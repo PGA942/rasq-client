@@ -9,3 +9,7 @@ export 'src/error_code.dart';
 export 'src/media.dart';
 export 'src/post.dart';
 export 'src/user.dart';
+export 'src/notification.dart';
+export 'src/page.dart';
+export 'src/profile.dart';
+export 'src/thread.dart';

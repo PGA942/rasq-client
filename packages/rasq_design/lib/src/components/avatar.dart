@@ -52,10 +52,12 @@ class RasqAvatar extends StatelessWidget {
         child: imageUrl == null
             ? ColoredBox(
                 color: RasqColors.accent,
-                child: Center(
-                  child: Text(
-                    (fallbackLabel ?? '?').characters.first,
-                    style: TextStyle(color: RasqColors.white, fontSize: size * 0.42, fontWeight: FontWeight.w700),
+                child: ExcludeSemantics(
+                  child: Center(
+                    child: Text(
+                      (fallbackLabel ?? '?').characters.first,
+                      style: TextStyle(color: RasqColors.white, fontSize: size * 0.42, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
               )

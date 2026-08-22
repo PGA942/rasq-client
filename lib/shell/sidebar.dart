@@ -1,35 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
-import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
+import '../app/providers.dart';
 import '../app/router.dart';
 
 /// Sidebar content (原典: UI_status「サイドバー」: マルチアカウント・ブックマーク・
 /// リスト・プラグイン・設定・ヘルプ・Webコンソール). Shown through the
 /// Overlay Manager on the `sidebar` layer (closes on barrier tap).
-class RasqSidebar extends StatelessWidget {
-  const RasqSidebar({super.key, required this.me, required this.accounts, required this.handle, this.onAccountSettings});
+class RasqSidebar extends ConsumerWidget {
+  const RasqSidebar({super.key, required this.handle});
 
-  final UserSummary me;
-  final List<AccountId> accounts;
   final OverlayHandle handle;
-  final VoidCallback? onAccountSettings;
 
   static const String overlayId = 'app.sidebar';
 
-  static Future<void> open(OverlayManager manager, {required UserSummary me, required List<AccountId> accounts}) => manager.show(RasqOverlayEntry(
+  static Future<void> open(OverlayManager manager) => manager.show(RasqOverlayEntry(
         id: overlayId,
         layer: OverlayLayer.sidebar,
         alignment: Alignment.centerLeft,
         semanticsLabel: 'サイドバー',
-        builder: (context, handle) => RasqSidebar(me: me, accounts: accounts, handle: handle),
+        builder: (context, handle) => RasqSidebar(handle: handle),
       ));
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final me = ref.watch(currentUserProvider);
+    final sessions = ref.watch(sessionsProvider).value ?? const SessionsState();
     final width = (MediaQuery.sizeOf(context).width * 0.78).clamp(240.0, 340.0);
     void go(String route) {
       handle.close();
@@ -43,7 +43,6 @@ class RasqSidebar extends StatelessWidget {
         height: double.infinity,
         child: SafeArea(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            // Account header: avatar + name + chevron, sub-accounts, account settings.
             Padding(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.sm, 0),
               child: Row(children: [
@@ -59,25 +58,32 @@ class RasqSidebar extends StatelessWidget {
                 const SizedBox(width: RasqSpacing.md),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(me.displayName, style: RasqTypography.title),
-                    Text('@${me.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
+                    Text(me.displayName, style: RasqTypography.title, overflow: TextOverflow.ellipsis),
+                    Text('@${me.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
                   ]),
                 ),
                 const Icon(Icons.keyboard_arrow_up),
               ]),
             ),
             const SizedBox(height: RasqSpacing.sm),
-            for (final a in accounts)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: 2),
-                child: Row(children: [
-                  RasqSnsPill(account: a, showLabel: false, dotSize: 16),
-                  const SizedBox(width: RasqSpacing.sm),
-                  Expanded(child: Text('$a', style: RasqTypography.bodySmall, overflow: TextOverflow.ellipsis)),
-                  const Icon(Icons.more_horiz, size: 18),
-                ]),
+            // Multi-account switcher: tap to switch (drop-down animation is 未定).
+            for (final s in sessions.sessions)
+              InkWell(
+                onTap: () async {
+                  await ref.read(sessionsProvider.notifier).setCurrent(s.account);
+                  handle.close();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: 6),
+                  child: Row(children: [
+                    RasqSnsPill(account: s.account, showLabel: false, dotSize: 16),
+                    const SizedBox(width: RasqSpacing.sm),
+                    Expanded(child: Text('${s.account}', style: RasqTypography.bodySmall.copyWith(fontWeight: s.account.key == sessions.current?.account.key ? FontWeight.w700 : null), overflow: TextOverflow.ellipsis)),
+                    const Icon(Icons.more_horiz, size: 18),
+                  ]),
+                ),
               ),
-            TextButton.icon(onPressed: onAccountSettings, icon: const Icon(Icons.settings, size: 18), label: const Text('アカウントの設定')),
+            TextButton.icon(onPressed: () => go(Routes.login), icon: const Icon(Icons.add, size: 18), label: const Text('アカウントを追加')),
             const Divider(),
             RasqListTile(title: 'ブックマーク', leading: const Icon(Icons.bookmark_border), chevron: false, onTap: () {}),
             RasqListTile(title: 'リスト', leading: const Icon(Icons.list_alt_outlined), chevron: false, onTap: () {}),

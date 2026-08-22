@@ -51,7 +51,11 @@ class SettingsScreen extends ConsumerWidget {
         RasqListTile(title: 'RASQについて', onTap: () {}),
         RasqDestructiveListTile(
           title: '@${me.handle}からログアウト',
-          onTap: () => manager.showAlert(id: 'settings.logout', title: 'ログアウトしますか？', message: 'このアカウントのプラグイン構成はデバイスに残ります。', confirmText: 'ログアウト', cancelText: 'キャンセル', destructive: true),
+          onTap: () async {
+            final ok = await manager.showAlert(id: 'settings.logout', title: 'ログアウトしますか？', message: 'このアカウントのプラグイン構成はデバイスに残ります。', confirmText: 'ログアウト', cancelText: 'キャンセル', destructive: true);
+            final account = ref.read(currentAccountProvider);
+            if (ok && account != null) await ref.read(sessionsProvider.notifier).remove(account);
+          },
         ),
       ]),
     );

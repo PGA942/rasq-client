@@ -2,34 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
-import 'package:rasq_store/rasq_store.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
-import '../../mock/mock_data.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
+import 'post_row.dart';
+import 'timeline_providers.dart';
 
-/// ホームTL (フォロー中/おすすめ/関連). M0: header + extensible tabs + mock rows.
-/// The real `PostTile` (L2 composite) lands in M2; [_MockPostRow] only
-/// exercises atomic components and the store wiring.
+/// ホームTL. Tabs = おすすめ(social) / フォロー中(home) + plugin timelines
+/// (ローカル/グローバル…) + 関連(リレーショナルTL, 保留 D-011).
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider);
-    final account = ref.watch(currentAccountProvider);
-    final posts = MockData.timeline(account);
-    final tabs = [const RasqTabItem('おすすめ'), const RasqTabItem('フォロー中'), const RasqTabItem('関連')];
+    final session = ref.watch(currentSnsSessionProvider);
+    final kinds = _tabKinds(session);
+    final tabs = [for (final k in kinds) RasqTabItem(_label(k), id: k.id)];
+    final initial = kinds.indexOf(TimelineKind.home).clamp(0, kinds.length - 1);
+
     return DefaultTabController(
       length: tabs.length,
-      initialIndex: 1,
+      initialIndex: initial,
       child: Scaffold(
-        appBar: RasqHomeHeader(
-          me: me,
-          onAvatarTap: () => RasqShell.openSidebar(context, ref),
-          vcWidget: _VcWidgetPlaceholder(users: [MockData.douglas, MockData.tivard], extra: 4),
-        ),
+        appBar: RasqHomeHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref)),
         body: Column(children: [
           Container(
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
@@ -40,9 +38,11 @@ class HomeScreen extends ConsumerWidget {
           ),
           Expanded(
             child: TabBarView(children: [
-              const RasqEmptyView(title: 'おすすめ', hint: 'M2でSNSプラグインから流入します'),
-              _TimelineList(posts: posts),
-              const RasqEmptyView(title: '関連', hint: 'リレーショナルTL (M5)'),
+              for (final k in kinds)
+                if (k == TimelineKind.relational)
+                  const RasqEmptyView(title: '関連', hint: 'リレーショナルTLはアルゴリズム確定後に実装します (D-011)')
+                else
+                  _TimelineView(kind: k),
             ]),
           ),
         ]),
@@ -55,126 +55,100 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+
+  static List<TimelineKind> _tabKinds(SnsSession? session) {
+    final supported = session?.timelines ?? const [TimelineKind.home];
+    final out = <TimelineKind>[];
+    if (supported.contains(TimelineKind.social)) out.add(TimelineKind.social);
+    if (supported.contains(TimelineKind.home)) out.add(TimelineKind.home);
+    out.add(TimelineKind.relational);
+    for (final k in supported) {
+      if (!out.contains(k)) out.add(k);
+    }
+    return out.take(RasqTabs.maxExtensible).toList();
+  }
+
+  static String _label(TimelineKind k) => k == TimelineKind.social ? 'おすすめ' : k.label;
 }
 
-class _TimelineList extends StatelessWidget {
-  const _TimelineList({required this.posts});
-  final List<Post> posts;
-
+class _TimelineView extends ConsumerStatefulWidget {
+  const _TimelineView({required this.kind});
+  final TimelineKind kind;
   @override
-  Widget build(BuildContext context) => RefreshIndicator(
-        onRefresh: () async {},
-        child: ListView.separated(
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: posts.length,
-          separatorBuilder: (_, _) => const Divider(),
-          itemBuilder: (context, i) => _MockPostRow(post: posts[i]),
-        ),
-      );
+  ConsumerState<_TimelineView> createState() => _TimelineViewState();
 }
 
-/// Temporary row for M0 — deliberately NOT the final PostTile.
-class _MockPostRow extends ConsumerWidget {
-  const _MockPostRow({required this.post});
-  final Post post;
+class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeepAliveClientMixin {
+  final _scroll = ScrollController();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final like = ref.watch(actionStateOfProvider((postKey: post.key, actionId: 'like')));
-    final repost = ref.watch(actionStateOfProvider((postKey: post.key, actionId: 'repost')));
-    final store = ref.read(actionStateProvider.notifier);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.sm, RasqSpacing.xs),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        RasqAvatar(imageUrl: post.author.avatarUrl, size: RasqSizes.avatarLg, presence: post.author.presence, fallbackLabel: post.author.displayName),
-        const SizedBox(width: RasqSpacing.md),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(post.author.displayName, style: RasqTypography.displayName),
-                  Row(children: [
-                    Flexible(child: Text('@${post.author.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
-                    const SizedBox(width: 2),
-                    Flexible(child: RasqSnsPill(account: post.author.account)),
-                  ]),
-                ]),
-              ),
-              RasqIconButton(icon: Icons.bookmark_border, size: 20, onPressed: () {}, tooltip: 'ブックマーク'),
-              RasqIconButton(icon: Icons.more_horiz, size: 20, onPressed: () {}, tooltip: 'メニュー'),
-            ]),
-            const SizedBox(height: RasqSpacing.xs),
-            RasqRichText.plain(post.body, style: RasqTypography.body),
-            if (post.media.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: post.media)],
-            if (post.poll != null) ...[const SizedBox(height: RasqSpacing.sm), _MockPoll(poll: post.poll!)],
-            const SizedBox(height: RasqSpacing.xs),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              RasqActionButton.iconCount(icon: Icons.subdirectory_arrow_left, count: post.counts['reply'] ?? 0, tooltip: '返信', onTap: () {}),
-              RasqActionButton.icon(icon: Icons.navigation, tooltip: 'ブースト', onTap: () {}),
-              RasqActionButton.iconCount(
-                icon: Icons.repeat,
-                doneIcon: Icons.repeat_on,
-                count: repost.count ?? post.counts['repost'] ?? 0,
-                done: repost.done,
-                tooltip: 'リノート',
-                onTap: () => store.apply(post.key, 'repost', ActionState(done: !repost.done, count: (repost.count ?? post.counts['repost'] ?? 0) + (repost.done ? -1 : 1))),
-              ),
-              RasqActionButton.iconCount(
-                icon: Icons.favorite_border,
-                doneIcon: Icons.favorite,
-                doneColor: RasqTokens.of(context).live,
-                count: like.count ?? post.counts['like'] ?? 0,
-                done: like.done,
-                tooltip: 'いいね',
-                onTap: () => store.apply(post.key, 'like', ActionState(done: !like.done, count: (like.count ?? post.counts['like'] ?? 0) + (like.done ? -1 : 1))),
-              ),
-              RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {}),
-            ]),
-          ]),
-        ),
-      ]),
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      if (_scroll.position.extentAfter < 600) ref.read(timelineProvider(widget.kind).notifier).loadMore();
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final state = ref.watch(timelineProvider(widget.kind));
+    final session = ref.watch(currentSnsSessionProvider);
+    final notifier = ref.read(timelineProvider(widget.kind).notifier);
+    final actions = session?.actions ?? const <ActionDescriptor>[];
+
+    return state.when(
+      loading: () => const RasqLoading(),
+      error: (e, _) => _ErrorList(error: e, onRetry: notifier.refresh),
+      data: (tl) {
+        if (tl.posts.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: notifier.refresh,
+            child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: '投稿はありません', hint: '下に引っ張って更新')]),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: notifier.refresh,
+          child: ListView.separated(
+            controller: _scroll,
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: tl.posts.length + 1,
+            separatorBuilder: (_, _) => const Divider(),
+            itemBuilder: (context, i) {
+              if (i == tl.posts.length) {
+                if (tl.loadingMore) return const RasqLoading();
+                if (tl.error != null) return Padding(padding: const EdgeInsets.all(16), child: Center(child: TextButton(onPressed: notifier.loadMore, child: const Text('読み込みに失敗しました。再試行'))));
+                return const SizedBox(height: 80);
+              }
+              final p = tl.posts[i];
+              return PostRow(post: p, actions: actions, onAction: (a) => notifier.perform(p, a));
+            },
+          ),
+        );
+      },
     );
   }
 }
 
-class _MockPoll extends StatelessWidget {
-  const _MockPoll({required this.poll});
-  final Poll poll;
+class _ErrorList extends StatelessWidget {
+  const _ErrorList({required this.error, required this.onRetry});
+  final Object error;
+  final Future<void> Function() onRetry;
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final total = poll.totalVotes == 0 ? 1 : poll.totalVotes;
-    return Column(children: [
-      for (final o in poll.options)
-        Container(
-          margin: const EdgeInsets.only(bottom: 6),
-          height: 40,
-          decoration: BoxDecoration(border: Border.all(color: scheme.onSurface), borderRadius: BorderRadius.circular(8)),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(children: [
-            Align(alignment: Alignment.centerRight, child: FractionallySizedBox(widthFactor: o.votes / total, child: ColoredBox(color: scheme.surfaceContainerHighest))),
-            Center(child: Text(o.text, style: RasqTypography.listTile)),
-            Positioned(right: 12, top: 0, bottom: 0, child: Center(child: Text('${o.votes}', style: RasqTypography.listTile))),
-          ]),
-        ),
-    ]);
+    final code = error is SnsApiException ? (error as SnsApiException).code : ErrorCode.internalServerError.copyWith(message: '$error');
+    return RefreshIndicator(
+      onRefresh: onRetry,
+      child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 80), RasqErrorView(code: code, onRetry: onRetry, retryLabel: '再読み込み')]),
+    );
   }
-}
-
-class _VcWidgetPlaceholder extends StatelessWidget {
-  const _VcWidgetPlaceholder({required this.users, required this.extra});
-  final List<UserSummary> users;
-  final int extra;
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: '参加中のVC',
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          decoration: BoxDecoration(color: RasqColors.accent, borderRadius: BorderRadius.circular(999)),
-          child: RasqGroupAvatar(users: users, size: 28, overflowCount: extra),
-        ),
-      );
 }

@@ -1,0 +1,22 @@
+name: sns_misskey
+description: Misskey SNS adapter for RASQ (MiAuth login, timelines, notes, reactions, notifications). Dart implementation of the SnsPlugin contract.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  http: ^1.2.0
+  meta: ^1.16.0
+  rasq_models:
+    path: ../rasq_models
+  rasq_plugin_api:
+    path: ../rasq_plugin_api
+  rasq_store:
+    path: ../rasq_store
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.0.0

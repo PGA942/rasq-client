@@ -5,7 +5,6 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../app/providers.dart';
-import '../mock/mock_data.dart';
 import 'nav.dart';
 import 'sidebar.dart';
 
@@ -33,7 +32,7 @@ class RasqShell extends ConsumerWidget {
   }
 
   static void openSidebar(BuildContext context, WidgetRef ref) {
-    RasqSidebar.open(ref.read(overlayManagerProvider), me: ref.read(currentUserProvider), accounts: MockData.accounts);
+    RasqSidebar.open(ref.read(overlayManagerProvider));
   }
 }
 
