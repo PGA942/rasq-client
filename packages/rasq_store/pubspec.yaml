@@ -1,0 +1,17 @@
+name: rasq_store
+description: RASQ Store/Signal layer — state lives outside the DSL and flows into components as props.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  riverpod: ^3.0.0
+  rasq_models:
+    path: ../rasq_models
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.0.0

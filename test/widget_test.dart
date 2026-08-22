@@ -1,30 +1,40 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:rasq_client/main.dart';
+import 'package:rasq_client/app/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('app boots into home timeline and opens the sidebar via header avatar', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(const ProviderScope(child: RasqApp()));
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Home tabs and a mock post from the timeline.
+    expect(find.text('フォロー中'), findsWidgets);
+    expect(find.text('ダグラス'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Header avatar → sidebar (Overlay Manager, sidebar layer).
+    await tester.tap(find.bySemanticsLabel('サイドバーを開く'));
+    await tester.pumpAndSettle();
+    expect(find.text('全ての設定'), findsOneWidget);
+
+    // Barrier tap closes the sidebar (クローズ挙動: 背面タップで閉じる).
+    await tester.tapAt(const Offset(350, 400));
+    await tester.pumpAndSettle();
+    expect(find.text('全ての設定'), findsNothing);
+  });
+
+  testWidgets('tablet width switches to the 2-pane layout', (tester) async {
+    tester.view.physicalSize = const Size(2400, 1600);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const ProviderScope(child: RasqApp()));
+    await tester.pumpAndSettle();
+    expect(find.text('第3カラム'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
   });
 }
