@@ -12,7 +12,10 @@ class SecureSessionStorage implements SessionStorage {
       : _s = storage ??
             const FlutterSecureStorage(
               iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
-              mOptions: MacOsOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
+              // macOS: the data-protection keychain needs the keychain-access-groups
+              // entitlement (= development-certificate signing). Use the legacy
+              // file keychain so locally signed dev builds work out of the box.
+              mOptions: MacOsOptions(accessibility: KeychainAccessibility.first_unlock_this_device, usesDataProtectionKeychain: false),
             );
   final FlutterSecureStorage _s;
 
