@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -24,8 +25,17 @@ class MisskeyApi {
       res = await _client
           .post(endpoint(path), headers: const {'content-type': 'application/json'}, body: jsonEncode(payload))
           .timeout(timeout);
+    } on TimeoutException catch (e) {
+      throw SnsApiException(ErrorCode.timeout.copyWith(message: '$host からの応答がありません(${timeout.inSeconds}秒)。インターネット接続を確認してください'), cause: e);
+    } on http.ClientException catch (e) {
+      // Web: CORS / fetch failures. VM: some connection errors.
+      throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '03', title: 'HTTP Client Error', message: '$host: ${e.message}'), cause: e);
     } on Exception catch (e) {
-      throw SnsApiException(ErrorCode.timeout, cause: e);
+      // SocketException (DNS / refused / sandbox "Operation not permitted"),
+      // HandshakeException (TLS) … kept platform-agnostic (no dart:io import).
+      final msg = e.toString().replaceFirst(RegExp(r'^\w+Exception: '), '');
+      final hint = msg.contains('not permitted') ? ' (アプリのネットワーク権限/サンドボックス設定を確認してください)' : '';
+      throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable', message: '$host に接続できません: $msg$hint'), cause: e);
     }
     if (res.statusCode == 204) return null;
     Object? decoded;

@@ -140,10 +140,24 @@ void main() {
       expect(r.count, 3);
     });
 
+    test('transport errors are not reported as 408', () async {
+      final cors = MisskeyApi('misskey.test', client: MockClient((_) async => throw http.ClientException('Failed to fetch')));
+      await expectLater(cors.call('meta'), throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'B03')));
+      final denied = MisskeyApi('misskey.test', client: MockClient((_) async => throw const _Socket('Operation not permitted')));
+      await expectLater(denied.call('meta'), throwsA(isA<SnsApiException>().having((e) => e.code.message, 'message', contains('サンドボックス'))));
+    });
+
     test('http error → SnsApiException with HTTP code', () async {
       final c = MockClient((_) async => http.Response(jsonEncode({'error': {'message': 'Unauthorized', 'code': 'CREDENTIAL_REQUIRED'}}), 401));
       final api = MisskeyApi('misskey.test', client: c);
       await expectLater(api.call('i'), throwsA(isA<SnsApiException>().having((e) => e.code.display, 'display', 'Error:401 Unauthorized')));
     });
   });
+}
+
+class _Socket implements Exception {
+  const _Socket(this.m);
+  final String m;
+  @override
+  String toString() => 'SocketException: $m';
 }
