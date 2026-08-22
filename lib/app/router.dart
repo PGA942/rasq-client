@@ -11,6 +11,7 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/vc/vc_screen.dart';
+import '../shell/app_overlay_root.dart';
 import '../shell/rasq_shell.dart';
 import 'providers.dart';
 
@@ -28,6 +29,9 @@ abstract final class Routes {
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+
+/// Navigator under [AppOverlayRoot]; full-screen pages push here.
+final _appNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'app');
 
 /// Bridges Riverpod state → GoRouter.refreshListenable.
 class _RouterRefresh extends ChangeNotifier {
@@ -53,24 +57,31 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => RasqShell(navigationShell: navigationShell),
-        branches: [
-          StatefulShellBranch(routes: [GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: Routes.search, builder: (_, _) => const SearchScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const VcScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: Routes.dm, builder: (_, _) => const DmScreen())]),
+      ShellRoute(
+        navigatorKey: _appNavigatorKey,
+        builder: (context, state, child) => AppOverlayRoot(child: child),
+        routes: [
+          StatefulShellRoute.indexedStack(
+            builder: (context, state, navigationShell) => RasqShell(navigationShell: navigationShell),
+            branches: [
+              StatefulShellBranch(routes: [GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen())]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.search, builder: (_, _) => const SearchScreen())]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const VcScreen())]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen())]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.dm, builder: (_, _) => const DmScreen())]),
+            ],
+          ),
+          // Full-screen pages above the tab shell (ページヘッダー: 戻る＋タイトル＋…),
+          // still below the OverlayHost.
+          GoRoute(path: Routes.settings, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const SettingsScreen()),
+          GoRoute(path: Routes.catalog, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const CatalogScreen()),
+          GoRoute(
+            path: Routes.login,
+            parentNavigatorKey: _appNavigatorKey,
+            builder: (_, _) => const LoginScreen(),
+            routes: [GoRoute(path: 'misskey', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MisskeyLoginScreen())],
+          ),
         ],
-      ),
-      // Sub screens pushed above the shell (ページヘッダー: 戻る＋タイトル＋…).
-      GoRoute(path: Routes.settings, parentNavigatorKey: _rootNavigatorKey, builder: (_, _) => const SettingsScreen()),
-      GoRoute(path: Routes.catalog, parentNavigatorKey: _rootNavigatorKey, builder: (_, _) => const CatalogScreen()),
-      GoRoute(
-        path: Routes.login,
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const LoginScreen(),
-        routes: [GoRoute(path: 'misskey', parentNavigatorKey: _rootNavigatorKey, builder: (_, _) => const MisskeyLoginScreen())],
       ),
     ],
   );

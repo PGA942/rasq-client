@@ -39,6 +39,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('SNSにログイン'), findsOneWidget);
     expect(find.text('Misskeyでログイン'), findsOneWidget);
+
+    // Overlays must render above root-level pages too (regression: terms sheet never appeared).
+    await tester.tap(find.text('BlueSkyでログイン'));
+    await tester.pumpAndSettle();
+    expect(find.text('BlueSky は準備中です'), findsOneWidget);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.text('BlueSky は準備中です'), findsNothing);
+
+    // Misskey → server screen → terms sheet appears through the Overlay Manager.
+    await tester.tap(find.text('Misskeyでログイン'));
+    await tester.pumpAndSettle();
+    expect(find.text('PDSを変更'), findsOneWidget);
   });
 
   testWidgets('session → home timeline from plugin; action updates store; sidebar opens/closes', (tester) async {

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
-import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../app/providers.dart';
 import 'nav.dart';
 import 'sidebar.dart';
 
-/// App shell: layout (モバイル / タブレット), global nav and the OverlayHost.
+/// App shell: layout (モバイル / タブレット) and global nav. Overlays are
+/// rendered by [AppOverlayRoot] above the whole navigator.
 ///
 /// * < 840dp: header + content + bottom global nav.
 /// * ≥ 840dp: fixed sidebar rail + main pane + third pane (検索 or 1つ前の画面);
@@ -20,15 +20,10 @@ class RasqShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final manager = ref.watch(overlayManagerProvider);
-    return OverlayScope(
-      manager: manager,
-      child: LayoutBuilder(builder: (context, constraints) {
-        final tablet = constraints.maxWidth >= RasqSizes.tabletBreakpoint;
-        final content = tablet ? _TabletLayout(shell: navigationShell) : _MobileLayout(shell: navigationShell);
-        return OverlayHost(manager: manager, child: content);
-      }),
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final tablet = constraints.maxWidth >= RasqSizes.tabletBreakpoint;
+      return tablet ? _TabletLayout(shell: navigationShell) : _MobileLayout(shell: navigationShell);
+    });
   }
 
   static void openSidebar(BuildContext context, WidgetRef ref) {
