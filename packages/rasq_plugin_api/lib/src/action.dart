@@ -26,6 +26,7 @@ class ActionDescriptor {
     this.countSource = CountSource.self,
     this.autoHookForbidden = false,
     this.destructive = false,
+    this.iconPerPost = false,
   });
 
   final String id;
@@ -44,6 +45,13 @@ class ActionDescriptor {
   /// Forbidden for 自動Hook by SNS terms (旧D5).
   final bool autoHookForbidden;
   final bool destructive;
+
+  /// The plugin may replace this button's icon **per post** through
+  /// [ActionResult.icon] (例: 短押しリアクションの予測絵文字をエッジ抽出アイコンで表示).
+  /// Allowed only for the SNS plugin and its child plugins (視認性のため他プラグインは不可 —
+  /// the host validation gate ignores icons from others). [icon]/[doneIcon] stay
+  /// as the bundled default.
+  final bool iconPerPost;
 
   /// Derived automation policy (旧D5 C案): immediate → allowed,
   /// confirm/saveDiscard/stick → human gate, forbidden flag wins.
@@ -64,6 +72,7 @@ class ActionDescriptor {
         'countSource': countSource.name,
         'autoHookForbidden': autoHookForbidden,
         'destructive': destructive,
+        'iconPerPost': iconPerPost,
       };
 
   factory ActionDescriptor.fromJson(Map<String, Object?> j) => ActionDescriptor(
@@ -77,6 +86,7 @@ class ActionDescriptor {
         countSource: CountSource.values.byName(j['countSource'] as String? ?? 'self'),
         autoHookForbidden: j['autoHookForbidden'] as bool? ?? false,
         destructive: j['destructive'] as bool? ?? false,
+        iconPerPost: j['iconPerPost'] as bool? ?? false,
       );
 }
 
@@ -118,11 +128,23 @@ class ActionRef {
   String toString() => fq;
 }
 
-/// Result of performing an action — feeds `ActionStateStore` directly.
+/// Per-post icon override (only honoured when [ActionDescriptor.iconPerPost]).
+@immutable
+class ActionIcon {
+  const ActionIcon.url(Uri this.url) : material = null;
+  const ActionIcon.material(String this.material) : url = null;
+  final Uri? url;
+  final String? material;
+}
+
+/// Result of performing / reading an action — feeds `ActionStateStore` directly.
 @immutable
 class ActionResult {
-  const ActionResult({required this.done, this.count, this.message});
+  const ActionResult({required this.done, this.count, this.message, this.icon});
   final bool done;
   final int? count;
   final String? message;
+
+  /// Per-post icon (e.g. predicted reaction emoji). See [ActionDescriptor.iconPerPost].
+  final ActionIcon? icon;
 }

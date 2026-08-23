@@ -19,6 +19,7 @@ void main() {
     const m = PluginManifest(id: 'x', name: 'X', version: '1.0.0', kind: PluginKind.sns, actions: [ActionDescriptor(id: 'like', genreTag: 'Reaction', label: 'like')]);
     final back = PluginManifest.fromJson(m.toJson());
     expect(back.actions.single.genreTag, 'Reaction');
+    expect(PluginManifest.fromJson(const PluginManifest(id: 'y', name: 'Y', version: '1.0.0', kind: PluginKind.sns, actions: [ActionDescriptor(id: 'r', genreTag: 'Reaction', label: 'r', iconPerPost: true)]).toJson()).actions.single.iconPerPost, isTrue);
     expect(back.kind, PluginKind.sns);
   });
 

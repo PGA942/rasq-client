@@ -27,7 +27,8 @@ class MisskeySession extends SnsSessionBase {
   static const defaultActions = [
     ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信', icon: 'subdirectory_arrow_left', fow: FowType.interstitial, confirmMode: ConfirmMode.confirm),
     ActionDescriptor(id: 'renote', genreTag: 'Repost', label: 'リノート', icon: 'repeat', doneIcon: 'repeat_on'),
-    ActionDescriptor(id: 'reaction', genreTag: 'Reaction', label: 'リアクション', icon: 'add_reaction_outlined', doneIcon: 'add_reaction'),
+    // 本番: 短押し=予測モデルで最有力の絵文字をリアクション。操作前は投稿ごとに予測絵文字(エッジ抽出)を表示 → iconPerPost.
+    ActionDescriptor(id: 'reaction', genreTag: 'Reaction', label: 'リアクション', icon: 'add_reaction_outlined', doneIcon: 'add_reaction', iconPerPost: true),
     ActionDescriptor(id: 'favorite', genreTag: 'Bookmark', label: 'お気に入り', icon: 'star_border', doneIcon: 'star', countSource: CountSource.none),
   ];
 

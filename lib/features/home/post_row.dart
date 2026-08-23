@@ -214,6 +214,24 @@ class _ActionBtn extends ConsumerWidget {
     final showCount = action.countSource != CountSource.none;
     final count = st.count ?? post.counts[action.id] ?? 0;
     void tap() => onAction(action).catchError((_) {});
+    if (st.iconUrl != null) {
+      // 投稿ごとのアイコン差し替え(SNSプラグイン配下のみ): 予測リアクション等
+      return Tooltip(
+        message: action.label,
+        child: InkResponse(
+          onTap: tap,
+          onLongPress: onLongPress,
+          radius: 24,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Image.network(st.iconUrl.toString(), width: 20, height: 20, errorBuilder: (_, _, _) => Icon(icon, size: 20)),
+              if (showCount && count > 0) Padding(padding: const EdgeInsets.only(left: 4), child: Text('$count', style: RasqTypography.count)),
+            ]),
+          ),
+        ),
+      );
+    }
     return showCount
         ? RasqActionButton.iconCount(icon: icon, doneIcon: doneIcon, done: st.done, doneColor: doneColor, count: count, tooltip: action.label, onTap: tap, onLongPress: onLongPress, enabled: st.enabled)
         : RasqActionButton.icon(icon: icon, doneIcon: doneIcon, done: st.done, doneColor: doneColor, tooltip: action.label, onTap: tap, onLongPress: onLongPress, enabled: st.enabled);

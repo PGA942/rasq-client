@@ -2,20 +2,23 @@ import 'package:riverpod/riverpod.dart';
 
 /// State of one action button on one post, as returned by the SNS plugin.
 class ActionState {
-  const ActionState({this.done = false, this.count, this.enabled = true});
+  const ActionState({this.done = false, this.count, this.enabled = true, this.iconUrl});
   final bool done;
 
   /// `null` when the plugin does not return counts for this action.
   final int? count;
   final bool enabled;
 
-  ActionState copyWith({bool? done, int? count, bool? enabled}) =>
-      ActionState(done: done ?? this.done, count: count ?? this.count, enabled: enabled ?? this.enabled);
+  /// Per-post icon override (predicted reaction etc.). null = bundled default.
+  final Uri? iconUrl;
+
+  ActionState copyWith({bool? done, int? count, bool? enabled, Uri? iconUrl}) =>
+      ActionState(done: done ?? this.done, count: count ?? this.count, enabled: enabled ?? this.enabled, iconUrl: iconUrl ?? this.iconUrl);
 
   @override
-  bool operator ==(Object other) => other is ActionState && other.done == done && other.count == count && other.enabled == enabled;
+  bool operator ==(Object other) => other is ActionState && other.done == done && other.count == count && other.enabled == enabled && other.iconUrl == iconUrl;
   @override
-  int get hashCode => Object.hash(done, count, enabled);
+  int get hashCode => Object.hash(done, count, enabled, iconUrl);
 }
 
 /// Key: `${postKey}#${actionId}` where postKey = `accountKey:postId`.

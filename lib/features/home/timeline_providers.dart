@@ -59,11 +59,14 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   void _applyStates(List<Post> posts, Map<String, Map<String, ActionResult>> states) {
     final store = ref.read(actionStateProvider.notifier);
     final batch = <ActionKey, ActionState>{};
+    final descriptors = {for (final a in _session?.actions ?? const <ActionDescriptor>[]) a.id: a};
     for (final p in posts) {
       final s = states[p.id];
       if (s == null) continue;
       for (final e in s.entries) {
-        batch[(postKey: p.key, actionId: e.key)] = ActionState(done: e.value.done, count: e.value.count);
+        // Validation gate: per-post icons only for actions that declared iconPerPost.
+        final allowIcon = descriptors[e.key]?.iconPerPost ?? false;
+        batch[(postKey: p.key, actionId: e.key)] = ActionState(done: e.value.done, count: e.value.count, iconUrl: allowIcon ? e.value.icon?.url : null);
       }
     }
     store.applyAll(batch);
@@ -109,7 +112,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     store.applyOptimistic(post.key, action.id, done: !undo);
     try {
       final r = await session.performAction(action.id, post.id, args: {...args, 'undo': undo});
-      store.apply(post.key, action.id, ActionState(done: r.done, count: r.count ?? before.count));
+      store.apply(post.key, action.id, ActionState(done: r.done, count: r.count ?? before.count, iconUrl: action.iconPerPost ? (r.icon?.url ?? before.iconUrl) : null));
     } catch (e) {
       store.apply(post.key, action.id, before);
       debugPrint('action ${action.id} failed: $e');
