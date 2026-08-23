@@ -42,6 +42,13 @@ abstract final class MisskeyMappers {
     );
   }
 
+  static UserListInfo userList(Map<String, Object?> j) => UserListInfo(
+        id: j['id'] as String,
+        name: (j['name'] ?? '').toString(),
+        memberIds: [for (final id in (j['userIds'] as List? ?? const [])) id.toString()],
+        isPublic: j['isPublic'] as bool? ?? false,
+      );
+
   static FollowRequest followRequest(Map<String, Object?> j, {required AccountId account, required String host}) => FollowRequest(
         id: j['id'] as String,
         user: user((j['follower'] as Map).cast<String, Object?>(), account: account, host: host),

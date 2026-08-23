@@ -309,6 +309,49 @@ class MisskeySession extends SnsSessionBase {
   Future<void> reportUser(String userId, String comment) => api.call('users/report-abuse', {'userId': userId, 'comment': comment});
 
   @override
+  Future<UserProfile> updateProfile(ProfileUpdate update) async {
+    final u = update;
+    final body = <String, Object?>{
+      if (u.displayName != null) 'name': u.displayName,
+      if (u.description != null) 'description': u.description,
+      if (u.location != null) 'location': u.location,
+      if (u.birthday != null) 'birthday': u.birthday!.isEmpty ? null : u.birthday,
+      if (u.fields != null) 'fields': [for (final f in u.fields!) {'name': f.name, 'value': f.value}],
+      if (u.avatarMediaId != null) 'avatarId': u.avatarMediaId,
+      if (u.bannerMediaId != null) 'bannerId': u.bannerMediaId,
+    };
+    final res = await api.callMap('i/update', body);
+    _me = null;
+    return MisskeyMappers.profile(res, account: account, host: host);
+  }
+
+  @override
+  Future<List<UserListInfo>> lists() async => [for (final l in await api.callList('users/lists/list')) MisskeyMappers.userList(l)];
+  @override
+  Future<UserListInfo> listInfo(String listId) async => MisskeyMappers.userList(await api.callMap('users/lists/show', {'listId': listId}));
+  @override
+  Future<List<UserSummary>> listMembers(String listId) async {
+    final info = await listInfo(listId);
+    if (info.memberIds.isEmpty) return const [];
+    return [for (final p in await users(info.memberIds)) p.summary];
+  }
+  @override
+  Future<UserListInfo> createList(String name) async => MisskeyMappers.userList(await api.callMap('users/lists/create', {'name': name}));
+  @override
+  Future<void> addToList(String listId, String userId) => api.call('users/lists/push', {'listId': listId, 'userId': userId});
+  @override
+  Future<void> removeFromList(String listId, String userId) => api.call('users/lists/pull', {'listId': listId, 'userId': userId});
+
+  @override
+  Future<Page<Post>> favorites({String? cursor, int limit = 20}) async {
+    final list = await api.callList('i/favorites', {'limit': limit, 'untilId': ?cursor});
+    return Page(
+      items: [for (final f in list) if (f['note'] is Map) MisskeyMappers.note((f['note'] as Map).cast<String, Object?>(), viewer: account, host: host)],
+      nextCursor: list.isEmpty ? null : list.last['id'] as String?,
+    );
+  }
+
+  @override
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) => _follows('users/followers', 'follower', id, cursor, limit);
   @override
   Future<Page<UserSummary>> following(String id, {String? cursor, int limit = 20}) => _follows('users/following', 'followee', id, cursor, limit);

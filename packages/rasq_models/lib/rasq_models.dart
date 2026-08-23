@@ -17,3 +17,4 @@ export 'src/trend.dart';
 export 'src/dm.dart';
 export 'src/reaction.dart';
 export 'src/follow_request.dart';
+export 'src/user_list_info.dart';

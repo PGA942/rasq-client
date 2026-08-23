@@ -14,6 +14,10 @@ import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
 import '../features/settings/mute_block_screen.dart';
+import '../features/settings/settings_section_screen.dart';
+import '../features/profile/profile_edit_screen.dart';
+import '../features/lists/lists_screens.dart';
+import '../features/bookmarks/bookmarks_screen.dart';
 import '../features/users/follow_requests_screen.dart';
 import '../features/users/follows_screen.dart';
 import '../features/users/user_page_screen.dart';
@@ -36,6 +40,9 @@ abstract final class Routes {
   static const catalog = '/catalog';
   static const login = '/login';
   static const viewer = '/viewer';
+  static const lists = '/lists';
+  static const bookmarks = '/bookmarks';
+  static const profileEdit = '/profile/edit';
   static const loginMisskey = '/login/misskey';
 }
 
@@ -119,6 +126,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           // still below the OverlayHost.
           GoRoute(path: Routes.settings, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const SettingsScreen(), routes: [
             GoRoute(path: 'mute-block', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MuteBlockScreen()),
+            GoRoute(path: 'section/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SettingsSectionScreen(sectionId: s.pathParameters['id']!)),
+          ]),
+          GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
+          GoRoute(path: Routes.bookmarks, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BookmarksScreen()),
+          GoRoute(path: Routes.lists, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListsScreen(), routes: [
+            GoRoute(path: 'import', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListImportScreen()),
+            GoRoute(path: ':id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => ListDetailScreen(listId: s.pathParameters['id']!, info: s.extra is UserListInfo ? s.extra as UserListInfo : null)),
           ]),
           GoRoute(
             path: Routes.viewer,

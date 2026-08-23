@@ -8,7 +8,10 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../app/navigation.dart';
+import '../../app/router.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../text/inline_spans.dart';
@@ -66,7 +69,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
               onShowRestricted: () => setState(() => _showRestricted = true),
               bio: p.description == null ? null : RasqRichText(InlineSpans.parse(p.description!, emojis: ref.watch(emojiCacheProvider), onLink: (u) => launchUrl(u, mode: LaunchMode.externalApplication), onHashtag: (t) => context.pushTrend(t)), style: RasqTypography.body),
               onFollowTap: () => ref.read(userListHelperProvider).toggleFollow(p.summary),
-              onEditTap: () => manager.showAlert(id: 'user.edit', title: 'プロフィール編集', message: 'プロフィール編集画面は次のバッチで実装します。', confirmText: 'OK'),
+              onEditTap: () => context.push(Routes.profileEdit),
               onNotifyTap: () {},
               onFollowingTap: () => context.pushFollows(p.summary, followers: false),
               onFollowersTap: () => context.pushFollows(p.summary, followers: true),

@@ -93,6 +93,16 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<FollowState> setFollowing(String userId, bool following) async => FollowState(following: following);
   @override
+  Future<UserProfile> updateProfile(ProfileUpdate update) async => UserProfile(summary: await me(), description: update.description);
+  @override
+  Future<List<UserListInfo>> lists() async => [UserListInfo(id: 'l1', name: 'Fediverse Banner', memberIds: [_posts.last.author.id])];
+  @override
+  Future<UserListInfo> listInfo(String listId) async => (await lists()).first;
+  @override
+  Future<List<UserSummary>> listMembers(String listId) async => [_posts.last.author];
+  @override
+  Future<Page<Post>> favorites({String? cursor, int limit = 20}) async => Page(items: _posts.take(1).toList());
+  @override
   Future<List<TrendTag>> trendingTags() async => const [TrendTag(tag: '打上会', usersCount: 117, chart: [1, 3, 2])];
   @override
   Future<List<DmRoom>> dmRooms() async => [DmRoom(id: _posts.last.author.id, peer: _posts.last.author, lastPost: _posts.last)];

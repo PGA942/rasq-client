@@ -292,6 +292,30 @@ void main() {
       expect((await s.blockedUsers()).items.single.id, 'g');
     });
 
+    test('profile update, lists, favorites', () async {
+      late Map<String, Object?> seenUpdate;
+      final c = client({
+        'i/update': (b) {
+          seenUpdate = b;
+          return {...user('me'), 'name': b['name'], 'fields': b['fields']};
+        },
+        'users/lists/list': (_) => [{'id': 'l1', 'name': 'Fediverse Banner', 'userIds': ['a', 'b']}],
+        'users/lists/show': (_) => {'id': 'l1', 'name': 'Fediverse Banner', 'userIds': ['a', 'b']},
+        'users/show': (b) => [for (final id in (b['userIds'] as List)) user(id as String)],
+        'users/lists/create': (b) => {'id': 'l2', 'name': b['name'], 'userIds': []},
+        'i/favorites': (_) => [{'id': 'f1', 'note': note('n1')}],
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+      final p = await s.updateProfile(const ProfileUpdate(displayName: 'タロ', fields: [(name: 'web', value: 'https://x')]));
+      expect(seenUpdate['name'], 'タロ');
+      expect((seenUpdate['fields'] as List).single, {'name': 'web', 'value': 'https://x'});
+      expect(p.summary.displayName, 'タロ');
+      expect((await s.lists()).single.memberIds, ['a', 'b']);
+      expect((await s.listMembers('l1')).map((u) => u.id).toList(), ['a', 'b']);
+      expect((await s.createList('new')).id, 'l2');
+      expect((await s.favorites()).items.single.id, 'n1');
+    });
+
     test('http error → SnsApiException with HTTP code', () async {
       final c = MockClient((_) async => http.Response(jsonEncode({'error': {'message': 'Unauthorized', 'code': 'CREDENTIAL_REQUIRED'}}), 401));
       final api = MisskeyApi('misskey.test', client: c);

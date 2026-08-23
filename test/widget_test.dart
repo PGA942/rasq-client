@@ -202,6 +202,38 @@ void main() {
     await tester.tap(find.text('ミュート/ブロック'));
     await tester.pumpAndSettle();
     expect(find.text('ブロック中'), findsOneWidget);
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+
+    // 設定第一階層 → アプリの外観.
+    await tester.tap(find.text('アプリの外観'));
+    await tester.pumpAndSettle();
+    expect(find.text('フォントやカラースキーム'), findsOneWidget);
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+
+    // Sidebar → リスト → リストの中身 (ユーザー欄).
+    await tester.tap(find.bySemanticsLabel('サイドバーを開く'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('リスト'));
+    await tester.pumpAndSettle();
+    expect(find.text('Fediverse Banner'), findsOneWidget);
+    await tester.tap(find.text('Fediverse Banner'));
+    await tester.pumpAndSettle();
+    expect(find.text('外す'), findsOneWidget);
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+
+    // Sidebar → ブックマーク (お気に入り).
+    await tester.tap(find.bySemanticsLabel('サイドバーを開く'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ブックマーク'));
+    await tester.pumpAndSettle();
+    expect(find.text('ダグラス'), findsOneWidget);
   });
 
   testWidgets('tablet width switches to the 2-pane layout', (tester) async {
