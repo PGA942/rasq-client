@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../app/providers.dart';
+import '../features/notifications/notifications_screen.dart';
 import 'nav.dart';
 import 'sidebar.dart';
 
@@ -31,12 +32,12 @@ class RasqShell extends ConsumerWidget {
   }
 }
 
-class _MobileLayout extends StatelessWidget {
+class _MobileLayout extends ConsumerWidget {
   const _MobileLayout({required this.shell});
   final StatefulNavigationShell shell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: shell,
@@ -47,10 +48,33 @@ class _MobileLayout extends StatelessWidget {
           onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
           destinations: [
             for (final t in RasqNavTab.values)
-              NavigationDestination(icon: Icon(t.icon), selectedIcon: Icon(t.selectedIcon), label: t.label, tooltip: t.label),
+              NavigationDestination(
+                icon: _LongPressable(tab: t, child: Icon(t.icon)),
+                selectedIcon: _LongPressable(tab: t, child: Icon(t.selectedIcon)),
+                label: t.label,
+                tooltip: t.label,
+              ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 通知 / DM ボタン長押し → 一括既読・通知オフ のドロップダウン (ワイヤーフレーム注釈).
+class _LongPressable extends ConsumerWidget {
+  const _LongPressable({required this.tab, required this.child});
+  final RasqNavTab tab;
+  final Widget child;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (tab != RasqNavTab.notifications && tab != RasqNavTab.dm) return child;
+    return GestureDetector(
+      onLongPress: () {
+        final box = context.findRenderObject() as RenderBox;
+        showNotificationQuickMenu(ref, box.localToGlobal(Offset.zero) & box.size);
+      },
+      child: child,
     );
   }
 }

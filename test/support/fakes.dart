@@ -69,6 +69,30 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<List<UserProfile>> users(List<String> ids) async => [for (final p in _posts) if (ids.contains(p.author.id)) UserProfile(summary: p.author)];
   @override
+  Future<UserProfile> user(String id) async {
+    final u = _posts.map((p) => p.author).firstWhere((a) => a.id == id, orElse: () => throw SnsApiException(ErrorCode.notFound));
+    return UserProfile(summary: u, description: u.bio, followersCount: 12, followingCount: 34, postsCount: 56, location: '地球', fields: const [ProfileField(name: '千芋', value: 'https://amzn.jp/19f253fc')]);
+  }
+  @override
+  Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20, UserPostsFilter filter = UserPostsFilter.posts}) async =>
+      Page(items: _posts.where((p) => p.author.id == id && (filter != UserPostsFilter.media || p.media.isNotEmpty)).toList());
+  @override
+  Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) async => Page(items: _posts.map((p) => p.author).toSet().toList());
+  @override
+  Future<Page<UserSummary>> following(String id, {String? cursor, int limit = 20}) async => Page(items: _posts.map((p) => p.author).take(1).toList());
+  @override
+  Future<List<FollowRequest>> followRequests() async => [FollowRequest(id: 'fr', user: _posts.last.author)];
+  @override
+  Future<void> acceptFollowRequest(String userId) async {}
+  @override
+  Future<void> rejectFollowRequest(String userId) async {}
+  @override
+  Future<Page<UserSummary>> mutedUsers({String? cursor, int limit = 30}) async => Page.empty();
+  @override
+  Future<Page<UserSummary>> blockedUsers({String? cursor, int limit = 30}) async => Page(items: [_posts.last.author]);
+  @override
+  Future<FollowState> setFollowing(String userId, bool following) async => FollowState(following: following);
+  @override
   Future<List<TrendTag>> trendingTags() async => const [TrendTag(tag: '打上会', usersCount: 117, chart: [1, 3, 2])];
   @override
   Future<List<DmRoom>> dmRooms() async => [DmRoom(id: _posts.last.author.id, peer: _posts.last.author, lastPost: _posts.last)];

@@ -25,6 +25,25 @@ extension RasqNavigation on BuildContext {
     push('$loc/reactions', extra: post);
   }
 
+  String get _tabBase {
+    final loc = GoRouterState.of(this).matchedLocation;
+    return loc.startsWith(Routes.dm)
+        ? Routes.dm
+        : loc.startsWith(Routes.search)
+            ? Routes.search
+            : loc.startsWith(Routes.notifications)
+                ? Routes.notifications
+                : loc.startsWith(Routes.vc)
+                    ? Routes.vc
+                    : Routes.home;
+  }
+
+  void pushUser(UserSummary user) => push('$_tabBase/user/${Uri.encodeComponent(user.id)}', extra: user);
+  void pushFollows(UserSummary user, {required bool followers}) => push('$_tabBase/user/${Uri.encodeComponent(user.id)}/follows${followers ? '?tab=followers' : ''}', extra: user);
+  void pushFollowRequests() => push('${Routes.notifications}/requests');
+  void pushMuteBlock() => push('${Routes.settings}/mute-block');
+  void openViewer(Post post, int index) => push(Routes.viewer, extra: (post: post, index: index));
+
   void pushTrend(String tag) => push('${Routes.search}/trend/${Uri.encodeComponent(tag)}');
 
   void pushDmRoom(DmRoom room) => push('${Routes.dm}/room/${Uri.encodeComponent(room.peer.id)}', extra: room);

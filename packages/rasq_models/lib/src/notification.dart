@@ -45,6 +45,7 @@ class NotificationItem {
     this.reaction,
     this.read = false,
     this.raw,
+    this.reactionsByActor = const {},
   });
 
   final String id;
@@ -62,6 +63,9 @@ class NotificationItem {
 
   /// Plugin-specific payload the host does not interpret.
   final Map<String, Object?>? raw;
+
+  /// For grouped reaction notifications: actor id → reaction string.
+  final Map<String, String> reactionsByActor;
 
   String get key => '${account.key}:$id';
 }

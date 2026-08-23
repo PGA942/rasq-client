@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import 'post.dart';
 import 'user.dart';
 
 /// Key/value meta row on a profile (リンク / 誕生日 / 場所 …).
@@ -29,6 +30,8 @@ class UserProfile {
     this.isLocked = false,
     this.isBot = false,
     this.isSuspended = false,
+    this.pinnedPosts = const [],
+    this.profileUrl,
   });
 
   final UserSummary summary;
@@ -45,4 +48,8 @@ class UserProfile {
   final bool isLocked;
   final bool isBot;
   final bool isSuspended;
+  final List<Post> pinnedPosts;
+
+  /// Profile web URL (リンクをコピー).
+  final Uri? profileUrl;
 }

@@ -56,6 +56,7 @@ class Post {
     this.reactionEmojis = const {},
     this.myReaction,
     this.source = PostSource.note,
+    this.url,
   });
 
   final String id;
@@ -97,6 +98,9 @@ class Post {
   final PostSource source;
 
   int get reactionTotal => reactions.values.fold(0, (a, b) => a + b);
+
+  /// Canonical web URL of the post (リンクをコピー / 共有).
+  final Uri? url;
 
   /// Store key: `accountKey:postId`.
   String get key => '${account.key}:$id';

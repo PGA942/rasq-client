@@ -12,6 +12,11 @@ import '../features/login/misskey_login_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
+import '../features/media/media_viewer_screen.dart';
+import '../features/settings/mute_block_screen.dart';
+import '../features/users/follow_requests_screen.dart';
+import '../features/users/follows_screen.dart';
+import '../features/users/user_page_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/trend/trend_screen.dart';
@@ -30,6 +35,7 @@ abstract final class Routes {
   static const settings = '/settings';
   static const catalog = '/catalog';
   static const login = '/login';
+  static const viewer = '/viewer';
   static const loginMisskey = '/login/misskey';
 }
 
@@ -44,6 +50,18 @@ GoRoute get _postRoute => GoRoute(
       builder: (_, s) => PostDetailScreen(postId: s.pathParameters['id']!, initial: s.extra is Post ? s.extra as Post : null),
       routes: [
         GoRoute(path: 'reactions', builder: (_, s) => ReactionsScreen(postId: s.pathParameters['id']!, initial: s.extra is Post ? s.extra as Post : null)),
+      ],
+    );
+
+/// `user/:id` (+ `follows`) — nested under each tab.
+GoRoute get _userRoute => GoRoute(
+      path: 'user/:id',
+      builder: (_, s) => UserPageScreen(userId: s.pathParameters['id']!, initial: s.extra is UserSummary ? s.extra as UserSummary : null),
+      routes: [
+        GoRoute(
+          path: 'follows',
+          builder: (_, s) => FollowsScreen(userId: s.pathParameters['id']!, initialFollowers: s.uri.queryParameters['tab'] == 'followers', user: s.extra is UserSummary ? s.extra as UserSummary : null),
+        ),
       ],
     );
 
@@ -78,26 +96,38 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellRoute.indexedStack(
             builder: (context, state, navigationShell) => RasqShell(navigationShell: navigationShell),
             branches: [
-              StatefulShellBranch(routes: [GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen(), routes: [_postRoute])]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen(), routes: [_postRoute, _userRoute])]),
               StatefulShellBranch(routes: [
                 GoRoute(path: Routes.search, builder: (_, _) => const SearchScreen(), routes: [
                   GoRoute(path: 'trend/:tag', builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!)),
                   _postRoute,
+                  _userRoute,
                 ]),
               ]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const VcScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen(), routes: [_postRoute])]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const VcScreen(), routes: [_postRoute, _userRoute])]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen(), routes: [_postRoute, _userRoute, GoRoute(path: 'requests', builder: (_, _) => const FollowRequestsScreen())])]),
               StatefulShellBranch(routes: [
                 GoRoute(path: Routes.dm, builder: (_, _) => const DmScreen(), routes: [
                   GoRoute(path: 'room/:peerId', builder: (_, s) => DmRoomScreen(peerId: s.pathParameters['peerId']!, room: s.extra is DmRoom ? s.extra as DmRoom : null)),
                   _postRoute,
+                  _userRoute,
                 ]),
               ]),
             ],
           ),
           // Full-screen pages above the tab shell (ページヘッダー: 戻る＋タイトル＋…),
           // still below the OverlayHost.
-          GoRoute(path: Routes.settings, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const SettingsScreen()),
+          GoRoute(path: Routes.settings, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const SettingsScreen(), routes: [
+            GoRoute(path: 'mute-block', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MuteBlockScreen()),
+          ]),
+          GoRoute(
+            path: Routes.viewer,
+            parentNavigatorKey: _appNavigatorKey,
+            pageBuilder: (_, s) {
+              final x = s.extra as ({Post post, int index});
+              return CustomTransitionPage(child: MediaViewerScreen(post: x.post, initialIndex: x.index), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child));
+            },
+          ),
           GoRoute(path: Routes.catalog, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const CatalogScreen()),
           GoRoute(
             path: Routes.login,

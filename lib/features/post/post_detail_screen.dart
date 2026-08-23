@@ -54,6 +54,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // 既読: 詳細を開いた投稿は既読扱い → TL では省略表示になる.
+    final key = initial?.key;
+    if (key != null) WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(readStateProvider.notifier).markRead(key));
+  }
+
+  @override
   Widget build(BuildContext context) {
     final me = ref.watch(currentUserProvider);
     final session = ref.watch(currentSnsSessionProvider);

@@ -258,6 +258,40 @@ void main() {
       expect(p.isDirect, isTrue);
     });
 
+    test('grouped notifications, user posts filters, follow requests, mute/block lists', () async {
+      late Map<String, Object?> seenNotes;
+      final c = client({
+        'i/notifications-grouped': (_) => [
+              {'id': 'g1', 'type': 'reaction:grouped', 'createdAt': '2026-08-22T00:00:00Z', 'note': note('n1'), 'reactions': [
+                    {'user': user('a'), 'reaction': '👍'},
+                    {'user': user('b'), 'reaction': '🎉'},
+                  ]},
+              {'id': 'g2', 'type': 'renote:grouped', 'createdAt': '2026-08-22T00:00:00Z', 'note': note('n2'), 'users': [user('c'), user('d')]},
+            ],
+        'users/notes': (b) {
+          seenNotes = b;
+          return [note('q1', renote: note('x')), note('p1')];
+        },
+        'following/requests/list': (_) => [{'id': 'fr1', 'follower': user('e'), 'followee': user('me')}],
+        'mute/list': (_) => [{'id': 'm1', 'mutee': user('f')}],
+        'blocking/list': (_) => [{'id': 'b1', 'blockee': user('g')}],
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+      final n = await s.notifications();
+      expect(n.items[0].kind, NotificationKind.reaction);
+      expect(n.items[0].actors.length, 2);
+      expect(n.items[0].reactionsByActor['b'], '🎉');
+      expect(n.items[1].actors.length, 2);
+      final media = await s.userPosts('u', filter: UserPostsFilter.media);
+      expect(seenNotes['withFiles'], isTrue);
+      expect(media.items.length, 2);
+      final quotes = await s.userPosts('u', filter: UserPostsFilter.quotes);
+      expect(quotes.items.single.id, 'q1');
+      expect((await s.followRequests()).single.user.id, 'e');
+      expect((await s.mutedUsers()).items.single.id, 'f');
+      expect((await s.blockedUsers()).items.single.id, 'g');
+    });
+
     test('http error → SnsApiException with HTTP code', () async {
       final c = MockClient((_) async => http.Response(jsonEncode({'error': {'message': 'Unauthorized', 'code': 'CREDENTIAL_REQUIRED'}}), 401));
       final api = MisskeyApi('misskey.test', client: c);

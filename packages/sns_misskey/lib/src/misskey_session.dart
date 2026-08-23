@@ -237,7 +237,13 @@ class MisskeySession extends SnsSessionBase {
 
   @override
   Future<Page<NotificationItem>> notifications({String? cursor, int limit = 20}) async {
-    final list = await api.callList('i/notifications', {'limit': limit, 'untilId': ?cursor});
+    List<Map<String, Object?>> list;
+    try {
+      list = await api.callList('i/notifications-grouped', {'limit': limit, 'untilId': ?cursor});
+    } on SnsApiException catch (e) {
+      if (e.code.code != '404') rethrow;
+      list = await api.callList('i/notifications', {'limit': limit, 'untilId': ?cursor});
+    }
     return Page(
       items: [for (final n in list) MisskeyMappers.notification(n, viewer: account, host: host)],
       nextCursor: list.isEmpty ? null : list.last['id'] as String?,
@@ -262,8 +268,45 @@ class MisskeySession extends SnsSessionBase {
   }
 
   @override
-  Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20}) async =>
-      _page(await api.callList('users/notes', {'userId': id, 'limit': limit, 'untilId': ?cursor}));
+  Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20, UserPostsFilter filter = UserPostsFilter.posts}) async {
+    final body = <String, Object?>{
+      'userId': id,
+      'limit': limit,
+      'untilId': ?cursor,
+      'withReplies': filter == UserPostsFilter.withReplies,
+      'withRenotes': filter != UserPostsFilter.media,
+      if (filter == UserPostsFilter.media) 'withFiles': true,
+    };
+    final list = await api.callList('users/notes', body);
+    if (filter == UserPostsFilter.quotes) {
+      return _page([for (final n in list) if (n['renote'] is Map && (n['text'] as String?)?.isNotEmpty == true) n]);
+    }
+    return _page(list);
+  }
+
+  @override
+  Future<List<FollowRequest>> followRequests() async =>
+      [for (final r in await api.callList('following/requests/list', {'limit': 50})) MisskeyMappers.followRequest(r, account: account, host: host)];
+  @override
+  Future<void> acceptFollowRequest(String userId) => api.call('following/requests/accept', {'userId': userId});
+  @override
+  Future<void> rejectFollowRequest(String userId) => api.call('following/requests/reject', {'userId': userId});
+
+  @override
+  Future<Page<UserSummary>> mutedUsers({String? cursor, int limit = 30}) => _relationList('mute/list', 'mutee', cursor, limit);
+  @override
+  Future<Page<UserSummary>> blockedUsers({String? cursor, int limit = 30}) => _relationList('blocking/list', 'blockee', cursor, limit);
+
+  Future<Page<UserSummary>> _relationList(String path, String field, String? cursor, int limit) async {
+    final list = await api.callList(path, {'limit': limit, 'untilId': ?cursor});
+    return Page(
+      items: [for (final e in list) if (e[field] is Map) MisskeyMappers.user((e[field] as Map).cast<String, Object?>(), account: account, host: host)],
+      nextCursor: list.isEmpty ? null : list.last['id'] as String?,
+    );
+  }
+
+  @override
+  Future<void> reportUser(String userId, String comment) => api.call('users/report-abuse', {'userId': userId, 'comment': comment});
 
   @override
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) => _follows('users/followers', 'follower', id, cursor, limit);

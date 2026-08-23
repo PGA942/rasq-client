@@ -51,7 +51,8 @@ class RasqTabs extends StatelessWidget implements PreferredSizeWidget {
   late final List<GlobalKey> _keys = [for (var i = 0; i < items.length; i++) GlobalKey(debugLabel: 'tab$i')];
 
   @override
-  Size get preferredSize => const Size.fromHeight(RasqSizes.minTap);
+  /// Tab height + TabBar indicator weight (2).
+  Size get preferredSize => const Size.fromHeight(RasqSizes.minTap + 2);
 
   @override
   Widget build(BuildContext context) {

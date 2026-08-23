@@ -7,6 +7,8 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_client/features/media/media_viewer_screen.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
@@ -150,6 +152,56 @@ void main() {
     await tester.tap(find.byIcon(Icons.chevron_right).first);
     await tester.pumpAndSettle();
     expect(find.textContaining('都市伝説'), findsOneWidget);
+  });
+
+  testWidgets('user page, follows, notification prefs, mute/block, media viewer', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+
+    // Author name → user page (UserTileLarge) → フォロー中 count → follows screen.
+    await tester.tap(find.text('ダグラス').first);
+    await tester.pumpAndSettle();
+    expect(find.text('56 ノート'), findsOneWidget);
+    expect(find.text('フォロー中'), findsWidgets);
+    await tester.tap(find.text('34'));
+    await tester.pumpAndSettle();
+    expect(find.text('フォロワー'), findsWidgets);
+    await tester.tap(find.byTooltip('戻る').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('戻る').first);
+    await tester.pumpAndSettle();
+
+    // Media tile → full-screen viewer (black scaffold with action bar).
+    await tester.dragUntilVisible(find.byType(RasqMediaGrid).first, find.byType(ListView).first, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('表示する').first); // reveal sensitive tile
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(RasqMediaGrid).first);
+    await tester.pumpAndSettle();
+    expect(find.byType(MediaViewerScreen), findsOneWidget);
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+
+    // Notifications → prefs sheet.
+    await tester.tap(find.byTooltip('通知'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('通知プロファイル設定'));
+    await tester.pumpAndSettle();
+    expect(find.text('リアクションを通知する'), findsOneWidget);
+    await tester.tap(find.text('閉じる'));
+    await tester.pumpAndSettle();
+
+    // Sidebar → settings → ミュート/ブロック.
+    await tester.tap(find.bySemanticsLabel('サイドバーを開く'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('全ての設定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ミュート/ブロック'));
+    await tester.pumpAndSettle();
+    expect(find.text('ブロック中'), findsOneWidget);
   });
 
   testWidgets('tablet width switches to the 2-pane layout', (tester) async {

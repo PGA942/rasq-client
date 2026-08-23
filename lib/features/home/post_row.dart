@@ -10,6 +10,7 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../compose/emoji_picker_fow.dart';
+import '../post/post_menu.dart';
 
 /// Interim post row (M1). The L2 composite `PostTile` with slot model
 /// (avatar/content/media/action/完全置き換え) replaces this in M2; the action
@@ -18,13 +19,16 @@ import '../compose/emoji_picker_fow.dart';
 /// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
 typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<String, Object?> args});
 
-class PostRow extends ConsumerWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap});
+class PostRow extends ConsumerStatefulWidget {
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false});
 
   final Post post;
   final List<ActionDescriptor> actions;
   final PostActionHandler onAction;
   final VoidCallback? onTap;
+
+  /// Embedded size (通知の投稿タイル系など): smaller avatar, no outer padding.
+  final bool dense;
 
   static const Map<String, IconData> _icons = {
     'subdirectory_arrow_left': Icons.subdirectory_arrow_left,
@@ -44,21 +48,40 @@ class PostRow extends ConsumerWidget {
   static IconData iconFor(String? name, IconData fallback) => _icons[name] ?? fallback;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PostRow> createState() => _PostRowState();
+}
+
+class _PostRowState extends ConsumerState<PostRow> {
+  bool _expanded = false;
+
+  Post get post => widget.post;
+  List<ActionDescriptor> get actions => widget.actions;
+  PostActionHandler get onAction => widget.onAction;
+  VoidCallback? get onTap => widget.onTap;
+
+  static const _collapseLines = 3;
+
+  @override
+  Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     final emojis = ref.watch(emojiCacheProvider);
+    // 省略表示: 既読かつ長文の投稿は先頭数行 + 「展開する」(タップ領域は全体).
+    final isRead = ref.watch(isReadProvider(post.key));
+    final lineCount = '\n'.allMatches(post.body).length + 1;
+    final collapsible = isRead && !_expanded && (lineCount > _collapseLines || post.body.length > 140);
+    final avatarSize = widget.dense ? RasqSizes.avatarMd : RasqSizes.avatarLg;
     final spans = InlineSpans.parse(post.body, emojis: emojis, onLink: (u) => launchUrl(u, mode: LaunchMode.externalApplication), onHashtag: (t) => context.pushTrend(t));
     final nameSpans = InlineSpans.parse(post.author.displayName, emojis: emojis);
 
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.sm, RasqSpacing.xs),
+        padding: widget.dense ? const EdgeInsets.symmetric(vertical: RasqSpacing.xs) : const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.sm, RasqSpacing.xs),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (post.repostedBy != null)
             Padding(
-              padding: const EdgeInsets.only(left: RasqSizes.avatarLg + RasqSpacing.md, bottom: 4),
+              padding: EdgeInsets.only(left: avatarSize + RasqSpacing.md, bottom: 4),
               child: Row(children: [
                 Icon(Icons.repeat, size: 14, color: scheme.onSurfaceVariant),
                 const SizedBox(width: 4),
@@ -66,13 +89,15 @@ class PostRow extends ConsumerWidget {
               ]),
             ),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            RasqAvatar(imageUrl: post.author.avatarUrl, size: RasqSizes.avatarLg, presence: post.author.presence, fallbackLabel: post.author.displayName),
+            RasqAvatar(imageUrl: post.author.avatarUrl, size: avatarSize, presence: post.author.presence, fallbackLabel: post.author.displayName, onTap: () => context.pushUser(post.author)),
             const SizedBox(width: RasqSpacing.md),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    child: InkWell(
+                      onTap: () => context.pushUser(post.author),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       RasqRichText(nameSpans, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
                       Row(children: [
                         Flexible(child: Text('@${post.author.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
@@ -80,15 +105,35 @@ class PostRow extends ConsumerWidget {
                         Flexible(child: RasqSnsPill(account: post.author.account)),
                       ]),
                     ]),
+                    ),
                   ),
                   RasqTimestamp(post.createdAt),
-                  RasqIconButton(icon: Icons.more_horiz, size: 20, onPressed: () {}, tooltip: 'メニュー'),
+                  Builder(
+                    builder: (ctx) => RasqIconButton(
+                      icon: Icons.more_horiz,
+                      size: 20,
+                      tooltip: 'メニュー',
+                      onPressed: () {
+                        final box = ctx.findRenderObject() as RenderBox;
+                        showPostMenu(context, ref, post, box.localToGlobal(Offset.zero) & box.size);
+                      },
+                    ),
+                  ),
                 ]),
                 const SizedBox(height: RasqSpacing.xs),
-                if (post.contentWarning != null && post.contentWarning!.isNotEmpty)
-                  _Cw(cw: post.contentWarning!, child: _Body(spans: spans, post: post))
+                if (collapsible)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(() => _expanded = true),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      RasqRichText(spans, style: RasqTypography.body, maxLines: _collapseLines, overflow: TextOverflow.ellipsis),
+                      Text('展開する', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+                    ]),
+                  )
+                else if (post.contentWarning != null && post.contentWarning!.isNotEmpty)
+                  _Cw(cw: post.contentWarning!, child: _Body(spans: spans, post: post, onMediaTap: (i) => context.openViewer(post, i)))
                 else
-                  _Body(spans: spans, post: post),
+                  _Body(spans: spans, post: post, onMediaTap: (i) => context.openViewer(post, i)),
                 const SizedBox(height: RasqSpacing.xs),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   for (final a in actions)
@@ -114,13 +159,14 @@ class PostRow extends ConsumerWidget {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.spans, required this.post});
+  const _Body({required this.spans, required this.post, this.onMediaTap});
   final List<RasqSpan> spans;
   final Post post;
+  final ValueChanged<int>? onMediaTap;
   @override
   Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (post.body.isNotEmpty) RasqRichText(spans, style: RasqTypography.body),
-        if (post.media.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: post.media)],
+        if (post.media.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: post.media, onTapTile: onMediaTap)],
         if (post.poll != null) ...[const SizedBox(height: RasqSpacing.sm), _PollView(poll: post.poll!)],
         if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _QuoteView(post: post.quote!)],
       ]);

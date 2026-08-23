@@ -37,8 +37,16 @@ abstract final class MisskeyMappers {
       isLocked: j['isLocked'] as bool? ?? false,
       isBot: j['isBot'] as bool? ?? false,
       isSuspended: j['isSuspended'] as bool? ?? false,
+      pinnedPosts: [for (final n in (j['pinnedNotes'] as List? ?? const [])) if (n is Map) note(n.cast<String, Object?>(), viewer: account, host: host)],
+      profileUrl: Uri.https(s.account.instance, '/@${s.handle}'),
     );
   }
+
+  static FollowRequest followRequest(Map<String, Object?> j, {required AccountId account, required String host}) => FollowRequest(
+        id: j['id'] as String,
+        user: user((j['follower'] as Map).cast<String, Object?>(), account: account, host: host),
+        createdAt: _date(j['createdAt']),
+      );
 
   static FollowState relation(Map<String, Object?> j) => FollowState(
         following: j['isFollowing'] as bool? ?? false,
@@ -139,6 +147,7 @@ abstract final class MisskeyMappers {
           if (e.value is String) ':${e.key}:': Uri.parse(e.value as String),
       },
       myReaction: j['myReaction'] as String?,
+      url: _uri(j['url']) ?? _uri(j['uri']) ?? Uri.https(host, '/notes/${j['id']}'),
     );
   }
 
@@ -191,7 +200,8 @@ abstract final class MisskeyMappers {
       );
 
   static NotificationItem notification(Map<String, Object?> j, {required AccountId viewer, required String host}) {
-    final type = j['type'] as String? ?? 'other';
+    final rawType = j['type'] as String? ?? 'other';
+    final type = rawType.replaceFirst(':grouped', '');
     final kind = switch (type) {
       'reaction' => NotificationKind.reaction,
       'renote' => NotificationKind.repost,
@@ -205,9 +215,17 @@ abstract final class MisskeyMappers {
       _ => NotificationKind.other,
     };
     final actors = <UserSummary>[];
+    final byActor = <String, String>{};
     if (j['user'] is Map) actors.add(user((j['user'] as Map).cast<String, Object?>(), account: viewer, host: host));
     for (final u in (j['users'] as List? ?? const [])) {
       if (u is Map) actors.add(user(u.cast<String, Object?>(), account: viewer, host: host));
+    }
+    for (final r in (j['reactions'] as List? ?? const [])) {
+      if (r is Map && r['user'] is Map) {
+        final u = user((r['user'] as Map).cast<String, Object?>(), account: viewer, host: host);
+        actors.add(u);
+        if (r['reaction'] is String) byActor[u.id] = r['reaction'] as String;
+      }
     }
     return NotificationItem(
       id: j['id'] as String,
@@ -216,9 +234,10 @@ abstract final class MisskeyMappers {
       createdAt: _date(j['createdAt']) ?? DateTime.now(),
       actors: actors,
       post: j['note'] is Map ? note((j['note'] as Map).cast<String, Object?>(), viewer: viewer, host: host) : null,
-      reaction: j['reaction'] as String?,
+      reaction: j['reaction'] as String? ?? (byActor.isNotEmpty ? byActor.values.first : null),
       read: j['isRead'] as bool? ?? false,
-      raw: {'type': type},
+      raw: {'type': rawType},
+      reactionsByActor: byActor,
     );
   }
 

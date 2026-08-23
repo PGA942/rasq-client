@@ -42,7 +42,15 @@ abstract class SnsSession {
 
   Future<UserProfile> user(String id);
   Future<UserProfile?> userByHandle(String handle, {String? host});
-  Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20});
+  Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20, UserPostsFilter filter = UserPostsFilter.posts});
+
+  // --- フォロー申請 / ミュート・ブロック一覧 ---
+  Future<List<FollowRequest>> followRequests();
+  Future<void> acceptFollowRequest(String userId);
+  Future<void> rejectFollowRequest(String userId);
+  Future<Page<UserSummary>> mutedUsers({String? cursor, int limit = 30});
+  Future<Page<UserSummary>> blockedUsers({String? cursor, int limit = 30});
+  Future<void> reportUser(String userId, String comment);
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20});
   Future<Page<UserSummary>> following(String id, {String? cursor, int limit = 20});
   Future<FollowState> relationship(String userId);
@@ -78,6 +86,9 @@ abstract class SnsSession {
 
   Future<void> close();
 }
+
+/// Filter for [SnsSession.userPosts] (ユーザーページのタブ).
+enum UserPostsFilter { posts, withReplies, media, quotes }
 
 /// Well-known dynamic timeline ids understood by adapters via [SnsSession.timeline]:
 /// `tag:{tag}` (トレンドTL), `dm:{peerUserId}` (DMルーム), `featured` (Today).
@@ -125,7 +136,19 @@ abstract class SnsSessionBase implements SnsSession {
   @override
   Future<UserProfile?> userByHandle(String handle, {String? host}) => _unsupported('userByHandle');
   @override
-  Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20}) => _unsupported('userPosts');
+  Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20, UserPostsFilter filter = UserPostsFilter.posts}) => _unsupported('userPosts');
+  @override
+  Future<List<FollowRequest>> followRequests() => _unsupported('followRequests');
+  @override
+  Future<void> acceptFollowRequest(String userId) => _unsupported('acceptFollowRequest');
+  @override
+  Future<void> rejectFollowRequest(String userId) => _unsupported('rejectFollowRequest');
+  @override
+  Future<Page<UserSummary>> mutedUsers({String? cursor, int limit = 30}) => _unsupported('mutedUsers');
+  @override
+  Future<Page<UserSummary>> blockedUsers({String? cursor, int limit = 30}) => _unsupported('blockedUsers');
+  @override
+  Future<void> reportUser(String userId, String comment) => _unsupported('reportUser');
   @override
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) => _unsupported('followers');
   @override

@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../app/navigation.dart';
 import '../../shell/headers.dart';
 
 /// 設定(ホーム) — 全ての設定 (ワイヤーフレーム P7).
@@ -24,6 +25,7 @@ class SettingsScreen extends ConsumerWidget {
         RasqListTile(title: 'プラグインの構成', onTap: () {}),
         RasqListTile(title: 'BlueSky Plugin', trailing: const Icon(Icons.verified, color: Color(0xFF34C759), size: 18), onTap: () {}),
         RasqListTile(title: 'Misskey Plugin', trailing: const Icon(Icons.verified, color: Color(0xFF1E88E5), size: 18), onTap: () {}),
+        RasqListTile(title: 'ミュート/ブロック', onTap: () => context.pushMuteBlock()),
         RasqValueListTile(
           title: 'アプリの外観',
           value: switch (mode) { ThemeModeSetting.system => 'システム', ThemeModeSetting.light => 'ライト', ThemeModeSetting.dark => 'ダーク' },

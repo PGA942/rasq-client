@@ -24,6 +24,7 @@ export 'src/components/list_tiles.dart';
 export 'src/components/input.dart';
 export 'src/components/sns_pill.dart';
 export 'src/components/user_row.dart';
+export 'src/components/user_tile_large.dart';
 export 'src/components/sort.dart';
 
 export 'src/layout/tabs.dart';
