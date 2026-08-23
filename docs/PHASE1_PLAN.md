@@ -125,6 +125,9 @@
 - ログイン(マルチPDS/サーバー検索/ユーザー名+パスワード/新規登録リンク)、利用規約(プラグインごと)、トークン保管、マルチアカウント
 - Store へのデータ流入(SNSプラグイン→Store→Props)
 
+**M1 進捗(2026-08-22)**: 実装済み — `rasq_plugin_api`(SnsPlugin/SnsSession/ActionDescriptor/ActionRef/PluginManifest/AuthFlow/AccountSession/PluginRegistry/TimelineKind+DynamicTimelines)、`sns_misskey`(MiAuth、TL 4種+`tag:`/`dm:`/`featured`、ノート/通知/ユーザー/関係/検索/絵文字、`hashtags/trend`、DMルーム=限定公開投稿を相手単位に束ねる)、セッション永続化(secure storage; macOS は従来型Keychain)、ログイン画面(Misskeyのみ有効)、規約シート、ホームTL(実データ・無限スクロール・楽観更新)、通知一覧、投稿詳細(スレッド)、トレンドホーム(`hashtags/trend`+Today=`notes/featured`)、トレンドTL(`notes/search-by-tag`、フォロー中の反応は空欄)、DMホーム/DMルーム。macOS 実機で MiAuth→ホームTL まで確認済み。
+**M1 残件**: 投稿コンポーザー(次段階: FOW サンプル)、DM送信、Bluesky/Mastodon アダプタ(トークン発行サーバー待ち)、通知4タイル化、ディープリンク callback。
+
 ### M2 コア画面
 
 - ホームTL(フォロー中/おすすめ)、`PostTile` 3種(通常/埋め込み/スレッドまとめ)+`CollapsedPost`、投票、引用、リンクバナー/VC告知カード

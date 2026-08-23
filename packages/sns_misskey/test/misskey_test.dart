@@ -147,6 +147,54 @@ void main() {
       await expectLater(denied.call('meta'), throwsA(isA<SnsApiException>().having((e) => e.code.message, 'message', contains('サンドボックス'))));
     });
 
+    test('tag / featured timelines and trending tags', () async {
+      late String seenTag;
+      final c = client({
+        'notes/search-by-tag': (b) {
+          seenTag = b['tag'] as String;
+          return [note('t1')];
+        },
+        'notes/featured': (_) => [note('f1'), note('f2')],
+        'hashtags/trend': (_) => [
+              {'tag': '打上会', 'usersCount': 117, 'chart': [1, 2, 3]},
+            ],
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+      final tag = await s.timeline(DynamicTimelines.tag('打上会'));
+      expect(seenTag, '打上会');
+      expect(tag.items.single.id, 't1');
+      final featured = await s.timeline(DynamicTimelines.featured);
+      expect(featured.items.length, 2);
+      expect(featured.nextCursor, isNull);
+      final trends = await s.trendingTags();
+      expect(trends.single.tag, '打上会');
+      expect(trends.single.usersCount, 117);
+    });
+
+    test('DM rooms group direct notes per peer (received + sent)', () async {
+      Map<String, Object?> direct(String id, String authorId, List<String> to, String at) => {
+            ...note(id),
+            'userId': authorId,
+            'user': user(authorId),
+            'visibility': 'specified',
+            'visibleUserIds': to,
+            'createdAt': at,
+          };
+      final c = client({
+        'i': (_) => {'id': 'me', 'username': 'me'},
+        'notes/mentions': (_) => [direct('r1', 'alice', ['me'], '2026-08-22T10:00:00Z'), direct('r2', 'bob', ['me'], '2026-08-22T09:00:00Z')],
+        'users/notes': (_) => [direct('s1', 'me', ['alice'], '2026-08-22T11:00:00Z'), {...note('pub'), 'userId': 'me', 'visibility': 'public'}],
+        'users/show': (b) => [for (final id in (b['userIds'] as List)) user(id as String)],
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+      final rooms = await s.dmRooms();
+      expect(rooms.map((r) => r.peer.id).toSet(), {'alice', 'bob'});
+      expect(rooms.firstWhere((r) => r.peer.id == 'alice').lastPost!.id, 's1'); // newest (sent) wins
+      final room = await s.timeline(DynamicTimelines.dm('alice'));
+      expect(room.items.map((p) => p.id).toList(), ['s1', 'r1']);
+      expect(room.items.first.isDirect, isTrue);
+    });
+
     test('http error → SnsApiException with HTTP code', () async {
       final c = MockClient((_) async => http.Response(jsonEncode({'error': {'message': 'Unauthorized', 'code': 'CREDENTIAL_REQUIRED'}}), 401));
       final api = MisskeyApi('misskey.test', client: c);

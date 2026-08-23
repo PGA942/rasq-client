@@ -48,6 +48,8 @@ class Post {
     this.repostedBy,
     this.linkUrl,
     this.counts = const {},
+    this.visibility,
+    this.directToIds = const [],
   });
 
   final String id;
@@ -67,6 +69,14 @@ class Post {
 
   /// Action counts keyed by action id (e.g. `reply`, `repost`, `like`).
   final Map<String, int> counts;
+
+  /// Plugin visibility string (`public` / `home` / `followers` / `specified` …).
+  final String? visibility;
+
+  /// Recipient user ids for direct posts (Misskey `visibleUserIds`).
+  final List<String> directToIds;
+
+  bool get isDirect => visibility == 'specified' || visibility == 'direct';
 
   /// Store key: `accountKey:postId`.
   String get key => '${account.key}:$id';

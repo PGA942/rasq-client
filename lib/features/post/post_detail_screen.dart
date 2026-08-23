@@ -1,0 +1,158 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rasq_store/rasq_store.dart';
+
+import '../../app/navigation.dart';
+import '../../app/providers.dart';
+import '../../shell/headers.dart';
+import '../home/post_row.dart';
+import '../home/timeline_providers.dart';
+
+/// スレッド展開画面: ancestors → 対象投稿 → 「∨ 返信 / リアクションを表示 >」→
+/// replies (thread line) → さらに表示 → 返信バー(コンポーザーは次段階).
+final threadProvider = FutureProvider.autoDispose.family<Thread, String>((ref, id) async {
+  final s = ref.watch(currentSnsSessionProvider);
+  if (s == null) throw StateError('not logged in');
+  final t = await s.thread(id);
+  // Seed action states for every post in the thread so buttons show real counts.
+  final all = [...t.ancestors, t.post, ...t.descendants];
+  final states = await s.actionStates(all);
+  final store = ref.read(actionStateProvider.notifier);
+  store.applyAll({
+    for (final p in all)
+      for (final e in (states[p.id] ?? const <String, ActionResult>{}).entries) (postKey: p.key, actionId: e.key): ActionState(done: e.value.done, count: e.value.count),
+  });
+  return t;
+});
+
+class PostDetailScreen extends ConsumerWidget {
+  const PostDetailScreen({super.key, required this.postId, this.initial});
+  final String postId;
+
+  /// Post passed from the list for instant first paint.
+  final Post? initial;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(currentUserProvider);
+    final session = ref.watch(currentSnsSessionProvider);
+    final thread = ref.watch(threadProvider(postId));
+    final actions = session?.actions ?? const <ActionDescriptor>[];
+    final scheme = Theme.of(context).colorScheme;
+
+    Future<void> perform(Post p, ActionDescriptor a) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a);
+
+    return Scaffold(
+      appBar: RasqPageHeader(title: '投稿', leadingAvatar: me, actions: [RasqIconButton(icon: Icons.bookmark_border, onPressed: () {}, tooltip: 'ブックマーク')], onMore: () {}),
+      body: thread.when(
+        loading: () => initial == null ? const RasqLoading() : _ThreadBody(post: initial!, ancestors: const [], descendants: const [], actions: actions, onAction: perform, loading: true),
+        error: (e, _) {
+          final code = e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e');
+          if (code.code == '404') {
+            return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('投稿はありません', style: RasqTypography.title)));
+          }
+          return RasqErrorView(code: code, onRetry: () => ref.invalidate(threadProvider(postId)), retryLabel: '再読み込み');
+        },
+        data: (t) => _ThreadBody(post: t.post, ancestors: t.ancestors, descendants: t.descendants, actions: actions, onAction: perform),
+      ),
+      bottomNavigationBar: _ReplyBarPlaceholder(handle: initial?.author.handle ?? thread.value?.post.author.handle, instance: initial?.author.account.instance ?? thread.value?.post.author.account.instance, color: scheme.surface),
+    );
+  }
+}
+
+class _ThreadBody extends StatelessWidget {
+  const _ThreadBody({required this.post, required this.ancestors, required this.descendants, required this.actions, required this.onAction, this.loading = false});
+  final Post post;
+  final List<Post> ancestors;
+  final List<Post> descendants;
+  final List<ActionDescriptor> actions;
+  final Future<void> Function(Post, ActionDescriptor) onAction;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
+      for (final a in ancestors) ...[
+        PostRow(post: a, actions: actions, onAction: (d) => onAction(a, d), onTap: () => context.pushPost(a)),
+        const Divider(),
+      ],
+      PostRow(post: post, actions: actions, onAction: (d) => onAction(post, d)),
+      Container(
+        decoration: BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: scheme.onSurface, width: 1))),
+        padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+        height: RasqSizes.minTap,
+        child: Row(children: [
+          const Icon(Icons.keyboard_arrow_down, size: 18),
+          const SizedBox(width: 4),
+          const Text('返信', style: RasqTypography.tab),
+          const Spacer(),
+          TextButton(onPressed: () {}, child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('リアクションを表示'), Icon(Icons.chevron_right, size: 18)])),
+        ]),
+      ),
+      if (loading) const RasqLoading(),
+      for (final d in descendants) ...[
+        _Threaded(child: PostRow(post: d, actions: actions, onAction: (x) => onAction(d, x), onTap: () => context.pushPost(d))),
+        const Divider(),
+      ],
+      if (descendants.isNotEmpty) Center(child: TextButton(onPressed: () {}, child: const Text('さらに表示'))),
+    ]);
+  }
+}
+
+/// Draws the vertical thread line at the avatar column.
+class _Threaded extends StatelessWidget {
+  const _Threaded({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Stack(children: [
+        Positioned(left: RasqSpacing.page + RasqSizes.avatarLg / 2 - 1, top: 0, bottom: 0, child: Container(width: 2, color: Theme.of(context).colorScheme.outlineVariant)),
+        child,
+      ]);
+}
+
+/// 返信バー(placeholder): 投稿コンポーザーは次段階で FOW として実装。
+class _ReplyBarPlaceholder extends StatelessWidget {
+  const _ReplyBarPlaceholder({required this.handle, required this.instance, required this.color});
+  final String? handle;
+  final String? instance;
+  final Color color;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: color,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.sm),
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm),
+          decoration: BoxDecoration(border: Border.all(color: scheme.onSurface), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: scheme.onSurface, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 6),
+            Row(children: [
+              const Icon(Icons.subdirectory_arrow_left, size: 16),
+              const SizedBox(width: 4),
+              if (handle != null) Text('@$handle', style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).link)),
+              if (instance != null) Text(' $instance', style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).link)),
+            ]),
+            Text('返信..', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+            Divider(color: scheme.outline),
+            Row(children: [
+              for (final i in [Icons.photo_camera_outlined, Icons.image_outlined, Icons.visibility_outlined, Icons.poll_outlined, Icons.emoji_emotions_outlined, Icons.code])
+                Padding(padding: const EdgeInsets.only(right: 10), child: Icon(i, size: 20, color: scheme.onSurfaceVariant)),
+              const Spacer(),
+              Container(width: 22, height: 22, alignment: Alignment.center, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: scheme.primary)), child: Text('0', style: RasqTypography.caption.copyWith(color: scheme.primary))),
+              const SizedBox(width: 8),
+              FilledButton(onPressed: null, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 14)), child: const Text('返信')),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+}

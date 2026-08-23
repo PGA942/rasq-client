@@ -13,3 +13,5 @@ export 'src/notification.dart';
 export 'src/page.dart';
 export 'src/profile.dart';
 export 'src/thread.dart';
+export 'src/trend.dart';
+export 'src/dm.dart';

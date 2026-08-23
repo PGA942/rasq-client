@@ -130,8 +130,16 @@ abstract final class MisskeyMappers {
         'renote': (j['renoteCount'] as num?)?.toInt() ?? 0,
         'reaction': reactionTotal,
       },
+      visibility: j['visibility'] as String?,
+      directToIds: [for (final id in (j['visibleUserIds'] as List? ?? const [])) id.toString()],
     );
   }
+
+  static TrendTag trend(Map<String, Object?> j) => TrendTag(
+        tag: (j['tag'] ?? '').toString(),
+        usersCount: (j['usersCount'] as num?)?.toInt(),
+        chart: [for (final c in (j['chart'] as List? ?? const [])) (c as num).toInt()],
+      );
 
   static NotificationItem notification(Map<String, Object?> j, {required AccountId viewer, required String host}) {
     final type = j['type'] as String? ?? 'other';

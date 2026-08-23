@@ -39,7 +39,22 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<UserSummary> me() async => UserSummary(id: 'me', account: account, displayName: 'テスター');
   @override
-  Future<Page<Post>> timeline(TimelineKind kind, {String? cursor, int limit = 20}) async => Page(items: cursor == null ? _posts : const []);
+  Future<Page<Post>> timeline(TimelineKind kind, {String? cursor, int limit = 20}) async {
+    if (cursor != null) return Page.empty();
+    if (kind.id.startsWith('tag:')) return Page(items: _posts.take(1).toList());
+    if (kind.id.startsWith('dm:')) return Page(items: [_posts.last]);
+    if (kind == DynamicTimelines.featured) return Page(items: _posts.take(2).toList());
+    return Page(items: _posts);
+  }
+  @override
+  Future<Thread> thread(String id) async {
+    final p = _posts.firstWhere((e) => e.id == id);
+    return Thread(post: p, descendants: _posts.where((e) => e.id != id).take(1).toList());
+  }
+  @override
+  Future<List<TrendTag>> trendingTags() async => const [TrendTag(tag: '打上会', usersCount: 117, chart: [1, 3, 2])];
+  @override
+  Future<List<DmRoom>> dmRooms() async => [DmRoom(id: _posts.last.author.id, peer: _posts.last.author, lastPost: _posts.last)];
   @override
   Future<ActionResult> performAction(String actionId, String postId, {Map<String, Object?> args = const {}}) async {
     performed.add('$actionId:$postId:${args['undo']}');

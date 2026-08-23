@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
@@ -130,7 +131,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                 return const SizedBox(height: 80);
               }
               final p = tl.posts[i];
-              return PostRow(post: p, actions: actions, onAction: (a) => notifier.perform(p, a));
+              return PostRow(post: p, actions: actions, onAction: (a) => notifier.perform(p, a), onTap: () => context.pushPost(p));
             },
           ),
         );

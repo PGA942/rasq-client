@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rasq_models/rasq_models.dart';
 
 import '../features/catalog/catalog_screen.dart';
+import '../features/dm/dm_room_screen.dart';
 import '../features/dm/dm_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/login/login_screen.dart';
 import '../features/login/misskey_login_screen.dart';
 import '../features/notifications/notifications_screen.dart';
+import '../features/post/post_detail_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/trend/trend_screen.dart';
 import '../features/vc/vc_screen.dart';
 import '../shell/app_overlay_root.dart';
 import '../shell/rasq_shell.dart';
@@ -32,6 +36,12 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
 /// Navigator under [AppOverlayRoot]; full-screen pages push here.
 final _appNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'app');
+
+/// `post/:id` — thread screen, nested under each tab so the global nav stays.
+GoRoute get _postRoute => GoRoute(
+      path: 'post/:id',
+      builder: (_, s) => PostDetailScreen(postId: s.pathParameters['id']!, initial: s.extra is Post ? s.extra as Post : null),
+    );
 
 /// Bridges Riverpod state → GoRouter.refreshListenable.
 class _RouterRefresh extends ChangeNotifier {
@@ -64,11 +74,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellRoute.indexedStack(
             builder: (context, state, navigationShell) => RasqShell(navigationShell: navigationShell),
             branches: [
-              StatefulShellBranch(routes: [GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.search, builder: (_, _) => const SearchScreen())]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen(), routes: [_postRoute])]),
+              StatefulShellBranch(routes: [
+                GoRoute(path: Routes.search, builder: (_, _) => const SearchScreen(), routes: [
+                  GoRoute(path: 'trend/:tag', builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!)),
+                  _postRoute,
+                ]),
+              ]),
               StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const VcScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.dm, builder: (_, _) => const DmScreen())]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen(), routes: [_postRoute])]),
+              StatefulShellBranch(routes: [
+                GoRoute(path: Routes.dm, builder: (_, _) => const DmScreen(), routes: [
+                  GoRoute(path: 'room/:peerId', builder: (_, s) => DmRoomScreen(peerId: s.pathParameters['peerId']!, room: s.extra is DmRoom ? s.extra as DmRoom : null)),
+                  _postRoute,
+                ]),
+              ]),
             ],
           ),
           // Full-screen pages above the tab shell (ページヘッダー: 戻る＋タイトル＋…),

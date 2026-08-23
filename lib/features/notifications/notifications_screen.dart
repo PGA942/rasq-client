@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
@@ -91,7 +92,9 @@ class _Row extends StatelessWidget {
       NotificationKind.pollEnded => (Icons.poll, scheme.primary, '投票が終了しました'),
       _ => (Icons.notifications_none, scheme.onSurfaceVariant, '通知'),
     };
-    return Container(
+    return InkWell(
+      onTap: item.post == null ? null : () => context.pushPost(item.post!),
+      child: Container(
       color: item.read ? null : scheme.primaryContainer.withValues(alpha: 0.25),
       padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, RasqSpacing.md),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -109,6 +112,7 @@ class _Row extends StatelessWidget {
           ]),
         ),
       ]),
+      ),
     );
   }
 }

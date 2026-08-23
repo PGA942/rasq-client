@@ -80,6 +80,42 @@ void main() {
     expect(find.text('全ての設定'), findsNothing);
   });
 
+  testWidgets('post → thread screen, search → trend tag → trend TL, dm → room', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+
+    // Thread: tap a post body.
+    await tester.tap(find.textContaining('Take off'));
+    await tester.pumpAndSettle();
+    expect(find.text('投稿'), findsOneWidget); // page header
+    expect(find.text('返信'), findsWidgets); // 返信 row + reply bar
+    expect(find.text('リアクションを表示'), findsOneWidget);
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+
+    // Search tab → trend words from plugin → trend TL.
+    await tester.tap(find.byTooltip('検索'));
+    await tester.pumpAndSettle();
+    expect(find.text('打上会'), findsOneWidget);
+    expect(find.text('117 Users'), findsOneWidget);
+    await tester.tap(find.text('打上会'));
+    await tester.pumpAndSettle();
+    expect(find.text('フォロー中の反応'), findsOneWidget);
+    expect(find.text('トレンド'), findsWidgets);
+    expect(find.text('ダグラス'), findsOneWidget); // tag timeline row
+
+    // DM tab → room list → room timeline.
+    await tester.tap(find.byTooltip('DM'));
+    await tester.pumpAndSettle();
+    expect(find.text('事故アピール'), findsWidgets);
+    await tester.tap(find.byIcon(Icons.chevron_right).first);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('都市伝説'), findsOneWidget);
+  });
+
   testWidgets('tablet width switches to the 2-pane layout', (tester) async {
     tester.view.physicalSize = const Size(2400, 1600);
     tester.view.devicePixelRatio = 2;

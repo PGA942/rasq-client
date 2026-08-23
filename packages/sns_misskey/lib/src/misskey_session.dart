@@ -50,11 +50,45 @@ class MisskeySession extends SnsSessionBase {
       };
 
   @override
-  Future<Page<Post>> timeline(TimelineKind kind, {String? cursor, int limit = 20}) async {
+  Future<Page<Post>> timeline(TimelineKind kind, {String? cursor, int limit = 20}) async => (await timelineWithStates(kind, cursor: cursor, limit: limit)).$1;
+
+  /// Raw note list for [kind] (handles dynamic ids: `tag:` / `dm:` / `featured`).
+  Future<List<Map<String, Object?>>> _rawTimeline(TimelineKind kind, String? cursor, int limit) async {
+    final id = kind.id;
+    if (id.startsWith('tag:')) {
+      return api.callList('notes/search-by-tag', {'tag': id.substring(4), 'limit': limit, 'untilId': ?cursor});
+    }
+    if (id == 'featured') {
+      return cursor == null ? api.callList('notes/featured', {'limit': limit}) : const [];
+    }
+    if (id.startsWith('dm:')) {
+      if (cursor != null) return const [];
+      final peer = id.substring(3);
+      final all = await _directNotes();
+      final mine = await _myId();
+      return [
+        for (final n in all)
+          if ((n['userId'] == peer) || (n['userId'] == mine && (n['visibleUserIds'] as List? ?? const []).contains(peer))) n,
+      ];
+    }
     final body = <String, Object?>{'limit': limit, 'untilId': ?cursor};
-    if (kind.id.startsWith('list:')) body['listId'] = kind.id.substring(5);
-    final list = await api.callList(_timelinePath(kind), body);
-    return _page(list);
+    if (id.startsWith('list:')) body['listId'] = id.substring(5);
+    return api.callList(_timelinePath(kind), body);
+  }
+
+  String? _cachedMyId;
+  Future<String> _myId() async => _cachedMyId ??= (await api.callMap('i'))['id'] as String;
+
+  /// Received + sent direct notes, newest first (sample: no paging).
+  Future<List<Map<String, Object?>>> _directNotes({int limit = 50}) async {
+    final mine = await _myId();
+    final received = await api.callList('notes/mentions', {'visibility': 'specified', 'limit': limit});
+    final sentAll = await api.callList('users/notes', {'userId': mine, 'limit': limit, 'withReplies': true});
+    final sent = [for (final n in sentAll) if (n['visibility'] == 'specified') n];
+    final seen = <String>{};
+    final all = [for (final n in [...received, ...sent]) if (seen.add(n['id'] as String)) n];
+    all.sort((a, b) => (b['createdAt'] as String? ?? '').compareTo(a['createdAt'] as String? ?? ''));
+    return all;
   }
 
   Page<Post> _page(List<Map<String, Object?>> list) {
@@ -157,10 +191,9 @@ class MisskeySession extends SnsSessionBase {
 
   /// Timeline fetch that also returns per-note action states.
   Future<(Page<Post>, Map<String, Map<String, ActionResult>>)> timelineWithStates(TimelineKind kind, {String? cursor, int limit = 20}) async {
-    final body = <String, Object?>{'limit': limit, 'untilId': ?cursor};
-    if (kind.id.startsWith('list:')) body['listId'] = kind.id.substring(5);
-    final list = await api.callList(_timelinePath(kind), body);
-    final page = _page(list);
+    final list = await _rawTimeline(kind, cursor, limit);
+    var page = _page(list);
+    if (kind.id == 'featured' || kind.id.startsWith('dm:')) page = Page(items: page.items); // not paged
     final states = <String, Map<String, ActionResult>>{};
     for (var i = 0; i < list.length; i++) {
       final raw = list[i];
@@ -243,6 +276,47 @@ class MisskeySession extends SnsSessionBase {
   Future<Page<UserSummary>> searchUsers(String query, {String? cursor, int limit = 20}) async {
     final list = await api.callList('users/search', {'query': query, 'limit': limit});
     return Page(items: [for (final u in list) MisskeyMappers.user(u, account: account, host: host)]);
+  }
+
+  @override
+  Future<List<TrendTag>> trendingTags() async => [for (final t in await api.callList('hashtags/trend')) MisskeyMappers.trend(t)];
+
+  @override
+  Future<List<DmRoom>> dmRooms() async {
+    final mine = await _myId();
+    final notes = await _directNotes();
+    final byPeer = <String, Map<String, Object?>>{}; // peerId → newest note
+    final peerUsers = <String, Map<String, Object?>>{};
+    for (final n in notes) {
+      final String peer;
+      if (n['userId'] == mine) {
+        final ids = (n['visibleUserIds'] as List? ?? const []);
+        if (ids.isEmpty) continue;
+        peer = ids.first.toString();
+      } else {
+        peer = n['userId'] as String;
+        peerUsers[peer] = (n['user'] as Map).cast<String, Object?>();
+      }
+      byPeer.putIfAbsent(peer, () => n);
+    }
+    final missing = [for (final id in byPeer.keys) if (!peerUsers.containsKey(id)) id];
+    if (missing.isNotEmpty) {
+      final users = await api.callList('users/show', {'userIds': missing});
+      for (final u in users) {
+        peerUsers[u['id'] as String] = u;
+      }
+    }
+    final rooms = <DmRoom>[];
+    for (final e in byPeer.entries) {
+      final u = peerUsers[e.key];
+      if (u == null) continue;
+      rooms.add(DmRoom(
+        id: e.key,
+        peer: MisskeyMappers.user(u, account: account, host: host),
+        lastPost: MisskeyMappers.note(e.value, viewer: account, host: host),
+      ));
+    }
+    return rooms;
   }
 
   @override

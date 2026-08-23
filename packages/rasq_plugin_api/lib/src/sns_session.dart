@@ -54,7 +54,21 @@ abstract class SnsSession {
   /// Resolves custom emoji shortcode → image URL (MFM / Mastodon custom emoji).
   Future<Uri?> emojiUrl(String shortcode);
 
+  // --- トレンド (phase-1 sample: sourced from the SNS itself) ---
+  Future<List<TrendTag>> trendingTags();
+
+  // --- DM (限定公開投稿をDM扱い) ---
+  Future<List<DmRoom>> dmRooms();
+
   Future<void> close();
+}
+
+/// Well-known dynamic timeline ids understood by adapters via [SnsSession.timeline]:
+/// `tag:{tag}` (トレンドTL), `dm:{peerUserId}` (DMルーム), `featured` (Today).
+abstract final class DynamicTimelines {
+  static TimelineKind tag(String tag) => TimelineKind('tag:$tag', '#$tag');
+  static TimelineKind dm(String peerUserId) => TimelineKind('dm:$peerUserId', 'DM', extensible: false);
+  static const featured = TimelineKind('featured', 'Today', extensible: false);
 }
 
 /// Convenience base: every method throws [UnsupportedError] so adapters only
@@ -112,6 +126,10 @@ abstract class SnsSessionBase implements SnsSession {
   Future<Page<UserSummary>> searchUsers(String query, {String? cursor, int limit = 20}) => _unsupported('searchUsers');
   @override
   Future<Uri?> emojiUrl(String shortcode) async => null;
+  @override
+  Future<List<TrendTag>> trendingTags() => _unsupported('trendingTags');
+  @override
+  Future<List<DmRoom>> dmRooms() => _unsupported('dmRooms');
   @override
   Future<void> close() async {}
 }
