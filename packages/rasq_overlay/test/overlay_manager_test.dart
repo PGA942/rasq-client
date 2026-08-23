@@ -6,6 +6,7 @@ RasqOverlayEntry entry(String id, OverlayLayer layer, {String? owner}) =>
     RasqOverlayEntry(id: id, layer: layer, ownerId: owner, builder: (_, _) => const SizedBox());
 
 void main() {
+  _fowTests();
   group('OverlayManager rules', () {
     test('modal and bottom sheet stack; dropdown is exclusive', () {
       final m = OverlayManager();
@@ -90,5 +91,35 @@ void main() {
     await tester.tapAt(const Offset(200, 50)); // scrim
     await tester.pump();
     expect(find.text('sheet'), findsNothing);
+  });
+}
+
+void _fowTests() {
+  testWidgets('FOW panels stack bottom-up (newest at bottom), resize via handle, interstitial scrim discards', (tester) async {
+    final m = OverlayManager();
+    await tester.pumpWidget(MaterialApp(home: OverlayHost(manager: m, child: const Scaffold(body: Text('content')))));
+    final parentSpec = FowSpec(type: FowPanelType.interstitial, initialHeightFactor: 0.5, title: 'parent', cancelText: 'cancel');
+    final childSpec = FowSpec(type: FowPanelType.widget, initialHeightFactor: 0.3, title: 'child');
+    m.showFow(id: 'parent', spec: parentSpec, builder: (_, _) => const Text('P'));
+    m.showFow(id: 'child', spec: childSpec, ownerId: 'parent', builder: (_, _) => const Text('C'));
+    await tester.pump();
+    expect(m.inLayer(OverlayLayer.fow).length, 2);
+    final pTop = tester.getTopLeft(find.text('P')).dy;
+    final cTop = tester.getTopLeft(find.text('C')).dy;
+    expect(cTop, greaterThan(pTop)); // child below parent
+
+    // drag child's handle up → taller
+    final before = childSpec.heightFactor.value;
+    final handle = find.bySemanticsLabel('サイズ変更ハンドル').last;
+    await tester.drag(handle, const Offset(0, -60));
+    await tester.pump();
+    expect(childSpec.heightFactor.value, greaterThan(before));
+
+    // tapping the scrim closes the interstitial parent (discard)
+    await tester.tapAt(const Offset(200, 20));
+    await tester.pump();
+    expect(m.contains('parent'), isFalse);
+    m.closeOwnedBy('parent');
+    expect(m.contains('child'), isFalse);
   });
 }

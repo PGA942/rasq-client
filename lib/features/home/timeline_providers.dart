@@ -105,7 +105,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     if (session == null) return;
     final store = ref.read(actionStateProvider.notifier);
     final before = store.of(post.key, action.id);
-    final undo = before.done;
+    final undo = args.containsKey('reaction') ? false : before.done;
     store.applyOptimistic(post.key, action.id, done: !undo);
     try {
       final r = await session.performAction(action.id, post.id, args: {...args, 'undo': undo});

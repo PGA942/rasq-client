@@ -164,6 +164,14 @@ class MisskeySession extends SnsSessionBase {
         if (undo) {
           await api.call('notes/reactions/delete', {'noteId': postId});
         } else {
+          if (args['reaction'] != null) {
+            // Explicit emoji: replace whatever reaction exists (Misskey allows one per user).
+            try {
+              await api.call('notes/reactions/delete', {'noteId': postId});
+            } on SnsApiException {
+              // no existing reaction
+            }
+          }
           await api.call('notes/reactions/create', {'noteId': postId, 'reaction': args['reaction'] ?? defaultReaction});
         }
         final n = await api.callMap('notes/show', {'noteId': postId});

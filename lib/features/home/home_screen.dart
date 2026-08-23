@@ -136,7 +136,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                 return const SizedBox(height: 80);
               }
               final p = tl.posts[i];
-              return PostRow(post: p, actions: actions, onAction: (a) => notifier.perform(p, a), onTap: () => context.pushPost(p));
+              return PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args), onTap: () => context.pushPost(p));
             },
           ),
         );

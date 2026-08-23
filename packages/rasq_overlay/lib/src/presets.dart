@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'fow.dart';
 import 'overlay_entry.dart';
 import 'overlay_layer.dart';
 import 'overlay_manager.dart';
@@ -112,12 +113,35 @@ extension OverlayPresets on OverlayManager {
     return result == true;
   }
 
+  /// Function Override Widget: docked, resizable bottom panel.
+  /// `builder` receives the handle so the content can close itself with a result.
+  Future<T?> showFow<T>({
+    required String id,
+    required OverlayWidgetBuilder builder,
+    FowSpec? spec,
+    String? ownerId,
+    String? semanticsLabel,
+  }) async {
+    final result = await show(RasqOverlayEntry(
+      id: id,
+      layer: OverlayLayer.fow,
+      alignment: Alignment.bottomCenter,
+      ownerId: ownerId,
+      semanticsLabel: semanticsLabel ?? spec?.title,
+      fow: spec ?? FowSpec(),
+      builder: builder,
+    ));
+    return result as T?;
+  }
+
   /// Dropdown menu anchored to a widget (長押しメニュー / ソート選択 / アカウント切替).
+  /// [dense] = compact variant for small sort menus.
   Future<T?> showDropdown<T>({
     required String id,
     required Rect anchor,
     required List<RasqDropdownItem<T>> items,
     String? ownerId,
+    bool dense = false,
   }) async {
     final result = await show(RasqOverlayEntry(
       id: id,
@@ -137,15 +161,15 @@ extension OverlayPresets on OverlayManager {
                 InkWell(
                   onTap: items[i].enabled ? () => handle.close(result: items[i].value) : null,
                   child: Container(
-                    constraints: const BoxConstraints(minHeight: 44, minWidth: 160),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    constraints: BoxConstraints(minHeight: dense ? 34 : 44, minWidth: dense ? 120 : 160),
+                    padding: EdgeInsets.symmetric(horizontal: dense ? 12 : 16),
                     alignment: Alignment.centerLeft,
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if (items[i].checked) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.check, size: 18)),
+                      if (items[i].checked) Padding(padding: const EdgeInsets.only(right: 6), child: Icon(Icons.check, size: dense ? 14 : 18)),
                       Text(
                         items[i].label,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: dense ? 12.5 : 14,
                           fontWeight: FontWeight.w600,
                           color: items[i].destructive ? scheme.error : (items[i].accent ? scheme.primary : scheme.onSurface),
                         ),

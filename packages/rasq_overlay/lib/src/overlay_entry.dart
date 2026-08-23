@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'fow.dart';
 import 'overlay_layer.dart';
 
 /// Why an entry was closed.
@@ -43,6 +44,7 @@ class RasqOverlayEntry {
     this.onClosed,
     this.ownerId,
     this.semanticsLabel,
+    this.fow,
   });
 
   /// Stable id (plugin-scoped ids should be prefixed by pluginId).
@@ -68,7 +70,11 @@ class RasqOverlayEntry {
   final String? ownerId;
   final String? semanticsLabel;
 
-  OverlayBarrierBehavior get effectiveBarrierBehavior => barrierBehavior ?? layer.barrierBehavior;
+  /// Presentation for `fow` layer entries (docked, resizable panel).
+  final FowSpec? fow;
+
+  OverlayBarrierBehavior get effectiveBarrierBehavior =>
+      barrierBehavior ?? (layer == OverlayLayer.fow && (fow?.blocksContent ?? false) ? OverlayBarrierBehavior.dismissDiscard : layer.barrierBehavior);
 
   OverlayHandle handleWith(void Function(String id, {Object? result, OverlayCloseReason reason}) close) => OverlayHandle._(id, close);
 }

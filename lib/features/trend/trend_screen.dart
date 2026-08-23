@@ -56,7 +56,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     final tabs = [const RasqTabItem('ノート'), const RasqTabItem('フォロー中'), const RasqTabItem('ユーザー')];
 
     Widget rows(List<Post> posts) => Column(children: [
-          for (final p in posts) ...[PostRow(post: p, actions: actions, onAction: (a) => notifier.perform(p, a), onTap: () => context.pushPost(p)), const Divider()],
+          for (final p in posts) ...[PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)), const Divider()],
         ]);
 
     return DefaultTabController(

@@ -7,6 +7,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 Future<RasqSortOrder?> showSortMenu(OverlayManager manager, Rect anchor, RasqSortOrder current, {String id = 'sort'}) => manager.showDropdown<RasqSortOrder>(
       id: 'sort.$id',
       anchor: anchor,
+      dense: true,
       items: [
         for (final o in [RasqSortOrder.reactionsAsc, RasqSortOrder.reactionsDesc, RasqSortOrder.defaultOrder]) RasqDropdownItem(o.label, o, checked: o == current),
       ],

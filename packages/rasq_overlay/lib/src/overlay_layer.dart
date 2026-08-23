@@ -28,9 +28,10 @@ enum OverlayLayer {
         OverlayLayer.bottomSheet => OverlayStacking.stack,
         OverlayLayer.dropdown => OverlayStacking.exclusive,
         OverlayLayer.rai => OverlayStacking.coexist,
-        // Sidebar / FOW / VC: one at a time (a new request replaces the old).
+        // Sidebar / VC: one at a time (a new request replaces the old).
         OverlayLayer.sidebar => OverlayStacking.exclusive,
-        OverlayLayer.fow => OverlayStacking.exclusive,
+        // FOW: stack (再帰FOW呼び出し — 親FOWの下に子FOWが積まれる).
+        OverlayLayer.fow => OverlayStacking.stack,
         OverlayLayer.vcVideo => OverlayStacking.exclusive,
       };
 

@@ -11,20 +11,22 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import 'compose_target.dart';
-import 'emoji_panel.dart';
+import 'emoji_picker_fow.dart';
 import 'poll_editor.dart';
 
-/// Opens the composer (bottom sheet via Overlay Manager; becomes a FOW
-/// interstitial in M3). Resolves with the created post, or null on cancel.
+/// Opens the composer as an interstitial FOW (docked, resizable). Child FOWs
+/// (絵文字ピッカー) are owned by it and closed with it.
+/// Resolves with the created post, or null on cancel.
+const composerFowId = 'fow.composer';
+
 Future<Post?> showComposer(WidgetRef ref, ComposeTarget target) async {
   final manager = ref.read(overlayManagerProvider);
-  final res = await manager.showBottomSheet<Post>(
-    id: 'composer',
-    title: target.title,
-    cancelText: 'キャンセル',
-    maxHeightFactor: 0.92,
-    builder: (ctx) => _ComposerBody(target: target, onSent: (p) => OverlayScope.read(ctx).close('composer', result: p)),
+  final res = await manager.showFow<Post>(
+    id: composerFowId,
+    spec: FowSpec(type: FowPanelType.interstitial, confirmMode: FowConfirmMode.saveDiscard, initialHeightFactor: 0.72, minHeightFactor: 0.35, title: target.title, cancelText: 'キャンセル'),
+    builder: (ctx, handle) => _ComposerBody(target: target, onSent: (p) => handle.close(result: p)),
   );
+  manager.closeOwnedBy(composerFowId);
   return res;
 }
 
@@ -50,7 +52,6 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   final _cw = TextEditingController();
   final _focus = FocusNode();
   bool _cwOn = false;
-  bool _emojiOpen = false;
   PollDraft? _poll;
   final List<_Attachment> _files = [];
   bool _busy = false;
@@ -240,7 +241,14 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= 4 ? null : () => _pick()),
                 RasqActionButton.icon(icon: Icons.visibility_outlined, doneIcon: Icons.visibility, done: _cwOn, tooltip: '隠す(注釈)', onTap: () => setState(() => _cwOn = !_cwOn)),
                 if (!_isDm) RasqActionButton.icon(icon: Icons.poll_outlined, doneIcon: Icons.poll, done: _poll != null, tooltip: '投票', onTap: () => setState(() => _poll = _poll == null ? PollDraft() : null)),
-                RasqActionButton.icon(icon: Icons.emoji_emotions_outlined, doneIcon: Icons.emoji_emotions, done: _emojiOpen, tooltip: '絵文字', onTap: () => setState(() => _emojiOpen = !_emojiOpen)),
+                RasqActionButton.icon(
+                  icon: Icons.emoji_emotions_outlined,
+                  tooltip: '絵文字',
+                  onTap: () => openEmojiPicker(ref, ownerId: composerFowId, onPick: (e) {
+                    _insert(e);
+                    _focus.requestFocus();
+                  }),
+                ),
                 RasqActionButton.icon(icon: Icons.code, tooltip: 'MFM (次段階)', enabled: false),
               ]),
             ),
@@ -260,7 +268,6 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
           ),
         ]),
       ),
-      if (_emojiOpen) EmojiPanel(onPick: _insert),
     ]);
   }
 }

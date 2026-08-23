@@ -60,7 +60,7 @@ class SearchScreen extends ConsumerWidget {
                 ? const [RasqEmptyView(title: 'Today', hint: 'ハイライトはまだありません')]
                 : [
                     for (final p in s.posts.take(10)) ...[
-                      PostRow(post: p, actions: actions, onAction: (a) => ref.read(timelineProvider(DynamicTimelines.featured).notifier).perform(p, a), onTap: () => context.pushPost(p)),
+                      PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => ref.read(timelineProvider(DynamicTimelines.featured).notifier).perform(p, a, args: args), onTap: () => context.pushPost(p)),
                       const Divider(),
                     ],
                   ],

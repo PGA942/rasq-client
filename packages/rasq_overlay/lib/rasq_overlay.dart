@@ -6,6 +6,7 @@
 /// as data, and [OverlayHost] renders the resulting stack above the content.
 library;
 
+export 'src/fow.dart';
 export 'src/overlay_layer.dart';
 export 'src/overlay_entry.dart';
 export 'src/overlay_manager.dart';

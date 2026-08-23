@@ -9,17 +9,21 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
+import '../compose/emoji_picker_fow.dart';
 
 /// Interim post row (M1). The L2 composite `PostTile` with slot model
 /// (avatar/content/media/action/完全置き換え) replaces this in M2; the action
 /// bar already follows the registration model (plugin → ActionDescriptor →
 /// state from Store).
+/// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
+typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<String, Object?> args});
+
 class PostRow extends ConsumerWidget {
   const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap});
 
   final Post post;
   final List<ActionDescriptor> actions;
-  final Future<void> Function(ActionDescriptor action) onAction;
+  final PostActionHandler onAction;
   final VoidCallback? onTap;
 
   static const Map<String, IconData> _icons = {
@@ -87,7 +91,17 @@ class PostRow extends ConsumerWidget {
                   _Body(spans: spans, post: post),
                 const SizedBox(height: RasqSpacing.xs),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  for (final a in actions) _ActionBtn(post: post, action: a, onAction: onAction, doneColor: a.genreTag == 'Reaction' ? tokens.live : null),
+                  for (final a in actions)
+                    _ActionBtn(
+                      post: post,
+                      action: a,
+                      onAction: onAction,
+                      doneColor: a.genreTag == 'Reaction' ? tokens.live : null,
+                      // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行
+                      onLongPress: a.genreTag == 'Reaction'
+                          ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', onPick: (e) => onAction(a, args: {'reaction': e}).catchError((_) {}))
+                          : null,
+                    ),
                   RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {}),
                 ]),
               ]),
@@ -139,11 +153,12 @@ class _CwState extends State<_Cw> {
 }
 
 class _ActionBtn extends ConsumerWidget {
-  const _ActionBtn({required this.post, required this.action, required this.onAction, this.doneColor});
+  const _ActionBtn({required this.post, required this.action, required this.onAction, this.doneColor, this.onLongPress});
   final Post post;
   final ActionDescriptor action;
-  final Future<void> Function(ActionDescriptor) onAction;
+  final PostActionHandler onAction;
   final Color? doneColor;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -154,8 +169,8 @@ class _ActionBtn extends ConsumerWidget {
     final count = st.count ?? post.counts[action.id] ?? 0;
     void tap() => onAction(action).catchError((_) {});
     return showCount
-        ? RasqActionButton.iconCount(icon: icon, doneIcon: doneIcon, done: st.done, doneColor: doneColor, count: count, tooltip: action.label, onTap: tap, enabled: st.enabled)
-        : RasqActionButton.icon(icon: icon, doneIcon: doneIcon, done: st.done, doneColor: doneColor, tooltip: action.label, onTap: tap, enabled: st.enabled);
+        ? RasqActionButton.iconCount(icon: icon, doneIcon: doneIcon, done: st.done, doneColor: doneColor, count: count, tooltip: action.label, onTap: tap, onLongPress: onLongPress, enabled: st.enabled)
+        : RasqActionButton.icon(icon: icon, doneIcon: doneIcon, done: st.done, doneColor: doneColor, tooltip: action.label, onTap: tap, onLongPress: onLongPress, enabled: st.enabled);
   }
 }
 

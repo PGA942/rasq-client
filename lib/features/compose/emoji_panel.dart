@@ -8,9 +8,11 @@ import 'compose_providers.dart';
 /// 絵文字ピッカー (ワイヤーフレーム: 検索 / 履歴 / 全てのemoji / 独自の絵文字).
 /// Emits the text to insert (`😀` or `:shortcode:`).
 class EmojiPanel extends ConsumerStatefulWidget {
-  const EmojiPanel({super.key, required this.onPick, this.height = 260});
+  const EmojiPanel({super.key, required this.onPick, this.height});
   final ValueChanged<String> onPick;
-  final double height;
+
+  /// Fixed height; null = fill the parent (FOW panel).
+  final double? height;
 
   static const unicode = ['😀', '😂', '🥹', '😍', '🤔', '😭', '😡', '🥳', '😴', '🙏', '👍', '👎', '👏', '🙌', '💪', '❤️', '💔', '🔥', '✨', '🎉', '🚀', '🌙', '☀️', '🌸', '🍣', '🍜', '☕', '🍺', '🐱', '🐶', '🐟', '🦀', '💡', '📌', '✅', '❌', '⚠️', '💯', '🆗', '🔁'];
 
@@ -43,7 +45,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
     return Container(
       height: widget.height,
       decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.outlineVariant))),
-      child: Column(children: [
+      child: Column(mainAxisSize: MainAxisSize.max, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.md, 4),
           child: RasqSearchBar(controller: _q, hintText: '検索', onChanged: (_) => setState(() {})),

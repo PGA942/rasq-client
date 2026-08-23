@@ -62,7 +62,7 @@ class _ReactionsScreenState extends ConsumerState<ReactionsScreen> {
               margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm, 0),
               decoration: BoxDecoration(border: Border.all(color: Theme.of(context).colorScheme.onSurface), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
               clipBehavior: Clip.antiAlias,
-              child: PostRow(post: post, actions: const [], onAction: (_) async {}, onTap: () => context.pushPost(post)),
+              child: PostRow(post: post, actions: const [], onAction: (_, {args = const {}}) async {}, onTap: () => context.pushPost(post)),
             ),
           RasqTabs(
             items: tabs,
@@ -102,7 +102,7 @@ class _Replies extends ConsumerWidget {
         return ListView.separated(
           itemCount: list.length,
           separatorBuilder: (_, _) => const Divider(),
-          itemBuilder: (_, i) => PostRow(post: list[i], actions: actions, onAction: (a) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(list[i], a), onTap: () => context.pushPost(list[i])),
+          itemBuilder: (_, i) => PostRow(post: list[i], actions: actions, onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(list[i], a, args: args), onTap: () => context.pushPost(list[i])),
         );
       },
     );

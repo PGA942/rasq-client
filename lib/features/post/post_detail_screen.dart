@@ -62,7 +62,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final scheme = Theme.of(context).colorScheme;
 
-    Future<void> perform(Post p, ActionDescriptor a) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a);
+    Future<void> perform(Post p, ActionDescriptor a, {Map<String, Object?> args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args);
 
     return Scaffold(
       appBar: RasqPageHeader(title: '投稿', leadingAvatar: me, actions: [RasqIconButton(icon: Icons.bookmark_border, onPressed: () {}, tooltip: 'ブックマーク')], onMore: () {}),
@@ -101,7 +101,7 @@ class _ThreadBody extends StatelessWidget {
   final List<Post> ancestors;
   final List<Post> descendants;
   final List<ActionDescriptor> actions;
-  final Future<void> Function(Post, ActionDescriptor) onAction;
+  final Future<void> Function(Post, ActionDescriptor, {Map<String, Object?> args}) onAction;
   final bool loading;
   final RasqSortOrder order;
   final ValueChanged<Rect>? onSortTap;
@@ -113,10 +113,10 @@ class _ThreadBody extends StatelessWidget {
     final replies = sortByReactions(descendants, order, (p) => p.reactionTotal);
     return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
       for (final a in ancestors) ...[
-        PostRow(post: a, actions: actions, onAction: (d) => onAction(a, d), onTap: () => context.pushPost(a)),
+        PostRow(post: a, actions: actions, onAction: (d, {args = const {}}) => onAction(a, d, args: args), onTap: () => context.pushPost(a)),
         const Divider(),
       ],
-      PostRow(post: post, actions: actions, onAction: (d) => onAction(post, d)),
+      PostRow(post: post, actions: actions, onAction: (d, {args = const {}}) => onAction(post, d, args: args)),
       Container(
         decoration: BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: scheme.onSurface, width: 1))),
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
@@ -144,7 +144,7 @@ class _ThreadBody extends StatelessWidget {
       ),
       if (loading) const RasqLoading(),
       for (final d in replies) ...[
-        _Threaded(child: PostRow(post: d, actions: actions, onAction: (x) => onAction(d, x), onTap: () => context.pushPost(d))),
+        _Threaded(child: PostRow(post: d, actions: actions, onAction: (x, {args = const {}}) => onAction(d, x, args: args), onTap: () => context.pushPost(d))),
         const Divider(),
       ],
       if (replies.isNotEmpty) Center(child: TextButton(onPressed: () {}, child: const Text('さらに表示'))),

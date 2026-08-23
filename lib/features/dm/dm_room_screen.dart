@@ -71,7 +71,7 @@ class DmRoomScreen extends ConsumerWidget {
                   physics: const AlwaysScrollableScrollPhysics(),
                   itemCount: s.posts.length,
                   separatorBuilder: (_, _) => const Divider(),
-                  itemBuilder: (context, i) => PostRow(post: s.posts[i], actions: actions, onAction: (a) => notifier.perform(s.posts[i], a), onTap: () => context.pushPost(s.posts[i])),
+                  itemBuilder: (context, i) => PostRow(post: s.posts[i], actions: actions, onAction: (a, {args = const {}}) => notifier.perform(s.posts[i], a, args: args), onTap: () => context.pushPost(s.posts[i])),
                 ),
         ),
       ),
