@@ -12,13 +12,16 @@ import '../../text/inline_spans.dart';
 import '../compose/emoji_picker_fow.dart';
 import '../post/post_menu.dart';
 
-/// Interim post row (M1). The L2 composite `PostTile` with slot model
-/// (avatar/content/media/action/完全置き換え) replaces this in M2; the action
-/// bar already follows the registration model (plugin → ActionDescriptor →
-/// state from Store).
 /// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
 typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<String, Object?> args});
 
+/// Host adapter around the L2 composite [RasqPostTile]: reads the Store
+/// (既読 / アクション状態 / 絵文字キャッシュ), parses RSL into spans, maps the
+/// plugin's `ActionDescriptor`s to [RasqActionBarItem]s and fills the tile's
+/// slots. The tile itself is props-only (D-002: L2 はホスト実装、状態は DSL の外).
+///
+/// This is exactly the work the RRL renderer will do for a WASM plugin's
+/// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
   const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false});
 
@@ -30,6 +33,8 @@ class PostRow extends ConsumerStatefulWidget {
   /// Embedded size (通知の投稿タイル系など): smaller avatar, no outer padding.
   final bool dense;
 
+  /// Host icon registry: plugin icon names → Material glyphs (until the RASQ
+  /// icon font lands).
   static const Map<String, IconData> _icons = {
     'subdirectory_arrow_left': Icons.subdirectory_arrow_left,
     'repeat': Icons.repeat,
@@ -52,239 +57,108 @@ class PostRow extends ConsumerStatefulWidget {
 }
 
 class _PostRowState extends ConsumerState<PostRow> {
+  /// Ephemeral: user expanded a collapsed (既読) post in this session.
   bool _expanded = false;
 
   Post get post => widget.post;
-  List<ActionDescriptor> get actions => widget.actions;
-  PostActionHandler get onAction => widget.onAction;
-  VoidCallback? get onTap => widget.onTap;
 
   static const _collapseLines = 3;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     final emojis = ref.watch(emojiCacheProvider);
-    // 省略表示: 既読かつ長文の投稿は先頭数行 + 「展開する」(タップ領域は全体).
     final isRead = ref.watch(isReadProvider(post.key));
+
+    // 省略表示: 既読かつ長文の投稿は先頭数行 + 「展開する」(Store 状態 → props).
     final lineCount = '\n'.allMatches(post.body).length + 1;
     final collapsible = isRead && !_expanded && (lineCount > _collapseLines || post.body.length > 140);
-    final avatarSize = widget.dense ? RasqSizes.avatarMd : RasqSizes.avatarLg;
+
     final spans = InlineSpans.parse(post.body, emojis: emojis, onLink: (u) => launchUrl(u, mode: LaunchMode.externalApplication), onHashtag: (t) => context.pushTrend(t));
     final nameSpans = InlineSpans.parse(post.author.displayName, emojis: emojis);
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: widget.dense ? const EdgeInsets.symmetric(vertical: RasqSpacing.xs) : const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.sm, RasqSpacing.xs),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (post.repostedBy != null)
-            Padding(
-              padding: EdgeInsets.only(left: avatarSize + RasqSpacing.md, bottom: 4),
-              child: Row(children: [
-                Icon(Icons.repeat, size: 14, color: scheme.onSurfaceVariant),
-                const SizedBox(width: 4),
-                Flexible(child: Text('${post.repostedBy!.displayName}がリノートしました', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
-              ]),
-            ),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            RasqAvatar(imageUrl: post.author.avatarUrl, size: avatarSize, presence: post.author.presence, fallbackLabel: post.author.displayName, onTap: () => context.pushUser(post.author)),
-            const SizedBox(width: RasqSpacing.md),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => context.pushUser(post.author),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      RasqRichText(nameSpans, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Row(children: [
-                        Flexible(child: Text('@${post.author.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
-                        const SizedBox(width: 2),
-                        Flexible(child: RasqSnsPill(account: post.author.account)),
-                      ]),
-                    ]),
-                    ),
-                  ),
-                  RasqTimestamp(post.createdAt),
-                  Builder(
-                    builder: (ctx) => RasqIconButton(
-                      icon: Icons.more_horiz,
-                      size: 20,
-                      tooltip: 'メニュー',
-                      onPressed: () {
-                        final box = ctx.findRenderObject() as RenderBox;
-                        showPostMenu(context, ref, post, box.localToGlobal(Offset.zero) & box.size);
-                      },
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: RasqSpacing.xs),
-                if (collapsible)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => setState(() => _expanded = true),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      RasqRichText(spans, style: RasqTypography.body, maxLines: _collapseLines, overflow: TextOverflow.ellipsis),
-                      Text('展開する', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
-                    ]),
-                  )
-                else if (post.contentWarning != null && post.contentWarning!.isNotEmpty)
-                  _Cw(cw: post.contentWarning!, child: _Body(spans: spans, post: post, onMediaTap: (i) => context.openViewer(post, i)))
-                else
-                  _Body(spans: spans, post: post, onMediaTap: (i) => context.openViewer(post, i)),
-                const SizedBox(height: RasqSpacing.xs),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  for (final a in actions)
-                    _ActionBtn(
-                      post: post,
-                      action: a,
-                      onAction: onAction,
-                      doneColor: a.genreTag == 'Reaction' ? tokens.live : null,
-                      // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行
-                      onLongPress: a.genreTag == 'Reaction'
-                          ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', onPick: (e) => onAction(a, args: {'reaction': e}).catchError((_) {}))
-                          : null,
-                    ),
-                  RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {}),
-                ]),
-              ]),
-            ),
-          ]),
-        ]),
-      ),
+    // content slot
+    final Widget content;
+    if (collapsible) {
+      content = RasqCollapsedPost(spans: spans, maxLines: _collapseLines, onExpand: () => setState(() => _expanded = true));
+    } else {
+      final body = post.body.isNotEmpty ? RasqRichText(spans, style: RasqTypography.body) : const SizedBox.shrink();
+      final cw = post.contentWarning;
+      content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, child: _CwBody(post: post, body: body)) : body;
+    }
+    // When a CW is present, media/poll/quote live *inside* the CW reveal;
+    // otherwise they fill the tile's own slots.
+    final hasCw = !collapsible && (post.contentWarning?.isNotEmpty ?? false);
+
+    final actionItems = [for (final a in widget.actions) _item(a, tokens)];
+
+    return RasqPostTile(
+      author: post.author,
+      createdAt: post.createdAt,
+      nameSpans: nameSpans,
+      repostedBy: post.repostedBy,
+      dense: widget.dense,
+      content: content,
+      media: !collapsible && !hasCw && post.media.isNotEmpty ? RasqMediaGrid(items: post.media, onTapTile: (i) => context.openViewer(post, i)) : null,
+      poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
+      quote: !collapsible && !hasCw && post.quote != null ? quoteTile(context, post.quote!, emojis: emojis) : null,
+      actionBar: widget.actions.isEmpty
+          ? null
+          : RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
+      onTap: widget.onTap,
+      onAuthorTap: () => context.pushUser(post.author),
+      onMore: (anchor) => showPostMenu(context, ref, post, anchor),
     );
   }
-}
 
-class _Body extends StatelessWidget {
-  const _Body({required this.spans, required this.post, this.onMediaTap});
-  final List<RasqSpan> spans;
-  final Post post;
-  final ValueChanged<int>? onMediaTap;
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (post.body.isNotEmpty) RasqRichText(spans, style: RasqTypography.body),
-        if (post.media.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: post.media, onTapTile: onMediaTap)],
-        if (post.poll != null) ...[const SizedBox(height: RasqSpacing.sm), _PollView(poll: post.poll!)],
-        if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _QuoteView(post: post.quote!)],
-      ]);
-}
-
-class _Cw extends StatefulWidget {
-  const _Cw({required this.cw, required this.child});
-  final String cw;
-  final Widget child;
-  @override
-  State<_Cw> createState() => _CwState();
-}
-
-class _CwState extends State<_Cw> {
-  bool _open = false;
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(widget.cw, style: RasqTypography.body),
-      const SizedBox(height: 4),
-      OutlinedButton(
-        onPressed: () => setState(() => _open = !_open),
-        style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12), side: BorderSide(color: scheme.outline), foregroundColor: scheme.onSurface),
-        child: Text(_open ? '隠す' : 'もっと見る'),
-      ),
-      if (_open) ...[const SizedBox(height: RasqSpacing.sm), widget.child],
-    ]);
+  /// ActionDescriptor + ActionState (Store) → ActionBar props.
+  RasqActionBarItem _item(ActionDescriptor a, RasqTokens tokens) {
+    final st = ref.watch(actionStateOfProvider((postKey: post.key, actionId: a.id)));
+    final icon = PostRow.iconFor(a.icon, Icons.circle_outlined);
+    final doneIcon = a.doneIcon == null ? null : PostRow.iconFor(a.doneIcon, icon);
+    final isReaction = a.genreTag == 'Reaction';
+    return RasqActionBarItem(
+      id: a.id,
+      label: a.label,
+      icon: icon,
+      doneIcon: doneIcon,
+      done: st.done,
+      count: st.count ?? post.counts[a.id],
+      showCount: a.countSource != CountSource.none,
+      enabled: st.enabled,
+      doneColor: isReaction ? tokens.live : null,
+      iconUrl: st.iconUrl,
+      onTap: () => widget.onAction(a).catchError((_) {}),
+      // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行
+      onLongPress: isReaction ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', onPick: (e) => widget.onAction(a, args: {'reaction': e}).catchError((_) {})) : null,
+    );
   }
+
+  /// 引用: 投稿カード(埋め込みサイズ)を再利用.
+  static Widget quoteTile(BuildContext context, Post q, {Map<String, Uri?> emojis = const {}}) => RasqPostTile(
+        variant: RasqPostTileVariant.embedded,
+        author: q.author,
+        createdAt: q.createdAt,
+        nameSpans: InlineSpans.parse(q.author.displayName, emojis: emojis),
+        content: q.body.isNotEmpty ? RasqRichText(InlineSpans.parse(q.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis) : const SizedBox.shrink(),
+        media: q.media.isNotEmpty ? RasqMediaGrid(items: q.media) : null,
+        onTap: () => context.pushPost(q),
+      );
 }
 
-class _ActionBtn extends ConsumerWidget {
-  const _ActionBtn({required this.post, required this.action, required this.onAction, this.doneColor, this.onLongPress});
+/// Body shown under an opened CW: text + media + poll + quote together.
+class _CwBody extends ConsumerWidget {
+  const _CwBody({required this.post, required this.body});
   final Post post;
-  final ActionDescriptor action;
-  final PostActionHandler onAction;
-  final Color? doneColor;
-  final VoidCallback? onLongPress;
-
+  final Widget body;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final st = ref.watch(actionStateOfProvider((postKey: post.key, actionId: action.id)));
-    final icon = PostRow.iconFor(action.icon, Icons.circle_outlined);
-    final doneIcon = action.doneIcon == null ? null : PostRow.iconFor(action.doneIcon, icon);
-    final showCount = action.countSource != CountSource.none;
-    final count = st.count ?? post.counts[action.id] ?? 0;
-    void tap() => onAction(action).catchError((_) {});
-    if (st.iconUrl != null) {
-      // 投稿ごとのアイコン差し替え(SNSプラグイン配下のみ): 予測リアクション等
-      return Tooltip(
-        message: action.label,
-        child: InkResponse(
-          onTap: tap,
-          onLongPress: onLongPress,
-          radius: 24,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Image.network(st.iconUrl.toString(), width: 20, height: 20, errorBuilder: (_, _, _) => Icon(icon, size: 20)),
-              if (showCount && count > 0) Padding(padding: const EdgeInsets.only(left: 4), child: Text('$count', style: RasqTypography.count)),
-            ]),
-          ),
-        ),
-      );
-    }
-    return showCount
-        ? RasqActionButton.iconCount(icon: icon, doneIcon: doneIcon, done: st.done, doneColor: doneColor, count: count, tooltip: action.label, onTap: tap, onLongPress: onLongPress, enabled: st.enabled)
-        : RasqActionButton.icon(icon: icon, doneIcon: doneIcon, done: st.done, doneColor: doneColor, tooltip: action.label, onTap: tap, onLongPress: onLongPress, enabled: st.enabled);
-  }
-}
-
-class _PollView extends StatelessWidget {
-  const _PollView({required this.poll});
-  final Poll poll;
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final total = poll.totalVotes == 0 ? 1 : poll.totalVotes;
-    final now = DateTime.now();
-    final results = poll.showsResults(now);
+    final emojis = ref.watch(emojiCacheProvider);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      for (var i = 0; i < poll.options.length; i++)
-        Container(
-          margin: const EdgeInsets.only(bottom: 6),
-          height: 40,
-          decoration: BoxDecoration(border: Border.all(color: poll.votedIndices.contains(i) ? scheme.primary : scheme.onSurface, width: poll.votedIndices.contains(i) ? 2 : 1), borderRadius: BorderRadius.circular(8)),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(children: [
-            if (results) Align(alignment: Alignment.centerRight, child: FractionallySizedBox(widthFactor: poll.options[i].votes / total, child: ColoredBox(color: scheme.surfaceContainerHighest))),
-            Center(child: Text(poll.options[i].text, style: RasqTypography.listTile)),
-            if (results) Positioned(right: 12, top: 0, bottom: 0, child: Center(child: Text('${poll.options[i].votes}', style: RasqTypography.listTile))),
-          ]),
-        ),
-      if (poll.expiresAt != null) RasqTimestamp(poll.expiresAt!, mode: RasqTimestampMode.remaining),
+      body,
+      if (post.media.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: post.media, onTapTile: (i) => context.openViewer(post, i))],
+      if (post.poll != null) ...[const SizedBox(height: RasqSpacing.sm), RasqPollWidget(poll: post.poll!)],
+      if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _PostRowState.quoteTile(context, post.quote!, emojis: emojis)],
     ]);
-  }
-}
-
-class _QuoteView extends StatelessWidget {
-  const _QuoteView({required this.post});
-  final Post post;
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(RasqSpacing.sm),
-      decoration: BoxDecoration(border: Border.all(color: scheme.outline), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          RasqAvatar(imageUrl: post.author.avatarUrl, size: RasqSizes.avatarXs, fallbackLabel: post.author.displayName),
-          const SizedBox(width: 6),
-          Flexible(child: Text(post.author.displayName, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-          const SizedBox(width: 6),
-          Flexible(child: Text('@${post.author.handle}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
-        ]),
-        if (post.body.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: RasqRichText(InlineSpans.parse(post.body), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis)),
-        if (post.media.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: RasqMediaGrid(items: post.media)),
-      ]),
-    );
   }
 }

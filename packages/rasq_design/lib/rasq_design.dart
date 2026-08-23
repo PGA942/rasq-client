@@ -26,6 +26,15 @@ export 'src/components/sns_pill.dart';
 export 'src/components/user_row.dart';
 export 'src/components/user_tile_large.dart';
 export 'src/components/sort.dart';
+export 'src/components/brand.dart';
+
+// L2 composite — 投稿まわり (PostTile / ActionBar / PollWidget / CollapsedPost …).
+export 'src/components/post_tile.dart';
+export 'src/components/action_bar.dart';
+export 'src/components/poll_widget.dart';
+export 'src/components/collapsed_post.dart';
+export 'src/components/content_warning.dart';
+export 'src/components/link_banner.dart';
 
 export 'src/layout/tabs.dart';
 export 'src/layout/collapsible_header.dart';

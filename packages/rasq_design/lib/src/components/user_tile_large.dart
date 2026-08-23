@@ -7,6 +7,7 @@ import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
 import 'avatar.dart';
 import 'badge.dart';
+import 'brand.dart';
 import 'buttons.dart';
 import 'sns_pill.dart';
 
@@ -93,7 +94,10 @@ class RasqUserTileLarge extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(u.displayName, style: RasqTypography.title),
+          Row(children: [
+            Flexible(child: Text(u.displayName, style: RasqTypography.title, overflow: TextOverflow.ellipsis)),
+            RasqVerifiedBadge(kind: u.verification, size: 18),
+          ]),
           Row(children: [
             Flexible(child: Text('@${u.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
             const SizedBox(width: 2),

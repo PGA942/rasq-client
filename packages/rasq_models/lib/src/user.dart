@@ -5,6 +5,12 @@ import 'account.dart';
 /// Presence flags rendered on avatars (LIVE / VC中).
 enum UserPresence { none, inVc, live }
 
+/// RASQ account verification tier, rendered as a badge next to the display
+/// name (`RasqVerifiedBadge`). Issued by the RASQ account server, not by the
+/// SNS plugin — SNS adapters leave it [none]; the host fills it in once the
+/// RASQ account ↔ SNS account link (第二期) exists.
+enum UserVerification { none, person, company, government }
+
 @immutable
 class UserSummary {
   const UserSummary({
@@ -14,6 +20,7 @@ class UserSummary {
     this.avatarUrl,
     this.bio,
     this.presence = UserPresence.none,
+    this.verification = UserVerification.none,
   });
 
   /// Plugin-scoped stable id (DID / Misskey id …).
@@ -23,6 +30,7 @@ class UserSummary {
   final Uri? avatarUrl;
   final String? bio;
   final UserPresence presence;
+  final UserVerification verification;
 
   String get handle => account.handle;
 

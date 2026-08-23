@@ -46,6 +46,7 @@ class RasqSidebar extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.sm, 0),
               child: Row(children: [
+                const RasqLogo(height: 22),
                 const Spacer(),
                 RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: me.displayName),
                 RasqIconButton(icon: Icons.more_horiz, onPressed: () {}, tooltip: 'その他'),

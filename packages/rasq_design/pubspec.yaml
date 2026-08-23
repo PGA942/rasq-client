@@ -18,3 +18,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+flutter:
+  # Brand assets (特殊なコンポーネント置き場 → background keyed out, downsized).
+  # Referenced with `package: 'rasq_design'` from `RasqLogo` / `RasqBrandIcon` /
+  # `RasqVerifiedBadge` / `RasqAsTellIcon` in src/components/brand.dart.
+  assets:
+    - assets/brand/

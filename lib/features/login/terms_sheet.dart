@@ -19,7 +19,10 @@ Future<bool> showTermsSheet(OverlayManager manager, PluginManifest manifest) asy
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Text(manifest.name, style: RasqTypography.title),
-            if (manifest.verified) const Padding(padding: EdgeInsets.only(left: 4), child: Icon(Icons.verified, color: Color(0xFF34C759), size: 18)),
+            if (manifest.official)
+              const Padding(padding: EdgeInsets.only(left: 4), child: RasqBrandIcon(size: 18, semanticsLabel: 'RASQ Official'))
+            else if (manifest.verified)
+              const Padding(padding: EdgeInsets.only(left: 4), child: Icon(Icons.verified, color: Color(0xFF1E88E5), size: 18)),
             const Spacer(),
             if (manifest.author != null) Text(manifest.author!, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
           ]),

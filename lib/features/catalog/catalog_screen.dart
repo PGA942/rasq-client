@@ -7,6 +7,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../mock/mock_data.dart';
 import '../../shell/headers.dart';
+import '../../text/inline_spans.dart';
 
 /// Component catalog (Widgetbook-lite). Dev-only; lists every L2 atomic
 /// component with its variants plus Overlay Manager presets.
@@ -18,10 +19,92 @@ class CatalogScreen extends ConsumerWidget {
     final manager = ref.watch(overlayManagerProvider);
     final tokens = RasqTokens.of(context);
     final now = DateTime.now();
+    final posts = MockData.timeline(MockData.accountMisskey);
+    final postSpans = [for (final p in posts) InlineSpans.parse(p.body)];
+    final demoActions = [
+      RasqActionBarItem(id: 'reply', label: '返信', icon: Icons.subdirectory_arrow_left, count: 2, onTap: () {}),
+      RasqActionBarItem(id: 'renote', label: 'リノート', icon: Icons.repeat, doneIcon: Icons.repeat_on, count: 12, onTap: () {}),
+      RasqActionBarItem(id: 'reaction', label: 'リアクション', icon: Icons.add_reaction_outlined, doneIcon: Icons.add_reaction, done: true, doneColor: tokens.live, count: 48, onTap: () {}),
+      RasqActionBarItem(id: 'favorite', label: 'お気に入り', icon: Icons.star_border, doneIcon: Icons.star, showCount: false, onTap: () {}),
+    ];
     return Scaffold(
       appBar: const RasqPageHeader(title: 'コンポーネントカタログ'),
       body: ListView(padding: const EdgeInsets.only(bottom: 48), children: [
-        const RasqSectionHeader(title: 'Avatar / Badge', topMargin: 0),
+        const RasqSectionHeader(title: 'Brand (特殊なコンポーネント置き場)', topMargin: 0),
+        _row([
+          const RasqLogo(height: 36),
+          const RasqBrandIcon(size: 32),
+          const RasqVerifiedBadge(kind: UserVerification.person, size: 24),
+          const RasqVerifiedBadge(kind: UserVerification.company, size: 24),
+          const RasqVerifiedBadge(kind: UserVerification.government, size: 24),
+          const RasqAsTellIcon(size: 28),
+          const RasqAsTellIcon(size: 28, selected: false),
+        ]),
+        const RasqSectionHeader(title: 'PostTile — 通常 (アクションバー / 投票 / メディア)'),
+        RasqPostTile(
+          author: posts[0].author,
+          createdAt: posts[0].createdAt,
+          repostedBy: MockData.tivard,
+          content: RasqRichText(postSpans[0], style: RasqTypography.body),
+          actionBar: RasqActionBar(items: demoActions, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
+          onMore: (_) {},
+          onTap: () {},
+        ),
+        const Divider(),
+        RasqPostTile(
+          author: posts[1].author,
+          createdAt: posts[1].createdAt,
+          content: RasqRichText(postSpans[1], style: RasqTypography.body),
+          poll: RasqPollWidget(poll: posts[1].poll!, onVote: (_) {}),
+          actionBar: RasqActionBar(items: demoActions),
+          onTap: () {},
+        ),
+        const Divider(),
+        RasqPostTile(
+          author: posts[2].author,
+          createdAt: posts[2].createdAt,
+          content: RasqContentWarning(cw: '誕生日の話', child: RasqRichText(postSpans[2], style: RasqTypography.body)),
+          media: RasqMediaGrid(items: posts[2].media),
+          linkBanner: RasqLinkBanner(url: Uri.parse('https://example.com/article'), title: 'リンク先バナー', description: 'OGP のタイトルと説明', onTap: () {}),
+          actionBar: RasqActionBar(items: demoActions),
+          onTap: () {},
+        ),
+        const RasqSectionHeader(title: 'PostTile — 埋め込み (引用 / リアクション表示 / タイマー通知) & スレッドまとめ'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+          child: RasqPostTile(variant: RasqPostTileVariant.embedded, author: posts[0].author, createdAt: posts[0].createdAt, content: RasqRichText(postSpans[0], style: RasqTypography.bodySmall, maxLines: 4, overflow: TextOverflow.ellipsis), onTap: () {}),
+        ),
+        RasqPostTile(variant: RasqPostTileVariant.threadSummary, author: posts[2].author, createdAt: posts[2].createdAt, content: RasqRichText(postSpans[2], style: RasqTypography.body, maxLines: 2, overflow: TextOverflow.ellipsis), threadReplyCount: 3, onTap: () {}),
+        const RasqSectionHeader(title: 'CollapsedPost (省略表示: 既読 + 長文)'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+          child: RasqCollapsedPost(spans: InlineSpans.parse('既読の長い投稿は先頭数行だけ表示します。\n2行目\n3行目\n4行目は隠れます\n5行目'), onExpand: () {}),
+        ),
+        const RasqSectionHeader(title: 'PollWidget (未投票 単一 / 複数, 投票済み, 期限切れ)'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+          child: Column(children: [
+            RasqPollWidget(poll: const Poll(options: [PollOption(text: '猫派', votes: 3), PollOption(text: '犬派', votes: 2)]), onVote: (_) {}),
+            const SizedBox(height: RasqSpacing.md),
+            RasqPollWidget(poll: Poll(options: const [PollOption(text: 'A', votes: 1), PollOption(text: 'B'), PollOption(text: 'C', votes: 4)], multiple: true, expiresAt: now.add(const Duration(hours: 3))), onVote: (_) {}),
+            const SizedBox(height: RasqSpacing.md),
+            RasqPollWidget(poll: const Poll(options: [PollOption(text: '猫派', votes: 30), PollOption(text: '犬派', votes: 20), PollOption(text: 'その他', votes: 5)], votedIndices: {0})),
+            const SizedBox(height: RasqSpacing.md),
+            RasqPollWidget(poll: Poll(options: const [PollOption(text: '賛成', votes: 7), PollOption(text: '反対', votes: 3)], expiresAt: now.subtract(const Duration(days: 1)))),
+          ]),
+        ),
+        const RasqSectionHeader(title: 'ActionBar (spread / leading = コンポーザーツールバー)'),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: RasqActionBar(items: demoActions, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})])),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+          child: RasqActionBar(layout: RasqActionBarLayout.leading, items: [
+            RasqActionBarItem(id: 'image', label: '画像', icon: Icons.image_outlined, showCount: false, onTap: () {}),
+            RasqActionBarItem(id: 'emoji', label: '絵文字', icon: Icons.emoji_emotions_outlined, showCount: false, onTap: () {}),
+            RasqActionBarItem(id: 'poll', label: '投票', icon: Icons.poll_outlined, showCount: false, onTap: () {}),
+            RasqActionBarItem(id: 'cw', label: '注釈', icon: Icons.visibility_off_outlined, showCount: false, onTap: () {}),
+          ]),
+        ),
+        const RasqSectionHeader(title: 'Avatar / Badge'),
         _row([
           RasqAvatar(imageUrl: MockData.me.avatarUrl, fallbackLabel: 'タ'),
           RasqAvatar(imageUrl: MockData.douglas.avatarUrl, presence: UserPresence.inVc),
@@ -86,7 +169,7 @@ class CatalogScreen extends ConsumerWidget {
         ]),
         const RasqSectionHeader(title: 'ListTile family'),
         RasqListTile(title: 'プラグインの構成', onTap: () {}),
-        RasqListTile(title: 'BlueSky Plugin', subtitle: 'RASQ Official', leading: const Icon(Icons.extension_outlined), trailing: const Icon(Icons.verified, color: Color(0xFF34C759), size: 18), onTap: () {}),
+        RasqListTile(title: 'BlueSky Plugin', subtitle: 'RASQ Official', leading: const Icon(Icons.extension_outlined), trailing: const RasqBrandIcon(size: 18, semanticsLabel: 'RASQ Official'), onTap: () {}),
         const _SwitchDemo(),
         RasqValueListTile(title: 'インターフェースの表示サイズ', value: '標準', onTap: () {}),
         RasqWarningListTile(title: 'トレンドの指向性/刺激性', onTap: () {}),

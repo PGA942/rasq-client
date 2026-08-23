@@ -6,6 +6,7 @@ import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
 import 'avatar.dart';
 import 'badge.dart';
+import 'brand.dart';
 import 'buttons.dart';
 import 'sns_pill.dart';
 
@@ -62,7 +63,10 @@ class RasqUserRow extends StatelessWidget {
               Row(children: [
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(user.displayName, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Row(children: [
+                      Flexible(child: Text(user.displayName, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      RasqVerifiedBadge(kind: user.verification),
+                    ]),
                     Row(children: [
                       Flexible(child: Text('@${user.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
                       const SizedBox(width: 2),

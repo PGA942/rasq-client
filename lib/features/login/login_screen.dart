@@ -38,6 +38,7 @@ class LoginScreen extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Padding(padding: EdgeInsets.only(top: RasqSpacing.xl, bottom: RasqSpacing.sm), child: Center(child: RasqLogo(height: 44))),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: RasqSpacing.md),
               child: Text('初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。',

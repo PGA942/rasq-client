@@ -27,7 +27,8 @@ class SettingsScreen extends ConsumerWidget {
         for (final p in registry.plugins)
           RasqListTile(
             title: p.manifest.name,
-            trailing: p.manifest.verified ? Icon(Icons.verified, color: p.manifest.official ? const Color(0xFF34C759) : const Color(0xFF1E88E5), size: 18) : null,
+            // RASQ Official → brand mark; other store-verified plugins → verified glyph.
+            trailing: p.manifest.official ? const RasqBrandIcon(size: 18, semanticsLabel: 'RASQ Official') : (p.manifest.verified ? const Icon(Icons.verified, color: Color(0xFF1E88E5), size: 18) : null),
             onTap: () => context.push('/settings/section/sns'),
           ),
         RasqListTile(title: 'アプリの外観', onTap: () => context.push('/settings/section/appearance')),

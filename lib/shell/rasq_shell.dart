@@ -49,8 +49,8 @@ class _MobileLayout extends ConsumerWidget {
           destinations: [
             for (final t in RasqNavTab.values)
               NavigationDestination(
-                icon: _LongPressable(tab: t, child: Icon(t.icon)),
-                selectedIcon: _LongPressable(tab: t, child: Icon(t.selectedIcon)),
+                icon: _LongPressable(tab: t, child: _navIcon(t, selected: false)),
+                selectedIcon: _LongPressable(tab: t, child: _navIcon(t, selected: true)),
                 label: t.label,
                 tooltip: t.label,
               ),
@@ -60,6 +60,10 @@ class _MobileLayout extends ConsumerWidget {
     );
   }
 }
+
+/// Nav glyphs: AsTell uses the brand mark (特殊なコンポーネント置き場), the rest
+/// Material icons until the RASQ icon font lands.
+Widget _navIcon(RasqNavTab t, {required bool selected}) => t == RasqNavTab.vc ? RasqAsTellIcon(size: 26, selected: selected) : Icon(selected ? t.selectedIcon : t.icon);
 
 /// 通知 / DM ボタン長押し → 一括既読・通知オフ のドロップダウン (ワイヤーフレーム注釈).
 class _LongPressable extends ConsumerWidget {
@@ -100,8 +104,8 @@ class _TabletLayout extends StatelessWidget {
                   tooltip: t.label,
                   isSelected: shell.currentIndex == t.index,
                   onPressed: () => shell.goBranch(t.index, initialLocation: t.index == shell.currentIndex),
-                  icon: Icon(t.icon),
-                  selectedIcon: Icon(t.selectedIcon),
+                  icon: _navIcon(t, selected: false),
+                  selectedIcon: _navIcon(t, selected: true),
                 ),
             ]),
           ),
