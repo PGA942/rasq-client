@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_store/rasq_store.dart' show FollowState;
 
@@ -54,11 +56,25 @@ abstract class SnsSession {
   /// Resolves custom emoji shortcode → image URL (MFM / Mastodon custom emoji).
   Future<Uri?> emojiUrl(String shortcode);
 
+  // --- リアクション / リノート一覧 ---
+  Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30});
+  Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30});
+
+  // --- ユーザー一括 ---
+  Future<List<UserProfile>> users(List<String> ids);
+  Future<Map<String, FollowState>> relationships(List<String> userIds);
+
+  // --- コンポーザー ---
+  int get maxPostLength;
+  Future<MediaItem> uploadMedia(Uint8List bytes, String filename, {String? mimeType, bool sensitive = false, String? alt});
+  Future<List<EmojiInfo>> customEmojis();
+
   // --- トレンド (phase-1 sample: sourced from the SNS itself) ---
   Future<List<TrendTag>> trendingTags();
 
-  // --- DM (限定公開投稿をDM扱い) ---
+  // --- DM (限定公開投稿をDM扱い + ネイティブChat) ---
   Future<List<DmRoom>> dmRooms();
+  Future<Post> sendDm(DmRoom room, NewPost draft);
 
   Future<void> close();
 }
@@ -68,6 +84,8 @@ abstract class SnsSession {
 abstract final class DynamicTimelines {
   static TimelineKind tag(String tag) => TimelineKind('tag:$tag', '#$tag');
   static TimelineKind dm(String peerUserId) => TimelineKind('dm:$peerUserId', 'DM', extensible: false);
+  static TimelineKind chat(String peerUserId) => TimelineKind('chat:$peerUserId', 'Chat', extensible: false);
+  static TimelineKind forRoom(DmRoom room) => room.kind == DmRoomKind.chat ? chat(room.peer.id) : dm(room.peer.id);
   static const featured = TimelineKind('featured', 'Today', extensible: false);
 }
 
@@ -127,9 +145,25 @@ abstract class SnsSessionBase implements SnsSession {
   @override
   Future<Uri?> emojiUrl(String shortcode) async => null;
   @override
+  Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30}) => _unsupported('reactions');
+  @override
+  Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) => _unsupported('reposters');
+  @override
+  Future<List<UserProfile>> users(List<String> ids) => _unsupported('users');
+  @override
+  Future<Map<String, FollowState>> relationships(List<String> userIds) => _unsupported('relationships');
+  @override
+  int get maxPostLength => 500;
+  @override
+  Future<MediaItem> uploadMedia(Uint8List bytes, String filename, {String? mimeType, bool sensitive = false, String? alt}) => _unsupported('uploadMedia');
+  @override
+  Future<List<EmojiInfo>> customEmojis() async => const [];
+  @override
   Future<List<TrendTag>> trendingTags() => _unsupported('trendingTags');
   @override
   Future<List<DmRoom>> dmRooms() => _unsupported('dmRooms');
+  @override
+  Future<Post> sendDm(DmRoom room, NewPost draft) => _unsupported('sendDm');
   @override
   Future<void> close() async {}
 }

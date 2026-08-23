@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_store/rasq_store.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
+import '../../app/sort_menu.dart';
+import '../compose/compose_target.dart';
+import '../compose/composer_sheet.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 
@@ -28,7 +32,7 @@ final threadProvider = FutureProvider.autoDispose.family<Thread, String>((ref, i
   return t;
 });
 
-class PostDetailScreen extends ConsumerWidget {
+class PostDetailScreen extends ConsumerStatefulWidget {
   const PostDetailScreen({super.key, required this.postId, this.initial});
   final String postId;
 
@@ -36,10 +40,25 @@ class PostDetailScreen extends ConsumerWidget {
   final Post? initial;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PostDetailScreen> createState() => _PostDetailScreenState();
+}
+
+class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
+  RasqSortOrder _order = RasqSortOrder.defaultOrder;
+  String get postId => widget.postId;
+  Post? get initial => widget.initial;
+
+  Future<void> _reply(Post to) async {
+    final created = await showComposer(ref, ComposeReply(to));
+    if (created != null) ref.invalidate(threadProvider(postId));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final me = ref.watch(currentUserProvider);
     final session = ref.watch(currentSnsSessionProvider);
     final thread = ref.watch(threadProvider(postId));
+    final manager = ref.watch(overlayManagerProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final scheme = Theme.of(context).colorScheme;
 
@@ -48,7 +67,7 @@ class PostDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: RasqPageHeader(title: '投稿', leadingAvatar: me, actions: [RasqIconButton(icon: Icons.bookmark_border, onPressed: () {}, tooltip: 'ブックマーク')], onMore: () {}),
       body: thread.when(
-        loading: () => initial == null ? const RasqLoading() : _ThreadBody(post: initial!, ancestors: const [], descendants: const [], actions: actions, onAction: perform, loading: true),
+        loading: () => initial == null ? const RasqLoading() : _ThreadBody(post: initial!, ancestors: const [], descendants: const [], actions: actions, onAction: perform, loading: true, order: _order, onSortTap: (r) => _sort(manager, r), onShowReactions: () => context.pushReactions(initial!)),
         error: (e, _) {
           final code = e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e');
           if (code.code == '404') {
@@ -56,25 +75,42 @@ class PostDetailScreen extends ConsumerWidget {
           }
           return RasqErrorView(code: code, onRetry: () => ref.invalidate(threadProvider(postId)), retryLabel: '再読み込み');
         },
-        data: (t) => _ThreadBody(post: t.post, ancestors: t.ancestors, descendants: t.descendants, actions: actions, onAction: perform),
+        data: (t) => _ThreadBody(post: t.post, ancestors: t.ancestors, descendants: t.descendants, actions: actions, onAction: perform, order: _order, onSortTap: (r) => _sort(manager, r), onShowReactions: () => context.pushReactions(t.post)),
       ),
-      bottomNavigationBar: _ReplyBarPlaceholder(handle: initial?.author.handle ?? thread.value?.post.author.handle, instance: initial?.author.account.instance ?? thread.value?.post.author.account.instance, color: scheme.surface),
+      bottomNavigationBar: _ReplyBarPlaceholder(
+        handle: initial?.author.handle ?? thread.value?.post.author.handle,
+        instance: initial?.author.account.instance ?? thread.value?.post.author.account.instance,
+        color: scheme.surface,
+        onTap: () {
+          final target = thread.value?.post ?? initial;
+          if (target != null) _reply(target);
+        },
+      ),
     );
+  }
+
+  Future<void> _sort(OverlayManager manager, Rect rect) async {
+    final o = await showSortMenu(manager, rect, _order, id: 'thread');
+    if (o != null) setState(() => _order = o);
   }
 }
 
 class _ThreadBody extends StatelessWidget {
-  const _ThreadBody({required this.post, required this.ancestors, required this.descendants, required this.actions, required this.onAction, this.loading = false});
+  const _ThreadBody({required this.post, required this.ancestors, required this.descendants, required this.actions, required this.onAction, this.loading = false, this.order = RasqSortOrder.defaultOrder, this.onSortTap, this.onShowReactions});
   final Post post;
   final List<Post> ancestors;
   final List<Post> descendants;
   final List<ActionDescriptor> actions;
   final Future<void> Function(Post, ActionDescriptor) onAction;
   final bool loading;
+  final RasqSortOrder order;
+  final ValueChanged<Rect>? onSortTap;
+  final VoidCallback? onShowReactions;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final replies = sortByReactions(descendants, order, (p) => p.reactionTotal);
     return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
       for (final a in ancestors) ...[
         PostRow(post: a, actions: actions, onAction: (d) => onAction(a, d), onTap: () => context.pushPost(a)),
@@ -86,19 +122,32 @@ class _ThreadBody extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
         height: RasqSizes.minTap,
         child: Row(children: [
-          const Icon(Icons.keyboard_arrow_down, size: 18),
-          const SizedBox(width: 4),
-          const Text('返信', style: RasqTypography.tab),
+          Builder(
+            builder: (ctx) => InkWell(
+              onTap: onSortTap == null
+                  ? null
+                  : () {
+                      final box = ctx.findRenderObject() as RenderBox;
+                      onSortTap!(box.localToGlobal(Offset.zero) & box.size);
+                    },
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.keyboard_arrow_down, size: 18),
+                const SizedBox(width: 4),
+                const Text('返信', style: RasqTypography.tab),
+                if (order != RasqSortOrder.defaultOrder) Padding(padding: const EdgeInsets.only(left: 6), child: Text(order.label, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+              ]),
+            ),
+          ),
           const Spacer(),
-          TextButton(onPressed: () {}, child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('リアクションを表示'), Icon(Icons.chevron_right, size: 18)])),
+          TextButton(onPressed: onShowReactions, child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('リアクションを表示'), Icon(Icons.chevron_right, size: 18)])),
         ]),
       ),
       if (loading) const RasqLoading(),
-      for (final d in descendants) ...[
+      for (final d in replies) ...[
         _Threaded(child: PostRow(post: d, actions: actions, onAction: (x) => onAction(d, x), onTap: () => context.pushPost(d))),
         const Divider(),
       ],
-      if (descendants.isNotEmpty) Center(child: TextButton(onPressed: () {}, child: const Text('さらに表示'))),
+      if (replies.isNotEmpty) Center(child: TextButton(onPressed: () {}, child: const Text('さらに表示'))),
     ]);
   }
 }
@@ -114,12 +163,13 @@ class _Threaded extends StatelessWidget {
       ]);
 }
 
-/// 返信バー(placeholder): 投稿コンポーザーは次段階で FOW として実装。
+/// 返信バー: タップでコンポーザー(返信モード)を開く。
 class _ReplyBarPlaceholder extends StatelessWidget {
-  const _ReplyBarPlaceholder({required this.handle, required this.instance, required this.color});
+  const _ReplyBarPlaceholder({required this.handle, required this.instance, required this.color, this.onTap});
   final String? handle;
   final String? instance;
   final Color color;
+  final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -127,7 +177,10 @@ class _ReplyBarPlaceholder extends StatelessWidget {
       color: color,
       child: SafeArea(
         top: false,
-        child: Container(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(RasqSizes.radiusMd),
+          child: Container(
           margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.sm),
           padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm),
           decoration: BoxDecoration(border: Border.all(color: scheme.onSurface), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
@@ -148,9 +201,10 @@ class _ReplyBarPlaceholder extends StatelessWidget {
               const Spacer(),
               Container(width: 22, height: 22, alignment: Alignment.center, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: scheme.primary)), child: Text('0', style: RasqTypography.caption.copyWith(color: scheme.primary))),
               const SizedBox(width: 8),
-              FilledButton(onPressed: null, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 14)), child: const Text('返信')),
+              FilledButton(onPressed: onTap, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 14)), child: const Text('返信')),
             ]),
           ]),
+        ),
         ),
       ),
     );

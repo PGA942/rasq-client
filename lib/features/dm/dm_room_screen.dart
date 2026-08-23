@@ -7,7 +7,10 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
+import '../compose/compose_target.dart';
+import '../compose/composer_sheet.dart';
 import '../home/post_row.dart';
+import 'dm_providers.dart';
 import '../home/timeline_providers.dart';
 
 /// DMルーム: ページヘッダー(相手名) + ルームタイムライン(通常投稿の使い回し).
@@ -19,13 +22,44 @@ class DmRoomScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final kind = DynamicTimelines.dm(peerId);
+    final rooms = ref.watch(dmRoomsProvider).value;
+    final resolved = room ?? rooms?.where((r) => r.peer.id == peerId).firstOrNull;
+    final kind = resolved == null ? DynamicTimelines.dm(peerId) : DynamicTimelines.forRoom(resolved);
     final tl = ref.watch(timelineProvider(kind));
     final notifier = ref.read(timelineProvider(kind).notifier);
     final actions = ref.watch(currentSnsSessionProvider)?.actions ?? const [];
-    final title = room?.displayTitle ?? tl.value?.posts.where((p) => p.author.id == peerId).firstOrNull?.author.displayName ?? 'DM';
+    final title = resolved?.displayTitle ?? tl.value?.posts.where((p) => p.author.id == peerId).firstOrNull?.author.displayName ?? 'DM';
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: RasqPageHeader(title: title, onMore: () {}),
+      bottomNavigationBar: resolved == null
+          ? null
+          : Material(
+              color: scheme.surface,
+              child: SafeArea(
+                top: false,
+                child: InkWell(
+                  onTap: () async {
+                    final sent = await showComposer(ref, ComposeDm(resolved));
+                    if (sent != null) {
+                      await notifier.refresh();
+                      ref.invalidate(dmRoomsProvider);
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.all(RasqSpacing.sm),
+                    padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: RasqSpacing.sm),
+                    decoration: BoxDecoration(border: Border.all(color: scheme.onSurface), borderRadius: BorderRadius.circular(RasqSizes.radiusPill)),
+                    child: Row(children: [
+                      Icon(resolved.kind == DmRoomKind.chat ? Icons.chat_bubble_outline : Icons.lock_outline, size: 18, color: scheme.onSurfaceVariant),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(resolved.kind == DmRoomKind.chat ? 'メッセージを入力..' : 'ダイレクト投稿を入力..', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
+                      Icon(Icons.send, size: 18, color: scheme.primary),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
       body: tl.when(
         loading: () => const RasqLoading(),
         error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),

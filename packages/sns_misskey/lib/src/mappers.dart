@@ -114,6 +114,7 @@ abstract final class MisskeyMappers {
 
     final reactions = (j['reactions'] as Map?)?.cast<String, Object?>() ?? const {};
     final reactionTotal = reactions.values.fold<int>(0, (a, v) => a + ((v as num?)?.toInt() ?? 0));
+    final reactionEmojis = (j['reactionEmojis'] as Map?)?.cast<String, Object?>() ?? const {};
     return Post(
       id: j['id'] as String,
       account: viewer,
@@ -132,7 +133,55 @@ abstract final class MisskeyMappers {
       },
       visibility: j['visibility'] as String?,
       directToIds: [for (final id in (j['visibleUserIds'] as List? ?? const [])) id.toString()],
+      reactions: {for (final e in reactions.entries) e.key: (e.value as num?)?.toInt() ?? 0},
+      reactionEmojis: {
+        for (final e in reactionEmojis.entries)
+          if (e.value is String) ':${e.key}:': Uri.parse(e.value as String),
+      },
+      myReaction: j['myReaction'] as String?,
     );
+  }
+
+  /// Chat message (Misskey 2025.4+) → Post so DM rooms can reuse PostRow.
+  static Post chatMessage(Map<String, Object?> j, {required AccountId viewer, required String host, required UserSummary me, UserSummary? peer}) {
+    final fromId = j['fromUserId'] as String?;
+    final fromUser = j['fromUser'] is Map ? user((j['fromUser'] as Map).cast<String, Object?>(), account: viewer, host: host) : (fromId == me.id ? me : (peer ?? me));
+    final file = j['file'] is Map ? (j['file'] as Map).cast<String, Object?>() : null;
+    final reactions = <String, int>{};
+    for (final r in (j['reactions'] as List? ?? const [])) {
+      if (r is Map && r['reaction'] is String) reactions.update(r['reaction'] as String, (v) => v + 1, ifAbsent: () => 1);
+    }
+    return Post(
+      id: j['id'] as String,
+      account: viewer,
+      author: fromUser,
+      createdAt: _date(j['createdAt']) ?? DateTime.now(),
+      body: j['text'] as String? ?? '',
+      bodyFormat: 'mfm',
+      media: [if (file != null) MisskeyMappers.file(file)],
+      visibility: 'specified',
+      directToIds: [if (j['toUserId'] is String) j['toUserId'] as String],
+      reactions: reactions,
+      source: PostSource.chatMessage,
+    );
+  }
+
+  static ReactionEntry reactionEntry(Map<String, Object?> j, {required AccountId viewer, required String host, Map<String, Uri> emojiUrls = const {}}) {
+    final type = (j['type'] ?? '').toString();
+    return ReactionEntry(
+      id: j['id'] as String,
+      user: user((j['user'] as Map).cast<String, Object?>(), account: viewer, host: host),
+      reaction: type,
+      createdAt: _date(j['createdAt']) ?? DateTime.now(),
+      emojiUrl: emojiUrls[type],
+    );
+  }
+
+  static EmojiInfo? emoji(Map<String, Object?> j) {
+    final name = j['name'];
+    final url = j['url'];
+    if (name is! String || url is! String) return null;
+    return EmojiInfo(name: name, url: Uri.parse(url), category: j['category'] as String?, aliases: [for (final a in (j['aliases'] as List? ?? const [])) a.toString()]);
   }
 
   static TrendTag trend(Map<String, Object?> j) => TrendTag(

@@ -8,6 +8,8 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
+import '../compose/compose_target.dart';
+import '../compose/composer_sheet.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
 
@@ -48,7 +50,10 @@ class HomeScreen extends ConsumerWidget {
           ),
         ]),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () async {
+            final created = await showComposer(ref, const ComposeNormal());
+            if (created != null) await ref.read(timelineProvider(TimelineKind.home).notifier).refresh();
+          },
           tooltip: '投稿',
           shape: const CircleBorder(),
           child: const Icon(Icons.add),

@@ -86,7 +86,10 @@ class _RoomRow extends StatelessWidget {
           const SizedBox(width: RasqSpacing.md),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(room.displayTitle, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Row(children: [
+                Flexible(child: Text(room.displayTitle, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                if (room.kind == DmRoomKind.chat) const Padding(padding: EdgeInsets.only(left: 6), child: RasqPill(label: 'Chat', outlined: true)),
+              ]),
               const SizedBox(height: 2),
               if (last != null)
                 RasqRichText(

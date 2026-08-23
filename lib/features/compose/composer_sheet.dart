@@ -1,0 +1,312 @@
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+
+import '../../app/providers.dart';
+import '../../text/inline_spans.dart';
+import 'compose_target.dart';
+import 'emoji_panel.dart';
+import 'poll_editor.dart';
+
+/// Opens the composer (bottom sheet via Overlay Manager; becomes a FOW
+/// interstitial in M3). Resolves with the created post, or null on cancel.
+Future<Post?> showComposer(WidgetRef ref, ComposeTarget target) async {
+  final manager = ref.read(overlayManagerProvider);
+  final res = await manager.showBottomSheet<Post>(
+    id: 'composer',
+    title: target.title,
+    cancelText: 'キャンセル',
+    maxHeightFactor: 0.92,
+    builder: (ctx) => _ComposerBody(target: target, onSent: (p) => OverlayScope.read(ctx).close('composer', result: p)),
+  );
+  return res;
+}
+
+class _Attachment {
+  _Attachment({required this.bytes, required this.name, this.mimeType});
+  final Uint8List bytes;
+  final String name;
+  final String? mimeType;
+  bool sensitive = false;
+  MediaItem? uploaded;
+}
+
+class _ComposerBody extends ConsumerStatefulWidget {
+  const _ComposerBody({required this.target, required this.onSent});
+  final ComposeTarget target;
+  final ValueChanged<Post> onSent;
+  @override
+  ConsumerState<_ComposerBody> createState() => _ComposerBodyState();
+}
+
+class _ComposerBodyState extends ConsumerState<_ComposerBody> {
+  final _text = TextEditingController();
+  final _cw = TextEditingController();
+  final _focus = FocusNode();
+  bool _cwOn = false;
+  bool _emojiOpen = false;
+  PollDraft? _poll;
+  final List<_Attachment> _files = [];
+  bool _busy = false;
+  String? _error;
+  String? _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    final t = widget.target;
+    if (t is ComposeReply) {
+      final a = t.to.author;
+      final me = ref.read(currentAccountProvider);
+      final mention = a.account.instance == me?.instance ? '@${a.handle}' : '@${a.handle}@${a.account.instance}';
+      _text.text = '$mention ';
+      _text.selection = TextSelection.collapsed(offset: _text.text.length);
+      if (t.to.contentWarning != null && t.to.contentWarning!.isNotEmpty) {
+        _cwOn = true;
+        _cw.text = t.to.contentWarning!;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _text.dispose();
+    _cw.dispose();
+    _focus.dispose();
+    _poll?.dispose();
+    super.dispose();
+  }
+
+  SnsSession? get _session => ref.read(currentSnsSessionProvider);
+  bool get _isDm => widget.target is ComposeDm;
+  int get _max => _session?.maxPostLength ?? 500;
+
+  void _insert(String s) {
+    final v = _text.value;
+    final sel = v.selection.isValid ? v.selection : TextSelection.collapsed(offset: v.text.length);
+    final next = v.text.replaceRange(sel.start, sel.end, s);
+    _text.value = TextEditingValue(text: next, selection: TextSelection.collapsed(offset: sel.start + s.length));
+    setState(() {});
+  }
+
+  Future<void> _pick({bool camera = false}) async {
+    final picker = ImagePicker();
+    try {
+      final files = camera ? [await picker.pickImage(source: ImageSource.camera)].whereType<XFile>().toList() : await picker.pickMultiImage();
+      for (final f in files.take(4 - _files.length)) {
+        _files.add(_Attachment(bytes: await f.readAsBytes(), name: f.name, mimeType: f.mimeType));
+      }
+      setState(() {});
+    } catch (e) {
+      if (camera) return _pick();
+      setState(() => _error = '画像を選択できませんでした: $e');
+    }
+  }
+
+  bool get _canSend {
+    if (_busy || _session == null) return false;
+    final hasText = _text.text.trim().isNotEmpty;
+    final hasMedia = _files.isNotEmpty;
+    final pollOk = _poll == null || _poll!.isValid;
+    if (_poll != null && !_poll!.isValid) return false;
+    if (_text.text.length > _max) return false;
+    return (hasText || hasMedia || (_poll != null && pollOk)) && !(_isDm && _files.length > 1);
+  }
+
+  Future<void> _send() async {
+    final session = _session;
+    if (session == null) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final ids = <String>[];
+      for (var i = 0; i < _files.length; i++) {
+        final f = _files[i];
+        setState(() => _progress = 'アップロード中 ${i + 1}/${_files.length}');
+        f.uploaded ??= await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: f.sensitive);
+        ids.add(f.uploaded!.id);
+      }
+      setState(() => _progress = '送信中…');
+      final draft = NewPost(
+        text: _text.text.trim(),
+        contentWarning: _cwOn && _cw.text.trim().isNotEmpty ? _cw.text.trim() : null,
+        replyToId: switch (widget.target) { ComposeReply(to: final p) => p.id, _ => null },
+        quoteOfId: switch (widget.target) { ComposeQuote(of: final p) => p.id, _ => null },
+        mediaIds: ids,
+        poll: _poll == null ? null : NewPoll(choices: _poll!.texts, multiple: _poll!.multiple, expiresAfter: _poll!.expiresAfter),
+      );
+      final post = switch (widget.target) {
+        ComposeDm(room: final r) => await session.sendDm(r, draft),
+        _ => await session.createPost(draft),
+      };
+      widget.onSent(post);
+    } on SnsApiException catch (e) {
+      setState(() => _error = '${e.code.display}${e.code.message == null ? '' : '\n${e.code.message}'}');
+    } catch (e) {
+      setState(() => _error = '送信に失敗しました: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = RasqTokens.of(context);
+    final me = ref.watch(currentUserProvider);
+    final emojis = ref.watch(emojiCacheProvider);
+    final target = widget.target;
+    final count = _text.text.length;
+    final over = count > _max;
+
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Flexible(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (target is ComposeReply || target is ComposeQuote)
+              Padding(
+                padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
+                child: _TargetPreview(post: target is ComposeReply ? target.to : (target as ComposeQuote).of, emojis: emojis),
+              ),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: me.displayName),
+              const SizedBox(width: RasqSpacing.md),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (_cwOn)
+                    Row(children: [
+                      Icon(Icons.visibility_outlined, size: 18, color: scheme.onSurfaceVariant),
+                      const SizedBox(width: 6),
+                      Expanded(child: TextField(controller: _cw, decoration: const InputDecoration(hintText: '注釈..', isDense: true), style: RasqTypography.bodySmall)),
+                      RasqIconButton(icon: Icons.cancel, size: 20, tooltip: '注釈を外す', onPressed: () => setState(() => _cwOn = false)),
+                    ]),
+                  TextField(
+                    controller: _text,
+                    focusNode: _focus,
+                    autofocus: true,
+                    minLines: 3,
+                    maxLines: 10,
+                    style: RasqTypography.body,
+                    decoration: InputDecoration(hintText: _isDm ? 'メッセージを入力..' : 'いいことがありますように！', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ]),
+              ),
+            ]),
+            if (_files.isNotEmpty)
+              SizedBox(
+                height: 88,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _files.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) => _AttachmentTile(a: _files[i], onRemove: () => setState(() => _files.removeAt(i)), onToggleSensitive: () => setState(() => _files[i].sensitive = !_files[i].sensitive)),
+                ),
+              ),
+            if (_poll != null) PollEditor(draft: _poll!, onRemove: () => setState(() => _poll = null)),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: RasqSpacing.sm),
+                child: Text(_error!, style: RasqTypography.bodySmall.copyWith(color: tokens.danger)),
+              ),
+            if (_progress != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text(_progress!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+          ]),
+        ),
+      ),
+      // Toolbar (コンポーザーツールバー = アクションバーの左寄せバリエーション)
+      Container(
+        decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.outlineVariant))),
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 4, RasqSpacing.sm, 4),
+        child: Row(children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                RasqActionButton.icon(icon: Icons.photo_camera_outlined, tooltip: 'カメラ', onTap: _busy ? null : () => _pick(camera: true)),
+                RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= 4 ? null : () => _pick()),
+                RasqActionButton.icon(icon: Icons.visibility_outlined, doneIcon: Icons.visibility, done: _cwOn, tooltip: '隠す(注釈)', onTap: () => setState(() => _cwOn = !_cwOn)),
+                if (!_isDm) RasqActionButton.icon(icon: Icons.poll_outlined, doneIcon: Icons.poll, done: _poll != null, tooltip: '投票', onTap: () => setState(() => _poll = _poll == null ? PollDraft() : null)),
+                RasqActionButton.icon(icon: Icons.emoji_emotions_outlined, doneIcon: Icons.emoji_emotions, done: _emojiOpen, tooltip: '絵文字', onTap: () => setState(() => _emojiOpen = !_emojiOpen)),
+                RasqActionButton.icon(icon: Icons.code, tooltip: 'MFM (次段階)', enabled: false),
+              ]),
+            ),
+          ),
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: over ? tokens.danger : scheme.primary, width: 1.5)),
+            child: Text('$count', style: RasqTypography.caption.copyWith(color: over ? tokens.danger : scheme.primary, fontSize: 10)),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: _canSend ? _send : null,
+            style: FilledButton.styleFrom(minimumSize: const Size(0, 34), padding: const EdgeInsets.symmetric(horizontal: 16)),
+            child: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(switch (target) { ComposeReply() => '返信', ComposeDm() => '送信', _ => '送信' }),
+          ),
+        ]),
+      ),
+      if (_emojiOpen) EmojiPanel(onPick: _insert),
+    ]);
+  }
+}
+
+class _TargetPreview extends StatelessWidget {
+  const _TargetPreview({required this.post, required this.emojis});
+  final Post post;
+  final Map<String, Uri?> emojis;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(RasqSpacing.sm),
+      decoration: BoxDecoration(color: scheme.surfaceContainer, borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        RasqAvatar(imageUrl: post.author.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: post.author.displayName),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(post.author.displayName, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+            RasqRichText(InlineSpans.parse(post.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 3, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+class _AttachmentTile extends StatelessWidget {
+  const _AttachmentTile({required this.a, required this.onRemove, required this.onToggleSensitive});
+  final _Attachment a;
+  final VoidCallback onRemove;
+  final VoidCallback onToggleSensitive;
+  @override
+  Widget build(BuildContext context) => Stack(children: [
+        ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(a.bytes, width: 88, height: 88, fit: BoxFit.cover)),
+        Positioned(right: 0, top: 0, child: RasqIconButton(icon: Icons.cancel, size: 18, color: Colors.white, onPressed: onRemove, tooltip: '削除')),
+        Positioned(
+          left: 0,
+          bottom: 0,
+          child: IconButton(
+            onPressed: onToggleSensitive,
+            tooltip: a.sensitive ? 'センシティブ解除' : 'センシティブにする',
+            icon: Icon(a.sensitive ? Icons.visibility_off : Icons.visibility_outlined, size: 18, color: Colors.white),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          ),
+        ),
+      ]);
+}

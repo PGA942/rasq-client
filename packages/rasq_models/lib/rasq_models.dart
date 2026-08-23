@@ -15,3 +15,4 @@ export 'src/profile.dart';
 export 'src/thread.dart';
 export 'src/trend.dart';
 export 'src/dm.dart';
+export 'src/reaction.dart';

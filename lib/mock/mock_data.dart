@@ -54,6 +54,7 @@ abstract final class MockData {
         createdAt: now.subtract(const Duration(minutes: 3)),
         body: '4..\n3..\n2..\n1..\nLet\'s Take off!!!',
         counts: const {'reply': 2, 'repost': 12, 'like': 48},
+        reactions: const {'👍': 30, '🎉': 18},
       ),
       Post(
         id: 'p2',

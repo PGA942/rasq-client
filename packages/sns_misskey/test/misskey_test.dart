@@ -195,6 +195,69 @@ void main() {
       expect(room.items.first.isDirect, isTrue);
     });
 
+    test('reactions / reposters / users / relationships', () async {
+      final c = client({
+        'notes/reactions': (b) => [
+              {'id': 'x1', 'createdAt': '2026-08-22T00:00:00Z', 'type': '👍', 'user': user('a')},
+              {'id': 'x2', 'createdAt': '2026-08-22T00:00:00Z', 'type': ':blobcat:', 'user': user('b')},
+            ],
+        'emojis': (_) => {'emojis': [{'name': 'blobcat', 'url': 'https://e/blobcat.png', 'category': 'cats'}]},
+        'notes/renotes': (_) => [{'id': 'rn1', 'user': user('c')}],
+        'users/show': (b) => [for (final id in (b['userIds'] as List)) {...user(id as String), 'followersCount': 3}],
+        'users/relation': (b) => [for (final id in (b['userId'] as List)) {'id': id, 'isFollowing': id == 'a', 'isFollowed': false}],
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+      final r = await s.reactions('n1');
+      expect(r.items.length, 2);
+      expect(r.items[1].emojiUrl.toString(), 'https://e/blobcat.png');
+      expect((await s.reposters('n1')).items.single.id, 'c');
+      expect((await s.users(['a', 'b'])).map((u) => u.followersCount).toList(), [3, 3]);
+      final rel = await s.relationships(['a', 'b']);
+      expect(rel['a']!.following, isTrue);
+      expect(rel['b']!.following, isFalse);
+      expect((await s.customEmojis()).single.category, 'cats');
+    });
+
+    test('chat: rooms + timeline when available; silently empty on 404', () async {
+      Map<String, Object?> msg(String id, String from, String to, String text) => {'id': id, 'createdAt': '2026-08-22T00:00:00Z', 'fromUserId': from, 'toUserId': to, 'text': text, 'fromUser': user(from), 'toUser': user(to), 'isRead': false};
+      final c = client({
+        'i': (_) => user('me'),
+        'notes/mentions': (_) => [],
+        'users/notes': (_) => [],
+        'chat/history': (_) => [msg('c1', 'alice', 'me', 'hi')],
+        'chat/messages/user-timeline': (_) => [msg('c1', 'alice', 'me', 'hi'), msg('c0', 'me', 'alice', 'yo')],
+        'chat/messages/create-to-user': (b) => msg('c2', 'me', b['toUserId'] as String, b['text'] as String),
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+      final rooms = await s.dmRooms();
+      expect(rooms.single.kind, DmRoomKind.chat);
+      expect(rooms.single.peer.id, 'alice');
+      expect(rooms.single.unreadCount, 1);
+      final tl = await s.timeline(DynamicTimelines.forRoom(rooms.single));
+      expect(tl.items.map((p) => p.author.id).toList(), ['alice', 'me']);
+      expect(tl.items.first.source, PostSource.chatMessage);
+      final sent = await s.sendDm(rooms.single, const NewPost(text: 'hello'));
+      expect(sent.body, 'hello');
+
+      final noChat = client({'i': (_) => user('me'), 'notes/mentions': (_) => [], 'users/notes': (_) => []});
+      final s2 = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: noChat);
+      expect(await s2.dmRooms(), isEmpty);
+    });
+
+    test('direct-note DM send uses specified visibility', () async {
+      late Map<String, Object?> seen;
+      final c = client({'notes/create': (b) {
+            seen = b;
+            return {'createdNote': {...note('d1'), 'visibility': 'specified', 'visibleUserIds': ['alice']}};
+          }});
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+      final room = DmRoom(id: 'alice', peer: MisskeyMappers.user(user('alice'), account: viewer, host: 'misskey.test'));
+      final p = await s.sendDm(room, const NewPost(text: 'secret'));
+      expect(seen['visibility'], 'specified');
+      expect(seen['visibleUserIds'], ['alice']);
+      expect(p.isDirect, isTrue);
+    });
+
     test('http error → SnsApiException with HTTP code', () async {
       final c = MockClient((_) async => http.Response(jsonEncode({'error': {'message': 'Unauthorized', 'code': 'CREDENTIAL_REQUIRED'}}), 401));
       final api = MisskeyApi('misskey.test', client: c);

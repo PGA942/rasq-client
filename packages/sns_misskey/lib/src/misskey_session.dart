@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:http/http.dart' as http;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -61,6 +63,17 @@ class MisskeySession extends SnsSessionBase {
     if (id == 'featured') {
       return cursor == null ? api.callList('notes/featured', {'limit': limit}) : const [];
     }
+    if (id.startsWith('chat:')) {
+      if (cursor != null) return const [];
+      final peer = id.substring(5);
+      try {
+        final msgs = await api.callList('chat/messages/user-timeline', {'userId': peer, 'limit': limit});
+        return [for (final m in msgs) {...m, '__chat': true}];
+      } on SnsApiException catch (e) {
+        if (_chatUnavailable(e)) return const [];
+        rethrow;
+      }
+    }
     if (id.startsWith('dm:')) {
       if (cursor != null) return const [];
       final peer = id.substring(3);
@@ -91,8 +104,16 @@ class MisskeySession extends SnsSessionBase {
     return all;
   }
 
+  UserSummary? _me;
+  Future<UserSummary> _meUser() async => _me ??= await me();
+
+  static bool _chatUnavailable(SnsApiException e) => e.code.code == '404' || e.code.code == '403' || e.code.code == '400';
+
   Page<Post> _page(List<Map<String, Object?>> list) {
-    final posts = [for (final n in list) MisskeyMappers.note(n, viewer: account, host: host)];
+    final posts = [
+      for (final n in list)
+        if (n['__chat'] == true) MisskeyMappers.chatMessage(n, viewer: account, host: host, me: _me ?? UserSummary(id: _cachedMyId ?? '', account: account, displayName: account.handle)) else MisskeyMappers.note(n, viewer: account, host: host),
+    ];
     return Page(items: posts, nextCursor: list.isEmpty ? null : list.last['id'] as String?);
   }
 
@@ -191,13 +212,15 @@ class MisskeySession extends SnsSessionBase {
 
   /// Timeline fetch that also returns per-note action states.
   Future<(Page<Post>, Map<String, Map<String, ActionResult>>)> timelineWithStates(TimelineKind kind, {String? cursor, int limit = 20}) async {
+    if (kind.id.startsWith('chat:')) await _meUser();
     final list = await _rawTimeline(kind, cursor, limit);
     var page = _page(list);
-    if (kind.id == 'featured' || kind.id.startsWith('dm:')) page = Page(items: page.items); // not paged
+    if (kind.id == 'featured' || kind.id.startsWith('dm:') || kind.id.startsWith('chat:')) page = Page(items: page.items); // not paged
     final states = <String, Map<String, ActionResult>>{};
     for (var i = 0; i < list.length; i++) {
       final raw = list[i];
       // For pure renotes the displayed post is the inner note, but the row id is the renote id.
+      if (raw['__chat'] == true) continue;
       final inner = raw['renote'] is Map && (raw['text'] == null || (raw['text'] as String).isEmpty) ? (raw['renote'] as Map).cast<String, Object?>() : raw;
       states[page.items[i].id] = noteStates(inner);
     }
@@ -316,7 +339,139 @@ class MisskeySession extends SnsSessionBase {
         lastPost: MisskeyMappers.note(e.value, viewer: account, host: host),
       ));
     }
+    rooms.addAll(await _chatRooms());
     return rooms;
+  }
+
+  /// Native chat rooms (1:1 only). Silently empty when the instance has no chat.
+  Future<List<DmRoom>> _chatRooms() async {
+    try {
+      final me = await _meUser();
+      final history = await api.callList('chat/history', {'room': false, 'limit': 50});
+      final rooms = <DmRoom>[];
+      for (final m in history) {
+        final fromId = m['fromUserId'] as String?;
+        final toId = m['toUserId'] as String?;
+        final peerJson = (fromId == me.id ? m['toUser'] : m['fromUser']);
+        final peerId = fromId == me.id ? toId : fromId;
+        if (peerId == null) continue;
+        UserSummary peer;
+        if (peerJson is Map) {
+          peer = MisskeyMappers.user(peerJson.cast<String, Object?>(), account: account, host: host);
+        } else {
+          final us = await api.callList('users/show', {'userIds': [peerId]});
+          if (us.isEmpty) continue;
+          peer = MisskeyMappers.user(us.first, account: account, host: host);
+        }
+        rooms.add(DmRoom(
+          id: 'chat:$peerId',
+          kind: DmRoomKind.chat,
+          peer: peer,
+          lastPost: MisskeyMappers.chatMessage(m, viewer: account, host: host, me: me, peer: peer),
+          unreadCount: m['isRead'] == false && fromId != me.id ? 1 : 0,
+        ));
+      }
+      return rooms;
+    } on SnsApiException catch (e) {
+      if (_chatUnavailable(e)) return const [];
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Post> sendDm(DmRoom room, NewPost draft) async {
+    if (room.kind == DmRoomKind.chat) {
+      final me = await _meUser();
+      final res = await api.callMap('chat/messages/create-to-user', {
+        'toUserId': room.peer.id,
+        if (draft.text.isNotEmpty) 'text': draft.text,
+        if (draft.mediaIds.isNotEmpty) 'fileId': draft.mediaIds.first,
+      });
+      return MisskeyMappers.chatMessage(res, viewer: account, host: host, me: me, peer: room.peer);
+    }
+    final res = await api.callMap('notes/create', {
+      'text': draft.text,
+      'visibility': 'specified',
+      'visibleUserIds': [room.peer.id],
+      if (draft.contentWarning != null) 'cw': draft.contentWarning,
+      if (draft.mediaIds.isNotEmpty) 'fileIds': draft.mediaIds,
+    });
+    return MisskeyMappers.note((res['createdNote'] as Map).cast<String, Object?>(), viewer: account, host: host);
+  }
+
+  @override
+  Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30}) async {
+    final list = await api.callList('notes/reactions', {'noteId': postId, 'type': ?type, 'limit': limit, 'untilId': ?cursor});
+    final urls = <String, Uri>{};
+    for (final r in list) {
+      final t = (r['type'] ?? '').toString();
+      if (t.startsWith(':') && !urls.containsKey(t)) {
+        final u = await emojiUrl(t.substring(1, t.length - 1));
+        if (u != null) urls[t] = u;
+      }
+    }
+    return Page(items: [for (final r in list) MisskeyMappers.reactionEntry(r, viewer: account, host: host, emojiUrls: urls)], nextCursor: list.isEmpty ? null : list.last['id'] as String?);
+  }
+
+  @override
+  Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) async {
+    final list = await api.callList('notes/renotes', {'noteId': postId, 'limit': limit, 'untilId': ?cursor});
+    return Page(
+      items: [for (final n in list) if (n['user'] is Map) MisskeyMappers.user((n['user'] as Map).cast<String, Object?>(), account: account, host: host)],
+      nextCursor: list.isEmpty ? null : list.last['id'] as String?,
+    );
+  }
+
+  @override
+  Future<List<UserProfile>> users(List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    final out = <UserProfile>[];
+    for (var i = 0; i < ids.length; i += 100) {
+      final chunk = ids.sublist(i, (i + 100).clamp(0, ids.length));
+      final list = await api.callList('users/show', {'userIds': chunk});
+      out.addAll([for (final u in list) MisskeyMappers.profile(u, account: account, host: host)]);
+    }
+    return out;
+  }
+
+  @override
+  Future<Map<String, FollowState>> relationships(List<String> userIds) async {
+    if (userIds.isEmpty) return const {};
+    final res = await api.call('users/relation', {'userId': userIds});
+    final list = res is List ? res : [res];
+    return {for (final r in list) if (r is Map) r['id'] as String: MisskeyMappers.relation(r.cast<String, Object?>())};
+  }
+
+  @override
+  int get maxPostLength => 3000;
+
+  @override
+  Future<MediaItem> uploadMedia(Uint8List bytes, String filename, {String? mimeType, bool sensitive = false, String? alt}) async {
+    final res = await api.upload('drive/files/create', bytes: bytes, filename: filename, mimeType: mimeType, fields: {
+      'name': filename,
+      'isSensitive': '$sensitive',
+      'force': 'true',
+      if (alt != null && alt.isNotEmpty) 'comment': alt,
+    });
+    return MisskeyMappers.file(res);
+  }
+
+  @override
+  Future<List<EmojiInfo>> customEmojis() async {
+    try {
+      final res = await api.callMap('emojis');
+      final list = <EmojiInfo>[];
+      for (final e in (res['emojis'] as List? ?? const [])) {
+        if (e is Map) {
+          final info = MisskeyMappers.emoji(e.cast<String, Object?>());
+          if (info != null) list.add(info);
+        }
+      }
+      _emojis ??= {for (final e in list) e.name: e.url};
+      return list;
+    } on SnsApiException {
+      return const [];
+    }
   }
 
   @override

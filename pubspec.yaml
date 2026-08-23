@@ -23,6 +23,7 @@ dependencies:
   flutter_secure_storage: ^10.0.0
   url_launcher: ^6.3.0
   http: ^1.2.0
+  image_picker: ^1.1.2
   rasq_models:
     path: packages/rasq_models
   rasq_design:

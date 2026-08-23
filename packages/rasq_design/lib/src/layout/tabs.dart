@@ -30,6 +30,7 @@ class RasqTabs extends StatelessWidget implements PreferredSizeWidget {
     this.mode = RasqTabsMode.extensible,
     this.onTap,
     this.showChevron = true,
+    this.onSelectedTabTap,
   }) : items = mode == RasqTabsMode.extensible ? items.take(maxExtensible).toList() : items;
 
   static const int maxExtensible = 10;
@@ -41,7 +42,13 @@ class RasqTabs extends StatelessWidget implements PreferredSizeWidget {
   final ValueChanged<int>? onTap;
   final bool showChevron;
 
+  /// Tap on the already-selected tab (the one with the `∨`): opens the
+  /// sort/filter dropdown. Receives the tab's global rect as anchor.
+  final void Function(int index, Rect anchor)? onSelectedTabTap;
+
   bool get isScrollable => mode == RasqTabsMode.extensible && items.length >= scrollThreshold;
+
+  late final List<GlobalKey> _keys = [for (var i = 0; i < items.length; i++) GlobalKey(debugLabel: 'tab$i')];
 
   @override
   Size get preferredSize => const Size.fromHeight(RasqSizes.minTap);
@@ -55,16 +62,24 @@ class RasqTabs extends StatelessWidget implements PreferredSizeWidget {
         controller: ctrl,
         isScrollable: isScrollable,
         tabAlignment: isScrollable ? TabAlignment.start : TabAlignment.fill,
-        onTap: onTap,
-        labelPadding: const EdgeInsets.symmetric(horizontal: 12),
+        onTap: (i) {
+          if (onSelectedTabTap != null && i == ctrl.previousIndex && i == ctrl.index) {
+            final key = _keys[i];
+            final box = key.currentContext?.findRenderObject() as RenderBox?;
+            if (box != null) onSelectedTabTap!(i, box.localToGlobal(Offset.zero) & box.size);
+          }
+          onTap?.call(i);
+        },
+        labelPadding: const EdgeInsets.symmetric(horizontal: 8),
         tabs: [
           for (var i = 0; i < items.length; i++)
             Tab(
+              key: _keys[i],
               height: RasqSizes.minTap,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (showChevron && ctrl.index == i) const Padding(padding: EdgeInsets.only(right: 2), child: Icon(Icons.keyboard_arrow_down, size: 18)),
                 if (items[i].icon != null) Padding(padding: const EdgeInsets.only(right: 4), child: Icon(items[i].icon, size: 18)),
-                Text(items[i].label, style: RasqTypography.tab),
+                Flexible(child: Text(items[i].label, style: RasqTypography.tab, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis)),
               ]),
             ),
         ],

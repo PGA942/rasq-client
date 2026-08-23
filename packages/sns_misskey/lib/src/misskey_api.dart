@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:rasq_models/rasq_models.dart';
@@ -52,6 +53,34 @@ class MisskeyApi {
       throw SnsApiException(ErrorCode.http(res.statusCode, title: _title(res.statusCode), message: msg), cause: decoded);
     }
     return decoded;
+  }
+
+  /// Multipart upload (`drive/files/create`). Token goes in the `i` field.
+  Future<Map<String, Object?>> upload(String path, {required Uint8List bytes, required String filename, String? mimeType, Map<String, String> fields = const {}}) async {
+    final req = http.MultipartRequest('POST', endpoint(path))
+      ..fields.addAll({...fields, 'i': ?token})
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: mimeType == null ? null : _mediaType(mimeType)));
+    http.StreamedResponse streamed;
+    try {
+      streamed = await _client.send(req).timeout(const Duration(minutes: 2));
+    } on TimeoutException catch (e) {
+      throw SnsApiException(ErrorCode.timeout.copyWith(message: 'アップロードがタイムアウトしました'), cause: e);
+    } on Exception catch (e) {
+      throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable', message: '$host に接続できません: $e'), cause: e);
+    }
+    final res = await http.Response.fromStream(streamed);
+    final decoded = res.body.isEmpty ? null : jsonDecode(utf8.decode(res.bodyBytes));
+    if (res.statusCode >= 400) {
+      final err = decoded is Map ? decoded['error'] : null;
+      final msg = err is Map ? (err['message'] ?? err['code'])?.toString() : null;
+      throw SnsApiException(ErrorCode.http(res.statusCode, title: _title(res.statusCode), message: msg), cause: decoded);
+    }
+    return (decoded as Map).cast<String, Object?>();
+  }
+
+  static http.MediaType? _mediaType(String mime) {
+    final parts = mime.split('/');
+    return parts.length == 2 ? http.MediaType(parts[0], parts[1]) : null;
   }
 
   Future<Map<String, Object?>> callMap(String path, [Map<String, Object?> body = const {}]) async =>

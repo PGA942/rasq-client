@@ -29,6 +29,8 @@ class PollOption {
   final Uri? imageUrl;
 }
 
+enum PostSource { note, chatMessage }
+
 /// Minimal post model for phase-1 milestones M0–M2.
 /// Body text is kept as raw source plus a plugin-declared [bodyFormat]
 /// (plain / mfm / html) — the RSL span tree is built by the renderer.
@@ -50,6 +52,10 @@ class Post {
     this.counts = const {},
     this.visibility,
     this.directToIds = const [],
+    this.reactions = const {},
+    this.reactionEmojis = const {},
+    this.myReaction,
+    this.source = PostSource.note,
   });
 
   final String id;
@@ -77,6 +83,20 @@ class Post {
   final List<String> directToIds;
 
   bool get isDirect => visibility == 'specified' || visibility == 'direct';
+
+  /// Per-reaction counts (`👍` → 3, `:blobcat:` → 1), display order preserved.
+  final Map<String, int> reactions;
+
+  /// Image URLs for custom-emoji reactions keyed by reaction string.
+  final Map<String, Uri> reactionEmojis;
+
+  /// Viewer's own reaction, if any.
+  final String? myReaction;
+
+  /// Where this post came from (normal note vs. chat message).
+  final PostSource source;
+
+  int get reactionTotal => reactions.values.fold(0, (a, b) => a + b);
 
   /// Store key: `accountKey:postId`.
   String get key => '${account.key}:$id';

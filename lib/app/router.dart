@@ -11,6 +11,7 @@ import '../features/login/login_screen.dart';
 import '../features/login/misskey_login_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/post/post_detail_screen.dart';
+import '../features/post/reactions_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/trend/trend_screen.dart';
@@ -41,6 +42,9 @@ final _appNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'app');
 GoRoute get _postRoute => GoRoute(
       path: 'post/:id',
       builder: (_, s) => PostDetailScreen(postId: s.pathParameters['id']!, initial: s.extra is Post ? s.extra as Post : null),
+      routes: [
+        GoRoute(path: 'reactions', builder: (_, s) => ReactionsScreen(postId: s.pathParameters['id']!, initial: s.extra is Post ? s.extra as Post : null)),
+      ],
     );
 
 /// Bridges Riverpod state → GoRouter.refreshListenable.

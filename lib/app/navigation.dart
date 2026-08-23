@@ -20,6 +20,11 @@ extension RasqNavigation on BuildContext {
     push('$base/post/${Uri.encodeComponent(post.id)}', extra: post);
   }
 
+  void pushReactions(Post post) {
+    final loc = GoRouterState.of(this).matchedLocation;
+    push('$loc/reactions', extra: post);
+  }
+
   void pushTrend(String tag) => push('${Routes.search}/trend/${Uri.encodeComponent(tag)}');
 
   void pushDmRoom(DmRoom room) => push('${Routes.dm}/room/${Uri.encodeComponent(room.peer.id)}', extra: room);

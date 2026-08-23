@@ -50,6 +50,8 @@ class MiAuthFlow extends BrowserAuthFlow {
     'write:drive',
     'read:messaging',
     'write:messaging',
+    'read:chat',
+    'write:chat',
   ];
 
   @override

@@ -93,7 +93,43 @@ void main() {
     expect(find.text('投稿'), findsOneWidget); // page header
     expect(find.text('返信'), findsWidgets); // 返信 row + reply bar
     expect(find.text('リアクションを表示'), findsOneWidget);
+
+    // リアクションを表示 → sections (emoji + count), expand → user rows.
+    await tester.tap(find.text('リアクションを表示'));
+    await tester.pumpAndSettle();
+    expect(find.text('30'), findsOneWidget);
+    await tester.tap(find.text('30'));
+    await tester.pumpAndSettle();
+    expect(find.text('フォロー'), findsWidgets); // follow pill in user row
     await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+
+    // 返信バー → composer (reply mode) → send → thread refreshed.
+    await tester.tap(find.text('返信..'));
+    await tester.pumpAndSettle();
+    expect(find.text('返信'), findsWidgets);
+    await tester.enterText(find.byType(TextField).last, '@username テスト返信');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '返信').last);
+    await tester.pumpAndSettle();
+    expect(find.text('キャンセル'), findsNothing);
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+
+    // FAB → composer (normal) with CW + poll + emoji panel toggles.
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    expect(find.text('ノートの作成'), findsOneWidget);
+    await tester.tap(find.byTooltip('隠す(注釈)'));
+    await tester.pumpAndSettle();
+    expect(find.text('注釈..'), findsOneWidget);
+    await tester.tap(find.byTooltip('投票'));
+    await tester.pumpAndSettle();
+    expect(find.text('回答1'), findsOneWidget);
+    await tester.tap(find.byTooltip('絵文字'));
+    await tester.pumpAndSettle();
+    expect(find.text('全てのemoji'), findsOneWidget);
+    await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
 
     // Search tab → trend words from plugin → trend TL.
