@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:rrl_core/rrl_core.dart';
+import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/providers.dart';
 import '../../mock/mock_data.dart';
@@ -103,6 +107,48 @@ class CatalogScreen extends ConsumerWidget {
             RasqActionBarItem(id: 'poll', label: '投票', icon: Icons.poll_outlined, showCount: false, onTap: () {}),
             RasqActionBarItem(id: 'cw', label: '注釈', icon: Icons.visibility_off_outlined, showCount: false, onTap: () {}),
           ]),
+        ),
+        const RasqSectionHeader(title: 'RRL レンダラー (M3: post-tile.rrl.json → L1/L2/L3)'),
+        RrlRenderer(
+          node: RrlDocument.fromSnapshot((jsonDecode(_postTileRrl) as Map).cast<String, Object?>()).root,
+          host: RrlHost(
+            instanceScope: 'rasq.official.misskey:misskey:misskey.io:yamada:0.1.0:catalog',
+            scope: RrlScope({
+              'post': {
+                'id': 'p1',
+                'key': 'misskey:misskey.io:yamada:p1',
+                'author': {'displayName': 'ダグラス', 'handle': 'username', 'kind': 'misskey', 'instance': 'misskey.io', 'avatarUrl': 'https://picsum.photos/seed/douglas/200'},
+                'createdAt': now.subtract(const Duration(minutes: 3)).toIso8601String(),
+                'bodyRSL': 'WASM プラグインが出した snapshot を #RRL レンダラーが描画しています',
+                'contentWarning': null,
+                'media': [
+                  {'id': 'm1', 'type': 'image', 'url': 'https://picsum.photos/seed/rrl1/600/400'},
+                  {'id': 'm2', 'type': 'image', 'url': 'https://picsum.photos/seed/rrl2/600/400'},
+                ],
+                'poll': null,
+                'quote': null,
+              },
+              'actions': [
+                {'id': 'reply', 'label': '返信', 'icon': 'subdirectory_arrow_left'},
+                {'id': 'renote', 'label': 'リノート', 'icon': 'repeat', 'doneIcon': 'repeat_on'},
+                {'id': 'reaction', 'label': 'リアクション', 'icon': 'add_reaction_outlined', 'doneIcon': 'add_reaction'},
+              ],
+              'actionStates': {
+                'misskey:misskey.io:yamada:p1': {
+                  'renote': {'done': true, 'count': 12},
+                  'reply': {'count': 2},
+                  'reaction': {'count': 48},
+                },
+              },
+            }),
+            rslParser: InlineSpans.parse,
+            onEvent: (nodeId, kind, {fn, payload = const {}}) => manager.showAlert(
+              id: 'catalog.rrl.event',
+              title: 'RRL event',
+              message: 'nodeId: $nodeId\nkind: $kind${fn == null ? '' : '\nfn: $fn'}${payload.isEmpty ? '' : '\npayload: $payload'}',
+              confirmText: 'OK',
+            ),
+          ),
         ),
         const RasqSectionHeader(title: 'Avatar / Badge'),
         _row([
@@ -247,6 +293,38 @@ class CatalogScreen extends ConsumerWidget {
         child: Wrap(spacing: 12, runSpacing: 12, crossAxisAlignment: WrapCrossAlignment.center, children: children),
       );
 }
+
+/// `rasq-sdk-sample/examples/post-tile.rrl.json` — the wire-format snapshot a
+/// WASM SNS plugin emits (PROTOCOL.md §3.1), rendered live above.
+const _postTileRrl = '''
+{
+  "schema": "rasq.boundary/1",
+  "scope": "rasq.official.misskey:misskey:misskey.io:yamada:0.1.0:tl-home",
+  "type": "snapshot",
+  "rev": 1,
+  "root": {
+    "t": "PostTile", "k": "post-{{post.id}}", "role": "contentBody",
+    "p": { "post": "\$.post", "variant": "normal" },
+    "c": [
+      { "t": "Avatar", "k": "avatar", "p": { "user": "\$.post.author" }, "on": { "tap": "openUser" } },
+      { "t": "Row", "k": "header", "c": [
+        { "t": "RichText", "k": "name", "tag": "user_name", "p": { "source": "\$.post.author.displayName" } },
+        { "t": "Text", "k": "handle", "tag": "user_handle", "p": { "text": "\$.post.author.handle" } },
+        { "t": "Timestamp", "k": "time", "tag": "time", "p": { "time": "\$.post.createdAt" } }
+      ]},
+      { "t": "If", "k": "cw?", "p": { "cond": "\$.post.contentWarning" }, "c": [
+        { "t": "Text", "k": "cw", "tag": "cw", "p": { "text": "\$.post.contentWarning" } }
+      ]},
+      { "t": "RichText", "k": "body", "tag": "main_text", "p": { "source": "\$.post.bodyRSL" } },
+      { "t": "MediaGrid", "k": "media", "p": { "items": "\$.post.media" }, "on": { "tap": "openViewer" } },
+      { "t": "If", "k": "poll?", "p": { "cond": "\$.post.poll" }, "c": [
+        { "t": "PollWidget", "k": "poll", "tag": "vote", "p": { "poll": "\$.post.poll" }, "on": { "confirm": "vote" } }
+      ]},
+      { "t": "ActionBar", "k": "actions", "role": "actionBar", "p": { "actions": "\$.actions", "states": "\$.actionStates[post.key]" }, "on": { "tap": "performAction", "longPress": "pickReaction" } }
+    ]
+  }
+}
+''';
 
 class _SwitchDemo extends StatefulWidget {
   const _SwitchDemo();

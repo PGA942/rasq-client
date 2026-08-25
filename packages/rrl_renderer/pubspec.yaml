@@ -1,0 +1,24 @@
+name: rrl_renderer
+description: RRL tree -> Flutter widgets (L1 primitives, L3 controls, L2 delegated to rasq_design).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  rrl_core:
+    path: ../rrl_core
+  rasq_design:
+    path: ../rasq_design
+  rasq_models:
+    path: ../rasq_models
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

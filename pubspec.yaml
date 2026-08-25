@@ -13,6 +13,8 @@ workspace:
   - packages/rasq_store
   - packages/rasq_plugin_api
   - packages/sns_misskey
+  - packages/rrl_core
+  - packages/rrl_renderer
 
 dependencies:
   flutter:
@@ -36,6 +38,10 @@ dependencies:
     path: packages/rasq_plugin_api
   sns_misskey:
     path: packages/sns_misskey
+  rrl_core:
+    path: packages/rrl_core
+  rrl_renderer:
+    path: packages/rrl_renderer
 
 dev_dependencies:
   flutter_test:
