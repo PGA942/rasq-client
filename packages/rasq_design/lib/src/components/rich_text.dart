@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/rasq_tokens_extension.dart';
+import 'mfm.dart';
 
 /// Inline span model for RSL (RASQ Subassembly Language) output.
 ///
@@ -54,6 +55,17 @@ class RasqHashtagSpan extends RasqSpan {
   const RasqHashtagSpan(this.tag, {this.onTap});
   final String tag;
   final VoidCallback? onTap;
+}
+
+/// MFM 装飾関数 (`$[fn.args …]` / RSL wire `{s:"transform", fn, args, c}`).
+///
+/// Rendering is delegated to `RasqMfmTransform` (mfm.dart). Unknown [fn]s
+/// render [children] unchanged — the schema's forward-compat rule.
+class RasqTransformSpan extends RasqSpan {
+  const RasqTransformSpan(this.fn, {this.args = const {}, required this.children});
+  final String fn;
+  final Map<String, Object?> args;
+  final List<RasqSpan> children;
 }
 
 /// Draws a list of [RasqSpan]s. Stateless; gesture recognizers are owned by
@@ -133,6 +145,14 @@ class _RasqRichTextState extends State<RasqRichText> {
           RasqLinkSpan() => TextSpan(text: s.text, style: linkStyle, recognizer: _tap(s.onTap)),
           RasqMentionSpan() => TextSpan(text: '@${s.handle}', style: linkStyle, recognizer: _tap(s.onTap)),
           RasqHashtagSpan() => TextSpan(text: '#${s.tag}', style: linkStyle, recognizer: _tap(s.onTap)),
+          RasqTransformSpan() => WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: RasqMfmTransform(
+                fn: s.fn,
+                args: s.args,
+                child: RasqRichText(s.children, style: RasqMfmTransform.childStyle(s.fn, s.args, base)),
+              ),
+            ),
         };
 
     return Text.rich(

@@ -9,6 +9,7 @@ library;
 export 'src/action.dart';
 export 'src/auth.dart';
 export 'src/manifest.dart';
+export 'src/ml_model.dart';
 export 'src/plugin_registry.dart';
 export 'src/server_info.dart';
 export 'src/sns_plugin.dart';

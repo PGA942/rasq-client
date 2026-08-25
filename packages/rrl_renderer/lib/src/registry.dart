@@ -137,7 +137,13 @@ abstract final class RrlComponentRegistry {
       return RasqAvatar(imageUrl: user.avatarUrl, fallbackLabel: user.displayName, onTap: ctx.tapHandler('tap'));
     },
     'Badge': (ctx) => RasqBadge(count: (ctx.props['count'] as num?)?.toInt(), dot: rrlTruthy(ctx.props['dot'])),
-    'RichText': (ctx) => RasqRichText(ctx.host.parseRsl(rrlString(ctx.props['source'])), style: RasqTypography.body),
+    // `source` = raw string (host parses MFM/plain) OR a structured RSL span
+    // array (rsl-span.schema.json) the plugin pre-parsed.
+    'RichText': (ctx) {
+      final source = ctx.props['source'];
+      final spans = source is List ? rslSpansFromJson(source) : ctx.host.parseRsl(rrlString(source));
+      return RasqRichText(spans, style: RasqTypography.body);
+    },
     'Timestamp': (ctx) => RasqTimestamp(rrlTime(ctx.props['time'])),
     'Button': (ctx) => FilledButton(onPressed: ctx.tapHandler('tap'), child: Text(rrlString(ctx.props['label']))),
     'ActionButton': (ctx) => RasqActionButton.iconCount(

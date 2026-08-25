@@ -150,6 +150,14 @@ class CatalogScreen extends ConsumerWidget {
             ),
           ),
         ),
+        const RasqSectionHeader(title: 'MFM transform (rsl-span: \$[fn args …])'),
+        Padding(
+          padding: const EdgeInsets.all(RasqSpacing.page),
+          child: RasqRichText(
+            InlineSpans.parse(r'$[tada 🎉] $[spin.speed=1.5s $[x2 回る]] **太字** $[rainbow 虹色] $[jelly ぷるぷる] $[blur ぼかし] $[fg.color=ff5555 赤字] $[rotate.deg=15 傾き] $[unknown_fn 未知fnは中身のみ]'),
+            style: RasqTypography.body,
+          ),
+        ),
         const RasqSectionHeader(title: 'Avatar / Badge'),
         _row([
           RasqAvatar(imageUrl: MockData.me.avatarUrl, fallbackLabel: 'タ'),
