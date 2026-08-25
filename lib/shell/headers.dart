@@ -51,7 +51,7 @@ class RasqNotificationHeader extends StatelessWidget implements PreferredSizeWid
 
 /// 検索ヘッダー: search bar is the main actor. Shared by 検索 and DM tabs.
 class RasqSearchHeader extends StatelessWidget implements PreferredSizeWidget {
-  const RasqSearchHeader({super.key, required this.me, this.onAvatarTap, this.hintText = '検索', this.controller, this.onSubmitted, this.onDropdownTap, this.onSearchTap, this.readOnly = false, this.trailing});
+  const RasqSearchHeader({super.key, required this.me, this.onAvatarTap, this.hintText = '検索', this.controller, this.onSubmitted, this.onDropdownTap, this.onSearchTap, this.readOnly = false, this.trailing, this.focusNode});
 
   final UserSummary me;
   final VoidCallback? onAvatarTap;
@@ -62,6 +62,7 @@ class RasqSearchHeader extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onSearchTap;
   final bool readOnly;
   final Widget? trailing;
+  final FocusNode? focusNode;
 
   @override
   Size get preferredSize => const Size.fromHeight(RasqSizes.headerHeight);
@@ -69,7 +70,7 @@ class RasqSearchHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) => _HeaderBar(
         leading: _AvatarButton(me: me, onTap: onAvatarTap),
-        middle: RasqSearchBar(controller: controller, hintText: hintText, onSubmitted: onSubmitted, onDropdownTap: onDropdownTap, onTap: onSearchTap, readOnly: readOnly),
+        middle: RasqSearchBar(controller: controller, focusNode: focusNode, hintText: hintText, onSubmitted: onSubmitted, onDropdownTap: onDropdownTap, onTap: onSearchTap, readOnly: readOnly),
         middlePadding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
         trailing: trailing ?? const SizedBox(width: RasqSpacing.sm),
       );

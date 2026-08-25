@@ -11,28 +11,61 @@ import '../../shell/rasq_shell.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../trend/trend_providers.dart';
+import 'search_filter_bar_view.dart';
 
 /// 検索ホーム / トレンドホーム: 広告枠(AdSlot) → トレンド(ワード一覧) → Today.
 /// Phase-1 sample sources trends from the SNS (`hashtags/trend`) and Today
 /// from `notes/featured` until the trend provider / server exists.
-class SearchScreen extends ConsumerWidget {
+///
+/// 検索欄にフォーカスが当たると下方向に拡幅して検索フィルタ行が現れる
+/// (D-021。設定後は常時表示、結果画面のトレンドTLへ引き継がれる)。
+class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends ConsumerState<SearchScreen> {
+  final _controller = TextEditingController();
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final me = ref.watch(currentUserProvider);
     final scheme = Theme.of(context).colorScheme;
     final trends = ref.watch(trendingTagsProvider);
     final today = ref.watch(timelineProvider(DynamicTimelines.featured));
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const [];
-    final controller = TextEditingController();
+    final genreCandidates = trends.value?.map((t) => t.tag).take(RasqSearchFilterBar.maxInlineGenres).toList() ?? const <String>[];
     return Scaffold(
-      appBar: RasqSearchHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref), controller: controller, onSubmitted: (q) {
+      appBar: RasqSearchHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref), controller: _controller, focusNode: _focus, onDropdownTap: () => setState(() => _focus.hasFocus ? _focus.unfocus() : _focus.requestFocus()), onSubmitted: (q) {
         final tag = q.trim().replaceFirst(RegExp(r'^#'), '');
         if (tag.isNotEmpty) context.pushTrend(tag);
       }),
-      body: RefreshIndicator(
+      body: Column(children: [
+        SearchFilterBarView(expanded: _focus.hasFocus, genreCandidates: genreCandidates),
+        Expanded(child: _home(context, scheme, trends, today, actions)),
+      ]),
+    );
+  }
+
+  Widget _home(BuildContext context, ColorScheme scheme, AsyncValue<List<TrendTag>> trends, AsyncValue<dynamic> today, List<ActionDescriptor> actions) {
+    return RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(trendingTagsProvider);
           await ref.read(timelineProvider(DynamicTimelines.featured).notifier).refresh();
@@ -67,8 +100,7 @@ class SearchScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 80),
         ]),
-      ),
-    );
+      );
   }
 }
 

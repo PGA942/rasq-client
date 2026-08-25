@@ -67,9 +67,13 @@ class RasqSearchBar extends StatelessWidget {
     this.readOnly = false,
     this.trailing,
     this.height = RasqSizes.searchBarHeight,
+    this.focusNode,
   });
 
   final TextEditingController? controller;
+
+  /// フォーカス連動 UI(検索フィルタ行 D-021)用。
+  final FocusNode? focusNode;
   final String hintText;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
@@ -100,6 +104,7 @@ class RasqSearchBar extends StatelessWidget {
         Expanded(
           child: TextField(
             controller: controller,
+            focusNode: focusNode,
             onChanged: onChanged,
             onSubmitted: onSubmitted,
             onTap: onTap,

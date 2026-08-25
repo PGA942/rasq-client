@@ -6,18 +6,22 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
-import '../../app/sort_menu.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../search/search_filter.dart';
+import '../search/search_filter_bar_view.dart';
 import '../users/user_list.dart';
 import 'trend_analysis.dart';
+import 'trend_providers.dart';
 
 /// トレンドTL(検索結果): ∨ノート / フォロー中 / ユーザー.
-/// ノート = 「フォロー中の反応」(フォロイーの投稿をリアクション順) + 「トレンド」(タグTL).
-/// フォロー中 = フォロイーの投稿一覧。ユーザー = リアクション数順のユーザータイル.
-/// 選択中タブをもう一度タップ → ソートメニュー(リアクション数 昇順/降順/デフォルト).
+/// ノート = 「フォロー中の反応」 + 「トレンド」(タグTL)。
+///
+/// 並び替え/絞り込みは検索フィルタ行(D-021): 検索バーの ∨ でトグル、設定後は
+/// 常時表示。関連順は SearchRanker(ルールベース実働 + GLiNER/SigLIP は
+/// ml.infer 配線後に有効, D-022)。選択中タブの再タップでも並び替えメニュー。
 class TrendScreen extends ConsumerStatefulWidget {
   const TrendScreen({super.key, required this.tag});
   final String tag;
@@ -27,7 +31,7 @@ class TrendScreen extends ConsumerStatefulWidget {
 
 class _TrendScreenState extends ConsumerState<TrendScreen> {
   final _scroll = ScrollController();
-  RasqSortOrder _order = RasqSortOrder.defaultOrder;
+  bool _filterOpen = false;
   TimelineKind get _kind => DynamicTimelines.tag(widget.tag);
 
   @override
@@ -53,7 +57,15 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     final analysis = ref.watch(trendAnalysisProvider(widget.tag));
     final notifier = ref.read(timelineProvider(_kind).notifier);
     final manager = ref.watch(overlayManagerProvider);
+    final filter = ref.watch(searchFilterProvider);
+    final trends = ref.watch(trendingTagsProvider);
+    final genreCandidates = [
+      for (final t in trends.value ?? const <TrendTag>[])
+        if (t.tag != widget.tag) t.tag,
+    ].take(RasqSearchFilterBar.maxInlineGenres).toList();
     final tabs = [const RasqTabItem('ノート'), const RasqTabItem('フォロー中'), const RasqTabItem('ユーザー')];
+
+    List<Post> apply(List<Post> posts) => applySearchFilter(posts, filter, query: widget.tag);
 
     Widget rows(List<Post> posts) => Column(children: [
           for (final p in posts) ...[PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)), const Divider()],
@@ -68,13 +80,15 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
           controller: TextEditingController(text: widget.tag),
           readOnly: true,
           onSearchTap: () => Navigator.of(context).maybePop(),
+          onDropdownTap: () => setState(() => _filterOpen = !_filterOpen),
         ),
         body: Column(children: [
+          SearchFilterBarView(expanded: _filterOpen, genreCandidates: genreCandidates),
           RasqTabs(
             items: tabs,
             onSelectedTabTap: (i, rect) async {
-              final o = await showSortMenu(manager, rect, _order, id: 'trend');
-              if (o != null) setState(() => _order = o);
+              final s = await showSearchSortMenu(manager, rect, filter.sort);
+              if (s != null) ref.read(searchFilterProvider.notifier).set(filter.copyWith(sort: s));
             },
           ),
           Expanded(
@@ -89,30 +103,40 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   analysis.when(
                     loading: () => const RasqLoading(),
                     error: (_, _) => const SizedBox(height: 48),
-                    data: (a) => a.followingPosts.isEmpty ? const SizedBox(height: 48) : rows(sortByReactions(a.followingPosts.take(3).toList(), _order, (p) => p.reactionTotal)),
+                    data: (a) {
+                      final posts = apply(a.followingPosts).take(3).toList();
+                      return posts.isEmpty ? const SizedBox(height: 48) : rows(posts);
+                    },
                   ),
                   const RasqSectionHeader(title: 'トレンド', topMargin: 0),
                   tl.when(
                     loading: () => const RasqLoading(),
                     error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
-                    data: (s) => s.posts.isEmpty
-                        ? const RasqEmptyView(title: 'なんにもないようです', hint: 'ワードを変えると見つかるかもしれません')
-                        : Column(children: [rows(sortByReactions(s.posts, _order, (p) => p.reactionTotal)), if (s.loadingMore) const RasqLoading()]),
+                    data: (s) {
+                      final posts = apply(s.posts);
+                      return posts.isEmpty
+                          ? const RasqEmptyView(title: 'なんにもないようです', hint: 'ワードやフィルタを変えると見つかるかもしれません')
+                          : Column(children: [rows(posts), if (s.loadingMore) const RasqLoading()]);
+                    },
                   ),
                 ]),
               ),
               analysis.when(
                 loading: () => const RasqLoading(),
                 error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
-                data: (a) => a.followingPosts.isEmpty
-                    ? const RasqEmptyView(title: 'フォロー中の投稿はありません', hint: 'このワードについてフォロイーはまだ投稿していません')
-                    : ListView(children: [rows(sortByReactions(a.followingPosts, _order, (p) => p.reactionTotal))]),
+                data: (a) {
+                  final posts = apply(a.followingPosts);
+                  return posts.isEmpty
+                      ? const RasqEmptyView(title: 'フォロー中の投稿はありません', hint: 'このワードについてフォロイーはまだ投稿していません')
+                      : ListView(children: [rows(posts)]);
+                },
               ),
               analysis.when(
                 loading: () => const RasqLoading(),
                 error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
                 data: (a) {
-                  final ranked = sortByReactions(a.users, _order == RasqSortOrder.defaultOrder ? RasqSortOrder.reactionsDesc : _order, (e) => e.$2);
+                  // ユーザーはリアクション合計順(古い順のみ昇順に反転)。
+                  final ranked = [...a.users]..sort((x, y) => filter.sort == SearchSort.oldest ? x.$2.compareTo(y.$2) : y.$2.compareTo(x.$2));
                   return ranked.isEmpty
                       ? const RasqEmptyView(title: 'ユーザーはいません')
                       : UserList(users: [for (final e in ranked) e.$1.summary], subtitles: {for (final e in ranked) e.$1.summary.id: 'リアクション ${e.$2}'});
