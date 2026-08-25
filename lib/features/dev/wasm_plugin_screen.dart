@@ -36,7 +36,8 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
   bool _busy = false;
 
   RasqHostEnvironment get _env =>
-      widget.envOverride ?? RasqHostEnvironment(fetch: curlSyncFetch, onLog: (m) => debugPrint('[wasm host] $m'));
+      // net.fetch はランタイム内蔵(rustls)で実行 — モバイルでも動く (D-023)。
+      widget.envOverride ?? RasqHostEnvironment(nativeFetch: true, onLog: (m) => debugPrint('[wasm host] $m'));
 
   @override
   void initState() {

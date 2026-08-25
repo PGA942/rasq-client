@@ -29,6 +29,7 @@ export 'src/components/user_row.dart';
 export 'src/components/user_tile_large.dart';
 export 'src/components/sort.dart';
 export 'src/components/search_filter_bar.dart';
+export 'src/components/slider_list_tile.dart';
 export 'src/components/brand.dart';
 
 // L2 composite — 投稿まわり (PostTile / ActionBar / PollWidget / CollapsedPost …).

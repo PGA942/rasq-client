@@ -8,6 +8,7 @@ import 'package:rasq_store/rasq_store.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../home/action_bar_edit_sheet.dart';
 import '../home/timeline_providers.dart';
 
 /// 投稿コンテキストメニュー(右上の `…` のみで出現 — ワイヤーフレーム注釈).
@@ -27,6 +28,7 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
     const RasqDropdownItem('詳細', 'detail'),
     const RasqDropdownItem('リンクをコピー', 'copy'),
+    const RasqDropdownItem('アクションバーを編集', 'editActions'),
     RasqDropdownItem(fav.done ? 'お気に入り解除' : 'お気に入り', 'favorite'),
     if (!isMine) RasqDropdownItem(st.following ? 'フォロー解除' : 'フォロー', 'follow'),
     if (!isMine) RasqDropdownItem(st.muted ? 'ミュート解除' : 'ミュート', 'mute', accent: true),
@@ -42,6 +44,8 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
     case 'copy':
       final url = post.url ?? Uri.https(post.author.account.instance, '/notes/${post.id}');
       await Clipboard.setData(ClipboardData(text: url.toString()));
+    case 'editActions':
+      await showActionBarEditSheet(ref);
     case 'favorite':
       final fa = s.actions.where((a) => a.id == 'favorite').firstOrNull;
       if (fa != null) await ref.read(timelineProvider(TimelineKind.home).notifier).perform(post, fa);

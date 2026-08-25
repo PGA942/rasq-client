@@ -10,6 +10,7 @@ import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
+import '../relational/relational_timeline_view.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
 
@@ -43,7 +44,7 @@ class HomeScreen extends ConsumerWidget {
             child: TabBarView(children: [
               for (final k in kinds)
                 if (k == TimelineKind.relational)
-                  const RasqEmptyView(title: '関連', hint: 'リレーショナルTLはアルゴリズム確定後に実装します (D-011)')
+                  const RelationalTimelineView() // D-022 v0 (ルールベース段)
                 else
                   _TimelineView(kind: k),
             ]),

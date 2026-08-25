@@ -117,6 +117,23 @@ class _RasqMfmTransformState extends State<RasqMfmTransform> with SingleTickerPr
         return Transform.flip(flipX: h, flipY: v, child: child);
       case 'center':
         return Align(alignment: Alignment.center, child: child);
+      // Markdown ブロック(MFM の > 引用 / ```コード```)。parser が transform
+      // スパンとして持ち込む(rsl-span の fn は自由文字列)。
+      case 'quote':
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          padding: const EdgeInsets.only(left: 8),
+          decoration: BoxDecoration(border: Border(left: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 3))),
+          child: child,
+        );
+      case 'code_block':
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(6)),
+          width: double.infinity,
+          child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: child),
+        );
     }
 
     final controller = _controller;

@@ -15,12 +15,18 @@ sealed class RasqSpan {
 }
 
 class RasqTextSpan extends RasqSpan {
-  const RasqTextSpan(this.text, {this.bold = false, this.italic = false, this.strike = false, this.small = false});
+  const RasqTextSpan(this.text, {this.bold = false, this.italic = false, this.strike = false, this.small = false, this.code = false});
   final String text;
   final bool bold;
   final bool italic;
   final bool strike;
   final bool small;
+
+  /// `` `inline code` `` — monospace + 薄い背景。
+  final bool code;
+
+  RasqTextSpan copyWith({bool? bold, bool? italic, bool? strike, bool? small, bool? code}) =>
+      RasqTextSpan(text, bold: bold ?? this.bold, italic: italic ?? this.italic, strike: strike ?? this.strike, small: small ?? this.small, code: code ?? this.code);
 }
 
 /// Custom emoji rendered inline at text height.
@@ -114,8 +120,16 @@ class _RasqRichTextState extends State<RasqRichText> {
 
     final base = widget.style ?? DefaultTextStyle.of(context).style;
     final tokens = RasqTokens.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final linkStyle = base.copyWith(color: tokens.link);
-    final emojiHeight = (base.fontSize ?? 15) * 1.25;
+    // デカ絵文字: 本文が絵文字(と空白)だけなら 2 倍で描く(Misskey 準拠)。
+    final emojiOnly = widget.spans.isNotEmpty &&
+        widget.spans.every((s) => switch (s) {
+              RasqEmojiSpan() => true,
+              RasqTextSpan() => s.text.trim().isEmpty,
+              _ => false,
+            });
+    final emojiHeight = (base.fontSize ?? 15) * (emojiOnly ? 2.5 : 1.25);
 
     InlineSpan toSpan(RasqSpan s) => switch (s) {
           RasqTextSpan() => TextSpan(
@@ -125,6 +139,9 @@ class _RasqRichTextState extends State<RasqRichText> {
                 fontStyle: s.italic ? FontStyle.italic : null,
                 decoration: s.strike ? TextDecoration.lineThrough : null,
                 fontSize: s.small ? (base.fontSize ?? 15) * 0.85 : null,
+                fontFamily: s.code ? 'monospace' : null,
+                fontFamilyFallback: s.code ? const ['Menlo', 'Courier New'] : null,
+                backgroundColor: s.code ? scheme.surfaceContainerHighest : null,
               ),
             ),
           RasqEmojiSpan() => s.url == null

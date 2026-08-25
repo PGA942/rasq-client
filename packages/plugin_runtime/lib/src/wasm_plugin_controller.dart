@@ -45,7 +45,7 @@ class WasmPluginController extends ChangeNotifier {
   void load() {
     if (_plugin != null) return;
     try {
-      _plugin = RasqWasmPlugin.fromBytes(_bytes, hostFn: env.dispatch);
+      _plugin = RasqWasmPlugin.fromBytes(_bytes, hostFn: env.dispatch, nativeFetch: env.nativeFetch);
       _lastError = null;
       pullSnapshot();
     } on RasqWasmInstantiateException catch (e) {

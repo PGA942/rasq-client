@@ -27,6 +27,7 @@ List<RasqSpan> rslSpansFromJson(
           italic: m['italic'] == true,
           strike: m['strike'] == true,
           small: m['small'] == true,
+          code: m['code'] == true,
         ));
       case 'emoji':
         final code = '${m['shortcode'] ?? ''}';
@@ -72,6 +73,7 @@ List<Object?> rslSpansToJson(List<RasqSpan> spans) => [
               if (s.italic) 'italic': true,
               if (s.strike) 'strike': true,
               if (s.small) 'small': true,
+              if (s.code) 'code': true,
             },
           RasqEmojiSpan() => {'s': 'emoji', 'shortcode': s.shortcode, if (s.url != null) 'url': s.url.toString()},
           RasqInlineImageSpan() => {'s': 'image', 'url': s.url.toString(), 'height': s.height, if (s.alt != null) 'alt': s.alt},

@@ -62,9 +62,15 @@ class RasqHostEnvironment {
   RasqHostEnvironment({
     Map<String, Object?>? storage,
     this.fetch,
+    this.nativeFetch = false,
     this.onAlert,
     this.onLog,
   }) : storage = storage ?? {};
+
+  /// Serve `net.fetch` inside the wasm runtime (blocking rustls HTTP —
+  /// mobile-capable, D-023). Takes precedence over [fetch]; the runtime
+  /// short-circuits before the Dart dispatcher sees the call.
+  final bool nativeFetch;
 
   /// `storage.*` backing map (the app injects secure-storage-backed maps
   /// per plugin namespace later; D-004 `storage.safe`).

@@ -11,6 +11,7 @@ import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../compose/emoji_picker_fow.dart';
 import '../post/post_menu.dart';
+import 'action_bar_config.dart';
 
 /// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
 typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<String, Object?> args});
@@ -90,7 +91,9 @@ class _PostRowState extends ConsumerState<PostRow> {
     // otherwise they fill the tile's own slots.
     final hasCw = !collapsible && (post.contentWarning?.isNotEmpty ?? false);
 
-    final actionItems = [for (final a in widget.actions) _item(a, tokens)];
+    // アクションバー編集(ホスト構成): 並び替え・非表示を適用してから Props 化。
+    final configured = ref.watch(actionBarConfigProvider).apply(widget.actions);
+    final actionItems = [for (final a in configured) _item(a, tokens)];
 
     return RasqPostTile(
       author: post.author,
