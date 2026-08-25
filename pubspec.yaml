@@ -15,6 +15,7 @@ workspace:
   - packages/sns_misskey
   - packages/rrl_core
   - packages/rrl_renderer
+  - packages/plugin_runtime
 
 dependencies:
   flutter:
@@ -42,6 +43,8 @@ dependencies:
     path: packages/rrl_core
   rrl_renderer:
     path: packages/rrl_renderer
+  plugin_runtime:
+    path: packages/plugin_runtime
 
 dev_dependencies:
   flutter_test:
@@ -50,3 +53,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    # misskey-wasm-sample plugin binary (built in rasq-sdk-sample; loaded by
+    # the WASMプラグイン試験 dev screen).
+    - assets/plugins/misskey_wasm_sample.wasm

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../features/catalog/catalog_screen.dart';
+import '../features/dev/wasm_plugin_screen.dart';
 import '../features/dm/dm_room_screen.dart';
 import '../features/dm/dm_screen.dart';
 import '../features/home/home_screen.dart';
@@ -38,6 +39,7 @@ abstract final class Routes {
   static const dm = '/dm';
   static const settings = '/settings';
   static const catalog = '/catalog';
+  static const wasmDev = '/dev/wasm';
   static const login = '/login';
   static const viewer = '/viewer';
   static const lists = '/lists';
@@ -92,7 +94,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final onLogin = loc.startsWith(Routes.login);
       if (sessions.isLoading) return null; // keep splash until storage is read
       final loggedIn = sessions.value?.isLoggedIn ?? false;
-      if (!loggedIn && !onLogin && loc != Routes.catalog) return Routes.login;
+      if (!loggedIn && !onLogin && loc != Routes.catalog && loc != Routes.wasmDev) return Routes.login;
       return null;
     },
     routes: [
@@ -143,6 +145,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(path: Routes.catalog, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const CatalogScreen()),
+          GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const WasmPluginScreen()),
           GoRoute(
             path: Routes.login,
             parentNavigatorKey: _appNavigatorKey,
