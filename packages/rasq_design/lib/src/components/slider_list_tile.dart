@@ -45,3 +45,52 @@ class RasqSliderListTile extends StatelessWidget {
     );
   }
 }
+
+/// 範囲スライダー設定行 (L2)。リレーショナルTL の TTL 下限〜上限 (D-028) の
+/// ような「幅を持つ設定」に使う。[RasqSliderListTile] と同じ見た目の枠。
+class RasqRangeSliderListTile extends StatelessWidget {
+  const RasqRangeSliderListTile({
+    super.key,
+    required this.title,
+    required this.values,
+    required this.min,
+    required this.max,
+    this.divisions,
+    this.onChanged,
+    this.subtitle,
+    this.valueLabel,
+  });
+
+  final String title;
+  final RangeValues values;
+  final double min;
+  final double max;
+  final int? divisions;
+  final ValueChanged<RangeValues>? onChanged;
+  final String? subtitle;
+
+  /// 右側の現在値表示(省略時は「下限〜上限」の整数丸め)。
+  final String? valueLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(title, style: RasqTypography.listTile)),
+          Text(valueLabel ?? '${values.start.round()}〜${values.end.round()}', style: RasqTypography.count.copyWith(color: scheme.onSurfaceVariant)),
+        ]),
+        if (subtitle != null) Text(subtitle!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        RangeSlider(
+          values: RangeValues(values.start.clamp(min, max), values.end.clamp(min, max)),
+          min: min,
+          max: max,
+          divisions: divisions,
+          onChanged: onChanged,
+        ),
+      ]),
+    );
+  }
+}

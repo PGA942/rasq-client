@@ -124,35 +124,60 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
   }
 
   /// FOW(widget タイプ)= 背面のタイムラインが動いたまま調整できる。
-  void _openTuning() {
+  /// 絵文字ピッカー FOW と同じ作法: キャンセル(空白クリック・esc 含む)で
+  /// 開いたときの設定に巻き戻し、決定で確定。
+  Future<void> _openTuning() async {
     final manager = ref.read(overlayManagerProvider);
-    manager.showFow(
+    final store = ref.read(relationalSettingsProvider.notifier);
+    final snapshot = ref.read(relationalSettingsProvider);
+    final result = await manager.showFow<bool>(
       id: 'relational.tuning',
-      spec: FowSpec(title: 'リレーショナルTL調整', initialHeightFactor: 0.5),
+      spec: FowSpec(
+        type: FowPanelType.widget,
+        initialHeightFactor: 0.5,
+        minHeightFactor: 0.25,
+        maxHeightFactor: 0.9,
+        title: 'リレーショナルTL調整',
+        cancelText: 'キャンセル',
+        confirmText: '決定',
+      ),
       builder: (_, _) => const _TuningPanel(),
     );
+    if (result != true) store.set(snapshot);
   }
 }
 
-/// FOW チューニングパネル (D-028): エンジンの全パラメーターをライブ調整。
-/// 変更は即時反映+永続化(`relational.settings.v1`)。
-class _TuningPanel extends ConsumerWidget {
+/// FOW チューニングパネル (D-028)。変更は即時反映+永続化
+/// (`relational.settings.v1`)、キャンセル時は呼び出し側が巻き戻す。
+///
+/// 通常表示は要点 6 つ+TTL(RangeSlider)に絞り、全パラメーターは
+/// 「詳細設定」タイルからの遷移で表示する。
+class _TuningPanel extends ConsumerStatefulWidget {
   const _TuningPanel();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TuningPanel> createState() => _TuningPanelState();
+}
+
+class _TuningPanelState extends ConsumerState<_TuningPanel> {
+  bool _advanced = false;
+
+  static const _defaults = LinkWeights();
+
+  Widget _section(BuildContext context, String title) => Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
+        child: Text(title, style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
+      );
+
+  @override
+  Widget build(BuildContext context) {
     final s = ref.watch(relationalSettingsProvider);
     final store = ref.read(relationalSettingsProvider.notifier);
     final w = s.weights;
-    final scheme = Theme.of(context).colorScheme;
 
-    Widget section(String title) => Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
-          child: Text(title, style: RasqTypography.caption.copyWith(color: scheme.primary, fontWeight: FontWeight.w700)),
-        );
-
-    Widget weight(String title, double value, double max, LinkWeights Function(double) apply) => RasqSliderListTile(
+    Widget weight(String title, double value, double max, LinkWeights Function(double) apply, {String? subtitle}) => RasqSliderListTile(
           title: title,
+          subtitle: subtitle,
           value: value,
           min: 0,
           max: max,
@@ -161,11 +186,64 @@ class _TuningPanel extends ConsumerWidget {
           onChanged: (v) => store.set(s.copyWith(weights: apply(v))),
         );
 
+    if (_advanced) {
+      return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
+        ListTile(
+          dense: true,
+          leading: const Icon(Icons.arrow_back, size: 20),
+          title: const Text('詳細設定'),
+          onTap: () => setState(() => _advanced = false),
+        ),
+        _section(context, '束ね判定'),
+        RasqSliderListTile(
+          title: '候補ウィンドウ',
+          subtitle: '親候補を探す直近の範囲',
+          value: s.candidateWindowMinutes.toDouble(),
+          min: 5,
+          max: 120,
+          divisions: 23,
+          valueLabel: '${s.candidateWindowMinutes}分',
+          onChanged: (v) => store.set(s.copyWith(candidateWindowMinutes: v.round())),
+        ),
+        _section(context, '重み(通常投稿)'),
+        weight('内容類似', w.content, 0.8, (v) => w.copyWith(content: v)),
+        weight('エンティティ一致', w.entity, 0.5, (v) => w.copyWith(entity: v)),
+        weight('時間減衰', w.time, 0.5, (v) => w.copyWith(time: v)),
+        weight('ペア親密度', w.affinity, 0.3, (v) => w.copyWith(affinity: v)),
+        weight('発話交替', w.turn, 0.2, (v) => w.copyWith(turn: v)),
+        weight('アンカー', w.anchor, 0.3, (v) => w.copyWith(anchor: v)),
+        _section(context, 'フラット加点'),
+        weight('コミュニティ事前分布 ±', w.communityPrior, 0.15, (v) => w.copyWith(communityPrior: v)),
+        _section(context, 'ライフサイクル'),
+        RasqSliderListTile(
+          title: '仮 ROOT 保留',
+          subtitle: '新話題として確定するまでの保留時間',
+          value: s.tentativeHoldSeconds.toDouble(),
+          min: 30,
+          max: 300,
+          divisions: 27,
+          valueLabel: '${s.tentativeHoldSeconds}秒',
+          onChanged: (v) => store.set(s.copyWith(tentativeHoldSeconds: v.round())),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+          child: OutlinedButton.icon(icon: const Icon(Icons.restart_alt, size: 18), label: const Text('既定に戻す'), onPressed: store.reset),
+        ),
+      ]);
+    }
+
+    // 類似性 = 内容類似 + エンティティ、親密度 = ペア親密度 + 発話交替。
+    // まとめスライダーは既定の内訳比率を保ったまま両方をスケールする。
+    final similarity = w.content + w.entity;
+    final closeness = w.affinity + w.turn;
+    const simBase = 0.45 + 0.20;
+    const closeBase = 0.10 + 0.05;
+
     return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
-      section('束ね判定'),
+      _section(context, '束ね判定'),
       RasqSliderListTile(
         title: '束ねやすさ',
-        subtitle: 'リンクしきい値バイアス。低いほど広く束ねる(しきい値自体はコミュニティ別に自動調整)',
+        subtitle: '低いほど広く束ねる(しきい値はコミュニティ別に自動調整)',
         value: s.linkBias.toDouble(),
         min: 50,
         max: 100,
@@ -173,8 +251,8 @@ class _TuningPanel extends ConsumerWidget {
         onChanged: (v) => store.set(s.copyWith(linkBias: v.round())),
       ),
       RasqSliderListTile(
-        title: '時間減衰 τ',
-        subtitle: 'e^(-Δt/τ)。大きいほど時間が離れた投稿もリンクしやすい',
+        title: '時間減衰',
+        subtitle: '大きいほど時間が離れた投稿もリンクしやすい(τ)',
         value: s.tauSeconds.toDouble(),
         min: 60,
         max: 1800,
@@ -182,59 +260,51 @@ class _TuningPanel extends ConsumerWidget {
         valueLabel: '${s.tauSeconds}秒',
         onChanged: (v) => store.set(s.copyWith(tauSeconds: v.round())),
       ),
+      _section(context, '重み'),
       RasqSliderListTile(
-        title: '候補ウィンドウ',
-        subtitle: '親候補を探す直近の範囲',
-        value: s.candidateWindowMinutes.toDouble(),
-        min: 5,
-        max: 120,
-        divisions: 23,
-        valueLabel: '${s.candidateWindowMinutes}分',
-        onChanged: (v) => store.set(s.copyWith(candidateWindowMinutes: v.round())),
+        title: '類似性',
+        subtitle: '内容類似+エンティティ一致(内訳は詳細設定)',
+        value: similarity,
+        min: 0,
+        max: 1.0,
+        divisions: 100,
+        valueLabel: similarity.toStringAsFixed(2),
+        onChanged: (v) => store.set(s.copyWith(weights: w.copyWith(content: v * _defaults.content / simBase, entity: v * _defaults.entity / simBase))),
       ),
-      section('重み(通常投稿)'),
-      weight('内容類似', w.content, 0.8, (v) => w.copyWith(content: v)),
-      weight('エンティティ一致', w.entity, 0.5, (v) => w.copyWith(entity: v)),
-      weight('時間減衰', w.time, 0.5, (v) => w.copyWith(time: v)),
-      weight('ペア親密度', w.affinity, 0.3, (v) => w.copyWith(affinity: v)),
-      weight('発話交替', w.turn, 0.2, (v) => w.copyWith(turn: v)),
-      weight('アンカー', w.anchor, 0.3, (v) => w.copyWith(anchor: v)),
-      section('フラット加点'),
+      RasqSliderListTile(
+        title: '親密度',
+        subtitle: 'ペア親密度+発話交替(内訳は詳細設定)',
+        value: closeness,
+        min: 0,
+        max: 0.45,
+        divisions: 45,
+        valueLabel: closeness.toStringAsFixed(2),
+        onChanged: (v) => store.set(s.copyWith(weights: w.copyWith(affinity: v * _defaults.affinity / closeBase, turn: v * _defaults.turn / closeBase))),
+      ),
+      _section(context, '追加判定'),
       weight('ハードアンカー(URL/引用先)', w.hardAnchorBonus, 0.4, (v) => w.copyWith(hardAnchorBonus: v)),
       weight('反応表現(それな・わかる等)', w.reactiveBonus, 0.3, (v) => w.copyWith(reactiveBonus: v)),
-      weight('コミュニティ事前分布 ±', w.communityPrior, 0.15, (v) => w.copyWith(communityPrior: v)),
-      section('ライフサイクル'),
-      RasqSliderListTile(
-        title: 'TTL 下限',
-        value: s.minTtlMinutes.toDouble(),
+      _section(context, 'ライフサイクル'),
+      RasqRangeSliderListTile(
+        title: 'TTL',
+        subtitle: '会話が沈むまでの時間。投稿間隔からこの範囲内で自動調整',
+        values: RangeValues(s.minTtlMinutes.toDouble(), s.maxTtlMinutes.toDouble()),
         min: 1,
-        max: 15,
-        divisions: 14,
-        valueLabel: '${s.minTtlMinutes}分',
-        onChanged: (v) => store.set(s.copyWith(minTtlMinutes: v.round())),
-      ),
-      RasqSliderListTile(
-        title: 'TTL 上限',
-        value: s.maxTtlMinutes.toDouble(),
-        min: 5,
         max: 60,
-        divisions: 55,
-        valueLabel: '${s.maxTtlMinutes}分',
-        onChanged: (v) => store.set(s.copyWith(maxTtlMinutes: v.round())),
+        divisions: 59,
+        valueLabel: '${s.minTtlMinutes}〜${s.maxTtlMinutes}分',
+        onChanged: (v) {
+          final lo = v.start.round().clamp(1, 60);
+          final hi = v.end.round().clamp(lo, 60);
+          store.set(s.copyWith(minTtlMinutes: lo, maxTtlMinutes: hi));
+        },
       ),
-      RasqSliderListTile(
-        title: '仮 ROOT 保留',
-        subtitle: '新話題として確定するまでの保留時間',
-        value: s.tentativeHoldSeconds.toDouble(),
-        min: 30,
-        max: 300,
-        divisions: 27,
-        valueLabel: '${s.tentativeHoldSeconds}秒',
-        onChanged: (v) => store.set(s.copyWith(tentativeHoldSeconds: v.round())),
-      ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
-        child: OutlinedButton.icon(icon: const Icon(Icons.restart_alt, size: 18), label: const Text('既定に戻す'), onPressed: store.reset),
+      ListTile(
+        dense: true,
+        leading: const Icon(Icons.tune, size: 20),
+        title: const Text('詳細設定'),
+        trailing: const Icon(Icons.chevron_right, size: 20),
+        onTap: () => setState(() => _advanced = true),
       ),
     ]);
   }

@@ -65,6 +65,33 @@ void main() {
     expect(RasqTabs(items: many, mode: RasqTabsMode.fixed).items.length, 12);
   });
 
+  testWidgets('RasqRangeSliderListTile: 範囲表示とドラッグ変更 (D-028)', (tester) async {
+    RangeValues? changed;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: RasqRangeSliderListTile(
+          title: 'TTL',
+          values: const RangeValues(5, 30),
+          min: 1,
+          max: 60,
+          divisions: 59,
+          onChanged: (v) => changed = v,
+        ),
+      ),
+    ));
+    expect(find.text('TTL'), findsOneWidget);
+    expect(find.text('5〜30'), findsOneWidget);
+    // 下限つまみを右へドラッグ → onChanged が呼ばれ start が上がる。
+    final slider = find.byType(RangeSlider);
+    final box = tester.getRect(slider);
+    final startThumbX = box.left + box.width * (5 - 1) / (60 - 1);
+    await tester.dragFrom(Offset(startThumbX, box.center.dy), const Offset(60, 0));
+    await tester.pumpAndSettle();
+    expect(changed, isNotNull);
+    expect(changed!.start, greaterThan(5));
+    expect(changed!.end, closeTo(30, 1));
+  });
+
   test('ErrorCode grammar', () {
     expect(ErrorCode.tryParse('a25')?.family, ErrorFamily.settings);
     expect(ErrorCode.tryParse('D2F')?.code, 'D2F');
