@@ -136,6 +136,7 @@ class MlGateway {
     this.activeHtlPosts,
     this.glinerModelId = 'rasq.official.search/gliner-ner',
     this.siglipModelId = 'rasq.official.search/siglip-similarity',
+    this.summarizerModelId = 'rasq.official.astell/vc-summarizer',
   });
 
   final Map<String, MlModelManifest> manifests;
@@ -153,6 +154,7 @@ class MlGateway {
   final int Function()? activeHtlPosts;
   final String glinerModelId;
   final String siglipModelId;
+  final String summarizerModelId;
 
   bool _serverRunnable(MlModelManifest manifest) {
     final server = manifest.server;
@@ -232,6 +234,20 @@ class MlGateway {
     final result = await infer(siglipModelId, {'texts': texts});
     final rows = result.output['embeddings'] as List? ?? const [];
     return [for (final row in rows) _normalize([for (final v in (row as List)) (v as num).toDouble()])];
+  }
+
+  /// ASTell 要約(mT5-small + copy gate、多言語)。デバイス = onnx 単発
+  /// forward をマニフェストの `generation` 設定で greedy ループ、サーバー =
+  /// vLLM。**実行手段が無い/未登録なら null**(呼び出し側は要約なしで表示)。
+  Future<String?> summarize(String text) async {
+    if (!manifests.containsKey(summarizerModelId)) return null;
+    try {
+      final result = await infer(summarizerModelId, {'prompt': text, 'text': text});
+      final s = (result.output['text'] ?? result.output['summary'])?.toString().trim();
+      return (s == null || s.isEmpty) ? null : s;
+    } on MlUnavailableException {
+      return null;
+    }
   }
 
   static Float32List _normalize(List<double> v) {

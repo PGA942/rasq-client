@@ -7,12 +7,13 @@ import 'package:rasq_models/rasq_models.dart';
 const account = AccountId(kind: SnsKind.misskey, instance: 'misskey.io', handle: 'yamada');
 final base = DateTime(2026, 8, 26, 12);
 
-Post post(String id, String author, String body, {Duration at = Duration.zero}) => Post(
+Post post(String id, String author, String body, {Duration at = Duration.zero, String? repostedBy}) => Post(
       id: id,
       account: account,
       author: UserSummary(id: author, account: account, displayName: author),
       createdAt: base.add(at),
       body: body,
+      repostedBy: repostedBy == null ? null : UserSummary(id: repostedBy, account: account, displayName: repostedBy),
     );
 
 void main() {
@@ -136,6 +137,24 @@ void main() {
       final events = ConversationEngine().buildAll(followeePosts: posts);
       final e = events.firstWhere((ev) => ev.root.id == '1');
       expect(e.posts.map((p) => p.id), ['1', '2', '3']);
+    });
+
+    test('リノートで運ばれた人も参加者に含まれ、リノート主は親密度で繋がる', () {
+      final posts = [
+        // bob が carol の投稿をリノートして HTL に運んできた。
+        post('1', 'carol', 'ストラトローンチの機体写真を撮った', repostedBy: 'bob'),
+        post('2', 'alice', 'ストラトローンチの機体、翼が長いよね', at: const Duration(minutes: 1)),
+        // リノート主 bob の空リプ(内容シグナルなし)→ リノートの親密度
+        // (weight 2)+ 参加者としての発話交替で繋がる。
+        post('3', 'bob', 'ほんとそれ', at: const Duration(minutes: 2)),
+      ];
+      final events = ConversationEngine().build(followeePosts: posts, now: base.add(const Duration(minutes: 3)));
+      expect(events, hasLength(1));
+      final e = events.single;
+      expect(e.posts.map((p) => p.id), ['1', '2', '3']);
+      // members = 著者(carol, alice, bob)+ リノート主(bob、重複除去)。
+      expect(e.members.map((u) => u.displayName).toSet(), {'carol', 'bob', 'alice'});
+      expect(e.participants.keys, contains('misskey:misskey.io:bob'));
     });
 
     test('lookback を渡すと TTL で沈んだ過去の会話も表示に含める (D-028)', () {

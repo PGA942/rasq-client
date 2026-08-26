@@ -79,7 +79,7 @@ final mlGatewayProvider = FutureProvider<MlGateway?>((ref) async {
   const baseUrl = String.fromEnvironment('RASQ_ML_BASE_URL');
   if (baseUrl.isEmpty) return null;
   final manifests = <String, MlModelManifest>{};
-  for (final asset in ['assets/models/gliner-ner.model.json', 'assets/models/siglip-similarity.model.json']) {
+  for (final asset in ['assets/models/gliner-ner.model.json', 'assets/models/siglip-similarity.model.json', 'assets/models/astell-summarizer.model.json']) {
     final m = MlModelManifest.fromJson((jsonDecode(await rootBundle.loadString(asset)) as Map).cast<String, Object?>());
     manifests[m.id] = m;
   }
@@ -129,6 +129,25 @@ final relationalMlProvider = FutureProvider<RelationalMlResult?>((ref) async {
 /// GTL/LTL 候補の連結は廃止(人気話題が複数コミュニティを誤結合するハブに
 /// なるため)。ML 解析があれば SigLIP 類似度と Louvain コミュニティ
 /// (事前分布)がリンク採点に入る。
+/// イベントの ASTell 要約(D-029)。イベント id ごとに 1 回だけ計算する
+/// (`ref.read` なので投稿追加では再要約しない — 実測後に見直し)。
+/// ゲートウェイ未構成/実行手段なしは null → カードは要約なしで表示。
+final eventSummaryProvider = FutureProvider.family<String?, String>((ref, eventId) async {
+  final gateway = await ref.watch(mlGatewayProvider.future);
+  if (gateway == null) return null;
+  final events = ref.read(conversationEventsProvider).value ?? const [];
+  ConversationEvent? event;
+  for (final e in events) {
+    if (e.id == eventId) {
+      event = e;
+      break;
+    }
+  }
+  if (event == null) return null;
+  final text = [for (final p in event.posts.take(12)) '${p.author.displayName}: ${p.body}'].join('\n');
+  return gateway.summarize('次の会話を1文で要約:\n$text');
+});
+
 final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>((ref) {
   final settings = ref.watch(relationalSettingsProvider);
   final lookbackMinutes = ref.watch(relationalLookbackProvider);

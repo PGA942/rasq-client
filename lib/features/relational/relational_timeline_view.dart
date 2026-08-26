@@ -331,8 +331,14 @@ class _EventCardState extends ConsumerState<_EventCard> {
     final emojis = ref.watch(emojiCacheProvider);
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
+    // 自分も会話に含まれるが、アイコンはタイルに出さない(全員自分なら残す)。
+    final selfKey = ref.watch(currentUserProvider).key;
+    final avatarUsers = [for (final u in members) if (u.key != selfKey) u];
+    final shownUsers = avatarUsers.isEmpty ? members : avatarUsers;
     final others = members.length - 1;
     final tags = [for (final t in e.entities) if (t.length >= 2) t].take(4).toList();
+    // ASTell 要約(実行手段が無ければ null → ROOT 本文のみ)。
+    final summary = ref.watch(eventSummaryProvider(e.id)).value;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       InkWell(
@@ -340,12 +346,15 @@ class _EventCardState extends ConsumerState<_EventCard> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.sm, RasqSpacing.sm),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            RasqGroupAvatar(users: members, size: RasqSizes.avatarMd, overflowCount: others > 2 ? others - 2 : null),
+            RasqGroupAvatar(users: shownUsers, size: RasqSizes.avatarMd, overflowCount: shownUsers.length > 3 ? shownUsers.length - 3 : null),
             const SizedBox(width: RasqSpacing.md),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(others > 0 ? '${e.root.author.displayName}+$others人' : e.root.author.displayName, style: RasqTypography.displayName),
-                RasqRichText(InlineSpans.parse(e.root.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                if (summary != null)
+                  Text(summary, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant, fontStyle: FontStyle.italic), maxLines: 2, overflow: TextOverflow.ellipsis)
+                else
+                  RasqRichText(InlineSpans.parse(e.root.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
                 if (tags.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),

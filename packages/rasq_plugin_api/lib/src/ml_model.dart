@@ -152,10 +152,34 @@ class MlTokenizerSpec {
       );
 }
 
+/// seq2seq 生成の設定。KV キャッシュ無しの単発 forward で export された
+/// モデル(例: ASTell の mt5_copy.onnx)は、ホストがこの設定でデコーダー
+/// ループ(decoder_input_ids を伸ばしながら再実行)を回す。
+@immutable
+class MlGenerationSpec {
+  const MlGenerationSpec({required this.decoderStartTokenId, required this.eosTokenId, this.padTokenId, this.maxNewTokens = 64, this.strategy = 'greedy'});
+
+  final int decoderStartTokenId;
+  final int eosTokenId;
+  final int? padTokenId;
+  final int maxNewTokens;
+
+  /// 現状 greedy のみ(サンプリングは server 側に任せる)。
+  final String strategy;
+
+  factory MlGenerationSpec.fromJson(Map<String, Object?> json) => MlGenerationSpec(
+        decoderStartTokenId: (json['decoderStartTokenId'] as num).toInt(),
+        eosTokenId: (json['eosTokenId'] as num).toInt(),
+        padTokenId: (json['padTokenId'] as num?)?.toInt(),
+        maxNewTokens: (json['maxNewTokens'] as num?)?.toInt() ?? 64,
+        strategy: json['strategy'] as String? ?? 'greedy',
+      );
+}
+
 /// On-device execution via onnx runtime.
 @immutable
 class OnnxRuntimeSpec {
-  const OnnxRuntimeSpec({required this.file, this.quantization, required this.inputs, required this.outputs, this.tokenizer, this.labelsFile, this.executionProviders = const ['cpu']});
+  const OnnxRuntimeSpec({required this.file, this.quantization, required this.inputs, required this.outputs, this.tokenizer, this.labelsFile, this.executionProviders = const ['cpu'], this.generation});
 
   final String file;
   final String? quantization;
@@ -167,6 +191,9 @@ class OnnxRuntimeSpec {
   /// 実行プロバイダの希望順(GPU/NPU: cuda / tensorrt / coreml / nnapi / qnn / cpu)。
   final List<String> executionProviders;
 
+  /// generation タスクのデコーダーループ設定(null = 単発推論)。
+  final MlGenerationSpec? generation;
+
   factory OnnxRuntimeSpec.fromJson(Map<String, Object?> json) => OnnxRuntimeSpec(
         file: json['file'] as String,
         quantization: json['quantization'] as String?,
@@ -175,6 +202,7 @@ class OnnxRuntimeSpec {
         tokenizer: json['tokenizer'] == null ? null : MlTokenizerSpec.fromJson((json['tokenizer'] as Map).cast()),
         labelsFile: json['labelsFile'] as String?,
         executionProviders: [for (final e in (json['executionProviders'] as List? ?? const ['cpu'])) e as String],
+        generation: json['generation'] == null ? null : MlGenerationSpec.fromJson((json['generation'] as Map).cast()),
       );
 }
 

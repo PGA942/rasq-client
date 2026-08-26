@@ -120,6 +120,55 @@ void main() {
       expect(r.placement, MlPlacement.server);
     });
 
+    test('summarize: ASTell マニフェスト経由で要約、未登録/実行手段なしは null (D-029)', () async {
+      final withVllm = MlGateway(
+        manifests: {'rasq.official.astell/vc-summarizer': manifest('rasq.official.astell/vc-summarizer', engine: 'vllm')},
+        vllm: VllmExecutor(
+          baseUrl: Uri.parse('https://llm.example'),
+          post: (url, {headers, body}) async => jsonResponse({
+            'choices': [
+              {'message': {'role': 'assistant', 'content': 'ロケットの話で盛り上がっている'}},
+            ],
+          }),
+        ),
+      );
+      expect(await withVllm.summarize('会話ログ'), 'ロケットの話で盛り上がっている');
+      // マニフェスト未登録 → null(例外にしない)。
+      expect(await MlGateway(manifests: const {}).summarize('会話ログ'), isNull);
+      // 登録はあるが実行先なし → null(例外にしない)。
+      final noRuntime = MlGateway(manifests: {'rasq.official.astell/vc-summarizer': manifest('rasq.official.astell/vc-summarizer', engine: 'vllm')});
+      expect(await noRuntime.summarize('会話ログ'), isNull);
+    });
+
+    test('onnx generation 設定つきマニフェストのパース (mt5_copy)', () {
+      final m = MlModelManifest.fromJson({
+        'id': 'rasq.official.astell/vc-summarizer',
+        'version': '0.2.0',
+        'task': 'generation',
+        'io': {'input': 'text', 'output': 'text'},
+        'runtimes': {
+          'onnx': {
+            'file': 'models/astell/mt5_copy.onnx',
+            'inputs': [
+              {'name': 'input_ids', 'dtype': 'int64', 'shape': [1, 'seq'], 'semantic': 'token_ids'},
+              {'name': 'attention_mask', 'dtype': 'int64', 'shape': [1, 128], 'semantic': 'attention_mask'},
+              {'name': 'decoder_input_ids', 'dtype': 'int64', 'shape': [1, 'dec_seq'], 'semantic': 'decoder_token_ids'},
+            ],
+            'outputs': [
+              {'name': 'logits', 'dtype': 'float32', 'shape': ['batch', 'dec_seq', 250112], 'semantic': 'logits'},
+            ],
+            'generation': {'decoderStartTokenId': 0, 'eosTokenId': 1, 'padTokenId': 0, 'maxNewTokens': 64},
+          },
+        },
+      });
+      final g = m.onnx!.generation!;
+      expect(g.decoderStartTokenId, 0);
+      expect(g.eosTokenId, 1);
+      expect(g.strategy, 'greedy');
+      expect(m.onnx!.inputs[1].shape, [1, 128]);
+      expect(m.onnx!.inputs[2].semantic, 'decoder_token_ids');
+    });
+
     test('デバイス実行器があればそちらが優先される', () async {
       final gateway = MlGateway(
         manifests: {'m/x': manifest('m/x', device: true)},

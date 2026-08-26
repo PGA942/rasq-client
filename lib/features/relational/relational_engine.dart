@@ -331,10 +331,10 @@ class UserPairAffinity {
 
   static String _key(String a, String b) => a.compareTo(b) <= 0 ? '$a|$b' : '$b|$a';
 
-  void record(String a, String b) {
+  void record(String a, String b, {int weight = 1}) {
     if (a == b) return;
     final k = _key(a, b);
-    _count[k] = (_count[k] ?? 0) + 1;
+    _count[k] = (_count[k] ?? 0) + weight;
   }
 
   /// 0〜1(共起 3 回で 0.5)。
@@ -354,7 +354,11 @@ class ConversationEvent {
         entities = extractFeatures(p),
         anchors = strongAnchors(p),
         hardAnchorSet = hardAnchors(p),
-        participants = {p.author.key: p.createdAt},
+        participants = {
+          p.author.key: p.createdAt,
+          // リノートで運ばれてきた投稿は、運んだ人(リノート主)も参加者。
+          if (p.repostedBy != null) p.repostedBy!.key: p.createdAt,
+        },
         intervalSeconds = [],
         lastActivityAt = p.createdAt;
 
@@ -389,9 +393,16 @@ class ConversationEvent {
   /// 可変プロトタイプ: 直近の投稿(会話の発展に追従する)。
   List<Post> get recentPosts => posts.length <= 8 ? posts : posts.sublist(posts.length - 8);
 
+  /// 参加メンバー(著者 + リノート主)。自分自身も含む — タイル表示側で
+  /// 自分のアイコンだけ除外する。
   List<UserSummary> get members {
     final seen = <String>{};
-    return [for (final p in posts) if (seen.add(p.author.key)) p.author];
+    return [
+      for (final p in posts) ...[
+        if (seen.add(p.author.key)) p.author,
+        if (p.repostedBy != null && seen.add(p.repostedBy!.key)) p.repostedBy!,
+      ],
+    ];
   }
 
   void add(Post p) {
@@ -401,8 +412,13 @@ class ConversationEvent {
     entities.addAll(extractFeatures(p));
     anchors.addAll(strongAnchors(p));
     hardAnchorSet.addAll(hardAnchors(p));
-    final prev = participants[p.author.key];
-    if (prev == null || p.createdAt.isAfter(prev)) participants[p.author.key] = p.createdAt;
+    void touch(String key) {
+      final prev = participants[key];
+      if (prev == null || p.createdAt.isAfter(prev)) participants[key] = p.createdAt;
+    }
+
+    touch(p.author.key);
+    if (p.repostedBy != null) touch(p.repostedBy!.key);
     if (p.createdAt.isAfter(lastActivityAt)) lastActivityAt = p.createdAt;
   }
 
@@ -528,6 +544,10 @@ class ConversationEngine {
       // 近接投稿ペア → 親密度(普段この 2 人が近くで投稿するか)。
       if (prev != null && p.createdAt.difference(prev.createdAt) <= const Duration(minutes: 5)) {
         affinity.record(prev.author.key, p.author.key);
+      }
+      // リノートは直接のインタラクション → 近接共起より強く効かせる。
+      if (p.repostedBy != null) {
+        affinity.record(p.repostedBy!.key, p.author.key, weight: 2);
       }
       final anchorsOfP = strongAnchors(p);
       final hardOfP = hardAnchors(p);
