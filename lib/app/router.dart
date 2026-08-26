@@ -15,6 +15,7 @@ import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
 import '../features/settings/mute_block_screen.dart';
+import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
 import '../features/profile/profile_edit_screen.dart';
 import '../features/lists/lists_screens.dart';
@@ -128,6 +129,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           // still below the OverlayHost.
           GoRoute(path: Routes.settings, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const SettingsScreen(), routes: [
             GoRoute(path: 'mute-block', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MuteBlockScreen()),
+            GoRoute(path: 'dsl/:area', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => SettingsDslScreen(area: state.pathParameters['area']!)),
             GoRoute(path: 'section/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SettingsSectionScreen(sectionId: s.pathParameters['id']!)),
           ]),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),

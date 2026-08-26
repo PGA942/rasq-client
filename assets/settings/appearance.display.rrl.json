@@ -1,0 +1,26 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "appearance.display",
+  "title": "インターフェースの表示サイズ",
+  "defaults": { "textScale": 100 },
+  "root": {
+    "t": "Column",
+    "c": [
+      { "t": "SectionHeader", "p": { "title": "表示サイズ" } },
+      {
+        "t": "SliderListTile",
+        "k": "textScale",
+        "p": {
+          "title": "文字とUIの大きさ",
+          "subtitle": "アプリ全体の文字サイズを変えます(即時反映)",
+          "value": "$.settings.textScale",
+          "min": 85,
+          "max": 130,
+          "divisions": 9,
+          "unit": "%"
+        },
+        "on": { "change": "settings.set" }
+      }
+    ]
+  }
+}

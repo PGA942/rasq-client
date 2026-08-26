@@ -173,6 +173,62 @@ abstract final class RrlComponentRegistry {
           subtitle: ctx.props['subtitle'] as String?,
           onTap: ctx.tapHandler('tap'),
         ),
+    // ---- 設定タイル (D-031: 設定DSL = RRL サブセット) ----------------------
+    'SwitchListTile': (ctx) => RasqSwitchListTile(
+          title: rrlString(ctx.props['title']),
+          subtitle: ctx.props['subtitle'] as String?,
+          value: rrlTruthy(ctx.props['value']),
+          enabled: ctx.props['enabled'] == null || rrlTruthy(ctx.props['enabled']),
+          onChanged: ctx.node.on.containsKey('change') ? (v) => ctx.emit('change', {'value': v}) : null,
+        ),
+    'RadioListTile': (ctx) => RasqRadioListTile<Object?>(
+          title: rrlString(ctx.props['title']),
+          subtitle: ctx.props['subtitle'] as String?,
+          value: ctx.props['value'],
+          groupValue: ctx.props['group'],
+          enabled: ctx.props['enabled'] == null || rrlTruthy(ctx.props['enabled']),
+          onChanged: ctx.node.on.containsKey('change') ? (v) => ctx.emit('change', {'value': v}) : null,
+        ),
+    'ValueListTile': (ctx) => RasqValueListTile(
+          title: rrlString(ctx.props['title']),
+          value: rrlString(ctx.props['value']),
+          onTap: ctx.tapHandler('tap'),
+        ),
+    'WarningListTile': (ctx) => RasqWarningListTile(
+          title: rrlString(ctx.props['title']),
+          subtitle: ctx.props['subtitle'] as String?,
+          onTap: ctx.tapHandler('tap'),
+        ),
+    'DestructiveListTile': (ctx) => RasqDestructiveListTile(title: rrlString(ctx.props['title']), onTap: ctx.tapHandler('tap')),
+    'SliderListTile': (ctx) {
+      final value = (ctx.props['value'] as num?)?.toDouble() ?? 0;
+      final unit = ctx.props['unit'] as String?;
+      return RasqSliderListTile(
+        title: rrlString(ctx.props['title']),
+        subtitle: ctx.props['subtitle'] as String?,
+        value: value,
+        min: (ctx.props['min'] as num?)?.toDouble() ?? 0,
+        max: (ctx.props['max'] as num?)?.toDouble() ?? 100,
+        divisions: (ctx.props['divisions'] as num?)?.toInt(),
+        valueLabel: unit == null ? null : '${value.round()}$unit',
+        onChanged: ctx.node.on.containsKey('change') ? (v) => ctx.emit('change', {'value': v}) : null,
+      );
+    },
+    'RangeSliderListTile': (ctx) {
+      final start = (ctx.props['start'] as num?)?.toDouble() ?? 0;
+      final end = (ctx.props['end'] as num?)?.toDouble() ?? 0;
+      final unit = ctx.props['unit'] as String? ?? '';
+      return RasqRangeSliderListTile(
+        title: rrlString(ctx.props['title']),
+        subtitle: ctx.props['subtitle'] as String?,
+        values: RangeValues(start, end),
+        min: (ctx.props['min'] as num?)?.toDouble() ?? 0,
+        max: (ctx.props['max'] as num?)?.toDouble() ?? 100,
+        divisions: (ctx.props['divisions'] as num?)?.toInt(),
+        valueLabel: '${start.round()}〜${end.round()}$unit',
+        onChanged: ctx.node.on.containsKey('change') ? (v) => ctx.emit('change', {'value': {'start': v.start, 'end': v.end}}) : null,
+      );
+    },
     'UserRow': (ctx) => RasqUserRow(user: rrlUser(ctx.props['user']), onTap: ctx.tapHandler('tap')),
     'ActionBar': _actionBar,
     'PostTile': _postTile,

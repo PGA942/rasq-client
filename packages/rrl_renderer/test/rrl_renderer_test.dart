@@ -144,6 +144,43 @@ void main() {
       expect(find.text('セクション'), findsOneWidget);
     });
 
+    testWidgets('設定タイル (D-031): Switch/Slider/Radio が Bind 値を描画し change を発火する', (tester) async {
+      final events = <(String, Object?)>[];
+      const root = RrlNode(t: 'Column', c: [
+        RrlNode(t: 'SectionHeader', p: {'title': '表示'}),
+        RrlNode(t: 'SwitchListTile', k: 'reduceMotion', p: {'title': 'モーションを抑制する', 'value': r'$.settings.reduceMotion'}, on: {'change': 'settings.set'}),
+        RrlNode(t: 'SliderListTile', k: 'textScale', p: {'title': '文字の大きさ', 'value': r'$.settings.textScale', 'min': 85, 'max': 130, 'divisions': 9, 'unit': '%'}, on: {'change': 'settings.set'}),
+        RrlNode(t: 'RadioListTile', k: 'themeDark', p: {'title': 'ダーク', 'value': 'dark', 'group': r'$.settings.theme'}, on: {'change': 'settings.set'}),
+        RrlNode(t: 'ValueListTile', k: 'lang', p: {'title': '言語', 'value': '日本語'}),
+        RrlNode(t: 'DestructiveListTile', k: 'reset', p: {'title': 'リセット'}, on: {'tap': 'settings.reset'}),
+      ]);
+      final host = RrlHost(
+        instanceScope: instanceScope,
+        scope: RrlScope({
+          'settings': {'reduceMotion': false, 'textScale': 100, 'theme': 'light'},
+        }),
+        onEvent: (nodeId, kind, {fn, payload = const {}}) => events.add(('${nodeId.split(':').last}/$kind/$fn', payload['value'])),
+      );
+      await tester.pumpWidget(wrap(RrlRenderer(node: root, host: host)));
+      expect(find.text('モーションを抑制する'), findsOneWidget);
+      expect(find.text('100%'), findsOneWidget);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+
+      await tester.tap(find.byType(Switch));
+      expect(events.single, ('reduceMotion/change/settings.set', true));
+
+      events.clear();
+      await tester.tap(find.text('ダーク'));
+      expect(events.single, ('themeDark/change/settings.set', 'dark'));
+
+      events.clear();
+      final slider = find.byType(Slider);
+      await tester.drag(slider, const Offset(80, 0));
+      expect(events, isNotEmpty);
+      expect(events.last.$1, 'textScale/change/settings.set');
+      expect(events.last.$2, isA<num>());
+    });
+
     testWidgets('patch → re-render updates the tree', (tester) async {
       var doc = const RrlDocument(scope: instanceScope, rev: 1, root: RrlNode(t: 'Text', k: 'msg', p: {'text': '古い'}));
       final host = RrlHost(instanceScope: instanceScope, scope: RrlScope({}));

@@ -39,9 +39,9 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('ヘルプ、法的表示'),
   ], note: 'この画面ではインストールされたプラグインのうち、SNS変換プラグインの設定画面だけセクションが表示される。この画面は FOW の DSL で作る(第一階層以降)。'),
   'appearance': SettingsSection('アプリの外観', [
-    SettingsRow('インターフェースの表示サイズ'),
+    SettingsRow('インターフェースの表示サイズ', route: '/settings/dsl/appearance.display'),
     SettingsRow('フォントやカラースキーム'),
-    SettingsRow('モーションの抑制'),
+    SettingsRow('モーションの抑制', route: '/settings/dsl/appearance.motion'),
     SettingsRow('ピクチャインピクチャ'),
     SettingsRow('通知の表示形式'),
   ]),
