@@ -1,5 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/features/relational/relational_engine.dart';
+import 'package:rasq_client/features/relational/relational_providers.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 const account = AccountId(kind: SnsKind.misskey, instance: 'misskey.io', handle: 'yamada');
@@ -136,12 +138,69 @@ void main() {
       expect(e.posts.map((p) => p.id), ['1', '2', '3']);
     });
 
+    test('lookback を渡すと TTL で沈んだ過去の会話も表示に含める (D-028)', () {
+      final posts = [
+        post('1', 'a', '同人誌の原稿、落とした……'),
+        post('2', 'b', 'えっ、マジ', at: const Duration(seconds: 40)),
+      ];
+      // 3 時間後: 会話はとっくに CLOSED → 通常表示は空。
+      final now = base.add(const Duration(hours: 3));
+      expect(ConversationEngine().build(followeePosts: posts, now: now), isEmpty);
+      // 遡り表示(4 時間)なら過去の空リプ会話が出る。
+      final events = ConversationEngine().build(followeePosts: posts, now: now, lookback: const Duration(hours: 4));
+      expect(events, hasLength(1));
+      expect(events.single.posts.map((p) => p.id), ['1', '2']);
+      // 遡り窓より古ければやはり出ない。
+      expect(ConversationEngine().build(followeePosts: posts, now: now, lookback: const Duration(hours: 1)), isEmpty);
+    });
+
     test('markAction で浮上する(自分の関連投稿へのアクション)', () {
       final e = fastEvent();
       final engine = ConversationEngine();
       final at = base.add(const Duration(minutes: 4));
       engine.markAction([e], postKey: e.posts.last.key, at: at);
       expect(e.lastActivityAt, at);
+    });
+  });
+
+  group('遡り窓ストア (D-028)', () {
+    test('引っ張るたびに +30 分、上限 12 時間、リセットで 0', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final store = container.read(relationalLookbackProvider.notifier);
+      expect(container.read(relationalLookbackProvider), 0);
+      expect(store.extend(), isTrue);
+      expect(container.read(relationalLookbackProvider), 30);
+      store.extend();
+      expect(container.read(relationalLookbackProvider), 60);
+      for (var i = 0; i < 100; i++) {
+        store.extend();
+      }
+      expect(container.read(relationalLookbackProvider), RelationalLookbackStore.maxMinutes);
+      expect(store.extend(), isFalse);
+      store.reset();
+      expect(container.read(relationalLookbackProvider), 0);
+    });
+  });
+
+  group('設定の直列化 (D-028)', () {
+    test('JSON 往復で重み・τ を含め復元できる', () {
+      const s = RelationalSettings(linkBias: 80, tauSeconds: 900, maxTtlMinutes: 45, weights: LinkWeights(content: 0.6, reactiveBonus: 0.25));
+      final restored = RelationalSettings.fromJson(s.toJson());
+      expect(restored.linkBias, 80);
+      expect(restored.tauSeconds, 900);
+      expect(restored.maxTtlMinutes, 45);
+      expect(restored.weights.content, 0.6);
+      expect(restored.weights.reactiveBonus, 0.25);
+      // 未指定フィールドは既定値。
+      expect(restored.weights.entity, const LinkWeights().entity);
+    });
+
+    test('壊れた/欠けた JSON は既定値へフォールバック', () {
+      final restored = RelationalSettings.fromJson({'linkBias': 60, 'weights': 'broken'});
+      expect(restored.linkBias, 60);
+      expect(restored.weights.content, const LinkWeights().content);
+      expect(restored.tauSeconds, const RelationalSettings().tauSeconds);
     });
   });
 

@@ -42,12 +42,98 @@ enum ConversationState {
   closed,
 }
 
+/// リンク採点の重み (D-028)。初期値は実測チューニング前の暫定なので、
+/// FOW チューニングパネルからライブ調整できる(通常投稿プロファイル。
+/// 反応表現プロファイルは固定比率 + [reactiveBonus] のみ調整可)。
+@immutable
+class LinkWeights {
+  const LinkWeights({
+    this.content = 0.45,
+    this.entity = 0.20,
+    this.time = 0.15,
+    this.affinity = 0.10,
+    this.turn = 0.05,
+    this.anchor = 0.10,
+    this.hardAnchorBonus = 0.2,
+    this.reactiveBonus = 0.15,
+    this.communityPrior = 0.05,
+  });
+
+  /// 内容類似(SigLIP cos / 文字 n-gram の max)。
+  final double content;
+
+  /// エンティティ一致(1件=0.6 / 2件以上=1.0)。
+  final double entity;
+
+  /// 時間減衰 e^(-Δt/τ)。
+  final double time;
+
+  /// ユーザーペア親密度。
+  final double affinity;
+
+  /// 発話交替(A→B→A)。
+  final double turn;
+
+  /// アンカー(ハード=1.0 / ソフト#タグ=0.6)。
+  final double anchor;
+
+  /// ハードアンカー(URL・引用先)一致のフラット加点。
+  final double hardAnchorBonus;
+
+  /// 反応表現(「それな」等)の応答証拠としてのフラット加点。
+  final double reactiveBonus;
+
+  /// Louvain コミュニティ事前分布(同一 +、異なる −)。
+  final double communityPrior;
+
+  LinkWeights copyWith({double? content, double? entity, double? time, double? affinity, double? turn, double? anchor, double? hardAnchorBonus, double? reactiveBonus, double? communityPrior}) => LinkWeights(
+        content: content ?? this.content,
+        entity: entity ?? this.entity,
+        time: time ?? this.time,
+        affinity: affinity ?? this.affinity,
+        turn: turn ?? this.turn,
+        anchor: anchor ?? this.anchor,
+        hardAnchorBonus: hardAnchorBonus ?? this.hardAnchorBonus,
+        reactiveBonus: reactiveBonus ?? this.reactiveBonus,
+        communityPrior: communityPrior ?? this.communityPrior,
+      );
+
+  Map<String, Object?> toJson() => {
+        'content': content,
+        'entity': entity,
+        'time': time,
+        'affinity': affinity,
+        'turn': turn,
+        'anchor': anchor,
+        'hardAnchorBonus': hardAnchorBonus,
+        'reactiveBonus': reactiveBonus,
+        'communityPrior': communityPrior,
+      };
+
+  factory LinkWeights.fromJson(Map<String, Object?> json) {
+    double d(String key, double fallback) => (json[key] as num?)?.toDouble() ?? fallback;
+    const def = LinkWeights();
+    return LinkWeights(
+      content: d('content', def.content),
+      entity: d('entity', def.entity),
+      time: d('time', def.time),
+      affinity: d('affinity', def.affinity),
+      turn: d('turn', def.turn),
+      anchor: d('anchor', def.anchor),
+      hardAnchorBonus: d('hardAnchorBonus', def.hardAnchorBonus),
+      reactiveBonus: d('reactiveBonus', def.reactiveBonus),
+      communityPrior: d('communityPrior', def.communityPrior),
+    );
+  }
+}
+
 /// リレーショナルTL 設定 (D-027)。
 ///
 /// [linkBias] はリンクしきい値への全体バイアス(**50〜100 正規化のスライダー**、
 /// 75 = 補正なし)。しきい値そのものはコミュニティ別に適応させるため
 /// (いつも同じ作品の話をするコミュニティでは素の類似度が常時高い)、
-/// ユーザーが触るのは「束ねやすさ」の一つまみだけにする。
+/// 普段ユーザーが触るのは「束ねやすさ」の一つまみだけにする。細かい
+/// パラメーターは FOW チューニングパネル(D-028)から。
 @immutable
 class RelationalSettings {
   const RelationalSettings({
@@ -56,6 +142,8 @@ class RelationalSettings {
     this.tentativeHoldSeconds = 150,
     this.minTtlMinutes = 5,
     this.maxTtlMinutes = 30,
+    this.tauSeconds = 600,
+    this.weights = const LinkWeights(),
   });
 
   /// 束ねやすさ(50〜100)。100 に近いほど厳しく(束ねにくく)なる。
@@ -74,16 +162,48 @@ class RelationalSettings {
   /// イベント TTL の上限(分)。
   final int maxTtlMinutes;
 
+  /// 時間減衰 e^(-Δt/τ) の τ(秒)。
+  final int tauSeconds;
+
+  /// リンク採点の重み。
+  final LinkWeights weights;
+
   /// スライダー値 → しきい値オフセット(-0.25〜+0.25)。
   double get biasOffset => (linkBias.clamp(50, 100) - 75) / 100.0;
 
-  RelationalSettings copyWith({int? linkBias, int? candidateWindowMinutes, int? tentativeHoldSeconds, int? minTtlMinutes, int? maxTtlMinutes}) => RelationalSettings(
+  RelationalSettings copyWith({int? linkBias, int? candidateWindowMinutes, int? tentativeHoldSeconds, int? minTtlMinutes, int? maxTtlMinutes, int? tauSeconds, LinkWeights? weights}) => RelationalSettings(
         linkBias: linkBias ?? this.linkBias,
         candidateWindowMinutes: candidateWindowMinutes ?? this.candidateWindowMinutes,
         tentativeHoldSeconds: tentativeHoldSeconds ?? this.tentativeHoldSeconds,
         minTtlMinutes: minTtlMinutes ?? this.minTtlMinutes,
         maxTtlMinutes: maxTtlMinutes ?? this.maxTtlMinutes,
+        tauSeconds: tauSeconds ?? this.tauSeconds,
+        weights: weights ?? this.weights,
       );
+
+  Map<String, Object?> toJson() => {
+        'linkBias': linkBias,
+        'candidateWindowMinutes': candidateWindowMinutes,
+        'tentativeHoldSeconds': tentativeHoldSeconds,
+        'minTtlMinutes': minTtlMinutes,
+        'maxTtlMinutes': maxTtlMinutes,
+        'tauSeconds': tauSeconds,
+        'weights': weights.toJson(),
+      };
+
+  factory RelationalSettings.fromJson(Map<String, Object?> json) {
+    int i(String key, int fallback) => (json[key] as num?)?.toInt() ?? fallback;
+    const def = RelationalSettings();
+    return RelationalSettings(
+      linkBias: i('linkBias', def.linkBias),
+      candidateWindowMinutes: i('candidateWindowMinutes', def.candidateWindowMinutes),
+      tentativeHoldSeconds: i('tentativeHoldSeconds', def.tentativeHoldSeconds),
+      minTtlMinutes: i('minTtlMinutes', def.minTtlMinutes),
+      maxTtlMinutes: i('maxTtlMinutes', def.maxTtlMinutes),
+      tauSeconds: i('tauSeconds', def.tauSeconds),
+      weights: json['weights'] is Map ? LinkWeights.fromJson((json['weights'] as Map).cast<String, Object?>()) : def.weights,
+    );
+  }
 }
 
 /// 2 投稿の類似度(0〜1、cos 相当)。SigLIP 配線時は
@@ -311,7 +431,7 @@ class ConversationEvent {
 /// 会話イベントエンジン (D-027)。投稿を時系列に処理し、投稿ごとに
 /// 「どの会話への暗黙応答か / 新話題の開始か」を判定する。
 class ConversationEngine {
-  ConversationEngine({this.settings = const RelationalSettings(), this.semantic, this.communityOf, this.tauSeconds = 600});
+  ConversationEngine({this.settings = const RelationalSettings(), this.semantic, this.communityOf});
 
   final RelationalSettings settings;
 
@@ -321,9 +441,6 @@ class ConversationEngine {
   /// SigLIP EMA → Louvain の著者コミュニティ(D-024)。**事前分布**として
   /// ±の加点にだけ使い、束ねの可否を決めるフィルタにはしない。
   final Map<String, int>? communityOf;
-
-  /// 時間減衰 e^(-Δt/τ) の τ(秒)。
-  final int tauSeconds;
 
   final Map<String, Map<String, double>> _profiles = {};
 
@@ -362,12 +479,13 @@ class ConversationEngine {
   /// P(p が イベント e への暗黙応答)。ルール重み(将来 LightGBM に置換)。
   @visibleForTesting
   double linkScore(Post p, ConversationEvent e, UserPairAffinity affinity, {required bool anchorMatch, required bool hardMatch}) {
+    final w = settings.weights;
     var content = 0.0;
     for (final q in {...e.anchorPosts, ...e.recentPosts}) {
       content = math.max(content, _contentPair(p, q));
     }
     final dtSec = p.createdAt.difference(e.lastActivityAt).inSeconds.abs();
-    final timeDecay = math.exp(-dtSec / tauSeconds);
+    final timeDecay = math.exp(-dtSec / settings.tauSeconds);
     final overlap = entityOverlap(extractFeatures(p), e.entities);
     final entityScore = overlap >= 2 ? 1.0 : (overlap == 1 ? 0.6 : 0.0);
     var aff = 0.0;
@@ -382,18 +500,19 @@ class ConversationEngine {
     // ハードアンカー(URL/引用先)一致はほぼ確実に同じ話題 → フラット加点。
     // ソフトアンカー(#タグ)は汎用タグの誤結合があるので小さめ。
     final anchor = hardMatch ? 1.0 : (anchorMatch ? 0.6 : 0.0);
-    final hardBonus = hardMatch ? 0.2 : 0.0;
+    final hardBonus = hardMatch ? w.hardAnchorBonus : 0.0;
     var prior = 0.0;
     final ca = communityOf?[p.author.key];
     final ce = communityOf?[e.root.author.key];
-    if (ca != null && ce != null) prior = ca == ce ? 0.05 : -0.05;
+    if (ca != null && ce != null) prior = ca == ce ? w.communityPrior : -w.communityPrior;
 
     if (isReactivePost(p)) {
       // 反応表現は中身が測れない: それ自体が「直前の何かへの応答」の証拠
-      // (+0.15)とみなし、時間差・親密度・往復を重く見る。
-      return (0.15 * content + 0.40 * timeDecay + 0.20 * aff + 0.15 * turn + 0.10 * math.max(entityScore, anchor) + 0.15 + hardBonus + prior).clamp(0.0, 1.0);
+      // ([LinkWeights.reactiveBonus])とみなし、時間差・親密度・往復を重く
+      // 見る固定プロファイル(比率は通常プロファイルと独立)。
+      return (0.15 * content + 0.40 * timeDecay + 0.20 * aff + 0.15 * turn + 0.10 * math.max(entityScore, anchor) + w.reactiveBonus + hardBonus + prior).clamp(0.0, 1.0);
     }
-    return (0.45 * content + 0.20 * entityScore + 0.15 * timeDecay + 0.10 * aff + 0.05 * turn + 0.10 * anchor + hardBonus + prior).clamp(0.0, 1.0);
+    return (w.content * content + w.entity * entityScore + w.time * timeDecay + w.affinity * aff + w.turn * turn + w.anchor * anchor + hardBonus + prior).clamp(0.0, 1.0);
   }
 
   /// フォロイーの投稿列から会話イベントを組む(仮 ROOT 含む全イベント)。
@@ -445,10 +564,17 @@ class ConversationEngine {
   /// 表示対象 = ACTIVE のイベントだけ、活動が新しい順。仮 ROOT(単独投稿)は
   /// 後続が来るまで表示しない(「保留して遡る」— 開始点はどのみち batch
   /// 再構築で遡及的に含まれる)。
-  List<ConversationEvent> build({required List<Post> followeePosts, DateTime? now}) {
+  ///
+  /// [lookback] を渡すと、TTL で沈んだ(DORMANT/CLOSED)会話も最終活動が
+  /// lookback 以内なら表示に含める(D-028: アクティブフォロイーが少ない
+  /// ときに、リスト末尾で引っ張って過去の空リプを遡るため)。
+  List<ConversationEvent> build({required List<Post> followeePosts, DateTime? now, Duration? lookback}) {
     final clock = now ?? DateTime.now();
     final all = buildAll(followeePosts: followeePosts, now: clock);
-    final out = [for (final e in all) if (e.stateAt(clock, settings) == ConversationState.active) e];
+    final out = [
+      for (final e in all)
+        if (e.posts.length >= 2 && (e.stateAt(clock, settings) == ConversationState.active || (lookback != null && clock.difference(e.lastActivityAt) <= lookback))) e,
+    ];
     out.sort((a, b) => b.lastActivityAt.compareTo(a.lastActivityAt));
     return out;
   }

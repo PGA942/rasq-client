@@ -11,14 +11,53 @@ import '../home/timeline_providers.dart';
 import 'relational_engine.dart';
 import 'relational_ml.dart';
 
+/// 設定の永続化キー(FOW チューニングの実測値をセッションを跨いで保持)。
+const relationalSettingsStorageKey = 'relational.settings.v1';
+
 class RelationalSettingsStore extends Notifier<RelationalSettings> {
   @override
-  RelationalSettings build() => const RelationalSettings();
+  RelationalSettings build() {
+    // 同期 build なので保存値は後追いで復元(壊れた値は既定のまま)。
+    Future(() async {
+      try {
+        final raw = await ref.read(sessionStorageProvider).read(relationalSettingsStorageKey);
+        if (raw != null) state = RelationalSettings.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      } catch (_) {}
+    });
+    return const RelationalSettings();
+  }
 
-  void set(RelationalSettings next) => state = next;
+  void set(RelationalSettings next) {
+    state = next;
+    ref.read(sessionStorageProvider).write(relationalSettingsStorageKey, jsonEncode(next.toJson()));
+  }
+
+  void reset() => set(const RelationalSettings());
 }
 
 final relationalSettingsProvider = NotifierProvider<RelationalSettingsStore, RelationalSettings>(RelationalSettingsStore.new);
+
+/// 遡り表示の窓(分)。0 = 通常(ACTIVE のみ)。リスト末尾(または空の状態)で
+/// 引っ張るたびに +30 分ずつ広がり、TTL で沈んだ過去の空リプ会話も表示に
+/// 含める(D-028: アクティブフォロイーが少ないとき対策)。リフレッシュで戻る。
+class RelationalLookbackStore extends Notifier<int> {
+  static const stepMinutes = 30;
+  static const maxMinutes = 12 * 60;
+
+  @override
+  int build() => 0;
+
+  /// 1 段階(30分)遡る。広がったら true。
+  bool extend() {
+    if (state >= maxMinutes) return false;
+    state = (state + stepMinutes).clamp(0, maxMinutes);
+    return true;
+  }
+
+  void reset() => state = 0;
+}
+
+final relationalLookbackProvider = NotifierProvider<RelationalLookbackStore, int>(RelationalLookbackStore.new);
 
 /// 直近 10 分の HTL 流入投稿数(D-024 追補「HTL アクティブ数」— ローカル
 /// SigLIP 実行の可否判定に使う)。
@@ -92,11 +131,12 @@ final relationalMlProvider = FutureProvider<RelationalMlResult?>((ref) async {
 /// (事前分布)がリンク採点に入る。
 final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>((ref) {
   final settings = ref.watch(relationalSettingsProvider);
+  final lookbackMinutes = ref.watch(relationalLookbackProvider);
   final home = ref.watch(timelineProvider(TimelineKind.home));
   final ml = ref.watch(relationalMlProvider).value;
 
   return home.whenData((h) {
     final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf);
-    return engine.build(followeePosts: h.posts);
+    return engine.build(followeePosts: h.posts, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
   });
 });
