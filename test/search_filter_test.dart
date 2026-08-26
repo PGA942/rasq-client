@@ -1,9 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:rasq_client/features/search/search_filter.dart';
 import 'package:rasq_client/features/search/search_ranker.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_ml/rasq_ml.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 const account = AccountId(kind: SnsKind.misskey, instance: 'misskey.io', handle: 'yamada');
 final now = DateTime(2026, 8, 25, 12);
@@ -37,6 +42,48 @@ void main() {
       final b = post('b', '本文B', age: const Duration(hours: 1));
       final ranked = SearchRanker(mlScore: {b.key: 5.0}).rank([a, b], query: 'ロケット', now: now);
       expect(ranked.first.id, 'b');
+    });
+
+    test('computeSearchMlScores: GLiNER 抽出 → クエリ×2 / ジャンル×1 の加点', () async {
+      final manifest = MlModelManifest.fromJson({
+        'id': 'rasq.official.search/gliner-ner',
+        'version': '0.1.0',
+        'task': 'custom',
+        'io': {'input': 'texts', 'output': 'tensors'},
+        'runtimes': {
+          'server': {'engine': 'triton', 'model': 'gliner'},
+        },
+      });
+      final gateway = MlGateway(
+        manifests: {manifest.id: manifest},
+        triton: TritonExecutor(
+          baseUrl: Uri.parse('https://ml.example'),
+          post: (url, {headers, body}) async {
+            final out = jsonEncode({
+              'entities': [
+                [
+                  {'text': 'ストラトローンチ', 'label': 'ロケット', 'score': 0.9},
+                  {'text': '打上会', 'label': '宇宙', 'score': 0.5},
+                ],
+                <Object>[],
+              ],
+            });
+            return http.Response.bytes(
+              utf8.encode(jsonEncode({
+                'outputs': [
+                  {'name': 'OUTPUT', 'datatype': 'BYTES', 'shape': [1], 'data': [out]},
+                ],
+              })),
+              200,
+            );
+          },
+        ),
+      );
+      final a = post('a', 'ストラトローンチの話');
+      final b = post('b', '無関係');
+      final scores = await computeSearchMlScores(gateway, [a, b], query: 'ロケット', genres: {'宇宙'});
+      expect(scores[a.key], closeTo(0.9 * 2 + 0.5, 1e-9));
+      expect(scores.containsKey(b.key), isFalse);
     });
   });
 

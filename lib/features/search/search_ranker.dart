@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:rasq_ml/rasq_ml.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 /// 「関連順」ランカー v0 (D-022)。
@@ -68,4 +69,30 @@ class SearchRanker {
   }
 
   bool matchesAnyGenre(Post p, Set<String> genres) => genres.any((g) => matchesGenre(p, g));
+}
+
+/// GLiNER(多言語ゼロショット NER)で `mlScore` を事前計算する (D-022 第2段)。
+///
+/// クエリとジャンルをそのままゼロショットラベルにして、抽出スコアを加点に
+/// 写像する(クエリ一致 ×2.0 / ジャンル一致 ×1.0)。同期ランキングを保つため
+/// 非同期で先に呼び、結果を `SearchRanker(mlScore: …)` に渡す。
+Future<Map<String, double>> computeSearchMlScores(
+  MlGateway gateway,
+  List<Post> posts, {
+  required String query,
+  Set<String> genres = const {},
+}) async {
+  if (posts.isEmpty) return const {};
+  final labels = [if (query.trim().isNotEmpty) query.trim(), ...genres];
+  if (labels.isEmpty) return const {};
+  final entities = await gateway.zeroShotEntities([for (final p in posts) p.body], labels: labels);
+  final out = <String, double>{};
+  for (var i = 0; i < posts.length && i < entities.length; i++) {
+    var score = 0.0;
+    for (final e in entities[i]) {
+      score += e.score * (e.label == query.trim() ? 2.0 : 1.0);
+    }
+    if (score > 0) out[posts[i].key] = score;
+  }
+  return out;
 }

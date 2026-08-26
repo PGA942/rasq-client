@@ -14,6 +14,8 @@
 /// - [WasmPluginView]: renders the document and routes events back as `call`s.
 library;
 
+export 'src/async_wasm_plugin_controller.dart';
 export 'src/host_environment.dart';
 export 'src/wasm_plugin_controller.dart';
 export 'src/wasm_plugin_view.dart';
+export 'src/wasm_plugin_worker.dart';

@@ -14,13 +14,16 @@ import '../../text/inline_spans.dart';
 ///
 /// 1. 同梱アセット(assets/plugins/misskey_wasm_sample.wasm)または任意の
 ///    .wasm ファイルパスからロード → 初期 snapshot を表示
-/// 2. 「TL取得」→ プラグインが host の `net.fetch`(curl 同期)で Misskey の
-///    `notes/local-timeline` を叩き、RRL ツリーを再構築 → 再描画
+/// 2. 「TL取得」→ プラグインが `net.fetch`(ランタイム内蔵 rustls, D-023)で
+///    Misskey の `notes/local-timeline` を叩き、RRL ツリーを再構築 → 再描画
 /// 3. タイル上のタップは `call(fn)` としてプラグインへ戻る(結果を下部に表示)
+///
+/// 通常はワーカー isolate(AsyncWasmPluginController)で実行し UI を
+/// ブロックしない。テストは envOverride で同期コントローラに差し替える。
 class WasmPluginScreen extends StatefulWidget {
   const WasmPluginScreen({super.key, this.wasmBytesOverride, this.envOverride});
 
-  /// Tests inject the bytes / a hermetic environment.
+  /// Tests inject the bytes / a hermetic environment (同期実行になる).
   final Uint8List? wasmBytesOverride;
   final RasqHostEnvironment? envOverride;
 
@@ -29,15 +32,11 @@ class WasmPluginScreen extends StatefulWidget {
 }
 
 class _WasmPluginScreenState extends State<WasmPluginScreen> {
-  WasmPluginController? _controller;
+  WasmPluginViewModel? _controller;
   String? _loadError;
   final _hostField = TextEditingController(text: 'misskey.io');
   final _pathField = TextEditingController();
   bool _busy = false;
-
-  RasqHostEnvironment get _env =>
-      // net.fetch はランタイム内蔵(rustls)で実行 — モバイルでも動く (D-023)。
-      widget.envOverride ?? RasqHostEnvironment(nativeFetch: true, onLog: (m) => debugPrint('[wasm host] $m'));
 
   @override
   void initState() {
@@ -48,33 +47,54 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
   Future<void> _loadFromAsset() async {
     try {
       final bytes = widget.wasmBytesOverride ?? (await rootBundle.load('assets/plugins/misskey_wasm_sample.wasm')).buffer.asUint8List();
-      _start(bytes);
+      await _start(bytes);
     } catch (e) {
       setState(() => _loadError = 'アセットの読み込みに失敗: $e');
     }
   }
 
-  void _loadFromPath(String path) {
+  Future<void> _loadFromPath(String path) async {
     try {
-      _start(File(path).readAsBytesSync());
+      await _start(File(path).readAsBytesSync());
     } catch (e) {
       setState(() => _loadError = '$path の読み込みに失敗: $e');
     }
   }
 
-  void _start(Uint8List bytes) {
-    _controller?.dispose();
-    final controller = WasmPluginController(wasmBytes: bytes, env: _env)..load();
+  Future<void> _start(Uint8List bytes) async {
+    _disposeController();
+    if (widget.envOverride != null) {
+      final controller = WasmPluginController(wasmBytes: bytes, env: widget.envOverride)..load();
+      setState(() {
+        _controller = controller;
+        _loadError = null;
+      });
+      return;
+    }
+    final controller = AsyncWasmPluginController(wasmBytes: bytes);
     setState(() {
       _controller = controller;
       _loadError = null;
     });
+    await controller.load();
   }
 
-  Future<void> _run(void Function() op) async {
+  void _disposeController() {
+    final c = _controller;
+    if (c is WasmPluginController) c.dispose();
+    if (c is AsyncWasmPluginController) c.dispose();
+    _controller = null;
+  }
+
+  Future<void> _invoke(String fn, Map<String, Object?> args) async {
+    final c = _controller;
     setState(() => _busy = true);
     try {
-      op(); // v1 host fns are synchronous — this blocks (dev screen; v2 = worker isolate)
+      if (c is AsyncWasmPluginController) {
+        await c.invoke(fn, args);
+      } else if (c is WasmPluginController) {
+        c.invoke(fn, args);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -82,7 +102,7 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _disposeController();
     _hostField.dispose();
     _pathField.dispose();
     super.dispose();
@@ -102,8 +122,8 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
               Expanded(child: RasqInput(controller: _hostField, hintText: 'インスタンス (例: misskey.io)')),
               const SizedBox(width: RasqSpacing.sm),
               FilledButton.icon(
-                onPressed: controller == null || _busy ? null : () => _run(() => controller.invoke('timeline', {'host': _hostField.text.trim(), 'limit': 10})),
-                icon: const Icon(Icons.download, size: 18),
+                onPressed: controller == null || _busy ? null : () => _invoke('timeline', {'host': _hostField.text.trim(), 'limit': 10}),
+                icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.download, size: 18),
                 label: const Text('TL取得'),
               ),
             ]),

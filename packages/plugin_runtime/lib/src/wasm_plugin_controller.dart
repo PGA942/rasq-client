@@ -6,6 +6,14 @@ import 'package:rrl_core/rrl_core.dart';
 
 import 'host_environment.dart';
 
+/// [WasmPluginView] が要求する最小面(同期/非同期コントローラ共通)。
+abstract class WasmPluginViewModel implements Listenable {
+  RrlDocument? get document;
+  String? get lastError;
+  Map<String, dynamic>? get lastResult;
+  void handleEvent(String nodeId, String kind, {String? fn, Map<String, Object?> payload});
+}
+
 /// Owns one WASM plugin instance and its live [RrlDocument].
 ///
 /// - `load()` instantiates the module (host functions served by [env]) and
@@ -20,7 +28,7 @@ import 'host_environment.dart';
 ///
 /// v1 calls are synchronous on the calling isolate (PROTOCOL §4.1) — run
 /// heavy plugins off the UI isolate later.
-class WasmPluginController extends ChangeNotifier {
+class WasmPluginController extends ChangeNotifier implements WasmPluginViewModel {
   WasmPluginController({required Uint8List wasmBytes, RasqHostEnvironment? env})
       : _bytes = wasmBytes,
         env = env ?? RasqHostEnvironment();
@@ -34,10 +42,13 @@ class WasmPluginController extends ChangeNotifier {
   Map<String, dynamic>? _lastResult;
   int _callSeq = 0;
 
+  @override
   RrlDocument? get document => _document;
+  @override
   String? get lastError => _lastError;
 
   /// Result message of the most recent [invoke] (debug surface).
+  @override
   Map<String, dynamic>? get lastResult => _lastResult;
 
   bool get isLoaded => _plugin != null;
@@ -99,6 +110,7 @@ class WasmPluginController extends ChangeNotifier {
   }
 
   /// Renderer event → plugin function call (`RrlHost.onEvent` adapter).
+  @override
   void handleEvent(String nodeId, String kind, {String? fn, Map<String, Object?> payload = const {}}) {
     if (fn == null) return; // node declared no handler for this kind
     invoke(fn, {'nodeId': nodeId, 'kind': kind, ...payload});

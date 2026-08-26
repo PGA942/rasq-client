@@ -104,14 +104,32 @@ class RelationalEngine {
 
   /// フォロイーの投稿からクラスタを作り、候補(LTL・トレンド)の類似投稿を
   /// 取り込む。しきい値未満は束ねない。
-  List<RelationalCluster> build({required List<Post> followeePosts, List<Post> candidatePosts = const [], DateTime? now}) {
+  ///
+  /// [communityOf] は D-024 の計算量削減: SigLIP EMA の著者類似グラフを
+  /// Louvain で分割した所属(authorKey → community id)。渡すと、**異なる
+  /// コミュニティの著者同士は類似度計算すら行わず束ねない**(候補=非フォロイー
+  /// など所属が無い著者は制限なし)。
+  List<RelationalCluster> build({
+    required List<Post> followeePosts,
+    List<Post> candidatePosts = const [],
+    Map<String, int>? communityOf,
+    DateTime? now,
+  }) {
     final t = settings.normalizedThreshold;
     final clusters = <RelationalCluster>[];
+
+    bool sameCommunity(RelationalCluster c, Post p) {
+      if (communityOf == null) return true;
+      final a = communityOf[c.seed.author.key];
+      final b = communityOf[p.author.key];
+      return a == null || b == null || a == b;
+    }
 
     for (final p in followeePosts) {
       RelationalCluster? best;
       var bestScore = 0.0;
       for (final c in clusters) {
+        if (!sameCommunity(c, p)) continue;
         final s = _clusterSimilarity(c, p);
         if (s >= t && s > bestScore) {
           best = c;
@@ -130,6 +148,7 @@ class RelationalEngine {
     // 1 投稿だけのクラスタは「関連」ではないので、候補取り込み前に見る。
     for (final candidate in candidatePosts) {
       for (final c in clusters) {
+        if (!sameCommunity(c, candidate)) continue;
         final s = _clusterSimilarity(c, candidate);
         if (s >= t && !c.posts.any((p) => p.key == candidate.key)) {
           c.posts.add(candidate);

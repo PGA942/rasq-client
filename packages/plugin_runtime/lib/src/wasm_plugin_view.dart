@@ -12,7 +12,8 @@ import 'wasm_plugin_controller.dart';
 class WasmPluginView extends StatelessWidget {
   const WasmPluginView({super.key, required this.controller, this.rslParser, this.slots = const {}});
 
-  final WasmPluginController controller;
+  /// 同期([WasmPluginController])/非同期(AsyncWasmPluginController)どちらでも。
+  final WasmPluginViewModel controller;
 
   /// RSL/MFM parser for RichText sources (the app passes `InlineSpans.parse`).
   final List<RasqSpan> Function(String source)? rslParser;

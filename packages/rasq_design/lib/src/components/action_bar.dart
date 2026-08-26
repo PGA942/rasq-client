@@ -25,7 +25,11 @@ class RasqActionBarItem {
     this.iconUrl,
     this.onTap,
     this.onLongPress,
+    this.onAnchorTap,
   });
+
+  /// タップ時にボタンの矩形が要る場合([onTap] より優先)。アクションリストの
+  /// ドロップダウン展開などに使う。
 
   final String id;
   final String label;
@@ -50,6 +54,7 @@ class RasqActionBarItem {
   final Uri? iconUrl;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final ValueChanged<Rect>? onAnchorTap;
 }
 
 /// How buttons are distributed across the bar.
@@ -124,27 +129,39 @@ class _ActionBarButton extends StatelessWidget {
         ),
       );
     }
-    return showCount
-        ? RasqActionButton.iconCount(
-            icon: item.icon,
-            doneIcon: item.doneIcon,
-            done: item.done,
-            doneColor: item.doneColor,
-            count: count,
-            tooltip: item.label,
-            onTap: item.onTap,
-            onLongPress: item.onLongPress,
-            enabled: item.enabled,
-          )
-        : RasqActionButton.icon(
-            icon: item.icon,
-            doneIcon: item.doneIcon,
-            done: item.done,
-            doneColor: item.doneColor,
-            tooltip: item.label,
-            onTap: item.onTap,
-            onLongPress: item.onLongPress,
-            enabled: item.enabled,
-          );
+    return Builder(
+      builder: (ctx) {
+        VoidCallback? onTap = item.onTap;
+        final anchorTap = item.onAnchorTap;
+        if (anchorTap != null) {
+          onTap = () {
+            final box = ctx.findRenderObject() as RenderBox;
+            anchorTap(box.localToGlobal(Offset.zero) & box.size);
+          };
+        }
+        return showCount
+            ? RasqActionButton.iconCount(
+                icon: item.icon,
+                doneIcon: item.doneIcon,
+                done: item.done,
+                doneColor: item.doneColor,
+                count: count,
+                tooltip: item.label,
+                onTap: onTap,
+                onLongPress: item.onLongPress,
+                enabled: item.enabled,
+              )
+            : RasqActionButton.icon(
+                icon: item.icon,
+                doneIcon: item.doneIcon,
+                done: item.done,
+                doneColor: item.doneColor,
+                tooltip: item.label,
+                onTap: onTap,
+                onLongPress: item.onLongPress,
+                enabled: item.enabled,
+              );
+      },
+    );
   }
 }

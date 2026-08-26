@@ -16,6 +16,7 @@ workspace:
   - packages/rrl_core
   - packages/rrl_renderer
   - packages/plugin_runtime
+  - packages/rasq_ml
 
 dependencies:
   flutter:
@@ -45,6 +46,8 @@ dependencies:
     path: packages/rrl_renderer
   plugin_runtime:
     path: packages/plugin_runtime
+  rasq_ml:
+    path: packages/rasq_ml
 
 dev_dependencies:
   flutter_test:
@@ -57,3 +60,5 @@ flutter:
     # misskey-wasm-sample plugin binary (built in rasq-sdk-sample; loaded by
     # the WASMプラグイン試験 dev screen).
     - assets/plugins/misskey_wasm_sample.wasm
+    # ML model manifests (model-manifest.schema.json — resolved by MlGateway).
+    - assets/models/

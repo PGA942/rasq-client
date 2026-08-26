@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -91,9 +92,15 @@ class _PostRowState extends ConsumerState<PostRow> {
     // otherwise they fill the tile's own slots.
     final hasCw = !collapsible && (post.contentWarning?.isNotEmpty ?? false);
 
-    // アクションバー編集(ホスト構成): 並び替え・非表示を適用してから Props 化。
-    final configured = ref.watch(actionBarConfigProvider).apply(widget.actions);
-    final actionItems = [for (final a in configured) _item(a, tokens)];
+    // アクションバー編集(ホスト構成): リスト束ね・並び替え・非表示を適用して Props 化。
+    final entries = ref.watch(actionBarConfigProvider).apply(widget.actions);
+    final actionItems = [
+      for (final e in entries)
+        switch (e) {
+          SingleActionEntry() => _item(e.action, tokens),
+          ActionListEntry() => _listItem(e),
+        },
+    ];
 
     return RasqPostTile(
       author: post.author,
@@ -136,6 +143,24 @@ class _PostRowState extends ConsumerState<PostRow> {
       onLongPress: isReaction ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', onPick: (e) => widget.onAction(a, args: {'reaction': e}).catchError((_) {})) : null,
     );
   }
+
+  /// アクションリスト(束ね)ボタン: タップでメンバーのドロップダウン。
+  RasqActionBarItem _listItem(ActionListEntry entry) => RasqActionBarItem(
+        id: 'list:${entry.list.id}',
+        label: entry.list.name,
+        icon: Icons.apps,
+        showCount: false,
+        onAnchorTap: (anchor) async {
+          final manager = ref.read(overlayManagerProvider);
+          final picked = await manager.showDropdown<ActionDescriptor>(
+            id: 'actionbar.list.${entry.list.id}',
+            anchor: anchor,
+            dense: true,
+            items: [for (final a in entry.members) RasqDropdownItem(a.label, a)],
+          );
+          if (picked != null) await widget.onAction(picked).catchError((_) {});
+        },
+      );
 
   /// 引用: 投稿カード(埋め込みサイズ)を再利用.
   static Widget quoteTile(BuildContext context, Post q, {Map<String, Uri?> emojis = const {}}) => RasqPostTile(
