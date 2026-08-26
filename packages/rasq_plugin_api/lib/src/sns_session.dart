@@ -63,6 +63,17 @@ abstract class SnsSession {
   Future<void> addToList(String listId, String userId);
   Future<void> removeFromList(String listId, String userId);
   Future<Page<Post>> favorites({String? cursor, int limit = 20});
+
+  // --- クリップ (D-032: SNS ネイティブ側。ホスト横断クリップはホスト実装) ---
+  /// [userId] のクリップ一覧(null = 自分)。他ユーザーは公開クリップのみ。
+  /// 非対応 SNS は [UnsupportedError] → ホストがタブ/メニューを隠す。
+  Future<List<ClipInfo>> clips({String? userId});
+  Future<ClipInfo> clipInfo(String clipId);
+  Future<Page<Post>> clipNotes(String clipId, {String? cursor, int limit = 20});
+  Future<ClipInfo> createClip(String name, {String? description, bool isPublic = false});
+  Future<void> deleteClip(String clipId);
+  Future<void> addToClip(String clipId, String postId);
+  Future<void> removeFromClip(String clipId, String postId);
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20});
   Future<Page<UserSummary>> following(String id, {String? cursor, int limit = 20});
   Future<FollowState> relationship(String userId);
@@ -177,6 +188,20 @@ abstract class SnsSessionBase implements SnsSession {
   Future<void> removeFromList(String listId, String userId) => _unsupported('removeFromList');
   @override
   Future<Page<Post>> favorites({String? cursor, int limit = 20}) => _unsupported('favorites');
+  @override
+  Future<List<ClipInfo>> clips({String? userId}) => _unsupported('clips');
+  @override
+  Future<ClipInfo> clipInfo(String clipId) => _unsupported('clipInfo');
+  @override
+  Future<Page<Post>> clipNotes(String clipId, {String? cursor, int limit = 20}) => _unsupported('clipNotes');
+  @override
+  Future<ClipInfo> createClip(String name, {String? description, bool isPublic = false}) => _unsupported('createClip');
+  @override
+  Future<void> deleteClip(String clipId) => _unsupported('deleteClip');
+  @override
+  Future<void> addToClip(String clipId, String postId) => _unsupported('addToClip');
+  @override
+  Future<void> removeFromClip(String clipId, String postId) => _unsupported('removeFromClip');
   @override
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) => _unsupported('followers');
   @override
