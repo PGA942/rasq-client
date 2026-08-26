@@ -104,23 +104,30 @@ List<Post> applySearchFilter(List<Post> posts, SearchFilterState filter, {requir
   }
 }
 
-/// チップ行の組み立て(検索ホーム / トレンドTL 共用)。
-List<RasqFilterChipItem> buildSearchFilterChips({
+/// 展開タイル内に入れ子で置くジャンルボタンの上限(選択済みは常に出す)。
+const int maxGenreChips = 6;
+
+/// 並び替え/期間のドロップダウンチップ(検索ホーム / トレンドTL 共用)。
+List<RasqFilterChipItem> buildSortPeriodChips({
   required SearchFilterState filter,
-  required List<String> genreCandidates,
   required void Function(Rect) onSortTap,
   required void Function(Rect) onPeriodTap,
+}) =>
+    [
+      RasqFilterChipItem(label: filter.sort.label, selected: filter.sort != SearchSort.relevance, dropdown: true, onAnchorTap: onSortTap),
+      RasqFilterChipItem(label: filter.period == SearchPeriod.all ? '期間' : filter.period.label, selected: filter.period != SearchPeriod.all, dropdown: true, onAnchorTap: onPeriodTap),
+    ];
+
+/// ジャンルのトグルチップ(スタジアム形・入れ子)。選択済みを優先。
+List<RasqFilterChipItem> buildGenreChips({
+  required SearchFilterState filter,
+  required List<String> genreCandidates,
   required void Function(String) onGenreToggle,
 }) {
-  // 選択済みジャンルを優先しつつ、直置きは 3 個まで(D-021)。
   final inline = <String>[
     ...filter.genres,
     for (final g in genreCandidates)
       if (!filter.genres.contains(g)) g,
-  ].take(RasqSearchFilterBar.maxInlineGenres).toList();
-  return [
-    RasqFilterChipItem(label: filter.sort.label, selected: filter.sort != SearchSort.relevance, dropdown: true, onAnchorTap: onSortTap),
-    RasqFilterChipItem(label: filter.period == SearchPeriod.all ? '期間' : filter.period.label, selected: filter.period != SearchPeriod.all, dropdown: true, onAnchorTap: onPeriodTap),
-    for (final g in inline) RasqFilterChipItem(label: '#$g', selected: filter.genres.contains(g), onTap: () => onGenreToggle(g)),
-  ];
+  ].take(maxGenreChips).toList();
+  return [for (final g in inline) RasqFilterChipItem(label: '#$g', selected: filter.genres.contains(g), onTap: () => onGenreToggle(g))];
 }

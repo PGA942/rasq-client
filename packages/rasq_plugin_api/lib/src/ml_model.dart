@@ -155,7 +155,7 @@ class MlTokenizerSpec {
 /// On-device execution via onnx runtime.
 @immutable
 class OnnxRuntimeSpec {
-  const OnnxRuntimeSpec({required this.file, this.quantization, required this.inputs, required this.outputs, this.tokenizer, this.labelsFile});
+  const OnnxRuntimeSpec({required this.file, this.quantization, required this.inputs, required this.outputs, this.tokenizer, this.labelsFile, this.executionProviders = const ['cpu']});
 
   final String file;
   final String? quantization;
@@ -164,6 +164,9 @@ class OnnxRuntimeSpec {
   final MlTokenizerSpec? tokenizer;
   final String? labelsFile;
 
+  /// 実行プロバイダの希望順(GPU/NPU: cuda / tensorrt / coreml / nnapi / qnn / cpu)。
+  final List<String> executionProviders;
+
   factory OnnxRuntimeSpec.fromJson(Map<String, Object?> json) => OnnxRuntimeSpec(
         file: json['file'] as String,
         quantization: json['quantization'] as String?,
@@ -171,6 +174,7 @@ class OnnxRuntimeSpec {
         outputs: [for (final t in (json['outputs'] as List? ?? const [])) MlTensorSpec.fromJson((t as Map).cast())],
         tokenizer: json['tokenizer'] == null ? null : MlTokenizerSpec.fromJson((json['tokenizer'] as Map).cast()),
         labelsFile: json['labelsFile'] as String?,
+        executionProviders: [for (final e in (json['executionProviders'] as List? ?? const ['cpu'])) e as String],
       );
 }
 

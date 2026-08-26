@@ -6,8 +6,6 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
-import '../../shell/headers.dart';
-import '../../shell/rasq_shell.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../search/search_filter.dart';
@@ -31,7 +29,7 @@ class TrendScreen extends ConsumerStatefulWidget {
 
 class _TrendScreenState extends ConsumerState<TrendScreen> {
   final _scroll = ScrollController();
-  bool _filterOpen = false;
+  late final _searchController = TextEditingController(text: widget.tag);
   TimelineKind get _kind => DynamicTimelines.tag(widget.tag);
 
   @override
@@ -45,12 +43,12 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
   @override
   void dispose() {
     _scroll.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final me = ref.watch(currentUserProvider);
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const [];
     final tl = ref.watch(timelineProvider(_kind));
@@ -62,7 +60,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     final genreCandidates = [
       for (final t in trends.value ?? const <TrendTag>[])
         if (t.tag != widget.tag) t.tag,
-    ].take(RasqSearchFilterBar.maxInlineGenres).toList();
+    ].take(maxGenreChips).toList();
     final tabs = [const RasqTabItem('ノート'), const RasqTabItem('フォロー中'), const RasqTabItem('ユーザー')];
 
     List<Post> apply(List<Post> posts) => applySearchFilter(posts, filter, query: widget.tag);
@@ -74,16 +72,27 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
-        appBar: RasqSearchHeader(
-          me: me,
-          onAvatarTap: () => RasqShell.openSidebar(context, ref),
-          controller: TextEditingController(text: widget.tag),
-          readOnly: true,
-          onSearchTap: () => Navigator.of(context).maybePop(),
-          onDropdownTap: () => setState(() => _filterOpen = !_filterOpen),
-        ),
-        body: Column(children: [
-          SearchFilterBarView(expanded: _filterOpen, genreCandidates: genreCandidates),
+        body: SafeArea(
+          bottom: false,
+          child: Column(children: [
+          // ← でトレンドホームへ戻る。入力欄は編集可能で、そのまま次の検索を
+          // 続けられる(submit で結果画面を置き換え)。フィルタは一体型タイル内。
+          Padding(
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.xs),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, tooltip: 'トレンドホームへ戻る', onPressed: () => Navigator.of(context).maybePop()),
+              Expanded(
+                child: SearchFilterBox(
+                  controller: _searchController,
+                  genreCandidates: genreCandidates,
+                  onSubmitted: (q) {
+                    final tag = q.trim().replaceFirst(RegExp(r'^#'), '');
+                    if (tag.isNotEmpty && tag != widget.tag) context.replaceTrend(tag);
+                  },
+                ),
+              ),
+            ]),
+          ),
           RasqTabs(
             items: tabs,
             onSelectedTabTap: (i, rect) async {
@@ -145,6 +154,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
             ]),
           ),
         ]),
+        ),
       ),
     );
   }

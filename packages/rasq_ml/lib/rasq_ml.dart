@@ -8,6 +8,7 @@
 ///   リレーショナルTL の類似判定をコミュニティ内に限定して計算量を削減する。
 library;
 
+export 'src/device_policy.dart';
 export 'src/ema_store.dart';
 export 'src/gateway.dart';
 export 'src/louvain.dart';

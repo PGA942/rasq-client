@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'device_policy.dart';
+
 /// One zero-shot entity from GLiNER.
 @immutable
 class MlEntity {
@@ -129,6 +131,9 @@ class MlGateway {
     this.device,
     this.triton,
     this.vllm,
+    this.policy,
+    this.cpuProbe,
+    this.activeHtlPosts,
     this.glinerModelId = 'rasq.official.search/gliner-ner',
     this.siglipModelId = 'rasq.official.search/siglip-similarity',
   });
@@ -137,8 +142,31 @@ class MlGateway {
   final MlDeviceExecutor? device;
   final TritonExecutor? triton;
   final VllmExecutor? vllm;
+
+  /// ローカル実行の許可判定 (D-024 追補: CPU < 75% かつ HTL アクティブ数が
+  /// 少ないとき)。**サーバーで実行できない構成では判定に関わらずローカルを
+  /// 試す**(それ以外に手段が無いため)。null = 常に許可。
+  final DevicePolicy? policy;
+  final CpuLoadProbe? cpuProbe;
+
+  /// 直近ウィンドウの HTL 流入投稿数(ホームTLのアクティブさ)。
+  final int Function()? activeHtlPosts;
   final String glinerModelId;
   final String siglipModelId;
+
+  bool _serverRunnable(MlModelManifest manifest) {
+    final server = manifest.server;
+    if (server == null) return false;
+    return server.engine == 'vllm' ? vllm != null : triton != null;
+  }
+
+  Future<bool> _deviceAllowed(MlModelManifest manifest) async {
+    final p = policy;
+    if (p == null) return true;
+    if (!_serverRunnable(manifest)) return true; // サーバーが無ければローカルのみが試験手段
+    final cpu = await cpuProbe?.sample();
+    return p.allowsLocal(cpuUsage: cpu, activeHtlPosts: activeHtlPosts?.call());
+  }
 
   MlModelManifest manifestOf(String modelId) {
     final m = manifests[modelId];
@@ -161,7 +189,7 @@ class MlGateway {
       switch (placement) {
         case MlPlacement.device:
           final d = device;
-          if (d != null && manifest.runsOnDevice && d.canRun(manifest)) {
+          if (d != null && manifest.runsOnDevice && d.canRun(manifest) && await _deviceAllowed(manifest)) {
             return MlResult(output: await d.inferJson(manifest, input), placement: MlPlacement.device, runtime: d.runtime);
           }
           tried.add('device');

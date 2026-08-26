@@ -6,11 +6,11 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
-import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../trend/trend_providers.dart';
+import 'search_filter.dart';
 import 'search_filter_bar_view.dart';
 
 /// 検索ホーム / トレンドホーム: 広告枠(AdSlot) → トレンド(ワード一覧) → Today.
@@ -51,16 +51,36 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final today = ref.watch(timelineProvider(DynamicTimelines.featured));
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const [];
-    final genreCandidates = trends.value?.map((t) => t.tag).take(RasqSearchFilterBar.maxInlineGenres).toList() ?? const <String>[];
+    final genreCandidates = trends.value?.map((t) => t.tag).take(maxGenreChips).toList() ?? const <String>[];
     return Scaffold(
-      appBar: RasqSearchHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref), controller: _controller, focusNode: _focus, onDropdownTap: () => setState(() => _focus.hasFocus ? _focus.unfocus() : _focus.requestFocus()), onSubmitted: (q) {
-        final tag = q.trim().replaceFirst(RegExp(r'^#'), '');
-        if (tag.isNotEmpty) context.pushTrend(tag);
-      }),
-      body: Column(children: [
-        SearchFilterBarView(expanded: _focus.hasFocus, genreCandidates: genreCandidates),
-        Expanded(child: _home(context, scheme, trends, today, actions)),
-      ]),
+      body: SafeArea(
+        bottom: false,
+        child: Column(children: [
+          // 検索ボックス一体型(D-021 改): フォーカスで下方向に拡幅する角丸タイル。
+          Padding(
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.xs),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: me.displayName, onTap: () => RasqShell.openSidebar(context, ref)),
+              ),
+              const SizedBox(width: RasqSpacing.sm),
+              Expanded(
+                child: SearchFilterBox(
+                  controller: _controller,
+                  focusNode: _focus,
+                  genreCandidates: genreCandidates,
+                  onSubmitted: (q) {
+                    final tag = q.trim().replaceFirst(RegExp(r'^#'), '');
+                    if (tag.isNotEmpty) context.pushTrend(tag);
+                  },
+                ),
+              ),
+            ]),
+          ),
+          Expanded(child: _home(context, scheme, trends, today, actions)),
+        ]),
+      ),
     );
   }
 

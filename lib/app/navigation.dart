@@ -46,5 +46,8 @@ extension RasqNavigation on BuildContext {
 
   void pushTrend(String tag) => push('${Routes.search}/trend/${Uri.encodeComponent(tag)}');
 
+  /// トレンドTL上で検索を続ける(現在の結果画面を置き換える)。
+  void replaceTrend(String tag) => pushReplacement('${Routes.search}/trend/${Uri.encodeComponent(tag)}');
+
   void pushDmRoom(DmRoom room) => push('${Routes.dm}/room/${Uri.encodeComponent(room.peer.id)}', extra: room);
 }

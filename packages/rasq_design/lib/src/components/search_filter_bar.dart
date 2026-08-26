@@ -4,7 +4,7 @@ import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
 
-/// One chip of the search filter bar. Dropdown-style chips get the tap
+/// One chip of the search filter area. Dropdown-style chips get the tap
 /// anchor rect (for the Overlay-Manager dropdown); toggle chips just flip.
 @immutable
 class RasqFilterChipItem {
@@ -27,68 +27,10 @@ class RasqFilterChipItem {
   final ValueChanged<Rect>? onAnchorTap;
 }
 
-/// 検索フィルタ行 (検索ソートUI, D-021):
-///
-/// 検索欄に**カーソルが当たっている(入力中)**か、いずれかのフィルタが適用済み
-/// (dirty)のときだけ、検索バーの下方向に拡幅して現れるチップ行。誤タップ防止の
-/// ため常設はしない(原典: 2026-08-25 レビュー)。
-///
-/// - 並び替え/期間はドロップダウンチップ(`∨`、小型ドロップダウン = D-015 部品)
-/// - ジャンルは **3 個までボタン(トグル)形式で直置き**、4 個目以降は `∨` に畳む
-/// - フィルタ適用中は末尾に「リセット」
-///
-/// Props-only: 状態(選択中ソート・ジャンル)はホスト側が持つ。
-class RasqSearchFilterBar extends StatelessWidget {
-  const RasqSearchFilterBar({
-    super.key,
-    required this.visible,
-    this.chips = const [],
-    this.onReset,
-    this.trailing,
-  });
-
-  /// フォーカス中 or dirty のとき true。false は高さ 0 に畳む。
-  final bool visible;
-  final List<RasqFilterChipItem> chips;
-
-  /// 非 null で「リセット」チップを末尾に出す(dirty のときだけ渡す)。
-  final VoidCallback? onReset;
-
-  /// 行末の固定ウィジェット(例: ⚙ 検索設定)。
-  final Widget? trailing;
-
-  /// ジャンルをボタン直置きにする上限(それ以降は `∨` へ)。
-  static const int maxInlineGenres = 3;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 160),
-      curve: Curves.easeOutCubic,
-      alignment: Alignment.topCenter,
-      child: !visible
-          ? const SizedBox(width: double.infinity)
-          : Padding(
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.sm),
-              child: Row(children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(children: [
-                      for (final chip in chips) Padding(padding: const EdgeInsets.only(right: RasqSpacing.sm), child: _Chip(item: chip)),
-                      ?switch (onReset) { null => null, final reset => _Chip(item: RasqFilterChipItem(label: 'リセット', onTap: reset)) },
-                    ]),
-                  ),
-                ),
-                ?trailing,
-              ]),
-            ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.item});
+/// スタジアム形(両端が丸い)フィルタチップ。展開タイルの中に**入れ子**で
+/// 置かれる(角丸タイル内のさらに丸いボタン、2026-08-25 レビュー)。
+class RasqFilterChip extends StatelessWidget {
+  const RasqFilterChip({super.key, required this.item});
   final RasqFilterChipItem item;
 
   @override
@@ -126,6 +68,139 @@ class _Chip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 検索ボックス一体型のフィルタ UI (D-021 改, 2026-08-25 レビュー反映)。
+///
+/// 折りたたみ時は丸い検索バー。**展開すると入力欄が下方向に伸び、同じ角丸
+/// タイルの中に**ソート/期間チップと、入れ子のスタジアム形ジャンルボタンが
+/// 入る(検索バーの下に別 UI がぶら下がる形はやめた)。展開条件はホスト側
+/// (フォーカス中 / ∨ トグル / フィルタ適用中)。
+class RasqExpandableSearchBox extends StatelessWidget {
+  const RasqExpandableSearchBox({
+    super.key,
+    required this.expanded,
+    this.controller,
+    this.focusNode,
+    this.hintText = '検索',
+    this.readOnly = false,
+    this.onSubmitted,
+    this.onTap,
+    this.onDropdownTap,
+    this.filterChips = const [],
+    this.genreChips = const [],
+    this.onReset,
+    this.trailing,
+  });
+
+  final bool expanded;
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
+  final String hintText;
+  final bool readOnly;
+  final ValueChanged<String>? onSubmitted;
+  final VoidCallback? onTap;
+
+  /// 先頭の `∨`(フィルタ部のトグル)。
+  final VoidCallback? onDropdownTap;
+
+  /// 並び替え/期間などのドロップダウンチップ。
+  final List<RasqFilterChipItem> filterChips;
+
+  /// ジャンルのトグルチップ(スタジアム形、Wrap で折り返し)。
+  final List<RasqFilterChipItem> genreChips;
+
+  /// フィルタ適用中のみ渡す(「リセット」を出す)。
+  final VoidCallback? onReset;
+
+  /// フィルタ行末尾の固定ウィジェット(⚙ など)。
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    const barHeight = RasqSizes.searchBarHeight;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.onSurface, width: 1.2),
+        borderRadius: BorderRadius.circular(expanded ? RasqSizes.radiusLg : barHeight),
+        color: scheme.surface,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(
+          height: barHeight,
+          child: Row(children: [
+            SizedBox(
+              width: RasqSizes.minTap,
+              height: barHeight,
+              child: InkWell(
+                onTap: onDropdownTap,
+                child: AnimatedRotation(
+                  duration: const Duration(milliseconds: 160),
+                  turns: expanded ? 0.5 : 0,
+                  child: Icon(Icons.keyboard_arrow_down, size: 20, color: scheme.onSurface),
+                ),
+              ),
+            ),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                readOnly: readOnly,
+                onSubmitted: onSubmitted,
+                onTap: onTap,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+                decoration: InputDecoration(
+                  hintText: hintText,
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                ),
+              ),
+            ),
+            const SizedBox(width: RasqSizes.minTap),
+          ]),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: !expanded
+              ? const SizedBox(width: double.infinity)
+              : Padding(
+                  padding: const EdgeInsets.fromLTRB(RasqSpacing.md, 0, RasqSpacing.sm, RasqSpacing.sm),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                    Divider(height: 1, color: scheme.outlineVariant),
+                    const SizedBox(height: RasqSpacing.sm),
+                    Row(children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(children: [
+                            for (final chip in filterChips) Padding(padding: const EdgeInsets.only(right: RasqSpacing.sm), child: RasqFilterChip(item: chip)),
+                            ?switch (onReset) { null => null, final reset => RasqFilterChip(item: RasqFilterChipItem(label: 'リセット', onTap: reset)) },
+                          ]),
+                        ),
+                      ),
+                      ?trailing,
+                    ]),
+                    if (genreChips.isNotEmpty) ...[
+                      const SizedBox(height: RasqSpacing.sm),
+                      Wrap(spacing: RasqSpacing.sm, runSpacing: RasqSpacing.xs, children: [
+                        for (final g in genreChips) RasqFilterChip(item: g),
+                      ]),
+                    ],
+                  ]),
+                ),
+        ),
+      ]),
     );
   }
 }

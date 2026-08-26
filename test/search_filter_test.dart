@@ -111,48 +111,57 @@ void main() {
     });
   });
 
-  group('RasqSearchFilterBar', () {
-    Widget wrap(Widget child) => MaterialApp(theme: RasqTheme.light(), home: Scaffold(body: child));
+  group('RasqExpandableSearchBox (一体型展開タイル)', () {
+    Widget wrap(Widget child) => MaterialApp(theme: RasqTheme.light(), home: Scaffold(body: Padding(padding: const EdgeInsets.all(8), child: child)));
 
-    testWidgets('visible=false は畳まれ、true でチップが並ぶ(ジャンル直置きは3個まで)', (tester) async {
-      final chips = buildSearchFilterChips(
-        filter: const SearchFilterState(genres: {'宇宙'}),
-        genreCandidates: const ['映画化', 'サラダボール', 'ロケット発射'],
-        onSortTap: (_) {},
-        onPeriodTap: (_) {},
-        onGenreToggle: (_) {},
-      );
-      await tester.pumpWidget(wrap(RasqSearchFilterBar(visible: false, chips: chips)));
+    List<RasqFilterChipItem> sortPeriod(SearchFilterState filter) => buildSortPeriodChips(filter: filter, onSortTap: (_) {}, onPeriodTap: (_) {});
+
+    testWidgets('折りたたみ時はフィルタ非表示、展開でタイル内にチップとジャンルが入る', (tester) async {
+      const filter = SearchFilterState(genres: {'宇宙'});
+      final genres = buildGenreChips(filter: filter, genreCandidates: const ['映画化', 'サラダボール', 'ロケット発射'], onGenreToggle: (_) {});
+      await tester.pumpWidget(wrap(RasqExpandableSearchBox(expanded: false, filterChips: sortPeriod(filter), genreChips: genres)));
       expect(find.text('関連順'), findsNothing);
 
-      await tester.pumpWidget(wrap(RasqSearchFilterBar(visible: true, chips: chips, onReset: () {})));
+      await tester.pumpWidget(wrap(RasqExpandableSearchBox(expanded: true, filterChips: sortPeriod(filter), genreChips: genres, onReset: () {})));
       await tester.pumpAndSettle();
       expect(find.text('関連順'), findsOneWidget);
       expect(find.text('期間'), findsOneWidget);
-      // 選択済み『宇宙』優先 + 候補2つ = 直置き3個、4個目は出ない。
+      // 選択済み『宇宙』優先で入れ子ジャンルボタン(上限 maxGenreChips)。
       expect(find.text('#宇宙'), findsOneWidget);
       expect(find.text('#映画化'), findsOneWidget);
-      expect(find.text('#サラダボール'), findsOneWidget);
-      expect(find.text('#ロケット発射'), findsNothing);
       expect(find.text('リセット'), findsOneWidget);
     });
 
-    testWidgets('ジャンルボタンのトグルとリセットが届く', (tester) async {
+    testWidgets('ジャンルトグル・リセット・∨トグルが届く', (tester) async {
       String? toggled;
       var reset = 0;
-      final chips = buildSearchFilterChips(
-        filter: SearchFilterState.initial,
-        genreCandidates: const ['宇宙'],
-        onSortTap: (_) {},
-        onPeriodTap: (_) {},
-        onGenreToggle: (g) => toggled = g,
-      );
-      await tester.pumpWidget(wrap(RasqSearchFilterBar(visible: true, chips: chips, onReset: () => reset++)));
+      var chevron = 0;
+      final genres = buildGenreChips(filter: SearchFilterState.initial, genreCandidates: const ['宇宙'], onGenreToggle: (g) => toggled = g);
+      await tester.pumpWidget(wrap(RasqExpandableSearchBox(
+        expanded: true,
+        filterChips: sortPeriod(SearchFilterState.initial),
+        genreChips: genres,
+        onReset: () => reset++,
+        onDropdownTap: () => chevron++,
+      )));
       await tester.pumpAndSettle();
       await tester.tap(find.text('#宇宙'));
       expect(toggled, '宇宙');
       await tester.tap(find.text('リセット'));
       expect(reset, 1);
+      await tester.tap(find.byIcon(Icons.keyboard_arrow_down).first);
+      expect(chevron, 1);
+    });
+
+    test('buildGenreChips は選択済み優先で maxGenreChips 個まで', () {
+      final chips = buildGenreChips(
+        filter: const SearchFilterState(genres: {'g9'}),
+        genreCandidates: const ['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7'],
+        onGenreToggle: (_) {},
+      );
+      expect(chips, hasLength(maxGenreChips));
+      expect(chips.first.label, '#g9');
+      expect(chips.first.selected, isTrue);
     });
   });
 }

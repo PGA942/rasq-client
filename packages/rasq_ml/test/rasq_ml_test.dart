@@ -163,6 +163,82 @@ void main() {
     });
   });
 
+  group('DevicePolicy / EP 解決 / CPU probe (D-024 追補)', () {
+    test('CPU 75% 未満かつ HTL 静かならローカル許可、指標が取れなければ許可に倒す', () {
+      const p = DevicePolicy();
+      expect(p.allowsLocal(cpuUsage: 0.5, activeHtlPosts: 10), isTrue);
+      expect(p.allowsLocal(cpuUsage: 0.80, activeHtlPosts: 10), isFalse);
+      expect(p.allowsLocal(cpuUsage: 0.5, activeHtlPosts: 100), isFalse);
+      expect(p.allowsLocal(), isTrue); // 不明 → ローカル(サーバー無し構成の試験手段)
+    });
+
+    test('gateway: サーバー実行可能で CPU 高負荷 → サーバーへ、サーバー無しなら policy を無視してローカル', () async {
+      final withServer = MlGateway(
+        manifests: {'m/x': manifest('m/x', device: true)},
+        device: _FakeDevice(),
+        policy: const DevicePolicy(),
+        cpuProbe: _FixedCpu(0.9),
+        triton: TritonExecutor(
+          baseUrl: Uri.parse('https://ml.example'),
+          post: (u, {headers, body}) async => jsonResponse({
+            'outputs': [
+              {'name': 'OUTPUT', 'datatype': 'BYTES', 'shape': [1], 'data': [jsonEncode({'from': 'server'})]},
+            ],
+          }),
+        ),
+      );
+      expect((await withServer.infer('m/x', {})).placement, MlPlacement.server);
+
+      final deviceOnlyManifest = MlModelManifest.fromJson({
+        'id': 'm/d', 'version': '0.1.0', 'task': 'custom',
+        'io': {'input': 'texts', 'output': 'tensors'},
+        'runtimes': {
+          'onnx': {'file': 'x.onnx', 'inputs': [], 'outputs': []},
+        },
+      });
+      final noServer = MlGateway(
+        manifests: {'m/d': deviceOnlyManifest},
+        device: _FakeDevice(),
+        policy: const DevicePolicy(),
+        cpuProbe: _FixedCpu(0.9), // 高負荷でも他に手段が無い
+      );
+      expect((await noServer.infer('m/d', {})).placement, MlPlacement.device);
+    });
+
+    test('resolveExecutionProviders は希望×利用可能の交差 + cpu フォールバック', () {
+      final m = MlModelManifest.fromJson({
+        'id': 'm/x', 'version': '1', 'task': 'custom',
+        'io': {'input': 'texts', 'output': 'tensors'},
+        'runtimes': {
+          'onnx': {'file': 'x.onnx', 'inputs': [], 'outputs': [], 'executionProviders': ['cuda', 'coreml', 'cpu']},
+        },
+      });
+      expect(resolveExecutionProviders(m, available: ['coreml', 'cpu']), ['coreml', 'cpu']);
+      expect(resolveExecutionProviders(m, available: ['nnapi']), ['cpu']);
+    });
+
+    test('ProcStatCpuProbe.usageBetween', () {
+      const before = 'cpu  100 0 100 800 0 0 0 0 0 0\nrest';
+      const after = 'cpu  200 0 200 1000 0 0 0 0 0 0\nrest';
+      // busy Δ = 200, idle Δ = 200, total Δ = 400 → 0.5
+      expect(ProcStatCpuProbe.usageBetween(before, after), closeTo(0.5, 1e-9));
+      expect(ProcStatCpuProbe.usageBetween('junk', after), isNull);
+    });
+  });
+
+  group('EMA 永続化', () {
+    test('toJson/fromJson 往復で類似度が保存される', () {
+      final store = FolloweeEmbeddingStore(alpha: 0.4);
+      store.update('a', [1, 0]);
+      store.update('b', [0, 1]);
+      final restored = FolloweeEmbeddingStore.fromJson((jsonDecode(jsonEncode(store.toJson())) as Map).cast<String, Object?>());
+      expect(restored.alpha, 0.4);
+      expect(restored.similarity('a', 'b'), closeTo(store.similarity('a', 'b'), 1e-9));
+      restored.update('a', [0, 1]); // 復元後も畳み込み継続できる
+      expect(restored.similarity('a', 'b'), greaterThan(0.5));
+    });
+  });
+
   group('louvain', () {
     test('2 つの密なコミュニティを分離する', () {
       // A: a1-a2-a3 完全グラフ / B: b1-b2-b3 完全グラフ、間は弱い橋 1 本。
@@ -188,6 +264,13 @@ void main() {
       expect(c.keys, containsAll(['x', 'y']));
     });
   });
+}
+
+class _FixedCpu implements CpuLoadProbe {
+  _FixedCpu(this.value);
+  final double value;
+  @override
+  Future<double?> sample() async => value;
 }
 
 class _FakeDevice implements MlDeviceExecutor {

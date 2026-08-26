@@ -68,4 +68,19 @@ class FolloweeEmbeddingStore {
     final n = norm == 0 ? 1.0 : math.sqrt(norm);
     return Float32List.fromList([for (final x in v) x / n]);
   }
+
+  /// 永続化(セッションを跨いで EMA を持ち回る)。
+  Map<String, Object?> toJson() => {
+        'alpha': alpha,
+        'ema': {for (final e in _ema.entries) e.key: e.value.toList()},
+      };
+
+  factory FolloweeEmbeddingStore.fromJson(Map<String, Object?> json) {
+    final store = FolloweeEmbeddingStore(alpha: (json['alpha'] as num?)?.toDouble() ?? 0.3);
+    final ema = (json['ema'] as Map?)?.cast<String, Object?>() ?? const {};
+    for (final e in ema.entries) {
+      store._ema[e.key] = Float32List.fromList([for (final v in (e.value as List)) (v as num).toDouble()]);
+    }
+    return store;
+  }
 }

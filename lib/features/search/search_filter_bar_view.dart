@@ -6,27 +6,67 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import 'search_filter.dart';
 
-/// 検索フィルタ行の配線 (D-021): [RasqSearchFilterBar] に共有状態
-/// ([searchFilterProvider]) とドロップダウン・⚙ 設定シートを繋ぐ。
-/// 検索ホーム(フォーカス連動)とトレンドTL(∨ トグル連動)で共用。
-class SearchFilterBarView extends ConsumerWidget {
-  const SearchFilterBarView({super.key, required this.expanded, this.genreCandidates = const []});
+/// 検索ボックス(一体型展開タイル, D-021 改)の配線。
+///
+/// 展開条件: 入力欄フォーカス中 / 先頭 ∨ トグル / フィルタ適用中(常時)。
+/// 展開部はソート・期間チップ + 入れ子のスタジアム形ジャンルボタン + ⚙。
+/// 検索ホーム(avatar 横)とトレンドTL(← 横、編集可で検索を続けられる)で共用。
+class SearchFilterBox extends ConsumerStatefulWidget {
+  const SearchFilterBox({
+    super.key,
+    this.controller,
+    this.focusNode,
+    this.hintText = '検索',
+    this.onSubmitted,
+    this.genreCandidates = const [],
+  });
 
-  /// 呼び出し側の展開条件(検索欄フォーカス中 / ∨ トグル)。dirty なら常時表示。
-  final bool expanded;
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
+  final String hintText;
+  final ValueChanged<String>? onSubmitted;
   final List<String> genreCandidates;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SearchFilterBox> createState() => _SearchFilterBoxState();
+}
+
+class _SearchFilterBoxState extends ConsumerState<SearchFilterBox> {
+  bool _toggled = false;
+  FocusNode? _ownedFocus;
+
+  FocusNode get _focus => widget.focusNode ?? (_ownedFocus ??= FocusNode());
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_onFocus);
+  }
+
+  void _onFocus() => setState(() {});
+
+  @override
+  void dispose() {
+    _focus.removeListener(_onFocus);
+    _ownedFocus?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final filter = ref.watch(searchFilterProvider);
     final manager = ref.watch(overlayManagerProvider);
     void update(SearchFilterState next) => ref.read(searchFilterProvider.notifier).set(next);
 
-    return RasqSearchFilterBar(
-      visible: expanded || filter.dirty,
-      chips: buildSearchFilterChips(
+    return RasqExpandableSearchBox(
+      expanded: _toggled || _focus.hasFocus || filter.dirty,
+      controller: widget.controller,
+      focusNode: _focus,
+      hintText: widget.hintText,
+      onSubmitted: widget.onSubmitted,
+      onDropdownTap: () => setState(() => _toggled = !_toggled),
+      filterChips: buildSortPeriodChips(
         filter: filter,
-        genreCandidates: genreCandidates,
         onSortTap: (rect) async {
           final s = await showSearchSortMenu(manager, rect, filter.sort);
           if (s != null) update(ref.read(searchFilterProvider).copyWith(sort: s));
@@ -35,6 +75,10 @@ class SearchFilterBarView extends ConsumerWidget {
           final p = await showSearchPeriodMenu(manager, rect, filter.period);
           if (p != null) update(ref.read(searchFilterProvider).copyWith(period: p));
         },
+      ),
+      genreChips: buildGenreChips(
+        filter: filter,
+        genreCandidates: widget.genreCandidates,
         onGenreToggle: (g) => update(ref.read(searchFilterProvider).toggleGenre(g)),
       ),
       onReset: filter.dirty ? () => update(SearchFilterState.initial) : null,
@@ -55,6 +99,6 @@ class SearchFilterBarView extends ConsumerWidget {
     );
   }
 
-  Future<void> _placeholder(dynamic manager, String title) =>
+  Future<void> _placeholder(OverlayManager manager, String title) =>
       manager.showAlert(id: 'search.settings.placeholder', title: title, message: 'トレンド設定(M5)/プラグイン設定(M4)の実装時にここへ繋ぎます。', confirmText: 'OK');
 }
