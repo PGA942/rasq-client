@@ -77,19 +77,16 @@ void main() {
     expect(ml.postSimilarity(followees[0], followees[1]), closeTo(1.0, 1e-6));
     expect(ml.postSimilarity(followees[0], followees[2]), closeTo(0.5, 1e-6));
 
-    // エンジン: コミュニティ制限 + SigLIP 類似度 → 2 クラスタに分かれる
-    // (ルールベースなら #daily 共有で 1 つに潰れる)。
-    const engine = RelationalEngine(settings: RelationalSettings(threshold: 75, staleMinutes: 60));
-    final ruleBased = engine.build(followeePosts: followees, now: now);
-    expect(ruleBased, hasLength(1), reason: '前提: ルールベースだと 1 束');
-
-    final restricted = RelationalEngine(
-      settings: const RelationalSettings(threshold: 75, staleMinutes: 60),
-      similarity: ml.postSimilarity,
-    ).build(followeePosts: followees, communityOf: ml.communityOf, now: now);
-    expect(restricted, hasLength(2));
-    for (final cluster in restricted) {
-      final authors = cluster.members.map((u) => u.displayName).toSet();
+    // エンジン (D-027): SigLIP 類似度 + コミュニティ事前分布(±の加点、
+    // ハードフィルタではない)→ #daily を全員が共有していても
+    // ロケット会話とごはん会話の 2 イベントに分かれる。
+    final events = ConversationEngine(
+      semantic: ml.postSimilarity,
+      communityOf: ml.communityOf,
+    ).build(followeePosts: followees, now: now);
+    expect(events, hasLength(2));
+    for (final e in events) {
+      final authors = e.members.map((u) => u.displayName).toSet();
       expect(authors, anyOf(equals({'rocketA', 'rocketB'}), equals({'foodC', 'foodD'})));
     }
   });

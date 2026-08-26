@@ -3,101 +3,166 @@ import 'package:rasq_client/features/relational/relational_engine.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 const account = AccountId(kind: SnsKind.misskey, instance: 'misskey.io', handle: 'yamada');
-final now = DateTime(2026, 8, 25, 12);
+final base = DateTime(2026, 8, 26, 12);
 
-Post post(String id, String author, String body, {Duration age = Duration.zero}) => Post(
+Post post(String id, String author, String body, {Duration at = Duration.zero}) => Post(
       id: id,
       account: account,
       author: UserSummary(id: author, account: account, displayName: author),
-      createdAt: now.subtract(age),
+      createdAt: base.add(at),
       body: body,
     );
 
 void main() {
-  const engine = RelationalEngine(settings: RelationalSettings(threshold: 60, staleMinutes: 10));
-
-  test('features: ハッシュタグ・メンション・カタカナ/英数・CJK連続語', () {
-    final f = RelationalEngine.features(post('x', 'a', '#打上会 のストラトローンチ Stratolaunch @douglas 国際信州大学'));
-    expect(f, containsAll(['打上会', 'ストラトローンチ', 'stratolaunch', 'douglas', '国際信州大学']));
-  });
-
-  test('ruleBasedSimilarity は 0.5 床の擬似 cos', () {
-    final a = post('a', 'u1', '#ロケット 発射');
-    final b = post('b', 'u2', '#ロケット すごい');
-    final c = post('c', 'u3', 'まったく別の話题です');
-    expect(RelationalEngine.ruleBasedSimilarity(a, b), greaterThan(0.6));
-    expect(RelationalEngine.ruleBasedSimilarity(a, c), lessThan(0.6));
-    expect(RelationalEngine.ruleBasedSimilarity(a, c), greaterThanOrEqualTo(0.5));
-  });
-
-  test('build: 同じ話題のフォロイー投稿が束ねられ、単発は出ない', () {
-    final clusters = engine.build(followeePosts: [
-      post('1', 'douglas', '#打上会 ストラトローンチ発射!', age: const Duration(minutes: 3)),
-      post('2', 'tivard', 'ストラトローンチ 打ち上げ成功 #打上会', age: const Duration(minutes: 1)),
-      post('3', 'lonely', '今日のお昼はカレーうどん', age: const Duration(minutes: 2)),
-    ], now: now);
-    expect(clusters, hasLength(1));
-    expect(clusters.single.posts, hasLength(2));
-    expect(clusters.single.members.map((u) => u.displayName), containsAll(['douglas', 'tivard']));
-    expect(clusters.single.lastActivityAt, now.subtract(const Duration(minutes: 1)));
-  });
-
-  test('build: LTL 候補がしきい値以上ならクラスタに合流する', () {
-    final clusters = engine.build(
-      followeePosts: [
-        post('1', 'douglas', '#打上会 ストラトローンチ発射!', age: const Duration(minutes: 3)),
-        post('2', 'tivard', 'ストラトローンチ成功 #打上会', age: const Duration(minutes: 2)),
-      ],
-      candidatePosts: [
-        post('9', 'stranger', 'ストラトローンチ #打上会 見てた!', age: const Duration(minutes: 1)),
-        post('8', 'other', '無関係な夕飯の写真', age: const Duration(minutes: 1)),
-      ],
-      now: now,
-    );
-    expect(clusters.single.posts.map((p) => p.id), containsAll(['1', '2', '9']));
-    expect(clusters.single.posts.map((p) => p.id), isNot(contains('8')));
-  });
-
-  test('しきい値 100 ではほぼ束ねない(スライダー上限)', () {
-    const strict = RelationalEngine(settings: RelationalSettings(threshold: 100));
-    final clusters = strict.build(followeePosts: [
-      post('1', 'a', '#x ロケット'),
-      post('2', 'b', '#x ロケット パーティー'), // 特徴が 1 語でも違えば cos 1.0 に届かない
-    ], now: now);
-    expect(clusters, isEmpty);
-  });
-
-  test('浮上ルール: staleMinutes 超は沈み、markAction で浮上する', () {
-    final old = [
-      post('1', 'a', '#topic ネタ', age: const Duration(minutes: 30)),
-      post('2', 'b', '#topic ネタ返し', age: const Duration(minutes: 25)),
-    ];
-    expect(engine.build(followeePosts: old, now: now), isEmpty);
-
-    // markAction(自分の関連投稿へのアクション)で浮上が更新されれば残る。
-    const lenient = RelationalEngine(settings: RelationalSettings(threshold: 60, staleMinutes: 60));
-    final clusters = lenient.build(followeePosts: old, now: now);
-    engine.markAction(clusters, postKey: old.first.key, at: now.subtract(const Duration(minutes: 1)));
-    expect(engine.pruneStale(clusters, now: now), hasLength(1));
-  });
-
-  test('除外ルール: しきい値から離れた投稿を4連続した著者は外れる', () {
-    final clusters = engine.build(followeePosts: [
-      post('1', 'douglas', '#打上会 ストラトローンチ', age: const Duration(minutes: 5)),
-      post('2', 'tivard', 'ストラトローンチ #打上会', age: const Duration(minutes: 4)),
-      post('3', 'noisy', '#打上会 ストラトローンチ 見た', age: const Duration(minutes: 3)),
-    ], now: now);
-    expect(clusters.single.members, hasLength(3));
-
-    final pruned = engine.dropOffTopicMembers(clusters, recentByAuthor: {
-      'misskey:misskey.io:noisy': [
-        post('n1', 'noisy', '夕飯なう'),
-        post('n2', 'noisy', 'ねむい'),
-        post('n3', 'noisy', 'テレビみてる'),
-        post('n4', 'noisy', 'おやすみ'),
-      ],
+  group('特徴抽出', () {
+    test('タグ・メンション・固有名詞近似', () {
+      final f = extractFeatures(post('x', 'a', '#打上会 のストラトローンチ Stratolaunch @douglas 国際信州大学'));
+      expect(f, containsAll(['打上会', 'ストラトローンチ', 'stratolaunch', 'douglas', '国際信州大学']));
     });
-    expect(pruned.single.members.map((u) => u.displayName), isNot(contains('noisy')));
-    expect(pruned.single.members, hasLength(2));
+
+    test('反応表現の検出(短文のみ)', () {
+      expect(isReactivePost(post('1', 'a', 'それな')), isTrue);
+      expect(isReactivePost(post('2', 'a', 'えっ、マジ')), isTrue);
+      expect(isReactivePost(post('3', 'a', 'わかる……')), isTrue);
+      expect(isReactivePost(post('4', 'a', '本日の登壇資料を公開しました。リンクはこちらです。ぜひご覧ください。それでは。')), isFalse);
+      expect(isReactivePost(post('5', 'a', '天気は快晴です')), isFalse);
+    });
+
+    test('ルールベース類似度は 0.5〜1.0(共有語が多いほど高い)', () {
+      final a = post('a', 'u1', 'ストラトローンチの機体が好き');
+      final b = post('b', 'u2', 'ストラトローンチの機体、翼が長い');
+      final c = post('c', 'u3', '今日のごはんはカレー');
+      expect(ruleBasedSimilarity(a, b), greaterThan(ruleBasedSimilarity(a, c)));
+      expect(ruleBasedSimilarity(a, c), greaterThanOrEqualTo(0.5));
+    });
+  });
+
+  group('会話イベント (D-027)', () {
+    test('空リプ会話が 1 イベントに束なる(反応表現+時間+発話交替)', () {
+      final posts = [
+        post('1', 'alice', '同人誌の原稿、落とした……'),
+        post('2', 'bob', 'えっ、マジ', at: const Duration(seconds: 40)),
+        post('3', 'alice', 'マジ……無理だった', at: const Duration(seconds: 90)),
+        post('4', 'carol', '天気は快晴。散歩日和です', at: const Duration(seconds: 60)),
+      ];
+      final engine = ConversationEngine();
+      final events = engine.build(followeePosts: posts, now: base.add(const Duration(minutes: 3)));
+      expect(events, hasLength(1));
+      final e = events.single;
+      // 仮 ROOT(開始点)まで遡って束なっている。
+      expect(e.root.id, '1');
+      expect(e.posts.map((p) => p.id), ['1', '2', '3']);
+      // carol の独り言は仮 ROOT のまま表示されない。
+      expect(e.members.map((u) => u.displayName), ['alice', 'bob']);
+    });
+
+    test('話題語を共有する会話は内容類似で束なり、無関係は分かれる', () {
+      final posts = [
+        post('1', 'a', 'ストラトローンチの打ち上げ配信見てる'),
+        post('2', 'b', 'ストラトローンチの配信、望遠の画角すごいな', at: const Duration(minutes: 1)),
+        post('3', 'c', '猫カフェのラテアート可愛かった', at: const Duration(minutes: 2)),
+        post('4', 'd', 'ラテアート目当てで猫カフェ行きたい', at: const Duration(minutes: 3)),
+      ];
+      final events = ConversationEngine().build(followeePosts: posts, now: base.add(const Duration(minutes: 4)));
+      expect(events, hasLength(2));
+      final byRoot = {for (final e in events) e.root.id: e.posts.map((p) => p.id).toList()};
+      expect(byRoot['1'], ['1', '2']);
+      expect(byRoot['3'], ['3', '4']);
+    });
+
+    test('ユーザー除外はしない: 別話題を連投しても過去の参加は残る (投稿単位所属)', () {
+      final posts = [
+        post('1', 'alice', 'ストラトローンチの打ち上げ配信見てる'),
+        post('2', 'bob', 'ストラトローンチ配信、自分も見てる', at: const Duration(minutes: 1)),
+        // alice が無関係の別話題を 4 連投(v0 ならイベントから除外されていた)。
+        post('3', 'alice', '晩ごはんのカレーを仕込む', at: const Duration(minutes: 5)),
+        post('4', 'alice', 'カレーのルーが足りない', at: const Duration(minutes: 6)),
+        post('5', 'alice', 'カレーに福神漬けは必須', at: const Duration(minutes: 7)),
+        post('6', 'alice', 'カレーができた', at: const Duration(minutes: 8)),
+      ];
+      // buildAll = 表示フィルタ前の全イベント(TTL で沈んでいても所属は残る)。
+      final events = ConversationEngine().buildAll(followeePosts: posts, now: base.add(const Duration(minutes: 9)));
+      final launch = events.firstWhere((e) => e.root.id == '1');
+      // alice の投稿 1 はイベントに残ったまま。
+      expect(launch.posts.map((p) => p.id), contains('1'));
+      expect(launch.members.map((u) => u.displayName), contains('alice'));
+    });
+
+    test('単独投稿は仮 ROOT のまま表示されず、後続が来れば遡及して表示される', () {
+      final engine = ConversationEngine();
+      final solo = [post('1', 'a', 'ストラトローンチの機体が好き')];
+      expect(engine.build(followeePosts: solo, now: base.add(const Duration(minutes: 1))), isEmpty);
+      final followed = [...solo, post('2', 'b', 'ストラトローンチの機体、翼が長いよね', at: const Duration(minutes: 1))];
+      final events = ConversationEngine().build(followeePosts: followed, now: base.add(const Duration(minutes: 2)));
+      expect(events, hasLength(1));
+      expect(events.single.root.id, '1');
+    });
+  });
+
+  group('TTL とライフサイクル', () {
+    ConversationEvent fastEvent() {
+      final e = ConversationEvent.root(post('1', 'a', 'ストラトローンチ見てる'));
+      e.add(post('2', 'b', 'ストラトローンチいいね', at: const Duration(seconds: 10)));
+      e.add(post('3', 'a', 'ストラトローンチ最高', at: const Duration(seconds: 20)));
+      return e;
+    }
+
+    test('テンポの速い会話は TTL 下限(5分)で沈む', () {
+      const s = RelationalSettings();
+      final e = fastEvent();
+      expect(e.ttl(s), const Duration(minutes: 5));
+      expect(e.stateAt(base.add(const Duration(minutes: 4)), s), ConversationState.active);
+      expect(e.stateAt(base.add(const Duration(minutes: 6)), s), ConversationState.dormant);
+      expect(e.stateAt(base.add(const Duration(minutes: 20)), s), ConversationState.closed);
+    });
+
+    test('ゆっくりした会話は間隔に応じて TTL が伸びる(上限 30 分)', () {
+      const s = RelationalSettings();
+      final e = ConversationEvent.root(post('1', 'a', 'ストラトローンチ見てる'));
+      e.add(post('2', 'b', 'ストラトローンチいいね', at: const Duration(minutes: 20)));
+      expect(e.ttl(s), const Duration(minutes: 30));
+      expect(e.stateAt(base.add(const Duration(minutes: 45)), s), ConversationState.active);
+    });
+
+    test('ハードアンカー(URL)一致は候補ウィンドウ外でも再開できる', () {
+      final posts = [
+        post('1', 'a', '例の記事読んだ https://example.com/stratolaunch-report すごい'),
+        post('2', 'b', 'その記事いいよね https://example.com/stratolaunch-report', at: const Duration(minutes: 2)),
+        // 40 分後(ウィンドウ 30 分の外)に同じ URL を貼る。
+        post('3', 'c', '出遅れたけど読んだ https://example.com/stratolaunch-report', at: const Duration(minutes: 42)),
+      ];
+      final events = ConversationEngine().buildAll(followeePosts: posts);
+      final e = events.firstWhere((ev) => ev.root.id == '1');
+      expect(e.posts.map((p) => p.id), ['1', '2', '3']);
+    });
+
+    test('markAction で浮上する(自分の関連投稿へのアクション)', () {
+      final e = fastEvent();
+      final engine = ConversationEngine();
+      final at = base.add(const Duration(minutes: 4));
+      engine.markAction([e], postKey: e.posts.last.key, at: at);
+      expect(e.lastActivityAt, at);
+    });
+  });
+
+  group('適応しきい値', () {
+    test('標本が無い間は既定 0.5 + バイアス', () {
+      expect(ConversationEngine().thresholdFor(null), closeTo(0.5, 1e-9));
+      expect(ConversationEngine(settings: const RelationalSettings(linkBias: 100)).thresholdFor(null), closeTo(0.75, 1e-9));
+      // 0.5 - 0.25 = 0.25 だが下限 0.3 でクランプされる。
+      expect(ConversationEngine(settings: const RelationalSettings(linkBias: 50)).thresholdFor(null), closeTo(0.3, 1e-9));
+    });
+
+    test('無関係投稿のベストスコア分布からコミュニティ別に適応する', () {
+      // 互いに無関係な投稿を大量に流す → ROOT 判定の標本が貯まる。
+      final topics = ['カレーの仕込み', '飛行機の写真', '週末の登山計画', '新刊の告知', '水槽の掃除', '自転車の整備', '映画の感想', '編み物の進捗', '盆栽の手入れ', 'ラジオの収録'];
+      final posts = [for (var i = 0; i < topics.length; i++) post('$i', 'u$i', '${topics[i]}をしている', at: Duration(minutes: i))];
+      final engine = ConversationEngine();
+      engine.buildAll(followeePosts: posts);
+      final t = engine.thresholdFor(null);
+      // 無関係スコアが低い環境ではしきい値が下がる(ただし下限 0.3)。
+      expect(t, lessThan(0.5));
+      expect(t, greaterThanOrEqualTo(0.3));
+    });
   });
 }

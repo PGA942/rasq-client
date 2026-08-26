@@ -1,213 +1,462 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
 
-/// リレーショナルTL 設定 (D-022)。
+/// リレーショナルTL v1 — **会話イベント方式** (D-027)。
 ///
-/// [threshold] は **50〜100 に正規化した類似度しきい値**(高次元ベクトルの
-/// cos 類似度は 0 に張り付かないため下限 50)。SigLIP 配線後は
-/// `(cos + 1) / 2 * 100` を同じ尺度に写像する。初期値は実測で調整する前提
-/// なのでユーザーがスライダーで変更できる。
+/// v0(クラスタ方式)は「ユーザーの普段の関心圏(Louvain コミュニティ)」と
+/// 「数分だけ発生する空リプ会話」を同じクラスタとして扱っていたため、
+/// 話題の開始検出に失敗して会話が繋がらなかった。v1 は各投稿について
+/// 「既存話題に属するか」ではなく **「どの直前投稿への暗黙応答か /
+/// 新しい話題の開始か」** を判定する reply-to グラフ構造に変更する:
+///
+/// 1. 新投稿 → 直近ウィンドウ内のイベント(会話)を候補にリンクを採点
+/// 2. 最良リンクが適応しきい値以上 → そのイベントへ追加(投稿単位所属)
+/// 3. しきい値未満 → **仮 ROOT**(新話題候補)として保留。後続の関連投稿が
+///    来た時点で ROOT まで遡って 1 イベントに確定(First Story Detection)
+/// 4. Louvain コミュニティは**事前分布(加点)に格下げ**。ハードフィルタにしない
+/// 5. GTL/トレンドからの投稿連結は停止(誤結合ハブになるため)
+/// 6. ユーザー退出(無関係 4 連投)は廃止。所属は投稿単位、参加度は時間減衰
+/// 7. イベント表現は EMA 単一重心ではなく **固定アンカー(最初の 2〜3 投稿)+
+///    最近プロトタイプ(直近 5〜8 投稿)の max 類似**(重心の話題流出を防ぐ)
+/// 8. TTL はイベント別適応: `clamp(2 × 投稿間隔Q90, 最短, 最長)`
+///
+/// リンク採点は現状ルール重み(SigLIP cos / 文字 n-gram / エンティティ /
+/// 強アンカー / 時間差 / ユーザーペア親密度 / 発話交替 / 反応表現 /
+/// コミュニティ事前分布)。将来は明示リプライ等を弱教師に
+/// LightGBM / ロジスティック回帰へ置き換える。
+
+/// 会話イベントの状態。
+enum ConversationState {
+  /// 新規らしい単独投稿。保留中(表示しない)。
+  tentative,
+
+  /// 進行中の会話(2 投稿以上、TTL 以内)。表示対象。
+  active,
+
+  /// 投稿間隔が空いた。強アンカー一致でのみ再開できる。
+  dormant,
+
+  /// 再開可能時間を超えた。
+  closed,
+}
+
+/// リレーショナルTL 設定 (D-027)。
+///
+/// [linkBias] はリンクしきい値への全体バイアス(**50〜100 正規化のスライダー**、
+/// 75 = 補正なし)。しきい値そのものはコミュニティ別に適応させるため
+/// (いつも同じ作品の話をするコミュニティでは素の類似度が常時高い)、
+/// ユーザーが触るのは「束ねやすさ」の一つまみだけにする。
 @immutable
 class RelationalSettings {
-  const RelationalSettings({this.threshold = 75, this.staleMinutes = 10, this.maxOffTopicPosts = 4});
+  const RelationalSettings({
+    this.linkBias = 75,
+    this.candidateWindowMinutes = 30,
+    this.tentativeHoldSeconds = 150,
+    this.minTtlMinutes = 5,
+    this.maxTtlMinutes = 30,
+  });
 
-  /// 類似度しきい値(50〜100)。
-  final int threshold;
+  /// 束ねやすさ(50〜100)。100 に近いほど厳しく(束ねにくく)なる。
+  final int linkBias;
 
-  /// 浮上が無いままこの分数が経つとクラスタを外す。
-  final int staleMinutes;
+  /// 親候補を探す直近ウィンドウ(分)。
+  final int candidateWindowMinutes;
 
-  /// メンバーがしきい値から離れた投稿をこの回数連続でしたら外す。
-  final int maxOffTopicPosts;
+  /// 仮 ROOT の保留時間(秒)。この間は「新話題として確定」しない
+  /// (リアルタイム性を数分犠牲にして開始点精度を上げる)。
+  final int tentativeHoldSeconds;
 
-  double get normalizedThreshold => threshold.clamp(50, 100) / 100.0;
+  /// イベント TTL の下限(分)。
+  final int minTtlMinutes;
 
-  RelationalSettings copyWith({int? threshold, int? staleMinutes, int? maxOffTopicPosts}) => RelationalSettings(
-        threshold: threshold ?? this.threshold,
-        staleMinutes: staleMinutes ?? this.staleMinutes,
-        maxOffTopicPosts: maxOffTopicPosts ?? this.maxOffTopicPosts,
+  /// イベント TTL の上限(分)。
+  final int maxTtlMinutes;
+
+  /// スライダー値 → しきい値オフセット(-0.25〜+0.25)。
+  double get biasOffset => (linkBias.clamp(50, 100) - 75) / 100.0;
+
+  RelationalSettings copyWith({int? linkBias, int? candidateWindowMinutes, int? tentativeHoldSeconds, int? minTtlMinutes, int? maxTtlMinutes}) => RelationalSettings(
+        linkBias: linkBias ?? this.linkBias,
+        candidateWindowMinutes: candidateWindowMinutes ?? this.candidateWindowMinutes,
+        tentativeHoldSeconds: tentativeHoldSeconds ?? this.tentativeHoldSeconds,
+        minTtlMinutes: minTtlMinutes ?? this.minTtlMinutes,
+        maxTtlMinutes: maxTtlMinutes ?? this.maxTtlMinutes,
       );
 }
 
-/// 2 投稿の類似度(0〜1、cos 相当)。SigLIP 配線後は
-/// `(text_embeds コサイン + 1) / 2` を注入する(D-022)。
+/// 2 投稿の類似度(0〜1、cos 相当)。SigLIP 配線時は
+/// `(text_embeds コサイン + 1) / 2` を注入する。
 typedef PostSimilarity = double Function(Post a, Post b);
 
-/// 1 クラスタ = 「関連」タブの 1 カード。
-class RelationalCluster {
-  RelationalCluster({required this.id, required this.seed, required this.posts, required this.tags, required this.lastActivityAt});
+/// 特徴語: #タグ / @メンション / 固有名詞近似(2文字以上のカタカナ・英数語、
+/// 2文字以上の漢字連続)。GLiNER 配線後はゼロショット抽出結果を加える。
+Set<String> extractFeatures(Post p) {
+  final out = <String>{};
+  final text = '${p.body} ${p.quote?.body ?? ''}';
+  for (final m in RegExp(r'#([^\s#＃]+)').allMatches(text)) {
+    out.add(m.group(1)!.toLowerCase());
+  }
+  for (final m in RegExp(r'@([A-Za-z0-9_.-]+)').allMatches(text)) {
+    out.add(m.group(1)!.toLowerCase());
+  }
+  for (final m in RegExp(r'([ァ-ヴー]{2,}|[A-Za-z0-9][A-Za-z0-9\-_.]{1,})').allMatches(text)) {
+    out.add(m.group(1)!.toLowerCase());
+  }
+  for (final m in RegExp(r'([一-龠々]{2,})').allMatches(text)) {
+    out.add(m.group(1)!);
+  }
+  return out;
+}
+
+/// 強い共通アンカー(ソフト): ハッシュタグ。同じ話題の可能性が高いが、
+/// `#daily` のような汎用タグもあるため加点どまり(単独ではリンクさせない)。
+Set<String> strongAnchors(Post p) {
+  final out = <String>{};
+  final text = '${p.body} ${p.quote?.body ?? ''}';
+  for (final m in RegExp(r'#([^\s#＃]+)').allMatches(text)) {
+    out.add('#${m.group(1)!.toLowerCase()}');
+  }
+  return out;
+}
+
+/// 強い共通アンカー(ハード): URL / 引用先。一致すればほぼ確実に同じ話題で、
+/// **休眠イベントの再開**にも使える。画像 pHash は端末側実装が入ったら追加。
+Set<String> hardAnchors(Post p) {
+  final out = <String>{};
+  final text = '${p.body} ${p.quote?.body ?? ''}';
+  for (final m in RegExp(r'https?://[^\s]+').allMatches(text)) {
+    out.add(m.group(0)!.replaceAll(RegExp(r'[).,]+$'), '').toLowerCase());
+  }
+  if (p.linkUrl != null) out.add(p.linkUrl.toString().toLowerCase());
+  if (p.quote != null) out.add('quote:${p.quote!.key}');
+  return out;
+}
+
+final _reactionLexicon = RegExp(
+  r'(それな|それはそう|わか(る|り)|分か(る|り)|たしかに|確かに|ほん(と|ま)それ|ほんそれ|まじ|マジ|ﾏｼﾞ|え[っぇえー]+|うそ|ウソ|嘘でしょ|草|くさ|ｗ+|w{2,}|笑った|わろた|ワロタ|やば|ヤバ|つら|辛|無理|むり|尊い|最高|好き|すき|おめでと|お(つかれ|疲れ)|それ|これ|あれ|だよね|よね[ぇー]?)',
+);
+
+/// 暗黙応答らしい短文か(「それな」「わかる」「えっ」など)。埋め込みや
+/// n-gram では中身が測れないぶん、時間差・親密度・発話交替を重く見る。
+bool isReactivePost(Post p) {
+  final body = p.body.trim();
+  if (body.isEmpty || body.length > 30) return false;
+  return _reactionLexicon.hasMatch(body);
+}
+
+/// 文字 2〜3-gram プロファイル(表記揺れ・略語・オタク語彙に強い。短文では
+/// 埋め込みより効くことがあるため必ず併用する)。
+Map<String, double> charNgramProfile(String text) {
+  final t = text.toLowerCase().replaceAll(RegExp(r'https?://[^\s]+'), ' ').replaceAll(RegExp(r'[\s#＃@]+'), '');
+  final counts = <String, double>{};
+  for (final n in const [2, 3]) {
+    for (var i = 0; i + n <= t.length; i++) {
+      final g = t.substring(i, i + n);
+      counts[g] = (counts[g] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
+double cosineOfProfiles(Map<String, double> a, Map<String, double> b) {
+  if (a.isEmpty || b.isEmpty) return 0;
+  var na = 0.0;
+  var nb = 0.0;
+  for (final v in a.values) {
+    na += v * v;
+  }
+  for (final v in b.values) {
+    nb += v * v;
+  }
+  var dot = 0.0;
+  final (small, large) = a.length <= b.length ? (a, b) : (b, a);
+  for (final e in small.entries) {
+    final w = large[e.key];
+    if (w != null) dot += e.value * w;
+  }
+  return dot / (math.sqrt(na) * math.sqrt(nb));
+}
+
+/// ルールベースの投稿間類似度(0.5〜1.0 の擬似 cos)。SigLIP の埋め込みが
+/// 取れないペアのフォールバック(relational_ml.dart)。
+double ruleBasedSimilarity(Post a, Post b) {
+  final fa = extractFeatures(a);
+  final fb = extractFeatures(b);
+  var jaccard = 0.0;
+  if (fa.isNotEmpty && fb.isNotEmpty) {
+    jaccard = fa.intersection(fb).length / fa.union(fb).length;
+  }
+  final ngram = cosineOfProfiles(charNgramProfile(a.body), charNgramProfile(b.body));
+  return 0.5 + 0.5 * math.max(jaccard, ngram);
+}
+
+/// エンティティ一致数。漢字連続の切り出しは活用語尾を巻き込んでズレる
+/// (「配信見てる」→「配信見」)ため、完全一致に加えて**片方向の包含**
+/// (2 文字以上)も一致に数える。
+int entityOverlap(Set<String> a, Set<String> b) {
+  var n = 0;
+  for (final x in a) {
+    if (x.length < 2) continue;
+    if (b.contains(x) || b.any((y) => y.length >= 2 && (x.contains(y) || y.contains(x)))) n++;
+  }
+  return n;
+}
+
+/// ユーザーペア親密度: 普段この 2 人が時間的に近接して投稿するか。
+/// 明示リプライ・リノート関係が取れたら重み付けを足す。
+class UserPairAffinity {
+  final Map<String, int> _count = {};
+
+  static String _key(String a, String b) => a.compareTo(b) <= 0 ? '$a|$b' : '$b|$a';
+
+  void record(String a, String b) {
+    if (a == b) return;
+    final k = _key(a, b);
+    _count[k] = (_count[k] ?? 0) + 1;
+  }
+
+  /// 0〜1(共起 3 回で 0.5)。
+  double of(String a, String b) {
+    final c = _count[_key(a, b)] ?? 0;
+    return c / (c + 3);
+  }
+}
+
+/// 1 会話イベント = 「関連」タブの 1 カード。所属は**投稿単位**で、
+/// ユーザーは除外しない(1 人が複数話題を並行するため)。
+class ConversationEvent {
+  ConversationEvent.root(Post p)
+      : id = p.key,
+        posts = [p],
+        postKeys = {p.key},
+        entities = extractFeatures(p),
+        anchors = strongAnchors(p),
+        hardAnchorSet = hardAnchors(p),
+        participants = {p.author.key: p.createdAt},
+        intervalSeconds = [],
+        lastActivityAt = p.createdAt;
 
   final String id;
 
-  /// クラスタを開始したフォロイー投稿(カードの代表)。
-  final Post seed;
+  /// 時系列順の所属投稿。先頭が ROOT(開始点)。
   final List<Post> posts;
+  final Set<String> postKeys;
 
-  /// 束ねに使った特徴語(ハッシュタグ・固有名詞近似)。
-  final Set<String> tags;
+  /// 共通エンティティ(特徴語の和集合)。
+  final Set<String> entities;
 
-  /// 最後の「浮上」時刻: メンバーの投稿/リノート、または自分の関連投稿への
-  /// アクション(markAction)。
+  /// ソフトアンカー(#タグ)。
+  final Set<String> anchors;
+
+  /// ハードアンカー(URL / 引用先)。休眠からの再開判定に使う。
+  final Set<String> hardAnchorSet;
+
+  /// 参加ユーザー → 最終参加時刻(参加度の時間減衰用。除外はしない)。
+  final Map<String, DateTime> participants;
+
+  /// 投稿間隔の実測(TTL の適応に使う)。
+  final List<int> intervalSeconds;
+
   DateTime lastActivityAt;
+
+  Post get root => posts.first;
+
+  /// 固定アンカー投稿: 最初の 2〜3 投稿(話題の原点。EMA のように流されない)。
+  List<Post> get anchorPosts => posts.length <= 3 ? posts : posts.sublist(0, 3);
+
+  /// 可変プロトタイプ: 直近の投稿(会話の発展に追従する)。
+  List<Post> get recentPosts => posts.length <= 8 ? posts : posts.sublist(posts.length - 8);
 
   List<UserSummary> get members {
     final seen = <String>{};
     return [for (final p in posts) if (seen.add(p.author.key)) p.author];
   }
+
+  void add(Post p) {
+    intervalSeconds.add(p.createdAt.difference(lastActivityAt).inSeconds.abs());
+    posts.add(p);
+    postKeys.add(p.key);
+    entities.addAll(extractFeatures(p));
+    anchors.addAll(strongAnchors(p));
+    hardAnchorSet.addAll(hardAnchors(p));
+    final prev = participants[p.author.key];
+    if (prev == null || p.createdAt.isAfter(prev)) participants[p.author.key] = p.createdAt;
+    if (p.createdAt.isAfter(lastActivityAt)) lastActivityAt = p.createdAt;
+  }
+
+  /// イベント別 TTL: `clamp(2 × 投稿間隔Q90, 最短, 最長)`。テンポの速い
+  /// 空リプ会話は早く沈み、ゆっくりした会話は長く保つ。
+  Duration ttl(RelationalSettings s) {
+    if (intervalSeconds.isEmpty) return Duration(minutes: s.minTtlMinutes);
+    final sorted = [...intervalSeconds]..sort();
+    final q90 = sorted[((sorted.length - 1) * 0.9).round()];
+    final sec = (2 * q90).clamp(s.minTtlMinutes * 60, s.maxTtlMinutes * 60);
+    return Duration(seconds: sec);
+  }
+
+  ConversationState stateAt(DateTime now, RelationalSettings s) {
+    if (posts.length < 2) {
+      return now.difference(root.createdAt) > Duration(minutes: s.candidateWindowMinutes) ? ConversationState.closed : ConversationState.tentative;
+    }
+    final idle = now.difference(lastActivityAt);
+    final t = ttl(s);
+    if (idle <= t) return ConversationState.active;
+    if (idle <= t * 2) return ConversationState.dormant;
+    return ConversationState.closed;
+  }
 }
 
-/// リレーショナルTL エンジン v0 (D-022)。
-///
-/// 3 段のうち **ルールベース段が実働**: 特徴抽出はハッシュタグ + メンション +
-/// 固有名詞近似(カタカナ・英数・CJK の連続語 = GLiNER のゼロショット抽出が
-/// 配線されるまでの代用)。類似度既定は特徴集合の Jaccard を 0.5〜1.0 に写像
-/// した擬似 cos([RelationalEngine.ruleBasedSimilarity])。GLiNER / SigLIP は
-/// [similarity] と特徴語の注入で差し替える。
-class RelationalEngine {
-  const RelationalEngine({this.settings = const RelationalSettings(), PostSimilarity? similarity}) : _similarity = similarity ?? ruleBasedSimilarity;
+/// 会話イベントエンジン (D-027)。投稿を時系列に処理し、投稿ごとに
+/// 「どの会話への暗黙応答か / 新話題の開始か」を判定する。
+class ConversationEngine {
+  ConversationEngine({this.settings = const RelationalSettings(), this.semantic, this.communityOf, this.tauSeconds = 600});
 
   final RelationalSettings settings;
-  final PostSimilarity _similarity;
 
-  double similarity(Post a, Post b) => _similarity(a, b);
+  /// SigLIP 類似度((cos+1)/2 に写像済み)。無ければ文字 n-gram のみ。
+  final PostSimilarity? semantic;
 
-  /// 特徴語: #タグ / @メンション / 固有名詞近似(2文字以上のカタカナ・英数語、
-  /// 4文字以上の CJK 連続)。GLiNER 配線後はゼロショット抽出結果に置き換わる。
-  static Set<String> features(Post p) {
-    final out = <String>{};
-    final text = '${p.body} ${p.quote?.body ?? ''}';
-    for (final m in RegExp(r'#([^\s#＃]+)').allMatches(text)) {
-      out.add(m.group(1)!.toLowerCase());
+  /// SigLIP EMA → Louvain の著者コミュニティ(D-024)。**事前分布**として
+  /// ±の加点にだけ使い、束ねの可否を決めるフィルタにはしない。
+  final Map<String, int>? communityOf;
+
+  /// 時間減衰 e^(-Δt/τ) の τ(秒)。
+  final int tauSeconds;
+
+  final Map<String, Map<String, double>> _profiles = {};
+
+  /// コミュニティ別: ROOT 判定時(= 無関係だった)のベストスコア標本。
+  final Map<int?, List<double>> _rootScoreSamples = {};
+
+  Map<String, double> _profile(Post p) => _profiles.putIfAbsent(p.key, () => charNgramProfile(p.body));
+
+  /// 適応しきい値: 無関係投稿のベストスコアの `中央値 + 2.5 × MAD` を
+  /// コミュニティ別に推定(いつも同じ作品の話をするコミュニティでは素の
+  /// 類似度が常時高いため、全体共通にしない)。標本不足の間は既定 0.5。
+  @visibleForTesting
+  double thresholdFor(int? community) {
+    var base = 0.5;
+    final samples = _rootScoreSamples[community];
+    if (samples != null && samples.length >= 8) {
+      final sorted = [...samples]..sort();
+      final median = sorted[sorted.length ~/ 2];
+      final devs = [for (final s in samples) (s - median).abs()]..sort();
+      final mad = devs[devs.length ~/ 2];
+      base = (median + 2.5 * mad).clamp(0.35, 0.8);
     }
-    for (final m in RegExp(r'@([A-Za-z0-9_.-]+)').allMatches(text)) {
-      out.add(m.group(1)!.toLowerCase());
-    }
-    for (final m in RegExp(r'([ァ-ヴー]{2,}|[A-Za-z0-9][A-Za-z0-9\-_.]{1,})').allMatches(text)) {
-      out.add(m.group(1)!.toLowerCase());
-    }
-    for (final m in RegExp(r'([一-龠々]{4,})').allMatches(text)) {
-      out.add(m.group(1)!);
-    }
-    return out;
+    return (base + settings.biasOffset).clamp(0.3, 0.95);
   }
 
-  /// 擬似 cos: Jaccard(0..1) → 0.5..1.0(高次元 cos が 0 に張り付かない性質に
-  /// 合わせた床)。しきい値スライダー 50-100 と同じ尺度になる。
-  static double ruleBasedSimilarity(Post a, Post b) {
-    final fa = features(a);
-    final fb = features(b);
-    if (fa.isEmpty || fb.isEmpty) return 0.5;
-    final inter = fa.intersection(fb).length;
-    final union = fa.union(fb).length;
-    return 0.5 + 0.5 * (inter / union);
+  double _contentPair(Post a, Post b) {
+    var s = cosineOfProfiles(_profile(a), _profile(b));
+    final sem = semantic;
+    if (sem != null) {
+      // (cos+1)/2 の写像を 0..1 に伸長(無関係 ≈ 0.5 が床にならないように)。
+      s = math.max(s, (2 * sem(a, b) - 1).clamp(0.0, 1.0));
+    }
+    return s;
   }
 
-  /// フォロイーの投稿からクラスタを作り、候補(LTL・トレンド)の類似投稿を
-  /// 取り込む。しきい値未満は束ねない。
-  ///
-  /// [communityOf] は D-024 の計算量削減: SigLIP EMA の著者類似グラフを
-  /// Louvain で分割した所属(authorKey → community id)。渡すと、**異なる
-  /// コミュニティの著者同士は類似度計算すら行わず束ねない**(候補=非フォロイー
-  /// など所属が無い著者は制限なし)。
-  List<RelationalCluster> build({
-    required List<Post> followeePosts,
-    List<Post> candidatePosts = const [],
-    Map<String, int>? communityOf,
-    DateTime? now,
-  }) {
-    final t = settings.normalizedThreshold;
-    final clusters = <RelationalCluster>[];
-
-    bool sameCommunity(RelationalCluster c, Post p) {
-      if (communityOf == null) return true;
-      final a = communityOf[c.seed.author.key];
-      final b = communityOf[p.author.key];
-      return a == null || b == null || a == b;
+  /// P(p が イベント e への暗黙応答)。ルール重み(将来 LightGBM に置換)。
+  @visibleForTesting
+  double linkScore(Post p, ConversationEvent e, UserPairAffinity affinity, {required bool anchorMatch, required bool hardMatch}) {
+    var content = 0.0;
+    for (final q in {...e.anchorPosts, ...e.recentPosts}) {
+      content = math.max(content, _contentPair(p, q));
     }
+    final dtSec = p.createdAt.difference(e.lastActivityAt).inSeconds.abs();
+    final timeDecay = math.exp(-dtSec / tauSeconds);
+    final overlap = entityOverlap(extractFeatures(p), e.entities);
+    final entityScore = overlap >= 2 ? 1.0 : (overlap == 1 ? 0.6 : 0.0);
+    var aff = 0.0;
+    for (final u in e.participants.keys) {
+      aff = math.max(aff, affinity.of(p.author.key, u));
+    }
+    // 発話交替: A→B→A のような往復は空リプらしさが強い。
+    var turn = 0.0;
+    if (e.participants.containsKey(p.author.key)) {
+      turn = e.posts.last.author.key != p.author.key ? 1.0 : 0.4;
+    }
+    // ハードアンカー(URL/引用先)一致はほぼ確実に同じ話題 → フラット加点。
+    // ソフトアンカー(#タグ)は汎用タグの誤結合があるので小さめ。
+    final anchor = hardMatch ? 1.0 : (anchorMatch ? 0.6 : 0.0);
+    final hardBonus = hardMatch ? 0.2 : 0.0;
+    var prior = 0.0;
+    final ca = communityOf?[p.author.key];
+    final ce = communityOf?[e.root.author.key];
+    if (ca != null && ce != null) prior = ca == ce ? 0.05 : -0.05;
 
-    for (final p in followeePosts) {
-      RelationalCluster? best;
+    if (isReactivePost(p)) {
+      // 反応表現は中身が測れない: それ自体が「直前の何かへの応答」の証拠
+      // (+0.15)とみなし、時間差・親密度・往復を重く見る。
+      return (0.15 * content + 0.40 * timeDecay + 0.20 * aff + 0.15 * turn + 0.10 * math.max(entityScore, anchor) + 0.15 + hardBonus + prior).clamp(0.0, 1.0);
+    }
+    return (0.45 * content + 0.20 * entityScore + 0.15 * timeDecay + 0.10 * aff + 0.05 * turn + 0.10 * anchor + hardBonus + prior).clamp(0.0, 1.0);
+  }
+
+  /// フォロイーの投稿列から会話イベントを組む(仮 ROOT 含む全イベント)。
+  /// GTL/トレンド候補の連結は v1 で**廃止**(人気話題が複数コミュニティを
+  /// 誤結合するハブになるため。残すなら確定後の背景情報検索に分離する)。
+  List<ConversationEvent> buildAll({required List<Post> followeePosts, DateTime? now}) {
+    final posts = [...followeePosts]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final events = <ConversationEvent>[];
+    final affinity = UserPairAffinity();
+    final window = Duration(minutes: settings.candidateWindowMinutes);
+    Post? prev;
+    for (final p in posts) {
+      // 近接投稿ペア → 親密度(普段この 2 人が近くで投稿するか)。
+      if (prev != null && p.createdAt.difference(prev.createdAt) <= const Duration(minutes: 5)) {
+        affinity.record(prev.author.key, p.author.key);
+      }
+      final anchorsOfP = strongAnchors(p);
+      final hardOfP = hardAnchors(p);
+      ConversationEvent? best;
       var bestScore = 0.0;
-      for (final c in clusters) {
-        if (!sameCommunity(c, p)) continue;
-        final s = _clusterSimilarity(c, p);
-        if (s >= t && s > bestScore) {
-          best = c;
+      var sawCandidate = false;
+      for (final e in events) {
+        if (e.postKeys.contains(p.key)) continue;
+        final hardMatch = hardOfP.any(e.hardAnchorSet.contains);
+        final anchorMatch = hardMatch || anchorsOfP.any(e.anchors.contains);
+        final within = p.createdAt.difference(e.lastActivityAt) <= window;
+        // 休眠イベントはハードアンカー一致でのみ再開候補になる。
+        if (!within && !hardMatch) continue;
+        if (e.stateAt(p.createdAt, settings) == ConversationState.closed && !hardMatch) continue;
+        sawCandidate = true;
+        final s = linkScore(p, e, affinity, anchorMatch: anchorMatch, hardMatch: hardMatch);
+        if (s > bestScore) {
           bestScore = s;
+          best = e;
         }
       }
-      if (best != null) {
-        best.posts.add(p);
-        best.tags.addAll(features(p));
-        if (p.createdAt.isAfter(best.lastActivityAt)) best.lastActivityAt = p.createdAt;
+      final community = communityOf?[p.author.key];
+      if (best != null && bestScore >= thresholdFor(community)) {
+        best.add(p);
       } else {
-        clusters.add(RelationalCluster(id: p.key, seed: p, posts: [p], tags: features(p), lastActivityAt: p.createdAt));
+        if (sawCandidate) (_rootScoreSamples[community] ??= []).add(bestScore);
+        events.add(ConversationEvent.root(p));
       }
+      prev = p;
     }
-
-    // 1 投稿だけのクラスタは「関連」ではないので、候補取り込み前に見る。
-    for (final candidate in candidatePosts) {
-      for (final c in clusters) {
-        if (!sameCommunity(c, candidate)) continue;
-        final s = _clusterSimilarity(c, candidate);
-        if (s >= t && !c.posts.any((p) => p.key == candidate.key)) {
-          c.posts.add(candidate);
-          if (candidate.createdAt.isAfter(c.lastActivityAt)) c.lastActivityAt = candidate.createdAt;
-          break;
-        }
-      }
-    }
-
-    // 関連が成立しているクラスタ(2投稿以上)だけ、活動が新しい順に。
-    final out = [for (final c in clusters) if (c.posts.length >= 2) c];
-    out.sort((a, b) => b.lastActivityAt.compareTo(a.lastActivityAt));
-    return pruneStale(out, now: now);
+    return events;
   }
 
-  double _clusterSimilarity(RelationalCluster c, Post p) {
-    var maxScore = 0.0;
-    for (final member in c.posts) {
-      final s = similarity(member, p);
-      if (s > maxScore) maxScore = s;
-    }
-    return maxScore;
-  }
-
-  /// 浮上ルール: [RelationalCluster.lastActivityAt] から staleMinutes 超なら外す。
-  /// 浮上 = メンバーの投稿/リノート(build で反映)+ 自分の関連投稿への
-  /// アクション([markAction] で反映)。
-  List<RelationalCluster> pruneStale(List<RelationalCluster> clusters, {DateTime? now}) {
+  /// 表示対象 = ACTIVE のイベントだけ、活動が新しい順。仮 ROOT(単独投稿)は
+  /// 後続が来るまで表示しない(「保留して遡る」— 開始点はどのみち batch
+  /// 再構築で遡及的に含まれる)。
+  List<ConversationEvent> build({required List<Post> followeePosts, DateTime? now}) {
     final clock = now ?? DateTime.now();
-    final limit = Duration(minutes: settings.staleMinutes);
-    return [for (final c in clusters) if (clock.difference(c.lastActivityAt) <= limit) c];
+    final all = buildAll(followeePosts: followeePosts, now: clock);
+    final out = [for (final e in all) if (e.stateAt(clock, settings) == ConversationState.active) e];
+    out.sort((a, b) => b.lastActivityAt.compareTo(a.lastActivityAt));
+    return out;
   }
 
   /// 自分の関連投稿にアクション(リアクション・返信等)が付いた → 浮上。
-  void markAction(List<RelationalCluster> clusters, {required String postKey, required DateTime at}) {
-    for (final c in clusters) {
-      if (c.posts.any((p) => p.key == postKey) && at.isAfter(c.lastActivityAt)) c.lastActivityAt = at;
+  void markAction(List<ConversationEvent> events, {required String postKey, required DateTime at}) {
+    for (final e in events) {
+      if (e.postKeys.contains(postKey) && at.isAfter(e.lastActivityAt)) e.lastActivityAt = at;
     }
-  }
-
-  /// 除外ルール: 著者の直近投稿のうち、しきい値から離れた投稿が
-  /// [RelationalSettings.maxOffTopicPosts] 連続したらそのメンバーの投稿を外す。
-  List<RelationalCluster> dropOffTopicMembers(List<RelationalCluster> clusters, {required Map<String, List<Post>> recentByAuthor}) {
-    final t = settings.normalizedThreshold;
-    final out = <RelationalCluster>[];
-    for (final c in clusters) {
-      final dropAuthors = <String>{};
-      for (final author in c.members) {
-        final recent = recentByAuthor[author.key];
-        if (recent == null || recent.length < settings.maxOffTopicPosts) continue;
-        final latest = recent.take(settings.maxOffTopicPosts);
-        final allOff = latest.every((p) => _clusterSimilarity(c, p) < t);
-        if (allOff) dropAuthors.add(author.key);
-      }
-      final kept = [for (final p in c.posts) if (!dropAuthors.contains(p.author.key)) p];
-      if (kept.length >= 2 && !dropAuthors.contains(c.seed.author.key)) {
-        out.add(RelationalCluster(id: c.id, seed: c.seed, posts: kept, tags: c.tags, lastActivityAt: c.lastActivityAt));
-      }
-    }
-    return out;
   }
 }

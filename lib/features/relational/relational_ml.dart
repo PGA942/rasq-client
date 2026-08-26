@@ -3,16 +3,14 @@ import 'package:rasq_models/rasq_models.dart';
 
 import 'relational_engine.dart';
 
-/// SigLIP + EMA + Louvain の前段パイプライン (D-024)。
+/// SigLIP + EMA + Louvain の前段パイプライン (D-024 → D-027 で役割変更)。
 ///
 /// 1. 投稿本文を SigLIP(多言語)で埋め込み(GPU はゲートウェイの配置解決先)
 /// 2. **フォロイー毎に特徴量の指数移動平均**を更新([FolloweeEmbeddingStore])
 /// 3. 著者類似グラフ → **Louvain** でコミュニティ分割
-/// 4. クラスタリング([RelationalEngine.build])の類似判定を
-///    同一コミュニティ内に限定 + 投稿間類似度を実 cos に置き換え
-///
-/// 全投稿ペアの類似計算 O(P²) を「コミュニティ内の P²」+「著者数 A² の
-/// グラフ構築(A << P)」に落とすのが狙い。
+/// 4. コミュニティは [ConversationEngine] の**事前分布(リンク採点の加点)**と
+///    適応しきい値の層別に使う。v0 のようなハードフィルタにはしない
+///    (Louvain のコミュニティは「普段の関心圏」であって進行中の会話ではない)
 class RelationalMlResult {
   const RelationalMlResult({required this.communityOf, required this.postSimilarity});
 
@@ -57,7 +55,7 @@ class RelationalMlPipeline {
       final ea = byPostKey[a.key];
       final eb = byPostKey[b.key];
       if (ea == null || eb == null || ea.length != eb.length) {
-        return RelationalEngine.ruleBasedSimilarity(a, b);
+        return ruleBasedSimilarity(a, b);
       }
       var dot = 0.0;
       for (var i = 0; i < ea.length; i++) {

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_ml/rasq_ml.dart';
-import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
@@ -76,13 +75,10 @@ final relationalMlProvider = FutureProvider<RelationalMlResult?>((ref) async {
   final gateway = await ref.watch(mlGatewayProvider.future);
   if (gateway == null) return null;
   final home = await ref.watch(timelineProvider(TimelineKind.home).future);
-  final session = ref.read(currentSnsSessionProvider);
-  final supportsLocal = session?.timelines.contains(TimelineKind.local) ?? false;
-  final local = supportsLocal ? ref.watch(timelineProvider(TimelineKind.local)).value : null;
   try {
     final store = await ref.watch(relationalEmaStoreProvider.future);
     final pipeline = RelationalMlPipeline(gateway: gateway, store: store);
-    final result = await pipeline.analyze(home.posts, extraPosts: local?.posts ?? const []);
+    final result = await pipeline.analyze(home.posts);
     await ref.read(sessionStorageProvider).write(relationalEmaStorageKey, jsonEncode(store.toJson()));
     return result;
   } on MlUnavailableException {
@@ -90,25 +86,17 @@ final relationalMlProvider = FutureProvider<RelationalMlResult?>((ref) async {
   }
 });
 
-/// フォロイーTL(home)+ 候補(local があれば)からクラスタを組む。
-/// ML 解析があれば SigLIP 類似度 + Louvain コミュニティ制限で、無ければ
-/// ルールベースで束ねる。
-final relationalClustersProvider = Provider<AsyncValue<List<RelationalCluster>>>((ref) {
+/// フォロイーTL(home)から**会話イベント**を組む (D-027)。
+/// GTL/LTL 候補の連結は廃止(人気話題が複数コミュニティを誤結合するハブに
+/// なるため)。ML 解析があれば SigLIP 類似度と Louvain コミュニティ
+/// (事前分布)がリンク採点に入る。
+final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>((ref) {
   final settings = ref.watch(relationalSettingsProvider);
-  final session = ref.watch(currentSnsSessionProvider);
   final home = ref.watch(timelineProvider(TimelineKind.home));
-  final supportsLocal = session?.timelines.contains(TimelineKind.local) ?? false;
-  final local = supportsLocal ? ref.watch(timelineProvider(TimelineKind.local)) : null;
   final ml = ref.watch(relationalMlProvider).value;
 
   return home.whenData((h) {
-    final followeePosts = h.posts;
-    final followeeKeys = {for (final p in followeePosts) p.key};
-    final candidates = [
-      for (final p in local?.value?.posts ?? const <Post>[])
-        if (!followeeKeys.contains(p.key)) p,
-    ];
-    final engine = RelationalEngine(settings: settings, similarity: ml?.postSimilarity);
-    return engine.build(followeePosts: followeePosts, candidatePosts: candidates, communityOf: ml?.communityOf);
+    final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf);
+    return engine.build(followeePosts: h.posts);
   });
 });

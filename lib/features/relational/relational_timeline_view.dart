@@ -12,16 +12,16 @@ import '../home/timeline_providers.dart';
 import 'relational_engine.dart';
 import 'relational_providers.dart';
 
-/// 「関連」タブ = リレーショナルTL v0 (D-022)。
-/// フォロイーの投稿を特徴語で束ね、LTL の類似投稿を取り込んだ**クラスタカード**を
-/// 活動が新しい順に並べる。カードをタップすると中の投稿(PostRow)を展開する。
-/// しきい値(50〜100)と浮上タイムアウトは右上 ⚙ のスライダーで調整。
+/// 「関連」タブ = リレーショナルTL v1 (D-027、会話イベント方式)。
+/// フォロイーの投稿を「どの直前投稿への暗黙応答か」で会話イベントに束ね、
+/// **イベントカード**を活動が新しい順に並べる。カードをタップすると中の投稿
+/// (PostRow)を展開する。束ねやすさと TTL 上限は右上 ⚙ のスライダーで調整。
 class RelationalTimelineView extends ConsumerWidget {
   const RelationalTimelineView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final clusters = ref.watch(relationalClustersProvider);
+    final events = ref.watch(conversationEventsProvider);
     final settings = ref.watch(relationalSettingsProvider);
     final manager = ref.watch(overlayManagerProvider);
     return Column(children: [
@@ -31,14 +31,14 @@ class RelationalTimelineView extends ConsumerWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(left: RasqSpacing.sm),
-              child: Text('類似度 ${settings.threshold} / ${settings.staleMinutes}分で沈む', style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              child: Text('束ねやすさ ${settings.linkBias} / 会話のテンポに応じて最長${settings.maxTtlMinutes}分で沈む', style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
             ),
           ),
           RasqIconButton(icon: Icons.tune, size: 20, tooltip: 'リレーショナルTL設定', onPressed: () => _openSettings(context, ref, manager)),
         ]),
       ),
       Expanded(
-        child: clusters.when(
+        child: events.when(
           loading: () => const RasqLoading(),
           error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.relationalTimelineBroken, onRetry: () => ref.invalidate(timelineProvider(TimelineKind.home)), retryLabel: '再読み込み'),
           data: (list) => list.isEmpty
@@ -46,7 +46,7 @@ class RelationalTimelineView extends ConsumerWidget {
                   onRefresh: () => ref.read(timelineProvider(TimelineKind.home).notifier).refresh(),
                   child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [
                     SizedBox(height: 120),
-                    RasqEmptyView(title: 'まだ関連の束がありません', hint: 'フォロイーの話題が重なると、ここに束ねて表示します。しきい値を下げると束ねやすくなります'),
+                    RasqEmptyView(title: 'いま進行中の会話はありません', hint: 'フォロイーの空リプや会話が始まると、ここに束ねて表示します。束ねやすさを下げると拾いやすくなります'),
                   ]),
                 )
               : RefreshIndicator(
@@ -55,7 +55,7 @@ class RelationalTimelineView extends ConsumerWidget {
                     physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: list.length,
                     separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (_, i) => _ClusterCard(cluster: list[i]),
+                    itemBuilder: (_, i) => _EventCard(event: list[i]),
                   ),
                 ),
         ),
@@ -72,23 +72,23 @@ class RelationalTimelineView extends ConsumerWidget {
         final store = ref.read(relationalSettingsProvider.notifier);
         return Column(mainAxisSize: MainAxisSize.min, children: [
           RasqSliderListTile(
-            title: '類似度のしきい値',
-            subtitle: 'SigLIP cos 類似度の 50〜100 正規化。低いほど広く束ねる(初期値は実測で調整)',
-            value: s.threshold.toDouble(),
+            title: '束ねやすさ',
+            subtitle: '会話リンク判定のしきい値バイアス(50〜100)。低いほど広く束ねる。しきい値自体はコミュニティ別に自動調整',
+            value: s.linkBias.toDouble(),
             min: 50,
             max: 100,
             divisions: 50,
-            onChanged: (v) => store.set(s.copyWith(threshold: v.round())),
+            onChanged: (v) => store.set(s.copyWith(linkBias: v.round())),
           ),
           RasqSliderListTile(
-            title: '浮上タイムアウト',
-            subtitle: '新しい投稿・リノート・自分の関連投稿へのアクションがこの時間なければ沈む',
-            value: s.staleMinutes.toDouble(),
-            min: 1,
+            title: '沈むまでの最長時間',
+            subtitle: '会話の TTL は投稿間隔から自動調整(テンポの速い空リプは早く沈む)。その上限',
+            value: s.maxTtlMinutes.toDouble(),
+            min: 5,
             max: 60,
-            divisions: 59,
-            valueLabel: '${s.staleMinutes}分',
-            onChanged: (v) => store.set(s.copyWith(staleMinutes: v.round())),
+            divisions: 55,
+            valueLabel: '${s.maxTtlMinutes}分',
+            onChanged: (v) => store.set(s.copyWith(maxTtlMinutes: v.round())),
           ),
           const SizedBox(height: RasqSpacing.md),
         ]);
@@ -97,28 +97,29 @@ class RelationalTimelineView extends ConsumerWidget {
   }
 }
 
-/// クラスタカード: GroupAvatar + 「◯◯+N人」 + 代表本文 + タグ → タップで展開。
-class _ClusterCard extends ConsumerStatefulWidget {
-  const _ClusterCard({required this.cluster});
-  final RelationalCluster cluster;
+/// イベントカード: GroupAvatar + 「◯◯+N人」 + ROOT本文 + 共通エンティティ
+/// → タップで会話(投稿列)を展開。
+class _EventCard extends ConsumerStatefulWidget {
+  const _EventCard({required this.event});
+  final ConversationEvent event;
 
   @override
-  ConsumerState<_ClusterCard> createState() => _ClusterCardState();
+  ConsumerState<_EventCard> createState() => _EventCardState();
 }
 
-class _ClusterCardState extends ConsumerState<_ClusterCard> {
+class _EventCardState extends ConsumerState<_EventCard> {
   bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final c = widget.cluster;
-    final members = c.members;
+    final e = widget.event;
+    final members = e.members;
     final emojis = ref.watch(emojiCacheProvider);
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final others = members.length - 1;
-    final tags = [for (final t in c.tags) if (t.length >= 2) t].take(4).toList();
+    final tags = [for (final t in e.entities) if (t.length >= 2) t].take(4).toList();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       InkWell(
@@ -130,8 +131,8 @@ class _ClusterCardState extends ConsumerState<_ClusterCard> {
             const SizedBox(width: RasqSpacing.md),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(others > 0 ? '${c.seed.author.displayName}+$others人' : c.seed.author.displayName, style: RasqTypography.displayName),
-                RasqRichText(InlineSpans.parse(c.seed.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(others > 0 ? '${e.root.author.displayName}+$others人' : e.root.author.displayName, style: RasqTypography.displayName),
+                RasqRichText(InlineSpans.parse(e.root.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
                 if (tags.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
@@ -141,13 +142,13 @@ class _ClusterCardState extends ConsumerState<_ClusterCard> {
             ),
             Column(children: [
               Icon(_expanded ? Icons.keyboard_arrow_down : Icons.chevron_right, color: scheme.onSurfaceVariant),
-              Text('${c.posts.length}件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              Text('${e.posts.length}件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ]),
           ]),
         ),
       ),
       if (_expanded)
-        for (final p in c.posts) ...[
+        for (final p in e.posts) ...[
           const Divider(indent: RasqSpacing.page * 2),
           Padding(
             padding: const EdgeInsets.only(left: RasqSpacing.page),
