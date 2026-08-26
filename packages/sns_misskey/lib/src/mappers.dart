@@ -49,6 +49,16 @@ abstract final class MisskeyMappers {
         isPublic: j['isPublic'] as bool? ?? false,
       );
 
+  /// Misskey clip (`clips/*` / `users/clips`) → [ClipInfo] (D-032).
+  static ClipInfo clip(Map<String, Object?> j, {required AccountId account, required String host}) => ClipInfo(
+        id: j['id'] as String,
+        name: (j['name'] ?? '').toString(),
+        description: j['description'] as String?,
+        isPublic: j['isPublic'] as bool? ?? false,
+        notesCount: (j['notesCount'] as num?)?.toInt(),
+        owner: j['user'] is Map ? user((j['user'] as Map).cast<String, Object?>(), account: account, host: host) : null,
+      );
+
   static FollowRequest followRequest(Map<String, Object?> j, {required AccountId account, required String host}) => FollowRequest(
         id: j['id'] as String,
         user: user((j['follower'] as Map).cast<String, Object?>(), account: account, host: host),

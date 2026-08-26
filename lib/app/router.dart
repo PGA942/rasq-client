@@ -18,6 +18,7 @@ import '../features/settings/mute_block_screen.dart';
 import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
 import '../features/profile/profile_edit_screen.dart';
+import '../features/clips/clip_timeline_screen.dart';
 import '../features/lists/lists_screens.dart';
 import '../features/bookmarks/bookmarks_screen.dart';
 import '../features/users/follow_requests_screen.dart';
@@ -134,6 +135,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
           GoRoute(path: Routes.bookmarks, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BookmarksScreen()),
+          GoRoute(path: '/clips/detail', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => ClipTimelineScreen(clip: state.extra! as ClipInfo)),
           GoRoute(path: Routes.lists, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListsScreen(), routes: [
             GoRoute(path: 'import', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListImportScreen()),
             GoRoute(path: ':id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => ListDetailScreen(listId: s.pathParameters['id']!, info: s.extra is UserListInfo ? s.extra as UserListInfo : null)),

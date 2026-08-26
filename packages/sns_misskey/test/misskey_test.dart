@@ -116,6 +116,44 @@ void main() {
       await expectLater(flow.complete(), throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', '401')));
     });
 
+
+    test('クリップ (D-032): 一覧/中身/作成/追加/削除', () async {
+      late Map<String, Object?> seenAdd;
+      final clipJson = {'id': 'cl1', 'name': '旅行の候補', 'isPublic': true, 'notesCount': 2, 'user': user('carol')};
+      final c = client({
+        'clips/list': (_) => [clipJson],
+        'users/clips': (b) => b['userId'] == 'carol' ? [clipJson] : [],
+        'clips/show': (b) => clipJson,
+        'clips/notes': (b) => [note('n1'), note('n2')],
+        'clips/create': (b) => {'id': 'cl2', 'name': b['name'], 'isPublic': b['isPublic'], 'notesCount': 0},
+        'clips/add-note': (b) { seenAdd = b; return {}; },
+        'clips/remove-note': (b) => {},
+        'clips/delete': (b) => {},
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+
+      final mine = await s.clips();
+      expect(mine.single.name, '旅行の候補');
+      expect(mine.single.isPublic, isTrue);
+      expect(mine.single.notesCount, 2);
+      expect(mine.single.owner?.displayName, '名前carol');
+      expect(mine.single.isHost, isFalse);
+
+      expect(await s.clips(userId: 'carol'), hasLength(1));
+      expect((await s.clipInfo('cl1')).id, 'cl1');
+
+      final page = await s.clipNotes('cl1', limit: 20);
+      expect(page.items.map((p) => p.id), ['n1', 'n2']);
+      expect(page.nextCursor, isNull, reason: 'limit 未満なら次ページなし');
+
+      final created = await s.createClip('新規', isPublic: true);
+      expect(created.id, 'cl2');
+      await s.addToClip('cl1', 'n9');
+      expect(seenAdd, {'i': 'T', 'clipId': 'cl1', 'noteId': 'n9'});
+      await s.removeFromClip('cl1', 'n9');
+      await s.deleteClip('cl1');
+    });
+
     test('timelineWithStates sends token & untilId, maps done flags', () async {
       late Map<String, Object?> seen;
       final c = client({

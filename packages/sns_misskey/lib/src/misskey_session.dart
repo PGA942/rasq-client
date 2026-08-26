@@ -343,6 +343,38 @@ class MisskeySession extends SnsSessionBase {
   @override
   Future<void> removeFromList(String listId, String userId) => api.call('users/lists/pull', {'listId': listId, 'userId': userId});
 
+  // --- クリップ (D-032: Misskey ネイティブ) ---
+  @override
+  Future<List<ClipInfo>> clips({String? userId}) async => [
+        for (final c in await api.callList(userId == null ? 'clips/list' : 'users/clips', {'userId': ?userId}))
+          MisskeyMappers.clip(c, account: account, host: host),
+      ];
+
+  @override
+  Future<ClipInfo> clipInfo(String clipId) async => MisskeyMappers.clip(await api.callMap('clips/show', {'clipId': clipId}), account: account, host: host);
+
+  @override
+  Future<Page<Post>> clipNotes(String clipId, {String? cursor, int limit = 20}) async {
+    final list = await api.callList('clips/notes', {'clipId': clipId, 'limit': limit, 'untilId': ?cursor});
+    return Page(
+      items: [for (final n in list) MisskeyMappers.note(n, viewer: account, host: host)],
+      nextCursor: list.length < limit ? null : list.last['id'] as String?,
+    );
+  }
+
+  @override
+  Future<ClipInfo> createClip(String name, {String? description, bool isPublic = false}) async =>
+      MisskeyMappers.clip(await api.callMap('clips/create', {'name': name, 'isPublic': isPublic, 'description': ?description}), account: account, host: host);
+
+  @override
+  Future<void> deleteClip(String clipId) => api.call('clips/delete', {'clipId': clipId});
+
+  @override
+  Future<void> addToClip(String clipId, String postId) => api.call('clips/add-note', {'clipId': clipId, 'noteId': postId});
+
+  @override
+  Future<void> removeFromClip(String clipId, String postId) => api.call('clips/remove-note', {'clipId': clipId, 'noteId': postId});
+
   @override
   Future<Page<Post>> favorites({String? cursor, int limit = 20}) async {
     final list = await api.callList('i/favorites', {'limit': limit, 'untilId': ?cursor});

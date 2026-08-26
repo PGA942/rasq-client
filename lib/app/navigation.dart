@@ -38,6 +38,7 @@ extension RasqNavigation on BuildContext {
                     : Routes.home;
   }
 
+  void pushClip(ClipInfo clip) => push('/clips/detail', extra: clip);
   void pushUser(UserSummary user) => push('$_tabBase/user/${Uri.encodeComponent(user.id)}', extra: user);
   void pushFollows(UserSummary user, {required bool followers}) => push('$_tabBase/user/${Uri.encodeComponent(user.id)}/follows${followers ? '?tab=followers' : ''}', extra: user);
   void pushFollowRequests() => push('${Routes.notifications}/requests');

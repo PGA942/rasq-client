@@ -9,6 +9,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
+import '../clips/clip_providers.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../users/user_list.dart';
@@ -52,30 +53,56 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
             error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(listsProvider), retryLabel: '再読み込み'),
             data: (all) {
               final list = all.where((l) => _q.isEmpty || l.name.toLowerCase().contains(_q)).toList();
-              if (list.isEmpty) return const RasqEmptyView(title: 'リストはありません', hint: '＋でリストを作成できます');
-              return ListView.separated(
-                itemCount: list.length,
-                separatorBuilder: (_, _) => const Divider(),
-                itemBuilder: (context, i) => InkWell(
-                  onTap: () => context.push('/lists/${Uri.encodeComponent(list[i].id)}', extra: list[i]),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.md),
-                    child: Row(children: [
-                      Container(width: 48, height: 48, decoration: BoxDecoration(color: scheme.surfaceContainerHighest, shape: BoxShape.circle), child: const Icon(Icons.list_alt_outlined)),
-                      const SizedBox(width: RasqSpacing.md),
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(list[i].name, style: RasqTypography.displayName),
-                          Text('#${list[i].id}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
-                          Text('${list[i].memberIds.length} ユーザー', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-                        ]),
-                      ),
-                      RasqIconButton(icon: Icons.more_horiz, size: 20, onPressed: () {}, tooltip: 'メニュー'),
-                      const Icon(Icons.chevron_right),
-                    ]),
-                  ),
-                ),
-              );
+              // クリップ(ネイティブ + RASQ 横断)もリスト画面にまとめて出す
+              // (D-032: ユーザーページ以外の入口。詳細はクリップTL)。
+              final clips = ref.watch(myClipsProvider).where((c) => _q.isEmpty || c.name.toLowerCase().contains(_q)).toList();
+              if (list.isEmpty && clips.isEmpty) return const RasqEmptyView(title: 'リストはありません', hint: '＋でリストを作成できます');
+              Widget listRow(UserListInfo l) => InkWell(
+                    onTap: () => context.push('/lists/${Uri.encodeComponent(l.id)}', extra: l),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.md),
+                      child: Row(children: [
+                        Container(width: 48, height: 48, decoration: BoxDecoration(color: scheme.surfaceContainerHighest, shape: BoxShape.circle), child: const Icon(Icons.list_alt_outlined)),
+                        const SizedBox(width: RasqSpacing.md),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(l.name, style: RasqTypography.displayName),
+                            Text('#${l.id}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
+                            Text('${l.memberIds.length} ユーザー', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                          ]),
+                        ),
+                        RasqIconButton(icon: Icons.more_horiz, size: 20, onPressed: () {}, tooltip: 'メニュー'),
+                        const Icon(Icons.chevron_right),
+                      ]),
+                    ),
+                  );
+              Widget clipRow(ClipInfo c) => InkWell(
+                    onTap: () => context.pushClip(c),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.md),
+                      child: Row(children: [
+                        Container(width: 48, height: 48, decoration: BoxDecoration(color: scheme.surfaceContainerHighest, shape: BoxShape.circle), child: Icon(c.isHost ? Icons.workspaces_outlined : Icons.collections_bookmark_outlined)),
+                        const SizedBox(width: RasqSpacing.md),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(c.name, style: RasqTypography.displayName),
+                            Text([if (c.notesCount != null) '${c.notesCount}件', if (c.isHost) 'RASQ(SNS 横断)' else 'クリップ'].join(' ・ '), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                          ]),
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ]),
+                    ),
+                  );
+              return ListView(children: [
+                if (clips.isNotEmpty) ...[
+                  const RasqSectionHeader(title: 'クリップ', topMargin: 0),
+                  for (final c in clips) ...[clipRow(c), const Divider(height: 1)],
+                ],
+                if (list.isNotEmpty) ...[
+                  if (clips.isNotEmpty) const RasqSectionHeader(title: 'リスト', topMargin: RasqSpacing.md),
+                  for (final l in list) ...[listRow(l), const Divider(height: 1)],
+                ],
+              ]);
             },
           ),
         ),

@@ -15,6 +15,7 @@ import '../../app/router.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../text/inline_spans.dart';
+import '../clips/clip_providers.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import 'user_list.dart';
@@ -82,7 +83,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
                     _UserPosts(userId: p.summary.id, filter: UserPostsFilter.posts, pinned: p.pinnedPosts),
                     _UserPosts(userId: p.summary.id, filter: UserPostsFilter.quotes),
                     _UserPosts(userId: p.summary.id, filter: UserPostsFilter.media),
-                    const RasqEmptyView(title: 'クリップ / Play', hint: 'プラグイン表示(プラグインタイル)は M4'),
+                    _UserClips(userId: p.summary.id),
                   ],
           );
         },
@@ -150,6 +151,37 @@ class _UserPosts extends ConsumerWidget {
               PostRow(post: post, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(post, a, args: args), onTap: () => context.pushPost(post)),
             ]);
           },
+        );
+      },
+    );
+  }
+}
+
+/// クリップタブ (D-032): 対象ユーザーの公開クリップ一覧 → タップでクリップTL。
+/// SNS がクリップ非対応なら従来どおりのプレースホルダー。
+class _UserClips extends ConsumerWidget {
+  const _UserClips({required this.userId});
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final clips = ref.watch(userClipsProvider(userId));
+    final scheme = Theme.of(context).colorScheme;
+    return clips.when(
+      loading: () => const RasqLoading(),
+      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userClipsProvider(userId)), retryLabel: '再読み込み'),
+      data: (list) {
+        if (list == null) return const RasqEmptyView(title: 'クリップ / Play', hint: 'この SNS はクリップに対応していません(プラグインタイルは M4)');
+        if (list.isEmpty) return const RasqEmptyView(title: '公開クリップはありません');
+        return ListView.separated(
+          itemCount: list.length,
+          separatorBuilder: (_, _) => const Divider(height: 1),
+          itemBuilder: (_, i) => RasqListTile(
+            title: list[i].name,
+            subtitle: [if (list[i].notesCount != null) '${list[i].notesCount}件', if (list[i].description?.isNotEmpty == true) list[i].description!].join(' ・ '),
+            leading: Icon(Icons.collections_bookmark_outlined, color: scheme.onSurfaceVariant),
+            onTap: () => context.pushClip(list[i]),
+          ),
         );
       },
     );
