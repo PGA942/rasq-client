@@ -27,7 +27,7 @@ void main() {
     final store = container.read(hostClipsProvider.notifier);
     await container.read(hostClipsProvider.future);
 
-    final clip = await store.createClip('旅行の候補');
+    final clip = await store.createClip('旅行の候補', description: '京都の宿・食・移動');
     await store.addPost(clip.id, post('1', misskey, '京都の宿'));
     await store.addPost(clip.id, post('2', bluesky, 'kyoto hotels'));
     await store.addPost(clip.id, post('1', misskey, '京都の宿')); // 重複は入らない
@@ -47,6 +47,8 @@ void main() {
     addTearDown(container2.dispose);
     final restored = await container2.read(hostClipsProvider.future);
     expect(restored.single.name, '旅行の候補');
+    expect(restored.single.description, '京都の宿・食・移動');
+    expect(restored.single.info.description, '京都の宿・食・移動');
     expect(restored.single.entries.single.postKey, post('1', misskey, '').key);
 
     // KV は D-035 のキー規約。

@@ -74,6 +74,10 @@ abstract class SnsSession {
   Future<void> deleteClip(String clipId);
   Future<void> addToClip(String clipId, String postId);
   Future<void> removeFromClip(String clipId, String postId);
+
+  /// [userId] の Play(Misskey Flash 等)一覧 (D-039)。RASQ 内では実行せず
+  /// **外部リンク**として表示する。非対応 SNS は [UnsupportedError]。
+  Future<List<PlayInfo>> userPlays(String userId);
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20});
   Future<Page<UserSummary>> following(String id, {String? cursor, int limit = 20});
   Future<FollowState> relationship(String userId);
@@ -202,6 +206,8 @@ abstract class SnsSessionBase implements SnsSession {
   Future<void> addToClip(String clipId, String postId) => _unsupported('addToClip');
   @override
   Future<void> removeFromClip(String clipId, String postId) => _unsupported('removeFromClip');
+  @override
+  Future<List<PlayInfo>> userPlays(String userId) => _unsupported('userPlays');
   @override
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) => _unsupported('followers');
   @override

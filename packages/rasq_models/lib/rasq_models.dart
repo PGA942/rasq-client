@@ -18,4 +18,5 @@ export 'src/dm.dart';
 export 'src/reaction.dart';
 export 'src/follow_request.dart';
 export 'src/clip.dart';
+export 'src/play.dart';
 export 'src/user_list_info.dart';

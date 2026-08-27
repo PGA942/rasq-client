@@ -27,6 +27,17 @@ final userClipsProvider = FutureProvider.autoDispose.family<List<ClipInfo>?, Str
   }
 });
 
+/// 指定ユーザーの Play(外部リンク表示、D-039)。非対応 SNS は null。
+final userPlaysProvider = FutureProvider.autoDispose.family<List<PlayInfo>?, String>((ref, userId) async {
+  final s = ref.watch(currentSnsSessionProvider);
+  if (s == null) return const [];
+  try {
+    return await s.userPlays(userId);
+  } on UnsupportedError {
+    return null;
+  }
+});
+
 /// リスト欄の表示設定 KV(D-035 規約: `lists.view.v1`)。
 const listsViewArea = 'lists.view';
 

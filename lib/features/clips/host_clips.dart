@@ -36,22 +36,25 @@ class HostClipEntry {
 
 @immutable
 class HostClip {
-  const HostClip({required this.id, required this.name, required this.createdAt, this.entries = const []});
+  const HostClip({required this.id, required this.name, required this.createdAt, this.description, this.entries = const []});
 
   final String id;
   final String name;
+  final String? description;
   final DateTime createdAt;
   final List<HostClipEntry> entries;
 
-  ClipInfo get info => ClipInfo(id: '$hostClipIdPrefix$id', name: name, notesCount: entries.length, isHost: true);
+  ClipInfo get info => ClipInfo(id: '$hostClipIdPrefix$id', name: name, description: description, notesCount: entries.length, isHost: true);
 
-  HostClip copyWith({String? name, List<HostClipEntry>? entries}) => HostClip(id: id, name: name ?? this.name, createdAt: createdAt, entries: entries ?? this.entries);
+  HostClip copyWith({String? name, String? description, List<HostClipEntry>? entries}) =>
+      HostClip(id: id, name: name ?? this.name, description: description ?? this.description, createdAt: createdAt, entries: entries ?? this.entries);
 
-  Map<String, Object?> toJson() => {'id': id, 'name': name, 'createdAt': createdAt.toIso8601String(), 'entries': [for (final e in entries) e.toJson()]};
+  Map<String, Object?> toJson() => {'id': id, 'name': name, 'description': ?description, 'createdAt': createdAt.toIso8601String(), 'entries': [for (final e in entries) e.toJson()]};
 
   factory HostClip.fromJson(Map<String, Object?> j) => HostClip(
         id: j['id'] as String,
         name: (j['name'] ?? '').toString(),
+        description: j['description'] as String?,
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
         entries: [for (final e in (j['entries'] as List? ?? const [])) HostClipEntry.fromJson((e as Map).cast<String, Object?>())],
       );
@@ -124,8 +127,8 @@ class HostClipsStore extends AsyncNotifier<List<HostClip>> {
     await ref.read(sessionStorageProvider).write(hostClipsStorageKey, jsonEncode([for (final c in next) c.toJson()]));
   }
 
-  Future<HostClip> createClip(String name) async {
-    final clip = HostClip(id: DateTime.now().millisecondsSinceEpoch.toRadixString(36), name: name, createdAt: DateTime.now());
+  Future<HostClip> createClip(String name, {String? description}) async {
+    final clip = HostClip(id: DateTime.now().millisecondsSinceEpoch.toRadixString(36), name: name, description: description, createdAt: DateTime.now());
     await _save([...state.value ?? const <HostClip>[], clip]);
     return clip;
   }

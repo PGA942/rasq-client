@@ -10,7 +10,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
+import '../compose/compose_target.dart';
+import '../compose/composer_sheet.dart';
 import '../compose/emoji_picker_fow.dart';
+import 'reaction_history.dart';
 import '../post/post_menu.dart';
 import 'action_bar_config.dart';
 
@@ -127,6 +130,7 @@ class _PostRowState extends ConsumerState<PostRow> {
     final icon = PostRow.iconFor(a.icon, Icons.circle_outlined);
     final doneIcon = a.doneIcon == null ? null : PostRow.iconFor(a.doneIcon, icon);
     final isReaction = a.genreTag == 'Reaction';
+    final isRepost = a.genreTag == 'Repost';
     return RasqActionBarItem(
       id: a.id,
       label: a.label,
@@ -138,10 +142,53 @@ class _PostRowState extends ConsumerState<PostRow> {
       enabled: st.enabled,
       doneColor: isReaction ? tokens.live : null,
       iconUrl: st.iconUrl,
-      onTap: () => widget.onAction(a).catchError((_) {}),
+      // Repost はデフォルトの**アクションバンドル**(D-039): タップで
+      // リノート / 引用ノートのドロップダウン(ユーザー編集のリスト化とは
+      // 別で、(+) の編集導線には出ない組み込みバンドル)。
+      onTap: isRepost ? null : () => _performReactionAware(a, st),
+      onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : null,
       // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行
-      onLongPress: isReaction ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', onPick: (e) => widget.onAction(a, args: {'reaction': e}).catchError((_) {})) : null,
+      onLongPress: isReaction
+          ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', onPick: (e) {
+                widget.onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
+              })
+          : null,
     );
+  }
+
+  /// 短押し。リアクションは**予測絵文字**を添えて実行する (D-039:
+  /// 事前学習なしのヒューリスティック — 自分の履歴 × 投稿に付いている
+  /// リアクション。reaction-predictor モデル配線後は ml.infer に置換)。
+  void _performReactionAware(ActionDescriptor a, ActionState st) {
+    if (a.genreTag == 'Reaction' && !st.done) {
+      final predicted = ref.read(reactionHistoryProvider.notifier).predictFor(post);
+      widget
+          .onAction(a, args: predicted == null ? const {} : {'reaction': predicted})
+          .then((_) => predicted == null ? null : ref.read(reactionHistoryProvider.notifier).record(predicted))
+          .catchError((_) {});
+      return;
+    }
+    widget.onAction(a).catchError((_) {});
+  }
+
+  /// リノート/引用ノートの組み込みバンドル (D-039)。
+  Future<void> _repostBundle(ActionDescriptor a, ActionState st, Rect anchor) async {
+    final manager = ref.read(overlayManagerProvider);
+    final picked = await manager.showDropdown<String>(
+      id: 'actionbar.repost.${post.key}',
+      anchor: anchor,
+      dense: true,
+      items: [
+        RasqDropdownItem(st.done ? 'リノート解除' : 'リノート', 'renote'),
+        const RasqDropdownItem('引用ノート', 'quote'),
+      ],
+    );
+    switch (picked) {
+      case 'renote':
+        await widget.onAction(a).catchError((_) {});
+      case 'quote':
+        await showComposer(ref, ComposeQuote(post));
+    }
   }
 
   /// アクションリスト(束ね)ボタン: タップでメンバーのドロップダウン。

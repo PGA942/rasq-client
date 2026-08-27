@@ -154,6 +154,22 @@ void main() {
       await s.deleteClip('cl1');
     });
 
+
+    test('Play (D-039): users/flashs → PlayInfo(外部リンク)', () async {
+      final c = client({
+        'users/flashs': (b) => b['userId'] == 'carol'
+            ? [
+                {'id': 'fl1', 'title': 'おみくじ', 'summary': '今日の運勢'},
+              ]
+            : [],
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+      final plays = await s.userPlays('carol');
+      expect(plays.single.title, 'おみくじ');
+      expect(plays.single.summary, '今日の運勢');
+      expect(plays.single.url.toString(), 'https://misskey.test/play/fl1');
+    });
+
     test('timelineWithStates sends token & untilId, maps done flags', () async {
       late Map<String, Object?> seen;
       final c = client({

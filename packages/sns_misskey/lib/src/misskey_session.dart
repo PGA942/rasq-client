@@ -376,6 +376,17 @@ class MisskeySession extends SnsSessionBase {
   Future<void> removeFromClip(String clipId, String postId) => api.call('clips/remove-note', {'clipId': clipId, 'noteId': postId});
 
   @override
+  Future<List<PlayInfo>> userPlays(String userId) async => [
+        for (final f in await api.callList('users/flashs', {'userId': userId}))
+          PlayInfo(
+            id: f['id'] as String,
+            title: (f['title'] ?? '').toString(),
+            summary: f['summary'] as String?,
+            url: Uri.https(host, '/play/${f['id']}'),
+          ),
+      ];
+
+  @override
   Future<Page<Post>> favorites({String? cursor, int limit = 20}) async {
     final list = await api.callList('i/favorites', {'limit': limit, 'untilId': ?cursor});
     return Page(

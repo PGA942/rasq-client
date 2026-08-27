@@ -63,9 +63,11 @@ Future<void> showAddToClipSheet(WidgetRef ref, Post post) async {
   }
 }
 
-/// 新規作成: 名前入力 → ネイティブ / RASQ(SNS 横断)の作成先を選んで追加。
+/// 新規作成: 名前 + 説明文(任意)→ ネイティブ / RASQ(SNS 横断)の作成先を
+/// 選んで追加。説明文はクリップページのヘッダー(EventStyleHeader)に出る。
 Future<void> _createAndAdd(OverlayManager manager, SnsSession? session, HostClipsStore hostStore, Post post) async {
   final controller = TextEditingController();
+  final descController = TextEditingController();
   var toHost = session == null;
   final ok = await manager.showBottomSheet<bool>(
     id: 'clip.create',
@@ -75,6 +77,10 @@ Future<void> _createAndAdd(OverlayManager manager, SnsSession? session, HostClip
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(hintText: 'クリップ名')),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+          child: TextField(controller: descController, maxLines: 2, minLines: 1, decoration: const InputDecoration(hintText: '説明(任意)')),
         ),
         if (session != null)
           RasqSwitchListTile(
@@ -91,12 +97,13 @@ Future<void> _createAndAdd(OverlayManager manager, SnsSession? session, HostClip
     ),
   );
   final name = controller.text.trim();
+  final description = descController.text.trim().isEmpty ? null : descController.text.trim();
   if (ok != true || name.isEmpty) return;
   if (toHost || session == null) {
-    final clip = await hostStore.createClip(name);
+    final clip = await hostStore.createClip(name, description: description);
     await hostStore.addPost(clip.id, post);
   } else {
-    final clip = await session.createClip(name);
+    final clip = await session.createClip(name, description: description);
     await session.addToClip(clip.id, post.id);
   }
 }

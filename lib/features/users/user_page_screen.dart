@@ -157,8 +157,9 @@ class _UserPosts extends ConsumerWidget {
   }
 }
 
-/// クリップタブ (D-032): 対象ユーザーの公開クリップ一覧 → タップでクリップTL。
-/// SNS がクリップ非対応なら従来どおりのプレースホルダー。
+/// クリップ/Play タブ (D-032/D-039): 対象ユーザーの公開クリップ一覧
+/// (タップでクリップTL)+ **Play の外部リンク**(RASQ 内では実行しない)。
+/// SNS がどちらも非対応なら従来どおりのプレースホルダー。
 class _UserClips extends ConsumerWidget {
   const _UserClips({required this.userId});
   final String userId;
@@ -166,23 +167,41 @@ class _UserClips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final clips = ref.watch(userClipsProvider(userId));
+    final plays = ref.watch(userPlaysProvider(userId)).value;
     final scheme = Theme.of(context).colorScheme;
     return clips.when(
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userClipsProvider(userId)), retryLabel: '再読み込み'),
       data: (list) {
-        if (list == null) return const RasqEmptyView(title: 'クリップ / Play', hint: 'この SNS はクリップに対応していません(プラグインタイルは M4)');
-        if (list.isEmpty) return const RasqEmptyView(title: '公開クリップはありません');
-        return ListView.separated(
-          itemCount: list.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (_, i) => RasqListTile(
-            title: list[i].name,
-            subtitle: [if (list[i].notesCount != null) '${list[i].notesCount}件', if (list[i].description?.isNotEmpty == true) list[i].description!].join(' ・ '),
-            leading: Icon(Icons.collections_bookmark_outlined, color: scheme.onSurfaceVariant),
-            onTap: () => context.pushClip(list[i]),
-          ),
-        );
+        if (list == null && plays == null) return const RasqEmptyView(title: 'クリップ / Play', hint: 'この SNS はクリップ・Play に対応していません(プラグインタイルは M4)');
+        if ((list ?? const []).isEmpty && (plays ?? const []).isEmpty) return const RasqEmptyView(title: '公開クリップ・Play はありません');
+        return ListView(children: [
+          if ((list ?? const []).isNotEmpty) ...[
+            const RasqSectionHeader(title: 'クリップ', topMargin: 0),
+            for (final c in list!) ...[
+              RasqListTile(
+                title: c.name,
+                subtitle: [if (c.notesCount != null) '${c.notesCount}件', if (c.description?.isNotEmpty == true) c.description!].join(' ・ '),
+                leading: Icon(Icons.collections_bookmark_outlined, color: scheme.onSurfaceVariant),
+                onTap: () => context.pushClip(c),
+              ),
+              const Divider(height: 1),
+            ],
+          ],
+          if ((plays ?? const []).isNotEmpty) ...[
+            const RasqSectionHeader(title: 'Play'),
+            for (final p in plays!) ...[
+              RasqListTile(
+                title: p.title,
+                subtitle: p.summary,
+                leading: Icon(Icons.play_circle_outline, color: scheme.onSurfaceVariant),
+                trailing: const Icon(Icons.north_east, size: 18),
+                onTap: () => launchUrl(p.url, mode: LaunchMode.externalApplication),
+              ),
+              const Divider(height: 1),
+            ],
+          ],
+        ]);
       },
     );
   }

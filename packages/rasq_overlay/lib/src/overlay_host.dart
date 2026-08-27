@@ -198,27 +198,43 @@ class _FowPanel extends StatelessWidget {
 
 /// Positions a dropdown next to its anchor, flipping horizontally/vertically
 /// when it would overflow (「スクリーン端で位置反転」).
+///
+/// `LayoutBuilder → Positioned` の形は ParentDataWidget 違反(Positioned は
+/// Stack の直下限定)で、開くたびに debug 例外が出ていた —
+/// [CustomSingleChildLayout] のデリゲートで座標計算する形に修正 (D-039)。
 class _AnchoredDropdown extends StatelessWidget {
   const _AnchoredDropdown({required this.anchor, required this.child});
   final Rect anchor;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final size = constraints.biggest;
-      final openDown = anchor.bottom + 200 <= size.height || anchor.top < size.height / 2;
-      final openRight = anchor.left + 220 <= size.width;
-      return Positioned(
-        top: openDown ? anchor.bottom : null,
-        bottom: openDown ? null : size.height - anchor.top,
-        left: openRight ? anchor.left : null,
-        right: openRight ? null : size.width - anchor.right,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: size.width * 0.8, maxHeight: size.height * 0.6),
-          child: child,
-        ),
+  Widget build(BuildContext context) => Positioned.fill(
+        child: CustomSingleChildLayout(delegate: _DropdownLayout(anchor), child: child),
       );
-    });
+}
+
+class _DropdownLayout extends SingleChildLayoutDelegate {
+  const _DropdownLayout(this.anchor);
+  final Rect anchor;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) => BoxConstraints(
+        maxWidth: constraints.maxWidth * 0.8,
+        maxHeight: constraints.maxHeight * 0.6,
+      );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final openDown = anchor.bottom + 200 <= size.height || anchor.top < size.height / 2;
+    final openRight = anchor.left + 220 <= size.width;
+    final top = openDown ? anchor.bottom : anchor.top - childSize.height;
+    final left = openRight ? anchor.left : anchor.right - childSize.width;
+    return Offset(
+      left.clamp(0.0, (size.width - childSize.width).clamp(0.0, double.infinity)),
+      top.clamp(0.0, (size.height - childSize.height).clamp(0.0, double.infinity)),
+    );
   }
+
+  @override
+  bool shouldRelayout(_DropdownLayout oldDelegate) => oldDelegate.anchor != anchor;
 }
