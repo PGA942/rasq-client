@@ -7,6 +7,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
+import '../clips/clip_providers.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 
@@ -29,17 +30,37 @@ class BookmarksScreen extends ConsumerWidget {
       body: favs.when(
         loading: () => const RasqLoading(),
         error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(favoritesProvider), retryLabel: '再読み込み'),
-        data: (posts) => posts.isEmpty
-            ? const RasqEmptyView(title: 'ブックマークはありません', hint: '投稿メニューの「お気に入り」で追加できます')
-            : RefreshIndicator(
-                onRefresh: () => ref.refresh(favoritesProvider.future),
-                child: ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: posts.length,
-                  separatorBuilder: (_, _) => const Divider(),
-                  itemBuilder: (_, i) => PostRow(post: posts[i], actions: actions, onAction: (a, {args = const {}}) => notifier.perform(posts[i], a, args: args), onTap: () => context.pushPost(posts[i])),
-                ),
-              ),
+        data: (posts) {
+          // 自分のための保存の置き場 (D-032 改): RASQ 横断クリップと非公開
+          // ネイティブクリップはリスト欄ではなくここに並ぶ。
+          final clips = ref.watch(bookmarkClipsProvider);
+          final scheme = Theme.of(context).colorScheme;
+          if (posts.isEmpty && clips.isEmpty) {
+            return const RasqEmptyView(title: 'ブックマークはありません', hint: '投稿メニューの「お気に入り」「クリップに追加」で集められます');
+          }
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(favoritesProvider.future),
+            child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
+              if (clips.isNotEmpty) ...[
+                const RasqSectionHeader(title: 'クリップ', topMargin: 0),
+                for (final c in clips) ...[
+                  RasqListTile(
+                    title: c.name,
+                    subtitle: [if (c.notesCount != null) '${c.notesCount}件', if (c.isHost) 'RASQ(SNS 横断)' else '非公開クリップ'].join(' ・ '),
+                    leading: Icon(c.isHost ? Icons.workspaces_outlined : Icons.lock_outline, color: scheme.onSurfaceVariant),
+                    onTap: () => context.pushClip(c),
+                  ),
+                  const Divider(height: 1),
+                ],
+                if (posts.isNotEmpty) const RasqSectionHeader(title: 'お気に入り'),
+              ],
+              for (final p in posts) ...[
+                PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)),
+                const Divider(),
+              ],
+            ]),
+          );
+        },
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/features/clips/clip_timeline_screen.dart';
 import 'package:rasq_client/features/clips/host_clips.dart';
+import 'package:rasq_client/features/clips/index_toc.dart';
 import 'package:rasq_client/session/session_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -34,25 +35,27 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // ヘッダー + 目次 + 全 3 投稿。
-    expect(find.text('旅行の候補'), findsOneWidget);
+    // ヘッダー(アプリバー + リレーショナルページ準拠ブロック)+ 目次 + 全 3 投稿。
+    expect(find.text('旅行の候補'), findsNWidgets(2));
     expect(find.text('目次'), findsOneWidget);
-    expect(find.text('#京都旅行'), findsOneWidget);
     expect(find.text('2件'), findsOneWidget);
     expect(find.textContaining('宿を探す'), findsOneWidget);
-    expect(find.textContaining('ラテアート'), findsOneWidget);
+    expect(find.textContaining('ラテアート'), findsWidgets);
 
-    // 章をタップ → その章だけに絞り込み(元の所属は変えない、表示だけ)。
-    await tester.tap(find.text('#京都旅行'));
+    // 章をタップ(TOC 内のラベル。ヘッダーのチップにも同語が出る)→
+    // その章だけに絞り込み(元の所属は変えない、表示だけ)。
+    final tocLabel = find.descendant(of: find.byType(VirtualIndexToc), matching: find.text('#京都旅行'));
+    expect(tocLabel, findsOneWidget);
+    await tester.tap(tocLabel);
     await tester.pumpAndSettle();
     expect(find.textContaining('宿を探す'), findsOneWidget);
-    expect(find.textContaining('ラテアート'), findsNothing);
+    expect(find.textContaining('のラテアート'), findsNothing);
     expect(find.text('絞り込み中'), findsOneWidget);
 
     // もう一度タップで解除。
-    await tester.tap(find.text('#京都旅行'));
+    await tester.tap(tocLabel);
     await tester.pumpAndSettle();
-    expect(find.textContaining('ラテアート'), findsOneWidget);
+    expect(find.textContaining('のラテアート'), findsOneWidget);
     expect(find.text('絞り込み中'), findsNothing);
   });
 }

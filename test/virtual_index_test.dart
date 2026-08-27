@@ -74,6 +74,46 @@ void main() {
     });
   });
 
+  group('見出しヘルパー (D-037)', () {
+    test('sharedHeadline は最共有の実在語、共有が無ければ null', () {
+      final posts = [
+        post('1', 'a', 'ストラトローンチの機体が好き'),
+        post('2', 'b', 'ストラトローンチの機体、翼が長い', at: const Duration(minutes: 1)),
+      ];
+      expect(sharedHeadline(posts), isNotNull);
+      expect(sharedHeadline([post('1', 'a', '眠い'), post('2', 'b', '腹へった')]), isNull);
+    });
+
+    test('topSharedLabels は共有ラベルを重複表層語を寄せて返す', () {
+      final posts = [
+        post('1', 'a', '#打上げ ストラトローンチの機体が好き'),
+        post('2', 'b', '#打上げ ストラトローンチの機体、翼が長い', at: const Duration(minutes: 1)),
+      ];
+      final labels = topSharedLabels(posts);
+      expect(labels, contains('#打上げ'));
+      // 「ストラトローンチ」系は 1 つに寄る(包含関係の重複を出さない)。
+      expect(labels.where((l) => l.contains('ストラトローンチ')).length, lessThanOrEqualTo(1));
+      expect(labels.length, lessThanOrEqualTo(4));
+    });
+  });
+
+  group('リストTL の目次「いま話されていること」 (D-036)', () {
+    test('会話イベントが章になり、単発投稿は 1 バケツにまとまる', () {
+      final posts = [
+        post('1', 'a', 'ストラトローンチの配信見てる'),
+        post('2', 'b', 'ストラトローンチの配信、画角すごい', at: const Duration(minutes: 1)),
+        post('3', 'c', '今日は眠いだけの独り言', at: const Duration(minutes: 2)),
+      ];
+      final entries = indexForListTimeline(posts, now: base.add(const Duration(minutes: 3)));
+      expect(entries, hasLength(2));
+      expect(entries.first.labelSource, isNot('fallback'));
+      expect(entries.first.count, 2);
+      final singles = entries.last;
+      expect(singles.label, '単発投稿');
+      expect(singles.count, 1);
+    });
+  });
+
   group('会話イベント → 目次 (リスト/TL 用)', () {
     test('共有エンティティがあれば命名、無ければ「関連投稿 N件」の仮ラベル', () {
       final named = ConversationEvent.root(post('1', 'a', 'ストラトローンチの配信見てる'));

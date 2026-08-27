@@ -6,10 +6,13 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../session/session_providers.dart';
 import '../../shell/headers.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../relational/relational_event_screen.dart';
 import 'host_clips.dart';
+import 'index_toc.dart';
 import 'virtual_index.dart';
 
 /// クリップTL (D-032/D-036)。ネイティブクリップとホスト横断クリップの
@@ -30,7 +33,6 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
   bool _loading = false;
   Object? _error;
   String? _selectedEntry;
-  bool _indexOpen = true;
 
   bool get _isHost => widget.clip.isHost;
 
@@ -69,14 +71,20 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     if (_isHost) ref.watch(hostClipsProvider); // 追加/削除に追従
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final posts = _posts ?? const <Post>[];
     final index = buildClipIndex(posts);
-    final selected = _selectedEntry == null ? null : _findEntry(index, _selectedEntry!);
+    final selected = findIndexEntry(index, _selectedEntry);
     final visible = selected == null ? posts : [for (final p in posts) if (selected.postKeys.contains(p.key)) p];
+
+    // ヘッダーはリレーショナルページと同じブロック(D-037):
+    // 参加メンバー + 実在語見出し + 説明 + キーワードチップ。
+    final selfKey = ref.watch(currentUserProvider).key;
+    final memberSeen = <String>{};
+    final members = [for (final p in posts) if (memberSeen.add(p.author.key)) p.author];
+    final avatars = [for (final u in members) if (u.key != selfKey) u];
 
     return Scaffold(
       appBar: RasqPageHeader(title: widget.clip.name),
@@ -89,7 +97,18 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
                   : RefreshIndicator(
                       onRefresh: () => _load(),
                       child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
-                        if (index.isNotEmpty) _tableOfContents(index, scheme),
+                        EventStyleHeader(
+                          members: avatars.isEmpty ? members : avatars,
+                          title: widget.clip.name,
+                          caption: [
+                            '${widget.clip.notesCount ?? posts.length}件',
+                            if (_isHost) 'RASQ クリップ(SNS 横断)' else if (!widget.clip.isPublic) '非公開クリップ' else if (widget.clip.owner != null) widget.clip.owner!.displayName,
+                          ].join(' ・ '),
+                          headline: sharedHeadline(posts),
+                          description: widget.clip.description,
+                          chips: topSharedLabels(posts),
+                        ),
+                        VirtualIndexToc(entries: index, selectedId: _selectedEntry, onSelect: (id) => setState(() => _selectedEntry = id)),
                         for (final p in visible) ...[
                           PostRow(
                             post: p,
@@ -106,61 +125,5 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
                       ]),
                     ),
     );
-  }
-
-  IndexEntry? _findEntry(List<IndexEntry> entries, String id) {
-    for (final e in entries) {
-      if (e.id == id) return e;
-      for (final c in e.children) {
-        if (c.id == id) return c;
-      }
-    }
-    return null;
-  }
-
-  /// 仮想目次: 実在語ラベル + 件数。最大 2 階層。タップで絞り込み(トグル)。
-  Widget _tableOfContents(List<IndexEntry> index, ColorScheme scheme) {
-    Widget row(IndexEntry e, {bool child = false}) {
-      final active = _selectedEntry == e.id;
-      return InkWell(
-        onTap: () => setState(() => _selectedEntry = active ? null : e.id),
-        child: Container(
-          padding: EdgeInsets.fromLTRB(RasqSpacing.page + (child ? RasqSpacing.lg : 0), 6, RasqSpacing.page, 6),
-          color: active ? scheme.primary.withValues(alpha: 0.08) : null,
-          child: Row(children: [
-            Icon(child ? Icons.subdirectory_arrow_right : (e.labelSource == 'fallback' ? Icons.more_horiz : Icons.tag), size: 16, color: scheme.onSurfaceVariant),
-            const SizedBox(width: RasqSpacing.sm),
-            Expanded(child: Text(e.label, style: RasqTypography.bodySmall.copyWith(fontWeight: active ? FontWeight.w700 : null, color: e.labelSource == 'fallback' ? scheme.onSurfaceVariant : null))),
-            Text('${e.count}件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-          ]),
-        ),
-      );
-    }
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      InkWell(
-        onTap: () => setState(() => _indexOpen = !_indexOpen),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 4),
-          child: Row(children: [
-            Icon(Icons.toc, size: 18, color: scheme.onSurfaceVariant),
-            const SizedBox(width: RasqSpacing.sm),
-            Text('目次', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w700)),
-            if (_selectedEntry != null) ...[
-              const SizedBox(width: RasqSpacing.sm),
-              Text('絞り込み中', style: RasqTypography.caption.copyWith(color: scheme.primary)),
-            ],
-            const Spacer(),
-            AnimatedRotation(turns: _indexOpen ? 0 : -0.25, duration: const Duration(milliseconds: 150), child: Icon(Icons.keyboard_arrow_down, size: 18, color: scheme.onSurfaceVariant)),
-          ]),
-        ),
-      ),
-      if (_indexOpen)
-        for (final e in index) ...[
-          row(e),
-          for (final c in e.children) row(c, child: true),
-        ],
-      const Divider(),
-    ]);
   }
 }

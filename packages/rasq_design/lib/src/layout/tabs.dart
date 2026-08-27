@@ -22,7 +22,12 @@ class RasqTabItem {
 
 /// Tab bar honouring the 4/5/10 thresholds. The selected tab gets a `v`
 /// chevron like the wireframes (「∨引用」「∨フォロワー」).
-class RasqTabs extends StatelessWidget implements PreferredSizeWidget {
+///
+/// StatefulWidget なのはアンカー計測用の GlobalKey を **State(=マウント毎)**
+/// に持たせるため — ウィジェットインスタンスに `late final` で持つと、
+/// ピン留めヘッダー(SliverPersistentHeader)が同一インスタンスを再マウント
+/// する瞬間に「GlobalKey used multiple times」で落ちる。
+class RasqTabs extends StatefulWidget implements PreferredSizeWidget {
   RasqTabs({
     super.key,
     required List<RasqTabItem> items,
@@ -48,11 +53,37 @@ class RasqTabs extends StatelessWidget implements PreferredSizeWidget {
 
   bool get isScrollable => mode == RasqTabsMode.extensible && items.length >= scrollThreshold;
 
-  late final List<GlobalKey> _keys = [for (var i = 0; i < items.length; i++) GlobalKey(debugLabel: 'tab$i')];
-
   @override
   /// Tab height + TabBar indicator weight (2).
   Size get preferredSize => const Size.fromHeight(RasqSizes.minTap + 2);
+
+  @override
+  State<RasqTabs> createState() => _RasqTabsState();
+}
+
+class _RasqTabsState extends State<RasqTabs> {
+  List<GlobalKey> _keys = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _rebuildKeys();
+  }
+
+  @override
+  void didUpdateWidget(RasqTabs old) {
+    super.didUpdateWidget(old);
+    if (old.items.length != widget.items.length) _rebuildKeys();
+  }
+
+  void _rebuildKeys() => _keys = [for (var i = 0; i < widget.items.length; i++) GlobalKey(debugLabel: 'tab$i')];
+
+  List<RasqTabItem> get items => widget.items;
+  bool get isScrollable => widget.isScrollable;
+  bool get showChevron => widget.showChevron;
+  ValueChanged<int>? get onTap => widget.onTap;
+  void Function(int index, Rect anchor)? get onSelectedTabTap => widget.onSelectedTabTap;
+  TabController? get controller => widget.controller;
 
   @override
   Widget build(BuildContext context) {

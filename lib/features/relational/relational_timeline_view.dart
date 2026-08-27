@@ -5,10 +5,11 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
-import '../../app/navigation.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
-import '../home/post_row.dart';
+import '../clips/virtual_index.dart';
 import '../home/timeline_providers.dart';
 import 'relational_engine.dart';
 import 'relational_providers.dart';
@@ -310,79 +311,57 @@ class _TuningPanelState extends ConsumerState<_TuningPanel> {
   }
 }
 
-/// イベントカード: GroupAvatar + 「◯◯+N人」 + ROOT本文 + 共通エンティティ
-/// → タップで会話(投稿列)を展開。
-class _EventCard extends ConsumerStatefulWidget {
+/// イベントタイル (D-037): GroupAvatar + 「◯◯+N人」+ **実在語の見出し** +
+/// 1 行要約(要約が無ければ ROOT 本文)。タップで**リレーショナルページ**へ
+/// 遷移する(以前のドロップダウン展開は廃止 — 1行/3行要約を分けるため)。
+class _EventCard extends ConsumerWidget {
   const _EventCard({required this.event});
   final ConversationEvent event;
 
   @override
-  ConsumerState<_EventCard> createState() => _EventCardState();
-}
-
-class _EventCardState extends ConsumerState<_EventCard> {
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final e = widget.event;
+    final e = event;
     final members = e.members;
     final emojis = ref.watch(emojiCacheProvider);
-    final session = ref.watch(currentSnsSessionProvider);
-    final actions = session?.actions ?? const <ActionDescriptor>[];
     // 自分も会話に含まれるが、アイコンはタイルに出さない(全員自分なら残す)。
     final selfKey = ref.watch(currentUserProvider).key;
     final avatarUsers = [for (final u in members) if (u.key != selfKey) u];
     final shownUsers = avatarUsers.isEmpty ? members : avatarUsers;
     final others = members.length - 1;
-    final tags = [for (final t in e.entities) if (t.length >= 2) t].take(4).toList();
-    // ASTell 要約(実行手段が無ければ null → ROOT 本文のみ)。
+    final headline = sharedHeadline(e.posts);
+    final tags = topSharedLabels(e.posts);
+    // ASTell 要約(1 行。実行手段が無ければ ROOT 本文)。
     final summary = ref.watch(eventSummaryProvider(e.id)).value;
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      InkWell(
-        onTap: () => setState(() => _expanded = !_expanded),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.sm, RasqSpacing.sm),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            RasqGroupAvatar(users: shownUsers, size: RasqSizes.avatarMd, overflowCount: shownUsers.length > 3 ? shownUsers.length - 3 : null),
-            const SizedBox(width: RasqSpacing.md),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(others > 0 ? '${e.root.author.displayName}+$others人' : e.root.author.displayName, style: RasqTypography.displayName),
-                if (summary != null)
-                  Text(summary, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant, fontStyle: FontStyle.italic), maxLines: 2, overflow: TextOverflow.ellipsis)
-                else
-                  RasqRichText(InlineSpans.parse(e.root.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
-                if (tags.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Wrap(spacing: 6, children: [for (final t in tags) Text('#$t', style: RasqTypography.caption.copyWith(color: RasqTokens.of(context).link))]),
-                  ),
-              ]),
-            ),
-            Column(children: [
-              Icon(_expanded ? Icons.keyboard_arrow_down : Icons.chevron_right, color: scheme.onSurfaceVariant),
-              Text('${e.posts.length}件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+    return InkWell(
+      onTap: () => context.push('/relational/event', extra: e),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.sm, RasqSpacing.sm),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          RasqGroupAvatar(users: shownUsers, size: RasqSizes.avatarMd, overflowCount: shownUsers.length > 3 ? shownUsers.length - 3 : null),
+          const SizedBox(width: RasqSpacing.md),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(others > 0 ? '${e.root.author.displayName}+$others人' : e.root.author.displayName, style: RasqTypography.displayName),
+              if (headline != null) Text(headline, style: RasqTypography.displayName.copyWith(fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (summary != null)
+                Text(summary, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.ellipsis)
+              else
+                RasqRichText(InlineSpans.parse(e.root.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (tags.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Wrap(spacing: 6, children: [for (final t in tags) Text(t, style: RasqTypography.caption.copyWith(color: RasqTokens.of(context).link))]),
+                ),
             ]),
-          ]),
-        ),
-      ),
-      if (_expanded)
-        for (final p in e.posts) ...[
-          const Divider(indent: RasqSpacing.page * 2),
-          Padding(
-            padding: const EdgeInsets.only(left: RasqSpacing.page),
-            child: PostRow(
-              post: p,
-              actions: actions,
-              onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args),
-              onTap: () => context.pushPost(p),
-              dense: true,
-            ),
           ),
-        ],
-    ]);
+          Column(children: [
+            Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+            Text('${e.posts.length}件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          ]),
+        ]),
+      ),
+    );
   }
 }

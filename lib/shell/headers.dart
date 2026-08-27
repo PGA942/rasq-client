@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 
@@ -96,7 +97,23 @@ class RasqPageHeader extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final bar = _HeaderBar(
       leading: Row(mainAxisSize: MainAxisSize.min, children: [
-        RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, onPressed: onBack ?? () => Navigator.of(context).maybePop(), tooltip: '戻る'),
+        // 既定の戻るは GoRouter を優先する — go_router 管理下のネスト
+        // ナビゲータを直接 pop すると `!_debugLocked` アサーションで落ちる
+        // ことがある(リストページ等の戻るボタン)。
+        RasqIconButton(
+          icon: Icons.arrow_back_ios_new,
+          size: 18,
+          onPressed: onBack ??
+              () {
+                final router = GoRouter.maybeOf(context);
+                if (router?.canPop() ?? false) {
+                  router!.pop();
+                } else {
+                  Navigator.of(context).maybePop();
+                }
+              },
+          tooltip: '戻る',
+        ),
         if (leadingAvatar != null) RasqAvatar(imageUrl: leadingAvatar!.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: leadingAvatar!.displayName),
       ]),
       middle: Text(title, style: RasqTypography.title, overflow: TextOverflow.ellipsis),

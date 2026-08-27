@@ -10,8 +10,11 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../clips/clip_providers.dart';
+import '../clips/index_toc.dart';
+import '../clips/virtual_index.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../settings/settings_dsl.dart';
 import '../users/user_list.dart';
 
 final listsProvider = FutureProvider.autoDispose<List<UserListInfo>>((ref) async {
@@ -37,25 +40,64 @@ class ListsScreen extends ConsumerStatefulWidget {
 
 class _ListsScreenState extends ConsumerState<ListsScreen> {
   String _q = '';
+  final _controller = TextEditingController();
+  final _focus = FocusNode();
+  bool _filterOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() => setState(() => _q = _controller.text.trim().toLowerCase()));
+    _focus.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final lists = ref.watch(listsProvider);
     final manager = ref.watch(overlayManagerProvider);
     final scheme = Theme.of(context).colorScheme;
+    // 表示設定(非公開クリップ)は KV `lists.view.v1` に永続化。
+    final viewSettings = ref.watch(settingsAreaProvider(listsViewArea)).value ?? const <String, Object?>{};
+    final showPrivate = viewSettings['showPrivateClips'] == true;
     return Scaffold(
       appBar: RasqPageHeader(title: 'リスト', actions: [RasqIconButton(icon: Icons.download_outlined, onPressed: () => context.push('/lists/import'), tooltip: 'リストのインポート')], onMore: () {}),
       body: Column(children: [
-        Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm), child: RasqSearchBar(hintText: 'ActivityPub 荒らし', onChanged: (v) => setState(() => _q = v.trim().toLowerCase()))),
+        // 検索ページと同じ一体型入力欄 (D-026 部品): 下方向に伸びて表示設定
+        // チップが入る。非公開クリップは既定で出さない(ここで切替)。
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
+          child: RasqExpandableSearchBox(
+            expanded: _filterOpen || _focus.hasFocus || showPrivate,
+            controller: _controller,
+            focusNode: _focus,
+            hintText: 'リスト・クリップを検索',
+            onDropdownTap: () => setState(() => _filterOpen = !_filterOpen),
+            filterChips: [
+              RasqFilterChipItem(
+                label: '非公開クリップを表示',
+                selected: showPrivate,
+                onTap: () => ref.read(settingsAreaProvider(listsViewArea).notifier).set('showPrivateClips', !showPrivate),
+              ),
+            ],
+          ),
+        ),
         Expanded(
           child: lists.when(
             loading: () => const RasqLoading(),
             error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(listsProvider), retryLabel: '再読み込み'),
             data: (all) {
               final list = all.where((l) => _q.isEmpty || l.name.toLowerCase().contains(_q)).toList();
-              // クリップ(ネイティブ + RASQ 横断)もリスト画面にまとめて出す
-              // (D-032: ユーザーページ以外の入口。詳細はクリップTL)。
-              final clips = ref.watch(myClipsProvider).where((c) => _q.isEmpty || c.name.toLowerCase().contains(_q)).toList();
+              // クリップもリスト画面にまとめて出す(D-032: ユーザーページ以外の
+              // 入口。詳細はクリップTL)。既定は公開ネイティブのみ — 非公開は
+              // 入力欄のフィルタで表示切替、RASQ 横断はブックマーク欄へ。
+              final clips = ref.watch(listsClipsProvider).where((c) => _q.isEmpty || c.name.toLowerCase().contains(_q)).toList();
               if (list.isEmpty && clips.isEmpty) return const RasqEmptyView(title: 'リストはありません', hint: '＋でリストを作成できます');
               Widget listRow(UserListInfo l) => InkWell(
                     onTap: () => context.push('/lists/${Uri.encodeComponent(l.id)}', extra: l),
@@ -86,7 +128,7 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(c.name, style: RasqTypography.displayName),
-                            Text([if (c.notesCount != null) '${c.notesCount}件', if (c.isHost) 'RASQ(SNS 横断)' else 'クリップ'].join(' ・ '), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                            Text([if (c.notesCount != null) '${c.notesCount}件', if (c.isHost) 'RASQ(SNS 横断)' else if (!c.isPublic) '非公開クリップ' else 'クリップ'].join(' ・ '), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                           ]),
                         ),
                         const Icon(Icons.chevron_right),
@@ -176,17 +218,44 @@ class ListDetailScreen extends ConsumerWidget {
             error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
             data: (s) => s.posts.isEmpty
                 ? const RasqEmptyView(title: '投稿はありません')
-                : RefreshIndicator(
-                    onRefresh: notifier.refresh,
-                    child: ListView.separated(
-                      itemCount: s.posts.length,
-                      separatorBuilder: (_, _) => const Divider(),
-                      itemBuilder: (_, i) => PostRow(post: s.posts[i], actions: actions, onAction: (a, {args = const {}}) => notifier.perform(s.posts[i], a, args: args), onTap: () => context.pushPost(s.posts[i])),
-                    ),
-                  ),
+                : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier),
           ),
         ]),
       ),
+    );
+  }
+}
+
+/// リストTL の投稿列 + 目次「いま話されていること」(D-036: リストは同じ
+/// メンバーが複数話題を並行するので、会話イベントをそのまま章にする)。
+/// 章タップで絞り込みトグル。単発投稿は 1 つのバケツにまとまる。
+class _ListTimelinePosts extends ConsumerStatefulWidget {
+  const _ListTimelinePosts({required this.posts, required this.actions, required this.notifier});
+  final List<Post> posts;
+  final List<ActionDescriptor> actions;
+  final TimelineNotifier notifier;
+
+  @override
+  ConsumerState<_ListTimelinePosts> createState() => _ListTimelinePostsState();
+}
+
+class _ListTimelinePostsState extends ConsumerState<_ListTimelinePosts> {
+  String? _selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = indexForListTimeline(widget.posts);
+    final selected = findIndexEntry(entries, _selected);
+    final visible = selected == null ? widget.posts : [for (final p in widget.posts) if (selected.postKeys.contains(p.key)) p];
+    return RefreshIndicator(
+      onRefresh: widget.notifier.refresh,
+      child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
+        VirtualIndexToc(entries: entries, selectedId: _selected, onSelect: (id) => setState(() => _selected = id), title: 'いま話されていること', showState: true),
+        for (final p in visible) ...[
+          PostRow(post: p, actions: widget.actions, onAction: (a, {args = const {}}) => widget.notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)),
+          const Divider(),
+        ],
+      ]),
     );
   }
 }

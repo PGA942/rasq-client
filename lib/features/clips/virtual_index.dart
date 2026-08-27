@@ -148,6 +148,78 @@ List<(String, String, List<Post>)> _greedyGroups(List<Post> posts, {required int
   return groups;
 }
 
+/// 投稿集合の見出し(最も多くの投稿に共通する実在語)。2 投稿未満の共有なら
+/// null(無理に命名しない)。リレーショナルページ / イベントタイルの 1 行
+/// 見出しに使う。
+String? sharedHeadline(List<Post> posts) {
+  final counts = <String, (double, int)>{};
+  for (final p in posts) {
+    for (final e in _labelCandidates(p).entries) {
+      final cur = counts[e.key];
+      counts[e.key] = (cur == null ? e.value : (cur.$1 > e.value ? cur.$1 : e.value), (cur?.$2 ?? 0) + 1);
+    }
+  }
+  String? best;
+  var bestScore = 0.0;
+  counts.forEach((label, v) {
+    if (v.$2 < 2) return;
+    final score = v.$1 * v.$2 + label.length * 0.01;
+    if (score > bestScore) {
+      best = label;
+      bestScore = score;
+    }
+  });
+  return best;
+}
+
+/// 上位の共有ラベル(キーワードチップ用、共有数順・最大 [max] 件)。
+List<String> topSharedLabels(List<Post> posts, {int max = 4}) {
+  final counts = <String, (double, int)>{};
+  for (final p in posts) {
+    for (final e in _labelCandidates(p).entries) {
+      final cur = counts[e.key];
+      counts[e.key] = (cur == null ? e.value : (cur.$1 > e.value ? cur.$1 : e.value), (cur?.$2 ?? 0) + 1);
+    }
+  }
+  final shared = [for (final e in counts.entries) if (e.value.$2 >= 2) (e.key, e.value.$1 * e.value.$2)]..sort((a, b) => b.$2.compareTo(a.$2));
+  final out = <String>[];
+  for (final (label, _) in shared) {
+    // ほぼ同じ表層語(包含)は 1 つに寄せる。
+    if (out.any((o) => o.contains(label) || label.contains(o))) continue;
+    out.add(label);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/// リストTL 用の目次「いま話されていること」: 会話イベント(2 投稿以上)を
+/// 章にし、単発投稿は 1 つのバケツにまとめる(アドバイス原文の表示例)。
+List<IndexEntry> indexForListTimeline(List<Post> posts, {ConversationEngine? engine, DateTime? now}) {
+  if (posts.isEmpty) return const [];
+  final e = engine ?? ConversationEngine();
+  final events = e.buildAll(followeePosts: posts, now: now);
+  final multi = [for (final ev in events) if (ev.posts.length >= 2) ev];
+  final entries = indexFromConversationEvents(multi, now: now, settings: e.settings);
+  final singles = [for (final ev in events) if (ev.posts.length < 2) ...ev.posts];
+  if (singles.isNotEmpty) {
+    final sorted = [...singles]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return [
+      ...entries,
+      IndexEntry(
+        id: 'singles',
+        label: '単発投稿',
+        labelSource: 'fallback',
+        postKeys: [for (final p in sorted) p.key],
+        startedAt: sorted.first.createdAt,
+        lastActiveAt: sorted.last.createdAt,
+        confidence: 0.2,
+        state: IndexEntryState.dormant,
+      ),
+    ];
+  }
+  return entries;
+}
+
 /// クリップ用の目次: 長期的な話題を内容ベース(時間窓なし)で束ねる。
 /// 保存時 or 閲覧時に再計算(D-036: クリップ行)。
 List<IndexEntry> buildClipIndex(List<Post> posts, {int minGroupSize = 2, int maxEntries = 8}) {
