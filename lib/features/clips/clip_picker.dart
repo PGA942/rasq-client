@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
 import 'host_clips.dart';
@@ -11,8 +12,12 @@ import 'host_clips.dart';
 /// (SNS 対応時のみ)とホスト横断クリップ(常時)を一つのシートに並べ、
 /// 末尾に新規作成を置く。
 Future<void> showAddToClipSheet(WidgetRef ref, Post post) async {
+  // await 後に ref を触らない: シートが閉じる頃には呼び出し元ウィジェットが
+  // 破棄されていることがある(「Looking up a deactivated widget's ancestor」)。
   final manager = ref.read(overlayManagerProvider);
   final session = ref.read(currentSnsSessionProvider);
+  final hostStore = ref.read(hostClipsProvider.notifier);
+  final hostClips = ref.read(hostClipsProvider).value ?? const <HostClip>[];
   List<ClipInfo> native = const [];
   if (session != null) {
     try {
@@ -23,7 +28,7 @@ Future<void> showAddToClipSheet(WidgetRef ref, Post post) async {
       native = const [];
     }
   }
-  final host = ref.read(hostClipsProvider).value ?? const <HostClip>[];
+  final host = hostClips;
 
   final picked = await manager.showBottomSheet<Object>(
     id: 'clip.add',
@@ -50,18 +55,16 @@ Future<void> showAddToClipSheet(WidgetRef ref, Post post) async {
   if (picked == null) return;
 
   if (picked == #create) {
-    await _createAndAdd(ref, post);
+    await _createAndAdd(manager, session, hostStore, post);
   } else if (picked is ClipInfo) {
     await session?.addToClip(picked.id, post.id);
   } else if (picked is HostClip) {
-    await ref.read(hostClipsProvider.notifier).addPost(picked.id, post);
+    await hostStore.addPost(picked.id, post);
   }
 }
 
 /// 新規作成: 名前入力 → ネイティブ / RASQ(SNS 横断)の作成先を選んで追加。
-Future<void> _createAndAdd(WidgetRef ref, Post post) async {
-  final manager = ref.read(overlayManagerProvider);
-  final session = ref.read(currentSnsSessionProvider);
+Future<void> _createAndAdd(OverlayManager manager, SnsSession? session, HostClipsStore hostStore, Post post) async {
   final controller = TextEditingController();
   var toHost = session == null;
   final ok = await manager.showBottomSheet<bool>(
@@ -90,8 +93,8 @@ Future<void> _createAndAdd(WidgetRef ref, Post post) async {
   final name = controller.text.trim();
   if (ok != true || name.isEmpty) return;
   if (toHost || session == null) {
-    final clip = await ref.read(hostClipsProvider.notifier).createClip(name);
-    await ref.read(hostClipsProvider.notifier).addPost(clip.id, post);
+    final clip = await hostStore.createClip(name);
+    await hostStore.addPost(clip.id, post);
   } else {
     final clip = await session.createClip(name);
     await session.addToClip(clip.id, post.id);

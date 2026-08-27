@@ -101,7 +101,18 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<List<UserSummary>> listMembers(String listId) async => [_posts.last.author];
   @override
+  Future<void> removeFromList(String listId, String userId) async {}
+  @override
   Future<Page<Post>> favorites({String? cursor, int limit = 20}) async => Page(items: _posts.take(1).toList());
+  @override
+  Future<List<ClipInfo>> clips({String? userId}) async => const [
+        ClipInfo(id: 'c-pub', name: '公開クリップ', isPublic: true, notesCount: 2),
+        ClipInfo(id: 'c-priv', name: '内緒のクリップ', notesCount: 1),
+      ];
+  @override
+  Future<ClipInfo> clipInfo(String clipId) async => (await clips()).firstWhere((c) => c.id == clipId);
+  @override
+  Future<Page<Post>> clipNotes(String clipId, {String? cursor, int limit = 20}) async => Page(items: _posts.take(2).toList());
   @override
   Future<List<TrendTag>> trendingTags() async => const [TrendTag(tag: '打上会', usersCount: 117, chart: [1, 3, 2])];
   @override

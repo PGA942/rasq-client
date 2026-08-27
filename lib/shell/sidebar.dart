@@ -67,6 +67,9 @@ class RasqSidebar extends ConsumerWidget {
               ]),
             ),
             const SizedBox(height: RasqSpacing.sm),
+            // 低いウィンドウ(macOS 等)でも溢れないよう、中央部はスクロール領域。
+            Expanded(
+              child: ListView(padding: EdgeInsets.zero, children: [
             // Multi-account switcher: tap to switch (drop-down animation is 未定).
             for (final s in sessions.sessions)
               InkWell(
@@ -91,7 +94,8 @@ class RasqSidebar extends ConsumerWidget {
             RasqListTile(title: 'プラグイン', leading: const Icon(Icons.extension_outlined), chevron: false, onTap: () {}),
             RasqListTile(title: '全ての設定', leading: const Icon(Icons.settings_outlined), chevron: false, onTap: () => go(Routes.settings)),
             RasqListTile(title: 'ヘルプ', leading: const Icon(Icons.help_outline), chevron: false, onTap: () {}),
-            const Spacer(),
+              ]),
+            ),
             RasqListTile(title: 'コンポーネントカタログ (dev)', leading: const Icon(Icons.widgets_outlined), chevron: false, divider: false, onTap: () => go(Routes.catalog)),
             RasqListTile(title: 'WASMプラグイン試験 (dev)', leading: const Icon(Icons.extension_outlined), chevron: false, divider: false, onTap: () => go(Routes.wasmDev)),
             RasqListTile(title: 'Webコンソール', leading: const Icon(Icons.language), chevron: false, divider: false, onTap: () {}),
