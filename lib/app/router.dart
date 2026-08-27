@@ -137,6 +137,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
           GoRoute(path: Routes.bookmarks, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BookmarksScreen()),
+          // タブ外(リスト/クリップ/設定などアプリ直下のページ)から開く
+          // 投稿/ユーザー/トレンドの複製ルート (D-038)。タブ配下の同ルートを
+          // タブ外から push すると StatefulShellRoute のページキーが二重に
+          // なって `!keyReservation.contains(key)` で落ちるため、こちらへ。
+          GoRoute(path: '/post/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => PostDetailScreen(postId: s.pathParameters['id']!, initial: s.extra is Post ? s.extra as Post : null), routes: [
+            GoRoute(path: 'reactions', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => ReactionsScreen(postId: s.pathParameters['id']!, initial: s.extra is Post ? s.extra as Post : null)),
+          ]),
+          GoRoute(path: '/user/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => UserPageScreen(userId: s.pathParameters['id']!, initial: s.extra is UserSummary ? s.extra as UserSummary : null), routes: [
+            GoRoute(
+              path: 'follows',
+              parentNavigatorKey: _appNavigatorKey,
+              builder: (_, s) => FollowsScreen(userId: s.pathParameters['id']!, initialFollowers: s.uri.queryParameters['tab'] == 'followers', user: s.extra is UserSummary ? s.extra as UserSummary : null),
+            ),
+          ]),
+          GoRoute(path: '/trend/:tag', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!)),
           GoRoute(path: '/clips/detail', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => ClipTimelineScreen(clip: state.extra! as ClipInfo)),
           GoRoute(path: '/relational/event', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => RelationalEventScreen(event: state.extra! as ConversationEvent)),
           GoRoute(path: Routes.lists, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListsScreen(), routes: [

@@ -83,6 +83,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
+    // リスト詳細 → 投稿タブ → ノートをタップ(アプリナビゲータ上のページから
+    // タブ配下ルートへの pushPost — 実機で keyReservation が出た操作)。
+    await tester.tap(find.text('Fediverse Banner'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('投稿'));
+    await tester.pumpAndSettle();
+    final note = find.textContaining('犬派');
+    if (note.evaluate().isNotEmpty) {
+      await tester.tap(note.first, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'リストTLからノートを開く');
+      await tester.tap(find.byTooltip('戻る').last, warnIfMissed: false);
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byTooltip('戻る').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // クリップページ → 投稿をタップ(pushPost)/ アバター(pushUser)。
+    await tester.tap(find.text('公開クリップ').first, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    final clipNote = find.textContaining('犬派');
+    if (clipNote.evaluate().isNotEmpty) {
+      await tester.tap(clipNote.first, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'クリップページからノートを開く');
+      await tester.tap(find.byTooltip('戻る').last, warnIfMissed: false);
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byTooltip('戻る').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
     // クリップ行を素早く 2 回タップ(二重 push)。
     await tester.tap(find.text('公開クリップ'));
     await tester.pump(const Duration(milliseconds: 30));
