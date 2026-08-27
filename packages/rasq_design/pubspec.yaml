@@ -1,0 +1,27 @@
+name: rasq_design
+description: RASQ design tokens, theme, and L2 standard components (host-owned).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  rasq_models:
+    path: ../rasq_models
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  # Brand assets (特殊なコンポーネント置き場 → background keyed out, downsized).
+  # Referenced with `package: 'rasq_design'` from `RasqLogo` / `RasqBrandIcon` /
+  # `RasqVerifiedBadge` / `RasqAsTellIcon` in src/components/brand.dart.
+  assets:
+    - assets/brand/

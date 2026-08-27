@@ -1,0 +1,153 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+
+import '../../session/session_providers.dart';
+
+/// アクションリスト(2026-08-25 ワイヤー「アクションリスト化」):
+/// 複数アクションを 1 ボタンに束ねる名前付きリスト。バーではリストが
+/// 1 ボタンとして出て、タップでメンバーのドロップダウンが開く。
+@immutable
+class ActionListDef {
+  const ActionListDef({required this.id, required this.name, required this.memberIds});
+
+  final String id;
+  final String name;
+  final List<String> memberIds;
+
+  Map<String, Object?> toJson() => {'id': id, 'name': name, 'memberIds': memberIds};
+
+  factory ActionListDef.fromJson(Map<String, Object?> json) => ActionListDef(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        memberIds: [for (final m in (json['memberIds'] as List? ?? const [])) m as String],
+      );
+}
+
+/// バーの 1 枠: 単体アクション or アクションリスト。
+sealed class ActionBarEntry {
+  const ActionBarEntry();
+}
+
+class SingleActionEntry extends ActionBarEntry {
+  const SingleActionEntry(this.action);
+  final ActionDescriptor action;
+}
+
+class ActionListEntry extends ActionBarEntry {
+  const ActionListEntry(this.list, this.members);
+  final ActionListDef list;
+  final List<ActionDescriptor> members;
+}
+
+/// アクションバーのユーザー構成。
+///
+/// プラグインが登録した `ActionDescriptor` はそのままに、**ホスト側の構成**
+/// として並び順・表示/非表示・リスト束ねを持つ(プラグイン無変更)。
+/// [order] にはアクション id と `list:{listId}` が並ぶ。永続化はホストの
+/// ストレージ(v1 は投稿タイル面のみ・全アカウント共通)。
+@immutable
+class ActionBarConfig {
+  const ActionBarConfig({this.order = const [], this.hidden = const {}, this.lists = const []});
+
+  final List<String> order;
+  final Set<String> hidden;
+  final List<ActionListDef> lists;
+
+  bool get dirty => order.isNotEmpty || hidden.isNotEmpty || lists.isNotEmpty;
+
+  static String listKey(String listId) => 'list:$listId';
+
+  /// リストに入っているアクション id。
+  Set<String> get listedIds => {for (final l in lists) ...l.memberIds};
+
+  /// 構成を適用: リスト束ね + 並び替え + 非表示除外。
+  List<ActionBarEntry> apply(List<ActionDescriptor> actions) {
+    final byId = {for (final a in actions) a.id: a};
+    final listById = {for (final l in lists) l.id: l};
+    final consumed = <String>{...hidden, ...listedIds};
+
+    ActionBarEntry? entryFor(String key) {
+      if (key.startsWith('list:')) {
+        final list = listById[key.substring(5)];
+        if (list == null) return null;
+        final members = [for (final id in list.memberIds) if (byId.containsKey(id)) byId[id]!];
+        return members.isEmpty ? null : ActionListEntry(list, members);
+      }
+      final a = byId[key];
+      return a == null || consumed.contains(key) ? null : SingleActionEntry(a);
+    }
+
+    final out = <ActionBarEntry>[];
+    final placed = <String>{};
+    for (final key in order) {
+      final e = entryFor(key);
+      if (e != null && placed.add(key)) out.add(e);
+    }
+    // order に無いリスト → 末尾へ。
+    for (final l in lists) {
+      final key = listKey(l.id);
+      if (!placed.contains(key)) {
+        final e = entryFor(key);
+        if (e != null && placed.add(key)) out.add(e);
+      }
+    }
+    // order に無い単体アクション(登録順)。
+    for (final a in actions) {
+      if (!placed.contains(a.id) && !consumed.contains(a.id)) {
+        out.add(SingleActionEntry(a));
+        placed.add(a.id);
+      }
+    }
+    return out;
+  }
+
+  ActionBarConfig copyWith({List<String>? order, Set<String>? hidden, List<ActionListDef>? lists}) =>
+      ActionBarConfig(order: order ?? this.order, hidden: hidden ?? this.hidden, lists: lists ?? this.lists);
+
+  Map<String, Object?> toJson() => {
+        'order': order,
+        'hidden': hidden.toList(),
+        'lists': [for (final l in lists) l.toJson()],
+      };
+
+  factory ActionBarConfig.fromJson(Map<String, Object?> json) => ActionBarConfig(
+        order: [for (final o in (json['order'] as List? ?? const [])) o as String],
+        hidden: {for (final h in (json['hidden'] as List? ?? const [])) h as String},
+        lists: [for (final l in (json['lists'] as List? ?? const [])) ActionListDef.fromJson((l as Map).cast<String, Object?>())],
+      );
+}
+
+/// 投稿タイル面の構成。ホストのストレージに永続化(キー `actionBar.post.v1`)。
+class ActionBarConfigStore extends Notifier<ActionBarConfig> {
+  static const storageKey = 'actionBar.post.v1';
+  bool _loaded = false;
+
+  @override
+  ActionBarConfig build() {
+    _restore();
+    return const ActionBarConfig();
+  }
+
+  Future<void> _restore() async {
+    if (_loaded) return;
+    _loaded = true;
+    try {
+      final raw = await ref.read(sessionStorageProvider).read(storageKey);
+      if (raw != null) state = ActionBarConfig.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+    } catch (_) {
+      // 壊れた保存値は既定にフォールバック(次の set で上書きされる)。
+    }
+  }
+
+  void set(ActionBarConfig next) {
+    state = next;
+    ref.read(sessionStorageProvider).write(storageKey, jsonEncode(next.toJson()));
+  }
+
+  void reset() => set(const ActionBarConfig());
+}
+
+final actionBarConfigProvider = NotifierProvider<ActionBarConfigStore, ActionBarConfig>(ActionBarConfigStore.new);

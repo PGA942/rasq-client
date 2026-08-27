@@ -1,0 +1,32 @@
+name: plugin_runtime
+description: "Hosts a RASQ WASM plugin (wasmi via rasq_wasm_runtime): snapshot/patch -> RrlDocument, events -> call, host functions."
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  rrl_core:
+    path: ../rrl_core
+  rrl_renderer:
+    path: ../rrl_renderer
+  rasq_design:
+    path: ../rasq_design
+  rasq_models:
+    path: ../rasq_models
+  rasq_plugin_api:
+    path: ../rasq_plugin_api
+  # SDK repo checkout, side by side with rasq-client (M3 scaffolding; becomes
+  # a hosted/git dependency once the SDK stabilises).
+  rasq_wasm_runtime:
+    path: ../../../rasq-sdk-sample/rasq_wasm_runtime
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

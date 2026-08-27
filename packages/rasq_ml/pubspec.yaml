@@ -1,0 +1,18 @@
+name: rasq_ml
+description: "ML gateway for RASQ: model-manifest resolution (device onnx / server Triton+vLLM), SigLIP followee-EMA embeddings and Louvain communities (D-022/D-024)."
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  http: ^1.2.0
+  meta: ^1.16.0
+  rasq_plugin_api:
+    path: ../rasq_plugin_api
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.0.0

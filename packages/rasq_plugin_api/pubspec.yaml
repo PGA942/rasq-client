@@ -1,0 +1,19 @@
+name: rasq_plugin_api
+description: Host-side plugin contracts for RASQ — SnsPlugin / SnsSession / ActionRef / manifest. Draft to be aligned with rasq-sdk-sample.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  meta: ^1.16.0
+  rasq_models:
+    path: ../rasq_models
+  rasq_store:
+    path: ../rasq_store
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.0.0
