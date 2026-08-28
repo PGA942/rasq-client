@@ -152,6 +152,38 @@ void main() {
     expect(draft.reactionAcceptance, isNull);
   });
 
+  testWidgets('stick FOW (D-048): 枠は下側も角丸 + ページ遷移で自動消滅', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    Post plain(AccountId viewer) => Post(
+          id: 'p1',
+          account: viewer,
+          author: UserSummary(id: 'bob', account: const AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'bob'), displayName: 'ボブ'),
+          createdAt: DateTime(2026, 8, 28, 12),
+          body: '角丸の確認です',
+        );
+    await tester.pumpWidget(app(posts: (v) => [plain(v)]));
+    await tester.pumpAndSettle();
+
+    // 投稿 → スレッド → 返信バーで stick コンポーザーを開く。
+    await tester.tap(find.text('角丸の確認です').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('返信..'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.close), findsOneWidget);
+
+    // FOW = 角丸四角形枠: stick はフッター上にドックするので下側も丸い。
+    final panel = tester.widgetList<Material>(find.byType(Material)).firstWhere((w) => w.elevation == 8);
+    expect((panel.shape! as RoundedRectangleBorder).borderRadius, BorderRadius.circular(16));
+
+    // 特定ページに張り付く stick はページ遷移で自動消滅する。
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.close), findsNothing);
+    expect(find.widgetWithText(FilledButton, '返信'), findsNothing);
+  });
+
   test('mfmSnippet: プロパティー/フラグ/固定スニペットの組み立て', () {
     final rotate = mfmFunctions.firstWhere((f) => f.name == 'rotate');
     expect(mfmSnippet(rotate, {'deg': '30'}), (r'$[rotate.deg=30 ', ']'));

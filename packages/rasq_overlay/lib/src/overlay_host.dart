@@ -176,7 +176,10 @@ class _FowPanel extends StatelessWidget {
     final panel = Material(
         color: scheme.surface,
         elevation: 8,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+        // FOW = ドラッグハンドル + **角丸四角形枠**の集合 (D-048)。フッターの
+        // 上にドックする stick は内部フッター(アクションバー)が枠の下辺に
+        // なるため下側も丸める。画面最下端まで覆う通常 FOW は上側のみ。
+        shape: RoundedRectangleBorder(borderRadius: spec.dockAboveFooter ? BorderRadius.circular(16) : const BorderRadius.vertical(top: Radius.circular(16))),
         clipBehavior: Clip.antiAlias,
         child: Column(children: [
           if (spec.showHandle)

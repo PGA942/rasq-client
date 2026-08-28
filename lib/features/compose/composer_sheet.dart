@@ -9,6 +9,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../../text/inline_spans.dart';
 import 'compose_providers.dart';
 import 'compose_target.dart';
@@ -50,13 +51,22 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target) async {
           // 受け入れ。MFM ピッカーは下部ツールバー側 (D-046)。
           headerTrailing: const ComposerHeaderControls(),
         );
-  final res = await manager.showFow<Post>(
-    id: composerFowId,
-    spec: spec,
-    builder: (ctx, handle) => _ComposerBody(target: target, spec: spec, onSent: (p) => handle.close(result: p), onClose: () => handle.close()),
-  );
-  manager.closeOwnedBy(composerFowId);
-  return res;
+  // stick は特定の返信/DM ページに張り付くもの (D-048): ページ遷移(戻る・
+  // タブ切替・別投稿へ移動)を検知したら自動で消滅する。
+  final router = stick ? ref.read(routerProvider) : null;
+  void onNavigate() => manager.close(composerFowId, reason: OverlayCloseReason.discard);
+  router?.routerDelegate.addListener(onNavigate);
+  try {
+    final res = await manager.showFow<Post>(
+      id: composerFowId,
+      spec: spec,
+      builder: (ctx, handle) => _ComposerBody(target: target, spec: spec, onSent: (p) => handle.close(result: p), onClose: () => handle.close()),
+    );
+    return res;
+  } finally {
+    router?.routerDelegate.removeListener(onNavigate);
+    manager.closeOwnedBy(composerFowId);
+  }
 }
 
 /// FOW ヘッダー右側のコントロール群 (D-045)。状態は [composeOptionsProvider]

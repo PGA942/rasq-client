@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../app/providers.dart';
@@ -28,8 +29,9 @@ class AppOverlayRoot extends ConsumerWidget {
           child: OverlayHost(
             manager: manager,
             // stick FOW の根本 = フッターメニュー(グローバルナビ)の上 (D-047)。
+            // 実高さ = NavigationBar のテーマ高さ + 上枠線 1.2(rasq_shell)。
             // タブレット幅(≥840dp)は下部ナビが無いので持ち上げない。
-            fowDockInset: (ctx) => MediaQuery.sizeOf(ctx).width >= 840 ? 0 : 80 + 1.2 + MediaQuery.paddingOf(ctx).bottom,
+            fowDockInset: (ctx) => MediaQuery.sizeOf(ctx).width >= 840 ? 0 : RasqSizes.navHeight + 1.2 + MediaQuery.paddingOf(ctx).bottom,
             child: child,
           ),
         ),
