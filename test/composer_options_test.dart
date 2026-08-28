@@ -128,19 +128,18 @@ void main() {
 
     await tester.tap(find.text('秘密の相談です').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('返信..'));
-    await tester.pumpAndSettle();
 
-    // stick FOW: ヘッダーレス(キャンセル無し)で、割り込みヘッダーに閉じる
-    // ボタンとダイレクト表示が出る。
+    // 常駐 stick (D-050): ページを開いた時点で縮小状態のコンポーザーが居る。
     expect(find.text('キャンセル'), findsNothing);
+    expect(find.byType(TextField), findsWidgets);
+
+    // 入力(フォーカス)で割り込みヘッダーが展開: ✕ とダイレクト表示。
+    await tester.enterText(find.byType(TextField).last, '@alice 了解です');
+    await tester.pumpAndSettle();
     expect(find.byIcon(Icons.close), findsOneWidget);
     expect(find.text('ダイレクト投稿への返信(相手にだけ届きます)'), findsOneWidget);
     // 公開範囲などのオプションはダイレクトでは出さない。
     expect(find.byTooltip('公開範囲: パブリック'), findsNothing);
-
-    await tester.enterText(find.byType(TextField).last, '@alice 了解です');
-    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '返信').last);
     await tester.pumpAndSettle();
 
@@ -166,30 +165,35 @@ void main() {
     await tester.pumpWidget(app(posts: (v) => [plain(v)]));
     await tester.pumpAndSettle();
 
-    // 投稿 → スレッド → 返信バーで stick コンポーザーを開く。
+    // 投稿 → スレッド: 常駐 stick コンポーザー (D-050) が縮小状態で置かれる。
     await tester.tap(find.text('角丸の確認です').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('返信..'));
-    await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.close), findsOneWidget);
 
     // FOW = 角丸四角形枠: stick はフッター上にドックするので下側も丸い。
     final panel = tester.widgetList<Material>(find.byType(Material)).firstWhere((w) => w.elevation == 8);
     expect((panel.shape! as RoundedRectangleBorder).borderRadius, BorderRadius.circular(16));
 
-    // ドラッグハンドル (D-049): 上に引くと拡大(最上段より上はシームレス)、
-    // 大きく下げると最下段(折りたたみフィット)へスナップして止まる。
+    // ドラッグハンドル (D-049): 上に引くと展開段階へスナップ、
+    // 大きく下げると最下段(折りたたみフィット)へ戻って止まる。
     final handle = find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'サイズ変更ハンドル');
     expect(handle, findsOneWidget);
     Material fowPanel() => tester.widgetList<Material>(find.byType(Material)).firstWhere((w) => w.elevation == 8);
     double panelHeight() => tester.getSize(find.byWidget(fowPanel())).height;
-    final fitExpanded = panelHeight();
+    final h0 = panelHeight(); // 折りたたみフィット
     await tester.drag(handle, const Offset(0, -160));
     await tester.pumpAndSettle();
-    expect(panelHeight(), greaterThan(fitExpanded + 100));
-    await tester.drag(handle, const Offset(0, 500));
+    final h1 = panelHeight();
+    expect(h1, greaterThan(h0 + 80)); // 展開段階(またはそれ以上)へ
+    // ドラッグしても入力中のテキストは消えない (D-050 修正)。
+    await tester.enterText(find.byType(TextField).last, '消えないでね');
     await tester.pumpAndSettle();
-    expect(panelHeight(), lessThan(fitExpanded)); // 最下段(折りたたみ段階)で停止
+    await tester.drag(handle, const Offset(0, -60));
+    await tester.pumpAndSettle();
+    expect(find.text('消えないでね'), findsOneWidget);
+    await tester.drag(handle, const Offset(0, 600));
+    await tester.pumpAndSettle();
+    expect(panelHeight(), lessThan(h1)); // 最下段方向へ戻る
+    expect(find.text('消えないでね'), findsOneWidget);
 
     // 特定ページに張り付く stick はページ遷移で自動消滅する。
     await tester.tap(find.byTooltip('戻る'));

@@ -244,11 +244,17 @@ class _FowPanelState extends State<_FowPanel> {
           Expanded(child: child),
         ]),
       );
-    // ドラッグ中は即時反映、それ以外(スナップ着地・stick の展開/折りたたみ・
-    // 外部からの heightFactor 変更)はアニメーションで動かす。
-    return _dragging
-        ? SizedBox(height: height, child: panel)
-        : AnimatedContainer(duration: const Duration(milliseconds: 180), curve: Curves.easeOutCubic, height: height, child: panel);
+    // ドラッグ中は即時反映(duration 0)、それ以外(スナップ着地・stick の
+    // 展開/折りたたみ・外部からの heightFactor 変更)はアニメーションで動かす。
+    // ⚠ ウィジェット型は常に AnimatedContainer 1 種に固定する: SizedBox と
+    // 切り替えると Element が作り直され、**入力中のテキストごと State が
+    // 消える**(ハンドル操作で本文消失、D-050 で実測)。
+    return AnimatedContainer(
+      duration: _dragging ? Duration.zero : const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      height: height,
+      child: panel,
+    );
   }
 }
 

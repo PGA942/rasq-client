@@ -48,9 +48,22 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   String get postId => widget.postId;
   Post? get initial => widget.initial;
 
-  Future<void> _reply(Post to) async {
-    final created = await showComposer(ref, ComposeReply(to));
-    if (created != null) ref.invalidate(threadProvider(postId));
+  /// 常駐返信 stick (D-050): 元の返信タイルの代わりに、ページを開いたら
+  /// 縮小状態の stick コンポーザーを置く(ページ遷移で自動消滅 D-048)。
+  /// このページへ**戻ってきた**ときも、コンポーザーが無ければ置き直す。
+  bool _composerScheduled = false;
+  void _ensureReplyComposer(Post target) {
+    if (_composerScheduled || ref.read(overlayManagerProvider).contains(composerFowId)) return;
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return; // 最前面のときだけ
+    _composerScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        if (!mounted) return;
+        await showComposer(ref, ComposeReply(target), resident: true, onPosted: (_) => ref.invalidate(threadProvider(postId)));
+      } finally {
+        _composerScheduled = false;
+      }
+    });
   }
 
   @override
@@ -68,9 +81,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final thread = ref.watch(threadProvider(postId));
     final manager = ref.watch(overlayManagerProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
-    final scheme = Theme.of(context).colorScheme;
 
     Future<void> perform(Post p, ActionDescriptor a, {Map<String, Object?> args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args);
+
+    final replyTarget = thread.value?.post ?? initial;
+    if (replyTarget != null) _ensureReplyComposer(replyTarget);
 
     return Scaffold(
       appBar: RasqPageHeader(title: '投稿', leadingAvatar: me, actions: [RasqIconButton(icon: Icons.bookmark_border, onPressed: () {}, tooltip: 'ブックマーク')], onMore: () {}),
@@ -84,15 +99,6 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           return RasqErrorView(code: code, onRetry: () => ref.invalidate(threadProvider(postId)), retryLabel: '再読み込み');
         },
         data: (t) => _ThreadBody(post: t.post, ancestors: t.ancestors, descendants: t.descendants, actions: actions, onAction: perform, order: _order, onSortTap: (r) => _sort(manager, r), onShowReactions: () => context.pushReactions(t.post)),
-      ),
-      bottomNavigationBar: _ReplyBarPlaceholder(
-        handle: initial?.author.handle ?? thread.value?.post.author.handle,
-        instance: initial?.author.account.instance ?? thread.value?.post.author.account.instance,
-        color: scheme.surface,
-        onTap: () {
-          final target = thread.value?.post ?? initial;
-          if (target != null) _reply(target);
-        },
       ),
     );
   }
@@ -171,50 +177,3 @@ class _Threaded extends StatelessWidget {
       ]);
 }
 
-/// 返信バー: タップでコンポーザー(返信モード)を開く。
-class _ReplyBarPlaceholder extends StatelessWidget {
-  const _ReplyBarPlaceholder({required this.handle, required this.instance, required this.color, this.onTap});
-  final String? handle;
-  final String? instance;
-  final Color color;
-  final VoidCallback? onTap;
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: color,
-      child: SafeArea(
-        top: false,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(RasqSizes.radiusMd),
-          child: Container(
-          margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.sm),
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm),
-          decoration: BoxDecoration(border: Border.all(color: scheme.onSurface), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: scheme.onSurface, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 6),
-            Row(children: [
-              const Icon(Icons.subdirectory_arrow_left, size: 16),
-              const SizedBox(width: 4),
-              if (handle != null) Text('@$handle', style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).link)),
-              if (instance != null) Text(' $instance', style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).link)),
-            ]),
-            Text('返信..', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
-            Divider(color: scheme.outline),
-            Row(children: [
-              for (final i in [Icons.photo_camera_outlined, Icons.image_outlined, Icons.visibility_outlined, Icons.poll_outlined, Icons.emoji_emotions_outlined, Icons.code])
-                Padding(padding: const EdgeInsets.only(right: 10), child: Icon(i, size: 20, color: scheme.onSurfaceVariant)),
-              const Spacer(),
-              Container(width: 22, height: 22, alignment: Alignment.center, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: scheme.primary)), child: Text('0', style: RasqTypography.caption.copyWith(color: scheme.primary))),
-              const SizedBox(width: 8),
-              FilledButton(onPressed: onTap, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 14)), child: const Text('返信')),
-            ]),
-          ]),
-        ),
-        ),
-      ),
-    );
-  }
-}

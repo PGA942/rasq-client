@@ -107,15 +107,15 @@ void main() {
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
 
-    // 返信バー → composer (reply mode) → send → thread refreshed.
-    await tester.tap(find.text('返信..'));
-    await tester.pumpAndSettle();
+    // 常駐 stick コンポーザー (D-050): ページに戻ると縮小状態で置き直される →
+    // 入力 → send → thread refreshed(送信後も閉じない)。
     expect(find.text('返信'), findsWidgets);
     await tester.enterText(find.byType(TextField).last, '@username テスト返信');
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '返信').last);
     await tester.pumpAndSettle();
     expect(find.text('キャンセル'), findsNothing);
+    expect(find.widgetWithText(FilledButton, '返信'), findsWidgets); // 常駐で残る
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
 

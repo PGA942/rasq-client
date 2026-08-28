@@ -47,7 +47,8 @@ void main() {
     await tester.tap(find.text('@${target.handle}').last);
     await tester.pumpAndSettle();
 
-    // 既存ルームが無くてもコンポーザー付きのルーム画面が開く。
-    expect(find.text('ダイレクト投稿を入力..'), findsOneWidget);
+    // 既存ルームが無くても常駐 stick コンポーザー (D-050) 付きで開く。
+    expect(find.text('メッセージを入力..'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '送信'), findsOneWidget);
   });
 }
