@@ -99,8 +99,9 @@ void main() {
     // リアクションを表示 → sections (emoji + count), expand → user rows.
     await tester.tap(find.text('リアクションを表示'));
     await tester.pumpAndSettle();
-    expect(find.text('30'), findsOneWidget);
-    await tester.tap(find.text('30'));
+    // 「30」は投稿内リアクションタイル (D-040) とリアクション表示欄の 2 箇所。
+    expect(find.text('30'), findsWidgets);
+    await tester.tap(find.text('30').last);
     await tester.pumpAndSettle();
     expect(find.text('フォロー'), findsWidgets); // follow pill in user row
     await tester.tap(find.byTooltip('戻る'));
@@ -130,7 +131,7 @@ void main() {
     expect(find.text('回答1'), findsOneWidget);
     await tester.tap(find.byTooltip('絵文字'));
     await tester.pumpAndSettle();
-    expect(find.text('全てのemoji'), findsOneWidget);
+    expect(find.text('デフォルト'), findsOneWidget); // 旧「全てのemoji」(D-040)
     await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
 

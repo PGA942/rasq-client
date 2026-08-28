@@ -23,6 +23,7 @@ class RasqActionBarItem {
     this.enabled = true,
     this.doneColor,
     this.iconUrl,
+    this.iconText,
     this.onTap,
     this.onLongPress,
     this.onAnchorTap,
@@ -52,6 +53,9 @@ class RasqActionBarItem {
   /// replaces [icon]; the host validation gate decides whether a plugin may
   /// set this at all, the bar just renders what it is given.
   final Uri? iconUrl;
+
+  /// テキスト(絵文字)アイコン差し替え (D-040)。[iconUrl] より優先。
+  final String? iconText;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final ValueChanged<Rect>? onAnchorTap;
@@ -105,6 +109,30 @@ class _ActionBarButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final count = item.count ?? 0;
     final showCount = item.showCount;
+    if (item.iconText != null) {
+      // テキスト(絵文字)アイコン差し替え (D-040: リアクション済み/予測表示)。
+      return Tooltip(
+        message: item.label,
+        child: Semantics(
+          button: true,
+          enabled: item.enabled,
+          selected: item.done,
+          label: item.label,
+          child: InkResponse(
+            onTap: item.enabled ? item.onTap : null,
+            onLongPress: item.enabled ? item.onLongPress : null,
+            radius: 24,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(item.iconText!, style: const TextStyle(fontSize: 17)),
+                if (showCount && count > 0) Padding(padding: const EdgeInsets.only(left: 4), child: Text('$count', style: RasqTypography.count)),
+              ]),
+            ),
+          ),
+        ),
+      );
+    }
     if (item.iconUrl != null) {
       // 投稿ごとのアイコン差し替え(SNS プラグイン配下のみ、D-017).
       return Tooltip(

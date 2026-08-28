@@ -131,10 +131,22 @@ class ActionRef {
 /// Per-post icon override (only honoured when [ActionDescriptor.iconPerPost]).
 @immutable
 class ActionIcon {
-  const ActionIcon.url(Uri this.url) : material = null;
-  const ActionIcon.material(String this.material) : url = null;
+  const ActionIcon.url(Uri this.url)
+      : material = null,
+        text = null;
+  const ActionIcon.material(String this.material)
+      : url = null,
+        text = null;
+
+  /// Unicode 絵文字などのテキストアイコン (D-040: リアクション後にボタンが
+  /// その絵文字に変わる)。
+  const ActionIcon.text(String this.text)
+      : url = null,
+        material = null;
+
   final Uri? url;
   final String? material;
+  final String? text;
 }
 
 /// Result of performing / reading an action — feeds `ActionStateStore` directly.

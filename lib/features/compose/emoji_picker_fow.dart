@@ -17,6 +17,8 @@ Future<void> openEmojiPicker(
   String? ownerId,
   bool closeOnPick = false,
   String title = '絵文字',
+  String? predictionContext,
+  Map<String, int> existingReactions = const {},
 }) async {
   final manager = ref.read(overlayManagerProvider);
   await manager.showFow<void>(
@@ -24,6 +26,8 @@ Future<void> openEmojiPicker(
     ownerId: ownerId,
     spec: FowSpec(type: FowPanelType.widget, initialHeightFactor: 0.4, minHeightFactor: 0.25, maxHeightFactor: 0.8, title: title, cancelText: '閉じる'),
     builder: (ctx, handle) => EmojiPanel(
+      predictionContext: predictionContext,
+      existingReactions: existingReactions,
       onPick: (e) {
         onPick(e);
         if (closeOnPick) handle.close(result: e);

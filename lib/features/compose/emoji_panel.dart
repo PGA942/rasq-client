@@ -3,16 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 
-import 'compose_providers.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 
-/// 絵文字ピッカー (ワイヤーフレーム: 検索 / 履歴 / 全てのemoji / 独自の絵文字).
+import '../../app/providers.dart';
+import '../home/reaction_history.dart';
+import 'compose_providers.dart';
+import 'emoji_prediction.dart';
+
+/// 絵文字ピッカー (D-040: 検索 / 履歴 / **予測** / **デフォルト** / 独自の絵文字).
 /// Emits the text to insert (`😀` or `:shortcode:`).
+///
+/// - 「予測」= 文脈([predictionContext])× 利用履歴 × 既存リアクションの
+///   ルールベース予測(SigLIP/GLiNER 配線後に前段を強化 — 絵文字予測.md)
+/// - 「デフォルト」(旧: 全てのemoji)は見出し長押しでバンドル編集(FOW)へ
+///   移行する予定(M4 のプレースホルダー)
 class EmojiPanel extends ConsumerStatefulWidget {
-  const EmojiPanel({super.key, required this.onPick, this.height});
+  const EmojiPanel({super.key, required this.onPick, this.height, this.predictionContext, this.existingReactions = const {}});
   final ValueChanged<String> onPick;
 
   /// Fixed height; null = fill the parent (FOW panel).
   final double? height;
+
+  /// 予測の文脈(CW + 本文 + 親/引用。コンポーザーでは下書きテキスト)。
+  final String? predictionContext;
+
+  /// 対象投稿に既に付いているリアクション(リアクション用途のとき)。
+  final Map<String, int> existingReactions;
 
   static const unicode = ['😀', '😂', '🥹', '😍', '🤔', '😭', '😡', '🥳', '😴', '🙏', '👍', '👎', '👏', '🙌', '💪', '❤️', '💔', '🔥', '✨', '🎉', '🚀', '🌙', '☀️', '🌸', '🍣', '🍜', '☕', '🍺', '🐱', '🐶', '🐟', '🦀', '💡', '📌', '✅', '❌', '⚠️', '💯', '🆗', '🔁'];
 
@@ -56,7 +72,27 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
               _label('履歴'),
               _grid([for (final e in recent) _EmojiCell(text: e, url: _urlFor(e, custom.value), onTap: () => _pick(e))]),
             ],
-            _label('全てのemoji'),
+            // 予測 (D-040): 文脈 × 履歴 × 既存リアクションのルールベース。
+            if (q.isEmpty) ...[
+              () {
+                final predicted = predictEmojis(
+                  context: widget.predictionContext ?? '',
+                  existingReactions: widget.existingReactions,
+                  history: ref.watch(reactionHistoryProvider).value ?? const {},
+                  recent: recent,
+                  custom: custom.value ?? const [],
+                );
+                if (predicted.isEmpty) return const SizedBox.shrink();
+                return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  _label('予測'),
+                  _grid([for (final e in predicted) _EmojiCell(text: e, url: _urlFor(e, custom.value), onTap: () => _pick(e))]),
+                ]);
+              }(),
+            ],
+            InkWell(
+              onLongPress: () => ref.read(overlayManagerProvider).showAlert(id: 'emoji.bundle', title: 'バンドル編集', message: 'デフォルト欄のバンドル編集(FOW)は M4 で実装します。', confirmText: 'OK'),
+              child: _label('デフォルト'),
+            ),
             _grid([for (final e in uni) _EmojiCell(text: e, onTap: () => _pick(e))]),
             InkWell(
               onTap: () => setState(() => _customOpen = !_customOpen),
@@ -98,15 +134,13 @@ class _EmojiCell extends StatelessWidget {
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
-        child: Tooltip(
-          message: text,
-          child: SizedBox(
-            width: 36,
-            height: 36,
-            child: Center(
-              child: url == null ? Text(text, style: const TextStyle(fontSize: 22)) : Image.network(url.toString(), width: 26, height: 26, errorBuilder: (_, _, _) => Text(text, style: const TextStyle(fontSize: 10))),
-            ),
-          ),
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 36),
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          // 可変幅表示 + ホバー/長押しチップ (D-040: Miria 方式参考 —
+          // セル幅を固定せず、絵文字の実寸比で並べる)。
+          child: Center(child: RasqCustomEmoji(url: url, fallbackText: text, height: 26, name: text.startsWith(':') ? text.replaceAll(':', '') : text)),
         ),
       );
 }

@@ -15,6 +15,8 @@ export 'src/theme/rasq_tokens_extension.dart';
 
 export 'src/components/avatar.dart';
 export 'src/components/badge.dart';
+export 'src/components/custom_emoji.dart';
+export 'src/components/reaction_chips.dart';
 export 'src/components/rich_text.dart';
 export 'src/components/mfm.dart';
 export 'src/components/rsl_json.dart';

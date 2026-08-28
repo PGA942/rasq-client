@@ -170,6 +170,17 @@ void main() {
       expect(plays.single.url.toString(), 'https://misskey.test/play/fl1');
     });
 
+
+    test('reactionIcon (D-040): Unicode はテキスト、カスタムは /emoji URL', () {
+      expect(MisskeySession.reactionIcon(null, 'misskey.test'), isNull);
+      final uni = MisskeySession.reactionIcon('❤', 'misskey.test')!;
+      expect(uni.text, '❤');
+      expect(uni.url, isNull);
+      final custom = MisskeySession.reactionIcon(':blobcat@.:', 'misskey.test')!;
+      expect(custom.url.toString(), 'https://misskey.test/emoji/blobcat.webp');
+      expect(custom.text, isNull);
+    });
+
     test('timelineWithStates sends token & untilId, maps done flags', () async {
       late Map<String, Object?> seen;
       final c = client({

@@ -178,7 +178,8 @@ class MisskeySession extends SnsSessionBase {
         final n = await api.callMap('notes/show', {'noteId': postId});
         final reactions = (n['reactions'] as Map?)?.cast<String, Object?>() ?? const {};
         final total = reactions.values.fold<int>(0, (a, v) => a + ((v as num?)?.toInt() ?? 0));
-        return ActionResult(done: n['myReaction'] != null, count: total);
+        // リアクションした絵文字をボタンアイコンに反映 (D-040, iconPerPost)。
+        return ActionResult(done: n['myReaction'] != null, count: total, icon: reactionIcon(n['myReaction'] as String?, host));
       case 'renote':
         if (args['undo'] == true) {
           await api.call('notes/unrenote', {'noteId': postId});
@@ -207,14 +208,24 @@ class MisskeySession extends SnsSessionBase {
     return super.actionStates(posts);
   }
 
+  /// `myReaction` 文字列 → ボタンアイコン (D-040)。Unicode はテキスト、
+  /// カスタム(`:name@.:`)は `/emoji/<name>.webp` の画像。
+  static ActionIcon? reactionIcon(String? reaction, String host) {
+    if (reaction == null) return null;
+    if (!reaction.startsWith(':')) return ActionIcon.text(reaction);
+    final name = reaction.substring(1, reaction.length - 1).split('@').first;
+    return ActionIcon.url(Uri.https(host, '/emoji/$name.webp'));
+  }
+
   /// Per-note action states from raw note JSON (used by the timeline notifier).
-  static Map<String, ActionResult> noteStates(Map<String, Object?> n) {
+  static Map<String, ActionResult> noteStates(Map<String, Object?> n, {String? host}) {
     final reactions = (n['reactions'] as Map?)?.cast<String, Object?>() ?? const {};
     final total = reactions.values.fold<int>(0, (a, v) => a + ((v as num?)?.toInt() ?? 0));
     return {
       'reply': ActionResult(done: false, count: (n['repliesCount'] as num?)?.toInt() ?? 0),
       'renote': ActionResult(done: false, count: (n['renoteCount'] as num?)?.toInt() ?? 0),
-      'reaction': ActionResult(done: n['myReaction'] != null, count: total),
+      // TL でもリアクション済み絵文字がボタンに出る (D-040)。
+      'reaction': ActionResult(done: n['myReaction'] != null, count: total, icon: host == null ? null : reactionIcon(n['myReaction'] as String?, host)),
       'favorite': ActionResult(done: n['isFavorited'] == true),
     };
   }
@@ -231,7 +242,7 @@ class MisskeySession extends SnsSessionBase {
       // For pure renotes the displayed post is the inner note, but the row id is the renote id.
       if (raw['__chat'] == true) continue;
       final inner = raw['renote'] is Map && (raw['text'] == null || (raw['text'] as String).isEmpty) ? (raw['renote'] as Map).cast<String, Object?>() : raw;
-      states[page.items[i].id] = noteStates(inner);
+      states[page.items[i].id] = noteStates(inner, host: host);
     }
     return (page, states);
   }

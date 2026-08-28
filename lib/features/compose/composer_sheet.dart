@@ -244,7 +244,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 RasqActionButton.icon(
                   icon: Icons.emoji_emotions_outlined,
                   tooltip: '絵文字',
-                  onTap: () => openEmojiPicker(ref, ownerId: composerFowId, onPick: (e) {
+                  onTap: () => openEmojiPicker(ref, ownerId: composerFowId, predictionContext: _text.text, onPick: (e) {
                     _insert(e);
                     _focus.requestFocus();
                   }),

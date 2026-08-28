@@ -124,7 +124,7 @@ class _ThreadBody extends StatelessWidget {
         PostRow(post: a, actions: actions, onAction: (d, {args = const {}}) => onAction(a, d, args: args), onTap: () => context.pushPost(a)),
         const Divider(),
       ],
-      PostRow(post: post, actions: actions, onAction: (d, {args = const {}}) => onAction(post, d, args: args)),
+      PostRow(post: post, actions: actions, onAction: (d, {args = const {}}) => onAction(post, d, args: args), predictReaction: true),
       Container(
         decoration: BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: scheme.onSurface, width: 1))),
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),

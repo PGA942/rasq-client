@@ -28,7 +28,7 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false, this.predictReaction = false});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -37,6 +37,11 @@ class PostRow extends ConsumerStatefulWidget {
 
   /// Embedded size (通知の投稿タイル系など): smaller avatar, no outer padding.
   final bool dense;
+
+  /// 詳細画面のみ true (D-040): リアクションボタンに最良の予測絵文字を
+  /// 表示する。TL では負荷を避けるため予測表示しない(タップでピッカー
+  /// ではなく予測実行、は共通)。
+  final bool predictReaction;
 
   /// Host icon registry: plugin icon names → Material glyphs (until the RASQ
   /// icon font lands).
@@ -115,9 +120,28 @@ class _PostRowState extends ConsumerState<PostRow> {
       media: !collapsible && !hasCw && post.media.isNotEmpty ? RasqMediaGrid(items: post.media, onTapTile: (i) => context.openViewer(post, i)) : null,
       poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
       quote: !collapsible && !hasCw && post.quote != null ? quoteTile(context, post.quote!, emojis: emojis) : null,
-      actionBar: widget.actions.isEmpty
+      actionBar: widget.actions.isEmpty && post.reactions.isEmpty
           ? null
-          : RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
+          : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              // 投稿内のリアクション数表示 (D-040): アクションバーの上に
+              // 角丸タイル(絵文字+数、自分のはハイライト、タップで同調/解除)。
+              if (post.reactions.isNotEmpty)
+                RasqReactionChips(
+                  reactions: post.reactions,
+                  emojiUrls: post.reactionEmojis,
+                  myReaction: post.myReaction,
+                  onTap: (r) {
+                    final a = widget.actions.where((x) => x.genreTag == 'Reaction').firstOrNull;
+                    if (a == null) return;
+                    if (r == post.myReaction) {
+                      widget.onAction(a).catchError((_) {}); // 自分の → 解除
+                    } else {
+                      widget.onAction(a, args: {'reaction': r}).then((_) => ref.read(reactionHistoryProvider.notifier).record(r)).catchError((_) {});
+                    }
+                  },
+                ),
+              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
+            ]),
       onTap: widget.onTap,
       onAuthorTap: () => context.pushUser(post.author),
       onMore: (anchor) => showPostMenu(context, ref, post, anchor),
@@ -131,6 +155,13 @@ class _PostRowState extends ConsumerState<PostRow> {
     final doneIcon = a.doneIcon == null ? null : PostRow.iconFor(a.doneIcon, icon);
     final isReaction = a.genreTag == 'Reaction';
     final isRepost = a.genreTag == 'Repost';
+    // 詳細画面ではリアクションボタンに最良の予測候補を表示 (D-040)。
+    // 予測が Unicode 絵文字のときだけ表示(カスタムは短押し実行のみ)。
+    String? iconText = st.iconText;
+    if (iconText == null && st.iconUrl == null && isReaction && !st.done && widget.predictReaction) {
+      final predicted = ref.watch(reactionHistoryProvider).value == null ? null : ref.read(reactionHistoryProvider.notifier).predictFor(post);
+      if (predicted != null && !predicted.startsWith(':')) iconText = predicted;
+    }
     return RasqActionBarItem(
       id: a.id,
       label: a.label,
@@ -142,6 +173,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       enabled: st.enabled,
       doneColor: isReaction ? tokens.live : null,
       iconUrl: st.iconUrl,
+      iconText: iconText,
       // Repost はデフォルトの**アクションバンドル**(D-039): タップで
       // リノート / 引用ノートのドロップダウン(ユーザー編集のリスト化とは
       // 別で、(+) の編集導線には出ない組み込みバンドル)。
@@ -149,7 +181,9 @@ class _PostRowState extends ConsumerState<PostRow> {
       onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : null,
       // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行
       onLongPress: isReaction
-          ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', onPick: (e) {
+          ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション',
+                  predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
+                  existingReactions: post.reactions, onPick: (e) {
                 widget.onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
               })
           : null,
