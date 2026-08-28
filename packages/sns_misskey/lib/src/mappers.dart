@@ -234,7 +234,20 @@ abstract final class MisskeyMappers {
       'receiveFollowRequest' => NotificationKind.followRequest,
       'followRequestAccepted' => NotificationKind.followAccepted,
       'pollEnded' => NotificationKind.pollEnded,
-      _ => NotificationKind.other,
+      'note' => NotificationKind.other,
+      // システム通知 (D-045): app(外部アプリ)/ロール付与/実績/ログイン等。
+      // 未知タイプもシステム通知として縮退表示する(落とさない・隠さない)。
+      _ => NotificationKind.system,
+    };
+    // システム通知の見出しと本文。
+    final (title, body) = switch (type) {
+      'app' => (j['header'] as String? ?? 'アプリからの通知', j['body'] as String?),
+      'roleAssigned' => ('ロールが付与されました', (j['role'] is Map ? (j['role'] as Map)['name'] : null) as String?),
+      'achievementEarned' => ('実績を獲得しました', j['achievement'] as String?),
+      'login' => ('新しいログインがありました', null),
+      'test' => ('テスト通知', null),
+      'exportCompleted' => ('エクスポートが完了しました', j['exportedEntity'] as String?),
+      _ => kind == NotificationKind.system ? ('通知 ($type)', null) : (null, null),
     };
     final actors = <UserSummary>[];
     final byActor = <String, String>{};
@@ -257,6 +270,8 @@ abstract final class MisskeyMappers {
       actors: actors,
       post: j['note'] is Map ? note((j['note'] as Map).cast<String, Object?>(), viewer: viewer, host: host) : null,
       reaction: j['reaction'] as String? ?? (byActor.isNotEmpty ? byActor.values.first : null),
+      title: title,
+      body: body,
       read: j['isRead'] as bool? ?? false,
       raw: {'type': rawType},
       reactionsByActor: byActor,

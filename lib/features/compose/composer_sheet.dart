@@ -10,8 +10,10 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
+import 'compose_providers.dart';
 import 'compose_target.dart';
 import 'emoji_picker_fow.dart';
+import 'mfm_picker_fow.dart';
 import 'poll_editor.dart';
 
 /// Opens the composer as an interstitial FOW (docked, resizable). Child FOWs
@@ -23,11 +25,92 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target) async {
   final manager = ref.read(overlayManagerProvider);
   final res = await manager.showFow<Post>(
     id: composerFowId,
-    spec: FowSpec(type: FowPanelType.interstitial, confirmMode: FowConfirmMode.saveDiscard, initialHeightFactor: 0.72, minHeightFactor: 0.35, title: target.title, cancelText: 'キャンセル'),
+    spec: FowSpec(
+      type: FowPanelType.interstitial,
+      confirmMode: FowConfirmMode.saveDiscard,
+      initialHeightFactor: 0.72,
+      minHeightFactor: 0.35,
+      title: target.title,
+      cancelText: 'キャンセル',
+      // ヘッダー右側の空きスペース (D-045): 公開設定 / 連合 / リアクション
+      // 受け入れ / MFM ピッカー。
+      headerTrailing: ComposerHeaderControls(isDm: target is ComposeDm),
+    ),
     builder: (ctx, handle) => _ComposerBody(target: target, onSent: (p) => handle.close(result: p)),
   );
   manager.closeOwnedBy(composerFowId);
   return res;
+}
+
+/// FOW ヘッダー右側のコントロール群 (D-045)。状態は [composeOptionsProvider]
+/// (本文側と共有、アプリ起動中は前回値を記憶)。DM では公開範囲が specified
+/// 固定のため MFM ピッカーだけを出す。
+class ComposerHeaderControls extends ConsumerWidget {
+  const ComposerHeaderControls({super.key, this.isDm = false});
+  final bool isDm;
+
+  Rect _anchorOf(BuildContext ctx) {
+    final box = ctx.findRenderObject() as RenderBox;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final opts = ref.watch(composeOptionsProvider);
+    final store = ref.read(composeOptionsProvider.notifier);
+    final manager = ref.read(overlayManagerProvider);
+    final mfm = ref.watch(currentAccountProvider)?.kind == SnsKind.misskey;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      if (!isDm) ...[
+        Builder(builder: (ctx) {
+          final (icon, label) = switch (opts.visibility) {
+            'home' => (Icons.home_outlined, 'ホーム'),
+            'followers' => (Icons.lock_outline, 'フォロワー'),
+            _ => (Icons.public, 'パブリック'),
+          };
+          return RasqActionButton.icon(
+            icon: icon,
+            tooltip: '公開範囲: $label',
+            onTap: () async {
+              final picked = await manager.showDropdown<String>(id: 'composer.visibility', ownerId: composerFowId, anchor: _anchorOf(ctx), dense: true, items: const [
+                RasqDropdownItem('パブリック', 'public'),
+                RasqDropdownItem('ホーム', 'home'),
+                RasqDropdownItem('フォロワー', 'followers'),
+              ]);
+              if (picked != null) store.setVisibility(picked);
+            },
+          );
+        }),
+        RasqActionButton.icon(
+          icon: Icons.rocket_launch_outlined,
+          doneIcon: Icons.public_off,
+          done: opts.localOnly,
+          tooltip: opts.localOnly ? '連合なし(このサーバーのみ)' : '連合あり(タップで連合なしに)',
+          onTap: () => store.setLocalOnly(!opts.localOnly),
+        ),
+        Builder(builder: (ctx) {
+          return RasqActionButton.icon(
+            icon: Icons.add_reaction_outlined,
+            doneIcon: Icons.add_reaction,
+            done: opts.reactionAcceptance != null,
+            tooltip: 'リアクションの受け入れ: ${reactionAcceptanceLabels[opts.reactionAcceptance]}',
+            onTap: () async {
+              final picked = await manager.showDropdown<(String?,)>(id: 'composer.reaction', ownerId: composerFowId, anchor: _anchorOf(ctx), dense: true, items: [
+                for (final e in reactionAcceptanceLabels.entries) RasqDropdownItem(e.value, (e.key,)),
+              ]);
+              if (picked != null) store.setReactionAcceptance(picked.$1);
+            },
+          );
+        }),
+      ],
+      RasqActionButton.icon(
+        icon: Icons.code,
+        tooltip: mfm ? 'MFM' : 'Markdown',
+        onTap: () => openMfmPicker(ref, ownerId: composerFowId, mfm: mfm, onApply: (p, s) => ref.read(composerInsertBridgeProvider).value = ComposerInsert(p, s)),
+      ),
+      const SizedBox(width: 4),
+    ]);
+  }
 }
 
 class _Attachment {
@@ -58,9 +141,14 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   String? _error;
   String? _progress;
 
+  late final ValueNotifier<ComposerInsert?> _bridge;
+
   @override
   void initState() {
     super.initState();
+    // ヘッダー/MFM ピッカーからの挿入依頼(カーソル位置はこちらが知っている)。
+    _bridge = ref.read(composerInsertBridgeProvider);
+    _bridge.addListener(_onBridgeInsert);
     final t = widget.target;
     if (t is ComposeReply) {
       final a = t.to.author;
@@ -77,11 +165,31 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   @override
   void dispose() {
+    _bridge.removeListener(_onBridgeInsert);
     _text.dispose();
     _cw.dispose();
     _focus.dispose();
     _poll?.dispose();
     super.dispose();
+  }
+
+  void _onBridgeInsert() {
+    final ins = _bridge.value;
+    if (ins == null || !mounted) return;
+    _bridge.value = null;
+    _wrapSelection(ins.prefix, ins.suffix);
+    _focus.requestFocus();
+  }
+
+  /// 選択範囲を [prefix]…[suffix] で包む。カーソルは中身部分(サフィックス
+  /// 直前)へ — MFM 挿入後にそのまま本文を打てる (D-045)。
+  void _wrapSelection(String prefix, String suffix) {
+    final v = _text.value;
+    final sel = v.selection.isValid ? v.selection : TextSelection.collapsed(offset: v.text.length);
+    final selected = v.text.substring(sel.start, sel.end);
+    final next = v.text.replaceRange(sel.start, sel.end, '$prefix$selected$suffix');
+    _text.value = TextEditingValue(text: next, selection: TextSelection.collapsed(offset: sel.start + prefix.length + selected.length));
+    setState(() {});
   }
 
   SnsSession? get _session => ref.read(currentSnsSessionProvider);
@@ -136,11 +244,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ids.add(f.uploaded!.id);
       }
       setState(() => _progress = '送信中…');
+      // 投稿オプション (D-045: FOW ヘッダーの公開設定/連合/リアクション受け入れ)。
+      final opts = ref.read(composeOptionsProvider);
       final draft = NewPost(
         text: _text.text.trim(),
         contentWarning: _cwOn && _cw.text.trim().isNotEmpty ? _cw.text.trim() : null,
         replyToId: switch (widget.target) { ComposeReply(to: final p) => p.id, _ => null },
         quoteOfId: switch (widget.target) { ComposeQuote(of: final p) => p.id, _ => null },
+        visibility: _isDm ? null : opts.visibility,
+        localOnly: !_isDm && opts.localOnly,
+        reactionAcceptance: _isDm ? null : opts.reactionAcceptance,
         mediaIds: ids,
         poll: _poll == null ? null : NewPoll(choices: _poll!.texts, multiple: _poll!.multiple, expiresAfter: _poll!.expiresAfter),
       );
@@ -249,7 +362,6 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     _focus.requestFocus();
                   }),
                 ),
-                RasqActionButton.icon(icon: Icons.code, tooltip: 'MFM (次段階)', enabled: false),
               ]),
             ),
           ),

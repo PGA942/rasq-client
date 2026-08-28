@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 /// FOW type (原典: UI_Elements「FOWタイプ（3種）」).
 enum FowPanelType { widget, interstitial, system }
@@ -22,6 +22,7 @@ class FowSpec {
     this.title,
     this.cancelText,
     this.confirmText,
+    this.headerTrailing,
     this.showHandle = true,
     this.avoidKeyboard = true,
   }) : heightFactor = ValueNotifier(initialHeightFactor.clamp(minHeightFactor, maxHeightFactor));
@@ -39,6 +40,10 @@ class FowSpec {
   final String? title;
   final String? cancelText;
   final String? confirmText;
+
+  /// ヘッダー右側の空きスペースに置くコントロール (D-045: コンポーザーの
+  /// 公開設定など)。[confirmText] より優先して右端に描画される。
+  final Widget? headerTrailing;
   final bool showHandle;
 
   /// Lift the panel above the soft keyboard.

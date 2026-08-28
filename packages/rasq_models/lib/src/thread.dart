@@ -23,6 +23,8 @@ class NewPost {
     this.quoteOfId,
     this.repostOfId,
     this.visibility,
+    this.localOnly = false,
+    this.reactionAcceptance,
     this.mediaIds = const [],
     this.poll,
   });
@@ -34,6 +36,14 @@ class NewPost {
   /// Pure repost (no text) — [text] is ignored.
   final String? repostOfId;
   final String? visibility;
+
+  /// 連合しない(このサーバーのみ)。対応 SNS のみ意味を持つ。
+  final bool localOnly;
+
+  /// リアクションの受け入れ (D-045)。null = 全て。値は SNS 側の語彙
+  /// (Misskey: likeOnly / likeOnlyForRemote / nonSensitiveOnly /
+  /// nonSensitiveOnlyForLocalLikeOnlyForRemote)。
+  final String? reactionAcceptance;
   final List<String> mediaIds;
   final NewPoll? poll;
 }

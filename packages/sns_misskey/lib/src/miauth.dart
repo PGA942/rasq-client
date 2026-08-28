@@ -31,9 +31,18 @@ class MiAuthFlow extends BrowserAuthFlow {
   final http.Client? client;
 
   /// Misskey permission scopes requested for phase 1.
+  ///
+  /// 注意: スコープを増やすと**既存トークンには反映されない**(再ログインが
+  /// 必要)。後から足すと全ユーザーに再ログインを強いるので、使う見込みの
+  /// あるものは最初から並べておく (D-045)。
   static const defaultPermissions = [
     'read:account',
+    // i/update(アカウント設定 D-044: Bot/Cat/承認制…)、クリップ・リストの
+    // 作成/削除など「アカウント」括りの書き込み系はこれが無いと 403 になる。
+    'write:account',
     'write:notes',
+    // 投票 (RasqPollWidget) 用。
+    'write:votes',
     'read:notifications',
     'write:notifications',
     'read:reactions',

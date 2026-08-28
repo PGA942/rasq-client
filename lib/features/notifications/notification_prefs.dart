@@ -33,5 +33,6 @@ const notificationPrefRows = <(String, List<NotificationKind>)>[
   ('タイマー付きブックマークを通知する', [NotificationKind.timer]),
   ('投票の完了を通知する', [NotificationKind.pollEnded]),
   ('フォローを通知する', [NotificationKind.follow, NotificationKind.followRequest, NotificationKind.followAccepted]),
+  ('システム通知を表示する', [NotificationKind.system]),
   ('その他の通知を配信する', [NotificationKind.reply, NotificationKind.mention, NotificationKind.listAdded, NotificationKind.other]),
 ];

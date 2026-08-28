@@ -52,8 +52,12 @@ class FakeSnsSession extends SnsSessionBase {
     final p = _posts.firstWhere((e) => e.id == id);
     return Thread(post: p, descendants: _posts.where((e) => e.id != id).take(1).toList());
   }
+  /// 最後に createPost へ渡された draft (投稿オプションのテスト用)。
+  NewPost? lastDraft;
+
   @override
   Future<Post> createPost(NewPost draft) async {
+    lastDraft = draft;
     final me = await this.me();
     final p = Post(id: 'new${_posts.length}', account: account, author: me, createdAt: DateTime.now(), body: draft.text, contentWarning: draft.contentWarning);
     _posts.insert(0, p);

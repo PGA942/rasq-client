@@ -243,6 +243,54 @@ void main() {
       await expectLater(s.settingsWrite('account', 'password', 'x'), throwsUnsupportedError);
     });
 
+    test('createPost (D-045): visibility/localOnly/reactionAcceptance を送る', () async {
+      late Map<String, Object?> seen;
+      final c = client({
+        'notes/create': (b) {
+          seen = b;
+          return {'createdNote': note('n9')};
+        },
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: MisskeyPlugin.pluginId, token: 'T', createdAt: DateTime(2026)), client: c);
+      await s.createPost(const NewPost(text: 't', visibility: 'home', localOnly: true, reactionAcceptance: 'likeOnly'));
+      expect(seen['visibility'], 'home');
+      expect(seen['localOnly'], isTrue);
+      expect(seen['reactionAcceptance'], 'likeOnly');
+
+      // 既定(未指定)では送らない — サーバー既定に任せる。
+      await s.createPost(const NewPost(text: 't2'));
+      expect(seen.containsKey('localOnly'), isFalse);
+      expect(seen.containsKey('reactionAcceptance'), isFalse);
+    });
+
+    test('システム通知 (D-045): app/roleAssigned/未知タイプ → system + title/body', () {
+      NotificationItem map(Map<String, Object?> j) => MisskeyMappers.notification({'id': 'x', 'createdAt': '2026-08-28T00:00:00.000Z', ...j}, viewer: viewer, host: 'misskey.test');
+
+      final app = map({'type': 'app', 'header': 'メンテナンスのお知らせ', 'body': '本日 2 時から'});
+      expect(app.kind, NotificationKind.system);
+      expect(app.title, 'メンテナンスのお知らせ');
+      expect(app.body, '本日 2 時から');
+
+      final role = map({'type': 'roleAssigned', 'role': {'name': 'モデレーター'}});
+      expect(role.kind, NotificationKind.system);
+      expect(role.title, 'ロールが付与されました');
+      expect(role.body, 'モデレーター');
+
+      // 未知タイプも落とさずシステム通知として縮退表示する。
+      final unknown = map({'type': 'somethingNew2027'});
+      expect(unknown.kind, NotificationKind.system);
+      expect(unknown.title, '通知 (somethingNew2027)');
+
+      // 既存タイプは従来どおり(title/body なし)。
+      final follow = map({'type': 'follow', 'user': user('alice')});
+      expect(follow.kind, NotificationKind.follow);
+      expect(follow.title, isNull);
+    });
+
+    test('MiAuth スコープ (D-045): write:account / write:votes を要求する', () {
+      expect(MiAuthFlow.defaultPermissions, containsAll(['write:account', 'write:votes']));
+    });
+
     test('設定ページ (D-044): 4 ページとも rasq.settings-page/1 として解釈できる', () {
       final pages = MisskeyPlugin().settingsPages;
       final areas = <String>[];

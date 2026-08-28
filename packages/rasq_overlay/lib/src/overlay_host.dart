@@ -186,7 +186,14 @@ class _FowPanel extends StatelessWidget {
               child: Row(children: [
                 if (spec.cancelText != null) TextButton(onPressed: onCancel, child: Text(spec.cancelText!, style: TextStyle(color: scheme.onSurfaceVariant))) else const SizedBox(width: 80),
                 Expanded(child: Center(child: Text(spec.title ?? '', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),
-                if (spec.confirmText != null) TextButton(onPressed: onConfirm, child: Text(spec.confirmText!, style: TextStyle(color: scheme.primary))) else const SizedBox(width: 80),
+                // 右側: headerTrailing(D-045: コンポーザーの公開設定など)>
+                // 決定ボタン > 空きスペース。
+                if (spec.headerTrailing != null)
+                  spec.headerTrailing!
+                else if (spec.confirmText != null)
+                  TextButton(onPressed: onConfirm, child: Text(spec.confirmText!, style: TextStyle(color: scheme.primary)))
+                else
+                  const SizedBox(width: 80),
               ]),
             ),
           Expanded(child: child),

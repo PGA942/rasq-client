@@ -205,7 +205,11 @@ class SettingsDslScreen extends ConsumerWidget {
         switch (fn) {
           case 'settings.set' when s.isRemote:
             ref.read(remoteSettingsProvider(s.area).notifier).set(key, payload['value']).catchError((Object e) {
-              ref.read(overlayManagerProvider).showAlert(id: 'settings.remote.error', title: '保存できませんでした', message: '$e', confirmText: 'OK');
+              // 権限不足 (D-045): スコープの増加は既存トークンに反映されない
+              // ため、再ログインの誘導を添える。
+              final permission = '$e'.contains('PERMISSION_DENIED') || '$e'.contains('403');
+              final hint = permission ? '\n\nアプリの権限が不足しています。一度ログアウトして再ログインすると、新しい権限が付与されます。' : '';
+              ref.read(overlayManagerProvider).showAlert(id: 'settings.remote.error', title: '保存できませんでした', message: '$e$hint', confirmText: 'OK');
             });
           case 'settings.set':
             ref.read(settingsAreaProvider(area).notifier).set(key, payload['value']);

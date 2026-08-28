@@ -166,12 +166,15 @@ extension OverlayPresets on OverlayManager {
                     alignment: Alignment.centerLeft,
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       if (items[i].checked) Padding(padding: const EdgeInsets.only(right: 6), child: Icon(Icons.check, size: dense ? 14 : 18)),
-                      Text(
-                        items[i].label,
-                        style: TextStyle(
-                          fontSize: dense ? 12.5 : 14,
-                          fontWeight: FontWeight.w600,
-                          color: items[i].destructive ? scheme.error : (items[i].accent ? scheme.primary : scheme.onSurface),
+                      // 長いラベルは折り返す(はみ出しで overflow にしない)。
+                      Flexible(
+                        child: Text(
+                          items[i].label,
+                          style: TextStyle(
+                            fontSize: dense ? 12.5 : 14,
+                            fontWeight: FontWeight.w600,
+                            color: items[i].destructive ? scheme.error : (items[i].accent ? scheme.primary : scheme.onSurface),
+                          ),
                         ),
                       ),
                     ]),

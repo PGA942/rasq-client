@@ -20,6 +20,11 @@ enum NotificationKind {
   pollEnded,
   timer,
   vc,
+
+  /// システム通知 (D-045): サーバー/アプリ発の本文つき通知
+  /// (Misskey: app / roleAssigned / achievementEarned / login / test …)。
+  /// 本文は [NotificationItem.title]/[NotificationItem.body]。
+  system,
   other;
 
   NotificationTileType get tile => switch (this) {
@@ -27,11 +32,12 @@ enum NotificationKind {
         follow || followRequest || followAccepted || listAdded => NotificationTileType.follow,
         quote || reply || mention => NotificationTileType.postTile,
         timer || vc => NotificationTileType.timer,
+        system => NotificationTileType.system,
         other => NotificationTileType.action,
       };
 }
 
-enum NotificationTileType { action, follow, postTile, timer }
+enum NotificationTileType { action, follow, postTile, timer, system }
 
 @immutable
 class NotificationItem {
@@ -46,6 +52,8 @@ class NotificationItem {
     this.read = false,
     this.raw,
     this.reactionsByActor = const {},
+    this.title,
+    this.body,
   });
 
   final String id;
@@ -66,6 +74,10 @@ class NotificationItem {
 
   /// For grouped reaction notifications: actor id → reaction string.
   final Map<String, String> reactionsByActor;
+
+  /// システム通知 (D-045) の見出しと本文。
+  final String? title;
+  final String? body;
 
   String get key => '${account.key}:$id';
 }

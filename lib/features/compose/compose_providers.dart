@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
@@ -19,3 +20,60 @@ class RecentEmojiStore extends Notifier<List<String>> {
 }
 
 final recentEmojiProvider = NotifierProvider<RecentEmojiStore, List<String>>(RecentEmojiStore.new);
+
+/// 投稿オプション (D-045: FOW ヘッダー右側のコントロール)。
+/// アプリ起動中は前回の選択を記憶する(Misskey 本家と同じ感覚)。
+class ComposeOptions {
+  const ComposeOptions({this.visibility = 'public', this.localOnly = false, this.reactionAcceptance});
+
+  /// public / home / followers(DM は sendDm 側で specified 固定)。
+  final String visibility;
+
+  /// 連合なし(このサーバー内のみ)。
+  final bool localOnly;
+
+  /// リアクションの受け入れ。null = 全て(Misskey の語彙をそのまま保持)。
+  final String? reactionAcceptance;
+
+  ComposeOptions copyWith({String? visibility, bool? localOnly, String? Function()? reactionAcceptance}) => ComposeOptions(
+        visibility: visibility ?? this.visibility,
+        localOnly: localOnly ?? this.localOnly,
+        reactionAcceptance: reactionAcceptance == null ? this.reactionAcceptance : reactionAcceptance(),
+      );
+}
+
+class ComposeOptionsStore extends Notifier<ComposeOptions> {
+  @override
+  ComposeOptions build() => const ComposeOptions();
+  void setVisibility(String v) => state = state.copyWith(visibility: v);
+  void setLocalOnly(bool v) => state = state.copyWith(localOnly: v);
+  void setReactionAcceptance(String? v) => state = state.copyWith(reactionAcceptance: () => v);
+}
+
+final composeOptionsProvider = NotifierProvider<ComposeOptionsStore, ComposeOptions>(ComposeOptionsStore.new);
+
+/// リアクション受け入れの選択肢 (Misskey の語彙 → 表示名)。null = 全て。
+const reactionAcceptanceLabels = <String?, String>{
+  null: '全て',
+  'likeOnly': 'いいねのみ',
+  'likeOnlyForRemote': '外部からはいいね',
+  'nonSensitiveOnly': '非センシティブのみ',
+  'nonSensitiveOnlyForLocalLikeOnlyForRemote': '非センシティブ&外部からはいいねのみ',
+};
+
+/// コンポーザー本文への挿入ブリッジ (D-045): ヘッダー/子 FOW からの挿入依頼を
+/// 本文の TextField(カーソル位置を知っている側)が受け取る。
+class ComposerInsert {
+  const ComposerInsert(this.prefix, [this.suffix = '']);
+
+  /// [suffix] が空でなければ選択範囲を [prefix]…[suffix] で包み、カーソルは
+  /// 中身部分(サフィックス直前)に置かれる。
+  final String prefix;
+  final String suffix;
+}
+
+final composerInsertBridgeProvider = Provider<ValueNotifier<ComposerInsert?>>((ref) {
+  final n = ValueNotifier<ComposerInsert?>(null);
+  ref.onDispose(n.dispose);
+  return n;
+});
