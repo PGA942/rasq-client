@@ -205,6 +205,59 @@ void main() {
       expect(r.count, 3);
     });
 
+    test('プラグイン設定 (D-044): applySettings→TLパラメーター、account は i/i update', () async {
+      late Map<String, Object?> seenTl;
+      Map<String, Object?>? seenUpdate;
+      final me = {'isLocked': true, 'isExplorable': true, 'hideOnlineStatus': false, 'publicReactions': true, 'isBot': false, 'isCat': false};
+      final c = client({
+        'notes/timeline': (b) {
+          seenTl = b;
+          return [];
+        },
+        'i': (_) => me,
+        'i/update': (b) {
+          seenUpdate = b;
+          return {...me, 'isCat': true};
+        },
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: MisskeyPlugin.pluginId, token: 'T', createdAt: DateTime(2026)), client: c);
+
+      // 既定値: withRenotes オン / withReplies オフ。
+      await s.timeline(TimelineKind.home);
+      expect(seenTl['withRenotes'], isTrue);
+      expect(seenTl['withReplies'], isFalse);
+
+      await s.applySettings('timeline', {'withRenotes': false, 'withReplies': true});
+      await s.timeline(TimelineKind.home);
+      expect(seenTl['withRenotes'], isFalse);
+      expect(seenTl['withReplies'], isTrue);
+
+      // account = remote ページ: i から読み、i/update へ 1 キー書き込み。
+      final read = await s.settingsRead('account');
+      expect(read['isLocked'], isTrue);
+      expect(read['isCat'], isFalse);
+      final after = await s.settingsWrite('account', 'isCat', true);
+      expect(seenUpdate?['isCat'], isTrue);
+      expect(after['isCat'], isTrue);
+      // 許可リスト外のキーは投げる(パスワード系を DSL から触らせない)。
+      await expectLater(s.settingsWrite('account', 'password', 'x'), throwsUnsupportedError);
+    });
+
+    test('設定ページ (D-044): 4 ページとも rasq.settings-page/1 として解釈できる', () {
+      final pages = MisskeyPlugin().settingsPages;
+      final areas = <String>[];
+      for (final raw in pages) {
+        final j = (jsonDecode(raw) as Map).cast<String, Object?>();
+        expect(j['schema'], 'rasq.settings-page/1');
+        expect(j['root'], isA<Map<String, Object?>>());
+        areas.add(j['area'] as String);
+      }
+      expect(areas, ['account', 'timeline', 'safety', 'security']);
+      // account はサーバー保存 (source: remote)。
+      final account = (jsonDecode(pages.first) as Map).cast<String, Object?>();
+      expect(account['source'], 'remote');
+    });
+
     test('transport errors are not reported as 408', () async {
       final cors = MisskeyApi('misskey.test', client: MockClient((_) async => throw http.ClientException('Failed to fetch')));
       await expectLater(cors.call('meta'), throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'B03')));

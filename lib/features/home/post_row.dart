@@ -15,6 +15,7 @@ import '../compose/composer_sheet.dart';
 import '../compose/emoji_picker_fow.dart';
 import 'reaction_history.dart';
 import '../post/post_menu.dart';
+import '../settings/safety.dart';
 import 'action_bar_config.dart';
 
 /// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
@@ -74,6 +75,7 @@ class _PostRowState extends ConsumerState<PostRow> {
     final tokens = RasqTokens.of(context);
     final emojis = ref.watch(emojiCacheProvider);
     final isRead = ref.watch(isReadProvider(post.key));
+    final safety = ref.watch(safetySettingsProvider);
 
     // 省略表示: 既読かつ長文の投稿は先頭数行 + 「展開する」(Store 状態 → props).
     final lineCount = '\n'.allMatches(post.body).length + 1;
@@ -89,11 +91,13 @@ class _PostRowState extends ConsumerState<PostRow> {
     } else {
       final body = post.body.isNotEmpty ? RasqRichText(spans, style: RasqTypography.body) : const SizedBox.shrink();
       final cw = post.contentWarning;
-      content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, child: _CwBody(post: post, body: body)) : body;
+      content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, initiallyOpen: safety.openCw, child: _CwBody(post: post, body: body)) : body;
     }
     // When a CW is present, media/poll/quote live *inside* the CW reveal;
     // otherwise they fill the tile's own slots.
     final hasCw = !collapsible && (post.contentWarning?.isNotEmpty ?? false);
+    // 閲覧注意メディアの表示設定 (D-044: sns.safety) を適用。
+    final (mediaItems, mediaIndex) = safety.applyTo(post.media);
 
     // アクションバー編集(ホスト構成): リスト束ね・並び替え・非表示を適用して Props 化。
     final entries = ref.watch(actionBarConfigProvider).apply(widget.actions);
@@ -112,9 +116,9 @@ class _PostRowState extends ConsumerState<PostRow> {
       repostedBy: post.repostedBy,
       dense: widget.dense,
       content: content,
-      media: !collapsible && !hasCw && post.media.isNotEmpty ? RasqMediaGrid(items: post.media, onTapTile: (i) => context.openViewer(post, i)) : null,
+      media: !collapsible && !hasCw && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, onTapTile: (i) => context.openViewer(post, mediaIndex[i])) : null,
       poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
-      quote: !collapsible && !hasCw && post.quote != null ? quoteTile(context, post.quote!, emojis: emojis) : null,
+      quote: !collapsible && !hasCw && post.quote != null ? quoteTile(context, post.quote!, emojis: emojis, safety: safety) : null,
       actionBar: widget.actions.isEmpty && post.reactions.isEmpty
           ? null
           : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
@@ -262,15 +266,18 @@ class _PostRowState extends ConsumerState<PostRow> {
       );
 
   /// 引用: 投稿カード(埋め込みサイズ)を再利用.
-  static Widget quoteTile(BuildContext context, Post q, {Map<String, Uri?> emojis = const {}}) => RasqPostTile(
-        variant: RasqPostTileVariant.embedded,
-        author: q.author,
-        createdAt: q.createdAt,
-        nameSpans: InlineSpans.parse(q.author.displayName, emojis: emojis),
-        content: q.body.isNotEmpty ? RasqRichText(InlineSpans.parse(q.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis) : const SizedBox.shrink(),
-        media: q.media.isNotEmpty ? RasqMediaGrid(items: q.media) : null,
-        onTap: () => context.pushPost(q),
-      );
+  static Widget quoteTile(BuildContext context, Post q, {Map<String, Uri?> emojis = const {}, SafetySettings safety = const SafetySettings()}) {
+    final (mediaItems, _) = safety.applyTo(q.media);
+    return RasqPostTile(
+      variant: RasqPostTileVariant.embedded,
+      author: q.author,
+      createdAt: q.createdAt,
+      nameSpans: InlineSpans.parse(q.author.displayName, emojis: emojis),
+      content: q.body.isNotEmpty ? RasqRichText(InlineSpans.parse(q.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis) : const SizedBox.shrink(),
+      media: mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems) : null,
+      onTap: () => context.pushPost(q),
+    );
+  }
 }
 
 /// Body shown under an opened CW: text + media + poll + quote together.
@@ -281,11 +288,13 @@ class _CwBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final emojis = ref.watch(emojiCacheProvider);
+    final safety = ref.watch(safetySettingsProvider);
+    final (mediaItems, mediaIndex) = safety.applyTo(post.media);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       body,
-      if (post.media.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: post.media, onTapTile: (i) => context.openViewer(post, i))],
+      if (mediaItems.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: mediaItems, onTapTile: (i) => context.openViewer(post, mediaIndex[i]))],
       if (post.poll != null) ...[const SizedBox(height: RasqSpacing.sm), RasqPollWidget(poll: post.poll!)],
-      if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _PostRowState.quoteTile(context, post.quote!, emojis: emojis)],
+      if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _PostRowState.quoteTile(context, post.quote!, emojis: emojis, safety: safety)],
     ]);
   }
 }

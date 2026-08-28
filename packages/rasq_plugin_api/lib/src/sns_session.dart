@@ -99,6 +99,18 @@ abstract class SnsSession {
   Future<List<UserProfile>> users(List<String> ids);
   Future<Map<String, FollowState>> relationships(List<String> userIds);
 
+  // --- プラグイン設定 (D-044: rasq.settings-page/1) ---
+  /// ローカル保存ページ(source: local)の値をセッションへ反映する。ホストが
+  /// 値の変更毎(+ 最初のタイムライン取得前)に呼ぶ。[values] は defaults
+  /// マージ済み。既定は no-op — 設定を持たないプラグインはそのままでよい。
+  Future<void> applySettings(String area, Map<String, Object?> values) async {}
+
+  /// remote ページ(source: "remote")の現在値(サーバー側設定)。
+  Future<Map<String, Object?>> settingsRead(String area) => throw UnsupportedError('$pluginId does not support settingsRead');
+
+  /// remote ページの 1 キー書き込み。戻り値 = 書き込み後の最新値マップ。
+  Future<Map<String, Object?>> settingsWrite(String area, String key, Object? value) => throw UnsupportedError('$pluginId does not support settingsWrite');
+
   // --- コンポーザー ---
   int get maxPostLength;
   Future<MediaItem> uploadMedia(Uint8List bytes, String filename, {String? mimeType, bool sensitive = false, String? alt});
@@ -234,6 +246,12 @@ abstract class SnsSessionBase implements SnsSession {
   Future<List<UserProfile>> users(List<String> ids) => _unsupported('users');
   @override
   Future<Map<String, FollowState>> relationships(List<String> userIds) => _unsupported('relationships');
+  @override
+  Future<void> applySettings(String area, Map<String, Object?> values) async {}
+  @override
+  Future<Map<String, Object?>> settingsRead(String area) => _unsupported('settingsRead');
+  @override
+  Future<Map<String, Object?>> settingsWrite(String area, String key, Object? value) => _unsupported('settingsWrite');
   @override
   int get maxPostLength => 500;
   @override

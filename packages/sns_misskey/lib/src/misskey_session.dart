@@ -87,7 +87,41 @@ class MisskeySession extends SnsSessionBase {
     }
     final body = <String, Object?>{'limit': limit, 'untilId': ?cursor};
     if (id.startsWith('list:')) body['listId'] = id.substring(5);
+    // タイムライン設定 (D-044): 標準 TL + リスト TL は withRenotes、
+    // withReplies は対応エンドポイント(home/local/social)のみ。
+    body['withRenotes'] = _withRenotes;
+    if (id == 'home' || id == 'local' || id == 'social') body['withReplies'] = _withReplies;
     return api.callList(_timelinePath(kind), body);
+  }
+
+  // --- プラグイン設定 (D-044: settings_pages.dart のページに対応) ---
+  bool _withRenotes = true;
+  bool _withReplies = false;
+
+  @override
+  Future<void> applySettings(String area, Map<String, Object?> values) async {
+    if (area != 'timeline') return;
+    _withRenotes = values['withRenotes'] != false;
+    _withReplies = values['withReplies'] == true;
+  }
+
+  /// `account` ページ (source: remote) が読み書きするキー。
+  static const accountSettingKeys = ['isLocked', 'isExplorable', 'hideOnlineStatus', 'publicReactions', 'isBot', 'isCat'];
+
+  Map<String, Object?> _accountSettings(Map<String, Object?> i) => {for (final k in accountSettingKeys) k: i[k] == true};
+
+  @override
+  Future<Map<String, Object?>> settingsRead(String area) async {
+    if (area != 'account') throw UnsupportedError('unknown remote settings area: $area');
+    return _accountSettings(await api.callMap('i'));
+  }
+
+  @override
+  Future<Map<String, Object?>> settingsWrite(String area, String key, Object? value) async {
+    if (area != 'account' || !accountSettingKeys.contains(key)) {
+      throw UnsupportedError('unknown remote setting: $area.$key');
+    }
+    return _accountSettings(await api.callMap('i/update', {key: value == true}));
   }
 
   String? _cachedMyId;

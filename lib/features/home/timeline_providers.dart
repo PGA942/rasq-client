@@ -7,6 +7,7 @@ import 'package:sns_misskey/sns_misskey.dart';
 
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
+import '../settings/settings_dsl.dart';
 
 @immutable
 class TimelineState {
@@ -38,6 +39,13 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     ref.watch(currentAccountProvider); // rebuild per account
     final session = _session;
     if (session == null) return const TimelineState();
+    // タイムライン設定 (D-044) を取得前に反映。watch なので変更 → 再取得。
+    try {
+      final tl = await ref.watch(snsSettingValuesProvider('timeline').future);
+      if (tl.isNotEmpty) await session.applySettings('timeline', tl);
+    } catch (e) {
+      debugPrint('timeline settings: $e');
+    }
     final (page, states) = await _fetch(session, null);
     return TimelineState(posts: page.items, cursor: page.nextCursor);
   }

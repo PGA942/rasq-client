@@ -5,6 +5,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'miauth.dart';
 import 'misskey_api.dart';
 import 'misskey_session.dart';
+import 'settings_pages.dart';
 
 /// Official Misskey plugin (Dart implementation).
 class MisskeyPlugin extends SnsPlugin {
@@ -41,6 +42,9 @@ class MisskeyPlugin extends SnsPlugin {
 ### 第一項　プラグインの再配布の禁止
 ''',
       );
+
+  @override
+  List<String> get settingsPages => misskeySettingsPages();
 
   @override
   Future<ServerInfo> inspectServer(String host) async {

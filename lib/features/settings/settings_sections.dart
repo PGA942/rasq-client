@@ -28,10 +28,11 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('プラグインの詳細設定'),
   ]),
   'sns': SettingsSection('SNSプラグイン', [
-    SettingsRow('アカウント'),
-    SettingsRow('タイムライン'),
-    SettingsRow('セキュリティ'),
-    SettingsRow('プライバシーとセーフモード'),
+    // 第二階層 = プラグイン提供の設定 DSL ページ (D-044, `sns.<短area>`)。
+    SettingsRow('アカウント', route: '/settings/dsl/sns.account'),
+    SettingsRow('タイムライン', route: '/settings/dsl/sns.timeline'),
+    SettingsRow('セキュリティ', route: '/settings/dsl/sns.security'),
+    SettingsRow('プライバシーとセーフモード', route: '/settings/dsl/sns.safety'),
     SettingsRow('リスト', route: '/lists'),
     SettingsRow('ミュート/ブロック', route: '/settings/mute-block'),
     SettingsRow('カスタムモーションとアニメーション'),
