@@ -24,6 +24,7 @@ class RasqActionBarItem {
     this.doneColor,
     this.iconUrl,
     this.iconText,
+    this.mutedIcon = false,
     this.onTap,
     this.onLongPress,
     this.onAnchorTap,
@@ -56,6 +57,10 @@ class RasqActionBarItem {
 
   /// テキスト(絵文字)アイコン差し替え (D-040)。[iconUrl] より優先。
   final String? iconText;
+
+  /// true = 予測表示 (D-042): アイコンをグレースケール + 70% に減光して
+  /// 「まだ押していない」ことを視覚的に区別する。
+  final bool mutedIcon;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final ValueChanged<Rect>? onAnchorTap;
@@ -109,6 +114,21 @@ class _ActionBarButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final count = item.count ?? 0;
     final showCount = item.showCount;
+    // 予測表示の減光 (D-042): グレースケール + 70%。
+    Widget mute(Widget child) => item.mutedIcon
+        ? Opacity(
+            opacity: 0.7,
+            child: ColorFiltered(
+              colorFilter: const ColorFilter.matrix([
+                0.2126, 0.7152, 0.0722, 0, 0, //
+                0.2126, 0.7152, 0.0722, 0, 0,
+                0.2126, 0.7152, 0.0722, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              child: child,
+            ),
+          )
+        : child;
     if (item.iconText != null) {
       // テキスト(絵文字)アイコン差し替え (D-040: リアクション済み/予測表示)。
       return Tooltip(
@@ -125,7 +145,7 @@ class _ActionBarButton extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(item.iconText!, style: const TextStyle(fontSize: 17)),
+                mute(Text(item.iconText!, style: const TextStyle(fontSize: 17))),
                 if (showCount && count > 0) Padding(padding: const EdgeInsets.only(left: 4), child: Text('$count', style: RasqTypography.count)),
               ]),
             ),
@@ -149,7 +169,7 @@ class _ActionBarButton extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Image.network(item.iconUrl.toString(), width: 20, height: 20, errorBuilder: (_, _, _) => Icon(item.icon, size: 20)),
+                mute(Image.network(item.iconUrl.toString(), width: 20, height: 20, errorBuilder: (_, _, _) => Icon(item.icon, size: 20))),
                 if (showCount && count > 0) Padding(padding: const EdgeInsets.only(left: 4), child: Text('$count', style: RasqTypography.count)),
               ]),
             ),

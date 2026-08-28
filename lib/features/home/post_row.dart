@@ -125,6 +125,17 @@ class _PostRowState extends ConsumerState<PostRow> {
                   reactions: post.reactions,
                   emojiUrls: post.reactionEmojis,
                   myReaction: post.myReaction,
+                  // チップにリアクションしたユーザー(アイコン+名前)を表示
+                  // (D-042)。チップを開いたときだけ SNS API を叩く。
+                  usersLoader: (r) async {
+                    final s = ref.read(currentSnsSessionProvider);
+                    if (s == null) return const [];
+                    try {
+                      return [for (final e in (await s.reactions(post.id, type: r, limit: 10)).items) e.user];
+                    } catch (_) {
+                      return const [];
+                    }
+                  },
                   onTap: (r) {
                     final a = widget.actions.where((x) => x.genreTag == 'Reaction').firstOrNull;
                     if (a == null) return;
@@ -155,6 +166,7 @@ class _PostRowState extends ConsumerState<PostRow> {
     // Unicode はテキスト、カスタムは投稿の reactionEmojis から画像で表示。
     String? iconText = st.iconText;
     Uri? iconUrl = st.iconUrl;
+    var predictedIcon = false;
     if (iconText == null && iconUrl == null && isReaction && !st.done) {
       final predicted = ref.watch(reactionHistoryProvider).value == null ? null : ref.read(reactionHistoryProvider.notifier).predictFor(post);
       if (predicted != null) {
@@ -163,6 +175,7 @@ class _PostRowState extends ConsumerState<PostRow> {
         } else {
           iconText = predicted;
         }
+        predictedIcon = iconText != null || iconUrl != null;
       }
     }
     return RasqActionBarItem(
@@ -177,6 +190,8 @@ class _PostRowState extends ConsumerState<PostRow> {
       doneColor: isReaction ? tokens.live : null,
       iconUrl: iconUrl,
       iconText: iconText,
+      // 予測はグレースケール+70%減光で「未実行」を区別 (D-042)。
+      mutedIcon: predictedIcon,
       // Repost はデフォルトの**アクションバンドル**(D-039): タップで
       // リノート / 引用ノートのドロップダウン(ユーザー編集のリスト化とは
       // 別で、(+) の編集導線には出ない組み込みバンドル)。

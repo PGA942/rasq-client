@@ -160,7 +160,9 @@ class _EmojiCellState extends State<_EmojiCell> {
         constraints: const BoxConstraints(minWidth: 36),
         height: 36,
         padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Center(child: inner),
+        // widthFactor: 1 で shrink-wrap — 素の Center は有界制約で全幅に
+        // 広がり、Wrap で 1 行 1 絵文字になってしまう (D-042 修正)。
+        child: Center(widthFactor: 1, child: inner),
       ),
     );
     if (loadNow) return cell;

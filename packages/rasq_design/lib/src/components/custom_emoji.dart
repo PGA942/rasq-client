@@ -12,7 +12,7 @@ import '../tokens/typography.dart';
 /// ホバー(デスクトップ)/ 長押し(モバイル)で**チップ**を出す:
 /// 名前の左横に絵文字、横長の絵文字なら名前の上に表示する。
 class RasqCustomEmoji extends StatefulWidget {
-  const RasqCustomEmoji({super.key, this.url, required this.fallbackText, required this.height, this.name, this.semanticLabel});
+  const RasqCustomEmoji({super.key, this.url, required this.fallbackText, required this.height, this.name, this.semanticLabel, this.chipDetail});
 
   /// 画像 URL(null = [fallbackText] をテキスト表示)。
   final Uri? url;
@@ -24,6 +24,10 @@ class RasqCustomEmoji extends StatefulWidget {
   /// チップに出す名前(null = チップなし)。
   final String? name;
   final String? semanticLabel;
+
+  /// チップの追加行(リアクションしたユーザーの名前とアイコン等、D-042)。
+  /// チップ表示中だけ build される。
+  final WidgetBuilder? chipDetail;
 
   /// 可変幅ルール: アスペクト比 3 まで幅可変、超えたら幅 2×高さで固定。
   static double displayWidth(double aspect, double height) => aspect <= 3 ? height * aspect : height * 2;
@@ -153,17 +157,20 @@ class _EmojiChip extends StatelessWidget {
             child: Image.network(w.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => Text(w.fallbackText)),
           );
     final name = Text(w.name!, style: RasqTypography.caption.copyWith(color: scheme.onInverseSurface));
+    final detail = w.chipDetail?.call(context);
     return Positioned(
       left: origin.dx,
-      top: origin.dy - (wide ? 64 : 40),
+      top: origin.dy - (wide ? 64 : 40) - (detail == null ? 0 : 24),
       child: Material(
         color: scheme.inverseSurface,
         borderRadius: BorderRadius.circular(6),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: 4),
-          child: wide
-              ? Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [emoji, const SizedBox(height: 2), name])
-              : Row(mainAxisSize: MainAxisSize.min, children: [emoji, const SizedBox(width: RasqSpacing.sm), name]),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (wide) ...[emoji, const SizedBox(height: 2), name] else Row(mainAxisSize: MainAxisSize.min, children: [emoji, const SizedBox(width: RasqSpacing.sm), name]),
+            // リアクションしたユーザー等の追加行 (D-042)。
+            ?detail,
+          ]),
         ),
       ),
     );
