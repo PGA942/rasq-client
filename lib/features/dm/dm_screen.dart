@@ -28,9 +28,6 @@ class DmScreen extends ConsumerWidget {
         body: Column(children: [
           Row(children: [
             Expanded(child: RasqTabs(items: tabs, showChevron: false)),
-            // 新規メッセージ (D-045): ユーザーを選んでコンポーザー付きの
-            // ルームを開く(既存ルームが無くても DM を始められる)。
-            RasqIconButton(icon: Icons.edit_square, size: 20, tooltip: '新規メッセージ', onPressed: () => _startNewDm(context, ref)),
             RasqIconButton(icon: Icons.settings, size: 20, onPressed: () {}, tooltip: 'DM設定'),
           ]),
           const Padding(padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm), child: RasqSearchBar()),
@@ -41,6 +38,14 @@ class DmScreen extends ConsumerWidget {
             ]),
           ),
         ]),
+        // 新規メッセージ (D-045/D-046): 投稿と同じ + ボタン。ユーザーを選んで
+        // コンポーザー付きのルームを開く(既存ルームが無くても始められる)。
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _startNewDm(context, ref),
+          tooltip: '新規メッセージ',
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }

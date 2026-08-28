@@ -69,6 +69,11 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) async => Page.empty();
   @override
+  Future<Page<UserSummary>> searchUsers(String query, {String? cursor, int limit = 20}) async {
+    final unique = {for (final p in _posts) p.author.key: p.author};
+    return Page(items: [for (final u in unique.values) if (u.displayName.contains(query) || u.id.contains(query)) u]);
+  }
+  @override
   Future<Map<String, FollowState>> relationships(List<String> userIds) async => {for (final id in userIds) id: const FollowState()};
   @override
   Future<List<UserProfile>> users(List<String> ids) async => [for (final p in _posts) if (ids.contains(p.author.id)) UserProfile(summary: p.author)];

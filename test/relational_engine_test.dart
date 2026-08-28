@@ -243,4 +243,55 @@ void main() {
       expect(t, greaterThanOrEqualTo(0.3));
     });
   });
+
+  group('ゲスト投稿 (D-046: リノート/引用で入った人)', () {
+    // フォロイー同士の会話: ストラトローンチの話題(URL ハードアンカー付き)。
+    List<Post> followeeTalk() => [
+          post('1', 'alice', 'ストラトローンチの機体見てきた https://strato.example/launch', at: const Duration(minutes: 30)),
+          post('2', 'bob', 'ストラトローンチの機体、翼が長いんだよね', at: const Duration(minutes: 31)),
+        ];
+
+    test('引用より前のゲスト投稿が遡ってページに入る(時系列位置に挿入)', () {
+      // guest はフォロイーではないが、話題の 20 分前から同じ URL で投稿していた。
+      final guest = post('g1', 'guest', 'ストラトローンチの機体、今日飛ぶらしい https://strato.example/launch', at: const Duration(minutes: 10));
+      final engine = ConversationEngine();
+      final events = engine.build(followeePosts: followeeTalk(), guestPosts: [guest], now: base.add(const Duration(minutes: 35)));
+      expect(events, hasLength(1));
+      final e = events.single;
+      expect(e.postKeys, contains(guest.key));
+      // 遡及挿入: 開始点(先頭)がゲストの先行投稿になる。
+      expect(e.posts.first.id, 'g1');
+      expect(e.members.map((u) => u.id), contains('guest'));
+    });
+
+    test('無関係なゲスト投稿はイベントを作らない(リンクのみ = 脱退しやすい)', () {
+      final noise = post('g2', 'guest', '今日のごはんはカレーでした', at: const Duration(minutes: 29));
+      final engine = ConversationEngine();
+      final events = engine.buildAll(followeePosts: followeeTalk(), guestPosts: [noise]);
+      // フォロイー分のイベントだけ(ゲストの独り言は ROOT にならない)。
+      expect(events.every((e) => !e.postKeys.contains(noise.key)), isTrue);
+      expect(events.expand((e) => e.posts).every((p) => p.id != 'g2'), isTrue);
+    });
+
+    test('ゲストのしきい値は +guestBias で厳しめ(バイアスを上げると弾かれる)', () {
+      // ハードアンカー無し・そこそこの類似のボーダー投稿。
+      final borderline = post('g3', 'guest', 'ストラトローンチの機体いいよね', at: const Duration(minutes: 32));
+      final loose = ConversationEngine(settings: const RelationalSettings(guestBias: 0.0));
+      final strict = ConversationEngine(settings: const RelationalSettings(guestBias: 0.45));
+      final withLoose = loose.buildAll(followeePosts: followeeTalk(), guestPosts: [borderline]);
+      final withStrict = strict.buildAll(followeePosts: followeeTalk(), guestPosts: [borderline]);
+      expect(withLoose.any((e) => e.postKeys.contains(borderline.key)), isTrue);
+      expect(withStrict.any((e) => e.postKeys.contains(borderline.key)), isFalse);
+    });
+
+    test('guestBias は設定 JSON を往復する', () {
+      const s = RelationalSettings(guestBias: 0.12);
+      final restored = RelationalSettings.fromJson(s.toJson());
+      expect(restored.guestBias, 0.12);
+      // 旧保存値(guestBias 無し)は既定にフォールバック。
+      final legacy = RelationalSettings.fromJson(const {'linkBias': 80});
+      expect(legacy.guestBias, const RelationalSettings().guestBias);
+      expect(legacy.linkBias, 80);
+    });
+  });
 }

@@ -33,8 +33,9 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target) async {
       title: target.title,
       cancelText: 'キャンセル',
       // ヘッダー右側の空きスペース (D-045): 公開設定 / 連合 / リアクション
-      // 受け入れ / MFM ピッカー。
-      headerTrailing: ComposerHeaderControls(isDm: target is ComposeDm),
+      // 受け入れ。MFM ピッカーは下部ツールバー側 (D-046)。DM は公開範囲が
+      // specified 固定なのでヘッダーコントロール無し。
+      headerTrailing: target is ComposeDm ? null : const ComposerHeaderControls(),
     ),
     builder: (ctx, handle) => _ComposerBody(target: target, onSent: (p) => handle.close(result: p)),
   );
@@ -43,11 +44,9 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target) async {
 }
 
 /// FOW ヘッダー右側のコントロール群 (D-045)。状態は [composeOptionsProvider]
-/// (本文側と共有、アプリ起動中は前回値を記憶)。DM では公開範囲が specified
-/// 固定のため MFM ピッカーだけを出す。
+/// (本文側と共有、アプリ起動中は前回値を記憶)。
 class ComposerHeaderControls extends ConsumerWidget {
-  const ComposerHeaderControls({super.key, this.isDm = false});
-  final bool isDm;
+  const ComposerHeaderControls({super.key});
 
   Rect _anchorOf(BuildContext ctx) {
     final box = ctx.findRenderObject() as RenderBox;
@@ -59,10 +58,8 @@ class ComposerHeaderControls extends ConsumerWidget {
     final opts = ref.watch(composeOptionsProvider);
     final store = ref.read(composeOptionsProvider.notifier);
     final manager = ref.read(overlayManagerProvider);
-    final mfm = ref.watch(currentAccountProvider)?.kind == SnsKind.misskey;
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      if (!isDm) ...[
-        Builder(builder: (ctx) {
+      Builder(builder: (ctx) {
           final (icon, label) = switch (opts.visibility) {
             'home' => (Icons.home_outlined, 'ホーム'),
             'followers' => (Icons.lock_outline, 'フォロワー'),
@@ -81,33 +78,27 @@ class ComposerHeaderControls extends ConsumerWidget {
             },
           );
         }),
-        RasqActionButton.icon(
-          icon: Icons.rocket_launch_outlined,
-          doneIcon: Icons.public_off,
-          done: opts.localOnly,
-          tooltip: opts.localOnly ? '連合なし(このサーバーのみ)' : '連合あり(タップで連合なしに)',
-          onTap: () => store.setLocalOnly(!opts.localOnly),
-        ),
-        Builder(builder: (ctx) {
-          return RasqActionButton.icon(
-            icon: Icons.add_reaction_outlined,
-            doneIcon: Icons.add_reaction,
-            done: opts.reactionAcceptance != null,
-            tooltip: 'リアクションの受け入れ: ${reactionAcceptanceLabels[opts.reactionAcceptance]}',
-            onTap: () async {
-              final picked = await manager.showDropdown<(String?,)>(id: 'composer.reaction', ownerId: composerFowId, anchor: _anchorOf(ctx), dense: true, items: [
-                for (final e in reactionAcceptanceLabels.entries) RasqDropdownItem(e.value, (e.key,)),
-              ]);
-              if (picked != null) store.setReactionAcceptance(picked.$1);
-            },
-          );
-        }),
-      ],
       RasqActionButton.icon(
-        icon: Icons.code,
-        tooltip: mfm ? 'MFM' : 'Markdown',
-        onTap: () => openMfmPicker(ref, ownerId: composerFowId, mfm: mfm, onApply: (p, s) => ref.read(composerInsertBridgeProvider).value = ComposerInsert(p, s)),
+        icon: Icons.rocket_launch_outlined,
+        doneIcon: Icons.public_off,
+        done: opts.localOnly,
+        tooltip: opts.localOnly ? '連合なし(このサーバーのみ)' : '連合あり(タップで連合なしに)',
+        onTap: () => store.setLocalOnly(!opts.localOnly),
       ),
+      Builder(builder: (ctx) {
+        return RasqActionButton.icon(
+          icon: Icons.add_reaction_outlined,
+          doneIcon: Icons.add_reaction,
+          done: opts.reactionAcceptance != null,
+          tooltip: 'リアクションの受け入れ: ${reactionAcceptanceLabels[opts.reactionAcceptance]}',
+          onTap: () async {
+            final picked = await manager.showDropdown<(String?,)>(id: 'composer.reaction', ownerId: composerFowId, anchor: _anchorOf(ctx), dense: true, items: [
+              for (final e in reactionAcceptanceLabels.entries) RasqDropdownItem(e.value, (e.key,)),
+            ]);
+            if (picked != null) store.setReactionAcceptance(picked.$1);
+          },
+        );
+      }),
       const SizedBox(width: 4),
     ]);
   }
@@ -141,14 +132,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   String? _error;
   String? _progress;
 
-  late final ValueNotifier<ComposerInsert?> _bridge;
-
   @override
   void initState() {
     super.initState();
-    // ヘッダー/MFM ピッカーからの挿入依頼(カーソル位置はこちらが知っている)。
-    _bridge = ref.read(composerInsertBridgeProvider);
-    _bridge.addListener(_onBridgeInsert);
     final t = widget.target;
     if (t is ComposeReply) {
       final a = t.to.author;
@@ -165,20 +151,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   @override
   void dispose() {
-    _bridge.removeListener(_onBridgeInsert);
     _text.dispose();
     _cw.dispose();
     _focus.dispose();
     _poll?.dispose();
     super.dispose();
-  }
-
-  void _onBridgeInsert() {
-    final ins = _bridge.value;
-    if (ins == null || !mounted) return;
-    _bridge.value = null;
-    _wrapSelection(ins.prefix, ins.suffix);
-    _focus.requestFocus();
   }
 
   /// 選択範囲を [prefix]…[suffix] で包む。カーソルは中身部分(サフィックス
@@ -362,6 +339,18 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     _focus.requestFocus();
                   }),
                 ),
+                // MFM/Markdown ピッカー (D-045/D-046: 起動ボタンはツールバー側)。
+                Builder(builder: (context) {
+                  final mfm = ref.watch(currentAccountProvider)?.kind == SnsKind.misskey;
+                  return RasqActionButton.icon(
+                    icon: Icons.code,
+                    tooltip: mfm ? 'MFM' : 'Markdown',
+                    onTap: () => openMfmPicker(ref, ownerId: composerFowId, mfm: mfm, onApply: (p, s) {
+                      _wrapSelection(p, s);
+                      _focus.requestFocus();
+                    }),
+                  );
+                }),
               ]),
             ),
           ),

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
@@ -61,19 +60,3 @@ const reactionAcceptanceLabels = <String?, String>{
   'nonSensitiveOnlyForLocalLikeOnlyForRemote': '非センシティブ&外部からはいいねのみ',
 };
 
-/// コンポーザー本文への挿入ブリッジ (D-045): ヘッダー/子 FOW からの挿入依頼を
-/// 本文の TextField(カーソル位置を知っている側)が受け取る。
-class ComposerInsert {
-  const ComposerInsert(this.prefix, [this.suffix = '']);
-
-  /// [suffix] が空でなければ選択範囲を [prefix]…[suffix] で包み、カーソルは
-  /// 中身部分(サフィックス直前)に置かれる。
-  final String prefix;
-  final String suffix;
-}
-
-final composerInsertBridgeProvider = Provider<ValueNotifier<ComposerInsert?>>((ref) {
-  final n = ValueNotifier<ComposerInsert?>(null);
-  ref.onDispose(n.dispose);
-  return n;
-});
