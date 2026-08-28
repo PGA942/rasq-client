@@ -25,6 +25,7 @@ class FowSpec {
     this.headerTrailing,
     this.showHandle = true,
     this.avoidKeyboard = true,
+    this.dockAboveFooter = false,
   }) : heightFactor = ValueNotifier(initialHeightFactor.clamp(minHeightFactor, maxHeightFactor));
 
   final FowPanelType type;
@@ -48,6 +49,11 @@ class FowSpec {
 
   /// Lift the panel above the soft keyboard.
   final bool avoidKeyboard;
+
+  /// stick FOW (D-047): キーボードが閉じているとき、根本をフッターメニューの
+  /// **上**にドックする(通常 FOW は画面最下端まで覆う)。インセット値は
+  /// [OverlayHost.fowDockInset] がレイアウトから供給する。
+  final bool dockAboveFooter;
 
   bool get hasHeader => title != null || cancelText != null || confirmText != null;
 

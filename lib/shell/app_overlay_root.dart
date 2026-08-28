@@ -25,7 +25,13 @@ class AppOverlayRoot extends ConsumerWidget {
         child: Focus(
           autofocus: true,
           skipTraversal: true,
-          child: OverlayHost(manager: manager, child: child),
+          child: OverlayHost(
+            manager: manager,
+            // stick FOW の根本 = フッターメニュー(グローバルナビ)の上 (D-047)。
+            // タブレット幅(≥840dp)は下部ナビが無いので持ち上げない。
+            fowDockInset: (ctx) => MediaQuery.sizeOf(ctx).width >= 840 ? 0 : 80 + 1.2 + MediaQuery.paddingOf(ctx).bottom,
+            child: child,
+          ),
         ),
       ),
     );

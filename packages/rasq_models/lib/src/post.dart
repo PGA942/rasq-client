@@ -51,6 +51,7 @@ class Post {
     this.linkUrl,
     this.counts = const {},
     this.visibility,
+    this.localOnly = false,
     this.directToIds = const [],
     this.reactions = const {},
     this.reactionEmojis = const {},
@@ -79,6 +80,10 @@ class Post {
 
   /// Plugin visibility string (`public` / `home` / `followers` / `specified` …).
   final String? visibility;
+
+  /// 連合しない投稿 (Misskey `localOnly`)。返信/引用は連合可視性を親より
+  /// 広げられないため、コンポーザーが継承判定に使う (D-047)。
+  final bool localOnly;
 
   /// Recipient user ids for direct posts (Misskey `visibleUserIds`).
   final List<String> directToIds;

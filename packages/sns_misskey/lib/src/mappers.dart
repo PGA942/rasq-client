@@ -157,6 +157,7 @@ abstract final class MisskeyMappers {
         'reaction': reactionTotal,
       },
       visibility: j['visibility'] as String?,
+      localOnly: j['localOnly'] == true,
       directToIds: [for (final id in (j['visibleUserIds'] as List? ?? const [])) id.toString()],
       reactions: {for (final e in reactions.entries) e.key: (e.value as num?)?.toInt() ?? 0},
       reactionEmojis: {

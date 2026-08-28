@@ -261,6 +261,18 @@ void main() {
       await s.createPost(const NewPost(text: 't2'));
       expect(seen.containsKey('localOnly'), isFalse);
       expect(seen.containsKey('reactionAcceptance'), isFalse);
+
+      // ダイレクト (D-047): specified には宛先 visibleUserIds を添える。
+      await s.createPost(const NewPost(text: 't3', visibility: 'specified', directToIds: ['peer1', 'peer2']));
+      expect(seen['visibility'], 'specified');
+      expect(seen['visibleUserIds'], ['peer1', 'peer2']);
+    });
+
+    test('mapper (D-047): localOnly / visibleUserIds を Post に写す', () {
+      final p = MisskeyMappers.note({...note('n1'), 'visibility': 'specified', 'localOnly': true, 'visibleUserIds': ['peer1']}, viewer: viewer, host: 'misskey.test');
+      expect(p.isDirect, isTrue);
+      expect(p.localOnly, isTrue);
+      expect(p.directToIds, ['peer1']);
     });
 
     test('システム通知 (D-045): app/roleAssigned/未知タイプ → system + title/body', () {

@@ -8,11 +8,15 @@ import 'overlay_manager.dart';
 /// Renders the content plus every open overlay, honouring layer z-order,
 /// scrims and barrier behaviour. Place it once at the root of the app shell.
 class OverlayHost extends StatelessWidget {
-  const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor});
+  const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor, this.fowDockInset});
 
   final OverlayManager manager;
   final Widget child;
   final Color? scrimColor;
+
+  /// [FowSpec.dockAboveFooter] な FOW の根本を持ち上げる量(= アプリの
+  /// フッターメニュー高さ)。レイアウトを知るアプリ側が供給する (D-047)。
+  final double Function(BuildContext context)? fowDockInset;
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +99,7 @@ class OverlayHost extends StatelessWidget {
     }
     widgets.add(Positioned.fill(
       child: _FowColumn(
+        dockInset: fowDockInset,
         entries: fows,
         buildContent: (e) {
           final handle = manager.handleFor(e);
@@ -113,17 +118,23 @@ class OverlayHost extends StatelessWidget {
 /// Lays FOW panels out bottom-up. Heights come from each spec's heightFactor
 /// and are scaled down proportionally when they would not fit.
 class _FowColumn extends StatelessWidget {
-  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm});
+  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, this.dockInset});
   final List<RasqOverlayEntry> entries;
   final Widget Function(RasqOverlayEntry) buildContent;
   final void Function(RasqOverlayEntry) onCancel;
   final void Function(RasqOverlayEntry) onConfirm;
+  final double Function(BuildContext context)? dockInset;
 
   @override
   Widget build(BuildContext context) {
     final ordered = entries.reversed.toList(); // newest first → placed at bottom
     return LayoutBuilder(builder: (context, constraints) {
-      final insets = MediaQuery.viewInsetsOf(context).bottom;
+      var insets = MediaQuery.viewInsetsOf(context).bottom;
+      // stick FOW (D-047): キーボードが閉じている間はフッターメニューの上に
+      // ドックする(キーボードが出たらその上 = 従来どおり)。
+      if (insets == 0 && ordered.any((e) => e.fow?.dockAboveFooter == true)) {
+        insets = dockInset?.call(context) ?? 0;
+      }
       final avail = constraints.maxHeight - insets;
       return AnimatedBuilder(
         animation: Listenable.merge([for (final e in ordered) e.fow?.heightFactor].whereType<Listenable>().toList()),
@@ -159,9 +170,10 @@ class _FowPanel extends StatelessWidget {
     final spec = entry.fow ?? FowSpec();
     final scheme = Theme.of(context).colorScheme;
     final hostHeight = MediaQuery.sizeOf(context).height;
-    return SizedBox(
-      height: height,
-      child: Material(
+    // 非リサイズパネル(stick コンポーザー等)は heightFactor 変更を
+    // なめらかに(展開時にヘッダー/返信先タイルが「割り込んでくる」動き)。
+    // ドラッグリサイズ可能なパネルは追従遅延を避けて即時反映。
+    final panel = Material(
         color: scheme.surface,
         elevation: 8,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
@@ -198,8 +210,10 @@ class _FowPanel extends StatelessWidget {
             ),
           Expanded(child: child),
         ]),
-      ),
-    );
+      );
+    return spec.resizable
+        ? SizedBox(height: height, child: panel)
+        : AnimatedContainer(duration: const Duration(milliseconds: 180), curve: Curves.easeOutCubic, height: height, child: panel);
   }
 }
 

@@ -176,6 +176,8 @@ class MisskeySession extends SnsSessionBase {
       if (draft.quoteOfId != null) 'renoteId': draft.quoteOfId,
       if (draft.repostOfId != null) 'renoteId': draft.repostOfId,
       if (draft.visibility != null) 'visibility': draft.visibility,
+      // ダイレクト (D-047): specified には宛先が必須(DM ルームへの返信等)。
+      if (draft.visibility == 'specified' && draft.directToIds.isNotEmpty) 'visibleUserIds': draft.directToIds,
       if (draft.localOnly) 'localOnly': true,
       if (draft.reactionAcceptance != null) 'reactionAcceptance': draft.reactionAcceptance,
       if (draft.mediaIds.isNotEmpty) 'fileIds': draft.mediaIds,

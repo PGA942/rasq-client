@@ -23,21 +23,37 @@ const composerFowId = 'fow.composer';
 
 Future<Post?> showComposer(WidgetRef ref, ComposeTarget target) async {
   final manager = ref.read(overlayManagerProvider);
+  // 返信 / ダイレクト投稿は **stick FOW** (D-047): ヘッダー無しで根本が
+  // フッターメニュー/キーボードの上に貼り付き、タップ(フォーカス)すると
+  // ヘッダーと返信先タイルが上から割り込んでくる(書き込み領域とアクション
+  // バーはシームレスなまま)。通常/引用は従来のインタースティシャル。
+  final stick = target is ComposeReply || target is ComposeDm;
+  final spec = stick
+      ? FowSpec(
+          type: FowPanelType.widget,
+          confirmMode: FowConfirmMode.stick,
+          initialHeightFactor: _ComposerBodyState.stickCollapsedFactor,
+          minHeightFactor: 0.10,
+          maxHeightFactor: 0.8,
+          resizable: false,
+          showHandle: false,
+          dockAboveFooter: true,
+        )
+      : FowSpec(
+          type: FowPanelType.interstitial,
+          confirmMode: FowConfirmMode.saveDiscard,
+          initialHeightFactor: 0.72,
+          minHeightFactor: 0.35,
+          title: target.title,
+          cancelText: 'キャンセル',
+          // ヘッダー右側の空きスペース (D-045): 公開設定 / 連合 / リアクション
+          // 受け入れ。MFM ピッカーは下部ツールバー側 (D-046)。
+          headerTrailing: const ComposerHeaderControls(),
+        );
   final res = await manager.showFow<Post>(
     id: composerFowId,
-    spec: FowSpec(
-      type: FowPanelType.interstitial,
-      confirmMode: FowConfirmMode.saveDiscard,
-      initialHeightFactor: 0.72,
-      minHeightFactor: 0.35,
-      title: target.title,
-      cancelText: 'キャンセル',
-      // ヘッダー右側の空きスペース (D-045): 公開設定 / 連合 / リアクション
-      // 受け入れ。MFM ピッカーは下部ツールバー側 (D-046)。DM は公開範囲が
-      // specified 固定なのでヘッダーコントロール無し。
-      headerTrailing: target is ComposeDm ? null : const ComposerHeaderControls(),
-    ),
-    builder: (ctx, handle) => _ComposerBody(target: target, onSent: (p) => handle.close(result: p)),
+    spec: spec,
+    builder: (ctx, handle) => _ComposerBody(target: target, spec: spec, onSent: (p) => handle.close(result: p), onClose: () => handle.close()),
   );
   manager.closeOwnedBy(composerFowId);
   return res;
@@ -114,9 +130,13 @@ class _Attachment {
 }
 
 class _ComposerBody extends ConsumerStatefulWidget {
-  const _ComposerBody({required this.target, required this.onSent});
+  const _ComposerBody({required this.target, required this.onSent, this.spec, this.onClose});
   final ComposeTarget target;
   final ValueChanged<Post> onSent;
+
+  /// stick モード (D-047) の高さ調整用(展開/折りたたみで heightFactor を動かす)。
+  final FowSpec? spec;
+  final VoidCallback? onClose;
   @override
   ConsumerState<_ComposerBody> createState() => _ComposerBodyState();
 }
@@ -132,9 +152,29 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   String? _error;
   String? _progress;
 
+  // stick FOW (D-047) の高さ: 折りたたみ = 入力行 + ツールバーだけ、展開 =
+  // ヘッダー + 返信先タイルが割り込む。
+  static const stickCollapsedFactor = 0.15;
+  static const stickExpandedFactor = 0.44;
+
+  bool get _stick => widget.target is ComposeReply || widget.target is ComposeDm;
+  Post? get _replyTo => switch (widget.target) { ComposeReply(to: final p) => p, _ => null };
+
+  /// ダイレクト投稿への返信 = 公開範囲をダイレクト(specified)に固定 (D-047)。
+  bool get _directReply => _replyTo?.isDirect ?? false;
+
+  bool get _stickExpanded => _focus.hasFocus || _text.text.trim().isNotEmpty || _files.isNotEmpty || _poll != null || _cwOn;
+
+  void _syncStickHeight() {
+    if (!_stick || !mounted) return;
+    widget.spec?.heightFactor.value = _stickExpanded ? stickExpandedFactor : stickCollapsedFactor;
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
+    _focus.addListener(_syncStickHeight);
     final t = widget.target;
     if (t is ComposeReply) {
       final a = t.to.author;
@@ -223,14 +263,23 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       setState(() => _progress = '送信中…');
       // 投稿オプション (D-045: FOW ヘッダーの公開設定/連合/リアクション受け入れ)。
       final opts = ref.read(composeOptionsProvider);
+      final replyTo = _replyTo;
+      final quoteOf = switch (widget.target) { ComposeQuote(of: final p) => p, _ => null };
+      final parent = replyTo ?? quoteOf;
+      // ダイレクトモード (D-047): ダイレクト投稿への返信は specified 固定 +
+      // 宛先継承(それ以外だとサーバーがエラーを返す)。連合可視性も親より
+      // 広げられない(連合なしの親 → 返信/引用も連合なし)。
+      final direct = !_isDm && (replyTo?.isDirect ?? false);
+      final myId = ref.read(currentUserProvider).id;
       final draft = NewPost(
         text: _text.text.trim(),
         contentWarning: _cwOn && _cw.text.trim().isNotEmpty ? _cw.text.trim() : null,
-        replyToId: switch (widget.target) { ComposeReply(to: final p) => p.id, _ => null },
-        quoteOfId: switch (widget.target) { ComposeQuote(of: final p) => p.id, _ => null },
-        visibility: _isDm ? null : opts.visibility,
-        localOnly: !_isDm && opts.localOnly,
-        reactionAcceptance: _isDm ? null : opts.reactionAcceptance,
+        replyToId: replyTo?.id,
+        quoteOfId: quoteOf?.id,
+        visibility: _isDm ? null : (direct ? 'specified' : opts.visibility),
+        localOnly: !_isDm && ((parent?.localOnly ?? false) || (!direct && opts.localOnly)),
+        reactionAcceptance: (_isDm || direct) ? null : opts.reactionAcceptance,
+        directToIds: direct ? {replyTo!.author.id, ...replyTo.directToIds}.where((id) => id != myId).toList() : const [],
         mediaIds: ids,
         poll: _poll == null ? null : NewPoll(choices: _poll!.texts, multiple: _poll!.multiple, expiresAfter: _poll!.expiresAfter),
       );
@@ -268,10 +317,29 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (target is ComposeReply || target is ComposeQuote)
+            // stick FOW (D-047): フォーカスするとヘッダー(タイトル + 投稿
+            // オプション + 閉じる)と返信先タイルが上から割り込んでくる。
+            if (_stick)
+              AnimatedSize(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: !_stickExpanded
+                    ? const SizedBox(width: double.infinity)
+                    : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          Expanded(child: Text(_isDm ? '→ ${target.title}' : target.title, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
+                          if (!_isDm && !_directReply) const ComposerHeaderControls(),
+                          RasqIconButton(icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: widget.onClose),
+                        ]),
+                        if (_directReply) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('ダイレクト投稿への返信(相手にだけ届きます)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+                        if (_replyTo != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: _TargetPreview(post: _replyTo!, emojis: emojis)),
+                      ]),
+              ),
+            if (!_stick && target is ComposeQuote)
               Padding(
                 padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
-                child: _TargetPreview(post: target is ComposeReply ? target.to : (target as ComposeQuote).of, emojis: emojis),
+                child: _TargetPreview(post: target.of, emojis: emojis),
               ),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: me.displayName),
@@ -289,11 +357,12 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     controller: _text,
                     focusNode: _focus,
                     autofocus: true,
-                    minLines: 3,
+                    // stick の折りたたみ時は 1 行の書き込みバー(展開で伸びる)。
+                    minLines: _stick && !_stickExpanded ? 1 : 3,
                     maxLines: 10,
                     style: RasqTypography.body,
                     decoration: InputDecoration(hintText: _isDm ? 'メッセージを入力..' : 'いいことがありますように！', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (_) => _stick ? _syncStickHeight() : setState(() {}),
                   ),
                 ]),
               ),
