@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 /// FOW type (原典: UI_Elements「FOWタイプ（3種）」).
@@ -26,7 +28,11 @@ class FowSpec {
     this.showHandle = true,
     this.avoidKeyboard = true,
     this.dockAboveFooter = false,
-  }) : heightFactor = ValueNotifier(initialHeightFactor.clamp(minHeightFactor, maxHeightFactor));
+    List<double> heightStops = const [],
+    this.freeAboveStops = false,
+    this.freeBelowStops = false,
+  })  : heightStops = [...heightStops]..sort(),
+        heightFactor = ValueNotifier(initialHeightFactor.clamp(minHeightFactor, maxHeightFactor));
 
   final FowPanelType type;
   final FowConfirmMode confirmMode;
@@ -55,11 +61,51 @@ class FowSpec {
   /// [OverlayHost.fowDockInset] がレイアウトから供給する。
   final bool dockAboveFooter;
 
+  /// 高さの段階 (D-049): factor の昇順配列。ドラッグを離すと最も近い段階へ
+  /// スナップする。空 = 段階なし(従来のシームレスな連続リサイズ)。
+  /// 呼び出し側が実測から動的に差し替えてよい(コンポーザーの
+  /// 「全部ピッタリ」段階など)。
+  List<double> heightStops;
+
+  /// 最上段より上へ**シームレスに**動かせるか(false = 最上段で止まる)。
+  final bool freeAboveStops;
+
+  /// 最下段より下へ**シームレスに**動かせるか(false = 最下段で止まる)。
+  final bool freeBelowStops;
+
+  /// ユーザーがハンドルでサイズ変更したか(呼び出し側の自動フィットが
+  /// 手動調整を上書きしないための印。段階が切り替わったらリセットしてよい)。
+  bool userResized = false;
+
   bool get hasHeader => title != null || cancelText != null || confirmText != null;
 
   /// Interstitial FOWs take the screen: scrim + barrier discard. Widget/system FOWs
   /// leave the content behind them interactive.
   bool get blocksContent => type == FowPanelType.interstitial;
 
-  void resizeBy(double deltaFactor) => heightFactor.value = (heightFactor.value - deltaFactor).clamp(minHeightFactor, maxHeightFactor);
+  void resizeBy(double deltaFactor) {
+    userResized = true;
+    var lo = minHeightFactor;
+    var hi = maxHeightFactor;
+    if (heightStops.isNotEmpty) {
+      // 段階の外側: free 指定が無い側は端の段階で止まる (D-049)。
+      if (!freeBelowStops) lo = math.max(lo, heightStops.first);
+      if (!freeAboveStops) hi = math.min(hi, heightStops.last);
+    }
+    heightFactor.value = (heightFactor.value - deltaFactor).clamp(lo, hi);
+  }
+
+  /// ドラッグ終了時: 段階の**間**にいるなら最も近い段階へスナップする。
+  /// free 側の外側にいる場合はそのまま(シームレス)。
+  void snapToStops() {
+    if (heightStops.isEmpty) return;
+    final v = heightFactor.value;
+    if (freeBelowStops && v < heightStops.first) return;
+    if (freeAboveStops && v > heightStops.last) return;
+    var best = heightStops.first;
+    for (final s in heightStops) {
+      if ((v - s).abs() < (v - best).abs()) best = s;
+    }
+    heightFactor.value = best.clamp(minHeightFactor, maxHeightFactor);
+  }
 }

@@ -144,12 +144,20 @@ class _FowColumn extends StatelessWidget {
           final scale = total > 1 ? 1 / total : 1.0;
           final heights = [for (final f in factors) f * scale * avail];
           // Older entries are above; the newest sits at the very bottom.
+          // OverflowBox: 高さアニメーション(D-049)の過渡期は合計が avail を
+          // 一時的に超えることがある(古いパネルが縮む前に新しいパネルが
+          // 目標高さで現れる)。上方向へ逃がして RenderFlex overflow にしない。
           return Padding(
             padding: EdgeInsets.only(bottom: insets),
-            child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-              for (var i = ordered.length - 1; i >= 0; i--)
-                _FowPanel(entry: ordered[i], height: heights[i], child: buildContent(ordered[i]), onCancel: () => onCancel(ordered[i]), onConfirm: () => onConfirm(ordered[i])),
-            ]),
+            child: OverflowBox(
+              alignment: Alignment.bottomCenter,
+              minHeight: 0,
+              maxHeight: double.infinity,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                for (var i = ordered.length - 1; i >= 0; i--)
+                  _FowPanel(entry: ordered[i], height: heights[i], child: buildContent(ordered[i]), onCancel: () => onCancel(ordered[i]), onConfirm: () => onConfirm(ordered[i])),
+              ]),
+            ),
           );
         },
       );
@@ -157,7 +165,7 @@ class _FowColumn extends StatelessWidget {
   }
 }
 
-class _FowPanel extends StatelessWidget {
+class _FowPanel extends StatefulWidget {
   const _FowPanel({required this.entry, required this.height, required this.child, required this.onCancel, required this.onConfirm});
   final RasqOverlayEntry entry;
   final double height;
@@ -166,7 +174,21 @@ class _FowPanel extends StatelessWidget {
   final VoidCallback onConfirm;
 
   @override
+  State<_FowPanel> createState() => _FowPanelState();
+}
+
+class _FowPanelState extends State<_FowPanel> {
+  /// ドラッグ中は高さを即時反映(追従遅延を出さない)。離したら
+  /// [FowSpec.snapToStops] で最寄りの高さ段階へアニメーションで着地 (D-049)。
+  bool _dragging = false;
+
+  @override
   Widget build(BuildContext context) {
+    final entry = widget.entry;
+    final height = widget.height;
+    final child = widget.child;
+    final onCancel = widget.onCancel;
+    final onConfirm = widget.onConfirm;
     final spec = entry.fow ?? FowSpec();
     final scheme = Theme.of(context).colorScheme;
     final hostHeight = MediaQuery.sizeOf(context).height;
@@ -185,7 +207,15 @@ class _FowPanel extends StatelessWidget {
           if (spec.showHandle)
             GestureDetector(
               behavior: HitTestBehavior.opaque,
+              onVerticalDragStart: spec.resizable ? (_) => setState(() => _dragging = true) : null,
               onVerticalDragUpdate: spec.resizable ? (d) => spec.resizeBy(d.delta.dy / hostHeight) : null,
+              onVerticalDragEnd: spec.resizable
+                  ? (_) {
+                      setState(() => _dragging = false);
+                      spec.snapToStops();
+                    }
+                  : null,
+              onVerticalDragCancel: spec.resizable ? () => setState(() => _dragging = false) : null,
               child: Semantics(
                 label: 'サイズ変更ハンドル',
                 child: SizedBox(
@@ -214,7 +244,9 @@ class _FowPanel extends StatelessWidget {
           Expanded(child: child),
         ]),
       );
-    return spec.resizable
+    // ドラッグ中は即時反映、それ以外(スナップ着地・stick の展開/折りたたみ・
+    // 外部からの heightFactor 変更)はアニメーションで動かす。
+    return _dragging
         ? SizedBox(height: height, child: panel)
         : AnimatedContainer(duration: const Duration(milliseconds: 180), curve: Curves.easeOutCubic, height: height, child: panel);
   }

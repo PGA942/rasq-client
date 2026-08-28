@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../shell/app_overlay_root.dart';
 import '../../text/inline_spans.dart';
 import 'compose_providers.dart';
 import 'compose_target.dart';
@@ -36,9 +38,11 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target) async {
           initialHeightFactor: _ComposerBodyState.stickCollapsedFactor,
           minHeightFactor: 0.10,
           maxHeightFactor: 0.8,
-          resizable: false,
-          showHandle: false,
           dockAboveFooter: true,
+          // 高さの段階 (D-049): 折りたたみ/全部ピッタリの 2 段(実測が入ると
+          // 本体が差し替える)。最上段より上はシームレス、最下段で止まる。
+          heightStops: const [_ComposerBodyState.stickCollapsedFactor, _ComposerBodyState.stickExpandedFactor],
+          freeAboveStops: true,
         )
       : FowSpec(
           type: FowPanelType.interstitial,
@@ -162,8 +166,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   String? _error;
   String? _progress;
 
-  // stick FOW (D-047) の高さ: 折りたたみ = 入力行 + ツールバーだけ、展開 =
-  // ヘッダー + 返信先タイルが割り込む。
+  // stick FOW (D-047/D-049) の高さ: 折りたたみ = 入力行 + ツールバーだけ、
+  // 展開 = ヘッダー + 返信先タイルが割り込む。定数は実測が入るまでの初期値で、
+  // レイアウト後に「全部をピッタリ表示できる」段階を計算して差し替える。
   static const stickCollapsedFactor = 0.15;
   static const stickExpandedFactor = 0.44;
 
@@ -175,10 +180,64 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   bool get _stickExpanded => _focus.hasFocus || _text.text.trim().isNotEmpty || _files.isNotEmpty || _poll != null || _cwOn;
 
+  // ---- 高さ段階の実測 (D-049) ------------------------------------------
+  final _stickContentKey = GlobalKey();
+  final _stickToolbarKey = GlobalKey();
+  // 割り込みヘッダー: AnimatedSize(アニメ中の見かけの高さ)と中身
+  // (自然な高さ)。fit = content − 見かけ + 自然、でアニメ非依存に測れる。
+  final _stickHeaderAnimKey = GlobalKey();
+  final _stickHeaderInnerKey = GlobalKey();
+  bool? _wasExpanded;
+  double? _fitCollapsed;
+  double? _fitExpanded;
+
   void _syncStickHeight() {
     if (!_stick || !mounted) return;
-    widget.spec?.heightFactor.value = _stickExpanded ? stickExpandedFactor : stickCollapsedFactor;
     setState(() {});
+  }
+
+  /// build 毎に呼ぶ(冪等)。レイアウト後に「全部をピッタリ表示できる」
+  /// 高さを実測し、高さ段階(heightStops)と現在高さへ反映する。
+  void _scheduleStickFit() {
+    final spec = widget.spec;
+    if (spec == null) return;
+    if (_wasExpanded != _stickExpanded) {
+      _wasExpanded = _stickExpanded;
+      spec.userResized = false; // 段階が変わったら自動フィットを再開
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureStickFit());
+  }
+
+  void _measureStickFit() {
+    if (!mounted || !_stick) return;
+    final spec = widget.spec;
+    if (spec == null) return;
+    final content = _stickContentKey.currentContext?.size?.height;
+    final toolbar = _stickToolbarKey.currentContext?.size?.height;
+    if (content == null || toolbar == null) return;
+    final headerAnim = _stickHeaderAnimKey.currentContext?.size?.height ?? 0;
+    final headerInner = _stickHeaderInnerKey.currentContext?.size?.height ?? 0;
+    // パネルが実際に使える高さ = ホスト − キーボード(無ければフッタードック)。
+    final mq = MediaQuery.of(context);
+    final avail = mq.size.height - (mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : fowDockInsetOf(context));
+    if (avail <= 0) return;
+    // 内訳: コンテンツ(割り込みヘッダーはアニメ後の自然高さに補正)+
+    // ツールバー + ハンドル 18 + スクロール上パディング + 予備。
+    final px = (content - headerAnim + headerInner) + toolbar + 18 + RasqSpacing.sm + 2;
+    final fit = (px / avail).clamp(spec.minHeightFactor, spec.maxHeightFactor).toDouble();
+    if (_stickExpanded) {
+      _fitExpanded = fit;
+    } else {
+      _fitCollapsed = fit;
+    }
+    final lo = _fitCollapsed ?? stickCollapsedFactor;
+    final hi = math.max(lo, _fitExpanded ?? stickExpandedFactor);
+    spec.heightStops = (hi - lo).abs() < 0.005 ? [lo] : [lo, hi];
+    // 全部をピッタリ表示: ユーザーがハンドルで調整していない限り、現在段階の
+    // フィット高さへ追従する(はみ出す分はスクロールで読めるので強制しない)。
+    if (!spec.userResized && (spec.heightFactor.value - fit).abs() > 0.005) {
+      spec.heightFactor.value = fit;
+    }
   }
 
   @override
@@ -321,22 +380,24 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final target = widget.target;
     final count = _text.text.length;
     final over = count > _max;
+    if (_stick) _scheduleStickFit(); // 高さ段階の実測 (D-049)
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Flexible(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child: Column(key: _stick ? _stickContentKey : null, crossAxisAlignment: CrossAxisAlignment.start, children: [
             // stick FOW (D-047): フォーカスするとヘッダー(タイトル + 投稿
             // オプション + 閉じる)と返信先タイルが上から割り込んでくる。
             if (_stick)
               AnimatedSize(
+                key: _stickHeaderAnimKey,
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOutCubic,
                 alignment: Alignment.topCenter,
                 child: !_stickExpanded
                     ? const SizedBox(width: double.infinity)
-                    : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    : Column(key: _stickHeaderInnerKey, crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(children: [
                           Expanded(child: Text(_isDm ? '→ ${target.title}' : target.title, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
                           if (!_isDm && !_directReply) const ComposerHeaderControls(),
@@ -399,6 +460,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       ),
       // Toolbar (コンポーザーツールバー = アクションバーの左寄せバリエーション)
       Container(
+        key: _stick ? _stickToolbarKey : null,
         decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.outlineVariant))),
         padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 4, RasqSpacing.sm, 4),
         child: Row(children: [

@@ -177,6 +177,20 @@ void main() {
     final panel = tester.widgetList<Material>(find.byType(Material)).firstWhere((w) => w.elevation == 8);
     expect((panel.shape! as RoundedRectangleBorder).borderRadius, BorderRadius.circular(16));
 
+    // ドラッグハンドル (D-049): 上に引くと拡大(最上段より上はシームレス)、
+    // 大きく下げると最下段(折りたたみフィット)へスナップして止まる。
+    final handle = find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'サイズ変更ハンドル');
+    expect(handle, findsOneWidget);
+    Material fowPanel() => tester.widgetList<Material>(find.byType(Material)).firstWhere((w) => w.elevation == 8);
+    double panelHeight() => tester.getSize(find.byWidget(fowPanel())).height;
+    final fitExpanded = panelHeight();
+    await tester.drag(handle, const Offset(0, -160));
+    await tester.pumpAndSettle();
+    expect(panelHeight(), greaterThan(fitExpanded + 100));
+    await tester.drag(handle, const Offset(0, 500));
+    await tester.pumpAndSettle();
+    expect(panelHeight(), lessThan(fitExpanded)); // 最下段(折りたたみ段階)で停止
+
     // 特定ページに張り付く stick はページ遷移で自動消滅する。
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
