@@ -84,10 +84,23 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
     final Widget emoji;
     if (url == null) {
       emoji = Text(widget.fallbackText, style: TextStyle(fontSize: widget.height * 0.85), semanticsLabel: widget.semanticLabel);
+    } else if (_aspect == null) {
+      // 実寸解決前: 高さ固定・幅は画像なり(fitHeight)で即表示し、上限 3×h
+      // だけ constraints で掛ける。以前の「正方形 + contain」はロング絵文字が
+      // 数 px にレタボ化されて見えなくなっていた (D-041)。
+      emoji = ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: widget.height * 3, maxHeight: widget.height),
+        child: Image.network(
+          url.toString(),
+          height: widget.height,
+          fit: BoxFit.fitHeight,
+          semanticLabel: widget.semanticLabel ?? widget.name,
+          errorBuilder: (_, _, _) => Text(widget.fallbackText, style: TextStyle(fontSize: widget.height * 0.6)),
+        ),
+      );
     } else {
-      final aspect = _aspect ?? 1.0;
       emoji = SizedBox(
-        width: RasqCustomEmoji.displayWidth(aspect, widget.height),
+        width: RasqCustomEmoji.displayWidth(_aspect!, widget.height),
         height: widget.height,
         child: Image.network(
           url.toString(),

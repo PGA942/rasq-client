@@ -19,26 +19,46 @@ Post post(Map<String, int> reactions) => Post(
     );
 
 void main() {
-  test('リアクション予測 (D-039): 投稿の既存リアクション × 自分の履歴 → 最頻 → null', () async {
+  test('リアクション予測 (D-039/D-041): 複数リアクション済みは投稿内から指数選出、それ以外は履歴', () async {
     final storage = MemorySessionStorage();
     final container = ProviderContainer(overrides: [sessionStorageProvider.overrideWithValue(storage)]);
     addTearDown(container.dispose);
     final store = container.read(reactionHistoryProvider.notifier);
     await container.read(reactionHistoryProvider.future);
 
-    // 履歴なし → null(アダプタの既定に任せる)。
-    expect(store.predictFor(post(const {'👍': 3})), isNull);
+    // 合計 2 未満 + 履歴なし → null(アダプタの既定に任せる)。
+    expect(store.predictFor(post(const {'👍': 1})), isNull);
+
+    // 複数リアクション済み → 履歴が無くても**その投稿のリアクションの中**から。
+    // 上位ほど指数関数的に出やすい(重み 2^-rank)— 多数の投稿で 1 位が最頻。
+    final tally = <String, int>{};
+    for (var i = 0; i < 300; i++) {
+      final p = Post(
+        id: 'p$i',
+        account: account,
+        author: const UserSummary(id: 'a', account: account, displayName: 'a'),
+        createdAt: DateTime(2026, 8, 27),
+        body: 'x',
+        reactions: const {'👍': 10, '🎉': 5, '😇': 1},
+      );
+      final r = store.predictFor(p)!;
+      expect(const ['👍', '🎉', '😇'], contains(r));
+      tally[r] = (tally[r] ?? 0) + 1;
+    }
+    expect(tally['👍']!, greaterThan(tally['🎉'] ?? 0));
+    expect(tally['🎉'] ?? 0, greaterThan(tally['😇'] ?? 0));
+    // 同じ投稿なら結果は安定(決定的シード)。
+    final fixed = post(const {'👍': 3, '🎉': 2});
+    expect(store.predictFor(fixed), store.predictFor(fixed));
 
     await store.record('🎉');
     await store.record('🎉');
     await store.record('👍');
 
-    // 投稿に付いているものと自分の履歴の交差(🎉 は付いていない)→ 👍。
-    expect(store.predictFor(post(const {'👍': 3, '😇': 1})), '👍');
-    // 交差があれば自分の最頻 🎉。
-    expect(store.predictFor(post(const {'🎉': 1, '👍': 2})), '🎉');
-    // 交差ゼロ → 自分の最頻 🎉。
-    expect(store.predictFor(post(const {':blobcat:': 5})), '🎉');
+    // 合計 2 未満の投稿: 交差(👍 だけ付いている)→ 👍。
+    expect(store.predictFor(post(const {'👍': 1})), '👍');
+    // リアクションゼロ → 自分の最頻 🎉。
+    expect(store.predictFor(post(const {})), '🎉');
 
     // 永続化: 別コンテナで復元。
     final container2 = ProviderContainer(overrides: [sessionStorageProvider.overrideWithValue(storage)]);

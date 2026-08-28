@@ -124,6 +124,18 @@ void main() {
     expect(highlighted, isNotEmpty);
   });
 
+  test('RasqReactionChips.group: 同名の変種を合算・ローカル優先・枠なし判定 (D-041)', () {
+    final groups = RasqReactionChips.group(const {':cat@remote.example:': 3, ':cat@.:': 2, '👍': 1, ':dog@remote.example:': 2}, ':cat@.:');
+    final cat = groups.firstWhere((g) => g.name == 'cat');
+    expect(cat.count, 5, reason: '変種は合算');
+    expect(cat.representative, ':cat@.:', reason: 'ローカルサーバーの絵文字を優先');
+    expect(cat.hasLocal, isTrue);
+    expect(cat.mine, isTrue);
+    final dog = groups.firstWhere((g) => g.name == 'dog');
+    expect(dog.hasLocal, isFalse, reason: 'ローカルに無い → 枠なし表示・タップ不可');
+    expect(groups.firstWhere((g) => g.name == '👍').hasLocal, isTrue);
+  });
+
   test('ErrorCode grammar', () {
     expect(ErrorCode.tryParse('a25')?.family, ErrorFamily.settings);
     expect(ErrorCode.tryParse('D2F')?.code, 'D2F');

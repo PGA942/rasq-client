@@ -160,6 +160,11 @@ abstract final class MisskeyMappers {
       directToIds: [for (final id in (j['visibleUserIds'] as List? ?? const [])) id.toString()],
       reactions: {for (final e in reactions.entries) e.key: (e.value as num?)?.toInt() ?? 0},
       reactionEmojis: {
+        // ローカルカスタム(`:name@.:`)は Misskey の reactionEmojis に URL が
+        // 来ない → /emoji/<name>.webp を補完(ロング絵文字が
+        // テキスト fallback になって消える問題の修正、D-041)。
+        for (final k in reactions.keys)
+          if (k.startsWith(':') && k.endsWith('@.:')) k: Uri.https(host, '/emoji/${k.substring(1, k.length - 3)}.webp'),
         for (final e in reactionEmojis.entries)
           if (e.value is String) ':${e.key}:': Uri.parse(e.value as String),
       },

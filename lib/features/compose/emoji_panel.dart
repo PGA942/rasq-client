@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../app/providers.dart';
 import '../home/reaction_history.dart';
@@ -105,7 +106,10 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
                 data: (list) {
                   final filtered = q.isEmpty ? list : list.where((e) => e.name.toLowerCase().contains(q) || e.aliases.any((a) => a.toLowerCase().contains(q))).toList();
                   if (filtered.isEmpty) return Padding(padding: const EdgeInsets.all(8), child: Text('独自の絵文字はありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)));
-                  return _grid([for (final e in filtered.take(240)) _EmojiCell(text: ':${e.name}:', url: e.url, onTap: () => _pick(':${e.name}:'))]);
+                  // 遅延読み込み (D-041): visibility_detector で見えたセルだけ
+                  // 画像を読む → 件数上限を撤去できる。Wrap なので不等幅でも
+                  // 横に詰めて改行される。
+                  return _grid([for (final e in filtered) _EmojiCell(text: ':${e.name}:', url: e.url, lazy: true, onTap: () => _pick(':${e.name}:'))]);
                 },
               ),
             const SizedBox(height: 12),
@@ -125,22 +129,47 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
   Widget _grid(List<Widget> cells) => Wrap(spacing: 4, runSpacing: 4, children: cells);
 }
 
-class _EmojiCell extends StatelessWidget {
-  const _EmojiCell({required this.text, required this.onTap, this.url});
+class _EmojiCell extends StatefulWidget {
+  const _EmojiCell({required this.text, required this.onTap, this.url, this.lazy = false});
   final String text;
   final Uri? url;
   final VoidCallback onTap;
+
+  /// true = 画面に入るまで画像を読まない(独自の絵文字の大量リスト用)。
+  final bool lazy;
+
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          constraints: const BoxConstraints(minWidth: 36),
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          // 可変幅表示 + ホバー/長押しチップ (D-040: Miria 方式参考 —
-          // セル幅を固定せず、絵文字の実寸比で並べる)。
-          child: Center(child: RasqCustomEmoji(url: url, fallbackText: text, height: 26, name: text.startsWith(':') ? text.replaceAll(':', '') : text)),
-        ),
-      );
+  State<_EmojiCell> createState() => _EmojiCellState();
+}
+
+class _EmojiCellState extends State<_EmojiCell> {
+  bool _seen = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final loadNow = !widget.lazy || _seen || widget.url == null;
+    // 可変幅表示 + ホバー/長押しチップ (D-040/D-041: Miria 方式参考 —
+    // セル幅を固定せず絵文字の実寸比で並べ、Wrap が不等幅のまま改行する)。
+    final inner = loadNow
+        ? RasqCustomEmoji(url: widget.url, fallbackText: widget.text, height: 26, name: widget.text.startsWith(':') ? widget.text.replaceAll(':', '') : widget.text)
+        : const SizedBox(width: 26, height: 26);
+    final cell = InkWell(
+      onTap: widget.onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 36),
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Center(child: inner),
+      ),
+    );
+    if (loadNow) return cell;
+    return VisibilityDetector(
+      key: Key('emoji-cell-${widget.text}'),
+      onVisibilityChanged: (info) {
+        if (!_seen && info.visibleFraction > 0 && mounted) setState(() => _seen = true);
+      },
+      child: cell,
+    );
+  }
 }

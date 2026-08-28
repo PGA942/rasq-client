@@ -28,7 +28,7 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false, this.predictReaction = false});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -37,11 +37,6 @@ class PostRow extends ConsumerStatefulWidget {
 
   /// Embedded size (通知の投稿タイル系など): smaller avatar, no outer padding.
   final bool dense;
-
-  /// 詳細画面のみ true (D-040): リアクションボタンに最良の予測絵文字を
-  /// 表示する。TL では負荷を避けるため予測表示しない(タップでピッカー
-  /// ではなく予測実行、は共通)。
-  final bool predictReaction;
 
   /// Host icon registry: plugin icon names → Material glyphs (until the RASQ
   /// icon font lands).
@@ -155,12 +150,20 @@ class _PostRowState extends ConsumerState<PostRow> {
     final doneIcon = a.doneIcon == null ? null : PostRow.iconFor(a.doneIcon, icon);
     final isReaction = a.genreTag == 'Reaction';
     final isRepost = a.genreTag == 'Repost';
-    // 詳細画面ではリアクションボタンに最良の予測候補を表示 (D-040)。
-    // 予測が Unicode 絵文字のときだけ表示(カスタムは短押し実行のみ)。
+    // 予測絵文字の表示 (D-041): リアクションしていない**全ての投稿**で、
+    // 表示されたタイミングにパッシブ計算(純ローカル、ネットワーク/ML なし)。
+    // Unicode はテキスト、カスタムは投稿の reactionEmojis から画像で表示。
     String? iconText = st.iconText;
-    if (iconText == null && st.iconUrl == null && isReaction && !st.done && widget.predictReaction) {
+    Uri? iconUrl = st.iconUrl;
+    if (iconText == null && iconUrl == null && isReaction && !st.done) {
       final predicted = ref.watch(reactionHistoryProvider).value == null ? null : ref.read(reactionHistoryProvider.notifier).predictFor(post);
-      if (predicted != null && !predicted.startsWith(':')) iconText = predicted;
+      if (predicted != null) {
+        if (predicted.startsWith(':')) {
+          iconUrl = post.reactionEmojis[predicted];
+        } else {
+          iconText = predicted;
+        }
+      }
     }
     return RasqActionBarItem(
       id: a.id,
@@ -172,7 +175,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       showCount: a.countSource != CountSource.none,
       enabled: st.enabled,
       doneColor: isReaction ? tokens.live : null,
-      iconUrl: st.iconUrl,
+      iconUrl: iconUrl,
       iconText: iconText,
       // Repost はデフォルトの**アクションバンドル**(D-039): タップで
       // リノート / 引用ノートのドロップダウン(ユーザー編集のリスト化とは
