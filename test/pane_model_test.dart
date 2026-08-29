@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/navigation.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/compose/emoji_panel.dart';
 import 'package:rasq_client/features/post/post_detail_screen.dart';
 import 'package:rasq_client/features/users/user_page_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -84,5 +85,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(col3Width(), lessThanOrEqualTo(kSearchHomeColumnWidth + 1));
     expect(find.byType(PostDetailScreen), findsNothing); // 第2カラムはホームTLのまま
+
+    // ---- FOW を掴んで第3カラムへ移動 (D-060) --------------------------
+    // リアクションピッカーを開き、ドラッグハンドルを右へ掴んで動かす。
+    await tester.longPress(find.byIcon(Icons.favorite_border).first);
+    await tester.pumpAndSettle();
+    expect(find.byType(EmojiPanel), findsOneWidget);
+    final handle = find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'サイズ変更ハンドル');
+    await tester.drag(handle, const Offset(160, 0));
+    await tester.pumpAndSettle();
+    // FOW は閉じ、第3カラムに同じ面(補助面: タイトル + ✕)が開く。
+    final pickerInCol3 = find.descendant(of: col3, matching: find.byType(EmojiPanel));
+    expect(pickerInCol3, findsOneWidget);
+    expect(find.descendant(of: col3, matching: find.text('リアクション')), findsOneWidget);
+    expect(find.descendant(of: col3, matching: find.byTooltip('閉じる')), findsOneWidget);
+
+    // 第3カラム側でピックするとリアクションが実行され、面が閉じる。
+    await tester.tap(find.descendant(of: pickerInCol3, matching: find.text('👍')).first);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: col3, matching: find.byType(EmojiPanel)), findsNothing);
   });
 }

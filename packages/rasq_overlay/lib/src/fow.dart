@@ -82,6 +82,11 @@ class FowSpec {
   /// 間はホストが高さを即時反映する(アニメの追従遅延を出さない)。
   final ValueNotifier<bool> dragging = ValueNotifier(false);
 
+  /// ハンドル/ヘッダー枠を**横へ掴んで動かした**ときの移動先 (D-060:
+  /// 第3カラムへのカラム間移行)。null = 移動不可。呼び出し側が「FOW を
+  /// 閉じて第3カラムに同じ面を開く」処理を渡す(幅は移動先に追従する)。
+  VoidCallback? onMoveAside;
+
   bool get hasHeader => title != null || cancelText != null || confirmText != null;
 
   /// Interstitial FOWs take the screen: scrim + barrier discard. Widget/system FOWs

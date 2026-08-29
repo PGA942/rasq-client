@@ -199,6 +199,9 @@ class _FowPanelState extends State<_FowPanel> {
   /// [FowSpec.snapToStops] で最寄りの高さ段階へアニメーションで着地 (D-049)。
   bool _dragging = false;
 
+  /// パン中の横移動量(右へ掴んで動かすとカラム間移行、D-060)。
+  double _handleDx = 0;
+
   @override
   Widget build(BuildContext context) {
     final entry = widget.entry;
@@ -228,15 +231,29 @@ class _FowPanelState extends State<_FowPanel> {
           if (spec.showHandle)
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onVerticalDragStart: spec.resizable ? (_) => setState(() => _dragging = true) : null,
-              onVerticalDragUpdate: spec.resizable ? (d) => spec.resizeBy(d.delta.dy / hostHeight) : null,
-              onVerticalDragEnd: spec.resizable
-                  ? (_) {
-                      setState(() => _dragging = false);
-                      spec.snapToStops();
+              // パン: 縦 = リサイズ、横(右へ 100px 以上)= カラム間移行
+              // (D-060: 掴んで第3カラムへ。移動可否は onMoveAside の有無)。
+              onPanStart: spec.resizable ? (_) => setState(() {
+                    _dragging = true;
+                    _handleDx = 0;
+                  }) : null,
+              onPanUpdate: spec.resizable
+                  ? (d) {
+                      _handleDx += d.delta.dx;
+                      spec.resizeBy(d.delta.dy / hostHeight);
                     }
                   : null,
-              onVerticalDragCancel: spec.resizable ? () => setState(() => _dragging = false) : null,
+              onPanEnd: spec.resizable
+                  ? (_) {
+                      setState(() => _dragging = false);
+                      if (_handleDx > 100 && spec.onMoveAside != null && MediaQuery.sizeOf(context).width >= 840) {
+                        spec.onMoveAside!();
+                      } else {
+                        spec.snapToStops();
+                      }
+                    }
+                  : null,
+              onPanCancel: spec.resizable ? () => setState(() => _dragging = false) : null,
               child: Semantics(
                 label: 'サイズ変更ハンドル',
                 child: SizedBox(

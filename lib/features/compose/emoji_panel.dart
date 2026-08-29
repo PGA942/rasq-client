@@ -26,7 +26,7 @@ import 'emoji_prediction.dart';
 /// 数千個のコールバック登録が FPS を殺していたため廃止(ListView の遅延
 /// ビルドが同じ役割をゼロコストで果たす)。
 class EmojiPanel extends ConsumerStatefulWidget {
-  const EmojiPanel({super.key, required this.onPick, this.height, this.predictionContext, this.existingReactions = const {}, this.actionBar, this.spec});
+  const EmojiPanel({super.key, required this.onPick, this.height, this.predictionContext, this.existingReactions = const {}, this.actionBar, this.spec, this.onMoveAside});
   final ValueChanged<String> onPick;
 
   /// Fixed height; null = fill the parent (FOW panel).
@@ -47,6 +47,10 @@ class EmojiPanel extends ConsumerStatefulWidget {
   /// リアクションピッカー時の FOW spec (D-053)。バーの反対側に出す
   /// **外縁ハンドル**のリサイズ/スナップに使う(ホスト側ハンドルは消す)。
   final FowSpec? spec;
+
+  /// バー(ヘッダー枠)を**右へ掴んで動かした**ときのカラム間移行 (D-060:
+  /// 第3カラムへ移動)。null = 移動不可。
+  final VoidCallback? onMoveAside;
 
   /// 予測の文脈(CW + 本文 + 親/引用。コンポーザーでは下書きテキスト)。
   final String? predictionContext;
@@ -75,22 +79,32 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
   bool? _barOnTopOverride;
   bool _draggingBar = false; // 掴んでいる間はドラッグハンドルが消失する
   double _barDragDelta = 0;
+  double _barDragDx = 0;
 
-  /// バーを掴んで上下へドラッグ → 離した位置で上付き/下付きが決まる。
+  /// バーを掴んでドラッグ: 上下 → 離した位置で上付き/下付きが決まる。
+  /// **右へ 100px 以上** → カラム間移行(第3カラムへ、D-060)。
   /// 枠線は内側にだけ引く(枠の外周線と二重にならないように)。
   Widget _grabbableBar(BuildContext context, Widget bar, {required bool onTop}) => GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onVerticalDragStart: (_) => setState(() {
+        onPanStart: (_) => setState(() {
           _draggingBar = true;
           _barDragDelta = 0;
+          _barDragDx = 0;
         }),
-        onVerticalDragUpdate: (d) => _barDragDelta += d.delta.dy,
-        onVerticalDragEnd: (_) => setState(() {
+        onPanUpdate: (d) {
+          _barDragDelta += d.delta.dy;
+          _barDragDx += d.delta.dx;
+        },
+        onPanEnd: (_) => setState(() {
           _draggingBar = false;
+          if (_barDragDx > 100 && widget.onMoveAside != null && MediaQuery.sizeOf(context).width >= 840) {
+            widget.onMoveAside!();
+            return;
+          }
           // 24px 以上動かしたら方向で確定(上へ = バーが上辺 = 下方向へつく)。
           if (_barDragDelta.abs() > 24) _barOnTopOverride = _barDragDelta < 0;
         }),
-        onVerticalDragCancel: () => setState(() => _draggingBar = false),
+        onPanCancel: () => setState(() => _draggingBar = false),
         child: Container(
           decoration: BoxDecoration(
             border: onTop
