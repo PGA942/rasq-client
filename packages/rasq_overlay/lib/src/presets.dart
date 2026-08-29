@@ -121,6 +121,7 @@ extension OverlayPresets on OverlayManager {
     FowSpec? spec,
     String? ownerId,
     String? semanticsLabel,
+    OverlayBarrierBehavior? barrierBehavior,
   }) async {
     final result = await show(RasqOverlayEntry(
       id: id,
@@ -129,6 +130,7 @@ extension OverlayPresets on OverlayManager {
       ownerId: ownerId,
       semanticsLabel: semanticsLabel ?? spec?.title,
       fow: spec ?? FowSpec(),
+      barrierBehavior: barrierBehavior,
       builder: builder,
     ));
     return result as T?;

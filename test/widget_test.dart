@@ -132,8 +132,10 @@ void main() {
     await tester.tap(find.byTooltip('絵文字'));
     await tester.pumpAndSettle();
     expect(find.text('デフォルト'), findsOneWidget); // 旧「全てのemoji」(D-040)
-    await tester.tap(find.text('キャンセル'));
+    // D-051: 通常コンポーザーもヘッダーレス(パネル内ヘッダーの ✕ で閉じる)。
+    await tester.tap(find.byTooltip('閉じる'));
     await tester.pumpAndSettle();
+    expect(find.text('ノートの作成'), findsNothing);
 
     // Search tab → trend words from plugin → trend TL.
     await tester.tap(find.byTooltip('検索'));

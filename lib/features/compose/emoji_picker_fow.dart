@@ -24,7 +24,10 @@ Future<void> openEmojiPicker(
   await manager.showFow<void>(
     id: emojiPickerFowId,
     ownerId: ownerId,
-    spec: FowSpec(type: FowPanelType.widget, initialHeightFactor: 0.4, minHeightFactor: 0.25, maxHeightFactor: 0.8, title: title, cancelText: '閉じる'),
+    // 同手法化 (D-051): 角丸枠 + フッター上にドック + **余白クリックで消失**
+    // (ポップアップは出ない)。
+    barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
+    spec: FowSpec(type: FowPanelType.widget, initialHeightFactor: 0.4, minHeightFactor: 0.25, maxHeightFactor: 0.8, title: title, cancelText: '閉じる', dockAboveFooter: true),
     builder: (ctx, handle) => EmojiPanel(
       predictionContext: predictionContext,
       existingReactions: existingReactions,

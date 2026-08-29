@@ -28,8 +28,9 @@ class DmRoomScreen extends ConsumerStatefulWidget {
 class _DmRoomScreenState extends ConsumerState<DmRoomScreen> {
   /// 常駐 stick (D-050)。このページへ戻ってきたときも無ければ置き直す。
   bool _composerScheduled = false;
+  bool _composerDismissed = false; // ✕ で閉じた(このページ滞在中は再表示しない)
   void _ensureComposer(DmRoom room) {
-    if (_composerScheduled || ref.read(overlayManagerProvider).contains(composerFowId)) return;
+    if (_composerDismissed || _composerScheduled || ref.read(overlayManagerProvider).contains(composerFowId)) return;
     if (!(ModalRoute.of(context)?.isCurrent ?? true)) return; // 最前面のときだけ
     _composerScheduled = true;
     final kind = DynamicTimelines.forRoom(room);
@@ -40,6 +41,10 @@ class _DmRoomScreenState extends ConsumerState<DmRoomScreen> {
           ref.read(timelineProvider(kind).notifier).refresh();
           ref.invalidate(dmRoomsProvider);
         });
+        // 遷移直後はナビゲーターが未反映のことがあるので 1 フレーム待つ。
+        if (!mounted) return;
+        await WidgetsBinding.instance.endOfFrame;
+        if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) _composerDismissed = true;
       } finally {
         _composerScheduled = false;
       }

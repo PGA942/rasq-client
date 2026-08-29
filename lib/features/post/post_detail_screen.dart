@@ -52,14 +52,20 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   /// 縮小状態の stick コンポーザーを置く(ページ遷移で自動消滅 D-048)。
   /// このページへ**戻ってきた**ときも、コンポーザーが無ければ置き直す。
   bool _composerScheduled = false;
+  bool _composerDismissed = false; // ✕ で閉じた(このページ滞在中は再表示しない)
   void _ensureReplyComposer(Post target) {
-    if (_composerScheduled || ref.read(overlayManagerProvider).contains(composerFowId)) return;
+    if (_composerDismissed || _composerScheduled || ref.read(overlayManagerProvider).contains(composerFowId)) return;
     if (!(ModalRoute.of(context)?.isCurrent ?? true)) return; // 最前面のときだけ
     _composerScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         if (!mounted) return;
         await showComposer(ref, ComposeReply(target), resident: true, onPosted: (_) => ref.invalidate(threadProvider(postId)));
+        // ページが最前面のまま閉じた = ユーザーの ✕(遷移で消えた場合は除外)。
+        // 遷移直後はナビゲーターが未反映のことがあるので 1 フレーム待つ。
+        if (!mounted) return;
+        await WidgetsBinding.instance.endOfFrame;
+        if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) _composerDismissed = true;
       } finally {
         _composerScheduled = false;
       }

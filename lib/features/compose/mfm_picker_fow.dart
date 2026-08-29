@@ -94,7 +94,9 @@ Future<void> openMfmPicker(WidgetRef ref, {String? ownerId, required void Functi
   await manager.showFow<void>(
     id: mfmPickerFowId,
     ownerId: ownerId,
-    spec: FowSpec(type: FowPanelType.widget, initialHeightFactor: 0.5, minHeightFactor: 0.3, maxHeightFactor: 0.85, title: mfm ? 'MFM' : 'Markdown', cancelText: '閉じる'),
+    // 同手法化 (D-051): 角丸枠 + フッター上にドック + 余白クリックで消失。
+    barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
+    spec: FowSpec(type: FowPanelType.widget, initialHeightFactor: 0.5, minHeightFactor: 0.3, maxHeightFactor: 0.85, title: mfm ? 'MFM' : 'Markdown', cancelText: '閉じる', dockAboveFooter: true),
     builder: (ctx, handle) => MfmPickerPanel(
       mfm: mfm,
       onApply: (p, s) {

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../../app/providers.dart';
+import 'compose_target.dart';
 
 /// Custom emoji of the current instance (絵文字ピッカー「独自の絵文字」).
 final customEmojisProvider = FutureProvider<List<EmojiInfo>>((ref) async {
@@ -50,6 +51,33 @@ class ComposeOptionsStore extends Notifier<ComposeOptions> {
 }
 
 final composeOptionsProvider = NotifierProvider<ComposeOptionsStore, ComposeOptions>(ComposeOptionsStore.new);
+
+/// コンポーザーの下書き (D-051)。ターゲット毎(通常/返信先/引用先/DM ルーム)
+/// に 1 件、アプリ起動中はメモリに保持する。閉じるときに保存され、同じ
+/// ターゲットのコンポーザーを開くと復元される(送信で消える)。
+/// 添付画像・投票は対象外(テキストと注釈のみ)。
+class ComposeDraft {
+  const ComposeDraft({required this.text, this.cw = '', this.cwOn = false});
+  final String text;
+  final String cw;
+  final bool cwOn;
+}
+
+String draftKeyOf(ComposeTarget t) => switch (t) {
+      ComposeNormal() => 'normal',
+      ComposeReply(to: final p) => 'reply:${p.key}',
+      ComposeQuote(of: final p) => 'quote:${p.key}',
+      ComposeDm(room: final r) => 'dm:${r.id}',
+    };
+
+class ComposeDraftsStore extends Notifier<Map<String, ComposeDraft>> {
+  @override
+  Map<String, ComposeDraft> build() => const {};
+  void save(String key, ComposeDraft d) => state = {...state, key: d};
+  void clear(String key) => state = {...state}..remove(key);
+}
+
+final composeDraftsProvider = NotifierProvider<ComposeDraftsStore, Map<String, ComposeDraft>>(ComposeDraftsStore.new);
 
 /// リアクション受け入れの選択肢 (Misskey の語彙 → 表示名)。null = 全て。
 const reactionAcceptanceLabels = <String?, String>{

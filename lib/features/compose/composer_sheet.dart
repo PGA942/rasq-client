@@ -49,15 +49,18 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident =
           freeAboveStops: true,
         )
       : FowSpec(
+          // 同手法化 (D-051): 通常/引用も stick と同じ角丸枠 + パネル内
+          // ヘッダー + フッター上ドック + ピッタリ高さ段階。ただしこちらは
+          // インタースティシャル(スクリムあり)で、**余白クリックで自動的に
+          // 下書きへ入って消失**する(ポップアップは出ない)。
           type: FowPanelType.interstitial,
           confirmMode: FowConfirmMode.saveDiscard,
-          initialHeightFactor: 0.72,
-          minHeightFactor: 0.35,
-          title: target.title,
-          cancelText: 'キャンセル',
-          // ヘッダー右側の空きスペース (D-045): 公開設定 / 連合 / リアクション
-          // 受け入れ。MFM ピッカーは下部ツールバー側 (D-046)。
-          headerTrailing: const ComposerHeaderControls(),
+          initialHeightFactor: 0.45,
+          minHeightFactor: 0.2,
+          maxHeightFactor: 0.9,
+          dockAboveFooter: true,
+          heightStops: const [0.45],
+          freeAboveStops: true,
         );
   // stick は特定の返信/DM ページに張り付くもの (D-048): ページ遷移(戻る・
   // タブ切替・別投稿へ移動)を検知したら自動で消滅する。
@@ -74,7 +77,7 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident =
         resident: resident,
         // 常駐は送信で閉じない(本体が下書きをリセットして残る)。
         onSent: resident ? (p) => onPosted?.call(p) : (p) => handle.close(result: p),
-        onClose: resident ? null : () => handle.close(),
+        onClose: () => handle.close(),
       ),
     );
     return res;
@@ -186,13 +189,19 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   static const stickCollapsedFactor = 0.15;
   static const stickExpandedFactor = 0.44;
 
-  bool get _stick => widget.target is ComposeReply || widget.target is ComposeDm;
   Post? get _replyTo => switch (widget.target) { ComposeReply(to: final p) => p, _ => null };
+  Post? get _quoteOf => switch (widget.target) { ComposeQuote(of: final p) => p, _ => null };
 
   /// ダイレクト投稿への返信 = 公開範囲をダイレクト(specified)に固定 (D-047)。
   bool get _directReply => _replyTo?.isDirect ?? false;
 
+  /// 縮小状態を持つのはページ常駐 stick だけ (D-051: 通常/引用は常に展開)。
+  bool get _collapsible => widget.resident;
+
   bool get _stickExpanded => _focus.hasFocus || _text.text.trim().isNotEmpty || _files.isNotEmpty || _poll != null || _cwOn;
+
+  /// ヘッダー(タイトル + 投稿オプション + ✕)と対象タイルを見せるか。
+  bool get _expandedView => !_collapsible || _stickExpanded;
 
   // ---- 高さ段階の実測 (D-049) ------------------------------------------
   final _stickContentKey = GlobalKey();
@@ -206,7 +215,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   double? _fitExpanded;
 
   void _syncStickHeight() {
-    if (!_stick || !mounted) return;
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -215,15 +224,15 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   void _scheduleStickFit() {
     final spec = widget.spec;
     if (spec == null) return;
-    if (_wasExpanded != _stickExpanded) {
-      _wasExpanded = _stickExpanded;
+    if (_wasExpanded != _expandedView) {
+      _wasExpanded = _expandedView;
       spec.userResized = false; // 段階が変わったら自動フィットを再開
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureStickFit());
   }
 
   void _measureStickFit() {
-    if (!mounted || !_stick) return;
+    if (!mounted) return;
     final spec = widget.spec;
     if (spec == null) return;
     final content = _stickContentKey.currentContext?.size?.height;
@@ -239,12 +248,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     // ツールバー + ハンドル 18 + スクロール上パディング + 予備。
     final px = (content - headerAnim + headerInner) + toolbar + 18 + RasqSpacing.sm + 2;
     final fit = (px / avail).clamp(spec.minHeightFactor, spec.maxHeightFactor).toDouble();
-    if (_stickExpanded) {
+    if (_expandedView) {
       _fitExpanded = fit;
     } else {
       _fitCollapsed = fit;
     }
-    final lo = _fitCollapsed ?? stickCollapsedFactor;
+    // 縮小状態を持たない通常/引用は「ピッタリ」1 段だけ (D-051)。
+    final lo = _collapsible ? (_fitCollapsed ?? stickCollapsedFactor) : fit;
     final hi = math.max(lo, _fitExpanded ?? stickExpandedFactor);
     spec.heightStops = (hi - lo).abs() < 0.005 ? [lo] : [lo, hi];
     // 全部をピッタリ表示: ユーザーがハンドルで調整していない限り、現在段階の
@@ -260,9 +270,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   String? _cwPrefill;
   bool _prefillPending = false;
 
+  /// 下書き (D-051): 閉じるときに保存済みなら復元する。
+  /// (notifier は dispose 中に ref が使えないためフィールドに保持する。)
+  String get _draftKey => draftKeyOf(widget.target);
+  bool _skipDraftOnDispose = false;
+  late final ComposeDraftsStore _drafts;
+
   @override
   void initState() {
     super.initState();
+    _drafts = ref.read(composeDraftsProvider.notifier);
     _focus.addListener(_onFocusChanged);
     final t = widget.target;
     if (t is ComposeReply) {
@@ -277,6 +294,15 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       } else {
         _applyPrefill();
       }
+    }
+    // 保存済み下書きの復元(プリセットより優先)。
+    final d = ref.read(composeDraftsProvider)[_draftKey];
+    if (d != null) {
+      _text.text = d.text;
+      _text.selection = TextSelection.collapsed(offset: _text.text.length);
+      _cwOn = d.cwOn;
+      _cw.text = d.cw;
+      _prefillPending = false;
     }
   }
 
@@ -297,8 +323,58 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     _syncStickHeight();
   }
 
+  /// 意味のある入力があるか(自動入力のメンション/CW だけなら「無し」扱い)。
+  bool get _hasDraftContent {
+    final t = _text.text.trim();
+    final mentionOnly = t.isEmpty || t == (_mentionPrefill?.trim() ?? '');
+    final cwCustom = _cwOn && _cw.text.trim().isNotEmpty && _cw.text.trim() != (_cwPrefill ?? '');
+    return !mentionOnly || _files.isNotEmpty || _poll != null || cwCustom;
+  }
+
+  void _saveDraft() {
+    if (_text.text.trim().isEmpty && _cw.text.trim().isEmpty) return; // テキストの無い下書きは残さない
+    _drafts.save(_draftKey, ComposeDraft(text: _text.text, cw: _cw.text, cwOn: _cwOn));
+  }
+
+  /// ✕ / 余白クリック等での閉じ方 (D-051):
+  /// - 常駐 stick: 自動入力のメンションだけなら黙って閉じる。入力がある場合は
+  ///   「下書きに保存 / 破棄」をポップアップで確認してから閉じる。
+  /// - 通常/引用: 確認なしで閉じる(dispose で自動的に下書きへ入る)。
+  Future<void> _handleClose() async {
+    if (!widget.resident || !_hasDraftContent) {
+      if (!_hasDraftContent) _skipDraftOnDispose = true; // メンションだけなら下書きも残さない
+      widget.onClose?.call();
+      return;
+    }
+    final manager = ref.read(overlayManagerProvider);
+    final action = await manager.showBottomSheet<String>(
+      id: 'composer.close',
+      title: '書きかけの投稿があります',
+      builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
+        RasqListTile(title: '下書きに保存して閉じる', onTap: () => manager.close('composer.close', result: 'save')),
+        RasqDestructiveListTile(title: '破棄して閉じる', onTap: () => manager.close('composer.close', result: 'discard')),
+      ]),
+    );
+    if (!mounted || action == null) return;
+    if (action == 'save') _saveDraft();
+    _skipDraftOnDispose = true; // 保存済み or 破棄 — dispose では触らない
+    widget.onClose?.call();
+  }
+
   @override
   void dispose() {
+    // 余白クリック/ページ遷移などで閉じたときの自動下書き (D-051)。
+    // unmount 中は provider を変更できないためマイクロタスクへ遅延する。
+    if (!_skipDraftOnDispose && _hasDraftContent && (_text.text.trim().isNotEmpty || _cw.text.trim().isNotEmpty)) {
+      final drafts = _drafts;
+      final key = _draftKey;
+      final d = ComposeDraft(text: _text.text, cw: _cw.text, cwOn: _cwOn);
+      Future.microtask(() {
+        try {
+          drafts.save(key, d);
+        } catch (_) {/* アプリ終了などで store ごと破棄済みなら諦める */}
+      });
+    }
     _focus.removeListener(_onFocusChanged);
     _text.dispose();
     _cw.dispose();
@@ -409,8 +485,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ComposeDm(room: final r) => await session.sendDm(r, draft),
         _ => await session.createPost(draft),
       };
+      _drafts.clear(_draftKey); // 送信済み → 下書き破棄
+      _skipDraftOnDispose = true;
       widget.onSent(post);
-      if (widget.resident && mounted) setState(_resetDraft);
+      if (widget.resident && mounted) {
+        _skipDraftOnDispose = false; // 常駐は続投するので自動下書きを再開
+        setState(_resetDraft);
+      }
     } on SnsApiException catch (e) {
       setState(() => _error = '${e.code.display}${e.code.message == null ? '' : '\n${e.code.message}'}');
     } catch (e) {
@@ -434,39 +515,32 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final target = widget.target;
     final count = _text.text.length;
     final over = count > _max;
-    if (_stick) _scheduleStickFit(); // 高さ段階の実測 (D-049)
+    _scheduleStickFit(); // 高さ段階の実測 (D-049/D-051: 全ターゲット共通)
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Flexible(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Column(key: _stick ? _stickContentKey : null, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // stick FOW (D-047): フォーカスするとヘッダー(タイトル + 投稿
-            // オプション + 閉じる)と返信先タイルが上から割り込んでくる。
-            if (_stick)
-              AnimatedSize(
-                key: _stickHeaderAnimKey,
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topCenter,
-                child: !_stickExpanded
-                    ? const SizedBox(width: double.infinity)
-                    : Column(key: _stickHeaderInnerKey, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [
-                          Expanded(child: Text(_isDm ? '→ ${target.title}' : target.title, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-                          if (!_isDm && !_directReply) const ComposerHeaderControls(),
-                          // 常駐 stick (D-050) の ✕ は閉じずに折りたたむ。
-                          RasqIconButton(icon: Icons.close, size: 20, tooltip: widget.onClose == null ? '折りたたむ' : '閉じる', onPressed: widget.onClose ?? () => _focus.unfocus()),
-                        ]),
-                        if (_directReply) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('ダイレクト投稿への返信(相手にだけ届きます)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-                        if (_replyTo != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: _TargetPreview(post: _replyTo!, emojis: emojis)),
+          child: Column(key: _stickContentKey, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // パネル内ヘッダー (D-047/D-051): タイトル + 投稿オプション + ✕ と
+            // 対象タイル。常駐 stick ではフォーカスで上から割り込んでくる。
+            AnimatedSize(
+              key: _stickHeaderAnimKey,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: !_expandedView
+                  ? const SizedBox(width: double.infinity)
+                  : Column(key: _stickHeaderInnerKey, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Expanded(child: Text(_isDm ? '→ ${target.title}' : target.title, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
+                        if (!_isDm && !_directReply) const ComposerHeaderControls(),
+                        RasqIconButton(icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: _busy ? null : _handleClose),
                       ]),
-              ),
-            if (!_stick && target is ComposeQuote)
-              Padding(
-                padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
-                child: _TargetPreview(post: target.of, emojis: emojis),
-              ),
+                      if (_directReply) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('ダイレクト投稿への返信(相手にだけ届きます)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+                      if (_replyTo != null || _quoteOf != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: _TargetPreview(post: (_replyTo ?? _quoteOf)!, emojis: emojis)),
+                    ]),
+            ),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: me.displayName),
               const SizedBox(width: RasqSpacing.md),
@@ -485,11 +559,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     // 常駐 stick は縮小状態で置かれる(タップで展開)。
                     autofocus: !widget.resident,
                     // stick の折りたたみ時は 1 行の書き込みバー(展開で伸びる)。
-                    minLines: _stick && !_stickExpanded ? 1 : 3,
+                    minLines: _expandedView ? 3 : 1,
                     maxLines: 10,
                     style: RasqTypography.body,
                     decoration: InputDecoration(hintText: _isDm ? 'メッセージを入力..' : 'いいことがありますように！', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
-                    onChanged: (_) => _stick ? _syncStickHeight() : setState(() {}),
+                    onChanged: (_) => _syncStickHeight(),
                   ),
                 ]),
               ),
@@ -516,7 +590,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       ),
       // Toolbar (コンポーザーツールバー = アクションバーの左寄せバリエーション)
       Container(
-        key: _stick ? _stickToolbarKey : null,
+        key: _stickToolbarKey,
         decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.outlineVariant))),
         padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 4, RasqSpacing.sm, 4),
         child: Row(children: [

@@ -90,6 +90,8 @@ void main() {
     expect(find.text('x2'), findsOneWidget);
     expect(find.text('2倍に拡大'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('rotate'), 80, scrollable: find.descendant(of: find.byType(MfmPickerPanel), matching: find.byType(Scrollable)));
+    await tester.ensureVisible(find.text('rotate'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('rotate'));
     await tester.pumpAndSettle();
 
@@ -200,6 +202,80 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.close), findsNothing);
     expect(find.widgetWithText(FilledButton, '返信'), findsNothing);
+  });
+
+  testWidgets('常駐 stick の ✕ (D-051): メンションだけなら閉じる / 入力があれば下書き確認 → 復元', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    Post plain(AccountId viewer) => Post(
+          id: 'p2',
+          account: viewer,
+          author: UserSummary(id: 'bob', account: const AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'bob'), displayName: 'ボブ'),
+          createdAt: DateTime(2026, 8, 29, 9),
+          body: '下書きの確認です',
+        );
+    await tester.pumpWidget(app(posts: (v) => [plain(v)]));
+    await tester.pumpAndSettle();
+
+    // スレッドへ → 常駐 stick(縮小)。タップでメンションが自動入力される。
+    await tester.tap(find.text('下書きの確認です').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(TextField).last);
+    await tester.pumpAndSettle();
+    expect(find.text('@bob '), findsOneWidget);
+
+    // メンションだけ → ✕ でポップアップなしに閉じ、滞在中は再表示されない。
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.text('書きかけの投稿があります'), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+
+    // 入り直して本文を書いてから ✕ → 確認ポップアップ → 下書きに保存。
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下書きの確認です').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '@bob 書きかけの返信');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.text('書きかけの投稿があります'), findsOneWidget);
+    await tester.tap(find.text('下書きに保存して閉じる'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+
+    // ページを出て戻ると下書きが復元される。
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下書きの確認です').first);
+    await tester.pumpAndSettle();
+    expect(find.text('@bob 書きかけの返信'), findsOneWidget);
+  });
+
+  testWidgets('通常コンポーザー (D-051): 余白クリックで自動的に下書きへ入って消失 → 再オープンで復元', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    expect(find.text('ノートの作成'), findsOneWidget); // パネル内ヘッダー
+    await tester.enterText(find.byType(TextField).last, '書きかけのノート');
+    await tester.pumpAndSettle();
+
+    // 余白(スクリム)クリック → ポップアップなしで消失(自動下書き)。
+    await tester.tapAt(const Offset(20, 80));
+    await tester.pumpAndSettle();
+    expect(find.text('ノートの作成'), findsNothing);
+    expect(find.text('書きかけの投稿があります'), findsNothing);
+
+    // もう一度開くと復元されている。
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    expect(find.text('書きかけのノート'), findsOneWidget);
   });
 
   test('mfmSnippet: プロパティー/フラグ/固定スニペットの組み立て', () {
