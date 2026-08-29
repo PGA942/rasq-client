@@ -134,6 +134,25 @@ void paneBackTo(BuildContext context, ThirdColumnEntry current, {ThirdColumnEntr
   }
 }
 
+/// 第3カラム内での**置き換え**遷移 (D-061: replaceTrend 等)。現在の entry を
+/// 第2カラムへ移さず、previous を引き継いだまま差し替える。処理したら true。
+bool replacePageInPane(
+  BuildContext context, {
+  required String id,
+  required String title,
+  required String location,
+  Object? extra,
+  required WidgetBuilder builder,
+}) {
+  final scope = PaneScope.maybeOf(context);
+  if (scope?.entry == null) return false;
+  final container = ProviderScope.containerOf(context, listen: false);
+  container.read(thirdColumnProvider.notifier).open(
+        ThirdColumnEntry(id: id, title: title, location: location, extra: extra, builder: builder, previous: scope!.entry!.previous),
+      );
+  return true;
+}
+
 /// 第3カラムの中身。empty 設定は設定 DSL と同じ KV 規約(`thirdColumn.v1`)。
 class ThirdColumnView extends ConsumerWidget {
   const ThirdColumnView({super.key});

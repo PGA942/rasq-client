@@ -241,6 +241,8 @@ class _FowPanelState extends State<_FowPanel> {
                   ? (d) {
                       _handleDx += d.delta.dx;
                       spec.resizeBy(d.delta.dy / hostHeight);
+                      // 移動可能なパネルは掴みに横追従させる(視覚フィードバック)。
+                      if (spec.onMoveAside != null) setState(() {});
                     }
                   : null,
               onPanEnd: spec.resizable
@@ -287,12 +289,16 @@ class _FowPanelState extends State<_FowPanel> {
     // ⚠ ウィジェット型は常に AnimatedContainer 1 種に固定する: SizedBox と
     // 切り替えると Element が作り直され、**入力中のテキストごと State が
     // 消える**(ハンドル操作で本文消失、D-050 で実測)。
+    // 横追従 (D-061): 移動可能なパネルは掴んでいる間だけ右へついてくる。
+    // 離すとしきい値未満なら中央へ戻り、超えていれば onMoveAside が発火する。
+    final asideDx = (_dragging && spec.onMoveAside != null) ? _handleDx.clamp(0.0, 480.0) : 0.0;
     return ValueListenableBuilder<bool>(
       valueListenable: spec.dragging,
       builder: (context, innerDragging, child) => AnimatedContainer(
         duration: _dragging || innerDragging ? Duration.zero : const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
         height: height,
+        transform: Matrix4.translationValues(asideDx, 0, 0),
         child: child,
       ),
       child: panel,

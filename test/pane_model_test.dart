@@ -8,6 +8,7 @@ import 'package:rasq_client/app/navigation.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/compose/emoji_panel.dart';
 import 'package:rasq_client/features/post/post_detail_screen.dart';
+import 'package:rasq_client/features/post/reactions_screen.dart';
 import 'package:rasq_client/features/users/user_page_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/third_column.dart';
@@ -104,5 +105,18 @@ void main() {
     await tester.tap(find.descendant(of: pickerInCol3, matching: find.text('👍')).first);
     await tester.pumpAndSettle();
     expect(find.descendant(of: col3, matching: find.byType(EmojiPanel)), findsNothing);
+
+    // ---- 第3カラム内の「リアクションを表示」 (D-061) ------------------
+    // matchedLocation(第2カラム)基準でリンクが切れていた回帰テスト。
+    await tester.tap(find.text('ペインモデルの確認').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('リアクションを表示'));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: col3, matching: find.byType(ReactionsScreen)), findsOneWidget);
+    expect(find.byType(PostDetailScreen), findsOneWidget); // 投稿ページは第2カラムへ
+    // < で投稿ページを取り戻せる。
+    await tester.tap(find.descendant(of: col3, matching: find.byTooltip('戻る')).first);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: col3, matching: find.byType(PostDetailScreen)), findsOneWidget);
   });
 }
