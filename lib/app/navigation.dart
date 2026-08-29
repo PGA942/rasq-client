@@ -2,6 +2,10 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../features/post/post_detail_screen.dart';
+import '../features/trend/trend_screen.dart';
+import '../features/users/user_page_screen.dart';
+import '../shell/third_column.dart';
 import 'router.dart';
 
 /// Navigation helpers shared by rows/screens.
@@ -22,7 +26,10 @@ extension RasqNavigation on BuildContext {
   /// global nav stays visible; タブ外ではアプリ直下ルートへ).
   void pushPost(Post post) {
     final base = _inTab ? _tabBase : '';
-    push('$base/post/${Uri.encodeComponent(post.id)}', extra: post);
+    final loc = '$base/post/${Uri.encodeComponent(post.id)}';
+    // ペインモデル (D-057): タブレット幅では第3カラム(current)に開く。
+    if (_inTab && openPageInPanes(this, id: 'post:${post.key}', title: '投稿', location: loc, extra: post, builder: (_) => PostDetailScreen(postId: post.id, initial: post))) return;
+    push(loc, extra: post);
   }
 
   void pushReactions(Post post) {
@@ -44,13 +51,21 @@ extension RasqNavigation on BuildContext {
   }
 
   void pushClip(ClipInfo clip) => push('/clips/detail', extra: clip);
-  void pushUser(UserSummary user) => push('${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}', extra: user);
+  void pushUser(UserSummary user) {
+    final loc = '${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}';
+    if (_inTab && openPageInPanes(this, id: 'user:${user.key}', title: user.displayName, location: loc, extra: user, builder: (_) => UserPageScreen(userId: user.id, initial: user))) return;
+    push(loc, extra: user);
+  }
   void pushFollows(UserSummary user, {required bool followers}) => push('${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}/follows${followers ? '?tab=followers' : ''}', extra: user);
   void pushFollowRequests() => push('${Routes.notifications}/requests');
   void pushMuteBlock() => push('${Routes.settings}/mute-block');
   void openViewer(Post post, int index) => push(Routes.viewer, extra: (post: post, index: index));
 
-  void pushTrend(String tag) => push('${_inTab ? '${Routes.search}/trend' : '/trend'}/${Uri.encodeComponent(tag)}');
+  void pushTrend(String tag) {
+    final loc = '${_inTab ? '${Routes.search}/trend' : '/trend'}/${Uri.encodeComponent(tag)}';
+    if (_inTab && openPageInPanes(this, id: 'trend:$tag', title: '#$tag', location: loc, builder: (_) => TrendScreen(tag: tag))) return;
+    push(loc);
+  }
 
   /// トレンドTL上で検索を続ける(現在の結果画面を置き換える)。
   void replaceTrend(String tag) {

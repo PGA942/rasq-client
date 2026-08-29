@@ -84,54 +84,67 @@ class _LongPressable extends ConsumerWidget {
   }
 }
 
-class _TabletLayout extends StatelessWidget {
+class _TabletLayout extends ConsumerWidget {
   const _TabletLayout({required this.shell});
   final StatefulNavigationShell shell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    // ペインモデル (D-057): 第3カラムにページが開いている間は第2カラムが
+    // 検索ホーム幅(狭)へ縮み、第3カラムが広がる。空のときは逆。
+    final occupied = ref.watch(thirdColumnProvider) != null;
     return Scaffold(
-      body: Row(children: [
-        // Sidebar rail (何も開いてない時はサイドバー).
-        Container(
-          width: 72,
-          decoration: BoxDecoration(border: Border(right: BorderSide(color: scheme.outlineVariant))),
-          child: SafeArea(
-            child: Column(children: [
-              const SizedBox(height: RasqSpacing.lg),
-              for (final t in RasqNavTab.values)
-                IconButton(
-                  tooltip: t.label,
-                  isSelected: shell.currentIndex == t.index,
-                  onPressed: () => shell.goBranch(t.index, initialLocation: t.index == shell.currentIndex),
-                  icon: _navIcon(t, selected: false),
-                  selectedIcon: _navIcon(t, selected: true),
-                ),
-            ]),
+      body: LayoutBuilder(builder: (context, constraints) {
+        final total = constraints.maxWidth - 72;
+        final col2Width = (occupied ? kSearchHomeColumnWidth : total - kSearchHomeColumnWidth).clamp(kSearchHomeColumnWidth, total - kSearchHomeColumnWidth < kSearchHomeColumnWidth ? total / 2 : total - kSearchHomeColumnWidth);
+        return Row(children: [
+          // Sidebar rail (何も開いてない時はサイドバー).
+          Container(
+            width: 72,
+            decoration: BoxDecoration(border: Border(right: BorderSide(color: scheme.outlineVariant))),
+            child: SafeArea(
+              child: Column(children: [
+                const SizedBox(height: RasqSpacing.lg),
+                for (final t in RasqNavTab.values)
+                  IconButton(
+                    tooltip: t.label,
+                    isSelected: shell.currentIndex == t.index,
+                    onPressed: () => shell.goBranch(t.index, initialLocation: t.index == shell.currentIndex),
+                    icon: _navIcon(t, selected: false),
+                    selectedIcon: _navIcon(t, selected: true),
+                  ),
+              ]),
+            ),
           ),
-        ),
-        Expanded(flex: 5, child: shell),
-        // 第3カラム (M5b/D-056): 空のときは検索(設定で変更可)。features が
-        // 補助面を開き、M5c 以降は FOW の移動先になる。
-        Container(
-          width: 320,
-          decoration: BoxDecoration(border: Border(left: BorderSide(color: scheme.outlineVariant))),
-          child: SafeArea(
-            child: Column(children: [
-              const Expanded(child: ThirdColumnView()),
-              // VC ミニプレイヤーのスタブ(M2 から据え置き)。
-              Container(
-                height: 96,
-                margin: const EdgeInsets.all(RasqSpacing.sm),
-                decoration: BoxDecoration(color: RasqColors.lightBlue.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-                alignment: Alignment.center,
-                child: const Text('VC', style: TextStyle(color: RasqColors.white, fontSize: 32, fontWeight: FontWeight.w300)),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            width: col2Width.toDouble(),
+            child: ClipRect(child: shell),
+          ),
+          // 第3カラム (D-056/D-057): 空のときは検索(設定で変更可)。ページが
+          // 開くと広がり、M5c 以降は FOW の移動先になる。
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(border: Border(left: BorderSide(color: scheme.outlineVariant))),
+              child: SafeArea(
+                child: Column(children: [
+                  const Expanded(child: ThirdColumnView()),
+                  // VC ミニプレイヤーのスタブ(M2 から据え置き)。
+                  Container(
+                    height: 96,
+                    margin: const EdgeInsets.all(RasqSpacing.sm),
+                    decoration: BoxDecoration(color: RasqColors.lightBlue.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+                    alignment: Alignment.center,
+                    child: const Text('VC', style: TextStyle(color: RasqColors.white, fontSize: 32, fontWeight: FontWeight.w300)),
+                  ),
+                ]),
               ),
-            ]),
+            ),
           ),
-        ),
-      ]),
+        ]);
+      }),
     );
   }
 }

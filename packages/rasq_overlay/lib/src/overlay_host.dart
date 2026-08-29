@@ -151,17 +151,25 @@ class _FowColumn extends StatelessWidget {
           // OverflowBox: 高さアニメーション(D-049)の過渡期は合計が avail を
           // 一時的に超えることがある(古いパネルが縮む前に新しいパネルが
           // 目標高さで現れる)。上方向へ逃がして RenderFlex overflow にしない。
+          // 幅 (D-057): FOW はページ幅または 1200px に合わせる — 広い画面では
+          // 1200px を上限に中央寄せ(カラム別の幅追従は M5c のカラム間移行で)。
           return Padding(
             padding: EdgeInsets.only(bottom: insets),
-            child: OverflowBox(
+            child: Align(
               alignment: Alignment.bottomCenter,
-              minHeight: 0,
-              maxHeight: double.infinity,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                for (var i = ordered.length - 1; i >= 0; i--)
-                  // 最前面(最新)のパネルだけ影付き (D-052: 複数 FOW の判別)。
-                  _FowPanel(entry: ordered[i], height: heights[i], frontmost: i == 0, child: buildContent(ordered[i]), onCancel: () => onCancel(ordered[i]), onConfirm: () => onConfirm(ordered[i])),
-              ]),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: OverflowBox(
+                  alignment: Alignment.bottomCenter,
+                  minHeight: 0,
+                  maxHeight: double.infinity,
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    for (var i = ordered.length - 1; i >= 0; i--)
+                      // 最前面(最新)のパネルだけ影付き (D-052: 複数 FOW の判別)。
+                      _FowPanel(entry: ordered[i], height: heights[i], frontmost: i == 0, child: buildContent(ordered[i]), onCancel: () => onCancel(ordered[i]), onConfirm: () => onConfirm(ordered[i])),
+                  ]),
+                ),
+              ),
             ),
           );
         },
