@@ -77,6 +77,11 @@ class FowSpec {
   /// 手動調整を上書きしないための印。段階が切り替わったらリセットしてよい)。
   bool userResized = false;
 
+  /// パネル**内部**のハンドル(D-053: リアクションピッカーの外縁ハンドル等、
+  /// [showHandle] を消してコンテンツ側に置いたもの)がドラッグ中か。true の
+  /// 間はホストが高さを即時反映する(アニメの追従遅延を出さない)。
+  final ValueNotifier<bool> dragging = ValueNotifier(false);
+
   bool get hasHeader => title != null || cancelText != null || confirmText != null;
 
   /// Interstitial FOWs take the screen: scrim + barrier discard. Widget/system FOWs

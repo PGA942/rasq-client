@@ -26,20 +26,27 @@ import 'emoji_prediction.dart';
 /// 数千個のコールバック登録が FPS を殺していたため廃止(ListView の遅延
 /// ビルドが同じ役割をゼロコストで果たす)。
 class EmojiPanel extends ConsumerStatefulWidget {
-  const EmojiPanel({super.key, required this.onPick, this.height, this.predictionContext, this.existingReactions = const {}, this.actionBar});
+  const EmojiPanel({super.key, required this.onPick, this.height, this.predictionContext, this.existingReactions = const {}, this.actionBar, this.spec});
   final ValueChanged<String> onPick;
 
   /// Fixed height; null = fill the parent (FOW panel).
   final double? height;
 
-  /// 投稿への絵文字コンポーザー (D-052): 対象投稿のアクションボタン。
-  /// 基本は**下付き**、表示余白が最小配列([actionBarFlipHeight])より小さい
-  /// ときは**逆付き(上)**に切り替わる。バーの枠をピンチすると手動で
-  /// 逆サイドへ移動できる(第3カラムへの移動も将来同じ手法)。
+  /// 投稿への絵文字コンポーザー (D-052/D-053): 対象投稿のアクションボタン。
+  /// 既定は**下方向へつく**(= バーがパネル上辺、ワイヤーフレーム 1p 左下)。
+  /// バー(ヘッダー枠)を掴んで上下にドラッグすると、**掴んでいる間は
+  /// ドラッグハンドルが消失**し、離した位置でボタンに対して上付き/下付き
+  /// (+ハンドルを上下どちらに出すか)が決定する。表示余白が最小配列
+  /// ([actionBarFlipHeight])より小さいときは自動で逆付きになる。
+  /// (未実装の第3カラムへの移動も将来同じ手法。)
   final Widget? actionBar;
 
-  /// これより低いパネルではアクションバーを上側に付ける。
+  /// これより低いパネルではバーを逆側に付ける。
   static const actionBarFlipHeight = 240.0;
+
+  /// リアクションピッカー時の FOW spec (D-053)。バーの反対側に出す
+  /// **外縁ハンドル**のリサイズ/スナップに使う(ホスト側ハンドルは消す)。
+  final FowSpec? spec;
 
   /// 予測の文脈(CW + 本文 + 親/引用。コンポーザーでは下書きテキスト)。
   final String? predictionContext;
@@ -63,24 +70,60 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
   final _q = TextEditingController();
   final _expanded = <String>{};
 
-  /// アクションバーの位置 (D-052)。null = 自動(パネル高さで判定)、
-  /// true/false = ピンチによる手動指定。
+  /// アクションバー(= 掴めるヘッダー枠)の位置 (D-052/D-053)。
+  /// null = 自動(パネル高さで判定)、true/false = ドラッグによる手動指定。
   bool? _barOnTopOverride;
-  bool _flippedThisGesture = false;
+  bool _draggingBar = false; // 掴んでいる間はドラッグハンドルが消失する
+  double _barDragDelta = 0;
 
-  Widget _pinchableBar(BuildContext context, Widget bar) => GestureDetector(
-        // バーの枠をピンチ(2 本指で縮小)すると逆サイドへ移動する。
-        onScaleStart: (_) => _flippedThisGesture = false,
-        onScaleUpdate: (d) {
-          if (_flippedThisGesture || d.pointerCount < 2 || d.scale > 0.85) return;
-          _flippedThisGesture = true;
-          setState(() => _barOnTopOverride = !(_barOnTopOverride ?? false));
-        },
+  /// バーを掴んで上下へドラッグ → 離した位置で上付き/下付きが決まる。
+  Widget _grabbableBar(BuildContext context, Widget bar) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragStart: (_) => setState(() {
+          _draggingBar = true;
+          _barDragDelta = 0;
+        }),
+        onVerticalDragUpdate: (d) => _barDragDelta += d.delta.dy,
+        onVerticalDragEnd: (_) => setState(() {
+          _draggingBar = false;
+          // 24px 以上動かしたら方向で確定(上へ = バーが上辺 = 下方向へつく)。
+          if (_barDragDelta.abs() > 24) _barOnTopOverride = _barDragDelta < 0;
+        }),
+        onVerticalDragCancel: () => setState(() => _draggingBar = false),
         child: Container(
-          decoration: BoxDecoration(border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
+          decoration: BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
           child: bar,
         ),
       );
+
+  /// バーの反対側(外縁)に出すドラッグハンドル。バーを掴んでいる間は消える。
+  Widget _edgeHandle(BuildContext context) {
+    final spec = widget.spec;
+    final scheme = Theme.of(context).colorScheme;
+    return Opacity(
+      opacity: _draggingBar ? 0 : 1,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragStart: spec == null ? null : (_) => spec.dragging.value = true,
+        onVerticalDragUpdate: spec == null ? null : (d) => spec.resizeBy(d.delta.dy / MediaQuery.sizeOf(context).height),
+        onVerticalDragEnd: spec == null
+            ? null
+            : (_) {
+                spec.dragging.value = false;
+                spec.snapToStops();
+              },
+        onVerticalDragCancel: spec == null ? null : () => spec.dragging.value = false,
+        child: Semantics(
+          label: 'サイズ変更ハンドル',
+          child: SizedBox(
+            height: 18,
+            width: double.infinity,
+            child: Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: scheme.onSurface, borderRadius: BorderRadius.circular(2)))),
+          ),
+        ),
+      ),
+    );
+  }
 
   // 予測は毎ビルド再計算しない(カスタム絵文字数千件の走査になるため)。
   List<String>? _predicted;
@@ -197,11 +240,14 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
       decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.outlineVariant))),
       child: LayoutBuilder(builder: (context, constraints) {
         final bar = widget.actionBar;
-        // 基本は下付き。表示余白が最小配列より小さければ逆付き(上)に、
-        // ピンチによる手動指定があればそれを優先する (D-052)。
-        final onTop = _barOnTopOverride ?? (constraints.maxHeight.isFinite && constraints.maxHeight < EmojiPanel.actionBarFlipHeight);
+        // 既定は「下方向へつく」= バーが上辺(ワイヤーフレーム 1p 左下)。
+        // 表示余白が最小配列より小さければ逆付きに。バーを掴んで離した
+        // 手動指定があればそれを優先する (D-053)。
+        final onTop = _barOnTopOverride ?? !(constraints.maxHeight.isFinite && constraints.maxHeight < EmojiPanel.actionBarFlipHeight);
+        final hasEdgeHandle = bar != null && widget.spec != null;
         return Column(mainAxisSize: MainAxisSize.max, children: [
-          if (bar != null && onTop) _pinchableBar(context, bar),
+          if (bar != null && onTop) _grabbableBar(context, bar),
+          if (hasEdgeHandle && !onTop) _edgeHandle(context), // バーが下 → ハンドルは上
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.md, 4),
             child: RasqSearchBar(controller: _q, hintText: '検索', onChanged: (_) => setState(() {})),
@@ -213,7 +259,8 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
               itemBuilder: (_, i) => rows[i](),
             ),
           ),
-          if (bar != null && !onTop) _pinchableBar(context, bar),
+          if (hasEdgeHandle && onTop) _edgeHandle(context), // バーが上 → ハンドルは下
+          if (bar != null && !onTop) _grabbableBar(context, bar),
         ]);
       }),
     );

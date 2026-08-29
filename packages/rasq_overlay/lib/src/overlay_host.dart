@@ -262,10 +262,14 @@ class _FowPanelState extends State<_FowPanel> {
     // ⚠ ウィジェット型は常に AnimatedContainer 1 種に固定する: SizedBox と
     // 切り替えると Element が作り直され、**入力中のテキストごと State が
     // 消える**(ハンドル操作で本文消失、D-050 で実測)。
-    return AnimatedContainer(
-      duration: _dragging ? Duration.zero : const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      height: height,
+    return ValueListenableBuilder<bool>(
+      valueListenable: spec.dragging,
+      builder: (context, innerDragging, child) => AnimatedContainer(
+        duration: _dragging || innerDragging ? Duration.zero : const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        height: height,
+        child: child,
+      ),
       child: panel,
     );
   }

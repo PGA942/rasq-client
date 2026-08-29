@@ -562,7 +562,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                             ),
                           ),
                         ),
-                        Text(_headerTitle, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                        // 文字サイズは絵文字ピッカー(FOW ヘッダー)に合わせる (D-053)。
+                        Text(_headerTitle, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
                         Expanded(
                           child: Align(
                             alignment: Alignment.centerRight,
@@ -598,7 +599,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     // stick の折りたたみ時は 1 行の書き込みバー(展開で伸びる)。
                     minLines: _expandedView ? 3 : 1,
                     maxLines: 10,
-                    style: RasqTypography.body,
+                    // 文字サイズは絵文字ピッカー(検索欄 = bodySmall)に合わせる (D-053)。
+                    style: RasqTypography.bodySmall,
                     decoration: InputDecoration(hintText: _isDm ? 'メッセージを入力..' : 'いいことがありますように！', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
                     onChanged: (_) => _syncStickHeight(),
                   ),

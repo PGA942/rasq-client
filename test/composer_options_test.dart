@@ -305,7 +305,19 @@ void main() {
     await tester.longPress(find.byIcon(Icons.favorite_border).first);
     await tester.pumpAndSettle();
     expect(find.text('リアクション'), findsOneWidget); // ピッカーのタイトル
-    expect(find.descendant(of: find.byType(EmojiPanel), matching: find.byType(RasqActionBar)), findsOneWidget);
+    final panel = find.byType(EmojiPanel);
+    final bar = find.descendant(of: panel, matching: find.byType(RasqActionBar));
+    final search = find.descendant(of: panel, matching: find.byType(RasqSearchBar));
+    expect(bar, findsOneWidget);
+    // 既定は「下方向へつく」= バーがパネル上辺(ワイヤーフレーム 1p 左下)。
+    expect(tester.getTopLeft(bar).dy, lessThan(tester.getTopLeft(search).dy));
+    // 外縁(バーの反対側 = 下)にドラッグハンドル。
+    expect(find.descendant(of: panel, matching: find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'サイズ変更ハンドル')), findsOneWidget);
+
+    // バー(ヘッダー枠)を掴んで下へドラッグ → 離した位置で逆付きに決定 (D-053)。
+    await tester.drag(bar, const Offset(0, 120));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(bar).dy, greaterThan(tester.getTopLeft(search).dy));
   });
 
   test('mfmSnippet: プロパティー/フラグ/固定スニペットの組み立て', () {
