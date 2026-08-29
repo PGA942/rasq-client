@@ -201,15 +201,13 @@ class _PostRowState extends ConsumerState<PostRow> {
       // 別で、(+) の編集導線には出ない組み込みバンドル)。
       onTap: isRepost ? null : () => _performReactionAware(a, st),
       onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : null,
-      // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行
+      // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行。
+      // 投稿のアクションバーの複製は置かない (D-055: 「謎のアクションバー」に
+      // 見える) — 実物のバーへのアンカー付けは FOW 再設計(RRL 拡張)時。
       onLongPress: isReaction
           ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション',
                   predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
-                  existingReactions: post.reactions,
-                  // 投稿への絵文字コンポーザー (D-052): 対象投稿のアクション
-                  // ボタンをピッカーに同伴させる。
-                  actionBar: _pickerActionBar(),
-                  onPick: (e) {
+                  existingReactions: post.reactions, onPick: (e) {
                 widget.onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
               })
           : null,
@@ -268,21 +266,6 @@ class _PostRowState extends ConsumerState<PostRow> {
           if (picked != null) await widget.onAction(picked).catchError((_) {});
         },
       );
-
-  /// リアクションピッカーに同伴させる対象投稿のアクションバー (D-052)。
-  /// 行のアクションバーと同じ構成(束ね・並び替え適用済み)を開いた時点の
-  /// 状態で組む。
-  Widget _pickerActionBar() {
-    final tokens = RasqTokens.of(context);
-    final entries = ref.read(actionBarConfigProvider).apply(widget.actions);
-    return RasqActionBar(items: [
-      for (final e in entries)
-        switch (e) {
-          SingleActionEntry() => _item(e.action, tokens),
-          ActionListEntry() => _listItem(e),
-        },
-    ]);
-  }
 
   /// 引用: 投稿カード(埋め込みサイズ)を再利用.
   static Widget quoteTile(BuildContext context, Post q, {Map<String, Uri?> emojis = const {}, SafetySettings safety = const SafetySettings()}) {

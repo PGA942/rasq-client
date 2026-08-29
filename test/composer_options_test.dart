@@ -295,7 +295,7 @@ void main() {
     expect(find.text('書きかけのノート'), findsOneWidget);
   });
 
-  testWidgets('リアクションピッカー (D-052): 対象投稿のアクションボタンが同伴する(基本下付き)', (tester) async {
+  testWidgets('リアクションピッカー (D-055): ヘッダー行あり・投稿のバーの複製は置かない', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -304,22 +304,12 @@ void main() {
 
     await tester.longPress(find.byIcon(Icons.favorite_border).first);
     await tester.pumpAndSettle();
-    // ヘッダーレス (D-054): 閉じる/タイトル行は無く、バー自体が枠の上辺。
-    expect(find.text('リアクション'), findsNothing);
-    expect(find.text('閉じる'), findsNothing);
+    // ヘッダー行系 (D-055): 閉じる/リアクションのヘッダーがあり、
+    // 「謎のアクションバー」(呼び出し元投稿の複製)はパネル内に出さない。
+    expect(find.text('リアクション'), findsOneWidget);
+    expect(find.text('閉じる'), findsOneWidget);
     final panel = find.byType(EmojiPanel);
-    final bar = find.descendant(of: panel, matching: find.byType(RasqActionBar));
-    final search = find.descendant(of: panel, matching: find.byType(RasqSearchBar));
-    expect(bar, findsOneWidget);
-    // 既定は「下方向へつく」= バーがパネル上辺(ワイヤーフレーム 1p 左下)。
-    expect(tester.getTopLeft(bar).dy, lessThan(tester.getTopLeft(search).dy));
-    // 外縁(バーの反対側 = 下)にドラッグハンドル。
-    expect(find.descendant(of: panel, matching: find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'サイズ変更ハンドル')), findsOneWidget);
-
-    // バー(ヘッダー枠)を掴んで下へドラッグ → 離した位置で逆付きに決定 (D-053)。
-    await tester.drag(bar, const Offset(0, 120));
-    await tester.pumpAndSettle();
-    expect(tester.getTopLeft(bar).dy, greaterThan(tester.getTopLeft(search).dy));
+    expect(find.descendant(of: panel, matching: find.byType(RasqActionBar)), findsNothing);
   });
 
   test('mfmSnippet: プロパティー/フラグ/固定スニペットの組み立て', () {
