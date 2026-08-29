@@ -200,8 +200,25 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   bool get _stickExpanded => _focus.hasFocus || _text.text.trim().isNotEmpty || _files.isNotEmpty || _poll != null || _cwOn;
 
-  /// ヘッダー(タイトル + 投稿オプション + ✕)と対象タイルを見せるか。
+  /// ヘッダー(キャンセル/タイトル/下書き)と対象タイルを見せるか。
   bool get _expandedView => !_collapsible || _stickExpanded;
+
+  /// ヘッダー中央のタイトル (D-052: 「投稿/返信」)。
+  String get _headerTitle => switch (widget.target) {
+        ComposeNormal() => '投稿',
+        ComposeReply() => '返信',
+        ComposeQuote() => '引用',
+        ComposeDm() => '→ ${widget.target.title}',
+      };
+
+  /// 下書きに保存できる内容があるか(D-052 の「下書き」ボタン)。
+  bool get _canDraft => _text.text.trim().isNotEmpty || _cw.text.trim().isNotEmpty;
+
+  void _saveAsDraftAndClose() {
+    _saveDraft();
+    _skipDraftOnDispose = true;
+    widget.onClose?.call();
+  }
 
   // ---- 高さ段階の実測 (D-049) ------------------------------------------
   final _stickContentKey = GlobalKey();
@@ -532,10 +549,30 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               child: !_expandedView
                   ? const SizedBox(width: double.infinity)
                   : Column(key: _stickHeaderInnerKey, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      // ヘッダー (D-052): キャンセル(左)/ タイトル(太字・中央)/
+                      // 下書き(青文字・右)。投稿オプションは下部ツールバーへ。
                       Row(children: [
-                        Expanded(child: Text(_isDm ? '→ ${target.title}' : target.title, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-                        if (!_isDm && !_directReply) const ComposerHeaderControls(),
-                        RasqIconButton(icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: _busy ? null : _handleClose),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: _busy ? null : _handleClose,
+                              style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerLeft),
+                              child: Text('キャンセル', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                            ),
+                          ),
+                        ),
+                        Text(_headerTitle, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _busy || !_canDraft ? null : _saveAsDraftAndClose,
+                              style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerRight),
+                              child: Text('下書き', style: RasqTypography.bodySmall.copyWith(color: _canDraft ? tokens.link : scheme.onSurfaceVariant.withValues(alpha: 0.5))),
+                            ),
+                          ),
+                        ),
                       ]),
                       if (_directReply) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('ダイレクト投稿への返信(相手にだけ届きます)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
                       if (_replyTo != null || _quoteOf != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: _TargetPreview(post: (_replyTo ?? _quoteOf)!, emojis: emojis)),
@@ -622,6 +659,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     }),
                   );
                 }),
+                // 投稿オプション (D-052: ヘッダーからツールバーへ移動)。
+                if (!_isDm && !_directReply) const ComposerHeaderControls(),
               ]),
             ),
           ),

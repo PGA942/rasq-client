@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/compose/emoji_panel.dart';
 import 'package:rasq_client/features/compose/mfm_picker_fow.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -42,7 +44,11 @@ void main() {
 
     await tester.tap(find.byTooltip('投稿'));
     await tester.pumpAndSettle();
-    expect(find.text('ノートの作成'), findsOneWidget);
+    expect(find.text('投稿'), findsOneWidget); // ヘッダー中央タイトル (D-052)
+
+    // 投稿オプションはツールバー(横スクロール)に移動 (D-052)。
+    await tester.dragUntilVisible(find.byTooltip('公開範囲: パブリック'), find.byType(SingleChildScrollView).last, const Offset(-60, 0));
+    await tester.pumpAndSettle();
 
     // 公開範囲 → ホーム
     await tester.tap(find.byTooltip('公開範囲: パブリック'));
@@ -135,10 +141,10 @@ void main() {
     expect(find.text('キャンセル'), findsNothing);
     expect(find.byType(TextField), findsWidgets);
 
-    // 入力(フォーカス)で割り込みヘッダーが展開: ✕ とダイレクト表示。
+    // 入力(フォーカス)で割り込みヘッダーが展開: キャンセル とダイレクト表示。
     await tester.enterText(find.byType(TextField).last, '@alice 了解です');
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.close), findsOneWidget);
+    expect(find.text('キャンセル'), findsOneWidget);
     expect(find.text('ダイレクト投稿への返信(相手にだけ届きます)'), findsOneWidget);
     // 公開範囲などのオプションはダイレクトでは出さない。
     expect(find.byTooltip('公開範囲: パブリック'), findsNothing);
@@ -225,8 +231,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('@bob '), findsOneWidget);
 
-    // メンションだけ → ✕ でポップアップなしに閉じ、滞在中は再表示されない。
-    await tester.tap(find.byIcon(Icons.close));
+    // メンションだけ → キャンセルでポップアップなしに閉じ、滞在中は再表示されない。
+    await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
     expect(find.text('書きかけの投稿があります'), findsNothing);
     expect(find.byType(TextField), findsNothing);
@@ -238,7 +244,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, '@bob 書きかけの返信');
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.text('キャンセル').first);
     await tester.pumpAndSettle();
     expect(find.text('書きかけの投稿があります'), findsOneWidget);
     await tester.tap(find.text('下書きに保存して閉じる'));
@@ -262,20 +268,44 @@ void main() {
 
     await tester.tap(find.byTooltip('投稿'));
     await tester.pumpAndSettle();
-    expect(find.text('ノートの作成'), findsOneWidget); // パネル内ヘッダー
+    // ヘッダー (D-052): キャンセル(左)/ 投稿(太字・中央)/ 下書き(右)。
+    expect(find.text('キャンセル'), findsOneWidget);
+    expect(find.text('投稿'), findsOneWidget);
+    expect(find.text('下書き'), findsOneWidget);
     await tester.enterText(find.byType(TextField).last, '書きかけのノート');
     await tester.pumpAndSettle();
 
     // 余白(スクリム)クリック → ポップアップなしで消失(自動下書き)。
     await tester.tapAt(const Offset(20, 80));
     await tester.pumpAndSettle();
-    expect(find.text('ノートの作成'), findsNothing);
+    expect(find.text('キャンセル'), findsNothing);
     expect(find.text('書きかけの投稿があります'), findsNothing);
 
     // もう一度開くと復元されている。
     await tester.tap(find.byTooltip('投稿'));
     await tester.pumpAndSettle();
     expect(find.text('書きかけのノート'), findsOneWidget);
+
+    // 「下書き」ボタン(青文字・右揃え)でも保存して閉じる → 再度復元。
+    await tester.tap(find.text('下書き'));
+    await tester.pumpAndSettle();
+    expect(find.text('キャンセル'), findsNothing);
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    expect(find.text('書きかけのノート'), findsOneWidget);
+  });
+
+  testWidgets('リアクションピッカー (D-052): 対象投稿のアクションボタンが同伴する(基本下付き)', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byIcon(Icons.favorite_border).first);
+    await tester.pumpAndSettle();
+    expect(find.text('リアクション'), findsOneWidget); // ピッカーのタイトル
+    expect(find.descendant(of: find.byType(EmojiPanel), matching: find.byType(RasqActionBar)), findsOneWidget);
   });
 
   test('mfmSnippet: プロパティー/フラグ/固定スニペットの組み立て', () {

@@ -85,6 +85,10 @@ class OverlayHost extends StatelessWidget {
     final widgets = <Widget>[];
     final blocking = fows.lastWhere((e) => e.effectiveBarrierBehavior != OverlayBarrierBehavior.none, orElse: () => fows.first);
     if (blocking.effectiveBarrierBehavior != OverlayBarrierBehavior.none) {
+      // グレーアウト(スクリム)はインタースティシャル(+ボタンの投稿
+      // コンポーザー等)のときだけ (D-052)。ピッカー類の「余白クリックで
+      // 消失」は**透明バリア**で受ける(背面を暗くしない)。
+      final dim = blocking.fow?.blocksContent ?? false;
       widgets.add(Positioned.fill(
         child: Semantics(
           label: '閉じる',
@@ -92,7 +96,7 @@ class OverlayHost extends StatelessWidget {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => manager.barrierTapped(blocking.id),
-            child: ColoredBox(color: scrimColor ?? Colors.black.withValues(alpha: 0.35)),
+            child: dim ? ColoredBox(color: scrimColor ?? Colors.black.withValues(alpha: 0.35)) : const SizedBox.expand(),
           ),
         ),
       ));
@@ -155,7 +159,8 @@ class _FowColumn extends StatelessWidget {
               maxHeight: double.infinity,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 for (var i = ordered.length - 1; i >= 0; i--)
-                  _FowPanel(entry: ordered[i], height: heights[i], child: buildContent(ordered[i]), onCancel: () => onCancel(ordered[i]), onConfirm: () => onConfirm(ordered[i])),
+                  // 最前面(最新)のパネルだけ影付き (D-052: 複数 FOW の判別)。
+                  _FowPanel(entry: ordered[i], height: heights[i], frontmost: i == 0, child: buildContent(ordered[i]), onCancel: () => onCancel(ordered[i]), onConfirm: () => onConfirm(ordered[i])),
               ]),
             ),
           );
@@ -166,12 +171,16 @@ class _FowColumn extends StatelessWidget {
 }
 
 class _FowPanel extends StatefulWidget {
-  const _FowPanel({required this.entry, required this.height, required this.child, required this.onCancel, required this.onConfirm});
+  const _FowPanel({required this.entry, required this.height, required this.child, required this.onCancel, required this.onConfirm, this.frontmost = true});
   final RasqOverlayEntry entry;
   final double height;
   final Widget child;
   final VoidCallback onCancel;
   final VoidCallback onConfirm;
+
+  /// 最前面(操作対象)のパネルか。FOW の枠はグレーの線で描き、**影の有無で
+  /// 最前面かどうかを判別**する (D-052: 複数 FOW を開いたときの識別)。
+  final bool frontmost;
 
   @override
   State<_FowPanel> createState() => _FowPanelState();
@@ -197,11 +206,15 @@ class _FowPanelState extends State<_FowPanel> {
     // ドラッグリサイズ可能なパネルは追従遅延を避けて即時反映。
     final panel = Material(
         color: scheme.surface,
-        elevation: 8,
+        // 最前面のパネルだけ影付き(枠線は全パネル共通のグレー、D-052)。
+        elevation: widget.frontmost ? 8 : 0,
         // FOW = ドラッグハンドル + **角丸四角形枠**の集合 (D-048)。フッターの
         // 上にドックする stick は内部フッター(アクションバー)が枠の下辺に
         // なるため下側も丸める。画面最下端まで覆う通常 FOW は上側のみ。
-        shape: RoundedRectangleBorder(borderRadius: spec.dockAboveFooter ? BorderRadius.circular(16) : const BorderRadius.vertical(top: Radius.circular(16))),
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: scheme.outlineVariant),
+          borderRadius: spec.dockAboveFooter ? BorderRadius.circular(16) : const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
         clipBehavior: Clip.antiAlias,
         child: Column(children: [
           if (spec.showHandle)

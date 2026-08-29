@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
@@ -19,6 +19,7 @@ Future<void> openEmojiPicker(
   String title = '絵文字',
   String? predictionContext,
   Map<String, int> existingReactions = const {},
+  Widget? actionBar,
 }) async {
   final manager = ref.read(overlayManagerProvider);
   await manager.showFow<void>(
@@ -31,6 +32,9 @@ Future<void> openEmojiPicker(
     builder: (ctx, handle) => EmojiPanel(
       predictionContext: predictionContext,
       existingReactions: existingReactions,
+      // 投稿への絵文字コンポーザー (D-052): 対象投稿のアクションボタンを
+      // パネルに同伴させる(基本は下付き)。
+      actionBar: actionBar,
       onPick: (e) {
         onPick(e);
         if (closeOnPick) handle.close(result: e);

@@ -122,7 +122,8 @@ void main() {
     // FAB → composer (normal) with CW + poll + emoji panel toggles.
     await tester.tap(find.byTooltip('投稿'));
     await tester.pumpAndSettle();
-    expect(find.text('ノートの作成'), findsOneWidget);
+    expect(find.text('投稿'), findsOneWidget); // ヘッダー中央タイトル (D-052)
+    expect(find.text('下書き'), findsOneWidget); // 右揃えの下書きボタン
     await tester.tap(find.byTooltip('隠す(注釈)'));
     await tester.pumpAndSettle();
     expect(find.text('注釈..'), findsOneWidget);
@@ -132,10 +133,10 @@ void main() {
     await tester.tap(find.byTooltip('絵文字'));
     await tester.pumpAndSettle();
     expect(find.text('デフォルト'), findsOneWidget); // 旧「全てのemoji」(D-040)
-    // D-051: 通常コンポーザーもヘッダーレス(パネル内ヘッダーの ✕ で閉じる)。
-    await tester.tap(find.byTooltip('閉じる'));
+    // D-052: パネル内ヘッダーの「キャンセル」(左揃え)で閉じる。
+    await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
-    expect(find.text('ノートの作成'), findsNothing);
+    expect(find.text('キャンセル'), findsNothing);
 
     // Search tab → trend words from plugin → trend TL.
     await tester.tap(find.byTooltip('検索'));

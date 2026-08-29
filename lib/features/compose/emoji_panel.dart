@@ -26,11 +26,20 @@ import 'emoji_prediction.dart';
 /// 数千個のコールバック登録が FPS を殺していたため廃止(ListView の遅延
 /// ビルドが同じ役割をゼロコストで果たす)。
 class EmojiPanel extends ConsumerStatefulWidget {
-  const EmojiPanel({super.key, required this.onPick, this.height, this.predictionContext, this.existingReactions = const {}});
+  const EmojiPanel({super.key, required this.onPick, this.height, this.predictionContext, this.existingReactions = const {}, this.actionBar});
   final ValueChanged<String> onPick;
 
   /// Fixed height; null = fill the parent (FOW panel).
   final double? height;
+
+  /// 投稿への絵文字コンポーザー (D-052): 対象投稿のアクションボタン。
+  /// 基本は**下付き**、表示余白が最小配列([actionBarFlipHeight])より小さい
+  /// ときは**逆付き(上)**に切り替わる。バーの枠をピンチすると手動で
+  /// 逆サイドへ移動できる(第3カラムへの移動も将来同じ手法)。
+  final Widget? actionBar;
+
+  /// これより低いパネルではアクションバーを上側に付ける。
+  static const actionBarFlipHeight = 240.0;
 
   /// 予測の文脈(CW + 本文 + 親/引用。コンポーザーでは下書きテキスト)。
   final String? predictionContext;
@@ -53,6 +62,25 @@ class EmojiPanel extends ConsumerStatefulWidget {
 class _EmojiPanelState extends ConsumerState<EmojiPanel> {
   final _q = TextEditingController();
   final _expanded = <String>{};
+
+  /// アクションバーの位置 (D-052)。null = 自動(パネル高さで判定)、
+  /// true/false = ピンチによる手動指定。
+  bool? _barOnTopOverride;
+  bool _flippedThisGesture = false;
+
+  Widget _pinchableBar(BuildContext context, Widget bar) => GestureDetector(
+        // バーの枠をピンチ(2 本指で縮小)すると逆サイドへ移動する。
+        onScaleStart: (_) => _flippedThisGesture = false,
+        onScaleUpdate: (d) {
+          if (_flippedThisGesture || d.pointerCount < 2 || d.scale > 0.85) return;
+          _flippedThisGesture = true;
+          setState(() => _barOnTopOverride = !(_barOnTopOverride ?? false));
+        },
+        child: Container(
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
+          child: bar,
+        ),
+      );
 
   // 予測は毎ビルド再計算しない(カスタム絵文字数千件の走査になるため)。
   List<String>? _predicted;
@@ -167,19 +195,27 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
     return Container(
       height: widget.height,
       decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.outlineVariant))),
-      child: Column(mainAxisSize: MainAxisSize.max, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.md, 4),
-          child: RasqSearchBar(controller: _q, hintText: '検索', onChanged: (_) => setState(() {})),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(RasqSpacing.md, 0, RasqSpacing.md, 12),
-            itemCount: rows.length,
-            itemBuilder: (_, i) => rows[i](),
+      child: LayoutBuilder(builder: (context, constraints) {
+        final bar = widget.actionBar;
+        // 基本は下付き。表示余白が最小配列より小さければ逆付き(上)に、
+        // ピンチによる手動指定があればそれを優先する (D-052)。
+        final onTop = _barOnTopOverride ?? (constraints.maxHeight.isFinite && constraints.maxHeight < EmojiPanel.actionBarFlipHeight);
+        return Column(mainAxisSize: MainAxisSize.max, children: [
+          if (bar != null && onTop) _pinchableBar(context, bar),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.md, 4),
+            child: RasqSearchBar(controller: _q, hintText: '検索', onChanged: (_) => setState(() {})),
           ),
-        ),
-      ]),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.md, 0, RasqSpacing.md, 12),
+              itemCount: rows.length,
+              itemBuilder: (_, i) => rows[i](),
+            ),
+          ),
+          if (bar != null && !onTop) _pinchableBar(context, bar),
+        ]);
+      }),
     );
   }
 

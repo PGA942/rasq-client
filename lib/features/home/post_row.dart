@@ -205,7 +205,11 @@ class _PostRowState extends ConsumerState<PostRow> {
       onLongPress: isReaction
           ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション',
                   predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
-                  existingReactions: post.reactions, onPick: (e) {
+                  existingReactions: post.reactions,
+                  // 投稿への絵文字コンポーザー (D-052): 対象投稿のアクション
+                  // ボタンをピッカーに同伴させる。
+                  actionBar: _pickerActionBar(),
+                  onPick: (e) {
                 widget.onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
               })
           : null,
@@ -264,6 +268,21 @@ class _PostRowState extends ConsumerState<PostRow> {
           if (picked != null) await widget.onAction(picked).catchError((_) {});
         },
       );
+
+  /// リアクションピッカーに同伴させる対象投稿のアクションバー (D-052)。
+  /// 行のアクションバーと同じ構成(束ね・並び替え適用済み)を開いた時点の
+  /// 状態で組む。
+  Widget _pickerActionBar() {
+    final tokens = RasqTokens.of(context);
+    final entries = ref.read(actionBarConfigProvider).apply(widget.actions);
+    return RasqActionBar(items: [
+      for (final e in entries)
+        switch (e) {
+          SingleActionEntry() => _item(e.action, tokens),
+          ActionListEntry() => _listItem(e),
+        },
+    ]);
+  }
 
   /// 引用: 投稿カード(埋め込みサイズ)を再利用.
   static Widget quoteTile(BuildContext context, Post q, {Map<String, Uri?> emojis = const {}, SafetySettings safety = const SafetySettings()}) {
