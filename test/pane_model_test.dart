@@ -61,20 +61,25 @@ void main() {
     expect(find.byType(PostDetailScreen), findsOneWidget); // 第2カラム(router)側
     expect(find.descendant(of: col3, matching: find.byType(PostDetailScreen)), findsNothing);
 
-    // 移動した状態では ✕ は出ず、< で完結する (D-058)。
-    // (2 つ目の「戻る」はページ自身のヘッダーのもの — カラムヘッダー側は先頭)
+    // ページ entry に ✕ は出ない — 小画面モードと同じく < で完結 (D-058)。
     expect(find.descendant(of: col3, matching: find.byTooltip('閉じる')), findsNothing);
-    final backInCol3 = find.descendant(of: col3, matching: find.byTooltip('戻る')).first;
+    final backInCol3 = find.descendant(of: col3, matching: find.byTooltip('戻る(長押しで一覧)'));
+    expect(backInCol3, findsOneWidget);
 
-    // < で第2カラムへ移していた投稿ページを取り戻す(router も 1 つ戻る)。
-    await tester.tap(backInCol3);
+    // < 長押し → どこまで戻るかのドロップダウン(チェーン + 閉じる)。
+    await tester.longPress(backInCol3);
+    await tester.pumpAndSettle();
+    expect(find.text('投稿'), findsWidgets); // チェーン先頭(移した投稿ページ)
+    expect(find.text('閉じる'), findsOneWidget);
+    await tester.tap(find.text('投稿').last);
     await tester.pumpAndSettle();
     expect(find.descendant(of: col3, matching: find.byType(PostDetailScreen)), findsOneWidget);
     expect(find.byType(PostDetailScreen), findsOneWidget); // router 側の複製は消えた
     expect(find.byType(UserPageScreen), findsNothing);
 
-    // 取り戻した entry は ✕ に戻る → 閉じると検索(狭)へ。
-    await tester.tap(find.descendant(of: col3, matching: find.byTooltip('閉じる')));
+    // previous の無い entry の < は「閉じる」= 検索(狭)へ。✕ は出ない。
+    expect(find.descendant(of: col3, matching: find.byTooltip('閉じる')), findsNothing);
+    await tester.tap(find.descendant(of: col3, matching: find.byTooltip('戻る(長押しで一覧)')));
     await tester.pumpAndSettle();
     expect(col3Width(), lessThanOrEqualTo(kSearchHomeColumnWidth + 1));
     expect(find.byType(PostDetailScreen), findsNothing); // 第2カラムはホームTLのまま

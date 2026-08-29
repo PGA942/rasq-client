@@ -101,6 +101,36 @@ bool openPageInPanes(
   return true;
 }
 
+/// [entry] から辿れる previous のチェーン(近い順)。
+List<ThirdColumnEntry> _chainOf(ThirdColumnEntry entry) => [
+      for (var p = entry.previous; p != null; p = p.previous) p,
+    ];
+
+/// < の戻り処理 (D-058): [target] まで戻る(null = 全部戻して閉じる = 検索へ)。
+/// 途中で第2カラムへ移していたページの router 複製は、最深マッチが一致する
+/// 間だけ pop する(第2カラム側の < で先に戻られていたら触らない)。
+void _backTo(WidgetRef ref, ThirdColumnEntry current, {ThirdColumnEntry? target}) {
+  final router = ref.read(routerProvider);
+  var p = current.previous;
+  while (p != null) {
+    final loc = p.location;
+    if (loc != null) {
+      // push は uri に反映されないため、最深マッチで判定する。
+      final top = router.routerDelegate.currentConfiguration.last.matchedLocation;
+      if (top == loc.split('?').first && router.canPop()) router.pop();
+    }
+    if (identical(p, target)) break;
+    p = p.previous;
+  }
+  if (target != null) {
+    ref.read(thirdColumnProvider.notifier).open(target);
+  } else {
+    // 全部戻して閉じる: ページ常駐コンポーザーも一緒に閉じる。
+    ref.read(overlayManagerProvider).close(composerFowId);
+    ref.read(thirdColumnProvider.notifier).close();
+  }
+}
+
 /// 第3カラムの中身。empty 設定は設定 DSL と同じ KV 規約(`thirdColumn.v1`)。
 class ThirdColumnView extends ConsumerWidget {
   const ThirdColumnView({super.key});
@@ -118,38 +148,33 @@ class ThirdColumnView extends ConsumerWidget {
           SizedBox(
             height: 40,
             child: Row(children: [
-              // 第2カラムへ移したページがあるとき (D-058): ✕ は出さず、
-              // <(戻る)で取り戻して完結する。
-              if (entry.previous != null)
-                RasqIconButton(
-                  icon: Icons.arrow_back,
-                  size: 20,
-                  tooltip: '戻る',
-                  onPressed: () {
-                    final prev = entry.previous!;
-                    final router = ref.read(routerProvider);
-                    // 第2カラムに previous がまだ表示されていれば router も戻す
-                    // (第2カラム側の < で先に戻られていたら pop しない)。
-                    // push は uri に反映されないため、最深マッチで判定する。
-                    final loc = router.routerDelegate.currentConfiguration.last.matchedLocation;
-                    if (prev.location != null && loc == prev.location!.split('?').first && router.canPop()) router.pop();
-                    ref.read(thirdColumnProvider.notifier).open(prev);
-                  },
-                )
+              // ページ entry (D-058): ✕ は出さず、小画面モードと同じく <(戻る)
+              // で完結する。previous が無ければ「戻る」= 閉じて検索へ。
+              // **長押し**で「どこまで戻るか」のドロップダウン。
+              if (entry.location != null)
+                Builder(builder: (ctx) {
+                  return RasqActionButton.icon(
+                    icon: Icons.arrow_back,
+                    tooltip: '戻る(長押しで一覧)',
+                    onTap: () => _backTo(ref, entry, target: entry.previous),
+                    onLongPress: () async {
+                      final box = ctx.findRenderObject() as RenderBox;
+                      final anchor = box.localToGlobal(Offset.zero) & box.size;
+                      final manager = ref.read(overlayManagerProvider);
+                      final picked = await manager.showDropdown<(ThirdColumnEntry?,)>(id: 'thirdColumn.back', anchor: anchor, dense: true, items: [
+                        for (final p in _chainOf(entry)) RasqDropdownItem(p.title, (p,)),
+                        const RasqDropdownItem('閉じる', (null,)),
+                      ]);
+                      if (picked != null) _backTo(ref, entry, target: picked.$1);
+                    },
+                  );
+                })
               else
                 const SizedBox(width: RasqSpacing.md),
               Expanded(child: Text(entry.title, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-              if (entry.previous == null)
-                RasqIconButton(
-                  icon: Icons.close,
-                  size: 20,
-                  tooltip: '閉じる',
-                  onPressed: () {
-                    // ページに張り付く常駐コンポーザーはページと一緒に閉じる。
-                    if (entry.location != null) ref.read(overlayManagerProvider).close(composerFowId);
-                    ref.read(thirdColumnProvider.notifier).close();
-                  },
-                ),
+              // 補助面(FOW 移動など)だけ ✕ を持つ。ページは < で完結。
+              if (entry.location == null)
+                RasqIconButton(icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: () => ref.read(thirdColumnProvider.notifier).close()),
               const SizedBox(width: 4),
             ]),
           ),
