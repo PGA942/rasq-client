@@ -101,16 +101,19 @@ bool openPageInPanes(
   return true;
 }
 
-/// [entry] から辿れる previous のチェーン(近い順)。
-List<ThirdColumnEntry> _chainOf(ThirdColumnEntry entry) => [
+/// [entry] から辿れる previous のチェーン(近い順)。< 長押しの
+/// 「どこまで戻るか」ドロップダウンに使う。
+List<ThirdColumnEntry> paneBackChain(ThirdColumnEntry entry) => [
       for (var p = entry.previous; p != null; p = p.previous) p,
     ];
 
-/// < の戻り処理 (D-058): [target] まで戻る(null = 全部戻して閉じる = 検索へ)。
-/// 途中で第2カラムへ移していたページの router 複製は、最深マッチが一致する
-/// 間だけ pop する(第2カラム側の < で先に戻られていたら触らない)。
-void _backTo(WidgetRef ref, ThirdColumnEntry current, {ThirdColumnEntry? target}) {
-  final router = ref.read(routerProvider);
+/// < の戻り処理 (D-058/D-059): [target] まで戻る(null = 全部戻して閉じる =
+/// 検索へ)。途中で第2カラムへ移していたページの router 複製は、最深マッチが
+/// 一致する間だけ pop する(第2カラム側の < で先に戻られていたら触らない)。
+/// ページ自身のヘッダーの < ボタン([RasqPageHeader])から呼ばれる。
+void paneBackTo(BuildContext context, ThirdColumnEntry current, {ThirdColumnEntry? target}) {
+  final container = ProviderScope.containerOf(context, listen: false);
+  final router = container.read(routerProvider);
   var p = current.previous;
   while (p != null) {
     final loc = p.location;
@@ -123,11 +126,11 @@ void _backTo(WidgetRef ref, ThirdColumnEntry current, {ThirdColumnEntry? target}
     p = p.previous;
   }
   if (target != null) {
-    ref.read(thirdColumnProvider.notifier).open(target);
+    container.read(thirdColumnProvider.notifier).open(target);
   } else {
     // 全部戻して閉じる: ページ常駐コンポーザーも一緒に閉じる。
-    ref.read(overlayManagerProvider).close(composerFowId);
-    ref.read(thirdColumnProvider.notifier).close();
+    container.read(overlayManagerProvider).close(composerFowId);
+    container.read(thirdColumnProvider.notifier).close();
   }
 }
 
@@ -142,39 +145,22 @@ class ThirdColumnView extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final entry = ref.watch(thirdColumnProvider);
     if (entry != null) {
+      // ページ entry (D-059): カラム専用ヘッダーは出さず全面表示 — 戻りは
+      // ページ自身のヘッダーの < に統合される(RasqPageHeader が PaneScope を
+      // 見て paneBackTo を呼ぶ。長押しで「どこまで戻るか」)。
+      if (entry.location != null) {
+        return PaneScope(entry: entry, child: Builder(builder: entry.builder));
+      }
+      // 補助面(FOW 移動など)はタイトル + ✕ のカラムヘッダーを持つ。
       return PaneScope(
         entry: entry,
         child: Column(children: [
           SizedBox(
             height: 40,
             child: Row(children: [
-              // ページ entry (D-058): ✕ は出さず、小画面モードと同じく <(戻る)
-              // で完結する。previous が無ければ「戻る」= 閉じて検索へ。
-              // **長押し**で「どこまで戻るか」のドロップダウン。
-              if (entry.location != null)
-                Builder(builder: (ctx) {
-                  return RasqActionButton.icon(
-                    icon: Icons.arrow_back,
-                    tooltip: '戻る(長押しで一覧)',
-                    onTap: () => _backTo(ref, entry, target: entry.previous),
-                    onLongPress: () async {
-                      final box = ctx.findRenderObject() as RenderBox;
-                      final anchor = box.localToGlobal(Offset.zero) & box.size;
-                      final manager = ref.read(overlayManagerProvider);
-                      final picked = await manager.showDropdown<(ThirdColumnEntry?,)>(id: 'thirdColumn.back', anchor: anchor, dense: true, items: [
-                        for (final p in _chainOf(entry)) RasqDropdownItem(p.title, (p,)),
-                        const RasqDropdownItem('閉じる', (null,)),
-                      ]);
-                      if (picked != null) _backTo(ref, entry, target: picked.$1);
-                    },
-                  );
-                })
-              else
-                const SizedBox(width: RasqSpacing.md),
+              const SizedBox(width: RasqSpacing.md),
               Expanded(child: Text(entry.title, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-              // 補助面(FOW 移動など)だけ ✕ を持つ。ページは < で完結。
-              if (entry.location == null)
-                RasqIconButton(icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: () => ref.read(thirdColumnProvider.notifier).close()),
+              RasqIconButton(icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: () => ref.read(thirdColumnProvider.notifier).close()),
               const SizedBox(width: 4),
             ]),
           ),

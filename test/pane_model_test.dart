@@ -61,9 +61,10 @@ void main() {
     expect(find.byType(PostDetailScreen), findsOneWidget); // 第2カラム(router)側
     expect(find.descendant(of: col3, matching: find.byType(PostDetailScreen)), findsNothing);
 
-    // ページ entry に ✕ は出ない — 小画面モードと同じく < で完結 (D-058)。
+    // カラム専用ヘッダーは無く、戻りは**ページ自身のヘッダーの <** に統合
+    // (D-059)。✕ は出ない。
     expect(find.descendant(of: col3, matching: find.byTooltip('閉じる')), findsNothing);
-    final backInCol3 = find.descendant(of: col3, matching: find.byTooltip('戻る(長押しで一覧)'));
+    final backInCol3 = find.descendant(of: col3, matching: find.byTooltip('戻る'));
     expect(backInCol3, findsOneWidget);
 
     // < 長押し → どこまで戻るかのドロップダウン(チェーン + 閉じる)。
@@ -79,7 +80,7 @@ void main() {
 
     // previous の無い entry の < は「閉じる」= 検索(狭)へ。✕ は出ない。
     expect(find.descendant(of: col3, matching: find.byTooltip('閉じる')), findsNothing);
-    await tester.tap(find.descendant(of: col3, matching: find.byTooltip('戻る(長押しで一覧)')));
+    await tester.tap(find.descendant(of: col3, matching: find.byTooltip('戻る')));
     await tester.pumpAndSettle();
     expect(col3Width(), lessThanOrEqualTo(kSearchHomeColumnWidth + 1));
     expect(find.byType(PostDetailScreen), findsNothing); // 第2カラムはホームTLのまま
