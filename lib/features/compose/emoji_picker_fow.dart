@@ -22,22 +22,26 @@ Future<void> openEmojiPicker(
   Widget? actionBar,
 }) async {
   final manager = ref.read(overlayManagerProvider);
-  // リアクションピッカー (D-052/D-053): 対象投稿のアクションボタンを同伴。
-  // ホスト側の上辺ハンドルは消し、バーの**反対側の外縁**にハンドルを出す
+  // リアクションピッカー (D-052〜D-054): 対象投稿のアクションボタンを同伴。
+  // このとき FOW は**完全ヘッダーレス**(閉じる/タイトル行なし) — バー自体が
+  // 角丸枠の上辺(= 掴めるヘッダー枠)になり、ハンドルは反対側の外縁に出る
   // (バーを掴んでいる間はハンドル消失 → 離した位置で上付き/下付き決定)。
+  // 閉じるのは余白クリック / esc。
+  final reaction = actionBar != null;
   final spec = FowSpec(
     type: FowPanelType.widget,
     initialHeightFactor: 0.4,
     minHeightFactor: 0.25,
     maxHeightFactor: 0.8,
-    title: title,
-    cancelText: '閉じる',
+    title: reaction ? null : title,
+    cancelText: reaction ? null : '閉じる',
     dockAboveFooter: true,
-    showHandle: actionBar == null,
+    showHandle: !reaction,
   );
   await manager.showFow<void>(
     id: emojiPickerFowId,
     ownerId: ownerId,
+    semanticsLabel: title,
     // 同手法化 (D-051): 角丸枠 + フッター上にドック + **余白クリックで消失**
     // (ポップアップは出ない)。
     barrierBehavior: OverlayBarrierBehavior.dismissDiscard,

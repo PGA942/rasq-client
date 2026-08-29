@@ -77,7 +77,8 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
   double _barDragDelta = 0;
 
   /// バーを掴んで上下へドラッグ → 離した位置で上付き/下付きが決まる。
-  Widget _grabbableBar(BuildContext context, Widget bar) => GestureDetector(
+  /// 枠線は内側にだけ引く(枠の外周線と二重にならないように)。
+  Widget _grabbableBar(BuildContext context, Widget bar, {required bool onTop}) => GestureDetector(
         behavior: HitTestBehavior.opaque,
         onVerticalDragStart: (_) => setState(() {
           _draggingBar = true;
@@ -91,7 +92,11 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
         }),
         onVerticalDragCancel: () => setState(() => _draggingBar = false),
         child: Container(
-          decoration: BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
+          decoration: BoxDecoration(
+            border: onTop
+                ? Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))
+                : Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+          ),
           child: bar,
         ),
       );
@@ -237,7 +242,9 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
 
     return Container(
       height: widget.height,
-      decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.outlineVariant))),
+      // リアクションピッカー(ヘッダーレス)ではバーが枠の上辺そのものなので
+      // 上枠線を引かない(枠の外周線と二重になるため)。
+      decoration: widget.spec != null ? null : BoxDecoration(border: Border(top: BorderSide(color: scheme.outlineVariant))),
       child: LayoutBuilder(builder: (context, constraints) {
         final bar = widget.actionBar;
         // 既定は「下方向へつく」= バーが上辺(ワイヤーフレーム 1p 左下)。
@@ -246,7 +253,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
         final onTop = _barOnTopOverride ?? !(constraints.maxHeight.isFinite && constraints.maxHeight < EmojiPanel.actionBarFlipHeight);
         final hasEdgeHandle = bar != null && widget.spec != null;
         return Column(mainAxisSize: MainAxisSize.max, children: [
-          if (bar != null && onTop) _grabbableBar(context, bar),
+          if (bar != null && onTop) _grabbableBar(context, bar, onTop: true),
           if (hasEdgeHandle && !onTop) _edgeHandle(context), // バーが下 → ハンドルは上
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.md, 4),
@@ -260,7 +267,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
             ),
           ),
           if (hasEdgeHandle && onTop) _edgeHandle(context), // バーが上 → ハンドルは下
-          if (bar != null && !onTop) _grabbableBar(context, bar),
+          if (bar != null && !onTop) _grabbableBar(context, bar, onTop: false),
         ]);
       }),
     );

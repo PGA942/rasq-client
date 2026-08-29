@@ -304,7 +304,9 @@ void main() {
 
     await tester.longPress(find.byIcon(Icons.favorite_border).first);
     await tester.pumpAndSettle();
-    expect(find.text('リアクション'), findsOneWidget); // ピッカーのタイトル
+    // ヘッダーレス (D-054): 閉じる/タイトル行は無く、バー自体が枠の上辺。
+    expect(find.text('リアクション'), findsNothing);
+    expect(find.text('閉じる'), findsNothing);
     final panel = find.byType(EmojiPanel);
     final bar = find.descendant(of: panel, matching: find.byType(RasqActionBar));
     final search = find.descendant(of: panel, matching: find.byType(RasqSearchBar));
