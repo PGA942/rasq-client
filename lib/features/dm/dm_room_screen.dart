@@ -7,6 +7,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
+import '../../shell/third_column.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../home/post_row.dart';
@@ -37,7 +38,7 @@ class _DmRoomScreenState extends ConsumerState<DmRoomScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         if (!mounted) return;
-        await showComposer(ref, ComposeDm(room), resident: true, onPosted: (_) {
+        await showComposer(ref, ComposeDm(room), resident: true, column: fowColumnOf(context), onPosted: (_) {
           ref.read(timelineProvider(kind).notifier).refresh();
           ref.invalidate(dmRoomsProvider);
         });

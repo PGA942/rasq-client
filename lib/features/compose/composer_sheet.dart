@@ -28,7 +28,7 @@ const composerFowId = 'fow.composer';
 /// 縮小状態で置かれ、送信しても閉じずに(下書きをリセットして)残る。✕ は
 /// 折りたたみ。消えるのはページ遷移のときだけ。[onPosted] は送信毎に呼ばれる
 /// (スレッド/ルームの再読込用)。
-Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted}) async {
+Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0}) async {
   final manager = ref.read(overlayManagerProvider);
   // 返信 / ダイレクト投稿は **stick FOW** (D-047): ヘッダー無しで根本が
   // フッターメニュー/キーボードの上に貼り付き、タップ(フォーカス)すると
@@ -43,6 +43,7 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident =
           minHeightFactor: 0.10,
           maxHeightFactor: 0.8,
           dockAboveFooter: true,
+          columnIndex: column,
           // 高さの段階 (D-049): 折りたたみ/全部ピッタリの 2 段(実測が入ると
           // 本体が差し替える)。最上段より上はシームレス、最下段で止まる。
           heightStops: const [_ComposerBodyState.stickCollapsedFactor, _ComposerBodyState.stickExpandedFactor],
@@ -59,6 +60,7 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident =
           minHeightFactor: 0.2,
           maxHeightFactor: 0.9,
           dockAboveFooter: true,
+          columnIndex: column,
           heightStops: const [0.45],
           freeAboveStops: true,
         );
@@ -235,6 +237,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     if (!mounted) return;
     setState(() {});
   }
+
+  /// FOW 内ヘッダー/フッターを「掴んで左右カラム間移動」のグリップにする
+  /// (D-062。ハンドルは縦リサイズ専用の役割分担)。
+  Widget _grip(Widget child) => widget.spec == null ? child : FowMoveGrip(spec: widget.spec!, child: child);
+
+  /// 子 FOW(絵文字/MFM ピッカー)はコンポーザーと同じカラムに開く。
+  int get _column => widget.spec?.columnIndex ?? 0;
 
   /// build 毎に呼ぶ(冪等)。レイアウト後に「全部をピッタリ表示できる」
   /// 高さを実測し、高さ段階(heightStops)と現在高さへ反映する。
@@ -551,7 +560,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   : Column(key: _stickHeaderInnerKey, crossAxisAlignment: CrossAxisAlignment.start, children: [
                       // ヘッダー (D-052): キャンセル(左)/ タイトル(太字・中央)/
                       // 下書き(青文字・右)。投稿オプションは下部ツールバーへ。
-                      Row(children: [
+                      // FOW 内ヘッダー = 掴んで左右カラム間移動 (D-062)。
+                      _grip(Row(children: [
                         Expanded(
                           child: Align(
                             alignment: Alignment.centerLeft,
@@ -574,7 +584,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                             ),
                           ),
                         ),
-                      ]),
+                      ])),
                       if (_directReply) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('ダイレクト投稿への返信(相手にだけ届きます)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
                       if (_replyTo != null || _quoteOf != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: _TargetPreview(post: (_replyTo ?? _quoteOf)!, emojis: emojis)),
                     ]),
@@ -628,7 +638,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ),
       ),
       // Toolbar (コンポーザーツールバー = アクションバーの左寄せバリエーション)
-      Container(
+      // FOW 内フッター = 掴んで左右カラム間移動 (D-062)。
+      _grip(Container(
         key: _stickToolbarKey,
         decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.outlineVariant))),
         padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 4, RasqSpacing.sm, 4),
@@ -644,7 +655,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 RasqActionButton.icon(
                   icon: Icons.emoji_emotions_outlined,
                   tooltip: '絵文字',
-                  onTap: () => openEmojiPicker(ref, ownerId: composerFowId, predictionContext: _text.text, onPick: (e) {
+                  onTap: () => openEmojiPicker(ref, ownerId: composerFowId, column: _column, predictionContext: _text.text, onPick: (e) {
                     _insert(e);
                     _focus.requestFocus();
                   }),
@@ -655,7 +666,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   return RasqActionButton.icon(
                     icon: Icons.code,
                     tooltip: mfm ? 'MFM' : 'Markdown',
-                    onTap: () => openMfmPicker(ref, ownerId: composerFowId, mfm: mfm, onApply: (p, s) {
+                    onTap: () => openMfmPicker(ref, ownerId: composerFowId, mfm: mfm, column: _column, onApply: (p, s) {
                       _wrapSelection(p, s);
                       _focus.requestFocus();
                     }),
@@ -680,7 +691,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             child: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(switch (target) { ComposeReply() => '返信', ComposeDm() => '送信', _ => '送信' }),
           ),
         ]),
-      ),
+      )),
     ]);
   }
 }

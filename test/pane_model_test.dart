@@ -87,24 +87,30 @@ void main() {
     expect(col3Width(), lessThanOrEqualTo(kSearchHomeColumnWidth + 1));
     expect(find.byType(PostDetailScreen), findsNothing); // 第2カラムはホームTLのまま
 
-    // ---- FOW を掴んで第3カラムへ移動 (D-060) --------------------------
-    // リアクションピッカーを開き、ドラッグハンドルを右へ掴んで動かす。
+    // ---- FOW の横ドッキング (D-062) -----------------------------------
+    // リアクションピッカーは開いた側(第2カラム)に揃い、カラム幅に収まる。
     await tester.longPress(find.byIcon(Icons.favorite_border).first);
     await tester.pumpAndSettle();
     expect(find.byType(EmojiPanel), findsOneWidget);
-    final handle = find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'サイズ変更ハンドル');
-    await tester.drag(handle, const Offset(160, 0));
-    await tester.pumpAndSettle();
-    // FOW は閉じ、第3カラムに同じ面(補助面: タイトル + ✕)が開く。
-    final pickerInCol3 = find.descendant(of: col3, matching: find.byType(EmojiPanel));
-    expect(pickerInCol3, findsOneWidget);
-    expect(find.descendant(of: col3, matching: find.text('リアクション')), findsOneWidget);
-    expect(find.descendant(of: col3, matching: find.byTooltip('閉じる')), findsOneWidget);
+    Finder fowPanel() => find.byWidgetPredicate((w) => w is Material && w.elevation == 8);
+    expect(tester.getTopLeft(fowPanel()).dx, closeTo(72, 1)); // 第2カラムの左端
+    expect(tester.getSize(fowPanel()).width, closeTo(1200 - 72 - kSearchHomeColumnWidth, 1));
 
-    // 第3カラム側でピックするとリアクションが実行され、面が閉じる。
-    await tester.tap(find.descendant(of: pickerInCol3, matching: find.text('👍')).first);
+    // FOW 内ヘッダーを掴んで右へ → 第3カラムの中心へスナップ(幅も追従)。
+    await tester.drag(find.text('リアクション'), const Offset(600, 0));
     await tester.pumpAndSettle();
-    expect(find.descendant(of: col3, matching: find.byType(EmojiPanel)), findsNothing);
+    expect(tester.getTopLeft(fowPanel()).dx, closeTo(1200 - kSearchHomeColumnWidth, 1));
+    expect(tester.getSize(fowPanel()).width, closeTo(kSearchHomeColumnWidth, 1));
+
+    // さらに右の壁へ 50px 以上めり込ませる → 最大化(全幅)。
+    await tester.drag(find.text('リアクション'), const Offset(400, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(fowPanel()).width, closeTo(1200, 1));
+
+    // ピックでリアクション実行 → 閉じる(従来どおり)。
+    await tester.tap(find.descendant(of: find.byType(EmojiPanel), matching: find.text('👍')).first);
+    await tester.pumpAndSettle();
+    expect(find.byType(EmojiPanel), findsNothing);
 
     // ---- 第3カラム内の「リアクションを表示」 (D-061) ------------------
     // matchedLocation(第2カラム)基準でリンクが切れていた回帰テスト。

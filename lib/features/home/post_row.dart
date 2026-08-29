@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
@@ -205,7 +206,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       // 投稿のアクションバーの複製は置かない (D-055: 「謎のアクションバー」に
       // 見える) — 実物のバーへのアンカー付けは FOW 再設計(RRL 拡張)時。
       onLongPress: isReaction
-          ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション',
+          ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context),
                   predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
                   existingReactions: post.reactions, onPick: (e) {
                 widget.onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
@@ -245,7 +246,8 @@ class _PostRowState extends ConsumerState<PostRow> {
       case 'renote':
         await widget.onAction(a).catchError((_) {});
       case 'quote':
-        await showComposer(ref, ComposeQuote(post));
+        if (!mounted) return;
+        await showComposer(ref, ComposeQuote(post), column: fowColumnOf(context));
     }
   }
 

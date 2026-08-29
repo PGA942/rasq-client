@@ -8,7 +8,7 @@ import 'overlay_manager.dart';
 /// Renders the content plus every open overlay, honouring layer z-order,
 /// scrims and barrier behaviour. Place it once at the root of the app shell.
 class OverlayHost extends StatelessWidget {
-  const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor, this.fowDockInset});
+  const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor, this.fowDockInset, this.fowColumns});
 
   final OverlayManager manager;
   final Widget child;
@@ -17,6 +17,11 @@ class OverlayHost extends StatelessWidget {
   /// [FowSpec.dockAboveFooter] な FOW の根本を持ち上げる量(= アプリの
   /// フッターメニュー高さ)。レイアウトを知るアプリ側が供給する (D-047)。
   final double Function(BuildContext context)? fowDockInset;
+
+  /// FOW の列スロット (D-062): タブレット幅のカラム幾何をアプリが供給する。
+  /// null/空 = 単一スロット(全幅、1200px 上限で中央寄せ)。FOW はスロットの
+  /// 中心に揃い、スロット幅に収まる。
+  final List<FowColumnSlot> Function(BuildContext context)? fowColumns;
 
   @override
   Widget build(BuildContext context) {
@@ -104,6 +109,7 @@ class OverlayHost extends StatelessWidget {
     widgets.add(Positioned.fill(
       child: _FowColumn(
         dockInset: fowDockInset,
+        columns: fowColumns,
         entries: fows,
         buildContent: (e) {
           final handle = manager.handleFor(e);
@@ -122,12 +128,13 @@ class OverlayHost extends StatelessWidget {
 /// Lays FOW panels out bottom-up. Heights come from each spec's heightFactor
 /// and are scaled down proportionally when they would not fit.
 class _FowColumn extends StatelessWidget {
-  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, this.dockInset});
+  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, this.dockInset, this.columns});
   final List<RasqOverlayEntry> entries;
   final Widget Function(RasqOverlayEntry) buildContent;
   final void Function(RasqOverlayEntry) onCancel;
   final void Function(RasqOverlayEntry) onConfirm;
   final double Function(BuildContext context)? dockInset;
+  final List<FowColumnSlot> Function(BuildContext context)? columns;
 
   @override
   Widget build(BuildContext context) {
@@ -140,38 +147,87 @@ class _FowColumn extends StatelessWidget {
         insets = dockInset?.call(context) ?? 0;
       }
       final avail = constraints.maxHeight - insets;
+      final totalW = constraints.maxWidth;
+      // 列スロット (D-062): 無指定なら単一スロット(全幅 1200px 上限・中央)。
+      final maxW = totalW < 1200 ? totalW : 1200.0;
+      final maximizedSlot = FowColumnSlot(x: (totalW - maxW) / 2, width: maxW);
+      final slots = columns?.call(context) ?? const <FowColumnSlot>[];
+      final effSlots = slots.isEmpty ? [maximizedSlot] : slots;
+      FowColumnSlot slotOf(FowSpec s) => s.maximized ? maximizedSlot : effSlots[s.columnIndex.clamp(0, effSlots.length - 1)];
+      // 離したときの精算 (D-062): 基本は最も近いカラム中心へスナップ
+      // (カラム枠内に収まる幅)。**端のスロットを越えて壁へ 50px 以上
+      // めり込ませた**ときだけ最大化(スナップ後の幅で判定するので、
+      // 幅広のパネルを隣カラムへ動かしただけでは最大化しない)。
+      void settle(FowSpec s, double dx) {
+        final cur = slotOf(s);
+        final center = cur.x + cur.width / 2 + dx;
+        var best = 0;
+        var bestD = double.infinity;
+        for (var i = 0; i < effSlots.length; i++) {
+          final d = (center - (effSlots[i].x + effSlots[i].width / 2)).abs();
+          if (d < bestD) {
+            bestD = d;
+            best = i;
+          }
+        }
+        final first = effSlots.first;
+        final last = effSlots.last;
+        final leftLimit = (first.x + first.width / 2) - first.x - 50;
+        final rightLimit = (last.x + last.width / 2) + (totalW - (last.x + last.width)) + 50;
+        if (center < leftLimit || center > rightLimit) {
+          s.maximized = true;
+        } else {
+          s.maximized = false;
+          s.columnIndex = best;
+        }
+        s.geometryRev.value++;
+      }
+
       return AnimatedBuilder(
-        animation: Listenable.merge([for (final e in ordered) e.fow?.heightFactor].whereType<Listenable>().toList()),
+        animation: Listenable.merge([
+          for (final e in ordered) ...[e.fow?.heightFactor, e.fow?.geometryRev],
+        ].whereType<Listenable>().toList()),
         builder: (context, _) {
-          final factors = [for (final e in ordered) (e.fow?.heightFactor.value ?? 0.45)];
-          final total = factors.fold(0.0, (a, b) => a + b);
-          final scale = total > 1 ? 1 / total : 1.0;
-          final heights = [for (final f in factors) f * scale * avail];
-          // Older entries are above; the newest sits at the very bottom.
-          // OverflowBox: 高さアニメーション(D-049)の過渡期は合計が avail を
-          // 一時的に超えることがある(古いパネルが縮む前に新しいパネルが
-          // 目標高さで現れる)。上方向へ逃がして RenderFlex overflow にしない。
-          // 幅 (D-057): FOW はページ幅または 1200px に合わせる — 広い画面では
-          // 1200px を上限に中央寄せ(カラム別の幅追従は M5c のカラム間移行で)。
-          return Padding(
-            padding: EdgeInsets.only(bottom: insets),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200),
-                child: OverflowBox(
-                  alignment: Alignment.bottomCenter,
-                  minHeight: 0,
-                  maxHeight: double.infinity,
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    for (var i = ordered.length - 1; i >= 0; i--)
-                      // 最前面(最新)のパネルだけ影付き (D-052: 複数 FOW の判別)。
-                      _FowPanel(entry: ordered[i], height: heights[i], frontmost: i == 0, child: buildContent(ordered[i]), onCancel: () => onCancel(ordered[i]), onConfirm: () => onConfirm(ordered[i])),
-                  ]),
-                ),
+          // スロット毎にグループ化し、各グループ内で従来どおり下から積む。
+          final groups = <String, List<RasqOverlayEntry>>{};
+          for (final e in ordered) {
+            final s = e.fow ?? FowSpec();
+            s.settleMove = (dx) => settle(s, dx);
+            final key = s.maximized ? 'max' : 'col${s.columnIndex.clamp(0, effSlots.length - 1)}';
+            (groups[key] ??= []).add(e);
+          }
+          Widget groupColumn(List<RasqOverlayEntry> group) {
+            final factors = [for (final e in group) (e.fow?.heightFactor.value ?? 0.45)];
+            final total = factors.fold(0.0, (a, b) => a + b);
+            final scale = total > 1 ? 1 / total : 1.0;
+            final heights = [for (final f in factors) f * scale * avail];
+            // OverflowBox: 高さアニメーション(D-049)の過渡期は合計が avail を
+            // 一時的に超えることがある — 上方向へ逃がして overflow にしない。
+            return Padding(
+              padding: EdgeInsets.only(bottom: insets),
+              child: OverflowBox(
+                alignment: Alignment.bottomCenter,
+                minHeight: 0,
+                maxHeight: double.infinity,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  for (var i = group.length - 1; i >= 0; i--)
+                    // 最前面(最新)のパネルだけ影付き (D-052: 複数 FOW の判別)。
+                    _FowPanel(entry: group[i], height: heights[i], frontmost: identical(group[i], ordered.first), child: buildContent(group[i]), onCancel: () => onCancel(group[i]), onConfirm: () => onConfirm(group[i])),
+                ]),
               ),
-            ),
-          );
+            );
+          }
+
+          return Stack(children: [
+            for (final entry in groups.entries)
+              Positioned(
+                left: entry.key == 'max' ? maximizedSlot.x : effSlots[int.parse(entry.key.substring(3))].x,
+                width: entry.key == 'max' ? maximizedSlot.width : effSlots[int.parse(entry.key.substring(3))].width,
+                top: 0,
+                bottom: 0,
+                child: groupColumn(entry.value),
+              ),
+          ]);
         },
       );
     });
@@ -198,9 +254,6 @@ class _FowPanelState extends State<_FowPanel> {
   /// ドラッグ中は高さを即時反映(追従遅延を出さない)。離したら
   /// [FowSpec.snapToStops] で最寄りの高さ段階へアニメーションで着地 (D-049)。
   bool _dragging = false;
-
-  /// パン中の横移動量(右へ掴んで動かすとカラム間移行、D-060)。
-  double _handleDx = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -231,31 +284,17 @@ class _FowPanelState extends State<_FowPanel> {
           if (spec.showHandle)
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              // パン: 縦 = リサイズ、横(右へ 100px 以上)= カラム間移行
-              // (D-060: 掴んで第3カラムへ。移動可否は onMoveAside の有無)。
-              onPanStart: spec.resizable ? (_) => setState(() {
-                    _dragging = true;
-                    _handleDx = 0;
-                  }) : null,
-              onPanUpdate: spec.resizable
-                  ? (d) {
-                      _handleDx += d.delta.dx;
-                      spec.resizeBy(d.delta.dy / hostHeight);
-                      // 移動可能なパネルは掴みに横追従させる(視覚フィードバック)。
-                      if (spec.onMoveAside != null) setState(() {});
-                    }
-                  : null,
-              onPanEnd: spec.resizable
+              // ハンドルは**縦リサイズ専用** (D-062: 横移動はヘッダー/フッターの
+              // FowMoveGrip に役割分担 — 上に動かすときの横誤爆を防ぐ)。
+              onVerticalDragStart: spec.resizable ? (_) => setState(() => _dragging = true) : null,
+              onVerticalDragUpdate: spec.resizable ? (d) => spec.resizeBy(d.delta.dy / hostHeight) : null,
+              onVerticalDragEnd: spec.resizable
                   ? (_) {
                       setState(() => _dragging = false);
-                      if (_handleDx > 100 && spec.onMoveAside != null && MediaQuery.sizeOf(context).width >= 840) {
-                        spec.onMoveAside!();
-                      } else {
-                        spec.snapToStops();
-                      }
+                      spec.snapToStops();
                     }
                   : null,
-              onPanCancel: spec.resizable ? () => setState(() => _dragging = false) : null,
+              onVerticalDragCancel: spec.resizable ? () => setState(() => _dragging = false) : null,
               child: Semantics(
                 label: 'サイズ変更ハンドル',
                 child: SizedBox(
@@ -266,7 +305,10 @@ class _FowPanelState extends State<_FowPanel> {
               ),
             ),
           if (spec.hasHeader)
-            SizedBox(
+            // FOW 内ヘッダーは掴んで左右のカラム間移動ができる (D-062)。
+            FowMoveGrip(
+              spec: spec,
+              child: SizedBox(
               height: 40,
               child: Row(children: [
                 if (spec.cancelText != null) TextButton(onPressed: onCancel, child: Text(spec.cancelText!, style: TextStyle(color: scheme.onSurfaceVariant))) else const SizedBox(width: 80),
@@ -280,6 +322,7 @@ class _FowPanelState extends State<_FowPanel> {
                 else
                   const SizedBox(width: 80),
               ]),
+              ),
             ),
           Expanded(child: child),
         ]),
@@ -289,16 +332,20 @@ class _FowPanelState extends State<_FowPanel> {
     // ⚠ ウィジェット型は常に AnimatedContainer 1 種に固定する: SizedBox と
     // 切り替えると Element が作り直され、**入力中のテキストごと State が
     // 消える**(ハンドル操作で本文消失、D-050 で実測)。
-    // 横追従 (D-061): 移動可能なパネルは掴んでいる間だけ右へついてくる。
-    // 離すとしきい値未満なら中央へ戻り、超えていれば onMoveAside が発火する。
-    final asideDx = (_dragging && spec.onMoveAside != null) ? _handleDx.clamp(0.0, 480.0) : 0.0;
-    return ValueListenableBuilder<bool>(
-      valueListenable: spec.dragging,
-      builder: (context, innerDragging, child) => AnimatedContainer(
-        duration: _dragging || innerDragging ? Duration.zero : const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        height: height,
-        transform: Matrix4.translationValues(asideDx, 0, 0),
+    // 横追従 (D-062): FowMoveGrip(FOW 内ヘッダー/フッター)を掴んでいる間、
+    // パネルが左右についてくる。離すとホストの精算でカラム中心へスナップ /
+    // 壁へ 50px 以上めり込んでいれば最大化(レイアウト側で幅が変わる)。
+    return ValueListenableBuilder<double>(
+      valueListenable: spec.moveDx,
+      builder: (context, moveDx, child) => ValueListenableBuilder<bool>(
+        valueListenable: spec.dragging,
+        builder: (context, innerDragging, child) => AnimatedContainer(
+          duration: _dragging || innerDragging ? Duration.zero : const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          height: height,
+          transform: Matrix4.translationValues(moveDx, 0, 0),
+          child: child,
+        ),
         child: child,
       ),
       child: panel,

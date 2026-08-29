@@ -7,6 +7,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../app/providers.dart';
 import '../app/router.dart';
+import 'third_column.dart';
 
 /// stick FOW の根本を持ち上げる量 = フッターメニューの実高さ (D-047/D-049)。
 /// 実高さ = NavigationBar のテーマ高さ + 上枠線 1.2(rasq_shell)。
@@ -41,7 +42,24 @@ class AppOverlayRoot extends ConsumerWidget {
         child: Focus(
           autofocus: true,
           skipTraversal: true,
-          child: OverlayHost(manager: manager, fowDockInset: (ctx) => fowDockInsetOf(ctx, ref.read(routerProvider)), child: child),
+          child: OverlayHost(
+            manager: manager,
+            fowDockInset: (ctx) => fowDockInsetOf(ctx, ref.read(routerProvider)),
+            // FOW の列スロット (D-062): タブレット幅では第2/第3カラムの幾何を
+            // 供給し、FOW はカラム中心に揃いカラム幅に収まる。
+            fowColumns: (ctx) {
+              final total = MediaQuery.sizeOf(ctx).width;
+              if (total < 840) return const <FowColumnSlot>[];
+              final occupied = ref.read(thirdColumnProvider) != null;
+              final content = total - 72;
+              final col2W = (occupied ? kSearchHomeColumnWidth : content - kSearchHomeColumnWidth).clamp(kSearchHomeColumnWidth, content - kSearchHomeColumnWidth < kSearchHomeColumnWidth ? content / 2 : content - kSearchHomeColumnWidth).toDouble();
+              return [
+                FowColumnSlot(x: 72, width: col2W),
+                FowColumnSlot(x: 72 + col2W, width: content - col2W),
+              ];
+            },
+            child: child,
+          ),
         ),
       ),
     );

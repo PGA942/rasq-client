@@ -6,7 +6,6 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
-import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
 import 'compose_providers.dart';
 
@@ -90,25 +89,11 @@ const markdownFunctions = <MfmFn>[
   return ('\$[$head ', ']');
 }
 
-Future<void> openMfmPicker(WidgetRef ref, {String? ownerId, required void Function(String prefix, String suffix) onApply, required bool mfm}) async {
+Future<void> openMfmPicker(WidgetRef ref, {String? ownerId, required void Function(String prefix, String suffix) onApply, required bool mfm, int column = 0}) async {
   final manager = ref.read(overlayManagerProvider);
   final title = mfm ? 'MFM' : 'Markdown';
-  final spec = FowSpec(type: FowPanelType.widget, initialHeightFactor: 0.5, minHeightFactor: 0.3, maxHeightFactor: 0.85, title: title, cancelText: '閉じる', dockAboveFooter: true);
-  // 掴んで第3カラムへ移動 (D-060)。
-  spec.onMoveAside = () {
-    manager.close(mfmPickerFowId);
-    ref.read(thirdColumnProvider.notifier).open(ThirdColumnEntry(
-          id: mfmPickerFowId,
-          title: title,
-          builder: (_) => MfmPickerPanel(
-            mfm: mfm,
-            onApply: (p, s) {
-              onApply(p, s);
-              ref.read(thirdColumnProvider.notifier).close(mfmPickerFowId);
-            },
-          ),
-        ));
-  };
+  // 横ドッキング (D-062): ヘッダー(FowMoveGrip)を掴んで左右カラムへ移動。
+  final spec = FowSpec(type: FowPanelType.widget, initialHeightFactor: 0.5, minHeightFactor: 0.3, maxHeightFactor: 0.85, title: title, cancelText: '閉じる', dockAboveFooter: true, columnIndex: column);
   await manager.showFow<void>(
     id: mfmPickerFowId,
     ownerId: ownerId,

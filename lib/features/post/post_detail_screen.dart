@@ -9,6 +9,7 @@ import 'package:rasq_store/rasq_store.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
+import '../../shell/third_column.dart';
 import '../../app/sort_menu.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
@@ -60,7 +61,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         if (!mounted) return;
-        await showComposer(ref, ComposeReply(target), resident: true, onPosted: (_) => ref.invalidate(threadProvider(postId)));
+        await showComposer(ref, ComposeReply(target), resident: true, column: fowColumnOf(context), onPosted: (_) => ref.invalidate(threadProvider(postId)));
         // ページが最前面のまま閉じた = ユーザーの ✕(遷移で消えた場合は除外)。
         // 遷移直後はナビゲーターが未反映のことがあるので 1 フレーム待つ。
         if (!mounted) return;

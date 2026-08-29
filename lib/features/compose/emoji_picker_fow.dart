@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
-import '../../shell/third_column.dart';
 import 'emoji_panel.dart';
 
 /// 絵文字ピッカー FOW (widget type): docked, resizable, content behind stays
@@ -21,6 +20,7 @@ Future<void> openEmojiPicker(
   String? predictionContext,
   Map<String, int> existingReactions = const {},
   Widget? actionBar,
+  int column = 0,
 }) async {
   final manager = ref.read(overlayManagerProvider);
   // FOW のクロームは 2 系統 (D-055):
@@ -41,27 +41,10 @@ Future<void> openEmojiPicker(
     cancelText: reaction ? null : '閉じる',
     dockAboveFooter: true,
     showHandle: !reaction,
+    // 横ドッキング (D-062): 開いた側のカラムに揃う。ヘッダー(FowMoveGrip)を
+    // 掴んで左右カラムへ移動でき、壁へ 50px めり込ませると最大化する。
+    columnIndex: column,
   );
-  // 掴んで第3カラムへ移動 (D-060): ヘッダー枠(バー)/ハンドルを右へ掴んで
-  // 動かすと、FOW を閉じて同じ面を第3カラムに開く(幅はカラムに追従)。
-  void moveAside() {
-    manager.close(emojiPickerFowId);
-    ref.read(thirdColumnProvider.notifier).open(ThirdColumnEntry(
-          id: emojiPickerFowId,
-          title: title,
-          builder: (_) => EmojiPanel(
-            predictionContext: predictionContext,
-            existingReactions: existingReactions,
-            actionBar: actionBar,
-            onPick: (e) {
-              onPick(e);
-              if (closeOnPick) ref.read(thirdColumnProvider.notifier).close(emojiPickerFowId);
-            },
-          ),
-        ));
-  }
-
-  spec.onMoveAside = moveAside;
   await manager.showFow<void>(
     id: emojiPickerFowId,
     ownerId: ownerId,
@@ -75,7 +58,6 @@ Future<void> openEmojiPicker(
       existingReactions: existingReactions,
       actionBar: actionBar,
       spec: actionBar == null ? null : spec,
-      onMoveAside: moveAside,
       onPick: (e) {
         onPick(e);
         if (closeOnPick) handle.close(result: e);

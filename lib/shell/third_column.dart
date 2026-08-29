@@ -134,6 +134,10 @@ void paneBackTo(BuildContext context, ThirdColumnEntry current, {ThirdColumnEntr
   }
 }
 
+/// FOW を開くときの初期カラム (D-062): 第3カラムのページ内から開かれた
+/// FOW は第3カラム側にドックする。
+int fowColumnOf(BuildContext context) => PaneScope.maybeOf(context)?.entry != null ? 1 : 0;
+
 /// 第3カラム内での**置き換え**遷移 (D-061: replaceTrend 等)。現在の entry を
 /// 第2カラムへ移さず、previous を引き継いだまま差し替える。処理したら true。
 bool replacePageInPane(
