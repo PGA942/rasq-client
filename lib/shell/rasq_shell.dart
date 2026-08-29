@@ -7,6 +7,7 @@ import '../app/providers.dart';
 import '../features/notifications/notifications_screen.dart';
 import 'nav.dart';
 import 'sidebar.dart';
+import 'third_column.dart';
 
 /// App shell: layout (モバイル / タブレット) and global nav. Overlays are
 /// rendered by [AppOverlayRoot] above the whole navigator.
@@ -111,28 +112,26 @@ class _TabletLayout extends StatelessWidget {
           ),
         ),
         Expanded(flex: 5, child: shell),
-        // Third pane: 検索 when nothing is open (設定で変更可) — M2 fills this.
+        // 第3カラム (M5b/D-056): 空のときは検索(設定で変更可)。features が
+        // 補助面を開き、M5c 以降は FOW の移動先になる。
         Container(
           width: 320,
           decoration: BoxDecoration(border: Border(left: BorderSide(color: scheme.outlineVariant))),
-          child: const _ThirdPanePlaceholder(),
+          child: SafeArea(
+            child: Column(children: [
+              const Expanded(child: ThirdColumnView()),
+              // VC ミニプレイヤーのスタブ(M2 から据え置き)。
+              Container(
+                height: 96,
+                margin: const EdgeInsets.all(RasqSpacing.sm),
+                decoration: BoxDecoration(color: RasqColors.lightBlue.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+                alignment: Alignment.center,
+                child: const Text('VC', style: TextStyle(color: RasqColors.white, fontSize: 32, fontWeight: FontWeight.w300)),
+              ),
+            ]),
+          ),
         ),
       ]),
     );
   }
-}
-
-class _ThirdPanePlaceholder extends StatelessWidget {
-  const _ThirdPanePlaceholder();
-  @override
-  Widget build(BuildContext context) => Column(children: [
-        const Expanded(child: RasqEmptyView(title: '第3カラム', hint: '何も開いてない時は検索(設定で変更可)')),
-        Container(
-          height: 96,
-          margin: const EdgeInsets.all(RasqSpacing.sm),
-          decoration: BoxDecoration(color: RasqColors.lightBlue.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-          alignment: Alignment.center,
-          child: const Text('VC', style: TextStyle(color: RasqColors.white, fontSize: 32, fontWeight: FontWeight.w300)),
-        ),
-      ]);
 }

@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/search/search_screen.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_client/shell/third_column.dart';
 import 'package:rasq_client/features/media/media_viewer_screen.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -246,7 +248,28 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    expect(find.text('第3カラム'), findsOneWidget);
+    // 第3カラム (D-056): 空のときは検索が入る(プレースホルダーではなく)。
+    expect(find.byType(ThirdColumnView), findsOneWidget);
+    expect(find.descendant(of: find.byType(ThirdColumnView), matching: find.byType(SearchScreen)), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
+
+    // features が補助面を開ける → タイトル + ✕、閉じると検索へ戻る。
+    final ctx = tester.element(find.byType(ThirdColumnView));
+    final container = ProviderScope.containerOf(ctx, listen: false);
+    container.read(thirdColumnProvider.notifier).open(ThirdColumnEntry(id: 'test', title: '補助面テスト', builder: (_) => const Text('第3カラムの中身')));
+    await tester.pumpAndSettle();
+    expect(find.text('補助面テスト'), findsOneWidget);
+    expect(find.text('第3カラムの中身'), findsOneWidget);
+    await tester.tap(find.byTooltip('閉じる'));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byType(ThirdColumnView), matching: find.byType(SearchScreen)), findsOneWidget);
+
+    // 空時コンテンツの設定(歯車 → 表示しない)。
+    await tester.tap(find.byTooltip('第3カラムの設定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('表示しない'));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byType(ThirdColumnView), matching: find.byType(SearchScreen)), findsNothing);
+    expect(find.text('第3カラム'), findsOneWidget); // 空ビュー
   });
 }
