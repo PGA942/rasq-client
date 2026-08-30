@@ -5,6 +5,7 @@ import 'package:rasq_wasm_runtime/rasq_wasm_runtime.dart';
 import 'package:rrl_core/rrl_core.dart';
 
 import 'host_environment.dart';
+import 'wasm_fow.dart';
 
 /// [WasmPluginView] が要求する最小面(同期/非同期コントローラ共通)。
 abstract class WasmPluginViewModel implements Listenable {
@@ -28,7 +29,7 @@ abstract class WasmPluginViewModel implements Listenable {
 ///
 /// v1 calls are synchronous on the calling isolate (PROTOCOL §4.1) — run
 /// heavy plugins off the UI isolate later.
-class WasmPluginController extends ChangeNotifier implements WasmPluginViewModel {
+class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin implements WasmPluginViewModel {
   WasmPluginController({required Uint8List wasmBytes, RasqHostEnvironment? env})
       : _bytes = wasmBytes,
         env = env ?? RasqHostEnvironment();
@@ -55,6 +56,9 @@ class WasmPluginController extends ChangeNotifier implements WasmPluginViewModel
 
   void load() {
     if (_plugin != null) return;
+    // fow.open/close の中継 (D-064): 環境の検証を通った要求を UI 側
+    // コールバック(onFowOpen/onFowClose)へ写す。
+    env.onFow ??= (fn, args) => handleFowHostFn(fn, args, scope: _document?.scope ?? 'plugin');
     try {
       _plugin = RasqWasmPlugin.fromBytes(_bytes, hostFn: env.dispatch, nativeFetch: env.nativeFetch);
       _lastError = null;
@@ -114,6 +118,12 @@ class WasmPluginController extends ChangeNotifier implements WasmPluginViewModel
   void handleEvent(String nodeId, String kind, {String? fn, Map<String, Object?> payload = const {}}) {
     if (fn == null) return; // node declared no handler for this kind
     invoke(fn, {'nodeId': nodeId, 'kind': kind, ...payload});
+  }
+
+  @override
+  void invokeFowClosed(String fn, Map<String, Object?> args) {
+    if (_plugin == null) return; // dispose 後(closeOwnedBy 連動)は通知不要
+    invoke(fn, args);
   }
 
   RasqWasmPlugin _require() {

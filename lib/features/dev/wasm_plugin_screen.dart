@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../shell/headers.dart';
+import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
 
 /// WASM プラグイン試験画面 (dev)。misskey-wasm-sample(rasq-sdk-sample で
@@ -38,6 +40,14 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
   final _pathField = TextEditingController();
   bool _busy = false;
 
+  /// FOW surface (D-064) 用に捕まえた OverlayManager(dispose 時の
+  /// closeOwnedBy にも使うので context 経由にしない)。
+  OverlayManager? _overlay;
+
+  /// この画面のプラグインが開く FOW の id 前置(衝突回避 + 一括クローズ)。
+  static const _fowOwner = 'wasm-sample';
+  static const _fowPrefix = 'fow.wasm-sample.';
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +75,7 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
     _disposeController();
     if (widget.envOverride != null) {
       final controller = WasmPluginController(wasmBytes: bytes, env: widget.envOverride)..load();
+      _wireFowSurface(controller);
       setState(() {
         _controller = controller;
         _loadError = null;
@@ -72,6 +83,7 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
       return;
     }
     final controller = AsyncWasmPluginController(wasmBytes: bytes);
+    _wireFowSurface(controller);
     setState(() {
       _controller = controller;
       _loadError = null;
@@ -79,7 +91,52 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
     await controller.load();
   }
 
+  /// プラグインの fow.open/close (D-064) を OverlayManager の実 FOW へ写す。
+  void _wireFowSurface(WasmPluginViewModel controller) {
+    if (controller is! WasmFowSurfaceHost) return;
+    final host = controller as WasmFowSurfaceHost;
+    host.onFowOpen = (req) => _openPluginFow(controller, req);
+    host.onFowClose = (id, {result, reason}) => _overlay?.close('$_fowPrefix$id', result: result);
+  }
+
+  void _openPluginFow(WasmPluginViewModel controller, WasmFowRequest req) {
+    if (!mounted) return;
+    final manager = _overlay ??= OverlayScope.read(context);
+    final spec = req.spec;
+    final type = switch ('${spec['type']}') {
+      'interstitial' => FowPanelType.interstitial,
+      'system' => FowPanelType.system,
+      _ => FowPanelType.widget,
+    };
+    manager.show(RasqOverlayEntry(
+      id: '$_fowPrefix${req.id}',
+      layer: OverlayLayer.fow,
+      alignment: Alignment.bottomCenter,
+      ownerId: _fowOwner,
+      semanticsLabel: spec['title'] as String? ?? 'プラグインFOW',
+      // ピッカー同手法 (D-051): 透明バリア、余白クリックで破棄。
+      barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
+      fow: FowSpec(
+        type: type,
+        initialHeightFactor: (spec['initialHeightFactor'] as num?)?.toDouble() ?? 0.45,
+        title: spec['title'] as String?,
+        cancelText: spec['cancelText'] as String?,
+        confirmText: spec['confirmText'] as String?,
+        dockAboveFooter: true,
+        // 横ドッキング (D-062): 開いた画面のカラムに揃える。
+        columnIndex: fowColumnOf(context),
+      ),
+      onClosed: (reason, result) {
+        // 同一 id の再 open(中身の差し替え)はクローズ通知にしない。
+        if (reason == OverlayCloseReason.replaced) return;
+        (controller as WasmFowSurfaceHost).notifyFowClosed(req.id, reason: reason.name, result: result);
+      },
+      builder: (ctx, handle) => WasmFowView(controller: controller, request: req, rslParser: InlineSpans.parse),
+    ));
+  }
+
   void _disposeController() {
+    _overlay?.closeOwnedBy(_fowOwner);
     final c = _controller;
     if (c is WasmPluginController) c.dispose();
     if (c is AsyncWasmPluginController) c.dispose();

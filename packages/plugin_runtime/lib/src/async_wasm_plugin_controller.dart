@@ -3,15 +3,16 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:rrl_core/rrl_core.dart';
 
+import 'wasm_fow.dart';
 import 'wasm_plugin_controller.dart';
 import 'wasm_plugin_worker.dart';
 
 /// [WasmPluginController] の非同期版: プラグインを [WasmPluginWorker]
 /// (専用 isolate)で動かし、UI isolate をブロックしない。
 /// `net.fetch`(ランタイム内蔵)や重い snapshot 生成中も画面が止まらない。
-class AsyncWasmPluginController extends ChangeNotifier implements WasmPluginViewModel {
-  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}})
-      : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage);
+class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin implements WasmPluginViewModel {
+  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}, Set<String> fowPermissions = const {'widget'}})
+      : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage, fowPermissions: fowPermissions);
 
   final WasmWorkerConfig _config;
   WasmPluginWorker? _worker;
@@ -34,6 +35,16 @@ class AsyncWasmPluginController extends ChangeNotifier implements WasmPluginView
     if (_worker != null) return;
     try {
       _worker = await WasmPluginWorker.spawn(_config);
+      // ワーカーから中継されてきた fow.open/close (D-064)。wasm 側は既に
+      // 受理済み({opened:true})なので、ここの失敗は lastError に留める。
+      _worker!.fowRequests.listen((m) {
+        try {
+          handleFowHostFn('${m['fn']}', (m['args'] as Map?)?.cast<String, Object?>() ?? const {}, scope: _document?.scope ?? 'plugin');
+        } catch (e) {
+          _lastError = 'fow relay failed: $e';
+          _notify();
+        }
+      });
       await pullSnapshot();
     } catch (e) {
       _lastError = '$e';
@@ -87,6 +98,16 @@ class AsyncWasmPluginController extends ChangeNotifier implements WasmPluginView
     if (fn == null) return;
     // Fire and forget — 結果は lastResult / document 更新として観測される。
     invoke(fn, {'nodeId': nodeId, 'kind': kind, ...payload}).catchError((Object e) {
+      _lastError = '$e';
+      _notify();
+      return <String, dynamic>{};
+    });
+  }
+
+  @override
+  void invokeFowClosed(String fn, Map<String, Object?> args) {
+    if (_worker == null) return; // dispose 後(closeOwnedBy 連動)は通知不要
+    invoke(fn, args).catchError((Object e) {
       _lastError = '$e';
       _notify();
       return <String, dynamic>{};

@@ -106,7 +106,8 @@ void main() {
       controller.load();
       controller.applyPatch(); // baseRev 1 → ok
       expect(controller.document!.rev, 2);
-      expect(controller.document!.root.p['reactionCount'], 1);
+      // D-064 で初期ツリーは Column(PostTile + FOWデモ Button)になった。
+      expect(controller.document!.root.findByKey('post-sample-1')!.p['reactionCount'], 1);
 
       controller.invoke('timeline'); // plugin rev is now 2 (fresh tree)
       controller.applyPatch(); // patch baseRev 1 vs rev 2 → resync
@@ -170,6 +171,53 @@ void main() {
       )));
       expect(find.textContaining('parsed:'), findsOneWidget);
       expect(find.byType(RasqMfmTransform), findsOneWidget);
+    });
+  });
+
+  group('FOW surface (D-064)', () {
+    test('fow.open → onFowOpen(RRL ドキュメント)→ タップで fow.close → onClosed 通知が call で戻る', () async {
+      final controller = WasmPluginController(wasmBytes: bytes);
+      addTearDown(controller.dispose);
+      controller.load();
+      WasmFowRequest? opened;
+      final closes = <(String, Object?)>[];
+      controller.onFowOpen = (req) => opened = req;
+      controller.onFowClose = (id, {result, reason}) => closes.add((id, result));
+
+      final result = controller.invoke('pickReaction', {'postId': 'p1'});
+      expect(result['ok'], true, reason: '$result');
+      expect((result['value'] as Map)['opened'], true);
+      expect(opened, isNotNull);
+      expect(opened!.id, 'reaction-picker');
+      expect(opened!.spec['type'], 'widget');
+      expect(opened!.spec['title'], 'リアクション (wasm)');
+      expect(opened!.onClosed, 'fowClosed');
+      expect(opened!.document.root.findByKey('emoji-like'), isNotNull);
+
+      // FOW 内の絵文字 Button のタップ = event → call(reactFromFow)。
+      controller.handleEvent('${opened!.document.scope}:emoji-heart', 'tap', fn: 'reactFromFow');
+      expect(closes.single.$1, 'reaction-picker');
+      expect(closes.single.$2, '❤️');
+
+      // アプリ層が実 FOW を閉じた通知 → プラグインの onClosed 関数へ。
+      controller.notifyFowClosed('reaction-picker', reason: 'completed', result: '❤️');
+      await Future<void>.delayed(Duration.zero); // scheduleMicrotask 分
+      final last = controller.invoke('lastFowClosed');
+      expect(last['ok'], true, reason: '$last');
+      expect((last['value'] as Map)['reason'], 'completed');
+      expect((last['value'] as Map)['result'], '❤️');
+    });
+
+    test('権限ゲート: 許可外 type / 未配線 / id 無しはエラーで返る(トラップしない)', () {
+      Map<String, dynamic> call(RasqHostEnvironment env, String fn, Map<String, Object?> args) =>
+          (jsonDecode(env.dispatch(jsonEncode({'schema': 'rasq.hostfn/1', 'callId': 'f', 'fn': fn, 'args': args}))) as Map).cast<String, dynamic>();
+      final root = {'t': 'Text', 'k': 'x'};
+      final env = RasqHostEnvironment(onFow: (fn, args) => null); // 既定権限 = widget のみ
+      expect(call(env, 'fow.open', {'id': 'x', 'spec': {'type': 'interstitial'}, 'root': root})['error']['code'], 'E01');
+      expect(call(env, 'fow.open', {'id': 'x', 'spec': {'type': 'widget'}, 'root': root})['value'], {'opened': true});
+      expect(call(env, 'fow.open', {'spec': {'type': 'widget'}, 'root': root})['error']['code'], 'D01');
+      expect(call(env, 'fow.close', const {})['error']['code'], 'D01');
+      expect(call(RasqHostEnvironment(), 'fow.open', {'id': 'x', 'spec': {'type': 'widget'}, 'root': root})['error']['code'], 'E01'); // 未配線
     });
   });
 

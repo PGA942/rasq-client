@@ -13,11 +13,14 @@ import 'host_environment.dart';
 /// その場で組み立てる。alert は自動確認、ログはメッセージでメインへ流す。
 @immutable
 class WasmWorkerConfig {
-  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}});
+  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}});
 
   final Uint8List wasmBytes;
   final bool nativeFetch;
   final Map<String, Object?> seedStorage;
+
+  /// 許可された FOW type (D-064)。ワーカー側の環境にそのまま渡る。
+  final Set<String> fowPermissions;
 }
 
 /// WASM プラグインを専用 isolate で動かすワーカー (D-023 の後段)。
@@ -34,9 +37,15 @@ class WasmPluginWorker {
   final Map<int, Completer<String>> _pending = {};
   int _seq = 0;
   final _logs = StreamController<String>.broadcast();
+  final _fows = StreamController<Map<String, Object?>>.broadcast();
 
   /// ホスト関数のログ(hostFn 呼び出し名など)。
   Stream<String> get logs => _logs.stream;
+
+  /// ワーカー内の `fow.open` / `fow.close` の中継 (D-064)。要素は
+  /// `{fn, args}` — wasm 側は即 `{opened:true}` を受け取り(受理)、実際の
+  /// 表示はこのストリームを購読する UI isolate 側が行う。
+  Stream<Map<String, Object?>> get fowRequests => _fows.stream;
 
   static Future<WasmPluginWorker> spawn(WasmWorkerConfig config) async {
     final handshake = ReceivePort();
@@ -60,6 +69,10 @@ class WasmPluginWorker {
     final map = (message as Map).cast<String, Object?>();
     if (map['log'] != null) {
       _logs.add('${map['log']}');
+      return;
+    }
+    if (map['fow'] != null) {
+      _fows.add((map['fow'] as Map).cast<String, Object?>());
       return;
     }
     final completer = _pending.remove(map['id']);
@@ -90,6 +103,7 @@ class WasmPluginWorker {
     } catch (_) {}
     _responses.close();
     _logs.close();
+    _fows.close();
     _isolate.kill(priority: Isolate.beforeNextEvent);
   }
 }
@@ -121,6 +135,13 @@ Future<void> _workerMain(List<Object?> init) async {
             storage: {...config.seedStorage},
             nativeFetch: config.nativeFetch,
             onLog: (m) => respond.send({'log': m}),
+            fowPermissions: config.fowPermissions,
+            // fow.* はメイン isolate へ fire-and-forget で中継 (D-064)。
+            // 戻り null → 環境の既定値(open は {opened:true} = 受理)。
+            onFow: (fn, args) {
+              respond.send({'fow': {'fn': fn, 'args': args}});
+              return null;
+            },
           );
           plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetch);
           respond.send({'id': id, 'ok': true, 'result': 'pong'});
