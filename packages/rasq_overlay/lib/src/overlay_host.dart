@@ -334,10 +334,11 @@ class _FowColumn extends StatelessWidget {
           // 埋もれた FOW はハンドルクリックのスイッチャーで前面化する。
           final frontmostEntry = entries.isEmpty ? null : entries.last;
           final byId = {for (final x in entries) x.id: x};
-          // 親子 FOW (D-067): 親の外側(付いている側)を占める子 FOW の
-          // 最大高さ。親はこのぶん持ち上がり/下がり、入力部が被らない。
-          // 子の heightFactor は AnimatedBuilder が購読済み → リサイズや
-          // 付け替えに**リアルタイム**で追従する。
+          // 親子 FOW (D-067/D-068): 親の外側(付いている側)を占める子 FOW
+          // の最大高さ。親はこのぶん**枠を伸ばし**、FOW ウィジェット内の
+          // [FowChildGap](高さ可変 padding)がこの値を受けて内容を子の
+          // 反対側へ押し出す — 入力部が被らない。子の heightFactor は
+          // AnimatedBuilder が購読済み → リサイズにリアルタイム追従する。
           double liftFor(RasqOverlayEntry p) {
             var lift = 0.0;
             for (final c in entries) {
@@ -382,19 +383,25 @@ class _FowColumn extends StatelessWidget {
                 if (spaceAbove > 0 && h > spaceAbove) h = spaceAbove;
               }
             } else if (!pinned && attachTopEff) {
-              // アプリヘッダーに下付き (D-065)。子がいる側 = 外側(上)を
-              // 子の高さぶん空ける (D-067)。
+              // アプリヘッダーに下付き (D-065)。子の高さぶん枠を伸ばし、
+              // 内容側は FowChildGap が場所を空ける (D-068)。
               topSide = true;
-              padTop = topInsetV + lift;
+              padTop = topInsetV;
+              h += lift;
               final space = hostH - padTop - insets;
               if (space > 0 && h > space) h = space;
             } else if (!pinned) {
-              // 下側ドック: 子の高さぶん持ち上がる (D-067、キーボード回避と
-              // 同じ向き)。
-              padBottom = insets + lift;
+              // 下側ドック: 子の高さぶん枠を伸ばす (D-068)。
+              h += lift;
               final space = hostH - padBottom;
               if (space > 0 && h > space) h = space;
             }
+            // FowChildGap への通知 (D-068): 子はいまの付け先の外側(下ドック
+            // なら下、ヘッダー付きなら上)に付く。いなければ 0。
+            final gapTop = !pinned && anchor == null && attachTopEff ? lift : 0.0;
+            final gapBottom = !pinned && anchor == null && !attachTopEff ? lift : 0.0;
+            if (s.childGapTop.value != gapTop) s.childGapTop.value = gapTop;
+            if (s.childGapBottom.value != gapBottom) s.childGapBottom.value = gapBottom;
             children.add(Positioned(
               left: slot.x,
               width: slot.width,

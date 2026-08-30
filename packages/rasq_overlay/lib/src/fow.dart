@@ -128,6 +128,18 @@ class FowSpec {
   /// 差し込む)。[FowMoveGrip] が onPanEnd で呼ぶ(dx = 横、dy = 縦)。
   void Function(double dx, double dy)? settleMove;
 
+  // ---- 親子 FOW の回避伸縮 (D-068) --------------------------------------
+  // 子 FOW(ownerId = この FOW の entry id)が付いている側と高さを
+  // ホストのレイアウトがリアルタイムに書く。FOW ウィジェット内に置いた
+  // [FowChildGap](高さ可変 padding)がこれを高さにして、アクションバーや
+  // 入力部を子の反対側へ押し出す。子がいないときは 0。
+
+  /// 上側(ヘッダー側)に付いている子 FOW の高さ。
+  final ValueNotifier<double> childGapTop = ValueNotifier(0);
+
+  /// 下側(フッター側)に付いている子 FOW の高さ。
+  final ValueNotifier<double> childGapBottom = ValueNotifier(0);
+
   // ---- FOW スイッチャーのプレビュー (D-066) -----------------------------
 
   /// パネルを包む RepaintBoundary のキー。スイッチャーを開く直前にホストが
@@ -174,6 +186,29 @@ class FowSpec {
     }
     heightFactor.value = best.clamp(minHeightFactor, maxHeightFactor);
   }
+}
+
+/// FOW ウィジェット内に置く**高さ可変 padding** (D-068)。子 FOW がその側に
+/// 付いている間はその高さに伸び(いなければ 0px)、アクションバーや入力部を
+/// 子の反対側へ押し出して被らないようにする。コンポーザーはアクションバーの
+/// 前後に 1 つずつ置く(子の付く方向は親側指定 — 親の付け先が変われば
+/// 伸びる側も切り替わる)。
+class FowChildGap extends StatelessWidget {
+  const FowChildGap({super.key, required this.spec, this.top = false});
+  final FowSpec spec;
+
+  /// true = 上側(ヘッダー側)の子に反応する。false = 下側(フッター側)。
+  final bool top;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<double>(
+        valueListenable: top ? spec.childGapTop : spec.childGapBottom,
+        builder: (context, gap, _) => AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOutCubic,
+          height: gap,
+        ),
+      );
 }
 
 /// FOW の列スロット (D-062): ホストのカラム幾何(左端 x とカラム幅)。

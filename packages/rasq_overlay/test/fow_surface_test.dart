@@ -66,14 +66,23 @@ void main() {
     expect(tester.getBottomLeft(fowPanel()).dy, closeTo(800, 1));
   });
 
-  testWidgets('親子 FOW (D-067): 親は子の高さぶんリアルタイムに持ち上がり、方向は親側指定で子が追従、親クローズで連動', (tester) async {
+  testWidgets('親子 FOW (D-067/D-068): 親は子の高さぶん枠を伸ばし FowChildGap が場所を空ける、方向は親側指定、親クローズで連動', (tester) async {
     tester.view.physicalSize = const Size(2400, 1600); // 1200x800 論理
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
     final m = OverlayManager();
     final parentSpec = FowSpec(title: '親コンポーザー', cancelText: '閉じる', initialHeightFactor: 0.4);
     final childSpec = FowSpec(title: '子ピッカー', cancelText: '閉じる', initialHeightFactor: 0.3);
-    m.showFow<void>(id: 'parent', spec: parentSpec, builder: (context, handle) => const SizedBox());
+    // 親の中身: [入力部][バー][FowChildGap(下)] — gap が子の高さに伸びて
+    // バー/入力部を押し上げる (D-068)。
+    m.showFow<void>(
+        id: 'parent',
+        spec: parentSpec,
+        builder: (context, handle) => Column(children: [
+              const Expanded(child: ColoredBox(color: Color(0xFF808080), child: SizedBox.expand(child: Center(child: Text('入力部'))))),
+              const SizedBox(height: 40, child: Center(child: Text('バー'))),
+              FowChildGap(spec: parentSpec),
+            ]));
     m.showFow<void>(id: 'child', ownerId: 'parent', spec: childSpec, builder: (context, handle) => const SizedBox());
     await tester.pumpWidget(host(m, topInset: (_) => 60));
     await tester.pumpAndSettle();
@@ -81,20 +90,28 @@ void main() {
     Rect panelOf(String title) => tester.getRect(find.ancestor(
         of: find.text(title),
         matching: find.byWidgetPredicate((w) => w is Material && w.shape is RoundedRectangleBorder)).first);
-    // 子は画面下端、親は子の上辺に載る(入力部が被らない)。
+    // 子は画面下端。親の**枠**は下端まで伸びたまま(持ち上げない)、
+    // gap 通知が子の高さになり、バーは子の上辺に載る。
     expect(panelOf('子ピッカー').bottom, closeTo(800, 1));
-    expect(panelOf('親コンポーザー').bottom, closeTo(800 - 240, 1)); // 子 0.3*800
-    // 子をリサイズ → 親がリアルタイムで追従。
+    expect(panelOf('親コンポーザー').bottom, closeTo(800, 1));
+    expect(panelOf('親コンポーザー').top, closeTo(800 - (320 + 240), 1)); // 0.4*800 + 子 240
+    expect(parentSpec.childGapBottom.value, closeTo(240, 1));
+    expect(tester.getBottomLeft(find.text('バー')).dy, lessThanOrEqualTo(800 - 240 + 21)); // バーは子の上辺(gap 分上)
+
+    // 子をリサイズ → gap がリアルタイム追従。
     childSpec.heightFactor.value = 0.5;
     await tester.pumpAndSettle();
-    expect(panelOf('親コンポーザー').bottom, closeTo(800 - 400, 1));
+    expect(parentSpec.childGapBottom.value, closeTo(400, 1));
+    expect(panelOf('親コンポーザー').top, closeTo(800 - (320 + 400), 1));
 
-    // 親をヘッダー下付きへ → 方向は親側指定なので子も追従し、親は子の下。
+    // 親をヘッダー下付きへ → 方向は親側指定なので子も追従し、gap は上側へ。
     await tester.drag(find.text('親コンポーザー'), const Offset(0, -100));
     await tester.pumpAndSettle();
     expect(parentSpec.attachTop, isTrue);
     expect(panelOf('子ピッカー').top, closeTo(60, 1));
-    expect(panelOf('親コンポーザー').top, closeTo(60 + 400, 1));
+    expect(panelOf('親コンポーザー').top, closeTo(60, 1)); // 枠は同じ根本(ヘッダー下)
+    expect(parentSpec.childGapTop.value, closeTo(400, 1));
+    expect(parentSpec.childGapBottom.value, 0);
 
     // 親を閉じると子は連動クローズ (CONTRACT)。
     m.close('parent');

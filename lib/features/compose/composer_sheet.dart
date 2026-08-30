@@ -637,6 +637,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
           ]),
         ),
       ),
+      // 子 FOW の回避伸縮 (D-068): アクションバーの**前後**に高さ可変
+      // padding を置く。子ピッカーが付いている側の padding が子の高さに
+      // 伸びて(いなければ 0px)、入力部・バーが子に被らない。
+      if (widget.spec != null) FowChildGap(spec: widget.spec!, top: true),
       // Toolbar (コンポーザーツールバー = アクションバーの左寄せバリエーション)
       // FOW 内フッター = 掴んで左右カラム間移動 (D-062)。
       _grip(Container(
@@ -692,6 +696,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
           ),
         ]),
       )),
+      // 子 FOW の回避伸縮 (D-068): バー後ろ側の可変 padding(下ドック時は
+      // こちらが伸びて、バーが子ピッカーの上辺に載る)。
+      if (widget.spec != null) FowChildGap(spec: widget.spec!),
     ]);
   }
 }
