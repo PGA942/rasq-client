@@ -11,12 +11,14 @@ const viewer = AccountId(kind: SnsKind.misskey, instance: 'misskey.test', handle
 
 Map<String, Object?> user(String id, {String? host}) => {'id': id, 'username': id, 'name': '名前$id', 'host': host, 'avatarUrl': 'https://a/$id.png'};
 
-Map<String, Object?> note(String id, {String? text = 'hello :blobcat:', Map<String, Object?>? renote, List<Map<String, Object?>> files = const [], Object? poll, String? myReaction}) => {
+Map<String, Object?> note(String id, {String? text = 'hello :blobcat:', Map<String, Object?>? renote, Map<String, Object?>? reply, List<Map<String, Object?>> files = const [], Object? poll, String? myReaction}) => {
       'id': id,
       'createdAt': '2026-08-22T00:00:00.000Z',
       'text': text,
       'user': user('u$id'),
       'renote': renote,
+      'reply': reply,
+      'replyId': reply?['id'],
       'files': files,
       'fileIds': [for (final f in files) f['id']],
       'poll': poll,
@@ -448,7 +450,7 @@ void main() {
             ],
         'users/notes': (b) {
           seenNotes = b;
-          return [note('q1', renote: note('x')), note('p1')];
+          return [note('q1', renote: note('x')), note('p1'), note('r1', reply: note('parent1', files: [{'id': 'f', 'type': 'image/png', 'url': 'https://f/p.png'}]))];
         },
         'following/requests/list': (_) => [{'id': 'fr1', 'follower': user('e'), 'followee': user('me')}],
         'mute/list': (_) => [{'id': 'm1', 'mutee': user('f')}],
@@ -462,9 +464,18 @@ void main() {
       expect(n.items[1].actors.length, 2);
       final media = await s.userPosts('u', filter: UserPostsFilter.media);
       expect(seenNotes['withFiles'], isTrue);
-      expect(media.items.length, 2);
+      expect(media.items.length, 3);
+      // 返信TL / 引用TL への振り分け (D-069): 返信は返信のみ・引用は引用のみ・
+      // ノートは両方を除く。返信には replyTo(リプライ元)が載る。
       final quotes = await s.userPosts('u', filter: UserPostsFilter.quotes);
       expect(quotes.items.single.id, 'q1');
+      final replies = await s.userPosts('u', filter: UserPostsFilter.replies);
+      expect(seenNotes['withReplies'], isTrue);
+      expect(replies.items.single.id, 'r1');
+      expect(replies.items.single.replyTo?.id, 'parent1');
+      expect(replies.items.single.replyTo?.media, hasLength(1));
+      final posts = await s.userPosts('u', filter: UserPostsFilter.posts);
+      expect([for (final p in posts.items) p.id], ['p1']);
       expect((await s.followRequests()).single.user.id, 'e');
       expect((await s.mutedUsers()).items.single.id, 'f');
       expect((await s.blockedUsers()).items.single.id, 'g');

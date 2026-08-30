@@ -39,6 +39,7 @@ export 'src/components/post_tile.dart';
 export 'src/components/action_bar.dart';
 export 'src/components/poll_widget.dart';
 export 'src/components/collapsed_post.dart';
+export 'src/components/reply_parent_tile.dart';
 export 'src/components/content_warning.dart';
 export 'src/components/link_banner.dart';
 

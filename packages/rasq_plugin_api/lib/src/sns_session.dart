@@ -127,7 +127,10 @@ abstract class SnsSession {
 }
 
 /// Filter for [SnsSession.userPosts] (ユーザーページのタブ).
-enum UserPostsFilter { posts, withReplies, media, quotes }
+/// [posts] = ノート(返信・引用を除く)、[replies] = 返信のみ(返信TL)、
+/// [quotes] = 引用のみ(引用TL)— 返信と引用はそれぞれの TL へ振り分ける
+/// (D-069)。[withReplies] = ノート + 返信の混在(旧来の互換)。
+enum UserPostsFilter { posts, withReplies, replies, media, quotes }
 
 /// Well-known dynamic timeline ids understood by adapters via [SnsSession.timeline]:
 /// `tag:{tag}` (トレンドTL), `dm:{peerUserId}` (DMルーム), `featured` (Today).

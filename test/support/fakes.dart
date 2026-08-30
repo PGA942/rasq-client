@@ -84,7 +84,19 @@ class FakeSnsSession extends SnsSessionBase {
   }
   @override
   Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20, UserPostsFilter filter = UserPostsFilter.posts}) async =>
-      Page(items: _posts.where((p) => p.author.id == id && (filter != UserPostsFilter.media || p.media.isNotEmpty)).toList());
+      Page(items: _posts.where((p) {
+        if (p.author.id != id) return false;
+        final isReply = p.replyTo != null || p.replyToId != null;
+        final isQuote = p.quote != null && p.body.isNotEmpty;
+        // 返信TL / 引用TL への振り分け (D-069)。
+        return switch (filter) {
+          UserPostsFilter.media => p.media.isNotEmpty,
+          UserPostsFilter.replies => isReply,
+          UserPostsFilter.quotes => isQuote,
+          UserPostsFilter.posts => !isReply && !isQuote,
+          UserPostsFilter.withReplies => true,
+        };
+      }).toList());
   @override
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) async => Page(items: _posts.map((p) => p.author).toSet().toList());
   @override

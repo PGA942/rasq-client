@@ -47,6 +47,8 @@ class Post {
     this.media = const [],
     this.poll,
     this.quote,
+    this.replyTo,
+    this.replyToId,
     this.repostedBy,
     this.linkUrl,
     this.counts = const {},
@@ -72,6 +74,13 @@ class Post {
   final List<MediaItem> media;
   final Poll? poll;
   final Post? quote;
+
+  /// リプライ元投稿 (D-069)。TL・リプライ欄では省略タイル
+  /// (ワイヤーフレーム p.5「1件の添付リンク」の形)で上に表示する。
+  final Post? replyTo;
+
+  /// リプライ元の id([replyTo] 本体が来ない SNS/文脈でも判定に使える)。
+  final String? replyToId;
   final UserSummary? repostedBy;
   final Uri? linkUrl;
 

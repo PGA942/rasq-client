@@ -133,11 +133,10 @@ class _ThreadBody extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final replies = sortByReactions(descendants, order, (p) => p.reactionTotal);
     return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
-      for (final a in ancestors) ...[
-        PostRow(post: a, actions: actions, onAction: (d, {args = const {}}) => onAction(a, d, args: args), onTap: () => context.pushPost(a)),
-        const Divider(),
-      ],
-      PostRow(post: post, actions: actions, onAction: (d, {args = const {}}) => onAction(post, d, args: args)),
+      // 1 つ前の投稿(ancestors)は省略タイル (D-069: ワイヤーフレーム p.5
+      // 「1件の添付リンク」の形)でスレッド線を繋ぐ。タップでそのスレッドへ。
+      for (final a in ancestors) ReplyParentRow(post: a),
+      PostRow(post: post, actions: actions, onAction: (d, {args = const {}}) => onAction(post, d, args: args), showReplyParent: ancestors.isEmpty),
       Container(
         decoration: BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: scheme.onSurface, width: 1))),
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
@@ -165,7 +164,9 @@ class _ThreadBody extends StatelessWidget {
       ),
       if (loading) const RasqLoading(),
       for (final d in replies) ...[
-        _Threaded(child: PostRow(post: d, actions: actions, onAction: (x, {args = const {}}) => onAction(d, x, args: args), onTap: () => context.pushPost(d))),
+        // 直接の返信は親(表示中の投稿)が見えているので省略タイルは出さない
+        // (孫返信など別の親のものだけ出す、D-069)。
+        _Threaded(child: PostRow(post: d, actions: actions, onAction: (x, {args = const {}}) => onAction(d, x, args: args), onTap: () => context.pushPost(d), showReplyParent: (d.replyToId ?? d.replyTo?.id) != post.id)),
         const Divider(),
       ],
       if (replies.isNotEmpty) Center(child: TextButton(onPressed: () {}, child: const Text('さらに表示'))),

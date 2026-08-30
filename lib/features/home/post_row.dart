@@ -30,7 +30,7 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false, this.showReplyParent = true});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -39,6 +39,17 @@ class PostRow extends ConsumerStatefulWidget {
 
   /// Embedded size (通知の投稿タイル系など): smaller avatar, no outer padding.
   final bool dense;
+
+  /// リプライ元投稿の省略タイルを上に出す (D-069)。スレッド展開画面の
+  /// ように文脈側が既に親を表示している場合は false。
+  final bool showReplyParent;
+
+  /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
+  static String? attachmentSummaryOf(Post p) {
+    if (p.media.isNotEmpty) return '${p.media.length}件の添付ファイル';
+    if (p.linkUrl != null) return '1件の添付リンク';
+    return null;
+  }
 
   /// Host icon registry: plugin icon names → Material glyphs (until the RASQ
   /// icon font lands).
@@ -110,7 +121,7 @@ class _PostRowState extends ConsumerState<PostRow> {
         },
     ];
 
-    return RasqPostTile(
+    final tile = RasqPostTile(
       author: post.author,
       createdAt: post.createdAt,
       nameSpans: nameSpans,
@@ -157,6 +168,15 @@ class _PostRowState extends ConsumerState<PostRow> {
       onAuthorTap: () => context.pushUser(post.author),
       onMore: (anchor) => showPostMenu(context, ref, post, anchor),
     );
+    // リプライ元の省略タイル (D-069): TL に流れてきたリプライは、1 つ前の
+    // 投稿をワイヤーフレーム p.5(DM ルームの「1件の添付リンク」)の形で
+    // 上に出し、スレッド線で繋ぐ。タップで元投稿のスレッドへ。
+    final parent = post.replyTo;
+    if (parent == null || !widget.showReplyParent) return tile;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+      ReplyParentRow(post: parent),
+      tile,
+    ]);
   }
 
   /// ActionDescriptor + ActionState (Store) → ActionBar props.
@@ -280,6 +300,30 @@ class _PostRowState extends ConsumerState<PostRow> {
       content: q.body.isNotEmpty ? RasqRichText(InlineSpans.parse(q.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis) : const SizedBox.shrink(),
       media: mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems) : null,
       onTap: () => context.pushPost(q),
+    );
+  }
+}
+
+/// リプライ元投稿の省略タイル(ホスト接着、D-069): RSL の 1 行抜粋・
+/// 添付サマリー・タップ遷移を [RasqReplyParentTile] の Props に写す。
+/// TL のリプライ(PostRow が上に積む)とスレッド展開画面の ancestors で共用。
+class ReplyParentRow extends ConsumerWidget {
+  const ReplyParentRow({super.key, required this.post, this.onTap});
+
+  /// リプライ元(親)の投稿。
+  final Post post;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final emojis = ref.watch(emojiCacheProvider);
+    final cw = post.contentWarning;
+    final spans = InlineSpans.parse(cw != null && cw.isNotEmpty ? '【CW: $cw】' : post.body, emojis: emojis);
+    return RasqReplyParentTile(
+      author: post.author,
+      attachmentSummary: PostRow.attachmentSummaryOf(post),
+      content: RasqRichText(spans, style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+      onTap: onTap ?? () => context.pushPost(post),
     );
   }
 }

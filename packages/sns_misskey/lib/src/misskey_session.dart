@@ -323,15 +323,21 @@ class MisskeySession extends SnsSessionBase {
       'userId': id,
       'limit': limit,
       'untilId': ?cursor,
-      'withReplies': filter == UserPostsFilter.withReplies,
+      'withReplies': filter == UserPostsFilter.withReplies || filter == UserPostsFilter.replies,
       'withRenotes': filter != UserPostsFilter.media,
       if (filter == UserPostsFilter.media) 'withFiles': true,
     };
     final list = await api.callList('users/notes', body);
-    if (filter == UserPostsFilter.quotes) {
-      return _page([for (final n in list) if (n['renote'] is Map && (n['text'] as String?)?.isNotEmpty == true) n]);
-    }
-    return _page(list);
+    bool isQuote(Map n) => n['renote'] is Map && (n['text'] as String?)?.isNotEmpty == true;
+    bool isReply(Map n) => n['reply'] is Map || n['replyId'] != null;
+    // 返信TL / 引用TL への振り分け (D-069): 返信は返信のみ、引用は引用のみ、
+    // ノートは両方を除いたもの(純リノートは残す)。
+    return switch (filter) {
+      UserPostsFilter.replies => _page([for (final n in list) if (isReply(n)) n]),
+      UserPostsFilter.quotes => _page([for (final n in list) if (isQuote(n)) n]),
+      UserPostsFilter.posts => _page([for (final n in list) if (!isQuote(n) && !isReply(n)) n]),
+      _ => _page(list),
+    };
   }
 
   @override

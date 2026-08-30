@@ -132,6 +132,8 @@ abstract final class MisskeyMappers {
         media: inner.media,
         poll: inner.poll,
         quote: inner.quote,
+        replyTo: inner.replyTo,
+        replyToId: inner.replyToId,
         repostedBy: author,
         counts: inner.counts,
       );
@@ -151,6 +153,9 @@ abstract final class MisskeyMappers {
       media: [for (final f in (j['files'] as List? ?? const [])) file((f as Map).cast<String, Object?>())],
       poll: poll(j['poll']),
       quote: renote != null && depth < 2 ? note(renote, viewer: viewer, host: host, depth: depth + 1) : null,
+      // リプライ元 (D-069): TL・リプライ欄の省略タイル表示に使う。
+      replyTo: j['reply'] is Map && depth < 2 ? note((j['reply'] as Map).cast<String, Object?>(), viewer: viewer, host: host, depth: depth + 1) : null,
+      replyToId: j['replyId'] as String?,
       counts: {
         'reply': (j['repliesCount'] as num?)?.toInt() ?? 0,
         'renote': (j['renoteCount'] as num?)?.toInt() ?? 0,
