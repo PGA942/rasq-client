@@ -8,7 +8,7 @@ import 'overlay_manager.dart';
 /// Renders the content plus every open overlay, honouring layer z-order,
 /// scrims and barrier behaviour. Place it once at the root of the app shell.
 class OverlayHost extends StatelessWidget {
-  const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor, this.fowDockInset, this.fowColumns});
+  const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor, this.fowDockInset, this.fowColumns, this.fowPinnedWidth = 320});
 
   final OverlayManager manager;
   final Widget child;
@@ -22,6 +22,10 @@ class OverlayHost extends StatelessWidget {
   /// null/空 = 単一スロット(全幅、1200px 上限で中央寄せ)。FOW はスロットの
   /// 中心に揃い、スロット幅に収まる。
   final List<FowColumnSlot> Function(BuildContext context)? fowColumns;
+
+  /// 壁付けピン (D-063) の幅。両端の壁へ 50px 以上めり込ませた FOW は
+  /// 壁側にこの幅・**最大高さ**で張り付く(アプリは検索ホーム幅を渡す)。
+  final double fowPinnedWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +114,7 @@ class OverlayHost extends StatelessWidget {
       child: _FowColumn(
         dockInset: fowDockInset,
         columns: fowColumns,
+        pinnedWidth: fowPinnedWidth,
         entries: fows,
         buildContent: (e) {
           final handle = manager.handleFor(e);
@@ -128,13 +133,14 @@ class OverlayHost extends StatelessWidget {
 /// Lays FOW panels out bottom-up. Heights come from each spec's heightFactor
 /// and are scaled down proportionally when they would not fit.
 class _FowColumn extends StatelessWidget {
-  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, this.dockInset, this.columns});
+  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, this.dockInset, this.columns, this.pinnedWidth = 320});
   final List<RasqOverlayEntry> entries;
   final Widget Function(RasqOverlayEntry) buildContent;
   final void Function(RasqOverlayEntry) onCancel;
   final void Function(RasqOverlayEntry) onConfirm;
   final double Function(BuildContext context)? dockInset;
   final List<FowColumnSlot> Function(BuildContext context)? columns;
+  final double pinnedWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -150,17 +156,16 @@ class _FowColumn extends StatelessWidget {
       final totalW = constraints.maxWidth;
       // 列スロット (D-062): 無指定なら単一スロット(全幅 1200px 上限・中央)。
       final maxW = totalW < 1200 ? totalW : 1200.0;
-      final maximizedSlot = FowColumnSlot(x: (totalW - maxW) / 2, width: maxW);
       final slots = columns?.call(context) ?? const <FowColumnSlot>[];
-      final effSlots = slots.isEmpty ? [maximizedSlot] : slots;
-      FowColumnSlot slotOf(FowSpec s) => s.maximized ? maximizedSlot : effSlots[s.columnIndex.clamp(0, effSlots.length - 1)];
-      // 離したときの精算 (D-062): 基本は最も近いカラム中心へスナップ
-      // (カラム枠内に収まる幅)。**端のスロットを越えて壁へ 50px 以上
-      // めり込ませた**ときだけ最大化(スナップ後の幅で判定するので、
-      // 幅広のパネルを隣カラムへ動かしただけでは最大化しない)。
-      void settle(FowSpec s, double dx) {
-        final cur = slotOf(s);
-        final center = cur.x + cur.width / 2 + dx;
+      final effSlots = slots.isEmpty ? [FowColumnSlot(x: (totalW - maxW) / 2, width: maxW)] : slots;
+      // 壁付けスロット (D-063): カラム領域の両端に検索ホーム幅・最大高さで
+      // 張り付く(中央への全幅最大化はしない — 元画面を覆わない)。
+      final pinW = pinnedWidth < totalW ? pinnedWidth : totalW;
+      FowColumnSlot pinSlot(int wall) => wall < 0
+          ? FowColumnSlot(x: effSlots.first.x, width: pinW)
+          : FowColumnSlot(x: effSlots.last.x + effSlots.last.width - pinW, width: pinW);
+      FowColumnSlot slotOf(FowSpec s) => s.pinnedWall != 0 ? pinSlot(s.pinnedWall) : effSlots[s.columnIndex.clamp(0, effSlots.length - 1)];
+      int nearest(double center) {
         var best = 0;
         var bestD = double.infinity;
         for (var i = 0; i < effSlots.length; i++) {
@@ -170,14 +175,40 @@ class _FowColumn extends StatelessWidget {
             best = i;
           }
         }
+        return best;
+      }
+
+      // 離したときの精算 (D-062/D-063): 基本は最も近いカラム中心へスナップ
+      // (カラム枠内に収まる幅)。最寄りが今のカラムのままでも**ウィンドウ幅の
+      // 1 割以上**動かしていれば隣のカラムへ移す(広いカラムでは中心間の
+      // 中点まで引っ張らないと動かず、判定が厳しすぎた)。**端のスロットを
+      // 越えて壁へ 50px 以上めり込ませた**ときはその壁へピン留め。ピン中は
+      // 内側へしきい値以上動かしたときだけカラム揃えへ戻る(小さな
+      // 揺れでは外れない)。
+      final moveThreshold = totalW * 0.1;
+      void settle(FowSpec s, double dx) {
+        final cur = slotOf(s);
+        final center = cur.x + cur.width / 2 + dx;
         final first = effSlots.first;
         final last = effSlots.last;
         final leftLimit = (first.x + first.width / 2) - first.x - 50;
         final rightLimit = (last.x + last.width / 2) + (totalW - (last.x + last.width)) + 50;
-        if (center < leftLimit || center > rightLimit) {
-          s.maximized = true;
+        if (s.pinnedWall != 0) {
+          final inward = s.pinnedWall < 0 ? dx : -dx;
+          if (inward >= moveThreshold) {
+            s.pinnedWall = 0;
+            s.columnIndex = nearest(center);
+          }
+        } else if (center < leftLimit) {
+          s.pinnedWall = -1;
+        } else if (center > rightLimit) {
+          s.pinnedWall = 1;
         } else {
-          s.maximized = false;
+          var best = nearest(center);
+          final curIdx = s.columnIndex.clamp(0, effSlots.length - 1);
+          if (best == curIdx && dx.abs() >= moveThreshold) {
+            best = (curIdx + (dx > 0 ? 1 : -1)).clamp(0, effSlots.length - 1);
+          }
           s.columnIndex = best;
         }
         s.geometryRev.value++;
@@ -193,11 +224,16 @@ class _FowColumn extends StatelessWidget {
           for (final e in ordered) {
             final s = e.fow ?? FowSpec();
             s.settleMove = (dx) => settle(s, dx);
-            final key = s.maximized ? 'max' : 'col${s.columnIndex.clamp(0, effSlots.length - 1)}';
+            final key = s.pinnedWall < 0
+                ? 'pinL'
+                : s.pinnedWall > 0
+                    ? 'pinR'
+                    : 'col${s.columnIndex.clamp(0, effSlots.length - 1)}';
             (groups[key] ??= []).add(e);
           }
-          Widget groupColumn(List<RasqOverlayEntry> group) {
-            final factors = [for (final e in group) (e.fow?.heightFactor.value ?? 0.45)];
+          Widget groupColumn(List<RasqOverlayEntry> group, {required bool pinned}) {
+            // 壁付けピン (D-063) は高さ段階を離れて**最大高さ**で張り付く。
+            final factors = [for (final e in group) pinned ? 1.0 : (e.fow?.heightFactor.value ?? 0.45)];
             final total = factors.fold(0.0, (a, b) => a + b);
             final scale = total > 1 ? 1 / total : 1.0;
             final heights = [for (final f in factors) f * scale * avail];
@@ -218,14 +254,19 @@ class _FowColumn extends StatelessWidget {
             );
           }
 
+          FowColumnSlot slotForKey(String key) => key == 'pinL'
+              ? pinSlot(-1)
+              : key == 'pinR'
+                  ? pinSlot(1)
+                  : effSlots[int.parse(key.substring(3))];
           return Stack(children: [
             for (final entry in groups.entries)
               Positioned(
-                left: entry.key == 'max' ? maximizedSlot.x : effSlots[int.parse(entry.key.substring(3))].x,
-                width: entry.key == 'max' ? maximizedSlot.width : effSlots[int.parse(entry.key.substring(3))].width,
+                left: slotForKey(entry.key).x,
+                width: slotForKey(entry.key).width,
                 top: 0,
                 bottom: 0,
-                child: groupColumn(entry.value),
+                child: groupColumn(entry.value, pinned: entry.key.startsWith('pin')),
               ),
           ]);
         },
@@ -334,7 +375,7 @@ class _FowPanelState extends State<_FowPanel> {
     // 消える**(ハンドル操作で本文消失、D-050 で実測)。
     // 横追従 (D-062): FowMoveGrip(FOW 内ヘッダー/フッター)を掴んでいる間、
     // パネルが左右についてくる。離すとホストの精算でカラム中心へスナップ /
-    // 壁へ 50px 以上めり込んでいれば最大化(レイアウト側で幅が変わる)。
+    // 壁へ 50px 以上めり込んでいれば壁付けピン(レイアウト側で幅が変わる)。
     return ValueListenableBuilder<double>(
       valueListenable: spec.moveDx,
       builder: (context, moveDx, child) => ValueListenableBuilder<bool>(

@@ -45,6 +45,8 @@ class AppOverlayRoot extends ConsumerWidget {
           child: OverlayHost(
             manager: manager,
             fowDockInset: (ctx) => fowDockInsetOf(ctx, ref.read(routerProvider)),
+            // 壁付けピン (D-063) は検索ホーム幅で壁側カラムに張り付く。
+            fowPinnedWidth: kSearchHomeColumnWidth,
             // FOW の列スロット (D-062): タブレット幅では第2/第3カラムの幾何を
             // 供給し、FOW はカラム中心に揃いカラム幅に収まる。
             fowColumns: (ctx) {

@@ -97,15 +97,26 @@ void main() {
     expect(tester.getSize(fowPanel()).width, closeTo(1200 - 72 - kSearchHomeColumnWidth, 1));
 
     // FOW 内ヘッダーを掴んで右へ → 第3カラムの中心へスナップ(幅も追従)。
-    await tester.drag(find.text('リアクション'), const Offset(600, 0));
+    // 移動判定はウィンドウ幅の 1 割 (D-063: 広いカラムでは中心間の中点まで
+    // 引っ張らないと動かず厳しすぎた) — 150px(> 120px)で動く。
+    await tester.drag(find.text('リアクション'), const Offset(150, 0));
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(fowPanel()).dx, closeTo(1200 - kSearchHomeColumnWidth, 1));
     expect(tester.getSize(fowPanel()).width, closeTo(kSearchHomeColumnWidth, 1));
 
-    // さらに右の壁へ 50px 以上めり込ませる → 最大化(全幅)。
+    // さらに右の壁へ 50px 以上めり込ませる → 壁付けピン (D-063): 中央への
+    // 全幅最大化ではなく、壁側に検索ホーム幅・**最大高さ**で張り付く。
     await tester.drag(find.text('リアクション'), const Offset(400, 0));
     await tester.pumpAndSettle();
-    expect(tester.getSize(fowPanel()).width, closeTo(1200, 1));
+    expect(tester.getTopLeft(fowPanel()).dx, closeTo(1200 - kSearchHomeColumnWidth, 1));
+    expect(tester.getSize(fowPanel()).width, closeTo(kSearchHomeColumnWidth, 1));
+    expect(tester.getSize(fowPanel()).height, closeTo(800, 1));
+
+    // 内側へしきい値以上動かすとピンが外れてカラム揃えへ戻る(高さも戻る)。
+    await tester.drag(find.text('リアクション'), const Offset(-200, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(fowPanel()).width, closeTo(kSearchHomeColumnWidth, 1));
+    expect(tester.getSize(fowPanel()).height, lessThan(700));
 
     // ピックでリアクション実行 → 閉じる(従来どおり)。
     await tester.tap(find.descendant(of: find.byType(EmojiPanel), matching: find.text('👍')).first);

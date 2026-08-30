@@ -83,10 +83,10 @@ class FowSpec {
   /// 間はホストが高さを即時反映する(アニメの追従遅延を出さない)。
   final ValueNotifier<bool> dragging = ValueNotifier(false);
 
-  // ---- 横ドッキング (D-062) --------------------------------------------
+  // ---- 横ドッキング (D-062/D-063) --------------------------------------
   // FOW はカラムの中心に揃い、**カラム枠内に収まる幅**でドックする。
   // FOW 内ヘッダー/フッター([FowMoveGrip])を掴んで左右へ動かすと隣の
-  // カラムへ移動し、**両端の壁に 50px 以上めり込ませると最大化**する。
+  // カラムへ移動し、**両端の壁に 50px 以上めり込ませると壁付けピン**になる。
   // ドラッグハンドルは縦リサイズ専用(横の誤爆を防ぐ役割分担)。
 
   /// ドラッグ中の横追従量([FowMoveGrip] が書く。離すとホストが精算)。
@@ -95,8 +95,11 @@ class FowSpec {
   /// 所属カラム(ホストの列スロット index。範囲外は clamp される)。
   int columnIndex;
 
-  /// 最大化(壁へのめり込みで確定。カラム揃えに戻すには掴んで動かす)。
-  bool maximized = false;
+  /// 壁付けピン (D-063): -1 = 左の壁 / 1 = 右の壁 / 0 = なし。壁へ 50px
+  /// 以上めり込ませると確定し、壁側に**最大高さ・検索ホーム幅**で張り付く
+  /// (元画面を覆う中央最大化はしない)。内側へしきい値以上動かすと
+  /// カラム揃えへ戻る。
+  int pinnedWall = 0;
 
   /// カラム/最大化の変更をホストのレイアウトへ伝えるカウンター。
   final ValueNotifier<int> geometryRev = ValueNotifier(0);
@@ -122,10 +125,6 @@ class FowSpec {
     }
     heightFactor.value = (heightFactor.value - deltaFactor).clamp(lo, hi);
   }
-
-  /// 列スロット(横ドッキングの受け皿)。ホストのレイアウトが供給する。
-  /// [x] はホスト座標系の左端、[width] はカラム幅。
-  static const int maximizedColumn = -1;
 
   /// ドラッグ終了時: 段階の**間**にいるなら最も近い段階へスナップする。
   /// free 側の外側にいる場合はそのまま(シームレス)。
@@ -153,7 +152,7 @@ class FowColumnSlot {
 /// FOW 内ヘッダー/フッターに被せる「掴んで左右カラム間移動」グリップ
 /// (D-062)。**横**ドラッグだけを拾う(縦のスクロール・リサイズやタップは
 /// 子へ通す — ハンドルの縦リサイズとの役割分担)。離すとホストが精算し、
-/// カラム中心へスナップ / 壁へ 50px 以上めり込んでいれば最大化する。
+/// カラム中心へスナップ / 壁へ 50px 以上めり込んでいれば壁付けピンになる。
 class FowMoveGrip extends StatelessWidget {
   const FowMoveGrip({super.key, required this.spec, required this.child});
   final FowSpec spec;
