@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
+import '../home/post_row.dart';
 
 /// WASM プラグイン試験画面 (dev)。misskey-wasm-sample(rasq-sdk-sample で
 /// ビルドした .wasm)をインポートし、plugin_runtime 経由で描画する:
@@ -47,6 +50,42 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
   /// この画面のプラグインが開く FOW の id 前置(衝突回避 + 一括クローズ)。
   static const _fowOwner = 'wasm-sample';
   static const _fowPrefix = 'fow.wasm-sample.';
+
+  /// 境界セッション試験 (D-074/M5d): `WasmSnsSession.timeline` の結果
+  /// (Post ワイヤ → ホストモデル)。非 null の間はこれを表示する。
+  List<Post>? _boundaryPosts;
+
+  /// SnsSession 契約の boundary 写像を実際に叩く: 抽象関数 `sns.timeline`
+  /// → Post ワイヤ → ホストの PostRow パイプラインで描画。
+  Future<void> _boundaryTimeline() async {
+    final c = _controller;
+    if (c == null) return;
+    final host = _hostField.text.trim();
+    setState(() => _busy = true);
+    try {
+      final session = WasmSnsSession(
+        account: AccountId(kind: SnsKind.misskey, instance: host, handle: 'wasm-boundary'),
+        pluginId: 'misskey-wasm-sample',
+        extraArgs: {'host': host},
+        invoke: (fn, args) async => switch (c) {
+          AsyncWasmPluginController() => await c.invoke(fn, args),
+          WasmPluginController() => c.invoke(fn, args),
+          _ => <String, dynamic>{'ok': false},
+        },
+      );
+      final page = await session.timeline(TimelineKind.local);
+      if (mounted) {
+        setState(() {
+          _boundaryPosts = page.items;
+          _loadError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadError = '境界TL: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   void initState() {
@@ -204,6 +243,12 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
                 icon: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.download, size: 18),
                 label: const Text('TL取得'),
               ),
+              const SizedBox(width: RasqSpacing.sm),
+              // 境界セッション (D-074): sns.timeline 抽象関数 → Post ワイヤ。
+              OutlinedButton(
+                onPressed: controller == null || _busy ? null : _boundaryTimeline,
+                child: const Text('境界TL'),
+              ),
             ]),
             const SizedBox(height: RasqSpacing.xs),
             Row(children: [
@@ -224,11 +269,28 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
         ),
         const Divider(),
         Expanded(
-          child: controller == null
-              ? const RasqLoading()
-              : SingleChildScrollView(
-                  child: WasmPluginView(controller: controller, rslParser: InlineSpans.parse),
-                ),
+          child: _boundaryPosts != null
+              // 境界セッション試験 (D-074): Post ワイヤをホストの通常
+              // パイプライン(PostRow)で描画 = 契約写像の実証。
+              ? ListView(children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: 4),
+                    color: scheme.surfaceContainerHighest,
+                    child: Row(children: [
+                      Expanded(child: Text('境界セッション: sns.timeline → Post ワイヤ → PostRow', style: RasqTypography.caption)),
+                      TextButton(onPressed: () => setState(() => _boundaryPosts = null), child: const Text('閉じる')),
+                    ]),
+                  ),
+                  for (final p in _boundaryPosts!) ...[
+                    PostRow(post: p, actions: const [], onAction: (_, {args = const {}}) async {}),
+                    const Divider(),
+                  ],
+                ])
+              : controller == null
+                  ? const RasqLoading()
+                  : SingleChildScrollView(
+                      child: WasmPluginView(controller: controller, rslParser: InlineSpans.parse),
+                    ),
         ),
       ]),
     );

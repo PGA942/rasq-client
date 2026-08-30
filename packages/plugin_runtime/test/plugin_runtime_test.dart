@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 /// The real Misskey sample plugin, built from rasq-sdk-sample:
 /// `cargo build --release --target wasm32-unknown-unknown -p misskey-wasm-sample`.
@@ -284,6 +286,48 @@ void main() {
       expect(call(env, 'fow.open', {'spec': {'type': 'widget'}, 'root': root})['error']['code'], 'D01');
       expect(call(env, 'fow.close', const {})['error']['code'], 'D01');
       expect(call(RasqHostEnvironment(), 'fow.open', {'id': 'x', 'spec': {'type': 'widget'}, 'root': root})['error']['code'], 'E01'); // 未配線
+    });
+  });
+
+  group('WasmSnsSession (D-074/M5d: SnsSession 契約の boundary 写像)', () {
+    const viewer = AccountId(kind: SnsKind.misskey, instance: 'misskey.example', handle: 'me');
+
+    test('sns.timeline → Post ワイヤ → Page<Post>(net.fetch はホスト代理)', () async {
+      final env = RasqHostEnvironment(fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        pluginId: 'misskey-wasm-sample',
+        extraArgs: const {'host': 'misskey.example'},
+        invoke: (fn, args) async => controller.invoke(fn, args),
+      );
+      final page = await session.timeline(TimelineKind.local, limit: 5);
+      expect(page.items, hasLength(2));
+      final p = page.items.first;
+      expect(p.id, 'n1');
+      expect(p.account, viewer); // キー付けはホスト側
+      expect(p.author.displayName, 'ダグラス');
+      expect(p.author.account.instance, 'misskey.example'); // host フォールバック
+      expect(p.body, contains('打ち上げ成功'));
+      expect(p.bodyFormat, 'mfm');
+      expect(p.media.single.type, MediaType.image);
+      expect(p.counts['renote'], 5);
+      expect(p.reactions['👍'], 3);
+      expect(page.items[1].author.account.instance, 'other.example');
+      expect(page.nextCursor, 'n2');
+    });
+
+    test('エラーは SnsApiException(コード付き)へ写る', () async {
+      final controller = WasmPluginController(wasmBytes: bytes); // fetch なし → B01
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(account: viewer, invoke: (fn, args) async => controller.invoke(fn, args));
+      await expectLater(
+        session.timeline(TimelineKind.local),
+        throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'B01')),
+      );
     });
   });
 

@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
+import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/dev/wasm_plugin_screen.dart';
+import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
@@ -52,6 +55,47 @@ void main() {
     expect(find.text('ローカルTLの投稿'), findsOneWidget);
     expect(find.text('ダグラス'), findsOneWidget);
     expect(find.byType(RasqActionBar), findsOneWidget);
+  });
+
+  testWidgets('境界セッション (D-074/M5d): 境界TL → sns.timeline → Post ワイヤ → PostRow で描画', (tester) async {
+    if (!wasmFile.existsSync()) {
+      markTestSkipped('misskey-wasm-sample not built');
+      return;
+    }
+    final canned = jsonEncode([
+      {
+        'id': 'n1',
+        'text': '境界越えの投稿',
+        'cw': null,
+        'createdAt': '2026-08-30T12:00:00.000Z',
+        'user': {'username': 'douglas', 'name': 'ダグラス', 'host': null, 'avatarUrl': null},
+        'files': [],
+        'repliesCount': 0,
+        'renoteCount': 2,
+        'reactions': {'👍': 3},
+      },
+    ]);
+    final env = RasqHostEnvironment(fetch: (req) => SyncFetchResponse(status: 200, bodyText: canned));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage())],
+      child: MaterialApp(
+        theme: RasqTheme.light(),
+        home: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: WasmPluginScreen(wasmBytesOverride: wasmFile.readAsBytesSync(), envOverride: env),
+        ),
+      ),
+    ));
+    await tester.pump();
+
+    await tester.tap(find.text('境界TL'));
+    await tester.pumpAndSettle();
+
+    // Post ワイヤがホストの通常パイプライン(PostRow → RasqPostTile)で出る。
+    expect(find.textContaining('境界セッション: sns.timeline'), findsOneWidget);
+    expect(find.byType(RasqPostTile), findsOneWidget);
+    expect(find.text('境界越えの投稿'), findsOneWidget);
+    expect(find.text('ダグラス'), findsOneWidget);
   });
 
   testWidgets('FOW surface (D-064): プラグインの fow.open が実 FOW になり、絵文字タップの fow.close で閉じる', (tester) async {
