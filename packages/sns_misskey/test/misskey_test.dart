@@ -11,12 +11,14 @@ const viewer = AccountId(kind: SnsKind.misskey, instance: 'misskey.test', handle
 
 Map<String, Object?> user(String id, {String? host}) => {'id': id, 'username': id, 'name': '名前$id', 'host': host, 'avatarUrl': 'https://a/$id.png'};
 
-Map<String, Object?> note(String id, {String? text = 'hello :blobcat:', Map<String, Object?>? renote, List<Map<String, Object?>> files = const [], Object? poll, String? myReaction}) => {
+Map<String, Object?> note(String id, {String? text = 'hello :blobcat:', Map<String, Object?>? renote, Map<String, Object?>? reply, List<Map<String, Object?>> files = const [], Object? poll, String? myReaction}) => {
       'id': id,
       'createdAt': '2026-08-22T00:00:00.000Z',
       'text': text,
       'user': user('u$id'),
       'renote': renote,
+      'reply': reply,
+      'replyId': reply?['id'],
       'files': files,
       'fileIds': [for (final f in files) f['id']],
       'poll': poll,
@@ -170,6 +172,17 @@ void main() {
       expect(plays.single.url.toString(), 'https://misskey.test/play/fl1');
     });
 
+
+    test('reactionIcon (D-040): Unicode はテキスト、カスタムは /emoji URL', () {
+      expect(MisskeySession.reactionIcon(null, 'misskey.test'), isNull);
+      final uni = MisskeySession.reactionIcon('❤', 'misskey.test')!;
+      expect(uni.text, '❤');
+      expect(uni.url, isNull);
+      final custom = MisskeySession.reactionIcon(':blobcat@.:', 'misskey.test')!;
+      expect(custom.url.toString(), 'https://misskey.test/emoji/blobcat.webp');
+      expect(custom.text, isNull);
+    });
+
     test('timelineWithStates sends token & untilId, maps done flags', () async {
       late Map<String, Object?> seen;
       final c = client({
@@ -192,6 +205,119 @@ void main() {
       final r = await s.performAction('reaction', 'n2');
       expect(r.done, isTrue);
       expect(r.count, 3);
+    });
+
+    test('プラグイン設定 (D-044): applySettings→TLパラメーター、account は i/i update', () async {
+      late Map<String, Object?> seenTl;
+      Map<String, Object?>? seenUpdate;
+      final me = {'isLocked': true, 'isExplorable': true, 'hideOnlineStatus': false, 'publicReactions': true, 'isBot': false, 'isCat': false};
+      final c = client({
+        'notes/timeline': (b) {
+          seenTl = b;
+          return [];
+        },
+        'i': (_) => me,
+        'i/update': (b) {
+          seenUpdate = b;
+          return {...me, 'isCat': true};
+        },
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: MisskeyPlugin.pluginId, token: 'T', createdAt: DateTime(2026)), client: c);
+
+      // 既定値: withRenotes オン / withReplies オフ。
+      await s.timeline(TimelineKind.home);
+      expect(seenTl['withRenotes'], isTrue);
+      expect(seenTl['withReplies'], isFalse);
+
+      await s.applySettings('timeline', {'withRenotes': false, 'withReplies': true});
+      await s.timeline(TimelineKind.home);
+      expect(seenTl['withRenotes'], isFalse);
+      expect(seenTl['withReplies'], isTrue);
+
+      // account = remote ページ: i から読み、i/update へ 1 キー書き込み。
+      final read = await s.settingsRead('account');
+      expect(read['isLocked'], isTrue);
+      expect(read['isCat'], isFalse);
+      final after = await s.settingsWrite('account', 'isCat', true);
+      expect(seenUpdate?['isCat'], isTrue);
+      expect(after['isCat'], isTrue);
+      // 許可リスト外のキーは投げる(パスワード系を DSL から触らせない)。
+      await expectLater(s.settingsWrite('account', 'password', 'x'), throwsUnsupportedError);
+    });
+
+    test('createPost (D-045): visibility/localOnly/reactionAcceptance を送る', () async {
+      late Map<String, Object?> seen;
+      final c = client({
+        'notes/create': (b) {
+          seen = b;
+          return {'createdNote': note('n9')};
+        },
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: MisskeyPlugin.pluginId, token: 'T', createdAt: DateTime(2026)), client: c);
+      await s.createPost(const NewPost(text: 't', visibility: 'home', localOnly: true, reactionAcceptance: 'likeOnly'));
+      expect(seen['visibility'], 'home');
+      expect(seen['localOnly'], isTrue);
+      expect(seen['reactionAcceptance'], 'likeOnly');
+
+      // 既定(未指定)では送らない — サーバー既定に任せる。
+      await s.createPost(const NewPost(text: 't2'));
+      expect(seen.containsKey('localOnly'), isFalse);
+      expect(seen.containsKey('reactionAcceptance'), isFalse);
+
+      // ダイレクト (D-047): specified には宛先 visibleUserIds を添える。
+      await s.createPost(const NewPost(text: 't3', visibility: 'specified', directToIds: ['peer1', 'peer2']));
+      expect(seen['visibility'], 'specified');
+      expect(seen['visibleUserIds'], ['peer1', 'peer2']);
+    });
+
+    test('mapper (D-047): localOnly / visibleUserIds を Post に写す', () {
+      final p = MisskeyMappers.note({...note('n1'), 'visibility': 'specified', 'localOnly': true, 'visibleUserIds': ['peer1']}, viewer: viewer, host: 'misskey.test');
+      expect(p.isDirect, isTrue);
+      expect(p.localOnly, isTrue);
+      expect(p.directToIds, ['peer1']);
+    });
+
+    test('システム通知 (D-045): app/roleAssigned/未知タイプ → system + title/body', () {
+      NotificationItem map(Map<String, Object?> j) => MisskeyMappers.notification({'id': 'x', 'createdAt': '2026-08-28T00:00:00.000Z', ...j}, viewer: viewer, host: 'misskey.test');
+
+      final app = map({'type': 'app', 'header': 'メンテナンスのお知らせ', 'body': '本日 2 時から'});
+      expect(app.kind, NotificationKind.system);
+      expect(app.title, 'メンテナンスのお知らせ');
+      expect(app.body, '本日 2 時から');
+
+      final role = map({'type': 'roleAssigned', 'role': {'name': 'モデレーター'}});
+      expect(role.kind, NotificationKind.system);
+      expect(role.title, 'ロールが付与されました');
+      expect(role.body, 'モデレーター');
+
+      // 未知タイプも落とさずシステム通知として縮退表示する。
+      final unknown = map({'type': 'somethingNew2027'});
+      expect(unknown.kind, NotificationKind.system);
+      expect(unknown.title, '通知 (somethingNew2027)');
+
+      // 既存タイプは従来どおり(title/body なし)。
+      final follow = map({'type': 'follow', 'user': user('alice')});
+      expect(follow.kind, NotificationKind.follow);
+      expect(follow.title, isNull);
+    });
+
+    test('MiAuth スコープ (D-045): write:account / write:votes を要求する', () {
+      expect(MiAuthFlow.defaultPermissions, containsAll(['write:account', 'write:votes']));
+    });
+
+    test('設定ページ (D-044): 4 ページとも rasq.settings-page/1 として解釈できる', () {
+      final pages = MisskeyPlugin().settingsPages;
+      final areas = <String>[];
+      for (final raw in pages) {
+        final j = (jsonDecode(raw) as Map).cast<String, Object?>();
+        expect(j['schema'], 'rasq.settings-page/1');
+        expect(j['root'], isA<Map<String, Object?>>());
+        areas.add(j['area'] as String);
+      }
+      expect(areas, ['account', 'timeline', 'safety', 'security']);
+      // account はサーバー保存 (source: remote)。
+      final account = (jsonDecode(pages.first) as Map).cast<String, Object?>();
+      expect(account['source'], 'remote');
     });
 
     test('transport errors are not reported as 408', () async {
@@ -324,8 +450,9 @@ void main() {
             ],
         'users/notes': (b) {
           seenNotes = b;
-          return [note('q1', renote: note('x')), note('p1')];
+          return [note('q1', renote: note('x')), note('p1'), note('r1', reply: note('parent1', files: [{'id': 'f', 'type': 'image/png', 'url': 'https://f/p.png'}]))];
         },
+        'notes/renotes': (_) => [note('q1', renote: note('x')), note('pure', text: null, renote: note('x')), note('r2', renote: note('x'))],
         'following/requests/list': (_) => [{'id': 'fr1', 'follower': user('e'), 'followee': user('me')}],
         'mute/list': (_) => [{'id': 'm1', 'mutee': user('f')}],
         'blocking/list': (_) => [{'id': 'b1', 'blockee': user('g')}],
@@ -338,9 +465,21 @@ void main() {
       expect(n.items[1].actors.length, 2);
       final media = await s.userPosts('u', filter: UserPostsFilter.media);
       expect(seenNotes['withFiles'], isTrue);
-      expect(media.items.length, 2);
+      expect(media.items.length, 3);
+      // 返信TL / 引用TL への振り分け (D-069): 返信は返信のみ・引用は引用のみ・
+      // ノートは両方を除く。返信には replyTo(リプライ元)が載る。
       final quotes = await s.userPosts('u', filter: UserPostsFilter.quotes);
       expect(quotes.items.single.id, 'q1');
+      final replies = await s.userPosts('u', filter: UserPostsFilter.replies);
+      expect(seenNotes['withReplies'], isTrue);
+      expect(replies.items.single.id, 'r1');
+      expect(replies.items.single.replyTo?.id, 'parent1');
+      expect(replies.items.single.replyTo?.media, hasLength(1));
+      final posts = await s.userPosts('u', filter: UserPostsFilter.posts);
+      expect([for (final p in posts.items) p.id], ['p1']);
+      // 引用ノート一覧 (D-070): notes/renotes から引用のみ(純リノート除外)。
+      final quoteNotes = await s.quotes('x');
+      expect([for (final q in quoteNotes.items) q.id], ['q1', 'r2']);
       expect((await s.followRequests()).single.user.id, 'e');
       expect((await s.mutedUsers()).items.single.id, 'f');
       expect((await s.blockedUsers()).items.single.id, 'g');

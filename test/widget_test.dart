@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/search/search_screen.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_client/shell/third_column.dart';
 import 'package:rasq_client/features/media/media_viewer_screen.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -99,29 +101,31 @@ void main() {
     // リアクションを表示 → sections (emoji + count), expand → user rows.
     await tester.tap(find.text('リアクションを表示'));
     await tester.pumpAndSettle();
-    expect(find.text('30'), findsOneWidget);
-    await tester.tap(find.text('30'));
+    // 「30」は投稿内リアクションタイル (D-040) とリアクション表示欄の 2 箇所。
+    expect(find.text('30'), findsWidgets);
+    await tester.tap(find.text('30').last);
     await tester.pumpAndSettle();
     expect(find.text('フォロー'), findsWidgets); // follow pill in user row
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
 
-    // 返信バー → composer (reply mode) → send → thread refreshed.
-    await tester.tap(find.text('返信..'));
-    await tester.pumpAndSettle();
+    // 常駐 stick コンポーザー (D-050): ページに戻ると縮小状態で置き直される →
+    // 入力 → send → thread refreshed(送信後も閉じない)。
     expect(find.text('返信'), findsWidgets);
     await tester.enterText(find.byType(TextField).last, '@username テスト返信');
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '返信').last);
     await tester.pumpAndSettle();
     expect(find.text('キャンセル'), findsNothing);
+    expect(find.widgetWithText(FilledButton, '返信'), findsWidgets); // 常駐で残る
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
 
     // FAB → composer (normal) with CW + poll + emoji panel toggles.
     await tester.tap(find.byTooltip('投稿'));
     await tester.pumpAndSettle();
-    expect(find.text('ノートの作成'), findsOneWidget);
+    expect(find.text('投稿'), findsOneWidget); // ヘッダー中央タイトル (D-052)
+    expect(find.text('下書き'), findsOneWidget); // 右揃えの下書きボタン
     await tester.tap(find.byTooltip('隠す(注釈)'));
     await tester.pumpAndSettle();
     expect(find.text('注釈..'), findsOneWidget);
@@ -130,9 +134,11 @@ void main() {
     expect(find.text('回答1'), findsOneWidget);
     await tester.tap(find.byTooltip('絵文字'));
     await tester.pumpAndSettle();
-    expect(find.text('全てのemoji'), findsOneWidget);
+    expect(find.text('デフォルト'), findsOneWidget); // 旧「全てのemoji」(D-040)
+    // D-052: パネル内ヘッダーの「キャンセル」(左揃え)で閉じる。
     await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
+    expect(find.text('キャンセル'), findsNothing);
 
     // Search tab → trend words from plugin → trend TL.
     await tester.tap(find.byTooltip('検索'));
@@ -242,7 +248,28 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    expect(find.text('第3カラム'), findsOneWidget);
+    // 第3カラム (D-056): 空のときは検索が入る(プレースホルダーではなく)。
+    expect(find.byType(ThirdColumnView), findsOneWidget);
+    expect(find.descendant(of: find.byType(ThirdColumnView), matching: find.byType(SearchScreen)), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
+
+    // features が補助面を開ける → タイトル + ✕、閉じると検索へ戻る。
+    final ctx = tester.element(find.byType(ThirdColumnView));
+    final container = ProviderScope.containerOf(ctx, listen: false);
+    container.read(thirdColumnProvider.notifier).open(ThirdColumnEntry(id: 'test', title: '補助面テスト', builder: (_) => const Text('第3カラムの中身')));
+    await tester.pumpAndSettle();
+    expect(find.text('補助面テスト'), findsOneWidget);
+    expect(find.text('第3カラムの中身'), findsOneWidget);
+    await tester.tap(find.byTooltip('閉じる'));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byType(ThirdColumnView), matching: find.byType(SearchScreen)), findsOneWidget);
+
+    // 空時コンテンツの設定(歯車 → 表示しない)。
+    await tester.tap(find.byTooltip('第3カラムの設定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('表示しない'));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byType(ThirdColumnView), matching: find.byType(SearchScreen)), findsNothing);
+    expect(find.text('第3カラム'), findsOneWidget); // 空ビュー
   });
 }

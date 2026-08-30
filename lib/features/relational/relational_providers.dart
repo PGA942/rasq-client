@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_ml/rasq_ml.dart';
+import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
@@ -148,14 +149,61 @@ final eventSummaryProvider = FutureProvider.family<String?, String>((ref, eventI
   return gateway.summarize('次の会話を1文で要約:\n$text');
 });
 
+/// リノート/引用で運ばれてきた**非フォロイー(ゲスト)**の自前投稿 (D-046)。
+/// 「引用されたタイミングより前に話題について投稿していたら、遡ってページに
+/// 適用」のための供給源: 最近紹介されたゲストから最大 [maxGuests] 人の
+/// userPosts を引き、紹介時刻の 12 時間前まで遡って返す。エンジン側で
+/// 既存イベントへのリンクのみ(+guestBias で厳しめ)を許す。
+/// 紹介が古いゲストはそもそも取得しない = 追跡が自然に終わる(脱退)。
+final relationalGuestPostsProvider = FutureProvider<List<Post>>((ref) async {
+  const maxGuests = 8;
+  final session = ref.watch(currentSnsSessionProvider);
+  final home = ref.watch(timelineProvider(TimelineKind.home)).value;
+  if (session == null || home == null || home.posts.isEmpty) return const [];
+  final myKey = ref.watch(currentUserProvider).key;
+
+  // フォロイー = 自分の HTL に直接投稿が流れる人(非 RT の著者)+ リノート主。
+  final followees = <String>{};
+  for (final p in home.posts) {
+    followees.add(p.repostedBy?.key ?? p.author.key);
+  }
+  // ゲスト = RT で運ばれた著者 / 引用先の著者(フォロイー・自分を除く)。
+  final guests = <String, UserSummary>{};
+  final introducedAt = <String, DateTime>{};
+  void consider(UserSummary u, DateTime at) {
+    if (followees.contains(u.key) || u.key == myKey) return;
+    guests[u.key] = u;
+    final prev = introducedAt[u.key];
+    if (prev == null || at.isAfter(prev)) introducedAt[u.key] = at;
+  }
+
+  for (final p in home.posts) {
+    if (p.repostedBy != null) consider(p.author, p.createdAt);
+    if (p.quote != null) consider(p.quote!.author, p.createdAt);
+  }
+  if (guests.isEmpty) return const [];
+
+  final ranked = guests.keys.toList()..sort((a, b) => introducedAt[b]!.compareTo(introducedAt[a]!));
+  final fetched = await Future.wait([
+    for (final key in ranked.take(maxGuests))
+      session.userPosts(guests[key]!.id, limit: 20).then((page) {
+        final since = introducedAt[key]!.subtract(const Duration(hours: 12));
+        return [for (final q in page.items) if (q.createdAt.isAfter(since)) q];
+      }).catchError((_) => const <Post>[]),
+  ]);
+  return [for (final list in fetched) ...list];
+});
+
 final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>((ref) {
   final settings = ref.watch(relationalSettingsProvider);
   final lookbackMinutes = ref.watch(relationalLookbackProvider);
   final home = ref.watch(timelineProvider(TimelineKind.home));
   final ml = ref.watch(relationalMlProvider).value;
+  // 取得が終わるまではゲスト無しで組み、届いたら再構築(表示を待たせない)。
+  final guests = ref.watch(relationalGuestPostsProvider).value ?? const <Post>[];
 
   return home.whenData((h) {
     final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf);
-    return engine.build(followeePosts: h.posts, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
+    return engine.build(followeePosts: h.posts, guestPosts: guests, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
   });
 });

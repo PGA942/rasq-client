@@ -23,9 +23,12 @@ class RasqActionBarItem {
     this.enabled = true,
     this.doneColor,
     this.iconUrl,
+    this.iconText,
+    this.mutedIcon = false,
     this.onTap,
     this.onLongPress,
     this.onAnchorTap,
+    this.onAnchorLongPress,
   });
 
   /// タップ時にボタンの矩形が要る場合([onTap] より優先)。アクションリストの
@@ -52,9 +55,20 @@ class RasqActionBarItem {
   /// replaces [icon]; the host validation gate decides whether a plugin may
   /// set this at all, the bar just renders what it is given.
   final Uri? iconUrl;
+
+  /// テキスト(絵文字)アイコン差し替え (D-040)。[iconUrl] より優先。
+  final String? iconText;
+
+  /// true = 予測表示 (D-042): アイコンをグレースケール + 70% に減光して
+  /// 「まだ押していない」ことを視覚的に区別する。
+  final bool mutedIcon;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final ValueChanged<Rect>? onAnchorTap;
+
+  /// 長押し時にボタンの矩形が要る場合([onLongPress] より優先)。FOW を
+  /// 実物のアクションボタンへアンカーする(リアクションピッカー、D-065)。
+  final ValueChanged<Rect>? onAnchorLongPress;
 }
 
 /// How buttons are distributed across the bar.
@@ -101,10 +115,60 @@ class _ActionBarButton extends StatelessWidget {
   const _ActionBarButton({required this.item});
   final RasqActionBarItem item;
 
+  /// [RasqActionBarItem.onAnchorLongPress] があればボタン矩形付きで呼ぶ
+  /// (FOW の実物ボタンへのアンカー、D-065)。
+  VoidCallback? _longPress(BuildContext ctx) {
+    final anchorLp = item.onAnchorLongPress;
+    if (anchorLp == null) return item.onLongPress;
+    return () {
+      final box = ctx.findRenderObject() as RenderBox;
+      anchorLp(box.localToGlobal(Offset.zero) & box.size);
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final count = item.count ?? 0;
     final showCount = item.showCount;
+    // 予測表示の減光 (D-042): グレースケール + 70%。
+    Widget mute(Widget child) => item.mutedIcon
+        ? Opacity(
+            opacity: 0.7,
+            child: ColorFiltered(
+              colorFilter: const ColorFilter.matrix([
+                0.2126, 0.7152, 0.0722, 0, 0, //
+                0.2126, 0.7152, 0.0722, 0, 0,
+                0.2126, 0.7152, 0.0722, 0, 0,
+                0, 0, 0, 1, 0,
+              ]),
+              child: child,
+            ),
+          )
+        : child;
+    if (item.iconText != null) {
+      // テキスト(絵文字)アイコン差し替え (D-040: リアクション済み/予測表示)。
+      return Tooltip(
+        message: item.label,
+        child: Semantics(
+          button: true,
+          enabled: item.enabled,
+          selected: item.done,
+          label: item.label,
+          child: InkResponse(
+            onTap: item.enabled ? item.onTap : null,
+            onLongPress: item.enabled ? _longPress(context) : null,
+            radius: 24,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                mute(Text(item.iconText!, style: const TextStyle(fontSize: 17))),
+                if (showCount && count > 0) Padding(padding: const EdgeInsets.only(left: 4), child: Text('$count', style: RasqTypography.count)),
+              ]),
+            ),
+          ),
+        ),
+      );
+    }
     if (item.iconUrl != null) {
       // 投稿ごとのアイコン差し替え(SNS プラグイン配下のみ、D-017).
       return Tooltip(
@@ -116,12 +180,12 @@ class _ActionBarButton extends StatelessWidget {
           label: item.label,
           child: InkResponse(
             onTap: item.enabled ? item.onTap : null,
-            onLongPress: item.enabled ? item.onLongPress : null,
+            onLongPress: item.enabled ? _longPress(context) : null,
             radius: 24,
             child: ConstrainedBox(
               constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Image.network(item.iconUrl.toString(), width: 20, height: 20, errorBuilder: (_, _, _) => Icon(item.icon, size: 20)),
+                mute(Image.network(item.iconUrl.toString(), width: 20, height: 20, errorBuilder: (_, _, _) => Icon(item.icon, size: 20))),
                 if (showCount && count > 0) Padding(padding: const EdgeInsets.only(left: 4), child: Text('$count', style: RasqTypography.count)),
               ]),
             ),
@@ -148,7 +212,7 @@ class _ActionBarButton extends StatelessWidget {
                 count: count,
                 tooltip: item.label,
                 onTap: onTap,
-                onLongPress: item.onLongPress,
+                onLongPress: _longPress(ctx),
                 enabled: item.enabled,
               )
             : RasqActionButton.icon(
@@ -158,7 +222,7 @@ class _ActionBarButton extends StatelessWidget {
                 doneColor: item.doneColor,
                 tooltip: item.label,
                 onTap: onTap,
-                onLongPress: item.onLongPress,
+                onLongPress: _longPress(ctx),
                 enabled: item.enabled,
               );
       },

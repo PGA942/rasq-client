@@ -9,12 +9,14 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../compose/emoji_picker_fow.dart';
 import 'reaction_history.dart';
 import '../post/post_menu.dart';
+import '../settings/safety.dart';
 import 'action_bar_config.dart';
 
 /// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
@@ -28,7 +30,7 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false, this.showReplyParent = true});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -37,6 +39,17 @@ class PostRow extends ConsumerStatefulWidget {
 
   /// Embedded size (通知の投稿タイル系など): smaller avatar, no outer padding.
   final bool dense;
+
+  /// リプライ元投稿の省略タイルを上に出す (D-069)。スレッド展開画面の
+  /// ように文脈側が既に親を表示している場合は false。
+  final bool showReplyParent;
+
+  /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
+  static String? attachmentSummaryOf(Post p) {
+    if (p.media.isNotEmpty) return '${p.media.length}件の添付ファイル';
+    if (p.linkUrl != null) return '1件の添付リンク';
+    return null;
+  }
 
   /// Host icon registry: plugin icon names → Material glyphs (until the RASQ
   /// icon font lands).
@@ -74,6 +87,7 @@ class _PostRowState extends ConsumerState<PostRow> {
     final tokens = RasqTokens.of(context);
     final emojis = ref.watch(emojiCacheProvider);
     final isRead = ref.watch(isReadProvider(post.key));
+    final safety = ref.watch(safetySettingsProvider);
 
     // 省略表示: 既読かつ長文の投稿は先頭数行 + 「展開する」(Store 状態 → props).
     final lineCount = '\n'.allMatches(post.body).length + 1;
@@ -89,11 +103,13 @@ class _PostRowState extends ConsumerState<PostRow> {
     } else {
       final body = post.body.isNotEmpty ? RasqRichText(spans, style: RasqTypography.body) : const SizedBox.shrink();
       final cw = post.contentWarning;
-      content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, child: _CwBody(post: post, body: body)) : body;
+      content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, initiallyOpen: safety.openCw, child: _CwBody(post: post, body: body)) : body;
     }
     // When a CW is present, media/poll/quote live *inside* the CW reveal;
     // otherwise they fill the tile's own slots.
     final hasCw = !collapsible && (post.contentWarning?.isNotEmpty ?? false);
+    // 閲覧注意メディアの表示設定 (D-044: sns.safety) を適用。
+    final (mediaItems, mediaIndex) = safety.applyTo(post.media);
 
     // アクションバー編集(ホスト構成): リスト束ね・並び替え・非表示を適用して Props 化。
     final entries = ref.watch(actionBarConfigProvider).apply(widget.actions);
@@ -105,23 +121,62 @@ class _PostRowState extends ConsumerState<PostRow> {
         },
     ];
 
-    return RasqPostTile(
+    final tile = RasqPostTile(
       author: post.author,
       createdAt: post.createdAt,
       nameSpans: nameSpans,
       repostedBy: post.repostedBy,
       dense: widget.dense,
       content: content,
-      media: !collapsible && !hasCw && post.media.isNotEmpty ? RasqMediaGrid(items: post.media, onTapTile: (i) => context.openViewer(post, i)) : null,
+      media: !collapsible && !hasCw && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, onTapTile: (i) => context.openViewer(post, mediaIndex[i])) : null,
       poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
-      quote: !collapsible && !hasCw && post.quote != null ? quoteTile(context, post.quote!, emojis: emojis) : null,
-      actionBar: widget.actions.isEmpty
+      quote: !collapsible && !hasCw && post.quote != null ? quoteTile(context, post.quote!, emojis: emojis, safety: safety) : null,
+      actionBar: widget.actions.isEmpty && post.reactions.isEmpty
           ? null
-          : RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
+          : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              // 投稿内のリアクション数表示 (D-040): アクションバーの上に
+              // 角丸タイル(絵文字+数、自分のはハイライト、タップで同調/解除)。
+              if (post.reactions.isNotEmpty)
+                RasqReactionChips(
+                  reactions: post.reactions,
+                  emojiUrls: post.reactionEmojis,
+                  myReaction: post.myReaction,
+                  // チップにリアクションしたユーザー(アイコン+名前)を表示
+                  // (D-042)。チップを開いたときだけ SNS API を叩く。
+                  usersLoader: (r) async {
+                    final s = ref.read(currentSnsSessionProvider);
+                    if (s == null) return const [];
+                    try {
+                      return [for (final e in (await s.reactions(post.id, type: r, limit: 10)).items) e.user];
+                    } catch (_) {
+                      return const [];
+                    }
+                  },
+                  onTap: (r) {
+                    final a = widget.actions.where((x) => x.genreTag == 'Reaction').firstOrNull;
+                    if (a == null) return;
+                    if (r == post.myReaction) {
+                      widget.onAction(a).catchError((_) {}); // 自分の → 解除
+                    } else {
+                      widget.onAction(a, args: {'reaction': r}).then((_) => ref.read(reactionHistoryProvider.notifier).record(r)).catchError((_) {});
+                    }
+                  },
+                ),
+              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
+            ]),
       onTap: widget.onTap,
       onAuthorTap: () => context.pushUser(post.author),
       onMore: (anchor) => showPostMenu(context, ref, post, anchor),
     );
+    // リプライ元の省略タイル (D-069): TL に流れてきたリプライは、1 つ前の
+    // 投稿をワイヤーフレーム p.5(DM ルームの「1件の添付リンク」)の形で
+    // 上に出し、スレッド線で繋ぐ。タップで元投稿のスレッドへ。
+    final parent = post.replyTo;
+    if (parent == null || !widget.showReplyParent) return tile;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+      ReplyParentRow(post: parent),
+      tile,
+    ]);
   }
 
   /// ActionDescriptor + ActionState (Store) → ActionBar props.
@@ -131,6 +186,23 @@ class _PostRowState extends ConsumerState<PostRow> {
     final doneIcon = a.doneIcon == null ? null : PostRow.iconFor(a.doneIcon, icon);
     final isReaction = a.genreTag == 'Reaction';
     final isRepost = a.genreTag == 'Repost';
+    // 予測絵文字の表示 (D-041): リアクションしていない**全ての投稿**で、
+    // 表示されたタイミングにパッシブ計算(純ローカル、ネットワーク/ML なし)。
+    // Unicode はテキスト、カスタムは投稿の reactionEmojis から画像で表示。
+    String? iconText = st.iconText;
+    Uri? iconUrl = st.iconUrl;
+    var predictedIcon = false;
+    if (iconText == null && iconUrl == null && isReaction && !st.done) {
+      final predicted = ref.watch(reactionHistoryProvider).value == null ? null : ref.read(reactionHistoryProvider.notifier).predictFor(post);
+      if (predicted != null) {
+        if (predicted.startsWith(':')) {
+          iconUrl = post.reactionEmojis[predicted];
+        } else {
+          iconText = predicted;
+        }
+        predictedIcon = iconText != null || iconUrl != null;
+      }
+    }
     return RasqActionBarItem(
       id: a.id,
       label: a.label,
@@ -141,15 +213,22 @@ class _PostRowState extends ConsumerState<PostRow> {
       showCount: a.countSource != CountSource.none,
       enabled: st.enabled,
       doneColor: isReaction ? tokens.live : null,
-      iconUrl: st.iconUrl,
+      iconUrl: iconUrl,
+      iconText: iconText,
+      // 予測はグレースケール+70%減光で「未実行」を区別 (D-042)。
+      mutedIcon: predictedIcon,
       // Repost はデフォルトの**アクションバンドル**(D-039): タップで
       // リノート / 引用ノートのドロップダウン(ユーザー編集のリスト化とは
       // 別で、(+) の編集導線には出ない組み込みバンドル)。
       onTap: isRepost ? null : () => _performReactionAware(a, st),
       onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : null,
-      // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行
-      onLongPress: isReaction
-          ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', onPick: (e) {
+      // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行。
+      // ピッカーは**実物のリアクションボタンにアンカー**する (D-065:
+      // 基本下付き・余白不足で上付き。D-055 の複製バーは置かない)。
+      onAnchorLongPress: isReaction
+          ? (anchor) => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context), anchor: anchor,
+                  predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
+                  existingReactions: post.reactions, onPick: (e) {
                 widget.onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
               })
           : null,
@@ -187,7 +266,8 @@ class _PostRowState extends ConsumerState<PostRow> {
       case 'renote':
         await widget.onAction(a).catchError((_) {});
       case 'quote':
-        await showComposer(ref, ComposeQuote(post));
+        if (!mounted) return;
+        await showComposer(ref, ComposeQuote(post), column: fowColumnOf(context));
     }
   }
 
@@ -210,15 +290,42 @@ class _PostRowState extends ConsumerState<PostRow> {
       );
 
   /// 引用: 投稿カード(埋め込みサイズ)を再利用.
-  static Widget quoteTile(BuildContext context, Post q, {Map<String, Uri?> emojis = const {}}) => RasqPostTile(
-        variant: RasqPostTileVariant.embedded,
-        author: q.author,
-        createdAt: q.createdAt,
-        nameSpans: InlineSpans.parse(q.author.displayName, emojis: emojis),
-        content: q.body.isNotEmpty ? RasqRichText(InlineSpans.parse(q.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis) : const SizedBox.shrink(),
-        media: q.media.isNotEmpty ? RasqMediaGrid(items: q.media) : null,
-        onTap: () => context.pushPost(q),
-      );
+  static Widget quoteTile(BuildContext context, Post q, {Map<String, Uri?> emojis = const {}, SafetySettings safety = const SafetySettings()}) {
+    final (mediaItems, _) = safety.applyTo(q.media);
+    return RasqPostTile(
+      variant: RasqPostTileVariant.embedded,
+      author: q.author,
+      createdAt: q.createdAt,
+      nameSpans: InlineSpans.parse(q.author.displayName, emojis: emojis),
+      content: q.body.isNotEmpty ? RasqRichText(InlineSpans.parse(q.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis) : const SizedBox.shrink(),
+      media: mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems) : null,
+      onTap: () => context.pushPost(q),
+    );
+  }
+}
+
+/// リプライ元投稿の省略タイル(ホスト接着、D-069): RSL の 1 行抜粋・
+/// 添付サマリー・タップ遷移を [RasqReplyParentTile] の Props に写す。
+/// TL のリプライ(PostRow が上に積む)とスレッド展開画面の ancestors で共用。
+class ReplyParentRow extends ConsumerWidget {
+  const ReplyParentRow({super.key, required this.post, this.onTap});
+
+  /// リプライ元(親)の投稿。
+  final Post post;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final emojis = ref.watch(emojiCacheProvider);
+    final cw = post.contentWarning;
+    final spans = InlineSpans.parse(cw != null && cw.isNotEmpty ? '【CW: $cw】' : post.body, emojis: emojis);
+    return RasqReplyParentTile(
+      author: post.author,
+      attachmentSummary: PostRow.attachmentSummaryOf(post),
+      content: RasqRichText(spans, style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+      onTap: onTap ?? () => context.pushPost(post),
+    );
+  }
 }
 
 /// Body shown under an opened CW: text + media + poll + quote together.
@@ -229,11 +336,13 @@ class _CwBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final emojis = ref.watch(emojiCacheProvider);
+    final safety = ref.watch(safetySettingsProvider);
+    final (mediaItems, mediaIndex) = safety.applyTo(post.media);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       body,
-      if (post.media.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: post.media, onTapTile: (i) => context.openViewer(post, i))],
+      if (mediaItems.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: mediaItems, onTapTile: (i) => context.openViewer(post, mediaIndex[i]))],
       if (post.poll != null) ...[const SizedBox(height: RasqSpacing.sm), RasqPollWidget(poll: post.poll!)],
-      if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _PostRowState.quoteTile(context, post.quote!, emojis: emojis)],
+      if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _PostRowState.quoteTile(context, post.quote!, emojis: emojis, safety: safety)],
     ]);
   }
 }

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
+
+import '../app/providers.dart';
+import 'third_column.dart';
 
 /// ヘッダー4種 (原典: UI_Elements「ヘッダー（4種）」). All expose the same
 /// 56dp height so content offsets are stable across tabs.
@@ -95,25 +100,44 @@ class RasqPageHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 第3カラム内のページ (D-059): 戻りはこの < に統合される(カラム専用の
+    // ヘッダー行は出さない)。長押しで「どこまで戻るか」のドロップダウン
+    // (この長押し履歴は将来他の画面の < にも広げる予定)。
+    final paneEntry = PaneScope.maybeOf(context)?.entry;
+    final inPane = paneEntry != null && paneEntry.location != null;
     final bar = _HeaderBar(
       leading: Row(mainAxisSize: MainAxisSize.min, children: [
         // 既定の戻るは GoRouter を優先する — go_router 管理下のネスト
         // ナビゲータを直接 pop すると `!_debugLocked` アサーションで落ちる
         // ことがある(リストページ等の戻るボタン)。
-        RasqIconButton(
-          icon: Icons.arrow_back_ios_new,
-          size: 18,
-          onPressed: onBack ??
-              () {
-                final router = GoRouter.maybeOf(context);
-                if (router?.canPop() ?? false) {
-                  router!.pop();
-                } else {
-                  Navigator.of(context).maybePop();
-                }
-              },
-          tooltip: '戻る',
-        ),
+        Builder(builder: (ctx) {
+          return RasqActionButton.icon(
+            icon: Icons.arrow_back_ios_new,
+            tooltip: '戻る',
+            onTap: onBack ??
+                () {
+                  if (inPane) return paneBackTo(ctx, paneEntry, target: paneEntry.previous);
+                  final router = GoRouter.maybeOf(context);
+                  if (router?.canPop() ?? false) {
+                    router!.pop();
+                  } else {
+                    Navigator.of(context).maybePop();
+                  }
+                },
+            onLongPress: !inPane
+                ? null
+                : () async {
+                    final box = ctx.findRenderObject() as RenderBox;
+                    final anchor = box.localToGlobal(Offset.zero) & box.size;
+                    final manager = ProviderScope.containerOf(ctx, listen: false).read(overlayManagerProvider);
+                    final picked = await manager.showDropdown<(ThirdColumnEntry?,)>(id: 'thirdColumn.back', anchor: anchor, dense: true, items: [
+                      for (final p in paneBackChain(paneEntry)) RasqDropdownItem(p.title, (p,)),
+                      const RasqDropdownItem('閉じる', (null,)),
+                    ]);
+                    if (picked != null && ctx.mounted) paneBackTo(ctx, paneEntry, target: picked.$1);
+                  },
+          );
+        }),
         if (leadingAvatar != null) RasqAvatar(imageUrl: leadingAvatar!.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: leadingAvatar!.displayName),
       ]),
       middle: Text(title, style: RasqTypography.title, overflow: TextOverflow.ellipsis),

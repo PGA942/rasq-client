@@ -146,6 +146,7 @@ class NotificationTile extends ConsumerWidget {
       NotificationTileType.follow => _FollowTile(item: item),
       NotificationTileType.postTile => _PostTile(item: item),
       NotificationTileType.timer => _TimerTile(item: item),
+      NotificationTileType.system => _SystemTile(item: item),
     };
     return InkWell(
       onTap: () {
@@ -159,6 +160,29 @@ class NotificationTile extends ConsumerWidget {
       },
       child: Container(color: bg, padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.md), child: child),
     );
+  }
+}
+
+/// システム通知 (D-045): サーバー/アプリ発の見出し + 本文。actors に依存しない。
+class _SystemTile extends StatelessWidget {
+  const _SystemTile({required this.item});
+  final NotificationItem item;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(Icons.campaign_outlined, color: scheme.primary, size: 24),
+      const SizedBox(width: RasqSpacing.md),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(item.title ?? 'システム通知', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+          if (item.body != null && item.body!.isNotEmpty)
+            Padding(padding: const EdgeInsets.only(top: 2), child: Text(item.body!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 3, overflow: TextOverflow.ellipsis)),
+        ]),
+      ),
+      const SizedBox(width: RasqSpacing.sm),
+      RasqTimestamp(item.createdAt),
+    ]);
   }
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
@@ -37,8 +38,79 @@ class DmScreen extends ConsumerWidget {
             ]),
           ),
         ]),
+        // 新規メッセージ (D-045/D-046): 投稿と同じ + ボタン。ユーザーを選んで
+        // コンポーザー付きのルームを開く(既存ルームが無くても始められる)。
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _startNewDm(context, ref),
+          tooltip: '新規メッセージ',
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
+  }
+}
+
+Future<void> _startNewDm(BuildContext context, WidgetRef ref) async {
+  final manager = ref.read(overlayManagerProvider);
+  final rooms = ref.read(dmRoomsProvider).value ?? const <DmRoom>[];
+  final nav = context.pushDmRoom; // await 前に確保(deactivated-ancestor 対策)
+  final picked = await manager.showBottomSheet<UserSummary>(id: 'dm.new', title: '新規メッセージ', builder: (_) => const _UserPickSheet());
+  if (picked == null) return;
+  // 既存ルームがあればそれを開く(重複ルームを作らない)。
+  final existing = rooms.where((r) => r.peer.id == picked.id).firstOrNull;
+  nav(existing ?? DmRoom(id: 'dm:${picked.id}', peer: picked));
+}
+
+/// 相手を選ぶシート: 検索欄 + 結果リスト。選択で ルーム画面(コンポーザー付き)へ。
+class _UserPickSheet extends ConsumerStatefulWidget {
+  const _UserPickSheet();
+  @override
+  ConsumerState<_UserPickSheet> createState() => _UserPickSheetState();
+}
+
+class _UserPickSheetState extends ConsumerState<_UserPickSheet> {
+  String _q = '';
+  Future<List<UserSummary>>? _results;
+
+  void _search(String q) {
+    final session = ref.read(currentSnsSessionProvider);
+    setState(() {
+      _q = q.trim();
+      _results = _q.isEmpty || session == null ? null : session.searchUsers(_q, limit: 20).then((p) => p.items);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
+        child: RasqSearchBar(hintText: 'ユーザー名で検索..', onChanged: _search),
+      ),
+      Flexible(
+        child: _results == null
+            ? Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('DM を送る相手を検索します。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)))
+            : FutureBuilder(
+                future: _results,
+                builder: (context, snap) {
+                  if (!snap.hasData && snap.error == null) return const RasqLoading();
+                  final users = snap.data ?? const <UserSummary>[];
+                  if (users.isEmpty) return const RasqEmptyView(title: '見つかりませんでした');
+                  return ListView(shrinkWrap: true, children: [
+                    for (final u in users)
+                      RasqListTile(
+                        leading: RasqAvatar(imageUrl: u.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: u.displayName),
+                        title: u.displayName,
+                        subtitle: '@${u.handle}',
+                        onTap: () => ref.read(overlayManagerProvider).close('dm.new', result: u),
+                      ),
+                  ]);
+                },
+              ),
+      ),
+    ]);
   }
 }
 

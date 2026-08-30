@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -38,11 +39,31 @@ class ReactionHistoryStore extends AsyncNotifier<Map<String, int>> {
     await ref.read(sessionStorageProvider).write(reactionHistoryStorageKey, jsonEncode(trimmed));
   }
 
-  /// 投稿 [post] への短押しリアクションの予測。
+  /// 投稿 [post] への短押しリアクションの予測 (D-041 改)。
+  ///
+  /// 1. **既に複数回リアクションされている投稿** → その投稿のリアクションの
+  ///    中から選出。順位が上のものほど**指数関数的に**選ばれやすい
+  ///    (重み 2^-rank、post.key シードの決定的乱択 — 表示が投稿ごとに
+  ///    安定しつつ、毎回 1 位ばかりにはならない)
+  /// 2. それ以外 → 自分の履歴 × 投稿の既存リアクションの交差 → 自分の最頻
+  ///
+  /// 計算は純ローカル(ネットワーク・ML なし)なので、**表示されたタイミングの
+  /// パッシブ駆動**で全投稿に対して走らせてよい。
   String? predictFor(Post post) {
+    final total = post.reactions.values.fold<int>(0, (a, b) => a + b);
+    if (total >= 2) {
+      final ranked = post.reactions.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+      final weights = [for (var i = 0; i < ranked.length; i++) math.pow(2.0, -i).toDouble()];
+      final sum = weights.fold<double>(0, (a, b) => a + b);
+      var roll = math.Random(post.key.hashCode).nextDouble() * sum;
+      for (var i = 0; i < ranked.length; i++) {
+        roll -= weights[i];
+        if (roll <= 0) return ranked[i].key;
+      }
+      return ranked.first.key;
+    }
     final counts = state.value ?? const <String, int>{};
     if (counts.isEmpty) return null;
-    // 1. 投稿に付いているリアクション × 自分の履歴。
     String? best;
     var bestScore = 0;
     for (final r in post.reactions.keys) {
@@ -53,7 +74,6 @@ class ReactionHistoryStore extends AsyncNotifier<Map<String, int>> {
       }
     }
     if (best != null) return best;
-    // 2. 自分の最頻絵文字。
     return (counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).first.key;
   }
 }

@@ -38,6 +38,35 @@ void main() {
     controller.dispose();
   });
 
+  test('FOW surface (D-064): ワーカー中継で fow.open → タップで fow.close → onClosed 通知', () async {
+    final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false);
+    await controller.load();
+    WasmFowRequest? opened;
+    final closes = <(String, Object?)>[];
+    controller.onFowOpen = (req) => opened = req;
+    controller.onFowClose = (id, {result, reason}) => closes.add((id, result));
+
+    final result = await controller.invoke('pickReaction', {'postId': 'p1'});
+    expect(result['ok'], true, reason: '$result');
+    expect((result['value'] as Map)['opened'], true); // v1 = 受理
+    // fow.open はワーカーから fire-and-forget で中継される — 到着を待つ。
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(opened, isNotNull);
+    expect(opened!.document.root.findByKey('emoji-tada'), isNotNull);
+
+    controller.handleEvent('${opened!.document.scope}:emoji-tada', 'tap', fn: 'reactFromFow');
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    expect(closes.single.$1, 'reaction-picker');
+    expect(closes.single.$2, '🎉');
+
+    controller.notifyFowClosed('reaction-picker', reason: 'dismissed', result: '🎉');
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final last = await controller.invoke('lastFowClosed');
+    expect((last['value'] as Map)['reason'], 'dismissed');
+    expect((last['value'] as Map)['result'], '🎉');
+    controller.dispose();
+  });
+
   test('handleEvent は fire-and-forget で call になる', () async {
     final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false);
     await controller.load();

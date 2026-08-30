@@ -47,10 +47,13 @@ class Post {
     this.media = const [],
     this.poll,
     this.quote,
+    this.replyTo,
+    this.replyToId,
     this.repostedBy,
     this.linkUrl,
     this.counts = const {},
     this.visibility,
+    this.localOnly = false,
     this.directToIds = const [],
     this.reactions = const {},
     this.reactionEmojis = const {},
@@ -71,6 +74,13 @@ class Post {
   final List<MediaItem> media;
   final Poll? poll;
   final Post? quote;
+
+  /// リプライ元投稿 (D-069)。TL・リプライ欄では省略タイル
+  /// (ワイヤーフレーム p.5「1件の添付リンク」の形)で上に表示する。
+  final Post? replyTo;
+
+  /// リプライ元の id([replyTo] 本体が来ない SNS/文脈でも判定に使える)。
+  final String? replyToId;
   final UserSummary? repostedBy;
   final Uri? linkUrl;
 
@@ -79,6 +89,10 @@ class Post {
 
   /// Plugin visibility string (`public` / `home` / `followers` / `specified` …).
   final String? visibility;
+
+  /// 連合しない投稿 (Misskey `localOnly`)。返信/引用は連合可視性を親より
+  /// 広げられないため、コンポーザーが継承判定に使う (D-047)。
+  final bool localOnly;
 
   /// Recipient user ids for direct posts (Misskey `visibleUserIds`).
   final List<String> directToIds;

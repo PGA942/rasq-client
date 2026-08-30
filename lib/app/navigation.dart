@@ -2,6 +2,12 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../features/post/post_detail_screen.dart';
+import '../features/post/reactions_screen.dart';
+import '../features/trend/trend_screen.dart';
+import '../features/users/follows_screen.dart';
+import '../features/users/user_page_screen.dart';
+import '../shell/third_column.dart';
 import 'router.dart';
 
 /// Navigation helpers shared by rows/screens.
@@ -22,12 +28,20 @@ extension RasqNavigation on BuildContext {
   /// global nav stays visible; タブ外ではアプリ直下ルートへ).
   void pushPost(Post post) {
     final base = _inTab ? _tabBase : '';
-    push('$base/post/${Uri.encodeComponent(post.id)}', extra: post);
+    final loc = '$base/post/${Uri.encodeComponent(post.id)}';
+    // ペインモデル (D-057): タブレット幅では第3カラム(current)に開く。
+    if (_inTab && openPageInPanes(this, id: 'post:${post.key}', title: '投稿', location: loc, extra: post, builder: (_) => PostDetailScreen(postId: post.id, initial: post))) return;
+    push(loc, extra: post);
   }
 
   void pushReactions(Post post) {
-    final loc = GoRouterState.of(this).matchedLocation;
-    push('$loc/reactions', extra: post);
+    // 第3カラム内 (D-061): matchedLocation は第2カラムのルートを指すため、
+    // entry 自身の location を基準にする(そのままだとリンクが切れる)。
+    final pane = PaneScope.maybeOf(this)?.entry;
+    final base = pane?.location ?? GoRouterState.of(this).matchedLocation;
+    final loc = '$base/reactions';
+    if ((pane != null || _inTab) && openPageInPanes(this, id: 'reactions:${post.key}', title: 'リアクション', location: loc, extra: post, builder: (_) => ReactionsScreen(postId: post.id, initial: post))) return;
+    push(loc, extra: post);
   }
 
   String get _tabBase {
@@ -44,16 +58,30 @@ extension RasqNavigation on BuildContext {
   }
 
   void pushClip(ClipInfo clip) => push('/clips/detail', extra: clip);
-  void pushUser(UserSummary user) => push('${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}', extra: user);
-  void pushFollows(UserSummary user, {required bool followers}) => push('${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}/follows${followers ? '?tab=followers' : ''}', extra: user);
+  void pushUser(UserSummary user) {
+    final loc = '${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}';
+    if (_inTab && openPageInPanes(this, id: 'user:${user.key}', title: user.displayName, location: loc, extra: user, builder: (_) => UserPageScreen(userId: user.id, initial: user))) return;
+    push(loc, extra: user);
+  }
+  void pushFollows(UserSummary user, {required bool followers}) {
+    final loc = '${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}/follows${followers ? '?tab=followers' : ''}';
+    if (_inTab && openPageInPanes(this, id: 'follows:${user.key}:$followers', title: followers ? 'フォロワー' : 'フォロー中', location: loc, extra: user, builder: (_) => FollowsScreen(userId: user.id, initialFollowers: followers, user: user))) return;
+    push(loc, extra: user);
+  }
   void pushFollowRequests() => push('${Routes.notifications}/requests');
   void pushMuteBlock() => push('${Routes.settings}/mute-block');
   void openViewer(Post post, int index) => push(Routes.viewer, extra: (post: post, index: index));
 
-  void pushTrend(String tag) => push('${_inTab ? '${Routes.search}/trend' : '/trend'}/${Uri.encodeComponent(tag)}');
+  void pushTrend(String tag) {
+    final loc = '${_inTab ? '${Routes.search}/trend' : '/trend'}/${Uri.encodeComponent(tag)}';
+    if (_inTab && openPageInPanes(this, id: 'trend:$tag', title: '#$tag', location: loc, builder: (_) => TrendScreen(tag: tag))) return;
+    push(loc);
+  }
 
   /// トレンドTL上で検索を続ける(現在の結果画面を置き換える)。
   void replaceTrend(String tag) {
+    // 第3カラム内 (D-061): entry を差し替える(第2カラムへは移さない)。
+    if (replacePageInPane(this, id: 'trend:$tag', title: '#$tag', location: '${Routes.search}/trend/${Uri.encodeComponent(tag)}', builder: (_) => TrendScreen(tag: tag))) return;
     final loc = GoRouterState.of(this).matchedLocation;
     final base = loc.startsWith('/trend') ? '/trend' : '${Routes.search}/trend';
     pushReplacement('$base/${Uri.encodeComponent(tag)}');

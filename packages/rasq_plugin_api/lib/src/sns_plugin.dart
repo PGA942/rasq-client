@@ -11,6 +11,13 @@ abstract class SnsPlugin {
   PluginManifest get manifest;
   SnsKind get kind;
 
+  /// 設定第二階層ページ (D-044): `rasq.settings-page/1` JSON ドキュメント。
+  /// `area` は短名(`account` / `timeline` …)。ホストが `/settings/dsl/
+  /// sns.<area>` に割り当て、ローカル保存ページの値はアカウント毎 KV
+  /// `sns.<pluginId>.<area>.v1` に置く(`source: "remote"` のページは
+  /// [SnsSession.settingsRead]/[SnsSession.settingsWrite] 経由でサーバー保存)。
+  List<String> get settingsPages => const [];
+
   /// Normalises user input ("misskey.io", "https://misskey.io/") to a host.
   String normalizeHost(String input) {
     var s = input.trim();

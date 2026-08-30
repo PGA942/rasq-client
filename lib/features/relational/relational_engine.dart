@@ -143,6 +143,7 @@ class RelationalSettings {
     this.minTtlMinutes = 5,
     this.maxTtlMinutes = 30,
     this.tauSeconds = 600,
+    this.guestBias = 0.07,
     this.weights = const LinkWeights(),
   });
 
@@ -165,19 +166,25 @@ class RelationalSettings {
   /// 時間減衰 e^(-Δt/τ) の τ(秒)。
   final int tauSeconds;
 
+  /// ゲスト(リノート/引用で運ばれてきた非フォロイー)のリンクしきい値への
+  /// 加算 (D-046)。フォロイーより**少し厳しめ**に束ね、無関係な投稿で
+  /// ページに残り続けない(脱退しやすい)ようにする。
+  final double guestBias;
+
   /// リンク採点の重み。
   final LinkWeights weights;
 
   /// スライダー値 → しきい値オフセット(-0.25〜+0.25)。
   double get biasOffset => (linkBias.clamp(50, 100) - 75) / 100.0;
 
-  RelationalSettings copyWith({int? linkBias, int? candidateWindowMinutes, int? tentativeHoldSeconds, int? minTtlMinutes, int? maxTtlMinutes, int? tauSeconds, LinkWeights? weights}) => RelationalSettings(
+  RelationalSettings copyWith({int? linkBias, int? candidateWindowMinutes, int? tentativeHoldSeconds, int? minTtlMinutes, int? maxTtlMinutes, int? tauSeconds, double? guestBias, LinkWeights? weights}) => RelationalSettings(
         linkBias: linkBias ?? this.linkBias,
         candidateWindowMinutes: candidateWindowMinutes ?? this.candidateWindowMinutes,
         tentativeHoldSeconds: tentativeHoldSeconds ?? this.tentativeHoldSeconds,
         minTtlMinutes: minTtlMinutes ?? this.minTtlMinutes,
         maxTtlMinutes: maxTtlMinutes ?? this.maxTtlMinutes,
         tauSeconds: tauSeconds ?? this.tauSeconds,
+        guestBias: guestBias ?? this.guestBias,
         weights: weights ?? this.weights,
       );
 
@@ -188,6 +195,7 @@ class RelationalSettings {
         'minTtlMinutes': minTtlMinutes,
         'maxTtlMinutes': maxTtlMinutes,
         'tauSeconds': tauSeconds,
+        'guestBias': guestBias,
         'weights': weights.toJson(),
       };
 
@@ -201,6 +209,7 @@ class RelationalSettings {
       minTtlMinutes: i('minTtlMinutes', def.minTtlMinutes),
       maxTtlMinutes: i('maxTtlMinutes', def.maxTtlMinutes),
       tauSeconds: i('tauSeconds', def.tauSeconds),
+      guestBias: (json['guestBias'] as num?)?.toDouble() ?? def.guestBias,
       weights: json['weights'] is Map ? LinkWeights.fromJson((json['weights'] as Map).cast<String, Object?>()) : def.weights,
     );
   }
@@ -212,9 +221,11 @@ typedef PostSimilarity = double Function(Post a, Post b);
 
 /// 特徴語: #タグ / @メンション / 固有名詞近似(2文字以上のカタカナ・英数語、
 /// 2文字以上の漢字連続)。GLiNER 配線後はゼロショット抽出結果を加える。
-Set<String> extractFeatures(Post p) {
+Set<String> extractFeatures(Post p) => extractFeaturesText('${p.body} ${p.quote?.body ?? ''}');
+
+/// 生テキスト版 (D-070: リノートした人のプロフィール文からのソートに使う)。
+Set<String> extractFeaturesText(String text) {
   final out = <String>{};
-  final text = '${p.body} ${p.quote?.body ?? ''}';
   for (final m in RegExp(r'#([^\s#＃]+)').allMatches(text)) {
     out.add(m.group(1)!.toLowerCase());
   }
@@ -407,7 +418,14 @@ class ConversationEvent {
 
   void add(Post p) {
     intervalSeconds.add(p.createdAt.difference(lastActivityAt).inSeconds.abs());
-    posts.add(p);
+    // ゲストの遡及投稿 (D-046) は過去時刻で入ることがある → 時系列位置に挿入
+    // (ROOT より前の投稿は新しい開始点としてページ先頭に並ぶ)。
+    final idx = posts.indexWhere((q) => q.createdAt.isAfter(p.createdAt));
+    if (idx < 0) {
+      posts.add(p);
+    } else {
+      posts.insert(idx, p);
+    }
     postKeys.add(p.key);
     entities.addAll(extractFeatures(p));
     anchors.addAll(strongAnchors(p));
@@ -493,14 +511,16 @@ class ConversationEngine {
   }
 
   /// P(p が イベント e への暗黙応答)。ルール重み(将来 LightGBM に置換)。
+  /// [timeRef] を渡すと時間減衰の基準を差し替える(ゲストの遡及投稿 D-046:
+  /// 最終活動ではなく**最も近い所属投稿**との時間差で測る)。
   @visibleForTesting
-  double linkScore(Post p, ConversationEvent e, UserPairAffinity affinity, {required bool anchorMatch, required bool hardMatch}) {
+  double linkScore(Post p, ConversationEvent e, UserPairAffinity affinity, {required bool anchorMatch, required bool hardMatch, DateTime? timeRef}) {
     final w = settings.weights;
     var content = 0.0;
     for (final q in {...e.anchorPosts, ...e.recentPosts}) {
       content = math.max(content, _contentPair(p, q));
     }
-    final dtSec = p.createdAt.difference(e.lastActivityAt).inSeconds.abs();
+    final dtSec = p.createdAt.difference(timeRef ?? e.lastActivityAt).inSeconds.abs();
     final timeDecay = math.exp(-dtSec / settings.tauSeconds);
     final overlap = entityOverlap(extractFeatures(p), e.entities);
     final entityScore = overlap >= 2 ? 1.0 : (overlap == 1 ? 0.6 : 0.0);
@@ -534,7 +554,15 @@ class ConversationEngine {
   /// フォロイーの投稿列から会話イベントを組む(仮 ROOT 含む全イベント)。
   /// GTL/トレンド候補の連結は v1 で**廃止**(人気話題が複数コミュニティを
   /// 誤結合するハブになるため。残すなら確定後の背景情報検索に分離する)。
-  List<ConversationEvent> buildAll({required List<Post> followeePosts, DateTime? now}) {
+  ///
+  /// [guestPosts] (D-046) = リノート/引用で運ばれてきた**非フォロイー**の
+  /// 自前タイムライン。フォロイーのイベントが組み上がった後に接続する:
+  /// - 既存イベントへのリンクのみ(**新しい ROOT にはならない**)
+  /// - しきい値は `+guestBias` で少し厳しめ(無関係な投稿で残らない = 脱退
+  ///   しやすい)
+  /// - 引用されたタイミングより**前**の投稿でも、話題が繋がれば時系列位置に
+  ///   遡って挿入される
+  List<ConversationEvent> buildAll({required List<Post> followeePosts, List<Post> guestPosts = const [], DateTime? now}) {
     final posts = [...followeePosts]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     final events = <ConversationEvent>[];
     final affinity = UserPairAffinity();
@@ -578,7 +606,47 @@ class ConversationEngine {
       }
       prev = p;
     }
+    _attachGuestPosts(events, guestPosts, affinity);
     return events;
+  }
+
+  /// ゲスト投稿の接続 (D-046)。イベント確定後に走る後段パスなので、過去方向
+  /// (引用より前の投稿)にもリンクできる。
+  void _attachGuestPosts(List<ConversationEvent> events, List<Post> guestPosts, UserPairAffinity affinity) {
+    if (guestPosts.isEmpty || events.isEmpty) return;
+    final window = Duration(minutes: settings.candidateWindowMinutes);
+    final sorted = [...guestPosts]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    for (final p in sorted) {
+      // RT でホーム TL に既に載っている投稿はそのまま(重複挿入しない)。
+      if (events.any((e) => e.postKeys.contains(p.key))) continue;
+      ConversationEvent? best;
+      var bestScore = 0.0;
+      DateTime? bestRef;
+      for (final e in events) {
+        final hardMatch = hardAnchors(p).any(e.hardAnchorSet.contains);
+        // 最も近い所属投稿との時間差(遡及なので lastActivity 基準にしない)。
+        var ref = e.lastActivityAt;
+        var refDt = p.createdAt.difference(ref).inSeconds.abs();
+        for (final q in e.posts) {
+          final dt = p.createdAt.difference(q.createdAt).inSeconds.abs();
+          if (dt < refDt) {
+            refDt = dt;
+            ref = q.createdAt;
+          }
+        }
+        if (Duration(seconds: refDt) > window && !hardMatch) continue;
+        final anchorMatch = hardMatch || strongAnchors(p).any(e.anchors.contains);
+        final s = linkScore(p, e, affinity, anchorMatch: anchorMatch, hardMatch: hardMatch, timeRef: ref);
+        if (s > bestScore) {
+          bestScore = s;
+          best = e;
+          bestRef = ref;
+        }
+      }
+      // ゲストはリンクのみ(ROOT を作らない)+ しきい値は少し厳しめ。
+      final threshold = (thresholdFor(communityOf?[p.author.key]) + settings.guestBias).clamp(0.3, 0.98);
+      if (best != null && bestRef != null && bestScore >= threshold) best.add(p);
+    }
   }
 
   /// 表示対象 = ACTIVE のイベントだけ、活動が新しい順。仮 ROOT(単独投稿)は
@@ -588,9 +656,9 @@ class ConversationEngine {
   /// [lookback] を渡すと、TTL で沈んだ(DORMANT/CLOSED)会話も最終活動が
   /// lookback 以内なら表示に含める(D-028: アクティブフォロイーが少ない
   /// ときに、リスト末尾で引っ張って過去の空リプを遡るため)。
-  List<ConversationEvent> build({required List<Post> followeePosts, DateTime? now, Duration? lookback}) {
+  List<ConversationEvent> build({required List<Post> followeePosts, List<Post> guestPosts = const [], DateTime? now, Duration? lookback}) {
     final clock = now ?? DateTime.now();
-    final all = buildAll(followeePosts: followeePosts, now: clock);
+    final all = buildAll(followeePosts: followeePosts, guestPosts: guestPosts, now: clock);
     final out = [
       for (final e in all)
         if (e.posts.length >= 2 && (e.stateAt(clock, settings) == ConversationState.active || (lookback != null && clock.difference(e.lastActivityAt) <= lookback))) e,

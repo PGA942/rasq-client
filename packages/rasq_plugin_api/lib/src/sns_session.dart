@@ -95,9 +95,25 @@ abstract class SnsSession {
   Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30});
   Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30});
 
+  /// 引用ノート一覧 (D-070: スレッド画面/リアクション画面の「共有(引用
+  /// ノート)」欄)。
+  Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30});
+
   // --- ユーザー一括 ---
   Future<List<UserProfile>> users(List<String> ids);
   Future<Map<String, FollowState>> relationships(List<String> userIds);
+
+  // --- プラグイン設定 (D-044: rasq.settings-page/1) ---
+  /// ローカル保存ページ(source: local)の値をセッションへ反映する。ホストが
+  /// 値の変更毎(+ 最初のタイムライン取得前)に呼ぶ。[values] は defaults
+  /// マージ済み。既定は no-op — 設定を持たないプラグインはそのままでよい。
+  Future<void> applySettings(String area, Map<String, Object?> values) async {}
+
+  /// remote ページ(source: "remote")の現在値(サーバー側設定)。
+  Future<Map<String, Object?>> settingsRead(String area) => throw UnsupportedError('$pluginId does not support settingsRead');
+
+  /// remote ページの 1 キー書き込み。戻り値 = 書き込み後の最新値マップ。
+  Future<Map<String, Object?>> settingsWrite(String area, String key, Object? value) => throw UnsupportedError('$pluginId does not support settingsWrite');
 
   // --- コンポーザー ---
   int get maxPostLength;
@@ -115,7 +131,10 @@ abstract class SnsSession {
 }
 
 /// Filter for [SnsSession.userPosts] (ユーザーページのタブ).
-enum UserPostsFilter { posts, withReplies, media, quotes }
+/// [posts] = ノート(返信・引用を除く)、[replies] = 返信のみ(返信TL)、
+/// [quotes] = 引用のみ(引用TL)— 返信と引用はそれぞれの TL へ振り分ける
+/// (D-069)。[withReplies] = ノート + 返信の混在(旧来の互換)。
+enum UserPostsFilter { posts, withReplies, replies, media, quotes }
 
 /// Well-known dynamic timeline ids understood by adapters via [SnsSession.timeline]:
 /// `tag:{tag}` (トレンドTL), `dm:{peerUserId}` (DMルーム), `featured` (Today).
@@ -231,9 +250,17 @@ abstract class SnsSessionBase implements SnsSession {
   @override
   Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) => _unsupported('reposters');
   @override
+  Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30}) => _unsupported('quotes');
+  @override
   Future<List<UserProfile>> users(List<String> ids) => _unsupported('users');
   @override
   Future<Map<String, FollowState>> relationships(List<String> userIds) => _unsupported('relationships');
+  @override
+  Future<void> applySettings(String area, Map<String, Object?> values) async {}
+  @override
+  Future<Map<String, Object?>> settingsRead(String area) => _unsupported('settingsRead');
+  @override
+  Future<Map<String, Object?>> settingsWrite(String area, String key, Object? value) => _unsupported('settingsWrite');
   @override
   int get maxPostLength => 500;
   @override

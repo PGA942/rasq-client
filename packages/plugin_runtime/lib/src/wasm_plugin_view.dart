@@ -4,6 +4,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
+import 'wasm_fow.dart';
 import 'wasm_plugin_controller.dart';
 
 /// Renders a [WasmPluginController]'s document through [RrlRenderer] and
@@ -39,10 +40,47 @@ class WasmPluginView extends StatelessWidget {
             scope: RrlScope({}),
             rslParser: rslParser,
             slots: slots,
+            // 実物ジオメトリ (D-072): role 付きノードの矩形を登録 → FOW の
+            // 実物アンカー(fow.open anchor)が引く。
+            geometry: controller.geometry,
             onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
           ),
         );
       },
     );
   }
+}
+
+/// プラグインが `fow.open` で渡した RRL ツリーを FOW の中身として描画する
+/// (D-064: FOW の RRL surface 化)。イベントは通常ページと同じ経路で
+/// プラグインの関数 `call` に戻る。中身の更新は同一 id での `fow.open`
+/// 再要求 = リクエスト差し替え(このウィジェットごと作り直される)。
+class WasmFowView extends StatelessWidget {
+  const WasmFowView({super.key, required this.controller, required this.request, this.rslParser});
+
+  final WasmPluginViewModel controller;
+  final WasmFowRequest request;
+  final List<RasqSpan> Function(String source)? rslParser;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          // surface patch (D-073) 適用後の最新ドキュメントを読み直す。
+          final c = controller;
+          final doc = (c is WasmFowSurfaceHost ? (c as WasmFowSurfaceHost).fowDocument(request.id) : null) ?? request.document;
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            child: RrlRenderer(
+              node: doc.root,
+              host: RrlHost(
+                instanceScope: doc.scope,
+                scope: RrlScope({}),
+                rslParser: rslParser,
+                onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
+              ),
+            ),
+          );
+        },
+      );
 }

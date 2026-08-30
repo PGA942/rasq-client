@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:rasq_wasm_runtime/rasq_wasm_runtime.dart';
 import 'package:rrl_core/rrl_core.dart';
+import 'package:rrl_renderer/rrl_renderer.dart' show RrlGeometryRegistry;
 
 import 'host_environment.dart';
+import 'wasm_fow.dart';
 
 /// [WasmPluginView] が要求する最小面(同期/非同期コントローラ共通)。
 abstract class WasmPluginViewModel implements Listenable {
@@ -12,6 +14,11 @@ abstract class WasmPluginViewModel implements Listenable {
   String? get lastError;
   Map<String, dynamic>? get lastResult;
   void handleEvent(String nodeId, String kind, {String? fn, Map<String, Object?> payload});
+
+  /// 実物ジオメトリの登録簿 (D-072): レンダラーが role 付きノードを登録し、
+  /// FOW の実物アンカー(`fow.open` の `anchor`)や `geometry.lookup` が
+  /// ここから矩形を引く。コントローラ寿命で安定。
+  RrlGeometryRegistry get geometry;
 }
 
 /// Owns one WASM plugin instance and its live [RrlDocument].
@@ -28,13 +35,16 @@ abstract class WasmPluginViewModel implements Listenable {
 ///
 /// v1 calls are synchronous on the calling isolate (PROTOCOL §4.1) — run
 /// heavy plugins off the UI isolate later.
-class WasmPluginController extends ChangeNotifier implements WasmPluginViewModel {
+class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin implements WasmPluginViewModel {
   WasmPluginController({required Uint8List wasmBytes, RasqHostEnvironment? env})
       : _bytes = wasmBytes,
         env = env ?? RasqHostEnvironment();
 
   final Uint8List _bytes;
   final RasqHostEnvironment env;
+
+  @override
+  final RrlGeometryRegistry geometry = RrlGeometryRegistry();
 
   RasqWasmPlugin? _plugin;
   RrlDocument? _document;
@@ -55,6 +65,9 @@ class WasmPluginController extends ChangeNotifier implements WasmPluginViewModel
 
   void load() {
     if (_plugin != null) return;
+    // fow.open/close の中継 (D-064): 環境の検証を通った要求を UI 側
+    // コールバック(onFowOpen/onFowClose)へ写す。
+    env.onFow ??= (fn, args) => handleFowHostFn(fn, args, scope: _document?.scope ?? 'plugin');
     try {
       _plugin = RasqWasmPlugin.fromBytes(_bytes, hostFn: env.dispatch, nativeFetch: env.nativeFetch);
       _lastError = null;
@@ -83,8 +96,11 @@ class WasmPluginController extends ChangeNotifier implements WasmPluginViewModel
     final plugin = _require();
     final result = (jsonDecode(plugin.call(fn: fn, argsJson: jsonEncode(args), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
     _lastResult = result;
-    if (result['ok'] == true && (result['value'] as Map?)?['treeUpdated'] == true) {
+    final value = result['ok'] == true ? result['value'] as Map? : null;
+    if (value?['treeUpdated'] == true) {
       pullSnapshot();
+    } else if (value?['patch'] == true) {
+      applyPatch(); // 保留パッチの引き取り (D-073)
     } else {
       notifyListeners();
     }
@@ -92,12 +108,25 @@ class WasmPluginController extends ChangeNotifier implements WasmPluginViewModel
   }
 
   /// Pulls one `patch` message and applies it; rev mismatch → resync.
+  /// `surface` 指定 (D-073) は該当 FOW ドキュメントへ(不一致は破棄)。
   void applyPatch() {
     final plugin = _require();
+    final Map<String, Object?> message;
+    try {
+      message = (jsonDecode(plugin.patch()) as Map).cast<String, Object?>();
+    } catch (e) {
+      _lastError = 'patch failed: $e';
+      notifyListeners();
+      return;
+    }
+    if (message['surface'] != null) {
+      _lastError = applyFowPatch(message);
+      notifyListeners();
+      return;
+    }
     final doc = _document;
     if (doc == null) return pullSnapshot();
     try {
-      final message = (jsonDecode(plugin.patch()) as Map).cast<String, Object?>();
       _document = doc.applyPatch(message);
       _lastError = null;
       notifyListeners();
@@ -114,6 +143,12 @@ class WasmPluginController extends ChangeNotifier implements WasmPluginViewModel
   void handleEvent(String nodeId, String kind, {String? fn, Map<String, Object?> payload = const {}}) {
     if (fn == null) return; // node declared no handler for this kind
     invoke(fn, {'nodeId': nodeId, 'kind': kind, ...payload});
+  }
+
+  @override
+  void invokePluginCallback(String fn, Map<String, Object?> args) {
+    if (_plugin == null) return; // dispose 後(closeOwnedBy 連動)は通知不要
+    invoke(fn, args);
   }
 
   RasqWasmPlugin _require() {

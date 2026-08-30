@@ -92,6 +92,50 @@ void main() {
     expect(changed!.end, closeTo(30, 1));
   });
 
+  test('RasqCustomEmoji.displayWidth: 可変幅ルール (D-040)', () {
+    // アスペクト比 3 まで → 高さ固定・幅可変。
+    expect(RasqCustomEmoji.displayWidth(1.0, 20), 20);
+    expect(RasqCustomEmoji.displayWidth(2.5, 20), 50);
+    expect(RasqCustomEmoji.displayWidth(3.0, 20), 60);
+    // それ以上に横長 → 幅 2×高さで固定。
+    expect(RasqCustomEmoji.displayWidth(3.1, 20), 40);
+    expect(RasqCustomEmoji.displayWidth(8.0, 20), 40);
+  });
+
+  testWidgets('RasqReactionChips: 件数・+N・自分のハイライト・タップ (D-040)', (tester) async {
+    String? tapped;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: RasqReactionChips(
+          reactions: const {'👍': 3, '🎉': 2, '😂': 1},
+          myReaction: '🎉',
+          maxChips: 2,
+          onTap: (r) => tapped = r,
+        ),
+      ),
+    ));
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('+1'), findsOneWidget); // maxChips 超過分
+    await tester.tap(find.text('3'));
+    expect(tapped, '👍');
+    // 自分のリアクション(🎉)タイルは枠線ハイライト。
+    final highlighted = tester.widgetList<Container>(find.byType(Container)).where((c) => (c.decoration as BoxDecoration?)?.border != null);
+    expect(highlighted, isNotEmpty);
+  });
+
+  test('RasqReactionChips.group: 同名の変種を合算・ローカル優先・枠なし判定 (D-041)', () {
+    final groups = RasqReactionChips.group(const {':cat@remote.example:': 3, ':cat@.:': 2, '👍': 1, ':dog@remote.example:': 2}, ':cat@.:');
+    final cat = groups.firstWhere((g) => g.name == 'cat');
+    expect(cat.count, 5, reason: '変種は合算');
+    expect(cat.representative, ':cat@.:', reason: 'ローカルサーバーの絵文字を優先');
+    expect(cat.hasLocal, isTrue);
+    expect(cat.mine, isTrue);
+    final dog = groups.firstWhere((g) => g.name == 'dog');
+    expect(dog.hasLocal, isFalse, reason: 'ローカルに無い → 枠なし表示・タップ不可');
+    expect(groups.firstWhere((g) => g.name == '👍').hasLocal, isTrue);
+  });
+
   test('ErrorCode grammar', () {
     expect(ErrorCode.tryParse('a25')?.family, ErrorFamily.settings);
     expect(ErrorCode.tryParse('D2F')?.code, 'D2F');

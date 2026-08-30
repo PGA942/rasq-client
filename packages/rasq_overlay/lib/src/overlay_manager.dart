@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 
 import 'overlay_entry.dart';
 import 'overlay_layer.dart';
@@ -65,6 +66,69 @@ class OverlayManager extends ChangeNotifier {
     final e = _entries.removeAt(i);
     e.onClosed?.call(reason, result);
     _completers.remove(id)?.complete(reason == OverlayCloseReason.completed ? result : null);
+    // 子 FOW は ownerId で連動クローズ(CONTRACT/D-067: 親が閉じたら
+    // 子ピッカー等も閉じる)。ownerId がプラグイン id 等で FOW entry id と
+    // 一致しない場合は何も起きない。
+    if (e.layer == OverlayLayer.fow) {
+      for (final child in _entries.where((x) => x.layer == OverlayLayer.fow && x.ownerId == id).toList()) {
+        close(child.id, reason: OverlayCloseReason.host);
+      }
+    }
+    if (_fowSwitcherOpen && !_entries.any((x) => x.layer == OverlayLayer.fow)) {
+      _fowSwitcherOpen = false; // 最後の FOW が消えたらスイッチャーも閉じる
+    }
+    notifyListeners();
+  }
+
+  // ---- FOW スイッチャー (D-065) ----------------------------------------
+  // ドラッグハンドルの**クリック**で開く「開いている FOW の選択画面」。
+  // 背景をブラックアウトし、FOW をリスト形式で表示(APP スイッチャー風)。
+
+  bool _fowSwitcherOpen = false;
+  bool get fowSwitcherOpen => _fowSwitcherOpen;
+
+  void setFowSwitcher(bool open) {
+    if (_fowSwitcherOpen == open) return;
+    if (open && !_entries.any((e) => e.layer == OverlayLayer.fow)) return;
+    _fowSwitcherOpen = open;
+    notifyListeners();
+  }
+
+  /// スイッチャーを開く (D-066): まだ画面に出ているうちに各パネルを
+  /// RepaintBoundary からキャプチャしてプレビューにする(名前だけでは
+  /// 判別しづらい、の対応。失敗しても名前で選べるので握りつぶす)。
+  Future<void> openFowSwitcher() async {
+    for (final e in inLayer(OverlayLayer.fow)) {
+      final s = e.fow;
+      if (s == null) continue;
+      try {
+        final obj = s.previewBoundaryKey.currentContext?.findRenderObject();
+        if (obj is RenderRepaintBoundary && obj.hasSize) {
+          final image = await obj.toImage(pixelRatio: 0.6);
+          s.switcherPreview?.dispose();
+          s.switcherPreview = image;
+        }
+      } catch (_) {}
+    }
+    setFowSwitcher(true);
+  }
+
+  /// スイッチャーからの選択: 選んだ FOW を前面化し、**その FOW を親
+  /// (ownerId)とする子 FOW は自動で閉じる**(例: コンポーザーを選ぶと
+  /// 子の絵文字/MFM ピッカーが閉じる)。
+  void promoteFow(String id) {
+    _fowSwitcherOpen = false;
+    final e = byId(id);
+    if (e == null || e.layer != OverlayLayer.fow) {
+      notifyListeners();
+      return;
+    }
+    for (final child in _entries.where((x) => x.layer == OverlayLayer.fow && x.ownerId == id).toList()) {
+      close(child.id, reason: OverlayCloseReason.host);
+    }
+    _entries.remove(e);
+    _entries.add(e); // 同一レイヤー内の挿入順 = 前面度
+    _entries.sort((a, b) => a.layer.z.compareTo(b.layer.z));
     notifyListeners();
   }
 
@@ -86,6 +150,10 @@ class OverlayManager extends ChangeNotifier {
   /// Back gesture / Escape: closes the topmost blocking entry if its rule allows.
   /// Returns `true` when the event was consumed.
   bool handleBack() {
+    if (_fowSwitcherOpen) {
+      setFowSwitcher(false);
+      return true;
+    }
     final top = topBlocking;
     if (top == null) return false;
     switch (top.effectiveBarrierBehavior) {

@@ -2,7 +2,7 @@ import 'package:riverpod/riverpod.dart';
 
 /// State of one action button on one post, as returned by the SNS plugin.
 class ActionState {
-  const ActionState({this.done = false, this.count, this.enabled = true, this.iconUrl});
+  const ActionState({this.done = false, this.count, this.enabled = true, this.iconUrl, this.iconText});
   final bool done;
 
   /// `null` when the plugin does not return counts for this action.
@@ -12,13 +12,16 @@ class ActionState {
   /// Per-post icon override (predicted reaction etc.). null = bundled default.
   final Uri? iconUrl;
 
-  ActionState copyWith({bool? done, int? count, bool? enabled, Uri? iconUrl}) =>
-      ActionState(done: done ?? this.done, count: count ?? this.count, enabled: enabled ?? this.enabled, iconUrl: iconUrl ?? this.iconUrl);
+  /// Unicode 絵文字などのテキストアイコン(リアクション済み表示、D-040)。
+  final String? iconText;
+
+  ActionState copyWith({bool? done, int? count, bool? enabled, Uri? iconUrl, String? iconText}) =>
+      ActionState(done: done ?? this.done, count: count ?? this.count, enabled: enabled ?? this.enabled, iconUrl: iconUrl ?? this.iconUrl, iconText: iconText ?? this.iconText);
 
   @override
-  bool operator ==(Object other) => other is ActionState && other.done == done && other.count == count && other.enabled == enabled && other.iconUrl == iconUrl;
+  bool operator ==(Object other) => other is ActionState && other.done == done && other.count == count && other.enabled == enabled && other.iconUrl == iconUrl && other.iconText == iconText;
   @override
-  int get hashCode => Object.hash(done, count, enabled, iconUrl);
+  int get hashCode => Object.hash(done, count, enabled, iconUrl, iconText);
 }
 
 /// Key: `${postKey}#${actionId}` where postKey = `accountKey:postId`.

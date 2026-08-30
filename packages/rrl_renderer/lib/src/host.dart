@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
 
+import 'geometry.dart';
 import 'registry.dart';
 
 /// Callback for events leaving the renderer: the host wraps these into
@@ -19,6 +20,7 @@ class RrlHost {
     this.rslParser,
     this.slots = const {},
     this.components = const {},
+    this.geometry,
   });
 
   /// `pluginId:accountKey:pluginVersion:instanceId` — prefixed to explicit
@@ -40,6 +42,12 @@ class RrlHost {
 
   /// Extra / overriding L2 builders, merged over [RrlComponentRegistry.standard].
   final Map<String, RrlComponentBuilder> components;
+
+  /// 実物ジオメトリの登録簿 (D-072): 指定すると `role` 付きノードの矩形を
+  /// 引けるようになる(FOW の実物アンカー / `geometry.lookup`)。安定した
+  /// インスタンス(コントローラ等の持ち物)を渡すこと — RrlHost 自体は
+  /// ビルド毎に作り直されてよい。
+  final RrlGeometryRegistry? geometry;
 
   String nodeId(RrlNode node, RrlScope scope) => '$instanceScope:${scope.resolveTemplate(node.k ?? '#${node.t}')}';
 

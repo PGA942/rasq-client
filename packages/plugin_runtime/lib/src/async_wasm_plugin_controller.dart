@@ -2,18 +2,23 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:rrl_core/rrl_core.dart';
+import 'package:rrl_renderer/rrl_renderer.dart' show RrlGeometryRegistry;
 
+import 'wasm_fow.dart';
 import 'wasm_plugin_controller.dart';
 import 'wasm_plugin_worker.dart';
 
 /// [WasmPluginController] の非同期版: プラグインを [WasmPluginWorker]
 /// (専用 isolate)で動かし、UI isolate をブロックしない。
 /// `net.fetch`(ランタイム内蔵)や重い snapshot 生成中も画面が止まらない。
-class AsyncWasmPluginController extends ChangeNotifier implements WasmPluginViewModel {
-  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}})
-      : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage);
+class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin implements WasmPluginViewModel {
+  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}, Set<String> fowPermissions = const {'widget'}})
+      : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage, fowPermissions: fowPermissions);
 
   final WasmWorkerConfig _config;
+
+  @override
+  final RrlGeometryRegistry geometry = RrlGeometryRegistry();
   WasmPluginWorker? _worker;
   RrlDocument? _document;
   String? _lastError;
@@ -34,6 +39,16 @@ class AsyncWasmPluginController extends ChangeNotifier implements WasmPluginView
     if (_worker != null) return;
     try {
       _worker = await WasmPluginWorker.spawn(_config);
+      // ワーカーから中継されてきた fow.open/close (D-064)。wasm 側は既に
+      // 受理済み({opened:true})なので、ここの失敗は lastError に留める。
+      _worker!.fowRequests.listen((m) {
+        try {
+          handleFowHostFn('${m['fn']}', (m['args'] as Map?)?.cast<String, Object?>() ?? const {}, scope: _document?.scope ?? 'plugin');
+        } catch (e) {
+          _lastError = 'fow relay failed: $e';
+          _notify();
+        }
+      });
       await pullSnapshot();
     } catch (e) {
       _lastError = '$e';
@@ -57,20 +72,36 @@ class AsyncWasmPluginController extends ChangeNotifier implements WasmPluginView
     final worker = _require();
     final result = (jsonDecode(await worker.call(fn: fn, argsJson: jsonEncode(args), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
     _lastResult = result;
-    if (result['ok'] == true && (result['value'] as Map?)?['treeUpdated'] == true) {
+    final value = result['ok'] == true ? result['value'] as Map? : null;
+    if (value?['treeUpdated'] == true) {
       await pullSnapshot();
+    } else if (value?['patch'] == true) {
+      await applyPatch(); // 保留パッチの引き取り (D-073)
     } else {
       _notify();
     }
     return result;
   }
 
+  /// `surface` 指定 (D-073) は該当 FOW ドキュメントへ(不一致は破棄)。
   Future<void> applyPatch() async {
     final worker = _require();
+    final Map<String, Object?> message;
+    try {
+      message = (jsonDecode(await worker.patch()) as Map).cast<String, Object?>();
+    } catch (e) {
+      _lastError = 'patch failed: $e';
+      _notify();
+      return;
+    }
+    if (message['surface'] != null) {
+      _lastError = applyFowPatch(message);
+      _notify();
+      return;
+    }
     final doc = _document;
     if (doc == null) return pullSnapshot();
     try {
-      final message = (jsonDecode(await worker.patch()) as Map).cast<String, Object?>();
       _document = doc.applyPatch(message);
       _lastError = null;
       _notify();
@@ -87,6 +118,16 @@ class AsyncWasmPluginController extends ChangeNotifier implements WasmPluginView
     if (fn == null) return;
     // Fire and forget — 結果は lastResult / document 更新として観測される。
     invoke(fn, {'nodeId': nodeId, 'kind': kind, ...payload}).catchError((Object e) {
+      _lastError = '$e';
+      _notify();
+      return <String, dynamic>{};
+    });
+  }
+
+  @override
+  void invokePluginCallback(String fn, Map<String, Object?> args) {
+    if (_worker == null) return; // dispose 後(closeOwnedBy 連動)は通知不要
+    invoke(fn, args).catchError((Object e) {
       _lastError = '$e';
       _notify();
       return <String, dynamic>{};

@@ -132,6 +132,8 @@ abstract final class MisskeyMappers {
         media: inner.media,
         poll: inner.poll,
         quote: inner.quote,
+        replyTo: inner.replyTo,
+        replyToId: inner.replyToId,
         repostedBy: author,
         counts: inner.counts,
       );
@@ -151,15 +153,24 @@ abstract final class MisskeyMappers {
       media: [for (final f in (j['files'] as List? ?? const [])) file((f as Map).cast<String, Object?>())],
       poll: poll(j['poll']),
       quote: renote != null && depth < 2 ? note(renote, viewer: viewer, host: host, depth: depth + 1) : null,
+      // リプライ元 (D-069): TL・リプライ欄の省略タイル表示に使う。
+      replyTo: j['reply'] is Map && depth < 2 ? note((j['reply'] as Map).cast<String, Object?>(), viewer: viewer, host: host, depth: depth + 1) : null,
+      replyToId: j['replyId'] as String?,
       counts: {
         'reply': (j['repliesCount'] as num?)?.toInt() ?? 0,
         'renote': (j['renoteCount'] as num?)?.toInt() ?? 0,
         'reaction': reactionTotal,
       },
       visibility: j['visibility'] as String?,
+      localOnly: j['localOnly'] == true,
       directToIds: [for (final id in (j['visibleUserIds'] as List? ?? const [])) id.toString()],
       reactions: {for (final e in reactions.entries) e.key: (e.value as num?)?.toInt() ?? 0},
       reactionEmojis: {
+        // ローカルカスタム(`:name@.:`)は Misskey の reactionEmojis に URL が
+        // 来ない → /emoji/<name>.webp を補完(ロング絵文字が
+        // テキスト fallback になって消える問題の修正、D-041)。
+        for (final k in reactions.keys)
+          if (k.startsWith(':') && k.endsWith('@.:')) k: Uri.https(host, '/emoji/${k.substring(1, k.length - 3)}.webp'),
         for (final e in reactionEmojis.entries)
           if (e.value is String) ':${e.key}:': Uri.parse(e.value as String),
       },
@@ -229,7 +240,20 @@ abstract final class MisskeyMappers {
       'receiveFollowRequest' => NotificationKind.followRequest,
       'followRequestAccepted' => NotificationKind.followAccepted,
       'pollEnded' => NotificationKind.pollEnded,
-      _ => NotificationKind.other,
+      'note' => NotificationKind.other,
+      // システム通知 (D-045): app(外部アプリ)/ロール付与/実績/ログイン等。
+      // 未知タイプもシステム通知として縮退表示する(落とさない・隠さない)。
+      _ => NotificationKind.system,
+    };
+    // システム通知の見出しと本文。
+    final (title, body) = switch (type) {
+      'app' => (j['header'] as String? ?? 'アプリからの通知', j['body'] as String?),
+      'roleAssigned' => ('ロールが付与されました', (j['role'] is Map ? (j['role'] as Map)['name'] : null) as String?),
+      'achievementEarned' => ('実績を獲得しました', j['achievement'] as String?),
+      'login' => ('新しいログインがありました', null),
+      'test' => ('テスト通知', null),
+      'exportCompleted' => ('エクスポートが完了しました', j['exportedEntity'] as String?),
+      _ => kind == NotificationKind.system ? ('通知 ($type)', null) : (null, null),
     };
     final actors = <UserSummary>[];
     final byActor = <String, String>{};
@@ -252,6 +276,8 @@ abstract final class MisskeyMappers {
       actors: actors,
       post: j['note'] is Map ? note((j['note'] as Map).cast<String, Object?>(), viewer: viewer, host: host) : null,
       reaction: j['reaction'] as String? ?? (byActor.isNotEmpty ? byActor.values.first : null),
+      title: title,
+      body: body,
       read: j['isRead'] as bool? ?? false,
       raw: {'type': rawType},
       reactionsByActor: byActor,

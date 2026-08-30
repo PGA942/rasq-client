@@ -58,7 +58,9 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
           final keyUser = viewer == null ? p.summary.key : '${viewer.kind.name}:${viewer.instance}:${p.summary.id}';
           final st = viewer == null ? const FollowState() : ref.watch(followStateOfProvider((viewer: viewer.key, user: keyUser)));
           final restricted = (p.isSuspended || st.blocked || st.blockedBy) && !_showRestricted;
-          final tabs = [const RasqTabItem('ノート'), const RasqTabItem('引用'), const RasqTabItem('メディア'), const RasqTabItem('クリップ/Play')];
+          // 返信TL / 引用TL (D-069): 返信と引用はそれぞれのタブに振り分ける
+          // (ノートには両方とも流さない。純リノートはノートに残る)。
+          final tabs = [const RasqTabItem('ノート'), const RasqTabItem('返信'), const RasqTabItem('引用'), const RasqTabItem('メディア'), const RasqTabItem('クリップ/Play')];
           return RasqCollapsibleTabScaffold(
             header: RasqUserTileLarge(
               profile: p,
@@ -81,6 +83,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
                 ? [for (final _ in tabs) const RasqEmptyView(title: '制限されたユーザーです', hint: '「表示」を押すと内容を表示します')]
                 : [
                     _UserPosts(userId: p.summary.id, filter: UserPostsFilter.posts, pinned: p.pinnedPosts),
+                    _UserPosts(userId: p.summary.id, filter: UserPostsFilter.replies),
                     _UserPosts(userId: p.summary.id, filter: UserPostsFilter.quotes),
                     _UserPosts(userId: p.summary.id, filter: UserPostsFilter.media),
                     _UserClips(userId: p.summary.id),

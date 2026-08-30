@@ -27,6 +27,10 @@ class SyncFetchResponse {
 
 typedef SyncFetch = SyncFetchResponse Function(SyncFetchRequest request);
 
+/// `fow.open` / `fow.close` の中継先 (D-064)。検証済みの args を受け取り、
+/// host-fn の value を返す(null = 既定値: open `{opened:true}` / close `{}`)。
+typedef FowHostRelay = Object? Function(String fn, Map<String, Object?> args);
+
 /// Host-proxied `net.fetch` via a synchronous `curl` subprocess.
 ///
 /// v1 stop-gap for desktop dev: it blocks the calling isolate for the whole
@@ -65,6 +69,8 @@ class RasqHostEnvironment {
     this.nativeFetch = false,
     this.onAlert,
     this.onLog,
+    this.onFow,
+    this.fowPermissions = const {'widget'},
   }) : storage = storage ?? {};
 
   /// Serve `net.fetch` inside the wasm runtime (blocking rustls HTTP —
@@ -83,6 +89,15 @@ class RasqHostEnvironment {
   final bool Function(String title, String message)? onAlert;
 
   final void Function(String message)? onLog;
+
+  /// `fow.open` / `fow.close` の中継先 (D-064)。null → E01(未配線)。
+  /// コントローラが後から差すため mutable(同期コントローラは `load()` で
+  /// 自分の写像を、ワーカーは isolate 間ポートへの送信を差す)。
+  FowHostRelay? onFow;
+
+  /// マニフェストで許可された FOW type(`widget` / `interstitial` /
+  /// `system`)。範囲外の `spec.type` は E01(D-004 の権限モデル)。
+  final Set<String> fowPermissions;
 
   /// Entry point handed to `RasqWasmPlugin.fromBytes(hostFn: …)`.
   String dispatch(String requestJson) {
@@ -142,7 +157,25 @@ class RasqHostEnvironment {
         // Placement resolution (device onnx/llama vs server Triton/vLLM) is
         // M4+ work — the interface is fixed (model-manifest.schema.json).
         throw _HostFnError('E01', 'ml.infer backend not wired yet (model: ${args['model']})');
-      case RasqHostFns.fowOpen || RasqHostFns.fowClose || RasqHostFns.wasmCall || RasqHostFns.storeRead || RasqHostFns.geometryLookup:
+      case RasqHostFns.fowOpen:
+        final relay = onFow;
+        if (relay == null) throw _HostFnError('E01', 'fow backend not wired');
+        final id = args['id'];
+        if (id is! String || id.isEmpty) throw _HostFnError('D01', 'fow.open: id required');
+        if (args['root'] is! Map) throw _HostFnError('D01', 'fow.open: root required');
+        final type = '${((args['spec'] as Map?) ?? const {})['type'] ?? ''}';
+        if (!const {'widget', 'interstitial', 'system'}.contains(type)) {
+          throw _HostFnError('D01', 'fow.open: bad spec.type "$type"');
+        }
+        if (!fowPermissions.contains(type)) throw _HostFnError('E01', 'fow.$type not permitted');
+        return relay(fn, args) ?? const {'opened': true};
+      case RasqHostFns.fowClose:
+        final relay = onFow;
+        if (relay == null) throw _HostFnError('E01', 'fow backend not wired');
+        final id = args['id'];
+        if (id is! String || id.isEmpty) throw _HostFnError('D01', 'fow.close: id required');
+        return relay(fn, args) ?? const <String, Object?>{};
+      case RasqHostFns.wasmCall || RasqHostFns.storeRead || RasqHostFns.geometryLookup:
         throw _HostFnError('E01', '$fn not wired yet');
       default:
         throw _HostFnError('C01', 'unknown host fn: $fn');

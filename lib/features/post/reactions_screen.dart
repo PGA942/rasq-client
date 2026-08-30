@@ -12,6 +12,7 @@ import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../users/user_list.dart';
 import 'post_detail_screen.dart';
+import 'thread_section.dart';
 
 /// リアクションを表示: 対象投稿 + tabs 返信 / ∨引用 / リアクション / 共有.
 /// リアクション欄: 絵文字画像 + リアクション数 + 名前(折りたたみ、中身はユーザー欄).
@@ -75,8 +76,8 @@ class _ReactionsScreenState extends ConsumerState<ReactionsScreen> {
             child: TabBarView(children: [
               _Replies(postId: widget.postId, actions: actions, order: _order),
               _Reposters(postId: widget.postId),
-              post == null ? const RasqLoading() : _ReactionSections(post: post, order: _order, open: _open, onToggle: (t) => setState(() => _open.contains(t) ? _open.remove(t) : _open.add(t))),
-              const RasqEmptyView(title: '共有', hint: '共有の記録は M2'),
+              post == null ? const RasqLoading() : ReactionSections(post: post, order: _order, open: _open, onToggle: (t) => setState(() => _open.contains(t) ? _open.remove(t) : _open.add(t))),
+              _QuoteNotes(postId: widget.postId, actions: actions),
             ]),
           ),
         ]),
@@ -97,7 +98,8 @@ class _Replies extends ConsumerWidget {
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
       data: (t) {
-        final list = sortByReactions(t.descendants, order, (p) => p.reactionTotal);
+        // 返信タブもリプライだけ (D-071: 引用リノートは共有タブへ)。
+        final list = sortByReactions([for (final d in t.descendants) if (d.replyToId != null || d.replyTo != null) d], order, (p) => p.reactionTotal);
         if (list.isEmpty) return const RasqEmptyView(title: '返信はありません');
         return ListView.separated(
           itemCount: list.length,
@@ -105,6 +107,28 @@ class _Replies extends ConsumerWidget {
           itemBuilder: (_, i) => PostRow(post: list[i], actions: actions, onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(list[i], a, args: args), onTap: () => context.pushPost(list[i])),
         );
       },
+    );
+  }
+}
+
+/// 共有タブ = 引用ノート一覧 (D-070)。
+class _QuoteNotes extends ConsumerWidget {
+  const _QuoteNotes({required this.postId, required this.actions});
+  final String postId;
+  final List<ActionDescriptor> actions;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final page = ref.watch(threadQuotesProvider(postId));
+    return page.when(
+      loading: () => const RasqLoading(),
+      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
+      data: (list) => list.isEmpty
+          ? const RasqEmptyView(title: '引用ノートはありません')
+          : ListView.separated(
+              itemCount: list.length,
+              separatorBuilder: (_, _) => const Divider(),
+              itemBuilder: (_, i) => PostRow(post: list[i], actions: actions, onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(list[i], a, args: args), onTap: () => context.pushPost(list[i])),
+            ),
     );
   }
 }
@@ -123,12 +147,15 @@ class _Reposters extends ConsumerWidget {
   }
 }
 
-class _ReactionSections extends ConsumerWidget {
-  const _ReactionSections({required this.post, required this.order, required this.open, required this.onToggle});
+/// リアクション欄(絵文字グループの折りたたみリスト)。スレッド画面の
+/// 返信欄(D-070 のモード切り替え)からも埋め込むため public + shrinkWrap。
+class ReactionSections extends ConsumerWidget {
+  const ReactionSections({super.key, required this.post, required this.order, required this.open, required this.onToggle, this.shrinkWrap = false});
   final Post post;
   final RasqSortOrder order;
   final Set<String> open;
   final ValueChanged<String> onToggle;
+  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -138,7 +165,7 @@ class _ReactionSections extends ConsumerWidget {
     if (entries.isEmpty) return const RasqEmptyView(title: 'リアクションはありません');
     // prefetch custom emoji urls for :name: reactions not carried by the note
     ref.read(emojiCacheProvider.notifier).request([for (final e in entries) if (e.key.startsWith(':') && !post.reactionEmojis.containsKey(e.key)) e.key.substring(1, e.key.length - 1).replaceAll('@.', '')]);
-    return ListView(children: [
+    return ListView(shrinkWrap: shrinkWrap, physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null, children: [
       for (final e in entries) ...[
         InkWell(
           onTap: () => onToggle(e.key),

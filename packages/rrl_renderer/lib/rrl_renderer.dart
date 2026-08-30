@@ -15,6 +15,7 @@
 /// an inline error box instead of taking the tree down (V12 障害隔離).
 library;
 
+export 'src/geometry.dart';
 export 'src/host.dart';
 export 'src/registry.dart';
 export 'src/renderer.dart';

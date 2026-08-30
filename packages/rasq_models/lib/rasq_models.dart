@@ -14,6 +14,7 @@ export 'src/page.dart';
 export 'src/profile.dart';
 export 'src/thread.dart';
 export 'src/trend.dart';
+export 'src/wire.dart';
 export 'src/dm.dart';
 export 'src/reaction.dart';
 export 'src/follow_request.dart';

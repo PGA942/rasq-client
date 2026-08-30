@@ -50,10 +50,16 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<Thread> thread(String id) async {
     final p = _posts.firstWhere((e) => e.id == id);
-    return Thread(post: p, descendants: _posts.where((e) => e.id != id).take(1).toList());
+    // Misskey の notes/children 同様、リプライ以外(引用等)も混ぜて返す —
+    // 返信欄のリプライ絞り込み (D-071) は表示側の仕事。
+    return Thread(post: p, descendants: _posts.where((e) => e.id != id).take(2).toList());
   }
+  /// 最後に createPost へ渡された draft (投稿オプションのテスト用)。
+  NewPost? lastDraft;
+
   @override
   Future<Post> createPost(NewPost draft) async {
+    lastDraft = draft;
     final me = await this.me();
     final p = Post(id: 'new${_posts.length}', account: account, author: me, createdAt: DateTime.now(), body: draft.text, contentWarning: draft.contentWarning);
     _posts.insert(0, p);
@@ -63,7 +69,19 @@ class FakeSnsSession extends SnsSessionBase {
   Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30}) async =>
       Page(items: [ReactionEntry(id: 'r1', user: _posts.first.author, reaction: type ?? '👍', createdAt: DateTime(2026))]);
   @override
-  Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) async => Page.empty();
+  Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) async {
+    final unique = {for (final p in _posts.where((x) => x.id != postId)) p.author.key: p.author};
+    return Page(items: unique.values.toList());
+  }
+
+  @override
+  Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30}) async =>
+      Page(items: _posts.where((p) => p.quote?.id == postId && p.body.isNotEmpty).toList());
+  @override
+  Future<Page<UserSummary>> searchUsers(String query, {String? cursor, int limit = 20}) async {
+    final unique = {for (final p in _posts) p.author.key: p.author};
+    return Page(items: [for (final u in unique.values) if (u.displayName.contains(query) || u.id.contains(query)) u]);
+  }
   @override
   Future<Map<String, FollowState>> relationships(List<String> userIds) async => {for (final id in userIds) id: const FollowState()};
   @override
@@ -75,7 +93,19 @@ class FakeSnsSession extends SnsSessionBase {
   }
   @override
   Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20, UserPostsFilter filter = UserPostsFilter.posts}) async =>
-      Page(items: _posts.where((p) => p.author.id == id && (filter != UserPostsFilter.media || p.media.isNotEmpty)).toList());
+      Page(items: _posts.where((p) {
+        if (p.author.id != id) return false;
+        final isReply = p.replyTo != null || p.replyToId != null;
+        final isQuote = p.quote != null && p.body.isNotEmpty;
+        // 返信TL / 引用TL への振り分け (D-069)。
+        return switch (filter) {
+          UserPostsFilter.media => p.media.isNotEmpty,
+          UserPostsFilter.replies => isReply,
+          UserPostsFilter.quotes => isQuote,
+          UserPostsFilter.posts => !isReply && !isQuote,
+          UserPostsFilter.withReplies => true,
+        };
+      }).toList());
   @override
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) async => Page(items: _posts.map((p) => p.author).toSet().toList());
   @override

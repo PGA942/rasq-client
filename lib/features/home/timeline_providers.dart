@@ -7,6 +7,7 @@ import 'package:sns_misskey/sns_misskey.dart';
 
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
+import '../settings/settings_dsl.dart';
 
 @immutable
 class TimelineState {
@@ -38,6 +39,13 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     ref.watch(currentAccountProvider); // rebuild per account
     final session = _session;
     if (session == null) return const TimelineState();
+    // タイムライン設定 (D-044) を取得前に反映。watch なので変更 → 再取得。
+    try {
+      final tl = await ref.watch(snsSettingValuesProvider('timeline').future);
+      if (tl.isNotEmpty) await session.applySettings('timeline', tl);
+    } catch (e) {
+      debugPrint('timeline settings: $e');
+    }
     final (page, states) = await _fetch(session, null);
     return TimelineState(posts: page.items, cursor: page.nextCursor);
   }
@@ -66,7 +74,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       for (final e in s.entries) {
         // Validation gate: per-post icons only for actions that declared iconPerPost.
         final allowIcon = descriptors[e.key]?.iconPerPost ?? false;
-        batch[(postKey: p.key, actionId: e.key)] = ActionState(done: e.value.done, count: e.value.count, iconUrl: allowIcon ? e.value.icon?.url : null);
+        batch[(postKey: p.key, actionId: e.key)] = ActionState(done: e.value.done, count: e.value.count, iconUrl: allowIcon ? e.value.icon?.url : null, iconText: allowIcon ? e.value.icon?.text : null);
       }
     }
     store.applyAll(batch);
@@ -112,7 +120,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     store.applyOptimistic(post.key, action.id, done: !undo);
     try {
       final r = await session.performAction(action.id, post.id, args: {...args, 'undo': undo});
-      store.apply(post.key, action.id, ActionState(done: r.done, count: r.count ?? before.count, iconUrl: action.iconPerPost ? (r.icon?.url ?? before.iconUrl) : null));
+      store.apply(post.key, action.id, ActionState(done: r.done, count: r.count ?? before.count, iconUrl: action.iconPerPost ? (r.icon?.url ?? before.iconUrl) : null, iconText: action.iconPerPost ? (r.icon?.text ?? (r.icon?.url != null ? null : before.iconText)) : null));
     } catch (e) {
       store.apply(post.key, action.id, before);
       debugPrint('action ${action.id} failed: $e');

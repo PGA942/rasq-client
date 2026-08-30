@@ -16,6 +16,8 @@ library;
 
 export 'src/async_wasm_plugin_controller.dart';
 export 'src/host_environment.dart';
+export 'src/wasm_fow.dart';
+export 'src/wasm_sns_session.dart';
 export 'src/wasm_plugin_controller.dart';
 export 'src/wasm_plugin_view.dart';
 export 'src/wasm_plugin_worker.dart';

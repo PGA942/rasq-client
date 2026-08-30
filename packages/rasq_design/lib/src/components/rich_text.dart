@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/rasq_tokens_extension.dart';
+import 'custom_emoji.dart';
 import 'mfm.dart';
 
 /// Inline span model for RSL (RASQ Subassembly Language) output.
@@ -148,12 +149,8 @@ class _RasqRichTextState extends State<RasqRichText> {
               ? TextSpan(text: ':${s.shortcode}:', style: base)
               : WidgetSpan(
                   alignment: PlaceholderAlignment.middle,
-                  child: Image.network(
-                    s.url.toString(),
-                    height: emojiHeight,
-                    semanticLabel: s.shortcode,
-                    errorBuilder: (_, _, _) => Text(':${s.shortcode}:', style: base),
-                  ),
+                  // 可変幅ルール + ホバー/長押しチップ (D-040)。
+                  child: RasqCustomEmoji(url: s.url, fallbackText: ':${s.shortcode}:', height: emojiHeight, name: s.shortcode, semanticLabel: s.shortcode),
                 ),
           RasqInlineImageSpan() => WidgetSpan(
               alignment: PlaceholderAlignment.middle,

@@ -87,7 +87,41 @@ class MisskeySession extends SnsSessionBase {
     }
     final body = <String, Object?>{'limit': limit, 'untilId': ?cursor};
     if (id.startsWith('list:')) body['listId'] = id.substring(5);
+    // タイムライン設定 (D-044): 標準 TL + リスト TL は withRenotes、
+    // withReplies は対応エンドポイント(home/local/social)のみ。
+    body['withRenotes'] = _withRenotes;
+    if (id == 'home' || id == 'local' || id == 'social') body['withReplies'] = _withReplies;
     return api.callList(_timelinePath(kind), body);
+  }
+
+  // --- プラグイン設定 (D-044: settings_pages.dart のページに対応) ---
+  bool _withRenotes = true;
+  bool _withReplies = false;
+
+  @override
+  Future<void> applySettings(String area, Map<String, Object?> values) async {
+    if (area != 'timeline') return;
+    _withRenotes = values['withRenotes'] != false;
+    _withReplies = values['withReplies'] == true;
+  }
+
+  /// `account` ページ (source: remote) が読み書きするキー。
+  static const accountSettingKeys = ['isLocked', 'isExplorable', 'hideOnlineStatus', 'publicReactions', 'isBot', 'isCat'];
+
+  Map<String, Object?> _accountSettings(Map<String, Object?> i) => {for (final k in accountSettingKeys) k: i[k] == true};
+
+  @override
+  Future<Map<String, Object?>> settingsRead(String area) async {
+    if (area != 'account') throw UnsupportedError('unknown remote settings area: $area');
+    return _accountSettings(await api.callMap('i'));
+  }
+
+  @override
+  Future<Map<String, Object?>> settingsWrite(String area, String key, Object? value) async {
+    if (area != 'account' || !accountSettingKeys.contains(key)) {
+      throw UnsupportedError('unknown remote setting: $area.$key');
+    }
+    return _accountSettings(await api.callMap('i/update', {key: value == true}));
   }
 
   String? _cachedMyId;
@@ -142,6 +176,10 @@ class MisskeySession extends SnsSessionBase {
       if (draft.quoteOfId != null) 'renoteId': draft.quoteOfId,
       if (draft.repostOfId != null) 'renoteId': draft.repostOfId,
       if (draft.visibility != null) 'visibility': draft.visibility,
+      // ダイレクト (D-047): specified には宛先が必須(DM ルームへの返信等)。
+      if (draft.visibility == 'specified' && draft.directToIds.isNotEmpty) 'visibleUserIds': draft.directToIds,
+      if (draft.localOnly) 'localOnly': true,
+      if (draft.reactionAcceptance != null) 'reactionAcceptance': draft.reactionAcceptance,
       if (draft.mediaIds.isNotEmpty) 'fileIds': draft.mediaIds,
       if (draft.poll != null)
         'poll': {
@@ -178,7 +216,8 @@ class MisskeySession extends SnsSessionBase {
         final n = await api.callMap('notes/show', {'noteId': postId});
         final reactions = (n['reactions'] as Map?)?.cast<String, Object?>() ?? const {};
         final total = reactions.values.fold<int>(0, (a, v) => a + ((v as num?)?.toInt() ?? 0));
-        return ActionResult(done: n['myReaction'] != null, count: total);
+        // リアクションした絵文字をボタンアイコンに反映 (D-040, iconPerPost)。
+        return ActionResult(done: n['myReaction'] != null, count: total, icon: reactionIcon(n['myReaction'] as String?, host));
       case 'renote':
         if (args['undo'] == true) {
           await api.call('notes/unrenote', {'noteId': postId});
@@ -207,14 +246,24 @@ class MisskeySession extends SnsSessionBase {
     return super.actionStates(posts);
   }
 
+  /// `myReaction` 文字列 → ボタンアイコン (D-040)。Unicode はテキスト、
+  /// カスタム(`:name@.:`)は `/emoji/<name>.webp` の画像。
+  static ActionIcon? reactionIcon(String? reaction, String host) {
+    if (reaction == null) return null;
+    if (!reaction.startsWith(':')) return ActionIcon.text(reaction);
+    final name = reaction.substring(1, reaction.length - 1).split('@').first;
+    return ActionIcon.url(Uri.https(host, '/emoji/$name.webp'));
+  }
+
   /// Per-note action states from raw note JSON (used by the timeline notifier).
-  static Map<String, ActionResult> noteStates(Map<String, Object?> n) {
+  static Map<String, ActionResult> noteStates(Map<String, Object?> n, {String? host}) {
     final reactions = (n['reactions'] as Map?)?.cast<String, Object?>() ?? const {};
     final total = reactions.values.fold<int>(0, (a, v) => a + ((v as num?)?.toInt() ?? 0));
     return {
       'reply': ActionResult(done: false, count: (n['repliesCount'] as num?)?.toInt() ?? 0),
       'renote': ActionResult(done: false, count: (n['renoteCount'] as num?)?.toInt() ?? 0),
-      'reaction': ActionResult(done: n['myReaction'] != null, count: total),
+      // TL でもリアクション済み絵文字がボタンに出る (D-040)。
+      'reaction': ActionResult(done: n['myReaction'] != null, count: total, icon: host == null ? null : reactionIcon(n['myReaction'] as String?, host)),
       'favorite': ActionResult(done: n['isFavorited'] == true),
     };
   }
@@ -231,7 +280,7 @@ class MisskeySession extends SnsSessionBase {
       // For pure renotes the displayed post is the inner note, but the row id is the renote id.
       if (raw['__chat'] == true) continue;
       final inner = raw['renote'] is Map && (raw['text'] == null || (raw['text'] as String).isEmpty) ? (raw['renote'] as Map).cast<String, Object?>() : raw;
-      states[page.items[i].id] = noteStates(inner);
+      states[page.items[i].id] = noteStates(inner, host: host);
     }
     return (page, states);
   }
@@ -274,15 +323,21 @@ class MisskeySession extends SnsSessionBase {
       'userId': id,
       'limit': limit,
       'untilId': ?cursor,
-      'withReplies': filter == UserPostsFilter.withReplies,
+      'withReplies': filter == UserPostsFilter.withReplies || filter == UserPostsFilter.replies,
       'withRenotes': filter != UserPostsFilter.media,
       if (filter == UserPostsFilter.media) 'withFiles': true,
     };
     final list = await api.callList('users/notes', body);
-    if (filter == UserPostsFilter.quotes) {
-      return _page([for (final n in list) if (n['renote'] is Map && (n['text'] as String?)?.isNotEmpty == true) n]);
-    }
-    return _page(list);
+    bool isQuote(Map n) => n['renote'] is Map && (n['text'] as String?)?.isNotEmpty == true;
+    bool isReply(Map n) => n['reply'] is Map || n['replyId'] != null;
+    // 返信TL / 引用TL への振り分け (D-069): 返信は返信のみ、引用は引用のみ、
+    // ノートは両方を除いたもの(純リノートは残す)。
+    return switch (filter) {
+      UserPostsFilter.replies => _page([for (final n in list) if (isReply(n)) n]),
+      UserPostsFilter.quotes => _page([for (final n in list) if (isQuote(n)) n]),
+      UserPostsFilter.posts => _page([for (final n in list) if (!isQuote(n) && !isReply(n)) n]),
+      _ => _page(list),
+    };
   }
 
   @override
@@ -558,6 +613,17 @@ class MisskeySession extends SnsSessionBase {
       items: [for (final n in list) if (n['user'] is Map) MisskeyMappers.user((n['user'] as Map).cast<String, Object?>(), account: account, host: host)],
       nextCursor: list.isEmpty ? null : list.last['id'] as String?,
     );
+  }
+
+  @override
+  Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30}) async {
+    final list = await api.callList('notes/renotes', {'noteId': postId, 'limit': limit, 'untilId': ?cursor});
+    // 引用ノートのみ(本文/添付/CW のあるリノート)。純リノートは
+    // reposters(リノートした人)側で見る (D-070)。
+    return _page([
+      for (final n in list)
+        if ((n['text'] as String?)?.isNotEmpty == true || (n['fileIds'] as List? ?? const []).isNotEmpty || n['cw'] != null) n
+    ]);
   }
 
   @override
