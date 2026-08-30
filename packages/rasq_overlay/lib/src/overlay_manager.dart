@@ -66,6 +66,14 @@ class OverlayManager extends ChangeNotifier {
     final e = _entries.removeAt(i);
     e.onClosed?.call(reason, result);
     _completers.remove(id)?.complete(reason == OverlayCloseReason.completed ? result : null);
+    // 子 FOW は ownerId で連動クローズ(CONTRACT/D-067: 親が閉じたら
+    // 子ピッカー等も閉じる)。ownerId がプラグイン id 等で FOW entry id と
+    // 一致しない場合は何も起きない。
+    if (e.layer == OverlayLayer.fow) {
+      for (final child in _entries.where((x) => x.layer == OverlayLayer.fow && x.ownerId == id).toList()) {
+        close(child.id, reason: OverlayCloseReason.host);
+      }
+    }
     if (_fowSwitcherOpen && !_entries.any((x) => x.layer == OverlayLayer.fow)) {
       _fowSwitcherOpen = false; // 最後の FOW が消えたらスイッチャーも閉じる
     }

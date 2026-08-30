@@ -333,15 +333,37 @@ class _FowColumn extends StatelessWidget {
           // 独立配置する。entries は back → front なので後の子が上に描かれ、
           // 埋もれた FOW はハンドルクリックのスイッチャーで前面化する。
           final frontmostEntry = entries.isEmpty ? null : entries.last;
+          final byId = {for (final x in entries) x.id: x};
+          // 親子 FOW (D-067): 親の外側(付いている側)を占める子 FOW の
+          // 最大高さ。親はこのぶん持ち上がり/下がり、入力部が被らない。
+          // 子の heightFactor は AnimatedBuilder が購読済み → リサイズや
+          // 付け替えに**リアルタイム**で追従する。
+          double liftFor(RasqOverlayEntry p) {
+            var lift = 0.0;
+            for (final c in entries) {
+              if (c.ownerId != p.id) continue;
+              final cs = c.fow;
+              if (cs == null || cs.anchor != null || cs.pinnedWall != 0) continue;
+              final ch = cs.heightFactor.value * avail;
+              if (ch > lift) lift = ch;
+            }
+            return lift;
+          }
+
           final children = <Widget>[];
           for (final e in entries) {
             final s = e.fow ?? FowSpec();
             s.settleMove = (dx, dy) => settle(s, dx, dy);
-            final slot = slotOf(s);
             final pinned = s.pinnedWall != 0;
-            // 壁付けピン (D-063) は高さ段階を離れて**最大高さ**で張り付く。
             var h = (pinned ? 1.0 : s.heightFactor.value) * avail;
             final anchor = pinned ? null : s.anchor;
+            // 子 FOW は親の付く方向・カラムに追従する(D-067: 方向は親側
+            // 指定 — 親が動けば更新される)。
+            final parentSpec = (e.ownerId == null ? null : byId[e.ownerId])?.fow;
+            final follow = parentSpec != null && !pinned && anchor == null;
+            final slot = follow ? slotOf(parentSpec) : slotOf(s);
+            final attachTopEff = follow ? parentSpec.attachTop : s.attachTop;
+            final lift = liftFor(e);
             var topSide = false; // 上側基準(ヘッダー下付き / アンカー下付き)
             var padTop = 0.0;
             var padBottom = insets;
@@ -359,11 +381,18 @@ class _FowColumn extends StatelessWidget {
                 padBottom = (hostH - anchor.top).clamp(0.0, hostH);
                 if (spaceAbove > 0 && h > spaceAbove) h = spaceAbove;
               }
-            } else if (!pinned && s.attachTop) {
-              // アプリヘッダーに下付き (D-065)。
+            } else if (!pinned && attachTopEff) {
+              // アプリヘッダーに下付き (D-065)。子がいる側 = 外側(上)を
+              // 子の高さぶん空ける (D-067)。
               topSide = true;
-              padTop = topInsetV;
-              final space = hostH - topInsetV - insets;
+              padTop = topInsetV + lift;
+              final space = hostH - padTop - insets;
+              if (space > 0 && h > space) h = space;
+            } else if (!pinned) {
+              // 下側ドック: 子の高さぶん持ち上がる (D-067、キーボード回避と
+              // 同じ向き)。
+              padBottom = insets + lift;
+              final space = hostH - padBottom;
               if (space > 0 && h > space) h = space;
             }
             children.add(Positioned(

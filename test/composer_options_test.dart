@@ -95,6 +95,11 @@ void main() {
     // ホーム画面: 関数名 + 説明文の縦リスト(rotate まではスクロール)
     expect(find.text('x2'), findsOneWidget);
     expect(find.text('2倍に拡大'), findsOneWidget);
+
+    // 親子 FOW (D-067): 子ピッカーはコンポーザー(親)の下側に付き、親は
+    // 子の高さぶん持ち上がる — 入力部がピッカーに被らない。
+    expect(tester.getBottomLeft(find.byType(TextField).first).dy,
+        lessThanOrEqualTo(tester.getTopLeft(find.byType(MfmPickerPanel)).dy + 1));
     await tester.scrollUntilVisible(find.text('rotate'), 80, scrollable: find.descendant(of: find.byType(MfmPickerPanel), matching: find.byType(Scrollable)));
     await tester.ensureVisible(find.text('rotate'));
     await tester.pumpAndSettle();

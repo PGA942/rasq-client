@@ -66,6 +66,43 @@ void main() {
     expect(tester.getBottomLeft(fowPanel()).dy, closeTo(800, 1));
   });
 
+  testWidgets('親子 FOW (D-067): 親は子の高さぶんリアルタイムに持ち上がり、方向は親側指定で子が追従、親クローズで連動', (tester) async {
+    tester.view.physicalSize = const Size(2400, 1600); // 1200x800 論理
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final m = OverlayManager();
+    final parentSpec = FowSpec(title: '親コンポーザー', cancelText: '閉じる', initialHeightFactor: 0.4);
+    final childSpec = FowSpec(title: '子ピッカー', cancelText: '閉じる', initialHeightFactor: 0.3);
+    m.showFow<void>(id: 'parent', spec: parentSpec, builder: (context, handle) => const SizedBox());
+    m.showFow<void>(id: 'child', ownerId: 'parent', spec: childSpec, builder: (context, handle) => const SizedBox());
+    await tester.pumpWidget(host(m, topInset: (_) => 60));
+    await tester.pumpAndSettle();
+
+    Rect panelOf(String title) => tester.getRect(find.ancestor(
+        of: find.text(title),
+        matching: find.byWidgetPredicate((w) => w is Material && w.shape is RoundedRectangleBorder)).first);
+    // 子は画面下端、親は子の上辺に載る(入力部が被らない)。
+    expect(panelOf('子ピッカー').bottom, closeTo(800, 1));
+    expect(panelOf('親コンポーザー').bottom, closeTo(800 - 240, 1)); // 子 0.3*800
+    // 子をリサイズ → 親がリアルタイムで追従。
+    childSpec.heightFactor.value = 0.5;
+    await tester.pumpAndSettle();
+    expect(panelOf('親コンポーザー').bottom, closeTo(800 - 400, 1));
+
+    // 親をヘッダー下付きへ → 方向は親側指定なので子も追従し、親は子の下。
+    await tester.drag(find.text('親コンポーザー'), const Offset(0, -100));
+    await tester.pumpAndSettle();
+    expect(parentSpec.attachTop, isTrue);
+    expect(panelOf('子ピッカー').top, closeTo(60, 1));
+    expect(panelOf('親コンポーザー').top, closeTo(60 + 400, 1));
+
+    // 親を閉じると子は連動クローズ (CONTRACT)。
+    m.close('parent');
+    await tester.pumpAndSettle();
+    expect(m.contains('child'), isFalse);
+    expect(m.entries, isEmpty);
+  });
+
   testWidgets('アンカー FOW: 基本下付き → 縦ドラッグで上付き → 別カラムへ動かすと壁付き表示', (tester) async {
     tester.view.physicalSize = const Size(2400, 1600);
     tester.view.devicePixelRatio = 2;

@@ -128,7 +128,10 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
       id: '$_fowPrefix${req.id}',
       layer: OverlayLayer.fow,
       alignment: Alignment.bottomCenter,
-      ownerId: _fowOwner,
+      // 親子 FOW (D-067): parentId 指定時は親 FOW entry を owner にする
+      // (付く方向の追従・親の伸縮・連動クローズ)。親が閉じれば子も
+      // 連動して閉じるので、プラグイン一括クローズにも連なる。
+      ownerId: req.parentId != null ? '$_fowPrefix${req.parentId}' : _fowOwner,
       semanticsLabel: spec['title'] as String? ?? 'プラグインFOW',
       // ピッカー同手法 (D-051): 透明バリア、余白クリックで破棄。
       barrierBehavior: OverlayBarrierBehavior.dismissDiscard,

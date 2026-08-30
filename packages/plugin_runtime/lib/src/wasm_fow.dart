@@ -8,7 +8,7 @@ import 'package:rrl_core/rrl_core.dart';
 /// 取り込む。以後の更新は同じ id での `fow.open` 再要求 = 差し替え
 /// (patch のドキュメント多重化は後続)。
 class WasmFowRequest {
-  WasmFowRequest({required this.id, required this.spec, required this.document, this.onClosed, this.onCancel});
+  WasmFowRequest({required this.id, required this.spec, required this.document, this.onClosed, this.onCancel, this.parentId});
 
   /// プラグインローカルの FOW id(ホスト側はプラグイン id を前置して
   /// OverlayManager 上の衝突を避ける)。
@@ -31,6 +31,10 @@ class WasmFowRequest {
   /// する(args は `{id}`)。
   final String? onCancel;
 
+  /// 親 FOW の id(同プラグイン内、D-067)。子は親の付く方向・カラムに
+  /// 追従し、親は子の高さぶん伸縮する。親クローズで連動クローズ。
+  final String? parentId;
+
   factory WasmFowRequest.fromArgs(Map<String, Object?> args, {required String scope}) {
     final root = args['root'];
     if (root is! Map) throw const FormatException('fow.open: root missing');
@@ -46,6 +50,7 @@ class WasmFowRequest {
       }),
       onClosed: args['onClosed'] as String?,
       onCancel: args['onCancel'] as String?,
+      parentId: args['parentId'] as String?,
     );
   }
 }
