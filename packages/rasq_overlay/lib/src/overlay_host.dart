@@ -8,7 +8,7 @@ import 'overlay_manager.dart';
 /// Renders the content plus every open overlay, honouring layer z-order,
 /// scrims and barrier behaviour. Place it once at the root of the app shell.
 class OverlayHost extends StatelessWidget {
-  const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor, this.fowDockInset, this.fowColumns, this.fowPinnedWidth = 320});
+  const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor, this.fowDockInset, this.fowColumns, this.fowPinnedWidth = 320, this.fowTopInset});
 
   final OverlayManager manager;
   final Widget child;
@@ -27,6 +27,10 @@ class OverlayHost extends StatelessWidget {
   /// 壁側にこの幅・**最大高さ**で張り付く(アプリは検索ホーム幅を渡す)。
   final double fowPinnedWidth;
 
+  /// [FowSpec.attachTop] な FOW の上端 = アプリヘッダーの下辺 (D-065)。
+  /// アプリがヘッダー実高さ(ステータスバー込み)を供給する。
+  final double Function(BuildContext context)? fowTopInset;
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -34,7 +38,7 @@ class OverlayHost extends StatelessWidget {
       builder: (context, _) {
         final entries = manager.entries;
         return PopScope(
-          canPop: !entries.any((e) => e.effectiveBarrierBehavior != OverlayBarrierBehavior.none),
+          canPop: !manager.fowSwitcherOpen && !entries.any((e) => e.effectiveBarrierBehavior != OverlayBarrierBehavior.none),
           onPopInvokedWithResult: (didPop, _) {
             if (!didPop) manager.handleBack();
           },
@@ -111,49 +115,126 @@ class OverlayHost extends StatelessWidget {
       ));
     }
     widgets.add(Positioned.fill(
-      child: _FowColumn(
-        dockInset: fowDockInset,
-        columns: fowColumns,
-        pinnedWidth: fowPinnedWidth,
-        entries: fows,
-        buildContent: (e) {
-          final handle = manager.handleFor(e);
-          Widget content = Builder(builder: (ctx) => e.builder(ctx, handle));
-          if (e.semanticsLabel != null) content = Semantics(label: e.semanticsLabel, container: true, child: content);
-          return content;
-        },
-        onCancel: (e) => manager.close(e.id, reason: OverlayCloseReason.discard),
-        onConfirm: (e) => manager.close(e.id, result: true),
+      // FOW スイッチャー表示中もパネルは Offstage で生かしておく
+      // (入力中テキスト等の State を保持する — D-050 の教訓)。
+      child: Offstage(
+        offstage: manager.fowSwitcherOpen,
+        child: _FowColumn(
+          dockInset: fowDockInset,
+          topInset: fowTopInset,
+          columns: fowColumns,
+          pinnedWidth: fowPinnedWidth,
+          entries: fows,
+          buildContent: (e) {
+            final handle = manager.handleFor(e);
+            Widget content = Builder(builder: (ctx) => e.builder(ctx, handle));
+            if (e.semanticsLabel != null) content = Semantics(label: e.semanticsLabel, container: true, child: content);
+            return content;
+          },
+          onCancel: (e) => manager.close(e.id, reason: OverlayCloseReason.discard),
+          onConfirm: (e) => manager.close(e.id, result: true),
+          onShowSwitcher: () => manager.setFowSwitcher(true),
+        ),
       ),
     ));
+    if (manager.fowSwitcherOpen) {
+      widgets.add(Positioned.fill(child: _FowSwitcher(entries: fows, manager: manager)));
+    }
     return widgets;
   }
 }
 
-/// Lays FOW panels out bottom-up. Heights come from each spec's heightFactor
-/// and are scaled down proportionally when they would not fit.
+/// FOW スイッチャー (D-065): 背景をブラックアウトし、開いている FOW を
+/// リスト形式で表示(APP スイッチャー風)。選択で前面化(親を選ぶと
+/// 子 FOW は自動クローズ)、✕ でその FOW を閉じる、余白タップで戻る。
+class _FowSwitcher extends StatelessWidget {
+  const _FowSwitcher({required this.entries, required this.manager});
+  final List<RasqOverlayEntry> entries;
+  final OverlayManager manager;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    String labelOf(RasqOverlayEntry e) => e.fow?.title ?? e.semanticsLabel ?? e.id;
+    return Semantics(
+      label: 'FOW切り替え',
+      container: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => manager.setFowSwitcher(false),
+        child: ColoredBox(
+          color: Colors.black.withValues(alpha: 0.6),
+          child: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    // 前面の FOW が先頭(entries は back → front)。
+                    for (final e in entries.reversed)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Material(
+                          color: scheme.surface,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(color: scheme.outlineVariant),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: ListTile(
+                            leading: const Icon(Icons.layers_outlined),
+                            title: Text(labelOf(e), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            trailing: IconButton(
+                              tooltip: '閉じる',
+                              icon: const Icon(Icons.close),
+                              onPressed: () => manager.close(e.id, reason: OverlayCloseReason.discard),
+                            ),
+                            onTap: () => manager.promoteFow(e.id),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lays FOW panels out per attachment (D-065): 下端ドック(既定)/
+/// アプリヘッダー下付き / アクションボタンへのアンカー / 壁付けピン。
+/// 複数の FOW は**重ねて**表示され(最前面のみ影)、切り替えはハンドル
+/// クリックの FOW スイッチャーで行う。
 class _FowColumn extends StatelessWidget {
-  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, this.dockInset, this.columns, this.pinnedWidth = 320});
+  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.dockInset, this.topInset, this.columns, this.pinnedWidth = 320});
   final List<RasqOverlayEntry> entries;
   final Widget Function(RasqOverlayEntry) buildContent;
   final void Function(RasqOverlayEntry) onCancel;
   final void Function(RasqOverlayEntry) onConfirm;
+  final VoidCallback onShowSwitcher;
   final double Function(BuildContext context)? dockInset;
+  final double Function(BuildContext context)? topInset;
   final List<FowColumnSlot> Function(BuildContext context)? columns;
   final double pinnedWidth;
 
   @override
   Widget build(BuildContext context) {
-    final ordered = entries.reversed.toList(); // newest first → placed at bottom
     return LayoutBuilder(builder: (context, constraints) {
       var insets = MediaQuery.viewInsetsOf(context).bottom;
       // stick FOW (D-047): キーボードが閉じている間はフッターメニューの上に
       // ドックする(キーボードが出たらその上 = 従来どおり)。
-      if (insets == 0 && ordered.any((e) => e.fow?.dockAboveFooter == true)) {
+      if (insets == 0 && entries.any((e) => e.fow?.dockAboveFooter == true)) {
         insets = dockInset?.call(context) ?? 0;
       }
-      final avail = constraints.maxHeight - insets;
+      final hostH = constraints.maxHeight;
+      final avail = hostH - insets;
       final totalW = constraints.maxWidth;
+      final topInsetV = topInset?.call(context) ?? 0;
       // 列スロット (D-062): 無指定なら単一スロット(全幅 1200px 上限・中央)。
       final maxW = totalW < 1200 ? totalW : 1200.0;
       final slots = columns?.call(context) ?? const <FowColumnSlot>[];
@@ -178,15 +259,17 @@ class _FowColumn extends StatelessWidget {
         return best;
       }
 
-      // 離したときの精算 (D-062/D-063): 基本は最も近いカラム中心へスナップ
-      // (カラム枠内に収まる幅)。最寄りが今のカラムのままでも**ウィンドウ幅の
-      // 1 割以上**動かしていれば隣のカラムへ移す(広いカラムでは中心間の
-      // 中点まで引っ張らないと動かず、判定が厳しすぎた)。**端のスロットを
-      // 越えて壁へ 50px 以上めり込ませた**ときはその壁へピン留め。ピン中は
-      // 内側へしきい値以上動かしたときだけカラム揃えへ戻る(小さな
-      // 揺れでは外れない)。
-      final moveThreshold = totalW * 0.1;
-      void settle(FowSpec s, double dx) {
+      // 離したときの精算 (D-062/D-063/D-065): 横 = 最も近いカラム中心へ
+      // スナップ。同カラム最寄りでも**ウィンドウ幅の 1 割以上**動かして
+      // いれば隣へ。壁へ 50px 以上めり込ませたらその壁へピン留め(ピン中は
+      // 内側へ 1 割以上でカラム揃えへ復帰)。**アンカー FOW は別カラムへ
+      // 動かした時点で壁付き表示**(anchor 解除 → pinnedWall)。
+      // 縦 = 同じ比率(ウィンドウ高さの 1 割)で付け先を切り替える:
+      // アンカー FOW は上付き ⇄ 下付きの反転、通常 FOW はアプリヘッダー
+      // 下付き ⇄ フッター上/画面下端。
+      final moveThresholdX = totalW * 0.1;
+      final moveThresholdY = hostH * 0.1;
+      void settle(FowSpec s, double dx, double dy) {
         final cur = slotOf(s);
         final center = cur.x + cur.width / 2 + dx;
         final first = effSlots.first;
@@ -195,80 +278,112 @@ class _FowColumn extends StatelessWidget {
         final rightLimit = (last.x + last.width / 2) + (totalW - (last.x + last.width)) + 50;
         if (s.pinnedWall != 0) {
           final inward = s.pinnedWall < 0 ? dx : -dx;
-          if (inward >= moveThreshold) {
+          if (inward >= moveThresholdX) {
             s.pinnedWall = 0;
             s.columnIndex = nearest(center);
           }
         } else if (center < leftLimit) {
+          s.anchor = null;
           s.pinnedWall = -1;
         } else if (center > rightLimit) {
+          s.anchor = null;
           s.pinnedWall = 1;
         } else {
           var best = nearest(center);
           final curIdx = s.columnIndex.clamp(0, effSlots.length - 1);
-          if (best == curIdx && dx.abs() >= moveThreshold) {
+          if (best == curIdx && dx.abs() >= moveThresholdX) {
             best = (curIdx + (dx > 0 ? 1 : -1)).clamp(0, effSlots.length - 1);
           }
-          s.columnIndex = best;
+          if (best != curIdx && s.anchor != null) {
+            // アンカー FOW は別カラムへ動かした時点で壁付き表示 (D-065)。
+            s.anchor = null;
+            s.pinnedWall = dx > 0 ? 1 : -1;
+          } else {
+            s.columnIndex = best;
+          }
+        }
+        if (s.pinnedWall == 0 && dy.abs() >= moveThresholdY) {
+          if (s.anchor != null) {
+            s.anchorBelow = dy > 0; // 下へ → アンカーの下付き
+          } else {
+            s.attachTop = dy < 0; // 上へ → アプリヘッダーに下付き
+          }
         }
         s.geometryRev.value++;
       }
 
       return AnimatedBuilder(
         animation: Listenable.merge([
-          for (final e in ordered) ...[e.fow?.heightFactor, e.fow?.geometryRev],
+          for (final e in entries) ...[e.fow?.heightFactor, e.fow?.geometryRev],
         ].whereType<Listenable>().toList()),
         builder: (context, _) {
-          // スロット毎にグループ化し、各グループ内で従来どおり下から積む。
-          final groups = <String, List<RasqOverlayEntry>>{};
-          for (final e in ordered) {
+          // 重ね表示 (D-065): グループの縦積みをやめ、各 FOW を付け先ごとに
+          // 独立配置する。entries は back → front なので後の子が上に描かれ、
+          // 埋もれた FOW はハンドルクリックのスイッチャーで前面化する。
+          final frontmostEntry = entries.isEmpty ? null : entries.last;
+          final children = <Widget>[];
+          for (final e in entries) {
             final s = e.fow ?? FowSpec();
-            s.settleMove = (dx) => settle(s, dx);
-            final key = s.pinnedWall < 0
-                ? 'pinL'
-                : s.pinnedWall > 0
-                    ? 'pinR'
-                    : 'col${s.columnIndex.clamp(0, effSlots.length - 1)}';
-            (groups[key] ??= []).add(e);
-          }
-          Widget groupColumn(List<RasqOverlayEntry> group, {required bool pinned}) {
+            s.settleMove = (dx, dy) => settle(s, dx, dy);
+            final slot = slotOf(s);
+            final pinned = s.pinnedWall != 0;
             // 壁付けピン (D-063) は高さ段階を離れて**最大高さ**で張り付く。
-            final factors = [for (final e in group) pinned ? 1.0 : (e.fow?.heightFactor.value ?? 0.45)];
-            final total = factors.fold(0.0, (a, b) => a + b);
-            final scale = total > 1 ? 1 / total : 1.0;
-            final heights = [for (final f in factors) f * scale * avail];
-            // OverflowBox: 高さアニメーション(D-049)の過渡期は合計が avail を
-            // 一時的に超えることがある — 上方向へ逃がして overflow にしない。
-            return Padding(
-              padding: EdgeInsets.only(bottom: insets),
-              child: OverflowBox(
-                alignment: Alignment.bottomCenter,
-                minHeight: 0,
-                maxHeight: double.infinity,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  for (var i = group.length - 1; i >= 0; i--)
+            var h = (pinned ? 1.0 : s.heightFactor.value) * avail;
+            final anchor = pinned ? null : s.anchor;
+            var topSide = false; // 上側基準(ヘッダー下付き / アンカー下付き)
+            var padTop = 0.0;
+            var padBottom = insets;
+            if (anchor != null) {
+              final spaceBelow = hostH - insets - anchor.bottom;
+              final spaceAbove = anchor.top - topInsetV;
+              // 基本は下付き(ボタンの下辺に FOW 上辺)。下の余白が最小段より
+              // 小さければ上付きへ反転 (D-052/D-053)。ドラッグ確定が最優先。
+              final below = s.anchorBelow ?? (spaceBelow >= s.minHeightFactor * avail || spaceBelow >= spaceAbove);
+              if (below) {
+                topSide = true;
+                padTop = anchor.bottom.clamp(0.0, hostH);
+                if (spaceBelow > 0 && h > spaceBelow) h = spaceBelow;
+              } else {
+                padBottom = (hostH - anchor.top).clamp(0.0, hostH);
+                if (spaceAbove > 0 && h > spaceAbove) h = spaceAbove;
+              }
+            } else if (!pinned && s.attachTop) {
+              // アプリヘッダーに下付き (D-065)。
+              topSide = true;
+              padTop = topInsetV;
+              final space = hostH - topInsetV - insets;
+              if (space > 0 && h > space) h = space;
+            }
+            children.add(Positioned(
+              left: slot.x,
+              width: slot.width,
+              top: 0,
+              bottom: 0,
+              child: Padding(
+                padding: EdgeInsets.only(top: padTop, bottom: padBottom),
+                // OverflowBox: 高さアニメーション(D-049)の過渡期の一時的な
+                // はみ出しを反対側へ逃がして overflow にしない。
+                child: OverflowBox(
+                  alignment: topSide ? Alignment.topCenter : Alignment.bottomCenter,
+                  minHeight: 0,
+                  maxHeight: double.infinity,
+                  child: _FowPanel(
+                    entry: e,
+                    height: h,
                     // 最前面(最新)のパネルだけ影付き (D-052: 複数 FOW の判別)。
-                    _FowPanel(entry: group[i], height: heights[i], frontmost: identical(group[i], ordered.first), child: buildContent(group[i]), onCancel: () => onCancel(group[i]), onConfirm: () => onConfirm(group[i])),
-                ]),
+                    frontmost: identical(e, frontmostEntry),
+                    topSide: topSide,
+                    anchored: anchor != null,
+                    onCancel: () => onCancel(e),
+                    onConfirm: () => onConfirm(e),
+                    onShowSwitcher: onShowSwitcher,
+                    child: buildContent(e),
+                  ),
+                ),
               ),
-            );
+            ));
           }
-
-          FowColumnSlot slotForKey(String key) => key == 'pinL'
-              ? pinSlot(-1)
-              : key == 'pinR'
-                  ? pinSlot(1)
-                  : effSlots[int.parse(key.substring(3))];
-          return Stack(children: [
-            for (final entry in groups.entries)
-              Positioned(
-                left: slotForKey(entry.key).x,
-                width: slotForKey(entry.key).width,
-                top: 0,
-                bottom: 0,
-                child: groupColumn(entry.value, pinned: entry.key.startsWith('pin')),
-              ),
-          ]);
+          return Stack(children: children);
         },
       );
     });
@@ -276,16 +391,26 @@ class _FowColumn extends StatelessWidget {
 }
 
 class _FowPanel extends StatefulWidget {
-  const _FowPanel({required this.entry, required this.height, required this.child, required this.onCancel, required this.onConfirm, this.frontmost = true});
+  const _FowPanel({required this.entry, required this.height, required this.child, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.frontmost = true, this.topSide = false, this.anchored = false});
   final RasqOverlayEntry entry;
   final double height;
   final Widget child;
   final VoidCallback onCancel;
   final VoidCallback onConfirm;
 
+  /// ドラッグハンドルの**クリック** = FOW スイッチャー (D-065)。
+  final VoidCallback onShowSwitcher;
+
   /// 最前面(操作対象)のパネルか。FOW の枠はグレーの線で描き、**影の有無で
   /// 最前面かどうかを判別**する (D-052: 複数 FOW を開いたときの識別)。
   final bool frontmost;
+
+  /// 上側基準の配置(アプリヘッダー下付き / アンカー下付き)。ハンドルは
+  /// 反対側 = 下端の外縁に出し、リサイズの向きも反転する (D-065)。
+  final bool topSide;
+
+  /// アクションボタンへのアンカー配置(角丸は全周)。
+  final bool anchored;
 
   @override
   State<_FowPanel> createState() => _FowPanelState();
@@ -306,50 +431,47 @@ class _FowPanelState extends State<_FowPanel> {
     final spec = entry.fow ?? FowSpec();
     final scheme = Theme.of(context).colorScheme;
     final hostHeight = MediaQuery.sizeOf(context).height;
-    // 非リサイズパネル(stick コンポーザー等)は heightFactor 変更を
-    // なめらかに(展開時にヘッダー/返信先タイルが「割り込んでくる」動き)。
-    // ドラッグリサイズ可能なパネルは追従遅延を避けて即時反映。
-    final panel = Material(
-        color: scheme.surface,
-        // 最前面のパネルだけ影付き(枠線は全パネル共通のグレー、D-052)。
-        elevation: widget.frontmost ? 8 : 0,
-        // FOW = ドラッグハンドル + **角丸四角形枠**の集合 (D-048)。フッターの
-        // 上にドックする stick は内部フッター(アクションバー)が枠の下辺に
-        // なるため下側も丸める。画面最下端まで覆う通常 FOW は上側のみ。
-        shape: RoundedRectangleBorder(
-          side: BorderSide(color: scheme.outlineVariant),
-          borderRadius: spec.dockAboveFooter ? BorderRadius.circular(16) : const BorderRadius.vertical(top: Radius.circular(16)),
+    final topSide = widget.topSide;
+    // FOW = ドラッグハンドル + **角丸四角形枠**の集合 (D-048)。
+    // 角丸は付け先で決まる: アンカー = 全周(浮いている)、ヘッダー下付き =
+    // 下側のみ、フッター上にドックする stick = 全周、画面最下端 = 上側のみ。
+    final radius = widget.anchored
+        ? BorderRadius.circular(16)
+        : topSide
+            ? const BorderRadius.vertical(bottom: Radius.circular(16))
+            : spec.dockAboveFooter
+                ? BorderRadius.circular(16)
+                : const BorderRadius.vertical(top: Radius.circular(16));
+    // ハンドル: クリック = FOW スイッチャー (D-065)、縦ドラッグ = リサイズ
+    // (D-062 で横移動はヘッダー/フッターの FowMoveGrip に役割分担)。
+    // 上側基準の配置ではハンドルは下端の外縁 → リサイズの向きも反転する。
+    final handle = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onShowSwitcher,
+      onVerticalDragStart: spec.resizable ? (_) => setState(() => _dragging = true) : null,
+      onVerticalDragUpdate: spec.resizable ? (d) => spec.resizeBy((topSide ? -d.delta.dy : d.delta.dy) / hostHeight) : null,
+      onVerticalDragEnd: spec.resizable
+          ? (_) {
+              setState(() => _dragging = false);
+              spec.snapToStops();
+            }
+          : null,
+      onVerticalDragCancel: spec.resizable ? () => setState(() => _dragging = false) : null,
+      child: Semantics(
+        label: 'サイズ変更ハンドル',
+        button: true,
+        child: SizedBox(
+          height: 18,
+          width: double.infinity,
+          child: Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: scheme.onSurface, borderRadius: BorderRadius.circular(2)))),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(children: [
-          if (spec.showHandle)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              // ハンドルは**縦リサイズ専用** (D-062: 横移動はヘッダー/フッターの
-              // FowMoveGrip に役割分担 — 上に動かすときの横誤爆を防ぐ)。
-              onVerticalDragStart: spec.resizable ? (_) => setState(() => _dragging = true) : null,
-              onVerticalDragUpdate: spec.resizable ? (d) => spec.resizeBy(d.delta.dy / hostHeight) : null,
-              onVerticalDragEnd: spec.resizable
-                  ? (_) {
-                      setState(() => _dragging = false);
-                      spec.snapToStops();
-                    }
-                  : null,
-              onVerticalDragCancel: spec.resizable ? () => setState(() => _dragging = false) : null,
-              child: Semantics(
-                label: 'サイズ変更ハンドル',
-                child: SizedBox(
-                  height: 18,
-                  width: double.infinity,
-                  child: Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: scheme.onSurface, borderRadius: BorderRadius.circular(2)))),
-                ),
-              ),
-            ),
-          if (spec.hasHeader)
-            // FOW 内ヘッダーは掴んで左右のカラム間移動ができる (D-062)。
-            FowMoveGrip(
-              spec: spec,
-              child: SizedBox(
+      ),
+    );
+    final header = spec.hasHeader
+        // FOW 内ヘッダーは掴んで移動できる (D-062 横 / D-065 縦)。
+        ? FowMoveGrip(
+            spec: spec,
+            child: SizedBox(
               height: 40,
               child: Row(children: [
                 if (spec.cancelText != null) TextButton(onPressed: onCancel, child: Text(spec.cancelText!, style: TextStyle(color: scheme.onSurfaceVariant))) else const SizedBox(width: 80),
@@ -363,9 +485,23 @@ class _FowPanelState extends State<_FowPanel> {
                 else
                   const SizedBox(width: 80),
               ]),
-              ),
             ),
+          )
+        : null;
+    // 非リサイズパネル(stick コンポーザー等)は heightFactor 変更を
+    // なめらかに(展開時にヘッダー/返信先タイルが「割り込んでくる」動き)。
+    // ドラッグリサイズ可能なパネルは追従遅延を避けて即時反映。
+    final panel = Material(
+        color: scheme.surface,
+        // 最前面のパネルだけ影付き(枠線は全パネル共通のグレー、D-052)。
+        elevation: widget.frontmost ? 8 : 0,
+        shape: RoundedRectangleBorder(side: BorderSide(color: scheme.outlineVariant), borderRadius: radius),
+        clipBehavior: Clip.antiAlias,
+        child: Column(children: [
+          if (spec.showHandle && !topSide) handle,
+          ?header,
           Expanded(child: child),
+          if (spec.showHandle && topSide) handle,
         ]),
       );
     // ドラッグ中は即時反映(duration 0)、それ以外(スナップ着地・stick の
@@ -373,20 +509,16 @@ class _FowPanelState extends State<_FowPanel> {
     // ⚠ ウィジェット型は常に AnimatedContainer 1 種に固定する: SizedBox と
     // 切り替えると Element が作り直され、**入力中のテキストごと State が
     // 消える**(ハンドル操作で本文消失、D-050 で実測)。
-    // 横追従 (D-062): FowMoveGrip(FOW 内ヘッダー/フッター)を掴んでいる間、
-    // パネルが左右についてくる。離すとホストの精算でカラム中心へスナップ /
-    // 壁へ 50px 以上めり込んでいれば壁付けピン(レイアウト側で幅が変わる)。
-    return ValueListenableBuilder<double>(
-      valueListenable: spec.moveDx,
-      builder: (context, moveDx, child) => ValueListenableBuilder<bool>(
-        valueListenable: spec.dragging,
-        builder: (context, innerDragging, child) => AnimatedContainer(
-          duration: _dragging || innerDragging ? Duration.zero : const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          height: height,
-          transform: Matrix4.translationValues(moveDx, 0, 0),
-          child: child,
-        ),
+    // 追従 (D-062/D-065): FowMoveGrip(FOW 内ヘッダー/フッター)を掴んで
+    // いる間、パネルが縦横についてくる。離すとホストの精算でカラム中心へ
+    // スナップ / 壁付けピン / 付け先切り替え(レイアウト側で位置が変わる)。
+    return AnimatedBuilder(
+      animation: Listenable.merge([spec.moveDx, spec.moveDy, spec.dragging]),
+      builder: (context, child) => AnimatedContainer(
+        duration: _dragging || spec.dragging.value ? Duration.zero : const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        height: height,
+        transform: Matrix4.translationValues(spec.moveDx.value, spec.moveDy.value, 0),
         child: child,
       ),
       child: panel,

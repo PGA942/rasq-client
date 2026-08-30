@@ -87,26 +87,23 @@ void main() {
     expect(col3Width(), lessThanOrEqualTo(kSearchHomeColumnWidth + 1));
     expect(find.byType(PostDetailScreen), findsNothing); // 第2カラムはホームTLのまま
 
-    // ---- FOW の横ドッキング (D-062) -----------------------------------
-    // リアクションピッカーは開いた側(第2カラム)に揃い、カラム幅に収まる。
-    await tester.longPress(find.byIcon(Icons.favorite_border).first);
+    // ---- FOW の横ドッキング + アンカー (D-062/D-065) -------------------
+    // リアクションピッカーは**実物のリアクションボタンにアンカー**して開き
+    // (D-065)、開いた側(第2カラム)の幅に収まる。
+    final reactionBtn = find.byIcon(Icons.favorite_border).first;
+    final btnRect = tester.getRect(reactionBtn);
+    await tester.longPress(reactionBtn);
     await tester.pumpAndSettle();
     expect(find.byType(EmojiPanel), findsOneWidget);
     Finder fowPanel() => find.byWidgetPredicate((w) => w is Material && w.elevation == 8);
     expect(tester.getTopLeft(fowPanel()).dx, closeTo(72, 1)); // 第2カラムの左端
     expect(tester.getSize(fowPanel()).width, closeTo(1200 - 72 - kSearchHomeColumnWidth, 1));
+    // 基本は下付き: FOW の上辺がボタンの下辺の近く(ボタンより下)。
+    expect(tester.getTopLeft(fowPanel()).dy, greaterThanOrEqualTo(btnRect.bottom - 1));
 
-    // FOW 内ヘッダーを掴んで右へ → 第3カラムの中心へスナップ(幅も追従)。
-    // 移動判定はウィンドウ幅の 1 割 (D-063: 広いカラムでは中心間の中点まで
-    // 引っ張らないと動かず厳しすぎた) — 150px(> 120px)で動く。
+    // アンカー FOW を別カラムへ動かすと**その時点で壁付き表示** (D-065):
+    // 壁側に検索ホーム幅・最大高さで張り付く(アンカーは解除)。
     await tester.drag(find.text('リアクション'), const Offset(150, 0));
-    await tester.pumpAndSettle();
-    expect(tester.getTopLeft(fowPanel()).dx, closeTo(1200 - kSearchHomeColumnWidth, 1));
-    expect(tester.getSize(fowPanel()).width, closeTo(kSearchHomeColumnWidth, 1));
-
-    // さらに右の壁へ 50px 以上めり込ませる → 壁付けピン (D-063): 中央への
-    // 全幅最大化ではなく、壁側に検索ホーム幅・**最大高さ**で張り付く。
-    await tester.drag(find.text('リアクション'), const Offset(400, 0));
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(fowPanel()).dx, closeTo(1200 - kSearchHomeColumnWidth, 1));
     expect(tester.getSize(fowPanel()).width, closeTo(kSearchHomeColumnWidth, 1));

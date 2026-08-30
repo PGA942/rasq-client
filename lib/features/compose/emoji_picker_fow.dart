@@ -21,6 +21,7 @@ Future<void> openEmojiPicker(
   Map<String, int> existingReactions = const {},
   Widget? actionBar,
   int column = 0,
+  Rect? anchor,
 }) async {
   final manager = ref.read(overlayManagerProvider);
   // FOW のクロームは 2 系統 (D-055):
@@ -42,9 +43,13 @@ Future<void> openEmojiPicker(
     dockAboveFooter: true,
     showHandle: !reaction,
     // 横ドッキング (D-062): 開いた側のカラムに揃う。ヘッダー(FowMoveGrip)を
-    // 掴んで左右カラムへ移動でき、壁へ 50px めり込ませると最大化する。
+    // 掴んで左右カラムへ移動でき、壁へ 50px めり込ませると壁付けピンになる。
     columnIndex: column,
   );
+  // 実物アクションボタンへのアンカー (D-065): リアクション長押しはボタンの
+  // 矩形を受け取り、基本下付き(余白不足で上付き)で張り付く。縦ドラッグで
+  // 反転、別カラムへ動かすと壁付き表示へ。
+  spec.anchor = anchor;
   await manager.showFow<void>(
     id: emojiPickerFowId,
     ownerId: ownerId,

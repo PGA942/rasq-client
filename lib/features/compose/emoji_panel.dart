@@ -101,7 +101,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
             final dx = spec.moveDx.value;
             spec.moveDx.value = 0;
             if (dx.abs() > 40) {
-              spec.settleMove?.call(dx); // 横が主 → カラム間移動の精算
+              spec.settleMove?.call(dx, 0); // 横が主 → カラム間移動の精算
               return;
             }
           }
@@ -131,6 +131,8 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
       opacity: _draggingBar ? 0 : 1,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
+        // ハンドルのクリック = FOW スイッチャー (D-065)。
+        onTap: () => OverlayScope.read(context).setFowSwitcher(true),
         onVerticalDragStart: spec == null ? null : (_) => spec.dragging.value = true,
         onVerticalDragUpdate: spec == null ? null : (d) => spec.resizeBy(d.delta.dy / MediaQuery.sizeOf(context).height),
         onVerticalDragEnd: spec == null

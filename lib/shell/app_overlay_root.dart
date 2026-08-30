@@ -22,6 +22,10 @@ double fowDockInsetOf(BuildContext ctx, GoRouter router) {
   return RasqSizes.navHeight + 1.2 + MediaQuery.paddingOf(ctx).bottom;
 }
 
+/// アプリヘッダーの実高さ (D-065): FOW を「ヘッダーに下付き」で付けるときの
+/// 上端 = ステータスバー + ページヘッダー高さ。
+double fowTopInsetOf(BuildContext ctx) => MediaQuery.paddingOf(ctx).top + RasqSizes.headerHeight;
+
 /// Wraps the whole app navigator (tab shell *and* root-level pages such as
 /// login / settings / catalog) so every overlay request — from any screen or
 /// plugin — is rendered by the single [OverlayHost].
@@ -45,6 +49,7 @@ class AppOverlayRoot extends ConsumerWidget {
           child: OverlayHost(
             manager: manager,
             fowDockInset: (ctx) => fowDockInsetOf(ctx, ref.read(routerProvider)),
+            fowTopInset: fowTopInsetOf,
             // 壁付けピン (D-063) は検索ホーム幅で壁側カラムに張り付く。
             fowPinnedWidth: kSearchHomeColumnWidth,
             // FOW の列スロット (D-062): タブレット幅では第2/第3カラムの幾何を

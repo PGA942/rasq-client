@@ -203,10 +203,10 @@ class _PostRowState extends ConsumerState<PostRow> {
       onTap: isRepost ? null : () => _performReactionAware(a, st),
       onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : null,
       // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行。
-      // 投稿のアクションバーの複製は置かない (D-055: 「謎のアクションバー」に
-      // 見える) — 実物のバーへのアンカー付けは FOW 再設計(RRL 拡張)時。
-      onLongPress: isReaction
-          ? () => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context),
+      // ピッカーは**実物のリアクションボタンにアンカー**する (D-065:
+      // 基本下付き・余白不足で上付き。D-055 の複製バーは置かない)。
+      onAnchorLongPress: isReaction
+          ? (anchor) => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context), anchor: anchor,
                   predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
                   existingReactions: post.reactions, onPick: (e) {
                 widget.onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});

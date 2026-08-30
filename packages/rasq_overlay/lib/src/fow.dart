@@ -83,17 +83,36 @@ class FowSpec {
   /// 間はホストが高さを即時反映する(アニメの追従遅延を出さない)。
   final ValueNotifier<bool> dragging = ValueNotifier(false);
 
-  // ---- 横ドッキング (D-062/D-063) --------------------------------------
+  // ---- ドッキング (D-062/D-063/D-065) ----------------------------------
   // FOW はカラムの中心に揃い、**カラム枠内に収まる幅**でドックする。
-  // FOW 内ヘッダー/フッター([FowMoveGrip])を掴んで左右へ動かすと隣の
-  // カラムへ移動し、**両端の壁に 50px 以上めり込ませると壁付けピン**になる。
-  // ドラッグハンドルは縦リサイズ専用(横の誤爆を防ぐ役割分担)。
+  // FOW 内ヘッダー/フッター([FowMoveGrip])を掴んで動かすと:
+  //  横 = 隣のカラムへ移動(**両端の壁に 50px 以上めり込ませると壁付けピン**)
+  //  縦 = 付け先の切り替え(アプリヘッダー下付き ⇄ フッター/画面下端。
+  //       アンカー FOW は上付き ⇄ 下付きの反転)— 左右と同じ 1 割で確定。
+  // ドラッグハンドルは縦リサイズ専用(+クリックで FOW スイッチャー)。
 
   /// ドラッグ中の横追従量([FowMoveGrip] が書く。離すとホストが精算)。
   final ValueNotifier<double> moveDx = ValueNotifier(0);
 
+  /// ドラッグ中の縦追従量 (D-065)。
+  final ValueNotifier<double> moveDy = ValueNotifier(0);
+
   /// 所属カラム(ホストの列スロット index。範囲外は clamp される)。
   int columnIndex;
+
+  /// アプリヘッダーへの下付き (D-065)。false = 従来のフッター上/画面下端。
+  /// FOW 内ヘッダー/フッターを縦へウィンドウ高さの 1 割以上動かすと切替。
+  bool attachTop = false;
+
+  /// 実物アクションボタン/バーへのアンカー (D-065、グローバル矩形)。
+  /// 基本は下付き(ボタンの下辺に FOW 上辺)、下の余白が足りなければ
+  /// 上付き。**別カラムへ動かした時点で壁付き表示に変更**(anchor は
+  /// 解除され [pinnedWall] になる)。
+  Rect? anchor;
+
+  /// アンカーの下(true)/上(false)。null = 自動(余白で判定)。
+  /// 縦ドラッグで確定する。
+  bool? anchorBelow;
 
   /// 壁付けピン (D-063): -1 = 左の壁 / 1 = 右の壁 / 0 = なし。壁へ 50px
   /// 以上めり込ませると確定し、壁側に**最大高さ・検索ホーム幅**で張り付く
@@ -105,8 +124,8 @@ class FowSpec {
   final ValueNotifier<int> geometryRev = ValueNotifier(0);
 
   /// 離したときの精算(ホストが列スロット幾何を知っているので毎ビルド
-  /// 差し込む)。[FowMoveGrip] が onPanEnd で呼ぶ。
-  void Function(double dx)? settleMove;
+  /// 差し込む)。[FowMoveGrip] が onPanEnd で呼ぶ(dx = 横、dy = 縦)。
+  void Function(double dx, double dy)? settleMove;
 
   bool get hasHeader => title != null || cancelText != null || confirmText != null;
 
@@ -149,33 +168,41 @@ class FowColumnSlot {
   final double width;
 }
 
-/// FOW 内ヘッダー/フッターに被せる「掴んで左右カラム間移動」グリップ
-/// (D-062)。**横**ドラッグだけを拾う(縦のスクロール・リサイズやタップは
-/// 子へ通す — ハンドルの縦リサイズとの役割分担)。離すとホストが精算し、
-/// カラム中心へスナップ / 壁へ 50px 以上めり込んでいれば壁付けピンになる。
+/// FOW 内ヘッダー/フッターに被せる「掴んで移動」グリップ (D-062/D-065)。
+/// pan で縦横どちらも拾う(タップは子へ通す)。離すとホストが精算し、
+/// 横 = カラム中心へスナップ / 壁へ 50px 以上で壁付けピン、
+/// 縦 = 付け先の切り替え(ヘッダー下付き ⇄ 下側 / アンカーの上付き ⇄
+/// 下付き)。ハンドルの縦**リサイズ**とは掴む場所で役割分担する。
 class FowMoveGrip extends StatelessWidget {
   const FowMoveGrip({super.key, required this.spec, required this.child});
   final FowSpec spec;
   final Widget child;
 
+  void _reset() {
+    spec.dragging.value = false;
+    spec.moveDx.value = 0;
+    spec.moveDy.value = 0;
+  }
+
   @override
   Widget build(BuildContext context) => GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onHorizontalDragStart: (_) {
+        onPanStart: (_) {
           spec.dragging.value = true;
           spec.moveDx.value = 0;
+          spec.moveDy.value = 0;
         },
-        onHorizontalDragUpdate: (d) => spec.moveDx.value += d.delta.dx,
-        onHorizontalDragEnd: (_) {
-          spec.dragging.value = false;
+        onPanUpdate: (d) {
+          spec.moveDx.value += d.delta.dx;
+          spec.moveDy.value += d.delta.dy;
+        },
+        onPanEnd: (_) {
           final dx = spec.moveDx.value;
-          spec.moveDx.value = 0;
-          spec.settleMove?.call(dx);
+          final dy = spec.moveDy.value;
+          _reset();
+          spec.settleMove?.call(dx, dy);
         },
-        onHorizontalDragCancel: () {
-          spec.dragging.value = false;
-          spec.moveDx.value = 0;
-        },
+        onPanCancel: _reset,
         child: child,
       );
 }

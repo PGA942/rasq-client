@@ -28,6 +28,7 @@ class RasqActionBarItem {
     this.onTap,
     this.onLongPress,
     this.onAnchorTap,
+    this.onAnchorLongPress,
   });
 
   /// タップ時にボタンの矩形が要る場合([onTap] より優先)。アクションリストの
@@ -64,6 +65,10 @@ class RasqActionBarItem {
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final ValueChanged<Rect>? onAnchorTap;
+
+  /// 長押し時にボタンの矩形が要る場合([onLongPress] より優先)。FOW を
+  /// 実物のアクションボタンへアンカーする(リアクションピッカー、D-065)。
+  final ValueChanged<Rect>? onAnchorLongPress;
 }
 
 /// How buttons are distributed across the bar.
@@ -110,6 +115,17 @@ class _ActionBarButton extends StatelessWidget {
   const _ActionBarButton({required this.item});
   final RasqActionBarItem item;
 
+  /// [RasqActionBarItem.onAnchorLongPress] があればボタン矩形付きで呼ぶ
+  /// (FOW の実物ボタンへのアンカー、D-065)。
+  VoidCallback? _longPress(BuildContext ctx) {
+    final anchorLp = item.onAnchorLongPress;
+    if (anchorLp == null) return item.onLongPress;
+    return () {
+      final box = ctx.findRenderObject() as RenderBox;
+      anchorLp(box.localToGlobal(Offset.zero) & box.size);
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final count = item.count ?? 0;
@@ -140,7 +156,7 @@ class _ActionBarButton extends StatelessWidget {
           label: item.label,
           child: InkResponse(
             onTap: item.enabled ? item.onTap : null,
-            onLongPress: item.enabled ? item.onLongPress : null,
+            onLongPress: item.enabled ? _longPress(context) : null,
             radius: 24,
             child: ConstrainedBox(
               constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
@@ -164,7 +180,7 @@ class _ActionBarButton extends StatelessWidget {
           label: item.label,
           child: InkResponse(
             onTap: item.enabled ? item.onTap : null,
-            onLongPress: item.enabled ? item.onLongPress : null,
+            onLongPress: item.enabled ? _longPress(context) : null,
             radius: 24,
             child: ConstrainedBox(
               constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
@@ -196,7 +212,7 @@ class _ActionBarButton extends StatelessWidget {
                 count: count,
                 tooltip: item.label,
                 onTap: onTap,
-                onLongPress: item.onLongPress,
+                onLongPress: _longPress(ctx),
                 enabled: item.enabled,
               )
             : RasqActionButton.icon(
@@ -206,7 +222,7 @@ class _ActionBarButton extends StatelessWidget {
                 doneColor: item.doneColor,
                 tooltip: item.label,
                 onTap: onTap,
-                onLongPress: item.onLongPress,
+                onLongPress: _longPress(ctx),
                 enabled: item.enabled,
               );
       },
