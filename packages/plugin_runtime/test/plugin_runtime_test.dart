@@ -184,7 +184,9 @@ void main() {
       controller.onFowOpen = (req) => opened = req;
       controller.onFowClose = (id, {result, reason}) => closes.add((id, result));
 
-      final result = controller.invoke('pickReaction', {'postId': 'p1'});
+      // 実物ノードへのアンカー (D-072): 呼び出し元バーの key が渡る。
+      controller.handleEvent('scope:actions-n1', 'longPress', fn: 'pickReaction', payload: {'postId': 'p1'});
+      final result = controller.lastResult!;
       expect(result['ok'], true, reason: '$result');
       expect((result['value'] as Map)['opened'], true);
       expect(opened, isNotNull);
@@ -193,20 +195,30 @@ void main() {
       expect(opened!.spec['title'], 'リアクション (wasm)');
       expect(opened!.onClosed, 'fowClosed');
       expect(opened!.onCancel, 'confirmCloseFow');
+      expect(opened!.anchorNode, 'actions-n1');
       expect(opened!.document.root.findByKey('emoji-like'), isNotNull);
+
+      // lifecycle mount (D-072): v1 は call("lifecycle") で届く。
+      await Future<void>.delayed(Duration.zero);
+      final mounted = controller.invoke('lastLifecycle');
+      expect((mounted['value'] as Map)['kind'], 'mount');
+      expect((mounted['value'] as Map)['surface'], 'reaction-picker');
 
       // FOW 内の絵文字 Button のタップ = event → call(reactFromFow)。
       controller.handleEvent('${opened!.document.scope}:emoji-heart', 'tap', fn: 'reactFromFow');
       expect(closes.single.$1, 'reaction-picker');
       expect(closes.single.$2, '❤️');
 
-      // アプリ層が実 FOW を閉じた通知 → プラグインの onClosed 関数へ。
+      // アプリ層が実 FOW を閉じた通知 → プラグインの onClosed 関数へ +
+      // lifecycle unmount (D-072)。
       controller.notifyFowClosed('reaction-picker', reason: 'completed', result: '❤️');
       await Future<void>.delayed(Duration.zero); // scheduleMicrotask 分
       final last = controller.invoke('lastFowClosed');
       expect(last['ok'], true, reason: '$last');
       expect((last['value'] as Map)['reason'], 'completed');
       expect((last['value'] as Map)['result'], '❤️');
+      final unmounted = controller.invoke('lastLifecycle');
+      expect((unmounted['value'] as Map)['kind'], 'unmount');
     });
 
     test('✕の割り込み (D-066): onCancel → 確認 FOW が開き、破棄で両方閉じる / 続けるで確認だけ閉じる', () {

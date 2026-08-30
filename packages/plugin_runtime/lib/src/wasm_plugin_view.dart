@@ -40,6 +40,9 @@ class WasmPluginView extends StatelessWidget {
             scope: RrlScope({}),
             rslParser: rslParser,
             slots: slots,
+            // 実物ジオメトリ (D-072): role 付きノードの矩形を登録 → FOW の
+            // 実物アンカー(fow.open anchor)が引く。
+            geometry: controller.geometry,
             onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
           ),
         );

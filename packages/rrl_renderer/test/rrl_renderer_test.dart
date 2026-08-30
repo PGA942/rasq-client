@@ -75,6 +75,24 @@ void main() {
       expect(events.single.$1, startsWith(instanceScope));
     });
 
+    testWidgets('ジオメトリ登録簿 (D-072): role 付きノードの実物矩形が引ける', (tester) async {
+      final geometry = RrlGeometryRegistry();
+      final host = RrlHost(instanceScope: instanceScope, scope: RrlScope(hostData()), geometry: geometry);
+      await tester.pumpWidget(wrap(RrlRenderer(node: sampleRoot(), host: host)));
+
+      // role 指定でも nodeId 指定でも現在の矩形が取れる(グローバル座標)。
+      final byRole = geometry.lookup(role: 'actionBar');
+      expect(byRole, isNotNull);
+      expect(byRole!.width, greaterThan(0));
+      final byId = geometry.lookup(nodeId: '$instanceScope:actions');
+      expect(byId, byRole);
+      expect(geometry.lookup(role: 'threadNav'), isNull); // 無い role は null
+
+      // アンマウントで登録が消える。
+      await tester.pumpWidget(wrap(const SizedBox()));
+      expect(geometry.lookup(role: 'actionBar'), isNull);
+    });
+
     testWidgets('If cw? shows the annotation when bound truthy', (tester) async {
       final host = RrlHost(instanceScope: instanceScope, scope: RrlScope(hostData(withCw: true)));
       await tester.pumpWidget(wrap(RrlRenderer(node: sampleRoot(), host: host)));

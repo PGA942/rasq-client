@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
 
+import 'geometry.dart';
 import 'host.dart';
 import 'registry.dart';
 
@@ -34,17 +35,25 @@ class _NodeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     try {
-      final built = _build(context);
+      var built = _build(context);
       // tap / longPress wiring for nodes that declare events and are not L2
       // (L2 builders wire their own handlers with richer payloads).
       final wantsGesture = node.layer != RrlLayer.l2Standard && (node.on.containsKey('tap') || node.on.containsKey('longPress'));
-      if (!wantsGesture) return built;
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: node.on.containsKey('tap') ? () => host.emit(node, scope, 'tap') : null,
-        onLongPress: node.on.containsKey('longPress') ? () => host.emit(node, scope, 'longPress') : null,
-        child: built,
-      );
+      if (wantsGesture) {
+        built = GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: node.on.containsKey('tap') ? () => host.emit(node, scope, 'tap') : null,
+          onLongPress: node.on.containsKey('longPress') ? () => host.emit(node, scope, 'longPress') : null,
+          child: built,
+        );
+      }
+      // ジオメトリ登録 (D-072): role 付きノードは実物の矩形を引ける。
+      final role = node.role;
+      final geometry = host.geometry;
+      if (role != null && geometry != null) {
+        built = RrlGeometryTag(registry: geometry, nodeId: host.nodeId(node, scope), role: role, child: built);
+      }
+      return built;
     } catch (e) {
       // V12: per-node fault isolation — a bad node degrades to an inline
       // error box, siblings keep rendering.

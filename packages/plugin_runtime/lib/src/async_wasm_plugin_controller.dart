@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:rrl_core/rrl_core.dart';
+import 'package:rrl_renderer/rrl_renderer.dart' show RrlGeometryRegistry;
 
 import 'wasm_fow.dart';
 import 'wasm_plugin_controller.dart';
@@ -15,6 +16,9 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
       : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage, fowPermissions: fowPermissions);
 
   final WasmWorkerConfig _config;
+
+  @override
+  final RrlGeometryRegistry geometry = RrlGeometryRegistry();
   WasmPluginWorker? _worker;
   RrlDocument? _document;
   String? _lastError;
@@ -105,7 +109,7 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
   }
 
   @override
-  void invokeFowClosed(String fn, Map<String, Object?> args) {
+  void invokePluginCallback(String fn, Map<String, Object?> args) {
     if (_worker == null) return; // dispose 後(closeOwnedBy 連動)は通知不要
     invoke(fn, args).catchError((Object e) {
       _lastError = '$e';

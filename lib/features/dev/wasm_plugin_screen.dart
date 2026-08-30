@@ -118,6 +118,17 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
       // 横ドッキング (D-062): 開いた画面のカラムに揃える。
       columnIndex: fowColumnOf(context),
     );
+    // placement (D-072): アプリヘッダー下付き / 実物ノードへのアンカー。
+    // anchor はプラグイン自ドキュメントのノード(key または role)を
+    // ジオメトリ登録簿から解決 — 見つからなければ通常ドックに縮退。
+    fowSpec.attachTop = spec['attachTop'] == true;
+    if (req.anchorNode != null || req.anchorRole != null) {
+      final scope = req.document.scope;
+      fowSpec.anchor = controller.geometry.lookup(
+        nodeId: req.anchorNode == null ? null : '$scope:${req.anchorNode}',
+        role: req.anchorRole,
+      );
+    }
     // ✕の割り込み (D-066): onCancel 指定時、キャンセルボタンは閉じずに
     // プラグインの関数を呼ぶ(プラグインが確認 FOW を出して自分で閉じる)。
     final onCancelFn = req.onCancel;

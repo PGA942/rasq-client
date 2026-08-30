@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:rasq_wasm_runtime/rasq_wasm_runtime.dart';
 import 'package:rrl_core/rrl_core.dart';
+import 'package:rrl_renderer/rrl_renderer.dart' show RrlGeometryRegistry;
 
 import 'host_environment.dart';
 import 'wasm_fow.dart';
@@ -13,6 +14,11 @@ abstract class WasmPluginViewModel implements Listenable {
   String? get lastError;
   Map<String, dynamic>? get lastResult;
   void handleEvent(String nodeId, String kind, {String? fn, Map<String, Object?> payload});
+
+  /// 実物ジオメトリの登録簿 (D-072): レンダラーが role 付きノードを登録し、
+  /// FOW の実物アンカー(`fow.open` の `anchor`)や `geometry.lookup` が
+  /// ここから矩形を引く。コントローラ寿命で安定。
+  RrlGeometryRegistry get geometry;
 }
 
 /// Owns one WASM plugin instance and its live [RrlDocument].
@@ -36,6 +42,9 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
 
   final Uint8List _bytes;
   final RasqHostEnvironment env;
+
+  @override
+  final RrlGeometryRegistry geometry = RrlGeometryRegistry();
 
   RasqWasmPlugin? _plugin;
   RrlDocument? _document;
@@ -121,7 +130,7 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
   }
 
   @override
-  void invokeFowClosed(String fn, Map<String, Object?> args) {
+  void invokePluginCallback(String fn, Map<String, Object?> args) {
     if (_plugin == null) return; // dispose 後(closeOwnedBy 連動)は通知不要
     invoke(fn, args);
   }
