@@ -88,11 +88,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('リアクション (wasm)'), findsNothing);
 
-    // 再度開いて、ホスト側のキャンセル(閉じる)でも閉じる。
+    // 再度開いて ✕(閉じる)→ ホストは閉じずにプラグインの onCancel が
+    // 呼ばれ、**画面そのままで確認ポップアップ**(確認 FOW)が出る (D-066)。
     await tester.tap(find.text('FOWデモ'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('閉じる'));
     await tester.pumpAndSettle();
+    expect(find.text('リアクション (wasm)'), findsOneWidget); // 本体は残る
+    expect(find.text('閉じますか?'), findsOneWidget);
+
+    // 「続ける」→ 確認だけ閉じて本体は残る。
+    await tester.tap(find.text('続ける'));
+    await tester.pumpAndSettle();
+    expect(find.text('閉じますか?'), findsNothing);
+    expect(find.text('リアクション (wasm)'), findsOneWidget);
+
+    // ✕ → 「破棄」→ 両方閉じる。
+    await tester.tap(find.text('閉じる'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('破棄'));
+    await tester.pumpAndSettle();
+    expect(find.text('閉じますか?'), findsNothing);
     expect(find.text('リアクション (wasm)'), findsNothing);
   });
 }

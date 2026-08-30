@@ -192,6 +192,7 @@ void main() {
       expect(opened!.spec['type'], 'widget');
       expect(opened!.spec['title'], 'リアクション (wasm)');
       expect(opened!.onClosed, 'fowClosed');
+      expect(opened!.onCancel, 'confirmCloseFow');
       expect(opened!.document.root.findByKey('emoji-like'), isNotNull);
 
       // FOW 内の絵文字 Button のタップ = event → call(reactFromFow)。
@@ -206,6 +207,37 @@ void main() {
       expect(last['ok'], true, reason: '$last');
       expect((last['value'] as Map)['reason'], 'completed');
       expect((last['value'] as Map)['result'], '❤️');
+    });
+
+    test('✕の割り込み (D-066): onCancel → 確認 FOW が開き、破棄で両方閉じる / 続けるで確認だけ閉じる', () {
+      final controller = WasmPluginController(wasmBytes: bytes);
+      addTearDown(controller.dispose);
+      controller.load();
+      final openedIds = <String>[];
+      WasmFowRequest? lastOpened;
+      final closes = <(String, String?)>[];
+      controller.onFowOpen = (req) {
+        openedIds.add(req.id);
+        lastOpened = req;
+      };
+      controller.onFowClose = (id, {result, reason}) => closes.add((id, reason));
+
+      controller.invoke('pickReaction', {'postId': 'p1'});
+      // ✕押下 = ホストは閉じずに onCancel(confirmCloseFow)を call →
+      // 画面そのままで確認 FOW が開く。
+      controller.handleEvent('scope:reaction-picker', 'cancel', fn: 'confirmCloseFow', payload: {'id': 'reaction-picker'});
+      expect(openedIds, ['reaction-picker', 'reaction-picker-confirm']);
+      expect(lastOpened!.spec['title'], '閉じますか?');
+      expect(lastOpened!.document.root.findByKey('confirm-discard'), isNotNull);
+
+      // 「続ける」→ 確認だけ閉じる。
+      controller.handleEvent('scope:confirm-keep', 'tap', fn: 'keepFow');
+      expect(closes, [('reaction-picker-confirm', null)]);
+
+      // もう一度 ✕ → 「破棄」→ 確認と本体の両方が閉じる。
+      controller.handleEvent('scope:reaction-picker', 'cancel', fn: 'confirmCloseFow', payload: {'id': 'reaction-picker'});
+      controller.handleEvent('scope:confirm-discard', 'tap', fn: 'discardFow');
+      expect(closes.sublist(1), [('reaction-picker-confirm', null), ('reaction-picker', 'discard')]);
     });
 
     test('権限ゲート: 許可外 type / 未配線 / id 無しはエラーで返る(トラップしない)', () {

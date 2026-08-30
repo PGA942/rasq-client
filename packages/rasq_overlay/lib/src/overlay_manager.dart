@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 
 import 'overlay_entry.dart';
 import 'overlay_layer.dart';
@@ -83,6 +84,25 @@ class OverlayManager extends ChangeNotifier {
     if (open && !_entries.any((e) => e.layer == OverlayLayer.fow)) return;
     _fowSwitcherOpen = open;
     notifyListeners();
+  }
+
+  /// スイッチャーを開く (D-066): まだ画面に出ているうちに各パネルを
+  /// RepaintBoundary からキャプチャしてプレビューにする(名前だけでは
+  /// 判別しづらい、の対応。失敗しても名前で選べるので握りつぶす)。
+  Future<void> openFowSwitcher() async {
+    for (final e in inLayer(OverlayLayer.fow)) {
+      final s = e.fow;
+      if (s == null) continue;
+      try {
+        final obj = s.previewBoundaryKey.currentContext?.findRenderObject();
+        if (obj is RenderRepaintBoundary && obj.hasSize) {
+          final image = await obj.toImage(pixelRatio: 0.6);
+          s.switcherPreview?.dispose();
+          s.switcherPreview = image;
+        }
+      } catch (_) {}
+    }
+    setFowSwitcher(true);
   }
 
   /// スイッチャーからの選択: 選んだ FOW を前面化し、**その FOW を親

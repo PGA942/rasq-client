@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
@@ -126,6 +127,21 @@ class FowSpec {
   /// 離したときの精算(ホストが列スロット幾何を知っているので毎ビルド
   /// 差し込む)。[FowMoveGrip] が onPanEnd で呼ぶ(dx = 横、dy = 縦)。
   void Function(double dx, double dy)? settleMove;
+
+  // ---- FOW スイッチャーのプレビュー (D-066) -----------------------------
+
+  /// パネルを包む RepaintBoundary のキー。スイッチャーを開く直前にホストが
+  /// ここからキャプチャする(名前だけでは判別しづらい、の対応)。
+  final GlobalKey previewBoundaryKey = GlobalKey();
+
+  /// 直近のキャプチャ。スイッチャーのカードに縮小表示される。
+  ui.Image? switcherPreview;
+
+  /// ✕/キャンセルの割り込み (D-066): 設定時、クロームのキャンセルボタンは
+  /// **閉じずに**これを呼ぶ。プラグイン FOW が「画面そのままの確認
+  /// ポップアップ」を出すための口(PROTOCOL `fow.open` の `onCancel` —
+  /// プラグインは確認 FOW を開き、自分で `fow.close` する)。
+  VoidCallback? interceptCancel;
 
   bool get hasHeader => title != null || cancelText != null || confirmText != null;
 

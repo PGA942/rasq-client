@@ -8,7 +8,7 @@ import 'package:rrl_core/rrl_core.dart';
 /// 取り込む。以後の更新は同じ id での `fow.open` 再要求 = 差し替え
 /// (patch のドキュメント多重化は後続)。
 class WasmFowRequest {
-  WasmFowRequest({required this.id, required this.spec, required this.document, this.onClosed});
+  WasmFowRequest({required this.id, required this.spec, required this.document, this.onClosed, this.onCancel});
 
   /// プラグインローカルの FOW id(ホスト側はプラグイン id を前置して
   /// OverlayManager 上の衝突を避ける)。
@@ -26,6 +26,11 @@ class WasmFowRequest {
   /// (args は `{id, reason, result?}`)。
   final String? onClosed;
 
+  /// ✕/キャンセル押下時に call する関数名 (D-066)。指定時ホストは閉じず、
+  /// プラグインが画面そのままの確認ポップアップを出して自分で fow.close
+  /// する(args は `{id}`)。
+  final String? onCancel;
+
   factory WasmFowRequest.fromArgs(Map<String, Object?> args, {required String scope}) {
     final root = args['root'];
     if (root is! Map) throw const FormatException('fow.open: root missing');
@@ -40,6 +45,7 @@ class WasmFowRequest {
         'root': root,
       }),
       onClosed: args['onClosed'] as String?,
+      onCancel: args['onCancel'] as String?,
     );
   }
 }

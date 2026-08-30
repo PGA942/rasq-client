@@ -108,6 +108,22 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
       'system' => FowPanelType.system,
       _ => FowPanelType.widget,
     };
+    final fowSpec = FowSpec(
+      type: type,
+      initialHeightFactor: (spec['initialHeightFactor'] as num?)?.toDouble() ?? 0.45,
+      title: spec['title'] as String?,
+      cancelText: spec['cancelText'] as String? ?? (req.onCancel != null ? '閉じる' : null),
+      confirmText: spec['confirmText'] as String?,
+      dockAboveFooter: true,
+      // 横ドッキング (D-062): 開いた画面のカラムに揃える。
+      columnIndex: fowColumnOf(context),
+    );
+    // ✕の割り込み (D-066): onCancel 指定時、キャンセルボタンは閉じずに
+    // プラグインの関数を呼ぶ(プラグインが確認 FOW を出して自分で閉じる)。
+    final onCancelFn = req.onCancel;
+    if (onCancelFn != null) {
+      fowSpec.interceptCancel = () => controller.handleEvent('${req.document.scope}:${req.id}', 'cancel', fn: onCancelFn, payload: {'id': req.id});
+    }
     manager.show(RasqOverlayEntry(
       id: '$_fowPrefix${req.id}',
       layer: OverlayLayer.fow,
@@ -116,16 +132,7 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
       semanticsLabel: spec['title'] as String? ?? 'プラグインFOW',
       // ピッカー同手法 (D-051): 透明バリア、余白クリックで破棄。
       barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
-      fow: FowSpec(
-        type: type,
-        initialHeightFactor: (spec['initialHeightFactor'] as num?)?.toDouble() ?? 0.45,
-        title: spec['title'] as String?,
-        cancelText: spec['cancelText'] as String?,
-        confirmText: spec['confirmText'] as String?,
-        dockAboveFooter: true,
-        // 横ドッキング (D-062): 開いた画面のカラムに揃える。
-        columnIndex: fowColumnOf(context),
-      ),
+      fow: fowSpec,
       onClosed: (reason, result) {
         // 同一 id の再 open(中身の差し替え)はクローズ通知にしない。
         if (reason == OverlayCloseReason.replaced) return;

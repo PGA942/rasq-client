@@ -30,6 +30,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(m.fowSwitcherOpen, isTrue);
     expect(find.bySemanticsLabel('FOW切り替え'), findsOneWidget);
+    // プレビュー (D-066): 開く直前のキャプチャがカードに載る。
+    expect(find.byType(RawImage), findsNWidgets(2));
 
     // 「親パネル」を選択 → 子(ownerId=parent)は自動で閉じ、親が前面へ。
     await tester.tap(find.text('親パネル'));

@@ -133,7 +133,7 @@ class OverlayHost extends StatelessWidget {
           },
           onCancel: (e) => manager.close(e.id, reason: OverlayCloseReason.discard),
           onConfirm: (e) => manager.close(e.id, result: true),
-          onShowSwitcher: () => manager.setFowSwitcher(true),
+          onShowSwitcher: manager.openFowSwitcher,
         ),
       ),
     ));
@@ -183,15 +183,27 @@ class _FowSwitcher extends StatelessWidget {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: ListTile(
-                            leading: const Icon(Icons.layers_outlined),
-                            title: Text(labelOf(e), maxLines: 1, overflow: TextOverflow.ellipsis),
-                            trailing: IconButton(
-                              tooltip: '閉じる',
-                              icon: const Icon(Icons.close),
-                              onPressed: () => manager.close(e.id, reason: OverlayCloseReason.discard),
-                            ),
+                          child: InkWell(
                             onTap: () => manager.promoteFow(e.id),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                              // プレビュー (D-066): 開く直前のキャプチャを縮小表示。
+                              if (e.fow?.switcherPreview != null)
+                                Container(
+                                  height: 140,
+                                  color: scheme.surfaceContainerHighest,
+                                  child: RawImage(image: e.fow!.switcherPreview, fit: BoxFit.contain),
+                                ),
+                              ListTile(
+                                leading: const Icon(Icons.layers_outlined),
+                                title: Text(labelOf(e), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                trailing: IconButton(
+                                  tooltip: '閉じる',
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () => manager.close(e.id, reason: OverlayCloseReason.discard),
+                                ),
+                                onTap: () => manager.promoteFow(e.id),
+                              ),
+                            ]),
                           ),
                         ),
                       ),
@@ -474,7 +486,9 @@ class _FowPanelState extends State<_FowPanel> {
             child: SizedBox(
               height: 40,
               child: Row(children: [
-                if (spec.cancelText != null) TextButton(onPressed: onCancel, child: Text(spec.cancelText!, style: TextStyle(color: scheme.onSurfaceVariant))) else const SizedBox(width: 80),
+                // ✕/キャンセル: interceptCancel 指定時は閉じずにそれを呼ぶ
+                // (プラグインの確認ポップアップ、D-066)。
+                if (spec.cancelText != null) TextButton(onPressed: spec.interceptCancel ?? onCancel, child: Text(spec.cancelText!, style: TextStyle(color: scheme.onSurfaceVariant))) else const SizedBox(width: 80),
                 Expanded(child: Center(child: Text(spec.title ?? '', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),
                 // 右側: headerTrailing(D-045: コンポーザーの公開設定など)>
                 // 決定ボタン > 空きスペース。
@@ -491,7 +505,10 @@ class _FowPanelState extends State<_FowPanel> {
     // 非リサイズパネル(stick コンポーザー等)は heightFactor 変更を
     // なめらかに(展開時にヘッダー/返信先タイルが「割り込んでくる」動き)。
     // ドラッグリサイズ可能なパネルは追従遅延を避けて即時反映。
-    final panel = Material(
+    // RepaintBoundary: FOW スイッチャーのプレビュー用キャプチャ点 (D-066)。
+    final panel = RepaintBoundary(
+      key: spec.previewBoundaryKey,
+      child: Material(
         color: scheme.surface,
         // 最前面のパネルだけ影付き(枠線は全パネル共通のグレー、D-052)。
         elevation: widget.frontmost ? 8 : 0,
@@ -503,7 +520,8 @@ class _FowPanelState extends State<_FowPanel> {
           Expanded(child: child),
           if (spec.showHandle && topSide) handle,
         ]),
-      );
+      ),
+    );
     // ドラッグ中は即時反映(duration 0)、それ以外(スナップ着地・stick の
     // 展開/折りたたみ・外部からの heightFactor 変更)はアニメーションで動かす。
     // ⚠ ウィジェット型は常に AnimatedContainer 1 種に固定する: SizedBox と
