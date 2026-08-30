@@ -98,20 +98,35 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
     _loadFromAsset();
   }
 
-  Future<void> _loadFromAsset() async {
+  Future<void> _loadFromAsset([String asset = 'assets/plugins/misskey_wasm_sample.wasm']) async {
     try {
-      final bytes = widget.wasmBytesOverride ?? (await rootBundle.load('assets/plugins/misskey_wasm_sample.wasm')).buffer.asUint8List();
+      final bytes = widget.wasmBytesOverride ?? (await rootBundle.load(asset)).buffer.asUint8List();
       await _start(bytes);
     } catch (e) {
       setState(() => _loadError = 'アセットの読み込みに失敗: $e');
     }
   }
 
-  Future<void> _loadFromPath(String path) async {
+  Future<void> _loadFromPath(String raw) async {
     try {
-      await _start(File(path).readAsBytesSync());
+      // 相対パスはアプリの作業ディレクトリ基準になって役に立たない (D-078):
+      // `~` を展開し、相対ならホーム配下(と SDK リポジトリの定位置)も探す。
+      var path = raw.trim();
+      final home = Platform.environment['HOME'];
+      if (home != null && (path == '~' || path.startsWith('~/'))) path = home + path.substring(1);
+      var file = File(path);
+      if (!file.existsSync() && !path.startsWith('/') && home != null) {
+        for (final base in [home, '$home/Documents', '$home/Documents/rasq-sdk-sample']) {
+          final cand = File('$base/$path');
+          if (cand.existsSync()) {
+            file = cand;
+            break;
+          }
+        }
+      }
+      await _start(file.readAsBytesSync());
     } catch (e) {
-      setState(() => _loadError = '$path の読み込みに失敗: $e');
+      setState(() => _loadError = '$raw の読み込みに失敗(絶対パスか ~/ 始まりで指定してください): $e');
     }
   }
 
@@ -262,6 +277,12 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
               OutlinedButton(
                 onPressed: _busy ? null : () => _pathField.text.trim().isEmpty ? _loadFromAsset() : _loadFromPath(_pathField.text.trim()),
                 child: const Text('読み込み'),
+              ),
+              const SizedBox(width: RasqSpacing.sm),
+              // SDK の最小サンプル (D-077) も同梱 — ボタン一発で試せる。
+              OutlinedButton(
+                onPressed: _busy ? null : () => _loadFromAsset('assets/plugins/hello_rasq_plugin.wasm'),
+                child: const Text('hello'),
               ),
             ]),
             if (_loadError != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_loadError!, style: RasqTypography.caption.copyWith(color: RasqTokens.of(context).danger))),
