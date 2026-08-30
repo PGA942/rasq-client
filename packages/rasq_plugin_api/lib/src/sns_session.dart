@@ -95,6 +95,10 @@ abstract class SnsSession {
   Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30});
   Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30});
 
+  /// 引用ノート一覧 (D-070: スレッド画面/リアクション画面の「共有(引用
+  /// ノート)」欄)。
+  Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30});
+
   // --- ユーザー一括 ---
   Future<List<UserProfile>> users(List<String> ids);
   Future<Map<String, FollowState>> relationships(List<String> userIds);
@@ -245,6 +249,8 @@ abstract class SnsSessionBase implements SnsSession {
   Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30}) => _unsupported('reactions');
   @override
   Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) => _unsupported('reposters');
+  @override
+  Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30}) => _unsupported('quotes');
   @override
   Future<List<UserProfile>> users(List<String> ids) => _unsupported('users');
   @override

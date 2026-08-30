@@ -221,9 +221,11 @@ typedef PostSimilarity = double Function(Post a, Post b);
 
 /// 特徴語: #タグ / @メンション / 固有名詞近似(2文字以上のカタカナ・英数語、
 /// 2文字以上の漢字連続)。GLiNER 配線後はゼロショット抽出結果を加える。
-Set<String> extractFeatures(Post p) {
+Set<String> extractFeatures(Post p) => extractFeaturesText('${p.body} ${p.quote?.body ?? ''}');
+
+/// 生テキスト版 (D-070: リノートした人のプロフィール文からのソートに使う)。
+Set<String> extractFeaturesText(String text) {
   final out = <String>{};
-  final text = '${p.body} ${p.quote?.body ?? ''}';
   for (final m in RegExp(r'#([^\s#＃]+)').allMatches(text)) {
     out.add(m.group(1)!.toLowerCase());
   }

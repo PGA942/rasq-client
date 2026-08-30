@@ -616,6 +616,17 @@ class MisskeySession extends SnsSessionBase {
   }
 
   @override
+  Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30}) async {
+    final list = await api.callList('notes/renotes', {'noteId': postId, 'limit': limit, 'untilId': ?cursor});
+    // 引用ノートのみ(本文/添付/CW のあるリノート)。純リノートは
+    // reposters(リノートした人)側で見る (D-070)。
+    return _page([
+      for (final n in list)
+        if ((n['text'] as String?)?.isNotEmpty == true || (n['fileIds'] as List? ?? const []).isNotEmpty || n['cw'] != null) n
+    ]);
+  }
+
+  @override
   Future<List<UserProfile>> users(List<String> ids) async {
     if (ids.isEmpty) return const [];
     final out = <UserProfile>[];

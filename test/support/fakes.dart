@@ -67,7 +67,14 @@ class FakeSnsSession extends SnsSessionBase {
   Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30}) async =>
       Page(items: [ReactionEntry(id: 'r1', user: _posts.first.author, reaction: type ?? '👍', createdAt: DateTime(2026))]);
   @override
-  Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) async => Page.empty();
+  Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) async {
+    final unique = {for (final p in _posts.where((x) => x.id != postId)) p.author.key: p.author};
+    return Page(items: unique.values.toList());
+  }
+
+  @override
+  Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30}) async =>
+      Page(items: _posts.where((p) => p.quote?.id == postId && p.body.isNotEmpty).toList());
   @override
   Future<Page<UserSummary>> searchUsers(String query, {String? cursor, int limit = 20}) async {
     final unique = {for (final p in _posts) p.author.key: p.author};

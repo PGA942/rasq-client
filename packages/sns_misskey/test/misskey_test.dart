@@ -452,6 +452,7 @@ void main() {
           seenNotes = b;
           return [note('q1', renote: note('x')), note('p1'), note('r1', reply: note('parent1', files: [{'id': 'f', 'type': 'image/png', 'url': 'https://f/p.png'}]))];
         },
+        'notes/renotes': (_) => [note('q1', renote: note('x')), note('pure', text: null, renote: note('x')), note('r2', renote: note('x'))],
         'following/requests/list': (_) => [{'id': 'fr1', 'follower': user('e'), 'followee': user('me')}],
         'mute/list': (_) => [{'id': 'm1', 'mutee': user('f')}],
         'blocking/list': (_) => [{'id': 'b1', 'blockee': user('g')}],
@@ -476,6 +477,9 @@ void main() {
       expect(replies.items.single.replyTo?.media, hasLength(1));
       final posts = await s.userPosts('u', filter: UserPostsFilter.posts);
       expect([for (final p in posts.items) p.id], ['p1']);
+      // 引用ノート一覧 (D-070): notes/renotes から引用のみ(純リノート除外)。
+      final quoteNotes = await s.quotes('x');
+      expect([for (final q in quoteNotes.items) q.id], ['q1', 'r2']);
       expect((await s.followRequests()).single.user.id, 'e');
       expect((await s.mutedUsers()).items.single.id, 'f');
       expect((await s.blockedUsers()).items.single.id, 'g');
