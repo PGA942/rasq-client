@@ -73,13 +73,7 @@ class WasmSnsSession extends SnsSessionBase {
   @override
   Future<Thread> thread(String id) async {
     final value = await _call('sns.thread', {'id': id});
-    final t = (value['thread'] as Map? ?? const {}).cast<String, Object?>();
-    Post postOf(Object? j) => SnsWire.postFrom((j as Map? ?? const {}).cast<String, Object?>(), account: account);
-    return Thread(
-      post: postOf(t['post']),
-      ancestors: [for (final a in (t['ancestors'] as List? ?? const [])) postOf(a)],
-      descendants: [for (final d in (t['descendants'] as List? ?? const [])) postOf(d)],
-    );
+    return SnsWire.threadFrom((value['thread'] as Map? ?? const {}).cast<String, Object?>(), account: account);
   }
 
   @override
@@ -90,5 +84,75 @@ class WasmSnsSession extends SnsSessionBase {
     final value = await _call('sns.performAction', {'actionId': actionId, 'postId': postId, 'args': args});
     final r = (value['result'] as Map? ?? const {}).cast<String, Object?>();
     return ActionResult(done: r['done'] == true, count: (r['count'] as num?)?.toInt(), message: r['message'] as String?);
+  }
+
+  // ---- 書き込み系 (D-076) ----------------------------------------------
+
+  @override
+  Future<Post> createPost(NewPost draft) async {
+    final value = await _call('sns.createPost', {'draft': SnsWire.newPost(draft)});
+    return SnsWire.postFrom((value['post'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  @override
+  Future<void> deletePost(String id) async {
+    await _call('sns.deletePost', {'id': id});
+  }
+
+  // ---- ユーザー系 (D-076) ----------------------------------------------
+
+  @override
+  Future<UserSummary> me() async {
+    final value = await _call('sns.me', const {});
+    return SnsWire.userFrom((value['user'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<UserProfile> user(String id) async {
+    final value = await _call('sns.user', {'id': id});
+    return SnsWire.profileFrom((value['profile'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  @override
+  Future<UserProfile?> userByHandle(String handle, {String? host}) async {
+    try {
+      // 接続先(extraArgs の host)と衝突しないよう、ユーザーの所属ホストは
+      // userHost で渡す。
+      final value = await _call('sns.user', {'handle': handle, 'userHost': ?host});
+      return SnsWire.profileFrom((value['profile'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+    } on SnsApiException catch (e) {
+      if (e.code.code == '404') return null;
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20, UserPostsFilter filter = UserPostsFilter.posts}) async {
+    final value = await _call('sns.userPosts', {'id': id, 'filter': filter.name, 'limit': limit, 'cursor': ?cursor});
+    return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  // ---- スレッド画面の欄 (D-070 対応、D-076) ------------------------------
+
+  @override
+  Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30}) async {
+    final value = await _call('sns.reactions', {'postId': postId, 'type': ?type, 'limit': limit, 'cursor': ?cursor});
+    final page = (value['page'] as Map? ?? const {}).cast<String, Object?>();
+    return Page(
+      items: [for (final e in (page['items'] as List? ?? const [])) SnsWire.reactionEntryFrom((e as Map).cast<String, Object?>())],
+      nextCursor: page['nextCursor'] as String?,
+    );
+  }
+
+  @override
+  Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) async {
+    final value = await _call('sns.reposters', {'postId': postId, 'limit': limit, 'cursor': ?cursor});
+    return SnsWire.userPageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30}) async {
+    final value = await _call('sns.quotes', {'postId': postId, 'limit': limit, 'cursor': ?cursor});
+    return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
   }
 }

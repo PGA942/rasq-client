@@ -361,6 +361,80 @@ void main() {
       );
     });
 
+    test('D-076 増線: createPost/deletePost/me/user/userPosts/reactions/reposters/quotes', () async {
+      final douglas = {'id': 'u1', 'username': 'douglas', 'name': 'ダグラス', 'host': null, 'avatarUrl': null};
+      final plain = {'id': 'n1', 'text': 'ふつうの投稿', 'user': douglas, 'files': [], 'reactions': {}, 'repliesCount': 0, 'renoteCount': 0};
+      final replyNote = {'id': 'r1', 'text': '返信です', 'user': douglas, 'files': [], 'reactions': {}, 'replyId': 'n1', 'reply': plain};
+      final quoteNote = {'id': 'q1', 'text': '引用です', 'user': douglas, 'files': [], 'reactions': {}, 'renote': plain};
+      final seen = <String, Map<String, Object?>>{};
+      final env = RasqHostEnvironment(fetch: (req) {
+        final ep = req.url.path.split('/api/').last;
+        seen[ep] = (jsonDecode(req.body ?? '{}') as Map).cast<String, Object?>();
+        final Object? out = switch (ep) {
+          'notes/create' => {'createdNote': quoteNote},
+          'notes/delete' => null,
+          'i' => {'id': 'me1', 'username': 'me', 'name': 'わたし', 'host': null},
+          'users/show' => {...douglas, 'description': 'bio です', 'followersCount': 12, 'followingCount': 34, 'notesCount': 56, 'isBot': true, 'fields': [{'name': 'web', 'value': 'https://x.example'}], 'pinnedNotes': []},
+          'users/notes' => [plain, replyNote, quoteNote],
+          'notes/reactions' => [{'id': 're1', 'user': douglas, 'type': '🎉', 'createdAt': '2026-08-30T00:00:00Z'}],
+          'notes/renotes' => [{'id': 'rn1', 'text': null, 'user': douglas, 'files': [], 'reactions': {}, 'renote': plain}, quoteNote],
+          _ => [],
+        };
+        return out == null ? const SyncFetchResponse(status: 204) : SyncFetchResponse(status: 200, bodyText: jsonEncode(out));
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        extraArgs: const {'host': 'misskey.example', 'token': 'T'},
+        invoke: (fn, args) async => controller.invoke(fn, args),
+      );
+
+      // createPost: NewPost ワイヤ → notes/create への写像 → 作成 Post が返る。
+      final created = await session.createPost(const NewPost(
+          text: 'こんにちは', contentWarning: '注', replyToId: 'n1', visibility: 'home', localOnly: true,
+          poll: NewPoll(choices: ['犬', '猫'], multiple: true, expiresAfter: Duration(hours: 1))));
+      expect(created.id, 'q1');
+      final body = seen['notes/create']!;
+      expect(body['text'], 'こんにちは');
+      expect(body['cw'], '注');
+      expect(body['replyId'], 'n1');
+      expect(body['visibility'], 'home');
+      expect(body['localOnly'], true);
+      expect((body['poll'] as Map)['choices'], ['犬', '猫']);
+      expect((body['poll'] as Map)['expiredAfter'], 3600000);
+      expect(body['i'], 'T'); // token は共通口で積まれる
+
+      await session.deletePost('n1');
+      expect(seen['notes/delete']!['noteId'], 'n1');
+
+      expect((await session.me()).displayName, 'わたし');
+
+      final profile = await session.user('u1');
+      expect(profile.summary.displayName, 'ダグラス');
+      expect(profile.followersCount, 12);
+      expect(profile.isBot, isTrue);
+      expect(profile.fields.single.name, 'web');
+      expect(profile.profileUrl.toString(), contains('@douglas'));
+      expect((await session.userByHandle('douglas', host: 'other.example'))!.summary.id, 'u1');
+      expect(seen['users/show']!['username'], 'douglas');
+
+      // userPosts: 返信/引用の振り分け (D-069 と同じ規約) がワイヤ越しでも効く。
+      expect([for (final p in (await session.userPosts('u1', filter: UserPostsFilter.replies)).items) p.id], ['r1']);
+      expect((await session.userPosts('u1', filter: UserPostsFilter.replies)).items.single.replyTo?.id, 'n1');
+      expect([for (final p in (await session.userPosts('u1', filter: UserPostsFilter.quotes)).items) p.id], ['q1']);
+      expect((await session.userPosts('u1', filter: UserPostsFilter.quotes)).items.single.quote?.body, 'ふつうの投稿');
+      expect([for (final p in (await session.userPosts('u1', filter: UserPostsFilter.posts)).items) p.id], ['n1']);
+
+      final reactions = await session.reactions('n1');
+      expect(reactions.items.single.reaction, '🎉');
+      expect(reactions.items.single.user.displayName, 'ダグラス');
+
+      expect((await session.reposters('n1')).items, hasLength(2)); // リノートした人
+      expect([for (final q in (await session.quotes('n1')).items) q.id], ['q1']);
+    });
+
     test('エラーは SnsApiException(コード付き)へ写る', () async {
       final controller = WasmPluginController(wasmBytes: bytes); // fetch なし → B01
       addTearDown(controller.dispose);
