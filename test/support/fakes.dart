@@ -50,7 +50,9 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<Thread> thread(String id) async {
     final p = _posts.firstWhere((e) => e.id == id);
-    return Thread(post: p, descendants: _posts.where((e) => e.id != id).take(1).toList());
+    // Misskey の notes/children 同様、リプライ以外(引用等)も混ぜて返す —
+    // 返信欄のリプライ絞り込み (D-071) は表示側の仕事。
+    return Thread(post: p, descendants: _posts.where((e) => e.id != id).take(2).toList());
   }
   /// 最後に createPost へ渡された draft (投稿オプションのテスト用)。
   NewPost? lastDraft;

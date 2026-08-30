@@ -176,7 +176,10 @@ class _ThreadBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final replies = sortThreadPosts(descendants, order, post);
+    // 返信欄は**リプライだけ** (D-071、Twitter 寄せ): Misskey の
+    // notes/children は引用リノートも混ざって返る — 引用は「共有(引用
+    // ノート)」欄で見るので、ここでは replyTo を持つものに絞る。
+    final replies = sortThreadPosts([for (final d in descendants) if (d.replyToId != null || d.replyTo != null) d], order, post);
     return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
       // 1 つ前の投稿(ancestors)は省略タイル (D-069: ワイヤーフレーム p.5
       // 「1件の添付リンク」の形)でスレッド線を繋ぐ。タップでそのスレッドへ。

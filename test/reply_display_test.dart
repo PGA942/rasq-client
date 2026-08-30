@@ -82,6 +82,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PostDetailScreen), findsOneWidget);
 
+    // 返信欄は**リプライだけ** (D-071、Twitter 寄せ): notes/children 相当で
+    // 混ざってくる引用ノート(これすごい)は出さない。
+    expect(find.text('よかったやん！'), findsOneWidget);
+    expect(find.text('これすごい'), findsNothing);
+
     final chevron = find.byIcon(Icons.keyboard_arrow_down).first;
 
     // 短押し → 並び順メニュー(関連順/リアクション数/キーワード順/デフォルト)。

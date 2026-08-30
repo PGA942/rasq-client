@@ -98,7 +98,8 @@ class _Replies extends ConsumerWidget {
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
       data: (t) {
-        final list = sortByReactions(t.descendants, order, (p) => p.reactionTotal);
+        // 返信タブもリプライだけ (D-071: 引用リノートは共有タブへ)。
+        final list = sortByReactions([for (final d in t.descendants) if (d.replyToId != null || d.replyTo != null) d], order, (p) => p.reactionTotal);
         if (list.isEmpty) return const RasqEmptyView(title: '返信はありません');
         return ListView.separated(
           itemCount: list.length,
