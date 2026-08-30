@@ -63,16 +63,24 @@ class WasmFowView extends StatelessWidget {
   final List<RasqSpan> Function(String source)? rslParser;
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
-        child: RrlRenderer(
-          node: request.document.root,
-          host: RrlHost(
-            instanceScope: request.document.scope,
-            scope: RrlScope({}),
-            rslParser: rslParser,
-            onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
-          ),
-        ),
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          // surface patch (D-073) 適用後の最新ドキュメントを読み直す。
+          final c = controller;
+          final doc = (c is WasmFowSurfaceHost ? (c as WasmFowSurfaceHost).fowDocument(request.id) : null) ?? request.document;
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            child: RrlRenderer(
+              node: doc.root,
+              host: RrlHost(
+                instanceScope: doc.scope,
+                scope: RrlScope({}),
+                rslParser: rslParser,
+                onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
+              ),
+            ),
+          );
+        },
       );
 }

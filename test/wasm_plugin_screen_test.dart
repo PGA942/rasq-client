@@ -83,6 +83,13 @@ void main() {
     expect(find.text('👍'), findsOneWidget);
     expect(find.textContaining('postId: p-demo'), findsNothing); // postId 無しの入口
 
+    // surface patch (D-073): +1 → カウンターだけ差分更新(FOW は開いたまま)。
+    expect(find.text('タップ 0 回'), findsOneWidget);
+    await tester.tap(find.text('+1'));
+    await tester.pumpAndSettle();
+    expect(find.text('タップ 1 回'), findsOneWidget);
+    expect(find.text('リアクション (wasm)'), findsOneWidget);
+
     // FOW 内の絵文字 Button → event → reactFromFow → プラグイン発 fow.close。
     await tester.tap(find.text('👍'));
     await tester.pumpAndSettle();

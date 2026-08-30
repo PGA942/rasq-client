@@ -252,6 +252,28 @@ void main() {
       expect(closes.sublist(1), [('reaction-picker-confirm', null), ('reaction-picker', 'discard')]);
     });
 
+    test('surface patch (D-073): fowPlus → patch:true 引き取り → FOW ドキュメントだけ差分更新', () async {
+      final controller = WasmPluginController(wasmBytes: bytes);
+      addTearDown(controller.dispose);
+      controller.load();
+      controller.onFowOpen = (_) {};
+      controller.invoke('pickReaction', {'postId': 'p1'});
+      expect(controller.fowDocument('reaction-picker')!.root.findByKey('fow-count')!.p['text'], 'タップ 0 回');
+
+      controller.handleEvent('scope:fow-plus', 'tap', fn: 'fowPlus');
+      expect(controller.fowDocument('reaction-picker')!.rev, 2);
+      expect(controller.fowDocument('reaction-picker')!.root.findByKey('fow-count')!.p['text'], 'タップ 1 回');
+      controller.handleEvent('scope:fow-plus', 'tap', fn: 'fowPlus');
+      expect(controller.fowDocument('reaction-picker')!.root.findByKey('fow-count')!.p['text'], 'タップ 2 回');
+      expect(controller.document!.rev, 1); // 本体ドキュメントは動かない
+      expect(controller.lastError, isNull);
+
+      // 閉じたら surface ドキュメントは消える(再 open で rev 1 から)。
+      controller.notifyFowClosed('reaction-picker');
+      expect(controller.fowDocument('reaction-picker'), isNull);
+      await Future<void>.delayed(Duration.zero); // lifecycle microtask 消化
+    });
+
     test('権限ゲート: 許可外 type / 未配線 / id 無しはエラーで返る(トラップしない)', () {
       Map<String, dynamic> call(RasqHostEnvironment env, String fn, Map<String, Object?> args) =>
           (jsonDecode(env.dispatch(jsonEncode({'schema': 'rasq.hostfn/1', 'callId': 'f', 'fn': fn, 'args': args}))) as Map).cast<String, dynamic>();

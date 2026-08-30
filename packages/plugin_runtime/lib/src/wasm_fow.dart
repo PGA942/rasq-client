@@ -76,6 +76,10 @@ abstract class WasmFowSurfaceHost {
   /// ホスト側で FOW が閉じた通知(→ プラグインの `onClosed` 関数を call)。
   /// アプリ層が FOW クローズ時(reason = dismissed/completed/…)に呼ぶ。
   void notifyFowClosed(String id, {String reason = 'dismissed', Object? result});
+
+  /// FOW surface の現在のドキュメント (D-073: surface patch 適用後の最新)。
+  /// [WasmFowView] がコントローラ通知のたびにここから読み直す。
+  RrlDocument? fowDocument(String id);
 }
 
 /// [WasmFowSurfaceHost] の共通実装(同期/非同期コントローラで共用)。
@@ -89,6 +93,28 @@ mixin WasmFowSurfaceMixin implements WasmFowSurfaceHost {
   /// FOW id → onClosed 関数名(fow.open 時に控え、通知で消費)。
   final Map<String, String?> _fowOnClosed = {};
 
+  /// FOW id → 現在のドキュメント (D-073: surface patch で進む。open で
+  /// rev 1 から、同一 id の再 open は差し替え)。
+  final Map<String, RrlDocument> _fowDocs = {};
+
+  @override
+  RrlDocument? fowDocument(String id) => _fowDocs[id];
+
+  /// surface 指定の patch (D-073) を該当 FOW ドキュメントへ適用する。
+  /// 戻り値: null = 成功 / それ以外 = エラーメッセージ(rev 不一致・未知
+  /// surface は破棄 — プラグインは再 fow.open で resync する)。
+  String? applyFowPatch(Map<String, Object?> message) {
+    final surface = '${message['surface']}';
+    final doc = _fowDocs[surface];
+    if (doc == null) return 'unknown fow surface: $surface';
+    try {
+      _fowDocs[surface] = doc.applyPatch(message);
+      return null;
+    } catch (e) {
+      return 'fow patch failed ($surface): $e';
+    }
+  }
+
   /// 環境から中継されてきた `fow.*` host-fn を UI 側コールバックへ写す。
   /// 戻り値は host-fn の value(open は `{opened: true}`)。
   Object? handleFowHostFn(String fn, Map<String, Object?> args, {required String scope}) {
@@ -96,6 +122,7 @@ mixin WasmFowSurfaceMixin implements WasmFowSurfaceHost {
       final req = WasmFowRequest.fromArgs(args, scope: scope);
       final replacing = _fowOnClosed.containsKey(req.id);
       _fowOnClosed[req.id] = req.onClosed;
+      _fowDocs[req.id] = req.document;
       onFowOpen?.call(req);
       // lifecycle mount (D-072): 論理マウントで一度だけ(同一 id の
       // 再要求 = 差し替えでは送らない)。wasm 呼び出し中の再入を避けて
@@ -111,13 +138,14 @@ mixin WasmFowSurfaceMixin implements WasmFowSurfaceHost {
 
   @override
   void notifyFowClosed(String id, {String reason = 'dismissed', Object? result}) {
+    _fowDocs.remove(id);
+    if (!_fowOnClosed.containsKey(id)) return; // この mixin が開いた FOW ではない
     final fn = _fowOnClosed.remove(id);
-    if (fn == null) return;
     // マイクロタスクへ逃がす: 同期コントローラでは fow.close host-fn の
     // 最中(wasm 実行中)にここへ来ることがあり、その場で call すると
     // wasm へ再入してしまう。呼び出しが解けてから通知する。
     scheduleMicrotask(() {
-      invokePluginCallback(fn, {'id': id, 'reason': reason, 'result': ?result});
+      if (fn != null) invokePluginCallback(fn, {'id': id, 'reason': reason, 'result': ?result});
       // lifecycle unmount (D-072)。onClosed(アプリ都合の理由/結果)とは別に
       // 汎用のライフサイクルとしても届ける。
       invokePluginCallback('lifecycle', {'kind': 'unmount', 'surface': id});

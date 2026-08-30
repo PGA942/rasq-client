@@ -96,8 +96,11 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
     final plugin = _require();
     final result = (jsonDecode(plugin.call(fn: fn, argsJson: jsonEncode(args), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
     _lastResult = result;
-    if (result['ok'] == true && (result['value'] as Map?)?['treeUpdated'] == true) {
+    final value = result['ok'] == true ? result['value'] as Map? : null;
+    if (value?['treeUpdated'] == true) {
       pullSnapshot();
+    } else if (value?['patch'] == true) {
+      applyPatch(); // 保留パッチの引き取り (D-073)
     } else {
       notifyListeners();
     }
@@ -105,12 +108,25 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
   }
 
   /// Pulls one `patch` message and applies it; rev mismatch → resync.
+  /// `surface` 指定 (D-073) は該当 FOW ドキュメントへ(不一致は破棄)。
   void applyPatch() {
     final plugin = _require();
+    final Map<String, Object?> message;
+    try {
+      message = (jsonDecode(plugin.patch()) as Map).cast<String, Object?>();
+    } catch (e) {
+      _lastError = 'patch failed: $e';
+      notifyListeners();
+      return;
+    }
+    if (message['surface'] != null) {
+      _lastError = applyFowPatch(message);
+      notifyListeners();
+      return;
+    }
     final doc = _document;
     if (doc == null) return pullSnapshot();
     try {
-      final message = (jsonDecode(plugin.patch()) as Map).cast<String, Object?>();
       _document = doc.applyPatch(message);
       _lastError = null;
       notifyListeners();

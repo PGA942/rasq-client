@@ -72,20 +72,36 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
     final worker = _require();
     final result = (jsonDecode(await worker.call(fn: fn, argsJson: jsonEncode(args), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
     _lastResult = result;
-    if (result['ok'] == true && (result['value'] as Map?)?['treeUpdated'] == true) {
+    final value = result['ok'] == true ? result['value'] as Map? : null;
+    if (value?['treeUpdated'] == true) {
       await pullSnapshot();
+    } else if (value?['patch'] == true) {
+      await applyPatch(); // 保留パッチの引き取り (D-073)
     } else {
       _notify();
     }
     return result;
   }
 
+  /// `surface` 指定 (D-073) は該当 FOW ドキュメントへ(不一致は破棄)。
   Future<void> applyPatch() async {
     final worker = _require();
+    final Map<String, Object?> message;
+    try {
+      message = (jsonDecode(await worker.patch()) as Map).cast<String, Object?>();
+    } catch (e) {
+      _lastError = 'patch failed: $e';
+      _notify();
+      return;
+    }
+    if (message['surface'] != null) {
+      _lastError = applyFowPatch(message);
+      _notify();
+      return;
+    }
     final doc = _document;
     if (doc == null) return pullSnapshot();
     try {
-      final message = (jsonDecode(await worker.patch()) as Map).cast<String, Object?>();
       _document = doc.applyPatch(message);
       _lastError = null;
       _notify();
