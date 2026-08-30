@@ -54,6 +54,8 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
   /// 境界セッション試験 (D-074/M5d): `WasmSnsSession.timeline` の結果
   /// (Post ワイヤ → ホストモデル)。非 null の間はこれを表示する。
   List<Post>? _boundaryPosts;
+  WasmSnsSession? _boundarySession;
+  String? _boundaryNote; // performAction の結果表示
 
   /// SnsSession 契約の boundary 写像を実際に叩く: 抽象関数 `sns.timeline`
   /// → Post ワイヤ → ホストの PostRow パイプラインで描画。
@@ -73,10 +75,13 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
           _ => <String, dynamic>{'ok': false},
         },
       );
+      await session.loadActions(); // sns.actions (D-075: アクションバー宣言)
       final page = await session.timeline(TimelineKind.local);
       if (mounted) {
         setState(() {
+          _boundarySession = session;
           _boundaryPosts = page.items;
+          _boundaryNote = null;
           _loadError = null;
         });
       }
@@ -281,8 +286,26 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
                       TextButton(onPressed: () => setState(() => _boundaryPosts = null), child: const Text('閉じる')),
                     ]),
                   ),
+                  if (_boundaryNote != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: 4),
+                      child: Text(_boundaryNote!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                    ),
                   for (final p in _boundaryPosts!) ...[
-                    PostRow(post: p, actions: const [], onAction: (_, {args = const {}}) async {}),
+                    // アクションは sns.performAction へ (D-075: 短押しの中身は
+                    // プラグインが決める。トークン無しの実サーバーではエラー表示)。
+                    PostRow(
+                      post: p,
+                      actions: _boundarySession?.actions ?? const [],
+                      onAction: (a, {args = const {}}) async {
+                        try {
+                          final r = await _boundarySession!.performAction(a.id, p.id, args: args);
+                          if (mounted) setState(() => _boundaryNote = 'performAction(${a.id}, ${p.id}) → done=${r.done}');
+                        } catch (e) {
+                          if (mounted) setState(() => _boundaryNote = 'performAction(${a.id}) 失敗: $e');
+                        }
+                      },
+                    ),
                     const Divider(),
                   ],
                 ])

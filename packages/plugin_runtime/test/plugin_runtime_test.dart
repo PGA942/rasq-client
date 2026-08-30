@@ -319,6 +319,48 @@ void main() {
       expect(page.nextCursor, 'n2');
     });
 
+    test('sns.actions / sns.thread / sns.performAction (D-075)', () async {
+      final requests = <String>[];
+      final env = RasqHostEnvironment(fetch: (req) {
+        requests.add(req.url.path);
+        if (req.url.path.endsWith('notes/show')) return SyncFetchResponse(status: 200, bodyText: jsonEncode(jsonDecode(cannedNotes)[0]));
+        if (req.url.path.endsWith('notes/conversation')) return SyncFetchResponse(status: 200, bodyText: jsonEncode([jsonDecode(cannedNotes)[1]]));
+        if (req.url.path.endsWith('notes/children')) return SyncFetchResponse(status: 200, bodyText: cannedNotes);
+        if (req.url.path.endsWith('notes/reactions/create')) return const SyncFetchResponse(status: 204);
+        return SyncFetchResponse(status: 200, bodyText: cannedNotes);
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        extraArgs: const {'host': 'misskey.example'},
+        invoke: (fn, args) async => controller.invoke(fn, args),
+      );
+
+      // アクション宣言(register_action と同形)。
+      await session.loadActions();
+      expect([for (final a in session.actions) a.id], ['reply', 'renote', 'reaction']);
+      expect(session.actions.last.genreTag, 'Reaction');
+      expect(session.actions.last.doneIcon, 'add_reaction');
+
+      // スレッド: show + conversation(古い順へ反転)+ children。
+      final t = await session.thread('n1');
+      expect(t.post.id, 'n1');
+      expect(t.ancestors.single.id, 'n2');
+      expect(t.descendants, hasLength(2));
+      expect(requests.where((p) => p.endsWith('notes/show')), hasLength(1));
+
+      // performAction: 短押しの中身はプラグイン(reaction → 204 → done)。
+      final r = await session.performAction('reaction', 'n1', args: {'reaction': '🎉'});
+      expect(r.done, isTrue);
+      // 未対応アクションは C01 の SnsApiException。
+      await expectLater(
+        session.performAction('bookmark', 'n1'),
+        throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'C01')),
+      );
+    });
+
     test('エラーは SnsApiException(コード付き)へ写る', () async {
       final controller = WasmPluginController(wasmBytes: bytes); // fetch なし → B01
       addTearDown(controller.dispose);

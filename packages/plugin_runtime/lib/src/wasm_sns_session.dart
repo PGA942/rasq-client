@@ -32,8 +32,27 @@ class WasmSnsSession extends SnsSessionBase {
   @override
   List<TimelineKind> get timelines => const [TimelineKind.local];
 
+  List<ActionDescriptor> _actions = const [];
+
+  /// `sns.actions` で宣言されたアクションバーのボタン (D-075)。
+  /// [loadActions] 前(または未実装プラグイン)は空 = ホストはバー無しで
+  /// 描画する。
   @override
-  List<ActionDescriptor> get actions => const [];
+  List<ActionDescriptor> get actions => _actions;
+
+  /// `call("sns.actions")` → [ActionDescriptor] 群を取り込む(宣言 JSON は
+  /// register_action と同形)。未実装(C01)は空のまま。
+  Future<void> loadActions() async {
+    try {
+      final value = await _call('sns.actions', const {});
+      _actions = [
+        for (final a in (value['actions'] as List? ?? const [])) ActionDescriptor.fromJson((a as Map).cast<String, Object?>()),
+      ];
+    } on SnsApiException catch (e) {
+      if (e.code.code != 'C01') rethrow;
+      _actions = const [];
+    }
+  }
 
   /// `call("sns.<fn>")` → ok チェック → value。エラーは [SnsApiException]
   /// に写す(ホストのエラービュー/リトライがそのまま効く)。
@@ -49,5 +68,27 @@ class WasmSnsSession extends SnsSessionBase {
   Future<Page<Post>> timeline(TimelineKind kind, {String? cursor, int limit = 20}) async {
     final value = await _call('sns.timeline', {'kind': kind.id, 'limit': limit, 'cursor': ?cursor});
     return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  @override
+  Future<Thread> thread(String id) async {
+    final value = await _call('sns.thread', {'id': id});
+    final t = (value['thread'] as Map? ?? const {}).cast<String, Object?>();
+    Post postOf(Object? j) => SnsWire.postFrom((j as Map? ?? const {}).cast<String, Object?>(), account: account);
+    return Thread(
+      post: postOf(t['post']),
+      ancestors: [for (final a in (t['ancestors'] as List? ?? const [])) postOf(a)],
+      descendants: [for (final d in (t['descendants'] as List? ?? const [])) postOf(d)],
+    );
+  }
+
+  @override
+  Future<Post> post(String id) async => (await thread(id)).post;
+
+  @override
+  Future<ActionResult> performAction(String actionId, String postId, {Map<String, Object?> args = const {}}) async {
+    final value = await _call('sns.performAction', {'actionId': actionId, 'postId': postId, 'args': args});
+    final r = (value['result'] as Map? ?? const {}).cast<String, Object?>();
+    return ActionResult(done: r['done'] == true, count: (r['count'] as num?)?.toInt(), message: r['message'] as String?);
   }
 }

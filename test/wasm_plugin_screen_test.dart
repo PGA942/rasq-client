@@ -96,6 +96,13 @@ void main() {
     expect(find.byType(RasqPostTile), findsOneWidget);
     expect(find.text('境界越えの投稿'), findsOneWidget);
     expect(find.text('ダグラス'), findsOneWidget);
+
+    // sns.actions で宣言されたアクションバーが付き、タップは
+    // sns.performAction へ届く (D-075: 204 → done=true)。
+    expect(find.byType(RasqActionBar), findsOneWidget);
+    await tester.tap(find.byTooltip('リアクション'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('performAction(reaction, n1) → done=true'), findsOneWidget);
   });
 
   testWidgets('FOW surface (D-064): プラグインの fow.open が実 FOW になり、絵文字タップの fow.close で閉じる', (tester) async {
