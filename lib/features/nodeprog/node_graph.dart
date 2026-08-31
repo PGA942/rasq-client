@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 /// (KV `nodeprog.<scope>.v1`)まで — 実行は RAi/プラグイン統合側で配線する。
 @immutable
 class NodePort {
-  const NodePort({required this.label, this.value});
+  const NodePort({required this.label, this.value, this.dataType = 'any', this.format});
 
   final String label;
 
@@ -13,9 +13,38 @@ class NodePort {
   /// 接続ポート(値を持たない)。
   final String? value;
 
-  NodePort copyWith({String? value}) => NodePort(label: label, value: value ?? this.value);
-  Map<String, Object?> toJson() => {'label': label, if (value != null) 'value': value};
-  factory NodePort.fromJson(Map<String, Object?> j) => NodePort(label: j['label'] as String? ?? '', value: j['value'] as String?);
+  /// データ形式(大まかなジャンル)。**色分けと接続可否**の単位 —
+  /// ジャンルが違うポート同士は接続できない(D-092)。
+  final String dataType;
+
+  /// プラグインが細かく指定する形式(例: テキストの `.dic`)。両端が
+  /// 指定していて食い違うときは接続できない。
+  final String? format;
+
+  NodePort copyWith({String? value}) => NodePort(label: label, value: value ?? this.value, dataType: dataType, format: format);
+  Map<String, Object?> toJson() => {'label': label, if (value != null) 'value': value, 'dataType': dataType, if (format != null) 'format': format};
+  factory NodePort.fromJson(Map<String, Object?> j) => NodePort(
+      label: j['label'] as String? ?? '', value: j['value'] as String?, dataType: j['dataType'] as String? ?? 'any', format: j['format'] as String?);
+
+  /// 表示名: `テキスト(.dic)` のように形式を添える。
+  String get typeLabel => format == null ? dataType : '$dataType($format)';
+}
+
+/// データ形式 → 色(ポートのドットと接続線の色分け)。
+Color nodeTypeColor(String dataType) => switch (dataType) {
+      'クロック' => const Color(0xFFE57368),
+      '数値' => const Color(0xFF26A69A),
+      'テキスト' => const Color(0xFFFFB74D),
+      '投稿リスト' => const Color(0xFF42A5F5),
+      _ => const Color(0xFF9E9E9E),
+    };
+
+/// 2 ポートが接続可能か (D-092): ジャンル(dataType)一致が必須。
+/// 両端が形式(format)を指定していて食い違う場合も不可。
+bool portsCompatible(NodePort out, NodePort input) {
+  if (out.dataType != input.dataType) return false;
+  if (out.format != null && input.format != null && out.format != input.format) return false;
+  return true;
 }
 
 @immutable
@@ -110,9 +139,16 @@ class NodeCatalogEntry {
   final List<NodePort> outputs;
 
   GraphNode instantiate(String id, Offset at) => GraphNode(id: id, type: type, title: title, x: at.dx, y: at.dy, inputs: inputs, outputs: outputs);
+
+  /// パレットタイルの 1 行入出力表示(例: `入力: 間隔(数値) → 出力: クロック(クロック)`)。
+  String get ioSummary {
+    String side(List<NodePort> ps) => ps.isEmpty ? 'なし' : ps.map((p) => '${p.label}(${p.typeLabel})').join('・');
+    return '入力: ${side(inputs)} → 出力: ${side(outputs)}';
+  }
 }
 
-/// 組み込みノード(ワイヤーフレーム「GUIノードの例」より)。
+/// 組み込みノード(ワイヤーフレーム「GUIノードの例」より)。データ形式は
+/// クロック/数値/テキスト/投稿リスト — 色分けと接続可否の単位 (D-092)。
 const builtinNodeCatalog = <NodeCatalogEntry>[
   NodeCatalogEntry(
     type: 'clock',
@@ -120,8 +156,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.schedule,
     genre: '生成',
     description: '一定間隔でクロックを出します。TL の自動更新などのトリガーに使います。',
-    inputs: [NodePort(label: '間隔', value: '15秒')],
-    outputs: [NodePort(label: 'クロック')],
+    inputs: [NodePort(label: '間隔', value: '15秒', dataType: '数値')],
+    outputs: [NodePort(label: 'クロック', dataType: 'クロック')],
   ),
   NodeCatalogEntry(
     type: 'random',
@@ -129,8 +165,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.casino_outlined,
     genre: '生成',
     description: '乱数を出します。シードを固定すると再現できます。',
-    inputs: [NodePort(label: 'シード', value: 'randomseed')],
-    outputs: [NodePort(label: '1-7')],
+    inputs: [NodePort(label: 'シード', value: 'randomseed', dataType: '数値')],
+    outputs: [NodePort(label: '1-7', dataType: '数値')],
   ),
   NodeCatalogEntry(
     type: 'file',
@@ -138,8 +174,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.description_outlined,
     genre: '入力',
     description: 'ローカルファイルを読み込んでテキストとして出します。',
-    inputs: [NodePort(label: 'パス', value: '~/Documents/sample.dic')],
-    outputs: [NodePort(label: 'テキスト')],
+    inputs: [NodePort(label: 'パス', value: '~/Documents/sample.dic', dataType: 'テキスト')],
+    outputs: [NodePort(label: 'テキスト', dataType: 'テキスト')],
   ),
   NodeCatalogEntry(
     type: 'timeline',
@@ -147,6 +183,6 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.view_agenda_outlined,
     genre: 'タイムライン',
     description: '最終出力。投稿リストを繋ぐと、この画面のタイムラインに流れます。',
-    inputs: [NodePort(label: '投稿リスト')],
+    inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
 ];

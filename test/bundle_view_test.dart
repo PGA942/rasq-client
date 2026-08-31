@@ -97,12 +97,14 @@ void main() {
     await tester.tap(find.byTooltip('投稿'));
     await tester.pumpAndSettle();
 
-    // バンドルタイル(RASQ アカウントの顔)をタップ → 投稿先リスト。
-    await tester.tap(find.text('@tester').last);
+    // アバターをタップするとバンドルタイル(投稿先リスト)が出てくる (D-091)。
+    expect(find.text('投稿先のカスタマイズ'), findsNothing);
+    await tester.tap(find.byTooltip('投稿先を選ぶ'));
     await tester.pumpAndSettle();
     expect(find.text('投稿先のカスタマイズ'), findsOneWidget);
     await tester.tap(find.text('@second@example.test'));
     await tester.pumpAndSettle();
+    expect(find.text('投稿先のカスタマイズ'), findsNothing); // 選択でタイルは閉じる
 
     await tester.enterText(find.byType(TextField).last, 'バンドルからの投稿');
     await tester.pumpAndSettle();

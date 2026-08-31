@@ -449,9 +449,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// (チャイルドセーフティーや投稿内容による投稿アカウントのソートを組む口)。
   void _openTargetCustomize() => ref.read(routerProvider).push(Routes.nodes('composer'));
 
-  /// アカウントバンドルタイル (D-089): RASQ アカウントの顔 + ^ で投稿先
-  /// リストの開閉。サイドバー(D-087)と同じ作法(バンドル=素の @handle、
-  /// 個別=handle@instance)。
+  /// アカウントバンドルタイル (D-089/D-091): アバタータップで出てくる。
+  /// RASQ アカウントの顔 + 投稿先リスト。サイドバー(D-087)と同じ作法
+  /// (バンドル=素の @handle、個別=handle@instance)。ヘッダー行タップで閉じる。
   Widget _bundleTile(ColorScheme scheme, RasqTokens tokens) {
     final rasq = ref.watch(rasqAccountProvider);
     final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
@@ -462,7 +462,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => setState(() => _targetsOpen = !_targetsOpen),
+          onTap: () => setState(() => _targetsOpen = false),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
             child: Row(children: [
@@ -474,11 +474,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   Text('@${rasq.account.handle}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
                 ]),
               ),
-              Icon(_targetsOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 20),
+              const Icon(Icons.keyboard_arrow_up, size: 20),
             ]),
           ),
         ),
-        if (_targetsOpen) ...[
+        ...[
           for (final s in sessions)
             InkWell(
               onTap: () => setState(() {
@@ -672,12 +672,19 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                       if (_replyTo != null || _quoteOf != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: _TargetPreview(post: (_replyTo ?? _quoteOf)!, emojis: emojis)),
                     ]),
             ),
-            // アカウントバンドルタイル (D-089): 通常投稿の投稿先を選ぶ。
-            // 短押しで開閉、行タップで投稿先切替。設定リンクはノード
-            // プログラミング(投稿先のカスタマイズ)の入口。
-            if (widget.target is ComposeNormal) _bundleTile(scheme, tokens),
+            // アカウントバンドルタイル (D-089/D-091): **アバターをタップすると
+            // 出てくる**(常設だと引用時に場所が取れないため)。行タップで
+            // 投稿先切替、設定リンクはノードプログラミングの入口。DM 以外で有効。
+            if (_targetsOpen && !_isDm) _bundleTile(scheme, tokens),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: me.displayName),
+              Tooltip(
+                message: _isDm ? '' : '投稿先を選ぶ',
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: _isDm ? null : () => setState(() => _targetsOpen = !_targetsOpen),
+                  child: RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: me.displayName),
+                ),
+              ),
               const SizedBox(width: RasqSpacing.md),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
