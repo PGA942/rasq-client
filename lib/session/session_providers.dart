@@ -36,9 +36,14 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
 
 @immutable
 class SessionsState {
-  const SessionsState({this.sessions = const [], this.currentKey});
+  const SessionsState({this.sessions = const [], this.currentKey, this.bundleView = false});
   final List<AccountSession> sessions;
   final String? currentKey;
+
+  /// 総合表示 (D-087): アカウントバンドルタイル(RASQ アカウント)が選択
+  /// されている状態。ホームの TL は全アカウント合流の「総合」になる。
+  /// 個別アカウントを選ぶと false に戻る(current は裏で保持)。
+  final bool bundleView;
 
   AccountSession? get current {
     if (sessions.isEmpty) return null;
@@ -47,8 +52,8 @@ class SessionsState {
 
   bool get isLoggedIn => sessions.isNotEmpty;
 
-  SessionsState copyWith({List<AccountSession>? sessions, String? currentKey}) =>
-      SessionsState(sessions: sessions ?? this.sessions, currentKey: currentKey ?? this.currentKey);
+  SessionsState copyWith({List<AccountSession>? sessions, String? currentKey, bool? bundleView}) =>
+      SessionsState(sessions: sessions ?? this.sessions, currentKey: currentKey ?? this.currentKey, bundleView: bundleView ?? this.bundleView);
 }
 
 /// Logged-in accounts + the selected one. Persisted as one JSON blob in
@@ -63,7 +68,7 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
     try {
       final j = (jsonDecode(raw) as Map).cast<String, Object?>();
       final list = [for (final s in (j['sessions'] as List? ?? const [])) AccountSession.fromJson((s as Map).cast<String, Object?>())];
-      return SessionsState(sessions: list, currentKey: j['current'] as String?);
+      return SessionsState(sessions: list, currentKey: j['current'] as String?, bundleView: j['bundle'] == true);
     } catch (e) {
       debugPrint('sessions: corrupt storage, starting fresh: $e');
       return const SessionsState();
@@ -73,7 +78,7 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
   Future<void> _persist(SessionsState s) async {
     await ref.read(sessionStorageProvider).write(
           storageKey,
-          jsonEncode({'sessions': s.sessions.map((e) => e.toJson()).toList(), 'current': s.currentKey}),
+          jsonEncode({'sessions': s.sessions.map((e) => e.toJson()).toList(), 'current': s.currentKey, 'bundle': s.bundleView}),
         );
     state = AsyncData(s);
   }
@@ -93,8 +98,16 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
 
   Future<void> setCurrent(AccountId account) async {
     final cur = state.value ?? const SessionsState();
-    if (cur.currentKey == account.key) return;
-    await _persist(cur.copyWith(currentKey: account.key));
+    if (cur.currentKey == account.key && !cur.bundleView) return;
+    // 個別アカウントの選択は総合表示を抜ける (D-087)。
+    await _persist(cur.copyWith(currentKey: account.key, bundleView: false));
+  }
+
+  /// 総合表示 (D-087): アカウントバンドルタイルの短押しで入る。
+  Future<void> setBundleView(bool on) async {
+    final cur = state.value ?? const SessionsState();
+    if (cur.bundleView == on) return;
+    await _persist(cur.copyWith(bundleView: on));
   }
 }
 
@@ -111,6 +124,27 @@ final currentSnsSessionProvider = Provider<SnsSession?>((ref) {
 });
 
 final currentAccountProvider = Provider<AccountId?>((ref) => ref.watch(currentAccountSessionProvider)?.account);
+
+/// 総合表示中か (D-087)。
+final bundleViewProvider = Provider<bool>((ref) => ref.watch(sessionsProvider).value?.bundleView ?? false);
+
+/// RASQ アカウント(バンドルの顔)(D-087)。ORGATE サーバーのアカウントが
+/// できるまでは最初のログインアカウントのプロフィールを流用し、ハンドルは
+/// インスタンスなしの素の形(`@handle`)で出す — 個別アカウント行の
+/// `handle@instance` と区別が付く。
+final rasqAccountProvider = Provider<UserSummary>((ref) {
+  final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+  final first = sessions.firstOrNull;
+  if (first == null) {
+    return const UserSummary(id: '-', account: AccountId(kind: SnsKind.other, instance: '', handle: ''), displayName: 'RASQ');
+  }
+  return UserSummary(
+    id: 'rasq:${first.account.handle}',
+    account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: first.account.handle),
+    displayName: first.displayName ?? first.account.handle,
+    avatarUrl: first.avatarUrl,
+  );
+});
 
 /// Viewer profile. Resolves synchronously from the cached session bits and
 /// refreshes from `me()` in the background.

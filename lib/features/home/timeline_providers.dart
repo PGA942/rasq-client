@@ -55,9 +55,26 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
 
   SnsSession? get _session => ref.read(currentSnsSessionProvider);
 
+  /// 総合TL (D-088) のアカウント別カーソル。build で作り直す。
+  Map<String, String> _bundleCursors = {};
+
+  /// 投稿の所属アカウントのセッション (D-088): 総合TLでは投稿ごとに取得元
+  /// アカウントが違うので、アクションは所属セッションへルーティングする。
+  SnsSession? _sessionFor(Post p) {
+    final s = ref.read(sessionsProvider).value?.sessions.where((x) => x.account == p.account).firstOrNull;
+    return s == null ? null : ref.read(pluginRegistryProvider).session(s);
+  }
+
   @override
   Future<TimelineState> build() async {
     ref.watch(currentAccountProvider); // rebuild per account
+    if (kind == TimelineKind.bundle) {
+      // 総合TL (D-088): アカウントの増減で作り直す。
+      ref.watch(sessionsProvider.select((s) => s.value?.sessions.length ?? 0));
+      _bundleCursors = {};
+      final (page, _, _) = await _fetchBundle(first: true);
+      return TimelineState(posts: page.items, cursor: page.nextCursor);
+    }
     final session = _session;
     if (session == null) return const TimelineState();
     // タイムライン設定 (D-044) を取得前に反映。watch なので変更 → 再取得。
@@ -69,6 +86,42 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
     final (page, states, deco) = await _fetch(session, null);
     return TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: deco.tiles, badges: deco.badges);
+  }
+
+  /// 総合TL (D-088): 全ログインアカウントのホームTLを合流する。重複は
+  /// `著者キー/投稿id` で除外(同一インスタンスの複数アカウントで同じ投稿を
+  /// 見る場合は最初のアカウント側に寄せる)。取得に失敗したアカウントは無視。
+  Future<(Page<Post>, Map<String, Map<String, ActionResult>>, TimelineDecorations)> _fetchBundle({required bool first}) async {
+    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final registry = ref.read(pluginRegistryProvider);
+    final out = <Post>[];
+    final states = <String, Map<String, ActionResult>>{};
+    final seen = <String>{};
+    final next = <String, String>{};
+    for (final s in sessions) {
+      final cursor = first ? null : _bundleCursors[s.account.key];
+      if (!first && cursor == null) continue; // このアカウントは末尾まで読了
+      try {
+        final session = registry.session(s);
+        final page = await session.timeline(TimelineKind.home, cursor: cursor);
+        final st = await session.actionStates(page.items);
+        for (final p in page.items) {
+          if (!seen.add('${p.author.key}/${p.id}')) continue;
+          out.add(p);
+          final ps = st[p.id];
+          if (ps != null) states[p.id] = ps;
+        }
+        if (page.nextCursor != null) next[s.account.key] = page.nextCursor!;
+      } catch (e) {
+        debugPrint('bundle TL ${s.account.key}: $e');
+      }
+    }
+    _bundleCursors = next;
+    out.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    _applyStates(out, states);
+    ref.read(emojiCacheProvider.notifier).request({for (final p in out) ...InlineSpans.emojiShortcodes(p.body), for (final p in out) ...InlineSpans.emojiShortcodes(p.author.displayName)});
+    // カーソルはアカウント別に持つので、状態側にはダミーの続きトークンだけ渡す。
+    return (Page(items: out, nextCursor: next.isEmpty ? null : 'bundle'), states, const TimelineDecorations());
   }
 
   Future<(Page<Post>, Map<String, Map<String, ActionResult>>, TimelineDecorations)> _fetch(SnsSession session, String? cursor) async {
@@ -127,6 +180,12 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     final session = _session;
     if (session == null) return;
     try {
+      if (kind == TimelineKind.bundle) {
+        _bundleCursors = {};
+        final (page, _, _) = await _fetchBundle(first: true);
+        state = AsyncData(TimelineState(posts: page.items, cursor: page.nextCursor));
+        return;
+      }
       final (page, _, deco) = await _fetch(session, null);
       state = AsyncData(TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: deco.tiles, badges: deco.badges));
     } catch (e, st) {
@@ -144,7 +203,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     if (cur == null || session == null || !cur.hasMore || cur.loadingMore) return;
     state = AsyncData(cur.copyWith(loadingMore: true, clearError: true));
     try {
-      final (page, _, deco) = await _fetch(session, cur.cursor);
+      final (page, _, deco) = kind == TimelineKind.bundle ? await _fetchBundle(first: false) : await _fetch(session, cur.cursor);
       final seen = {for (final p in cur.posts) p.id};
       final merged = [...cur.posts, ...page.items.where((p) => !seen.contains(p.id))];
       state = AsyncData(cur.copyWith(posts: merged, cursor: page.nextCursor, clearCursor: page.nextCursor == null, loadingMore: false, customTiles: {...cur.customTiles, ...deco.tiles}, badges: {...cur.badges, ...deco.badges}));
@@ -155,7 +214,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
 
   /// Performs [actionId] with optimistic update, reconciles with the plugin result.
   Future<void> perform(Post post, ActionDescriptor action, {Map<String, Object?> args = const {}}) async {
-    final session = _session;
+    // 総合TLでは投稿の所属アカウントのセッションで実行する (D-088)。
+    final session = _sessionFor(post) ?? _session;
     if (session == null) return;
     final store = ref.read(actionStateProvider.notifier);
     final before = store.of(post.key, action.id);

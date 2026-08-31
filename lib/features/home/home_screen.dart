@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:plugin_runtime/plugin_runtime.dart' show CustomTimelineSpec, WasmSnsSession;
 import 'package:rrl_renderer/rrl_renderer.dart' show rrlIconFor;
 import 'package:rasq_design/rasq_design.dart';
@@ -8,6 +9,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../compose/compose_target.dart';
@@ -24,13 +26,16 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final me = ref.watch(currentUserProvider);
+    // 総合表示 (D-088): アカウントバンドル選択中はヘッダーが RASQ アカウント、
+    // TL は全アカウント合流の「総合」+ 関連(関連は元からバンドル供給)。
+    final bundle = ref.watch(bundleViewProvider);
+    final me = bundle ? ref.watch(rasqAccountProvider) : ref.watch(currentUserProvider);
     final session = ref.watch(currentSnsSessionProvider);
     // カスタム TL (M5e / D-080): TL プラグインの宣言をタブに足す。
     final customs = ref.watch(customTimelinesProvider).value ?? const <CustomTimelineSpec>[];
-    final kinds = _tabKinds(session, customs);
+    final kinds = bundle ? const [TimelineKind.bundle, TimelineKind.relational] : _tabKinds(session, customs);
     final tabs = [for (final k in kinds) RasqTabItem(_label(k), id: k.id)];
-    final initial = kinds.indexOf(TimelineKind.home).clamp(0, kinds.length - 1);
+    final initial = kinds.indexOf(bundle ? TimelineKind.bundle : TimelineKind.home).clamp(0, kinds.length - 1);
 
     return DefaultTabController(
       length: tabs.length,
@@ -42,7 +47,20 @@ class HomeScreen extends ConsumerWidget {
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
             child: Row(children: [
               Expanded(child: RasqTabs(items: tabs, showChevron: false)),
-              RasqIconButton(icon: Icons.settings, size: 20, onPressed: () {}, tooltip: 'タイムライン設定'),
+              // RAi (D-090): 未実装 — 実装時にはノードを内部的に操作する想定。
+              RasqIconButton(icon: Icons.smart_toy_outlined, size: 20, onPressed: () {}, tooltip: 'RAi(準備中)'),
+              // タイムライン設定 (D-090): ノードプログラミング画面へ。
+              Builder(builder: (ctx) {
+                return RasqIconButton(
+                  icon: Icons.settings,
+                  size: 20,
+                  tooltip: 'タイムライン設定',
+                  onPressed: () {
+                    final i = DefaultTabController.of(ctx).index.clamp(0, kinds.length - 1);
+                    ctx.push(Routes.nodes('tl.${kinds[i].id}'));
+                  },
+                );
+              }),
             ]),
           ),
           Expanded(

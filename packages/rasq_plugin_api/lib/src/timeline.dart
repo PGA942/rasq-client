@@ -21,6 +21,10 @@ class TimelineKind {
   /// リレーショナルTL — reserved (D-011: not implemented yet).
   static const relational = TimelineKind('relational', '関連', extensible: false);
 
+  /// 総合TL (D-088): 総合表示(アカウントバンドル)で全ログインアカウントの
+  /// ホームTLが合流するタブ。データ供給はホスト側(プラグインは関与しない)。
+  static const bundle = TimelineKind('bundle', '総合', extensible: false);
+
   /// User-defined list timeline: `list:{listId}`.
   factory TimelineKind.list(String listId, String label) => TimelineKind('list:$listId', label);
 

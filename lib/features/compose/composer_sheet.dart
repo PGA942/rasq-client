@@ -433,7 +433,86 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     setState(() {});
   }
 
-  SnsSession? get _session => ref.read(currentSnsSessionProvider);
+  /// 投稿先アカウント (D-089): アカウントバンドルタイルで選ぶ。null は
+  /// 現在アカウント。通常投稿(ComposeNormal)のみ — 返信/引用/DM は対象の
+  /// 投稿が属するアカウント文脈に固定する。
+  AccountSession? _postAs;
+  bool _targetsOpen = false;
+
+  SnsSession? get _session {
+    final t = _postAs;
+    if (t != null) return ref.read(pluginRegistryProvider).session(t);
+    return ref.read(currentSnsSessionProvider);
+  }
+
+  /// 投稿先のカスタマイズ (D-089/D-090): ノードプログラミング画面
+  /// (チャイルドセーフティーや投稿内容による投稿アカウントのソートを組む口)。
+  void _openTargetCustomize() => ref.read(routerProvider).push(Routes.nodes('composer'));
+
+  /// アカウントバンドルタイル (D-089): RASQ アカウントの顔 + ^ で投稿先
+  /// リストの開閉。サイドバー(D-087)と同じ作法(バンドル=素の @handle、
+  /// 個別=handle@instance)。
+  Widget _bundleTile(ColorScheme scheme, RasqTokens tokens) {
+    final rasq = ref.watch(rasqAccountProvider);
+    final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final selectedKey = (_postAs ?? ref.watch(currentAccountSessionProvider))?.account.key;
+    return Container(
+      margin: const EdgeInsets.only(bottom: RasqSpacing.sm),
+      decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() => _targetsOpen = !_targetsOpen),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
+            child: Row(children: [
+              RasqAvatar(imageUrl: rasq.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: rasq.displayName),
+              const SizedBox(width: RasqSpacing.sm),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(rasq.displayName, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                  Text('@${rasq.account.handle}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
+                ]),
+              ),
+              Icon(_targetsOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 20),
+            ]),
+          ),
+        ),
+        if (_targetsOpen) ...[
+          for (final s in sessions)
+            InkWell(
+              onTap: () => setState(() {
+                _postAs = s;
+                _targetsOpen = false;
+              }),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
+                child: Row(children: [
+                  RasqSnsPill(account: s.account, showLabel: false, dotSize: 14),
+                  const SizedBox(width: RasqSpacing.sm),
+                  Expanded(child: Text('${s.account}', style: RasqTypography.bodySmall.copyWith(fontWeight: s.account.key == selectedKey ? FontWeight.w700 : null), overflow: TextOverflow.ellipsis)),
+                  if (s.account.key == selectedKey) Icon(Icons.check, size: 16, color: tokens.link),
+                ]),
+              ),
+            ),
+          InkWell(
+            // 投稿先のカスタマイズ(ノードプログラミング)。チャイルド
+            // セーフティーや投稿内容による投稿アカウントのソートを組む口。
+            onTap: _openTargetCustomize,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 8),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.settings, size: 16, color: tokens.link),
+                const SizedBox(width: 6),
+                Text('投稿先のカスタマイズ', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+              ]),
+            ),
+          ),
+        ],
+      ]),
+    );
+  }
+
   bool get _isDm => widget.target is ComposeDm;
   int get _max => _session?.maxPostLength ?? 500;
 
@@ -536,7 +615,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
-    final me = ref.watch(currentUserProvider);
+    // 投稿先 (D-089): バンドルタイルで選んだアカウントの顔で書く。
+    final postAs = _postAs;
+    final me = postAs == null
+        ? ref.watch(currentUserProvider)
+        : UserSummary(id: '-', account: postAs.account, displayName: postAs.displayName ?? postAs.account.handle, avatarUrl: postAs.avatarUrl);
     final emojis = ref.watch(emojiCacheProvider);
     final target = widget.target;
     final count = _text.text.length;
@@ -589,6 +672,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                       if (_replyTo != null || _quoteOf != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: _TargetPreview(post: (_replyTo ?? _quoteOf)!, emojis: emojis)),
                     ]),
             ),
+            // アカウントバンドルタイル (D-089): 通常投稿の投稿先を選ぶ。
+            // 短押しで開閉、行タップで投稿先切替。設定リンクはノード
+            // プログラミング(投稿先のカスタマイズ)の入口。
+            if (widget.target is ComposeNormal) _bundleTile(scheme, tokens),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: me.displayName),
               const SizedBox(width: RasqSpacing.md),

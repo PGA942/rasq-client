@@ -3,12 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../app/providers.dart';
 import '../app/router.dart';
 
-/// Sidebar content (原典: UI_status「サイドバー」: マルチアカウント・ブックマーク・
-/// リスト・プラグイン・設定・ヘルプ・Webコンソール). Shown through the
+/// アカウントリストの開閉 (D-087: バンドルタイルの ^ ボタン)。アプリ起動中は
+/// サイドバーを閉じても保持する。
+class _AccountsExpanded extends Notifier<bool> {
+  @override
+  bool build() => true;
+  void toggle() => state = !state;
+}
+
+final sidebarAccountsExpandedProvider = NotifierProvider<_AccountsExpanded, bool>(_AccountsExpanded.new);
+
+/// Sidebar content (原典: UI_status「サイドバー」+ マルチアカウント化による
+/// UI変更点一覧: アカウントバンドルタイル(RASQ アカウント)・^ でアカウント
+/// リスト開閉・行ごとの … 操作・総合/個別の切り替え)。Shown through the
 /// Overlay Manager on the `sidebar` layer (closes on barrier tap).
 class RasqSidebar extends ConsumerWidget {
   const RasqSidebar({super.key, required this.handle});
@@ -25,11 +37,20 @@ class RasqSidebar extends ConsumerWidget {
         builder: (context, handle) => RasqSidebar(handle: handle),
       ));
 
+  Rect _rectOf(BuildContext context) {
+    final box = context.findRenderObject() as RenderBox?;
+    return box == null ? Rect.zero : box.localToGlobal(Offset.zero) & box.size;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final me = ref.watch(currentUserProvider);
+    final tokens = RasqTokens.of(context);
+    final manager = ref.watch(overlayManagerProvider);
+    final rasq = ref.watch(rasqAccountProvider);
     final sessions = ref.watch(sessionsProvider).value ?? const SessionsState();
+    final bundle = sessions.bundleView;
+    final expanded = ref.watch(sidebarAccountsExpandedProvider);
     final width = (MediaQuery.sizeOf(context).width * 0.78).clamp(240.0, 340.0);
     void go(String route) {
       handle.close();
@@ -48,52 +69,72 @@ class RasqSidebar extends ConsumerWidget {
               child: Row(children: [
                 const RasqLogo(height: 22),
                 const Spacer(),
-                RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: me.displayName),
-                RasqIconButton(icon: Icons.more_horiz, onPressed: () {}, tooltip: 'その他'),
+                RasqAvatar(imageUrl: rasq.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: rasq.displayName),
+                // 操作オプション (D-087: … ドロップダウン)。
+                Builder(builder: (buttonContext) {
+                  return RasqIconButton(
+                    icon: Icons.more_horiz,
+                    tooltip: 'その他',
+                    onPressed: () async {
+                      final pick = await manager.showDropdown<String>(id: 'sidebar.more', anchor: _rectOf(buttonContext), dense: true, items: const [
+                        RasqDropdownItem('アカウントを追加', 'add'),
+                        RasqDropdownItem('アカウントの設定', 'settings'),
+                      ]);
+                      if (pick == 'add') go(Routes.login);
+                      if (pick == 'settings') go(Routes.settings);
+                    },
+                  );
+                }),
               ]),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-              child: Row(children: [
-                RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarLg, fallbackLabel: me.displayName),
-                const SizedBox(width: RasqSpacing.md),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(me.displayName, style: RasqTypography.title, overflow: TextOverflow.ellipsis),
-                    Text('@${me.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
-                  ]),
-                ),
-                const Icon(Icons.keyboard_arrow_up),
-              ]),
+            // アカウントバンドルタイル (D-087): RASQ アカウント。短押しで
+            // 総合表示(全アカウントの TL が「総合」に合流)、^ でリスト開閉。
+            InkWell(
+              onTap: () async {
+                await ref.read(sessionsProvider.notifier).setBundleView(true);
+                handle.close();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: 4),
+                child: Row(children: [
+                  RasqAvatar(imageUrl: rasq.avatarUrl, size: RasqSizes.avatarLg, fallbackLabel: rasq.displayName),
+                  const SizedBox(width: RasqSpacing.md),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(rasq.displayName, style: RasqTypography.title.copyWith(color: bundle ? tokens.link : null), overflow: TextOverflow.ellipsis),
+                      Text('@${rasq.account.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
+                    ]),
+                  ),
+                  RasqIconButton(
+                    icon: expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    tooltip: expanded ? 'アカウントリストを隠す' : 'アカウントリストを表示',
+                    onPressed: () => ref.read(sidebarAccountsExpandedProvider.notifier).toggle(),
+                  ),
+                ]),
+              ),
             ),
             const SizedBox(height: RasqSpacing.sm),
             // 低いウィンドウ(macOS 等)でも溢れないよう、中央部はスクロール領域。
             Expanded(
               child: ListView(padding: EdgeInsets.zero, children: [
-            // Multi-account switcher: tap to switch (drop-down animation is 未定).
-            for (final s in sessions.sessions)
-              InkWell(
-                onTap: () async {
-                  await ref.read(sessionsProvider.notifier).setCurrent(s.account);
-                  handle.close();
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: 6),
-                  child: Row(children: [
-                    RasqSnsPill(account: s.account, showLabel: false, dotSize: 16),
-                    const SizedBox(width: RasqSpacing.sm),
-                    Expanded(child: Text('${s.account}', style: RasqTypography.bodySmall.copyWith(fontWeight: s.account.key == sessions.current?.account.key ? FontWeight.w700 : null), overflow: TextOverflow.ellipsis)),
-                    const Icon(Icons.more_horiz, size: 18),
-                  ]),
-                ),
-              ),
-            TextButton.icon(onPressed: () => go(Routes.login), icon: const Icon(Icons.add, size: 18), label: const Text('アカウントを追加')),
-            const Divider(),
-            RasqListTile(title: 'ブックマーク', leading: const Icon(Icons.bookmark_border), chevron: false, onTap: () => go(Routes.bookmarks)),
-            RasqListTile(title: 'リスト', leading: const Icon(Icons.list_alt_outlined), chevron: false, onTap: () => go(Routes.lists)),
-            RasqListTile(title: 'プラグイン', leading: const Icon(Icons.extension_outlined), chevron: false, onTap: () {}),
-            RasqListTile(title: '全ての設定', leading: const Icon(Icons.settings_outlined), chevron: false, onTap: () => go(Routes.settings)),
-            RasqListTile(title: 'ヘルプ', leading: const Icon(Icons.help_outline), chevron: false, onTap: () {}),
+                // Multi-account list: 短押しで個別表示へ切り替え、… で操作。
+                if (expanded) ...[
+                  for (final s in sessions.sessions) _accountRow(context, ref, manager, sessions, s, bundle),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md),
+                    child: TextButton.icon(
+                      onPressed: () => go(Routes.settings),
+                      icon: Icon(Icons.settings, size: 18, color: tokens.link),
+                      label: Text('アカウントの設定', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+                    ),
+                  ),
+                ],
+                const Divider(),
+                RasqListTile(title: 'ブックマーク', leading: const Icon(Icons.bookmark_border), chevron: false, onTap: () => go(Routes.bookmarks)),
+                RasqListTile(title: 'リスト', leading: const Icon(Icons.list_alt_outlined), chevron: false, onTap: () => go(Routes.lists)),
+                RasqListTile(title: 'プラグイン', leading: const Icon(Icons.extension_outlined), chevron: false, onTap: () {}),
+                RasqListTile(title: '全ての設定', leading: const Icon(Icons.settings_outlined), chevron: false, onTap: () => go(Routes.settings)),
+                RasqListTile(title: 'ヘルプ', leading: const Icon(Icons.help_outline), chevron: false, onTap: () {}),
               ]),
             ),
             RasqListTile(title: 'コンポーネントカタログ (dev)', leading: const Icon(Icons.widgets_outlined), chevron: false, divider: false, onTap: () => go(Routes.catalog)),
@@ -101,6 +142,43 @@ class RasqSidebar extends ConsumerWidget {
             RasqListTile(title: 'Webコンソール', leading: const Icon(Icons.language), chevron: false, divider: false, onTap: () {}),
           ]),
         ),
+      ),
+    );
+  }
+
+  Widget _accountRow(BuildContext context, WidgetRef ref, OverlayManager manager, SessionsState sessions, AccountSession s, bool bundle) {
+    final selected = !bundle && s.account.key == sessions.current?.account.key;
+    return InkWell(
+      onTap: () async {
+        await ref.read(sessionsProvider.notifier).setCurrent(s.account);
+        handle.close();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: 6),
+        child: Row(children: [
+          RasqSnsPill(account: s.account, showLabel: false, dotSize: 16),
+          const SizedBox(width: RasqSpacing.sm),
+          Expanded(child: Text('${s.account}', style: RasqTypography.bodySmall.copyWith(fontWeight: selected ? FontWeight.w700 : null), overflow: TextOverflow.ellipsis)),
+          Builder(builder: (buttonContext) {
+            return RasqIconButton(
+              icon: Icons.more_horiz,
+              size: 18,
+              tooltip: 'アカウントの操作',
+              onPressed: () async {
+                final pick = await manager.showDropdown<String>(id: 'sidebar.account.${s.account.key}', anchor: _rectOf(buttonContext), dense: true, items: const [
+                  RasqDropdownItem('このアカウントを表示', 'show'),
+                  RasqDropdownItem('ログアウト', 'logout', destructive: true),
+                ]);
+                if (pick == 'show') {
+                  await ref.read(sessionsProvider.notifier).setCurrent(s.account);
+                  handle.close();
+                } else if (pick == 'logout') {
+                  await ref.read(sessionsProvider.notifier).remove(s.account);
+                }
+              },
+            );
+          }),
+        ]),
       ),
     );
   }
