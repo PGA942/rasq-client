@@ -30,7 +30,7 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false, this.showReplyParent = true});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -43,6 +43,10 @@ class PostRow extends ConsumerStatefulWidget {
   /// リプライ元投稿の省略タイルを上に出す (D-069)。スレッド展開画面の
   /// ように文脈側が既に親を表示している場合は false。
   final bool showReplyParent;
+
+  /// 上付きバナー行 (D-085): TL プラグインのバッジ(RT 行と同スタイル)。
+  final IconData? bannerIcon;
+  final String? bannerText;
 
   /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
   static String? attachmentSummaryOf(Post p) {
@@ -126,6 +130,8 @@ class _PostRowState extends ConsumerState<PostRow> {
       createdAt: post.createdAt,
       nameSpans: nameSpans,
       repostedBy: post.repostedBy,
+      bannerIcon: widget.bannerIcon,
+      bannerText: widget.bannerText,
       dense: widget.dense,
       content: content,
       media: !collapsible && !hasCw && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, onTapTile: (i) => context.openViewer(post, mediaIndex[i])) : null,

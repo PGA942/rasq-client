@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:plugin_runtime/plugin_runtime.dart' show CustomTimelineSpec, WasmSnsSession;
+import 'package:rrl_renderer/rrl_renderer.dart' show rrlIconFor;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -151,7 +152,16 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
               if (tile != null && widget.kind.id.startsWith('custom:') && session is WasmSnsSession) {
                 return CustomTileRow(timelineId: widget.kind.id.substring('custom:'.length), post: p, node: tile, plugin: session.timelinePlugin);
               }
-              return PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args), onTap: () => context.pushPost(p));
+              // 上付きバナー行 (D-085): TL プラグインのバッジ(RT 行と同スタイル)。
+              final badge = tl.badges[p.id];
+              return PostRow(
+                post: p,
+                actions: actions,
+                onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args),
+                onTap: () => context.pushPost(p),
+                bannerIcon: badge == null ? null : rrlIconFor(badge.icon, Icons.label_outline),
+                bannerText: badge?.text,
+              );
             },
           ),
         );

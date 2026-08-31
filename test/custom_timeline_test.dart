@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart' show Icons;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
@@ -55,6 +56,9 @@ WasmSnsInvoke _customizeInvoke(List<(String, Map<String, Object?>)> log) => (fn,
         return {
           'ok': true,
           'value': {
+            'badges': {
+              'p3': {'icon': 'star', 'text': 'リアクション2位 (3件)'},
+            },
             'tiles': {
               'p5': {
                 't': 'Column',
@@ -164,6 +168,10 @@ void main() {
     expect(find.text('👑 リアクション1位'), findsOneWidget);
     expect(find.text('五点の投稿'), findsOneWidget);
     expect(find.text('三点の投稿'), findsOneWidget); // 通常タイルのまま
+
+    // 上付きバナー行 (D-085): 2 位は通常タイルのまま RT 行スタイルのバッジ。
+    expect(find.text('リアクション2位 (3件)'), findsOneWidget);
+    expect(find.byIcon(Icons.star), findsOneWidget);
 
     // 可視性 lifecycle (D-082): 行の生成で visible が届いている。
     expect(

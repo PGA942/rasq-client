@@ -479,10 +479,14 @@ void main() {
       await expectLater(tl.compose('nope', [p('a', 1)]), throwsA(isA<StateError>()));
 
       // 投稿カスタマイザ (D-082): 1 位に置き換えタイル(contentBody 込み)。
-      final tiles = await tl.customize('reaction-rank', await tl.compose('reaction-rank', [p('a', 1), p('b', 5)]));
-      expect(tiles.keys, ['b']);
-      expect(tiles['b']!.containsRole('contentBody'), isTrue);
-      expect(await tl.customize('nope', [p('a', 1)]), isEmpty); // 失敗は {} に縮退
+      final deco = await tl.customize('reaction-rank', await tl.compose('reaction-rank', [p('a', 1), p('b', 5)]));
+      expect(deco.tiles.keys, ['b']);
+      expect(deco.tiles['b']!.containsRole('contentBody'), isTrue);
+      // 上付きバナー行 (D-085): 2 位はバッジ(RT 行スタイル)。
+      expect(deco.badges.keys, ['a']);
+      expect(deco.badges['a']!.icon, 'star');
+      expect(deco.badges['a']!.text, contains('リアクション2位'));
+      expect((await tl.customize('nope', [p('a', 1)])).tiles, isEmpty); // 失敗は空に縮退
 
       // 投稿加工 (D-083 transform_content): 表示前の本文加工(該当のみ)。
       Post body(String id, String text) => Post(id: id, account: viewer, author: const UserSummary(id: 'u', account: AccountId(kind: SnsKind.misskey, instance: 'x', handle: 'u'), displayName: 'う'), createdAt: DateTime(2026), body: text);
@@ -502,8 +506,8 @@ void main() {
             },
           });
       Post p(String id) => Post(id: id, account: viewer, author: const UserSummary(id: 'u', account: AccountId(kind: SnsKind.misskey, instance: 'x', handle: 'u'), displayName: 'う'), createdAt: DateTime(2026), body: id);
-      final tiles = await tl.customize('x', [p('good'), p('bad')]);
-      expect(tiles.keys, ['good']); // V5 違反は破棄 → 通常タイルに縮退
+      final deco = await tl.customize('x', [p('good'), p('bad')]);
+      expect(deco.tiles.keys, ['good']); // V5 違反は破棄 → 通常タイルに縮退
     });
 
     test('エラーは SnsApiException(コード付き)へ写る', () async {

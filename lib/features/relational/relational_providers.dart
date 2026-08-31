@@ -197,6 +197,32 @@ final relationalGuestPostsProvider = FutureProvider<List<Post>>((ref) async {
   return [for (final list in fetched) ...list];
 });
 
+/// アカウントバンドル供給 (M5f / D-086): 関連TL は「バンドルに含まれる
+/// **全アカウント**の TL 系を見る」特別枠 — 現在アカウントの HTL に加え、
+/// 他のログイン済みアカウントの HTL も混ぜる(失敗アカウントは無視)。
+/// 同一投稿の重複は 著者キー+投稿id で除外(同一インスタンスの複数
+/// アカウントが同じ会話を見ているケース)。
+final bundleFolloweePostsProvider = FutureProvider<List<Post>>((ref) async {
+  final home = ref.watch(timelineProvider(TimelineKind.home)).value?.posts ?? const <Post>[];
+  final sessions = ref.watch(sessionsProvider).value;
+  final current = sessions?.current;
+  final registry = ref.watch(pluginRegistryProvider);
+  final out = [...home];
+  final seen = {for (final p in home) '${p.author.key}/${p.id}'};
+  for (final s in sessions?.sessions ?? const <AccountSession>[]) {
+    if (s.account == current?.account) continue;
+    try {
+      final page = await registry.session(s).timeline(TimelineKind.home, limit: 20);
+      for (final p in page.items) {
+        if (seen.add('${p.author.key}/${p.id}')) out.add(p);
+      }
+    } catch (e) {
+      debugPrint('bundle TL ${s.account.key}: $e');
+    }
+  }
+  return out;
+});
+
 /// wasm エンジン (M5f / D-084) での構築。ML(SigLIP/Louvain)が効いている
 /// とき・モジュール不達時は null → Dart エンジンに縮退する。
 final wasmConversationEventsProvider = FutureProvider<List<ConversationEvent>?>((ref) async {
@@ -208,11 +234,13 @@ final wasmConversationEventsProvider = FutureProvider<List<ConversationEvent>?>(
   final lookbackMinutes = ref.watch(relationalLookbackProvider);
   final home = ref.watch(timelineProvider(TimelineKind.home)).value;
   if (home == null) return null;
+  // バンドル供給 (D-086): 全アカウントの HTL(取得中は現在分のみ)。
+  final followees = ref.watch(bundleFolloweePostsProvider).value ?? home.posts;
   final guests = ref.watch(relationalGuestPostsProvider).value ?? const <Post>[];
   try {
     return await buildEventsViaWasm(
       controller,
-      followees: home.posts,
+      followees: followees,
       guests: guests,
       settings: settings,
       now: DateTime.now(),
@@ -237,7 +265,9 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
   if (wasmEvents != null) return AsyncData(wasmEvents);
 
   return home.whenData((h) {
+    // バンドル供給 (D-086) は Dart エンジン側でも使う(取得中は現在分)。
+    final followees = ref.watch(bundleFolloweePostsProvider).value ?? h.posts;
     final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf);
-    return engine.build(followeePosts: h.posts, guestPosts: guests, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
+    return engine.build(followeePosts: followees, guestPosts: guests, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
   });
 });

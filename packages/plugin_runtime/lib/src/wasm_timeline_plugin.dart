@@ -19,6 +19,25 @@ class CustomTimelineSpec {
   final String base;
 }
 
+/// 上付きバナー行 (D-085): RT 行(♻︎ 〇〇がリノートしました)と同スタイルの
+/// 「アイコン名 + テキスト」。アイコン名はホストのアイコンレジストリで解決。
+class TimelineBadge {
+  const TimelineBadge({this.icon, required this.text});
+  final String? icon;
+  final String text;
+}
+
+/// `tl.customize` の結果 (D-082/D-085)。
+class TimelineDecorations {
+  const TimelineDecorations({this.tiles = const {}, this.badges = const {}});
+
+  /// 完全置き換えタイル(V5 検証済み)。
+  final Map<String, RrlNode> tiles;
+
+  /// 上付きバナー行(通常タイルに足す)。
+  final Map<String, TimelineBadge> badges;
+}
+
 /// タイムラインレンダラー契約 v1 のホスト側アダプター (M5e / D-080)。
 ///
 /// 基本思想の「TL プラグイン = Widget コンポーネント + ソートアルゴリズム +
@@ -65,15 +84,19 @@ class WasmTimelinePlugin {
     return [for (final postId in order) if (byId.containsKey('$postId')) byId['$postId']!];
   }
 
-  /// 投稿カスタマイザ (D-082): `tl.customize {id, posts}` →
-  /// `{tiles: {postId: RRL Node}}` — 完全置き換えタイル(replace_tile)。
-  /// **V5 検証ゲート**: 置き換えタイルは必須ロール `contentBody` を含む
-  /// こと — 欠けたタイルは破棄して通常タイルに縮退する。未実装/失敗は {}。
-  Future<Map<String, RrlNode>> customize(String id, List<Post> posts) async {
+  /// 投稿カスタマイザ (D-082/D-085): `tl.customize {id, posts}` →
+  /// `{tiles: {postId: RRL Node}, badges: {postId: {icon?, text}}}`。
+  /// - `tiles` = 完全置き換えタイル(replace_tile)。**V5 検証ゲート**:
+  ///   必須ロール `contentBody` を含まないタイルは破棄して通常タイルに縮退。
+  /// - `badges` (D-085) = **上付きバナー行**(RT の「♻︎ 〇〇がリノート
+  ///   しました」と同スタイル)。通常タイルのままアイコン名 + テキスト
+  ///   だけ足す軽量な口。
+  /// 未実装/失敗は空。
+  Future<TimelineDecorations> customize(String id, List<Post> posts) async {
     try {
       final value = await _call('tl.customize', {'id': id, 'posts': [for (final p in posts) SnsWire.post(p)]});
       final tiles = (value['tiles'] as Map?)?.cast<String, Object?>() ?? const {};
-      final out = <String, RrlNode>{};
+      final outTiles = <String, RrlNode>{};
       for (final e in tiles.entries) {
         if (e.value is! Map) continue;
         final node = RrlNode.fromJson((e.value as Map).cast<String, Object?>());
@@ -81,11 +104,16 @@ class WasmTimelinePlugin {
           debugPrint('tl.customize: V5 違反(contentBody 無し)のタイルを破棄: ${e.key}');
           continue;
         }
-        out[e.key] = node;
+        outTiles[e.key] = node;
       }
-      return out;
+      final badges = (value['badges'] as Map?)?.cast<String, Object?>() ?? const {};
+      final outBadges = <String, TimelineBadge>{
+        for (final e in badges.entries)
+          if (e.value is Map) e.key: TimelineBadge(icon: (e.value as Map)['icon'] as String?, text: '${(e.value as Map)['text'] ?? ''}'),
+      };
+      return TimelineDecorations(tiles: outTiles, badges: outBadges);
     } catch (_) {
-      return const {};
+      return const TimelineDecorations();
     }
   }
 

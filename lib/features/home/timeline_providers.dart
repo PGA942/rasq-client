@@ -23,7 +23,7 @@ final customTimelinesProvider = FutureProvider<List<CustomTimelineSpec>>((ref) a
 
 @immutable
 class TimelineState {
-  const TimelineState({this.posts = const [], this.cursor, this.loadingMore = false, this.error, this.customTiles = const {}});
+  const TimelineState({this.posts = const [], this.cursor, this.loadingMore = false, this.error, this.customTiles = const {}, this.badges = const {}});
   final List<Post> posts;
   final String? cursor;
   final bool loadingMore;
@@ -32,14 +32,18 @@ class TimelineState {
   /// 投稿カスタマイザ (D-082): postId → 置き換えタイル(RRL、V5 検証済み)。
   /// カスタム TL 以外は常に空。
   final Map<String, RrlNode> customTiles;
+
+  /// 上付きバナー行 (D-085): postId → RT 行と同スタイルのバッジ。
+  final Map<String, TimelineBadge> badges;
   bool get hasMore => cursor != null;
 
-  TimelineState copyWith({List<Post>? posts, String? cursor, bool clearCursor = false, bool? loadingMore, Object? error, bool clearError = false, Map<String, RrlNode>? customTiles}) => TimelineState(
+  TimelineState copyWith({List<Post>? posts, String? cursor, bool clearCursor = false, bool? loadingMore, Object? error, bool clearError = false, Map<String, RrlNode>? customTiles, Map<String, TimelineBadge>? badges}) => TimelineState(
         posts: posts ?? this.posts,
         cursor: clearCursor ? null : (cursor ?? this.cursor),
         loadingMore: loadingMore ?? this.loadingMore,
         error: clearError ? null : (error ?? this.error),
         customTiles: customTiles ?? this.customTiles,
+        badges: badges ?? this.badges,
       );
 }
 
@@ -63,11 +67,11 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     } catch (e) {
       debugPrint('timeline settings: $e');
     }
-    final (page, states, tiles) = await _fetch(session, null);
-    return TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: tiles);
+    final (page, states, deco) = await _fetch(session, null);
+    return TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: deco.tiles, badges: deco.badges);
   }
 
-  Future<(Page<Post>, Map<String, Map<String, ActionResult>>, Map<String, RrlNode>)> _fetch(SnsSession session, String? cursor) async {
+  Future<(Page<Post>, Map<String, Map<String, ActionResult>>, TimelineDecorations)> _fetch(SnsSession session, String? cursor) async {
     // カスタム TL (M5e / D-080): データ取得はホスト(基礎 TL)、TL プラグインは
     // ソートアルゴリズム(`tl.sort` — 表示順の id 列、未掲載は除外)。
     if (kind.id.startsWith('custom:') && session is WasmSnsSession) {
@@ -76,13 +80,13 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       if (spec != null) {
         final base = await session.timeline(TimelineKind(spec.base, spec.base), cursor: cursor);
         final states = await session.actionStates(base.items);
-        // 投稿加工 (D-083) → ソート → カスタマイザ (D-082) の順で通す。
+        // 投稿加工 (D-083) → ソート → カスタマイザ (D-082/D-085) の順で通す。
         final transformed = await session.timelinePlugin.transform(base.items);
         final composed = await session.timelinePlugin.compose(spec.id, transformed);
-        final tiles = await session.timelinePlugin.customize(spec.id, composed);
+        final deco = await session.timelinePlugin.customize(spec.id, composed);
         _applyStates(composed, states);
         ref.read(emojiCacheProvider.notifier).request({for (final p in composed) ...InlineSpans.emojiShortcodes(p.body)});
-        return (Page(items: composed, nextCursor: base.nextCursor), states, tiles);
+        return (Page(items: composed, nextCursor: base.nextCursor), states, deco);
       }
     }
     Page<Post> page;
@@ -100,7 +104,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
     _applyStates(page.items, states);
     ref.read(emojiCacheProvider.notifier).request({for (final p in page.items) ...InlineSpans.emojiShortcodes(p.body), for (final p in page.items) ...InlineSpans.emojiShortcodes(p.author.displayName)});
-    return (page, states, const <String, RrlNode>{});
+    return (page, states, const TimelineDecorations());
   }
 
   void _applyStates(List<Post> posts, Map<String, Map<String, ActionResult>> states) {
@@ -123,8 +127,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     final session = _session;
     if (session == null) return;
     try {
-      final (page, _, tiles) = await _fetch(session, null);
-      state = AsyncData(TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: tiles));
+      final (page, _, deco) = await _fetch(session, null);
+      state = AsyncData(TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: deco.tiles, badges: deco.badges));
     } catch (e, st) {
       if (state.value == null || state.value!.posts.isEmpty) {
         state = AsyncError(e, st);
@@ -140,10 +144,10 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     if (cur == null || session == null || !cur.hasMore || cur.loadingMore) return;
     state = AsyncData(cur.copyWith(loadingMore: true, clearError: true));
     try {
-      final (page, _, tiles) = await _fetch(session, cur.cursor);
+      final (page, _, deco) = await _fetch(session, cur.cursor);
       final seen = {for (final p in cur.posts) p.id};
       final merged = [...cur.posts, ...page.items.where((p) => !seen.contains(p.id))];
-      state = AsyncData(cur.copyWith(posts: merged, cursor: page.nextCursor, clearCursor: page.nextCursor == null, loadingMore: false, customTiles: {...cur.customTiles, ...tiles}));
+      state = AsyncData(cur.copyWith(posts: merged, cursor: page.nextCursor, clearCursor: page.nextCursor == null, loadingMore: false, customTiles: {...cur.customTiles, ...deco.tiles}, badges: {...cur.badges, ...deco.badges}));
     } catch (e) {
       state = AsyncData(cur.copyWith(loadingMore: false, error: e));
     }

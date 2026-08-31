@@ -43,7 +43,9 @@ class RrlDocument {
     return RrlDocument(
       scope: message['scope'] as String,
       rev: message['rev'] as int,
-      root: RrlNode.fromJson((message['root'] as Map).cast<String, Object?>()),
+      // V11 検証ゲート (D-086): 付与先違反のタグは取り込み時に剥がす
+      // (装飾/構造ノードのタグが意味タグの読取りを汚さないように)。
+      root: RrlNode.fromJson((message['root'] as Map).cast<String, Object?>()).sanitizeTags(),
     );
   }
 
