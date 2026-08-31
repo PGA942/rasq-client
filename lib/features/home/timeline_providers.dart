@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
@@ -8,6 +9,16 @@ import 'package:sns_misskey/sns_misskey.dart';
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../settings/settings_dsl.dart';
+
+/// カスタム TL の宣言 (M5e / D-080): 現在のセッションが wasm 境界
+/// ([WasmSnsSession])のとき、その TL レンダラー契約(`tl.timelines`)から
+/// 読む。ホームのタブに `custom:<id>` として現れる。独立 TL プラグインの
+/// 常設インストールはストア統合(M4)側で拡張する。
+final customTimelinesProvider = FutureProvider<List<CustomTimelineSpec>>((ref) async {
+  final session = ref.watch(currentSnsSessionProvider);
+  if (session is! WasmSnsSession) return const [];
+  return session.timelinePlugin.timelines();
+});
 
 @immutable
 class TimelineState {
@@ -51,6 +62,20 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   }
 
   Future<(Page<Post>, Map<String, Map<String, ActionResult>>)> _fetch(SnsSession session, String? cursor) async {
+    // カスタム TL (M5e / D-080): データ取得はホスト(基礎 TL)、TL プラグインは
+    // ソートアルゴリズム(`tl.sort` — 表示順の id 列、未掲載は除外)。
+    if (kind.id.startsWith('custom:') && session is WasmSnsSession) {
+      final specs = await ref.read(customTimelinesProvider.future);
+      final spec = specs.where((x) => 'custom:${x.id}' == kind.id).firstOrNull;
+      if (spec != null) {
+        final base = await session.timeline(TimelineKind(spec.base, spec.base), cursor: cursor);
+        final states = await session.actionStates(base.items);
+        final composed = await session.timelinePlugin.compose(spec.id, base.items);
+        _applyStates(composed, states);
+        ref.read(emojiCacheProvider.notifier).request({for (final p in composed) ...InlineSpans.emojiShortcodes(p.body)});
+        return (Page(items: composed, nextCursor: base.nextCursor), states);
+      }
+    }
     Page<Post> page;
     Map<String, Map<String, ActionResult>> states;
     if (session is MisskeySession) {

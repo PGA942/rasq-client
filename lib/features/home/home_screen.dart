@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:plugin_runtime/plugin_runtime.dart' show CustomTimelineSpec;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -23,7 +24,9 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider);
     final session = ref.watch(currentSnsSessionProvider);
-    final kinds = _tabKinds(session);
+    // カスタム TL (M5e / D-080): TL プラグインの宣言をタブに足す。
+    final customs = ref.watch(customTimelinesProvider).value ?? const <CustomTimelineSpec>[];
+    final kinds = _tabKinds(session, customs);
     final tabs = [for (final k in kinds) RasqTabItem(_label(k), id: k.id)];
     final initial = kinds.indexOf(TimelineKind.home).clamp(0, kinds.length - 1);
 
@@ -63,7 +66,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  static List<TimelineKind> _tabKinds(SnsSession? session) {
+  static List<TimelineKind> _tabKinds(SnsSession? session, List<CustomTimelineSpec> customs) {
     final supported = session?.timelines ?? const [TimelineKind.home];
     final out = <TimelineKind>[];
     if (supported.contains(TimelineKind.social)) out.add(TimelineKind.social);
@@ -71,6 +74,10 @@ class HomeScreen extends ConsumerWidget {
     out.add(TimelineKind.relational);
     for (final k in supported) {
       if (!out.contains(k)) out.add(k);
+    }
+    // カスタム TL (M5e / D-080): TL プラグイン宣言のタブ。
+    for (final c in customs) {
+      out.add(TimelineKind('custom:${c.id}', c.label));
     }
     return out.take(RasqTabs.maxExtensible).toList();
   }

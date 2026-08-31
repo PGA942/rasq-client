@@ -1,6 +1,8 @@
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'wasm_timeline_plugin.dart';
+
 /// プラグインへの `call` の実行口(同期/非同期コントローラの `invoke` を
 /// そのまま渡す)。戻りは boundary の `result` メッセージ。
 typedef WasmSnsInvoke = Future<Map<String, dynamic>> Function(String fn, Map<String, Object?> args);
@@ -36,6 +38,11 @@ class WasmSnsSession extends SnsSessionBase {
 
   @override
   Future<void> close() async => _onClose?.call();
+
+  /// 同じ wasm モジュールが提供する**タイムラインレンダラー契約**の口
+  /// (M5e / D-080)。SNS プラグインは自分のカスタム TL(宣言 + ソート)も
+  /// 持てる — 独立 TL プラグインの常設インストールはストア統合(M4)側。
+  late final WasmTimelinePlugin timelinePlugin = WasmTimelinePlugin(invoke: _invoke, extraArgs: extraArgs);
 
   @override
   List<TimelineKind> get timelines => const [TimelineKind.local];

@@ -459,6 +459,26 @@ void main() {
       await registry.closeSession(account.account); // ワーカー破棄(例外なし)
     });
 
+    test('TL レンダラー契約 v1 (D-080): tl.timelines 宣言 + tl.sort(リアクション順)', () async {
+      final controller = WasmPluginController(wasmBytes: bytes);
+      addTearDown(controller.dispose);
+      controller.load();
+      final tl = WasmTimelinePlugin(invoke: (fn, args) async => controller.invoke(fn, args));
+
+      final specs = await tl.timelines();
+      expect(specs, hasLength(1));
+      expect(specs.single.id, 'reaction-rank');
+      expect(specs.single.label, 'リアクション順');
+      expect(specs.single.base, 'local');
+
+      Post p(String id, int reactions) => Post(id: id, account: viewer, author: const UserSummary(id: 'u', account: AccountId(kind: SnsKind.misskey, instance: 'x', handle: 'u'), displayName: 'う'), createdAt: DateTime(2026), body: id, counts: {'reaction': reactions});
+      final sorted = await tl.compose('reaction-rank', [p('a', 1), p('b', 5), p('c', 3)]);
+      expect([for (final x in sorted) x.id], ['b', 'c', 'a']); // リアクション降順・同数は元順
+
+      // 未知の TL id は C01 → StateError(呼び出し側で縮退)。
+      await expectLater(tl.compose('nope', [p('a', 1)]), throwsA(isA<StateError>()));
+    });
+
     test('エラーは SnsApiException(コード付き)へ写る', () async {
       final controller = WasmPluginController(wasmBytes: bytes); // fetch なし → B01
       addTearDown(controller.dispose);
