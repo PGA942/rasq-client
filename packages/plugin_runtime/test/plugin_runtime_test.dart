@@ -491,6 +491,23 @@ void main() {
     });
   });
 
+  test('gpu.compute (D-081): WGSL compute で f32 配列を 2 倍(GPU 無しは E01 でクラウドへ縮退)', () {
+    final controller = WasmPluginController(wasmBytes: bytes);
+    addTearDown(controller.dispose);
+    controller.load();
+    final result = controller.invoke('gpuDouble', {'values': [1, 2.5, 3]});
+    if (result['ok'] != true) {
+      // GPU アダプターの無い環境: E01 = クラウドカルクレーターへの
+      // フォールバック規約どおり。
+      expect((result['error'] as Map)['code'], 'E01', reason: '$result');
+      markTestSkipped('no gpu adapter: $result');
+      return;
+    }
+    final value = (result['value'] as Map).cast<String, Object?>();
+    expect(value['placement'], 'device');
+    expect((value['values'] as List).map((v) => (v as num).toDouble()).toList(), [2.0, 5.0, 6.0]);
+  });
+
   test('RasqHostEnvironment: storage round trip + unknown fn C01', () {
     final env = RasqHostEnvironment();
     final set = jsonDecode(env.dispatch(jsonEncode({'schema': 'rasq.hostfn/1', 'callId': '1', 'fn': 'storage.set', 'args': {'ns': 'safe', 'key': 'k', 'value': 42}})));
