@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show debugPrint;
+
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_ml/rasq_ml.dart';
@@ -11,6 +13,7 @@ import '../../session/session_providers.dart';
 import '../home/timeline_providers.dart';
 import 'relational_engine.dart';
 import 'relational_ml.dart';
+import 'relational_wasm.dart';
 
 /// 設定の永続化キー(FOW チューニングの実測値をセッションを跨いで保持)。
 const relationalSettingsStorageKey = 'relational.settings.v1';
@@ -194,6 +197,33 @@ final relationalGuestPostsProvider = FutureProvider<List<Post>>((ref) async {
   return [for (final list in fetched) ...list];
 });
 
+/// wasm エンジン (M5f / D-084) での構築。ML(SigLIP/Louvain)が効いている
+/// とき・モジュール不達時は null → Dart エンジンに縮退する。
+final wasmConversationEventsProvider = FutureProvider<List<ConversationEvent>?>((ref) async {
+  final ml = ref.watch(relationalMlProvider).value;
+  if (ml != null) return null; // ML はホスト側資産 — カルクレーター統合後に wasm から ml.infer
+  final controller = ref.watch(relationalWasmProvider).value;
+  if (controller == null) return null;
+  final settings = ref.watch(relationalSettingsProvider);
+  final lookbackMinutes = ref.watch(relationalLookbackProvider);
+  final home = ref.watch(timelineProvider(TimelineKind.home)).value;
+  if (home == null) return null;
+  final guests = ref.watch(relationalGuestPostsProvider).value ?? const <Post>[];
+  try {
+    return await buildEventsViaWasm(
+      controller,
+      followees: home.posts,
+      guests: guests,
+      settings: settings,
+      now: DateTime.now(),
+      lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null,
+    );
+  } catch (e) {
+    debugPrint('relational.build (wasm): $e');
+    return null;
+  }
+});
+
 final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>((ref) {
   final settings = ref.watch(relationalSettingsProvider);
   final lookbackMinutes = ref.watch(relationalLookbackProvider);
@@ -201,6 +231,10 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
   final ml = ref.watch(relationalMlProvider).value;
   // 取得が終わるまではゲスト無しで組み、届いたら再構築(表示を待たせない)。
   final guests = ref.watch(relationalGuestPostsProvider).value ?? const <Post>[];
+
+  // wasm エンジンの結果があればそれを使う (M5f / D-084 特別枠)。
+  final wasmEvents = ref.watch(wasmConversationEventsProvider).value;
+  if (wasmEvents != null) return AsyncData(wasmEvents);
 
   return home.whenData((h) {
     final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf);

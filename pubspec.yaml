@@ -63,6 +63,7 @@ flutter:
     # the WASMプラグイン試験 dev screen).
     - assets/plugins/misskey_wasm_sample.wasm
     - assets/plugins/hello_rasq_plugin.wasm
+    - assets/plugins/relational_wasm.wasm
     # ML model manifests (model-manifest.schema.json — resolved by MlGateway).
     - assets/models/
     # 設定第二階層の静的 RRL ページ (D-031, rasq.settings-page/1).
