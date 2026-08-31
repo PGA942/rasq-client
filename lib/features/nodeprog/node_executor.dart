@@ -46,7 +46,7 @@ Future<List<Post>?> runNodeGraph(
       }
       return out;
     }
-    if (from.type != 'sort' && from.type != 'remove' && !from.type.startsWith('plugin:')) {
+    if (from.type != 'sort' && from.type != 'remove' && !from.type.startsWith('plugin:') && !from.type.startsWith('fn:')) {
       return null; // 投稿リストを繋げるのは加工ノードだけのはず
     }
     chain.add(from);
@@ -99,11 +99,13 @@ Future<List<Post>> _applyStep(
 /// 無ければ true(制約なし)。複数ぶら下がっていれば **または**。
 bool evalCondPort(NodeGraph g, Map<String, GraphNode> byId, String nodeId, Post p) => _evalCondPortAt(g, byId, nodeId, p, 0, const _CondContext.empty());
 
-bool _evalCondPortAt(NodeGraph g, Map<String, GraphNode> byId, String nodeId, Post p, int depth, _CondContext ctx) {
+/// [branch] は下側分岐の番号 (D-099: カスタム関数は複数分岐を持てる。
+/// 条件エッジの fromPort が分岐番号)。
+bool _evalCondPortAt(NodeGraph g, Map<String, GraphNode> byId, String nodeId, Post p, int depth, _CondContext ctx, {int branch = 0}) {
   if (depth > 32) return true; // 深さ暴走の保険
   final children = [
     for (final e in g.edges)
-      if (e.cond && e.from == nodeId)
+      if (e.cond && e.from == nodeId && e.fromPort == branch)
         if (byId[e.to] != null) byId[e.to]!,
   ];
   if (children.isEmpty) return true;
@@ -123,6 +125,14 @@ bool _nodeValue(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, Post p, {
       // 直下の否定。何も繋いでいない Not は「常に false」(空 = true の否定)。
       return !_evalCondPortAt(g, byId, n.id, p, depth, ctx);
     default:
+      // カスタム関数 (D-099) v1: 各分岐(または)を全分岐で「かつ」。
+      // 中身の実行はプラグイン/RAi 配線で置き換える。
+      if (n.type.startsWith('fn:') && n.condOutCount > 0) {
+        for (var b = 0; b < n.condOutCount; b++) {
+          if (!_evalCondPortAt(g, byId, n.id, p, depth, ctx, branch: b)) return false;
+        }
+        return true;
+      }
       return true;
   }
 }

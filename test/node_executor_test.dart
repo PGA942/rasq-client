@@ -202,6 +202,43 @@ void main() {
     expect((await runNodeGraph(g, fetch: fetchMl))!, isEmpty);
   });
 
+  test('カスタム関数 (D-099): 条件型は分岐ごとに「または」を取り、全分岐で「かつ」', () async {
+    final fnEntry = const CustomFunctionDef(id: 'fn:1', name: 'テスト関数', kind: 'cond', tags: ['本文', '画像']).toCatalogEntry();
+    expect(fnEntry.condBranches, ['本文', '画像']);
+    final fn = fnEntry.instantiate('f1', Offset.zero);
+    expect(fn.condOutCount, 2);
+
+    // remove ← fn(分岐0: 本文含む「広告」/ 分岐1: 画像 1 枚以上)
+    // → 「広告」かつ「画像あり」の p3 だけ消える。
+    final g = NodeGraph(
+      nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), fn, cond('c1', value: '広告'), cond('c2', tag: '画像', op: '以上', value: '1')],
+      edges: [
+        data('n1', 'n2'), data('n2', 'n3'),
+        condEdge('n2', 'f1'),
+        const GraphEdge(from: 'f1', fromPort: 0, to: 'c1', toPort: 0, cond: true),
+        const GraphEdge(from: 'f1', fromPort: 1, to: 'c2', toPort: 0, cond: true),
+      ],
+    );
+    final out = await runNodeGraph(g, fetch: fetch);
+    expect([for (final p in out!) p.id], ['p1', 'p2', 'p4']); // p3(広告 + 画像2枚)だけ消える
+
+    // 空の分岐は「制約なし」: 分岐1 を外すと本文「広告」だけで消える。
+    final g2 = NodeGraph(
+      nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), fn, cond('c1', value: '広告')],
+      edges: [data('n1', 'n2'), data('n2', 'n3'), condEdge('n2', 'f1'), const GraphEdge(from: 'f1', fromPort: 0, to: 'c1', toPort: 0, cond: true)],
+    );
+    expect([for (final p in (await runNodeGraph(g2, fetch: fetch))!) p.id], ['p2', 'p4']);
+  });
+
+  test('カスタム関数 (D-099): データ型(投稿リスト入出力)は鎖に挟めて素通し', () async {
+    final fn = const CustomFunctionDef(id: 'fn:2', name: '素通し', kind: 'data', inputs: ['投稿リスト'], outputs: ['投稿リスト']).toCatalogEntry().instantiate('f2', Offset.zero);
+    final g = NodeGraph(
+      nodes: [source('n1'), fn, timelineNode('n3')],
+      edges: [data('n1', 'f2'), data('f2', 'n3')],
+    );
+    expect([for (final p in (await runNodeGraph(g, fetch: fetch))!) p.id], ['p1', 'p2', 'p3', 'p4']);
+  });
+
   testWidgets('TL 反映: tl.home のグラフ(消去)がフォロー中タブに効く', (tester) async {
     final graph = NodeGraph(
       nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), cond('c1', value: '消して')],

@@ -137,6 +137,36 @@ void main() {
     expect(onCanvas(find.text('クロックメーカー')), findsNWidgets(2));
   });
 
+  testWidgets('D-099: 空白の長押し → カスタム関数の作成画面 → 作成でノードが置かれ、定義が残る', (tester) async {
+    final container = await pump(tester);
+    await tester.tap(find.byTooltip('タイムライン設定'));
+    await tester.pumpAndSettle();
+
+    // キャンバスの空白を長押し → 作成画面。
+    await tester.longPressAt(const Offset(180, 260));
+    await tester.pumpAndSettle();
+    expect(find.text('カスタム関数を作成'), findsOneWidget);
+
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'NGフィルタ');
+    await tester.pumpAndSettle();
+    // 入力元 = 条件、タグを 2 つ選ぶ → 下側分岐が 2 個になる。
+    await tester.tap(find.text('本文').last);
+    await tester.tap(find.text('画像').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('作成'));
+    await tester.pumpAndSettle();
+
+    // キャンバスにノードが置かれ、定義は KV に残る(パレットにも載る)。
+    expect(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('NGフィルタ')), findsOneWidget);
+    final defs = container.read(customFunctionsProvider);
+    expect(defs, hasLength(1));
+    expect(defs.single.name, 'NGフィルタ');
+    expect(defs.single.tags, containsAll(['本文', '画像']));
+    final saved = container.read(nodeCatalogProvider).where((e) => e.type == defs.single.id).single;
+    expect(saved.condBranches, hasLength(2));
+    expect(saved.genre, '関数');
+  });
+
   testWidgets('D-096: パレット FOW を閉じても「ノードを検索」ボタンで開き直せる', (tester) async {
     final container = await pump(tester);
     await tester.tap(find.byTooltip('タイムライン設定'));

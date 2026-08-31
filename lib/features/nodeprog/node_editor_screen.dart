@@ -65,10 +65,25 @@ final _nodeDmPeersProvider = FutureProvider<List<String>>((ref) async {
   }
 });
 
-/// カタログ: 組み込み + TL プラグイン(tl.timelines 宣言からソートノード)。
-/// リストTL取得/DM取得には実データの選択肢を注入する (D-097)。
+/// カスタム関数の定義一覧 (D-099)。KV `nodeprog.functions.v1` の `list` に
+/// 全スコープ共通で保存し、パレット(ジャンル「関数」)に載る。
+final customFunctionsProvider = Provider<List<CustomFunctionDef>>((ref) {
+  final area = ref.watch(settingsAreaProvider('nodeprog.functions')).value ?? const <String, Object?>{};
+  final raw = area['list'];
+  if (raw is! String) return const [];
+  try {
+    return [for (final j in (jsonDecode(raw) as List)) CustomFunctionDef.fromJson((j as Map).cast<String, Object?>())];
+  } catch (_) {
+    return const [];
+  }
+});
+
+/// カタログ: 組み込み + TL プラグイン(tl.timelines 宣言からソートノード)
+/// + カスタム関数 (D-099)。リストTL取得/DM取得には実データの選択肢を
+/// 注入する (D-097)。
 final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
   final customs = ref.watch(customTimelinesProvider).value ?? const [];
+  final functions = ref.watch(customFunctionsProvider);
   final listNames = ref.watch(_nodeListNamesProvider).value ?? const <String>[];
   final dmPeers = ref.watch(_nodeDmPeersProvider).value ?? const <String>[];
   NodeCatalogEntry withOptions(NodeCatalogEntry e, List<String> options) {
@@ -109,6 +124,7 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
         inputs: const [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
         outputs: const [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
       ),
+    for (final f in functions) f.toCatalogEntry(),
   ];
 });
 
@@ -354,6 +370,79 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     _save();
   }
 
+  // ---- カスタム関数 (D-099) -------------------------------------------------
+
+  Future<void> _saveFunctions(List<CustomFunctionDef> defs) =>
+      ref.read(settingsAreaProvider('nodeprog.functions').notifier).set('list', jsonEncode([for (final d in defs) d.toJson()]));
+
+  /// キャンバスの空白を(長)押して作成画面 (D-099)。入力元が条件以外なら
+  /// 入出力をリストから選択、条件なら条件タグを選択(複数 = 下側分岐が
+  /// 複数個)。作成すると定義が保存され、その場にノードが置かれる。
+  Future<void> _createFunction(Offset graphPos) async {
+    final name = TextEditingController();
+    var kind = 'cond';
+    final tags = <String>{};
+    final ins = <String>{};
+    final outs = <String>{};
+    const dataTypes = ['クロック', '数値', 'テキスト', 'テキスト配列', '投稿リスト'];
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) {
+        Widget chips(List<String> all, Set<String> picked) => Wrap(spacing: 6, runSpacing: 4, children: [
+              for (final t in all)
+                FilterChip(
+                  label: Text(t, style: RasqTypography.caption),
+                  selected: picked.contains(t),
+                  visualDensity: VisualDensity.compact,
+                  onSelected: (on) => setLocal(() => on ? picked.add(t) : picked.remove(t)),
+                ),
+            ]);
+        final valid = name.text.trim().isNotEmpty && (kind == 'cond' ? tags.isNotEmpty : (ins.isNotEmpty || outs.isNotEmpty));
+        return AlertDialog(
+          title: Text('カスタム関数を作成', style: RasqTypography.title),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              TextField(controller: name, autofocus: true, style: RasqTypography.bodySmall, decoration: const InputDecoration(hintText: '関数名', isDense: true), onChanged: (_) => setLocal(() {})),
+              const SizedBox(height: RasqSpacing.sm),
+              Text('入力元', style: RasqTypography.caption),
+              Row(children: [
+                ChoiceChip(label: const Text('条件'), selected: kind == 'cond', visualDensity: VisualDensity.compact, onSelected: (_) => setLocal(() => kind = 'cond')),
+                const SizedBox(width: 6),
+                ChoiceChip(label: const Text('データ'), selected: kind == 'data', visualDensity: VisualDensity.compact, onSelected: (_) => setLocal(() => kind = 'data')),
+              ]),
+              const SizedBox(height: RasqSpacing.sm),
+              if (kind == 'cond') ...[
+                Text('条件タグ(複数選ぶと下側の分岐が増えます)', style: RasqTypography.caption),
+                chips(condTagOptions, tags),
+              ] else ...[
+                Text('入力(データ形式)', style: RasqTypography.caption),
+                chips(dataTypes, ins),
+                const SizedBox(height: RasqSpacing.sm),
+                Text('出力(データ形式)', style: RasqTypography.caption),
+                chips(dataTypes, outs),
+              ],
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('キャンセル')),
+            TextButton(onPressed: valid ? () => Navigator.of(ctx).pop(true) : null, child: const Text('作成')),
+          ],
+        );
+      }),
+    );
+    if (ok != true || !mounted) return;
+    final def = CustomFunctionDef(
+      id: 'fn:${DateTime.now().millisecondsSinceEpoch}',
+      name: name.text.trim(),
+      kind: kind,
+      tags: tags.toList(),
+      inputs: ins.toList(),
+      outputs: outs.toList(),
+    );
+    await _saveFunctions([...ref.read(customFunctionsProvider), def]);
+    _addNode(def.toCatalogEntry(), graphPos);
+  }
+
   // ---- ノードのドロップダウン (D-092) ---------------------------------------
 
   Future<void> _nodeMenu(GraphNode n, Offset globalPos) async {
@@ -419,7 +508,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   static double _cardHeight(GraphNode n) {
     final inputsBlock = n.inputs.isEmpty ? 0.0 : _sectionH + n.inputs.length * _rowH;
     final outputsBlock = n.outputs.isEmpty ? 0.0 : _sectionH + n.outputs.length * _rowH;
-    return _condInH(n) + _headerH + inputsBlock + outputsBlock + (n.hasCondOut ? _condRowH : 6.0);
+    return _condInH(n) + _headerH + inputsBlock + outputsBlock + (n.condOutCount > 0 ? _condRowH : 6.0);
   }
 
   Offset _inputCenter(GraphNode n, int i) => Offset(n.x + 10, n.y + _condInH(n) + _headerH + _sectionH + i * _rowH + _rowH / 2);
@@ -429,9 +518,12 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     return Offset(n.x + _nodeW - 10, n.y + _condInH(n) + _headerH + inputsBlock + _sectionH + j * _rowH + _rowH / 2);
   }
 
-  /// 条件接続部 (D-094): 上辺/下辺の中央。
+  /// 条件接続部 (D-094): 上辺の中央/下辺は分岐ごとに等間隔 (D-099)。
   Offset _condInCenter(GraphNode n) => Offset(n.x + _nodeW / 2, n.y + _condRowH / 2);
-  Offset _condOutCenter(GraphNode n) => Offset(n.x + _nodeW / 2, n.y + _cardHeight(n) - _condRowH / 2);
+  Offset _condOutCenter(GraphNode n, int branch) {
+    final count = n.condOutCount.clamp(1, 99);
+    return Offset(n.x + _nodeW * (branch + 1) / (count + 1), n.y + _cardHeight(n) - _condRowH / 2);
+  }
 
   /// ヘッダーアイコンの中心 (D-095: クロックの繋ぎ先)。
   Offset _iconCenter(GraphNode n) => Offset(n.x + 17.5, n.y + _condInH(n) + _headerH / 2);
@@ -460,30 +552,34 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     return best;
   }
 
-  /// 条件接続部のヒット判定(30px 以内)。[wantOut] = 下辺(condOut)を探す。
-  String? _hitCondPort(Offset at, {required bool wantOut}) {
-    String? best;
+  /// 条件接続部のヒット判定(30px 以内)。[wantOut] = 下辺(condOut)を探す
+  /// (戻り値の port は分岐番号、上辺は常に 0)。
+  ({String node, int port})? _hitCondPort(Offset at, {required bool wantOut}) {
+    ({String node, int port})? best;
     var bestD = 30.0;
     for (final n in _graph.nodes) {
-      if (wantOut ? !n.hasCondOut : !n.hasCondIn) continue;
-      final c = wantOut ? _condOutCenter(n) : _condInCenter(n);
-      final d = (c - at).distance;
-      if (d < bestD) {
-        bestD = d;
-        best = n.id;
+      if (wantOut ? n.condOutCount == 0 : !n.hasCondIn) continue;
+      final branches = wantOut ? n.condOutCount : 1;
+      for (var b = 0; b < branches; b++) {
+        final c = wantOut ? _condOutCenter(n, b) : _condInCenter(n);
+        final d = (c - at).distance;
+        if (d < bestD) {
+          bestD = d;
+          best = (node: n.id, port: b);
+        }
       }
     }
     return best;
   }
 
-  void _connectCond(String fromId, String toId) {
-    if (fromId == toId) return;
+  void _connectCond(({String node, int port}) from, String toId) {
+    if (from.node == toId) return;
     setState(() {
       _graph = NodeGraph(nodes: _graph.nodes, edges: [
         // 上辺は 1 本まで — 既存の親は上書き。
         for (final e in _graph.edges)
           if (!(e.cond && e.to == toId)) e,
-        GraphEdge(from: fromId, fromPort: 0, to: toId, toPort: 0, cond: true),
+        GraphEdge(from: from.node, fromPort: from.port, to: toId, toPort: 0, cond: true),
       ]);
     });
     _save();
@@ -504,7 +600,11 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     if (drag.cond) {
       final target = _hitCondPort(at, wantOut: !drag.isOutput);
       if (target != null) {
-        drag.isOutput ? _connectCond(drag.node, target) : _connectCond(target, drag.node);
+        if (drag.isOutput) {
+          _connectCond((node: drag.node, port: drag.port), target.node);
+        } else {
+          _connectCond(target, drag.node);
+        }
       }
     } else {
       final target = _hitPort(at, wantOutput: !drag.isOutput);
@@ -569,7 +669,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
           onKeyEvent: _onKey,
           child: ClipRect(
             child: Stack(key: _canvasKey, clipBehavior: Clip.hardEdge, children: [
-              // 空領域: ドラッグでキャンバス移動、タップで選択解除 + フォーカス。
+              // 空領域: ドラッグでキャンバス移動、タップで選択解除 + フォーカス、
+              // **長押しでカスタム関数の作成画面** (D-099)。
               Positioned.fill(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -577,6 +678,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
                     _canvasFocus.requestFocus();
                     setState(() => _selected = null);
                   },
+                  onLongPressStart: (d) => _createFunction(_toGraph(d.globalPosition)),
                   onPanUpdate: (d) => setState(() => _pan += d.delta),
                 ),
               ),
@@ -617,7 +719,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
                     onTapCondIn: () => _disconnectCondIn(n.id),
                     onTapIcon: () => _disconnectIcon(n.id),
                     onPortDragStart: (i, isOutput, global) => setState(() => _drag = (node: n.id, port: i, isOutput: isOutput, cond: false, pos: _toGraph(global))),
-                    onCondDragStart: (isOut, global) => setState(() => _drag = (node: n.id, port: 0, isOutput: isOut, cond: true, pos: _toGraph(global))),
+                    onCondDragStart: (isOut, branch, global) => setState(() => _drag = (node: n.id, port: branch, isOutput: isOut, cond: true, pos: _toGraph(global))),
                     onPortDragUpdate: (global) => setState(() => _drag = _drag == null ? null : (node: _drag!.node, port: _drag!.port, isOutput: _drag!.isOutput, cond: _drag!.cond, pos: _toGraph(global))),
                     onPortDragEnd: () => _endDrag(_drag?.pos ?? Offset.zero),
                   ),
@@ -833,6 +935,20 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
             label: const Text('キャンバスに追加'),
           ),
         ),
+        // カスタム関数 (D-099) は定義ごと消せる(置き済みノードは残り、
+        // カタログ欠けとしてフォールバックアイコンになる)。
+        if (e.type.startsWith('fn:'))
+          Padding(
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
+            child: TextButton(
+              onPressed: () {
+                manager.close('nodeprog.detail');
+                final defs = ref.read(customFunctionsProvider);
+                ref.read(settingsAreaProvider('nodeprog.functions').notifier).set('list', jsonEncode([for (final d in defs) if (d.id != e.type) d.toJson()]));
+              },
+              child: Text('関数を削除', style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).danger)),
+            ),
+          ),
       ]),
     );
   }
@@ -927,7 +1043,7 @@ class _NodeCard extends StatelessWidget {
   final VoidCallback onTapCondIn;
   final VoidCallback onTapIcon;
   final void Function(int index, bool isOutput, Offset global) onPortDragStart;
-  final void Function(bool isOut, Offset global) onCondDragStart;
+  final void Function(bool isOut, int branch, Offset global) onCondDragStart;
   final ValueChanged<Offset> onPortDragUpdate;
   final VoidCallback onPortDragEnd;
 
@@ -978,22 +1094,33 @@ class _NodeCard extends StatelessWidget {
         for (var i = 0; i < node.inputs.length; i++) _inputRow(scheme, i),
         if (node.outputs.isNotEmpty) _sectionLabel(scheme, '出力'),
         for (var j = 0; j < node.outputs.length; j++) _outputRow(scheme, j),
-        // 条件接続部・下辺 (D-094): 条件ノードをぶら下げる。
-        if (node.hasCondOut)
-          SizedBox(height: _condRowH, child: Center(child: _condDot(scheme, isOut: true, filled: true)))
+        // 条件接続部・下辺 (D-094/D-099): 分岐ごとのドット(位置はポート
+        // 座標計算 `_condOutCenter` と同じ等間隔)。
+        if (node.condOutCount > 0)
+          SizedBox(
+            height: _condRowH,
+            child: Stack(clipBehavior: Clip.none, children: [
+              for (var b = 0; b < node.condOutCount; b++)
+                Positioned(
+                  left: _nodeW * (b + 1) / (node.condOutCount + 1) - 17,
+                  top: 0,
+                  child: _condDot(scheme, isOut: true, branch: b, filled: true),
+                ),
+            ]),
+          )
         else
           const SizedBox(height: 6),
       ]),
     );
   }
 
-  /// 条件接続部のドット(紫、上下方向)。
-  Widget _condDot(ColorScheme scheme, {required bool isOut, bool filled = false, VoidCallback? onTap}) {
+  /// 条件接続部のドット(紫、上下方向)。[branch] は下辺の分岐番号。
+  Widget _condDot(ColorScheme scheme, {required bool isOut, int branch = 0, bool filled = false, VoidCallback? onTap}) {
     final color = nodeTypeColor('条件');
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      onPanStart: (d) => onCondDragStart(isOut, d.globalPosition),
+      onPanStart: (d) => onCondDragStart(isOut, branch, d.globalPosition),
       onPanUpdate: (d) => onPortDragUpdate(d.globalPosition),
       onPanEnd: (_) => onPortDragEnd(),
       child: Padding(
@@ -1103,7 +1230,7 @@ class _EdgePainter extends CustomPainter {
   final Offset Function(GraphNode, int) inputCenter;
   final Offset Function(GraphNode, int) outputCenter;
   final Offset Function(GraphNode) condInCenter;
-  final Offset Function(GraphNode) condOutCenter;
+  final Offset Function(GraphNode, int) condOutCenter;
   final Offset Function(GraphNode) iconCenter;
   final ({String node, int port, bool isOutput, bool cond, Offset pos})? drag;
 
@@ -1138,7 +1265,7 @@ class _EdgePainter extends CustomPainter {
       final to = byId[e.to];
       if (from == null || to == null) continue;
       if (e.cond) {
-        if (from.hasCondOut && to.hasCondIn) vcurve(condOutCenter(from), condInCenter(to), condColor);
+        if (from.condOutCount > 0 && to.hasCondIn) vcurve(condOutCenter(from, e.fromPort.clamp(0, from.condOutCount - 1)), condInCenter(to), condColor);
         continue;
       }
       if (e.toIcon) {
@@ -1153,7 +1280,7 @@ class _EdgePainter extends CustomPainter {
     if (d != null) {
       final n = byId[d.node];
       if (n != null && d.cond) {
-        final start = d.isOutput ? condOutCenter(n) : condInCenter(n);
+        final start = d.isOutput ? condOutCenter(n, d.port.clamp(0, (n.condOutCount - 1).clamp(0, 99))) : condInCenter(n);
         vcurve(d.isOutput ? start : d.pos, d.isOutput ? d.pos : start, condColor);
       } else if (n != null) {
         final port = d.isOutput ? n.outputs.elementAtOrNull(d.port) : n.inputs.elementAtOrNull(d.port);

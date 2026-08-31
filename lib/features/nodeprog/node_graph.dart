@@ -68,7 +68,8 @@ bool portsCompatible(NodePort out, NodePort input) {
 
 @immutable
 class GraphNode {
-  const GraphNode({required this.id, required this.type, required this.title, required this.x, required this.y, this.inputs = const [], this.outputs = const [], this.hasCondIn = false, this.hasCondOut = false});
+  const GraphNode(
+      {required this.id, required this.type, required this.title, required this.x, required this.y, this.inputs = const [], this.outputs = const [], this.hasCondIn = false, this.hasCondOut = false, this.condBranches = const []});
 
   final String id;
 
@@ -85,8 +86,24 @@ class GraphNode {
   final bool hasCondIn;
   final bool hasCondOut;
 
+  /// 下側分岐のラベル (D-099: カスタム関数)。条件タグを複数選ぶと下側の
+  /// 分岐が複数個になる。空なら従来どおり 1 個(hasCondOut のとき)。
+  final List<String> condBranches;
+
+  /// 下側の条件接続部の個数。
+  int get condOutCount => condBranches.isNotEmpty ? condBranches.length : (hasCondOut ? 1 : 0);
+
   GraphNode copyWith({double? x, double? y, List<NodePort>? inputs}) => GraphNode(
-      id: id, type: type, title: title, x: x ?? this.x, y: y ?? this.y, inputs: inputs ?? this.inputs, outputs: outputs, hasCondIn: hasCondIn, hasCondOut: hasCondOut);
+      id: id,
+      type: type,
+      title: title,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      inputs: inputs ?? this.inputs,
+      outputs: outputs,
+      hasCondIn: hasCondIn,
+      hasCondOut: hasCondOut,
+      condBranches: condBranches);
 
   Map<String, Object?> toJson() => {
         'id': id,
@@ -98,6 +115,7 @@ class GraphNode {
         'outputs': [for (final p in outputs) p.toJson()],
         if (hasCondIn) 'condIn': true,
         if (hasCondOut) 'condOut': true,
+        if (condBranches.isNotEmpty) 'condBranches': condBranches,
       };
 
   factory GraphNode.fromJson(Map<String, Object?> j) => GraphNode(
@@ -110,6 +128,7 @@ class GraphNode {
         outputs: [for (final p in (j['outputs'] as List? ?? const [])) NodePort.fromJson((p as Map).cast<String, Object?>())],
         hasCondIn: j['condIn'] == true,
         hasCondOut: j['condOut'] == true,
+        condBranches: (j['condBranches'] as List?)?.cast<String>() ?? const [],
       );
 }
 
@@ -166,6 +185,7 @@ class NodeCatalogEntry {
     this.outputs = const [],
     this.hasCondIn = false,
     this.hasCondOut = false,
+    this.condBranches = const [],
   });
 
   final String type;
@@ -181,8 +201,11 @@ class NodeCatalogEntry {
   final bool hasCondIn;
   final bool hasCondOut;
 
-  GraphNode instantiate(String id, Offset at) =>
-      GraphNode(id: id, type: type, title: title, x: at.dx, y: at.dy, inputs: inputs, outputs: outputs, hasCondIn: hasCondIn, hasCondOut: hasCondOut);
+  /// 下側分岐のラベル (D-099: カスタム関数の条件タグ)。
+  final List<String> condBranches;
+
+  GraphNode instantiate(String id, Offset at) => GraphNode(
+      id: id, type: type, title: title, x: at.dx, y: at.dy, inputs: inputs, outputs: outputs, hasCondIn: hasCondIn, hasCondOut: hasCondOut, condBranches: condBranches);
 
   /// パレットタイルの 1 行入出力表示(例: `入力: 間隔(数値) → 出力: クロック(クロック)`)。
   String get ioSummary {
@@ -209,6 +232,62 @@ class NodeCatalogEntry {
 /// 投稿の見どころ、「演算」はその内容への述語。
 const condTagOptions = ['本文', '名前', '注釈', 'リアクション', '画像'];
 const condOpOptions = ['含む', '等しい', '以上', '以下'];
+
+/// カスタム関数ノードの定義 (D-099)。キャンバスの空白の長押しで作成し、
+/// KV `nodeprog.functions.v1` に保存 → 全スコープのパレットに載る。
+///
+/// - 入力元が**条件以外(データ)**: 入出力のデータ形式をリストから選ぶ。
+/// - 入力元が**条件**: 条件タグを選ぶ。**複数選ぶと下側の分岐が複数個**になる
+///   (分岐 = 選んだタグ)。実行 v1 は「各分岐の評価(または)を全分岐で
+///   かつ」— 関数の中身(タグ内容をどう使うか)はプラグイン/RAi 配線で
+///   置き換える予定。
+@immutable
+class CustomFunctionDef {
+  const CustomFunctionDef({required this.id, required this.name, required this.kind, this.tags = const [], this.inputs = const [], this.outputs = const []});
+
+  /// ノード type(`fn:<連番>`)。
+  final String id;
+  final String name;
+
+  /// 'cond'(入力元が条件)| 'data'(それ以外)。
+  final String kind;
+  final List<String> tags;
+  final List<String> inputs;
+  final List<String> outputs;
+
+  Map<String, Object?> toJson() => {'id': id, 'name': name, 'kind': kind, 'tags': tags, 'inputs': inputs, 'outputs': outputs};
+  factory CustomFunctionDef.fromJson(Map<String, Object?> j) => CustomFunctionDef(
+        id: j['id'] as String,
+        name: j['name'] as String? ?? '関数',
+        kind: j['kind'] as String? ?? 'data',
+        tags: (j['tags'] as List?)?.cast<String>() ?? const [],
+        inputs: (j['inputs'] as List?)?.cast<String>() ?? const [],
+        outputs: (j['outputs'] as List?)?.cast<String>() ?? const [],
+      );
+
+  NodeCatalogEntry toCatalogEntry() => kind == 'cond'
+      ? NodeCatalogEntry(
+          type: id,
+          title: name,
+          icon: Icons.auto_fix_high_outlined,
+          genre: '関数',
+          author: 'カスタム関数',
+          description: '条件タグ ${tags.join('・')} を受けるカスタム関数です(中身の配線はプラグイン/RAi で)。',
+          hasCondIn: true,
+          hasCondOut: true,
+          condBranches: tags.isEmpty ? const ['条件'] : tags,
+        )
+      : NodeCatalogEntry(
+          type: id,
+          title: name,
+          icon: Icons.auto_fix_high_outlined,
+          genre: '関数',
+          author: 'カスタム関数',
+          description: 'カスタム関数です(中身の配線はプラグイン/RAi で)。',
+          inputs: [for (final t in inputs) NodePort(label: t, dataType: t)],
+          outputs: [for (final t in outputs) NodePort(label: t, dataType: t)],
+        );
+}
 
 /// 組み込みノード(ワイヤーフレーム「GUIノードの例」より)。データ形式は
 /// クロック/数値/テキスト/投稿リスト — 色分けと接続可否の単位 (D-092)。
