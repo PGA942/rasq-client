@@ -95,6 +95,9 @@ class RrlNode {
 
   /// True if this node or any descendant carries [wantedTag].
   bool containsTag(String wantedTag) => tag == wantedTag || c.any((child) => child.containsTag(wantedTag));
+
+  /// V5 検証(完全置き換えタイルの必須ロール)などで使う (D-082)。
+  bool containsRole(String wantedRole) => role == wantedRole || c.any((child) => child.containsRole(wantedRole));
 }
 
 /// `nodeId = "{instanceScope}:{key}"` where

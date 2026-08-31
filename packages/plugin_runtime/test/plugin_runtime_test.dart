@@ -477,6 +477,27 @@ void main() {
 
       // 未知の TL id は C01 → StateError(呼び出し側で縮退)。
       await expectLater(tl.compose('nope', [p('a', 1)]), throwsA(isA<StateError>()));
+
+      // 投稿カスタマイザ (D-082): 1 位に置き換えタイル(contentBody 込み)。
+      final tiles = await tl.customize('reaction-rank', await tl.compose('reaction-rank', [p('a', 1), p('b', 5)]));
+      expect(tiles.keys, ['b']);
+      expect(tiles['b']!.containsRole('contentBody'), isTrue);
+      expect(await tl.customize('nope', [p('a', 1)]), isEmpty); // 失敗は {} に縮退
+    });
+
+    test('V5 検証 (D-082): contentBody の無い置き換えタイルは破棄される', () async {
+      final tl = WasmTimelinePlugin(invoke: (fn, args) async => {
+            'ok': true,
+            'value': {
+              'tiles': {
+                'good': {'t': 'Column', 'k': 'g', 'c': [{'t': 'PostTile', 'k': 'gp', 'role': 'contentBody', 'p': {'post': {'id': 'good'}}}]},
+                'bad': {'t': 'Text', 'k': 'b', 'p': {'text': 'contentBody 無し'}},
+              },
+            },
+          });
+      Post p(String id) => Post(id: id, account: viewer, author: const UserSummary(id: 'u', account: AccountId(kind: SnsKind.misskey, instance: 'x', handle: 'u'), displayName: 'う'), createdAt: DateTime(2026), body: id);
+      final tiles = await tl.customize('x', [p('good'), p('bad')]);
+      expect(tiles.keys, ['good']); // V5 違反は破棄 → 通常タイルに縮退
     });
 
     test('エラーは SnsApiException(コード付き)へ写る', () async {

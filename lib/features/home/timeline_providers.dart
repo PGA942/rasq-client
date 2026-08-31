@@ -4,6 +4,7 @@ import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
+import 'package:rrl_core/rrl_core.dart';
 import 'package:sns_misskey/sns_misskey.dart';
 
 import '../../app/providers.dart';
@@ -22,18 +23,23 @@ final customTimelinesProvider = FutureProvider<List<CustomTimelineSpec>>((ref) a
 
 @immutable
 class TimelineState {
-  const TimelineState({this.posts = const [], this.cursor, this.loadingMore = false, this.error});
+  const TimelineState({this.posts = const [], this.cursor, this.loadingMore = false, this.error, this.customTiles = const {}});
   final List<Post> posts;
   final String? cursor;
   final bool loadingMore;
   final Object? error;
+
+  /// 投稿カスタマイザ (D-082): postId → 置き換えタイル(RRL、V5 検証済み)。
+  /// カスタム TL 以外は常に空。
+  final Map<String, RrlNode> customTiles;
   bool get hasMore => cursor != null;
 
-  TimelineState copyWith({List<Post>? posts, String? cursor, bool clearCursor = false, bool? loadingMore, Object? error, bool clearError = false}) => TimelineState(
+  TimelineState copyWith({List<Post>? posts, String? cursor, bool clearCursor = false, bool? loadingMore, Object? error, bool clearError = false, Map<String, RrlNode>? customTiles}) => TimelineState(
         posts: posts ?? this.posts,
         cursor: clearCursor ? null : (cursor ?? this.cursor),
         loadingMore: loadingMore ?? this.loadingMore,
         error: clearError ? null : (error ?? this.error),
+        customTiles: customTiles ?? this.customTiles,
       );
 }
 
@@ -57,11 +63,11 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     } catch (e) {
       debugPrint('timeline settings: $e');
     }
-    final (page, states) = await _fetch(session, null);
-    return TimelineState(posts: page.items, cursor: page.nextCursor);
+    final (page, states, tiles) = await _fetch(session, null);
+    return TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: tiles);
   }
 
-  Future<(Page<Post>, Map<String, Map<String, ActionResult>>)> _fetch(SnsSession session, String? cursor) async {
+  Future<(Page<Post>, Map<String, Map<String, ActionResult>>, Map<String, RrlNode>)> _fetch(SnsSession session, String? cursor) async {
     // カスタム TL (M5e / D-080): データ取得はホスト(基礎 TL)、TL プラグインは
     // ソートアルゴリズム(`tl.sort` — 表示順の id 列、未掲載は除外)。
     if (kind.id.startsWith('custom:') && session is WasmSnsSession) {
@@ -71,9 +77,11 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         final base = await session.timeline(TimelineKind(spec.base, spec.base), cursor: cursor);
         final states = await session.actionStates(base.items);
         final composed = await session.timelinePlugin.compose(spec.id, base.items);
+        // 投稿カスタマイザ (D-082): 完全置き換えタイル(V5 検証済み)。
+        final tiles = await session.timelinePlugin.customize(spec.id, composed);
         _applyStates(composed, states);
         ref.read(emojiCacheProvider.notifier).request({for (final p in composed) ...InlineSpans.emojiShortcodes(p.body)});
-        return (Page(items: composed, nextCursor: base.nextCursor), states);
+        return (Page(items: composed, nextCursor: base.nextCursor), states, tiles);
       }
     }
     Page<Post> page;
@@ -86,7 +94,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
     _applyStates(page.items, states);
     ref.read(emojiCacheProvider.notifier).request({for (final p in page.items) ...InlineSpans.emojiShortcodes(p.body), for (final p in page.items) ...InlineSpans.emojiShortcodes(p.author.displayName)});
-    return (page, states);
+    return (page, states, const <String, RrlNode>{});
   }
 
   void _applyStates(List<Post> posts, Map<String, Map<String, ActionResult>> states) {
@@ -109,8 +117,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     final session = _session;
     if (session == null) return;
     try {
-      final (page, _) = await _fetch(session, null);
-      state = AsyncData(TimelineState(posts: page.items, cursor: page.nextCursor));
+      final (page, _, tiles) = await _fetch(session, null);
+      state = AsyncData(TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: tiles));
     } catch (e, st) {
       if (state.value == null || state.value!.posts.isEmpty) {
         state = AsyncError(e, st);
@@ -126,10 +134,10 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     if (cur == null || session == null || !cur.hasMore || cur.loadingMore) return;
     state = AsyncData(cur.copyWith(loadingMore: true, clearError: true));
     try {
-      final (page, _) = await _fetch(session, cur.cursor);
+      final (page, _, tiles) = await _fetch(session, cur.cursor);
       final seen = {for (final p in cur.posts) p.id};
       final merged = [...cur.posts, ...page.items.where((p) => !seen.contains(p.id))];
-      state = AsyncData(cur.copyWith(posts: merged, cursor: page.nextCursor, clearCursor: page.nextCursor == null, loadingMore: false));
+      state = AsyncData(cur.copyWith(posts: merged, cursor: page.nextCursor, clearCursor: page.nextCursor == null, loadingMore: false, customTiles: {...cur.customTiles, ...tiles}));
     } catch (e) {
       state = AsyncData(cur.copyWith(loadingMore: false, error: e));
     }

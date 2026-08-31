@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rrl_core/rrl_core.dart';
 
 import 'wasm_sns_session.dart';
 
@@ -61,5 +63,44 @@ class WasmTimelinePlugin {
     if (order == null) return posts;
     final byId = {for (final p in posts) p.id: p};
     return [for (final postId in order) if (byId.containsKey('$postId')) byId['$postId']!];
+  }
+
+  /// 投稿カスタマイザ (D-082): `tl.customize {id, posts}` →
+  /// `{tiles: {postId: RRL Node}}` — 完全置き換えタイル(replace_tile)。
+  /// **V5 検証ゲート**: 置き換えタイルは必須ロール `contentBody` を含む
+  /// こと — 欠けたタイルは破棄して通常タイルに縮退する。未実装/失敗は {}。
+  Future<Map<String, RrlNode>> customize(String id, List<Post> posts) async {
+    try {
+      final value = await _call('tl.customize', {'id': id, 'posts': [for (final p in posts) SnsWire.post(p)]});
+      final tiles = (value['tiles'] as Map?)?.cast<String, Object?>() ?? const {};
+      final out = <String, RrlNode>{};
+      for (final e in tiles.entries) {
+        if (e.value is! Map) continue;
+        final node = RrlNode.fromJson((e.value as Map).cast<String, Object?>());
+        if (!node.containsRole('contentBody')) {
+          debugPrint('tl.customize: V5 違反(contentBody 無し)のタイルを破棄: ${e.key}');
+          continue;
+        }
+        out[e.key] = node;
+      }
+      return out;
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// 置き換えタイル内のイベント → プラグイン関数(fire-and-forget)。
+  void handleEvent(String nodeId, String kind, {String? fn, Map<String, Object?> payload = const {}}) {
+    if (fn == null) return;
+    _invoke(fn, {'nodeId': nodeId, 'kind': kind, ...payload, ...extraArgs}).catchError((Object e) {
+      debugPrint('tl event $fn: $e');
+      return <String, dynamic>{};
+    });
+  }
+
+  /// 仮想化 TL の可視性 (D-082): 行が生成/破棄されたタイミングで
+  /// `lifecycle {kind: visible|hidden, surface: tl:<id>, post}` を届ける。
+  void notifyVisibility(String id, String postId, {required bool visible}) {
+    _invoke('lifecycle', {'kind': visible ? 'visible' : 'hidden', 'surface': 'tl:$id', 'post': postId, ...extraArgs}).catchError((Object _) => <String, dynamic>{});
   }
 }

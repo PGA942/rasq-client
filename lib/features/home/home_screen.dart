@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:plugin_runtime/plugin_runtime.dart' show CustomTimelineSpec;
+import 'package:plugin_runtime/plugin_runtime.dart' show CustomTimelineSpec, WasmSnsSession;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -12,6 +12,7 @@ import '../../shell/rasq_shell.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../relational/relational_timeline_view.dart';
+import 'custom_tile_row.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
 
@@ -144,6 +145,12 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                 return const SizedBox(height: 80);
               }
               final p = tl.posts[i];
+              // 投稿カスタマイザ (D-082): 置き換えタイルがあれば RRL で描く
+              // (V5 検証済み。スレッドナビと可視性 lifecycle はホスト側)。
+              final tile = tl.customTiles[p.id];
+              if (tile != null && widget.kind.id.startsWith('custom:') && session is WasmSnsSession) {
+                return CustomTileRow(timelineId: widget.kind.id.substring('custom:'.length), post: p, node: tile, plugin: session.timelinePlugin);
+              }
               return PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args), onTap: () => context.pushPost(p));
             },
           ),
