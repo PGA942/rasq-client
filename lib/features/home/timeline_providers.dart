@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
@@ -9,6 +11,8 @@ import 'package:sns_misskey/sns_misskey.dart';
 
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
+import '../nodeprog/node_executor.dart';
+import '../nodeprog/node_graph.dart';
 import '../settings/settings_dsl.dart';
 
 /// カスタム TL の宣言 (M5e / D-080): 現在のセッションが wasm 境界
@@ -154,6 +158,27 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     // (v1 は wasm セッション自身のモジュール。独立プラグインはストア統合後)。
     if (session is WasmSnsSession) {
       page = Page(items: await session.timelinePlugin.transform(page.items), nextCursor: page.nextCursor);
+    }
+    // ノードグラフ実行 (D-094): この TL のスコープ(tl.<id>)に
+    // 「タイムライン取得 → 加工 → タイムライン」の完成した鎖があれば通す。
+    if (!kind.id.startsWith('custom:')) {
+      try {
+        final area = await ref.read(settingsAreaProvider('nodeprog.tl.${kind.id}').future);
+        final raw = area['graph'];
+        if (raw is String) {
+          final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+          final result = await runNodeGraph(graph, fetch: (kid) async {
+            if (kid == kind.id) return page.items; // 自分の TL は再取得しない
+            return (await session.timeline(TimelineKind(kid, kid), cursor: cursor)).items;
+          });
+          if (result != null) {
+            page = Page(items: result, nextCursor: page.nextCursor);
+            states = await session.actionStates(result); // 別 TL 由来の投稿の分を取り直す
+          }
+        }
+      } catch (e) {
+        debugPrint('nodeprog(tl.${kind.id}): $e');
+      }
     }
     _applyStates(page.items, states);
     ref.read(emojiCacheProvider.notifier).request({for (final p in page.items) ...InlineSpans.emojiShortcodes(p.body), for (final p in page.items) ...InlineSpans.emojiShortcodes(p.author.displayName)});

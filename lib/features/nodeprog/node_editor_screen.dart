@@ -8,6 +8,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../shell/app_overlay_root.dart';
 import '../../shell/headers.dart';
 import '../home/timeline_providers.dart';
 import '../settings/settings_dsl.dart';
@@ -67,6 +68,9 @@ const _headerH = 34.0;
 const _sectionH = 18.0;
 const _rowH = 26.0;
 
+/// 条件接続部 (D-094) の行高(上辺/下辺の中央ドット)。
+const _condRowH = 14.0;
+
 class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   final _canvasKey = GlobalKey();
   final _canvasFocus = FocusNode(debugLabel: 'nodeCanvas');
@@ -83,7 +87,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   GraphNode? _clipboard;
 
   /// 接続ドラッグ中の状態(始点ポートと現在位置、**グラフ座標**)。
-  ({String node, int port, bool isOutput, Offset pos})? _drag;
+  /// [cond] のときは縦の条件接続で、isOutput=true は下辺(condOut)始まり。
+  ({String node, int port, bool isOutput, bool cond, Offset pos})? _drag;
 
   String get _area => 'nodeprog.${widget.scope}';
   String get _title => switch (widget.scope) {
@@ -217,7 +222,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         // 入力は 1 本まで — 既存の接続は上書き。
         edges: [
           for (final e in _graph.edges)
-            if (!(e.to == to.node && e.toPort == to.port)) e,
+            if (!(!e.cond && e.to == to.node && e.toPort == to.port)) e,
           GraphEdge(from: from.node, fromPort: from.port, to: to.node, toPort: to.port),
         ],
       );
@@ -226,34 +231,48 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   }
 
   void _disconnectInput(String node, int port) {
-    final had = _graph.edges.any((e) => e.to == node && e.toPort == port);
+    final had = _graph.edges.any((e) => !e.cond && e.to == node && e.toPort == port);
     if (!had) return;
     setState(() {
-      _graph = NodeGraph(nodes: _graph.nodes, edges: [for (final e in _graph.edges) if (!(e.to == node && e.toPort == port)) e]);
+      _graph = NodeGraph(nodes: _graph.nodes, edges: [for (final e in _graph.edges) if (!(!e.cond && e.to == node && e.toPort == port)) e]);
     });
     _save();
   }
 
-  Future<void> _editValue(GraphNode node, int index) async {
-    final controller = TextEditingController(text: node.inputs[index].value ?? '');
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(node.inputs[index].label, style: RasqTypography.title),
-        content: TextField(controller: controller, autofocus: true, style: RasqTypography.bodySmall),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('キャンセル')),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('決定')),
-        ],
-      ),
-    );
-    if (ok != true) return;
+  Future<void> _editValue(GraphNode node, int index, Rect anchor) async {
+    final port = node.inputs[index];
+    String? next;
+    if (port.options != null) {
+      // 選択肢付きの値 (D-094) はドロップダウンで選ぶ。
+      next = await _manager.showDropdown<String>(
+        id: 'nodeprog.value',
+        anchor: anchor,
+        dense: true,
+        items: [for (final o in port.options!) RasqDropdownItem(o, o, checked: o == port.value)],
+      );
+      if (next == null) return;
+    } else {
+      final controller = TextEditingController(text: port.value ?? '');
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(port.label, style: RasqTypography.title),
+          content: TextField(controller: controller, autofocus: true, style: RasqTypography.bodySmall),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('キャンセル')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('決定')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      next = controller.text;
+    }
     setState(() {
       _graph = NodeGraph(
         nodes: [
           for (final n in _graph.nodes)
             n.id == node.id
-                ? n.copyWith(inputs: [for (var i = 0; i < n.inputs.length; i++) i == index ? n.inputs[i].copyWith(value: controller.text) : n.inputs[i]])
+                ? n.copyWith(inputs: [for (var i = 0; i < n.inputs.length; i++) i == index ? n.inputs[i].copyWith(value: next) : n.inputs[i]])
                 : n,
         ],
         edges: _graph.edges,
@@ -314,18 +333,32 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         description: entry?.description,
         inputs: n.inputs,
         outputs: n.outputs,
+        hasCondIn: n.hasCondIn,
+        hasCondOut: n.hasCondOut,
       ),
     );
   }
 
   // ---- ポート座標(グラフ座標系)--------------------------------------------
 
-  Offset _inputCenter(GraphNode n, int i) => Offset(n.x + 10, n.y + _headerH + _sectionH + i * _rowH + _rowH / 2);
+  static double _condInH(GraphNode n) => n.hasCondIn ? _condRowH : 0.0;
+
+  static double _cardHeight(GraphNode n) {
+    final inputsBlock = n.inputs.isEmpty ? 0.0 : _sectionH + n.inputs.length * _rowH;
+    final outputsBlock = n.outputs.isEmpty ? 0.0 : _sectionH + n.outputs.length * _rowH;
+    return _condInH(n) + _headerH + inputsBlock + outputsBlock + (n.hasCondOut ? _condRowH : 6.0);
+  }
+
+  Offset _inputCenter(GraphNode n, int i) => Offset(n.x + 10, n.y + _condInH(n) + _headerH + _sectionH + i * _rowH + _rowH / 2);
 
   Offset _outputCenter(GraphNode n, int j) {
     final inputsBlock = n.inputs.isEmpty ? 0.0 : _sectionH + n.inputs.length * _rowH;
-    return Offset(n.x + _nodeW - 10, n.y + _headerH + inputsBlock + _sectionH + j * _rowH + _rowH / 2);
+    return Offset(n.x + _nodeW - 10, n.y + _condInH(n) + _headerH + inputsBlock + _sectionH + j * _rowH + _rowH / 2);
   }
+
+  /// 条件接続部 (D-094): 上辺/下辺の中央。
+  Offset _condInCenter(GraphNode n) => Offset(n.x + _nodeW / 2, n.y + _condRowH / 2);
+  Offset _condOutCenter(GraphNode n) => Offset(n.x + _nodeW / 2, n.y + _cardHeight(n) - _condRowH / 2);
 
   /// global → グラフ座標(キャンバス local からパンを引く)。
   Offset _toGraph(Offset global) {
@@ -351,15 +384,60 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     return best;
   }
 
+  /// 条件接続部のヒット判定(30px 以内)。[wantOut] = 下辺(condOut)を探す。
+  String? _hitCondPort(Offset at, {required bool wantOut}) {
+    String? best;
+    var bestD = 30.0;
+    for (final n in _graph.nodes) {
+      if (wantOut ? !n.hasCondOut : !n.hasCondIn) continue;
+      final c = wantOut ? _condOutCenter(n) : _condInCenter(n);
+      final d = (c - at).distance;
+      if (d < bestD) {
+        bestD = d;
+        best = n.id;
+      }
+    }
+    return best;
+  }
+
+  void _connectCond(String fromId, String toId) {
+    if (fromId == toId) return;
+    setState(() {
+      _graph = NodeGraph(nodes: _graph.nodes, edges: [
+        // 上辺は 1 本まで — 既存の親は上書き。
+        for (final e in _graph.edges)
+          if (!(e.cond && e.to == toId)) e,
+        GraphEdge(from: fromId, fromPort: 0, to: toId, toPort: 0, cond: true),
+      ]);
+    });
+    _save();
+  }
+
+  void _disconnectCondIn(String toId) {
+    final had = _graph.edges.any((e) => e.cond && e.to == toId);
+    if (!had) return;
+    setState(() {
+      _graph = NodeGraph(nodes: _graph.nodes, edges: [for (final e in _graph.edges) if (!(e.cond && e.to == toId)) e]);
+    });
+    _save();
+  }
+
   void _endDrag(Offset at) {
     final drag = _drag;
     if (drag == null) return;
-    final target = _hitPort(at, wantOutput: !drag.isOutput);
-    if (target != null) {
-      if (drag.isOutput) {
-        _connect((node: drag.node, port: drag.port), target);
-      } else {
-        _connect(target, (node: drag.node, port: drag.port));
+    if (drag.cond) {
+      final target = _hitCondPort(at, wantOut: !drag.isOutput);
+      if (target != null) {
+        drag.isOutput ? _connectCond(drag.node, target) : _connectCond(target, drag.node);
+      }
+    } else {
+      final target = _hitPort(at, wantOutput: !drag.isOutput);
+      if (target != null) {
+        if (drag.isOutput) {
+          _connect((node: drag.node, port: drag.port), target);
+        } else {
+          _connect(target, (node: drag.node, port: drag.port));
+        }
       }
     }
     setState(() => _drag = null);
@@ -408,7 +486,15 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _EdgePainter(graph: _graph, pan: _pan, inputCenter: _inputCenter, outputCenter: _outputCenter, drag: _drag),
+                    painter: _EdgePainter(
+                      graph: _graph,
+                      pan: _pan,
+                      inputCenter: _inputCenter,
+                      outputCenter: _outputCenter,
+                      condInCenter: _condInCenter,
+                      condOutCenter: _condOutCenter,
+                      drag: _drag,
+                    ),
                   ),
                 ),
               ),
@@ -422,14 +508,17 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
                     node: n,
                     icon: _catalogByType[n.type]?.icon ?? Icons.extension_outlined,
                     selected: _selected == n.id,
-                    connectedInputs: {for (final e in _graph.edges) if (e.to == n.id) e.toPort},
+                    connectedInputs: {for (final e in _graph.edges) if (!e.cond && e.to == n.id) e.toPort},
+                    condInConnected: _graph.edges.any((e) => e.cond && e.to == n.id),
                     onMenu: (global) => _nodeMenu(n, global),
                     onMove: (delta) => _moveNode(n.id, delta),
                     onMoveEnd: _save,
-                    onEditValue: (i) => _editValue(n, i),
+                    onEditValue: (i, rect) => _editValue(n, i, rect),
                     onTapInput: (i) => _disconnectInput(n.id, i),
-                    onPortDragStart: (i, isOutput, global) => setState(() => _drag = (node: n.id, port: i, isOutput: isOutput, pos: _toGraph(global))),
-                    onPortDragUpdate: (global) => setState(() => _drag = _drag == null ? null : (node: _drag!.node, port: _drag!.port, isOutput: _drag!.isOutput, pos: _toGraph(global))),
+                    onTapCondIn: () => _disconnectCondIn(n.id),
+                    onPortDragStart: (i, isOutput, global) => setState(() => _drag = (node: n.id, port: i, isOutput: isOutput, cond: false, pos: _toGraph(global))),
+                    onCondDragStart: (isOut, global) => setState(() => _drag = (node: n.id, port: 0, isOutput: isOut, cond: true, pos: _toGraph(global))),
+                    onPortDragUpdate: (global) => setState(() => _drag = _drag == null ? null : (node: _drag!.node, port: _drag!.port, isOutput: _drag!.isOutput, cond: _drag!.cond, pos: _toGraph(global))),
                     onPortDragEnd: () => _endDrag(_drag?.pos ?? Offset.zero),
                   ),
                 ),
@@ -458,7 +547,9 @@ class _NodePalettePanel extends ConsumerStatefulWidget {
 class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
   final _search = TextEditingController();
   final _focus = FocusNode(debugLabel: 'nodePaletteSearch');
+  final _barKey = GlobalKey();
   bool _toggled = false;
+  bool _fitScheduled = false;
   String _genre = 'すべて';
 
   @override
@@ -475,6 +566,33 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
     }
     setState(() {});
   }
+
+  /// 最小段の高さをバーの実測に合わせる (D-093: 固定比だと低いウィンドウで
+  /// 入力欄が隠れる)。コンポーザー stick のピッタリ実測と同じ作法。
+  void _scheduleFit() {
+    if (_fitScheduled || _focus.hasFocus || _toggled) return; // 展開中は測らない
+    _fitScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fitScheduled = false;
+      if (!mounted || _focus.hasFocus || _toggled) return;
+      final bar = _barKey.currentContext?.size?.height;
+      if (bar == null) return;
+      final mq = MediaQuery.of(context);
+      final avail = mq.size.height - (mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : fowDockInsetOf(context, ref.read(routerProvider)));
+      if (avail <= 0) return;
+      final spec = widget.spec;
+      // バー + ハンドル 18 + 予備。
+      final fit = ((bar + 18 + 2) / avail).clamp(spec.minHeightFactor, spec.maxHeightFactor).toDouble();
+      if ((spec.heightStops.firstOrNull ?? 0) != fit) spec.heightStops = [fit, _paletteExpanded];
+      final collapsed = spec.heightFactor.value < _paletteExpanded - 0.05;
+      if (collapsed && !spec.userResized && (spec.heightFactor.value - fit).abs() > 0.005) {
+        spec.heightFactor.value = fit;
+      }
+    });
+  }
+
+  /// 最小段(実測後は heightStops の先頭)。ドラッグ開始時の折りたたみ先。
+  double get _collapsedStop => widget.spec.heightStops.firstOrNull ?? _paletteCollapsed;
 
   @override
   void dispose() {
@@ -496,18 +614,15 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
         if ((_genre == 'すべて' || e.genre == _genre) && (query.isEmpty || e.title.contains(query) || (e.description ?? '').contains(query))) e,
     ];
 
+    _scheduleFit();
     final bar = Padding(
+        key: _barKey,
         padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 6, RasqSpacing.sm, 6),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // RAi (未実装): 実装時にはここからノードを内部的に操作する想定。
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Tooltip(
-              message: 'RAi(準備中)',
-              child: CircleAvatar(radius: 14, backgroundColor: scheme.surfaceContainerHighest, child: Icon(Icons.smart_toy_outlined, size: 16, color: scheme.onSurfaceVariant)),
-            ),
-          ),
-          const SizedBox(width: RasqSpacing.sm),
+          // RAi (未実装, D-093 でアセット化): 実装時にはここからノードを
+          // 内部的に操作する想定。
+          const RasqRaiButton(size: 28),
+          const SizedBox(width: 2),
           Expanded(
             child: RasqExpandableSearchBox(
               expanded: _toggled || _focus.hasFocus,
@@ -559,9 +674,9 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
           child: entries.isEmpty
               ? const RasqEmptyView(title: 'ノードが見つかりません', hint: '検索ワードやジャンルを変えてみてください')
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 4, RasqSpacing.page, RasqSpacing.sm),
+                  padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
                   itemCount: entries.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 6),
+                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, i) => _tile(scheme, manager, entries[i]),
                 ),
         ),
@@ -570,40 +685,32 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
   }
 
   Widget _tile(ColorScheme scheme, OverlayManager manager, NodeCatalogEntry e) {
-    final card = Container(
-      padding: const EdgeInsets.all(RasqSpacing.sm),
-      decoration: BoxDecoration(color: scheme.surface, border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)),
-      child: Row(children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(10)),
-          child: Icon(e.icon, size: 22),
-        ),
-        const SizedBox(width: RasqSpacing.sm),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(e.title, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
-            if (e.author != null) Text(e.author!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-            // 入出力の 1 行表示 (D-092: ワイヤーフレーム書き忘れ分)。
-            Text(e.ioSummary, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
-          ]),
-        ),
-        const Icon(Icons.chevron_right, size: 18),
-      ]),
+    // ノードタイル (D-093): 「アクションバーをなくして > メニューがついた
+    // 投稿タイルみたいなもの」 — サーバー/プラグイン表示と共用の
+    // RasqPluginTile。入出力は 1 行 + 形式色ドット。
+    final tile = RasqPluginTile(
+      icon: e.icon,
+      title: e.title,
+      subtitle: '${e.author ?? '組み込みノード'} · ${e.genre}',
+      description: e.description,
+      detail: e.ioSummary,
+      detailColorDots: e.typeDots,
+      onTap: () => _showDetail(manager, e),
     );
     return LongPressDraggable<NodeCatalogEntry>(
       data: e,
       feedback: Material(
-        color: Colors.transparent,
-        child: Opacity(opacity: 0.9, child: SizedBox(width: 280, child: card)),
+        color: scheme.surface,
+        elevation: 4,
+        borderRadius: BorderRadius.circular(12),
+        child: Opacity(opacity: 0.95, child: SizedBox(width: 300, child: tile)),
       ),
       // ドラッグ中は FOW を最小表示に折りたたむ(WF: 下側に stick)。
       onDragStarted: () {
         _focus.unfocus();
-        widget.spec.heightFactor.value = _paletteCollapsed;
+        widget.spec.heightFactor.value = _collapsedStop;
       },
-      child: InkWell(onTap: () => _showDetail(manager, e), child: card),
+      child: tile,
     );
   }
 
@@ -614,7 +721,7 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
       title: e.title,
       ownerId: nodePaletteFowId,
       builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        _NodeInfoBody(author: e.author, genre: e.genre, description: e.description, inputs: e.inputs, outputs: e.outputs),
+        _NodeInfoBody(author: e.author, genre: e.genre, description: e.description, inputs: e.inputs, outputs: e.outputs, hasCondIn: e.hasCondIn, hasCondOut: e.hasCondOut),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
           child: FilledButton.icon(
@@ -633,13 +740,15 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
 
 /// ノード情報の中身(詳細シートと「ノード情報」で共用)。
 class _NodeInfoBody extends StatelessWidget {
-  const _NodeInfoBody({this.author, this.genre, this.description, required this.inputs, required this.outputs});
+  const _NodeInfoBody({this.author, this.genre, this.description, required this.inputs, required this.outputs, this.hasCondIn = false, this.hasCondOut = false});
 
   final String? author;
   final String? genre;
   final String? description;
   final List<NodePort> inputs;
   final List<NodePort> outputs;
+  final bool hasCondIn;
+  final bool hasCondOut;
 
   @override
   Widget build(BuildContext context) {
@@ -660,13 +769,15 @@ class _NodeInfoBody extends StatelessWidget {
         if (author != null || genre != null)
           Text([?author, if (genre != null) 'ジャンル: $genre'].join(' · '), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         if (description != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(description!, style: RasqTypography.bodySmall)),
-        if (inputs.isNotEmpty) ...[
+        if (inputs.isNotEmpty || hasCondIn) ...[
           Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text('入力', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
           for (final p in inputs) port(p),
+          if (hasCondIn) port(const NodePort(label: '条件(上辺)', dataType: '条件')),
         ],
-        if (outputs.isNotEmpty) ...[
+        if (outputs.isNotEmpty || hasCondOut) ...[
           Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text('出力', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
           for (final p in outputs) port(p),
+          if (hasCondOut) port(const NodePort(label: '条件(下辺)', dataType: '条件')),
         ],
       ]),
     );
@@ -681,12 +792,15 @@ class _NodeCard extends StatelessWidget {
     required this.icon,
     required this.selected,
     required this.connectedInputs,
+    required this.condInConnected,
     required this.onMenu,
     required this.onMove,
     required this.onMoveEnd,
     required this.onEditValue,
     required this.onTapInput,
+    required this.onTapCondIn,
     required this.onPortDragStart,
+    required this.onCondDragStart,
     required this.onPortDragUpdate,
     required this.onPortDragEnd,
   });
@@ -696,13 +810,18 @@ class _NodeCard extends StatelessWidget {
   final bool selected;
   final Set<int> connectedInputs;
 
+  /// 上辺の条件接続部に親が付いているか (D-094)。
+  final bool condInConnected;
+
   /// クリック/長押しのドロップダウン(グローバル座標)。
   final ValueChanged<Offset> onMenu;
   final ValueChanged<Offset> onMove;
   final VoidCallback onMoveEnd;
-  final ValueChanged<int> onEditValue;
+  final void Function(int index, Rect anchor) onEditValue;
   final ValueChanged<int> onTapInput;
+  final VoidCallback onTapCondIn;
   final void Function(int index, bool isOutput, Offset global) onPortDragStart;
+  final void Function(bool isOut, Offset global) onCondDragStart;
   final ValueChanged<Offset> onPortDragUpdate;
   final VoidCallback onPortDragEnd;
 
@@ -719,6 +838,9 @@ class _NodeCard extends StatelessWidget {
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 2))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        // 条件接続部・上辺 (D-094): 親(並べ替え/消去/条件)からの縦接続を受ける。
+        if (node.hasCondIn)
+          SizedBox(height: _condRowH, child: Center(child: _condDot(scheme, isOut: false, filled: condInConnected, onTap: onTapCondIn))),
         // ヘッダー = 移動グリップ + クリック/長押しでドロップダウン (D-092)。
         GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -742,8 +864,32 @@ class _NodeCard extends StatelessWidget {
         for (var i = 0; i < node.inputs.length; i++) _inputRow(scheme, i),
         if (node.outputs.isNotEmpty) _sectionLabel(scheme, '出力'),
         for (var j = 0; j < node.outputs.length; j++) _outputRow(scheme, j),
-        const SizedBox(height: 6),
+        // 条件接続部・下辺 (D-094): 条件ノードをぶら下げる。
+        if (node.hasCondOut)
+          SizedBox(height: _condRowH, child: Center(child: _condDot(scheme, isOut: true, filled: true)))
+        else
+          const SizedBox(height: 6),
       ]),
+    );
+  }
+
+  /// 条件接続部のドット(紫、上下方向)。
+  Widget _condDot(ColorScheme scheme, {required bool isOut, bool filled = false, VoidCallback? onTap}) {
+    final color = nodeTypeColor('条件');
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      onPanStart: (d) => onCondDragStart(isOut, d.globalPosition),
+      onPanUpdate: (d) => onPortDragUpdate(d.globalPosition),
+      onPanEnd: (_) => onPortDragEnd(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        child: Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: filled ? color : scheme.surface, border: Border.all(color: color, width: 1.4)),
+        ),
+      ),
     );
   }
 
@@ -789,22 +935,30 @@ class _NodeCard extends StatelessWidget {
         Expanded(
           child: p.value == null
               ? Text(p.label, style: RasqTypography.caption, overflow: TextOverflow.ellipsis)
-              : InkWell(
-                  onTap: () => onEditValue(i),
-                  child: Container(
-                    height: 20,
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(6)),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        p.value!.isEmpty ? p.label : p.value!,
-                        style: TextStyle(fontSize: 9, color: p.value!.isEmpty ? scheme.onSurfaceVariant : scheme.onSurface),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+              : Builder(builder: (ctx) {
+                  return InkWell(
+                    onTap: () {
+                      final box = ctx.findRenderObject() as RenderBox;
+                      onEditValue(i, box.localToGlobal(Offset.zero) & box.size);
+                    },
+                    child: Container(
+                      height: 20,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(6)),
+                      child: Row(children: [
+                        Expanded(
+                          child: Text(
+                            p.value!.isEmpty ? p.label : p.value!,
+                            style: TextStyle(fontSize: 9, color: p.value!.isEmpty ? scheme.onSurfaceVariant : scheme.onSurface),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        // 選択肢付き (D-094) はドロップダウンの ∨ を出す。
+                        if (p.options != null) Icon(Icons.keyboard_arrow_down, size: 12, color: scheme.onSurfaceVariant),
+                      ]),
                     ),
-                  ),
-                ),
+                  );
+                }),
         ),
         const SizedBox(width: 12),
       ]),
@@ -826,40 +980,62 @@ class _NodeCard extends StatelessWidget {
 }
 
 /// 接続線(ベジェ)とドラッグ中の仮線。色は**出力ポートのデータ形式** (D-092)。
+/// 条件接続 (D-094) は縦方向のベジェ(紫)。
 class _EdgePainter extends CustomPainter {
-  _EdgePainter({required this.graph, required this.pan, required this.inputCenter, required this.outputCenter, required this.drag});
+  _EdgePainter({required this.graph, required this.pan, required this.inputCenter, required this.outputCenter, required this.condInCenter, required this.condOutCenter, required this.drag});
 
   final NodeGraph graph;
   final Offset pan;
   final Offset Function(GraphNode, int) inputCenter;
   final Offset Function(GraphNode, int) outputCenter;
-  final ({String node, int port, bool isOutput, Offset pos})? drag;
+  final Offset Function(GraphNode) condInCenter;
+  final Offset Function(GraphNode) condOutCenter;
+  final ({String node, int port, bool isOutput, bool cond, Offset pos})? drag;
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.translate(pan.dx, pan.dy);
     final byId = {for (final n in graph.nodes) n.id: n};
-    void curve(Offset a, Offset b, Color color) {
-      final paint = Paint()
-        ..color = color
-        ..strokeWidth = 2
-        ..style = PaintingStyle.stroke;
-      final dx = ((b.dx - a.dx).abs() / 2).clamp(24.0, 120.0);
-      canvas.drawPath(Path()..moveTo(a.dx, a.dy)..cubicTo(a.dx + dx, a.dy, b.dx - dx, b.dy, b.dx, b.dy), paint);
+    Paint stroke(Color color) => Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    void dots(Offset a, Offset b, Color color) {
       canvas.drawCircle(a, 3, Paint()..color = color);
       canvas.drawCircle(b, 3, Paint()..color = color);
     }
 
+    void curve(Offset a, Offset b, Color color) {
+      final dx = ((b.dx - a.dx).abs() / 2).clamp(24.0, 120.0);
+      canvas.drawPath(Path()..moveTo(a.dx, a.dy)..cubicTo(a.dx + dx, a.dy, b.dx - dx, b.dy, b.dx, b.dy), stroke(color));
+      dots(a, b, color);
+    }
+
+    void vcurve(Offset a, Offset b, Color color) {
+      final dy = ((b.dy - a.dy).abs() / 2).clamp(16.0, 80.0);
+      canvas.drawPath(Path()..moveTo(a.dx, a.dy)..cubicTo(a.dx, a.dy + dy, b.dx, b.dy - dy, b.dx, b.dy), stroke(color));
+      dots(a, b, color);
+    }
+
+    final condColor = nodeTypeColor('条件');
     for (final e in graph.edges) {
       final from = byId[e.from];
       final to = byId[e.to];
-      if (from == null || to == null || e.fromPort >= from.outputs.length || e.toPort >= to.inputs.length) continue;
+      if (from == null || to == null) continue;
+      if (e.cond) {
+        if (from.hasCondOut && to.hasCondIn) vcurve(condOutCenter(from), condInCenter(to), condColor);
+        continue;
+      }
+      if (e.fromPort >= from.outputs.length || e.toPort >= to.inputs.length) continue;
       curve(outputCenter(from, e.fromPort), inputCenter(to, e.toPort), nodeTypeColor(from.outputs[e.fromPort].dataType));
     }
     final d = drag;
     if (d != null) {
       final n = byId[d.node];
-      if (n != null) {
+      if (n != null && d.cond) {
+        final start = d.isOutput ? condOutCenter(n) : condInCenter(n);
+        vcurve(d.isOutput ? start : d.pos, d.isOutput ? d.pos : start, condColor);
+      } else if (n != null) {
         final port = d.isOutput ? n.outputs.elementAtOrNull(d.port) : n.inputs.elementAtOrNull(d.port);
         final start = d.isOutput ? outputCenter(n, d.port) : inputCenter(n, d.port);
         curve(d.isOutput ? start : d.pos, d.isOutput ? d.pos : start, nodeTypeColor(port?.dataType ?? 'any'));

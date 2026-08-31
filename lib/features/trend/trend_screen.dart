@@ -105,8 +105,8 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                 },
               ),
             ),
-            // トレンドもタイムラインと同じ (D-090): RAi + ノード設定。
-            RasqIconButton(icon: Icons.smart_toy_outlined, size: 20, onPressed: () {}, tooltip: 'RAi(準備中)'),
+            // トレンドもタイムラインと同じ (D-090/D-093): RAi + ノード設定。
+            const RasqRaiButton(size: 24),
             RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'トレンド設定', onPressed: () => context.push(Routes.nodes('trend'))),
           ]),
           Expanded(

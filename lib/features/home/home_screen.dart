@@ -47,8 +47,8 @@ class HomeScreen extends ConsumerWidget {
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
             child: Row(children: [
               Expanded(child: RasqTabs(items: tabs, showChevron: false)),
-              // RAi (D-090): 未実装 — 実装時にはノードを内部的に操作する想定。
-              RasqIconButton(icon: Icons.smart_toy_outlined, size: 20, onPressed: () {}, tooltip: 'RAi(準備中)'),
+              // RAi (D-090/D-093): 未実装 — 実装時にはノードを内部的に操作する想定。
+              const RasqRaiButton(size: 24),
               // タイムライン設定 (D-090): ノードプログラミング画面へ。
               Builder(builder: (ctx) {
                 return RasqIconButton(

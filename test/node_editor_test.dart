@@ -88,7 +88,8 @@ void main() {
     expect(find.textContaining('入力: 間隔(数値)'), findsOneWidget);
     await tester.tap(find.text('クロックメーカー'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('一定間隔でクロック'), findsOneWidget); // 詳細情報
+    expect(find.text('キャンバスに追加'), findsOneWidget); // 詳細情報シート
+    expect(find.text('条件(下辺)'), findsNothing); // クロックに条件接続部はない
     await tester.tap(find.text('キャンバスに追加'));
     await tester.pumpAndSettle();
     expect(onCanvas(find.text('クロックメーカー')), findsOneWidget);

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../tokens/sizes.dart';
+
 /// Brand assets shipped with the design system (原典: 特殊なコンポーネント置き場).
 ///
 /// All images live in `assets/brand/` of this package and are referenced with
@@ -19,6 +21,35 @@ abstract final class RasqBrandAssets {
 
   /// Pastel AsTell mark — for dark surfaces.
   static const asTellLight = 'assets/brand/astell_light.png';
+
+  /// RAi ボタン(Assets2/rai_button — コマ型ロボットの丸バッジ)。
+  static const raiButton = 'assets/brand/rai_button.png';
+}
+
+/// RAi ボタン (D-093): TL 選択行・トレンド・ノードパレット等に置く共通の
+/// 入口。RAi 実装までは [onPressed] なし(表示のみ)でも同じ見た目。
+class RasqRaiButton extends StatelessWidget {
+  const RasqRaiButton({super.key, this.onPressed, this.size = 26, this.tooltip = 'RAi(準備中)'});
+
+  final VoidCallback? onPressed;
+  final double size;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        onPressed: onPressed ?? () {},
+        tooltip: tooltip,
+        icon: Image.asset(
+          RasqBrandAssets.raiButton,
+          package: RasqBrandAssets.package,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          semanticLabel: 'RAi',
+          filterQuality: FilterQuality.medium,
+        ),
+        constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
+      );
 }
 
 /// The RASQ app mark (swoosh + orange dot), e.g. next to official plugins or
