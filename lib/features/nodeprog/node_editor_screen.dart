@@ -222,7 +222,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         // 入力は 1 本まで — 既存の接続は上書き。
         edges: [
           for (final e in _graph.edges)
-            if (!(!e.cond && e.to == to.node && e.toPort == to.port)) e,
+            if (!(!e.cond && !e.toIcon && e.to == to.node && e.toPort == to.port)) e,
           GraphEdge(from: from.node, fromPort: from.port, to: to.node, toPort: to.port),
         ],
       );
@@ -231,10 +231,33 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   }
 
   void _disconnectInput(String node, int port) {
-    final had = _graph.edges.any((e) => !e.cond && e.to == node && e.toPort == port);
+    final had = _graph.edges.any((e) => !e.cond && !e.toIcon && e.to == node && e.toPort == port);
     if (!had) return;
     setState(() {
-      _graph = NodeGraph(nodes: _graph.nodes, edges: [for (final e in _graph.edges) if (!(!e.cond && e.to == node && e.toPort == port)) e]);
+      _graph = NodeGraph(nodes: _graph.nodes, edges: [for (final e in _graph.edges) if (!(!e.cond && !e.toIcon && e.to == node && e.toPort == port)) e]);
+    });
+    _save();
+  }
+
+  /// クロック接続 (D-095): クロック出力 → ノードのヘッダーアイコン。
+  /// アイコンへの接続は 1 本まで(上書き)。
+  void _connectClock(({String node, int port}) from, String toId) {
+    if (from.node == toId) return;
+    setState(() {
+      _graph = NodeGraph(nodes: _graph.nodes, edges: [
+        for (final e in _graph.edges)
+          if (!(e.toIcon && e.to == toId)) e,
+        GraphEdge(from: from.node, fromPort: from.port, to: toId, toPort: 0, toIcon: true),
+      ]);
+    });
+    _save();
+  }
+
+  void _disconnectIcon(String toId) {
+    final had = _graph.edges.any((e) => e.toIcon && e.to == toId);
+    if (!had) return;
+    setState(() {
+      _graph = NodeGraph(nodes: _graph.nodes, edges: [for (final e in _graph.edges) if (!(e.toIcon && e.to == toId)) e]);
     });
     _save();
   }
@@ -360,6 +383,9 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   Offset _condInCenter(GraphNode n) => Offset(n.x + _nodeW / 2, n.y + _condRowH / 2);
   Offset _condOutCenter(GraphNode n) => Offset(n.x + _nodeW / 2, n.y + _cardHeight(n) - _condRowH / 2);
 
+  /// ヘッダーアイコンの中心 (D-095: クロックの繋ぎ先)。
+  Offset _iconCenter(GraphNode n) => Offset(n.x + 17.5, n.y + _condInH(n) + _headerH / 2);
+
   /// global → グラフ座標(キャンバス local からパンを引く)。
   Offset _toGraph(Offset global) {
     final box = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
@@ -438,6 +464,23 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         } else {
           _connect(target, (node: drag.node, port: drag.port));
         }
+      } else if (drag.isOutput) {
+        // クロック出力はノードのアイコンにも繋げる (D-095)。
+        final byId = {for (final n in _graph.nodes) n.id: n};
+        final out = byId[drag.node]?.outputs.elementAtOrNull(drag.port);
+        if (out?.dataType == 'クロック') {
+          String? best;
+          var bestD = 30.0;
+          for (final n in _graph.nodes) {
+            if (n.id == drag.node) continue;
+            final d = (_iconCenter(n) - at).distance;
+            if (d < bestD) {
+              bestD = d;
+              best = n.id;
+            }
+          }
+          if (best != null) _connectClock((node: drag.node, port: drag.port), best);
+        }
       }
     }
     setState(() => _drag = null);
@@ -463,7 +506,11 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: RasqPageHeader(title: _title),
+      // ノード検索の再呼び出し (D-096): パレット FOW を閉じてしまっても
+      // ここから開き直せる(開いていれば何もしない)。
+      appBar: RasqPageHeader(title: _title, actions: [
+        RasqIconButton(icon: Icons.manage_search, tooltip: 'ノードを検索', onPressed: _openPalette),
+      ]),
       body: DragTarget<NodeCatalogEntry>(
         onAcceptWithDetails: (d) => _addNode(d.data, _toGraph(d.offset) - const Offset(0, 10)),
         builder: (context, _, _) => Focus(
@@ -493,6 +540,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
                       outputCenter: _outputCenter,
                       condInCenter: _condInCenter,
                       condOutCenter: _condOutCenter,
+                      iconCenter: _iconCenter,
                       drag: _drag,
                     ),
                   ),
@@ -508,14 +556,16 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
                     node: n,
                     icon: _catalogByType[n.type]?.icon ?? Icons.extension_outlined,
                     selected: _selected == n.id,
-                    connectedInputs: {for (final e in _graph.edges) if (!e.cond && e.to == n.id) e.toPort},
+                    connectedInputs: {for (final e in _graph.edges) if (!e.cond && !e.toIcon && e.to == n.id) e.toPort},
                     condInConnected: _graph.edges.any((e) => e.cond && e.to == n.id),
+                    clockConnected: _graph.edges.any((e) => e.toIcon && e.to == n.id),
                     onMenu: (global) => _nodeMenu(n, global),
                     onMove: (delta) => _moveNode(n.id, delta),
                     onMoveEnd: _save,
                     onEditValue: (i, rect) => _editValue(n, i, rect),
                     onTapInput: (i) => _disconnectInput(n.id, i),
                     onTapCondIn: () => _disconnectCondIn(n.id),
+                    onTapIcon: () => _disconnectIcon(n.id),
                     onPortDragStart: (i, isOutput, global) => setState(() => _drag = (node: n.id, port: i, isOutput: isOutput, cond: false, pos: _toGraph(global))),
                     onCondDragStart: (isOut, global) => setState(() => _drag = (node: n.id, port: 0, isOutput: isOut, cond: true, pos: _toGraph(global))),
                     onPortDragUpdate: (global) => setState(() => _drag = _drag == null ? null : (node: _drag!.node, port: _drag!.port, isOutput: _drag!.isOutput, cond: _drag!.cond, pos: _toGraph(global))),
@@ -793,12 +843,14 @@ class _NodeCard extends StatelessWidget {
     required this.selected,
     required this.connectedInputs,
     required this.condInConnected,
+    required this.clockConnected,
     required this.onMenu,
     required this.onMove,
     required this.onMoveEnd,
     required this.onEditValue,
     required this.onTapInput,
     required this.onTapCondIn,
+    required this.onTapIcon,
     required this.onPortDragStart,
     required this.onCondDragStart,
     required this.onPortDragUpdate,
@@ -813,6 +865,9 @@ class _NodeCard extends StatelessWidget {
   /// 上辺の条件接続部に親が付いているか (D-094)。
   final bool condInConnected;
 
+  /// ヘッダーアイコンにクロックが繋がっているか (D-095)。
+  final bool clockConnected;
+
   /// クリック/長押しのドロップダウン(グローバル座標)。
   final ValueChanged<Offset> onMenu;
   final ValueChanged<Offset> onMove;
@@ -820,6 +875,7 @@ class _NodeCard extends StatelessWidget {
   final void Function(int index, Rect anchor) onEditValue;
   final ValueChanged<int> onTapInput;
   final VoidCallback onTapCondIn;
+  final VoidCallback onTapIcon;
   final void Function(int index, bool isOutput, Offset global) onPortDragStart;
   final void Function(bool isOut, Offset global) onCondDragStart;
   final ValueChanged<Offset> onPortDragUpdate;
@@ -853,7 +909,15 @@ class _NodeCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(children: [
-                Icon(icon, size: 15, color: scheme.onSurfaceVariant),
+                // アイコン = クロックの繋ぎ先 (D-095)。接続中はクロック色で
+                // 塗り、タップで切断(未接続時はヘッダーのメニューに任せる)。
+                clockConnected
+                    ? GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onTapIcon,
+                        child: Icon(icon, size: 15, color: nodeTypeColor('クロック')),
+                      )
+                    : Icon(icon, size: 15, color: scheme.onSurfaceVariant),
                 const SizedBox(width: 6),
                 Expanded(child: Text(node.title, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
               ]),
@@ -982,7 +1046,7 @@ class _NodeCard extends StatelessWidget {
 /// 接続線(ベジェ)とドラッグ中の仮線。色は**出力ポートのデータ形式** (D-092)。
 /// 条件接続 (D-094) は縦方向のベジェ(紫)。
 class _EdgePainter extends CustomPainter {
-  _EdgePainter({required this.graph, required this.pan, required this.inputCenter, required this.outputCenter, required this.condInCenter, required this.condOutCenter, required this.drag});
+  _EdgePainter({required this.graph, required this.pan, required this.inputCenter, required this.outputCenter, required this.condInCenter, required this.condOutCenter, required this.iconCenter, required this.drag});
 
   final NodeGraph graph;
   final Offset pan;
@@ -990,6 +1054,7 @@ class _EdgePainter extends CustomPainter {
   final Offset Function(GraphNode, int) outputCenter;
   final Offset Function(GraphNode) condInCenter;
   final Offset Function(GraphNode) condOutCenter;
+  final Offset Function(GraphNode) iconCenter;
   final ({String node, int port, bool isOutput, bool cond, Offset pos})? drag;
 
   @override
@@ -1024,6 +1089,11 @@ class _EdgePainter extends CustomPainter {
       if (from == null || to == null) continue;
       if (e.cond) {
         if (from.hasCondOut && to.hasCondIn) vcurve(condOutCenter(from), condInCenter(to), condColor);
+        continue;
+      }
+      if (e.toIcon) {
+        // クロック → アイコン (D-095)。
+        if (e.fromPort < from.outputs.length) curve(outputCenter(from, e.fromPort), iconCenter(to), nodeTypeColor(from.outputs[e.fromPort].dataType));
         continue;
       }
       if (e.fromPort >= from.outputs.length || e.toPort >= to.inputs.length) continue;

@@ -137,6 +137,22 @@ void main() {
     expect(onCanvas(find.text('クロックメーカー')), findsNWidgets(2));
   });
 
+  testWidgets('D-096: パレット FOW を閉じても「ノードを検索」ボタンで開き直せる', (tester) async {
+    final container = await pump(tester);
+    await tester.tap(find.byTooltip('タイムライン設定'));
+    await tester.pumpAndSettle();
+    expect(find.text('プラグインノードを検索'), findsOneWidget);
+
+    final manager = container.read(overlayManagerProvider);
+    manager.close(nodePaletteFowId);
+    await tester.pumpAndSettle();
+    expect(find.text('プラグインノードを検索'), findsNothing);
+
+    await tester.tap(find.byTooltip('ノードを検索'));
+    await tester.pumpAndSettle();
+    expect(find.text('プラグインノードを検索'), findsOneWidget);
+  });
+
   testWidgets('コンポーザーの「投稿先のカスタマイズ」→ composer スコープのエディタ', (tester) async {
     await pump(tester);
     await tester.tap(find.byTooltip('投稿'));

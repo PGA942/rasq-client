@@ -94,7 +94,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final manager = ref.watch(overlayManagerProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
 
-    Future<void> perform(Post p, ActionDescriptor a, {Map<String, Object?> args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args);
+    Future<void> perform(Post p, ActionDescriptor a, {Map<String, Object?> args = const {}}) {
+      // 返信ボタン (D-096): ✕ で消した常駐返信コンポーザーを呼び戻す
+      // (開いていれば何もしない — _ensureReplyComposer 側が多重を弾く)。
+      if (a.genreTag == 'Reply') {
+        setState(() => _composerDismissed = false); // 再表示を許可 → build が置き直す
+        return Future.value();
+      }
+      return ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args);
+    }
 
     final replyTarget = thread.value?.post ?? initial;
     if (replyTarget != null) _ensureReplyComposer(replyTarget);

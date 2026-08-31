@@ -92,6 +92,30 @@ void main() {
     expect([for (final p in (await runNodeGraph(g, fetch: fetch))!) p.id], ['p1', 'p2', 'p4']);
   });
 
+  test('クロック → アイコン接続 (D-095): 間隔の解釈、鎖はそのまま動く', () async {
+    final clockBase = builtinNodeCatalog.firstWhere((e) => e.type == 'clock').instantiate('k1', Offset.zero);
+    final clock30 = clockBase.copyWith(inputs: [clockBase.inputs[0].copyWith(value: '30秒')]);
+    final g = NodeGraph(
+      nodes: [source('n1'), step('sort', 'n2'), timelineNode('n3'), clock30],
+      edges: [
+        data('n1', 'n2'),
+        data('n2', 'n3'),
+        const GraphEdge(from: 'k1', fromPort: 0, to: 'n1', toPort: 0, toIcon: true), // クロック → 取得ノードのアイコン
+      ],
+    );
+    expect(nodeGraphClockInterval(g), const Duration(seconds: 30));
+    // toIcon エッジは鎖の遡りに混ざらない — 実行結果は素通し(条件なし sort)。
+    expect([for (final p in (await runNodeGraph(g, fetch: fetch))!) p.id], ['p1', 'p2', 'p3', 'p4']);
+
+    // 間隔の解釈: 分/既定/最短クランプ。
+    expect(parseClockInterval('15秒'), const Duration(seconds: 15));
+    expect(parseClockInterval('2分'), const Duration(minutes: 2));
+    expect(parseClockInterval('5'), const Duration(seconds: 10)); // 最短 10 秒
+    expect(parseClockInterval(''), const Duration(seconds: 15)); // 既定
+    // クロック未接続なら null。
+    expect(nodeGraphClockInterval(NodeGraph(nodes: [clock30], edges: const [])), isNull);
+  });
+
   test('鎖が未完成なら null(実行しない)', () async {
     // タイムラインノードに何も繋がっていない。
     final g = NodeGraph(nodes: [source('n1'), timelineNode('n3')], edges: const []);

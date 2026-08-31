@@ -115,18 +115,26 @@ class GraphNode {
 /// 出力ポート(from の outputs[fromPort])→ 入力ポート(to の inputs[toPort])。
 /// [cond] のとき (D-094) は**縦方向の条件接続**: from の下辺 → to の上辺で、
 /// fromPort/toPort は使わない(0 固定)。
+/// [toIcon] のとき (D-095) は**ノードのアイコンへの接続**(クロック):
+/// from のクロック出力 → to のヘッダーアイコンで、toPort は使わない。
 @immutable
 class GraphEdge {
-  const GraphEdge({required this.from, required this.fromPort, required this.to, required this.toPort, this.cond = false});
+  const GraphEdge({required this.from, required this.fromPort, required this.to, required this.toPort, this.cond = false, this.toIcon = false});
   final String from;
   final int fromPort;
   final String to;
   final int toPort;
   final bool cond;
+  final bool toIcon;
 
-  Map<String, Object?> toJson() => {'from': from, 'fromPort': fromPort, 'to': to, 'toPort': toPort, if (cond) 'cond': true};
+  Map<String, Object?> toJson() => {'from': from, 'fromPort': fromPort, 'to': to, 'toPort': toPort, if (cond) 'cond': true, if (toIcon) 'toIcon': true};
   factory GraphEdge.fromJson(Map<String, Object?> j) => GraphEdge(
-      from: j['from'] as String, fromPort: (j['fromPort'] as num?)?.toInt() ?? 0, to: j['to'] as String, toPort: (j['toPort'] as num?)?.toInt() ?? 0, cond: j['cond'] == true);
+      from: j['from'] as String,
+      fromPort: (j['fromPort'] as num?)?.toInt() ?? 0,
+      to: j['to'] as String,
+      toPort: (j['toPort'] as num?)?.toInt() ?? 0,
+      cond: j['cond'] == true,
+      toIcon: j['toIcon'] == true);
 }
 
 @immutable

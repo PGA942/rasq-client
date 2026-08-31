@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -62,6 +63,24 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   /// 総合TL (D-088) のアカウント別カーソル。build で作り直す。
   Map<String, String> _bundleCursors = {};
 
+  /// クロックノード (D-095): グラフのクロックがアイコンに繋がっていると
+  /// その間隔で TL を自動更新する。
+  Timer? _clockTimer;
+  Duration? _clockInterval;
+
+  void _armClock(Duration? interval) {
+    if (interval == null) {
+      _clockTimer?.cancel();
+      _clockTimer = null;
+      _clockInterval = null;
+      return;
+    }
+    if (_clockTimer != null && _clockInterval == interval) return; // 周期そのまま — 位相を保つ
+    _clockTimer?.cancel();
+    _clockInterval = interval;
+    _clockTimer = Timer.periodic(interval, (_) => refresh());
+  }
+
   /// 投稿の所属アカウントのセッション (D-088): 総合TLでは投稿ごとに取得元
   /// アカウントが違うので、アクションは所属セッションへルーティングする。
   SnsSession? _sessionFor(Post p) {
@@ -72,6 +91,11 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   @override
   Future<TimelineState> build() async {
     ref.watch(currentAccountProvider); // rebuild per account
+    ref.onDispose(() {
+      _clockTimer?.cancel();
+      _clockTimer = null;
+      _clockInterval = null;
+    });
     if (kind == TimelineKind.bundle) {
       // 総合TL (D-088): アカウントの増減で作り直す。
       ref.watch(sessionsProvider.select((s) => s.value?.sessions.length ?? 0));
@@ -162,6 +186,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     // ノードグラフ実行 (D-094): この TL のスコープ(tl.<id>)に
     // 「タイムライン取得 → 加工 → タイムライン」の完成した鎖があれば通す。
     if (!kind.id.startsWith('custom:')) {
+      Duration? clock;
       try {
         final area = await ref.read(settingsAreaProvider('nodeprog.tl.${kind.id}').future);
         final raw = area['graph'];
@@ -174,11 +199,14 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
           if (result != null) {
             page = Page(items: result, nextCursor: page.nextCursor);
             states = await session.actionStates(result); // 別 TL 由来の投稿の分を取り直す
+            // クロック → ノードのアイコン (D-095): 繋がっていれば自動更新。
+            clock = nodeGraphClockInterval(graph);
           }
         }
       } catch (e) {
         debugPrint('nodeprog(tl.${kind.id}): $e');
       }
+      _armClock(clock);
     }
     _applyStates(page.items, states);
     ref.read(emojiCacheProvider.notifier).request({for (final p in page.items) ...InlineSpans.emojiShortcodes(p.body), for (final p in page.items) ...InlineSpans.emojiShortcodes(p.author.displayName)});

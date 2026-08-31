@@ -18,7 +18,7 @@ Future<List<Post>?> runNodeGraph(NodeGraph g, {required Future<List<Post>> Funct
   var current = timeline;
   final visited = <String>{timeline.id};
   while (true) {
-    final edge = g.edges.where((e) => !e.cond && e.to == current.id && e.toPort == 0).firstOrNull;
+    final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == current.id && e.toPort == 0).firstOrNull;
     if (edge == null) return null; // 鎖が途切れている → 実行しない
     final from = byId[edge.from];
     if (from == null || !visited.add(from.id)) return null; // 迷子/循環
@@ -83,6 +83,30 @@ bool _nodeValue(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, Post p, {
     default:
       return true;
   }
+}
+
+/// クロック接続 (D-095): クロックメーカーの出力が**どこかのノードの
+/// アイコン**に繋がっていれば、その「間隔」を返す(TL の自動更新周期)。
+/// 未接続なら null。間隔は `15秒` / `2分` / `30` などを解釈し、最短 10 秒。
+Duration? nodeGraphClockInterval(NodeGraph g) {
+  final byId = {for (final n in g.nodes) n.id: n};
+  for (final e in g.edges) {
+    if (!e.toIcon) continue;
+    final clock = byId[e.from];
+    if (clock == null || clock.type != 'clock') continue;
+    return parseClockInterval(clock.inputs.firstOrNull?.value ?? '');
+  }
+  return null;
+}
+
+/// `15秒`/`2分`/`30s`/`1m`/`30` → Duration(最短 10 秒、既定 15 秒)。
+Duration parseClockInterval(String raw) {
+  final m = RegExp(r'(\d+)').firstMatch(raw);
+  if (m == null) return const Duration(seconds: 15);
+  final n = int.parse(m.group(1)!);
+  final minutes = raw.contains('分') || raw.contains('m');
+  final seconds = minutes ? n * 60 : n;
+  return Duration(seconds: seconds < 10 ? 10 : seconds);
 }
 
 /// 条件ノードの述語: 指定タグの内容 × 演算 × 値。

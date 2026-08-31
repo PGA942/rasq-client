@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:flutter/material.dart';
+import 'package:rasq_client/features/compose/composer_sheet.dart';
 import 'package:rasq_client/features/post/post_detail_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -148,5 +149,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('これすごい'), findsOneWidget);
     expect(find.text('よかったやん！'), findsNothing);
+  });
+
+  testWidgets('D-096: ✕ で消した常駐返信コンポーザーが返信ボタンで再出現する', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('よかったやん！'));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    final manager = container.read(overlayManagerProvider);
+    expect(manager.contains(composerFowId), isTrue); // 常駐 stick が置かれている
+
+    // ✕ 相当(ページ最前面のまま閉じる)→ このページ滞在中は自動では戻らない。
+    manager.close(composerFowId);
+    await tester.pumpAndSettle();
+    expect(manager.contains(composerFowId), isFalse);
+
+    // 返信ボタンで再出現。
+    await tester.tap(find.byTooltip('返信').first);
+    await tester.pumpAndSettle();
+    expect(manager.contains(composerFowId), isTrue);
   });
 }
