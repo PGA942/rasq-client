@@ -16,7 +16,10 @@ typedef WasmSnsInvoke = Future<Map<String, dynamic>> Function(String fn, Map<Str
 /// …)は同じ形で 1 本ずつ増やす。未実装は [UnsupportedError] のまま
 /// (ホストが UI を隠す既定動作)。
 class WasmSnsSession extends SnsSessionBase {
-  WasmSnsSession({required this.account, required WasmSnsInvoke invoke, this.pluginId = 'wasm', this.extraArgs = const {}}) : _invoke = invoke; // ignore: prefer_initializing_formals
+  WasmSnsSession({required this.account, required WasmSnsInvoke invoke, this.pluginId = 'wasm', this.extraArgs = const {}, Future<void> Function()? onClose})
+      : _invoke = invoke, // ignore: prefer_initializing_formals
+        // ignore: prefer_initializing_formals
+        _onClose = onClose;
 
   @override
   final AccountId account;
@@ -26,8 +29,13 @@ class WasmSnsSession extends SnsSessionBase {
 
   final WasmSnsInvoke _invoke;
 
-  /// 毎呼び出しに足す引数(dev 試験での baseUrl/host 上書き等)。
+  /// 毎呼び出しに足す引数(接続先 host / 認証 token / dev の baseUrl 等)。
   final Map<String, Object?> extraArgs;
+
+  final Future<void> Function()? _onClose;
+
+  @override
+  Future<void> close() async => _onClose?.call();
 
   @override
   List<TimelineKind> get timelines => const [TimelineKind.local];
@@ -64,8 +72,18 @@ class WasmSnsSession extends SnsSessionBase {
     throw SnsApiException(ErrorCode.tryParse('${error['code'] ?? ''}', message: message) ?? ErrorCode.internalServerError.copyWith(message: message));
   }
 
+  bool _actionsLoaded = false;
+
   @override
   Future<Page<Post>> timeline(TimelineKind kind, {String? cursor, int limit = 20}) async {
+    // 実登録セッション (D-079): 最初の TL 取得前にアクション宣言を取り込む
+    // (TL 画面はこの await 後に session.actions を読むので間に合う)。
+    if (!_actionsLoaded) {
+      _actionsLoaded = true;
+      try {
+        await loadActions();
+      } catch (_) {} // 宣言が取れなくてもバー無しで TL は出す
+    }
     final value = await _call('sns.timeline', {'kind': kind.id, 'limit': limit, 'cursor': ?cursor});
     return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
   }

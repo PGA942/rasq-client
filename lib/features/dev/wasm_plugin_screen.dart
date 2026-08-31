@@ -3,12 +3,14 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
@@ -25,7 +27,7 @@ import '../home/post_row.dart';
 ///
 /// 通常はワーカー isolate(AsyncWasmPluginController)で実行し UI を
 /// ブロックしない。テストは envOverride で同期コントローラに差し替える。
-class WasmPluginScreen extends StatefulWidget {
+class WasmPluginScreen extends ConsumerStatefulWidget {
   const WasmPluginScreen({super.key, this.wasmBytesOverride, this.envOverride});
 
   /// Tests inject the bytes / a hermetic environment (同期実行になる).
@@ -33,10 +35,10 @@ class WasmPluginScreen extends StatefulWidget {
   final RasqHostEnvironment? envOverride;
 
   @override
-  State<WasmPluginScreen> createState() => _WasmPluginScreenState();
+  ConsumerState<WasmPluginScreen> createState() => _WasmPluginScreenState();
 }
 
-class _WasmPluginScreenState extends State<WasmPluginScreen> {
+class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
   WasmPluginViewModel? _controller;
   String? _loadError;
   final _hostField = TextEditingController(text: 'misskey.io');
@@ -215,6 +217,35 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
     ));
   }
 
+  /// 実登録 (D-079): 現在の Misskey アカウントのトークンで、wasm SNS
+  /// プラグイン(misskey-wasm-sample)のセッションを**本物のアカウント**と
+  /// して登録し、そのまま切り替える。以降アプリの TL/スレッド/アクションが
+  /// sns.* 境界の上で動く(認証はホスト所有 — トークンは呼び出し毎に
+  /// args.token で渡る)。アカウントキー衝突を避けるため handle に ~wasm を
+  /// 付ける。戻るときはサイドバーのアカウント切り替えで元のアカウントへ。
+  Future<void> _registerRealSession() async {
+    final cur = (await ref.read(sessionsProvider.future)).current;
+    if (!mounted) return;
+    if (cur == null || cur.account.kind != SnsKind.misskey || cur.pluginId == wasmSamplePluginId) {
+      setState(() => _loadError = '実登録には Misskey アカウントでのログインが必要です');
+      return;
+    }
+    final acc = AccountId(kind: cur.account.kind, instance: cur.account.instance, handle: '${cur.account.handle}~wasm');
+    final me = UserSummary(id: '-', account: acc, displayName: '${cur.displayName ?? cur.account.handle} (wasm境界)', avatarUrl: cur.avatarUrl);
+    await ref.read(sessionsProvider.notifier).add(AuthResult(
+          session: AccountSession(
+            account: acc,
+            pluginId: wasmSamplePluginId,
+            token: cur.token,
+            createdAt: DateTime.now(),
+            displayName: me.displayName,
+            avatarUrl: cur.avatarUrl,
+          ),
+          me: me,
+        ));
+    if (mounted) setState(() => _loadError = null);
+  }
+
   void _disposeController() {
     _overlay?.closeOwnedBy(_fowOwner);
     final c = _controller;
@@ -283,6 +314,12 @@ class _WasmPluginScreenState extends State<WasmPluginScreen> {
               OutlinedButton(
                 onPressed: _busy ? null : () => _loadFromAsset('assets/plugins/hello_rasq_plugin.wasm'),
                 child: const Text('hello'),
+              ),
+              const SizedBox(width: RasqSpacing.sm),
+              // 実登録 (D-079): 現在のトークンで wasm セッションを本登録。
+              OutlinedButton(
+                onPressed: _busy ? null : _registerRealSession,
+                child: const Text('実登録'),
               ),
             ]),
             if (_loadError != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_loadError!, style: RasqTypography.caption.copyWith(color: RasqTokens.of(context).danger))),

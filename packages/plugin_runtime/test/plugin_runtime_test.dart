@@ -435,6 +435,30 @@ void main() {
       expect([for (final q in (await session.quotes('n1')).items) q.id], ['q1']);
     });
 
+    test('実登録の口 (D-079): WasmSnsPlugin → PluginRegistry 解決、TL 前にアクション自動取り込み、close で破棄', () async {
+      final plugin = WasmSnsPlugin(
+        manifest: const PluginManifest(id: 'misskey-wasm-sample', name: 'Misskey (wasm sample)', version: '0.1.0', kind: PluginKind.sns, supportedSns: [SnsKind.misskey]),
+        kind: SnsKind.misskey,
+        nativeFetch: false, // ワーカーはネットワーク無し(net.fetch → B01)
+        loadBytes: () async => bytes,
+      );
+      final registry = PluginRegistry()..register(plugin);
+      final account = AccountSession(account: viewer, pluginId: 'misskey-wasm-sample', token: 'TOKEN', createdAt: DateTime(2026));
+      final session = registry.session(account);
+      expect(session, isA<WasmSnsSession>());
+      expect(session.pluginId, 'misskey-wasm-sample');
+      expect(session.account, viewer);
+
+      // TL は fetch 不能で B01 だが、**アクション宣言(静的)は先に取り込まれる**。
+      await expectLater(
+        session.timeline(TimelineKind.local),
+        throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'B01')),
+      );
+      expect([for (final a in session.actions) a.id], ['reply', 'renote', 'reaction']);
+
+      await registry.closeSession(account.account); // ワーカー破棄(例外なし)
+    });
+
     test('エラーは SnsApiException(コード付き)へ写る', () async {
       final controller = WasmPluginController(wasmBytes: bytes); // fetch なし → B01
       addTearDown(controller.dispose);
