@@ -319,6 +319,40 @@ void main() {
       expect(page.nextCursor, 'n2');
     });
 
+    test('sns.timeline: 純リノートは中身へ展開して repostedBy を載せる (D-100)', () async {
+      final pureRenote = jsonEncode([
+        {
+          'id': 'outer1',
+          'text': null,
+          'fileIds': <Object?>[],
+          'poll': null,
+          'createdAt': '2026-08-31T12:00:00.000Z',
+          'user': {'id': 'u2', 'username': 'renoter', 'name': 'リノートする人'},
+          'renote': {
+            'id': 'inner1',
+            'text': '中身の本文',
+            'createdAt': '2026-08-30T12:00:00.000Z',
+            'user': {'id': 'u1', 'username': 'author', 'name': '元の人'},
+          },
+        },
+      ]);
+      final env = RasqHostEnvironment(fetch: (_) => SyncFetchResponse(status: 200, bodyText: pureRenote));
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        extraArgs: const {'host': 'misskey.example'},
+        invoke: (fn, args) async => controller.invoke(fn, args),
+      );
+      final page = await session.timeline(TimelineKind.local, limit: 5);
+      final p = page.items.single;
+      expect(p.id, 'outer1'); // アクションは外側の id へ
+      expect(p.body, '中身の本文'); // 「内容のない投稿」にならない
+      expect(p.author.handle, 'author');
+      expect(p.repostedBy?.handle, 'renoter');
+    });
+
     test('sns.actions / sns.thread / sns.performAction (D-075)', () async {
       final requests = <String>[];
       final env = RasqHostEnvironment(fetch: (req) {
