@@ -43,11 +43,61 @@ const nodePaletteFowId = 'fow.nodepalette';
 const _paletteCollapsed = 0.09;
 const _paletteExpanded = 0.5;
 
+/// リスト/DM ノードの選択肢 (D-097): ログイン中セッションから引く。
+/// 失敗・未対応は空(値ボックスは自由入力のまま)。
+final _nodeListNamesProvider = FutureProvider<List<String>>((ref) async {
+  final s = ref.watch(currentSnsSessionProvider);
+  if (s == null) return const [];
+  try {
+    return [for (final l in await s.lists()) l.name];
+  } catch (_) {
+    return const [];
+  }
+});
+
+final _nodeDmPeersProvider = FutureProvider<List<String>>((ref) async {
+  final s = ref.watch(currentSnsSessionProvider);
+  if (s == null) return const [];
+  try {
+    return [for (final r in await s.dmRooms()) r.peer.handle];
+  } catch (_) {
+    return const [];
+  }
+});
+
 /// カタログ: 組み込み + TL プラグイン(tl.timelines 宣言からソートノード)。
+/// リストTL取得/DM取得には実データの選択肢を注入する (D-097)。
 final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
   final customs = ref.watch(customTimelinesProvider).value ?? const [];
+  final listNames = ref.watch(_nodeListNamesProvider).value ?? const <String>[];
+  final dmPeers = ref.watch(_nodeDmPeersProvider).value ?? const <String>[];
+  NodeCatalogEntry withOptions(NodeCatalogEntry e, List<String> options) {
+    if (options.isEmpty) return e;
+    final first = e.inputs.first;
+    return NodeCatalogEntry(
+      type: e.type,
+      title: e.title,
+      icon: e.icon,
+      genre: e.genre,
+      author: e.author,
+      description: e.description,
+      inputs: [
+        NodePort(label: first.label, value: first.value, dataType: first.dataType, format: first.format, options: options),
+        ...e.inputs.skip(1),
+      ],
+      outputs: e.outputs,
+      hasCondIn: e.hasCondIn,
+      hasCondOut: e.hasCondOut,
+    );
+  }
+
   return [
-    ...builtinNodeCatalog,
+    for (final e in builtinNodeCatalog)
+      switch (e.type) {
+        'tl.list' => withOptions(e, listNames),
+        'tl.dm' => withOptions(e, dmPeers),
+        _ => e,
+      },
     for (final c in customs)
       NodeCatalogEntry(
         type: 'plugin:${c.id}',

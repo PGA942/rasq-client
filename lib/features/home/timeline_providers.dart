@@ -10,10 +10,13 @@ import 'package:rasq_store/rasq_store.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:sns_misskey/sns_misskey.dart';
 
+import 'package:rasq_ml/rasq_ml.dart' show MlGateway;
+
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
+import '../relational/relational_providers.dart' show mlGatewayProvider;
 import '../settings/settings_dsl.dart';
 
 /// カスタム TL の宣言 (M5e / D-080): 現在のセッションが wasm 境界
@@ -192,10 +195,18 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         final raw = area['graph'];
         if (raw is String) {
           final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
-          final result = await runNodeGraph(graph, fetch: (kid) async {
-            if (kid == kind.id) return page.items; // 自分の TL は再取得しない
-            return (await session.timeline(TimelineKind(kid, kid), cursor: cursor)).items;
-          });
+          // SigLIP ゲートウェイ (D-097): あれば類似度ノードが実埋め込みを使う
+          // (無ければ executor が n-gram 類似度へ縮退)。
+          MlGateway? gateway;
+          try {
+            gateway = await ref.read(mlGatewayProvider.future);
+          } catch (_) {}
+          final result = await runNodeGraph(
+            graph,
+            fetch: (kid) => _fetchForNode(session, kid, cursor, page.items),
+            fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
+            embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
+          );
           if (result != null) {
             page = Page(items: result, nextCursor: page.nextCursor);
             states = await session.actionStates(result); // 別 TL 由来の投稿の分を取り直す
@@ -211,6 +222,34 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     _applyStates(page.items, states);
     ref.read(emojiCacheProvider.notifier).request({for (final p in page.items) ...InlineSpans.emojiShortcodes(p.body), for (final p in page.items) ...InlineSpans.emojiShortcodes(p.author.displayName)});
     return (page, states, const TimelineDecorations());
+  }
+
+  /// 取得ノード (D-097) の kind 解決: リストは名前 → id、DM は相手ハンドル →
+  /// ルームの peer id をアプリ側で引く。自分の TL は再取得しない。
+  Future<List<Post>> _fetchForNode(SnsSession session, String kid, String? cursor, List<Post> current) async {
+    if (kid == kind.id) return current;
+    if (kid.startsWith('search:')) {
+      final q = kid.substring(7).trim();
+      if (q.isEmpty) return const [];
+      return (await session.searchPosts(q, cursor: cursor)).items;
+    }
+    if (kid.startsWith('list:')) {
+      final name = kid.substring(5).trim();
+      if (name.isEmpty) return const [];
+      final lists = await session.lists();
+      final l = lists.where((x) => x.name == name || x.id == name).firstOrNull;
+      if (l == null) return const [];
+      return (await session.timeline(TimelineKind.list(l.id, l.name), cursor: cursor)).items;
+    }
+    if (kid.startsWith('dm:')) {
+      final who = kid.substring(3).trim().replaceFirst('@', '');
+      if (who.isEmpty) return const [];
+      final rooms = await session.dmRooms();
+      final r = rooms.where((x) => x.peer.handle == who || x.peer.id == who).firstOrNull;
+      if (r == null) return const [];
+      return (await session.timeline(TimelineKind('dm:${r.peer.id}', 'DM'))).items;
+    }
+    return (await session.timeline(TimelineKind(kid, kid), cursor: cursor)).items;
   }
 
   void _applyStates(List<Post> posts, Map<String, Map<String, ActionResult>> states) {

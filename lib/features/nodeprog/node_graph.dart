@@ -49,6 +49,7 @@ Color nodeTypeColor(String dataType) => switch (dataType) {
       'クロック' => const Color(0xFFE57368),
       '数値' => const Color(0xFF26A69A),
       'テキスト' => const Color(0xFFFFB74D),
+      'テキスト配列' => const Color(0xFF8D6E63),
       '投稿リスト' => const Color(0xFF42A5F5),
       // 条件接続部 (D-094): 上下方向の紫。設定はノード内の値ボックス専用
       // (接続相手が存在しないのでどこにも繋がらない)。
@@ -226,9 +227,14 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: 'ランダム',
     icon: Icons.casino_outlined,
     genre: '生成',
-    description: '乱数を出します。シードを固定すると再現できます。',
-    inputs: [NodePort(label: 'シード', value: 'randomseed', dataType: '数値')],
-    outputs: [NodePort(label: '1-7', dataType: '数値')],
+    description: '投稿ごとに乱数を出します。範囲は「1-7」のように指定し、小数点を入れると小数点以下もカウントします。シードで再現できます。',
+    inputs: [
+      NodePort(label: 'シード', value: 'randomseed', dataType: '設定'),
+      // 範囲 (D-097): ユーザー指定。整数なら両端含む整数、小数点を含む
+      // 書き方(例: 0-1.5)なら小数も出す。
+      NodePort(label: '範囲', value: '1-7', dataType: '設定'),
+    ],
+    outputs: [NodePort(label: '乱数', dataType: '数値')],
   ),
   NodeCatalogEntry(
     type: 'file',
@@ -297,6 +303,81 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.block_outlined,
     genre: '条件',
     description: '下に繋いだ条件の否定を返します。',
+    hasCondIn: true,
+    hasCondOut: true,
+  ),
+  // ---- 取得系 (D-097): リスト/検索/DM/トレンド。
+  NodeCatalogEntry(
+    type: 'tl.list',
+    title: 'リストTL取得',
+    icon: Icons.list_alt_outlined,
+    genre: '取得',
+    description: 'Misskey のリストのタイムラインを取得します(リスト名で指定)。',
+    inputs: [NodePort(label: 'リスト', value: '', dataType: '設定')],
+    outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
+  NodeCatalogEntry(
+    type: 'tl.search',
+    title: '検索TL取得',
+    icon: Icons.search,
+    genre: '取得',
+    description: '検索ワードにヒットする投稿を取得します。',
+    inputs: [NodePort(label: '検索ワード', value: '', dataType: '設定')],
+    outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
+  NodeCatalogEntry(
+    type: 'tl.dm',
+    title: 'DM取得',
+    icon: Icons.mail_outline,
+    genre: '取得',
+    description: '相手(ハンドル)との DM を取得します。',
+    inputs: [NodePort(label: '相手', value: '', dataType: '設定')],
+    outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
+  NodeCatalogEntry(
+    type: 'trend.tags',
+    title: 'トレンド取得',
+    icon: Icons.trending_up,
+    genre: '取得',
+    description: 'いまのトレンドタグを文字列の配列として出します(類似度/キーワードの入力に)。',
+    outputs: [NodePort(label: 'タグ', dataType: 'テキスト配列')],
+  ),
+  // ---- 生成系 ML (D-097): 類似度/キーワード一致 + 演算子条件。
+  NodeCatalogEntry(
+    type: 'ml.similar',
+    title: '類似度 (SigLIP)',
+    icon: Icons.auto_awesome_outlined,
+    genre: 'ML',
+    description: '基準テキスト(または配列)と各投稿の cos 類似度を出します。ML 不達時は n-gram 類似度に縮退します。',
+    inputs: [
+      NodePort(label: '基準', value: '', dataType: 'テキスト'),
+      NodePort(label: '基準リスト', dataType: 'テキスト配列'),
+    ],
+    outputs: [NodePort(label: '類似度', dataType: '数値')],
+  ),
+  NodeCatalogEntry(
+    type: 'ml.keyword',
+    title: 'キーワード一致 (GLiNER)',
+    icon: Icons.label_important_outline,
+    genre: 'ML',
+    description: 'キーワード(または配列)と各投稿の特徴語の一致数を出します。',
+    inputs: [
+      NodePort(label: 'キーワード', value: '', dataType: 'テキスト'),
+      NodePort(label: 'キーワードリスト', dataType: 'テキスト配列'),
+    ],
+    outputs: [NodePort(label: '一致度', dataType: '数値')],
+  ),
+  NodeCatalogEntry(
+    type: 'compare',
+    title: '比較',
+    icon: Icons.functions,
+    genre: '条件',
+    description: '数値(類似度・乱数など)としきい値を比べて True/False を返す演算子条件です。値元が未接続なら制約なし扱いです。',
+    inputs: [
+      NodePort(label: '値元', dataType: '数値'),
+      NodePort(label: '演算', value: '以上', dataType: '設定', options: ['以上', '以下', '等しい']),
+      NodePort(label: '値', value: '0.5', dataType: '設定'),
+    ],
     hasCondIn: true,
     hasCondOut: true,
   ),

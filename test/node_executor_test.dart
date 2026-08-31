@@ -125,6 +125,83 @@ void main() {
     expect(await runNodeGraph(g2, fetch: fetch), isNull);
   });
 
+  test('取得系 (D-097): リスト/検索/DM ノードは kind を組み立てて fetch へ渡す', () async {
+    final asked = <String>[];
+    Future<List<Post>> capture(String kid) async {
+      asked.add(kid);
+      return posts;
+    }
+
+    GraphNode withValue(String type, String id, String value) {
+      final base = step(type, id);
+      return base.copyWith(inputs: [base.inputs[0].copyWith(value: value), ...base.inputs.skip(1)]);
+    }
+
+    for (final (type, value, expected) in [('tl.search', 'わんこ', 'search:わんこ'), ('tl.list', '推し', 'list:推し'), ('tl.dm', 'yamada', 'dm:yamada')]) {
+      asked.clear();
+      final g = NodeGraph(nodes: [withValue(type, 'n1', value), timelineNode('n3')], edges: [data('n1', 'n3')]);
+      expect(await runNodeGraph(g, fetch: capture), posts);
+      expect(asked, [expected]);
+    }
+  });
+
+  test('ランダム範囲 (D-097): 整数レンジは整数、小数点入りは小数、決定的', () {
+    final base = builtinNodeCatalog.firstWhere((e) => e.type == 'random').instantiate('r1', Offset.zero);
+    GraphNode withRange(String range) => base.copyWith(inputs: [base.inputs[0], base.inputs[1].copyWith(value: range)]);
+
+    for (final p in posts) {
+      final v = nodeRandomValue(withRange('1-7'), p);
+      expect(v, inInclusiveRange(1, 7));
+      expect(v, v.roundToDouble()); // 整数
+      expect(nodeRandomValue(withRange('1-7'), p), v); // 決定的
+      final d = nodeRandomValue(withRange('0-1.5'), p);
+      expect(d, inInclusiveRange(0, 1.5));
+      expect((d * 10).roundToDouble() / 10, d); // 小数第 1 位まで
+    }
+    // シードを変えると系列が変わる(全投稿一致はまず起きない)。
+    final other = base.copyWith(inputs: [base.inputs[0].copyWith(value: 'べつのシード'), base.inputs[1]]);
+    expect([for (final p in posts) nodeRandomValue(other, p)], isNot([for (final p in posts) nodeRandomValue(base, p)]));
+  });
+
+  test('比較 + ML (D-097): キーワード一致(トレンド供給)とn-gram類似度で条件ソート', () async {
+    final mlPosts = [post('m1', 'ラーメン食べたい'), post('m2', '猫がかわいい'), post('m3', '今日のラーメンは最高'), post('m4', 'ねむい')];
+    Future<List<Post>> fetchMl(String kid) async => mlPosts;
+
+    // トレンド(['ラーメン'])→ キーワード一致 → 比較(以上 1)→ 消去。
+    var g = NodeGraph(
+      nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), step('compare', 'x1'), step('ml.keyword', 'k1'), step('trend.tags', 't1')],
+      edges: [
+        data('n1', 'n2'), data('n2', 'n3'),
+        condEdge('n2', 'x1'),
+        const GraphEdge(from: 'k1', fromPort: 0, to: 'x1', toPort: 0), // 一致度 → 値元
+        const GraphEdge(from: 't1', fromPort: 0, to: 'k1', toPort: 1), // タグ → キーワードリスト
+      ],
+    );
+    var out = await runNodeGraph(g, fetch: fetchMl, fetchTrends: () async => ['ラーメン']);
+    expect([for (final p in out!) p.id], ['m2', 'm4']); // ラーメン投稿が消える
+
+    // 類似度(基準 'ラーメン大好き')→ 比較(以上 0.2)→ 並べ替え(ヒットが先頭)。
+    final simBase = step('ml.similar', 's1');
+    final sim = simBase.copyWith(inputs: [simBase.inputs[0].copyWith(value: 'ラーメン大好き'), ...simBase.inputs.skip(1)]);
+    final cmpBase = step('compare', 'x2');
+    final cmp = cmpBase.copyWith(inputs: [cmpBase.inputs[0], cmpBase.inputs[1], cmpBase.inputs[2].copyWith(value: '0.2')]);
+    g = NodeGraph(
+      nodes: [source('n1'), step('sort', 'n2'), timelineNode('n3'), cmp, sim],
+      edges: [data('n1', 'n2'), data('n2', 'n3'), condEdge('n2', 'x2'), const GraphEdge(from: 's1', fromPort: 0, to: 'x2', toPort: 0)],
+    );
+    out = await runNodeGraph(g, fetch: fetchMl);
+    expect(out!.first.body, contains('ラーメン')); // 類似の高い投稿が先頭
+    expect([for (final p in out) p.id]..sort(), ['m1', 'm2', 'm3', 'm4']..sort()); // 消えてはいない
+
+    // 比較の値元が未接続なら制約なし(何も消えない)。
+    g = NodeGraph(
+      nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), step('compare', 'x3')],
+      edges: [data('n1', 'n2'), data('n2', 'n3'), condEdge('n2', 'x3')],
+    );
+    // 制約なし = 全部 true = remove は全消し(条件なしの remove と同じ挙動)。
+    expect((await runNodeGraph(g, fetch: fetchMl))!, isEmpty);
+  });
+
   testWidgets('TL 反映: tl.home のグラフ(消去)がフォロー中タブに効く', (tester) async {
     final graph = NodeGraph(
       nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), cond('c1', value: '消して')],
