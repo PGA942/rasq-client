@@ -76,8 +76,9 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       if (spec != null) {
         final base = await session.timeline(TimelineKind(spec.base, spec.base), cursor: cursor);
         final states = await session.actionStates(base.items);
-        final composed = await session.timelinePlugin.compose(spec.id, base.items);
-        // 投稿カスタマイザ (D-082): 完全置き換えタイル(V5 検証済み)。
+        // 投稿加工 (D-083) → ソート → カスタマイザ (D-082) の順で通す。
+        final transformed = await session.timelinePlugin.transform(base.items);
+        final composed = await session.timelinePlugin.compose(spec.id, transformed);
         final tiles = await session.timelinePlugin.customize(spec.id, composed);
         _applyStates(composed, states);
         ref.read(emojiCacheProvider.notifier).request({for (final p in composed) ...InlineSpans.emojiShortcodes(p.body)});
@@ -91,6 +92,11 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     } else {
       page = await session.timeline(kind, cursor: cursor);
       states = await session.actionStates(page.items);
+    }
+    // 投稿加工プラグイン (D-083): 通常 TL でも表示前に本文加工を通す
+    // (v1 は wasm セッション自身のモジュール。独立プラグインはストア統合後)。
+    if (session is WasmSnsSession) {
+      page = Page(items: await session.timelinePlugin.transform(page.items), nextCursor: page.nextCursor);
     }
     _applyStates(page.items, states);
     ref.read(emojiCacheProvider.notifier).request({for (final p in page.items) ...InlineSpans.emojiShortcodes(p.body), for (final p in page.items) ...InlineSpans.emojiShortcodes(p.author.displayName)});

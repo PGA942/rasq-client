@@ -176,4 +176,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PostDetailScreen), findsOneWidget);
   });
+
+  testWidgets('投稿加工プラグイン (D-083): 通常 TL でも表示前に本文が加工される', (tester) async {
+    const account = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [
+          AccountSession(account: account, pluginId: 'fake.wire', token: 't', createdAt: DateTime(2026), displayName: 'テスター').toJson(),
+        ],
+        'current': account.key,
+      }),
+    });
+    Future<Map<String, dynamic>> invoke(String fn, Map<String, Object?> args) async {
+      if (fn == 'post.transform') {
+        return {
+          'ok': true,
+          'value': {'posts': {'p1': {'body': '🚀 一点の投稿'}}},
+        };
+      }
+      return _invoke(fn, args);
+    }
+
+    final registry = PluginRegistry()..register(_WireBoundaryPlugin(invoke));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+
+    // 通常 TL(ローカル)でも本文加工が効く(構造はそのまま PostRow)。
+    await tester.tap(find.text('ローカル'));
+    await tester.pumpAndSettle();
+    expect(find.text('🚀 一点の投稿'), findsOneWidget);
+    expect(find.text('一点の投稿'), findsNothing);
+    expect(find.text('五点の投稿'), findsOneWidget); // 非該当は無加工
+  });
 }

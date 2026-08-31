@@ -103,4 +103,28 @@ class WasmTimelinePlugin {
   void notifyVisibility(String id, String postId, {required bool visible}) {
     _invoke('lifecycle', {'kind': visible ? 'visible' : 'hidden', 'surface': 'tl:$id', 'post': postId, ...extraArgs}).catchError((Object _) => <String, dynamic>{});
   }
+
+  /// 投稿加工プラグイン (D-083 transform_content): `post.transform {posts}`
+  /// → `{posts: {postId: {body?, cw?}}}` — 表示前に本文/注釈を差し替える
+  /// (**全 TL 共通**。タイル構造は変えない — 構造は tl.customize の領分)。
+  /// 未実装/失敗はそのまま返す。
+  Future<List<Post>> transform(List<Post> posts) async {
+    try {
+      final value = await _call('post.transform', {'posts': [for (final p in posts) SnsWire.post(p)]});
+      final patches = (value['posts'] as Map?)?.cast<String, Object?>() ?? const {};
+      if (patches.isEmpty) return posts;
+      return [
+        for (final p in posts)
+          if (patches[p.id] is Map)
+            p.copyWith(
+              body: ((patches[p.id] as Map)['body'] as String?),
+              contentWarning: ((patches[p.id] as Map)['cw'] as String?),
+            )
+          else
+            p,
+      ];
+    } catch (_) {
+      return posts;
+    }
+  }
 }

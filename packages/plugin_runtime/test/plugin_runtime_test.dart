@@ -483,6 +483,12 @@ void main() {
       expect(tiles.keys, ['b']);
       expect(tiles['b']!.containsRole('contentBody'), isTrue);
       expect(await tl.customize('nope', [p('a', 1)]), isEmpty); // 失敗は {} に縮退
+
+      // 投稿加工 (D-083 transform_content): 表示前の本文加工(該当のみ)。
+      Post body(String id, String text) => Post(id: id, account: viewer, author: const UserSummary(id: 'u', account: AccountId(kind: SnsKind.misskey, instance: 'x', handle: 'u'), displayName: 'う'), createdAt: DateTime(2026), body: text);
+      final transformed = await tl.transform([body('t1', '打ち上げ成功！'), body('t2', 'ただの投稿')]);
+      expect(transformed[0].body, '🚀 打ち上げ成功！');
+      expect(transformed[1].body, 'ただの投稿');
     });
 
     test('V5 検証 (D-082): contentBody の無い置き換えタイルは破棄される', () async {
