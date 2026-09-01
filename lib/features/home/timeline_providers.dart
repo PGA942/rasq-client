@@ -105,6 +105,14 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       // 総合TL (D-088): アカウントの増減で作り直す。
       ref.watch(sessionsProvider.select((s) => s.value?.sessions.length ?? 0));
       _bundleCursors = {};
+      // ノードグラフ経由 (D-114): 自動構成(アカウント追加でマージ段を更新)
+      // を済ませてから実行。鎖が無ければ従来の合流へフォールバック。
+      try {
+        final result = await _runBundleGraph();
+        if (result != null) return TimelineState(posts: result);
+      } catch (e) {
+        debugPrint('bundle graph: $e');
+      }
       final (page, _, _) = await _fetchBundle(first: true);
       return TimelineState(posts: page.items, cursor: page.nextCursor);
     }
@@ -119,6 +127,97 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
     final (page, states, deco) = await _fetch(session, null);
     return TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: deco.tiles, badges: deco.badges);
+  }
+
+  /// 総合スコープの自動構成 + 実行 (D-114)。グラフが無ければ全アカウント分を
+  /// 自動生成(取得×N → マージ段 → タイムライン)。ユーザーが編集済み
+  /// (auto フラグなし)なら、新アカウントはマージの空き口への差し込みだけ試す。
+  Future<List<Post>?> _runBundleGraph() async {
+    final session = _session;
+    if (session == null) return null;
+    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    if (sessions.isEmpty) return null;
+    final accounts = [for (final s in sessions) '${s.account}'];
+    final sig = accounts.join('|');
+    final store = ref.read(settingsAreaProvider('nodeprog.tl.bundle').notifier);
+    final area = await ref.read(settingsAreaProvider('nodeprog.tl.bundle').future);
+    final raw = area['graph'];
+    NodeGraph graph;
+    if (raw is! String) {
+      graph = buildBundleGraph(accounts);
+      await store.set('graph', jsonEncode(graph.toJson()));
+      await store.set('auto', true);
+      await store.set('accounts', sig);
+    } else {
+      graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      if (area['accounts'] != sig) {
+        if (area['auto'] == true) {
+          graph = buildBundleGraph(accounts);
+          await store.set('graph', jsonEncode(graph.toJson()));
+        } else {
+          final known = area['accounts'] is String ? (area['accounts'] as String).split('|').toSet() : const <String>{};
+          for (final a in accounts) {
+            if (known.contains(a)) continue;
+            final inserted = insertAccountIntoBundleGraph(graph, a);
+            if (inserted != null) graph = inserted; // 差し込めない形は手動に任せる
+          }
+          await store.set('graph', jsonEncode(graph.toJson()));
+        }
+        await store.set('accounts', sig);
+      }
+    }
+
+    SnsSession? sessionForAccount(String label) {
+      final s = sessions.where((x) => '${x.account}' == label || x.account.key == label).firstOrNull;
+      return s == null ? null : ref.read(pluginRegistryProvider).session(s);
+    }
+
+    final result = await runNodeGraph(
+      graph,
+      fetch: (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
+      fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
+      pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
+      storageRead: (slot) async => (await ref.read(settingsAreaProvider('storage.safe').future))[slot],
+      storageWrite: (slot, value) => ref.read(settingsAreaProvider('storage.safe').notifier).set(slot, value),
+    );
+    if (result == null) return null;
+
+    // アクション状態は所属アカウントのセッションから取り直す。
+    final byAccount = <String, List<Post>>{};
+    for (final p in result) {
+      byAccount.putIfAbsent(p.account.key, () => []).add(p);
+    }
+    for (final e in byAccount.entries) {
+      final s = sessions.where((x) => x.account.key == e.key).firstOrNull;
+      if (s == null) continue;
+      try {
+        _applyStates(e.value, await ref.read(pluginRegistryProvider).session(s).actionStates(e.value));
+      } catch (_) {}
+    }
+    _armClock(nodeGraphClockInterval(graph));
+    final folded = _foldDuplicates(result);
+    ref.read(emojiCacheProvider.notifier).request({for (final p in folded) ...InlineSpans.emojiShortcodes(p.body), for (final p in folded) ...InlineSpans.emojiShortcodes(p.author.displayName)});
+    return folded;
+  }
+
+  /// 中身比較の畳み込み (D-110): 一致コピーは隠して ↓ の選択肢へ回す。
+  List<Post> _foldDuplicates(List<Post> posts) {
+    final byDup = <String, Post>{};
+    final dropped = <String, List<Post>>{};
+    final out = <Post>[];
+    for (final p in posts) {
+      final kept = byDup[postDupKey(p)];
+      if (kept != null) {
+        dropped.putIfAbsent(kept.key, () => []).add(p);
+        continue;
+      }
+      byDup[postDupKey(p)] = p;
+      out.add(p);
+    }
+    if (dropped.isNotEmpty) {
+      Future.microtask(() => ref.read(postAlternatesProvider.notifier).recordAll(dropped));
+    }
+    return out;
   }
 
   /// 総合TL (D-088): 全ログインアカウントのホームTLを合流する。重複は
@@ -209,9 +308,10 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
     // ノードグラフ実行 (D-094): この TL のスコープ(tl.<id>)に
     // 「タイムライン取得 → 加工 → タイムライン」の完成した鎖があれば通す。
-    // トレンド/タグ TL (D-102) は共通の `trend` スコープ。
+    // トレンド/タグ TL (D-102) と Today(featured, D-113)は共通の `trend`
+    // スコープ。
     if (!kind.id.startsWith('custom:')) {
-      final scope = kind.id.startsWith('tag:') ? 'trend' : 'tl.${kind.id}';
+      final scope = kind.id.startsWith('tag:') || kind.id == 'featured' ? 'trend' : 'tl.${kind.id}';
       Duration? clock;
       try {
         // アカウント分離 (D-108): グラフ/storage.safe は持ち主アカウントの

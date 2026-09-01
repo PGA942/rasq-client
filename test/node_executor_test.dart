@@ -414,6 +414,68 @@ void main() {
     expect([for (final p in (await runNodeGraph(g, fetch: fetch))!) p.id], ['p1', 'p2', 'p3', 'p4']);
   });
 
+  test('カタログ追従 (D-113): 旧ノードに追加入力(アカウント等)と選択肢が入る', () {
+    // D-109 以前の保存形: tl.source は TL 入力しか持っていない。
+    const old = NodeGraph(nodes: [
+      GraphNode(id: 'n1', type: 'tl.source', title: 'タイムライン取得', x: 0, y: 0, inputs: [NodePort(label: 'TL', value: 'social', dataType: '設定')], outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')]),
+    ]);
+    final catalog = {for (final e in builtinNodeCatalog) e.type: e};
+    final up = upgradeGraphNodes(old, catalog).nodes.single;
+    expect(up.inputs.map((i) => i.label), ['TL', 'アカウント']); // 追加入力が末尾に付く
+    expect(up.inputs.first.value, 'social'); // 既存の設定値は保持
+    expect(up.inputs.first.options, isNotNull); // 選択肢もカタログから
+  });
+
+  test('トレンド枠 (D-113): テキスト配列の終端 runNodeGraphTexts', () async {
+    GraphNode inst(String type, String id) => builtinNodeCatalog.firstWhere((e) => e.type == type).instantiate(id, Offset.zero);
+    final g = NodeGraph(
+      nodes: [inst('trend.tags', 't1'), inst('trend.frame', 'f1')],
+      edges: [const GraphEdge(from: 't1', fromPort: 0, to: 'f1', toPort: 0)],
+    );
+    final tags = await runNodeGraphTexts(g, terminal: 'trend.frame', fetchTrends: () async => ['猫', 'ラーメン']);
+    expect(tags, ['猫', 'ラーメン']);
+    // 鎖なし → null(既定のトレンドのまま)。
+    expect(await runNodeGraphTexts(const NodeGraph(), terminal: 'trend.frame', fetchTrends: () async => ['x']), isNull);
+  });
+
+  test('バンドル自動構成 (D-114): アカウント列 → 取得×N + マージ段 + タイムライン', () async {
+    // 2 アカウント: マージ 1 段。
+    final g2 = buildBundleGraph(['@a@x.test', '@b@x.test']);
+    expect(g2.nodes.where((n) => n.type == 'tl.source'), hasLength(2));
+    expect(g2.nodes.where((n) => n.type == 'merge'), hasLength(1));
+    expect(g2.nodes.where((n) => n.type == 'timeline'), hasLength(1));
+    final asked = <String>[];
+    final out = await runNodeGraph(g2, fetch: (kid) async {
+      asked.add(kid);
+      return [post(kid.hashCode.toString(), kid, at: DateTime(2026, 9, 1, asked.length))];
+    });
+    expect(asked.toSet(), {'acct:@a@x.test|home', 'acct:@b@x.test|home'});
+    expect(out, hasLength(2));
+
+    // 5 アカウント: マージ段組み(3 口 → 前段 + 2)で全部合流する。
+    final g5 = buildBundleGraph([for (var i = 0; i < 5; i++) '@u$i@x.test']);
+    expect(g5.nodes.where((n) => n.type == 'merge').length, greaterThanOrEqualTo(2));
+    final asked5 = <String>[];
+    final out5 = await runNodeGraph(g5, fetch: (kid) async {
+      asked5.add(kid);
+      return [post('p${asked5.length}', kid, at: DateTime(2026, 9, 1, asked5.length))];
+    });
+    expect(out5, hasLength(5));
+
+    // ユーザー編集後の差し込み: マージに空き口があれば新アカウントを接続。
+    final inserted = insertAccountIntoBundleGraph(g2, '@c@x.test');
+    expect(inserted, isNotNull);
+    final askedIns = <String>[];
+    final outIns = await runNodeGraph(inserted!, fetch: (kid) async {
+      askedIns.add(kid);
+      return [post('q${askedIns.length}', kid, at: DateTime(2026, 9, 1, askedIns.length))];
+    });
+    expect(askedIns.toSet(), contains('acct:@c@x.test|home'));
+    expect(outIns, hasLength(3));
+    // 満杯(3 口使用済み)なら null。
+    expect(insertAccountIntoBundleGraph(inserted, '@d@x.test'), isNull);
+  });
+
   testWidgets('ノードTLタブ (D-101): node: タブの中身はグラフ実行結果', (tester) async {
     final srcBase = builtinNodeCatalog.firstWhere((e) => e.type == 'tl.source').instantiate('n1', Offset.zero);
     final src = srcBase.copyWith(inputs: [srcBase.inputs[0].copyWith(value: 'home')]);

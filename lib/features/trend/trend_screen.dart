@@ -54,7 +54,9 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const [];
     final tl = ref.watch(timelineProvider(_kind));
-    final analysis = ref.watch(trendAnalysisProvider(widget.tag));
+    // ノードグラフ実配線 (D-113): trend.following / trend.users スコープ。
+    final following = ref.watch(trendFollowingPostsProvider(widget.tag));
+    final rankedUsers = ref.watch(trendUsersProvider(widget.tag));
     final notifier = ref.read(timelineProvider(_kind).notifier);
     final manager = ref.watch(overlayManagerProvider);
     final filter = ref.watch(searchFilterProvider);
@@ -114,15 +116,17 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
               RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(trendAnalysisProvider(widget.tag));
+                  ref.invalidate(trendFollowingPostsProvider(widget.tag));
+                  ref.invalidate(trendUsersProvider(widget.tag));
                   await notifier.refresh();
                 },
                 child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
                   const RasqSectionHeader(title: 'フォロー中の反応', topMargin: 0),
-                  analysis.when(
+                  following.when(
                     loading: () => const RasqLoading(),
                     error: (_, _) => const SizedBox(height: 48),
-                    data: (a) {
-                      final posts = apply(a.followingPosts).take(3).toList();
+                    data: (fp) {
+                      final posts = apply(fp).take(3).toList();
                       return posts.isEmpty ? const SizedBox(height: 48) : rows(posts);
                     },
                   ),
@@ -139,22 +143,22 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   ),
                 ]),
               ),
-              analysis.when(
+              following.when(
                 loading: () => const RasqLoading(),
                 error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
-                data: (a) {
-                  final posts = apply(a.followingPosts);
+                data: (fp) {
+                  final posts = apply(fp);
                   return posts.isEmpty
                       ? const RasqEmptyView(title: 'フォロー中の投稿はありません', hint: 'このワードについてフォロイーはまだ投稿していません')
                       : ListView(children: [rows(posts)]);
                 },
               ),
-              analysis.when(
+              rankedUsers.when(
                 loading: () => const RasqLoading(),
                 error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
-                data: (a) {
+                data: (users) {
                   // ユーザーはリアクション合計順(古い順のみ昇順に反転)。
-                  final ranked = [...a.users]..sort((x, y) => filter.sort == SearchSort.oldest ? x.$2.compareTo(y.$2) : y.$2.compareTo(x.$2));
+                  final ranked = [...users]..sort((x, y) => filter.sort == SearchSort.oldest ? x.$2.compareTo(y.$2) : y.$2.compareTo(x.$2));
                   return ranked.isEmpty
                       ? const RasqEmptyView(title: 'ユーザーはいません')
                       : UserList(users: [for (final e in ranked) e.$1.summary], subtitles: {for (final e in ranked) e.$1.summary.id: 'リアクション ${e.$2}'});

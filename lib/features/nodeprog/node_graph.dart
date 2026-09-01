@@ -493,6 +493,16 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
+  // トレンド枠 (D-113): トレンドホームの「トレンド」一覧の終端。繋いだ
+  // テキスト配列(トレンド取得/読み出し等)がそのまま一覧になる。
+  NodeCatalogEntry(
+    type: 'trend.frame',
+    title: 'トレンド枠',
+    icon: Icons.tag,
+    genre: 'タイムライン',
+    description: 'トレンドホームの「トレンド」一覧の最終出力。タグ(テキスト配列)を繋ぐとそのまま一覧に出ます。',
+    inputs: [NodePort(label: 'タグ', dataType: 'テキスト配列')],
+  ),
   // ---- 生成系 ML (D-097): 類似度/キーワード一致 + 演算子条件。
   NodeCatalogEntry(
     type: 'ml.similar',
@@ -578,3 +588,113 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     hasCondOut: true,
   ),
 ];
+
+/// 保存済みノードをカタログの最新形に追従させる (D-113)。追加された入力
+/// (「アカウント」等)や選択肢(リスト名/アカウント一覧)を既存グラフにも
+/// 反映する — 既存の設定値はラベルで引き継ぐ。カタログに無い type
+/// (削除された関数など)はそのまま。入力はカタログ末尾追加が前提なので
+/// エッジのポート番号は保たれる。
+NodeGraph upgradeGraphNodes(NodeGraph g, Map<String, NodeCatalogEntry> catalog) {
+  GraphNode upgrade(GraphNode n) {
+    final e = catalog[n.type];
+    if (e == null) return n;
+    final inputs = [
+      for (final ci in e.inputs)
+        NodePort(
+          label: ci.label,
+          value: n.inputs.where((x) => x.label == ci.label).firstOrNull?.value ?? ci.value,
+          dataType: ci.dataType,
+          format: ci.format,
+          options: ci.options,
+        ),
+    ];
+    return GraphNode(
+      id: n.id,
+      type: n.type,
+      title: e.title,
+      x: n.x,
+      y: n.y,
+      inputs: inputs,
+      outputs: e.outputs,
+      hasCondIn: e.hasCondIn,
+      hasCondOut: e.hasCondOut,
+      condBranches: e.condBranches.isNotEmpty ? e.condBranches : n.condBranches,
+    );
+  }
+
+  return NodeGraph(nodes: [for (final n in g.nodes) upgrade(n)], edges: g.edges);
+}
+
+/// 総合(バンドル)スコープの自動構成 (D-114): 各アカウントの
+/// タイムライン取得 → マージ(3 口を段組み)→ タイムライン。
+NodeGraph buildBundleGraph(List<String> accountLabels) {
+  GraphNode inst(String type, String id, Offset at, {Map<String, String> values = const {}}) {
+    final e = builtinNodeCatalog.firstWhere((x) => x.type == type);
+    final n = e.instantiate(id, at);
+    return n.copyWith(inputs: [
+      for (final p in n.inputs) values.containsKey(p.label) ? p.copyWith(value: values[p.label]) : p,
+    ]);
+  }
+
+  final nodes = <GraphNode>[];
+  final edges = <GraphEdge>[];
+  for (var i = 0; i < accountLabels.length; i++) {
+    nodes.add(inst('tl.source', 's$i', Offset(24, 40 + i * 170), values: {'TL': 'home', 'アカウント': accountLabels[i]}));
+  }
+  // マージ段組み: 最初の段は取得×3、以降は前段のマージ + 取得×2。
+  var mergeIndex = 0;
+  String? currentOut; // 直近の出力ノード id
+  var consumed = 0;
+  if (accountLabels.length == 1) {
+    currentOut = 's0';
+    consumed = 1;
+  }
+  while (consumed < accountLabels.length) {
+    final id = 'm$mergeIndex';
+    nodes.add(inst('merge', id, Offset(260.0 + mergeIndex * 40, 120.0 + mergeIndex * 150)));
+    var port = 0;
+    if (currentOut != null) {
+      edges.add(GraphEdge(from: currentOut, fromPort: 0, to: id, toPort: port++));
+    }
+    while (port < 3 && consumed < accountLabels.length) {
+      edges.add(GraphEdge(from: 's$consumed', fromPort: 0, to: id, toPort: port++));
+      consumed++;
+    }
+    currentOut = id;
+    mergeIndex++;
+  }
+  nodes.add(builtinNodeCatalog.firstWhere((x) => x.type == 'timeline').instantiate('t0', Offset(520.0 + mergeIndex * 20, 160)));
+  if (currentOut != null) edges.add(GraphEdge(from: currentOut, fromPort: 0, to: 't0', toPort: 0));
+  return NodeGraph(nodes: nodes, edges: edges);
+}
+
+/// ユーザーが編集済みの総合グラフへ新アカウントの取得ノードを差し込む
+/// (D-114)。終端タイムラインの 1 段前がマージで空き口があればそこへ。
+/// 差し込めない形(マージ以外/満杯)は null — 手動に任せる。
+NodeGraph? insertAccountIntoBundleGraph(NodeGraph g, String accountLabel) {
+  final byId = {for (final n in g.nodes) n.id: n};
+  for (final t in g.nodes.where((n) => n.type == 'timeline')) {
+    final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == t.id && e.toPort == 0).firstOrNull;
+    final up = edge == null ? null : byId[edge.from];
+    if (up == null || up.type != 'merge') continue;
+    final used = {for (final e in g.edges) if (!e.cond && !e.toIcon && e.to == up.id) e.toPort};
+    final free = [0, 1, 2].where((p) => !used.contains(p)).firstOrNull;
+    if (free == null) continue;
+    var seq = 0;
+    for (final n in g.nodes) {
+      final m = RegExp(r'^n?s?(\d+)$').firstMatch(n.id);
+      if (m != null) seq = seq < int.parse(m.group(1)!) ? int.parse(m.group(1)!) : seq;
+    }
+    final src = builtinNodeCatalog.firstWhere((x) => x.type == 'tl.source').instantiate('s${seq + 1}', Offset(up.x - 230, up.y + 120));
+    final withValues = src.copyWith(inputs: [
+      for (final p in src.inputs)
+        switch (p.label) {
+          'TL' => p.copyWith(value: 'home'),
+          'アカウント' => p.copyWith(value: accountLabel),
+          _ => p,
+        },
+    ]);
+    return NodeGraph(nodes: [...g.nodes, withValues], edges: [...g.edges, GraphEdge(from: withValues.id, fromPort: 0, to: up.id, toPort: free)]);
+  }
+  return null;
+}

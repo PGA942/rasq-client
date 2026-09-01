@@ -552,6 +552,28 @@ Map<String, double> _keywordScores(List<String> refs, List<Post> posts) {
   return {for (final p in posts) p.key: entityOverlap(refFeatures, extractFeatures(p)).toDouble()};
 }
 
+/// テキスト配列の終端 (D-113: トレンド枠ノード)。終端 [terminal] の入力に
+/// 繋がったテキスト配列(トレンド取得/GLiNER抽出/読み出し)を評価して返す。
+/// 鎖が無ければ null(既定のトレンド一覧のまま)。
+Future<List<String>?> runNodeGraphTexts(
+  NodeGraph g, {
+  required String terminal,
+  Future<List<Post>> Function(String kindId)? fetch,
+  Future<List<String>> Function()? fetchTrends,
+  Future<Object?> Function(String slot)? storageRead,
+}) async {
+  final byId = {for (final n in g.nodes) n.id: n};
+  final env = _ExecEnv(fetch: fetch ?? (_) async => const [], fetchTrends: fetchTrends, storageRead: storageRead);
+  for (final t in g.nodes.where((n) => n.type == terminal)) {
+    final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == t.id && e.toPort == 0).firstOrNull;
+    final up = edge == null ? null : byId[edge.from];
+    if (up == null) continue;
+    final texts = await _textArrayOutOf(g, byId, up, env);
+    if (texts != null) return texts;
+  }
+  return null;
+}
+
 /// クロック接続 (D-095): クロックメーカーの出力が**どこかのノードの
 /// アイコン**に繋がっていれば、その「間隔」を返す(TL の自動更新周期)。
 /// 未接続なら null。間隔は `15秒` / `2分` / `30` などを解釈し、最短 10 秒。

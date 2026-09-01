@@ -169,6 +169,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   /// グラフの持ち主アカウント (D-108: アカウント分離)。ノード TL タブは
   /// 作ったアカウント、それ以外は現在アカウント。
   String? get _accountKey {
+    if (_scope == 'tl.bundle') return null; // 総合はバンドル共有 (D-114)
     if (_scope.startsWith('tl.node:')) {
       final id = _scope.substring(3);
       final owner = ref.read(allNodeTabsProvider).where((t) => t.$2.id == id).firstOrNull;
@@ -212,6 +213,9 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
       if (!mounted) return;
       var g = raw is String ? NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>()) : const NodeGraph();
       if (g.nodes.isEmpty) g = _defaultGraph();
+      // カタログ追従 (D-113): 追加された入力(アカウント等)と最新の選択肢を
+      // 既存ノードにも反映(値はラベルで引き継ぎ。保存は次の編集時)。
+      g = upgradeGraphNodes(g, _catalogByType);
       setState(() {
         _graph = g;
         _loaded = true;
@@ -239,13 +243,36 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
 
     if (_scope == 'tl.relational') return NodeGraph(nodes: [inst('timeline.relational', 'n1', const Offset(100, 120))]);
     if (_scope == 'composer') return NodeGraph(nodes: [inst('composer.target', 'n1', const Offset(100, 120))]);
+    // 総合 (D-114): アカウント列から自動構成(取得×N → マージ → タイムライン)。
+    if (_scope == 'tl.bundle') {
+      final accounts = [for (final s in ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${s.account}'];
+      return buildBundleGraph(accounts);
+    }
+    // トレンドのノートタブ (D-113): トレンド枠(トレンド取得 → トレンド枠)も
+    // デフォルトで添える。
+    if (_scope == 'trend') {
+      return NodeGraph(
+        nodes: [
+          inst('clock', 'n1', const Offset(24, 32)),
+          inst('tl.search', 'n2', const Offset(64, 214), value: ''),
+          inst('timeline', 'n3', const Offset(300, 120)),
+          inst('trend.tags', 'n4', const Offset(24, 400)),
+          inst('trend.frame', 'n5', const Offset(300, 420)),
+        ],
+        edges: const [
+          GraphEdge(from: 'n1', fromPort: 0, to: 'n2', toPort: 0, toIcon: true),
+          GraphEdge(from: 'n2', fromPort: 0, to: 'n3', toPort: 0),
+          GraphEdge(from: 'n4', fromPort: 0, to: 'n5', toPort: 0),
+        ],
+      );
+    }
     final (srcType, srcValue) = switch (_scope) {
       'tl.social' => ('tl.source', 'social'),
       'tl.home' => ('tl.source', 'home'),
       'tl.local' => ('tl.source', 'local'),
       'tl.global' => ('tl.source', 'global'),
       'trend.following' => ('tl.source', 'home'),
-      'trend' || 'trend.users' => ('tl.search', ''),
+      'trend.users' => ('tl.search', ''),
       _ => ('tl.source', 'home'), // node:<id> など
     };
     return NodeGraph(
@@ -271,6 +298,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     }
     final nodeTabs = ref.watch(nodeTabsProvider);
     final tabs = <(String, String, bool)>[
+      ('tl.bundle', '総合', false),
       ('tl.social', 'おすすめ', false),
       ('tl.home', 'フォロー中', false),
       ('tl.relational', '関連', false),
@@ -405,7 +433,12 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     super.dispose();
   }
 
-  void _save() => ref.read(settingsAreaProvider(_area).notifier).set('graph', jsonEncode(_graph.toJson()));
+  void _save() {
+    ref.read(settingsAreaProvider(_area).notifier).set('graph', jsonEncode(_graph.toJson()));
+    // 総合 (D-114): ユーザーが編集したら自動構成の管理から外す(以降の
+    // アカウント追加はマージの空き口への差し込みだけ試す)。
+    if (_scope == 'tl.bundle') ref.read(settingsAreaProvider(_area).notifier).set('auto', null);
+  }
 
   Map<String, NodeCatalogEntry> get _catalogByType => {for (final e in ref.watch(nodeCatalogProvider)) e.type: e};
 

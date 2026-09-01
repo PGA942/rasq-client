@@ -47,7 +47,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     final me = ref.watch(currentUserProvider);
     final scheme = Theme.of(context).colorScheme;
-    final trends = ref.watch(trendingTagsProvider);
+    final trends = ref.watch(trendFrameTagsProvider); // トレンド枠ノード対応 (D-113)
     final today = ref.watch(timelineProvider(DynamicTimelines.featured));
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const [];
@@ -88,6 +88,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(trendingTagsProvider);
+          ref.invalidate(trendFrameTagsProvider);
           await ref.read(timelineProvider(DynamicTimelines.featured).notifier).refresh();
         },
         child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
@@ -100,7 +101,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           RasqSectionHeader(title: 'トレンド', trailing: RasqIconButton(icon: Icons.settings, size: 20, onPressed: () {}, tooltip: 'トレンド設定')),
           ...trends.when(
             loading: () => const [RasqLoading()],
-            error: (e, _) => [RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), compact: true, onRetry: () => ref.invalidate(trendingTagsProvider), retryLabel: '再読み込み')],
+            error: (e, _) => [RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), compact: true, onRetry: () => ref.invalidate(trendFrameTagsProvider), retryLabel: '再読み込み')],
             data: (list) => list.isEmpty
                 ? const [RasqEmptyView(title: 'トレンドはありません', hint: 'サーバーサイドのトレンドプロバイダーは準備中')]
                 : [for (final t in list.take(8)) _TrendTile(trend: t, onTap: () => context.pushTrend(t.tag))],
