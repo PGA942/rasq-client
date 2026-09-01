@@ -570,6 +570,57 @@ void main() {
     expect([for (final p in dropped) p.id], ['b1']);
   });
 
+  test('カスタム関数の中身: 関数入力 → 消去 → 関数出力 が実行される (D-118)', () async {
+    const fnType = 'fn:test1';
+    final fnNode = GraphNode(
+        id: 'f1',
+        type: fnType,
+        title: '広告おとし',
+        x: 0,
+        y: 0,
+        inputs: const [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+        outputs: const [NodePort(label: '投稿リスト', dataType: '投稿リスト')]);
+    final g = NodeGraph(nodes: [source('n1'), fnNode, timelineNode('n3')], edges: [data('n1', 'f1'), data('f1', 'n3')]);
+    final body = NodeGraph(
+      nodes: [step('fn.input', 'b1'), step('remove', 'b2'), step('fn.output', 'b3'), cond('c1', value: '広告')],
+      edges: [data('b1', 'b2'), data('b2', 'b3'), condEdge('b2', 'c1')],
+    );
+    final out = await runNodeGraph(g, fetch: fetch, loadFunction: (id) async => id == fnType ? body : null);
+    expect([for (final p in out!) p.id], ['p2', 'p4']);
+
+    // 中身なし(未編集)の関数は素通し。
+    final plain = await runNodeGraph(g, fetch: fetch, loadFunction: (_) async => null);
+    expect(plain!.length, posts.length);
+  });
+
+  test('カスタム関数の自己再帰は素通しになる(無限ループしない) (D-118)', () async {
+    const fnType = 'fn:test2';
+    GraphNode fnAt(String id) => GraphNode(
+        id: id,
+        type: fnType,
+        title: '再帰',
+        x: 0,
+        y: 0,
+        inputs: const [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+        outputs: const [NodePort(label: '投稿リスト', dataType: '投稿リスト')]);
+    final g = NodeGraph(nodes: [source('n1'), fnAt('f1'), timelineNode('n3')], edges: [data('n1', 'f1'), data('f1', 'n3')]);
+    // 中身に自分自身が置かれている → 内側の自分は素通し(ガード)。
+    final body = NodeGraph(nodes: [step('fn.input', 'b1'), fnAt('b2'), step('fn.output', 'b3')], edges: [data('b1', 'b2'), data('b2', 'b3')]);
+    final out = await runNodeGraph(g, fetch: fetch, loadFunction: (_) async => body);
+    expect(out!.length, posts.length);
+  });
+
+  test('マージ: 失敗した枝は捨てて残りの枝だけで合流する (D-117)', () async {
+    final rawB = source('n2');
+    final srcB = rawB.copyWith(inputs: [rawB.inputs[0].copyWith(value: 'local'), rawB.inputs[1]]);
+    final g = NodeGraph(
+      nodes: [source('n1'), srcB, step('merge', 'm1'), timelineNode('n3')],
+      edges: [data('n1', 'm1'), const GraphEdge(from: 'n2', fromPort: 0, to: 'm1', toPort: 1), data('m1', 'n3')],
+    );
+    final out = await runNodeGraph(g, fetch: (kid) async => kid == 'local' ? throw StateError('接続不可') : posts);
+    expect(out!.length, posts.length); // local 枝の失敗で TL 全体は死なない
+  });
+
   test('ポスト先ノード: 下書き内容の条件で投稿先が上から順に選ばれる (D-116)', () async {
     GraphNode target(String id, String account, Offset at) {
       final base = builtinNodeCatalog.firstWhere((e) => e.type == 'composer.target').instantiate(id, at);

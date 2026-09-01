@@ -306,6 +306,7 @@ final relationalNodePostsProvider = FutureProvider<List<Post>?>((ref) async {
         return (await ref.read(settingsAreaProvider('storage.safe').future))[slot];
       },
       storageWrite: (slot, value) => ref.read(settingsAreaProvider(storageArea).notifier).set(slot, value),
+      loadFunction: (fnId) => loadFunctionBody((a) => ref.read(settingsAreaProvider(a).future), fnId), // カスタム関数の中身 (D-118)
     );
   } catch (e) {
     debugPrint('nodeprog(tl.relational): $e');

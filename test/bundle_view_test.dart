@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/home/post_duplicates.dart';
+import 'package:rasq_client/features/home/timeline_providers.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -204,6 +205,65 @@ void main() {
     await container.read(settingsAreaProvider('nodeprog.prefs').notifier).set('bundleTabs', false);
     await tester.pumpAndSettle();
     expect(find.text('セカンドTL'), findsNothing);
+  });
+
+  testWidgets('総合グラフはリフレッシュしても効き続ける (D-117: 以前は旧合流に戻っていた)', (tester) async {
+    GraphNode inst(String type, String id, {Map<String, String> values = const {}}) {
+      final e = builtinNodeCatalog.firstWhere((x) => x.type == type);
+      final n = e.instantiate(id, Offset.zero);
+      return n.copyWith(inputs: [for (final p in n.inputs) values.containsKey(p.label) ? p.copyWith(value: values[p.label]) : p]);
+    }
+
+    // ユーザー編集済み(auto なし)の総合グラフ: 取得×2 → マージ → 消去
+    // (本文に second)→ タイムライン。
+    const l1 = '@tester@example.test';
+    const l2 = '@second@example.test';
+    final graph = NodeGraph(nodes: [
+      inst('tl.source', 's0', values: {'TL': 'home', 'アカウント': l1}),
+      inst('tl.source', 's1', values: {'TL': 'home', 'アカウント': l2}),
+      inst('merge', 'm0'),
+      inst('remove', 'r0'),
+      inst('cond', 'c0', values: {'値': 'second'}),
+      inst('timeline', 't0'),
+    ], edges: const [
+      GraphEdge(from: 's0', fromPort: 0, to: 'm0', toPort: 0),
+      GraphEdge(from: 's1', fromPort: 0, to: 'm0', toPort: 1),
+      GraphEdge(from: 'm0', fromPort: 0, to: 'r0', toPort: 0),
+      GraphEdge(from: 'r0', fromPort: 0, to: 't0', toPort: 0),
+      GraphEdge(from: 'r0', fromPort: 0, to: 'c0', toPort: 0, cond: true),
+    ]);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [session(acc1).toJson(), session(acc2).toJson()],
+        'current': acc1.key,
+      }),
+      'nodeprog.tl.bundle.v1': jsonEncode({'graph': jsonEncode(graph.toJson()), 'accounts': '$l1|$l2', 'auto': false}),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [postOf(v)]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+
+    RasqSidebar.open(container.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(RasqSidebar), matching: find.text('@tester')));
+    await tester.pumpAndSettle();
+
+    // グラフの消去が効いている(second の投稿は消える)。
+    expect(find.text('tester の投稿'), findsOneWidget);
+    expect(find.text('second の投稿'), findsNothing);
+
+    // リフレッシュ(プル更新/クロックと同じ経路)後もグラフのまま。
+    await container.read(timelineProvider(TimelineKind.bundle).notifier).refresh();
+    await tester.pumpAndSettle();
+    expect(find.text('tester の投稿'), findsOneWidget);
+    expect(find.text('second の投稿'), findsNothing);
   });
 
   testWidgets('アカウント行の … → ログアウトでそのアカウントが外れる', (tester) async {

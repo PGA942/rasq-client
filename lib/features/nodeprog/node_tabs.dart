@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../settings/settings_dsl.dart';
+import 'node_graph.dart';
 
 /// ユーザーが作ったノード TL タブ (D-101)。ノードエディタの「+」で追加し、
 /// ホームのタブ列に `node:<id>` として並ぶ。中身はノードグラフ
@@ -39,6 +40,19 @@ Future<String?> readNodeGraphRaw(Future<Map<String, Object?>> Function(String ar
     if (legacy is String) return legacy;
   }
   return null;
+}
+
+/// カスタム関数の中身グラフ (D-118)。関数定義(`nodeprog.functions`)と
+/// 同じくグローバル領域(スコープ = 関数 id `fn:<連番>`)。無い/壊れている
+/// 場合は null(実行側は素通しになる)。
+Future<NodeGraph?> loadFunctionBody(Future<Map<String, Object?>> Function(String area) readArea, String fnId) async {
+  final raw = await readNodeGraphRaw(readArea, null, fnId);
+  if (raw == null) return null;
+  try {
+    return NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+  } catch (_) {
+    return null;
+  }
 }
 
 List<NodeTab> _decodeTabs(Map<String, Object?> area) {

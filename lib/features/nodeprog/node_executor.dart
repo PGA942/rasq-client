@@ -27,6 +27,8 @@ import 'node_graph.dart';
 ///   前段絞り込み (D-102) は `timeline.relational`。
 /// - [onDuplicate]: マージ (D-115) が中身比較で畳んだコピーの通知
 ///   (残したコピー, 隠したコピー)。↓(アカウント選択)の選択肢に回す用。
+/// - [loadFunction]: カスタム関数 (D-118) の中身グラフ(fn.input → … →
+///   fn.output)の読み込み。null/中身なしの関数は素通し。
 Future<List<Post>?> runNodeGraph(
   NodeGraph g, {
   required Future<List<Post>> Function(String kindId) fetch,
@@ -36,10 +38,11 @@ Future<List<Post>?> runNodeGraph(
   Future<Object?> Function(String slot)? storageRead,
   Future<void> Function(String slot, Object? value)? storageWrite,
   void Function(Post kept, Post dropped)? onDuplicate,
+  Future<NodeGraph?> Function(String fnId)? loadFunction,
   String terminal = 'timeline',
 }) async {
   final byId = {for (final n in g.nodes) n.id: n};
-  final env = _ExecEnv(fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite, onDuplicate: onDuplicate);
+  final env = _ExecEnv(fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite, onDuplicate: onDuplicate, loadFunction: loadFunction);
 
   // storage.safe 保存ノード (D-104/D-105): **終端評価より先に**書く — 同じ
   // グラフ内の「読み出し」が同一実行で新しいプロファイルを見られるように。
@@ -66,7 +69,8 @@ Future<List<Post>?> runNodeGraph(
 
 /// 実行環境(コールバック束)。
 class _ExecEnv {
-  const _ExecEnv({required this.fetch, this.fetchTrends, this.embedTexts, this.pluginSort, this.storageRead, this.storageWrite, this.onDuplicate});
+  const _ExecEnv(
+      {required this.fetch, this.fetchTrends, this.embedTexts, this.pluginSort, this.storageRead, this.storageWrite, this.onDuplicate, this.loadFunction, this.fnInput, this.fnStack = const {}});
   final Future<List<Post>> Function(String kindId) fetch;
   final Future<List<String>> Function()? fetchTrends;
   final Future<List<List<double>>> Function(List<String> texts)? embedTexts;
@@ -74,6 +78,24 @@ class _ExecEnv {
   final Future<Object?> Function(String slot)? storageRead;
   final Future<void> Function(String slot, Object? value)? storageWrite;
   final void Function(Post kept, Post dropped)? onDuplicate;
+  final Future<NodeGraph?> Function(String fnId)? loadFunction;
+
+  /// 関数の中身の実行中 (D-118): 「関数入力」ノードに束縛された投稿リストと、
+  /// 実行中の関数 id の集合(自己再帰/循環の素通しガード)。
+  final List<Post>? fnInput;
+  final Set<String> fnStack;
+
+  _ExecEnv enterFunction(String fnId, List<Post> input) => _ExecEnv(
+      fetch: fetch,
+      fetchTrends: fetchTrends,
+      embedTexts: embedTexts,
+      pluginSort: pluginSort,
+      storageRead: storageRead,
+      storageWrite: storageWrite,
+      onDuplicate: onDuplicate,
+      loadFunction: loadFunction,
+      fnInput: input,
+      fnStack: {...fnStack, fnId});
 }
 
 /// 取得ノード (D-094/D-097/D-103) → fetch へ渡す kind id。取得ノードで
@@ -106,15 +128,21 @@ Future<List<Post>?> _postsOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphN
   if (depth > 16) return null;
   final sourceKind = _sourceKindOf(n);
   if (sourceKind != null) return env.fetch(sourceKind);
+  // 関数入力 (D-118): 関数の中身の実行中は束縛された投稿リストを出す。
+  if (n.type == 'fn.input') return env.fnInput;
   // マージ (D-106): 全入力の投稿リストを時刻順に 1 本へ(重複除外)。
+  // 枝ごとに独立して評価し、失敗した枝(アカウント不達など)は捨てて
+  // 残りだけで合流する (D-117: 1 枝の失敗で TL 全体を殺さない)。
   if (n.type == 'merge') {
     final lists = <List<Post>>[];
     for (final e in g.edges) {
       if (e.cond || e.toIcon || e.to != n.id) continue;
       final up = byId[e.from];
       if (up == null) continue;
-      final posts = await _postsOutOf(g, byId, up, env, depth + 1);
-      if (posts != null) lists.add(posts);
+      try {
+        final posts = await _postsOutOf(g, byId, up, env, depth + 1);
+        if (posts != null) lists.add(posts);
+      } catch (_) {}
     }
     if (lists.isEmpty) return null;
     return mergePostLists(lists, onDuplicate: env.onDuplicate);
@@ -197,9 +225,34 @@ Future<List<Post>> _applyStep(NodeGraph g, Map<String, GraphNode> byId, GraphNod
       }
       return [for (final p in posts) if (!_evalCondPortAt(g, byId, step.id, p, 0, ctx)) p];
     default:
-      // fn: のデータ型カスタム関数など — 素通し(中身はプラグイン/RAi 配線)。
+      // データ型カスタム関数 (D-118): 中身のサブグラフ(fn.input → … →
+      // fn.output)があれば実行する。中身なし/読めない/循環は素通し。
+      if (step.type.startsWith('fn:') && env.loadFunction != null && !env.fnStack.contains(step.type)) {
+        try {
+          final body = await env.loadFunction!(step.type);
+          if (body != null) {
+            final result = await _runFunctionBody(body, step.type, posts, env);
+            if (result != null) return result;
+          }
+        } catch (_) {}
+      }
       return posts;
   }
+}
+
+/// カスタム関数の中身 (D-118): 「関数入力」に [input] を束縛して
+/// 「関数出力」に繋がった鎖を評価する。成立した鎖が無ければ null(素通し)。
+Future<List<Post>?> _runFunctionBody(NodeGraph body, String fnId, List<Post> input, _ExecEnv outer) async {
+  final byId = {for (final n in body.nodes) n.id: n};
+  final env = outer.enterFunction(fnId, input);
+  for (final t in body.nodes.where((n) => n.type == 'fn.output')) {
+    final edge = body.edges.where((e) => !e.cond && !e.toIcon && e.to == t.id && e.toPort == 0).firstOrNull;
+    final up = edge == null ? null : byId[edge.from];
+    if (up == null) continue;
+    final result = await _postsOutOf(body, byId, up, env, 0);
+    if (result != null) return result;
+  }
+  return null;
 }
 
 // ---- 結果ノード / storage.safe (D-104) --------------------------------------

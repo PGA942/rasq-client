@@ -68,6 +68,33 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   /// 総合TL (D-088) のアカウント別カーソル。build で作り直す。
   Map<String, String> _bundleCursors = {};
 
+  /// グラフ取得ノードの枝ごとのカーソル (D-117)。キー = kind id(acct: 包み
+  /// を含む)、値 null = その枝は末尾まで読了。続き読みは**グラフをもう一度
+  /// 実行**し、各取得ノードが自分のカーソルから次ページを読む(マージ TL 用の
+  /// 「使い捨てクロック」方式 — 1 回ぶんのトリガーとして焚き直すイメージ)。
+  Map<String, String?> _nodeCursors = {};
+
+  /// 総合TL がノードグラフで動いているか(loadMore/refresh の経路選択)。
+  bool _bundleGraphActive = false;
+
+  bool get _nodeHasMore => _nodeCursors.values.any((v) => v != null);
+
+  /// 取得ノードの枝ごとページング (D-117)。[more] のときは前回のカーソルから
+  /// 続きを読む(読了済みの枝は空)。自分の基礎 TL([selfKindId])は基礎側の
+  /// カーソルで進むのでここでは扱わない。
+  Future<List<Post>> _pagedNodeFetch(SnsSession session, String kid, {required bool more, String? selfKindId, List<Post> selfItems = const [], SnsSession? Function(String)? sessionFor}) async {
+    if (selfKindId != null && kid == selfKindId) return selfItems;
+    String? c;
+    if (more && _nodeCursors.containsKey(kid)) {
+      c = _nodeCursors[kid];
+      if (c == null) return const []; // 読了
+    }
+    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next);
+  }
+
+  /// カスタム関数の中身グラフ (D-118)。
+  Future<NodeGraph?> _loadFunctionBody(String fnId) => loadFunctionBody((a) => ref.read(settingsAreaProvider(a).future), fnId);
+
   /// クロックノード (D-095): グラフのクロックがアイコンに繋がっていると
   /// その間隔で TL を自動更新する。
   Timer? _clockTimer;
@@ -105,14 +132,19 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       // 総合TL (D-088): アカウントの増減で作り直す。
       ref.watch(sessionsProvider.select((s) => s.value?.sessions.length ?? 0));
       _bundleCursors = {};
+      _nodeCursors = {};
       // ノードグラフ経由 (D-114): 自動構成(アカウント追加でマージ段を更新)
       // を済ませてから実行。鎖が無ければ従来の合流へフォールバック。
       try {
         final result = await _runBundleGraph();
-        if (result != null) return TimelineState(posts: result);
+        if (result != null) {
+          _bundleGraphActive = true;
+          return TimelineState(posts: result, cursor: _nodeHasMore ? 'node' : null);
+        }
       } catch (e) {
         debugPrint('bundle graph: $e');
       }
+      _bundleGraphActive = false;
       final (page, _, _) = await _fetchBundle(first: true);
       return TimelineState(posts: page.items, cursor: page.nextCursor);
     }
@@ -132,7 +164,9 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   /// 総合スコープの自動構成 + 実行 (D-114)。グラフが無ければ全アカウント分を
   /// 自動生成(取得×N → マージ段 → タイムライン)。ユーザーが編集済み
   /// (auto フラグなし)なら、新アカウントはマージの空き口への差し込みだけ試す。
-  Future<List<Post>?> _runBundleGraph() async {
+  /// [more] (D-117) は続き読み: 自動構成は済んでいる前提でグラフだけ読み、
+  /// 各取得ノードが自分のカーソルから次ページを読む。
+  Future<List<Post>?> _runBundleGraph({bool more = false}) async {
     final session = _session;
     if (session == null) return null;
     final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
@@ -143,7 +177,10 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     final area = await ref.read(settingsAreaProvider('nodeprog.tl.bundle').future);
     final raw = area['graph'];
     NodeGraph graph;
-    if (raw is! String) {
+    if (more) {
+      if (raw is! String) return null;
+      graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+    } else if (raw is! String) {
       graph = buildBundleGraph(accounts);
       await store.set('graph', jsonEncode(graph.toJson()));
       await store.set('auto', true);
@@ -176,12 +213,13 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     final merged = <String, List<Post>>{};
     final result = await runNodeGraph(
       graph,
-      fetch: (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
+      fetch: (kid) => _pagedNodeFetch(session, kid, more: more, sessionFor: sessionForAccount),
       fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
       pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
       storageRead: (slot) async => (await ref.read(settingsAreaProvider('storage.safe').future))[slot],
       storageWrite: (slot, value) => ref.read(settingsAreaProvider('storage.safe').notifier).set(slot, value),
       onDuplicate: (kept, dropped) => merged.putIfAbsent(kept.key, () => []).add(dropped),
+      loadFunction: _loadFunctionBody,
     );
     if (result == null) return null;
     if (merged.isNotEmpty) {
@@ -225,6 +263,18 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       Future.microtask(() => ref.read(postAlternatesProvider.notifier).recordAll(dropped));
     }
     return out;
+  }
+
+  /// 総合TL の続き読み (D-117): グラフをもう一度実行し、各取得ノードが自分の
+  /// カーソルから次ページを読む(loadMore が id 重複を除いて末尾へ足す)。
+  Future<(Page<Post>, Map<String, Map<String, ActionResult>>, TimelineDecorations)> _bundleGraphMore() async {
+    List<Post> result = const [];
+    try {
+      result = await _runBundleGraph(more: true) ?? const [];
+    } catch (e) {
+      debugPrint('bundle graph more: $e');
+    }
+    return (Page(items: result, nextCursor: _nodeHasMore ? 'node' : null), <String, Map<String, ActionResult>>{}, const TimelineDecorations());
   }
 
   /// 総合TL (D-088): 全ログインアカウントのホームTLを合流する。重複は
@@ -352,10 +402,14 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
 
           // マージが中身比較で畳んだコピー (D-115) は ↓ の選択肢へ回す。
           final merged = <String, List<Post>>{};
+          // 枝ごとのカーソル (D-117): 初回/リフレッシュで仕切り直し、続き読みは
+          // 各取得ノードが自分のカーソルから次ページを読む。
+          if (cursor == null) _nodeCursors = {};
           final result = await runNodeGraph(
             graph,
-            fetch: (kid) => resolveNodeFetch(graphSession, kid, selfKindId: kind.id, selfItems: page.items, cursor: cursor, sessionFor: sessionForAccount),
+            fetch: (kid) => _pagedNodeFetch(graphSession, kid, more: cursor != null, selfKindId: kind.id, selfItems: page.items, sessionFor: sessionForAccount),
             onDuplicate: (kept, dropped) => merged.putIfAbsent(kept.key, () => []).add(dropped),
+            loadFunction: _loadFunctionBody,
             fetchTrends: () async => [for (final t in await graphSession.trendingTags()) t.tag],
             embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
             // TL プラグインのソートノード (D-102): tl.sort/compose の実体。
@@ -369,7 +423,10 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             storageWrite: (slot, value) => ref.read(settingsAreaProvider(storageArea).notifier).set(slot, value),
           );
           if (result != null) {
-            page = Page(items: result, nextCursor: page.nextCursor);
+            // node: タブは基礎 TL のカーソルが無いので、枝に続きがある限り
+            // 続き読みできる (D-117)。基礎 TL 有りのタブは基礎側のカーソル。
+            final nodeMore = kind.id.startsWith('node:') && _nodeHasMore;
+            page = Page(items: result, nextCursor: page.nextCursor ?? (nodeMore ? 'node' : null));
             states = await graphSession.actionStates(result); // 別 TL 由来の投稿の分を取り直す
             if (merged.isNotEmpty) {
               Future.microtask(() => ref.read(postAlternatesProvider.notifier).recordAll(merged));
@@ -410,6 +467,20 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     try {
       if (kind == TimelineKind.bundle) {
         _bundleCursors = {};
+        _nodeCursors = {};
+        // リフレッシュ(プル更新/クロック)もグラフ経由 (D-117): 以前はここが
+        // 旧合流へ直行していて、更新のたびに総合グラフの加工が消えていた。
+        try {
+          final result = await _runBundleGraph();
+          if (result != null) {
+            _bundleGraphActive = true;
+            state = AsyncData(TimelineState(posts: result, cursor: _nodeHasMore ? 'node' : null));
+            return;
+          }
+        } catch (e) {
+          debugPrint('bundle graph: $e');
+        }
+        _bundleGraphActive = false;
         final (page, _, _) = await _fetchBundle(first: true);
         state = AsyncData(TimelineState(posts: page.items, cursor: page.nextCursor));
         return;
@@ -431,7 +502,9 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     if (cur == null || session == null || !cur.hasMore || cur.loadingMore) return;
     state = AsyncData(cur.copyWith(loadingMore: true, clearError: true));
     try {
-      final (page, _, deco) = kind == TimelineKind.bundle ? await _fetchBundle(first: false) : await _fetch(session, cur.cursor);
+      final (page, _, deco) = kind == TimelineKind.bundle
+          ? (_bundleGraphActive ? await _bundleGraphMore() : await _fetchBundle(first: false))
+          : await _fetch(session, cur.cursor);
       final seen = {for (final p in cur.posts) p.id};
       final merged = [...cur.posts, ...page.items.where((p) => !seen.contains(p.id))];
       state = AsyncData(cur.copyWith(posts: merged, cursor: page.nextCursor, clearCursor: page.nextCursor == null, loadingMore: false, customTiles: {...cur.customTiles, ...deco.tiles}, badges: {...cur.badges, ...deco.badges}));
@@ -465,22 +538,37 @@ final timelineProvider = AsyncNotifierProvider.family<TimelineNotifier, Timeline
 /// 取得ノード (D-097) の kind 解決(TL/関連/トレンドで共用): リストは
 /// 名前 → id、DM は相手ハンドル → ルームの peer id をアプリ側で引く。
 /// [selfKindId] と一致する取得は [selfItems] を返す(自分の TL の再取得回避)。
-Future<List<Post>> resolveNodeFetch(SnsSession session, String kid, {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor}) async {
+/// [onCursor] (D-117) には取得ページの続きトークンを報告する(枝ごとの
+/// ページング用。null = 末尾まで読了)。
+Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
+    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor}) async {
   // アカウント指定 (D-109): `acct:<@handle@instance>|<kind>` — そのアカウントの
   // セッションで残りを解決する(見つからなければ渡されたセッションのまま)。
   if (kid.startsWith('acct:')) {
     final sep = kid.indexOf('|');
     if (sep > 5) {
       final other = sessionFor?.call(kid.substring(5, sep));
-      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor);
+      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor, onCursor: onCursor);
     }
   }
   if (selfKindId != null && kid == selfKindId) return selfItems;
-  if (kid == 'myreactions') return (await session.reactedPosts(cursor: cursor)).items; // リアクション済み取得 (D-103)
+  // 投稿加工プラグイン (D-083/D-118): ノード定義を持たないプラグインの加工は
+  // **取得ノードに渡す直前**に済ませる(wasm セッションの post.transform)。
+  Future<List<Post>> finish(Page<Post> page) async {
+    onCursor?.call(page.nextCursor);
+    if (session is WasmSnsSession) {
+      try {
+        return await session.timelinePlugin.transform(page.items);
+      } catch (_) {} // 加工不達は素通し
+    }
+    return page.items;
+  }
+
+  if (kid == 'myreactions') return finish(await session.reactedPosts(cursor: cursor)); // リアクション済み取得 (D-103)
   if (kid.startsWith('search:')) {
     final q = kid.substring(7).trim();
     if (q.isEmpty) return const [];
-    return (await session.searchPosts(q, cursor: cursor)).items;
+    return finish(await session.searchPosts(q, cursor: cursor));
   }
   if (kid.startsWith('list:')) {
     final name = kid.substring(5).trim();
@@ -488,7 +576,7 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid, {String? sel
     final lists = await session.lists();
     final l = lists.where((x) => x.name == name || x.id == name).firstOrNull;
     if (l == null) return const [];
-    return (await session.timeline(TimelineKind.list(l.id, l.name), cursor: cursor)).items;
+    return finish(await session.timeline(TimelineKind.list(l.id, l.name), cursor: cursor));
   }
   if (kid.startsWith('dm:')) {
     final who = kid.substring(3).trim().replaceFirst('@', '');
@@ -496,7 +584,7 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid, {String? sel
     final rooms = await session.dmRooms();
     final r = rooms.where((x) => x.peer.handle == who || x.peer.id == who).firstOrNull;
     if (r == null) return const [];
-    return (await session.timeline(TimelineKind('dm:${r.peer.id}', 'DM'))).items;
+    return finish(await session.timeline(TimelineKind('dm:${r.peer.id}', 'DM'), cursor: cursor));
   }
-  return (await session.timeline(TimelineKind(kid, kid), cursor: cursor)).items;
+  return finish(await session.timeline(TimelineKind(kid, kid), cursor: cursor));
 }

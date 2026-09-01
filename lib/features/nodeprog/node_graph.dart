@@ -390,6 +390,25 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     hasCondIn: true,
     hasCondOut: true,
   ),
+  // 関数の中身 (D-118): カスタム関数のサブグラフ専用の境界ノード。
+  // 「関数入力」に呼び出し元の入力(v1 は投稿リスト)が束縛され、
+  // 「関数出力」に繋いだ鎖の結果が関数ノードの出力になる。
+  NodeCatalogEntry(
+    type: 'fn.input',
+    title: '関数入力',
+    icon: Icons.login,
+    genre: '関数',
+    description: '関数の中身の入口。呼び出し元から渡された投稿リストがここから出ます(関数の中身の編集画面専用)。',
+    outputs: [NodePort(label: '入力', dataType: '投稿リスト')],
+  ),
+  NodeCatalogEntry(
+    type: 'fn.output',
+    title: '関数出力',
+    icon: Icons.logout,
+    genre: '関数',
+    description: '関数の中身の出口。ここに繋いだ投稿リストが関数ノードの出力になります(未接続なら素通し)。',
+    inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
   // マージ (D-106): 複数の投稿リストを 1 本のタイムラインへ合流。
   NodeCatalogEntry(
     type: 'merge',

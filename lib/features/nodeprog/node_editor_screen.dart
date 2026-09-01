@@ -170,6 +170,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   /// 作ったアカウント、それ以外は現在アカウント。
   String? get _accountKey {
     if (_scope == 'tl.bundle') return null; // 総合はバンドル共有 (D-114)
+    if (_scope.startsWith('fn:')) return null; // 関数の中身はグローバル (D-118: 定義と同じ)
     if (_scope.startsWith('tl.node:')) {
       final id = _scope.substring(3);
       final owner = ref.read(allNodeTabsProvider).where((t) => t.$2.id == id).firstOrNull;
@@ -179,11 +180,18 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   }
 
   String get _area => nodeprogAreaFor(_accountKey, _scope);
-  String get _title => switch (_scope) {
-        'composer' => '投稿先のカスタマイズ',
-        'trend' => 'トレンドをカスタマイズ',
-        _ => 'タイムラインをカスタマイズ',
-      };
+  String get _title {
+    // 関数の中身の編集 (D-118): タイトルに関数名を出す。
+    if (_scope.startsWith('fn:')) {
+      final def = ref.read(customFunctionsProvider).where((d) => d.id == _scope).firstOrNull;
+      return '関数の中身${def == null ? '' : ' — ${def.name}'}';
+    }
+    return switch (_scope) {
+      'composer' => '投稿先のカスタマイズ',
+      'trend' => 'トレンドをカスタマイズ',
+      _ => 'タイムラインをカスタマイズ',
+    };
+  }
 
   /// dispose 時に ref が使えないため、パレット FOW を閉じる用に保持。
   late final OverlayManager _manager;
@@ -243,6 +251,13 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
 
     if (_scope == 'tl.relational') return NodeGraph(nodes: [inst('timeline.relational', 'n1', const Offset(100, 120))]);
     if (_scope == 'composer') return NodeGraph(nodes: [inst('composer.target', 'n1', const Offset(100, 120))]);
+    // 関数の中身 (D-118): 関数入力 → 関数出力 の素通し鎖から始める。
+    if (_scope.startsWith('fn:')) {
+      return NodeGraph(
+        nodes: [inst('fn.input', 'n1', const Offset(40, 120)), inst('fn.output', 'n2', const Offset(340, 140))],
+        edges: const [GraphEdge(from: 'n1', fromPort: 0, to: 'n2', toPort: 0)],
+      );
+    }
     // 総合 (D-114): アカウント列から自動構成(取得×N → マージ → タイムライン)。
     if (_scope == 'tl.bundle') {
       final accounts = [for (final s in ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${s.account}'];
@@ -687,6 +702,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     );
     await _saveFunctions([...ref.read(customFunctionsProvider), def]);
     _addNode(def.toCatalogEntry(), graphPos);
+    // データ関数 (D-118) はそのまま中身(関数入力 → … → 関数出力)の編集へ。
+    if (kind == 'data' && mounted) ref.read(routerProvider).push(Routes.nodes(def.id));
   }
 
   // ---- ノードのドロップダウン (D-092) ---------------------------------------
@@ -700,6 +717,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
       dense: true,
       items: [
         const RasqDropdownItem('ノード情報', 'info'),
+        // 関数の中身の編集 (D-118): fn.input → … → fn.output のサブグラフへ。
+        if (n.type.startsWith('fn:')) const RasqDropdownItem('関数の中身を編集', 'fnbody'),
         const RasqDropdownItem('プラグインストアに移動', 'store', enabled: false), // ストア統合 (M4) で有効化
         const RasqDropdownItem('コピー', 'copy'),
         RasqDropdownItem('ペースト', 'paste', enabled: _clipboard != null),
@@ -710,6 +729,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     switch (pick) {
       case 'info':
         _showNodeInfo(n);
+      case 'fnbody':
+        ref.read(routerProvider).push(Routes.nodes(n.type));
       case 'copy':
         _clipboard = n;
       case 'paste':
@@ -1075,9 +1096,18 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
     final catalog = ref.watch(nodeCatalogProvider);
     final query = _search.text.trim();
     final genres = ['すべて', ...{for (final e in catalog) e.genre}];
+    // スコープ限定ノード: ポスト先はコンポーザー (D-106)、関数入出力は
+    // 関数の中身の編集画面 (D-118) だけに出す。
+    bool scopeAllows(NodeCatalogEntry e) {
+      final scope = widget.scopeOf();
+      if (e.type == 'composer.target') return scope == 'composer';
+      if (e.type == 'fn.input' || e.type == 'fn.output') return scope.startsWith('fn:');
+      return true;
+    }
+
     final entries = [
       for (final e in catalog)
-        if (e.type != 'composer.target' || widget.scopeOf() == 'composer') // ポスト先はコンポーザー限定 (D-106)
+        if (scopeAllows(e))
           if ((_genre == 'すべて' || e.genre == _genre) && (query.isEmpty || e.title.contains(query) || (e.description ?? '').contains(query))) e,
     ];
 
@@ -1200,6 +1230,19 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
             label: const Text('キャンバスに追加'),
           ),
         ),
+        // カスタム関数 (D-118): 中身(サブグラフ)の編集へ。
+        if (e.type.startsWith('fn:'))
+          Padding(
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
+            child: TextButton.icon(
+              onPressed: () {
+                manager.close('nodeprog.detail');
+                ref.read(routerProvider).push(Routes.nodes(e.type));
+              },
+              icon: const Icon(Icons.account_tree_outlined, size: 18),
+              label: const Text('中身を編集'),
+            ),
+          ),
         // カスタム関数 (D-099) は定義ごと消せる(置き済みノードは残り、
         // カタログ欠けとしてフォールバックアイコンになる)。
         if (e.type.startsWith('fn:'))
