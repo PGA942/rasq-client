@@ -180,4 +180,43 @@ class WasmSnsSession extends SnsSessionBase {
     final value = await _call('sns.quotes', {'postId': postId, 'limit': limit, 'cursor': ?cursor});
     return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
   }
+
+  // --- カスタム絵文字 (D-111): wasm 側で取得できない問題の修正 ---
+
+  Map<String, Uri>? _emojis;
+
+  /// `call("sns.emojis")` → `{emojis: [{name, url, category?, aliases?}]}`。
+  /// 未実装プラグイン(C01 等)は空に縮退する。
+  @override
+  Future<List<EmojiInfo>> customEmojis() async {
+    try {
+      final value = await _call('sns.emojis', {});
+      final list = <EmojiInfo>[];
+      for (final e in (value['emojis'] as List? ?? const [])) {
+        if (e is! Map || e['name'] is! String || e['url'] is! String) continue;
+        final url = Uri.tryParse(e['url'] as String);
+        if (url == null) continue;
+        list.add(EmojiInfo(name: e['name'] as String, url: url, category: e['category'] as String?, aliases: [for (final a in (e['aliases'] as List? ?? const [])) a.toString()]));
+      }
+      _emojis ??= {for (final e in list) e.name: e.url};
+      return list;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// ショートコード → URL。一覧に無いローカルカスタムは Misskey 系の
+  /// `/emoji/<name>.webp` に縮退する(接続先 host は extraArgs)。
+  @override
+  Future<Uri?> emojiUrl(String shortcode) async {
+    if (_emojis == null) await customEmojis();
+    final name = shortcode.replaceAll('@.', '');
+    final hit = _emojis?[name];
+    if (hit != null) return hit;
+    final host = extraArgs['host'];
+    if (host is String && host.isNotEmpty && account.kind == SnsKind.misskey) {
+      return Uri.https(host, '/emoji/$name.webp');
+    }
+    return null;
+  }
 }

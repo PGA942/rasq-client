@@ -62,6 +62,7 @@ class RasqPostTile extends StatelessWidget {
     this.onTap,
     this.onAuthorTap,
     this.onMore,
+    this.headerAction,
     this.dense = false,
     this.threadReplyCount,
     this.padding,
@@ -104,6 +105,9 @@ class RasqPostTile extends StatelessWidget {
   /// anchor an Overlay-Manager dropdown on it. Hidden when null.
   final ValueChanged<Rect>? onMore;
 
+  /// ヘッダー右上、`…` の左に置く追加ボタン (D-111: アカウント選択 ↓ など)。
+  final Widget? headerAction;
+
   /// Smaller avatar, no outer page padding (notification 投稿タイル系).
   final bool dense;
 
@@ -130,6 +134,8 @@ class RasqPostTile extends StatelessWidget {
         ),
       ),
       RasqTimestamp(createdAt),
+      // ヘッダー右上の追加ボタン (D-111): … の左に置く(アカウント選択 ↓ 等)。
+      if (headerAction != null && !embedded) headerAction!,
       if (onMore != null && !embedded)
         Builder(
           builder: (ctx) => RasqIconButton(

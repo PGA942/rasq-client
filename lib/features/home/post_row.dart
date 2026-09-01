@@ -182,37 +182,37 @@ class _PostRowState extends ConsumerState<PostRow> {
                     }
                   },
                 ),
-              if (widget.actions.isNotEmpty)
-                RasqActionBar(items: actionItems, trailing: [
-                  // アカウント選択 (D-110): 複数アカウントに流れてきた同一投稿は
-                  // 1 枚に畳まれる — ↓ でどのアカウントとして見る/反応するかを選ぶ。
-                  if (alternates.isNotEmpty)
-                    Builder(builder: (ctx) {
-                      return RasqActionButton.icon(
-                        icon: Icons.keyboard_arrow_down,
-                        tooltip: 'アカウント選択',
-                        onTap: () async {
-                          final box = ctx.findRenderObject() as RenderBox;
-                          final manager = ref.read(overlayManagerProvider);
-                          final picked = await manager.showDropdown<Post>(
-                            id: 'post.actAs.${widget.post.key}',
-                            anchor: box.localToGlobal(Offset.zero) & box.size,
-                            dense: true,
-                            items: [
-                              RasqDropdownItem('${widget.post.account}', widget.post, checked: post.key == widget.post.key),
-                              for (final a in alternates) RasqDropdownItem('${a.account}', a, checked: post.key == a.key),
-                            ],
-                          );
-                          if (picked != null && mounted) setState(() => _actAs = picked.key == widget.post.key ? null : picked);
-                        },
-                      );
-                    }),
-                  RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {}),
-                ]),
+              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
             ]),
       onTap: widget.onTap,
       onAuthorTap: () => context.pushUser(post.author),
       onMore: (anchor) => showPostMenu(context, ref, post, anchor),
+      // アカウント選択 (D-110/D-111): 複数アカウントに流れてきた同一投稿は
+      // 1 枚に畳まれる — ヘッダー右上(… の左)の ↓ でどのアカウントとして
+      // 見る/反応するかを選ぶ(アクションバーはずらさない)。
+      headerAction: alternates.isEmpty
+          ? null
+          : Builder(builder: (ctx) {
+              return RasqIconButton(
+                icon: Icons.keyboard_arrow_down,
+                size: 20,
+                tooltip: 'アカウント選択',
+                onPressed: () async {
+                  final box = ctx.findRenderObject() as RenderBox;
+                  final manager = ref.read(overlayManagerProvider);
+                  final picked = await manager.showDropdown<Post>(
+                    id: 'post.actAs.${widget.post.key}',
+                    anchor: box.localToGlobal(Offset.zero) & box.size,
+                    dense: true,
+                    items: [
+                      RasqDropdownItem('${widget.post.account}', widget.post, checked: post.key == widget.post.key),
+                      for (final a in alternates) RasqDropdownItem('${a.account}', a, checked: post.key == a.key),
+                    ],
+                  );
+                  if (picked != null && mounted) setState(() => _actAs = picked.key == widget.post.key ? null : picked);
+                },
+              );
+            }),
     );
     // リプライ元の省略タイル (D-069): TL に流れてきたリプライは、1 つ前の
     // 投稿をワイヤーフレーム p.5(DM ルームの「1件の添付リンク」)の形で

@@ -353,6 +353,33 @@ void main() {
       expect(p.repostedBy?.handle, 'renoter');
     });
 
+    test('sns.emojis (D-111): カスタム絵文字の取得と emojiUrl(未掲載は /emoji/ 縮退)', () async {
+      final env = RasqHostEnvironment(fetch: (req) {
+        if (req.url.path.endsWith('emojis')) {
+          return SyncFetchResponse(status: 200, bodyText: jsonEncode({
+            'emojis': [
+              {'name': 'blobcat', 'url': 'https://misskey.example/files/blobcat.webp', 'category': 'ねこ'},
+            ],
+          }));
+        }
+        return const SyncFetchResponse(status: 404);
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        extraArgs: const {'host': 'misskey.example'},
+        invoke: (fn, args) async => controller.invoke(fn, args),
+      );
+      final emojis = await session.customEmojis();
+      expect(emojis.single.name, 'blobcat');
+      expect(emojis.single.url.toString(), 'https://misskey.example/files/blobcat.webp');
+      expect((await session.emojiUrl('blobcat'))?.toString(), 'https://misskey.example/files/blobcat.webp');
+      // 一覧に無いローカルカスタム(:name@.:)は /emoji/<name>.webp に縮退。
+      expect((await session.emojiUrl('unknown@.'))?.toString(), 'https://misskey.example/emoji/unknown.webp');
+    });
+
     test('sns.actions / sns.thread / sns.performAction (D-075)', () async {
       final requests = <String>[];
       final env = RasqHostEnvironment(fetch: (req) {
