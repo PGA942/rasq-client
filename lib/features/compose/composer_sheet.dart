@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -13,6 +15,10 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
 import '../../text/inline_spans.dart';
+import '../nodeprog/node_executor.dart';
+import '../nodeprog/node_graph.dart';
+import '../nodeprog/node_tabs.dart';
+import '../settings/settings_dsl.dart';
 import 'compose_providers.dart';
 import 'compose_target.dart';
 import 'emoji_picker_fow.dart';
@@ -330,6 +336,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       _cw.text = d.cw;
       _prefillPending = false;
     }
+    _scheduleTargetEval(); // ポスト先ノード (D-116): 開いた時点の内容で初回評価
   }
 
   void _applyPrefill() {
@@ -401,6 +408,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         } catch (_) {/* アプリ終了などで store ごと破棄済みなら諦める */}
       });
     }
+    _targetEval?.cancel();
     _focus.removeListener(_onFocusChanged);
     _text.dispose();
     _cw.dispose();
@@ -418,6 +426,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     _poll?.dispose();
     _poll = null;
     _error = null;
+    _suggestedPostAs = null; // 下書きが消えたのでサジェストも仕切り直し (D-116)
+    _matchedTargets = const [];
     if (widget.target is ComposeReply) _prefillPending = true; // 次の返信用に再アーム
     _focus.unfocus();
   }
@@ -439,10 +449,61 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   AccountSession? _postAs;
   bool _targetsOpen = false;
 
+  /// ポスト先ノードの実行 (D-116): 下書き内容で `composer` スコープの条件を
+  /// 評価して投稿先をサジェストする。手動選択(_postAs)が常に優先。
+  AccountSession? _suggestedPostAs;
+  List<String> _matchedTargets = const [];
+  Timer? _targetEval;
+
+  AccountSession? get _effectivePostAs => _postAs ?? _suggestedPostAs;
+
   SnsSession? get _session {
-    final t = _postAs;
+    final t = _effectivePostAs;
     if (t != null) return ref.read(pluginRegistryProvider).session(t);
     return ref.read(currentSnsSessionProvider);
+  }
+
+  void _scheduleTargetEval() {
+    if (widget.target is! ComposeNormal) return;
+    _targetEval?.cancel();
+    _targetEval = Timer(const Duration(milliseconds: 400), _evalComposerTargets);
+  }
+
+  Future<void> _evalComposerTargets() async {
+    if (!mounted) return;
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'composer');
+      if (raw == null || !mounted) return;
+      final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      final me = ref.read(currentUserProvider);
+      // 条件評価用の下書き投稿(本文/注釈/添付数が条件タグの対象)。
+      final draft = Post(
+        id: 'draft',
+        account: me.account,
+        author: me,
+        createdAt: DateTime.now(),
+        body: _text.text,
+        contentWarning: _cwOn && _cw.text.trim().isNotEmpty ? _cw.text.trim() : null,
+        media: [for (var i = 0; i < _files.length; i++) MediaItem(id: 'draft$i', type: MediaType.image, url: Uri.parse('draft:$i'))],
+      );
+      final storageArea = storageSafeAreaFor(accKey);
+      final matched = await composerTargetAccounts(graph, draft, storageRead: (slot) async => (await ref.read(settingsAreaProvider(storageArea).future))[slot]);
+      if (!mounted) return;
+      final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+      AccountSession? find(String label) =>
+          label.isEmpty || label == '現在のアカウント' ? null : sessions.where((s) => '${s.account}' == label || s.account.key == label).firstOrNull;
+      setState(() {
+        _matchedTargets = matched;
+        _suggestedPostAs = matched.isEmpty ? null : find(matched.first);
+      });
+    } catch (_) {} // グラフ未設定/読めない → サジェストなし
+  }
+
+  /// ポスト先ノードの条件に一致した順位(タイルのソート用)。不一致は末尾。
+  int _targetRank(AccountSession s) {
+    final i = _matchedTargets.indexWhere((l) => l == '${s.account}' || l == s.account.key);
+    return i < 0 ? _matchedTargets.length : i;
   }
 
   /// 投稿先のカスタマイズ (D-089/D-090): ノードプログラミング画面
@@ -455,7 +516,14 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Widget _bundleTile(ColorScheme scheme, RasqTokens tokens) {
     final rasq = ref.watch(rasqAccountProvider);
     final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
-    final selectedKey = (_postAs ?? ref.watch(currentAccountSessionProvider))?.account.key;
+    final selectedKey = (_effectivePostAs ?? ref.watch(currentAccountSessionProvider))?.account.key;
+    // ポスト先ノードの条件に一致したアカウントを上へ (D-116: 投稿内容による
+    // 投稿アカウントのソート)。一致なし/グラフなしなら元の並びのまま。
+    final ordered = [...sessions]
+      ..sort((a, b) {
+        final r = _targetRank(a).compareTo(_targetRank(b));
+        return r != 0 ? r : sessions.indexOf(a).compareTo(sessions.indexOf(b)); // 安定
+      });
     return Container(
       margin: const EdgeInsets.only(bottom: RasqSpacing.sm),
       decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)),
@@ -479,7 +547,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
           ),
         ),
         ...[
-          for (final s in sessions)
+          for (final s in ordered)
             InkWell(
               onTap: () => setState(() {
                 _postAs = s;
@@ -491,6 +559,12 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   RasqSnsPill(account: s.account, showLabel: false, dotSize: 14),
                   const SizedBox(width: RasqSpacing.sm),
                   Expanded(child: Text('${s.account}', style: RasqTypography.bodySmall.copyWith(fontWeight: s.account.key == selectedKey ? FontWeight.w700 : null), overflow: TextOverflow.ellipsis)),
+                  // ポスト先ノードの条件に一致 (D-116)。
+                  if (_targetRank(s) < _matchedTargets.length)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Tooltip(message: 'ポスト先ノードの条件に一致', child: Icon(Icons.auto_awesome, size: 14, color: scheme.onSurfaceVariant)),
+                    ),
                   if (s.account.key == selectedKey) Icon(Icons.check, size: 16, color: tokens.link),
                 ]),
               ),
@@ -615,8 +689,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
-    // 投稿先 (D-089): バンドルタイルで選んだアカウントの顔で書く。
-    final postAs = _postAs;
+    // 投稿先 (D-089): バンドルタイルで選んだ(またはポスト先ノードが
+    // サジェストした, D-116)アカウントの顔で書く。
+    final postAs = _effectivePostAs;
     final me = postAs == null
         ? ref.watch(currentUserProvider)
         : UserSummary(id: '-', account: postAs.account, displayName: postAs.displayName ?? postAs.account.handle, avatarUrl: postAs.avatarUrl);
@@ -706,7 +781,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     // 文字サイズは絵文字ピッカー(検索欄 = bodySmall)に合わせる (D-053)。
                     style: RasqTypography.bodySmall,
                     decoration: InputDecoration(hintText: _isDm ? 'メッセージを入力..' : 'いいことがありますように！', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
-                    onChanged: (_) => _syncStickHeight(),
+                    onChanged: (_) {
+                      _syncStickHeight();
+                      _scheduleTargetEval(); // ポスト先の条件を打ち直し毎に再評価 (D-116)
+                    },
                   ),
                 ]),
               ),

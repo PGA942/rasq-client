@@ -396,7 +396,7 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: 'マージ',
     icon: Icons.merge_type,
     genre: '加工',
-    description: '繋いだ投稿リストを時刻順に 1 本へ合流します(重複は除外)。',
+    description: '繋いだ投稿リストを時刻順に 1 本へ合流します。別アカウントに流れてきた同じ投稿は 1 枚に畳み、タイルの ↓ でアカウントを選べます。',
     inputs: [
       NodePort(label: '投稿リスト1', dataType: '投稿リスト'),
       NodePort(label: '投稿リスト2', dataType: '投稿リスト'),
@@ -473,14 +473,14 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     ],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
-  // ポスト先 (D-106): 投稿コンポーザーのスコープ専用。投稿先アカウントの
-  // 候補で、条件を下にぶら下げて内容で選ぶ想定(実行はコンポーザー統合で)。
+  // ポスト先 (D-106/D-116): 投稿コンポーザーのスコープ専用。下書き内容で
+  // 条件を評価し、成立したポスト先が投稿先のサジェストになる。
   NodeCatalogEntry(
     type: 'composer.target',
     title: 'ポスト先',
     icon: Icons.send_outlined,
     genre: 'コンポーザー',
-    description: '投稿先アカウントの候補。下に条件をぶら下げると、投稿内容がその条件に合うときこのアカウントが選ばれます(実行はコンポーザー統合で)。',
+    description: '投稿先アカウントの候補。下に条件をぶら下げると、投稿内容がその条件に合うときこのアカウントが投稿先になります(上に置いたものほど優先。手動で選び直せます)。',
     inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
     hasCondOut: true,
   ),

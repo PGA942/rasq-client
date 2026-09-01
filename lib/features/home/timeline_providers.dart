@@ -172,6 +172,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       return s == null ? null : ref.read(pluginRegistryProvider).session(s);
     }
 
+    // マージが中身比較で畳んだコピー (D-115) は ↓ の選択肢へ回す。
+    final merged = <String, List<Post>>{};
     final result = await runNodeGraph(
       graph,
       fetch: (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
@@ -179,12 +181,17 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
       storageRead: (slot) async => (await ref.read(settingsAreaProvider('storage.safe').future))[slot],
       storageWrite: (slot, value) => ref.read(settingsAreaProvider('storage.safe').notifier).set(slot, value),
+      onDuplicate: (kept, dropped) => merged.putIfAbsent(kept.key, () => []).add(dropped),
     );
     if (result == null) return null;
+    if (merged.isNotEmpty) {
+      Future.microtask(() => ref.read(postAlternatesProvider.notifier).recordAll(merged));
+    }
 
-    // アクション状態は所属アカウントのセッションから取り直す。
+    // アクション状態は所属アカウントのセッションから取り直す。隠したコピーの
+    // 分も取る(↓ でアカウントを切り替えたとき用)。
     final byAccount = <String, List<Post>>{};
-    for (final p in result) {
+    for (final p in [...result, for (final l in merged.values) ...l]) {
       byAccount.putIfAbsent(p.account.key, () => []).add(p);
     }
     for (final e in byAccount.entries) {
@@ -343,9 +350,12 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             return s == null ? null : ref.read(pluginRegistryProvider).session(s);
           }
 
+          // マージが中身比較で畳んだコピー (D-115) は ↓ の選択肢へ回す。
+          final merged = <String, List<Post>>{};
           final result = await runNodeGraph(
             graph,
             fetch: (kid) => resolveNodeFetch(graphSession, kid, selfKindId: kind.id, selfItems: page.items, cursor: cursor, sessionFor: sessionForAccount),
+            onDuplicate: (kept, dropped) => merged.putIfAbsent(kept.key, () => []).add(dropped),
             fetchTrends: () async => [for (final t in await graphSession.trendingTags()) t.tag],
             embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
             // TL プラグインのソートノード (D-102): tl.sort/compose の実体。
@@ -361,6 +371,9 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
           if (result != null) {
             page = Page(items: result, nextCursor: page.nextCursor);
             states = await graphSession.actionStates(result); // 別 TL 由来の投稿の分を取り直す
+            if (merged.isNotEmpty) {
+              Future.microtask(() => ref.read(postAlternatesProvider.notifier).recordAll(merged));
+            }
             // クロック → ノードのアイコン (D-095): 繋がっていれば自動更新。
             clock = nodeGraphClockInterval(graph);
           }

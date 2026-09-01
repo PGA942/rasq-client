@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:rasq_models/rasq_models.dart';
 
+import '../home/post_duplicates.dart' show postDupKey;
 import '../relational/relational_engine.dart' show charNgramProfile, cosineOfProfiles, entityOverlap, extractFeatures, extractFeaturesText;
 import 'node_graph.dart';
 
@@ -24,6 +25,8 @@ import 'node_graph.dart';
 ///   ノードは**鎖の成立に関係なく**毎実行走る(プロファイル保存グラフ)。
 /// - [terminal]: 終端ノードの type。通常 TL は `timeline`、関連 TL の
 ///   前段絞り込み (D-102) は `timeline.relational`。
+/// - [onDuplicate]: マージ (D-115) が中身比較で畳んだコピーの通知
+///   (残したコピー, 隠したコピー)。↓(アカウント選択)の選択肢に回す用。
 Future<List<Post>?> runNodeGraph(
   NodeGraph g, {
   required Future<List<Post>> Function(String kindId) fetch,
@@ -32,10 +35,11 @@ Future<List<Post>?> runNodeGraph(
   Future<List<Post>> Function(String pluginTlId, List<Post> posts)? pluginSort,
   Future<Object?> Function(String slot)? storageRead,
   Future<void> Function(String slot, Object? value)? storageWrite,
+  void Function(Post kept, Post dropped)? onDuplicate,
   String terminal = 'timeline',
 }) async {
   final byId = {for (final n in g.nodes) n.id: n};
-  final env = _ExecEnv(fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite);
+  final env = _ExecEnv(fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite, onDuplicate: onDuplicate);
 
   // storage.safe 保存ノード (D-104/D-105): **終端評価より先に**書く — 同じ
   // グラフ内の「読み出し」が同一実行で新しいプロファイルを見られるように。
@@ -62,13 +66,14 @@ Future<List<Post>?> runNodeGraph(
 
 /// 実行環境(コールバック束)。
 class _ExecEnv {
-  const _ExecEnv({required this.fetch, this.fetchTrends, this.embedTexts, this.pluginSort, this.storageRead, this.storageWrite});
+  const _ExecEnv({required this.fetch, this.fetchTrends, this.embedTexts, this.pluginSort, this.storageRead, this.storageWrite, this.onDuplicate});
   final Future<List<Post>> Function(String kindId) fetch;
   final Future<List<String>> Function()? fetchTrends;
   final Future<List<List<double>>> Function(List<String> texts)? embedTexts;
   final Future<List<Post>> Function(String pluginTlId, List<Post> posts)? pluginSort;
   final Future<Object?> Function(String slot)? storageRead;
   final Future<void> Function(String slot, Object? value)? storageWrite;
+  final void Function(Post kept, Post dropped)? onDuplicate;
 }
 
 /// 取得ノード (D-094/D-097/D-103) → fetch へ渡す kind id。取得ノードで
@@ -112,7 +117,7 @@ Future<List<Post>?> _postsOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphN
       if (posts != null) lists.add(posts);
     }
     if (lists.isEmpty) return null;
-    return mergePostLists(lists);
+    return mergePostLists(lists, onDuplicate: env.onDuplicate);
   }
   // トレンド検索結果取得 (D-106): 上位タグを検索して合流。
   if (n.type == 'trend.posts') {
@@ -127,7 +132,7 @@ Future<List<Post>?> _postsOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphN
           lists.add(await env.fetch(_withAccount(n, 'search:$tag')));
         } catch (_) {}
       }
-      return mergePostLists(lists);
+      return mergePostLists(lists, onDuplicate: env.onDuplicate);
     } catch (_) {
       return null;
     }
@@ -143,13 +148,24 @@ Future<List<Post>?> _postsOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphN
   return null;
 }
 
-/// 複数の投稿リストを時刻降順で 1 本に合流する(重複は著者キー+投稿 id)。
-List<Post> mergePostLists(List<List<Post>> lists) {
+/// 複数の投稿リストを時刻降順で 1 本に合流する。重複は 2 段階で畳む:
+/// 同一アカウント内は著者キー+投稿 id、アカウント違いの同じ投稿は中身比較
+/// ([postDupKey], D-115)。中身で畳んだコピーは [onDuplicate] へ渡す
+/// (↓ のアカウント選択肢に回す — 同一アカウント内の重複は黙って捨てる)。
+List<Post> mergePostLists(List<List<Post>> lists, {void Function(Post kept, Post dropped)? onDuplicate}) {
   final seen = <String>{};
+  final byDup = <String, Post>{};
   final out = <Post>[];
   for (final list in lists) {
     for (final p in list) {
-      if (seen.add('${p.author.key}/${p.id}')) out.add(p);
+      if (!seen.add('${p.author.key}/${p.id}')) continue;
+      final kept = byDup[postDupKey(p)];
+      if (kept != null) {
+        onDuplicate?.call(kept, p);
+        continue;
+      }
+      byDup[postDupKey(p)] = p;
+      out.add(p);
     }
   }
   out.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -572,6 +588,30 @@ Future<List<String>?> runNodeGraphTexts(
     if (texts != null) return texts;
   }
   return null;
+}
+
+/// ポスト先ノードの実行 (D-116): 下書き [draft] で各「ポスト先」の条件木を
+/// 評価し、成立したノードの「アカウント」を**上から順**(y → x)に返す。
+/// 条件を何もぶら下げていないポスト先は常に成立(デフォルト候補として
+/// 一番下に置く想定)。空文字は「現在のアカウント」の意味。
+Future<List<String>> composerTargetAccounts(
+  NodeGraph g,
+  Post draft, {
+  Future<List<List<double>>> Function(List<String> texts)? embedTexts,
+  Future<Object?> Function(String slot)? storageRead,
+}) async {
+  final byId = {for (final n in g.nodes) n.id: n};
+  final env = _ExecEnv(fetch: (_) async => const [], embedTexts: embedTexts, storageRead: storageRead);
+  final targets = g.nodes.where((n) => n.type == 'composer.target').toList()
+    ..sort((a, b) => a.y == b.y ? a.x.compareTo(b.x) : a.y.compareTo(b.y));
+  final out = <String>[];
+  for (final t in targets) {
+    final ctx = await _CondContext.prepare(g, byId, t.id, [draft], env);
+    if (_evalCondPortAt(g, byId, t.id, draft, 0, ctx)) {
+      out.add(t.inputs.where((i) => i.label == 'アカウント').firstOrNull?.value?.trim() ?? '');
+    }
+  }
+  return out;
 }
 
 /// クロック接続 (D-095): クロックメーカーの出力が**どこかのノードの

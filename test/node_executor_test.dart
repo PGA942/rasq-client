@@ -538,4 +538,50 @@ void main() {
     expect(find.text('これも残る'), findsOneWidget);
     expect(find.text('消しての投稿'), findsNothing);
   });
+
+  test('マージ: 別アカウントに流れてきた同じ投稿は 1 枚に畳んで ↓ の選択肢へ (D-115)', () async {
+    const accB = AccountId(kind: SnsKind.misskey, instance: 'other.test', handle: 'tester2');
+    const someone = UserSummary(id: 'u9', account: AccountId(kind: SnsKind.misskey, instance: 'origin.test', handle: 'someone'), displayName: '同一人物');
+    final at = DateTime(2026, 9, 1);
+    final copyA = Post(id: 'a1', account: acc, author: someone, createdAt: at, body: '同じ投稿');
+    final copyB = Post(id: 'b1', account: accB, author: someone, createdAt: at, body: '同じ投稿');
+    final onlyB = Post(id: 'b2', account: accB, author: someone, createdAt: at, body: 'こっちだけ');
+
+    final srcA = source('n1');
+    final rawB = source('n2');
+    final srcB = rawB.copyWith(inputs: [rawB.inputs[0].copyWith(value: 'local'), rawB.inputs[1]]);
+    final g = NodeGraph(
+      nodes: [srcA, srcB, step('merge', 'm1'), timelineNode('n3')],
+      edges: [data('n1', 'm1'), const GraphEdge(from: 'n2', fromPort: 0, to: 'm1', toPort: 1), data('m1', 'n3')],
+    );
+
+    Post? kept;
+    final dropped = <Post>[];
+    final out = await runNodeGraph(
+      g,
+      fetch: (kid) async => kid == 'local' ? [copyB, onlyB] : [copyA],
+      onDuplicate: (k, d) {
+        kept = k;
+        dropped.add(d);
+      },
+    );
+    expect({for (final p in out!) p.id}, {'a1', 'b2'}); // 中身が同じ b1 は畳まれる
+    expect(kept!.id, 'a1');
+    expect([for (final p in dropped) p.id], ['b1']);
+  });
+
+  test('ポスト先ノード: 下書き内容の条件で投稿先が上から順に選ばれる (D-116)', () async {
+    GraphNode target(String id, String account, Offset at) {
+      final base = builtinNodeCatalog.firstWhere((e) => e.type == 'composer.target').instantiate(id, at);
+      return base.copyWith(inputs: [base.inputs[0].copyWith(value: account)]);
+    }
+
+    // 上: 条件付き(本文に「ネタバレ」)→ サブ垢。下: 条件なし = デフォルト。
+    final g = NodeGraph(
+      nodes: [target('t1', '@sub@other.test', const Offset(0, 0)), target('t2', '@main@example.test', const Offset(0, 120)), cond('c1', value: 'ネタバレ')],
+      edges: [condEdge('t1', 'c1')],
+    );
+    expect(await composerTargetAccounts(g, post('d1', 'ネタバレ注意です')), ['@sub@other.test', '@main@example.test']);
+    expect(await composerTargetAccounts(g, post('d2', 'ただのあいさつ')), ['@main@example.test']);
+  });
 }
