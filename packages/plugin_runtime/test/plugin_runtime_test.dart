@@ -353,6 +353,52 @@ void main() {
       expect(p.repostedBy?.handle, 'renoter');
     });
 
+    test('純リノートの読み替え (D-112): repostTargetId を採取して各欄を中身のノートへ', () async {
+      final pureRenote = jsonEncode([
+        {
+          'id': 'outer1',
+          'text': null,
+          'fileIds': <Object?>[],
+          'poll': null,
+          'createdAt': '2026-09-01T12:00:00.000Z',
+          'user': {'id': 'u2', 'username': 'renoter'},
+          'renote': {
+            'id': 'inner1',
+            'text': '中身の本文',
+            'reactions': {':abunaiyo_i@.:': 2},
+            'user': {'id': 'u1', 'username': 'author'},
+          },
+        },
+      ]);
+      final asked = <String>[];
+      final env = RasqHostEnvironment(fetch: (req) {
+        asked.add('${req.url.path}:${jsonDecode(req.body ?? '{}')['noteId'] ?? ''}');
+        if (req.url.path.endsWith('notes/timeline') || req.url.path.endsWith('notes/local-timeline')) {
+          return SyncFetchResponse(status: 200, bodyText: pureRenote);
+        }
+        return const SyncFetchResponse(status: 200, bodyText: '[]');
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        extraArgs: const {'host': 'misskey.example'},
+        invoke: (fn, args) async => controller.invoke(fn, args),
+      );
+      final page = await session.timeline(TimelineKind.local, limit: 5);
+      final p = page.items.single;
+      expect(p.id, 'outer1');
+      // リアクション絵文字の URL 補完 (D-112): ローカルカスタムは /emoji/。
+      expect(p.reactionEmojis[':abunaiyo_i@.:']?.toString(), 'https://misskey.example/emoji/abunaiyo_i.webp');
+      // 各欄は中身のノート(inner1)に向く。
+      asked.clear();
+      await session.reactions(p.id, limit: 10);
+      await session.reposters(p.id, limit: 10);
+      expect(asked.where((a) => a.contains('inner1')), hasLength(2));
+      expect(asked.where((a) => a.contains('outer1')), isEmpty);
+    });
+
     test('sns.emojis (D-111): カスタム絵文字の取得と emojiUrl(未掲載は /emoji/ 縮退)', () async {
       final env = RasqHostEnvironment(fetch: (req) {
         if (req.url.path.endsWith('emojis')) {

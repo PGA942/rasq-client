@@ -92,12 +92,29 @@ class WasmSnsSession extends SnsSessionBase {
       } catch (_) {} // 宣言が取れなくてもバー無しで TL は出す
     }
     final value = await _call('sns.timeline', {'kind': kind.id, 'limit': limit, 'cursor': ?cursor});
-    return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+    final page = (value['page'] as Map? ?? const {}).cast<String, Object?>();
+    _harvestRepostTargets(page);
+    return SnsWire.pageFrom(page, account: account);
   }
+
+  /// 純リノートのアクション読み替え (D-112): ワイヤの `repostTargetId` を
+  /// 採取し、アクション/スレッド/各欄は**中身のノート**へ向ける(公式
+  /// クライアントの appearNote と同じ。Misskey セッションの D-111 と対)。
+  final Map<String, String> _repostTarget = {};
+
+  void _harvestRepostTargets(Map<String, Object?> page) {
+    for (final item in (page['items'] as List? ?? const [])) {
+      if (item is Map && item['id'] is String && item['repostTargetId'] is String) {
+        _repostTarget[item['id'] as String] = item['repostTargetId'] as String;
+      }
+    }
+  }
+
+  String _actionTarget(String postId) => _repostTarget[postId] ?? postId;
 
   @override
   Future<Thread> thread(String id) async {
-    final value = await _call('sns.thread', {'id': id});
+    final value = await _call('sns.thread', {'id': _actionTarget(id)});
     return SnsWire.threadFrom((value['thread'] as Map? ?? const {}).cast<String, Object?>(), account: account);
   }
 
@@ -106,6 +123,7 @@ class WasmSnsSession extends SnsSessionBase {
 
   @override
   Future<ActionResult> performAction(String actionId, String postId, {Map<String, Object?> args = const {}}) async {
+    postId = _actionTarget(postId); // 純リノートは中身のノートへ (D-112)
     final value = await _call('sns.performAction', {'actionId': actionId, 'postId': postId, 'args': args});
     final r = (value['result'] as Map? ?? const {}).cast<String, Object?>();
     return ActionResult(done: r['done'] == true, count: (r['count'] as num?)?.toInt(), message: r['message'] as String?);
@@ -161,6 +179,7 @@ class WasmSnsSession extends SnsSessionBase {
 
   @override
   Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30}) async {
+    postId = _actionTarget(postId); // D-112
     final value = await _call('sns.reactions', {'postId': postId, 'type': ?type, 'limit': limit, 'cursor': ?cursor});
     final page = (value['page'] as Map? ?? const {}).cast<String, Object?>();
     return Page(
@@ -171,12 +190,14 @@ class WasmSnsSession extends SnsSessionBase {
 
   @override
   Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) async {
+    postId = _actionTarget(postId); // D-112
     final value = await _call('sns.reposters', {'postId': postId, 'limit': limit, 'cursor': ?cursor});
     return SnsWire.userPageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>());
   }
 
   @override
   Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30}) async {
+    postId = _actionTarget(postId); // D-112
     final value = await _call('sns.quotes', {'postId': postId, 'limit': limit, 'cursor': ?cursor});
     return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
   }
