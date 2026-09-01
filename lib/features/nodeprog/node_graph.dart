@@ -448,7 +448,7 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '類似度 (SigLIP)',
     icon: Icons.auto_awesome_outlined,
     genre: 'ML',
-    description: '基準テキスト(または配列)と各投稿の cos 類似度を出します。ML 不達時は n-gram 類似度に縮退します。',
+    description: '基準(テキスト/配列/ベクトル)と各投稿の類似度を、この TL 内での相対値 0〜1 で出します(0.8 ≒ 上位 2 割相当)。ML 不達時は n-gram 類似度に縮退します。',
     inputs: [
       NodePort(label: '基準', value: '', dataType: 'テキスト'),
       NodePort(label: '基準リスト', dataType: 'テキスト配列'),
@@ -517,7 +517,7 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '比較',
     icon: Icons.functions,
     genre: '条件',
-    description: '数値(類似度・乱数など)としきい値を比べて True/False を返す演算子条件です。値元が未接続なら制約なし扱いです。',
+    description: '数値(類似度・乱数など)としきい値を比べて True/False を返す演算子条件です。値元が未接続・値が取れないとき(スロットが空など)は False になります。',
     inputs: [
       NodePort(label: '値元', dataType: '数値'),
       NodePort(label: '演算', value: '以上', dataType: '設定', options: ['以上', '以下', '等しい']),

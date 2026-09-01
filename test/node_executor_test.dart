@@ -193,13 +193,12 @@ void main() {
     expect(out!.first.body, contains('ラーメン')); // 類似の高い投稿が先頭
     expect([for (final p in out) p.id]..sort(), ['m1', 'm2', 'm3', 'm4']..sort()); // 消えてはいない
 
-    // 比較の値元が未接続なら制約なし(何も消えない)。
+    // 比較の値元が未接続/値が取れないときは False (D-105: 全消し事故防止)。
     g = NodeGraph(
       nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), step('compare', 'x3')],
       edges: [data('n1', 'n2'), data('n2', 'n3'), condEdge('n2', 'x3')],
     );
-    // 制約なし = 全部 true = remove は全消し(条件なしの remove と同じ挙動)。
-    expect((await runNodeGraph(g, fetch: fetchMl))!, isEmpty);
+    expect((await runNodeGraph(g, fetch: fetchMl))!, hasLength(mlPosts.length)); // 何も消えない
   });
 
   test('カスタム関数 (D-099): 条件型は分岐ごとに「または」を取り、全分岐で「かつ」', () async {
@@ -289,9 +288,10 @@ void main() {
     final sorted = await runNodeGraph(filterGraph, fetch: fetchMl, storageRead: (s) async => store[s], storageWrite: (s, v) async => store[s] = v);
     expect(sorted!.first.body, contains('ラーメン')); // プロファイルに合う投稿が先頭
 
-    // ③ ベクトル基準: 読み出し → 類似度(基準ベクトル) → 比較(以上 0.15)→ 消去。
+    // ③ ベクトル基準: 読み出し → 類似度(基準ベクトル、相対値 0〜1) →
+    //   比較(以上 0.5)→ 並べ替え: プロファイルに似た投稿が先頭へ。
     final vecGraph = NodeGraph(
-      nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), step('compare', 'x2'), step('ml.similar', 'sim'), slotted('storage.load', 'r2', 'profile')],
+      nodes: [source('n1'), step('sort', 'n2'), timelineNode('n3'), step('compare', 'x2'), step('ml.similar', 'sim'), slotted('storage.load', 'r2', 'profile')],
       edges: [
         data('n1', 'n2'), data('n2', 'n3'),
         condEdge('n2', 'x2'),
@@ -299,16 +299,29 @@ void main() {
         const GraphEdge(from: 'r2', fromPort: 1, to: 'sim', toPort: 2), // ベクトル → 基準ベクトル
       ],
     );
-    final cmp = vecGraph.nodes.firstWhere((n) => n.id == 'x2');
-    final vecGraph2 = NodeGraph(
-      nodes: [for (final n in vecGraph.nodes) n.id == 'x2' ? n.copyWith(inputs: [n.inputs[0], n.inputs[1], n.inputs[2].copyWith(value: '0.15')]) : n],
-      edges: vecGraph.edges,
+    final byVec = await runNodeGraph(vecGraph, fetch: fetchMl, storageRead: (s) async => store[s], storageWrite: (s, v) async => store[s] = v);
+    expect(byVec!.first.body, contains('ラーメン')); // 相対値の最大 = ラーメン系が先頭
+
+    // ④ 保存は終端評価より先 (D-105): 同じグラフの保存 → 読み出しが 1 回の
+    //   実行で繋がる(空ストアから 1 発でソートが効く)。
+    final store2 = <String, Object?>{};
+    final oneShot = NodeGraph(
+      nodes: [
+        step('tl.myreactions', 'r0'), step('ml.gliner', 'k0'), slotted('storage.save', 'w0', 'p2'),
+        source('n1'), step('sort', 'n2'), timelineNode('n3'), step('compare', 'x0'), step('ml.keyword', 'k9'), slotted('storage.load', 'l0', 'p2'),
+      ],
+      edges: [
+        data('r0', 'k0'),
+        const GraphEdge(from: 'k0', fromPort: 0, to: 'w0', toPort: 1),
+        data('n1', 'n2'), data('n2', 'n3'),
+        condEdge('n2', 'x0'),
+        const GraphEdge(from: 'k9', fromPort: 0, to: 'x0', toPort: 0),
+        const GraphEdge(from: 'l0', fromPort: 0, to: 'k9', toPort: 1),
+      ],
     );
-    expect(cmp.inputs[2].label, '値');
-    final removed = await runNodeGraph(vecGraph2, fetch: fetchMl, storageRead: (s) async => store[s], storageWrite: (s, v) async => store[s] = v);
-    // プロファイル(全投稿の n-gram 合算)に最も似ているラーメン投稿が消えている。
-    expect([for (final p in removed!) p.id], isNot(contains('m1')));
-    expect(removed.length, lessThan(mlPosts.length));
+    final oneShotOut = await runNodeGraph(oneShot, fetch: fetchMl, storageRead: (s) async => store2[s], storageWrite: (s, v) async => store2[s] = v);
+    expect(store2['p2'], isNotNull); // 保存が走っている
+    expect(oneShotOut!.first.body, contains('ラーメン')); // 同一実行で読めている
   });
 
   test('終端タイプ (D-102): 関連タイムラインノードは terminal 指定でだけ実行される', () async {

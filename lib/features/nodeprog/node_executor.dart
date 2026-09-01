@@ -37,15 +37,8 @@ Future<List<Post>?> runNodeGraph(
   final byId = {for (final n in g.nodes) n.id: n};
   final env = _ExecEnv(fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite);
 
-  List<Post>? result;
-  final timeline = g.nodes.where((n) => n.type == terminal).firstOrNull;
-  if (timeline != null) {
-    final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == timeline.id && e.toPort == 0).firstOrNull;
-    final up = edge == null ? null : byId[edge.from];
-    if (up != null) result = await _postsOutOf(g, byId, up, env, 0);
-  }
-
-  // storage.safe 保存ノード (D-104): スロット + データが繋がっていれば書く。
+  // storage.safe 保存ノード (D-104/D-105): **終端評価より先に**書く — 同じ
+  // グラフ内の「読み出し」が同一実行で新しいプロファイルを見られるように。
   if (storageWrite != null) {
     for (final n in g.nodes) {
       if (n.type != 'storage.save') continue;
@@ -54,7 +47,17 @@ Future<List<Post>?> runNodeGraph(
       } catch (_) {} // 保存失敗で TL は落とさない
     }
   }
-  return result;
+
+  // 終端は複数置けることがある(組み替え中など) — **完成した鎖が最初に
+  // 成立したもの**を採用する (D-105)。
+  for (final timeline in g.nodes.where((n) => n.type == terminal)) {
+    final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == timeline.id && e.toPort == 0).firstOrNull;
+    final up = edge == null ? null : byId[edge.from];
+    if (up == null) continue;
+    final result = await _postsOutOf(g, byId, up, env, 0);
+    if (result != null) return result;
+  }
+  return null;
 }
 
 /// 実行環境(コールバック束)。
@@ -290,12 +293,12 @@ bool _nodeValue(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, Post p, {
 bool _comparePredicate(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, Post p, _CondContext ctx) {
   final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == n.id && e.toPort == 0).firstOrNull;
   final source = edge == null ? null : byId[edge.from];
-  if (source == null) return true; // 値元が未接続 → 制約なし
+  if (source == null) return false; // 値元が未接続 → 不成立 (D-105: 全消し事故防止)
   final v = _numericOf(source, p, ctx);
-  if (v == null) return true;
+  if (v == null) return false; // 値が取れない(スロット空など)→ 不成立
   String cfg(String label, String fallback) => n.inputs.where((i) => i.label == label).firstOrNull?.value ?? fallback;
   final t = num.tryParse(cfg('値', ''));
-  if (t == null) return true;
+  if (t == null) return false;
   return switch (cfg('演算', '以上')) {
     '以下' => v <= t,
     '等しい' => (v - t).abs() < 1e-9,
@@ -384,7 +387,7 @@ class _CondContext {
         final src = edge == null ? null : byId[edge.from];
         if (src != null) vecRef = await _vectorOutOf(g, byId, src, env);
       }
-      if (refs.isEmpty && vecRef == null) continue; // 基準なし → スコアなし(比較は制約なしに落ちる)
+      if (refs.isEmpty && vecRef == null) continue; // 基準なし → スコアなし(比較は不成立に落ちる)
       scores[ml.id] = ml.type == 'ml.similar' ? await _similarScores(refs, vecRef, posts, env.embedTexts) : _keywordScores(refs, posts);
     }
     return _CondContext(scores);
@@ -430,6 +433,10 @@ double _cosVec(List<double> a, List<double> b) {
 
 /// SigLIP cos 類似度(基準は複数なら最良値、テキスト基準とベクトル基準は
 /// max で併合)。ゲートウェイ不達/失敗時は n-gram 類似度に縮退する。
+///
+/// 返り値は **その投稿一括の中での相対値 0〜1**(min-max 正規化, D-105)。
+/// 生 cos は縮退時 0.1〜0.3 程度と小さく「以上 0.8」等のしきい値が実質
+/// 効かないため、比較で使いやすい相対スコアに揃える(0.8 ≒ 上位 2 割相当)。
 Future<Map<String, double>> _similarScores(
     List<String> refs, Map<String, Object?>? vecRef, List<Post> posts, Future<List<List<double>>> Function(List<String>)? embedTexts) async {
   final out = <String, double>{for (final p in posts) p.key: 0.0};
@@ -467,6 +474,18 @@ Future<Map<String, double>> _similarScores(
     } else if (vecRef['kind'] == 'ngram' && vecRef['p'] is Map) {
       final profile = {for (final e in (vecRef['p'] as Map).entries) '${e.key}': ((e.value as num?) ?? 0).toDouble()};
       merge({for (final p in posts) p.key: cosineOfProfiles(profile, charNgramProfile(p.body))});
+    }
+  }
+
+  // 相対値へ正規化 (D-105): 一括の最小→0、最大→1。全投稿が同点なら 0.5。
+  if (out.isNotEmpty) {
+    final values = out.values.toList();
+    final lo = values.reduce(math.min);
+    final hi = values.reduce(math.max);
+    if ((hi - lo).abs() < 1e-12) {
+      out.updateAll((_, _) => 0.5);
+    } else {
+      out.updateAll((_, v) => (v - lo) / (hi - lo));
     }
   }
   return out;
