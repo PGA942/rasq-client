@@ -275,6 +275,31 @@ void main() {
     expect([for (final p in out!) p.id], ['y1', 'x1']);
   });
 
+  test('アカウント指定 (D-109): 取得ノードのアカウントが kind に包まれて渡る', () async {
+    final asked = <String>[];
+    Future<List<Post>> capture(String kid) async {
+      asked.add(kid);
+      return posts;
+    }
+
+    final base = step('tl.source', 'n1');
+    GraphNode withAccount(String acct) => base.copyWith(inputs: [
+          base.inputs.firstWhere((i) => i.label == 'TL').copyWith(value: 'home'),
+          base.inputs.firstWhere((i) => i.label == 'アカウント').copyWith(value: acct),
+        ]);
+
+    // アカウント指定あり → `acct:<表記>|home`。
+    var g = NodeGraph(nodes: [withAccount('@second@example.test'), timelineNode('n3')], edges: [data('n1', 'n3')]);
+    await runNodeGraph(g, fetch: capture);
+    expect(asked, ['acct:@second@example.test|home']);
+
+    // 「現在のアカウント」/空はそのまま。
+    asked.clear();
+    g = NodeGraph(nodes: [withAccount('現在のアカウント'), timelineNode('n3')], edges: [data('n1', 'n3')]);
+    await runNodeGraph(g, fetch: capture);
+    expect(asked, ['home']);
+  });
+
   test('リアクション済み取得 (D-103): fetch へ myreactions を渡す', () async {
     final asked = <String>[];
     final g = NodeGraph(nodes: [step('tl.myreactions', 'n1'), timelineNode('n3')], edges: [data('n1', 'n3')]);

@@ -88,11 +88,11 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
   final functions = ref.watch(customFunctionsProvider);
   final listNames = ref.watch(_nodeListNamesProvider).value ?? const <String>[];
   final dmPeers = ref.watch(_nodeDmPeersProvider).value ?? const <String>[];
-  // ポスト先 (D-106): ログイン済みアカウントを選択肢に。
+  // アカウント選択 (D-106/D-109): ログイン済みアカウントを選択肢に。
   final accounts = [for (final s in ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${s.account}'];
-  NodeCatalogEntry withOptions(NodeCatalogEntry e, List<String> options) {
+  final acctOptions = ['現在のアカウント', ...accounts];
+  NodeCatalogEntry withOptions(NodeCatalogEntry e, String label, List<String> options) {
     if (options.isEmpty) return e;
-    final first = e.inputs.first;
     return NodeCatalogEntry(
       type: e.type,
       title: e.title,
@@ -101,21 +101,23 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
       author: e.author,
       description: e.description,
       inputs: [
-        NodePort(label: first.label, value: first.value, dataType: first.dataType, format: first.format, options: options),
-        ...e.inputs.skip(1),
+        for (final p in e.inputs)
+          p.label == label ? NodePort(label: p.label, value: p.value, dataType: p.dataType, format: p.format, options: options) : p,
       ],
       outputs: e.outputs,
       hasCondIn: e.hasCondIn,
       hasCondOut: e.hasCondOut,
+      condBranches: e.condBranches,
     );
   }
 
   return [
     for (final e in builtinNodeCatalog)
       switch (e.type) {
-        'tl.list' => withOptions(e, listNames),
-        'tl.dm' => withOptions(e, dmPeers),
-        'composer.target' => withOptions(e, accounts),
+        'tl.list' => withOptions(withOptions(e, 'リスト', listNames), 'アカウント', acctOptions),
+        'tl.dm' => withOptions(withOptions(e, '相手', dmPeers), 'アカウント', acctOptions),
+        'tl.source' || 'tl.search' || 'tl.myreactions' || 'trend.posts' => withOptions(e, 'アカウント', acctOptions),
+        'composer.target' => withOptions(e, 'アカウント', accounts),
         _ => e,
       },
     for (final c in customs)

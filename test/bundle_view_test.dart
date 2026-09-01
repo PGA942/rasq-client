@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/home/post_duplicates.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -118,6 +119,51 @@ void main() {
     expect(s2.lastDraft?.text, 'バンドルからの投稿');
     final s1 = registry.session(session(acc1)) as FakeSnsSession;
     expect(s1.lastDraft, isNull);
+  });
+
+  testWidgets('D-110: 複数アカウントに流れてきた同一投稿は 1 枚に畳み、↓ でアカウント選択', (tester) async {
+    // 同じ著者(id+ドメイン)+ 同じ本文 — インスタンスの違いで投稿 id は別。
+    Post buzz(AccountId viewer, String id) => Post(
+        id: id,
+        account: viewer,
+        author: const UserSummary(id: 'u-pop', account: AccountId(kind: SnsKind.misskey, instance: 'home.test', handle: 'popular'), displayName: 'ポピュラー'),
+        createdAt: DateTime(2026, 9, 1, 12),
+        body: 'バズった投稿');
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [session(acc1).toJson(), session(acc2).toJson()],
+        'current': acc1.key,
+        'bundle': true,
+      }),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [buzz(v, 'b-${v.handle}'), postOf(v)]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+
+    // 総合 TL: 同一投稿は 1 枚だけ(表示崩れ対策)。
+    expect(find.text('バズった投稿'), findsOneWidget);
+    expect(find.text('tester の投稿'), findsOneWidget); // 別内容はそのまま
+    expect(find.text('second の投稿'), findsOneWidget);
+
+    // ↓(アカウント選択)は畳んだタイルにだけ出る。
+    expect(find.byTooltip('アカウント選択'), findsOneWidget);
+    await tester.tap(find.byTooltip('アカウント選択'));
+    await tester.pumpAndSettle();
+    expect(find.text('@tester@example.test'), findsOneWidget);
+    expect(find.text('@second@example.test'), findsOneWidget);
+    await tester.tap(find.text('@second@example.test'));
+    await tester.pumpAndSettle();
+
+    // 選択は保持される(開き直すと second 側にチェック)。表示は 1 枚のまま。
+    expect(find.text('バズった投稿'), findsOneWidget);
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    expect(container.read(postAlternatesProvider), isNotEmpty);
   });
 
   testWidgets('D-108: バンドルでノードTLを集合表示 — 他アカウントのタブが並び、中身は持ち主のセッションで動く', (tester) async {

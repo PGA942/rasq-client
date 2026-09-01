@@ -17,6 +17,7 @@ import '../../text/inline_spans.dart';
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
+import 'post_duplicates.dart';
 import '../relational/relational_providers.dart' show mlGatewayProvider;
 import '../settings/settings_dsl.dart';
 
@@ -129,6 +130,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     final out = <Post>[];
     final states = <String, Map<String, ActionResult>>{};
     final seen = <String>{};
+    final byDup = <String, Post>{}; // 中身の同定キー (D-110) → 残したコピー
+    final dropped = <String, List<Post>>{};
     final next = <String, String>{};
     for (final s in sessions) {
       final cursor = first ? null : _bundleCursors[s.account.key];
@@ -137,8 +140,18 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         final session = registry.session(s);
         final page = await session.timeline(TimelineKind.home, cursor: cursor);
         final st = await session.actionStates(page.items);
+        // 隠すコピーの分も含めて状態は残す(↓ でアカウントを切り替えたとき用)。
+        _applyStates(page.items, st);
         for (final p in page.items) {
           if (!seen.add('${p.author.key}/${p.id}')) continue;
+          // 中身比較の同定 (D-110): 別インスタンス経由の同じ投稿は隠して
+          // ↓(アカウント選択)の選択肢へ回す。
+          final kept = byDup[postDupKey(p)];
+          if (kept != null) {
+            dropped.putIfAbsent(kept.key, () => []).add(p);
+            continue;
+          }
+          byDup[postDupKey(p)] = p;
           out.add(p);
           final ps = st[p.id];
           if (ps != null) states[p.id] = ps;
@@ -147,6 +160,9 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       } catch (e) {
         debugPrint('bundle TL ${s.account.key}: $e');
       }
+    }
+    if (dropped.isNotEmpty) {
+      Future.microtask(() => ref.read(postAlternatesProvider.notifier).recordAll(dropped));
     }
     _bundleCursors = next;
     out.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -221,9 +237,15 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             gateway = await ref.read(mlGatewayProvider.future);
           } catch (_) {}
           final storageArea = storageSafeAreaFor(graphAccKey);
+          // アカウント指定 (D-109) の解決: 表記(@handle@instance)かキーで探す。
+          SnsSession? sessionForAccount(String label) {
+            final s = ref.read(sessionsProvider).value?.sessions.where((x) => '${x.account}' == label || x.account.key == label).firstOrNull;
+            return s == null ? null : ref.read(pluginRegistryProvider).session(s);
+          }
+
           final result = await runNodeGraph(
             graph,
-            fetch: (kid) => resolveNodeFetch(graphSession, kid, selfKindId: kind.id, selfItems: page.items, cursor: cursor),
+            fetch: (kid) => resolveNodeFetch(graphSession, kid, selfKindId: kind.id, selfItems: page.items, cursor: cursor, sessionFor: sessionForAccount),
             fetchTrends: () async => [for (final t in await graphSession.trendingTags()) t.tag],
             embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
             // TL プラグインのソートノード (D-102): tl.sort/compose の実体。
@@ -330,7 +352,16 @@ final timelineProvider = AsyncNotifierProvider.family<TimelineNotifier, Timeline
 /// 取得ノード (D-097) の kind 解決(TL/関連/トレンドで共用): リストは
 /// 名前 → id、DM は相手ハンドル → ルームの peer id をアプリ側で引く。
 /// [selfKindId] と一致する取得は [selfItems] を返す(自分の TL の再取得回避)。
-Future<List<Post>> resolveNodeFetch(SnsSession session, String kid, {String? selfKindId, List<Post> selfItems = const [], String? cursor}) async {
+Future<List<Post>> resolveNodeFetch(SnsSession session, String kid, {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor}) async {
+  // アカウント指定 (D-109): `acct:<@handle@instance>|<kind>` — そのアカウントの
+  // セッションで残りを解決する(見つからなければ渡されたセッションのまま)。
+  if (kid.startsWith('acct:')) {
+    final sep = kid.indexOf('|');
+    if (sep > 5) {
+      final other = sessionFor?.call(kid.substring(5, sep));
+      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor);
+    }
+  }
   if (selfKindId != null && kid == selfKindId) return selfItems;
   if (kid == 'myreactions') return (await session.reactedPosts(cursor: cursor)).items; // リアクション済み取得 (D-103)
   if (kid.startsWith('search:')) {

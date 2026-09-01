@@ -341,7 +341,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.download_outlined,
     genre: 'タイムライン',
     description: '選んだタイムラインを取得して、投稿リスト(RRLタグ付き)として渡します。',
-    inputs: [NodePort(label: 'TL', value: 'home', dataType: '設定', options: ['home', 'social', 'local', 'global'])],
+    inputs: [
+      NodePort(label: 'TL', value: 'home', dataType: '設定', options: ['home', 'social', 'local', 'global']),
+      NodePort(label: 'アカウント', value: '', dataType: '設定'),
+    ],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   NodeCatalogEntry(
@@ -419,7 +422,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.list_alt_outlined,
     genre: '取得',
     description: 'Misskey のリストのタイムラインを取得します(リスト名で指定)。',
-    inputs: [NodePort(label: 'リスト', value: '', dataType: '設定')],
+    inputs: [
+      NodePort(label: 'リスト', value: '', dataType: '設定'),
+      NodePort(label: 'アカウント', value: '', dataType: '設定'),
+    ],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   NodeCatalogEntry(
@@ -428,7 +434,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.search,
     genre: '取得',
     description: '検索ワードにヒットする投稿を取得します。',
-    inputs: [NodePort(label: '検索ワード', value: '', dataType: '設定')],
+    inputs: [
+      NodePort(label: '検索ワード', value: '', dataType: '設定'),
+      NodePort(label: 'アカウント', value: '', dataType: '設定'),
+    ],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   NodeCatalogEntry(
@@ -437,7 +446,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.mail_outline,
     genre: '取得',
     description: '相手(ハンドル)との DM を取得します。',
-    inputs: [NodePort(label: '相手', value: '', dataType: '設定')],
+    inputs: [
+      NodePort(label: '相手', value: '', dataType: '設定'),
+      NodePort(label: 'アカウント', value: '', dataType: '設定'),
+    ],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   NodeCatalogEntry(
@@ -455,7 +467,10 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.travel_explore,
     genre: '取得',
     description: 'いまのトレンド上位タグを検索して、その投稿を 1 本に合流して出します。',
-    inputs: [NodePort(label: 'タグ数', value: '3', dataType: '設定')],
+    inputs: [
+      NodePort(label: 'タグ数', value: '3', dataType: '設定'),
+      NodePort(label: 'アカウント', value: '', dataType: '設定'),
+    ],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   // ポスト先 (D-106): 投稿コンポーザーのスコープ専用。投稿先アカウントの
@@ -475,6 +490,7 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     icon: Icons.favorite_border,
     genre: '取得',
     description: 'TL で自分がリアクションした投稿を取得します(好みのプロファイル作りに)。',
+    inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   // ---- 生成系 ML (D-097): 類似度/キーワード一致 + 演算子条件。

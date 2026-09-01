@@ -72,17 +72,28 @@ class _ExecEnv {
 }
 
 /// 取得ノード (D-094/D-097/D-103) → fetch へ渡す kind id。取得ノードで
-/// なければ null。
+/// なければ null。「アカウント」指定 (D-109) があると `acct:<表記>|<kind>` に
+/// 包んで渡す(どのアカウントのセッションで取るかはアプリ側で解決)。
 String? _sourceKindOf(GraphNode n) {
-  String value() => n.inputs.firstOrNull?.value?.trim() ?? '';
-  return switch (n.type) {
-    'tl.source' => value().isEmpty ? 'home' : value(),
-    'tl.list' => 'list:${value()}',
-    'tl.search' => 'search:${value()}',
-    'tl.dm' => 'dm:${value()}',
+  String input(String label) => n.inputs.where((i) => i.label == label).firstOrNull?.value?.trim() ?? '';
+  final base = switch (n.type) {
+    'tl.source' => input('TL').isEmpty ? 'home' : input('TL'),
+    'tl.list' => 'list:${input('リスト')}',
+    'tl.search' => 'search:${input('検索ワード')}',
+    'tl.dm' => 'dm:${input('相手')}',
     'tl.myreactions' => 'myreactions',
     _ => null,
   };
+  if (base == null) return null;
+  return _withAccount(n, base);
+}
+
+/// 「アカウント」入力 (D-109) を kind id に包む。空/「現在のアカウント」は
+/// そのまま(現在 or 持ち主のセッション)。
+String _withAccount(GraphNode n, String kind) {
+  final acct = n.inputs.where((i) => i.label == 'アカウント').firstOrNull?.value?.trim() ?? '';
+  if (acct.isEmpty || acct == '現在のアカウント') return kind;
+  return 'acct:$acct|$kind';
 }
 
 /// [n] の投稿リスト出力を再帰評価する(取得 → 加工の任意の形)。
@@ -113,7 +124,7 @@ Future<List<Post>?> _postsOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphN
       final lists = <List<Post>>[];
       for (final tag in tags) {
         try {
-          lists.add(await env.fetch('search:$tag'));
+          lists.add(await env.fetch(_withAccount(n, 'search:$tag')));
         } catch (_) {}
       }
       return mergePostLists(lists);

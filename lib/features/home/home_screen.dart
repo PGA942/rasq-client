@@ -191,6 +191,9 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                 post: p,
                 actions: actions,
                 onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args),
+                // アカウント選択 (D-110): ↓ で切り替えたコピーで実行(所属
+                // アカウントへのルーティングは perform 側)。
+                actionsFor: (shown) => (a, {args = const {}}) => notifier.perform(shown, a, args: args),
                 onTap: () => context.pushPost(p),
                 bannerIcon: badge == null ? null : rrlIconFor(badge.icon, Icons.label_outline),
                 bannerText: badge?.text,

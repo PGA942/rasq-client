@@ -105,6 +105,8 @@ class RelationalEventScreen extends ConsumerWidget {
             post: p,
             actions: actions,
             onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args),
+            // アカウント選択 (D-110): ↓ で切り替えたコピーで実行。
+            actionsFor: (shown) => (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(shown, a, args: args),
             onTap: () => context.pushPost(p),
           ),
           const Divider(),

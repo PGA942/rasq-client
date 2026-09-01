@@ -12,6 +12,7 @@ import 'package:plugin_runtime/plugin_runtime.dart' show WasmSnsSession;
 
 import '../../app/providers.dart';
 import '../../session/session_providers.dart';
+import '../home/post_duplicates.dart';
 import '../home/timeline_providers.dart';
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
@@ -215,16 +216,30 @@ final bundleFolloweePostsProvider = FutureProvider<List<Post>>((ref) async {
   final registry = ref.watch(pluginRegistryProvider);
   final out = [...home];
   final seen = {for (final p in home) '${p.author.key}/${p.id}'};
+  // 中身比較の同定 (D-110): 複数アカウントに流れてきた同じ投稿は隠して
+  // ↓(アカウント選択)の選択肢へ回す(関連TLの表示崩れ対策)。
+  final byDup = <String, Post>{for (final p in home) postDupKey(p): p};
+  final dropped = <String, List<Post>>{};
   for (final s in sessions?.sessions ?? const <AccountSession>[]) {
     if (s.account == current?.account) continue;
     try {
       final page = await registry.session(s).timeline(TimelineKind.home, limit: 20);
       for (final p in page.items) {
-        if (seen.add('${p.author.key}/${p.id}')) out.add(p);
+        if (!seen.add('${p.author.key}/${p.id}')) continue;
+        final kept = byDup[postDupKey(p)];
+        if (kept != null) {
+          dropped.putIfAbsent(kept.key, () => []).add(p);
+          continue;
+        }
+        byDup[postDupKey(p)] = p;
+        out.add(p);
       }
     } catch (e) {
       debugPrint('bundle TL ${s.account.key}: $e');
     }
+  }
+  if (dropped.isNotEmpty) {
+    Future.microtask(() => ref.read(postAlternatesProvider.notifier).recordAll(dropped));
   }
   return out;
 });
@@ -274,10 +289,15 @@ final relationalNodePostsProvider = FutureProvider<List<Post>?>((ref) async {
     if (raw is! String) return null;
     final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
     final storageArea = storageSafeAreaFor(accKey);
+    SnsSession? sessionForAccount(String label) {
+      final s = ref.read(sessionsProvider).value?.sessions.where((x) => '${x.account}' == label || x.account.key == label).firstOrNull;
+      return s == null ? null : ref.read(pluginRegistryProvider).session(s);
+    }
+
     return await runNodeGraph(
       graph,
       terminal: 'timeline.relational',
-      fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: 'home', selfItems: home?.posts ?? const []),
+      fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: 'home', selfItems: home?.posts ?? const [], sessionFor: sessionForAccount),
       fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
       pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
       storageRead: (slot) async {
