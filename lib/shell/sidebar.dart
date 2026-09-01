@@ -132,7 +132,8 @@ class RasqSidebar extends ConsumerWidget {
                 const Divider(),
                 RasqListTile(title: 'ブックマーク', leading: const Icon(Icons.bookmark_border), chevron: false, onTap: () => go(Routes.bookmarks)),
                 RasqListTile(title: 'リスト', leading: const Icon(Icons.list_alt_outlined), chevron: false, onTap: () => go(Routes.lists)),
-                RasqListTile(title: 'プラグイン', leading: const Icon(Icons.extension_outlined), chevron: false, onTap: () {}),
+                // プラグインストア (M4 / D-120)。
+                RasqListTile(title: 'プラグイン', leading: const Icon(Icons.extension_outlined), chevron: false, onTap: () => go(Routes.store)),
                 RasqListTile(title: '全ての設定', leading: const Icon(Icons.settings_outlined), chevron: false, onTap: () => go(Routes.settings)),
                 RasqListTile(title: 'ヘルプ', leading: const Icon(Icons.help_outline), chevron: false, onTap: () {}),
               ]),

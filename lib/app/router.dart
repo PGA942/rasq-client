@@ -29,6 +29,8 @@ import '../features/users/follows_screen.dart';
 import '../features/users/user_page_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/store/plugin_page_screen.dart';
+import '../features/store/store_home_screen.dart';
 import '../features/trend/trend_screen.dart';
 import '../features/vc/vc_screen.dart';
 import '../shell/app_overlay_root.dart';
@@ -54,6 +56,10 @@ abstract final class Routes {
 
   /// ノードプログラミング画面 (D-090)。`/nodes/<scope>`。
   static String nodes(String scope) => '/nodes/${Uri.encodeComponent(scope)}';
+
+  /// プラグインストア (M4 / D-120)。
+  static const store = '/store';
+  static String storePlugin(String id) => '/store/plugin/${Uri.encodeComponent(id)}';
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -173,6 +179,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(path: Routes.catalog, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const CatalogScreen()),
+          // プラグインストア (M4 / D-120)。
+          GoRoute(path: Routes.store, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const StoreHomeScreen()),
+          GoRoute(
+              path: '/store/plugin/:id',
+              parentNavigatorKey: _appNavigatorKey,
+              builder: (_, s) => PluginPageScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
           GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const WasmPluginScreen()),
           GoRoute(
             path: Routes.login,

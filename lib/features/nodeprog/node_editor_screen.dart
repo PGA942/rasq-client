@@ -13,6 +13,7 @@ import '../../shell/app_overlay_root.dart';
 import '../../shell/headers.dart';
 import '../home/timeline_providers.dart';
 import '../settings/settings_dsl.dart';
+import '../store/store_client.dart' show storeSamplePluginId;
 import 'node_graph.dart';
 import 'node_tabs.dart';
 
@@ -482,7 +483,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
           id: nodePaletteFowId,
           semanticsLabel: 'プラグインノードを検索',
           spec: spec,
-          builder: (ctx, handle) => _NodePalettePanel(spec: spec, scopeOf: () => _scope, onAdd: (e) => _addNode(e, _viewCenter())),
+          builder: (ctx, handle) => _NodePalettePanel(spec: spec, scopeOf: () => _scope, onAdd: (e) => _addNode(e, _viewCenter()), onCreateFunction: () => _createFunction(_viewCenter())),
         )
         .whenComplete(() => router.routerDelegate.removeListener(onNavigate));
   }
@@ -719,7 +720,9 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         const RasqDropdownItem('ノード情報', 'info'),
         // 関数の中身の編集 (D-118): fn.input → … → fn.output のサブグラフへ。
         if (n.type.startsWith('fn:')) const RasqDropdownItem('関数の中身を編集', 'fnbody'),
-        const RasqDropdownItem('プラグインストアに移動', 'store', enabled: false), // ストア統合 (M4) で有効化
+        // ストア統合 (M4/D-120): プラグインノードは提供元のページへ、
+        // それ以外はストアホームへ。
+        const RasqDropdownItem('プラグインストアに移動', 'store'),
         const RasqDropdownItem('コピー', 'copy'),
         RasqDropdownItem('ペースト', 'paste', enabled: _clipboard != null),
         const RasqDropdownItem('削除', 'delete', destructive: true),
@@ -731,6 +734,10 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         _showNodeInfo(n);
       case 'fnbody':
         ref.read(routerProvider).push(Routes.nodes(n.type));
+      case 'store':
+        // v1: TL プラグインノードは同梱 wasm サンプルの掲載ページへ
+        // (独立プラグインのノード → 掲載 id の対応はノード定義配布で拡張)。
+        ref.read(routerProvider).push(n.type.startsWith('plugin:') ? Routes.storePlugin(storeSamplePluginId) : Routes.store);
       case 'copy':
         _clipboard = n;
       case 'paste':
@@ -1019,13 +1026,17 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
 /// タイルのタップで詳細情報、長押しドラッグでキャンバスへ(ドラッグ中は
 /// FOW を最小表示へ折りたたむ)。
 class _NodePalettePanel extends ConsumerStatefulWidget {
-  const _NodePalettePanel({required this.spec, required this.scopeOf, required this.onAdd});
+  const _NodePalettePanel({required this.spec, required this.scopeOf, required this.onAdd, required this.onCreateFunction});
 
   final FowSpec spec;
 
   /// 現在のエディタスコープ(コンポーザー専用ノードの出し分けに使う)。
   final String Function() scopeOf;
   final ValueChanged<NodeCatalogEntry> onAdd;
+
+  /// カスタム関数の作成 (D-119): パレットの先頭タイルから作成画面を開く
+  /// (キャンバスの空白長押しと同じダイアログ)。
+  final VoidCallback onCreateFunction;
 
   @override
   ConsumerState<_NodePalettePanel> createState() => _NodePalettePanelState();
@@ -1160,6 +1171,10 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
           ),
         ]),
     );
+    // カスタム関数の作成タイル (D-119): 空白長押しだけだと見つけにくいので、
+    // 検索(パレット)の「関数」ジャンル/すべての先頭にも作成導線を置く。
+    final showCreate = (_genre == 'すべて' || _genre == '関数') && (query.isEmpty || 'カスタム関数を作成'.contains(query));
+
     // 最小表示(折りたたみ)時はバーだけをクリップ描画 — 端数ではみ出さない。
     return LayoutBuilder(builder: (context, c) {
       if (c.maxHeight < 130) {
@@ -1168,13 +1183,25 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
       return Column(children: [
         bar,
         Expanded(
-          child: entries.isEmpty
+          child: entries.isEmpty && !showCreate
               ? const RasqEmptyView(title: 'ノードが見つかりません', hint: '検索ワードやジャンルを変えてみてください')
               : ListView.separated(
                   padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
-                  itemCount: entries.length,
+                  itemCount: entries.length + (showCreate ? 1 : 0),
                   separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (context, i) => _tile(scheme, manager, entries[i]),
+                  itemBuilder: (context, i) {
+                    if (showCreate && i == 0) {
+                      return RasqPluginTile(
+                        icon: Icons.add_circle_outline,
+                        title: 'カスタム関数を作成',
+                        subtitle: '関数',
+                        description: '条件タグまたは入出力(データ形式)を選んで、自分の関数ノードを作ります。データ関数は中身をノードで組めます。',
+                        chevron: false,
+                        onTap: widget.onCreateFunction,
+                      );
+                    }
+                    return _tile(scheme, manager, entries[i - (showCreate ? 1 : 0)]);
+                  },
                 ),
         ),
       ]);

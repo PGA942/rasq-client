@@ -176,6 +176,31 @@ void main() {
     expect(saved.genre, '関数');
   });
 
+  testWidgets('D-119: パレット(検索)の先頭タイルからもカスタム関数を作成できる', (tester) async {
+    final container = await pump(tester);
+    await tester.tap(find.byTooltip('タイムライン設定'));
+    await tester.pumpAndSettle();
+
+    // 検索欄フォーカスでパレットを展開 → 先頭に作成タイル → 作成ダイアログ。
+    await tester.tap(find.text('プラグインノードを検索'));
+    await tester.pumpAndSettle();
+    final createTile = find.text('カスタム関数を作成');
+    expect(createTile, findsOneWidget);
+    await tester.tap(createTile);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'パレット製');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('本文').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('作成'));
+    await tester.pumpAndSettle();
+
+    expect(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('パレット製')), findsOneWidget);
+    expect(container.read(customFunctionsProvider).single.name, 'パレット製');
+  });
+
   testWidgets('D-101: タブ行 — +で追加(ホームにも出る)、現在タブクリックで名前編集、…で削除', (tester) async {
     final container = await pump(tester);
     // RAi は TL のタブ行では隠す (D-103) — エディタのパレット側にだけ出る。
