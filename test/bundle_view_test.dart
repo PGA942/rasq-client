@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/nodeprog/node_graph.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -116,6 +118,46 @@ void main() {
     expect(s2.lastDraft?.text, 'バンドルからの投稿');
     final s1 = registry.session(session(acc1)) as FakeSnsSession;
     expect(s1.lastDraft, isNull);
+  });
+
+  testWidgets('D-108: バンドルでノードTLを集合表示 — 他アカウントのタブが並び、中身は持ち主のセッションで動く', (tester) async {
+    // acc2 のノード TL タブ + グラフ(取得 home → タイムライン)をアカウント
+    // 領域にシードし、総合表示で開く。
+    final src = builtinNodeCatalog.firstWhere((e) => e.type == 'tl.source').instantiate('n1', Offset.zero);
+    final tl = builtinNodeCatalog.firstWhere((e) => e.type == 'timeline').instantiate('n3', Offset.zero);
+    final graph = NodeGraph(nodes: [src.copyWith(inputs: [src.inputs[0].copyWith(value: 'home')]), tl], edges: const [GraphEdge(from: 'n1', fromPort: 0, to: 'n3', toPort: 0)]);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [session(acc1).toJson(), session(acc2).toJson()],
+        'current': acc1.key,
+        'bundle': true, // 総合表示で起動
+      }),
+      'nodeprog.${acc2.key}.tabs.v1': jsonEncode({'list': jsonEncode([{'id': 'node:9', 'label': 'セカンドTL'}])}),
+      'nodeprog.${acc2.key}.tl.node:9.v1': jsonEncode({'graph': jsonEncode(graph.toJson())}),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [postOf(v)]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+
+    // 集合表示: acc2 のタブが総合のタブ列に出る。
+    expect(find.text('セカンドTL'), findsOneWidget);
+    await tester.tap(find.text('セカンドTL'));
+    await tester.pumpAndSettle();
+    // 中身は持ち主(acc2)のセッションで実行されている。
+    expect(find.text('second の投稿'), findsOneWidget);
+    expect(find.text('tester の投稿'), findsNothing);
+
+    // 設定でオフにすると隠れる (D-108)。
+    await container.read(settingsAreaProvider('nodeprog.prefs').notifier).set('bundleTabs', false);
+    await tester.pumpAndSettle();
+    expect(find.text('セカンドTL'), findsNothing);
   });
 
   testWidgets('アカウント行の … → ログアウトでそのアカウントが外れる', (tester) async {

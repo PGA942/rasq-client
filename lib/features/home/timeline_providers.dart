@@ -16,6 +16,7 @@ import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
+import '../nodeprog/node_tabs.dart';
 import '../relational/relational_providers.dart' show mlGatewayProvider;
 import '../settings/settings_dsl.dart';
 
@@ -197,8 +198,20 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       final scope = kind.id.startsWith('tag:') ? 'trend' : 'tl.${kind.id}';
       Duration? clock;
       try {
-        final area = await ref.read(settingsAreaProvider('nodeprog.$scope').future);
-        final raw = area['graph'];
+        // アカウント分離 (D-108): グラフ/storage.safe は持ち主アカウントの
+        // 領域。ノード TL タブは作ったアカウントのグラフ + セッションで動く
+        // (バンドルの集合表示でも中身が持ち主のまま)。
+        var graphAccKey = ref.read(currentAccountProvider)?.key;
+        var graphSession = session;
+        if (kind.id.startsWith('node:')) {
+          final owner = ref.read(allNodeTabsProvider).where((t) => t.$2.id == kind.id).firstOrNull;
+          if (owner != null) {
+            graphAccKey = owner.$1;
+            final s = ref.read(sessionsProvider).value?.sessions.where((x) => x.account.key == owner.$1).firstOrNull;
+            if (s != null) graphSession = ref.read(pluginRegistryProvider).session(s);
+          }
+        }
+        final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), graphAccKey, scope);
         if (raw is String) {
           final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
           // SigLIP ゲートウェイ (D-097): あれば類似度ノードが実埋め込みを使う
@@ -207,20 +220,25 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
           try {
             gateway = await ref.read(mlGatewayProvider.future);
           } catch (_) {}
+          final storageArea = storageSafeAreaFor(graphAccKey);
           final result = await runNodeGraph(
             graph,
-            fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: kind.id, selfItems: page.items, cursor: cursor),
-            fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
+            fetch: (kid) => resolveNodeFetch(graphSession, kid, selfKindId: kind.id, selfItems: page.items, cursor: cursor),
+            fetchTrends: () async => [for (final t in await graphSession.trendingTags()) t.tag],
             embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
             // TL プラグインのソートノード (D-102): tl.sort/compose の実体。
-            pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
-            // storage.safe (D-104): 保存/読み出しノードの実体(KV 共有領域)。
-            storageRead: (slot) async => (await ref.read(settingsAreaProvider('storage.safe').future))[slot],
-            storageWrite: (slot, value) => ref.read(settingsAreaProvider('storage.safe').notifier).set(slot, value),
+            pluginSort: graphSession is! WasmSnsSession ? null : (id, posts) => (graphSession as WasmSnsSession).timelinePlugin.compose(id, posts),
+            // storage.safe (D-104/D-108): アカウント別領域(旧共有領域は読み取りフォールバック)。
+            storageRead: (slot) async {
+              final own = (await ref.read(settingsAreaProvider(storageArea).future))[slot];
+              if (own != null) return own;
+              return (await ref.read(settingsAreaProvider('storage.safe').future))[slot];
+            },
+            storageWrite: (slot, value) => ref.read(settingsAreaProvider(storageArea).notifier).set(slot, value),
           );
           if (result != null) {
             page = Page(items: result, nextCursor: page.nextCursor);
-            states = await session.actionStates(result); // 別 TL 由来の投稿の分を取り直す
+            states = await graphSession.actionStates(result); // 別 TL 由来の投稿の分を取り直す
             // クロック → ノードのアイコン (D-095): 繋がっていれば自動更新。
             clock = nodeGraphClockInterval(graph);
           }

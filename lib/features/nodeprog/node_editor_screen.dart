@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
@@ -87,6 +88,8 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
   final functions = ref.watch(customFunctionsProvider);
   final listNames = ref.watch(_nodeListNamesProvider).value ?? const <String>[];
   final dmPeers = ref.watch(_nodeDmPeersProvider).value ?? const <String>[];
+  // ポスト先 (D-106): ログイン済みアカウントを選択肢に。
+  final accounts = [for (final s in ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${s.account}'];
   NodeCatalogEntry withOptions(NodeCatalogEntry e, List<String> options) {
     if (options.isEmpty) return e;
     final first = e.inputs.first;
@@ -112,6 +115,7 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
       switch (e.type) {
         'tl.list' => withOptions(e, listNames),
         'tl.dm' => withOptions(e, dmPeers),
+        'composer.target' => withOptions(e, accounts),
         _ => e,
       },
     for (final c in customs)
@@ -160,7 +164,18 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   /// 現在のスコープ (D-101: 上側のタブ行で切り替わる)。
   late String _scope = widget.scope;
 
-  String get _area => 'nodeprog.$_scope';
+  /// グラフの持ち主アカウント (D-108: アカウント分離)。ノード TL タブは
+  /// 作ったアカウント、それ以外は現在アカウント。
+  String? get _accountKey {
+    if (_scope.startsWith('tl.node:')) {
+      final id = _scope.substring(3);
+      final owner = ref.read(allNodeTabsProvider).where((t) => t.$2.id == id).firstOrNull;
+      if (owner != null) return owner.$1;
+    }
+    return ref.read(currentAccountProvider)?.key;
+  }
+
+  String get _area => nodeprogAreaFor(_accountKey, _scope);
   String get _title => switch (_scope) {
         'composer' => '投稿先のカスタマイズ',
         'trend' => 'トレンドをカスタマイズ',
@@ -190,15 +205,11 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
       _pan = Offset.zero;
     });
     try {
-      final m = await ref.read(settingsAreaProvider(_area).future);
-      final raw = m['graph'];
+      // アカウント分離 (D-108): アカウント領域 → 旧グローバル領域の順で読む。
+      final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), _accountKey, _scope);
       if (!mounted) return;
       var g = raw is String ? NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>()) : const NodeGraph();
-      if (_scope.startsWith('tl.') && g.nodes.isEmpty) {
-        final type = _scope == 'tl.relational' ? 'timeline.relational' : 'timeline';
-        final entry = builtinNodeCatalog.firstWhere((e) => e.type == type);
-        g = NodeGraph(nodes: [entry.instantiate('n1', const Offset(100, 120))]);
-      }
+      if (g.nodes.isEmpty) g = _defaultGraph();
       setState(() {
         _graph = g;
         _loaded = true;
@@ -214,19 +225,59 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     _loadGraph();
   }
 
+  /// 空グラフのデフォルト配置 (D-101/D-107): TL 系タブは
+  /// **クロックメーカー → タイムライン取得 → タイムライン** のフルチェーン、
+  /// 関連は関連タイムライン、コンポーザーはポスト先。
+  NodeGraph _defaultGraph() {
+    GraphNode inst(String type, String id, Offset at, {String? value}) {
+      final e = builtinNodeCatalog.firstWhere((x) => x.type == type);
+      final n = e.instantiate(id, at);
+      return value == null ? n : n.copyWith(inputs: [n.inputs.first.copyWith(value: value), ...n.inputs.skip(1)]);
+    }
+
+    if (_scope == 'tl.relational') return NodeGraph(nodes: [inst('timeline.relational', 'n1', const Offset(100, 120))]);
+    if (_scope == 'composer') return NodeGraph(nodes: [inst('composer.target', 'n1', const Offset(100, 120))]);
+    final (srcType, srcValue) = switch (_scope) {
+      'tl.social' => ('tl.source', 'social'),
+      'tl.home' => ('tl.source', 'home'),
+      'tl.local' => ('tl.source', 'local'),
+      'tl.global' => ('tl.source', 'global'),
+      'trend.following' => ('tl.source', 'home'),
+      'trend' || 'trend.users' => ('tl.search', ''),
+      _ => ('tl.source', 'home'), // node:<id> など
+    };
+    return NodeGraph(
+      nodes: [
+        inst('clock', 'n1', const Offset(24, 32)),
+        inst(srcType, 'n2', const Offset(64, 214), value: srcValue),
+        inst('timeline', 'n3', const Offset(300, 120)),
+      ],
+      edges: const [
+        GraphEdge(from: 'n1', fromPort: 0, to: 'n2', toPort: 0, toIcon: true),
+        GraphEdge(from: 'n2', fromPort: 0, to: 'n3', toPort: 0),
+      ],
+    );
+  }
+
   // ---- タブ行 (D-101) -------------------------------------------------------
 
   /// (スコープ, ラベル, ユーザー作成か)。基本タブ + ノードTLタブ。
+  /// トレンドのエディタは ノート/フォロー中/ユーザー のタブ (D-107)。
   List<(String, String, bool)> _tabs() {
+    if (_scope.startsWith('trend')) {
+      return const [('trend', 'ノート', false), ('trend.following', 'フォロー中', false), ('trend.users', 'ユーザー', false)];
+    }
     final nodeTabs = ref.watch(nodeTabsProvider);
     final tabs = <(String, String, bool)>[
       ('tl.social', 'おすすめ', false),
       ('tl.home', 'フォロー中', false),
       ('tl.relational', '関連', false),
+      ('tl.local', 'ローカル', false),
+      ('tl.global', 'グローバル', false),
       for (final t in nodeTabs) ('tl.${t.id}', t.label, true),
     ];
     if (_scope.startsWith('tl.') && !tabs.any((t) => t.$1 == _scope)) {
-      tabs.insert(0, (_scope, _scope.substring(3), false)); // local 等、列にない基本 TL
+      tabs.insert(0, (_scope, _scope.substring(3), false)); // 列にない基本 TL
     }
     return tabs;
   }
@@ -269,7 +320,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
               ]),
             ),
           ),
-          RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
+          if (_scope.startsWith('tl.')) RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
         ]),
       ),
     );
@@ -312,21 +363,25 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
 
   Future<void> _deleteTab(String scope) async {
     final id = scope.substring(3);
-    await saveNodeTabs(ref, [for (final t in ref.read(nodeTabsProvider)) if (t.id != id) t]);
-    await ref.read(settingsAreaProvider('nodeprog.$scope').notifier).set('graph', null);
+    final tabs = ref.read(nodeTabsProvider);
+    if (!tabs.any((t) => t.id == id)) return; // 他アカウントのタブは消せない (D-108)
+    await saveNodeTabs(ref, [for (final t in tabs) if (t.id != id) t]);
+    await ref.read(settingsAreaProvider(_area).notifier).set('graph', null);
     if (mounted) _switchScope('tl.home');
   }
 
-  /// … メニュー (D-101): タブ名を変更/タブを削除(ユーザータブのみ)/
-  /// グラフをクリア。
+  /// … メニュー (D-101/D-108): タブ名を変更/タブを削除(自分のユーザー
+  /// タブのみ)/グラフをクリア/バンドルの集合表示切替。
   Future<void> _moreMenu(BuildContext buttonContext) async {
     final box = buttonContext.findRenderObject() as RenderBox;
     final anchor = box.localToGlobal(Offset.zero) & box.size;
-    final isNodeTab = _scope.startsWith('tl.node:');
+    final ownTab = _scope.startsWith('tl.node:') && ref.read(nodeTabsProvider).any((t) => 'tl.${t.id}' == _scope);
+    final bundleTabs = ref.read(bundleNodeTabsVisibleProvider);
     final pick = await _manager.showDropdown<String>(id: 'nodeprog.more', anchor: anchor, dense: true, items: [
-      RasqDropdownItem('タブ名を変更', 'rename', enabled: isNodeTab),
-      RasqDropdownItem('タブを削除', 'deleteTab', enabled: isNodeTab, destructive: true),
+      RasqDropdownItem('タブ名を変更', 'rename', enabled: ownTab),
+      RasqDropdownItem('タブを削除', 'deleteTab', enabled: ownTab, destructive: true),
       const RasqDropdownItem('グラフをクリア', 'clear'),
+      RasqDropdownItem('バンドルでノードTLを集合表示', 'bundleTabs', checked: bundleTabs),
     ]);
     if (!mounted) return;
     switch (pick) {
@@ -337,6 +392,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
       case 'clear':
         await ref.read(settingsAreaProvider(_area).notifier).set('graph', null);
         if (mounted) await _loadGraph();
+      case 'bundleTabs':
+        await ref.read(settingsAreaProvider('nodeprog.prefs').notifier).set('bundleTabs', !bundleTabs);
     }
   }
 
@@ -375,7 +432,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
           id: nodePaletteFowId,
           semanticsLabel: 'プラグインノードを検索',
           spec: spec,
-          builder: (ctx, handle) => _NodePalettePanel(spec: spec, onAdd: (e) => _addNode(e, _viewCenter())),
+          builder: (ctx, handle) => _NodePalettePanel(spec: spec, scopeOf: () => _scope, onAdd: (e) => _addNode(e, _viewCenter())),
         )
         .whenComplete(() => router.routerDelegate.removeListener(onNavigate));
   }
@@ -820,7 +877,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
             return RasqIconButton(icon: Icons.more_horiz, tooltip: 'その他', onPressed: () => _moreMenu(ctx));
           }),
         ],
-        bottom: _scope.startsWith('tl.') ? _tabBar() : null,
+        bottom: _scope.startsWith('tl.') || _scope.startsWith('trend') ? _tabBar() : null,
       ),
       // ノード検索の再呼び出し (D-096/D-101): FAB — パレット FOW が開いて
       // いる間はその下に隠れる位置。
@@ -906,9 +963,12 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
 /// タイルのタップで詳細情報、長押しドラッグでキャンバスへ(ドラッグ中は
 /// FOW を最小表示へ折りたたむ)。
 class _NodePalettePanel extends ConsumerStatefulWidget {
-  const _NodePalettePanel({required this.spec, required this.onAdd});
+  const _NodePalettePanel({required this.spec, required this.scopeOf, required this.onAdd});
 
   final FowSpec spec;
+
+  /// 現在のエディタスコープ(コンポーザー専用ノードの出し分けに使う)。
+  final String Function() scopeOf;
   final ValueChanged<NodeCatalogEntry> onAdd;
 
   @override
@@ -982,7 +1042,8 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
     final genres = ['すべて', ...{for (final e in catalog) e.genre}];
     final entries = [
       for (final e in catalog)
-        if ((_genre == 'すべて' || e.genre == _genre) && (query.isEmpty || e.title.contains(query) || (e.description ?? '').contains(query))) e,
+        if (e.type != 'composer.target' || widget.scopeOf() == 'composer') // ポスト先はコンポーザー限定 (D-106)
+          if ((_genre == 'すべて' || e.genre == _genre) && (query.isEmpty || e.title.contains(query) || (e.description ?? '').contains(query))) e,
     ];
 
     _scheduleFit();

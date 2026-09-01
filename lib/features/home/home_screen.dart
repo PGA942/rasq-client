@@ -34,9 +34,17 @@ class HomeScreen extends ConsumerWidget {
     final session = ref.watch(currentSnsSessionProvider);
     // カスタム TL (M5e / D-080): TL プラグインの宣言をタブに足す。
     final customs = ref.watch(customTimelinesProvider).value ?? const <CustomTimelineSpec>[];
-    // ノードTLタブ (D-101): ノードエディタの「+」で作ったタブ。
+    // ノードTLタブ (D-101): ノードエディタの「+」で作ったタブ。総合表示では
+    // **全アカウント分を集合表示** (D-108、… メニューの設定でオフにできる)。
     final nodeTabs = ref.watch(nodeTabsProvider);
-    final kinds = bundle ? const [TimelineKind.bundle, TimelineKind.relational] : _tabKinds(session, customs, nodeTabs);
+    final kinds = bundle
+        ? [
+            TimelineKind.bundle,
+            TimelineKind.relational,
+            if (ref.watch(bundleNodeTabsVisibleProvider))
+              for (final (_, t) in ref.watch(allNodeTabsProvider)) TimelineKind(t.id, t.label),
+          ]
+        : _tabKinds(session, customs, nodeTabs);
     final tabs = [for (final k in kinds) RasqTabItem(_label(k), id: k.id)];
     final initial = kinds.indexOf(bundle ? TimelineKind.bundle : TimelineKind.home).clamp(0, kinds.length - 1);
 

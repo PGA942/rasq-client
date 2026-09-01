@@ -16,11 +16,11 @@ import 'support/fakes.dart';
 /// 縦接続: 数珠繋ぎ = かつ、並列 = または、Not = 否定)→ タイムライン。
 void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
-  Post post(String id, String body, {int reactions = 0, int media = 0}) => Post(
+  Post post(String id, String body, {int reactions = 0, int media = 0, DateTime? at}) => Post(
       id: id,
       account: acc,
       author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'),
-      createdAt: DateTime(2026, 8, 31),
+      createdAt: at ?? DateTime(2026, 8, 31),
       body: body,
       reactions: reactions == 0 ? const {} : {'👍': reactions},
       media: [for (var i = 0; i < media; i++) MediaItem(id: 'm$i', type: MediaType.image, url: Uri.parse('https://x.invalid/$i.png'))]);
@@ -236,6 +236,43 @@ void main() {
       edges: [data('n1', 'f2'), data('f2', 'n3')],
     );
     expect([for (final p in (await runNodeGraph(g, fetch: fetch))!) p.id], ['p1', 'p2', 'p3', 'p4']);
+  });
+
+  test('マージ (D-106): 複数の投稿リストを時刻降順で 1 本へ(重複除外)', () async {
+    final listA = [post('a1', 'A新しい', at: DateTime(2026, 9, 1, 12)), post('dup', '共通', at: DateTime(2026, 9, 1, 10))];
+    final listB = [post('b1', 'B最新', at: DateTime(2026, 9, 1, 13)), post('dup', '共通', at: DateTime(2026, 9, 1, 10)), post('b2', 'B古い', at: DateTime(2026, 9, 1, 9))];
+    GraphNode src(String id, String tl) {
+      final base = step('tl.source', id);
+      return base.copyWith(inputs: [base.inputs[0].copyWith(value: tl)]);
+    }
+
+    final g = NodeGraph(
+      nodes: [src('n1', 'home'), src('n2', 'local'), step('merge', 'm1'), timelineNode('n3')],
+      edges: [
+        const GraphEdge(from: 'n1', fromPort: 0, to: 'm1', toPort: 0),
+        const GraphEdge(from: 'n2', fromPort: 0, to: 'm1', toPort: 1),
+        data('m1', 'n3'),
+      ],
+    );
+    final out = await runNodeGraph(g, fetch: (kid) async => kid == 'home' ? listA : listB);
+    expect([for (final p in out!) p.id], ['b1', 'a1', 'dup', 'b2']); // 時刻降順・重複 1 回
+  });
+
+  test('トレンド検索結果取得 (D-106): 上位タグを検索して合流', () async {
+    final asked = <String>[];
+    final base = step('trend.posts', 't1');
+    final t = base.copyWith(inputs: [base.inputs[0].copyWith(value: '2')]);
+    final g = NodeGraph(nodes: [t, timelineNode('n3')], edges: [data('t1', 'n3')]);
+    final out = await runNodeGraph(
+      g,
+      fetch: (kid) async {
+        asked.add(kid);
+        return kid == 'search:x' ? [post('x1', 'xの投稿', at: DateTime(2026, 9, 1, 10))] : [post('y1', 'yの投稿', at: DateTime(2026, 9, 1, 11))];
+      },
+      fetchTrends: () async => ['x', 'y', 'z'],
+    );
+    expect(asked, ['search:x', 'search:y']); // タグ数 2 で打ち切り
+    expect([for (final p in out!) p.id], ['y1', 'x1']);
   });
 
   test('リアクション済み取得 (D-103): fetch へ myreactions を渡す', () async {

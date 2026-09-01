@@ -90,6 +90,37 @@ Future<List<Post>?> _postsOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphN
   if (depth > 16) return null;
   final sourceKind = _sourceKindOf(n);
   if (sourceKind != null) return env.fetch(sourceKind);
+  // マージ (D-106): 全入力の投稿リストを時刻順に 1 本へ(重複除外)。
+  if (n.type == 'merge') {
+    final lists = <List<Post>>[];
+    for (final e in g.edges) {
+      if (e.cond || e.toIcon || e.to != n.id) continue;
+      final up = byId[e.from];
+      if (up == null) continue;
+      final posts = await _postsOutOf(g, byId, up, env, depth + 1);
+      if (posts != null) lists.add(posts);
+    }
+    if (lists.isEmpty) return null;
+    return mergePostLists(lists);
+  }
+  // トレンド検索結果取得 (D-106): 上位タグを検索して合流。
+  if (n.type == 'trend.posts') {
+    if (env.fetchTrends == null) return null;
+    try {
+      final count = int.tryParse(n.inputs.firstOrNull?.value?.trim() ?? '') ?? 3;
+      final tags = (await env.fetchTrends!()).take(count.clamp(1, 10)).toList();
+      if (tags.isEmpty) return const [];
+      final lists = <List<Post>>[];
+      for (final tag in tags) {
+        try {
+          lists.add(await env.fetch('search:$tag'));
+        } catch (_) {}
+      }
+      return mergePostLists(lists);
+    } catch (_) {
+      return null;
+    }
+  }
   if (n.type == 'sort' || n.type == 'remove' || n.type.startsWith('plugin:') || n.type.startsWith('fn:')) {
     final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == n.id && e.toPort == 0).firstOrNull;
     final up = edge == null ? null : byId[edge.from];
@@ -99,6 +130,19 @@ Future<List<Post>?> _postsOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphN
     return _applyStep(g, byId, n, posts, env);
   }
   return null;
+}
+
+/// 複数の投稿リストを時刻降順で 1 本に合流する(重複は著者キー+投稿 id)。
+List<Post> mergePostLists(List<List<Post>> lists) {
+  final seen = <String>{};
+  final out = <Post>[];
+  for (final list in lists) {
+    for (final p in list) {
+      if (seen.add('${p.author.key}/${p.id}')) out.add(p);
+    }
+  }
+  out.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return out;
 }
 
 Future<List<Post>> _applyStep(NodeGraph g, Map<String, GraphNode> byId, GraphNode step, List<Post> posts, _ExecEnv env) async {

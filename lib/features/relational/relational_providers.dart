@@ -15,6 +15,7 @@ import '../../session/session_providers.dart';
 import '../home/timeline_providers.dart';
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
+import '../nodeprog/node_tabs.dart';
 import '../settings/settings_dsl.dart';
 import 'relational_engine.dart';
 import 'relational_ml.dart';
@@ -266,18 +267,25 @@ final relationalNodePostsProvider = FutureProvider<List<Post>?>((ref) async {
   if (session == null) return null;
   final home = ref.watch(timelineProvider(TimelineKind.home)).value;
   try {
-    final area = await ref.watch(settingsAreaProvider('nodeprog.tl.relational').future);
-    final raw = area['graph'];
+    // アカウント分離 (D-108): 現在アカウントの領域(旧共有領域は読み取り
+    // フォールバック)。
+    final accKey = ref.watch(currentAccountProvider)?.key;
+    final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'tl.relational');
     if (raw is! String) return null;
     final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+    final storageArea = storageSafeAreaFor(accKey);
     return await runNodeGraph(
       graph,
       terminal: 'timeline.relational',
       fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: 'home', selfItems: home?.posts ?? const []),
       fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
       pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
-      storageRead: (slot) async => (await ref.read(settingsAreaProvider('storage.safe').future))[slot],
-      storageWrite: (slot, value) => ref.read(settingsAreaProvider('storage.safe').notifier).set(slot, value),
+      storageRead: (slot) async {
+        final own = (await ref.read(settingsAreaProvider(storageArea).future))[slot];
+        if (own != null) return own;
+        return (await ref.read(settingsAreaProvider('storage.safe').future))[slot];
+      },
+      storageWrite: (slot, value) => ref.read(settingsAreaProvider(storageArea).notifier).set(slot, value),
     );
   } catch (e) {
     debugPrint('nodeprog(tl.relational): $e');

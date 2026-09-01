@@ -387,6 +387,20 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     hasCondIn: true,
     hasCondOut: true,
   ),
+  // マージ (D-106): 複数の投稿リストを 1 本のタイムラインへ合流。
+  NodeCatalogEntry(
+    type: 'merge',
+    title: 'マージ',
+    icon: Icons.merge_type,
+    genre: '加工',
+    description: '繋いだ投稿リストを時刻順に 1 本へ合流します(重複は除外)。',
+    inputs: [
+      NodePort(label: '投稿リスト1', dataType: '投稿リスト'),
+      NodePort(label: '投稿リスト2', dataType: '投稿リスト'),
+      NodePort(label: '投稿リスト3', dataType: '投稿リスト'),
+    ],
+    outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
   // 関連プラグインノード (D-102): 関連 TL の**前段絞り込み**の終端。
   // 処理系(会話イベント構築)はそのまま — 繋いだ投稿リストがフォロイー
   // 入力の代わりになるだけ(通常 TL のタイムラインノードの置き換え)。
@@ -433,6 +447,27 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     genre: '取得',
     description: 'いまのトレンドタグを文字列の配列として出します(類似度/キーワードの入力に)。',
     outputs: [NodePort(label: 'タグ', dataType: 'テキスト配列')],
+  ),
+  // トレンド検索結果取得 (D-106): トレンド上位タグを検索して投稿リストに。
+  NodeCatalogEntry(
+    type: 'trend.posts',
+    title: 'トレンド検索結果取得',
+    icon: Icons.travel_explore,
+    genre: '取得',
+    description: 'いまのトレンド上位タグを検索して、その投稿を 1 本に合流して出します。',
+    inputs: [NodePort(label: 'タグ数', value: '3', dataType: '設定')],
+    outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
+  // ポスト先 (D-106): 投稿コンポーザーのスコープ専用。投稿先アカウントの
+  // 候補で、条件を下にぶら下げて内容で選ぶ想定(実行はコンポーザー統合で)。
+  NodeCatalogEntry(
+    type: 'composer.target',
+    title: 'ポスト先',
+    icon: Icons.send_outlined,
+    genre: 'コンポーザー',
+    description: '投稿先アカウントの候補。下に条件をぶら下げると、投稿内容がその条件に合うときこのアカウントが選ばれます(実行はコンポーザー統合で)。',
+    inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
+    hasCondOut: true,
   ),
   NodeCatalogEntry(
     type: 'tl.myreactions',

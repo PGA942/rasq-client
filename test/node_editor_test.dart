@@ -86,17 +86,25 @@ void main() {
     await tester.pumpAndSettle();
 
     // タイルには 1 行の入出力情報。タップで詳細 → 「キャンバスに追加」。
+    // (クロック/取得/タイムラインはデフォルト配置済み D-107 — 追加対象は
+    // ファイルリーダーにする。)
     expect(find.textContaining('入力: 間隔(数値)'), findsOneWidget);
-    await tester.tap(find.text('クロックメーカー'));
+    expect(onCanvas(find.text('クロックメーカー')), findsOneWidget); // デフォルトのフルチェーン
+    expect(onCanvas(find.text('タイムライン取得')), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'ファイルリーダー'); // 検索で絞る
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ファイルリーダー').last);
     await tester.pumpAndSettle();
     expect(find.text('キャンバスに追加'), findsOneWidget); // 詳細情報シート
-    expect(find.text('条件(下辺)'), findsNothing); // クロックに条件接続部はない
+    expect(find.text('条件(下辺)'), findsNothing); // ファイルリーダーに条件接続部はない
     await tester.tap(find.text('キャンバスに追加'));
     await tester.pumpAndSettle();
-    expect(onCanvas(find.text('クロックメーカー')), findsOneWidget);
+    expect(onCanvas(find.text('ファイルリーダー')), findsOneWidget);
 
     // 長押しドラッグでキャンバスへ(ドラッグ中は FOW が最小表示へ)。
-    final gesture = await tester.startGesture(tester.getCenter(find.text('ランダム').hitTestable()));
+    await tester.enterText(find.byType(TextField).last, 'ランダム'); // 検索し直す
+    await tester.pumpAndSettle();
+    final gesture = await tester.startGesture(tester.getCenter(find.text('ランダム').hitTestable().last)); // .first は検索欄の入力値
     await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
     // FOW(下側)より上、かつクロックメーカーのカードに被らない位置へ。
     await gesture.moveTo(const Offset(300, 170));
@@ -105,24 +113,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(onCanvas(find.text('ランダム')), findsOneWidget);
 
-    // KV に保存されている(scope = tl.home)。
-    final saved = (await container.read(settingsAreaProvider('nodeprog.tl.home').future))['graph'];
+    // KV に保存されている(scope = tl.home、アカウント分離 D-108)。
+    final saved = (await container.read(settingsAreaProvider('nodeprog.${fakeSession().account.key}.tl.home').future))['graph'];
     expect(saved, isA<String>());
     final graph = NodeGraph.fromJson((jsonDecode(saved! as String) as Map).cast<String, Object?>());
-    expect({for (final n in graph.nodes) n.type}, {'timeline', 'clock', 'random'}); // タイムラインノードはデフォルト配置 (D-101)
+    expect({for (final n in graph.nodes) n.type}, {'timeline', 'clock', 'tl.source', 'file', 'random'}); // フルチェーンがデフォルト配置 (D-107)
 
     // ノードのクリック → ドロップダウン (D-092): コピー/ペースト/削除。
-    await tester.tap(onCanvas(find.text('クロックメーカー')));
+    await tester.tap(onCanvas(find.text('ファイルリーダー')));
     await tester.pumpAndSettle();
     expect(find.text('ノード情報'), findsOneWidget);
     expect(find.text('プラグインストアに移動'), findsOneWidget); // 一旦無効
     await tester.tap(find.text('コピー'));
     await tester.pumpAndSettle();
-    await tester.tap(onCanvas(find.text('クロックメーカー')));
+    await tester.tap(onCanvas(find.text('ファイルリーダー')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ペースト'));
     await tester.pumpAndSettle();
-    expect(onCanvas(find.text('クロックメーカー')), findsNWidgets(2));
+    expect(onCanvas(find.text('ファイルリーダー')), findsNWidgets(2));
 
     await tester.tap(onCanvas(find.text('ランダム')));
     await tester.pumpAndSettle();
@@ -130,12 +138,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(onCanvas(find.text('ランダム')), findsNothing);
 
-    // 戻って開き直してもノードが残る(クロック×2)。
+    // 戻って開き直してもノードが残る(ファイルリーダー×2)。
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('タイムライン設定'));
     await tester.pumpAndSettle();
-    expect(onCanvas(find.text('クロックメーカー')), findsNWidgets(2));
+    expect(onCanvas(find.text('ファイルリーダー')), findsNWidgets(2));
   });
 
   testWidgets('D-099: 空白の長押し → カスタム関数の作成画面 → 作成でノードが置かれ、定義が残る', (tester) async {
@@ -190,8 +198,13 @@ void main() {
     expect(container.read(nodeTabsProvider), hasLength(1));
     expect(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('マイTL')), findsOneWidget);
 
-    // 今開いているタブをクリック → 名前編集。
-    await tester.tap(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('マイTL')));
+    // 今開いているタブをクリック → 名前編集(タブ行は横スクロールなので
+    // 端のタブは寄せてからタップ)。
+    final tabRow = find.descendant(of: find.byType(NodeEditorScreen), matching: find.byType(SingleChildScrollView)).first;
+    final myTab = find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('マイTL'));
+    await tester.dragUntilVisible(myTab, tabRow, const Offset(-80, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(myTab);
     await tester.pumpAndSettle();
     expect(find.text('タブ名を変更'), findsOneWidget);
     await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), '推しTL');
@@ -199,21 +212,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(nodeTabsProvider).single.label, '推しTL');
 
-    // ホームのタブ列にも出る。
-    await tester.tap(find.byTooltip('戻る'));
-    await tester.pumpAndSettle();
-    expect(find.text('推しTL'), findsOneWidget);
-
-    // … メニューから削除。
-    await tester.tap(find.text('推しTL'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('タイムライン設定'));
-    await tester.pumpAndSettle();
+    // … メニューから削除(開いているタブ = 自分のタブ)。
     await tester.tap(find.byTooltip('その他'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('タブを削除'));
     await tester.pumpAndSettle();
     expect(container.read(nodeTabsProvider), isEmpty);
+
+    // ホームのタブ列からも消えている。
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    expect(find.text('推しTL'), findsNothing);
   });
 
   testWidgets('D-096: パレット FOW を閉じても「ノードを検索」ボタンで開き直せる', (tester) async {
