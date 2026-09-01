@@ -13,6 +13,7 @@ import '../../shell/headers.dart';
 import '../home/timeline_providers.dart';
 import '../settings/settings_dsl.dart';
 import 'node_graph.dart';
+import 'node_tabs.dart';
 
 /// ノードプログラミング画面 (D-090/D-092): TL 選択行の設定ボタン/トレンド/
 /// コンポーザーの「投稿先のカスタマイズ」から開く。GUI ノードをキャンバスに
@@ -156,8 +157,11 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   /// [cond] のときは縦の条件接続で、isOutput=true は下辺(condOut)始まり。
   ({String node, int port, bool isOutput, bool cond, Offset pos})? _drag;
 
-  String get _area => 'nodeprog.${widget.scope}';
-  String get _title => switch (widget.scope) {
+  /// 現在のスコープ (D-101: 上側のタブ行で切り替わる)。
+  late String _scope = widget.scope;
+
+  String get _area => 'nodeprog.$_scope';
+  String get _title => switch (_scope) {
         'composer' => '投稿先のカスタマイズ',
         'trend' => 'トレンドをカスタマイズ',
         _ => 'タイムラインをカスタマイズ',
@@ -170,20 +174,170 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   void initState() {
     super.initState();
     _manager = ref.read(overlayManagerProvider);
-    Future.microtask(() async {
-      try {
-        final m = await ref.read(settingsAreaProvider(_area).future);
-        final raw = m['graph'];
-        if (!mounted) return;
-        setState(() {
-          if (raw is String) _graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
-          _loaded = true;
-        });
-      } catch (_) {
-        if (mounted) setState(() => _loaded = true);
-      }
-    });
+    _loadGraph();
     WidgetsBinding.instance.addPostFrameCallback((_) => _openPalette());
+  }
+
+  /// スコープのグラフを読み込む。空なら**タイムラインノードをデフォルト
+  /// 配置** (D-101 — 関連スコープは関連タイムラインノード)。保存はユーザー
+  /// が何か編集したときに全体ごと入る。
+  Future<void> _loadGraph() async {
+    setState(() {
+      _loaded = false;
+      _graph = const NodeGraph();
+      _selected = null;
+      _drag = null;
+      _pan = Offset.zero;
+    });
+    try {
+      final m = await ref.read(settingsAreaProvider(_area).future);
+      final raw = m['graph'];
+      if (!mounted) return;
+      var g = raw is String ? NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>()) : const NodeGraph();
+      if (_scope.startsWith('tl.') && g.nodes.isEmpty) {
+        final type = _scope == 'tl.relational' ? 'timeline.relational' : 'timeline';
+        final entry = builtinNodeCatalog.firstWhere((e) => e.type == type);
+        g = NodeGraph(nodes: [entry.instantiate('n1', const Offset(100, 120))]);
+      }
+      setState(() {
+        _graph = g;
+        _loaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loaded = true);
+    }
+  }
+
+  void _switchScope(String next) {
+    if (next == _scope) return;
+    setState(() => _scope = next);
+    _loadGraph();
+  }
+
+  // ---- タブ行 (D-101) -------------------------------------------------------
+
+  /// (スコープ, ラベル, ユーザー作成か)。基本タブ + ノードTLタブ。
+  List<(String, String, bool)> _tabs() {
+    final nodeTabs = ref.watch(nodeTabsProvider);
+    final tabs = <(String, String, bool)>[
+      ('tl.social', 'おすすめ', false),
+      ('tl.home', 'フォロー中', false),
+      ('tl.relational', '関連', false),
+      for (final t in nodeTabs) ('tl.${t.id}', t.label, true),
+    ];
+    if (_scope.startsWith('tl.') && !tabs.any((t) => t.$1 == _scope)) {
+      tabs.insert(0, (_scope, _scope.substring(3), false)); // local 等、列にない基本 TL
+    }
+    return tabs;
+  }
+
+  /// 上側のタブ行: 今開いているタブをクリックで名前編集(ユーザータブのみ)、
+  /// 「+」でタブ追加。
+  PreferredSizeWidget _tabBar() {
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = RasqTokens.of(context);
+    final tabs = _tabs();
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(40),
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
+        child: Row(children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
+              child: Row(children: [
+                for (final t in tabs)
+                  InkWell(
+                    onTap: () {
+                      if (t.$1 != _scope) {
+                        _switchScope(t.$1);
+                      } else if (t.$3) {
+                        _renameTab(t.$1); // 開いているタブをクリック → 名前編集
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                      decoration: _scope == t.$1 ? BoxDecoration(border: Border(bottom: BorderSide(color: tokens.link, width: 2))) : null,
+                      child: Text(
+                        t.$2,
+                        style: RasqTypography.bodySmall.copyWith(fontWeight: _scope == t.$1 ? FontWeight.w700 : null, color: _scope == t.$1 ? tokens.link : scheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ),
+              ]),
+            ),
+          ),
+          RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
+        ]),
+      ),
+    );
+  }
+
+  Future<String?> _promptText(String title, {String? initial, String hint = ''}) async {
+    final controller = TextEditingController(text: initial ?? '');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title, style: RasqTypography.title),
+        content: TextField(controller: controller, autofocus: true, style: RasqTypography.bodySmall, decoration: InputDecoration(hintText: hint, isDense: true)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('キャンセル')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('決定')),
+        ],
+      ),
+    );
+    return ok == true ? controller.text.trim() : null;
+  }
+
+  Future<void> _addTab() async {
+    final name = await _promptText('新しいタブ', hint: 'タブ名');
+    if (name == null || name.isEmpty || !mounted) return;
+    final tab = NodeTab(id: 'node:${DateTime.now().millisecondsSinceEpoch}', label: name);
+    await saveNodeTabs(ref, [...ref.read(nodeTabsProvider), tab]);
+    _switchScope('tl.${tab.id}');
+  }
+
+  Future<void> _renameTab(String scope) async {
+    final id = scope.substring(3);
+    final tabs = ref.read(nodeTabsProvider);
+    final cur = tabs.where((t) => t.id == id).firstOrNull;
+    if (cur == null) return;
+    final name = await _promptText('タブ名を変更', initial: cur.label);
+    if (name == null || name.isEmpty || !mounted) return;
+    await saveNodeTabs(ref, [for (final t in tabs) t.id == id ? NodeTab(id: id, label: name) : t]);
+    setState(() {});
+  }
+
+  Future<void> _deleteTab(String scope) async {
+    final id = scope.substring(3);
+    await saveNodeTabs(ref, [for (final t in ref.read(nodeTabsProvider)) if (t.id != id) t]);
+    await ref.read(settingsAreaProvider('nodeprog.$scope').notifier).set('graph', null);
+    if (mounted) _switchScope('tl.home');
+  }
+
+  /// … メニュー (D-101): タブ名を変更/タブを削除(ユーザータブのみ)/
+  /// グラフをクリア。
+  Future<void> _moreMenu(BuildContext buttonContext) async {
+    final box = buttonContext.findRenderObject() as RenderBox;
+    final anchor = box.localToGlobal(Offset.zero) & box.size;
+    final isNodeTab = _scope.startsWith('tl.node:');
+    final pick = await _manager.showDropdown<String>(id: 'nodeprog.more', anchor: anchor, dense: true, items: [
+      RasqDropdownItem('タブ名を変更', 'rename', enabled: isNodeTab),
+      RasqDropdownItem('タブを削除', 'deleteTab', enabled: isNodeTab, destructive: true),
+      const RasqDropdownItem('グラフをクリア', 'clear'),
+    ]);
+    if (!mounted) return;
+    switch (pick) {
+      case 'rename':
+        await _renameTab(_scope);
+      case 'deleteTab':
+        await _deleteTab(_scope);
+      case 'clear':
+        await ref.read(settingsAreaProvider(_area).notifier).set('graph', null);
+        if (mounted) await _loadGraph();
+    }
   }
 
   @override
@@ -658,9 +812,24 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     return Scaffold(
       // ノード検索の再呼び出し (D-096): パレット FOW を閉じてしまっても
       // ここから開き直せる(開いていれば何もしない)。
-      appBar: RasqPageHeader(title: _title, actions: [
-        RasqIconButton(icon: Icons.manage_search, tooltip: 'ノードを検索', onPressed: _openPalette),
-      ]),
+      // … メニュー (D-101): タブの削除/名前変更/グラフのクリア。
+      appBar: RasqPageHeader(
+        title: _title,
+        actions: [
+          Builder(builder: (ctx) {
+            return RasqIconButton(icon: Icons.more_horiz, tooltip: 'その他', onPressed: () => _moreMenu(ctx));
+          }),
+        ],
+        bottom: _scope.startsWith('tl.') ? _tabBar() : null,
+      ),
+      // ノード検索の再呼び出し (D-096/D-101): FAB — パレット FOW が開いて
+      // いる間はその下に隠れる位置。
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openPalette,
+        tooltip: 'ノードを検索',
+        shape: const CircleBorder(),
+        child: const Icon(Icons.manage_search),
+      ),
       body: DragTarget<NodeCatalogEntry>(
         onAcceptWithDetails: (d) => _addNode(d.data, _toGraph(d.offset) - const Offset(0, 10)),
         builder: (context, _, _) => Focus(

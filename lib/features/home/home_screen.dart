@@ -14,6 +14,7 @@ import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
+import '../nodeprog/node_tabs.dart';
 import '../relational/relational_timeline_view.dart';
 import 'custom_tile_row.dart';
 import 'post_row.dart';
@@ -33,7 +34,9 @@ class HomeScreen extends ConsumerWidget {
     final session = ref.watch(currentSnsSessionProvider);
     // カスタム TL (M5e / D-080): TL プラグインの宣言をタブに足す。
     final customs = ref.watch(customTimelinesProvider).value ?? const <CustomTimelineSpec>[];
-    final kinds = bundle ? const [TimelineKind.bundle, TimelineKind.relational] : _tabKinds(session, customs);
+    // ノードTLタブ (D-101): ノードエディタの「+」で作ったタブ。
+    final nodeTabs = ref.watch(nodeTabsProvider);
+    final kinds = bundle ? const [TimelineKind.bundle, TimelineKind.relational] : _tabKinds(session, customs, nodeTabs);
     final tabs = [for (final k in kinds) RasqTabItem(_label(k), id: k.id)];
     final initial = kinds.indexOf(bundle ? TimelineKind.bundle : TimelineKind.home).clamp(0, kinds.length - 1);
 
@@ -86,7 +89,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  static List<TimelineKind> _tabKinds(SnsSession? session, List<CustomTimelineSpec> customs) {
+  static List<TimelineKind> _tabKinds(SnsSession? session, List<CustomTimelineSpec> customs, List<NodeTab> nodeTabs) {
     final supported = session?.timelines ?? const [TimelineKind.home];
     final out = <TimelineKind>[];
     if (supported.contains(TimelineKind.social)) out.add(TimelineKind.social);
@@ -98,6 +101,10 @@ class HomeScreen extends ConsumerWidget {
     // カスタム TL (M5e / D-080): TL プラグイン宣言のタブ。
     for (final c in customs) {
       out.add(TimelineKind('custom:${c.id}', c.label));
+    }
+    // ノードTLタブ (D-101): 中身はノードグラフの実行結果。
+    for (final t in nodeTabs) {
+      out.add(TimelineKind(t.id, t.label));
     }
     return out.take(RasqTabs.maxExtensible).toList();
   }

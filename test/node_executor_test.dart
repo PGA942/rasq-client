@@ -239,6 +239,66 @@ void main() {
     expect([for (final p in (await runNodeGraph(g, fetch: fetch))!) p.id], ['p1', 'p2', 'p3', 'p4']);
   });
 
+  test('終端タイプ (D-102): 関連タイムラインノードは terminal 指定でだけ実行される', () async {
+    final relTerminal = builtinNodeCatalog.firstWhere((e) => e.type == 'timeline.relational').instantiate('n3', Offset.zero);
+    final g = NodeGraph(
+      nodes: [source('n1'), step('remove', 'n2'), relTerminal, cond('c1', value: '広告')],
+      edges: [data('n1', 'n2'), data('n2', 'n3'), condEdge('n2', 'c1')],
+    );
+    expect(await runNodeGraph(g, fetch: fetch), isNull); // 通常 TL 終端では実行しない
+    final out = await runNodeGraph(g, fetch: fetch, terminal: 'timeline.relational');
+    expect([for (final p in out!) p.id], ['p2', 'p4']); // 前段絞り込みとして動く
+  });
+
+  test('plugin ソートノード (D-102): tl.sort の実体(コールバック)が呼ばれる', () async {
+    const pluginNode = GraphNode(id: 'g1', type: 'plugin:rank', title: 'ランキング順でソート', x: 0, y: 0, inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')], outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')]);
+    final g = NodeGraph(
+      nodes: [source('n1'), pluginNode, timelineNode('n3')],
+      edges: [data('n1', 'g1'), data('g1', 'n3')],
+    );
+    final asked = <String>[];
+    final out = await runNodeGraph(g, fetch: fetch, pluginSort: (id, posts) async {
+      asked.add(id);
+      return posts.reversed.toList();
+    });
+    expect(asked, ['rank']);
+    expect([for (final p in out!) p.id], ['p4', 'p3', 'p2', 'p1']);
+    // コールバック無しは素通し。
+    expect([for (final p in (await runNodeGraph(g, fetch: fetch))!) p.id], ['p1', 'p2', 'p3', 'p4']);
+  });
+
+  testWidgets('ノードTLタブ (D-101): node: タブの中身はグラフ実行結果', (tester) async {
+    final srcBase = builtinNodeCatalog.firstWhere((e) => e.type == 'tl.source').instantiate('n1', Offset.zero);
+    final src = srcBase.copyWith(inputs: [srcBase.inputs[0].copyWith(value: 'home')]);
+    final graph = NodeGraph(
+      nodes: [src, step('remove', 'n2'), timelineNode('n3'), cond('c1', value: '消して')],
+      edges: [data('n1', 'n2'), data('n2', 'n3'), condEdge('n2', 'c1')],
+    );
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [fakeSession().toJson()],
+        'current': fakeSession().account.key,
+      }),
+      'nodeprog.tabs.v1': jsonEncode({'list': jsonEncode([{'id': 'node:1', 'label': 'マイTL'}])}),
+      'nodeprog.tl.node:1.v1': jsonEncode({'graph': jsonEncode(graph.toJson())}),
+    });
+    final registry = PluginRegistry()
+      ..register(FakeSnsPlugin(posts: (v) => [post('a1', '残る投稿'), post('a2', '消しての投稿')]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('マイTL'));
+    await tester.pumpAndSettle();
+    expect(find.text('残る投稿'), findsOneWidget);
+    expect(find.text('消しての投稿'), findsNothing);
+  });
+
   testWidgets('TL 反映: tl.home のグラフ(消去)がフォロー中タブに効く', (tester) async {
     final graph = NodeGraph(
       nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), cond('c1', value: '消して')],

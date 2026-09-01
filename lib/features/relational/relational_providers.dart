@@ -8,9 +8,14 @@ import 'package:rasq_ml/rasq_ml.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'package:plugin_runtime/plugin_runtime.dart' show WasmSnsSession;
+
 import '../../app/providers.dart';
 import '../../session/session_providers.dart';
 import '../home/timeline_providers.dart';
+import '../nodeprog/node_executor.dart';
+import '../nodeprog/node_graph.dart';
+import '../settings/settings_dsl.dart';
 import 'relational_engine.dart';
 import 'relational_ml.dart';
 import 'relational_wasm.dart';
@@ -234,8 +239,8 @@ final wasmConversationEventsProvider = FutureProvider<List<ConversationEvent>?>(
   final lookbackMinutes = ref.watch(relationalLookbackProvider);
   final home = ref.watch(timelineProvider(TimelineKind.home)).value;
   if (home == null) return null;
-  // バンドル供給 (D-086): 全アカウントの HTL(取得中は現在分のみ)。
-  final followees = ref.watch(bundleFolloweePostsProvider).value ?? home.posts;
+  // 前段絞り込み (D-102) > バンドル供給 (D-086) > 現在分、の順で使う。
+  final followees = ref.watch(relationalNodePostsProvider).value ?? ref.watch(bundleFolloweePostsProvider).value ?? home.posts;
   final guests = ref.watch(relationalGuestPostsProvider).value ?? const <Post>[];
   try {
     return await buildEventsViaWasm(
@@ -248,6 +253,32 @@ final wasmConversationEventsProvider = FutureProvider<List<ConversationEvent>?>(
     );
   } catch (e) {
     debugPrint('relational.build (wasm): $e');
+    return null;
+  }
+});
+
+/// 関連 TL の前段絞り込み (D-102): `tl.relational` スコープのノードグラフに
+/// 「取得 →(加工)→ **関連タイムライン**」の完成した鎖があれば、その出力を
+/// フォロイー入力の代わりに使う。処理系(会話イベント構築)はそのまま。
+/// 鎖が無ければ null → 従来どおりバンドル/HTL。
+final relationalNodePostsProvider = FutureProvider<List<Post>?>((ref) async {
+  final session = ref.watch(currentSnsSessionProvider);
+  if (session == null) return null;
+  final home = ref.watch(timelineProvider(TimelineKind.home)).value;
+  try {
+    final area = await ref.watch(settingsAreaProvider('nodeprog.tl.relational').future);
+    final raw = area['graph'];
+    if (raw is! String) return null;
+    final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+    return await runNodeGraph(
+      graph,
+      terminal: 'timeline.relational',
+      fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: 'home', selfItems: home?.posts ?? const []),
+      fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
+      pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
+    );
+  } catch (e) {
+    debugPrint('nodeprog(tl.relational): $e');
     return null;
   }
 });
@@ -265,8 +296,8 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
   if (wasmEvents != null) return AsyncData(wasmEvents);
 
   return home.whenData((h) {
-    // バンドル供給 (D-086) は Dart エンジン側でも使う(取得中は現在分)。
-    final followees = ref.watch(bundleFolloweePostsProvider).value ?? h.posts;
+    // 前段絞り込み (D-102) > バンドル供給 (D-086) > 現在分、の順で使う。
+    final followees = ref.watch(relationalNodePostsProvider).value ?? ref.watch(bundleFolloweePostsProvider).value ?? h.posts;
     final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf);
     return engine.build(followeePosts: followees, guestPosts: guests, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
   });

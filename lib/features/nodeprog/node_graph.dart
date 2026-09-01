@@ -385,6 +385,17 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     hasCondIn: true,
     hasCondOut: true,
   ),
+  // 関連プラグインノード (D-102): 関連 TL の**前段絞り込み**の終端。
+  // 処理系(会話イベント構築)はそのまま — 繋いだ投稿リストがフォロイー
+  // 入力の代わりになるだけ(通常 TL のタイムラインノードの置き換え)。
+  NodeCatalogEntry(
+    type: 'timeline.relational',
+    title: '関連タイムライン',
+    icon: Icons.hub_outlined,
+    genre: 'タイムライン',
+    description: '関連TLの前段絞り込みの最終出力。繋いだ投稿リストが会話イベント構築の入力になります(処理系は変わりません)。',
+    inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
   // ---- 取得系 (D-097): リスト/検索/DM/トレンド。
   NodeCatalogEntry(
     type: 'tl.list',

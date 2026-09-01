@@ -18,14 +18,20 @@ import 'node_graph.dart';
 /// - [fetchTrends]: トレンド取得ノード(タグの文字列配列)。
 /// - [embedTexts]: SigLIP 埋め込み(ML ゲートウェイ)。null/失敗時は
 ///   n-gram 類似度に縮退する。
+/// - [pluginSort]: TL プラグインのソートノード(`plugin:<id>`)の実体
+///   (tl.sort/compose)。null なら素通し。
+/// - [terminal]: 終端ノードの type。通常 TL は `timeline`、関連 TL の
+///   前段絞り込み (D-102) は `timeline.relational`。
 Future<List<Post>?> runNodeGraph(
   NodeGraph g, {
   required Future<List<Post>> Function(String kindId) fetch,
   Future<List<String>> Function()? fetchTrends,
   Future<List<List<double>>> Function(List<String> texts)? embedTexts,
+  Future<List<Post>> Function(String pluginTlId, List<Post> posts)? pluginSort,
+  String terminal = 'timeline',
 }) async {
   final byId = {for (final n in g.nodes) n.id: n};
-  final timeline = g.nodes.where((n) => n.type == 'timeline').firstOrNull;
+  final timeline = g.nodes.where((n) => n.type == terminal).firstOrNull;
   if (timeline == null) return null;
 
   // タイムラインから上流(データ接続)へ遡って鎖を組む。
@@ -42,7 +48,7 @@ Future<List<Post>?> runNodeGraph(
       final posts = await fetch(sourceKind);
       var out = posts;
       for (final step in chain.reversed) {
-        out = await _applyStep(g, byId, step, out, fetchTrends: fetchTrends, embedTexts: embedTexts);
+        out = await _applyStep(g, byId, step, out, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort);
       }
       return out;
     }
@@ -73,7 +79,16 @@ Future<List<Post>> _applyStep(
   List<Post> posts, {
   Future<List<String>> Function()? fetchTrends,
   Future<List<List<double>>> Function(List<String> texts)? embedTexts,
+  Future<List<Post>> Function(String pluginTlId, List<Post> posts)? pluginSort,
 }) async {
+  // TL プラグインのソートノード (D-102): tl.sort/compose の実体を呼ぶ。
+  if (step.type.startsWith('plugin:') && pluginSort != null) {
+    try {
+      return await pluginSort(step.type.substring('plugin:'.length), posts);
+    } catch (_) {
+      return posts; // プラグイン不達は素通し
+    }
+  }
   switch (step.type) {
     case 'sort':
     case 'remove':

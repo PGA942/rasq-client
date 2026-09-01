@@ -8,6 +8,7 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/nodeprog/node_editor_screen.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
+import 'package:rasq_client/features/nodeprog/node_tabs.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -108,7 +109,7 @@ void main() {
     final saved = (await container.read(settingsAreaProvider('nodeprog.tl.home').future))['graph'];
     expect(saved, isA<String>());
     final graph = NodeGraph.fromJson((jsonDecode(saved! as String) as Map).cast<String, Object?>());
-    expect({for (final n in graph.nodes) n.type}, {'clock', 'random'});
+    expect({for (final n in graph.nodes) n.type}, {'timeline', 'clock', 'random'}); // タイムラインノードはデフォルト配置 (D-101)
 
     // ノードのクリック → ドロップダウン (D-092): コピー/ペースト/削除。
     await tester.tap(onCanvas(find.text('クロックメーカー')));
@@ -143,7 +144,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // キャンバスの空白を長押し → 作成画面。
-    await tester.longPressAt(const Offset(180, 260));
+    await tester.longPressAt(const Offset(320, 420)); // デフォルトのタイムラインノードを避けた空白
     await tester.pumpAndSettle();
     expect(find.text('カスタム関数を作成'), findsOneWidget);
 
@@ -165,6 +166,51 @@ void main() {
     final saved = container.read(nodeCatalogProvider).where((e) => e.type == defs.single.id).single;
     expect(saved.condBranches, hasLength(2));
     expect(saved.genre, '関数');
+  });
+
+  testWidgets('D-101: タブ行 — +で追加(ホームにも出る)、現在タブクリックで名前編集、…で削除', (tester) async {
+    final container = await pump(tester);
+    await tester.tap(find.byTooltip('タイムライン設定'));
+    await tester.pumpAndSettle();
+
+    // 上側のタブ行(基本タブ)+ デフォルトのタイムラインノード。
+    final inEditor = find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('フォロー中'));
+    expect(inEditor, findsOneWidget);
+    expect(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('タイムライン')), findsWidgets);
+
+    // + でタブ追加 → 新スコープに切り替わる。
+    await tester.tap(find.byTooltip('タブを追加'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'マイTL');
+    await tester.tap(find.text('決定'));
+    await tester.pumpAndSettle();
+    expect(container.read(nodeTabsProvider), hasLength(1));
+    expect(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('マイTL')), findsOneWidget);
+
+    // 今開いているタブをクリック → 名前編集。
+    await tester.tap(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('マイTL')));
+    await tester.pumpAndSettle();
+    expect(find.text('タブ名を変更'), findsOneWidget);
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), '推しTL');
+    await tester.tap(find.text('決定'));
+    await tester.pumpAndSettle();
+    expect(container.read(nodeTabsProvider).single.label, '推しTL');
+
+    // ホームのタブ列にも出る。
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    expect(find.text('推しTL'), findsOneWidget);
+
+    // … メニューから削除。
+    await tester.tap(find.text('推しTL'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('タイムライン設定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('その他'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('タブを削除'));
+    await tester.pumpAndSettle();
+    expect(container.read(nodeTabsProvider), isEmpty);
   });
 
   testWidgets('D-096: パレット FOW を閉じても「ノードを検索」ボタンで開き直せる', (tester) async {

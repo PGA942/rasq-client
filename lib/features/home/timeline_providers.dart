@@ -175,7 +175,11 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
     Page<Post> page;
     Map<String, Map<String, ActionResult>> states;
-    if (session is MisskeySession) {
+    if (kind.id.startsWith('node:')) {
+      // ノードTLタブ (D-101): 基礎 TL なし — 中身はグラフの取得ノードが全て。
+      page = Page(items: const []);
+      states = {};
+    } else if (session is MisskeySession) {
       (page, states) = await session.timelineWithStates(kind, cursor: cursor);
     } else {
       page = await session.timeline(kind, cursor: cursor);
@@ -183,15 +187,17 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
     // 投稿加工プラグイン (D-083): 通常 TL でも表示前に本文加工を通す
     // (v1 は wasm セッション自身のモジュール。独立プラグインはストア統合後)。
-    if (session is WasmSnsSession) {
+    if (session is WasmSnsSession && !kind.id.startsWith('node:')) {
       page = Page(items: await session.timelinePlugin.transform(page.items), nextCursor: page.nextCursor);
     }
     // ノードグラフ実行 (D-094): この TL のスコープ(tl.<id>)に
     // 「タイムライン取得 → 加工 → タイムライン」の完成した鎖があれば通す。
+    // トレンド/タグ TL (D-102) は共通の `trend` スコープ。
     if (!kind.id.startsWith('custom:')) {
+      final scope = kind.id.startsWith('tag:') ? 'trend' : 'tl.${kind.id}';
       Duration? clock;
       try {
-        final area = await ref.read(settingsAreaProvider('nodeprog.tl.${kind.id}').future);
+        final area = await ref.read(settingsAreaProvider('nodeprog.$scope').future);
         final raw = area['graph'];
         if (raw is String) {
           final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
@@ -203,9 +209,11 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
           } catch (_) {}
           final result = await runNodeGraph(
             graph,
-            fetch: (kid) => _fetchForNode(session, kid, cursor, page.items),
+            fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: kind.id, selfItems: page.items, cursor: cursor),
             fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
             embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
+            // TL プラグインのソートノード (D-102): tl.sort/compose の実体。
+            pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
           );
           if (result != null) {
             page = Page(items: result, nextCursor: page.nextCursor);
@@ -215,41 +223,13 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
           }
         }
       } catch (e) {
-        debugPrint('nodeprog(tl.${kind.id}): $e');
+        debugPrint('nodeprog($scope): $e');
       }
       _armClock(clock);
     }
     _applyStates(page.items, states);
     ref.read(emojiCacheProvider.notifier).request({for (final p in page.items) ...InlineSpans.emojiShortcodes(p.body), for (final p in page.items) ...InlineSpans.emojiShortcodes(p.author.displayName)});
     return (page, states, const TimelineDecorations());
-  }
-
-  /// 取得ノード (D-097) の kind 解決: リストは名前 → id、DM は相手ハンドル →
-  /// ルームの peer id をアプリ側で引く。自分の TL は再取得しない。
-  Future<List<Post>> _fetchForNode(SnsSession session, String kid, String? cursor, List<Post> current) async {
-    if (kid == kind.id) return current;
-    if (kid.startsWith('search:')) {
-      final q = kid.substring(7).trim();
-      if (q.isEmpty) return const [];
-      return (await session.searchPosts(q, cursor: cursor)).items;
-    }
-    if (kid.startsWith('list:')) {
-      final name = kid.substring(5).trim();
-      if (name.isEmpty) return const [];
-      final lists = await session.lists();
-      final l = lists.where((x) => x.name == name || x.id == name).firstOrNull;
-      if (l == null) return const [];
-      return (await session.timeline(TimelineKind.list(l.id, l.name), cursor: cursor)).items;
-    }
-    if (kid.startsWith('dm:')) {
-      final who = kid.substring(3).trim().replaceFirst('@', '');
-      if (who.isEmpty) return const [];
-      final rooms = await session.dmRooms();
-      final r = rooms.where((x) => x.peer.handle == who || x.peer.id == who).firstOrNull;
-      if (r == null) return const [];
-      return (await session.timeline(TimelineKind('dm:${r.peer.id}', 'DM'))).items;
-    }
-    return (await session.timeline(TimelineKind(kid, kid), cursor: cursor)).items;
   }
 
   void _applyStates(List<Post> posts, Map<String, Map<String, ActionResult>> states) {
@@ -325,3 +305,32 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
 }
 
 final timelineProvider = AsyncNotifierProvider.family<TimelineNotifier, TimelineState, TimelineKind>(TimelineNotifier.new);
+
+/// 取得ノード (D-097) の kind 解決(TL/関連/トレンドで共用): リストは
+/// 名前 → id、DM は相手ハンドル → ルームの peer id をアプリ側で引く。
+/// [selfKindId] と一致する取得は [selfItems] を返す(自分の TL の再取得回避)。
+Future<List<Post>> resolveNodeFetch(SnsSession session, String kid, {String? selfKindId, List<Post> selfItems = const [], String? cursor}) async {
+  if (selfKindId != null && kid == selfKindId) return selfItems;
+  if (kid.startsWith('search:')) {
+    final q = kid.substring(7).trim();
+    if (q.isEmpty) return const [];
+    return (await session.searchPosts(q, cursor: cursor)).items;
+  }
+  if (kid.startsWith('list:')) {
+    final name = kid.substring(5).trim();
+    if (name.isEmpty) return const [];
+    final lists = await session.lists();
+    final l = lists.where((x) => x.name == name || x.id == name).firstOrNull;
+    if (l == null) return const [];
+    return (await session.timeline(TimelineKind.list(l.id, l.name), cursor: cursor)).items;
+  }
+  if (kid.startsWith('dm:')) {
+    final who = kid.substring(3).trim().replaceFirst('@', '');
+    if (who.isEmpty) return const [];
+    final rooms = await session.dmRooms();
+    final r = rooms.where((x) => x.peer.handle == who || x.peer.id == who).firstOrNull;
+    if (r == null) return const [];
+    return (await session.timeline(TimelineKind('dm:${r.peer.id}', 'DM'))).items;
+  }
+  return (await session.timeline(TimelineKind(kid, kid), cursor: cursor)).items;
+}
