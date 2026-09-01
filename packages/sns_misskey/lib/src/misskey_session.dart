@@ -450,6 +450,16 @@ class MisskeySession extends SnsSessionBase {
     );
   }
 
+  /// 自分がリアクションした投稿 (D-103: ノードの取得口)。
+  @override
+  Future<Page<Post>> reactedPosts({String? cursor, int limit = 20}) async {
+    final list = await api.callList('users/reactions', {'userId': await _myId(), 'limit': limit, 'untilId': ?cursor});
+    return Page(
+      items: [for (final r in list) if (r['note'] is Map) MisskeyMappers.note((r['note'] as Map).cast<String, Object?>(), viewer: account, host: host)],
+      nextCursor: list.isEmpty ? null : list.last['id'] as String?,
+    );
+  }
+
   @override
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) => _follows('users/followers', 'follower', id, cursor, limit);
   @override

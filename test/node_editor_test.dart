@@ -170,8 +170,11 @@ void main() {
 
   testWidgets('D-101: タブ行 — +で追加(ホームにも出る)、現在タブクリックで名前編集、…で削除', (tester) async {
     final container = await pump(tester);
+    // RAi は TL のタブ行では隠す (D-103) — エディタのパレット側にだけ出る。
+    expect(find.byTooltip('RAi(準備中)'), findsNothing);
     await tester.tap(find.byTooltip('タイムライン設定'));
     await tester.pumpAndSettle();
+    expect(find.byTooltip('RAi(準備中)'), findsOneWidget); // パレット FOW 側
 
     // 上側のタブ行(基本タブ)+ デフォルトのタイムラインノード。
     final inEditor = find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('フォロー中'));

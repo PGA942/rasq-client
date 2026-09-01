@@ -50,6 +50,8 @@ Color nodeTypeColor(String dataType) => switch (dataType) {
       '数値' => const Color(0xFF26A69A),
       'テキスト' => const Color(0xFFFFB74D),
       'テキスト配列' => const Color(0xFF8D6E63),
+      // ベクトル (D-104): SigLIP 埋め込み等のプロファイル(保存/類似度の基準)。
+      'ベクトル' => const Color(0xFF5C6BC0),
       '投稿リスト' => const Color(0xFF42A5F5),
       // 条件接続部 (D-094): 上下方向の紫。設定はノード内の値ボックス専用
       // (接続相手が存在しないのでどこにも繋がらない)。
@@ -432,6 +434,14 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     description: 'いまのトレンドタグを文字列の配列として出します(類似度/キーワードの入力に)。',
     outputs: [NodePort(label: 'タグ', dataType: 'テキスト配列')],
   ),
+  NodeCatalogEntry(
+    type: 'tl.myreactions',
+    title: 'リアクション済み取得',
+    icon: Icons.favorite_border,
+    genre: '取得',
+    description: 'TL で自分がリアクションした投稿を取得します(好みのプロファイル作りに)。',
+    outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
   // ---- 生成系 ML (D-097): 類似度/キーワード一致 + 演算子条件。
   NodeCatalogEntry(
     type: 'ml.similar',
@@ -442,8 +452,53 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     inputs: [
       NodePort(label: '基準', value: '', dataType: 'テキスト'),
       NodePort(label: '基準リスト', dataType: 'テキスト配列'),
+      // 基準ベクトル (D-104): SigLIP 埋め込み/保存済みプロファイルを基準に。
+      NodePort(label: '基準ベクトル', dataType: 'ベクトル'),
     ],
     outputs: [NodePort(label: '類似度', dataType: '数値')],
+  ),
+  // ---- 結果ノード + storage.safe (D-104)。
+  NodeCatalogEntry(
+    type: 'ml.gliner',
+    title: 'GLiNER抽出',
+    icon: Icons.sell_outlined,
+    genre: 'ML',
+    description: '投稿リストから特徴語(頻出順)を抽出して文字列の配列で出します。',
+    inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+    outputs: [NodePort(label: '特徴語', dataType: 'テキスト配列')],
+  ),
+  NodeCatalogEntry(
+    type: 'ml.siglip',
+    title: 'SigLIP埋め込み',
+    icon: Icons.grain,
+    genre: 'ML',
+    description: '投稿リストの平均埋め込み(プロファイル)をベクトルで出します。ML 不達時は n-gram プロファイルに縮退します。',
+    inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+    outputs: [NodePort(label: '埋め込み', dataType: 'ベクトル')],
+  ),
+  NodeCatalogEntry(
+    type: 'storage.save',
+    title: '保存 (storage.safe)',
+    icon: Icons.save_outlined,
+    genre: '保存',
+    description: '繋いだデータをスロットに保存します。storage.safe は依存関係の子プラグインにも渡せる安全な置き場(プラグイン側の受け渡しは初回起動時に確認)。',
+    inputs: [
+      NodePort(label: 'スロット', value: '', dataType: '設定'),
+      NodePort(label: 'テキスト配列', dataType: 'テキスト配列'),
+      NodePort(label: 'ベクトル', dataType: 'ベクトル'),
+    ],
+  ),
+  NodeCatalogEntry(
+    type: 'storage.load',
+    title: '読み出し (storage.safe)',
+    icon: Icons.file_open_outlined,
+    genre: '保存',
+    description: 'スロットに保存したデータを読み出します。',
+    inputs: [NodePort(label: 'スロット', value: '', dataType: '設定')],
+    outputs: [
+      NodePort(label: 'テキスト配列', dataType: 'テキスト配列'),
+      NodePort(label: 'ベクトル', dataType: 'ベクトル'),
+    ],
   ),
   NodeCatalogEntry(
     type: 'ml.keyword',

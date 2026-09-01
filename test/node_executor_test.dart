@@ -239,6 +239,78 @@ void main() {
     expect([for (final p in (await runNodeGraph(g, fetch: fetch))!) p.id], ['p1', 'p2', 'p3', 'p4']);
   });
 
+  test('リアクション済み取得 (D-103): fetch へ myreactions を渡す', () async {
+    final asked = <String>[];
+    final g = NodeGraph(nodes: [step('tl.myreactions', 'n1'), timelineNode('n3')], edges: [data('n1', 'n3')]);
+    final out = await runNodeGraph(g, fetch: (kid) async {
+      asked.add(kid);
+      return posts;
+    });
+    expect(asked, ['myreactions']);
+    expect(out, posts);
+  });
+
+  test('storage.safe (D-104): GLiNER/SigLIP の結果を保存 → 読み出してローカルTLを絞り込む(おすすめレシピ)', () async {
+    final mlPosts = [post('m1', 'ラーメン食べたい'), post('m2', '猫がかわいい'), post('m3', '今日のラーメンは最高'), post('m4', 'ねむい')];
+    Future<List<Post>> fetchMl(String kid) async => mlPosts;
+    final store = <String, Object?>{};
+
+    // ① 保存グラフ: リアクション済み(の代わりに固定 posts)→ GLiNER抽出/
+    //   SigLIP埋め込み → 保存(slot: profile)。終端の鎖が無くても保存は走る。
+    GraphNode slotted(String type, String id, String slot) {
+      final base = step(type, id);
+      return base.copyWith(inputs: [base.inputs[0].copyWith(value: slot), ...base.inputs.skip(1)]);
+    }
+
+    final saveGraph = NodeGraph(
+      nodes: [step('tl.myreactions', 'n1'), step('ml.gliner', 'k1'), step('ml.siglip', 's1'), slotted('storage.save', 'w1', 'profile')],
+      edges: [
+        data('n1', 'k1'), data('n1', 's1'),
+        const GraphEdge(from: 'k1', fromPort: 0, to: 'w1', toPort: 1), // 特徴語 → テキスト配列
+        const GraphEdge(from: 's1', fromPort: 0, to: 'w1', toPort: 2), // 埋め込み → ベクトル
+      ],
+    );
+    final saved = await runNodeGraph(saveGraph, fetch: fetchMl, storageWrite: (slot, value) async => store[slot] = value, storageRead: (s) async => store[s]);
+    expect(saved, isNull); // TL 終端はない
+    final payload = (store['profile'] as Map).cast<String, Object?>();
+    expect((payload['texts'] as List).cast<String>(), contains('ラーメン'));
+    expect((payload['vector'] as Map)['kind'], 'ngram'); // ゲートウェイなし → n-gram 縮退
+
+    // ② 絞り込みグラフ: 読み出し → キーワード一致 → 比較(以上 1)→ 並べ替え。
+    final filterGraph = NodeGraph(
+      nodes: [source('n1'), step('sort', 'n2'), timelineNode('n3'), step('compare', 'x1'), step('ml.keyword', 'k2'), slotted('storage.load', 'r1', 'profile')],
+      edges: [
+        data('n1', 'n2'), data('n2', 'n3'),
+        condEdge('n2', 'x1'),
+        const GraphEdge(from: 'k2', fromPort: 0, to: 'x1', toPort: 0),
+        const GraphEdge(from: 'r1', fromPort: 0, to: 'k2', toPort: 1), // 読み出したテキスト配列 → キーワードリスト
+      ],
+    );
+    final sorted = await runNodeGraph(filterGraph, fetch: fetchMl, storageRead: (s) async => store[s], storageWrite: (s, v) async => store[s] = v);
+    expect(sorted!.first.body, contains('ラーメン')); // プロファイルに合う投稿が先頭
+
+    // ③ ベクトル基準: 読み出し → 類似度(基準ベクトル) → 比較(以上 0.15)→ 消去。
+    final vecGraph = NodeGraph(
+      nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), step('compare', 'x2'), step('ml.similar', 'sim'), slotted('storage.load', 'r2', 'profile')],
+      edges: [
+        data('n1', 'n2'), data('n2', 'n3'),
+        condEdge('n2', 'x2'),
+        const GraphEdge(from: 'sim', fromPort: 0, to: 'x2', toPort: 0),
+        const GraphEdge(from: 'r2', fromPort: 1, to: 'sim', toPort: 2), // ベクトル → 基準ベクトル
+      ],
+    );
+    final cmp = vecGraph.nodes.firstWhere((n) => n.id == 'x2');
+    final vecGraph2 = NodeGraph(
+      nodes: [for (final n in vecGraph.nodes) n.id == 'x2' ? n.copyWith(inputs: [n.inputs[0], n.inputs[1], n.inputs[2].copyWith(value: '0.15')]) : n],
+      edges: vecGraph.edges,
+    );
+    expect(cmp.inputs[2].label, '値');
+    final removed = await runNodeGraph(vecGraph2, fetch: fetchMl, storageRead: (s) async => store[s], storageWrite: (s, v) async => store[s] = v);
+    // プロファイル(全投稿の n-gram 合算)に最も似ているラーメン投稿が消えている。
+    expect([for (final p in removed!) p.id], isNot(contains('m1')));
+    expect(removed.length, lessThan(mlPosts.length));
+  });
+
   test('終端タイプ (D-102): 関連タイムラインノードは terminal 指定でだけ実行される', () async {
     final relTerminal = builtinNodeCatalog.firstWhere((e) => e.type == 'timeline.relational').instantiate('n3', Offset.zero);
     final g = NodeGraph(

@@ -64,6 +64,10 @@ abstract class SnsSession {
   Future<void> removeFromList(String listId, String userId);
   Future<Page<Post>> favorites({String? cursor, int limit = 20});
 
+  /// 自分がリアクションした投稿 (D-103: ノードの取得口)。非対応 SNS は
+  /// [UnsupportedError]。
+  Future<Page<Post>> reactedPosts({String? cursor, int limit = 20});
+
   // --- クリップ (D-032: SNS ネイティブ側。ホスト横断クリップはホスト実装) ---
   /// [userId] のクリップ一覧(null = 自分)。他ユーザーは公開クリップのみ。
   /// 非対応 SNS は [UnsupportedError] → ホストがタブ/メニューを隠す。
@@ -211,6 +215,8 @@ abstract class SnsSessionBase implements SnsSession {
   Future<void> removeFromList(String listId, String userId) => _unsupported('removeFromList');
   @override
   Future<Page<Post>> favorites({String? cursor, int limit = 20}) => _unsupported('favorites');
+  @override
+  Future<Page<Post>> reactedPosts({String? cursor, int limit = 20}) => _unsupported('reactedPosts');
   @override
   Future<List<ClipInfo>> clips({String? userId}) => _unsupported('clips');
   @override

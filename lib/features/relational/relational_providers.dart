@@ -276,6 +276,8 @@ final relationalNodePostsProvider = FutureProvider<List<Post>?>((ref) async {
       fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: 'home', selfItems: home?.posts ?? const []),
       fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
       pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
+      storageRead: (slot) async => (await ref.read(settingsAreaProvider('storage.safe').future))[slot],
+      storageWrite: (slot, value) => ref.read(settingsAreaProvider('storage.safe').notifier).set(slot, value),
     );
   } catch (e) {
     debugPrint('nodeprog(tl.relational): $e');

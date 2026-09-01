@@ -214,6 +214,9 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
             // TL プラグインのソートノード (D-102): tl.sort/compose の実体。
             pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
+            // storage.safe (D-104): 保存/読み出しノードの実体(KV 共有領域)。
+            storageRead: (slot) async => (await ref.read(settingsAreaProvider('storage.safe').future))[slot],
+            storageWrite: (slot, value) => ref.read(settingsAreaProvider('storage.safe').notifier).set(slot, value),
           );
           if (result != null) {
             page = Page(items: result, nextCursor: page.nextCursor);
@@ -311,6 +314,7 @@ final timelineProvider = AsyncNotifierProvider.family<TimelineNotifier, Timeline
 /// [selfKindId] と一致する取得は [selfItems] を返す(自分の TL の再取得回避)。
 Future<List<Post>> resolveNodeFetch(SnsSession session, String kid, {String? selfKindId, List<Post> selfItems = const [], String? cursor}) async {
   if (selfKindId != null && kid == selfKindId) return selfItems;
+  if (kid == 'myreactions') return (await session.reactedPosts(cursor: cursor)).items; // リアクション済み取得 (D-103)
   if (kid.startsWith('search:')) {
     final q = kid.substring(7).trim();
     if (q.isEmpty) return const [];

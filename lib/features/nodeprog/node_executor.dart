@@ -20,6 +20,8 @@ import 'node_graph.dart';
 ///   n-gram 類似度に縮退する。
 /// - [pluginSort]: TL プラグインのソートノード(`plugin:<id>`)の実体
 ///   (tl.sort/compose)。null なら素通し。
+/// - [storageRead]/[storageWrite]: storage.safe (D-104) の読み書き。保存
+///   ノードは**鎖の成立に関係なく**毎実行走る(プロファイル保存グラフ)。
 /// - [terminal]: 終端ノードの type。通常 TL は `timeline`、関連 TL の
 ///   前段絞り込み (D-102) は `timeline.relational`。
 Future<List<Post>?> runNodeGraph(
@@ -28,39 +30,46 @@ Future<List<Post>?> runNodeGraph(
   Future<List<String>> Function()? fetchTrends,
   Future<List<List<double>>> Function(List<String> texts)? embedTexts,
   Future<List<Post>> Function(String pluginTlId, List<Post> posts)? pluginSort,
+  Future<Object?> Function(String slot)? storageRead,
+  Future<void> Function(String slot, Object? value)? storageWrite,
   String terminal = 'timeline',
 }) async {
   final byId = {for (final n in g.nodes) n.id: n};
-  final timeline = g.nodes.where((n) => n.type == terminal).firstOrNull;
-  if (timeline == null) return null;
+  final env = _ExecEnv(fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite);
 
-  // タイムラインから上流(データ接続)へ遡って鎖を組む。
-  final chain = <GraphNode>[];
-  var current = timeline;
-  final visited = <String>{timeline.id};
-  while (true) {
-    final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == current.id && e.toPort == 0).firstOrNull;
-    if (edge == null) return null; // 鎖が途切れている → 実行しない
-    final from = byId[edge.from];
-    if (from == null || !visited.add(from.id)) return null; // 迷子/循環
-    final sourceKind = _sourceKindOf(from);
-    if (sourceKind != null) {
-      final posts = await fetch(sourceKind);
-      var out = posts;
-      for (final step in chain.reversed) {
-        out = await _applyStep(g, byId, step, out, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort);
-      }
-      return out;
-    }
-    if (from.type != 'sort' && from.type != 'remove' && !from.type.startsWith('plugin:') && !from.type.startsWith('fn:')) {
-      return null; // 投稿リストを繋げるのは加工ノードだけのはず
-    }
-    chain.add(from);
-    current = from;
+  List<Post>? result;
+  final timeline = g.nodes.where((n) => n.type == terminal).firstOrNull;
+  if (timeline != null) {
+    final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == timeline.id && e.toPort == 0).firstOrNull;
+    final up = edge == null ? null : byId[edge.from];
+    if (up != null) result = await _postsOutOf(g, byId, up, env, 0);
   }
+
+  // storage.safe 保存ノード (D-104): スロット + データが繋がっていれば書く。
+  if (storageWrite != null) {
+    for (final n in g.nodes) {
+      if (n.type != 'storage.save') continue;
+      try {
+        await _execSave(g, byId, n, env);
+      } catch (_) {} // 保存失敗で TL は落とさない
+    }
+  }
+  return result;
 }
 
-/// 取得ノード (D-094/D-097) → fetch へ渡す kind id。取得ノードでなければ null。
+/// 実行環境(コールバック束)。
+class _ExecEnv {
+  const _ExecEnv({required this.fetch, this.fetchTrends, this.embedTexts, this.pluginSort, this.storageRead, this.storageWrite});
+  final Future<List<Post>> Function(String kindId) fetch;
+  final Future<List<String>> Function()? fetchTrends;
+  final Future<List<List<double>>> Function(List<String> texts)? embedTexts;
+  final Future<List<Post>> Function(String pluginTlId, List<Post> posts)? pluginSort;
+  final Future<Object?> Function(String slot)? storageRead;
+  final Future<void> Function(String slot, Object? value)? storageWrite;
+}
+
+/// 取得ノード (D-094/D-097/D-103) → fetch へ渡す kind id。取得ノードで
+/// なければ null。
 String? _sourceKindOf(GraphNode n) {
   String value() => n.inputs.firstOrNull?.value?.trim() ?? '';
   return switch (n.type) {
@@ -68,23 +77,32 @@ String? _sourceKindOf(GraphNode n) {
     'tl.list' => 'list:${value()}',
     'tl.search' => 'search:${value()}',
     'tl.dm' => 'dm:${value()}',
+    'tl.myreactions' => 'myreactions',
     _ => null,
   };
 }
 
-Future<List<Post>> _applyStep(
-  NodeGraph g,
-  Map<String, GraphNode> byId,
-  GraphNode step,
-  List<Post> posts, {
-  Future<List<String>> Function()? fetchTrends,
-  Future<List<List<double>>> Function(List<String> texts)? embedTexts,
-  Future<List<Post>> Function(String pluginTlId, List<Post> posts)? pluginSort,
-}) async {
+/// [n] の投稿リスト出力を再帰評価する(取得 → 加工の任意の形)。
+Future<List<Post>?> _postsOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, _ExecEnv env, int depth) async {
+  if (depth > 16) return null;
+  final sourceKind = _sourceKindOf(n);
+  if (sourceKind != null) return env.fetch(sourceKind);
+  if (n.type == 'sort' || n.type == 'remove' || n.type.startsWith('plugin:') || n.type.startsWith('fn:')) {
+    final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == n.id && e.toPort == 0).firstOrNull;
+    final up = edge == null ? null : byId[edge.from];
+    if (up == null) return null;
+    final posts = await _postsOutOf(g, byId, up, env, depth + 1);
+    if (posts == null) return null;
+    return _applyStep(g, byId, n, posts, env);
+  }
+  return null;
+}
+
+Future<List<Post>> _applyStep(NodeGraph g, Map<String, GraphNode> byId, GraphNode step, List<Post> posts, _ExecEnv env) async {
   // TL プラグインのソートノード (D-102): tl.sort/compose の実体を呼ぶ。
-  if (step.type.startsWith('plugin:') && pluginSort != null) {
+  if (step.type.startsWith('plugin:') && env.pluginSort != null) {
     try {
-      return await pluginSort(step.type.substring('plugin:'.length), posts);
+      return await env.pluginSort!(step.type.substring('plugin:'.length), posts);
     } catch (_) {
       return posts; // プラグイン不達は素通し
     }
@@ -93,7 +111,7 @@ Future<List<Post>> _applyStep(
     case 'sort':
     case 'remove':
       // ML ノードのスコアは投稿一括で先に計算しておく(条件評価は同期)。
-      final ctx = await _CondContext.prepare(g, byId, step.id, posts, fetchTrends: fetchTrends, embedTexts: embedTexts);
+      final ctx = await _CondContext.prepare(g, byId, step.id, posts, env);
       if (step.type == 'sort') {
         // 条件に合う投稿を先頭へ(安定 — 各群の元の順序は保つ)。
         final hit = <Post>[];
@@ -105,9 +123,124 @@ Future<List<Post>> _applyStep(
       }
       return [for (final p in posts) if (!_evalCondPortAt(g, byId, step.id, p, 0, ctx)) p];
     default:
-      // plugin:* 等はまだ実行系がない — 素通し(ストア統合/wasm 配線で実装)。
+      // fn: のデータ型カスタム関数など — 素通し(中身はプラグイン/RAi 配線)。
       return posts;
   }
+}
+
+// ---- 結果ノード / storage.safe (D-104) --------------------------------------
+
+/// [n] のテキスト配列出力を評価する(トレンド/GLiNER抽出/読み出し)。
+Future<List<String>?> _textArrayOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, _ExecEnv env) async {
+  switch (n.type) {
+    case 'trend.tags':
+      if (env.fetchTrends == null) return null;
+      try {
+        return [for (final t in await env.fetchTrends!()) if (t.trim().isNotEmpty) t];
+      } catch (_) {
+        return null;
+      }
+    case 'ml.gliner':
+      final posts = await _upstreamPosts(g, byId, n, env);
+      if (posts == null) return null;
+      return topFeaturesOf(posts);
+    case 'storage.load':
+      final payload = await _loadSlot(g, n, env);
+      final texts = payload?['texts'];
+      return texts is List ? texts.cast<String>() : null;
+  }
+  return null;
+}
+
+/// [n] のベクトル出力を評価する(SigLIP埋め込み/読み出し)。
+/// 形は `{kind: 'siglip', v: [...]}` か `{kind: 'ngram', p: {...}}`。
+Future<Map<String, Object?>?> _vectorOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, _ExecEnv env) async {
+  switch (n.type) {
+    case 'ml.siglip':
+      final posts = await _upstreamPosts(g, byId, n, env);
+      if (posts == null || posts.isEmpty) return null;
+      return profileVectorOf(posts, env.embedTexts);
+    case 'storage.load':
+      final payload = await _loadSlot(g, n, env);
+      final v = payload?['vector'];
+      return v is Map ? v.cast<String, Object?>() : null;
+  }
+  return null;
+}
+
+Future<List<Post>?> _upstreamPosts(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, _ExecEnv env) async {
+  final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == n.id && e.toPort == 0).firstOrNull;
+  final up = edge == null ? null : byId[edge.from];
+  if (up == null) return null;
+  return _postsOutOf(g, byId, up, env, 0);
+}
+
+Future<Map<String, Object?>?> _loadSlot(NodeGraph g, GraphNode n, _ExecEnv env) async {
+  final slot = n.inputs.where((i) => i.label == 'スロット').firstOrNull?.value?.trim() ?? '';
+  if (slot.isEmpty || env.storageRead == null) return null;
+  final raw = await env.storageRead!(slot);
+  return raw is Map ? raw.cast<String, Object?>() : null;
+}
+
+Future<void> _execSave(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, _ExecEnv env) async {
+  final slot = n.inputs.where((i) => i.label == 'スロット').firstOrNull?.value?.trim() ?? '';
+  if (slot.isEmpty) return;
+  List<String>? texts;
+  Map<String, Object?>? vector;
+  for (final e in g.edges) {
+    if (e.cond || e.toIcon || e.to != n.id) continue;
+    final src = byId[e.from];
+    if (src == null) continue;
+    final port = n.inputs.elementAtOrNull(e.toPort);
+    if (port?.label == 'テキスト配列') texts = await _textArrayOutOf(g, byId, src, env);
+    if (port?.label == 'ベクトル') vector = await _vectorOutOf(g, byId, src, env);
+  }
+  if (texts == null && vector == null) return; // データ未接続 → 書かない
+  await env.storageWrite!(slot, {'texts': ?texts, 'vector': ?vector});
+}
+
+/// GLiNER抽出 (D-104): 投稿群の特徴語を頻出順で返す。
+List<String> topFeaturesOf(List<Post> posts, {int max = 24}) {
+  final counts = <String, int>{};
+  for (final p in posts) {
+    for (final f in extractFeatures(p)) {
+      counts[f] = (counts[f] ?? 0) + 1;
+    }
+  }
+  final sorted = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+  return [for (final e in sorted.take(max)) e.key];
+}
+
+/// SigLIP埋め込み (D-104): 投稿群の平均埋め込み。ゲートウェイ不達時は
+/// n-gram プロファイル(合算)に縮退する。
+Future<Map<String, Object?>> profileVectorOf(List<Post> posts, Future<List<List<double>>> Function(List<String>)? embedTexts) async {
+  final bodies = [for (final p in posts.take(40)) p.body];
+  if (embedTexts != null) {
+    try {
+      final embs = await embedTexts(bodies);
+      if (embs.isNotEmpty) {
+        final mean = List<double>.filled(embs.first.length, 0);
+        for (final e in embs) {
+          for (var i = 0; i < mean.length && i < e.length; i++) {
+            mean[i] += e[i];
+          }
+        }
+        for (var i = 0; i < mean.length; i++) {
+          mean[i] /= embs.length;
+        }
+        return {'kind': 'siglip', 'v': mean};
+      }
+    } catch (_) {
+      // 縮退へ
+    }
+  }
+  final merged = <String, double>{};
+  for (final b in bodies) {
+    for (final e in charNgramProfile(b).entries) {
+      merged[e.key] = (merged[e.key] ?? 0) + e.value;
+    }
+  }
+  return {'kind': 'ngram', 'p': merged};
 }
 
 /// [nodeId] の下辺の条件接続部を評価する(テスト用の公開口)。直下に何も
@@ -216,14 +349,7 @@ class _CondContext {
 
   /// [stepId] の条件木にぶら下がる比較ノードの値元(ML ノード)を集めて、
   /// 投稿一括でスコアを計算しておく。
-  static Future<_CondContext> prepare(
-    NodeGraph g,
-    Map<String, GraphNode> byId,
-    String stepId,
-    List<Post> posts, {
-    Future<List<String>> Function()? fetchTrends,
-    Future<List<List<double>>> Function(List<String> texts)? embedTexts,
-  }) async {
+  static Future<_CondContext> prepare(NodeGraph g, Map<String, GraphNode> byId, String stepId, List<Post> posts, _ExecEnv env) async {
     // 条件木を BFS で辿って比較ノードを集める。
     final queue = <String>[stepId];
     final seen = <String>{stepId};
@@ -247,17 +373,27 @@ class _CondContext {
     final scores = <String, Map<String, double>>{};
     for (final ml in mlNodes) {
       if (scores.containsKey(ml.id)) continue;
-      final refs = await _textSources(g, byId, ml, fetchTrends: fetchTrends);
-      if (refs.isEmpty) continue; // 基準なし → スコアなし(比較は制約なしに落ちる)
-      scores[ml.id] = ml.type == 'ml.similar' ? await _similarScores(refs, posts, embedTexts) : _keywordScores(refs, posts);
+      final refs = await _textSources(g, byId, ml, env);
+      // 基準ベクトル (D-104): SigLIP埋め込み/読み出しからの接続。
+      Map<String, Object?>? vecRef;
+      if (ml.type == 'ml.similar') {
+        final edge = g.edges.where((e) {
+          if (e.cond || e.toIcon || e.to != ml.id) return false;
+          return ml.inputs.elementAtOrNull(e.toPort)?.label == '基準ベクトル';
+        }).firstOrNull;
+        final src = edge == null ? null : byId[edge.from];
+        if (src != null) vecRef = await _vectorOutOf(g, byId, src, env);
+      }
+      if (refs.isEmpty && vecRef == null) continue; // 基準なし → スコアなし(比較は制約なしに落ちる)
+      scores[ml.id] = ml.type == 'ml.similar' ? await _similarScores(refs, vecRef, posts, env.embedTexts) : _keywordScores(refs, posts);
     }
     return _CondContext(scores);
   }
 }
 
 /// ML ノードのテキスト入力を解決する: 値ボックス + 接続元(ファイルリーダー
-/// のファイル内容 / トレンド取得のタグ配列)。
-Future<List<String>> _textSources(NodeGraph g, Map<String, GraphNode> byId, GraphNode ml, {Future<List<String>> Function()? fetchTrends}) async {
+/// のファイル内容 / テキスト配列を出すノード — トレンド/GLiNER抽出/読み出し)。
+Future<List<String>> _textSources(NodeGraph g, Map<String, GraphNode> byId, GraphNode ml, _ExecEnv env) async {
   final out = <String>[];
   final own = ml.inputs.firstOrNull?.value?.trim() ?? '';
   if (own.isNotEmpty) out.add(own);
@@ -273,44 +409,67 @@ Future<List<String>> _textSources(NodeGraph g, Map<String, GraphNode> byId, Grap
         final text = await File(resolved).readAsString();
         if (text.trim().isNotEmpty) out.add(text);
       } catch (_) {} // 読めないファイルは無視
-    } else if (src.type == 'trend.tags' && fetchTrends != null) {
-      try {
-        out.addAll((await fetchTrends()).where((t) => t.trim().isNotEmpty));
-      } catch (_) {}
+    } else {
+      final texts = await _textArrayOutOf(g, byId, src, env);
+      if (texts != null) out.addAll(texts.where((t) => t.trim().isNotEmpty));
     }
   }
   return out;
 }
 
-/// SigLIP cos 類似度(基準は複数なら最良値)。ゲートウェイ不達/失敗時は
-/// n-gram 類似度に縮退する。
-Future<Map<String, double>> _similarScores(List<String> refs, List<Post> posts, Future<List<List<double>>> Function(List<String>)? embedTexts) async {
-  if (embedTexts != null) {
-    try {
-      final embs = await embedTexts([...refs, for (final p in posts) p.body]);
-      double cos(List<double> a, List<double> b) {
-        var dot = 0.0, na = 0.0, nb = 0.0;
-        final len = math.min(a.length, b.length);
-        for (var i = 0; i < len; i++) {
-          dot += a[i] * b[i];
-          na += a[i] * a[i];
-          nb += b[i] * b[i];
-        }
-        return na == 0 || nb == 0 ? 0 : dot / (math.sqrt(na) * math.sqrt(nb));
-      }
+double _cosVec(List<double> a, List<double> b) {
+  var dot = 0.0, na = 0.0, nb = 0.0;
+  final len = math.min(a.length, b.length);
+  for (var i = 0; i < len; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  return na == 0 || nb == 0 ? 0 : dot / (math.sqrt(na) * math.sqrt(nb));
+}
 
-      return {
-        for (var i = 0; i < posts.length; i++)
-          posts[i].key: [for (var r = 0; r < refs.length; r++) cos(embs[r], embs[refs.length + i])].reduce(math.max),
-      };
-    } catch (_) {
-      // 縮退へ
+/// SigLIP cos 類似度(基準は複数なら最良値、テキスト基準とベクトル基準は
+/// max で併合)。ゲートウェイ不達/失敗時は n-gram 類似度に縮退する。
+Future<Map<String, double>> _similarScores(
+    List<String> refs, Map<String, Object?>? vecRef, List<Post> posts, Future<List<List<double>>> Function(List<String>)? embedTexts) async {
+  final out = <String, double>{for (final p in posts) p.key: 0.0};
+  void merge(Map<String, double> m) => m.forEach((k, v) => out[k] = math.max(out[k] ?? 0, v));
+
+  if (refs.isNotEmpty) {
+    var done = false;
+    if (embedTexts != null) {
+      try {
+        final embs = await embedTexts([...refs, for (final p in posts) p.body]);
+        merge({
+          for (var i = 0; i < posts.length; i++)
+            posts[i].key: [for (var r = 0; r < refs.length; r++) _cosVec(embs[r], embs[refs.length + i])].reduce(math.max),
+        });
+        done = true;
+      } catch (_) {
+        // 縮退へ
+      }
+    }
+    if (!done) {
+      final profiles = [for (final r in refs) charNgramProfile(r)];
+      merge({
+        for (final p in posts) p.key: [for (final r in profiles) cosineOfProfiles(r, charNgramProfile(p.body))].reduce(math.max),
+      });
     }
   }
-  final profiles = [for (final r in refs) charNgramProfile(r)];
-  return {
-    for (final p in posts) p.key: [for (final r in profiles) cosineOfProfiles(r, charNgramProfile(p.body))].reduce(math.max),
-  };
+
+  if (vecRef != null) {
+    if (vecRef['kind'] == 'siglip' && vecRef['v'] is List && embedTexts != null) {
+      try {
+        final v = [for (final x in vecRef['v'] as List) (x as num).toDouble()];
+        final embs = await embedTexts([for (final p in posts) p.body]);
+        merge({for (var i = 0; i < posts.length; i++) posts[i].key: _cosVec(v, embs[i])});
+      } catch (_) {}
+    } else if (vecRef['kind'] == 'ngram' && vecRef['p'] is Map) {
+      final profile = {for (final e in (vecRef['p'] as Map).entries) '${e.key}': ((e.value as num?) ?? 0).toDouble()};
+      merge({for (final p in posts) p.key: cosineOfProfiles(profile, charNgramProfile(p.body))});
+    }
+  }
+  return out;
 }
 
 /// キーワード一致 (GLiNER 系): 基準の特徴語と投稿の特徴語の重なり数。
