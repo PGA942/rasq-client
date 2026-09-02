@@ -533,6 +533,18 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     ],
     hasCondOut: true,
   ),
+  // 連動の絞り込み (D-131: 検討メモの F_target): 連動投稿だけに掛かる関門。
+  // 下の条件が成立しないと、このアカウントへの連動投稿は送られない
+  // (サジェストのポスト先判定には影響しない)。
+  NodeCatalogEntry(
+    type: 'composer.linkgate',
+    title: '連動の絞り込み',
+    icon: Icons.fork_right,
+    genre: 'コンポーザー',
+    description: '連動投稿だけに掛かる絞り込みです。下の条件が成立しないと、このアカウントへの連動投稿は送られません(通常のポスト先判定には影響しません)。',
+    inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
+    hasCondOut: true,
+  ),
   // 投稿加工(正規表現, D-130): 送信時に本文へ正規表現の置換をかける。
   // アカウント空 = すべての投稿先に適用。コンポーザースコープ専用。
   NodeCatalogEntry(

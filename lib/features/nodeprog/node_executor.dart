@@ -685,6 +685,29 @@ Future<List<String>> composerTargetAccounts(
   return out;
 }
 
+/// 連動の絞り込み (D-131): `composer.linkgate` を下書きで評価し、
+/// アカウント表記 → 通過したか、を返す(関門が無いアカウントは載らない =
+/// 制限なし)。同一アカウントに複数の関門があれば**すべて**通過が必要。
+Future<Map<String, bool>> composerLinkGates(
+  NodeGraph g,
+  Post draft, {
+  Future<List<Post>> Function(String kindId)? fetch,
+  Future<List<List<double>>> Function(List<String> texts)? embedTexts,
+  Future<Object?> Function(String slot)? storageRead,
+}) async {
+  final byId = {for (final n in g.nodes) n.id: n};
+  final env = _ExecEnv(fetch: fetch ?? (_) async => const [], embedTexts: embedTexts, storageRead: storageRead);
+  final out = <String, bool>{};
+  for (final n in g.nodes.where((n) => n.type == 'composer.linkgate')) {
+    final account = n.inputs.where((i) => i.label == 'アカウント').firstOrNull?.value?.trim() ?? '';
+    if (account.isEmpty) continue;
+    final ctx = await _CondContext.prepare(g, byId, n.id, [draft], env, normalizeSimilar: false);
+    final passed = _evalCondPortAt(g, byId, n.id, draft, 0, ctx);
+    out[account] = (out[account] ?? true) && passed;
+  }
+  return out;
+}
+
 /// ポスト先の選択(フォールバック込み, D-126)。成立したポスト先を上から順に
 /// 返し、続けて**代わりのフォーマットで投稿**(composer.fallback)の成立分を
 /// 返す(既に通常候補になったアカウントは除く)。フォールバックの

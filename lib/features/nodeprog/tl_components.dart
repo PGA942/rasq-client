@@ -312,6 +312,33 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
   return NodeGraph(nodes: nodes, edges: edges);
 }
 
+/// 絞り込みの 1 ノードぶん (D-131: ノード追加ボタンで複数積める)。
+@immutable
+class ComposerFilterSpec {
+  const ComposerFilterSpec({this.what = 'キーワード', this.from = '投稿内容'});
+  final String what;
+  final String from;
+
+  String get title => '$whatを$fromから絞り込み';
+
+  ComposerFilterSpec copyWith({String? what, String? from}) => ComposerFilterSpec(what: what ?? this.what, from: from ?? this.from);
+  Map<String, Object?> toJson() => {'what': what, 'from': from};
+  factory ComposerFilterSpec.fromJson(Map<String, Object?> j) =>
+      ComposerFilterSpec(what: j['what'] as String? ?? 'キーワード', from: j['from'] as String? ?? '投稿内容');
+}
+
+/// 投稿加工(正規表現)の 1 ノードぶん (D-131)。
+@immutable
+class ComposerRegexSpec {
+  const ComposerRegexSpec({this.pattern = '', this.replace = ''});
+  final String pattern;
+  final String replace;
+
+  ComposerRegexSpec copyWith({String? pattern, String? replace}) => ComposerRegexSpec(pattern: pattern ?? this.pattern, replace: replace ?? this.replace);
+  Map<String, Object?> toJson() => {'pattern': pattern, 'replace': replace};
+  factory ComposerRegexSpec.fromJson(Map<String, Object?> j) => ComposerRegexSpec(pattern: j['pattern'] as String? ?? '', replace: j['replace'] as String? ?? '');
+}
+
 /// コンポーザーのポスト先絞り込み (D-125): **アカウントごとタブ選択形式**。
 /// 各アカウントに 1 つ、サジェスト/絞り込みと同じ 2 パラメーター
 /// ([キーワード/類似性] × [投稿内容/リアクション/会話内容])を持ち、
@@ -328,7 +355,11 @@ class ComposerAccountFilter {
       this.delivery = 'auto',
       this.regexEnabled = false,
       this.regexPattern = '',
-      this.regexReplace = ''});
+      this.regexReplace = '',
+      this.extraFilters = const [],
+      this.extraRegexes = const [],
+      this.linkSources = const ['*'],
+      this.linkFilters = const []});
 
   final bool enabled;
   final String what;
@@ -350,6 +381,21 @@ class ComposerAccountFilter {
   final String regexPattern;
   final String regexReplace;
 
+  /// 追加ノード (D-131): 絞り込み/加工はノード追加ボタンで複数積める
+  /// (絞り込みは「かつ」で連結、加工は上から順に適用)。
+  final List<ComposerFilterSpec> extraFilters;
+  final List<ComposerRegexSpec> extraRegexes;
+
+  /// 連動元のアカウント選択 (D-131): このアカウントへ連動できる主投稿先。
+  /// `['*']` = すべて許可(既定)。空 = どこからも連動しない。
+  final List<String> linkSources;
+
+  /// 連動の絞り込み (D-131: 検討メモの F_target): 連動投稿だけに掛かる
+  /// 絞り込み(サジェストのポスト先判定には影響しない)。
+  final List<ComposerFilterSpec> linkFilters;
+
+  bool linkAllowedFrom(String source) => linkSources.contains('*') || linkSources.contains(source);
+
   String get title => '$whatを$fromから絞り込み';
 
   ComposerAccountFilter copyWith(
@@ -362,7 +408,11 @@ class ComposerAccountFilter {
           String? delivery,
           bool? regexEnabled,
           String? regexPattern,
-          String? regexReplace}) =>
+          String? regexReplace,
+          List<ComposerFilterSpec>? extraFilters,
+          List<ComposerRegexSpec>? extraRegexes,
+          List<String>? linkSources,
+          List<ComposerFilterSpec>? linkFilters}) =>
       ComposerAccountFilter(
           enabled: enabled ?? this.enabled,
           what: what ?? this.what,
@@ -373,7 +423,11 @@ class ComposerAccountFilter {
           delivery: delivery ?? this.delivery,
           regexEnabled: regexEnabled ?? this.regexEnabled,
           regexPattern: regexPattern ?? this.regexPattern,
-          regexReplace: regexReplace ?? this.regexReplace);
+          regexReplace: regexReplace ?? this.regexReplace,
+          extraFilters: extraFilters ?? this.extraFilters,
+          extraRegexes: extraRegexes ?? this.extraRegexes,
+          linkSources: linkSources ?? this.linkSources,
+          linkFilters: linkFilters ?? this.linkFilters);
   Map<String, Object?> toJson() => {
         'enabled': enabled,
         'what': what,
@@ -385,6 +439,10 @@ class ComposerAccountFilter {
         'regexEnabled': regexEnabled,
         'regexPattern': regexPattern,
         'regexReplace': regexReplace,
+        'extraFilters': [for (final f in extraFilters) f.toJson()],
+        'extraRegexes': [for (final r in extraRegexes) r.toJson()],
+        'linkSources': linkSources,
+        'linkFilters': [for (final f in linkFilters) f.toJson()],
       };
   factory ComposerAccountFilter.fromJson(Map<String, Object?> j) => ComposerAccountFilter(
       enabled: j['enabled'] == true,
@@ -393,6 +451,10 @@ class ComposerAccountFilter {
       fallbackEnabled: j['fallbackEnabled'] == true,
       fallbackFormat: j['fallbackFormat'] as String? ?? '注釈を付ける',
       fallbackCw: j['fallbackCw'] as String? ?? '',
+      extraFilters: [for (final f in (j['extraFilters'] as List? ?? const [])) ComposerFilterSpec.fromJson((f as Map).cast<String, Object?>())],
+      extraRegexes: [for (final r in (j['extraRegexes'] as List? ?? const [])) ComposerRegexSpec.fromJson((r as Map).cast<String, Object?>())],
+      linkSources: (j['linkSources'] as List?)?.cast<String>() ?? const ['*'],
+      linkFilters: [for (final f in (j['linkFilters'] as List? ?? const [])) ComposerFilterSpec.fromJson((f as Map).cast<String, Object?>())],
       delivery: j['delivery'] as String? ?? 'auto',
       regexEnabled: j['regexEnabled'] == true,
       regexPattern: j['regexPattern'] as String? ?? '',
@@ -448,52 +510,96 @@ NodeGraph compileComposerConfig(Map<String, ComposerAccountFilter> byAccount, Li
 
   final nodes = <GraphNode>[];
   final edges = <GraphEdge>[];
-  var row = 0;
-  // 投稿加工(正規表現, D-130): 絞り込みの有効/無効と独立に、アカウント別の
-  // 加工ノードを置く(独立ノード — 送信時に本文へ適用される)。
-  for (var i = 0; i < accounts.length; i++) {
-    final f = byAccount[accounts[i]];
-    if (f == null || !f.regexEnabled || f.regexPattern.isEmpty) continue;
-    nodes.add(inst('composer.regex', 'rx$i', Offset(900, 40.0 + i * 120), values: {'アカウント': accounts[i], 'パターン': f.regexPattern, '置換': f.regexReplace}));
-  }
-  for (var i = 0; i < accounts.length; i++) {
-    final account = accounts[i];
-    final f = byAccount[account];
-    if (f == null || !f.enabled) continue; // 無効 = 候補にしない(ポスト先ノードなし)
-    final y = 40.0 + row * 220;
-    final targetId = 't$i';
-    final refId = 'r$i';
-    final exId = 'x$i';
-    final mlId = 'l$i';
-    final cmpId = 'c$i';
-    nodes.add(inst('composer.target', targetId, Offset(100, y), values: {'アカウント': account}));
-    nodes.add(inst('tl.source', refId, Offset(420, y + 130), values: {'TL': suggestFromKind(f.from), 'アカウント': account}));
-    if (f.what == '類似性') {
-      nodes.add(inst('ml.siglip', exId, Offset(400, y + 70)));
-      nodes.add(inst('ml.similar', mlId, Offset(380, y + 20)));
-      nodes.add(inst('compare', cmpId, Offset(120, y + 90), values: {'演算': '以上', '値': '0.2'}));
+  var seq = 0;
+
+  /// 絞り込み 1 ノードぶんの ML チェーン(基準取得 → 抽出 → ML → 比較)を
+  /// 置いて比較ノードの id を返す。
+  String compareChain(String account, ComposerFilterSpec spec, double x, double y) {
+    final id = seq++;
+    final refId = 'r$id';
+    final exId = 'x$id';
+    final mlId = 'l$id';
+    final cmpId = 'c$id';
+    nodes.add(inst('tl.source', refId, Offset(x + 320, y + 130), values: {'TL': suggestFromKind(spec.from), 'アカウント': account}));
+    if (spec.what == '類似性') {
+      nodes.add(inst('ml.siglip', exId, Offset(x + 300, y + 70)));
+      nodes.add(inst('ml.similar', mlId, Offset(x + 280, y + 20)));
+      nodes.add(inst('compare', cmpId, Offset(x + 20, y + 90), values: {'演算': '以上', '値': '0.2'}));
       edges.add(GraphEdge(from: refId, fromPort: 0, to: exId, toPort: 0));
       edges.add(GraphEdge(from: exId, fromPort: 0, to: mlId, toPort: 2));
     } else {
-      nodes.add(inst('ml.gliner', exId, Offset(400, y + 70)));
-      nodes.add(inst('ml.keyword', mlId, Offset(380, y + 20)));
-      nodes.add(inst('compare', cmpId, Offset(120, y + 90), values: {'演算': '以上', '値': '1'}));
+      nodes.add(inst('ml.gliner', exId, Offset(x + 300, y + 70)));
+      nodes.add(inst('ml.keyword', mlId, Offset(x + 280, y + 20)));
+      nodes.add(inst('compare', cmpId, Offset(x + 20, y + 90), values: {'演算': '以上', '値': '1'}));
       edges.add(GraphEdge(from: refId, fromPort: 0, to: exId, toPort: 0));
       edges.add(GraphEdge(from: exId, fromPort: 0, to: mlId, toPort: 1));
     }
     edges.add(GraphEdge(from: mlId, fromPort: 0, to: cmpId, toPort: 0));
-    edges.add(GraphEdge(from: targetId, fromPort: 0, to: cmpId, toPort: 0, cond: true));
-    // 代わりのフォーマットで投稿 (D-126): 絞り込みに合わなかったとき —
-    // **無くなる直前のノード(比較)からバイパス**(同じ比較を Not で受ける)。
-    if (f.fallbackEnabled) {
-      final fbId = 'fb$i';
-      final notId = 'nt$i';
-      nodes.add(inst('composer.fallback', fbId, Offset(640, y), values: {'アカウント': account, 'フォーマット': f.fallbackFormat, '注釈': f.fallbackCw}));
-      nodes.add(inst('not', notId, Offset(660, y + 60)));
-      edges.add(GraphEdge(from: fbId, fromPort: 0, to: notId, toPort: 0, cond: true));
-      edges.add(GraphEdge(from: notId, fromPort: 0, to: cmpId, toPort: 0, cond: true));
+    return cmpId;
+  }
+
+  /// 複数の絞り込みを「かつ」(数珠繋ぎ)で [ownerId] の条件接続部へ。
+  /// 返り値 = 先頭の比較ノード id(フォールバックの Not のバイパス元)。
+  String? andChain(String ownerId, String account, List<ComposerFilterSpec> specs, double x, double y) {
+    String? head;
+    String? prev;
+    for (var k = 0; k < specs.length; k++) {
+      final cmpId = compareChain(account, specs[k], x + k * 60, y + k * 160);
+      if (prev == null) {
+        edges.add(GraphEdge(from: ownerId, fromPort: 0, to: cmpId, toPort: 0, cond: true));
+        head = cmpId;
+      } else {
+        edges.add(GraphEdge(from: prev, fromPort: 0, to: cmpId, toPort: 0, cond: true)); // かつ (D-094)
+      }
+      prev = cmpId;
     }
-    row++;
+    return head;
+  }
+
+  var row = 0;
+  // 投稿加工(正規表現, D-130/D-131): 絞り込みの有効/無効と独立に、
+  // アカウント別の加工ノードを置く(ノード追加ボタンで複数、上から順)。
+  for (var i = 0; i < accounts.length; i++) {
+    final f = byAccount[accounts[i]];
+    if (f == null) continue;
+    final specs = [
+      if (f.regexEnabled && f.regexPattern.isNotEmpty) ComposerRegexSpec(pattern: f.regexPattern, replace: f.regexReplace),
+      ...f.extraRegexes.where((r) => r.pattern.isNotEmpty),
+    ];
+    for (var k = 0; k < specs.length; k++) {
+      nodes.add(inst('composer.regex', 'rx${i}_$k', Offset(900.0 + k * 40, 40.0 + i * 120 + k * 30),
+          values: {'アカウント': accounts[i], 'パターン': specs[k].pattern, '置換': specs[k].replace}));
+    }
+  }
+  for (var i = 0; i < accounts.length; i++) {
+    final account = accounts[i];
+    final f = byAccount[account];
+    if (f == null) continue;
+    final y = 40.0 + row * 480;
+    if (f.enabled) {
+      final targetId = 't$i';
+      nodes.add(inst('composer.target', targetId, Offset(100, y), values: {'アカウント': account}));
+      // 絞り込み(主 + 追加ノード)を「かつ」で連結 (D-131)。
+      final head = andChain(targetId, account, [ComposerFilterSpec(what: f.what, from: f.from), ...f.extraFilters], 100, y);
+      // 代わりのフォーマットで投稿 (D-126): 絞り込みに合わなかったとき —
+      // **無くなる直前のノード(比較の先頭)からバイパス**(Not で受ける)。
+      if (f.fallbackEnabled && head != null) {
+        final fbId = 'fb$i';
+        final notId = 'nt$i';
+        nodes.add(inst('composer.fallback', fbId, Offset(640, y), values: {'アカウント': account, 'フォーマット': f.fallbackFormat, '注釈': f.fallbackCw}));
+        nodes.add(inst('not', notId, Offset(660, y + 60)));
+        edges.add(GraphEdge(from: fbId, fromPort: 0, to: notId, toPort: 0, cond: true));
+        edges.add(GraphEdge(from: notId, fromPort: 0, to: head, toPort: 0, cond: true));
+      }
+      row++;
+    }
+    // 連動の絞り込み (D-131: F_target): 連動投稿だけに掛かる関門ノード。
+    if (f.linkFilters.isNotEmpty) {
+      final gateId = 'lg$i';
+      nodes.add(inst('composer.linkgate', gateId, Offset(1200, y), values: {'アカウント': account}));
+      andChain(gateId, account, f.linkFilters, 1200, y);
+      if (!f.enabled) row++;
+    }
   }
   return NodeGraph(nodes: nodes, edges: edges);
 }

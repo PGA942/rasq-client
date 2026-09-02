@@ -279,9 +279,21 @@ void main() {
     // 完全に別ページ (D-126): タブ = アカウント、絞り込み系のみ。
     expect(find.byType(ComposerConfigScreen), findsOneWidget);
     expect(find.text('ポスト先の絞り込み'), findsOneWidget);
-    expect(find.text('代わりのフォーマットで投稿'), findsWidgets);
-    expect(find.text('連動投稿の届け方'), findsOneWidget); // D-129
-    expect(find.text('投稿加工(正規表現)'), findsWidgets); // D-130
+    expect(find.text('フォーマット'), findsOneWidget); // D-131: FOW ではなくページ内
+    expect(find.text('バイパスしない'), findsOneWidget);
+    expect(find.text('ノードを追加'), findsWidgets); // D-131: ノード追加ボタン
+    // 下のセクションへスクロールして確認 (D-129/D-130/D-131)。
+    final page = find.descendant(of: find.byType(ComposerConfigScreen), matching: find.byType(ListView));
+    await tester.dragUntilVisible(find.text('投稿加工(正規表現)').first, page, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(find.text('投稿加工(正規表現)'), findsWidgets);
+    await tester.dragUntilVisible(find.text('連動投稿の届け方'), page, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(find.text('連動投稿の届け方'), findsOneWidget);
+    await tester.dragUntilVisible(find.textContaining('連動の絞り込み').first, page, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('連動元のアカウント'), findsOneWidget); // D-131
+    expect(find.textContaining('連動の絞り込み'), findsWidgets); // D-131
     // 戻るで 1 ページ前へ帰れる(最初のタップはコンポーザー FOW の
     // スクリムを閉じる)。
     await tester.tap(find.byTooltip('戻る'), warnIfMissed: false);

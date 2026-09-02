@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession, SnsSession;
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -85,6 +86,30 @@ final settingsPageSpecProvider = FutureProvider.family<SettingsPageSpec, String>
 
 /// 1 ページ(area)分の設定値 KV。ホスト設定は `<area>.v1`(D-035)、
 /// プラグイン設定 (`sns.<短area>`) は `sns.<pluginId>.<短area>.v1`。
+/// SNS プラグイン設定で「設定するアカウント」を切り替えるオーバーライド
+/// (D-131)。null = 現在のアカウント。SNS 設定ページのアカウントバンドル
+/// タイル(RASQ 行なし)から選ぶ。
+class SettingsAccountOverride extends Notifier<AccountSession?> {
+  @override
+  AccountSession? build() => null;
+  void set(AccountSession? s) => state = s;
+}
+
+final settingsAccountOverrideProvider = NotifierProvider<SettingsAccountOverride, AccountSession?>(SettingsAccountOverride.new);
+
+/// 設定対象の SNS セッション (D-131): オーバーライド → 現在の順。
+SnsSession? settingsTargetSession(Ref ref) {
+  final override = ref.watch(settingsAccountOverrideProvider);
+  if (override != null) {
+    try {
+      return ref.watch(pluginRegistryProvider).session(override);
+    } catch (_) {
+      return null;
+    }
+  }
+  return ref.watch(currentSnsSessionProvider);
+}
+
 class SettingsAreaStore extends AsyncNotifier<Map<String, Object?>> {
   SettingsAreaStore(this.area);
   final String area;
@@ -100,7 +125,10 @@ class SettingsAreaStore extends AsyncNotifier<Map<String, Object?>> {
 
   @override
   Future<Map<String, Object?>> build() async {
-    if (_isPlugin) ref.watch(currentSnsSessionProvider); // キーがプラグインに依存
+    if (_isPlugin) {
+      ref.watch(currentSnsSessionProvider); // キーがプラグインに依存
+      ref.watch(settingsAccountOverrideProvider); // 設定対象の切替 (D-131)
+    }
     try {
       final raw = await ref.watch(sessionStorageProvider).read(storageKey);
       if (raw != null) return (jsonDecode(raw) as Map).cast<String, Object?>();
@@ -134,13 +162,15 @@ class RemoteSettingsStore extends AsyncNotifier<Map<String, Object?>> {
 
   @override
   Future<Map<String, Object?>> build() async {
-    final session = ref.watch(currentSnsSessionProvider);
+    // 設定するアカウントの切替 (D-131): オーバーライドがあればそのセッション。
+    final session = settingsTargetSession(ref);
     if (session == null) return const {};
     return session.settingsRead(shortArea);
   }
 
   Future<void> set(String key, Object? value) async {
-    final session = ref.read(currentSnsSessionProvider);
+    final override = ref.read(settingsAccountOverrideProvider);
+    final session = override != null ? ref.read(pluginRegistryProvider).session(override) : ref.read(currentSnsSessionProvider);
     if (session == null) return;
     final before = state.value ?? const <String, Object?>{};
     state = AsyncData({...before, key: value});
@@ -221,7 +251,46 @@ class SettingsDslScreen extends ConsumerWidget {
     );
     return Scaffold(
       appBar: RasqPageHeader(title: s.title),
-      body: ListView(children: [RrlRenderer(node: s.root, host: host)]),
+      body: ListView(children: [
+        // SNS プラグイン設定のアカウント切替 (D-131): バンドルタイル型
+        // (RASQ アカウント行なし)。選んだアカウントのセッションに読み書き。
+        if (area.startsWith('sns.')) _accountTile(context, ref),
+        RrlRenderer(node: s.root, host: host),
+      ]),
+    );
+  }
+
+  Widget _accountTile(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = RasqTokens.of(context);
+    final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    if (sessions.length < 2) return const SizedBox.shrink();
+    final selectedKey = (ref.watch(settingsAccountOverrideProvider) ?? ref.watch(currentAccountSessionProvider))?.account.key;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.md, RasqSpacing.xs),
+      decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.md, 6, RasqSpacing.md, 0),
+          child: Text('設定するアカウント', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        ),
+        for (final s in sessions)
+          InkWell(
+            onTap: () {
+              final current = ref.read(currentAccountSessionProvider);
+              ref.read(settingsAccountOverrideProvider.notifier).set(s.account.key == current?.account.key ? null : s);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
+              child: Row(children: [
+                RasqSnsPill(account: s.account, showLabel: false, dotSize: 14),
+                const SizedBox(width: RasqSpacing.sm),
+                Expanded(child: Text('${s.account}', style: RasqTypography.bodySmall.copyWith(fontWeight: s.account.key == selectedKey ? FontWeight.w700 : null), overflow: TextOverflow.ellipsis)),
+                if (s.account.key == selectedKey) Icon(Icons.check, size: 16, color: tokens.link),
+              ]),
+            ),
+          ),
+      ]),
     );
   }
 }

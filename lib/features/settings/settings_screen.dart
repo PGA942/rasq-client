@@ -38,6 +38,9 @@ class SettingsScreen extends ConsumerWidget {
         RasqListTile(title: '通知', onTap: () => context.push('/settings/section/notifications')),
         RasqListTile(title: 'RASQについて', onTap: () => context.push('/settings/section/about')),
         RasqListTile(title: 'ミュート/ブロック', onTap: () => context.pushMuteBlock()),
+        // その他の設定 (D-131)。
+        const RasqSectionHeader(title: 'その他の設定'),
+        RasqListTile(title: '投稿コンポーザー', onTap: () => context.push('/settings/composer')),
         RasqListTile(
           title: 'アカウントの重要設定',
           subtitle: 'パスワードの再設定やアカウント削除など、パスワードがいる処理は web 版で行います',

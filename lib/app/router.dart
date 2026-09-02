@@ -17,6 +17,7 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
+import '../features/settings/composer_settings_screen.dart';
 import '../features/settings/mute_block_screen.dart';
 import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
@@ -153,6 +154,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'mute-block', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MuteBlockScreen()),
             GoRoute(path: 'dsl/:area', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => SettingsDslScreen(area: state.pathParameters['area']!)),
             GoRoute(path: 'section/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SettingsSectionScreen(sectionId: s.pathParameters['id']!)),
+            // その他の設定 → 投稿コンポーザー (D-131)。
+            GoRoute(path: 'composer', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ComposerSettingsScreen()),
           ]),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
           GoRoute(path: Routes.bookmarks, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BookmarksScreen()),

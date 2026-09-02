@@ -474,6 +474,31 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
   }
 
+  /// 連動の絞り込み (D-131): composer.linkgate を下書きで評価する。
+  Future<Map<String, bool>> _linkGates() async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'composer');
+      if (raw == null) return const {};
+      final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      final me = ref.read(currentUserProvider);
+      final draft = Post(id: 'draft', account: me.account, author: me, createdAt: DateTime.now(), body: _text.text);
+      final session = ref.read(currentSnsSessionProvider);
+      SnsSession? sessionForAccount(String label) {
+        final s = ref.read(sessionsProvider).value?.sessions.where((x) => '${x.account}' == label || x.account.key == label).firstOrNull;
+        return s == null ? null : ref.read(pluginRegistryProvider).session(s);
+      }
+
+      return await composerLinkGates(
+        graph,
+        draft,
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
+      );
+    } catch (_) {
+      return const {};
+    }
+  }
+
   /// 投稿加工(正規表現, D-130)のルール。ポスト先グラフの composer.regex から。
   Future<List<(String, String, String)>> _regexRules() async {
     try {
@@ -590,10 +615,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
     AccountSession? find(String label) =>
         label.isEmpty || label == '現在のアカウント' ? null : sessions.where((s) => '${s.account}' == label || s.account.key == label).firstOrNull;
+    // 投稿アカウントの自動選択 (D-131: その他の設定 → 投稿コンポーザー)。
+    // オフでも一致マーク/並び替えは出す(自動で顔は切り替えない)。
+    final autoAccount = (ref.read(settingsAreaProvider('composer.prefs')).value ?? const {})['autoAccount'] != false;
     setState(() {
       _matchedTargets = [for (final c in choices) c.$1];
-      _suggestedPostAs = choices.isEmpty ? null : find(choices.first.$1);
-      _suggestedFallback = choices.isEmpty ? null : choices.first.$2;
+      _suggestedPostAs = !autoAccount || choices.isEmpty ? null : find(choices.first.$1);
+      _suggestedFallback = !autoAccount || choices.isEmpty ? null : choices.first.$2;
     });
   }
 
@@ -748,14 +776,23 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
     final primaryKey = (_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account.key;
     List<(String, Map<String, String>?)> choices = const [];
-    if (_multiSel.values.contains(_selLinked)) choices = await _composerChoices();
+    Map<String, bool> gates = const {};
+    if (_multiSel.values.contains(_selLinked)) {
+      choices = await _composerChoices();
+      gates = await _linkGates(); // 連動の絞り込み (D-131)
+    }
     final cfg = await _composerAccountCfg();
+    final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
     final plan = <(AccountSession, Map<String, String>?, String)>[];
     for (final s in sessions) {
       final label = '${s.account}';
       final mode = _multiSel[label] ?? _selNone;
       if (mode == _selNone || s.account.key == primaryKey) continue;
       if (mode == _selLinked) {
+        // 連動元のアカウント選択 (D-131): 主投稿先が許可リストにあるときだけ。
+        if (!(cfg[label]?.linkAllowedFrom(primaryLabel) ?? true)) continue;
+        // 連動の絞り込み (D-131: F_target): 関門があるなら通過が必要。
+        if (gates.containsKey(label) && gates[label] != true) continue;
         final hit = choices.where((c) => c.$1 == label || c.$1 == s.account.key).firstOrNull;
         if (hit == null) continue; // ノード不成立 → このアカウントには連動しない
         plan.add((s, hit.$2, cfg[label]?.delivery ?? 'auto'));

@@ -226,6 +226,52 @@ void main() {
     expect(composerDeliveryLabel('draft'), contains('下書き'));
   });
 
+
+  test('D-131: 追加ノードは「かつ」連結、連動の絞り込みは linkgate、連動元は linkSources', () async {
+    const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
+    Post post(String id, String body) =>
+        Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 2), body: body);
+
+    final g = compileComposerConfig({
+      '@game@a.test': const ComposerAccountFilter(
+        enabled: true,
+        what: 'キーワード',
+        from: '投稿内容',
+        extraFilters: [ComposerFilterSpec(what: 'キーワード', from: 'リアクション')],
+        linkFilters: [ComposerFilterSpec(what: 'キーワード', from: '投稿内容')],
+      ),
+    }, ['@game@a.test']);
+    // 追加ノード: 比較が 2 つ + 連動関門(linkgate)にも比較。
+    expect(g.nodes.where((n) => n.type == 'compare').length, 3);
+    expect(g.nodes.where((n) => n.type == 'composer.linkgate'), hasLength(1));
+
+    // 連動の絞り込み: 基準に合う下書きだけ関門を通る。
+    Future<List<Post>> fetch(String kid) async => switch (kid) {
+          'acct:@game@a.test|myposts' => [post('ref', 'スプラトゥーンのガチマッチ配信')],
+          'acct:@game@a.test|myreactions' => [post('ref2', 'スプラトゥーンのガチマッチ配信')],
+          _ => const <Post>[],
+        };
+    final pass = await composerLinkGates(g, post('d1', '今夜もガチマッチやります'), fetch: fetch);
+    expect(pass['@game@a.test'], isTrue);
+    final fail = await composerLinkGates(g, post('d2', '会議の議事録です'), fetch: fetch);
+    expect(fail['@game@a.test'], isFalse);
+
+    // 連動元のアカウント選択: ['*'] = すべて許可(既定)、リスト指定は限定。
+    expect(const ComposerAccountFilter().linkAllowedFrom('@x@y.test'), isTrue);
+    const limited = ComposerAccountFilter(linkSources: ['@main@a.test']);
+    expect(limited.linkAllowedFrom('@main@a.test'), isTrue);
+    expect(limited.linkAllowedFrom('@sub@a.test'), isFalse);
+    expect(const ComposerAccountFilter(linkSources: []).linkAllowedFrom('@main@a.test'), isFalse); // 空 = どこからも連動しない
+
+    // 追加の正規表現ノードもルールに載る。
+    final g2 = compileComposerConfig({
+      '@a@x.test': const ComposerAccountFilter(regexEnabled: true, regexPattern: 'ねこ', regexReplace: '🐱', extraRegexes: [ComposerRegexSpec(pattern: 'いぬ', replace: '🐶')]),
+    }, ['@a@x.test']);
+    final rules = composerRegexRules(g2);
+    expect(rules, hasLength(2));
+    expect(applyComposerRegex('ねこといぬ', '@a@x.test', rules), '🐱と🐶');
+  });
+
   Future<ProviderContainer> pumpConfig(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
