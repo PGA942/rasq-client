@@ -5,17 +5,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
+import 'package:rrl_core/rrl_core.dart';
+import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/providers.dart';
-import '../../app/router.dart' show routerProvider;
+import '../../app/router.dart' show Routes, routerProvider;
 import '../../shell/headers.dart';
 import '../home/timeline_providers.dart' show customTimelinesProvider;
 import '../settings/settings_dsl.dart';
+import '../store/store_client.dart' show storeSamplePluginId;
 import 'node_tabs.dart';
 import 'tl_components.dart';
 
 /// コンポーネント追加パレット (D-122): ノード検索と同じ FOW。
 const tlConfigPaletteFowId = 'fow.tlconfig.palette';
+
+/// パラメーター編集 FOW (D-123): タイル + RRL 描画のパラメーター部。
+const tlConfigParamsFowId = 'fow.tlconfig.params';
 
 /// 自作リスト(リスト系ソースの候補)。
 final _tlListNamesProvider = FutureProvider<List<String>>((ref) async {
@@ -76,6 +82,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   @override
   void dispose() {
     _manager.close(tlConfigPaletteFowId);
+    _manager.close(tlConfigParamsFowId);
     super.dispose();
   }
 
@@ -314,21 +321,140 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         .whenComplete(() => router.routerDelegate.removeListener(onNavigate));
   }
 
-  Future<void> _algorithmMenu(BuildContext anchorContext, int i) async {
-    final pick = await _pickFrom(anchorContext, 'tlconfig.algoMenu', [if (i > 0) '上へ移動', if (i < _cfg.algorithms.length - 1) '下へ移動', '削除'], '');
+  /// コンポーネントの見た目情報(タイル/詳細/並べ替え行で共用)。
+  (IconData, String, String, String) _algoInfo(TlAlgorithmComponent a) => (
+        a.isPlugin ? Icons.extension_outlined : (a.isSuggest ? Icons.auto_awesome_outlined : Icons.schedule),
+        a.title,
+        a.isPlugin ? 'TLプラグイン' : 'RASQ',
+        switch (a.type) {
+          'chrono' => '取得したままの時刻順に整えます。',
+          'suggest' => '${a.from}(${suggestFromKind(a.from) == 'myposts' ? '自分の投稿' : suggestFromKind(a.from) == 'myreplies' ? '自分の返信' : 'リアクションした投稿'})を基準に、${a.what}で合う投稿を先頭へ並べ替えます。',
+          _ => '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
+        },
+      );
+
+  (IconData, String, String, String) _sourceInfo(TlSourceComponent s) => (
+        s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined),
+        s.isTrend ? '現在のトレンドTLを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得'),
+        s.account.isEmpty ? '現在のアカウント' : s.account,
+        'TL: ${s.isTrend ? 'トレンド上位タグの検索結果' : s.isList ? 'リスト: ${s.listName}' : switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', _ => 'フォロー中 (home)' }}',
+      );
+
+  /// … メニュー (D-123): 詳細/一時的な無効化(解除)/ストアページ/削除。
+  /// 並べ替えはアクションバー編集と同じシート([_openReorder])に移した。
+  Future<void> _componentMenu(BuildContext anchorContext, {required bool algorithm, required int i}) async {
+    final manager = ref.read(overlayManagerProvider);
+    final box = anchorContext.findRenderObject() as RenderBox;
+    final anchor = box.localToGlobal(Offset.zero) & box.size;
+    final enabled = algorithm ? _cfg.algorithms[i].enabled : _cfg.sources[i].enabled;
+    final isPlugin = algorithm && _cfg.algorithms[i].isPlugin;
+    final pick = await manager.showDropdown<String>(id: 'tlconfig.component', anchor: anchor, dense: true, items: [
+      const RasqDropdownItem('詳細', 'info'),
+      const RasqDropdownItem('パラメーターを編集', 'params'),
+      RasqDropdownItem(enabled ? '一時的な無効化' : '無効化の解除', 'toggle'),
+      // v1: TL プラグインは同梱 wasm サンプルの掲載ページへ (D-120 と同じ対応)。
+      RasqDropdownItem('プラグインのストアページへ移動', 'store', enabled: isPlugin),
+      const RasqDropdownItem('削除', 'delete', destructive: true),
+    ]);
     if (pick == null || !mounted) return;
-    final list = [..._cfg.algorithms];
     switch (pick) {
-      case '上へ移動':
-        final a = list.removeAt(i);
-        list.insert(i - 1, a);
-      case '下へ移動':
-        final a = list.removeAt(i);
-        list.insert(i + 1, a);
-      case '削除':
-        list.removeAt(i);
+      case 'info':
+        _showComponentInfo(algorithm: algorithm, i: i);
+      case 'params':
+        _openParamsFow(algorithm: algorithm, index: i);
+      case 'toggle':
+        if (algorithm) {
+          _update(_cfg.copyWith(algorithms: [for (var k = 0; k < _cfg.algorithms.length; k++) k == i ? _cfg.algorithms[k].copyWith(enabled: !enabled) : _cfg.algorithms[k]]));
+        } else {
+          _update(_cfg.copyWith(sources: [for (var k = 0; k < _cfg.sources.length; k++) k == i ? _cfg.sources[k].copyWith(enabled: !enabled) : _cfg.sources[k]]));
+        }
+      case 'store':
+        ref.read(routerProvider).push(Routes.storePlugin(storeSamplePluginId));
+      case 'delete':
+        if (algorithm) {
+          _update(_cfg.copyWith(algorithms: [for (var k = 0; k < _cfg.algorithms.length; k++) if (k != i) _cfg.algorithms[k]]));
+        } else if (_cfg.sources.length > 1) {
+          _update(_cfg.copyWith(sources: [for (var k = 0; k < _cfg.sources.length; k++) if (k != i) _cfg.sources[k]]));
+        }
     }
-    _update(_cfg.copyWith(algorithms: list));
+  }
+
+  void _showComponentInfo({required bool algorithm, required int i}) {
+    final manager = ref.read(overlayManagerProvider);
+    final (icon, title, subtitle, description) = algorithm ? _algoInfo(_cfg.algorithms[i]) : _sourceInfo(_cfg.sources[i]);
+    final sns = [for (final p in ref.read(pluginRegistryProvider).plugins) p.manifest.name];
+    manager.showBottomSheet<void>(
+      id: 'tlconfig.info',
+      title: title,
+      builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(icon, size: 18, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text('提供: $subtitle', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            ]),
+            const SizedBox(height: RasqSpacing.sm),
+            Text(description, style: RasqTypography.bodySmall),
+            const SizedBox(height: RasqSpacing.sm),
+            Text('対応: ${sns.isEmpty ? '—' : sns.join('・')}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          ]),
+        );
+      },
+    );
+  }
+
+  /// パラメーター編集 FOW (D-123): 「>」/… の「パラメーターを編集」から。
+  /// タイルヘッダー + **RRL で描いたパラメーター部**(設定 DSL と同じ部品)。
+  void _openParamsFow({required bool algorithm, required int index}) {
+    final manager = ref.read(overlayManagerProvider);
+    if (manager.contains(tlConfigParamsFowId)) manager.close(tlConfigParamsFowId);
+    final spec = FowSpec(
+      type: FowPanelType.widget,
+      initialHeightFactor: 0.55,
+      minHeightFactor: 0.2,
+      maxHeightFactor: 0.85,
+      dockAboveFooter: true,
+      heightStops: const [0.55],
+      freeAboveStops: true,
+    );
+    final router = ref.read(routerProvider);
+    void onNavigate() => manager.close(tlConfigParamsFowId);
+    router.routerDelegate.addListener(onNavigate);
+    manager
+        .showFow<void>(
+          id: tlConfigParamsFowId,
+          semanticsLabel: 'ノードを設定',
+          spec: spec,
+          builder: (ctx, handle) => _ComponentParamsPanel(
+            algorithm: algorithm,
+            index: index,
+            scope: _scope,
+            cfgOf: () => _cfg,
+            infoOf: (alg, i) => alg ? _algoInfo(_cfg.algorithms[i]) : _sourceInfo(_cfg.sources[i]),
+            accounts: _accounts,
+            onUpdate: _update,
+          ),
+        )
+        .whenComplete(() => router.routerDelegate.removeListener(onNavigate));
+  }
+
+  /// 並べ替え (D-123): アクションバー編集 (D-025 系) と同じ UI —
+  /// ドラッグで並び替え、目のトグルで一時的な無効化。即時反映。
+  void _openReorder({required bool algorithms}) {
+    final manager = ref.read(overlayManagerProvider);
+    manager.showBottomSheet<void>(
+      id: 'tlconfig.reorder',
+      title: algorithms ? 'アルゴリズムの並べ替え' : 'タイムラインの並べ替え',
+      builder: (_) => _ReorderSheetBody(
+        algorithms: algorithms,
+        cfgOf: () => _cfg,
+        infoOf: (alg, i) => alg ? _algoInfo(_cfg.algorithms[i]) : _sourceInfo(_cfg.sources[i]),
+        onUpdate: _update,
+      ),
+    );
   }
 
   // ---- build -----------------------------------------------------------------
@@ -361,16 +487,23 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
                   child: Text('この TL はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。',
                       style: RasqTypography.caption.copyWith(color: tokens.danger)),
                 ),
-              const RasqSectionHeader(title: 'アルゴリズム', topMargin: 0),
-              for (var i = 0; i < _cfg.algorithms.length; i++) _algorithmTile(i),
+              RasqSectionHeader(
+                title: 'アルゴリズム',
+                topMargin: 0,
+                trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: 'アルゴリズムの並べ替え', onPressed: () => _openReorder(algorithms: true)),
+              ),
+              for (var i = 0; i < _cfg.algorithms.length; i++) _componentTile(algorithm: true, i: i),
               _addTile('アルゴリズムを追加', () => _openPalette(algorithms: true)),
-              const RasqSectionHeader(title: 'SNSタイムライン'),
+              RasqSectionHeader(
+                title: 'SNSタイムライン',
+                trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: 'タイムラインの並べ替え', onPressed: () => _openReorder(algorithms: false)),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
                 child: Text('複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。',
                     style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               ),
-              for (var i = 0; i < _cfg.sources.length; i++) _sourceTile(i),
+              for (var i = 0; i < _cfg.sources.length; i++) _componentTile(algorithm: false, i: i),
               _addTile('タイムラインを追加', () => _openPalette(algorithms: false)),
               const RasqSectionHeader(title: '自動更新'),
               Builder(builder: (ctx) {
@@ -399,98 +532,29 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     );
   }
 
-  Widget _algorithmTile(int i) {
-    final a = _cfg.algorithms[i];
-    final subtitle = a.isPlugin ? 'TLプラグイン' : 'RASQ';
-    final description = switch (a.type) {
-      'chrono' => '取得したままの時刻順に整えます。',
-      'suggest' => '${a.from}(${suggestFromKind(a.from) == 'myposts' ? '自分の投稿' : suggestFromKind(a.from) == 'myreplies' ? '自分の返信' : 'リアクションした投稿'})を基準に、${a.what}で合う投稿を先頭へ並べ替えます。',
-      _ => '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
-    };
+  /// コンポーネントタイル (D-123): タップ(>)= パラメーター編集 FOW、
+  /// … = 詳細/無効化/ストア/削除。無効化中はグレー表示。
+  Widget _componentTile({required bool algorithm, required int i}) {
+    final scheme = Theme.of(context).colorScheme;
+    final enabled = algorithm ? _cfg.algorithms[i].enabled : _cfg.sources[i].enabled;
+    final (icon, title, subtitle, description) = algorithm ? _algoInfo(_cfg.algorithms[i]) : _sourceInfo(_cfg.sources[i]);
     return Row(children: [
       Expanded(
         child: RasqPluginTile(
-          icon: a.isPlugin ? Icons.extension_outlined : (a.isSuggest ? Icons.auto_awesome_outlined : Icons.schedule),
-          title: a.title,
-          subtitle: subtitle,
+          leading: Icon(icon, size: 22, color: enabled ? null : scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+          title: title,
+          subtitle: enabled ? subtitle : '$subtitle ・ 無効化中',
           description: description,
-          chevron: false,
-          onTap: a.isSuggest
-              ? () async {
-                  // なにを → なにから の順で選び直す(2 段ドロップダウン)。
-                  final manager = ref.read(overlayManagerProvider);
-                  final what = await manager.showBottomSheet<String>(
-                    id: 'tlconfig.suggestWhat',
-                    title: 'なにをサジェストする?',
-                    builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
-                      for (final o in suggestWhatOptions) RasqListTile(title: o, onTap: () => manager.close('tlconfig.suggestWhat', result: o)),
-                    ]),
-                  );
-                  if (what == null || !mounted) return;
-                  final from = await manager.showBottomSheet<String>(
-                    id: 'tlconfig.suggestFrom',
-                    title: 'なにから読み取る?',
-                    builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
-                      for (final o in suggestFromOptions) RasqListTile(title: o, onTap: () => manager.close('tlconfig.suggestFrom', result: o)),
-                    ]),
-                  );
-                  if (from == null || !mounted) return;
-                  _update(_cfg.copyWith(algorithms: [for (var k = 0; k < _cfg.algorithms.length; k++) k == i ? _cfg.algorithms[k].copyWith(what: what, from: from) : _cfg.algorithms[k]]));
-                }
-              : null,
+          chevron: true,
+          onTap: () => _openParamsFow(algorithm: algorithm, index: i),
         ),
       ),
-      Builder(builder: (ctx) => RasqIconButton(icon: Icons.more_horiz, size: 18, tooltip: 'アルゴリズムの操作', onPressed: () => _algorithmMenu(ctx, i))),
-      const SizedBox(width: RasqSpacing.sm),
-    ]);
-  }
-
-  Widget _sourceTile(int i) {
-    final s = _cfg.sources[i];
-    final (title, tlLabel) = s.isTrend
-        ? ('現在のトレンドTLを取得', 'トレンド上位タグの検索結果')
-        : s.isList
-            ? ('リストTLを取得', 'リスト: ${s.listName}')
-            : ('タイムラインを取得', switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', _ => 'フォロー中 (home)' });
-    return Row(children: [
-      Expanded(
-        child: Builder(builder: (ctx) {
-          return RasqPluginTile(
-            icon: s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined),
-            title: title,
-            subtitle: s.account.isEmpty ? '現在のアカウント' : s.account,
-            description: 'TL: $tlLabel',
-            chevron: true,
-            onTap: () async {
-              // 基本 TL は種類 → アカウントの順、トレンド/リストはアカウントのみ。
-              var tl = s.tl;
-              if (!s.isTrend && !s.isList) {
-                final pick = await _pickFrom(ctx, 'tlconfig.srcTl', ['home', 'social', 'local', 'global'], s.tl);
-                if (pick == null || !mounted || !ctx.mounted) return;
-                tl = pick;
-              }
-              final acct = await _pickFrom(ctx, 'tlconfig.srcAcct', ['現在のアカウント', ..._accounts], s.account.isEmpty ? '現在のアカウント' : s.account);
-              if (acct == null || !mounted) return;
-              _update(_cfg.copyWith(sources: [
-                for (var k = 0; k < _cfg.sources.length; k++) k == i ? s.copyWith(tl: tl, account: acct == '現在のアカウント' ? '' : acct) : _cfg.sources[k],
-              ]));
-            },
-          );
-        }),
-      ),
-      Builder(builder: (ctx) {
-        return RasqIconButton(
-          icon: Icons.more_horiz,
-          size: 18,
-          tooltip: 'タイムラインの操作',
-          onPressed: () async {
-            final pick = await _pickFrom(ctx, 'tlconfig.srcMenu', ['削除'], '');
-            if (pick == '削除' && mounted && _cfg.sources.length > 1) {
-              _update(_cfg.copyWith(sources: [for (var k = 0; k < _cfg.sources.length; k++) if (k != i) _cfg.sources[k]]));
-            }
-          },
-        );
-      }),
+      Builder(
+          builder: (ctx) => RasqIconButton(
+              icon: Icons.more_horiz,
+              size: 18,
+              tooltip: algorithm ? 'アルゴリズムの操作' : 'タイムラインの操作',
+              onPressed: () => _componentMenu(ctx, algorithm: algorithm, i: i))),
       const SizedBox(width: RasqSpacing.sm),
     ]);
   }
@@ -529,6 +593,10 @@ class _PaletteItem {
 class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> {
   final _search = TextEditingController();
   final _focus = FocusNode();
+
+  /// ジャンルチップ (D-123): 提供元(RASQ/TLプラグイン/SNSプラグイン/
+  /// リスト系)で絞り込む。ノードパレットと同じチップ UI。
+  String _genre = 'すべて';
 
   @override
   void initState() {
@@ -607,10 +675,14 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
 
   @override
   Widget build(BuildContext context) {
+    final manager = ref.read(overlayManagerProvider);
     final query = _search.text.trim();
+    final all = _items();
+    final genres = ['すべて', ...{for (final e in all) e.subtitle}];
     final items = [
-      for (final e in _items())
-        if (query.isEmpty || e.title.contains(query) || e.description.contains(query) || e.subtitle.contains(query)) e,
+      for (final e in all)
+        if (_genre == 'すべて' || e.subtitle == _genre)
+          if (query.isEmpty || e.title.contains(query) || e.description.contains(query) || e.subtitle.contains(query)) e,
     ];
     final bar = Padding(
       padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 6, RasqSpacing.sm, 6),
@@ -619,6 +691,34 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
         controller: _search,
         focusNode: _focus,
         hintText: 'プラグインノードを検索',
+        filterChips: [
+          RasqFilterChipItem(
+            label: '並び替え: 関連順',
+            dropdown: true,
+            onAnchorTap: (rect) => manager.showDropdown<String>(
+              id: 'tlconfig.palette.sort',
+              ownerId: tlConfigPaletteFowId,
+              anchor: rect,
+              dense: true,
+              items: const [RasqDropdownItem('関連順', 'relevance', checked: true)],
+            ),
+          ),
+          RasqFilterChipItem(
+            label: 'ジャンル: $_genre',
+            dropdown: true,
+            selected: _genre != 'すべて',
+            onAnchorTap: (rect) async {
+              final pick = await manager.showDropdown<String>(
+                id: 'tlconfig.palette.genre',
+                ownerId: tlConfigPaletteFowId,
+                anchor: rect,
+                dense: true,
+                items: [for (final g in genres) RasqDropdownItem(g, g, checked: g == _genre)],
+              );
+              if (pick != null && mounted) setState(() => _genre = pick);
+            },
+          ),
+        ],
       ),
     );
     // 最小表示(折りたたみ)時はバーだけ(ノードパレットと同じ作法)。
@@ -652,5 +752,189 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
         ),
       ]);
     });
+  }
+}
+
+/// パラメーター編集 FOW の中身 (D-123): タイルヘッダー + **RRL で描いた
+/// パラメーター部**(設定 DSL と同じ L2 部品 — SectionHeader/RadioListTile)。
+/// ワイヤーフレーム「ノードを設定」の形。プラグイン側の RRL 設定ページは
+/// ストア統合(ノード定義配布)でここに差し込まれる。
+class _ComponentParamsPanel extends StatefulWidget {
+  const _ComponentParamsPanel(
+      {required this.algorithm, required this.index, required this.scope, required this.cfgOf, required this.infoOf, required this.accounts, required this.onUpdate});
+
+  final bool algorithm;
+  final int index;
+  final String scope;
+  final TlConfig Function() cfgOf;
+  final (IconData, String, String, String) Function(bool algorithm, int i) infoOf;
+  final List<String> accounts;
+  final ValueChanged<TlConfig> onUpdate;
+
+  @override
+  State<_ComponentParamsPanel> createState() => _ComponentParamsPanelState();
+}
+
+class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
+  RrlNode _radio(String key, String label, String value) =>
+      RrlNode(t: 'RadioListTile', k: key, p: {'title': label, 'value': value, 'group': '\$.settings.$key'}, on: const {'change': 'settings.set'});
+
+  RrlNode _section(String title) => RrlNode(t: 'SectionHeader', p: {'title': title});
+
+  (Map<String, Object?>, RrlNode) _paramsOf(TlConfig cfg) {
+    if (widget.algorithm) {
+      final a = cfg.algorithms[widget.index];
+      if (a.isSuggest) {
+        return (
+          {'what': a.what, 'from': a.from},
+          RrlNode(t: 'Column', c: [
+            _section('なにをサジェストする?'),
+            for (final o in suggestWhatOptions) _radio('what', o, o),
+            _section('なにから読み取る?'),
+            for (final o in suggestFromOptions) _radio('from', o, o),
+          ]),
+        );
+      }
+      return (
+        const {},
+        RrlNode(t: 'Column', c: [
+          RrlNode(t: 'Text', p: {
+            'text': a.isPlugin ? 'このプラグインのパラメーター(RRL 設定ページ)は、ノード定義の配布(ストア統合)でここに表示されます。' : '時系列順にパラメーターはありません。'
+          }),
+        ]),
+      );
+    }
+    final s = cfg.sources[widget.index];
+    return (
+      {'tl': s.tl, 'account': s.account.isEmpty ? '現在のアカウント' : s.account},
+      RrlNode(t: 'Column', c: [
+        if (!s.isTrend && !s.isList) ...[
+          _section('TL 種別'),
+          _radio('tl', 'フォロー中 (home)', 'home'),
+          _radio('tl', 'おすすめ (social)', 'social'),
+          _radio('tl', 'ローカル (local)', 'local'),
+          _radio('tl', 'グローバル (global)', 'global'),
+        ],
+        _section('アカウント'),
+        _radio('account', '現在のアカウント', '現在のアカウント'),
+        for (final a in widget.accounts) _radio('account', a, a),
+      ]),
+    );
+  }
+
+  void _apply(String key, Object? value) {
+    final cfg = widget.cfgOf();
+    if (widget.algorithm) {
+      final next = [
+        for (var k = 0; k < cfg.algorithms.length; k++)
+          k == widget.index ? cfg.algorithms[k].copyWith(what: key == 'what' ? '$value' : null, from: key == 'from' ? '$value' : null) : cfg.algorithms[k],
+      ];
+      widget.onUpdate(cfg.copyWith(algorithms: next));
+    } else {
+      final next = [
+        for (var k = 0; k < cfg.sources.length; k++)
+          k == widget.index
+              ? cfg.sources[k].copyWith(tl: key == 'tl' ? '$value' : null, account: key == 'account' ? ('$value' == '現在のアカウント' ? '' : '$value') : null)
+              : cfg.sources[k],
+      ];
+      widget.onUpdate(cfg.copyWith(sources: next));
+    }
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cfg = widget.cfgOf();
+    final inRange = widget.algorithm ? widget.index < cfg.algorithms.length : widget.index < cfg.sources.length;
+    if (!inRange) return const SizedBox.shrink();
+    final (icon, title, subtitle, description) = widget.infoOf(widget.algorithm, widget.index);
+    final (values, root) = _paramsOf(cfg);
+    final host = RrlHost(
+      // 疑似 instanceScope(設定 DSL D-031 と同じ作法): ホスト静的ページ。
+      instanceScope: 'rasq.host.tlconfig:-:0:${widget.scope}.${widget.algorithm ? 'algo' : 'src'}.${widget.index}',
+      scope: RrlScope({'settings': values}),
+      onEvent: (nodeId, kind, {String? fn, Map<String, Object?> payload = const {}}) {
+        if (fn == 'settings.set') _apply(nodeId.split(':').last, payload['value']);
+      },
+    );
+    return Column(children: [
+      RasqPluginTile(icon: icon, title: title, subtitle: subtitle, description: description, chevron: false),
+      const Divider(height: 1),
+      Expanded(child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), children: [RrlRenderer(node: root, host: host)])),
+    ]);
+  }
+}
+
+/// 並べ替えシート (D-123): アクションバー編集と同じ UI — ドラッグで
+/// 並び替え、目のトグルで一時的な無効化(解除)。即時反映 + 永続化。
+class _ReorderSheetBody extends StatefulWidget {
+  const _ReorderSheetBody({required this.algorithms, required this.cfgOf, required this.infoOf, required this.onUpdate});
+
+  final bool algorithms;
+  final TlConfig Function() cfgOf;
+  final (IconData, String, String, String) Function(bool algorithm, int i) infoOf;
+  final ValueChanged<TlConfig> onUpdate;
+
+  @override
+  State<_ReorderSheetBody> createState() => _ReorderSheetBodyState();
+}
+
+class _ReorderSheetBodyState extends State<_ReorderSheetBody> {
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final cfg = widget.cfgOf();
+    final count = widget.algorithms ? cfg.algorithms.length : cfg.sources.length;
+
+    Widget row(int i) {
+      final enabled = widget.algorithms ? cfg.algorithms[i].enabled : cfg.sources[i].enabled;
+      final (icon, title, subtitle, _) = widget.infoOf(widget.algorithms, i);
+      return RasqListTile(
+        key: ValueKey('reorder$i'),
+        title: title,
+        subtitle: subtitle,
+        leading: Icon(icon, size: 22, color: enabled ? scheme.onSurface : scheme.onSurfaceVariant),
+        chevron: false,
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          RasqIconButton(
+            icon: enabled ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            size: 20,
+            tooltip: enabled ? '一時的な無効化' : '無効化の解除',
+            onPressed: () {
+              if (widget.algorithms) {
+                widget.onUpdate(cfg.copyWith(algorithms: [for (var k = 0; k < cfg.algorithms.length; k++) k == i ? cfg.algorithms[k].copyWith(enabled: !enabled) : cfg.algorithms[k]]));
+              } else {
+                widget.onUpdate(cfg.copyWith(sources: [for (var k = 0; k < cfg.sources.length; k++) k == i ? cfg.sources[k].copyWith(enabled: !enabled) : cfg.sources[k]]));
+              }
+              setState(() {});
+            },
+          ),
+          Icon(Icons.drag_handle, size: 20, color: scheme.onSurfaceVariant),
+        ]),
+      );
+    }
+
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      ReorderableListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        buildDefaultDragHandles: true,
+        onReorderItem: (from, to) {
+          if (widget.algorithms) {
+            final list = [...cfg.algorithms];
+            final moved = list.removeAt(from);
+            list.insert(to.clamp(0, list.length), moved);
+            widget.onUpdate(cfg.copyWith(algorithms: list));
+          } else {
+            final list = [...cfg.sources];
+            final moved = list.removeAt(from);
+            list.insert(to.clamp(0, list.length), moved);
+            widget.onUpdate(cfg.copyWith(sources: list));
+          }
+          setState(() {});
+        },
+        children: [for (var i = 0; i < count; i++) row(i)],
+      ),
+    ]);
   }
 }

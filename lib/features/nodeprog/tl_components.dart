@@ -19,12 +19,15 @@ import 'node_graph.dart';
 /// そのまま使われ、オート構成を壊す自由形はこの UI からは作れない。
 @immutable
 class TlSourceComponent {
-  const TlSourceComponent({this.tl = 'home', this.account = ''});
+  const TlSourceComponent({this.tl = 'home', this.account = '', this.enabled = true});
 
   /// TL 種別: home/social/local/global(基本 TL)、`list:<名前>`(リスト系)、
   /// `trend`(現在のトレンド TL = 上位タグの検索結果合流)— D-122 で
   /// 追加パレットの選択肢を [タイムライン, リスト系, 現在のトレンドTL] に絞る。
   final String tl;
+
+  /// 一時的な無効化 (D-123): 外さずに実行だけ止める(コンパイルから除外)。
+  final bool enabled;
 
   bool get isTrend => tl == 'trend';
   bool get isList => tl.startsWith('list:');
@@ -33,9 +36,11 @@ class TlSourceComponent {
   /// アカウント表記(空 = 現在のアカウント)。
   final String account;
 
-  TlSourceComponent copyWith({String? tl, String? account}) => TlSourceComponent(tl: tl ?? this.tl, account: account ?? this.account);
-  Map<String, Object?> toJson() => {'tl': tl, 'account': account};
-  factory TlSourceComponent.fromJson(Map<String, Object?> j) => TlSourceComponent(tl: j['tl'] as String? ?? 'home', account: j['account'] as String? ?? '');
+  TlSourceComponent copyWith({String? tl, String? account, bool? enabled}) =>
+      TlSourceComponent(tl: tl ?? this.tl, account: account ?? this.account, enabled: enabled ?? this.enabled);
+  Map<String, Object?> toJson() => {'tl': tl, 'account': account, 'enabled': enabled};
+  factory TlSourceComponent.fromJson(Map<String, Object?> j) =>
+      TlSourceComponent(tl: j['tl'] as String? ?? 'home', account: j['account'] as String? ?? '', enabled: j['enabled'] != false);
 }
 
 /// サジェストの基準の選択肢 → 取得 kind(D-121 の対応):
@@ -52,7 +57,7 @@ String suggestFromKind(String from) => switch (from) {
 
 @immutable
 class TlAlgorithmComponent {
-  const TlAlgorithmComponent({required this.type, this.what = 'キーワード', this.from = '投稿内容', this.pluginLabel = ''});
+  const TlAlgorithmComponent({required this.type, this.what = 'キーワード', this.from = '投稿内容', this.pluginLabel = '', this.enabled = true});
 
   /// 'chrono'(時系列順)| 'suggest' | `plugin:<tlId>`(カスタム TL プラグイン)。
   final String type;
@@ -64,6 +69,9 @@ class TlAlgorithmComponent {
   /// plugin: の表示名(「〇〇でソート」)。
   final String pluginLabel;
 
+  /// 一時的な無効化 (D-123): 外さずに適用だけ止める(コンパイルから除外)。
+  final bool enabled;
+
   bool get isSuggest => type == 'suggest';
   bool get isPlugin => type.startsWith('plugin:');
 
@@ -73,10 +81,15 @@ class TlAlgorithmComponent {
         _ => pluginLabel.isEmpty ? 'カスタム(TLプラグイン)' : pluginLabel,
       };
 
-  TlAlgorithmComponent copyWith({String? what, String? from}) => TlAlgorithmComponent(type: type, what: what ?? this.what, from: from ?? this.from, pluginLabel: pluginLabel);
-  Map<String, Object?> toJson() => {'type': type, 'what': what, 'from': from, 'pluginLabel': pluginLabel};
+  TlAlgorithmComponent copyWith({String? what, String? from, bool? enabled}) =>
+      TlAlgorithmComponent(type: type, what: what ?? this.what, from: from ?? this.from, pluginLabel: pluginLabel, enabled: enabled ?? this.enabled);
+  Map<String, Object?> toJson() => {'type': type, 'what': what, 'from': from, 'pluginLabel': pluginLabel, 'enabled': enabled};
   factory TlAlgorithmComponent.fromJson(Map<String, Object?> j) => TlAlgorithmComponent(
-      type: j['type'] as String? ?? 'chrono', what: j['what'] as String? ?? 'キーワード', from: j['from'] as String? ?? '投稿内容', pluginLabel: j['pluginLabel'] as String? ?? '');
+      type: j['type'] as String? ?? 'chrono',
+      what: j['what'] as String? ?? 'キーワード',
+      from: j['from'] as String? ?? '投稿内容',
+      pluginLabel: j['pluginLabel'] as String? ?? '',
+      enabled: j['enabled'] != false);
 }
 
 @immutable
@@ -127,11 +140,15 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
   final nodes = <GraphNode>[];
   final edges = <GraphEdge>[];
 
+  // 一時的な無効化 (D-123): 無効のコンポーネントはコンパイルから除外。
+  final sources = [for (final s in cfg.sources) if (s.enabled) s];
+  final algorithms = [for (final a in cfg.algorithms) if (a.enabled) a];
+
   // 取得段。基準(サジェスト)には myposts / myreactions / myreplies も
   // tl.source の TL 値として通す(実行側の resolveNodeFetch が解決)。
   // リスト系 → tl.list、現在のトレンド TL → trend.posts (D-122)。
-  for (var i = 0; i < cfg.sources.length; i++) {
-    final s = cfg.sources[i];
+  for (var i = 0; i < sources.length; i++) {
+    final s = sources[i];
     final at = Offset(24, 40.0 + i * 170);
     if (s.isTrend) {
       nodes.add(inst('trend.posts', 's$i', at, values: {'アカウント': s.account}));
@@ -141,22 +158,22 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
       nodes.add(inst('tl.source', 's$i', at, values: {'TL': s.tl, 'アカウント': s.account}));
     }
   }
-  if (cfg.sources.isEmpty) return const NodeGraph();
+  if (sources.isEmpty) return const NodeGraph();
 
   // マージ段組み(D-114 と同形): 3 口、溢れたら前段 + 2 口で連鎖。
   String out;
-  if (cfg.sources.length == 1) {
+  if (sources.length == 1) {
     out = 's0';
   } else {
     var mergeIndex = 0;
     String? current;
     var consumed = 0;
-    while (consumed < cfg.sources.length) {
+    while (consumed < sources.length) {
       final id = 'm$mergeIndex';
       nodes.add(inst('merge', id, Offset(260.0 + mergeIndex * 40, 120.0 + mergeIndex * 150)));
       var port = 0;
       if (current != null) edges.add(GraphEdge(from: current, fromPort: 0, to: id, toPort: port++));
-      while (port < 3 && consumed < cfg.sources.length) {
+      while (port < 3 && consumed < sources.length) {
         edges.add(GraphEdge(from: 's$consumed', fromPort: 0, to: id, toPort: port++));
         consumed++;
       }
@@ -168,8 +185,8 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
 
   // アルゴリズム段(上から順に適用 = 鎖の順)。
   var col = 0;
-  for (var i = 0; i < cfg.algorithms.length; i++) {
-    final a = cfg.algorithms[i];
+  for (var i = 0; i < algorithms.length; i++) {
+    final a = algorithms[i];
     final x = 300.0 + col * 260;
     if (a.type == 'chrono') continue; // 時系列は取得/マージの既定順
     if (a.isPlugin) {

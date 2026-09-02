@@ -89,7 +89,7 @@ void main() {
     expect([for (final p in out!) p.id], ['p2', 'p1']); // 猫の投稿が先頭
   });
 
-  testWidgets('歯車 → 簡略版カスタマイズ画面: コンポーネント追加でグラフが KV へコンパイルされる', (tester) async {
+  Future<ProviderContainer> pumpConfig(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -109,10 +109,15 @@ void main() {
     ));
     await tester.pumpAndSettle();
     final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
-
-    // TL の歯車は簡略版カスタマイズ画面へ (D-121: キャンバスは一旦無効化)。
     await tester.tap(find.byTooltip('タイムライン設定'));
     await tester.pumpAndSettle();
+    return container;
+  }
+
+  testWidgets('歯車 → 簡略版カスタマイズ画面: コンポーネント追加でグラフが KV へコンパイルされる', (tester) async {
+    final container = await pumpConfig(tester);
+
+    // TL の歯車は簡略版カスタマイズ画面へ (D-121: キャンバスは一旦無効化)。
     expect(find.byType(TimelineConfigScreen), findsOneWidget);
     Finder inScreen(Finder f) => find.descendant(of: find.byType(TimelineConfigScreen), matching: f);
     expect(inScreen(find.text('アルゴリズム')), findsOneWidget);
@@ -160,5 +165,66 @@ void main() {
     await tester.tap(find.text('削除'));
     await tester.pumpAndSettle();
     expect(inScreen(find.text('キーワードを投稿内容からサジェスト')), findsNothing);
+  });
+
+  testWidgets('D-123: パラメーターFOW(RRL)/一時的な無効化/並べ替えシート/ジャンルチップ', (tester) async {
+    final container = await pumpConfig(tester);
+    Finder inScreen(Finder f) => find.descendant(of: find.byType(TimelineConfigScreen), matching: f);
+    final manager = container.read(overlayManagerProvider);
+    final acc = fakeSession().account.key;
+
+    await tester.tap(inScreen(find.text('フォロー中')));
+    await tester.pumpAndSettle();
+
+    // サジェストを追加してからタイルをタップ → パラメーター FOW(RRL の
+    // ラジオ)。「類似性」を選ぶとタイトルが追従する。
+    await tester.tap(inScreen(find.text('アルゴリズムを追加')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('サジェスト'));
+    await tester.pumpAndSettle();
+    await tester.tap(inScreen(find.text('キーワードを投稿内容からサジェスト')));
+    await tester.pumpAndSettle();
+    expect(find.text('なにをサジェストする?'), findsOneWidget); // RRL SectionHeader
+    await tester.tap(find.text('類似性'));
+    await tester.pumpAndSettle();
+    expect(find.text('類似性を投稿内容からサジェスト'), findsWidgets); // タイル + FOW ヘッダー
+    manager.close(tlConfigParamsFowId);
+    await tester.pumpAndSettle();
+
+    // … → 一時的な無効化: タイルがグレー表記になり、コンパイルから外れる。
+    await tester.tap(inScreen(find.byTooltip('アルゴリズムの操作')).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('一時的な無効化'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('無効化中'), findsOneWidget);
+    var area = await container.read(settingsAreaProvider('nodeprog.$acc.tl.home').future);
+    var types = {for (final n in NodeGraph.fromJson((jsonDecode(area['graph']! as String) as Map).cast<String, Object?>()).nodes) n.type};
+    expect(types, isNot(contains('sort'))); // 無効化された段は消える
+
+    // 並べ替えシート(アクションバー編集と同じ UI): 目のトグルで解除。
+    await tester.tap(inScreen(find.byTooltip('アルゴリズムの並べ替え')));
+    await tester.pumpAndSettle();
+    expect(find.text('アルゴリズムの並べ替え'), findsWidgets); // シートタイトル
+    expect(find.byIcon(Icons.drag_handle), findsWidgets);
+    await tester.tap(find.byTooltip('無効化の解除'));
+    await tester.pumpAndSettle();
+    area = await container.read(settingsAreaProvider('nodeprog.$acc.tl.home').future);
+    types = {for (final n in NodeGraph.fromJson((jsonDecode(area['graph']! as String) as Map).cast<String, Object?>()).nodes) n.type};
+    expect(types, contains('sort')); // 解除で戻る
+    manager.close('tlconfig.reorder');
+    await tester.pumpAndSettle();
+
+    // ジャンルチップ (D-123): タイムライン側パレットを「リスト系」に絞る。
+    await tester.tap(inScreen(find.text('タイムラインを追加')));
+    await tester.pumpAndSettle();
+    expect(find.text('タイムライン'), findsOneWidget);
+    await tester.tap(find.text('プラグインノードを検索')); // 検索欄フォーカスでチップ表示
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('ジャンル: すべて'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('リスト系').last); // ドロップダウン項目
+    await tester.pumpAndSettle();
+    expect(find.text('タイムライン'), findsNothing);
+    expect(find.text('リスト: Fediverse Banner'), findsOneWidget);
   });
 }
