@@ -7,6 +7,7 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/features/nodeprog/tl_components.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -96,6 +97,16 @@ void main() {
     final s2 = registry.session(session(acc2)) as FakeSnsSession;
     expect(s1.lastDraft?.text, '連動🐱テストです');
     expect(s2.lastDraft?.text, '連動🐱テストです');
+
+    // 学習ループ (D-132): 確定ラベルがプロファイルへ、連動は正例として記録。
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    final learn = await container.read(settingsAreaProvider('storage.safe.${acc1.key}').future);
+    final slot = learn['learn:@tester@example.test'];
+    expect(slot, isA<Map<dynamic, dynamic>>());
+    expect(((slot as Map)['count'] as num).toInt(), 1);
+    final relations = (await container.read(settingsAreaProvider('composer.learn').future))['relations'] as Map;
+    final rel = relations['@tester@example.test→@second@example.test'] as Map;
+    expect((rel['pos'] as num).toInt(), 1);
   });
 
   testWidgets('D-129: delivery=draft はそのアカウント宛の下書きになり、投稿先に選ぶと復元される', (tester) async {

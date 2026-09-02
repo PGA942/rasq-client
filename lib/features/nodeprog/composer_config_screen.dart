@@ -12,6 +12,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart' show Routes, routerProvider;
 import '../../shell/headers.dart';
 import '../settings/settings_dsl.dart';
+import '../compose/composer_learning.dart';
 import 'node_tabs.dart';
 import 'tl_components.dart';
 
@@ -156,6 +157,36 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
     );
   }
 
+  /// 学習ループの状況 (D-132): 確定投稿の件数と最終更新。
+  Widget _learnCaption(ColorScheme scheme) {
+    final accKey = ref.read(currentAccountProvider)?.key;
+    final area = ref.watch(settingsAreaProvider(storageSafeAreaFor(accKey))).value ?? const <String, Object?>{};
+    final slot = area[composerLearnSlot(_tab)];
+    if (slot is! Map) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+        child: Text('学習プロファイル: まだ確定投稿がありません(投稿すると自動で学習します)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      );
+    }
+    final count = (slot['count'] as num?)?.toInt() ?? 0;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+      child: Text('学習プロファイル: 確定投稿 $count 件(手動で切り替えた投稿は強く学習・半減期 90 日)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+    );
+  }
+
+  /// 連動 (→ このアカウント) の実績 (D-132: 正例/負例の分離記録)。
+  Widget _relationCaption(ColorScheme scheme) {
+    final relations = (ref.watch(settingsAreaProvider('composer.learn')).value ?? const <String, Object?>{})['relations'];
+    if (relations is! Map) return const SizedBox.shrink();
+    final (pos, neg) = composerRelationStats(relations.cast<String, Object?>(), _tab);
+    if (pos == 0 && neg == 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
+      child: Text('実績: 連動 $pos 回 / 確認で解除 $neg 回', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+    );
+  }
+
   Widget _addNodeButton(String label, VoidCallback onTap) {
     final tokens = RasqTokens.of(context);
     return Padding(
@@ -199,6 +230,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
                     ),
                   // ---- ポスト先の絞り込み(ノード追加で複数 = かつ, D-131)----
                   const RasqSectionHeader(title: 'ポスト先の絞り込み', topMargin: 0),
+                  _learnCaption(scheme),
                   _filterTile(scheme, f),
                   for (var i = 0; i < f.extraFilters.length; i++) _extraFilterTile(scheme, f, i, linked: false),
                   _addNodeButton('ノードを追加', () => _update(_tab, f.copyWith(extraFilters: [...f.extraFilters, const ComposerFilterSpec()]))),
@@ -244,6 +276,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
                     child: Text('連動元のアカウント(主投稿先がここにあるときだけ連動)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                   ),
                   _linkSourcesTile(scheme, tokens, f),
+                  _relationCaption(scheme),
                   // 連動の絞り込み (D-131: F_target — 連動投稿だけに掛かる)。
                   Padding(
                     padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
@@ -581,7 +614,8 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
             const RrlNode(t: 'SectionHeader', p: {'title': 'なにを見る?'}),
             for (final o in suggestWhatOptions) _radio('what', o, o),
             const RrlNode(t: 'SectionHeader', p: {'title': 'なにから読み取る?'}),
-            for (final o in suggestFromOptions) _radio('from', o, o),
+            // 学習プロファイル (D-132): 確定投稿の学習ループが基準になる。
+            for (final o in composerSuggestFromOptions) _radio('from', o, o),
           ]);
     final host = RrlHost(
       instanceScope: 'rasq.host.composerconfig:-:0:${widget.account}.${widget.mode}.${widget.extraIndex}',

@@ -21,6 +21,7 @@ import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
 import '../nodeprog/tl_components.dart';
 import '../settings/settings_dsl.dart';
+import 'composer_learning.dart';
 import 'compose_providers.dart';
 import 'compose_target.dart';
 import 'emoji_picker_fow.dart';
@@ -805,9 +806,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   /// confirm (D-129): 投稿前に連動先を**チェック済み状態で表示**して確認。
   /// 戻り値 null = 送信自体を中止。チェックを外した連動先は計画から外す。
-  Future<List<(AccountSession, Map<String, String>?, String)>?> _confirmLinked(List<(AccountSession, Map<String, String>?, String)> plan) async {
+  Future<(List<(AccountSession, Map<String, String>?, String)>, List<String>)?> _confirmLinked(List<(AccountSession, Map<String, String>?, String)> plan) async {
     final targets = [for (final e in plan) if (e.$3 == 'confirm') e];
-    if (targets.isEmpty) return plan;
+    if (targets.isEmpty) return (plan, const <String>[]);
     final manager = ref.read(overlayManagerProvider);
     final checked = {for (final e in targets) e.$1.account.key: true};
     final ok = await manager.showBottomSheet<bool>(
@@ -830,19 +831,24 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       }),
     );
     if (ok != true) return null; // シートを閉じた = 送信中止
-    return [
-      for (final e in plan)
-        if (e.$3 != 'confirm' || (checked[e.$1.account.key] ?? true)) e,
-    ];
+    // チェックを外した連動先 = リレーションの負例 (D-132: 学習データの分離)。
+    return (
+      [
+        for (final e in plan)
+          if (e.$3 != 'confirm' || (checked[e.$1.account.key] ?? true)) e,
+      ],
+      [for (final e in targets) if (checked[e.$1.account.key] != true) '${e.$1.account}'],
+    );
   }
 
   /// 計画の実行 (D-128/D-129/D-130): auto/confirm 済み = 投稿、draft =
   /// そのアカウント宛の下書き(次にそのアカウントを投稿先に選ぶと復元)。
   /// 失敗したアカウント表記を返す(本体は落とさない)。
-  Future<List<String>> _executeMultiPlan(
+  Future<(List<String>, List<String>)> _executeMultiPlan(
       List<(AccountSession, Map<String, String>?, String)> plan, NewPost base, List<(String, String, String)> regexRules) async {
     final registry = ref.read(pluginRegistryProvider);
     final errors = <String>[];
+    final posted = <String>[]; // 連動の正例 (D-132)
     for (final (s, fb, delivery) in plan) {
       final label = '${s.account}';
       var cw = base.contentWarning;
@@ -873,12 +879,38 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         }
         await session.createPost(NewPost(
             text: text, contentWarning: cw, visibility: visibility, localOnly: localOnly, reactionAcceptance: base.reactionAcceptance, mediaIds: ids, poll: base.poll));
+        posted.add(label);
       } catch (e) {
         errors.add(label);
         debugPrint('連動投稿 $label: $e');
       }
     }
-    return errors;
+    return (errors, posted);
+  }
+
+  /// 学習ループ (D-132): 確定ラベルをプロファイルへ EMA 追加(手動切替は
+  /// 強く学習)+ 連動 (A→B) の正例/負例の記録。送信は落とさない。
+  Future<void> _recordLearning({required String primaryLabel, required bool corrected, required List<String> posted, required List<String> removed}) async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final area = storageSafeAreaFor(accKey);
+      final slot = composerLearnSlot(primaryLabel);
+      final existing = (await ref.read(settingsAreaProvider(area).future))[slot];
+      final updated = composerLearnUpdate(existing is Map ? existing.cast<String, Object?>() : null, _text.text.trim(), weight: corrected ? 3.0 : 1.0);
+      await ref.read(settingsAreaProvider(area).notifier).set(slot, updated);
+      if (posted.isNotEmpty || removed.isNotEmpty) {
+        var relations = ((await ref.read(settingsAreaProvider('composer.learn').future))['relations'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
+        for (final b in posted) {
+          relations = composerRelationBump(relations, primaryLabel, b, positive: true);
+        }
+        for (final b in removed) {
+          relations = composerRelationBump(relations, primaryLabel, b, positive: false);
+        }
+        await ref.read(settingsAreaProvider('composer.learn').notifier).set('relations', relations);
+      }
+    } catch (e) {
+      debugPrint('学習ループ: $e');
+    }
   }
 
   bool get _isDm => widget.target is ComposeDm;
@@ -922,11 +954,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     // 連動投稿の計画 (D-129): confirm の届け方があれば**送信前(busy に入る
     // 前)に**チェック済み状態のシートで確認する(閉じたら送信自体を中止)。
     var multiPlan = await _buildMultiPlan();
+    var removedByConfirm = <String>[]; // 確認で外した連動先 = 負例 (D-132)
     final regexRules = widget.target is ComposeNormal ? await _regexRules() : const <(String, String, String)>[];
     if (multiPlan.any((e) => e.$3 == 'confirm')) {
       final approved = await _confirmLinked(multiPlan);
       if (approved == null) return; // 送信中止
-      multiPlan = approved;
+      multiPlan = approved.$1;
+      removedByConfirm = approved.$2;
     }
     if (!mounted) return;
     setState(() {
@@ -987,7 +1021,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       };
       // 複数選択モード (D-128/D-129): 計画の実行 — auto/confirm 済みは投稿、
       // draft はそのアカウント宛の下書き。正規表現加工 (D-130) も各送信先に。
-      final linkErrors = await _executeMultiPlan(multiPlan, NewPost(
+      final (linkErrors, linkedPosted) = await _executeMultiPlan(multiPlan, NewPost(
         text: _text.text.trim(),
         contentWarning: cw,
         visibility: visibility,
@@ -995,6 +1029,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         reactionAcceptance: (_isDm || direct) ? null : opts.reactionAcceptance,
         poll: _poll == null ? null : NewPoll(choices: _poll!.texts, multiple: _poll!.multiple, expiresAfter: _poll!.expiresAfter),
       ), regexRules);
+      // 学習ループ (D-132): 確定ラベル(手動切替は強く学習)+ 連動の正負例。
+      if (widget.target is ComposeNormal && _text.text.trim().isNotEmpty) {
+        final corrected = _postAs != null && _suggestedPostAs != null && _postAs!.account.key != _suggestedPostAs!.account.key;
+        await _recordLearning(primaryLabel: primaryLabel, corrected: corrected, posted: linkedPosted, removed: removedByConfirm);
+      }
       _drafts.clear(_draftKey); // 送信済み → 下書き破棄
       _skipDraftOnDispose = true;
       _multiSel.clear();

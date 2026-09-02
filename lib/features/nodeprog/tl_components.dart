@@ -53,6 +53,13 @@ class TlSourceComponent {
 const suggestWhatOptions = ['キーワード', '類似性'];
 const suggestFromOptions = ['投稿内容', 'リアクション', '会話内容'];
 
+/// コンポーザーの基準 (D-132): 学習ループの確定投稿プロファイル
+/// (storage.safe スロット)も基準に選べる。
+const composerSuggestFromOptions = [...suggestFromOptions, '学習プロファイル'];
+
+/// 学習プロファイルの storage.safe スロット名 (D-132)。
+String composerLearnSlot(String account) => 'learn:$account';
+
 String suggestFromKind(String from) => switch (from) {
       'リアクション' => 'myreactions',
       '会話内容' => 'myreplies',
@@ -520,6 +527,22 @@ NodeGraph compileComposerConfig(Map<String, ComposerAccountFilter> byAccount, Li
     final exId = 'x$id';
     final mlId = 'l$id';
     final cmpId = 'c$id';
+    // 学習プロファイル (D-132): storage.safe の確定投稿プロファイルを基準に
+    // (読み出しノード経由 — texts = キーワード基準、vector = 類似性基準)。
+    if (spec.from == '学習プロファイル') {
+      nodes.add(inst('storage.load', refId, Offset(x + 320, y + 130), values: {'スロット': composerLearnSlot(account)}));
+      if (spec.what == '類似性') {
+        nodes.add(inst('ml.similar', mlId, Offset(x + 280, y + 20)));
+        nodes.add(inst('compare', cmpId, Offset(x + 20, y + 90), values: {'演算': '以上', '値': '0.2'}));
+        edges.add(GraphEdge(from: refId, fromPort: 1, to: mlId, toPort: 2)); // ベクトル出力 → 基準ベクトル
+      } else {
+        nodes.add(inst('ml.keyword', mlId, Offset(x + 280, y + 20)));
+        nodes.add(inst('compare', cmpId, Offset(x + 20, y + 90), values: {'演算': '以上', '値': '1'}));
+        edges.add(GraphEdge(from: refId, fromPort: 0, to: mlId, toPort: 1)); // テキスト配列 → キーワードリスト
+      }
+      edges.add(GraphEdge(from: mlId, fromPort: 0, to: cmpId, toPort: 0));
+      return cmpId;
+    }
     nodes.add(inst('tl.source', refId, Offset(x + 320, y + 130), values: {'TL': suggestFromKind(spec.from), 'アカウント': account}));
     if (spec.what == '類似性') {
       nodes.add(inst('ml.siglip', exId, Offset(x + 300, y + 70)));
