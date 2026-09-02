@@ -205,6 +205,27 @@ void main() {
     expect(dm.inputs.firstWhere((p) => p.label == '相手').value, 'alice');
   });
 
+
+  test('D-130: 正規表現加工 — ルール抽出と適用(アカウント限定/不正パターンはスキップ)', () {
+    final g = compileComposerConfig({
+      '@a@x.test': const ComposerAccountFilter(regexEnabled: true, regexPattern: 'ねこ', regexReplace: '🐱'),
+      '@b@y.test': const ComposerAccountFilter(regexEnabled: true, regexPattern: '[', regexReplace: 'x'), // 不正
+    }, ['@a@x.test', '@b@y.test']);
+    final rules = composerRegexRules(g);
+    expect(rules, hasLength(2));
+    // a 限定ルールは a にだけ効く。不正パターンは落とさず無視。
+    expect(applyComposerRegex('ねこの話', '@a@x.test', rules), '🐱の話');
+    expect(applyComposerRegex('ねこの話', '@b@y.test', rules), 'ねこの話');
+    // アカウント空 = すべてに適用。
+    expect(applyComposerRegex('ねこ', '@b@y.test', [('', 'ねこ', '🐱')]), '🐱');
+  });
+
+  test('D-129: 届け方のラベルと既定', () {
+    expect(const ComposerAccountFilter().delivery, 'auto');
+    expect(composerDeliveryLabel('confirm'), contains('確認'));
+    expect(composerDeliveryLabel('draft'), contains('下書き'));
+  });
+
   Future<ProviderContainer> pumpConfig(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;

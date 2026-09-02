@@ -319,7 +319,16 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
 @immutable
 class ComposerAccountFilter {
   const ComposerAccountFilter(
-      {this.enabled = false, this.what = 'キーワード', this.from = '投稿内容', this.fallbackEnabled = false, this.fallbackFormat = '注釈を付ける', this.fallbackCw = ''});
+      {this.enabled = false,
+      this.what = 'キーワード',
+      this.from = '投稿内容',
+      this.fallbackEnabled = false,
+      this.fallbackFormat = '注釈を付ける',
+      this.fallbackCw = '',
+      this.delivery = 'auto',
+      this.regexEnabled = false,
+      this.regexPattern = '',
+      this.regexReplace = ''});
 
   final bool enabled;
   final String what;
@@ -331,25 +340,97 @@ class ComposerAccountFilter {
   final String fallbackFormat;
   final String fallbackCw;
 
+  /// 連動投稿の届け方 (D-129, 原典: 投稿コンポーザーの話.md):
+  /// 'auto'(そのまま投稿)| 'confirm'(投稿前にチェック済み状態で確認)|
+  /// 'draft'(そのアカウント宛の下書きだけ作る)。
+  final String delivery;
+
+  /// 投稿加工(正規表現, D-130): このアカウントへ送る本文にパターン置換。
+  final bool regexEnabled;
+  final String regexPattern;
+  final String regexReplace;
+
   String get title => '$whatを$fromから絞り込み';
 
-  ComposerAccountFilter copyWith({bool? enabled, String? what, String? from, bool? fallbackEnabled, String? fallbackFormat, String? fallbackCw}) =>
+  ComposerAccountFilter copyWith(
+          {bool? enabled,
+          String? what,
+          String? from,
+          bool? fallbackEnabled,
+          String? fallbackFormat,
+          String? fallbackCw,
+          String? delivery,
+          bool? regexEnabled,
+          String? regexPattern,
+          String? regexReplace}) =>
       ComposerAccountFilter(
           enabled: enabled ?? this.enabled,
           what: what ?? this.what,
           from: from ?? this.from,
           fallbackEnabled: fallbackEnabled ?? this.fallbackEnabled,
           fallbackFormat: fallbackFormat ?? this.fallbackFormat,
-          fallbackCw: fallbackCw ?? this.fallbackCw);
-  Map<String, Object?> toJson() =>
-      {'enabled': enabled, 'what': what, 'from': from, 'fallbackEnabled': fallbackEnabled, 'fallbackFormat': fallbackFormat, 'fallbackCw': fallbackCw};
+          fallbackCw: fallbackCw ?? this.fallbackCw,
+          delivery: delivery ?? this.delivery,
+          regexEnabled: regexEnabled ?? this.regexEnabled,
+          regexPattern: regexPattern ?? this.regexPattern,
+          regexReplace: regexReplace ?? this.regexReplace);
+  Map<String, Object?> toJson() => {
+        'enabled': enabled,
+        'what': what,
+        'from': from,
+        'fallbackEnabled': fallbackEnabled,
+        'fallbackFormat': fallbackFormat,
+        'fallbackCw': fallbackCw,
+        'delivery': delivery,
+        'regexEnabled': regexEnabled,
+        'regexPattern': regexPattern,
+        'regexReplace': regexReplace,
+      };
   factory ComposerAccountFilter.fromJson(Map<String, Object?> j) => ComposerAccountFilter(
       enabled: j['enabled'] == true,
       what: j['what'] as String? ?? 'キーワード',
       from: j['from'] as String? ?? '投稿内容',
       fallbackEnabled: j['fallbackEnabled'] == true,
       fallbackFormat: j['fallbackFormat'] as String? ?? '注釈を付ける',
-      fallbackCw: j['fallbackCw'] as String? ?? '');
+      fallbackCw: j['fallbackCw'] as String? ?? '',
+      delivery: j['delivery'] as String? ?? 'auto',
+      regexEnabled: j['regexEnabled'] == true,
+      regexPattern: j['regexPattern'] as String? ?? '',
+      regexReplace: j['regexReplace'] as String? ?? '');
+}
+
+/// 連動投稿の届け方の表示 (D-129)。
+const composerDeliveryOptions = ['auto', 'confirm', 'draft'];
+String composerDeliveryLabel(String d) => switch (d) {
+      'confirm' => '確認して投稿 (confirm)',
+      'draft' => '下書きだけ作る (draft)',
+      _ => 'そのまま投稿 (auto)',
+    };
+
+/// コンポーザーグラフの正規表現加工ルール (D-130):
+/// (アカウント表記('' = すべて), パターン, 置換)。
+List<(String, String, String)> composerRegexRules(NodeGraph g) => [
+      for (final n in g.nodes)
+        if (n.type == 'composer.regex')
+          (
+            n.inputs.where((i) => i.label == 'アカウント').firstOrNull?.value?.trim() ?? '',
+            n.inputs.where((i) => i.label == 'パターン').firstOrNull?.value ?? '',
+            n.inputs.where((i) => i.label == '置換').firstOrNull?.value ?? '',
+          ),
+    ];
+
+/// [account](表記 or キー)へ送る本文に正規表現加工を適用する (D-130)。
+/// パターンが不正なルールは無視(投稿は落とさない)。
+String applyComposerRegex(String text, String account, List<(String, String, String)> rules) {
+  var out = text;
+  for (final (target, pattern, replace) in rules) {
+    if (pattern.isEmpty) continue;
+    if (target.isNotEmpty && target != account) continue;
+    try {
+      out = out.replaceAll(RegExp(pattern), replace);
+    } catch (_) {} // 不正な正規表現はスキップ
+  }
+  return out;
 }
 
 /// アカウント表記 → 絞り込みの構成 → コンポーザーグラフ (D-125)。
@@ -368,6 +449,13 @@ NodeGraph compileComposerConfig(Map<String, ComposerAccountFilter> byAccount, Li
   final nodes = <GraphNode>[];
   final edges = <GraphEdge>[];
   var row = 0;
+  // 投稿加工(正規表現, D-130): 絞り込みの有効/無効と独立に、アカウント別の
+  // 加工ノードを置く(独立ノード — 送信時に本文へ適用される)。
+  for (var i = 0; i < accounts.length; i++) {
+    final f = byAccount[accounts[i]];
+    if (f == null || !f.regexEnabled || f.regexPattern.isEmpty) continue;
+    nodes.add(inst('composer.regex', 'rx$i', Offset(900, 40.0 + i * 120), values: {'アカウント': accounts[i], 'パターン': f.regexPattern, '置換': f.regexReplace}));
+  }
   for (var i = 0; i < accounts.length; i++) {
     final account = accounts[i];
     final f = byAccount[account];

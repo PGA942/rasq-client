@@ -19,6 +19,7 @@ import '../home/timeline_providers.dart' show resolveNodeFetch;
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
+import '../nodeprog/tl_components.dart';
 import '../settings/settings_dsl.dart';
 import 'compose_providers.dart';
 import 'compose_target.dart';
@@ -458,6 +459,33 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   final Map<String, int> _multiSel = {};
   static const _selNone = 0, _selNormal = 1, _selLinked = 2;
 
+  /// composercfg(アカウント別のポスト先設定, D-125/D-129/D-130)。
+  Future<Map<String, ComposerAccountFilter>> _composerAccountCfg() async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final area = await ref.read(settingsAreaProvider(nodeprogAreaFor(accKey, 'composer')).future);
+      final raw = area['composercfg'];
+      if (raw is! String) return const {};
+      final out = <String, ComposerAccountFilter>{};
+      (jsonDecode(raw) as Map).cast<String, Object?>().forEach((k, v) => out[k] = ComposerAccountFilter.fromJson((v as Map).cast<String, Object?>()));
+      return out;
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// 投稿加工(正規表現, D-130)のルール。ポスト先グラフの composer.regex から。
+  Future<List<(String, String, String)>> _regexRules() async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'composer');
+      if (raw == null) return const [];
+      return composerRegexRules(NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>()));
+    } catch (_) {
+      return const [];
+    }
+  }
+
   /// ポスト先グラフにノード設定(ポスト先/フォールバック)があるアカウント。
   Future<Set<String>> _linkedCapableAccounts() async {
     try {
@@ -628,6 +656,17 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     _postAs = s;
                     _targetsOpen = false;
                   });
+                  // 連動の下書き (D-129: delivery=draft): このアカウント宛の
+                  // 下書きがあれば、空のコンポーザーに復元して消費する。
+                  final linked = ref.read(composeDraftsProvider)['linked:${s.account.key}'];
+                  if (linked != null && _text.text.trim().isEmpty) {
+                    _text.text = linked.text;
+                    _text.selection = TextSelection.collapsed(offset: _text.text.length);
+                    _cwOn = linked.cwOn;
+                    _cw.text = linked.cw;
+                    _drafts.clear('linked:${s.account.key}');
+                    setState(() {});
+                  }
                 }
               },
               child: Padding(
@@ -701,26 +740,92 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     );
   }
 
-  /// 複数選択の連動投稿 (D-128)。失敗したアカウント表記を返す(本体の
-  /// 投稿は成功済みなので、失敗しても全体は落とさない)。
-  Future<List<String>> _sendMulti(NewPost base) async {
+  /// 連動投稿の計画 (D-128/D-129): (セッション, フォールバック, 届け方)。
+  /// 通常投稿は常に auto。ノード連動はポスト先グラフの成立分だけ +
+  /// composercfg の届け方(auto/confirm/draft)。
+  Future<List<(AccountSession, Map<String, String>?, String)>> _buildMultiPlan() async {
     if (!_multiSelect || widget.target is! ComposeNormal || !_multiSel.values.any((v) => v != _selNone)) return const [];
     final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
-    final registry = ref.read(pluginRegistryProvider);
     final primaryKey = (_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account.key;
-    // ノード連動分の成立判定はポスト先グラフの評価(1 回だけ)。
     List<(String, Map<String, String>?)> choices = const [];
     if (_multiSel.values.contains(_selLinked)) choices = await _composerChoices();
-    final errors = <String>[];
+    final cfg = await _composerAccountCfg();
+    final plan = <(AccountSession, Map<String, String>?, String)>[];
     for (final s in sessions) {
       final label = '${s.account}';
       final mode = _multiSel[label] ?? _selNone;
       if (mode == _selNone || s.account.key == primaryKey) continue;
-      Map<String, String>? fb;
       if (mode == _selLinked) {
         final hit = choices.where((c) => c.$1 == label || c.$1 == s.account.key).firstOrNull;
         if (hit == null) continue; // ノード不成立 → このアカウントには連動しない
-        fb = hit.$2;
+        plan.add((s, hit.$2, cfg[label]?.delivery ?? 'auto'));
+      } else {
+        plan.add((s, null, 'auto'));
+      }
+    }
+    return plan;
+  }
+
+  /// confirm (D-129): 投稿前に連動先を**チェック済み状態で表示**して確認。
+  /// 戻り値 null = 送信自体を中止。チェックを外した連動先は計画から外す。
+  Future<List<(AccountSession, Map<String, String>?, String)>?> _confirmLinked(List<(AccountSession, Map<String, String>?, String)> plan) async {
+    final targets = [for (final e in plan) if (e.$3 == 'confirm') e];
+    if (targets.isEmpty) return plan;
+    final manager = ref.read(overlayManagerProvider);
+    final checked = {for (final e in targets) e.$1.account.key: true};
+    final ok = await manager.showBottomSheet<bool>(
+      id: 'composer.linked.confirm',
+      title: '連動投稿の確認',
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) {
+        return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (final e in targets)
+            RasqSwitchListTile(
+              title: '${e.$1.account}',
+              subtitle: e.$2 == null ? '同内容で連動投稿' : '代わりのフォーマットで連動投稿',
+              value: checked[e.$1.account.key] ?? true,
+              onChanged: (v) => setLocal(() => checked[e.$1.account.key] = v),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
+            child: FilledButton(onPressed: () => manager.close('composer.linked.confirm', result: true), child: const Text('この内容で投稿する')),
+          ),
+        ]);
+      }),
+    );
+    if (ok != true) return null; // シートを閉じた = 送信中止
+    return [
+      for (final e in plan)
+        if (e.$3 != 'confirm' || (checked[e.$1.account.key] ?? true)) e,
+    ];
+  }
+
+  /// 計画の実行 (D-128/D-129/D-130): auto/confirm 済み = 投稿、draft =
+  /// そのアカウント宛の下書き(次にそのアカウントを投稿先に選ぶと復元)。
+  /// 失敗したアカウント表記を返す(本体は落とさない)。
+  Future<List<String>> _executeMultiPlan(
+      List<(AccountSession, Map<String, String>?, String)> plan, NewPost base, List<(String, String, String)> regexRules) async {
+    final registry = ref.read(pluginRegistryProvider);
+    final errors = <String>[];
+    for (final (s, fb, delivery) in plan) {
+      final label = '${s.account}';
+      var cw = base.contentWarning;
+      var visibility = base.visibility;
+      var localOnly = base.localOnly;
+      // フォールバック経由 (D-126) は代替フォーマットを適用。
+      switch (fb?['format']) {
+        case 'cw':
+          cw ??= (fb!['cw']?.isNotEmpty ?? false) ? fb['cw'] : '別フォーマット';
+        case 'followers':
+          visibility = 'followers';
+        case 'localOnly':
+          localOnly = true;
+      }
+      // 投稿加工(正規表現, D-130): 送信先アカウントごとに本文へ適用。
+      final text = applyComposerRegex(base.text, label, regexRules);
+      if (delivery == 'draft') {
+        // 下書きだけ作る (D-129): 次にそのアカウントを投稿先に選ぶと復元。
+        _drafts.save('linked:${s.account.key}', ComposeDraft(text: text, cw: cw ?? '', cwOn: cw != null));
+        continue;
       }
       try {
         final session = registry.session(s);
@@ -729,20 +834,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         for (final f in _files) {
           ids.add((await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: f.sensitive)).id);
         }
-        var cw = base.contentWarning;
-        var visibility = base.visibility;
-        var localOnly = base.localOnly;
-        // フォールバック経由 (D-126) は代替フォーマットを適用。
-        switch (fb?['format']) {
-          case 'cw':
-            cw ??= (fb!['cw']?.isNotEmpty ?? false) ? fb['cw'] : '別フォーマット';
-          case 'followers':
-            visibility = 'followers';
-          case 'localOnly':
-            localOnly = true;
-        }
         await session.createPost(NewPost(
-            text: base.text, contentWarning: cw, visibility: visibility, localOnly: localOnly, reactionAcceptance: base.reactionAcceptance, mediaIds: ids, poll: base.poll));
+            text: text, contentWarning: cw, visibility: visibility, localOnly: localOnly, reactionAcceptance: base.reactionAcceptance, mediaIds: ids, poll: base.poll));
       } catch (e) {
         errors.add(label);
         debugPrint('連動投稿 $label: $e');
@@ -789,6 +882,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Future<void> _send() async {
     final session = _session;
     if (session == null) return;
+    // 連動投稿の計画 (D-129): confirm の届け方があれば**送信前(busy に入る
+    // 前)に**チェック済み状態のシートで確認する(閉じたら送信自体を中止)。
+    var multiPlan = await _buildMultiPlan();
+    final regexRules = widget.target is ComposeNormal ? await _regexRules() : const <(String, String, String)>[];
+    if (multiPlan.any((e) => e.$3 == 'confirm')) {
+      final approved = await _confirmLinked(multiPlan);
+      if (approved == null) return; // 送信中止
+      multiPlan = approved;
+    }
+    if (!mounted) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -827,8 +930,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         case 'localOnly':
           if (!_isDm) localOnly = true;
       }
+      // 投稿加工(正規表現, D-130): 本体の投稿先アカウントにも適用。
+      final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
       final draft = NewPost(
-        text: _text.text.trim(),
+        text: applyComposerRegex(_text.text.trim(), primaryLabel, regexRules),
         contentWarning: cw,
         replyToId: replyTo?.id,
         quoteOfId: quoteOf?.id,
@@ -843,9 +948,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ComposeDm(room: final r) => await session.sendDm(r, draft),
         _ => await session.createPost(draft),
       };
-      // 複数選択モード (D-128): 選択したアカウントへ連動投稿(通常 = 同内容 /
-      // ノード連動 = ポスト先グラフが成立したときだけ、フォーマット適用)。
-      final linkErrors = await _sendMulti(draft);
+      // 複数選択モード (D-128/D-129): 計画の実行 — auto/confirm 済みは投稿、
+      // draft はそのアカウント宛の下書き。正規表現加工 (D-130) も各送信先に。
+      final linkErrors = await _executeMultiPlan(multiPlan, NewPost(
+        text: _text.text.trim(),
+        contentWarning: cw,
+        visibility: visibility,
+        localOnly: localOnly,
+        reactionAcceptance: (_isDm || direct) ? null : opts.reactionAcceptance,
+        poll: _poll == null ? null : NewPoll(choices: _poll!.texts, multiple: _poll!.multiple, expiresAfter: _poll!.expiresAfter),
+      ), regexRules);
       _drafts.clear(_draftKey); // 送信済み → 下書き破棄
       _skipDraftOnDispose = true;
       _multiSel.clear();

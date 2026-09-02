@@ -533,6 +533,20 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     ],
     hasCondOut: true,
   ),
+  // 投稿加工(正規表現, D-130): 送信時に本文へ正規表現の置換をかける。
+  // アカウント空 = すべての投稿先に適用。コンポーザースコープ専用。
+  NodeCatalogEntry(
+    type: 'composer.regex',
+    title: '投稿加工(正規表現)',
+    icon: Icons.find_replace,
+    genre: 'コンポーザー',
+    description: '送信時に本文へ正規表現の置換をかけます(パターンに一致した部分を置換)。アカウントが空のときは全ての投稿先に適用します。',
+    inputs: [
+      NodePort(label: 'アカウント', value: '', dataType: '設定'),
+      NodePort(label: 'パターン', value: '', dataType: '設定'),
+      NodePort(label: '置換', value: '', dataType: '設定'),
+    ],
+  ),
   NodeCatalogEntry(
     type: 'tl.myreactions',
     title: 'リアクション済み取得',

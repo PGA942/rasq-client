@@ -179,6 +179,31 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
                     ),
                   const RasqSectionHeader(title: 'ポスト先の絞り込み', topMargin: 0),
                   _filterTile(scheme, f),
+                  // 連動投稿の届け方 (D-129): auto / confirm / draft。
+                  const RasqSectionHeader(title: '連動投稿の届け方'),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+                    child: Text('複数選択モードの「ノード連動」でこのアカウントへ送るときの届け方です。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  ),
+                  Builder(builder: (ctx) {
+                    return RasqListTile(
+                      title: '届け方: ${composerDeliveryLabel(f.delivery)}',
+                      leading: const Icon(Icons.send_time_extension_outlined),
+                      onTap: () async {
+                        final box = ctx.findRenderObject() as RenderBox;
+                        final pick = await _manager.showDropdown<String>(
+                          id: 'composerconfig.delivery',
+                          anchor: box.localToGlobal(Offset.zero) & box.size,
+                          dense: true,
+                          items: [for (final d in composerDeliveryOptions) RasqDropdownItem(composerDeliveryLabel(d), d, checked: d == f.delivery)],
+                        );
+                        if (pick != null && mounted) _update(_tab, _current.copyWith(delivery: pick));
+                      },
+                    );
+                  }),
+                  // 投稿加工(正規表現, D-130): このアカウントへ送る本文の置換。
+                  const RasqSectionHeader(title: '投稿加工(正規表現)'),
+                  _regexTile(scheme, f),
                   const RasqSectionHeader(title: '代わりのフォーマットで投稿'),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
@@ -200,10 +225,29 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
               ? 'このアカウントの${f.from == '投稿内容' ? '投稿' : f.from == 'リアクション' ? 'リアクションした投稿' : '返信'}を基準に、下書きが${f.what}で合うとき投稿先候補になります。'
               : '無効化中: このアカウントはポスト先の候補になりません。',
           chevron: true,
-          onTap: () => _openParams(fallback: false),
+          onTap: () => _openParams(mode: 'filter'),
         ),
       ),
-      Builder(builder: (ctx) => _menuButton(ctx, fallback: false, enabled: f.enabled)),
+      Builder(builder: (ctx) => _menuButton(ctx, mode: 'filter', enabled: f.enabled)),
+      const SizedBox(width: RasqSpacing.sm),
+    ]);
+  }
+
+  Widget _regexTile(ColorScheme scheme, ComposerAccountFilter f) {
+    return Row(children: [
+      Expanded(
+        child: RasqPluginTile(
+          leading: Icon(Icons.find_replace, size: 22, color: f.regexEnabled ? null : scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+          title: '投稿加工(正規表現)',
+          subtitle: f.regexEnabled ? _tab : '$_tab ・ 無効化中',
+          description: f.regexEnabled && f.regexPattern.isNotEmpty
+              ? 'このアカウントへ送る本文の「${f.regexPattern}」を「${f.regexReplace}」に置換します。'
+              : '送信時に本文へ正規表現の置換をかけます(例: タグの付け替え・伏せ字)。',
+          chevron: true,
+          onTap: () => _openParams(mode: 'regex'),
+        ),
+      ),
+      Builder(builder: (ctx) => _menuButton(ctx, mode: 'regex', enabled: f.regexEnabled)),
       const SizedBox(width: RasqSpacing.sm),
     ]);
   }
@@ -220,19 +264,19 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
               ? '絞り込みに合わなかったとき、$formatLabel でこのアカウントを候補に残します。'
               : '無効化中: 絞り込みに合わない下書きは、このアカウントの候補になりません。',
           chevron: true,
-          onTap: () => _openParams(fallback: true),
+          onTap: () => _openParams(mode: 'fallback'),
         ),
       ),
-      Builder(builder: (ctx) => _menuButton(ctx, fallback: true, enabled: f.fallbackEnabled)),
+      Builder(builder: (ctx) => _menuButton(ctx, mode: 'fallback', enabled: f.fallbackEnabled)),
       const SizedBox(width: RasqSpacing.sm),
     ]);
   }
 
-  Widget _menuButton(BuildContext ctx, {required bool fallback, required bool enabled}) {
+  Widget _menuButton(BuildContext ctx, {required String mode, required bool enabled}) {
     return RasqIconButton(
       icon: Icons.more_horiz,
       size: 18,
-      tooltip: fallback ? '代替フォーマットの操作' : 'ポスト先の操作',
+      tooltip: switch (mode) { 'fallback' => '代替フォーマットの操作', 'regex' => '投稿加工の操作', _ => 'ポスト先の操作' },
       onPressed: () async {
         final box = ctx.findRenderObject() as RenderBox;
         final pick = await _manager.showDropdown<String>(
@@ -246,16 +290,22 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
         );
         if (!mounted) return;
         final f = _current;
-        if (pick == 'params') _openParams(fallback: fallback);
+        if (pick == 'params') _openParams(mode: mode);
         if (pick == 'toggle') {
-          _update(_tab, fallback ? f.copyWith(fallbackEnabled: !enabled) : f.copyWith(enabled: !enabled));
+          _update(
+              _tab,
+              switch (mode) {
+                'fallback' => f.copyWith(fallbackEnabled: !enabled),
+                'regex' => f.copyWith(regexEnabled: !enabled),
+                _ => f.copyWith(enabled: !enabled),
+              });
         }
       },
     );
   }
 
   /// パラメーター FOW (D-124 作法): 決定 = 確定 / キャンセル・FOW 外 = 巻き戻し。
-  void _openParams({required bool fallback}) {
+  void _openParams({required String mode}) {
     final manager = _manager;
     if (manager.contains(composerConfigParamsFowId)) manager.close(composerConfigParamsFowId);
     final spec = FowSpec(
@@ -276,7 +326,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
           spec: spec,
           builder: (ctx, handle) => _ComposerParamsPanel(
             account: account,
-            fallback: fallback,
+            mode: mode,
             filterOf: () => _cfg[account] ?? const ComposerAccountFilter(),
             onUpdate: (f) => _update(account, f),
             onConfirm: () => manager.close(composerConfigParamsFowId, result: true),
@@ -293,10 +343,12 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
 /// 部品)。[fallback] = 代わりのフォーマットで投稿の設定。
 class _ComposerParamsPanel extends StatefulWidget {
   const _ComposerParamsPanel(
-      {required this.account, required this.fallback, required this.filterOf, required this.onUpdate, required this.onConfirm, required this.onCancel});
+      {required this.account, required this.mode, required this.filterOf, required this.onUpdate, required this.onConfirm, required this.onCancel});
 
   final String account;
-  final bool fallback;
+
+  /// 'filter' | 'fallback' | 'regex' (D-130)。
+  final String mode;
   final ComposerAccountFilter Function() filterOf;
   final ValueChanged<ComposerAccountFilter> onUpdate;
   final VoidCallback onConfirm;
@@ -308,10 +360,14 @@ class _ComposerParamsPanel extends StatefulWidget {
 
 class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
   late final TextEditingController _cw = TextEditingController(text: widget.filterOf().fallbackCw);
+  late final TextEditingController _pattern = TextEditingController(text: widget.filterOf().regexPattern);
+  late final TextEditingController _replace = TextEditingController(text: widget.filterOf().regexReplace);
 
   @override
   void dispose() {
     _cw.dispose();
+    _pattern.dispose();
+    _replace.dispose();
     super.dispose();
   }
 
@@ -323,7 +379,11 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     final f = widget.filterOf();
-    final root = widget.fallback
+    final root = widget.mode == 'regex'
+        ? const RrlNode(t: 'Column', c: [
+            RrlNode(t: 'SwitchListTile', k: 'regexEnabled', p: {'title': '投稿加工を有効にする', 'subtitle': 'このアカウントへ送る本文にパターン置換をかけます', 'value': '\$.settings.regexEnabled'}, on: {'change': 'settings.set'}),
+          ])
+        : widget.mode == 'fallback'
         ? RrlNode(t: 'Column', c: [
             const RrlNode(t: 'SwitchListTile', k: 'fallbackEnabled', p: {'title': '代わりのフォーマットで投稿する', 'subtitle': '絞り込みに合わなかったとき、代替フォーマットで候補に残します', 'value': '\$.settings.fallbackEnabled'}, on: {'change': 'settings.set'}),
             const RrlNode(t: 'SectionHeader', p: {'title': 'フォーマット'}),
@@ -339,7 +399,14 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
     final host = RrlHost(
       instanceScope: 'rasq.host.composerconfig:-:0:${widget.account}',
       scope: RrlScope({
-        'settings': {'enabled': f.enabled, 'what': f.what, 'from': f.from, 'fallbackEnabled': f.fallbackEnabled, 'fallbackFormat': f.fallbackFormat},
+        'settings': {
+          'enabled': f.enabled,
+          'what': f.what,
+          'from': f.from,
+          'fallbackEnabled': f.fallbackEnabled,
+          'fallbackFormat': f.fallbackFormat,
+          'regexEnabled': f.regexEnabled,
+        },
       }),
       onEvent: (nodeId, kind, {String? fn, Map<String, Object?> payload = const {}}) {
         if (fn != 'settings.set') return;
@@ -348,6 +415,7 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
         widget.onUpdate(switch (key) {
           'enabled' => f.copyWith(enabled: v == true),
           'fallbackEnabled' => f.copyWith(fallbackEnabled: v == true),
+          'regexEnabled' => f.copyWith(regexEnabled: v == true),
           'fallbackFormat' => f.copyWith(fallbackFormat: '$v'),
           'what' => f.copyWith(what: '$v'),
           _ => f.copyWith(from: '$v'),
@@ -383,17 +451,21 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
         ]),
       ),
       RasqPluginTile(
-        icon: widget.fallback ? Icons.alt_route : Icons.filter_alt_outlined,
-        title: widget.fallback ? '代わりのフォーマットで投稿' : f.title,
+        icon: switch (widget.mode) { 'fallback' => Icons.alt_route, 'regex' => Icons.find_replace, _ => Icons.filter_alt_outlined },
+        title: switch (widget.mode) { 'fallback' => '代わりのフォーマットで投稿', 'regex' => '投稿加工(正規表現)', _ => f.title },
         subtitle: widget.account,
-        description: widget.fallback ? '絞り込みに合わなかったときのバイパスです。' : '下書きがこの条件に合うとき、このアカウントが投稿先候補になります。',
+        description: switch (widget.mode) {
+          'fallback' => '絞り込みに合わなかったときのバイパスです。',
+          'regex' => '送信時に本文へ正規表現の置換をかけます。',
+          _ => '下書きがこの条件に合うとき、このアカウントが投稿先候補になります。',
+        },
         chevron: false,
       ),
       const Divider(height: 1),
       Expanded(
         child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), children: [
           RrlRenderer(node: root, host: host),
-          if (widget.fallback)
+          if (widget.mode == 'fallback')
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
               child: TextField(
@@ -405,6 +477,27 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
                 },
               ),
             ),
+          // 正規表現の欄 (D-130): RRL に Input 部品が入るまでのネイティブ欄。
+          if (widget.mode == 'regex') ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+              child: TextField(
+                controller: _pattern,
+                style: RasqTypography.bodySmall,
+                decoration: const InputDecoration(labelText: 'パターン(正規表現)', hintText: r'例: #ネタバレ\s*', isDense: true),
+                onChanged: (v) => widget.onUpdate(widget.filterOf().copyWith(regexPattern: v)),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+              child: TextField(
+                controller: _replace,
+                style: RasqTypography.bodySmall,
+                decoration: const InputDecoration(labelText: '置換(空 = 削除)', isDense: true),
+                onChanged: (v) => widget.onUpdate(widget.filterOf().copyWith(regexReplace: v)),
+              ),
+            ),
+          ],
         ]),
       ),
     ]);

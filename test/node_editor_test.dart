@@ -280,6 +280,8 @@ void main() {
     expect(find.byType(ComposerConfigScreen), findsOneWidget);
     expect(find.text('ポスト先の絞り込み'), findsOneWidget);
     expect(find.text('代わりのフォーマットで投稿'), findsWidgets);
+    expect(find.text('連動投稿の届け方'), findsOneWidget); // D-129
+    expect(find.text('投稿加工(正規表現)'), findsWidgets); // D-130
     // 戻るで 1 ページ前へ帰れる(最初のタップはコンポーザー FOW の
     // スクリムを閉じる)。
     await tester.tap(find.byTooltip('戻る'), warnIfMissed: false);

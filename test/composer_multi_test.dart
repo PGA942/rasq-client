@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
+import 'package:rasq_client/features/nodeprog/tl_components.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -31,17 +32,23 @@ void main() {
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
-    // ポスト先グラフ: second の素のポスト先ノード(条件なし = 常に成立)。
+    // ポスト先グラフ: second の素のポスト先ノード(条件なし = 常に成立)+
+    // 正規表現加工 (D-130: ねこ → 🐱、全アカウント)。届け方は confirm (D-129)。
     final target = builtinNodeCatalog.firstWhere((e) => e.type == 'composer.target').instantiate('t0', Offset.zero);
+    final regex = builtinNodeCatalog.firstWhere((e) => e.type == 'composer.regex').instantiate('rx0', Offset.zero);
     final graph = NodeGraph(nodes: [
       target.copyWith(inputs: [target.inputs.first.copyWith(value: '@second@example.test')]),
+      regex.copyWith(inputs: [regex.inputs[0], regex.inputs[1].copyWith(value: 'ねこ'), regex.inputs[2].copyWith(value: '🐱')]),
     ]);
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({
         'sessions': [session(acc1).toJson(), session(acc2).toJson()],
         'current': acc1.key,
       }),
-      'nodeprog.${acc1.key}.composer.v1': jsonEncode({'graph': jsonEncode(graph.toJson())}),
+      'nodeprog.${acc1.key}.composer.v1': jsonEncode({
+        'graph': jsonEncode(graph.toJson()),
+        'composercfg': jsonEncode({'@second@example.test': const ComposerAccountFilter(delivery: 'confirm').toJson()}),
+      }),
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [postOf(v)]));
     await tester.pumpWidget(ProviderScope(
@@ -75,15 +82,81 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('ノード連動'), findsOneWidget); // グラフに second のノード設定あり
 
-    // 送信 → 本体(tester)+ ノード連動(second、グラフ成立)の両方へ。
-    await tester.enterText(find.byType(TextField).last, '連動テストです');
+    // 送信 → confirm (D-129): 投稿前にチェック済み状態の確認シート。
+    await tester.enterText(find.byType(TextField).last, '連動ねこテストです');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('送信'));
+    await tester.pumpAndSettle();
+    expect(find.text('連動投稿の確認'), findsOneWidget);
+    await tester.tap(find.text('この内容で投稿する'));
+    await tester.pumpAndSettle();
+
+    // 本体 + 連動の両方に、正規表現加工 (D-130) が効いた本文で届く。
+    final s1 = registry.session(session(acc1)) as FakeSnsSession;
+    final s2 = registry.session(session(acc2)) as FakeSnsSession;
+    expect(s1.lastDraft?.text, '連動🐱テストです');
+    expect(s2.lastDraft?.text, '連動🐱テストです');
+  });
+
+  testWidgets('D-129: delivery=draft はそのアカウント宛の下書きになり、投稿先に選ぶと復元される', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final target = builtinNodeCatalog.firstWhere((e) => e.type == 'composer.target').instantiate('t0', Offset.zero);
+    final graph = NodeGraph(nodes: [
+      target.copyWith(inputs: [target.inputs.first.copyWith(value: '@second@example.test')]),
+    ]);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [session(acc1).toJson(), session(acc2).toJson()],
+        'current': acc1.key,
+      }),
+      'nodeprog.${acc1.key}.composer.v1': jsonEncode({
+        'graph': jsonEncode(graph.toJson()),
+        'composercfg': jsonEncode({'@second@example.test': const ComposerAccountFilter(delivery: 'draft').toJson()}),
+      }),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [postOf(v)]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('投稿先を選ぶ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('@tester@example.test'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('投稿先を選ぶ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('複数選択モード'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('@second@example.test'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('@second@example.test')); // → ノード連動
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).last, '連動ドラフトです');
     await tester.pumpAndSettle();
     await tester.tap(find.text('送信'));
     await tester.pumpAndSettle();
 
-    final s1 = registry.session(session(acc1)) as FakeSnsSession;
+    // second へは投稿されず、下書きだけ作られる (D-129)。
     final s2 = registry.session(session(acc2)) as FakeSnsSession;
-    expect(s1.lastDraft?.text, '連動テストです');
-    expect(s2.lastDraft?.text, '連動テストです');
+    expect(s2.lastDraft, isNull);
+
+    // 新しいコンポーザーで second を投稿先に選ぶと下書きが復元される。
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('投稿先を選ぶ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('@second@example.test'));
+    await tester.pumpAndSettle();
+    expect(find.text('連動ドラフトです'), findsOneWidget);
   });
 }
