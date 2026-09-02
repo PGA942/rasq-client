@@ -451,6 +451,46 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   AccountSession? _postAs;
   bool _targetsOpen = false;
 
+  /// 複数選択モード (D-128): アカウントごとに 非選択(0)→ 通常投稿(1)→
+  /// **ノードを通した連動投稿**(2, ポスト先グラフにそのアカウントの
+  /// ノード設定がある場合のみ)を循環する。選択分は送信時に連動投稿される。
+  bool _multiSelect = false;
+  final Map<String, int> _multiSel = {};
+  static const _selNone = 0, _selNormal = 1, _selLinked = 2;
+
+  /// ポスト先グラフにノード設定(ポスト先/フォールバック)があるアカウント。
+  Future<Set<String>> _linkedCapableAccounts() async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'composer');
+      if (raw == null) return const {};
+      final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      return {
+        for (final n in graph.nodes)
+          if (n.type == 'composer.target' || n.type == 'composer.fallback')
+            if ((n.inputs.where((i) => i.label == 'アカウント').firstOrNull?.value ?? '').trim().isNotEmpty)
+              n.inputs.where((i) => i.label == 'アカウント').firstOrNull!.value!.trim(),
+      };
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Set<String> _linkable = const {};
+
+  Future<void> _cycleMulti(String label) async {
+    if (_linkable.isEmpty) _linkable = await _linkedCapableAccounts();
+    if (!mounted) return;
+    setState(() {
+      final cur = _multiSel[label] ?? _selNone;
+      _multiSel[label] = cur == _selNone
+          ? _selNormal
+          : cur == _selNormal
+              ? (_linkable.contains(label) ? _selLinked : _selNone)
+              : _selNone;
+    });
+  }
+
   /// ポスト先ノードの実行 (D-116): 下書き内容で `composer` スコープの条件を
   /// 評価して投稿先をサジェストする。手動選択(_postAs)が常に優先。
   AccountSession? _suggestedPostAs;
@@ -475,12 +515,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     _targetEval = Timer(const Duration(milliseconds: 400), _evalComposerTargets);
   }
 
-  Future<void> _evalComposerTargets() async {
-    if (!mounted) return;
+  /// 下書きでポスト先グラフを評価した選択肢(通常 → フォールバック,
+  /// D-116/D-126/D-128)。グラフ未設定/失敗は空。
+  Future<List<(String, Map<String, String>?)>> _composerChoices() async {
     try {
       final accKey = ref.read(currentAccountProvider)?.key;
       final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'composer');
-      if (raw == null || !mounted) return;
+      if (raw == null || !mounted) return const [];
       final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
       final me = ref.read(currentUserProvider);
       // 条件評価用の下書き投稿(本文/注釈/添付数が条件タグの対象)。
@@ -503,22 +544,29 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       }
 
       // フォールバック込みの選択 (D-126): 通常候補 → 代替フォーマット候補。
-      final choices = await composerTargetChoices(
+      return await composerTargetChoices(
         graph,
         draft,
         fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
         storageRead: (slot) async => (await ref.read(settingsAreaProvider(storageArea).future))[slot],
       );
-      if (!mounted) return;
-      final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
-      AccountSession? find(String label) =>
-          label.isEmpty || label == '現在のアカウント' ? null : sessions.where((s) => '${s.account}' == label || s.account.key == label).firstOrNull;
-      setState(() {
-        _matchedTargets = [for (final c in choices) c.$1];
-        _suggestedPostAs = choices.isEmpty ? null : find(choices.first.$1);
-        _suggestedFallback = choices.isEmpty ? null : choices.first.$2;
-      });
-    } catch (_) {} // グラフ未設定/読めない → サジェストなし
+    } catch (_) {
+      return const []; // グラフ未設定/読めない → サジェストなし
+    }
+  }
+
+  Future<void> _evalComposerTargets() async {
+    if (!mounted) return;
+    final choices = await _composerChoices();
+    if (!mounted) return;
+    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    AccountSession? find(String label) =>
+        label.isEmpty || label == '現在のアカウント' ? null : sessions.where((s) => '${s.account}' == label || s.account.key == label).firstOrNull;
+    setState(() {
+      _matchedTargets = [for (final c in choices) c.$1];
+      _suggestedPostAs = choices.isEmpty ? null : find(choices.first.$1);
+      _suggestedFallback = choices.isEmpty ? null : choices.first.$2;
+    });
   }
 
   /// ポスト先ノードの条件に一致した順位(タイルのソート用)。不一致は末尾。
@@ -570,10 +618,18 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ...[
           for (final s in ordered)
             InkWell(
-              onTap: () => setState(() {
-                _postAs = s;
-                _targetsOpen = false;
-              }),
+              // 複数選択モード (D-128): 行タップで 非選択 → 通常投稿 →
+              // ノード連動投稿(設定があれば)を循環。通常モードは投稿先切替。
+              onTap: () {
+                if (_multiSelect) {
+                  _cycleMulti('${s.account}');
+                } else {
+                  setState(() {
+                    _postAs = s;
+                    _targetsOpen = false;
+                  });
+                }
+              },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
                 child: Row(children: [
@@ -586,7 +642,22 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                       padding: const EdgeInsets.only(right: 4),
                       child: Tooltip(message: 'ポスト先ノードの条件に一致', child: Icon(Icons.auto_awesome, size: 14, color: scheme.onSurfaceVariant)),
                     ),
-                  if (s.account.key == selectedKey) Icon(Icons.check, size: 16, color: tokens.link),
+                  if (_multiSelect) ...[
+                    switch (_multiSel['${s.account}'] ?? _selNone) {
+                      _selNormal => Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text('通常投稿', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                          const SizedBox(width: 4),
+                          Icon(Icons.check_circle_outline, size: 16, color: tokens.link),
+                        ]),
+                      _selLinked => Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text('ノード連動', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                          const SizedBox(width: 4),
+                          Icon(Icons.alt_route, size: 16, color: tokens.link),
+                        ]),
+                      _ => Icon(Icons.radio_button_unchecked, size: 16, color: scheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                    },
+                  ] else if (s.account.key == selectedKey)
+                    Icon(Icons.check, size: 16, color: tokens.link),
                 ]),
               ),
             ),
@@ -603,9 +674,81 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               ]),
             ),
           ),
+          // 複数選択モード (D-128): 選んだアカウントへ同時に投稿する
+          // (通常 = 同内容 / ノード連動 = ポスト先グラフを通して成立時のみ)。
+          if (widget.target is ComposeNormal)
+            InkWell(
+              onTap: () async {
+                final linkable = await _linkedCapableAccounts();
+                if (!mounted) return;
+                setState(() {
+                  _linkable = linkable;
+                  _multiSelect = !_multiSelect;
+                  if (!_multiSelect) _multiSel.clear();
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 8),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
+                  Icon(_multiSelect ? Icons.checklist_rtl : Icons.checklist, size: 16, color: tokens.link),
+                  const SizedBox(width: 6),
+                  Text(_multiSelect ? '複数選択を解除' : '複数選択モード', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+                ]),
+              ),
+            ),
         ],
       ]),
     );
+  }
+
+  /// 複数選択の連動投稿 (D-128)。失敗したアカウント表記を返す(本体の
+  /// 投稿は成功済みなので、失敗しても全体は落とさない)。
+  Future<List<String>> _sendMulti(NewPost base) async {
+    if (!_multiSelect || widget.target is! ComposeNormal || !_multiSel.values.any((v) => v != _selNone)) return const [];
+    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final registry = ref.read(pluginRegistryProvider);
+    final primaryKey = (_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account.key;
+    // ノード連動分の成立判定はポスト先グラフの評価(1 回だけ)。
+    List<(String, Map<String, String>?)> choices = const [];
+    if (_multiSel.values.contains(_selLinked)) choices = await _composerChoices();
+    final errors = <String>[];
+    for (final s in sessions) {
+      final label = '${s.account}';
+      final mode = _multiSel[label] ?? _selNone;
+      if (mode == _selNone || s.account.key == primaryKey) continue;
+      Map<String, String>? fb;
+      if (mode == _selLinked) {
+        final hit = choices.where((c) => c.$1 == label || c.$1 == s.account.key).firstOrNull;
+        if (hit == null) continue; // ノード不成立 → このアカウントには連動しない
+        fb = hit.$2;
+      }
+      try {
+        final session = registry.session(s);
+        // メディアは各アカウントのサーバーへ上げ直す(id は流用できない)。
+        final ids = <String>[];
+        for (final f in _files) {
+          ids.add((await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: f.sensitive)).id);
+        }
+        var cw = base.contentWarning;
+        var visibility = base.visibility;
+        var localOnly = base.localOnly;
+        // フォールバック経由 (D-126) は代替フォーマットを適用。
+        switch (fb?['format']) {
+          case 'cw':
+            cw ??= (fb!['cw']?.isNotEmpty ?? false) ? fb['cw'] : '別フォーマット';
+          case 'followers':
+            visibility = 'followers';
+          case 'localOnly':
+            localOnly = true;
+        }
+        await session.createPost(NewPost(
+            text: base.text, contentWarning: cw, visibility: visibility, localOnly: localOnly, reactionAcceptance: base.reactionAcceptance, mediaIds: ids, poll: base.poll));
+      } catch (e) {
+        errors.add(label);
+        debugPrint('連動投稿 $label: $e');
+      }
+    }
+    return errors;
   }
 
   bool get _isDm => widget.target is ComposeDm;
@@ -700,8 +843,17 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ComposeDm(room: final r) => await session.sendDm(r, draft),
         _ => await session.createPost(draft),
       };
+      // 複数選択モード (D-128): 選択したアカウントへ連動投稿(通常 = 同内容 /
+      // ノード連動 = ポスト先グラフが成立したときだけ、フォーマット適用)。
+      final linkErrors = await _sendMulti(draft);
       _drafts.clear(_draftKey); // 送信済み → 下書き破棄
       _skipDraftOnDispose = true;
+      _multiSel.clear();
+      if (linkErrors.isNotEmpty && mounted) {
+        // 本体は投稿済み — 閉じずに連動側の失敗だけ知らせる。
+        setState(() => _error = '連動投稿に失敗しました: ${linkErrors.join(' / ')}(本体は投稿済みです)');
+        return;
+      }
       widget.onSent(post);
       if (widget.resident && mounted) {
         _skipDraftOnDispose = false; // 常駐は続投するので自動下書きを再開
