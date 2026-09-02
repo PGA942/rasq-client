@@ -11,6 +11,7 @@ import '../features/home/home_screen.dart';
 import '../features/login/login_screen.dart';
 import '../features/login/misskey_login_screen.dart';
 import '../features/nodeprog/node_editor_screen.dart';
+import '../features/nodeprog/timeline_config_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
@@ -54,8 +55,12 @@ abstract final class Routes {
   static const profileEdit = '/profile/edit';
   static const loginMisskey = '/login/misskey';
 
-  /// ノードプログラミング画面 (D-090)。`/nodes/<scope>`。
+  /// ノードプログラミング画面 (D-090)。`/nodes/<scope>`。TL スコープの
+  /// キャンバスは一旦無効化 (D-121) — TL の歯車は [tlConfig] へ。
   static String nodes(String scope) => '/nodes/${Uri.encodeComponent(scope)}';
+
+  /// タイムラインのカスタマイズ(簡略版, D-121)。`/tlconfig/<scope>`。
+  static String tlConfig(String scope) => '/tlconfig/${Uri.encodeComponent(scope)}';
 
   /// プラグインストア (M4 / D-120)。
   static const store = '/store';
@@ -164,6 +169,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/trend/:tag', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!)),
           // ノードプログラミング (D-090): TL/トレンド/投稿先のカスタマイズ。
           GoRoute(path: '/nodes/:scope', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => NodeEditorScreen(scope: Uri.decodeComponent(s.pathParameters['scope']!))),
+          // TL カスタマイズの簡略版 (D-121): コンポーネント積み → グラフに
+          // コンパイル。TL の歯車はこちらへ(キャンバスは一旦無効化)。
+          GoRoute(path: '/tlconfig/:scope', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => TimelineConfigScreen(scope: Uri.decodeComponent(s.pathParameters['scope']!))),
           GoRoute(path: '/clips/detail', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => ClipTimelineScreen(clip: state.extra! as ClipInfo)),
           GoRoute(path: '/relational/event', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => RelationalEventScreen(event: state.extra! as ConversationEvent)),
           GoRoute(path: Routes.lists, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListsScreen(), routes: [

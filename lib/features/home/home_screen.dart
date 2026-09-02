@@ -60,7 +60,9 @@ class HomeScreen extends ConsumerWidget {
               Expanded(child: RasqTabs(items: tabs, showChevron: false)),
               // RAi は TL のタブ行では隠す (D-103 でユーザーが指定 —
               // ノードエディタのパレット側にだけ置く)。
-              // タイムライン設定 (D-090): ノードプログラミング画面へ。
+              // タイムライン設定 (D-090/D-121): 簡略版のカスタマイズ画面へ
+              // (SNSタイムライン + アルゴリズムのコンポーネント積み。
+              // 自由形ノードキャンバスは一旦無効化)。
               Builder(builder: (ctx) {
                 return RasqIconButton(
                   icon: Icons.settings,
@@ -68,7 +70,7 @@ class HomeScreen extends ConsumerWidget {
                   tooltip: 'タイムライン設定',
                   onPressed: () {
                     final i = DefaultTabController.of(ctx).index.clamp(0, kinds.length - 1);
-                    ctx.push(Routes.nodes('tl.${kinds[i].id}'));
+                    ctx.push(Routes.tlConfig('tl.${kinds[i].id}'));
                   },
                 );
               }),

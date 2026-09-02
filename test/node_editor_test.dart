@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/nodeprog/node_editor_screen.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/features/nodeprog/node_tabs.dart';
@@ -45,6 +46,14 @@ void main() {
 
   Finder onCanvas(Finder f) => find.descendant(of: find.byType(NodeEditorScreen), matching: f);
 
+  // ノードキャンバスは TL の歯車からは開かなくなった (D-121: 簡略版の
+  // カスタマイズ画面が正面口。キャンバスは一旦無効化)ので、テストは
+  // ルート直指定で開く。
+  Future<void> openEditor(WidgetTester tester, ProviderContainer container, [String scope = 'tl.home']) async {
+    container.read(routerProvider).push(Routes.nodes(scope));
+    await tester.pumpAndSettle();
+  }
+
   test('NodeGraph JSON 往復(データ形式付き)+ 接続可否', () {
     const g = NodeGraph(
       nodes: [
@@ -72,11 +81,8 @@ void main() {
   testWidgets('パレット FOW: タイルタップ → 詳細 → 追加 / 長押しドラッグ → 追加、KV に保存', (tester) async {
     final container = await pump(tester);
 
-    // フォロー中(home)タブに合わせてから設定を開く(スコープ = tl.home)。
-    await tester.tap(find.text('フォロー中'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('タイムライン設定'));
-    await tester.pumpAndSettle();
+    // スコープ = tl.home のエディタを開く。
+    await openEditor(tester, container, 'tl.home');
     expect(find.text('タイムラインをカスタマイズ'), findsOneWidget);
 
     // パレットは FOW (D-092)。検索欄(検索ホームと同じデザイン)にフォーカス
@@ -141,15 +147,13 @@ void main() {
     // 戻って開き直してもノードが残る(ファイルリーダー×2)。
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('タイムライン設定'));
-    await tester.pumpAndSettle();
+    await openEditor(tester, container, 'tl.home');
     expect(onCanvas(find.text('ファイルリーダー')), findsNWidgets(2));
   });
 
   testWidgets('D-099: 空白の長押し → カスタム関数の作成画面 → 作成でノードが置かれ、定義が残る', (tester) async {
     final container = await pump(tester);
-    await tester.tap(find.byTooltip('タイムライン設定'));
-    await tester.pumpAndSettle();
+    await openEditor(tester, container);
 
     // キャンバスの空白を長押し → 作成画面。
     await tester.longPressAt(const Offset(320, 420)); // デフォルトのタイムラインノードを避けた空白
@@ -178,8 +182,7 @@ void main() {
 
   testWidgets('D-119: パレット(検索)の先頭タイルからもカスタム関数を作成できる', (tester) async {
     final container = await pump(tester);
-    await tester.tap(find.byTooltip('タイムライン設定'));
-    await tester.pumpAndSettle();
+    await openEditor(tester, container);
 
     // 検索欄フォーカスでパレットを展開 → 先頭に作成タイル → 作成ダイアログ。
     await tester.tap(find.text('プラグインノードを検索'));
@@ -205,8 +208,7 @@ void main() {
     final container = await pump(tester);
     // RAi は TL のタブ行では隠す (D-103) — エディタのパレット側にだけ出る。
     expect(find.byTooltip('RAi(準備中)'), findsNothing);
-    await tester.tap(find.byTooltip('タイムライン設定'));
-    await tester.pumpAndSettle();
+    await openEditor(tester, container);
     expect(find.byTooltip('RAi(準備中)'), findsOneWidget); // パレット FOW 側
 
     // 上側のタブ行(基本タブ)+ デフォルトのタイムラインノード。
@@ -252,8 +254,7 @@ void main() {
 
   testWidgets('D-096: パレット FOW を閉じても「ノードを検索」ボタンで開き直せる', (tester) async {
     final container = await pump(tester);
-    await tester.tap(find.byTooltip('タイムライン設定'));
-    await tester.pumpAndSettle();
+    await openEditor(tester, container);
     expect(find.text('プラグインノードを検索'), findsOneWidget);
 
     final manager = container.read(overlayManagerProvider);

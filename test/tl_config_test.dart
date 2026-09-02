@@ -1,0 +1,142 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:rasq_client/app/app.dart';
+import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/nodeprog/node_executor.dart';
+import 'package:rasq_client/features/nodeprog/node_graph.dart';
+import 'package:rasq_client/features/nodeprog/timeline_config_screen.dart';
+import 'package:rasq_client/features/nodeprog/tl_components.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/mock/mock_data.dart';
+import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+
+import 'support/fakes.dart';
+
+/// D-121: TL カスタマイズの簡略化 — SNSタイムライン + アルゴリズムの
+/// コンポーネント積みを正準形ノードグラフへコンパイルする。
+void main() {
+  test('コンパイル: 取得×1 + 時系列順 + クロック → 正準形フルチェーン', () {
+    final g = compileTlConfig(const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [TlAlgorithmComponent(type: 'chrono')]), scope: 'tl.home');
+    expect({for (final n in g.nodes) n.type}, {'tl.source', 'timeline', 'clock'});
+    expect(g.edges.where((e) => e.toIcon).length, 1); // クロック → 取得ノードのアイコン (D-095)
+    expect(nodeGraphClockInterval(g), const Duration(seconds: 15));
+  });
+
+  test('コンパイル: 取得×2 はマージ、サジェスト/TLプラグインは鎖の段に', () {
+    final g = compileTlConfig(
+      const TlConfig(
+        sources: [TlSourceComponent(tl: 'home'), TlSourceComponent(tl: 'local', account: '@sub@other.test')],
+        algorithms: [
+          TlAlgorithmComponent(type: 'suggest', what: 'キーワード', from: 'リアクション'),
+          TlAlgorithmComponent(type: 'plugin:dict', pluginLabel: '辞書でソート'),
+        ],
+        clock: '',
+      ),
+      scope: 'tl.home',
+    );
+    final types = {for (final n in g.nodes) n.type};
+    expect(types, containsAll(['merge', 'sort', 'ml.gliner', 'ml.keyword', 'compare', 'plugin:dict', 'timeline']));
+    expect(types, isNot(contains('clock')));
+    // サジェストの基準 = リアクション済み (myreactions を TL 値に持つ取得ノード)。
+    expect(g.nodes.where((n) => n.type == 'tl.source' && n.inputs.first.value == 'myreactions'), hasLength(1));
+    // 鎖: merge → sort → plugin → timeline(データエッジを辿って確認)。
+    String? upstreamOf(String id) => g.edges.where((e) => !e.cond && !e.toIcon && e.to == id && e.toPort == 0).firstOrNull?.from;
+    final t = g.nodes.firstWhere((n) => n.type == 'timeline');
+    final plugin = upstreamOf(t.id)!;
+    expect(g.nodes.firstWhere((n) => n.id == plugin).type, 'plugin:dict');
+    final sort = upstreamOf(plugin)!;
+    expect(g.nodes.firstWhere((n) => n.id == sort).type, 'sort');
+    expect(g.nodes.firstWhere((n) => n.id == upstreamOf(sort)!).type, 'merge');
+  });
+
+  test('コンパイル: 関連スコープの終端は関連タイムライン (D-102)', () {
+    final g = compileTlConfig(defaultTlConfig('tl.relational'), scope: 'tl.relational');
+    expect(g.nodes.where((n) => n.type == 'timeline.relational'), hasLength(1));
+  });
+
+  test('実行: 類似性×投稿内容のサジェストが基準に近い投稿を先頭へ', () async {
+    const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
+    Post post(String id, String body) =>
+        Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 1), body: body);
+
+    final g = compileTlConfig(
+      const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [TlAlgorithmComponent(type: 'suggest', what: '類似性', from: '投稿内容')], clock: ''),
+      scope: 'tl.home',
+    );
+    final out = await runNodeGraph(
+      g,
+      fetch: (kid) async => switch (kid) {
+        'myposts' => [post('ref', '猫がかわいい。猫の写真を撮った')],
+        _ => [post('p1', '為替と株価の話題です'), post('p2', '猫がかわいいですね猫')],
+      },
+    );
+    expect([for (final p in out!) p.id], ['p2', 'p1']); // 猫の投稿が先頭
+  });
+
+  testWidgets('歯車 → 簡略版カスタマイズ画面: コンポーネント追加でグラフが KV へコンパイルされる', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [fakeSession().toJson()],
+        'current': fakeSession().account.key,
+      }),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+
+    // TL の歯車は簡略版カスタマイズ画面へ (D-121: キャンバスは一旦無効化)。
+    await tester.tap(find.byTooltip('タイムライン設定'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TimelineConfigScreen), findsOneWidget);
+    Finder inScreen(Finder f) => find.descendant(of: find.byType(TimelineConfigScreen), matching: f);
+    expect(inScreen(find.text('アルゴリズム')), findsOneWidget);
+    expect(inScreen(find.text('SNSタイムライン')), findsOneWidget);
+
+    // フォロー中タブへ(スコープ = tl.home)。既定は取得×1 + 時系列順。
+    await tester.tap(inScreen(find.text('フォロー中')));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('タイムラインを取得')), findsOneWidget);
+    expect(inScreen(find.text('時系列順')), findsOneWidget);
+
+    // アルゴリズムを追加 → サジェスト。
+    await tester.tap(inScreen(find.text('アルゴリズムを追加')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('サジェスト'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('キーワードを投稿内容からサジェスト')), findsOneWidget);
+
+    // タイムラインを追加 → 2 本目(合流 = マージ段がコンパイルされる)。
+    await tester.tap(inScreen(find.text('タイムラインを追加')));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('タイムラインを取得')), findsNWidgets(2));
+
+    // KV: tlcfg(コンポーネント)+ graph(正準形コンパイル)。
+    final area = await container.read(settingsAreaProvider('nodeprog.${fakeSession().account.key}.tl.home').future);
+    expect(area['tlcfg'], isA<String>());
+    final graph = NodeGraph.fromJson((jsonDecode(area['graph']! as String) as Map).cast<String, Object?>());
+    final types = {for (final n in graph.nodes) n.type};
+    expect(types, containsAll(['merge', 'sort', 'ml.gliner', 'ml.keyword', 'compare', 'timeline', 'clock']));
+
+    // アルゴリズムの … → 削除でサジェストが外れる。
+    await tester.tap(inScreen(find.byTooltip('アルゴリズムの操作')).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('削除'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('キーワードを投稿内容からサジェスト')), findsNothing);
+  });
+}

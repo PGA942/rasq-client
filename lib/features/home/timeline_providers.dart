@@ -565,6 +565,11 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
   }
 
   if (kid == 'myreactions') return finish(await session.reactedPosts(cursor: cursor)); // リアクション済み取得 (D-103)
+  // サジェストの基準 (D-121): 投稿内容 = 自分の投稿、会話内容 = 自分の返信。
+  if (kid == 'myposts' || kid == 'myreplies') {
+    final me = await session.me();
+    return finish(await session.userPosts(me.id, cursor: cursor, filter: kid == 'myposts' ? UserPostsFilter.posts : UserPostsFilter.replies));
+  }
   if (kid.startsWith('search:')) {
     final q = kid.substring(7).trim();
     if (q.isEmpty) return const [];
