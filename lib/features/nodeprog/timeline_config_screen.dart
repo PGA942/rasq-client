@@ -7,11 +7,26 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
 import '../../app/providers.dart';
+import '../../app/router.dart' show routerProvider;
 import '../../shell/headers.dart';
 import '../home/timeline_providers.dart' show customTimelinesProvider;
 import '../settings/settings_dsl.dart';
 import 'node_tabs.dart';
 import 'tl_components.dart';
+
+/// コンポーネント追加パレット (D-122): ノード検索と同じ FOW。
+const tlConfigPaletteFowId = 'fow.tlconfig.palette';
+
+/// 自作リスト(リスト系ソースの候補)。
+final _tlListNamesProvider = FutureProvider<List<String>>((ref) async {
+  final s = ref.watch(currentSnsSessionProvider);
+  if (s == null) return const [];
+  try {
+    return [for (final l in await s.lists()) l.name];
+  } catch (_) {
+    return const [];
+  }
+});
 
 /// タイムラインのカスタマイズ(簡略版, D-121 — ワイヤーフレーム
 /// 「タイムラインのカスタマイズ」)。TL は **SNSタイムライン(取得元)** と
@@ -48,10 +63,20 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
 
   List<String> get _accounts => [for (final s in ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${s.account}'];
 
+  /// dispose 時に ref が使えないため、パレット FOW を閉じる用に保持。
+  late final OverlayManager _manager;
+
   @override
   void initState() {
     super.initState();
+    _manager = ref.read(overlayManagerProvider);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _manager.close(tlConfigPaletteFowId);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -249,32 +274,44 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     return manager.showDropdown<String>(id: id, anchor: anchor, dense: true, items: [for (final o in options) RasqDropdownItem(o, o, checked: o == current)]);
   }
 
-  Future<void> _addAlgorithm() async {
+  /// コンポーネント追加 (D-122): ノード検索と同じ FOW パレットを開く。
+  /// タイルはプラグインタイルデザインで、アルゴリズム側は入出力ではなく
+  /// **ネイティブ対応の SNS プラグイン**を表示する。選択で追加して閉じる。
+  void _openPalette({required bool algorithms}) {
     final manager = ref.read(overlayManagerProvider);
-    final plugins = ref.read(customTimelinesProvider).value ?? const [];
-    final pick = await manager.showBottomSheet<TlAlgorithmComponent>(
-      id: 'tlconfig.addAlgo',
-      title: 'アルゴリズムを追加',
-      builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
-        RasqListTile(
-            title: 'サジェスト',
-            subtitle: '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から',
-            leading: const Icon(Icons.auto_awesome_outlined),
-            onTap: () => manager.close('tlconfig.addAlgo', result: const TlAlgorithmComponent(type: 'suggest'))),
-        RasqListTile(
-            title: '時系列順',
-            subtitle: '取得したままの時刻順に整えます',
-            leading: const Icon(Icons.schedule),
-            onTap: () => manager.close('tlconfig.addAlgo', result: const TlAlgorithmComponent(type: 'chrono'))),
-        for (final p in plugins)
-          RasqListTile(
-              title: '${p.label}でソート',
-              subtitle: 'カスタム(TLプラグイン)',
-              leading: const Icon(Icons.extension_outlined),
-              onTap: () => manager.close('tlconfig.addAlgo', result: TlAlgorithmComponent(type: 'plugin:${p.id}', pluginLabel: '${p.label}でソート'))),
-      ]),
+    if (manager.contains(tlConfigPaletteFowId)) manager.close(tlConfigPaletteFowId);
+    final spec = FowSpec(
+      type: FowPanelType.widget,
+      initialHeightFactor: 0.5,
+      minHeightFactor: 0.09,
+      maxHeightFactor: 0.85,
+      dockAboveFooter: true,
+      heightStops: const [0.09, 0.5],
+      freeAboveStops: true,
     );
-    if (pick != null) _update(_cfg.copyWith(algorithms: [..._cfg.algorithms, pick]));
+    // ページ遷移で自動クローズ(ノードパレットと同じ作法, D-048)。
+    final router = ref.read(routerProvider);
+    void onNavigate() => manager.close(tlConfigPaletteFowId);
+    router.routerDelegate.addListener(onNavigate);
+    manager
+        .showFow<void>(
+          id: tlConfigPaletteFowId,
+          semanticsLabel: 'プラグインノードを検索',
+          spec: spec,
+          builder: (ctx, handle) => _ComponentPalettePanel(
+            spec: spec,
+            algorithms: algorithms,
+            onAddAlgorithm: (a) {
+              manager.close(tlConfigPaletteFowId);
+              _update(_cfg.copyWith(algorithms: [..._cfg.algorithms, a]));
+            },
+            onAddSource: (s) {
+              manager.close(tlConfigPaletteFowId);
+              _update(_cfg.copyWith(sources: [..._cfg.sources, s]));
+            },
+          ),
+        )
+        .whenComplete(() => router.routerDelegate.removeListener(onNavigate));
   }
 
   Future<void> _algorithmMenu(BuildContext anchorContext, int i) async {
@@ -326,7 +363,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
                 ),
               const RasqSectionHeader(title: 'アルゴリズム', topMargin: 0),
               for (var i = 0; i < _cfg.algorithms.length; i++) _algorithmTile(i),
-              _addTile('アルゴリズムを追加', _addAlgorithm),
+              _addTile('アルゴリズムを追加', () => _openPalette(algorithms: true)),
               const RasqSectionHeader(title: 'SNSタイムライン'),
               Padding(
                 padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
@@ -334,7 +371,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
                     style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               ),
               for (var i = 0; i < _cfg.sources.length; i++) _sourceTile(i),
-              _addTile('タイムラインを追加', () => _update(_cfg.copyWith(sources: [..._cfg.sources, const TlSourceComponent()]))),
+              _addTile('タイムラインを追加', () => _openPalette(algorithms: false)),
               const RasqSectionHeader(title: '自動更新'),
               Builder(builder: (ctx) {
                 return RasqListTile(
@@ -410,19 +447,28 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
 
   Widget _sourceTile(int i) {
     final s = _cfg.sources[i];
-    final tlLabel = switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', _ => 'フォロー中 (home)' };
+    final (title, tlLabel) = s.isTrend
+        ? ('現在のトレンドTLを取得', 'トレンド上位タグの検索結果')
+        : s.isList
+            ? ('リストTLを取得', 'リスト: ${s.listName}')
+            : ('タイムラインを取得', switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', _ => 'フォロー中 (home)' });
     return Row(children: [
       Expanded(
         child: Builder(builder: (ctx) {
           return RasqPluginTile(
-            icon: Icons.download_outlined,
-            title: 'タイムラインを取得',
+            icon: s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined),
+            title: title,
             subtitle: s.account.isEmpty ? '現在のアカウント' : s.account,
             description: 'TL: $tlLabel',
             chevron: true,
             onTap: () async {
-              final tl = await _pickFrom(ctx, 'tlconfig.srcTl', ['home', 'social', 'local', 'global'], s.tl);
-              if (tl == null || !mounted || !ctx.mounted) return;
+              // 基本 TL は種類 → アカウントの順、トレンド/リストはアカウントのみ。
+              var tl = s.tl;
+              if (!s.isTrend && !s.isList) {
+                final pick = await _pickFrom(ctx, 'tlconfig.srcTl', ['home', 'social', 'local', 'global'], s.tl);
+                if (pick == null || !mounted || !ctx.mounted) return;
+                tl = pick;
+              }
               final acct = await _pickFrom(ctx, 'tlconfig.srcAcct', ['現在のアカウント', ..._accounts], s.account.isEmpty ? '現在のアカウント' : s.account);
               if (acct == null || !mounted) return;
               _update(_cfg.copyWith(sources: [
@@ -447,5 +493,164 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       }),
       const SizedBox(width: RasqSpacing.sm),
     ]);
+  }
+}
+
+/// コンポーネント追加パレット (D-122): ノード検索と同じ FOW + 検索欄。
+/// タイルは**プラグインタイルデザイン**(ワイヤーフレームと同じ内部配置 —
+/// アイコン/名前/提供元/説明/詳細行)で、ホバー中もこの表示のまま。
+/// 詳細行は入出力ではなく**ネイティブ対応の SNS プラグイン**。
+class _ComponentPalettePanel extends ConsumerStatefulWidget {
+  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource});
+
+  final FowSpec spec;
+
+  /// true = アルゴリズム側、false = タイムライン(取得元)側。
+  final bool algorithms;
+  final ValueChanged<TlAlgorithmComponent> onAddAlgorithm;
+  final ValueChanged<TlSourceComponent> onAddSource;
+
+  @override
+  ConsumerState<_ComponentPalettePanel> createState() => _ComponentPalettePanelState();
+}
+
+class _PaletteItem {
+  const _PaletteItem({required this.icon, required this.title, required this.subtitle, required this.description, required this.supported, required this.add});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String description;
+
+  /// ネイティブ対応の SNS プラグイン名(詳細行に出す)。
+  final List<String> supported;
+  final VoidCallback add;
+}
+
+class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> {
+  final _search = TextEditingController();
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _search.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  List<_PaletteItem> _items() {
+    // ネイティブ対応 SNS プラグイン: 組み込みは登録済みプラグイン全部、
+    // TL プラグインは宣言元(現在の wasm セッションのプラグイン)。
+    final registry = ref.watch(pluginRegistryProvider);
+    final allSns = [for (final p in registry.plugins) p.manifest.name];
+    final sessionPluginId = ref.watch(currentSnsSessionProvider)?.pluginId;
+    final sessionSns = [registry.plugin(sessionPluginId ?? '')?.manifest.name ?? sessionPluginId ?? '—'];
+    if (widget.algorithms) {
+      final plugins = ref.watch(customTimelinesProvider).value ?? const [];
+      return [
+        _PaletteItem(
+            icon: Icons.auto_awesome_outlined,
+            title: 'サジェスト',
+            subtitle: 'RASQ',
+            description: '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合う投稿を先頭へ並べ替えます。',
+            supported: allSns,
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'suggest'))),
+        _PaletteItem(
+            icon: Icons.schedule,
+            title: '時系列順',
+            subtitle: 'RASQ',
+            description: '取得したままの時刻順に整えます。',
+            supported: allSns,
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'chrono'))),
+        for (final p in plugins)
+          _PaletteItem(
+              icon: Icons.extension_outlined,
+              title: '${p.label}でソート',
+              subtitle: 'TLプラグイン',
+              description: '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
+              supported: sessionSns,
+              add: () => widget.onAddAlgorithm(TlAlgorithmComponent(type: 'plugin:${p.id}', pluginLabel: '${p.label}でソート'))),
+      ];
+    }
+    // タイムライン側 (D-122): [タイムライン, リスト系, 現在のトレンドTL] に絞る。
+    final lists = ref.watch(_tlListNamesProvider).value ?? const <String>[];
+    return [
+      _PaletteItem(
+          icon: Icons.download_outlined,
+          title: 'タイムライン',
+          subtitle: 'SNSプラグイン',
+          description: 'SNS の基本タイムライン(フォロー中/おすすめ/ローカル/グローバル)を取り込みます。種類とアカウントは追加後のタイルで選べます。',
+          supported: allSns,
+          add: () => widget.onAddSource(const TlSourceComponent(tl: 'home'))),
+      for (final name in lists)
+        _PaletteItem(
+            icon: Icons.list_alt_outlined,
+            title: 'リスト: $name',
+            subtitle: 'リスト系',
+            description: '自作リスト「$name」のタイムラインを取り込みます。',
+            supported: sessionSns,
+            add: () => widget.onAddSource(TlSourceComponent(tl: 'list:$name'))),
+      _PaletteItem(
+          icon: Icons.travel_explore,
+          title: '現在のトレンドTL',
+          subtitle: 'RASQ',
+          description: 'いまのトレンド上位タグの検索結果を 1 本に合流して取り込みます。',
+          supported: allSns,
+          add: () => widget.onAddSource(const TlSourceComponent(tl: 'trend'))),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _search.text.trim();
+    final items = [
+      for (final e in _items())
+        if (query.isEmpty || e.title.contains(query) || e.description.contains(query) || e.subtitle.contains(query)) e,
+    ];
+    final bar = Padding(
+      padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 6, RasqSpacing.sm, 6),
+      child: RasqExpandableSearchBox(
+        expanded: _focus.hasFocus,
+        controller: _search,
+        focusNode: _focus,
+        hintText: 'プラグインノードを検索',
+      ),
+    );
+    // 最小表示(折りたたみ)時はバーだけ(ノードパレットと同じ作法)。
+    return LayoutBuilder(builder: (context, c) {
+      if (c.maxHeight < 130) {
+        return SingleChildScrollView(physics: const NeverScrollableScrollPhysics(), child: bar);
+      }
+      return Column(children: [
+        bar,
+        Expanded(
+          child: items.isEmpty
+              ? const RasqEmptyView(title: 'コンポーネントが見つかりません', hint: '検索ワードを変えてみてください')
+              : ListView.separated(
+                  padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
+                  itemCount: items.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, i) {
+                    final e = items[i];
+                    return RasqPluginTile(
+                      icon: e.icon,
+                      title: e.title,
+                      subtitle: e.subtitle,
+                      description: e.description,
+                      // 入出力の代わりにネイティブ対応の SNS プラグイン (D-122)。
+                      detail: '対応: ${e.supported.isEmpty ? '—' : e.supported.join('・')}',
+                      chevron: false,
+                      onTap: e.add,
+                    );
+                  },
+                ),
+        ),
+      ]);
+    });
   }
 }

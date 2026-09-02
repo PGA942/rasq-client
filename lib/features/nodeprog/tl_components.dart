@@ -21,8 +21,14 @@ import 'node_graph.dart';
 class TlSourceComponent {
   const TlSourceComponent({this.tl = 'home', this.account = ''});
 
-  /// TL 種別(home/social/local/global — 取得ノードの TL 値)。
+  /// TL 種別: home/social/local/global(基本 TL)、`list:<名前>`(リスト系)、
+  /// `trend`(現在のトレンド TL = 上位タグの検索結果合流)— D-122 で
+  /// 追加パレットの選択肢を [タイムライン, リスト系, 現在のトレンドTL] に絞る。
   final String tl;
+
+  bool get isTrend => tl == 'trend';
+  bool get isList => tl.startsWith('list:');
+  String get listName => isList ? tl.substring(5) : '';
 
   /// アカウント表記(空 = 現在のアカウント)。
   final String account;
@@ -123,9 +129,17 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
 
   // 取得段。基準(サジェスト)には myposts / myreactions / myreplies も
   // tl.source の TL 値として通す(実行側の resolveNodeFetch が解決)。
+  // リスト系 → tl.list、現在のトレンド TL → trend.posts (D-122)。
   for (var i = 0; i < cfg.sources.length; i++) {
     final s = cfg.sources[i];
-    nodes.add(inst('tl.source', 's$i', Offset(24, 40.0 + i * 170), values: {'TL': s.tl, 'アカウント': s.account}));
+    final at = Offset(24, 40.0 + i * 170);
+    if (s.isTrend) {
+      nodes.add(inst('trend.posts', 's$i', at, values: {'アカウント': s.account}));
+    } else if (s.isList) {
+      nodes.add(inst('tl.list', 's$i', at, values: {'リスト': s.listName, 'アカウント': s.account}));
+    } else {
+      nodes.add(inst('tl.source', 's$i', at, values: {'TL': s.tl, 'アカウント': s.account}));
+    }
   }
   if (cfg.sources.isEmpty) return const NodeGraph();
 

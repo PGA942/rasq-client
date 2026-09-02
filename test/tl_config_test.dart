@@ -59,6 +59,17 @@ void main() {
     expect(g.nodes.where((n) => n.type == 'timeline.relational'), hasLength(1));
   });
 
+  test('コンパイル: リスト系 → tl.list、現在のトレンドTL → trend.posts (D-122)', () {
+    final g = compileTlConfig(
+      const TlConfig(sources: [TlSourceComponent(tl: 'list:推しの人たち'), TlSourceComponent(tl: 'trend')], algorithms: [], clock: ''),
+      scope: 'tl.home',
+    );
+    final list = g.nodes.firstWhere((n) => n.type == 'tl.list');
+    expect(list.inputs.firstWhere((p) => p.label == 'リスト').value, '推しの人たち');
+    expect(g.nodes.where((n) => n.type == 'trend.posts'), hasLength(1));
+    expect(g.nodes.where((n) => n.type == 'merge'), hasLength(1));
+  });
+
   test('実行: 類似性×投稿内容のサジェストが基準に近い投稿を先頭へ', () async {
     const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
     Post post(String id, String body) =>
@@ -113,24 +124,35 @@ void main() {
     expect(inScreen(find.text('タイムラインを取得')), findsOneWidget);
     expect(inScreen(find.text('時系列順')), findsOneWidget);
 
-    // アルゴリズムを追加 → サジェスト。
+    // アルゴリズムを追加 → ノード検索 FOW (D-122): プラグインタイルで
+    // 入出力ではなくネイティブ対応の SNS プラグインを表示。
     await tester.tap(inScreen(find.text('アルゴリズムを追加')));
     await tester.pumpAndSettle();
+    expect(find.text('プラグインノードを検索'), findsOneWidget);
+    expect(find.textContaining('対応: Fake'), findsWidgets);
     await tester.tap(find.text('サジェスト'));
     await tester.pumpAndSettle();
+    expect(find.text('プラグインノードを検索'), findsNothing); // 追加で閉じる
     expect(inScreen(find.text('キーワードを投稿内容からサジェスト')), findsOneWidget);
 
-    // タイムラインを追加 → 2 本目(合流 = マージ段がコンパイルされる)。
+    // タイムラインを追加 → FOW の選択肢は [タイムライン, リスト系,
+    // 現在のトレンドTL] に絞られている (D-122)。
     await tester.tap(inScreen(find.text('タイムラインを追加')));
     await tester.pumpAndSettle();
-    expect(inScreen(find.text('タイムラインを取得')), findsNWidgets(2));
+    expect(find.text('タイムライン'), findsOneWidget);
+    expect(find.text('リスト: Fediverse Banner'), findsOneWidget);
+    expect(find.text('現在のトレンドTL'), findsOneWidget);
+    await tester.tap(find.text('現在のトレンドTL'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('現在のトレンドTLを取得')), findsOneWidget);
 
-    // KV: tlcfg(コンポーネント)+ graph(正準形コンパイル)。
+    // KV: tlcfg(コンポーネント)+ graph(正準形コンパイル、トレンドは
+    // trend.posts、2 本目でマージ段)。
     final area = await container.read(settingsAreaProvider('nodeprog.${fakeSession().account.key}.tl.home').future);
     expect(area['tlcfg'], isA<String>());
     final graph = NodeGraph.fromJson((jsonDecode(area['graph']! as String) as Map).cast<String, Object?>());
     final types = {for (final n in graph.nodes) n.type};
-    expect(types, containsAll(['merge', 'sort', 'ml.gliner', 'ml.keyword', 'compare', 'timeline', 'clock']));
+    expect(types, containsAll(['merge', 'trend.posts', 'sort', 'ml.gliner', 'ml.keyword', 'compare', 'timeline', 'clock']));
 
     // アルゴリズムの … → 削除でサジェストが外れる。
     await tester.tap(inScreen(find.byTooltip('アルゴリズムの操作')).last);
