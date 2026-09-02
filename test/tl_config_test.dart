@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/nodeprog/node_editor_screen.dart';
 import 'package:rasq_client/features/nodeprog/node_executor.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
@@ -167,6 +168,41 @@ void main() {
     expect(hit, ['@game@a.test']);
     final miss = await composerTargetAccounts(g, post('d2', '会議の議事録を共有します'), fetch: fetch);
     expect(miss, isEmpty);
+  });
+
+
+  test('D-126: 代わりのフォーマットで投稿 — 絞り込みに合わないとフォールバック候補になる', () async {
+    const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
+    Post post(String id, String body) =>
+        Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 2), body: body);
+
+    final g = compileComposerConfig({
+      '@game@a.test': const ComposerAccountFilter(enabled: true, what: 'キーワード', from: '投稿内容', fallbackEnabled: true, fallbackFormat: 'フォロワー限定'),
+    }, ['@game@a.test']);
+    // フォールバックは比較の Not からバイパス (無くなる直前のノードから)。
+    expect({for (final n in g.nodes) n.type}, containsAll(['composer.target', 'composer.fallback', 'not', 'compare']));
+
+    Future<List<Post>> fetch(String kid) async =>
+        kid == 'acct:@game@a.test|myposts' ? [post('ref', 'スプラトゥーンのガチマッチ配信')] : const [];
+    // 合う → 通常候補(フォールバックなし)。
+    final hit = await composerTargetChoices(g, post('d1', '今夜もガチマッチやります'), fetch: fetch);
+    expect(hit.single.$1, '@game@a.test');
+    expect(hit.single.$2, isNull);
+    // 合わない → 代わりのフォーマット(フォロワー限定)で候補に残る。
+    final fb = await composerTargetChoices(g, post('d2', '会議の議事録を共有します'), fetch: fetch);
+    expect(fb.single.$1, '@game@a.test');
+    expect(fb.single.$2, {'format': 'followers', 'cw': ''});
+  });
+
+  test('D-127: DM の既定構成と DM 取得ソースのコンパイル', () {
+    expect(defaultTlConfig('tl.dm').sources.single.tl, 'self');
+    expect(defaultTlConfig('tl.dm:abc').sources.single.tl, 'self');
+    final g = compileTlConfig(
+      const TlConfig(sources: [TlSourceComponent(tl: 'dm:alice')], algorithms: [], clock: ''),
+      scope: 'tl.dm',
+    );
+    final dm = g.nodes.firstWhere((n) => n.type == 'tl.dm');
+    expect(dm.inputs.firstWhere((p) => p.label == '相手').value, 'alice');
   });
 
   Future<ProviderContainer> pumpConfig(WidgetTester tester) async {
@@ -360,5 +396,68 @@ void main() {
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
     expect(find.textContaining('ノードエディタで編集されています'), findsOneWidget);
+  });
+
+  testWidgets('D-127: DM 設定画面 — 共通タブ + DM 取得タイルだけのパレット', (tester) async {
+    final container = await pumpConfig(tester); // TL 設定を開いた状態から DM 設定へ遷移
+    container.read(routerProvider).push(Routes.tlConfig('tl.dm'));
+    await tester.pumpAndSettle();
+
+    Finder inScreen(Finder f) => find.descendant(of: find.byType(TimelineConfigScreen), matching: f);
+    expect(find.text('DM(共通)'), findsOneWidget);
+    expect(find.textContaining('個別設定のない全ての DM ページに適用'), findsOneWidget);
+    expect(inScreen(find.text('このタイムラインを取得')), findsOneWidget); // 既定 = self
+
+    // 取得元パレットは DM 取得用のタイルだけ (D-127)。
+    await tester.tap(inScreen(find.text('タイムラインを追加')));
+    await tester.pumpAndSettle();
+    expect(find.text('このDM'), findsOneWidget);
+    expect(find.textContaining('DM: @'), findsWidgets);
+    expect(find.text('タイムライン'), findsNothing);
+    expect(find.text('現在のトレンドTL'), findsNothing);
+  });
+
+  testWidgets('D-127: DM ルームに共通設定(tl.dm)のグラフが適用される', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    const acc2 = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'peer');
+    Post dmPost(String id, String body) =>
+        Post(id: id, account: acc2, author: const UserSummary(id: 'peer1', account: acc2, displayName: '相手'), createdAt: DateTime(2026, 9, 2), body: body);
+
+    // 共通設定: self → 消去(本文に「消して」)→ タイムライン。
+    final cfg = TlConfig(sources: const [TlSourceComponent(tl: 'self')], algorithms: const [TlAlgorithmComponent(type: 'filter')], clock: '');
+    // filter は ML 依存なので、確実な cond 消去のグラフを直接コンパイルする
+    // 代わりに queryfilter(ワード指定)で組む。
+    final g = compileTlConfig(
+      const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'queryfilter', query: '残る')], clock: ''),
+      scope: 'tl.dm',
+    );
+    expect(cfg, isNotNull);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [fakeSession().toJson()],
+        'current': fakeSession().account.key,
+      }),
+      'nodeprog.${fakeSession().account.key}.tl.dm.v1': jsonEncode({'graph': jsonEncode(g.toJson())}),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [dmPost('a', '残るメッセージ'), dmPost('b', '関係ない話')]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+
+    // DM ルームを直接開く(ページ個別設定なし → tl.dm の共通設定が効く)。
+    // fakes の dm: 取得は最後の 1 件(関係ない話)だけを返す — 共通設定の
+    // 検索絞り込み(残る)がそれを落とすので、空になれば適用の証拠。
+    container.read(routerProvider).push('/dm/room/peer1');
+    await tester.pumpAndSettle();
+    expect(find.text('関係ない話'), findsNothing);
+    expect(find.text('まだメッセージはありません'), findsOneWidget);
   });
 }

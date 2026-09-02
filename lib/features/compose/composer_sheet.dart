@@ -428,6 +428,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     _poll = null;
     _error = null;
     _suggestedPostAs = null; // 下書きが消えたのでサジェストも仕切り直し (D-116)
+    _suggestedFallback = null;
     _matchedTargets = const [];
     if (widget.target is ComposeReply) _prefillPending = true; // 次の返信用に再アーム
     _focus.unfocus();
@@ -454,6 +455,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// 評価して投稿先をサジェストする。手動選択(_postAs)が常に優先。
   AccountSession? _suggestedPostAs;
   List<String> _matchedTargets = const [];
+
+  /// 代わりのフォーマットで投稿 (D-126): サジェストがフォールバック経由の
+  /// とき、送信時に適用するフォーマット({'format': ..., 'cw': ...})。
+  Map<String, String>? _suggestedFallback;
   Timer? _targetEval;
 
   AccountSession? get _effectivePostAs => _postAs ?? _suggestedPostAs;
@@ -497,7 +502,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         return s == null ? null : ref.read(pluginRegistryProvider).session(s);
       }
 
-      final matched = await composerTargetAccounts(
+      // フォールバック込みの選択 (D-126): 通常候補 → 代替フォーマット候補。
+      final choices = await composerTargetChoices(
         graph,
         draft,
         fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
@@ -508,8 +514,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       AccountSession? find(String label) =>
           label.isEmpty || label == '現在のアカウント' ? null : sessions.where((s) => '${s.account}' == label || s.account.key == label).firstOrNull;
       setState(() {
-        _matchedTargets = matched;
-        _suggestedPostAs = matched.isEmpty ? null : find(matched.first);
+        _matchedTargets = [for (final c in choices) c.$1];
+        _suggestedPostAs = choices.isEmpty ? null : find(choices.first.$1);
+        _suggestedFallback = choices.isEmpty ? null : choices.first.$2;
       });
     } catch (_) {} // グラフ未設定/読めない → サジェストなし
   }
@@ -520,9 +527,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     return i < 0 ? _matchedTargets.length : i;
   }
 
-  /// 投稿先のカスタマイズ (D-089/D-125): アカウントごとタブ選択形式の
-  /// 絞り込み画面へ(グラフでの編集は … メニューの「グラフで編集」)。
-  void _openTargetCustomize() => ref.read(routerProvider).push(Routes.tlConfig('composer'));
+  /// 投稿先のカスタマイズ (D-089/D-126): 完全に別ページ(アカウントごと
+  /// タブ選択形式。グラフでの編集は … メニューの「グラフで編集」)。
+  void _openTargetCustomize() => ref.read(routerProvider).push(Routes.composerConfig);
 
   /// アカウントバンドルタイル (D-089/D-091): アバタータップで出てくる。
   /// RASQ アカウントの顔 + 投稿先リスト。サイドバー(D-087)と同じ作法
@@ -662,13 +669,28 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       // 広げられない(連合なしの親 → 返信/引用も連合なし)。
       final direct = !_isDm && (replyTo?.isDirect ?? false);
       final myId = ref.read(currentUserProvider).id;
+      // 代わりのフォーマットで投稿 (D-126): サジェストがフォールバック経由の
+      // アカウントで送るとき、指定のフォーマット(注釈/フォロワー限定/
+      // 連合なし)を下書きに適用する。
+      final fb = (_postAs == null && _suggestedPostAs != null) ? _suggestedFallback : null;
+      String? cw = _cwOn && _cw.text.trim().isNotEmpty ? _cw.text.trim() : null;
+      String? visibility = _isDm ? null : (direct ? 'specified' : opts.visibility);
+      var localOnly = !_isDm && ((parent?.localOnly ?? false) || (!direct && opts.localOnly));
+      switch (fb?['format']) {
+        case 'cw':
+          cw ??= (fb!['cw']?.isNotEmpty ?? false) ? fb['cw'] : '別フォーマット';
+        case 'followers':
+          if (!_isDm && !direct) visibility = 'followers';
+        case 'localOnly':
+          if (!_isDm) localOnly = true;
+      }
       final draft = NewPost(
         text: _text.text.trim(),
-        contentWarning: _cwOn && _cw.text.trim().isNotEmpty ? _cw.text.trim() : null,
+        contentWarning: cw,
         replyToId: replyTo?.id,
         quoteOfId: quoteOf?.id,
-        visibility: _isDm ? null : (direct ? 'specified' : opts.visibility),
-        localOnly: !_isDm && ((parent?.localOnly ?? false) || (!direct && opts.localOnly)),
+        visibility: visibility,
+        localOnly: localOnly,
         reactionAcceptance: (_isDm || direct) ? null : opts.reactionAcceptance,
         directToIds: direct ? {replyTo!.author.id, ...replyTo.directToIds}.where((id) => id != myId).toList() : const [],
         mediaIds: ids,

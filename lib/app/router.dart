@@ -10,6 +10,7 @@ import '../features/dm/dm_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/login/login_screen.dart';
 import '../features/login/misskey_login_screen.dart';
+import '../features/nodeprog/composer_config_screen.dart';
 import '../features/nodeprog/node_editor_screen.dart';
 import '../features/nodeprog/timeline_config_screen.dart';
 import '../features/notifications/notifications_screen.dart';
@@ -61,6 +62,9 @@ abstract final class Routes {
 
   /// タイムラインのカスタマイズ(簡略版, D-121)。`/tlconfig/<scope>`。
   static String tlConfig(String scope) => '/tlconfig/${Uri.encodeComponent(scope)}';
+
+  /// 投稿先のカスタマイズ (D-126: 完全に別ページ)。
+  static const composerConfig = '/composerconfig';
 
   /// プラグインストア (M4 / D-120)。
   static const store = '/store';
@@ -172,6 +176,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           // TL カスタマイズの簡略版 (D-121): コンポーネント積み → グラフに
           // コンパイル。TL の歯車はこちらへ(キャンバスは一旦無効化)。
           GoRoute(path: '/tlconfig/:scope', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => TimelineConfigScreen(scope: Uri.decodeComponent(s.pathParameters['scope']!))),
+          // 投稿先のカスタマイズ (D-126): 完全に別ページ(戻るで 1 つ前へ)。
+          GoRoute(path: Routes.composerConfig, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ComposerConfigScreen()),
           GoRoute(path: '/clips/detail', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => ClipTimelineScreen(clip: state.extra! as ClipInfo)),
           GoRoute(path: '/relational/event', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => RelationalEventScreen(event: state.extra! as ConversationEvent)),
           GoRoute(path: Routes.lists, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListsScreen(), routes: [

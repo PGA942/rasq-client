@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
@@ -7,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../../text/inline_spans.dart';
@@ -28,7 +30,9 @@ class DmScreen extends ConsumerWidget {
         body: Column(children: [
           Row(children: [
             Expanded(child: RasqTabs(items: tabs, showChevron: false)),
-            RasqIconButton(icon: Icons.settings, size: 20, onPressed: () {}, tooltip: 'DM設定'),
+            // DM のカスタマイズ (D-127): メインページの設定 = カスタム未設定の
+            // 全 DM ページに適用される共通設定(tl.dm)。
+            RasqIconButton(icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig('tl.dm')), tooltip: 'DM設定'),
           ]),
           const Padding(padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm), child: RasqSearchBar()),
           Expanded(

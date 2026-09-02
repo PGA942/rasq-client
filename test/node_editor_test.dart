@@ -10,7 +10,7 @@ import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/nodeprog/node_editor_screen.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/features/nodeprog/node_tabs.dart';
-import 'package:rasq_client/features/nodeprog/timeline_config_screen.dart';
+import 'package:rasq_client/features/nodeprog/composer_config_screen.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -276,9 +276,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('投稿先のカスタマイズ'));
     await tester.pumpAndSettle();
-    // 簡略版のポスト先絞り込み画面(タブ = アカウント)。グラフでの編集は
-    // … メニューの「グラフで編集」から。
-    expect(find.byType(TimelineConfigScreen), findsOneWidget);
+    // 完全に別ページ (D-126): タブ = アカウント、絞り込み系のみ。
+    expect(find.byType(ComposerConfigScreen), findsOneWidget);
     expect(find.text('ポスト先の絞り込み'), findsOneWidget);
+    expect(find.text('代わりのフォーマットで投稿'), findsWidgets);
+    // 戻るで 1 ページ前へ帰れる(最初のタップはコンポーザー FOW の
+    // スクリムを閉じる)。
+    await tester.tap(find.byTooltip('戻る'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('戻る'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(find.byType(ComposerConfigScreen), findsNothing);
   });
 }

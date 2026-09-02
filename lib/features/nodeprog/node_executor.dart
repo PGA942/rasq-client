@@ -685,6 +685,44 @@ Future<List<String>> composerTargetAccounts(
   return out;
 }
 
+/// ポスト先の選択(フォールバック込み, D-126)。成立したポスト先を上から順に
+/// 返し、続けて**代わりのフォーマットで投稿**(composer.fallback)の成立分を
+/// 返す(既に通常候補になったアカウントは除く)。フォールバックの
+/// `format` は `{'format': 'cw'|'followers'|'localOnly', 'cw': <注釈>}`。
+Future<List<(String, Map<String, String>?)>> composerTargetChoices(
+  NodeGraph g,
+  Post draft, {
+  Future<List<Post>> Function(String kindId)? fetch,
+  Future<List<List<double>>> Function(List<String> texts)? embedTexts,
+  Future<Object?> Function(String slot)? storageRead,
+}) async {
+  final byId = {for (final n in g.nodes) n.id: n};
+  final env = _ExecEnv(fetch: fetch ?? (_) async => const [], embedTexts: embedTexts, storageRead: storageRead);
+  final out = <(String, Map<String, String>?)>[];
+  final chosen = <String>{};
+  final matched = await composerTargetAccounts(g, draft, fetch: fetch, embedTexts: embedTexts, storageRead: storageRead);
+  for (final a in matched) {
+    if (chosen.add(a)) out.add((a, null));
+  }
+  final fallbacks = g.nodes.where((n) => n.type == 'composer.fallback').toList()
+    ..sort((a, b) => a.y == b.y ? a.x.compareTo(b.x) : a.y.compareTo(b.y));
+  for (final f in fallbacks) {
+    String input(String label) => f.inputs.where((i) => i.label == label).firstOrNull?.value?.trim() ?? '';
+    final account = input('アカウント');
+    if (chosen.contains(account)) continue;
+    final ctx = await _CondContext.prepare(g, byId, f.id, [draft], env, normalizeSimilar: false);
+    if (!_evalCondPortAt(g, byId, f.id, draft, 0, ctx)) continue;
+    chosen.add(account);
+    final format = switch (input('フォーマット')) {
+      'フォロワー限定' => 'followers',
+      '連合なし' => 'localOnly',
+      _ => 'cw',
+    };
+    out.add((account, {'format': format, 'cw': input('注釈')}));
+  }
+  return out;
+}
+
 /// クロック接続 (D-095): クロックメーカーの出力が**どこかのノードの
 /// アイコン**に繋がっていれば、その「間隔」を返す(TL の自動更新周期)。
 /// 未接続なら null。間隔は `15秒` / `2分` / `30` などを解釈し、最短 10 秒。

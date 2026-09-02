@@ -384,7 +384,12 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             if (s != null) graphSession = ref.read(pluginRegistryProvider).session(s);
           }
         }
-        final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), graphAccKey, scope);
+        var raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), graphAccKey, scope);
+        // DM 共通設定 (D-127): ページ個別の設定が無ければ、メインページの
+        // 設定(tl.dm)をカスタム未設定の全 DM ページに適用する。
+        if (raw == null && (kind.id.startsWith('dm:') || kind.id.startsWith('chat:'))) {
+          raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), graphAccKey, 'tl.dm');
+        }
         if (raw is String) {
           final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
           // SigLIP ゲートウェイ (D-097): あれば類似度ノードが実埋め込みを使う

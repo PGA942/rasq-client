@@ -23,6 +23,17 @@ const tlConfigPaletteFowId = 'fow.tlconfig.palette';
 /// パラメーター編集 FOW (D-123): タイル + RRL 描画のパラメーター部。
 const tlConfigParamsFowId = 'fow.tlconfig.params';
 
+/// DM の相手(DM 取得タイルの候補, D-127)。
+final _tlDmPeersProvider = FutureProvider<List<String>>((ref) async {
+  final s = ref.watch(currentSnsSessionProvider);
+  if (s == null) return const [];
+  try {
+    return [for (final r in await s.dmRooms()) r.peer.handle];
+  } catch (_) {
+    return const [];
+  }
+});
+
 /// 自作リスト(リスト系ソースの候補)。
 final _tlListNamesProvider = FutureProvider<List<String>>((ref) async {
   final s = ref.watch(currentSnsSessionProvider);
@@ -51,11 +62,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   TlConfig _cfg = const TlConfig();
   bool _loaded = false;
 
-  /// コンポーザーモード (D-125): アカウントごとタブ選択形式のポスト先
-  /// 絞り込み。タブ = ログイン済みアカウント。
-  Map<String, ComposerAccountFilter> _composerCfg = {};
-  String _composerTab = '';
-  bool get _isComposer => _scope == 'composer';
+
+  /// DM スコープ (D-127): tl.dm = 共通設定(カスタム未設定の全 DM ページに
+  /// 適用)、`tl.dm:<peer>` / `tl.chat:<peer>` = そのページだけの設定。
+  bool get _isDmScope => _scope == 'tl.dm' || _scope.startsWith('tl.dm:') || _scope.startsWith('tl.chat:');
 
   /// tlcfg が無いのに graph がある = ノードエディタで手組みされた TL。
   /// このまま保存すると置き換えるので、バナーで明示する。
@@ -97,27 +107,6 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       _loaded = false;
       _handEdited = false;
     });
-    if (_isComposer) {
-      // ポスト先の絞り込み (D-125): アカウントごとの構成。
-      try {
-        final area = await ref.read(settingsAreaProvider(_area).future);
-        if (!mounted) return;
-        final raw = area['composercfg'];
-        final cfg = <String, ComposerAccountFilter>{};
-        if (raw is String) {
-          (jsonDecode(raw) as Map).cast<String, Object?>().forEach((k, v) => cfg[k] = ComposerAccountFilter.fromJson((v as Map).cast<String, Object?>()));
-        }
-        setState(() {
-          _composerCfg = cfg;
-          _composerTab = _accounts.contains(_composerTab) ? _composerTab : (_accounts.firstOrNull ?? '');
-          _handEdited = raw is! String && area['graph'] is String;
-          _loaded = true;
-        });
-      } catch (_) {
-        if (mounted) setState(() => _loaded = true);
-      }
-      return;
-    }
     try {
       final area = await ref.read(settingsAreaProvider(_area).future);
       final raw = area['tlcfg'];
@@ -161,19 +150,6 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     _save();
   }
 
-  /// コンポーザー構成の保存 (D-125): composercfg + コンパイル済みグラフ。
-  Future<void> _saveComposer() async {
-    final store = ref.read(settingsAreaProvider(_area).notifier);
-    await store.set('composercfg', jsonEncode({for (final e in _composerCfg.entries) e.key: e.value.toJson()}));
-    await store.set('graph', jsonEncode(compileComposerConfig(_composerCfg, _accounts).toJson()));
-    if (mounted) setState(() => _handEdited = false);
-  }
-
-  void _updateComposer(String account, ComposerAccountFilter next) {
-    setState(() => _composerCfg = {..._composerCfg, account: next});
-    _saveComposer();
-  }
-
   void _switchScope(String next) {
     if (next == _scope) return;
     setState(() => _scope = next);
@@ -183,8 +159,8 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   // ---- タブ行(ノードエディタ D-101 と同じ作法)-----------------------------
 
   List<(String, String, bool)> _tabs() {
-    // コンポーザー (D-125): タブ = ログイン済みアカウント(タブ選択形式)。
-    if (_isComposer) return [for (final a in _accounts) (a, a, false)];
+    // DM (D-127): 共通(tl.dm)と各ページ(tl.dm:<peer>)は単独タブ。
+    if (_isDmScope) return [(_scope, _scope == 'tl.dm' ? 'DM(共通)' : 'このDM', false)];
     // トレンドのエディタは ノート/フォロー中/ユーザー (D-107/D-124)。
     if (_scope.startsWith('trend')) {
       return const [('trend', 'ノート', false), ('trend.following', 'フォロー中', false), ('trend.users', 'ユーザー', false)];
@@ -239,7 +215,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
               ]),
             ),
           ),
-          if (_scope.startsWith('tl.')) RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
+          if (_scope.startsWith('tl.') && !_isDmScope) RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
         ]),
       ),
     );
@@ -366,6 +342,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
           builder: (ctx, handle) => _ComponentPalettePanel(
             spec: spec,
             algorithms: algorithms,
+            dmOnly: _isDmScope,
             onAddAlgorithm: (a) {
               manager.close(tlConfigPaletteFowId);
               _update(_cfg.copyWith(algorithms: [..._cfg.algorithms, a]));
@@ -392,10 +369,14 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       );
 
   (IconData, String, String, String) _sourceInfo(TlSourceComponent s) => (
-        s.isSelf ? Icons.sync_alt : (s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined)),
-        s.isSelf ? 'このタイムラインを取得' : (s.isTrend ? '現在のトレンドTLを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得')),
+        s.isSelf
+            ? Icons.sync_alt
+            : s.isDm
+                ? Icons.mail_outline
+                : (s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined)),
+        s.isSelf ? 'このタイムラインを取得' : (s.isDm ? 'DM取得' : (s.isTrend ? '現在のトレンドTLを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得'))),
         s.isSelf ? 'RASQ' : (s.account.isEmpty ? '現在のアカウント' : s.account),
-        'TL: ${s.isSelf ? 'この画面の基礎タイムライン(検索結果/欄の投稿)' : s.isTrend ? 'トレンド上位タグの検索結果' : s.isList ? 'リスト: ${s.listName}' : switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', _ => 'フォロー中 (home)' }}',
+        'TL: ${s.isSelf ? 'この画面の基礎タイムライン(検索結果/欄の投稿)' : s.isDm ? 'DM: @${s.dmPeer}' : s.isTrend ? 'トレンド上位タグの検索結果' : s.isList ? 'リスト: ${s.listName}' : switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', _ => 'フォロー中 (home)' }}',
       );
 
   /// … メニュー (D-123): 詳細/一時的な無効化(解除)/ストアページ/削除。
@@ -540,15 +521,18 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       ),
       body: !_loaded
           ? const RasqLoading()
-          : _isComposer
-              ? _composerBody(scheme, tokens)
-              : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
+          : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
               // 説明バナー(ワイヤーフレーム: アルゴリズムは上から順に適用)。
               Container(
                 margin: const EdgeInsets.all(RasqSpacing.sm),
                 padding: const EdgeInsets.all(RasqSpacing.sm),
                 decoration: BoxDecoration(color: tokens.link.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
-                child: Text('タイムラインのアルゴリズムや取り込み、表示するタイムラインなどを指定できます。アルゴリズムは上から順に適用されます。',
+                child: Text(
+                    _scope == 'tl.dm'
+                        ? 'DM のメイン設定です。個別設定のない全ての DM ページに適用されます。アルゴリズムは上から順に適用されます。'
+                        : _isDmScope
+                            ? 'この DM ページだけの設定です(保存すると DM 共通設定より優先されます)。アルゴリズムは上から順に適用されます。'
+                            : 'タイムラインのアルゴリズムや取り込み、表示するタイムラインなどを指定できます。アルゴリズムは上から順に適用されます。',
                     style: RasqTypography.caption.copyWith(color: tokens.link)),
               ),
               if (_handEdited)
@@ -588,99 +572,6 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
               }),
             ]),
     );
-  }
-
-  /// コンポーザーモードの本体 (D-125): 選択中アカウントのポスト先絞り込み。
-  Widget _composerBody(ColorScheme scheme, RasqTokens tokens) {
-    final account = _composerTab;
-    if (account.isEmpty) return const RasqEmptyView(title: 'アカウントがありません', hint: 'ログインすると投稿先の条件を組めます');
-    final f = _composerCfg[account] ?? const ComposerAccountFilter();
-    return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
-      Container(
-        margin: const EdgeInsets.all(RasqSpacing.sm),
-        padding: const EdgeInsets.all(RasqSpacing.sm),
-        decoration: BoxDecoration(color: tokens.link.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
-        child: Text('アカウントごとに絞り込みを組むと、下書きの内容が条件に合うアカウントが投稿先の候補になります(タブでアカウントを選択)。',
-            style: RasqTypography.caption.copyWith(color: tokens.link)),
-      ),
-      if (_handEdited)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
-          child: Text('ポスト先はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。', style: RasqTypography.caption.copyWith(color: tokens.danger)),
-        ),
-      const RasqSectionHeader(title: 'ポスト先の絞り込み', topMargin: 0),
-      Row(children: [
-        Expanded(
-          child: RasqPluginTile(
-            leading: Icon(Icons.filter_alt_outlined, size: 22, color: f.enabled ? null : scheme.onSurfaceVariant.withValues(alpha: 0.5)),
-            title: f.title,
-            subtitle: f.enabled ? account : '$account ・ 無効化中',
-            description: f.enabled
-                ? 'このアカウントの${f.from == '投稿内容' ? '投稿' : f.from == 'リアクション' ? 'リアクションした投稿' : '返信'}を基準に、下書きが${f.what}で合うとき投稿先候補になります。'
-                : '無効化中: このアカウントはポスト先の候補になりません(サジェストは他の条件だけで決まります)。',
-            chevron: true,
-            onTap: _openComposerParams,
-          ),
-        ),
-        Builder(builder: (ctx) {
-          return RasqIconButton(
-            icon: Icons.more_horiz,
-            size: 18,
-            tooltip: 'ポスト先の操作',
-            onPressed: () async {
-              final box = ctx.findRenderObject() as RenderBox;
-              final pick = await ref.read(overlayManagerProvider).showDropdown<String>(
-                id: 'tlconfig.composerMenu',
-                anchor: box.localToGlobal(Offset.zero) & box.size,
-                dense: true,
-                items: [
-                  const RasqDropdownItem('パラメーターを編集', 'params'),
-                  RasqDropdownItem(f.enabled ? '一時的な無効化' : '無効化の解除', 'toggle'),
-                ],
-              );
-              if (!mounted) return;
-              if (pick == 'params') _openComposerParams();
-              if (pick == 'toggle') _updateComposer(account, f.copyWith(enabled: !f.enabled));
-            },
-          );
-        }),
-        const SizedBox(width: RasqSpacing.sm),
-      ]),
-    ]);
-  }
-
-  /// コンポーザーのパラメーター FOW (D-125): 有効トグル + サジェストと同じ
-  /// 2 パラメーター(RRL 描画)。決定/キャンセルは TL 側と同じ作法。
-  void _openComposerParams() {
-    final manager = ref.read(overlayManagerProvider);
-    if (manager.contains(tlConfigParamsFowId)) manager.close(tlConfigParamsFowId);
-    final spec = FowSpec(
-      type: FowPanelType.interstitial,
-      initialHeightFactor: 0.85,
-      minHeightFactor: 0.2,
-      maxHeightFactor: 0.85,
-      dockAboveFooter: true,
-      heightStops: const [0.85],
-      freeAboveStops: true,
-    );
-    final account = _composerTab;
-    final before = _composerCfg[account] ?? const ComposerAccountFilter();
-    manager
-        .showFow<bool>(
-          id: tlConfigParamsFowId,
-          semanticsLabel: 'ノードを設定',
-          spec: spec,
-          builder: (ctx, handle) => _ComposerParamsPanel(
-            account: account,
-            filterOf: () => _composerCfg[account] ?? const ComposerAccountFilter(),
-            onUpdate: (f) => _updateComposer(account, f),
-            onConfirm: () => manager.close(tlConfigParamsFowId, result: true),
-            onCancel: () => manager.close(tlConfigParamsFowId),
-          ),
-        )
-        .then((ok) {
-      if (ok != true && mounted) _updateComposer(account, before); // 巻き戻し
-    });
   }
 
   Widget _addTile(String label, VoidCallback onTap) {
@@ -728,12 +619,15 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
 /// アイコン/名前/提供元/説明/詳細行)で、ホバー中もこの表示のまま。
 /// 詳細行は入出力ではなく**ネイティブ対応の SNS プラグイン**。
 class _ComponentPalettePanel extends ConsumerStatefulWidget {
-  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource});
+  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false});
 
   final FowSpec spec;
 
   /// true = アルゴリズム側、false = タイムライン(取得元)側。
   final bool algorithms;
+
+  /// DM スコープ (D-127): 取得元は DM 取得用のタイルだけ表示する。
+  final bool dmOnly;
   final ValueChanged<TlAlgorithmComponent> onAddAlgorithm;
   final ValueChanged<TlSourceComponent> onAddSource;
 
@@ -820,6 +714,27 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               description: '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
               supported: sessionSns,
               add: () => widget.onAddAlgorithm(TlAlgorithmComponent(type: 'plugin:${p.id}', pluginLabel: '${p.label}でソート'))),
+      ];
+    }
+    // DM スコープ (D-127): DM 取得用のタイルだけ。
+    if (widget.dmOnly) {
+      final peers = ref.watch(_tlDmPeersProvider).value ?? const <String>[];
+      return [
+        _PaletteItem(
+            icon: Icons.sync_alt,
+            title: 'このDM',
+            subtitle: 'RASQ',
+            description: 'この DM ページのメッセージをそのまま取り込みます(共通設定ではそれぞれのページの DM)。',
+            supported: allSns,
+            add: () => widget.onAddSource(const TlSourceComponent(tl: 'self'))),
+        for (final peer in peers)
+          _PaletteItem(
+              icon: Icons.mail_outline,
+              title: 'DM: @$peer',
+              subtitle: 'DM取得',
+              description: '@$peer との DM を取り込みます。',
+              supported: sessionSns,
+              add: () => widget.onAddSource(TlSourceComponent(tl: 'dm:$peer'))),
       ];
     }
     // タイムライン側 (D-122): [タイムライン, リスト系, 現在のトレンドTL] に絞る
@@ -1026,7 +941,7 @@ class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
     return (
       {'tl': s.tl, 'account': s.account.isEmpty ? '現在のアカウント' : s.account},
       RrlNode(t: 'Column', c: [
-        if (!s.isTrend && !s.isList) ...[
+        if (!s.isTrend && !s.isList && !s.isDm) ...[
           _section('TL 種別'),
           _radio('tl', 'フォロー中 (home)', 'home'),
           _radio('tl', 'おすすめ (social)', 'social'),
@@ -1208,82 +1123,3 @@ class _ReorderSheetBodyState extends State<_ReorderSheetBody> {
   }
 }
 
-/// コンポーザーのパラメーターパネル (D-125): 有効トグル + [キーワード/類似性]
-/// × [投稿内容/リアクション/会話内容](RRL 描画 — 設定 DSL の部品)。
-class _ComposerParamsPanel extends StatefulWidget {
-  const _ComposerParamsPanel({required this.account, required this.filterOf, required this.onUpdate, required this.onConfirm, required this.onCancel});
-
-  final String account;
-  final ComposerAccountFilter Function() filterOf;
-  final ValueChanged<ComposerAccountFilter> onUpdate;
-  final VoidCallback onConfirm;
-  final VoidCallback onCancel;
-
-  @override
-  State<_ComposerParamsPanel> createState() => _ComposerParamsPanelState();
-}
-
-class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
-  RrlNode _radio(String key, String label, String value) =>
-      RrlNode(t: 'RadioListTile', k: key, p: {'title': label, 'value': value, 'group': '\$.settings.$key'}, on: const {'change': 'settings.set'});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tokens = RasqTokens.of(context);
-    final f = widget.filterOf();
-    final root = RrlNode(t: 'Column', c: [
-      const RrlNode(t: 'SwitchListTile', k: 'enabled', p: {'title': '絞り込みを有効にする', 'subtitle': '無効のときこのアカウントはポスト先の候補になりません', 'value': '\$.settings.enabled'}, on: {'change': 'settings.set'}),
-      const RrlNode(t: 'SectionHeader', p: {'title': 'なにを見る?'}),
-      for (final o in suggestWhatOptions) _radio('what', o, o),
-      const RrlNode(t: 'SectionHeader', p: {'title': 'なにから読み取る?'}),
-      for (final o in suggestFromOptions) _radio('from', o, o),
-    ]);
-    final host = RrlHost(
-      instanceScope: 'rasq.host.tlconfig:-:0:composer.${widget.account}',
-      scope: RrlScope({'settings': {'enabled': f.enabled, 'what': f.what, 'from': f.from}}),
-      onEvent: (nodeId, kind, {String? fn, Map<String, Object?> payload = const {}}) {
-        if (fn != 'settings.set') return;
-        final key = nodeId.split(':').last;
-        final v = payload['value'];
-        widget.onUpdate(switch (key) {
-          'enabled' => f.copyWith(enabled: v == true),
-          'what' => f.copyWith(what: '$v'),
-          _ => f.copyWith(from: '$v'),
-        });
-        setState(() {});
-      },
-    );
-    return Column(children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 2, RasqSpacing.page, 0),
-        child: Row(children: [
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: widget.onCancel,
-                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerLeft),
-                child: Text('キャンセル', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
-              ),
-            ),
-          ),
-          Text('ノードを設定', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: widget.onConfirm,
-                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerRight),
-                child: Text('決定', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
-              ),
-            ),
-          ),
-        ]),
-      ),
-      RasqPluginTile(icon: Icons.filter_alt_outlined, title: f.title, subtitle: widget.account, description: '下書きがこの条件に合うとき、このアカウントが投稿先候補になります。', chevron: false),
-      const Divider(height: 1),
-      Expanded(child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), children: [RrlRenderer(node: root, host: host)])),
-    ]);
-  }
-}

@@ -33,7 +33,9 @@ class TlSourceComponent {
   bool get isTrend => tl == 'trend';
   bool get isList => tl.startsWith('list:');
   bool get isSelf => tl == 'self';
+  bool get isDm => tl.startsWith('dm:');
   String get listName => isList ? tl.substring(5) : '';
+  String get dmPeer => isDm ? tl.substring(3) : '';
 
   /// アカウント表記(空 = 現在のアカウント)。
   final String account;
@@ -144,6 +146,11 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
   if (scope == 'trend' || scope == 'trend.users') {
     return const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
   }
+  if (scope == 'tl.dm' || scope.startsWith('tl.dm:') || scope.startsWith('tl.chat:')) {
+    // DM (D-127): メイン(tl.dm)= カスタム未設定の全 DM ページの共通設定、
+    // 各ページ(tl.dm:<peer>)= そのルームだけの設定。どちらも self から。
+    return const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'chrono')], clock: '');
+  }
   if (scope == 'trend.following') {
     // フォロー中タブ (D-125): フォロイーの投稿を検索ワード/タグで絞り込む —
     // 「home 取得 → 時系列順」だけだと意味が見えないので絞り込みを明示する。
@@ -184,6 +191,9 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
     } else if (s.isSelf) {
       // この画面の基礎 TL (D-124): 実行側の resolveNodeFetch が selfItems を返す。
       nodes.add(inst('tl.source', 's$i', at, values: {'TL': 'self'}));
+    } else if (s.isDm) {
+      // DM 取得 (D-127): 相手指定の DM ルーム。
+      nodes.add(inst('tl.dm', 's$i', at, values: {'相手': s.dmPeer, 'アカウント': s.account}));
     } else if (s.isList) {
       nodes.add(inst('tl.list', 's$i', at, values: {'リスト': s.listName, 'アカウント': s.account}));
     } else {
@@ -308,19 +318,38 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
 /// 下書きがそのアカウントの基準に合うときポスト先候補になる。
 @immutable
 class ComposerAccountFilter {
-  const ComposerAccountFilter({this.enabled = false, this.what = 'キーワード', this.from = '投稿内容'});
+  const ComposerAccountFilter(
+      {this.enabled = false, this.what = 'キーワード', this.from = '投稿内容', this.fallbackEnabled = false, this.fallbackFormat = '注釈を付ける', this.fallbackCw = ''});
 
   final bool enabled;
   final String what;
   final String from;
 
+  /// 代わりのフォーマットで投稿 (D-126): 絞り込みで投稿先から外れた場合、
+  /// 代替フォーマット(注釈/フォロワー限定/連合なし)で候補に残す。
+  final bool fallbackEnabled;
+  final String fallbackFormat;
+  final String fallbackCw;
+
   String get title => '$whatを$fromから絞り込み';
 
-  ComposerAccountFilter copyWith({bool? enabled, String? what, String? from}) =>
-      ComposerAccountFilter(enabled: enabled ?? this.enabled, what: what ?? this.what, from: from ?? this.from);
-  Map<String, Object?> toJson() => {'enabled': enabled, 'what': what, 'from': from};
-  factory ComposerAccountFilter.fromJson(Map<String, Object?> j) =>
-      ComposerAccountFilter(enabled: j['enabled'] == true, what: j['what'] as String? ?? 'キーワード', from: j['from'] as String? ?? '投稿内容');
+  ComposerAccountFilter copyWith({bool? enabled, String? what, String? from, bool? fallbackEnabled, String? fallbackFormat, String? fallbackCw}) =>
+      ComposerAccountFilter(
+          enabled: enabled ?? this.enabled,
+          what: what ?? this.what,
+          from: from ?? this.from,
+          fallbackEnabled: fallbackEnabled ?? this.fallbackEnabled,
+          fallbackFormat: fallbackFormat ?? this.fallbackFormat,
+          fallbackCw: fallbackCw ?? this.fallbackCw);
+  Map<String, Object?> toJson() =>
+      {'enabled': enabled, 'what': what, 'from': from, 'fallbackEnabled': fallbackEnabled, 'fallbackFormat': fallbackFormat, 'fallbackCw': fallbackCw};
+  factory ComposerAccountFilter.fromJson(Map<String, Object?> j) => ComposerAccountFilter(
+      enabled: j['enabled'] == true,
+      what: j['what'] as String? ?? 'キーワード',
+      from: j['from'] as String? ?? '投稿内容',
+      fallbackEnabled: j['fallbackEnabled'] == true,
+      fallbackFormat: j['fallbackFormat'] as String? ?? '注釈を付ける',
+      fallbackCw: j['fallbackCw'] as String? ?? '');
 }
 
 /// アカウント表記 → 絞り込みの構成 → コンポーザーグラフ (D-125)。
@@ -366,6 +395,16 @@ NodeGraph compileComposerConfig(Map<String, ComposerAccountFilter> byAccount, Li
     }
     edges.add(GraphEdge(from: mlId, fromPort: 0, to: cmpId, toPort: 0));
     edges.add(GraphEdge(from: targetId, fromPort: 0, to: cmpId, toPort: 0, cond: true));
+    // 代わりのフォーマットで投稿 (D-126): 絞り込みに合わなかったとき —
+    // **無くなる直前のノード(比較)からバイパス**(同じ比較を Not で受ける)。
+    if (f.fallbackEnabled) {
+      final fbId = 'fb$i';
+      final notId = 'nt$i';
+      nodes.add(inst('composer.fallback', fbId, Offset(640, y), values: {'アカウント': account, 'フォーマット': f.fallbackFormat, '注釈': f.fallbackCw}));
+      nodes.add(inst('not', notId, Offset(660, y + 60)));
+      edges.add(GraphEdge(from: fbId, fromPort: 0, to: notId, toPort: 0, cond: true));
+      edges.add(GraphEdge(from: notId, fromPort: 0, to: cmpId, toPort: 0, cond: true));
+    }
     row++;
   }
   return NodeGraph(nodes: nodes, edges: edges);

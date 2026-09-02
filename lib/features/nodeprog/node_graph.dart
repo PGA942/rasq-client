@@ -517,6 +517,22 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
     hasCondOut: true,
   ),
+  // 代わりのフォーマットで投稿 (D-126): 絞り込みで投稿が無くなった(下書きが
+  // 条件に合わなかった)場合のバイパス — 直前の比較を Not で受けて、代替
+  // フォーマットでこのアカウントに投稿する。
+  NodeCatalogEntry(
+    type: 'composer.fallback',
+    title: '代わりのフォーマットで投稿',
+    icon: Icons.alt_route,
+    genre: 'コンポーザー',
+    description: '絞り込みで投稿先から外れた場合のバイパス。下の条件(通常は直前の比較の Not)が成立したとき、代わりのフォーマットでこのアカウントに投稿します。',
+    inputs: [
+      NodePort(label: 'アカウント', value: '', dataType: '設定'),
+      NodePort(label: 'フォーマット', value: '注釈を付ける', dataType: '設定', options: ['注釈を付ける', 'フォロワー限定', '連合なし']),
+      NodePort(label: '注釈', value: '', dataType: '設定'),
+    ],
+    hasCondOut: true,
+  ),
   NodeCatalogEntry(
     type: 'tl.myreactions',
     title: 'リアクション済み取得',

@@ -1,0 +1,412 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
+import 'package:rrl_core/rrl_core.dart';
+import 'package:rrl_renderer/rrl_renderer.dart';
+
+import '../../app/providers.dart';
+import '../../app/router.dart' show Routes, routerProvider;
+import '../../shell/headers.dart';
+import '../settings/settings_dsl.dart';
+import 'node_tabs.dart';
+import 'tl_components.dart';
+
+/// コンポーザーのパラメーター FOW。
+const composerConfigParamsFowId = 'fow.composerconfig.params';
+
+/// 投稿先のカスタマイズ (D-126): **完全に別ページ**(タブは TL カスタマイズに
+/// 間借りせず、戻るで 1 ページ前に帰れる)。対象は SNS タイムラインではなく
+/// **投稿内容(と内部フォーマットが合っているか)**なので、**絞り込み系のみ**:
+///
+/// - **ポスト先の絞り込み**: アカウントごとタブ選択形式 (D-125)。下書きが
+///   そのアカウントの基準([キーワード/類似性] × [投稿内容/リアクション/
+///   会話内容])に合うとき投稿先候補になる。
+/// - **代わりのフォーマットで投稿**: 絞り込みで投稿が無くなった(条件に
+///   合わなかった)場合のバイパス — 無くなる直前のノード(比較)を Not で
+///   受けて、代替フォーマット(注釈/フォロワー限定/連合なし)で候補に残す。
+class ComposerConfigScreen extends ConsumerStatefulWidget {
+  const ComposerConfigScreen({super.key});
+  @override
+  ConsumerState<ComposerConfigScreen> createState() => _ComposerConfigScreenState();
+}
+
+class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
+  Map<String, ComposerAccountFilter> _cfg = {};
+  String _tab = '';
+  bool _loaded = false;
+  bool _handEdited = false;
+
+  String get _area => nodeprogAreaFor(ref.read(currentAccountProvider)?.key, 'composer');
+  List<String> get _accounts => [for (final s in ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${s.account}'];
+
+  late final OverlayManager _manager;
+
+  @override
+  void initState() {
+    super.initState();
+    _manager = ref.read(overlayManagerProvider);
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _manager.close(composerConfigParamsFowId);
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loaded = false;
+      _handEdited = false;
+    });
+    try {
+      final area = await ref.read(settingsAreaProvider(_area).future);
+      if (!mounted) return;
+      final raw = area['composercfg'];
+      final cfg = <String, ComposerAccountFilter>{};
+      if (raw is String) {
+        (jsonDecode(raw) as Map).cast<String, Object?>().forEach((k, v) => cfg[k] = ComposerAccountFilter.fromJson((v as Map).cast<String, Object?>()));
+      }
+      setState(() {
+        _cfg = cfg;
+        _tab = _accounts.contains(_tab) ? _tab : (_accounts.firstOrNull ?? '');
+        _handEdited = raw is! String && area['graph'] is String;
+        _loaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loaded = true);
+    }
+  }
+
+  Future<void> _save() async {
+    final store = ref.read(settingsAreaProvider(_area).notifier);
+    await store.set('composercfg', jsonEncode({for (final e in _cfg.entries) e.key: e.value.toJson()}));
+    await store.set('graph', jsonEncode(compileComposerConfig(_cfg, _accounts).toJson()));
+    if (mounted) setState(() => _handEdited = false);
+  }
+
+  void _update(String account, ComposerAccountFilter next) {
+    setState(() => _cfg = {..._cfg, account: next});
+    _save();
+  }
+
+  ComposerAccountFilter get _current => _cfg[_tab] ?? const ComposerAccountFilter();
+
+  Future<void> _moreMenu(BuildContext buttonContext) async {
+    final box = buttonContext.findRenderObject() as RenderBox;
+    final pick = await _manager.showDropdown<String>(
+      id: 'composerconfig.more',
+      anchor: box.localToGlobal(Offset.zero) & box.size,
+      dense: true,
+      items: const [
+        RasqDropdownItem('この構成をリセット', 'reset'),
+        // グラフカスタマイズ (D-124): 手を入れた構成は自動構成の対象外。
+        RasqDropdownItem('グラフで編集', 'nodes'),
+      ],
+    );
+    if (!mounted) return;
+    switch (pick) {
+      case 'reset':
+        final store = ref.read(settingsAreaProvider(_area).notifier);
+        await store.set('graph', null);
+        await store.set('composercfg', null);
+        if (mounted) await _load();
+      case 'nodes':
+        await ref.read(routerProvider).push(Routes.nodes('composer'));
+        if (mounted) await _load();
+    }
+  }
+
+  PreferredSizeWidget _tabBar() {
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = RasqTokens.of(context);
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(40),
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
+          child: Row(children: [
+            for (final a in _accounts)
+              InkWell(
+                onTap: () => setState(() => _tab = a),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                  decoration: _tab == a ? BoxDecoration(border: Border(bottom: BorderSide(color: tokens.link, width: 2))) : null,
+                  child: Text(a, style: RasqTypography.bodySmall.copyWith(fontWeight: _tab == a ? FontWeight.w700 : null, color: _tab == a ? tokens.link : scheme.onSurfaceVariant)),
+                ),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = RasqTokens.of(context);
+    ref.watch(sessionsProvider);
+    final f = _current;
+    return Scaffold(
+      appBar: RasqPageHeader(
+        title: '投稿先のカスタマイズ',
+        actions: [Builder(builder: (ctx) => RasqIconButton(icon: Icons.more_horiz, tooltip: 'その他', onPressed: () => _moreMenu(ctx)))],
+        bottom: _tabBar(),
+      ),
+      body: !_loaded
+          ? const RasqLoading()
+          : _tab.isEmpty
+              ? const RasqEmptyView(title: 'アカウントがありません', hint: 'ログインすると投稿先の条件を組めます')
+              : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
+                  Container(
+                    margin: const EdgeInsets.all(RasqSpacing.sm),
+                    padding: const EdgeInsets.all(RasqSpacing.sm),
+                    decoration: BoxDecoration(color: tokens.link.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
+                    child: Text('アカウントごとに絞り込みを組むと、下書きの内容(と内部のフォーマット)が合うアカウントが投稿先の候補になります。',
+                        style: RasqTypography.caption.copyWith(color: tokens.link)),
+                  ),
+                  if (_handEdited)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
+                      child: Text('ポスト先はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。', style: RasqTypography.caption.copyWith(color: tokens.danger)),
+                    ),
+                  const RasqSectionHeader(title: 'ポスト先の絞り込み', topMargin: 0),
+                  _filterTile(scheme, f),
+                  const RasqSectionHeader(title: '代わりのフォーマットで投稿'),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+                    child: Text('絞り込みで投稿先から外れた場合のバイパスです(無くなる直前の比較から Not で受けます)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  ),
+                  _fallbackTile(scheme, f),
+                ]),
+    );
+  }
+
+  Widget _filterTile(ColorScheme scheme, ComposerAccountFilter f) {
+    return Row(children: [
+      Expanded(
+        child: RasqPluginTile(
+          leading: Icon(Icons.filter_alt_outlined, size: 22, color: f.enabled ? null : scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+          title: f.title,
+          subtitle: f.enabled ? _tab : '$_tab ・ 無効化中',
+          description: f.enabled
+              ? 'このアカウントの${f.from == '投稿内容' ? '投稿' : f.from == 'リアクション' ? 'リアクションした投稿' : '返信'}を基準に、下書きが${f.what}で合うとき投稿先候補になります。'
+              : '無効化中: このアカウントはポスト先の候補になりません。',
+          chevron: true,
+          onTap: () => _openParams(fallback: false),
+        ),
+      ),
+      Builder(builder: (ctx) => _menuButton(ctx, fallback: false, enabled: f.enabled)),
+      const SizedBox(width: RasqSpacing.sm),
+    ]);
+  }
+
+  Widget _fallbackTile(ColorScheme scheme, ComposerAccountFilter f) {
+    final formatLabel = f.fallbackFormat + (f.fallbackFormat == '注釈を付ける' && f.fallbackCw.isNotEmpty ? '(${f.fallbackCw})' : '');
+    return Row(children: [
+      Expanded(
+        child: RasqPluginTile(
+          leading: Icon(Icons.alt_route, size: 22, color: f.fallbackEnabled ? null : scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+          title: '代わりのフォーマットで投稿',
+          subtitle: f.fallbackEnabled ? _tab : '$_tab ・ 無効化中',
+          description: f.fallbackEnabled
+              ? '絞り込みに合わなかったとき、$formatLabel でこのアカウントを候補に残します。'
+              : '無効化中: 絞り込みに合わない下書きは、このアカウントの候補になりません。',
+          chevron: true,
+          onTap: () => _openParams(fallback: true),
+        ),
+      ),
+      Builder(builder: (ctx) => _menuButton(ctx, fallback: true, enabled: f.fallbackEnabled)),
+      const SizedBox(width: RasqSpacing.sm),
+    ]);
+  }
+
+  Widget _menuButton(BuildContext ctx, {required bool fallback, required bool enabled}) {
+    return RasqIconButton(
+      icon: Icons.more_horiz,
+      size: 18,
+      tooltip: fallback ? '代替フォーマットの操作' : 'ポスト先の操作',
+      onPressed: () async {
+        final box = ctx.findRenderObject() as RenderBox;
+        final pick = await _manager.showDropdown<String>(
+          id: 'composerconfig.menu',
+          anchor: box.localToGlobal(Offset.zero) & box.size,
+          dense: true,
+          items: [
+            const RasqDropdownItem('パラメーターを編集', 'params'),
+            RasqDropdownItem(enabled ? '一時的な無効化' : '無効化の解除', 'toggle'),
+          ],
+        );
+        if (!mounted) return;
+        final f = _current;
+        if (pick == 'params') _openParams(fallback: fallback);
+        if (pick == 'toggle') {
+          _update(_tab, fallback ? f.copyWith(fallbackEnabled: !enabled) : f.copyWith(enabled: !enabled));
+        }
+      },
+    );
+  }
+
+  /// パラメーター FOW (D-124 作法): 決定 = 確定 / キャンセル・FOW 外 = 巻き戻し。
+  void _openParams({required bool fallback}) {
+    final manager = _manager;
+    if (manager.contains(composerConfigParamsFowId)) manager.close(composerConfigParamsFowId);
+    final spec = FowSpec(
+      type: FowPanelType.interstitial,
+      initialHeightFactor: 0.85,
+      minHeightFactor: 0.2,
+      maxHeightFactor: 0.85,
+      dockAboveFooter: true,
+      heightStops: const [0.85],
+      freeAboveStops: true,
+    );
+    final account = _tab;
+    final before = _cfg[account] ?? const ComposerAccountFilter();
+    manager
+        .showFow<bool>(
+          id: composerConfigParamsFowId,
+          semanticsLabel: 'ノードを設定',
+          spec: spec,
+          builder: (ctx, handle) => _ComposerParamsPanel(
+            account: account,
+            fallback: fallback,
+            filterOf: () => _cfg[account] ?? const ComposerAccountFilter(),
+            onUpdate: (f) => _update(account, f),
+            onConfirm: () => manager.close(composerConfigParamsFowId, result: true),
+            onCancel: () => manager.close(composerConfigParamsFowId),
+          ),
+        )
+        .then((ok) {
+      if (ok != true && mounted) _update(account, before); // 巻き戻し
+    });
+  }
+}
+
+/// パラメーターパネル: 有効トグル + パラメーター(RRL 描画 — 設定 DSL の
+/// 部品)。[fallback] = 代わりのフォーマットで投稿の設定。
+class _ComposerParamsPanel extends StatefulWidget {
+  const _ComposerParamsPanel(
+      {required this.account, required this.fallback, required this.filterOf, required this.onUpdate, required this.onConfirm, required this.onCancel});
+
+  final String account;
+  final bool fallback;
+  final ComposerAccountFilter Function() filterOf;
+  final ValueChanged<ComposerAccountFilter> onUpdate;
+  final VoidCallback onConfirm;
+  final VoidCallback onCancel;
+
+  @override
+  State<_ComposerParamsPanel> createState() => _ComposerParamsPanelState();
+}
+
+class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
+  late final TextEditingController _cw = TextEditingController(text: widget.filterOf().fallbackCw);
+
+  @override
+  void dispose() {
+    _cw.dispose();
+    super.dispose();
+  }
+
+  RrlNode _radio(String key, String label, String value) =>
+      RrlNode(t: 'RadioListTile', k: key, p: {'title': label, 'value': value, 'group': '\$.settings.$key'}, on: const {'change': 'settings.set'});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = RasqTokens.of(context);
+    final f = widget.filterOf();
+    final root = widget.fallback
+        ? RrlNode(t: 'Column', c: [
+            const RrlNode(t: 'SwitchListTile', k: 'fallbackEnabled', p: {'title': '代わりのフォーマットで投稿する', 'subtitle': '絞り込みに合わなかったとき、代替フォーマットで候補に残します', 'value': '\$.settings.fallbackEnabled'}, on: {'change': 'settings.set'}),
+            const RrlNode(t: 'SectionHeader', p: {'title': 'フォーマット'}),
+            for (final o in const ['注釈を付ける', 'フォロワー限定', '連合なし']) _radio('fallbackFormat', o, o),
+          ])
+        : RrlNode(t: 'Column', c: [
+            const RrlNode(t: 'SwitchListTile', k: 'enabled', p: {'title': '絞り込みを有効にする', 'subtitle': '無効のときこのアカウントはポスト先の候補になりません', 'value': '\$.settings.enabled'}, on: {'change': 'settings.set'}),
+            const RrlNode(t: 'SectionHeader', p: {'title': 'なにを見る?'}),
+            for (final o in suggestWhatOptions) _radio('what', o, o),
+            const RrlNode(t: 'SectionHeader', p: {'title': 'なにから読み取る?'}),
+            for (final o in suggestFromOptions) _radio('from', o, o),
+          ]);
+    final host = RrlHost(
+      instanceScope: 'rasq.host.composerconfig:-:0:${widget.account}',
+      scope: RrlScope({
+        'settings': {'enabled': f.enabled, 'what': f.what, 'from': f.from, 'fallbackEnabled': f.fallbackEnabled, 'fallbackFormat': f.fallbackFormat},
+      }),
+      onEvent: (nodeId, kind, {String? fn, Map<String, Object?> payload = const {}}) {
+        if (fn != 'settings.set') return;
+        final key = nodeId.split(':').last;
+        final v = payload['value'];
+        widget.onUpdate(switch (key) {
+          'enabled' => f.copyWith(enabled: v == true),
+          'fallbackEnabled' => f.copyWith(fallbackEnabled: v == true),
+          'fallbackFormat' => f.copyWith(fallbackFormat: '$v'),
+          'what' => f.copyWith(what: '$v'),
+          _ => f.copyWith(from: '$v'),
+        });
+        setState(() {});
+      },
+    );
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 2, RasqSpacing.page, 0),
+        child: Row(children: [
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: widget.onCancel,
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerLeft),
+                child: Text('キャンセル', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+              ),
+            ),
+          ),
+          Text('ノードを設定', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: widget.onConfirm,
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerRight),
+                child: Text('決定', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+              ),
+            ),
+          ),
+        ]),
+      ),
+      RasqPluginTile(
+        icon: widget.fallback ? Icons.alt_route : Icons.filter_alt_outlined,
+        title: widget.fallback ? '代わりのフォーマットで投稿' : f.title,
+        subtitle: widget.account,
+        description: widget.fallback ? '絞り込みに合わなかったときのバイパスです。' : '下書きがこの条件に合うとき、このアカウントが投稿先候補になります。',
+        chevron: false,
+      ),
+      const Divider(height: 1),
+      Expanded(
+        child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), children: [
+          RrlRenderer(node: root, host: host),
+          if (widget.fallback)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+              child: TextField(
+                controller: _cw,
+                style: RasqTypography.bodySmall,
+                decoration: const InputDecoration(labelText: '注釈(「注釈を付ける」のとき)', isDense: true),
+                onChanged: (v) {
+                  widget.onUpdate(widget.filterOf().copyWith(fallbackCw: v.trim()));
+                },
+              ),
+            ),
+        ]),
+      ),
+    ]);
+  }
+}

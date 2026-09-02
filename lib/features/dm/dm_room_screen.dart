@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart';
 import '../compose/compose_target.dart';
@@ -64,7 +66,12 @@ class _DmRoomScreenState extends ConsumerState<DmRoomScreen> {
     final title = resolved?.displayTitle ?? tl.value?.posts.where((p) => p.author.id == peerId).firstOrNull?.author.displayName ?? 'DM';
     if (resolved != null) _ensureComposer(resolved);
     return Scaffold(
-      appBar: RasqPageHeader(title: title, onMore: () {}),
+      appBar: RasqPageHeader(
+        title: title,
+        onMore: () {},
+        // このページだけの DM 設定 (D-127: 未設定なら tl.dm の共通設定が効く)。
+        actions: [RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'このDMの設定', onPressed: () => context.push(Routes.tlConfig('tl.${kind.id}')))],
+      ),
       body: tl.when(
         loading: () => const RasqLoading(),
         error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
