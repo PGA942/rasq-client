@@ -10,6 +10,7 @@ import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/nodeprog/node_editor_screen.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/features/nodeprog/node_tabs.dart';
+import 'package:rasq_client/features/nodeprog/timeline_config_screen.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -267,7 +268,7 @@ void main() {
     expect(find.text('プラグインノードを検索'), findsOneWidget);
   });
 
-  testWidgets('コンポーザーの「投稿先のカスタマイズ」→ composer スコープのエディタ', (tester) async {
+  testWidgets('コンポーザーの「投稿先のカスタマイズ」→ アカウントごとタブの絞り込み画面 (D-125)', (tester) async {
     await pump(tester);
     await tester.tap(find.byTooltip('投稿'));
     await tester.pumpAndSettle();
@@ -275,7 +276,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('投稿先のカスタマイズ'));
     await tester.pumpAndSettle();
-    // 画面タイトル(コンポーザー FOW のリンクはオーバーレイ側に残る)。
-    expect(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('投稿先のカスタマイズ')), findsOneWidget);
+    // 簡略版のポスト先絞り込み画面(タブ = アカウント)。グラフでの編集は
+    // … メニューの「グラフで編集」から。
+    expect(find.byType(TimelineConfigScreen), findsOneWidget);
+    expect(find.text('ポスト先の絞り込み'), findsOneWidget);
   });
 }

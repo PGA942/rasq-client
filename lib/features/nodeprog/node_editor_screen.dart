@@ -460,6 +460,9 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     if (_scope.startsWith('tl.') || _scope.startsWith('trend')) {
       ref.read(settingsAreaProvider(_area).notifier).set('tlcfg', null);
     }
+    if (_scope == 'composer') {
+      ref.read(settingsAreaProvider(_area).notifier).set('composercfg', null); // D-125
+    }
   }
 
   Map<String, NodeCatalogEntry> get _catalogByType => {for (final e in ref.watch(nodeCatalogProvider)) e.type: e};

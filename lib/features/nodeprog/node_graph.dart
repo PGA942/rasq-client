@@ -409,6 +409,20 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     description: '関数の中身の出口。ここに繋いだ投稿リストが関数ノードの出力になります(未接続なら素通し)。',
     inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
+  // 検索絞り込み (D-125): このページの検索ワード/タグ(または指定ワード)に
+  // 合う投稿だけ通す。検索/トレンド系 TL の既定チェーンに置かれる。
+  NodeCatalogEntry(
+    type: 'filter.query',
+    title: '検索絞り込み',
+    icon: Icons.manage_search,
+    genre: '加工',
+    description: '検索ワードに合う投稿だけ通します。ワードが空のときは、このページの検索ワード/タグを使います。',
+    inputs: [
+      NodePort(label: '投稿リスト', dataType: '投稿リスト'),
+      NodePort(label: '検索ワード', value: '', dataType: '設定'),
+    ],
+    outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
   // マージ (D-106): 複数の投稿リストを 1 本のタイムラインへ合流。
   NodeCatalogEntry(
     type: 'merge',

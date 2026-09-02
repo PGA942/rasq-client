@@ -51,6 +51,12 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   TlConfig _cfg = const TlConfig();
   bool _loaded = false;
 
+  /// コンポーザーモード (D-125): アカウントごとタブ選択形式のポスト先
+  /// 絞り込み。タブ = ログイン済みアカウント。
+  Map<String, ComposerAccountFilter> _composerCfg = {};
+  String _composerTab = '';
+  bool get _isComposer => _scope == 'composer';
+
   /// tlcfg が無いのに graph がある = ノードエディタで手組みされた TL。
   /// このまま保存すると置き換えるので、バナーで明示する。
   bool _handEdited = false;
@@ -91,6 +97,27 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       _loaded = false;
       _handEdited = false;
     });
+    if (_isComposer) {
+      // ポスト先の絞り込み (D-125): アカウントごとの構成。
+      try {
+        final area = await ref.read(settingsAreaProvider(_area).future);
+        if (!mounted) return;
+        final raw = area['composercfg'];
+        final cfg = <String, ComposerAccountFilter>{};
+        if (raw is String) {
+          (jsonDecode(raw) as Map).cast<String, Object?>().forEach((k, v) => cfg[k] = ComposerAccountFilter.fromJson((v as Map).cast<String, Object?>()));
+        }
+        setState(() {
+          _composerCfg = cfg;
+          _composerTab = _accounts.contains(_composerTab) ? _composerTab : (_accounts.firstOrNull ?? '');
+          _handEdited = raw is! String && area['graph'] is String;
+          _loaded = true;
+        });
+      } catch (_) {
+        if (mounted) setState(() => _loaded = true);
+      }
+      return;
+    }
     try {
       final area = await ref.read(settingsAreaProvider(_area).future);
       final raw = area['tlcfg'];
@@ -134,6 +161,19 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     _save();
   }
 
+  /// コンポーザー構成の保存 (D-125): composercfg + コンパイル済みグラフ。
+  Future<void> _saveComposer() async {
+    final store = ref.read(settingsAreaProvider(_area).notifier);
+    await store.set('composercfg', jsonEncode({for (final e in _composerCfg.entries) e.key: e.value.toJson()}));
+    await store.set('graph', jsonEncode(compileComposerConfig(_composerCfg, _accounts).toJson()));
+    if (mounted) setState(() => _handEdited = false);
+  }
+
+  void _updateComposer(String account, ComposerAccountFilter next) {
+    setState(() => _composerCfg = {..._composerCfg, account: next});
+    _saveComposer();
+  }
+
   void _switchScope(String next) {
     if (next == _scope) return;
     setState(() => _scope = next);
@@ -143,6 +183,8 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   // ---- タブ行(ノードエディタ D-101 と同じ作法)-----------------------------
 
   List<(String, String, bool)> _tabs() {
+    // コンポーザー (D-125): タブ = ログイン済みアカウント(タブ選択形式)。
+    if (_isComposer) return [for (final a in _accounts) (a, a, false)];
     // トレンドのエディタは ノート/フォロー中/ユーザー (D-107/D-124)。
     if (_scope.startsWith('trend')) {
       return const [('trend', 'ノート', false), ('trend.following', 'フォロー中', false), ('trend.users', 'ユーザー', false)];
@@ -278,6 +320,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         final store = ref.read(settingsAreaProvider(_area).notifier);
         await store.set('graph', null);
         await store.set('tlcfg', null);
+        await store.set('composercfg', null);
         if (mounted) await _load();
       case 'bundleTabs':
         await ref.read(settingsAreaProvider('nodeprog.prefs').notifier).set('bundleTabs', !bundleTabs);
@@ -497,7 +540,9 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       ),
       body: !_loaded
           ? const RasqLoading()
-          : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
+          : _isComposer
+              ? _composerBody(scheme, tokens)
+              : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
               // 説明バナー(ワイヤーフレーム: アルゴリズムは上から順に適用)。
               Container(
                 margin: const EdgeInsets.all(RasqSpacing.sm),
@@ -543,6 +588,99 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
               }),
             ]),
     );
+  }
+
+  /// コンポーザーモードの本体 (D-125): 選択中アカウントのポスト先絞り込み。
+  Widget _composerBody(ColorScheme scheme, RasqTokens tokens) {
+    final account = _composerTab;
+    if (account.isEmpty) return const RasqEmptyView(title: 'アカウントがありません', hint: 'ログインすると投稿先の条件を組めます');
+    final f = _composerCfg[account] ?? const ComposerAccountFilter();
+    return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
+      Container(
+        margin: const EdgeInsets.all(RasqSpacing.sm),
+        padding: const EdgeInsets.all(RasqSpacing.sm),
+        decoration: BoxDecoration(color: tokens.link.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
+        child: Text('アカウントごとに絞り込みを組むと、下書きの内容が条件に合うアカウントが投稿先の候補になります(タブでアカウントを選択)。',
+            style: RasqTypography.caption.copyWith(color: tokens.link)),
+      ),
+      if (_handEdited)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
+          child: Text('ポスト先はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。', style: RasqTypography.caption.copyWith(color: tokens.danger)),
+        ),
+      const RasqSectionHeader(title: 'ポスト先の絞り込み', topMargin: 0),
+      Row(children: [
+        Expanded(
+          child: RasqPluginTile(
+            leading: Icon(Icons.filter_alt_outlined, size: 22, color: f.enabled ? null : scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+            title: f.title,
+            subtitle: f.enabled ? account : '$account ・ 無効化中',
+            description: f.enabled
+                ? 'このアカウントの${f.from == '投稿内容' ? '投稿' : f.from == 'リアクション' ? 'リアクションした投稿' : '返信'}を基準に、下書きが${f.what}で合うとき投稿先候補になります。'
+                : '無効化中: このアカウントはポスト先の候補になりません(サジェストは他の条件だけで決まります)。',
+            chevron: true,
+            onTap: _openComposerParams,
+          ),
+        ),
+        Builder(builder: (ctx) {
+          return RasqIconButton(
+            icon: Icons.more_horiz,
+            size: 18,
+            tooltip: 'ポスト先の操作',
+            onPressed: () async {
+              final box = ctx.findRenderObject() as RenderBox;
+              final pick = await ref.read(overlayManagerProvider).showDropdown<String>(
+                id: 'tlconfig.composerMenu',
+                anchor: box.localToGlobal(Offset.zero) & box.size,
+                dense: true,
+                items: [
+                  const RasqDropdownItem('パラメーターを編集', 'params'),
+                  RasqDropdownItem(f.enabled ? '一時的な無効化' : '無効化の解除', 'toggle'),
+                ],
+              );
+              if (!mounted) return;
+              if (pick == 'params') _openComposerParams();
+              if (pick == 'toggle') _updateComposer(account, f.copyWith(enabled: !f.enabled));
+            },
+          );
+        }),
+        const SizedBox(width: RasqSpacing.sm),
+      ]),
+    ]);
+  }
+
+  /// コンポーザーのパラメーター FOW (D-125): 有効トグル + サジェストと同じ
+  /// 2 パラメーター(RRL 描画)。決定/キャンセルは TL 側と同じ作法。
+  void _openComposerParams() {
+    final manager = ref.read(overlayManagerProvider);
+    if (manager.contains(tlConfigParamsFowId)) manager.close(tlConfigParamsFowId);
+    final spec = FowSpec(
+      type: FowPanelType.interstitial,
+      initialHeightFactor: 0.85,
+      minHeightFactor: 0.2,
+      maxHeightFactor: 0.85,
+      dockAboveFooter: true,
+      heightStops: const [0.85],
+      freeAboveStops: true,
+    );
+    final account = _composerTab;
+    final before = _composerCfg[account] ?? const ComposerAccountFilter();
+    manager
+        .showFow<bool>(
+          id: tlConfigParamsFowId,
+          semanticsLabel: 'ノードを設定',
+          spec: spec,
+          builder: (ctx, handle) => _ComposerParamsPanel(
+            account: account,
+            filterOf: () => _composerCfg[account] ?? const ComposerAccountFilter(),
+            onUpdate: (f) => _updateComposer(account, f),
+            onConfirm: () => manager.close(tlConfigParamsFowId, result: true),
+            onCancel: () => manager.close(tlConfigParamsFowId),
+          ),
+        )
+        .then((ok) {
+      if (ok != true && mounted) _updateComposer(account, before); // 巻き戻し
+    });
   }
 
   Widget _addTile(String label, VoidCallback onTap) {
@@ -653,6 +791,20 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             description: '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合う投稿を先頭へ並べ替えます。',
             supported: allSns,
             add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'suggest'))),
+        _PaletteItem(
+            icon: Icons.filter_alt_outlined,
+            title: '絞り込み',
+            subtitle: 'RASQ',
+            description: '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合わない投稿を除外します(サジェストと同じパラメーター)。',
+            supported: allSns,
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'filter'))),
+        _PaletteItem(
+            icon: Icons.manage_search,
+            title: '検索絞り込み',
+            subtitle: 'RASQ',
+            description: 'このページの検索ワード/タグ(または指定ワード)に合う投稿だけ通します。',
+            supported: allSns,
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'queryfilter'))),
         _PaletteItem(
             icon: Icons.schedule,
             title: '時系列順',
@@ -821,6 +973,15 @@ class _ComponentParamsPanel extends StatefulWidget {
 }
 
 class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
+  late final TextEditingController _query = TextEditingController(
+      text: widget.algorithm && widget.index < widget.cfgOf().algorithms.length ? widget.cfgOf().algorithms[widget.index].query : '');
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
   RrlNode _radio(String key, String label, String value) =>
       RrlNode(t: 'RadioListTile', k: key, p: {'title': label, 'value': value, 'group': '\$.settings.$key'}, on: const {'change': 'settings.set'});
 
@@ -829,7 +990,7 @@ class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
   (Map<String, Object?>, RrlNode) _paramsOf(TlConfig cfg) {
     if (widget.algorithm) {
       final a = cfg.algorithms[widget.index];
-      if (a.isSuggest) {
+      if (a.hasSuggestParams) {
         return (
           {'what': a.what, 'from': a.from},
           RrlNode(t: 'Column', c: [
@@ -844,7 +1005,11 @@ class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
         const {},
         RrlNode(t: 'Column', c: [
           RrlNode(t: 'Text', p: {
-            'text': a.isPlugin ? 'このプラグインのパラメーター(RRL 設定ページ)は、ノード定義の配布(ストア統合)でここに表示されます。' : '時系列順にパラメーターはありません。'
+            'text': a.isPlugin
+                ? 'このプラグインのパラメーター(RRL 設定ページ)は、ノード定義の配布(ストア統合)でここに表示されます。'
+                : a.isQueryFilter
+                    ? 'ワードが空のときは、このページの検索ワード/タグで絞り込みます。ワードは下の欄で指定できます。'
+                    : '時系列順にパラメーターはありません。'
           }),
         ]),
       );
@@ -943,7 +1108,28 @@ class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
       ),
       RasqPluginTile(icon: icon, title: title, subtitle: subtitle, description: description, chevron: false),
       const Divider(height: 1),
-      Expanded(child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), children: [RrlRenderer(node: root, host: host)])),
+      Expanded(
+        child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), children: [
+          RrlRenderer(node: root, host: host),
+          // 検索絞り込み (D-125): ワード指定(RRL の Input 部品が入るまでの
+          // ネイティブ欄。空 = このページの検索ワード/タグ)。
+          if (widget.algorithm && widget.index < cfg.algorithms.length && cfg.algorithms[widget.index].isQueryFilter)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+              child: TextField(
+                controller: _query,
+                style: RasqTypography.bodySmall,
+                decoration: const InputDecoration(labelText: '検索ワード(空 = このページの検索ワード)', isDense: true),
+                onChanged: (v) {
+                  final c = widget.cfgOf();
+                  widget.onUpdate(c.copyWith(algorithms: [
+                    for (var k = 0; k < c.algorithms.length; k++) k == widget.index ? c.algorithms[k].copyWith(query: v.trim()) : c.algorithms[k],
+                  ]));
+                },
+              ),
+            ),
+        ]),
+      ),
     ]);
   }
 }
@@ -1018,6 +1204,86 @@ class _ReorderSheetBodyState extends State<_ReorderSheetBody> {
         },
         children: [for (var i = 0; i < count; i++) row(i)],
       ),
+    ]);
+  }
+}
+
+/// コンポーザーのパラメーターパネル (D-125): 有効トグル + [キーワード/類似性]
+/// × [投稿内容/リアクション/会話内容](RRL 描画 — 設定 DSL の部品)。
+class _ComposerParamsPanel extends StatefulWidget {
+  const _ComposerParamsPanel({required this.account, required this.filterOf, required this.onUpdate, required this.onConfirm, required this.onCancel});
+
+  final String account;
+  final ComposerAccountFilter Function() filterOf;
+  final ValueChanged<ComposerAccountFilter> onUpdate;
+  final VoidCallback onConfirm;
+  final VoidCallback onCancel;
+
+  @override
+  State<_ComposerParamsPanel> createState() => _ComposerParamsPanelState();
+}
+
+class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
+  RrlNode _radio(String key, String label, String value) =>
+      RrlNode(t: 'RadioListTile', k: key, p: {'title': label, 'value': value, 'group': '\$.settings.$key'}, on: const {'change': 'settings.set'});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = RasqTokens.of(context);
+    final f = widget.filterOf();
+    final root = RrlNode(t: 'Column', c: [
+      const RrlNode(t: 'SwitchListTile', k: 'enabled', p: {'title': '絞り込みを有効にする', 'subtitle': '無効のときこのアカウントはポスト先の候補になりません', 'value': '\$.settings.enabled'}, on: {'change': 'settings.set'}),
+      const RrlNode(t: 'SectionHeader', p: {'title': 'なにを見る?'}),
+      for (final o in suggestWhatOptions) _radio('what', o, o),
+      const RrlNode(t: 'SectionHeader', p: {'title': 'なにから読み取る?'}),
+      for (final o in suggestFromOptions) _radio('from', o, o),
+    ]);
+    final host = RrlHost(
+      instanceScope: 'rasq.host.tlconfig:-:0:composer.${widget.account}',
+      scope: RrlScope({'settings': {'enabled': f.enabled, 'what': f.what, 'from': f.from}}),
+      onEvent: (nodeId, kind, {String? fn, Map<String, Object?> payload = const {}}) {
+        if (fn != 'settings.set') return;
+        final key = nodeId.split(':').last;
+        final v = payload['value'];
+        widget.onUpdate(switch (key) {
+          'enabled' => f.copyWith(enabled: v == true),
+          'what' => f.copyWith(what: '$v'),
+          _ => f.copyWith(from: '$v'),
+        });
+        setState(() {});
+      },
+    );
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 2, RasqSpacing.page, 0),
+        child: Row(children: [
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: widget.onCancel,
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerLeft),
+                child: Text('キャンセル', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+              ),
+            ),
+          ),
+          Text('ノードを設定', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: widget.onConfirm,
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerRight),
+                child: Text('決定', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+              ),
+            ),
+          ),
+        ]),
+      ),
+      RasqPluginTile(icon: Icons.filter_alt_outlined, title: f.title, subtitle: widget.account, description: '下書きがこの条件に合うとき、このアカウントが投稿先候補になります。', chevron: false),
+      const Divider(height: 1),
+      Expanded(child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), children: [RrlRenderer(node: root, host: host)])),
     ]);
   }
 }

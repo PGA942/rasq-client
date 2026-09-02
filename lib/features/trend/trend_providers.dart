@@ -25,7 +25,7 @@ final trendingTagsProvider = FutureProvider.autoDispose<List<TrendTag>>((ref) as
 /// トレンドスコープのグラフを [posts] に適用する共通口 (D-113)。
 /// デフォルト鎖の取得ノードが要求する kind([selfKindId])に、この欄の
 /// 投稿を差し込む(= 欄の投稿を加工する)。鎖が無ければ null。
-Future<List<Post>?> _applyTrendScopeGraph(Ref ref, SnsSession session, String scope, String selfKindId, List<Post> posts) async {
+Future<List<Post>?> _applyTrendScopeGraph(Ref ref, SnsSession session, String scope, String selfKindId, List<Post> posts, {String? selfQuery}) async {
   try {
     final accKey = ref.read(currentAccountProvider)?.key;
     final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, scope);
@@ -48,6 +48,7 @@ Future<List<Post>?> _applyTrendScopeGraph(Ref ref, SnsSession session, String sc
       },
       storageWrite: (slot, value) => ref.read(settingsAreaProvider(storageArea).notifier).set(slot, value),
       loadFunction: (fnId) => loadFunctionBody((a) => ref.read(settingsAreaProvider(a).future), fnId), // カスタム関数の中身 (D-118)
+      selfQuery: selfQuery, // 検索絞り込み (D-125): このページの検索ワード/タグ
     );
   } catch (e) {
     debugPrint('nodeprog($scope): $e');
@@ -61,7 +62,7 @@ final trendFollowingPostsProvider = FutureProvider.autoDispose.family<List<Post>
   final a = await ref.watch(trendAnalysisProvider(tag).future);
   final s = ref.watch(currentSnsSessionProvider);
   if (s == null) return a.followingPosts;
-  return await _applyTrendScopeGraph(ref, s, 'trend.following', 'home', a.followingPosts) ?? a.followingPosts;
+  return await _applyTrendScopeGraph(ref, s, 'trend.following', 'home', a.followingPosts, selfQuery: tag) ?? a.followingPosts;
 });
 
 /// ユーザータブ (D-113): `trend.users` スコープのグラフでタグ投稿を絞って
@@ -70,7 +71,7 @@ final trendUsersProvider = FutureProvider.autoDispose.family<List<(UserProfile, 
   final a = await ref.watch(trendAnalysisProvider(tag).future);
   final s = ref.watch(currentSnsSessionProvider);
   if (s == null) return a.users;
-  final filtered = await _applyTrendScopeGraph(ref, s, 'trend.users', 'search:', a.posts);
+  final filtered = await _applyTrendScopeGraph(ref, s, 'trend.users', 'search:', a.posts, selfQuery: tag);
   if (filtered == null) return a.users;
   final score = <String, int>{};
   for (final p in filtered) {

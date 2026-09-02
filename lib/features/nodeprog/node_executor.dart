@@ -39,10 +39,12 @@ Future<List<Post>?> runNodeGraph(
   Future<void> Function(String slot, Object? value)? storageWrite,
   void Function(Post kept, Post dropped)? onDuplicate,
   Future<NodeGraph?> Function(String fnId)? loadFunction,
+  String? selfQuery,
   String terminal = 'timeline',
 }) async {
   final byId = {for (final n in g.nodes) n.id: n};
-  final env = _ExecEnv(fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite, onDuplicate: onDuplicate, loadFunction: loadFunction);
+  final env = _ExecEnv(
+      fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite, onDuplicate: onDuplicate, loadFunction: loadFunction, selfQuery: selfQuery);
 
   // storage.safe 保存ノード (D-104/D-105): **終端評価より先に**書く — 同じ
   // グラフ内の「読み出し」が同一実行で新しいプロファイルを見られるように。
@@ -70,7 +72,7 @@ Future<List<Post>?> runNodeGraph(
 /// 実行環境(コールバック束)。
 class _ExecEnv {
   const _ExecEnv(
-      {required this.fetch, this.fetchTrends, this.embedTexts, this.pluginSort, this.storageRead, this.storageWrite, this.onDuplicate, this.loadFunction, this.fnInput, this.fnStack = const {}});
+      {required this.fetch, this.fetchTrends, this.embedTexts, this.pluginSort, this.storageRead, this.storageWrite, this.onDuplicate, this.loadFunction, this.selfQuery, this.fnInput, this.fnStack = const {}});
   final Future<List<Post>> Function(String kindId) fetch;
   final Future<List<String>> Function()? fetchTrends;
   final Future<List<List<double>>> Function(List<String> texts)? embedTexts;
@@ -79,6 +81,9 @@ class _ExecEnv {
   final Future<void> Function(String slot, Object? value)? storageWrite;
   final void Function(Post kept, Post dropped)? onDuplicate;
   final Future<NodeGraph?> Function(String fnId)? loadFunction;
+
+  /// このページの検索ワード/タグ (D-125: 検索絞り込みノードの既定値)。
+  final String? selfQuery;
 
   /// 関数の中身の実行中 (D-118): 「関数入力」ノードに束縛された投稿リストと、
   /// 実行中の関数 id の集合(自己再帰/循環の素通しガード)。
@@ -94,6 +99,7 @@ class _ExecEnv {
       storageWrite: storageWrite,
       onDuplicate: onDuplicate,
       loadFunction: loadFunction,
+      selfQuery: selfQuery,
       fnInput: input,
       fnStack: {...fnStack, fnId});
 }
@@ -165,7 +171,7 @@ Future<List<Post>?> _postsOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphN
       return null;
     }
   }
-  if (n.type == 'sort' || n.type == 'remove' || n.type.startsWith('plugin:') || n.type.startsWith('fn:')) {
+  if (n.type == 'sort' || n.type == 'remove' || n.type == 'filter.query' || n.type.startsWith('plugin:') || n.type.startsWith('fn:')) {
     final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == n.id && e.toPort == 0).firstOrNull;
     final up = edge == null ? null : byId[edge.from];
     if (up == null) return null;
@@ -210,6 +216,15 @@ Future<List<Post>> _applyStep(NodeGraph g, Map<String, GraphNode> byId, GraphNod
     }
   }
   switch (step.type) {
+    case 'filter.query':
+      // 検索絞り込み (D-125): ワードが空ならこのページの検索ワード/タグ。
+      final raw = step.inputs.where((i) => i.label == '検索ワード').firstOrNull?.value?.trim() ?? '';
+      final word = (raw.isEmpty ? (env.selfQuery ?? '') : raw).replaceFirst(RegExp(r'^#'), '').toLowerCase();
+      if (word.isEmpty) return posts;
+      return [
+        for (final p in posts)
+          if (p.body.toLowerCase().contains(word) || p.author.displayName.toLowerCase().contains(word) || (p.contentWarning ?? '').toLowerCase().contains(word)) p,
+      ];
     case 'sort':
     case 'remove':
       // ML ノードのスコアは投稿一括で先に計算しておく(条件評価は同期)。
@@ -476,7 +491,7 @@ class _CondContext {
 
   /// [stepId] の条件木にぶら下がる比較ノードの値元(ML ノード)を集めて、
   /// 投稿一括でスコアを計算しておく。
-  static Future<_CondContext> prepare(NodeGraph g, Map<String, GraphNode> byId, String stepId, List<Post> posts, _ExecEnv env) async {
+  static Future<_CondContext> prepare(NodeGraph g, Map<String, GraphNode> byId, String stepId, List<Post> posts, _ExecEnv env, {bool normalizeSimilar = true}) async {
     // 条件木を BFS で辿って比較ノードを集める。
     final queue = <String>[stepId];
     final seen = <String>{stepId};
@@ -512,7 +527,7 @@ class _CondContext {
         if (src != null) vecRef = await _vectorOutOf(g, byId, src, env);
       }
       if (refs.isEmpty && vecRef == null) continue; // 基準なし → スコアなし(比較は不成立に落ちる)
-      scores[ml.id] = ml.type == 'ml.similar' ? await _similarScores(refs, vecRef, posts, env.embedTexts) : _keywordScores(refs, posts);
+      scores[ml.id] = ml.type == 'ml.similar' ? await _similarScores(refs, vecRef, posts, env.embedTexts, normalize: normalizeSimilar) : _keywordScores(refs, posts);
     }
     return _CondContext(scores);
   }
@@ -562,7 +577,7 @@ double _cosVec(List<double> a, List<double> b) {
 /// 生 cos は縮退時 0.1〜0.3 程度と小さく「以上 0.8」等のしきい値が実質
 /// 効かないため、比較で使いやすい相対スコアに揃える(0.8 ≒ 上位 2 割相当)。
 Future<Map<String, double>> _similarScores(
-    List<String> refs, Map<String, Object?>? vecRef, List<Post> posts, Future<List<List<double>>> Function(List<String>)? embedTexts) async {
+    List<String> refs, Map<String, Object?>? vecRef, List<Post> posts, Future<List<List<double>>> Function(List<String>)? embedTexts, {bool normalize = true}) async {
   final out = <String, double>{for (final p in posts) p.key: 0.0};
   void merge(Map<String, double> m) => m.forEach((k, v) => out[k] = math.max(out[k] ?? 0, v));
 
@@ -602,7 +617,8 @@ Future<Map<String, double>> _similarScores(
   }
 
   // 相対値へ正規化 (D-105): 一括の最小→0、最大→1。全投稿が同点なら 0.5。
-  if (out.isNotEmpty) {
+  // コンポーザー評価 (D-125) は 1 件なので生値のまま([normalize] = false)。
+  if (normalize && out.isNotEmpty) {
     final values = out.values.toList();
     final lo = values.reduce(math.min);
     final hi = values.reduce(math.max);
@@ -650,16 +666,18 @@ Future<List<String>?> runNodeGraphTexts(
 Future<List<String>> composerTargetAccounts(
   NodeGraph g,
   Post draft, {
+  Future<List<Post>> Function(String kindId)? fetch,
   Future<List<List<double>>> Function(List<String> texts)? embedTexts,
   Future<Object?> Function(String slot)? storageRead,
 }) async {
   final byId = {for (final n in g.nodes) n.id: n};
-  final env = _ExecEnv(fetch: (_) async => const [], embedTexts: embedTexts, storageRead: storageRead);
+  final env = _ExecEnv(fetch: fetch ?? (_) async => const [], embedTexts: embedTexts, storageRead: storageRead);
   final targets = g.nodes.where((n) => n.type == 'composer.target').toList()
     ..sort((a, b) => a.y == b.y ? a.x.compareTo(b.x) : a.y.compareTo(b.y));
   final out = <String>[];
   for (final t in targets) {
-    final ctx = await _CondContext.prepare(g, byId, t.id, [draft], env);
+    // 下書きは 1 件なので類似度は生値で比較する (D-125: 正規化は縮退する)。
+    final ctx = await _CondContext.prepare(g, byId, t.id, [draft], env, normalizeSimilar: false);
     if (_evalCondPortAt(g, byId, t.id, draft, 0, ctx)) {
       out.add(t.inputs.where((i) => i.label == 'アカウント').firstOrNull?.value?.trim() ?? '');
     }

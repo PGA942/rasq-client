@@ -59,12 +59,15 @@ String suggestFromKind(String from) => switch (from) {
 
 @immutable
 class TlAlgorithmComponent {
-  const TlAlgorithmComponent({required this.type, this.what = 'キーワード', this.from = '投稿内容', this.pluginLabel = '', this.enabled = true});
+  const TlAlgorithmComponent({required this.type, this.what = 'キーワード', this.from = '投稿内容', this.pluginLabel = '', this.enabled = true, this.query = ''});
 
-  /// 'chrono'(時系列順)| 'suggest' | `plugin:<tlId>`(カスタム TL プラグイン)。
+  /// 'chrono'(時系列順)| 'suggest' | 'filter'(絞り込み — サジェストと
+  /// 同じパラメーターで、合わない投稿を除外, D-125)| 'queryfilter'
+  /// (検索絞り込み — このページの検索ワード/タグに合う投稿だけ, D-125)|
+  /// `plugin:<tlId>`(カスタム TL プラグイン)。
   final String type;
 
-  /// suggest: なにを([キーワード/類似性])/なにから([投稿内容/リアクション/会話内容])。
+  /// suggest/filter: なにを([キーワード/類似性])/なにから([投稿内容/リアクション/会話内容])。
   final String what;
   final String from;
 
@@ -74,24 +77,35 @@ class TlAlgorithmComponent {
   /// 一時的な無効化 (D-123): 外さずに適用だけ止める(コンパイルから除外)。
   final bool enabled;
 
+  /// queryfilter: 検索ワード('' = このページの検索ワード/タグ, D-125)。
+  final String query;
+
   bool get isSuggest => type == 'suggest';
+  bool get isFilter => type == 'filter';
+  bool get isQueryFilter => type == 'queryfilter';
   bool get isPlugin => type.startsWith('plugin:');
+
+  /// パラメーター編集の対象(サジェスト/絞り込みは同じ 2 パラメーター)。
+  bool get hasSuggestParams => isSuggest || isFilter;
 
   String get title => switch (type) {
         'chrono' => '時系列順',
         'suggest' => '$whatを$fromからサジェスト',
+        'filter' => '$whatを$fromから絞り込み',
+        'queryfilter' => '検索絞り込み',
         _ => pluginLabel.isEmpty ? 'カスタム(TLプラグイン)' : pluginLabel,
       };
 
-  TlAlgorithmComponent copyWith({String? what, String? from, bool? enabled}) =>
-      TlAlgorithmComponent(type: type, what: what ?? this.what, from: from ?? this.from, pluginLabel: pluginLabel, enabled: enabled ?? this.enabled);
-  Map<String, Object?> toJson() => {'type': type, 'what': what, 'from': from, 'pluginLabel': pluginLabel, 'enabled': enabled};
+  TlAlgorithmComponent copyWith({String? what, String? from, bool? enabled, String? query}) => TlAlgorithmComponent(
+      type: type, what: what ?? this.what, from: from ?? this.from, pluginLabel: pluginLabel, enabled: enabled ?? this.enabled, query: query ?? this.query);
+  Map<String, Object?> toJson() => {'type': type, 'what': what, 'from': from, 'pluginLabel': pluginLabel, 'enabled': enabled, 'query': query};
   factory TlAlgorithmComponent.fromJson(Map<String, Object?> j) => TlAlgorithmComponent(
       type: j['type'] as String? ?? 'chrono',
       what: j['what'] as String? ?? 'キーワード',
       from: j['from'] as String? ?? '投稿内容',
       pluginLabel: j['pluginLabel'] as String? ?? '',
-      enabled: j['enabled'] != false);
+      enabled: j['enabled'] != false,
+      query: j['query'] as String? ?? '');
 }
 
 @immutable
@@ -131,7 +145,9 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
     return const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
   }
   if (scope == 'trend.following') {
-    return const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
+    // フォロー中タブ (D-125): フォロイーの投稿を検索ワード/タグで絞り込む —
+    // 「home 取得 → 時系列順」だけだと意味が見えないので絞り込みを明示する。
+    return const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [TlAlgorithmComponent(type: 'queryfilter'), TlAlgorithmComponent(type: 'chrono')]);
   }
   final base = scope.startsWith('tl.') ? scope.substring(3) : 'home';
   if (base.startsWith('list:')) {
@@ -205,6 +221,15 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
     final a = algorithms[i];
     final x = 300.0 + col * 260;
     if (a.type == 'chrono') continue; // 時系列は取得/マージの既定順
+    if (a.isQueryFilter) {
+      // 検索絞り込み (D-125): ワード空 = このページの検索ワード/タグ。
+      final id = 'a$i';
+      nodes.add(inst('filter.query', id, Offset(x, 60), values: {'検索ワード': a.query}));
+      edges.add(GraphEdge(from: out, fromPort: 0, to: id, toPort: 0));
+      out = id;
+      col++;
+      continue;
+    }
     if (a.isPlugin) {
       final id = 'a$i';
       nodes.add(GraphNode(
@@ -220,15 +245,17 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
       col++;
       continue;
     }
-    // サジェスト: 基準取得 → 抽出(GLiNER/SigLIP)→ ML → 比較 → 並べ替え。
-    final sortId = 'a$i';
+    // サジェスト/絞り込み (D-125): 基準取得 → 抽出(GLiNER/SigLIP)→ ML →
+    // 比較 → 並べ替え(suggest)/ 消去 + Not(filter = 合わない投稿を除外)。
+    final stepId = 'a$i';
     final refId = 'r$i';
     final exId = 'x$i';
     final mlId = 'l$i';
     final cmpId = 'c$i';
-    nodes.add(inst('sort', sortId, Offset(x, 60)));
+    final notId = 'n$i';
+    nodes.add(inst(a.isFilter ? 'remove' : 'sort', stepId, Offset(x, 60)));
     nodes.add(inst('tl.source', refId, Offset(x - 40, 460), values: {'TL': suggestFromKind(a.from)}));
-    edges.add(GraphEdge(from: out, fromPort: 0, to: sortId, toPort: 0));
+    edges.add(GraphEdge(from: out, fromPort: 0, to: stepId, toPort: 0));
     if (a.what == '類似性') {
       nodes.add(inst('ml.siglip', exId, Offset(x + 40, 380)));
       nodes.add(inst('ml.similar', mlId, Offset(x + 80, 300)));
@@ -245,8 +272,15 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
       edges.add(GraphEdge(from: exId, fromPort: 0, to: mlId, toPort: 1));
     }
     edges.add(GraphEdge(from: mlId, fromPort: 0, to: cmpId, toPort: 0));
-    edges.add(GraphEdge(from: sortId, fromPort: 0, to: cmpId, toPort: 0, cond: true));
-    out = sortId;
+    if (a.isFilter) {
+      // 絞り込み: 「条件に合わない投稿を消す」= remove → Not → 比較。
+      nodes.add(inst('not', notId, Offset(x + 10, 120)));
+      edges.add(GraphEdge(from: stepId, fromPort: 0, to: notId, toPort: 0, cond: true));
+      edges.add(GraphEdge(from: notId, fromPort: 0, to: cmpId, toPort: 0, cond: true));
+    } else {
+      edges.add(GraphEdge(from: stepId, fromPort: 0, to: cmpId, toPort: 0, cond: true));
+    }
+    out = stepId;
     col++;
   }
 
@@ -264,6 +298,75 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
     nodes.add(inst('trend.tags', 'f0', const Offset(24, 640)));
     nodes.add(inst('trend.frame', 'f1', const Offset(300, 660)));
     edges.add(const GraphEdge(from: 'f0', fromPort: 0, to: 'f1', toPort: 0));
+  }
+  return NodeGraph(nodes: nodes, edges: edges);
+}
+
+/// コンポーザーのポスト先絞り込み (D-125): **アカウントごとタブ選択形式**。
+/// 各アカウントに 1 つ、サジェスト/絞り込みと同じ 2 パラメーター
+/// ([キーワード/類似性] × [投稿内容/リアクション/会話内容])を持ち、
+/// 下書きがそのアカウントの基準に合うときポスト先候補になる。
+@immutable
+class ComposerAccountFilter {
+  const ComposerAccountFilter({this.enabled = false, this.what = 'キーワード', this.from = '投稿内容'});
+
+  final bool enabled;
+  final String what;
+  final String from;
+
+  String get title => '$whatを$fromから絞り込み';
+
+  ComposerAccountFilter copyWith({bool? enabled, String? what, String? from}) =>
+      ComposerAccountFilter(enabled: enabled ?? this.enabled, what: what ?? this.what, from: from ?? this.from);
+  Map<String, Object?> toJson() => {'enabled': enabled, 'what': what, 'from': from};
+  factory ComposerAccountFilter.fromJson(Map<String, Object?> j) =>
+      ComposerAccountFilter(enabled: j['enabled'] == true, what: j['what'] as String? ?? 'キーワード', from: j['from'] as String? ?? '投稿内容');
+}
+
+/// アカウント表記 → 絞り込みの構成 → コンポーザーグラフ (D-125)。
+/// 有効なアカウントだけ「ポスト先 + 比較 ← ML ← 抽出 ← 基準取得(その
+/// アカウントの投稿/リアクション/返信)」の鎖になる。基準はアカウント指定
+/// (`acct:<表記>|myposts` 等)で、そのアカウントのセッションから取る。
+/// 類似度は下書き 1 件の生値比較(正規化なし)なので、しきい値は
+/// キーワード = 1(特徴語の一致数)/類似性 = 0.2(n-gram cos の生値)。
+NodeGraph compileComposerConfig(Map<String, ComposerAccountFilter> byAccount, List<String> accounts) {
+  GraphNode inst(String type, String id, Offset at, {Map<String, String> values = const {}}) {
+    final e = builtinNodeCatalog.firstWhere((x) => x.type == type);
+    final n = e.instantiate(id, at);
+    return n.copyWith(inputs: [for (final p in n.inputs) values.containsKey(p.label) ? p.copyWith(value: values[p.label]) : p]);
+  }
+
+  final nodes = <GraphNode>[];
+  final edges = <GraphEdge>[];
+  var row = 0;
+  for (var i = 0; i < accounts.length; i++) {
+    final account = accounts[i];
+    final f = byAccount[account];
+    if (f == null || !f.enabled) continue; // 無効 = 候補にしない(ポスト先ノードなし)
+    final y = 40.0 + row * 220;
+    final targetId = 't$i';
+    final refId = 'r$i';
+    final exId = 'x$i';
+    final mlId = 'l$i';
+    final cmpId = 'c$i';
+    nodes.add(inst('composer.target', targetId, Offset(100, y), values: {'アカウント': account}));
+    nodes.add(inst('tl.source', refId, Offset(420, y + 130), values: {'TL': suggestFromKind(f.from), 'アカウント': account}));
+    if (f.what == '類似性') {
+      nodes.add(inst('ml.siglip', exId, Offset(400, y + 70)));
+      nodes.add(inst('ml.similar', mlId, Offset(380, y + 20)));
+      nodes.add(inst('compare', cmpId, Offset(120, y + 90), values: {'演算': '以上', '値': '0.2'}));
+      edges.add(GraphEdge(from: refId, fromPort: 0, to: exId, toPort: 0));
+      edges.add(GraphEdge(from: exId, fromPort: 0, to: mlId, toPort: 2));
+    } else {
+      nodes.add(inst('ml.gliner', exId, Offset(400, y + 70)));
+      nodes.add(inst('ml.keyword', mlId, Offset(380, y + 20)));
+      nodes.add(inst('compare', cmpId, Offset(120, y + 90), values: {'演算': '以上', '値': '1'}));
+      edges.add(GraphEdge(from: refId, fromPort: 0, to: exId, toPort: 0));
+      edges.add(GraphEdge(from: exId, fromPort: 0, to: mlId, toPort: 1));
+    }
+    edges.add(GraphEdge(from: mlId, fromPort: 0, to: cmpId, toPort: 0));
+    edges.add(GraphEdge(from: targetId, fromPort: 0, to: cmpId, toPort: 0, cond: true));
+    row++;
   }
   return NodeGraph(nodes: nodes, edges: edges);
 }

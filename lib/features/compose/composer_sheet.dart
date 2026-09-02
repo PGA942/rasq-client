@@ -15,6 +15,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
 import '../../text/inline_spans.dart';
+import '../home/timeline_providers.dart' show resolveNodeFetch;
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
@@ -488,7 +489,20 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         media: [for (var i = 0; i < _files.length; i++) MediaItem(id: 'draft$i', type: MediaType.image, url: Uri.parse('draft:$i'))],
       );
       final storageArea = storageSafeAreaFor(accKey);
-      final matched = await composerTargetAccounts(graph, draft, storageRead: (slot) async => (await ref.read(settingsAreaProvider(storageArea).future))[slot]);
+      // 基準取得 (D-125): 絞り込みの基準(そのアカウントの投稿/リアクション/
+      // 返信)を各アカウントのセッションから引けるようにする。
+      final session = ref.read(currentSnsSessionProvider);
+      SnsSession? sessionForAccount(String label) {
+        final s = ref.read(sessionsProvider).value?.sessions.where((x) => '${x.account}' == label || x.account.key == label).firstOrNull;
+        return s == null ? null : ref.read(pluginRegistryProvider).session(s);
+      }
+
+      final matched = await composerTargetAccounts(
+        graph,
+        draft,
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
+        storageRead: (slot) async => (await ref.read(settingsAreaProvider(storageArea).future))[slot],
+      );
       if (!mounted) return;
       final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
       AccountSession? find(String label) =>
@@ -506,9 +520,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     return i < 0 ? _matchedTargets.length : i;
   }
 
-  /// 投稿先のカスタマイズ (D-089/D-090): ノードプログラミング画面
-  /// (チャイルドセーフティーや投稿内容による投稿アカウントのソートを組む口)。
-  void _openTargetCustomize() => ref.read(routerProvider).push(Routes.nodes('composer'));
+  /// 投稿先のカスタマイズ (D-089/D-125): アカウントごとタブ選択形式の
+  /// 絞り込み画面へ(グラフでの編集は … メニューの「グラフで編集」)。
+  void _openTargetCustomize() => ref.read(routerProvider).push(Routes.tlConfig('composer'));
 
   /// アカウントバンドルタイル (D-089/D-091): アバタータップで出てくる。
   /// RASQ アカウントの顔 + 投稿先リスト。サイドバー(D-087)と同じ作法

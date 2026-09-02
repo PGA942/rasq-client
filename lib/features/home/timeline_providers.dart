@@ -410,6 +410,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             fetch: (kid) => _pagedNodeFetch(graphSession, kid, more: cursor != null, selfKindId: kind.id, selfItems: page.items, sessionFor: sessionForAccount),
             onDuplicate: (kept, dropped) => merged.putIfAbsent(kept.key, () => []).add(dropped),
             loadFunction: _loadFunctionBody,
+            // 検索絞り込み (D-125): タグ TL ではタグが既定の検索ワード。
+            selfQuery: kind.id.startsWith('tag:') ? kind.id.substring(4) : null,
             fetchTrends: () async => [for (final t in await graphSession.trendingTags()) t.tag],
             embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
             // TL プラグインのソートノード (D-102): tl.sort/compose の実体。

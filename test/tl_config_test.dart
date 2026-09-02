@@ -102,6 +102,73 @@ void main() {
     expect([for (final p in out!) p.id], ['p2', 'p1']); // 猫の投稿が先頭
   });
 
+
+  test('D-125: 検索絞り込みノード — selfQuery/指定ワードで絞る', () async {
+    const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
+    Post post(String id, String body) =>
+        Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 1), body: body);
+    final posts = [post('p1', '#りんご の話'), post('p2', 'みかんの話')];
+
+    // queryfilter コンポーネント(ワード空)→ selfQuery で絞る。
+    final g = compileTlConfig(
+      const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [TlAlgorithmComponent(type: 'queryfilter')], clock: ''),
+      scope: 'tl.home',
+    );
+    var out = await runNodeGraph(g, fetch: (_) async => posts, selfQuery: 'りんご');
+    expect([for (final p in out!) p.id], ['p1']);
+
+    // 指定ワードは selfQuery より優先。
+    final g2 = compileTlConfig(
+      const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [TlAlgorithmComponent(type: 'queryfilter', query: 'みかん')], clock: ''),
+      scope: 'tl.home',
+    );
+    out = await runNodeGraph(g2, fetch: (_) async => posts, selfQuery: 'りんご');
+    expect([for (final p in out!) p.id], ['p2']);
+
+    // trend.following の既定構成に検索絞り込みが入っている。
+    expect(defaultTlConfig('trend.following').algorithms.first.type, 'queryfilter');
+  });
+
+  test('D-125: 絞り込みコンポーネント — remove + Not + 比較にコンパイルされ、合わない投稿を除外', () async {
+    const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
+    Post post(String id, String body) =>
+        Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 1), body: body);
+
+    final g = compileTlConfig(
+      const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [TlAlgorithmComponent(type: 'filter', what: '類似性', from: '投稿内容')], clock: ''),
+      scope: 'tl.home',
+    );
+    expect({for (final n in g.nodes) n.type}, containsAll(['remove', 'not', 'compare', 'ml.siglip', 'ml.similar']));
+    final out = await runNodeGraph(
+      g,
+      fetch: (kid) async => switch (kid) {
+        'myposts' => [post('ref', '猫がかわいい。猫の写真を撮った')],
+        _ => [post('p1', '為替と株価の話題です'), post('p2', '猫がかわいいですね猫')],
+      },
+    );
+    expect([for (final p in out!) p.id], ['p2']); // 合わない p1 は除外
+  });
+
+  test('D-125: コンポーザーの絞り込み — 有効アカウントだけポスト先になり、下書きの一致で選ばれる', () async {
+    const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
+    Post post(String id, String body) =>
+        Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 1), body: body);
+
+    final g = compileComposerConfig({
+      '@game@a.test': const ComposerAccountFilter(enabled: true, what: 'キーワード', from: '投稿内容'),
+      '@work@b.test': const ComposerAccountFilter(enabled: false),
+    }, ['@game@a.test', '@work@b.test']);
+    // 無効アカウントはポスト先ノード自体が無い。
+    expect(g.nodes.where((n) => n.type == 'composer.target'), hasLength(1));
+
+    Future<List<Post>> fetch(String kid) async =>
+        kid == 'acct:@game@a.test|myposts' ? [post('ref', 'スプラトゥーンのガチマッチ配信')] : const [];
+    final hit = await composerTargetAccounts(g, post('d1', '今夜もガチマッチやります'), fetch: fetch);
+    expect(hit, ['@game@a.test']);
+    final miss = await composerTargetAccounts(g, post('d2', '会議の議事録を共有します'), fetch: fetch);
+    expect(miss, isEmpty);
+  });
+
   Future<ProviderContainer> pumpConfig(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
