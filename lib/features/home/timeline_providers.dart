@@ -83,7 +83,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   /// 続きを読む(読了済みの枝は空)。自分の基礎 TL([selfKindId])は基礎側の
   /// カーソルで進むのでここでは扱わない。
   Future<List<Post>> _pagedNodeFetch(SnsSession session, String kid, {required bool more, String? selfKindId, List<Post> selfItems = const [], SnsSession? Function(String)? sessionFor}) async {
-    if (selfKindId != null && kid == selfKindId) return selfItems;
+    if (kid == 'self' || (selfKindId != null && kid == selfKindId)) return selfItems; // 基礎TLのカーソルで進む (D-124)
     String? c;
     if (more && _nodeCursors.containsKey(kid)) {
       c = _nodeCursors[kid];
@@ -551,7 +551,9 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
       return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor, onCursor: onCursor);
     }
   }
-  if (selfKindId != null && kid == selfKindId) return selfItems;
+  // `self` (D-124): この画面の基礎タイムライン(検索結果/リスト/欄の投稿)を
+  // そのまま返す — kind id が動的なスコープ(トレンド等)の自己参照。
+  if (kid == 'self' || (selfKindId != null && kid == selfKindId)) return selfItems;
   // 投稿加工プラグイン (D-083/D-118): ノード定義を持たないプラグインの加工は
   // **取得ノードに渡す直前**に済ませる(wasm セッションの post.transform)。
   Future<List<Post>> finish(Page<Post> page) async {

@@ -454,6 +454,12 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     // 総合 (D-114): ユーザーが編集したら自動構成の管理から外す(以降の
     // アカウント追加はマージの空き口への差し込みだけ試す)。
     if (_scope == 'tl.bundle') ref.read(settingsAreaProvider(_area).notifier).set('auto', null);
+    // グラフで編集 (D-124): グラフが正になったのでコンポーネント構成
+    // (tlcfg)は破棄 — 簡易側は「ノードで編集済み」の置き換え警告になる。
+    // プラグインの自動構成もグラフ編集済み TL には触れない。
+    if (_scope.startsWith('tl.') || _scope.startsWith('trend')) {
+      ref.read(settingsAreaProvider(_area).notifier).set('tlcfg', null);
+    }
   }
 
   Map<String, NodeCatalogEntry> get _catalogByType => {for (final e in ref.watch(nodeCatalogProvider)) e.type: e};

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/nodeprog/node_editor_screen.dart';
 import 'package:rasq_client/features/nodeprog/node_executor.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/features/nodeprog/timeline_config_screen.dart';
@@ -57,6 +58,18 @@ void main() {
   test('コンパイル: 関連スコープの終端は関連タイムライン (D-102)', () {
     final g = compileTlConfig(defaultTlConfig('tl.relational'), scope: 'tl.relational');
     expect(g.nodes.where((n) => n.type == 'timeline.relational'), hasLength(1));
+  });
+
+  test('D-124: self/リスト/トレンドの既定構成とコンパイル(トレンド枠チェーン付き)', () {
+    expect(defaultTlConfig('trend').sources.single.tl, 'self');
+    expect(defaultTlConfig('trend.users').sources.single.tl, 'self');
+    expect(defaultTlConfig('trend.following').sources.single.tl, 'home');
+    expect(defaultTlConfig('tl.list:abc123').sources.single.tl, 'list:abc123');
+
+    final g = compileTlConfig(defaultTlConfig('trend'), scope: 'trend');
+    final src = g.nodes.firstWhere((n) => n.type == 'tl.source');
+    expect(src.inputs.first.value, 'self'); // 基礎TLの自己参照
+    expect({for (final n in g.nodes) n.type}, containsAll(['trend.tags', 'trend.frame'])); // トレンド枠の既定チェーンも添える
   });
 
   test('コンパイル: リスト系 → tl.list、現在のトレンドTL → trend.posts (D-122)', () {
@@ -185,11 +198,24 @@ void main() {
     await tester.tap(inScreen(find.text('キーワードを投稿内容からサジェスト')));
     await tester.pumpAndSettle();
     expect(find.text('なにをサジェストする?'), findsOneWidget); // RRL SectionHeader
+    expect(find.text('ノードを設定'), findsOneWidget); // 決定/キャンセルヘッダー (D-124)
     await tester.tap(find.text('類似性'));
     await tester.pumpAndSettle();
     expect(find.text('類似性を投稿内容からサジェスト'), findsWidgets); // タイル + FOW ヘッダー
-    manager.close(tlConfigParamsFowId);
+    await tester.tap(find.text('決定'));
     await tester.pumpAndSettle();
+    expect(find.text('ノードを設定'), findsNothing); // 決定で閉じて確定
+    expect(inScreen(find.text('類似性を投稿内容からサジェスト')), findsOneWidget);
+
+    // キャンセル = 巻き戻し (D-124: 絵文字ピッカーの作法)。
+    await tester.tap(inScreen(find.text('類似性を投稿内容からサジェスト')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('キーワード'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('キャンセル'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('類似性を投稿内容からサジェスト')), findsOneWidget); // 巻き戻った
+    expect(inScreen(find.text('キーワードを投稿内容からサジェスト')), findsNothing);
 
     // … → 一時的な無効化: タイルがグレー表記になり、コンパイルから外れる。
     await tester.tap(inScreen(find.byTooltip('アルゴリズムの操作')).last);
@@ -226,5 +252,46 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('タイムライン'), findsNothing);
     expect(find.text('リスト: Fediverse Banner'), findsOneWidget);
+  });
+
+  testWidgets('D-124: 「グラフで編集」→ ノードエディタ。グラフ編集で tlcfg は破棄され手組み扱いに', (tester) async {
+    final container = await pumpConfig(tester);
+    Finder inScreen(Finder f) => find.descendant(of: find.byType(TimelineConfigScreen), matching: f);
+    final acc = fakeSession().account.key;
+
+    await tester.tap(inScreen(find.text('フォロー中')));
+    await tester.pumpAndSettle();
+    // 何か編集して tlcfg を作る(自動更新: 15秒 → 1分)。
+    await tester.tap(inScreen(find.textContaining('間隔:')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1分'));
+    await tester.pumpAndSettle();
+    var area = await container.read(settingsAreaProvider('nodeprog.$acc.tl.home').future);
+    expect(area['tlcfg'], isA<String>());
+
+    // … → グラフで編集 (D-124: ノードの調節はグラフ形式で編集)。
+    await tester.tap(find.byTooltip('その他'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('グラフで編集'));
+    await tester.pumpAndSettle();
+    expect(find.byType(NodeEditorScreen), findsOneWidget);
+
+    // キャンバスで編集(コピー → ペースト)するとグラフが正になり tlcfg 破棄。
+    final onCanvas = find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('タイムライン取得'));
+    await tester.tap(onCanvas.first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('コピー'));
+    await tester.pumpAndSettle();
+    await tester.tap(onCanvas.first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ペースト'));
+    await tester.pumpAndSettle();
+    area = await container.read(settingsAreaProvider('nodeprog.$acc.tl.home').future);
+    expect(area['tlcfg'], isNull);
+
+    // 戻ると簡易側は「ノードで編集済み」の置き換え警告。
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('ノードエディタで編集されています'), findsOneWidget);
   });
 }

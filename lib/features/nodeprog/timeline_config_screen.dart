@@ -143,6 +143,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   // ---- タブ行(ノードエディタ D-101 と同じ作法)-----------------------------
 
   List<(String, String, bool)> _tabs() {
+    // トレンドのエディタは ノート/フォロー中/ユーザー (D-107/D-124)。
+    if (_scope.startsWith('trend')) {
+      return const [('trend', 'ノート', false), ('trend.following', 'フォロー中', false), ('trend.users', 'ユーザー', false)];
+    }
     final nodeTabs = ref.watch(nodeTabsProvider);
     final tabs = <(String, String, bool)>[
       ('tl.bundle', '総合', false),
@@ -153,7 +157,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       ('tl.global', 'グローバル', false),
       for (final t in nodeTabs) ('tl.${t.id}', t.label, true),
     ];
-    if (!tabs.any((t) => t.$1 == _scope)) tabs.insert(0, (_scope, _scope.startsWith('tl.') ? _scope.substring(3) : _scope, false));
+    if (!tabs.any((t) => t.$1 == _scope)) {
+      final base = _scope.startsWith('tl.') ? _scope.substring(3) : _scope;
+      tabs.insert(0, (_scope, base.startsWith('list:') ? 'このリスト' : base, false));
+    }
     return tabs;
   }
 
@@ -190,7 +197,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
               ]),
             ),
           ),
-          RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
+          if (_scope.startsWith('tl.')) RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
         ]),
       ),
     );
@@ -252,8 +259,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       RasqDropdownItem('タブ名を変更', 'rename', enabled: ownTab),
       RasqDropdownItem('タブを削除', 'deleteTab', enabled: ownTab, destructive: true),
       const RasqDropdownItem('このTLの構成をリセット', 'reset'),
-      // 自由形ノードキャンバス: 一旦無効化 (D-121 — ワイヤーフレーム指定)。
-      const RasqDropdownItem('ノードの編集(調整中)', 'nodes', enabled: false),
+      // グラフカスタマイズ (D-124): ノードの調節はグラフ形式の編集に。
+      // グラフで手を入れた TL はプラグインの自動構成の対象外(簡易側は
+      // 置き換え警告バナー)。
+      const RasqDropdownItem('グラフで編集', 'nodes'),
       RasqDropdownItem('バンドルでノードTLを集合表示', 'bundleTabs', checked: bundleTabs),
     ]);
     if (!mounted) return;
@@ -262,6 +271,9 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         await _renameTab(_scope);
       case 'deleteTab':
         await _deleteTab(_scope);
+      case 'nodes':
+        await ref.read(routerProvider).push(Routes.nodes(_scope));
+        if (mounted) await _load(); // グラフ編集から戻ったら手組み状態を反映
       case 'reset':
         final store = ref.read(settingsAreaProvider(_area).notifier);
         await store.set('graph', null);
@@ -287,13 +299,16 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   void _openPalette({required bool algorithms}) {
     final manager = ref.read(overlayManagerProvider);
     if (manager.contains(tlConfigPaletteFowId)) manager.close(tlConfigPaletteFowId);
+    // インタースティシャル (D-124): FOW 外(スクリム)タップでキャンセル。
+    // 高さはとりあえず最大段まで — サイズ配列(コンテンツ/プラグインからの
+    // 段の受け渡し)は RRL 設定ページの配布と一緒に繋ぐ。
     final spec = FowSpec(
-      type: FowPanelType.widget,
-      initialHeightFactor: 0.5,
-      minHeightFactor: 0.09,
+      type: FowPanelType.interstitial,
+      initialHeightFactor: 0.85,
+      minHeightFactor: 0.2,
       maxHeightFactor: 0.85,
       dockAboveFooter: true,
-      heightStops: const [0.09, 0.5],
+      heightStops: const [0.85],
       freeAboveStops: true,
     );
     // ページ遷移で自動クローズ(ノードパレットと同じ作法, D-048)。
@@ -334,10 +349,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       );
 
   (IconData, String, String, String) _sourceInfo(TlSourceComponent s) => (
-        s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined),
-        s.isTrend ? '現在のトレンドTLを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得'),
-        s.account.isEmpty ? '現在のアカウント' : s.account,
-        'TL: ${s.isTrend ? 'トレンド上位タグの検索結果' : s.isList ? 'リスト: ${s.listName}' : switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', _ => 'フォロー中 (home)' }}',
+        s.isSelf ? Icons.sync_alt : (s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined)),
+        s.isSelf ? 'このタイムラインを取得' : (s.isTrend ? '現在のトレンドTLを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得')),
+        s.isSelf ? 'RASQ' : (s.account.isEmpty ? '現在のアカウント' : s.account),
+        'TL: ${s.isSelf ? 'この画面の基礎タイムライン(検索結果/欄の投稿)' : s.isTrend ? 'トレンド上位タグの検索結果' : s.isList ? 'リスト: ${s.listName}' : switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', _ => 'フォロー中 (home)' }}',
       );
 
   /// … メニュー (D-123): 詳細/一時的な無効化(解除)/ストアページ/削除。
@@ -406,25 +421,30 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     );
   }
 
-  /// パラメーター編集 FOW (D-123): 「>」/… の「パラメーターを編集」から。
-  /// タイルヘッダー + **RRL で描いたパラメーター部**(設定 DSL と同じ部品)。
+  /// パラメーター編集 FOW (D-123/D-124): 「>」/… の「パラメーターを編集」
+  /// から。タイルヘッダー + **RRL で描いたパラメーター部**(設定 DSL と同じ
+  /// 部品)。ヘッダーは絵文字ピッカーの作法 — **キャンセル = 巻き戻し /
+  /// 決定 = 確定**。FOW 外(スクリム)タップはキャンセル扱い。
   void _openParamsFow({required bool algorithm, required int index}) {
     final manager = ref.read(overlayManagerProvider);
     if (manager.contains(tlConfigParamsFowId)) manager.close(tlConfigParamsFowId);
+    // 高さはとりあえず最大段まで(サイズ配列の受け渡しは RRL 設定ページの
+    // 配布と一緒に)。
     final spec = FowSpec(
-      type: FowPanelType.widget,
-      initialHeightFactor: 0.55,
+      type: FowPanelType.interstitial,
+      initialHeightFactor: 0.85,
       minHeightFactor: 0.2,
       maxHeightFactor: 0.85,
       dockAboveFooter: true,
-      heightStops: const [0.55],
+      heightStops: const [0.85],
       freeAboveStops: true,
     );
     final router = ref.read(routerProvider);
     void onNavigate() => manager.close(tlConfigParamsFowId);
     router.routerDelegate.addListener(onNavigate);
+    final before = _cfg; // キャンセル/FOW 外タップの巻き戻し先
     manager
-        .showFow<void>(
+        .showFow<bool>(
           id: tlConfigParamsFowId,
           semanticsLabel: 'ノードを設定',
           spec: spec,
@@ -436,8 +456,13 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
             infoOf: (alg, i) => alg ? _algoInfo(_cfg.algorithms[i]) : _sourceInfo(_cfg.sources[i]),
             accounts: _accounts,
             onUpdate: _update,
+            onConfirm: () => manager.close(tlConfigParamsFowId, result: true),
+            onCancel: () => manager.close(tlConfigParamsFowId),
           ),
         )
+        .then((ok) {
+          if (ok != true && mounted) _update(before); // 決定以外は巻き戻す
+        })
         .whenComplete(() => router.routerDelegate.removeListener(onNavigate));
   }
 
@@ -645,9 +670,17 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               add: () => widget.onAddAlgorithm(TlAlgorithmComponent(type: 'plugin:${p.id}', pluginLabel: '${p.label}でソート'))),
       ];
     }
-    // タイムライン側 (D-122): [タイムライン, リスト系, 現在のトレンドTL] に絞る。
+    // タイムライン側 (D-122): [タイムライン, リスト系, 現在のトレンドTL] に絞る
+    // (+ このタイムライン = 基礎 TL の自己参照, D-124)。
     final lists = ref.watch(_tlListNamesProvider).value ?? const <String>[];
     return [
+      _PaletteItem(
+          icon: Icons.sync_alt,
+          title: 'このタイムライン',
+          subtitle: 'RASQ',
+          description: 'この画面の基礎タイムライン(タブ/検索結果/リスト/欄の投稿)をそのまま取り込みます。',
+          supported: allSns,
+          add: () => widget.onAddSource(const TlSourceComponent(tl: 'self'))),
       _PaletteItem(
           icon: Icons.download_outlined,
           title: 'タイムライン',
@@ -761,7 +794,15 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
 /// ストア統合(ノード定義配布)でここに差し込まれる。
 class _ComponentParamsPanel extends StatefulWidget {
   const _ComponentParamsPanel(
-      {required this.algorithm, required this.index, required this.scope, required this.cfgOf, required this.infoOf, required this.accounts, required this.onUpdate});
+      {required this.algorithm,
+      required this.index,
+      required this.scope,
+      required this.cfgOf,
+      required this.infoOf,
+      required this.accounts,
+      required this.onUpdate,
+      required this.onConfirm,
+      required this.onCancel});
 
   final bool algorithm;
   final int index;
@@ -770,6 +811,10 @@ class _ComponentParamsPanel extends StatefulWidget {
   final (IconData, String, String, String) Function(bool algorithm, int i) infoOf;
   final List<String> accounts;
   final ValueChanged<TlConfig> onUpdate;
+
+  /// 決定/キャンセル (D-124: 絵文字ピッカーの作法 — キャンセル = 巻き戻し)。
+  final VoidCallback onConfirm;
+  final VoidCallback onCancel;
 
   @override
   State<_ComponentParamsPanel> createState() => _ComponentParamsPanelState();
@@ -805,6 +850,14 @@ class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
       );
     }
     final s = cfg.sources[widget.index];
+    if (s.isSelf) {
+      return (
+        const {},
+        const RrlNode(t: 'Column', c: [
+          RrlNode(t: 'Text', p: {'text': 'この画面の基礎タイムラインをそのまま取り込みます。パラメーターはありません。'}),
+        ]),
+      );
+    }
     return (
       {'tl': s.tl, 'account': s.account.isEmpty ? '現在のアカウント' : s.account},
       RrlNode(t: 'Column', c: [
@@ -857,7 +910,37 @@ class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
         if (fn == 'settings.set') _apply(nodeId.split(':').last, payload['value']);
       },
     );
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = RasqTokens.of(context);
     return Column(children: [
+      // 決定/キャンセルヘッダー (D-124: 絵文字ピッカー/コンポーザー D-052 と
+      // 同じ配置 — キャンセル(左)/タイトル(太字・中央)/決定(右))。
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 2, RasqSpacing.page, 0),
+        child: Row(children: [
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: widget.onCancel,
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerLeft),
+                child: Text('キャンセル', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+              ),
+            ),
+          ),
+          Text('ノードを設定', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: widget.onConfirm,
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerRight),
+                child: Text('決定', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+              ),
+            ),
+          ),
+        ]),
+      ),
       RasqPluginTile(icon: icon, title: title, subtitle: subtitle, description: description, chevron: false),
       const Divider(height: 1),
       Expanded(child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), children: [RrlRenderer(node: root, host: host)])),

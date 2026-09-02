@@ -21,9 +21,10 @@ import 'node_graph.dart';
 class TlSourceComponent {
   const TlSourceComponent({this.tl = 'home', this.account = '', this.enabled = true});
 
-  /// TL 種別: home/social/local/global(基本 TL)、`list:<名前>`(リスト系)、
-  /// `trend`(現在のトレンド TL = 上位タグの検索結果合流)— D-122 で
-  /// 追加パレットの選択肢を [タイムライン, リスト系, 現在のトレンドTL] に絞る。
+  /// TL 種別: home/social/local/global(基本 TL)、`list:<名前 or id>`
+  /// (リスト系)、`trend`(現在のトレンド TL = 上位タグの検索結果合流)、
+  /// `self`(この画面の基礎タイムライン — 検索結果/リスト/欄の投稿を
+  /// そのまま取り込む, D-124)。
   final String tl;
 
   /// 一時的な無効化 (D-123): 外さずに実行だけ止める(コンパイルから除外)。
@@ -31,6 +32,7 @@ class TlSourceComponent {
 
   bool get isTrend => tl == 'trend';
   bool get isList => tl.startsWith('list:');
+  bool get isSelf => tl == 'self';
   String get listName => isList ? tl.substring(5) : '';
 
   /// アカウント表記(空 = 現在のアカウント)。
@@ -119,11 +121,22 @@ class TlConfig {
 
 /// スコープの既定構成: 基礎 TL 1 本 + 時系列順(従来のデフォルトフルチェーン
 /// D-107 と同じ意味)。総合は全アカウントの home(D-114 の自動構成と同形)。
+/// TL 系は全部この UI (D-124): リスト TL はそのリストの取得、トレンド系は
+/// 「このタイムライン」(self — 検索結果/欄の投稿)から始める。
 TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []}) {
   if (scope == 'tl.bundle') {
     return TlConfig(sources: [for (final a in bundleAccounts) TlSourceComponent(tl: 'home', account: a)], algorithms: const [TlAlgorithmComponent(type: 'chrono')]);
   }
+  if (scope == 'trend' || scope == 'trend.users') {
+    return const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
+  }
+  if (scope == 'trend.following') {
+    return const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
+  }
   final base = scope.startsWith('tl.') ? scope.substring(3) : 'home';
+  if (base.startsWith('list:')) {
+    return TlConfig(sources: [TlSourceComponent(tl: base)], algorithms: const [TlAlgorithmComponent(type: 'chrono')]);
+  }
   final tl = ['home', 'social', 'local', 'global'].contains(base) ? base : 'home';
   return TlConfig(sources: [TlSourceComponent(tl: tl)], algorithms: const [TlAlgorithmComponent(type: 'chrono')]);
 }
@@ -152,6 +165,9 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
     final at = Offset(24, 40.0 + i * 170);
     if (s.isTrend) {
       nodes.add(inst('trend.posts', 's$i', at, values: {'アカウント': s.account}));
+    } else if (s.isSelf) {
+      // この画面の基礎 TL (D-124): 実行側の resolveNodeFetch が selfItems を返す。
+      nodes.add(inst('tl.source', 's$i', at, values: {'TL': 'self'}));
     } else if (s.isList) {
       nodes.add(inst('tl.list', 's$i', at, values: {'リスト': s.listName, 'アカウント': s.account}));
     } else {
@@ -241,6 +257,13 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
   if (cfg.clock.isNotEmpty) {
     nodes.add(inst('clock', 'c0', const Offset(24, -120), values: {'間隔': cfg.clock}));
     edges.add(const GraphEdge(from: 'c0', fromPort: 0, to: 's0', toPort: 0, toIcon: true));
+  }
+  // トレンドスコープ (D-113/D-124): トレンド枠の既定チェーンも添える —
+  // グラフ編集(「グラフで編集」)でタグ一覧を置き換えられる口を残す。
+  if (scope == 'trend') {
+    nodes.add(inst('trend.tags', 'f0', const Offset(24, 640)));
+    nodes.add(inst('trend.frame', 'f1', const Offset(300, 660)));
+    edges.add(const GraphEdge(from: 'f0', fromPort: 0, to: 'f1', toPort: 0));
   }
   return NodeGraph(nodes: nodes, edges: edges);
 }
