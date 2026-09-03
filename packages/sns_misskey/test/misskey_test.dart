@@ -63,6 +63,10 @@ void main() {
       expect(pure.body, 'hello :blobcat:');
       expect(pure.repostedBy!.displayName, '名前ur1');
       expect(pure.author.id, 'un2');
+      // リアクション表示 (D-111): チップ/自分のリアクションは中身のノートから
+      // コピーされる(落とすとフォロー外ユーザーの RT で一切出ない)。
+      expect(pure.reactions, {'👍': 2, ':blobcat:': 1});
+      expect(pure.counts['reaction'], 3);
 
       final quote = MisskeyMappers.note(note('q1', text: 'QT!', renote: note('n3')), viewer: viewer, host: 'misskey.test');
       expect(quote.body, 'QT!');

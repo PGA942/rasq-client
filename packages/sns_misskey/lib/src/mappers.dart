@@ -120,6 +120,9 @@ abstract final class MisskeyMappers {
 
     if (isPureRenote && depth == 0) {
       // Show the renoted note with "X がリノートしました".
+      // リアクション表示 (D-111): チップ/自分のリアクションは**中身のノート**の
+      // ものをそのまま載せる(落とすとフォロー外ユーザーの RT でリアクション系が
+      // 一切出ない)。アクション状態も timelineWithStates が内側から取っている。
       final inner = note(renote, viewer: viewer, host: host, depth: depth + 1);
       return Post(
         id: j['id'] as String,
@@ -136,6 +139,12 @@ abstract final class MisskeyMappers {
         replyToId: inner.replyToId,
         repostedBy: author,
         counts: inner.counts,
+        visibility: inner.visibility,
+        localOnly: inner.localOnly,
+        reactions: inner.reactions,
+        reactionEmojis: inner.reactionEmojis,
+        myReaction: inner.myReaction,
+        url: inner.url,
       );
     }
 

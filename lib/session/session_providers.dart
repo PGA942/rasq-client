@@ -1,12 +1,17 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:sns_misskey/sns_misskey.dart';
 
 import 'session_storage.dart';
+
+/// wasm SNS サンプルの pluginId(dev「実登録」とレジストリ解決で共用)。
+const wasmSamplePluginId = 'misskey-wasm-sample';
 
 /// Overridable in tests (MemorySessionStorage).
 final sessionStorageProvider = Provider<SessionStorage>((ref) => SecureSessionStorage());
@@ -14,16 +19,31 @@ final sessionStorageProvider = Provider<SessionStorage>((ref) => SecureSessionSt
 /// Installed SNS plugins. M1: Misskey only (D-010). Bluesky / Mastodon are
 /// registered once ORGATE-server can issue tokens.
 final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
-  final r = PluginRegistry()..register(MisskeyPlugin());
+  final r = PluginRegistry()
+    ..register(MisskeyPlugin())
+    // wasm SNS サンプル (D-079: 実登録の口)。この pluginId のセッションは
+    // sns.* 境界(WasmSnsSession)として解決され、アプリの通常パイプラインが
+    // wasm の上で動く。ログイン UI には出ない(pluginFor は Misskey が先)—
+    // 登録は dev 画面の「実登録」から。
+    ..register(WasmSnsPlugin(
+      manifest: const PluginManifest(id: wasmSamplePluginId, name: 'Misskey (wasm sample)', version: '0.1.0', kind: PluginKind.sns, supportedSns: [SnsKind.misskey]),
+      kind: SnsKind.misskey,
+      loadBytes: () async => (await rootBundle.load('assets/plugins/misskey_wasm_sample.wasm')).buffer.asUint8List(),
+    ));
   ref.onDispose(r.closeAll);
   return r;
 });
 
 @immutable
 class SessionsState {
-  const SessionsState({this.sessions = const [], this.currentKey});
+  const SessionsState({this.sessions = const [], this.currentKey, this.bundleView = false});
   final List<AccountSession> sessions;
   final String? currentKey;
+
+  /// 総合表示 (D-087): アカウントバンドルタイル(RASQ アカウント)が選択
+  /// されている状態。ホームの TL は全アカウント合流の「総合」になる。
+  /// 個別アカウントを選ぶと false に戻る(current は裏で保持)。
+  final bool bundleView;
 
   AccountSession? get current {
     if (sessions.isEmpty) return null;
@@ -32,8 +52,8 @@ class SessionsState {
 
   bool get isLoggedIn => sessions.isNotEmpty;
 
-  SessionsState copyWith({List<AccountSession>? sessions, String? currentKey}) =>
-      SessionsState(sessions: sessions ?? this.sessions, currentKey: currentKey ?? this.currentKey);
+  SessionsState copyWith({List<AccountSession>? sessions, String? currentKey, bool? bundleView}) =>
+      SessionsState(sessions: sessions ?? this.sessions, currentKey: currentKey ?? this.currentKey, bundleView: bundleView ?? this.bundleView);
 }
 
 /// Logged-in accounts + the selected one. Persisted as one JSON blob in
@@ -48,7 +68,7 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
     try {
       final j = (jsonDecode(raw) as Map).cast<String, Object?>();
       final list = [for (final s in (j['sessions'] as List? ?? const [])) AccountSession.fromJson((s as Map).cast<String, Object?>())];
-      return SessionsState(sessions: list, currentKey: j['current'] as String?);
+      return SessionsState(sessions: list, currentKey: j['current'] as String?, bundleView: j['bundle'] == true);
     } catch (e) {
       debugPrint('sessions: corrupt storage, starting fresh: $e');
       return const SessionsState();
@@ -58,7 +78,7 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
   Future<void> _persist(SessionsState s) async {
     await ref.read(sessionStorageProvider).write(
           storageKey,
-          jsonEncode({'sessions': s.sessions.map((e) => e.toJson()).toList(), 'current': s.currentKey}),
+          jsonEncode({'sessions': s.sessions.map((e) => e.toJson()).toList(), 'current': s.currentKey, 'bundle': s.bundleView}),
         );
     state = AsyncData(s);
   }
@@ -78,8 +98,16 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
 
   Future<void> setCurrent(AccountId account) async {
     final cur = state.value ?? const SessionsState();
-    if (cur.currentKey == account.key) return;
-    await _persist(cur.copyWith(currentKey: account.key));
+    if (cur.currentKey == account.key && !cur.bundleView) return;
+    // 個別アカウントの選択は総合表示を抜ける (D-087)。
+    await _persist(cur.copyWith(currentKey: account.key, bundleView: false));
+  }
+
+  /// 総合表示 (D-087): アカウントバンドルタイルの短押しで入る。
+  Future<void> setBundleView(bool on) async {
+    final cur = state.value ?? const SessionsState();
+    if (cur.bundleView == on) return;
+    await _persist(cur.copyWith(bundleView: on));
   }
 }
 
@@ -96,6 +124,27 @@ final currentSnsSessionProvider = Provider<SnsSession?>((ref) {
 });
 
 final currentAccountProvider = Provider<AccountId?>((ref) => ref.watch(currentAccountSessionProvider)?.account);
+
+/// 総合表示中か (D-087)。
+final bundleViewProvider = Provider<bool>((ref) => ref.watch(sessionsProvider).value?.bundleView ?? false);
+
+/// RASQ アカウント(バンドルの顔)(D-087)。ORGATE サーバーのアカウントが
+/// できるまでは最初のログインアカウントのプロフィールを流用し、ハンドルは
+/// インスタンスなしの素の形(`@handle`)で出す — 個別アカウント行の
+/// `handle@instance` と区別が付く。
+final rasqAccountProvider = Provider<UserSummary>((ref) {
+  final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+  final first = sessions.firstOrNull;
+  if (first == null) {
+    return const UserSummary(id: '-', account: AccountId(kind: SnsKind.other, instance: '', handle: ''), displayName: 'RASQ');
+  }
+  return UserSummary(
+    id: 'rasq:${first.account.handle}',
+    account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: first.account.handle),
+    displayName: first.displayName ?? first.account.handle,
+    avatarUrl: first.avatarUrl,
+  );
+});
 
 /// Viewer profile. Resolves synchronously from the cached session bits and
 /// refreshes from `me()` in the background.

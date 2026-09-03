@@ -82,6 +82,21 @@ class RrlNode {
   RrlNode copyWith({Map<String, Object?>? p, List<RrlNode>? c}) =>
       RrlNode(t: t, k: k, tag: tag, role: role, p: p ?? this.p, on: on, c: c ?? this.c);
 
+  /// タグを付けてはいけないノード型 (PROTOCOL §2.2「付けないもの」):
+  /// 装飾/構造ノードのタグは意味タグの読取り(RAi・関連TL・TL ソート)を
+  /// 汚すので、取り込み時に剥がす。
+  static const Set<String> _noTagTypes = {'Icon', 'Avatar', 'ActionBar', 'ActionButton', 'Spacer', 'Row', 'Column', 'Stack', 'Grid', 'Scroll'};
+
+  /// V11 検証ゲート (D-086): 付与先違反のタグを再帰的に剥がした木を返す。
+  /// 違反が無ければ自身をそのまま返す(再構築しない)。
+  RrlNode sanitizeTags() {
+    final children = [for (final child in c) child.sanitizeTags()];
+    final childChanged = !identical(children.length, c.length) || Iterable<int>.generate(children.length).any((i) => !identical(children[i], c[i]));
+    final badTag = tag != null && _noTagTypes.contains(t);
+    if (!badTag && !childChanged) return this;
+    return RrlNode(t: t, k: k, tag: badTag ? null : tag, role: role, p: p, on: on, c: childChanged ? children : c);
+  }
+
   /// Depth-first search by explicit key. Keys are expected to be tree-unique
   /// for patch targets (plugin's responsibility, PROTOCOL §2).
   RrlNode? findByKey(String key) {
@@ -95,6 +110,9 @@ class RrlNode {
 
   /// True if this node or any descendant carries [wantedTag].
   bool containsTag(String wantedTag) => tag == wantedTag || c.any((child) => child.containsTag(wantedTag));
+
+  /// V5 検証(完全置き換えタイルの必須ロール)などで使う (D-082)。
+  bool containsRole(String wantedRole) => role == wantedRole || c.any((child) => child.containsRole(wantedRole));
 }
 
 /// `nodeId = "{instanceScope}:{key}"` where

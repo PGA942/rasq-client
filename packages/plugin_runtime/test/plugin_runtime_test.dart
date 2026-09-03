@@ -319,6 +319,113 @@ void main() {
       expect(page.nextCursor, 'n2');
     });
 
+    test('sns.timeline: 純リノートは中身へ展開して repostedBy を載せる (D-100)', () async {
+      final pureRenote = jsonEncode([
+        {
+          'id': 'outer1',
+          'text': null,
+          'fileIds': <Object?>[],
+          'poll': null,
+          'createdAt': '2026-08-31T12:00:00.000Z',
+          'user': {'id': 'u2', 'username': 'renoter', 'name': 'リノートする人'},
+          'renote': {
+            'id': 'inner1',
+            'text': '中身の本文',
+            'createdAt': '2026-08-30T12:00:00.000Z',
+            'user': {'id': 'u1', 'username': 'author', 'name': '元の人'},
+          },
+        },
+      ]);
+      final env = RasqHostEnvironment(fetch: (_) => SyncFetchResponse(status: 200, bodyText: pureRenote));
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        extraArgs: const {'host': 'misskey.example'},
+        invoke: (fn, args) async => controller.invoke(fn, args),
+      );
+      final page = await session.timeline(TimelineKind.local, limit: 5);
+      final p = page.items.single;
+      expect(p.id, 'outer1'); // アクションは外側の id へ
+      expect(p.body, '中身の本文'); // 「内容のない投稿」にならない
+      expect(p.author.handle, 'author');
+      expect(p.repostedBy?.handle, 'renoter');
+    });
+
+    test('純リノートの読み替え (D-112): repostTargetId を採取して各欄を中身のノートへ', () async {
+      final pureRenote = jsonEncode([
+        {
+          'id': 'outer1',
+          'text': null,
+          'fileIds': <Object?>[],
+          'poll': null,
+          'createdAt': '2026-09-01T12:00:00.000Z',
+          'user': {'id': 'u2', 'username': 'renoter'},
+          'renote': {
+            'id': 'inner1',
+            'text': '中身の本文',
+            'reactions': {':abunaiyo_i@.:': 2},
+            'user': {'id': 'u1', 'username': 'author'},
+          },
+        },
+      ]);
+      final asked = <String>[];
+      final env = RasqHostEnvironment(fetch: (req) {
+        asked.add('${req.url.path}:${jsonDecode(req.body ?? '{}')['noteId'] ?? ''}');
+        if (req.url.path.endsWith('notes/timeline') || req.url.path.endsWith('notes/local-timeline')) {
+          return SyncFetchResponse(status: 200, bodyText: pureRenote);
+        }
+        return const SyncFetchResponse(status: 200, bodyText: '[]');
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        extraArgs: const {'host': 'misskey.example'},
+        invoke: (fn, args) async => controller.invoke(fn, args),
+      );
+      final page = await session.timeline(TimelineKind.local, limit: 5);
+      final p = page.items.single;
+      expect(p.id, 'outer1');
+      // リアクション絵文字の URL 補完 (D-112): ローカルカスタムは /emoji/。
+      expect(p.reactionEmojis[':abunaiyo_i@.:']?.toString(), 'https://misskey.example/emoji/abunaiyo_i.webp');
+      // 各欄は中身のノート(inner1)に向く。
+      asked.clear();
+      await session.reactions(p.id, limit: 10);
+      await session.reposters(p.id, limit: 10);
+      expect(asked.where((a) => a.contains('inner1')), hasLength(2));
+      expect(asked.where((a) => a.contains('outer1')), isEmpty);
+    });
+
+    test('sns.emojis (D-111): カスタム絵文字の取得と emojiUrl(未掲載は /emoji/ 縮退)', () async {
+      final env = RasqHostEnvironment(fetch: (req) {
+        if (req.url.path.endsWith('emojis')) {
+          return SyncFetchResponse(status: 200, bodyText: jsonEncode({
+            'emojis': [
+              {'name': 'blobcat', 'url': 'https://misskey.example/files/blobcat.webp', 'category': 'ねこ'},
+            ],
+          }));
+        }
+        return const SyncFetchResponse(status: 404);
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        extraArgs: const {'host': 'misskey.example'},
+        invoke: (fn, args) async => controller.invoke(fn, args),
+      );
+      final emojis = await session.customEmojis();
+      expect(emojis.single.name, 'blobcat');
+      expect(emojis.single.url.toString(), 'https://misskey.example/files/blobcat.webp');
+      expect((await session.emojiUrl('blobcat'))?.toString(), 'https://misskey.example/files/blobcat.webp');
+      // 一覧に無いローカルカスタム(:name@.:)は /emoji/<name>.webp に縮退。
+      expect((await session.emojiUrl('unknown@.'))?.toString(), 'https://misskey.example/emoji/unknown.webp');
+    });
+
     test('sns.actions / sns.thread / sns.performAction (D-075)', () async {
       final requests = <String>[];
       final env = RasqHostEnvironment(fetch: (req) {
@@ -361,6 +468,155 @@ void main() {
       );
     });
 
+    test('D-076 増線: createPost/deletePost/me/user/userPosts/reactions/reposters/quotes', () async {
+      final douglas = {'id': 'u1', 'username': 'douglas', 'name': 'ダグラス', 'host': null, 'avatarUrl': null};
+      final plain = {'id': 'n1', 'text': 'ふつうの投稿', 'user': douglas, 'files': [], 'reactions': {}, 'repliesCount': 0, 'renoteCount': 0};
+      final replyNote = {'id': 'r1', 'text': '返信です', 'user': douglas, 'files': [], 'reactions': {}, 'replyId': 'n1', 'reply': plain};
+      final quoteNote = {'id': 'q1', 'text': '引用です', 'user': douglas, 'files': [], 'reactions': {}, 'renote': plain};
+      final seen = <String, Map<String, Object?>>{};
+      final env = RasqHostEnvironment(fetch: (req) {
+        final ep = req.url.path.split('/api/').last;
+        seen[ep] = (jsonDecode(req.body ?? '{}') as Map).cast<String, Object?>();
+        final Object? out = switch (ep) {
+          'notes/create' => {'createdNote': quoteNote},
+          'notes/delete' => null,
+          'i' => {'id': 'me1', 'username': 'me', 'name': 'わたし', 'host': null},
+          'users/show' => {...douglas, 'description': 'bio です', 'followersCount': 12, 'followingCount': 34, 'notesCount': 56, 'isBot': true, 'fields': [{'name': 'web', 'value': 'https://x.example'}], 'pinnedNotes': []},
+          'users/notes' => [plain, replyNote, quoteNote],
+          'notes/reactions' => [{'id': 're1', 'user': douglas, 'type': '🎉', 'createdAt': '2026-08-30T00:00:00Z'}],
+          'notes/renotes' => [{'id': 'rn1', 'text': null, 'user': douglas, 'files': [], 'reactions': {}, 'renote': plain}, quoteNote],
+          _ => [],
+        };
+        return out == null ? const SyncFetchResponse(status: 204) : SyncFetchResponse(status: 200, bodyText: jsonEncode(out));
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        extraArgs: const {'host': 'misskey.example', 'token': 'T'},
+        invoke: (fn, args) async => controller.invoke(fn, args),
+      );
+
+      // createPost: NewPost ワイヤ → notes/create への写像 → 作成 Post が返る。
+      final created = await session.createPost(const NewPost(
+          text: 'こんにちは', contentWarning: '注', replyToId: 'n1', visibility: 'home', localOnly: true,
+          poll: NewPoll(choices: ['犬', '猫'], multiple: true, expiresAfter: Duration(hours: 1))));
+      expect(created.id, 'q1');
+      final body = seen['notes/create']!;
+      expect(body['text'], 'こんにちは');
+      expect(body['cw'], '注');
+      expect(body['replyId'], 'n1');
+      expect(body['visibility'], 'home');
+      expect(body['localOnly'], true);
+      expect((body['poll'] as Map)['choices'], ['犬', '猫']);
+      expect((body['poll'] as Map)['expiredAfter'], 3600000);
+      expect(body['i'], 'T'); // token は共通口で積まれる
+
+      await session.deletePost('n1');
+      expect(seen['notes/delete']!['noteId'], 'n1');
+
+      expect((await session.me()).displayName, 'わたし');
+
+      final profile = await session.user('u1');
+      expect(profile.summary.displayName, 'ダグラス');
+      expect(profile.followersCount, 12);
+      expect(profile.isBot, isTrue);
+      expect(profile.fields.single.name, 'web');
+      expect(profile.profileUrl.toString(), contains('@douglas'));
+      expect((await session.userByHandle('douglas', host: 'other.example'))!.summary.id, 'u1');
+      expect(seen['users/show']!['username'], 'douglas');
+
+      // userPosts: 返信/引用の振り分け (D-069 と同じ規約) がワイヤ越しでも効く。
+      expect([for (final p in (await session.userPosts('u1', filter: UserPostsFilter.replies)).items) p.id], ['r1']);
+      expect((await session.userPosts('u1', filter: UserPostsFilter.replies)).items.single.replyTo?.id, 'n1');
+      expect([for (final p in (await session.userPosts('u1', filter: UserPostsFilter.quotes)).items) p.id], ['q1']);
+      expect((await session.userPosts('u1', filter: UserPostsFilter.quotes)).items.single.quote?.body, 'ふつうの投稿');
+      expect([for (final p in (await session.userPosts('u1', filter: UserPostsFilter.posts)).items) p.id], ['n1']);
+
+      final reactions = await session.reactions('n1');
+      expect(reactions.items.single.reaction, '🎉');
+      expect(reactions.items.single.user.displayName, 'ダグラス');
+
+      expect((await session.reposters('n1')).items, hasLength(2)); // リノートした人
+      expect([for (final q in (await session.quotes('n1')).items) q.id], ['q1']);
+    });
+
+    test('実登録の口 (D-079): WasmSnsPlugin → PluginRegistry 解決、TL 前にアクション自動取り込み、close で破棄', () async {
+      final plugin = WasmSnsPlugin(
+        manifest: const PluginManifest(id: 'misskey-wasm-sample', name: 'Misskey (wasm sample)', version: '0.1.0', kind: PluginKind.sns, supportedSns: [SnsKind.misskey]),
+        kind: SnsKind.misskey,
+        nativeFetch: false, // ワーカーはネットワーク無し(net.fetch → B01)
+        loadBytes: () async => bytes,
+      );
+      final registry = PluginRegistry()..register(plugin);
+      final account = AccountSession(account: viewer, pluginId: 'misskey-wasm-sample', token: 'TOKEN', createdAt: DateTime(2026));
+      final session = registry.session(account);
+      expect(session, isA<WasmSnsSession>());
+      expect(session.pluginId, 'misskey-wasm-sample');
+      expect(session.account, viewer);
+
+      // TL は fetch 不能で B01 だが、**アクション宣言(静的)は先に取り込まれる**。
+      await expectLater(
+        session.timeline(TimelineKind.local),
+        throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'B01')),
+      );
+      expect([for (final a in session.actions) a.id], ['reply', 'renote', 'reaction']);
+
+      await registry.closeSession(account.account); // ワーカー破棄(例外なし)
+    });
+
+    test('TL レンダラー契約 v1 (D-080): tl.timelines 宣言 + tl.sort(リアクション順)', () async {
+      final controller = WasmPluginController(wasmBytes: bytes);
+      addTearDown(controller.dispose);
+      controller.load();
+      final tl = WasmTimelinePlugin(invoke: (fn, args) async => controller.invoke(fn, args));
+
+      final specs = await tl.timelines();
+      expect(specs, hasLength(1));
+      expect(specs.single.id, 'reaction-rank');
+      expect(specs.single.label, 'リアクション順');
+      expect(specs.single.base, 'local');
+
+      Post p(String id, int reactions) => Post(id: id, account: viewer, author: const UserSummary(id: 'u', account: AccountId(kind: SnsKind.misskey, instance: 'x', handle: 'u'), displayName: 'う'), createdAt: DateTime(2026), body: id, counts: {'reaction': reactions});
+      final sorted = await tl.compose('reaction-rank', [p('a', 1), p('b', 5), p('c', 3)]);
+      expect([for (final x in sorted) x.id], ['b', 'c', 'a']); // リアクション降順・同数は元順
+
+      // 未知の TL id は C01 → StateError(呼び出し側で縮退)。
+      await expectLater(tl.compose('nope', [p('a', 1)]), throwsA(isA<StateError>()));
+
+      // 投稿カスタマイザ (D-082): 1 位に置き換えタイル(contentBody 込み)。
+      final deco = await tl.customize('reaction-rank', await tl.compose('reaction-rank', [p('a', 1), p('b', 5)]));
+      expect(deco.tiles.keys, ['b']);
+      expect(deco.tiles['b']!.containsRole('contentBody'), isTrue);
+      // 上付きバナー行 (D-085): 2 位はバッジ(RT 行スタイル)。
+      expect(deco.badges.keys, ['a']);
+      expect(deco.badges['a']!.icon, 'star');
+      expect(deco.badges['a']!.text, contains('リアクション2位'));
+      expect((await tl.customize('nope', [p('a', 1)])).tiles, isEmpty); // 失敗は空に縮退
+
+      // 投稿加工 (D-083 transform_content): 表示前の本文加工(該当のみ)。
+      Post body(String id, String text) => Post(id: id, account: viewer, author: const UserSummary(id: 'u', account: AccountId(kind: SnsKind.misskey, instance: 'x', handle: 'u'), displayName: 'う'), createdAt: DateTime(2026), body: text);
+      final transformed = await tl.transform([body('t1', '打ち上げ成功！'), body('t2', 'ただの投稿')]);
+      expect(transformed[0].body, '🚀 打ち上げ成功！');
+      expect(transformed[1].body, 'ただの投稿');
+    });
+
+    test('V5 検証 (D-082): contentBody の無い置き換えタイルは破棄される', () async {
+      final tl = WasmTimelinePlugin(invoke: (fn, args) async => {
+            'ok': true,
+            'value': {
+              'tiles': {
+                'good': {'t': 'Column', 'k': 'g', 'c': [{'t': 'PostTile', 'k': 'gp', 'role': 'contentBody', 'p': {'post': {'id': 'good'}}}]},
+                'bad': {'t': 'Text', 'k': 'b', 'p': {'text': 'contentBody 無し'}},
+              },
+            },
+          });
+      Post p(String id) => Post(id: id, account: viewer, author: const UserSummary(id: 'u', account: AccountId(kind: SnsKind.misskey, instance: 'x', handle: 'u'), displayName: 'う'), createdAt: DateTime(2026), body: id);
+      final deco = await tl.customize('x', [p('good'), p('bad')]);
+      expect(deco.tiles.keys, ['good']); // V5 違反は破棄 → 通常タイルに縮退
+    });
+
     test('エラーは SnsApiException(コード付き)へ写る', () async {
       final controller = WasmPluginController(wasmBytes: bytes); // fetch なし → B01
       addTearDown(controller.dispose);
@@ -371,6 +627,23 @@ void main() {
         throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'B01')),
       );
     });
+  });
+
+  test('gpu.compute (D-081): WGSL compute で f32 配列を 2 倍(GPU 無しは E01 でクラウドへ縮退)', () {
+    final controller = WasmPluginController(wasmBytes: bytes);
+    addTearDown(controller.dispose);
+    controller.load();
+    final result = controller.invoke('gpuDouble', {'values': [1, 2.5, 3]});
+    if (result['ok'] != true) {
+      // GPU アダプターの無い環境: E01 = クラウドカルクレーターへの
+      // フォールバック規約どおり。
+      expect((result['error'] as Map)['code'], 'E01', reason: '$result');
+      markTestSkipped('no gpu adapter: $result');
+      return;
+    }
+    final value = (result['value'] as Map).cast<String, Object?>();
+    expect(value['placement'], 'device');
+    expect((value['values'] as List).map((v) => (v as num).toDouble()).toList(), [2.0, 5.0, 6.0]);
   });
 
   test('RasqHostEnvironment: storage round trip + unknown fn C01', () {

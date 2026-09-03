@@ -1,16 +1,26 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show debugPrint;
+
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_ml/rasq_ml.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'package:plugin_runtime/plugin_runtime.dart' show WasmSnsSession;
+
 import '../../app/providers.dart';
 import '../../session/session_providers.dart';
+import '../home/post_duplicates.dart';
 import '../home/timeline_providers.dart';
+import '../nodeprog/node_executor.dart';
+import '../nodeprog/node_graph.dart';
+import '../nodeprog/node_tabs.dart';
+import '../settings/settings_dsl.dart';
 import 'relational_engine.dart';
 import 'relational_ml.dart';
+import 'relational_wasm.dart';
 
 /// 設定の永続化キー(FOW チューニングの実測値をセッションを跨いで保持)。
 const relationalSettingsStorageKey = 'relational.settings.v1';
@@ -194,6 +204,116 @@ final relationalGuestPostsProvider = FutureProvider<List<Post>>((ref) async {
   return [for (final list in fetched) ...list];
 });
 
+/// アカウントバンドル供給 (M5f / D-086): 関連TL は「バンドルに含まれる
+/// **全アカウント**の TL 系を見る」特別枠 — 現在アカウントの HTL に加え、
+/// 他のログイン済みアカウントの HTL も混ぜる(失敗アカウントは無視)。
+/// 同一投稿の重複は 著者キー+投稿id で除外(同一インスタンスの複数
+/// アカウントが同じ会話を見ているケース)。
+final bundleFolloweePostsProvider = FutureProvider<List<Post>>((ref) async {
+  final home = ref.watch(timelineProvider(TimelineKind.home)).value?.posts ?? const <Post>[];
+  final sessions = ref.watch(sessionsProvider).value;
+  final current = sessions?.current;
+  final registry = ref.watch(pluginRegistryProvider);
+  final out = [...home];
+  final seen = {for (final p in home) '${p.author.key}/${p.id}'};
+  // 中身比較の同定 (D-110): 複数アカウントに流れてきた同じ投稿は隠して
+  // ↓(アカウント選択)の選択肢へ回す(関連TLの表示崩れ対策)。
+  final byDup = <String, Post>{for (final p in home) postDupKey(p): p};
+  final dropped = <String, List<Post>>{};
+  for (final s in sessions?.sessions ?? const <AccountSession>[]) {
+    if (s.account == current?.account) continue;
+    try {
+      final page = await registry.session(s).timeline(TimelineKind.home, limit: 20);
+      for (final p in page.items) {
+        if (!seen.add('${p.author.key}/${p.id}')) continue;
+        final kept = byDup[postDupKey(p)];
+        if (kept != null) {
+          dropped.putIfAbsent(kept.key, () => []).add(p);
+          continue;
+        }
+        byDup[postDupKey(p)] = p;
+        out.add(p);
+      }
+    } catch (e) {
+      debugPrint('bundle TL ${s.account.key}: $e');
+    }
+  }
+  if (dropped.isNotEmpty) {
+    Future.microtask(() => ref.read(postAlternatesProvider.notifier).recordAll(dropped));
+  }
+  return out;
+});
+
+/// wasm エンジン (M5f / D-084) での構築。ML(SigLIP/Louvain)が効いている
+/// とき・モジュール不達時は null → Dart エンジンに縮退する。
+final wasmConversationEventsProvider = FutureProvider<List<ConversationEvent>?>((ref) async {
+  final ml = ref.watch(relationalMlProvider).value;
+  if (ml != null) return null; // ML はホスト側資産 — カルクレーター統合後に wasm から ml.infer
+  final controller = ref.watch(relationalWasmProvider).value;
+  if (controller == null) return null;
+  final settings = ref.watch(relationalSettingsProvider);
+  final lookbackMinutes = ref.watch(relationalLookbackProvider);
+  final home = ref.watch(timelineProvider(TimelineKind.home)).value;
+  if (home == null) return null;
+  // 前段絞り込み (D-102) > バンドル供給 (D-086) > 現在分、の順で使う。
+  final followees = ref.watch(relationalNodePostsProvider).value ?? ref.watch(bundleFolloweePostsProvider).value ?? home.posts;
+  final guests = ref.watch(relationalGuestPostsProvider).value ?? const <Post>[];
+  try {
+    return await buildEventsViaWasm(
+      controller,
+      followees: followees,
+      guests: guests,
+      settings: settings,
+      now: DateTime.now(),
+      lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null,
+    );
+  } catch (e) {
+    debugPrint('relational.build (wasm): $e');
+    return null;
+  }
+});
+
+/// 関連 TL の前段絞り込み (D-102): `tl.relational` スコープのノードグラフに
+/// 「取得 →(加工)→ **関連タイムライン**」の完成した鎖があれば、その出力を
+/// フォロイー入力の代わりに使う。処理系(会話イベント構築)はそのまま。
+/// 鎖が無ければ null → 従来どおりバンドル/HTL。
+final relationalNodePostsProvider = FutureProvider<List<Post>?>((ref) async {
+  final session = ref.watch(currentSnsSessionProvider);
+  if (session == null) return null;
+  final home = ref.watch(timelineProvider(TimelineKind.home)).value;
+  try {
+    // アカウント分離 (D-108): 現在アカウントの領域(旧共有領域は読み取り
+    // フォールバック)。
+    final accKey = ref.watch(currentAccountProvider)?.key;
+    final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'tl.relational');
+    if (raw is! String) return null;
+    final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+    final storageArea = storageSafeAreaFor(accKey);
+    SnsSession? sessionForAccount(String label) {
+      final s = ref.read(sessionsProvider).value?.sessions.where((x) => '${x.account}' == label || x.account.key == label).firstOrNull;
+      return s == null ? null : ref.read(pluginRegistryProvider).session(s);
+    }
+
+    return await runNodeGraph(
+      graph,
+      terminal: 'timeline.relational',
+      fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: 'home', selfItems: home?.posts ?? const [], sessionFor: sessionForAccount),
+      fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
+      pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
+      storageRead: (slot) async {
+        final own = (await ref.read(settingsAreaProvider(storageArea).future))[slot];
+        if (own != null) return own;
+        return (await ref.read(settingsAreaProvider('storage.safe').future))[slot];
+      },
+      storageWrite: (slot, value) => ref.read(settingsAreaProvider(storageArea).notifier).set(slot, value),
+      loadFunction: (fnId) => loadFunctionBody((a) => ref.read(settingsAreaProvider(a).future), fnId), // カスタム関数の中身 (D-118)
+    );
+  } catch (e) {
+    debugPrint('nodeprog(tl.relational): $e');
+    return null;
+  }
+});
+
 final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>((ref) {
   final settings = ref.watch(relationalSettingsProvider);
   final lookbackMinutes = ref.watch(relationalLookbackProvider);
@@ -202,8 +322,14 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
   // 取得が終わるまではゲスト無しで組み、届いたら再構築(表示を待たせない)。
   final guests = ref.watch(relationalGuestPostsProvider).value ?? const <Post>[];
 
+  // wasm エンジンの結果があればそれを使う (M5f / D-084 特別枠)。
+  final wasmEvents = ref.watch(wasmConversationEventsProvider).value;
+  if (wasmEvents != null) return AsyncData(wasmEvents);
+
   return home.whenData((h) {
+    // 前段絞り込み (D-102) > バンドル供給 (D-086) > 現在分、の順で使う。
+    final followees = ref.watch(relationalNodePostsProvider).value ?? ref.watch(bundleFolloweePostsProvider).value ?? h.posts;
     final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf);
-    return engine.build(followeePosts: h.posts, guestPosts: guests, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
+    return engine.build(followeePosts: followees, guestPosts: guests, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
   });
 });

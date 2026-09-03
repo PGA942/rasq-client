@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../clips/clip_providers.dart';
 import '../clips/index_toc.dart';
@@ -189,7 +190,14 @@ class ListDetailScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: RasqPageHeader(title: info?.name ?? 'リスト', onMore: () {}, bottom: RasqTabs(items: tabs)),
+        appBar: RasqPageHeader(
+          title: info?.name ?? 'リスト',
+          onMore: () {},
+          // リスト TL のカスタマイズ (D-124): TL 系は全部同 UI。デフォルトは
+          // このリストの取得ノード(tl.list)から始まる。
+          actions: [RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'リストTL設定', onPressed: () => context.push(Routes.tlConfig('tl.list:$listId')))],
+          bottom: RasqTabs(items: tabs),
+        ),
         body: TabBarView(children: [
           members.when(
             loading: () => const RasqLoading(),

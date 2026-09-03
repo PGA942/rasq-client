@@ -31,6 +31,9 @@ class SecureSessionStorage implements SessionStorage {
 class MemorySessionStorage implements SessionStorage {
   MemorySessionStorage([Map<String, String>? seed]) : _m = {...?seed};
   final Map<String, String> _m;
+
+  /// テスト用: 保存済みキー一覧。
+  Iterable<String> get keys => _m.keys;
   @override
   Future<String?> read(String key) async => _m[key];
   @override

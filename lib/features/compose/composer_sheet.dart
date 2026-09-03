@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -13,6 +15,13 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
 import '../../text/inline_spans.dart';
+import '../home/timeline_providers.dart' show resolveNodeFetch;
+import '../nodeprog/node_executor.dart';
+import '../nodeprog/node_graph.dart';
+import '../nodeprog/node_tabs.dart';
+import '../nodeprog/tl_components.dart';
+import '../settings/settings_dsl.dart';
+import 'composer_learning.dart';
 import 'compose_providers.dart';
 import 'compose_target.dart';
 import 'emoji_picker_fow.dart';
@@ -330,6 +339,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       _cw.text = d.cw;
       _prefillPending = false;
     }
+    _scheduleTargetEval(); // ポスト先ノード (D-116): 開いた時点の内容で初回評価
   }
 
   void _applyPrefill() {
@@ -401,6 +411,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         } catch (_) {/* アプリ終了などで store ごと破棄済みなら諦める */}
       });
     }
+    _targetEval?.cancel();
     _focus.removeListener(_onFocusChanged);
     _text.dispose();
     _cw.dispose();
@@ -418,6 +429,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     _poll?.dispose();
     _poll = null;
     _error = null;
+    _suggestedPostAs = null; // 下書きが消えたのでサジェストも仕切り直し (D-116)
+    _suggestedFallback = null;
+    _matchedTargets = const [];
     if (widget.target is ComposeReply) _prefillPending = true; // 次の返信用に再アーム
     _focus.unfocus();
   }
@@ -433,7 +447,472 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     setState(() {});
   }
 
-  SnsSession? get _session => ref.read(currentSnsSessionProvider);
+  /// 投稿先アカウント (D-089): アカウントバンドルタイルで選ぶ。null は
+  /// 現在アカウント。通常投稿(ComposeNormal)のみ — 返信/引用/DM は対象の
+  /// 投稿が属するアカウント文脈に固定する。
+  AccountSession? _postAs;
+  bool _targetsOpen = false;
+
+  /// 複数選択モード (D-128): アカウントごとに 非選択(0)→ 通常投稿(1)→
+  /// **ノードを通した連動投稿**(2, ポスト先グラフにそのアカウントの
+  /// ノード設定がある場合のみ)を循環する。選択分は送信時に連動投稿される。
+  bool _multiSelect = false;
+  final Map<String, int> _multiSel = {};
+  static const _selNone = 0, _selNormal = 1, _selLinked = 2;
+
+  /// composercfg(アカウント別のポスト先設定, D-125/D-129/D-130)。
+  Future<Map<String, ComposerAccountFilter>> _composerAccountCfg() async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final area = await ref.read(settingsAreaProvider(nodeprogAreaFor(accKey, 'composer')).future);
+      final raw = area['composercfg'];
+      if (raw is! String) return const {};
+      final out = <String, ComposerAccountFilter>{};
+      (jsonDecode(raw) as Map).cast<String, Object?>().forEach((k, v) => out[k] = ComposerAccountFilter.fromJson((v as Map).cast<String, Object?>()));
+      return out;
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// 連動の絞り込み (D-131): composer.linkgate を下書きで評価する。
+  Future<Map<String, bool>> _linkGates() async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'composer');
+      if (raw == null) return const {};
+      final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      final me = ref.read(currentUserProvider);
+      final draft = Post(id: 'draft', account: me.account, author: me, createdAt: DateTime.now(), body: _text.text);
+      final session = ref.read(currentSnsSessionProvider);
+      SnsSession? sessionForAccount(String label) {
+        final s = ref.read(sessionsProvider).value?.sessions.where((x) => '${x.account}' == label || x.account.key == label).firstOrNull;
+        return s == null ? null : ref.read(pluginRegistryProvider).session(s);
+      }
+
+      return await composerLinkGates(
+        graph,
+        draft,
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
+      );
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// 投稿加工(正規表現, D-130)のルール。ポスト先グラフの composer.regex から。
+  Future<List<(String, String, String)>> _regexRules() async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'composer');
+      if (raw == null) return const [];
+      return composerRegexRules(NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>()));
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// ポスト先グラフにノード設定(ポスト先/フォールバック)があるアカウント。
+  Future<Set<String>> _linkedCapableAccounts() async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'composer');
+      if (raw == null) return const {};
+      final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      return {
+        for (final n in graph.nodes)
+          if (n.type == 'composer.target' || n.type == 'composer.fallback')
+            if ((n.inputs.where((i) => i.label == 'アカウント').firstOrNull?.value ?? '').trim().isNotEmpty)
+              n.inputs.where((i) => i.label == 'アカウント').firstOrNull!.value!.trim(),
+      };
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Set<String> _linkable = const {};
+
+  Future<void> _cycleMulti(String label) async {
+    if (_linkable.isEmpty) _linkable = await _linkedCapableAccounts();
+    if (!mounted) return;
+    setState(() {
+      final cur = _multiSel[label] ?? _selNone;
+      _multiSel[label] = cur == _selNone
+          ? _selNormal
+          : cur == _selNormal
+              ? (_linkable.contains(label) ? _selLinked : _selNone)
+              : _selNone;
+    });
+  }
+
+  /// ポスト先ノードの実行 (D-116): 下書き内容で `composer` スコープの条件を
+  /// 評価して投稿先をサジェストする。手動選択(_postAs)が常に優先。
+  AccountSession? _suggestedPostAs;
+  List<String> _matchedTargets = const [];
+
+  /// 代わりのフォーマットで投稿 (D-126): サジェストがフォールバック経由の
+  /// とき、送信時に適用するフォーマット({'format': ..., 'cw': ...})。
+  Map<String, String>? _suggestedFallback;
+  Timer? _targetEval;
+
+  AccountSession? get _effectivePostAs => _postAs ?? _suggestedPostAs;
+
+  SnsSession? get _session {
+    final t = _effectivePostAs;
+    if (t != null) return ref.read(pluginRegistryProvider).session(t);
+    return ref.read(currentSnsSessionProvider);
+  }
+
+  void _scheduleTargetEval() {
+    if (widget.target is! ComposeNormal) return;
+    _targetEval?.cancel();
+    _targetEval = Timer(const Duration(milliseconds: 400), _evalComposerTargets);
+  }
+
+  /// 下書きでポスト先グラフを評価した選択肢(通常 → フォールバック,
+  /// D-116/D-126/D-128)。グラフ未設定/失敗は空。
+  Future<List<(String, Map<String, String>?)>> _composerChoices() async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'composer');
+      if (raw == null || !mounted) return const [];
+      final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      final me = ref.read(currentUserProvider);
+      // 条件評価用の下書き投稿(本文/注釈/添付数が条件タグの対象)。
+      final draft = Post(
+        id: 'draft',
+        account: me.account,
+        author: me,
+        createdAt: DateTime.now(),
+        body: _text.text,
+        contentWarning: _cwOn && _cw.text.trim().isNotEmpty ? _cw.text.trim() : null,
+        media: [for (var i = 0; i < _files.length; i++) MediaItem(id: 'draft$i', type: MediaType.image, url: Uri.parse('draft:$i'))],
+      );
+      final storageArea = storageSafeAreaFor(accKey);
+      // 基準取得 (D-125): 絞り込みの基準(そのアカウントの投稿/リアクション/
+      // 返信)を各アカウントのセッションから引けるようにする。
+      final session = ref.read(currentSnsSessionProvider);
+      SnsSession? sessionForAccount(String label) {
+        final s = ref.read(sessionsProvider).value?.sessions.where((x) => '${x.account}' == label || x.account.key == label).firstOrNull;
+        return s == null ? null : ref.read(pluginRegistryProvider).session(s);
+      }
+
+      // フォールバック込みの選択 (D-126): 通常候補 → 代替フォーマット候補。
+      return await composerTargetChoices(
+        graph,
+        draft,
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
+        storageRead: (slot) async => (await ref.read(settingsAreaProvider(storageArea).future))[slot],
+      );
+    } catch (_) {
+      return const []; // グラフ未設定/読めない → サジェストなし
+    }
+  }
+
+  Future<void> _evalComposerTargets() async {
+    if (!mounted) return;
+    final choices = await _composerChoices();
+    if (!mounted) return;
+    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    AccountSession? find(String label) =>
+        label.isEmpty || label == '現在のアカウント' ? null : sessions.where((s) => '${s.account}' == label || s.account.key == label).firstOrNull;
+    // 投稿アカウントの自動選択 (D-131: その他の設定 → 投稿コンポーザー)。
+    // オフでも一致マーク/並び替えは出す(自動で顔は切り替えない)。
+    final autoAccount = (ref.read(settingsAreaProvider('composer.prefs')).value ?? const {})['autoAccount'] != false;
+    setState(() {
+      _matchedTargets = [for (final c in choices) c.$1];
+      _suggestedPostAs = !autoAccount || choices.isEmpty ? null : find(choices.first.$1);
+      _suggestedFallback = !autoAccount || choices.isEmpty ? null : choices.first.$2;
+    });
+  }
+
+  /// ポスト先ノードの条件に一致した順位(タイルのソート用)。不一致は末尾。
+  int _targetRank(AccountSession s) {
+    final i = _matchedTargets.indexWhere((l) => l == '${s.account}' || l == s.account.key);
+    return i < 0 ? _matchedTargets.length : i;
+  }
+
+  /// 投稿先のカスタマイズ (D-089/D-126): 完全に別ページ(アカウントごと
+  /// タブ選択形式。グラフでの編集は … メニューの「グラフで編集」)。
+  void _openTargetCustomize() => ref.read(routerProvider).push(Routes.composerConfig);
+
+  /// アカウントバンドルタイル (D-089/D-091): アバタータップで出てくる。
+  /// RASQ アカウントの顔 + 投稿先リスト。サイドバー(D-087)と同じ作法
+  /// (バンドル=素の @handle、個別=handle@instance)。ヘッダー行タップで閉じる。
+  Widget _bundleTile(ColorScheme scheme, RasqTokens tokens) {
+    final rasq = ref.watch(rasqAccountProvider);
+    final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final selectedKey = (_effectivePostAs ?? ref.watch(currentAccountSessionProvider))?.account.key;
+    // ポスト先ノードの条件に一致したアカウントを上へ (D-116: 投稿内容による
+    // 投稿アカウントのソート)。一致なし/グラフなしなら元の並びのまま。
+    final ordered = [...sessions]
+      ..sort((a, b) {
+        final r = _targetRank(a).compareTo(_targetRank(b));
+        return r != 0 ? r : sessions.indexOf(a).compareTo(sessions.indexOf(b)); // 安定
+      });
+    return Container(
+      margin: const EdgeInsets.only(bottom: RasqSpacing.sm),
+      decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() => _targetsOpen = false),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
+            child: Row(children: [
+              RasqAvatar(imageUrl: rasq.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: rasq.displayName),
+              const SizedBox(width: RasqSpacing.sm),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(rasq.displayName, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                  Text('@${rasq.account.handle}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
+                ]),
+              ),
+              const Icon(Icons.keyboard_arrow_up, size: 20),
+            ]),
+          ),
+        ),
+        ...[
+          for (final s in ordered)
+            InkWell(
+              // 複数選択モード (D-128): 行タップで 非選択 → 通常投稿 →
+              // ノード連動投稿(設定があれば)を循環。通常モードは投稿先切替。
+              onTap: () {
+                if (_multiSelect) {
+                  _cycleMulti('${s.account}');
+                } else {
+                  setState(() {
+                    _postAs = s;
+                    _targetsOpen = false;
+                  });
+                  // 連動の下書き (D-129: delivery=draft): このアカウント宛の
+                  // 下書きがあれば、空のコンポーザーに復元して消費する。
+                  final linked = ref.read(composeDraftsProvider)['linked:${s.account.key}'];
+                  if (linked != null && _text.text.trim().isEmpty) {
+                    _text.text = linked.text;
+                    _text.selection = TextSelection.collapsed(offset: _text.text.length);
+                    _cwOn = linked.cwOn;
+                    _cw.text = linked.cw;
+                    _drafts.clear('linked:${s.account.key}');
+                    setState(() {});
+                  }
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
+                child: Row(children: [
+                  RasqSnsPill(account: s.account, showLabel: false, dotSize: 14),
+                  const SizedBox(width: RasqSpacing.sm),
+                  Expanded(child: Text('${s.account}', style: RasqTypography.bodySmall.copyWith(fontWeight: s.account.key == selectedKey ? FontWeight.w700 : null), overflow: TextOverflow.ellipsis)),
+                  // ポスト先ノードの条件に一致 (D-116)。
+                  if (_targetRank(s) < _matchedTargets.length)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Tooltip(message: 'ポスト先ノードの条件に一致', child: Icon(Icons.auto_awesome, size: 14, color: scheme.onSurfaceVariant)),
+                    ),
+                  if (_multiSelect) ...[
+                    switch (_multiSel['${s.account}'] ?? _selNone) {
+                      _selNormal => Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text('通常投稿', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                          const SizedBox(width: 4),
+                          Icon(Icons.check_circle_outline, size: 16, color: tokens.link),
+                        ]),
+                      _selLinked => Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text('ノード連動', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                          const SizedBox(width: 4),
+                          Icon(Icons.alt_route, size: 16, color: tokens.link),
+                        ]),
+                      _ => Icon(Icons.radio_button_unchecked, size: 16, color: scheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                    },
+                  ] else if (s.account.key == selectedKey)
+                    Icon(Icons.check, size: 16, color: tokens.link),
+                ]),
+              ),
+            ),
+          InkWell(
+            // 投稿先のカスタマイズ(ノードプログラミング)。チャイルド
+            // セーフティーや投稿内容による投稿アカウントのソートを組む口。
+            onTap: _openTargetCustomize,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 8),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.settings, size: 16, color: tokens.link),
+                const SizedBox(width: 6),
+                Text('投稿先のカスタマイズ', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+              ]),
+            ),
+          ),
+          // 複数選択モード (D-128): 選んだアカウントへ同時に投稿する
+          // (通常 = 同内容 / ノード連動 = ポスト先グラフを通して成立時のみ)。
+          if (widget.target is ComposeNormal)
+            InkWell(
+              onTap: () async {
+                final linkable = await _linkedCapableAccounts();
+                if (!mounted) return;
+                setState(() {
+                  _linkable = linkable;
+                  _multiSelect = !_multiSelect;
+                  if (!_multiSelect) _multiSel.clear();
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 8),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
+                  Icon(_multiSelect ? Icons.checklist_rtl : Icons.checklist, size: 16, color: tokens.link),
+                  const SizedBox(width: 6),
+                  Text(_multiSelect ? '複数選択を解除' : '複数選択モード', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
+                ]),
+              ),
+            ),
+        ],
+      ]),
+    );
+  }
+
+  /// 連動投稿の計画 (D-128/D-129): (セッション, フォールバック, 届け方)。
+  /// 通常投稿は常に auto。ノード連動はポスト先グラフの成立分だけ +
+  /// composercfg の届け方(auto/confirm/draft)。
+  Future<List<(AccountSession, Map<String, String>?, String)>> _buildMultiPlan() async {
+    if (!_multiSelect || widget.target is! ComposeNormal || !_multiSel.values.any((v) => v != _selNone)) return const [];
+    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final primaryKey = (_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account.key;
+    List<(String, Map<String, String>?)> choices = const [];
+    Map<String, bool> gates = const {};
+    if (_multiSel.values.contains(_selLinked)) {
+      choices = await _composerChoices();
+      gates = await _linkGates(); // 連動の絞り込み (D-131)
+    }
+    final cfg = await _composerAccountCfg();
+    final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
+    final plan = <(AccountSession, Map<String, String>?, String)>[];
+    for (final s in sessions) {
+      final label = '${s.account}';
+      final mode = _multiSel[label] ?? _selNone;
+      if (mode == _selNone || s.account.key == primaryKey) continue;
+      if (mode == _selLinked) {
+        // 連動元のアカウント選択 (D-131): 主投稿先が許可リストにあるときだけ。
+        if (!(cfg[label]?.linkAllowedFrom(primaryLabel) ?? true)) continue;
+        // 連動の絞り込み (D-131: F_target): 関門があるなら通過が必要。
+        if (gates.containsKey(label) && gates[label] != true) continue;
+        final hit = choices.where((c) => c.$1 == label || c.$1 == s.account.key).firstOrNull;
+        if (hit == null) continue; // ノード不成立 → このアカウントには連動しない
+        plan.add((s, hit.$2, cfg[label]?.delivery ?? 'auto'));
+      } else {
+        plan.add((s, null, 'auto'));
+      }
+    }
+    return plan;
+  }
+
+  /// confirm (D-129): 投稿前に連動先を**チェック済み状態で表示**して確認。
+  /// 戻り値 null = 送信自体を中止。チェックを外した連動先は計画から外す。
+  Future<(List<(AccountSession, Map<String, String>?, String)>, List<String>)?> _confirmLinked(List<(AccountSession, Map<String, String>?, String)> plan) async {
+    final targets = [for (final e in plan) if (e.$3 == 'confirm') e];
+    if (targets.isEmpty) return (plan, const <String>[]);
+    final manager = ref.read(overlayManagerProvider);
+    final checked = {for (final e in targets) e.$1.account.key: true};
+    final ok = await manager.showBottomSheet<bool>(
+      id: 'composer.linked.confirm',
+      title: '連動投稿の確認',
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) {
+        return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (final e in targets)
+            RasqSwitchListTile(
+              title: '${e.$1.account}',
+              subtitle: e.$2 == null ? '同内容で連動投稿' : '代わりのフォーマットで連動投稿',
+              value: checked[e.$1.account.key] ?? true,
+              onChanged: (v) => setLocal(() => checked[e.$1.account.key] = v),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
+            child: FilledButton(onPressed: () => manager.close('composer.linked.confirm', result: true), child: const Text('この内容で投稿する')),
+          ),
+        ]);
+      }),
+    );
+    if (ok != true) return null; // シートを閉じた = 送信中止
+    // チェックを外した連動先 = リレーションの負例 (D-132: 学習データの分離)。
+    return (
+      [
+        for (final e in plan)
+          if (e.$3 != 'confirm' || (checked[e.$1.account.key] ?? true)) e,
+      ],
+      [for (final e in targets) if (checked[e.$1.account.key] != true) '${e.$1.account}'],
+    );
+  }
+
+  /// 計画の実行 (D-128/D-129/D-130): auto/confirm 済み = 投稿、draft =
+  /// そのアカウント宛の下書き(次にそのアカウントを投稿先に選ぶと復元)。
+  /// 失敗したアカウント表記を返す(本体は落とさない)。
+  Future<(List<String>, List<String>)> _executeMultiPlan(
+      List<(AccountSession, Map<String, String>?, String)> plan, NewPost base, List<(String, String, String)> regexRules) async {
+    final registry = ref.read(pluginRegistryProvider);
+    final errors = <String>[];
+    final posted = <String>[]; // 連動の正例 (D-132)
+    for (final (s, fb, delivery) in plan) {
+      final label = '${s.account}';
+      var cw = base.contentWarning;
+      var visibility = base.visibility;
+      var localOnly = base.localOnly;
+      // フォールバック経由 (D-126) は代替フォーマットを適用。
+      switch (fb?['format']) {
+        case 'cw':
+          cw ??= (fb!['cw']?.isNotEmpty ?? false) ? fb['cw'] : '別フォーマット';
+        case 'followers':
+          visibility = 'followers';
+        case 'localOnly':
+          localOnly = true;
+      }
+      // 投稿加工(正規表現, D-130): 送信先アカウントごとに本文へ適用。
+      final text = applyComposerRegex(base.text, label, regexRules);
+      if (delivery == 'draft') {
+        // 下書きだけ作る (D-129): 次にそのアカウントを投稿先に選ぶと復元。
+        _drafts.save('linked:${s.account.key}', ComposeDraft(text: text, cw: cw ?? '', cwOn: cw != null));
+        continue;
+      }
+      try {
+        final session = registry.session(s);
+        // メディアは各アカウントのサーバーへ上げ直す(id は流用できない)。
+        final ids = <String>[];
+        for (final f in _files) {
+          ids.add((await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: f.sensitive)).id);
+        }
+        await session.createPost(NewPost(
+            text: text, contentWarning: cw, visibility: visibility, localOnly: localOnly, reactionAcceptance: base.reactionAcceptance, mediaIds: ids, poll: base.poll));
+        posted.add(label);
+      } catch (e) {
+        errors.add(label);
+        debugPrint('連動投稿 $label: $e');
+      }
+    }
+    return (errors, posted);
+  }
+
+  /// 学習ループ (D-132): 確定ラベルをプロファイルへ EMA 追加(手動切替は
+  /// 強く学習)+ 連動 (A→B) の正例/負例の記録。送信は落とさない。
+  Future<void> _recordLearning({required String primaryLabel, required bool corrected, required List<String> posted, required List<String> removed}) async {
+    try {
+      final accKey = ref.read(currentAccountProvider)?.key;
+      final area = storageSafeAreaFor(accKey);
+      final slot = composerLearnSlot(primaryLabel);
+      final existing = (await ref.read(settingsAreaProvider(area).future))[slot];
+      final updated = composerLearnUpdate(existing is Map ? existing.cast<String, Object?>() : null, _text.text.trim(), weight: corrected ? 3.0 : 1.0);
+      await ref.read(settingsAreaProvider(area).notifier).set(slot, updated);
+      if (posted.isNotEmpty || removed.isNotEmpty) {
+        var relations = ((await ref.read(settingsAreaProvider('composer.learn').future))['relations'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
+        for (final b in posted) {
+          relations = composerRelationBump(relations, primaryLabel, b, positive: true);
+        }
+        for (final b in removed) {
+          relations = composerRelationBump(relations, primaryLabel, b, positive: false);
+        }
+        await ref.read(settingsAreaProvider('composer.learn').notifier).set('relations', relations);
+      }
+    } catch (e) {
+      debugPrint('学習ループ: $e');
+    }
+  }
+
   bool get _isDm => widget.target is ComposeDm;
   int get _max => _session?.maxPostLength ?? 500;
 
@@ -472,6 +951,18 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Future<void> _send() async {
     final session = _session;
     if (session == null) return;
+    // 連動投稿の計画 (D-129): confirm の届け方があれば**送信前(busy に入る
+    // 前)に**チェック済み状態のシートで確認する(閉じたら送信自体を中止)。
+    var multiPlan = await _buildMultiPlan();
+    var removedByConfirm = <String>[]; // 確認で外した連動先 = 負例 (D-132)
+    final regexRules = widget.target is ComposeNormal ? await _regexRules() : const <(String, String, String)>[];
+    if (multiPlan.any((e) => e.$3 == 'confirm')) {
+      final approved = await _confirmLinked(multiPlan);
+      if (approved == null) return; // 送信中止
+      multiPlan = approved.$1;
+      removedByConfirm = approved.$2;
+    }
+    if (!mounted) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -495,13 +986,30 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       // 広げられない(連合なしの親 → 返信/引用も連合なし)。
       final direct = !_isDm && (replyTo?.isDirect ?? false);
       final myId = ref.read(currentUserProvider).id;
+      // 代わりのフォーマットで投稿 (D-126): サジェストがフォールバック経由の
+      // アカウントで送るとき、指定のフォーマット(注釈/フォロワー限定/
+      // 連合なし)を下書きに適用する。
+      final fb = (_postAs == null && _suggestedPostAs != null) ? _suggestedFallback : null;
+      String? cw = _cwOn && _cw.text.trim().isNotEmpty ? _cw.text.trim() : null;
+      String? visibility = _isDm ? null : (direct ? 'specified' : opts.visibility);
+      var localOnly = !_isDm && ((parent?.localOnly ?? false) || (!direct && opts.localOnly));
+      switch (fb?['format']) {
+        case 'cw':
+          cw ??= (fb!['cw']?.isNotEmpty ?? false) ? fb['cw'] : '別フォーマット';
+        case 'followers':
+          if (!_isDm && !direct) visibility = 'followers';
+        case 'localOnly':
+          if (!_isDm) localOnly = true;
+      }
+      // 投稿加工(正規表現, D-130): 本体の投稿先アカウントにも適用。
+      final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
       final draft = NewPost(
-        text: _text.text.trim(),
-        contentWarning: _cwOn && _cw.text.trim().isNotEmpty ? _cw.text.trim() : null,
+        text: applyComposerRegex(_text.text.trim(), primaryLabel, regexRules),
+        contentWarning: cw,
         replyToId: replyTo?.id,
         quoteOfId: quoteOf?.id,
-        visibility: _isDm ? null : (direct ? 'specified' : opts.visibility),
-        localOnly: !_isDm && ((parent?.localOnly ?? false) || (!direct && opts.localOnly)),
+        visibility: visibility,
+        localOnly: localOnly,
         reactionAcceptance: (_isDm || direct) ? null : opts.reactionAcceptance,
         directToIds: direct ? {replyTo!.author.id, ...replyTo.directToIds}.where((id) => id != myId).toList() : const [],
         mediaIds: ids,
@@ -511,8 +1019,29 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ComposeDm(room: final r) => await session.sendDm(r, draft),
         _ => await session.createPost(draft),
       };
+      // 複数選択モード (D-128/D-129): 計画の実行 — auto/confirm 済みは投稿、
+      // draft はそのアカウント宛の下書き。正規表現加工 (D-130) も各送信先に。
+      final (linkErrors, linkedPosted) = await _executeMultiPlan(multiPlan, NewPost(
+        text: _text.text.trim(),
+        contentWarning: cw,
+        visibility: visibility,
+        localOnly: localOnly,
+        reactionAcceptance: (_isDm || direct) ? null : opts.reactionAcceptance,
+        poll: _poll == null ? null : NewPoll(choices: _poll!.texts, multiple: _poll!.multiple, expiresAfter: _poll!.expiresAfter),
+      ), regexRules);
+      // 学習ループ (D-132): 確定ラベル(手動切替は強く学習)+ 連動の正負例。
+      if (widget.target is ComposeNormal && _text.text.trim().isNotEmpty) {
+        final corrected = _postAs != null && _suggestedPostAs != null && _postAs!.account.key != _suggestedPostAs!.account.key;
+        await _recordLearning(primaryLabel: primaryLabel, corrected: corrected, posted: linkedPosted, removed: removedByConfirm);
+      }
       _drafts.clear(_draftKey); // 送信済み → 下書き破棄
       _skipDraftOnDispose = true;
+      _multiSel.clear();
+      if (linkErrors.isNotEmpty && mounted) {
+        // 本体は投稿済み — 閉じずに連動側の失敗だけ知らせる。
+        setState(() => _error = '連動投稿に失敗しました: ${linkErrors.join(' / ')}(本体は投稿済みです)');
+        return;
+      }
       widget.onSent(post);
       if (widget.resident && mounted) {
         _skipDraftOnDispose = false; // 常駐は続投するので自動下書きを再開
@@ -536,7 +1065,12 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
-    final me = ref.watch(currentUserProvider);
+    // 投稿先 (D-089): バンドルタイルで選んだ(またはポスト先ノードが
+    // サジェストした, D-116)アカウントの顔で書く。
+    final postAs = _effectivePostAs;
+    final me = postAs == null
+        ? ref.watch(currentUserProvider)
+        : UserSummary(id: '-', account: postAs.account, displayName: postAs.displayName ?? postAs.account.handle, avatarUrl: postAs.avatarUrl);
     final emojis = ref.watch(emojiCacheProvider);
     final target = widget.target;
     final count = _text.text.length;
@@ -589,8 +1123,19 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                       if (_replyTo != null || _quoteOf != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: _TargetPreview(post: (_replyTo ?? _quoteOf)!, emojis: emojis)),
                     ]),
             ),
+            // アカウントバンドルタイル (D-089/D-091): **アバターをタップすると
+            // 出てくる**(常設だと引用時に場所が取れないため)。行タップで
+            // 投稿先切替、設定リンクはノードプログラミングの入口。DM 以外で有効。
+            if (_targetsOpen && !_isDm) _bundleTile(scheme, tokens),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: me.displayName),
+              Tooltip(
+                message: _isDm ? '' : '投稿先を選ぶ',
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: _isDm ? null : () => setState(() => _targetsOpen = !_targetsOpen),
+                  child: RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: me.displayName),
+                ),
+              ),
               const SizedBox(width: RasqSpacing.md),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -612,7 +1157,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     // 文字サイズは絵文字ピッカー(検索欄 = bodySmall)に合わせる (D-053)。
                     style: RasqTypography.bodySmall,
                     decoration: InputDecoration(hintText: _isDm ? 'メッセージを入力..' : 'いいことがありますように！', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
-                    onChanged: (_) => _syncStickHeight(),
+                    onChanged: (_) {
+                      _syncStickHeight();
+                      _scheduleTargetEval(); // ポスト先の条件を打ち直し毎に再評価 (D-116)
+                    },
                   ),
                 ]),
               ),

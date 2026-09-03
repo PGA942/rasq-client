@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:plugin_runtime/plugin_runtime.dart' show CustomTimelineSpec, WasmSnsSession;
+import 'package:rrl_renderer/rrl_renderer.dart' show rrlIconFor;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
+import '../nodeprog/node_tabs.dart';
 import '../relational/relational_timeline_view.dart';
+import 'custom_tile_row.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
 
@@ -21,11 +27,26 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final me = ref.watch(currentUserProvider);
+    // 総合表示 (D-088): アカウントバンドル選択中はヘッダーが RASQ アカウント、
+    // TL は全アカウント合流の「総合」+ 関連(関連は元からバンドル供給)。
+    final bundle = ref.watch(bundleViewProvider);
+    final me = bundle ? ref.watch(rasqAccountProvider) : ref.watch(currentUserProvider);
     final session = ref.watch(currentSnsSessionProvider);
-    final kinds = _tabKinds(session);
+    // カスタム TL (M5e / D-080): TL プラグインの宣言をタブに足す。
+    final customs = ref.watch(customTimelinesProvider).value ?? const <CustomTimelineSpec>[];
+    // ノードTLタブ (D-101): ノードエディタの「+」で作ったタブ。総合表示では
+    // **全アカウント分を集合表示** (D-108、… メニューの設定でオフにできる)。
+    final nodeTabs = ref.watch(nodeTabsProvider);
+    final kinds = bundle
+        ? [
+            TimelineKind.bundle,
+            TimelineKind.relational,
+            if (ref.watch(bundleNodeTabsVisibleProvider))
+              for (final (_, t) in ref.watch(allNodeTabsProvider)) TimelineKind(t.id, t.label),
+          ]
+        : _tabKinds(session, customs, nodeTabs);
     final tabs = [for (final k in kinds) RasqTabItem(_label(k), id: k.id)];
-    final initial = kinds.indexOf(TimelineKind.home).clamp(0, kinds.length - 1);
+    final initial = kinds.indexOf(bundle ? TimelineKind.bundle : TimelineKind.home).clamp(0, kinds.length - 1);
 
     return DefaultTabController(
       length: tabs.length,
@@ -37,7 +58,22 @@ class HomeScreen extends ConsumerWidget {
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
             child: Row(children: [
               Expanded(child: RasqTabs(items: tabs, showChevron: false)),
-              RasqIconButton(icon: Icons.settings, size: 20, onPressed: () {}, tooltip: 'タイムライン設定'),
+              // RAi は TL のタブ行では隠す (D-103 でユーザーが指定 —
+              // ノードエディタのパレット側にだけ置く)。
+              // タイムライン設定 (D-090/D-121): 簡略版のカスタマイズ画面へ
+              // (SNSタイムライン + アルゴリズムのコンポーネント積み。
+              // 自由形ノードキャンバスは一旦無効化)。
+              Builder(builder: (ctx) {
+                return RasqIconButton(
+                  icon: Icons.settings,
+                  size: 20,
+                  tooltip: 'タイムライン設定',
+                  onPressed: () {
+                    final i = DefaultTabController.of(ctx).index.clamp(0, kinds.length - 1);
+                    ctx.push(Routes.tlConfig('tl.${kinds[i].id}'));
+                  },
+                );
+              }),
             ]),
           ),
           Expanded(
@@ -63,7 +99,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  static List<TimelineKind> _tabKinds(SnsSession? session) {
+  static List<TimelineKind> _tabKinds(SnsSession? session, List<CustomTimelineSpec> customs, List<NodeTab> nodeTabs) {
     final supported = session?.timelines ?? const [TimelineKind.home];
     final out = <TimelineKind>[];
     if (supported.contains(TimelineKind.social)) out.add(TimelineKind.social);
@@ -71,6 +107,14 @@ class HomeScreen extends ConsumerWidget {
     out.add(TimelineKind.relational);
     for (final k in supported) {
       if (!out.contains(k)) out.add(k);
+    }
+    // カスタム TL (M5e / D-080): TL プラグイン宣言のタブ。
+    for (final c in customs) {
+      out.add(TimelineKind('custom:${c.id}', c.label));
+    }
+    // ノードTLタブ (D-101): 中身はノードグラフの実行結果。
+    for (final t in nodeTabs) {
+      out.add(TimelineKind(t.id, t.label));
     }
     return out.take(RasqTabs.maxExtensible).toList();
   }
@@ -137,7 +181,25 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                 return const SizedBox(height: 80);
               }
               final p = tl.posts[i];
-              return PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args), onTap: () => context.pushPost(p));
+              // 投稿カスタマイザ (D-082): 置き換えタイルがあれば RRL で描く
+              // (V5 検証済み。スレッドナビと可視性 lifecycle はホスト側)。
+              final tile = tl.customTiles[p.id];
+              if (tile != null && widget.kind.id.startsWith('custom:') && session is WasmSnsSession) {
+                return CustomTileRow(timelineId: widget.kind.id.substring('custom:'.length), post: p, node: tile, plugin: session.timelinePlugin);
+              }
+              // 上付きバナー行 (D-085): TL プラグインのバッジ(RT 行と同スタイル)。
+              final badge = tl.badges[p.id];
+              return PostRow(
+                post: p,
+                actions: actions,
+                onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args),
+                // アカウント選択 (D-110): ↓ で切り替えたコピーで実行(所属
+                // アカウントへのルーティングは perform 側)。
+                actionsFor: (shown) => (a, {args = const {}}) => notifier.perform(shown, a, args: args),
+                onTap: () => context.pushPost(p),
+                bannerIcon: badge == null ? null : rrlIconFor(badge.icon, Icons.label_outline),
+                bannerText: badge?.text,
+              );
             },
           ),
         );

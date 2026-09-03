@@ -175,6 +175,11 @@ class RasqHostEnvironment {
         final id = args['id'];
         if (id is! String || id.isEmpty) throw _HostFnError('D01', 'fow.close: id required');
         return relay(fn, args) ?? const <String, Object?>{};
+      case RasqHostFns.gpuCompute:
+        // gpu.compute (D-081) はランタイム内(wgpu)で短絡処理される —
+        // ここへ来るのは旧ランタイムのみ。プラグインはクラウド
+        // カルクレーター(ml.infer)へフォールバックする規約。
+        throw _HostFnError('E01', 'gpu.compute requires the native runtime (fall back to ml.infer)');
       case RasqHostFns.wasmCall || RasqHostFns.storeRead || RasqHostFns.geometryLookup:
         throw _HostFnError('E01', '$fn not wired yet');
       default:

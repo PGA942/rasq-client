@@ -14,6 +14,7 @@ abstract final class RasqHostFns {
   static const wasmCall = 'wasm.call';
   static const storeRead = 'store.read';
   static const geometryLookup = 'geometry.lookup';
+  static const gpuCompute = 'gpu.compute';
 }
 
 /// Where an `ml.infer` call actually ran (returned to the plugin).

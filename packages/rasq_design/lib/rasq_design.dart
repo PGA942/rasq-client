@@ -33,6 +33,7 @@ export 'src/components/sort.dart';
 export 'src/components/search_filter_bar.dart';
 export 'src/components/slider_list_tile.dart';
 export 'src/components/brand.dart';
+export 'src/components/plugin_tile.dart';
 
 // L2 composite — 投稿まわり (PostTile / ActionBar / PollWidget / CollapsedPost …).
 export 'src/components/post_tile.dart';

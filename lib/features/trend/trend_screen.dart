@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../search/search_filter.dart';
@@ -52,7 +54,9 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const [];
     final tl = ref.watch(timelineProvider(_kind));
-    final analysis = ref.watch(trendAnalysisProvider(widget.tag));
+    // ノードグラフ実配線 (D-113): trend.following / trend.users スコープ。
+    final following = ref.watch(trendFollowingPostsProvider(widget.tag));
+    final rankedUsers = ref.watch(trendUsersProvider(widget.tag));
     final notifier = ref.read(timelineProvider(_kind).notifier);
     final manager = ref.watch(overlayManagerProvider);
     final filter = ref.watch(searchFilterProvider);
@@ -93,27 +97,37 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
               ),
             ]),
           ),
-          RasqTabs(
-            items: tabs,
-            onSelectedTabTap: (i, rect) async {
-              final s = await showSearchSortMenu(manager, rect, filter.sort);
-              if (s != null) ref.read(searchFilterProvider.notifier).set(filter.copyWith(sort: s));
-            },
-          ),
+          Row(children: [
+            Expanded(
+              child: RasqTabs(
+                items: tabs,
+                onSelectedTabTap: (i, rect) async {
+                  final s = await showSearchSortMenu(manager, rect, filter.sort);
+                  if (s != null) ref.read(searchFilterProvider.notifier).set(filter.copyWith(sort: s));
+                },
+              ),
+            ),
+            // トレンドもタイムラインと同じ (D-090/D-103): RAi は TL のタブ行
+            // では隠し、ノード設定だけ置く。
+            // TL 系は全部同 UI (D-124): 簡略版カスタマイズ画面へ。
+            RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'トレンド設定', onPressed: () => context.push(Routes.tlConfig('trend'))),
+          ]),
           Expanded(
             child: TabBarView(children: [
               RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(trendAnalysisProvider(widget.tag));
+                  ref.invalidate(trendFollowingPostsProvider(widget.tag));
+                  ref.invalidate(trendUsersProvider(widget.tag));
                   await notifier.refresh();
                 },
                 child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
                   const RasqSectionHeader(title: 'フォロー中の反応', topMargin: 0),
-                  analysis.when(
+                  following.when(
                     loading: () => const RasqLoading(),
                     error: (_, _) => const SizedBox(height: 48),
-                    data: (a) {
-                      final posts = apply(a.followingPosts).take(3).toList();
+                    data: (fp) {
+                      final posts = apply(fp).take(3).toList();
                       return posts.isEmpty ? const SizedBox(height: 48) : rows(posts);
                     },
                   ),
@@ -130,22 +144,22 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   ),
                 ]),
               ),
-              analysis.when(
+              following.when(
                 loading: () => const RasqLoading(),
                 error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
-                data: (a) {
-                  final posts = apply(a.followingPosts);
+                data: (fp) {
+                  final posts = apply(fp);
                   return posts.isEmpty
                       ? const RasqEmptyView(title: 'フォロー中の投稿はありません', hint: 'このワードについてフォロイーはまだ投稿していません')
                       : ListView(children: [rows(posts)]);
                 },
               ),
-              analysis.when(
+              rankedUsers.when(
                 loading: () => const RasqLoading(),
                 error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
-                data: (a) {
+                data: (users) {
                   // ユーザーはリアクション合計順(古い順のみ昇順に反転)。
-                  final ranked = [...a.users]..sort((x, y) => filter.sort == SearchSort.oldest ? x.$2.compareTo(y.$2) : y.$2.compareTo(x.$2));
+                  final ranked = [...users]..sort((x, y) => filter.sort == SearchSort.oldest ? x.$2.compareTo(y.$2) : y.$2.compareTo(x.$2));
                   return ranked.isEmpty
                       ? const RasqEmptyView(title: 'ユーザーはいません')
                       : UserList(users: [for (final e in ranked) e.$1.summary], subtitles: {for (final e in ranked) e.$1.summary.id: 'リアクション ${e.$2}'});

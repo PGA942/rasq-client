@@ -51,6 +51,8 @@ class RasqPostTile extends StatelessWidget {
     required this.content,
     this.nameSpans,
     this.repostedBy,
+    this.bannerIcon,
+    this.bannerText,
     this.avatar,
     this.media,
     this.poll,
@@ -60,6 +62,7 @@ class RasqPostTile extends StatelessWidget {
     this.onTap,
     this.onAuthorTap,
     this.onMore,
+    this.headerAction,
     this.dense = false,
     this.threadReplyCount,
     this.padding,
@@ -73,6 +76,11 @@ class RasqPostTile extends StatelessWidget {
   /// [UserSummary.displayName].
   final List<RasqSpan>? nameSpans;
   final UserSummary? repostedBy;
+
+  /// 上付きバナー行 (D-085): RT 行と同スタイルの「アイコン + テキスト」。
+  /// TL プラグイン(tl.customize の badges)や RRL の PostTile props から渡る。
+  final IconData? bannerIcon;
+  final String? bannerText;
 
   /// avatar slot override.
   final Widget? avatar;
@@ -96,6 +104,9 @@ class RasqPostTile extends StatelessWidget {
   /// `…` context menu. Receives the button's global rect so the host can
   /// anchor an Overlay-Manager dropdown on it. Hidden when null.
   final ValueChanged<Rect>? onMore;
+
+  /// ヘッダー右上、`…` の左に置く追加ボタン (D-111: アカウント選択 ↓ など)。
+  final Widget? headerAction;
 
   /// Smaller avatar, no outer page padding (notification 投稿タイル系).
   final bool dense;
@@ -123,6 +134,8 @@ class RasqPostTile extends StatelessWidget {
         ),
       ),
       RasqTimestamp(createdAt),
+      // ヘッダー右上の追加ボタン (D-111): … の左に置く(アカウント選択 ↓ 等)。
+      if (headerAction != null && !embedded) headerAction!,
       if (onMore != null && !embedded)
         Builder(
           builder: (ctx) => RasqIconButton(
@@ -159,16 +172,20 @@ class RasqPostTile extends StatelessWidget {
 
     final avatarWidget = avatar ?? RasqAvatar(imageUrl: author.avatarUrl, size: avatarSize, presence: author.presence, fallbackLabel: author.displayName, onTap: onAuthorTap);
 
+    // 上付きバナー行(RT の「♻︎ 〇〇がリノートしました」と同スタイル)。
+    // D-085: TL プラグインもアイコン名 + 表示テキストで同じ行を出せる。
+    Widget bannerRow(IconData icon, String text) => Padding(
+      padding: EdgeInsets.only(left: avatarSize + RasqSpacing.md, bottom: 4),
+      child: Row(children: [
+        Icon(icon, size: 14, color: scheme.onSurfaceVariant),
+        const SizedBox(width: 4),
+        Flexible(child: Text(text, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
+      ]),
+    );
+
     Widget tile = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (repostedBy != null && !embedded)
-        Padding(
-          padding: EdgeInsets.only(left: avatarSize + RasqSpacing.md, bottom: 4),
-          child: Row(children: [
-            Icon(Icons.repeat, size: 14, color: scheme.onSurfaceVariant),
-            const SizedBox(width: 4),
-            Flexible(child: Text('${repostedBy!.displayName}がリノートしました', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
-          ]),
-        ),
+      if (bannerText != null && !embedded) bannerRow(bannerIcon ?? Icons.label_outline, bannerText!),
+      if (repostedBy != null && !embedded) bannerRow(Icons.repeat, '${repostedBy!.displayName}がリノートしました'),
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         avatarWidget,
         SizedBox(width: embedded ? RasqSpacing.sm : RasqSpacing.md),

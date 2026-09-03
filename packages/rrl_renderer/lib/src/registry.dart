@@ -300,6 +300,10 @@ abstract final class RrlComponentRegistry {
       content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: content),
       media: media,
       actionBar: actionBar,
+      // 上付きバナー行 (D-085): RT 行と同スタイル。プラグインはアイコン名 +
+      // テキストの Props で渡す(完全置き換えタイル側の口)。
+      bannerIcon: ctx.props['bannerIcon'] == null ? null : rrlIconFor(ctx.props['bannerIcon'] as String?),
+      bannerText: ctx.props['bannerText'] as String?,
       onTap: ctx.tapHandler('tap'),
     );
   }

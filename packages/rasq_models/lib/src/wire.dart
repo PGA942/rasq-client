@@ -2,6 +2,9 @@ import 'account.dart';
 import 'media.dart';
 import 'page.dart';
 import 'post.dart';
+import 'profile.dart';
+import 'reaction.dart';
+import 'thread.dart';
 import 'user.dart';
 
 /// SNS 境界のワイヤ形 (`rasq.post/1`、D-074 / M5d)。
@@ -144,5 +147,67 @@ abstract final class SnsWire {
   static Page<Post> pageFrom(Map<String, Object?> j, {required AccountId account}) => Page(
         items: [for (final x in (j['items'] as List? ?? const [])) postFrom((x as Map).cast<String, Object?>(), account: account)],
         nextCursor: j['nextCursor'] as String?,
+      );
+
+  static Page<UserSummary> userPageFrom(Map<String, Object?> j) => Page(
+        items: [for (final x in (j['items'] as List? ?? const [])) userFrom((x as Map).cast<String, Object?>())],
+        nextCursor: j['nextCursor'] as String?,
+      );
+
+  /// `createPost` の下書き (D-076: `sns.createPost` の引数)。
+  static Map<String, Object?> newPost(NewPost d) => {
+        'text': d.text,
+        'cw': ?d.contentWarning,
+        'replyToId': ?d.replyToId,
+        'quoteOfId': ?d.quoteOfId,
+        'repostOfId': ?d.repostOfId,
+        'visibility': ?d.visibility,
+        if (d.localOnly) 'localOnly': true,
+        'reactionAcceptance': ?d.reactionAcceptance,
+        if (d.directToIds.isNotEmpty) 'directToIds': d.directToIds,
+        if (d.mediaIds.isNotEmpty) 'mediaIds': d.mediaIds,
+        'poll': ?(d.poll == null
+            ? null
+            : {
+                'choices': d.poll!.choices,
+                if (d.poll!.multiple) 'multiple': true,
+                'expiresAfterSec': ?d.poll!.expiresAfter?.inSeconds,
+              }),
+      };
+
+  static UserProfile profileFrom(Map<String, Object?> j, {required AccountId account}) => UserProfile(
+        summary: userFrom((j['user'] as Map? ?? const {}).cast<String, Object?>()),
+        bannerUrl: j['bannerUrl'] is String ? Uri.tryParse(j['bannerUrl'] as String) : null,
+        description: j['description'] as String?,
+        followersCount: (j['followersCount'] as num?)?.toInt(),
+        followingCount: (j['followingCount'] as num?)?.toInt(),
+        postsCount: (j['postsCount'] as num?)?.toInt(),
+        fields: [
+          for (final f in (j['fields'] as List? ?? const []))
+            ProfileField(name: '${(f as Map)['name'] ?? ''}', value: '${f['value'] ?? ''}', verified: f['verified'] == true),
+        ],
+        createdAt: j['createdAt'] is String ? DateTime.tryParse(j['createdAt'] as String) : null,
+        birthday: j['birthday'] as String?,
+        location: j['location'] as String?,
+        url: j['url'] is String ? Uri.tryParse(j['url'] as String) : null,
+        isLocked: j['isLocked'] == true,
+        isBot: j['isBot'] == true,
+        isSuspended: j['isSuspended'] == true,
+        pinnedPosts: [for (final p in (j['pinnedPosts'] as List? ?? const [])) postFrom((p as Map).cast<String, Object?>(), account: account)],
+        profileUrl: j['profileUrl'] is String ? Uri.tryParse(j['profileUrl'] as String) : null,
+      );
+
+  static ReactionEntry reactionEntryFrom(Map<String, Object?> j) => ReactionEntry(
+        id: '${j['id']}',
+        user: userFrom((j['user'] as Map? ?? const {}).cast<String, Object?>()),
+        reaction: '${j['reaction'] ?? ''}',
+        createdAt: DateTime.tryParse('${j['createdAt']}') ?? DateTime.now(),
+        emojiUrl: j['emojiUrl'] is String ? Uri.tryParse(j['emojiUrl'] as String) : null,
+      );
+
+  static Thread threadFrom(Map<String, Object?> j, {required AccountId account}) => Thread(
+        post: postFrom((j['post'] as Map? ?? const {}).cast<String, Object?>(), account: account),
+        ancestors: [for (final a in (j['ancestors'] as List? ?? const [])) postFrom((a as Map).cast<String, Object?>(), account: account)],
+        descendants: [for (final d in (j['descendants'] as List? ?? const [])) postFrom((d as Map).cast<String, Object?>(), account: account)],
       );
 }

@@ -18,6 +18,7 @@ import 'reaction_history.dart';
 import '../post/post_menu.dart';
 import '../settings/safety.dart';
 import 'action_bar_config.dart';
+import 'post_duplicates.dart';
 
 /// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
 typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<String, Object?> args});
@@ -30,11 +31,15 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.onTap, this.dense = false, this.showReplyParent = true});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText});
 
   final Post post;
   final List<ActionDescriptor> actions;
   final PostActionHandler onAction;
+
+  /// アカウント選択 (D-110): 重複コピーへ切り替えたとき、そのコピーで
+  /// アクションを実行するためのハンドラ工場。null なら [onAction] のまま。
+  final PostActionHandler Function(Post shown)? actionsFor;
   final VoidCallback? onTap;
 
   /// Embedded size (通知の投稿タイル系など): smaller avatar, no outer padding.
@@ -43,6 +48,10 @@ class PostRow extends ConsumerStatefulWidget {
   /// リプライ元投稿の省略タイルを上に出す (D-069)。スレッド展開画面の
   /// ように文脈側が既に親を表示している場合は false。
   final bool showReplyParent;
+
+  /// 上付きバナー行 (D-085): TL プラグインのバッジ(RT 行と同スタイル)。
+  final IconData? bannerIcon;
+  final String? bannerText;
 
   /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
   static String? attachmentSummaryOf(Post p) {
@@ -78,7 +87,14 @@ class _PostRowState extends ConsumerState<PostRow> {
   /// Ephemeral: user expanded a collapsed (既読) post in this session.
   bool _expanded = false;
 
-  Post get post => widget.post;
+  /// アカウント選択 (D-110): ↓ で選んだ別アカウントのコピー。表示と
+  /// アクションがこのコピーに切り替わる。
+  Post? _actAs;
+
+  Post get post => _actAs ?? widget.post;
+
+  /// [_actAs] 中はそのコピーでアクションを実行する。
+  PostActionHandler get _onAction => (_actAs != null && widget.actionsFor != null) ? widget.actionsFor!(post) : widget.onAction;
 
   static const _collapseLines = 3;
 
@@ -88,6 +104,8 @@ class _PostRowState extends ConsumerState<PostRow> {
     final emojis = ref.watch(emojiCacheProvider);
     final isRead = ref.watch(isReadProvider(post.key));
     final safety = ref.watch(safetySettingsProvider);
+    // 隠した重複コピー (D-110): あれば ↓(アカウント選択)を出す。
+    final alternates = ref.watch(postAlternatesProvider)[widget.post.key] ?? const <Post>[];
 
     // 省略表示: 既読かつ長文の投稿は先頭数行 + 「展開する」(Store 状態 → props).
     final lineCount = '\n'.allMatches(post.body).length + 1;
@@ -126,6 +144,8 @@ class _PostRowState extends ConsumerState<PostRow> {
       createdAt: post.createdAt,
       nameSpans: nameSpans,
       repostedBy: post.repostedBy,
+      bannerIcon: widget.bannerIcon,
+      bannerText: widget.bannerText,
       dense: widget.dense,
       content: content,
       media: !collapsible && !hasCw && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, onTapTile: (i) => context.openViewer(post, mediaIndex[i])) : null,
@@ -156,9 +176,9 @@ class _PostRowState extends ConsumerState<PostRow> {
                     final a = widget.actions.where((x) => x.genreTag == 'Reaction').firstOrNull;
                     if (a == null) return;
                     if (r == post.myReaction) {
-                      widget.onAction(a).catchError((_) {}); // 自分の → 解除
+                      _onAction(a).catchError((_) {}); // 自分の → 解除
                     } else {
-                      widget.onAction(a, args: {'reaction': r}).then((_) => ref.read(reactionHistoryProvider.notifier).record(r)).catchError((_) {});
+                      _onAction(a, args: {'reaction': r}).then((_) => ref.read(reactionHistoryProvider.notifier).record(r)).catchError((_) {});
                     }
                   },
                 ),
@@ -167,6 +187,32 @@ class _PostRowState extends ConsumerState<PostRow> {
       onTap: widget.onTap,
       onAuthorTap: () => context.pushUser(post.author),
       onMore: (anchor) => showPostMenu(context, ref, post, anchor),
+      // アカウント選択 (D-110/D-111): 複数アカウントに流れてきた同一投稿は
+      // 1 枚に畳まれる — ヘッダー右上(… の左)の ↓ でどのアカウントとして
+      // 見る/反応するかを選ぶ(アクションバーはずらさない)。
+      headerAction: alternates.isEmpty
+          ? null
+          : Builder(builder: (ctx) {
+              return RasqIconButton(
+                icon: Icons.keyboard_arrow_down,
+                size: 20,
+                tooltip: 'アカウント選択',
+                onPressed: () async {
+                  final box = ctx.findRenderObject() as RenderBox;
+                  final manager = ref.read(overlayManagerProvider);
+                  final picked = await manager.showDropdown<Post>(
+                    id: 'post.actAs.${widget.post.key}',
+                    anchor: box.localToGlobal(Offset.zero) & box.size,
+                    dense: true,
+                    items: [
+                      RasqDropdownItem('${widget.post.account}', widget.post, checked: post.key == widget.post.key),
+                      for (final a in alternates) RasqDropdownItem('${a.account}', a, checked: post.key == a.key),
+                    ],
+                  );
+                  if (picked != null && mounted) setState(() => _actAs = picked.key == widget.post.key ? null : picked);
+                },
+              );
+            }),
     );
     // リプライ元の省略タイル (D-069): TL に流れてきたリプライは、1 つ前の
     // 投稿をワイヤーフレーム p.5(DM ルームの「1件の添付リンク」)の形で
@@ -229,7 +275,7 @@ class _PostRowState extends ConsumerState<PostRow> {
           ? (anchor) => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context), anchor: anchor,
                   predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
                   existingReactions: post.reactions, onPick: (e) {
-                widget.onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
+                _onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
               })
           : null,
     );
@@ -247,7 +293,7 @@ class _PostRowState extends ConsumerState<PostRow> {
           .catchError((_) {});
       return;
     }
-    widget.onAction(a).catchError((_) {});
+    _onAction(a).catchError((_) {});
   }
 
   /// リノート/引用ノートの組み込みバンドル (D-039)。
@@ -264,7 +310,7 @@ class _PostRowState extends ConsumerState<PostRow> {
     );
     switch (picked) {
       case 'renote':
-        await widget.onAction(a).catchError((_) {});
+        await _onAction(a).catchError((_) {});
       case 'quote':
         if (!mounted) return;
         await showComposer(ref, ComposeQuote(post), column: fowColumnOf(context));
@@ -285,7 +331,7 @@ class _PostRowState extends ConsumerState<PostRow> {
             dense: true,
             items: [for (final a in entry.members) RasqDropdownItem(a.label, a)],
           );
-          if (picked != null) await widget.onAction(picked).catchError((_) {});
+          if (picked != null) await _onAction(picked).catchError((_) {});
         },
       );
 

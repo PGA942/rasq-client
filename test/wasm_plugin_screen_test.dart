@@ -8,6 +8,8 @@ import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/dev/wasm_plugin_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
+
+import 'support/fakes.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
@@ -36,11 +38,14 @@ void main() {
     ]);
     final env = RasqHostEnvironment(fetch: (req) => SyncFetchResponse(status: 200, bodyText: canned));
 
-    await tester.pumpWidget(MaterialApp(
-      theme: RasqTheme.light(),
-      home: MediaQuery(
-        data: const MediaQueryData(disableAnimations: true),
-        child: WasmPluginScreen(wasmBytesOverride: wasmFile.readAsBytesSync(), envOverride: env),
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage())],
+      child: MaterialApp(
+        theme: RasqTheme.light(),
+        home: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: WasmPluginScreen(wasmBytesOverride: wasmFile.readAsBytesSync(), envOverride: env),
+        ),
       ),
     ));
     await tester.pump();
@@ -105,13 +110,52 @@ void main() {
     expect(find.textContaining('performAction(reaction, n1) → done=true'), findsOneWidget);
   });
 
+  testWidgets('実登録 (D-079): 現在のトークンで wasm セッションが本登録され、そのまま切り替わる', (tester) async {
+    if (!wasmFile.existsSync()) {
+      markTestSkipped('misskey-wasm-sample not built');
+      return;
+    }
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [fakeSession().toJson()],
+        'current': fakeSession().account.key,
+      }),
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sessionStorageProvider.overrideWithValue(storage)],
+      child: MaterialApp(
+        theme: RasqTheme.light(),
+        home: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: WasmPluginScreen(wasmBytesOverride: wasmFile.readAsBytesSync(), envOverride: RasqHostEnvironment()),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('実登録'));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(tester.element(find.byType(WasmPluginScreen)));
+    final state = container.read(sessionsProvider).value!;
+    expect(state.sessions, hasLength(2));
+    final wasmSession = state.current!;
+    expect(wasmSession.pluginId, wasmSamplePluginId); // 現在のアカウントが wasm 境界へ
+    expect(wasmSession.account.handle, 'tester~wasm'); // キー衝突回避
+    expect(wasmSession.token, 't'); // 既存トークンをホストが供給
+    // レジストリで WasmSnsSession に解決される(実登録の口)。
+    expect(container.read(pluginRegistryProvider).session(wasmSession), isA<WasmSnsSession>());
+  });
+
   testWidgets('FOW surface (D-064): プラグインの fow.open が実 FOW になり、絵文字タップの fow.close で閉じる', (tester) async {
     if (!wasmFile.existsSync()) {
       markTestSkipped('misskey-wasm-sample not built');
       return;
     }
     final manager = OverlayManager();
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage())],
+      child: MaterialApp(
       theme: RasqTheme.light(),
       home: MediaQuery(
         data: const MediaQueryData(disableAnimations: true),
@@ -123,7 +167,7 @@ void main() {
           ),
         ),
       ),
-    ));
+    )));
     await tester.pump();
 
     // 初期ツリーの「FOWデモ」Button → プラグインが fow.open を要求。

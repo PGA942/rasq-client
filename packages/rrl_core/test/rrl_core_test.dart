@@ -31,6 +31,30 @@ void main() {
       expect(const RrlNode(t: 'Nope').layer, RrlLayer.unknown);
     });
 
+    test('V11 タグ検証 (D-086): 装飾/構造ノードのタグは取り込み時に剥がれる', () {
+      final doc = RrlDocument.fromSnapshot({
+        'schema': 'rasq.boundary/1',
+        'scope': 's',
+        'type': 'snapshot',
+        'rev': 1,
+        'root': {
+          't': 'Column', 'k': 'root', 'tag': 'main_text', // 構造ノード → 剥がす
+          'c': [
+            {'t': 'RichText', 'k': 'body', 'tag': 'main_text', 'p': {'source': 'x'}}, // 内容ノード → 残す
+            {'t': 'Icon', 'k': 'deco', 'tag': 'pic', 'p': {'icon': 'star'}}, // 装飾 → 剥がす
+            {'t': 'Image', 'k': 'img', 'tag': 'pic', 'p': {'src': 'https://x/1.png'}}, // メディア → 残す
+            {'t': 'ActionBar', 'k': 'bar', 'tag': 'reaction', 'role': 'actionBar', 'p': {}},
+          ],
+        },
+      });
+      expect(doc.root.tag, isNull);
+      expect(doc.root.findByKey('body')!.tag, 'main_text');
+      expect(doc.root.findByKey('deco')!.tag, isNull);
+      expect(doc.root.findByKey('img')!.tag, 'pic');
+      expect(doc.root.findByKey('bar')!.tag, isNull);
+      expect(doc.root.findByKey('bar')!.role, 'actionBar'); // role は対象外
+    });
+
     test('RrlNodeId splits instanceScope and key at the last colon', () {
       final id = RrlNodeId.parse('$scope:post-sample-1');
       expect(id.instanceScope, scope);

@@ -1,0 +1,305 @@
+import 'dart:convert';
+
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:rasq_client/app/app.dart';
+import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/nodeprog/node_editor_screen.dart';
+import 'package:rasq_client/features/nodeprog/node_graph.dart';
+import 'package:rasq_client/features/nodeprog/node_tabs.dart';
+import 'package:rasq_client/features/nodeprog/composer_config_screen.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/mock/mock_data.dart';
+import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+
+import 'support/fakes.dart';
+
+/// D-090/D-092: ノードプログラミング画面 — TL 選択行の設定ボタンから開き、
+/// パレット(プラグインノードを検索、FOW 製)からタイルタップ → 詳細 →
+/// 追加、または長押しドラッグで追加。ノードはクリックでドロップダウン
+/// (情報/コピー/ペースト/削除)。グラフは KV(`nodeprog.<scope>`)に保存。
+void main() {
+  Future<ProviderContainer> pump(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [fakeSession().toJson()],
+        'current': fakeSession().account.key,
+      }),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+  }
+
+  Finder onCanvas(Finder f) => find.descendant(of: find.byType(NodeEditorScreen), matching: f);
+
+  // ノードキャンバスは TL の歯車からは開かなくなった (D-121: 簡略版の
+  // カスタマイズ画面が正面口。キャンバスは一旦無効化)ので、テストは
+  // ルート直指定で開く。
+  Future<void> openEditor(WidgetTester tester, ProviderContainer container, [String scope = 'tl.home']) async {
+    container.read(routerProvider).push(Routes.nodes(scope));
+    await tester.pumpAndSettle();
+  }
+
+  test('NodeGraph JSON 往復(データ形式付き)+ 接続可否', () {
+    const g = NodeGraph(
+      nodes: [
+        GraphNode(id: 'n1', type: 'clock', title: 'クロックメーカー', x: 10, y: 20, inputs: [NodePort(label: '間隔', value: '15秒', dataType: '数値')], outputs: [NodePort(label: 'クロック', dataType: 'クロック')]),
+      ],
+      edges: [GraphEdge(from: 'n1', fromPort: 0, to: 'n2', toPort: 1)],
+    );
+    final back = NodeGraph.fromJson((jsonDecode(jsonEncode(g.toJson())) as Map).cast<String, Object?>());
+    expect(back.nodes.single.inputs.single.value, '15秒');
+    expect(back.nodes.single.outputs.single.dataType, 'クロック');
+    expect(back.edges.single.toPort, 1);
+
+    // 形式ゲート (D-092): ジャンル一致が必須、format の食い違いも不可。
+    const posts = NodePort(label: '投稿リスト', dataType: '投稿リスト');
+    const clock = NodePort(label: 'クロック', dataType: 'クロック');
+    const dicText = NodePort(label: 'テキスト(.dic)', dataType: 'テキスト', format: '.dic');
+    const genericText = NodePort(label: 'テキスト', dataType: 'テキスト');
+    const csvText = NodePort(label: 'テキスト(.csv)', dataType: 'テキスト', format: '.csv');
+    expect(portsCompatible(posts, posts), isTrue);
+    expect(portsCompatible(clock, posts), isFalse); // 色(ジャンル)違い
+    expect(portsCompatible(genericText, dicText), isTrue); // 片側だけ形式指定は許容
+    expect(portsCompatible(csvText, dicText), isFalse); // 形式の食い違い
+  });
+
+  testWidgets('パレット FOW: タイルタップ → 詳細 → 追加 / 長押しドラッグ → 追加、KV に保存', (tester) async {
+    final container = await pump(tester);
+
+    // スコープ = tl.home のエディタを開く。
+    await openEditor(tester, container, 'tl.home');
+    expect(find.text('タイムラインをカスタマイズ'), findsOneWidget);
+
+    // パレットは FOW (D-092)。検索欄(検索ホームと同じデザイン)にフォーカス
+    // すると展開してタイルが見える。
+    expect(find.text('プラグインノードを検索'), findsOneWidget);
+    await tester.tap(find.text('プラグインノードを検索'));
+    await tester.pumpAndSettle();
+
+    // タイルには 1 行の入出力情報。タップで詳細 → 「キャンバスに追加」。
+    // (クロック/取得/タイムラインはデフォルト配置済み D-107 — 追加対象は
+    // ファイルリーダーにする。)
+    expect(find.textContaining('入力: 間隔(数値)'), findsOneWidget);
+    expect(onCanvas(find.text('クロックメーカー')), findsOneWidget); // デフォルトのフルチェーン
+    expect(onCanvas(find.text('タイムライン取得')), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'ファイルリーダー'); // 検索で絞る
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ファイルリーダー').last);
+    await tester.pumpAndSettle();
+    expect(find.text('キャンバスに追加'), findsOneWidget); // 詳細情報シート
+    expect(find.text('条件(下辺)'), findsNothing); // ファイルリーダーに条件接続部はない
+    await tester.tap(find.text('キャンバスに追加'));
+    await tester.pumpAndSettle();
+    expect(onCanvas(find.text('ファイルリーダー')), findsOneWidget);
+
+    // 長押しドラッグでキャンバスへ(ドラッグ中は FOW が最小表示へ)。
+    await tester.enterText(find.byType(TextField).last, 'ランダム'); // 検索し直す
+    await tester.pumpAndSettle();
+    final gesture = await tester.startGesture(tester.getCenter(find.text('ランダム').hitTestable().last)); // .first は検索欄の入力値
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    // FOW(下側)より上、かつクロックメーカーのカードに被らない位置へ。
+    await gesture.moveTo(const Offset(300, 170));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(onCanvas(find.text('ランダム')), findsOneWidget);
+
+    // KV に保存されている(scope = tl.home、アカウント分離 D-108)。
+    final saved = (await container.read(settingsAreaProvider('nodeprog.${fakeSession().account.key}.tl.home').future))['graph'];
+    expect(saved, isA<String>());
+    final graph = NodeGraph.fromJson((jsonDecode(saved! as String) as Map).cast<String, Object?>());
+    expect({for (final n in graph.nodes) n.type}, {'timeline', 'clock', 'tl.source', 'file', 'random'}); // フルチェーンがデフォルト配置 (D-107)
+
+    // ノードのクリック → ドロップダウン (D-092): コピー/ペースト/削除。
+    await tester.tap(onCanvas(find.text('ファイルリーダー')));
+    await tester.pumpAndSettle();
+    expect(find.text('ノード情報'), findsOneWidget);
+    expect(find.text('プラグインストアに移動'), findsOneWidget); // 一旦無効
+    await tester.tap(find.text('コピー'));
+    await tester.pumpAndSettle();
+    await tester.tap(onCanvas(find.text('ファイルリーダー')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ペースト'));
+    await tester.pumpAndSettle();
+    expect(onCanvas(find.text('ファイルリーダー')), findsNWidgets(2));
+
+    await tester.tap(onCanvas(find.text('ランダム')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('削除'));
+    await tester.pumpAndSettle();
+    expect(onCanvas(find.text('ランダム')), findsNothing);
+
+    // 戻って開き直してもノードが残る(ファイルリーダー×2)。
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    await openEditor(tester, container, 'tl.home');
+    expect(onCanvas(find.text('ファイルリーダー')), findsNWidgets(2));
+  });
+
+  testWidgets('D-099: 空白の長押し → カスタム関数の作成画面 → 作成でノードが置かれ、定義が残る', (tester) async {
+    final container = await pump(tester);
+    await openEditor(tester, container);
+
+    // キャンバスの空白を長押し → 作成画面。
+    await tester.longPressAt(const Offset(320, 420)); // デフォルトのタイムラインノードを避けた空白
+    await tester.pumpAndSettle();
+    expect(find.text('カスタム関数を作成'), findsOneWidget);
+
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'NGフィルタ');
+    await tester.pumpAndSettle();
+    // 入力元 = 条件、タグを 2 つ選ぶ → 下側分岐が 2 個になる。
+    await tester.tap(find.text('本文').last);
+    await tester.tap(find.text('画像').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('作成'));
+    await tester.pumpAndSettle();
+
+    // キャンバスにノードが置かれ、定義は KV に残る(パレットにも載る)。
+    expect(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('NGフィルタ')), findsOneWidget);
+    final defs = container.read(customFunctionsProvider);
+    expect(defs, hasLength(1));
+    expect(defs.single.name, 'NGフィルタ');
+    expect(defs.single.tags, containsAll(['本文', '画像']));
+    final saved = container.read(nodeCatalogProvider).where((e) => e.type == defs.single.id).single;
+    expect(saved.condBranches, hasLength(2));
+    expect(saved.genre, '関数');
+  });
+
+  testWidgets('D-119: パレット(検索)の先頭タイルからもカスタム関数を作成できる', (tester) async {
+    final container = await pump(tester);
+    await openEditor(tester, container);
+
+    // 検索欄フォーカスでパレットを展開 → 先頭に作成タイル → 作成ダイアログ。
+    await tester.tap(find.text('プラグインノードを検索'));
+    await tester.pumpAndSettle();
+    final createTile = find.text('カスタム関数を作成');
+    expect(createTile, findsOneWidget);
+    await tester.tap(createTile);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'パレット製');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('本文').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('作成'));
+    await tester.pumpAndSettle();
+
+    expect(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('パレット製')), findsOneWidget);
+    expect(container.read(customFunctionsProvider).single.name, 'パレット製');
+  });
+
+  testWidgets('D-101: タブ行 — +で追加(ホームにも出る)、現在タブクリックで名前編集、…で削除', (tester) async {
+    final container = await pump(tester);
+    // RAi は TL のタブ行では隠す (D-103) — エディタのパレット側にだけ出る。
+    expect(find.byTooltip('RAi(準備中)'), findsNothing);
+    await openEditor(tester, container);
+    expect(find.byTooltip('RAi(準備中)'), findsOneWidget); // パレット FOW 側
+
+    // 上側のタブ行(基本タブ)+ デフォルトのタイムラインノード。
+    final inEditor = find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('フォロー中'));
+    expect(inEditor, findsOneWidget);
+    expect(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('タイムライン')), findsWidgets);
+
+    // + でタブ追加 → 新スコープに切り替わる。
+    await tester.tap(find.byTooltip('タブを追加'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'マイTL');
+    await tester.tap(find.text('決定'));
+    await tester.pumpAndSettle();
+    expect(container.read(nodeTabsProvider), hasLength(1));
+    expect(find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('マイTL')), findsOneWidget);
+
+    // 今開いているタブをクリック → 名前編集(タブ行は横スクロールなので
+    // 端のタブは寄せてからタップ)。
+    final tabRow = find.descendant(of: find.byType(NodeEditorScreen), matching: find.byType(SingleChildScrollView)).first;
+    final myTab = find.descendant(of: find.byType(NodeEditorScreen), matching: find.text('マイTL'));
+    await tester.dragUntilVisible(myTab, tabRow, const Offset(-80, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(myTab);
+    await tester.pumpAndSettle();
+    expect(find.text('タブ名を変更'), findsOneWidget);
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), '推しTL');
+    await tester.tap(find.text('決定'));
+    await tester.pumpAndSettle();
+    expect(container.read(nodeTabsProvider).single.label, '推しTL');
+
+    // … メニューから削除(開いているタブ = 自分のタブ)。
+    await tester.tap(find.byTooltip('その他'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('タブを削除'));
+    await tester.pumpAndSettle();
+    expect(container.read(nodeTabsProvider), isEmpty);
+
+    // ホームのタブ列からも消えている。
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    expect(find.text('推しTL'), findsNothing);
+  });
+
+  testWidgets('D-096: パレット FOW を閉じても「ノードを検索」ボタンで開き直せる', (tester) async {
+    final container = await pump(tester);
+    await openEditor(tester, container);
+    expect(find.text('プラグインノードを検索'), findsOneWidget);
+
+    final manager = container.read(overlayManagerProvider);
+    manager.close(nodePaletteFowId);
+    await tester.pumpAndSettle();
+    expect(find.text('プラグインノードを検索'), findsNothing);
+
+    await tester.tap(find.byTooltip('ノードを検索'));
+    await tester.pumpAndSettle();
+    expect(find.text('プラグインノードを検索'), findsOneWidget);
+  });
+
+  testWidgets('コンポーザーの「投稿先のカスタマイズ」→ アカウントごとタブの絞り込み画面 (D-125)', (tester) async {
+    await pump(tester);
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('投稿先を選ぶ')); // アバタータップでタイル (D-091)
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('投稿先のカスタマイズ'));
+    await tester.pumpAndSettle();
+    // 完全に別ページ (D-126): タブ = アカウント、絞り込み系のみ。
+    expect(find.byType(ComposerConfigScreen), findsOneWidget);
+    expect(find.text('ポスト先の絞り込み'), findsOneWidget);
+    expect(find.text('フォーマット'), findsOneWidget); // D-131: FOW ではなくページ内
+    expect(find.text('バイパスしない'), findsOneWidget);
+    expect(find.text('ノードを追加'), findsWidgets); // D-131: ノード追加ボタン
+    // 下のセクションへスクロールして確認 (D-129/D-130/D-131)。
+    final page = find.descendant(of: find.byType(ComposerConfigScreen), matching: find.byType(ListView));
+    await tester.dragUntilVisible(find.text('投稿加工(正規表現)').first, page, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(find.text('投稿加工(正規表現)'), findsWidgets);
+    await tester.dragUntilVisible(find.text('連動投稿の届け方'), page, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(find.text('連動投稿の届け方'), findsOneWidget);
+    await tester.dragUntilVisible(find.textContaining('連動の絞り込み').first, page, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('連動元のアカウント'), findsOneWidget); // D-131
+    expect(find.textContaining('連動の絞り込み'), findsWidgets); // D-131
+    // 戻るで 1 ページ前へ帰れる(最初のタップはコンポーザー FOW の
+    // スクリムを閉じる)。
+    await tester.tap(find.byTooltip('戻る'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('戻る'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(find.byType(ComposerConfigScreen), findsNothing);
+  });
+}

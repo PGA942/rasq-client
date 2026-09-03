@@ -157,6 +157,7 @@ class MisskeySession extends SnsSessionBase {
 
   @override
   Future<Thread> thread(String id) async {
+    id = _actionTarget(id); // 純リノートは中身のスレッドへ (D-111)
     final target = await post(id);
     final conv = await api.callList('notes/conversation', {'noteId': id, 'limit': 30});
     final children = await api.callList('notes/children', {'noteId': id, 'limit': 30});
@@ -197,6 +198,7 @@ class MisskeySession extends SnsSessionBase {
 
   @override
   Future<ActionResult> performAction(String actionId, String postId, {Map<String, Object?> args = const {}}) async {
+    postId = _actionTarget(postId); // 純リノートは中身のノートへ (D-111)
     switch (actionId) {
       case 'reaction':
         final undo = args['undo'] == true;
@@ -280,10 +282,20 @@ class MisskeySession extends SnsSessionBase {
       // For pure renotes the displayed post is the inner note, but the row id is the renote id.
       if (raw['__chat'] == true) continue;
       final inner = raw['renote'] is Map && (raw['text'] == null || (raw['text'] as String).isEmpty) ? (raw['renote'] as Map).cast<String, Object?>() : raw;
+      // 純リノートのアクション読み替え (D-111): リアクション等は**中身の
+      // ノート**に付ける(公式クライアントの appearNote と同じ)。
+      if (!identical(inner, raw) && inner['id'] is String) {
+        _renoteTarget[page.items[i].id] = inner['id'] as String;
+      }
       states[page.items[i].id] = noteStates(inner, host: host);
     }
     return (page, states);
   }
+
+  /// 純リノートの行 id → 中身のノート id (D-111)。TL 取得時に採取。
+  final Map<String, String> _renoteTarget = {};
+
+  String _actionTarget(String postId) => _renoteTarget[postId] ?? postId;
 
   @override
   Future<Page<NotificationItem>> notifications({String? cursor, int limit = 20}) async {
@@ -450,6 +462,16 @@ class MisskeySession extends SnsSessionBase {
     );
   }
 
+  /// 自分がリアクションした投稿 (D-103: ノードの取得口)。
+  @override
+  Future<Page<Post>> reactedPosts({String? cursor, int limit = 20}) async {
+    final list = await api.callList('users/reactions', {'userId': await _myId(), 'limit': limit, 'untilId': ?cursor});
+    return Page(
+      items: [for (final r in list) if (r['note'] is Map) MisskeyMappers.note((r['note'] as Map).cast<String, Object?>(), viewer: account, host: host)],
+      nextCursor: list.isEmpty ? null : list.last['id'] as String?,
+    );
+  }
+
   @override
   Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) => _follows('users/followers', 'follower', id, cursor, limit);
   @override
@@ -594,6 +616,7 @@ class MisskeySession extends SnsSessionBase {
 
   @override
   Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30}) async {
+    postId = _actionTarget(postId); // D-111
     final list = await api.callList('notes/reactions', {'noteId': postId, 'type': ?type, 'limit': limit, 'untilId': ?cursor});
     final urls = <String, Uri>{};
     for (final r in list) {
@@ -608,6 +631,7 @@ class MisskeySession extends SnsSessionBase {
 
   @override
   Future<Page<UserSummary>> reposters(String postId, {String? cursor, int limit = 30}) async {
+    postId = _actionTarget(postId); // D-111
     final list = await api.callList('notes/renotes', {'noteId': postId, 'limit': limit, 'untilId': ?cursor});
     return Page(
       items: [for (final n in list) if (n['user'] is Map) MisskeyMappers.user((n['user'] as Map).cast<String, Object?>(), account: account, host: host)],
@@ -617,6 +641,7 @@ class MisskeySession extends SnsSessionBase {
 
   @override
   Future<Page<Post>> quotes(String postId, {String? cursor, int limit = 30}) async {
+    postId = _actionTarget(postId); // D-111
     final list = await api.callList('notes/renotes', {'noteId': postId, 'limit': limit, 'untilId': ?cursor});
     // 引用ノートのみ(本文/添付/CW のあるリノート)。純リノートは
     // reposters(リノートした人)側で見る (D-070)。

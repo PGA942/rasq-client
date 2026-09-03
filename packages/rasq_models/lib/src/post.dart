@@ -116,6 +116,34 @@ class Post {
   /// Canonical web URL of the post (リンクをコピー / 共有).
   final Uri? url;
 
+  /// 投稿加工プラグイン (D-083 `post.transform`) が本文/注釈を差し替える
+  /// ときに使う(他フィールドは加工対象外)。
+  Post copyWith({String? body, String? contentWarning}) => Post(
+        id: id,
+        account: account,
+        author: author,
+        createdAt: createdAt,
+        body: body ?? this.body,
+        bodyFormat: bodyFormat,
+        contentWarning: contentWarning ?? this.contentWarning,
+        media: media,
+        poll: poll,
+        quote: quote,
+        replyTo: replyTo,
+        replyToId: replyToId,
+        repostedBy: repostedBy,
+        linkUrl: linkUrl,
+        counts: counts,
+        visibility: visibility,
+        localOnly: localOnly,
+        directToIds: directToIds,
+        reactions: reactions,
+        reactionEmojis: reactionEmojis,
+        myReaction: myReaction,
+        source: source,
+        url: url,
+      );
+
   /// Store key: `accountKey:postId`.
   String get key => '${account.key}:$id';
 
