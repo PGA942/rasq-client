@@ -1,5 +1,6 @@
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rasq_store/rasq_store.dart' show FollowState;
 
 import 'wasm_timeline_plugin.dart';
 
@@ -44,8 +45,27 @@ class WasmSnsSession extends SnsSessionBase {
   /// 持てる — 独立 TL プラグインの常設インストールはストア統合(M4)側。
   late final WasmTimelinePlugin timelinePlugin = WasmTimelinePlugin(invoke: _invoke, extraArgs: extraArgs);
 
+  /// `sns.timelines` で宣言された基本 TL (D-134)。読み込み前 / 未実装の
+  /// プラグインは Misskey 参照実装に合わせたローカル TL 1 本に縮退する。
+  List<TimelineKind> _timelines = const [TimelineKind.local];
+
   @override
-  List<TimelineKind> get timelines => const [TimelineKind.local];
+  List<TimelineKind> get timelines => _timelines;
+
+  /// `call("sns.timelines")` → タブに並べる TL の宣言 (CONTRACT §6)。
+  /// SNS ごとに揃う TL が違うので、ホストは決め打ちせずここから受け取る。
+  Future<void> loadTimelines() async {
+    try {
+      final value = await _call('sns.timelines', const {});
+      final declared = <TimelineKind>[
+        for (final t in (value['timelines'] as List? ?? const []))
+          if (t is Map && t['id'] is String) TimelineKind(t['id'] as String, t['label'] as String? ?? '${t['id']}'),
+      ];
+      if (declared.isNotEmpty) _timelines = declared;
+    } on SnsApiException catch (e) {
+      if (e.code.code != 'C01') rethrow; // 未実装は既定のまま
+    }
+  }
 
   List<ActionDescriptor> _actions = const [];
 
@@ -87,9 +107,13 @@ class WasmSnsSession extends SnsSessionBase {
     // (TL 画面はこの await 後に session.actions を読むので間に合う)。
     if (!_actionsLoaded) {
       _actionsLoaded = true;
+      // 宣言が取れなくても TL は出す(バー無し / 既定の TL 一覧)。
       try {
         await loadActions();
-      } catch (_) {} // 宣言が取れなくてもバー無しで TL は出す
+      } catch (_) {}
+      try {
+        await loadTimelines();
+      } catch (_) {}
     }
     final value = await _call('sns.timeline', {'kind': kind.id, 'limit': limit, 'cursor': ?cursor});
     final page = (value['page'] as Map? ?? const {}).cast<String, Object?>();
@@ -239,5 +263,156 @@ class WasmSnsSession extends SnsSessionBase {
       return Uri.https(host, '/emoji/$name.webp');
     }
     return null;
+  }
+
+  // ── 通知 (D-134) ────────────────────────────────────────────────
+
+  @override
+  Future<Page<NotificationItem>> notifications({String? cursor, int limit = 20}) async {
+    final value = await _call('sns.notifications', {'limit': limit, 'cursor': ?cursor});
+    return SnsWire.notificationPageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  @override
+  Future<void> markNotificationsRead() async {
+    await _call('sns.markNotificationsRead', const {});
+  }
+
+  // ── 関係(フォロー/ミュート/ブロック)(D-134) ────────────────────
+
+  static FollowState _followState(Map<String, Object?> j) => FollowState(
+        following: j['following'] == true,
+        followedBy: j['followedBy'] == true,
+        requested: j['requested'] == true,
+        muted: j['muted'] == true,
+        blocked: j['blocked'] == true,
+        blockedBy: j['blockedBy'] == true,
+      );
+
+  @override
+  Future<Map<String, FollowState>> relationships(List<String> userIds) async {
+    if (userIds.isEmpty) return const {};
+    final value = await _call('sns.relationships', {'ids': userIds});
+    final states = (value['states'] as Map? ?? const {}).cast<String, Object?>();
+    return {
+      for (final e in states.entries)
+        if (e.value is Map) e.key: _followState((e.value as Map).cast<String, Object?>()),
+    };
+  }
+
+  @override
+  Future<FollowState> relationship(String userId) async => (await relationships([userId]))[userId] ?? const FollowState();
+
+  /// 3 つのセッターは 1 本の `sns.setRelation` に写す。戻りは**サーバーを
+  /// 読み直した状態**なので、鍵アカウントへのフォローは `requested` で返る。
+  Future<FollowState> _setRelation(String userId, String relation, bool on) async {
+    final value = await _call('sns.setRelation', {'id': userId, 'relation': relation, 'on': on});
+    return _followState((value['state'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<FollowState> setFollowing(String userId, bool following) => _setRelation(userId, 'following', following);
+
+  @override
+  Future<FollowState> setMuted(String userId, bool muted) => _setRelation(userId, 'muted', muted);
+
+  @override
+  Future<FollowState> setBlocked(String userId, bool blocked) => _setRelation(userId, 'blocked', blocked);
+
+  Future<Page<UserSummary>> _follows(String id, String direction, String? cursor, int limit) async {
+    final value = await _call('sns.follows', {'id': id, 'direction': direction, 'limit': limit, 'cursor': ?cursor});
+    return SnsWire.userPageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<Page<UserSummary>> followers(String id, {String? cursor, int limit = 20}) => _follows(id, 'followers', cursor, limit);
+
+  @override
+  Future<Page<UserSummary>> following(String id, {String? cursor, int limit = 20}) => _follows(id, 'following', cursor, limit);
+
+  /// muted / blocked / followRequests は同じ「人の一覧」なので、境界では
+  /// 1 本の `sns.userList` に束ねてある。
+  Future<Page<UserSummary>> _userList(String kind, String? cursor, int limit) async {
+    final value = await _call('sns.userList', {'kind': kind, 'limit': limit, 'cursor': ?cursor});
+    return SnsWire.userPageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<Page<UserSummary>> mutedUsers({String? cursor, int limit = 30}) => _userList('muted', cursor, limit);
+
+  @override
+  Future<Page<UserSummary>> blockedUsers({String? cursor, int limit = 30}) => _userList('blocked', cursor, limit);
+
+  @override
+  Future<List<FollowRequest>> followRequests() async {
+    final page = await _userList('followRequests', null, 50);
+    // 申請 id は Misskey では相手のユーザー id で足りる(accept/reject が
+    // userId を取る)。id を別に持つ SNS は将来ワイヤへ足す。
+    return [for (final u in page.items) FollowRequest(id: u.id, user: u)];
+  }
+
+  @override
+  Future<void> acceptFollowRequest(String userId) async {
+    await _call('sns.resolveFollowRequest', {'id': userId, 'accept': true});
+  }
+
+  @override
+  Future<void> rejectFollowRequest(String userId) async {
+    await _call('sns.resolveFollowRequest', {'id': userId, 'accept': false});
+  }
+
+  @override
+  Future<void> reportUser(String userId, String comment) async {
+    await _call('sns.reportUser', {'id': userId, 'comment': comment});
+  }
+
+  // ── 検索 / トレンド / お気に入り (D-134) ──────────────────────────
+
+  @override
+  Future<Page<Post>> searchPosts(String query, {String? cursor, int limit = 20}) async {
+    final value = await _call('sns.search', {'kind': 'posts', 'q': query, 'limit': limit, 'cursor': ?cursor});
+    return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  @override
+  Future<Page<UserSummary>> searchUsers(String query, {String? cursor, int limit = 20}) async {
+    final value = await _call('sns.search', {'kind': 'users', 'q': query, 'limit': limit, 'cursor': ?cursor});
+    return SnsWire.userPageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<List<TrendTag>> trendingTags() async {
+    final value = await _call('sns.trendingTags', const {});
+    return [
+      for (final t in (value['tags'] as List? ?? const []))
+        if (t is Map && t['tag'] is String) TrendTag(tag: t['tag'] as String, usersCount: (t['count'] as num?)?.toInt()),
+    ];
+  }
+
+  @override
+  Future<Page<Post>> favorites({String? cursor, int limit = 20}) async {
+    final value = await _call('sns.favorites', {'limit': limit, 'cursor': ?cursor});
+    return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  // ── DM (CONTRACT §7, D-134) ─────────────────────────────────────
+
+  @override
+  Future<List<DmRoom>> dmRooms() async {
+    final value = await _call('sns.dmRooms', const {});
+    return [
+      for (final r in (value['rooms'] as List? ?? const []))
+        if (r is Map) SnsWire.dmRoomFrom(r.cast<String, Object?>(), account: account),
+    ];
+  }
+
+  @override
+  Future<Post> sendDm(DmRoom room, NewPost draft) async {
+    final value = await _call('sns.sendDm', {
+      'roomKind': room.kind.name,
+      'peerId': room.peer.id,
+      'draft': SnsWire.newPost(draft),
+    });
+    return SnsWire.postFrom((value['post'] as Map? ?? const {}).cast<String, Object?>(), account: account);
   }
 }

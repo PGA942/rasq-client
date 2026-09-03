@@ -21,6 +21,9 @@ dependencies:
     path: ../rasq_models
   rasq_plugin_api:
     path: ../rasq_plugin_api
+  # FollowState(関係の状態)— sns.relationships / sns.setRelation の取り込み先。
+  rasq_store:
+    path: ../rasq_store
   # SDK repo checkout, side by side with rasq-client (M3 scaffolding; becomes
   # a hosted/git dependency once the SDK stabilises).
   rasq_wasm_runtime:

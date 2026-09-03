@@ -1,1 +1,1 @@
-{"format-version":[1,0,0],"native-assets":{"macos_arm64":{"package:rasq_wasm_runtime/rasq_wasm_runtime_bindings_generated.dart":["absolute","/Users/xepos/Documents/rasq-client/packages/plugin_runtime/build/native_assets/macos/librasq_wasm_runtime_core.dylib"]}}}
+{"format-version":[1,0,0],"native-assets":{"linux_x64":{"package:rasq_wasm_runtime/rasq_wasm_runtime_bindings_generated.dart":["absolute","/workspace/rasq-client/packages/plugin_runtime/build/native_assets/linux/librasq_wasm_runtime_core.so"]}}}

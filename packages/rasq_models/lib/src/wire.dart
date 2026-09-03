@@ -1,5 +1,7 @@
 import 'account.dart';
+import 'dm.dart';
 import 'media.dart';
+import 'notification.dart';
 import 'page.dart';
 import 'post.dart';
 import 'profile.dart';
@@ -209,5 +211,52 @@ abstract final class SnsWire {
         post: postFrom((j['post'] as Map? ?? const {}).cast<String, Object?>(), account: account),
         ancestors: [for (final a in (j['ancestors'] as List? ?? const [])) postFrom((a as Map).cast<String, Object?>(), account: account)],
         descendants: [for (final d in (j['descendants'] as List? ?? const [])) postFrom((d as Map).cast<String, Object?>(), account: account)],
+      );
+
+  // ── 通知 / DM (D-134) ────────────────────────────────────────────
+
+  /// 通知ワイヤ → [NotificationItem]。
+  ///
+  /// `actors` はグループ通知を畳んだ配列(単体通知は 1 件)、
+  /// `reactionsByActor` は actor id → リアクション文字列。未知の `kind` は
+  /// [NotificationKind.other] に倒す — プラグインが新しい種別を返しても
+  /// ホストは落ちず、アクションタイルとして描く。
+  static NotificationItem notificationFrom(Map<String, Object?> j, {required AccountId account}) => NotificationItem(
+        id: '${j['id']}',
+        account: account,
+        kind: NotificationKind.values.asNameMap()['${j['kind']}'] ?? NotificationKind.other,
+        createdAt: DateTime.tryParse('${j['createdAt']}')?.toLocal() ?? DateTime.now(),
+        actors: [
+          for (final a in (j['actors'] as List? ?? const []))
+            if (a is Map) userFrom(a.cast<String, Object?>()),
+        ],
+        post: j['post'] is Map ? postFrom((j['post'] as Map).cast<String, Object?>(), account: account) : null,
+        reaction: j['reaction'] as String?,
+        read: j['read'] == true,
+        reactionsByActor: {
+          for (final e in ((j['reactionsByActor'] as Map?) ?? const {}).entries)
+            if (e.value is String) '${e.key}': e.value as String,
+        },
+        title: j['title'] as String?,
+        body: j['body'] as String?,
+      );
+
+  static Page<NotificationItem> notificationPageFrom(Map<String, Object?> j, {required AccountId account}) => Page(
+        items: [
+          for (final n in (j['items'] as List? ?? const []))
+            if (n is Map) notificationFrom(n.cast<String, Object?>(), account: account),
+        ],
+        nextCursor: j['nextCursor'] as String?,
+      );
+
+  /// DM ルームワイヤ → [DmRoom] (CONTRACT §7)。`kind` は `direct`
+  /// (限定公開投稿を束ねたもの)か `chat`(ネイティブ Chat)。
+  static DmRoom dmRoomFrom(Map<String, Object?> j, {required AccountId account}) => DmRoom(
+        id: '${j['id']}',
+        kind: DmRoomKind.values.asNameMap()['${j['kind']}'] ?? DmRoomKind.direct,
+        peer: userFrom(((j['peer'] as Map?) ?? const {}).cast<String, Object?>()),
+        lastPost: j['lastPost'] is Map ? postFrom((j['lastPost'] as Map).cast<String, Object?>(), account: account) : null,
+        unreadCount: (j['unreadCount'] as num?)?.toInt() ?? 0,
+        title: j['title'] as String?,
       );
 }

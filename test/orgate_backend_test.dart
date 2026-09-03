@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show SocketException;
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' show sha512;
@@ -32,11 +32,23 @@ void main() {
   const detailJson = '''
 {"id":"jp.rasq.misskey-wasm-sample","name":"Misskey コネクタ","summary":"Misskey を RASQ に繋ぐ SNS プラグイン(wasm サンプル)。","version":"0.5.0","status":"published","origin":"official","rating":5.0,"downloads":1,"sizeMb":0.26,"hasAds":false,"price":0.0,"description":"rasq-sdk-sample の Rust 製 wasm プラグイン。","screenshots":[],"channel":"stable","updatedAt":"2026-09-03T05:46:26.584304Z","safety":{"crashFreeRate":0.998,"dataHandling":"投稿・トークンは端末内にのみ保存。","externalHosts":["<ログインした Misskey インスタンス>"],"permissions":[{"permission":"network","reason":"Misskey インスタンスの API を呼ぶため"},{"permission":"storage.safe","reason":"セッショントークンと TL 設定の保存"}],"rasqFeatures":["タイムライン描画 (RRL)","ノードグラフ (tl.sort)","投稿加工 (post.transform)"]},"compatibility":{"os":["ios","android","macos","windows","linux"],"rasqVersion":">=0.1.0"},"developer":{"name":"RASQ Project"}}''';
 
-  // 実物の misskey_wasm_sample.wasm に対する、サーバー(Rust ed25519-dalek)の署名。
+  // ── サーバー(Rust ed25519-dalek)が実際に作った署名 ────────────────
+  //
+  // 中身は固定のバイト列。**同梱 wasm ではなく専用のフィクスチャ**にして
+  // あるのは、プラグインを 1 行直すたびにこの定数を採り直す羽目になるのを
+  // 避けるため。検証したい性質(サーバーが作った署名を Dart 側が検証できる)
+  // はどちらでも同じ。
+  const fixtureBytes = 'rasq-artifact-fixture-v1\n';
+  const fixtureSha512 =
+      '55ba084367bde9c56e6a1b64ddca15bdd343ef21af28ad7e33a843683fe4e990645117ea36b77fa60cf75efaf17dc99648e7d6178a7d8a6553f7d827f774a636';
+  const fixtureSignature = 'vOv3lLKaCO0PWXMkaB5pYdg1j7LbzssNKNBK/Ansi/2ILMp/3lAQ+5B0WhSoTbGYMi8jR2CWxg32laV8ybyRBQ==';
+  const storePublicKey = 'MrtN8nNtaruCxzB0HN7q/zQzTj4Pj/fDiUURQ7xEz6E=';
+
+  // manifest フィクスチャに載る配布物のハッシュ(採取時点の wasm)。
+  // JSON の読み取りだけを確かめるので、実ファイルと一致している必要はない。
   const bundleSha512 =
       '2ee69e8aaefb2bd452ba3979f2804c8f92bcaad99000c74c45b22af26cd84c72c26c6407f9b7e43a84b36b1d7395ac2eadd0d9fb88938ad5af2f117ca5efa9fc';
   const bundleSignature = 'E9TWd8zgH8RAffL2GAUVZ/kSOgjvKjyOe//xllmALnOKEvpI3DcZ10PEl1y3qeA191HhzV65E3zr65NC8iQjCA==';
-  const storePublicKey = 'MrtN8nNtaruCxzB0HN7q/zQzTj4Pj/fDiUURQ7xEz6E=';
 
   const manifestJson = '''
 {"pluginId":"jp.rasq.misskey-wasm-sample","version":"0.5.0","channel":"stable","manifest":{"id":"jp.rasq.misskey-wasm-sample","kind":"sns","name":"Misskey コネクタ","official":true,"permissions":["network","storage.safe","register_action","transform_content"],"supportedSns":["misskey"],"verified":true,"version":"0.5.0"},"permissionsAdded":[],"artifacts":[{"id":"bundle","kind":"bundle","sizeBytes":269990,"sha512":"$bundleSha512","signature":"$bundleSignature","lazy":false}],"storePublicKey":"$storePublicKey"}''';
@@ -158,23 +170,19 @@ void main() {
   });
 
   group('配布物の検証 (D-034)', () {
-    /// 実物の wasm サンプル。テストは pubspec のあるディレクトリで動く。
-    final wasm = File('assets/plugins/misskey_wasm_sample.wasm');
+    final fixture = Uint8List.fromList(utf8.encode(fixtureBytes));
+    const artifact = StoreArtifact(id: 'fixture', kind: 'asset', sizeBytes: 25, sha512: fixtureSha512, signature: fixtureSignature);
 
     test('サーバー(Rust ed25519-dalek)の署名を Dart 側が検証できる', () async {
-      final bytes = Uint8List.fromList(await wasm.readAsBytes());
-      expect(sha512.convert(bytes).toString(), bundleSha512, reason: '同梱 wasm が採取時と同じであること');
-
-      const artifact = StoreArtifact(id: 'bundle', sizeBytes: 269990, sha512: bundleSha512, signature: bundleSignature);
-      final r = await verifyArtifact(bytes: bytes, artifact: artifact, storePublicKey: storePublicKey);
+      expect(sha512.convert(fixture).toString(), fixtureSha512);
+      final r = await verifyArtifact(bytes: fixture, artifact: artifact, storePublicKey: storePublicKey);
       expect(r.ok, isTrue, reason: r.message);
       expect(r.signatureChecked, isTrue);
     });
 
     test('1 バイト違えば SHA-512 で落ちる', () async {
-      final bytes = Uint8List.fromList([...await wasm.readAsBytes(), 0]);
-      const artifact = StoreArtifact(id: 'bundle', sizeBytes: 269990, sha512: bundleSha512, signature: bundleSignature);
-      final r = await verifyArtifact(bytes: bytes, artifact: artifact, storePublicKey: storePublicKey);
+      final tampered = Uint8List.fromList([...fixture, 0]);
+      final r = await verifyArtifact(bytes: tampered, artifact: artifact, storePublicKey: storePublicKey);
       expect(r.ok, isFalse);
       expect(r.message, contains('SHA-512'));
     });
