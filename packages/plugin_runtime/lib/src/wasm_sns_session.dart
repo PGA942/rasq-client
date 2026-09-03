@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart' show FollowState;
@@ -414,5 +417,176 @@ class WasmSnsSession extends SnsSessionBase {
       'draft': SnsWire.newPost(draft),
     });
     return SnsWire.postFrom((value['post'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  // ── メディア / プロフィール (D-136) ─────────────────────────────
+
+  @override
+  Future<MediaItem> uploadMedia(Uint8List bytes, String filename, {String? mimeType, bool sensitive = false, String? alt}) async {
+    // バイト列は base64 で境界を渡る(host-fn の `body: {b64}` と同じ規約)。
+    // multipart の組み立てはプラグイン側 — SNS ごとにフィールド名が違うので、
+    // 境界に multipart 専用の口を作るより面が増えない。
+    final value = await _call('sns.uploadMedia', {
+      'bytesB64': base64Encode(bytes),
+      'filename': filename,
+      'mimeType': ?mimeType,
+      'sensitive': sensitive,
+      'alt': ?alt,
+    });
+    return SnsWire.mediaFrom((value['media'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<UserProfile> updateProfile(ProfileUpdate update) async {
+    final value = await _call('sns.updateProfile', {
+      'update': {
+        'displayName': ?update.displayName,
+        'description': ?update.description,
+        'location': ?update.location,
+        'birthday': ?update.birthday,
+        'avatarMediaId': ?update.avatarMediaId,
+        'bannerMediaId': ?update.bannerMediaId,
+        if (update.fields != null) 'fields': [for (final f in update.fields!) {'name': f.name, 'value': f.value}],
+      },
+    });
+    return SnsWire.profileFrom((value['profile'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  // ── ユーザー一括 / リアクション済み (D-136) ──────────────────────
+
+  @override
+  Future<List<UserProfile>> users(List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    final value = await _call('sns.users', {'ids': ids});
+    return [
+      for (final p in (value['profiles'] as List? ?? const []))
+        if (p is Map) SnsWire.profileFrom(p.cast<String, Object?>(), account: account),
+    ];
+  }
+
+  @override
+  Future<Page<Post>> reactedPosts({String? cursor, int limit = 20}) async {
+    final value = await _call('sns.reactedPosts', {'limit': limit, 'cursor': ?cursor});
+    return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  // ── リスト (D-136) ──────────────────────────────────────────────
+
+  static UserListInfo _listFrom(Map<String, Object?> j) => UserListInfo(
+        id: '${j['id']}',
+        name: '${j['name'] ?? ''}',
+        memberIds: [for (final id in (j['memberIds'] as List? ?? const [])) '$id'],
+        description: j['description'] as String?,
+        isPublic: j['isPublic'] == true,
+      );
+
+  @override
+  Future<List<UserListInfo>> lists() async {
+    final value = await _call('sns.lists', const {});
+    return [
+      for (final l in (value['lists'] as List? ?? const []))
+        if (l is Map) _listFrom(l.cast<String, Object?>()),
+    ];
+  }
+
+  @override
+  Future<UserListInfo> listInfo(String listId) async {
+    final value = await _call('sns.listInfo', {'id': listId});
+    return _listFrom((value['list'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<List<UserSummary>> listMembers(String listId) async {
+    final value = await _call('sns.listMembers', {'id': listId});
+    return [
+      for (final u in (value['users'] as List? ?? const []))
+        if (u is Map) SnsWire.userFrom(u.cast<String, Object?>()),
+    ];
+  }
+
+  @override
+  Future<UserListInfo> createList(String name) async {
+    final value = await _call('sns.createList', {'name': name});
+    return _listFrom((value['list'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<void> addToList(String listId, String userId) async {
+    await _call('sns.updateListMember', {'listId': listId, 'userId': userId, 'add': true});
+  }
+
+  @override
+  Future<void> removeFromList(String listId, String userId) async {
+    await _call('sns.updateListMember', {'listId': listId, 'userId': userId, 'add': false});
+  }
+
+  // ── クリップ / Play (D-136) ─────────────────────────────────────
+  //
+  // どちらも SNS 固有の機能。持たないプラグインは C01 を返し、
+  // [SnsApiException] のまま上がってホストが該当タブ/メニューを隠す。
+
+  static ClipInfo _clipFrom(Map<String, Object?> j) => ClipInfo(
+        id: '${j['id']}',
+        name: '${j['name'] ?? ''}',
+        description: j['description'] as String?,
+        isPublic: j['isPublic'] == true,
+        notesCount: (j['notesCount'] as num?)?.toInt(),
+      );
+
+  @override
+  Future<List<ClipInfo>> clips({String? userId}) async {
+    final value = await _call('sns.clips', {'userId': ?userId});
+    return [
+      for (final c in (value['clips'] as List? ?? const []))
+        if (c is Map) _clipFrom(c.cast<String, Object?>()),
+    ];
+  }
+
+  @override
+  Future<ClipInfo> clipInfo(String clipId) async {
+    final value = await _call('sns.clipInfo', {'clipId': clipId});
+    return _clipFrom((value['clip'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<Page<Post>> clipNotes(String clipId, {String? cursor, int limit = 20}) async {
+    final value = await _call('sns.clipNotes', {'clipId': clipId, 'limit': limit, 'cursor': ?cursor});
+    return SnsWire.pageFrom((value['page'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+  }
+
+  @override
+  Future<ClipInfo> createClip(String name, {String? description, bool isPublic = false}) async {
+    final value = await _call('sns.createClip', {'name': name, 'description': ?description, 'isPublic': isPublic});
+    return _clipFrom((value['clip'] as Map? ?? const {}).cast<String, Object?>());
+  }
+
+  @override
+  Future<void> deleteClip(String clipId) async {
+    await _call('sns.deleteClip', {'clipId': clipId});
+  }
+
+  @override
+  Future<void> addToClip(String clipId, String postId) async {
+    await _call('sns.updateClipNote', {'clipId': clipId, 'postId': _actionTarget(postId), 'add': true});
+  }
+
+  @override
+  Future<void> removeFromClip(String clipId, String postId) async {
+    await _call('sns.updateClipNote', {'clipId': clipId, 'postId': _actionTarget(postId), 'add': false});
+  }
+
+  @override
+  Future<List<PlayInfo>> userPlays(String userId) async {
+    final value = await _call('sns.userPlays', {'userId': userId});
+    return [
+      for (final p in (value['plays'] as List? ?? const []))
+        if (p is Map && p['url'] is String)
+          PlayInfo(
+            id: '${p['id']}',
+            title: '${p['title'] ?? ''}',
+            summary: p['summary'] as String?,
+            url: Uri.parse(p['url'] as String),
+          ),
+    ];
   }
 }

@@ -10,19 +10,31 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 /// (PROTOCOL §4.1); async host functions are the planned v2.
 @immutable
 class SyncFetchRequest {
-  const SyncFetchRequest({required this.method, required this.url, this.headers = const {}, this.body});
+  const SyncFetchRequest({required this.method, required this.url, this.headers = const {}, this.body, this.bodyBytes});
   final String method;
   final Uri url;
   final Map<String, String> headers;
+
+  /// UTF-8 のボディ。バイナリを送るときは [bodyBytes] を使う。
   final String? body;
+
+  /// バイナリのボディ(host-fn schema の `body: {b64}`)。multipart の
+  /// メディアアップロードはプラグインが本体を組み立ててここへ載せる —
+  /// ホストは中身を解釈しない。
+  final Uint8List? bodyBytes;
 }
 
 @immutable
 class SyncFetchResponse {
-  const SyncFetchResponse({required this.status, this.headers = const {}, this.bodyText});
+  const SyncFetchResponse({required this.status, this.headers = const {}, this.bodyText, this.bodyBytes});
   final int status;
   final Map<String, String> headers;
+
+  /// UTF-8 として読めた応答。
   final String? bodyText;
+
+  /// UTF-8 として読めなかった応答(画像など)。`bodyB64` として渡る。
+  final Uint8List? bodyBytes;
 }
 
 typedef SyncFetch = SyncFetchResponse Function(SyncFetchRequest request);
@@ -37,23 +49,43 @@ typedef FowHostRelay = Object? Function(String fn, Map<String, Object?> args);
 /// request (run plugin work off the UI isolate or accept the jank). Mobile
 /// needs the async v2 boundary — this throws where `curl` is unavailable.
 SyncFetchResponse curlSyncFetch(SyncFetchRequest request) {
-  final args = <String>[
-    '-sS',
-    '--max-time', '15',
-    '-X', request.method,
-    for (final e in request.headers.entries) ...['-H', '${e.key}: ${e.value}'],
-    if (request.body != null) ...['--data', request.body!],
-    '-w', r'\n%{http_code}',
-    request.url.toString(),
-  ];
-  final result = Process.runSync('curl', args, stdoutEncoding: utf8, stderrEncoding: utf8);
-  if (result.exitCode != 0) {
-    throw ProcessException('curl', args, result.stderr.toString(), result.exitCode);
+  // バイナリはコマンドラインに載せられないので一時ファイル経由。応答も
+  // バイト列で受けたいので、ステータスは -w で別ファイルへ書かせる。
+  final tmp = Directory.systemTemp.createTempSync('rasq-fetch');
+  try {
+    final bodyFile = File('${tmp.path}/body');
+    final outFile = File('${tmp.path}/out');
+    if (request.bodyBytes != null) {
+      bodyFile.writeAsBytesSync(request.bodyBytes!);
+    } else if (request.body != null) {
+      bodyFile.writeAsStringSync(request.body!);
+    }
+    final hasBody = request.bodyBytes != null || request.body != null;
+    final args = <String>[
+      '-sS',
+      '--max-time', '15',
+      '-X', request.method,
+      for (final e in request.headers.entries) ...['-H', '${e.key}: ${e.value}'],
+      if (hasBody) ...['--data-binary', '@${bodyFile.path}'],
+      '-o', outFile.path,
+      '-w', '%{http_code}',
+      request.url.toString(),
+    ];
+    final result = Process.runSync('curl', args, stdoutEncoding: utf8, stderrEncoding: utf8);
+    if (result.exitCode != 0) {
+      throw ProcessException('curl', args, result.stderr.toString(), result.exitCode);
+    }
+    final status = int.tryParse(result.stdout.toString().trim()) ?? 0;
+    final bytes = outFile.existsSync() ? outFile.readAsBytesSync() : Uint8List(0);
+    try {
+      return SyncFetchResponse(status: status, bodyText: utf8.decode(bytes));
+    } on FormatException {
+      // UTF-8 で読めない = バイナリ応答。
+      return SyncFetchResponse(status: status, bodyBytes: bytes);
+    }
+  } finally {
+    tmp.deleteSync(recursive: true);
   }
-  final out = result.stdout.toString();
-  final cut = out.lastIndexOf('\n');
-  final status = int.tryParse(out.substring(cut + 1).trim()) ?? 0;
-  return SyncFetchResponse(status: status, bodyText: out.substring(0, cut < 0 ? 0 : cut));
 }
 
 /// Serves a plugin's host-function calls (`rasq.hostfn/1` request JSON →
@@ -140,16 +172,33 @@ class RasqHostEnvironment {
         }
         final SyncFetchResponse res;
         try {
+          // ボディは UTF-8 文字列か、バイナリの base64 (`{b64}`)。
+          final rawBody = args['body'];
+          Uint8List? bodyBytes;
+          if (rawBody is Map && rawBody['b64'] is String) {
+            try {
+              bodyBytes = base64Decode(rawBody['b64'] as String);
+            } catch (e) {
+              throw _HostFnError('D01', 'bad body base64: $e');
+            }
+          }
           res = fetcher(SyncFetchRequest(
             method: '${args['method'] ?? 'GET'}',
             url: url,
             headers: (args['headers'] as Map?)?.cast<String, String>() ?? const {},
-            body: args['body'] as String?,
+            body: rawBody is String ? rawBody : null,
+            bodyBytes: bodyBytes,
           ));
         } catch (e) {
+          if (e is _HostFnError) rethrow;
           throw _HostFnError('B01', 'fetch failed: $e');
         }
-        return {'status': res.status, 'headers': res.headers, 'bodyText': res.bodyText};
+        return {
+          'status': res.status,
+          'headers': res.headers,
+          'bodyText': res.bodyText,
+          if (res.bodyBytes != null) 'bodyB64': base64Encode(res.bodyBytes!),
+        };
       case RasqHostFns.alert:
         final confirmed = onAlert?.call('${args['title'] ?? ''}', '${args['message'] ?? ''}') ?? true;
         return {'confirmed': confirmed};

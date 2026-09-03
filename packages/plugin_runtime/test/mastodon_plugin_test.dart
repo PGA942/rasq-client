@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
@@ -280,6 +281,40 @@ void main() {
         s.session.quotes('s1'),
         throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'C01')),
       );
+    });
+
+    test('クリップ / Play は Mastodon に無いので C01 → ホストがタブを隠す', () async {
+      final s = sessionWith(const {});
+      await expectLater(s.session.clips(), throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'C01')));
+      await expectLater(s.session.userPlays('u1'), throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'C01')));
+    });
+
+    test('sns.uploadMedia: multipart がバイナリのまま渡り、v2 の media を返す', () async {
+      final jpeg = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0xFF, 0xFE]);
+      SyncFetchRequest? seen;
+      final env = RasqHostEnvironment(fetch: (req) {
+        seen = req;
+        return const SyncFetchResponse(
+          status: 200,
+          bodyText: '{"id":"m9","type":"image","url":"https://x.test/m9.jpg","preview_url":"https://x.test/m9s.jpg","description":"写真"}',
+        );
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(account: viewer, extraArgs: const {'host': 'mastodon.example', 'token': 'tok'}, invoke: (fn, a) async => controller.invoke(fn, a));
+
+      final media = await session.uploadMedia(jpeg, 'photo.jpg', mimeType: 'image/jpeg', alt: '写真');
+      expect(media.id, 'm9');
+      expect(media.type, MediaType.image);
+      expect(media.alt, '写真');
+      expect(seen!.url.path, '/api/v2/media');
+      expect(seen!.bodyBytes, isNotNull);
+      // Mastodon はトークンをヘッダーで渡す(Misskey はフィールド)。
+      expect(seen!.headers['Authorization'], 'Bearer tok');
+      final asText = latin1.decode(seen!.bodyBytes!);
+      expect(asText, contains('name="file"; filename="photo.jpg"'));
+      expect(asText, contains('name="description"'));
     });
 
     test('HTTP エラーはコード付きの SnsApiException になる', () async {

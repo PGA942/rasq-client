@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -287,6 +288,112 @@ void main() {
       expect(call(env, 'fow.close', const {})['error']['code'], 'D01');
       expect(call(RasqHostEnvironment(), 'fow.open', {'id': 'x', 'spec': {'type': 'widget'}, 'root': root})['error']['code'], 'E01'); // 未配線
     });
+  });
+
+  group('メディア / リスト / クリップ (D-136)', () {
+    const viewer = AccountId(kind: SnsKind.misskey, instance: 'misskey.example', handle: 'me');
+
+    test('sns.uploadMedia: multipart 本体がバイナリのまま境界を渡る', () async {
+      // PNG のマジックナンバー + UTF-8 にならないバイト。文字列経路だと壊れる。
+      final png = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0xFF, 0xFE]);
+      SyncFetchRequest? seen;
+      final env = RasqHostEnvironment(fetch: (req) {
+        seen = req;
+        return const SyncFetchResponse(
+          status: 200,
+          bodyText: '{"id":"f1","type":"image/png","url":"https://x.test/f1.png","thumbnailUrl":"https://x.test/f1s.png","isSensitive":true,"comment":"ロケット","name":"rocket.png"}',
+        );
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(
+        account: viewer,
+        extraArgs: const {'host': 'misskey.example', 'token': 'tok'},
+        invoke: (fn, a) async => controller.invoke(fn, a),
+      );
+
+      final media = await session.uploadMedia(png, 'rocket.png', mimeType: 'image/png', sensitive: true, alt: 'ロケット');
+
+      expect(media.id, 'f1');
+      expect(media.type, MediaType.image);
+      expect(media.sensitive, isTrue);
+      expect(media.alt, 'ロケット');
+
+      // multipart として組み立てられ、**生バイトがそのまま**入っている。
+      expect(seen!.headers['Content-Type'], startsWith('multipart/form-data; boundary='));
+      expect(seen!.bodyBytes, isNotNull, reason: 'バイナリ経路 ({b64}) を通ること');
+      expect(seen!.body, isNull);
+      final body = seen!.bodyBytes!;
+      expect(_indexOfBytes(body, png), greaterThan(0), reason: '画像のバイト列が壊れずに載っている');
+      final asText = latin1.decode(body);
+      expect(asText, contains('name="file"; filename="rocket.png"'));
+      expect(asText, contains('Content-Type: image/png'));
+      expect(asText, contains('name="i"'), reason: 'Misskey はトークンをフィールドで渡す');
+      expect(asText, contains('name="comment"'));
+    });
+
+    test('sns.lists / listMembers / createList / add / remove', () async {
+      final calls = <String>[];
+      final env = RasqHostEnvironment(fetch: (req) {
+        final endpoint = req.url.path.replaceFirst('/api/', '');
+        calls.add(endpoint);
+        return switch (endpoint) {
+          'users/lists/list' => const SyncFetchResponse(status: 200, bodyText: '[{"id":"L1","name":"友だち","userIds":["u1","u2"],"isPublic":false}]'),
+          'users/lists/show' => const SyncFetchResponse(status: 200, bodyText: '{"id":"L1","name":"友だち","userIds":["u1"],"isPublic":false}'),
+          'users/show' => const SyncFetchResponse(status: 200, bodyText: '[{"id":"u1","username":"alice","name":"アリス"}]'),
+          'users/lists/create' => const SyncFetchResponse(status: 200, bodyText: '{"id":"L2","name":"新しいリスト","userIds":[]}'),
+          'users/lists/push' || 'users/lists/pull' => const SyncFetchResponse(status: 204),
+          _ => const SyncFetchResponse(status: 404, bodyText: '{}'),
+        };
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(account: viewer, extraArgs: const {'host': 'misskey.example', 'token': 't'}, invoke: (fn, a) async => controller.invoke(fn, a));
+
+      final lists = await session.lists();
+      expect(lists.single.name, '友だち');
+      expect(lists.single.memberIds, ['u1', 'u2']);
+
+      expect((await session.listInfo('L1')).id, 'L1');
+      // メンバーは id しか返らないので、ユーザーを引き直す。
+      expect((await session.listMembers('L1')).single.displayName, 'アリス');
+      expect(calls, contains('users/show'));
+
+      expect((await session.createList('新しいリスト')).id, 'L2');
+      await session.addToList('L1', 'u3');
+      expect(calls, contains('users/lists/push'));
+      await session.removeFromList('L1', 'u3');
+      expect(calls, contains('users/lists/pull'));
+    });
+
+    test('sns.clips / clipNotes / userPlays', () async {
+      final env = RasqHostEnvironment(fetch: (req) {
+        final endpoint = req.url.path.replaceFirst('/api/', '');
+        return switch (endpoint) {
+          'clips/list' => const SyncFetchResponse(status: 200, bodyText: '[{"id":"c1","name":"あとで読む","description":"メモ","isPublic":false,"notesCount":3}]'),
+          'clips/notes' => SyncFetchResponse(status: 200, bodyText: cannedNotes),
+          'users/flashs' => const SyncFetchResponse(status: 200, bodyText: '[{"id":"p1","title":"占い","summary":"あそび"}]'),
+          _ => const SyncFetchResponse(status: 404, bodyText: '{}'),
+        };
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(account: viewer, extraArgs: const {'host': 'misskey.example', 'token': 't'}, invoke: (fn, a) async => controller.invoke(fn, a));
+
+      final clips = await session.clips();
+      expect(clips.single.name, 'あとで読む');
+      expect(clips.single.notesCount, 3);
+      expect((await session.clipNotes('c1')).items, hasLength(2));
+
+      final plays = await session.userPlays('u1');
+      // Play は RASQ 内で実行せず外部リンクとして出す (D-039)。
+      expect(plays.single.url.toString(), 'https://misskey.example/play/p1');
+      expect(plays.single.title, '占い');
+    });
+
   });
 
   group('WasmSnsSession — 通知 / 関係 / DM / 検索 (D-134)', () {
@@ -905,4 +1012,19 @@ void main() {
     final ml = jsonDecode(env.dispatch(jsonEncode({'schema': 'rasq.hostfn/1', 'callId': '4', 'fn': 'ml.infer', 'args': {'model': 'x'}})));
     expect(ml['error']['code'], 'E01');
   });
+}
+
+/// `needle` が `haystack` に現れる位置(無ければ -1)。
+int _indexOfBytes(List<int> haystack, List<int> needle) {
+  for (var i = 0; i + needle.length <= haystack.length; i++) {
+    var ok = true;
+    for (var j = 0; j < needle.length; j++) {
+      if (haystack[i + j] != needle[j]) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) return i;
+  }
+  return -1;
 }
