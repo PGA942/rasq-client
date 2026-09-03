@@ -55,6 +55,25 @@ class WasmSnsSession extends SnsSessionBase {
   @override
   List<TimelineKind> get timelines => _timelines;
 
+  /// 投稿の文字数上限。**インスタンスごとに違う**ので、プラグインの
+  /// `sns.capabilities` から受け取る。取れるまで(未実装プラグイン含む)は
+  /// ホスト既定の 500 のまま。
+  int? _maxPostLength;
+
+  @override
+  int get maxPostLength => _maxPostLength ?? super.maxPostLength;
+
+  /// `call("sns.capabilities")` → セッション単位の能力値。
+  Future<void> loadCapabilities() async {
+    try {
+      final value = await _call('sns.capabilities', const {});
+      final max = (value['maxPostLength'] as num?)?.toInt();
+      if (max != null && max > 0) _maxPostLength = max;
+    } on SnsApiException catch (e) {
+      if (e.code.code != 'C01') rethrow; // 未実装は既定のまま
+    }
+  }
+
   /// `call("sns.timelines")` → タブに並べる TL の宣言 (CONTRACT §6)。
   /// SNS ごとに揃う TL が違うので、ホストは決め打ちせずここから受け取る。
   Future<void> loadTimelines() async {
@@ -141,6 +160,9 @@ class WasmSnsSession extends SnsSessionBase {
       } catch (_) {}
       try {
         await loadTimelines();
+      } catch (_) {}
+      try {
+        await loadCapabilities();
       } catch (_) {}
     }
     final value = await _call('sns.timeline', {'kind': kind.id, 'limit': limit, 'cursor': ?cursor});

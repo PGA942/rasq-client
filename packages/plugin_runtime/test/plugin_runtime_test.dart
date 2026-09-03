@@ -476,6 +476,22 @@ void main() {
       );
     }
 
+    test('sns.capabilities: 文字数上限はインスタンスごとにプラグインが答える', () async {
+      final s = sessionWith({
+        'meta': {'maxNoteTextLength': 5000},
+      });
+      // 宣言前はホスト既定 (500)。
+      expect(s.session.maxPostLength, 500);
+      await s.session.loadCapabilities();
+      expect(s.session.maxPostLength, 5000, reason: 'インスタンス設定を反映する');
+    });
+
+    test('sns.capabilities: meta が取れなくても Misskey の既定値で答える', () async {
+      final s = sessionWith(const {}); // meta は 404
+      await s.session.loadCapabilities();
+      expect(s.session.maxPostLength, 3000);
+    });
+
     test('sns.timelines: TL タブの並びをプラグインが宣言する', () async {
       final s = sessionWith(const {});
       await s.session.loadTimelines();
