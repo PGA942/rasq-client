@@ -103,8 +103,8 @@ void main() {
       storeClientProvider.overrideWithValue(_TamperedStoreClient()),
     ]);
     addTearDown(container.dispose);
-    final error = await container.read(installedPluginsProvider.notifier).install('net.example.dict-sort');
-    expect(error, contains('SHA-512'));
+    final outcome = await container.read(installedPluginsProvider.notifier).install('net.example.dict-sort');
+    expect(outcome.error, contains('SHA-512'));
     expect(container.read(installedPluginsProvider), isEmpty);
   });
 }

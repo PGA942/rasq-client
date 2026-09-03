@@ -32,6 +32,7 @@ import '../features/users/follows_screen.dart';
 import '../features/users/user_page_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/settings/backend_screen.dart';
 import '../features/store/plugin_page_screen.dart';
 import '../features/store/store_home_screen.dart';
 import '../features/trend/trend_screen.dart';
@@ -156,6 +157,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'section/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SettingsSectionScreen(sectionId: s.pathParameters['id']!)),
             // その他の設定 → 投稿コンポーザー (D-131)。
             GoRoute(path: 'composer', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ComposerSettingsScreen()),
+            GoRoute(path: 'server', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BackendSettingsScreen()),
           ]),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
           GoRoute(path: Routes.bookmarks, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BookmarksScreen()),

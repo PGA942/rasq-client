@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../backend/orgate_client.dart';
 import '../../shell/headers.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
@@ -62,7 +63,10 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
               ],
               const SizedBox(height: RasqSpacing.sm),
               if (bundle != null)
-                Text('配布物: ${(bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB ・ SHA-512 ${bundle.sha512.substring(0, 16)}… ・ ストア署名つき',
+                // 署名の有無は正直に出す。モックストアや署名前の掲載物は
+                // ハッシュ照合だけになる (D-034)。
+                Text('配布物: ${(bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB ・ SHA-512 ${bundle.sha512.substring(0, 16)}…'
+                    ' ・ ${bundle.signature.isNotEmpty && manifest.storePublicKey.isNotEmpty ? 'ストア署名つき (ed25519)' : 'ストア署名なし(ハッシュ照合のみ)'}',
                     style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ]),
           ),
@@ -75,10 +79,10 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
     );
     if (ok != true || !mounted) return; // 余白/スワイプで閉じた = キャンセル
     setState(() => _busy = true);
-    final error = await ref.read(installedPluginsProvider.notifier).install(widget.pluginId);
+    final outcome = await ref.read(installedPluginsProvider.notifier).install(widget.pluginId);
     if (!mounted) return;
     setState(() => _busy = false);
-    toast(error ?? '${d.name} をインストールしました(SHA-512 検証済み)');
+    toast(outcome.error ?? '${d.name} をインストールしました(${outcome.verification?.message ?? 'SHA-512 検証済み'})');
   }
 
   @override
@@ -118,6 +122,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
                         style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                   ]),
                 ),
+                _BookmarkButton(pluginId: d.id),
               ]),
             ),
             // 状態バナー(警告/停止/失効/更新あり)。
@@ -230,6 +235,26 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
           ]);
         },
       ),
+    );
+  }
+}
+
+/// ストアのブックマーク (D-033 `/me/bookmarks`)。RASQ アカウントに紐づく
+/// サーバー側の状態なので、接続していないときは出さない。
+class _BookmarkButton extends ConsumerWidget {
+  const _BookmarkButton({required this.pluginId});
+  final String pluginId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(orgateConfiguredProvider)) return const SizedBox.shrink();
+    final marked = ref.watch(storeBookmarksProvider).value?.contains(pluginId) ?? false;
+    return IconButton(
+      tooltip: marked ? 'ブックマークを外す' : 'ブックマークする',
+      icon: Icon(marked ? Icons.bookmark : Icons.bookmark_border),
+      onPressed: () => ref.read(storeBookmarksProvider.notifier).toggle(pluginId).catchError((Object e) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ブックマークを更新できませんでした: $e')));
+      }),
     );
   }
 }

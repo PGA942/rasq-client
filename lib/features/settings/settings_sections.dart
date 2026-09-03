@@ -73,6 +73,7 @@ const settingsSections = <String, SettingsSection>{
   ]),
   'about': SettingsSection('RASQについて', [
     SettingsRow('アカウント'),
+    SettingsRow('RASQ サーバー', subtitle: 'プラグインストア / RASQ アカウント / ログインの接続先', route: '/settings/server'),
     SettingsRow('ヘルプ'),
     SettingsRow('購読状況'),
     SettingsRow('クッキーについて'),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../app/providers.dart';
+import '../backend/rasq_account.dart';
 import '../features/notifications/notifications_screen.dart';
 import 'nav.dart';
 import 'sidebar.dart';
@@ -22,6 +23,10 @@ class RasqShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // アカウントバンドル (D-087) をサーバーへ同期し続ける。シェルは常時
+    // 生きているので、ここで 1 度 watch しておけばログインの増減に追随する。
+    // 接続先が未設定なら何もしない。
+    ref.watch(orgateBundleSyncProvider);
     return LayoutBuilder(builder: (context, constraints) {
       final tablet = constraints.maxWidth >= RasqSizes.tabletBreakpoint;
       return tablet ? _TabletLayout(shell: navigationShell) : _MobileLayout(shell: navigationShell);

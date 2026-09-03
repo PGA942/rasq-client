@@ -1,15 +1,23 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart' show sha512;
+import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../backend/orgate_client.dart';
 import '../settings/settings_dsl.dart';
+import 'http_store_client.dart';
 import 'store_client.dart';
 import 'store_models.dart';
 
-/// ストアクライアント (M4)。v1 はモック — ORGATE-server 実装後に HTTP へ
-/// 差し替える(テストは override)。
-final storeClientProvider = Provider<StoreClient>((ref) => MockStoreClient());
+/// ストアクライアント (M4)。接続先が設定されていれば `orgate-server` の
+/// `/api/v1`、未設定ならモックへ縮退する(サーバー無しでもアプリは動く)。
+/// テストは override して差し替える。
+final storeClientProvider = Provider<StoreClient>((ref) {
+  final client = ref.watch(orgateClientProvider);
+  return client == null ? MockStoreClient() : HttpStoreClient(client);
+});
 
 final storeHomeProvider = FutureProvider((ref) => ref.watch(storeClientProvider).home());
 final storeSearchProvider = FutureProvider.family<List<StorePluginCard>, String>((ref, q) => ref.watch(storeClientProvider).search(q));
@@ -18,10 +26,68 @@ final storeManifestProvider = FutureProvider.family<InstallManifest?, String>((r
 final storeReviewsProvider = FutureProvider.family<List<StoreReview>, String>((ref, id) => ref.watch(storeClientProvider).reviews(id));
 final storeReleasesProvider = FutureProvider.family<List<ReleaseNote>, String>((ref, id) => ref.watch(storeClientProvider).releases(id));
 
+/// 配布物の検証結果。失敗理由はそのままユーザーに見せる。
+@immutable
+class ArtifactVerification {
+  const ArtifactVerification._(this.ok, this.message, {this.signatureChecked = false});
+  final bool ok;
+  final String message;
+
+  /// ed25519 署名まで検証できたか(モックや未署名のストアでは false)。
+  final bool signatureChecked;
+
+  static const _hashOnly = ArtifactVerification._(true, 'SHA-512 照合 OK(署名なし)');
+  static const _full = ArtifactVerification._(true, 'SHA-512 + ed25519 署名 検証 OK', signatureChecked: true);
+  static ArtifactVerification failure(String why) => ArtifactVerification._(false, why);
+}
+
+/// 配布物 1 件の検証 (D-034)。
+///
+/// 1. **SHA-512 照合** — 落としたバイト列がマニフェストのハッシュと一致するか。
+/// 2. **ed25519 署名** — そのハッシュ(生 64 バイト)にストア鍵の署名が付いて
+///    いるか。サーバーは `sign(sha512(bytes))` を返すので、こちらも同じものを
+///    検証する。
+/// 3. **鍵のピン留め** — `--dart-define=ORGATE_STORE_PUBLIC_KEY` を焼き込んで
+///    あれば、マニフェストの `storePublicKey` がそれと一致することも要求する
+///    (サーバーがすり替わっても気付ける)。
+///
+/// 署名が無い(モック / 署名前のストア)ときはハッシュ照合だけで通す。
+/// ただし鍵をピン留めしてある構成では、署名の欠落は失敗として扱う。
+Future<ArtifactVerification> verifyArtifact({
+  required Uint8List bytes,
+  required StoreArtifact artifact,
+  required String storePublicKey,
+}) async {
+  final digest = sha512.convert(bytes);
+  if (digest.toString() != artifact.sha512) {
+    return ArtifactVerification.failure('整合性検証に失敗しました(SHA-512 不一致)。時間をおいて再取得してください');
+  }
+
+  if (pinnedStorePublicKey.isNotEmpty && storePublicKey != pinnedStorePublicKey) {
+    return ArtifactVerification.failure('ストアの署名鍵がアプリに焼き込んだ鍵と一致しません。接続先を確認してください');
+  }
+  if (storePublicKey.isEmpty || artifact.signature.isEmpty) {
+    if (pinnedStorePublicKey.isNotEmpty) {
+      return ArtifactVerification.failure('配布物に署名がありません(このビルドは署名済みストアのみを許可します)');
+    }
+    return ArtifactVerification._hashOnly;
+  }
+
+  try {
+    final publicKey = SimplePublicKey(base64Decode(storePublicKey), type: KeyPairType.ed25519);
+    final signature = Signature(base64Decode(artifact.signature), publicKey: publicKey);
+    // 署名対象はバイト列そのものではなく **SHA-512 ダイジェストの生 64 バイト**。
+    final ok = await Ed25519().verify(Uint8List.fromList(digest.bytes), signature: signature);
+    return ok ? ArtifactVerification._full : ArtifactVerification.failure('配布物の署名が正しくありません。インストールを中止しました');
+  } catch (e) {
+    return ArtifactVerification.failure('署名を検証できませんでした: $e');
+  }
+}
+
 /// インストール済みプラグイン (M4 v1): KV `store.installed.v1` に永続化。
-/// インストール = manifest 取得 → 配布物ダウンロード → **SHA-512 照合**
-/// (D-034) → 登録。wasm 実体の常設ロードはノード定義プラグインの配置実行
-/// (M4 後段)で拡張し、v1 は状態管理 + 検証パイプラインまで。
+/// インストール = manifest 取得 → 配布物ダウンロード → **SHA-512 照合 +
+/// ed25519 署名検証**(D-034)→ 登録。wasm 実体の常設ロードはノード定義
+/// プラグインの配置実行(M4 後段)で拡張する。
 class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
   @override
   List<InstalledPlugin> build() {
@@ -42,24 +108,71 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
 
   bool isInstalled(String pluginId) => state.any((p) => p.id == pluginId);
 
-  /// インストール実行。成功で null、失敗で表示用のエラーメッセージ。
-  Future<String?> install(String pluginId) async {
+  /// インストール実行。`error` が null なら成功で、`verification` に
+  /// どこまで検証できたか(ハッシュのみ / 署名まで)が入る。
+  Future<({String? error, ArtifactVerification? verification})> install(String pluginId) async {
     final client = ref.read(storeClientProvider);
-    final m = await client.manifest(pluginId);
-    if (m == null) return '構成(マニフェスト)を取得できませんでした';
-    final bundle = m.artifacts.where((a) => a.kind == 'bundle').firstOrNull;
-    if (bundle == null) return '配布物がありません';
-    final bytes = await client.downloadArtifact(pluginId, bundle.id);
-    // 整合性検証 (D-034): アーティファクト毎の SHA-512。署名(ed25519)は
-    // ストア鍵の配布(サーバー実装)後に検証を足す。
-    final digest = sha512.convert(bytes).toString();
-    if (digest != bundle.sha512) return '整合性検証に失敗しました(SHA-512 不一致)。時間をおいて再取得してください';
+    final InstallManifest? m;
+    try {
+      m = await client.manifest(pluginId);
+    } on OrgateException catch (e) {
+      // 停止・取り下げ中のプラグインはサーバーが 403 で断る (D-120 ③)。
+      return (error: e.message, verification: null);
+    }
+    if (m == null) return (error: '構成(マニフェスト)を取得できませんでした', verification: null);
+    final bundle = m.bundle;
+    if (bundle == null) return (error: '配布物がありません', verification: null);
+
+    final Uint8List bytes;
+    try {
+      bytes = await client.downloadArtifact(pluginId, bundle.id);
+    } on OrgateException catch (e) {
+      return (error: e.message, verification: null);
+    }
+
+    final verified = await verifyArtifact(bytes: bytes, artifact: bundle, storePublicKey: m.storePublicKey);
+    if (!verified.ok) return (error: verified.message, verification: verified);
+    debugPrint('store: $pluginId ${m.version} — ${verified.message}');
+
     final name = m.manifest['name'] as String? ?? pluginId;
-    await _persist([...state.where((p) => p.id != pluginId), InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: digest, installedAt: DateTime.now())]);
-    return null;
+    await _persist([
+      ...state.where((p) => p.id != pluginId),
+      InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: DateTime.now()),
+    ]);
+    return (error: null, verification: verified);
   }
 
   Future<void> uninstall(String pluginId) => _persist([...state.where((p) => p.id != pluginId)]);
 }
 
 final installedPluginsProvider = NotifierProvider<InstalledPlugins, List<InstalledPlugin>>(InstalledPlugins.new);
+
+/// ブックマークした プラグイン id(サーバー接続時のみ意味がある)。
+class StoreBookmarks extends AsyncNotifier<Set<String>> {
+  @override
+  Future<Set<String>> build() async {
+    final client = ref.watch(storeClientProvider);
+    try {
+      return {for (final c in await client.bookmarks()) c.id};
+    } on OrgateException catch (e) {
+      // 未ログイン(401)でも画面は出す。
+      debugPrint('store bookmarks: $e');
+      return const {};
+    }
+  }
+
+  Future<void> toggle(String pluginId) async {
+    final current = state.value ?? const <String>{};
+    final next = current.contains(pluginId);
+    state = AsyncData(next ? ({...current}..remove(pluginId)) : {...current, pluginId});
+    try {
+      await ref.read(storeClientProvider).setBookmark(pluginId, !next);
+      ref.invalidate(storeHomeProvider);
+    } catch (e) {
+      state = AsyncData(current); // 巻き戻す
+      rethrow;
+    }
+  }
+}
+
+final storeBookmarksProvider = AsyncNotifierProvider<StoreBookmarks, Set<String>>(StoreBookmarks.new);

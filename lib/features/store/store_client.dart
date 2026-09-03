@@ -6,16 +6,40 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import 'store_models.dart';
 
+/// ストアホームの 3 セクション (D-033: 今週のトレンド/ブックマーク/おすすめ)。
+typedef StoreHomeSections = ({
+  List<StorePluginCard> trending,
+  List<StorePluginCard> bookmarks,
+  List<StorePluginCard> recent,
+});
+
 /// ストア API のクライアント境界 (D-033: openapi/store.yaml と同じ形)。
-/// ORGATE-server 実装後は HTTP クライアントに差し替える(モック開発方針)。
+///
+/// 実装は 2 つ:
+/// - [MockStoreClient] — 接続先未設定のときの縮退。掲載は同梱 wasm サンプル
+///   (実物)+ 架空 3 件。
+/// - `HttpStoreClient` — `orgate-server` の `/api/v1`。接続先は
+///   `orgateBaseUrlProvider`(`--dart-define=ORGATE_BASE_URL` か KV
+///   `backend.v1` の `baseUrl`)で決まる。
+///
+/// **どちらでもインストール時の検証(SHA-512 + ed25519)は同じ経路を通る。**
 abstract class StoreClient {
-  Future<({List<StorePluginCard> trending, List<StorePluginCard> recent})> home();
+  Future<StoreHomeSections> home();
   Future<List<StorePluginCard>> search(String q);
   Future<StorePluginDetail?> plugin(String id);
   Future<InstallManifest?> manifest(String id);
   Future<Uint8List> downloadArtifact(String pluginId, String artifactId);
   Future<List<StoreReview>> reviews(String id);
   Future<List<ReleaseNote>> releases(String id);
+
+  /// レビュー投稿(要認証)。`verifiedUse` はサーバーがインストール履歴から付ける。
+  Future<StoreReview> createReview(String pluginId, {required int rating, String body, String? usedVersion});
+
+  /// ブックマークの追加/削除(要認証)。
+  Future<void> setBookmark(String pluginId, bool bookmarked);
+
+  /// ブックマーク一覧(要認証)。
+  Future<List<StorePluginCard>> bookmarks();
 }
 
 /// 同梱 wasm サンプル(実プラグイン)のストア上の id。
@@ -121,11 +145,37 @@ class MockStoreClient implements StoreClient {
     ),
   ];
 
+  /// ブックマークはサーバー側の状態なので、モックでは端末内に持つ。
+  final _bookmarked = <String>{};
+  final _reviews = <String, List<StoreReview>>{};
+
   @override
-  Future<({List<StorePluginCard> trending, List<StorePluginCard> recent})> home() async => (
+  Future<StoreHomeSections> home() async => (
         trending: <StorePluginCard>[_cards[0], _cards[1], _cards[3]],
+        bookmarks: <StorePluginCard>[for (final c in _cards) if (_bookmarked.contains(c.id)) c],
         recent: <StorePluginCard>[_cards[2], _cards[1]],
       );
+
+  @override
+  Future<StoreReview> createReview(String pluginId, {required int rating, String body = '', String? usedVersion}) async {
+    final review = StoreReview(
+      id: 'mock-${DateTime.now().microsecondsSinceEpoch}',
+      rating: rating,
+      body: body,
+      usedVersion: usedVersion ?? '',
+      verifiedUse: true,
+      createdAt: DateTime.now(),
+    );
+    (_reviews[pluginId] ??= []).insert(0, review);
+    return review;
+  }
+
+  @override
+  Future<void> setBookmark(String pluginId, bool bookmarked) async =>
+      bookmarked ? _bookmarked.add(pluginId) : _bookmarked.remove(pluginId);
+
+  @override
+  Future<List<StorePluginCard>> bookmarks() async => [for (final c in _cards) if (_bookmarked.contains(c.id)) c];
 
   @override
   Future<List<StorePluginCard>> search(String q) async {
@@ -165,8 +215,11 @@ class MockStoreClient implements StoreClient {
       channel: detail.channel,
       manifest: {'id': id, 'name': detail.name, 'permissions': [for (final p in detail.safety.permissions) p.permission]},
       permissionsAdded: id == 'net.example.dict-sort' ? const [PermissionEntry('net.fetch', 'ネット辞書(v2.0 で追加)の取得')] : const [],
+      // モックは署名鍵を持たない。storePublicKey が空なので、インストール側は
+      // SHA-512 照合だけを行い署名検証は飛ばす(サーバー接続時のみ検証が効く)。
+      storePublicKey: '',
       artifacts: [
-        StoreArtifact(id: 'bundle', sizeBytes: bytes.length, sha512: sha512.convert(bytes).toString(), signature: 'mock-ed25519'),
+        StoreArtifact(id: 'bundle', sizeBytes: bytes.length, sha512: sha512.convert(bytes).toString()),
         if (id == 'net.example.siglip-reco') const StoreArtifact(id: 'model-siglip', kind: 'model', sizeBytes: 96 * 1024 * 1024, sha512: '-', lazy: true),
       ],
     );
@@ -176,7 +229,9 @@ class MockStoreClient implements StoreClient {
   Future<Uint8List> downloadArtifact(String pluginId, String artifactId) => _bytesOf(pluginId);
 
   @override
-  Future<List<StoreReview>> reviews(String id) async => switch (id) {
+  Future<List<StoreReview>> reviews(String id) async => [...?_reviews[id], ..._seededReviews(id)];
+
+  List<StoreReview> _seededReviews(String id) => switch (id) {
         storeSamplePluginId => [
             StoreReview(id: 'r1', rating: 5, body: 'wasm でここまで動くのすごい。TL も速い。', usedVersion: '0.5.0', verifiedUse: true, helpfulCount: 12, createdAt: DateTime(2026, 8, 20)),
             StoreReview(id: 'r2', rating: 4, body: '絵文字ピッカーの読み込みが最初だけ遅い。', usedVersion: '0.4.2', verifiedUse: true, helpfulCount: 3, developerReply: '0.5.0 でキャッシュを入れました!', createdAt: DateTime(2026, 8, 2)),

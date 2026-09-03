@@ -83,6 +83,10 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
                         ),
                       const Divider(height: 1),
                     ],
+                    if (h.bookmarks.isNotEmpty) ...[
+                      const RasqSectionHeader(title: 'ブックマーク', topMargin: 0),
+                      for (final c in h.bookmarks) ...[tile(c), const Divider(height: 1)],
+                    ],
                     const RasqSectionHeader(title: '今週のトレンド', topMargin: 0),
                     for (final c in h.trending) ...[tile(c), const Divider(height: 1)],
                     const RasqSectionHeader(title: '最近の更新', topMargin: 0),

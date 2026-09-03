@@ -8,6 +8,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:sns_misskey/sns_misskey.dart';
 
+import '../backend/rasq_account.dart';
 import 'session_storage.dart';
 
 /// wasm SNS サンプルの pluginId(dev「実登録」とレジストリ解決で共用)。
@@ -128,11 +129,18 @@ final currentAccountProvider = Provider<AccountId?>((ref) => ref.watch(currentAc
 /// 総合表示中か (D-087)。
 final bundleViewProvider = Provider<bool>((ref) => ref.watch(sessionsProvider).value?.bundleView ?? false);
 
-/// RASQ アカウント(バンドルの顔)(D-087)。ORGATE サーバーのアカウントが
-/// できるまでは最初のログインアカウントのプロフィールを流用し、ハンドルは
-/// インスタンスなしの素の形(`@handle`)で出す — 個別アカウント行の
-/// `handle@instance` と区別が付く。
+/// RASQ アカウント(バンドルの顔)(D-087)。
+///
+/// ORGATE サーバーに繋がっていれば**本物の RASQ アカウント**
+/// ([orgateAccountProvider] = `GET /me`)を出す。接続先が未設定、または
+/// まだ取得できていない間は、最初のログインアカウントのプロフィールを
+/// 流用する(サーバー無しでもサイドバーが成立する)。
+/// どちらの場合もハンドルはインスタンスなしの素の形(`@handle`)で出す —
+/// 個別アカウント行の `handle@instance` と区別が付く。
 final rasqAccountProvider = Provider<UserSummary>((ref) {
+  final server = ref.watch(orgateAccountProvider).value;
+  if (server != null) return server.toUserSummary();
+
   final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
   final first = sessions.firstOrNull;
   if (first == null) {
