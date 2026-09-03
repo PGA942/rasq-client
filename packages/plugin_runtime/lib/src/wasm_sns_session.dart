@@ -92,10 +92,35 @@ class WasmSnsSession extends SnsSessionBase {
     }
   }
 
+  /// ローカル保存の設定ページ (D-044) の値。area → 値マップ。
+  ///
+  /// **毎呼び出しの `args.settings` に載せる** — プラグインは自分が知って
+  /// いる area / キーだけ読む(例: Misskey の `settings.timeline.withRenotes`
+  /// → TL 取得パラメーター)。area ごとに入れ子にしてあるので、別ページの
+  /// 同名キーとぶつからない。
+  final Map<String, Map<String, Object?>> _settings = {};
+
+  /// ホストが設定値の変更毎(+ 最初の TL 取得前)に呼ぶ。
+  @override
+  Future<void> applySettings(String area, Map<String, Object?> values) async {
+    _settings[area] = {...values};
+    // 値を保存したいプラグインには通知もする。未実装(C01)は無視 —
+    // 次回以降の呼び出しに args.settings として載るので実害はない。
+    try {
+      await _call('sns.applySettings', {'area': area, 'values': values});
+    } on SnsApiException catch (e) {
+      if (e.code.code != 'C01') rethrow;
+    }
+  }
+
   /// `call("sns.<fn>")` → ok チェック → value。エラーは [SnsApiException]
   /// に写す(ホストのエラービュー/リトライがそのまま効く)。
   Future<Map<String, Object?>> _call(String fn, Map<String, Object?> args) async {
-    final result = await _invoke(fn, {...args, ...extraArgs});
+    final result = await _invoke(fn, {
+      if (_settings.isNotEmpty) 'settings': _settings,
+      ...args,
+      ...extraArgs,
+    });
     if (result['ok'] == true) return (result['value'] as Map? ?? const {}).cast<String, Object?>();
     final error = (result['error'] as Map?)?.cast<String, Object?>() ?? const {};
     final message = '${error['message'] ?? 'wasm sns call failed: $fn'}';
@@ -462,6 +487,20 @@ class WasmSnsSession extends SnsSessionBase {
       for (final p in (value['profiles'] as List? ?? const []))
         if (p is Map) SnsWire.profileFrom(p.cast<String, Object?>(), account: account),
     ];
+  }
+
+  // ── プラグイン設定 (D-044) ──────────────────────────────────────
+
+  @override
+  Future<Map<String, Object?>> settingsRead(String area) async {
+    final value = await _call('sns.settingsRead', {'area': area});
+    return (value['values'] as Map? ?? const {}).cast<String, Object?>();
+  }
+
+  @override
+  Future<Map<String, Object?>> settingsWrite(String area, String key, Object? value) async {
+    final res = await _call('sns.settingsWrite', {'area': area, 'key': key, 'value': value});
+    return (res['values'] as Map? ?? const {}).cast<String, Object?>();
   }
 
   @override

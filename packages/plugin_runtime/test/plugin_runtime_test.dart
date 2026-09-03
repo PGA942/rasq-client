@@ -333,6 +333,56 @@ void main() {
       expect(asText, contains('name="comment"'));
     });
 
+    test('applySettings (D-044): TL 設定が毎呼び出しの settings に載り、取得パラメーターに効く', () async {
+      final bodies = <String>[];
+      final env = RasqHostEnvironment(fetch: (req) {
+        bodies.add(req.body ?? '');
+        return SyncFetchResponse(status: 200, bodyText: cannedNotes);
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(account: viewer, extraArgs: const {'host': 'misskey.example', 'token': 't'}, invoke: (fn, a) async => controller.invoke(fn, a));
+
+      // 設定前: プラグインは既定のまま(パラメーターを付けない)。
+      await session.timeline(TimelineKind.home, limit: 5);
+      expect(bodies.last, isNot(contains('withRenotes')));
+
+      // ホストは値の変更毎(+ 最初の TL 取得前)に applySettings を呼ぶ。
+      await session.applySettings('timeline', {'withRenotes': false, 'withReplies': true});
+      await session.timeline(TimelineKind.home, limit: 5);
+      expect(bodies.last, contains('"withRenotes":false'));
+      expect(bodies.last, contains('"withReplies":true'));
+    });
+
+    test('settingsRead / settingsWrite (D-044): remote ページはサーバーが真実', () async {
+      final writes = <String>[];
+      final env = RasqHostEnvironment(fetch: (req) {
+        final endpoint = req.url.path.replaceFirst('/api/', '');
+        if (endpoint == 'i/update') {
+          writes.add(req.body ?? '');
+          return const SyncFetchResponse(status: 200, bodyText: '{}');
+        }
+        return const SyncFetchResponse(status: 200, bodyText: '{"id":"me","username":"me","isLocked":true,"noCrawle":false}');
+      });
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      controller.load();
+      final session = WasmSnsSession(account: viewer, extraArgs: const {'host': 'misskey.example', 'token': 't'}, invoke: (fn, a) async => controller.invoke(fn, a));
+
+      expect((await session.settingsRead('account'))['isLocked'], isTrue);
+      // 書き込み後は読み直した値が返る(サーバーが弾いた変更も見える)。
+      final after = await session.settingsWrite('account', 'noCrawle', true);
+      expect(writes.single, contains('"noCrawle":true'));
+      expect(after.containsKey('isLocked'), isTrue);
+
+      // 知らない area は C01 → ホストがページを出さない。
+      await expectLater(
+        session.settingsRead('nope'),
+        throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', 'C01')),
+      );
+    });
+
     test('sns.lists / listMembers / createList / add / remove', () async {
       final calls = <String>[];
       final env = RasqHostEnvironment(fetch: (req) {
