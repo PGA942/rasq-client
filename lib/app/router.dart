@@ -9,7 +9,7 @@ import '../features/dm/dm_room_screen.dart';
 import '../features/dm/dm_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/login/login_screen.dart';
-import '../features/login/misskey_login_screen.dart';
+import '../features/login/sns_login_screen.dart';
 import '../features/nodeprog/composer_config_screen.dart';
 import '../features/nodeprog/node_editor_screen.dart';
 import '../features/nodeprog/timeline_config_screen.dart';
@@ -57,6 +57,7 @@ abstract final class Routes {
   static const bookmarks = '/bookmarks';
   static const profileEdit = '/profile/edit';
   static const loginMisskey = '/login/misskey';
+  static const loginMastodon = '/login/mastodon';
 
   /// ノードプログラミング画面 (D-090)。`/nodes/<scope>`。TL スコープの
   /// キャンバスは一旦無効化 (D-121) — TL の歯車は [tlConfig] へ。
@@ -209,7 +210,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: Routes.login,
             parentNavigatorKey: _appNavigatorKey,
             builder: (_, _) => const LoginScreen(),
-            routes: [GoRoute(path: 'misskey', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MisskeyLoginScreen())],
+            routes: [
+              GoRoute(path: 'misskey', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MisskeyLoginScreen()),
+              GoRoute(path: 'mastodon', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MastodonLoginScreen()),
+            ],
           ),
         ],
       ),

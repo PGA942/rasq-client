@@ -13,11 +13,12 @@ import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/features/store/http_store_client.dart';
 import 'package:rasq_client/features/store/store_models.dart';
+import 'package:rasq_client/backend/sns_oauth.dart';
 import 'package:rasq_client/features/store/store_providers.dart';
 import 'package:rasq_client/session/session_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
-import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
+import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession, BrowserAuthFlow, SnsApiException;
 
 /// orgate-server との境界。
 ///
@@ -215,6 +216,94 @@ void main() {
     });
   });
 
+  group('Mastodon ログイン — OAuth ブローカー (D-135)', () {
+    ProviderContainer brokered(MockClient http_) {
+      final container = ProviderContainer(overrides: [
+        sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
+        settingsAreaProvider(backendSettingsArea).overrideWith(() => _FixedSettingsArea({'baseUrl': 'https://orgate.test'})),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://orgate.test'), httpClient: http_)),
+      ]);
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('begin → ブラウザ URL、complete → セッション(トークンは端末へ)', () async {
+      final server = fakeServer({
+        'POST /api/v1/auth/sns/mastodon/begin':
+            '{"state":"st-1","authorizeUrl":"https://mastodon.example/oauth/authorize?client_id=abc&state=st-1","hint":"許可したら戻ってきてください","host":"mastodon.example"}',
+        'POST /api/v1/auth/sns/mastodon/complete':
+            '{"token":"mastodon-access-token","tokenType":"Bearer","scope":"read write follow","host":"mastodon.example",'
+            '"me":{"id":"u1","handle":"yamada","displayName":"タロ・ヤマダ","avatarUrl":"https://x.test/a.png","instance":"mastodon.example"}}',
+      });
+      final container = brokered(server.client);
+      final factory = brokeredAuthFactory(
+        container.read(_refProvider),
+        provider: 'mastodon',
+        pluginId: 'rasq.official.mastodon',
+        kind: SnsKind.mastodon,
+      );
+
+      final flow = await factory('mastodon.example') as BrowserAuthFlow;
+      expect(flow.url.host, 'mastodon.example');
+      expect(flow.url.path, '/oauth/authorize');
+      expect(flow.hint, contains('戻ってきて'));
+
+      final result = await flow.complete();
+      expect(result.session.token, 'mastodon-access-token');
+      expect(result.session.pluginId, 'rasq.official.mastodon');
+      expect(result.session.account.kind, SnsKind.mastodon);
+      expect(result.session.account.instance, 'mastodon.example');
+      expect(result.session.account.handle, 'yamada');
+      expect(result.session.account.key, 'mastodon:mastodon.example:yamada');
+      expect(result.me.displayName, 'タロ・ヤマダ');
+
+      // complete は state だけを送る(code はサーバーが保持している)。
+      final complete = server.seen.firstWhere((r) => r.url.path.endsWith('/complete')) as http.Request;
+      expect(jsonDecode(complete.body), {'state': 'st-1'});
+    });
+
+    test('サーバー未設定ならログインを始める前に理由付きで断る', () async {
+      final container = ProviderContainer(overrides: [
+        sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
+      ]);
+      addTearDown(container.dispose);
+      final factory = brokeredAuthFactory(
+        container.read(_refProvider),
+        provider: 'mastodon',
+        pluginId: 'rasq.official.mastodon',
+        kind: SnsKind.mastodon,
+      );
+      await expectLater(
+        factory('mastodon.example'),
+        throwsA(isA<SnsApiException>().having((e) => e.code.message, 'message', contains('RASQ サーバー'))),
+      );
+    });
+
+    test('ブローカーのエラー(未許可・state 切れ)は CONTRACT §9 のコードで届く', () async {
+      final client = MockClient((req) async {
+        if (req.url.path.endsWith('/begin')) {
+          return http.Response(
+            '{"state":"st-1","authorizeUrl":"https://mastodon.example/oauth/authorize","hint":"h","host":"mastodon.example"}',
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response(
+          jsonEncode({'error': {'code': '404', 'message': 'unknown, expired or already used state'}}),
+          404,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+      final container = brokered(client);
+      final factory = brokeredAuthFactory(container.read(_refProvider), provider: 'mastodon', pluginId: 'p', kind: SnsKind.mastodon);
+      final flow = await factory('mastodon.example') as BrowserAuthFlow;
+      await expectLater(
+        flow.complete(),
+        throwsA(isA<SnsApiException>().having((e) => e.code.code, 'code', '404')),
+      );
+    });
+  });
+
   group('RASQ アカウント (D-087)', () {
     ProviderContainer containerWith(MockClient http_, {Map<String, String> seed = const {}}) {
       final storage = MemorySessionStorage({...seed});
@@ -322,3 +411,7 @@ class _FixedSettingsArea extends SettingsAreaStore {
   @override
   Future<Map<String, Object?>> build() async => values;
 }
+
+/// `brokeredAuthFactory` は `Ref` を取る(認証開始時に接続先を読み直すため)。
+/// テストからは、何もしないプロバイダーの `Ref` を借りて渡す。
+final _refProvider = Provider<Ref>((ref) => ref);
