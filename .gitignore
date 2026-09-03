@@ -49,3 +49,7 @@ app.*.map.json
 
 # local tooling
 .claude/
+
+# Flutter/Dart のビルド出力(ネイティブアセット・dill キャッシュ)。
+# 一部が誤って追跡されていたので明示的に外す。
+packages/*/build/
