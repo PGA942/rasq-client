@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
@@ -92,7 +93,9 @@ class StoreFrameCard extends StatelessWidget {
         onTap: onTap,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.xs, RasqSpacing.xs, RasqSpacing.xs),
+            // 右端は … ボタンがあればその余白に任せ、無ければ左と同じ間隔を空ける
+            // (相対時刻などの trailing が枠に張り付かないように)。
+            padding: EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.xs, onMore == null ? RasqSpacing.md : RasqSpacing.xs, RasqSpacing.xs),
             child: Row(children: [
               Expanded(child: header),
               ?headerTrailing,
@@ -170,6 +173,22 @@ String helpfulSummary(StoreReview r, ReviewVote mine) {
 /// レビュー共有用のリンク(アプリ内ディープリンク。Web 版は M4 後段)。
 String reviewShareLink(String pluginId, String reviewId) => 'rasq://store/plugin/${Uri.encodeComponent(pluginId)}/reviews#${Uri.encodeComponent(reviewId)}';
 
+/// 「N人が役に立ったと考えました。」だけを出す(ストアページのフレーム用。
+/// アクションバーは置かず、投票はレビュー TL 側で行う)。
+class ReviewHelpfulSummary extends ConsumerWidget {
+  const ReviewHelpfulSummary({super.key, required this.pluginId, required this.review, this.textAlign = TextAlign.center});
+  final String pluginId;
+  final StoreReview review;
+  final TextAlign textAlign;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final mine = ref.watch(reviewVotesProvider.select((m) => m['$pluginId/${review.id}'] ?? ReviewVote.none));
+    return Text(helpfulSummary(review, mine), textAlign: textAlign, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis);
+  }
+}
+
 /// レビュー TL のアクションバー (D-137): ↪️ 共有 / 👍 参考になった / 👎 参考に
 /// ならなかった。状態は [reviewVotesProvider](端末側)から props で流す
 /// (投稿タイルのアクションバーと同じ「状態は DSL の外」)。
@@ -227,14 +246,31 @@ class ReviewActionBar extends ConsumerWidget {
   }
 }
 
-/// レビュー TL の 1 タイル(ワイヤーフレーム「レビューを表示」): アバター /
-/// 見出し + ★ + … / 投稿者 / 本文 / アクションバー(↪️ 👍 👎 + 人数)/
-/// 開発者返信。
+/// レビューの投稿者を投稿タイルの著者として表す (D-137 追補)。RASQ アカウント
+/// (`rasqAccountProvider` と同じ `kind: other / instance: rasq` の形)。
+/// 将来はここからアカウントページへ飛ぶ。
+UserSummary reviewAuthorOf(StoreReview r) {
+  final handle = r.authorHandle.isNotEmpty ? r.authorHandle : (r.authorName.isNotEmpty ? r.authorName : 'anonymous');
+  return UserSummary(
+    id: 'rasq:$handle',
+    account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: handle),
+    displayName: r.authorName.isEmpty ? '匿名' : r.authorName,
+    avatarUrl: r.authorAvatarUrl,
+  );
+}
+
+/// レビュー TL の 1 タイル (D-137 追補): **スレッド展開画面と同じスタイル** —
+/// L2 の [RasqPostTile](通常バリアント)に載せる。アバター / 表示名 +
+/// `@handle ● rasq` / 相対時刻 / … のヘッダーは投稿タイルそのまま、本文
+/// スロットに ★ + 見出し / 本文 / 実利用済み・版 / 開発者返信、アクション
+/// スロットに ↪️ 👍 👎。著者タップは将来 RASQ アカウントページへ
+/// ([onAuthorTap])。
 class StoreReviewTile extends StatelessWidget {
-  const StoreReviewTile({super.key, required this.pluginId, required this.review, this.onMore});
+  const StoreReviewTile({super.key, required this.pluginId, required this.review, this.onMore, this.onAuthorTap});
   final String pluginId;
   final StoreReview review;
   final ValueChanged<Rect>? onMore;
+  final VoidCallback? onAuthorTap;
 
   @override
   Widget build(BuildContext context) {
@@ -244,61 +280,42 @@ class StoreReviewTile extends StatelessWidget {
       if (r.verifiedUse) '実利用済み',
       if (r.usedVersion.isNotEmpty) 'v${r.usedVersion}',
     ].join(' ・ ');
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.sm, RasqSpacing.xs),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        RasqAvatar(imageUrl: r.authorAvatarUrl, size: RasqSizes.avatarLg, fallbackLabel: r.authorName.isEmpty ? '?' : r.authorName),
-        const SizedBox(width: RasqSpacing.md),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(child: Text(r.headline, style: RasqTypography.displayName, maxLines: 2, overflow: TextOverflow.ellipsis)),
-              const SizedBox(width: RasqSpacing.sm),
-              Text(starsText(r.rating), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
-              if (onMore != null)
-                Builder(
-                  builder: (ctx) => RasqIconButton(
-                    icon: Icons.more_horiz,
-                    size: 20,
-                    tooltip: 'メニュー',
-                    onPressed: () {
-                      final box = ctx.findRenderObject() as RenderBox;
-                      onMore!(box.localToGlobal(Offset.zero) & box.size);
-                    },
-                  ),
-                ),
-            ]),
-            Row(children: [
-              Text(r.authorName.isEmpty ? '匿名' : r.authorName, style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
-              const SizedBox(width: RasqSpacing.sm),
-              RasqTimestamp(r.createdAt, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-              if (meta.isNotEmpty) ...[
-                const SizedBox(width: RasqSpacing.sm),
-                Flexible(child: Text(meta, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
-              ],
-            ]),
-            if (r.body.isNotEmpty) ...[
-              const SizedBox(height: RasqSpacing.xs),
-              Text(r.body, style: RasqTypography.bodySmall),
-            ],
-            if (r.developerReply != null)
-              Container(
-                margin: const EdgeInsets.only(top: RasqSpacing.sm),
-                padding: const EdgeInsets.all(RasqSpacing.sm),
-                decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
-                child: Text('開発者の返信: ${r.developerReply}', style: RasqTypography.caption),
-              ),
-            const SizedBox(height: RasqSpacing.xs),
-            ReviewActionBar(pluginId: pluginId, review: r),
-          ]),
-        ),
+    return RasqPostTile(
+      author: reviewAuthorOf(r),
+      createdAt: r.createdAt,
+      onAuthorTap: onAuthorTap,
+      onMore: onMore,
+      content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(starsText(r.rating), style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700, color: RasqTokens.of(context).warning)),
+          const SizedBox(width: RasqSpacing.sm),
+          Expanded(child: Text(r.headline, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700))),
+        ]),
+        if (r.body.isNotEmpty && r.title.isNotEmpty) ...[
+          const SizedBox(height: RasqSpacing.xs),
+          Text(r.body, style: RasqTypography.body),
+        ],
+        if (meta.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: RasqSpacing.xs),
+            child: Text(meta, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          ),
+        if (r.developerReply != null)
+          Container(
+            margin: const EdgeInsets.only(top: RasqSpacing.sm),
+            padding: const EdgeInsets.all(RasqSpacing.sm),
+            decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
+            child: Text('開発者の返信: ${r.developerReply}', style: RasqTypography.caption),
+          ),
       ]),
+      actionBar: ReviewActionBar(pluginId: pluginId, review: r),
     );
   }
 }
 
-/// ストアページのレビューフレーム: ★ + 見出し / 相対時刻 / … | 本文(3 行)|
-/// 👍 👎 + 人数。タップでレビュー TL へ。
+/// ストアページのレビューフレーム: ★ + 見出し / 相対時刻 | 本文(3 行)|
+/// 「N人が役に立ったと考えました。」(中央揃え、アクションバーなし — 投票は
+/// レビュー TL で)。タップでレビュー TL へ。
 class StoreReviewFrame extends StatelessWidget {
   const StoreReviewFrame({super.key, required this.pluginId, required this.review, this.onTap, this.onMore});
   final String pluginId;
@@ -319,7 +336,7 @@ class StoreReviewFrame extends StatelessWidget {
       ]),
       headerTrailing: RasqTimestamp(review.createdAt, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
       body: Text(review.body.isEmpty ? '(本文なし)' : review.body, style: RasqTypography.caption.copyWith(height: 1.5), maxLines: 3, overflow: TextOverflow.ellipsis),
-      footer: ReviewActionBar(pluginId: pluginId, review: review),
+      footer: Padding(padding: const EdgeInsets.symmetric(vertical: RasqSpacing.xs), child: ReviewHelpfulSummary(pluginId: pluginId, review: review)),
     );
   }
 }
