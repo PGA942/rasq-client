@@ -35,11 +35,17 @@ Widget app({bool loggedIn = true}) {
 }
 
 void main() {
-  testWidgets('no session → login screen (Misskey enabled, others disabled)', (tester) async {
+  testWidgets('no session → onboarding (RASQ アカウント作成) → skip → login screen (Misskey enabled, others disabled)', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(app(loggedIn: false));
+    await tester.pumpAndSettle();
+    // 初回オンボーディング (D-138): 新規端末はまず RASQ アカウント作成の案内。
+    // サーバー未設定なので作成は無効、スキップで従来のシステムへ。
+    expect(find.text('RASQ アカウントを作成しますか?'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'RASQ アカウントを作成')).onPressed, isNull);
+    await tester.tap(find.text('スキップしてこの端末だけで使う'));
     await tester.pumpAndSettle();
     expect(find.text('SNSにログイン'), findsOneWidget);
     expect(find.text('Misskeyでログイン'), findsOneWidget);

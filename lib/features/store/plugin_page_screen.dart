@@ -586,7 +586,7 @@ class _BookmarkButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref.watch(orgateConfiguredProvider)) return const SizedBox.shrink();
+    if (!ref.watch(centralConfiguredProvider)) return const SizedBox.shrink();
     final marked = ref.watch(storeBookmarksProvider).value?.contains(pluginId) ?? false;
     return IconButton(
       tooltip: marked ? 'ブックマークを外す' : 'ブックマークする',

@@ -33,6 +33,7 @@ import '../features/users/user_page_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/backend_screen.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import '../features/store/plugin_page_screen.dart';
 import '../features/store/review_timeline_screen.dart';
 import '../features/store/store_home_screen.dart';
@@ -53,6 +54,9 @@ abstract final class Routes {
   static const catalog = '/catalog';
   static const wasmDev = '/dev/wasm';
   static const login = '/login';
+
+  /// 初回オンボーディング (D-138): RASQ アカウント作成の案内。
+  static const onboarding = '/onboarding';
   static const viewer = '/viewer';
   static const lists = '/lists';
   static const bookmarks = '/bookmarks';
@@ -112,6 +116,7 @@ class _RouterRefresh extends ChangeNotifier {
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefresh();
   ref.listen(sessionsProvider, (_, _) => refresh.refresh());
+  ref.listen(rasqAccountsProvider, (_, _) => refresh.refresh());
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -120,11 +125,20 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final sessions = ref.read(sessionsProvider);
+      final ledger = ref.read(rasqAccountsProvider);
       final loc = state.matchedLocation;
       final onLogin = loc.startsWith(Routes.login);
-      if (sessions.isLoading) return null; // keep splash until storage is read
+      if (sessions.isLoading || ledger.isLoading) return null; // keep splash until storage is read
       final loggedIn = sessions.value?.isLoggedIn ?? false;
-      if (!loggedIn && !onLogin && loc != Routes.catalog && loc != Routes.wasmDev) return Routes.login;
+      // 未ログインでも開ける画面: カタログ/開発用、オンボーディング、接続先設定
+      // (オンボーディングから Central の接続先を入れるため)。
+      const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server'};
+      // 初回オンボーディング (D-138): 台帳が空(= 新規端末)ならまず RASQ
+      // アカウント作成の案内へ。SNS ログイン済みの端末は移行で済み扱い。
+      final onboardingDone = ledger.value?.onboardingDone ?? false;
+      if (!onboardingDone && !loggedIn && !open.contains(loc) && !onLogin) return Routes.onboarding;
+      if (!loggedIn && !onLogin && !open.contains(loc)) return Routes.login;
+      if (loggedIn && loc == Routes.onboarding) return Routes.home;
       return null;
     },
     routes: [
@@ -214,6 +228,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               parentNavigatorKey: _appNavigatorKey,
               builder: (_, s) => ReviewTimelineScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
           GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const WasmPluginScreen()),
+          GoRoute(path: Routes.onboarding, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingScreen()),
           GoRoute(
             path: Routes.login,
             parentNavigatorKey: _appNavigatorKey,

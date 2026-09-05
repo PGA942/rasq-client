@@ -25,6 +25,10 @@ final notificationsProvider = FutureProvider<Page<NotificationItem>>((ref) async
   return page;
 });
 
+/// 未読の通知数(現在の SNS アカウント分)。RASQ アカウント FOW の左端バッジ
+/// (D-138)が使う。取得前・未ログインは 0。
+final unreadNotificationCountProvider = Provider<int>((ref) => ref.watch(notificationsProvider).value?.items.where((n) => !n.read).length ?? 0);
+
 /// 通知 (すべて / フォロー中). 4 tile types (アクション系 / フォロー系 / 投稿タイル系 / タイマー系),
 /// 長押しドロップダウン(一括既読・通知オフ)は下ナビ側、⚙ = 通知プロファイル設定.
 class NotificationsScreen extends ConsumerWidget {

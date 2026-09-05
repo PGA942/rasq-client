@@ -7,6 +7,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../app/providers.dart';
 import '../app/router.dart';
+import 'rasq_account_fow.dart';
 
 /// アカウントリストの開閉 (D-087: バンドルタイルの ^ ボタン)。アプリ起動中は
 /// サイドバーを閉じても保持する。
@@ -70,21 +71,16 @@ class RasqSidebar extends ConsumerWidget {
                 const RasqLogo(height: 22),
                 const Spacer(),
                 RasqAvatar(imageUrl: rasq.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: rasq.displayName),
-                // 操作オプション (D-087: … ドロップダウン)。
-                Builder(builder: (buttonContext) {
-                  return RasqIconButton(
-                    icon: Icons.more_horiz,
-                    tooltip: 'その他',
-                    onPressed: () async {
-                      final pick = await manager.showDropdown<String>(id: 'sidebar.more', anchor: _rectOf(buttonContext), dense: true, items: const [
-                        RasqDropdownItem('アカウントを追加', 'add'),
-                        RasqDropdownItem('アカウントの設定', 'settings'),
-                      ]);
-                      if (pick == 'add') go(Routes.login);
-                      if (pick == 'settings') go(Routes.settings);
-                    },
-                  );
-                }),
+                // … = RASQ アカウントの選択/編集 FOW (D-138。D-087 のドロップ
+                // ダウンは FOW 内の「SNS アカウントを追加」「アカウント設定」へ)。
+                RasqIconButton(
+                  icon: Icons.more_horiz,
+                  tooltip: 'RASQ アカウント',
+                  onPressed: () {
+                    handle.close();
+                    openRasqAccountFow(ref);
+                  },
+                ),
               ]),
             ),
             // アカウントバンドルタイル (D-087): RASQ アカウント。短押しで
