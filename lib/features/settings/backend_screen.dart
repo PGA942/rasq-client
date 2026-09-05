@@ -9,11 +9,15 @@ import '../../backend/rasq_account.dart';
 import '../../shell/headers.dart';
 import 'settings_dsl.dart';
 
-/// RASQ サーバー (`orgate-server`) の接続設定 (`/settings/server`)。
+/// RASQ サーバーの接続設定 (`/settings/server`)。
 ///
-/// 接続先は本来ビルド時に `--dart-define=ORGATE_BASE_URL` で焼き込むが、
-/// 開発中は手元のサーバーへ向け直せる必要がある。ここでの入力は KV
-/// `backend.v1` の `baseUrl` に入り、焼き込み値より優先される。
+/// 2 面 (D-138): **RASQ Central**(`rasq-central` — RASQ アカウント / ストア /
+/// プラグイン管理 / ユーザーデータ)と**エッジ**(`orgate-server` —
+/// カルクレーター / AsTell / OAuth ブローカー)。接続先は本来ビルド時に
+/// `--dart-define=RASQ_CENTRAL_URL` / `ORGATE_BASE_URL` で焼き込むが、開発中は
+/// 手元のサーバーへ向け直せる必要がある。ここでの入力は KV `backend.v1` の
+/// `centralUrl` / `baseUrl` に入り、焼き込み値より優先される。Central が空なら
+/// エッジの接続先を流用する(1 台で兼ねる開発構成)。
 ///
 /// 設定 DSL (D-031) ではなく素の画面なのは、設定 DSL の L2 タイル集合に
 /// **自由入力の Input タイルがまだ無い**ため。タイルが増えたら
@@ -26,6 +30,7 @@ class BackendSettingsScreen extends ConsumerStatefulWidget {
 
 class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
   final _url = TextEditingController();
+  final _central = TextEditingController();
   bool _loaded = false;
   bool _busy = false;
   String? _probe;
@@ -33,12 +38,14 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
   @override
   void dispose() {
     _url.dispose();
+    _central.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     setState(() => _busy = true);
     await ref.read(settingsAreaProvider(backendSettingsArea).notifier).set('baseUrl', _url.text.trim());
+    await ref.read(settingsAreaProvider(backendSettingsArea).notifier).set('centralUrl', _central.text.trim());
     // 接続先が変わったので、アカウントとストアを取り直す。
     ref.invalidate(orgateAccountProvider);
     ref.invalidate(storeKeyProbeProvider);
@@ -47,7 +54,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
 
   Future<void> _test() async {
     setState(() { _busy = true; _probe = null; });
-    final client = ref.read(orgateClientProvider);
+    final client = ref.read(centralClientProvider);
     if (client == null) {
       setState(() { _busy = false; _probe = '接続先が設定されていません'; });
       return;
@@ -70,12 +77,14 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final saved = ref.watch(settingsAreaProvider(backendSettingsArea)).value?['baseUrl'];
-    if (!_loaded && saved is String) {
-      _url.text = saved;
+    final area = ref.watch(settingsAreaProvider(backendSettingsArea)).value;
+    if (!_loaded && area != null) {
+      _url.text = area['baseUrl'] is String ? area['baseUrl'] as String : '';
+      _central.text = area['centralUrl'] is String ? area['centralUrl'] as String : '';
       _loaded = true;
     }
     final base = ref.watch(orgateBaseUrlProvider);
+    final central = ref.watch(centralBaseUrlProvider);
     final account = ref.watch(orgateAccountProvider);
     final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
 
@@ -83,12 +92,17 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
       appBar: const RasqPageHeader(title: 'RASQ サーバー'),
       body: ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [
         Text(
-          'プラグインストアと RASQ アカウント、Mastodon などのログイン(OAuth ブローカー)に使うサーバーです。'
-          'SNS の投稿やタイムラインはここを通らず、プラグインが各インスタンスへ直接接続します。',
+          'RASQ Central は RASQ アカウント・プラグインストア・プラグイン管理・ユーザーデータのサーバー、'
+          'エッジはカルクレーター / AsTell と Mastodon などのログイン(OAuth ブローカー)のサーバーです。'
+          'SNS の投稿やタイムラインはどちらも通らず、プラグインが各インスタンスへ直接接続します。',
           style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: RasqSpacing.md),
-        Text('接続先', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text('RASQ Central の接続先(空ならエッジを流用)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        const SizedBox(height: 4),
+        RasqInput(controller: _central, hintText: 'https://central.rasq.example', keyboardType: TextInputType.url),
+        const SizedBox(height: RasqSpacing.sm),
+        Text('エッジ(orgate-server)の接続先', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 4),
         RasqInput(controller: _url, hintText: 'https://orgate.example', keyboardType: TextInputType.url),
         const SizedBox(height: RasqSpacing.sm),
@@ -103,9 +117,10 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
         ],
         const SizedBox(height: RasqSpacing.sm),
         Text(
-          base == null
-              ? '未接続 — プラグインストアはモック、RASQ アカウントは最初のログインアカウントからの流用になります。'
-              : '接続中: $base',
+          [
+            central == null ? 'Central: 未接続 — プラグインストアはモック、RASQ アカウントは作成できません(この端末のみ)。' : 'Central: $central',
+            base == null ? 'エッジ: 未接続' : 'エッジ: $base',
+          ].join('\n'),
           style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
         ),
         const RasqSectionHeader(title: 'RASQ アカウント'),
@@ -113,7 +128,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
           loading: () => const RasqLoading(),
           error: (e, _) => Text('アカウントを取得できませんでした: $e', style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).danger)),
           data: (a) => a == null
-              ? Text('接続先が設定されていません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
+              ? Text(central == null ? '接続先が設定されていません。' : 'RASQ アカウントは未作成です。サイドバーの … → RASQ アカウントから作成できます。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
               : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('@${a.handle}', style: RasqTypography.title),
                   Text(a.displayName, style: RasqTypography.bodySmall),
@@ -139,7 +154,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
 
 /// 接続テストの結果をキャッシュしないためのダミー(invalidate 対象)。
 final storeKeyProbeProvider = FutureProvider<Map<String, Object?>>((ref) async {
-  final client = ref.watch(orgateClientProvider);
+  final client = ref.watch(centralClientProvider);
   if (client == null) return const {};
   return client.getJson('/store-key');
 });

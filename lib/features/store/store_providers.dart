@@ -11,11 +11,12 @@ import 'http_store_client.dart';
 import 'store_client.dart';
 import 'store_models.dart';
 
-/// ストアクライアント (M4)。接続先が設定されていれば `orgate-server` の
-/// `/api/v1`、未設定ならモックへ縮退する(サーバー無しでもアプリは動く)。
+/// ストアクライアント (M4)。接続先が設定されていれば **RASQ Central**
+/// (`rasq-central`, D-138。未設定ならエッジ = `orgate-server` へ縮退)の
+/// `/api/v1`、どちらも無ければモックへ縮退する(サーバー無しでもアプリは動く)。
 /// テストは override して差し替える。
 final storeClientProvider = Provider<StoreClient>((ref) {
-  final client = ref.watch(orgateClientProvider);
+  final client = ref.watch(centralClientProvider);
   return client == null ? MockStoreClient() : HttpStoreClient(client);
 });
 

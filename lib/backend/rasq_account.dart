@@ -78,7 +78,13 @@ class OrgateTokenHolder {
 
 final orgateTokenHolderProvider = Provider<OrgateTokenHolder>((ref) => OrgateTokenHolder());
 
-/// RASQ アカウントの状態。接続先未設定なら常に null データ。
+/// RASQ Central 上のアカウントの状態 (D-133 → D-138)。
+///
+/// - 接続先未設定なら常に null。
+/// - **端末登録は自動では行わない**(D-138: オンボーディングか RASQ
+///   アカウント FOW の「作成」で [createAccount] を呼んだときだけ)。保存済み
+///   トークンがあれば `GET /me` で復元する。
+/// - [signOut] でトークンを捨てる(SNS セッションは端末に残る)。
 class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   static const storageKey = 'rasq.orgate.device.v1';
 
@@ -92,16 +98,16 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   @override
   Future<RasqAccount?> build() async {
     // 接続先が変わったら作り直す(開発中にローカルサーバーへ向け直す)。
-    final client = ref.watch(orgateClientProvider);
+    final client = ref.watch(centralClientProvider);
     if (client == null) return null;
 
     final storage = ref.read(sessionStorageProvider);
     _creds = await _loadOrCreateCredentials(storage);
     _publishToken();
 
-    if (_creds!.token == null) {
-      await _registerDevice(client, storage);
-    }
+    // まだ作っていない(トークンなし)なら何もしない — 作るのはユーザーの
+    // 選択 (D-138)。
+    if (_creds!.token == null) return null;
     try {
       return RasqAccount.fromJson(await client.getJson('/me'));
     } on OrgateException catch (e) {
@@ -132,12 +138,13 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     return creds;
   }
 
-  Future<void> _registerDevice(OrgateClient client, SessionStorage storage) async {
-    // 表示名の初期値は、既にログインしている SNS アカウントから借りる。
+  Future<void> _registerDevice(OrgateClient client, SessionStorage storage, {String? displayName}) async {
+    // 表示名の初期値は、指定が無ければ既にログインしている SNS アカウントから借りる。
     final first = ref.read(sessionsProvider).value?.sessions.firstOrNull;
+    final name = displayName ?? first?.displayName;
     final res = await client.postJson('/auth/device', {
       'deviceId': _creds!.deviceId,
-      if (first?.displayName != null) 'displayName': first!.displayName,
+      if (name != null && name.isNotEmpty) 'displayName': name,
     });
     _creds = _DeviceCredentials(
       deviceId: _creds!.deviceId,
@@ -148,8 +155,34 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     _publishToken();
   }
 
+  /// RASQ アカウントを作る(端末登録 → `GET /me`)。既にあればそれを返す。
+  /// 接続先が無ければ null(呼び出し側が案内する)。
+  Future<RasqAccount?> createAccount({String? displayName}) async {
+    final client = ref.read(centralClientProvider);
+    if (client == null) return null;
+    final storage = ref.read(sessionStorageProvider);
+    _creds ??= await _loadOrCreateCredentials(storage);
+    if (_creds!.token == null) {
+      await _registerDevice(client, storage, displayName: displayName);
+    }
+    final account = RasqAccount.fromJson(await client.getJson('/me'));
+    state = AsyncData(account);
+    return account;
+  }
+
+  /// Central からログアウト: トークンを捨て、端末 ID だけ残す(再作成すると
+  /// 同じアカウントへ戻れる — API.md `POST /auth/device` の再発行)。
+  Future<void> signOut() async {
+    final storage = ref.read(sessionStorageProvider);
+    _creds ??= await _loadOrCreateCredentials(storage);
+    _creds = _DeviceCredentials(deviceId: _creds!.deviceId);
+    await storage.write(storageKey, jsonEncode(_creds!.toJson()));
+    _publishToken();
+    state = const AsyncData(null);
+  }
+
   Future<void> updateProfile({String? handle, String? displayName, String? avatarUrl}) async {
-    final client = ref.read(orgateClientProvider);
+    final client = ref.read(centralClientProvider);
     if (client == null) return;
     final res = await client.patchJson('/me', {
       'handle': ?handle,
@@ -162,7 +195,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// ログイン済み SNS アカウントをバンドルへ写す。**トークンは送らない。**
   /// サーバーが知るのは「どのアカウントが束ねられているか」だけ。
   Future<void> syncBundle(List<AccountSession> sessions) async {
-    final client = ref.read(orgateClientProvider);
+    final client = ref.read(centralClientProvider);
     if (client == null || state.value == null) return;
     final wanted = {for (final s in sessions) s.account.key: s};
     try {

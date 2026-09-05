@@ -320,14 +320,18 @@ void main() {
       return container;
     }
 
-    test('初回は端末登録 → /me。トークンはセキュアストレージに残る', () async {
+    test('作成 (D-138) = 端末登録 → /me。トークンはセキュアストレージに残る。作るまでは null', () async {
       final server = fakeServer({
         'POST /api/v1/auth/device': '{"accountId":"c3446e59-b937-4a1b-9050-335da9dc346b","handle":"rasq_c3446e59b937","displayName":"RASQ ユーザー","token":"secret-token"}',
         'GET /api/v1/me': meJson,
       });
       final container = containerWith(server.client);
 
-      final account = await container.read(orgateAccountProvider.future);
+      // 端末登録は自動では走らない(オンボーディング/FOW の「作成」で明示)。
+      expect(await container.read(orgateAccountProvider.future), isNull);
+      expect(server.seen.where((r) => r.url.path.endsWith('/auth/device')), isEmpty);
+
+      final account = await container.read(orgateAccountProvider.notifier).createAccount();
       expect(account!.handle, 'rasq_c3446e59b937');
       expect(account.displayName, 'RASQ ユーザー');
 
@@ -383,6 +387,7 @@ void main() {
       });
       final container = containerWith(server.client);
       await container.read(orgateAccountProvider.future);
+      await container.read(orgateAccountProvider.notifier).createAccount();
 
       await container.read(orgateAccountProvider.notifier).syncBundle([
         AccountSession(

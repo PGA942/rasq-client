@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
+export '../session/rasq_accounts.dart';
 export '../session/session_providers.dart';
 
 /// The single Overlay Manager instance. Every overlay request (app or plugin)

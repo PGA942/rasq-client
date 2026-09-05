@@ -10,6 +10,7 @@ import 'package:sns_misskey/sns_misskey.dart';
 
 import '../backend/rasq_account.dart';
 import '../backend/sns_oauth.dart';
+import 'rasq_accounts.dart';
 import 'session_storage.dart';
 
 /// wasm SNS サンプルの pluginId(dev「実登録」とレジストリ解決で共用)。
@@ -69,8 +70,15 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
 
 @immutable
 class SessionsState {
-  const SessionsState({this.sessions = const [], this.currentKey, this.bundleView = false});
+  const SessionsState({this.sessions = const [], this.currentKey, this.bundleView = false, List<AccountSession>? allSessions}) : _all = allSessions;
+
+  /// **現在の RASQ アカウントに属する** SNS セッション (D-138)。バンドル TL /
+  /// コンポーザー / サイドバーのアカウント行はこれを見る。
   final List<AccountSession> sessions;
+
+  /// 端末にある全セッション(RASQ アカウントを跨いだ集合)。永続化の単位。
+  List<AccountSession> get allSessions => _all ?? sessions;
+  final List<AccountSession>? _all;
   final String? currentKey;
 
   /// 総合表示 (D-087): アカウントバンドルタイル(RASQ アカウント)が選択
@@ -85,8 +93,8 @@ class SessionsState {
 
   bool get isLoggedIn => sessions.isNotEmpty;
 
-  SessionsState copyWith({List<AccountSession>? sessions, String? currentKey, bool? bundleView}) =>
-      SessionsState(sessions: sessions ?? this.sessions, currentKey: currentKey ?? this.currentKey, bundleView: bundleView ?? this.bundleView);
+  SessionsState copyWith({List<AccountSession>? sessions, String? currentKey, bool? bundleView, List<AccountSession>? allSessions}) =>
+      SessionsState(sessions: sessions ?? this.sessions, currentKey: currentKey ?? this.currentKey, bundleView: bundleView ?? this.bundleView, allSessions: allSessions ?? _all);
 }
 
 /// Logged-in accounts + the selected one. Persisted as one JSON blob in
@@ -96,37 +104,52 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
 
   @override
   Future<SessionsState> build() async {
+    // 現在の RASQ アカウント (D-138) が変われば見せるセッションも変わる。
+    final ledger = await ref.watch(rasqAccountsProvider.future);
     final raw = await ref.read(sessionStorageProvider).read(storageKey);
     if (raw == null) return const SessionsState();
     try {
       final j = (jsonDecode(raw) as Map).cast<String, Object?>();
       final list = [for (final s in (j['sessions'] as List? ?? const [])) AccountSession.fromJson((s as Map).cast<String, Object?>())];
-      return SessionsState(sessions: list, currentKey: j['current'] as String?, bundleView: j['bundle'] == true);
+      return _view(list, currentKey: j['current'] as String?, bundleView: j['bundle'] == true, ledger: ledger);
     } catch (e) {
       debugPrint('sessions: corrupt storage, starting fresh: $e');
       return const SessionsState();
     }
   }
 
+  /// 全セッションから、現在の RASQ アカウントに属する分だけを見せる形を作る。
+  /// 台帳が無い(移行前・テストの素の状態)なら全部見せる。current が所属外
+  /// なら所属内の先頭へ寄せる。
+  SessionsState _view(List<AccountSession> all, {String? currentKey, bool bundleView = false, RasqAccountsState? ledger}) {
+    final owner = (ledger ?? ref.read(rasqAccountsProvider).value ?? const RasqAccountsState()).current;
+    final visible = owner == null ? all : [for (final s in all) if (owner.sessionKeys.contains(s.account.key)) s];
+    final key = visible.any((s) => s.account.key == currentKey) ? currentKey : visible.firstOrNull?.account.key;
+    return SessionsState(sessions: visible, currentKey: key, bundleView: bundleView, allSessions: all);
+  }
+
   Future<void> _persist(SessionsState s) async {
     await ref.read(sessionStorageProvider).write(
           storageKey,
-          jsonEncode({'sessions': s.sessions.map((e) => e.toJson()).toList(), 'current': s.currentKey, 'bundle': s.bundleView}),
+          jsonEncode({'sessions': s.allSessions.map((e) => e.toJson()).toList(), 'current': s.currentKey, 'bundle': s.bundleView}),
         );
     state = AsyncData(s);
   }
 
   Future<void> add(AuthResult result) async {
     final cur = state.value ?? const SessionsState();
-    final others = cur.sessions.where((s) => s.account != result.session.account).toList();
-    await _persist(SessionsState(sessions: [...others, result.session], currentKey: result.session.account.key));
+    // 新しいログインは現在の RASQ アカウントに所属させる (D-138)。
+    await ref.read(rasqAccountsProvider.notifier).addSessionKey(result.session.account.key);
+    final others = cur.allSessions.where((s) => s.account != result.session.account).toList();
+    await _persist(_view([...others, result.session], currentKey: result.session.account.key, ledger: ref.read(rasqAccountsProvider).value));
   }
 
   Future<void> remove(AccountId account) async {
     final cur = state.value ?? const SessionsState();
     await ref.read(pluginRegistryProvider).closeSession(account);
-    final rest = cur.sessions.where((s) => s.account != account).toList();
-    await _persist(SessionsState(sessions: rest, currentKey: cur.currentKey == account.key ? rest.firstOrNull?.account.key : cur.currentKey));
+    await ref.read(rasqAccountsProvider.notifier).removeSessionKey(account.key);
+    final rest = cur.allSessions.where((s) => s.account != account).toList();
+    await _persist(_view(rest, currentKey: cur.currentKey == account.key ? null : cur.currentKey, bundleView: cur.bundleView, ledger: ref.read(rasqAccountsProvider).value));
   }
 
   Future<void> setCurrent(AccountId account) async {
@@ -170,19 +193,34 @@ final bundleViewProvider = Provider<bool>((ref) => ref.watch(sessionsProvider).v
 /// どちらの場合もハンドルはインスタンスなしの素の形(`@handle`)で出す —
 /// 個別アカウント行の `handle@instance` と区別が付く。
 final rasqAccountProvider = Provider<UserSummary>((ref) {
+  final record = ref.watch(currentRasqAccountProvider);
   final server = ref.watch(orgateAccountProvider).value;
-  if (server != null) return server.toUserSummary();
+  // Central アカウント (D-138): サーバーのプロフィールが取れていればそれ、
+  // まだなら台帳に写した値。
+  if (record != null && record.isCentral) {
+    if (server != null && server.id == record.centralAccountId) return server.toUserSummary();
+    return UserSummary(
+      id: 'rasq:${record.centralAccountId}',
+      account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: record.handle ?? ''),
+      displayName: record.displayName ?? record.handle ?? 'RASQ',
+      avatarUrl: record.avatarUrl,
+    );
+  }
 
+  // 「この端末のみ」: 明示のプロフィールがあればそれ、無ければ所属する最初の
+  // SNS アカウントを借りる(従来の挙動)。
   final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
   final first = sessions.firstOrNull;
-  if (first == null) {
+  final handle = record?.handle ?? first?.account.handle ?? '';
+  final displayName = record?.displayName ?? first?.displayName ?? (first?.account.handle ?? 'RASQ');
+  if (first == null && record == null) {
     return const UserSummary(id: '-', account: AccountId(kind: SnsKind.other, instance: '', handle: ''), displayName: 'RASQ');
   }
   return UserSummary(
-    id: 'rasq:${first.account.handle}',
-    account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: first.account.handle),
-    displayName: first.displayName ?? first.account.handle,
-    avatarUrl: first.avatarUrl,
+    id: 'rasq:${record?.id ?? handle}',
+    account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: handle),
+    displayName: displayName,
+    avatarUrl: record?.avatarUrl ?? first?.avatarUrl,
   );
 });
 
