@@ -13,6 +13,7 @@ import 'package:rasq_client/features/store/store_providers.dart';
 import 'package:rasq_client/features/store/store_widgets.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -121,6 +122,10 @@ void main() {
     expect(find.text('12件'), findsOneWidget);
     expect(find.byType(StoreReviewFrame), findsWidgets);
     expect(find.text('wasm でここまで動く'), findsOneWidget); // 関連性 1 位が先頭フレーム
+    // フレームにはアクションバーを置かず、人数だけ中央揃え(投票は TL 側)。
+    expect(find.descendant(of: find.byType(StoreReviewFrame), matching: find.byType(ReviewActionBar)), findsNothing);
+    final summary = tester.widget<Text>(find.descendant(of: find.byType(StoreReviewFrame).first, matching: find.text('12人が役に立ったと考えました。')));
+    expect(summary.textAlign, TextAlign.center);
 
     await reveal(tester, find.text('プライバシーと必要な権限'));
     expect(find.text('ネットワーク'), findsOneWidget);
@@ -146,9 +151,12 @@ void main() {
     expect(find.text('関連性'), findsOneWidget);
     expect(find.text('最新'), findsOneWidget);
     expect(find.byType(StoreReviewTile), findsWidgets);
-    // 先頭タイル = 関連性 1 位(👍12)。↪️ / 👍 / 👎 のアクションバー。
+    // 先頭タイル = 関連性 1 位(👍12)。スレッド展開画面と同じ投稿タイル
+    // (表示名 + @handle ● rasq)に ↪️ / 👍 / 👎 のアクションバー。
     expect(find.text('wasm でここまで動く'), findsOneWidget);
     expect(find.text('タロ・ヤマダ'), findsOneWidget);
+    expect(find.text('@taro_yamada'), findsOneWidget);
+    expect(find.descendant(of: find.byType(StoreReviewTile).first, matching: find.byType(RasqPostTile)), findsOneWidget);
     expect(find.text('12人が役に立ったと考えました。'), findsOneWidget);
     expect(find.byIcon(Icons.shortcut), findsWidgets);
 

@@ -12,10 +12,13 @@ import 'store_widgets.dart';
 
 /// レビュー TL (D-137: ワイヤーフレーム「レビューを表示」)。
 ///
+/// **スレッド展開画面と同じスタイル**(D-137 追補): ヘッダーは `<` + 自分の
+/// RASQ アカウント + タイトル、タイルは L2 の投稿タイル([StoreReviewTile] =
+/// RasqPostTile に ★ + 見出し / 本文 / ↪️ 👍 👎)。著者タップは将来 RASQ
+/// アカウントページへ(今は準備中の案内)。
 /// タブ = 「∨関連性 | 最新」(固定 2 タブ。選択中タブの ∨ から 関連性 /
-/// 評価が高い / 評価が低い を選べる)。タイルは [StoreReviewTile](↪️ / 👍 / 👎
-/// のアクションバー)。右下の + でレビュー作成。ストアページの「レビュー」
-/// フレームはこの TL の関連性上位 10 件。
+/// 評価が高い / 評価が低い を選べる)。右下の + でレビュー作成。ストアページの
+/// 「レビュー」フレームはこの TL の関連性上位 10 件。
 class ReviewTimelineScreen extends ConsumerStatefulWidget {
   const ReviewTimelineScreen({super.key, required this.pluginId});
   final String pluginId;
@@ -33,11 +36,13 @@ class _ReviewTimelineScreenState extends ConsumerState<ReviewTimelineScreen> {
     final manager = ref.watch(overlayManagerProvider);
     final detail = ref.watch(storePluginProvider(widget.pluginId)).value;
     final reviews = ref.watch(storeReviewsProvider(widget.pluginId));
+    final me = ref.watch(rasqAccountProvider);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: RasqPageHeader(
           title: 'レビュー',
+          leadingAvatar: me,
           onMore: () {},
           bottom: RasqTabs(
             items: [RasqTabItem(_leftSort.label), const RasqTabItem('最新')],
@@ -88,6 +93,8 @@ class _ReviewList extends ConsumerWidget {
         return StoreReviewTile(
           pluginId: pluginId,
           review: r,
+          // RASQ アカウントのページはまだ無い(D-087 の後段)。導線だけ先に置く。
+          onAuthorTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('@${reviewAuthorOf(r).handle} の RASQ アカウントページは準備中です'))),
           onMore: (rect) async {
             final pick = await manager.showDropdown<String>(id: 'store.review.more', anchor: rect, items: const [
               RasqDropdownItem('リンクをコピー', 'copy'),

@@ -402,6 +402,7 @@ class StoreReview {
     this.title = '',
     this.body = '',
     this.authorName = '',
+    this.authorHandle = '',
     this.authorAvatarUrl,
     this.usedVersion = '',
     this.verifiedUse = false,
@@ -417,8 +418,9 @@ class StoreReview {
   final String title;
   final String body;
 
-  /// 投稿者(RASQ アカウントの表示名 / アバター)。匿名なら空。
+  /// 投稿者(RASQ アカウントの表示名 / ハンドル / アバター)。匿名なら空。
   final String authorName;
+  final String authorHandle;
   final Uri? authorAvatarUrl;
   final String usedVersion;
   final bool verifiedUse;
@@ -470,6 +472,7 @@ class StoreReview {
         title: title,
         body: body,
         authorName: authorName,
+        authorHandle: authorHandle,
         authorAvatarUrl: authorAvatarUrl,
         usedVersion: usedVersion,
         verifiedUse: verifiedUse,
@@ -487,6 +490,7 @@ class StoreReview {
       title: j['title'] as String? ?? '',
       body: j['body'] as String? ?? '',
       authorName: author['name'] as String? ?? '',
+      authorHandle: author['handle'] as String? ?? '',
       authorAvatarUrl: _uri(author['avatarUrl']),
       usedVersion: j['usedVersion'] as String? ?? '',
       verifiedUse: j['verifiedUse'] == true,
