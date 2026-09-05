@@ -27,6 +27,8 @@ dependencies:
   flutter_secure_storage: ^10.0.0
   url_launcher: ^6.3.0
   crypto: ^3.0.3
+  # ストア配布物の ed25519 署名検証 (D-034)。純 Dart 実装で全プラットフォーム同一。
+  cryptography: ^2.9.0
   http: ^1.2.0
   image_picker: ^1.1.2
   rasq_models:
@@ -63,6 +65,8 @@ flutter:
     # misskey-wasm-sample plugin binary (built in rasq-sdk-sample; loaded by
     # the WASMプラグイン試験 dev screen).
     - assets/plugins/misskey_wasm_sample.wasm
+    # Mastodon SNS プラグイン (D-135)。sns.* 境界だけを実装した wasm。
+    - assets/plugins/mastodon_wasm.wasm
     - assets/plugins/hello_rasq_plugin.wasm
     - assets/plugins/relational_wasm.wasm
     # ML model manifests (model-manifest.schema.json — resolved by MlGateway).

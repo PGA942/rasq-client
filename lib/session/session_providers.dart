@@ -8,19 +8,45 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:sns_misskey/sns_misskey.dart';
 
+import '../backend/rasq_account.dart';
+import '../backend/sns_oauth.dart';
 import 'session_storage.dart';
 
 /// wasm SNS サンプルの pluginId(dev「実登録」とレジストリ解決で共用)。
 const wasmSamplePluginId = 'misskey-wasm-sample';
 
+/// Mastodon プラグイン (D-135) の pluginId。ログイン画面とレジストリで共用。
+const mastodonPluginId = 'rasq.official.mastodon';
+
 /// Overridable in tests (MemorySessionStorage).
 final sessionStorageProvider = Provider<SessionStorage>((ref) => SecureSessionStorage());
 
-/// Installed SNS plugins. M1: Misskey only (D-010). Bluesky / Mastodon are
-/// registered once ORGATE-server can issue tokens.
+/// Installed SNS plugins.
+///
+/// - Misskey: Dart 直書きアダプタ (D-010)。MiAuth はクライアント単体で完結する。
+/// - Misskey (wasm sample): 同じ SNS の wasm 実装。ログイン UI には出ない
+///   (`pluginFor` は Dart 版が先)— 登録は dev 画面の「実登録」から。
+/// - Mastodon (D-135): wasm プラグイン。**認証は orgate-server の OAuth
+///   ブローカー経由**(インスタンスごとの client_secret が要るため)。
+///   サーバー未設定ならログイン開始時にその旨のエラーを返す。
 final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
   final r = PluginRegistry()
     ..register(MisskeyPlugin())
+    ..register(WasmSnsPlugin(
+      manifest: const PluginManifest(
+        id: mastodonPluginId,
+        name: 'Mastodon',
+        version: '0.1.0',
+        kind: PluginKind.sns,
+        supportedSns: [SnsKind.mastodon],
+        permissions: ['network', 'storage.safe', 'register_action'],
+        official: true,
+        verified: true,
+      ),
+      kind: SnsKind.mastodon,
+      loadBytes: () async => (await rootBundle.load('assets/plugins/mastodon_wasm.wasm')).buffer.asUint8List(),
+      authFlowFactory: brokeredAuthFactory(ref, provider: 'mastodon', pluginId: mastodonPluginId, kind: SnsKind.mastodon),
+    ))
     // wasm SNS サンプル (D-079: 実登録の口)。この pluginId のセッションは
     // sns.* 境界(WasmSnsSession)として解決され、アプリの通常パイプラインが
     // wasm の上で動く。ログイン UI には出ない(pluginFor は Misskey が先)—
@@ -30,7 +56,14 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
       kind: SnsKind.misskey,
       loadBytes: () async => (await rootBundle.load('assets/plugins/misskey_wasm_sample.wasm')).buffer.asUint8List(),
     ));
-  ref.onDispose(r.closeAll);
+  ref.onDispose(() async {
+    await r.closeAll();
+    // セッションを持たないワーカー(inspectServer 用の匿名ワーカー)も
+    // ここで閉じる。
+    for (final p in r.plugins.whereType<WasmSnsPlugin>()) {
+      await p.dispose();
+    }
+  });
   return r;
 });
 
@@ -128,11 +161,18 @@ final currentAccountProvider = Provider<AccountId?>((ref) => ref.watch(currentAc
 /// 総合表示中か (D-087)。
 final bundleViewProvider = Provider<bool>((ref) => ref.watch(sessionsProvider).value?.bundleView ?? false);
 
-/// RASQ アカウント(バンドルの顔)(D-087)。ORGATE サーバーのアカウントが
-/// できるまでは最初のログインアカウントのプロフィールを流用し、ハンドルは
-/// インスタンスなしの素の形(`@handle`)で出す — 個別アカウント行の
-/// `handle@instance` と区別が付く。
+/// RASQ アカウント(バンドルの顔)(D-087)。
+///
+/// ORGATE サーバーに繋がっていれば**本物の RASQ アカウント**
+/// ([orgateAccountProvider] = `GET /me`)を出す。接続先が未設定、または
+/// まだ取得できていない間は、最初のログインアカウントのプロフィールを
+/// 流用する(サーバー無しでもサイドバーが成立する)。
+/// どちらの場合もハンドルはインスタンスなしの素の形(`@handle`)で出す —
+/// 個別アカウント行の `handle@instance` と区別が付く。
 final rasqAccountProvider = Provider<UserSummary>((ref) {
+  final server = ref.watch(orgateAccountProvider).value;
+  if (server != null) return server.toUserSummary();
+
   final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
   final first = sessions.firstOrNull;
   if (first == null) {

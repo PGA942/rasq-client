@@ -4,29 +4,54 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
-import 'package:sns_misskey/sns_misskey.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'package:sns_misskey/sns_misskey.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import 'terms_sheet.dart';
 
-/// Misskey login: インスタンスURL入力 → サーバー確認 → 利用規約 → MiAuth(ブラウザ) → 認証を確認.
-class MisskeyLoginScreen extends ConsumerStatefulWidget {
-  const MisskeyLoginScreen({super.key});
+/// SNS ログインの共通画面: インスタンスURL入力 → サーバー確認 → 利用規約 →
+/// ブラウザ認証 → 「認証を確認」。
+///
+/// 流れは CONTRACT §3 の `BrowserAuthFlow{url, hint, complete()}` そのもの
+/// なので SNS を問わず同じで、違うのは**どのプラグインに聞くか**だけ。
+/// Misskey は MiAuth でクライアント単体で完結し、Mastodon は
+/// orgate-server の OAuth ブローカー越しにトークンを受け取る (D-135) が、
+/// 画面から見ればどちらも同じ 3 ステップになる。
+class SnsLoginScreen extends ConsumerStatefulWidget {
+  const SnsLoginScreen({
+    super.key,
+    required this.pluginId,
+    required this.kind,
+    required this.defaultHost,
+    required this.authButtonLabel,
+    this.hostHint,
+  });
+
+  final String pluginId;
+  final SnsKind kind;
+
+  /// 入力欄の初期値(代表的なインスタンス)。
+  final String defaultHost;
+
+  /// 「ブラウザで認証する (MiAuth)」のような、認証方式込みのラベル。
+  final String authButtonLabel;
+  final String? hostHint;
 
   @override
-  ConsumerState<MisskeyLoginScreen> createState() => _MisskeyLoginScreenState();
+  ConsumerState<SnsLoginScreen> createState() => _SnsLoginScreenState();
 }
 
-class _MisskeyLoginScreenState extends ConsumerState<MisskeyLoginScreen> {
-  final _host = TextEditingController(text: 'misskey.io');
+class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
+  late final _host = TextEditingController(text: widget.defaultHost);
   ServerInfo? _server;
   BrowserAuthFlow? _flow;
   bool _busy = false;
   String? _error;
 
-  SnsPlugin get _plugin => ref.read(pluginRegistryProvider).plugin(MisskeyPlugin.pluginId)!;
+  SnsPlugin get _plugin => ref.read(pluginRegistryProvider).plugin(widget.pluginId)!;
 
   @override
   void dispose() {
@@ -67,6 +92,9 @@ class _MisskeyLoginScreenState extends ConsumerState<MisskeyLoginScreen> {
       setState(() => _flow = flow);
       final ok = await launchUrl(flow.url, mode: LaunchMode.externalApplication);
       if (!ok) setState(() => _error = 'ブラウザを開けませんでした。URL: ${flow.url}');
+    } on SnsApiException catch (e) {
+      // サーバー未設定 (B10) やブローカーのエラーはそのまま見せる。
+      setState(() => _error = e.code.message ?? e.code.display);
     } catch (e) {
       setState(() => _error = '認証を開始できませんでした: $e');
     } finally {
@@ -106,12 +134,18 @@ class _MisskeyLoginScreenState extends ConsumerState<MisskeyLoginScreen> {
           Text('PDSを変更すると、アプリ外でのURL表示が変わります。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: RasqSpacing.xl),
           Row(children: [
-            Container(width: 32, height: 32, decoration: BoxDecoration(color: RasqSnsPill.colorOf(SnsKind.misskey), shape: BoxShape.circle), alignment: Alignment.center, child: const Text('M', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(color: RasqSnsPill.colorOf(widget.kind), shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: Text(widget.kind.label.characters.first, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+            ),
             const SizedBox(width: RasqSpacing.md),
             Expanded(
               child: RasqInput(
                 controller: _host,
-                hintText: '移行先のURLを入力 (例: misskey.io)',
+                hintText: widget.hostHint ?? '移行先のURLを入力 (例: ${widget.defaultHost})',
                 keyboardType: TextInputType.url,
                 textInputAction: TextInputAction.go,
                 onSubmitted: (_) => _inspect(),
@@ -135,7 +169,11 @@ class _MisskeyLoginScreenState extends ConsumerState<MisskeyLoginScreen> {
             const RasqSectionHeader(title: 'サーバーの検索', topMargin: 0),
             RasqListTile(
               title: _server!.name,
-              subtitle: [_server!.host, if (_server!.version != null) 'Misskey ${_server!.version}', if (_server!.maintainer != null) '管理人:${_server!.maintainer}'].join(' · '),
+              subtitle: [
+                _server!.host,
+                if (_server!.version != null) '${_server!.software ?? widget.kind.label} ${_server!.version}',
+                if (_server!.maintainer != null) '管理人:${_server!.maintainer}',
+              ].join(' · '),
               leading: _server!.iconUrl == null ? const Icon(Icons.dns_outlined) : RasqAvatar(imageUrl: _server!.iconUrl, size: 32),
               trailing: _server!.registrationOpen == false ? const RasqPill(label: '登録停止中', color: RasqColors.muted) : null,
               chevron: false,
@@ -146,7 +184,7 @@ class _MisskeyLoginScreenState extends ConsumerState<MisskeyLoginScreen> {
               FilledButton.icon(
                 onPressed: _busy ? null : _startAuth,
                 icon: const Icon(Icons.open_in_browser),
-                label: const Text('ブラウザで認証する (MiAuth)'),
+                label: Text(widget.authButtonLabel),
                 style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               )
             else ...[
@@ -165,4 +203,32 @@ class _MisskeyLoginScreenState extends ConsumerState<MisskeyLoginScreen> {
       ),
     );
   }
+}
+
+/// Misskey (MiAuth) — クライアント単体で完結する。
+class MisskeyLoginScreen extends StatelessWidget {
+  const MisskeyLoginScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => SnsLoginScreen(
+        pluginId: MisskeyPlugin.pluginId,
+        kind: SnsKind.misskey,
+        defaultHost: 'misskey.io',
+        authButtonLabel: 'ブラウザで認証する (MiAuth)',
+      );
+}
+
+/// Mastodon (OAuth) — インスタンスごとの client_secret が要るので、
+/// トークン発行は orgate-server の OAuth ブローカーが代行する (D-135)。
+class MastodonLoginScreen extends StatelessWidget {
+  const MastodonLoginScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => SnsLoginScreen(
+        pluginId: mastodonPluginId,
+        kind: SnsKind.mastodon,
+        defaultHost: 'mastodon.social',
+        authButtonLabel: 'ブラウザで認証する (OAuth)',
+        hostHint: 'インスタンスのURLを入力 (例: mastodon.social)',
+      );
 }

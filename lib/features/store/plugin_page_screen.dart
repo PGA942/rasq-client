@@ -1,16 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
+import '../../app/router.dart';
+import '../../backend/orgate_client.dart';
 import '../../shell/headers.dart';
+import 'release_fow.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
+import 'store_widgets.dart';
 
-/// プラグインページ (M4 / D-120): プレビュー情報 + **常設安全性ブロック**
-/// (SafetyBlock, D-033)+ 互換性 + リリースノート + レビュー。インストールは
-/// 確認シート(構成 = InstallManifest の権限・配布物が根拠)→ SHA-512 検証。
+/// プラグインページ (M4 / D-120 → D-137 でワイヤーフレーム「全体像」の形に)。
+///
+/// 上から: 依存の注意 + インストール(ピル)/ バナー / アイコン + 名前 +
+/// 提供元 + ブックマーク + … / 紹介文 / プレビュー(横スライド)/ 先月の DL 数
+/// (折れ線)/ 評価(分布)/ **レビュー ›**(TL 上位 10 件)/ **アップデートと
+/// バージョン ›**(タップで FOW)/ **プライバシーと必要な権限 ›**(権限タイプ
+/// ごとのグループ)— 3 節は左右スライドのインラインフレーム / 互換性。
+///
+/// 常設安全性ブロック (D-033) は「プライバシーと必要な権限」の節に**畳まずに**
+/// 残す。インストールは確認シート(InstallManifest の権限・配布物が根拠)→
+/// SHA-512 + ed25519 検証(D-034)。
 class PluginPageScreen extends ConsumerStatefulWidget {
   const PluginPageScreen({super.key, required this.pluginId});
   final String pluginId;
@@ -20,24 +35,36 @@ class PluginPageScreen extends ConsumerStatefulWidget {
 
 class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
   bool _busy = false;
+  bool _descriptionExpanded = false;
 
-  Future<void> _install(StorePluginDetail d) async {
-    void toast(String message) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-    }
+  void _toast(String message) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
 
+  /// インストール(版指定つき, D-137)。確認シート → 検証 → 登録。
+  Future<void> _install(StorePluginDetail d, {String? version}) async {
     final manager = ref.read(overlayManagerProvider);
-    final manifest = await ref.read(storeManifestProvider(widget.pluginId).future);
-    if (!mounted) return;
-    if (manifest == null) {
-      toast('構成を取得できませんでした');
+    final InstallManifest? manifest;
+    try {
+      manifest = await ref.read(storeClientProvider).manifest(widget.pluginId, version: version);
+    } on OrgateException catch (e) {
+      _toast(e.message);
       return;
     }
-    final bundle = manifest.artifacts.where((a) => a.kind == 'bundle').firstOrNull;
-    // インストール確認シート (D-033): 権限(用途理由つき)と配布物が根拠。
+    if (!mounted) return;
+    if (manifest == null) {
+      _toast(version == null ? '構成を取得できませんでした' : 'Ver.$version の構成が見つかりませんでした');
+      return;
+    }
+    final bundle = manifest.bundle;
+    final permissions = [
+      for (final id in (manifest.manifest['permissions'] as List? ?? const []))
+        if (id is String) d.safety.permissions.where((p) => p.permission == id).firstOrNull ?? PermissionEntry(id, ''),
+    ];
+    // インストール確認シート (D-033): 権限(種別ごと・用途理由つき)と配布物が根拠。
     final ok = await manager.showBottomSheet<bool>(
       id: 'store.install',
-      title: '${d.name} をインストール',
+      title: '${d.name} ${manifest.version} をインストール',
       builder: (ctx) {
         final scheme = Theme.of(ctx).colorScheme;
         return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -46,23 +73,29 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('このプラグインが使う権限', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               const SizedBox(height: 4),
-              for (final p in d.safety.permissions)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Icon(Icons.key_outlined, size: 16),
-                    const SizedBox(width: 6),
-                    Expanded(child: Text('${p.permission} — ${p.reason}', style: RasqTypography.bodySmall)),
-                  ]),
-                ),
-              if (manifest.permissionsAdded.isNotEmpty) ...[
+              for (final g in PermissionKind.group(permissions)) ...[
+                Text(g.kind.label, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700)),
+                for (final p in g.entries)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4, left: RasqSpacing.sm),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Icon(Icons.key_outlined, size: 16),
+                      const SizedBox(width: 6),
+                      Expanded(child: Text(p.reason.isEmpty ? p.permission : '${p.permission} — ${p.reason}', style: RasqTypography.bodySmall)),
+                    ]),
+                  ),
+              ],
+              if (manifest!.permissionsAdded.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text('前のバージョンから増えた権限', style: RasqTypography.caption.copyWith(color: RasqTokens.of(ctx).danger)),
                 for (final p in manifest.permissionsAdded) Text('${p.permission} — ${p.reason}', style: RasqTypography.bodySmall),
               ],
               const SizedBox(height: RasqSpacing.sm),
               if (bundle != null)
-                Text('配布物: ${(bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB ・ SHA-512 ${bundle.sha512.substring(0, 16)}… ・ ストア署名つき',
+                // 署名の有無は正直に出す。モックストアや署名前の掲載物は
+                // ハッシュ照合だけになる (D-034)。
+                Text('配布物: ${(bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB ・ SHA-512 ${bundle.sha512.substring(0, 16)}…'
+                    ' ・ ${bundle.signature.isNotEmpty && manifest.storePublicKey.isNotEmpty ? 'ストア署名つき (ed25519)' : 'ストア署名なし(ハッシュ照合のみ)'}',
                     style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ]),
           ),
@@ -75,161 +108,492 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
     );
     if (ok != true || !mounted) return; // 余白/スワイプで閉じた = キャンセル
     setState(() => _busy = true);
-    final error = await ref.read(installedPluginsProvider.notifier).install(widget.pluginId);
+    final outcome = await ref.read(installedPluginsProvider.notifier).install(widget.pluginId, version: version);
     if (!mounted) return;
     setState(() => _busy = false);
-    toast(error ?? '${d.name} をインストールしました(SHA-512 検証済み)');
+    _toast(outcome.error ?? '${d.name} ${manifest.version} をインストールしました(${outcome.verification?.message ?? 'SHA-512 検証済み'})');
+  }
+
+  /// ヘッダーの … メニュー(ワイヤーフレーム: レビューを投稿 / リンクをコピー /
+  /// 共有 / … / プラグインを報告)。フォロー/ミュート/ブロックはクリエイター
+  /// アカウント (RASQ アカウント) の関係 API が無いのでまだ出さない。
+  Future<void> _more(StorePluginDetail d, Rect anchor) async {
+    final manager = ref.read(overlayManagerProvider);
+    final pick = await manager.showDropdown<String>(id: 'store.plugin.more', anchor: anchor, items: [
+      const RasqDropdownItem('レビューを投稿', 'review'),
+      const RasqDropdownItem('リンクをコピー', 'copy'),
+      const RasqDropdownItem('共有', 'share'),
+      RasqDropdownItem('プラグインを報告', 'report', destructive: true, enabled: d.supportUrl != null),
+    ]);
+    if (!mounted) return;
+    switch (pick) {
+      case 'review':
+        await openReviewComposer(context, ref, detail: d);
+      case 'copy':
+      case 'share':
+        // 共有シート(OS)は share_plus 未導入なのでリンクのコピーで代替する。
+        await Clipboard.setData(ClipboardData(text: 'rasq://store/plugin/${Uri.encodeComponent(d.id)}'));
+        _toast('ストアページのリンクをコピーしました');
+      case 'report':
+        // 報告は開発者のサポート窓口へ(ストア側の通報 API は M4 後段)。
+        if (d.supportUrl != null) await launchUrl(d.supportUrl!, mode: LaunchMode.externalApplication);
+      default:
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tokens = RasqTokens.of(context);
     final detail = ref.watch(storePluginProvider(widget.pluginId));
-    final installed = ref.watch(installedPluginsProvider).where((p) => p.id == widget.pluginId).firstOrNull;
-
     return Scaffold(
       appBar: RasqPageHeader(title: 'プラグイン', onMore: () {}),
       body: detail.when(
         loading: () => const RasqLoading(),
         error: (e, _) => RasqEmptyView(title: 'ストアに接続できませんでした', hint: '$e'),
-        data: (d) {
-          if (d == null) return const RasqEmptyView(title: 'このプラグインは見つかりませんでした', hint: '取り下げられた可能性があります');
-          final reviews = ref.watch(storeReviewsProvider(d.id)).value ?? const <StoreReview>[];
-          final releases = ref.watch(storeReleasesProvider(d.id)).value ?? const <ReleaseNote>[];
-          return ListView(children: [
-            // ヘッダー: アイコン + 名前/提供元 + 数値行。
-            Padding(
-              padding: const EdgeInsets.all(RasqSpacing.page),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(14)),
-                  child: const Icon(Icons.extension_outlined, size: 30),
-                ),
-                const SizedBox(width: RasqSpacing.md),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(d.name, style: RasqTypography.title),
-                    Text('${d.developerName} ・ ${d.origin.label}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
-                    const SizedBox(height: 2),
-                    Text('★${d.rating.toStringAsFixed(1)} ・ ${d.downloads} DL ・ ${d.sizeMb.toStringAsFixed(1)}MB ・ v${d.version}${d.channel == 'beta' ? ' (β)' : ''}',
-                        style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-                  ]),
-                ),
-              ]),
-            ),
-            // 状態バナー(警告/停止/失効/更新あり)。
-            if (d.status != PluginStatus.published)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-                padding: const EdgeInsets.all(RasqSpacing.sm),
-                decoration: BoxDecoration(
-                  color: (d.status.isCaution ? tokens.danger : tokens.link).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(RasqSizes.radiusSm),
-                ),
-                child: Text('状態: ${d.status.label}', style: RasqTypography.bodySmall.copyWith(color: d.status.isCaution ? tokens.danger : tokens.link)),
-              ),
-            // インストール/削除。
-            Padding(
-              padding: const EdgeInsets.all(RasqSpacing.page),
-              child: installed == null
-                  ? FilledButton(
-                      // 停止/失効は新規インストール不可(警告はバナー明示の上で可)。
-                      onPressed: _busy || (d.status.isCaution && d.status != PluginStatus.warning) ? null : () => _install(d),
-                      child: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(d.price == 0 ? 'インストール' : '¥${d.price.toStringAsFixed(0)} で購入'),
-                    )
-                  : Row(children: [
-                      Expanded(child: Text('インストール済み v${installed.version}(SHA-512 検証済み)', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
-                      OutlinedButton(
-                        onPressed: _busy ? null : () => ref.read(installedPluginsProvider.notifier).uninstall(d.id),
-                        child: const Text('削除'),
-                      ),
-                    ]),
-            ),
-            // 常設安全性ブロック (D-033): 折りたたまない。
-            const RasqSectionHeader(title: '権限と安全性', topMargin: 0),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                for (final p in d.safety.permissions)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Icon(Icons.key_outlined, size: 16),
-                      const SizedBox(width: 6),
-                      Expanded(child: Text('${p.permission} — ${p.reason}', style: RasqTypography.bodySmall)),
-                    ]),
-                  ),
-                if (d.safety.externalHosts.isNotEmpty) Text('外部通信先: ${d.safety.externalHosts.join('、')}', style: RasqTypography.bodySmall),
-                if (d.safety.dataHandling.isNotEmpty) Text('データの扱い: ${d.safety.dataHandling}', style: RasqTypography.bodySmall),
+        data: (d) => d == null ? const RasqEmptyView(title: 'このプラグインは見つかりませんでした', hint: '取り下げられた可能性があります') : _page(d),
+      ),
+    );
+  }
+
+  Widget _page(StorePluginDetail d) {
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = RasqTokens.of(context);
+    final installedList = ref.watch(installedPluginsProvider);
+    final installed = installedList.where((p) => p.id == widget.pluginId).firstOrNull;
+    final topReviews = ref.watch(storeTopReviewsProvider(d.id)).value ?? const <StoreReview>[];
+    final allReviews = ref.watch(storeReviewsProvider(d.id)).value ?? const <StoreReview>[];
+    final releases = ref.watch(storeReleasesProvider(d.id)).value ?? const <ReleaseNote>[];
+    final missingDeps = [for (final id in d.compatibility.requiresPlugins) if (!installedList.any((p) => p.id == id)) id];
+    final histogram = d.ratingHistogram.length == 5 ? d.ratingHistogram : StoreReview.histogram(allReviews);
+    final canInstall = !_busy && !(d.status.isCaution && d.status != PluginStatus.warning);
+
+    return ListView(children: [
+      // ── 依存の注意 + インストール(ピル) ─────────────────────────────
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // 依存の注意(未導入の必要プラグインをリンク)。インストール済みでも
+              // 依存が欠けていれば出し続ける。
+              if (missingDeps.isNotEmpty)
+                Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  Text('このプラグインを利用するには ', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  for (final (i, id) in missingDeps.indexed) ...[
+                    if (i > 0) Text(' / ', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                    InkWell(
+                      onTap: () => context.push(Routes.storePlugin(id)),
+                      child: Text(id, style: RasqTypography.caption.copyWith(color: tokens.link)),
+                    ),
+                  ],
+                  Text(' のインストールが必要です。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                ]),
+              if (installed != null)
+                Text('インストール済み v${installed.version}(SHA-512 検証済み)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
+              else if (missingDeps.isEmpty)
                 Text(
-                  [
-                    if (d.safety.crashFreeRate != null) '正常起動率 ${(d.safety.crashFreeRate! * 100).toStringAsFixed(1)}%',
-                    d.safety.backgroundExecution ? 'バックグラウンド実行あり' : 'バックグラウンド実行なし',
-                    if (d.safety.usesGpu) 'GPU 使用',
-                    d.safety.adPlacements.isEmpty ? '広告なし' : '広告あり',
-                  ].join(' ・ '),
+                  '${d.price == 0 ? '無料' : '¥${d.price.toStringAsFixed(0)}'} ・ ${d.sizeMb.toStringAsFixed(1)}MB ・ v${d.version}${d.channel == 'beta' ? ' (β)' : ''}${d.hasAds ? ' ・ 広告あり' : ''}',
                   style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
                 ),
-                if (d.safety.rasqFeatures.isNotEmpty)
+            ]),
+          ),
+          const SizedBox(width: RasqSpacing.sm),
+          if (installed == null)
+            FilledButton(
+              // 停止/失効は新規インストール不可(警告はバナー明示の上で可)。
+              onPressed: canInstall ? () => _install(d) : null,
+              style: FilledButton.styleFrom(shape: const StadiumBorder(), padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.lg)),
+              child: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(d.price == 0 ? 'インストール' : '¥${d.price.toStringAsFixed(0)} で購入'),
+            )
+          else
+            OutlinedButton(
+              onPressed: _busy ? null : () => ref.read(installedPluginsProvider.notifier).uninstall(d.id),
+              style: OutlinedButton.styleFrom(shape: const StadiumBorder()),
+              child: const Text('削除'),
+            ),
+        ]),
+      ),
+      // ── バナー ───────────────────────────────────────────────────────
+      _Banner(url: d.bannerUrl),
+      // ── アイコン + 名前 + 提供元 + ブックマーク + … ───────────────────
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.sm, 0),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(14)),
+            clipBehavior: Clip.antiAlias,
+            child: d.iconUrl != null ? Image.network(d.iconUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.extension_outlined, size: 30)) : const Icon(Icons.extension_outlined, size: 30),
+          ),
+          const SizedBox(width: RasqSpacing.md),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(d.name, style: RasqTypography.title),
+              Text('${d.developerName.isEmpty ? '提供元不明' : d.developerName} ・ ${d.origin.label}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
+              const SizedBox(height: 2),
+              Text('★${d.rating.toStringAsFixed(1)} ・ ${_formatDownloads(d.downloads)} DL', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            ]),
+          ),
+          _BookmarkButton(pluginId: d.id),
+          Builder(
+            builder: (ctx) => RasqIconButton(
+              icon: Icons.more_horiz,
+              tooltip: 'メニュー',
+              onPressed: () {
+                final box = ctx.findRenderObject() as RenderBox;
+                _more(d, box.localToGlobal(Offset.zero) & box.size);
+              },
+            ),
+          ),
+        ]),
+      ),
+      // ── 紹介文(+ 説明の展開) ─────────────────────────────────────────
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(d.summary, style: RasqTypography.body),
+          if (d.description.isNotEmpty)
+            InkWell(
+              onTap: () => setState(() => _descriptionExpanded = !_descriptionExpanded),
+              child: Padding(
+                padding: const EdgeInsets.only(top: RasqSpacing.xs),
+                child: Text(
+                  d.description,
+                  style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
+                  maxLines: _descriptionExpanded ? null : 2,
+                  overflow: _descriptionExpanded ? null : TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+        ]),
+      ),
+      // ── 状態バナー(警告/停止/失効/更新あり/β) ─────────────────────────
+      if (d.status != PluginStatus.published)
+        Container(
+          margin: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+          padding: const EdgeInsets.all(RasqSpacing.sm),
+          decoration: BoxDecoration(
+            color: (d.status.isCaution ? tokens.danger : tokens.link).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(RasqSizes.radiusSm),
+          ),
+          child: Text('状態: ${d.status.label}', style: RasqTypography.bodySmall.copyWith(color: d.status.isCaution ? tokens.danger : tokens.link)),
+        ),
+      // ── プレビュー(横スライド) ──────────────────────────────────────
+      const StoreFrameSectionHeader(title: 'プレビュー'),
+      StoreFrameStrip(
+        height: 200,
+        children: d.screenshots.isEmpty
+            ? [_PreviewPlaceholder(name: d.name)]
+            : [for (final u in d.screenshots) _Screenshot(url: u)],
+      ),
+      // ── 先月のダウンロード数 / 評価 ──────────────────────────────────
+      if (d.downloadsLastMonth != null)
+        _StatBlock(
+          title: '先月のダウンロード数',
+          value: _formatDownloads(d.downloadsLastMonth!),
+          chart: DownloadsSparkline(values: d.downloadHistory),
+        ),
+      _StatBlock(
+        title: '評価',
+        value: d.rating == 0 ? '—' : d.rating.toStringAsFixed(1),
+        chart: RatingHistogram(histogram: histogram),
+      ),
+      // ── レビュー ›(TL 上位 10 件) ────────────────────────────────────
+      StoreFrameSectionHeader(
+        title: 'レビュー',
+        onTap: () => context.push(Routes.storePluginReviews(d.id)),
+        trailing: Text('${allReviews.length}件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      ),
+      StoreFrameStrip(
+        height: 176,
+        children: topReviews.isEmpty
+            ? [
+                StoreFrameCard(
+                  showChevron: false,
+                  header: Text('まだレビューがありません', style: RasqTypography.listTile),
+                  body: Text('最初のレビューを書いてみませんか。', style: RasqTypography.caption),
+                  footer: Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: () => openReviewComposer(context, ref, detail: d), child: const Text('レビューを書く'))),
+                ),
+              ]
+            : [
+                for (final r in topReviews)
+                  StoreReviewFrame(pluginId: d.id, review: r, onTap: () => context.push(Routes.storePluginReviews(d.id))),
+              ],
+      ),
+      // ── アップデートとバージョン ›(タップで FOW) ─────────────────────
+      StoreFrameSectionHeader(title: 'アップデートとバージョン', onTap: releases.isEmpty ? null : () => _showAllReleases(d, releases, installed)),
+      StoreFrameStrip(
+        height: 150,
+        children: releases.isEmpty
+            ? [
+                StoreFrameCard(
+                  showChevron: false,
+                  header: Text('v${d.version}', style: RasqTypography.listTile),
+                  body: Text('リリースノートはまだありません。', style: RasqTypography.caption),
+                ),
+              ]
+            : [
+                for (final r in releases)
+                  StoreFrameCard(
+                    onTap: () => openReleaseFow(ref, detail: d, release: r, installed: installed, onInstall: (v) => _install(d, version: v)),
+                    header: Text('${d.name} ${r.version}${r.channel == 'beta' ? ' Pre' : ''}', style: RasqTypography.listTile, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    headerTrailing: installed?.version == r.version
+                        ? Padding(padding: const EdgeInsets.only(right: RasqSpacing.xs), child: Text('利用中', style: RasqTypography.caption.copyWith(color: tokens.link)))
+                        : null,
+                    body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(child: Text(r.notes, style: RasqTypography.caption.copyWith(height: 1.5), overflow: TextOverflow.fade)),
+                      if (r.permissionsAdded.isNotEmpty)
+                        Text('権限の追加: ${[for (final p in r.permissionsAdded) p.permission].join('、')}', style: RasqTypography.caption.copyWith(color: tokens.danger), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ]),
+                  ),
+              ],
+      ),
+      // ── プライバシーと必要な権限 ›(権限タイプごとのグループ) ────────
+      StoreFrameSectionHeader(title: 'プライバシーと必要な権限', onTap: () => _showSafetyDetail(d)),
+      StoreFrameStrip(
+        height: 150,
+        children: [
+          for (final g in PermissionKind.group(d.safety.permissions))
+            StoreFrameCard(
+              onTap: () => _showSafetyDetail(d),
+              header: Text(g.kind.label, style: RasqTypography.listTile),
+              body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                for (final p in g.entries)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text('利用する RASQ 機能: ${d.safety.rasqFeatures.join('、')}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text('${p.permission} — ${p.reason}', style: RasqTypography.caption.copyWith(height: 1.4), maxLines: 2, overflow: TextOverflow.ellipsis),
                   ),
               ]),
             ),
-            const RasqSectionHeader(title: '互換性'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-              child: Text(
-                [
-                  if (d.compatibility.rasqVersion.isNotEmpty) 'RASQ ${d.compatibility.rasqVersion}',
-                  if (d.compatibility.os.isNotEmpty) d.compatibility.os.join('/'),
-                  if (d.compatibility.requiredRuntimes.isNotEmpty) 'ランタイム: ${d.compatibility.requiredRuntimes.join('、')}',
-                  if (d.compatibility.requiresPlugins.isNotEmpty) '必要プラグイン: ${d.compatibility.requiresPlugins.join('、')}',
-                ].join(' ・ '),
-                style: RasqTypography.bodySmall,
-              ),
+          if (d.safety.permissions.isEmpty)
+            StoreFrameCard(
+              showChevron: false,
+              header: Text('権限', style: RasqTypography.listTile),
+              body: Text('このプラグインは追加の権限を要求しません。', style: RasqTypography.caption),
             ),
-            const RasqSectionHeader(title: '説明'),
-            Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text(d.description, style: RasqTypography.bodySmall)),
-            if (releases.isNotEmpty) ...[
-              const RasqSectionHeader(title: 'リリースノート'),
-              for (final r in releases.take(3))
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('v${r.version}${r.channel == 'beta' ? ' (β)' : ''}', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
-                    Text(r.notes, style: RasqTypography.bodySmall),
-                    if (r.permissionsAdded.isNotEmpty)
-                      Text('権限の追加: ${[for (final p in r.permissionsAdded) p.permission].join('、')}(自動更新は停止されます)',
-                          style: RasqTypography.caption.copyWith(color: tokens.danger)),
-                  ]),
-                ),
-            ],
-            if (reviews.isNotEmpty) ...[
-              const RasqSectionHeader(title: 'レビュー'),
-              for (final r in reviews.take(3))
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('${'★' * r.rating}${r.verifiedUse ? ' ・ 実利用済み' : ''}${r.usedVersion.isEmpty ? '' : ' ・ v${r.usedVersion}'}',
-                        style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-                    Text(r.body, style: RasqTypography.bodySmall),
-                    if (r.developerReply != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: RasqSpacing.md, top: 2),
-                        child: Text('開発者: ${r.developerReply}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-                      ),
-                  ]),
-                ),
-            ],
-            const SizedBox(height: RasqSpacing.page),
-          ]);
-        },
+          // 常設安全性ブロックの残り (D-033): 外部通信とデータ / 実行環境。
+          StoreFrameCard(
+            onTap: () => _showSafetyDetail(d),
+            header: Text('外部通信とデータ', style: RasqTypography.listTile),
+            body: Text(
+              [
+                d.safety.externalHosts.isEmpty ? '外部通信先: なし' : '外部通信先: ${d.safety.externalHosts.join('、')}',
+                if (d.safety.dataHandling.isNotEmpty) d.safety.dataHandling,
+                if (d.safety.externalSdks.isNotEmpty) '外部 SDK: ${d.safety.externalSdks.join('、')}',
+              ].join('\n'),
+              style: RasqTypography.caption.copyWith(height: 1.4),
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          StoreFrameCard(
+            onTap: () => _showSafetyDetail(d),
+            header: Text('実行環境', style: RasqTypography.listTile),
+            body: Text(
+              [
+                if (d.safety.crashFreeRate != null) '正常起動率 ${(d.safety.crashFreeRate! * 100).toStringAsFixed(1)}%',
+                d.safety.backgroundExecution ? 'バックグラウンド実行あり' : 'バックグラウンド実行なし',
+                d.safety.usesGpu ? 'GPU 使用' : 'GPU 不使用',
+                d.safety.adPlacements.isEmpty ? '広告なし' : '広告あり(${d.safety.adPlacements.join('、')})',
+              ].join('\n'),
+              style: RasqTypography.caption.copyWith(height: 1.4),
+            ),
+          ),
+        ],
       ),
+      // ── 互換性 ───────────────────────────────────────────────────────
+      const RasqSectionHeader(title: '互換性'),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+            [
+              if (d.compatibility.rasqVersion.isNotEmpty) 'RASQ ${d.compatibility.rasqVersion}',
+              if (d.compatibility.os.isNotEmpty) d.compatibility.os.join('/'),
+              if (d.compatibility.requiredRuntimes.isNotEmpty) 'ランタイム: ${d.compatibility.requiredRuntimes.join('、')}',
+              if (d.compatibility.requiresPlugins.isNotEmpty) '必要プラグイン: ${d.compatibility.requiresPlugins.join('、')}',
+              if (d.compatibility.conflictsWith.isNotEmpty) '競合: ${d.compatibility.conflictsWith.join('、')}',
+            ].join(' ・ '),
+            style: RasqTypography.bodySmall,
+          ),
+          if (d.safety.rasqFeatures.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('利用する RASQ 機能: ${d.safety.rasqFeatures.join('、')}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            ),
+        ]),
+      ),
+      const SizedBox(height: RasqSpacing.xl),
+    ]);
+  }
+
+  /// 「アップデートとバージョン ›」: 全版の一覧シート。各行 → FOW。
+  Future<void> _showAllReleases(StorePluginDetail d, List<ReleaseNote> releases, InstalledPlugin? installed) async {
+    final manager = ref.read(overlayManagerProvider);
+    final pick = await manager.showBottomSheet<ReleaseNote>(
+      id: 'store.releases',
+      title: 'バージョン',
+      builder: (ctx) => ListView(shrinkWrap: true, children: [
+        for (final r in releases)
+          RasqPluginTile(
+            icon: r.channel == 'beta' ? Icons.science_outlined : Icons.new_releases_outlined,
+            title: '${r.version}${r.channel == 'beta' ? ' (β)' : ''}',
+            subtitle: '${r.publishedAt.year}/${r.publishedAt.month}/${r.publishedAt.day}${installed?.version == r.version ? ' ・ 利用中' : ''}',
+            description: r.notes,
+            detail: r.permissionsAdded.isEmpty ? null : '権限の追加: ${[for (final p in r.permissionsAdded) p.permission].join('、')}',
+            detailColorDots: [if (r.permissionsAdded.isNotEmpty) RasqTokens.of(ctx).danger],
+            onTap: () => manager.close('store.releases', result: r),
+          ),
+      ]),
+    );
+    if (pick == null || !mounted) return;
+    await openReleaseFow(ref, detail: d, release: pick, installed: installed, onInstall: (v) => _install(d, version: v));
+  }
+
+  /// 「プライバシーと必要な権限 ›」: 常設安全性ブロックの全文(グループ順)。
+  Future<void> _showSafetyDetail(StorePluginDetail d) async {
+    final manager = ref.read(overlayManagerProvider);
+    await manager.showBottomSheet<void>(
+      id: 'store.safety',
+      title: 'プライバシーと必要な権限',
+      builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page), children: [
+          for (final g in PermissionKind.group(d.safety.permissions)) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs),
+              child: Text('${g.kind.label}${g.kind.description.isEmpty ? '' : ' — ${g.kind.description}'}', style: RasqTypography.listTile),
+            ),
+            for (final p in g.entries)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Icon(Icons.key_outlined, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text('${p.permission} — ${p.reason}', style: RasqTypography.bodySmall)),
+                ]),
+              ),
+          ],
+          Padding(padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs), child: Text('外部通信とデータ', style: RasqTypography.listTile)),
+          Text(d.safety.externalHosts.isEmpty ? '外部通信先: なし' : '外部通信先: ${d.safety.externalHosts.join('、')}', style: RasqTypography.bodySmall),
+          if (d.safety.dataHandling.isNotEmpty) Text('データの扱い: ${d.safety.dataHandling}', style: RasqTypography.bodySmall),
+          if (d.safety.externalSdks.isNotEmpty) Text('外部 SDK: ${d.safety.externalSdks.join('、')}', style: RasqTypography.bodySmall),
+          Padding(padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs), child: Text('実行環境', style: RasqTypography.listTile)),
+          Text(
+            [
+              if (d.safety.crashFreeRate != null) '正常起動率 ${(d.safety.crashFreeRate! * 100).toStringAsFixed(1)}%',
+              d.safety.backgroundExecution ? 'バックグラウンド実行あり' : 'バックグラウンド実行なし',
+              d.safety.usesGpu ? 'GPU 使用' : 'GPU 不使用',
+              d.safety.adPlacements.isEmpty ? '広告なし' : '広告あり(${d.safety.adPlacements.join('、')})',
+            ].join(' ・ '),
+            style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ]);
+      },
+    );
+  }
+}
+
+class _Banner extends StatelessWidget {
+  const _Banner({required this.url});
+  final Uri? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 110,
+      width: double.infinity,
+      child: url != null
+          ? Image.network(url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => _placeholder(scheme))
+          : _placeholder(scheme),
+    );
+  }
+
+  Widget _placeholder(ColorScheme scheme) => DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [scheme.primaryContainer, scheme.surfaceContainerHighest], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        ),
+      );
+}
+
+class _Screenshot extends StatelessWidget {
+  const _Screenshot({required this.url});
+  final Uri url;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(border: Border.all(color: scheme.outline), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+      clipBehavior: Clip.antiAlias,
+      child: Image.network(url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Center(child: Icon(Icons.broken_image_outlined))),
+    );
+  }
+}
+
+class _PreviewPlaceholder extends StatelessWidget {
+  const _PreviewPlaceholder({required this.name});
+  final String name;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(border: Border.all(color: scheme.outline), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+      child: Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.image_outlined, size: 32, color: scheme.onSurfaceVariant),
+          const SizedBox(height: RasqSpacing.xs),
+          Text('$name のプレビュー画像はまだありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        ]),
+      ),
+    );
+  }
+}
+
+/// 「先月のダウンロード数 / 評価」: 見出し、左に大きな数値、右にグラフ。
+class _StatBlock extends StatelessWidget {
+  const _StatBlock({required this.title, required this.value, required this.chart});
+  final String title;
+  final String value;
+  final Widget chart;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.lg, RasqSpacing.page, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: RasqTypography.sectionHeader),
+          const SizedBox(height: RasqSpacing.xs),
+          SizedBox(
+            height: 92,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              SizedBox(width: 120, child: Text(value, style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w700, height: 1.1), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              const SizedBox(width: RasqSpacing.md),
+              Expanded(child: chart),
+            ]),
+          ),
+        ]),
+      );
+}
+
+String _formatDownloads(int n) => n >= 10000 ? '${(n / 10000).toStringAsFixed(1)}万' : '$n';
+
+/// ストアのブックマーク (D-033 `/me/bookmarks`)。RASQ アカウントに紐づく
+/// サーバー側の状態なので、接続していないときは出さない。
+class _BookmarkButton extends ConsumerWidget {
+  const _BookmarkButton({required this.pluginId});
+  final String pluginId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(orgateConfiguredProvider)) return const SizedBox.shrink();
+    final marked = ref.watch(storeBookmarksProvider).value?.contains(pluginId) ?? false;
+    return IconButton(
+      tooltip: marked ? 'ブックマークを外す' : 'ブックマークする',
+      icon: Icon(marked ? Icons.bookmark : Icons.bookmark_border),
+      onPressed: () => ref.read(storeBookmarksProvider.notifier).toggle(pluginId).catchError((Object e) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ブックマークを更新できませんでした: $e')));
+      }),
     );
   }
 }

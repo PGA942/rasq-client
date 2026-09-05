@@ -10,7 +10,8 @@ import '../../app/router.dart';
 
 /// ログイン (マルチPDS). Wireframe: BlueSky / Misskey / mixi2 / Mastodon /
 /// サービスを探してログイン + Raiのインストラクチャ.
-/// M1: only Misskey is live (D-010); the others show why they are disabled.
+/// Misskey (MiAuth) と Mastodon (OAuth ブローカー経由, D-135) が有効。
+/// BlueSky / mixi2 はまだプラグインが無いので理由を出して止める。
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
@@ -23,7 +24,7 @@ class LoginScreen extends ConsumerWidget {
     Future<void> notReady(String name) => manager.showAlert(
           id: 'login.notready',
           title: '$name は準備中です',
-          message: 'アクセストークン発行にサーバー側(ORGATE-server)が必要なため、第一期はまず Misskey(MiAuth)からログインできます。',
+          message: '$name のプラグインがまだありません。現在は Misskey(MiAuth)と Mastodon(OAuth)からログインできます。',
           confirmText: 'OK',
         );
 
@@ -48,7 +49,7 @@ class LoginScreen extends ConsumerWidget {
             _ServiceButton(kind: SnsKind.bluesky, label: 'BlueSkyでログイン', enabled: false, onTap: () => notReady('BlueSky')),
             _ServiceButton(kind: SnsKind.misskey, label: 'Misskeyでログイン', onTap: () => context.push(Routes.loginMisskey)),
             _ServiceButton(kind: SnsKind.mixi2, label: 'mixi2でログイン', enabled: false, external: true, onTap: () => notReady('mixi2')),
-            _ServiceButton(kind: SnsKind.mastodon, label: 'Mastodonでログイン', enabled: false, onTap: () => notReady('Mastodon')),
+            _ServiceButton(kind: SnsKind.mastodon, label: 'Mastodonでログイン', onTap: () => context.push(Routes.loginMastodon)),
             const SizedBox(height: RasqSpacing.sm),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: scheme.onSurface, foregroundColor: scheme.surface, minimumSize: const Size.fromHeight(44)),

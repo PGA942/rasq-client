@@ -18,7 +18,7 @@ variables:
   SECRET_DETECTION_ENABLED: 'true'
   PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
   CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
-  SDK_SAMPLE_BRANCH: "feature/wasm-runtime-scaffold"
+  SDK_SAMPLE_BRANCH: "agent/other-api-plugins"
 
 include:
 - template: Security/SAST.gitlab-ci.yml
@@ -49,7 +49,9 @@ flutter:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
     - export PATH="$CARGO_HOME/bin:$PATH"
     - rustup target add wasm32-unknown-unknown
-    - (cd "$CI_PROJECT_DIR/../rasq-sdk-sample/rust" && cargo build --release --target wasm32-unknown-unknown -p misskey-wasm-sample)
+    # wasm 依存のテスト(misskey サンプル / Mastodon プラグイン)を
+    # スキップさせないため、両方ビルドしてから走らせる。
+    - (cd "$CI_PROJECT_DIR/../rasq-sdk-sample/rust" && cargo build --release --target wasm32-unknown-unknown -p misskey-wasm-sample -p mastodon-wasm)
   script:
     - flutter --version
     - flutter pub get

@@ -1,0 +1,5 @@
+# `live` タグ = 実際に動いている orgate-server が要るテスト。
+# 既定では接続先(--dart-define=ORGATE_LIVE_URL)が無ければ自分でスキップする。
+tags:
+  live:
+    skip: false
