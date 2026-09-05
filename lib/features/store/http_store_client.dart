@@ -42,9 +42,9 @@ class HttpStoreClient implements StoreClient {
   }
 
   @override
-  Future<InstallManifest?> manifest(String id) async {
+  Future<InstallManifest?> manifest(String id, {String? version}) async {
     try {
-      return InstallManifest.fromJson(await _client.getJson('/plugins/${Uri.encodeComponent(id)}/manifest'));
+      return InstallManifest.fromJson(await _client.getJson('/plugins/${Uri.encodeComponent(id)}/manifest', {'version': ?version}));
     } on OrgateException catch (e) {
       if (e.code.code == '404') return null;
       rethrow;
@@ -52,12 +52,13 @@ class HttpStoreClient implements StoreClient {
   }
 
   @override
-  Future<Uint8List> downloadArtifact(String pluginId, String artifactId) =>
-      _client.getBytes('/plugins/${Uri.encodeComponent(pluginId)}/artifacts/${Uri.encodeComponent(artifactId)}');
+  Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version}) =>
+      // 版指定は API.md「?version= で版を選べる(既定は現在版)」。
+      _client.getBytes('/plugins/${Uri.encodeComponent(pluginId)}/artifacts/${Uri.encodeComponent(artifactId)}', {'version': ?version});
 
   @override
-  Future<List<StoreReview>> reviews(String id) async {
-    final j = await _client.getJson('/plugins/${Uri.encodeComponent(id)}/reviews');
+  Future<List<StoreReview>> reviews(String id, {ReviewSort sort = ReviewSort.helpful}) async {
+    final j = await _client.getJson('/plugins/${Uri.encodeComponent(id)}/reviews', {'sort': sort.wire});
     return [
       for (final r in (j['items'] as List? ?? const []))
         if (r is Map) StoreReview.fromJson(r.cast<String, Object?>()),
@@ -74,14 +75,21 @@ class HttpStoreClient implements StoreClient {
   }
 
   @override
-  Future<StoreReview> createReview(String pluginId, {required int rating, String body = '', String? usedVersion}) async {
+  Future<StoreReview> createReview(String pluginId, {required int rating, String title = '', String body = '', String? usedVersion}) async {
     final j = await _client.postJson('/plugins/${Uri.encodeComponent(pluginId)}/reviews', {
       'rating': rating,
+      if (title.isNotEmpty) 'title': title,
       'body': body,
       'usedVersion': ?usedVersion,
     });
     return StoreReview.fromJson(j);
   }
+
+  /// store.yaml `PUT /plugins/{id}/reviews/{reviewId}/vote`(D-137 で追加。
+  /// orgate-server 側の実装はこれから — 未実装の 404 は呼び出し側が握る)。
+  @override
+  Future<void> voteReview(String pluginId, String reviewId, ReviewVote vote) =>
+      _client.putJson('/plugins/${Uri.encodeComponent(pluginId)}/reviews/${Uri.encodeComponent(reviewId)}/vote', {'vote': vote.wire});
 
   @override
   Future<void> setBookmark(String pluginId, bool bookmarked) =>

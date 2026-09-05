@@ -24,6 +24,16 @@ final storeSearchProvider = FutureProvider.family<List<StorePluginCard>, String>
 final storePluginProvider = FutureProvider.family<StorePluginDetail?, String>((ref, id) => ref.watch(storeClientProvider).plugin(id));
 final storeManifestProvider = FutureProvider.family<InstallManifest?, String>((ref, id) => ref.watch(storeClientProvider).manifest(id));
 final storeReviewsProvider = FutureProvider.family<List<StoreReview>, String>((ref, id) => ref.watch(storeClientProvider).reviews(id));
+
+/// ストアページの「レビュー」フレームに出す上位 10 件 (D-137): レビュー TL
+/// を関連性(参考になった数 → 実利用済み → 新しさ)で並べた先頭。
+final storeTopReviewsProvider = FutureProvider.family<List<StoreReview>, String>((ref, id) async {
+  final all = await ref.watch(storeReviewsProvider(id).future);
+  return StoreReview.sorted(all, ReviewSort.helpful).take(storeTopReviewCount).toList();
+});
+
+/// ストアページに載せるレビュー件数(ワイヤーフレーム「レビュー >」の横並び)。
+const storeTopReviewCount = 10;
 final storeReleasesProvider = FutureProvider.family<List<ReleaseNote>, String>((ref, id) => ref.watch(storeClientProvider).releases(id));
 
 /// 配布物の検証結果。失敗理由はそのままユーザーに見せる。
@@ -110,22 +120,26 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
 
   /// インストール実行。`error` が null なら成功で、`verification` に
   /// どこまで検証できたか(ハッシュのみ / 署名まで)が入る。
-  Future<({String? error, ArtifactVerification? verification})> install(String pluginId) async {
+  ///
+  /// [version] を指定するとその版を入れる(リリースノート FOW の
+  /// 「Ver.〇〇をインストール」, D-137)。省略時は stable 最新。既に別の版が
+  /// 入っていれば置き換える(アカウントごとの版固定は M4 後段)。
+  Future<({String? error, ArtifactVerification? verification})> install(String pluginId, {String? version}) async {
     final client = ref.read(storeClientProvider);
     final InstallManifest? m;
     try {
-      m = await client.manifest(pluginId);
+      m = await client.manifest(pluginId, version: version);
     } on OrgateException catch (e) {
       // 停止・取り下げ中のプラグインはサーバーが 403 で断る (D-120 ③)。
       return (error: e.message, verification: null);
     }
-    if (m == null) return (error: '構成(マニフェスト)を取得できませんでした', verification: null);
+    if (m == null) return (error: version == null ? '構成(マニフェスト)を取得できませんでした' : 'Ver.$version の構成が見つかりませんでした', verification: null);
     final bundle = m.bundle;
     if (bundle == null) return (error: '配布物がありません', verification: null);
 
     final Uint8List bytes;
     try {
-      bytes = await client.downloadArtifact(pluginId, bundle.id);
+      bytes = await client.downloadArtifact(pluginId, bundle.id, version: version);
     } on OrgateException catch (e) {
       return (error: e.message, verification: null);
     }
@@ -176,3 +190,40 @@ class StoreBookmarks extends AsyncNotifier<Set<String>> {
 }
 
 final storeBookmarksProvider = AsyncNotifierProvider<StoreBookmarks, Set<String>>(StoreBookmarks.new);
+
+/// レビューへの 👍/👎 (D-137): 端末側の投票状態。KV `store.reviewVotes.v1` に
+/// `"<pluginId>/<reviewId>": "up" | "down"` で永続化し、サーバーには
+/// [StoreClient.voteReview] で送る(モックは受け取って捨てる。未実装の
+/// サーバーは 404 を返すので、その場合も端末側の状態は残す)。
+///
+/// 表示側は `helpfulCount + (vote == up ? 1 : 0)` のように**元の集計に自分の
+/// 票を足して**見せる。サーバーの集計に自分の票が入る/入らないの二重計上は、
+/// レビュー再取得時に自分の票が既に含まれている前提(1 アカウント 1 票)なので
+/// 起きない — 再取得後は [ReviewVotes] の記録と一致する。
+class ReviewVotes extends Notifier<Map<String, ReviewVote>> {
+  @override
+  Map<String, ReviewVote> build() {
+    final area = ref.watch(settingsAreaProvider('store.reviewVotes')).value ?? const <String, Object?>{};
+    return {for (final e in area.entries) if (e.value is String) e.key: ReviewVote.fromWire(e.value as String)};
+  }
+
+  static String _key(String pluginId, String reviewId) => '$pluginId/$reviewId';
+
+  ReviewVote of(String pluginId, String reviewId) => state[_key(pluginId, reviewId)] ?? ReviewVote.none;
+
+  /// 同じ票をもう一度押すと取り消し、逆の票なら切り替える。
+  Future<void> toggle(String pluginId, String reviewId, ReviewVote vote) async {
+    final key = _key(pluginId, reviewId);
+    final next = of(pluginId, reviewId) == vote ? ReviewVote.none : vote;
+    state = {...state, key: next};
+    await ref.read(settingsAreaProvider('store.reviewVotes').notifier).set(key, next.wire);
+    try {
+      await ref.read(storeClientProvider).voteReview(pluginId, reviewId, next);
+    } on OrgateException catch (e) {
+      // サーバー側が未対応(404)/未ログイン(401)でも端末側の票は残す。
+      debugPrint('store voteReview: $e');
+    }
+  }
+}
+
+final reviewVotesProvider = NotifierProvider<ReviewVotes, Map<String, ReviewVote>>(ReviewVotes.new);

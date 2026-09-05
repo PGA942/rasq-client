@@ -34,6 +34,7 @@ import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/backend_screen.dart';
 import '../features/store/plugin_page_screen.dart';
+import '../features/store/review_timeline_screen.dart';
 import '../features/store/store_home_screen.dart';
 import '../features/trend/trend_screen.dart';
 import '../features/vc/vc_screen.dart';
@@ -72,6 +73,9 @@ abstract final class Routes {
   /// プラグインストア (M4 / D-120)。
   static const store = '/store';
   static String storePlugin(String id) => '/store/plugin/${Uri.encodeComponent(id)}';
+
+  /// レビュー TL (D-137)。
+  static String storePluginReviews(String id) => '/store/plugin/${Uri.encodeComponent(id)}/reviews';
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -205,6 +209,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: '/store/plugin/:id',
               parentNavigatorKey: _appNavigatorKey,
               builder: (_, s) => PluginPageScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
+          GoRoute(
+              path: '/store/plugin/:id/reviews',
+              parentNavigatorKey: _appNavigatorKey,
+              builder: (_, s) => ReviewTimelineScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
           GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const WasmPluginScreen()),
           GoRoute(
             path: Routes.login,
