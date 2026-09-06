@@ -36,6 +36,7 @@ class AstellRoom {
     this.peerCount = 0,
     this.live = false,
     this.thumbnailUrl,
+    this.hostStream,
   });
 
   final String id;
@@ -68,6 +69,9 @@ class AstellRoom {
   /// LIVE タイルのサムネイル(共有メディア。モック/将来のサーバー拡張)。
   final Uri? thumbnailUrl;
 
+  /// ホストの配信(動画 / 画面)。null = 配信なし。
+  final AstellHostStream? hostStream;
+
   bool get isOpen => closedAt == null;
 
   UserSummary get owner => _rasqUser(id: ownerId, handle: ownerHandle, displayName: ownerDisplayName, avatarUrl: ownerAvatarUrl);
@@ -92,10 +96,11 @@ class AstellRoom {
         closedAt: j['closedAt'] is String ? DateTime.tryParse(j['closedAt'] as String) : null,
         peerCount: (j['peerCount'] as num?)?.toInt() ?? 0,
         live: j['live'] == true,
-        thumbnailUrl: _uri(j['thumbnailUrl']),
+        thumbnailUrl: _uri(j['thumbnailUrl']) ?? (j['hostStream'] is Map ? _uri((j['hostStream'] as Map)['thumbnailUrl']) : null),
+        hostStream: j['hostStream'] is Map ? AstellHostStream.fromJson((j['hostStream'] as Map).cast<String, Object?>()) : null,
       );
 
-  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live}) => AstellRoom(
+  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false}) => AstellRoom(
         id: id,
         ownerId: ownerId,
         ownerHandle: ownerHandle,
@@ -113,6 +118,46 @@ class AstellRoom {
         peerCount: peerCount ?? this.peerCount,
         live: live ?? this.live,
         thumbnailUrl: thumbnailUrl,
+        hostStream: clearHostStream ? null : (hostStream ?? this.hostStream),
+      );
+}
+
+/// ホストの配信状態 (D-145): `{kind: video|screen, title, thumbnailUrl, startedAt}`。
+@immutable
+class AstellHostStream {
+  const AstellHostStream({required this.kind, this.title = '', this.thumbnailUrl, this.startedAt});
+  final String kind;
+  final String title;
+  final Uri? thumbnailUrl;
+  final DateTime? startedAt;
+  bool get isScreen => kind == 'screen';
+
+  factory AstellHostStream.fromJson(Map<String, Object?> j) => AstellHostStream(
+        kind: j['kind'] as String? ?? 'video',
+        title: j['title'] as String? ?? '',
+        thumbnailUrl: _uri(j['thumbnailUrl']),
+        startedAt: j['startedAt'] is String ? DateTime.tryParse(j['startedAt'] as String) : null,
+      );
+
+  Map<String, Object?> toJson() => {'kind': kind, 'title': title, 'thumbnailUrl': thumbnailUrl?.toString(), 'startedAt': startedAt?.toIso8601String()};
+}
+
+/// アップロード済みの共有コンテンツ(`POST /astell/rooms/{id}/assets` の応答)。
+@immutable
+class AstellAsset {
+  const AstellAsset({required this.id, required this.url, required this.name, required this.contentType, required this.sizeBytes});
+  final String id;
+  final Uri url;
+  final String name;
+  final String contentType;
+  final int sizeBytes;
+
+  factory AstellAsset.fromJson(Map<String, Object?> j) => AstellAsset(
+        id: j['id'] as String? ?? '',
+        url: Uri.parse(j['url'] as String? ?? ''),
+        name: j['name'] as String? ?? '',
+        contentType: j['contentType'] as String? ?? 'application/octet-stream',
+        sizeBytes: (j['sizeBytes'] as num?)?.toInt() ?? 0,
       );
 }
 
@@ -212,6 +257,13 @@ class AstellShare {
   /// 投稿/メディアの作者名(payload の `author`、無ければ共有した人)。
   String get authorName => payload['author'] as String? ?? displayName;
   Uri? get authorAvatarUrl => _uri(payload['avatarUrl']);
+
+  /// 投稿の所属 SNS(`sns` / `instance` / `postId`)。対応プラグインがあればアプリ内で開く。
+  String? get snsKind => payload['sns'] as String?;
+  String? get instance => payload['instance'] as String?;
+  String? get postId => payload['postId'] as String?;
+  Uri? get url => _uri(payload['url']);
+  bool get isImage => (payload['mimeType'] as String? ?? '').startsWith('image/');
 
   /// サムネイル(メディア / 投稿の添付 / リンクの OGP)。
   Uri? get thumbnailUrl => _uri(payload['thumbnailUrl']) ?? (kind == 'media' ? _uri(payload['url']) : null);

@@ -157,6 +157,21 @@ class OrgateClient {
   Future<Map<String, Object?>> patchJson(String path, Object body) async =>
       ((await _send(_req('PATCH', path, body: body))) as Map?)?.cast<String, Object?>() ?? const {};
 
+  /// 生バイト列の POST(共有コンテンツのアップロード等)。応答は JSON。
+  Future<Map<String, Object?>> postBytes(String path, List<int> bytes, {required String contentType, Map<String, String> headers = const {}}) async {
+    final http.Response r;
+    try {
+      r = await _http
+          .post(_url(path), headers: {..._headers(), 'content-type': contentType, ...headers}, body: bytes)
+          .timeout(_timeout * 6);
+    } on Exception catch (e) {
+      throw OrgateException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable'), '$e');
+    }
+    if (r.statusCode >= 400) _fail(r);
+    final body = r.bodyBytes.isEmpty ? const {} : jsonDecode(utf8.decode(r.bodyBytes));
+    return (body as Map?)?.cast<String, Object?>() ?? const {};
+  }
+
   Future<Map<String, Object?>> putJson(String path, Object body) async =>
       ((await _send(_req('PUT', path, body: body))) as Map?)?.cast<String, Object?>() ?? const {};
 

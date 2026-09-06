@@ -67,6 +67,8 @@ class VcScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        // 全画面ビューワー(ルートナビゲータへ push)の Hero と衝突しないよう固有タグ (D-145)。
+        heroTag: 'astell.create',
         tooltip: 'VC を作成',
         onPressed: () => openAstellCreateFow(context, ref),
         child: const Icon(Icons.add),

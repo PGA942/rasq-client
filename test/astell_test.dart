@@ -9,6 +9,7 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/vc/astell_client.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
+import 'package:rasq_client/features/vc/astell_media_viewer.dart';
 import 'package:rasq_client/features/vc/astell_models.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/astell_tile.dart';
@@ -104,6 +105,20 @@ void main() {
       expect(t.text, 'こんにちは');
       expect(const NewAstellRoom(title: 'T', welcomeMessage: 'ようこそ').toJson()['welcomeMessage'], 'ようこそ');
       expect(const NewAstellRoom(title: 'T').toJson().containsKey('welcomeMessage'), isFalse);
+    });
+
+    test('ホストが動画配信中のダミー (D-145): Create Game に hostStream が入っている', () async {
+      final client = MockAstellClient();
+      final room = (await client.room('r-sublrony'))!;
+      expect(room.hostStream, isNotNull);
+      expect(room.hostStream!.kind, 'video');
+      expect(room.hostStream!.title, contains('エディタ'));
+      expect(room.live, isTrue);
+      // JSON からも読める(サーバーの Room.hostStream)。
+      final parsed = AstellRoom.fromJson({'id': 'x', 'ownerId': 'o', 'ownerHandle': 'h', 'ownerDisplayName': 'H', 'title': 't', 'createdAt': '2026-09-06T00:00:00Z',
+        'hostStream': {'kind': 'screen', 'title': '画面', 'thumbnailUrl': 'https://x.test/t.png'}});
+      expect(parsed.hostStream!.isScreen, isTrue);
+      expect(parsed.thumbnailUrl.toString(), 'https://x.test/t.png');
     });
 
     test('動画つき FOW のダミー (D-144): Launch LIVE に投稿 + 動画の共有が入っている', () async {
@@ -222,6 +237,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('photo.png'), findsWidgets);
     expect(find.text('共有 (2)'), findsOneWidget);
+    // アップロード (D-145): 共有の payload に Central の URL と assetId が載る。
+    final media = container.read(astellSessionProvider)!.shares.lastWhere((x) => x.kind == 'media');
+    expect(media.payload['assetId'], startsWith('mock-asset-'));
+    expect(media.url, isNotNull);
+    expect(media.thumbnailUrl, isNotNull); // image/png
+    // メディアのタップ → 全画面ビューワー。
+    await tester.tap(find.text('photo.png').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(AstellMediaViewer), findsOneWidget);
+    expect(find.byTooltip('保存'), findsOneWidget);
+    await tester.tap(find.byType(CloseButton));
+    await tester.pumpAndSettle();
+    expect(find.byType(AstellMediaViewer), findsNothing);
     // ↓ で全件、… → 削除。
     await tester.tap(find.byTooltip('共有をすべて表示'));
     await tester.pumpAndSettle();
@@ -279,6 +307,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider), isNull);
     expect(find.byType(AstellRoomBody), findsNothing);
+  });
+
+  testWidgets('ホスト配信中のルーム: 展開に配信パネル、stick の先頭に配信の印、タップで全画面', (tester) async {
+    await pump(tester);
+    await openVc(tester);
+    // Create Game(ホストが動画配信中)へ直接参加 → ホーム先頭の「参加中」からルーム FOW を開く。
+    final room = (await MockAstellClient().room('r-sublrony'))!;
+    await ProviderScope.containerOf(tester.element(find.byType(RasqApp))).read(astellSessionProvider.notifier).join(room);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('参加中: Create Game'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('配信: エディタ作業'), findsOneWidget);
+    await tester.tap(find.textContaining('配信: エディタ作業'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AstellMediaViewer), findsOneWidget);
+    await tester.tap(find.byType(CloseButton));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(180, 60));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Sublrony が配信中'), findsOneWidget);
+    await tester.tap(find.byKey(astellRoomCompactKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('退出'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('+ → 作成 FOW(タイトル / ウェルカム / トグル)→ 作成 → ルーム FOW、ホームに載る', (tester) async {

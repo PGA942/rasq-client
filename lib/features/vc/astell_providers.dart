@@ -18,6 +18,19 @@ final astellClientProvider = Provider<AstellClient>((ref) {
   return HttpAstellClient(client, baseUrl: base, token: () => holder.token);
 });
 
+/// アップロード前の圧縮 (D-145): Central は `zstd` を期待する。Dart 側の zstd
+/// コーデック(`zstd_dart` / `dart_zstd`、いずれも FFI)は実機ビルドで検証してから
+/// 差し込む — それまでは無圧縮(`identity`)で送る。サーバーは両方受ける。
+class AstellAssetCodec {
+  const AstellAssetCodec({required this.encoding, required this.encode});
+  final String encoding;
+  final List<int> Function(List<int> bytes) encode;
+  static const identity = AstellAssetCodec(encoding: 'identity', encode: _same);
+  static List<int> _same(List<int> b) => b;
+}
+
+final astellAssetCodecProvider = Provider<AstellAssetCodec>((ref) => AstellAssetCodec.identity);
+
 /// 「共有する」のファイル選択 (D-142)。テストは差し替える。
 final astellMediaPickerProvider = Provider<Future<XFile?> Function()>((ref) => () => ImagePicker().pickMedia());
 
