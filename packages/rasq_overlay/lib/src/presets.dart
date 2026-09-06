@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'fow.dart';
@@ -122,6 +123,8 @@ extension OverlayPresets on OverlayManager {
     String? ownerId,
     String? semanticsLabel,
     OverlayBarrierBehavior? barrierBehavior,
+    VoidCallback? onBarrierTap,
+    ValueListenable<bool>? barrierEnabled,
   }) async {
     final result = await show(RasqOverlayEntry(
       id: id,
@@ -131,6 +134,8 @@ extension OverlayPresets on OverlayManager {
       semanticsLabel: semanticsLabel ?? spec?.title,
       fow: spec ?? FowSpec(),
       barrierBehavior: barrierBehavior,
+      onBarrierTap: onBarrierTap,
+      barrierEnabled: barrierEnabled,
       builder: builder,
     ));
     return result as T?;

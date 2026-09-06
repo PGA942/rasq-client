@@ -216,49 +216,55 @@ class _PreviewBody extends ConsumerWidget {
 
 // ── ルーム FOW(参加後) ────────────────────────────────────────────
 
-/// stick の 2 段 (D-142): 最小 = 見出し + コンパクトバー / 展開。
-const astellRoomCollapsedFactor = 0.16;
+/// stick の 2 段 (D-142 / D-143): 最小 = コンパクトバーだけ / 展開。
+const astellRoomCollapsedFactor = 0.19;
 const astellRoomExpandedFactor = 0.75;
 
-/// 空白タップの受け皿(テスト用キー)。
-const astellRoomBlankKey = Key('astell.room.blank');
+/// 展開レイアウトに要る最小高さ(ヘッダー + 共有 + タブ + 下段)。これより
+/// 低い = **タブ選択欄が隠れる**タイミングで stick に変形する (D-143)。
+const astellRoomTabsCoveredHeight = 300.0;
+
 const astellRoomCompactKey = Key('astell.room.compact');
+const astellRoomHeaderKey = Key('astell.room.header');
 
 Future<void> openAstellRoomFow(BuildContext context, WidgetRef ref) async {
   final manager = ref.read(overlayManagerProvider);
   final room = ref.read(astellSessionProvider)?.room;
   if (room == null) return;
+  // ヘッダーは FOW のクロームではなく本体側で描く(stick 化で消すため)。
   final spec = FowSpec(
     type: FowPanelType.widget,
     initialHeightFactor: astellRoomExpandedFactor,
     minHeightFactor: 0.12,
     maxHeightFactor: 0.92,
-    title: room.title,
     dockAboveFooter: true,
-    // 空白タップで最小化 → stick の 2 段(最小 / 展開)。最上段より上はシームレス。
     heightStops: const [astellRoomCollapsedFactor, astellRoomExpandedFactor],
     freeAboveStops: true,
-    headerTrailing: Row(mainAxisSize: MainAxisSize.min, children: [
-      RasqIconButton(icon: Icons.ios_share, size: 20, tooltip: '共有', onPressed: () {}),
-      RasqIconButton(icon: Icons.bookmark, size: 20, tooltip: 'ブックマーク', onPressed: () {}),
-      Builder(
-        builder: (ctx) => TextButton(
-          onPressed: () async {
-            await ref.read(astellSessionProvider.notifier).leave();
-            manager.close(astellRoomFowId);
-          },
-          child: Text('退出', style: TextStyle(color: RasqTokens.of(ctx).danger, fontWeight: FontWeight.w700)),
-        ),
-      ),
-    ]),
   );
+  // 外側タップ → stick(閉じない)。stick 中はバリアを外して背面を触れるように。
+  final barrierEnabled = ValueNotifier<bool>(true);
+  void syncBarrier() {
+    final expanded = spec.heightFactor.value >= (astellRoomCollapsedFactor + astellRoomExpandedFactor) / 2;
+    if (barrierEnabled.value != expanded) {
+      barrierEnabled.value = expanded;
+      manager.requestRebuild();
+    }
+  }
+  spec.heightFactor.addListener(syncBarrier);
   await manager.showFow<void>(
     id: astellRoomFowId,
     spec: spec,
-    // 余白タップでは閉じない(閉じる = 退出のみ)。
-    barrierBehavior: OverlayBarrierBehavior.none,
+    semanticsLabel: room.title,
+    barrierBehavior: OverlayBarrierBehavior.dismiss,
+    onBarrierTap: () {
+      spec.userResized = false;
+      spec.heightFactor.value = astellRoomCollapsedFactor;
+    },
+    barrierEnabled: barrierEnabled,
     builder: (ctx, handle) => AstellRoomBody(spec: spec),
   );
+  spec.heightFactor.removeListener(syncBarrier);
+  barrierEnabled.dispose();
 }
 
 class AstellRoomBody extends ConsumerStatefulWidget {
@@ -281,25 +287,52 @@ enum AstellRoomTab {
   final String label;
 }
 
-/// チャット欄の 1 行: 文字起こし / 共有コンテンツ。時刻順。
+/// チャット欄の 1 行: 文字起こし / 共有コンテンツ / 入力中の下書き。時刻順。
 class _ChatEntry {
-  const _ChatEntry({required this.at, required this.author, required this.text, this.kind, this.transcript = false});
+  const _ChatEntry({required this.at, required this.author, required this.text, this.kind, this.transcript = false, this.draft = false});
   final DateTime at;
   final String author;
   final String text;
   final String? kind;
   final bool transcript;
+  final bool draft;
 }
+
+const _kAnim = Duration(milliseconds: 220);
 
 class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   bool _sharesExpanded = false;
+  final _input = TextEditingController();
 
-  void _collapse() {
-    final spec = widget.spec;
-    if (spec == null) return;
-    spec.userResized = false;
-    spec.heightFactor.value = astellRoomCollapsedFactor;
+  /// 入力開始時刻 (D-141): 下書き枠はこの時刻の位置に差し込まれ、送信で
+  /// その時刻の発言になる。入力を全部消すと消える。
+  DateTime? _draftStartedAt;
+
+  @override
+  void initState() {
+    super.initState();
+    _input.addListener(_onInputChanged);
   }
+
+  void _onInputChanged() {
+    final text = _input.text;
+    setState(() {
+      if (text.isEmpty) {
+        _draftStartedAt = null;
+      } else {
+        _draftStartedAt ??= DateTime.now();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _input.removeListener(_onInputChanged);
+    _input.dispose();
+    super.dispose();
+  }
+
+  bool get _drafting => _draftStartedAt != null;
 
   void _expand() {
     final spec = widget.spec;
@@ -310,52 +343,22 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   @override
   Widget build(BuildContext context) {
     final spec = widget.spec;
-    if (spec == null) return _full(context);
-    // 段の中間で表示を切り替える。判定は heightFactor(目標)と**実際の制約**の
-    // 両方 — アニメーション中に展開レイアウトが小さい高さへ詰め込まれて
-    // はみ出さないように、どちらかが小さければコンパクト。
-    const threshold = (astellRoomCollapsedFactor + astellRoomExpandedFactor) / 2;
+    if (spec == null) return _body(context, compact: false);
+    // タブ選択欄が隠れる高さで変形 (D-143)。目標(heightFactor)と実際の制約の
+    // どちらでも判定し、アニメーション中に詰め込まれてはみ出さないようにする。
     return ValueListenableBuilder<double>(
       valueListenable: spec.heightFactor,
       builder: (context, h, _) => LayoutBuilder(
-        builder: (context, constraints) => (h < threshold || constraints.maxHeight < 320) ? _compact(context) : _full(context),
+        builder: (context, constraints) {
+          final targetPx = h * MediaQuery.sizeOf(context).height;
+          final compact = targetPx < astellRoomTabsCoveredHeight || constraints.maxHeight < astellRoomTabsCoveredHeight;
+          return _body(context, compact: compact);
+        },
       ),
     );
   }
 
-  // ── 最小(stick): 参加メンバー + マイク/画面 ────────────────────────
-  Widget _compact(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final s = ref.watch(astellSessionProvider);
-    if (s == null) return const SizedBox.shrink();
-    final session = ref.read(astellSessionProvider.notifier);
-    return GestureDetector(
-      key: astellRoomCompactKey,
-      behavior: HitTestBehavior.opaque,
-      onTap: _expand,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.xs),
-        child: Row(children: [
-          RasqGroupAvatar(users: [for (final p in s.peers) p.user], size: RasqSizes.avatarSm, maxVisible: 3),
-          const SizedBox(width: RasqSpacing.sm),
-          Expanded(
-            child: Text(
-              s.screenShareOn ? '画面共有モード' : (s.transcripts.isNotEmpty ? '${s.transcripts.last.displayName}>${s.transcripts.last.text}' : '${s.peers.length}人が参加中'),
-              style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン', onPressed: session.toggleMic),
-          const SizedBox(width: RasqSpacing.xs),
-          _RoundButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: session.toggleScreenShare),
-        ]),
-      ),
-    );
-  }
-
-  // ── 展開 ──────────────────────────────────────────────────────────
-  Widget _full(BuildContext context) {
+  Widget _body(BuildContext context, {required bool compact}) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     final s = ref.watch(astellSessionProvider);
@@ -365,9 +368,31 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     final me = ref.watch(rasqAccountProvider);
     final isOwner = me.account.handle == room.ownerHandle;
 
-    return DefaultTabController(
-      length: AstellRoomTab.values.length,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    Future<void> leave() async {
+      await session.leave();
+      ref.read(overlayManagerProvider).close(astellRoomFowId);
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      // ── ヘッダー(展開時のみ。stick で消える) ──
+      AnimatedSize(
+        duration: _kAnim,
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: compact
+            ? const SizedBox(width: double.infinity)
+            : Padding(
+                key: astellRoomHeaderKey,
+                padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.xs, 0),
+                child: Row(children: [
+                  Expanded(child: Text(room.title, style: RasqTypography.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  RasqIconButton(icon: Icons.ios_share, size: 20, tooltip: '共有', onPressed: () {}),
+                  RasqIconButton(icon: Icons.bookmark, size: 20, tooltip: 'ブックマーク', onPressed: () {}),
+                  TextButton(onPressed: leave, child: Text('退出', style: TextStyle(color: tokens.danger, fontWeight: FontWeight.w700))),
+                ]),
+              ),
+      ),
+      if (!compact) ...[
         if (s.error != null)
           Container(
             color: tokens.danger.withValues(alpha: 0.08),
@@ -401,41 +426,48 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         ),
         const Divider(height: RasqSpacing.sm),
         // ── タブ (D-141) ──
-        RasqTabs(items: [for (final t in AstellRoomTab.values) RasqTabItem(t.label)], mode: RasqTabsMode.fixed, showChevron: false),
-        // 空白タップで stick(最小化)(D-142)。子のタップは子が取る。
         Expanded(
-          child: GestureDetector(
-            key: astellRoomBlankKey,
-            behavior: HitTestBehavior.translucent,
-            onTap: _collapse,
-            child: TabBarView(children: [
-              _homeTab(context, s, isOwner),
-              _chatTab(context, s, me.account.handle),
-              _indexTab(context, s),
-              _roomTab(context, s),
+          child: DefaultTabController(
+            length: AstellRoomTab.values.length,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              RasqTabs(items: [for (final t in AstellRoomTab.values) RasqTabItem(t.label)], mode: RasqTabsMode.fixed, showChevron: false),
+              Expanded(
+                child: TabBarView(children: [
+                  _homeTab(context, s, isOwner),
+                  _chatTab(context, s, me.account.handle),
+                  _indexTab(context, s),
+                  _roomTab(context, s),
+                ]),
+              ),
             ]),
           ),
         ),
         const Divider(height: 1),
-        // 下段 (D-142): マイク / 画面共有 / 字幕 / 文字起こし・共有コンテンツ / 共有する(ファイル) / 歯車。
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.sm),
-          child: Row(children: [
-            _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン(音声は M5 後段)', onPressed: session.toggleMic),
-            const SizedBox(width: RasqSpacing.xs),
-            _RoundButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: session.toggleScreenShare),
-            const SizedBox(width: RasqSpacing.xs),
-            _RoundButton(icon: Icons.subtitles_outlined, tooltip: s.captionsOn ? '字幕オフ' : '字幕オン', filled: s.captionsOn ? const Color(0xFF2EBF8F) : null, onPressed: session.toggleCaptions),
-            const SizedBox(width: RasqSpacing.sm),
-            Expanded(child: _Ticker(state: s)),
-            const SizedBox(width: RasqSpacing.sm),
-            _RoundButton(icon: Icons.upload, tooltip: '共有する', filled: scheme.onSurface, onPressed: _pickAndShare),
-            const SizedBox(width: RasqSpacing.xs),
-            _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: () => _notYet(context, 'VC の設定')),
-          ]),
-        ),
-      ]),
-    );
+      ],
+      // ── 下段バー: 展開 ⇄ stick で変形 (D-143) ──
+      _Footer(
+        compact: compact,
+        state: s,
+        input: _input,
+        drafting: _drafting,
+        onMic: session.toggleMic,
+        onScreen: session.toggleScreenShare,
+        onCaptions: session.toggleCaptions,
+        onSendText: _sendText,
+        onPickFile: _pickAndShare,
+        onSettings: () => _notYet(context, 'VC の設定'),
+        onExpand: _expand,
+        onLeave: leave,
+      ),
+    ]);
+  }
+
+  void _sendText() {
+    final text = _input.text.trim();
+    if (text.isEmpty) return;
+    final isLink = text.startsWith('http://') || text.startsWith('https://');
+    ref.read(astellSessionProvider.notifier).share(isLink ? 'link' : 'text', isLink ? {'url': text} : {'text': text});
+    _input.clear(); // → リスナーが下書き枠を消す
   }
 
   /// 「共有する」= ファイル選択 → media として共有(D-142)。アップロード先
@@ -494,33 +526,37 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     ]);
   }
 
-  // ── チャット: 文字起こしと共有コンテンツを時刻順に ──
+  // ── チャット: 文字起こしと共有コンテンツを時刻順に。入力中は下書き枠 (D-141)。 ──
   List<_ChatEntry> _chatEntries(AstellSessionState s, String myHandle) => <_ChatEntry>[
         for (final t in s.transcripts) _ChatEntry(at: t.createdAt, author: t.displayName, text: t.text, transcript: true),
         for (final sh in s.shares) _ChatEntry(at: sh.createdAt, author: sh.handle == myHandle || sh.accountId == 'me' ? 'あなた' : sh.displayName, text: sh.headline, kind: sh.kind),
+        if (_draftStartedAt != null) _ChatEntry(at: _draftStartedAt!, author: 'あなた', text: _input.text, draft: true),
       ]..sort((a, b) => a.at.compareTo(b.at));
 
   Widget _chatTab(BuildContext context, AstellSessionState s, String myHandle) {
     final scheme = Theme.of(context).colorScheme;
     final entries = _chatEntries(s, myHandle);
     if (entries.isEmpty) {
-      return Center(child: Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('発話の文字起こしと共有コンテンツがここに時刻順で並びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center)));
+      return Center(child: Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('発話の文字起こしと、下の入力から送ったメッセージ・共有コンテンツがここに時刻順で並びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center)));
     }
     return ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs), children: [
       for (final e in entries)
         Container(
           margin: const EdgeInsets.symmetric(vertical: 2),
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
-          decoration: e.transcript ? null : BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
+          decoration: e.draft
+              ? BoxDecoration(border: Border.all(color: scheme.outline), borderRadius: BorderRadius.circular(RasqSizes.radiusSm))
+              : (e.transcript ? null : BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(RasqSizes.radiusSm))),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             SizedBox(width: 40, child: Text(_hhmm(e.at), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-            if (e.kind != null) Padding(padding: const EdgeInsets.only(right: RasqSpacing.xs), child: RasqPill(label: e.kind!)),
+            if (e.kind != null && e.kind != 'text') Padding(padding: const EdgeInsets.only(right: RasqSpacing.xs), child: RasqPill(label: e.kind!)),
             Expanded(
               child: Text.rich(TextSpan(children: [
                 TextSpan(text: '${e.author}> ', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: e.transcript ? scheme.onSurfaceVariant : null)),
-                TextSpan(text: e.text, style: RasqTypography.bodySmall),
+                TextSpan(text: e.draft && e.text.isEmpty ? '入力中…' : e.text, style: RasqTypography.bodySmall.copyWith(color: e.draft ? scheme.onSurfaceVariant : null, fontStyle: e.draft ? FontStyle.italic : null)),
               ])),
             ),
+            if (e.draft) Text('下書き', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ]),
         ),
       const SizedBox(height: RasqSpacing.xxl),
@@ -582,18 +618,128 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   }
 }
 
+/// 下段バー (D-143)。展開: マイク / 画面共有 / 字幕 / (字幕オン: 文字起こし + 入力欄、
+/// オフ: 「共有する」に差し替え) / 送信 or 共有する / 歯車。
+/// stick: チャット(入力欄)が消え、マイク・画面共有は**下から押し出されて**消える。
+/// 残るのは 参加メンバー(or 画面共有中の印)+ 文字起こし/共有コンテンツ + 字幕 + ✕。
+class _Footer extends StatelessWidget {
+  const _Footer({
+    required this.compact,
+    required this.state,
+    required this.input,
+    required this.drafting,
+    required this.onMic,
+    required this.onScreen,
+    required this.onCaptions,
+    required this.onSendText,
+    required this.onPickFile,
+    required this.onSettings,
+    required this.onExpand,
+    required this.onLeave,
+  });
+  final bool compact;
+  final AstellSessionState state;
+  final TextEditingController input;
+  final bool drafting;
+  final VoidCallback onMic, onScreen, onCaptions, onSendText, onPickFile, onSettings, onExpand, onLeave;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final s = state;
+    // マイク / 画面共有: stick では下へ押し出されて消える(幅も畳む)。
+    final pushedOut = ClipRect(
+      child: AnimatedSize(
+        duration: _kAnim,
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.centerLeft,
+        child: compact
+            ? const SizedBox(height: 44)
+            : AnimatedSlide(
+                duration: _kAnim,
+                offset: Offset.zero,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン(音声は M5 後段)', onPressed: onMic),
+                  const SizedBox(width: RasqSpacing.xs),
+                  _RoundButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: onScreen),
+                  const SizedBox(width: RasqSpacing.xs),
+                ]),
+              ),
+      ),
+    );
+
+    final Widget middle;
+    if (compact) {
+      middle = GestureDetector(
+        key: astellRoomCompactKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: onExpand,
+        child: Row(children: [
+          if (s.screenShareOn)
+            Container(
+              width: 44,
+              height: 30,
+              decoration: BoxDecoration(color: RasqColors.sub.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6), border: Border.all(color: RasqColors.sub)),
+              child: const Icon(Icons.desktop_windows, size: 16, color: RasqColors.sub),
+            )
+          else
+            RasqGroupAvatar(users: [for (final p in s.peers) p.user], size: RasqSizes.avatarSm, maxVisible: 3),
+          const SizedBox(width: RasqSpacing.sm),
+          Expanded(child: _Ticker(state: s, compact: true)),
+        ]),
+      );
+    } else if (s.captionsOn) {
+      middle = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        _Ticker(state: s),
+        RasqInput(controller: input, hintText: 'input..', onSubmitted: (_) => onSendText()),
+      ]);
+    } else {
+      // 字幕オフ: 入力欄の代わりに「共有する」。
+      middle = OutlinedButton.icon(
+        onPressed: onPickFile,
+        icon: const Icon(Icons.upload, size: 18),
+        label: const Text('共有する'),
+        style: OutlinedButton.styleFrom(shape: const StadiumBorder(), minimumSize: const Size.fromHeight(40)),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(RasqSpacing.sm, compact ? 2 : RasqSpacing.xs, RasqSpacing.sm, compact ? RasqSpacing.xs : RasqSpacing.sm),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        pushedOut,
+        _RoundButton(icon: Icons.subtitles_outlined, tooltip: s.captionsOn ? '字幕オフ' : '字幕オン', filled: s.captionsOn ? const Color(0xFF2EBF8F) : null, onPressed: onCaptions),
+        const SizedBox(width: RasqSpacing.sm),
+        Expanded(child: middle),
+        const SizedBox(width: RasqSpacing.sm),
+        if (compact)
+          _RoundButton(icon: Icons.close, tooltip: '退出', onPressed: onLeave)
+        else if (s.captionsOn)
+          _RoundButton(icon: drafting ? Icons.send : Icons.upload, tooltip: drafting ? '送信完了する' : '共有する', filled: scheme.onSurface, onPressed: drafting ? onSendText : onPickFile)
+        else
+          _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: onSettings),
+        if (!compact && s.captionsOn) ...[
+          const SizedBox(width: RasqSpacing.xs),
+          _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: onSettings),
+        ],
+      ]),
+    );
+  }
+}
+
 String _hhmm(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
 /// 下段の「文字起こし / 共有コンテンツ」(D-142: 入力欄の代わり)。
 class _Ticker extends StatelessWidget {
-  const _Ticker({required this.state});
+  const _Ticker({required this.state, this.compact = false});
   final AstellSessionState state;
+  final bool compact;
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final lines = <String>[
-      if (state.captionsOn) for (final t in state.transcripts.reversed.take(2).toList().reversed) '${t.displayName}>${t.text}',
+      if (state.captionsOn) for (final t in state.transcripts.reversed.take(compact ? 1 : 2).toList().reversed) '${t.displayName}>${t.text}',
       if (state.shares.isNotEmpty) '共有: ${state.shares.last.headline}',
+      if (compact && state.screenShareOn) '画面共有モード',
     ];
     if (lines.isEmpty) {
       lines.add(state.captionsOn ? (state.room.showSummary ? '文字起こしはまだありません' : '文字起こしは無効(要約非公開)') : '字幕オフ');

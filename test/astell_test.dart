@@ -176,57 +176,66 @@ void main() {
     expect(find.text('共有'), findsOneWidget);
     expect(find.text('プレビューにざっくり要約を表示する'), findsOneWidget);
 
-    // タブ (D-141): ホーム / チャット / 目次 / ルーム。入力欄は無い (D-142)。
+    // タブ (D-141): ホーム / チャット / 目次 / ルーム。ヘッダーは本体側 (D-143)。
     Finder inRoom(String t) => find.descendant(of: find.byType(AstellRoomBody), matching: find.text(t));
     for (final t in ['ホーム', 'チャット', '目次', 'ルーム']) {
       expect(inRoom(t), findsOneWidget);
     }
-    expect(find.widgetWithText(TextField, 'input..'), findsNothing);
+    expect(find.byKey(astellRoomHeaderKey), findsOneWidget);
 
-    // 「共有する」= ファイル選択 → media として共有(モックはエコー)。
-    await tester.tap(find.byTooltip('共有する'));
+    // チャット入力(字幕オン時): 入力開始で下書き枠 + 「送信完了する」、全消去で消える、送信で共有。
+    await tester.tap(inRoom('チャット'));
     await tester.pumpAndSettle();
-    expect(find.text('photo.png'), findsOneWidget);
-    expect(find.text('あなた が共有'), findsOneWidget);
+    expect(find.byTooltip('共有する'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こん');
+    await tester.pumpAndSettle();
+    expect(find.text('下書き'), findsOneWidget);
+    expect(find.byTooltip('送信完了する'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'input..'), '');
+    await tester.pumpAndSettle();
+    expect(find.text('下書き'), findsNothing);
+    await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こんばんは');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('送信完了する'));
+    await tester.pumpAndSettle();
+    expect(find.text('こんばんは'), findsWidgets); // 共有欄 + チャット
     expect(find.text('共有 (1)'), findsOneWidget);
-    expect(find.byTooltip('共有をすべて表示'), findsNothing);
 
-    // 2 件目 → 見出し「共有 (2)」+ ↓。畳んでいれば直近 1 件だけ、↓ で全部。
-    await tester.tap(find.byTooltip('共有する'));
+    // 字幕オフ → 入力欄が「共有する」(ファイル選択)に差し替わる → media 共有。
+    await tester.tap(find.byTooltip('字幕オフ'));
     await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'input..'), findsNothing);
+    await tester.tap(find.widgetWithText(OutlinedButton, '共有する'));
+    await tester.pumpAndSettle();
+    expect(find.text('photo.png'), findsWidgets);
     expect(find.text('共有 (2)'), findsOneWidget);
-    expect(find.text('photo.png'), findsOneWidget);
+    // ↓ で全件、… → 削除。
     await tester.tap(find.byTooltip('共有をすべて表示'));
     await tester.pumpAndSettle();
-    expect(find.text('photo.png'), findsNWidgets(2));
-
-    // … → 削除(自分の共有)。
     await tester.tap(find.byTooltip('共有の操作').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除'));
     await tester.pumpAndSettle();
     expect(find.text('共有 (1)'), findsOneWidget);
+    await tester.tap(find.byTooltip('字幕オン'));
+    await tester.pumpAndSettle();
 
-    // 画面共有モード: ボタンでモード表示。
+    // 画面共有モード。
     await tester.tap(find.byTooltip('画面共有'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('画面共有モード'), findsOneWidget);
     expect(container.read(astellSessionProvider)!.screenShareOn, isTrue);
 
-    // チャット: 共有コンテンツが時刻順に並ぶ(pill つき)。
-    await tester.tap(inRoom('チャット'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('あなた> '), findsWidgets);
-
-    // 空白タップ → stick(最小化): コンパクトバーになり、タップで展開。
-    final blank = tester.getRect(find.byKey(astellRoomBlankKey));
-    await tester.tapAt(Offset(blank.left + 8, blank.bottom - 8));
+    // FOW の外側をタップ → stick: ヘッダーと入力欄が消え、コンパクトバーに。タップで展開。
+    await tester.tapAt(const Offset(180, 60));
     await tester.pumpAndSettle();
     expect(find.byKey(astellRoomCompactKey), findsOneWidget);
-    expect(find.byKey(astellRoomBlankKey), findsNothing);
+    expect(find.byKey(astellRoomHeaderKey), findsNothing);
+    expect(find.widgetWithText(TextField, 'input..'), findsNothing);
+    expect(find.byTooltip('画面共有オフ'), findsNothing); // 下から押し出されて消える
     await tester.tap(find.byKey(astellRoomCompactKey));
     await tester.pumpAndSettle();
-    expect(find.byKey(astellRoomBlankKey), findsOneWidget);
+    expect(find.byKey(astellRoomHeaderKey), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'input..'), findsOneWidget);
 
     // ルーム: 参加メンバー全員。
     await tester.tap(inRoom('ルーム'));

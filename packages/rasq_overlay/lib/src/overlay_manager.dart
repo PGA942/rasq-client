@@ -136,6 +136,10 @@ class OverlayManager extends ChangeNotifier {
   void barrierTapped(String id) {
     final e = byId(id);
     if (e == null) return;
+    if (e.onBarrierTap != null) {
+      e.onBarrierTap!();
+      return;
+    }
     switch (e.effectiveBarrierBehavior) {
       case OverlayBarrierBehavior.ignore:
       case OverlayBarrierBehavior.none:
@@ -146,6 +150,10 @@ class OverlayManager extends ChangeNotifier {
         close(id, reason: OverlayCloseReason.discard);
     }
   }
+
+  /// エントリ側の動的な状態(バリアの有効/無効など)が変わったときにホストを
+  /// 描き直させる。
+  void requestRebuild() => notifyListeners();
 
   /// Back gesture / Escape: closes the topmost blocking entry if its rule allows.
   /// Returns `true` when the event was consumed.

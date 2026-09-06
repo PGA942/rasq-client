@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'fow.dart';
@@ -41,6 +42,8 @@ class RasqOverlayEntry {
     this.alignment = Alignment.center,
     this.anchor,
     this.barrierBehavior,
+    this.onBarrierTap,
+    this.barrierEnabled,
     this.onClosed,
     this.ownerId,
     this.semanticsLabel,
@@ -63,6 +66,15 @@ class RasqOverlayEntry {
 
   /// Per-entry override of the layer default.
   final OverlayBarrierBehavior? barrierBehavior;
+
+  /// バリア(FOW 以外の部分)のタップを**閉じずに**横取りする (D-143: AsTell の
+  /// ルーム FOW は外側タップで stick に変形する)。設定時は [barrierBehavior]
+  /// の閉じる動作を行わない。
+  final VoidCallback? onBarrierTap;
+
+  /// バリアの動的な有効/無効 (D-143)。false の間は [OverlayBarrierBehavior.none]
+  /// と同じ(背面を触れる)。切り替えたら [OverlayManager.requestRebuild] を呼ぶ。
+  final ValueListenable<bool>? barrierEnabled;
   final void Function(OverlayCloseReason reason, Object? result)? onClosed;
 
   /// Owner (plugin id / feature id) — lets the host close everything owned by
@@ -74,7 +86,9 @@ class RasqOverlayEntry {
   final FowSpec? fow;
 
   OverlayBarrierBehavior get effectiveBarrierBehavior =>
-      barrierBehavior ?? (layer == OverlayLayer.fow && (fow?.blocksContent ?? false) ? OverlayBarrierBehavior.dismissDiscard : layer.barrierBehavior);
+      barrierEnabled?.value == false
+          ? OverlayBarrierBehavior.none
+          : barrierBehavior ?? (layer == OverlayLayer.fow && (fow?.blocksContent ?? false) ? OverlayBarrierBehavior.dismissDiscard : layer.barrierBehavior);
 
   OverlayHandle handleWith(void Function(String id, {Object? result, OverlayCloseReason reason}) close) => OverlayHandle._(id, close);
 }
