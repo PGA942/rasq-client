@@ -1068,7 +1068,15 @@ class _HostStreamTile extends StatelessWidget {
             else
               ColoredBox(color: scheme.surfaceContainerHighest),
             const Center(child: Icon(Icons.play_circle_fill, size: 20, color: Colors.white70)),
-            Positioned(left: 2, top: 2, child: RasqPill(label: 'LIVE', color: RasqColors.live, textColor: Colors.white)),
+            Positioned(
+              left: 3,
+              top: 3,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(color: RasqColors.live, borderRadius: BorderRadius.circular(3)),
+                child: const Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, height: 1.0)),
+              ),
+            ),
           ]),
         ),
       ),
