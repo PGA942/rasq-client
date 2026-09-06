@@ -12,7 +12,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -67,9 +69,36 @@ void main() {
     await tester.tap(find.text('参加'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こんばんは');
-    await tester.tap(find.byTooltip('共有する'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('送信完了する'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room.png'));
+    await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'input..'), '入力中のテキスト');
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_chat.png'));
+  });
+
+  testWidgets('avatar bundle gallery', (tester) async {
+    tester.view.physicalSize = const Size(900, 600);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    const user = UserSummary(id: 'u', account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: 'douglas'), displayName: 'ダグラス');
+    await tester.pumpWidget(MaterialApp(
+      theme: RasqTheme.light(),
+      home: Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Wrap(spacing: 16, runSpacing: 16, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            for (final (n, live) in [(4, false), (2560, true), (99999, false), (123456, true), (2500000, false), (123000000, true)])
+              RasqAvatarBundle(user: user, count: n, live: live, size: 40),
+          ]),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(Scaffold), matchesGoldenFile('bundle_gallery.png'));
   });
 
   testWidgets('create fow', (tester) async {
