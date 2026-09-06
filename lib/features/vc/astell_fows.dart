@@ -323,7 +323,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               if (s.captionsOn)
                 for (final t in lastLines) Text('${t.displayName}>${t.text}', style: RasqTypography.caption.copyWith(fontSize: 9, color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
               if (s.captionsOn && s.transcripts.isEmpty && room.showSummary)
-                Text('文字起こしはまだありません', style: RasqTypography.caption.copyWith(fontSize: 9, color: scheme.onSurfaceVariant)),
+                Text('文字起こしはまだありません', style: RasqTypography.caption.copyWith(fontSize: 9, color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
               RasqInput(
                 controller: _input,
                 hintText: 'input..',

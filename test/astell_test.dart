@@ -11,6 +11,7 @@ import 'package:rasq_client/features/vc/astell_models.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/astell_tile.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -43,6 +44,35 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  group('アイコン&追加情報バンドル (D-140)', () {
+    test('人数: 1000 未満は素の数、以上は k 表記で小数第 1 位切り捨て', () {
+      expect(RasqAvatarBundle.formatCount(4), '+4');
+      expect(RasqAvatarBundle.formatCount(999), '+999');
+      expect(RasqAvatarBundle.formatCount(1000), '+1k');
+      expect(RasqAvatarBundle.formatCount(2560), '+2.5k');
+      expect(RasqAvatarBundle.formatCount(2599), '+2.5k');
+      expect(RasqAvatarBundle.formatCount(12345), '+12.3k');
+    });
+
+    testWidgets('層: 角丸ワイヤー(背面)→ 円形アイコン → LIVE(下辺中央)、人数は右端', (tester) async {
+      const user = UserSummary(id: 'u', account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: 'h'), displayName: 'ダグラス');
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Center(child: RasqAvatarBundle(user: user, count: 2560, live: true, size: 40)))));
+      expect(find.text('+2.5k'), findsOneWidget);
+      expect(find.text('LIVE'), findsOneWidget);
+      final bundle = tester.getRect(find.byType(RasqAvatarBundle));
+      final avatar = tester.getRect(find.byType(RasqAvatar));
+      final count = tester.getRect(find.text('+2.5k'));
+      final live = tester.getRect(find.text('LIVE'));
+      // アイコンは左端、人数はその右、LIVE はワイヤー(アイコン中心から右)の中央下。
+      expect(avatar.left, closeTo(bundle.left, 3)); // 円形縁取り(size*0.06)の内側
+      expect(count.left, greaterThan(avatar.right - 1));
+      expect(count.center.dy, closeTo(avatar.center.dy, 1));
+      expect(live.center.dy, greaterThan(count.bottom));
+      final wireLeft = avatar.left + 20;
+      expect(live.center.dx, closeTo((wireLeft + bundle.right) / 2, 4));
+    });
+  });
+
   group('モデル', () {
     test('Room / Peer / Share / Transcript の JSON(rasq-central API.md §3)を読める', () {
       final r = AstellRoom.fromJson({
@@ -51,7 +81,7 @@ void main() {
         'createdAt': '2026-09-06T10:00:00Z', 'closedAt': null, 'peerCount': 5, 'live': true,
       });
       expect(r.owner.account.handle, 'douglas');
-      expect(r.owner.presence, UserPresence.live);
+      expect(r.owner.presence, UserPresence.none, reason: 'LIVE はバンドル側が描く(アバターの LIVE 帯と二重にしない)');
       expect(r.summaryText, 'デスクリプションが提供されていません。');
       expect(r.autoGenre, isFalse);
       expect(r.isOpen, isTrue);

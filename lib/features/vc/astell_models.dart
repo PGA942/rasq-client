@@ -70,7 +70,7 @@ class AstellRoom {
 
   bool get isOpen => closedAt == null;
 
-  UserSummary get owner => _rasqUser(id: ownerId, handle: ownerHandle, displayName: ownerDisplayName, avatarUrl: ownerAvatarUrl, presence: live ? UserPresence.live : UserPresence.inVc);
+  UserSummary get owner => _rasqUser(id: ownerId, handle: ownerHandle, displayName: ownerDisplayName, avatarUrl: ownerAvatarUrl);
 
   /// タイル/プレビューに出す要約文(ワイヤーフレームの空表示つき)。
   String get summaryText => description.isEmpty ? 'デスクリプションが提供されていません。' : description;

@@ -29,28 +29,41 @@ class AstellTile extends StatelessWidget {
       ),
       padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Column(children: [
-            RasqGroupAvatar(users: [room.owner], size: RasqSizes.avatarMd, maxVisible: 1, overflowCount: room.peerCount > 0 ? room.peerCount : null),
-            if (room.live) Padding(padding: const EdgeInsets.only(top: 2), child: RasqPill(label: 'LIVE', color: RasqColors.live, textColor: Colors.white)),
+        // 見出し行: バンドル(小)+ ホスト名/タイトル、… は右上に重ねる(行幅を
+        // 食わない)。2 列タイルは 1 枚 ≈ 170px なので、バンドルは 30px 基準。
+        Stack(clipBehavior: Clip.none, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // アイコン&追加情報バンドル (D-140): 角丸ワイヤー + 円形アイコン + 人数 + LIVE。
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.topLeft,
+              child: RasqAvatarBundle(user: room.owner, count: room.peerCount, live: room.live, size: 30),
+            ),
+            const SizedBox(width: RasqSpacing.xs),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(right: onMore != null ? 18 : 0),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(room.ownerDisplayName, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(room.title, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ]),
+              ),
+            ),
           ]),
-          const SizedBox(width: RasqSpacing.sm),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(room.ownerDisplayName, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-              Text(room.title, style: RasqTypography.displayName, maxLines: 2, overflow: TextOverflow.ellipsis),
-            ]),
-          ),
           if (onMore != null)
-            Builder(
-              builder: (ctx) => RasqIconButton(
-                icon: Icons.more_horiz,
-                size: 18,
-                tooltip: 'メニュー',
-                onPressed: () {
-                  final box = ctx.findRenderObject() as RenderBox;
-                  onMore!(box.localToGlobal(Offset.zero) & box.size);
-                },
+            Positioned(
+              top: -10,
+              right: -10,
+              child: Builder(
+                builder: (ctx) => RasqIconButton(
+                  icon: Icons.more_horiz,
+                  size: 16,
+                  tooltip: 'メニュー',
+                  onPressed: () {
+                    final box = ctx.findRenderObject() as RenderBox;
+                    onMore!(box.localToGlobal(Offset.zero) & box.size);
+                  },
+                ),
               ),
             ),
         ]),
