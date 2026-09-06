@@ -74,7 +74,9 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_preview.png'));
     await tester.tap(find.text('参加'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('共有する'));
+    await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こんばんは');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('送信完了する'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('共有する'));
     await tester.pumpAndSettle();
@@ -82,8 +84,9 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_chat.png'));
-    final blank = tester.getRect(find.byKey(astellRoomBlankKey));
-    await tester.tapAt(Offset(blank.left + 8, blank.bottom - 8));
+    await tester.tap(find.byTooltip('画面共有'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(180, 60));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick.png'));
   });
