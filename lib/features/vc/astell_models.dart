@@ -200,6 +200,23 @@ class AstellShare {
         _ => kind,
       };
 
+  /// 種別の日本語ラベル(stick のタイルのピル)。
+  String get kindLabel => switch (kind) {
+        'post' => '投稿',
+        'media' => (payload['mimeType'] as String? ?? '').startsWith('video/') ? '動画' : 'メディア',
+        'link' => 'リンク',
+        'text' => 'テキスト',
+        _ => kind,
+      };
+
+  /// 投稿/メディアの作者名(payload の `author`、無ければ共有した人)。
+  String get authorName => payload['author'] as String? ?? displayName;
+  Uri? get authorAvatarUrl => _uri(payload['avatarUrl']);
+
+  /// サムネイル(メディア / 投稿の添付 / リンクの OGP)。
+  Uri? get thumbnailUrl => _uri(payload['thumbnailUrl']) ?? (kind == 'media' ? _uri(payload['url']) : null);
+  bool get isVideo => (payload['mimeType'] as String? ?? '').startsWith('video/');
+
   factory AstellShare.fromJson(Map<String, Object?> j) => AstellShare(
         id: j['id'] as String? ?? '',
         accountId: j['accountId'] as String? ?? '',

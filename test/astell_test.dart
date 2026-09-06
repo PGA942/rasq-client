@@ -106,6 +106,19 @@ void main() {
       expect(const NewAstellRoom(title: 'T').toJson().containsKey('welcomeMessage'), isFalse);
     });
 
+    test('動画つき FOW のダミー (D-144): Launch LIVE に投稿 + 動画の共有が入っている', () async {
+      final client = MockAstellClient();
+      final shares = await client.shares('r-spacequant');
+      expect(shares.map((s) => s.kind), ['post', 'media']);
+      expect(shares.last.isVideo, isTrue);
+      expect(shares.last.kindLabel, '動画');
+      expect(shares.last.thumbnailUrl, isNotNull);
+      expect(shares.first.authorName, 'SpaceQuant Barbados');
+      expect(shares.first.kindLabel, '投稿');
+      final room = (await client.room('r-spacequant'))!;
+      expect(room.thumbnailUrl, isNotNull);
+    });
+
     test('セッション: welcome → peer-joined/left → share → transcript → closed', () async {
       final client = MockAstellClient();
       final container = ProviderContainer(overrides: [
@@ -220,22 +233,39 @@ void main() {
     await tester.tap(find.byTooltip('字幕オン'));
     await tester.pumpAndSettle();
 
-    // 画面共有モード。
-    await tester.tap(find.byTooltip('画面共有'));
-    await tester.pumpAndSettle();
-    expect(container.read(astellSessionProvider)!.screenShareOn, isTrue);
-
-    // FOW の外側をタップ → stick: ヘッダーと入力欄が消え、コンパクトバーに。タップで展開。
+    // FOW の外側をタップ → stick(画面共有なし): ヘッダーと入力欄が消え、マイク/画面は残る。
+    // 中央は 文字起こし → 上下スワイプで共有コンテンツのタイル (D-144)。
     await tester.tapAt(const Offset(180, 60));
     await tester.pumpAndSettle();
     expect(find.byKey(astellRoomCompactKey), findsOneWidget);
     expect(find.byKey(astellRoomHeaderKey), findsNothing);
     expect(find.widgetWithText(TextField, 'input..'), findsNothing);
-    expect(find.byTooltip('画面共有オフ'), findsNothing); // 下から押し出されて消える
+    expect(find.byTooltip('画面共有'), findsOneWidget);
+    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
+    expect(find.byKey(astellStickPagerKey), findsOneWidget);
+    await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, -80));
+    await tester.pumpAndSettle();
+    expect(find.text('こんばんは'), findsOneWidget); // テキスト共有のタイル
+    expect(find.text('テキスト'), findsOneWidget); // 種別ピル
+    // タップで展開。
     await tester.tap(find.byKey(astellRoomCompactKey));
     await tester.pumpAndSettle();
     expect(find.byKey(astellRoomHeaderKey), findsOneWidget);
     expect(find.widgetWithText(TextField, 'input..'), findsOneWidget);
+
+    // 画面共有モード → stick でマイク/画面は下から押し出されて消える。
+    await tester.tap(find.byTooltip('画面共有'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.screenShareOn, isTrue);
+    await tester.tapAt(const Offset(180, 60));
+    await tester.pumpAndSettle();
+    expect(find.byKey(astellRoomCompactKey), findsOneWidget);
+    expect(find.byTooltip('画面共有オフ'), findsNothing);
+    expect(find.textContaining('画面共有モード'), findsOneWidget);
+    await tester.tap(find.byKey(astellRoomCompactKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('画面共有オフ'));
+    await tester.pumpAndSettle();
 
     // ルーム: 参加メンバー全員。
     await tester.tap(inRoom('ルーム'));
