@@ -18,6 +18,10 @@ abstract class AstellClient {
   Future<void> closeRoom(String id);
   Future<List<AstellShare>> shares(String id);
   Future<void> deleteShare(String roomId, String shareId);
+
+  /// 共有コンテンツのアップロード (D-145)。[bytes] は [encoding] で圧縮済み
+  /// (`zstd` or `identity`)。応答の `url` を共有の payload に載せる。
+  Future<AstellAsset> uploadAsset(String roomId, List<int> bytes, {required String name, required String contentType, String encoding = 'identity'});
   Future<List<AstellTranscript>> transcripts(String id);
 
   /// シグナリング WebSocket。welcome / peer-joined / share / transcript … を
@@ -121,10 +125,14 @@ class MockAstellClient implements AstellClient {
           ownerHandle: 'sublrony',
           ownerDisplayName: 'Sublrony',
           title: 'Create Game',
+          description: 'ゲーム制作の作業配信。エディタの画面を流しながら雑談中。',
+          genres: const ['ゲーム制作', '作業配信'],
           createdAt: DateTime(2026, 9, 6, 17),
           peerCount: 2,
           live: true,
           thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl2/600/400'),
+          // ホストが動画(作業画面の録画)を配信中のダミー (D-145)。
+          hostStream: AstellHostStream(kind: 'video', title: 'エディタ作業 — 敵キャラのAI', thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl2/600/400'), startedAt: DateTime(2026, 9, 6, 17, 5)),
         ),
       ];
 
@@ -202,6 +210,12 @@ class MockAstellClient implements AstellClient {
   }
 
   final List<_MockConnection> _connections = [];
+
+  @override
+  Future<AstellAsset> uploadAsset(String roomId, List<int> bytes, {required String name, required String contentType, String encoding = 'identity'}) async {
+    // モックは実体を持たない — 名前と大きさだけ返す(URL は picsum のダミー)。
+    return AstellAsset(id: 'mock-asset-${DateTime.now().microsecondsSinceEpoch}', url: Uri.parse('https://picsum.photos/seed/${Uri.encodeComponent(name)}/600/400'), name: name, contentType: contentType, sizeBytes: bytes.length);
+  }
 
   @override
   Future<List<AstellTranscript>> transcripts(String id) async => const [];
@@ -308,6 +322,15 @@ class HttpAstellClient implements AstellClient {
 
   @override
   Future<void> deleteShare(String roomId, String shareId) => _client.delete('/astell/rooms/${Uri.encodeComponent(roomId)}/shares/${Uri.encodeComponent(shareId)}');
+
+  @override
+  Future<AstellAsset> uploadAsset(String roomId, List<int> bytes, {required String name, required String contentType, String encoding = 'identity'}) async =>
+      AstellAsset.fromJson(await _client.postBytes(
+        '/astell/rooms/${Uri.encodeComponent(roomId)}/assets',
+        bytes,
+        contentType: contentType,
+        headers: {'content-encoding': encoding, 'x-rasq-file-name': Uri.encodeComponent(name)},
+      ));
 
   @override
   Future<List<AstellTranscript>> transcripts(String id) async => _list(await _client.getList('/astell/rooms/${Uri.encodeComponent(id)}/transcripts'), AstellTranscript.fromJson);

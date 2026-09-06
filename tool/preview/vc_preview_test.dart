@@ -14,6 +14,7 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
+import 'package:rasq_client/features/vc/astell_client.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -91,6 +92,9 @@ void main() {
     await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, -80));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick_share.png'));
+    // メディアのタイルはタップで全画面になるので、文字起こしのページへ戻してから展開。
+    await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, 80));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(astellRoomCompactKey));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('画面共有'));
@@ -136,6 +140,20 @@ void main() {
     ));
     await tester.pumpAndSettle();
     await expectLater(find.byType(Scaffold), matchesGoldenFile('bundle_gallery.png'));
+  });
+
+  testWidgets('host stream room (D-145)', (tester) async {
+    await pump(tester);
+    // Create Game(ホストが動画配信中)へ直接参加 → ホーム先頭の「参加中」からルーム FOW を開く。
+    final room = (await MockAstellClient().room('r-sublrony'))!;
+    await ProviderScope.containerOf(tester.element(find.byType(RasqApp))).read(astellSessionProvider.notifier).join(room);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('参加中: Create Game'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_hoststream.png'));
+    await tester.tapAt(const Offset(180, 60));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_hoststream_stick.png'));
   });
 
   testWidgets('create fow', (tester) async {

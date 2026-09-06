@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import 'astell_media_viewer.dart';
 import 'astell_models.dart';
 import 'astell_providers.dart';
 
@@ -447,6 +449,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               Expanded(child: Text('画面共有モード(映像の送出は M5 後段)', style: RasqTypography.caption.copyWith(color: RasqColors.sub))),
             ]),
           ),
+        // ── ホストの配信 (D-145): 動画/画面のプレビュー ──
+        if (room.hostStream != null) _HostStreamPanel(stream: room.hostStream!, onTap: () => _openStream(context, room)),
         // ── 共有(常設): 直近 1 件、↓ で全部、各カードに … ──
         _SharesSection(
           shares: s.shares,
@@ -454,6 +458,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
           isOwner: isOwner,
           expanded: _sharesExpanded,
           onToggle: () => setState(() => _sharesExpanded = !_sharesExpanded),
+          onOpen: (share) => _openShare(context, share),
           onMore: (share, rect) => _shareMenu(context, share, rect, isOwner: isOwner, mine: share.handle == me.account.handle || share.accountId == 'me'),
         ),
         const Divider(height: RasqSpacing.sm),
@@ -491,6 +496,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         onSettings: () => _notYet(context, 'VC の設定'),
         onExpand: _expand,
         onLeave: leave,
+        onOpenShare: (share) => _openShare(context, share),
       ),
     ]);
   }
@@ -513,9 +519,62 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       final size = await file.length();
       // XFile.fromData は name が空になる実装がある → path の末尾 → 既定名。
       final name = file.name.isNotEmpty ? file.name : (file.path.isNotEmpty ? file.path.split('/').last : 'ファイル');
-      ref.read(astellSessionProvider.notifier).share('media', {'name': name, 'mimeType': ?file.mimeType, 'sizeBytes': size, 'title': name});
+      final mime = file.mimeType ?? _guessMime(name);
+      // Central へアップロード (D-145: zstd 圧縮 — コーデックが無ければ無圧縮)して URL を共有に載せる。
+      final s = ref.read(astellSessionProvider);
+      if (s == null) return;
+      final codec = ref.read(astellAssetCodecProvider);
+      final asset = await ref.read(astellClientProvider).uploadAsset(s.room.id, codec.encode(await file.readAsBytes()), name: name, contentType: mime, encoding: codec.encoding);
+      ref.read(astellSessionProvider.notifier).share('media', {
+        'name': name,
+        'title': name,
+        'mimeType': mime,
+        'sizeBytes': size,
+        'assetId': asset.id,
+        'url': asset.url.toString(),
+        if (mime.startsWith('image/')) 'thumbnailUrl': asset.url.toString(),
+      });
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ファイルを選択できませんでした: $e')));
+    }
+  }
+
+  /// ホストの配信をタップ → 全画面(再生は M5 後段、今は静止画)。
+  Future<void> _openStream(BuildContext context, AstellRoom room) {
+    final st = room.hostStream!;
+    final share = AstellShare(
+      id: 'stream',
+      accountId: room.ownerId,
+      handle: room.ownerHandle,
+      displayName: room.ownerDisplayName,
+      kind: 'media',
+      payload: {'title': st.title.isEmpty ? '${room.ownerDisplayName} の配信' : st.title, 'mimeType': st.isScreen ? 'video/screen' : 'video/stream', 'thumbnailUrl': st.thumbnailUrl?.toString()},
+      createdAt: st.startedAt ?? room.createdAt,
+    );
+    return AstellMediaViewer.open(context, share);
+  }
+
+  /// タイルのタップ (D-145): メディア = 全画面 / 投稿 = 対応 SNS プラグインがあればアプリ内、
+  /// 無ければ Web / リンク = Web。
+  Future<void> _openShare(BuildContext context, AstellShare share) async {
+    switch (share.kind) {
+      case 'media':
+        await AstellMediaViewer.open(context, share);
+      case 'post':
+        final sessions = ref.read(sessionsProvider).value?.sessions ?? const [];
+        final current = ref.read(currentAccountProvider);
+        final matches = share.snsKind != null && share.postId != null && current != null && current.kind.name == share.snsKind && (share.instance == null || current.instance == share.instance);
+        if (matches && sessions.isNotEmpty) {
+          context.push('/post/${Uri.encodeComponent(share.postId!)}');
+        } else if (share.url != null) {
+          await launchUrl(share.url!, mode: LaunchMode.externalApplication); // Web 表示(アプリ内 WebView は未導入)
+        } else {
+          _notYet(context, 'この投稿の表示(対応 SNS プラグインが未導入)');
+        }
+      case 'link':
+        if (share.url != null) await launchUrl(share.url!, mode: LaunchMode.externalApplication);
+      default:
+        break;
     }
   }
 
@@ -670,12 +729,14 @@ class _Footer extends StatelessWidget {
     required this.onSettings,
     required this.onExpand,
     required this.onLeave,
+    required this.onOpenShare,
   });
   final bool compact;
   final AstellSessionState state;
   final TextEditingController input;
   final bool drafting;
   final VoidCallback onMic, onScreen, onCaptions, onSendText, onPickFile, onSettings, onExpand, onLeave;
+  final void Function(AstellShare share) onOpenShare;
 
   @override
   Widget build(BuildContext context) {
@@ -722,7 +783,7 @@ class _Footer extends StatelessWidget {
                 Expanded(child: _Ticker(state: s, compact: true)),
               ])
             // 画面共有なし: 文字起こし(3 行)と共有コンテンツのタイルを**上下スワイプ**で行き来。
-            : _StickPager(state: s),
+            : _StickPager(state: s, onOpenShare: onOpenShare),
       );
     } else if (s.captionsOn) {
       middle = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
@@ -767,14 +828,20 @@ String _hhmm(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toS
 /// stick の中央 (D-144): 文字起こし(字幕オン時)と共有コンテンツのタイルを縦の
 /// PageView で。上下スライドで前後の共有へ移動(新しい順)。
 class _StickPager extends StatelessWidget {
-  const _StickPager({required this.state});
+  const _StickPager({required this.state, required this.onOpenShare});
   final AstellSessionState state;
+  final void Function(AstellShare share) onOpenShare;
 
   @override
   Widget build(BuildContext context) {
+    final host = state.room.hostStream;
     final pages = <Widget>[
-      if (state.captionsOn || state.shares.isEmpty) Align(alignment: Alignment.centerLeft, child: _Ticker(state: state, compact: true, lines: 3)),
-      for (final sh in state.shares.reversed) _ShareTile(share: sh),
+      // ホストの配信中はその印を先頭に (D-145)。
+      if (host != null) _HostStreamTile(stream: host, room: state.room),
+      if (state.captionsOn || (state.shares.isEmpty && host == null)) Align(alignment: Alignment.centerLeft, child: _Ticker(state: state, compact: true, lines: 3)),
+      // メディア / 投稿 / リンクはタップで開く (D-145)。テキストはバーのタップ = 展開に任せる。
+      for (final sh in state.shares.reversed)
+        if (sh.kind == 'text') _ShareTile(share: sh) else GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => onOpenShare(sh), child: _ShareTile(share: sh)),
     ];
     return SizedBox(
       height: 56,
@@ -863,13 +930,14 @@ class _Ticker extends StatelessWidget {
 
 /// 共有欄(常設、D-142): 見出し「共有 (N)」+ ↓/↑、畳んでいれば直近 1 件、各カードに …。
 class _SharesSection extends StatelessWidget {
-  const _SharesSection({required this.shares, required this.myHandle, required this.isOwner, required this.expanded, required this.onToggle, required this.onMore});
+  const _SharesSection({required this.shares, required this.myHandle, required this.isOwner, required this.expanded, required this.onToggle, required this.onMore, required this.onOpen});
   final List<AstellShare> shares;
   final String myHandle;
   final bool isOwner;
   final bool expanded;
   final VoidCallback onToggle;
   final void Function(AstellShare share, Rect anchor) onMore;
+  final void Function(AstellShare share) onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -890,11 +958,27 @@ class _SharesSection extends StatelessWidget {
       for (final sh in shown)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 2, RasqSpacing.page, 2),
-          child: Container(
-            decoration: BoxDecoration(border: Border.all(color: scheme.outline), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+          child: Material(
+            color: Colors.transparent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RasqSizes.radiusMd), side: BorderSide(color: scheme.outline)),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+            onTap: () => onOpen(sh),
+            child: Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.xs, RasqSpacing.xs, RasqSpacing.xs),
             child: Row(children: [
-              RasqPill(label: sh.kind),
+              if (sh.thumbnailUrl != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: RasqSpacing.sm),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: SizedBox(width: 48, height: 36, child: Stack(fit: StackFit.expand, children: [
+                      Image.network(sh.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
+                      if (sh.isVideo) const Center(child: Icon(Icons.play_circle_fill, size: 18, color: Colors.white)),
+                    ])),
+                  ),
+                ),
+              RasqPill(label: sh.kindLabel),
               const SizedBox(width: RasqSpacing.xs),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -914,10 +998,103 @@ class _SharesSection extends StatelessWidget {
                 ),
               ),
             ]),
+            ),
+            ),
           ),
         ),
     ]);
   }
+}
+
+/// ホストの配信パネル(展開時、共有欄の上): 16:9 のプレビュー + LIVE + タイトル。
+class _HostStreamPanel extends StatelessWidget {
+  const _HostStreamPanel({required this.stream, required this.onTap});
+  final AstellHostStream stream;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
+      child: GestureDetector(
+        onTap: onTap,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(RasqSizes.radiusMd),
+          child: AspectRatio(
+            aspectRatio: 16 / 7,
+            child: Stack(fit: StackFit.expand, children: [
+              if (stream.thumbnailUrl != null)
+                Image.network(stream.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
+              else
+                ColoredBox(color: scheme.surfaceContainerHighest),
+              const Center(child: Icon(Icons.play_circle_fill, size: 40, color: Colors.white70)),
+              Positioned(left: 8, top: 8, child: RasqPill(label: 'LIVE', color: RasqColors.live, textColor: Colors.white)),
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 6,
+                child: Text(
+                  '${stream.isScreen ? '画面共有' : '配信'}: ${stream.title}',
+                  style: RasqTypography.caption.copyWith(color: Colors.white, fontWeight: FontWeight.w700, shadows: const [Shadow(blurRadius: 4, color: Colors.black)]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// stick の先頭ページ: ホストの配信の印(サムネイル + LIVE + タイトル)。
+class _HostStreamTile extends StatelessWidget {
+  const _HostStreamTile({required this.stream, required this.room});
+  final AstellHostStream stream;
+  final AstellRoom room;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: SizedBox(
+          width: 64,
+          height: 44,
+          child: Stack(fit: StackFit.expand, children: [
+            if (stream.thumbnailUrl != null)
+              Image.network(stream.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
+            else
+              ColoredBox(color: scheme.surfaceContainerHighest),
+            const Center(child: Icon(Icons.play_circle_fill, size: 20, color: Colors.white70)),
+            Positioned(left: 2, top: 2, child: RasqPill(label: 'LIVE', color: RasqColors.live, textColor: Colors.white)),
+          ]),
+        ),
+      ),
+      const SizedBox(width: RasqSpacing.sm),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text('${room.ownerDisplayName} が${stream.isScreen ? '画面共有' : '配信'}中', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(stream.title, style: RasqTypography.caption.copyWith(fontSize: 10, color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+        ]),
+      ),
+    ]);
+  }
+}
+
+String _guessMime(String name) {
+  final ext = name.contains('.') ? name.split('.').last.toLowerCase() : '';
+  return switch (ext) {
+    'png' => 'image/png',
+    'jpg' || 'jpeg' => 'image/jpeg',
+    'gif' => 'image/gif',
+    'webp' => 'image/webp',
+    'mp4' || 'm4v' => 'video/mp4',
+    'mov' => 'video/quicktime',
+    'webm' => 'video/webm',
+    _ => 'application/octet-stream',
+  };
 }
 
 // ── 作成 FOW ──────────────────────────────────────────────────────
