@@ -38,7 +38,43 @@ abstract class AstellConnection {
 class MockAstellClient implements AstellClient {
   MockAstellClient() {
     _rooms.addAll(seededRooms());
+    _shares['r-spacequant'] = seededShares('r-spacequant');
   }
+
+  /// 動画つき FOW のダミー (D-144): 画像はコンポーネントカタログと同じ picsum を流用。
+  static List<AstellShare> seededShares(String roomId) => switch (roomId) {
+        'r-spacequant' => [
+            AstellShare(
+              id: 'sq-post',
+              accountId: 'spacequant',
+              handle: 'spacequant',
+              displayName: 'SpaceQuant',
+              kind: 'post',
+              payload: const {
+                'author': 'SpaceQuant Barbados',
+                'avatarUrl': 'https://picsum.photos/seed/spacequant/200',
+                'body': 'Barbados III has been successfully placed into Earth orbit. Good job @Stratolaunch',
+              },
+              createdAt: DateTime(2026, 9, 6, 18, 5),
+            ),
+            AstellShare(
+              id: 'sq-video',
+              accountId: 'spacequant',
+              handle: 'spacequant',
+              displayName: 'SpaceQuant',
+              kind: 'media',
+              payload: const {
+                'title': 'Barbados III 打ち上げ映像',
+                'mimeType': 'video/mp4',
+                'url': 'https://picsum.photos/seed/rrl1/600/400',
+                'thumbnailUrl': 'https://picsum.photos/seed/rrl1/600/400',
+                'durationMs': 95000,
+              },
+              createdAt: DateTime(2026, 9, 6, 18, 12),
+            ),
+          ],
+        _ => const [],
+      };
 
   final List<AstellRoom> _rooms = [];
   final Map<String, List<AstellShare>> _shares = {};
@@ -77,6 +113,7 @@ class MockAstellClient implements AstellClient {
           createdAt: DateTime(2026, 9, 6, 18),
           peerCount: 2500,
           live: true,
+          thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl1/600/400'),
         ),
         AstellRoom(
           id: 'r-sublrony',
@@ -87,6 +124,7 @@ class MockAstellClient implements AstellClient {
           createdAt: DateTime(2026, 9, 6, 17),
           peerCount: 2,
           live: true,
+          thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl2/600/400'),
         ),
       ];
 

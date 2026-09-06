@@ -84,11 +84,37 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_chat.png'));
+    // stick(画面共有なし): 文字起こし → 上下スワイプで共有タイル。
+    await tester.tapAt(const Offset(180, 60));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick.png'));
+    await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, -80));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick_share.png'));
+    await tester.tap(find.byKey(astellRoomCompactKey));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('画面共有'));
     await tester.pumpAndSettle();
     await tester.tapAt(const Offset(180, 60));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick.png'));
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick_screen.png'));
+  });
+
+  testWidgets('video room fow (D-144)', (tester) async {
+    await pump(tester);
+    // トレンド先頭 = Launch LIVE(投稿 + 動画の共有入り)。
+    await tester.tap(find.text('見てみる').at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('参加'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_video.png'));
+    await tester.tapAt(const Offset(180, 60));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, -80));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, -80));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_video_stick.png'));
   });
 
   testWidgets('avatar bundle gallery', (tester) async {

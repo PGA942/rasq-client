@@ -225,6 +225,7 @@ const astellRoomExpandedFactor = 0.75;
 const astellRoomTabsCoveredHeight = 300.0;
 
 const astellRoomCompactKey = Key('astell.room.compact');
+const astellStickPagerKey = Key('astell.room.stick.pager');
 const astellRoomHeaderKey = Key('astell.room.header');
 
 Future<void> openAstellRoomFow(BuildContext context, WidgetRef ref) async {
@@ -680,13 +681,15 @@ class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final s = state;
-    // マイク / 画面共有: stick では下へ押し出されて消える(幅も畳む)。
+    // マイク / 画面共有: stick で**画面共有中**なら下へ押し出されて消える(幅も畳む)。
+    // 画面共有なしの stick では残る(ワイヤーフレーム「UI下部に表示」)。
+    final pushOut = compact && s.screenShareOn;
     final pushedOut = ClipRect(
       child: AnimatedSize(
         duration: _kAnim,
         curve: Curves.easeOutCubic,
         alignment: Alignment.centerLeft,
-        child: compact
+        child: pushOut
             ? const SizedBox(height: 44)
             : AnimatedSlide(
                 duration: _kAnim,
@@ -707,19 +710,19 @@ class _Footer extends StatelessWidget {
         key: astellRoomCompactKey,
         behavior: HitTestBehavior.opaque,
         onTap: onExpand,
-        child: Row(children: [
-          if (s.screenShareOn)
-            Container(
-              width: 44,
-              height: 30,
-              decoration: BoxDecoration(color: RasqColors.sub.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6), border: Border.all(color: RasqColors.sub)),
-              child: const Icon(Icons.desktop_windows, size: 16, color: RasqColors.sub),
-            )
-          else
-            RasqGroupAvatar(users: [for (final p in s.peers) p.user], size: RasqSizes.avatarSm, maxVisible: 3),
-          const SizedBox(width: RasqSpacing.sm),
-          Expanded(child: _Ticker(state: s, compact: true)),
-        ]),
+        child: s.screenShareOn
+            ? Row(children: [
+                Container(
+                  width: 44,
+                  height: 30,
+                  decoration: BoxDecoration(color: RasqColors.sub.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6), border: Border.all(color: RasqColors.sub)),
+                  child: const Icon(Icons.desktop_windows, size: 16, color: RasqColors.sub),
+                ),
+                const SizedBox(width: RasqSpacing.sm),
+                Expanded(child: _Ticker(state: s, compact: true)),
+              ])
+            // 画面共有なし: 文字起こし(3 行)と共有コンテンツのタイルを**上下スワイプ**で行き来。
+            : _StickPager(state: s),
       );
     } else if (s.captionsOn) {
       middle = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
@@ -761,17 +764,92 @@ class _Footer extends StatelessWidget {
 
 String _hhmm(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
+/// stick の中央 (D-144): 文字起こし(字幕オン時)と共有コンテンツのタイルを縦の
+/// PageView で。上下スライドで前後の共有へ移動(新しい順)。
+class _StickPager extends StatelessWidget {
+  const _StickPager({required this.state});
+  final AstellSessionState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final pages = <Widget>[
+      if (state.captionsOn || state.shares.isEmpty) Align(alignment: Alignment.centerLeft, child: _Ticker(state: state, compact: true, lines: 3)),
+      for (final sh in state.shares.reversed) _ShareTile(share: sh),
+    ];
+    return SizedBox(
+      height: 56,
+      child: PageView(
+        key: astellStickPagerKey,
+        scrollDirection: Axis.vertical,
+        children: pages,
+      ),
+    );
+  }
+}
+
+/// 共有コンテンツのタイル (D-144、ワイヤーフレーム右): アバター + 作者名 + 種別ピル /
+/// 本文。メディアはサムネイル(動画は ▶)。
+class _ShareTile extends StatelessWidget {
+  const _ShareTile({required this.share});
+  final AstellShare share;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final thumb = share.thumbnailUrl;
+    return Container(
+      decoration: BoxDecoration(border: Border.all(color: scheme.onSurface, width: 1.2), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
+      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: 2),
+      clipBehavior: Clip.hardEdge,
+      child: Row(children: [
+        if (thumb != null)
+          Padding(
+            padding: const EdgeInsets.only(right: RasqSpacing.sm),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: SizedBox(
+                width: 56,
+                height: 40,
+                child: Stack(fit: StackFit.expand, children: [
+                  Image.network(thumb.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.movie_outlined, size: 18, color: scheme.onSurfaceVariant))),
+                  if (share.isVideo) const Center(child: Icon(Icons.play_circle_fill, size: 22, color: Colors.white)),
+                ]),
+              ),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.only(right: RasqSpacing.sm),
+            child: RasqAvatar(imageUrl: share.authorAvatarUrl, size: RasqSizes.avatarSm, fallbackLabel: share.authorName),
+          ),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
+            Row(children: [
+              Expanded(child: Text(share.authorName, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700, height: 1.2), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              RasqPill(label: share.kindLabel, color: RasqColors.link, textColor: Colors.white),
+            ]),
+            Text(share.headline, style: RasqTypography.caption.copyWith(fontSize: 10, height: 1.15), maxLines: 2, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
 /// 下段の「文字起こし / 共有コンテンツ」(D-142: 入力欄の代わり)。
 class _Ticker extends StatelessWidget {
-  const _Ticker({required this.state, this.compact = false});
+  const _Ticker({required this.state, this.compact = false, this.lines = 2});
   final AstellSessionState state;
   final bool compact;
+
+  /// 文字起こしの行数。
+  final int lines;
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final lines = <String>[
-      if (state.captionsOn) for (final t in state.transcripts.reversed.take(compact ? 1 : 2).toList().reversed) '${t.displayName}>${t.text}',
-      if (state.shares.isNotEmpty) '共有: ${state.shares.last.headline}',
+      if (state.captionsOn) for (final t in state.transcripts.reversed.take(this.lines).toList().reversed) '${t.displayName}>${t.text}',
+      if (state.shares.isNotEmpty && !(compact && !state.screenShareOn)) '共有: ${state.shares.last.headline}',
       if (compact && state.screenShareOn) '画面共有モード',
     ];
     if (lines.isEmpty) {
