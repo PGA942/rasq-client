@@ -217,7 +217,7 @@ class _PreviewBody extends ConsumerWidget {
 // ── ルーム FOW(参加後) ────────────────────────────────────────────
 
 /// stick の 2 段 (D-142 / D-143): 最小 = コンパクトバーだけ / 展開。
-const astellRoomCollapsedFactor = 0.19;
+const astellRoomCollapsedFactor = 0.13;
 const astellRoomExpandedFactor = 0.75;
 
 /// 展開レイアウトに要る最小高さ(ヘッダー + 共有 + タブ + 下段)。これより
@@ -303,6 +303,27 @@ const _kAnim = Duration(milliseconds: 220);
 class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   bool _sharesExpanded = false;
   final _input = TextEditingController();
+  final _footerKey = GlobalKey();
+
+  /// FOW のクローム(ハンドル + 余白)ぶん。最小段 = バーの実測 + これ。
+  static const _chromeHeight = 30.0;
+
+  /// stick の最小段をバーの実測高さに合わせる(コンポーザー D-049 と同じ作法)。
+  void _syncCollapsedStop(BuildContext context) {
+    final spec = widget.spec;
+    if (spec == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = _footerKey.currentContext?.findRenderObject() as RenderBox?;
+      final host = MediaQuery.sizeOf(context).height;
+      if (box == null || !box.hasSize || host <= 0) return;
+      final fit = ((box.size.height + _chromeHeight) / host).clamp(spec.minHeightFactor, astellRoomExpandedFactor - 0.05);
+      final current = spec.heightStops.isEmpty ? astellRoomCollapsedFactor : spec.heightStops.first;
+      if ((fit - current).abs() < 0.003) return;
+      spec.heightStops = [fit, astellRoomExpandedFactor];
+      if ((spec.heightFactor.value - current).abs() < 0.01) spec.heightFactor.value = fit;
+    });
+  }
 
   /// 入力開始時刻 (D-141): 下書き枠はこの時刻の位置に差し込まれ、送信で
   /// その時刻の発言になる。入力を全部消すと消える。
@@ -352,7 +373,17 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         builder: (context, constraints) {
           final targetPx = h * MediaQuery.sizeOf(context).height;
           final compact = targetPx < astellRoomTabsCoveredHeight || constraints.maxHeight < astellRoomTabsCoveredHeight;
-          return _body(context, compact: compact);
+          if (!compact) return _body(context, compact: false);
+          _syncCollapsedStop(context);
+          // 変形中(高さが縮む途中)は下端に寄せてクリップし、はみ出させない。
+          return ClipRect(
+            child: OverflowBox(
+              alignment: Alignment.bottomCenter,
+              minHeight: 0,
+              maxHeight: double.infinity,
+              child: _body(context, compact: true),
+            ),
+          );
         },
       ),
     );
@@ -446,6 +477,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       ],
       // ── 下段バー: 展開 ⇄ stick で変形 (D-143) ──
       _Footer(
+        key: _footerKey,
         compact: compact,
         state: s,
         input: _input,
@@ -624,6 +656,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
 /// 残るのは 参加メンバー(or 画面共有中の印)+ 文字起こし/共有コンテンツ + 字幕 + ✕。
 class _Footer extends StatelessWidget {
   const _Footer({
+    super.key,
     required this.compact,
     required this.state,
     required this.input,
