@@ -53,3 +53,6 @@ app.*.map.json
 # Flutter/Dart のビルド出力(ネイティブアセット・dill キャッシュ)。
 # 一部が誤って追跡されていたので明示的に外す。
 packages/*/build/
+
+# 描画確認ハーネスの出力 (D-140)
+tool/preview/*.png

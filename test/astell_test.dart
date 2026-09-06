@@ -11,6 +11,7 @@ import 'package:rasq_client/features/vc/astell_models.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/astell_tile.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -43,6 +44,39 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  group('アイコン&追加情報バンドル (D-140)', () {
+    test('人数: 1000 未満は素の数、以上は k で小数点以下切り捨て、100k 以上は + なし・3 文字/行・2 行まで', () {
+      expect(RasqAvatarBundle.formatCount(4), '+4');
+      expect(RasqAvatarBundle.formatCount(999), '+999');
+      expect(RasqAvatarBundle.formatCount(1000), '+1k');
+      expect(RasqAvatarBundle.formatCount(2560), '+2k');
+      expect(RasqAvatarBundle.formatCount(99_999), '+99k');
+      expect(RasqAvatarBundle.formatCount(100_000), '100\nk');
+      expect(RasqAvatarBundle.formatCount(123_456), '123\nk');
+      expect(RasqAvatarBundle.formatCount(2_500_000), '2M');
+      expect(RasqAvatarBundle.formatCount(12_000_000), '12M');
+      expect(RasqAvatarBundle.formatCount(123_000_000), '123\nM');
+    });
+
+    testWidgets('層: 角丸ワイヤー(背面)→ 円形アイコン → LIVE(下辺中央)、人数は右端', (tester) async {
+      const user = UserSummary(id: 'u', account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: 'h'), displayName: 'ダグラス');
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Center(child: RasqAvatarBundle(user: user, count: 2560, live: true, size: 40)))));
+      expect(find.text('+2k'), findsOneWidget);
+      expect(find.text('LIVE'), findsOneWidget);
+      final bundle = tester.getRect(find.byType(RasqAvatarBundle));
+      final avatar = tester.getRect(find.byType(RasqAvatar));
+      final count = tester.getRect(find.text('+2k'));
+      final live = tester.getRect(find.text('LIVE'));
+      // アイコンは左端、人数はその右、LIVE はワイヤー(アイコン中心から右)の中央下。
+      expect(avatar.left, closeTo(bundle.left, 3)); // 円形縁取り(size*0.06)の内側
+      expect(count.left, greaterThan(avatar.right - 1));
+      expect(count.center.dy, closeTo(avatar.center.dy, 1));
+      expect(live.center.dy, greaterThan(count.bottom));
+      final wireLeft = avatar.left + 20;
+      expect(live.center.dx, closeTo((wireLeft + bundle.right) / 2, 4));
+    });
+  });
+
   group('モデル', () {
     test('Room / Peer / Share / Transcript の JSON(rasq-central API.md §3)を読める', () {
       final r = AstellRoom.fromJson({
@@ -51,7 +85,7 @@ void main() {
         'createdAt': '2026-09-06T10:00:00Z', 'closedAt': null, 'peerCount': 5, 'live': true,
       });
       expect(r.owner.account.handle, 'douglas');
-      expect(r.owner.presence, UserPresence.live);
+      expect(r.owner.presence, UserPresence.none, reason: 'LIVE はバンドル側が描く(アバターの LIVE 帯と二重にしない)');
       expect(r.summaryText, 'デスクリプションが提供されていません。');
       expect(r.autoGenre, isFalse);
       expect(r.isOpen, isTrue);
@@ -135,12 +169,41 @@ void main() {
     expect(find.text('共有'), findsOneWidget);
     expect(find.text('プレビューにざっくり要約を表示する'), findsOneWidget);
 
-    // テキストを共有 → 共有欄に載る(モックはエコー)。
-    await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こんばんは');
-    await tester.tap(find.byTooltip('共有する'));
+    // タブ (D-141): ホーム / チャット / 目次 / ルーム。
+    Finder inRoom(String t) => find.descendant(of: find.byType(AstellRoomBody), matching: find.text(t));
+    for (final t in ['ホーム', 'チャット', '目次', 'ルーム']) {
+      expect(inRoom(t), findsOneWidget);
+    }
+
+    // チャット: 入力を始めると下書き枠が入り、ボタンが「送信完了する」に。全部消すと枠が消える。
+    await tester.tap(inRoom('チャット'));
     await tester.pumpAndSettle();
-    expect(find.text('こんばんは'), findsOneWidget);
+    expect(find.byTooltip('共有する'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こん');
+    await tester.pumpAndSettle();
+    expect(find.text('下書き'), findsOneWidget);
+    expect(find.byTooltip('送信完了する'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'input..'), '');
+    await tester.pumpAndSettle();
+    expect(find.text('下書き'), findsNothing);
+    expect(find.byTooltip('共有する'), findsOneWidget);
+
+    // 送信 → 共有欄とチャットに載る(モックはエコー)。
+    await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こんばんは');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('送信完了する'));
+    await tester.pumpAndSettle();
+    expect(find.text('下書き'), findsNothing);
+    expect(find.text('こんばんは'), findsOneWidget); // 共有欄(常設)
     expect(find.text('あなた が共有'), findsOneWidget);
+    expect(find.textContaining('あなた> '), findsOneWidget); // チャット欄
+
+    // ルーム: 参加メンバー全員。
+    await tester.tap(inRoom('ルーム'));
+    await tester.pumpAndSettle();
+    expect(find.text('参加メンバー(5)'), findsOneWidget);
+    expect(find.byType(RasqUserRow), findsWidgets); // 全員を行で(遅延 ListView なので見えている分)
+    expect(find.text('ダグラス'), findsWidgets);
 
     // 退出でセッションが消える。
     await tester.tap(find.text('退出'));
