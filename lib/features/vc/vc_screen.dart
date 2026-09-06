@@ -1,30 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
+import 'astell_fows.dart';
+import 'astell_models.dart';
+import 'astell_providers.dart';
+import 'astell_tile.dart';
 
-/// グローバルVCホーム (おすすめ / トレンド / フォロー中). M0 = sections only.
+/// グローバル VC ホーム (D-139、ワイヤーフレーム p.3): おすすめ / トレンド /
+/// フォロー中 の 3 節に VC タイルを横並び。「見てみる」→ 参加 FOW → 参加 →
+/// ルーム FOW。右下の + で作成 FOW。データは RASQ Central `/astell/home`
+/// (未接続ならモック)。
 class VcScreen extends ConsumerWidget {
   const VcScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider);
+    final home = ref.watch(astellHomeProvider);
+    final manager = ref.watch(overlayManagerProvider);
+    final session = ref.watch(astellSessionProvider);
+
+    void open(AstellRoom room) => openAstellPreviewFow(context, ref, room);
+    Future<void> more(AstellRoom room, Rect anchor) async {
+      final pick = await manager.showDropdown<String>(id: 'astell.tile.more', anchor: anchor, dense: true, items: const [
+        RasqDropdownItem('リンクをコピー', 'copy'),
+        RasqDropdownItem('ホストをフォロー', 'follow'),
+        RasqDropdownItem('ミュート', 'mute'),
+        RasqDropdownItem('報告', 'report', destructive: true),
+      ]);
+      if (pick != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('「${room.title}」の操作($pick)は M5 後段で入ります')));
+      }
+    }
+
+    Widget section(String title, List<AstellRoom> rooms, {String? emptyHint, VoidCallback? onSettings}) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          RasqSectionHeader(title: title, topMargin: 0, trailing: onSettings == null ? null : RasqIconButton(icon: Icons.settings, size: 20, onPressed: onSettings, tooltip: '$titleの設定')),
+          AstellTileStrip(rooms: rooms, onOpen: open, onMore: more, emptyHint: emptyHint),
+        ]);
+
     return Scaffold(
       appBar: RasqSearchHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref)),
-      body: ListView(children: [
-        const RasqSectionHeader(title: 'おすすめ', topMargin: 0),
-        SizedBox(
-          height: 180,
-          child: Center(child: RasqGradientButton(label: '見てみる', onPressed: () {}, height: 40)),
+      body: home.when(
+        loading: () => const RasqLoading(),
+        error: (e, _) => RasqEmptyView(title: 'VC を取得できませんでした', hint: '$e'),
+        data: (h) => RefreshIndicator(
+          onRefresh: () => ref.refresh(astellHomeProvider.future),
+          child: ListView(children: [
+            // 参加中のルームがあれば先頭に戻り口(FOW を閉じても接続は続く)。
+            if (session != null)
+              RasqListTile(
+                title: '参加中: ${session.room.title}',
+                subtitle: session.connected ? '${session.peers.length}人 ・ タップで開く' : (session.error ?? '接続しています…'),
+                leading: const Icon(Icons.headset_mic_outlined, color: RasqColors.accent),
+                onTap: () => openAstellRoomFow(context, ref),
+              ),
+            section('おすすめ', h.recommended, emptyHint: 'おすすめの VC はまだありません'),
+            section('トレンド', h.trending, emptyHint: 'トレンドの VC はまだありません', onSettings: () {}),
+            section('フォロー中', h.following, emptyHint: 'フォロー中のユーザーの VC はありません', onSettings: () {}),
+            const SizedBox(height: 80),
+          ]),
         ),
-        RasqSectionHeader(title: 'トレンド', trailing: RasqIconButton(icon: Icons.settings, size: 20, onPressed: () {}, tooltip: '設定')),
-        const RasqEmptyView(title: 'VCタイル', hint: 'AsTell (M5): 名前・タイトル・ざっくり要約・ジャンル・共有メディア'),
-        RasqSectionHeader(title: 'フォロー中', trailing: RasqIconButton(icon: Icons.settings, size: 20, onPressed: () {}, tooltip: '設定')),
-      ]),
+      ),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'VC を作成',
+        onPressed: () => openAstellCreateFow(context, ref),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
