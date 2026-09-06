@@ -121,11 +121,24 @@ class AstellTileStrip extends StatefulWidget {
 }
 
 class _AstellTileStripState extends State<AstellTileStrip> {
-  late final PageController _controller = PageController(viewportFraction: 0.54);
+  /// タイル 1 枚の最大幅 (D-142)。タブレットで横に伸びすぎないように。
+  static const maxTileWidth = 600.0;
+  PageController? _controller;
+  double _fraction = 0.54;
+
+  PageController _controllerFor(double width) {
+    final fraction = (maxTileWidth / width).clamp(0.2, 0.54);
+    if (_controller == null || (fraction - _fraction).abs() > 0.001) {
+      _controller?.dispose();
+      _fraction = fraction;
+      _controller = PageController(viewportFraction: fraction);
+    }
+    return _controller!;
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -140,8 +153,9 @@ class _AstellTileStripState extends State<AstellTileStrip> {
     }
     return SizedBox(
       height: widget.height,
-      child: PageView.builder(
-        controller: _controller,
+      child: LayoutBuilder(
+        builder: (context, constraints) => PageView.builder(
+        controller: _controllerFor(constraints.maxWidth),
         padEnds: false,
         itemCount: widget.rooms.length,
         itemBuilder: (_, i) {
@@ -151,6 +165,7 @@ class _AstellTileStripState extends State<AstellTileStrip> {
             child: AstellTile(room: room, onOpen: () => widget.onOpen(room), onMore: widget.onMore == null ? null : (rect) => widget.onMore!(room, rect)),
           );
         },
+        ),
       ),
     );
   }

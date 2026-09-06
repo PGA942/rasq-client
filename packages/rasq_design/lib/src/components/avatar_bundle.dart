@@ -9,8 +9,8 @@ import 'avatar.dart';
 /// アイコン&追加情報バンドル (D-140 / D-141、ワイヤーフレーム p.3 の VC タイル左上)。
 ///
 /// 3 層:
-/// 1. **背面**: 角丸四角形の**ワイヤー**(縁取り + 黄色い塗り)。アイコンの縁取りが
-///    収まる高さ(= [size])で、アイコンの中心から右へ伸びて人数を収める。
+/// 1. **背面**: 角丸四角形の**ワイヤー**(黄色の塗り、枠線も同色)。アイコンの縁取りが
+///    収まる高さ(= [size])で、**左端からアイコンの下を通って**右へ伸び人数を収める。
 /// 2. **アイコン**: 円形、円形の縁取りつき(縁取りは [size] の内側)。背面より
 ///    1 レイヤー上で左端に重なる。
 /// 3. **LIVE**: 角丸ワイヤーの**下辺中央**に重ねる(赤地・白文字)。
@@ -44,10 +44,10 @@ class RasqAvatarBundle extends StatelessWidget {
   /// アイコンの直径 = 角丸ワイヤーの高さ。
   final double size;
 
-  /// ワイヤーの縁取り色(既定: ブランドのアクセント)。
+  /// ワイヤーの色(塗りと枠線。既定: ブランドの黄色)。
   final Color? color;
 
-  /// ワイヤーの塗り(既定: ブランドの黄色)。
+  /// 塗りだけ変えたいとき(既定: [color] を薄く)。
   final Color? fillColor;
 
   /// アイコンの円形縁取り(既定: 面色 = 背面から浮いて見える)。
@@ -73,8 +73,8 @@ class RasqAvatarBundle extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
-    final wire = color ?? RasqColors.accent;
-    final fill = fillColor ?? RasqColors.yellow.withValues(alpha: 0.55);
+    final wire = color ?? RasqColors.yellow;
+    final fill = fillColor ?? wire.withValues(alpha: 0.6);
     final ring = ringColor ?? scheme.surface;
     final label = (count ?? 0) > 0 ? formatCount(count!) : null;
     final twoLines = label != null && label.contains('\n');
@@ -82,11 +82,11 @@ class RasqAvatarBundle extends StatelessWidget {
     final countStyle = TextStyle(fontSize: size * (twoLines ? 0.26 : 0.3), fontWeight: FontWeight.w700, color: scheme.onSurface, height: 1.05);
     final liveHeight = size * 0.28;
 
-    // 角丸ワイヤーの幅: アイコンの中心から右へ、人数の文字幅 + 余白。
+    // 角丸ワイヤーの幅: 左端(アイコンの下)から右へ、人数の文字幅 + 余白。
     final countWidth = label == null ? 0.0 : _textWidth(label, countStyle) + size * 0.3;
-    final wireLeft = size / 2;
-    final wireWidth = size / 2 + size * 0.15 + countWidth;
-    final totalWidth = wireLeft + wireWidth;
+    const wireLeft = 0.0;
+    final wireWidth = size + size * 0.15 + countWidth;
+    final totalWidth = wireWidth;
 
     // 縁取りは [size] の内側に収める(外にはみ出すと行の高さと中心がずれる)。
     final ringWidth = size * 0.06;
@@ -101,7 +101,7 @@ class RasqAvatarBundle extends StatelessWidget {
       width: totalWidth,
       height: size + (live ? liveHeight / 2 : 0),
       child: Stack(clipBehavior: Clip.none, children: [
-        // 1. 背面: 角丸四角のワイヤー(黄色の塗り + アクセントの縁取り)。
+        // 1. 背面: 角丸四角のワイヤー(黄色の塗り + 同色の枠線、左端まで)。
         Positioned(
           left: wireLeft,
           top: 0,
@@ -118,9 +118,9 @@ class RasqAvatarBundle extends StatelessWidget {
         // 人数: 右端、上下中央、縁取りなし(100k 以上は 2 行)。
         if (label != null)
           Positioned(
-            left: wireLeft,
+            left: size,
             top: 0,
-            width: wireWidth - size * 0.15,
+            width: wireWidth - size - size * 0.15,
             height: wireHeight,
             child: Align(
               alignment: Alignment.centerRight,
@@ -129,11 +129,11 @@ class RasqAvatarBundle extends StatelessWidget {
           ),
         // 2. アイコン: 円形 + 円形縁取り、背面より上。
         Positioned(left: 0, top: 0, child: avatar),
-        // 3. LIVE: 角丸ワイヤーの下辺中央。
+        // 3. LIVE: 角丸ワイヤーの下辺中央(アイコンを除いた右側の中央)。
         if (live)
           Positioned(
-            left: wireLeft,
-            width: wireWidth,
+            left: size / 2,
+            width: wireWidth - size / 2,
             top: wireHeight - liveHeight / 2,
             height: liveHeight,
             child: Center(

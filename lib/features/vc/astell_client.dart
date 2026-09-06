@@ -17,6 +17,7 @@ abstract class AstellClient {
   Future<AstellRoom> updateRoom(String id, Map<String, Object?> patch);
   Future<void> closeRoom(String id);
   Future<List<AstellShare>> shares(String id);
+  Future<void> deleteShare(String roomId, String shareId);
   Future<List<AstellTranscript>> transcripts(String id);
 
   /// シグナリング WebSocket。welcome / peer-joined / share / transcript … を
@@ -155,10 +156,24 @@ class MockAstellClient implements AstellClient {
   Future<List<AstellShare>> shares(String id) async => _shares[id] ?? const [];
 
   @override
+  Future<void> deleteShare(String roomId, String shareId) async {
+    _shares[roomId]?.removeWhere((s) => s.id == shareId);
+    for (final c in _connections.where((c) => c.roomId == roomId)) {
+      c._controller.add({'type': 'share-removed', 'shareId': shareId});
+    }
+  }
+
+  final List<_MockConnection> _connections = [];
+
+  @override
   Future<List<AstellTranscript>> transcripts(String id) async => const [];
 
   @override
-  Future<AstellConnection> connect(String roomId) async => _MockConnection(this, roomId);
+  Future<AstellConnection> connect(String roomId) async {
+    final c = _MockConnection(this, roomId);
+    _connections.add(c);
+    return c;
+  }
 }
 
 class _MockConnection implements AstellConnection {
@@ -209,7 +224,10 @@ class _MockConnection implements AstellConnection {
   }
 
   @override
-  Future<void> close() => _controller.close();
+  Future<void> close() {
+    client._connections.remove(this);
+    return _controller.close();
+  }
 }
 
 // ── RASQ Central ──────────────────────────────────────────────────
@@ -249,6 +267,9 @@ class HttpAstellClient implements AstellClient {
 
   @override
   Future<List<AstellShare>> shares(String id) async => _list(await _client.getList('/astell/rooms/${Uri.encodeComponent(id)}/shares'), AstellShare.fromJson);
+
+  @override
+  Future<void> deleteShare(String roomId, String shareId) => _client.delete('/astell/rooms/${Uri.encodeComponent(roomId)}/shares/${Uri.encodeComponent(shareId)}');
 
   @override
   Future<List<AstellTranscript>> transcripts(String id) async => _list(await _client.getList('/astell/rooms/${Uri.encodeComponent(id)}/transcripts'), AstellTranscript.fromJson);

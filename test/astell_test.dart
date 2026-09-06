@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/vc/astell_client.dart';
@@ -32,7 +34,12 @@ void main() {
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p1', 'ふつうの投稿')]));
     await tester.pumpWidget(ProviderScope(
-      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)],
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        // 「共有する」のファイル選択はダミー画像を返す。
+        astellMediaPickerProvider.overrideWithValue(() async => XFile.fromData(Uint8List.fromList([1, 2, 3]), name: 'photo.png', path: '/tmp/photo.png', mimeType: 'image/png')),
+      ],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
@@ -72,8 +79,8 @@ void main() {
       expect(count.left, greaterThan(avatar.right - 1));
       expect(count.center.dy, closeTo(avatar.center.dy, 1));
       expect(live.center.dy, greaterThan(count.bottom));
-      final wireLeft = avatar.left + 20;
-      expect(live.center.dx, closeTo((wireLeft + bundle.right) / 2, 4));
+      // LIVE はアイコンを除いた右側(アイコン中心〜右端)の中央。
+      expect(live.center.dx, closeTo((bundle.left + 20 + bundle.right) / 2, 4));
     });
   });
 
@@ -169,34 +176,57 @@ void main() {
     expect(find.text('共有'), findsOneWidget);
     expect(find.text('プレビューにざっくり要約を表示する'), findsOneWidget);
 
-    // タブ (D-141): ホーム / チャット / 目次 / ルーム。
+    // タブ (D-141): ホーム / チャット / 目次 / ルーム。入力欄は無い (D-142)。
     Finder inRoom(String t) => find.descendant(of: find.byType(AstellRoomBody), matching: find.text(t));
     for (final t in ['ホーム', 'チャット', '目次', 'ルーム']) {
       expect(inRoom(t), findsOneWidget);
     }
+    expect(find.widgetWithText(TextField, 'input..'), findsNothing);
 
-    // チャット: 入力を始めると下書き枠が入り、ボタンが「送信完了する」に。全部消すと枠が消える。
+    // 「共有する」= ファイル選択 → media として共有(モックはエコー)。
+    await tester.tap(find.byTooltip('共有する'));
+    await tester.pumpAndSettle();
+    expect(find.text('photo.png'), findsOneWidget);
+    expect(find.text('あなた が共有'), findsOneWidget);
+    expect(find.text('共有 (1)'), findsOneWidget);
+    expect(find.byTooltip('共有をすべて表示'), findsNothing);
+
+    // 2 件目 → 見出し「共有 (2)」+ ↓。畳んでいれば直近 1 件だけ、↓ で全部。
+    await tester.tap(find.byTooltip('共有する'));
+    await tester.pumpAndSettle();
+    expect(find.text('共有 (2)'), findsOneWidget);
+    expect(find.text('photo.png'), findsOneWidget);
+    await tester.tap(find.byTooltip('共有をすべて表示'));
+    await tester.pumpAndSettle();
+    expect(find.text('photo.png'), findsNWidgets(2));
+
+    // … → 削除(自分の共有)。
+    await tester.tap(find.byTooltip('共有の操作').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('削除'));
+    await tester.pumpAndSettle();
+    expect(find.text('共有 (1)'), findsOneWidget);
+
+    // 画面共有モード: ボタンでモード表示。
+    await tester.tap(find.byTooltip('画面共有'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('画面共有モード'), findsOneWidget);
+    expect(container.read(astellSessionProvider)!.screenShareOn, isTrue);
+
+    // チャット: 共有コンテンツが時刻順に並ぶ(pill つき)。
     await tester.tap(inRoom('チャット'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('共有する'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こん');
-    await tester.pumpAndSettle();
-    expect(find.text('下書き'), findsOneWidget);
-    expect(find.byTooltip('送信完了する'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'input..'), '');
-    await tester.pumpAndSettle();
-    expect(find.text('下書き'), findsNothing);
-    expect(find.byTooltip('共有する'), findsOneWidget);
+    expect(find.textContaining('あなた> '), findsWidgets);
 
-    // 送信 → 共有欄とチャットに載る(モックはエコー)。
-    await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こんばんは');
+    // 空白タップ → stick(最小化): コンパクトバーになり、タップで展開。
+    final blank = tester.getRect(find.byKey(astellRoomBlankKey));
+    await tester.tapAt(Offset(blank.left + 8, blank.bottom - 8));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('送信完了する'));
+    expect(find.byKey(astellRoomCompactKey), findsOneWidget);
+    expect(find.byKey(astellRoomBlankKey), findsNothing);
+    await tester.tap(find.byKey(astellRoomCompactKey));
     await tester.pumpAndSettle();
-    expect(find.text('下書き'), findsNothing);
-    expect(find.text('こんばんは'), findsOneWidget); // 共有欄(常設)
-    expect(find.text('あなた が共有'), findsOneWidget);
-    expect(find.textContaining('あなた> '), findsOneWidget); // チャット欄
+    expect(find.byKey(astellRoomBlankKey), findsOneWidget);
 
     // ルーム: 参加メンバー全員。
     await tester.tap(inRoom('ルーム'));
