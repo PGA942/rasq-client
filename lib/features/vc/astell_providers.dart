@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
@@ -16,6 +17,9 @@ final astellClientProvider = Provider<AstellClient>((ref) {
   final holder = ref.read(orgateTokenHolderProvider);
   return HttpAstellClient(client, baseUrl: base, token: () => holder.token);
 });
+
+/// 「共有する」のファイル選択 (D-142)。テストは差し替える。
+final astellMediaPickerProvider = Provider<Future<XFile?> Function()>((ref) => () => ImagePicker().pickMedia());
 
 /// VC ホームの 3 節。
 final astellHomeProvider = FutureProvider<AstellHome>((ref) => ref.watch(astellClientProvider).home());
@@ -35,6 +39,7 @@ class AstellSessionState {
     this.connected = false,
     this.micOn = false,
     this.captionsOn = true,
+    this.screenShareOn = false,
     this.error,
   });
   final AstellRoom room;
@@ -49,6 +54,9 @@ class AstellSessionState {
 
   /// 字幕(文字起こしの表示)。
   final bool captionsOn;
+
+  /// 画面共有モード(映像は M5 後段 — 今は表示状態だけ)。
+  final bool screenShareOn;
   final String? error;
 
   AstellSessionState copyWith({
@@ -60,6 +68,7 @@ class AstellSessionState {
     bool? connected,
     bool? micOn,
     bool? captionsOn,
+    bool? screenShareOn,
     String? error,
     bool clearError = false,
   }) =>
@@ -72,6 +81,7 @@ class AstellSessionState {
         connected: connected ?? this.connected,
         micOn: micOn ?? this.micOn,
         captionsOn: captionsOn ?? this.captionsOn,
+        screenShareOn: screenShareOn ?? this.screenShareOn,
         error: clearError ? null : (error ?? this.error),
       );
 }
@@ -130,6 +140,8 @@ class AstellSession extends Notifier<AstellSessionState?> {
       case 'share':
         final x = m['share'];
         if (x is Map) state = s.copyWith(shares: [...s.shares, AstellShare.fromJson(x.cast<String, Object?>())]);
+      case 'share-removed':
+        state = s.copyWith(shares: [for (final x in s.shares) if (x.id != m['shareId']) x]);
       case 'transcript':
         final x = m['transcript'];
         if (x is Map) state = s.copyWith(transcripts: [...s.transcripts, AstellTranscript.fromJson(x.cast<String, Object?>())]);
@@ -159,6 +171,19 @@ class AstellSession extends Notifier<AstellSessionState?> {
 
   void toggleCaptions() {
     if (state != null) state = state!.copyWith(captionsOn: !state!.captionsOn);
+  }
+
+  void toggleScreenShare() {
+    if (state != null) state = state!.copyWith(screenShareOn: !state!.screenShareOn);
+  }
+
+  /// 共有の削除(自分の共有 or ルームオーナー)。サーバーの `share-removed` で
+  /// 全員に反映されるが、モック/遅延に備えて手元も先に消す。
+  Future<void> removeShare(String shareId) async {
+    final s = state;
+    if (s == null) return;
+    await ref.read(astellClientProvider).deleteShare(s.room.id, shareId);
+    if (state != null) state = state!.copyWith(shares: [for (final x in state!.shares) if (x.id != shareId) x]);
   }
 
   Future<void> leave() async {

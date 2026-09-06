@@ -13,6 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
+import 'package:rasq_client/features/vc/astell_providers.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -48,7 +50,11 @@ void main() {
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p1', 'ふつうの投稿')]));
     await tester.pumpWidget(ProviderScope(
-      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)],
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        astellMediaPickerProvider.overrideWithValue(() async => XFile.fromData(Uint8List.fromList([1, 2, 3]), name: 'launch_photo.png', path: '/tmp/launch_photo.png', mimeType: 'image/png')),
+      ],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
@@ -68,16 +74,18 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_preview.png'));
     await tester.tap(find.text('参加'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こんばんは');
+    await tester.tap(find.byTooltip('共有する'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('送信完了する'));
+    await tester.tap(find.byTooltip('共有する'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room.png'));
     await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'input..'), '入力中のテキスト');
-    await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_chat.png'));
+    final blank = tester.getRect(find.byKey(astellRoomBlankKey));
+    await tester.tapAt(Offset(blank.left + 8, blank.bottom - 8));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick.png'));
   });
 
   testWidgets('avatar bundle gallery', (tester) async {
