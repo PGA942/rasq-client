@@ -83,7 +83,15 @@ void main() {
     await tester.tap(find.text('ミュート'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_viewing.png'));
-    await tester.tap(find.byTooltip('共有枠から外す'));
+    // stick + 共有枠にピアの画面 (D-148): 左端が映像に。
+    await tester.tapAt(const Offset(180, 60));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick_viewing.png'));
+    await tester.tap(find.byKey(astellRoomCompactKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('共有枠の操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ピン留めを外す'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こんばんは');
     await tester.pumpAndSettle();
@@ -105,23 +113,18 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_chat.png'));
-    // stick(画面共有なし): 文字起こし → 上下スワイプで共有タイル。
+    // stick(共有枠なし、字幕オン): 左端 2 つ + 文字起こし。字幕オフ: ピン留めのタイル(上下スワイプ)。
     await tester.tapAt(const Offset(180, 60));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick.png'));
-    await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, -80));
-    await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick_share.png'));
-    // メディアのタイルはタップで全画面になるので、文字起こしのページへ戻してから展開。
-    await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, 80));
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(astellRoomCompactKey));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('画面共有'));
+    await tester.tap(find.byTooltip('字幕オフ'));
     await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_captions_off.png'));
     await tester.tapAt(const Offset(180, 60));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick_screen.png'));
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_stick_share.png'));
   });
 
   testWidgets('video room fow (D-144)', (tester) async {
@@ -132,9 +135,9 @@ void main() {
     await tester.tap(find.text('参加'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_video.png'));
-    await tester.tapAt(const Offset(180, 60));
+    await tester.tap(find.byTooltip('字幕オフ'));
     await tester.pumpAndSettle();
-    await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, -80));
+    await tester.tapAt(const Offset(180, 60));
     await tester.pumpAndSettle();
     await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, -80));
     await tester.pumpAndSettle();
