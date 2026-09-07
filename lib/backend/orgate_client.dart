@@ -172,6 +172,18 @@ class OrgateClient {
     return (body as Map?)?.cast<String, Object?>() ?? const {};
   }
 
+  /// JSON を送ってバイト列(音声など)を受ける。
+  Future<Uint8List> postForBytes(String path, Object body) async {
+    final http.Response r;
+    try {
+      r = await _http.post(_url(path), headers: _headers(json: true), body: jsonEncode(body)).timeout(_timeout * 3);
+    } on Exception catch (e) {
+      throw OrgateException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable'), '$e');
+    }
+    if (r.statusCode >= 400) _fail(r);
+    return r.bodyBytes;
+  }
+
   Future<Map<String, Object?>> putJson(String path, Object body) async =>
       ((await _send(_req('PUT', path, body: body))) as Map?)?.cast<String, Object?>() ?? const {};
 
