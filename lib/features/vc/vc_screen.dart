@@ -27,14 +27,22 @@ class VcScreen extends ConsumerWidget {
 
     void open(AstellRoom room) => openAstellPreviewFow(context, ref, room);
     Future<void> more(AstellRoom room, Rect anchor) async {
-      final pick = await manager.showDropdown<String>(id: 'astell.tile.more', anchor: anchor, dense: true, items: const [
-        RasqDropdownItem('リンクをコピー', 'copy'),
-        RasqDropdownItem('ホストをフォロー', 'follow'),
-        RasqDropdownItem('ミュート', 'mute'),
-        RasqDropdownItem('報告', 'report', destructive: true),
+      final following = ref.read(astellFollowingProvider).value?.contains(room.ownerId) ?? false;
+      final pick = await manager.showDropdown<String>(id: 'astell.tile.more', anchor: anchor, dense: true, items: [
+        const RasqDropdownItem('リンクをコピー', 'copy'),
+        RasqDropdownItem(following ? 'ホストのフォローを解除' : 'ホストをフォロー', 'follow'),
+        const RasqDropdownItem('ミュート', 'mute'),
+        const RasqDropdownItem('報告', 'report', destructive: true),
       ]);
-      if (pick != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('「${room.title}」の操作($pick)は M5 後段で入ります')));
+      if (pick == null || !context.mounted) return;
+      switch (pick) {
+        case 'follow':
+          await ref.read(astellSessionProvider.notifier).follow(room.ownerId, !following);
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(following ? '${room.ownerDisplayName} のフォローを解除しました' : '${room.ownerDisplayName} をフォローしました')));
+        case 'report':
+          await showAstellReportSheet(context, ref, targetAccountId: room.ownerId, roomId: room.id, what: 'ルーム「${room.title}」');
+        default:
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('「${room.title}」の操作($pick)は M5 後段で入ります')));
       }
     }
 
@@ -59,6 +67,25 @@ class VcScreen extends ConsumerWidget {
                 leading: const Icon(Icons.headset_mic_outlined, color: RasqColors.accent),
                 onTap: () => openAstellRoomFow(context, ref),
               ),
+            // 招待 (D-150): 招待されているルームを行で(辞退できる)。
+            if (h.invited.isNotEmpty) ...[
+              const RasqSectionHeader(title: '招待', topMargin: 0),
+              for (final r in h.invited)
+                RasqListTile(
+                  title: r.title,
+                  subtitle: '${r.ownerDisplayName} から招待 ・ タップで見る',
+                  leading: RasqAvatar(imageUrl: r.ownerAvatarUrl, size: RasqSizes.avatarMd, fallbackLabel: r.ownerDisplayName),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      await ref.read(astellClientProvider).declineInvite(r.id);
+                      ref.invalidate(astellHomeProvider);
+                    },
+                    child: const Text('辞退'),
+                  ),
+                  chevron: false,
+                  onTap: () => open(r),
+                ),
+            ],
             section('おすすめ', h.recommended, emptyHint: 'おすすめの VC はまだありません'),
             section('トレンド', h.trending, emptyHint: 'トレンドの VC はまだありません', onSettings: () {}),
             section('フォロー中', h.following, emptyHint: 'フォロー中のユーザーの VC はありません', onSettings: () {}),

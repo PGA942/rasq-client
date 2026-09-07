@@ -111,6 +111,14 @@ void main() {
     await tester.tap(find.text('全員向けにミュート'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_members_muted.png'));
+    // 通報シート (D-150)。
+    await tester.tap(find.descendant(of: tivardRow, matching: find.byTooltip('メンバーの操作')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('通報'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_report.png'));
+    await tester.tap(find.text('キャンセル'));
+    await tester.pumpAndSettle();
     await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('共有欄にピン留め').first);
@@ -190,6 +198,8 @@ void main() {
   testWidgets('create fow', (tester) async {
     await pump(tester);
     await tester.tap(find.byTooltip('VC を作成'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('ダグラス を招待'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_create.png'));
     // 作成 → オーナーの設定シート(モデレーション、D-149)。

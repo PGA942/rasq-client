@@ -41,6 +41,7 @@ class AstellRoom {
     this.joinPolicy = 'anyone',
     this.sharePolicy = 'everyone',
     this.moderators = const [],
+    this.tendencyFilter = false,
   });
 
   final String id;
@@ -88,6 +89,9 @@ class AstellRoom {
   /// モデレーターのアカウント id(オーナーは含まない)。
   final List<String> moderators;
 
+  /// 発信傾向(GoEmotion、今はダミー判定)で入室を絞る (D-150)。
+  final bool tendencyFilter;
+
   bool get isOpen => closedAt == null;
 
   /// オーナーかモデレーターか。
@@ -121,9 +125,10 @@ class AstellRoom {
         joinPolicy: j['joinPolicy'] as String? ?? 'anyone',
         sharePolicy: j['sharePolicy'] as String? ?? 'everyone',
         moderators: [for (final m in (j['moderators'] as List? ?? const [])) if (m is String) m],
+        tendencyFilter: j['tendencyFilter'] == true,
       );
 
-  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false, String? joinPolicy, String? sharePolicy, List<String>? moderators}) => AstellRoom(
+  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false, String? joinPolicy, String? sharePolicy, List<String>? moderators, bool? tendencyFilter}) => AstellRoom(
         id: id,
         ownerId: ownerId,
         ownerHandle: ownerHandle,
@@ -146,8 +151,45 @@ class AstellRoom {
         joinPolicy: joinPolicy ?? this.joinPolicy,
         sharePolicy: sharePolicy ?? this.sharePolicy,
         moderators: moderators ?? this.moderators,
+        tendencyFilter: tendencyFilter ?? this.tendencyFilter,
       );
 }
+
+/// フォロー / フォロワー / ブロックの 1 件 (`GET /me/following|followers|blocks`)。
+@immutable
+class AstellFollowEntry {
+  const AstellFollowEntry({required this.id, required this.handle, required this.displayName, this.avatarUrl});
+  final String id;
+  final String handle;
+  final String displayName;
+  final Uri? avatarUrl;
+  factory AstellFollowEntry.fromJson(Map<String, Object?> j) => AstellFollowEntry(id: j['id'] as String? ?? '', handle: j['handle'] as String? ?? '', displayName: j['displayName'] as String? ?? '', avatarUrl: _uri(j['avatarUrl']));
+}
+
+/// 発信傾向 (D-150、`GET /judge/tendency/{id}`)。今はサーバーのダミー判定。
+@immutable
+class AstellTendency {
+  const AstellTendency({required this.accountId, required this.labels, required this.hostile, required this.source});
+  final String accountId;
+  final List<({String label, double score})> labels;
+  final bool hostile;
+  final String source;
+  factory AstellTendency.fromJson(Map<String, Object?> j) => AstellTendency(
+        accountId: j['accountId'] as String? ?? '',
+        labels: [for (final l in (j['labels'] as List? ?? const [])) if (l is Map) (label: l['label'] as String? ?? '', score: (l['score'] as num?)?.toDouble() ?? 0)],
+        hostile: j['hostile'] == true,
+        source: j['source'] as String? ?? '',
+      );
+  String get summary => labels.map((l) => '${l.label} ${(l.score * 100).round()}%').join(' / ');
+}
+
+/// 通報の理由 (D-150、`POST /reports`)。
+const astellReportReasons = <({String id, String label})>[
+  (id: 'spam', label: 'スパム'),
+  (id: 'harassment', label: '嫌がらせ・暴言'),
+  (id: 'illegal', label: '違法・危険な内容'),
+  (id: 'other', label: 'その他'),
+];
 
 /// 参加ポリシーの表示 (D-149)。
 const astellJoinPolicies = <({String id, String label, String hint})>[
@@ -221,14 +263,17 @@ class AstellAsset {
 /// VC ホームの 3 節(ワイヤーフレーム p.3)。
 @immutable
 class AstellHome {
-  const AstellHome({this.recommended = const [], this.trending = const [], this.following = const []});
+  const AstellHome({this.recommended = const [], this.trending = const [], this.following = const [], this.invited = const []});
   final List<AstellRoom> recommended;
   final List<AstellRoom> trending;
   final List<AstellRoom> following;
 
+  /// 招待されているルーム (D-150)。
+  final List<AstellRoom> invited;
+
   factory AstellHome.fromJson(Map<String, Object?> j) {
     List<AstellRoom> rooms(Object? v) => [for (final r in (v as List? ?? const [])) if (r is Map) AstellRoom.fromJson(r.cast<String, Object?>())];
-    return AstellHome(recommended: rooms(j['recommended']), trending: rooms(j['trending']), following: rooms(j['following']));
+    return AstellHome(recommended: rooms(j['recommended']), trending: rooms(j['trending']), following: rooms(j['following']), invited: rooms(j['invited']));
   }
 }
 
