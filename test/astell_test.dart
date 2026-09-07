@@ -434,6 +434,14 @@ void main() {
     expect(find.text('共有枠に表示'), findsOneWidget);
     expect(find.text('ミュート解除'), findsOneWidget);
     expect(find.text('ブロック'), findsOneWidget);
+    // モデレーション (D-149): あなたはこのルームのモデレーター → 全員向けミュート / キック はある、
+    // 付与 / BAN(オーナーだけ)はない。
+    expect(container.read(astellSessionProvider)!.isModerator, isTrue);
+    expect(container.read(astellSessionProvider)!.isOwner, isFalse);
+    expect(find.text('全員向けにミュート'), findsOneWidget);
+    expect(find.text('キック'), findsOneWidget);
+    expect(find.text('モデレーターにする'), findsNothing);
+    expect(find.text('BAN'), findsNothing);
     await tester.tap(find.text('共有枠に表示'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
@@ -443,6 +451,25 @@ void main() {
     await tester.tap(find.descendant(of: tivardRow, matching: find.byTooltip('共有枠に表示中')));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer, isNull);
+    // 全員向けミュート → peer-state(mutedByMod)で行に赤いピル。キック → 参加者から消える。
+    await tester.tap(find.descendant(of: tivardRow, matching: find.byTooltip('メンバーの操作')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('全員向けにミュート'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.peers.firstWhere((p) => p.peerId == 'p2').mutedByMod, isTrue);
+    expect(find.text('強制ミュート'), findsOneWidget);
+    await tester.drag(find.text('@tivard'), const Offset(0, 300)); // 先頭(ダグラス)まで戻す(遅延 ListView)
+    await tester.pumpAndSettle();
+    expect(find.text('ホスト'), findsOneWidget); // ダグラスの役割ピル
+    await tester.scrollUntilVisible(find.text('@a4'), 80, scrollable: find.ancestor(of: find.text('@tivard'), matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
+    final guestRow = find.ancestor(of: find.text('@a4'), matching: find.byType(Row)).last;
+    await tester.tap(find.descendant(of: guestRow, matching: find.byTooltip('メンバーの操作')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('キック'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.peers.map((p) => p.peerId), isNot(contains('p4')));
+    expect(container.read(astellSessionProvider)!.peers, hasLength(4));
 
     // チャット行の「…」(D-147): ピン留め / フォロー / ミュート / ブロック / 通報。
     await tester.tap(inRoom('チャット'));
@@ -513,6 +540,58 @@ void main() {
     expect(s.room.title, '夜の雑談');
     expect(s.room.welcomeMessage, 'ようこそ');
     expect(find.byType(AstellRoomBody), findsOneWidget);
+    expect(s.isOwner, isTrue);
+
+    // オーナーのモデレーション (D-149): ダグラスをモデレーターに → 役割ピル / 設定の一覧に載る。
+    Finder inRoom(String t) => find.descendant(of: find.byType(AstellRoomBody), matching: find.text(t));
+    await tester.tap(inRoom('ルーム'));
+    await tester.pumpAndSettle();
+    final row = find.ancestor(of: find.text('@douglas'), matching: find.byType(Row)).last;
+    await tester.tap(find.descendant(of: row, matching: find.byTooltip('メンバーの操作')));
+    await tester.pumpAndSettle();
+    expect(find.text('モデレーターにする'), findsOneWidget);
+    expect(find.text('BAN'), findsOneWidget);
+    await tester.tap(find.text('モデレーターにする'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.room.moderators, ['douglas']);
+    expect(find.text('モデレーター'), findsOneWidget);
+    // 設定: 参加できる人 / 共有できる人 / モデレーター / BAN。
+    await tester.tap(find.byTooltip('設定'));
+    await tester.pumpAndSettle();
+    expect(find.text('モデレーション(オーナー)'), findsOneWidget);
+    await tester.tap(find.text('フォロワーだけ'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.room.joinPolicy, 'followers');
+    Finder sheet() => find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable));
+    await tester.scrollUntilVisible(find.text('モデレーターだけ'), 80, scrollable: sheet());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('モデレーターだけ'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.room.sharePolicy, 'moderators');
+    await tester.scrollUntilVisible(find.byTooltip('モデレーターを外す'), 80, scrollable: sheet());
+    await tester.pumpAndSettle();
+    expect(find.text('モデレーター(1)— 付与はメンバー行の「…」から'), findsOneWidget);
+    await tester.tap(find.byTooltip('モデレーターを外す'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.room.moderators, isEmpty);
+    await tester.tap(find.text('キャンセル'));
+    await tester.pumpAndSettle();
+    // BAN → 参加者から消え、設定の BAN 一覧に載る → 解除。
+    await tester.tap(find.descendant(of: row, matching: find.byTooltip('メンバーの操作')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('BAN'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.peers, isEmpty);
+    await tester.tap(find.byTooltip('設定'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('BAN(1)— メンバー行の「…」から'), 80, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
+    await tester.pumpAndSettle();
+    expect(find.text('@douglas'), findsOneWidget);
+    await tester.tap(find.byTooltip('BAN を解除'));
+    await tester.pumpAndSettle();
+    expect(find.text('BAN(0)— メンバー行の「…」から'), findsOneWidget);
+    await tester.tap(find.text('キャンセル'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('退出'));
     await tester.pumpAndSettle();
     // ホームのおすすめ先頭に自分のルーム。
