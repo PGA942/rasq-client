@@ -204,6 +204,29 @@ void main() {
     expect(find.text('共有'), findsOneWidget);
     expect(find.text('プレビューにざっくり要約を表示する'), findsOneWidget);
 
+    // 自動再生 (D-147): TiVard が画面共有中なので、参加した時点で共有枠に出ている。
+    // 下段は ピン解除 / 全画面 / ミュート。「…」→ ミュート → 「ミュート中」、下段の音量が赤に。
+    expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
+    expect(find.textContaining('TiVard の画面'), findsOneWidget);
+    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsNothing);
+    expect(find.byTooltip('ミュート'), findsOneWidget);
+    await tester.tap(find.byTooltip('共有枠の操作'));
+    await tester.pumpAndSettle();
+    expect(find.text('ピン留めを外す'), findsOneWidget);
+    expect(find.text('通報'), findsOneWidget);
+    await tester.tap(find.text('ミュート'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.isMuted('p2'), isTrue);
+    expect(find.text('ミュート中'), findsOneWidget);
+    expect(find.byTooltip('ミュート解除'), findsOneWidget);
+    await tester.tap(find.byTooltip('ミュート解除'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.isMuted('p2'), isFalse);
+    await tester.tap(find.byTooltip('共有枠から外す'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.viewingPeer, isNull);
+    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
+
     // タブ (D-141): ホーム / チャット / 目次 / ルーム。ヘッダーは本体側 (D-143)。
     Finder inRoom(String t) => find.descendant(of: find.byType(AstellRoomBody), matching: find.text(t));
     for (final t in ['ホーム', 'チャット', '目次', 'ルーム']) {
@@ -299,9 +322,9 @@ void main() {
     expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
     expect(find.textContaining('TiVard の画面'), findsOneWidget);
     expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsNothing);
-    expect(find.byTooltip('共有枠から外す'), findsWidgets);
+    expect(find.byTooltip('共有枠から外す'), findsOneWidget); // 下段(パネル側は「…」に)
     expect(find.byTooltip('全画面'), findsWidgets);
-    await tester.tap(find.byTooltip('共有枠から外す').last);
+    await tester.tap(find.byTooltip('共有枠から外す'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer, isNull);
     expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
@@ -310,6 +333,14 @@ void main() {
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
     expect(find.text('VC の設定'), findsOneWidget);
+    // 自動再生の設定 (D-147)。
+    expect(find.widgetWithText(RasqSwitchListTile, '画面共有が始まったら共有枠に出す'), findsOneWidget);
+    await tester.tap(find.widgetWithText(RasqSwitchListTile, '画面共有が始まったら共有枠に出す'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellAutoPlayProvider), isFalse);
+    // 読み上げの段はシートの下(遅延 ListView)なのでスクロールして見る。
+    await tester.scrollUntilVisible(find.text('女性 1(日本語)'), 80, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
+    await tester.pumpAndSettle();
     expect(find.textContaining('CosyVoice2-0.5B'), findsOneWidget);
     expect(find.text('女性 1(日本語)'), findsOneWidget);
     await tester.tap(find.widgetWithText(RasqSwitchListTile, 'テキスト'));
@@ -336,8 +367,36 @@ void main() {
     await tester.tap(inRoom('ルーム'));
     await tester.pumpAndSettle();
     expect(find.text('参加メンバー(5)'), findsOneWidget);
-    expect(find.byType(RasqUserRow), findsWidgets); // 全員を行で(遅延 ListView なので見えている分)
-    expect(find.text('ダグラス'), findsWidgets);
+    // メンバー行 (D-147): @handle + 画面共有枠 + スピーカー + 「…」。
+    expect(find.text('@tivard'), findsOneWidget);
+    expect(find.byTooltip('画面共有を表示'), findsOneWidget); // TiVard の枠
+    expect(find.byTooltip('ミュート'), findsWidgets);
+    final tivardRow = find.ancestor(of: find.text('@tivard'), matching: find.byType(Row)).last;
+    await tester.tap(find.descendant(of: tivardRow, matching: find.byTooltip('ミュート')));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.isMuted('p2'), isTrue);
+    expect(find.descendant(of: tivardRow, matching: find.byTooltip('ミュート解除')), findsOneWidget);
+    await tester.tap(find.descendant(of: tivardRow, matching: find.byTooltip('メンバーの操作')));
+    await tester.pumpAndSettle();
+    expect(find.text('共有枠に表示'), findsOneWidget);
+    expect(find.text('ミュート解除'), findsOneWidget);
+    expect(find.text('ブロック'), findsOneWidget);
+    await tester.tap(find.text('共有枠に表示'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
+    await tester.tap(find.byTooltip('共有枠から外す'));
+    await tester.pumpAndSettle();
+
+    // チャット行の「…」(D-147): ピン留め / フォロー / ミュート / ブロック / 通報。
+    await tester.tap(inRoom('チャット'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('チャットの操作').first); // 先頭 = ダグラスの文字起こし
+    await tester.pumpAndSettle();
+    expect(find.text('共有欄にピン留め'), findsWidgets);
+    expect(find.text('フォロー'), findsOneWidget);
+    await tester.tap(find.text('ミュート'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.isMuted('p1'), isTrue);
 
     // 退出でセッションが消える。
     await tester.tap(find.text('退出'));

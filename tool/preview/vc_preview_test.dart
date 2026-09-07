@@ -75,18 +75,26 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_preview.png'));
     await tester.tap(find.text('参加'));
     await tester.pumpAndSettle();
+    // 自動再生 (D-147): TiVard の画面共有が参加時点で共有枠に出る(下段がピン解除 / 全画面 / ミュートに)。
+    // 「…」→ ミュート で「ミュート中」。
+    await tester.tap(find.byTooltip('共有枠の操作'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_viewing_menu.png'));
+    await tester.tap(find.text('ミュート'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_viewing.png'));
+    await tester.tap(find.byTooltip('共有枠から外す'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こんばんは');
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('送信完了する'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('共有する'));
     await tester.pumpAndSettle();
-    // TiVard の画面共有枠 → 共有枠に表示(下段がピン解除 / 全画面 / 音量に)。
-    await tester.tap(find.byTooltip('画面共有を表示'));
+    // ルームタブ (D-147): メンバー行(画面共有枠 + スピーカー + …)。
+    await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('ルーム')));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_viewing.png'));
-    await tester.tap(find.byTooltip('共有枠から外す').last);
-    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_members.png'));
     await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('共有欄にピン留め').first);

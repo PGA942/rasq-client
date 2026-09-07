@@ -54,6 +54,13 @@ final astellAutoShareProvider = Provider<Map<String, bool>>((ref) {
   return {for (final c in astellShareClasses) c.id: (area['auto.${c.id}'] as bool?) ?? (_astellAutoDefaults[c.id] ?? false)};
 });
 
+/// 自動再生 (D-147): ピアの画面共有が始まったら(参加時に既にあるものも)共有枠に自動で出す。
+/// KV `autoplay.screen`、既定オン。
+final astellAutoPlayProvider = Provider<bool>((ref) {
+  final area = ref.watch(settingsAreaProvider(astellSettingsArea)).value ?? const <String, Object?>{};
+  return (area['autoplay.screen'] as bool?) ?? true;
+});
+
 /// VC ホームの 3 節。
 final astellHomeProvider = FutureProvider<AstellHome>((ref) => ref.watch(astellClientProvider).home());
 
@@ -74,6 +81,7 @@ class AstellSessionState {
     this.captionsOn = true,
     this.screenShareOn = false,
     this.viewingPeerId,
+    this.mutedPeerIds = const {},
     this.error,
   });
   final AstellRoom room;
@@ -94,7 +102,12 @@ class AstellSessionState {
 
   /// 共有枠に表示している(ピン留め/クリックした)ピアの画面共有 (D-146)。
   final String? viewingPeerId;
+
+  /// 手元でミュートしたピア (D-147)。音声は M5 後段なので今は表示と台帳だけ。
+  final Set<String> mutedPeerIds;
   final String? error;
+
+  bool isMuted(String peerId) => mutedPeerIds.contains(peerId);
 
   AstellPeer? get viewingPeer => viewingPeerId == null ? null : peers.where((p) => p.peerId == viewingPeerId && p.screenShare != null).firstOrNull;
 
@@ -110,6 +123,7 @@ class AstellSessionState {
     bool? screenShareOn,
     String? viewingPeerId,
     bool clearViewing = false,
+    Set<String>? mutedPeerIds,
     String? error,
     bool clearError = false,
   }) =>
@@ -124,6 +138,7 @@ class AstellSessionState {
         captionsOn: captionsOn ?? this.captionsOn,
         screenShareOn: screenShareOn ?? this.screenShareOn,
         viewingPeerId: clearViewing ? null : (viewingPeerId ?? this.viewingPeerId),
+        mutedPeerIds: mutedPeerIds ?? this.mutedPeerIds,
         error: clearError ? null : (error ?? this.error),
       );
 }
@@ -174,6 +189,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
           shares: [for (final x in (m['shares'] as List? ?? const [])) if (x is Map) AstellShare.fromJson(x.cast<String, Object?>())],
           transcripts: [for (final x in (m['transcripts'] as List? ?? const [])) if (x is Map) AstellTranscript.fromJson(x.cast<String, Object?>())],
         );
+        _autoPlay(state!.peers.where((p) => p.peerId != state!.myPeerId && p.screenShare != null).firstOrNull);
       case 'peer-joined':
         final p = m['peer'];
         if (p is Map) state = s.copyWith(peers: [...s.peers, AstellPeer.fromJson(p.cast<String, Object?>())]);
@@ -191,12 +207,14 @@ class AstellSession extends Notifier<AstellSessionState?> {
         if (p is Map) {
           final peer = AstellPeer.fromJson(p.cast<String, Object?>());
           if (peer.peerId == s.myPeerId) break; // 自分の状態の折り返しは参加者に入れない
-          final known = s.peers.any((e) => e.peerId == peer.peerId);
+          final before = s.peers.where((e) => e.peerId == peer.peerId).firstOrNull;
           state = s.copyWith(
-            peers: known ? [for (final e in s.peers) e.peerId == peer.peerId ? peer : e] : [...s.peers, peer],
+            peers: before != null ? [for (final e in s.peers) e.peerId == peer.peerId ? peer : e] : [...s.peers, peer],
             // 表示中のピアが共有をやめたら共有枠を閉じる。
             clearViewing: s.viewingPeerId == peer.peerId && peer.screenShare == null,
           );
+          // 画面共有が**始まった**ら自動再生 (D-147)。
+          if (peer.screenShare != null && before?.screenShare == null) _autoPlay(peer);
         }
       case 'share-removed':
         state = s.copyWith(shares: [for (final x in s.shares) if (x.id != m['shareId']) x]);
@@ -243,6 +261,23 @@ class AstellSession extends Notifier<AstellSessionState?> {
     if (state == null) return;
     state = state!.copyWith(micOn: !state!.micOn);
     _sendState();
+  }
+
+  /// 自動再生 (D-147): 設定がオンで、共有枠が空いていれば [peer] の画面を出す。
+  void _autoPlay(AstellPeer? peer) {
+    final s = state;
+    if (s == null || peer == null || s.viewingPeerId != null) return;
+    if (!ref.read(astellAutoPlayProvider)) return;
+    state = s.copyWith(viewingPeerId: peer.peerId);
+  }
+
+  /// ピアを手元でミュート/解除 (D-147)。
+  void toggleMute(String peerId) {
+    final s = state;
+    if (s == null) return;
+    final next = {...s.mutedPeerIds};
+    if (!next.remove(peerId)) next.add(peerId);
+    state = s.copyWith(mutedPeerIds: next);
   }
 
   /// ピアの画面共有を共有枠に表示する/やめる (D-146)。
