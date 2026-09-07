@@ -344,9 +344,12 @@ enum AstellRoomTab {
 
 /// チャット欄の 1 行: 文字起こし / 共有コンテンツ / 入力中の下書き。時刻順。
 class _ChatEntry {
-  const _ChatEntry({required this.at, required this.author, required this.text, this.kind, this.transcript = false, this.draft = false, this.id, this.pinned = false});
+  const _ChatEntry({required this.at, required this.author, required this.text, this.kind, this.transcript = false, this.draft = false, this.id, this.pinned = false, this.handle});
   final DateTime at;
   final String author;
+
+  /// 発言者のハンドル(「…」のミュート等で参加者に引き当てる)。下書きは null。
+  final String? handle;
   final String text;
   final String? kind;
   final bool transcript;
@@ -515,7 +518,12 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
           ),
         // ── 共有枠 (D-146): ピン留め/クリックしたピアの画面共有 ──
         if (s.viewingPeer != null)
-          _ViewingScreenPanel(peer: s.viewingPeer!, onClose: () => session.viewScreen(null), onFullscreen: () => _openPeerScreen(context, s.viewingPeer!))
+          _ViewingScreenPanel(
+            peer: s.viewingPeer!,
+            muted: s.isMuted(s.viewingPeer!.peerId),
+            onFullscreen: () => _openPeerScreen(context, s.viewingPeer!),
+            onMore: (rect) => _peerMenu(context, s, s.viewingPeer!, rect, pinned: true),
+          )
         // ── ホストの配信 (D-145): 動画/画面のプレビュー ──
         else if (room.hostStream != null)
           _HostStreamPanel(stream: room.hostStream!, onTap: () => _openStream(context, room)),
@@ -568,6 +576,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         onOpenShare: (share) => _openShare(context, share),
         onUnview: () => session.viewScreen(null),
         onFullscreen: s.viewingPeer == null ? null : () => _openPeerScreen(context, s.viewingPeer!),
+        onMute: s.viewingPeer == null ? null : () => session.toggleMute(s.viewingPeer!.peerId),
       ),
     ]);
   }
@@ -653,6 +662,13 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               onChanged: (v) => ref.read(settingsAreaProvider(astellSettingsArea).notifier).set('auto.${c.id}', v),
             ),
           const Divider(height: RasqSpacing.md),
+          _label(ctx, '自動再生'),
+          RasqSwitchListTile(
+            title: '画面共有が始まったら共有枠に出す',
+            value: ref.watch(astellAutoPlayProvider),
+            onChanged: (v) => ref.read(settingsAreaProvider(astellSettingsArea).notifier).set('autoplay.screen', v),
+          ),
+          const Divider(height: RasqSpacing.md),
           _label(ctx, '読み上げ(${voices.model}、プリセット音声)${voices.enabled ? '' : ' — サーバー未設定'}'),
           RasqRadioListTile<String?>(title: '読み上げなし', value: null, groupValue: room.ttsVoice, onChanged: isOwner ? (_) => _patch({'ttsVoice': null}) : null),
           for (final v in voices.voices) RasqRadioListTile<String?>(title: v.label, value: v.id, groupValue: room.ttsVoice, onChanged: isOwner ? (_) => _patch({'ttsVoice': v.id}) : null),
@@ -729,6 +745,70 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     }
   }
 
+  /// ピアの「…」(D-147、ワイヤーフレーム右下): 共有枠のピン留め/解除 / 全画面 /
+  /// ミュート / フォロー / ブロック / 通報。ミュートは手元だけ(音声は M5 後段)。
+  Future<void> _peerMenu(BuildContext context, AstellSessionState s, AstellPeer peer, Rect anchor, {required bool pinned}) async {
+    final manager = ref.read(overlayManagerProvider);
+    final session = ref.read(astellSessionProvider.notifier);
+    final muted = s.isMuted(peer.peerId);
+    final pick = await manager.showDropdown<String>(id: 'astell.peer.more', anchor: anchor, dense: true, items: [
+      if (peer.screenShare != null) RasqDropdownItem(pinned ? 'ピン留めを外す' : '共有枠に表示', 'pin', accent: !pinned),
+      if (peer.screenShare != null) const RasqDropdownItem('全画面', 'fullscreen'),
+      const RasqDropdownItem('フォロー', 'follow'),
+      RasqDropdownItem(muted ? 'ミュート解除' : 'ミュート', 'mute', accent: true),
+      const RasqDropdownItem('ブロック', 'block', destructive: true),
+      const RasqDropdownItem('通報', 'report', destructive: true),
+    ]);
+    if (!context.mounted) return;
+    switch (pick) {
+      case 'pin':
+        session.viewScreen(pinned ? null : peer.peerId);
+      case 'fullscreen':
+        await _openPeerScreen(context, peer);
+      case 'mute':
+        session.toggleMute(peer.peerId);
+      case 'follow':
+        _notYetCentral(context, 'RASQ アカウントのフォロー');
+      case 'block':
+        _notYetCentral(context, 'ブロック');
+      case 'report':
+        _notYetCentral(context, '通報(rasq-judge)');
+      default:
+        break;
+    }
+  }
+
+  /// チャット行の「…」(D-147、ワイヤーフレーム左下): 共有欄にピン留め / フォロー /
+  /// ミュート / ブロック / 通報。発言者はハンドルで参加者に引き当てる。
+  Future<void> _chatMenu(BuildContext context, AstellSessionState s, _ChatEntry e, Rect anchor) async {
+    final manager = ref.read(overlayManagerProvider);
+    final session = ref.read(astellSessionProvider.notifier);
+    final peer = e.handle == null ? null : s.peers.where((p) => p.handle == e.handle && p.peerId != s.myPeerId).firstOrNull;
+    final muted = peer != null && s.isMuted(peer.peerId);
+    final pick = await manager.showDropdown<String>(id: 'astell.chat.more', anchor: anchor, dense: true, items: [
+      if (e.id != null) RasqDropdownItem(e.pinned ? 'ピン留めを外す' : '共有欄にピン留め', 'pin', accent: !e.pinned),
+      RasqDropdownItem('フォロー', 'follow', enabled: peer != null),
+      RasqDropdownItem(muted ? 'ミュート解除' : 'ミュート', 'mute', accent: true, enabled: peer != null),
+      RasqDropdownItem('ブロック', 'block', destructive: true, enabled: peer != null),
+      RasqDropdownItem('通報', 'report', destructive: true, enabled: peer != null),
+    ]);
+    if (!context.mounted) return;
+    switch (pick) {
+      case 'pin':
+        await (e.transcript ? session.pinTranscript(e.id!, !e.pinned) : session.pinShare(e.id!, !e.pinned));
+      case 'mute':
+        if (peer != null) session.toggleMute(peer.peerId);
+      case 'follow':
+        _notYetCentral(context, 'RASQ アカウントのフォロー');
+      case 'block':
+        _notYetCentral(context, 'ブロック');
+      case 'report':
+        _notYetCentral(context, '通報(rasq-judge)');
+      default:
+        break;
+    }
+  }
+
   // ── ホーム: 参加メンバー / トグル / ジャンル(ワイヤーフレームの中段) ──
   Widget _homeTab(BuildContext context, AstellSessionState s, bool isOwner) {
     final room = s.room;
@@ -746,8 +826,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
 
   // ── チャット: 文字起こしと共有コンテンツを時刻順に。入力中は下書き枠 (D-141)。 ──
   List<_ChatEntry> _chatEntries(AstellSessionState s, String myHandle) => <_ChatEntry>[
-        for (final t in s.transcripts) _ChatEntry(at: t.createdAt, author: t.displayName, text: t.text, transcript: true, id: t.id, pinned: t.pinned),
-        for (final sh in s.shares) _ChatEntry(at: sh.createdAt, author: sh.handle == myHandle || sh.accountId == 'me' ? 'あなた' : sh.displayName, text: sh.headline, kind: sh.kind, id: sh.id, pinned: sh.pinned),
+        for (final t in s.transcripts) _ChatEntry(at: t.createdAt, author: t.displayName, text: t.text, transcript: true, id: t.id, pinned: t.pinned, handle: t.handle),
+        for (final sh in s.shares) _ChatEntry(at: sh.createdAt, author: sh.handle == myHandle || sh.accountId == 'me' ? 'あなた' : sh.displayName, text: sh.headline, kind: sh.kind, id: sh.id, pinned: sh.pinned, handle: sh.handle),
         if (_draftStartedAt != null) _ChatEntry(at: _draftStartedAt!, author: 'あなた', text: _input.text, draft: true),
       ]..sort((a, b) => a.at.compareTo(b.at));
 
@@ -784,6 +864,18 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
                 tooltip: e.pinned ? 'ピン留めを外す' : '共有欄にピン留め',
                 onPressed: () => e.transcript ? ref.read(astellSessionProvider.notifier).pinTranscript(e.id!, !e.pinned) : ref.read(astellSessionProvider.notifier).pinShare(e.id!, !e.pinned),
               ),
+            // 「…」(D-147): フォロー / ミュート / ブロック / 通報。
+            if (!e.draft)
+              Builder(builder: (ctx) => RasqIconButton(
+                icon: Icons.more_horiz,
+                size: 16,
+                color: scheme.onSurfaceVariant,
+                tooltip: 'チャットの操作',
+                onPressed: () {
+                  final box = ctx.findRenderObject() as RenderBox;
+                  _chatMenu(context, s, e, box.localToGlobal(Offset.zero) & box.size);
+                },
+              )),
           ]),
         ),
       const SizedBox(height: RasqSpacing.xxl),
@@ -818,11 +910,17 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     final scheme = Theme.of(context).colorScheme;
     return ListView(padding: EdgeInsets.zero, children: [
       _label(context, '参加メンバー(${s.peers.length})'),
+      // ワイヤーフレーム右下 (D-147): アバター(マイク)+ 名前/@handle + 画面共有枠 +
+      // スピーカー(ミュート切替)+ 「…」。
       for (final p in s.peers)
-        RasqUserRow(
-          user: p.user,
-          subtitle: p.micOn ? 'マイクオン' : '聞いています',
-          trailing: _StateBadge(icon: p.micOn ? Icons.mic : Icons.volume_up, color: p.micOn ? RasqColors.accent : RasqColors.sub),
+        _MemberRow(
+          peer: p,
+          self: p.peerId == s.myPeerId,
+          muted: s.isMuted(p.peerId),
+          viewing: s.viewingPeerId == p.peerId,
+          onViewScreen: () => ref.read(astellSessionProvider.notifier).viewScreen(s.viewingPeerId == p.peerId ? null : p.peerId),
+          onMute: () => ref.read(astellSessionProvider.notifier).toggleMute(p.peerId),
+          onMore: (rect) => _peerMenu(context, s, p, rect, pinned: s.viewingPeerId == p.peerId),
         ),
       if (s.peers.isEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('まだ誰もいません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
       const Divider(height: RasqSpacing.md),
@@ -867,6 +965,7 @@ class _Footer extends StatelessWidget {
     required this.onOpenShare,
     required this.onUnview,
     this.onFullscreen,
+    this.onMute,
   });
   final bool compact;
   final AstellSessionState state;
@@ -874,6 +973,9 @@ class _Footer extends StatelessWidget {
   final bool drafting;
   final VoidCallback onMic, onScreen, onCaptions, onSendText, onPickFile, onSettings, onExpand, onLeave, onUnview;
   final VoidCallback? onFullscreen;
+
+  /// 共有枠のピアをミュート/解除 (D-147)。
+  final VoidCallback? onMute;
   final void Function(AstellShare share) onOpenShare;
 
   @override
@@ -899,7 +1001,12 @@ class _Footer extends StatelessWidget {
                     const SizedBox(width: RasqSpacing.xs),
                     _RoundButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: onFullscreen),
                     const SizedBox(width: RasqSpacing.xs),
-                    _RoundButton(icon: Icons.volume_up, tooltip: '共有の音量(M5 後段)', onPressed: null),
+                    _RoundButton(
+                      icon: s.isMuted(s.viewingPeer!.peerId) ? Icons.volume_off : Icons.volume_up,
+                      tooltip: s.isMuted(s.viewingPeer!.peerId) ? 'ミュート解除' : 'ミュート',
+                      filled: s.isMuted(s.viewingPeer!.peerId) ? RasqColors.danger : null,
+                      onPressed: onMute,
+                    ),
                     const SizedBox(width: RasqSpacing.xs),
                   ])
                 : AnimatedSlide(
@@ -1185,10 +1292,13 @@ class _SharesSection extends StatelessWidget {
 
 /// 共有枠 (D-146): ピン留め/クリックしたピアの画面共有。16:7 のプレビュー + 名前 + 閉じる/全画面。
 class _ViewingScreenPanel extends StatelessWidget {
-  const _ViewingScreenPanel({required this.peer, required this.onClose, required this.onFullscreen});
+  const _ViewingScreenPanel({required this.peer, required this.muted, required this.onFullscreen, required this.onMore});
   final AstellPeer peer;
-  final VoidCallback onClose;
+  final bool muted;
   final VoidCallback onFullscreen;
+
+  /// 「…」(D-147): ピン解除 / 全画面 / ミュート / フォロー / ブロック / 通報。
+  final void Function(Rect anchor) onMore;
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -1204,10 +1314,21 @@ class _ViewingScreenPanel extends StatelessWidget {
               Image.network(sc.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
             else
               ColoredBox(color: scheme.surfaceContainerHighest),
-            Positioned(left: 8, top: 8, child: RasqPill(label: '画面共有', color: RasqColors.sub, textColor: Colors.white)),
+            Positioned(left: 8, top: 8, child: Row(mainAxisSize: MainAxisSize.min, children: [
+              RasqPill(label: '画面共有', color: RasqColors.sub, textColor: Colors.white),
+              if (muted) ...[const SizedBox(width: 4), RasqPill(label: 'ミュート中', color: RasqColors.danger, textColor: Colors.white)],
+            ])),
             Positioned(right: 4, top: 4, child: Row(mainAxisSize: MainAxisSize.min, children: [
               RasqIconButton(icon: Icons.fullscreen, color: Colors.white, tooltip: '全画面', onPressed: onFullscreen),
-              RasqIconButton(icon: Icons.push_pin_outlined, color: Colors.white, tooltip: '共有枠から外す', onPressed: onClose),
+              Builder(builder: (ctx) => RasqIconButton(
+                icon: Icons.more_horiz,
+                color: Colors.white,
+                tooltip: '共有枠の操作',
+                onPressed: () {
+                  final box = ctx.findRenderObject() as RenderBox;
+                  onMore(box.localToGlobal(Offset.zero) & box.size);
+                },
+              )),
             ])),
             Positioned(
               left: 8,
@@ -1221,6 +1342,94 @@ class _ViewingScreenPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+/// ルームタブの参加メンバー行 (D-147、ワイヤーフレーム右下): アバター(マイクのバッジ)+
+/// 名前 / @handle + 画面共有枠(タップで共有枠に表示)+ スピーカー(ミュート切替)+ 「…」。
+class _MemberRow extends StatelessWidget {
+  const _MemberRow({required this.peer, required this.self, required this.muted, required this.viewing, required this.onViewScreen, required this.onMute, required this.onMore});
+  final AstellPeer peer;
+  final bool self;
+  final bool muted;
+  final bool viewing;
+  final VoidCallback onViewScreen;
+  final VoidCallback onMute;
+  final void Function(Rect anchor) onMore;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final p = peer;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+      child: Row(children: [
+        RasqAvatar(
+          imageUrl: p.avatarUrl,
+          size: RasqSizes.avatarLg,
+          fallbackLabel: p.displayName,
+          badge: _StateBadge(icon: p.micOn ? Icons.mic : Icons.mic_off, color: p.micOn ? RasqColors.accent : scheme.outline),
+        ),
+        const SizedBox(width: RasqSpacing.md),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(self ? '${p.displayName}(あなた)' : p.displayName, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text('@${p.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+        // 画面共有枠: マイク表示(スピーカー)の左。
+        if (p.screenShare != null) ...[
+          GestureDetector(
+            onTap: onViewScreen,
+            child: Tooltip(
+              message: viewing ? '共有枠に表示中' : '画面共有を表示',
+              child: Container(
+                width: 72,
+                height: 44,
+                decoration: BoxDecoration(
+                  border: Border.all(color: viewing ? RasqColors.link : scheme.outlineVariant, width: viewing ? 2 : 1),
+                  borderRadius: BorderRadius.circular(RasqSizes.radiusSm),
+                  color: scheme.surfaceContainerHighest,
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: p.screenShare!.thumbnailUrl != null
+                    ? Image.network(p.screenShare!.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant))
+                    : Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant),
+              ),
+            ),
+          ),
+          const SizedBox(width: RasqSpacing.sm),
+        ] else
+          Padding(
+            padding: const EdgeInsets.only(right: RasqSpacing.sm),
+            child: Icon(Icons.desktop_access_disabled_outlined, size: 20, color: scheme.outline),
+          ),
+        // スピーカー: 青 = 聞こえる / 赤 = ミュート。自分には出さない。
+        if (!self) ...[
+          RasqIconButton(
+            icon: muted ? Icons.volume_off : Icons.volume_up,
+            size: 20,
+            color: muted ? RasqColors.danger : RasqColors.link,
+            tooltip: muted ? 'ミュート解除' : 'ミュート',
+            onPressed: onMute,
+          ),
+          Builder(builder: (ctx) => RasqIconButton(
+            icon: Icons.more_horiz,
+            size: 20,
+            tooltip: 'メンバーの操作',
+            onPressed: () {
+              final box = ctx.findRenderObject() as RenderBox;
+              onMore(box.localToGlobal(Offset.zero) & box.size);
+            },
+          )),
+        ],
+      ]),
+    );
+  }
+}
+
+/// RASQ アカウント側の機能(フォロー / ブロック / 通報)の口。Central の API は S-006 以降。
+void _notYetCentral(BuildContext context, String what) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$what は RASQ アカウント(Central)側の実装後に入ります')));
 }
 
 /// ホストの配信パネル(展開時、共有欄の上): 16:9 のプレビュー + LIVE + タイトル。
