@@ -81,6 +81,18 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('共有する'));
     await tester.pumpAndSettle();
+    // TiVard の画面共有枠 → 共有枠に表示(下段がピン解除 / 全画面 / 音量に)。
+    await tester.tap(find.byTooltip('画面共有を表示'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_viewing.png'));
+    await tester.tap(find.byTooltip('共有枠から外す').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('共有欄にピン留め').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('ホーム')));
+    await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room.png'));
     await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
     await tester.pumpAndSettle();

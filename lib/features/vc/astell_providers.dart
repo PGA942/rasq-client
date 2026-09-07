@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
+import '../settings/settings_dsl.dart';
 import 'astell_client.dart';
 import 'astell_models.dart';
 
@@ -34,6 +35,25 @@ final astellAssetCodecProvider = Provider<AstellAssetCodec>((ref) => AstellAsset
 /// 「共有する」のファイル選択 (D-142)。テストは差し替える。
 final astellMediaPickerProvider = Provider<Future<XFile?> Function()>((ref) => () => ImagePicker().pickMedia());
 
+/// 共有欄の自動表示設定 (D-146): チャットに流れたものをメディアタイプごとに
+/// 自動で「共有」欄へ出すか。KV `astell.v1` の `auto.<class>`。既定は画像・動画のみ。
+const astellSettingsArea = 'astell';
+const astellShareClasses = <({String id, String label})>[
+  (id: 'image', label: '画像'),
+  (id: 'video', label: '動画'),
+  (id: 'file', label: 'ファイル'),
+  (id: 'link', label: 'リンク'),
+  (id: 'post', label: '投稿'),
+  (id: 'text', label: 'テキスト'),
+  (id: 'transcript', label: '文字起こし'),
+];
+const _astellAutoDefaults = {'image': true, 'video': true};
+
+final astellAutoShareProvider = Provider<Map<String, bool>>((ref) {
+  final area = ref.watch(settingsAreaProvider(astellSettingsArea)).value ?? const <String, Object?>{};
+  return {for (final c in astellShareClasses) c.id: (area['auto.${c.id}'] as bool?) ?? (_astellAutoDefaults[c.id] ?? false)};
+});
+
 /// VC ホームの 3 節。
 final astellHomeProvider = FutureProvider<AstellHome>((ref) => ref.watch(astellClientProvider).home());
 
@@ -53,6 +73,7 @@ class AstellSessionState {
     this.micOn = false,
     this.captionsOn = true,
     this.screenShareOn = false,
+    this.viewingPeerId,
     this.error,
   });
   final AstellRoom room;
@@ -70,7 +91,12 @@ class AstellSessionState {
 
   /// 画面共有モード(映像は M5 後段 — 今は表示状態だけ)。
   final bool screenShareOn;
+
+  /// 共有枠に表示している(ピン留め/クリックした)ピアの画面共有 (D-146)。
+  final String? viewingPeerId;
   final String? error;
+
+  AstellPeer? get viewingPeer => viewingPeerId == null ? null : peers.where((p) => p.peerId == viewingPeerId && p.screenShare != null).firstOrNull;
 
   AstellSessionState copyWith({
     AstellRoom? room,
@@ -82,6 +108,8 @@ class AstellSessionState {
     bool? micOn,
     bool? captionsOn,
     bool? screenShareOn,
+    String? viewingPeerId,
+    bool clearViewing = false,
     String? error,
     bool clearError = false,
   }) =>
@@ -95,6 +123,7 @@ class AstellSessionState {
         micOn: micOn ?? this.micOn,
         captionsOn: captionsOn ?? this.captionsOn,
         screenShareOn: screenShareOn ?? this.screenShareOn,
+        viewingPeerId: clearViewing ? null : (viewingPeerId ?? this.viewingPeerId),
         error: clearError ? null : (error ?? this.error),
       );
 }
@@ -152,12 +181,30 @@ class AstellSession extends Notifier<AstellSessionState?> {
         state = s.copyWith(peers: [for (final p in s.peers) if (p.peerId != m['peerId']) p]);
       case 'share':
         final x = m['share'];
-        if (x is Map) state = s.copyWith(shares: [...s.shares, AstellShare.fromJson(x.cast<String, Object?>())]);
+        if (x is Map) {
+          final sh = AstellShare.fromJson(x.cast<String, Object?>());
+          // 同じ id はピン留め等の更新 (D-146)。
+          state = s.copyWith(shares: s.shares.any((e) => e.id == sh.id) ? [for (final e in s.shares) e.id == sh.id ? sh : e] : [...s.shares, sh]);
+        }
+      case 'peer-state':
+        final p = m['peer'];
+        if (p is Map) {
+          final peer = AstellPeer.fromJson(p.cast<String, Object?>());
+          final known = s.peers.any((e) => e.peerId == peer.peerId);
+          state = s.copyWith(
+            peers: known ? [for (final e in s.peers) e.peerId == peer.peerId ? peer : e] : [...s.peers, peer],
+            // 表示中のピアが共有をやめたら共有枠を閉じる。
+            clearViewing: s.viewingPeerId == peer.peerId && peer.screenShare == null,
+          );
+        }
       case 'share-removed':
         state = s.copyWith(shares: [for (final x in s.shares) if (x.id != m['shareId']) x]);
       case 'transcript':
         final x = m['transcript'];
-        if (x is Map) state = s.copyWith(transcripts: [...s.transcripts, AstellTranscript.fromJson(x.cast<String, Object?>())]);
+        if (x is Map) {
+          final t = AstellTranscript.fromJson(x.cast<String, Object?>());
+          state = s.copyWith(transcripts: s.transcripts.any((e) => e.id == t.id) ? [for (final e in s.transcripts) e.id == t.id ? t : e] : [...s.transcripts, t]);
+        }
       case 'room':
         final x = m['room'];
         if (x is Map) state = s.copyWith(room: AstellRoom.fromJson(x.cast<String, Object?>()));
@@ -178,8 +225,43 @@ class AstellSession extends Notifier<AstellSessionState?> {
     if (state != null) state = state!.copyWith(room: room);
   }
 
+  /// 自分の状態(マイク / 画面共有)を全員へ (D-146: `state` メッセージ)。
+  void _sendState() {
+    final s = state;
+    if (s == null) return;
+    _conn?.send({
+      'type': 'state',
+      'state': {
+        'micOn': s.micOn,
+        'screenShare': s.screenShareOn ? const AstellScreenShare(title: '自分の画面').toJson() : null,
+      },
+    });
+  }
+
   void toggleMic() {
-    if (state != null) state = state!.copyWith(micOn: !state!.micOn);
+    if (state == null) return;
+    state = state!.copyWith(micOn: !state!.micOn);
+    _sendState();
+  }
+
+  /// ピアの画面共有を共有枠に表示する/やめる (D-146)。
+  void viewScreen(String? peerId) {
+    if (state == null) return;
+    state = peerId == null ? state!.copyWith(clearViewing: true) : state!.copyWith(viewingPeerId: peerId);
+  }
+
+  Future<void> pinShare(String shareId, bool pinned) async {
+    final s = state;
+    if (s == null) return;
+    final updated = await ref.read(astellClientProvider).pinShare(s.room.id, shareId, pinned);
+    if (state != null) state = state!.copyWith(shares: [for (final e in state!.shares) e.id == shareId ? updated : e]);
+  }
+
+  Future<void> pinTranscript(String transcriptId, bool pinned) async {
+    final s = state;
+    if (s == null) return;
+    final updated = await ref.read(astellClientProvider).pinTranscript(s.room.id, transcriptId, pinned);
+    if (state != null) state = state!.copyWith(transcripts: [for (final e in state!.transcripts) e.id == transcriptId ? updated : e]);
   }
 
   void toggleCaptions() {
@@ -187,7 +269,9 @@ class AstellSession extends Notifier<AstellSessionState?> {
   }
 
   void toggleScreenShare() {
-    if (state != null) state = state!.copyWith(screenShareOn: !state!.screenShareOn);
+    if (state == null) return;
+    state = state!.copyWith(screenShareOn: !state!.screenShareOn);
+    _sendState();
   }
 
   /// 共有の削除(自分の共有 or ルームオーナー)。サーバーの `share-removed` で

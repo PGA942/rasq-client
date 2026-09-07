@@ -37,6 +37,7 @@ class AstellRoom {
     this.live = false,
     this.thumbnailUrl,
     this.hostStream,
+    this.ttsVoice,
   });
 
   final String id;
@@ -72,6 +73,9 @@ class AstellRoom {
   /// ホストの配信(動画 / 画面)。null = 配信なし。
   final AstellHostStream? hostStream;
 
+  /// 読み上げのプリセット音声(CosyVoice2-0.5B)。null = 読み上げなし。
+  final String? ttsVoice;
+
   bool get isOpen => closedAt == null;
 
   UserSummary get owner => _rasqUser(id: ownerId, handle: ownerHandle, displayName: ownerDisplayName, avatarUrl: ownerAvatarUrl);
@@ -98,9 +102,10 @@ class AstellRoom {
         live: j['live'] == true,
         thumbnailUrl: _uri(j['thumbnailUrl']) ?? (j['hostStream'] is Map ? _uri((j['hostStream'] as Map)['thumbnailUrl']) : null),
         hostStream: j['hostStream'] is Map ? AstellHostStream.fromJson((j['hostStream'] as Map).cast<String, Object?>()) : null,
+        ttsVoice: j['ttsVoice'] as String?,
       );
 
-  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false}) => AstellRoom(
+  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false}) => AstellRoom(
         id: id,
         ownerId: ownerId,
         ownerHandle: ownerHandle,
@@ -119,6 +124,7 @@ class AstellRoom {
         live: live ?? this.live,
         thumbnailUrl: thumbnailUrl,
         hostStream: clearHostStream ? null : (hostStream ?? this.hostStream),
+        ttsVoice: clearTtsVoice ? null : (ttsVoice ?? this.ttsVoice),
       );
 }
 
@@ -199,42 +205,81 @@ class NewAstellRoom {
 }
 
 /// 接続中のピア(参加メンバー)。
+/// ピアの画面共有(`state.screenShare`)。
+@immutable
+class AstellScreenShare {
+  const AstellScreenShare({this.title = '', this.thumbnailUrl});
+  final String title;
+  final Uri? thumbnailUrl;
+  factory AstellScreenShare.fromJson(Map<String, Object?> j) => AstellScreenShare(title: j['title'] as String? ?? '', thumbnailUrl: _uri(j['thumbnailUrl']));
+  Map<String, Object?> toJson() => {'title': title, 'thumbnailUrl': thumbnailUrl?.toString()};
+}
+
 @immutable
 class AstellPeer {
-  const AstellPeer({required this.peerId, required this.accountId, required this.handle, required this.displayName, this.avatarUrl, this.micOn = false, this.speaking = false});
+  const AstellPeer({required this.peerId, required this.accountId, required this.handle, required this.displayName, this.avatarUrl, this.micOn = false, this.speaking = false, this.screenShare});
   final String peerId;
   final String accountId;
   final String handle;
   final String displayName;
   final Uri? avatarUrl;
 
-  /// マイク状態(シグナリングの拡張で流す予定。今は端末側の表示用)。
+  /// マイク状態(`state.micOn`、シグナリングの `state` で共有)。
   final bool micOn;
   final bool speaking;
 
+  /// このピアの画面共有。null = していない。
+  final AstellScreenShare? screenShare;
+
   UserSummary get user => _rasqUser(id: accountId, handle: handle, displayName: displayName, avatarUrl: avatarUrl, presence: UserPresence.inVc);
 
-  factory AstellPeer.fromJson(Map<String, Object?> j) => AstellPeer(
-        peerId: j['peerId'] as String? ?? '',
-        accountId: j['accountId'] as String? ?? '',
-        handle: j['handle'] as String? ?? '',
-        displayName: j['displayName'] as String? ?? '',
-        avatarUrl: _uri(j['avatarUrl']),
-        micOn: j['micOn'] == true,
+  factory AstellPeer.fromJson(Map<String, Object?> j) {
+    final st = (j['state'] as Map?)?.cast<String, Object?>() ?? const {};
+    return AstellPeer(
+      peerId: j['peerId'] as String? ?? '',
+      accountId: j['accountId'] as String? ?? '',
+      handle: j['handle'] as String? ?? '',
+      displayName: j['displayName'] as String? ?? '',
+      avatarUrl: _uri(j['avatarUrl']),
+      micOn: j['micOn'] == true || st['micOn'] == true,
+      screenShare: st['screenShare'] is Map ? AstellScreenShare.fromJson((st['screenShare'] as Map).cast<String, Object?>()) : null,
+    );
+  }
+
+  AstellPeer copyWith({bool? micOn, AstellScreenShare? screenShare, bool clearScreenShare = false}) => AstellPeer(
+        peerId: peerId,
+        accountId: accountId,
+        handle: handle,
+        displayName: displayName,
+        avatarUrl: avatarUrl,
+        micOn: micOn ?? this.micOn,
+        speaking: speaking,
+        screenShare: clearScreenShare ? null : (screenShare ?? this.screenShare),
       );
 }
 
 /// 共有(プラグイン以外: post / media / link / text)。
 @immutable
 class AstellShare {
-  const AstellShare({required this.id, required this.accountId, required this.handle, required this.displayName, required this.kind, this.payload = const {}, required this.createdAt});
+  const AstellShare({required this.id, required this.accountId, required this.handle, required this.displayName, required this.kind, this.payload = const {}, this.pinned = false, required this.createdAt});
   final String id;
   final String accountId;
   final String handle;
   final String displayName;
   final String kind;
   final Map<String, Object?> payload;
+
+  /// チャットからピン留めされて「共有」欄に出ているか (D-146)。
+  final bool pinned;
   final DateTime createdAt;
+
+  AstellShare copyWith({bool? pinned}) => AstellShare(id: id, accountId: accountId, handle: handle, displayName: displayName, kind: kind, payload: payload, pinned: pinned ?? this.pinned, createdAt: createdAt);
+
+  /// 自動表示設定のキー(画像 / 動画 / リンク / 投稿 / テキスト)。
+  String get mediaClass => switch (kind) {
+        'media' => isVideo ? 'video' : (isImage ? 'image' : 'file'),
+        _ => kind,
+      };
 
   /// 1 行表示(共有欄のカード見出し)。
   String get headline => switch (kind) {
@@ -276,6 +321,7 @@ class AstellShare {
         displayName: j['displayName'] as String? ?? '',
         kind: j['kind'] as String? ?? 'text',
         payload: (j['payload'] as Map?)?.cast<String, Object?>() ?? const {},
+        pinned: j['pinned'] == true,
         createdAt: _date(j['createdAt']),
       );
 }
@@ -283,14 +329,17 @@ class AstellShare {
 /// 文字起こし 1 件(distil-whisper/distil-large-v3、サーバー側)。
 @immutable
 class AstellTranscript {
-  const AstellTranscript({required this.id, required this.accountId, required this.handle, required this.displayName, required this.text, this.lang, required this.createdAt});
+  const AstellTranscript({required this.id, required this.accountId, required this.handle, required this.displayName, required this.text, this.lang, this.pinned = false, required this.createdAt});
   final String id;
   final String accountId;
   final String handle;
   final String displayName;
   final String text;
   final String? lang;
+  final bool pinned;
   final DateTime createdAt;
+
+  AstellTranscript copyWith({bool? pinned}) => AstellTranscript(id: id, accountId: accountId, handle: handle, displayName: displayName, text: text, lang: lang, pinned: pinned ?? this.pinned, createdAt: createdAt);
 
   factory AstellTranscript.fromJson(Map<String, Object?> j) => AstellTranscript(
         id: j['id'] as String? ?? '',
@@ -299,6 +348,7 @@ class AstellTranscript {
         displayName: j['displayName'] as String? ?? '',
         text: j['text'] as String? ?? '',
         lang: j['lang'] as String?,
+        pinned: j['pinned'] == true,
         createdAt: _date(j['createdAt']),
       );
 }

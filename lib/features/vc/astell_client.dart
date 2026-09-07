@@ -19,6 +19,14 @@ abstract class AstellClient {
   Future<List<AstellShare>> shares(String id);
   Future<void> deleteShare(String roomId, String shareId);
 
+  /// チャットの 1 件を「共有」欄へ出す/外す (D-146)。
+  Future<AstellShare> pinShare(String roomId, String shareId, bool pinned);
+  Future<AstellTranscript> pinTranscript(String roomId, String transcriptId, bool pinned);
+
+  /// 読み上げ (D-146): プリセット音声の一覧と、音声の合成(未設定なら例外)。
+  Future<AstellTtsVoices> ttsVoices();
+  Future<List<int>> speak(String roomId, String text, {String? voice});
+
   /// 共有コンテンツのアップロード (D-145)。[bytes] は [encoding] で圧縮済み
   /// (`zstd` or `identity`)。応答の `url` を共有の payload に載せる。
   Future<AstellAsset> uploadAsset(String roomId, List<int> bytes, {required String name, required String contentType, String encoding = 'identity'});
@@ -34,6 +42,19 @@ abstract class AstellConnection {
   Stream<Map<String, Object?>> get messages;
   void send(Map<String, Object?> message);
   Future<void> close();
+}
+
+/// `GET /astell/tts/voices`。
+class AstellTtsVoices {
+  const AstellTtsVoices({required this.enabled, required this.model, required this.voices});
+  final bool enabled;
+  final String model;
+  final List<({String id, String label})> voices;
+  factory AstellTtsVoices.fromJson(Map<String, Object?> j) => AstellTtsVoices(
+        enabled: j['enabled'] == true,
+        model: j['model'] as String? ?? 'CosyVoice2-0.5B',
+        voices: [for (final v in (j['voices'] as List? ?? const [])) if (v is Map) (id: v['id'] as String? ?? '', label: v['label'] as String? ?? v['id'] as String? ?? '')],
+      );
 }
 
 // ── モック ────────────────────────────────────────────────────────
@@ -136,13 +157,24 @@ class MockAstellClient implements AstellClient {
         ),
       ];
 
+  /// ダミーの文字起こし(打ち上げの打ち上げ)。ワイヤーフレームの 3 行。
+  static List<AstellTranscript> seededTranscripts(String roomId) => switch (roomId) {
+        'r-launch' => [
+            AstellTranscript(id: 't1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', text: 'いい感じに行ったねー', lang: 'ja', createdAt: DateTime(2026, 9, 6, 20, 3)),
+            AstellTranscript(id: 't2', accountId: 'yamahaya', handle: 'yamahaya', displayName: '山ハヤ', text: '振動まわりだけちょい気がかり', lang: 'ja', createdAt: DateTime(2026, 9, 6, 20, 4)),
+            AstellTranscript(id: 't3', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', text: 'そうやねー分離の後エンジンのスタビライザー周りが', lang: 'ja', createdAt: DateTime(2026, 9, 6, 20, 5)),
+          ],
+        _ => const [],
+      };
+
   static List<AstellPeer> seededPeers(String roomId) => switch (roomId) {
-        'r-launch' => const [
-            AstellPeer(peerId: 'p1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', micOn: true),
-            AstellPeer(peerId: 'p2', accountId: 'tivard', handle: 'tivard', displayName: 'TiVard', micOn: true),
-            AstellPeer(peerId: 'p3', accountId: 'yamahaya', handle: 'yamahaya', displayName: '山ハヤ'),
-            AstellPeer(peerId: 'p4', accountId: 'a4', handle: 'a4', displayName: 'ゲスト A'),
-            AstellPeer(peerId: 'p5', accountId: 'a5', handle: 'a5', displayName: 'ゲスト B'),
+        'r-launch' => [
+            const AstellPeer(peerId: 'p1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', micOn: true),
+            // TiVard は画面共有中 (D-146 のデモ)。サムネイルはカタログの picsum。
+            AstellPeer(peerId: 'p2', accountId: 'tivard', handle: 'tivard', displayName: 'TiVard', micOn: true, screenShare: AstellScreenShare(title: '打ち上げ映像(エディタ)', thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl1/600/400'))),
+            const AstellPeer(peerId: 'p3', accountId: 'yamahaya', handle: 'yamahaya', displayName: '山ハヤ'),
+            const AstellPeer(peerId: 'p4', accountId: 'a4', handle: 'a4', displayName: 'ゲスト A'),
+            const AstellPeer(peerId: 'p5', accountId: 'a5', handle: 'a5', displayName: 'ゲスト B'),
           ],
         _ => const [AstellPeer(peerId: 'p1', accountId: 'host', handle: 'host', displayName: 'ホスト', micOn: true)],
       };
@@ -212,6 +244,44 @@ class MockAstellClient implements AstellClient {
   final List<_MockConnection> _connections = [];
 
   @override
+  Future<AstellShare> pinShare(String roomId, String shareId, bool pinned) async {
+    final list = _shares[roomId] ??= [];
+    final i = list.indexWhere((s) => s.id == shareId);
+    if (i < 0) throw StateError('no such share');
+    final updated = list[i].copyWith(pinned: pinned);
+    list[i] = updated;
+    for (final c in _connections.where((c) => c.roomId == roomId)) {
+      c._controller.add({'type': 'share', 'share': _MockConnection._shareJson(updated)});
+    }
+    return updated;
+  }
+
+  final Map<String, List<AstellTranscript>> _transcripts = {};
+
+  @override
+  Future<AstellTranscript> pinTranscript(String roomId, String transcriptId, bool pinned) async {
+    final list = _transcripts[roomId] ??= [];
+    final i = list.indexWhere((t) => t.id == transcriptId);
+    if (i < 0) throw StateError('no such transcript');
+    final updated = list[i].copyWith(pinned: pinned);
+    list[i] = updated;
+    for (final c in _connections.where((c) => c.roomId == roomId)) {
+      c._controller.add({'type': 'transcript', 'transcript': _MockConnection._transcriptJson(updated)});
+    }
+    return updated;
+  }
+
+  @override
+  Future<AstellTtsVoices> ttsVoices() async => const AstellTtsVoices(enabled: false, model: 'CosyVoice2-0.5B', voices: [
+        (id: 'ja_female_1', label: '女性 1(日本語)'),
+        (id: 'ja_male_1', label: '男性 1(日本語)'),
+        (id: 'en_female_1', label: 'Female 1 (English)'),
+      ]);
+
+  @override
+  Future<List<int>> speak(String roomId, String text, {String? voice}) async => throw StateError('読み上げバックエンドが未設定です(CENTRAL_TTS_URL)');
+
+  @override
   Future<AstellAsset> uploadAsset(String roomId, List<int> bytes, {required String name, required String contentType, String encoding = 'identity'}) async {
     // モックは実体を持たない — 名前と大きさだけ返す(URL は picsum のダミー)。
     return AstellAsset(id: 'mock-asset-${DateTime.now().microsecondsSinceEpoch}', url: Uri.parse('https://picsum.photos/seed/${Uri.encodeComponent(name)}/600/400'), name: name, contentType: contentType, sizeBytes: bytes.length);
@@ -233,12 +303,13 @@ class _MockConnection implements AstellConnection {
     // welcome は購読が始まってから流す(broadcast は購読前のイベントを捨てる)。
     _controller = StreamController<Map<String, Object?>>.broadcast(onListen: () {
       final peers = MockAstellClient.seededPeers(roomId);
+      client._transcripts[roomId] ??= MockAstellClient.seededTranscripts(roomId);
       _controller.add({
         'type': 'welcome',
         'peerId': MockAstellClient._me.peerId,
         'peers': [for (final p in peers) _peerJson(p)],
         'shares': [for (final s in client._shares[roomId] ?? const <AstellShare>[]) _shareJson(s)],
-        'transcripts': const [],
+        'transcripts': [for (final t in client._transcripts[roomId] ?? const <AstellTranscript>[]) _transcriptJson(t)],
       });
     });
   }
@@ -247,8 +318,9 @@ class _MockConnection implements AstellConnection {
   late final StreamController<Map<String, Object?>> _controller;
   var _n = 0;
 
-  static Map<String, Object?> _peerJson(AstellPeer p) => {'peerId': p.peerId, 'accountId': p.accountId, 'handle': p.handle, 'displayName': p.displayName, 'micOn': p.micOn};
-  static Map<String, Object?> _shareJson(AstellShare s) => {'id': s.id, 'accountId': s.accountId, 'handle': s.handle, 'displayName': s.displayName, 'kind': s.kind, 'payload': s.payload, 'createdAt': s.createdAt.toIso8601String()};
+  static Map<String, Object?> _peerJson(AstellPeer p) => {'peerId': p.peerId, 'accountId': p.accountId, 'handle': p.handle, 'displayName': p.displayName, 'state': {'micOn': p.micOn, 'screenShare': p.screenShare?.toJson()}};
+  static Map<String, Object?> _shareJson(AstellShare s) => {'id': s.id, 'accountId': s.accountId, 'handle': s.handle, 'displayName': s.displayName, 'kind': s.kind, 'payload': s.payload, 'pinned': s.pinned, 'createdAt': s.createdAt.toIso8601String()};
+  static Map<String, Object?> _transcriptJson(AstellTranscript t) => {'id': t.id, 'accountId': t.accountId, 'handle': t.handle, 'displayName': t.displayName, 'text': t.text, 'lang': t.lang, 'pinned': t.pinned, 'createdAt': t.createdAt.toIso8601String()};
 
   @override
   Stream<Map<String, Object?>> get messages => _controller.stream;
@@ -258,6 +330,10 @@ class _MockConnection implements AstellConnection {
     switch (message['type']) {
       case 'ping':
         _controller.add({'type': 'pong'});
+      case 'state':
+        // 自分の状態をそのまま peer-state で返す(他のピアにも配った体)。
+        final st = (message['state'] as Map?)?.cast<String, Object?>() ?? const {};
+        _controller.add({'type': 'peer-state', 'peer': {'peerId': MockAstellClient._me.peerId, 'accountId': 'me', 'handle': 'me', 'displayName': 'あなた', 'state': st}});
       case 'share':
         final share = AstellShare(
           id: 'ms-${_n++}',
@@ -322,6 +398,20 @@ class HttpAstellClient implements AstellClient {
 
   @override
   Future<void> deleteShare(String roomId, String shareId) => _client.delete('/astell/rooms/${Uri.encodeComponent(roomId)}/shares/${Uri.encodeComponent(shareId)}');
+
+  @override
+  Future<AstellShare> pinShare(String roomId, String shareId, bool pinned) async =>
+      AstellShare.fromJson(await _client.putJson('/astell/rooms/${Uri.encodeComponent(roomId)}/shares/${Uri.encodeComponent(shareId)}/pin', {'pinned': pinned}));
+
+  @override
+  Future<AstellTranscript> pinTranscript(String roomId, String transcriptId, bool pinned) async =>
+      AstellTranscript.fromJson(await _client.putJson('/astell/rooms/${Uri.encodeComponent(roomId)}/transcripts/${Uri.encodeComponent(transcriptId)}/pin', {'pinned': pinned}));
+
+  @override
+  Future<AstellTtsVoices> ttsVoices() async => AstellTtsVoices.fromJson(await _client.getJson('/astell/tts/voices'));
+
+  @override
+  Future<List<int>> speak(String roomId, String text, {String? voice}) => _client.postForBytes('/astell/rooms/${Uri.encodeComponent(roomId)}/tts', {'text': text, 'voice': ?voice});
 
   @override
   Future<AstellAsset> uploadAsset(String roomId, List<int> bytes, {required String name, required String contentType, String encoding = 'identity'}) async =>
