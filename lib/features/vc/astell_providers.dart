@@ -190,6 +190,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
         final p = m['peer'];
         if (p is Map) {
           final peer = AstellPeer.fromJson(p.cast<String, Object?>());
+          if (peer.peerId == s.myPeerId) break; // 自分の状態の折り返しは参加者に入れない
           final known = s.peers.any((e) => e.peerId == peer.peerId);
           state = s.copyWith(
             peers: known ? [for (final e in s.peers) e.peerId == peer.peerId ? peer : e] : [...s.peers, peer],
