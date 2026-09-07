@@ -280,6 +280,8 @@ const astellRoomTabsCoveredHeight = 300.0;
 
 const astellRoomCompactKey = Key('astell.room.compact');
 const astellStickPagerKey = Key('astell.room.stick.pager');
+const astellFooterActionsKey = Key('astell.footer.actions');
+const astellStickScreenKey = Key('astell.stick.screen');
 const astellRoomHeaderKey = Key('astell.room.header');
 
 Future<void> openAstellRoomFow(BuildContext context, WidgetRef ref) async {
@@ -563,8 +565,10 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         key: _footerKey,
         compact: compact,
         state: s,
+        pinned: _sharedItems(s),
         input: _input,
         drafting: _drafting,
+        onSpeaker: session.toggleSpeaker,
         onMic: session.toggleMic,
         onScreen: session.toggleScreenShare,
         onCaptions: session.toggleCaptions,
@@ -574,9 +578,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         onExpand: _expand,
         onLeave: leave,
         onOpenShare: (share) => _openShare(context, share),
-        onUnview: () => session.viewScreen(null),
         onFullscreen: s.viewingPeer == null ? null : () => _openPeerScreen(context, s.viewingPeer!),
-        onMute: s.viewingPeer == null ? null : () => session.toggleMute(s.viewingPeer!.peerId),
       ),
     ]);
   }
@@ -943,17 +945,23 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   }
 }
 
-/// 下段バー (D-143)。展開: マイク / 画面共有 / 字幕 / (字幕オン: 文字起こし + 入力欄、
-/// オフ: 「共有する」に差し替え) / 送信 or 共有する / 歯車。
-/// stick: チャット(入力欄)が消え、マイク・画面共有は**下から押し出されて**消える。
-/// 残るのは 参加メンバー(or 画面共有中の印)+ 文字起こし/共有コンテンツ + 字幕 + ✕。
+/// 下段バー (D-148、ユーザー指定の構造):
+/// `[左端ボタン群] [字幕] [中央] [共有する/送信完了する] [設定]`
+/// - 左端: スピーカーミュート / マイクミュート / 画面共有 / (全画面: 共有枠にピアの画面がある時) /
+///   (プラグインアクション: 今は無効)。横向き ListView で、**画面幅が狭い or stick は 2 つまで**表示。
+/// - stick で共有枠にピアの画面がある時は、左端(字幕ボタン以外)が**映像そのもの**に置き換わり、
+///   タップでそのまま全画面。
+/// - 字幕: 有効時は右側(中央)に字幕、無効時は「共有する」(stick では画面共有以外のピン留めのタイル)。
+/// - 右端: 共有する(入力中は 送信完了する)+ 設定。stick では 設定 → 退出、共有するは消える。
 class _Footer extends StatelessWidget {
   const _Footer({
     super.key,
     required this.compact,
     required this.state,
+    required this.pinned,
     required this.input,
     required this.drafting,
+    required this.onSpeaker,
     required this.onMic,
     required this.onScreen,
     required this.onCaptions,
@@ -963,84 +971,71 @@ class _Footer extends StatelessWidget {
     required this.onExpand,
     required this.onLeave,
     required this.onOpenShare,
-    required this.onUnview,
     this.onFullscreen,
-    this.onMute,
   });
   final bool compact;
   final AstellSessionState state;
+
+  /// 共有欄の中身(ピン留め + 自動表示)。stick の中央(字幕オフ)に出す。
+  final List<_SharedItem> pinned;
   final TextEditingController input;
   final bool drafting;
-  final VoidCallback onMic, onScreen, onCaptions, onSendText, onPickFile, onSettings, onExpand, onLeave, onUnview;
-  final VoidCallback? onFullscreen;
+  final VoidCallback onSpeaker, onMic, onScreen, onCaptions, onSendText, onPickFile, onSettings, onExpand, onLeave;
 
-  /// 共有枠のピアをミュート/解除 (D-147)。
-  final VoidCallback? onMute;
+  /// 共有枠のピアの画面を全画面に(共有枠が空なら null)。
+  final VoidCallback? onFullscreen;
   final void Function(AstellShare share) onOpenShare;
+
+  /// 左端ボタン群を 2 つに絞る画面幅。
+  static const narrowWidth = 600.0;
+  static const _button = 44.0;
+  static const _gap = RasqSpacing.xs;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final s = state;
-    // マイク / 画面共有: stick で**画面共有中**なら下へ押し出されて消える(幅も畳む)。
-    // 画面共有なしの stick では残る(ワイヤーフレーム「UI下部に表示」)。
-    final pushOut = compact && s.screenShareOn;
-    final viewing = s.viewingPeer != null;
-    final pushedOut = ClipRect(
-      child: AnimatedSize(
-        duration: _kAnim,
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.centerLeft,
-        child: pushOut
-            ? const SizedBox(height: 44)
-            : viewing
-                // 共有枠にピアの画面を出している間はマイク/画面共有が**置き換わる** (D-146):
-                // ピン解除 / 全画面 / 音量。
-                ? Row(mainAxisSize: MainAxisSize.min, children: [
-                    _RoundButton(icon: Icons.push_pin_outlined, tooltip: '共有枠から外す', filled: RasqColors.link, onPressed: onUnview),
-                    const SizedBox(width: RasqSpacing.xs),
-                    _RoundButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: onFullscreen),
-                    const SizedBox(width: RasqSpacing.xs),
-                    _RoundButton(
-                      icon: s.isMuted(s.viewingPeer!.peerId) ? Icons.volume_off : Icons.volume_up,
-                      tooltip: s.isMuted(s.viewingPeer!.peerId) ? 'ミュート解除' : 'ミュート',
-                      filled: s.isMuted(s.viewingPeer!.peerId) ? RasqColors.danger : null,
-                      onPressed: onMute,
-                    ),
-                    const SizedBox(width: RasqSpacing.xs),
-                  ])
-                : AnimatedSlide(
-                    duration: _kAnim,
-                    offset: Offset.zero,
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン(音声は M5 後段)', onPressed: onMic),
-                      const SizedBox(width: RasqSpacing.xs),
-                      _RoundButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: onScreen),
-                      const SizedBox(width: RasqSpacing.xs),
-                    ]),
-                  ),
-      ),
-    );
+    final viewing = s.viewingPeer;
+    final narrow = compact || MediaQuery.sizeOf(context).width < narrowWidth;
 
+    // ── 左端 ──
+    final actions = <Widget>[
+      _RoundButton(icon: s.speakerMuted ? Icons.volume_off : Icons.volume_up, tooltip: s.speakerMuted ? 'スピーカーミュート解除' : 'スピーカーミュート', filled: s.speakerMuted ? RasqColors.danger : null, onPressed: onSpeaker),
+      _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン(音声は M5 後段)', filled: s.micOn ? RasqColors.accent : null, onPressed: onMic),
+      _RoundButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: onScreen),
+      if (viewing != null) _RoundButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: onFullscreen),
+      const _RoundButton(icon: Icons.extension_outlined, tooltip: 'プラグインアクション(未対応)', onPressed: null),
+    ];
+    final Widget left;
+    if (compact && viewing != null) {
+      // stick + 共有枠にピアの画面: ボタン群の代わりに映像。タップで全画面。
+      left = _StickScreen(key: astellStickScreenKey, peer: viewing, muted: s.isMuted(viewing.peerId) || s.speakerMuted, onTap: onFullscreen);
+    } else {
+      final visible = narrow ? 2 : actions.length;
+      left = SizedBox(
+        width: visible * _button + (visible - 1) * _gap,
+        height: _button,
+        child: ListView.separated(
+          key: astellFooterActionsKey,
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.zero,
+          physics: const ClampingScrollPhysics(),
+          itemCount: actions.length,
+          separatorBuilder: (_, _) => const SizedBox(width: _gap),
+          itemBuilder: (_, i) => actions[i],
+        ),
+      );
+    }
+
+    // ── 中央 ──
     final Widget middle;
     if (compact) {
       middle = GestureDetector(
         key: astellRoomCompactKey,
         behavior: HitTestBehavior.opaque,
         onTap: onExpand,
-        child: s.screenShareOn
-            ? Row(children: [
-                Container(
-                  width: 44,
-                  height: 30,
-                  decoration: BoxDecoration(color: RasqColors.sub.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6), border: Border.all(color: RasqColors.sub)),
-                  child: const Icon(Icons.desktop_windows, size: 16, color: RasqColors.sub),
-                ),
-                const SizedBox(width: RasqSpacing.sm),
-                Expanded(child: _Ticker(state: s, compact: true)),
-              ])
-            // 画面共有なし: 文字起こし(3 行)と共有コンテンツのタイルを**上下スワイプ**で行き来。
-            : _StickPager(state: s, onOpenShare: onOpenShare),
+        // 字幕オン: 文字起こし(3 行)。オフ: 画面共有以外のピン留めを上下スワイプで。
+        child: s.captionsOn ? Align(alignment: Alignment.centerLeft, child: _Ticker(state: s, compact: true, lines: 3)) : _StickPager(state: s, items: pinned, onOpenShare: onOpenShare),
       );
     } else if (s.captionsOn) {
       middle = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
@@ -1048,7 +1043,6 @@ class _Footer extends StatelessWidget {
         RasqInput(controller: input, hintText: 'input..', onSubmitted: (_) => onSendText()),
       ]);
     } else {
-      // 字幕オフ: 入力欄の代わりに「共有する」。
       middle = OutlinedButton.icon(
         onPressed: onPickFile,
         icon: const Icon(Icons.upload, size: 18),
@@ -1060,19 +1054,18 @@ class _Footer extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(RasqSpacing.sm, compact ? 2 : RasqSpacing.xs, RasqSpacing.sm, compact ? RasqSpacing.xs : RasqSpacing.sm),
       child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        pushedOut,
+        left,
+        const SizedBox(width: _gap),
         _RoundButton(icon: Icons.subtitles_outlined, tooltip: s.captionsOn ? '字幕オフ' : '字幕オン', filled: s.captionsOn ? const Color(0xFF2EBF8F) : null, onPressed: onCaptions),
         const SizedBox(width: RasqSpacing.sm),
         Expanded(child: middle),
         const SizedBox(width: RasqSpacing.sm),
+        // ── 右端 ──
         if (compact)
           _RoundButton(icon: Icons.close, tooltip: '退出', onPressed: onLeave)
-        else if (s.captionsOn)
-          _RoundButton(icon: drafting ? Icons.send : Icons.upload, tooltip: drafting ? '送信完了する' : '共有する', filled: scheme.onSurface, onPressed: drafting ? onSendText : onPickFile)
-        else
-          _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: onSettings),
-        if (!compact && s.captionsOn) ...[
-          const SizedBox(width: RasqSpacing.xs),
+        else ...[
+          _RoundButton(icon: drafting ? Icons.send : Icons.upload, tooltip: drafting ? '送信完了する' : '共有する', filled: scheme.onSurface, onPressed: drafting ? onSendText : onPickFile),
+          const SizedBox(width: _gap),
           _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: onSettings),
         ],
       ]),
@@ -1080,27 +1073,63 @@ class _Footer extends StatelessWidget {
   }
 }
 
+/// stick の左端 (D-148): 共有枠にあるピアの画面の映像(今はサムネイル)。タップで全画面。
+class _StickScreen extends StatelessWidget {
+  const _StickScreen({super.key, required this.peer, required this.muted, this.onTap});
+  final AstellPeer peer;
+  final bool muted;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final sc = peer.screenShare!;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Tooltip(
+        message: '${peer.displayName} の画面(タップで全画面)',
+        child: Container(
+          width: 92,
+          height: 44,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), border: Border.all(color: RasqColors.link, width: 1.5), color: scheme.surfaceContainerHighest),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(fit: StackFit.expand, children: [
+            if (sc.thumbnailUrl != null)
+              Image.network(sc.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant))
+            else
+              Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant),
+            if (muted) const Positioned(right: 2, bottom: 2, child: Icon(Icons.volume_off, size: 12, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)])),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 String _hhmm(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-/// stick の中央 (D-144): 文字起こし(字幕オン時)と共有コンテンツのタイルを縦の
-/// PageView で。上下スライドで前後の共有へ移動(新しい順)。
+/// stick の中央(字幕オフ、D-144/D-148): ホストの配信の印と、**画面共有以外のピン留め**
+/// (共有欄の中身)のタイルを縦の PageView で。上下スライドで前後へ(新しい順)。
 class _StickPager extends StatelessWidget {
-  const _StickPager({required this.state, required this.onOpenShare});
+  const _StickPager({required this.state, required this.items, required this.onOpenShare});
   final AstellSessionState state;
+  final List<_SharedItem> items;
   final void Function(AstellShare share) onOpenShare;
 
   @override
   Widget build(BuildContext context) {
     final host = state.room.hostStream;
-    final viewing = state.viewingPeer;
+    final scheme = Theme.of(context).colorScheme;
     final pages = <Widget>[
-      // 共有枠に出しているピアの画面 → ホストの配信 の順で先頭に。
-      if (viewing != null) _HostStreamTile(stream: AstellHostStream(kind: 'screen', title: viewing.screenShare!.title, thumbnailUrl: viewing.screenShare!.thumbnailUrl), room: state.room, label: '${viewing.displayName} の画面'),
       if (host != null) _HostStreamTile(stream: host, room: state.room),
-      if (state.captionsOn || (state.shares.isEmpty && host == null)) Align(alignment: Alignment.centerLeft, child: _Ticker(state: state, compact: true, lines: 3)),
-      // メディア / 投稿 / リンクはタップで開く (D-145)。テキストはバーのタップ = 展開に任せる。
-      for (final sh in state.shares.reversed)
-        if (sh.kind == 'text') _ShareTile(share: sh) else GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => onOpenShare(sh), child: _ShareTile(share: sh)),
+      // メディア / 投稿 / リンクはタップで開く (D-145)。テキストと文字起こしはバーのタップ = 展開に任せる。
+      for (final it in items.reversed)
+        if (it.share case final sh?)
+          (sh.kind == 'text' ? _ShareTile(share: sh) : GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => onOpenShare(sh), child: _ShareTile(share: sh)))
+        else
+          _ShareTile(share: _transcriptAsShare(it.transcript!)),
+      if (host == null && items.isEmpty)
+        Align(alignment: Alignment.centerLeft, child: Text('ピン留めした共有がここに出ます', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
     ];
     return SizedBox(
       height: 56,
@@ -1111,6 +1140,9 @@ class _StickPager extends StatelessWidget {
       ),
     );
   }
+
+  /// 文字起こしをテキストのタイルとして出すための詰め替え。
+  static AstellShare _transcriptAsShare(AstellTranscript t) => AstellShare(id: t.id, accountId: t.accountId, handle: t.handle, displayName: t.displayName, kind: 'text', payload: {'text': t.text}, pinned: t.pinned, createdAt: t.createdAt);
 }
 
 /// 共有コンテンツのタイル (D-144、ワイヤーフレーム右): アバター + 作者名 + 種別ピル /
@@ -1175,8 +1207,7 @@ class _Ticker extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final lines = <String>[
       if (state.captionsOn) for (final t in state.transcripts.reversed.take(this.lines).toList().reversed) '${t.displayName}>${t.text}',
-      if (state.shares.isNotEmpty && !(compact && !state.screenShareOn)) '共有: ${state.shares.last.headline}',
-      if (compact && state.screenShareOn) '画面共有モード',
+      if (state.shares.isNotEmpty && !compact) '共有: ${state.shares.last.headline}',
     ];
     if (lines.isEmpty) {
       lines.add(state.captionsOn ? (state.room.showSummary ? '文字起こしはまだありません' : '文字起こしは無効(要約非公開)') : '字幕オフ');
@@ -1476,10 +1507,9 @@ class _HostStreamPanel extends StatelessWidget {
 
 /// stick の先頭ページ: ホストの配信の印(サムネイル + LIVE + タイトル)。
 class _HostStreamTile extends StatelessWidget {
-  const _HostStreamTile({required this.stream, required this.room, this.label});
+  const _HostStreamTile({required this.stream, required this.room});
   final AstellHostStream stream;
   final AstellRoom room;
-  final String? label;
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -1510,7 +1540,7 @@ class _HostStreamTile extends StatelessWidget {
       const SizedBox(width: RasqSpacing.sm),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(label ?? '${room.ownerDisplayName} が${stream.isScreen ? '画面共有' : '配信'}中', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text('${room.ownerDisplayName} が${stream.isScreen ? '画面共有' : '配信'}中', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
           Text(stream.title, style: RasqTypography.caption.copyWith(fontSize: 10, color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
         ]),
       ),

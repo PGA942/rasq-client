@@ -26,6 +26,13 @@ void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
   Post post(String id, String body) => Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 8, 31), body: body);
 
+  /// 下段の左端ボタン群(横 ListView、狭幅は 2 つまで)を [tooltip] のボタンまでスクロール (D-148)。
+  Future<void> scrollActions(WidgetTester tester, String tooltip, {bool back = false}) => tester.scrollUntilVisible(
+        find.byTooltip(tooltip),
+        back ? -48 : 48,
+        scrollable: find.descendant(of: find.byKey(astellFooterActionsKey), matching: find.byType(Scrollable)),
+      );
+
   Future<ProviderContainer> pump(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
@@ -205,11 +212,29 @@ void main() {
     expect(find.text('プレビューにざっくり要約を表示する'), findsOneWidget);
 
     // 自動再生 (D-147): TiVard が画面共有中なので、参加した時点で共有枠に出ている。
-    // 下段は ピン解除 / 全画面 / ミュート。「…」→ ミュート → 「ミュート中」、下段の音量が赤に。
+    // 下段 (D-148): 左端 = スピーカー / マイク / 画面共有 / 全画面(共有枠にある間) / プラグイン、
+    // 右端 = 共有する + 設定。「…」→ ミュート → 「ミュート中」。
     expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
     expect(find.textContaining('TiVard の画面'), findsOneWidget);
-    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsNothing);
-    expect(find.byTooltip('ミュート'), findsOneWidget);
+    expect(find.byKey(astellFooterActionsKey), findsOneWidget);
+    expect(find.byTooltip('スピーカーミュート'), findsOneWidget);
+    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
+    expect(find.byTooltip('画面共有'), findsNothing); // 狭幅(360px)は 2 つまで → 横スクロールの先
+    await scrollActions(tester, '画面共有');
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('画面共有'), findsOneWidget);
+    await scrollActions(tester, 'プラグインアクション(未対応)');
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('全画面'), findsWidgets); // 左端 + パネル右上
+    expect(find.byTooltip('プラグインアクション(未対応)'), findsOneWidget);
+    await scrollActions(tester, 'スピーカーミュート', back: true);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('設定'), findsOneWidget);
+    await tester.tap(find.byTooltip('スピーカーミュート'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.speakerMuted, isTrue);
+    await tester.tap(find.byTooltip('スピーカーミュート解除'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('共有枠の操作'));
     await tester.pumpAndSettle();
     expect(find.text('ピン留めを外す'), findsOneWidget);
@@ -218,14 +243,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.isMuted('p2'), isTrue);
     expect(find.text('ミュート中'), findsOneWidget);
-    expect(find.byTooltip('ミュート解除'), findsOneWidget);
-    await tester.tap(find.byTooltip('ミュート解除'));
+    await tester.tap(find.byTooltip('共有枠の操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ミュート解除'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.isMuted('p2'), isFalse);
-    await tester.tap(find.byTooltip('共有枠から外す'));
+    // stick + 共有枠にピアの画面: 左端が映像に置き換わり、タップで全画面。
+    await tester.tapAt(const Offset(180, 60));
+    await tester.pumpAndSettle();
+    expect(find.byKey(astellStickScreenKey), findsOneWidget);
+    expect(find.byKey(astellFooterActionsKey), findsNothing);
+    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsNothing);
+    expect(find.byTooltip('字幕オフ'), findsOneWidget);
+    expect(find.byTooltip('退出'), findsOneWidget);
+    expect(find.byTooltip('設定'), findsNothing);
+    await tester.tap(find.byKey(astellStickScreenKey));
+    await tester.pumpAndSettle();
+    expect(find.byType(AstellMediaViewer), findsOneWidget);
+    await tester.tap(find.byType(CloseButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(astellRoomCompactKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('共有枠の操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ピン留めを外す'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer, isNull);
-    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
+    expect(find.byTooltip('全画面'), findsNothing);
 
     // タブ (D-141): ホーム / チャット / 目次 / ルーム。ヘッダーは本体側 (D-143)。
     Finder inRoom(String t) => find.descendant(of: find.byType(AstellRoomBody), matching: find.text(t));
@@ -292,28 +336,41 @@ void main() {
     await tester.tap(find.byTooltip('字幕オン'));
     await tester.pumpAndSettle();
 
-    // FOW の外側をタップ → stick(画面共有なし): ヘッダーと入力欄が消え、マイク/画面は残る。
-    // 中央は 文字起こし → 上下スワイプで共有コンテンツのタイル (D-144)。
+    // FOW の外側をタップ → stick(共有枠なし): ヘッダーと入力欄が消え、左端は 2 つまで(横 ListView)。
+    // 字幕オン: 中央は文字起こし。字幕オフ: 画面共有以外のピン留めのタイル(上下スワイプ) (D-148)。
     await tester.tapAt(const Offset(180, 60));
     await tester.pumpAndSettle();
     expect(find.byKey(astellRoomCompactKey), findsOneWidget);
     expect(find.byKey(astellRoomHeaderKey), findsNothing);
     expect(find.widgetWithText(TextField, 'input..'), findsNothing);
-    expect(find.byTooltip('画面共有'), findsOneWidget);
+    expect(find.byTooltip('スピーカーミュート'), findsOneWidget);
     expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
-    expect(find.byKey(astellStickPagerKey), findsOneWidget);
-    await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, -80));
-    await tester.pumpAndSettle();
-    expect(find.text('こんばんは'), findsOneWidget); // テキスト共有のタイル
-    expect(find.text('テキスト'), findsOneWidget); // 種別ピル
-    // タップで展開。
+    expect(find.byTooltip('画面共有'), findsNothing); // 3 つ目は横スクロールの先
+    expect(find.byTooltip('退出'), findsOneWidget);
+    expect(find.byTooltip('共有する'), findsNothing);
+    expect(find.byKey(astellStickPagerKey), findsNothing); // 字幕オン = 文字起こし
     await tester.tap(find.byKey(astellRoomCompactKey));
     await tester.pumpAndSettle();
     expect(find.byKey(astellRoomHeaderKey), findsOneWidget);
+    await tester.tap(find.byTooltip('字幕オフ'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(180, 60));
+    await tester.pumpAndSettle();
+    expect(find.byKey(astellStickPagerKey), findsOneWidget);
+    await tester.drag(find.byKey(astellStickPagerKey), const Offset(0, -80));
+    await tester.pumpAndSettle();
+    expect(find.text('こんばんは'), findsOneWidget); // ピン留めしたテキストのタイル
+    expect(find.text('テキスト'), findsOneWidget); // 種別ピル
+    // タップで展開、字幕を戻す。
+    await tester.tap(find.byKey(astellRoomCompactKey));
+    await tester.pumpAndSettle();
+    expect(find.byKey(astellRoomHeaderKey), findsOneWidget);
+    await tester.tap(find.byTooltip('字幕オン'));
+    await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, 'input..'), findsOneWidget);
 
     // 画面共有のデモ (D-146): TiVard のタイルにマイク表示の左の画面共有枠 → タップで共有枠に表示、
-    // その間はマイク/画面共有ボタンが ピン解除 / 全画面 / 音量 に置き換わる。
+    // 左端に 全画面 が増える (D-148)。もう一度タップで外す。
     await tester.tap(inRoom('ホーム'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('画面共有を表示'), findsOneWidget);
@@ -321,13 +378,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
     expect(find.textContaining('TiVard の画面'), findsOneWidget);
-    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsNothing);
-    expect(find.byTooltip('共有枠から外す'), findsOneWidget); // 下段(パネル側は「…」に)
+    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
     expect(find.byTooltip('全画面'), findsWidgets);
-    await tester.tap(find.byTooltip('共有枠から外す'));
+    await tester.tap(find.byTooltip('共有枠に表示中'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer, isNull);
-    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
+    expect(find.byTooltip('全画面'), findsNothing);
 
     // 歯車 → 設定: 自動表示の種類と読み上げ音声(CosyVoice2-0.5B)。
     await tester.tap(find.byTooltip('設定'));
@@ -349,19 +405,16 @@ void main() {
     await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
 
-    // 画面共有モード → stick でマイク/画面は下から押し出されて消える。
+    // 自分の画面共有モード: 左端の 画面共有 が塗りつぶしに、展開の上部に印。
+    await scrollActions(tester, '画面共有');
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('画面共有'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.screenShareOn, isTrue);
-    await tester.tapAt(const Offset(180, 60));
-    await tester.pumpAndSettle();
-    expect(find.byKey(astellRoomCompactKey), findsOneWidget);
-    expect(find.byTooltip('画面共有オフ'), findsNothing);
     expect(find.textContaining('画面共有モード'), findsOneWidget);
-    await tester.tap(find.byKey(astellRoomCompactKey));
-    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('画面共有オフ'));
     await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.screenShareOn, isFalse);
 
     // ルーム: 参加メンバー全員。
     await tester.tap(inRoom('ルーム'));
@@ -384,8 +437,12 @@ void main() {
     await tester.tap(find.text('共有枠に表示'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
-    await tester.tap(find.byTooltip('共有枠から外す'));
+    // 共有枠パネルが上に出て行が下へ押されるので、見える所まで寄せてから外す。
+    await tester.ensureVisible(find.descendant(of: tivardRow, matching: find.byTooltip('共有枠に表示中')));
     await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: tivardRow, matching: find.byTooltip('共有枠に表示中')));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.viewingPeer, isNull);
 
     // チャット行の「…」(D-147): ピン留め / フォロー / ミュート / ブロック / 通報。
     await tester.tap(inRoom('チャット'));
@@ -419,6 +476,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AstellMediaViewer), findsOneWidget);
     await tester.tap(find.byType(CloseButton));
+    await tester.pumpAndSettle();
+    // stick の中央は字幕オフの時にピン留め/配信のタイル (D-148)。
+    await tester.tap(find.byTooltip('字幕オフ'));
     await tester.pumpAndSettle();
     await tester.tapAt(const Offset(180, 60));
     await tester.pumpAndSettle();

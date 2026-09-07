@@ -82,6 +82,7 @@ class AstellSessionState {
     this.screenShareOn = false,
     this.viewingPeerId,
     this.mutedPeerIds = const {},
+    this.speakerMuted = false,
     this.error,
   });
   final AstellRoom room;
@@ -105,6 +106,9 @@ class AstellSessionState {
 
   /// 手元でミュートしたピア (D-147)。音声は M5 後段なので今は表示と台帳だけ。
   final Set<String> mutedPeerIds;
+
+  /// スピーカーミュート (D-148): 受け取る音声を全部止める(音声は M5 後段)。
+  final bool speakerMuted;
   final String? error;
 
   bool isMuted(String peerId) => mutedPeerIds.contains(peerId);
@@ -124,6 +128,7 @@ class AstellSessionState {
     String? viewingPeerId,
     bool clearViewing = false,
     Set<String>? mutedPeerIds,
+    bool? speakerMuted,
     String? error,
     bool clearError = false,
   }) =>
@@ -139,6 +144,7 @@ class AstellSessionState {
         screenShareOn: screenShareOn ?? this.screenShareOn,
         viewingPeerId: clearViewing ? null : (viewingPeerId ?? this.viewingPeerId),
         mutedPeerIds: mutedPeerIds ?? this.mutedPeerIds,
+        speakerMuted: speakerMuted ?? this.speakerMuted,
         error: clearError ? null : (error ?? this.error),
       );
 }
@@ -269,6 +275,11 @@ class AstellSession extends Notifier<AstellSessionState?> {
     if (s == null || peer == null || s.viewingPeerId != null) return;
     if (!ref.read(astellAutoPlayProvider)) return;
     state = s.copyWith(viewingPeerId: peer.peerId);
+  }
+
+  /// スピーカーミュート切替 (D-148)。
+  void toggleSpeaker() {
+    if (state != null) state = state!.copyWith(speakerMuted: !state!.speakerMuted);
   }
 
   /// ピアを手元でミュート/解除 (D-147)。
