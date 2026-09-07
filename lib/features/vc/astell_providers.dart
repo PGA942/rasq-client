@@ -61,6 +61,9 @@ final astellAutoPlayProvider = Provider<bool>((ref) {
   return (area['autoplay.screen'] as bool?) ?? true;
 });
 
+/// 自分がフォローしている RASQ アカウント (D-149)。
+final astellFollowingProvider = FutureProvider<Set<String>>((ref) => ref.watch(astellClientProvider).following());
+
 /// VC ホームの 3 節。
 final astellHomeProvider = FutureProvider<AstellHome>((ref) => ref.watch(astellClientProvider).home());
 
@@ -73,6 +76,7 @@ class AstellSessionState {
   const AstellSessionState({
     required this.room,
     this.myPeerId,
+    this.myAccountId,
     this.peers = const [],
     this.shares = const [],
     this.transcripts = const [],
@@ -83,10 +87,14 @@ class AstellSessionState {
     this.viewingPeerId,
     this.mutedPeerIds = const {},
     this.speakerMuted = false,
+    this.forceMuted = false,
     this.error,
   });
   final AstellRoom room;
   final String? myPeerId;
+
+  /// 自分の RASQ アカウント id(welcome の `accountId`)。役割の判定に使う。
+  final String? myAccountId;
   final List<AstellPeer> peers;
   final List<AstellShare> shares;
   final List<AstellTranscript> transcripts;
@@ -109,15 +117,23 @@ class AstellSessionState {
 
   /// スピーカーミュート (D-148): 受け取る音声を全部止める(音声は M5 後段)。
   final bool speakerMuted;
+
+  /// モデレーターに全員向けミュートされている (D-149)。マイクは立てられない。
+  final bool forceMuted;
   final String? error;
 
   bool isMuted(String peerId) => mutedPeerIds.contains(peerId);
+
+  /// 役割 (D-149): オーナー / モデレーター(オーナー含む)。
+  bool get isOwner => myAccountId != null && room.ownerId == myAccountId;
+  bool get isModerator => room.isModerator(myAccountId);
 
   AstellPeer? get viewingPeer => viewingPeerId == null ? null : peers.where((p) => p.peerId == viewingPeerId && p.screenShare != null).firstOrNull;
 
   AstellSessionState copyWith({
     AstellRoom? room,
     String? myPeerId,
+    String? myAccountId,
     List<AstellPeer>? peers,
     List<AstellShare>? shares,
     List<AstellTranscript>? transcripts,
@@ -129,12 +145,14 @@ class AstellSessionState {
     bool clearViewing = false,
     Set<String>? mutedPeerIds,
     bool? speakerMuted,
+    bool? forceMuted,
     String? error,
     bool clearError = false,
   }) =>
       AstellSessionState(
         room: room ?? this.room,
         myPeerId: myPeerId ?? this.myPeerId,
+        myAccountId: myAccountId ?? this.myAccountId,
         peers: peers ?? this.peers,
         shares: shares ?? this.shares,
         transcripts: transcripts ?? this.transcripts,
@@ -145,6 +163,7 @@ class AstellSessionState {
         viewingPeerId: clearViewing ? null : (viewingPeerId ?? this.viewingPeerId),
         mutedPeerIds: mutedPeerIds ?? this.mutedPeerIds,
         speakerMuted: speakerMuted ?? this.speakerMuted,
+        forceMuted: forceMuted ?? this.forceMuted,
         error: clearError ? null : (error ?? this.error),
       );
 }
@@ -191,6 +210,9 @@ class AstellSession extends Notifier<AstellSessionState?> {
           connected: true,
           clearError: true,
           myPeerId: m['peerId'] as String?,
+          myAccountId: m['accountId'] as String?,
+          // S-006: welcome にルーム(モデレーター / ポリシー)が載る。
+          room: m['room'] is Map ? AstellRoom.fromJson((m['room'] as Map).cast<String, Object?>()) : null,
           peers: peersOf(m['peers']),
           shares: [for (final x in (m['shares'] as List? ?? const [])) if (x is Map) AstellShare.fromJson(x.cast<String, Object?>())],
           transcripts: [for (final x in (m['transcripts'] as List? ?? const [])) if (x is Map) AstellTranscript.fromJson(x.cast<String, Object?>())],
@@ -212,7 +234,11 @@ class AstellSession extends Notifier<AstellSessionState?> {
         final p = m['peer'];
         if (p is Map) {
           final peer = AstellPeer.fromJson(p.cast<String, Object?>());
-          if (peer.peerId == s.myPeerId) break; // 自分の状態の折り返しは参加者に入れない
+          if (peer.peerId == s.myPeerId) {
+            // 自分の状態の折り返しは参加者に入れない。強制ミュート (D-149) だけ拾う。
+            if (peer.mutedByMod != s.forceMuted) state = s.copyWith(forceMuted: peer.mutedByMod, micOn: peer.mutedByMod ? false : null);
+            break;
+          }
           final before = s.peers.where((e) => e.peerId == peer.peerId).firstOrNull;
           state = s.copyWith(
             peers: before != null ? [for (final e in s.peers) e.peerId == peer.peerId ? peer : e] : [...s.peers, peer],
@@ -235,6 +261,10 @@ class AstellSession extends Notifier<AstellSessionState?> {
         if (x is Map) state = s.copyWith(room: AstellRoom.fromJson(x.cast<String, Object?>()));
       case 'closed':
         state = s.copyWith(connected: false, error: 'ホストがルームを終了しました');
+      case 'kicked':
+        // モデレーションで追い出された (D-149)。接続は切る(状態は残して案内を出す)。
+        state = s.copyWith(connected: false, error: m['reason'] == 'banned' ? 'このルームから BAN されました' : 'モデレーターにルームから退出させられました');
+        unawaited(_teardown());
       case 'error':
         state = s.copyWith(error: m['message'] as String?);
       default:
@@ -264,9 +294,45 @@ class AstellSession extends Notifier<AstellSessionState?> {
   }
 
   void toggleMic() {
-    if (state == null) return;
+    if (state == null || state!.forceMuted) return; // 強制ミュート中は立てられない
     state = state!.copyWith(micOn: !state!.micOn);
     _sendState();
+  }
+
+  // ── モデレーション (D-149) ──
+  Future<void> setModerator(String accountId, bool moderator) async {
+    final s = state;
+    if (s == null) return;
+    final room = await ref.read(astellClientProvider).setModerator(s.room.id, accountId, moderator);
+    if (state != null) state = state!.copyWith(room: room);
+  }
+
+  Future<void> kick(String peerId) async {
+    final s = state;
+    if (s == null) return;
+    await ref.read(astellClientProvider).kickPeer(s.room.id, peerId);
+    if (state != null) state = state!.copyWith(peers: [for (final p in state!.peers) if (p.peerId != peerId) p], clearViewing: state!.viewingPeerId == peerId);
+  }
+
+  Future<void> mutePeer(String peerId, bool muted) async {
+    final s = state;
+    if (s == null) return;
+    final p = await ref.read(astellClientProvider).mutePeer(s.room.id, peerId, muted);
+    if (state != null) state = state!.copyWith(peers: [for (final e in state!.peers) e.peerId == peerId ? p : e]);
+  }
+
+  Future<List<AstellBan>> ban(String accountId, {String? reason}) async {
+    final s = state;
+    if (s == null) return const [];
+    final bans = await ref.read(astellClientProvider).ban(s.room.id, accountId, reason: reason);
+    if (state != null) state = state!.copyWith(peers: [for (final p in state!.peers) if (p.accountId != accountId) p]);
+    return bans;
+  }
+
+  Future<void> follow(String accountId, bool follow) async {
+    await ref.read(astellClientProvider).follow(accountId, follow);
+    ref.invalidate(astellFollowingProvider);
+    ref.invalidate(astellHomeProvider);
   }
 
   /// 自動再生 (D-147): 設定がオンで、共有枠が空いていれば [peer] の画面を出す。

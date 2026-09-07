@@ -3,9 +3,9 @@ import 'package:rasq_design/rasq_design.dart';
 
 import 'astell_models.dart';
 
-/// 共有メディアの全画面表示 (D-145)。黒背景 + 画像(動画は ▶ の静止画。
-/// 再生は M5 後段)。下段は**画像加工プラグインと同じ口**の並び — 保存 / 共有 /
-/// プラグイン(メディアビューワープラグイン D-004 ③ はストア統合後)。
+/// 共有メディアの全画面表示 (D-145 / D-149)。黒背景 + 画像(動画は ▶ の静止画。
+/// 再生は M5 後段)。インターフェースは**全画面表示プラグイン**(メディアビューワー
+/// D-004 ③)の口 — 加工(クロップ等)はしない。下段 = プラグイン / 保存 / 共有。
 class AstellMediaViewer extends StatelessWidget {
   const AstellMediaViewer({super.key, required this.share});
   final AstellShare share;
@@ -38,14 +38,13 @@ class AstellMediaViewer extends StatelessWidget {
             ]),
           ),
         ),
-        // 下段: 画像加工プラグインと同じ並び(左 = 編集系スロット、右 = 保存 / 共有)。
+        // 下段: 全画面表示プラグインの並び(左 = プラグインのスロット、右 = 保存 / 共有)。
         SafeArea(
           top: false,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
             child: Row(children: [
-              RasqIconButton(icon: Icons.extension_outlined, color: Colors.white54, tooltip: 'メディアビューワープラグイン(ストア統合後)', onPressed: null),
-              RasqIconButton(icon: Icons.crop_outlined, color: Colors.white54, tooltip: '加工(画像加工プラグイン)', onPressed: null),
+              RasqIconButton(icon: Icons.extension_outlined, color: Colors.white54, tooltip: '全画面表示プラグイン(ストア統合後)', onPressed: null),
               const Spacer(),
               Text('${share.authorName} が共有', style: RasqTypography.caption.copyWith(color: Colors.white70)),
               const Spacer(),

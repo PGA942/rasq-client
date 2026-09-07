@@ -187,6 +187,9 @@ class OrgateClient {
   Future<Map<String, Object?>> putJson(String path, Object body) async =>
       ((await _send(_req('PUT', path, body: body))) as Map?)?.cast<String, Object?>() ?? const {};
 
+  /// PUT で配列を受ける(AsTell の BAN 一覧など)。
+  Future<List<Object?>> putList(String path, Object body) async => (await _send(_req('PUT', path, body: body))) as List? ?? const [];
+
   Future<void> delete(String path) => _send(_req('DELETE', path));
 
   /// 配布物のバイト列。JSON ではないので `_send` は通さない。

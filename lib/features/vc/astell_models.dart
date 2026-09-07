@@ -38,6 +38,9 @@ class AstellRoom {
     this.thumbnailUrl,
     this.hostStream,
     this.ttsVoice,
+    this.joinPolicy = 'anyone',
+    this.sharePolicy = 'everyone',
+    this.moderators = const [],
   });
 
   final String id;
@@ -76,7 +79,19 @@ class AstellRoom {
   /// 読み上げのプリセット音声(CosyVoice2-0.5B)。null = 読み上げなし。
   final String? ttsVoice;
 
+  /// 参加できる人 (D-149): anyone | followers | following | mutual。
+  final String joinPolicy;
+
+  /// 共有できる人 (D-149): everyone | moderators。
+  final String sharePolicy;
+
+  /// モデレーターのアカウント id(オーナーは含まない)。
+  final List<String> moderators;
+
   bool get isOpen => closedAt == null;
+
+  /// オーナーかモデレーターか。
+  bool isModerator(String? accountId) => accountId != null && (accountId == ownerId || moderators.contains(accountId));
 
   UserSummary get owner => _rasqUser(id: ownerId, handle: ownerHandle, displayName: ownerDisplayName, avatarUrl: ownerAvatarUrl);
 
@@ -103,9 +118,12 @@ class AstellRoom {
         thumbnailUrl: _uri(j['thumbnailUrl']) ?? (j['hostStream'] is Map ? _uri((j['hostStream'] as Map)['thumbnailUrl']) : null),
         hostStream: j['hostStream'] is Map ? AstellHostStream.fromJson((j['hostStream'] as Map).cast<String, Object?>()) : null,
         ttsVoice: j['ttsVoice'] as String?,
+        joinPolicy: j['joinPolicy'] as String? ?? 'anyone',
+        sharePolicy: j['sharePolicy'] as String? ?? 'everyone',
+        moderators: [for (final m in (j['moderators'] as List? ?? const [])) if (m is String) m],
       );
 
-  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false}) => AstellRoom(
+  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false, String? joinPolicy, String? sharePolicy, List<String>? moderators}) => AstellRoom(
         id: id,
         ownerId: ownerId,
         ownerHandle: ownerHandle,
@@ -125,6 +143,39 @@ class AstellRoom {
         thumbnailUrl: thumbnailUrl,
         hostStream: clearHostStream ? null : (hostStream ?? this.hostStream),
         ttsVoice: clearTtsVoice ? null : (ttsVoice ?? this.ttsVoice),
+        joinPolicy: joinPolicy ?? this.joinPolicy,
+        sharePolicy: sharePolicy ?? this.sharePolicy,
+        moderators: moderators ?? this.moderators,
+      );
+}
+
+/// 参加ポリシーの表示 (D-149)。
+const astellJoinPolicies = <({String id, String label, String hint})>[
+  (id: 'anyone', label: '誰でも', hint: '公開ルームは誰でも参加できます'),
+  (id: 'followers', label: 'フォロワーだけ', hint: 'あなた(ホスト)を RASQ アカウントでフォローしている人'),
+  (id: 'following', label: 'フォロー中の人だけ', hint: 'あなたがフォローしている人'),
+  (id: 'mutual', label: '相互フォローだけ', hint: 'お互いにフォローしている人'),
+];
+const astellSharePolicies = <({String id, String label})>[
+  (id: 'everyone', label: '全員'),
+  (id: 'moderators', label: 'モデレーターだけ'),
+];
+
+/// BAN の 1 件 (D-149)。
+@immutable
+class AstellBan {
+  const AstellBan({required this.accountId, required this.handle, required this.displayName, this.reason, required this.createdAt});
+  final String accountId;
+  final String handle;
+  final String displayName;
+  final String? reason;
+  final DateTime createdAt;
+  factory AstellBan.fromJson(Map<String, Object?> j) => AstellBan(
+        accountId: j['accountId'] as String? ?? '',
+        handle: j['handle'] as String? ?? '',
+        displayName: j['displayName'] as String? ?? '',
+        reason: j['reason'] as String?,
+        createdAt: _date(j['createdAt']),
       );
 }
 
@@ -217,7 +268,7 @@ class AstellScreenShare {
 
 @immutable
 class AstellPeer {
-  const AstellPeer({required this.peerId, required this.accountId, required this.handle, required this.displayName, this.avatarUrl, this.micOn = false, this.speaking = false, this.screenShare});
+  const AstellPeer({required this.peerId, required this.accountId, required this.handle, required this.displayName, this.avatarUrl, this.micOn = false, this.speaking = false, this.screenShare, this.mutedByMod = false});
   final String peerId;
   final String accountId;
   final String handle;
@@ -231,6 +282,9 @@ class AstellPeer {
   /// このピアの画面共有。null = していない。
   final AstellScreenShare? screenShare;
 
+  /// モデレーターに全員向けミュートされている (D-149、`state.mutedByMod`)。
+  final bool mutedByMod;
+
   UserSummary get user => _rasqUser(id: accountId, handle: handle, displayName: displayName, avatarUrl: avatarUrl, presence: UserPresence.inVc);
 
   factory AstellPeer.fromJson(Map<String, Object?> j) {
@@ -243,10 +297,11 @@ class AstellPeer {
       avatarUrl: _uri(j['avatarUrl']),
       micOn: j['micOn'] == true || st['micOn'] == true,
       screenShare: st['screenShare'] is Map ? AstellScreenShare.fromJson((st['screenShare'] as Map).cast<String, Object?>()) : null,
+      mutedByMod: st['mutedByMod'] == true,
     );
   }
 
-  AstellPeer copyWith({bool? micOn, AstellScreenShare? screenShare, bool clearScreenShare = false}) => AstellPeer(
+  AstellPeer copyWith({bool? micOn, AstellScreenShare? screenShare, bool clearScreenShare = false, bool? mutedByMod}) => AstellPeer(
         peerId: peerId,
         accountId: accountId,
         handle: handle,
@@ -255,6 +310,7 @@ class AstellPeer {
         micOn: micOn ?? this.micOn,
         speaking: speaking,
         screenShare: clearScreenShare ? null : (screenShare ?? this.screenShare),
+        mutedByMod: mutedByMod ?? this.mutedByMod,
       );
 }
 

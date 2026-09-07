@@ -103,6 +103,14 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('ルーム')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_members.png'));
+    // モデレーターのメニュー (D-149): TiVard の「…」。
+    final tivardRow = find.ancestor(of: find.text('@tivard'), matching: find.byType(Row)).last;
+    await tester.tap(find.descendant(of: tivardRow, matching: find.byTooltip('メンバーの操作')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_members_menu.png'));
+    await tester.tap(find.text('全員向けにミュート'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_members_muted.png'));
     await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('共有欄にピン留め').first);
@@ -184,5 +192,14 @@ void main() {
     await tester.tap(find.byTooltip('VC を作成'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_create.png'));
+    // 作成 → オーナーの設定シート(モデレーション、D-149)。
+    await tester.enterText(find.widgetWithText(TextField, 'タイトル'), '夜の雑談');
+    await tester.tap(find.text('作成'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('設定'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('モデレーション(オーナー)'), 80, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_settings_owner.png'));
   });
 }

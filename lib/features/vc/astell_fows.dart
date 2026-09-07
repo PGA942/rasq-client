@@ -469,7 +469,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     final session = ref.read(astellSessionProvider.notifier);
     final room = s.room;
     final me = ref.watch(rasqAccountProvider);
-    final isOwner = me.account.handle == room.ownerHandle;
+    // 役割 (D-149): welcome の accountId で判定(モックは 'me')。
+    final isOwner = s.isOwner;
 
     Future<void> leave() async {
       await session.leave();
@@ -663,6 +664,28 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               value: auto[c.id] ?? false,
               onChanged: (v) => ref.read(settingsAreaProvider(astellSettingsArea).notifier).set('auto.${c.id}', v),
             ),
+          if (isOwner) ...[
+            const Divider(height: RasqSpacing.md),
+            _label(ctx, 'モデレーション(オーナー)'),
+            _label(ctx, '参加できる人'),
+            for (final p in astellJoinPolicies)
+              RasqRadioListTile<String>(title: p.label, subtitle: p.hint, value: p.id, groupValue: room.joinPolicy, onChanged: (_) => _patch({'joinPolicy': p.id})),
+            _label(ctx, '共有(チャットへの投稿)できる人'),
+            for (final p in astellSharePolicies) RasqRadioListTile<String>(title: p.label, value: p.id, groupValue: room.sharePolicy, onChanged: (_) => _patch({'sharePolicy': p.id})),
+            _label(ctx, 'モデレーター(${room.moderators.length})— 付与はメンバー行の「…」から'),
+            for (final m in room.moderators)
+              RasqListTile(
+                title: s.peers.where((p) => p.accountId == m).firstOrNull?.displayName ?? m,
+                subtitle: s.peers.where((p) => p.accountId == m).firstOrNull?.handle.let((h) => '@$h'),
+                chevron: false,
+                trailing: RasqIconButton(icon: Icons.person_remove_outlined, size: 20, tooltip: 'モデレーターを外す', onPressed: () => _guard(ctx, () => ref.read(astellSessionProvider.notifier).setModerator(m, false))),
+              ),
+            _BanList(roomId: room.id),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
+              child: Text('将来: アカウントの発信傾向(GoEmotion、rasq-judge)で入室を絞る/限定入室にする判定もここに入ります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            ),
+          ],
           const Divider(height: RasqSpacing.md),
           _label(ctx, '自動再生'),
           RasqSwitchListTile(
@@ -753,11 +776,21 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     final manager = ref.read(overlayManagerProvider);
     final session = ref.read(astellSessionProvider.notifier);
     final muted = s.isMuted(peer.peerId);
+    final following = ref.read(astellFollowingProvider).value?.contains(peer.accountId) ?? false;
+    final isOwnerPeer = peer.accountId == s.room.ownerId;
+    final isModPeer = s.room.moderators.contains(peer.accountId);
+    // モデレーション (D-149): キック / 全員向けミュートはモデレーター(オーナーには効かない、
+    // モデレーター同士はオーナーだけ)。付与 / BAN はオーナー。
+    final canModerate = s.isModerator && !isOwnerPeer && (!isModPeer || s.isOwner);
     final pick = await manager.showDropdown<String>(id: 'astell.peer.more', anchor: anchor, dense: true, items: [
       if (peer.screenShare != null) RasqDropdownItem(pinned ? 'ピン留めを外す' : '共有枠に表示', 'pin', accent: !pinned),
       if (peer.screenShare != null) const RasqDropdownItem('全画面', 'fullscreen'),
-      const RasqDropdownItem('フォロー', 'follow'),
+      RasqDropdownItem(following ? 'フォロー解除' : 'フォロー', 'follow'),
       RasqDropdownItem(muted ? 'ミュート解除' : 'ミュート', 'mute', accent: true),
+      if (canModerate) RasqDropdownItem(peer.mutedByMod ? '全員向けミュートを解除' : '全員向けにミュート', 'modmute', accent: true),
+      if (canModerate) const RasqDropdownItem('キック', 'kick', destructive: true),
+      if (s.isOwner && !isOwnerPeer) RasqDropdownItem(isModPeer ? 'モデレーターを外す' : 'モデレーターにする', 'moderator'),
+      if (s.isOwner && !isOwnerPeer) const RasqDropdownItem('BAN', 'ban', destructive: true),
       const RasqDropdownItem('ブロック', 'block', destructive: true),
       const RasqDropdownItem('通報', 'report', destructive: true),
     ]);
@@ -769,14 +802,31 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         await _openPeerScreen(context, peer);
       case 'mute':
         session.toggleMute(peer.peerId);
+      case 'modmute':
+        await _guard(context, () => session.mutePeer(peer.peerId, !peer.mutedByMod));
+      case 'kick':
+        await _guard(context, () => session.kick(peer.peerId));
+      case 'moderator':
+        await _guard(context, () => session.setModerator(peer.accountId, !isModPeer));
+      case 'ban':
+        await _guard(context, () => session.ban(peer.accountId));
       case 'follow':
-        _notYetCentral(context, 'RASQ アカウントのフォロー');
+        await _guard(context, () => session.follow(peer.accountId, !following));
       case 'block':
         _notYetCentral(context, 'ブロック');
       case 'report':
         _notYetCentral(context, '通報(rasq-judge)');
       default:
         break;
+    }
+  }
+
+  /// サーバーの 403 などを SnackBar に流す。
+  Future<void> _guard(BuildContext context, Future<void> Function() run) async {
+    try {
+      await run();
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('できませんでした: $e')));
     }
   }
 
@@ -787,21 +837,32 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     final session = ref.read(astellSessionProvider.notifier);
     final peer = e.handle == null ? null : s.peers.where((p) => p.handle == e.handle && p.peerId != s.myPeerId).firstOrNull;
     final muted = peer != null && s.isMuted(peer.peerId);
+    final following = peer != null && (ref.read(astellFollowingProvider).value?.contains(peer.accountId) ?? false);
+    final canModerate = peer != null && s.isModerator && peer.accountId != s.room.ownerId && (!s.room.moderators.contains(peer.accountId) || s.isOwner);
     final pick = await manager.showDropdown<String>(id: 'astell.chat.more', anchor: anchor, dense: true, items: [
-      if (e.id != null) RasqDropdownItem(e.pinned ? 'ピン留めを外す' : '共有欄にピン留め', 'pin', accent: !e.pinned),
-      RasqDropdownItem('フォロー', 'follow', enabled: peer != null),
+      if (e.id != null) RasqDropdownItem(e.pinned ? 'ピン留めを外す' : '共有欄にピン留め', 'pin', accent: !e.pinned, enabled: s.isModerator),
+      RasqDropdownItem(following ? 'フォロー解除' : 'フォロー', 'follow', enabled: peer != null),
       RasqDropdownItem(muted ? 'ミュート解除' : 'ミュート', 'mute', accent: true, enabled: peer != null),
+      if (canModerate) RasqDropdownItem(peer.mutedByMod ? '全員向けミュートを解除' : '全員向けにミュート', 'modmute', accent: true),
+      if (canModerate) const RasqDropdownItem('キック', 'kick', destructive: true),
+      if (peer != null && s.isOwner && peer.accountId != s.room.ownerId) const RasqDropdownItem('BAN', 'ban', destructive: true),
       RasqDropdownItem('ブロック', 'block', destructive: true, enabled: peer != null),
       RasqDropdownItem('通報', 'report', destructive: true, enabled: peer != null),
     ]);
     if (!context.mounted) return;
     switch (pick) {
       case 'pin':
-        await (e.transcript ? session.pinTranscript(e.id!, !e.pinned) : session.pinShare(e.id!, !e.pinned));
+        await _guard(context, () => e.transcript ? session.pinTranscript(e.id!, !e.pinned) : session.pinShare(e.id!, !e.pinned));
       case 'mute':
         if (peer != null) session.toggleMute(peer.peerId);
+      case 'modmute':
+        if (peer != null) await _guard(context, () => session.mutePeer(peer.peerId, !peer.mutedByMod));
+      case 'kick':
+        if (peer != null) await _guard(context, () => session.kick(peer.peerId));
+      case 'ban':
+        if (peer != null) await _guard(context, () => session.ban(peer.accountId));
       case 'follow':
-        _notYetCentral(context, 'RASQ アカウントのフォロー');
+        if (peer != null) await _guard(context, () => session.follow(peer.accountId, !following));
       case 'block':
         _notYetCentral(context, 'ブロック');
       case 'report':
@@ -857,8 +918,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               ])),
             ),
             if (e.draft) Text('下書き', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-            // ピン留め (D-146): 共有欄へ出す/外す。
-            if (e.id != null)
+            // ピン留め (D-146): 共有欄へ出す/外す。モデレーターだけ (D-149)。
+            if (e.id != null && s.isModerator)
               RasqIconButton(
                 icon: e.pinned ? Icons.push_pin : Icons.push_pin_outlined,
                 size: 16,
@@ -918,6 +979,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         _MemberRow(
           peer: p,
           self: p.peerId == s.myPeerId,
+          role: p.accountId == s.room.ownerId ? 'ホスト' : (s.room.moderators.contains(p.accountId) ? 'モデレーター' : null),
           muted: s.isMuted(p.peerId),
           viewing: s.viewingPeerId == p.peerId,
           onViewScreen: () => ref.read(astellSessionProvider.notifier).viewScreen(s.viewingPeerId == p.peerId ? null : p.peerId),
@@ -1001,7 +1063,9 @@ class _Footer extends StatelessWidget {
     // ── 左端 ──
     final actions = <Widget>[
       _RoundButton(icon: s.speakerMuted ? Icons.volume_off : Icons.volume_up, tooltip: s.speakerMuted ? 'スピーカーミュート解除' : 'スピーカーミュート', filled: s.speakerMuted ? RasqColors.danger : null, onPressed: onSpeaker),
-      _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン(音声は M5 後段)', filled: s.micOn ? RasqColors.accent : null, onPressed: onMic),
+      s.forceMuted
+          ? const _RoundButton(icon: Icons.mic_off, tooltip: 'モデレーターにミュートされています', filled: RasqColors.danger, onPressed: null)
+          : _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン(音声は M5 後段)', filled: s.micOn ? RasqColors.accent : null, onPressed: onMic),
       _RoundButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: onScreen),
       if (viewing != null) _RoundButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: onFullscreen),
       const _RoundButton(icon: Icons.extension_outlined, tooltip: 'プラグインアクション(未対応)', onPressed: null),
@@ -1378,9 +1442,12 @@ class _ViewingScreenPanel extends StatelessWidget {
 /// ルームタブの参加メンバー行 (D-147、ワイヤーフレーム右下): アバター(マイクのバッジ)+
 /// 名前 / @handle + 画面共有枠(タップで共有枠に表示)+ スピーカー(ミュート切替)+ 「…」。
 class _MemberRow extends StatelessWidget {
-  const _MemberRow({required this.peer, required this.self, required this.muted, required this.viewing, required this.onViewScreen, required this.onMute, required this.onMore});
+  const _MemberRow({required this.peer, required this.self, this.role, required this.muted, required this.viewing, required this.onViewScreen, required this.onMute, required this.onMore});
   final AstellPeer peer;
   final bool self;
+
+  /// 役割のピル (D-149): ホスト / モデレーター。
+  final String? role;
   final bool muted;
   final bool viewing;
   final VoidCallback onViewScreen;
@@ -1398,12 +1465,17 @@ class _MemberRow extends StatelessWidget {
           imageUrl: p.avatarUrl,
           size: RasqSizes.avatarLg,
           fallbackLabel: p.displayName,
-          badge: _StateBadge(icon: p.micOn ? Icons.mic : Icons.mic_off, color: p.micOn ? RasqColors.accent : scheme.outline),
+          // 全員向けミュート (D-149) は赤のマイクオフ。
+          badge: _StateBadge(icon: p.micOn ? Icons.mic : Icons.mic_off, color: p.mutedByMod ? RasqColors.danger : (p.micOn ? RasqColors.accent : scheme.outline)),
         ),
         const SizedBox(width: RasqSpacing.md),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(self ? '${p.displayName}(あなた)' : p.displayName, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Wrap(spacing: 4, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              Text(self ? '${p.displayName}(あなた)' : p.displayName, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (role != null) RasqPill(label: role!, color: role == 'ホスト' ? RasqColors.accent : RasqColors.sub, textColor: Colors.white),
+              if (p.mutedByMod) const RasqPill(label: '強制ミュート', color: RasqColors.danger, textColor: Colors.white),
+            ]),
             Text('@${p.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
           ]),
         ),
@@ -1458,7 +1530,57 @@ class _MemberRow extends StatelessWidget {
   }
 }
 
-/// RASQ アカウント側の機能(フォロー / ブロック / 通報)の口。Central の API は S-006 以降。
+/// 設定シートの BAN 一覧 (D-149): オーナーが解除できる。
+class _BanList extends ConsumerStatefulWidget {
+  const _BanList({required this.roomId});
+  final String roomId;
+  @override
+  ConsumerState<_BanList> createState() => _BanListState();
+}
+
+class _BanListState extends ConsumerState<_BanList> {
+  late Future<List<AstellBan>> _bans = ref.read(astellClientProvider).bans(widget.roomId);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return FutureBuilder<List<AstellBan>>(
+      future: _bans,
+      builder: (context, snap) {
+        final bans = snap.data ?? const <AstellBan>[];
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _label(context, 'BAN(${bans.length})— メンバー行の「…」から'),
+          if (snap.hasError) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('BAN 一覧を読めませんでした: ${snap.error}', style: RasqTypography.caption.copyWith(color: scheme.error))),
+          for (final b in bans)
+            RasqListTile(
+              title: b.displayName,
+              subtitle: '@${b.handle}${b.reason == null ? '' : ' — ${b.reason}'}',
+              chevron: false,
+              trailing: RasqIconButton(
+                icon: Icons.lock_open_outlined,
+                size: 20,
+                tooltip: 'BAN を解除',
+                onPressed: () async {
+                  await ref.read(astellClientProvider).unban(widget.roomId, b.accountId);
+                  if (!mounted) return;
+                  final next = ref.read(astellClientProvider).bans(widget.roomId);
+                  setState(() {
+                    _bans = next;
+                  });
+                },
+              ),
+            ),
+        ]);
+      },
+    );
+  }
+}
+
+extension<T extends Object> on T {
+  R let<R>(R Function(T it) f) => f(this);
+}
+
+/// RASQ アカウント側の機能(ブロック / 通報)の口。Central の API は S-006 以降。
 void _notYetCentral(BuildContext context, String what) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$what は RASQ アカウント(Central)側の実装後に入ります')));
 }

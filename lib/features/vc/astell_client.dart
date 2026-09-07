@@ -23,6 +23,18 @@ abstract class AstellClient {
   Future<AstellShare> pinShare(String roomId, String shareId, bool pinned);
   Future<AstellTranscript> pinTranscript(String roomId, String transcriptId, bool pinned);
 
+  /// モデレーション (D-149 / S-006)。付与・BAN はオーナー、キック・強制ミュートはモデレーター。
+  Future<AstellRoom> setModerator(String roomId, String accountId, bool moderator);
+  Future<void> kickPeer(String roomId, String peerId);
+  Future<AstellPeer> mutePeer(String roomId, String peerId, bool muted);
+  Future<List<AstellBan>> bans(String roomId);
+  Future<List<AstellBan>> ban(String roomId, String accountId, {String? reason});
+  Future<void> unban(String roomId, String accountId);
+
+  /// RASQ アカウントのフォロー (S-006、参加ポリシーの判定に使う)。
+  Future<Set<String>> following();
+  Future<void> follow(String accountId, bool follow);
+
   /// 読み上げ (D-146): プリセット音声の一覧と、音声の合成(未設定なら例外)。
   Future<AstellTtsVoices> ttsVoices();
   Future<List<int>> speak(String roomId, String text, {String? voice});
@@ -117,6 +129,8 @@ class MockAstellClient implements AstellClient {
           genres: const ['#打上会', 'スペースライフ', '宇宙', 'ロケット発射', '発射', 'バルバトスIII', '周回軌道'],
           createdAt: DateTime(2026, 9, 6, 20),
           peerCount: 5,
+          // あなたはこのルームのモデレーター (D-149 のデモ)。
+          moderators: const ['me'],
         ),
         AstellRoom(
           id: 'r-surprise',
@@ -176,7 +190,7 @@ class MockAstellClient implements AstellClient {
             const AstellPeer(peerId: 'p4', accountId: 'a4', handle: 'a4', displayName: 'ゲスト A'),
             const AstellPeer(peerId: 'p5', accountId: 'a5', handle: 'a5', displayName: 'ゲスト B'),
           ],
-        _ => const [AstellPeer(peerId: 'p1', accountId: 'host', handle: 'host', displayName: 'ホスト', micOn: true)],
+        _ => const [AstellPeer(peerId: 'p1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', micOn: true)],
       };
 
   @override
@@ -222,8 +236,13 @@ class MockAstellClient implements AstellClient {
       genres: (patch['genres'] as List?)?.cast<String>(),
       showSummary: patch['showSummary'] as bool?,
       autoGenre: patch['autoGenre'] as bool?,
+      joinPolicy: patch['joinPolicy'] as String?,
+      sharePolicy: patch['sharePolicy'] as String?,
+      ttsVoice: patch['ttsVoice'] as String?,
+      clearTtsVoice: patch.containsKey('ttsVoice') && patch['ttsVoice'] == null,
     );
     _rooms[i] = r;
+    _broadcast(id, {'type': 'room', 'room': _roomJson(r)});
     return r;
   }
 
@@ -271,6 +290,102 @@ class MockAstellClient implements AstellClient {
     return updated;
   }
 
+  // ── モデレーション (D-149) ──
+  final Map<String, List<AstellBan>> _bans = {};
+  final Map<String, Set<String>> _mutedByMod = {};
+  final Map<String, Set<String>> _kicked = {};
+  final Set<String> _following = {};
+
+  void _broadcast(String roomId, Map<String, Object?> m) {
+    for (final c in _connections.where((c) => c.roomId == roomId)) {
+      c._controller.add(m);
+    }
+  }
+
+  /// 接続中のピア(seed からキック済みを除く)。
+  List<AstellPeer> _livePeers(String roomId) => [for (final p in seededPeers(roomId)) if (!(_kicked[roomId]?.contains(p.peerId) ?? false)) p];
+
+  Map<String, Object?> _roomJson(AstellRoom r) => {
+        'id': r.id, 'ownerId': r.ownerId, 'ownerHandle': r.ownerHandle, 'ownerDisplayName': r.ownerDisplayName, 'ownerAvatarUrl': r.ownerAvatarUrl?.toString(),
+        'title': r.title, 'description': r.description, 'genres': r.genres, 'visibility': r.visibility, 'welcomeMessage': r.welcomeMessage,
+        'showSummary': r.showSummary, 'autoGenre': r.autoGenre, 'createdAt': r.createdAt.toIso8601String(), 'peerCount': r.peerCount, 'live': r.live,
+        'thumbnailUrl': r.thumbnailUrl?.toString(), 'hostStream': r.hostStream?.toJson(), 'ttsVoice': r.ttsVoice,
+        'joinPolicy': r.joinPolicy, 'sharePolicy': r.sharePolicy, 'moderators': r.moderators,
+      };
+
+  @override
+  Future<AstellRoom> setModerator(String roomId, String accountId, bool moderator) async {
+    final i = _rooms.indexWhere((r) => r.id == roomId);
+    if (i < 0) throw StateError('no such room');
+    final mods = {..._rooms[i].moderators};
+    if (moderator) {
+      mods.add(accountId);
+    } else {
+      mods.remove(accountId);
+    }
+    _rooms[i] = _rooms[i].copyWith(moderators: mods.toList());
+    _broadcast(roomId, {'type': 'room', 'room': _roomJson(_rooms[i])});
+    return _rooms[i];
+  }
+
+  @override
+  Future<void> kickPeer(String roomId, String peerId) async {
+    (_kicked[roomId] ??= {}).add(peerId);
+    _broadcast(roomId, {'type': 'peer-left', 'peerId': peerId});
+  }
+
+  @override
+  Future<AstellPeer> mutePeer(String roomId, String peerId, bool muted) async {
+    final p = _livePeers(roomId).where((p) => p.peerId == peerId).firstOrNull;
+    if (p == null) throw StateError('no such peer');
+    final set = _mutedByMod[roomId] ??= {};
+    if (muted) {
+      set.add(peerId);
+    } else {
+      set.remove(peerId);
+    }
+    final updated = p.copyWith(mutedByMod: muted, micOn: muted ? false : null);
+    _broadcast(roomId, {'type': 'peer-state', 'peer': _MockConnection._peerJson(updated)});
+    return updated;
+  }
+
+  @override
+  Future<List<AstellBan>> bans(String roomId) async => List.unmodifiable(_bans[roomId] ?? const []);
+
+  @override
+  Future<List<AstellBan>> ban(String roomId, String accountId, {String? reason}) async {
+    final list = _bans[roomId] ??= [];
+    final p = seededPeers(roomId).where((p) => p.accountId == accountId).firstOrNull;
+    if (!list.any((b) => b.accountId == accountId)) {
+      list.insert(0, AstellBan(accountId: accountId, handle: p?.handle ?? accountId, displayName: p?.displayName ?? accountId, reason: reason, createdAt: DateTime.now()));
+    }
+    // モデレーターなら外し、接続中なら追い出す。
+    final i = _rooms.indexWhere((r) => r.id == roomId);
+    if (i >= 0 && _rooms[i].moderators.contains(accountId)) {
+      _rooms[i] = _rooms[i].copyWith(moderators: [for (final m in _rooms[i].moderators) if (m != accountId) m]);
+      _broadcast(roomId, {'type': 'room', 'room': _roomJson(_rooms[i])});
+    }
+    for (final peer in _livePeers(roomId).where((p) => p.accountId == accountId)) {
+      await kickPeer(roomId, peer.peerId);
+    }
+    return List.unmodifiable(list);
+  }
+
+  @override
+  Future<void> unban(String roomId, String accountId) async => _bans[roomId]?.removeWhere((b) => b.accountId == accountId);
+
+  @override
+  Future<Set<String>> following() async => {..._following};
+
+  @override
+  Future<void> follow(String accountId, bool follow) async {
+    if (follow) {
+      _following.add(accountId);
+    } else {
+      _following.remove(accountId);
+    }
+  }
+
   @override
   Future<AstellTtsVoices> ttsVoices() async => const AstellTtsVoices(enabled: false, model: 'CosyVoice2-0.5B', voices: [
         (id: 'ja_female_1', label: '女性 1(日本語)'),
@@ -302,11 +417,13 @@ class _MockConnection implements AstellConnection {
   _MockConnection(this.client, this.roomId) {
     // welcome は購読が始まってから流す(broadcast は購読前のイベントを捨てる)。
     _controller = StreamController<Map<String, Object?>>.broadcast(onListen: () {
-      final peers = MockAstellClient.seededPeers(roomId);
+      final muted = client._mutedByMod[roomId] ?? const <String>{};
+      final peers = [for (final p in client._livePeers(roomId)) muted.contains(p.peerId) ? p.copyWith(mutedByMod: true, micOn: false) : p];
       client._transcripts[roomId] ??= MockAstellClient.seededTranscripts(roomId);
       _controller.add({
         'type': 'welcome',
         'peerId': MockAstellClient._me.peerId,
+        'accountId': MockAstellClient._me.accountId,
         'peers': [for (final p in peers) _peerJson(p)],
         'shares': [for (final s in client._shares[roomId] ?? const <AstellShare>[]) _shareJson(s)],
         'transcripts': [for (final t in client._transcripts[roomId] ?? const <AstellTranscript>[]) _transcriptJson(t)],
@@ -318,7 +435,7 @@ class _MockConnection implements AstellConnection {
   late final StreamController<Map<String, Object?>> _controller;
   var _n = 0;
 
-  static Map<String, Object?> _peerJson(AstellPeer p) => {'peerId': p.peerId, 'accountId': p.accountId, 'handle': p.handle, 'displayName': p.displayName, 'state': {'micOn': p.micOn, 'screenShare': p.screenShare?.toJson()}};
+  static Map<String, Object?> _peerJson(AstellPeer p) => {'peerId': p.peerId, 'accountId': p.accountId, 'handle': p.handle, 'displayName': p.displayName, 'state': {'micOn': p.micOn, 'screenShare': p.screenShare?.toJson(), 'mutedByMod': p.mutedByMod}};
   static Map<String, Object?> _shareJson(AstellShare s) => {'id': s.id, 'accountId': s.accountId, 'handle': s.handle, 'displayName': s.displayName, 'kind': s.kind, 'payload': s.payload, 'pinned': s.pinned, 'createdAt': s.createdAt.toIso8601String()};
   static Map<String, Object?> _transcriptJson(AstellTranscript t) => {'id': t.id, 'accountId': t.accountId, 'handle': t.handle, 'displayName': t.displayName, 'text': t.text, 'lang': t.lang, 'pinned': t.pinned, 'createdAt': t.createdAt.toIso8601String()};
 
@@ -406,6 +523,40 @@ class HttpAstellClient implements AstellClient {
   @override
   Future<AstellTranscript> pinTranscript(String roomId, String transcriptId, bool pinned) async =>
       AstellTranscript.fromJson(await _client.putJson('/astell/rooms/${Uri.encodeComponent(roomId)}/transcripts/${Uri.encodeComponent(transcriptId)}/pin', {'pinned': pinned}));
+
+  String _room(String id) => '/astell/rooms/${Uri.encodeComponent(id)}';
+
+  @override
+  Future<AstellRoom> setModerator(String roomId, String accountId, bool moderator) async {
+    final path = '${_room(roomId)}/moderators/${Uri.encodeComponent(accountId)}';
+    if (moderator) return AstellRoom.fromJson(await _client.putJson(path, const {}));
+    await _client.delete(path);
+    return AstellRoom.fromJson(await _client.getJson(_room(roomId)));
+  }
+
+  @override
+  Future<void> kickPeer(String roomId, String peerId) => _client.postJson('${_room(roomId)}/peers/${Uri.encodeComponent(peerId)}/kick', const {});
+
+  @override
+  Future<AstellPeer> mutePeer(String roomId, String peerId, bool muted) async =>
+      AstellPeer.fromJson(await _client.putJson('${_room(roomId)}/peers/${Uri.encodeComponent(peerId)}/mute', {'muted': muted}));
+
+  @override
+  Future<List<AstellBan>> bans(String roomId) async => _list(await _client.getList('${_room(roomId)}/bans'), AstellBan.fromJson);
+
+  @override
+  Future<List<AstellBan>> ban(String roomId, String accountId, {String? reason}) async =>
+      _list(await _client.putList('${_room(roomId)}/bans/${Uri.encodeComponent(accountId)}', {'reason': ?reason}), AstellBan.fromJson);
+
+  @override
+  Future<void> unban(String roomId, String accountId) => _client.delete('${_room(roomId)}/bans/${Uri.encodeComponent(accountId)}');
+
+  @override
+  Future<Set<String>> following() async => {for (final e in await _client.getList('/me/following')) if (e is Map && e['id'] is String) e['id'] as String};
+
+  @override
+  Future<void> follow(String accountId, bool follow) =>
+      follow ? _client.putJson('/me/following/${Uri.encodeComponent(accountId)}', const {}) : _client.delete('/me/following/${Uri.encodeComponent(accountId)}');
 
   @override
   Future<AstellTtsVoices> ttsVoices() async => AstellTtsVoices.fromJson(await _client.getJson('/astell/tts/voices'));
