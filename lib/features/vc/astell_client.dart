@@ -35,6 +35,18 @@ abstract class AstellClient {
   Future<Set<String>> following();
   Future<void> follow(String accountId, bool follow);
 
+  /// 招待 (D-150 / S-007): フォロワー一覧 / ハンドルで探す / 招待 / 辞退。
+  Future<List<AstellFollowEntry>> followers();
+  Future<AstellFollowEntry?> lookupAccount(String handle);
+  Future<List<String>> invite(String roomId, List<String> accountIds);
+  Future<void> declineInvite(String roomId);
+
+  /// ブロック / 通報 / 発信傾向 (D-150 / S-007)。
+  Future<Set<String>> blocks();
+  Future<void> block(String accountId, bool block);
+  Future<void> report({String? targetAccountId, String? roomId, String? shareId, required String reason, String? note});
+  Future<AstellTendency> tendency(String accountId);
+
   /// 読み上げ (D-146): プリセット音声の一覧と、音声の合成(未設定なら例外)。
   Future<AstellTtsVoices> ttsVoices();
   Future<List<int>> speak(String roomId, String text, {String? voice});
@@ -197,7 +209,9 @@ class MockAstellClient implements AstellClient {
   Future<AstellHome> home() async {
     final open = [for (final r in _rooms) if (r.isOpen && r.visibility == 'public') r];
     final trending = [...open]..sort((a, b) => b.peerCount.compareTo(a.peerCount));
-    return AstellHome(recommended: open.take(10).toList(), trending: trending.take(10).toList(), following: const []);
+    final following = [for (final r in open) if (_following.contains(r.ownerId)) r];
+    final invited = [for (final r in _rooms) if (r.isOpen && (_invites[r.id]?.contains('me') ?? false)) r];
+    return AstellHome(recommended: open.take(10).toList(), trending: trending.take(10).toList(), following: following, invited: invited);
   }
 
   @override
@@ -238,6 +252,7 @@ class MockAstellClient implements AstellClient {
       autoGenre: patch['autoGenre'] as bool?,
       joinPolicy: patch['joinPolicy'] as String?,
       sharePolicy: patch['sharePolicy'] as String?,
+      tendencyFilter: patch['tendencyFilter'] as bool?,
       ttsVoice: patch['ttsVoice'] as String?,
       clearTtsVoice: patch.containsKey('ttsVoice') && patch['ttsVoice'] == null,
     );
@@ -310,7 +325,7 @@ class MockAstellClient implements AstellClient {
         'title': r.title, 'description': r.description, 'genres': r.genres, 'visibility': r.visibility, 'welcomeMessage': r.welcomeMessage,
         'showSummary': r.showSummary, 'autoGenre': r.autoGenre, 'createdAt': r.createdAt.toIso8601String(), 'peerCount': r.peerCount, 'live': r.live,
         'thumbnailUrl': r.thumbnailUrl?.toString(), 'hostStream': r.hostStream?.toJson(), 'ttsVoice': r.ttsVoice,
-        'joinPolicy': r.joinPolicy, 'sharePolicy': r.sharePolicy, 'moderators': r.moderators,
+        'joinPolicy': r.joinPolicy, 'sharePolicy': r.sharePolicy, 'moderators': r.moderators, 'tendencyFilter': r.tendencyFilter,
       };
 
   @override
@@ -376,6 +391,86 @@ class MockAstellClient implements AstellClient {
 
   @override
   Future<Set<String>> following() async => {..._following};
+
+  // ── 招待 / ブロック / 通報 / 発信傾向 (D-150) ──
+  static const seededFollowers = [
+    AstellFollowEntry(id: 'douglas', handle: 'douglas', displayName: 'ダグラス'),
+    AstellFollowEntry(id: 'tivard', handle: 'tivard', displayName: 'TiVard'),
+    AstellFollowEntry(id: 'yamahaya', handle: 'yamahaya', displayName: '山ハヤ'),
+  ];
+  final Map<String, Set<String>> _invites = {'r-surprise': {'me'}};
+  final Set<String> _blocks = {};
+  final List<Map<String, Object?>> reports = [];
+
+  /// テスト/デバッグ用: ルームへの招待。
+  Set<String> invitesOf(String roomId) => {...?_invites[roomId]};
+
+  @override
+  Future<List<AstellFollowEntry>> followers() async => seededFollowers;
+
+  @override
+  Future<AstellFollowEntry?> lookupAccount(String handle) async {
+    final h = handle.trim().replaceFirst('@', '').toLowerCase();
+    for (final f in seededFollowers) {
+      if (f.handle == h) return f;
+    }
+    for (final r in _rooms) {
+      for (final p in seededPeers(r.id)) {
+        if (p.handle == h) return AstellFollowEntry(id: p.accountId, handle: p.handle, displayName: p.displayName, avatarUrl: p.avatarUrl);
+      }
+      if (r.ownerHandle == h) return AstellFollowEntry(id: r.ownerId, handle: r.ownerHandle, displayName: r.ownerDisplayName, avatarUrl: r.ownerAvatarUrl);
+    }
+    return null;
+  }
+
+  @override
+  Future<List<String>> invite(String roomId, List<String> accountIds) async {
+    final set = _invites[roomId] ??= {};
+    final done = <String>[];
+    for (final id in accountIds) {
+      if (set.add(id)) done.add(id);
+    }
+    return done;
+  }
+
+  @override
+  Future<void> declineInvite(String roomId) async => _invites[roomId]?.remove('me');
+
+  @override
+  Future<Set<String>> blocks() async => {..._blocks};
+
+  @override
+  Future<void> block(String accountId, bool block) async {
+    if (block) {
+      _blocks.add(accountId);
+      _following.remove(accountId);
+    } else {
+      _blocks.remove(accountId);
+    }
+  }
+
+  @override
+  Future<void> report({String? targetAccountId, String? roomId, String? shareId, required String reason, String? note}) async {
+    reports.add({'targetAccountId': targetAccountId, 'roomId': roomId, 'shareId': shareId, 'reason': reason, 'note': note});
+  }
+
+  @override
+  Future<AstellTendency> tendency(String accountId) async {
+    // サーバーのダミー判定と同じ決め打ち: 表示名に hostile / 荒らし。
+    String? name;
+    for (final r in _rooms) {
+      for (final p in seededPeers(r.id)) {
+        if (p.accountId == accountId) name = p.displayName;
+      }
+    }
+    final hostile = (name ?? '').toLowerCase().contains('hostile') || (name ?? '').contains('荒らし');
+    return AstellTendency(
+      accountId: accountId,
+      labels: hostile ? const [(label: 'anger', score: 0.62), (label: 'annoyance', score: 0.48), (label: 'disgust', score: 0.31)] : const [(label: 'neutral', score: 0.71), (label: 'joy', score: 0.22), (label: 'curiosity', score: 0.18)],
+      hostile: hostile,
+      source: 'dummy',
+    );
+  }
 
   @override
   Future<void> follow(String accountId, bool follow) async {
@@ -557,6 +652,41 @@ class HttpAstellClient implements AstellClient {
   @override
   Future<void> follow(String accountId, bool follow) =>
       follow ? _client.putJson('/me/following/${Uri.encodeComponent(accountId)}', const {}) : _client.delete('/me/following/${Uri.encodeComponent(accountId)}');
+
+  @override
+  Future<List<AstellFollowEntry>> followers() async => _list(await _client.getList('/me/followers'), AstellFollowEntry.fromJson);
+
+  @override
+  Future<AstellFollowEntry?> lookupAccount(String handle) async {
+    try {
+      final j = await _client.getJson('/accounts/${Uri.encodeComponent(handle.trim().replaceFirst('@', ''))}');
+      return AstellFollowEntry.fromJson(j);
+    } on OrgateException catch (e) {
+      if (e.code.code == '404') return null;
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<String>> invite(String roomId, List<String> accountIds) async =>
+      [for (final e in await _client.postList('${_room(roomId)}/invites', {'accountIds': accountIds})) if (e is String) e];
+
+  @override
+  Future<void> declineInvite(String roomId) => _client.delete('/astell/invites/${Uri.encodeComponent(roomId)}');
+
+  @override
+  Future<Set<String>> blocks() async => {for (final e in await _client.getList('/me/blocks')) if (e is Map && e['id'] is String) e['id'] as String};
+
+  @override
+  Future<void> block(String accountId, bool block) =>
+      block ? _client.putJson('/me/blocks/${Uri.encodeComponent(accountId)}', const {}) : _client.delete('/me/blocks/${Uri.encodeComponent(accountId)}');
+
+  @override
+  Future<void> report({String? targetAccountId, String? roomId, String? shareId, required String reason, String? note}) =>
+      _client.postJson('/reports', {'targetAccountId': ?targetAccountId, 'roomId': ?roomId, 'shareId': ?shareId, 'reason': reason, 'note': ?note});
+
+  @override
+  Future<AstellTendency> tendency(String accountId) async => AstellTendency.fromJson(await _client.getJson('/judge/tendency/${Uri.encodeComponent(accountId)}'));
 
   @override
   Future<AstellTtsVoices> ttsVoices() async => AstellTtsVoices.fromJson(await _client.getJson('/astell/tts/voices'));

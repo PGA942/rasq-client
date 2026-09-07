@@ -187,6 +187,9 @@ class OrgateClient {
   Future<Map<String, Object?>> putJson(String path, Object body) async =>
       ((await _send(_req('PUT', path, body: body))) as Map?)?.cast<String, Object?>() ?? const {};
 
+  /// POST で配列を受ける(AsTell の招待の結果など)。
+  Future<List<Object?>> postList(String path, Object body) async => (await _send(_req('POST', path, body: body))) as List? ?? const [];
+
   /// PUT で配列を受ける(AsTell の BAN 一覧など)。
   Future<List<Object?>> putList(String path, Object body) async => (await _send(_req('PUT', path, body: body))) as List? ?? const [];
 

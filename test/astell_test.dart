@@ -13,6 +13,7 @@ import 'package:rasq_client/features/vc/astell_media_viewer.dart';
 import 'package:rasq_client/features/vc/astell_models.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/astell_tile.dart';
+import 'package:rasq_client/features/vc/vc_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -173,10 +174,21 @@ void main() {
     await pump(tester);
     await openVc(tester);
 
+    // 招待 (D-150): 招待されているルームの行 → 辞退で消える。
+    expect(find.text('招待'), findsOneWidget);
+    expect(find.text('サプライズ'), findsWidgets);
+    expect(find.textContaining('よもぎもち から招待'), findsOneWidget);
     expect(find.text('おすすめ'), findsOneWidget);
     expect(find.text('トレンド'), findsOneWidget);
-    expect(find.text('フォロー中'), findsOneWidget);
     expect(find.byType(AstellTile), findsWidgets);
+    await tester.scrollUntilVisible(find.text('フォロー中'), 200, scrollable: find.descendant(of: find.byType(VcScreen), matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
+    expect(find.text('フォロー中'), findsOneWidget);
+    await tester.drag(find.text('トレンド'), const Offset(0, 600));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('辞退'));
+    await tester.pumpAndSettle();
+    expect(find.text('招待'), findsNothing);
     // おすすめの先頭 = ダグラス「打ち上げの打ち上げ」(要約 + ジャンル)。
     expect(find.text('ダグラス'), findsWidgets);
     expect(find.text('打ち上げの打ち上げ'), findsWidgets);
@@ -186,7 +198,24 @@ void main() {
     // 要約なしのタイルは空表示、LIVE のタイルにはバッジ。
     expect(find.text('デスクリプションが提供されていません。'), findsWidgets);
     expect(find.text('LIVE'), findsWidgets);
+    await tester.scrollUntilVisible(find.text('フォロー中のユーザーの VC はありません'), 200, scrollable: find.descendant(of: find.byType(VcScreen), matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
     expect(find.text('フォロー中のユーザーの VC はありません'), findsOneWidget);
+    // タイルの「…」→ 報告 → 通報シート → 送信 (D-150)。
+    await tester.drag(find.text('フォロー中'), const Offset(0, 600));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('メニュー').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('報告'));
+    await tester.pumpAndSettle();
+    expect(find.text('通報'), findsOneWidget);
+    await tester.tap(find.text('嫌がらせ・暴言'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('通報する'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('通報しました'), findsOneWidget);
+    final mock = ProviderScope.containerOf(tester.element(find.byType(VcScreen))).read(astellClientProvider) as MockAstellClient;
+    expect(mock.reports.single['reason'], 'harassment');
   });
 
   testWidgets('見てみる → 参加 FOW(参加メンバー / ざっくり要約 / ジャンル / 参加)→ 参加 → ルーム FOW(共有 / 退出)', (tester) async {
@@ -481,6 +510,33 @@ void main() {
     await tester.tap(find.text('ミュート'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.isMuted('p1'), isTrue);
+    // ブロック (D-150): ダグラスの発言が隠れ、解除で戻る。
+    await tester.tap(find.byTooltip('チャットの操作').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ブロック'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('ブロック中のユーザーの発言'), findsOneWidget);
+    expect(find.textContaining('いい感じに行ったねー'), findsNothing);
+    await tester.tap(find.byTooltip('チャットの操作').first); // 先頭は山ハヤ(ダグラスは隠れている)
+    await tester.pumpAndSettle();
+    expect(find.text('ブロック'), findsOneWidget); // 山ハヤは未ブロック
+    await tester.tap(find.text('通報'));
+    await tester.pumpAndSettle();
+    expect(find.text('通報する'), findsOneWidget);
+    await tester.tap(find.text('キャンセル'));
+    await tester.pumpAndSettle();
+    await tester.tap(inRoom('ルーム'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.text('@tivard'), const Offset(0, 300));
+    await tester.pumpAndSettle();
+    final douglasRow = find.ancestor(of: find.text('@douglas'), matching: find.byType(Row)).last;
+    await tester.tap(find.descendant(of: douglasRow, matching: find.byTooltip('メンバーの操作')));
+    await tester.pumpAndSettle();
+    expect(find.text('ブロック解除'), findsOneWidget);
+    expect(find.text('発信傾向を見る(ダミー判定)'), findsOneWidget);
+    await tester.tap(find.text('ブロック解除'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellBlocksProvider).value, isEmpty);
 
     // 退出でセッションが消える。
     await tester.tap(find.text('退出'));
@@ -530,6 +586,23 @@ void main() {
     expect(find.text('タイトルを入力してください'), findsOneWidget);
 
     await tester.enterText(find.widgetWithText(TextField, 'タイトル'), '夜の雑談');
+    // フォロワーを招待 (D-150): チップで選ぶ + 検索して追加。
+    await tester.tap(find.byTooltip('ダグラス を招待'));
+    await tester.pumpAndSettle();
+    expect(find.text('フォロワーを招待(1)'), findsOneWidget);
+    // 「検索して追加」は横並びの右端(横スクロールの先)。
+    await tester.scrollUntilVisible(find.byTooltip('検索して追加'), 80, scrollable: find.ancestor(of: find.byTooltip('ダグラス の招待をやめる'), matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('検索して追加'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '@handle(RASQ アカウント)'), '@nobody');
+    await tester.tap(find.text('招待に追加'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('見つかりませんでした'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, '@handle(RASQ アカウント)'), '@spacequant');
+    await tester.tap(find.text('招待に追加'));
+    await tester.pumpAndSettle();
+    expect(find.text('フォロワーを招待(2)'), findsOneWidget);
     await tester.tap(find.text('参加時にウェルカムメッセージを表示する'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'ウェルカムメッセージを設定..'), 'ようこそ');
@@ -541,6 +614,7 @@ void main() {
     expect(s.room.welcomeMessage, 'ようこそ');
     expect(find.byType(AstellRoomBody), findsOneWidget);
     expect(s.isOwner, isTrue);
+    expect((container.read(astellClientProvider) as MockAstellClient).invitesOf(s.room.id), {'douglas', 'spacequant'});
 
     // オーナーのモデレーション (D-149): ダグラスをモデレーターに → 役割ピル / 設定の一覧に載る。
     Finder inRoom(String t) => find.descendant(of: find.byType(AstellRoomBody), matching: find.text(t));
@@ -568,12 +642,20 @@ void main() {
     await tester.tap(find.text('モデレーターだけ'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.room.sharePolicy, 'moderators');
-    await tester.scrollUntilVisible(find.byTooltip('モデレーターを外す'), 80, scrollable: sheet());
+    await tester.scrollUntilVisible(find.text('モデレーター(1)— 付与はメンバー行の「…」から'), 80, scrollable: sheet());
     await tester.pumpAndSettle();
     expect(find.text('モデレーター(1)— 付与はメンバー行の「…」から'), findsOneWidget);
+    await tester.scrollUntilVisible(find.byTooltip('モデレーターを外す'), 80, scrollable: sheet());
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('モデレーターを外す'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.room.moderators, isEmpty);
+    // 発信傾向フィルター(ダミー判定)。
+    await tester.scrollUntilVisible(find.widgetWithText(RasqSwitchListTile, '発信傾向で入室を絞る(ダミー判定)'), 80, scrollable: sheet());
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(RasqSwitchListTile, '発信傾向で入室を絞る(ダミー判定)'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.room.tendencyFilter, isTrue);
     await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
     // BAN → 参加者から消え、設定の BAN 一覧に載る → 解除。

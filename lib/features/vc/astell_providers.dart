@@ -64,6 +64,12 @@ final astellAutoPlayProvider = Provider<bool>((ref) {
 /// 自分がフォローしている RASQ アカウント (D-149)。
 final astellFollowingProvider = FutureProvider<Set<String>>((ref) => ref.watch(astellClientProvider).following());
 
+/// ブロックしている RASQ アカウント (D-150)。発言を隠す / ホストならそのルームに入れない。
+final astellBlocksProvider = FutureProvider<Set<String>>((ref) => ref.watch(astellClientProvider).blocks());
+
+/// フォロワー(作成 FOW の「フォロワーを招待」)。
+final astellFollowersProvider = FutureProvider<List<AstellFollowEntry>>((ref) => ref.watch(astellClientProvider).followers());
+
 /// VC ホームの 3 節。
 final astellHomeProvider = FutureProvider<AstellHome>((ref) => ref.watch(astellClientProvider).home());
 
@@ -333,6 +339,13 @@ class AstellSession extends Notifier<AstellSessionState?> {
     await ref.read(astellClientProvider).follow(accountId, follow);
     ref.invalidate(astellFollowingProvider);
     ref.invalidate(astellHomeProvider);
+  }
+
+  /// ブロック (D-150): Central に残し、フォローも切れる。発言の非表示は表示側で `astellBlocksProvider`。
+  Future<void> block(String accountId, bool block) async {
+    await ref.read(astellClientProvider).block(accountId, block);
+    ref.invalidate(astellBlocksProvider);
+    ref.invalidate(astellFollowingProvider);
   }
 
   /// 自動再生 (D-147): 設定がオンで、共有枠が空いていれば [peer] の画面を出す。

@@ -681,9 +681,11 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
                 trailing: RasqIconButton(icon: Icons.person_remove_outlined, size: 20, tooltip: 'モデレーターを外す', onPressed: () => _guard(ctx, () => ref.read(astellSessionProvider.notifier).setModerator(m, false))),
               ),
             _BanList(roomId: room.id),
+            _label(ctx, '発信傾向'),
+            RasqSwitchListTile(title: '発信傾向で入室を絞る(ダミー判定)', value: room.tendencyFilter, onChanged: (v) => _patch({'tendencyFilter': v})),
             Padding(
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
-              child: Text('将来: アカウントの発信傾向(GoEmotion、rasq-judge)で入室を絞る/限定入室にする判定もここに入ります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+              child: Text('本命は rasq-judge の GoEmotion(発信の感情傾向)で、学習が要るので今はサーバーのダミー判定(表示名に hostile / 荒らし を含む人だけ敵対的)。オンにすると敵対的と判定された人は入室できません。メンバー行の「…」から判定結果を見られます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ),
           ],
           const Divider(height: RasqSpacing.md),
@@ -764,7 +766,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       case 'delete':
         await ref.read(astellSessionProvider.notifier).removeShare(share.id);
       case 'report':
-        _notYet(context, '共有の報告(rasq-judge)');
+        await showAstellReportSheet(context, ref, shareId: share.id, roomId: ref.read(astellSessionProvider)?.room.id, targetAccountId: share.accountId == 'me' ? null : share.accountId, what: '共有「${share.headline}」');
       default:
         break;
     }
@@ -777,6 +779,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     final session = ref.read(astellSessionProvider.notifier);
     final muted = s.isMuted(peer.peerId);
     final following = ref.read(astellFollowingProvider).value?.contains(peer.accountId) ?? false;
+    final blocked = ref.read(astellBlocksProvider).value?.contains(peer.accountId) ?? false;
     final isOwnerPeer = peer.accountId == s.room.ownerId;
     final isModPeer = s.room.moderators.contains(peer.accountId);
     // モデレーション (D-149): キック / 全員向けミュートはモデレーター(オーナーには効かない、
@@ -791,7 +794,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       if (canModerate) const RasqDropdownItem('キック', 'kick', destructive: true),
       if (s.isOwner && !isOwnerPeer) RasqDropdownItem(isModPeer ? 'モデレーターを外す' : 'モデレーターにする', 'moderator'),
       if (s.isOwner && !isOwnerPeer) const RasqDropdownItem('BAN', 'ban', destructive: true),
-      const RasqDropdownItem('ブロック', 'block', destructive: true),
+      if (s.isModerator) const RasqDropdownItem('発信傾向を見る(ダミー判定)', 'tendency'),
+      RasqDropdownItem(blocked ? 'ブロック解除' : 'ブロック', 'block', destructive: !blocked),
       const RasqDropdownItem('通報', 'report', destructive: true),
     ]);
     if (!context.mounted) return;
@@ -812,10 +816,18 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         await _guard(context, () => session.ban(peer.accountId));
       case 'follow':
         await _guard(context, () => session.follow(peer.accountId, !following));
+      case 'tendency':
+        await _guard(context, () async {
+          final t = await ref.read(astellClientProvider).tendency(peer.accountId);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${peer.displayName} の発信傾向(${t.source}): ${t.summary}${t.hostile ? ' — 敵対的' : ''}')));
+          }
+        });
       case 'block':
-        _notYetCentral(context, 'ブロック');
+        await _guard(context, () => session.block(peer.accountId, !blocked));
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(blocked ? '${peer.displayName} のブロックを解除しました' : '${peer.displayName} をブロックしました(発言を隠し、あなたのルームには入れません)')));
       case 'report':
-        _notYetCentral(context, '通報(rasq-judge)');
+        await showAstellReportSheet(context, ref, targetAccountId: peer.accountId, roomId: s.room.id, what: peer.displayName);
       default:
         break;
     }
@@ -838,6 +850,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     final peer = e.handle == null ? null : s.peers.where((p) => p.handle == e.handle && p.peerId != s.myPeerId).firstOrNull;
     final muted = peer != null && s.isMuted(peer.peerId);
     final following = peer != null && (ref.read(astellFollowingProvider).value?.contains(peer.accountId) ?? false);
+    final blocked = peer != null && (ref.read(astellBlocksProvider).value?.contains(peer.accountId) ?? false);
     final canModerate = peer != null && s.isModerator && peer.accountId != s.room.ownerId && (!s.room.moderators.contains(peer.accountId) || s.isOwner);
     final pick = await manager.showDropdown<String>(id: 'astell.chat.more', anchor: anchor, dense: true, items: [
       if (e.id != null) RasqDropdownItem(e.pinned ? 'ピン留めを外す' : '共有欄にピン留め', 'pin', accent: !e.pinned, enabled: s.isModerator),
@@ -846,8 +859,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       if (canModerate) RasqDropdownItem(peer.mutedByMod ? '全員向けミュートを解除' : '全員向けにミュート', 'modmute', accent: true),
       if (canModerate) const RasqDropdownItem('キック', 'kick', destructive: true),
       if (peer != null && s.isOwner && peer.accountId != s.room.ownerId) const RasqDropdownItem('BAN', 'ban', destructive: true),
-      RasqDropdownItem('ブロック', 'block', destructive: true, enabled: peer != null),
-      RasqDropdownItem('通報', 'report', destructive: true, enabled: peer != null),
+      RasqDropdownItem(blocked ? 'ブロック解除' : 'ブロック', 'block', destructive: !blocked, enabled: peer != null),
+      RasqDropdownItem('通報', 'report', destructive: true, enabled: peer != null || e.id != null),
     ]);
     if (!context.mounted) return;
     switch (pick) {
@@ -864,9 +877,9 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       case 'follow':
         if (peer != null) await _guard(context, () => session.follow(peer.accountId, !following));
       case 'block':
-        _notYetCentral(context, 'ブロック');
+        if (peer != null) await _guard(context, () => session.block(peer.accountId, !blocked));
       case 'report':
-        _notYetCentral(context, '通報(rasq-judge)');
+        await showAstellReportSheet(context, ref, targetAccountId: peer?.accountId, roomId: s.room.id, shareId: e.transcript ? null : e.id, what: '${e.author} の発言');
       default:
         break;
     }
@@ -896,11 +909,17 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
 
   Widget _chatTab(BuildContext context, AstellSessionState s, String myHandle) {
     final scheme = Theme.of(context).colorScheme;
-    final entries = _chatEntries(s, myHandle);
+    // ブロックした人の発言は隠す (D-150)。
+    final blocks = ref.watch(astellBlocksProvider).value ?? const <String>{};
+    final blockedHandles = {for (final p in s.peers) if (blocks.contains(p.accountId)) p.handle};
+    final all = _chatEntries(s, myHandle);
+    final entries = [for (final e in all) if (e.handle == null || !blockedHandles.contains(e.handle)) e];
+    final hidden = all.length - entries.length;
     if (entries.isEmpty) {
       return Center(child: Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('発話の文字起こしと、下の入力から送ったメッセージ・共有コンテンツがここに時刻順で並びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center)));
     }
     return ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs), children: [
+      if (hidden > 0) Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: Text('ブロック中のユーザーの発言 $hidden 件を隠しています', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
       for (final e in entries)
         Container(
           margin: const EdgeInsets.symmetric(vertical: 2),
@@ -1580,9 +1599,75 @@ extension<T extends Object> on T {
   R let<R>(R Function(T it) f) => f(this);
 }
 
-/// RASQ アカウント側の機能(ブロック / 通報)の口。Central の API は S-006 以降。
-void _notYetCentral(BuildContext context, String what) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$what は RASQ アカウント(Central)側の実装後に入ります')));
+/// 通報シート (D-150): 理由(スパム / 嫌がらせ / 違法 / その他)+ 補足 → `POST /reports`。
+/// rasq-judge が確認する。参加者・共有・チャット行・VC タイルから開く。
+Future<void> showAstellReportSheet(BuildContext context, WidgetRef ref, {String? targetAccountId, String? roomId, String? shareId, required String what}) async {
+  final manager = ref.read(overlayManagerProvider);
+  final note = TextEditingController();
+  var reason = astellReportReasons.first.id;
+  var sent = false;
+  await manager.showBottomSheet<void>(
+    id: 'astell.report',
+    title: '通報',
+    builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
+      final scheme = Theme.of(ctx).colorScheme;
+      return ListView(shrinkWrap: true, children: [
+        Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: Text('$what を通報します。rasq-judge(審査)が確認します。', style: RasqTypography.bodySmall)),
+        for (final r in astellReportReasons) RasqRadioListTile<String>(title: r.label, value: r.id, groupValue: reason, onChanged: (v) => setSheet(() => reason = v)),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: RasqInput(controller: note, hintText: '補足(任意)', maxLines: 3)),
+        Padding(
+          padding: const EdgeInsets.all(RasqSpacing.page),
+          child: FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: scheme.error),
+            onPressed: () async {
+              try {
+                await ref.read(astellClientProvider).report(targetAccountId: targetAccountId, roomId: roomId, shareId: shareId, reason: reason, note: note.text.trim().isEmpty ? null : note.text.trim());
+                sent = true;
+                manager.close('astell.report');
+              } catch (e) {
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('通報できませんでした: $e')));
+              }
+            },
+            child: const Text('通報する'),
+          ),
+        ),
+      ]);
+    }),
+  );
+  note.dispose();
+  if (sent && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('通報しました。rasq-judge が確認します')));
+}
+
+/// 作成 FOW の招待チップ (D-150): アバター + 名前、選択中はチェックの縁取り。
+class _InviteeChip extends StatelessWidget {
+  const _InviteeChip({required this.entry, required this.selected, required this.onTap});
+  final AstellFollowEntry entry;
+  final bool selected;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Tooltip(
+        message: selected ? '${entry.displayName} の招待をやめる' : '${entry.displayName} を招待',
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Stack(clipBehavior: Clip.none, children: [
+            Container(
+              width: RasqSizes.avatarXl,
+              height: RasqSizes.avatarXl,
+              // 縁取りは前景に描いて大きさを変えない(横並びの高さを揃える)。
+              foregroundDecoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: selected ? RasqColors.link : Colors.transparent, width: 2.5)),
+              child: RasqAvatar(imageUrl: entry.avatarUrl, size: RasqSizes.avatarXl, fallbackLabel: entry.displayName),
+            ),
+            if (selected) const Positioned(right: -2, bottom: -2, child: _StateBadge(icon: Icons.check, color: RasqColors.link)),
+          ]),
+          const SizedBox(height: 2),
+          SizedBox(width: RasqSizes.avatarXl + 8, child: Text(entry.displayName, style: RasqTypography.caption, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center)),
+        ]),
+      ),
+    );
+  }
 }
 
 /// ホストの配信パネル(展開時、共有欄の上): 16:9 のプレビュー + LIVE + タイトル。
@@ -1709,6 +1794,8 @@ class _CreateBody extends ConsumerStatefulWidget {
 }
 
 class _CreateBodyState extends ConsumerState<_CreateBody> {
+  /// 招待する RASQ アカウント (D-150): フォロワーのチップと「検索して追加」で選ぶ。
+  final Map<String, AstellFollowEntry> _invitees = {};
   final _title = TextEditingController();
   final _welcome = TextEditingController();
   final _description = TextEditingController();
@@ -1740,12 +1827,56 @@ class _CreateBodyState extends ConsumerState<_CreateBody> {
             showSummary: _showSummary,
             autoGenre: _autoGenre,
           ));
+      // 招待 (D-150): 作成後にまとめて送る(失敗しても作成は成立)。
+      if (_invitees.isNotEmpty) {
+        try {
+          await ref.read(astellClientProvider).invite(room.id, _invitees.keys.toList());
+        } catch (e) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('招待を送れませんでした: $e')));
+        }
+      }
       await widget.onCreated(room);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('作成できませんでした: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// 「検索して追加」: RASQ アカウントのハンドルで探して招待に足す (D-150)。
+  Future<void> _searchInvitee() async {
+    final manager = ref.read(overlayManagerProvider);
+    final input = TextEditingController();
+    String? error;
+    await manager.showBottomSheet<void>(
+      id: 'astell.create.invite',
+      title: '検索して追加',
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.page),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            RasqInput(controller: input, hintText: '@handle(RASQ アカウント)', autofocus: true),
+            if (error != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.xs), child: Text(error!, style: RasqTypography.caption.copyWith(color: scheme.error))),
+            const SizedBox(height: RasqSpacing.sm),
+            FilledButton(
+              onPressed: () async {
+                final found = await ref.read(astellClientProvider).lookupAccount(input.text);
+                if (!ctx.mounted) return;
+                if (found == null) {
+                  setSheet(() => error = '見つかりませんでした: ${input.text}');
+                  return;
+                }
+                setState(() => _invitees[found.id] = found);
+                manager.close('astell.create.invite');
+              },
+              child: const Text('招待に追加'),
+            ),
+          ]),
+        );
+      }),
+    );
+    input.dispose();
   }
 
   @override
@@ -1759,30 +1890,44 @@ class _CreateBodyState extends ConsumerState<_CreateBody> {
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
             child: RasqInput(controller: _title, hintText: 'タイトル', autofocus: true),
           ),
-          _label(context, 'フォロワーを招待'),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
-            child: Row(children: [
-              Column(mainAxisSize: MainAxisSize.min, children: [
-                RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarXl, fallbackLabel: me.displayName),
-                const SizedBox(height: 2),
-                Text('あなた', style: RasqTypography.caption),
-              ]),
-              const SizedBox(width: RasqSpacing.md),
-              Column(mainAxisSize: MainAxisSize.min, children: [
-                Material(
-                  shape: CircleBorder(side: BorderSide(color: scheme.onSurface, width: 1.5)),
-                  color: Colors.transparent,
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () => _notYet(context, 'フォロワーの招待'),
-                    child: SizedBox(width: RasqSizes.avatarXl, height: RasqSizes.avatarXl, child: Icon(Icons.add, size: 28, color: scheme.onSurface)),
+          _label(context, 'フォロワーを招待${_invitees.isEmpty ? '' : '(${_invitees.length})'}'),
+          // あなた / フォロワー(タップで選択)/ 検索して追加 を横に並べる (D-150)。
+          SizedBox(
+            height: RasqSizes.avatarXl + 24,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
+              children: [
+                Column(mainAxisSize: MainAxisSize.min, children: [
+                  RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarXl, fallbackLabel: me.displayName),
+                  const SizedBox(height: 2),
+                  Text('あなた', style: RasqTypography.caption),
+                ]),
+                const SizedBox(width: RasqSpacing.md),
+                for (final f in ref.watch(astellFollowersProvider).value ?? const <AstellFollowEntry>[]) ...[
+                  _InviteeChip(entry: f, selected: _invitees.containsKey(f.id), onTap: () => setState(() => _invitees.containsKey(f.id) ? _invitees.remove(f.id) : _invitees[f.id] = f)),
+                  const SizedBox(width: RasqSpacing.md),
+                ],
+                for (final f in _invitees.values)
+                  if (!(ref.watch(astellFollowersProvider).value ?? const <AstellFollowEntry>[]).any((x) => x.id == f.id)) ...[
+                    _InviteeChip(entry: f, selected: true, onTap: () => setState(() => _invitees.remove(f.id))),
+                    const SizedBox(width: RasqSpacing.md),
+                  ],
+                Column(mainAxisSize: MainAxisSize.min, children: [
+                  Material(
+                    shape: CircleBorder(side: BorderSide(color: scheme.onSurface, width: 1.5)),
+                    color: Colors.transparent,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _searchInvitee,
+                      child: SizedBox(width: RasqSizes.avatarXl, height: RasqSizes.avatarXl, child: Tooltip(message: '検索して追加', child: Icon(Icons.add, size: 28, color: scheme.onSurface))),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text('検索して追加', style: RasqTypography.caption),
-              ]),
-            ]),
+                  const SizedBox(height: 2),
+                  Text('検索して追加', style: RasqTypography.caption),
+                ]),
+              ],
+            ),
           ),
           const Divider(height: RasqSpacing.md),
           RasqSwitchListTile(title: '参加時にウェルカムメッセージを表示する', value: _welcomeOn, onChanged: (v) => setState(() => _welcomeOn = v)),
