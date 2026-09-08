@@ -47,6 +47,46 @@ Future<void> openRasqAccountFow(WidgetRef ref, {int column = 0}) async {
 /// 処置の案内(テスト用のキー)。
 const rasqSanctionBannerKey = Key('rasq.account.sanction');
 
+/// 解除申請のシート (D-152): 申請文 → `POST /me/sanctions/{id}/appeal`。
+Future<void> showSanctionAppealSheet(BuildContext context, WidgetRef ref, RasqSanctionEntry entry) async {
+  final manager = ref.read(overlayManagerProvider);
+  final text = TextEditingController();
+  var sent = false;
+  await manager.showBottomSheet<void>(
+    id: 'rasq.sanction.appeal',
+    title: '処置の解除を申請',
+    builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
+      final scheme = Theme.of(ctx).colorScheme;
+      return ListView(shrinkWrap: true, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+          child: Text('${entry.category} / ${entry.level}${entry.note == null ? '' : ' — ${entry.note}'}\n運営(rasq-judge)の担当者が読んで、受理なら処置が解除されます。自動判定は通りません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+        ),
+        Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqInput(controller: text, hintText: '申請の理由(必須)', maxLines: 4, autofocus: true)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page),
+          child: FilledButton(
+            onPressed: () async {
+              final m = text.text.trim();
+              if (m.isEmpty) return;
+              try {
+                await submitSanctionAppeal(ref, entry.id, m);
+                sent = true;
+                manager.close('rasq.sanction.appeal');
+              } catch (e) {
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('申請できませんでした: $e')));
+              }
+            },
+            child: const Text('申請する'),
+          ),
+        ),
+      ]);
+    }),
+  );
+  text.dispose();
+  if (sent && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('解除を申請しました。担当者が確認します')));
+}
+
 /// 台帳の 1 件を表示用 [UserSummary] に写す。現在のアカウントは
 /// [rasqAccountProvider](サーバーのプロフィール優先)、他は台帳の値か、
 /// 所属する最初の SNS セッションのプロフィールを借りる。
@@ -160,6 +200,16 @@ class RasqAccountPanel extends ConsumerWidget {
                 if (sanctions.moderated) Text('発言ごとに ${sanctions.reviewDelaySeconds} 秒の検閲遅延が入ります', style: RasqTypography.caption),
                 for (final n in sanctions.notes) Text('運営より: $n', style: RasqTypography.caption),
                 Text(sanctions.expiresAt == null ? '期限: なし' : '期限: ${sanctions.expiresAt!.toLocal()}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                // 解除申請 (D-152): 処置ごとに 1 つ。未処理があれば「申請中」。
+                Wrap(spacing: RasqSpacing.xs, children: [
+                  for (final e in sanctions.entries)
+                    e.canAppeal
+                        ? OutlinedButton(
+                            onPressed: () => showSanctionAppealSheet(context, ref, e),
+                            child: Text('解除を申請(${e.category} / ${e.level})', style: RasqTypography.caption),
+                          )
+                        : RasqPill(label: '申請中(${e.category})', color: RasqColors.sub, textColor: Colors.white),
+                ]),
               ]),
             ),
           if (ledger.accounts.isEmpty)

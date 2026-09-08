@@ -10,9 +10,36 @@ import '../backend/rasq_account.dart';
 /// - `moderate`: 発言ごとに検閲遅延 [reviewDelaySeconds](投稿はクライアントが待つ、
 ///   AsTell はサーバーが `held` → 判定 → 配信 / `rejected`)。
 /// - `severe`: 全機能停止(期限つき)。`permanent`: 凍結(サーバーが 403)。
+/// 有効な処置の 1 件(解除申請の対象、D-152)。
+@immutable
+class RasqSanctionEntry {
+  const RasqSanctionEntry({required this.id, required this.category, required this.level, this.note, this.expiresAt, this.appealStatus});
+  final String id;
+  final String category;
+  final String level;
+  final String? note;
+  final DateTime? expiresAt;
+
+  /// 直近の解除申請: open | accepted | rejected | null。
+  final String? appealStatus;
+  bool get canAppeal => appealStatus != 'open';
+  factory RasqSanctionEntry.fromJson(Map<String, Object?> j) => RasqSanctionEntry(
+        id: j['id'] as String? ?? '',
+        category: j['category'] as String? ?? '',
+        level: j['level'] as String? ?? '',
+        note: (j['note'] as String?)?.let((n) => n.isEmpty ? null : n),
+        expiresAt: j['expiresAt'] is String ? DateTime.tryParse(j['expiresAt'] as String) : null,
+        appealStatus: j['appealStatus'] as String?,
+      );
+}
+
+extension<T extends Object> on T {
+  R let<R>(R Function(T it) f) => f(this);
+}
+
 @immutable
 class RasqSanctions {
-  const RasqSanctions({this.level, this.restrictedFeatures = const [], this.reviewDelaySeconds = 0, this.categories = const [], this.expiresAt, this.notes = const []});
+  const RasqSanctions({this.level, this.restrictedFeatures = const [], this.reviewDelaySeconds = 0, this.categories = const [], this.expiresAt, this.notes = const [], this.entries = const []});
   final String? level;
   final List<String> restrictedFeatures;
   final int reviewDelaySeconds;
@@ -21,6 +48,9 @@ class RasqSanctions {
 
   /// 処置メモ(judge が書いた本人向けの説明)。
   final List<String> notes;
+
+  /// 有効な処置(解除申請の単位)。
+  final List<RasqSanctionEntry> entries;
 
   static const none = RasqSanctions();
 
@@ -64,6 +94,7 @@ class RasqSanctions {
         categories: [for (final c in (j['categories'] as List? ?? const [])) if (c is String) c],
         expiresAt: j['expiresAt'] is String ? DateTime.tryParse(j['expiresAt'] as String) : null,
         notes: [for (final s in (j['sanctions'] as List? ?? const [])) if (s is Map && s['note'] is String && (s['note'] as String).isNotEmpty) s['note'] as String],
+        entries: [for (final s in (j['sanctions'] as List? ?? const [])) if (s is Map) RasqSanctionEntry.fromJson(s.cast<String, Object?>())],
       );
 
   static String _fmt(DateTime t) {
@@ -85,3 +116,11 @@ final rasqSanctionsProvider = FutureProvider<RasqSanctions>((ref) async {
     return RasqSanctions.none;
   }
 });
+
+/// 解除申請 (D-152): `POST /me/sanctions/{id}/appeal`。judge の人が受理 / 却下する。
+Future<void> submitSanctionAppeal(WidgetRef ref, String sanctionId, String message) async {
+  final client = ref.read(centralClientProvider);
+  if (client == null) throw StateError('RASQ Central の接続先が設定されていません');
+  await client.postJson('/me/sanctions/${Uri.encodeComponent(sanctionId)}/appeal', {'message': message});
+  ref.invalidate(rasqSanctionsProvider);
+}
