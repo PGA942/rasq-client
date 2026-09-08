@@ -11,6 +11,7 @@ import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/session/sanctions.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/rasq_account_fow.dart';
 import 'package:rasq_client/shell/sidebar.dart';
@@ -128,6 +129,58 @@ void main() {
       expect(sessions.sessions.length, 2);
       expect(other.sessionKeys, isEmpty);
     });
+  });
+
+  testWidgets('アカウント処置の案内と解除申請 (D-151/D-152): 案内が出て、申請シートから POST /me/sanctions/{id}/appeal', (tester) async {
+    final posted = <String>[];
+    final http_ = MockClient((req) async {
+      if (req.method == 'POST' && req.url.path.endsWith('/sanctions/sa1/appeal')) {
+        posted.add(req.body);
+        return http.Response('{"id":"ap1","status":"open"}', 201, headers: {'content-type': 'application/json'});
+      }
+      return http.Response('[]', 200, headers: {'content-type': 'application/json'});
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p-${v.handle}', v, '${v.handle} の投稿')]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(seededStorage()),
+        pluginRegistryProvider.overrideWithValue(registry),
+        settingsAreaProvider(backendSettingsArea).overrideWith(() => _FixedSettingsArea({'baseUrl': 'https://central.test'})),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: http_, tokenProvider: () => 'tok')),
+        rasqSanctionsProvider.overrideWith((ref) async => RasqSanctions.fromJson({
+              'level': 'light',
+              'restrictedFeatures': ['post'],
+              'categories': ['spam'],
+              'sanctions': [
+                {'id': 'sa1', 'category': 'spam', 'level': 'light', 'note': '宣伝の連投', 'appealStatus': null},
+                {'id': 'sa2', 'category': 'harassment', 'level': 'moderate', 'note': '', 'appealStatus': 'open'},
+              ],
+            })),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    RasqSidebar.open(container.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('RASQ アカウント'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(rasqSanctionBannerKey), findsOneWidget);
+    expect(find.textContaining('軽度な制限'), findsOneWidget);
+    expect(find.textContaining('止まっている機能: 投稿'), findsOneWidget);
+    expect(find.textContaining('運営より: 宣伝の連投'), findsOneWidget);
+    expect(find.text('申請中(harassment)'), findsOneWidget); // 未処理の申請がある処置
+    await tester.tap(find.textContaining('解除を申請(spam'));
+    await tester.pumpAndSettle();
+    expect(find.text('処置の解除を申請'), findsOneWidget);
+    await tester.tap(find.text('申請する')); // 空は送らない
+    await tester.pumpAndSettle();
+    expect(posted, isEmpty);
+    await tester.enterText(find.widgetWithText(TextField, '申請の理由(必須)'), '反省しています');
+    await tester.tap(find.text('申請する'));
+    await tester.pumpAndSettle();
+    expect(posted, ['{"message":"反省しています"}']);
+    expect(find.textContaining('解除を申請しました'), findsOneWidget);
   });
 
   testWidgets('サイドバー … → RASQ アカウント FOW: 投稿タイル風の行(表示名/@handle)+ 左の通知バッジ枠 + … ドロップダウン', (tester) async {
