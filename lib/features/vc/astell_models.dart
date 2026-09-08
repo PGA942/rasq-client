@@ -42,6 +42,7 @@ class AstellRoom {
     this.sharePolicy = 'everyone',
     this.moderators = const [],
     this.tendencyFilter = false,
+    this.locked = false,
   });
 
   final String id;
@@ -92,6 +93,9 @@ class AstellRoom {
   /// 発信傾向(GoEmotion、今はダミー判定)で入室を絞る (D-150)。
   final bool tendencyFilter;
 
+  /// 運営(rasq-judge)による新規入室停止 (D-151)。
+  final bool locked;
+
   bool get isOpen => closedAt == null;
 
   /// オーナーかモデレーターか。
@@ -126,6 +130,7 @@ class AstellRoom {
         sharePolicy: j['sharePolicy'] as String? ?? 'everyone',
         moderators: [for (final m in (j['moderators'] as List? ?? const [])) if (m is String) m],
         tendencyFilter: j['tendencyFilter'] == true,
+        locked: j['locked'] == true,
       );
 
   AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false, String? joinPolicy, String? sharePolicy, List<String>? moderators, bool? tendencyFilter}) => AstellRoom(
@@ -152,6 +157,7 @@ class AstellRoom {
         sharePolicy: sharePolicy ?? this.sharePolicy,
         moderators: moderators ?? this.moderators,
         tendencyFilter: tendencyFilter ?? this.tendencyFilter,
+        locked: locked,
       );
 }
 

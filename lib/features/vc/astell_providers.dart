@@ -95,6 +95,7 @@ class AstellSessionState {
     this.speakerMuted = false,
     this.forceMuted = false,
     this.error,
+    this.notice,
   });
   final AstellRoom room;
   final String? myPeerId;
@@ -128,6 +129,9 @@ class AstellSessionState {
   final bool forceMuted;
   final String? error;
 
+  /// 情報の案内(検閲の保留など、D-151)。エラーではない。
+  final String? notice;
+
   bool isMuted(String peerId) => mutedPeerIds.contains(peerId);
 
   /// 役割 (D-149): オーナー / モデレーター(オーナー含む)。
@@ -154,6 +158,8 @@ class AstellSessionState {
     bool? forceMuted,
     String? error,
     bool clearError = false,
+    String? notice,
+    bool clearNotice = false,
   }) =>
       AstellSessionState(
         room: room ?? this.room,
@@ -171,6 +177,7 @@ class AstellSessionState {
         speakerMuted: speakerMuted ?? this.speakerMuted,
         forceMuted: forceMuted ?? this.forceMuted,
         error: clearError ? null : (error ?? this.error),
+        notice: clearNotice ? null : (notice ?? this.notice),
       );
 }
 
@@ -229,13 +236,6 @@ class AstellSession extends Notifier<AstellSessionState?> {
         if (p is Map) state = s.copyWith(peers: [...s.peers, AstellPeer.fromJson(p.cast<String, Object?>())]);
       case 'peer-left':
         state = s.copyWith(peers: [for (final p in s.peers) if (p.peerId != m['peerId']) p]);
-      case 'share':
-        final x = m['share'];
-        if (x is Map) {
-          final sh = AstellShare.fromJson(x.cast<String, Object?>());
-          // 同じ id はピン留め等の更新 (D-146)。
-          state = s.copyWith(shares: s.shares.any((e) => e.id == sh.id) ? [for (final e in s.shares) e.id == sh.id ? sh : e] : [...s.shares, sh]);
-        }
       case 'peer-state':
         final p = m['peer'];
         if (p is Map) {
@@ -266,11 +266,33 @@ class AstellSession extends Notifier<AstellSessionState?> {
         final x = m['room'];
         if (x is Map) state = s.copyWith(room: AstellRoom.fromJson(x.cast<String, Object?>()));
       case 'closed':
-        state = s.copyWith(connected: false, error: 'ホストがルームを終了しました');
+        state = s.copyWith(connected: false, error: m['reason'] == 'moderation' ? '運営によりルームが閉鎖されました' : 'ホストがルームを終了しました');
       case 'kicked':
         // モデレーションで追い出された (D-149)。接続は切る(状態は残して案内を出す)。
-        state = s.copyWith(connected: false, error: m['reason'] == 'banned' ? 'このルームから BAN されました' : 'モデレーターにルームから退出させられました');
+        state = s.copyWith(
+          connected: false,
+          error: switch (m['reason']) {
+            'banned' => 'このルームから BAN されました',
+            'sanctioned' => 'アカウントの処置により退出させられました',
+            _ => 'モデレーターにルームから退出させられました',
+          },
+        );
         unawaited(_teardown());
+      // アカウント処置(中レベル、D-151): 共有は保留 → 判定 → 配信 or 却下。
+      case 'held':
+        state = s.copyWith(notice: '検閲中: ${m['delaySeconds'] ?? '?'} 秒後に判定して配信されます(アカウントの処置)', clearError: true);
+      case 'rejected':
+        state = s.copyWith(error: '検閲で却下されました(${m['source'] ?? 'review'})。この発言は配信されていません', clearNotice: true);
+      case 'share':
+        final x = m['share'];
+        if (x is Map) {
+          final sh = AstellShare.fromJson(x.cast<String, Object?>());
+          // 同じ id はピン留め等の更新 (D-146)。
+          state = s.copyWith(
+            shares: s.shares.any((e) => e.id == sh.id) ? [for (final e in s.shares) e.id == sh.id ? sh : e] : [...s.shares, sh],
+            clearNotice: sh.accountId == s.myAccountId, // 保留が明けた
+          );
+        }
       case 'error':
         state = s.copyWith(error: m['message'] as String?);
       default:

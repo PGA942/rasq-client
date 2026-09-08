@@ -12,6 +12,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../session/sanctions.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
 import '../../text/inline_spans.dart';
@@ -963,11 +964,26 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       removedByConfirm = approved.$2;
     }
     if (!mounted) return;
+    // アカウントの処置 (D-151): 投稿 / メディア付き投稿 / DM が止まっていれば送らない。
+    final sanctions = ref.read(rasqSanctionsProvider).value ?? RasqSanctions.none;
+    final blocked = sanctions.blockedMessage(_isDm ? 'dm' : 'post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
+    if (blocked != null) {
+      setState(() => _error = blocked);
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
+      // 中レベルの制限 (D-151): 発言ごとに検閲による遅延(投稿系はクライアント側で待つ)。
+      if (sanctions.moderated) {
+        for (var left = sanctions.reviewDelaySeconds; left > 0; left--) {
+          if (!mounted) return;
+          setState(() => _progress = '検閲による遅延: あと $left 秒');
+          await Future<void>.delayed(const Duration(seconds: 1));
+        }
+      }
       final ids = <String>[];
       for (var i = 0; i < _files.length; i++) {
         final f = _files[i];

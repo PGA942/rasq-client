@@ -10,6 +10,7 @@ import '../app/providers.dart';
 import '../app/router.dart';
 import '../backend/orgate_client.dart';
 import '../backend/rasq_account.dart';
+import '../session/sanctions.dart';
 import '../features/notifications/notifications_screen.dart';
 
 /// RASQ アカウントの選択/編集 FOW (D-138: サイドバー右上の … から)。
@@ -42,6 +43,9 @@ Future<void> openRasqAccountFow(WidgetRef ref, {int column = 0}) async {
     builder: (ctx, handle) => RasqAccountPanel(onDone: handle.close),
   );
 }
+
+/// 処置の案内(テスト用のキー)。
+const rasqSanctionBannerKey = Key('rasq.account.sanction');
 
 /// 台帳の 1 件を表示用 [UserSummary] に写す。現在のアカウントは
 /// [rasqAccountProvider](サーバーのプロフィール優先)、他は台帳の値か、
@@ -138,9 +142,26 @@ class RasqAccountPanel extends ConsumerWidget {
       }
     }
 
+    final sanctions = ref.watch(rasqSanctionsProvider).value ?? RasqSanctions.none;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
         child: ListView(padding: EdgeInsets.zero, children: [
+          // アカウントの処置 (D-151): 掛かっていれば先頭に案内。
+          if (sanctions.active)
+            Container(
+              key: rasqSanctionBannerKey,
+              margin: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+              padding: const EdgeInsets.all(RasqSpacing.sm),
+              decoration: BoxDecoration(color: tokens.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm), border: Border.all(color: tokens.danger.withValues(alpha: 0.4))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('このアカウントには処置が掛かっています: ${sanctions.levelLabel}', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: tokens.danger)),
+                if (sanctions.restrictedFeatures.isNotEmpty)
+                  Text('止まっている機能: ${sanctions.restrictedFeatures.map((f) => RasqSanctions.featureLabels[f] ?? f).join(' / ')}', style: RasqTypography.caption),
+                if (sanctions.moderated) Text('発言ごとに ${sanctions.reviewDelaySeconds} 秒の検閲遅延が入ります', style: RasqTypography.caption),
+                for (final n in sanctions.notes) Text('運営より: $n', style: RasqTypography.caption),
+                Text(sanctions.expiresAt == null ? '期限: なし' : '期限: ${sanctions.expiresAt!.toLocal()}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              ]),
+            ),
           if (ledger.accounts.isEmpty)
             Padding(
               padding: const EdgeInsets.all(RasqSpacing.page),

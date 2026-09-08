@@ -538,6 +538,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(astellBlocksProvider).value, isEmpty);
 
+    // アカウント処置 (D-151): 共有の保留(held)→ 案内、却下(rejected)→ エラー、運営の閉鎖。
+    final mockClient = container.read(astellClientProvider) as MockAstellClient;
+    mockClient.emit('r-launch', {'type': 'held', 'reason': 'review', 'delaySeconds': 30, 'kind': 'text'});
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.notice, contains('検閲中'));
+    expect(find.textContaining('検閲中: 30 秒後'), findsOneWidget);
+    mockClient.emit('r-launch', {'type': 'rejected', 'reason': 'review', 'kind': 'text', 'source': 'dummy'});
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.notice, isNull);
+    expect(find.textContaining('検閲で却下されました'), findsOneWidget);
+    mockClient.emit('r-launch', {'type': 'closed', 'reason': 'moderation'});
+    await tester.pumpAndSettle();
+    expect(find.textContaining('運営によりルームが閉鎖されました'), findsWidgets); // FOW + ホームの「参加中」行
+    expect(container.read(astellSessionProvider)!.connected, isFalse);
+
     // 退出でセッションが消える。
     await tester.tap(find.text('退出'));
     await tester.pumpAndSettle();

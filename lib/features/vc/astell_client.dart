@@ -405,6 +405,9 @@ class MockAstellClient implements AstellClient {
   /// テスト/デバッグ用: ルームへの招待。
   Set<String> invitesOf(String roomId) => {...?_invites[roomId]};
 
+  /// テスト/デバッグ用: サーバーからのメッセージを接続中の全員に流す(held / rejected / closed など)。
+  void emit(String roomId, Map<String, Object?> message) => _broadcast(roomId, message);
+
   @override
   Future<List<AstellFollowEntry>> followers() async => seededFollowers;
 

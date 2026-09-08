@@ -237,6 +237,11 @@ class _PreviewBody extends ConsumerWidget {
         child: ListView(padding: EdgeInsets.zero, children: [
           _label(context, '参加メンバー'),
           AstellMembersRow(peers: peers, totalCount: room.peerCount > peers.length ? room.peerCount : null),
+          if (room.locked)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
+              child: Text('運営により新規入室が停止されています(D-151)。', style: RasqTypography.caption.copyWith(color: RasqColors.danger)),
+            ),
           const Divider(height: RasqSpacing.md),
           _label(context, 'ざっくり要約'),
           Padding(
@@ -502,6 +507,12 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
             color: tokens.danger.withValues(alpha: 0.08),
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
             child: Text(s.error!, style: RasqTypography.caption.copyWith(color: tokens.danger)),
+          )
+        else if (s.notice != null)
+          Container(
+            color: RasqColors.sub.withValues(alpha: 0.10),
+            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
+            child: Text(s.notice!, style: RasqTypography.caption.copyWith(color: RasqColors.sub)),
           )
         else if (!s.connected)
           Container(
