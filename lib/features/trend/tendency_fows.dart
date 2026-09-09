@@ -9,8 +9,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../nodeprog/node_executor.dart';
 import '../relational/relational_engine.dart';
-import '../../text/inline_spans.dart';
-import '../settings/safety.dart';
+import '../home/post_row.dart';
 import 'tendency_profile.dart';
 
 /// トレンドプロファイル設定 (D-153、ワイヤーフレーム p.2 中段下): 検索ホーム/
@@ -274,8 +273,6 @@ Future<TendencyProfile?> openGenrePickFow(BuildContext context, WidgetRef ref, {
         setSheet(() => index++);
       }
 
-      final emojis = ref.read(emojiCacheProvider);
-      final (mediaItems, _) = ref.read(safetySettingsProvider).applyTo(p.media);
       return ListView(shrinkWrap: true, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
@@ -288,14 +285,8 @@ Future<TendencyProfile?> openGenrePickFow(BuildContext context, WidgetRef ref, {
             },
             background: Container(alignment: Alignment.centerLeft, padding: const EdgeInsets.only(left: RasqSpacing.page), child: const Text('好き', style: TextStyle(color: RasqColors.link, fontWeight: FontWeight.w700))),
             secondaryBackground: Container(alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: RasqSpacing.page), child: Text('好きではない', style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w700))),
-            child: RasqPostTile(
-              variant: RasqPostTileVariant.embedded,
-              author: p.author,
-              createdAt: p.createdAt,
-              nameSpans: InlineSpans.parse(p.author.displayName, emojis: emojis),
-              content: p.body.isNotEmpty ? RasqRichText(InlineSpans.parse(p.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis) : const SizedBox.shrink(),
-              media: mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems) : null,
-            ),
+            // インラインフレームの小表示 (D-156)。
+            child: InlinePostFrame(post: p, maxLines: 6, onTap: () {}),
           ),
         ),
         Padding(

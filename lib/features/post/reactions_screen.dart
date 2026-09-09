@@ -59,12 +59,11 @@ class _ReactionsScreenState extends ConsumerState<ReactionsScreen> {
       child: Scaffold(
         appBar: RasqPageHeader(title: 'リアクション', leadingAvatar: me, actions: [RasqIconButton(icon: Icons.bookmark_border, onPressed: () {}, tooltip: 'ブックマーク')], onMore: () {}),
         body: Column(children: [
+          // 対象投稿はインラインフレームの小表示 (D-156、ワイヤーフレーム p.1 右端)。
           if (post != null)
-            Container(
-              margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm, 0),
-              decoration: BoxDecoration(border: Border.all(color: Theme.of(context).colorScheme.onSurface), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-              clipBehavior: Clip.antiAlias,
-              child: PostRow(post: post, actions: const [], onAction: (_, {args = const {}}) async {}, onTap: () => context.pushPost(post)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm, 0),
+              child: InlinePostFrame(post: post, maxLines: 4, onTap: () => context.pushPost(post)),
             ),
           RasqTabs(
             items: tabs,

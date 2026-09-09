@@ -294,7 +294,7 @@ class _PostTile extends ConsumerWidget {
       Row(children: [Icon(Icons.subdirectory_arrow_left, size: 16, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text(label, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))]),
       Padding(
         padding: const EdgeInsets.only(left: 0),
-        child: PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args), onTap: () => context.pushPost(p), dense: true),
+        child: PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args), onTap: () => context.pushPost(p), dense: true, compactQuote: true),
       ),
     ]);
   }
