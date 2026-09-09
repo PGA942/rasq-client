@@ -117,6 +117,28 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_create_schedule.png'));
   });
 
+  testWidgets('post share in room chat (D-166)', (tester) async {
+    await pump(tester, posts: [post('p1', '打ち上げ成功おめでとう! 次は反省会で写真を見ましょう #打上会')], vc: false);
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    await container.read(astellSessionProvider.notifier).join((await container.read(astellClientProvider).room('r-launch'))!);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('メニュー').first);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('post_menu_astell.png'));
+    await tester.tap(find.text('AsTell で共有'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('AsTell'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('参加中: '));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(AstellRoomBody), matching: find.text('チャット')));
+    await tester.pumpAndSettle();
+    final chat = find.ancestor(of: find.textContaining('ダグラス> いい感じに行ったねー'), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.textContaining('あなた> 打ち上げ成功'), 80, scrollable: chat);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_room_post_share.png'));
+  });
+
   testWidgets('vc home', (tester) async {
     await pump(tester);
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_home.png'));

@@ -15,6 +15,7 @@ import 'package:rasq_client/notify/local_notifier.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_media_viewer.dart';
 import 'package:rasq_client/features/vc/astell_models.dart';
+import 'package:rasq_client/features/vc/astell_post_share.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/astell_tile.dart';
 import 'package:rasq_client/features/vc/vc_screen.dart';
@@ -899,5 +900,71 @@ void main() {
     await tester.drag(find.descendant(of: find.byKey(astellRoomHeaderKey), matching: find.text('打ち上げの打ち上げ')), const Offset(0, 300));
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(panel()).dy, closeTo(before, 1));
+  });
+
+  test('投稿のインライン共有 (D-166): URL 判定 / payload / 開くアカウントの一致', () {
+    expect(parseSnsPostUrl('https://misskey.io/notes/9abc123XYZ'), (sns: 'misskey', instance: 'misskey.io', id: '9abc123XYZ'));
+    expect(parseSnsPostUrl('https://mastodon.social/@Gargron/1'), (sns: 'mastodon', instance: 'mastodon.social', id: '1'));
+    expect(parseSnsPostUrl('https://bsky.app/profile/bsky.app/post/3k4')?.sns, 'bluesky');
+    expect(parseSnsPostUrl('https://astell.rasq.jp/@rasq_1/A7XeQCmhp4JYSaDQeZEyJG'), isNull);
+    expect(parseSnsPostUrl('https://example.com/'), isNull);
+    final p = Post(id: 'n1', account: acc, author: UserSummary(id: 'u1', account: acc, displayName: 'テスター', avatarUrl: Uri.parse('https://example.test/a.png')), createdAt: DateTime.utc(2026, 9, 1), body: 'こんにちは', media: [MediaItem(id: 'm1', type: MediaType.image, url: Uri.parse('https://example.test/m.png'))]);
+    final payload = astellPostPayloadOf(p);
+    expect(payload['url'], 'https://example.test/notes/n1');
+    expect(payload['sns'], 'misskey');
+    expect(payload['instance'], 'example.test');
+    expect(payload['thumbnailUrl'], 'https://example.test/m.png');
+    expect((payload['media'] as List).length, 1);
+    final back = postFromSharePayload(payload, acc)!;
+    expect(back.id, 'n1');
+    expect(back.body, 'こんにちは');
+    expect(back.media.single.type, MediaType.image);
+    expect(back.author.displayName, 'テスター');
+    // 一致するアカウント: 同じ SNS + インスタンス。違うインスタンスは null(= ブラウザ)。
+    expect(astellAccountForPost(payload, [fakeSession()]), acc);
+    expect(astellAccountForPost({'sns': 'misskey', 'instance': 'other.example'}, [fakeSession()]), isNull);
+    expect(astellAccountForPost({'sns': 'mastodon', 'instance': 'example.test'}, [fakeSession()]), isNull);
+  });
+
+  testWidgets('AsTell で投稿を共有 (D-166): 投稿メニュー → 参加中のルームへ post 共有、チャット行のタップで一致するアカウントならアプリ内展開、URL 入力は解決して post', (tester) async {
+    final container = await pump(tester);
+    // 参加してから TL へ戻り、投稿の … に「AsTell で共有」。
+    await container.read(astellSessionProvider.notifier).join((await container.read(astellClientProvider).room('r-launch'))!);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('メニュー').first);
+    await tester.pumpAndSettle();
+    expect(find.text('AsTell で共有'), findsOneWidget);
+    await tester.tap(find.text('AsTell で共有'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('に共有しました'), findsOneWidget);
+    final shares = container.read(astellSessionProvider)!.shares;
+    expect(shares.last.kind, 'post');
+    expect(shares.last.payload['instance'], 'example.test');
+    expect(shares.last.payload['body'], 'ふつうの投稿');
+    // ルーム FOW のチャット: 入力欄に投稿 URL → 一致するアカウントが無い(misskey.example)ので
+    // Central(モック)で解決 → post として共有。
+    await openVc(tester);
+    await tester.tap(find.textContaining('参加中: '));
+    await tester.pumpAndSettle();
+    Finder inRoom(String t) => find.descendant(of: find.byType(AstellRoomBody), matching: find.text(t));
+    await tester.tap(inRoom('チャット'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'input..'), 'https://misskey.example/notes/abc123');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('送信完了する'));
+    await tester.pumpAndSettle();
+    final last = container.read(astellSessionProvider)!.shares.last;
+    expect(last.kind, 'post');
+    expect(last.payload['author'], 'モックの投稿者');
+    expect(last.payload['instance'], 'misskey.example');
+    // チャット行(遅延 ListView の末尾)をタップ → インスタンスが一致する投稿はアプリ内でスレッド展開。
+    final chat = find.ancestor(of: find.textContaining('ダグラス> いい感じに行ったねー'), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.textContaining('あなた> ふつうの投稿'), 80, scrollable: chat);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('あなた> ふつうの投稿'));
+    await tester.pumpAndSettle();
+    expect(find.text('投稿'), findsWidgets); // スレッド展開画面のヘッダー
+    expect(find.text('@tester'), findsWidgets); // 共有した投稿(自分のアカウントで開いた)
+    await container.read(astellSessionProvider.notifier).leave();
   });
 }
