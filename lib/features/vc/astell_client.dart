@@ -51,6 +51,9 @@ abstract class AstellClient {
   Future<void> report({String? targetAccountId, String? roomId, String? shareId, required String reason, String? note});
   Future<AstellTendency> tendency(String accountId);
 
+  /// SNS 投稿の URL → 共有 payload (D-166/S-013)。Central の公開 API 解決。
+  Future<Map<String, Object?>> resolvePost(String url);
+
   /// 読み上げ (D-146): プリセット音声の一覧と、音声の合成(未設定なら例外)。
   Future<AstellTtsVoices> ttsVoices();
   Future<List<int>> speak(String roomId, String text, {String? voice});
@@ -493,6 +496,17 @@ class MockAstellClient implements AstellClient {
     );
   }
 
+
+  @override
+  Future<Map<String, Object?>> resolvePost(String url) async {
+    final u = Uri.tryParse(url);
+    if (u == null || u.host.isEmpty) throw StateError('not a post url');
+    return {
+      'url': url, 'sns': 'misskey', 'instance': u.host, 'postId': u.pathSegments.isEmpty ? 'x' : u.pathSegments.last,
+      'author': 'モックの投稿者', 'handle': 'mock', 'body': 'モックで解決した投稿: $url', 'media': const [],
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
+    };
+  }
   @override
   Future<void> follow(String accountId, bool follow) async {
     if (follow) {
@@ -712,6 +726,9 @@ class HttpAstellClient implements AstellClient {
   @override
   Future<AstellTendency> tendency(String accountId) async => AstellTendency.fromJson(await _client.getJson('/judge/tendency/${Uri.encodeComponent(accountId)}'));
 
+
+  @override
+  Future<Map<String, Object?>> resolvePost(String url) => _client.postJson('/astell/posts/resolve', {'url': url});
   @override
   Future<AstellTtsVoices> ttsVoices() async => AstellTtsVoices.fromJson(await _client.getJson('/astell/tts/voices'));
 

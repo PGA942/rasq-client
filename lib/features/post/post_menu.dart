@@ -11,6 +11,8 @@ import '../../app/providers.dart';
 import '../clips/clip_picker.dart';
 import '../home/action_bar_edit_sheet.dart';
 import '../home/timeline_providers.dart';
+import '../vc/astell_post_share.dart';
+import '../vc/astell_providers.dart';
 
 /// 投稿コンテキストメニュー(右上の `…` のみで出現 — ワイヤーフレーム注釈).
 /// 自身: 詳細 / リンクをコピー / お気に入り / 削除. 他ユーザー: 詳細 / リンクをコピー /
@@ -32,6 +34,8 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
     const RasqDropdownItem('アクションバーを編集', 'editActions'),
     RasqDropdownItem(fav.done ? 'お気に入り解除' : 'お気に入り', 'favorite'),
     const RasqDropdownItem('クリップに追加', 'clip'),
+    // 参加中の AsTell へインラインで共有 (D-166)。
+    if (ref.read(astellSessionProvider) != null) const RasqDropdownItem('AsTell で共有', 'astell'),
     if (!isMine) RasqDropdownItem(st.following ? 'フォロー解除' : 'フォロー', 'follow'),
     if (!isMine) RasqDropdownItem(st.muted ? 'ミュート解除' : 'ミュート', 'mute', accent: true),
     if (!isMine) RasqDropdownItem(st.blocked ? 'ブロック解除' : 'ブロック', 'block', destructive: true),
@@ -53,6 +57,11 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
       if (fa != null) await ref.read(timelineProvider(TimelineKind.home).notifier).perform(post, fa);
     case 'clip':
       await showAddToClipSheet(ref, post);
+    case 'astell':
+      final room = ref.read(astellSessionProvider)?.room;
+      if (room == null) return;
+      ref.read(astellSessionProvider.notifier).share('post', astellPostPayloadOf(post));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('「${room.title}」に共有しました')));
     case 'follow':
       store.apply(viewer.key, userKey, await s.setFollowing(post.author.id, !st.following));
     case 'mute':

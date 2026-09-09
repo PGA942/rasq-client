@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:go_router/go_router.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../settings/settings_dsl.dart';
 import '../trend/tendency_profile.dart';
@@ -14,6 +15,7 @@ import 'astell_bookmarks.dart';
 import 'astell_links.dart';
 import 'astell_media_viewer.dart';
 import 'astell_models.dart';
+import 'astell_post_share.dart';
 import 'astell_providers.dart';
 
 /// AsTell の 3 つの FOW (D-139、ワイヤーフレーム p.3):
@@ -612,12 +614,40 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     ]);
   }
 
-  void _sendText() {
+  Future<void> _sendText() async {
     final text = _input.text.trim();
     if (text.isEmpty) return;
     final isLink = text.startsWith('http://') || text.startsWith('https://');
-    ref.read(astellSessionProvider.notifier).share(isLink ? 'link' : 'text', isLink ? {'url': text} : {'text': text});
     _input.clear(); // → リスナーが下書き枠を消す
+    // SNS の投稿 URL はインラインで共有 (D-166): 自分のアカウントのインスタンスなら
+    // プラグイン(トークン)で、そうでなければ Central の公開 API 解決で。取れなければリンク。
+    final ref_ = parseSnsPostUrl(text);
+    if (isLink && ref_ != null) {
+      try {
+        final payload = await _resolvePost(text, ref_);
+        ref.read(astellSessionProvider.notifier).share('post', payload);
+        return;
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('投稿を取れなかったのでリンクとして共有します: $e')));
+      }
+    }
+    ref.read(astellSessionProvider.notifier).share(isLink ? 'link' : 'text', isLink ? {'url': text} : {'text': text});
+  }
+
+  Future<Map<String, Object?>> _resolvePost(String url, ({String sns, String instance, String id}) r) async {
+    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final acct = astellAccountForPost({'sns': r.sns, 'instance': r.instance}, sessions, prefer: ref.read(currentAccountProvider));
+    if (acct != null) {
+      final session = ref.read(sessionForAccountProvider(acct.key));
+      if (session != null) {
+        try {
+          return astellPostPayloadOf(await session.post(r.id));
+        } catch (e) {
+          debugPrint('astell: plugin post fetch failed, falling back to central: $e');
+        }
+      }
+    }
+    return ref.read(astellClientProvider).resolvePost(url);
   }
 
   /// 「共有する」= ファイル選択 → media として共有(D-142)。アップロード先
@@ -758,11 +788,13 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       case 'media':
         await AstellMediaViewer.open(context, share);
       case 'post':
-        final sessions = ref.read(sessionsProvider).value?.sessions ?? const [];
-        final current = ref.read(currentAccountProvider);
-        final matches = share.snsKind != null && share.postId != null && current != null && current.kind.name == share.snsKind && (share.instance == null || current.instance == share.instance);
-        if (matches && sessions.isNotEmpty) {
-          context.push('/post/${Uri.encodeComponent(share.postId!)}');
+        // URL が自分のアカウントのインスタンスと一致すれば RASQ 内でスレッド展開、
+        // そうでなければブラウザ (D-166)。
+        final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+        final acct = astellAccountForPost(share.payload, sessions, prefer: ref.read(currentAccountProvider));
+        final post = acct == null ? null : postFromSharePayload(share.payload, acct);
+        if (post != null) {
+          context.pushPost(post);
         } else if (share.url != null) {
           await launchUrl(share.url!, mode: LaunchMode.externalApplication); // Web 表示(アプリ内 WebView は未導入)
         } else {
@@ -959,10 +991,18 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
             SizedBox(width: 40, child: Text(_hhmm(e.at), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
             if (e.kind != null && e.kind != 'text') Padding(padding: const EdgeInsets.only(right: RasqSpacing.xs), child: RasqPill(label: e.kind!)),
             Expanded(
-              child: Text.rich(TextSpan(children: [
+              // 投稿/リンク/メディアの行はタップで開く (D-166: 投稿は一致するアカウントならアプリ内)。
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: e.id == null || e.transcript || e.kind == null || e.kind == 'text' ? null : () {
+                  final sh = s.shares.where((x) => x.id == e.id).firstOrNull;
+                  if (sh != null) _openShare(context, sh);
+                },
+                child: Text.rich(TextSpan(children: [
                 TextSpan(text: '${e.author}> ', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: e.transcript ? scheme.onSurfaceVariant : null)),
                 TextSpan(text: e.draft && e.text.isEmpty ? '入力中…' : e.text, style: RasqTypography.bodySmall.copyWith(color: e.draft ? scheme.onSurfaceVariant : null, fontStyle: e.draft ? FontStyle.italic : null)),
-              ])),
+                ])),
+              ),
             ),
             if (e.draft) Text('下書き', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             // ピン留め (D-146): 共有欄へ出す/外す。モデレーターだけ (D-149)。
