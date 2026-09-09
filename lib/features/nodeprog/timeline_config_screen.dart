@@ -15,6 +15,8 @@ import '../home/timeline_providers.dart' show customTimelinesProvider;
 import '../settings/settings_dsl.dart';
 import '../store/store_client.dart' show storeSamplePluginId;
 import 'node_tabs.dart';
+import '../trend/tendency_fows.dart';
+import '../trend/tendency_profile.dart';
 import 'tl_components.dart';
 
 /// コンポーネント追加パレット (D-122): ノード検索と同じ FOW。
@@ -347,6 +349,11 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
               manager.close(tlConfigPaletteFowId);
               _update(_cfg.copyWith(algorithms: [..._cfg.algorithms, a]));
             },
+            onPickGenres: () {
+              manager.close(tlConfigPaletteFowId);
+              if (!_cfg.algorithms.any((a) => a.isTendency)) _update(_cfg.copyWith(algorithms: [..._cfg.algorithms, const TlAlgorithmComponent(type: 'tendency')]));
+              _tendencyAction('pick');
+            },
             onAddSource: (s) {
               manager.close(tlConfigPaletteFowId);
               _update(_cfg.copyWith(sources: [..._cfg.sources, s]));
@@ -358,11 +365,12 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
 
   /// コンポーネントの見た目情報(タイル/詳細/並べ替え行で共用)。
   (IconData, String, String, String) _algoInfo(TlAlgorithmComponent a) => (
-        a.isPlugin ? Icons.extension_outlined : (a.isSuggest ? Icons.auto_awesome_outlined : Icons.schedule),
+        a.isPlugin ? Icons.extension_outlined : (a.isSuggest ? Icons.auto_awesome_outlined : a.isTendency ? Icons.tune : Icons.schedule),
         a.title,
         a.isPlugin ? 'TLプラグイン' : 'RASQ',
         switch (a.type) {
           'chrono' => '取得したままの時刻順に整えます。',
+          'tendency' => 'トレンドプロファイル(指向性/刺激性・好きなジャンル)に合わない投稿を除外し、適合度順に並べます。',
           'suggest' => '${a.from}(${suggestFromKind(a.from) == 'myposts' ? '自分の投稿' : suggestFromKind(a.from) == 'myreplies' ? '自分の返信' : 'リアクションした投稿'})を基準に、${a.what}で合う投稿を先頭へ並べ替えます。',
           _ => '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
         },
@@ -482,12 +490,28 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
             onUpdate: _update,
             onConfirm: () => manager.close(tlConfigParamsFowId, result: true),
             onCancel: () => manager.close(tlConfigParamsFowId),
+            onTendencyAction: _tendencyAction,
           ),
         )
         .then((ok) {
           if (ok != true && mounted) _update(before); // 決定以外は巻き戻す
         })
         .whenComplete(() => router.routerDelegate.removeListener(onNavigate));
+  }
+
+  /// 指向性/刺激性の部品のオプション (D-153/D-157): プロファイル編集の FOW を開く。
+  Future<void> _tendencyAction(String which) async {
+    switch (which) {
+      case 'tendency':
+        await openTendencyFow(context, ref);
+      case 'genres':
+        await openGenreFow(context, ref);
+      case 'pick':
+        final base = await ref.read(tendencyProfileProvider.future);
+        if (!mounted) return;
+        final picked = await openGenrePickFow(context, ref, base: base);
+        if (picked != null) await saveTendencyProfileFrom(ref, picked);
+    }
   }
 
   /// 並べ替え (D-123): アクションバー編集 (D-025 系) と同じ UI —
@@ -619,7 +643,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
 /// アイコン/名前/提供元/説明/詳細行)で、ホバー中もこの表示のまま。
 /// 詳細行は入出力ではなく**ネイティブ対応の SNS プラグイン**。
 class _ComponentPalettePanel extends ConsumerStatefulWidget {
-  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false});
+  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false, this.onPickGenres});
+
+  /// アクションからジャンルを選択 (D-157)。null なら出さない。
+  final VoidCallback? onPickGenres;
 
   final FowSpec spec;
 
@@ -706,6 +733,16 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             description: 'トレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)に合わない投稿を除外し、適合度順に並べます。プロファイルは検索ホームのトレンド ⚙ で編集します。',
             supported: allSns,
             add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'tendency'))),
+        // アクションからジャンルを選択 (D-157): 部品ではなくプロファイルの編集。
+        // 指向性/刺激性の部品が無ければ足してから開く。
+        if (widget.onPickGenres != null)
+          _PaletteItem(
+              icon: Icons.thumbs_up_down_outlined,
+              title: 'アクションからジャンルを選択',
+              subtitle: 'RASQ',
+              description: 'リアクションした投稿を類似した話題でまとめ、話題性の強いものから「好き / 好きではない」で好きなジャンルを決めます(指向性/刺激性の部品がこのプロファイルを使います)。',
+              supported: allSns,
+              add: () => widget.onPickGenres!()),
         _PaletteItem(
             icon: Icons.schedule,
             title: '時系列順',
@@ -876,7 +913,11 @@ class _ComponentParamsPanel extends StatefulWidget {
       required this.accounts,
       required this.onUpdate,
       required this.onConfirm,
-      required this.onCancel});
+      required this.onCancel,
+      this.onTendencyAction});
+
+  /// 指向性/刺激性の部品のオプション (D-157): 'tendency' / 'genres' / 'pick'。
+  final ValueChanged<String>? onTendencyAction;
 
   final bool algorithm;
   final int index;
@@ -931,7 +972,9 @@ class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
                 ? 'このプラグインのパラメーター(RRL 設定ページ)は、ノード定義の配布(ストア統合)でここに表示されます。'
                 : a.isQueryFilter
                     ? 'ワードが空のときは、このページの検索ワード/タグで絞り込みます。ワードは下の欄で指定できます。'
-                    : '時系列順にパラメーターはありません。'
+                    : a.isTendency
+                        ? 'storage.safe のトレンドプロファイルを使います。下のオプションから指向性/刺激性・好きなジャンル・アクションからのジャンル選択を編集できます(検索ホームのトレンド ⚙ と同じもの)。'
+                        : '時系列順にパラメーターはありません。'
           }),
         ]),
       );
@@ -1035,6 +1078,12 @@ class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
           RrlRenderer(node: root, host: host),
           // 検索絞り込み (D-125): ワード指定(RRL の Input 部品が入るまでの
           // ネイティブ欄。空 = このページの検索ワード/タグ)。
+          // 指向性/刺激性 (D-157): プロファイル編集のオプション。
+          if (widget.algorithm && widget.index < cfg.algorithms.length && cfg.algorithms[widget.index].isTendency && widget.onTendencyAction != null) ...[
+            RasqWarningListTile(title: 'トレンドの指向性/刺激性', onTap: () => widget.onTendencyAction!('tendency')),
+            RasqListTile(title: '好きなジャンル/方向性', onTap: () => widget.onTendencyAction!('genres')),
+            RasqListTile(title: 'アクションからジャンルを選択', subtitle: '類似した話題でまとめて、話題性の強いものから', onTap: () => widget.onTendencyAction!('pick')),
+          ],
           if (widget.algorithm && widget.index < cfg.algorithms.length && cfg.algorithms[widget.index].isQueryFilter)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
