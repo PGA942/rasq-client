@@ -48,7 +48,11 @@ double _similarity(Post a, Post b, Map<String, double> pa, Map<String, double> p
   final ng = cosineOfProfiles(pa, pb);
   final union = fa.union(fb).length;
   final jac = union == 0 ? 0.0 : fa.intersection(fb).length / union;
-  return math.max(ng, jac);
+  var s = math.max(ng, jac);
+  // 同じハッシュタグは強いアンカー(関連 TL と同じ考え方): 引用本文が混ざって
+  // 特徴語の重なりが薄まっても同じ話題に寄せる。
+  if (strongAnchors(a).intersection(strongAnchors(b)).isNotEmpty) s = math.max(s, 0.6);
+  return s;
 }
 
 /// [posts] を話題ごとにまとめて話題性の順に返す(最大 [top] 件)。
