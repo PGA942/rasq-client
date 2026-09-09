@@ -16,6 +16,8 @@ import '../compose/composer_sheet.dart';
 import '../compose/emoji_picker_fow.dart';
 import 'reaction_history.dart';
 import '../post/post_menu.dart';
+import '../vc/astell_actions.dart';
+import '../vc/astell_links.dart';
 import '../settings/safety.dart';
 import 'action_bar_config.dart';
 import 'post_duplicates.dart';
@@ -127,7 +129,10 @@ class _PostRowState extends ConsumerState<PostRow> {
     if (collapsible) {
       content = RasqCollapsedPost(spans: spans, maxLines: _collapseLines, onExpand: () => setState(() => _expanded = true));
     } else {
-      final body = post.body.isNotEmpty ? RasqRichText(spans, style: RasqTypography.body) : const SizedBox.shrink();
+      Widget body = post.body.isNotEmpty ? RasqRichText(spans, style: RasqTypography.body) : const SizedBox.shrink();
+      // AsTell のリンクを含む投稿 (D-160): 本文の下にルームのタイル(ブックマーク/通知/見てみる)。
+      final astellId = astellRoomIdIn(post.body);
+      if (astellId != null) body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [body, AstellPostTile(roomId: astellId)]);
       final cw = post.contentWarning;
       content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, initiallyOpen: safety.openCw, child: _CwBody(post: post, body: body)) : body;
     }

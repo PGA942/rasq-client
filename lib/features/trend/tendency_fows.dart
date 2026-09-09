@@ -252,6 +252,7 @@ Future<TendencyProfile?> openGenrePickFow(BuildContext context, WidgetRef ref, {
   var pool = [...reacted];
   var topics = topicsOf(pool, top: perPage);
   final selected = <int, Set<String>>{};
+  int? focused; // 下のボタンの対象 (D-158)
   var decided = 0;
   if (!context.mounted) return null;
   final done = await manager.showBottomSheet<bool>(
@@ -283,54 +284,78 @@ Future<TendencyProfile?> openGenrePickFow(BuildContext context, WidgetRef ref, {
         setSheet(() {});
       }
 
-      return ListView(shrinkWrap: true, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Text('最近のアクションを類似した話題でまとめ、話題性の強いものから ${topics.length} 件ずつ出しています。候補のジャンルをタップして選び、「好き」/「好きではない」(右/左スワイプでも)。(${decided + 1}〜 / 残り ${pool.length} 件)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-        ),
-        for (final t in topics) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-            child: Dismissible(
-              key: ValueKey('genre.pick.${t.representative.key}'),
-              direction: DismissDirection.horizontal,
-              confirmDismiss: (dir) async {
-                decide(t, dir == DismissDirection.startToEnd); // 右へ = 好き
-                return false; // 自分でカードを差し替える
-              },
-              background: Container(alignment: Alignment.centerLeft, padding: const EdgeInsets.only(left: RasqSpacing.page), child: const Text('好き', style: TextStyle(color: RasqColors.link, fontWeight: FontWeight.w700))),
-              secondaryBackground: Container(alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: RasqSpacing.page), child: Text('好きではない', style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w700))),
-              // インラインフレームの小表示 (D-156)。右上に話題の件数。
-              child: InlinePostFrame(post: t.representative, maxLines: 4, onTap: () {}, badge: t.posts.length > 1 ? RasqPill(label: '+${t.posts.length - 1} 件', color: RasqColors.sub, textColor: Colors.white) : null),
+      // 縦に 3 枚並べて、好き/好きではないは挟まずに下に 1 組 (D-158)。カードを
+      // タップして対象の話題を選ぶ(既定は先頭)。スワイプはカードごとに効く。
+      focused ??= topics.first.id;
+      if (!topics.any((t) => t.id == focused)) focused = topics.first.id;
+      final current = topics.firstWhere((t) => t.id == focused);
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        Flexible(
+          child: ListView(shrinkWrap: true, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+              child: Text('最近のアクションを類似した話題でまとめ、話題性の強いものから ${topics.length} 件ずつ出しています。話題をタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。(${decided + 1}〜 / 残り ${pool.length} 件)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
-            child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-              if (t.genres.isEmpty) Text('この話題からはジャンルを拾えませんでした', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-              for (final g in t.genres)
-                RasqTogglePillButton(
-                  label: '#$g',
-                  activeLabel: '#$g',
-                  active: (selected[t.id] ?? t.genres.take(2).toSet()).contains(g),
-                  onPressed: () => setSheet(() {
-                    final sel = selected.putIfAbsent(t.id, () => t.genres.take(2).toSet());
-                    sel.contains(g) ? sel.remove(g) : sel.add(g);
-                  }),
+            for (final t in topics)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+                child: Dismissible(
+                  key: ValueKey('genre.pick.${t.representative.key}'),
+                  direction: DismissDirection.horizontal,
+                  confirmDismiss: (dir) async {
+                    decide(t, dir == DismissDirection.startToEnd); // 右へ = 好き
+                    return false; // 自分でカードを差し替える
+                  },
+                  background: Container(alignment: Alignment.centerLeft, padding: const EdgeInsets.only(left: RasqSpacing.page), child: const Text('好き', style: TextStyle(color: RasqColors.link, fontWeight: FontWeight.w700))),
+                  secondaryBackground: Container(alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: RasqSpacing.page), child: Text('好きではない', style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w700))),
+                  child: GestureDetector(
+                    key: ValueKey('genre.topic.${t.id}'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setSheet(() => focused = t.id),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(RasqSizes.radiusLg),
+                        border: Border.all(color: t.id == focused ? RasqColors.link : scheme.outlineVariant, width: t.id == focused ? 2 : 1),
+                        color: t.id == focused ? RasqColors.link.withValues(alpha: 0.06) : null,
+                      ),
+                      padding: const EdgeInsets.all(RasqSpacing.xs),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        // インラインフレームの小表示 (D-156)。右上に話題の件数。
+                        InlinePostFrame(post: t.representative, maxLines: 3, onTap: () => setSheet(() => focused = t.id), badge: t.posts.length > 1 ? RasqPill(label: '+${t.posts.length - 1} 件', color: RasqColors.sub, textColor: Colors.white) : null),
+                        Padding(
+                          padding: const EdgeInsets.only(top: RasqSpacing.xs),
+                          child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
+                            if (t.genres.isEmpty) Text('この話題からはジャンルを拾えませんでした', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                            for (final g in t.genres)
+                              RasqTogglePillButton(
+                                label: '#$g',
+                                activeLabel: '#$g',
+                                active: (selected[t.id] ?? t.genres.take(2).toSet()).contains(g),
+                                onPressed: () => setSheet(() {
+                                  focused = t.id;
+                                  final sel = selected.putIfAbsent(t.id, () => t.genres.take(2).toSet());
+                                  sel.contains(g) ? sel.remove(g) : sel.add(g);
+                                }),
+                              ),
+                          ]),
+                        ),
+                      ]),
+                    ),
+                  ),
                 ),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
-            child: Row(children: [
-              Expanded(child: OutlinedButton(key: ValueKey('genre.dislike.${t.id}'), onPressed: () => decide(t, false), child: const Text('好きではない'))),
-              const SizedBox(width: RasqSpacing.sm),
-              Expanded(child: FilledButton(key: ValueKey('genre.like.${t.id}'), onPressed: () => decide(t, true), child: const Text('好き'))),
-            ]),
-          ),
-          if (t != topics.last) const Divider(height: RasqSpacing.sm),
-        ],
-        const SizedBox(height: RasqSpacing.sm),
+              ),
+            const SizedBox(height: RasqSpacing.sm),
+          ]),
+        ),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
+          child: Row(children: [
+            Expanded(child: OutlinedButton(key: const ValueKey('genre.dislike'), onPressed: () => decide(current, false), child: const Text('好きではない'))),
+            const SizedBox(width: RasqSpacing.sm),
+            Expanded(child: FilledButton(key: const ValueKey('genre.like'), onPressed: () => decide(current, true), child: const Text('好き'))),
+          ]),
+        ),
       ]);
     }),
   );

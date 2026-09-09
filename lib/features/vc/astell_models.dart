@@ -43,6 +43,7 @@ class AstellRoom {
     this.moderators = const [],
     this.tendencyFilter = false,
     this.locked = false,
+    this.scheduledAt,
   });
 
   final String id;
@@ -96,7 +97,14 @@ class AstellRoom {
   /// 運営(rasq-judge)による新規入室停止 (D-151)。
   final bool locked;
 
+  /// 開催予約 (D-159/S-011)。null = 開催中。未来ならオーナー/モデレーター以外は入れず、
+  /// オーナーが接続した時点で開催中になる(サーバーが null にする)。
+  final DateTime? scheduledAt;
+
   bool get isOpen => closedAt == null;
+
+  /// 予約中(まだ開催時刻が来ていない)か。
+  bool get isScheduled => scheduledAt != null && scheduledAt!.isAfter(DateTime.now());
 
   /// オーナーかモデレーターか。
   bool isModerator(String? accountId) => accountId != null && (accountId == ownerId || moderators.contains(accountId));
@@ -131,9 +139,21 @@ class AstellRoom {
         moderators: [for (final m in (j['moderators'] as List? ?? const [])) if (m is String) m],
         tendencyFilter: j['tendencyFilter'] == true,
         locked: j['locked'] == true,
+        scheduledAt: j['scheduledAt'] is String ? DateTime.tryParse(j['scheduledAt'] as String)?.toLocal() : null,
       );
 
-  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false, String? joinPolicy, String? sharePolicy, List<String>? moderators, bool? tendencyFilter}) => AstellRoom(
+  /// ワイヤ形(サーバーの `Room` と同じ)。ブックマークのスナップショット (D-160) と
+  /// モックの `room` メッセージに使う。
+  Map<String, Object?> toJson() => {
+        'id': id, 'ownerId': ownerId, 'ownerHandle': ownerHandle, 'ownerDisplayName': ownerDisplayName, 'ownerAvatarUrl': ownerAvatarUrl?.toString(),
+        'title': title, 'description': description, 'genres': genres, 'visibility': visibility, 'welcomeMessage': welcomeMessage,
+        'showSummary': showSummary, 'autoGenre': autoGenre, 'createdAt': createdAt.toIso8601String(), 'closedAt': closedAt?.toIso8601String(), 'peerCount': peerCount, 'live': live,
+        'thumbnailUrl': thumbnailUrl?.toString(), 'hostStream': hostStream?.toJson(), 'ttsVoice': ttsVoice,
+        'joinPolicy': joinPolicy, 'sharePolicy': sharePolicy, 'moderators': moderators, 'tendencyFilter': tendencyFilter, 'locked': locked,
+        'scheduledAt': scheduledAt?.toUtc().toIso8601String(),
+      };
+
+  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false, String? joinPolicy, String? sharePolicy, List<String>? moderators, bool? tendencyFilter, DateTime? scheduledAt, bool clearSchedule = false}) => AstellRoom(
         id: id,
         ownerId: ownerId,
         ownerHandle: ownerHandle,
@@ -158,6 +178,7 @@ class AstellRoom {
         moderators: moderators ?? this.moderators,
         tendencyFilter: tendencyFilter ?? this.tendencyFilter,
         locked: locked,
+        scheduledAt: clearSchedule ? null : (scheduledAt ?? this.scheduledAt),
       );
 }
 
@@ -269,7 +290,7 @@ class AstellAsset {
 /// VC ホームの 3 節(ワイヤーフレーム p.3)。
 @immutable
 class AstellHome {
-  const AstellHome({this.recommended = const [], this.trending = const [], this.following = const [], this.invited = const []});
+  const AstellHome({this.recommended = const [], this.trending = const [], this.following = const [], this.invited = const [], this.upcoming = const []});
   final List<AstellRoom> recommended;
   final List<AstellRoom> trending;
   final List<AstellRoom> following;
@@ -277,16 +298,19 @@ class AstellHome {
   /// 招待されているルーム (D-150)。
   final List<AstellRoom> invited;
 
+  /// 開催予約中のルーム (D-159): 近い順。
+  final List<AstellRoom> upcoming;
+
   factory AstellHome.fromJson(Map<String, Object?> j) {
     List<AstellRoom> rooms(Object? v) => [for (final r in (v as List? ?? const [])) if (r is Map) AstellRoom.fromJson(r.cast<String, Object?>())];
-    return AstellHome(recommended: rooms(j['recommended']), trending: rooms(j['trending']), following: rooms(j['following']), invited: rooms(j['invited']));
+    return AstellHome(recommended: rooms(j['recommended']), trending: rooms(j['trending']), following: rooms(j['following']), invited: rooms(j['invited']), upcoming: rooms(j['upcoming']));
   }
 }
 
 /// 作成 FOW の入力。
 @immutable
 class NewAstellRoom {
-  const NewAstellRoom({required this.title, this.description = '', this.genres = const [], this.welcomeMessage, this.showSummary = true, this.autoGenre = true, this.visibility = 'public'});
+  const NewAstellRoom({required this.title, this.description = '', this.genres = const [], this.welcomeMessage, this.showSummary = true, this.autoGenre = true, this.visibility = 'public', this.scheduledAt});
   final String title;
   final String description;
   final List<String> genres;
@@ -294,6 +318,9 @@ class NewAstellRoom {
   final bool showSummary;
   final bool autoGenre;
   final String visibility;
+
+  /// 開催予約 (D-159)。null = 作成即開催。
+  final DateTime? scheduledAt;
 
   Map<String, Object?> toJson() => {
         'title': title,
@@ -303,6 +330,7 @@ class NewAstellRoom {
         'welcomeMessage': ?welcomeMessage,
         'showSummary': showSummary,
         'autoGenre': autoGenre,
+        if (scheduledAt != null) 'scheduledAt': scheduledAt!.toUtc().toIso8601String(),
       };
 }
 

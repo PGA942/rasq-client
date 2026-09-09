@@ -181,6 +181,18 @@ class MockAstellClient implements AstellClient {
           // ホストが動画(作業画面の録画)を配信中のダミー (D-145)。
           hostStream: AstellHostStream(kind: 'video', title: 'エディタ作業 — 敵キャラのAI', thumbnailUrl: Uri.parse('https://picsum.photos/seed/rrl2/600/400'), startedAt: DateTime(2026, 9, 6, 17, 5)),
         ),
+        // 開催予約中のダミー (D-159): 近日開催の節に出る。
+        AstellRoom(
+          id: 'r-planned',
+          ownerId: 'yomogimochi',
+          ownerHandle: 'yomogimochi',
+          ownerDisplayName: 'よもぎもち',
+          title: '打ち上げ反省会',
+          description: '打ち上げ会の翌週。撮れた写真を見ながら振り返り。',
+          genres: const ['打上会', '写真'],
+          createdAt: DateTime.now(),
+          scheduledAt: DateTime.now().add(const Duration(days: 2, hours: 3)),
+        ),
       ];
 
   /// ダミーの文字起こし(打ち上げの打ち上げ)。ワイヤーフレームの 3 行。
@@ -207,11 +219,13 @@ class MockAstellClient implements AstellClient {
 
   @override
   Future<AstellHome> home() async {
-    final open = [for (final r in _rooms) if (r.isOpen && r.visibility == 'public') r];
+    final all = [for (final r in _rooms) if (r.isOpen && r.visibility == 'public') r];
+    final upcoming = [for (final r in all) if (r.isScheduled) r]..sort((a, b) => a.scheduledAt!.compareTo(b.scheduledAt!));
+    final open = [for (final r in all) if (!r.isScheduled) r];
     final trending = [...open]..sort((a, b) => b.peerCount.compareTo(a.peerCount));
-    final following = [for (final r in open) if (_following.contains(r.ownerId)) r];
+    final following = [for (final r in all) if (_following.contains(r.ownerId)) r];
     final invited = [for (final r in _rooms) if (r.isOpen && (_invites[r.id]?.contains('me') ?? false)) r];
-    return AstellHome(recommended: open.take(10).toList(), trending: trending.take(10).toList(), following: following, invited: invited);
+    return AstellHome(recommended: open.take(10).toList(), trending: trending.take(10).toList(), following: following, invited: invited, upcoming: upcoming.take(10).toList());
   }
 
   @override
@@ -235,6 +249,7 @@ class MockAstellClient implements AstellClient {
       showSummary: req.showSummary,
       autoGenre: req.autoGenre,
       createdAt: DateTime.now(),
+      scheduledAt: req.scheduledAt,
     );
     _rooms.insert(0, room);
     return room;
@@ -255,6 +270,8 @@ class MockAstellClient implements AstellClient {
       tendencyFilter: patch['tendencyFilter'] as bool?,
       ttsVoice: patch['ttsVoice'] as String?,
       clearTtsVoice: patch.containsKey('ttsVoice') && patch['ttsVoice'] == null,
+      scheduledAt: patch['scheduledAt'] is String ? DateTime.tryParse(patch['scheduledAt'] as String)?.toLocal() : null,
+      clearSchedule: patch.containsKey('scheduledAt') && patch['scheduledAt'] == null,
     );
     _rooms[i] = r;
     _broadcast(id, {'type': 'room', 'room': _roomJson(r)});
@@ -320,13 +337,7 @@ class MockAstellClient implements AstellClient {
   /// 接続中のピア(seed からキック済みを除く)。
   List<AstellPeer> _livePeers(String roomId) => [for (final p in seededPeers(roomId)) if (!(_kicked[roomId]?.contains(p.peerId) ?? false)) p];
 
-  Map<String, Object?> _roomJson(AstellRoom r) => {
-        'id': r.id, 'ownerId': r.ownerId, 'ownerHandle': r.ownerHandle, 'ownerDisplayName': r.ownerDisplayName, 'ownerAvatarUrl': r.ownerAvatarUrl?.toString(),
-        'title': r.title, 'description': r.description, 'genres': r.genres, 'visibility': r.visibility, 'welcomeMessage': r.welcomeMessage,
-        'showSummary': r.showSummary, 'autoGenre': r.autoGenre, 'createdAt': r.createdAt.toIso8601String(), 'peerCount': r.peerCount, 'live': r.live,
-        'thumbnailUrl': r.thumbnailUrl?.toString(), 'hostStream': r.hostStream?.toJson(), 'ttsVoice': r.ttsVoice,
-        'joinPolicy': r.joinPolicy, 'sharePolicy': r.sharePolicy, 'moderators': r.moderators, 'tendencyFilter': r.tendencyFilter,
-      };
+  Map<String, Object?> _roomJson(AstellRoom r) => r.toJson();
 
   @override
   Future<AstellRoom> setModerator(String roomId, String accountId, bool moderator) async {

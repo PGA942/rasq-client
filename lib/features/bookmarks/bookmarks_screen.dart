@@ -10,6 +10,9 @@ import '../../shell/headers.dart';
 import '../clips/clip_providers.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../vc/astell_actions.dart';
+import '../vc/astell_bookmarks.dart';
+import '../vc/astell_tile.dart';
 
 final favoritesProvider = FutureProvider.autoDispose<List<Post>>((ref) async {
   final s = ref.watch(currentSnsSessionProvider);
@@ -34,15 +37,25 @@ class BookmarksScreen extends ConsumerWidget {
           // 自分のための保存の置き場 (D-032 改): RASQ 横断クリップと非公開
           // ネイティブクリップはリスト欄ではなくここに並ぶ。
           final clips = ref.watch(bookmarkClipsProvider);
+          // AsTell のブックマーク (D-160): タイルの帯(見てみる/戻る、通知)。
+          final rooms = ref.watch(astellBookmarksProvider).value ?? const [];
           final scheme = Theme.of(context).colorScheme;
-          if (posts.isEmpty && clips.isEmpty) {
-            return const RasqEmptyView(title: 'ブックマークはありません', hint: '投稿メニューの「お気に入り」「クリップに追加」で集められます');
+          if (posts.isEmpty && clips.isEmpty && rooms.isEmpty) {
+            return const RasqEmptyView(title: 'ブックマークはありません', hint: '投稿メニューの「お気に入り」「クリップに追加」、VC タイルのしおりで集められます');
           }
           return RefreshIndicator(
-            onRefresh: () => ref.refresh(favoritesProvider.future),
+            onRefresh: () async {
+              await refreshAstellBookmarks(ref);
+              ref.invalidate(favoritesProvider);
+              await ref.read(favoritesProvider.future);
+            },
             child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
+              if (rooms.isNotEmpty) ...[
+                const RasqSectionHeader(title: 'AsTell', topMargin: 0),
+                AstellTileStrip(rooms: rooms, tileBuilder: (r) => AstellRoomTile(room: r)),
+              ],
               if (clips.isNotEmpty) ...[
-                const RasqSectionHeader(title: 'クリップ', topMargin: 0),
+                RasqSectionHeader(title: 'クリップ', topMargin: rooms.isEmpty ? 0 : RasqSpacing.sectionMargin),
                 for (final c in clips) ...[
                   RasqListTile(
                     title: c.name,

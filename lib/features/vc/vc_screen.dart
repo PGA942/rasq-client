@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
-import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
+import 'astell_actions.dart';
 import 'astell_fows.dart';
 import 'astell_models.dart';
 import 'astell_providers.dart';
@@ -22,33 +22,14 @@ class VcScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider);
     final home = ref.watch(astellHomeProvider);
-    final manager = ref.watch(overlayManagerProvider);
     final session = ref.watch(astellSessionProvider);
 
     void open(AstellRoom room) => openAstellPreviewFow(context, ref, room);
-    Future<void> more(AstellRoom room, Rect anchor) async {
-      final following = ref.read(astellFollowingProvider).value?.contains(room.ownerId) ?? false;
-      final pick = await manager.showDropdown<String>(id: 'astell.tile.more', anchor: anchor, dense: true, items: [
-        const RasqDropdownItem('リンクをコピー', 'copy'),
-        RasqDropdownItem(following ? 'ホストのフォローを解除' : 'ホストをフォロー', 'follow'),
-        const RasqDropdownItem('ミュート', 'mute'),
-        const RasqDropdownItem('報告', 'report', destructive: true),
-      ]);
-      if (pick == null || !context.mounted) return;
-      switch (pick) {
-        case 'follow':
-          await ref.read(astellSessionProvider.notifier).follow(room.ownerId, !following);
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(following ? '${room.ownerDisplayName} のフォローを解除しました' : '${room.ownerDisplayName} をフォローしました')));
-        case 'report':
-          await showAstellReportSheet(context, ref, targetAccountId: room.ownerId, roomId: room.id, what: 'ルーム「${room.title}」');
-        default:
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('「${room.title}」の操作($pick)は M5 後段で入ります')));
-      }
-    }
 
     Widget section(String title, List<AstellRoom> rooms, {String? emptyHint, VoidCallback? onSettings}) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           RasqSectionHeader(title: title, topMargin: 0, trailing: onSettings == null ? null : RasqIconButton(icon: Icons.settings, size: 20, onPressed: onSettings, tooltip: '$titleの設定')),
-          AstellTileStrip(rooms: rooms, onOpen: open, onMore: more, emptyHint: emptyHint),
+          // ブックマーク/開始通知/見てみる(戻る)を配線したタイル (D-160)。
+          AstellTileStrip(rooms: rooms, tileBuilder: (r) => AstellRoomTile(room: r), emptyHint: emptyHint),
         ]);
 
     return Scaffold(
@@ -87,6 +68,8 @@ class VcScreen extends ConsumerWidget {
                 ),
             ],
             section('おすすめ', h.recommended, emptyHint: 'おすすめの VC はまだありません'),
+            // 近日開催 (D-159): 開催予約中のルーム(予約時刻の近い順)。
+            if (h.upcoming.isNotEmpty) section('近日開催', h.upcoming),
             section('トレンド', h.trending, emptyHint: 'トレンドの VC はまだありません', onSettings: () {}),
             section('フォロー中', h.following, emptyHint: 'フォロー中のユーザーの VC はありません', onSettings: () {}),
             const SizedBox(height: 80),

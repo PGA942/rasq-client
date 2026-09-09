@@ -8,6 +8,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../settings/settings_dsl.dart';
+import '../trend/tendency_profile.dart';
+import 'astell_actions.dart';
+import 'astell_bookmarks.dart';
+import 'astell_links.dart';
 import 'astell_media_viewer.dart';
 import 'astell_models.dart';
 import 'astell_providers.dart';
@@ -26,6 +30,9 @@ import 'astell_providers.dart';
 const astellPreviewFowId = 'fow.astell.preview';
 const astellRoomFowId = 'fow.astell.room';
 const astellCreateFowId = 'fow.astell.create';
+
+/// 作成 FOW のフォーム(縦スクロール)。テストがスクロール先に使う。
+const astellCreateFormKey = Key('astell.create.form');
 
 FowSpec _spec({required String title, String? cancelText, Widget? trailing, double height = 0.6}) => FowSpec(
       type: FowPanelType.widget,
@@ -209,9 +216,10 @@ Future<void> openAstellPreviewFow(BuildContext context, WidgetRef ref, AstellRoo
     spec: _spec(
       title: room.title,
       cancelText: '閉じる',
+      // 共有(投稿コンポーザーへリンク転送)/ ブックマーク (D-159/D-160)。
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        RasqIconButton(icon: Icons.ios_share, size: 20, tooltip: '共有', onPressed: () {}),
-        RasqIconButton(icon: Icons.bookmark, size: 20, tooltip: 'ブックマーク', onPressed: () {}),
+        RasqIconButton(icon: Icons.ios_share, size: 20, tooltip: '共有', onPressed: () => shareAstellRoom(context, ref, room)),
+        AstellBookmarkButton(room: room),
       ]),
     ),
     barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
@@ -241,6 +249,15 @@ class _PreviewBody extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
               child: Text('運営により新規入室が停止されています(D-151)。', style: RasqTypography.caption.copyWith(color: RasqColors.danger)),
+            ),
+          // 開催予定 (D-159): 時刻と開始通知の登録。
+          if (room.isScheduled)
+            RasqListTile(
+              title: '開催予定 ${formatAstellSchedule(room.scheduledAt!)}',
+              subtitle: ref.watch(astellRemindedProvider(room.id)) ? '開始を通知します' : 'ホストが始めるまで参加できません',
+              leading: const Icon(Icons.schedule, color: RasqColors.link),
+              trailing: TextButton(onPressed: () => remindAstellRoom(context, ref, room), child: Text(ref.watch(astellRemindedProvider(room.id)) ? '通知を解除' : '開始を通知')),
+              chevron: false,
             ),
           const Divider(height: RasqSpacing.md),
           _label(context, 'ざっくり要約'),
@@ -495,8 +512,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
                 padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.xs, 0),
                 child: Row(children: [
                   Expanded(child: Text(room.title, style: RasqTypography.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                  RasqIconButton(icon: Icons.ios_share, size: 20, tooltip: '共有', onPressed: () {}),
-                  RasqIconButton(icon: Icons.bookmark, size: 20, tooltip: 'ブックマーク', onPressed: () {}),
+                  RasqIconButton(icon: Icons.ios_share, size: 20, tooltip: '共有', onPressed: () => shareAstellRoom(context, ref, room)),
+                  AstellBookmarkButton(room: room),
                   TextButton(onPressed: leave, child: Text('退出', style: TextStyle(color: tokens.danger, fontWeight: FontWeight.w700))),
                 ]),
               ),
@@ -1784,17 +1801,53 @@ String _guessMime(String name) {
 
 Future<void> openAstellCreateFow(BuildContext context, WidgetRef ref) async {
   final manager = ref.read(overlayManagerProvider);
+  // ヘッダーの共有アイコン (D-159): オンなら作成後に投稿コンポーザーへリンクを転送。
+  final shareAfter = ValueNotifier<bool>(false);
   await manager.showFow<void>(
     id: astellCreateFowId,
-    spec: _spec(title: 'VC を作成', cancelText: 'キャンセル', height: 0.7),
+    spec: _spec(
+      title: 'VC を作成',
+      cancelText: 'キャンセル',
+      height: 0.7,
+      trailing: ValueListenableBuilder<bool>(
+        valueListenable: shareAfter,
+        builder: (ctx, on, _) => RasqIconButton(
+          key: const ValueKey('astell.create.share'),
+          icon: Icons.ios_share,
+          size: 20,
+          color: on ? RasqColors.accent : null,
+          tooltip: on ? '作成後に投稿で共有する(オン)' : '作成後に投稿で共有する',
+          onPressed: () => shareAfter.value = !on,
+        ),
+      ),
+    ),
     barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
     builder: (ctx, handle) => _CreateBody(onCreated: (room) async {
       handle.close();
       ref.invalidate(astellHomeProvider);
+      if (shareAfter.value && context.mounted) await shareAstellRoom(context, ref, room);
+      if (!context.mounted) return;
+      if (room.isScheduled) {
+        // 予約 (D-159): オーナーが接続すると開催になるので、今は入らない。
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('「${room.title}」を ${formatAstellSchedule(room.scheduledAt!)} に予約しました')));
+        return;
+      }
       await ref.read(astellSessionProvider.notifier).join(room);
       if (context.mounted) await openAstellRoomFow(context, ref);
     }),
   );
+  shareAfter.dispose();
+}
+
+/// ヘッダーのブックマーク (D-160): 保存済みなら塗り。
+class AstellBookmarkButton extends ConsumerWidget {
+  const AstellBookmarkButton({super.key, required this.room});
+  final AstellRoom room;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final on = ref.watch(astellBookmarkedProvider(room.id));
+    return RasqIconButton(icon: on ? Icons.bookmark : Icons.bookmark_border, size: 20, color: on ? RasqColors.accent : null, tooltip: on ? 'ブックマークから削除' : 'ブックマークに保存', onPressed: () => bookmarkAstellRoom(context, ref, room));
+  }
 }
 
 class _CreateBody extends ConsumerStatefulWidget {
@@ -1810,17 +1863,60 @@ class _CreateBodyState extends ConsumerState<_CreateBody> {
   final _title = TextEditingController();
   final _welcome = TextEditingController();
   final _description = TextEditingController();
+  final _genreInput = TextEditingController();
   bool _welcomeOn = false;
   bool _showSummary = true;
   bool _autoGenre = true;
   bool _busy = false;
+
+  /// 開催予約 (D-159)。null = 作成即開催。
+  DateTime? _scheduledAt;
+
+  /// 手動のジャンル (D-159): 自動選択オフのときに選定。
+  final List<String> _genres = [];
 
   @override
   void dispose() {
     _title.dispose();
     _welcome.dispose();
     _description.dispose();
+    _genreInput.dispose();
     super.dispose();
+  }
+
+  /// 予約時刻の日付/時刻を選ぶ。既定は 1 時間後(15 分刻み)。
+  Future<void> _pickSchedule({bool date = true}) async {
+    final now = DateTime.now();
+    final base = _scheduledAt ?? DateTime(now.year, now.month, now.day, now.hour + 1, (now.minute ~/ 15) * 15);
+    DateTime next = base;
+    if (date) {
+      final d = await showDatePicker(context: context, initialDate: base.isBefore(now) ? now : base, firstDate: now, lastDate: now.add(const Duration(days: 90)));
+      if (d == null) return;
+      next = DateTime(d.year, d.month, d.day, base.hour, base.minute);
+    } else {
+      final t = await showTimePicker(context: context, initialTime: TimeOfDay(hour: base.hour, minute: base.minute));
+      if (t == null) return;
+      next = DateTime(base.year, base.month, base.day, t.hour, t.minute);
+    }
+    if (!mounted) return;
+    if (!next.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('開催予定は今より後にしてください')));
+      return;
+    }
+    setState(() => _scheduledAt = next);
+  }
+
+  void _addGenre(String raw) {
+    final g = raw.trim().replaceFirst(RegExp(r'^#'), '');
+    if (g.isEmpty || g.length > 30) return;
+    if (_genres.length >= 10) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ジャンルは 10 個までです')));
+      return;
+    }
+    setState(() {
+      if (!_genres.contains(g)) _genres.add(g);
+      _genreInput.clear();
+    });
   }
 
   Future<void> _create() async {
@@ -1831,12 +1927,19 @@ class _CreateBodyState extends ConsumerState<_CreateBody> {
     }
     setState(() => _busy = true);
     try {
+      if (_scheduledAt != null && !_scheduledAt!.isAfter(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('開催予定は今より後にしてください')));
+        setState(() => _busy = false);
+        return;
+      }
       final room = await ref.read(astellClientProvider).createRoom(NewAstellRoom(
             title: title,
             description: _description.text.trim(),
+            genres: _autoGenre ? const [] : List.of(_genres),
             welcomeMessage: _welcomeOn && _welcome.text.trim().isNotEmpty ? _welcome.text.trim() : null,
             showSummary: _showSummary,
             autoGenre: _autoGenre,
+            scheduledAt: _scheduledAt,
           ));
       // 招待 (D-150): 作成後にまとめて送る(失敗しても作成は成立)。
       if (_invitees.isNotEmpty) {
@@ -1896,7 +1999,7 @@ class _CreateBodyState extends ConsumerState<_CreateBody> {
     final me = ref.watch(rasqAccountProvider);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
-        child: ListView(padding: EdgeInsets.zero, children: [
+        child: ListView(key: astellCreateFormKey, padding: EdgeInsets.zero, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
             child: RasqInput(controller: _title, hintText: 'タイトル', autofocus: true),
@@ -1951,6 +2054,55 @@ class _CreateBodyState extends ConsumerState<_CreateBody> {
           RasqSwitchListTile(title: 'プレビューにざっくり要約を表示する', value: _showSummary, onChanged: (v) => setState(() => _showSummary = v)),
           const Divider(height: 1),
           RasqSwitchListTile(title: 'ジャンルを自動選択する', value: _autoGenre, onChanged: (v) => setState(() => _autoGenre = v)),
+          // ジャンル選定 (D-159): 自動選択オフのとき、手入力 + 好きなジャンルからの候補。
+          if (!_autoGenre) ...[
+            _label(context, 'ジャンルを選定(最大 10)'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+              child: Row(children: [
+                Expanded(child: RasqInput(key: const ValueKey('astell.create.genre.input'), controller: _genreInput, hintText: 'ジャンルを入力', onSubmitted: _addGenre)),
+                const SizedBox(width: RasqSpacing.xs),
+                RasqIconButton(icon: Icons.add, tooltip: 'ジャンルを追加', onPressed: () => _addGenre(_genreInput.text)),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+              child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
+                for (final g in _genres) RasqTogglePillButton(label: '#$g ✕', activeLabel: '#$g ✕', active: true, onPressed: () => setState(() => _genres.remove(g))),
+                // 候補: トレンドプロファイルの好きなジャンル (D-153)。
+                for (final g in ref.watch(tendencyProfileProvider).value?.genres ?? const <String>[])
+                  if (!_genres.contains(g)) RasqTogglePillButton(label: '+ #$g', activeLabel: '+ #$g', active: false, onPressed: () => _addGenre(g)),
+              ]),
+            ),
+          ],
+          const Divider(height: 1),
+          // 開催予約 (D-159): オンで日付/時刻。予約中はオーナーが入るまで他の人は参加できない。
+          RasqSwitchListTile(
+            title: '開催を予約する',
+            value: _scheduledAt != null,
+            onChanged: (v) {
+              if (!v) {
+                setState(() => _scheduledAt = null);
+                return;
+              }
+              final now = DateTime.now();
+              setState(() => _scheduledAt = DateTime(now.year, now.month, now.day, now.hour + 1, (now.minute ~/ 15) * 15));
+            },
+          ),
+          if (_scheduledAt != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+              child: Row(children: [
+                Expanded(child: OutlinedButton.icon(key: const ValueKey('astell.create.date'), onPressed: () => _pickSchedule(date: true), icon: const Icon(Icons.calendar_today, size: 16), label: Text('${_scheduledAt!.year}/${_scheduledAt!.month}/${_scheduledAt!.day}'))),
+                const SizedBox(width: RasqSpacing.xs),
+                Expanded(child: OutlinedButton.icon(key: const ValueKey('astell.create.time'), onPressed: () => _pickSchedule(date: false), icon: const Icon(Icons.schedule, size: 16), label: Text(formatAstellSchedule(_scheduledAt!).split(' ').last))),
+              ]),
+            ),
+          if (_scheduledAt != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+              child: Text('予約中はあなた(とモデレーター)が入るまで他の人は参加できません。近日開催の節と共有リンクから開始通知を登録できます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
             child: RasqInput(controller: _description, hintText: 'ざっくり要約(任意。空なら端末側で自動生成)', maxLines: 2),
@@ -1965,7 +2117,7 @@ class _CreateBodyState extends ConsumerState<_CreateBody> {
           const SizedBox(width: RasqSpacing.sm),
           _RoundButton(icon: Icons.subtitles_outlined, tooltip: '字幕', filled: _showSummary ? const Color(0xFF2EBF8F) : scheme.outline, onPressed: () => setState(() => _showSummary = !_showSummary)),
           const SizedBox(width: RasqSpacing.sm),
-          Expanded(child: RasqGradientButton(label: '作成', onPressed: _busy ? null : _create, enabled: !_busy)),
+          Expanded(child: RasqGradientButton(label: _scheduledAt != null ? '予約' : '作成', onPressed: _busy ? null : _create, enabled: !_busy)),
           const SizedBox(width: RasqSpacing.sm),
           _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: () => _notYet(context, 'VC の設定')),
         ]),
