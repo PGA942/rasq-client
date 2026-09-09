@@ -11,6 +11,7 @@ import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
 import '../settings/settings_dsl.dart';
+import 'tendency_profile.dart';
 import 'trend_analysis.dart';
 
 /// トレンドワード. Phase-1 sample: `hashtags/trend` of the current SNS
@@ -62,7 +63,10 @@ final trendFollowingPostsProvider = FutureProvider.autoDispose.family<List<Post>
   final a = await ref.watch(trendAnalysisProvider(tag).future);
   final s = ref.watch(currentSnsSessionProvider);
   if (s == null) return a.followingPosts;
-  return await _applyTrendScopeGraph(ref, s, 'trend.following', 'home', a.followingPosts, selfQuery: tag) ?? a.followingPosts;
+  final posts = await _applyTrendScopeGraph(ref, s, 'trend.following', 'home', a.followingPosts, selfQuery: tag) ?? a.followingPosts;
+  // 指向性/刺激性の既定適用 (D-153)。
+  final profile = await ref.watch(tendencyProfileProvider.future);
+  return applyTendencyProfile(posts, profile);
 });
 
 /// ユーザータブ (D-113): `trend.users` スコープのグラフでタグ投稿を絞って

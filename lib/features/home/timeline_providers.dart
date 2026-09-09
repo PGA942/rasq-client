@@ -17,6 +17,7 @@ import '../../text/inline_spans.dart';
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
+import '../trend/tendency_profile.dart';
 import 'post_duplicates.dart';
 import '../relational/relational_providers.dart' show mlGatewayProvider;
 import '../settings/settings_dsl.dart';
@@ -446,6 +447,16 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         debugPrint('nodeprog($scope): $e');
       }
       _armClock(clock);
+    }
+    // 指向性/刺激性の既定適用 (D-153): おすすめ(social)とトレンド(tag:)に、
+    // カスタム鎖の後でプロファイルを掛ける(プロファイルが効かなければ素通し)。
+    if (kind == TimelineKind.social || kind.id.startsWith('tag:')) {
+      try {
+        final profile = await ref.read(tendencyProfileProvider.future);
+        if (profile.active) page = Page(items: applyTendencyProfile(page.items, profile), nextCursor: page.nextCursor);
+      } catch (e) {
+        debugPrint('tendency: $e');
+      }
     }
     _applyStates(page.items, states);
     ref.read(emojiCacheProvider.notifier).request({for (final p in page.items) ...InlineSpans.emojiShortcodes(p.body), for (final p in page.items) ...InlineSpans.emojiShortcodes(p.author.displayName)});

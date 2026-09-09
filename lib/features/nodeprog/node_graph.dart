@@ -649,6 +649,18 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     outputs: [NodePort(label: '一致度', dataType: '数値')],
   ),
   NodeCatalogEntry(
+    type: 'ml.tendency',
+    title: '指向性/刺激性 (プロファイル)',
+    icon: Icons.tune,
+    genre: 'ML',
+    description: 'storage.safe のトレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)への適合度(0〜1)を各投稿に出します。プロファイルは検索ホームのトレンド ⚙ で編集し、他のノードからも同じスロットを読めます。',
+    inputs: [
+      NodePort(label: '投稿リスト', dataType: '投稿リスト'),
+      NodePort(label: 'プロファイル', value: 'trend.profile', dataType: '設定'),
+    ],
+    outputs: [NodePort(label: '適合度', dataType: '数値')],
+  ),
+  NodeCatalogEntry(
     type: 'compare',
     title: '比較',
     icon: Icons.functions,

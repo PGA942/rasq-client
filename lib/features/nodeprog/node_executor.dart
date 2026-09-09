@@ -5,6 +5,7 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../home/post_duplicates.dart' show postDupKey;
 import '../relational/relational_engine.dart' show charNgramProfile, cosineOfProfiles, entityOverlap, extractFeatures, extractFeaturesText;
+import '../trend/tendency_profile.dart';
 import 'node_graph.dart';
 
 /// ノードグラフの実行 (D-094/D-097)。
@@ -446,7 +447,7 @@ bool _comparePredicate(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, Po
 }
 
 double? _numericOf(GraphNode s, Post p, _CondContext ctx) => switch (s.type) {
-      'ml.similar' || 'ml.keyword' => ctx.scores[s.id]?[p.key],
+      'ml.similar' || 'ml.keyword' || 'ml.tendency' => ctx.scores[s.id]?[p.key],
       'random' => nodeRandomValue(s, p),
       _ => null,
     };
@@ -506,7 +507,7 @@ class _CondContext {
         if (child.type == 'compare') {
           final src = g.edges.where((x) => !x.cond && !x.toIcon && x.to == child.id && x.toPort == 0).firstOrNull;
           final ml = src == null ? null : byId[src.from];
-          if (ml != null && (ml.type == 'ml.similar' || ml.type == 'ml.keyword')) mlNodes.add(ml);
+          if (ml != null && (ml.type == 'ml.similar' || ml.type == 'ml.keyword' || ml.type == 'ml.tendency')) mlNodes.add(ml);
         }
       }
     }
@@ -515,6 +516,15 @@ class _CondContext {
     final scores = <String, Map<String, double>>{};
     for (final ml in mlNodes) {
       if (scores.containsKey(ml.id)) continue;
+      // 指向性/刺激性 (D-153): storage.safe のプロファイルへの適合度(生値 0〜1)。
+      if (ml.type == 'ml.tendency') {
+        final slot = ml.inputs.where((i) => i.label == 'プロファイル').firstOrNull?.value?.trim() ?? '';
+        final raw = await env.storageRead?.call(slot.isEmpty ? TendencyProfile.slot : slot);
+        final profile = TendencyProfile.tryParse(raw);
+        if (profile == null) continue; // プロファイル無し → スコアなし(比較は不成立)
+        scores[ml.id] = {for (final p in posts) p.key: tendencyScorer.score(p, profile).value};
+        continue;
+      }
       final refs = await _textSources(g, byId, ml, env);
       // 基準ベクトル (D-104): SigLIP埋め込み/読み出しからの接続。
       Map<String, Object?>? vecRef;
