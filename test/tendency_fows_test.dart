@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/trend/genre_topics.dart';
 import 'package:rasq_client/features/trend/tendency_fows.dart';
 import 'package:rasq_client/features/trend/tendency_profile.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -48,6 +49,56 @@ void main() {
     expect(auto.first, '打上会'); // 2 回出る
   });
 
+  test('話題のまとめ (D-157): 類似した投稿が 1 つの話題になり、話題性の順で上位だけ', () {
+    final many = [
+      post('a1', 'ロケット発射おめでとう #打上会', ),
+      post('a2', 'ロケット発射の中継見た #打上会'),
+      post('a3', '打上会のロケット発射、最高だった'),
+      post('b1', '今日の晩ごはんはカレー #料理'),
+      post('b2', 'カレーのスパイス配合メモ #料理'),
+      post('c1', '確定申告の締切いつだっけ'),
+    ];
+    final topics = topicsOf(many, top: 2);
+    expect(topics.length, 2);
+    expect(topics.first.posts.length, 3); // ロケット/打上会の話題が最も強い
+    expect(topics.first.genres, contains('打上会'));
+    expect(topics[1].posts.length, 2);
+    expect(topics[1].genres, contains('料理'));
+    expect(topicsOf(const [], top: 3), isEmpty);
+    // 1 件だけなら 1 話題。
+    expect(topicsOf([many.last], top: 3).single.posts.single.id, 'c1');
+  });
+
+  testWidgets('簡略カスタマイズ UI (D-157): 「アクションからジャンルを選択」の部品オプションと、指向性/刺激性の部品のオプション', (tester) async {
+    await pump(tester);
+    await tester.tap(find.byTooltip('検索'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('トレンド設定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('アルゴリズム(ノード)を編集'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('アルゴリズムを追加'));
+    await tester.pumpAndSettle();
+    expect(find.text('指向性/刺激性'), findsOneWidget);
+    await tester.tap(find.text('アクションからジャンルを選択'));
+    await tester.pumpAndSettle();
+    // 部品が足され、選択シートが開く。
+    expect(find.text('アクションからジャンルを選択'), findsWidgets);
+    expect(find.widgetWithText(FilledButton, '好き'), findsWidgets);
+    await tester.tap(find.text('キャンセル'));
+    await tester.pumpAndSettle();
+    expect(find.text('指向性/刺激性(プロファイル)'), findsOneWidget); // 追加された部品
+    // 部品のタイルを開く → オプション: 指向性/刺激性 / 好きなジャンル / アクションから選択。
+    await tester.tap(find.text('指向性/刺激性(プロファイル)'));
+    await tester.pumpAndSettle();
+    expect(find.text('ノードを設定'), findsOneWidget);
+    expect(find.text('トレンドの指向性/刺激性'), findsOneWidget);
+    expect(find.text('好きなジャンル/方向性'), findsOneWidget);
+    await tester.tap(find.text('トレンドの指向性/刺激性'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('trend.stimulus.radar')), findsOneWidget);
+  });
+
   testWidgets('検索ホームの ⚙ → プロファイル設定 → 指向性/刺激性(レーダー)→ ジャンル追加 → アクションから選択 → TL に効く', (tester) async {
     final container = await pump(tester);
     await tester.tap(find.byTooltip('検索'));
@@ -86,18 +137,22 @@ void main() {
     await tester.tap(find.byTooltip('ジャンルを追加'));
     await tester.pumpAndSettle();
     expect(find.textContaining('#宇宙'), findsWidgets); // チップは「#宇宙 ✕」
-    // アクションから選択: カード → 好き → 好きではない → 決定。
+    // アクションから選択 (D-157): 類似話題でまとめて同時に出す — 打上会の 2 件が 1 つの話題、カレーが別の話題。
     await tester.tap(find.text('最近のアクションから好きなものを選択'));
     await tester.pumpAndSettle();
     expect(find.text('アクションからジャンルを選択'), findsOneWidget);
-    expect(find.textContaining('(1/3)'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, '好き'));
+    expect(find.widgetWithText(FilledButton, '好き'), findsNWidgets(2));
+    expect(find.text('+1 件'), findsOneWidget); // 打上会の話題は代表 + 1 件
+    // 打上会の話題(先頭 = 話題性が高い)を好き。
+    await tester.tap(find.widgetWithText(FilledButton, '好き').first);
     await tester.pumpAndSettle();
-    expect(find.textContaining('(2/3)'), findsOneWidget);
-    await tester.tap(find.text('#料理')); // 先頭 2 つが選択済みなので「料理」を外す(残りは「カレー」)
+    expect(find.widgetWithText(FilledButton, '好き'), findsOneWidget);
+    // カレーの話題: 「料理」を外して「好きではない」。
+    await tester.tap(find.text('#料理'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(OutlinedButton, '好きではない'));
     await tester.pumpAndSettle();
+    expect(find.text('全部見ました'), findsOneWidget);
     await tester.tap(find.text('決定').last);
     await tester.pumpAndSettle();
     expect(find.textContaining('#打上会'), findsWidgets); // 好きに入った
@@ -106,7 +161,8 @@ void main() {
     await tester.pumpAndSettle();
     profile = await container.read(tendencyProfileProvider.future);
     expect(profile.genres, containsAll(['宇宙', '打上会']));
-    expect(profile.disliked, ['カレー']);
+    expect(profile.disliked, contains('カレー'));
+    expect(profile.disliked, isNot(contains('料理')));
     expect(profile.active, isTrue);
 
     // 設定シートに反映(チップと要約)。
