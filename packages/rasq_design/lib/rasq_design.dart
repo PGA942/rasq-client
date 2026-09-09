@@ -33,6 +33,7 @@ export 'src/components/user_tile_large.dart';
 export 'src/components/sort.dart';
 export 'src/components/search_filter_bar.dart';
 export 'src/components/slider_list_tile.dart';
+export 'src/components/radar_chart.dart';
 export 'src/components/brand.dart';
 export 'src/components/plugin_tile.dart';
 

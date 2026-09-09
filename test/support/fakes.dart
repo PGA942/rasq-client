@@ -65,6 +65,9 @@ class FakeSnsSession extends SnsSessionBase {
     _posts.insert(0, p);
     return p;
   }
+  /// リアクション済み取得 (D-103/D-154): 手元の投稿をそのまま返す。
+  @override
+  Future<Page<Post>> reactedPosts({String? cursor, int limit = 20}) async => cursor != null ? Page.empty() : Page(items: _posts.take(limit).toList());
   @override
   Future<Page<ReactionEntry>> reactions(String postId, {String? type, String? cursor, int limit = 30}) async =>
       Page(items: [ReactionEntry(id: 'r1', user: _posts.first.author, reaction: type ?? '👍', createdAt: DateTime(2026))]);
