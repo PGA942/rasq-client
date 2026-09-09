@@ -989,7 +989,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               : (e.transcript ? null : BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(RasqSizes.radiusSm))),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             SizedBox(width: 40, child: Text(_hhmm(e.at), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-            if (e.kind != null && e.kind != 'text') Padding(padding: const EdgeInsets.only(right: RasqSpacing.xs), child: RasqPill(label: e.kind!)),
+            if (e.kind != null && e.kind != 'text') Padding(padding: const EdgeInsets.only(right: RasqSpacing.xs), child: RasqPill(label: switch (e.kind) { 'post' => '投稿', 'media' => 'メディア', 'link' => 'リンク', _ => e.kind! })),
             Expanded(
               // 投稿/リンク/メディアの行はタップで開く (D-166: 投稿は一致するアカウントならアプリ内)。
               child: GestureDetector(
