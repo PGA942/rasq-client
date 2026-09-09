@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
-import 'package:go_router/go_router.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
-import '../../app/router.dart';
 import '../../shell/rasq_shell.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../trend/tendency_fows.dart';
 import '../trend/trend_providers.dart';
 import 'search_filter.dart';
 import 'search_filter_bar_view.dart';
@@ -101,7 +100,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: Container(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8), color: scheme.surfaceContainerHighest, child: Text('広告', style: TextStyle(fontSize: 28, color: scheme.onSurfaceVariant))),
           ),
           // TL 系は全部同 UI (D-124): トレンドのカスタマイズ画面へ。
-          RasqSectionHeader(title: 'トレンド', trailing: RasqIconButton(icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig('trend')), tooltip: 'トレンド設定')),
+          // トレンドプロファイル設定 (D-153): ジャンル / 指向性・刺激性 / プラグイン / キャッシュ / ノード編集。
+          RasqSectionHeader(title: 'トレンド', trailing: RasqIconButton(icon: Icons.settings, size: 20, onPressed: () => showTrendProfileSheet(context, ref), tooltip: 'トレンド設定')),
           ...trends.when(
             loading: () => const [RasqLoading()],
             error: (e, _) => [RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), compact: true, onRetry: () => ref.invalidate(trendFrameTagsProvider), retryLabel: '再読み込み')],

@@ -318,6 +318,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     _drafts = ref.read(composeDraftsProvider.notifier);
     _focus.addListener(_onFocusChanged);
     final t = widget.target;
+    // ↓ で別アカウントのコピーから開いた返信/引用 (D-155): 対象の投稿が属する
+    // アカウントを投稿先にする(現在と違い、ログイン中なら)。
+    final targetPost = switch (t) { ComposeReply(to: final p) => p, ComposeQuote(of: final p) => p, _ => null };
+    if (targetPost != null && targetPost.account != ref.read(currentAccountProvider)) {
+      final s = ref.read(sessionsProvider).value?.sessions.where((x) => x.account == targetPost.account).firstOrNull;
+      if (s != null) _postAs = s;
+    }
     if (t is ComposeReply) {
       final a = t.to.author;
       final me = ref.read(currentAccountProvider);

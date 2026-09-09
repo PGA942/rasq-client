@@ -73,7 +73,8 @@ class TlAlgorithmComponent {
   /// 'chrono'(時系列順)| 'suggest' | 'filter'(絞り込み — サジェストと
   /// 同じパラメーターで、合わない投稿を除外, D-125)| 'queryfilter'
   /// (検索絞り込み — このページの検索ワード/タグに合う投稿だけ, D-125)|
-  /// `plugin:<tlId>`(カスタム TL プラグイン)。
+  /// 'tendency'(指向性/刺激性 — storage.safe のトレンドプロファイルで
+  /// 絞り込み + 適合度順, D-153)| `plugin:<tlId>`(カスタム TL プラグイン)。
   final String type;
 
   /// suggest/filter: なにを([キーワード/類似性])/なにから([投稿内容/リアクション/会話内容])。
@@ -92,6 +93,7 @@ class TlAlgorithmComponent {
   bool get isSuggest => type == 'suggest';
   bool get isFilter => type == 'filter';
   bool get isQueryFilter => type == 'queryfilter';
+  bool get isTendency => type == 'tendency';
   bool get isPlugin => type.startsWith('plugin:');
 
   /// パラメーター編集の対象(サジェスト/絞り込みは同じ 2 パラメーター)。
@@ -102,6 +104,7 @@ class TlAlgorithmComponent {
         'suggest' => '$whatを$fromからサジェスト',
         'filter' => '$whatを$fromから絞り込み',
         'queryfilter' => '検索絞り込み',
+        'tendency' => '指向性/刺激性(プロファイル)',
         _ => pluginLabel.isEmpty ? 'カスタム(TLプラグイン)' : pluginLabel,
       };
 
@@ -245,6 +248,32 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
       edges.add(GraphEdge(from: out, fromPort: 0, to: id, toPort: 0));
       out = id;
       col++;
+      continue;
+    }
+    if (a.isTendency) {
+      // 指向性/刺激性 (D-153): プロファイルの適合度で「消去(0 = 嫌い/しきい値未満)」→「並べ替え」。
+      // id は取得(s*)/クロック(c*)/他段(a*,c*,n*)と被らない接頭辞で。
+      final rmId = 'ta$i';
+      final sortId = 'ts$i';
+      final mlId = 'tl$i';
+      final cmpRm = 'tc$i';
+      final cmpSort = 'td$i';
+      final notId = 'tn$i';
+      nodes.add(inst('remove', rmId, Offset(x, 60)));
+      nodes.add(inst('sort', sortId, Offset(x + 120, 60)));
+      nodes.add(inst('ml.tendency', mlId, Offset(x + 40, 300)));
+      nodes.add(inst('compare', cmpRm, Offset(x - 20, 180), values: {'演算': '以上', '値': '0.01'}));
+      nodes.add(inst('compare', cmpSort, Offset(x + 140, 180), values: {'演算': '以上', '値': '0'}));
+      nodes.add(inst('not', notId, Offset(x - 10, 120)));
+      edges.add(GraphEdge(from: out, fromPort: 0, to: rmId, toPort: 0));
+      edges.add(GraphEdge(from: rmId, fromPort: 0, to: sortId, toPort: 0));
+      edges.add(GraphEdge(from: mlId, fromPort: 0, to: cmpRm, toPort: 0));
+      edges.add(GraphEdge(from: mlId, fromPort: 0, to: cmpSort, toPort: 0));
+      edges.add(GraphEdge(from: rmId, fromPort: 0, to: notId, toPort: 0, cond: true));
+      edges.add(GraphEdge(from: notId, fromPort: 0, to: cmpRm, toPort: 0, cond: true));
+      edges.add(GraphEdge(from: sortId, fromPort: 0, to: cmpSort, toPort: 0, cond: true));
+      out = sortId;
+      col += 2;
       continue;
     }
     if (a.isPlugin) {

@@ -6,6 +6,8 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/nodeprog/node_executor.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
+import 'package:rasq_client/features/nodeprog/tl_components.dart';
+import 'package:rasq_client/features/trend/tendency_profile.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -114,6 +116,18 @@ void main() {
     expect(parseClockInterval(''), const Duration(seconds: 15)); // 既定
     // クロック未接続なら null。
     expect(nodeGraphClockInterval(NodeGraph(nodes: [clock30], edges: const [])), isNull);
+  });
+
+  test('指向性/刺激性 (D-153): プロファイルの適合度で 消去 → 並べ替え(簡略 UI のコンパイル)', () async {
+    final profile = const TendencyProfile(genres: ['広告'], directionality: 0.0, disliked: ['猫']).toJson();
+    final g = compileTlConfig(const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [TlAlgorithmComponent(type: 'tendency')]), scope: 'tl.social');
+    expect(g.nodes.where((n) => n.type == 'ml.tendency').length, 1);
+    final out = await runNodeGraph(g, fetch: fetch, storageRead: (slot) async => slot == TendencyProfile.slot ? profile : null);
+    // 広告に合う p1/p3 だけ残り(狭い)、猫は嫌いなジャンルで消える。
+    expect([for (final p in out!) p.id], ['p1', 'p3']);
+    // プロファイルが無ければ比較が不成立 = 全部消える側に倒れず、鎖は動く(消去は not(不成立)= 全消去を避けるため素通し)。
+    final none = await runNodeGraph(g, fetch: fetch, storageRead: (_) async => null);
+    expect(none, isNotNull);
   });
 
   test('鎖が未完成なら null(実行しない)', () async {

@@ -85,7 +85,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         bannerMediaId: bannerId,
       ));
       final me = ref.read(currentUserProvider);
-      ref.invalidate(userProfileProvider(me.id));
+      ref.invalidate(userProfileProvider((id: me.id, account: null)));
       if (mounted) context.pop();
     } on SnsApiException catch (e) {
       setState(() => _error = '${e.code.display}${e.code.message == null ? '' : '\n${e.code.message}'}');
@@ -99,7 +99,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   @override
   Widget build(BuildContext context) {
     final me = ref.watch(currentUserProvider);
-    final profile = ref.watch(userProfileProvider(me.id));
+    final profile = ref.watch(userProfileProvider((id: me.id, account: null)));
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     profile.whenData(_fill);
@@ -111,7 +111,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       ),
       body: profile.when(
         loading: () => const RasqLoading(),
-        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userProfileProvider(me.id)), retryLabel: '再読み込み'),
+        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userProfileProvider((id: me.id, account: null))), retryLabel: '再読み込み'),
         data: (p) => ListView(padding: const EdgeInsets.only(bottom: 48), children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),

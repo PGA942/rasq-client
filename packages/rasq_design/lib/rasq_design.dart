@@ -33,6 +33,7 @@ export 'src/components/user_tile_large.dart';
 export 'src/components/sort.dart';
 export 'src/components/search_filter_bar.dart';
 export 'src/components/slider_list_tile.dart';
+export 'src/components/radar_chart.dart';
 export 'src/components/brand.dart';
 export 'src/components/plugin_tile.dart';
 
@@ -42,6 +43,7 @@ export 'src/components/action_bar.dart';
 export 'src/components/poll_widget.dart';
 export 'src/components/collapsed_post.dart';
 export 'src/components/reply_parent_tile.dart';
+export 'src/components/inline_post_card.dart';
 export 'src/components/content_warning.dart';
 export 'src/components/link_banner.dart';
 

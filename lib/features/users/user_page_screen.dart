@@ -35,7 +35,8 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(userProfileProvider(widget.userId));
+    final acct = widget.initial?.account.key; // 属するアカウントで展開 (D-155)
+    final profile = ref.watch(userProfileProvider((id: widget.userId, account: acct)));
     final me = ref.watch(currentUserProvider);
     final viewer = ref.watch(currentAccountProvider);
     final manager = ref.watch(overlayManagerProvider);
@@ -51,7 +52,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
         error: (e, _) {
           final code = e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e');
           if (code.code == '404' || code.code == '400') return const _NoHit();
-          return RasqErrorView(code: code, onRetry: () => ref.invalidate(userProfileProvider(widget.userId)), retryLabel: '再読み込み');
+          return RasqErrorView(code: code, onRetry: () => ref.invalidate(userProfileProvider((id: widget.userId, account: acct))), retryLabel: '再読み込み');
         },
         data: (p) {
           final isSelf = p.summary.id == me.id || (p.summary.handle == me.handle && p.summary.account.instance == me.account.instance);
@@ -82,10 +83,10 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
             tabViews: restricted
                 ? [for (final _ in tabs) const RasqEmptyView(title: '制限されたユーザーです', hint: '「表示」を押すと内容を表示します')]
                 : [
-                    _UserPosts(userId: p.summary.id, filter: UserPostsFilter.posts, pinned: p.pinnedPosts),
-                    _UserPosts(userId: p.summary.id, filter: UserPostsFilter.replies),
-                    _UserPosts(userId: p.summary.id, filter: UserPostsFilter.quotes),
-                    _UserPosts(userId: p.summary.id, filter: UserPostsFilter.media),
+                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.posts, pinned: p.pinnedPosts),
+                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.replies),
+                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.quotes),
+                    _UserPosts(userId: p.summary.id, account: acct, filter: UserPostsFilter.media),
                     _UserClips(userId: p.summary.id),
                   ],
           );
@@ -126,19 +127,20 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
 }
 
 class _UserPosts extends ConsumerWidget {
-  const _UserPosts({required this.userId, required this.filter, this.pinned = const []});
+  const _UserPosts({required this.userId, required this.filter, this.pinned = const [], this.account});
   final String userId;
   final UserPostsFilter filter;
   final List<Post> pinned;
+  final String? account;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final page = ref.watch(userPostsProvider((id: userId, filter: filter)));
-    final actions = ref.watch(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[];
+    final page = ref.watch(userPostsProvider((id: userId, filter: filter, account: account)));
+    final actions = ref.watch(sessionForAccountProvider(account))?.actions ?? const <ActionDescriptor>[];
     final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
     final scheme = Theme.of(context).colorScheme;
     return page.when(
       loading: () => const RasqLoading(),
-      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userPostsProvider((id: userId, filter: filter))), retryLabel: '再読み込み'),
+      error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userPostsProvider((id: userId, filter: filter, account: account))), retryLabel: '再読み込み'),
       data: (p) {
         final items = [...pinned, ...p.items.where((x) => !pinned.any((pin) => pin.id == x.id))];
         if (items.isEmpty) return const RasqEmptyView(title: '投稿はありません');

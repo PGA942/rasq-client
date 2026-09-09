@@ -31,7 +31,7 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText, this.onActAs, this.compactQuote = false});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -52,6 +52,14 @@ class PostRow extends ConsumerStatefulWidget {
   /// 上付きバナー行 (D-085): TL プラグインのバッジ(RT 行と同スタイル)。
   final IconData? bannerIcon;
   final String? bannerText;
+
+  /// ↓ で別アカウントのコピーを選んだとき (D-155)。指定が無ければタイルの
+  /// タップでそのコピー(= そのアカウント)のスレッドを開く。
+  final ValueChanged<Post>? onActAs;
+
+  /// インラインフレームモード (D-156): 引用を小表示(サムネイル最大 4 枚のカード)
+  /// にする。TL では false(通常の埋め込みタイル)、スレッド展開/通知などでは true。
+  final bool compactQuote;
 
   /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
   static String? attachmentSummaryOf(Post p) {
@@ -150,7 +158,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       content: content,
       media: !collapsible && !hasCw && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, onTapTile: (i) => context.openViewer(post, mediaIndex[i])) : null,
       poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
-      quote: !collapsible && !hasCw && post.quote != null ? quoteTile(context, post.quote!, emojis: emojis, safety: safety) : null,
+      quote: !collapsible && !hasCw && post.quote != null ? (widget.compactQuote ? InlinePostFrame(post: post.quote!) : quoteTile(context, post.quote!, emojis: emojis, safety: safety)) : null,
       actionBar: widget.actions.isEmpty && post.reactions.isEmpty
           ? null
           : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
@@ -184,7 +192,8 @@ class _PostRowState extends ConsumerState<PostRow> {
                 ),
               if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
             ]),
-      onTap: widget.onTap,
+      // ↓ で別アカウントを選んでいる間は、そのコピーで以降の画面を開く (D-155)。
+      onTap: _actAs != null && widget.onActAs == null ? () => context.pushPost(_actAs!) : widget.onTap,
       onAuthorTap: () => context.pushUser(post.author),
       onMore: (anchor) => showPostMenu(context, ref, post, anchor),
       // アカウント選択 (D-110/D-111): 複数アカウントに流れてきた同一投稿は
@@ -209,7 +218,11 @@ class _PostRowState extends ConsumerState<PostRow> {
                       for (final a in alternates) RasqDropdownItem('${a.account}', a, checked: post.key == a.key),
                     ],
                   );
-                  if (picked != null && mounted) setState(() => _actAs = picked.key == widget.post.key ? null : picked);
+                  if (picked != null && mounted) {
+                    setState(() => _actAs = picked.key == widget.post.key ? null : picked);
+                    // スレッド展開画面 (D-155): 選んだアカウントで開き直す。
+                    if (_actAs != null) widget.onActAs?.call(_actAs!);
+                  }
                 },
               );
             }),
@@ -346,6 +359,39 @@ class _PostRowState extends ConsumerState<PostRow> {
       content: q.body.isNotEmpty ? RasqRichText(InlineSpans.parse(q.body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis) : const SizedBox.shrink(),
       media: mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems) : null,
       onTap: () => context.pushPost(q),
+    );
+  }
+}
+
+/// インラインフレームの小表示 (D-156): 別の面に埋め込む投稿のコンパクトなカード
+/// (小アバター + 名前 + 本文 3 行 + 左にサムネイル最大 4 枚)。タップでスレッドへ。
+/// 使う面: スレッド展開の引用 / リアクション表示の対象投稿 / 通知の投稿の引用 /
+/// アクションからのジャンル選択。TL の引用表示だけは通常の埋め込みタイル。
+class InlinePostFrame extends ConsumerWidget {
+  const InlinePostFrame({super.key, required this.post, this.onTap, this.maxLines = 3, this.badge});
+  final Post post;
+  final VoidCallback? onTap;
+  final int maxLines;
+  final Widget? badge;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final emojis = ref.watch(emojiCacheProvider);
+    final safety = ref.watch(safetySettingsProvider);
+    final (mediaItems, _) = safety.applyTo(post.media);
+    final cw = post.contentWarning;
+    final body = (cw != null && cw.isNotEmpty) ? '【CW: $cw】' : post.body;
+    final thumbs = <Uri>[for (final m in mediaItems) if (m.type == MediaType.image || m.type == MediaType.video || m.type == MediaType.gif) m.thumbnailUrl ?? m.url];
+    return RasqInlinePostCard(
+      author: post.author,
+      nameSpans: InlineSpans.parse(post.author.displayName, emojis: emojis),
+      content: body.isNotEmpty
+          ? RasqRichText(InlineSpans.parse(body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: maxLines, overflow: TextOverflow.ellipsis)
+          : Text(mediaItems.isNotEmpty ? '${mediaItems.length}件の添付' : '', style: RasqTypography.caption),
+      thumbnails: thumbs,
+      mediaCount: mediaItems.length,
+      badge: badge,
+      onTap: onTap ?? () => context.pushPost(post),
     );
   }
 }

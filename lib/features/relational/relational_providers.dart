@@ -21,6 +21,7 @@ import '../settings/settings_dsl.dart';
 import 'relational_engine.dart';
 import 'relational_ml.dart';
 import 'relational_wasm.dart';
+import '../trend/tendency_profile.dart';
 
 /// 設定の永続化キー(FOW チューニングの実測値をセッションを跨いで保持)。
 const relationalSettingsStorageKey = 'relational.settings.v1';
@@ -256,7 +257,7 @@ final wasmConversationEventsProvider = FutureProvider<List<ConversationEvent>?>(
   final home = ref.watch(timelineProvider(TimelineKind.home)).value;
   if (home == null) return null;
   // 前段絞り込み (D-102) > バンドル供給 (D-086) > 現在分、の順で使う。
-  final followees = ref.watch(relationalNodePostsProvider).value ?? ref.watch(bundleFolloweePostsProvider).value ?? home.posts;
+  final followees = ref.watch(relationalInputPostsProvider).value ?? home.posts;
   final guests = ref.watch(relationalGuestPostsProvider).value ?? const <Post>[];
   try {
     return await buildEventsViaWasm(
@@ -277,6 +278,15 @@ final wasmConversationEventsProvider = FutureProvider<List<ConversationEvent>?>(
 /// 「取得 →(加工)→ **関連タイムライン**」の完成した鎖があれば、その出力を
 /// フォロイー入力の代わりに使う。処理系(会話イベント構築)はそのまま。
 /// 鎖が無ければ null → 従来どおりバンドル/HTL。
+/// 関連 TL の入力 (D-153): 前段絞り込み > バンドル供給 の結果に指向性/刺激性の
+/// プロファイルを掛けたもの(効かない設定なら素通し)。
+final relationalInputPostsProvider = FutureProvider<List<Post>?>((ref) async {
+  final base = ref.watch(relationalNodePostsProvider).value ?? ref.watch(bundleFolloweePostsProvider).value;
+  if (base == null) return null;
+  final profile = await ref.watch(tendencyProfileProvider.future);
+  return applyTendencyProfile(base, profile);
+});
+
 final relationalNodePostsProvider = FutureProvider<List<Post>?>((ref) async {
   final session = ref.watch(currentSnsSessionProvider);
   if (session == null) return null;
@@ -328,7 +338,7 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
 
   return home.whenData((h) {
     // 前段絞り込み (D-102) > バンドル供給 (D-086) > 現在分、の順で使う。
-    final followees = ref.watch(relationalNodePostsProvider).value ?? ref.watch(bundleFolloweePostsProvider).value ?? h.posts;
+    final followees = ref.watch(relationalInputPostsProvider).value ?? h.posts;
     final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf);
     return engine.build(followeePosts: followees, guestPosts: guests, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
   });

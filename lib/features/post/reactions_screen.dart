@@ -16,18 +16,18 @@ import 'thread_section.dart';
 
 /// リアクションを表示: 対象投稿 + tabs 返信 / ∨引用 / リアクション / 共有.
 /// リアクション欄: 絵文字画像 + リアクション数 + 名前(折りたたみ、中身はユーザー欄).
-final reactionUsersProvider = FutureProvider.autoDispose.family<Page<ReactionEntry>, ({String postId, String type})>((ref, k) async {
-  final s = ref.watch(currentSnsSessionProvider);
+final reactionUsersProvider = FutureProvider.autoDispose.family<Page<ReactionEntry>, ({String postId, String type, String? account})>((ref, k) async {
+  final s = ref.watch(sessionForAccountProvider(k.account)); // 属するアカウントで (D-155)
   if (s == null) return Page.empty();
   final page = await s.reactions(k.postId, type: k.type, limit: 50);
   await ref.read(userListHelperProvider).primeRelationships(page.items.map((e) => e.user.id));
   return page;
 });
 
-final repostersProvider = FutureProvider.autoDispose.family<Page<UserSummary>, String>((ref, postId) async {
-  final s = ref.watch(currentSnsSessionProvider);
+final repostersProvider = FutureProvider.autoDispose.family<Page<UserSummary>, ({String id, String? account})>((ref, k) async {
+  final s = ref.watch(sessionForAccountProvider(k.account));
   if (s == null) return Page.empty();
-  final page = await s.reposters(postId, limit: 50);
+  final page = await s.reposters(k.id, limit: 50);
   await ref.read(userListHelperProvider).primeRelationships(page.items.map((e) => e.id));
   return page;
 });
@@ -47,9 +47,10 @@ class _ReactionsScreenState extends ConsumerState<ReactionsScreen> {
   @override
   Widget build(BuildContext context) {
     final me = ref.watch(currentUserProvider);
-    final thread = ref.watch(threadProvider(widget.postId));
+    final acct = widget.initial?.account.key; // 属するアカウントで展開 (D-155)
+    final thread = ref.watch(threadProvider((id: widget.postId, account: acct)));
     final post = thread.value?.post ?? widget.initial;
-    final actions = ref.watch(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[];
+    final actions = ref.watch(sessionForAccountProvider(acct))?.actions ?? const <ActionDescriptor>[];
     final manager = ref.watch(overlayManagerProvider);
     final tabs = [const RasqTabItem('返信'), const RasqTabItem('引用'), const RasqTabItem('リアクション'), const RasqTabItem('共有')];
     return DefaultTabController(
@@ -58,12 +59,11 @@ class _ReactionsScreenState extends ConsumerState<ReactionsScreen> {
       child: Scaffold(
         appBar: RasqPageHeader(title: 'リアクション', leadingAvatar: me, actions: [RasqIconButton(icon: Icons.bookmark_border, onPressed: () {}, tooltip: 'ブックマーク')], onMore: () {}),
         body: Column(children: [
+          // 対象投稿はインラインフレームの小表示 (D-156、ワイヤーフレーム p.1 右端)。
           if (post != null)
-            Container(
-              margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm, 0),
-              decoration: BoxDecoration(border: Border.all(color: Theme.of(context).colorScheme.onSurface), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-              clipBehavior: Clip.antiAlias,
-              child: PostRow(post: post, actions: const [], onAction: (_, {args = const {}}) async {}, onTap: () => context.pushPost(post)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm, 0),
+              child: InlinePostFrame(post: post, maxLines: 4, onTap: () => context.pushPost(post)),
             ),
           RasqTabs(
             items: tabs,
@@ -74,10 +74,10 @@ class _ReactionsScreenState extends ConsumerState<ReactionsScreen> {
           ),
           Expanded(
             child: TabBarView(children: [
-              _Replies(postId: widget.postId, actions: actions, order: _order),
-              _Reposters(postId: widget.postId),
+              _Replies(postId: widget.postId, account: acct, actions: actions, order: _order),
+              _Reposters(postId: widget.postId, account: acct),
               post == null ? const RasqLoading() : ReactionSections(post: post, order: _order, open: _open, onToggle: (t) => setState(() => _open.contains(t) ? _open.remove(t) : _open.add(t))),
-              _QuoteNotes(postId: widget.postId, actions: actions),
+              _QuoteNotes(postId: widget.postId, account: acct, actions: actions),
             ]),
           ),
         ]),
@@ -87,13 +87,14 @@ class _ReactionsScreenState extends ConsumerState<ReactionsScreen> {
 }
 
 class _Replies extends ConsumerWidget {
-  const _Replies({required this.postId, required this.actions, required this.order});
+  const _Replies({required this.postId, this.account, required this.actions, required this.order});
   final String postId;
+  final String? account;
   final List<ActionDescriptor> actions;
   final RasqSortOrder order;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final thread = ref.watch(threadProvider(postId));
+    final thread = ref.watch(threadProvider((id: postId, account: account)));
     return thread.when(
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
@@ -113,12 +114,13 @@ class _Replies extends ConsumerWidget {
 
 /// 共有タブ = 引用ノート一覧 (D-070)。
 class _QuoteNotes extends ConsumerWidget {
-  const _QuoteNotes({required this.postId, required this.actions});
+  const _QuoteNotes({required this.postId, this.account, required this.actions});
   final String postId;
+  final String? account;
   final List<ActionDescriptor> actions;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final page = ref.watch(threadQuotesProvider(postId));
+    final page = ref.watch(threadQuotesProvider((id: postId, account: account)));
     return page.when(
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
@@ -134,11 +136,12 @@ class _QuoteNotes extends ConsumerWidget {
 }
 
 class _Reposters extends ConsumerWidget {
-  const _Reposters({required this.postId});
+  const _Reposters({required this.postId, this.account});
   final String postId;
+  final String? account;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final page = ref.watch(repostersProvider(postId));
+    final page = ref.watch(repostersProvider((id: postId, account: account)));
     return page.when(
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
@@ -184,19 +187,20 @@ class ReactionSections extends ConsumerWidget {
             ]),
           ),
         ),
-        if (open.contains(e.key)) _ReactionUsers(postId: post.id, type: e.key),
+        if (open.contains(e.key)) _ReactionUsers(postId: post.id, type: e.key, account: post.account.key),
       ],
     ]);
   }
 }
 
 class _ReactionUsers extends ConsumerWidget {
-  const _ReactionUsers({required this.postId, required this.type});
+  const _ReactionUsers({required this.postId, required this.type, this.account});
   final String postId;
   final String type;
+  final String? account;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final page = ref.watch(reactionUsersProvider((postId: postId, type: type)));
+    final page = ref.watch(reactionUsersProvider((postId: postId, type: type, account: account)));
     return page.when(
       loading: () => const RasqLoading(),
       error: (e, _) => Padding(padding: const EdgeInsets.all(12), child: Text('$e', style: RasqTypography.caption)),

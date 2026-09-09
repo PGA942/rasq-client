@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
-import '../../app/router.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../search/search_filter.dart';
 import '../search/search_filter_bar_view.dart';
 import '../users/user_list.dart';
+import 'tendency_fows.dart';
 import 'trend_analysis.dart';
 import 'trend_providers.dart';
 
@@ -110,7 +109,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
             // トレンドもタイムラインと同じ (D-090/D-103): RAi は TL のタブ行
             // では隠し、ノード設定だけ置く。
             // TL 系は全部同 UI (D-124): 簡略版カスタマイズ画面へ。
-            RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'トレンド設定', onPressed: () => context.push(Routes.tlConfig('trend'))),
+            RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'トレンド設定', onPressed: () => showTrendProfileSheet(context, ref)),
           ]),
           Expanded(
             child: TabBarView(children: [

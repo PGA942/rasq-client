@@ -165,6 +165,22 @@ void main() {
     expect(find.text('バズった投稿'), findsOneWidget);
     final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
     expect(container.read(postAlternatesProvider), isNotEmpty);
+
+    // ↓ で second を選んだままタイルを開く → second のコピー(b-second)のスレッドが
+    // second のセッションで展開される (D-155)。返信の投稿先も second。
+    await tester.tap(find.text('バズった投稿'));
+    await tester.pumpAndSettle();
+    expect(find.text('投稿'), findsWidgets); // スレッド展開画面
+    final s1 = registry.session(session(acc1)) as FakeSnsSession;
+    final s2 = registry.session(session(acc2)) as FakeSnsSession;
+    expect(s2.threadRequests, ['b-second']);
+    expect(s1.threadRequests, isEmpty);
+    await tester.enterText(find.byType(TextField).last, '@popular second から返信');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '返信').last);
+    await tester.pumpAndSettle();
+    expect(s2.lastDraft?.text, contains('second から返信'));
+    expect(s1.lastDraft, isNull);
   });
 
   testWidgets('D-108: バンドルでノードTLを集合表示 — 他アカウントのタブが並び、中身は持ち主のセッションで動く', (tester) async {

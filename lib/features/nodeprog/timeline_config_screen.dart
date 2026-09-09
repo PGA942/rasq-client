@@ -700,6 +700,13 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             supported: allSns,
             add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'queryfilter'))),
         _PaletteItem(
+            icon: Icons.tune,
+            title: '指向性/刺激性',
+            subtitle: 'RASQ',
+            description: 'トレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)に合わない投稿を除外し、適合度順に並べます。プロファイルは検索ホームのトレンド ⚙ で編集します。',
+            supported: allSns,
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'tendency'))),
+        _PaletteItem(
             icon: Icons.schedule,
             title: '時系列順',
             subtitle: 'RASQ',
