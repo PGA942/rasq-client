@@ -15,6 +15,7 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/astell_client.dart';
+import 'package:rasq_client/notify/local_notifier.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -42,26 +43,77 @@ void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
   Post post(String id, String body) => Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 8, 31), body: body);
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(WidgetTester tester, {List<Post>? posts, bool vc = true}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
     });
-    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p1', 'ふつうの投稿')]));
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => posts ?? [post('p1', 'ふつうの投稿')]));
     await tester.pumpWidget(ProviderScope(
       overrides: [
         sessionStorageProvider.overrideWithValue(storage),
         pluginRegistryProvider.overrideWithValue(registry),
+        localNotifierProvider.overrideWithValue(MemoryLocalNotifier()), // 端末通知は台帳だけ
         astellMediaPickerProvider.overrideWithValue(() async => XFile.fromData(Uint8List.fromList([1, 2, 3]), name: 'launch_photo.png', path: '/tmp/launch_photo.png', mimeType: 'image/png')),
       ],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
+    if (!vc) return;
     await tester.tap(find.byTooltip('AsTell'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('create fow schedule + genres (D-159), tl astell tile + bookmarks (D-160)', (tester) async {
+    await pump(tester, posts: [post('p1', '今夜やります!\nrasq://astell/r-launch'), post('p2', '来週の反省会、集まれる人は通知登録しておいて\nrasq://astell/r-planned')], vc: false);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('tl_astell_tile.png'));
+    // 予約ルームのタイルの通知を登録 + 開催中のタイルをブックマーク。
+    await tester.tap(find.byKey(const ValueKey('astell.tile.bookmark')).first);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('astell.post.tile.r-planned')), 200, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('astell.tile.remind')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('tl_astell_tile_scheduled.png'));
+    await tester.tap(find.bySemanticsLabel('サイドバーを開く'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ブックマーク'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('bookmarks_astell.png'));
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('通知'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('notifications_astell_reminder.png'));
+    // 作成 FOW: ジャンル選定 + 開催予約。
+    await tester.tap(find.byTooltip('AsTell'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_home_upcoming.png'));
+    ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first)).clearSnackBars(); // スナックバーが FAB に被る
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('VC を作成'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'タイトル'), '打ち上げ反省会 その2');
+    final form = find.descendant(of: find.byKey(astellCreateFormKey), matching: find.byType(Scrollable)).first; // 外側(縦)。内側に招待の横 ListView がある
+    await tester.scrollUntilVisible(find.text('ジャンルを自動選択する'), 200, scrollable: form);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ジャンルを自動選択する'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('astell.create.genre.input')), 200, scrollable: form);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('astell.create.genre.input')), '写真');
+    await tester.tap(find.byTooltip('ジャンルを追加'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('開催を予約する'), 200, scrollable: form);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('開催を予約する'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('astell.create.date')), 200, scrollable: form);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_create_schedule.png'));
+  });
 
   testWidgets('vc home', (tester) async {
     await pump(tester);

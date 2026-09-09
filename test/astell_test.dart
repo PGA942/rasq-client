@@ -7,7 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/compose/composer_sheet.dart';
+import 'package:rasq_client/features/vc/astell_bookmarks.dart';
 import 'package:rasq_client/features/vc/astell_client.dart';
+import 'package:rasq_client/features/vc/astell_links.dart';
+import 'package:rasq_client/notify/local_notifier.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_media_viewer.dart';
 import 'package:rasq_client/features/vc/astell_models.dart';
@@ -17,6 +21,7 @@ import 'package:rasq_client/features/vc/vc_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
@@ -34,18 +39,22 @@ void main() {
         scrollable: find.descendant(of: find.byKey(astellFooterActionsKey), matching: find.byType(Scrollable)),
       );
 
-  Future<ProviderContainer> pump(WidgetTester tester) async {
+  final notifier = MemoryLocalNotifier();
+
+  Future<ProviderContainer> pump(WidgetTester tester, {List<Post>? posts}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
+    notifier.scheduled.clear();
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
     });
-    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p1', 'ふつうの投稿')]));
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => posts ?? [post('p1', 'ふつうの投稿')]));
     await tester.pumpWidget(ProviderScope(
       overrides: [
         sessionStorageProvider.overrideWithValue(storage),
         pluginRegistryProvider.overrideWithValue(registry),
+        localNotifierProvider.overrideWithValue(notifier),
         // 「共有する」のファイル選択はダミー画像を返す。
         astellMediaPickerProvider.overrideWithValue(() async => XFile.fromData(Uint8List.fromList([1, 2, 3]), name: 'photo.png', path: '/tmp/photo.png', mimeType: 'image/png')),
       ],
@@ -179,12 +188,20 @@ void main() {
     expect(find.text('サプライズ'), findsWidgets);
     expect(find.textContaining('よもぎもち から招待'), findsOneWidget);
     expect(find.text('おすすめ'), findsOneWidget);
-    expect(find.text('トレンド'), findsOneWidget);
     expect(find.byType(AstellTile), findsWidgets);
-    await tester.scrollUntilVisible(find.text('フォロー中'), 200, scrollable: find.descendant(of: find.byType(VcScreen), matching: find.byType(Scrollable)).first);
+    final vcList = find.descendant(of: find.byType(VcScreen), matching: find.byType(Scrollable)).first;
+    // 近日開催 (D-159): 予約中のルームの節がおすすめの次に入る。
+    await tester.scrollUntilVisible(find.text('近日開催'), 200, scrollable: vcList);
+    await tester.pumpAndSettle();
+    expect(find.text('近日開催'), findsOneWidget);
+    expect(find.textContaining('開催予定 '), findsWidgets);
+    await tester.scrollUntilVisible(find.text('トレンド'), 200, scrollable: vcList);
+    await tester.pumpAndSettle();
+    expect(find.text('トレンド'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('フォロー中'), 200, scrollable: vcList);
     await tester.pumpAndSettle();
     expect(find.text('フォロー中'), findsOneWidget);
-    await tester.drag(find.text('トレンド'), const Offset(0, 600));
+    await tester.scrollUntilVisible(find.text('辞退'), -200, scrollable: vcList);
     await tester.pumpAndSettle();
     await tester.tap(find.text('辞退'));
     await tester.pumpAndSettle();
@@ -693,5 +710,135 @@ void main() {
     await tester.pumpAndSettle();
     // ホームのおすすめ先頭に自分のルーム。
     expect(find.text('夜の雑談'), findsWidgets);
+  });
+
+  test('AsTell リンクの検出と共有文 (D-159/D-160)', () {
+    expect(astellRoomIdIn('今夜やります rasq://astell/r-launch よろしく'), 'r-launch');
+    expect(astellRoomIdIn('https://central.example/astell/9f1c-uuid まで'), '9f1c-uuid');
+    expect(astellRoomIdIn('リンクなし https://example.com/astellx/1'), isNull);
+    expect(astellRoomLink(null, 'r 1'), 'rasq://astell/r%201');
+    expect(astellRoomLink(Uri.parse('https://central.example/api/v1'), 'abc'), 'https://central.example/astell/abc');
+    final room = AstellRoom(id: 'x', ownerId: 'o', ownerHandle: 'o', ownerDisplayName: 'ホスト', title: '反省会', genres: const ['打上会'], createdAt: DateTime(2026), scheduledAt: DateTime.now().add(const Duration(days: 1)));
+    expect(astellShareText(room, 'rasq://astell/x'), allOf(contains('「反省会」を'), contains('に開催します'), contains('#打上会'), endsWith('rasq://astell/x')));
+    expect(astellShareText(room.copyWith(clearSchedule: true), 'L'), startsWith('「反省会」を開催中です'));
+  });
+
+  testWidgets('作成 FOW (D-159): 開催を予約 + ジャンルを選定 + 共有 → 予約(参加しない)→ 近日開催に載り、コンポーザーへリンク転送', (tester) async {
+    final container = await pump(tester);
+    await openVc(tester);
+    await tester.tap(find.byTooltip('VC を作成'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'タイトル'), '反省会');
+    // ジャンル選定: 自動選択をオフ → 入力欄とチップ。
+    final form = find.descendant(of: find.byKey(astellCreateFormKey), matching: find.byType(Scrollable)).first; // 外側(縦)。内側に招待の横 ListView がある
+    await tester.scrollUntilVisible(find.text('ジャンルを自動選択する'), 200, scrollable: form);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ジャンルを自動選択する'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('astell.create.genre.input')), 200, scrollable: form);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('astell.create.genre.input')), '#写真');
+    await tester.tap(find.byTooltip('ジャンルを追加'));
+    await tester.pumpAndSettle();
+    expect(find.text('#写真 ✕'), findsOneWidget);
+    // 開催予約: オンで日付/時刻ボタン、作成ボタンは「予約」。
+    await tester.scrollUntilVisible(find.text('開催を予約する'), 200, scrollable: form);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('開催を予約する'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('astell.create.date')), findsOneWidget);
+    expect(find.byKey(const ValueKey('astell.create.time')), findsOneWidget);
+    expect(find.text('予約'), findsOneWidget);
+    // ヘッダーの共有をオン → 作成後にコンポーザーへ転送。
+    await tester.tap(find.byKey(const ValueKey('astell.create.share')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('予約'));
+    await tester.pumpAndSettle();
+    // コンポーザーに共有文(リンク付き)。閉じる。
+    final field = find.byType(TextField).evaluate().map((e) => e.widget as TextField).where((t) => (t.controller?.text ?? '').contains('rasq://astell/')).toList();
+    expect(field, isNotEmpty, reason: 'コンポーザーに共有リンクが入る');
+    expect(field.first.controller!.text, contains('「反省会」を'));
+    expect(field.first.controller!.text, contains('#写真'));
+    final roomId = astellRoomIdIn(field.first.controller!.text)!;
+    container.read(overlayManagerProvider).close(composerFowId, reason: OverlayCloseReason.discard);
+    await tester.pumpAndSettle();
+    // 予約なので参加していない。ホームの近日開催に載り、タイルに開催予定。
+    expect(container.read(astellSessionProvider), isNull);
+    expect(find.textContaining('に予約しました'), findsOneWidget);
+    final created = await container.read(astellClientProvider).room(roomId);
+    expect(created!.isScheduled, isTrue);
+    expect(created.genres, ['写真']);
+    expect(created.autoGenre, isFalse);
+    await tester.pumpAndSettle();
+    expect(find.text('近日開催'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('近日開催'), 200, scrollable: find.descendant(of: find.byType(VcScreen), matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('開催予定 '), findsWidgets);
+  });
+
+  testWidgets('TL の AsTell タイル (D-160): リンク付き投稿 → タイル、ブックマーク保存/削除、開始通知、参加中は「戻る」', (tester) async {
+    final container = await pump(tester, posts: [post('p1', '今夜やります rasq://astell/r-launch'), post('p2', '来週の反省会 rasq://astell/r-planned')]);
+    // 開催中のルーム(打ち上げの打ち上げ)のタイルが本文の下に出る。
+    expect(find.byKey(const ValueKey('astell.post.tile.r-launch')), findsOneWidget);
+    expect(find.text('打ち上げの打ち上げ'), findsOneWidget);
+    final live = find.descendant(of: find.byKey(const ValueKey('astell.post.tile.r-launch')), matching: find.byKey(const ValueKey('astell.tile.bookmark')));
+    expect(live, findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('astell.post.tile.r-launch')), matching: find.byKey(const ValueKey('astell.tile.remind'))), findsNothing, reason: '開催中には通知ボタンなし');
+    // ブックマーク保存 → ブックマーク画面に AsTell の帯。
+    await tester.tap(live);
+    await tester.pumpAndSettle();
+    expect(find.text('ブックマークに保存しました'), findsOneWidget);
+    expect(container.read(astellBookmarkedProvider('r-launch')), isTrue);
+    // 予約ルーム(反省会)のタイル: 開催予定 + 通知ボタン → 登録 → 端末通知に入る。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('astell.post.tile.r-planned')), 200, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('開催予定 '), findsOneWidget);
+    final bell = find.descendant(of: find.byKey(const ValueKey('astell.post.tile.r-planned')), matching: find.byKey(const ValueKey('astell.tile.remind')));
+    await tester.tap(bell);
+    await tester.pumpAndSettle();
+    expect(notifier.scheduled.length, 1);
+    await tester.pump(const Duration(seconds: 5)); // 前のスナックバーが消えてから次
+    await tester.pumpAndSettle();
+    expect(find.textContaining('に通知します'), findsOneWidget);
+    expect(notifier.scheduled.values.single.title, 'ブックマークしたVCが始まります！');
+    expect(container.read(astellRemindedProvider('r-planned')), isTrue);
+    // 通知画面に「開始通知を登録した VC」→ 解除で消える。
+    await tester.tap(find.byTooltip('通知'));
+    await tester.pumpAndSettle();
+    expect(find.text('開始通知を登録した VC'), findsOneWidget);
+    expect(find.text('打ち上げ反省会'), findsOneWidget);
+    await tester.tap(find.text('解除'));
+    await tester.pumpAndSettle();
+    expect(notifier.scheduled, isEmpty);
+    expect(find.text('開始通知を登録した VC'), findsNothing);
+    // ブックマーク画面: AsTell の帯にタイル → 削除で消える。
+    await tester.tap(find.byTooltip('ホーム'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('サイドバーを開く'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ブックマーク'));
+    await tester.pumpAndSettle();
+    expect(find.text('AsTell'), findsOneWidget);
+    expect(find.text('打ち上げの打ち上げ'), findsWidgets); // 帯のタイル + お気に入りの投稿内タイル
+    // 前のスナックバー(通知登録 / 解除)を流してから。
+    ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first)).clearSnackBars();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('astell.tile.bookmark')).first);
+    await tester.pumpAndSettle();
+    expect(find.text('ブックマークから削除しました'), findsOneWidget);
+    expect(container.read(astellBookmarkedProvider('r-launch')), isFalse);
+    // 参加中のルームのタイルは「戻る」→ ルーム FOW。
+    await container.read(astellSessionProvider.notifier).join((await container.read(astellClientProvider).room('r-launch'))!);
+    await tester.tap(find.byTooltip('戻る')); // ブックマーク画面を閉じる
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('ホーム'));
+    await tester.pumpAndSettle();
+    final tile = find.byKey(const ValueKey('astell.post.tile.r-launch'));
+    expect(find.descendant(of: tile, matching: find.text('戻る')), findsOneWidget);
+    expect(find.descendant(of: tile, matching: find.text('見てみる')), findsNothing);
+    await tester.tap(find.descendant(of: tile, matching: find.text('戻る')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AstellRoomBody), findsOneWidget);
+    await container.read(astellSessionProvider.notifier).leave();
   });
 }

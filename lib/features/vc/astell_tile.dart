@@ -9,10 +9,21 @@ import 'astell_models.dart';
 /// (または「デスクリプションが提供されていません。」)/ ジャンル(青字の行)/
 /// LIVE ならバッジ + サムネイル / 「見てみる」。
 class AstellTile extends StatelessWidget {
-  const AstellTile({super.key, required this.room, this.onOpen, this.onMore});
+  const AstellTile({super.key, required this.room, this.onOpen, this.onMore, this.openLabel = '見てみる', this.bookmarked = false, this.onBookmark, this.reminded = false, this.onRemind});
   final AstellRoom room;
   final VoidCallback? onOpen;
   final ValueChanged<Rect>? onMore;
+
+  /// 下のボタンの文言 (D-160): 参加中のルームなら「戻る」。
+  final String openLabel;
+
+  /// ブックマーク (D-160)。[onBookmark] が null なら出さない。
+  final bool bookmarked;
+  final VoidCallback? onBookmark;
+
+  /// 開始通知 (D-160)。開催予定のあるルームだけ [onRemind] が入る。
+  final bool reminded;
+  final VoidCallback? onRemind;
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +89,16 @@ class AstellTile extends StatelessWidget {
                   ]),
                 )
               : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  // 開催予定 (D-159): 要約の上に時刻。
+                  if (room.isScheduled)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Row(children: [
+                        Icon(Icons.schedule, size: 12, color: tokens.link),
+                        const SizedBox(width: 2),
+                        Expanded(child: Text('開催予定 ${_schedule(room.scheduledAt!)}', style: RasqTypography.caption.copyWith(color: tokens.link, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      ]),
+                    ),
                   Expanded(
                     child: Text(
                       room.showSummary ? room.summaryText : 'ざっくり要約は非公開です。',
@@ -90,10 +111,22 @@ class AstellTile extends StatelessWidget {
                 ]),
         ),
         const SizedBox(height: RasqSpacing.xs),
-        RasqGradientButton(label: '見てみる', onPressed: onOpen, height: 36),
+        Row(children: [
+          if (onBookmark != null)
+            RasqIconButton(key: const ValueKey('astell.tile.bookmark'), icon: bookmarked ? Icons.bookmark : Icons.bookmark_border, size: 20, color: bookmarked ? RasqColors.accent : null, tooltip: bookmarked ? 'ブックマークから削除' : 'ブックマークに保存', onPressed: onBookmark),
+          if (onRemind != null)
+            RasqIconButton(key: const ValueKey('astell.tile.remind'), icon: reminded ? Icons.notifications_active : Icons.notifications_none, size: 20, color: reminded ? RasqColors.accent : null, tooltip: reminded ? '開始通知を解除' : '開始を通知', onPressed: onRemind),
+          Expanded(child: RasqGradientButton(label: openLabel, onPressed: onOpen, height: 36)),
+        ]),
       ]),
     );
   }
+}
+
+String _schedule(DateTime at) {
+  final l = at.toLocal();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${l.month}/${l.day} ${two(l.hour)}:${two(l.minute)}';
 }
 
 class _Genres extends StatelessWidget {
@@ -109,10 +142,13 @@ class _Genres extends StatelessWidget {
 
 /// タイルの横並び(2 枚 + 右端に次が覗く)。
 class AstellTileStrip extends StatefulWidget {
-  const AstellTileStrip({super.key, required this.rooms, required this.onOpen, this.onMore, this.height = 236, this.emptyHint});
+  const AstellTileStrip({super.key, required this.rooms, this.onOpen, this.onMore, this.tileBuilder, this.height = 236, this.emptyHint});
   final List<AstellRoom> rooms;
-  final void Function(AstellRoom room) onOpen;
+  final void Function(AstellRoom room)? onOpen;
   final void Function(AstellRoom room, Rect anchor)? onMore;
+
+  /// タイルを差し替える(ブックマーク/通知を配線した `AstellRoomTile` など、D-160)。
+  final Widget Function(AstellRoom room)? tileBuilder;
   final double height;
   final String? emptyHint;
 
@@ -162,7 +198,7 @@ class _AstellTileStripState extends State<AstellTileStrip> {
           final room = widget.rooms[i];
           return Padding(
             padding: const EdgeInsets.only(left: RasqSpacing.sm, right: RasqSpacing.xs, top: RasqSpacing.xs, bottom: RasqSpacing.xs),
-            child: AstellTile(room: room, onOpen: () => widget.onOpen(room), onMore: widget.onMore == null ? null : (rect) => widget.onMore!(room, rect)),
+            child: widget.tileBuilder?.call(room) ?? AstellTile(room: room, onOpen: widget.onOpen == null ? null : () => widget.onOpen!(room), onMore: widget.onMore == null ? null : (rect) => widget.onMore!(room, rect)),
           );
         },
         ),

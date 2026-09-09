@@ -38,7 +38,9 @@ const composerFowId = 'fow.composer';
 /// 縮小状態で置かれ、送信しても閉じずに(下書きをリセットして)残る。✕ は
 /// 折りたたみ。消えるのはページ遷移のときだけ。[onPosted] は送信毎に呼ばれる
 /// (スレッド/ルームの再読込用)。
-Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0}) async {
+/// [initialText] は本文の初期値(AsTell の共有リンク転送 D-159 など)。下書きが
+/// 残っていればそちらを優先する。
+Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText}) async {
   final manager = ref.read(overlayManagerProvider);
   // 返信 / ダイレクト投稿は **stick FOW** (D-047): ヘッダー無しで根本が
   // フッターメニュー/キーボードの上に貼り付き、タップ(フォーカス)すると
@@ -87,6 +89,7 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident =
         target: target,
         spec: spec,
         resident: resident,
+        initialText: initialText,
         // 常駐は送信で閉じない(本体が下書きをリセットして残る)。
         onSent: resident ? (p) => onPosted?.call(p) : (p) => handle.close(result: p),
         onClose: () => handle.close(),
@@ -170,8 +173,11 @@ class _Attachment {
 }
 
 class _ComposerBody extends ConsumerStatefulWidget {
-  const _ComposerBody({required this.target, required this.onSent, this.spec, this.onClose, this.resident = false});
+  const _ComposerBody({required this.target, required this.onSent, this.spec, this.onClose, this.resident = false, this.initialText});
   final ComposeTarget target;
+
+  /// 本文の初期値(下書きが無いときだけ)。
+  final String? initialText;
   final ValueChanged<Post> onSent;
 
   /// stick モード (D-047) の高さ調整用(展開/折りたたみで heightFactor を動かす)。
@@ -337,6 +343,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       } else {
         _applyPrefill();
       }
+    }
+    if (widget.initialText != null && widget.initialText!.isNotEmpty) {
+      _text.text = widget.initialText!;
+      _text.selection = TextSelection.collapsed(offset: _text.text.length);
     }
     // 保存済み下書きの復元(プリセットより優先)。
     final d = ref.read(composeDraftsProvider)[_draftKey];

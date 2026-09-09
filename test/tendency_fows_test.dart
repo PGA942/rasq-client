@@ -141,16 +141,20 @@ void main() {
     await tester.tap(find.text('最近のアクションから好きなものを選択'));
     await tester.pumpAndSettle();
     expect(find.text('アクションからジャンルを選択'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, '好き'), findsNWidgets(2));
+    // 縦に並べて好き/好きではないは下に 1 組 (D-158)。話題は 2 つ、既定の対象は先頭。
+    expect(find.widgetWithText(FilledButton, '好き'), findsOneWidget);
+    expect(find.byKey(const ValueKey('genre.like')), findsOneWidget);
+    expect(find.byKey(const ValueKey('genre.dislike')), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w.key is ValueKey && (w.key as ValueKey).value.toString().startsWith('genre.topic.')), findsNWidgets(2));
     expect(find.text('+1 件'), findsOneWidget); // 打上会の話題は代表 + 1 件
     // 打上会の話題(先頭 = 話題性が高い)を好き。
-    await tester.tap(find.widgetWithText(FilledButton, '好き').first);
+    await tester.tap(find.byKey(const ValueKey('genre.like')));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(FilledButton, '好き'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w.key is ValueKey && (w.key as ValueKey).value.toString().startsWith('genre.topic.')), findsOneWidget);
     // カレーの話題: 「料理」を外して「好きではない」。
     await tester.tap(find.text('#料理'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(OutlinedButton, '好きではない'));
+    await tester.tap(find.byKey(const ValueKey('genre.dislike')));
     await tester.pumpAndSettle();
     expect(find.text('全部見ました'), findsOneWidget);
     await tester.tap(find.text('決定').last);

@@ -14,6 +14,9 @@ import '../../text/inline_spans.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../users/user_list.dart';
+import '../vc/astell_actions.dart';
+import '../vc/astell_bookmarks.dart';
+import '../vc/astell_links.dart';
 import 'notification_prefs.dart';
 
 final notificationsProvider = FutureProvider<Page<NotificationItem>>((ref) async {
@@ -53,6 +56,8 @@ class NotificationsScreen extends ConsumerWidget {
             Expanded(child: RasqTabs(items: tabs, showChevron: false)),
             RasqIconButton(icon: Icons.settings, size: 20, onPressed: () => showNotificationPrefs(ref), tooltip: '通知プロファイル設定'),
           ]),
+          // 登録した開始通知 (D-160): 端末のローカル通知に入れた予定。
+          const _AstellReminders(),
           Expanded(
             child: TabBarView(children: [
               _List(items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future)),
@@ -134,6 +139,43 @@ class _List extends StatelessWidget {
                 ),
         ),
       );
+}
+
+/// 登録済みの AsTell 開始通知 (D-160): タップでルームへ、右端で解除。
+class _AstellReminders extends ConsumerWidget {
+  const _AstellReminders();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reminders = ref.watch(astellRemindersProvider).value ?? const <AstellReminder>[];
+    if (reminders.isEmpty) return const SizedBox.shrink();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+      const RasqSectionHeader(title: '開始通知を登録した VC', topMargin: 0),
+      for (final r in reminders)
+        RasqListTile(
+          title: r.title,
+          subtitle: '開催予定 ${formatAstellSchedule(r.at)}',
+          leading: const Icon(Icons.notifications_active, color: RasqColors.accent),
+          trailing: TextButton(
+            onPressed: () async {
+              final room = await ref.read(astellRoomProvider(r.roomId).future);
+              if (!context.mounted) return;
+              if (room != null) {
+                await remindAstellRoom(context, ref, room);
+              } else {
+                await ref.read(localNotifierCancelProvider)(r);
+              }
+            },
+            child: const Text('解除'),
+          ),
+          chevron: false,
+          onTap: () async {
+            final room = await ref.read(astellRoomProvider(r.roomId).future);
+            if (room != null && context.mounted) await openAstellRoomTile(context, ref, room);
+          },
+        ),
+      const Divider(height: 1),
+    ]);
+  }
 }
 
 /// 通知アイテム(4種) — 原典: UI_Elements「通知アイテム（4種）」.
