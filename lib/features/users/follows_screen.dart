@@ -24,8 +24,8 @@ class FollowsScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: RasqPageHeader(title: user?.displayName ?? 'フォロー/フォロワー', onMore: () {}, bottom: RasqTabs(items: tabs)),
         body: TabBarView(children: [
-          _List(k: (id: userId, followers: false)),
-          _List(k: (id: userId, followers: true)),
+          _List(k: (id: userId, followers: false, account: user?.account.key)),
+          _List(k: (id: userId, followers: true, account: user?.account.key)),
         ]),
       ),
     );
@@ -34,7 +34,7 @@ class FollowsScreen extends ConsumerWidget {
 
 class _List extends ConsumerWidget {
   const _List({required this.k});
-  final ({String id, bool followers}) k;
+  final ({String id, bool followers, String? account}) k;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final page = ref.watch(followsProvider(k));

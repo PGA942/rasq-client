@@ -8,7 +8,6 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/trend/tendency_fows.dart';
 import 'package:rasq_client/features/trend/tendency_profile.dart';
 import 'package:rasq_client/session/session_storage.dart';
-import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 

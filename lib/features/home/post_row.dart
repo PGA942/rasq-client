@@ -31,7 +31,7 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText, this.onActAs});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -52,6 +52,10 @@ class PostRow extends ConsumerStatefulWidget {
   /// 上付きバナー行 (D-085): TL プラグインのバッジ(RT 行と同スタイル)。
   final IconData? bannerIcon;
   final String? bannerText;
+
+  /// ↓ で別アカウントのコピーを選んだとき (D-155)。指定が無ければタイルの
+  /// タップでそのコピー(= そのアカウント)のスレッドを開く。
+  final ValueChanged<Post>? onActAs;
 
   /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
   static String? attachmentSummaryOf(Post p) {
@@ -184,7 +188,8 @@ class _PostRowState extends ConsumerState<PostRow> {
                 ),
               if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
             ]),
-      onTap: widget.onTap,
+      // ↓ で別アカウントを選んでいる間は、そのコピーで以降の画面を開く (D-155)。
+      onTap: _actAs != null && widget.onActAs == null ? () => context.pushPost(_actAs!) : widget.onTap,
       onAuthorTap: () => context.pushUser(post.author),
       onMore: (anchor) => showPostMenu(context, ref, post, anchor),
       // アカウント選択 (D-110/D-111): 複数アカウントに流れてきた同一投稿は
@@ -209,7 +214,11 @@ class _PostRowState extends ConsumerState<PostRow> {
                       for (final a in alternates) RasqDropdownItem('${a.account}', a, checked: post.key == a.key),
                     ],
                   );
-                  if (picked != null && mounted) setState(() => _actAs = picked.key == widget.post.key ? null : picked);
+                  if (picked != null && mounted) {
+                    setState(() => _actAs = picked.key == widget.post.key ? null : picked);
+                    // スレッド展開画面 (D-155): 選んだアカウントで開き直す。
+                    if (_actAs != null) widget.onActAs?.call(_actAs!);
+                  }
                 },
               );
             }),

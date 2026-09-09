@@ -21,10 +21,13 @@ import 'thread_section.dart';
 
 /// スレッド展開画面: ancestors → 対象投稿 → 「∨ 返信 / リアクションを表示 >」→
 /// replies (thread line) → さらに表示 → 返信バー(コンポーザーは次段階).
-final threadProvider = FutureProvider.autoDispose.family<Thread, String>((ref, id) async {
-  final s = ref.watch(currentSnsSessionProvider);
+/// キーは 投稿 id + 属するアカウント (D-155): ↓ で選んだアカウントのセッションで取る。
+typedef ThreadKey = ({String id, String? account});
+
+final threadProvider = FutureProvider.autoDispose.family<Thread, ThreadKey>((ref, k) async {
+  final s = ref.watch(sessionForAccountProvider(k.account));
   if (s == null) throw StateError('not logged in');
-  final t = await s.thread(id);
+  final t = await s.thread(k.id);
   // Seed action states for every post in the thread so buttons show real counts.
   final all = [...t.ancestors, t.post, ...t.descendants];
   final states = await s.actionStates(all);
@@ -54,6 +57,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   String get postId => widget.postId;
   Post? get initial => widget.initial;
 
+  /// この画面を展開するアカウント (D-155): 開いた投稿が属するアカウント。
+  String? get acct => initial?.account.key;
+  ThreadKey get threadKey => (id: postId, account: acct);
+
   /// 常駐返信 stick (D-050): 元の返信タイルの代わりに、ページを開いたら
   /// 縮小状態の stick コンポーザーを置く(ページ遷移で自動消滅 D-048)。
   /// このページへ**戻ってきた**ときも、コンポーザーが無ければ置き直す。
@@ -66,7 +73,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         if (!mounted) return;
-        await showComposer(ref, ComposeReply(target), resident: true, column: fowColumnOf(context), onPosted: (_) => ref.invalidate(threadProvider(postId)));
+        await showComposer(ref, ComposeReply(target), resident: true, column: fowColumnOf(context), onPosted: (_) => ref.invalidate(threadProvider(threadKey)));
         // ページが最前面のまま閉じた = ユーザーの ✕(遷移で消えた場合は除外)。
         // 遷移直後はナビゲーターが未反映のことがあるので 1 フレーム待つ。
         if (!mounted) return;
@@ -89,8 +96,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final me = ref.watch(currentUserProvider);
-    final session = ref.watch(currentSnsSessionProvider);
-    final thread = ref.watch(threadProvider(postId));
+    final session = ref.watch(sessionForAccountProvider(acct));
+    final thread = ref.watch(threadProvider(threadKey));
     final manager = ref.watch(overlayManagerProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
 
@@ -111,7 +118,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     // 他 SNS では返信に縮退する。
     final saved = ref.watch(settingsAreaProvider(_kvArea)).value ?? const <String, Object?>{};
     final order = ThreadSortOrder.values.asNameMap()[saved['order']] ?? ThreadSortOrder.none;
-    final misskey = ref.watch(currentAccountProvider)?.kind == SnsKind.misskey;
+    final misskey = (initial?.account.kind ?? ref.watch(currentAccountProvider)?.kind) == SnsKind.misskey;
     var mode = ThreadSectionMode.values.asNameMap()[saved['mode']] ?? ThreadSectionMode.replies;
     if (mode == ThreadSectionMode.reactions && !misskey) mode = ThreadSectionMode.replies;
 
@@ -127,6 +134,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           onSortTap: (r) => _sort(manager, r, mode: mode, current: order),
           onModeTap: (r) => _switchMode(manager, r, current: mode, misskey: misskey),
           onShowReactions: () => context.pushReactions(post),
+          // ↓ で別アカウントのコピーを選んだら、そのアカウントでスレッドを開き直す (D-155)。
+          onActAs: (alt) => context.pushPost(alt),
         );
 
     return Scaffold(
@@ -138,7 +147,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           if (code.code == '404') {
             return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('投稿はありません', style: RasqTypography.title)));
           }
-          return RasqErrorView(code: code, onRetry: () => ref.invalidate(threadProvider(postId)), retryLabel: '再読み込み');
+          return RasqErrorView(code: code, onRetry: () => ref.invalidate(threadProvider(threadKey)), retryLabel: '再読み込み');
         },
         data: (t) => body(t.post, t.ancestors, t.descendants),
       ),
@@ -168,7 +177,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 }
 
 class _ThreadBody extends StatelessWidget {
-  const _ThreadBody({required this.post, required this.ancestors, required this.descendants, required this.actions, required this.onAction, this.loading = false, this.order = ThreadSortOrder.none, this.mode = ThreadSectionMode.replies, this.onSortTap, this.onModeTap, this.onShowReactions});
+  const _ThreadBody({required this.post, required this.ancestors, required this.descendants, required this.actions, required this.onAction, this.loading = false, this.order = ThreadSortOrder.none, this.mode = ThreadSectionMode.replies, this.onSortTap, this.onModeTap, this.onShowReactions, this.onActAs});
   final Post post;
   final List<Post> ancestors;
   final List<Post> descendants;
@@ -181,6 +190,9 @@ class _ThreadBody extends StatelessWidget {
   final ValueChanged<Rect>? onModeTap;
   final VoidCallback? onShowReactions;
 
+  /// ↓ で別アカウントのコピーを選んだ (D-155)。
+  final ValueChanged<Post>? onActAs;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -192,7 +204,7 @@ class _ThreadBody extends StatelessWidget {
       // 1 つ前の投稿(ancestors)は省略タイル (D-069: ワイヤーフレーム p.5
       // 「1件の添付リンク」の形)でスレッド線を繋ぐ。タップでそのスレッドへ。
       for (final a in ancestors) ReplyParentRow(post: a),
-      PostRow(post: post, actions: actions, onAction: (d, {args = const {}}) => onAction(post, d, args: args), showReplyParent: ancestors.isEmpty),
+      PostRow(post: post, actions: actions, onAction: (d, {args = const {}}) => onAction(post, d, args: args), showReplyParent: ancestors.isEmpty, onActAs: onActAs),
       Container(
         decoration: BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: scheme.onSurface, width: 1))),
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
@@ -258,7 +270,7 @@ class _ModeSectionState extends ConsumerState<_ModeSection> {
     final post = widget.post;
     switch (widget.mode) {
       case ThreadSectionMode.renotes:
-        final page = ref.watch(repostersProvider(post.id));
+        final page = ref.watch(repostersProvider((id: post.id, account: post.account.key)));
         return page.when(
           loading: () => const RasqLoading(),
           error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
@@ -275,7 +287,7 @@ class _ModeSectionState extends ConsumerState<_ModeSection> {
           shrinkWrap: true,
         );
       case ThreadSectionMode.quotes:
-        final page = ref.watch(threadQuotesProvider(post.id));
+        final page = ref.watch(threadQuotesProvider((id: post.id, account: post.account.key)));
         return page.when(
           loading: () => const RasqLoading(),
           error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),

@@ -47,8 +47,12 @@ class FakeSnsSession extends SnsSessionBase {
     if (kind == DynamicTimelines.featured) return Page(items: _posts.take(2).toList());
     return Page(items: _posts);
   }
+  /// thread() を呼ばれた投稿 id(D-155: どのアカウントのセッションで開いたか)。
+  final List<String> threadRequests = [];
+
   @override
   Future<Thread> thread(String id) async {
+    threadRequests.add(id);
     final p = _posts.firstWhere((e) => e.id == id);
     // Misskey の notes/children 同様、リプライ以外(引用等)も混ぜて返す —
     // 返信欄のリプライ絞り込み (D-071) は表示側の仕事。

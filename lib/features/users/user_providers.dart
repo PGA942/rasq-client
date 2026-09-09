@@ -5,22 +5,26 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/providers.dart';
 import 'user_list.dart';
 
-final userProfileProvider = FutureProvider.autoDispose.family<UserProfile, String>((ref, id) async {
-  final s = ref.watch(currentSnsSessionProvider);
+/// キーの `account` は表示するユーザーが属するアカウント (D-155: ↓ で選んだ
+/// アカウントのセッションで以降の画面を展開する)。null = 現在。
+typedef UserKey = ({String id, String? account});
+
+final userProfileProvider = FutureProvider.autoDispose.family<UserProfile, UserKey>((ref, k) async {
+  final s = ref.watch(sessionForAccountProvider(k.account));
   if (s == null) throw StateError('not logged in');
-  final p = await s.user(id);
-  await ref.read(userListHelperProvider).primeRelationships([id]);
+  final p = await s.user(k.id);
+  await ref.read(userListHelperProvider).primeRelationships([k.id]);
   return p;
 });
 
-final userPostsProvider = FutureProvider.autoDispose.family<Page<Post>, ({String id, UserPostsFilter filter})>((ref, k) async {
-  final s = ref.watch(currentSnsSessionProvider);
+final userPostsProvider = FutureProvider.autoDispose.family<Page<Post>, ({String id, UserPostsFilter filter, String? account})>((ref, k) async {
+  final s = ref.watch(sessionForAccountProvider(k.account));
   if (s == null) return Page.empty();
   return s.userPosts(k.id, filter: k.filter, limit: 30);
 });
 
-final followsProvider = FutureProvider.autoDispose.family<Page<UserSummary>, ({String id, bool followers})>((ref, k) async {
-  final s = ref.watch(currentSnsSessionProvider);
+final followsProvider = FutureProvider.autoDispose.family<Page<UserSummary>, ({String id, bool followers, String? account})>((ref, k) async {
+  final s = ref.watch(sessionForAccountProvider(k.account));
   if (s == null) return Page.empty();
   final page = k.followers ? await s.followers(k.id, limit: 50) : await s.following(k.id, limit: 50);
   await ref.read(userListHelperProvider).primeRelationships(page.items.map((u) => u.id));

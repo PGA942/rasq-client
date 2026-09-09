@@ -181,6 +181,20 @@ final currentSnsSessionProvider = Provider<SnsSession?>((ref) {
 
 final currentAccountProvider = Provider<AccountId?>((ref) => ref.watch(currentAccountSessionProvider)?.account);
 
+/// 投稿/ユーザーが属するアカウント(`AccountId.key`)のセッション (D-155)。
+/// ↓ で別アカウントのコピーを選んで開いた画面は、以降そのアカウントで展開する
+/// (スレッド / リアクション / ユーザーページ / 返信の投稿先)。ログイン中で
+/// なければ現在のセッションに縮退。null = 現在。
+final sessionForAccountProvider = Provider.family<SnsSession?, String?>((ref, key) {
+  if (key == null) return ref.watch(currentSnsSessionProvider);
+  final state = ref.watch(sessionsProvider).value;
+  final s = state?.sessions.where((x) => x.account.key == key).firstOrNull ?? state?.allSessions.where((x) => x.account.key == key).firstOrNull;
+  if (s == null) return ref.watch(currentSnsSessionProvider);
+  return ref.watch(pluginRegistryProvider).session(s);
+});
+
+/// [sessionForAccountProvider] のアカウント id 版。
+
 /// 総合表示中か (D-087)。
 final bundleViewProvider = Provider<bool>((ref) => ref.watch(sessionsProvider).value?.bundleView ?? false);
 

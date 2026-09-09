@@ -58,8 +58,8 @@ List<UserSummary> sortThreadUsers(List<UserSummary> users, ThreadSortOrder order
     };
 
 /// 引用ノート一覧 (D-070「共有(引用ノート)」欄)。
-final threadQuotesProvider = FutureProvider.autoDispose.family<List<Post>, String>((ref, postId) async {
-  final s = ref.watch(currentSnsSessionProvider);
+final threadQuotesProvider = FutureProvider.autoDispose.family<List<Post>, ({String id, String? account})>((ref, k) async {
+  final s = ref.watch(sessionForAccountProvider(k.account)); // 属するアカウントで (D-155)
   if (s == null) return const [];
-  return (await s.quotes(postId, limit: 30)).items;
+  return (await s.quotes(k.id, limit: 30)).items;
 });
