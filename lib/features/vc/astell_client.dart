@@ -11,6 +11,10 @@ import 'astell_models.dart';
 /// §3)と同形。Central 未接続ならモックへ縮退する(ストアと同じ作法)。
 abstract class AstellClient {
   Future<AstellHome> home();
+
+  /// 自分の RASQ アカウント id(セッション外でオーナー判定に使う、D-164)。
+  /// HTTP はサーバーのプロフィール側で分かるので null、モックは 'me'。
+  String? get selfAccountId => null;
   Future<AstellRoom?> room(String id);
   Future<List<AstellPeer>> peers(String id);
   Future<AstellRoom> createRoom(NewAstellRoom req);
@@ -216,6 +220,9 @@ class MockAstellClient implements AstellClient {
           ],
         _ => const [AstellPeer(peerId: 'p1', accountId: 'douglas', handle: 'douglas', displayName: 'ダグラス', micOn: true)],
       };
+
+  @override
+  String? get selfAccountId => _me.accountId;
 
   @override
   Future<AstellHome> home() async {
@@ -588,6 +595,9 @@ class _MockConnection implements AstellConnection {
 
 class HttpAstellClient implements AstellClient {
   HttpAstellClient(this._client, {required this.baseUrl, required this.token});
+
+  @override
+  String? get selfAccountId => null;
   final OrgateClient _client;
   final Uri baseUrl;
   final String? Function() token;

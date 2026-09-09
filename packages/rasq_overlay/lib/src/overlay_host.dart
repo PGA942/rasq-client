@@ -553,7 +553,11 @@ class _FowPanelState extends State<_FowPanel> {
         child: Column(children: [
           if (spec.showHandle && !topSide) handle,
           ?header,
-          Expanded(child: child),
+          // 本体も掴んで動かせる (D-161): ListView / 入力欄 / スライダーなど
+          // ジェスチャーを取る部品の上では負け(内側の認識器が勝つ)、それ以外の
+          // 余白や文字の上では横 = カラム間移動、縦 = ヘッダー/フッターの
+          // 付け先切り替え。クローム(ヘッダー行)が無い FOW でも移動できる。
+          Expanded(child: spec.bodyMove ? FowMoveGrip(spec: spec, child: child) : child),
           if (spec.showHandle && topSide) handle,
         ]),
       ),

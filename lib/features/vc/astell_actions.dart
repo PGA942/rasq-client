@@ -19,13 +19,12 @@ import 'astell_tile.dart';
 
 /// 投稿コンポーザーへリンクを転送して共有する (D-159)。
 Future<void> shareAstellRoom(BuildContext context, WidgetRef ref, AstellRoom room) async {
-  final link = ref.read(astellRoomLinkProvider(room.id));
-  await showComposer(ref, const ComposeNormal(), initialText: astellShareText(room, link));
+  await showComposer(ref, const ComposeNormal(), initialText: astellShareText(room, astellRoomLink(room)));
 }
 
 Future<void> copyAstellRoomLink(BuildContext context, WidgetRef ref, AstellRoom room) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
-  await Clipboard.setData(ClipboardData(text: ref.read(astellRoomLinkProvider(room.id))));
+  await Clipboard.setData(ClipboardData(text: astellRoomLink(room)));
   messenger?.showSnackBar(const SnackBar(content: Text('リンクをコピーしました')));
 }
 
@@ -59,20 +58,26 @@ Future<void> openAstellRoomTile(BuildContext context, WidgetRef ref, AstellRoom 
   }
 }
 
-/// タイルの … メニュー(VC ホームと TL で共通)。
+/// タイルの … メニュー(VC ホームと TL で共通)。自分がホストのルーム (D-164) は
+/// 共有 / リンク / ブックマーク / 今すぐ開催(予約) / 参加(戻る) / 終了する。
 Future<void> showAstellTileMenu(BuildContext context, WidgetRef ref, AstellRoom room, Rect anchor) async {
   final manager = ref.read(overlayManagerProvider);
   final following = ref.read(astellFollowingProvider).value?.contains(room.ownerId) ?? false;
   final bookmarked = ref.read(astellBookmarkedProvider(room.id));
   final reminded = ref.read(astellRemindedProvider(room.id));
+  final mine = room.ownerId == ref.read(astellMyAccountIdProvider);
+  final joined = ref.read(astellSessionProvider)?.room.id == room.id;
   final pick = await manager.showDropdown<String>(id: 'astell.tile.more', anchor: anchor, dense: true, items: [
     const RasqDropdownItem('投稿で共有', 'share'),
     const RasqDropdownItem('リンクをコピー', 'copy'),
     RasqDropdownItem(bookmarked ? 'ブックマークから削除' : 'ブックマークに保存', 'bookmark'),
-    if (room.isScheduled) RasqDropdownItem(reminded ? '開始通知を解除' : '開始を通知', 'remind'),
-    RasqDropdownItem(following ? 'ホストのフォローを解除' : 'ホストをフォロー', 'follow'),
-    const RasqDropdownItem('ミュート', 'mute'),
-    const RasqDropdownItem('報告', 'report', destructive: true),
+    if (!mine && room.isScheduled) RasqDropdownItem(reminded ? '開始通知を解除' : '開始を通知', 'remind'),
+    if (mine && room.isScheduled && !joined) const RasqDropdownItem('今すぐ開催する', 'start'),
+    if (mine) RasqDropdownItem(joined ? 'ルームへ戻る' : '参加する', 'open'),
+    if (mine) const RasqDropdownItem('終了する', 'close', destructive: true),
+    if (!mine) RasqDropdownItem(following ? 'ホストのフォローを解除' : 'ホストをフォロー', 'follow'),
+    if (!mine) const RasqDropdownItem('ミュート', 'mute'),
+    if (!mine) const RasqDropdownItem('報告', 'report', destructive: true),
   ]);
   if (pick == null || !context.mounted) return;
   switch (pick) {
@@ -84,6 +89,15 @@ Future<void> showAstellTileMenu(BuildContext context, WidgetRef ref, AstellRoom 
       await bookmarkAstellRoom(context, ref, room);
     case 'remind':
       await remindAstellRoom(context, ref, room);
+    case 'start':
+      // オーナーが接続した時点で開催になる (S-011)。
+      await ref.read(astellSessionProvider.notifier).join(room);
+      ref.invalidate(astellHomeProvider);
+      if (context.mounted) await openAstellRoomFow(context, ref);
+    case 'open':
+      await openAstellRoomTile(context, ref, room);
+    case 'close':
+      await closeAstellRoom(context, ref, room);
     case 'follow':
       await ref.read(astellSessionProvider.notifier).follow(room.ownerId, !following);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(following ? '${room.ownerDisplayName} のフォローを解除しました' : '${room.ownerDisplayName} をフォローしました')));
@@ -91,6 +105,31 @@ Future<void> showAstellTileMenu(BuildContext context, WidgetRef ref, AstellRoom 
       await showAstellReportSheet(context, ref, targetAccountId: room.ownerId, roomId: room.id, what: 'ルーム「${room.title}」');
     default:
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('「${room.title}」の操作($pick)は M5 後段で入ります')));
+  }
+}
+
+/// 自分のルームを終了する (D-164): 確認シート → 参加中なら退出 → close → ホーム更新。
+Future<void> closeAstellRoom(BuildContext context, WidgetRef ref, AstellRoom room) async {
+  final manager = ref.read(overlayManagerProvider);
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final ok = await manager.showBottomSheet<bool>(
+    id: 'astell.tile.close',
+    title: 'ルームを終了',
+    confirmText: '終了する',
+    builder: (ctx) => Padding(
+      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.page),
+      child: Text(room.isScheduled ? '「${room.title}」の予約を取り消します。ブックマークや開始通知を登録した人には届きません。' : '「${room.title}」を終了します。参加中のメンバーは退出になります。', style: RasqTypography.body),
+    ),
+  );
+  if (ok != true) return;
+  try {
+    if (ref.read(astellSessionProvider)?.room.id == room.id) await ref.read(astellSessionProvider.notifier).leave();
+    await ref.read(astellClientProvider).closeRoom(room.id);
+    ref.invalidate(astellHomeProvider);
+    ref.invalidate(astellRoomProvider(room.id));
+    messenger?.showSnackBar(SnackBar(content: Text(room.isScheduled ? '「${room.title}」の予約を取り消しました' : '「${room.title}」を終了しました')));
+  } catch (e) {
+    messenger?.showSnackBar(SnackBar(content: Text('終了できませんでした: $e')));
   }
 }
 
@@ -135,6 +174,49 @@ class AstellPostTile extends ConsumerWidget {
               padding: const EdgeInsets.only(top: RasqSpacing.xs),
               child: SizedBox(height: height, child: AstellRoomTile(key: ValueKey('astell.post.tile.$roomId'), room: r)),
             ),
+    );
+  }
+}
+
+/// ホームヘッダーの AsTell 帯 (D-163、ワイヤーフレームの角丸四角形): 参加中 /
+/// フォロー中のホストのルーム / 招待されているルームのバンドルを横に並べ、
+/// タップで参加 FOW(参加中ならルーム FOW)。無ければ何も出さない。
+class AstellHeaderStrip extends ConsumerWidget {
+  const AstellHeaderStrip({super.key, this.max = 4});
+  final int max;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final home = ref.watch(astellHomeProvider).value;
+    final session = ref.watch(astellSessionProvider);
+    final rooms = <AstellRoom>[];
+    final seen = <String>{};
+    void add(AstellRoom r) {
+      if (seen.add(r.id) && r.isOpen) rooms.add(r);
+    }
+    if (session != null) add(session.room);
+    for (final r in home?.following ?? const <AstellRoom>[]) {
+      add(r);
+    }
+    for (final r in home?.invited ?? const <AstellRoom>[]) {
+      add(r);
+    }
+    if (rooms.isEmpty) return const SizedBox.shrink();
+    return Container(
+      key: const ValueKey('astell.header.strip'),
+      height: 40,
+      decoration: BoxDecoration(color: RasqColors.yellow.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(20)),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        for (final r in rooms.take(max)) ...[
+          Tooltip(
+            message: '${r.ownerDisplayName}: ${r.title}',
+            child: RasqAvatarBundle(user: r.owner, count: r.peerCount, live: r.live, size: 28, onTap: () => openAstellRoomTile(context, ref, r)),
+          ),
+          const SizedBox(width: 6),
+        ],
+        if (rooms.length > max) Padding(padding: const EdgeInsets.only(right: 4), child: Text('+${rooms.length - max}', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
+      ]),
     );
   }
 }

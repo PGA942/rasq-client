@@ -30,6 +30,7 @@ class FowSpec {
     this.avoidKeyboard = true,
     this.dockAboveFooter = false,
     this.columnIndex = 0,
+    this.bodyMove = true,
     List<double> heightStops = const [],
     this.freeAboveStops = false,
     this.freeBelowStops = false,
@@ -91,6 +92,10 @@ class FowSpec {
   //  縦 = 付け先の切り替え(アプリヘッダー下付き ⇄ フッター/画面下端。
   //       アンカー FOW は上付き ⇄ 下付きの反転)— 左右と同じ 1 割で確定。
   // ドラッグハンドルは縦リサイズ専用(+クリックで FOW スイッチャー)。
+
+  /// 本体(ヘッダー/フッター以外)も掴んで動かせるか (D-161)。既定 true。
+  /// 本体全面がジェスチャーを取る部品(キャンバス等)なら false にする。
+  bool bodyMove;
 
   /// ドラッグ中の横追従量([FowMoveGrip] が書く。離すとホストが精算)。
   final ValueNotifier<double> moveDx = ValueNotifier(0);

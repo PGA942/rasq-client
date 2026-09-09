@@ -53,7 +53,7 @@ class AstellTile extends StatelessWidget {
             const SizedBox(width: RasqSpacing.xs),
             Expanded(
               child: Padding(
-                padding: EdgeInsets.only(right: onMore != null ? 18 : 0),
+                padding: EdgeInsets.only(right: 18.0 * ((onMore != null ? 1 : 0) + (onBookmark != null ? 1 : 0) + (onRemind != null ? 1 : 0))),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(room.ownerDisplayName, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text(room.title, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -61,21 +61,29 @@ class AstellTile extends StatelessWidget {
               ),
             ),
           ]),
-          if (onMore != null)
+          // 右上: ブックマーク / 開始通知 / … を横並び (D-162: … の横に置く)。
+          if (onMore != null || onBookmark != null || onRemind != null)
             Positioned(
               top: -10,
               right: -10,
-              child: Builder(
-                builder: (ctx) => RasqIconButton(
-                  icon: Icons.more_horiz,
-                  size: 16,
-                  tooltip: 'メニュー',
-                  onPressed: () {
-                    final box = ctx.findRenderObject() as RenderBox;
-                    onMore!(box.localToGlobal(Offset.zero) & box.size);
-                  },
-                ),
-              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (onBookmark != null)
+                  RasqIconButton(key: const ValueKey('astell.tile.bookmark'), icon: bookmarked ? Icons.bookmark : Icons.bookmark_border, size: 16, color: bookmarked ? RasqColors.accent : null, tooltip: bookmarked ? 'ブックマークから削除' : 'ブックマークに保存', onPressed: onBookmark),
+                if (onRemind != null)
+                  RasqIconButton(key: const ValueKey('astell.tile.remind'), icon: reminded ? Icons.notifications_active : Icons.notifications_none, size: 16, color: reminded ? RasqColors.accent : null, tooltip: reminded ? '開始通知を解除' : '開始を通知', onPressed: onRemind),
+                if (onMore != null)
+                  Builder(
+                    builder: (ctx) => RasqIconButton(
+                      icon: Icons.more_horiz,
+                      size: 16,
+                      tooltip: 'メニュー',
+                      onPressed: () {
+                        final box = ctx.findRenderObject() as RenderBox;
+                        onMore!(box.localToGlobal(Offset.zero) & box.size);
+                      },
+                    ),
+                  ),
+              ]),
             ),
         ]),
         const SizedBox(height: RasqSpacing.xs),
@@ -111,13 +119,7 @@ class AstellTile extends StatelessWidget {
                 ]),
         ),
         const SizedBox(height: RasqSpacing.xs),
-        Row(children: [
-          if (onBookmark != null)
-            RasqIconButton(key: const ValueKey('astell.tile.bookmark'), icon: bookmarked ? Icons.bookmark : Icons.bookmark_border, size: 20, color: bookmarked ? RasqColors.accent : null, tooltip: bookmarked ? 'ブックマークから削除' : 'ブックマークに保存', onPressed: onBookmark),
-          if (onRemind != null)
-            RasqIconButton(key: const ValueKey('astell.tile.remind'), icon: reminded ? Icons.notifications_active : Icons.notifications_none, size: 20, color: reminded ? RasqColors.accent : null, tooltip: reminded ? '開始通知を解除' : '開始を通知', onPressed: onRemind),
-          Expanded(child: RasqGradientButton(label: openLabel, onPressed: onOpen, height: 36)),
-        ]),
+        RasqGradientButton(label: openLabel, onPressed: onOpen, height: 36),
       ]),
     );
   }
