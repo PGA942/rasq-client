@@ -15,6 +15,8 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/astell_client.dart';
+import 'package:rasq_client/features/vc/astell_models.dart';
+import 'package:rasq_client/features/vc/astell_tile.dart';
 import 'package:rasq_client/notify/local_notifier.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -118,6 +120,20 @@ void main() {
   testWidgets('vc home', (tester) async {
     await pump(tester);
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_home.png'));
+  });
+
+  testWidgets('owner tile menu (D-164) + home header strip (D-163)', (tester) async {
+    await pump(tester, posts: [post('p1', '今夜やります!\nrasq://astell/r-launch')], vc: false);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_header_astell.png'));
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    await container.read(astellClientProvider).createRoom(const NewAstellRoom(title: '自分の部屋', description: '自分がホストのルーム。… から終了できる。', genres: ['雑談']));
+    container.invalidate(astellHomeProvider);
+    await tester.tap(find.byTooltip('AsTell'));
+    await tester.pumpAndSettle();
+    final tile = find.ancestor(of: find.text('自分の部屋').first, matching: find.byType(AstellTile)).first;
+    await tester.tap(find.descendant(of: tile, matching: find.byTooltip('メニュー')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_tile_owner_menu.png'));
   });
 
   testWidgets('preview + room fow', (tester) async {

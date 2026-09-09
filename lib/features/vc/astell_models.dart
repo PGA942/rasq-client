@@ -44,6 +44,7 @@ class AstellRoom {
     this.tendencyFilter = false,
     this.locked = false,
     this.scheduledAt,
+    this.shareUrl,
   });
 
   final String id;
@@ -101,6 +102,10 @@ class AstellRoom {
   /// オーナーが接続した時点で開催中になる(サーバーが null にする)。
   final DateTime? scheduledAt;
 
+  /// 共有 URL (D-165/S-012): `https://astell.rasq.jp/@handle/<Base58 id>`。サーバーが
+  /// 付ける。無ければ(モック)`rasq://astell/<id>`。
+  final String? shareUrl;
+
   bool get isOpen => closedAt == null;
 
   /// 予約中(まだ開催時刻が来ていない)か。
@@ -140,6 +145,7 @@ class AstellRoom {
         tendencyFilter: j['tendencyFilter'] == true,
         locked: j['locked'] == true,
         scheduledAt: j['scheduledAt'] is String ? DateTime.tryParse(j['scheduledAt'] as String)?.toLocal() : null,
+        shareUrl: (j['shareUrl'] as String?)?.isNotEmpty == true ? j['shareUrl'] as String : null,
       );
 
   /// ワイヤ形(サーバーの `Room` と同じ)。ブックマークのスナップショット (D-160) と
@@ -151,6 +157,7 @@ class AstellRoom {
         'thumbnailUrl': thumbnailUrl?.toString(), 'hostStream': hostStream?.toJson(), 'ttsVoice': ttsVoice,
         'joinPolicy': joinPolicy, 'sharePolicy': sharePolicy, 'moderators': moderators, 'tendencyFilter': tendencyFilter, 'locked': locked,
         'scheduledAt': scheduledAt?.toUtc().toIso8601String(),
+        'shareUrl': shareUrl,
       };
 
   AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false, String? joinPolicy, String? sharePolicy, List<String>? moderators, bool? tendencyFilter, DateTime? scheduledAt, bool clearSchedule = false}) => AstellRoom(
@@ -179,6 +186,7 @@ class AstellRoom {
         tendencyFilter: tendencyFilter ?? this.tendencyFilter,
         locked: locked,
         scheduledAt: clearSchedule ? null : (scheduledAt ?? this.scheduledAt),
+        shareUrl: shareUrl,
       );
 }
 

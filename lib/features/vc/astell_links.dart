@@ -1,26 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../backend/orgate_client.dart';
 import 'astell_models.dart';
 import 'astell_providers.dart';
 
-/// AsTell ルームのリンク (D-159/D-160)。投稿で共有するのは Central の公開ページ
-/// (`CENTRAL_PUBLIC_URL/astell/<id>`、S-011)。Central 未接続(モック)なら
-/// `rasq://astell/<id>`。TL に流れてきた投稿の本文からはどちらも拾う。
+/// AsTell ルームのリンク (D-159/D-160/D-165)。投稿で共有するのはサーバーが付ける
+/// 共有 URL(`https://astell.rasq.jp/@handle/<Base58 id>`、OGP つきの公開ページ、
+/// S-012)。無ければ(モック)`rasq://astell/<id>`。TL に流れてきた投稿の本文からは
+/// 共有 URL / 旧 `…/astell/<id>` / `rasq://astell/<id>` のどれでも拾う。
+/// 共有 URL からは Base58 コードを id として渡す(Central の `GET /astell/rooms/{id}`
+/// はコードでも引ける)。
 final _astellLink = RegExp(r'(?:rasq://astell/|https?://[^\s/]+/astell/)([0-9A-Za-z._-]{1,64})');
+final _astellShareLink = RegExp(r'https?://[^\s/]+/@[A-Za-z0-9_.-]{1,64}/([1-9A-HJ-NP-Za-km-z]{16,22})(?![/A-Za-z0-9])');
 
-/// 本文に含まれる最初の AsTell ルーム id。無ければ null。
-String? astellRoomIdIn(String text) => _astellLink.firstMatch(text)?.group(1);
-
-/// ルームの共有リンク。
-String astellRoomLink(Uri? centralBase, String roomId) {
-  final id = Uri.encodeComponent(roomId);
-  if (centralBase == null) return 'rasq://astell/$id';
-  return '${centralBase.origin}/astell/$id';
+/// 本文に含まれる最初の AsTell ルーム参照(id または共有 URL の Base58 コード)。
+String? astellRoomIdIn(String text) {
+  final a = _astellLink.firstMatch(text);
+  final b = _astellShareLink.firstMatch(text);
+  if (a == null) return b?.group(1);
+  if (b == null) return a.group(1);
+  return a.start <= b.start ? a.group(1) : b.group(1);
 }
 
-/// 現在の接続先でのルーム共有リンク。
-final astellRoomLinkProvider = Provider.family<String, String>((ref, roomId) => astellRoomLink(ref.watch(centralBaseUrlProvider), roomId));
+/// ルームの共有リンク: サーバーの `shareUrl`、無ければ `rasq://astell/<id>`。
+String astellRoomLink(AstellRoom room) => room.shareUrl ?? 'rasq://astell/${Uri.encodeComponent(room.id)}';
 
 /// 共有の投稿本文 (D-159): タイトル + 開催予定(あれば)+ リンク。
 String astellShareText(AstellRoom room, String link) {

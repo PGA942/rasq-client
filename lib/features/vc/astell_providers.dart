@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../settings/settings_dsl.dart';
+import '../../session/session_providers.dart';
 import 'astell_client.dart';
 import 'astell_models.dart';
 
@@ -17,6 +18,17 @@ final astellClientProvider = Provider<AstellClient>((ref) {
   if (client == null || base == null) return MockAstellClient();
   final holder = ref.read(orgateTokenHolderProvider);
   return HttpAstellClient(client, baseUrl: base, token: () => holder.token);
+});
+
+/// 自分の RASQ アカウント id (D-164): 参加中なら welcome の値、無ければクライアント
+/// (モックは 'me')か RASQ アカウントの id(`rasq:` 接頭辞を外す)。
+final astellMyAccountIdProvider = Provider<String?>((ref) {
+  final fromSession = ref.watch(astellSessionProvider.select((s) => s?.myAccountId));
+  if (fromSession != null) return fromSession;
+  final fromClient = ref.watch(astellClientProvider).selfAccountId;
+  if (fromClient != null) return fromClient;
+  final id = ref.watch(rasqAccountProvider).id;
+  return id.startsWith('rasq:') ? id.substring(5) : id;
 });
 
 /// アップロード前の圧縮 (D-145): Central は `zstd` を期待する。Dart 側の zstd

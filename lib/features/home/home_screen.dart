@@ -16,6 +16,7 @@ import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../nodeprog/node_tabs.dart';
 import '../relational/relational_timeline_view.dart';
+import '../vc/astell_actions.dart';
 import 'custom_tile_row.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
@@ -52,7 +53,8 @@ class HomeScreen extends ConsumerWidget {
       length: tabs.length,
       initialIndex: initial,
       child: Scaffold(
-        appBar: RasqHomeHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref)),
+        // フォロー中のホストの AsTell (D-163): ヘッダーの角丸四角形にバンドルを並べる。
+        appBar: RasqHomeHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref), vcWidget: const AstellHeaderStrip()),
         body: Column(children: [
           Container(
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),

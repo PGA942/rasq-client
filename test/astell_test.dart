@@ -716,9 +716,13 @@ void main() {
     expect(astellRoomIdIn('今夜やります rasq://astell/r-launch よろしく'), 'r-launch');
     expect(astellRoomIdIn('https://central.example/astell/9f1c-uuid まで'), '9f1c-uuid');
     expect(astellRoomIdIn('リンクなし https://example.com/astellx/1'), isNull);
-    expect(astellRoomLink(null, 'r 1'), 'rasq://astell/r%201');
-    expect(astellRoomLink(Uri.parse('https://central.example/api/v1'), 'abc'), 'https://central.example/astell/abc');
+    // 共有 URL (D-165): `@handle/<Base58>` からはコードを id として拾う(Central はコードでも引ける)。
+    expect(astellRoomIdIn('来てね https://astell.rasq.jp/@douglas/A7XeQCmhp4JYSaDQeZEyJG'), 'A7XeQCmhp4JYSaDQeZEyJG');
+    expect(astellRoomIdIn('https://astell.rasq.jp/@douglas/A7XeQCmhp4JYSaDQeZEyJG/banner.png'), isNull);
+    expect(astellRoomIdIn('https://example.com/@douglas'), isNull);
     final room = AstellRoom(id: 'x', ownerId: 'o', ownerHandle: 'o', ownerDisplayName: 'ホスト', title: '反省会', genres: const ['打上会'], createdAt: DateTime(2026), scheduledAt: DateTime.now().add(const Duration(days: 1)));
+    expect(astellRoomLink(room), 'rasq://astell/x');
+    expect(astellRoomLink(AstellRoom.fromJson({...room.toJson(), 'shareUrl': 'https://astell.rasq.jp/@o/abc'})), 'https://astell.rasq.jp/@o/abc');
     expect(astellShareText(room, 'rasq://astell/x'), allOf(contains('「反省会」を'), contains('に開催します'), contains('#打上会'), endsWith('rasq://astell/x')));
     expect(astellShareText(room.copyWith(clearSchedule: true), 'L'), startsWith('「反省会」を開催中です'));
   });
@@ -840,5 +844,60 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AstellRoomBody), findsOneWidget);
     await container.read(astellSessionProvider.notifier).leave();
+  });
+
+  testWidgets('ホームヘッダーの AsTell 帯 (D-163): 招待/フォロー中のルームのバンドル → タップで参加 FOW', (tester) async {
+    await pump(tester);
+    // ホーム TL のヘッダー: 招待されている「サプライズ」(よもぎもち)のバンドル。
+    expect(find.byKey(const ValueKey('astell.header.strip')), findsOneWidget);
+    final bundle = find.descendant(of: find.byKey(const ValueKey('astell.header.strip')), matching: find.byType(RasqAvatarBundle));
+    expect(bundle, findsOneWidget);
+    expect(find.byTooltip('よもぎもち: サプライズ'), findsOneWidget);
+    await tester.tap(bundle);
+    await tester.pumpAndSettle();
+    expect(find.text('参加'), findsOneWidget); // 参加 FOW
+    expect(find.text('サプライズ'), findsWidgets);
+  });
+
+  testWidgets('自分がホストのタイルの … (D-164): 参加する / 終了する(報告は無い)→ 確認シート → 終了', (tester) async {
+    final container = await pump(tester);
+    await container.read(astellClientProvider).createRoom(const NewAstellRoom(title: '自分の部屋'));
+    container.invalidate(astellHomeProvider);
+    await openVc(tester);
+    expect(find.text('自分の部屋'), findsWidgets);
+    final tile = find.ancestor(of: find.text('自分の部屋').first, matching: find.byType(AstellTile)).first;
+    await tester.tap(find.descendant(of: tile, matching: find.byTooltip('メニュー')));
+    await tester.pumpAndSettle();
+    expect(find.text('終了する'), findsOneWidget);
+    expect(find.text('参加する'), findsOneWidget);
+    expect(find.text('報告'), findsNothing);
+    expect(find.text('ホストをフォロー'), findsNothing);
+    await tester.tap(find.text('終了する'));
+    await tester.pumpAndSettle();
+    expect(find.text('ルームを終了'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, '終了する'));
+    await tester.pumpAndSettle();
+    expect(find.text('「自分の部屋」を終了しました'), findsOneWidget);
+    expect(find.text('自分の部屋'), findsNothing);
+  });
+
+  testWidgets('FOW 本体を掴んで移動 (D-161): ルーム FOW の本体側ヘッダー(ListView でない所)を上へ → アプリヘッダー下付き、下へ → 戻る', (tester) async {
+    await pump(tester);
+    await openVc(tester);
+    await tester.tap(find.text('見てみる').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('参加'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AstellRoomBody), findsOneWidget);
+    Finder panel() => find.byWidgetPredicate((w) => w is Material && w.elevation == 8);
+    final before = tester.getTopLeft(panel()).dy;
+    expect(before, greaterThan(100));
+    // 本体側ヘッダーのタイトル文字を掴んで上へ(ウィンドウ高さの 1 割以上)。
+    await tester.drag(find.descendant(of: find.byKey(astellRoomHeaderKey), matching: find.text('打ち上げの打ち上げ')), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(panel()).dy, lessThan(120)); // アプリヘッダーの直下
+    await tester.drag(find.descendant(of: find.byKey(astellRoomHeaderKey), matching: find.text('打ち上げの打ち上げ')), const Offset(0, 300));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(panel()).dy, closeTo(before, 1));
   });
 }
