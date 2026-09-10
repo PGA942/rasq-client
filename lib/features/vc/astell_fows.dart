@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
 import '../trend/tendency_profile.dart';
 import 'astell_actions.dart';
@@ -606,6 +607,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         onSendText: _sendText,
         onPickFile: _pickAndShare,
         onSettings: () => _openSettings(context, s, isOwner),
+        // プラグインアクション (D-167): スロット `astell.action` のプラグインを開く。
+        onPlugin: ref.watch(slotPluginsForProvider(SlotIds.astellAction)).isEmpty ? null : () => _openPlugin(context, s),
         onExpand: _expand,
         onLeave: leave,
         onOpenShare: (share) => _openShare(context, share),
@@ -678,6 +681,25 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ファイルを選択できませんでした: $e')));
     }
+  }
+
+  /// プラグインアクション (D-167): 1 つなら即開く、複数ならシートで選ぶ。
+  Future<void> _openPlugin(BuildContext context, AstellSessionState s) async {
+    final plugins = ref.read(slotPluginsForProvider(SlotIds.astellAction));
+    if (plugins.isEmpty) return;
+    var pick = plugins.length == 1 ? plugins.first : null;
+    if (pick == null) {
+      final manager = ref.read(overlayManagerProvider);
+      pick = await manager.showBottomSheet<SlotPlugin>(
+        id: 'astell.plugin.pick',
+        title: 'プラグインアクション',
+        builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
+          for (final p in plugins) RasqListTile(title: p.manifest.name, subtitle: p.manifest.description, onTap: () => manager.close('astell.plugin.pick', result: p)),
+        ]),
+      );
+    }
+    if (pick == null) return;
+    await ref.read(slotPluginsProvider.notifier).astellOpen(pick, s);
   }
 
   /// 共有欄に出すもの (D-146): ピン留め(共有・文字起こし)+ 自動表示の種類に該当する共有。
@@ -1121,6 +1143,7 @@ class _Footer extends StatelessWidget {
     required this.onLeave,
     required this.onOpenShare,
     this.onFullscreen,
+    this.onPlugin,
   });
   final bool compact;
   final AstellSessionState state;
@@ -1133,6 +1156,9 @@ class _Footer extends StatelessWidget {
 
   /// 共有枠のピアの画面を全画面に(共有枠が空なら null)。
   final VoidCallback? onFullscreen;
+
+  /// プラグインアクション (D-167)。登録が無ければ null(無効表示)。
+  final VoidCallback? onPlugin;
   final void Function(AstellShare share) onOpenShare;
 
   /// 左端ボタン群を 2 つに絞る画面幅。
@@ -1155,7 +1181,7 @@ class _Footer extends StatelessWidget {
           : _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン(音声は M5 後段)', filled: s.micOn ? RasqColors.accent : null, onPressed: onMic),
       _RoundButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: onScreen),
       if (viewing != null) _RoundButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: onFullscreen),
-      const _RoundButton(icon: Icons.extension_outlined, tooltip: 'プラグインアクション(未対応)', onPressed: null),
+      _RoundButton(icon: Icons.extension_outlined, tooltip: onPlugin == null ? 'プラグインアクション(未登録)' : 'プラグインアクション', filled: onPlugin == null ? null : RasqColors.sub, onPressed: onPlugin),
     ];
     final Widget left;
     if (compact && viewing != null) {

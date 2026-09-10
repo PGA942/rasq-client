@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
@@ -17,6 +19,17 @@ class RrlRenderer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _NodeWidget(node: node, host: host, scope: host.scope);
+}
+
+/// `#RRGGBB` / `#RRGGBBAA` / `#AARRGGBB`(8 桁は RRGGBBAA と解釈)を Color に。
+Color? _rrlColor(Object? v) {
+  if (v is! String || !v.startsWith('#')) return null;
+  final hex = v.substring(1);
+  final n = int.tryParse(hex, radix: 16);
+  if (n == null) return null;
+  if (hex.length == 6) return Color(0xFF000000 | n);
+  if (hex.length == 8) return Color(((n & 0xFF) << 24) | (n >> 8));
+  return null;
 }
 
 class _NodeWidget extends StatelessWidget {
@@ -65,19 +78,62 @@ class _NodeWidget extends StatelessWidget {
     switch (node.t) {
       // ---- L1 Primitive ----------------------------------------------------
       case 'Text':
-        return Text(rrlString(_prop('text')), style: RasqTypography.body);
+        // ホスト拡張 props (D-167): size / bold / color(#RRGGBB)。
+        final size = (_prop('size') as num?)?.toDouble();
+        final bold = rrlTruthy(_prop('bold'));
+        final color = _rrlColor(_prop('color'));
+        return Text(rrlString(_prop('text')), style: RasqTypography.body.copyWith(fontSize: size, fontWeight: bold ? FontWeight.w700 : null, color: color));
       case 'Icon':
-        return Icon(rrlIconFor(rrlString(_prop('icon'))), size: (_prop('size') as num?)?.toDouble() ?? 20);
+        return Icon(rrlIconFor(rrlString(_prop('icon'))), size: (_prop('size') as num?)?.toDouble() ?? 20, color: _rrlColor(_prop('color')));
       case 'Image':
-        final src = rrlUri(_prop('src'));
+        // `data:` URI(プラグインが生成した画像、D-167)と幅/高さ指定を受ける。
+        final raw = rrlString(_prop('src'));
+        final width = (_prop('width') as num?)?.toDouble();
+        final height = (_prop('height') as num?)?.toDouble();
+        if (raw.startsWith('data:')) {
+          final Uint8List bytes;
+          try {
+            bytes = UriData.parse(raw).contentAsBytes();
+          } catch (_) {
+            return const _ErrorBox('bad data uri');
+          }
+          return Image.memory(bytes, width: width, height: height, fit: BoxFit.contain, gaplessPlayback: true, errorBuilder: (_, _, _) => const _ErrorBox('image'));
+        }
+        final src = rrlUri(raw);
         if (src == null) return const _ErrorBox('Image without src');
-        return Image.network(src.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const _ErrorBox('image'));
+        return Image.network(src.toString(), width: width, height: height, fit: width == null && height == null ? BoxFit.cover : BoxFit.contain, errorBuilder: (_, _, _) => const _ErrorBox('image'));
       case 'Row':
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: _children(scope));
       case 'Column':
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: _children(scope));
       case 'Stack':
-        return Stack(children: _children(scope));
+        // 子の `left`/`top`(ホスト拡張、D-167)は絶対配置。
+        return Stack(children: [
+          for (final c in node.c)
+            c.p.containsKey('left') || c.p.containsKey('top')
+                ? Positioned(
+                    left: (scope.resolveProp(c.p['left']) as num?)?.toDouble(),
+                    top: (scope.resolveProp(c.p['top']) as num?)?.toDouble(),
+                    width: (scope.resolveProp(c.p['width']) as num?)?.toDouble(),
+                    height: (scope.resolveProp(c.p['height']) as num?)?.toDouble(),
+                    child: _render(c, scope),
+                  )
+                : _render(c, scope),
+        ]);
+      case 'Box':
+        // 矩形 (D-167): width / height / color / borderColor / borderWidth / radius。
+        final bw = (_prop('borderWidth') as num?)?.toDouble() ?? 0;
+        final bc = _rrlColor(_prop('borderColor'));
+        return Container(
+          width: (_prop('width') as num?)?.toDouble(),
+          height: (_prop('height') as num?)?.toDouble(),
+          decoration: BoxDecoration(
+            color: _rrlColor(_prop('color')),
+            border: bc != null && bw > 0 ? Border.all(color: bc, width: bw) : null,
+            borderRadius: BorderRadius.circular((_prop('radius') as num?)?.toDouble() ?? 0),
+          ),
+          child: node.c.isEmpty ? null : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: _children(scope)),
+        );
       case 'Grid':
         final columns = (_prop('columns') as num?)?.toInt() ?? 2;
         return GridView.count(crossAxisCount: columns, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: RasqSpacing.mediaGap, crossAxisSpacing: RasqSpacing.mediaGap, children: _children(scope));

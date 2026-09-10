@@ -15,6 +15,20 @@ abstract final class RasqHostFns {
   static const storeRead = 'store.read';
   static const geometryLookup = 'geometry.lookup';
   static const gpuCompute = 'gpu.compute';
+
+  // スロット契約 (plugin-sample/CONTRACT.md §4、D-167): すべて fire-and-forget。
+  static const toast = 'toast';
+  static const soundPlay = 'sound.play';
+  static const clipboardSet = 'clipboard.set';
+  static const urlOpen = 'url.open';
+  static const muteAdd = 'mute.add';
+  static const astellShare = 'astell.share';
+  static const composerMediaReplace = 'composer.media.replace';
+  static const composerTextReplace = 'composer.text.replace';
+  static const viewerOverlaySet = 'viewer.overlay.set';
+
+  /// アプリ側へ中継するホスト関数(権限はスロット登録時に決まる)。
+  static const appFns = {toast, soundPlay, clipboardSet, urlOpen, muteAdd, astellShare, composerMediaReplace, composerTextReplace, viewerOverlaySet};
 }
 
 /// Where an `ml.infer` call actually ran (returned to the plugin).

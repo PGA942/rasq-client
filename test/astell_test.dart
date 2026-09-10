@@ -270,10 +270,10 @@ void main() {
     await scrollActions(tester, '画面共有');
     await tester.pumpAndSettle();
     expect(find.byTooltip('画面共有'), findsOneWidget);
-    await scrollActions(tester, 'プラグインアクション(未対応)');
+    await scrollActions(tester, 'プラグインアクション(未登録)');
     await tester.pumpAndSettle();
     expect(find.byTooltip('全画面'), findsWidgets); // 左端 + パネル右上
-    expect(find.byTooltip('プラグインアクション(未対応)'), findsOneWidget);
+    expect(find.byTooltip('プラグインアクション(未登録)'), findsOneWidget);
     await scrollActions(tester, 'スピーカーミュート', back: true);
     await tester.pumpAndSettle();
     expect(find.byTooltip('設定'), findsOneWidget);

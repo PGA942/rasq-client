@@ -43,6 +43,11 @@ typedef SyncFetch = SyncFetchResponse Function(SyncFetchRequest request);
 /// host-fn の value を返す(null = 既定値: open `{opened:true}` / close `{}`)。
 typedef FowHostRelay = Object? Function(String fn, Map<String, Object?> args);
 
+/// スロット契約のアプリ向けホスト関数(`toast` / `sound.play` / `clipboard.set` /
+/// `url.open` / `mute.add` / `astell.share` / `composer.*.replace` /
+/// `viewer.overlay.set`、D-167)の中継先。fire-and-forget で、戻りは受理 `{}`。
+typedef AppFnRelay = void Function(String fn, Map<String, Object?> args);
+
 /// Host-proxied `net.fetch` via a synchronous `curl` subprocess.
 ///
 /// v1 stop-gap for desktop dev: it blocks the calling isolate for the whole
@@ -103,7 +108,16 @@ class RasqHostEnvironment {
     this.onLog,
     this.onFow,
     this.fowPermissions = const {'widget'},
+    this.onAppFn,
+    this.appFns = const {},
   }) : storage = storage ?? {};
+
+  /// アプリ向けホスト関数の中継 (D-167)。null → E01。
+  AppFnRelay? onAppFn;
+
+  /// 許可されたアプリ向けホスト関数名(スロット登録時にマニフェストの
+  /// permissions / slots から決める)。範囲外は E01。
+  final Set<String> appFns;
 
   /// Serve `net.fetch` inside the wasm runtime (blocking rustls HTTP —
   /// mobile-capable, D-023). Takes precedence over [fetch]; the runtime
@@ -231,6 +245,28 @@ class RasqHostEnvironment {
         throw _HostFnError('E01', 'gpu.compute requires the native runtime (fall back to ml.infer)');
       case RasqHostFns.wasmCall || RasqHostFns.storeRead || RasqHostFns.geometryLookup:
         throw _HostFnError('E01', '$fn not wired yet');
+      case RasqHostFns.toast ||
+            RasqHostFns.soundPlay ||
+            RasqHostFns.clipboardSet ||
+            RasqHostFns.urlOpen ||
+            RasqHostFns.muteAdd ||
+            RasqHostFns.astellShare ||
+            RasqHostFns.composerMediaReplace ||
+            RasqHostFns.composerTextReplace ||
+            RasqHostFns.viewerOverlaySet:
+        // スロット契約 (D-167): 権限内ならアプリへ fire-and-forget で中継。
+        final relay = onAppFn;
+        if (relay == null) throw _HostFnError('E01', '$fn not wired');
+        if (!appFns.contains(fn)) throw _HostFnError('E01', '$fn not permitted');
+        if (fn == RasqHostFns.urlOpen) {
+          final u = Uri.tryParse('${args['url']}');
+          if (u == null || !(u.isScheme('https') || u.isScheme('http'))) throw _HostFnError('B03', 'url.open: http(s) only');
+        }
+        if ((fn == RasqHostFns.composerMediaReplace || fn == RasqHostFns.composerTextReplace || fn == RasqHostFns.viewerOverlaySet) && args['token'] is! String) {
+          throw _HostFnError('D01', '$fn: token required');
+        }
+        relay(fn, args);
+        return const <String, Object?>{};
       default:
         throw _HostFnError('C01', 'unknown host fn: $fn');
     }

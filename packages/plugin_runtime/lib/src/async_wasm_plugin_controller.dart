@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart' show RrlGeometryRegistry;
 
+import 'host_environment.dart' show AppFnRelay;
 import 'wasm_fow.dart';
 import 'wasm_plugin_controller.dart';
 import 'wasm_plugin_worker.dart';
@@ -12,10 +13,13 @@ import 'wasm_plugin_worker.dart';
 /// (専用 isolate)で動かし、UI isolate をブロックしない。
 /// `net.fetch`(ランタイム内蔵)や重い snapshot 生成中も画面が止まらない。
 class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin implements WasmPluginViewModel {
-  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}, Set<String> fowPermissions = const {'widget'}})
-      : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage, fowPermissions: fowPermissions);
+  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}, Set<String> fowPermissions = const {'widget'}, Set<String> appFns = const {}})
+      : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage, fowPermissions: fowPermissions, appFns: appFns);
 
   final WasmWorkerConfig _config;
+
+  /// アプリ向けホスト関数の中継先 (D-167)。ワーカーからの `{fn, args}` を受ける。
+  AppFnRelay? onAppFn;
 
   @override
   final RrlGeometryRegistry geometry = RrlGeometryRegistry();
@@ -46,6 +50,14 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
           handleFowHostFn('${m['fn']}', (m['args'] as Map?)?.cast<String, Object?>() ?? const {}, scope: _document?.scope ?? 'plugin');
         } catch (e) {
           _lastError = 'fow relay failed: $e';
+          _notify();
+        }
+      });
+      _worker!.appRequests.listen((m) {
+        try {
+          onAppFn?.call('${m['fn']}', (m['args'] as Map?)?.cast<String, Object?>() ?? const {});
+        } catch (e) {
+          _lastError = 'app relay failed: $e';
           _notify();
         }
       });

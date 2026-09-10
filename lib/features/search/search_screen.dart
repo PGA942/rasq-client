@@ -6,6 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../plugins/slot_plugins.dart';
 import '../../shell/rasq_shell.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
@@ -109,6 +110,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ? const [RasqEmptyView(title: 'トレンドはありません', hint: 'サーバーサイドのトレンドプロバイダーは準備中')]
                 : [for (final t in list.take(8)) _TrendTile(trend: t, onTap: () => context.pushTrend(t.tag))],
           ),
+          // トレンドプラグインのサジェスト (D-167、スロット `trend.suggest`)。
+          _TrendSuggestions(recent: [for (final t in trends.value ?? const <TrendTag>[]) t.tag]),
           const RasqSectionHeader(title: 'Today'),
           ...today.when(
             loading: () => const [RasqLoading()],
@@ -180,4 +183,33 @@ class _Sparkline extends CustomPainter {
   }
   @override
   bool shouldRepaint(covariant _Sparkline old) => old.values != values || old.color != color;
+}
+
+/// トレンドプラグイン (D-167): `trend.suggest` のチップ。登録が無ければ何も出さない。
+class _TrendSuggestions extends ConsumerWidget {
+  const _TrendSuggestions({required this.recent});
+  final List<String> recent;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plugins = ref.watch(slotPluginsForProvider(SlotIds.trendSuggest));
+    if (plugins.isEmpty) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    return FutureBuilder(
+      future: ref.read(slotPluginsProvider.notifier).trendSuggest(recent),
+      builder: (context, snap) {
+        final items = snap.data ?? const [];
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('サジェスト(${items.first.plugin.manifest.name})', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: RasqSpacing.xs),
+            Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
+              for (final it in items) ActionChip(label: Text('#${it.text}'), tooltip: it.reason, onPressed: () => context.pushTrend(it.text)),
+            ]),
+          ]),
+        );
+      },
+    );
+  }
 }
