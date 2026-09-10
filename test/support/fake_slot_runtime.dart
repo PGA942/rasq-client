@@ -70,9 +70,9 @@ class FakeSlotRuntime extends ChangeNotifier with WasmFowSurfaceMixin implements
 }
 
 /// [slotRuntimeLoaderProvider] の差し替え: バイト列の先頭文字列で偽物を選ぶ。
-SlotRuntimeLoader fakeSlotLoader(Map<String, FakeSlotRuntime Function()> byName) => (Uint8List bytes, {required Set<String> fowPermissions, required Set<String> appFns}) async {
-      final name = String.fromCharCodes(bytes);
-      final make = byName[name];
-      if (make == null) throw StateError('unknown fake plugin: $name');
+/// キーは「バイト列を文字列にしたもの」か、登録元(`store:<id>` 等)。
+SlotRuntimeLoader fakeSlotLoader(Map<String, FakeSlotRuntime Function()> byName) => (Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns}) async {
+      final make = byName[source] ?? (bytes.length < 64 ? byName[String.fromCharCodes(bytes)] : null);
+      if (make == null) throw StateError('unknown fake plugin: $source');
       return make();
     };

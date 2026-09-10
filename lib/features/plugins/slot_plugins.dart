@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../settings/settings_dsl.dart';
+import '../store/store_providers.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
 
@@ -105,9 +106,9 @@ class _AsyncSlotRuntime implements SlotRuntime {
 }
 
 /// wasm バイト列 → 実行中のプラグイン。テストは偽物に差し替える。
-typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required Set<String> fowPermissions, required Set<String> appFns});
+typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns});
 
-final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required fowPermissions, required appFns}) async {
+final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns}) async {
       final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns);
       await c.load();
       if (c.lastError != null && c.document == null) {
@@ -211,7 +212,18 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final raw = await ref.read(sessionStorageProvider).read(slotPluginsStorageKey);
       if (raw == null) return;
       for (final p in (jsonDecode(raw) as List)) {
-        if (p is String) await register(p, persist: false);
+        if (p is! String) continue;
+        // ストアからのインストール (D-168): 配布物を取り直す(モックは同梱アセット)。
+        if (p.startsWith('store:')) {
+          try {
+            final bytes = await ref.read(storeClientProvider).downloadArtifact(p.substring(6), 'bundle');
+            await register(p, bytes: bytes, persist: false);
+          } catch (e) {
+            debugPrint('slot plugin restore $p: $e');
+          }
+          continue;
+        }
+        await register(p, persist: false);
       }
     } catch (e) {
       debugPrint('slot plugins restore: $e');
@@ -228,7 +240,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final data = bytes ?? File(source).readAsBytesSync();
       final loader = ref.read(slotRuntimeLoaderProvider);
       // マニフェストを読むために一度素の権限で起動し、宣言に合わせて起動し直す。
-      var runtime = await loader(data, fowPermissions: const {'widget'}, appFns: const {});
+      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {});
       final m = (await runtime.invoke('plugin.manifest', const {}))['value'];
       if (m is! Map) {
         runtime.dispose();
@@ -240,7 +252,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         throw StateError('plugin.manifest.id が空です');
       }
       runtime.dispose();
-      runtime = await loader(data, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns);
+      runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns);
       final plugin = SlotPlugin(manifest: manifest, source: source, runtime: runtime);
       runtime.onAppFn = (fn, args) => _onAppFn(plugin, fn, args);
       _wireFow(plugin);

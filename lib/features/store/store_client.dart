@@ -53,6 +53,18 @@ abstract class StoreClient {
 /// 同梱 wasm サンプル(実プラグイン)のストア上の id。
 const storeSamplePluginId = 'jp.rasq.misskey-wasm-sample';
 
+/// スロットプラグインのサンプル (D-168): ストア id = マニフェストの id、
+/// 配布物 = 同梱の wasm(`assets/plugins/<asset>`)。インストールでスロット登録される。
+const storeSlotSamples = <({String id, String asset, String name, String summary, String description, List<String> features, List<(String, String)> permissions, double sizeMb})>[
+  (id: 'sample.astell', asset: 'astell_plugin.wasm', name: 'AsTell 効果音・効果映像', summary: 'AsTell のプラグインアクションから効果音 / 生成した効果映像 / 定型テキストを流します。', description: 'スロット `astell.action`。ルーム下段のプラグインアクションボタンで FOW を開き、システム音(ピンポン / クリック)、紙吹雪・花火・拍手の生成 PNG、定型テキストを共有します。「AsTell で共有」した投稿の受け取りも表示します。', features: ['AsTell プラグインアクション', 'FOW'], permissions: [('fow.widget', '操作パネル(FOW)を出すため'), ('storage.safe', '効果の使用回数の保存')], sizeMb: 0.25),
+  (id: 'sample.composer-media', asset: 'composer_media_plugin.wasm', name: 'メディア加工', summary: '添付画像のガンマ補正 / 回転 / 色相 / クロップ。', description: 'スロット `composer.media`。コンポーザーの添付タイルの「プラグインで加工」で FOW を開き、プレビューを見ながら適用します。処理は端末内の wasm だけで完結します。', features: ['メディアコンポーザー', 'FOW'], permissions: [('fow.widget', '加工パネル(FOW)を出すため'), ('storage.safe', '前回の設定の保存')], sizeMb: 0.53),
+  (id: 'sample.composer-text', asset: 'composer_text_plugin.wasm', name: 'ハッシュタグ候補', summary: '本文で # を打つと候補が出て、タップで挿入します。', description: 'スロット `composer.text`。本文の変化を受け取り、カーソル直前が #〜 のときに候補 FOW(最近使ったタグ + 辞書)を出します。', features: ['テキストコンポーザー', 'FOW'], permissions: [('fow.widget', '候補パネル(FOW)を出すため'), ('storage.safe', '最近使ったタグの保存')], sizeMb: 0.14),
+  (id: 'sample.media-fullscreen', asset: 'media_fullscreen_plugin.wasm', name: 'QR コード検出', summary: '全画面表示の画像から QR コードを見つけて枠を出し、タップでリンクを開けます。', description: 'スロット `viewer.overlay`。全画面ビューワーの画像を受け取って QR を検出し、バウンディングボックスを重ねます。タップでリンク FOW(コピー / ブラウザで開く / ミュート語に追加)。', features: ['全画面表示プラグイン', 'FOW'], permissions: [('fow.widget', 'リンクパネル(FOW)を出すため'), ('mute.words', '「このリンクをミュート」でミュート語に追加するため(毎回確認)')], sizeMb: 0.71),
+  (id: 'sample.post-process', asset: 'post_process_plugin.wasm', name: '相対日付を日付に', summary: '「今日」「昨日」「明日」を投稿日基準の日付に置き換えます。', description: 'スロット `post.transform`。全 TL の表示直前に本文の相対日付を「9/10(今日)」のように書き換えます(JST)。URL の中は触りません。', features: ['投稿加工 (post.transform)'], permissions: [], sizeMb: 0.1),
+  (id: 'sample.timeline', asset: 'timeline_plugin.wasm', name: 'Unicode 昇順 TL', summary: 'ホームに本文の Unicode 順で並ぶタブを足します。', description: 'スロット `tl`。基礎 TL(ホーム)を受け取り、本文の Unicode コードポイント昇順で並べ替えたカスタムタブを出します。', features: ['タイムライン (tl.sort)'], permissions: [], sizeMb: 0.1),
+  (id: 'sample.trend', asset: 'trend_plugin.wasm', name: 'トレンドサジェスト', summary: '今のトレンド語から関連タグをローカル規則で提案します。', description: 'スロット `trend.suggest`。検索ホームのトレンド節にサジェストのチップを足します。サーバー無しの共起辞書 + 前方一致です。', features: ['トレンド (trend.suggest)'], permissions: [], sizeMb: 0.1),
+];
+
 /// モックストア (M4 v1)。掲載物 = 実在する同梱 wasm サンプル + 架空の
 /// 掲載例。**検証パイプラインは本物**: manifest の SHA-512 は配布物バイトから
 /// 計算し、インストール側が downloadArtifact の結果と照合する。
@@ -166,6 +178,36 @@ class MockStoreClient implements StoreClient {
     ),
   ];
 
+  /// スロットプラグインのサンプル (D-168) の掲載カード。
+  static final _sampleCards = <StorePluginDetail>[
+    for (final (i, x) in storeSlotSamples.indexed)
+      StorePluginDetail(
+        id: x.id,
+        name: x.name,
+        summary: x.summary,
+        version: '0.1.0',
+        status: PluginStatus.published,
+        origin: PluginOrigin.official,
+        rating: 4.5,
+        downloads: 120 + i * 37,
+        sizeMb: x.sizeMb,
+        description: x.description,
+        safety: SafetyBlock(
+          rasqFeatures: x.features,
+          permissions: [for (final (p, why) in x.permissions) PermissionEntry(p, why)],
+          dataHandling: '処理は端末内の wasm で完結し、外部送信はありません。',
+          crashFreeRate: 0.999,
+        ),
+        compatibility: const Compatibility(rasqVersion: '>=0.1.0', os: ['ios', 'android', 'macos', 'windows', 'linux']),
+        developerName: 'RASQ Project',
+        downloadsLastMonth: 60 + i * 11,
+        downloadHistory: const [10, 20, 35, 50, 70, 95, 120],
+        ratingHistogram: const [0, 0, 1, 3, 6],
+      ),
+  ];
+
+  static List<StorePluginDetail> get _all => [..._cards, ..._sampleCards];
+
   /// ブックマークはサーバー側の状態なので、モックでは端末内に持つ。
   final _bookmarked = <String>{};
   final _reviews = <String, List<StoreReview>>{};
@@ -173,8 +215,9 @@ class MockStoreClient implements StoreClient {
   @override
   Future<StoreHomeSections> home() async => (
         trending: <StorePluginCard>[_cards[0], _cards[1], _cards[3]],
-        bookmarks: <StorePluginCard>[for (final c in _cards) if (_bookmarked.contains(c.id)) c],
-        recent: <StorePluginCard>[_cards[2], _cards[1]],
+        bookmarks: <StorePluginCard>[for (final c in _all) if (_bookmarked.contains(c.id)) c],
+        // 新着 = スロットプラグインのサンプル (D-168) + 従来の架空掲載。
+        recent: <StorePluginCard>[..._sampleCards, _cards[2], _cards[1]],
       );
 
   @override
@@ -204,20 +247,20 @@ class MockStoreClient implements StoreClient {
       bookmarked ? _bookmarked.add(pluginId) : _bookmarked.remove(pluginId);
 
   @override
-  Future<List<StorePluginCard>> bookmarks() async => [for (final c in _cards) if (_bookmarked.contains(c.id)) c];
+  Future<List<StorePluginCard>> bookmarks() async => [for (final c in _all) if (_bookmarked.contains(c.id)) c];
 
   @override
   Future<List<StorePluginCard>> search(String q) async {
     final query = q.trim().toLowerCase();
-    if (query.isEmpty) return List<StorePluginCard>.from(_cards);
+    if (query.isEmpty) return List<StorePluginCard>.from(_all);
     return [
-      for (final c in _cards)
+      for (final c in _all)
         if (c.name.toLowerCase().contains(query) || c.summary.toLowerCase().contains(query) || c.description.toLowerCase().contains(query)) c,
     ];
   }
 
   @override
-  Future<StorePluginDetail?> plugin(String id) async => _cards.where((c) => c.id == id).firstOrNull;
+  Future<StorePluginDetail?> plugin(String id) async => _all.where((c) => c.id == id).firstOrNull;
 
   /// 配布物の実体: 同梱 wasm サンプルはアプリ同梱のアセット、架空掲載は
   /// 決定的なダミーバイト(id から生成)。
@@ -225,8 +268,11 @@ class MockStoreClient implements StoreClient {
     final cached = _bytesCache[pluginId];
     if (cached != null) return cached;
     Uint8List bytes;
+    final sample = storeSlotSamples.where((x) => x.id == pluginId).firstOrNull;
     if (pluginId == storeSamplePluginId) {
       bytes = (await rootBundle.load('assets/plugins/misskey_wasm_sample.wasm')).buffer.asUint8List();
+    } else if (sample != null) {
+      bytes = (await rootBundle.load('assets/plugins/${sample.asset}')).buffer.asUint8List();
     } else {
       bytes = Uint8List.fromList(utf8.encode('rasqpkg-mock:$pluginId'));
     }

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../backend/orgate_client.dart';
 import '../settings/settings_dsl.dart';
 import 'http_store_client.dart';
+import '../plugins/slot_plugins.dart';
 import 'store_client.dart';
 import 'store_models.dart';
 
@@ -154,13 +155,29 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       ...state.where((p) => p.id != pluginId),
       InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: DateTime.now()),
     ]);
+    // 配布物が wasm そのもの(スロットプラグイン、D-168)ならスロットに登録する。
+    // 登録元は `store:<id>` — 次回起動はストアから取り直して読み込む。
+    if (isWasmBytes(bytes)) {
+      final slot = await ref.read(slotPluginsProvider.notifier).register('store:$pluginId', bytes: bytes);
+      if (slot == null) return (error: ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした', verification: verified);
+    }
     return (error: null, verification: verified);
   }
 
-  Future<void> uninstall(String pluginId) => _persist([...state.where((p) => p.id != pluginId)]);
+  Future<void> uninstall(String pluginId) async {
+    await _persist([...state.where((p) => p.id != pluginId)]);
+    // スロット登録 (D-168) も外す(登録元 `store:<id>`)。
+    final slots = ref.read(slotPluginsProvider.notifier);
+    for (final p in ref.read(slotPluginsProvider).where((p) => p.source == 'store:$pluginId')) {
+      await slots.unregister(p.id);
+    }
+  }
 }
 
 final installedPluginsProvider = NotifierProvider<InstalledPlugins, List<InstalledPlugin>>(InstalledPlugins.new);
+
+/// wasm バイナリか(`\0asm`)。ストアの配布物がスロットプラグインかの判定 (D-168)。
+bool isWasmBytes(Uint8List b) => b.length > 4 && b[0] == 0 && b[1] == 0x61 && b[2] == 0x73 && b[3] == 0x6d;
 
 /// ブックマークした プラグイン id(サーバー接続時のみ意味がある)。
 class StoreBookmarks extends AsyncNotifier<Set<String>> {
