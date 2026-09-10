@@ -15,6 +15,7 @@ import '../../shell/headers.dart';
 import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
 import '../home/post_row.dart';
+import '../plugins/slot_plugins.dart';
 
 /// WASM プラグイン試験画面 (dev)。misskey-wasm-sample(rasq-sdk-sample で
 /// ビルドした .wasm)をインポートし、plugin_runtime 経由で描画する:
@@ -100,9 +101,15 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
     _loadFromAsset();
   }
 
+  /// 直近に読み込んだ wasm(スロット登録に使う、D-167)。
+  Uint8List? _lastBytes;
+  String? _lastSource;
+
   Future<void> _loadFromAsset([String asset = 'assets/plugins/misskey_wasm_sample.wasm']) async {
     try {
       final bytes = widget.wasmBytesOverride ?? (await rootBundle.load(asset)).buffer.asUint8List();
+      _lastBytes = bytes;
+      _lastSource = 'asset:$asset';
       await _start(bytes);
     } catch (e) {
       setState(() => _loadError = 'アセットの読み込みに失敗: $e');
@@ -126,7 +133,10 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
           }
         }
       }
-      await _start(file.readAsBytesSync());
+      final bytes = file.readAsBytesSync();
+      _lastBytes = bytes;
+      _lastSource = file.path;
+      await _start(bytes);
     } catch (e) {
       setState(() => _loadError = '$raw の読み込みに失敗(絶対パスか ~/ 始まりで指定してください): $e');
     }
@@ -322,6 +332,33 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
                 child: const Text('実登録'),
               ),
             ]),
+            const SizedBox(height: RasqSpacing.xs),
+            // スロット登録 (D-167): 読み込んだ wasm をアプリの各所(AsTell / コンポーザー /
+            // ビューワー / TL / トレンド)から呼べるように常駐させる。パスは端末に残る。
+            Row(children: [
+              OutlinedButton.icon(
+                key: const ValueKey('wasm.slot.register'),
+                onPressed: _busy || _lastBytes == null
+                    ? null
+                    : () async {
+                        setState(() => _busy = true);
+                        try {
+                          await ref.read(slotPluginsProvider.notifier).register(_lastSource!, bytes: _lastSource!.startsWith('asset:') ? _lastBytes : null);
+                        } finally {
+                          if (mounted) setState(() => _busy = false);
+                        }
+                      },
+                icon: const Icon(Icons.extension, size: 18),
+                label: const Text('スロットに登録'),
+              ),
+              const SizedBox(width: RasqSpacing.sm),
+              Expanded(child: Text(ref.watch(slotPluginsNoticeProvider) ?? '登録済み: ${ref.watch(slotPluginsProvider).length}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis)),
+            ]),
+            for (final p in ref.watch(slotPluginsProvider))
+              Row(children: [
+                Expanded(child: Text('${p.manifest.name} ${p.manifest.version} — ${p.manifest.slots.join(', ')}', style: RasqTypography.caption, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                TextButton(onPressed: () => ref.read(slotPluginsProvider.notifier).unregister(p.id), child: const Text('解除')),
+              ]),
             if (_loadError != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_loadError!, style: RasqTypography.caption.copyWith(color: RasqTokens.of(context).danger))),
             if (controller?.lastResult != null)
               Padding(

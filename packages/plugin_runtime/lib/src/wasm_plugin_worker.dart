@@ -13,7 +13,7 @@ import 'host_environment.dart';
 /// その場で組み立てる。alert は自動確認、ログはメッセージでメインへ流す。
 @immutable
 class WasmWorkerConfig {
-  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}});
+  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}, this.appFns = const {}});
 
   final Uint8List wasmBytes;
   final bool nativeFetch;
@@ -21,6 +21,9 @@ class WasmWorkerConfig {
 
   /// 許可された FOW type (D-064)。ワーカー側の環境にそのまま渡る。
   final Set<String> fowPermissions;
+
+  /// 許可されたアプリ向けホスト関数 (D-167)。
+  final Set<String> appFns;
 }
 
 /// WASM プラグインを専用 isolate で動かすワーカー (D-023 の後段)。
@@ -38,9 +41,13 @@ class WasmPluginWorker {
   int _seq = 0;
   final _logs = StreamController<String>.broadcast();
   final _fows = StreamController<Map<String, Object?>>.broadcast();
+  final _apps = StreamController<Map<String, Object?>>.broadcast();
 
   /// ホスト関数のログ(hostFn 呼び出し名など)。
   Stream<String> get logs => _logs.stream;
+
+  /// ワーカー内のアプリ向けホスト関数の中継 (D-167)。要素は `{fn, args}`。
+  Stream<Map<String, Object?>> get appRequests => _apps.stream;
 
   /// ワーカー内の `fow.open` / `fow.close` の中継 (D-064)。要素は
   /// `{fn, args}` — wasm 側は即 `{opened:true}` を受け取り(受理)、実際の
@@ -75,6 +82,10 @@ class WasmPluginWorker {
       _fows.add((map['fow'] as Map).cast<String, Object?>());
       return;
     }
+    if (map['app'] != null) {
+      _apps.add((map['app'] as Map).cast<String, Object?>());
+      return;
+    }
     final completer = _pending.remove(map['id']);
     if (completer == null) return;
     if (map['ok'] == true) {
@@ -104,6 +115,7 @@ class WasmPluginWorker {
     _responses.close();
     _logs.close();
     _fows.close();
+    _apps.close();
     _isolate.kill(priority: Isolate.beforeNextEvent);
   }
 }
@@ -142,6 +154,9 @@ Future<void> _workerMain(List<Object?> init) async {
               respond.send({'fow': {'fn': fn, 'args': args}});
               return null;
             },
+            // アプリ向けホスト関数 (D-167) も同じく fire-and-forget で中継。
+            appFns: config.appFns,
+            onAppFn: (fn, args) => respond.send({'app': {'fn': fn, 'args': args}}),
           );
           plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetch);
           respond.send({'id': id, 'ok': true, 'result': 'pong'});

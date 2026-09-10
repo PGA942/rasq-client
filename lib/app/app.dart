@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../features/plugins/slot_plugins.dart';
 import '../features/settings/settings_dsl.dart';
 import 'providers.dart';
 import 'router.dart';
@@ -20,6 +21,8 @@ class RasqApp extends ConsumerWidget {
     final reduceMotion = settingValue(ref, 'appearance.motion', 'reduceMotion', false) == true;
     return MaterialApp.router(
       title: 'RASQ',
+      // スロットプラグインのトースト出口 (D-167)。
+      scaffoldMessengerKey: ref.watch(rootMessengerKeyProvider),
       debugShowCheckedModeBanner: false,
       theme: RasqTheme.light(),
       darkTheme: RasqTheme.dark(),

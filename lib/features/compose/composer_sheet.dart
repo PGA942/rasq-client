@@ -27,6 +27,7 @@ import 'compose_providers.dart';
 import 'compose_target.dart';
 import 'emoji_picker_fow.dart';
 import 'mfm_picker_fow.dart';
+import '../plugins/slot_plugins.dart';
 import 'poll_editor.dart';
 
 /// Opens the composer as an interstitial FOW (docked, resizable). Child FOWs
@@ -198,6 +199,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   PollDraft? _poll;
   final List<_Attachment> _files = [];
   bool _busy = false;
+
+  /// テキスト加工プラグイン (D-167): 本文変化のデバウンスと入力欄トークン。
+  Timer? _textPluginTimer;
+  late final String _textToken = 'composer-${identityHashCode(this)}';
+  SlotPluginsNotifier? _slots; // dispose で ref を触らないための写し
   String? _error;
   String? _progress;
 
@@ -415,8 +421,72 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     widget.onClose?.call();
   }
 
+  /// 添付をメディア加工プラグインへ (D-167、CONTRACT §2.2)。
+  Future<void> _editAttachment(_Attachment a) async {
+    final plugins = ref.read(slotPluginsForProvider(SlotIds.composerMedia));
+    if (plugins.isEmpty) return;
+    var pick = plugins.length == 1 ? plugins.first : null;
+    if (pick == null) {
+      final manager = ref.read(overlayManagerProvider);
+      pick = await manager.showBottomSheet<SlotPlugin>(
+        id: 'composer.media.plugin',
+        title: 'プラグインで加工',
+        ownerId: composerFowId,
+        builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
+          for (final p in plugins) RasqListTile(title: p.manifest.name, subtitle: p.manifest.description, onTap: () => manager.close('composer.media.plugin', result: p)),
+        ]),
+      );
+    }
+    if (pick == null) return;
+    final index = _files.indexOf(a);
+    if (index < 0) return;
+    await ref.read(slotPluginsProvider.notifier).mediaEdit(
+      pick,
+      index: index,
+      name: a.name,
+      mimeType: a.mimeType ?? 'image/png',
+      bytes: a.bytes,
+      onReplace: (bytes, mime, name) {
+        if (!mounted) return;
+        final i = _files.indexOf(a);
+        if (i < 0) return;
+        setState(() => _files[i] = _Attachment(bytes: bytes, name: name ?? a.name, mimeType: mime)..sensitive = a.sensitive);
+      },
+    );
+  }
+
+  /// 本文の変化をテキスト加工プラグインへ (D-167、CONTRACT §2.3)。200ms デバウンス。
+  void _scheduleTextPlugins() {
+    final plugins = ref.read(slotPluginsForProvider(SlotIds.composerText));
+    if (plugins.isEmpty) return;
+    _slots ??= ref.read(slotPluginsProvider.notifier);
+    _textPluginTimer?.cancel();
+    _textPluginTimer = Timer(const Duration(milliseconds: 200), () {
+      if (!mounted) return;
+      final sel = _text.selection;
+      for (final p in plugins) {
+        ref.read(slotPluginsProvider.notifier).textChanged(
+          p,
+          token: _textToken,
+          text: _text.text,
+          selectionStart: sel.isValid ? sel.start : _text.text.length,
+          selectionEnd: sel.isValid ? sel.end : _text.text.length,
+          onReplace: (start, end, text) {
+            if (!mounted) return;
+            final cur = _text.text;
+            if (start < 0 || end < start || end > cur.length) return;
+            _text.value = TextEditingValue(text: cur.replaceRange(start, end, text), selection: TextSelection.collapsed(offset: start + text.length));
+            _syncStickHeight();
+          },
+        );
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _textPluginTimer?.cancel();
+    _slots?.textDone(_textToken);
     // 余白クリック/ページ遷移などで閉じたときの自動下書き (D-051)。
     // unmount 中は provider を変更できないためマイクロタスクへ遅延する。
     if (!_skipDraftOnDispose && _hasDraftContent && (_text.text.trim().isNotEmpty || _cw.text.trim().isNotEmpty)) {
@@ -1193,6 +1263,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     onChanged: (_) {
                       _syncStickHeight();
                       _scheduleTargetEval(); // ポスト先の条件を打ち直し毎に再評価 (D-116)
+                      _scheduleTextPlugins(); // テキスト加工プラグイン (D-167)
                     },
                   ),
                 ]),
@@ -1205,7 +1276,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   scrollDirection: Axis.horizontal,
                   itemCount: _files.length,
                   separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) => _AttachmentTile(a: _files[i], onRemove: () => setState(() => _files.removeAt(i)), onToggleSensitive: () => setState(() => _files[i].sensitive = !_files[i].sensitive)),
+                  itemBuilder: (_, i) => _AttachmentTile(
+                    a: _files[i],
+                    onRemove: () => setState(() => _files.removeAt(i)),
+                    onToggleSensitive: () => setState(() => _files[i].sensitive = !_files[i].sensitive),
+                    // プラグインで加工 (D-167): スロット `composer.media` の登録があるときだけ。
+                    onEdit: ref.watch(slotPluginsForProvider(SlotIds.composerMedia)).isEmpty ? null : () => _editAttachment(_files[i]),
+                  ),
                 ),
               ),
             if (_poll != null) PollEditor(draft: _poll!, onRemove: () => setState(() => _poll = null)),
@@ -1309,14 +1386,18 @@ class _TargetPreview extends StatelessWidget {
 }
 
 class _AttachmentTile extends StatelessWidget {
-  const _AttachmentTile({required this.a, required this.onRemove, required this.onToggleSensitive});
+  const _AttachmentTile({required this.a, required this.onRemove, required this.onToggleSensitive, this.onEdit});
   final _Attachment a;
   final VoidCallback onRemove;
   final VoidCallback onToggleSensitive;
+
+  /// プラグインで加工 (D-167)。null なら出さない。
+  final VoidCallback? onEdit;
   @override
   Widget build(BuildContext context) => Stack(children: [
-        ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(a.bytes, width: 88, height: 88, fit: BoxFit.cover)),
+        ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(a.bytes, width: 88, height: 88, fit: BoxFit.cover, gaplessPlayback: true)),
         Positioned(right: 0, top: 0, child: RasqIconButton(icon: Icons.cancel, size: 18, color: Colors.white, onPressed: onRemove, tooltip: '削除')),
+        if (onEdit != null) Positioned(right: 0, bottom: 0, child: RasqIconButton(icon: Icons.auto_fix_high, size: 18, color: Colors.white, onPressed: onEdit, tooltip: 'プラグインで加工')),
         Positioned(
           left: 0,
           bottom: 0,

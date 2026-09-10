@@ -1,5 +1,12 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:rrl_core/rrl_core.dart';
+import 'package:rrl_renderer/rrl_renderer.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
@@ -9,6 +16,7 @@ import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../plugins/slot_plugins.dart';
 
 /// 全画面表示(画像/動画): 黒背景、PageView、戻る/…、下部アクションバー、本文.
 /// `…` → 「オーバーレイに移動」(動画のみ、VC・動画オーバーレイへ昇格 = M5 以降).
@@ -25,10 +33,106 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   late int _index = widget.initialIndex;
   bool _chrome = true;
 
+  /// 全画面表示プラグイン (D-167、スロット `viewer.overlay`): 画像ごとの重ね
+  /// (RRL、座標は渡した画素数)とトークン。
+  final Map<int, _Overlay> _overlays = {};
+  final Map<int, String> _tokens = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _askOverlay(_index));
+  }
+
   @override
   void dispose() {
+    for (final e in _tokens.entries) {
+      for (final p in ref.read(slotPluginsForProvider(SlotIds.viewerOverlay))) {
+        ref.read(slotPluginsProvider.notifier).viewerClose(p, e.value);
+      }
+    }
     _ctrl.dispose();
     super.dispose();
+  }
+
+  /// 画像本体を(長辺 1024 に縮めて)プラグインへ渡し、重ねる RRL をもらう。
+  Future<void> _askOverlay(int i) async {
+    final plugins = ref.read(slotPluginsForProvider(SlotIds.viewerOverlay));
+    if (plugins.isEmpty || _tokens.containsKey(i) || i >= widget.post.media.length) return;
+    final m = widget.post.media[i];
+    if (m.type != MediaType.image && m.type != MediaType.gif) return;
+    final token = 'viewer-${identityHashCode(this)}-$i';
+    _tokens[i] = token;
+    Uint8List? bytes;
+    var width = m.width ?? 0;
+    var height = m.height ?? 0;
+    try {
+      final res = await http.get(m.url).timeout(const Duration(seconds: 15));
+      if (res.statusCode == 200) {
+        final scaled = await _downscalePng(res.bodyBytes, 1024);
+        bytes = scaled.$1;
+        width = scaled.$2;
+        height = scaled.$3;
+      }
+    } catch (e) {
+      debugPrint('viewer overlay: fetch failed: $e');
+    }
+    if (!mounted || width == 0 || height == 0) return;
+    for (final p in plugins) {
+      final root = await ref.read(slotPluginsProvider.notifier).viewerOpen(
+        p,
+        token: token,
+        url: m.url.toString(),
+        mimeType: 'image/png',
+        width: width,
+        height: height,
+        bytes: bytes,
+        onOverlay: (root) {
+          if (mounted) setState(() => _overlays[i] = _Overlay(root: root, width: width, height: height, plugin: p));
+        },
+      );
+      if (root != null && mounted) setState(() => _overlays[i] = _Overlay(root: root, width: width, height: height, plugin: p));
+    }
+  }
+
+  /// 長辺 [max] に縮めた PNG と画素数。
+  static Future<(Uint8List, int, int)> _downscalePng(Uint8List src, int max) async {
+    final probe = await ui.instantiateImageCodec(src);
+    final frame = await probe.getNextFrame();
+    var image = frame.image;
+    if (image.width > max || image.height > max) {
+      final wide = image.width >= image.height;
+      final codec = await ui.instantiateImageCodec(src, targetWidth: wide ? max : null, targetHeight: wide ? null : max);
+      image = (await codec.getNextFrame()).image;
+    }
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    return (data!.buffer.asUint8List(), image.width, image.height);
+  }
+
+  /// 画像の上に重ねる(画素座標 → 表示倍率はホストが合わせる)。
+  Widget _withOverlay(int i, Widget image) {
+    final ov = _overlays[i];
+    if (ov == null) return image;
+    final controller = ov.plugin.runtime.view;
+    return FittedBox(
+      fit: BoxFit.contain,
+      child: SizedBox(
+        width: ov.width.toDouble(),
+        height: ov.height.toDouble(),
+        child: Stack(fit: StackFit.expand, children: [
+          image,
+          RrlRenderer(
+            node: ov.root,
+            host: RrlHost(
+              instanceScope: controller.document?.scope ?? ov.plugin.id,
+              scope: RrlScope({}),
+              geometry: controller.geometry,
+              onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 
   @override
@@ -45,7 +149,10 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
           child: PageView.builder(
             controller: _ctrl,
             itemCount: post.media.length,
-            onPageChanged: (i) => setState(() => _index = i),
+            onPageChanged: (i) {
+              setState(() => _index = i);
+              _askOverlay(i);
+            },
             itemBuilder: (_, i) {
               final m = post.media[i];
               return InteractiveViewer(
@@ -54,7 +161,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                 child: Center(
                   child: m.type == MediaType.file
                       ? Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.insert_drive_file_outlined, color: Colors.white, size: 64), Text(m.fileName ?? '', style: const TextStyle(color: Colors.white))])
-                      : Image.network(m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48)),
+                      : _withOverlay(i, Image.network(m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
                 ),
               );
             },
@@ -126,4 +233,12 @@ class _Circle extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => DecoratedBox(decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle), child: child);
+}
+
+class _Overlay {
+  const _Overlay({required this.root, required this.width, required this.height, required this.plugin});
+  final RrlNode root;
+  final int width;
+  final int height;
+  final SlotPlugin plugin;
 }

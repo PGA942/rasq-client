@@ -42,7 +42,7 @@ class RrlNode {
   /// Children.
   final List<RrlNode> c;
 
-  static const _l1 = {'Text', 'Icon', 'Image', 'Row', 'Column', 'Stack', 'Grid', 'Scroll', 'Canvas', 'Spacer'};
+  static const _l1 = {'Text', 'Icon', 'Image', 'Row', 'Column', 'Stack', 'Grid', 'Scroll', 'Canvas', 'Spacer', 'Box'};
   static const _l3 = {'If', 'ForEach', 'Call', 'Bind', 'Slot', 'Stream'};
   static const _l2 = {
     'Input', 'Avatar', 'Badge', 'RichText', 'MediaGrid', 'ActionButton', 'Timestamp', 'Button', //

@@ -13,6 +13,7 @@ import 'package:sns_misskey/sns_misskey.dart';
 import 'package:rasq_ml/rasq_ml.dart' show MlGateway;
 
 import '../../app/providers.dart';
+import '../plugins/slot_plugins.dart';
 import '../../text/inline_spans.dart';
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
@@ -28,8 +29,11 @@ import '../settings/settings_dsl.dart';
 /// 常設インストールはストア統合(M4)側で拡張する。
 final customTimelinesProvider = FutureProvider<List<CustomTimelineSpec>>((ref) async {
   final session = ref.watch(currentSnsSessionProvider);
-  if (session is! WasmSnsSession) return const [];
-  return session.timelinePlugin.timelines();
+  // スロットプラグイン (D-167): `tl` スロットの宣言は `slot:<pluginId>:<id>` で並ぶ。
+  ref.watch(slotPluginsProvider);
+  final slots = [for (final (p, t) in await ref.read(slotPluginsProvider.notifier).timelines()) CustomTimelineSpec(id: 'slot:${p.id}:${t.id}', label: t.label, base: t.base)];
+  if (session is! WasmSnsSession) return slots;
+  return [...await session.timelinePlugin.timelines(), ...slots];
 });
 
 @immutable
@@ -332,6 +336,22 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   Future<(Page<Post>, Map<String, Map<String, ActionResult>>, TimelineDecorations)> _fetch(SnsSession session, String? cursor) async {
     // カスタム TL (M5e / D-080): データ取得はホスト(基礎 TL)、TL プラグインは
     // ソートアルゴリズム(`tl.sort` — 表示順の id 列、未掲載は除外)。
+    // スロットの TL プラグイン (D-167): 基礎 TL → 投稿加工 → `tl.sort`。
+    if (kind.id.startsWith('custom:slot:')) {
+      final specs = await ref.read(customTimelinesProvider.future);
+      final spec = specs.where((x) => 'custom:${x.id}' == kind.id).firstOrNull;
+      final parts = kind.id.substring('custom:slot:'.length).split(':');
+      final slots = ref.read(slotPluginsProvider.notifier);
+      final plugin = ref.read(slotPluginsProvider).where((p) => p.id == parts.first).firstOrNull;
+      if (spec != null && plugin != null && parts.length >= 2) {
+        final base = await session.timeline(TimelineKind(spec.base, spec.base), cursor: cursor);
+        final states = await session.actionStates(base.items);
+        final sorted = await slots.sort(plugin, parts.sublist(1).join(':'), await slots.transform(base.items));
+        _applyStates(sorted, states);
+        ref.read(emojiCacheProvider.notifier).request({for (final p in sorted) ...InlineSpans.emojiShortcodes(p.body)});
+        return (Page(items: sorted, nextCursor: base.nextCursor), states, const TimelineDecorations());
+      }
+    }
     if (kind.id.startsWith('custom:') && session is WasmSnsSession) {
       final specs = await ref.read(customTimelinesProvider.future);
       final spec = specs.where((x) => 'custom:${x.id}' == kind.id).firstOrNull;
@@ -363,6 +383,10 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     // (v1 は wasm セッション自身のモジュール。独立プラグインはストア統合後)。
     if (session is WasmSnsSession && !kind.id.startsWith('node:')) {
       page = Page(items: await session.timelinePlugin.transform(page.items), nextCursor: page.nextCursor);
+    }
+    // 投稿加工のスロットプラグイン (D-167): 全 TL 共通。
+    if (!kind.id.startsWith('node:') && ref.read(slotPluginsForProvider(SlotIds.postTransform)).isNotEmpty) {
+      page = Page(items: await ref.read(slotPluginsProvider.notifier).transform(page.items), nextCursor: page.nextCursor);
     }
     // ノードグラフ実行 (D-094): この TL のスコープ(tl.<id>)に
     // 「タイムライン取得 → 加工 → タイムライン」の完成した鎖があれば通す。
