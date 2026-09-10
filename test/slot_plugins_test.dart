@@ -9,7 +9,6 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/home/timeline_providers.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
-import 'package:rasq_client/features/vc/astell_client.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
