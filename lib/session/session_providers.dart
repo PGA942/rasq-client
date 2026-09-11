@@ -12,6 +12,7 @@ import '../backend/rasq_account.dart';
 import '../backend/sns_oauth.dart';
 import 'rasq_accounts.dart';
 import 'session_storage.dart';
+import 'bluesky_auth.dart';
 
 /// wasm SNS サンプルの pluginId(dev「実登録」とレジストリ解決で共用)。
 const wasmSamplePluginId = 'misskey-wasm-sample';
@@ -31,6 +32,23 @@ final sessionStorageProvider = Provider<SessionStorage>((ref) => SecureSessionSt
 ///   ブローカー経由**(インスタンスごとの client_secret が要るため)。
 ///   サーバー未設定ならログイン開始時にその旨のエラーを返す。
 final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
+  // Bluesky (D-175): 認証フローがプラグイン自身(匿名ワーカー)を使うので先に作る。
+  late final WasmSnsPlugin bluesky;
+  bluesky = WasmSnsPlugin(
+    manifest: const PluginManifest(
+      id: blueskyPluginId,
+      name: 'Bluesky',
+      version: '0.1.0',
+      kind: PluginKind.sns,
+      supportedSns: [SnsKind.bluesky],
+      permissions: ['network', 'storage.safe', 'register_action'],
+      official: true,
+      verified: true,
+    ),
+    kind: SnsKind.bluesky,
+    loadBytes: () async => (await rootBundle.load('assets/plugins/bluesky_wasm.wasm')).buffer.asUint8List(),
+    authFlowFactory: (host, {callback}) async => BlueskyCredentialFlow(plugin: bluesky, host: host),
+  );
   final r = PluginRegistry()
     ..register(MisskeyPlugin())
     ..register(WasmSnsPlugin(
@@ -48,6 +66,8 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
       loadBytes: () async => (await rootBundle.load('assets/plugins/mastodon_wasm.wasm')).buffer.asUint8List(),
       authFlowFactory: brokeredAuthFactory(ref, provider: 'mastodon', pluginId: mastodonPluginId, kind: SnsKind.mastodon),
     ))
+    // Bluesky (D-175): wasm プラグイン。認証はハンドル + アプリパスワード(`sns.login` = createSession)。
+    ..register(bluesky)
     // wasm SNS サンプル (D-079: 実登録の口)。この pluginId のセッションは
     // sns.* 境界(WasmSnsSession)として解決され、アプリの通常パイプラインが
     // wasm の上で動く。ログイン UI には出ない(pluginFor は Misskey が先)—

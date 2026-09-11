@@ -74,6 +74,7 @@ flutter:
     - assets/plugins/misskey_wasm_sample.wasm
     # Mastodon SNS プラグイン (D-135)。sns.* 境界だけを実装した wasm。
     - assets/plugins/mastodon_wasm.wasm
+    - assets/plugins/bluesky_wasm.wasm
     - assets/plugins/hello_rasq_plugin.wasm
     - assets/plugins/relational_wasm.wasm
     # スロットプラグインのサンプル (D-168: plugin-sample の dist/。ストアのダミー掲載から

@@ -58,6 +58,13 @@ class WasmSnsPlugin extends SnsPlugin {
   /// ものとは別に置く(まだ [AccountSession] が無いため)。
   static const _anonymousKey = '';
 
+  /// セッション無しの匿名ワーカーで `fn` を呼ぶ(D-175: Bluesky の `sns.login` など、
+  /// 認証前の呼び出し)。戻りは `{ok, value}` / `{ok:false, error}` の生の結果。
+  Future<Map<String, dynamic>> callAnonymous(String fn, Map<String, Object?> args) async {
+    final controller = await _controllerFor(_anonymousKey);
+    return controller.invoke(fn, args);
+  }
+
   @override
   Future<ServerInfo> inspectServer(String host) async {
     final h = normalizeHost(host);

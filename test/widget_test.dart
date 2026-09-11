@@ -51,12 +51,14 @@ void main() {
     expect(find.text('Misskeyでログイン'), findsOneWidget);
 
     // Overlays must render above root-level pages too (regression: terms sheet never appeared).
-    await tester.tap(find.text('BlueSkyでログイン'));
+    // (Bluesky は D-175 でログインできるようになったので、準備中のままの mixi2 で確かめる。)
+    expect(find.text('Blueskyでログイン'), findsOneWidget);
+    await tester.tap(find.text('mixi2でログイン'));
     await tester.pumpAndSettle();
-    expect(find.text('BlueSky は準備中です'), findsOneWidget);
+    expect(find.text('mixi2 は準備中です'), findsOneWidget);
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
-    expect(find.text('BlueSky は準備中です'), findsNothing);
+    expect(find.text('mixi2 は準備中です'), findsNothing);
 
     // Misskey → server screen → terms sheet appears through the Overlay Manager.
     await tester.tap(find.text('Misskeyでログイン'));

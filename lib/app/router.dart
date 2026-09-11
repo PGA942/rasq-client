@@ -17,6 +17,7 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
+import '../features/login/bluesky_login_screen.dart';
 import '../features/plugins/media_editor_screen.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
@@ -67,6 +68,7 @@ abstract final class Routes {
   static const profileEdit = '/profile/edit';
   static const loginMisskey = '/login/misskey';
   static const loginMastodon = '/login/mastodon';
+  static const loginBluesky = '/login/bluesky';
 
   /// ノードプログラミング画面 (D-090)。`/nodes/<scope>`。TL スコープの
   /// キャンバスは一旦無効化 (D-121) — TL の歯車は [tlConfig] へ。
@@ -252,6 +254,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(path: 'misskey', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MisskeyLoginScreen()),
               GoRoute(path: 'mastodon', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MastodonLoginScreen()),
+              GoRoute(path: 'bluesky', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BlueskyLoginScreen()),
             ],
           ),
         ],
