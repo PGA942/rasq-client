@@ -200,20 +200,17 @@ abstract final class RrlComponentRegistry {
           onTap: ctx.tapHandler('tap'),
         ),
     'DestructiveListTile': (ctx) => RasqDestructiveListTile(title: rrlString(ctx.props['title']), onTap: ctx.tapHandler('tap')),
-    'SliderListTile': (ctx) {
-      final value = (ctx.props['value'] as num?)?.toDouble() ?? 0;
-      final unit = ctx.props['unit'] as String?;
-      return RasqSliderListTile(
-        title: rrlString(ctx.props['title']),
-        subtitle: ctx.props['subtitle'] as String?,
-        value: value,
-        min: (ctx.props['min'] as num?)?.toDouble() ?? 0,
-        max: (ctx.props['max'] as num?)?.toDouble() ?? 100,
-        divisions: (ctx.props['divisions'] as num?)?.toInt(),
-        valueLabel: unit == null ? null : '${value.round()}$unit',
-        onChanged: ctx.node.on.containsKey('change') ? (v) => ctx.emit('change', {'value': v}) : null,
-      );
-    },
+    'SliderListTile': (ctx) => _OptimisticSlider(
+          key: ValueKey('rrl.slider.${ctx.node.k ?? ctx.node.hashCode}'),
+          title: rrlString(ctx.props['title']),
+          subtitle: ctx.props['subtitle'] as String?,
+          value: (ctx.props['value'] as num?)?.toDouble() ?? 0,
+          min: (ctx.props['min'] as num?)?.toDouble() ?? 0,
+          max: (ctx.props['max'] as num?)?.toDouble() ?? 100,
+          divisions: (ctx.props['divisions'] as num?)?.toInt(),
+          unit: ctx.props['unit'] as String?,
+          onChanged: ctx.node.on.containsKey('change') ? (v) => ctx.emit('change', {'value': v}) : null,
+        ),
     'RangeSliderListTile': (ctx) {
       final start = (ctx.props['start'] as num?)?.toDouble() ?? 0;
       final end = (ctx.props['end'] as num?)?.toDouble() ?? 0;
@@ -307,4 +304,48 @@ abstract final class RrlComponentRegistry {
       onTap: ctx.tapHandler('tap'),
     );
   }
+}
+
+/// スライダーの楽観更新 (D-171): プラグイン / 設定 DSL の `SliderListTile` は props 駆動
+/// なので、`change` を出しても相手が `value` を書き戻すまでつまみと数値が動かなかった。
+/// ローカルに「いま触っている値」を持ち、props の `value` が変わったらそちらに合わせる。
+class _OptimisticSlider extends StatefulWidget {
+  const _OptimisticSlider({super.key, required this.title, this.subtitle, required this.value, required this.min, required this.max, this.divisions, this.unit, this.onChanged});
+  final String title;
+  final String? subtitle;
+  final double value;
+  final double min;
+  final double max;
+  final int? divisions;
+  final String? unit;
+  final ValueChanged<double>? onChanged;
+  @override
+  State<_OptimisticSlider> createState() => _OptimisticSliderState();
+}
+
+class _OptimisticSliderState extends State<_OptimisticSlider> {
+  late double _value = widget.value;
+
+  @override
+  void didUpdateWidget(_OptimisticSlider old) {
+    super.didUpdateWidget(old);
+    if (old.value != widget.value) _value = widget.value; // 相手が書き戻した値が優先
+  }
+
+  @override
+  Widget build(BuildContext context) => RasqSliderListTile(
+        title: widget.title,
+        subtitle: widget.subtitle,
+        value: _value,
+        min: widget.min,
+        max: widget.max,
+        divisions: widget.divisions,
+        valueLabel: widget.unit == null ? null : '${_value.round()}${widget.unit}',
+        onChanged: widget.onChanged == null
+            ? null
+            : (v) {
+                setState(() => _value = v);
+                widget.onChanged!(v);
+              },
+      );
 }

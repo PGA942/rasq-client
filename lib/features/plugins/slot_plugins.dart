@@ -559,12 +559,24 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       } catch (_) {}
       return null;
     }
+    return MediaEditSession(plugin: plugin, token: token, genres: parseMediaGenres(v['genres']));
+  }
+
+  /// `media.catalog` (契約 v0.4 §2.2): セッション無しの静的なジャンル / アクション一覧。無ければ null。
+  Future<List<MediaGenre>?> mediaCatalog(SlotPlugin plugin) async {
+    final v = await plugin.value('media.catalog', const {});
+    if (v == null) return null;
+    return parseMediaGenres(v['genres']);
+  }
+
+  /// `{genres: [{id, label?, icon?, actions: [{id, label, icon?}]}]}` の genres 部分。
+  static List<MediaGenre> parseMediaGenres(Object? raw) {
     final genres = <MediaGenre>[];
-    for (final g in (v['genres'] as List? ?? const [])) {
+    for (final g in (raw as List? ?? const [])) {
       if (g is! Map || g['id'] is! String) continue;
       genres.add(MediaGenre(
         id: g['id'] as String,
-        label: g['label'] as String? ?? g['id'] as String,
+        label: g['label'] as String? ?? mediaGenreDefaults[g['id']]?.label ?? g['id'] as String,
         icon: g['icon'] as String?,
         actions: [
           for (final a in (g['actions'] as List? ?? const []))
@@ -572,7 +584,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         ],
       ));
     }
-    return MediaEditSession(plugin: plugin, token: token, genres: genres);
+    return genres;
   }
 
   Future<void> mediaAction(MediaEditSession s, String genre, String action) => s.plugin.value('media.action', {'token': s.token, 'genre': genre, 'action': action});
@@ -736,6 +748,16 @@ class MediaGenre {
   final String? icon;
   final List<MediaAction> actions;
 }
+
+/// 既定のジャンル 5 種 (契約 v0.4 §2.2): id は固定、ラベル / アイコンはホストが持つ。
+/// カスタムジャンルはプラグインが `label` / `icon` を付けて宣言する。
+const mediaGenreDefaults = <String, ({String label, IconData icon})>{
+  'tone': (label: '色調', icon: Icons.tune),
+  'process': (label: '加工', icon: Icons.auto_fix_high),
+  'transform': (label: '変形', icon: Icons.crop_rotate),
+  'add': (label: '追加', icon: Icons.add_circle_outline),
+  'draw': (label: '描画', icon: Icons.brush),
+};
 
 class MediaAction {
   const MediaAction({required this.id, required this.label, this.icon});

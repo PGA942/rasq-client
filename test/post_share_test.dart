@@ -12,7 +12,6 @@ import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/post/share_fow.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
-import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fake_slot_runtime.dart';
