@@ -10,6 +10,7 @@ import '../features/users/user_page_screen.dart';
 import '../shell/third_column.dart';
 import 'router.dart';
 import '../features/plugins/media_editor_screen.dart';
+import '../features/plugins/pro_media_editor_screen.dart';
 import '../features/plugins/slot_plugins.dart';
 import 'dart:typed_data';
 
@@ -78,6 +79,10 @@ extension RasqNavigation on BuildContext {
   /// メディアエディター (D-169): 全画面で加工して結果を返す(キャンセルは null)。
   Future<MediaEditResult?> pushMediaEditor({required SlotPlugin plugin, required Uint8List bytes, required String name, required String mimeType}) =>
       push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: plugin, bytes: bytes, name: name, mimeType: mimeType));
+
+  /// 添付の加工 (D-173): 基本 = pro_image_editor、プラグインはそこからバイパス。
+  Future<MediaEditResult?> pushProMediaEditor({required Uint8List bytes, required String name, required String mimeType}) =>
+      push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: bytes, name: name, mimeType: mimeType));
 
   void pushTrend(String tag) {
     final loc = '${_inTab ? '${Routes.search}/trend' : '/trend'}/${Uri.encodeComponent(tag)}';

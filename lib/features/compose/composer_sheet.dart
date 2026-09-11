@@ -443,24 +443,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   /// 添付をメディア加工プラグインへ (D-167、CONTRACT §2.2)。
   Future<void> _editAttachment(_Attachment a) async {
-    final plugins = ref.read(slotPluginsForProvider(SlotIds.composerMedia));
-    if (plugins.isEmpty) return;
-    var pick = plugins.length == 1 ? plugins.first : null;
-    if (pick == null) {
-      final manager = ref.read(overlayManagerProvider);
-      pick = await manager.showBottomSheet<SlotPlugin>(
-        id: 'composer.media.plugin',
-        title: 'プラグインで加工',
-        ownerId: composerFowId,
-        builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
-          for (final p in plugins) RasqListTile(title: p.manifest.name, subtitle: p.manifest.description, onTap: () => manager.close('composer.media.plugin', result: p)),
-        ]),
-      );
-    }
-    if (pick == null) return;
     if (_files.indexOf(a) < 0) return;
-    // 専用の全画面エディター (D-169): 結果(本サイズ)で添付を差し替える。
-    final result = await context.pushMediaEditor(plugin: pick, bytes: a.bytes, name: a.name, mimeType: a.mimeType ?? 'image/png');
+    // 加工 (D-173): 基本動作は pro_image_editor、プラグイン(wasm / ONNX / アセットに無いフィルター)は
+    // その下段バーからメディアエディター (D-169) へバイパス。結果(本サイズ)で添付を差し替える。
+    final result = await context.pushProMediaEditor(bytes: a.bytes, name: a.name, mimeType: a.mimeType ?? 'image/png');
     if (!mounted || result == null) return;
     final i = _files.indexOf(a);
     if (i < 0) return;
@@ -1301,7 +1287,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     onRemove: () => setState(() => _files.removeAt(i)),
                     onToggleSensitive: () => setState(() => _files[i].sensitive = !_files[i].sensitive),
                     // プラグインで加工 (D-167): スロット `composer.media` の登録があるときだけ。
-                    onEdit: ref.watch(slotPluginsForProvider(SlotIds.composerMedia)).isEmpty ? null : () => _editAttachment(_files[i]),
+                    onEdit: () => _editAttachment(_files[i]),
                   ),
                 ),
               ),
@@ -1417,7 +1403,7 @@ class _AttachmentTile extends StatelessWidget {
   Widget build(BuildContext context) => Stack(children: [
         ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(a.bytes, width: 88, height: 88, fit: BoxFit.cover, gaplessPlayback: true)),
         Positioned(right: 0, top: 0, child: RasqIconButton(icon: Icons.cancel, size: 18, color: Colors.white, onPressed: onRemove, tooltip: '削除')),
-        if (onEdit != null) Positioned(right: 0, bottom: 0, child: RasqIconButton(icon: Icons.auto_fix_high, size: 18, color: Colors.white, onPressed: onEdit, tooltip: 'プラグインで加工')),
+        if (onEdit != null) Positioned(right: 0, bottom: 0, child: RasqIconButton(icon: Icons.auto_fix_high, size: 18, color: Colors.white, onPressed: onEdit, tooltip: '加工')),
         Positioned(
           left: 0,
           bottom: 0,

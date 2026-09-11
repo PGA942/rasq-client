@@ -13,6 +13,7 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/plugins/media_editor_screen.dart';
+import 'package:rasq_client/features/plugins/pro_media_editor_screen.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/post/share_fow.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -207,5 +208,24 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 300));
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_crop_overlay.png'));
+  });
+
+  testWidgets('pro_image_editor with plugin bypass button (D-173)', (tester) async {
+    fakes['m'] = () => FakeSlotRuntime(
+          manifest: {'id': 'sample.composer-media', 'name': 'メディア加工', 'version': '0.3.0', 'kind': 'action', 'slots': ['composer.media'], 'permissions': ['fow.widget']},
+          handler: (self, fn, args) => {'genres': []},
+        );
+    final c = await pump(tester);
+    await c.read(slotPluginsProvider.notifier).register('fake:m', bytes: Uint8List.fromList('m'.codeUnits));
+    await tester.pumpAndSettle();
+    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: png, name: 'photo.png', mimeType: 'image/png'));
+    // 画像の復号は本物の非同期なので runAsync で待つ。
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.ensureVisible(find.byKey(proMediaEditorPluginKey));
+    await tester.pump(const Duration(milliseconds: 300));
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_pro.png'));
   });
 }
