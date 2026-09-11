@@ -71,13 +71,15 @@ void main() {
     fakes['media'] = () => FakeSlotRuntime(
           manifest: {'id': 'sample.composer-media', 'name': 'メディア加工', 'version': '0.2.0', 'kind': 'action', 'slots': ['composer.media'], 'permissions': ['fow.widget']},
           handler: (self, fn, args) {
+            final catalog = {'genres': [
+              {'id': 'tone', 'actions': [{'id': 'gamma', 'label': 'ガンマ', 'icon': 'brightness_6'}, {'id': 'hue', 'label': '色相', 'icon': 'palette'}, {'id': 'reset', 'label': 'リセット', 'icon': 'restart_alt'}]},
+              {'id': 'process', 'actions': [{'id': 'gray', 'label': 'グレースケール', 'icon': 'filter_b_and_w'}, {'id': 'invert', 'label': 'ネガ反転', 'icon': 'invert_colors'}]},
+              {'id': 'transform', 'actions': [{'id': 'rotl', 'label': '左回転', 'icon': 'rotate_left'}, {'id': 'rotr', 'label': '右回転', 'icon': 'rotate_right'}, {'id': 'crop_center', 'label': '中央 1:1', 'icon': 'crop_square'}, {'id': 'crop_top', 'label': '上 4:3', 'icon': 'crop_landscape'}]},
+            ]};
+            if (fn == 'media.catalog') return catalog;
             if (fn == 'media.edit') {
               self.hostFn('composer.media.preview', {'token': args['token'], 'bytesB64': base64Encode(png), 'mimeType': 'image/png'});
-              return {'genres': [
-                {'id': 'tone', 'label': '色調', 'icon': 'tune', 'actions': [{'id': 'gamma', 'label': 'ガンマ', 'icon': 'brightness_6'}, {'id': 'hue', 'label': '色相', 'icon': 'palette'}, {'id': 'reset', 'label': 'リセット', 'icon': 'restart_alt'}]},
-                {'id': 'transform', 'label': '変形', 'icon': 'rotate_right', 'actions': [{'id': 'rotl', 'label': '左回転', 'icon': 'rotate_left'}, {'id': 'rotr', 'label': '右回転', 'icon': 'rotate_right'}]},
-                {'id': 'crop', 'label': 'クロップ', 'icon': 'crop', 'actions': [{'id': 'none', 'label': 'なし', 'icon': 'crop_free'}, {'id': 'center', 'label': '中央 1:1', 'icon': 'crop_square'}]},
-              ]};
+              return catalog;
             }
             if (fn == 'media.action') {
               if (args['action'] == 'gamma') self.openFow('media-param', {'t': 'Column', 'k': 'root', 'c': [{'t': 'SliderListTile', 'k': 'gamma', 'p': {'title': 'ガンマ', 'value': 1.4, 'min': 0.3, 'max': 3.0, 'divisions': 27}, 'on': {'change': 'gammaChanged'}}, {'t': 'Button', 'k': 'close', 'p': {'label': '閉じる'}, 'on': {'tap': 'closeParam'}}]}, title: 'ガンマ');
@@ -113,12 +115,15 @@ void main() {
     c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: media!, bytes: png, name: 'photo.png', mimeType: 'image/png'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor.png'));
-    await tester.tap(find.byKey(const ValueKey('media.action.gamma')));
+    await tester.tap(find.byKey(const ValueKey('media.action.sample.composer-media.tone.gamma')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_param_fow.png'));
     await tester.tap(find.byKey(const ValueKey('media.editor.pick')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_pick.png'));
+    await tester.tap(find.text('ジャンル'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_genre.png'));
   });
 
   testWidgets('post share fow + inline plugin fow (D-170)', (tester) async {

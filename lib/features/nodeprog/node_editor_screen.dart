@@ -14,8 +14,10 @@ import '../../shell/headers.dart';
 import '../home/timeline_providers.dart';
 import '../settings/settings_dsl.dart';
 import '../store/store_client.dart' show storeSamplePluginId;
+import 'node_executor.dart' show pluginParamsOf;
 import 'node_graph.dart';
 import 'node_tabs.dart';
+import 'plugin_params_panel.dart';
 
 /// ノードプログラミング画面 (D-090/D-092): TL 選択行の設定ボタン/トレンド/
 /// コンポーザーの「投稿先のカスタマイズ」から開く。GUI ノードをキャンバスに
@@ -129,7 +131,11 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
         genre: 'ソート/辞書',
         author: 'TLプラグイン',
         description: '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
-        inputs: const [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+        inputs: [
+          const NodePort(label: '投稿リスト', dataType: '投稿リスト'),
+          // スロットの TL プラグイン (D-171): パラメーター(JSON)は「ノードを設定」FOW の RRL で編集。
+          if (c.id.startsWith('slot:')) const NodePort(label: 'パラメーター', value: '{}', dataType: '設定'),
+        ],
         outputs: const [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
       ),
     for (final f in functions) f.toCatalogEntry(),
@@ -602,6 +608,11 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   Future<void> _editValue(GraphNode node, int index, Rect anchor) async {
     final port = node.inputs[index];
     String? next;
+    // スロットの TL プラグインの「パラメーター」ポート (D-171) は RRL の FOW で編集。
+    if (port.label == 'パラメーター' && slotSortNodeOf(node.type) != null) {
+      _openNodeParams(node);
+      return;
+    }
     if (port.options != null) {
       // 選択肢付きの値 (D-094) はドロップダウンで選ぶ。
       next = await _manager.showDropdown<String>(
@@ -727,6 +738,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
       dense: true,
       items: [
         const RasqDropdownItem('ノード情報', 'info'),
+        // スロットの TL プラグイン (D-171): パラメーターを RRL で編集。
+        if (slotSortNodeOf(n.type) != null) const RasqDropdownItem('ノードを設定', 'params'),
         // 関数の中身の編集 (D-118): fn.input → … → fn.output のサブグラフへ。
         if (n.type.startsWith('fn:')) const RasqDropdownItem('関数の中身を編集', 'fnbody'),
         // ストア統合 (M4/D-120): プラグインノードは提供元のページへ、
@@ -741,6 +754,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     switch (pick) {
       case 'info':
         _showNodeInfo(n);
+      case 'params':
+        _openNodeParams(n);
       case 'fnbody':
         ref.read(routerProvider).push(Routes.nodes(n.type));
       case 'store':
@@ -764,6 +779,51 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         _removeNode(n.id);
     }
     if (mounted) setState(() => _selected = null);
+  }
+
+  /// 「ノードを設定」FOW (D-171): プラグインの `tl.params` の RRL。決定で
+  /// 「パラメーター」ポートの値(JSON)に入る(実行時は `pluginParamsOf`)。
+  void _openNodeParams(GraphNode n) {
+    final manager = ref.read(overlayManagerProvider);
+    if (manager.contains(nodeParamsFowId)) manager.close(nodeParamsFowId);
+    final spec = FowSpec(type: FowPanelType.interstitial, initialHeightFactor: 0.85, minHeightFactor: 0.2, maxHeightFactor: 0.85, dockAboveFooter: true, heightStops: const [0.85], freeAboveStops: true);
+    final router = ref.read(routerProvider);
+    void onNavigate() => manager.close(nodeParamsFowId);
+    router.routerDelegate.addListener(onNavigate);
+    manager
+        .showFow<Map<String, Object?>>(
+          id: nodeParamsFowId,
+          semanticsLabel: 'ノードを設定',
+          spec: spec,
+          builder: (ctx, handle) => PluginParamsPanel(
+            nodeType: n.type,
+            title: n.title,
+            initial: pluginParamsOf(n),
+            onConfirm: (v) => handle.close(result: v),
+            onCancel: () => handle.close(),
+          ),
+        )
+        .then((v) {
+          if (v == null || !mounted) return;
+          final idx = n.inputs.indexWhere((p) => p.label == 'パラメーター');
+          setState(() {
+            _graph = NodeGraph(
+              nodes: [
+                for (final g in _graph.nodes)
+                  g.id == n.id
+                      ? g.copyWith(
+                          inputs: idx < 0
+                              ? [...g.inputs, NodePort(label: 'パラメーター', value: jsonEncode(v), dataType: '設定')]
+                              : [for (var i = 0; i < g.inputs.length; i++) i == idx ? g.inputs[i].copyWith(value: jsonEncode(v)) : g.inputs[i]],
+                        )
+                      : g,
+              ],
+              edges: _graph.edges,
+            );
+          });
+          _save();
+        })
+        .whenComplete(() => router.routerDelegate.removeListener(onNavigate));
   }
 
   void _showNodeInfo(GraphNode n) {
@@ -1533,13 +1593,15 @@ class _NodeCard extends StatelessWidget {
                       child: Row(children: [
                         Expanded(
                           child: Text(
-                            p.value!.isEmpty ? p.label : p.value!,
+                            // 設定(JSON)のポート (D-171) は値ではなくラベル(タップで「ノードを設定」FOW)。
+                            p.value!.isEmpty || p.dataType == '設定' ? p.label : p.value!,
                             style: TextStyle(fontSize: 9, color: p.value!.isEmpty ? scheme.onSurfaceVariant : scheme.onSurface),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        // 選択肢付き (D-094) はドロップダウンの ∨ を出す。
+                        // 選択肢付き (D-094) はドロップダウンの ∨ を出す。設定は ⚙。
                         if (p.options != null) Icon(Icons.keyboard_arrow_down, size: 12, color: scheme.onSurfaceVariant),
+                        if (p.dataType == '設定') Icon(Icons.settings_outlined, size: 12, color: scheme.onSurfaceVariant),
                       ]),
                     ),
                   );
