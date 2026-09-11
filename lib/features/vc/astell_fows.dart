@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../shell/third_column.dart';
 import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
 import '../trend/tendency_profile.dart';
@@ -699,7 +700,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       );
     }
     if (pick == null) return;
-    await ref.read(slotPluginsProvider.notifier).astellOpen(pick, s);
+    // プラグインの FOW はルーム FOW の子として同じカラムに (D-169)。
+    await ref.read(slotPluginsProvider.notifier).astellOpen(pick, s, fowOwner: astellRoomFowId, column: fowColumnOf(context));
   }
 
   /// 共有欄に出すもの (D-146): ピン留め(共有・文字起こし)+ 自動表示の種類に該当する共有。

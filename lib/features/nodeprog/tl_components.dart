@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import 'node_graph.dart';
@@ -68,7 +69,10 @@ String suggestFromKind(String from) => switch (from) {
 
 @immutable
 class TlAlgorithmComponent {
-  const TlAlgorithmComponent({required this.type, this.what = 'キーワード', this.from = '投稿内容', this.pluginLabel = '', this.enabled = true, this.query = ''});
+  const TlAlgorithmComponent({required this.type, this.what = 'キーワード', this.from = '投稿内容', this.pluginLabel = '', this.enabled = true, this.query = '', this.params = const {}});
+
+  /// plugin: のパラメーター (D-169): プラグインの RRL 設定ページ(`tl.params`)で編集した値。
+  final Map<String, Object?> params;
 
   /// 'chrono'(時系列順)| 'suggest' | 'filter'(絞り込み — サジェストと
   /// 同じパラメーターで、合わない投稿を除外, D-125)| 'queryfilter'
@@ -108,16 +112,17 @@ class TlAlgorithmComponent {
         _ => pluginLabel.isEmpty ? 'カスタム(TLプラグイン)' : pluginLabel,
       };
 
-  TlAlgorithmComponent copyWith({String? what, String? from, bool? enabled, String? query}) => TlAlgorithmComponent(
-      type: type, what: what ?? this.what, from: from ?? this.from, pluginLabel: pluginLabel, enabled: enabled ?? this.enabled, query: query ?? this.query);
-  Map<String, Object?> toJson() => {'type': type, 'what': what, 'from': from, 'pluginLabel': pluginLabel, 'enabled': enabled, 'query': query};
+  TlAlgorithmComponent copyWith({String? what, String? from, bool? enabled, String? query, Map<String, Object?>? params}) => TlAlgorithmComponent(
+      type: type, what: what ?? this.what, from: from ?? this.from, pluginLabel: pluginLabel, enabled: enabled ?? this.enabled, query: query ?? this.query, params: params ?? this.params);
+  Map<String, Object?> toJson() => {'type': type, 'what': what, 'from': from, 'pluginLabel': pluginLabel, 'enabled': enabled, 'query': query, if (params.isNotEmpty) 'params': params};
   factory TlAlgorithmComponent.fromJson(Map<String, Object?> j) => TlAlgorithmComponent(
       type: j['type'] as String? ?? 'chrono',
       what: j['what'] as String? ?? 'キーワード',
       from: j['from'] as String? ?? '投稿内容',
       pluginLabel: j['pluginLabel'] as String? ?? '',
       enabled: j['enabled'] != false,
-      query: j['query'] as String? ?? '');
+      query: j['query'] as String? ?? '',
+      params: (j['params'] as Map?)?.cast<String, Object?>() ?? const {});
 }
 
 @immutable
@@ -284,7 +289,11 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
           title: a.title,
           x: x,
           y: 60,
-          inputs: const [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+          inputs: [
+            const NodePort(label: '投稿リスト', dataType: '投稿リスト'),
+            // パラメーター (D-169): ノードを設定 FOW で編集した値を JSON で持たせる。
+            if (a.params.isNotEmpty) NodePort(label: 'パラメーター', value: jsonEncode(a.params), dataType: '設定'),
+          ],
           outputs: const [NodePort(label: '投稿リスト', dataType: '投稿リスト')]));
       edges.add(GraphEdge(from: out, fromPort: 0, to: id, toPort: 0));
       out = id;

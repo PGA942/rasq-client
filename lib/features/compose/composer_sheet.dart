@@ -11,6 +11,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../session/sanctions.dart';
 import '../../app/router.dart';
@@ -438,21 +439,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       );
     }
     if (pick == null) return;
-    final index = _files.indexOf(a);
-    if (index < 0) return;
-    await ref.read(slotPluginsProvider.notifier).mediaEdit(
-      pick,
-      index: index,
-      name: a.name,
-      mimeType: a.mimeType ?? 'image/png',
-      bytes: a.bytes,
-      onReplace: (bytes, mime, name) {
-        if (!mounted) return;
-        final i = _files.indexOf(a);
-        if (i < 0) return;
-        setState(() => _files[i] = _Attachment(bytes: bytes, name: name ?? a.name, mimeType: mime)..sensitive = a.sensitive);
-      },
-    );
+    if (_files.indexOf(a) < 0) return;
+    // 専用の全画面エディター (D-169): 結果(本サイズ)で添付を差し替える。
+    final result = await context.pushMediaEditor(plugin: pick, bytes: a.bytes, name: a.name, mimeType: a.mimeType ?? 'image/png');
+    if (!mounted || result == null) return;
+    final i = _files.indexOf(a);
+    if (i < 0) return;
+    setState(() => _files[i] = _Attachment(bytes: result.bytes, name: result.name ?? a.name, mimeType: result.mimeType)..sensitive = a.sensitive);
   }
 
   /// 本文の変化をテキスト加工プラグインへ (D-167、CONTRACT §2.3)。200ms デバウンス。
@@ -471,6 +464,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
           text: _text.text,
           selectionStart: sel.isValid ? sel.start : _text.text.length,
           selectionEnd: sel.isValid ? sel.end : _text.text.length,
+          // インライン FOW (D-169): MFM ピッカーと同じく、コンポーザーの子として同じカラムに。
+          fowOwner: composerFowId,
+          column: _column,
           onReplace: (start, end, text) {
             if (!mounted) return;
             final cur = _text.text;

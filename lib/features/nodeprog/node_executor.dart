@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -35,7 +36,7 @@ Future<List<Post>?> runNodeGraph(
   required Future<List<Post>> Function(String kindId) fetch,
   Future<List<String>> Function()? fetchTrends,
   Future<List<List<double>>> Function(List<String> texts)? embedTexts,
-  Future<List<Post>> Function(String pluginTlId, List<Post> posts)? pluginSort,
+  Future<List<Post>> Function(String pluginTlId, List<Post> posts, Map<String, Object?> params)? pluginSort,
   Future<Object?> Function(String slot)? storageRead,
   Future<void> Function(String slot, Object? value)? storageWrite,
   void Function(Post kept, Post dropped)? onDuplicate,
@@ -77,7 +78,7 @@ class _ExecEnv {
   final Future<List<Post>> Function(String kindId) fetch;
   final Future<List<String>> Function()? fetchTrends;
   final Future<List<List<double>>> Function(List<String> texts)? embedTexts;
-  final Future<List<Post>> Function(String pluginTlId, List<Post> posts)? pluginSort;
+  final Future<List<Post>> Function(String pluginTlId, List<Post> posts, Map<String, Object?> params)? pluginSort;
   final Future<Object?> Function(String slot)? storageRead;
   final Future<void> Function(String slot, Object? value)? storageWrite;
   final void Function(Post kept, Post dropped)? onDuplicate;
@@ -207,11 +208,23 @@ List<Post> mergePostLists(List<List<Post>> lists, {void Function(Post kept, Post
   return out;
 }
 
+/// プラグインノードの「パラメーター」ポート (D-169) を Map に戻す。
+Map<String, Object?> pluginParamsOf(GraphNode n) {
+  final raw = n.inputs.where((p) => p.label == 'パラメーター').firstOrNull?.value;
+  if (raw == null || raw.isEmpty) return const {};
+  try {
+    return (jsonDecode(raw) as Map).cast<String, Object?>();
+  } catch (_) {
+    return const {};
+  }
+}
+
 Future<List<Post>> _applyStep(NodeGraph g, Map<String, GraphNode> byId, GraphNode step, List<Post> posts, _ExecEnv env) async {
   // TL プラグインのソートノード (D-102): tl.sort/compose の実体を呼ぶ。
   if (step.type.startsWith('plugin:') && env.pluginSort != null) {
     try {
-      return await env.pluginSort!(step.type.substring('plugin:'.length), posts);
+      // パラメーター (D-169): 「パラメーター」ポートの値(JSON)。ノードを設定 FOW の RRL で編集したもの。
+      return await env.pluginSort!(step.type.substring('plugin:'.length), posts, pluginParamsOf(step));
     } catch (_) {
       return posts; // プラグイン不達は素通し
     }

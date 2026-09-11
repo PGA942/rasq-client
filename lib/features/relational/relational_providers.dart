@@ -11,6 +11,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:plugin_runtime/plugin_runtime.dart' show WasmSnsSession;
 
 import '../../app/providers.dart';
+import '../plugins/slot_plugins.dart';
 import '../../session/session_providers.dart';
 import '../home/post_duplicates.dart';
 import '../home/timeline_providers.dart';
@@ -309,7 +310,7 @@ final relationalNodePostsProvider = FutureProvider<List<Post>?>((ref) async {
       terminal: 'timeline.relational',
       fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: 'home', selfItems: home?.posts ?? const [], sessionFor: sessionForAccount),
       fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
-      pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
+      pluginSort: (id, posts, params) => id.startsWith('slot:') ? ref.read(slotPluginsProvider.notifier).sortById(id, posts, params: params) : (session is WasmSnsSession ? session.timelinePlugin.compose(id, posts) : Future.value(posts)),
       storageRead: (slot) async {
         final own = (await ref.read(settingsAreaProvider(storageArea).future))[slot];
         if (own != null) return own;

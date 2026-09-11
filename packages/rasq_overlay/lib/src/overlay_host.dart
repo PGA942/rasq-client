@@ -38,7 +38,7 @@ class OverlayHost extends StatelessWidget {
       builder: (context, _) {
         final entries = manager.entries;
         return PopScope(
-          canPop: !manager.fowSwitcherOpen && !entries.any((e) => e.effectiveBarrierBehavior != OverlayBarrierBehavior.none),
+          canPop: !manager.fowSwitcherOpen && !entries.any((e) => e.effectiveBarrierBehavior != OverlayBarrierBehavior.none && !manager.isFowSuspended(e)),
           onPopInvokedWithResult: (didPop, _) {
             if (!didPop) manager.handleBack();
           },
@@ -96,8 +96,9 @@ class OverlayHost extends StatelessWidget {
   /// A scrim is painted once, behind the topmost interstitial (if any).
   List<Widget> _buildFowGroup(BuildContext context, List<RasqOverlayEntry> fows) {
     final widgets = <Widget>[];
-    final blocking = fows.lastWhere((e) => e.effectiveBarrierBehavior != OverlayBarrierBehavior.none, orElse: () => fows.first);
-    if (blocking.effectiveBarrierBehavior != OverlayBarrierBehavior.none) {
+    // 退避中 (D-169) の FOW はバリアを張らない(Offstage で生かすだけ)。
+    final blocking = fows.lastWhere((e) => e.effectiveBarrierBehavior != OverlayBarrierBehavior.none && !manager.isFowSuspended(e), orElse: () => fows.first);
+    if (blocking.effectiveBarrierBehavior != OverlayBarrierBehavior.none && !manager.isFowSuspended(blocking)) {
       // グレーアウト(スクリム)はインタースティシャル(+ボタンの投稿
       // コンポーザー等)のときだけ (D-052)。ピッカー類の「余白クリックで
       // 消失」は**透明バリア**で受ける(背面を暗くしない)。
@@ -125,6 +126,7 @@ class OverlayHost extends StatelessWidget {
           columns: fowColumns,
           pinnedWidth: fowPinnedWidth,
           entries: fows,
+          suspended: manager.isFowSuspended,
           buildContent: (e) {
             final handle = manager.handleFor(e);
             Widget content = Builder(builder: (ctx) => e.builder(ctx, handle));
@@ -223,8 +225,11 @@ class _FowSwitcher extends StatelessWidget {
 /// 複数の FOW は**重ねて**表示され(最前面のみ影)、切り替えはハンドル
 /// クリックの FOW スイッチャーで行う。
 class _FowColumn extends StatelessWidget {
-  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.dockInset, this.topInset, this.columns, this.pinnedWidth = 320});
+  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.dockInset, this.topInset, this.columns, this.pinnedWidth = 320, this.suspended});
   final List<RasqOverlayEntry> entries;
+
+  /// 退避中 (D-169): Offstage で生かす(レイアウトからは外す)。
+  final bool Function(RasqOverlayEntry e)? suspended;
   final Widget Function(RasqOverlayEntry) buildContent;
   final void Function(RasqOverlayEntry) onCancel;
   final void Function(RasqOverlayEntry) onConfirm;
@@ -407,6 +412,8 @@ class _FowColumn extends StatelessWidget {
               width: slot.width,
               top: 0,
               bottom: 0,
+              child: Offstage(
+                offstage: suspended?.call(e) ?? false,
               child: Padding(
                 padding: EdgeInsets.only(top: padTop, bottom: padBottom),
                 // OverflowBox: 高さアニメーション(D-049)の過渡期の一時的な
@@ -428,6 +435,7 @@ class _FowColumn extends StatelessWidget {
                     child: buildContent(e),
                   ),
                 ),
+              ),
               ),
             ));
           }

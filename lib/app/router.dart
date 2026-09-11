@@ -17,6 +17,7 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
+import '../features/plugins/media_editor_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
 import '../features/settings/mute_block_screen.dart';
 import '../features/settings/settings_dsl.dart';
@@ -58,6 +59,7 @@ abstract final class Routes {
   /// 初回オンボーディング (D-138): RASQ アカウント作成の案内。
   static const onboarding = '/onboarding';
   static const viewer = '/viewer';
+  static const mediaEditor = '/media-editor';
   static const lists = '/lists';
   static const bookmarks = '/bookmarks';
   static const profileEdit = '/profile/edit';
@@ -215,6 +217,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               final x = s.extra as ({Post post, int index});
               return CustomTransitionPage(child: MediaViewerScreen(post: x.post, initialIndex: x.index), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child));
             },
+          ),
+          // メディアエディター (D-169): 添付をプラグインで加工する全画面。
+          GoRoute(
+            path: Routes.mediaEditor,
+            parentNavigatorKey: _appNavigatorKey,
+            pageBuilder: (_, s) => CustomTransitionPage(child: MediaEditorScreen(args: s.extra! as MediaEditorArgs), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child)),
           ),
           GoRoute(path: Routes.catalog, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const CatalogScreen()),
           // プラグインストア (M4 / D-120)。

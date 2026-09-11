@@ -9,6 +9,9 @@ import '../features/users/follows_screen.dart';
 import '../features/users/user_page_screen.dart';
 import '../shell/third_column.dart';
 import 'router.dart';
+import '../features/plugins/media_editor_screen.dart';
+import '../features/plugins/slot_plugins.dart';
+import 'dart:typed_data';
 
 /// Navigation helpers shared by rows/screens.
 extension RasqNavigation on BuildContext {
@@ -71,6 +74,10 @@ extension RasqNavigation on BuildContext {
   void pushFollowRequests() => push('${Routes.notifications}/requests');
   void pushMuteBlock() => push('${Routes.settings}/mute-block');
   void openViewer(Post post, int index) => push(Routes.viewer, extra: (post: post, index: index));
+
+  /// メディアエディター (D-169): 全画面で加工して結果を返す(キャンセルは null)。
+  Future<MediaEditResult?> pushMediaEditor({required SlotPlugin plugin, required Uint8List bytes, required String name, required String mimeType}) =>
+      push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: plugin, bytes: bytes, name: name, mimeType: mimeType));
 
   void pushTrend(String tag) {
     final loc = '${_inTab ? '${Routes.search}/trend' : '/trend'}/${Uri.encodeComponent(tag)}';

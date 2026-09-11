@@ -418,7 +418,7 @@ void main() {
       edges: [data('n1', 'g1'), data('g1', 'n3')],
     );
     final asked = <String>[];
-    final out = await runNodeGraph(g, fetch: fetch, pluginSort: (id, posts) async {
+    final out = await runNodeGraph(g, fetch: fetch, pluginSort: (id, posts, params) async {
       asked.add(id);
       return posts.reversed.toList();
     });

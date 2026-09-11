@@ -220,7 +220,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       graph,
       fetch: (kid) => _pagedNodeFetch(session, kid, more: more, sessionFor: sessionForAccount),
       fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
-      pluginSort: session is! WasmSnsSession ? null : (id, posts) => session.timelinePlugin.compose(id, posts),
+      pluginSort: (id, posts, params) => id.startsWith('slot:') ? ref.read(slotPluginsProvider.notifier).sortById(id, posts, params: params) : (session is WasmSnsSession ? session.timelinePlugin.compose(id, posts) : Future.value(posts)),
       storageRead: (slot) async => (await ref.read(settingsAreaProvider('storage.safe').future))[slot],
       storageWrite: (slot, value) => ref.read(settingsAreaProvider('storage.safe').notifier).set(slot, value),
       onDuplicate: (kept, dropped) => merged.putIfAbsent(kept.key, () => []).add(dropped),
@@ -336,22 +336,6 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   Future<(Page<Post>, Map<String, Map<String, ActionResult>>, TimelineDecorations)> _fetch(SnsSession session, String? cursor) async {
     // カスタム TL (M5e / D-080): データ取得はホスト(基礎 TL)、TL プラグインは
     // ソートアルゴリズム(`tl.sort` — 表示順の id 列、未掲載は除外)。
-    // スロットの TL プラグイン (D-167): 基礎 TL → 投稿加工 → `tl.sort`。
-    if (kind.id.startsWith('custom:slot:')) {
-      final specs = await ref.read(customTimelinesProvider.future);
-      final spec = specs.where((x) => 'custom:${x.id}' == kind.id).firstOrNull;
-      final parts = kind.id.substring('custom:slot:'.length).split(':');
-      final slots = ref.read(slotPluginsProvider.notifier);
-      final plugin = ref.read(slotPluginsProvider).where((p) => p.id == parts.first).firstOrNull;
-      if (spec != null && plugin != null && parts.length >= 2) {
-        final base = await session.timeline(TimelineKind(spec.base, spec.base), cursor: cursor);
-        final states = await session.actionStates(base.items);
-        final sorted = await slots.sort(plugin, parts.sublist(1).join(':'), await slots.transform(base.items));
-        _applyStates(sorted, states);
-        ref.read(emojiCacheProvider.notifier).request({for (final p in sorted) ...InlineSpans.emojiShortcodes(p.body)});
-        return (Page(items: sorted, nextCursor: base.nextCursor), states, const TimelineDecorations());
-      }
-    }
     if (kind.id.startsWith('custom:') && session is WasmSnsSession) {
       final specs = await ref.read(customTimelinesProvider.future);
       final spec = specs.where((x) => 'custom:${x.id}' == kind.id).firstOrNull;
@@ -445,7 +429,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             fetchTrends: () async => [for (final t in await graphSession.trendingTags()) t.tag],
             embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
             // TL プラグインのソートノード (D-102): tl.sort/compose の実体。
-            pluginSort: graphSession is! WasmSnsSession ? null : (id, posts) => (graphSession as WasmSnsSession).timelinePlugin.compose(id, posts),
+            pluginSort: (id, posts, params) => id.startsWith('slot:') ? ref.read(slotPluginsProvider.notifier).sortById(id, posts, params: params) : (graphSession is WasmSnsSession ? graphSession.timelinePlugin.compose(id, posts) : Future.value(posts)),
             // storage.safe (D-104/D-108): アカウント別領域(旧共有領域は読み取りフォールバック)。
             storageRead: (slot) async {
               final own = (await ref.read(settingsAreaProvider(storageArea).future))[slot];
