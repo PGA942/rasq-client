@@ -59,9 +59,16 @@ void main() {
 
   testWidgets('pro_image_editor が開き、プラグイン無しなら下段バーに「プラグイン」は無い、✕ で null', (tester) async {
     final c = await pump(tester);
+    // コンポーザー FOW を開いたまま加工へ → FOW は退避(エディターの前に出ない)、閉じると戻る (D-174)。
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    final manager = c.read(overlayManagerProvider);
+    final composer = manager.entries.where((e) => e.id == 'fow.composer').single;
+    expect(manager.isFowSuspended(composer), isFalse);
     final future = c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: png, name: 'a.jpg', mimeType: 'image/jpeg'));
     await settle(tester);
     expect(find.byType(ProImageEditor), findsOneWidget);
+    expect(manager.isFowSuspended(composer), isTrue);
     expect(find.text('クロップ / 回転'), findsOneWidget); // 日本語化
     expect(find.text('ペイント'), findsOneWidget);
     expect(find.byKey(proMediaEditorPluginKey), findsNothing);
@@ -69,6 +76,7 @@ void main() {
     await settle(tester);
     expect(await future, isNull);
     expect(find.byType(ProImageEditor), findsNothing);
+    expect(manager.isFowSuspended(composer), isFalse);
   });
 
   testWidgets('「プラグイン」→ 焼き込んだ画像でメディアエディター → 適用 → 結果が pro_image_editor の背景になる', (tester) async {

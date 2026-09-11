@@ -25,6 +25,7 @@ import '../nodeprog/tl_components.dart';
 import '../settings/settings_dsl.dart';
 import 'composer_learning.dart';
 import 'compose_providers.dart';
+export 'compose_providers.dart' show ComposerInitialFile;
 import 'account_select.dart';
 import 'compose_target.dart';
 import 'emoji_picker_fow.dart';
@@ -43,14 +44,6 @@ const composerFowId = 'fow.composer';
 /// (スレッド/ルームの再読込用)。
 /// [initialText] は本文の初期値(AsTell の共有リンク転送 D-159 など)。下書きが
 /// 残っていればそちらを優先する。
-/// コンポーザーに最初から載せる添付 (D-170: 共有プラグインの `composer.open`)。
-class ComposerInitialFile {
-  const ComposerInitialFile({required this.bytes, required this.name, this.mimeType});
-  final Uint8List bytes;
-  final String name;
-  final String? mimeType;
-}
-
 /// [postAs] は投稿先アカウントの初期値(共有 FOW で選んだアカウント、D-170)。
 Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles}) async {
   final manager = ref.read(overlayManagerProvider);
@@ -251,7 +244,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       };
 
   /// 下書きに保存できる内容があるか(D-052 の「下書き」ボタン)。
-  bool get _canDraft => _text.text.trim().isNotEmpty || _cw.text.trim().isNotEmpty;
+  bool get _canDraft => _text.text.trim().isNotEmpty || _cw.text.trim().isNotEmpty || _files.isNotEmpty;
+
+  /// 添付を下書きに(D-174: バイトごとメモリに残す)。
+  List<ComposerInitialFile> get _draftFiles => [for (final f in _files) ComposerInitialFile(bytes: f.bytes, name: f.name, mimeType: f.mimeType, sensitive: f.sensitive)];
 
   void _saveAsDraftAndClose() {
     _saveDraft();
@@ -372,7 +368,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     // 共有 FOW で選んだアカウント / プラグインが添えた画像 (D-170)。
     if (widget.initialPostAs != null) _postAs = widget.initialPostAs;
     for (final f in widget.initialFiles ?? const <ComposerInitialFile>[]) {
-      _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType));
+      _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive);
     }
     // 保存済み下書きの復元(プリセットより優先)。
     final d = ref.read(composeDraftsProvider)[_draftKey];
@@ -382,6 +378,12 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       _cwOn = d.cwOn;
       _cw.text = d.cw;
       _prefillPending = false;
+      // 添付も戻す (D-174)。
+      if (_files.isEmpty) {
+        for (final f in d.files) {
+          _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive);
+        }
+      }
     }
     _scheduleTargetEval(); // ポスト先ノード (D-116): 開いた時点の内容で初回評価
   }
@@ -412,8 +414,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   void _saveDraft() {
-    if (_text.text.trim().isEmpty && _cw.text.trim().isEmpty) return; // テキストの無い下書きは残さない
-    _drafts.save(_draftKey, ComposeDraft(text: _text.text, cw: _cw.text, cwOn: _cwOn));
+    if (_text.text.trim().isEmpty && _cw.text.trim().isEmpty && _files.isEmpty) return; // 中身の無い下書きは残さない
+    _drafts.save(_draftKey, ComposeDraft(text: _text.text, cw: _cw.text, cwOn: _cwOn, files: _draftFiles));
   }
 
   /// ✕ / 余白クリック等での閉じ方 (D-051):
@@ -490,10 +492,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     _slots?.textDone(_textToken);
     // 余白クリック/ページ遷移などで閉じたときの自動下書き (D-051)。
     // unmount 中は provider を変更できないためマイクロタスクへ遅延する。
-    if (!_skipDraftOnDispose && _hasDraftContent && (_text.text.trim().isNotEmpty || _cw.text.trim().isNotEmpty)) {
+    if (!_skipDraftOnDispose && _hasDraftContent && (_text.text.trim().isNotEmpty || _cw.text.trim().isNotEmpty || _files.isNotEmpty)) {
       final drafts = _drafts;
       final key = _draftKey;
-      final d = ComposeDraft(text: _text.text, cw: _cw.text, cwOn: _cwOn);
+      final d = ComposeDraft(text: _text.text, cw: _cw.text, cwOn: _cwOn, files: _draftFiles);
       Future.microtask(() {
         try {
           drafts.save(key, d);
@@ -1027,6 +1029,20 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
   }
 
+  /// 動画 (D-174): ギャラリーから 1 本。編集は pro_image_editor の動画モード。
+  Future<void> _pickVideo() async {
+    final picker = ImagePicker();
+    try {
+      final f = await picker.pickVideo(source: ImageSource.gallery);
+      if (f == null || _files.length >= 4) return;
+      final name = f.name.isEmpty ? 'video.mp4' : f.name;
+      _files.add(_Attachment(bytes: await f.readAsBytes(), name: name, mimeType: f.mimeType ?? (name.toLowerCase().endsWith('.mov') ? 'video/quicktime' : 'video/mp4')));
+      setState(() {});
+    } catch (e) {
+      setState(() => _error = '動画を選択できませんでした: $e');
+    }
+  }
+
   bool get _canSend {
     if (_busy || _session == null) return false;
     final hasText = _text.text.trim().isNotEmpty;
@@ -1318,6 +1334,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 RasqActionButton.icon(icon: Icons.photo_camera_outlined, tooltip: 'カメラ', onTap: _busy ? null : () => _pick(camera: true)),
                 RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= 4 ? null : () => _pick()),
+                RasqActionButton.icon(icon: Icons.videocam_outlined, tooltip: '動画', onTap: _busy || _files.length >= 4 ? null : _pickVideo),
                 RasqActionButton.icon(icon: Icons.visibility_outlined, doneIcon: Icons.visibility, done: _cwOn, tooltip: '隠す(注釈)', onTap: () => setState(() => _cwOn = !_cwOn)),
                 if (!_isDm) RasqActionButton.icon(icon: Icons.poll_outlined, doneIcon: Icons.poll, done: _poll != null, tooltip: '投票', onTap: () => setState(() => _poll = _poll == null ? PollDraft() : null)),
                 RasqActionButton.icon(
@@ -1399,9 +1416,27 @@ class _AttachmentTile extends StatelessWidget {
 
   /// プラグインで加工 (D-167)。null なら出さない。
   final VoidCallback? onEdit;
+  bool get _isVideo => (a.mimeType ?? '').startsWith('video/');
+
   @override
   Widget build(BuildContext context) => Stack(children: [
-        ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(a.bytes, width: 88, height: 88, fit: BoxFit.cover, gaplessPlayback: true)),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          // 動画 (D-174): サムネイルは作らず再生アイコン + ファイル名。
+          child: _isVideo
+              ? Container(
+                  width: 88,
+                  height: 88,
+                  color: Colors.black87,
+                  padding: const EdgeInsets.all(6),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.play_circle_outline, color: Colors.white, size: 28),
+                    const SizedBox(height: 4),
+                    Text(a.name, style: RasqTypography.caption.copyWith(color: Colors.white70, fontSize: 9), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                  ]),
+                )
+              : Image.memory(a.bytes, width: 88, height: 88, fit: BoxFit.cover, gaplessPlayback: true),
+        ),
         Positioned(right: 0, top: 0, child: RasqIconButton(icon: Icons.cancel, size: 18, color: Colors.white, onPressed: onRemove, tooltip: '削除')),
         if (onEdit != null) Positioned(right: 0, bottom: 0, child: RasqIconButton(icon: Icons.auto_fix_high, size: 18, color: Colors.white, onPressed: onEdit, tooltip: '加工')),
         Positioned(

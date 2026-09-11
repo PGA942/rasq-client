@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
@@ -55,13 +57,45 @@ class _NodeWidget extends StatelessWidget {
       if (wantsGesture) {
         // drag (契約 v0.5 §3): {phase, x, y, dx, dy}(ノードの左上原点、親 Stack の単位)。
         final drag = node.on.containsKey('drag');
+        // パン認識はタッチスロップ(≈18px)ぶん遅れて始まるので、指を置いた位置を覚えておき、
+        // start は置いた位置で出し、遅れぶんは最初の update として渡す(dx の合計が実移動と一致する)。
+        Offset? down;
+        Offset? last;
         built = GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: node.on.containsKey('tap') ? () => host.emit(node, scope, 'tap') : null,
           onLongPress: node.on.containsKey('longPress') ? () => host.emit(node, scope, 'longPress') : null,
-          onPanStart: drag ? (d) => host.emit(node, scope, 'drag', {'phase': 'start', 'x': d.localPosition.dx, 'y': d.localPosition.dy, 'dx': 0, 'dy': 0}) : null,
-          onPanUpdate: drag ? (d) => host.emit(node, scope, 'drag', {'phase': 'update', 'x': d.localPosition.dx, 'y': d.localPosition.dy, 'dx': d.delta.dx, 'dy': d.delta.dy}) : null,
-          onPanEnd: drag ? (d) => host.emit(node, scope, 'drag', {'phase': 'end', 'x': d.localPosition.dx, 'y': d.localPosition.dy, 'dx': 0, 'dy': 0}) : null,
+          onPanDown: drag ? (d) => down = d.localPosition : null,
+          onPanStart: drag
+              ? (d) {
+                  final from = down ?? d.localPosition;
+                  last = d.localPosition;
+                  host.emit(node, scope, 'drag', {'phase': 'start', 'x': from.dx, 'y': from.dy, 'dx': 0, 'dy': 0});
+                  final delta = d.localPosition - from;
+                  if (delta != Offset.zero) host.emit(node, scope, 'drag', {'phase': 'update', 'x': d.localPosition.dx, 'y': d.localPosition.dy, 'dx': delta.dx, 'dy': delta.dy});
+                }
+              : null,
+          onPanUpdate: drag
+              ? (d) {
+                  last = d.localPosition;
+                  host.emit(node, scope, 'drag', {'phase': 'update', 'x': d.localPosition.dx, 'y': d.localPosition.dy, 'dx': d.delta.dx, 'dy': d.delta.dy});
+                }
+              : null,
+          onPanEnd: drag
+              ? (d) {
+                  // DragEndDetails の localPosition は無いことがある → 最後の位置を使う。
+                  final at = last ?? d.localPosition;
+                  host.emit(node, scope, 'drag', {'phase': 'end', 'x': at.dx, 'y': at.dy, 'dx': 0, 'dy': 0});
+                  down = null;
+                  last = null;
+                }
+              : null,
+          onPanCancel: drag
+              ? () {
+                  down = null;
+                  last = null;
+                }
+              : null,
           child: built,
         );
       }
@@ -129,7 +163,7 @@ class _NodeWidget extends StatelessWidget {
         // 矩形 (D-167): width / height / color / borderColor / borderWidth / radius。
         final bw = (_prop('borderWidth') as num?)?.toDouble() ?? 0;
         final bc = _rrlColor(_prop('borderColor'));
-        return Container(
+        final box = Container(
           width: (_prop('width') as num?)?.toDouble(),
           height: (_prop('height') as num?)?.toDouble(),
           decoration: BoxDecoration(
@@ -139,6 +173,9 @@ class _NodeWidget extends StatelessWidget {
           ),
           child: node.c.isEmpty ? null : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: _children(scope)),
         );
+        // angle (契約 v0.6): 中心で回転して描く(度)。
+        final angle = (_prop('angle') as num?)?.toDouble() ?? 0;
+        return angle == 0 ? box : Transform.rotate(angle: angle * math.pi / 180, child: box);
       case 'Grid':
         final columns = (_prop('columns') as num?)?.toInt() ?? 2;
         return GridView.count(crossAxisCount: columns, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: RasqSpacing.mediaGap, crossAxisSpacing: RasqSpacing.mediaGap, children: _children(scope));

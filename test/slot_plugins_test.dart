@@ -529,4 +529,75 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(mediaEditorOverlayKey), findsNothing);
   });
+
+  testWidgets('合わせる先 (D-174 §2.2 v0.6): 重ねの Box をダブルタップ → 「この上にドラッグ」→ その上で指を離した drag の end に snap が付く、FOW で選び直せる', (tester) async {
+    late FakeSlotRuntime rt;
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+    fakes['snap'] = () => rt = FakeSlotRuntime(
+          manifest: manifest('t.snap', ['composer.media']),
+          handler: (self, fn, args) {
+            switch (fn) {
+              case 'media.catalog' || 'media.edit':
+                if (fn == 'media.edit') self.hostFn('composer.media.preview', {'token': args['token'], 'bytesB64': base64Encode(png), 'mimeType': 'image/png', 'width': 200, 'height': 100});
+                return {'genres': [{'id': 'process', 'actions': [{'id': 'sticker', 'label': 'スタンプ'}]}]};
+              case 'media.action':
+                self.hostFn('composer.media.overlay', {'token': args['token'], 'root': {'t': 'Stack', 'k': 'ov', 'p': {'width': 200, 'height': 100}, 'c': [
+                  {'t': 'Box', 'k': 'face.0', 'p': {'left': 120, 'top': 10, 'width': 60, 'height': 60, 'label': '顔 1', 'color': '#00000000', 'borderColor': '#ffffff', 'borderWidth': 1}, 'on': {'tap': 'face.0'}},
+                  {'t': 'Box', 'k': 'obj.0', 'p': {'left': 10, 'top': 10, 'width': 40, 'height': 40, 'label': 'スタンプ 1', 'color': '#ffffff88'}, 'on': {'drag': 'obj.0.move'}},
+                ]}});
+                return {};
+              case 'media.commit' || 'media.cancel':
+                return {};
+            }
+            return null;
+          },
+        );
+    final c = await pump(tester);
+    final plugin = await register(c, 'snap');
+    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: plugin, bytes: png, name: 'a.png', mimeType: 'image/png'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('media.action.t.snap.process.sticker')));
+    await tester.pumpAndSettle();
+    final ov = tester.getRect(find.byKey(mediaEditorOverlayKey));
+    final scale = ov.width / 200;
+    Offset g(double x, double y) => ov.topLeft + Offset(x * scale, y * scale);
+    // 顔の枠をダブルタップ → ドロップダウン → 合わせる先にする。
+    await tester.tapAt(g(150, 40));
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.tapAt(g(150, 40));
+    await tester.pumpAndSettle();
+    expect(find.text('この上にドラッグ(合わせる先にする)'), findsOneWidget);
+    await tester.tap(find.text('この上にドラッグ(合わせる先にする)'));
+    await tester.pumpAndSettle();
+    // スタンプの枠(drag)を顔の上まで運んで離す → end に snap {key: face.0 …}。
+    await tester.dragFrom(g(30, 30), Offset(120 * scale, 0));
+    await tester.pumpAndSettle();
+    final end = rt.calls.where((x) => x.$1 == 'obj.0.move' && x.$2['phase'] == 'end').last.$2;
+    final snap = end['snap'] as Map;
+    expect(snap['key'], 'face.0');
+    expect(snap['label'], '顔 1');
+    expect(snap['left'], 120);
+    expect(snap['width'], 60);
+    expect(snap['angle'], 0);
+    // 外で離すと snap は付かない(タッチスロップを超える距離で)。
+    await tester.dragFrom(g(30, 30), Offset(40 * scale, 0));
+    await tester.pumpAndSettle();
+    expect(rt.calls.where((x) => x.$1 == 'obj.0.move' && x.$2['phase'] == 'end').last.$2.containsKey('snap'), isFalse);
+    // FOW「合わせる先を選ぶ…」: label 付きの枠が並び、チェックで切り替わる。
+    await tester.tapAt(g(30, 30));
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.tapAt(g(30, 30));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('合わせる先を選ぶ…'));
+    await tester.pumpAndSettle();
+    expect(find.text('顔 1'), findsOneWidget);
+    expect(find.text('スタンプ 1'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('media.snap.face.0'))); // 解除
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('閉じる'));
+    await tester.pumpAndSettle();
+    await tester.dragFrom(g(30, 30), Offset(120 * scale, 0));
+    await tester.pumpAndSettle();
+    expect(rt.calls.where((x) => x.$1 == 'obj.0.move' && x.$2['phase'] == 'end').last.$2.containsKey('snap'), isFalse);
+  });
 }

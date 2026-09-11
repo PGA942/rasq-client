@@ -228,4 +228,44 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_pro.png'));
   });
+
+  testWidgets('snap targets highlight (D-174)', (tester) async {
+    fakes['snap'] = () => FakeSlotRuntime(
+          manifest: {'id': 'sample.media-process', 'name': '加工', 'version': '0.1.0', 'kind': 'action', 'slots': ['composer.media'], 'permissions': ['fow.widget']},
+          handler: (self, fn, args) {
+            final catalog = {'genres': [{'id': 'process', 'actions': [{'id': 'sticker', 'label': 'スタンプ', 'icon': 'emoji_emotions'}, {'id': 'reset', 'label': 'リセット', 'icon': 'restart_alt'}]}]};
+            if (fn == 'media.catalog') return catalog;
+            if (fn == 'media.edit') {
+              self.hostFn('composer.media.preview', {'token': args['token'], 'bytesB64': base64Encode(png), 'mimeType': 'image/png', 'width': 480, 'height': 320});
+              return catalog;
+            }
+            if (fn == 'media.action') {
+              self.hostFn('composer.media.overlay', {'token': args['token'], 'root': {'t': 'Stack', 'k': 'ov', 'p': {'width': 480, 'height': 320}, 'c': [
+                {'t': 'Box', 'k': 'face.0', 'p': {'left': 300, 'top': 60, 'width': 120, 'height': 120, 'label': '顔 1', 'color': '#00000000', 'borderColor': '#ffffffaa', 'borderWidth': 1}, 'on': {'tap': 'face.0'}},
+                {'t': 'Box', 'k': 'obj.0', 'p': {'left': 60, 'top': 100, 'width': 100, 'height': 100, 'label': 'スタンプ 1', 'angle': 20, 'color': '#ffd60088', 'borderColor': '#ffffff', 'borderWidth': 2}, 'on': {'drag': 'obj.0.move'}},
+              ]}});
+            }
+            return {};
+          },
+        );
+    final c = await pump(tester);
+    final p = await c.read(slotPluginsProvider.notifier).register('fake:snap', bytes: Uint8List.fromList('snap'.codeUnits));
+    await tester.pumpAndSettle();
+    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: p!, bytes: png, name: 'photo.png', mimeType: 'image/png'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('media.action.sample.media-process.process.sticker')));
+    await tester.pumpAndSettle();
+    final ov = tester.getRect(find.byKey(mediaEditorOverlayKey));
+    final scale = ov.width / 480;
+    final at = ov.topLeft + Offset(360 * scale, 120 * scale);
+    await tester.tapAt(at);
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.tapAt(at);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_snap_menu.png'));
+    await tester.tap(find.text('この上にドラッグ(合わせる先にする)'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_snap_target.png'));
+  });
 }
