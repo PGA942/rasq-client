@@ -61,6 +61,16 @@ class FakeSnsSession extends SnsSessionBase {
   /// 最後に createPost へ渡された draft (投稿オプションのテスト用)。
   NewPost? lastDraft;
 
+  /// 最後に sendDm へ渡された draft (共有 FOW の「DM へ共有」、D-170)。
+  NewPost? lastDm;
+
+  @override
+  Future<Post> sendDm(DmRoom room, NewPost draft) async {
+    lastDm = draft;
+    final me = await this.me();
+    return Post(id: 'dm${_posts.length}', account: account, author: me, createdAt: DateTime.now(), body: draft.text, visibility: 'specified', directToIds: [room.peer.id]);
+  }
+
   @override
   Future<Post> createPost(NewPost draft) async {
     lastDraft = draft;

@@ -65,6 +65,9 @@ class SlotManifest {
         if (slots.contains(SlotIds.composerMedia)) RasqHostFns.composerMediaPreview,
         if (slots.contains(SlotIds.composerText)) RasqHostFns.composerTextReplace,
         if (slots.contains(SlotIds.viewerOverlay)) RasqHostFns.viewerOverlaySet,
+        // 投稿共有 (§2.8): コンポーザーを開く + 参加中の AsTell へ。
+        if (slots.contains(SlotIds.postShare)) RasqHostFns.composerOpen,
+        if (slots.contains(SlotIds.postShare)) RasqHostFns.astellShare,
       };
 
   Set<String> get fowPermissions => {
@@ -82,6 +85,7 @@ abstract final class SlotIds {
   static const postTransform = 'post.transform';
   static const tl = 'tl';
   static const trendSuggest = 'trend.suggest';
+  static const postShare = 'post.share';
 }
 
 /// 実行中のプラグイン 1 つ(ワーカー isolate 上の wasm、テストでは偽物)。
@@ -175,6 +179,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   final Map<String, void Function(int start, int end, String text)> _textReplace = {};
   final Map<String, void Function(RrlNode root)> _overlaySet = {};
   final Map<String, void Function(Uint8List bytes, String mime)> _mediaPreview = {};
+  final Map<String, void Function(String text, Uint8List? media, String? mime, String? name)> _composerOpen = {};
 
   /// FOW の着き方 (D-169、契約 v0.2): プラグインの `fow.open` は呼び出し元の面の子として
   /// 開く。呼び出し元(コンポーザー / ルーム FOW / メディアエディター)が入口で指定する。
@@ -407,6 +412,17 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         final cb = _overlaySet['${args['token']}'];
         final root = args['root'];
         if (cb != null && root is Map) cb(RrlNode.fromJson(root.cast<String, Object?>()));
+      case RasqHostFns.composerOpen:
+        final cb = _composerOpen['${args['token']}'];
+        if (cb == null) return;
+        final b64 = args['mediaB64'];
+        Uint8List? media;
+        try {
+          if (b64 is String) media = base64Decode(b64);
+        } catch (_) {
+          media = null;
+        }
+        cb('${args['text'] ?? ''}', media, args['mimeType'] as String?, args['name'] as String?);
     }
   }
 
@@ -674,6 +690,22 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   }
 
   /// トレンドのサジェスト (CONTRACT §2.7)。
+  /// 投稿共有 (CONTRACT §2.8、D-170): 共有 FOW のプラグイン行から選ばれた。
+  /// プラグインの FOW は共有 FOW の子(インライン)。`composer.open` は [onComposerOpen] へ。
+  Future<String> postShare(SlotPlugin plugin, {required Map<String, Object?> post, required Map<String, Object?> account, required String link, required void Function(String text, Uint8List? media, String? mime, String? name) onComposerOpen, String? fowOwner, int column = 0}) async {
+    _setFowContext(plugin, fowOwner, column);
+    final token = 'share-${DateTime.now().microsecondsSinceEpoch}';
+    _composerOpen[token] = onComposerOpen;
+    await plugin.value('post.share', {'token': token, 'post': post, 'account': account, 'link': link});
+    return token;
+  }
+
+  /// 共有 FOW が閉じた: プラグインへ知らせ、受け口を捨てる。
+  Future<void> postShareClose(SlotPlugin plugin, String token) async {
+    _composerOpen.remove(token);
+    await plugin.value('post.share.close', {'token': token});
+  }
+
   Future<List<({String text, String? reason, SlotPlugin plugin})>> trendSuggest(List<String> recent, {String? query, int limit = 6}) async {
     final out = <({String text, String? reason, SlotPlugin plugin})>[];
     for (final p in forSlot(SlotIds.trendSuggest)) {

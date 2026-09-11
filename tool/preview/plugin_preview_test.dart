@@ -14,6 +14,7 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/plugins/media_editor_screen.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
+import 'package:rasq_client/features/post/share_fow.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -118,5 +119,48 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('media.editor.pick')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_pick.png'));
+  });
+
+  testWidgets('post share fow + inline plugin fow (D-170)', (tester) async {
+    fakes['share'] = () => FakeSlotRuntime(
+          manifest: {'id': 'sample.post-share', 'name': '共有テンプレート(サンプル)', 'version': '0.1.0', 'kind': 'action', 'description': '投稿をテンプレート(リンクのみ / 引用 / 作者に言及)で整えてコンポーザー・コピー・AsTell へ', 'slots': ['post.share'], 'permissions': ['fow.widget', 'storage.safe']},
+          handler: (self, fn, args) {
+            if (fn == 'post.share') {
+              final link = '${args['link']}';
+              self.openFow('share-template', {'t': 'Column', 'k': 'root', 'c': [
+                {'t': 'Text', 'k': 'author', 'p': {'text': '作者: テスター', 'bold': true}},
+                {'t': 'Text', 'k': 'body', 'p': {'text': '今日は打ち上げ'}},
+                {'t': 'Text', 'k': 'sec', 'p': {'text': 'テンプレート'}},
+                {'t': 'ListTile', 'k': 'tpl-link', 'p': {'title': '　 リンクのみ'}, 'on': {'tap': 'tpl.link'}},
+                {'t': 'ListTile', 'k': 'tpl-quote', 'p': {'title': '✓ 引用(本文つき)'}, 'on': {'tap': 'tpl.quote'}},
+                {'t': 'ListTile', 'k': 'tpl-mention', 'p': {'title': '　 作者に言及'}, 'on': {'tap': 'tpl.mention'}},
+                {'t': 'Text', 'k': 'sec2', 'p': {'text': '文面'}},
+                {'t': 'Text', 'k': 'result', 'p': {'text': '「今日は打ち上げ」\n$link'}},
+                {'t': 'Row', 'k': 'row', 'c': [
+                  {'t': 'Button', 'k': 'go', 'p': {'label': 'コンポーザーへ'}, 'on': {'tap': 'share.composer'}},
+                  {'t': 'Button', 'k': 'copy', 'p': {'label': 'コピー'}, 'on': {'tap': 'share.copy'}},
+                ]},
+              ]}, title: '共有テンプレート');
+            }
+            return {};
+          },
+        );
+    final c = await pump(tester);
+    await c.read(slotPluginsProvider.notifier).register('fake:share', bytes: Uint8List.fromList('share'.codeUnits));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('共有').first);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('post_share_fow.png'));
+    await tester.tap(find.byKey(const ValueKey('post.share.plugin.sample.post-share')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('post_share_plugin_inline_fow.png'));
+    // 他のアカウントで共有 → コンポーザー(アカウントピル)。
+    c.read(overlayManagerProvider).close(postShareFowId);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('共有').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('post.share.otherAccount')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('composer_account_pill.png'));
   });
 }

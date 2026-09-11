@@ -13,6 +13,8 @@ import '../home/action_bar_edit_sheet.dart';
 import '../home/timeline_providers.dart';
 import '../vc/astell_post_share.dart';
 import '../vc/astell_providers.dart';
+import '../../shell/third_column.dart';
+import 'share_fow.dart';
 
 /// 投稿コンテキストメニュー(右上の `…` のみで出現 — ワイヤーフレーム注釈).
 /// 自身: 詳細 / リンクをコピー / お気に入り / 削除. 他ユーザー: 詳細 / リンクをコピー /
@@ -31,6 +33,7 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
     const RasqDropdownItem('詳細', 'detail'),
     const RasqDropdownItem('リンクをコピー', 'copy'),
+    const RasqDropdownItem('共有', 'share'),
     const RasqDropdownItem('アクションバーを編集', 'editActions'),
     RasqDropdownItem(fav.done ? 'お気に入り解除' : 'お気に入り', 'favorite'),
     const RasqDropdownItem('クリップに追加', 'clip'),
@@ -50,6 +53,8 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
     case 'copy':
       final url = post.url ?? Uri.https(post.author.account.instance, '/notes/${post.id}');
       await Clipboard.setData(ClipboardData(text: url.toString()));
+    case 'share':
+      await showPostShareFow(ref, post, column: fowColumnOf(context));
     case 'editActions':
       await showActionBarEditSheet(ref);
     case 'favorite':

@@ -26,6 +26,7 @@ class FowSpec {
     this.cancelText,
     this.confirmText,
     this.headerTrailing,
+    this.headerLeading,
     this.showHandle = true,
     this.avoidKeyboard = true,
     this.dockAboveFooter = false,
@@ -54,6 +55,9 @@ class FowSpec {
   /// ヘッダー右側の空きスペースに置くコントロール (D-045: コンポーザーの
   /// 公開設定など)。[confirmText] より優先して右端に描画される。
   final Widget? headerTrailing;
+
+  /// ヘッダー左側(キャンセルの代わり。共有 FOW のアカウント選択、D-170)。
+  final Widget? headerLeading;
   final bool showHandle;
 
   /// Lift the panel above the soft keyboard.
@@ -160,7 +164,7 @@ class FowSpec {
   /// プラグインは確認 FOW を開き、自分で `fow.close` する)。
   VoidCallback? interceptCancel;
 
-  bool get hasHeader => title != null || cancelText != null || confirmText != null;
+  bool get hasHeader => title != null || cancelText != null || confirmText != null || headerLeading != null || headerTrailing != null;
 
   /// Interstitial FOWs take the screen: scrim + barrier discard. Widget/system FOWs
   /// leave the content behind them interactive.

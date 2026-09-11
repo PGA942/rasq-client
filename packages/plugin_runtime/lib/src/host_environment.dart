@@ -254,7 +254,8 @@ class RasqHostEnvironment {
             RasqHostFns.composerMediaReplace ||
             RasqHostFns.composerMediaPreview ||
             RasqHostFns.composerTextReplace ||
-            RasqHostFns.viewerOverlaySet:
+            RasqHostFns.viewerOverlaySet ||
+            RasqHostFns.composerOpen:
         // スロット契約 (D-167): 権限内ならアプリへ fire-and-forget で中継。
         final relay = onAppFn;
         if (relay == null) throw _HostFnError('E01', '$fn not wired');
@@ -263,7 +264,7 @@ class RasqHostEnvironment {
           final u = Uri.tryParse('${args['url']}');
           if (u == null || !(u.isScheme('https') || u.isScheme('http'))) throw _HostFnError('B03', 'url.open: http(s) only');
         }
-        if ((fn == RasqHostFns.composerMediaReplace || fn == RasqHostFns.composerMediaPreview || fn == RasqHostFns.composerTextReplace || fn == RasqHostFns.viewerOverlaySet) && args['token'] is! String) {
+        if ((fn == RasqHostFns.composerMediaReplace || fn == RasqHostFns.composerMediaPreview || fn == RasqHostFns.composerTextReplace || fn == RasqHostFns.viewerOverlaySet || fn == RasqHostFns.composerOpen) && args['token'] is! String) {
           throw _HostFnError('D01', '$fn: token required');
         }
         relay(fn, args);

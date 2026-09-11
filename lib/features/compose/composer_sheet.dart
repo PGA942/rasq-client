@@ -25,6 +25,7 @@ import '../nodeprog/tl_components.dart';
 import '../settings/settings_dsl.dart';
 import 'composer_learning.dart';
 import 'compose_providers.dart';
+import 'account_select.dart';
 import 'compose_target.dart';
 import 'emoji_picker_fow.dart';
 import 'mfm_picker_fow.dart';
@@ -42,7 +43,16 @@ const composerFowId = 'fow.composer';
 /// (スレッド/ルームの再読込用)。
 /// [initialText] は本文の初期値(AsTell の共有リンク転送 D-159 など)。下書きが
 /// 残っていればそちらを優先する。
-Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText}) async {
+/// コンポーザーに最初から載せる添付 (D-170: 共有プラグインの `composer.open`)。
+class ComposerInitialFile {
+  const ComposerInitialFile({required this.bytes, required this.name, this.mimeType});
+  final Uint8List bytes;
+  final String name;
+  final String? mimeType;
+}
+
+/// [postAs] は投稿先アカウントの初期値(共有 FOW で選んだアカウント、D-170)。
+Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles}) async {
   final manager = ref.read(overlayManagerProvider);
   // 返信 / ダイレクト投稿は **stick FOW** (D-047): ヘッダー無しで根本が
   // フッターメニュー/キーボードの上に貼り付き、タップ(フォーカス)すると
@@ -92,6 +102,8 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident =
         spec: spec,
         resident: resident,
         initialText: initialText,
+        initialPostAs: postAs,
+        initialFiles: initialFiles,
         // 常駐は送信で閉じない(本体が下書きをリセットして残る)。
         onSent: resident ? (p) => onPosted?.call(p) : (p) => handle.close(result: p),
         onClose: () => handle.close(),
@@ -175,11 +187,13 @@ class _Attachment {
 }
 
 class _ComposerBody extends ConsumerStatefulWidget {
-  const _ComposerBody({required this.target, required this.onSent, this.spec, this.onClose, this.resident = false, this.initialText});
+  const _ComposerBody({required this.target, required this.onSent, this.spec, this.onClose, this.resident = false, this.initialText, this.initialPostAs, this.initialFiles});
   final ComposeTarget target;
 
   /// 本文の初期値(下書きが無いときだけ)。
   final String? initialText;
+  final AccountSession? initialPostAs;
+  final List<ComposerInitialFile>? initialFiles;
   final ValueChanged<Post> onSent;
 
   /// stick モード (D-047) の高さ調整用(展開/折りたたみで heightFactor を動かす)。
@@ -354,6 +368,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     if (widget.initialText != null && widget.initialText!.isNotEmpty) {
       _text.text = widget.initialText!;
       _text.selection = TextSelection.collapsed(offset: _text.text.length);
+    }
+    // 共有 FOW で選んだアカウント / プラグインが添えた画像 (D-170)。
+    if (widget.initialPostAs != null) _postAs = widget.initialPostAs;
+    for (final f in widget.initialFiles ?? const <ComposerInitialFile>[]) {
+      _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType));
     }
     // 保存済み下書きの復元(プリセットより優先)。
     final d = ref.read(composeDraftsProvider)[_draftKey];
@@ -1226,16 +1245,21 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             // 出てくる**(常設だと引用時に場所が取れないため)。行タップで
             // 投稿先切替、設定リンクはノードプログラミングの入口。DM 以外で有効。
             if (_targetsOpen && !_isDm) _bundleTile(scheme, tokens),
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Tooltip(
-                message: _isDm ? '' : '投稿先を選ぶ',
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: _isDm ? null : () => setState(() => _targetsOpen = !_targetsOpen),
-                  child: RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: me.displayName),
-                ),
+            // 投稿先のアカウント選択ピル (D-170): 共有 FOW のヘッダーと同じ 200〜300px の
+            // ピル(アバター + SNS 色点 + @handle@instance + ▾)。タップでバンドルタイル開閉。
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AccountSelectPill(
+                account: me.account,
+                displayName: me.displayName,
+                avatarUrl: me.avatarUrl,
+                open: _targetsOpen,
+                tooltip: _isDm ? '' : '投稿先を選ぶ',
+                onTap: _isDm ? null : () => setState(() => _targetsOpen = !_targetsOpen),
               ),
-              const SizedBox(width: RasqSpacing.md),
+            ),
+            const SizedBox(height: RasqSpacing.xs),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if (_cwOn)

@@ -16,6 +16,7 @@ import '../compose/composer_sheet.dart';
 import '../compose/emoji_picker_fow.dart';
 import 'reaction_history.dart';
 import '../post/post_menu.dart';
+import '../post/share_fow.dart';
 import '../vc/astell_actions.dart';
 import '../vc/astell_links.dart';
 import '../settings/safety.dart';
@@ -195,7 +196,7 @@ class _PostRowState extends ConsumerState<PostRow> {
                     }
                   },
                 ),
-              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {})]),
+              if (widget.actions.isNotEmpty) RasqActionBar(items: actionItems, trailing: [RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () => showPostShareFow(ref, post, column: fowColumnOf(context)))]),
             ]),
       // ↓ で別アカウントを選んでいる間は、そのコピーで以降の画面を開く (D-155)。
       onTap: _actAs != null && widget.onActAs == null ? () => context.pushPost(_actAs!) : widget.onTap,
