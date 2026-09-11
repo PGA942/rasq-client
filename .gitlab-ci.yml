@@ -1,7 +1,8 @@
 # RASQ client CI
 # - Flutter: analyze + test for the workspace (app + packages/*)
-# - The workspace needs Dart >= 3.13 (pub workspaces), so the Flutter image is
-#   PINNED (3.47.1 = Dart 3.13.1) — `flutter:stable` lags and shipped Dart 3.12.
+# - The workspace needs Dart >= 3.13 (pub workspaces). ghcr.io/cirruslabs/flutter has
+#   no 3.47.x tag, so the job starts from the 3.44.0 image and switches the SDK
+#   checkout to the pinned tag (FLUTTER_PIN) in before_script.
 # - packages/plugin_runtime depends on ../rasq-sdk-sample/rasq_wasm_runtime
 #   (sibling checkout), whose build hook runs cargo. CI therefore:
 #     1. clones rasq-sdk-sample next to this project (CI_JOB_TOKEN — the
@@ -19,6 +20,7 @@ variables:
   PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
   CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
   SDK_SAMPLE_BRANCH: "agent/other-api-plugins"
+  FLUTTER_PIN: "3.47.2"
 
 include:
 - template: Security/SAST.gitlab-ci.yml
@@ -32,13 +34,19 @@ secret_detection:
 
 flutter:
   stage: test
-  image: ghcr.io/cirruslabs/flutter:3.47.1
+  image: ghcr.io/cirruslabs/flutter:3.44.0
   cache:
     key: pub-$CI_COMMIT_REF_SLUG
     paths:
       - .pub-cache/
       - .cargo/
   before_script:
+    # cirruslabs のイメージは 3.44.0 までしか無い(3.47.x は manifest unknown)。
+    # 3.44.0 のイメージに入っている Flutter の checkout を 3.47.2 のタグへ切り替える(Dart 3.13 が要る)。
+    - git config --global --add safe.directory "$FLUTTER_HOME"
+    - git -C "$FLUTTER_HOME" fetch --depth 1 origin "refs/tags/$FLUTTER_PIN:refs/tags/$FLUTTER_PIN"
+    - git -C "$FLUTTER_HOME" checkout -q "$FLUTTER_PIN"
+    - flutter --version
     # Sibling checkout of the SDK repo (path dependency of plugin_runtime).
     - |
       SDK_DIR="$CI_PROJECT_DIR/../rasq-sdk-sample"
@@ -51,7 +59,7 @@ flutter:
     - rustup target add wasm32-unknown-unknown
     # wasm 依存のテスト(misskey サンプル / Mastodon プラグイン)を
     # スキップさせないため、両方ビルドしてから走らせる。
-    - (cd "$CI_PROJECT_DIR/../rasq-sdk-sample/rust" && cargo build --release --target wasm32-unknown-unknown -p misskey-wasm-sample -p mastodon-wasm)
+    - (cd "$CI_PROJECT_DIR/../rasq-sdk-sample/rust" && cargo build --release --target wasm32-unknown-unknown -p misskey-wasm-sample -p mastodon-wasm -p bluesky-wasm)
   script:
     - flutter --version
     - flutter pub get
