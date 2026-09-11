@@ -51,12 +51,17 @@ class _NodeWidget extends StatelessWidget {
       var built = _build(context);
       // tap / longPress wiring for nodes that declare events and are not L2
       // (L2 builders wire their own handlers with richer payloads).
-      final wantsGesture = node.layer != RrlLayer.l2Standard && (node.on.containsKey('tap') || node.on.containsKey('longPress'));
+      final wantsGesture = node.layer != RrlLayer.l2Standard && (node.on.containsKey('tap') || node.on.containsKey('longPress') || node.on.containsKey('drag'));
       if (wantsGesture) {
+        // drag (契約 v0.5 §3): {phase, x, y, dx, dy}(ノードの左上原点、親 Stack の単位)。
+        final drag = node.on.containsKey('drag');
         built = GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: node.on.containsKey('tap') ? () => host.emit(node, scope, 'tap') : null,
           onLongPress: node.on.containsKey('longPress') ? () => host.emit(node, scope, 'longPress') : null,
+          onPanStart: drag ? (d) => host.emit(node, scope, 'drag', {'phase': 'start', 'x': d.localPosition.dx, 'y': d.localPosition.dy, 'dx': 0, 'dy': 0}) : null,
+          onPanUpdate: drag ? (d) => host.emit(node, scope, 'drag', {'phase': 'update', 'x': d.localPosition.dx, 'y': d.localPosition.dy, 'dx': d.delta.dx, 'dy': d.delta.dy}) : null,
+          onPanEnd: drag ? (d) => host.emit(node, scope, 'drag', {'phase': 'end', 'x': d.localPosition.dx, 'y': d.localPosition.dy, 'dx': 0, 'dy': 0}) : null,
           child: built,
         );
       }

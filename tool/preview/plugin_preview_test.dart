@@ -115,6 +115,10 @@ void main() {
     c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: media!, bytes: png, name: 'photo.png', mimeType: 'image/png'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor.png'));
+    // 横リストは中央から始まる (D-172) ので、左端のガンマまで戻す。
+    final strip = find.descendant(of: find.byKey(mediaEditorStripKey), matching: find.byType(Scrollable));
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('media.action.sample.composer-media.tone.gamma')), -60, scrollable: strip);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('media.action.sample.composer-media.tone.gamma')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_param_fow.png'));
@@ -167,5 +171,41 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('post.share.otherAccount')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('composer_account_pill.png'));
+  });
+
+  testWidgets('media editor overlay handles (D-172)', (tester) async {
+    fakes['tf'] = () => FakeSlotRuntime(
+          manifest: {'id': 'sample.media-transform', 'name': '変形ハンドル', 'version': '0.1.0', 'kind': 'action', 'slots': ['composer.media'], 'permissions': ['fow.widget']},
+          handler: (self, fn, args) {
+            final catalog = {'genres': [{'id': 'transform', 'actions': [{'id': 'rotate', 'label': '回転', 'icon': 'rotate_right'}, {'id': 'crop', 'label': 'クロップ', 'icon': 'crop'}, {'id': 'reset', 'label': 'リセット', 'icon': 'restart_alt'}]}]};
+            if (fn == 'media.catalog') return catalog;
+            if (fn == 'media.edit') {
+              self.hostFn('composer.media.preview', {'token': args['token'], 'bytesB64': base64Encode(png), 'mimeType': 'image/png', 'width': 480, 'height': 320});
+              return catalog;
+            }
+            if (fn == 'media.action' && args['action'] == 'crop') {
+              const l = 60.0, t = 40.0, r = 400.0, b = 280.0;
+              Map<String, Object?> handle(String k, double x, double y) => {'t': 'Box', 'k': k, 'p': {'left': x - 12, 'top': y - 12, 'width': 24, 'height': 24, 'color': '#ffffff', 'borderColor': '#1e88e5', 'borderWidth': 2, 'radius': 12}, 'on': {'drag': 'crop.$k'}};
+              self.hostFn('composer.media.overlay', {'token': args['token'], 'root': {'t': 'Stack', 'k': 'ov', 'p': {'width': 480, 'height': 320}, 'c': [
+                {'t': 'Box', 'k': 'dim-t', 'p': {'left': 0, 'top': 0, 'width': 480, 'height': t, 'color': '#00000088'}},
+                {'t': 'Box', 'k': 'dim-b', 'p': {'left': 0, 'top': b, 'width': 480, 'height': 320 - b, 'color': '#00000088'}},
+                {'t': 'Box', 'k': 'dim-l', 'p': {'left': 0, 'top': t, 'width': l, 'height': b - t, 'color': '#00000088'}},
+                {'t': 'Box', 'k': 'dim-r', 'p': {'left': r, 'top': t, 'width': 480 - r, 'height': b - t, 'color': '#00000088'}},
+                {'t': 'Box', 'k': 'rect', 'p': {'left': l, 'top': t, 'width': r - l, 'height': b - t, 'color': '#00000000', 'borderColor': '#ffffff', 'borderWidth': 2}},
+                handle('tl', l, t), handle('tr', r, t), handle('bl', l, b), handle('br', r, b),
+              ]}});
+            }
+            return {};
+          },
+        );
+    final c = await pump(tester);
+    final tf = await c.read(slotPluginsProvider.notifier).register('fake:tf', bytes: Uint8List.fromList('tf'.codeUnits));
+    await tester.pumpAndSettle();
+    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: tf!, bytes: png, name: 'photo.png', mimeType: 'image/png'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('media.action.sample.media-transform.transform.crop')));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_crop_overlay.png'));
   });
 }

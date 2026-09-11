@@ -28,9 +28,10 @@ abstract final class RasqHostFns {
   static const composerTextReplace = 'composer.text.replace';
   static const viewerOverlaySet = 'viewer.overlay.set';
   static const composerOpen = 'composer.open';
+  static const composerMediaOverlay = 'composer.media.overlay';
 
   /// アプリ側へ中継するホスト関数(権限はスロット登録時に決まる)。
-  static const appFns = {toast, soundPlay, clipboardSet, urlOpen, muteAdd, astellShare, composerMediaReplace, composerMediaPreview, composerTextReplace, viewerOverlaySet, composerOpen};
+  static const appFns = {toast, soundPlay, clipboardSet, urlOpen, muteAdd, astellShare, composerMediaReplace, composerMediaPreview, composerTextReplace, viewerOverlaySet, composerOpen, composerMediaOverlay};
 }
 
 /// Where an `ml.infer` call actually ran (returned to the plugin).
