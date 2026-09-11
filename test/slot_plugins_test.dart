@@ -475,4 +475,58 @@ void main() {
     final saved2 = (await c.read(settingsAreaProvider('nodeprog.${fakeSession().account.key}.tl.home').future))['graph'] as String;
     expect(pluginParamsOf(NodeGraph.fromJson((jsonDecode(saved2) as Map).cast<String, Object?>()).nodes.where((n) => n.type.startsWith('plugin:slot:')).single), {'order': 'desc'});
   });
+
+  testWidgets('メディアエディターの重ね (D-172 §2.2 v0.5): composer.media.overlay の Stack をプレビューの画素数で拡縮、Box の drag はプレビュー画素の座標で届く、横リストは中央揃え', (tester) async {
+    late FakeSlotRuntime rt;
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+    fakes['ov'] = () => rt = FakeSlotRuntime(
+          manifest: manifest('t.ov', ['composer.media']),
+          handler: (self, fn, args) {
+            switch (fn) {
+              case 'media.catalog' || 'media.edit':
+                if (fn == 'media.edit') {
+                  // プレビュー 200×100 画素(実体は 1×1 PNG でも座標系は width/height で決まる)。
+                  self.hostFn('composer.media.preview', {'token': args['token'], 'bytesB64': base64Encode(png), 'mimeType': 'image/png', 'width': 200, 'height': 100});
+                }
+                return {'genres': [{'id': 'transform', 'actions': [{'id': 'rotate', 'label': '回転'}, {'id': 'crop', 'label': 'クロップ'}]}]};
+              case 'media.action':
+                self.hostFn('composer.media.overlay', {'token': args['token'], 'root': {'t': 'Stack', 'k': 'ov', 'p': {'width': 200, 'height': 100}, 'c': [
+                  {'t': 'Box', 'k': 'handle', 'p': {'left': 80, 'top': 30, 'width': 40, 'height': 40, 'color': '#ffffff88', 'radius': 20}, 'on': {'drag': 'rotate.drag'}},
+                ]}});
+                return {};
+              case 'media.commit' || 'media.cancel':
+                return {};
+            }
+            return null;
+          },
+        );
+    final c = await pump(tester);
+    final plugin = await register(c, 'ov');
+    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: plugin, bytes: png, name: 'a.png', mimeType: 'image/png'));
+    await tester.pumpAndSettle();
+    // 横リスト: 2 つしか無いので中央に並ぶ(左右の余白が等しい)。
+    final strip = tester.getRect(find.byKey(mediaEditorStripKey));
+    final a = tester.getRect(find.byKey(const ValueKey('media.action.t.ov.transform.rotate')));
+    final b = tester.getRect(find.byKey(const ValueKey('media.action.t.ov.transform.crop')));
+    expect((a.left - strip.left) - (strip.right - b.right), closeTo(0, 1));
+    // 重ね: Stack(200×100) がプレビュー枠に contain で入る。
+    await tester.tap(find.byKey(const ValueKey('media.action.t.ov.transform.rotate')));
+    await tester.pumpAndSettle();
+    final ov = tester.getRect(find.byKey(mediaEditorOverlayKey));
+    expect(ov.width / ov.height, closeTo(2.0, 0.01));
+    final scale = ov.width / 200;
+    // ハンドル(Box、drag 付き)を 20 論理 px 右へなぞる → プレビュー画素で 20/scale。
+    final handle = find.descendant(of: find.byKey(mediaEditorOverlayKey), matching: find.byType(GestureDetector)).first;
+    await tester.drag(handle, const Offset(20, 0));
+    await tester.pumpAndSettle();
+    final drags = rt.calls.where((x) => x.$1 == 'rotate.drag').toList();
+    expect(drags.first.$2['phase'], 'start');
+    expect(drags.last.$2['phase'], 'end');
+    final dx = drags.where((x) => x.$2['phase'] == 'update').fold<double>(0, (acc, x) => acc + (x.$2['dx'] as num).toDouble());
+    expect(dx, closeTo(20 / scale, 0.5));
+    // root: null で消える。
+    rt.hostFn('composer.media.overlay', {'token': rt.calls.firstWhere((x) => x.$1 == 'media.edit').$2['token'], 'root': null});
+    await tester.pumpAndSettle();
+    expect(find.byKey(mediaEditorOverlayKey), findsNothing);
+  });
 }

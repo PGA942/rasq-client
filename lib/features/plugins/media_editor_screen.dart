@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
-import 'package:rrl_renderer/rrl_renderer.dart' show rrlIconFor;
+import 'package:rrl_core/rrl_core.dart';
+import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/providers.dart';
 import 'slot_plugins.dart';
@@ -39,6 +41,7 @@ class MediaEditResult {
 
 const mediaEditorPreviewKey = Key('media.editor.preview');
 const mediaEditorStripKey = Key('media.editor.strip');
+const mediaEditorOverlayKey = Key('media.editor.overlay');
 
 /// 見方(↓ で切り替え)。
 enum MediaEditorMode { plugin, genre }
@@ -63,6 +66,17 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
   late String _baseName = widget.args.name;
   bool _baseChanged = false;
   late Uint8List _preview = widget.args.bytes;
+
+  /// プレビューの画素数(重ねの座標系)。`composer.media.preview` の width/height、無ければ復号して測る。
+  (int, int)? _previewSize;
+  Uint8List? _measuring;
+
+  /// プレビューの上に重ねる RRL(`composer.media.overlay`、契約 v0.5)。
+  RrlNode? _overlayRoot;
+
+  /// 下付き横リスト: 中身が変わったら初期位置を中央に(D-172)。
+  ScrollController? _strip;
+  String _stripKey = '';
 
   MediaEditorMode _mode = MediaEditorMode.plugin;
   String _genreId = 'tone';
@@ -144,14 +158,22 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
       name: _baseName,
       mimeType: _baseMime,
       bytes: _base,
-      onPreview: (bytes, mime) {
-        if (mounted) setState(() => _preview = bytes);
+      onPreview: (bytes, mime, w, h) {
+        if (!mounted) return;
+        setState(() {
+          _preview = bytes;
+          _previewSize = (w != null && h != null && w > 0 && h > 0) ? (w, h) : null;
+        });
+      },
+      onOverlay: (root) {
+        if (mounted) setState(() => _overlayRoot = root);
       },
       // 旧形(プラグイン自身の FOW → replace)や即差し替え形: そのまま結果にする。
       onReplace: (bytes, mime, name) => _finish(MediaEditResult(bytes: bytes, mimeType: mime, name: name)),
     );
     if (!mounted) return;
     setState(() {
+      _overlayRoot = null;
       _plugin = plugin;
       _session = s;
       if (s != null && !_catalog.containsKey(plugin.id)) _catalog[plugin.id] = s.genres;
@@ -159,6 +181,51 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
     });
     _suspendOthers();
     _onFows();
+  }
+
+  /// 幅 / 高さが来なかったプレビューを復号して測る(重ねがあるときだけ)。
+  void _measurePreview() {
+    if (_previewSize != null || identical(_measuring, _preview) || _overlayRoot == null) return;
+    final bytes = _preview;
+    _measuring = bytes;
+    ui.decodeImageFromList(bytes, (img) {
+      if (!mounted || !identical(bytes, _preview)) return;
+      setState(() => _previewSize = (img.width, img.height));
+      img.dispose();
+    });
+  }
+
+  /// プレビュー(+ 重ね)。重ねはプレビューの画素数の Stack を表示倍率に合わせて拡縮する(ビューワーの重ねと同じ作法)。
+  Widget _previewWidget() {
+    final image = Image.memory(_preview, fit: BoxFit.contain, gaplessPlayback: true, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48));
+    final root = _overlayRoot;
+    final size = _previewSize;
+    if (root == null) return image;
+    if (size == null) {
+      _measurePreview();
+      return image;
+    }
+    final controller = _plugin.runtime.view;
+    return FittedBox(
+      fit: BoxFit.contain,
+      child: SizedBox(
+        key: mediaEditorOverlayKey,
+        width: size.$1.toDouble(),
+        height: size.$2.toDouble(),
+        child: Stack(fit: StackFit.expand, children: [
+          Image.memory(_preview, fit: BoxFit.fill, gaplessPlayback: true, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+          RrlRenderer(
+            node: root,
+            host: RrlHost(
+              instanceScope: controller.document?.scope ?? _plugin.id,
+              scope: RrlScope({}),
+              geometry: controller.geometry,
+              onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 
   /// 別プラグインへ(直列合成): 今のプラグインを適用して、その結果を次の入力にする。
@@ -237,6 +304,7 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
     for (final (n, l) in _fowHeightListeners) {
       n.removeListener(l);
     }
+    _strip?.dispose();
     final s = _session;
     if (s != null && !_closing) _slots.mediaCancel(s);
     super.dispose();
@@ -315,7 +383,7 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
                   width: math.max(48, math.min(size.width * 0.7, c.maxWidth - 144)),
                   height: math.max(48, math.min(size.height * 0.7, c.maxHeight - 8)),
                   alignment: Alignment.center,
-                  child: Image.memory(_preview, fit: BoxFit.contain, gaplessPlayback: true, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48)),
+                  child: _previewWidget(),
                 ),
               ),
             ),
@@ -326,27 +394,41 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
             height: 84,
             child: entries.isEmpty
                 ? Center(child: Text(_mode == MediaEditorMode.plugin ? 'このプラグインに編集はありません' : '「$subtitle」の編集を持つプラグインがありません', style: RasqTypography.caption.copyWith(color: Colors.white54)))
-                : ShaderMask(
-                    shaderCallback: (r) => const LinearGradient(colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent], stops: [0, 0.08, 0.92, 1]).createShader(r),
-                    blendMode: BlendMode.dstIn,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-                      itemCount: entries.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: RasqSpacing.sm),
-                      itemBuilder: (_, i) {
-                        final e = entries[i];
-                        return _StripAction(
-                          key: ValueKey('media.action.${e.plugin.id}.${e.genre.id}.${e.action.id}'),
-                          icon: rrlIconFor(e.action.icon, Icons.tune),
-                          label: e.action.label,
-                          // 「ジャンル」の見方では、どのプラグインの編集か分かるように小さく添える。
-                          sub: _mode == MediaEditorMode.genre ? e.plugin.manifest.name : null,
-                          onTap: () => _act(e),
-                        );
-                      },
-                    ),
-                  ),
+                : LayoutBuilder(builder: (ctx, c) {
+                    // 初期はセンター揃え (D-172): 収まるなら中央に並べ、はみ出すなら中央から始める。
+                    const itemW = 68.0;
+                    const gap = RasqSpacing.sm;
+                    const pad = 24.0;
+                    final content = pad * 2 + entries.length * itemW + (entries.length - 1) * gap;
+                    final key = '${_mode.name}:${_mode == MediaEditorMode.plugin ? _plugin.id : _genreId}:${entries.length}';
+                    if (key != _stripKey) {
+                      _stripKey = key;
+                      _strip?.dispose();
+                      _strip = ScrollController(initialScrollOffset: math.max(0, (content - c.maxWidth) / 2));
+                    }
+                    return ShaderMask(
+                      shaderCallback: (r) => const LinearGradient(colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent], stops: [0, 0.08, 0.92, 1]).createShader(r),
+                      blendMode: BlendMode.dstIn,
+                      child: ListView.separated(
+                        controller: _strip,
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.symmetric(horizontal: content < c.maxWidth ? pad + (c.maxWidth - content) / 2 : pad, vertical: 6),
+                        itemCount: entries.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: gap),
+                        itemBuilder: (_, i) {
+                          final e = entries[i];
+                          return _StripAction(
+                            key: ValueKey('media.action.${e.plugin.id}.${e.genre.id}.${e.action.id}'),
+                            icon: rrlIconFor(e.action.icon, Icons.tune),
+                            label: e.action.label,
+                            // 「ジャンル」の見方では、どのプラグインの編集か分かるように小さく添える。
+                            sub: _mode == MediaEditorMode.genre ? e.plugin.manifest.name : null,
+                            onTap: () => _act(e),
+                          );
+                        },
+                      ),
+                    );
+                  }),
           ),
           // 下付き FOW(プラグインのパラメーター)の分だけ空ける。
           AnimatedContainer(duration: const Duration(milliseconds: 180), height: fowH),

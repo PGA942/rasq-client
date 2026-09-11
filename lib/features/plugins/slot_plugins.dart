@@ -63,6 +63,7 @@ class SlotManifest {
         if (slots.contains(SlotIds.astellAction)) RasqHostFns.astellShare,
         if (slots.contains(SlotIds.composerMedia)) RasqHostFns.composerMediaReplace,
         if (slots.contains(SlotIds.composerMedia)) RasqHostFns.composerMediaPreview,
+        if (slots.contains(SlotIds.composerMedia)) RasqHostFns.composerMediaOverlay,
         if (slots.contains(SlotIds.composerText)) RasqHostFns.composerTextReplace,
         if (slots.contains(SlotIds.viewerOverlay)) RasqHostFns.viewerOverlaySet,
         // 投稿共有 (§2.8): コンポーザーを開く + 参加中の AsTell へ。
@@ -178,7 +179,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   final Map<String, void Function(Uint8List bytes, String mime, String? name)> _mediaReplace = {};
   final Map<String, void Function(int start, int end, String text)> _textReplace = {};
   final Map<String, void Function(RrlNode root)> _overlaySet = {};
-  final Map<String, void Function(Uint8List bytes, String mime)> _mediaPreview = {};
+  final Map<String, void Function(Uint8List bytes, String mime, int? width, int? height)> _mediaPreview = {};
+  final Map<String, void Function(RrlNode? root)> _mediaOverlay = {};
   final Map<String, void Function(String text, Uint8List? media, String? mime, String? name)> _composerOpen = {};
 
   /// FOW の着き方 (D-169、契約 v0.2): プラグインの `fow.open` は呼び出し元の面の子として
@@ -400,11 +402,16 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         final b64 = args['bytesB64'];
         if (cb != null && b64 is String) {
           try {
-            cb(base64Decode(b64), '${args['mimeType'] ?? 'image/png'}');
+            cb(base64Decode(b64), '${args['mimeType'] ?? 'image/png'}', (args['width'] as num?)?.toInt(), (args['height'] as num?)?.toInt());
           } catch (e) {
             debugPrint('media preview: $e');
           }
         }
+      case RasqHostFns.composerMediaOverlay:
+        // プレビューの上に重ねる RRL (契約 v0.5 §2.2)。root: null で消す。
+        final cb = _mediaOverlay['${args['token']}'];
+        final root = args['root'];
+        if (cb != null) cb(root is Map ? RrlNode.fromJson(root.cast<String, Object?>()) : null);
       case RasqHostFns.composerTextReplace:
         final cb = _textReplace['${args['token']}'];
         if (cb != null) cb((args['start'] as num?)?.toInt() ?? 0, (args['end'] as num?)?.toInt() ?? 0, '${args['text'] ?? ''}');
@@ -542,15 +549,17 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   /// メディアエディター (D-169、契約 v0.2 §2.2): `media.edit` を開いて genres を受ける。
   /// 戻り null = エディター形ではない(旧形 / 即差し替え形)。
-  Future<MediaEditSession?> mediaEditorOpen(SlotPlugin plugin, {required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime) onPreview, required void Function(Uint8List bytes, String mime, String? name) onReplace, String? fowOwner, int column = 0}) async {
+  Future<MediaEditSession?> mediaEditorOpen(SlotPlugin plugin, {required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, int? width, int? height) onPreview, required void Function(Uint8List bytes, String mime, String? name) onReplace, void Function(RrlNode? root)? onOverlay, String? fowOwner, int column = 0}) async {
     _setFowContext(plugin, fowOwner, column, barrierless: true);
     final token = 'media-${DateTime.now().microsecondsSinceEpoch}';
     _mediaPreview[token] = onPreview;
     _mediaReplace[token] = onReplace;
+    if (onOverlay != null) _mediaOverlay[token] = onOverlay;
     final v = await plugin.value('media.edit', {'token': token, 'index': 0, 'name': name, 'mimeType': mimeType, 'bytesB64': base64Encode(bytes)});
     if (v == null) {
       _mediaPreview.remove(token);
       _mediaReplace.remove(token);
+      _mediaOverlay.remove(token);
       return null;
     }
     if (v['bytesB64'] is String) {
@@ -595,6 +604,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     final v = await s.plugin.value('media.commit', {'token': s.token});
     _mediaPreview.remove(s.token);
     _mediaReplace.remove(s.token);
+    _mediaOverlay.remove(s.token);
     if (!_disposed) overlay.closeOwnedBy('$_fowOwner.${s.plugin.id}');
     if (v != null && v['bytesB64'] is String) {
       try {
@@ -607,6 +617,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   Future<void> mediaCancel(MediaEditSession s) async {
     _mediaPreview.remove(s.token);
     _mediaReplace.remove(s.token);
+    _mediaOverlay.remove(s.token);
     if (_disposed) return;
     final overlay = ref.read(overlayManagerProvider);
     await s.plugin.value('media.cancel', {'token': s.token});
