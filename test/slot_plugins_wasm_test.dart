@@ -75,4 +75,39 @@ void main() {
     expect(fows.last.$1, 'fow.close');
     c.dispose();
   });
+
+  test('post-share-plugin (§2.8): post.share → fow.open、テンプレート → composer.open、post.share.close → fow.close', () async {
+    final app = <(String, Map<String, Object?>)>[];
+    final fows = <(String, Map<String, Object?>)>[];
+    final env = RasqHostEnvironment(
+      onFow: (fn, args) {
+        fows.add((fn, args));
+        return null;
+      },
+      appFns: {RasqHostFns.composerOpen, RasqHostFns.clipboardSet, RasqHostFns.urlOpen, RasqHostFns.astellShare, RasqHostFns.toast},
+      onAppFn: (fn, args) => app.add((fn, args)),
+    );
+    final c = await load('post_share_plugin', env);
+    if (c == null) return markTestSkipped('plugin-sample/dist not built');
+    final m = value(c.invoke('plugin.manifest', const {}));
+    expect(m['id'], 'sample.post-share');
+    expect(m['slots'], ['post.share']);
+    value(c.invoke('post.share', {
+      'token': 'tk1',
+      'post': {'url': 'https://example.test/notes/p1', 'sns': 'misskey', 'instance': 'example.test', 'postId': 'p1', 'author': '作者', 'handle': 'author', 'body': '本文です', 'media': []},
+      'account': {'sns': 'misskey', 'instance': 'example.test', 'handle': 'me'},
+      'link': 'https://example.test/notes/p1',
+    }));
+    expect(fows.single.$1, 'fow.open');
+    expect(fows.single.$2['id'], 'share-template');
+    expect(jsonEncode(fows.single.$2['root']), contains('引用(本文つき)'));
+    value(c.invoke('tpl.quote', {'nodeId': 'x', 'kind': 'tap'}));
+    value(c.invoke('share.composer', {'nodeId': 'x', 'kind': 'tap'}));
+    final open = app.where((x) => x.$1 == RasqHostFns.composerOpen).single.$2;
+    expect(open['token'], 'tk1');
+    expect(open['text'], '「本文です」\nhttps://example.test/notes/p1');
+    value(c.invoke('post.share.close', {'token': 'tk1'}));
+    expect(fows.last.$1, 'fow.close');
+    c.dispose();
+  });
 }

@@ -156,6 +156,7 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
     final genres = _session?.genres ?? const <MediaGenre>[];
     final genre = _genre < genres.length ? genres[_genre] : null;
     final size = MediaQuery.sizeOf(context);
+    final scheme = Theme.of(context).colorScheme;
     final factor = _fowOpen ? 0.45 : 0.7;
     return Scaffold(
       backgroundColor: Colors.black,
@@ -201,30 +202,46 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
               ]),
             ),
           ),
-        // 右: ↓(プラグイン/編集ジャンル)+ ジャンルの縦列。
+        // 右: カラーモード反転色の角丸枠(D-170)。上端に ↓(丸に包まない、上に詰める)、
+        // その下にジャンルの縦列(スクロール)。
         Positioned(
           right: RasqSpacing.sm,
           top: 96,
           bottom: 24,
-          child: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Builder(
-                builder: (ctx) => _RoundAction(
-                  key: const ValueKey('media.editor.pick'),
-                  icon: Icons.keyboard_arrow_down,
-                  label: 'プラグイン / ジャンル',
-                  onTap: () {
-                    final box = ctx.findRenderObject() as RenderBox;
-                    _pick(box.localToGlobal(Offset.zero) & box.size);
-                  },
-                ),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              width: 56,
+              decoration: BoxDecoration(
+                color: scheme.inverseSurface.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: scheme.onInverseSurface.withValues(alpha: 0.35)),
               ),
-              const SizedBox(height: RasqSpacing.sm),
-              for (final (i, g) in genres.indexed) ...[
-                _RoundAction(key: ValueKey('media.genre.${g.id}'), icon: rrlIconFor(g.icon, Icons.category_outlined), label: g.label, filled: i == _genre, onTap: () => setState(() => _genre = i)),
-                const SizedBox(height: RasqSpacing.sm),
-              ],
-            ]),
+              padding: const EdgeInsets.fromLTRB(4, 2, 4, 6),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Builder(
+                  builder: (ctx) => RasqIconButton(
+                    key: const ValueKey('media.editor.pick'),
+                    icon: Icons.keyboard_arrow_down,
+                    size: 22,
+                    color: scheme.onInverseSurface,
+                    tooltip: 'プラグイン / ジャンル',
+                    onPressed: () {
+                      final box = ctx.findRenderObject() as RenderBox;
+                      _pick(box.localToGlobal(Offset.zero) & box.size);
+                    },
+                  ),
+                ),
+                Flexible(
+                  child: ListView(shrinkWrap: true, padding: const EdgeInsets.only(top: 2), children: [
+                    for (final (i, g) in genres.indexed) ...[
+                      _RoundAction(key: ValueKey('media.genre.${g.id}'), icon: rrlIconFor(g.icon, Icons.category_outlined), label: g.label, filled: i == _genre, onTap: () => setState(() => _genre = i)),
+                      const SizedBox(height: RasqSpacing.sm),
+                    ],
+                  ]),
+                ),
+              ]),
+            ),
           ),
         ),
         if (_note != null)

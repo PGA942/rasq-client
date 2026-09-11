@@ -532,7 +532,12 @@ class _FowPanelState extends State<_FowPanel> {
               child: Row(children: [
                 // ✕/キャンセル: interceptCancel 指定時は閉じずにそれを呼ぶ
                 // (プラグインの確認ポップアップ、D-066)。
-                if (spec.cancelText != null) TextButton(onPressed: spec.interceptCancel ?? onCancel, child: Text(spec.cancelText!, style: TextStyle(color: scheme.onSurfaceVariant))) else const SizedBox(width: 80),
+                if (spec.headerLeading != null)
+                  spec.headerLeading!
+                else if (spec.cancelText != null)
+                  TextButton(onPressed: spec.interceptCancel ?? onCancel, child: Text(spec.cancelText!, style: TextStyle(color: scheme.onSurfaceVariant)))
+                else
+                  const SizedBox(width: 80),
                 Expanded(child: Center(child: Text(spec.title ?? '', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),
                 // 右側: headerTrailing(D-045: コンポーザーの公開設定など)>
                 // 決定ボタン > 空きスペース。
