@@ -112,6 +112,7 @@ class HomeScreen extends ConsumerWidget {
     }
     // カスタム TL (M5e / D-080): TL プラグイン宣言のタブ。
     for (final c in customs) {
+      if (c.id.startsWith('slot:')) continue; // スロットの TL プラグインはタブではなくアルゴリズム部品 (D-169)
       out.add(TimelineKind('custom:${c.id}', c.label));
     }
     // ノードTLタブ (D-101): 中身はノードグラフの実行結果。

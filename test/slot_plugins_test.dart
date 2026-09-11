@@ -6,6 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/plugins/media_editor_screen.dart';
+import 'package:rasq_client/features/nodeprog/timeline_config_screen.dart';
+import 'package:rasq_client/features/nodeprog/tl_components.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart' show settingsAreaProvider;
 import 'package:rasq_client/features/home/timeline_providers.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
@@ -178,7 +183,7 @@ void main() {
     expect(replaced, [Uint8List.fromList([7]), 'image/jpeg', null]);
   });
 
-  testWidgets('投稿加工 (§2.5) とカスタム TL (§2.6) とトレンド (§2.7)', (tester) async {
+  testWidgets('投稿加工 (§2.5) とトレンド (§2.7)', (tester) async {
     fakes['tl'] = () => FakeSlotRuntime(
           manifest: manifest('t.tl', ['post.transform', 'tl', 'trend.suggest']),
           handler: (self, fn, args) {
@@ -203,12 +208,8 @@ void main() {
     c.invalidate(timelineProvider);
     await tester.pumpAndSettle();
     expect(find.textContaining('8/31(今日)は打ち上げ'), findsOneWidget);
-    // カスタム TL のタブ → 昇順(あいう が先)。
-    await tester.tap(find.text('Unicode 昇順'));
-    await tester.pumpAndSettle();
-    final custom = c.read(timelineProvider(const TimelineKind('custom:slot:t.tl:asc', 'Unicode 昇順'))).value!.posts;
-    // 基礎 TL → 投稿加工 → tl.sort の順(加工後の本文で並ぶ: '8' < 'あ')。
-    expect(custom.map((p) => p.body).toList(), ['8/31(今日)は打ち上げ', 'あいう']);
+    // TL プラグインはタブにならない (D-169: アルゴリズム部品)。
+    expect(find.text('Unicode 昇順'), findsNothing);
     // 検索ホームのトレンド節にサジェスト。
     await tester.tap(find.byTooltip('検索'));
     await tester.pumpAndSettle();
@@ -229,5 +230,141 @@ void main() {
     final words = (await c.read(settingsAreaProvider(muteWordsArea).future))[muteWordsKey];
     expect(words, ['https://spam.example/']);
     expect(find.textContaining('ミュート語に追加しました'), findsOneWidget);
+  });
+
+  testWidgets('メディアエディター (D-169 §2.2): genres → 左右の列、アクション → media.action、プレビュー差し替え、適用 → media.commit の結果', (tester) async {
+    late FakeSlotRuntime rt;
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+    fakes['media'] = () => rt = FakeSlotRuntime(
+          manifest: manifest('t.media', ['composer.media']),
+          handler: (self, fn, args) {
+            switch (fn) {
+              case 'media.edit':
+                self.hostFn('composer.media.preview', {'token': args['token'], 'bytesB64': base64Encode(png), 'mimeType': 'image/png'});
+                return {'genres': [
+                  {'id': 'tone', 'label': '色調', 'icon': 'tune', 'actions': [{'id': 'gamma', 'label': 'ガンマ', 'icon': 'brightness_6'}, {'id': 'reset', 'label': 'リセット'}]},
+                  {'id': 'transform', 'label': '変形', 'icon': 'rotate_right', 'actions': [{'id': 'rotl', 'label': '左回転'}]},
+                ]};
+              case 'media.action':
+                if (args['action'] == 'gamma') {
+                  self.openFow('media-param', {'t': 'Column', 'k': 'root', 'c': [{'t': 'SliderListTile', 'k': 'gamma', 'p': {'title': 'ガンマ', 'value': 1.0, 'min': 0.3, 'max': 3.0}, 'on': {'change': 'gammaChanged'}}]}, title: 'ガンマ');
+                }
+                self.hostFn('composer.media.preview', {'token': args['token'], 'bytesB64': base64Encode(png), 'mimeType': 'image/png'});
+                return {};
+              case 'media.commit':
+                return {'bytesB64': base64Encode([1, 2, 3]), 'mimeType': 'image/png', 'name': 'edited.png'};
+              case 'media.cancel':
+                return {};
+            }
+            return null;
+          },
+        );
+    final c = await pump(tester);
+    final plugin = await register(c, 'media');
+    final future = c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: plugin, bytes: png, name: 'a.png', mimeType: 'image/png'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MediaEditorScreen), findsOneWidget);
+    expect(rt.calls.where((x) => x.$1 == 'media.edit').length, 1);
+    // 右の列 = ジャンル、左の列 = 選んだジャンル(色調)のアクション。
+    expect(find.byKey(const ValueKey('media.genre.tone')), findsOneWidget);
+    expect(find.byKey(const ValueKey('media.genre.transform')), findsOneWidget);
+    expect(find.byKey(const ValueKey('media.action.gamma')), findsOneWidget);
+    expect(find.byKey(const ValueKey('media.action.rotl')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('media.genre.transform')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('media.action.rotl')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('media.action.rotl')));
+    await tester.pumpAndSettle();
+    final act = rt.calls.where((x) => x.$1 == 'media.action').last;
+    expect(act.$2['genre'], 'transform');
+    expect(act.$2['action'], 'rotl');
+    // 第 2 階層 = 下付き FOW(ガンマのスライダー)。開くとプレビューが縮む。
+    await tester.tap(find.byKey(const ValueKey('media.genre.tone')));
+    await tester.pumpAndSettle();
+    final before = tester.getSize(find.byKey(mediaEditorPreviewKey));
+    await tester.tap(find.byKey(const ValueKey('media.action.gamma')));
+    await tester.pumpAndSettle();
+    expect(find.text('ガンマ'), findsWidgets);
+    expect(find.byType(Slider), findsOneWidget);
+    expect(tester.getSize(find.byKey(mediaEditorPreviewKey)).height, lessThan(before.height));
+    // ↓ でプラグイン / ジャンルの一覧。
+    await tester.tap(find.byKey(const ValueKey('media.editor.pick')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('▸ 変形'), findsOneWidget);
+    await tester.tap(find.textContaining('▸ 変形'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('media.action.rotl')), findsOneWidget);
+    // 適用 → media.commit の結果が呼び出し元へ。
+    await tester.tap(find.byKey(const ValueKey('media.editor.apply')));
+    await tester.pumpAndSettle();
+    final result = await future;
+    expect(result!.bytes, [1, 2, 3]);
+    expect(result.name, 'edited.png');
+    expect(find.byType(MediaEditorScreen), findsNothing);
+    expect(find.byType(Slider), findsNothing); // 下付き FOW も閉じる
+  });
+
+  testWidgets('TL プラグイン = アルゴリズム部品 (D-169 §2.6): タブにはならず、ノードを設定 FOW にプラグインの RRL、tl.sort に params', (tester) async {
+    late FakeSlotRuntime rt;
+    fakes['tl'] = () => rt = FakeSlotRuntime(
+          manifest: {'id': 'sample.timeline', 'name': 'Unicode 順ソート', 'version': '0.2.0', 'kind': 'view', 'slots': ['tl']},
+          handler: (self, fn, args) {
+            switch (fn) {
+              case 'tl.timelines':
+                return {'timelines': [{'id': 'unicode', 'label': 'Unicode 順', 'base': 'home'}]};
+              case 'tl.params':
+                return {'root': {'t': 'Column', 'c': [
+                  {'t': 'SectionHeader', 'p': {'title': '並び順'}},
+                  {'t': 'RadioListTile', 'k': 'order', 'p': {'title': '昇順', 'value': 'asc', 'group': r'$.settings.order'}, 'on': {'change': 'settings.set'}},
+                  {'t': 'RadioListTile', 'k': 'order', 'p': {'title': '降順', 'value': 'desc', 'group': r'$.settings.order'}, 'on': {'change': 'settings.set'}},
+                ]}, 'defaults': {'order': 'asc'}};
+              case 'tl.sort':
+                final posts = [for (final p in (args['posts'] as List)) p as Map];
+                posts.sort((a, b) => '${a['body']}'.compareTo('${b['body']}'));
+                final desc = (args['params'] as Map?)?['order'] == 'desc';
+                return {'order': [for (final p in (desc ? posts.reversed : posts)) p['id']]};
+            }
+            return null;
+          },
+        );
+    final c = await pump(tester);
+    await register(c, 'tl');
+    await tester.pumpAndSettle();
+    expect(find.text('Unicode 順'), findsNothing); // タブにはならない
+    // フォロー中(home)のタイムライン設定 → アルゴリズムを追加 → 「Unicode 順でソート」。
+    await tester.tap(find.text('フォロー中'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('タイムライン設定'));
+    await tester.pumpAndSettle();
+    Finder inScreen(Finder f) => find.descendant(of: find.byType(TimelineConfigScreen), matching: f);
+    await tester.tap(inScreen(find.text('アルゴリズムを追加')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Unicode 順でソート'), 120, scrollable: find.byType(Scrollable).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Unicode 順でソート'));
+    await tester.pumpAndSettle();
+    // 部品タイル → ノードを設定 FOW にプラグインの RRL(ラジオ)。
+    await tester.tap(inScreen(find.text('Unicode 順でソート')));
+    await tester.pumpAndSettle();
+    expect(find.text('ノードを設定'), findsOneWidget);
+    expect(find.text('並び順'), findsOneWidget);
+    await tester.tap(find.text('降順'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('決定'));
+    await tester.pumpAndSettle();
+    // 保存された部品に params、コンパイルされたグラフのノードに「パラメーター」ポート。
+    final acc = fakeSession().account.key;
+    final area = await c.read(settingsAreaProvider('nodeprog.$acc.tl.home').future);
+    final cfg = TlConfig.fromJson((jsonDecode(area['tlcfg']! as String) as Map).cast<String, Object?>());
+    final comp = cfg.algorithms.firstWhere((a) => a.isPlugin);
+    expect(comp.type, 'plugin:slot:sample.timeline:unicode');
+    expect(comp.params, {'order': 'desc'});
+    // ホーム TL を読み直すと tl.sort に params が渡り、降順になる。
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    c.invalidate(timelineProvider);
+    await tester.pumpAndSettle();
+    final sortCall = rt.calls.where((x) => x.$1 == 'tl.sort').last;
+    expect((sortCall.$2['params'] as Map)['order'], 'desc');
   });
 }

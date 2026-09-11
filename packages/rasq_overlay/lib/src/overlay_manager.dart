@@ -87,6 +87,28 @@ class OverlayManager extends ChangeNotifier {
   bool _fowSwitcherOpen = false;
   bool get fowSwitcherOpen => _fowSwitcherOpen;
 
+  /// FOW の一時退避 (D-169): true を返した FOW は Offstage(State は生きたまま)で、
+  /// バリアも張らない。全画面の画面(メディアエディター)が下の FOW(コンポーザー等)を
+  /// 隠しつつ、自分の子 FOW だけ出すために使う。null = 退避なし。
+  bool Function(RasqOverlayEntry entry)? _fowSuspend;
+  bool isFowSuspended(RasqOverlayEntry e) => _fowSuspend?.call(e) ?? false;
+
+  void setFowSuspend(bool Function(RasqOverlayEntry entry)? filter) {
+    _fowSuspend = filter;
+    // 画面の dispose 中/ビルド中からも呼べるよう、通知はマイクロタスクで。
+    scheduleMicrotask(() {
+      if (!_disposed) notifyListeners();
+    });
+  }
+
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   void setFowSwitcher(bool open) {
     if (_fowSwitcherOpen == open) return;
     if (open && !_entries.any((e) => e.layer == OverlayLayer.fow)) return;

@@ -9,6 +9,7 @@ import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/providers.dart';
+import '../plugins/slot_plugins.dart';
 import '../../app/router.dart' show Routes, routerProvider;
 import '../../shell/headers.dart';
 import '../home/timeline_providers.dart' show customTimelinesProvider;
@@ -903,7 +904,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
 /// パラメーター部**(設定 DSL と同じ L2 部品 — SectionHeader/RadioListTile)。
 /// ワイヤーフレーム「ノードを設定」の形。プラグイン側の RRL 設定ページは
 /// ストア統合(ノード定義配布)でここに差し込まれる。
-class _ComponentParamsPanel extends StatefulWidget {
+class _ComponentParamsPanel extends ConsumerStatefulWidget {
   const _ComponentParamsPanel(
       {required this.algorithm,
       required this.index,
@@ -932,12 +933,34 @@ class _ComponentParamsPanel extends StatefulWidget {
   final VoidCallback onCancel;
 
   @override
-  State<_ComponentParamsPanel> createState() => _ComponentParamsPanelState();
+  ConsumerState<_ComponentParamsPanel> createState() => _ComponentParamsPanelState();
 }
 
-class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
+class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
   late final TextEditingController _query = TextEditingController(
       text: widget.algorithm && widget.index < widget.cfgOf().algorithms.length ? widget.cfgOf().algorithms[widget.index].query : '');
+
+  /// スロットの TL プラグイン (D-169): `tl.params` の RRL 設定ページと既定値。
+  Future<({RrlNode root, Map<String, Object?> defaults})?>? _pluginParams;
+
+  ({RrlNode root, Map<String, Object?> defaults})? _loadedPluginParams;
+
+  @override
+  void initState() {
+    super.initState();
+    final cfg = widget.cfgOf();
+    if (widget.algorithm && widget.index < cfg.algorithms.length && cfg.algorithms[widget.index].type.startsWith('plugin:slot:')) {
+      final id = cfg.algorithms[widget.index].type.substring('plugin:slot:'.length); // <pluginId>:<tlId>
+      final parts = id.split(':');
+      final plugin = ref.read(slotPluginsProvider).where((p) => p.id == parts.first).firstOrNull;
+      if (plugin != null && parts.length >= 2) {
+        _pluginParams = ref.read(slotPluginsProvider.notifier).tlParams(plugin, parts.sublist(1).join(':')).then((v) {
+          if (mounted) setState(() => _loadedPluginParams = v);
+          return v;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -962,6 +985,15 @@ class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
             _section('なにから読み取る?'),
             for (final o in suggestFromOptions) _radio('from', o, o),
           ]),
+        );
+      }
+      // スロットの TL プラグイン (D-169): プラグインの RRL 設定ページを差し込む。
+      final pp = _loadedPluginParams;
+      if (a.type.startsWith('plugin:slot:')) {
+        if (pp != null) return ({...pp.defaults, ...a.params}, pp.root);
+        return (
+          const {},
+          RrlNode(t: 'Column', c: [RrlNode(t: 'Text', p: {'text': _pluginParams == null ? 'このプラグインは登録されていません(ストアから入れ直してください)。' : 'パラメーターを読み込んでいます…'})]),
         );
       }
       return (
@@ -1008,9 +1040,14 @@ class _ComponentParamsPanelState extends State<_ComponentParamsPanel> {
   void _apply(String key, Object? value) {
     final cfg = widget.cfgOf();
     if (widget.algorithm) {
+      final a = cfg.algorithms[widget.index];
       final next = [
         for (var k = 0; k < cfg.algorithms.length; k++)
-          k == widget.index ? cfg.algorithms[k].copyWith(what: key == 'what' ? '$value' : null, from: key == 'from' ? '$value' : null) : cfg.algorithms[k],
+          k == widget.index
+              ? (a.isPlugin
+                  ? a.copyWith(params: {...a.params, key: value}) // プラグインのパラメーター (D-169)
+                  : a.copyWith(what: key == 'what' ? '$value' : null, from: key == 'from' ? '$value' : null))
+              : cfg.algorithms[k],
       ];
       widget.onUpdate(cfg.copyWith(algorithms: next));
     } else {

@@ -27,7 +27,12 @@ void main() {
     final m = value(c.invoke('plugin.manifest', const {}));
     expect(m['id'], 'sample.timeline');
     expect(m['slots'], ['tl']);
-    expect(value(c.invoke('tl.timelines', const {}))['timelines'], [{'id': 'unicode-asc', 'label': 'Unicode 昇順', 'base': 'home'}]);
+    expect(value(c.invoke('tl.timelines', const {}))['timelines'], [{'id': 'unicode-asc', 'label': 'Unicode 順', 'base': 'home'}]);
+    // パラメーター (契約 v0.2): tl.params の RRL と既定値、tl.sort の params。
+    final params = value(c.invoke('tl.params', {'id': 'unicode-asc'}));
+    expect(params['defaults'], {'order': 'asc', 'key': 'body'});
+    expect(jsonEncode(params['root']), contains(r'$.settings.order'));
+    expect(value(c.invoke('tl.sort', {'id': 'unicode-asc', 'posts': [{'id': 'a', 'body': 'ん'}, {'id': 'b', 'body': 'あ'}], 'params': {'order': 'desc'}}))['order'], ['a', 'b']);
     final sorted = value(c.invoke('tl.sort', {'id': 'unicode-asc', 'posts': [{'id': 'a', 'body': 'ん'}, {'id': 'b', 'body': 'あ'}, {'id': 'c', 'body': 'abc'}]}));
     expect(sorted['order'], ['c', 'b', 'a']);
     expect(c.invoke('tl.sort', {'id': 'nope', 'posts': []})['ok'], isFalse);

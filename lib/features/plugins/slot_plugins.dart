@@ -62,6 +62,7 @@ class SlotManifest {
         if (permissions.contains('mute.words')) RasqHostFns.muteAdd,
         if (slots.contains(SlotIds.astellAction)) RasqHostFns.astellShare,
         if (slots.contains(SlotIds.composerMedia)) RasqHostFns.composerMediaReplace,
+        if (slots.contains(SlotIds.composerMedia)) RasqHostFns.composerMediaPreview,
         if (slots.contains(SlotIds.composerText)) RasqHostFns.composerTextReplace,
         if (slots.contains(SlotIds.viewerOverlay)) RasqHostFns.viewerOverlaySet,
       };
@@ -173,6 +174,17 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   final Map<String, void Function(Uint8List bytes, String mime, String? name)> _mediaReplace = {};
   final Map<String, void Function(int start, int end, String text)> _textReplace = {};
   final Map<String, void Function(RrlNode root)> _overlaySet = {};
+  final Map<String, void Function(Uint8List bytes, String mime)> _mediaPreview = {};
+
+  /// FOW の着き方 (D-169、契約 v0.2): プラグインの `fow.open` は呼び出し元の面の子として
+  /// 開く。呼び出し元(コンポーザー / ルーム FOW / メディアエディター)が入口で指定する。
+  final Map<String, ({String? ownerId, int column, bool barrierless})> _fowContext = {};
+
+  /// 開いているプラグイン FOW の entry id(エディターがプレビューを縮める判定に使う)。
+  final ValueNotifier<Set<String>> openFows = ValueNotifier(const {});
+
+  /// [barrierless] = 余白タップで閉じないし、外のボタン(エディターの丸ボタン列)にタップが通る。
+  void _setFowContext(SlotPlugin plugin, String? ownerId, int column, {bool barrierless = false}) => _fowContext[plugin.id] = (ownerId: ownerId, column: column, barrierless: barrierless);
 
   /// AsTell: プラグインごとの現在のトークン(FOW を開いている間の通知先)。
   final Map<String, String> _astellTokens = {};
@@ -182,6 +194,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   /// `state` の写し(dispose 用)。
   final List<SlotPlugin> _live = [];
+  bool _disposed = false;
 
   void _set(List<SlotPlugin> next) {
     _live
@@ -194,6 +207,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   List<SlotPlugin> build() {
     // dispose 時は `state` を触れない(ライフサイクル内の Ref 使用になる)ので写しを持つ。
     ref.onDispose(() {
+      _disposed = true;
       for (final p in _live) {
         p.runtime.dispose();
       }
@@ -253,6 +267,10 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       }
       runtime.dispose();
       runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns);
+      if (_disposed) {
+        runtime.dispose(); // 読み込み中にプロバイダーが捨てられた(テストの再構築など)
+        return null;
+      }
       final plugin = SlotPlugin(manifest: manifest, source: source, runtime: runtime);
       runtime.onAppFn = (fn, args) => _onAppFn(plugin, fn, args);
       _wireFow(plugin);
@@ -265,7 +283,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       ref.read(slotPluginsNoticeProvider.notifier).set('${manifest.name} を登録しました(${manifest.slots.join(', ')})');
       return plugin;
     } catch (e) {
-      ref.read(slotPluginsNoticeProvider.notifier).set('登録できませんでした: $e');
+      if (!_disposed) ref.read(slotPluginsNoticeProvider.notifier).set('登録できませんでした: $e');
       return null;
     }
   }
@@ -301,6 +319,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       'system' => FowPanelType.system,
       _ => FowPanelType.widget,
     };
+    final ctx = _fowContext[plugin.id];
     final fowSpec = FowSpec(
       type: type,
       initialHeightFactor: (spec['initialHeightFactor'] as num?)?.toDouble() ?? 0.45,
@@ -308,6 +327,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       cancelText: spec['cancelText'] as String? ?? (req.onCancel != null ? '閉じる' : null),
       confirmText: spec['confirmText'] as String?,
       dockAboveFooter: true,
+      // 呼び出し元の面と同じカラム(インライン FOW、D-169)。
+      columnIndex: ctx?.column ?? 0,
     );
     fowSpec.attachTop = spec['attachTop'] == true;
     if (req.anchorNode != null || req.anchorRole != null) {
@@ -319,16 +340,22 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       fowSpec.interceptCancel = () => controller.handleEvent('${req.document.scope}:${req.id}', 'cancel', fn: onCancelFn, payload: {'id': req.id});
     }
     final owner = '$_fowOwner.${plugin.id}';
+    final entryId = '$_fowPrefix${plugin.id}.${req.id}';
+    openFows.value = {...openFows.value, entryId};
     manager.show(RasqOverlayEntry(
-      id: '$_fowPrefix${plugin.id}.${req.id}',
+      id: entryId,
       layer: OverlayLayer.fow,
       alignment: Alignment.bottomCenter,
-      ownerId: req.parentId != null ? '$_fowPrefix${plugin.id}.${req.parentId}' : owner,
+      // 親: プラグイン内の親 FOW > 呼び出し元の面(コンポーザー / ルーム FOW / エディター、D-169)> プラグイン自身。
+      // 親が閉じれば連動して閉じる。
+      ownerId: req.parentId != null ? '$_fowPrefix${plugin.id}.${req.parentId}' : (ctx?.ownerId ?? owner),
       semanticsLabel: spec['title'] as String? ?? plugin.manifest.name,
-      barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
+      // エディターの下付き FOW (D-169) はバリア無し: 開いたまま左右の列を押せる。
+      barrierBehavior: ctx?.barrierless == true ? OverlayBarrierBehavior.none : OverlayBarrierBehavior.dismissDiscard,
       fow: fowSpec,
       onClosed: (reason, result) {
         if (reason == OverlayCloseReason.replaced) return;
+        openFows.value = {...openFows.value}..remove(entryId);
         (controller as WasmFowSurfaceHost).notifyFowClosed(req.id, reason: reason.name, result: result);
       },
       builder: (ctx, handle) => WasmFowView(controller: controller, request: req, rslParser: InlineSpans.parse),
@@ -338,6 +365,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   // ── アプリ向けホスト関数(fire-and-forget)────────────────────────
 
   void _onAppFn(SlotPlugin plugin, String fn, Map<String, Object?> args) {
+    if (_disposed) return;
     switch (fn) {
       case RasqHostFns.toast:
         _toast('${plugin.manifest.name}: ${args['message'] ?? ''}');
@@ -362,6 +390,16 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
             _toast('${plugin.manifest.name}: 画像を受け取れませんでした($e)');
           }
         }
+      case RasqHostFns.composerMediaPreview:
+        final cb = _mediaPreview['${args['token']}'];
+        final b64 = args['bytesB64'];
+        if (cb != null && b64 is String) {
+          try {
+            cb(base64Decode(b64), '${args['mimeType'] ?? 'image/png'}');
+          } catch (e) {
+            debugPrint('media preview: $e');
+          }
+        }
       case RasqHostFns.composerTextReplace:
         final cb = _textReplace['${args['token']}'];
         if (cb != null) cb((args['start'] as num?)?.toInt() ?? 0, (args['end'] as num?)?.toInt() ?? 0, '${args['text'] ?? ''}');
@@ -373,6 +411,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   }
 
   void _toast(String message) {
+    if (_disposed) return;
     final ctx = ref.read(rootMessengerKeyProvider).currentState;
     ctx?.showSnackBar(SnackBar(content: Text(message)));
   }
@@ -419,7 +458,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   // ── スロット別の入口(アプリの各所から呼ぶ)──────────────────────
 
   /// AsTell (CONTRACT §2.1): プラグインアクションから選ばれた。
-  Future<void> astellOpen(SlotPlugin plugin, AstellSessionState s) async {
+  Future<void> astellOpen(SlotPlugin plugin, AstellSessionState s, {String? fowOwner, int column = 0}) async {
+    _setFowContext(plugin, fowOwner, column);
     final token = 'astell-${DateTime.now().microsecondsSinceEpoch}';
     _astellTokens[plugin.id] = token;
     _seenShares = {for (final x in s.shares) x.id};
@@ -470,7 +510,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   }
 
   /// コンポーザーの添付 (CONTRACT §2.2)。戻りは即時差し替え(あれば)。
-  Future<void> mediaEdit(SlotPlugin plugin, {required int index, required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, String? name) onReplace}) async {
+  Future<void> mediaEdit(SlotPlugin plugin, {required int index, required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, String? name) onReplace, String? fowOwner, int column = 0}) async {
+    _setFowContext(plugin, fowOwner, column);
     final token = 'media-${DateTime.now().microsecondsSinceEpoch}';
     _mediaReplace[token] = onReplace;
     final v = await plugin.value('media.edit', {'token': token, 'index': index, 'name': name, 'mimeType': mimeType, 'bytesB64': base64Encode(bytes)});
@@ -483,8 +524,70 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     }
   }
 
+  /// メディアエディター (D-169、契約 v0.2 §2.2): `media.edit` を開いて genres を受ける。
+  /// 戻り null = エディター形ではない(旧形 / 即差し替え形)。
+  Future<MediaEditSession?> mediaEditorOpen(SlotPlugin plugin, {required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime) onPreview, required void Function(Uint8List bytes, String mime, String? name) onReplace, String? fowOwner, int column = 0}) async {
+    _setFowContext(plugin, fowOwner, column, barrierless: true);
+    final token = 'media-${DateTime.now().microsecondsSinceEpoch}';
+    _mediaPreview[token] = onPreview;
+    _mediaReplace[token] = onReplace;
+    final v = await plugin.value('media.edit', {'token': token, 'index': 0, 'name': name, 'mimeType': mimeType, 'bytesB64': base64Encode(bytes)});
+    if (v == null) {
+      _mediaPreview.remove(token);
+      _mediaReplace.remove(token);
+      return null;
+    }
+    if (v['bytesB64'] is String) {
+      try {
+        onReplace(base64Decode(v['bytesB64'] as String), '${v['mimeType'] ?? mimeType}', v['name'] as String?);
+      } catch (_) {}
+      return null;
+    }
+    final genres = <MediaGenre>[];
+    for (final g in (v['genres'] as List? ?? const [])) {
+      if (g is! Map || g['id'] is! String) continue;
+      genres.add(MediaGenre(
+        id: g['id'] as String,
+        label: g['label'] as String? ?? g['id'] as String,
+        icon: g['icon'] as String?,
+        actions: [
+          for (final a in (g['actions'] as List? ?? const []))
+            if (a is Map && a['id'] is String) MediaAction(id: a['id'] as String, label: a['label'] as String? ?? a['id'] as String, icon: a['icon'] as String?),
+        ],
+      ));
+    }
+    return MediaEditSession(plugin: plugin, token: token, genres: genres);
+  }
+
+  Future<void> mediaAction(MediaEditSession s, String genre, String action) => s.plugin.value('media.action', {'token': s.token, 'genre': genre, 'action': action});
+
+  /// 適用: 本サイズの結果(戻り)か、`composer.media.replace` 経由。
+  Future<(Uint8List, String, String?)?> mediaCommit(MediaEditSession s) async {
+    final overlay = ref.read(overlayManagerProvider);
+    final v = await s.plugin.value('media.commit', {'token': s.token});
+    _mediaPreview.remove(s.token);
+    _mediaReplace.remove(s.token);
+    if (!_disposed) overlay.closeOwnedBy('$_fowOwner.${s.plugin.id}');
+    if (v != null && v['bytesB64'] is String) {
+      try {
+        return (base64Decode(v['bytesB64'] as String), '${v['mimeType'] ?? 'image/png'}', v['name'] as String?);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Future<void> mediaCancel(MediaEditSession s) async {
+    _mediaPreview.remove(s.token);
+    _mediaReplace.remove(s.token);
+    if (_disposed) return;
+    final overlay = ref.read(overlayManagerProvider);
+    await s.plugin.value('media.cancel', {'token': s.token});
+    if (!_disposed) overlay.closeOwnedBy('$_fowOwner.${s.plugin.id}');
+  }
+
   /// コンポーザー本文 (CONTRACT §2.3)。`token` は入力欄ごとに 1 つ。
-  void textChanged(SlotPlugin plugin, {required String token, required String text, required int selectionStart, required int selectionEnd, required void Function(int start, int end, String text) onReplace}) {
+  void textChanged(SlotPlugin plugin, {required String token, required String text, required int selectionStart, required int selectionEnd, required void Function(int start, int end, String text) onReplace, String? fowOwner, int column = 0}) {
+    _setFowContext(plugin, fowOwner, column);
     _textReplace[token] = onReplace;
     plugin.value('text.changed', {'token': token, 'text': text, 'selectionStart': selectionStart, 'selectionEnd': selectionEnd, 'trigger': ?triggerBeforeCursor(text, selectionStart)});
   }
@@ -545,8 +648,25 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     return out;
   }
 
-  Future<List<Post>> sort(SlotPlugin plugin, String id, List<Post> posts) async {
-    final v = await plugin.value('tl.sort', {'id': id, 'posts': [for (final x in posts) SnsWire.post(x)]});
+  /// `tl.params` (契約 v0.2 §2.6): ノードを設定 FOW に差し込む RRL と既定値。無ければ null。
+  Future<({RrlNode root, Map<String, Object?> defaults})?> tlParams(SlotPlugin plugin, String id) async {
+    final v = await plugin.value('tl.params', {'id': id});
+    final root = v?['root'];
+    if (root is! Map) return null;
+    return (root: RrlNode.fromJson(root.cast<String, Object?>()), defaults: (v!['defaults'] as Map?)?.cast<String, Object?>() ?? const {});
+  }
+
+  /// `slot:<pluginId>:<tlId>` で引く(ノードグラフの `plugin:` ステップから)。
+  Future<List<Post>> sortById(String slotTlId, List<Post> posts, {Map<String, Object?> params = const {}}) async {
+    final parts = slotTlId.startsWith('slot:') ? slotTlId.substring(5).split(':') : const <String>[];
+    if (parts.length < 2) return posts;
+    final plugin = state.where((p) => p.id == parts.first).firstOrNull;
+    if (plugin == null) return posts;
+    return sort(plugin, parts.sublist(1).join(':'), posts, params: params);
+  }
+
+  Future<List<Post>> sort(SlotPlugin plugin, String id, List<Post> posts, {Map<String, Object?> params = const {}}) async {
+    final v = await plugin.value('tl.sort', {'id': id, 'posts': [for (final x in posts) SnsWire.post(x)], 'params': params});
     final order = v?['order'];
     if (order is! List) return posts;
     final byId = {for (final x in posts) x.id: x};
@@ -568,3 +688,26 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
 /// アプリ直下の ScaffoldMessenger(トーストの出口)。`RasqApp` が付ける。
 final rootMessengerKeyProvider = Provider<GlobalKey<ScaffoldMessengerState>>((ref) => GlobalKey<ScaffoldMessengerState>());
+
+/// メディアエディターの 1 セッション (D-169)。
+class MediaEditSession {
+  const MediaEditSession({required this.plugin, required this.token, required this.genres});
+  final SlotPlugin plugin;
+  final String token;
+  final List<MediaGenre> genres;
+}
+
+class MediaGenre {
+  const MediaGenre({required this.id, required this.label, this.icon, this.actions = const []});
+  final String id;
+  final String label;
+  final String? icon;
+  final List<MediaAction> actions;
+}
+
+class MediaAction {
+  const MediaAction({required this.id, required this.label, this.icon});
+  final String id;
+  final String label;
+  final String? icon;
+}
