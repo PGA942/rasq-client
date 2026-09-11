@@ -18,6 +18,7 @@ import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
 import '../features/plugins/media_editor_screen.dart';
+import '../features/plugins/pro_media_editor_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
 import '../features/settings/mute_block_screen.dart';
 import '../features/settings/settings_dsl.dart';
@@ -60,6 +61,7 @@ abstract final class Routes {
   static const onboarding = '/onboarding';
   static const viewer = '/viewer';
   static const mediaEditor = '/media-editor';
+  static const mediaEditorPro = '/media-editor/pro';
   static const lists = '/lists';
   static const bookmarks = '/bookmarks';
   static const profileEdit = '/profile/edit';
@@ -223,6 +225,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: Routes.mediaEditor,
             parentNavigatorKey: _appNavigatorKey,
             pageBuilder: (_, s) => CustomTransitionPage(child: MediaEditorScreen(args: s.extra! as MediaEditorArgs), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child)),
+          ),
+          // 添付の加工 (D-173): pro_image_editor(基本)→ プラグインへバイパス。
+          GoRoute(
+            path: Routes.mediaEditorPro,
+            parentNavigatorKey: _appNavigatorKey,
+            pageBuilder: (_, s) => CustomTransitionPage(child: ProMediaEditorScreen(args: s.extra! as ProMediaEditorArgs), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child)),
           ),
           GoRoute(path: Routes.catalog, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const CatalogScreen()),
           // プラグインストア (M4 / D-120)。

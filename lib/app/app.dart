@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:material_ui/material_ui.dart' as mui;
 
 import '../features/plugins/slot_plugins.dart';
 import '../features/settings/settings_dsl.dart';
@@ -24,6 +25,8 @@ class RasqApp extends ConsumerWidget {
       // スロットプラグインのトースト出口 (D-167)。
       scaffoldMessengerKey: ref.watch(rootMessengerKeyProvider),
       debugShowCheckedModeBanner: false,
+      // pro_image_editor (D-173) は material_ui の AppBar/Scaffold を使うので、その MaterialLocalizations も要る。
+      localizationsDelegates: const [mui.DefaultMaterialLocalizations.delegate],
       theme: RasqTheme.light(),
       darkTheme: RasqTheme.dark(),
       themeMode: switch (mode) {
