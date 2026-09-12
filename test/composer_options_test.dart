@@ -253,8 +253,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('キャンセル').first);
     await tester.pumpAndSettle();
-    expect(find.text('書きかけの投稿があります'), findsOneWidget);
-    await tester.tap(find.text('下書きに保存して閉じる'));
+    // ポップアップ「下書きに保存しますか」(保存 / キャンセル)。キャンセルは編集に戻る。
+    expect(find.text('下書きに保存しますか'), findsOneWidget);
+    await tester.tap(find.text('キャンセル').last);
+    await tester.pumpAndSettle();
+    expect(find.text('下書きに保存しますか'), findsNothing);
+    expect(find.byType(TextField), findsWidgets);
+    await tester.tap(find.text('キャンセル').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsNothing);
 

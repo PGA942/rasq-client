@@ -167,8 +167,8 @@ void main() {
     // 下書きは添付も持つ (D-174): 閉じて開き直しても画像が消えない。
     await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
-    if (find.text('下書きに保存して閉じる').evaluate().isNotEmpty) {
-      await tester.tap(find.text('下書きに保存して閉じる'));
+    if (find.text('保存').evaluate().isNotEmpty) {
+      await tester.tap(find.text('保存'));
       await tester.pumpAndSettle();
     }
     expect(find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage), findsNothing);

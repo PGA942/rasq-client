@@ -451,23 +451,25 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   ///   「下書きに保存 / 破棄」をポップアップで確認してから閉じる。
   /// - 通常/引用: 確認なしで閉じる(dispose で自動的に下書きへ入る)。
   Future<void> _handleClose() async {
-    if (!widget.resident || !_hasDraftContent) {
-      if (!_hasDraftContent) _skipDraftOnDispose = true; // メンションだけなら下書きも残さない
+    if (!_hasDraftContent) {
+      _skipDraftOnDispose = true; // メンションだけなら下書きも残さない
       widget.onClose?.call();
       return;
     }
+    // メンション以外の入力があるときのキャンセル (D-176 改): ポップアップ「下書きに保存しますか」
+    // (開いている下書きなら「下書きを上書きしますか」)。保存 = 保存して閉じる / キャンセル = 編集に戻る。
     final manager = ref.read(overlayManagerProvider);
-    final action = await manager.showBottomSheet<String>(
+    final editing = _draftId != null;
+    final save = await manager.showAlert(
       id: 'composer.close',
-      title: '書きかけの投稿があります',
-      builder: (_) => Column(mainAxisSize: MainAxisSize.min, children: [
-        RasqListTile(title: '下書きに保存して閉じる', onTap: () => manager.close('composer.close', result: 'save')),
-        RasqDestructiveListTile(title: '破棄して閉じる', onTap: () => manager.close('composer.close', result: 'discard')),
-      ]),
+      title: editing ? '下書きを上書きしますか' : '下書きに保存しますか',
+      message: editing ? '開いている下書きを今の内容で上書きして閉じます。' : '今の内容を下書きに残して閉じます。',
+      confirmText: editing ? '上書き' : '保存',
+      cancelText: 'キャンセル',
     );
-    if (!mounted || action == null) return;
-    if (action == 'save') _saveDraft();
-    _skipDraftOnDispose = true; // 保存済み or 破棄 — dispose では触らない
+    if (!mounted || !save) return;
+    _saveDraft();
+    _skipDraftOnDispose = true; // 保存済み — dispose では触らない
     widget.onClose?.call();
   }
 
