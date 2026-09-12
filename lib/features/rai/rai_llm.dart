@@ -24,38 +24,77 @@ class RaiLlmStatus {
   static const initial = RaiLlmStatus(RaiLlmPhase.notInstalled);
 }
 
+/// 推論エンジン (D-182): GGUF は llama.cpp(fllama)、.litertlm は LiteRT-LM(flutter_gemma)。
+enum RaiEngine {
+  gguf,
+  litertlm;
+
+  String get label => this == RaiEngine.gguf ? 'llama.cpp / GGUF' : 'LiteRT-LM';
+}
+
 /// 端末に入れるモデルの候補。
 @immutable
 class RaiModelSpec {
-  const RaiModelSpec({required this.id, required this.label, required this.fileName, required this.url, required this.sizeMb, required this.family});
+  const RaiModelSpec({required this.id, required this.label, required this.fileName, required this.url, required this.sizeMb, required this.family, this.engine = RaiEngine.gguf});
   final String id;
   final String label;
   final String fileName;
   final String url;
   final int sizeMb;
 
-  /// flutter_gemma の ModelType 名(general / qwen3 …)。
+  /// flutter_gemma の ModelType 名(general / qwen3 …)。GGUF ではチャットテンプレートを
+  /// ファイルから読むので使わない。
   final String family;
+  final RaiEngine engine;
 }
 
+/// 既定 = 4B 級 / 3〜4bit の GGUF(ワイヤーフレームの Agents-A1-4B = InternScience/Agents-A1-4B)。
 const raiModelSpecs = <RaiModelSpec>[
   RaiModelSpec(
+    id: 'agents-a1-4b-q4km',
+    label: 'Agents-A1 4B (Q4_K_M)',
+    fileName: 'InternScience_Agents-A1-4B-Q4_K_M.gguf',
+    url: 'https://huggingface.co/bartowski/InternScience_Agents-A1-4B-GGUF/resolve/main/InternScience_Agents-A1-4B-Q4_K_M.gguf',
+    sizeMb: 2885,
+    family: 'qwen3',
+  ),
+  RaiModelSpec(
+    id: 'agents-a1-4b-q3km',
+    label: 'Agents-A1 4B (Q3_K_M・軽量)',
+    fileName: 'InternScience_Agents-A1-4B-Q3_K_M.gguf',
+    url: 'https://huggingface.co/bartowski/InternScience_Agents-A1-4B-GGUF/resolve/main/InternScience_Agents-A1-4B-Q3_K_M.gguf',
+    sizeMb: 2447,
+    family: 'qwen3',
+  ),
+  RaiModelSpec(
+    id: 'qwen3.5-4b-q4km',
+    label: 'Qwen3.5 4B (Q4_K_M)',
+    fileName: 'Qwen3.5-4B-Q4_K_M.gguf',
+    url: 'https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf',
+    sizeMb: 2741,
+    family: 'qwen3',
+  ),
+  RaiModelSpec(
     id: 'lfm2.5-2.6b',
-    label: 'LFM2.5 2.6B (int4)',
+    label: 'LFM2.5 2.6B (LiteRT int4)',
     fileName: 'LFM2.5-2.6B_int4.litertlm',
     url: 'https://huggingface.co/litert-community/LFM2.5-2.6B/resolve/main/LFM2.5-2.6B_int4.litertlm',
     sizeMb: 1668,
     family: 'general',
+    engine: RaiEngine.litertlm,
   ),
   RaiModelSpec(
     id: 'qwen3.5-4b',
-    label: 'Qwen3.5 4B (mixed int4)',
+    label: 'Qwen3.5 4B (LiteRT mixed int4)',
     fileName: 'Qwen3.5-4B_mixed_int4.litertlm',
     url: 'https://huggingface.co/litert-community/Qwen3.5-4B/resolve/main/Qwen3.5-4B_mixed_int4.litertlm',
     sizeMb: 2754,
     family: 'qwen3',
+    engine: RaiEngine.litertlm,
   ),
 ];
+
+RaiModelSpec raiModelSpecById(String? id) => raiModelSpecs.where((m) => m.id == id).firstOrNull ?? raiModelSpecs.first;
 
 /// バーのチップに出す端末内モデルの呼び名(ワイヤーフレーム)。
 const raiLocalModelLabel = 'Agents-A1-4B';
