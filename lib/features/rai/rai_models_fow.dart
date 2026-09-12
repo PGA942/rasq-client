@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import 'rai_layout.dart';
 import 'rai_llm.dart';
 
 /// LLM モデルの FOW (D-183): タイルに ローカル / クラウド、集計された完遂率(35B 未満だけ集計、
@@ -11,12 +12,13 @@ import 'rai_llm.dart';
 /// 削除)。バーのモデルチップから開く。
 const raiModelsFowId = 'fow.rai.models';
 
-Future<void> showRaiModelsFow(WidgetRef ref, {int? column}) async {
+Future<void> showRaiModelsFow(WidgetRef ref, BuildContext context, {int? column}) async {
   final manager = ref.read(overlayManagerProvider);
   if (manager.contains(raiModelsFowId)) return;
   await manager.showFow<void>(
     id: raiModelsFowId,
-    spec: FowSpec(title: 'モデル', cancelText: '閉じる', initialHeightFactor: 0.7, maxHeightFactor: 0.92, columnIndex: column ?? 0),
+    // 幅は入力ウィジェットに揃える (D-185)。
+    spec: FowSpec(title: 'モデル', cancelText: '閉じる', initialHeightFactor: 0.7, maxHeightFactor: 0.92, columnIndex: column ?? 0, maxWidth: raiPanelWidth(context)),
     builder: (_, _) => const RaiModelsBody(),
   );
 }

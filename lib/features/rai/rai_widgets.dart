@@ -358,7 +358,7 @@ List<String> splitSpeechLines(String text) {
 /// RAi の発言 (D-182、ワイヤーフレーム p.4): 入力ウィジェット(バー)の上に**1 行ずつ**。
 /// 左に RAi アイコン、右に n/m と ▶(次の行 / 次の手順)、✕。
 class RaiSpeech extends StatelessWidget {
-  const RaiSpeech({super.key, required this.line, required this.index, required this.count, required this.hasMore, required this.streaming, required this.onNext, required this.onClose, this.error = false});
+  const RaiSpeech({super.key, required this.line, required this.index, required this.count, required this.hasMore, required this.streaming, required this.onNext, required this.onClose, this.error = false, this.onHistory});
   final String line;
   final int index;
   final int count;
@@ -371,6 +371,9 @@ class RaiSpeech extends StatelessWidget {
   final bool error;
   final VoidCallback onNext;
   final VoidCallback onClose;
+
+  /// ↑: 発言の履歴 FOW (D-185)。
+  final VoidCallback? onHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -390,11 +393,13 @@ class RaiSpeech extends StatelessWidget {
               onTap: hasMore ? onNext : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Text(line, key: const ValueKey('rai.bubble'), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
+                // 高さは可変 (D-185): 長いエラー文も全部見える。
+                child: Text(line, key: const ValueKey('rai.bubble'), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
               ),
             ),
           ),
           if (count > 1 || streaming) Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Text(streaming ? '${index + 1}/$count…' : '${index + 1}/$count', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+          RasqIconButton(key: const ValueKey('rai.history'), icon: Icons.arrow_upward, size: 20, tooltip: '発言の履歴', onPressed: onHistory),
           RasqIconButton(key: const ValueKey('rai.next'), icon: hasMore ? Icons.play_arrow : Icons.check, size: 22, tooltip: hasMore ? '次へ' : '了解(閉じる)', onPressed: onNext),
           RasqIconButton(key: const ValueKey('rai.speech.close'), icon: Icons.close, size: 18, tooltip: '閉じる', onPressed: onClose),
         ]),

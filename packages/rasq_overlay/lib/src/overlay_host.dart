@@ -423,9 +423,11 @@ class _FowColumn extends StatelessWidget {
             final gapBottom = !pinned && anchor == null && !attachTopEff ? lift : 0.0;
             if (s.childGapTop.value != gapTop) s.childGapTop.value = gapTop;
             if (s.childGapBottom.value != gapBottom) s.childGapBottom.value = gapBottom;
+            // 最大幅 (D-185): 指定があればカラムの中央に寄せる。
+            final panelW = s.maxWidth != null && s.maxWidth! < slot.width ? s.maxWidth! : slot.width;
             children.add(Positioned(
-              left: slot.x,
-              width: slot.width,
+              left: slot.x + (slot.width - panelW) / 2,
+              width: panelW,
               top: 0,
               bottom: 0,
               child: Offstage(

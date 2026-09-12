@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
@@ -115,6 +116,24 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('フォールアップ先'));
     expect(find.byKey(const ValueKey('rai.ring.error')), findsOneWidget);
     expect(llm.released, 1);
+    // ↑ → 発言の履歴 FOW (D-185): 全文のタイル + コピー、幅は入力ウィジェットと同じ。
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
+      return null;
+    });
+    await tester.tap(find.byKey(const ValueKey('rai.history')));
+    await tester.pumpAndSettle();
+    expect(find.text('RAi の発言'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.history.0')), findsOneWidget);
+    final fowPanel = find.byWidgetPredicate((w) => w is Material && w.elevation == 8);
+    expect(tester.getSize(fowPanel).width, closeTo(tester.getSize(find.byType(RasqApp)).width - 16, 1));
+    await tester.tap(find.byKey(const ValueKey('rai.history.copy.0')));
+    await tester.pumpAndSettle();
+    expect(copied, contains('フォールアップ先(サーバー側)が未接続です'));
+    await tester.tap(find.text('閉じる').last);
+    await tester.pumpAndSettle();
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null);
     final screen = tester.getSize(find.byType(RasqApp));
     final overlayMascot = find.descendant(of: find.byType(RaiMascotLayer), matching: find.byType(RaiMascot));
     expect(tester.getCenter(overlayMascot).dx, closeTo(screen.width / 2, 1));
@@ -184,6 +203,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.models.open')));
     await tester.pumpAndSettle();
     expect(find.text('モデル'), findsOneWidget); // FOW タイトル
+    expect(tester.getSize(find.byWidgetPredicate((w) => w is Material && w.elevation == 8)).width, closeTo(tester.getSize(find.byType(RasqApp)).width - 16, 1)); // 幅は入力ウィジェットに揃う (D-185)
     expect(find.text('ローカル'), findsWidgets);
     expect(find.text('完遂率 -%'), findsWidgets);
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.ram.agents-a1-4b-q4km'))).data, 'メモリ: 動作可'); // 8 GB の端末

@@ -40,6 +40,7 @@ class RaiState {
     this.history = const [],
     this.error = false,
     this.lineIndex = 0,
+    this.log = const [],
   });
 
   final RaiMode mode;
@@ -70,6 +71,9 @@ class RaiState {
   /// 発言のうち今見せている行 (D-182: 1 行ずつ)。
   final int lineIndex;
 
+  /// 発言の履歴 (D-185): 新しい順。↑ で履歴 FOW。
+  final List<RaiUtterance> log;
+
   List<String> get lines => bubble == null ? const [] : splitSpeechLines(bubble!);
   String? get currentLine => lines.isEmpty ? (bubble == null ? null : '…') : lines[lineIndex.clamp(0, lines.length - 1)];
   bool get hasMoreLines => lineIndex + 1 < lines.length;
@@ -90,6 +94,7 @@ class RaiState {
     List<String>? history,
     bool? error,
     int? lineIndex,
+    List<RaiUtterance>? log,
   }) =>
       RaiState(
         mode: mode ?? this.mode,
@@ -105,12 +110,29 @@ class RaiState {
         history: history ?? this.history,
         error: error ?? (bubble is String ? false : this.error),
         lineIndex: lineIndex ?? this.lineIndex,
+        log: log ?? this.log,
       );
 
   static const _keep = Object();
 }
 
+/// 発言 1 つ(履歴 FOW のタイル)。
+@immutable
+class RaiUtterance {
+  const RaiUtterance({required this.text, required this.at, this.query, this.error = false});
+  final String text;
+  final DateTime at;
+  final String? query;
+  final bool error;
+}
+
 class RaiController extends Notifier<RaiState> {
+  /// 確定した発言を履歴に積む(50 件まで)。
+  void _record(String text, {bool error = false}) {
+    if (text.trim().isEmpty || text == '…') return;
+    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error), ...state.log].take(50).toList());
+  }
+
   @override
   RaiState build() => const RaiState();
 
@@ -171,6 +193,7 @@ class RaiController extends Notifier<RaiState> {
       }
       if (seq != _answerSeq) return;
       state = state.copyWith(busy: false, bubble: text.trim().isEmpty ? '(返事がありませんでした)' : text.trim());
+      _record(state.bubble!);
       return;
     } on RaiLlmException catch (e) {
       if (seq != _answerSeq) return;
@@ -179,10 +202,12 @@ class RaiController extends Notifier<RaiState> {
         final reply = await ref.read(raiFallUpProvider).chat(q);
         if (seq != _answerSeq) return;
         state = state.copyWith(busy: false, bubble: reply);
+        _record(reply);
       } on RaiLlmException catch (f) {
         if (seq != _answerSeq) return;
         final lines = ['端末内モデル: ${e.message}', 'フォールアップ: ${f.message}', ?fallbackText];
         state = state.copyWith(busy: false, bubble: lines.join('\n'), error: true);
+        _record(lines.join('\n'), error: true);
       }
     }
   }
@@ -232,6 +257,7 @@ class RaiController extends Notifier<RaiState> {
     }
     if (state.stepIndex != i) return; // 途中で別の質問に変わった
     state = state.copyWith(busy: false, bubble: step.text, target: rect, lineIndex: 0);
+    _record(step.text);
   }
 }
 
