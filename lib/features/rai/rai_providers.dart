@@ -45,7 +45,7 @@ class RaiState {
   /// バーの上段(見出し / 入力)を畳んでいないか。
   final bool expanded;
 
-  /// 入力欄を出しているか(「質問する」)。
+  /// 入力欄にフォーカスを入れる(ログインの「Raiのインストラクチャ」など)。入力欄自体は常に上段。
   final bool asking;
   final bool busy;
   final String? query;

@@ -199,14 +199,14 @@ class RaiStatusRing extends StatelessWidget {
       );
 }
 
-/// RAi バー (D-179、ワイヤーフレーム p.4): 「^ 困ったとき、お手伝いします！」+
-/// モデルチップ / 状態リング / トグル / 質問する。「質問する」で上段が入力欄になる。
+/// RAi バー (D-179 / D-180、ワイヤーフレーム p.4): 上段は**そのまま入力欄**(ヒント = 「困ったとき、
+/// お手伝いします！」、質問後はその文がヒントに)。左の ^ で下段(モデルチップ / 状態リング /
+/// トグル / 質問する)を畳む。「質問する」= 送信。
 class RaiBar extends StatefulWidget {
-  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onAskTap, required this.onSubmit, required this.onClose});
+  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose});
   final RaiState state;
   final VoidCallback onToggleExpanded;
   final ValueChanged<RaiMode> onMode;
-  final VoidCallback onAskTap;
   final ValueChanged<String> onSubmit;
   final VoidCallback onClose;
 
@@ -216,51 +216,75 @@ class RaiBar extends StatefulWidget {
 
 class _RaiBarState extends State<RaiBar> {
   final _input = TextEditingController();
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.state.asking) WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
+  }
+
+  @override
+  void didUpdateWidget(RaiBar old) {
+    super.didUpdateWidget(old);
+    if (widget.state.asking && !old.state.asking) _focus.requestFocus();
+  }
 
   @override
   void dispose() {
     _input.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
   void _submit() {
     final t = _input.text.trim();
-    if (t.isEmpty) return;
+    if (t.isEmpty) {
+      _focus.requestFocus();
+      return;
+    }
     widget.onSubmit(t);
     _input.clear();
+    _focus.unfocus();
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final s = widget.state;
-    final headline = s.query ?? '困ったとき、お手伝いします！';
+    final hint = s.query ?? '困ったとき、お手伝いします！';
     return Material(
       color: scheme.surface,
       elevation: 6,
       shape: RoundedRectangleBorder(side: BorderSide(color: scheme.onSurface, width: 1.2), borderRadius: BorderRadius.circular(RasqSizes.radiusLg)),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.sm),
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.sm),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          // 上段: 見出し(タップで畳む)/ 入力欄。
+          // 上段: ^(畳む)+ 入力欄 + ✕。
           SizedBox(
             height: 40,
-            child: s.asking
-                ? Row(children: [
-                    Expanded(child: RasqInput(key: const ValueKey('rai.input'), controller: _input, hintText: s.mode == RaiMode.instruction ? '操作を聞く(例: Bluesky でログイン)' : 'RAi に相談..', autofocus: true, onSubmitted: (_) => _submit())),
-                    RasqIconButton(icon: Icons.send, size: 20, tooltip: '送信', onPressed: _submit),
-                  ])
-                : InkWell(
-                    key: const ValueKey('rai.headline'),
-                    onTap: widget.onToggleExpanded,
-                    child: Row(children: [
-                      Icon(s.expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 22),
-                      const SizedBox(width: RasqSpacing.sm),
-                      Expanded(child: Text(headline, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      RasqIconButton(icon: Icons.close, size: 18, tooltip: 'RAi を閉じる', onPressed: widget.onClose),
-                    ]),
+            child: Row(children: [
+              RasqIconButton(key: const ValueKey('rai.headline'), icon: s.expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 22, tooltip: s.expanded ? '畳む' : '広げる', onPressed: widget.onToggleExpanded),
+              Expanded(
+                child: TextField(
+                  key: const ValueKey('rai.input'),
+                  controller: _input,
+                  focusNode: _focus,
+                  style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700),
+                  decoration: InputDecoration(
+                    hintText: hint,
+                    hintStyle: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface),
+                    isDense: true,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xs, vertical: 10),
                   ),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _submit(),
+                ),
+              ),
+              RasqIconButton(icon: Icons.close, size: 18, tooltip: 'RAi を閉じる', onPressed: widget.onClose),
+            ]),
           ),
           if (s.expanded)
             Padding(
@@ -286,8 +310,8 @@ class _RaiBarState extends State<RaiBar> {
                 const SizedBox(width: RasqSpacing.sm),
                 FilledButton(
                   key: const ValueKey('rai.ask'),
-                  onPressed: widget.onAskTap,
-                  style: FilledButton.styleFrom(backgroundColor: s.asking ? scheme.surfaceContainerHighest : RasqColors.link, foregroundColor: s.asking ? scheme.onSurface : Colors.white, minimumSize: const Size(0, 34), padding: const EdgeInsets.symmetric(horizontal: 14), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  onPressed: _submit,
+                  style: FilledButton.styleFrom(backgroundColor: RasqColors.link, foregroundColor: Colors.white, minimumSize: const Size(0, 34), padding: const EdgeInsets.symmetric(horizontal: 14), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                   child: const Text('質問する'),
                 ),
               ]),

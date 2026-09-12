@@ -64,7 +64,6 @@ class _RaiBarHost extends ConsumerWidget {
         state: s,
         onToggleExpanded: n.toggleExpanded,
         onMode: n.setMode,
-        onAskTap: () => n.setAsking(!s.asking),
         onSubmit: n.ask,
         onClose: () => hideRai(ref),
       ),

@@ -78,11 +78,10 @@ void main() {
     expect(find.text('困ったとき、お手伝いします！'), findsOneWidget);
     expect(find.text(RaiMode.assistant.modelName), findsOneWidget);
     expect(c.read(raiProvider).mode, RaiMode.assistant);
+    // 上段はそのまま入力欄(ヒント = 困ったとき…、D-180)。「質問する」で送信。
     // アシスタントの返事は中央固定(RAi が画面中央)。
-    await tester.tap(find.byKey(const ValueKey('rai.ask')));
-    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('rai.input')), '何かできる？');
-    await tester.tap(find.byTooltip('送信'));
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('第二期'));
     final screen = tester.getSize(find.byType(RasqApp));
@@ -95,10 +94,8 @@ void main() {
     expect(find.text(RaiMode.instruction.modelName), findsOneWidget);
     expect(find.byKey(const ValueKey('rai.bubble')), findsNothing);
     // 質問「投稿したい」→ ホームへ移動 → 「投稿」ボタンの脇に RAi + 吹き出し + ハイライト。
-    await tester.tap(find.byKey(const ValueKey('rai.ask')));
-    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿したい');
-    await tester.tap(find.byTooltip('送信'));
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     expect(find.byType(RaiHomeScreen), findsNothing); // ディープリンクでホームへ
     expect(find.text('右下の「投稿」でコンポーザーが開きます'), findsOneWidget);
@@ -120,10 +117,8 @@ void main() {
     // 履歴が RAi ホームに並ぶ。
     expect(c.read(raiProvider).history.first, '投稿したい');
     // 「Blueskyでログイン」→ ログイン画面へ遷移してラベルのボタンを指差す。
-    await tester.tap(find.byKey(const ValueKey('rai.ask')));
-    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('rai.input')), 'Blueskyでログインしたい');
-    await tester.tap(find.byTooltip('送信'));
+    await tester.testTextInput.receiveAction(TextInputAction.send); // キーボードの送信でも
     await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.text('「Blueskyでログイン」をクリックしてください'), findsOneWidget);
@@ -152,6 +147,7 @@ void main() {
     await tester.tap(find.text('Raiのインストラクチャ'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rai.input')), findsOneWidget);
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('rai.input'))).focusNode?.hasFocus, isTrue); // 入力欄にフォーカス
     expect(find.text(RaiMode.instruction.modelName), findsOneWidget);
   });
 }

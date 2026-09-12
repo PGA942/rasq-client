@@ -133,7 +133,14 @@ class RasqSidebar extends ConsumerWidget {
                 RasqListTile(title: '全ての設定', leading: const Icon(Icons.settings_outlined), chevron: false, onTap: () => go(Routes.settings)),
                 RasqListTile(title: 'ヘルプ', leading: const Icon(Icons.help_outline), chevron: false, onTap: () {}),
                 // RAi ホーム (D-179): サイドメニューの下部。
-                RasqListTile(key: const ValueKey('sidebar.rai'), title: 'RAi', leading: const Icon(Icons.smart_toy_outlined), chevron: false, onTap: () => go(Routes.rai)),
+                RasqListTile(key: const ValueKey('sidebar.rai'), title: 'RAi', leading: Container(
+                  width: 28,
+                  height: 28,
+                  padding: const EdgeInsets.all(2),
+                  // 白い頭が明るい面で消えないよう薄い下地を敷く。
+                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(6)),
+                  child: Image.asset('assets/images/rai_icon.png', semanticLabel: 'RAi'),
+                ), chevron: false, onTap: () => go(Routes.rai)),
               ]),
             ),
             RasqListTile(title: 'コンポーネントカタログ (dev)', leading: const Icon(Icons.widgets_outlined), chevron: false, divider: false, onTap: () => go(Routes.catalog)),
