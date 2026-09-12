@@ -16,6 +16,7 @@ import 'package:rasq_client/features/plugins/media_editor_screen.dart';
 import 'package:rasq_client/features/plugins/pro_media_editor_screen.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/post/share_fow.dart';
+import 'package:rasq_client/features/compose/drafts_fow.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -267,5 +268,53 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 300));
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_snap_target.png'));
+  });
+
+  testWidgets('plugin action bundle + edit sheet + drafts fow (D-176)', (tester) async {
+    fakes['act'] = () => FakeSlotRuntime(
+          manifest: {
+            'id': 'sample.post-action', 'name': '投稿ボタン', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action'], 'permissions': ['fow.widget'],
+            'actions': [
+              {'id': 'later', 'label': '後で読む', 'icon': 'bookmark', 'tags': ['Favorite', 'Bookmark', 'Star']},
+              {'id': 'copy', 'label': '本文をコピー', 'icon': 'content_copy', 'tags': ['Copy']},
+              {'id': 'quoteDraft', 'label': '引用の下書き', 'icon': 'format_quote', 'tags': ['Quote', 'Repost']},
+            ],
+          },
+          handler: (self, fn, args) => {'result': {'done': true}},
+        );
+    final c = await pump(tester);
+    await c.read(slotPluginsProvider.notifier).register('fake:act', bytes: Uint8List.fromList('act'.codeUnits));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('リアクション').first);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('action_bundle_plugin.png'));
+    await tester.tapAt(const Offset(180, 40));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('メニュー').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('アクションバーを編集'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('action_bar_edit_plugins.png'));
+    await tester.tapAt(const Offset(180, 40));
+    await tester.pumpAndSettle();
+    // 下書き FOW。
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '明日の打ち上げの写真、あとで整理してから出す');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下書き'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('drafts.save')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '週末の予定');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下書き'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('drafts_fow.png'));
+    await tester.tap(find.byKey(draftsSelectKey));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('drafts_fow_select.png'));
   });
 }

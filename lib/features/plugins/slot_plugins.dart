@@ -34,7 +34,7 @@ import '../vc/astell_providers.dart';
 /// `plugin.manifest` の答え。
 @immutable
 class SlotManifest {
-  const SlotManifest({required this.id, required this.name, this.version = '0.0.0', this.kind = 'action', this.description = '', this.slots = const [], this.permissions = const []});
+  const SlotManifest({required this.id, required this.name, this.version = '0.0.0', this.kind = 'action', this.description = '', this.slots = const [], this.permissions = const [], this.actions = const []});
   final String id;
   final String name;
   final String version;
@@ -42,6 +42,9 @@ class SlotManifest {
   final String description;
   final List<String> slots;
   final List<String> permissions;
+
+  /// 投稿のアクションボタン (契約 v0.7 §2.9、D-176): `post.action` の宣言。
+  final List<SlotActionDecl> actions;
 
   factory SlotManifest.fromJson(Map<String, Object?> j) => SlotManifest(
         id: j['id'] as String? ?? '',
@@ -51,6 +54,16 @@ class SlotManifest {
         description: j['description'] as String? ?? '',
         slots: [for (final s in (j['slots'] as List? ?? const [])) if (s is String) s],
         permissions: [for (final s in (j['permissions'] as List? ?? const [])) if (s is String) s],
+        actions: [
+          for (final a in (j['actions'] as List? ?? const []))
+            if (a is Map && a['id'] is String)
+              SlotActionDecl(
+                id: a['id'] as String,
+                label: a['label'] as String? ?? a['id'] as String,
+                icon: a['icon'] as String?,
+                tags: [for (final t in (a['tags'] as List? ?? const [])) if (t is String) t],
+              ),
+        ],
       );
 
   /// スロットと権限から、許可するアプリ向けホスト関数を決める。
@@ -66,9 +79,9 @@ class SlotManifest {
         if (slots.contains(SlotIds.composerMedia)) RasqHostFns.composerMediaOverlay,
         if (slots.contains(SlotIds.composerText)) RasqHostFns.composerTextReplace,
         if (slots.contains(SlotIds.viewerOverlay)) RasqHostFns.viewerOverlaySet,
-        // 投稿共有 (§2.8): コンポーザーを開く + 参加中の AsTell へ。
-        if (slots.contains(SlotIds.postShare)) RasqHostFns.composerOpen,
-        if (slots.contains(SlotIds.postShare)) RasqHostFns.astellShare,
+        // 投稿共有 (§2.8) / 投稿のアクションボタン (§2.9): コンポーザーを開く + 参加中の AsTell へ。
+        if (slots.contains(SlotIds.postShare) || slots.contains(SlotIds.postAction)) RasqHostFns.composerOpen,
+        if (slots.contains(SlotIds.postShare) || slots.contains(SlotIds.postAction)) RasqHostFns.astellShare,
       };
 
   Set<String> get fowPermissions => {
@@ -76,6 +89,15 @@ class SlotManifest {
         if (permissions.contains('fow.interstitial')) 'interstitial',
         if (permissions.contains('fow.system')) 'system',
       };
+}
+
+/// `post.action` のボタン宣言 (§2.9): タグ = 希望スロット(既存ボタンのタグと比べて束ねる)。
+class SlotActionDecl {
+  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const []});
+  final String id;
+  final String label;
+  final String? icon;
+  final List<String> tags;
 }
 
 abstract final class SlotIds {
@@ -87,6 +109,7 @@ abstract final class SlotIds {
   static const tl = 'tl';
   static const trendSuggest = 'trend.suggest';
   static const postShare = 'post.share';
+  static const postAction = 'post.action';
 }
 
 /// 実行中のプラグイン 1 つ(ワーカー isolate 上の wasm、テストでは偽物)。
@@ -727,6 +750,22 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   Future<void> postShareClose(SlotPlugin plugin, String token) async {
     _composerOpen.remove(token);
     await plugin.value('post.share.close', {'token': token});
+  }
+
+  /// 投稿のアクションボタン (CONTRACT §2.9、D-176): ユーザーが押した。戻りは `result.message`(トースト用)。
+  /// `composer.open` は [onComposerOpen] へ(呼び出し元の投稿の面から開く)。
+  Future<String?> postAction(SlotPlugin plugin, {required String actionId, required Map<String, Object?> post, required Map<String, Object?> account, required void Function(String text, Uint8List? media, String? mime, String? name) onComposerOpen, String? fowOwner, int column = 0}) async {
+    _setFowContext(plugin, fowOwner, column);
+    final token = 'action-${DateTime.now().microsecondsSinceEpoch}';
+    _composerOpen[token] = onComposerOpen;
+    try {
+      final v = await plugin.value('post.action', {'token': token, 'actionId': actionId, 'post': post, 'account': account});
+      final r = (v?['result'] as Map?)?.cast<String, Object?>();
+      return r?['message'] as String?;
+    } finally {
+      // composer.open は少し遅れて来ることがある(FOW のボタン経由)ので受け口は残す。上限で古いものから捨てる。
+      if (_composerOpen.length > 32) _composerOpen.remove(_composerOpen.keys.first);
+    }
   }
 
   Future<List<({String text, String? reason, SlotPlugin plugin})>> trendSuggest(List<String> recent, {String? query, int limit = 6}) async {

@@ -13,9 +13,10 @@
 enum OverlayLayer {
   fow,
   sidebar,
-  dropdown,
   vcVideo,
   bottomSheet,
+  // ドロップダウンはボトムシートの上 (D-176): シート内の … メニューが届くように(モーダルよりは下)。
+  dropdown,
   modal,
   rai;
 

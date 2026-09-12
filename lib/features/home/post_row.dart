@@ -17,6 +17,9 @@ import '../compose/emoji_picker_fow.dart';
 import 'reaction_history.dart';
 import '../post/post_menu.dart';
 import '../post/share_fow.dart';
+import '../plugins/slot_plugins.dart';
+import '../vc/astell_post_share.dart';
+import 'plugin_actions.dart';
 import '../vc/astell_actions.dart';
 import '../vc/astell_links.dart';
 import '../settings/safety.dart';
@@ -107,6 +110,26 @@ class _PostRowState extends ConsumerState<PostRow> {
   /// [_actAs] 中はそのコピーでアクションを実行する。
   PostActionHandler get _onAction => (_actAs != null && widget.actionsFor != null) ? widget.actionsFor!(post) : widget.onAction;
 
+  /// タップの実行: プラグインのボタン (D-176) はスロット登録簿へ、それ以外は SNS のアクションへ。
+  Future<void> _run(ActionDescriptor a, {Map<String, Object?> args = const {}}) => isPluginActionId(a.id) ? _runPlugin(a) : _onAction(a, args: args);
+
+  Future<void> _runPlugin(ActionDescriptor a) async {
+    final pa = ref.read(pluginActionsProvider).where((x) => x.id == a.id).firstOrNull;
+    if (pa == null) return;
+    final acc = post.account;
+    final column = fowColumnOf(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final message = await ref.read(slotPluginsProvider.notifier).postAction(
+      pa.plugin,
+      actionId: pa.decl.id,
+      post: astellPostPayloadOf(post),
+      account: {'sns': acc.kind.name, 'instance': acc.instance, 'handle': acc.handle},
+      column: column,
+      onComposerOpen: (text, media, mime, name) => showComposer(ref, const ComposeNormal(), initialText: text, column: column, initialFiles: media == null ? null : [ComposerInitialFile(bytes: media, name: name ?? 'plugin.png', mimeType: mime)]),
+    );
+    if (message != null && message.isNotEmpty) messenger?.showSnackBar(SnackBar(content: Text(message)));
+  }
+
   static const _collapseLines = 3;
 
   @override
@@ -144,7 +167,14 @@ class _PostRowState extends ConsumerState<PostRow> {
     final (mediaItems, mediaIndex) = safety.applyTo(post.media);
 
     // アクションバー編集(ホスト構成): リスト束ね・並び替え・非表示を適用して Props 化。
-    final entries = ref.watch(actionBarConfigProvider).apply(widget.actions);
+    // プラグインのボタン (D-176): このアカウントのスロット設定で有効なものを、タグの近い既存ボタンのバンドルへ。
+    final merged = mergePluginActions(
+      config: ref.watch(actionBarConfigProvider),
+      snsActions: widget.actions,
+      plugins: ref.watch(pluginActionsProvider),
+      settings: ref.watch(slotActionSettingsProvider(post.account.key)),
+    );
+    final entries = merged.config.apply(merged.actions);
     final actionItems = [
       for (final e in entries)
         switch (e) {
@@ -312,7 +342,7 @@ class _PostRowState extends ConsumerState<PostRow> {
           .catchError((_) {});
       return;
     }
-    _onAction(a).catchError((_) {});
+    _run(a).catchError((_) {});
   }
 
   /// リノート/引用ノートの組み込みバンドル (D-039)。
@@ -350,7 +380,7 @@ class _PostRowState extends ConsumerState<PostRow> {
             dense: true,
             items: [for (final a in entry.members) RasqDropdownItem(a.label, a)],
           );
-          if (picked != null) await _onAction(picked).catchError((_) {});
+          if (picked != null) await _run(picked).catchError((_) {});
         },
       );
 

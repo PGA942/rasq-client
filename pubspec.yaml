@@ -90,6 +90,7 @@ flutter:
     - assets/plugins/media_transform_plugin.wasm
     - assets/plugins/media_process_plugin.wasm
     - assets/plugins/media_draw_plugin.wasm
+    - assets/plugins/post_action_plugin.wasm
     # ML model manifests (model-manifest.schema.json — resolved by MlGateway).
     - assets/models/
     # 設定第二階層の静的 RRL ページ (D-031, rasq.settings-page/1).
