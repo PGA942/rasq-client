@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_ml/rasq_ml.dart';
 
 import '../relational/relational_providers.dart';
+import 'rai_embedding_model.dart';
 import 'rai_reference.dart';
 
 /// リファレンスの置き場(jsonl アセット、D-189)。
@@ -20,8 +21,14 @@ class GatewayRaiEmbedder implements RaiEmbedder {
   Future<List<List<double>>> embed(List<String> texts) async => [for (final v in await gateway.embedTexts(texts)) v.toList()];
 }
 
-/// 埋め込み: ゲートウェイがあれば SigLIP、無ければ n-gram(同じ契約)。テストで差し替える。
+/// 埋め込み (D-190): 端末内の SigLIP2(ダウンロード済み)→ ML ゲートウェイの SigLIP → n-gram(同じ契約)。
+/// 端末内モデルの状態が変わる(ダウンロード完了 / 削除)と索引も組み直す。
 final raiEmbedderProvider = FutureProvider<RaiEmbedder>((ref) async {
+  final st = ref.watch(raiEmbeddingStatusProvider).value;
+  if (st != null && st.ready) {
+    final e = await ref.watch(raiEmbeddingModelProvider).embedder();
+    if (e != null) return e;
+  }
   MlGateway? gw;
   try {
     gw = await ref.watch(mlGatewayProvider.future);

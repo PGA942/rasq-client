@@ -1,32 +1,42 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import 'rai_mascot_3d.dart';
 import 'rai_providers.dart';
 
 /// RAi のマスコット (D-179): ワイヤーフレーム p.4 の RAi ホーム(頭 = 耳付きの板 + 目、
 /// 体 = コーン)を 2D で。gltf / three.js 相当のモーションは第一期では簡易(位置の
 /// スプライン移動 + 指差し方向で少し傾く)。
-class RaiMascot extends StatelessWidget {
-  const RaiMascot({super.key, this.size = 96, this.tilt = 0, this.pointing});
+class RaiMascot extends ConsumerWidget {
+  const RaiMascot({super.key, this.size = 96, this.tilt = 0, this.pointing, this.controller3d});
   final double size;
 
-  /// 傾き(ラジアン)。移動中に進行方向へ少し傾ける。
+  /// 傾き(ラジアン)。移動中に進行方向へ少し傾ける(2D のとき)。
   final double tilt;
 
-  /// 指差す方向(単位ベクトル)。null なら正面。
+  /// 指差す方向(単位ベクトル)。null なら正面(2D のとき)。
   final Offset? pointing;
 
+  /// 3D (D-191) のクリップ制御。null なら静止(idle)。
+  final RaiMascot3dController? controller3d;
+
   @override
-  Widget build(BuildContext context) => Semantics(
-        label: 'RAi',
-        child: Transform.rotate(
-          angle: tilt,
-          child: CustomPaint(size: Size(size, size * 1.25), painter: _RaiMascotPainter(pointing: pointing, scheme: Theme.of(context).colorScheme)),
-        ),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final three = ref.watch(raiMascot3dProvider);
+    return Semantics(
+      label: 'RAi',
+      child: three
+          ? RaiMascot3d(size: size, controller: controller3d)
+          : Transform.rotate(
+              angle: tilt,
+              child: CustomPaint(size: Size(size, size * 1.25), painter: _RaiMascotPainter(pointing: pointing, scheme: Theme.of(context).colorScheme)),
+            ),
+    );
+  }
 }
 
 class _RaiMascotPainter extends CustomPainter {

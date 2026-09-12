@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_linux
+  flutter_angle
   flutter_gemma
   flutter_secure_storage_linux
   pro_video_editor
@@ -12,6 +13,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
   jni
+  onnxruntime
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)
