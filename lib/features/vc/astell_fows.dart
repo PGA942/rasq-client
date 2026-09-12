@@ -404,7 +404,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   final _footerKey = GlobalKey();
 
   /// FOW のクローム(ハンドル + 余白)ぶん。最小段 = バーの実測 + これ。
-  static const _chromeHeight = 30.0;
+  static const _chromeHeight = kFowHandleHeight + 12;
 
   /// stick の最小段をバーの実測高さに合わせる(コンポーザー D-049 と同じ作法)。
   void _syncCollapsedStop(BuildContext context) {
@@ -470,8 +470,24 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       builder: (context, h, _) => LayoutBuilder(
         builder: (context, constraints) {
           final targetPx = h * MediaQuery.sizeOf(context).height;
-          final compact = targetPx < astellRoomTabsCoveredHeight || constraints.maxHeight < astellRoomTabsCoveredHeight;
-          if (!compact) return _body(context, compact: false);
+          // compact の判定は**目標の高さだけ** (D-178)。以前は実際の制約でも切り替えていたため、
+          // キーボードで FOW が縮む / 閉じて伸び戻るアニメーションの間に compact へ変形し、入力欄
+          // (TextField)やタブの状態ごと消えてキーボードが一瞬で閉じていた。制約が足りない間は
+          // 下の OverflowBox で上を切る。
+          final squeezed = constraints.maxHeight < astellRoomTabsCoveredHeight;
+          final compact = targetPx < astellRoomTabsCoveredHeight;
+          if (!compact) {
+            // 展開: 木の形は狭くても同じ(ClipRect > OverflowBox > 本体)にして TextField / タブの
+            // 状態を保つ。キーボードで狭い間は最低 300px で組み、足りない分は上を切る(下段の入力欄が見える)。
+            return ClipRect(
+              child: OverflowBox(
+                alignment: Alignment.bottomCenter,
+                minHeight: 0,
+                maxHeight: squeezed ? astellRoomTabsCoveredHeight : constraints.maxHeight,
+                child: _body(context, compact: false),
+              ),
+            );
+          }
           _syncCollapsedStop(context);
           // 変形中(高さが縮む途中)は下端に寄せてクリップし、はみ出させない。
           return ClipRect(

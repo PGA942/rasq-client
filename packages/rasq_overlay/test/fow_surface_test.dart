@@ -4,10 +4,10 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 /// D-065: FOW の付け先(ヘッダー下付き / アンカー / 壁付き)と
 /// FOW スイッチャー(ハンドルクリック)。
-Widget host(OverlayManager m, {List<FowColumnSlot> Function(BuildContext)? columns, double Function(BuildContext)? topInset}) => MaterialApp(
+Widget host(OverlayManager m, {List<FowColumnSlot> Function(BuildContext)? columns, double Function(BuildContext)? topInset, double Function(BuildContext)? topClearance}) => MaterialApp(
       home: OverlayScope(
         manager: m,
-        child: OverlayHost(manager: m, fowColumns: columns, fowTopInset: topInset, child: const Scaffold(body: SizedBox.expand())),
+        child: OverlayHost(manager: m, fowColumns: columns, fowTopInset: topInset, fowTopClearance: topClearance, child: const Scaffold(body: SizedBox.expand())),
       ),
     );
 
@@ -150,5 +150,23 @@ void main() {
     expect(tester.getTopLeft(fowPanel()).dx, closeTo(1200 - 320, 1));
     expect(tester.getSize(fowPanel()).width, closeTo(320, 1));
     expect(tester.getSize(fowPanel()).height, closeTo(800, 1));
+  });
+
+  testWidgets('上辺の余白 (D-178): 下端ドック / 壁付けの FOW は fowTopClearance より上へ伸びず、ハンドルは 26px', (tester) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final m = OverlayManager();
+    m.showFow<void>(id: 'full', spec: FowSpec(title: '全高', cancelText: '閉じる', initialHeightFactor: 1.0, maxHeightFactor: 1.0), builder: (context, handle) => const SizedBox());
+    await tester.pumpWidget(host(m, topClearance: (_) => 100));
+    await tester.pumpAndSettle();
+    final handle = find.bySemanticsLabel('サイズ変更ハンドル');
+    expect(tester.getSize(handle).height, kFowHandleHeight);
+    expect(tester.getTopLeft(handle).dy, greaterThanOrEqualTo(100));
+    // 壁付け(高さ 1.0 固定)も同じ。
+    final spec = m.entries.single.fow!..pinnedWall = -1;
+    spec.geometryRev.value++;
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(handle).dy, greaterThanOrEqualTo(100));
   });
 }

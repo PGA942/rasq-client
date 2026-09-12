@@ -107,7 +107,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(fowPanel()).dx, closeTo(1200 - kSearchHomeColumnWidth, 1));
     expect(tester.getSize(fowPanel()).width, closeTo(kSearchHomeColumnWidth, 1));
-    expect(tester.getSize(fowPanel()).height, closeTo(800, 1));
+    expect(tester.getSize(fowPanel()).height, closeTo(800 - 32, 1)); // 上辺の余白 32px (D-178)
 
     // 内側へしきい値以上動かすとピンが外れてカラム揃えへ戻る(高さも戻る)。
     await tester.drag(find.text('リアクション'), const Offset(-200, 0));
