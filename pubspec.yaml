@@ -58,6 +58,8 @@ dependencies:
   video_player: ^2.14.0
   pro_video_editor: ^2.12.0
   path_provider: ^2.1.6
+  flutter_gemma: ^1.8.0
+  flutter_gemma_litertlm: ^1.6.3
 
 dev_dependencies:
   flutter_test:
@@ -71,6 +73,9 @@ flutter:
   assets:
     # RAi のアイコン (D-180: obsidian-vault/RAi 動作リファレンス/アイコン案1.jpeg、外側の黒を透明に)。
     - assets/images/rai_icon.png
+    # RAi の 3D モデル (D-181: Google Drive で受領した glb。リグ arm_1..4 L/R / ear / head / cone / koma、
+    # アニメ idle / run_* / accident。描画は後段 — 今はアセットとして保持)。
+    - assets/models/rai.glb
     # misskey-wasm-sample plugin binary (built in rasq-sdk-sample; loaded by
     # the WASMプラグイン試験 dev screen).
     - assets/plugins/misskey_wasm_sample.wasm

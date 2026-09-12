@@ -8,6 +8,7 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/login/login_screen.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/rai/rai_home_screen.dart';
+import 'package:rasq_client/features/rai/rai_llm.dart';
 import 'package:rasq_client/features/rai/rai_overlay.dart';
 import 'package:rasq_client/features/rai/rai_providers.dart';
 import 'package:rasq_client/features/rai/rai_reference.dart';
@@ -18,6 +19,7 @@ import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'support/fake_rai_llm.dart';
 import 'support/fakes.dart';
 
 /// RAi (D-179): バー(トグル / 質問する)、インストラクションの参照、部品へのスプライン移動、
@@ -53,6 +55,9 @@ void main() {
     });
   });
 
+  late FakeRaiLlm llm;
+  setUp(() => llm = FakeRaiLlm());
+
   Future<ProviderContainer> pump(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
@@ -61,7 +66,7 @@ void main() {
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => [post('p1', 'こんにちは')]));
-    await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)], child: const RasqApp()));
+    await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), raiLlmProvider.overrideWithValue(llm)], child: const RasqApp()));
     await tester.pumpAndSettle();
     return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
   }
@@ -79,14 +84,32 @@ void main() {
     expect(find.text(RaiMode.assistant.modelName), findsOneWidget);
     expect(c.read(raiProvider).mode, RaiMode.assistant);
     // 上段はそのまま入力欄(ヒント = 困ったとき…、D-180)。「質問する」で送信。
-    // アシスタントの返事は中央固定(RAi が画面中央)。
+    // アシスタント (D-181): 端末内モデルが未ダウンロード → フォールアップ(サーバー無し)も失敗 → 失敗表示、
+    // 端末内モデルのメモリは解放。返事は中央固定(RAi が画面中央)。
+    expect(find.text('未DL'), findsOneWidget); // チップの注記
     await tester.enterText(find.byKey(const ValueKey('rai.input')), '何かできる？');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('第二期'));
+    final failed = tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data!;
+    expect(failed, contains('まだダウンロードされていません'));
+    expect(failed, contains('フォールアップ先(サーバー側)が未接続です'));
+    expect(find.byKey(const ValueKey('rai.ring.error')), findsOneWidget);
+    expect(llm.released, 1);
     final screen = tester.getSize(find.byType(RasqApp));
     final overlayMascot = find.descendant(of: find.byType(RaiMascotLayer), matching: find.byType(RaiMascot));
     expect(tester.getCenter(overlayMascot).dx, closeTo(screen.width / 2, 1));
+    // モデルが準備できていれば端末内モデルの返事がトークンで流れる。
+    llm.set(RaiLlmStatus(RaiLlmPhase.ready, modelId: llm.spec.id));
+    await tester.pumpAndSettle();
+    expect(find.text('未DL'), findsNothing);
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'こんにちは');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, 'はい、RASQ の RAi です。');
+    expect(llm.systems.last, contains('アシスタント'));
+    expect(find.byKey(const ValueKey('rai.ring.idle')), findsOneWidget);
+    await tester.tap(find.text('閉じる'));
+    await tester.pumpAndSettle();
     // トグル → インストラクション(端末内モデル)。返事は消える。
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
     await tester.pumpAndSettle();
@@ -128,6 +151,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rai.toggle')), findsNothing);
     expect(find.byType(RaiMascot), findsNothing);
+  });
+
+  testWidgets('インストラクションで参照に無い質問は端末内モデルへバイパス、RAi ホームのモデル節でダウンロード / 削除 / 切り替え', (tester) async {
+    final c = await pump(tester);
+    RasqSidebar.open(c.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
+    await tester.pumpAndSettle();
+    // モデル節: 未ダウンロード → ダウンロード → 準備完了(解放 / 削除が出る)。
+    expect(find.textContaining('未ダウンロード'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rai.model.download')));
+    await tester.pumpAndSettle();
+    expect(llm.installs, 1);
+    expect(find.textContaining('準備完了'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.model.release')), findsOneWidget);
+    // 切り替え → Qwen3.5 4B。
+    await tester.drag(find.byType(RaiHomeScreen), const Offset(0, -600)); // 末尾まで(RAi バーの下に隠れないように)
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.model.pick.qwen3.5-4b')));
+    await tester.pumpAndSettle();
+    expect(llm.spec.id, 'qwen3.5-4b');
+    expect(find.textContaining('Qwen3.5 4B'), findsWidgets);
+    // インストラクションで参照に無い質問 → 端末内モデルが答える(操作のシステム指示)。
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await tester.pumpAndSettle();
+    llm.reply = '設定の「テーマ」から変えられます。';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, '設定の「テーマ」から変えられます。');
+    expect(llm.systems.last, contains('操作'));
+    // 削除 → 確認 → 未ダウンロードに戻る。
+    await tester.tap(find.text('閉じる'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(RaiHomeScreen), const Offset(0, 600));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('rai.model.delete')));
+    await tester.tap(find.byKey(const ValueKey('rai.model.delete')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('削除').last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('未ダウンロード'), findsOneWidget);
   });
 
   testWidgets('ログイン画面の「Raiのインストラクチャ」→ 入力欄付きのバー(インストラクション)', (tester) async {

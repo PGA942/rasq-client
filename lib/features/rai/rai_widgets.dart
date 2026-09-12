@@ -187,15 +187,18 @@ class RaiBubbleIconPainter extends CustomPainter {
 
 /// 状態リング: 待機は青い輪、処理中は回る。
 class RaiStatusRing extends StatelessWidget {
-  const RaiStatusRing({super.key, required this.busy});
+  const RaiStatusRing({super.key, required this.busy, this.error = false});
   final bool busy;
+
+  /// 直近が失敗表示(赤い輪)。
+  final bool error;
   @override
   Widget build(BuildContext context) => SizedBox(
         width: 24,
         height: 24,
         child: busy
             ? const CircularProgressIndicator(strokeWidth: 3, color: RasqColors.link)
-            : Container(decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: RasqColors.link, width: 3))),
+            : Container(key: ValueKey(error ? 'rai.ring.error' : 'rai.ring.idle'), decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: error ? RasqColors.danger : RasqColors.link, width: 3))),
       );
 }
 
@@ -203,8 +206,11 @@ class RaiStatusRing extends StatelessWidget {
 /// お手伝いします！」、質問後はその文がヒントに)。左の ^ で下段(モデルチップ / 状態リング /
 /// トグル / 質問する)を畳む。「質問する」= 送信。
 class RaiBar extends StatefulWidget {
-  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose});
+  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote});
   final RaiState state;
+
+  /// 端末内モデルの状態の短い注記(「未DL」「読み込み中」「45%」など。準備できていれば null)。
+  final String? llmNote;
   final VoidCallback onToggleExpanded;
   final ValueChanged<RaiMode> onMode;
   final ValueChanged<String> onSubmit;
@@ -300,11 +306,12 @@ class _RaiBarState extends State<RaiBar> {
                       Icon(s.mode.modelIcon, size: 16),
                       const SizedBox(width: 4),
                       Flexible(child: Text(s.mode.modelName, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                      if (widget.llmNote != null) Padding(padding: const EdgeInsets.only(left: 4), child: Text(widget.llmNote!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
                     ]),
                   ),
                 ),
                 const SizedBox(width: RasqSpacing.sm),
-                RaiStatusRing(busy: s.busy),
+                RaiStatusRing(busy: s.busy, error: s.error),
                 const SizedBox(width: RasqSpacing.sm),
                 RaiModeToggle(mode: s.mode, onChanged: widget.onMode),
                 const SizedBox(width: RasqSpacing.sm),
