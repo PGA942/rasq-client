@@ -6,6 +6,8 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
+import 'rai_history_fow.dart';
+import 'rai_layout.dart';
 import 'rai_llm.dart';
 import 'rai_models_fow.dart';
 import 'rai_providers.dart';
@@ -57,7 +59,6 @@ class _RaiBarHost extends ConsumerWidget {
     final insets = MediaQuery.viewInsetsOf(context).bottom;
     final dock = insets > 0 ? insets : fowDockInsetOf(context, ref.read(routerProvider));
     final screen = MediaQuery.sizeOf(context);
-    final width = screen.width;
     // 指差す部品がバーの後ろ(画面下)にあるときはバーを上(ヘッダーの下)へ逃がす。
     final t = s.target;
     final atTop = t != null && s.mode == RaiMode.instruction && t.bottom > screen.height - dock - 200;
@@ -73,9 +74,10 @@ class _RaiBarHost extends ConsumerWidget {
             error: s.error,
             onNext: n.advance,
             onClose: n.dismissBubble,
+            onHistory: () => showRaiHistoryFow(ref, context),
           );
     final bar = SizedBox(
-      width: width < 560 ? width - RasqSpacing.sm * 2 : 520,
+      width: raiPanelWidth(context),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         // RAi の発言は入力ウィジェットの上に 1 行ずつ (D-182)。
         if (speech != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: speech),
@@ -85,7 +87,7 @@ class _RaiBarHost extends ConsumerWidget {
         onMode: n.setMode,
         onSubmit: n.ask,
         onClose: () => hideRai(ref),
-        onModelTap: () => showRaiModelsFow(ref),
+        onModelTap: () => showRaiModelsFow(ref, context),
         llmNote: switch (llm.phase) {
           RaiLlmPhase.ready || RaiLlmPhase.generating => null,
           RaiLlmPhase.loading => '読み込み中',

@@ -406,6 +406,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_instruction.png'));
+    await tester.tap(find.byKey(const ValueKey('rai.history')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_history_fow.png'));
   });
 }
 

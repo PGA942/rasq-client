@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 
 
 import '../../shell/headers.dart';
+import 'rai_layout.dart';
 import 'rai_llm.dart';
 import 'rai_models_fow.dart';
 import 'rai_overlay.dart';
@@ -33,7 +34,11 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
     final s = ref.watch(raiProvider);
     return Scaffold(
       appBar: RasqPageHeader(title: 'RAi', onBack: () => Navigator.of(context).maybePop()),
-      body: ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xl, RasqSpacing.page, 240), children: [
+      // 大画面はコラム形式 (D-185): 入力ウィジェットと同じ幅の列を中央に。
+      body: Center(
+        child: SizedBox(
+          width: raiPanelWidth(context) + RasqSpacing.page * 2,
+          child: ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xl, RasqSpacing.page, 240), children: [
         const Center(child: RaiMascot(size: 180)),
         const SizedBox(height: RasqSpacing.md),
         Text('マクロとか、お任せください！', textAlign: TextAlign.center, style: RasqTypography.title),
@@ -54,6 +59,8 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
             ),
         ],
       ]),
+        ),
+      ),
     );
   }
 }
@@ -81,11 +88,11 @@ class _ModelSection extends ConsumerWidget {
         title: '$raiLocalModelLabel = ${spec.label}',
         subtitle: st.message == null || st.phase == RaiLlmPhase.loading ? phaseText : '$phaseText — ${st.message}',
         leading: Icon(Icons.smartphone, size: 20, color: scheme.onSurfaceVariant),
-        onTap: () => showRaiModelsFow(ref),
+        onTap: () => showRaiModelsFow(ref, context),
       ),
       Padding(
         padding: const EdgeInsets.only(top: RasqSpacing.sm),
-        child: OutlinedButton.icon(key: const ValueKey('rai.models.open'), onPressed: () => showRaiModelsFow(ref), icon: const Icon(Icons.tune, size: 18), label: const Text('モデルを選ぶ(ローカル / クラウド)')),
+        child: OutlinedButton.icon(key: const ValueKey('rai.models.open'), onPressed: () => showRaiModelsFow(ref, context), icon: const Icon(Icons.tune, size: 18), label: const Text('モデルを選ぶ(ローカル / クラウド)')),
       ),
       const SizedBox(height: RasqSpacing.xs),
       Text('フォールアップ先(サーバー側 / クラウドの大きいモデル)は未接続です。端末内モデルが使えないときは失敗表示になります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),

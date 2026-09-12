@@ -31,6 +31,7 @@ class FowSpec {
     this.avoidKeyboard = true,
     this.dockAboveFooter = false,
     this.columnIndex = 0,
+    this.maxWidth,
     this.bodyMove = true,
     List<double> heightStops = const [],
     this.freeAboveStops = false,
@@ -109,6 +110,9 @@ class FowSpec {
 
   /// 所属カラム(ホストの列スロット index。範囲外は clamp される)。
   int columnIndex;
+
+  /// パネルの最大幅 (D-185): カラムより狭ければカラムの中央に置く(RAi の入力ウィジェット幅に揃える等)。
+  final double? maxWidth;
 
   /// アプリヘッダーへの下付き (D-065)。false = 従来のフッター上/画面下端。
   /// FOW 内ヘッダー/フッターを縦へウィンドウ高さの 1 割以上動かすと切替。
