@@ -385,17 +385,18 @@ void main() {
     final c = await pump(tester);
     RasqSidebar.open(c.read(overlayManagerProvider));
     await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); // アイコン(asset)の復号
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('sidebar_rai.png'));
     await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_home.png'));
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('rai.ask')));
-    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿したい');
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_bar_asking.png'));
-    await tester.tap(find.byTooltip('送信'));
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_instruction.png'));
   });

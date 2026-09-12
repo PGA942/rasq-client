@@ -69,6 +69,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    # RAi のアイコン (D-180: obsidian-vault/RAi 動作リファレンス/アイコン案1.jpeg、外側の黒を透明に)。
+    - assets/images/rai_icon.png
     # misskey-wasm-sample plugin binary (built in rasq-sdk-sample; loaded by
     # the WASMプラグイン試験 dev screen).
     - assets/plugins/misskey_wasm_sample.wasm
