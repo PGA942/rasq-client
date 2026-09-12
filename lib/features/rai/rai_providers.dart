@@ -41,6 +41,7 @@ class RaiState {
     this.error = false,
     this.lineIndex = 0,
     this.log = const [],
+    this.historyOpen = false,
   });
 
   final RaiMode mode;
@@ -71,8 +72,9 @@ class RaiState {
   /// 発言のうち今見せている行 (D-182: 1 行ずつ)。
   final int lineIndex;
 
-  /// 発言の履歴 (D-185): 新しい順。↑ で履歴 FOW。
+  /// 発言の履歴 (D-185 / D-187): 新しい順。入力ウィジェットの履歴ボタンで上に広がる。
   final List<RaiUtterance> log;
+  final bool historyOpen;
 
   List<String> get lines => bubble == null ? const [] : splitSpeechLines(bubble!);
   String? get currentLine => lines.isEmpty ? (bubble == null ? null : '…') : lines[lineIndex.clamp(0, lines.length - 1)];
@@ -95,6 +97,7 @@ class RaiState {
     bool? error,
     int? lineIndex,
     List<RaiUtterance>? log,
+    bool? historyOpen,
   }) =>
       RaiState(
         mode: mode ?? this.mode,
@@ -111,6 +114,7 @@ class RaiState {
         error: error ?? (bubble is String ? false : this.error),
         lineIndex: lineIndex ?? this.lineIndex,
         log: log ?? this.log,
+        historyOpen: historyOpen ?? this.historyOpen,
       );
 
   static const _keep = Object();
@@ -141,6 +145,8 @@ class RaiController extends Notifier<RaiState> {
   void close() => state = const RaiState();
 
   void toggleExpanded() => state = state.copyWith(expanded: !state.expanded, asking: false);
+
+  void toggleHistory({bool? open}) => state = state.copyWith(historyOpen: open ?? !state.historyOpen);
 
   void setAsking(bool v) => state = state.copyWith(asking: v, expanded: true);
 

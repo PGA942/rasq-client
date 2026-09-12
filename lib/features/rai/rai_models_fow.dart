@@ -45,7 +45,8 @@ class RaiModelsBody extends ConsumerWidget {
     return ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xl), children: [
       Text('$raiLocalModelLabel = 端末内で動くモデル。$ramText', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
       const RasqSectionHeader(title: 'ローカル', topMargin: RasqSpacing.sm),
-      for (final m in raiModelSpecs) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
+      // 選択中を先頭に(操作ボタンがすぐ見える)。
+      for (final m in [...raiModelSpecs.where((m) => m.id == llm.spec.id), ...raiModelSpecs.where((m) => m.id != llm.spec.id)]) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
       const RasqSectionHeader(title: 'クラウド(フォールアップ先)', topMargin: RasqSpacing.md),
       for (final m in raiCloudModelSpecs) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
       const SizedBox(height: RasqSpacing.sm),

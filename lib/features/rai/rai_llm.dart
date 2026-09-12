@@ -58,8 +58,44 @@ class RaiModelSpec {
   bool get local => !cloud;
 }
 
-/// 既定 = 4B 級 / 3〜4bit の GGUF(ワイヤーフレームの Agents-A1-4B = InternScience/Agents-A1-4B)。
+/// 既定 = Qwen3.5 2B Q4_K_M (D-187: 4B は 8 GB 機で落ちたので下位グレードから)。4B 級は Agents-A1 4B。
 const raiModelSpecs = <RaiModelSpec>[
+  RaiModelSpec(
+    id: 'qwen3.5-2b-q4km',
+    label: 'Qwen3.5 2B (Q4_K_M)',
+    fileName: 'Qwen3.5-2B-Q4_K_M.gguf',
+    url: 'https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf',
+    sizeMb: 1281,
+    family: 'qwen3',
+    params: 2,
+  ),
+  RaiModelSpec(
+    id: 'qwen3.5-2b-q3km',
+    label: 'Qwen3.5 2B (Q3_K_M・軽量)',
+    fileName: 'Qwen3.5-2B-Q3_K_M.gguf',
+    url: 'https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q3_K_M.gguf',
+    sizeMb: 1107,
+    family: 'qwen3',
+    params: 2,
+  ),
+  RaiModelSpec(
+    id: 'qwen3.5-0.8b-q4km',
+    label: 'Qwen3.5 0.8B (Q4_K_M)',
+    fileName: 'Qwen3.5-0.8B-Q4_K_M.gguf',
+    url: 'https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf',
+    sizeMb: 533,
+    family: 'qwen3',
+    params: 0.8,
+  ),
+  RaiModelSpec(
+    id: 'qwen3.5-0.8b-q3km',
+    label: 'Qwen3.5 0.8B (Q3_K_M・最小)',
+    fileName: 'Qwen3.5-0.8B-Q3_K_M.gguf',
+    url: 'https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q3_K_M.gguf',
+    sizeMb: 470,
+    family: 'qwen3',
+    params: 0.8,
+  ),
   RaiModelSpec(
     id: 'agents-a1-4b-q4km',
     label: 'Agents-A1 4B (Q4_K_M)',

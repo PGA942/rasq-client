@@ -6,7 +6,6 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
-import 'rai_history_fow.dart';
 import 'rai_layout.dart';
 import 'rai_llm.dart';
 import 'rai_models_fow.dart';
@@ -74,7 +73,7 @@ class _RaiBarHost extends ConsumerWidget {
             error: s.error,
             onNext: n.advance,
             onClose: n.dismissBubble,
-            onHistory: () => showRaiHistoryFow(ref, context),
+            onHistory: () => n.toggleHistory(open: true),
           );
     final bar = SizedBox(
       width: raiPanelWidth(context),
@@ -88,6 +87,8 @@ class _RaiBarHost extends ConsumerWidget {
         onSubmit: n.ask,
         onClose: () => hideRai(ref),
         onModelTap: () => showRaiModelsFow(ref, context),
+        onHistoryToggle: n.toggleHistory,
+        historyMaxHeight: screen.height * 0.45,
         llmNote: switch (llm.phase) {
           RaiLlmPhase.ready || RaiLlmPhase.generating => null,
           RaiLlmPhase.loading => '読み込み中',
