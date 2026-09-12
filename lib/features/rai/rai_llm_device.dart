@@ -121,6 +121,9 @@ class DeviceRaiLlm implements RaiLlm {
         _set(RaiLlmStatus(RaiLlmPhase.loading, message: 'llama.cpp のランタイムを取得中', modelId: _spec.id));
         await _downloadLlamaRuntime(dir);
       }
+      // Gatekeeper (D-184): 取得した dylib には隔離属性が付き「開いていません」で弾かれるので、
+      // 属性を外して ad-hoc 署名する(毎回、失敗は無視 — 前回の展開分にも効かせる)。
+      await _unquarantine(dir);
       return lib.path;
     }
     // iOS / Android: アプリに組み込まれているかを探る(iOS = xcframework、Android = jniLibs)。
@@ -133,6 +136,23 @@ class DeviceRaiLlm implements RaiLlm {
       return null;
     } catch (_) {
       throw RaiLlmException(Platform.isIOS ? 'llama.cpp が組み込まれていません(Runner に llama.xcframework を追加)' : 'llama.cpp のライブラリがありません');
+    }
+  }
+
+  Future<void> _unquarantine(Directory dir) async {
+    try {
+      await Process.run('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', dir.path]);
+    } catch (e) {
+      debugPrint('llama runtime xattr: $e');
+    }
+    try {
+      await for (final f in dir.list()) {
+        if (f is File && f.path.contains('.dylib')) {
+          await Process.run('/usr/bin/codesign', ['--force', '--sign', '-', f.path]);
+        }
+      }
+    } catch (e) {
+      debugPrint('llama runtime codesign: $e');
     }
   }
 
@@ -368,7 +388,11 @@ class DeviceRaiLlm implements RaiLlm {
         await llama.sendPrompt(formatted);
       } catch (e) {
         if (!out.isClosed) {
-          out.addError(e is RaiLlmException ? e : RaiLlmException('モデルを読み込めません(llama.cpp): $e'));
+          final msg = '$e';
+          final hint = msg.contains('dlopen') || msg.contains('Failed to load dynamic library')
+              ? '\nGatekeeper に止められた場合: 「システム設定 > プライバシーとセキュリティ」で許可するか、Application Support/llama_cpp の dylib に xattr -dr com.apple.quarantine を実行してください'
+              : '';
+          out.addError(e is RaiLlmException ? e : RaiLlmException('モデルを読み込めません(llama.cpp): $msg$hint'));
           await out.close();
         }
       }
