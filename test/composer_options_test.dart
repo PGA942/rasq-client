@@ -293,8 +293,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('書きかけのノート'), findsOneWidget);
 
-    // 「下書き」ボタン(青文字・右揃え)でも保存して閉じる → 再度復元。
+    // 「下書き」ボタン(青文字・右揃え)→ 下書き FOW (D-176) → 「今の内容を上書き保存して閉じる」→ 再度復元。
     await tester.tap(find.text('下書き'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('drafts.save')));
     await tester.pumpAndSettle();
     expect(find.text('キャンセル'), findsNothing);
     await tester.tap(find.byTooltip('投稿'));

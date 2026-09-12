@@ -28,6 +28,7 @@ import 'compose_providers.dart';
 export 'compose_providers.dart' show ComposerInitialFile;
 import 'account_select.dart';
 import 'compose_target.dart';
+import 'drafts_fow.dart';
 import 'emoji_picker_fow.dart';
 import 'mfm_picker_fow.dart';
 import '../plugins/slot_plugins.dart';
@@ -249,12 +250,6 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// 添付を下書きに(D-174: バイトごとメモリに残す)。
   List<ComposerInitialFile> get _draftFiles => [for (final f in _files) ComposerInitialFile(bytes: f.bytes, name: f.name, mimeType: f.mimeType, sensitive: f.sensitive)];
 
-  void _saveAsDraftAndClose() {
-    _saveDraft();
-    _skipDraftOnDispose = true;
-    widget.onClose?.call();
-  }
-
   // ---- 高さ段階の実測 (D-049) ------------------------------------------
   final _stickContentKey = GlobalKey();
   final _stickToolbarKey = GlobalKey();
@@ -332,6 +327,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// 下書き (D-051): 閉じるときに保存済みなら復元する。
   /// (notifier は dispose 中に ref が使えないためフィールドに保持する。)
   String get _draftKey => draftKeyOf(widget.target);
+
+  /// 開いている下書きの id (D-176): 復元 / 保存で決まる。null なら保存時に新規。
+  String? _draftId;
   bool _skipDraftOnDispose = false;
   late final ComposeDraftsStore _drafts;
 
@@ -371,8 +369,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive);
     }
     // 保存済み下書きの復元(プリセットより優先)。
-    final d = ref.read(composeDraftsProvider)[_draftKey];
+    final d = ref.read(composeDraftsProvider.notifier).latestFor(_draftKey);
     if (d != null) {
+      _draftId = d.id;
       _text.text = d.text;
       _text.selection = TextSelection.collapsed(offset: _text.text.length);
       _cwOn = d.cwOn;
@@ -413,9 +412,38 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     return !mentionOnly || _files.isNotEmpty || _poll != null || cwCustom;
   }
 
-  void _saveDraft() {
+  ComposeDraft _draftNow(String id) => ComposeDraft(id: id, targetKey: _draftKey, createdAt: DateTime.now(), text: _text.text, cw: _cw.text, cwOn: _cwOn, files: _draftFiles);
+
+  void _saveDraft({bool asNew = false}) {
     if (_text.text.trim().isEmpty && _cw.text.trim().isEmpty && _files.isEmpty) return; // 中身の無い下書きは残さない
-    _drafts.save(_draftKey, ComposeDraft(text: _text.text, cw: _cw.text, cwOn: _cwOn, files: _draftFiles));
+    final id = asNew ? ComposeDraftsStore.newId() : (_draftId ?? ComposeDraftsStore.newId());
+    _draftId = id;
+    _drafts.save(id, _draftNow(id));
+  }
+
+  /// 「下書き」(D-176): 下書き FOW — 保存して閉じる / 別の下書きを開く / 消す。
+  Future<void> _openDrafts() async {
+    final r = await showDraftsFow(ref, currentDraftId: _draftId, hasContent: _canDraft, column: _column, ownerId: composerFowId);
+    if (!mounted || r == null) return;
+    switch (r) {
+      case DraftsSaveAndClose(asNew: final asNew):
+        _saveDraft(asNew: asNew);
+        _skipDraftOnDispose = true;
+        widget.onClose?.call();
+      case DraftsLoad(draft: final d):
+        // 書きかけがあれば自分の下書きとして残してから差し替える。
+        if (_canDraft && d.id != _draftId) _saveDraft();
+        setState(() {
+          _draftId = d.id;
+          _text.text = d.text;
+          _text.selection = TextSelection.collapsed(offset: _text.text.length);
+          _cwOn = d.cwOn;
+          _cw.text = d.cw;
+          _files
+            ..clear()
+            ..addAll([for (final f in d.files) _Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive]);
+        });
+    }
   }
 
   /// ✕ / 余白クリック等での閉じ方 (D-051):
@@ -494,8 +522,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     // unmount 中は provider を変更できないためマイクロタスクへ遅延する。
     if (!_skipDraftOnDispose && _hasDraftContent && (_text.text.trim().isNotEmpty || _cw.text.trim().isNotEmpty || _files.isNotEmpty)) {
       final drafts = _drafts;
-      final key = _draftKey;
-      final d = ComposeDraft(text: _text.text, cw: _cw.text, cwOn: _cwOn, files: _draftFiles);
+      final key = _draftId ?? ComposeDraftsStore.newId();
+      final d = _draftNow(key);
       Future.microtask(() {
         try {
           drafts.save(key, d);
@@ -1154,7 +1182,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         final corrected = _postAs != null && _suggestedPostAs != null && _postAs!.account.key != _suggestedPostAs!.account.key;
         await _recordLearning(primaryLabel: primaryLabel, corrected: corrected, posted: linkedPosted, removed: removedByConfirm);
       }
-      _drafts.clear(_draftKey); // 送信済み → 下書き破棄
+      if (_draftId != null) _drafts.clear(_draftId!); // 送信済み → 下書き破棄
       _skipDraftOnDispose = true;
       _multiSel.clear();
       if (linkErrors.isNotEmpty && mounted) {
@@ -1232,9 +1260,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                           child: Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: _busy || !_canDraft ? null : _saveAsDraftAndClose,
+                              onPressed: _busy ? null : _openDrafts,
                               style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerRight),
-                              child: Text('下書き', style: RasqTypography.bodySmall.copyWith(color: _canDraft ? tokens.link : scheme.onSurfaceVariant.withValues(alpha: 0.5))),
+                              child: Text('下書き', style: RasqTypography.bodySmall.copyWith(color: tokens.link)),
                             ),
                           ),
                         ),

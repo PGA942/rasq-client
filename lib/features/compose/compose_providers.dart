@@ -58,13 +58,39 @@ final composeOptionsProvider = NotifierProvider<ComposeOptionsStore, ComposeOpti
 /// ターゲットのコンポーザーを開くと復元される(送信で消える)。
 /// 添付画像・投票は対象外(テキストと注釈のみ)。
 class ComposeDraft {
-  const ComposeDraft({required this.text, this.cw = '', this.cwOn = false, this.files = const []});
+  const ComposeDraft({required this.text, this.cw = '', this.cwOn = false, this.files = const [], this.id = '', this.targetKey = 'normal', this.createdAt});
   final String text;
   final String cw;
   final bool cwOn;
 
   /// 添付 (D-174): 下書きはメモリ内なのでバイトごと持つ(閉じて開き直しても画像が消えない)。
   final List<ComposerInitialFile> files;
+
+  /// 下書き FOW (D-176): 複数の下書きを id で持つ。`targetKey` = [draftKeyOf](投稿 / 返信 / 引用 / DM)。
+  final String id;
+  final String targetKey;
+  final DateTime? createdAt;
+
+  bool get isLinked => id.startsWith('linked:');
+
+  /// 一覧の見出し(1 行目)。
+  String get title {
+    final t = text.trim();
+    if (t.isNotEmpty) return t.split('\n').first;
+    if (cw.trim().isNotEmpty) return '[${cw.trim()}]';
+    return files.isNotEmpty ? '(添付 ${files.length} 件)' : '(本文なし)';
+  }
+
+  /// 対象の種類(投稿 / 返信 / 引用 / DM)。
+  String get targetLabel => targetKey.startsWith('reply:')
+      ? '返信'
+      : targetKey.startsWith('quote:')
+          ? '引用'
+          : targetKey.startsWith('dm:')
+              ? 'DM'
+              : '投稿';
+
+  ComposeDraft copyWith({String? id, DateTime? createdAt}) => ComposeDraft(text: text, cw: cw, cwOn: cwOn, files: files, id: id ?? this.id, targetKey: targetKey, createdAt: createdAt ?? this.createdAt);
 }
 
 /// コンポーザーに最初から載せる添付 (D-170: 共有プラグインの `composer.open`、D-174: 下書きの復元)。
@@ -88,8 +114,20 @@ String draftKeyOf(ComposeTarget t) => switch (t) {
 class ComposeDraftsStore extends Notifier<Map<String, ComposeDraft>> {
   @override
   Map<String, ComposeDraft> build() => const {};
-  void save(String key, ComposeDraft d) => state = {...state, key: d};
+
+  /// id(`linked:<account>` は連動投稿の特別枠)で保存。id 無しの [d] は [key] を id にする。
+  void save(String key, ComposeDraft d) => state = {...state, key: d.id == key ? d : d.copyWith(id: key)};
   void clear(String key) => state = {...state}..remove(key);
+  void clearAll(Iterable<String> keys) => state = {...state}..removeWhere((k, _) => keys.contains(k));
+
+  /// 新しい id。
+  static String newId() => 'd-${DateTime.now().microsecondsSinceEpoch}';
+
+  /// 一覧(連動枠を除く、新しい順)。
+  List<ComposeDraft> get list => [for (final d in state.values) if (!d.isLinked) d]..sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
+
+  /// この対象の最新の下書き(コンポーザーを開いたときの復元用)。
+  ComposeDraft? latestFor(String targetKey) => list.where((d) => d.targetKey == targetKey).firstOrNull;
 }
 
 final composeDraftsProvider = NotifierProvider<ComposeDraftsStore, Map<String, ComposeDraft>>(ComposeDraftsStore.new);
