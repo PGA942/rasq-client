@@ -1,17 +1,22 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/media/viewer_plugin_overlay.dart';
+import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/users/profile_image_viewer.dart';
 import 'package:rasq_client/features/users/user_page_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rrl_renderer/rrl_renderer.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'support/fake_slot_runtime.dart';
 import 'support/fakes.dart';
 
 /// D-177: ユーザー行(リノート欄 / フォロワー等)からプロフィールへ、プロフィールのアイコン /
@@ -21,6 +26,10 @@ void main() {
   final bobUser = UserSummary(id: 'bob', account: bob, displayName: 'ボブ', avatarUrl: Uri.parse('https://example.test/bob.png'));
   List<MediaItem> media(int n) => [for (var i = 0; i < n; i++) MediaItem(id: 'm$i', type: MediaType.image, url: Uri.parse('https://example.test/$i.png'))];
 
+  final fakes = <String, FakeSlotRuntime Function()>{};
+  // 1×1 の PNG。
+  final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+
   Future<ProviderContainer> pump(WidgetTester tester, List<Post> Function(AccountId) posts) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
@@ -29,7 +38,15 @@ void main() {
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: posts));
-    await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)], child: const RasqApp()));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes)),
+        viewerImageFetcherProvider.overrideWithValue((_) async => png),
+      ],
+      child: const RasqApp(),
+    ));
     await tester.pumpAndSettle();
     return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
   }
@@ -88,5 +105,33 @@ void main() {
     await tester.tap(find.bySemanticsLabel('バナー画像'));
     await tester.tap(find.byType(RasqAvatar));
     expect((banner, avatar), (1, 1));
+  });
+
+  testWidgets('プロフィール画像の全画面にも全画面表示プラグイン (D-178): viewer.open に画像が渡り、重ねが描かれ、閉じると viewer.close', (tester) async {
+    late FakeSlotRuntime rt;
+    fakes['qr'] = () => rt = FakeSlotRuntime(
+          manifest: {'id': 't.qr', 'name': 'QR', 'version': '0.1.0', 'kind': 'action', 'slots': ['viewer.overlay'], 'permissions': ['fow.widget']},
+          handler: (self, fn, args) => fn == 'viewer.open' ? {'root': {'t': 'Text', 'k': 'hit', 'p': {'text': 'QR あり'}}} : null,
+        );
+    final c = await pump(tester, (v) => [Post(id: 'p1', account: v, author: bobUser, createdAt: DateTime(2026, 9, 1), body: 'こんにちは')]);
+    await c.read(slotPluginsProvider.notifier).register('fake:qr', bytes: Uint8List.fromList('qr'.codeUnits));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ボブ').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(RasqUserTileLarge), matching: find.byType(RasqAvatar)));
+    await tester.pumpAndSettle();
+    // 画像の復号は本物の非同期。
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pumpAndSettle();
+    final open = rt.calls.where((x) => x.$1 == 'viewer.open').single.$2;
+    expect(open['url'], 'https://example.test/bob.png');
+    expect(open['width'], 1);
+    expect(open['height'], 1);
+    expect(open['bytesB64'], isNotNull);
+    expect(find.descendant(of: find.byType(ProfileImageViewerScreen), matching: find.byType(RrlRenderer)), findsOneWidget);
+    expect(find.text('QR あり'), findsOneWidget);
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    expect(rt.calls.where((x) => x.$1 == 'viewer.close').single.$2['token'], open['token']);
   });
 }

@@ -219,7 +219,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   // stick FOW (D-047/D-049) の高さ: 折りたたみ = 入力行 + ツールバーだけ、
   // 展開 = ヘッダー + 返信先タイルが割り込む。定数は実測が入るまでの初期値で、
   // レイアウト後に「全部をピッタリ表示できる」段階を計算して差し替える。
-  static const stickCollapsedFactor = 0.15;
+  // 実測が入るまでの初期値 (D-178: ハンドル 26px + ツールバー 57px が 600px 高でも入るよう 0.15 → 0.17)。
+  static const stickCollapsedFactor = 0.17;
   static const stickExpandedFactor = 0.44;
 
   Post? get _replyTo => switch (widget.target) { ComposeReply(to: final p) => p, _ => null };
@@ -299,8 +300,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final avail = mq.size.height - (mq.viewInsets.bottom > 0 ? mq.viewInsets.bottom : fowDockInsetOf(context, ref.read(routerProvider)));
     if (avail <= 0) return;
     // 内訳: コンテンツ(割り込みヘッダーはアニメ後の自然高さに補正)+
-    // ツールバー + ハンドル 18 + スクロール上パディング + 予備。
-    final px = (content - headerAnim + headerInner) + toolbar + 18 + RasqSpacing.sm + 2;
+    // ツールバー + ハンドル + スクロール上パディング + 予備。
+    final px = (content - headerAnim + headerInner) + toolbar + kFowHandleHeight + RasqSpacing.sm + 2;
     final fit = (px / avail).clamp(spec.minHeightFactor, spec.maxHeightFactor).toDouble();
     if (_expandedView) {
       _fitExpanded = fit;
@@ -313,7 +314,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     spec.heightStops = (hi - lo).abs() < 0.005 ? [lo] : [lo, hi];
     // 全部をピッタリ表示: ユーザーがハンドルで調整していない限り、現在段階の
     // フィット高さへ追従する(はみ出す分はスクロールで読めるので強制しない)。
-    if (!spec.userResized && (spec.heightFactor.value - fit).abs() > 0.005) {
+    // 差はピクセルで見る (D-178): 比率 0.005 だと 3px 余りの不足を見逃して本体が数 px はみ出す。
+    if (!spec.userResized && (spec.heightFactor.value - fit).abs() * avail > 0.5) {
       spec.heightFactor.value = fit;
     }
   }

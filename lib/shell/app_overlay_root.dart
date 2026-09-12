@@ -50,6 +50,8 @@ class AppOverlayRoot extends ConsumerWidget {
             manager: manager,
             fowDockInset: (ctx) => fowDockInsetOf(ctx, ref.read(routerProvider)),
             fowTopInset: fowTopInsetOf,
+            // FOW の上辺はステータスバー + 32px より下 (D-178): ハンドルがコントロールセンター等に吸われない。
+            fowTopClearance: (ctx) => MediaQuery.paddingOf(ctx).top + 32,
             // 壁付けピン (D-063) は検索ホーム幅で壁側カラムに張り付く。
             fowPinnedWidth: kSearchHomeColumnWidth,
             // FOW の列スロット (D-062): タブレット幅では第2/第3カラムの幾何を

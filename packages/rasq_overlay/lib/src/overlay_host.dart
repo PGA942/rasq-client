@@ -7,8 +7,11 @@ import 'overlay_manager.dart';
 
 /// Renders the content plus every open overlay, honouring layer z-order,
 /// scrims and barrier behaviour. Place it once at the root of the app shell.
+/// リサイズハンドルの高さ (D-178: 18 → 26。指で掴みやすく)。stick の高さ実測はこれを足す。
+const kFowHandleHeight = 26.0;
+
 class OverlayHost extends StatelessWidget {
-  const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor, this.fowDockInset, this.fowColumns, this.fowPinnedWidth = 320, this.fowTopInset});
+  const OverlayHost({super.key, required this.manager, required this.child, this.scrimColor, this.fowDockInset, this.fowColumns, this.fowPinnedWidth = 320, this.fowTopInset, this.fowTopClearance});
 
   final OverlayManager manager;
   final Widget child;
@@ -30,6 +33,10 @@ class OverlayHost extends StatelessWidget {
   /// [FowSpec.attachTop] な FOW の上端 = アプリヘッダーの下辺 (D-065)。
   /// アプリがヘッダー実高さ(ステータスバー込み)を供給する。
   final double Function(BuildContext context)? fowTopInset;
+
+  /// 下端ドック / 壁付けの FOW の上辺をここまでで止める (D-178): ハンドルが画面の上端
+  /// (iPad のコントロールセンター等のシステムジェスチャー域)に入らないようにする。
+  final double Function(BuildContext context)? fowTopClearance;
 
   @override
   Widget build(BuildContext context) {
@@ -122,6 +129,7 @@ class OverlayHost extends StatelessWidget {
         offstage: manager.fowSwitcherOpen,
         child: _FowColumn(
           dockInset: fowDockInset,
+          topClearance: fowTopClearance,
           topInset: fowTopInset,
           columns: fowColumns,
           pinnedWidth: fowPinnedWidth,
@@ -225,7 +233,7 @@ class _FowSwitcher extends StatelessWidget {
 /// 複数の FOW は**重ねて**表示され(最前面のみ影)、切り替えはハンドル
 /// クリックの FOW スイッチャーで行う。
 class _FowColumn extends StatelessWidget {
-  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.dockInset, this.topInset, this.columns, this.pinnedWidth = 320, this.suspended});
+  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.dockInset, this.topInset, this.topClearance, this.columns, this.pinnedWidth = 320, this.suspended});
   final List<RasqOverlayEntry> entries;
 
   /// 退避中 (D-169): Offstage で生かす(レイアウトからは外す)。
@@ -236,6 +244,7 @@ class _FowColumn extends StatelessWidget {
   final VoidCallback onShowSwitcher;
   final double Function(BuildContext context)? dockInset;
   final double Function(BuildContext context)? topInset;
+  final double Function(BuildContext context)? topClearance;
   final List<FowColumnSlot> Function(BuildContext context)? columns;
   final double pinnedWidth;
 
@@ -252,6 +261,7 @@ class _FowColumn extends StatelessWidget {
       final avail = hostH - insets;
       final totalW = constraints.maxWidth;
       final topInsetV = topInset?.call(context) ?? 0;
+      final topClearV = topClearance?.call(context) ?? 0;
       // 列スロット (D-062): 無指定なら単一スロット(全幅 1200px 上限・中央)。
       final maxW = totalW < 1200 ? totalW : 1200.0;
       final slots = columns?.call(context) ?? const <FowColumnSlot>[];
@@ -401,6 +411,12 @@ class _FowColumn extends StatelessWidget {
               final space = hostH - padBottom;
               if (space > 0 && h > space) h = space;
             }
+            // 上辺の余白 (D-178): 下側基準(下端ドック / 壁付け / アンカー上付き)の FOW は
+            // ハンドルが画面上端のシステムジェスチャー域に入らない高さで止める。
+            if (!topSide) {
+              final cap = hostH - padBottom - topClearV;
+              if (cap > 0 && h > cap) h = cap;
+            }
             // FowChildGap への通知 (D-068): 子はいまの付け先の外側(下ドック
             // なら下、ヘッダー付きなら上)に付く。いなければ 0。
             final gapTop = !pinned && anchor == null && attachTopEff ? lift : 0.0;
@@ -517,9 +533,9 @@ class _FowPanelState extends State<_FowPanel> {
         label: 'サイズ変更ハンドル',
         button: true,
         child: SizedBox(
-          height: 18,
+          height: kFowHandleHeight,
           width: double.infinity,
-          child: Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: scheme.onSurface, borderRadius: BorderRadius.circular(2)))),
+          child: Center(child: Container(width: 44, height: 5, decoration: BoxDecoration(color: scheme.onSurface, borderRadius: BorderRadius.circular(2.5)))),
         ),
       ),
     );

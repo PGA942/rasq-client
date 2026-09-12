@@ -133,19 +133,8 @@ class _TabletLayout extends ConsumerWidget {
           Expanded(
             child: Container(
               decoration: BoxDecoration(border: Border(left: BorderSide(color: scheme.outlineVariant))),
-              child: SafeArea(
-                child: Column(children: [
-                  const Expanded(child: ThirdColumnView()),
-                  // VC ミニプレイヤーのスタブ(M2 から据え置き)。
-                  Container(
-                    height: 96,
-                    margin: const EdgeInsets.all(RasqSpacing.sm),
-                    decoration: BoxDecoration(color: RasqColors.lightBlue.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-                    alignment: Alignment.center,
-                    child: const Text('VC', style: TextStyle(color: RasqColors.white, fontSize: 32, fontWeight: FontWeight.w300)),
-                  ),
-                ]),
-              ),
+              // VC ミニプレイヤーのスタブは撤去 (D-178): AsTell は FOW で動く。
+              child: const SafeArea(child: ThirdColumnView()),
             ),
           ),
         ]);

@@ -256,7 +256,12 @@ void main() {
     expect(container.read(astellSessionProvider)?.connected, isTrue);
     expect(find.text('退出'), findsOneWidget);
     expect(find.text('共有'), findsOneWidget);
+    // ホームの下の方(ハンドルが 26px になって画面外、D-178)。リストをずらしてから見る。
+    await tester.drag(find.text('参加メンバー'), const Offset(0, -150));
+    await tester.pumpAndSettle();
     expect(find.text('プレビューにざっくり要約を表示する'), findsOneWidget);
+    await tester.drag(find.text('プレビューにざっくり要約を表示する'), const Offset(0, 150)); // 戻す
+    await tester.pumpAndSettle();
 
     // 自動再生 (D-147): TiVard が画面共有中なので、参加した時点で共有枠に出ている。
     // 下段 (D-148): 左端 = スピーカー / マイク / 画面共有 / 全画面(共有枠にある間) / プラグイン、
@@ -329,7 +334,22 @@ void main() {
     await tester.tap(inRoom('チャット'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('共有する'), findsOneWidget);
+    // キーボードが出て FOW が縮んでも(閉じて伸び戻る間も)compact に切り替わらず、入力欄と
+    // 選んでいたタブが残る (D-178: 以前は TextField ごと消えてキーボードが一瞬で閉じていた)。
+    await tester.tap(find.widgetWithText(TextField, 'input..'));
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 1800);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'input..'), findsOneWidget);
+    expect(tester.widget<TextField>(find.widgetWithText(TextField, 'input..')).focusNode?.hasFocus ?? FocusManager.instance.primaryFocus != null, isTrue);
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pumpAndSettle();
+    expect(DefaultTabController.of(tester.element(find.byType(TabBarView))).index, 1); // チャットのまま
     await tester.enterText(find.widgetWithText(TextField, 'input..'), 'こん');
+    await tester.pumpAndSettle();
+    // 下書き枠は末尾(時刻順)。リストを末尾まで送ってから見る(ハンドル 26px で 1 行ぶん外、D-178)。
+    final chatList = find.descendant(of: find.byType(TabBarView), matching: find.byWidgetPredicate((w) => w is Scrollable)).last;
+    await tester.scrollUntilVisible(find.text('下書き'), 100, scrollable: chatList);
     await tester.pumpAndSettle();
     expect(find.text('下書き'), findsOneWidget);
     expect(find.byTooltip('送信完了する'), findsOneWidget);
@@ -421,12 +441,14 @@ void main() {
     await tester.tap(inRoom('ホーム'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('画面共有を表示'), findsOneWidget);
+    await tester.ensureVisible(find.byTooltip('画面共有を表示')); // タブ欄が狭いとメンバー行の下端が外 (D-178)
     await tester.tap(find.byTooltip('画面共有を表示'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
     expect(find.textContaining('TiVard の画面'), findsOneWidget);
     expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
     expect(find.byTooltip('全画面'), findsWidgets);
+    await tester.ensureVisible(find.byTooltip('共有枠に表示中'));
     await tester.tap(find.byTooltip('共有枠に表示中'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer, isNull);
@@ -492,7 +514,8 @@ void main() {
     await tester.tap(find.text('共有枠に表示'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
-    // 共有枠パネルが上に出て行が下へ押されるので、見える所まで寄せてから外す。
+    // 共有枠パネルが上に出て行が下へ押される(遅延リストの外に出る)ので、見える所まで送ってから外す。
+    await tester.scrollUntilVisible(find.text('@tivard'), 60, scrollable: find.descendant(of: find.byType(TabBarView), matching: find.byWidgetPredicate((w) => w is Scrollable)).last);
     await tester.ensureVisible(find.descendant(of: tivardRow, matching: find.byTooltip('共有枠に表示中')));
     await tester.pumpAndSettle();
     await tester.tap(find.descendant(of: tivardRow, matching: find.byTooltip('共有枠に表示中')));
@@ -928,13 +951,17 @@ void main() {
 
   testWidgets('AsTell で投稿を共有 (D-166): 投稿メニュー → 参加中のルームへ post 共有、チャット行のタップで一致するアカウントならアプリ内展開、URL 入力は解決して post', (tester) async {
     final container = await pump(tester);
-    // 参加してから TL へ戻り、投稿の … に「AsTell で共有」。
+    // 参加してから TL へ戻り、投稿の … → 共有 FOW の「プラグインに共有」に「AsTell に共有」(D-178:
+    // 投稿メニューの「AsTell で共有」は共有 FOW へ統合)。
     await container.read(astellSessionProvider.notifier).join((await container.read(astellClientProvider).room('r-launch'))!);
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('メニュー').first);
     await tester.pumpAndSettle();
-    expect(find.text('AsTell で共有'), findsOneWidget);
-    await tester.tap(find.text('AsTell で共有'));
+    expect(find.text('AsTell で共有'), findsNothing);
+    await tester.tap(find.text('共有'));
+    await tester.pumpAndSettle();
+    expect(find.text('プラグインに共有'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('post.share.astell')));
     await tester.pumpAndSettle();
     expect(find.textContaining('に共有しました'), findsOneWidget);
     final shares = container.read(astellSessionProvider)!.shares;

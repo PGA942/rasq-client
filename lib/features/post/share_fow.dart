@@ -13,6 +13,7 @@ import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../plugins/slot_plugins.dart';
 import '../vc/astell_post_share.dart';
+import '../vc/astell_providers.dart';
 
 /// 投稿の共有 FOW (D-170): アクションバー右端の共有ボタンで開く。
 ///
@@ -187,10 +188,20 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
     if (room != null) await widget.onDm(room);
   }
 
+  /// AsTell へのインライン共有 (D-166 → D-178 で共有 FOW へ)。
+  void _astell() {
+    final room = ref.read(astellSessionProvider)?.room;
+    if (room == null) return;
+    ref.read(astellSessionProvider.notifier).share('post', astellPostPayloadOf(widget.post));
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('「${room.title}」に共有しました')));
+    ref.read(overlayManagerProvider).close(postShareFowId);
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final plugins = ref.watch(slotPluginsForProvider(SlotIds.postShare));
+    final astell = ref.watch(astellSessionProvider);
     final post = widget.post;
     return ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.page), children: [
       Row(children: [
@@ -200,11 +211,21 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
         const SizedBox(width: RasqSpacing.sm),
         _ShareChip(key: const ValueKey('post.share.otherAccount'), icon: Icons.switch_account_outlined, label: '他のアカウントで共有', onTap: () => widget.onComposer(widget.link)),
       ]),
-      const RasqSectionHeader(title: 'プラグイン', topMargin: RasqSpacing.md),
-      if (plugins.isEmpty)
+      // 「プラグインに共有」(D-178): 参加中の AsTell(ホスト内蔵)+ post.share を宣言したプラグイン。
+      // 投稿メニューの「AsTell で共有」はここへ統合。
+      const RasqSectionHeader(title: 'プラグインに共有', topMargin: RasqSpacing.md),
+      if (astell != null)
+        RasqListTile(
+          key: const ValueKey('post.share.astell'),
+          leading: Icon(Icons.record_voice_over_outlined, size: 20, color: scheme.onSurfaceVariant),
+          title: 'AsTell に共有',
+          subtitle: '参加中のルーム「${astell.room.title}」へ投稿を流す',
+          onTap: _astell,
+        ),
+      if (plugins.isEmpty && astell == null)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: RasqSpacing.sm),
-          child: Text('post.share を宣言したプラグインがここに並びます(ストアから追加)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text('post.share を宣言したプラグイン(と参加中の AsTell)がここに並びます', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ),
       for (final p in plugins)
         RasqListTile(
