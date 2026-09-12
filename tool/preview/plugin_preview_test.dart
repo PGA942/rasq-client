@@ -19,6 +19,7 @@ import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/post/share_fow.dart';
 import 'package:rasq_client/features/compose/drafts_fow.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
+import 'package:rasq_client/features/rai/rai_reference_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -60,7 +61,11 @@ void main() {
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
-    return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    // リファレンス索引 (D-189) はアセット読み込み(実 I/O)なので FakeAsync の外で先に組む。
+    await tester.runAsync(() => c.read(raiReferenceProvider.future));
+    await tester.pumpAndSettle();
+    return c;
   }
 
   // 実写風の代わりに 480×320 のグラデーション PNG(testWidgets の FakeAsync では toImage が進まないので setUpAll で)。
@@ -409,6 +414,19 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.history')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_history.png'));
+    // アシスタントの提案 (D-189): LLM のシチュエーション → 操作リファレンス → 関数の検索手順。
+    await tester.tap(find.byKey(const ValueKey('rai.history')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await tester.pumpAndSettle();
+    final llm = c.read(raiLlmProvider) as FakeRaiLlm; // pump() では ready の FakeRaiLlm
+    llm.reply = 'Bluesky にログインしたい状況';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'bsky のアカウントも使いたい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.next')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_assistant_proposal.png'));
   });
 }
 

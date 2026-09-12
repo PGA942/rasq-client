@@ -15,6 +15,7 @@ import 'package:rasq_client/features/rai/rai_models_fow.dart';
 import 'package:rasq_client/features/rai/rai_overlay.dart';
 import 'package:rasq_client/features/rai/rai_providers.dart';
 import 'package:rasq_client/features/rai/rai_reference.dart';
+import 'package:rasq_client/features/rai/rai_reference_providers.dart';
 import 'package:rasq_client/features/rai/rai_spline.dart';
 import 'package:rasq_client/features/rai/rai_widgets.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -72,12 +73,17 @@ void main() {
     expect(raiMemoryVerdict(modelMb: 2885, totalRamMb: null), RaiRamVerdict.unknown);
   });
 
-  group('参照 (matchInstruction)', () {
-    test('キーワードで引ける / 知らない質問は null', () {
-      expect(matchInstruction('Blueskyでログインしたい')?.instruction.id, 'login-bluesky');
-      expect(matchInstruction('つぶやくには？')?.instruction.id, 'post');
-      expect(matchInstruction('下書きはどこ')?.instruction.id, 'draft');
-      expect(matchInstruction('zzzz qqqq'), isNull);
+  group('参照 (D-189: rai_reference_test も参照)', () {
+    test('キーワードで引ける / 知らない質問は null', () async {
+      final index = await RaiReferenceIndex.fromJsonl(
+        functionsJsonl: await rootBundle.loadString(raiFunctionsAsset),
+        operationsJsonl: await rootBundle.loadString(raiOperationsAsset),
+        embedder: const NgramRaiEmbedder(),
+      );
+      expect(index.matchInstruction('Blueskyでログインしたい')?.instruction.id, 'login-bluesky');
+      expect(index.matchInstruction('つぶやくには？')?.instruction.id, 'post');
+      expect(index.matchInstruction('下書きはどこ')?.instruction.id, 'draft');
+      expect(index.matchInstruction('zzzz qqqq'), isNull);
     });
   });
 
@@ -105,7 +111,11 @@ void main() {
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => [post('p1', 'こんにちは')]));
     await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), raiLlmProvider.overrideWithValue(llm), deviceRamReaderProvider.overrideWithValue(() async => ram)], child: const RasqApp()));
     await tester.pumpAndSettle();
-    return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    // リファレンス索引 (D-189) はアセット読み込み(実 I/O)なので FakeAsync の外で先に組む。
+    await tester.runAsync(() => c.read(raiReferenceProvider.future));
+    await tester.pumpAndSettle();
+    return c;
   }
 
   testWidgets('サイドバー → RAi ホーム(バーはアシスタント)→ トグルでインストラクション → 質問 → 部品へ移動して指差す → 次へ / 閉じる', (tester) async {
@@ -293,6 +303,50 @@ void main() {
     expect(find.textContaining('未ダウンロード'), findsWidgets);
   });
 
+  testWidgets('アシスタント (D-189): LLM がシチュエーションを作ってから操作リファレンスを引き、関数の検索手順を提案(中央固定)', (tester) async {
+    final c = await pump(tester);
+    RasqSidebar.open(c.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
+    await tester.pumpAndSettle();
+    llm.set(RaiLlmStatus(RaiLlmPhase.ready, modelId: llm.spec.id));
+    llm.reply = '画像を付けて投稿したい状況';
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '撮った写真をみんなに見せたい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    // LLM にはシチュエーションの一文だけ作らせる(返事の生成はしない)。
+    expect(llm.systems.single, raiSituationSystem);
+    final st = c.read(raiProvider);
+    expect(st.situation, '画像を付けて投稿したい状況');
+    expect(st.proposal, 'attach');
+    expect(st.hits.first.id, 'attach');
+    expect(st.target, isNull); // 中央固定
+    expect(find.byType(RaiHomeScreen), findsOneWidget); // 画面は動かない
+    // 1 行目 = 見出し、▶ で関数〔id〕と 入力 / 固定 が並ぶ。
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, '「画像を付けて投稿」なら、この順で進めます(3 手順)');
+    await tester.tap(find.byKey(const ValueKey('rai.next')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, '1. 右下の「投稿」でコンポーザーが開きます〔composer.open〕');
+    await tester.tap(find.byKey(const ValueKey('rai.next')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('〔post.attach〕 入力: ファイル 固定: 閲覧注意=false'));
+    await tester.tap(find.byKey(const ValueKey('rai.next')));
+    await tester.pumpAndSettle();
+    final last = tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data!;
+    expect(last, contains('〔post.create〕 入力: 本文 固定: 公開範囲=public CW=false 返信制限=0 作成時刻='));
+    // 提案は履歴(ログ)に全文で残る。
+    expect(c.read(raiProvider).log.first.text, contains('3 手順'));
+    // リファレンスに無い発言(シチュエーションでも引けない)→ LLM の返事。
+    llm.reply = 'はい、RASQ の RAi です。';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).proposal, isNull);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, 'はい、RASQ の RAi です。');
+    expect(llm.systems.last, contains('アシスタント'));
+  });
+
   testWidgets('ログイン画面の「Raiのインストラクチャ」→ 入力欄付きのバー(インストラクション)', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
@@ -301,6 +355,7 @@ void main() {
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => const []));
     await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)], child: const RasqApp()));
     await tester.pumpAndSettle();
+    await tester.runAsync(() => ProviderScope.containerOf(tester.element(find.byType(RasqApp))).read(raiReferenceProvider.future));
     if (find.byType(LoginScreen).evaluate().isEmpty) {
       // オンボーディング等が先に出る構成なら、ログインへ。
       final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));

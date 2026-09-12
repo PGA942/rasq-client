@@ -8,6 +8,7 @@ import '../../app/router.dart';
 import 'rai_llm.dart';
 import 'rai_locator.dart';
 import 'rai_reference.dart';
+import 'rai_reference_providers.dart';
 import 'rai_widgets.dart' show splitSpeechLines;
 
 /// RAi のモード (D-179): インストラクション(操作を教える、RAi は部品まで移動して指差す)/
@@ -42,6 +43,9 @@ class RaiState {
     this.lineIndex = 0,
     this.log = const [],
     this.historyOpen = false,
+    this.hits = const [],
+    this.situation,
+    this.proposal,
   });
 
   final RaiMode mode;
@@ -76,6 +80,15 @@ class RaiState {
   final List<RaiUtterance> log;
   final bool historyOpen;
 
+  /// 直近のリファレンス検索の当たり(id とスコア、D-189)。評価 / 表示用。
+  final List<({String id, double score})> hits;
+
+  /// アシスタントで LLM が作ったシチュエーションの一文(無ければ入力そのまま)。
+  final String? situation;
+
+  /// 提案中の操作リファレンスの id。
+  final String? proposal;
+
   List<String> get lines => bubble == null ? const [] : splitSpeechLines(bubble!);
   String? get currentLine => lines.isEmpty ? (bubble == null ? null : '…') : lines[lineIndex.clamp(0, lines.length - 1)];
   bool get hasMoreLines => lineIndex + 1 < lines.length;
@@ -98,6 +111,9 @@ class RaiState {
     int? lineIndex,
     List<RaiUtterance>? log,
     bool? historyOpen,
+    List<({String id, double score})>? hits,
+    Object? situation = _keep,
+    Object? proposal = _keep,
   }) =>
       RaiState(
         mode: mode ?? this.mode,
@@ -115,6 +131,9 @@ class RaiState {
         lineIndex: lineIndex ?? this.lineIndex,
         log: log ?? this.log,
         historyOpen: historyOpen ?? this.historyOpen,
+        hits: hits ?? this.hits,
+        situation: identical(situation, _keep) ? this.situation : situation as String?,
+        proposal: identical(proposal, _keep) ? this.proposal : proposal as String?,
       );
 
   static const _keep = Object();
@@ -158,28 +177,76 @@ class RaiController extends Notifier<RaiState> {
 
   void dismissBubble() {
     _answerSeq++; // 生成中なら捨てる
-    state = state.copyWith(bubble: null, target: null, steps: const [], stepIndex: 0, lineIndex: 0, busy: false);
+    state = state.copyWith(bubble: null, target: null, steps: const [], stepIndex: 0, lineIndex: 0, busy: false, proposal: null);
   }
 
-  /// 「質問する」: インストラクションなら参照から手順を引いて最初の部品へ、
-  /// アシスタントは(第二期まで)固定の返事を中央で。
+  /// 「質問する」 (D-189): 操作リファレンスをハイブリッド検索(ベクトル + キーワード)して手順を出す。
+  /// - インストラクション: 入力そのままで検索 → 手順ごとに部品へ移動して指差す。当たらなければ LLM へ。
+  /// - アシスタント: 端末内モデルが使えれば「シチュエーション」の一文を作ってから検索し、関数リファレンスの
+  ///   検索手順(関数 / 入力するもの / 決まっているもの)を提案する(中央固定)。当たらなければ LLM の返事。
   Future<void> ask(String query) async {
     final q = query.trim();
     if (q.isEmpty) return;
     final history = [q, ...state.history.where((h) => h != q)].take(20).toList();
-    state = state.copyWith(query: q, asking: false, busy: true, history: history);
+    final seq = ++_answerSeq;
+    state = state.copyWith(query: q, asking: false, busy: true, history: history, hits: const []);
+    final index = await _index();
+    if (seq != _answerSeq) return;
     if (state.mode == RaiMode.assistant) {
-      await _answerWithLlm(q, system: _assistantSystem);
+      final situation = await _situate(q);
+      if (seq != _answerSeq) return;
+      final hits = index == null ? const <RaiHit<RaiOperation>>[] : await index.searchOperations(q, situation: situation);
+      if (seq != _answerSeq) return;
+      state = state.copyWith(hits: [for (final h in hits) (id: h.item.id, score: h.score)], situation: situation);
+      if (hits.isEmpty) {
+        await _answerWithLlm(q, system: _assistantSystem);
+        return;
+      }
+      final op = hits.first.item;
+      final steps = index!.expand(op);
+      final text = proposalLines(op, steps).join('\n');
+      state = state.copyWith(busy: false, bubble: text, target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: op.id);
+      _record(text);
       return;
     }
-    final m = matchInstruction(q);
-    if (m == null) {
+    final hits = index == null ? const <RaiHit<RaiOperation>>[] : await index.searchOperations(q);
+    if (seq != _answerSeq) return;
+    state = state.copyWith(hits: [for (final h in hits) (id: h.item.id, score: h.score)]);
+    if (hits.isEmpty) {
       // 参照に無い質問は LLM へバイパス(端末内 → フォールアップ)。どちらも無ければ案内文。
       await _answerWithLlm(q, system: _instructionSystem, fallbackText: 'まだ覚えていない操作です。「投稿」「ログイン」「共有」などで聞いてみてください。');
       return;
     }
-    state = state.copyWith(steps: m.instruction.steps, stepIndex: 0);
+    state = state.copyWith(steps: index!.expand(hits.first.item), stepIndex: 0);
     await _showStep(0);
+  }
+
+  /// 索引(組めていれば同期で返す。組み上がり待ちなら待つ。読めなければ null = LLM だけで答える)。
+  Future<RaiReferenceIndex?> _index() async {
+    final v = ref.read(raiReferenceProvider);
+    if (v.hasValue) return v.value;
+    try {
+      return await ref.read(raiReferenceProvider.future);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// LLM にシチュエーションの一文を作らせる(モデルが準備できていないときは null = 入力そのままで検索)。
+  Future<String?> _situate(String q) async {
+    final llm = ref.read(raiLlmProvider);
+    if (!llm.current.ready) return null;
+    try {
+      final buf = StringBuffer();
+      await for (final tok in llm.chat(q, system: raiSituationSystem)) {
+        buf.write(tok);
+        if (buf.length > 120) break;
+      }
+      final s = buf.toString().trim().split('\n').first.trim();
+      return s.isEmpty ? null : s;
+    } on RaiLlmException {
+      return null;
+    }
   }
 
   static const _assistantSystem = 'あなたは SNS ブラウザ RASQ のアシスタント「RAi」です。日本語で、短く(3 文以内)答えてください。';
@@ -189,7 +256,7 @@ class RaiController extends Notifier<RaiState> {
   Future<void> _answerWithLlm(String q, {required String system, String? fallbackText}) async {
     final llm = ref.read(raiLlmProvider);
     final seq = ++_answerSeq;
-    state = state.copyWith(busy: true, bubble: '…', target: null, steps: const [], stepIndex: 0, lineIndex: 0);
+    state = state.copyWith(busy: true, bubble: '…', target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: null);
     var text = '';
     try {
       await for (final tok in llm.chat(q, system: system)) {
