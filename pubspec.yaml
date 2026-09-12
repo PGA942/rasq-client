@@ -60,6 +60,9 @@ dependencies:
   path_provider: ^2.1.6
   flutter_gemma: ^1.8.0
   flutter_gemma_litertlm: ^1.6.3
+  # SigLIP2 テキスト塔の端末実行 (D-190) と RAi の 3D 描画 (D-191)。
+  onnxruntime: ^1.4.1
+  three_js: ^0.3.0
   llama_cpp_dart: ^0.2.2
   device_info_plus: ^13.2.0
   archive: ^4.2.0
@@ -80,6 +83,8 @@ flutter:
     # アニメ idle / run_* / accident。描画は後段 — 今はアセットとして保持)。
     - assets/models/rai.glb
     # RAi のリファレンス (D-189): 関数リファレンス / 操作リファレンス / 検索の評価セット(jsonl)。
+    # SigLIP2 のトークナイザー (D-190: Gemma SentencePiece BPE、4 MB。ONNX 本体はダウンロード)。
+    - assets/models/siglip2_tokenizer.model
     - assets/rai/functions.jsonl
     - assets/rai/operations.jsonl
     - assets/rai/eval.jsonl

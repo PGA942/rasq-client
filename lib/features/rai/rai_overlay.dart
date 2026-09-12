@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -9,6 +11,8 @@ import '../../shell/app_overlay_root.dart';
 import 'rai_layout.dart';
 import 'rai_llm.dart';
 import 'rai_models_fow.dart';
+import 'rai_mascot_3d.dart';
+import 'rai_motion.dart';
 import 'rai_providers.dart';
 import 'rai_spline.dart';
 import 'rai_widgets.dart';
@@ -131,18 +135,29 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   Rect? _lastTarget;
   RaiMode? _lastMode;
 
+  /// 3D (D-191): 移動の計画(起動 / 走行 / 停止、腕の側)と進み具合、推論中の一時停止。
+  final _ctrl3d = RaiMascot3dController();
+  bool _pausedByBusy = false;
+
   @override
   void initState() {
     super.initState();
-    _anim.addListener(() => setState(() {}));
+    _anim.addListener(() {
+      _ctrl3d.advance(Curves.easeInOutCubic.transform(_anim.value));
+      setState(() {});
+    });
     _anim.addStatusListener((st) {
-      if (st == AnimationStatus.completed && _path != null) _pos = _path!.to;
+      if (st == AnimationStatus.completed && _path != null) {
+        _pos = _path!.to;
+        _ctrl3d.finish();
+      }
     });
   }
 
   @override
   void dispose() {
     _anim.dispose();
+    _ctrl3d.dispose();
     super.dispose();
   }
 
@@ -151,15 +166,32 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     return raiAnchorFor(s.target!, screen, mascot: mascot);
   }
 
-  void _moveTo(Offset dest) {
+  void _moveTo(Offset dest, RaiState s, Size screen) {
     final from = _pos ?? dest;
+    final armTo = raiArmFor(dest, s.mode == RaiMode.instruction ? s.target : null);
     if ((from - dest).distance < 1) {
       _pos = dest;
+      _ctrl3d.idle(armTo);
       return;
     }
     _path = RaiPath(from: from, to: dest);
-    _anim.duration = Duration(milliseconds: (350 + _path!.length * 0.6).clamp(350, 1100).round());
+    // 起動 / 停止だけか、走行を挟むか(距離が画面幅 / カラム幅の半分以上)。
+    final plan = planRaiMotion(from: from, to: dest, columnWidth: math.min(screen.width, raiPanelWidth(context)), centerX: screen.width / 2, armFrom: _ctrl3d.arm, armTo: armTo);
+    _ctrl3d.start(plan);
+    _anim.duration = Duration(milliseconds: (plan.long ? 700 + _path!.length * 0.6 : 350 + _path!.length * 0.6).clamp(350, 1600).round());
     _anim.forward(from: 0);
+  }
+
+  /// LLM の推論中はアニメーションを止める(クリップも移動も)。終わったら続きから。
+  void _syncBusy(bool busy) {
+    if (busy == _pausedByBusy) return;
+    _pausedByBusy = busy;
+    _ctrl3d.paused = busy;
+    if (busy) {
+      if (_anim.isAnimating) _anim.stop();
+    } else if (_path != null && _anim.value < 1 && !_anim.isAnimating) {
+      _anim.forward();
+    }
   }
 
   @override
@@ -170,11 +202,12 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
       return const SizedBox.shrink();
     }
     final dest = _destination(s, screen);
+    _syncBusy(s.busy);
     if (s.target != _lastTarget || s.mode != _lastMode || _pos == null) {
       _lastTarget = s.target;
       _lastMode = s.mode;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _moveTo(dest));
+        if (mounted) setState(() => _moveTo(dest, s, screen));
       });
     }
     final path = _path;
@@ -199,7 +232,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
         Positioned(
           left: pos.dx - mascot / 2,
           top: pos.dy - mascot * 0.625,
-          child: IgnorePointer(child: RaiMascot(size: mascot, tilt: tilt, pointing: pointing)),
+          child: IgnorePointer(child: RaiMascot(size: mascot, tilt: tilt, pointing: pointing, controller3d: _ctrl3d)),
         ),
       ]),
     );

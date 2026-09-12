@@ -8,6 +8,7 @@
 
 #include <connectivity_plus/connectivity_plus_windows_plugin.h>
 #include <file_selector_windows/file_selector_windows.h>
+#include <flutter_angle/flutter_angle_plugin.h>
 #include <flutter_gemma/flutter_gemma_plugin.h>
 #include <flutter_secure_storage_windows/flutter_secure_storage_windows_plugin.h>
 #include <pro_video_editor/pro_video_editor_plugin_c_api.h>
@@ -18,6 +19,8 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("ConnectivityPlusWindowsPlugin"));
   FileSelectorWindowsRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FileSelectorWindows"));
+  FlutterAnglePluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("FlutterAnglePlugin"));
   FlutterGemmaPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FlutterGemmaPlugin"));
   FlutterSecureStorageWindowsPluginRegisterWithRegistrar(

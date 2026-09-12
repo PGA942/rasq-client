@@ -8,6 +8,7 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/login/login_screen.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/rai/rai_embedding_model.dart';
 import 'package:rasq_client/features/rai/rai_home_screen.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
 import 'package:rasq_client/features/rai/rai_llm_device.dart';
@@ -23,6 +24,7 @@ import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'support/fake_rai_embedding_model.dart';
 import 'support/fake_rai_llm.dart';
 import 'support/fakes.dart';
 
@@ -88,7 +90,11 @@ void main() {
   });
 
   late FakeRaiLlm llm;
-  setUp(() => llm = FakeRaiLlm());
+  late FakeRaiEmbeddingModel embedding;
+  setUp(() {
+    llm = FakeRaiLlm();
+    embedding = FakeRaiEmbeddingModel();
+  });
   ({int? totalMb, int? availableMb}) ram = (totalMb: 8192, availableMb: 4096);
 
   /// FOW の下端は RAi バーに隠れるので、対象がその上に来るまで少しだけ送る。
@@ -109,7 +115,7 @@ void main() {
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => [post('p1', 'こんにちは')]));
-    await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), raiLlmProvider.overrideWithValue(llm), deviceRamReaderProvider.overrideWithValue(() async => ram)], child: const RasqApp()));
+    await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), raiLlmProvider.overrideWithValue(llm), raiEmbeddingModelProvider.overrideWithValue(embedding), deviceRamReaderProvider.overrideWithValue(() async => ram)], child: const RasqApp()));
     await tester.pumpAndSettle();
     final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
     // リファレンス索引 (D-189) はアセット読み込み(実 I/O)なので FakeAsync の外で先に組む。
@@ -345,6 +351,39 @@ void main() {
     expect(c.read(raiProvider).proposal, isNull);
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, 'はい、RASQ の RAi です。');
     expect(llm.systems.last, contains('アシスタント'));
+  });
+
+  testWidgets('モデル FOW の「検索(リファレンスの埋め込み)」 (D-190): SigLIP2 をダウンロード → 索引が SigLIP2 で組み直る → 削除で n-gram に戻る', (tester) async {
+    final c = await pump(tester);
+    expect((await tester.runAsync(() => c.read(raiEmbedderProvider.future)))!.name, 'ngram-256');
+    RasqSidebar.open(c.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.models.open')));
+    await tester.pumpAndSettle();
+    final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.embed.tile')), 120, scrollable: fowList);
+    await tester.pumpAndSettle();
+    expect(find.text('SigLIP2 base(テキスト塔・int8)'), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.embed.phase'))).data, '未ダウンロード');
+    expect(find.textContaining('n-gram 代替'), findsOneWidget);
+    await clearOfBar(tester, fowList, find.byKey(const ValueKey('rai.embed.download')));
+    await tester.tap(find.byKey(const ValueKey('rai.embed.download')));
+    await tester.pumpAndSettle();
+    expect(embedding.installs, 1);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.embed.phase'))).data, '準備完了');
+    expect(find.textContaining('検索: SigLIP2'), findsOneWidget);
+    // 索引は新しい埋め込み器で組み直される。
+    await tester.runAsync(() => c.read(raiReferenceProvider.future));
+    await tester.pumpAndSettle();
+    expect((await tester.runAsync(() => c.read(raiEmbedderProvider.future)))!.name, 'fake-siglip');
+    expect(c.read(raiReferenceProvider).value!.embedder.name, 'fake-siglip');
+    await tester.tap(find.byKey(const ValueKey('rai.embed.delete')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.embed.phase'))).data, '未ダウンロード');
+    await tester.runAsync(() => c.read(raiReferenceProvider.future));
+    expect((await tester.runAsync(() => c.read(raiEmbedderProvider.future)))!.name, 'ngram-256');
   });
 
   testWidgets('ログイン画面の「Raiのインストラクチャ」→ 入力欄付きのバー(インストラクション)', (tester) async {

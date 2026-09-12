@@ -285,9 +285,11 @@ double keywordScore(String query, List<String> keys) {
     if (kk.isEmpty) continue;
     double s;
     if (kk.contains(q)) {
-      s = 1.0;
+      // 問い合わせがタグの一部(「投稿」⊂「画像を付けて投稿」)なら、タグをどれだけ覆うかで下げる。
+      final c = math.min(1.0, q.length / kk.length);
+      s = 0.5 + 0.5 * c;
       hits++;
-      covered += 1;
+      covered += c;
     } else if (q.contains(kk)) {
       final c = math.max(verb ? 0.6 : 0.0, math.min(1.0, kk.length / q.length));
       s = 0.5 + 0.5 * c;
