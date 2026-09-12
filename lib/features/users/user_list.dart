@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_store/rasq_store.dart';
 
+import '../../app/navigation.dart';
 import '../../app/providers.dart';
 
 /// Helper that primes/sets follow state through the Store (状態はDSLの外).
@@ -73,6 +74,7 @@ class UserList extends ConsumerWidget {
           subtitle: subtitles[u.id],
           leading: leadingFor?.call(u),
           onFollowTap: isMe ? null : () => ref.read(userListHelperProvider).toggleFollow(u),
+          onTap: () => context.pushUser(u), // 行タップでプロフィールへ (D-177)
           onMore: () {},
         );
       },

@@ -1,5 +1,6 @@
 // 描画確認ハーネス (D-169): メディアエディター / インラインのプラグイン FOW を PNG に。
 //   RASQ_PREVIEW_FONT=/path/to/NotoSansJP.ttf flutter test tool/preview/plugin_preview_test.dart --update-goldens
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -18,6 +19,7 @@ import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/post/share_fow.dart';
 import 'package:rasq_client/features/compose/drafts_fow.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -42,14 +44,14 @@ void main() {
   Post post(String id, String body) => Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 8, 31), body: body);
   final fakes = <String, FakeSlotRuntime Function()>{};
 
-  Future<ProviderContainer> pump(WidgetTester tester) async {
+  Future<ProviderContainer> pump(WidgetTester tester, {List<Post>? posts}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
     });
-    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => [post('p1', '今日は打ち上げ')]));
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => posts ?? [post('p1', '今日は打ち上げ')]));
     await tester.pumpWidget(ProviderScope(
       overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes))],
       child: const RasqApp(),
@@ -317,4 +319,101 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('drafts_fow_select.png'));
   });
+
+  testWidgets('close popup choices + thread media all + profile image viewer (D-177)', (tester) async {
+    // 画像 URL は全部グラデーション PNG を返す(debug 用のフック)。
+    debugNetworkImageHttpClientProvider = () => _PngHttpClient(png);
+    final author = UserSummary(id: 'u1', account: acc, displayName: 'テスター', avatarUrl: Uri.parse('https://example.test/avatar.png'));
+    final withMedia = Post(
+      id: 'p1',
+      account: acc,
+      author: author,
+      createdAt: DateTime(2026, 8, 31),
+      body: '打ち上げの写真、6 枚まとめて',
+      media: [for (var i = 0; i < 6; i++) MediaItem(id: 'm$i', type: MediaType.image, url: Uri.parse('https://example.test/$i.png'))],
+    );
+    await pump(tester, posts: [withMedia]);
+    await tester.tap(find.text('打ち上げの写真、6 枚まとめて'));
+    await tester.pumpAndSettle();
+    // 画像の復号は本物の非同期(FakeAsync では進まない)。
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('thread_media_all.png'));
+    // 作者名 → プロフィール → アイコン → 全画面。
+    await tester.tap(find.text('テスター').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(RasqUserTileLarge), matching: find.byType(RasqAvatar)));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('profile_image_viewer.png'));
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    // 下書きを開いて直してからキャンセル → 上書き / 新規保存 / 変更を破棄 / キャンセル。
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '明日の打ち上げの写真、あとで整理してから出す');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下書き'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('drafts.save')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下書き'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('明日の打ち上げの写真、あとで整理してから出す'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '明日の打ち上げの写真、整理できたので出す');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('キャンセル').first);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('composer_close_overwrite.png'));
+    debugNetworkImageHttpClientProvider = null; // テスト本体の中で戻す(不変条件の検査は tearDown より前)
+  });
+}
+
+/// プレビュー用: どの URL にも同じ PNG を 200 で返す HttpClient(`debugNetworkImageHttpClientProvider`)。
+class _PngHttpClient implements HttpClient {
+  _PngHttpClient(this.bytes);
+  final Uint8List bytes;
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async => _PngRequest(bytes);
+  @override
+  Future<HttpClientRequest> openUrl(String method, Uri url) async => _PngRequest(bytes);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class _PngRequest implements HttpClientRequest {
+  _PngRequest(this.bytes);
+  final Uint8List bytes;
+  @override
+  Future<HttpClientResponse> close() async => _PngResponse(bytes);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class _PngResponse extends Stream<List<int>> implements HttpClientResponse {
+  _PngResponse(this.bytes);
+  final Uint8List bytes;
+  @override
+  int get statusCode => 200;
+  @override
+  int get contentLength => bytes.length;
+  @override
+  HttpClientResponseCompressionState get compressionState => HttpClientResponseCompressionState.notCompressed;
+  @override
+  StreamSubscription<List<int>> listen(void Function(List<int> event)? onData, {Function? onError, void Function()? onDone, bool? cancelOnError}) =>
+      Stream<List<int>>.value(bytes).listen(onData, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
 }

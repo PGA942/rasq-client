@@ -71,6 +71,9 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
               requested: st.requested,
               restricted: restricted,
               onShowRestricted: () => setState(() => _showRestricted = true),
+              // アイコン / バナーのタップで全画面表示 (D-177)。
+              onAvatarTap: p.summary.avatarUrl == null ? null : () => context.openImage(p.summary.avatarUrl!, title: p.summary.displayName),
+              onBannerTap: p.bannerUrl == null ? null : () => context.openImage(p.bannerUrl!, title: p.summary.displayName),
               bio: p.description == null ? null : RasqRichText(InlineSpans.parse(p.description!, emojis: ref.watch(emojiCacheProvider), onLink: (u) => launchUrl(u, mode: LaunchMode.externalApplication), onHashtag: (t) => context.pushTrend(t)), style: RasqTypography.body),
               onFollowTap: () => ref.read(userListHelperProvider).toggleFollow(p.summary),
               onEditTap: () => context.push(Routes.profileEdit),

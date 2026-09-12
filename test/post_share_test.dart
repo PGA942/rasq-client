@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/compose/compose_providers.dart';
 import 'package:rasq_client/features/compose/account_select.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/post/share_fow.dart';
@@ -164,15 +165,17 @@ void main() {
     expect(tester.widget<TextField>(find.byType(TextField).last).controller!.text, '「こんにちは」\nhttps://example.test/notes/p1');
     expect(find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage), findsOneWidget);
     expect(rt.calls.where((x) => x.$1 == 'post.share.close').single.$2['token'], call['token']);
-    // 下書きは添付も持つ (D-174): 閉じて開き直しても画像が消えない。
+    // 下書きは添付も持つ (D-174): 閉じて下書き FOW から開き直しても画像が消えない(自動では入らない、D-177)。
     await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
-    if (find.text('保存').evaluate().isNotEmpty) {
-      await tester.tap(find.text('保存'));
-      await tester.pumpAndSettle();
-    }
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
     expect(find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage), findsNothing);
     await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下書き'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('drafts.item.${c.read(composeDraftsProvider.notifier).list.single.id}')));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(find.byType(TextField).last).controller!.text, '「こんにちは」\nhttps://example.test/notes/p1');
     expect(find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage), findsOneWidget);
