@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import 'rai_embedding_model.dart';
 import 'rai_layout.dart';
 import 'rai_llm.dart';
+import 'rai_widgets.dart' show raiBarKey;
 
 /// LLM モデルの FOW (D-183): タイルに ローカル / クラウド、集計された完遂率(35B 未満だけ集計、
 /// 未集計は「-%」)、端末 RAM から見た動作可否のインジケーター、状態と操作(ダウンロード / 使う /
@@ -16,10 +17,19 @@ const raiModelsFowId = 'fow.rai.models';
 Future<void> showRaiModelsFow(WidgetRef ref, BuildContext context, {int? column}) async {
   final manager = ref.read(overlayManagerProvider);
   if (manager.contains(raiModelsFowId)) return;
+  // 付く場所は文字入力ウィジェットの上 (D-192): バーの矩形をアンカーにして上付き。
+  Rect? anchor;
+  final barBox = raiBarKey.currentContext?.findRenderObject();
+  if (barBox is RenderBox && barBox.hasSize) {
+    final tl = barBox.localToGlobal(Offset.zero);
+    anchor = tl & barBox.size;
+  }
   await manager.showFow<void>(
     id: raiModelsFowId,
     // 幅は入力ウィジェットに揃える (D-185)。
-    spec: FowSpec(title: 'モデル', cancelText: '閉じる', initialHeightFactor: 0.7, maxHeightFactor: 0.92, columnIndex: column ?? 0, maxWidth: raiPanelWidth(context)),
+    spec: FowSpec(title: 'モデル', cancelText: '閉じる', initialHeightFactor: 0.7, maxHeightFactor: 0.92, columnIndex: column ?? 0, maxWidth: raiPanelWidth(context))
+      ..anchor = anchor
+      ..anchorBelow = anchor == null ? null : false,
     builder: (_, _) => const RaiModelsBody(),
   );
 }

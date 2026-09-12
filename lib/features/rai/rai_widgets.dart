@@ -12,8 +12,11 @@ import 'rai_providers.dart';
 /// 体 = コーン)を 2D で。gltf / three.js 相当のモーションは第一期では簡易(位置の
 /// スプライン移動 + 指差し方向で少し傾く)。
 class RaiMascot extends ConsumerWidget {
-  const RaiMascot({super.key, this.size = 96, this.tilt = 0, this.pointing, this.controller3d});
+  const RaiMascot({super.key, this.size = 96, this.tilt = 0, this.pointing, this.controller3d, this.opacity = 1});
   final double size;
+
+  /// 薄く表示(アシスタントのスタンバイ)。
+  final double opacity;
 
   /// 傾き(ラジアン)。移動中に進行方向へ少し傾ける(2D のとき)。
   final double tilt;
@@ -27,22 +30,29 @@ class RaiMascot extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final three = ref.watch(raiMascot3dProvider);
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Semantics(
       label: 'RAi',
       child: three
-          ? RaiMascot3d(size: size, controller: controller3d)
-          : Transform.rotate(
-              angle: tilt,
-              child: CustomPaint(size: Size(size, size * 1.25), painter: _RaiMascotPainter(pointing: pointing, scheme: Theme.of(context).colorScheme)),
+          ? RaiMascot3d(size: size, controller: controller3d, opacity: opacity, outline: dark ? Colors.white.withValues(alpha: 0.85) : null)
+          : Opacity(
+              opacity: opacity,
+              child: Transform.rotate(
+                angle: tilt,
+                child: CustomPaint(size: Size(size, size * 1.25), painter: _RaiMascotPainter(pointing: pointing, scheme: Theme.of(context).colorScheme, outline: dark)),
+              ),
             ),
     );
   }
 }
 
 class _RaiMascotPainter extends CustomPainter {
-  _RaiMascotPainter({required this.pointing, required this.scheme});
+  _RaiMascotPainter({required this.pointing, required this.scheme, this.outline = false});
   final Offset? pointing;
   final ColorScheme scheme;
+
+  /// ダークモードの縁取り (D-192)。
+  final bool outline;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -59,6 +69,20 @@ class _RaiMascotPainter extends CustomPainter {
       ..lineTo(cx + w * 0.16, h * 0.92)
       ..lineTo(cx - w * 0.16, h * 0.92)
       ..close();
+    if (outline) {
+      // ダークモード: 外形(台座 / 体 / 耳 / 頭)を白で縁取る。
+      final rim = Paint()
+        ..color = Colors.white.withValues(alpha: 0.85)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.05
+        ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(base, rim);
+      canvas.drawPath(body, rim);
+      canvas.drawCircle(Offset(cx - w * 0.36, h * 0.12), w * 0.11, rim);
+      canvas.drawCircle(Offset(cx + w * 0.36, h * 0.12), w * 0.11, rim);
+      final dx0 = (pointing?.dx ?? 0) * w * 0.04;
+      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(cx - w * 0.44 + dx0, h * 0.1, w * 0.88, h * 0.4), Radius.circular(w * 0.07)), rim);
+    }
     canvas.drawPath(body, cone);
     // 耳。
     final ear = Paint()..color = const Color(0xFFEDEDED);
@@ -80,7 +104,7 @@ class _RaiMascotPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RaiMascotPainter old) => old.pointing != pointing;
+  bool shouldRepaint(_RaiMascotPainter old) => old.pointing != pointing || old.outline != outline;
 }
 
 /// RAi の小さいアイコン(黄色い丸に RAi の頭、吹き出しの左)。
@@ -216,6 +240,9 @@ class RaiStatusRing extends StatelessWidget {
 /// RAi バー (D-179 / D-180、ワイヤーフレーム p.4): 上段は**そのまま入力欄**(ヒント = 「困ったとき、
 /// お手伝いします！」、質問後はその文がヒントに)。左の ^ で下段(モデルチップ / 状態リング /
 /// トグル / 質問する)を畳む。「質問する」= 送信。
+/// RAi バーの位置(モデル FOW をこの上に付ける、D-192)。
+final raiBarKey = GlobalKey(debugLabel: 'rai.bar');
+
 class RaiBar extends StatefulWidget {
   const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320});
   final RaiState state;

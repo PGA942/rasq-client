@@ -84,3 +84,28 @@ RaiMotionPlan planRaiMotion({required Offset from, required Offset to, required 
     armTo: armTo,
   );
 }
+
+/// 指差し時の RAi の大きさ(px)と、移動の手前再接近 / アシスタントのスタンバイでの最大の大きさ。
+const raiPointSize = 180.0;
+const raiApproachSize = 700.0;
+
+/// 画面に収まる「手前再接近」の大きさ。
+double raiApproachSizeFor(Size screen) => raiApproachSize.clamp(raiPointSize, (screen.shortestSide * 0.9).clamp(raiPointSize, raiApproachSize));
+
+/// 移動中の大きさ: 両端は指差しサイズ、中ほどで手前に寄って大きくなる(山なり)。
+double raiSizeAt(double progress, {required double approach, double point = raiPointSize}) {
+  final t = progress.clamp(0.0, 1.0);
+  final bump = 4 * t * (1 - t); // 0 → 1 → 0
+  return point + (approach - point) * bump;
+}
+
+/// 移動時間: 短距離 2〜4 秒、長距離 4〜6 秒(距離に比例)。
+Duration raiMoveDuration({required double distance, required double columnWidth, required bool long}) {
+  final half = columnWidth / 2;
+  if (!long) {
+    final r = half == 0 ? 1.0 : (distance / half).clamp(0.0, 1.0);
+    return Duration(milliseconds: (2000 + 2000 * r).round());
+  }
+  final r = ((distance - half) / (columnWidth * 1.5)).clamp(0.0, 1.0);
+  return Duration(milliseconds: (4000 + 2000 * r).round());
+}

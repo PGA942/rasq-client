@@ -85,6 +85,7 @@ class _RaiBarHost extends ConsumerWidget {
         // RAi の発言は入力ウィジェットの上に 1 行ずつ (D-182)。
         if (speech != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: speech),
         RaiBar(
+        key: raiBarKey,
         state: s,
         onToggleExpanded: n.toggleExpanded,
         onMode: n.setMode,
@@ -128,8 +129,12 @@ class RaiMascotLayer extends ConsumerStatefulWidget {
 }
 
 class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTickerProviderStateMixin {
-  static const mascot = 72.0;
-  late final AnimationController _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+  /// 指差し時の大きさ (D-192: 150〜200 px)。移動の手前再接近では [raiApproachSizeFor] まで大きくなる。
+  static const mascot = raiPointSize;
+  late final AnimationController _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
+
+  /// 静止位置は右下 / 左下 (D-192): 直前に指した部品が右半分なら左下、それ以外は右下。
+  bool _restLeft = false;
   RaiPath? _path;
   Offset? _pos;
   Rect? _lastTarget;
@@ -162,7 +167,12 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   }
 
   Offset _destination(RaiState s, Size screen) {
-    if (s.mode == RaiMode.assistant || s.target == null) return Offset(screen.width / 2, screen.height * 0.42);
+    if (s.mode == RaiMode.assistant || s.target == null) {
+      // 右下 / 左下(バーの上)。
+      final x = _restLeft ? mascot / 2 + RasqSpacing.md : screen.width - mascot / 2 - RasqSpacing.md;
+      return Offset(x, screen.height - 180 - mascot * 0.7);
+    }
+    _restLeft = s.target!.center.dx > screen.width / 2;
     return raiAnchorFor(s.target!, screen, mascot: mascot);
   }
 
@@ -178,7 +188,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     // 起動 / 停止だけか、走行を挟むか(距離が画面幅 / カラム幅の半分以上)。
     final plan = planRaiMotion(from: from, to: dest, columnWidth: math.min(screen.width, raiPanelWidth(context)), centerX: screen.width / 2, armFrom: _ctrl3d.arm, armTo: armTo);
     _ctrl3d.start(plan);
-    _anim.duration = Duration(milliseconds: (plan.long ? 700 + _path!.length * 0.6 : 350 + _path!.length * 0.6).clamp(350, 1600).round());
+    _anim.duration = raiMoveDuration(distance: (dest - from).distance, columnWidth: math.min(screen.width, raiPanelWidth(context)), long: plan.long);
     _anim.forward(from: 0);
   }
 
@@ -217,6 +227,8 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     final velocity = moving ? (path.at((t + 0.02).clamp(0, 1)) - pos) : Offset.zero;
     final tilt = moving ? (velocity.dx / (velocity.distance + 0.001)) * 0.18 : 0.0;
     final pointing = s.target == null ? null : pointingDirection(pos, s.target!.center);
+    // 手前再接近 (D-192): 移動の中ほどで大きく(最大 700 px、画面に収まる範囲)。
+    final size = moving ? raiSizeAt(t, approach: raiApproachSizeFor(screen)) : mascot;
     return SizedBox(
       width: screen.width,
       height: screen.height,
@@ -230,9 +242,9 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
             ),
           ),
         Positioned(
-          left: pos.dx - mascot / 2,
-          top: pos.dy - mascot * 0.625,
-          child: IgnorePointer(child: RaiMascot(size: mascot, tilt: tilt, pointing: pointing, controller3d: _ctrl3d)),
+          left: pos.dx - size / 2,
+          top: pos.dy - size * 0.625,
+          child: IgnorePointer(child: RaiMascot(size: size, tilt: tilt, pointing: pointing, controller3d: _ctrl3d)),
         ),
       ]),
     );

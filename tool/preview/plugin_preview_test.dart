@@ -398,7 +398,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_home.png'));
-    await tester.tap(find.byKey(const ValueKey('rai.models.open')));
+    await tester.tap(find.byKey(const ValueKey('rai.model')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_models_fow.png'));
     await tester.tap(find.text('閉じる').last);

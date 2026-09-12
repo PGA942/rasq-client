@@ -107,11 +107,17 @@ class RaiStep {
 
 /// 操作リファレンスの 1 行(index = 短文の高度なインデックス)。
 class RaiOperation {
-  const RaiOperation({required this.id, required this.index, this.tags = const [], this.steps = const []});
+  const RaiOperation({required this.id, required this.index, this.tags = const [], this.steps = const [], this.base, this.branchAt = 0});
   final String id;
   final String index;
   final List<String> tags;
+
+  /// 自分の手順(分岐なら base の共有部分のあと)。
   final List<RaiOperationStep> steps;
+
+  /// 分岐 (D-192): 元になる操作 id と、その先頭何手順を共有するか。
+  final String? base;
+  final int branchAt;
   String get title => index;
   String get text => [index, ...tags].join(' ');
 
@@ -120,6 +126,8 @@ class RaiOperation {
         index: '${j['index'] ?? j['title'] ?? ''}',
         tags: [for (final t in (j['tags'] as List? ?? const [])) '$t'],
         steps: [for (final s in (j['steps'] as List? ?? const [])) RaiOperationStep.fromJson((s as Map).cast<String, Object?>())],
+        base: j['base'] as String?,
+        branchAt: (j['branchAt'] as num?)?.toInt() ?? 0,
       );
 }
 
@@ -273,35 +281,33 @@ String stemJa(String s) {
 
 /// キーワード側のスコア: タイトル / タグが問い合わせに含まれる(含む)ときは、その語が問い合わせを
 /// どれだけ覆うか(短い語 1 つの一致で満点にしない: 「投稿のリンクをコピー」の「投稿」)、それ以外は
-/// 2-gram Dice の最大。当たったタグが複数なら覆いを足し合わせる(「投稿」+「リンク」)。
+/// 2-gram Dice の最大。複数タグが当たれば少し加点、見出し(先頭のキー)が問い合わせに近ければ少し加点
+/// (「投稿する」 vs 「投稿先のカスタマイズ」)。空白は無視して比べる(「DM を送る」と「DMを送」)。
+/// 返りは 1 を超えることがある(同点の順位付けのため)。
 double keywordScore(String query, List<String> keys) {
-  final q = stemJa(query);
+  final q = stemJa(query).replaceAll(RegExp(r'\s+'), '');
   if (q.isEmpty) return 0;
   var best = 0.0;
-  var covered = 0.0;
   var hits = 0;
   for (final k in keys) {
-    final (stem: kk, verb: verb) = _stemKey(k);
+    final (stem: kk0, verb: verb) = _stemKey(k);
+    final kk = kk0.replaceAll(RegExp(r'\s+'), '');
     if (kk.isEmpty) continue;
     double s;
     if (kk.contains(q)) {
       // 問い合わせがタグの一部(「投稿」⊂「画像を付けて投稿」)なら、タグをどれだけ覆うかで下げる。
-      final c = math.min(1.0, q.length / kk.length);
-      s = 0.5 + 0.5 * c;
+      s = 0.5 + 0.5 * math.min(1.0, q.length / kk.length);
       hits++;
-      covered += c;
     } else if (q.contains(kk)) {
-      final c = math.max(verb ? 0.6 : 0.0, math.min(1.0, kk.length / q.length));
-      s = 0.5 + 0.5 * c;
+      s = 0.5 + 0.5 * math.max(verb ? 0.6 : 0.0, math.min(1.0, kk.length / q.length));
       hits++;
-      covered += c;
     } else {
       s = diceSimilarity(q, kk);
     }
     if (s > best) best = s;
   }
-  if (hits > 1) best = math.max(best, 0.5 + 0.5 * math.min(1.0, covered));
-  return best + math.max(0, hits - 1) * 0.05;
+  final headline = keys.isEmpty ? 0.0 : diceSimilarity(q, stemJa(keys.first).replaceAll(RegExp(r'\s+'), ''));
+  return best + math.max(0, hits - 1) * 0.05 + 0.1 * headline;
 }
 
 /// 問い合わせの作り方: 入力そのまま / LLM がシチュエーションの一文を作ってから。
@@ -394,7 +400,7 @@ class RaiReferenceIndex {
     for (var i = 0; i < items.length; i++) {
       final vec = math.max(0.0, cosine(qv, vectors[i]));
       final kw = math.max(keywordScore(q, keys(items[i])), situation == null ? 0.0 : keywordScore(situation, keys(items[i])) * 0.8);
-      scored.add(RaiHit(item: items[i], score: weight * vec + (1 - weight) * math.min(1.0, kw), vector: vec, keyword: kw));
+      scored.add(RaiHit(item: items[i], score: weight * vec + (1 - weight) * math.min(1.3, kw), vector: vec, keyword: kw));
     }
     scored.sort((a, b) => b.score.compareTo(a.score));
     return [for (final h in scored.take(k)) if (h.score >= threshold) h];
@@ -405,10 +411,20 @@ class RaiReferenceIndex {
     if (traces.length > 100) traces.removeLast();
   }
 
+  /// 分岐 (D-192) を解いた手順: base の先頭 `branchAt` 手順(再帰)+ 自分の手順。循環 / 不明な base は自分の手順だけ。
+  List<RaiOperationStep> resolvedSteps(RaiOperation op, {Set<String>? seen}) {
+    final visited = seen ?? <String>{};
+    if (op.base == null || !visited.add(op.id)) return op.steps;
+    final b = operation(op.base!);
+    if (b == null || visited.contains(b.id)) return op.steps;
+    final shared = resolvedSteps(b, seen: visited);
+    return [...shared.take(op.branchAt.clamp(0, shared.length)), ...op.steps];
+  }
+
   /// 操作リファレンスの手順を、関数リファレンスで肉付けした [RaiStep] に展開する
-  /// (関数の部品 / 画面を引き継ぎ、preset は解決、input は表示名の列)。
+  /// (分岐を解き、関数の部品 / 画面を引き継ぎ、preset は解決、input は表示名の列)。
   List<RaiStep> expand(RaiOperation op, {RaiPresets presets = const RaiPresets()}) => [
-        for (final s in op.steps)
+        for (final s in resolvedSteps(op))
           () {
             final f = s.fn == null ? null : function(s.fn!);
             return RaiStep(
