@@ -8,6 +8,7 @@ import '../../app/router.dart';
 import 'rai_llm.dart';
 import 'rai_locator.dart';
 import 'rai_reference.dart';
+import 'rai_widgets.dart' show splitSpeechLines;
 
 /// RAi のモード (D-179): インストラクション(操作を教える、RAi は部品まで移動して指差す)/
 /// アシスタント(第二期: LLM。今は枠とトグルだけ、RAi は中央固定)。
@@ -38,6 +39,7 @@ class RaiState {
     this.stepIndex = 0,
     this.history = const [],
     this.error = false,
+    this.lineIndex = 0,
   });
 
   final RaiMode mode;
@@ -65,6 +67,13 @@ class RaiState {
   /// 直近の返事が失敗表示か(端末内モデル / フォールアップとも不可)。
   final bool error;
 
+  /// 発言のうち今見せている行 (D-182: 1 行ずつ)。
+  final int lineIndex;
+
+  List<String> get lines => bubble == null ? const [] : splitSpeechLines(bubble!);
+  String? get currentLine => lines.isEmpty ? (bubble == null ? null : '…') : lines[lineIndex.clamp(0, lines.length - 1)];
+  bool get hasMoreLines => lineIndex + 1 < lines.length;
+
   bool get hasNext => steps.isNotEmpty && stepIndex + 1 < steps.length;
 
   RaiState copyWith({
@@ -80,6 +89,7 @@ class RaiState {
     int? stepIndex,
     List<String>? history,
     bool? error,
+    int? lineIndex,
   }) =>
       RaiState(
         mode: mode ?? this.mode,
@@ -94,6 +104,7 @@ class RaiState {
         stepIndex: stepIndex ?? this.stepIndex,
         history: history ?? this.history,
         error: error ?? (bubble is String ? false : this.error),
+        lineIndex: lineIndex ?? this.lineIndex,
       );
 
   static const _keep = Object();
@@ -117,7 +128,10 @@ class RaiController extends Notifier<RaiState> {
     state = state.copyWith(mode: mode, bubble: null, target: null, steps: const [], stepIndex: 0);
   }
 
-  void dismissBubble() => state = state.copyWith(bubble: null, target: null, steps: const [], stepIndex: 0);
+  void dismissBubble() {
+    _answerSeq++; // 生成中なら捨てる
+    state = state.copyWith(bubble: null, target: null, steps: const [], stepIndex: 0, lineIndex: 0, busy: false);
+  }
 
   /// 「質問する」: インストラクションなら参照から手順を引いて最初の部品へ、
   /// アシスタントは(第二期まで)固定の返事を中央で。
@@ -147,7 +161,7 @@ class RaiController extends Notifier<RaiState> {
   Future<void> _answerWithLlm(String q, {required String system, String? fallbackText}) async {
     final llm = ref.read(raiLlmProvider);
     final seq = ++_answerSeq;
-    state = state.copyWith(busy: true, bubble: '…', target: null, steps: const [], stepIndex: 0);
+    state = state.copyWith(busy: true, bubble: '…', target: null, steps: const [], stepIndex: 0, lineIndex: 0);
     var text = '';
     try {
       await for (final tok in llm.chat(q, system: system)) {
@@ -174,6 +188,16 @@ class RaiController extends Notifier<RaiState> {
   }
 
   int _answerSeq = 0;
+
+  /// ▶: 次の行 → 無ければ次の手順 → 無ければ閉じる。
+  Future<void> advance() async {
+    if (state.hasMoreLines) {
+      state = state.copyWith(lineIndex: state.lineIndex + 1);
+      return;
+    }
+    if (state.busy) return; // まだ行が増える
+    await next();
+  }
 
   Future<void> next() async {
     if (!state.hasNext) {
@@ -207,7 +231,7 @@ class RaiController extends Notifier<RaiState> {
       }
     }
     if (state.stepIndex != i) return; // 途中で別の質問に変わった
-    state = state.copyWith(busy: false, bubble: step.text, target: rect);
+    state = state.copyWith(busy: false, bubble: step.text, target: rect, lineIndex: 0);
   }
 }
 

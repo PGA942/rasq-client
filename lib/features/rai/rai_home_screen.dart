@@ -112,12 +112,12 @@ class _ModelSection extends ConsumerWidget {
           ),
       ]),
       const SizedBox(height: RasqSpacing.sm),
-      Text('モデルの切り替え(仕様は LFM2.5 2.6B。4B 級は Qwen3.5)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      Text('モデルの切り替え(既定は 4B 級 / 3〜4bit の GGUF。LiteRT は iOS 向け)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
       for (final m in raiModelSpecs)
         RasqListTile(
           key: ValueKey('rai.model.pick.${m.id}'),
           title: m.label,
-          subtitle: '${m.fileName} · ${m.sizeMb} MB',
+          subtitle: '${m.engine.label} · ${m.fileName} · ${m.sizeMb} MB',
           leading: Icon(m.id == spec.id ? Icons.radio_button_checked : Icons.radio_button_off, size: 20, color: m.id == spec.id ? RasqColors.link : scheme.onSurfaceVariant),
           chevron: false,
           enabled: st.phase != RaiLlmPhase.downloading,

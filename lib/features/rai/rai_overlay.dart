@@ -60,9 +60,25 @@ class _RaiBarHost extends ConsumerWidget {
     // 指差す部品がバーの後ろ(画面下)にあるときはバーを上(ヘッダーの下)へ逃がす。
     final t = s.target;
     final atTop = t != null && s.mode == RaiMode.instruction && t.bottom > screen.height - dock - 200;
+    final speech = s.bubble == null
+        ? null
+        : RaiSpeech(
+            key: const ValueKey('rai.speech'),
+            line: s.currentLine ?? '…',
+            index: s.lineIndex,
+            count: s.lines.length,
+            hasMore: s.hasMoreLines || (!s.busy && s.hasNext),
+            streaming: s.busy,
+            error: s.error,
+            onNext: n.advance,
+            onClose: n.dismissBubble,
+          );
     final bar = SizedBox(
       width: width < 560 ? width - RasqSpacing.sm * 2 : 520,
-      child: RaiBar(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        // RAi の発言は入力ウィジェットの上に 1 行ずつ (D-182)。
+        if (speech != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: speech),
+        RaiBar(
         state: s,
         onToggleExpanded: n.toggleExpanded,
         onMode: n.setMode,
@@ -76,6 +92,7 @@ class _RaiBarHost extends ConsumerWidget {
           RaiLlmPhase.unavailable => '使えません',
         },
       ),
+      ]),
     );
     return SizedBox.expand(
       child: AnimatedAlign(
@@ -162,12 +179,6 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     final velocity = moving ? (path.at((t + 0.02).clamp(0, 1)) - pos) : Offset.zero;
     final tilt = moving ? (velocity.dx / (velocity.distance + 0.001)) * 0.18 : 0.0;
     final pointing = s.target == null ? null : pointingDirection(pos, s.target!.center);
-    // 吹き出しは RAi の上(画面の下半分にいるとき。下の RAi バーと被らない)か下。横は画面内に収める。
-    final bubbleW = (screen.width - 16).clamp(120.0, 300.0);
-    final bubbleLeft = (pos.dx - bubbleW / 2).clamp(8.0, screen.width - bubbleW - 8);
-    final above = pos.dy > screen.height * 0.45;
-    final headTop = pos.dy - mascot * 0.625;
-    final feet = pos.dy + mascot * 0.625;
     return SizedBox(
       width: screen.width,
       height: screen.height,
@@ -185,19 +196,6 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
           top: pos.dy - mascot * 0.625,
           child: IgnorePointer(child: RaiMascot(size: mascot, tilt: tilt, pointing: pointing)),
         ),
-        if (!moving)
-          Positioned(
-            left: bubbleLeft,
-            top: above ? null : feet + 8,
-            bottom: above ? (screen.height - headTop + 8).clamp(8.0, screen.height - 80) : null,
-            child: RaiBubble(
-              text: s.bubble!,
-              hasNext: s.hasNext,
-              onNext: ref.read(raiProvider.notifier).next,
-              onClose: ref.read(raiProvider.notifier).dismissBubble,
-              maxWidth: bubbleW,
-            ),
-          ),
       ]),
     );
   }

@@ -329,34 +329,68 @@ class _RaiBarState extends State<RaiBar> {
   }
 }
 
-/// 吹き出し(RAi アイコン + 文 + 次へ / 閉じる)。
-class RaiBubble extends StatelessWidget {
-  const RaiBubble({super.key, required this.text, required this.hasNext, required this.onNext, required this.onClose, this.maxWidth = 300});
-  final String text;
-  final bool hasNext;
+/// RAi の発言を行に割る (D-182): 改行と文末(。！？!?)で切り、空行は捨てる。
+List<String> splitSpeechLines(String text) {
+  final out = <String>[];
+  for (final para in text.split('\n')) {
+    final buf = StringBuffer();
+    for (final ch in para.split('')) {
+      buf.write(ch);
+      if ('。！？!?'.contains(ch)) {
+        final t = buf.toString().trim();
+        if (t.isNotEmpty) out.add(t);
+        buf.clear();
+      }
+    }
+    final rest = buf.toString().trim();
+    if (rest.isNotEmpty) out.add(rest);
+  }
+  return out;
+}
+
+/// RAi の発言 (D-182、ワイヤーフレーム p.4): 入力ウィジェット(バー)の上に**1 行ずつ**。
+/// 左に RAi アイコン、右に n/m と ▶(次の行 / 次の手順)、✕。
+class RaiSpeech extends StatelessWidget {
+  const RaiSpeech({super.key, required this.line, required this.index, required this.count, required this.hasMore, required this.streaming, required this.onNext, required this.onClose, this.error = false});
+  final String line;
+  final int index;
+  final int count;
+
+  /// ▶ で先がある(次の行 / 次の手順)。
+  final bool hasMore;
+
+  /// まだ生成中(行が増える)。
+  final bool streaming;
+  final bool error;
   final VoidCallback onNext;
   final VoidCallback onClose;
-  final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
-      child: Material(
-        color: scheme.surface,
-        elevation: 4,
-        shape: RoundedRectangleBorder(side: BorderSide(color: scheme.onSurface), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.xs),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(text, key: const ValueKey('rai.bubble'), style: RasqTypography.bodySmall),
-            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-              TextButton(onPressed: onClose, child: Text('閉じる', style: TextStyle(color: scheme.onSurfaceVariant))),
-              if (hasNext) TextButton(key: const ValueKey('rai.next'), onPressed: onNext, child: const Text('次へ')),
-            ]),
-          ]),
-        ),
+    return Material(
+      color: scheme.surface,
+      elevation: 4,
+      shape: RoundedRectangleBorder(side: BorderSide(color: error ? RasqColors.danger : scheme.onSurface, width: 1.2), borderRadius: BorderRadius.circular(RasqSizes.radiusLg)),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.xs, RasqSpacing.xs),
+        child: Row(children: [
+          const RaiIcon(size: 36),
+          const SizedBox(width: RasqSpacing.sm),
+          Expanded(
+            child: InkWell(
+              onTap: hasMore ? onNext : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Text(line, key: const ValueKey('rai.bubble'), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+          ),
+          if (count > 1 || streaming) Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Text(streaming ? '${index + 1}/$count…' : '${index + 1}/$count', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+          RasqIconButton(key: const ValueKey('rai.next'), icon: hasMore ? Icons.play_arrow : Icons.check, size: 22, tooltip: hasMore ? '次へ' : '了解(閉じる)', onPressed: onNext),
+          RasqIconButton(key: const ValueKey('rai.speech.close'), icon: Icons.close, size: 18, tooltip: '閉じる', onPressed: onClose),
+        ]),
       ),
     );
   }

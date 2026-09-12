@@ -46,6 +46,11 @@ void main() {
     });
   });
 
+  test('発言の行割り (splitSpeechLines)', () {
+    expect(splitSpeechLines('右下の「投稿」で開きます。本文を書いて送ります！\n添付は下から'), ['右下の「投稿」で開きます。', '本文を書いて送ります！', '添付は下から']);
+    expect(splitSpeechLines(''), isEmpty);
+  });
+
   group('参照 (matchInstruction)', () {
     test('キーワードで引ける / 知らない質問は null', () {
       expect(matchInstruction('Blueskyでログインしたい')?.instruction.id, 'login-bluesky');
@@ -90,9 +95,15 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('rai.input')), '何かできる？');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
-    final failed = tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data!;
+    // 発言は入力ウィジェットの上に 1 行ずつ (D-182): 1 行目 = 端末内モデルの理由、▶ で 2 行目 = フォールアップの理由。
+    final failed = c.read(raiProvider).bubble!;
     expect(failed, contains('まだダウンロードされていません'));
     expect(failed, contains('フォールアップ先(サーバー側)が未接続です'));
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('まだダウンロードされていません'));
+    expect(tester.getRect(find.byKey(const ValueKey('rai.speech'))).bottom, lessThan(tester.getRect(find.byKey(const ValueKey('rai.input'))).top)); // バーの上
+    await tester.tap(find.byKey(const ValueKey('rai.next')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('フォールアップ先'));
     expect(find.byKey(const ValueKey('rai.ring.error')), findsOneWidget);
     expect(llm.released, 1);
     final screen = tester.getSize(find.byType(RasqApp));
@@ -108,7 +119,7 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, 'はい、RASQ の RAi です。');
     expect(llm.systems.last, contains('アシスタント'));
     expect(find.byKey(const ValueKey('rai.ring.idle')), findsOneWidget);
-    await tester.tap(find.text('閉じる'));
+    await tester.tap(find.byKey(const ValueKey('rai.speech.close')));
     await tester.pumpAndSettle();
     // トグル → インストラクション(端末内モデル)。返事は消える。
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
@@ -129,11 +140,11 @@ void main() {
     expect((mascotRect.center - fab.center).distance, lessThan(200)); // ボタンの脇(下の方の部品は上から)
     expect(tester.getRect(find.byKey(const ValueKey('rai.toggle'))).top, lessThan(screen.height / 2)); // バーはボタンを隠さないよう上へ
     expect(mascotRect.overlaps(fab), isFalse); // 被らない
-    // 次へ → 2 手順目(部品が無ければ中央)、閉じる → RAi は消えるがバーは残る。
+    // ▶ → 2 手順目(部品が無ければ中央)、✕ → RAi は消えるがバーは残る。
     await tester.tap(find.byKey(const ValueKey('rai.next')));
     await tester.pumpAndSettle();
     expect(find.textContaining('本文を書いて'), findsOneWidget);
-    await tester.tap(find.text('閉じる'));
+    await tester.tap(find.byKey(const ValueKey('rai.speech.close')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rai.bubble')), findsNothing);
     expect(find.byKey(const ValueKey('rai.toggle')), findsOneWidget);
@@ -166,13 +177,15 @@ void main() {
     expect(llm.installs, 1);
     expect(find.textContaining('準備完了'), findsOneWidget);
     expect(find.byKey(const ValueKey('rai.model.release')), findsOneWidget);
-    // 切り替え → Qwen3.5 4B。
+    // 既定は Agents-A1 4B の GGUF (D-182)。切り替え → Qwen3.5 4B の GGUF。
+    expect(llm.spec.id, 'agents-a1-4b-q4km');
+    expect(llm.spec.engine, RaiEngine.gguf);
     await tester.drag(find.byType(RaiHomeScreen), const Offset(0, -600)); // 末尾まで(RAi バーの下に隠れないように)
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('rai.model.pick.qwen3.5-4b')));
+    await tester.tap(find.byKey(const ValueKey('rai.model.pick.qwen3.5-4b-q4km')));
     await tester.pumpAndSettle();
-    expect(llm.spec.id, 'qwen3.5-4b');
-    expect(find.textContaining('Qwen3.5 4B'), findsWidgets);
+    expect(llm.spec.id, 'qwen3.5-4b-q4km');
+    expect(find.textContaining('Qwen3.5 4B (Q4_K_M)'), findsWidgets);
     // インストラクションで参照に無い質問 → 端末内モデルが答える(操作のシステム指示)。
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
     await tester.pumpAndSettle();
@@ -182,9 +195,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, '設定の「テーマ」から変えられます。');
     expect(llm.systems.last, contains('操作'));
-    // 削除 → 確認 → 未ダウンロードに戻る。
-    await tester.tap(find.text('閉じる'));
+    // 複数文の返事は 1 行ずつ: ▶ で進む。
+    llm.reply = '一つ目です。二つ目です！\n三つ目';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, '一つ目です。');
+    expect(find.text('1/3'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rai.next')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, '二つ目です！');
+    await tester.tap(find.byKey(const ValueKey('rai.next')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, '三つ目');
+    await tester.tap(find.byKey(const ValueKey('rai.next'))); // 最後の行で ▶ → 閉じる
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rai.speech')), findsNothing);
+    // 削除 → 確認 → 未ダウンロードに戻る。
     await tester.drag(find.byType(RaiHomeScreen), const Offset(0, 600));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('rai.model.delete')));
