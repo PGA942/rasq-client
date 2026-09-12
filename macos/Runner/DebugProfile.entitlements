@@ -2,8 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Debug はサンドボックスを外す (D-186): 取得した llama.cpp の dylib が「library load disallowed by system policy」で
+	     拒否されるため。Release はサンドボックス + Frameworks に同梱・署名した dylib を使う。 -->
 	<key>com.apple.security.app-sandbox</key>
-	<true/>
+	<false/>
 	<!-- RAi 端末内モデル (D-185): 取得した llama.cpp の dylib(ad-hoc 署名)を dlopen できるように -->
 	<key>com.apple.security.cs.disable-library-validation</key>
 	<true/>
