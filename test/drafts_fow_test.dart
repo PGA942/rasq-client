@@ -46,7 +46,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('下書き'));
     await tester.pumpAndSettle();
-    expect(find.byKey(draftsConfirmKey), findsOneWidget); // ヘッダー右 = 決定
+    expect(find.byKey(draftsConfirmKey), findsNothing); // 通常モードのヘッダー右は空(選択モードで「削除」)
     expect(find.byKey(const ValueKey('drafts.save')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('drafts.save')));
     await tester.pumpAndSettle();
@@ -65,15 +65,14 @@ void main() {
     final drafts = c.read(composeDraftsProvider.notifier).list;
     expect(drafts.length, 2);
     expect(drafts.map((d) => d.text).toSet(), {'下書き A', '下書き B'});
-    // 一覧: A を選んで決定 → コンポーザーが A になる(書きかけの B は自分の下書きとして残る)。
+    // 一覧: A の行(右に >)をタップ → そのまま編集画面へ(書きかけの B は自分の下書きとして残る)。
     await openComposer(tester);
     expect(composerText(tester), '下書き B'); // 最新が復元
     await tester.tap(find.text('下書き'));
     await tester.pumpAndSettle();
     final a = drafts.firstWhere((d) => d.text == '下書き A');
+    expect(find.descendant(of: find.byKey(ValueKey('drafts.item.${a.id}')), matching: find.byIcon(Icons.chevron_right)), findsOneWidget);
     await tester.tap(find.byKey(ValueKey('drafts.item.${a.id}')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(draftsConfirmKey));
     await tester.pumpAndSettle();
     expect(composerText(tester), '下書き A');
     expect(c.read(composeDraftsProvider.notifier).list.length, 2);
@@ -89,9 +88,20 @@ void main() {
     await tester.tap(find.byKey(draftsConfirmKey));
     await tester.pumpAndSettle();
     expect(c.read(composeDraftsProvider.notifier).list.map((d) => d.text), ['下書き A']);
-    expect(find.text('決定'), findsOneWidget); // 削除後は通常モードに戻る
+    expect(find.byKey(draftsConfirmKey), findsNothing); // 削除後は通常モードに戻る
     await tester.tap(find.text('キャンセル').last);
     await tester.pumpAndSettle();
+    // キャンセル(コンポーザー)→ 開いている下書きなので「下書きを上書きしますか」→ 上書き。
+    await tester.enterText(find.byType(TextField).last, '下書き A (直した)');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('キャンセル').first);
+    await tester.pumpAndSettle();
+    expect(find.text('下書きを上書きしますか'), findsOneWidget);
+    await tester.tap(find.text('上書き'));
+    await tester.pumpAndSettle();
+    expect(c.read(composeDraftsProvider.notifier).list.map((d) => d.text), ['下書き A (直した)']);
+    await openComposer(tester);
+    expect(composerText(tester), '下書き A (直した)');
     // 送信すると開いている下書き(A)は消える。
     await tester.tap(find.text('送信'));
     await tester.pumpAndSettle();

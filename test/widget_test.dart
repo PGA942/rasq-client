@@ -143,8 +143,12 @@ void main() {
     await tester.tap(find.byTooltip('絵文字'));
     await tester.pumpAndSettle();
     expect(find.text('デフォルト'), findsOneWidget); // 旧「全てのemoji」(D-040)
-    // D-052: パネル内ヘッダーの「キャンセル」(左揃え)で閉じる。
+    // D-052: パネル内ヘッダーの「キャンセル」(左揃え)で閉じる。投票が入っているので
+    // 「下書きに保存しますか」(D-176 改)→ 保存 で閉じる。
     await tester.tap(find.text('キャンセル'));
+    await tester.pumpAndSettle();
+    expect(find.text('下書きに保存しますか'), findsOneWidget);
+    await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
     expect(find.text('キャンセル'), findsNothing);
 
