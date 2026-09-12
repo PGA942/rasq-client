@@ -10,6 +10,7 @@ import 'package:rasq_client/features/login/login_screen.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/rai/rai_home_screen.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
+import 'package:rasq_client/features/rai/rai_llm_device.dart';
 import 'package:rasq_client/features/rai/rai_models_fow.dart';
 import 'package:rasq_client/features/rai/rai_overlay.dart';
 import 'package:rasq_client/features/rai/rai_providers.dart';
@@ -51,6 +52,17 @@ void main() {
   test('発言の行割り (splitSpeechLines)', () {
     expect(splitSpeechLines('右下の「投稿」で開きます。本文を書いて送ります！\n添付は下から'), ['右下の「投稿」で開きます。', '本文を書いて送ります！', '添付は下から']);
     expect(splitSpeechLines(''), isEmpty);
+  });
+
+  test('<think> のフィルター (ThinkFilter): トークンをまたぐタグも落とす', () {
+    final f = ThinkFilter();
+    final out = StringBuffer();
+    for (final t in ['<thi', 'nk>', 'ぐるぐる', '考える', '</thi', 'nk>\n\n', 'こんにちは', '！']) {
+      out.write(f.push(t));
+    }
+    expect(out.toString(), 'こんにちは！');
+    final g = ThinkFilter();
+    expect(g.push('思考なし。') + g.push('<') + g.push('b>太字'), '思考なし。<b>太字');
   });
 
   test('メモリの判定 (raiMemoryVerdict)', () {
@@ -218,7 +230,7 @@ void main() {
     expect(tester.getSize(find.byWidgetPredicate((w) => w is Material && w.elevation == 8)).width, closeTo(tester.getSize(find.byType(RasqApp)).width - 16, 1)); // 幅は入力ウィジェットに揃う (D-185)
     expect(find.text('ローカル'), findsWidgets);
     expect(find.text('完遂率 -%'), findsWidgets);
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.ram.qwen3.5-2b-q4km'))).data, 'メモリ: 動作可'); // 8 GB の端末
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.ram.qwen3-1.7b-q4km'))).data, 'メモリ: 動作可'); // 8 GB の端末
     final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.tile.cloud-cyllm-jp-150b')), 120, scrollable: fowList);
     await tester.pumpAndSettle();
@@ -227,22 +239,22 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.phase.cloud-qwen3.9-33b-a3b'))).data, '未接続');
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.download')), -120, scrollable: fowList);
     await tester.pumpAndSettle();
-    // 既定は Qwen3.5 2B Q4_K_M の GGUF (D-187)。ダウンロード → 準備完了(解放 / 削除が出る)。
-    expect(llm.spec.id, 'qwen3.5-2b-q4km');
+    // 既定は Qwen3 1.7B Q4_K_M の GGUF (D-188)。ダウンロード → 準備完了(解放 / 削除が出る)。
+    expect(llm.spec.id, 'qwen3-1.7b-q4km');
     expect(llm.spec.engine, RaiEngine.gguf);
     await tester.tap(find.byKey(const ValueKey('rai.model.download')));
     await tester.pumpAndSettle();
     expect(llm.installs, 1);
     expect(find.byKey(const ValueKey('rai.model.release')), findsOneWidget);
-    // 切り替え → Qwen3.5 0.8B の GGUF(「使う」)。RAi バーの下に隠れないよう少し余分に送る。
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.use.qwen3.5-0.8b-q4km')), 80, scrollable: fowList);
-    await clearOfBar(tester, fowList, find.byKey(const ValueKey('rai.model.use.qwen3.5-0.8b-q4km')));
-    await tester.tap(find.byKey(const ValueKey('rai.model.use.qwen3.5-0.8b-q4km')));
+    // 切り替え → Qwen3 0.6B の GGUF(「使う」)。RAi バーの下に隠れないよう少し余分に送る。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.use.qwen3-0.6b-q4km')), 80, scrollable: fowList);
+    await clearOfBar(tester, fowList, find.byKey(const ValueKey('rai.model.use.qwen3-0.6b-q4km')));
+    await tester.tap(find.byKey(const ValueKey('rai.model.use.qwen3-0.6b-q4km')));
     await tester.pumpAndSettle();
-    expect(llm.spec.id, 'qwen3.5-0.8b-q4km');
+    expect(llm.spec.id, 'qwen3-0.6b-q4km');
     await tester.tap(find.text('閉じる').last); // FOW を閉じる
     await tester.pumpAndSettle();
-    expect(find.textContaining('Qwen3.5 0.8B (Q4_K_M)'), findsWidgets);
+    expect(find.textContaining('Qwen3 0.6B (Q4_K_M)'), findsWidgets);
     // インストラクションで参照に無い質問 → 端末内モデルが答える(操作のシステム指示)。
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
     await tester.pumpAndSettle();
@@ -271,8 +283,8 @@ void main() {
     // 削除(FOW)→ 確認 → 未ダウンロードに戻る。
     await tester.tap(find.byKey(const ValueKey('rai.model.tile')));
     await tester.pumpAndSettle();
-    // 選択中(0.8B)が先頭に来るので削除はすぐ見える。
-    expect(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3.5-0.8b-q4km'))).top, lessThan(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3.5-2b-q4km'))).top));
+    // 選択中(0.6B)が先頭に来るので削除はすぐ見える。
+    expect(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3-0.6b-q4km'))).top, lessThan(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3-1.7b-q4km'))).top));
     await tester.tap(find.byKey(const ValueKey('rai.model.delete')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除').last);
