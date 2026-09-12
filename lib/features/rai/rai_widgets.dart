@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import 'rai_providers.dart';
@@ -206,8 +207,12 @@ class RaiStatusRing extends StatelessWidget {
 /// お手伝いします！」、質問後はその文がヒントに)。左の ^ で下段(モデルチップ / 状態リング /
 /// トグル / 質問する)を畳む。「質問する」= 送信。
 class RaiBar extends StatefulWidget {
-  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap});
+  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320});
   final RaiState state;
+
+  /// 履歴ボタン (D-187): ウィジェットが上に広がって発言の履歴(コピー付き)が出る。
+  final VoidCallback? onHistoryToggle;
+  final double historyMaxHeight;
 
   /// モデルチップのタップ → モデル FOW (D-183)。
   final VoidCallback? onModelTap;
@@ -270,7 +275,14 @@ class _RaiBarState extends State<RaiBar> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.sm),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          // 上段: ^(畳む)+ 入力欄 + ✕。
+          // 履歴 (D-187): 入力欄の上に広がる。
+          if (s.historyOpen)
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: widget.historyMaxHeight),
+              child: RaiHistoryList(log: s.log),
+            ),
+          if (s.historyOpen) Divider(height: 1, color: scheme.outlineVariant),
+          // 上段: ^(畳む)+ 入力欄 + 履歴 + ✕。
           SizedBox(
             height: 40,
             child: Row(children: [
@@ -292,6 +304,7 @@ class _RaiBarState extends State<RaiBar> {
                   onSubmitted: (_) => _submit(),
                 ),
               ),
+              RasqIconButton(key: const ValueKey('rai.history'), icon: s.historyOpen ? Icons.expand_more : Icons.history, size: 20, tooltip: s.historyOpen ? '履歴を閉じる' : '発言の履歴', onPressed: widget.onHistoryToggle),
               RasqIconButton(icon: Icons.close, size: 18, tooltip: 'RAi を閉じる', onPressed: widget.onClose),
             ]),
           ),
@@ -399,7 +412,7 @@ class RaiSpeech extends StatelessWidget {
             ),
           ),
           if (count > 1 || streaming) Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Text(streaming ? '${index + 1}/$count…' : '${index + 1}/$count', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-          RasqIconButton(key: const ValueKey('rai.history'), icon: Icons.arrow_upward, size: 20, tooltip: '発言の履歴', onPressed: onHistory),
+          RasqIconButton(key: const ValueKey('rai.speech.history'), icon: Icons.arrow_upward, size: 20, tooltip: '発言の履歴', onPressed: onHistory),
           RasqIconButton(key: const ValueKey('rai.next'), icon: hasMore ? Icons.play_arrow : Icons.check, size: 22, tooltip: hasMore ? '次へ' : '了解(閉じる)', onPressed: onNext),
           RasqIconButton(key: const ValueKey('rai.speech.close'), icon: Icons.close, size: 18, tooltip: '閉じる', onPressed: onClose),
         ]),
@@ -429,4 +442,54 @@ Offset raiAnchorFor(Rect target, Size screen, {double mascot = 72, double reserv
     if (c.dx - mascot / 2 >= 0 && c.dx + mascot / 2 <= screen.width && c.dy - mascot * 0.7 >= 0 && c.dy + mascot * 0.7 <= screen.height - reservedBottom) return c;
   }
   return Offset(screen.width / 2, math.max(mascot, target.top - gap - mascot * 0.7));
+}
+
+/// 発言の履歴 (D-187): タイル = 全文(選択可)+ Q + 時刻、コピー。失敗は赤枠。新しい順。
+class RaiHistoryList extends StatelessWidget {
+  const RaiHistoryList({super.key, required this.log});
+  final List<RaiUtterance> log;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (log.isEmpty) {
+      return Padding(padding: const EdgeInsets.all(RasqSpacing.md), child: Text('まだ発言はありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)));
+    }
+    return ListView.builder(
+      key: const ValueKey('rai.history.list'),
+      shrinkWrap: true,
+      padding: const EdgeInsets.fromLTRB(0, RasqSpacing.xs, 0, RasqSpacing.xs),
+      itemCount: log.length,
+      itemBuilder: (context, i) {
+        final u = log[i];
+        return Container(
+          key: ValueKey('rai.history.$i'),
+          margin: const EdgeInsets.only(bottom: RasqSpacing.xs),
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, 0, RasqSpacing.xs),
+          decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(RasqSizes.radiusMd), border: Border.all(color: u.error ? RasqColors.danger : scheme.outlineVariant)),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const RaiIcon(size: 28),
+            const SizedBox(width: RasqSpacing.sm),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (u.query != null) Text('Q: ${u.query}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis),
+                SelectableText(u.text, style: RasqTypography.bodySmall),
+                Text(RasqTimestamp.format(u.at), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              ]),
+            ),
+            RasqIconButton(
+              key: ValueKey('rai.history.copy.$i'),
+              icon: Icons.copy,
+              size: 18,
+              tooltip: 'コピー',
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: u.text));
+                if (context.mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(content: Text('コピーしました')));
+              },
+            ),
+          ]),
+        );
+      },
+    );
+  }
 }

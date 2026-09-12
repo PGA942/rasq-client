@@ -362,8 +362,8 @@ class DeviceRaiLlm implements RaiLlm {
       path: modelPath,
       modelParams: lc.ModelParams()..nGpuLayers = 99,
       contextParams: lc.ContextParams()
-        ..nCtx = 2048
-        ..nBatch = 512
+        ..nCtx = 1024 // メモリ優先 (D-187)
+        ..nBatch = 256
         ..nPredict = 256
         ..nThreads = 4
         ..nThreadsBatch = 4,

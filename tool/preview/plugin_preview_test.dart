@@ -408,7 +408,7 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_instruction.png'));
     await tester.tap(find.byKey(const ValueKey('rai.history')));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_history_fow.png'));
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_history.png'));
   });
 }
 

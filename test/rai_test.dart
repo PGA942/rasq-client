@@ -73,6 +73,16 @@ void main() {
   setUp(() => llm = FakeRaiLlm());
   ({int? totalMb, int? availableMb}) ram = (totalMb: 8192, availableMb: 4096);
 
+  /// FOW の下端は RAi バーに隠れるので、対象がその上に来るまで少しだけ送る。
+  Future<void> clearOfBar(WidgetTester tester, Finder scrollable, Finder target) async {
+    final limit = tester.getSize(find.byType(RasqApp)).height - 170;
+    final bottom = tester.getRect(target).bottom;
+    if (bottom > limit) {
+      await tester.drag(scrollable, Offset(0, -(bottom - limit) - 8));
+      await tester.pumpAndSettle();
+    }
+  }
+
   Future<ProviderContainer> pump(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
@@ -116,23 +126,25 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('フォールアップ先'));
     expect(find.byKey(const ValueKey('rai.ring.error')), findsOneWidget);
     expect(llm.released, 1);
-    // ↑ → 発言の履歴 FOW (D-185): 全文のタイル + コピー、幅は入力ウィジェットと同じ。
+    // 履歴ボタン (D-187): 入力ウィジェットが上に広がって発言の履歴(全文 + コピー)が出る。
     String? copied;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
       if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
       return null;
     });
+    final barTopBefore = tester.getRect(find.byType(RaiBar)).top;
     await tester.tap(find.byKey(const ValueKey('rai.history')));
     await tester.pumpAndSettle();
-    expect(find.text('RAi の発言'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.history.list')), findsOneWidget);
     expect(find.byKey(const ValueKey('rai.history.0')), findsOneWidget);
-    final fowPanel = find.byWidgetPredicate((w) => w is Material && w.elevation == 8);
-    expect(tester.getSize(fowPanel).width, closeTo(tester.getSize(find.byType(RasqApp)).width - 16, 1));
+    expect(tester.getRect(find.byType(RaiBar)).top, lessThan(barTopBefore)); // 上方向に拡張
+    expect(tester.getRect(find.byType(RaiBar)).bottom, closeTo(tester.getRect(find.byType(RaiBar)).bottom, 0.1));
     await tester.tap(find.byKey(const ValueKey('rai.history.copy.0')));
     await tester.pumpAndSettle();
     expect(copied, contains('フォールアップ先(サーバー側)が未接続です'));
-    await tester.tap(find.text('閉じる').last);
+    await tester.tap(find.byKey(const ValueKey('rai.history')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rai.history.list')), findsNothing);
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null);
     final screen = tester.getSize(find.byType(RasqApp));
     final overlayMascot = find.descendant(of: find.byType(RaiMascotLayer), matching: find.byType(RaiMascot));
@@ -206,7 +218,7 @@ void main() {
     expect(tester.getSize(find.byWidgetPredicate((w) => w is Material && w.elevation == 8)).width, closeTo(tester.getSize(find.byType(RasqApp)).width - 16, 1)); // 幅は入力ウィジェットに揃う (D-185)
     expect(find.text('ローカル'), findsWidgets);
     expect(find.text('完遂率 -%'), findsWidgets);
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.ram.agents-a1-4b-q4km'))).data, 'メモリ: 動作可'); // 8 GB の端末
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.ram.qwen3.5-2b-q4km'))).data, 'メモリ: 動作可'); // 8 GB の端末
     final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.tile.cloud-cyllm-jp-150b')), 120, scrollable: fowList);
     await tester.pumpAndSettle();
@@ -215,21 +227,22 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.phase.cloud-qwen3.9-33b-a3b'))).data, '未接続');
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.download')), -120, scrollable: fowList);
     await tester.pumpAndSettle();
-    // 既定は Agents-A1 4B の GGUF (D-182)。ダウンロード → 準備完了(解放 / 削除が出る)。
-    expect(llm.spec.id, 'agents-a1-4b-q4km');
+    // 既定は Qwen3.5 2B Q4_K_M の GGUF (D-187)。ダウンロード → 準備完了(解放 / 削除が出る)。
+    expect(llm.spec.id, 'qwen3.5-2b-q4km');
     expect(llm.spec.engine, RaiEngine.gguf);
     await tester.tap(find.byKey(const ValueKey('rai.model.download')));
     await tester.pumpAndSettle();
     expect(llm.installs, 1);
     expect(find.byKey(const ValueKey('rai.model.release')), findsOneWidget);
-    // 切り替え → Qwen3.5 4B の GGUF(「使う」)。
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.use.qwen3.5-4b-q4km')), 80, scrollable: fowList);
-    await tester.tap(find.byKey(const ValueKey('rai.model.use.qwen3.5-4b-q4km')));
+    // 切り替え → Qwen3.5 0.8B の GGUF(「使う」)。RAi バーの下に隠れないよう少し余分に送る。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.use.qwen3.5-0.8b-q4km')), 80, scrollable: fowList);
+    await clearOfBar(tester, fowList, find.byKey(const ValueKey('rai.model.use.qwen3.5-0.8b-q4km')));
+    await tester.tap(find.byKey(const ValueKey('rai.model.use.qwen3.5-0.8b-q4km')));
     await tester.pumpAndSettle();
-    expect(llm.spec.id, 'qwen3.5-4b-q4km');
+    expect(llm.spec.id, 'qwen3.5-0.8b-q4km');
     await tester.tap(find.text('閉じる').last); // FOW を閉じる
     await tester.pumpAndSettle();
-    expect(find.textContaining('Qwen3.5 4B (Q4_K_M)'), findsWidgets);
+    expect(find.textContaining('Qwen3.5 0.8B (Q4_K_M)'), findsWidgets);
     // インストラクションで参照に無い質問 → 端末内モデルが答える(操作のシステム指示)。
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
     await tester.pumpAndSettle();
@@ -258,8 +271,8 @@ void main() {
     // 削除(FOW)→ 確認 → 未ダウンロードに戻る。
     await tester.tap(find.byKey(const ValueKey('rai.model.tile')));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.delete')), 120, scrollable: find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first);
-    await tester.pumpAndSettle();
+    // 選択中(0.8B)が先頭に来るので削除はすぐ見える。
+    expect(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3.5-0.8b-q4km'))).top, lessThan(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3.5-2b-q4km'))).top));
     await tester.tap(find.byKey(const ValueKey('rai.model.delete')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除').last);
