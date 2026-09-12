@@ -1,0 +1,17 @@
+{"id":"login-bluesky","index":"Bluesky でログイン","tags":["Bluesky","ブルースカイ","bsky","ログイン"],"steps":[{"fn":"login.bluesky","say":"「Blueskyでログイン」をクリックしてください","route":"/login"},{"say":"PDS(通常は bsky.social)とハンドル、アプリパスワードを入れて「ログイン」を押します","target":{"label":"ログイン"}}]}
+{"id":"login-misskey","index":"Misskey でログイン","tags":["Misskey","ミスキー","ログイン"],"steps":[{"fn":"login.misskey","say":"「Misskeyでログイン」をクリックしてください","route":"/login"},{"say":"インスタンスの URL を入れて認証すると、アカウントが追加されます"}]}
+{"id":"login-mastodon","index":"Mastodon でログイン","tags":["Mastodon","マストドン","ログイン"],"steps":[{"fn":"login.mastodon","say":"「Mastodonでログイン」をクリックしてください","route":"/login"},{"say":"インスタンスの URL を入れて認証すると、アカウントが追加されます"}]}
+{"id":"post","index":"投稿する","tags":["投稿","ノート","書く","ポスト","つぶやく"],"steps":[{"fn":"composer.open","say":"右下の「投稿」でコンポーザーが開きます"},{"fn":"post.create","say":"本文を書いて、ヘッダーの「投稿」で送ります。添付は下のツールバーから","target":{"tooltip":"画像"}}]}
+{"id":"attach","index":"画像を付けて投稿","tags":["画像","写真","添付","メディア","動画"],"steps":[{"fn":"composer.open","say":"右下の「投稿」でコンポーザーが開きます"},{"fn":"post.attach","say":"下のツールバーの「画像」から添付を選びます"},{"fn":"post.create","say":"本文を書いて「投稿」で送ります","target":{"label":"投稿"}}]}
+{"id":"draft","index":"下書き","tags":["下書き","ドラフト","保存","書きかけ"],"steps":[{"fn":"composer.open","say":"コンポーザーを開きます"},{"fn":"draft.save","say":"ヘッダー右の「下書き」から保存 / 開く / 削除ができます"}]}
+{"id":"share","index":"投稿を共有","tags":["共有","シェア","リンク","AsTell に共有"],"steps":[{"fn":"post.share","say":"投稿のアクションバー右端の「共有」を押します"},{"say":"内容 / リンクのコピー、プラグインに共有、DM へ共有が選べます"}]}
+{"id":"react","index":"投稿にリアクション","tags":["リアクション","いいね","絵文字","ハート"],"steps":[{"fn":"post.react","say":"投稿のアクションバーの「リアクション」を押して絵文字を選びます"}]}
+{"id":"repost","index":"投稿をリポスト","tags":["リポスト","リノート","ブースト","拡散"],"steps":[{"fn":"post.repost","say":"投稿のアクションバーの「リポスト」を押します"}]}
+{"id":"tl-config","index":"タイムライン設定","tags":["タイムライン","TL","アルゴリズム","並び","おすすめ"],"steps":[{"fn":"timeline.configure","say":"タブ行の右端の歯車でタイムラインの設定が開きます"}]}
+{"id":"search","index":"投稿を検索","tags":["検索","探す","サーチ","キーワード"],"steps":[{"fn":"search.posts","say":"下のタブの「検索」で検索語を入れます"}]}
+{"id":"astell","index":"AsTell(VC)に参加","tags":["AsTell","アステル","VC","ルーム","通話"],"steps":[{"fn":"astell.join","say":"下のタブの「AsTell」でルーム一覧へ"},{"say":"タイルの「見てみる」→「参加」でルーム FOW が開きます","target":{"label":"見てみる"}}]}
+{"id":"plugins","index":"プラグインを追加","tags":["プラグイン","ストア","拡張","追加"],"steps":[{"fn":"plugins.store","say":"サイドメニュー(ヘッダー左のアイコン)の「プラグイン」でストアが開きます"}]}
+{"id":"settings","index":"設定","tags":["設定","オプション","テーマ","ダーク"],"steps":[{"fn":"settings.open","say":"サイドメニューの「全ての設定」から"}]}
+{"id":"profile","index":"プロフィールを編集","tags":["プロフィール","自己紹介","アイコン","名前"],"steps":[{"fn":"profile.edit","say":"サイドメニューのアカウントから「プロフィールを編集」へ"}]}
+{"id":"bookmarks","index":"ブックマークを見る","tags":["ブックマーク","お気に入り","保存した投稿"],"steps":[{"fn":"bookmarks.open","say":"サイドメニューの「ブックマーク」から"}]}
+{"id":"dm","index":"DM を送る","tags":["DM","ダイレクトメッセージ","メッセージ","チャット"],"steps":[{"fn":"dm.send","say":"下のタブの「DM」で相手を選んで本文を送ります"}]}
