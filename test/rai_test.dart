@@ -13,6 +13,7 @@ import 'package:rasq_client/features/rai/rai_home_screen.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
 import 'package:rasq_client/features/rai/rai_llm_device.dart';
 import 'package:rasq_client/features/rai/rai_models_fow.dart';
+import 'package:rasq_client/features/rai/rai_motion.dart';
 import 'package:rasq_client/features/rai/rai_overlay.dart';
 import 'package:rasq_client/features/rai/rai_providers.dart';
 import 'package:rasq_client/features/rai/rai_reference.dart';
@@ -21,6 +22,7 @@ import 'package:rasq_client/features/rai/rai_spline.dart';
 import 'package:rasq_client/features/rai/rai_widgets.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -176,7 +178,9 @@ void main() {
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null);
     final screen = tester.getSize(find.byType(RasqApp));
     final overlayMascot = find.descendant(of: find.byType(RaiMascotLayer), matching: find.byType(RaiMascot));
-    expect(tester.getCenter(overlayMascot).dx, closeTo(screen.width / 2, 1));
+    // 静止位置は右下 (D-192: 右下 / 左下、直前に指した部品が右半分なら左下)。
+    expect(tester.getCenter(overlayMascot).dx, closeTo(screen.width - raiPointSize / 2 - RasqSpacing.md, 1));
+    expect(tester.getRect(overlayMascot).bottom, lessThan(tester.getRect(find.byType(RaiBar)).top + 1));
     // モデルが準備できていれば端末内モデルの返事がトークンで流れる。
     llm.set(RaiLlmStatus(RaiLlmPhase.ready, modelId: llm.spec.id));
     await tester.pumpAndSettle();
@@ -205,7 +209,7 @@ void main() {
     final fab = tester.getRect(find.byTooltip('投稿'));
     expect(target.overlaps(fab), isTrue);
     final mascotRect = tester.getRect(overlayMascot);
-    expect((mascotRect.center - fab.center).distance, lessThan(200)); // ボタンの脇(下の方の部品は上から)
+    expect((mascotRect.center - fab.center).distance, lessThan(raiPointSize * 1.6)); // ボタンの脇(大きさ 180 なので中心はその分離れる)
     expect(tester.getRect(find.byKey(const ValueKey('rai.toggle'))).top, lessThan(screen.height / 2)); // バーはボタンを隠さないよう上へ
     expect(mascotRect.overlaps(fab), isFalse); // 被らない
     // ▶ → 2 手順目(部品が無ければ中央)、✕ → RAi は消えるがバーは残る。
@@ -238,11 +242,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
     await tester.pumpAndSettle();
-    // モデルは FOW で (D-183): ホームの状態行(未ダウンロード)→「モデルを選ぶ」→ タイル(ローカル / クラウド、完遂率 -%、メモリ判定)。
-    expect(find.textContaining('未ダウンロード'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('rai.models.open')));
+    // モデルは FOW で (D-183): バーのモデルチップ → タイル(ローカル / クラウド、完遂率 -%、メモリ判定)。FOW は入力ウィジェットの上に付く (D-192)。
+    await tester.tap(find.byKey(const ValueKey('rai.model')));
     await tester.pumpAndSettle();
     expect(find.text('モデル'), findsOneWidget); // FOW タイトル
+    expect(tester.getRect(find.byWidgetPredicate((w) => w is Material && w.elevation == 8)).bottom, lessThanOrEqualTo(tester.getRect(find.byType(RaiBar)).top + 1)); // バーの上に付く
     expect(tester.getSize(find.byWidgetPredicate((w) => w is Material && w.elevation == 8)).width, closeTo(tester.getSize(find.byType(RasqApp)).width - 16, 1)); // 幅は入力ウィジェットに揃う (D-185)
     expect(find.text('ローカル'), findsWidgets);
     expect(find.text('完遂率 -%'), findsWidgets);
@@ -270,7 +274,6 @@ void main() {
     expect(llm.spec.id, 'qwen3-0.6b-q4km');
     await tester.tap(find.text('閉じる').last); // FOW を閉じる
     await tester.pumpAndSettle();
-    expect(find.textContaining('Qwen3 0.6B (Q4_K_M)'), findsWidgets);
     // インストラクションで参照に無い質問 → 端末内モデルが答える(操作のシステム指示)。
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
     await tester.pumpAndSettle();
@@ -297,7 +300,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rai.speech')), findsNothing);
     // 削除(FOW)→ 確認 → 未ダウンロードに戻る。
-    await tester.tap(find.byKey(const ValueKey('rai.model.tile')));
+    await tester.tap(find.byKey(const ValueKey('rai.model')));
     await tester.pumpAndSettle();
     // 選択中(0.6B)が先頭に来るので削除はすぐ見える。
     expect(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3-0.6b-q4km'))).top, lessThan(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3-1.7b-q4km'))).top));
@@ -306,7 +309,6 @@ void main() {
     await tester.tap(find.text('削除').last);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rai.model.download')), findsOneWidget);
-    expect(find.textContaining('未ダウンロード'), findsWidgets);
   });
 
   testWidgets('アシスタント (D-189): LLM がシチュエーションを作ってから操作リファレンスを引き、関数の検索手順を提案(中央固定)', (tester) async {
@@ -360,7 +362,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('rai.models.open')));
+    await tester.tap(find.byKey(const ValueKey('rai.model')));
     await tester.pumpAndSettle();
     final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.embed.tile')), 120, scrollable: fowList);

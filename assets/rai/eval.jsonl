@@ -1,25 +1,234 @@
-{"q":"Blueskyでログインしたい","op":"login-bluesky"}
-{"q":"bskyのアカウントを追加","op":"login-bluesky"}
-{"q":"ミスキーにログイン","op":"login-misskey"}
-{"q":"マストドンのアカウントを追加したい","op":"login-mastodon"}
-{"q":"投稿したい","op":"post"}
-{"q":"つぶやくには？","op":"post"}
-{"q":"ノートを書きたい","op":"post"}
-{"q":"写真を付けて投稿","op":"attach"}
-{"q":"画像を添付するには","op":"attach"}
-{"q":"下書きはどこ","op":"draft"}
-{"q":"書きかけを保存したい","op":"draft"}
-{"q":"投稿のリンクをコピーしたい","op":"share"}
-{"q":"シェアする方法","op":"share"}
-{"q":"いいねしたい","op":"react"}
-{"q":"リノートするには","op":"repost"}
-{"q":"タイムラインの並びを変えたい","op":"tl-config"}
-{"q":"投稿を探したい","op":"search"}
-{"q":"キーワードで検索","op":"search"}
-{"q":"VCに入りたい","op":"astell"}
-{"q":"アステルのルームに参加","op":"astell"}
-{"q":"プラグインを入れたい","op":"plugins"}
-{"q":"ダークテーマにしたい","op":"settings"}
-{"q":"自己紹介を変えたい","op":"profile"}
-{"q":"ブックマークした投稿を見たい","op":"bookmarks"}
-{"q":"DMを送りたい","op":"dm"}
+{"q": "Blueskyでログインしたい", "op": "login-bluesky"}
+{"q": "bskyのアカウントを追加", "op": "account-add"}
+{"q": "ミスキーにログイン", "op": "login-misskey"}
+{"q": "マストドンのアカウントを追加したい", "op": "login-mastodon"}
+{"q": "投稿したい", "op": "post"}
+{"q": "つぶやくには？", "op": "post"}
+{"q": "ノートを書きたい", "op": "post"}
+{"q": "写真を付けて投稿", "op": "attach"}
+{"q": "画像を添付するには", "op": "attach"}
+{"q": "下書きはどこ", "op": "draft"}
+{"q": "書きかけを保存したい", "op": "draft"}
+{"q": "投稿のリンクをコピーしたい", "op": "share"}
+{"q": "シェアする方法", "op": "share"}
+{"q": "いいねしたい", "op": "react"}
+{"q": "リノートするには", "op": "repost"}
+{"q": "タイムラインの並びを変えたい", "op": "tl-config"}
+{"q": "投稿を探したい", "op": "search"}
+{"q": "キーワードで検索", "op": "search"}
+{"q": "VCに入りたい", "op": "astell"}
+{"q": "アステルのルームに参加", "op": "astell"}
+{"q": "プラグインを入れたい", "op": "plugin-install"}
+{"q": "ダークテーマにしたい", "op": "settings-theme"}
+{"q": "自己紹介を変えたい", "op": "profile"}
+{"q": "ブックマークした投稿を見たい", "op": "bookmarks"}
+{"q": "DMを送りたい", "op": "dm"}
+{"q": "フォロワーだけに見せたい", "op": "post-visibility"}
+{"q": "投稿を非公開っぽくして出すには", "op": "post-visibility"}
+{"q": "ネタバレを隠して投稿したい", "op": "post-cw"}
+{"q": "閲覧注意を付けたい", "op": "post-cw"}
+{"q": "アンケートを取りたい", "op": "post-poll"}
+{"q": "みんなに選んでもらう投稿がしたい", "op": "post-poll"}
+{"q": "アンケートを24時間で締めたい", "op": "poll-timed"}
+{"q": "投票の期限ってどこで決めるの", "op": "poll-timed"}
+{"q": "文章に絵文字を入れたい", "op": "post-emoji"}
+{"q": "カスタム絵文字を本文で使いたい", "op": "post-emoji"}
+{"q": "文字を大きくして目立たせたい", "op": "post-mfm"}
+{"q": "投稿を装飾する方法が知りたい", "op": "post-mfm"}
+{"q": "別のアカウントで書きたい", "op": "post-account"}
+{"q": "どのアカウントから出すか変えたい", "op": "post-account"}
+{"q": "全部のアカウントに同じことを流したい", "op": "post-multi"}
+{"q": "二つのSNSへ一度に投稿できる？", "op": "post-multi"}
+{"q": "この投稿に返事をしたい", "op": "post-reply"}
+{"q": "リプを送るには", "op": "post-reply"}
+{"q": "コメントを付けて回したい", "op": "post-quote"}
+{"q": "引用リポストのやり方", "op": "post-quote"}
+{"q": "画像をぼかして出したい", "op": "attach-sensitive"}
+{"q": "添付を閲覧注意にしたい", "op": "attach-sensitive"}
+{"q": "写真を切り抜いてから投稿したい", "op": "attach-edit"}
+{"q": "添付にフィルターをかけられる？", "op": "attach-edit"}
+{"q": "前に書きかけたやつの続きを書きたい", "op": "draft-open"}
+{"q": "保存したドラフトはどこから出すの", "op": "draft-open"}
+{"q": "投稿の三点マークを押すと何ができる", "op": "post-menu"}
+{"q": "投稿ごとの操作を出したい", "op": "post-menu"}
+{"q": "この投稿をあとで読みたい", "op": "post-favorite"}
+{"q": "お気に入りに入れるには", "op": "post-favorite"}
+{"q": "気に入った投稿をまとめておきたい", "op": "clip-add"}
+{"q": "投稿をコレクションに入れたい", "op": "clip-add"}
+{"q": "間違えて出した投稿を消したい", "op": "post-delete"}
+{"q": "自分のノートを取り消すには", "op": "post-delete"}
+{"q": "投稿の下のボタンを並べ替えたい", "op": "actionbar-edit"}
+{"q": "使わないボタンを消したい", "op": "actionbar-edit"}
+{"q": "ボタンが多いので一つにまとめたい", "op": "actionbar-list"}
+{"q": "アクションをグループにできる？", "op": "actionbar-list"}
+{"q": "この投稿を友達に送りたい", "op": "share-dm"}
+{"q": "メッセージで教えるには", "op": "share-dm"}
+{"q": "好きな絵文字で反応したい", "op": "react-pick"}
+{"q": "いいね以外の絵文字を選びたい", "op": "react-pick"}
+{"q": "誰がリアクションしたか知りたい", "op": "thread-reactions"}
+{"q": "リノートした人を見たい", "op": "thread-reactions"}
+{"q": "返信を関連の近い順に並べたい", "op": "thread-sort"}
+{"q": "スレッドの表示を引用に切り替えたい", "op": "thread-sort"}
+{"q": "写真を大きく見たい", "op": "media-viewer"}
+{"q": "画像のALTを読みたい", "op": "media-viewer"}
+{"q": "タブを増やしたい", "op": "tl-tab-add"}
+{"q": "自分用のタイムラインを作りたい", "op": "tl-tab-add"}
+{"q": "TLにリストを設定したい", "op": "tl-list"}
+{"q": "作ったリストをタイムラインで流したい", "op": "tl-list"}
+{"q": "タイムラインにおすすめ順を入れたい", "op": "tl-algorithm"}
+{"q": "TLを絞り込みたい", "op": "tl-algorithm"}
+{"q": "アルゴリズムの適用順を入れ替えたい", "op": "tl-reorder"}
+{"q": "どの並べ替えを先に効かせるか変えたい", "op": "tl-reorder"}
+{"q": "おすすめじゃなく新しい順にしたい", "op": "tl-chrono"}
+{"q": "時系列で読みたい", "op": "tl-chrono"}
+{"q": "タイムラインをもっと細かく組みたい", "op": "tl-graph"}
+{"q": "ノードでTLを作れる？", "op": "tl-graph"}
+{"q": "会話がまとまって見えるタブが見たい", "op": "relational-tl"}
+{"q": "関連のタイムラインってどこ", "op": "relational-tl"}
+{"q": "会話の束ね方を変えたい", "op": "relational-tune"}
+{"q": "関連TLが細かすぎるので調整したい", "op": "relational-tune"}
+{"q": "トレンドの設定を触りたい", "op": "trend-config"}
+{"q": "流行りの表示を自分好みにしたい", "op": "trend-config"}
+{"q": "興味のある話題を登録したい", "op": "trend-genre"}
+{"q": "好きなジャンルを教えておきたい", "op": "trend-genre"}
+{"q": "過激な話題を減らしたい", "op": "trend-tendency"}
+{"q": "偏った情報ばかり出てくるのを直したい", "op": "trend-tendency"}
+{"q": "見た目まわりをいじりたい", "op": "settings-appearance"}
+{"q": "画面の雰囲気を変えたいんだけど", "op": "settings-appearance"}
+{"q": "画面を黒くしたい", "op": "settings-theme"}
+{"q": "夜でも目が疲れない配色にできる？", "op": "settings-theme"}
+{"q": "字が小さくて読みにくい", "op": "settings-textsize"}
+{"q": "表示をもう少し大きくしたい", "op": "settings-textsize"}
+{"q": "画面がぐるぐる動くのを止めたい", "op": "settings-motion"}
+{"q": "動きが多くて酔うので減らしたい", "op": "settings-motion"}
+{"q": "お知らせが多すぎるので減らしたい", "op": "settings-notifications"}
+{"q": "リアクションのお知らせだけ止められる？", "op": "settings-notifications"}
+{"q": "ブロックした人を確認したい", "op": "settings-mute-block"}
+{"q": "ミュートを解除したいんだけど", "op": "settings-mute-block"}
+{"q": "投稿するアカウントが勝手に変わる", "op": "settings-composer-prefs"}
+{"q": "書くときのアカウント選びを手動にしたい", "op": "settings-composer-prefs"}
+{"q": "つないでいるサーバー側の設定を見たい", "op": "settings-sns-account"}
+{"q": "別のアカウントの方の設定を変えたい", "op": "settings-sns-account"}
+{"q": "右側の空いてる欄を消したい", "op": "third-column"}
+{"q": "横に並ぶ 3 つ目の枠に何を出すか決めたい", "op": "third-column"}
+{"q": "欲しい拡張を探したい", "op": "plugin-search"}
+{"q": "ストアで名前から探せる？", "op": "plugin-search"}
+{"q": "拡張を入れたい", "op": "plugin-install"}
+{"q": "見つけたやつを導入するには", "op": "plugin-install"}
+{"q": "入れた拡張を消したい", "op": "plugin-uninstall"}
+{"q": "使わなくなったものを外す方法", "op": "plugin-uninstall"}
+{"q": "使ってみた感想を書きたい", "op": "plugin-review"}
+{"q": "星をつけて評価したい", "op": "plugin-review"}
+{"q": "投稿の下のボタンを増やしたい", "op": "plugin-slot-actions"}
+{"q": "拡張のボタンをバーに並べたい", "op": "plugin-slot-actions"}
+{"q": "貼る写真をきれいにしたい", "op": "media-editor-plugin"}
+{"q": "添付の画像を編集してから送りたい", "op": "media-editor-plugin"}
+{"q": "自分で通話の部屋を立てたい", "op": "astell-create"}
+{"q": "新しく VC を始めるには", "op": "astell-create"}
+{"q": "明日の夜に通話をセットしたい", "op": "astell-schedule"}
+{"q": "開催の時間を先に決めておきたい", "op": "astell-schedule"}
+{"q": "声が出ないんだけど", "op": "astell-mic"}
+{"q": "通話でミュートを外したい", "op": "astell-mic"}
+{"q": "話した内容を文字で見たい", "op": "astell-captions"}
+{"q": "通話にテロップを出せる？", "op": "astell-captions"}
+{"q": "通話中にファイルを渡したい", "op": "astell-share-file"}
+{"q": "みんなに画像を見せたい", "op": "astell-share-file"}
+{"q": "通話から抜けたい", "op": "astell-leave"}
+{"q": "部屋を出るにはどうすれば", "op": "astell-leave"}
+{"q": "読み上げの声を変えたい", "op": "astell-room-settings"}
+{"q": "共有欄に自動で出す種類を決めたい", "op": "astell-room-settings"}
+{"q": "荒らしている人を追い出したい", "op": "astell-member-menu"}
+{"q": "参加者への操作はどこから？", "op": "astell-member-menu"}
+{"q": "友達に部屋の管理を手伝ってほしい", "op": "astell-moderator"}
+{"q": "参加者に管理権限をあげたい", "op": "astell-moderator"}
+{"q": "気になる部屋をあとで開けるようにしたい", "op": "astell-bookmark"}
+{"q": "VC を保存しておきたい", "op": "astell-bookmark"}
+{"q": "やり方が分からないので聞きたい", "op": "rai-ask"}
+{"q": "アシスタントに相談するには", "op": "rai-ask"}
+{"q": "案内じゃなくて答えを返してほしい", "op": "rai-mode"}
+{"q": "操作の案内と返答を切り替えたい", "op": "rai-mode"}
+{"q": "オフラインでも答えてもらいたい", "op": "rai-model-download"}
+{"q": "端末の中で動くやつを入れたい", "op": "rai-model-download"}
+{"q": "容量が足りないので重いものを消したい", "op": "rai-model-delete"}
+{"q": "入れたモデルを消す方法", "op": "rai-model-delete"}
+{"q": "さっき言われたことをもう一度見たい", "op": "rai-history"}
+{"q": "前の返事を読み返したい", "op": "rai-history"}
+{"q": "TL の中身を細かく組み立てたい", "op": "node-graph"}
+{"q": "配線みたいな画面で編集したい", "op": "node-graph"}
+{"q": "部品を足したい", "op": "node-search"}
+{"q": "使えるノードを探して置きたい", "op": "node-search"}
+{"q": "置いた部品の中身を調整したい", "op": "node-params"}
+{"q": "ノードの値を変えるには", "op": "node-params"}
+{"q": "いらない部品を外したい", "op": "node-delete"}
+{"q": "間違えて置いたものを消したい", "op": "node-delete"}
+{"q": "どのアカウントに飛ばすか条件をつけたい", "op": "composer-config"}
+{"q": "投稿先の振り分けを作りたい", "op": "composer-config"}
+{"q": "この人のアカウント探したいんだけど", "op": "search-users"}
+{"q": "名前からユーザーを見つけたい", "op": "search-users"}
+{"q": "タグが付いた投稿だけ見たい", "op": "search-hashtag"}
+{"q": "#で探すのってどうやるの", "op": "search-hashtag"}
+{"q": "検索の出方を調整したい", "op": "search-settings"}
+{"q": "検索まわりのオプションはどこ", "op": "search-settings"}
+{"q": "検索の結果を新しい順にしたい", "op": "search-sort"}
+{"q": "出てくる順番を変えたい", "op": "search-sort"}
+{"q": "お知らせってどこで見るの", "op": "notifications"}
+{"q": "誰かに反応されたか確認したい", "op": "notifications"}
+{"q": "通知の細かい設定をいじりたい", "op": "notify-prefs"}
+{"q": "何を知らせるか選びたい", "op": "notify-prefs"}
+{"q": "リアクションの知らせがうるさい", "op": "notify-kind"}
+{"q": "フォローされた時だけ黙らせたい", "op": "notify-kind"}
+{"q": "未読のバッジを消したい", "op": "notify-read-all"}
+{"q": "まとめて読んだことにしたい", "op": "notify-read-all"}
+{"q": "フォローしたいって来てるのを承認したい", "op": "follow-requests"}
+{"q": "申請が来てるけど断りたい", "op": "follow-requests"}
+{"q": "まだ話したことない人にメッセージ送りたい", "op": "dm-new"}
+{"q": "新しくやり取りを始めたい", "op": "dm-new"}
+{"q": "メッセージ画面の設定を変えたい", "op": "dm-config"}
+{"q": "DMの見え方をいじりたい", "op": "dm-config"}
+{"q": "左から出てくるメニューを出したい", "op": "sidebar"}
+{"q": "アプリのメニューってどこから開くの", "op": "sidebar"}
+{"q": "自分のアカウント全体を管理したい", "op": "rasq-account"}
+{"q": "束ねてるアカウントの画面を出したい", "op": "rasq-account"}
+{"q": "もう一つアカウントを足したい", "op": "account-add"}
+{"q": "別のSNSも繋ぎたい", "op": "account-add"}
+{"q": "端末をまたいで設定を持ち歩きたい", "op": "rasq-create"}
+{"q": "RASQの登録ってどこでするの", "op": "rasq-create"}
+{"q": "使うアカウントを変えたい", "op": "account-switch"}
+{"q": "別の垢に持ち替えたい", "op": "account-switch"}
+{"q": "このアカウントから抜けたい", "op": "account-logout"}
+{"q": "サインアウトする方法", "op": "account-logout"}
+{"q": "相手のページってどうやって開くの", "op": "user-page"}
+{"q": "その人の投稿をまとめて見たい", "op": "user-page"}
+{"q": "この人を追いかけたい", "op": "user-follow"}
+{"q": "フォローするにはどうすれば", "op": "user-follow"}
+{"q": "もう追わなくていいので外したい", "op": "user-unfollow"}
+{"q": "フォローをやめたい", "op": "user-unfollow"}
+{"q": "相手に対する操作の一覧を出したい", "op": "user-menu"}
+{"q": "プロフィールのURLをコピーしたい", "op": "user-menu"}
+{"q": "この人の投稿を見えなくしたい", "op": "user-mute"}
+{"q": "静かにしたいけど切りはしたくない", "op": "user-mute"}
+{"q": "この人と関わらないようにしたい", "op": "user-block"}
+{"q": "相手から届かないようにしたい", "op": "user-block"}
+{"q": "アイコンを大きく見たい", "op": "user-image"}
+{"q": "ヘッダー画像を全画面で見たい", "op": "user-image"}
+{"q": "前に静かにした人を元に戻したい", "op": "mute-block"}
+{"q": "遮断した相手の一覧はどこ", "op": "mute-block"}
+{"q": "自分の写真を差し替えたい", "op": "profile-avatar"}
+{"q": "プロフィールの画像を変えたい", "op": "profile-avatar"}
+{"q": "自分のサイトを載せたい", "op": "profile-links"}
+{"q": "プロフィールにURLを書きたい", "op": "profile-links"}
+{"q": "作ったリストはどこから見るの", "op": "lists"}
+{"q": "まとめた一覧を開きたい", "op": "lists"}
+{"q": "新しくまとめを作りたい", "op": "list-create"}
+{"q": "リストって作れる？", "op": "list-create"}
+{"q": "前の環境のリストを持ってきたい", "op": "list-import"}
+{"q": "ファイルから取り込みたい", "op": "list-import"}
+{"q": "入れた人を抜きたい", "op": "list-members"}
+{"q": "中に誰がいるか見て整理したい", "op": "list-members"}
+{"q": "リストのTLの並びを変えたい", "op": "list-tl-config"}
+{"q": "このリストの表示をカスタムしたい", "op": "list-tl-config"}
+{"q": "気になる投稿を残しておきたい", "op": "bookmark-add"}
+{"q": "どのサーバーか調べてから入りたい", "op": "login-browser-auth"}
+{"q": "ブラウザで認証したあとどうするの", "op": "login-browser-auth"}
+{"q": "起動した最初の画面で何を選べばいい", "op": "onboarding"}
+{"q": "初回の案内を飛ばしたい", "op": "onboarding"}

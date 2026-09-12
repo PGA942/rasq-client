@@ -65,10 +65,18 @@ class RaiMascot3dController extends ChangeNotifier {
 }
 
 class RaiMascot3d extends StatefulWidget {
-  const RaiMascot3d({super.key, required this.size, this.controller, this.asset = 'assets/models/rai.glb'});
+  const RaiMascot3d({super.key, required this.size, this.controller, this.asset = 'assets/models/rai.glb', this.outline, this.opacity = 1});
   final double size;
   final RaiMascot3dController? controller;
   final String asset;
+
+  /// ダークモードの縁取り色(null なら縁取り無し)。
+  final Color? outline;
+  final double opacity;
+
+  /// 描画は固定解像度で行い、表示サイズは拡縮で合わせる(サイズが毎フレーム変わってもテクスチャを作り直さない)。
+  static const renderWidth = 400.0;
+  static const renderHeight = 500.0;
 
   @override
   State<RaiMascot3d> createState() => _RaiMascot3dState();
@@ -93,7 +101,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
         if (mounted) setState(() => _ready = true);
       },
       setup: _setup,
-      size: Size(widget.size, widget.size * 1.25),
+      size: const Size(RaiMascot3d.renderWidth, RaiMascot3d.renderHeight),
       settings: three.Settings(alpha: true, clearAlpha: 0, clearColor: 0x000000, animate: true, antialias: true, enableShadowMap: false),
     );
     _ctrl.addListener(_sync);
@@ -120,16 +128,30 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
     try {
       _three.scene = three.Scene();
       _three.camera = three.PerspectiveCamera(28, _three.width / _three.height, 0.1, 100);
-      _three.scene.add(three.AmbientLight(0xffffff, 0.9));
-      final key = three.DirectionalLight(0xffffff, 1.2);
+      // 金属部分(腕 / コマ)が暗く沈まないよう、環境光を強めに + キー / フィル / リム。
+      _three.scene.add(three.AmbientLight(0xffffff, 1.4));
+      final key = three.DirectionalLight(0xffffff, 1.8);
       key.position.setValues(1.5, 3, 4);
       _three.scene.add(key);
-      final fill = three.DirectionalLight(0xffffff, 0.5);
-      fill.position.setValues(-2, 1, 2);
+      final fill = three.DirectionalLight(0xdfe8ff, 0.9);
+      fill.position.setValues(-2.5, 1, 2.5);
       _three.scene.add(fill);
+      final rim = three.DirectionalLight(0xffffff, 1.0);
+      rim.position.setValues(0, 2, -3);
+      _three.scene.add(rim);
       final gltf = await three.GLTFLoader().fromAsset(widget.asset);
       if (gltf == null) throw StateError('glb を読めません');
       final model = gltf.scene;
+      // 環境マップ無しの metalness=1 は真っ黒に見えるので、金属材質は少し下げて粗さを上げる。
+      model.traverse((o) {
+        if (o is three.Mesh) {
+          final m = o.material;
+          if (m is three.MeshStandardMaterial) {
+            if (m.metalness > 0.4) m.metalness = 0.4;
+            if (m.roughness < 0.45) m.roughness = 0.45;
+          }
+        }
+      });
       // 高さ 1 に正規化して足元を原点へ(モデルの寸法に依らずカメラに収める)。
       final box = three.BoundingBox().setFromObject(model);
       final h = (box.max.y - box.min.y).abs();
@@ -180,10 +202,27 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   @override
   Widget build(BuildContext context) {
     if (_failed) return const SizedBox.shrink();
+    final tex = _three.texture;
+    final outline = widget.outline;
+    // 縁取り (D-192): 同じテクスチャを一色に塗って 8 方向へずらし、本体の下に敷く。
+    Widget copy() => Transform.scale(scaleY: Platform.isAndroid ? 1 : -1, child: Texture(textureId: tex!.textureId));
+    final scene = SizedBox(
+      width: RaiMascot3d.renderWidth,
+      height: RaiMascot3d.renderHeight,
+      child: Stack(fit: StackFit.expand, children: [
+        if (outline != null && tex != null && _ready)
+          for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
+            Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),
+        _three.build(),
+      ]),
+    );
     return SizedBox(
       width: widget.size,
       height: widget.size * 1.25,
-      child: Opacity(opacity: _ready ? 1 : 0, child: _three.build()),
+      child: Opacity(
+        opacity: _ready ? widget.opacity : 0,
+        child: FittedBox(fit: BoxFit.contain, child: scene),
+      ),
     );
   }
 }
