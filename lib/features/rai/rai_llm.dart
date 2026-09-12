@@ -32,20 +32,30 @@ enum RaiEngine {
   String get label => this == RaiEngine.gguf ? 'llama.cpp / GGUF' : 'LiteRT-LM';
 }
 
-/// 端末に入れるモデルの候補。
+/// 端末に入れるモデルの候補(クラウドのフォールアップ先も同じ形で並べる、D-183)。
 @immutable
 class RaiModelSpec {
-  const RaiModelSpec({required this.id, required this.label, required this.fileName, required this.url, required this.sizeMb, required this.family, this.engine = RaiEngine.gguf});
+  const RaiModelSpec({required this.id, required this.label, required this.fileName, required this.url, required this.sizeMb, required this.family, this.engine = RaiEngine.gguf, this.cloud = false, this.params = 4, this.completionRate});
   final String id;
   final String label;
   final String fileName;
   final String url;
   final int sizeMb;
 
-  /// flutter_gemma の ModelType 名(general / qwen3 …)。GGUF ではチャットテンプレートを
-  /// ファイルから読むので使わない。
+  /// flutter_gemma の ModelType 名(general / qwen3 …)。GGUF はチャットテンプレート(ChatML)を使う。
   final String family;
   final RaiEngine engine;
+
+  /// クラウド(フォールアップ先)のモデル。端末には入れない。
+  final bool cloud;
+
+  /// パラメーター数(B)。完遂率の集計対象は 35B 未満。
+  final double params;
+
+  /// 集計された完遂率(0..1)。未集計は null → 「-%」。
+  final double? completionRate;
+
+  bool get local => !cloud;
 }
 
 /// 既定 = 4B 級 / 3〜4bit の GGUF(ワイヤーフレームの Agents-A1-4B = InternScience/Agents-A1-4B)。
@@ -94,7 +104,37 @@ const raiModelSpecs = <RaiModelSpec>[
   ),
 ];
 
+/// クラウド(フォールアップ先)。サーバー側が無いので「未接続」。
+const raiCloudModelSpecs = <RaiModelSpec>[
+  RaiModelSpec(id: 'cloud-qwen3.9-33b-a3b', label: 'Qwen3.9 33B A3B', fileName: '', url: '', sizeMb: 0, family: 'qwen3', cloud: true, params: 33),
+  RaiModelSpec(id: 'cloud-cyllm-jp-150b', label: 'CyLLM-JP-150B', fileName: '', url: '', sizeMb: 0, family: 'general', cloud: true, params: 150),
+];
+
 RaiModelSpec raiModelSpecById(String? id) => raiModelSpecs.where((m) => m.id == id).firstOrNull ?? raiModelSpecs.first;
+
+/// メモリの判定 (D-183): モデルの重み × 1.15 + コンテキスト分(600 MB)が、端末 RAM の 6 割までなら
+/// 余裕、8.5 割までなら ぎりぎり、それ以上は 不可。RAM が分からなければ 不明。
+enum RaiRamVerdict {
+  ok,
+  tight,
+  no,
+  unknown;
+
+  String get label => switch (this) { RaiRamVerdict.ok => '動作可', RaiRamVerdict.tight => 'ぎりぎり', RaiRamVerdict.no => 'メモリ不足', RaiRamVerdict.unknown => '不明' };
+}
+
+RaiRamVerdict raiMemoryVerdict({required int modelMb, required int? totalRamMb}) {
+  if (totalRamMb == null || totalRamMb <= 0) return RaiRamVerdict.unknown;
+  final need = modelMb * 1.15 + 600;
+  if (need <= totalRamMb * 0.6) return RaiRamVerdict.ok;
+  if (need <= totalRamMb * 0.85) return RaiRamVerdict.tight;
+  return RaiRamVerdict.no;
+}
+
+/// 端末の RAM(MB、合計 / 空き)。取れなければ null。実体は `rai_llm_device.dart` の
+/// [deviceRamReader] を main.dart で差す(テストは override)。
+final deviceRamProvider = FutureProvider<({int? totalMb, int? availableMb})>((ref) => ref.watch(deviceRamReaderProvider)());
+final deviceRamReaderProvider = Provider<Future<({int? totalMb, int? availableMb})> Function()>((_) => () async => (totalMb: null, availableMb: null));
 
 /// バーのチップに出す端末内モデルの呼び名(ワイヤーフレーム)。
 const raiLocalModelLabel = 'Agents-A1-4B';

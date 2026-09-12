@@ -206,8 +206,11 @@ class RaiStatusRing extends StatelessWidget {
 /// お手伝いします！」、質問後はその文がヒントに)。左の ^ で下段(モデルチップ / 状態リング /
 /// トグル / 質問する)を畳む。「質問する」= 送信。
 class RaiBar extends StatefulWidget {
-  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote});
+  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap});
   final RaiState state;
+
+  /// モデルチップのタップ → モデル FOW (D-183)。
+  final VoidCallback? onModelTap;
 
   /// 端末内モデルの状態の短い注記(「未DL」「読み込み中」「45%」など。準備できていれば null)。
   final String? llmNote;
@@ -298,8 +301,11 @@ class _RaiBarState extends State<RaiBar> {
               child: Row(children: [
                 // モデルチップ。
                 Flexible(
-                  child: Container(
+                  child: InkWell(
                     key: const ValueKey('rai.model'),
+                    onTap: widget.onModelTap,
+                    borderRadius: BorderRadius.circular(RasqSizes.radiusPill),
+                    child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: 6),
                     decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(RasqSizes.radiusPill)),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -308,6 +314,7 @@ class _RaiBarState extends State<RaiBar> {
                       Flexible(child: Text(s.mode.modelName, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
                       if (widget.llmNote != null) Padding(padding: const EdgeInsets.only(left: 4), child: Text(widget.llmNote!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
                     ]),
+                    ),
                   ),
                 ),
                 const SizedBox(width: RasqSpacing.sm),

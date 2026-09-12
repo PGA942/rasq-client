@@ -9,6 +9,7 @@ import 'package:rasq_client/features/login/login_screen.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/rai/rai_home_screen.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
+import 'package:rasq_client/features/rai/rai_models_fow.dart';
 import 'package:rasq_client/features/rai/rai_overlay.dart';
 import 'package:rasq_client/features/rai/rai_providers.dart';
 import 'package:rasq_client/features/rai/rai_reference.dart';
@@ -51,6 +52,13 @@ void main() {
     expect(splitSpeechLines(''), isEmpty);
   });
 
+  test('メモリの判定 (raiMemoryVerdict)', () {
+    expect(raiMemoryVerdict(modelMb: 2885, totalRamMb: 8192), RaiRamVerdict.ok); // 3.3 GB 必要 / 4.9 GB まで余裕
+    expect(raiMemoryVerdict(modelMb: 2885, totalRamMb: 5000), RaiRamVerdict.tight);
+    expect(raiMemoryVerdict(modelMb: 2885, totalRamMb: 3000), RaiRamVerdict.no);
+    expect(raiMemoryVerdict(modelMb: 2885, totalRamMb: null), RaiRamVerdict.unknown);
+  });
+
   group('参照 (matchInstruction)', () {
     test('キーワードで引ける / 知らない質問は null', () {
       expect(matchInstruction('Blueskyでログインしたい')?.instruction.id, 'login-bluesky');
@@ -62,6 +70,7 @@ void main() {
 
   late FakeRaiLlm llm;
   setUp(() => llm = FakeRaiLlm());
+  ({int? totalMb, int? availableMb}) ram = (totalMb: 8192, availableMb: 4096);
 
   Future<ProviderContainer> pump(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
@@ -71,7 +80,7 @@ void main() {
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => [post('p1', 'こんにちは')]));
-    await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), raiLlmProvider.overrideWithValue(llm)], child: const RasqApp()));
+    await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), raiLlmProvider.overrideWithValue(llm), deviceRamReaderProvider.overrideWithValue(() async => ram)], child: const RasqApp()));
     await tester.pumpAndSettle();
     return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
   }
@@ -170,21 +179,36 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
     await tester.pumpAndSettle();
-    // モデル節: 未ダウンロード → ダウンロード → 準備完了(解放 / 削除が出る)。
+    // モデルは FOW で (D-183): ホームの状態行(未ダウンロード)→「モデルを選ぶ」→ タイル(ローカル / クラウド、完遂率 -%、メモリ判定)。
     expect(find.textContaining('未ダウンロード'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rai.models.open')));
+    await tester.pumpAndSettle();
+    expect(find.text('モデル'), findsOneWidget); // FOW タイトル
+    expect(find.text('ローカル'), findsWidgets);
+    expect(find.text('完遂率 -%'), findsWidgets);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.ram.agents-a1-4b-q4km'))).data, 'メモリ: 動作可'); // 8 GB の端末
+    final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.tile.cloud-cyllm-jp-150b')), 120, scrollable: fowList);
+    await tester.pumpAndSettle();
+    expect(find.text('クラウド'), findsWidgets);
+    expect(find.text('完遂率 集計外'), findsOneWidget); // 150B は集計外
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.phase.cloud-qwen3.9-33b-a3b'))).data, '未接続');
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.download')), -120, scrollable: fowList);
+    await tester.pumpAndSettle();
+    // 既定は Agents-A1 4B の GGUF (D-182)。ダウンロード → 準備完了(解放 / 削除が出る)。
+    expect(llm.spec.id, 'agents-a1-4b-q4km');
+    expect(llm.spec.engine, RaiEngine.gguf);
     await tester.tap(find.byKey(const ValueKey('rai.model.download')));
     await tester.pumpAndSettle();
     expect(llm.installs, 1);
-    expect(find.textContaining('準備完了'), findsOneWidget);
     expect(find.byKey(const ValueKey('rai.model.release')), findsOneWidget);
-    // 既定は Agents-A1 4B の GGUF (D-182)。切り替え → Qwen3.5 4B の GGUF。
-    expect(llm.spec.id, 'agents-a1-4b-q4km');
-    expect(llm.spec.engine, RaiEngine.gguf);
-    await tester.drag(find.byType(RaiHomeScreen), const Offset(0, -600)); // 末尾まで(RAi バーの下に隠れないように)
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('rai.model.pick.qwen3.5-4b-q4km')));
+    // 切り替え → Qwen3.5 4B の GGUF(「使う」)。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.use.qwen3.5-4b-q4km')), 80, scrollable: fowList);
+    await tester.tap(find.byKey(const ValueKey('rai.model.use.qwen3.5-4b-q4km')));
     await tester.pumpAndSettle();
     expect(llm.spec.id, 'qwen3.5-4b-q4km');
+    await tester.tap(find.text('閉じる').last); // FOW を閉じる
+    await tester.pumpAndSettle();
     expect(find.textContaining('Qwen3.5 4B (Q4_K_M)'), findsWidgets);
     // インストラクションで参照に無い質問 → 端末内モデルが答える(操作のシステム指示)。
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
@@ -211,15 +235,17 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.next'))); // 最後の行で ▶ → 閉じる
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rai.speech')), findsNothing);
-    // 削除 → 確認 → 未ダウンロードに戻る。
-    await tester.drag(find.byType(RaiHomeScreen), const Offset(0, 600));
+    // 削除(FOW)→ 確認 → 未ダウンロードに戻る。
+    await tester.tap(find.byKey(const ValueKey('rai.model.tile')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey('rai.model.delete')));
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.delete')), 120, scrollable: find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('rai.model.delete')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除').last);
     await tester.pumpAndSettle();
-    expect(find.textContaining('未ダウンロード'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.model.download')), findsOneWidget);
+    expect(find.textContaining('未ダウンロード'), findsWidgets);
   });
 
   testWidgets('ログイン画面の「Raiのインストラクチャ」→ 入力欄付きのバー(インストラクション)', (tester) async {

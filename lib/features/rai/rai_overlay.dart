@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
 import 'rai_llm.dart';
+import 'rai_models_fow.dart';
 import 'rai_providers.dart';
 import 'rai_spline.dart';
 import 'rai_widgets.dart';
@@ -84,6 +85,7 @@ class _RaiBarHost extends ConsumerWidget {
         onMode: n.setMode,
         onSubmit: n.ask,
         onClose: () => hideRai(ref),
+        onModelTap: () => showRaiModelsFow(ref),
         llmNote: switch (llm.phase) {
           RaiLlmPhase.ready || RaiLlmPhase.generating => null,
           RaiLlmPhase.loading => '読み込み中',
