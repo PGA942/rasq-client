@@ -17,7 +17,7 @@ Future<void> main() async {
   if (kDebugMode && _probeHost.isNotEmpty) await _probe(_probeHost);
   runApp(ProviderScope(
     // RAi の端末内モデル (D-181): 実機では flutter_gemma(LiteRT-LM)。テストは既定(使えない骨格)か偽物。
-    overrides: [raiLlmProvider.overrideWith((_) => DeviceRaiLlm())],
+    overrides: [raiLlmProvider.overrideWith((_) => DeviceRaiLlm()), deviceRamReaderProvider.overrideWithValue(deviceRamReader)],
     child: const RasqApp(),
   ));
 }

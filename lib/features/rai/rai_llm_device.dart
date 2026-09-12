@@ -1,21 +1,51 @@
 import 'dart:async';
+import 'dart:ffi';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma_litertlm/flutter_gemma_litertlm.dart';
-import 'package:fllama/fllama.dart' as fl;
 import 'package:http/http.dart' as http;
+import 'package:llama_cpp_dart/llama_cpp_dart.dart' as lc;
 import 'package:path_provider/path_provider.dart';
 
 import 'rai_llm.dart';
 
-/// 端末内 LLM の実体 (D-181 / D-182): エンジンをモデルごとに切り替える。
+/// 端末の RAM(device_info_plus)。iOS / Android は MB、macOS は bytes で返るので MB に揃える。
+Future<({int? totalMb, int? availableMb})> deviceRamReader() async {
+  try {
+    final info = DeviceInfoPlugin();
+    if (Platform.isIOS) {
+      final d = await info.iosInfo;
+      return (totalMb: d.physicalRamSize, availableMb: d.availableRamSize);
+    }
+    if (Platform.isAndroid) {
+      final d = await info.androidInfo;
+      return (totalMb: d.physicalRamSize, availableMb: d.availableRamSize);
+    }
+    if (Platform.isMacOS) {
+      final d = await info.macOsInfo;
+      final v = d.memorySize;
+      return (totalMb: v > 10000000 ? v ~/ (1024 * 1024) : v, availableMb: null);
+    }
+  } catch (e) {
+    debugPrint('device ram: $e');
+  }
+  return (totalMb: null, availableMb: null);
+}
+
+/// llama.cpp のプレビルト(macOS 開発用): GitHub Releases の tar.gz を落として展開する。
+/// 配布ビルドでは Frameworks に同梱して署名する(引き継ぎメモ)。
+const llamaCppReleaseTag = 'b10924';
+
+/// 端末内 LLM の実体 (D-181 / D-182 / D-183): エンジンをモデルごとに切り替える。
 ///
-/// - GGUF → llama.cpp(fllama、ネイティブアセットで llama.cpp をビルド)。モデルは HF から
-///   アプリのサポート領域(`rai_models/`)へ自前でダウンロード(進捗つき)。
-/// - .litertlm → LiteRT-LM(flutter_gemma)。macOS は付属 dylib の同梱に Podfile の post_install が
-///   要る(パッケージの #247)ので、当面は GGUF を既定にする。
+/// - GGUF → llama.cpp(**llama_cpp_dart**、MIT)。ネイティブは macOS ならランタイムに GitHub
+///   Releases から取得、iOS / Android はアプリに組み込んだもの(xcframework / jniLibs)を探す。
+///   モデルは HF から `ApplicationSupport/rai_models/` へ自前でダウンロード(進捗つき)。
+/// - .litertlm → LiteRT-LM(flutter_gemma)。
 /// 失敗はすべて [RaiLlmException] に畳む。選んだモデル id はファイルに残す。
 class DeviceRaiLlm implements RaiLlm {
   DeviceRaiLlm();
@@ -29,8 +59,10 @@ class DeviceRaiLlm implements RaiLlm {
   InferenceModel? _lrModel;
   Future<void>? _lrInit;
 
-  // GGUF
-  int? _ggufRequestId;
+  // llama.cpp
+  lc.LlamaParent? _llama;
+  String? _llamaModelPath;
+  Future<String?>? _libReady;
   StreamSubscription<List<int>>? _download;
 
   @override
@@ -45,9 +77,9 @@ class DeviceRaiLlm implements RaiLlm {
     if (!_ctrl.isClosed) _ctrl.add(s);
   }
 
-  Future<Directory> _dir() async {
+  Future<Directory> _dir([String sub = 'rai_models']) async {
     final base = await getApplicationSupportDirectory();
-    final d = Directory('${base.path}/rai_models');
+    final d = Directory('${base.path}/$sub');
     if (!await d.exists()) await d.create(recursive: true);
     return d;
   }
@@ -70,6 +102,62 @@ class DeviceRaiLlm implements RaiLlm {
       await File('${(await _dir()).path}/selected.txt').writeAsString(_spec.id);
     } catch (e) {
       debugPrint('rai llm selection save: $e');
+    }
+  }
+
+  // ── llama.cpp のネイティブライブラリ ──
+
+  /// 使えるライブラリのパス(null = プロセスに組み込み済み)。無ければ例外。
+  Future<String?> _ensureLlamaLib() => _libReady ??= _resolveLlamaLib().catchError((Object e) {
+        _libReady = null;
+        throw e;
+      });
+
+  Future<String?> _resolveLlamaLib() async {
+    if (Platform.isMacOS) {
+      final dir = Directory('${(await _dir('llama_cpp')).path}/$llamaCppReleaseTag');
+      final lib = File('${dir.path}/libmtmd.dylib');
+      if (!await lib.exists()) {
+        _set(RaiLlmStatus(RaiLlmPhase.loading, message: 'llama.cpp のランタイムを取得中', modelId: _spec.id));
+        await _downloadLlamaRuntime(dir);
+      }
+      return lib.path;
+    }
+    // iOS / Android: アプリに組み込まれているかを探る(iOS = xcframework、Android = jniLibs)。
+    try {
+      if (Platform.isAndroid) {
+        DynamicLibrary.open('libmtmd.so');
+        return 'libmtmd.so';
+      }
+      DynamicLibrary.process().lookup<NativeFunction<Void Function()>>('llama_backend_init');
+      return null;
+    } catch (_) {
+      throw RaiLlmException(Platform.isIOS ? 'llama.cpp が組み込まれていません(Runner に llama.xcframework を追加)' : 'llama.cpp のライブラリがありません');
+    }
+  }
+
+  Future<void> _downloadLlamaRuntime(Directory dir) async {
+    final url = 'https://github.com/ggml-org/llama.cpp/releases/download/$llamaCppReleaseTag/llama-$llamaCppReleaseTag-bin-macos-arm64.tar.gz';
+    final res = await http.get(Uri.parse(url)).timeout(const Duration(minutes: 3));
+    if (res.statusCode != 200) throw RaiLlmException('llama.cpp のランタイムを取得できません(HTTP ${res.statusCode})');
+    final archive = TarDecoder().decodeBytes(GZipDecoder().decodeBytes(res.bodyBytes));
+    await dir.create(recursive: true);
+    final links = <String, String>{};
+    for (final f in archive) {
+      final name = f.name.split('/').last;
+      if (name.isEmpty || !name.contains('.dylib')) continue;
+      if (f.isSymbolicLink) {
+        links[name] = f.symbolicLink!.split('/').last;
+        continue;
+      }
+      if (!f.isFile) continue;
+      await File('${dir.path}/$name').writeAsBytes(f.content as List<int>, flush: true);
+    }
+    // シンボリックリンクは実体のコピーで代用(tar の順序に依らないよう後から)。
+    for (final e in links.entries) {
+      final target = File('${dir.path}/${e.value}');
+      final link = File('${dir.path}/${e.key}');
+      if (await target.exists() && !await link.exists()) await target.copy(link.path);
     }
   }
 
@@ -98,7 +186,7 @@ class DeviceRaiLlm implements RaiLlm {
 
   @override
   Future<void> select(RaiModelSpec spec) async {
-    if (spec.id == _spec.id) return;
+    if (spec.id == _spec.id || spec.cloud) return;
     await release();
     _spec = spec;
     await _saveSelection();
@@ -194,13 +282,15 @@ class DeviceRaiLlm implements RaiLlm {
 
   @override
   Future<void> release() async {
-    final id = _ggufRequestId;
-    _ggufRequestId = null;
-    if (id != null) {
+    final l = _llama;
+    _llama = null;
+    _llamaModelPath = null;
+    if (l != null) {
       try {
-        fl.fllamaCancelInference(id);
+        await l.stop();
+        await l.dispose();
       } catch (e) {
-        debugPrint('rai llm cancel: $e');
+        debugPrint('rai llm llama dispose: $e');
       }
     }
     final m = _lrModel;
@@ -223,63 +313,77 @@ class DeviceRaiLlm implements RaiLlm {
     return _spec.engine == RaiEngine.gguf ? _ggufChat(prompt, system) : _lrChat(prompt, system);
   }
 
+  Future<lc.LlamaParent> _llamaLoad(String modelPath) async {
+    final cached = _llama;
+    if (cached != null && _llamaModelPath == modelPath) return cached;
+    await release();
+    _set(RaiLlmStatus(RaiLlmPhase.loading, modelId: _spec.id));
+    final lib = await _ensureLlamaLib();
+    lc.Llama.libraryPath = lib;
+    final load = lc.LlamaLoad(
+      path: modelPath,
+      modelParams: lc.ModelParams()..nGpuLayers = 99,
+      contextParams: lc.ContextParams()
+        ..nCtx = 2048
+        ..nBatch = 512
+        ..nPredict = 256
+        ..nThreads = 4
+        ..nThreadsBatch = 4,
+      samplingParams: lc.SamplerParams()
+        ..temp = 0.4
+        ..topP = 0.95
+        ..penaltyRepeat = 1.1,
+    );
+    final parent = lc.LlamaParent(load);
+    await parent.init();
+    _llama = parent;
+    _llamaModelPath = modelPath;
+    return parent;
+  }
+
   Stream<String> _ggufChat(String prompt, String? system) {
     final out = StreamController<String>();
+    StreamSubscription<String>? tokens;
+    StreamSubscription<lc.CompletionEvent>? completions;
     () async {
-      final f = await _ggufFile();
-      if (!await f.exists()) {
-        out.addError(RaiLlmException('モデルファイルがありません: ${f.path}'));
-        await out.close();
-        return;
-      }
-      _set(RaiLlmStatus(RaiLlmPhase.generating, modelId: _spec.id));
-      var emitted = '';
       try {
-        final request = fl.OpenAiRequest(
-          maxTokens: 256,
-          messages: [
-            if (system != null && system.isNotEmpty) fl.Message(fl.Role.system, system),
-            fl.Message(fl.Role.user, prompt),
-          ],
-          numGpuLayers: 99,
-          modelPath: f.path,
-          frequencyPenalty: 0.0,
-          presencePenalty: 1.1,
-          topP: 0.95,
-          contextSize: 2048,
-          temperature: 0.4,
-          logger: (log) => debugPrint('[llama.cpp] $log'),
-        );
-        _ggufRequestId = await fl.fllamaChat(request, (response, openAiJson, done) {
-          if (out.isClosed) return;
-          if (fl.fllamaOutputIndicatesLoadError(response)) {
-            out.addError(RaiLlmException('モデルを読み込めません(llama.cpp): $response'));
-            out.close();
-            return;
-          }
-          // fllama は累積の文章を返すので差分だけ流す。
-          if (response.length > emitted.length && response.startsWith(emitted)) {
-            out.add(response.substring(emitted.length));
-            emitted = response;
-          } else if (response != emitted) {
-            emitted = response;
-          }
-          if (done) out.close();
+        final f = await _ggufFile();
+        if (!await f.exists()) throw RaiLlmException('モデルファイルがありません: ${f.path}');
+        final llama = await _llamaLoad(f.path);
+        _set(RaiLlmStatus(RaiLlmPhase.generating, modelId: _spec.id));
+        // ChatML(Agents-A1 / Qwen 系)。system + user を渡し、assistant を開けておく。
+        final history = lc.ChatHistory();
+        if (system != null && system.isNotEmpty) history.addMessage(role: lc.Role.system, content: system);
+        history.addMessage(role: lc.Role.user, content: prompt);
+        history.addMessage(role: lc.Role.assistant, content: '');
+        final formatted = history.exportFormat(lc.ChatFormat.chatml, leaveLastAssistantOpen: true);
+        tokens = llama.stream.listen((t) {
+          if (!out.isClosed) out.add(t);
         });
+        completions = llama.completions.listen((e) {
+          if (out.isClosed) return;
+          if (!e.success) out.addError(RaiLlmException('生成に失敗しました: $e'));
+          out.close();
+        });
+        await llama.sendPrompt(formatted);
       } catch (e) {
         if (!out.isClosed) {
-          out.addError(RaiLlmException('生成に失敗しました: $e'));
+          out.addError(e is RaiLlmException ? e : RaiLlmException('モデルを読み込めません(llama.cpp): $e'));
           await out.close();
         }
       }
     }();
-    out.onCancel = () {
-      final id = _ggufRequestId;
-      if (id != null) fl.fllamaCancelInference(id);
+    out.onCancel = () async {
+      await tokens?.cancel();
+      await completions?.cancel();
+      try {
+        await _llama?.stop();
+      } catch (_) {}
     };
     return out.stream.transform(StreamTransformer.fromHandlers(handleDone: (sink) {
-      _ggufRequestId = null;
-      _set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
+      tokens?.cancel();
+      completions?.cancel();
+      if (_current.phase == RaiLlmPhase.generating) _set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
       sink.close();
     }));
   }

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
-import 'package:rasq_overlay/rasq_overlay.dart';
 
-import '../../app/providers.dart';
 
 import '../../shell/headers.dart';
 import 'rai_llm.dart';
+import 'rai_models_fow.dart';
 import 'rai_overlay.dart';
 import 'rai_providers.dart';
 import 'rai_widgets.dart';
@@ -59,7 +58,7 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
   }
 }
 
-/// 端末内モデル (D-181): 状態 / ダウンロード / 解放 / 削除 / モデルの切り替え。
+/// 端末内モデル (D-181 → D-183 で FOW へ): ここは今のモデルと状態だけ。詳細はモデル FOW。
 class _ModelSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -67,20 +66,11 @@ class _ModelSection extends ConsumerWidget {
     final llm = ref.watch(raiLlmProvider);
     final st = ref.watch(raiLlmStatusProvider).value ?? llm.current;
     final spec = llm.spec;
-    final manager = ref.read(overlayManagerProvider);
-    Future<void> guard(Future<void> Function() f) async {
-      try {
-        await f();
-      } on RaiLlmException catch (e) {
-        if (context.mounted) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    }
-
     final phaseText = switch (st.phase) {
       RaiLlmPhase.notInstalled => '未ダウンロード(${spec.sizeMb} MB)',
       RaiLlmPhase.downloading => 'ダウンロード中 ${st.progress ?? 0}%',
       RaiLlmPhase.ready => '準備完了',
-      RaiLlmPhase.loading => '読み込み中',
+      RaiLlmPhase.loading => st.message ?? '読み込み中',
       RaiLlmPhase.generating => '生成中',
       RaiLlmPhase.unavailable => '使えません',
     };
@@ -89,40 +79,15 @@ class _ModelSection extends ConsumerWidget {
       RasqListTile(
         key: const ValueKey('rai.model.tile'),
         title: '$raiLocalModelLabel = ${spec.label}',
-        subtitle: st.message == null ? phaseText : '$phaseText — ${st.message}',
+        subtitle: st.message == null || st.phase == RaiLlmPhase.loading ? phaseText : '$phaseText — ${st.message}',
         leading: Icon(Icons.smartphone, size: 20, color: scheme.onSurfaceVariant),
-        chevron: false,
+        onTap: () => showRaiModelsFow(ref),
       ),
-      if (st.phase == RaiLlmPhase.downloading)
-        Padding(padding: const EdgeInsets.symmetric(vertical: RasqSpacing.xs), child: LinearProgressIndicator(value: (st.progress ?? 0) / 100)),
-      Wrap(spacing: RasqSpacing.sm, children: [
-        if (st.phase == RaiLlmPhase.notInstalled || st.phase == RaiLlmPhase.unavailable)
-          FilledButton.icon(key: const ValueKey('rai.model.download'), onPressed: () => guard(llm.install), icon: const Icon(Icons.download, size: 18), label: const Text('ダウンロード')),
-        if (st.ready || st.phase == RaiLlmPhase.loading)
-          OutlinedButton.icon(key: const ValueKey('rai.model.release'), onPressed: () => guard(llm.release), icon: const Icon(Icons.memory, size: 18), label: const Text('メモリを解放')),
-        if (st.ready)
-          OutlinedButton.icon(
-            key: const ValueKey('rai.model.delete'),
-            onPressed: () async {
-              final ok = await manager.showAlert(id: 'rai.model.delete', title: 'モデルを削除しますか', message: '${spec.fileName} を端末から消します。', confirmText: '削除', cancelText: 'キャンセル', destructive: true);
-              if (ok) await guard(llm.uninstall);
-            },
-            icon: const Icon(Icons.delete_outline, size: 18),
-            label: const Text('削除'),
-          ),
-      ]),
-      const SizedBox(height: RasqSpacing.sm),
-      Text('モデルの切り替え(既定は 4B 級 / 3〜4bit の GGUF。LiteRT は iOS 向け)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-      for (final m in raiModelSpecs)
-        RasqListTile(
-          key: ValueKey('rai.model.pick.${m.id}'),
-          title: m.label,
-          subtitle: '${m.engine.label} · ${m.fileName} · ${m.sizeMb} MB',
-          leading: Icon(m.id == spec.id ? Icons.radio_button_checked : Icons.radio_button_off, size: 20, color: m.id == spec.id ? RasqColors.link : scheme.onSurfaceVariant),
-          chevron: false,
-          enabled: st.phase != RaiLlmPhase.downloading,
-          onTap: () => guard(() => llm.select(m)),
-        ),
+      Padding(
+        padding: const EdgeInsets.only(top: RasqSpacing.sm),
+        child: OutlinedButton.icon(key: const ValueKey('rai.models.open'), onPressed: () => showRaiModelsFow(ref), icon: const Icon(Icons.tune, size: 18), label: const Text('モデルを選ぶ(ローカル / クラウド)')),
+      ),
+      const SizedBox(height: RasqSpacing.xs),
       Text('フォールアップ先(サーバー側 / クラウドの大きいモデル)は未接続です。端末内モデルが使えないときは失敗表示になります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
     ]);
   }

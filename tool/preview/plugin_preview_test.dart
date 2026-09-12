@@ -56,7 +56,7 @@ void main() {
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => posts ?? [post('p1', '今日は打ち上げ')]));
     await tester.pumpWidget(ProviderScope(
-      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes)), raiLlmProvider.overrideWithValue(FakeRaiLlm(phase: RaiLlmPhase.ready))],
+      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes)), raiLlmProvider.overrideWithValue(FakeRaiLlm(phase: RaiLlmPhase.ready)), deviceRamReaderProvider.overrideWithValue(() async => (totalMb: 8192, availableMb: 3000))],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
@@ -393,6 +393,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_home.png'));
+    await tester.tap(find.byKey(const ValueKey('rai.models.open')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_models_fow.png'));
+    await tester.tap(find.text('閉じる').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿したい');
