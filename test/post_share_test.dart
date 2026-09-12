@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -165,6 +164,18 @@ void main() {
     expect(tester.widget<TextField>(find.byType(TextField).last).controller!.text, '「こんにちは」\nhttps://example.test/notes/p1');
     expect(find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage), findsOneWidget);
     expect(rt.calls.where((x) => x.$1 == 'post.share.close').single.$2['token'], call['token']);
+    // 下書きは添付も持つ (D-174): 閉じて開き直しても画像が消えない。
+    await tester.tap(find.text('キャンセル'));
+    await tester.pumpAndSettle();
+    if (find.text('下書きに保存して閉じる').evaluate().isNotEmpty) {
+      await tester.tap(find.text('下書きに保存して閉じる'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage), findsNothing);
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField).last).controller!.text, '「こんにちは」\nhttps://example.test/notes/p1');
+    expect(find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage), findsOneWidget);
   });
 
   testWidgets('DM へ共有: 選んだアカウントの DM 相手を選ぶ → DM コンポーザーにリンク', (tester) async {

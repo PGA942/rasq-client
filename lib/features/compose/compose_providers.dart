@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
@@ -57,10 +58,24 @@ final composeOptionsProvider = NotifierProvider<ComposeOptionsStore, ComposeOpti
 /// ターゲットのコンポーザーを開くと復元される(送信で消える)。
 /// 添付画像・投票は対象外(テキストと注釈のみ)。
 class ComposeDraft {
-  const ComposeDraft({required this.text, this.cw = '', this.cwOn = false});
+  const ComposeDraft({required this.text, this.cw = '', this.cwOn = false, this.files = const []});
   final String text;
   final String cw;
   final bool cwOn;
+
+  /// 添付 (D-174): 下書きはメモリ内なのでバイトごと持つ(閉じて開き直しても画像が消えない)。
+  final List<ComposerInitialFile> files;
+}
+
+/// コンポーザーに最初から載せる添付 (D-170: 共有プラグインの `composer.open`、D-174: 下書きの復元)。
+class ComposerInitialFile {
+  const ComposerInitialFile({required this.bytes, required this.name, this.mimeType, this.sensitive = false});
+  final Uint8List bytes;
+  final String name;
+  final String? mimeType;
+  final bool sensitive;
+
+  bool get isVideo => (mimeType ?? '').startsWith('video/');
 }
 
 String draftKeyOf(ComposeTarget t) => switch (t) {

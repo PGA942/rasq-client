@@ -699,7 +699,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         ]),
       );
     }
-    if (pick == null) return;
+    if (pick == null || !context.mounted) return;
     // プラグインの FOW はルーム FOW の子として同じカラムに (D-169)。
     await ref.read(slotPluginsProvider.notifier).astellOpen(pick, s, fowOwner: astellRoomFowId, column: fowColumnOf(context));
   }

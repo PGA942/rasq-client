@@ -137,6 +137,8 @@ class WasmSnsSession extends SnsSessionBase {
   Future<Map<String, Object?>> _call(String fn, Map<String, Object?> args) async {
     final result = await _invoke(fn, {
       if (_settings.isNotEmpty) 'settings': _settings,
+      // 現在時刻 (D-175): wasm には時計が無いので、createdAt 等が要るプラグイン(Bluesky)へ渡す。
+      'now': DateTime.now().toUtc().toIso8601String(),
       ...args,
       ...extraArgs,
     });

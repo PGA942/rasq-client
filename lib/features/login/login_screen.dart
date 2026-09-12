@@ -46,7 +46,7 @@ class LoginScreen extends ConsumerWidget {
                   style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
             ),
             const SizedBox(height: RasqSpacing.lg),
-            _ServiceButton(kind: SnsKind.bluesky, label: 'BlueSkyでログイン', enabled: false, onTap: () => notReady('BlueSky')),
+            _ServiceButton(kind: SnsKind.bluesky, label: 'Blueskyでログイン', onTap: () => context.push(Routes.loginBluesky)),
             _ServiceButton(kind: SnsKind.misskey, label: 'Misskeyでログイン', onTap: () => context.push(Routes.loginMisskey)),
             _ServiceButton(kind: SnsKind.mixi2, label: 'mixi2でログイン', enabled: false, external: true, onTap: () => notReady('mixi2')),
             _ServiceButton(kind: SnsKind.mastodon, label: 'Mastodonでログイン', onTap: () => context.push(Routes.loginMastodon)),

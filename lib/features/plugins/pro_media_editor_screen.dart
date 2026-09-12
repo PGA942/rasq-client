@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pro_image_editor/features/crop_rotate_editor/models/transform_configs.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' as pve;
+import 'package:path_provider/path_provider.dart';
+import 'package:video_player/video_player.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
@@ -19,6 +22,10 @@ import 'slot_plugins.dart';
 /// バイパス: 下段バーの「プラグイン」→ 今の見た目を `captureEditorImage` で 1 枚に焼き込み → プラグイン画面 →
 /// 適用結果を新しい背景にして戻る(レイヤー / フィルター / 調整 / ぼかし / 変形は焼き込み済みなので空にする)。
 /// 「ひとつ戻す」でプラグイン適用前には戻れない(背景を差し替えるため)。
+///
+/// 動画 (D-174): `mimeType` が `video/*` なら pro_image_editor の動画モード(トリム / ペイント / テキスト /
+/// 絵文字 / フィルター / ぼかし / 調整)。再生は `video_player`、書き出しは `pro_video_editor`(端末ネイティブ、
+/// mp4)。動画にはプラグインのバイパスは無い。
 class ProMediaEditorArgs {
   const ProMediaEditorArgs({required this.bytes, required this.name, required this.mimeType});
   final Uint8List bytes;
@@ -85,6 +92,125 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   final _barScroll = ScrollController();
   bool _closing = false;
   bool _bypassing = false;
+  late final OverlayManager _overlay = ref.read(overlayManagerProvider);
+
+  // ── 動画 (D-174) ──
+  bool get _isVideo => widget.args.mimeType.startsWith('video/');
+  VideoPlayerController? _player;
+  ProVideoController? _video;
+  pve.VideoMetadata? _meta;
+  File? _videoFile;
+  String? _videoError;
+  TrimDurationSpan? _trim;
+  bool _seeking = false;
+  TrimDurationSpan? _pendingSeek;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // 下の FOW(コンポーザー等)は退避 (D-174): エディターの前に出ないように。State は保持される。
+      _overlay.setFowSuspend((e) => true);
+    });
+    if (_isVideo) _initVideo();
+  }
+
+  Future<void> _initVideo() async {
+    try {
+      final dir = await getTemporaryDirectory();
+      final f = File('${dir.path}/rasq_edit_${DateTime.now().microsecondsSinceEpoch}_${widget.args.name}');
+      await f.writeAsBytes(widget.args.bytes, flush: true);
+      _videoFile = f;
+      final player = VideoPlayerController.file(f);
+      await player.initialize();
+      await player.setLooping(false);
+      await player.pause();
+      final meta = await pve.ProVideoEditor.instance.getMetadata(pve.EditorVideo.file(f.path));
+      if (!mounted) return;
+      _player = player;
+      _meta = meta;
+      _video = ProVideoController(
+        videoPlayer: AspectRatio(aspectRatio: player.value.aspectRatio == 0 ? 16 / 9 : player.value.aspectRatio, child: VideoPlayer(player)),
+        initialResolution: meta.resolution,
+        videoDuration: meta.duration,
+        fileSize: meta.fileSize,
+        bitrate: meta.bitrate,
+      );
+      player.addListener(_onPlayerTick);
+      setState(() {});
+      // サムネイル(トリムバー)は端末ネイティブでだけ作る。
+      if (!Platform.isLinux && !Platform.isWindows) {
+        final frames = await pve.ProVideoEditor.instance.getKeyFrames(pve.KeyFramesConfigs(video: pve.EditorVideo.file(f.path), outputSize: const Size.square(120), boxFit: pve.ThumbnailBoxFit.cover, maxOutputFrames: 10, outputFormat: pve.ThumbnailFormat.jpeg));
+        if (mounted) _video?.thumbnails = [for (final b in frames) MemoryImage(b)];
+      }
+    } catch (e) {
+      if (mounted) setState(() => _videoError = '動画を開けませんでした: $e');
+    }
+  }
+
+  void _onPlayerTick() {
+    final p = _player;
+    final v = _video;
+    final m = _meta;
+    if (p == null || v == null || m == null) return;
+    final pos = p.value.position;
+    v.setPlayTime(pos);
+    final span = _trim;
+    if (span != null && pos >= span.end) {
+      _seekTo(span);
+    } else if (pos >= m.duration) {
+      _seekTo(TrimDurationSpan(start: Duration.zero, end: m.duration));
+    }
+  }
+
+  Future<void> _seekTo(TrimDurationSpan span) async {
+    _trim = span;
+    if (_seeking) {
+      _pendingSeek = span;
+      return;
+    }
+    _seeking = true;
+    _video?.pause();
+    _video?.setPlayTime(span.start);
+    await _player?.pause();
+    await _player?.seekTo(span.start);
+    _seeking = false;
+    final next = _pendingSeek;
+    if (next != null) {
+      _pendingSeek = null;
+      await _seekTo(next);
+    }
+  }
+
+  /// 書き出し (D-174): トリム / レイヤー(1 枚に焼き込み)/ ぼかし / 色フィルター / 変形を pro_video_editor で mp4 に。
+  Future<void> _renderVideo(CompleteParameters p) async {
+    final f = _videoFile;
+    final m = _meta;
+    if (f == null || m == null) return;
+    try {
+      final data = pve.VideoRenderData(
+        id: 'rasq-${DateTime.now().microsecondsSinceEpoch}',
+        videoSegments: [pve.VideoSegment(video: pve.EditorVideo.file(f.path))],
+        imageLayers: [if (p.layers.isNotEmpty) pve.ImageLayer(image: pve.EditorLayerImage.memory(p.image))],
+        blur: p.blur,
+        colorFilters: [pve.ColorFilter(matrix: p.colorFiltersCombined)],
+        startTime: p.startTime,
+        endTime: p.endTime,
+        transform: p.isTransformed ? pve.ExportTransform(width: p.cropWidth, height: p.cropHeight, rotateTurns: 4 - p.rotateTurns, x: p.cropX, y: p.cropY, flipX: p.flipX, flipY: p.flipY) : null,
+        enableAudio: _video?.isAudioEnabled ?? true,
+        outputFormat: pve.VideoOutputFormat.mp4,
+        bitrate: m.bitrate,
+      );
+      final bytes = await pve.ProVideoEditor.instance.renderVideo(data);
+      if (!mounted) return;
+      final n = widget.args.name;
+      final dot = n.lastIndexOf('.');
+      _finish(MediaEditResult(bytes: bytes, mimeType: 'video/mp4', name: '${dot > 0 ? n.substring(0, dot) : n}.mp4'));
+    } catch (e) {
+      if (mounted) setState(() => _videoError = '動画を書き出せませんでした: $e');
+    }
+  }
 
   /// 差し替え後のファイル名(pro_image_editor の出力は PNG)。
   String get _outName {
@@ -95,7 +221,12 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   @override
   void dispose() {
+    _overlay.setFowSuspend(null);
     _barScroll.dispose();
+    _player?.removeListener(_onPlayerTick);
+    _player?.dispose();
+    _video?.dispose();
+    _videoFile?.delete().catchError((_) => _videoFile!);
     super.dispose();
   }
 
@@ -110,24 +241,16 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     if (_bypassing) return;
     final plugins = ref.read(slotPluginsForProvider(SlotIds.composerMedia));
     if (plugins.isEmpty) return;
-    var pick = plugins.length == 1 ? plugins.first : null;
-    if (pick == null) {
-      final manager = ref.read(overlayManagerProvider);
-      pick = await manager.showBottomSheet<SlotPlugin>(
-        id: 'media.pro.plugin',
-        title: 'プラグインで加工',
-        builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
-          for (final p in plugins) RasqListTile(title: p.manifest.name, subtitle: p.manifest.description, onTap: () => manager.close('media.pro.plugin', result: p)),
-        ]),
-      );
-    }
-    if (pick == null || !mounted) return;
+    // 選択シートは挟まない(D-174: 動線を増やさない)。プラグインの切り替えはメディアエディター側の右列で。
+    final pick = plugins.first;
     _bypassing = true;
     try {
       final bytes = await editor.captureEditorImage();
       if (!mounted || bytes.isEmpty) return;
       final result = await context.pushMediaEditor(plugin: pick, bytes: bytes, name: _outName, mimeType: 'image/png');
-      if (!mounted || result == null) return;
+      if (!mounted) return;
+      _overlay.setFowSuspend((e) => true); // メディアエディターが戻すので、こちらでまた退避する
+      if (result == null) return;
       // 焼き込み済みの状態を空にして、結果を背景に。
       editor.addHistory(layers: [], filters: [], tuneAdjustments: [], blur: 0, transformConfigs: TransformConfigs.empty());
       await editor.updateBackgroundImage(EditorImage(byteArray: result.bytes), updateHistory: false);
@@ -174,6 +297,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isVideo) return _buildVideo(context);
     final hasPlugins = ref.watch(slotPluginsForProvider(SlotIds.composerMedia)).isNotEmpty;
     return ProImageEditor.memory(
       widget.args.bytes,
@@ -191,6 +315,51 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         mainEditor: MainEditorConfigs(
           widgets: MainEditorWidgets(
             bottomBar: (editor, rebuildStream, key) => ReactiveWidget(stream: rebuildStream, builder: (_) => _bar(editor, key, hasPlugins)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideo(BuildContext context) {
+    final v = _video;
+    final err = _videoError;
+    if (v == null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: Stack(children: [
+            Center(child: err == null ? const CircularProgressIndicator() : Padding(padding: const EdgeInsets.all(24), child: Text(err, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center))),
+            Positioned(left: 8, top: 8, child: RasqIconButton(icon: Icons.close, color: Colors.white, tooltip: 'キャンセル', onPressed: () => _finish(null))),
+          ]),
+        ),
+      );
+    }
+    return ProImageEditor.video(
+      v,
+      key: _editorKey,
+      callbacks: ProImageEditorCallbacks(
+        onCompleteWithParameters: _renderVideo,
+        onCloseEditor: (mode) {
+          if (mode == EditorMode.main) _finish(null);
+        },
+        videoEditorCallbacks: VideoEditorCallbacks(
+          onPlay: () => _player?.play(),
+          onPause: () => _player?.pause(),
+          onMuteToggle: (muted) => _player?.setVolume(muted ? 0 : 1),
+          onTrimSpanUpdate: (span) {
+            if (_player?.value.isPlaying == true) _player?.pause();
+          },
+          onTrimSpanEnd: _seekTo,
+        ),
+      ),
+      configs: ProImageEditorConfigs(
+        i18n: rasqEditorI18n,
+        videoEditor: const VideoEditorConfigs(initialMuted: false, initialPlay: false, isAudioSupported: false, minTrimDuration: Duration(seconds: 1)),
+        mainEditor: MainEditorConfigs(
+          tools: const [SubEditorMode.paint, SubEditorMode.text, SubEditorMode.cropRotate, SubEditorMode.tune, SubEditorMode.filter, SubEditorMode.blur, SubEditorMode.emoji],
+          widgets: MainEditorWidgets(
+            bottomBar: (editor, rebuildStream, key) => ReactiveWidget(stream: rebuildStream, builder: (_) => _bar(editor, key, false)),
           ),
         ),
       ),

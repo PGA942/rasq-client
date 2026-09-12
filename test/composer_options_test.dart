@@ -89,6 +89,8 @@ void main() {
 
     await tester.tap(find.byTooltip('投稿'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('MFM')); // ツールバーは横スクロール(D-174 で「動画」が増えた)
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('MFM'));
     await tester.pumpAndSettle();
 

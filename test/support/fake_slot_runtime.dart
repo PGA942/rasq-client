@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
@@ -31,7 +30,7 @@ class FakeSlotRuntime extends ChangeNotifier with WasmFowSurfaceMixin implements
 
   /// プラグイン側から FOW を開く。
   void openFow(String id, Map<String, Object?> root, {String? title, String? onClosed}) {
-    handleFowHostFn('fow.open', {'id': id, 'spec': {'type': 'widget', 'title': title ?? id}, 'root': root, if (onClosed != null) 'onClosed': onClosed}, scope: scopeName);
+    handleFowHostFn('fow.open', {'id': id, 'spec': {'type': 'widget', 'title': title ?? id}, 'root': root, 'onClosed': ?onClosed}, scope: scopeName);
   }
 
   void closeFow(String id) => handleFowHostFn('fow.close', {'id': id}, scope: scopeName);

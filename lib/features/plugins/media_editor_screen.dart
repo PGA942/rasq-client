@@ -74,6 +74,9 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
   /// プレビューの上に重ねる RRL(`composer.media.overlay`、契約 v0.5)。
   RrlNode? _overlayRoot;
 
+  /// 合わせる先 (契約 v0.6、D-174): 重ねの Box の key。ダブルタップ → 「この上にドラッグ」で入る。
+  final Set<String> _snapKeys = {};
+
   /// 下付き横リスト: 中身が変わったら初期位置を中央に(D-172)。
   ScrollController? _strip;
   String _stripKey = '';
@@ -131,7 +134,7 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
   }
 
   /// 自分(いま編集に使っているプラグイン)の下付き FOW だけ出し、他は退避。
-  void _suspendOthers() => _overlay.setFowSuspend((e) => !e.id.startsWith('fow.slot.${_plugin.id}.'));
+  void _suspendOthers() => _overlay.setFowSuspend((e) => !e.id.startsWith('fow.slot.${_plugin.id}.') && !e.id.startsWith('fow.media.'));
 
   /// 開いている下付き FOW が画面下端から占める高さ(px)。無ければ 0。
   /// パネルの実測(前フレームの位置)を優先し、まだ描かれていなければ heightFactor から見積もる。
@@ -174,6 +177,7 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
     if (!mounted) return;
     setState(() {
       _overlayRoot = null;
+      _snapKeys.clear();
       _plugin = plugin;
       _session = s;
       if (s != null && !_catalog.containsKey(plugin.id)) _catalog[plugin.id] = s.genres;
@@ -206,6 +210,8 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
       return image;
     }
     final controller = _plugin.runtime.view;
+    final boxes = _overlayBoxes(root);
+    final targets = [for (final b in boxes) if (_snapKeys.contains(b.key)) b];
     return FittedBox(
       fit: BoxFit.contain,
       child: SizedBox(
@@ -214,17 +220,96 @@ class _MediaEditorScreenState extends ConsumerState<MediaEditorScreen> {
         height: size.$2.toDouble(),
         child: Stack(fit: StackFit.expand, children: [
           Image.memory(_preview, fit: BoxFit.fill, gaplessPlayback: true, errorBuilder: (_, _, _) => const SizedBox.shrink()),
-          RrlRenderer(
-            node: root,
-            host: RrlHost(
-              instanceScope: controller.document?.scope ?? _plugin.id,
-              scope: RrlScope({}),
-              geometry: controller.geometry,
-              onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
+          // ダブルタップ (v0.6): 合わせる先の指定。子の tap / drag はそのまま(ダブルタップ判定ぶんだけ tap が遅れる)。
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onDoubleTapDown: (d) => _onOverlayDoubleTap(boxes, d.localPosition, d.globalPosition),
+            child: RrlRenderer(
+              node: root,
+              host: RrlHost(
+                instanceScope: controller.document?.scope ?? _plugin.id,
+                scope: RrlScope({}),
+                geometry: controller.geometry,
+                onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: _withSnap(boxes, nodeId, kind, payload)),
+              ),
             ),
           ),
+          // 合わせる先の強調(点線)。
+          if (targets.isNotEmpty) IgnorePointer(child: CustomPaint(painter: _SnapPainter(targets))),
         ]),
       ),
+    );
+  }
+
+  /// 重ねの `Box`(left/top/width/height 付き)を集める。
+  static List<_OvBox> _overlayBoxes(RrlNode root) {
+    final out = <_OvBox>[];
+    for (final c in root.c) {
+      if (c.t != 'Box') continue;
+      final l = (c.p['left'] as num?)?.toDouble(), t = (c.p['top'] as num?)?.toDouble(), w = (c.p['width'] as num?)?.toDouble(), h = (c.p['height'] as num?)?.toDouble();
+      if (l == null || t == null || w == null || h == null) continue;
+      out.add(_OvBox(key: c.k ?? '#${out.length}', label: c.p['label'] as String?, rect: Rect.fromLTWH(l, t, w, h), angle: (c.p['angle'] as num?)?.toDouble() ?? 0));
+    }
+    return out;
+  }
+
+  /// `drag` の `end` に `snap` を添える (契約 v0.6): 指を離した位置(ノード左上 + x,y)が合わせる先の中なら。
+  Map<String, Object?> _withSnap(List<_OvBox> boxes, String nodeId, String kind, Map<String, Object?> payload) {
+    if (kind != 'drag' || payload['phase'] != 'end' || _snapKeys.isEmpty) return payload;
+    final key = nodeId.split(':').last;
+    final self = boxes.where((b) => b.key == key).firstOrNull;
+    final pt = Offset((self?.rect.left ?? 0) + ((payload['x'] as num?)?.toDouble() ?? 0), (self?.rect.top ?? 0) + ((payload['y'] as num?)?.toDouble() ?? 0));
+    for (final t in boxes.reversed) {
+      if (t.key == key || !_snapKeys.contains(t.key) || !t.contains(pt)) continue;
+      return {...payload, 'snap': {'key': t.key, if (t.label != null) 'label': t.label, 'left': t.rect.left, 'top': t.rect.top, 'width': t.rect.width, 'height': t.rect.height, 'angle': t.angle}};
+    }
+    return payload;
+  }
+
+  Future<void> _onOverlayDoubleTap(List<_OvBox> boxes, Offset local, Offset global) async {
+    final hit = boxes.reversed.where((b) => b.contains(local)).firstOrNull;
+    final isTarget = hit != null && _snapKeys.contains(hit.key);
+    final pick = await _overlay.showDropdown<String>(id: 'media.editor.snap', anchor: global & const Size(1, 1), dense: true, items: [
+      if (hit != null) RasqDropdownItem(isTarget ? 'この上にドラッグ(解除)' : 'この上にドラッグ(合わせる先にする)', 'toggle', checked: isTarget),
+      const RasqDropdownItem('合わせる先を選ぶ…', 'pick'),
+      if (_snapKeys.isNotEmpty) const RasqDropdownItem('合わせる先をすべて解除', 'clear'),
+    ]);
+    if (pick == null || !mounted) return;
+    switch (pick) {
+      case 'toggle':
+        final key = hit?.key;
+        if (key != null) setState(() => isTarget ? _snapKeys.remove(key) : _snapKeys.add(key));
+      case 'pick':
+        _openSnapFow();
+      case 'clear':
+        setState(_snapKeys.clear);
+    }
+  }
+
+  /// 合わせる先を選ぶ FOW: label 付きの Box を一覧、複数選択。
+  void _openSnapFow() {
+    _overlay.showFow<void>(
+      id: 'fow.media.snap',
+      spec: FowSpec(type: FowPanelType.widget, title: '合わせる先', cancelText: '閉じる', initialHeightFactor: 0.45, dockAboveFooter: true),
+      builder: (ctx, handle) => StatefulBuilder(builder: (ctx, setLocal) {
+        final root = _overlayRoot;
+        final boxes = root == null ? const <_OvBox>[] : _overlayBoxes(root).where((b) => b.label != null).toList();
+        if (boxes.isEmpty) return Center(child: Text('名前の付いた枠がありません', style: RasqTypography.bodySmall));
+        return ListView(padding: EdgeInsets.zero, children: [
+          for (final b in boxes)
+            RasqListTile(
+              key: ValueKey('media.snap.${b.key}'),
+              title: b.label!,
+              subtitle: '${b.rect.width.round()} × ${b.rect.height.round()}${b.angle == 0 ? '' : '、${b.angle.round()}°'}',
+              chevron: false,
+              trailing: Icon(_snapKeys.contains(b.key) ? Icons.check_box : Icons.check_box_outline_blank, color: _snapKeys.contains(b.key) ? RasqColors.accent : null),
+              onTap: () {
+                setState(() => _snapKeys.contains(b.key) ? _snapKeys.remove(b.key) : _snapKeys.add(b.key));
+                setLocal(() {});
+              },
+            ),
+        ]);
+      }),
     );
   }
 
@@ -546,4 +631,65 @@ class _Circle extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => DecoratedBox(decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle), child: child);
+}
+
+/// 重ねの Box(合わせる先の候補 / ドラッグ対象)。
+class _OvBox {
+  const _OvBox({required this.key, this.label, required this.rect, this.angle = 0});
+  final String key;
+  final String? label;
+  final Rect rect;
+
+  /// 度(中心で回転)。
+  final double angle;
+
+  /// 回転を戻してから矩形に入っているか。
+  bool contains(Offset p) {
+    if (angle == 0) return rect.contains(p);
+    final c = rect.center;
+    final a = -angle * math.pi / 180;
+    final d = p - c;
+    final r = Offset(d.dx * math.cos(a) - d.dy * math.sin(a), d.dx * math.sin(a) + d.dy * math.cos(a)) + c;
+    return rect.contains(r);
+  }
+}
+
+/// 合わせる先の点線(回転つき)。
+class _SnapPainter extends CustomPainter {
+  const _SnapPainter(this.targets);
+  final List<_OvBox> targets;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = RasqColors.accent;
+    for (final t in targets) {
+      canvas.save();
+      if (t.angle != 0) {
+        canvas.translate(t.rect.center.dx, t.rect.center.dy);
+        canvas.rotate(t.angle * math.pi / 180);
+        canvas.translate(-t.rect.center.dx, -t.rect.center.dy);
+      }
+      final r = t.rect.inflate(3);
+      const dash = 6.0;
+      void seg(Offset a, Offset b) {
+        final len = (b - a).distance;
+        var d = 0.0;
+        while (d < len) {
+          final e = math.min(d + dash, len);
+          canvas.drawLine(Offset.lerp(a, b, d / len)!, Offset.lerp(a, b, e / len)!, paint);
+          d += dash * 2;
+        }
+      }
+      seg(r.topLeft, r.topRight);
+      seg(r.topRight, r.bottomRight);
+      seg(r.bottomRight, r.bottomLeft);
+      seg(r.bottomLeft, r.topLeft);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SnapPainter old) => old.targets != targets;
 }
