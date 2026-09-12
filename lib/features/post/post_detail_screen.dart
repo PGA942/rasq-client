@@ -205,7 +205,8 @@ class _ThreadBody extends StatelessWidget {
       // 「1件の添付リンク」の形)でスレッド線を繋ぐ。タップでそのスレッドへ。
       for (final a in ancestors) ReplyParentRow(post: a),
       // スレッド展開はインラインフレームモード (D-156): 引用は小表示。
-      PostRow(post: post, actions: actions, onAction: (d, {args = const {}}) => onAction(post, d, args: args), showReplyParent: ancestors.isEmpty, onActAs: onActAs, compactQuote: true),
+      // メイン投稿は添付を全部並べる(5 枚目以降も、D-177)。
+      PostRow(post: post, actions: actions, onAction: (d, {args = const {}}) => onAction(post, d, args: args), showReplyParent: ancestors.isEmpty, onActAs: onActAs, compactQuote: true, showAllMedia: true),
       Container(
         decoration: BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: scheme.onSurface, width: 1))),
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),

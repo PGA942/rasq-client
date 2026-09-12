@@ -37,7 +37,7 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText, this.onActAs, this.compactQuote = false});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText, this.onActAs, this.compactQuote = false, this.showAllMedia = false});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -66,6 +66,9 @@ class PostRow extends ConsumerStatefulWidget {
   /// インラインフレームモード (D-156): 引用を小表示(サムネイル最大 4 枚のカード)
   /// にする。TL では false(通常の埋め込みタイル)、スレッド展開/通知などでは true。
   final bool compactQuote;
+
+  /// 添付を 4 枚で畳まず全部並べる(スレッド展開のメイン投稿、D-177)。
+  final bool showAllMedia;
 
   /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
   static String? attachmentSummaryOf(Post p) {
@@ -158,7 +161,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       final astellId = astellRoomIdIn(post.body);
       if (astellId != null) body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [body, AstellPostTile(roomId: astellId)]);
       final cw = post.contentWarning;
-      content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, initiallyOpen: safety.openCw, child: _CwBody(post: post, body: body)) : body;
+      content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, initiallyOpen: safety.openCw, child: _CwBody(post: post, body: body, showAllMedia: widget.showAllMedia)) : body;
     }
     // When a CW is present, media/poll/quote live *inside* the CW reveal;
     // otherwise they fill the tile's own slots.
@@ -192,7 +195,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       bannerText: widget.bannerText,
       dense: widget.dense,
       content: content,
-      media: !collapsible && !hasCw && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, onTapTile: (i) => context.openViewer(post, mediaIndex[i])) : null,
+      media: !collapsible && !hasCw && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, maxVisible: widget.showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i])) : null,
       poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
       quote: !collapsible && !hasCw && post.quote != null ? (widget.compactQuote ? InlinePostFrame(post: post.quote!) : quoteTile(context, post.quote!, emojis: emojis, safety: safety)) : null,
       actionBar: widget.actions.isEmpty && post.reactions.isEmpty
@@ -458,9 +461,10 @@ class ReplyParentRow extends ConsumerWidget {
 
 /// Body shown under an opened CW: text + media + poll + quote together.
 class _CwBody extends ConsumerWidget {
-  const _CwBody({required this.post, required this.body});
+  const _CwBody({required this.post, required this.body, this.showAllMedia = false});
   final Post post;
   final Widget body;
+  final bool showAllMedia;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final emojis = ref.watch(emojiCacheProvider);
@@ -468,7 +472,7 @@ class _CwBody extends ConsumerWidget {
     final (mediaItems, mediaIndex) = safety.applyTo(post.media);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       body,
-      if (mediaItems.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: mediaItems, onTapTile: (i) => context.openViewer(post, mediaIndex[i]))],
+      if (mediaItems.isNotEmpty) ...[const SizedBox(height: RasqSpacing.sm), RasqMediaGrid(items: mediaItems, maxVisible: showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]))],
       if (post.poll != null) ...[const SizedBox(height: RasqSpacing.sm), RasqPollWidget(poll: post.poll!)],
       if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _PostRowState.quoteTile(context, post.quote!, emojis: emojis, safety: safety)],
     ]);

@@ -261,16 +261,46 @@ void main() {
     expect(find.byType(TextField), findsWidgets);
     await tester.tap(find.text('キャンセル').first);
     await tester.pumpAndSettle();
+    // 保存 / 変更を破棄 / キャンセル (D-177)。
+    expect(find.byKey(const ValueKey('composer.close.discard')), findsOneWidget);
+    expect(find.byKey(const ValueKey('composer.close.saveNew')), findsNothing); // 新規保存は開いている下書きがあるときだけ
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsNothing);
 
-    // ページを出て戻ると下書きが復元される。
+    // ページを出て戻っても自動では入らない (D-177): 「下書き」FOW から選んで開く。
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('下書きの確認です').first);
     await tester.pumpAndSettle();
+    await tester.tap(find.byType(TextField).last);
+    await tester.pumpAndSettle();
+    expect(find.text('@bob 書きかけの返信'), findsNothing);
+    expect(find.text('@bob '), findsOneWidget);
+    await tester.tap(find.text('下書き'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('@bob 書きかけの返信'));
+    await tester.pumpAndSettle();
     expect(find.text('@bob 書きかけの返信'), findsOneWidget);
+    // 開いている下書きを直してから「変更を破棄」→ 保存済みの下書きは元のまま。
+    await tester.enterText(find.byType(TextField).last, '@bob 書きかけの返信 2');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('キャンセル').first);
+    await tester.pumpAndSettle();
+    expect(find.text('下書きを上書きしますか'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('composer.close.discard')));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下書きの確認です').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(TextField).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下書き'));
+    await tester.pumpAndSettle();
+    expect(find.text('@bob 書きかけの返信'), findsOneWidget);
+    expect(find.text('@bob 書きかけの返信 2'), findsNothing);
   });
 
   testWidgets('通常コンポーザー (D-051): 余白クリックで自動的に下書きへ入って消失 → 再オープンで復元', (tester) async {
@@ -295,18 +325,25 @@ void main() {
     expect(find.text('キャンセル'), findsNothing);
     expect(find.text('書きかけの投稿があります'), findsNothing);
 
-    // もう一度開くと復元されている。
+    // もう一度開いても自動では入らない (D-177)。「下書き」ボタン(青文字・右揃え)→ 下書き FOW (D-176)
+    // → 行をタップで開く。
     await tester.tap(find.byTooltip('投稿'));
     await tester.pumpAndSettle();
+    expect(find.text('書きかけのノート'), findsNothing);
+    await tester.tap(find.text('下書き'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('書きかけのノート'));
+    await tester.pumpAndSettle();
     expect(find.text('書きかけのノート'), findsOneWidget);
-
-    // 「下書き」ボタン(青文字・右揃え)→ 下書き FOW (D-176) → 「今の内容を上書き保存して閉じる」→ 再度復元。
+    // 「今の内容を上書き保存して閉じる」→ 下書きは 1 つのまま。
     await tester.tap(find.text('下書き'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('drafts.save')));
     await tester.pumpAndSettle();
     expect(find.text('キャンセル'), findsNothing);
     await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('下書き'));
     await tester.pumpAndSettle();
     expect(find.text('書きかけのノート'), findsOneWidget);
   });

@@ -76,6 +76,9 @@ extension RasqNavigation on BuildContext {
   void pushMuteBlock() => push('${Routes.settings}/mute-block');
   void openViewer(Post post, int index) => push(Routes.viewer, extra: (post: post, index: index));
 
+  /// プロフィールのアイコン / バナーを全画面で (D-177)。
+  void openImage(Uri url, {String? title}) => push(Routes.imageViewer, extra: (url: url, title: title));
+
   /// メディアエディター (D-169): 全画面で加工して結果を返す(キャンセルは null)。
   Future<MediaEditResult?> pushMediaEditor({required SlotPlugin plugin, required Uint8List bytes, required String name, required String mimeType}) =>
       push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: plugin, bytes: bytes, name: name, mimeType: mimeType));

@@ -368,22 +368,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     for (final f in widget.initialFiles ?? const <ComposerInitialFile>[]) {
       _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive);
     }
-    // 保存済み下書きの復元(プリセットより優先)。
-    final d = ref.read(composeDraftsProvider.notifier).latestFor(_draftKey);
-    if (d != null) {
-      _draftId = d.id;
-      _text.text = d.text;
-      _text.selection = TextSelection.collapsed(offset: _text.text.length);
-      _cwOn = d.cwOn;
-      _cw.text = d.cw;
-      _prefillPending = false;
-      // 添付も戻す (D-174)。
-      if (_files.isEmpty) {
-        for (final f in d.files) {
-          _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive);
-        }
-      }
-    }
+    // 下書きは自動では入れない (D-177): 開くときは空で、下書き FOW(「下書き」)から選んで開く。
     _scheduleTargetEval(); // ポスト先ノード (D-116): 開いた時点の内容で初回評価
   }
 
@@ -456,20 +441,35 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       widget.onClose?.call();
       return;
     }
-    // メンション以外の入力があるときのキャンセル (D-176 改): ポップアップ「下書きに保存しますか」
-    // (開いている下書きなら「下書きを上書きしますか」)。保存 = 保存して閉じる / キャンセル = 編集に戻る。
+    // メンション以外の入力があるときのキャンセル (D-176 改 / D-177): ポップアップ
+    // 「下書きに保存しますか」= 保存 / 変更を破棄 / キャンセル(編集に戻る)、
+    // 開いている下書きなら「下書きを上書きしますか」= 上書き / 新規保存 / 変更を破棄 / キャンセル。
     final manager = ref.read(overlayManagerProvider);
     final editing = _draftId != null;
-    final save = await manager.showAlert(
+    final pick = await manager.showChoiceAlert<_CloseChoice>(
       id: 'composer.close',
       title: editing ? '下書きを上書きしますか' : '下書きに保存しますか',
       message: editing ? '開いている下書きを今の内容で上書きして閉じます。' : '今の内容を下書きに残して閉じます。',
-      confirmText: editing ? '上書き' : '保存',
+      choices: [
+        if (editing) ...[
+          const RasqAlertChoice('上書き', _CloseChoice.overwrite, primary: true, key: ValueKey('composer.close.overwrite')),
+          const RasqAlertChoice('新規保存', _CloseChoice.saveNew, key: ValueKey('composer.close.saveNew')),
+        ] else
+          const RasqAlertChoice('保存', _CloseChoice.overwrite, primary: true, key: ValueKey('composer.close.save')),
+        const RasqAlertChoice('変更を破棄', _CloseChoice.discard, destructive: true, key: ValueKey('composer.close.discard')),
+      ],
       cancelText: 'キャンセル',
     );
-    if (!mounted || !save) return;
-    _saveDraft();
-    _skipDraftOnDispose = true; // 保存済み — dispose では触らない
+    if (!mounted || pick == null) return;
+    switch (pick) {
+      case _CloseChoice.overwrite:
+        _saveDraft();
+      case _CloseChoice.saveNew:
+        _saveDraft(asNew: true);
+      case _CloseChoice.discard:
+        break; // 保存済みの下書きは元のまま、今の変更は捨てる
+    }
+    _skipDraftOnDispose = true; // dispose では触らない
     widget.onClose?.call();
   }
 
@@ -1481,3 +1481,6 @@ class _AttachmentTile extends StatelessWidget {
         ),
       ]);
 }
+
+/// キャンセル時のポップアップの選択 (D-177)。
+enum _CloseChoice { overwrite, saveNew, discard }

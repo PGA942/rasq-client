@@ -32,6 +32,8 @@ class RasqUserTileLarge extends StatelessWidget {
     this.bio,
     this.restricted = false,
     this.onShowRestricted,
+    this.onAvatarTap,
+    this.onBannerTap,
   });
 
   final UserProfile profile;
@@ -48,6 +50,10 @@ class RasqUserTileLarge extends StatelessWidget {
 
   /// Rich bio (RSL spans rendered by the host); falls back to plain description.
   final Widget? bio;
+
+  /// アイコン / バナー画像のタップ(全画面表示、D-177)。
+  final VoidCallback? onAvatarTap;
+  final VoidCallback? onBannerTap;
 
   /// 制限ユーザー: banner row 「⚠ このユーザーは制限されています 表示」.
   final bool restricted;
@@ -67,7 +73,14 @@ class RasqUserTileLarge extends StatelessWidget {
           width: double.infinity,
           child: profile.bannerUrl == null
               ? ColoredBox(color: scheme.surfaceContainerHighest)
-              : Image.network(profile.bannerUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
+              : GestureDetector(
+                  onTap: onBannerTap,
+                  child: Semantics(
+                    button: onBannerTap != null,
+                    label: 'バナー画像',
+                    child: Image.network(profile.bannerUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
+                  ),
+                ),
         ),
         Positioned(
           left: RasqSpacing.page,
@@ -75,7 +88,7 @@ class RasqUserTileLarge extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(color: scheme.surface, shape: BoxShape.circle),
-            child: RasqAvatar(imageUrl: u.avatarUrl, size: avatarSize, presence: u.presence, fallbackLabel: u.displayName),
+            child: RasqAvatar(imageUrl: u.avatarUrl, size: avatarSize, presence: u.presence, fallbackLabel: u.displayName, onTap: onAvatarTap),
           ),
         ),
       ]),

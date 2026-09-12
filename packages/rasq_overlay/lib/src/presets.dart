@@ -114,6 +114,52 @@ extension OverlayPresets on OverlayManager {
     return result == true;
   }
 
+  /// 選択式のポップアップ (D-177): タイトル + 縦に並ぶ選択肢(下書きの「上書き / 新規保存 /
+  /// 変更を破棄 / キャンセル」など)。選ばれた値を返す。[cancelText] の行と barrier 外は null。
+  Future<T?> showChoiceAlert<T>({
+    required String id,
+    required String title,
+    required List<RasqAlertChoice<T>> choices,
+    String? message,
+    String? cancelText = 'キャンセル',
+    String? ownerId,
+  }) async {
+    final result = await show(RasqOverlayEntry(
+      id: id,
+      layer: OverlayLayer.modal,
+      alignment: Alignment.center,
+      ownerId: ownerId,
+      semanticsLabel: title,
+      builder: (context, handle) {
+        final scheme = Theme.of(context).colorScheme;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Material(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                if (message != null) ...[const SizedBox(height: 8), Text(message, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center)],
+                const SizedBox(height: 12),
+                for (final c in choices)
+                  TextButton(
+                    key: c.key,
+                    onPressed: () => handle.close(result: c.value),
+                    child: Text(c.label, style: TextStyle(color: c.destructive ? scheme.error : scheme.primary, fontWeight: c.primary ? FontWeight.w700 : FontWeight.w400)),
+                  ),
+                if (cancelText != null) TextButton(onPressed: handle.cancel, child: Text(cancelText, style: TextStyle(color: scheme.onSurfaceVariant))),
+              ]),
+            ),
+          ),
+        );
+      },
+    ));
+    return result is T ? result : null;
+  }
+
   /// Function Override Widget: docked, resizable bottom panel.
   /// `builder` receives the handle so the content can close itself with a result.
   Future<T?> showFow<T>({
@@ -206,4 +252,16 @@ class RasqDropdownItem<T> {
   final bool destructive;
   final bool accent;
   final bool enabled;
+}
+
+/// [OverlayPresets.showChoiceAlert] の 1 行。
+class RasqAlertChoice<T> {
+  const RasqAlertChoice(this.label, this.value, {this.primary = false, this.destructive = false, this.key});
+  final String label;
+  final T value;
+
+  /// 太字(既定の操作)。
+  final bool primary;
+  final bool destructive;
+  final Key? key;
 }

@@ -8,7 +8,9 @@ import '../tokens/colors.dart';
 import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
 
-/// MediaGrid — layout auto-adjusts by count (1枚フル幅 / 2枚横並び / 3枚以上グリッド),
+/// MediaGrid — layout auto-adjusts by count (1枚フル幅 / 2枚横並び / 3枚以上グリッド、
+/// [maxVisible] を超える分は最後のタイルに「+N」。スレッド展開など全部見せたい所は
+/// [maxVisible] を枚数以上にすると 2 列の行が続く、D-177),
 /// media types may be mixed, and sensitive state is independent per tile.
 ///
 /// Reveal state is ephemeral UI state, so it lives inside the widget
@@ -46,6 +48,7 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
     if (items.isEmpty) return const SizedBox.shrink();
     final radius = BorderRadius.circular(widget.borderRadius);
 
+    final visible = items.length > widget.maxVisible ? widget.maxVisible : items.length;
     Widget tile(int i) => _MediaTile(
           item: items[i],
           revealed: _revealed.contains(items[i].id),
@@ -55,7 +58,7 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
         );
 
     const gap = SizedBox.square(dimension: RasqSpacing.mediaGap);
-    final Widget body = switch (items.length) {
+    final Widget body = switch (visible) {
       1 => AspectRatio(aspectRatio: items.first.aspectRatio?.clamp(0.6, 2.2) ?? widget.singleAspectRatio, child: tile(0)),
       2 => AspectRatio(
           aspectRatio: widget.singleAspectRatio,
@@ -69,7 +72,7 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
             Expanded(child: Column(children: [Expanded(child: tile(1)), gap, Expanded(child: tile(2))])),
           ]),
         ),
-      _ => AspectRatio(
+      4 => AspectRatio(
           aspectRatio: widget.gridAspectRatio,
           child: Column(children: [
             Expanded(child: Row(children: [Expanded(child: tile(0)), gap, Expanded(child: tile(1))])),
@@ -77,6 +80,16 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
             Expanded(child: Row(children: [Expanded(child: tile(2)), gap, Expanded(child: tile(3))])),
           ]),
         ),
+      // 5 枚以上を全部見せる (D-177): 2 列の行を枚数分(奇数なら最後は 1 枚で全幅)。
+      _ => Column(children: [
+          for (var r = 0; r * 2 < visible; r++) ...[
+            if (r > 0) gap,
+            AspectRatio(
+              aspectRatio: widget.gridAspectRatio * 2,
+              child: r * 2 + 1 < visible ? Row(children: [Expanded(child: tile(r * 2)), gap, Expanded(child: tile(r * 2 + 1))]) : tile(r * 2),
+            ),
+          ],
+        ]),
     };
     return ClipRRect(borderRadius: radius, child: body);
   }

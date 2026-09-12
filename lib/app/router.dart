@@ -33,6 +33,7 @@ import '../features/bookmarks/bookmarks_screen.dart';
 import '../features/users/follow_requests_screen.dart';
 import '../features/users/follows_screen.dart';
 import '../features/users/user_page_screen.dart';
+import '../features/users/profile_image_viewer.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/backend_screen.dart';
@@ -61,6 +62,9 @@ abstract final class Routes {
   /// 初回オンボーディング (D-138): RASQ アカウント作成の案内。
   static const onboarding = '/onboarding';
   static const viewer = '/viewer';
+
+  /// プロフィールのアイコン / バナーの全画面表示 (D-177)。
+  static const imageViewer = '/viewer/image';
   static const mediaEditor = '/media-editor';
   static const mediaEditorPro = '/media-editor/pro';
   static const lists = '/lists';
@@ -220,6 +224,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (_, s) {
               final x = s.extra as ({Post post, int index});
               return CustomTransitionPage(child: MediaViewerScreen(post: x.post, initialIndex: x.index), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child));
+            },
+          ),
+          GoRoute(
+            path: Routes.imageViewer,
+            parentNavigatorKey: _appNavigatorKey,
+            pageBuilder: (_, s) {
+              final x = s.extra as ({Uri url, String? title});
+              return CustomTransitionPage(child: ProfileImageViewerScreen(url: x.url, title: x.title), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child));
             },
           ),
           // メディアエディター (D-169): 添付をプラグインで加工する全画面。
