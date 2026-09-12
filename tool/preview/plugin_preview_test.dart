@@ -19,6 +19,7 @@ import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/post/share_fow.dart';
 import 'package:rasq_client/features/compose/drafts_fow.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -378,6 +379,25 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('composer_close_overwrite.png'));
     debugNetworkImageHttpClientProvider = null; // テスト本体の中で戻す(不変条件の検査は tearDown より前)
+  });
+
+  testWidgets('RAi home + instruction pointing (D-179)', (tester) async {
+    final c = await pump(tester);
+    RasqSidebar.open(c.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_home.png'));
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿したい');
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_bar_asking.png'));
+    await tester.tap(find.byTooltip('送信'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_instruction.png'));
   });
 }
 

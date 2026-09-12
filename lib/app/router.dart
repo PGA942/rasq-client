@@ -41,6 +41,7 @@ import '../features/onboarding/onboarding_screen.dart';
 import '../features/store/plugin_page_screen.dart';
 import '../features/store/review_timeline_screen.dart';
 import '../features/store/store_home_screen.dart';
+import '../features/rai/rai_home_screen.dart';
 import '../features/trend/trend_screen.dart';
 import '../features/vc/vc_screen.dart';
 import '../shell/app_overlay_root.dart';
@@ -70,6 +71,9 @@ abstract final class Routes {
   static const lists = '/lists';
   static const bookmarks = '/bookmarks';
   static const profileEdit = '/profile/edit';
+
+  /// RAi ホーム (D-179)。
+  static const rai = '/rai';
   static const loginMisskey = '/login/misskey';
   static const loginMastodon = '/login/mastodon';
   static const loginBluesky = '/login/bluesky';
@@ -189,6 +193,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'server', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BackendSettingsScreen()),
           ]),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
+          GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiHomeScreen()),
           GoRoute(path: Routes.bookmarks, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BookmarksScreen()),
           // タブ外(リスト/クリップ/設定などアプリ直下のページ)から開く
           // 投稿/ユーザー/トレンドの複製ルート (D-038)。タブ配下の同ルートを

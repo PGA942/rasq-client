@@ -7,6 +7,8 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../rai/rai_overlay.dart';
+import '../rai/rai_providers.dart';
 
 /// ログイン (マルチPDS). Wireframe: BlueSky / Misskey / mixi2 / Mastodon /
 /// サービスを探してログイン + Raiのインストラクチャ.
@@ -58,7 +60,8 @@ class LoginScreen extends ConsumerWidget {
             ),
             const Spacer(),
             OutlinedButton.icon(
-              onPressed: () => manager.showAlert(id: 'login.rai', title: 'Raiのインストラクチャ', message: 'RAi インストラクションモードは M6 で実装予定です。', confirmText: 'OK'),
+              // RAi インストラクション (D-179): 入力欄付きのバーを出す(このページのまま)。
+              onPressed: () => showRai(ref, mode: RaiMode.instruction, asking: true),
               icon: const Icon(Icons.smart_toy_outlined),
               label: const Text('Raiのインストラクチャ'),
             ),
