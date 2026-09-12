@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router.dart';
+import 'rai_llm.dart';
 import 'rai_locator.dart';
 import 'rai_reference.dart';
 
@@ -16,9 +17,10 @@ enum RaiMode {
 
   String get label => this == RaiMode.instruction ? 'インストラクション' : 'アシスタント';
 
-  /// バーのモデルチップ(ワイヤーフレーム: 端末内モデル / クラウドモデル)。
-  String get modelName => this == RaiMode.instruction ? 'Agents-A1-4B' : 'Qwen3.9 33B A3B';
-  IconData get modelIcon => this == RaiMode.instruction ? Icons.smartphone : Icons.language;
+  /// バーのモデルチップ(ワイヤーフレーム: 端末内モデル / クラウドモデル)。D-181: アシスタントも
+  /// 当面は端末内の 4B(フォールアップ先のサーバーが無い)。
+  String get modelName => raiLocalModelLabel;
+  IconData get modelIcon => Icons.smartphone;
 }
 
 @immutable
@@ -35,6 +37,7 @@ class RaiState {
     this.steps = const [],
     this.stepIndex = 0,
     this.history = const [],
+    this.error = false,
   });
 
   final RaiMode mode;
@@ -59,6 +62,9 @@ class RaiState {
   final int stepIndex;
   final List<String> history;
 
+  /// 直近の返事が失敗表示か(端末内モデル / フォールアップとも不可)。
+  final bool error;
+
   bool get hasNext => steps.isNotEmpty && stepIndex + 1 < steps.length;
 
   RaiState copyWith({
@@ -73,6 +79,7 @@ class RaiState {
     List<RaiStep>? steps,
     int? stepIndex,
     List<String>? history,
+    bool? error,
   }) =>
       RaiState(
         mode: mode ?? this.mode,
@@ -86,6 +93,7 @@ class RaiState {
         steps: steps ?? this.steps,
         stepIndex: stepIndex ?? this.stepIndex,
         history: history ?? this.history,
+        error: error ?? (bubble is String ? false : this.error),
       );
 
   static const _keep = Object();
@@ -119,17 +127,53 @@ class RaiController extends Notifier<RaiState> {
     final history = [q, ...state.history.where((h) => h != q)].take(20).toList();
     state = state.copyWith(query: q, asking: false, busy: true, history: history);
     if (state.mode == RaiMode.assistant) {
-      state = state.copyWith(busy: false, bubble: 'アシスタントモード(LLM)は第二期です。いまはインストラクションモードで操作をご案内できます。', target: null, steps: const [], stepIndex: 0);
+      await _answerWithLlm(q, system: _assistantSystem);
       return;
     }
     final m = matchInstruction(q);
     if (m == null) {
-      state = state.copyWith(busy: false, bubble: 'まだ覚えていない操作です。「投稿」「ログイン」「共有」などで聞いてみてください。', target: null, steps: const [], stepIndex: 0);
+      // 参照に無い質問は LLM へバイパス(端末内 → フォールアップ)。どちらも無ければ案内文。
+      await _answerWithLlm(q, system: _instructionSystem, fallbackText: 'まだ覚えていない操作です。「投稿」「ログイン」「共有」などで聞いてみてください。');
       return;
     }
     state = state.copyWith(steps: m.instruction.steps, stepIndex: 0);
     await _showStep(0);
   }
+
+  static const _assistantSystem = 'あなたは SNS ブラウザ RASQ のアシスタント「RAi」です。日本語で、短く(3 文以内)答えてください。';
+  static const _instructionSystem = 'あなたは SNS ブラウザ RASQ の操作を教える「RAi」です。日本語で、操作手順を短く(3 文以内)答えてください。';
+
+  /// 端末内 LLM で答える(トークンを吹き出しへ流す)。だめならフォールアップ → それもだめなら失敗表示。
+  Future<void> _answerWithLlm(String q, {required String system, String? fallbackText}) async {
+    final llm = ref.read(raiLlmProvider);
+    final seq = ++_answerSeq;
+    state = state.copyWith(busy: true, bubble: '…', target: null, steps: const [], stepIndex: 0);
+    var text = '';
+    try {
+      await for (final tok in llm.chat(q, system: system)) {
+        if (seq != _answerSeq) return;
+        text += tok;
+        state = state.copyWith(bubble: text);
+      }
+      if (seq != _answerSeq) return;
+      state = state.copyWith(busy: false, bubble: text.trim().isEmpty ? '(返事がありませんでした)' : text.trim());
+      return;
+    } on RaiLlmException catch (e) {
+      if (seq != _answerSeq) return;
+      await llm.release(); // フォールアップ時は端末内モデルのメモリを解放する(仕様)
+      try {
+        final reply = await ref.read(raiFallUpProvider).chat(q);
+        if (seq != _answerSeq) return;
+        state = state.copyWith(busy: false, bubble: reply);
+      } on RaiLlmException catch (f) {
+        if (seq != _answerSeq) return;
+        final lines = ['端末内モデル: ${e.message}', 'フォールアップ: ${f.message}', ?fallbackText];
+        state = state.copyWith(busy: false, bubble: lines.join('\n'), error: true);
+      }
+    }
+  }
+
+  int _answerSeq = 0;
 
   Future<void> next() async {
     if (!state.hasNext) {

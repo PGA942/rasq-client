@@ -6,6 +6,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
+import 'rai_llm.dart';
 import 'rai_providers.dart';
 import 'rai_spline.dart';
 import 'rai_widgets.dart';
@@ -50,6 +51,7 @@ class _RaiBarHost extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(raiProvider);
     final n = ref.read(raiProvider.notifier);
+    final llm = ref.watch(raiLlmStatusProvider).value ?? ref.read(raiLlmProvider).current;
     // フッター(タブ)の上に置く。キーボードが出ていればその上。
     final insets = MediaQuery.viewInsetsOf(context).bottom;
     final dock = insets > 0 ? insets : fowDockInsetOf(context, ref.read(routerProvider));
@@ -66,6 +68,13 @@ class _RaiBarHost extends ConsumerWidget {
         onMode: n.setMode,
         onSubmit: n.ask,
         onClose: () => hideRai(ref),
+        llmNote: switch (llm.phase) {
+          RaiLlmPhase.ready || RaiLlmPhase.generating => null,
+          RaiLlmPhase.loading => '読み込み中',
+          RaiLlmPhase.downloading => '${llm.progress ?? 0}%',
+          RaiLlmPhase.notInstalled => '未DL',
+          RaiLlmPhase.unavailable => '使えません',
+        },
       ),
     );
     return SizedBox.expand(

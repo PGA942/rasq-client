@@ -18,12 +18,14 @@ import 'package:rasq_client/features/plugins/pro_media_editor_screen.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/post/share_fow.dart';
 import 'package:rasq_client/features/compose/drafts_fow.dart';
+import 'package:rasq_client/features/rai/rai_llm.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../test/support/fake_rai_llm.dart';
 import '../../test/support/fake_slot_runtime.dart';
 import '../../test/support/fakes.dart';
 
@@ -54,7 +56,7 @@ void main() {
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => posts ?? [post('p1', '今日は打ち上げ')]));
     await tester.pumpWidget(ProviderScope(
-      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes))],
+      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes)), raiLlmProvider.overrideWithValue(FakeRaiLlm(phase: RaiLlmPhase.ready))],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
