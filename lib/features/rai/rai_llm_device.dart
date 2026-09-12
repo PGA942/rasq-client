@@ -124,6 +124,10 @@ class DeviceRaiLlm implements RaiLlm {
       // Gatekeeper (D-184): 取得した dylib には隔離属性が付き「開いていません」で弾かれるので、
       // 属性を外して ad-hoc 署名する(毎回、失敗は無視 — 前回の展開分にも効かせる)。
       await _unquarantine(dir);
+      // 依存 dylib (D-186): libmtmd → @rpath/libllama.0.dylib → @rpath/libggml*.0.dylib は app の
+      // Frameworks からは見つからないので、先に絶対パスで順に読み込んでおく(同じ install name の
+      // 読み込み済みイメージが使われる)。
+      _preloadLlamaDeps(dir);
       return lib.path;
     }
     // iOS / Android: アプリに組み込まれているかを探る(iOS = xcframework、Android = jniLibs)。
@@ -136,6 +140,20 @@ class DeviceRaiLlm implements RaiLlm {
       return null;
     } catch (_) {
       throw RaiLlmException(Platform.isIOS ? 'llama.cpp が組み込まれていません(Runner に llama.xcframework を追加)' : 'llama.cpp のライブラリがありません');
+    }
+  }
+
+  static const _llamaDepOrder = ['libggml-base.0.dylib', 'libggml-cpu.0.dylib', 'libggml-blas.0.dylib', 'libggml-metal.0.dylib', 'libggml-rpc.0.dylib', 'libggml.0.dylib', 'libllama.0.dylib'];
+
+  void _preloadLlamaDeps(Directory dir) {
+    for (final name in _llamaDepOrder) {
+      final f = File('${dir.path}/$name');
+      if (!f.existsSync()) continue;
+      try {
+        DynamicLibrary.open(f.path);
+      } catch (e) {
+        debugPrint('llama runtime preload $name: $e');
+      }
     }
   }
 
@@ -389,9 +407,11 @@ class DeviceRaiLlm implements RaiLlm {
       } catch (e) {
         if (!out.isClosed) {
           final msg = '$e';
-          final hint = msg.contains('dlopen') || msg.contains('Failed to load dynamic library')
-              ? '\nGatekeeper に止められた場合: 「システム設定 > プライバシーとセキュリティ」で許可するか、Application Support/llama_cpp の dylib に xattr -dr com.apple.quarantine を実行してください'
-              : '';
+          final hint = msg.contains('disallowed by system policy')
+              ? '\n「system policy」= サンドボックス / ライブラリ検証で拒否。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください'
+              : msg.contains('dlopen') || msg.contains('Failed to load dynamic library')
+                  ? '\nGatekeeper に止められた場合: 「システム設定 > プライバシーとセキュリティ」で許可するか、Application Support/llama_cpp の dylib に xattr -dr com.apple.quarantine を実行してください'
+                  : '';
           out.addError(e is RaiLlmException ? e : RaiLlmException('モデルを読み込めません(llama.cpp): $msg$hint'));
           await out.close();
         }
