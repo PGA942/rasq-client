@@ -732,7 +732,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   Future<List<({String text, String? reason, SlotPlugin plugin})>> trendSuggest(List<String> recent, {String? query, int limit = 6}) async {
     final out = <({String text, String? reason, SlotPlugin plugin})>[];
     for (final p in forSlot(SlotIds.trendSuggest)) {
-      final v = await p.value('trend.suggest', {'recent': recent, if (query != null) 'query': query, 'limit': limit});
+      final v = await p.value('trend.suggest', {'recent': recent, 'query': ?query, 'limit': limit});
       for (final s in (v?['suggestions'] as List? ?? const [])) {
         if (s is Map && s['text'] is String) out.add((text: s['text'] as String, reason: s['reason'] as String?, plugin: p));
       }

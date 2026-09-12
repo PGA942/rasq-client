@@ -445,7 +445,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   /// 添付をメディア加工プラグインへ (D-167、CONTRACT §2.2)。
   Future<void> _editAttachment(_Attachment a) async {
-    if (_files.indexOf(a) < 0) return;
+    if (!_files.contains(a)) return;
     // 加工 (D-173): 基本動作は pro_image_editor、プラグイン(wasm / ONNX / アセットに無いフィルター)は
     // その下段バーからメディアエディター (D-169) へバイパス。結果(本サイズ)で添付を差し替える。
     final result = await context.pushProMediaEditor(bytes: a.bytes, name: a.name, mimeType: a.mimeType ?? 'image/png');
