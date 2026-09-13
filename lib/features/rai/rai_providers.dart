@@ -21,7 +21,8 @@ enum RaiMode {
 
   /// バーのモデルチップ(ワイヤーフレーム: 端末内モデル / クラウドモデル)。D-181: アシスタントも
   /// 当面は端末内の 4B(フォールアップ先のサーバーが無い)。
-  String get modelName => raiLocalModelLabel;
+  /// バーのチップの既定表記(実際は選択中モデルのコードネーム、D-198)。
+  String get modelName => raiModelSpecs.first.codename;
   IconData get modelIcon => Icons.smartphone;
 }
 

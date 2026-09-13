@@ -126,7 +126,10 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
         if (mounted) setState(() => _ready = true);
       },
       setup: _setup,
-      size: proj == null ? const Size(RaiMascot3d.renderWidth, RaiMascot3d.renderHeight) : proj.screen,
+      // 空間モード (D-198): サイズは three_js に任せる(MediaQuery の大きさ。固定サイズだとウィンドウの
+      // アスペクト比が変わったときにテクスチャが引き伸ばされ、位置も向きもずれる)。リサイズ時は
+      // three_js がテクスチャとカメラの aspect を更新する。
+      size: proj == null ? const Size(RaiMascot3d.renderWidth, RaiMascot3d.renderHeight) : null,
       settings: three.Settings(alpha: true, clearAlpha: 0, clearColor: 0x000000, animate: true, antialias: true, enableShadowMap: false),
     );
     _ctrl.addListener(_sync);
@@ -261,8 +264,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       ]),
     );
     if (widget.isScene) {
-      final sz = widget.projector!.screen;
-      return SizedBox(width: sz.width, height: sz.height, child: Opacity(opacity: _ready ? widget.opacity : 0, child: Stack(fit: StackFit.expand, children: [
+      return SizedBox.expand(child: Opacity(opacity: _ready ? widget.opacity : 0, child: Stack(fit: StackFit.expand, children: [
         if (outline != null && tex != null && _ready)
           for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
             Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),

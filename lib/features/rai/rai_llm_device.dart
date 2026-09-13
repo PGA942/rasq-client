@@ -362,7 +362,7 @@ class DeviceRaiLlm implements RaiLlm {
   @override
   Stream<String> chat(String prompt, {String? system}) {
     if (!_current.ready && _current.phase != RaiLlmPhase.loading) {
-      return Stream.error(RaiLlmException(_current.phase == RaiLlmPhase.notInstalled ? '端末内モデル($raiLocalModelLabel)がまだダウンロードされていません' : (_current.message ?? '端末内モデルを使えません')));
+      return Stream.error(RaiLlmException(_current.phase == RaiLlmPhase.notInstalled ? '端末内モデル(${_spec.codename})がまだダウンロードされていません' : (_current.message ?? '端末内モデルを使えません')));
     }
     return _spec.engine == RaiEngine.gguf ? _ggufChat(prompt, system) : _lrChat(prompt, system);
   }

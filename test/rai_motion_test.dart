@@ -102,4 +102,26 @@ void main() {
     expect(raiLoopOffset(0.05, plan: long, radius: 40).dx.sign, isNot(raiLoopOffset(0.05, plan: long, radius: 40, clockwise: false).dx.sign));
     expect(raiLoopOffset(0.1, plan: null, radius: 40), Offset.zero);
   });
+
+  test('連続なヨー (D-198): 走行の顔を連続に追うと候補の切り替えで跳ねず、±π を跨いでも連続', () {
+    final long = planRaiMotion(from: const Offset(40, 100), to: const Offset(300, 600), columnWidth: 360, centerX: 180, armFrom: RaiArm.left, armTo: RaiArm.right);
+    var face = raiRestYawFor(RaiArm.left);
+    double? prevOut;
+    var maxStep = 0.0;
+    for (var i = 1; i <= 200; i++) {
+      final t = i / 200;
+      // 接線が右 → 上 → 左 と回る(半円)。
+      final ang = math.pi * t;
+      final tangent = Offset(math.cos(ang), -math.sin(ang));
+      face = raiFaceYawNear(tangent, face, arm: RaiArm.right);
+      final y = raiYawAt(t, plan: long, tangent: tangent, armFrom: RaiArm.left, armTo: RaiArm.right, face: face, stopTurn: -1);
+      if (prevOut != null) maxStep = math.max(maxStep, (y - prevOut).abs());
+      prevOut = y;
+    }
+    expect(maxStep, lessThan(0.25)); // 1 フレームで 14° 以上跳ねない(停止の旋回は 1 周弱を 0.2 の区間で回る)
+    expect(raiWrap(prevOut!), closeTo(30 * math.pi / 180, 0.05)); // 到着側の向き(等価角)
+    expect(raiFaceYawNear(const Offset(0, -1), 1.4), closeTo(math.pi / 2, 1e-9)); // 直前が +80° なら +90° 側
+    expect(raiFaceYawNear(const Offset(0, -1), -1.4), closeTo(-math.pi / 2, 1e-9));
+    expect(raiFaceYawNear(const Offset(1, 0), 3.0), closeTo(math.pi, 1e-9)); // 直前が 172° なら 180° 側(0° へ跳ねない)
+  });
 }

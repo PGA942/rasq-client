@@ -49,7 +49,7 @@ class FakeRaiLlm implements RaiLlm {
   Stream<String> chat(String prompt, {String? system}) async* {
     prompts.add(prompt);
     systems.add(system);
-    if (!_current.ready) throw const RaiLlmException('端末内モデル(Agents-A1-4B)がまだダウンロードされていません');
+    if (!_current.ready) throw RaiLlmException('端末内モデル(${_spec.codename})がまだダウンロードされていません');
     set(RaiLlmStatus(RaiLlmPhase.generating, modelId: _spec.id));
     for (final ch in reply.split('')) {
       yield ch;

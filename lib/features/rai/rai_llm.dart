@@ -52,6 +52,9 @@ class RaiModelSpec {
   /// パラメーター数(B)。完遂率の集計対象は 35B 未満。
   final double params;
 
+  /// 2 単語のコードネーム (D-198)。
+  String get codename => raiCodename(this);
+
   /// 集計された完遂率(0..1)。未集計は null → 「-%」。
   final double? completionRate;
 
@@ -130,6 +133,8 @@ const raiModelSpecs = <RaiModelSpec>[
     sizeMb: 1668,
     family: 'general',
     engine: RaiEngine.litertlm,
+  
+    params: 2.6,
   ),
   RaiModelSpec(
     id: 'qwen3.5-4b',
@@ -139,6 +144,8 @@ const raiModelSpecs = <RaiModelSpec>[
     sizeMb: 2754,
     family: 'qwen3',
     engine: RaiEngine.litertlm,
+  
+    params: 4,
   ),
 ];
 
@@ -175,7 +182,31 @@ final deviceRamProvider = FutureProvider<({int? totalMb, int? availableMb})>((re
 final deviceRamReaderProvider = Provider<Future<({int? totalMb, int? availableMb})> Function()>((_) => () async => (totalMb: null, availableMb: null));
 
 /// バーのチップに出す端末内モデルの呼び名(ワイヤーフレーム)。
-const raiLocalModelLabel = 'Agents-A1-4B';
+/// モデルのコードネーム (D-198): 2 単語(モデルコード + サイズ)。
+/// コード: QA = Qwen3 系、Agent = Agents-A1、Liquid = LFM2.5。それ以外は家系名。
+/// サイズ: Nano < 1.2B、Mini < 2.5B、Lite < 4B、Lite+ < 8B、Core < 14B、Core+ < 27B、Max < 48B、Max+ < 120B、それ以上 Extreme。
+String raiModelCode(RaiModelSpec m) {
+  final id = m.id.toLowerCase();
+  if (id.contains('agents')) return 'Agent';
+  if (id.contains('lfm')) return 'Liquid';
+  if (id.contains('qwen')) return 'QA';
+  final head = m.label.split(RegExp(r'[\s\-]')).first;
+  return head.isEmpty ? m.family : head;
+}
+
+String raiSizeClass(double params) {
+  if (params < 1.2) return 'Nano';
+  if (params < 2.5) return 'Mini';
+  if (params < 4) return 'Lite';
+  if (params < 8) return 'Lite+';
+  if (params < 14) return 'Core';
+  if (params < 27) return 'Core+';
+  if (params < 48) return 'Max';
+  if (params < 120) return 'Max+';
+  return 'Extreme';
+}
+
+String raiCodename(RaiModelSpec m) => '${raiModelCode(m)} ${raiSizeClass(m.params)}';
 
 abstract class RaiLlm {
   RaiLlmStatus get current;

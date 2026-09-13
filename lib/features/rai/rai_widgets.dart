@@ -244,8 +244,11 @@ class RaiStatusRing extends StatelessWidget {
 final raiBarKey = GlobalKey(debugLabel: 'rai.bar');
 
 class RaiBar extends StatefulWidget {
-  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320, this.onSuggest});
+  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320, this.onSuggest, this.modelLabel});
   final RaiState state;
+
+  /// チップの表記(選択中モデルのコードネーム、D-198)。null なら既定。
+  final String? modelLabel;
 
   /// 薄い補完 (D-194): 入力から候補の見出しを返す(null = 無し)。半角 / 全角スペースで確定。
   final String? Function(String typed)? onSuggest;
@@ -393,7 +396,7 @@ class _RaiBarState extends State<RaiBar> {
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(s.mode.modelIcon, size: 16),
                       const SizedBox(width: 4),
-                      Flexible(child: Text(s.mode.modelName, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                      Flexible(child: Text(widget.modelLabel ?? s.mode.modelName, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
                       if (widget.llmNote != null) Padding(padding: const EdgeInsets.only(left: 4), child: Text(widget.llmNote!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
                     ]),
                     ),

@@ -107,6 +107,7 @@ class _RaiBarHost extends ConsumerWidget {
         onModelTap: () => showRaiModelsFow(ref, context),
         onHistoryToggle: n.toggleHistory,
         onSuggest: n.suggest,
+        modelLabel: ref.watch(raiLlmProvider).spec.codename,
         historyMaxHeight: screen.height * 0.45,
         llmNote: switch (llm.phase) {
           RaiLlmPhase.ready || RaiLlmPhase.generating => null,
@@ -151,6 +152,9 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   final _layerKey = GlobalKey();
 
   RaiArm _yawArmFrom = RaiArm.none;
+
+  /// 走行の顔(連続な角度、D-198)。
+  double _face = 0;
 
   /// 静止位置は右下 / 左下 (D-192): 直前に指した部品が右半分なら左下、それ以外は右下。
   bool _restLeft = false;
@@ -242,6 +246,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     // 3 次元スプライン (D-197): 両端は待機の奥行き、途中は再接近の奥行き。同サイドの長距離はリボン。
     _path = RaiPath3(projector: proj, from: from, to: dest, restSize: mascot, approachSize: raiApproachSizeFor(screen), ribbon: plan.long && !plan.crossesCenter);
     _yawArmFrom = _ctrl3d.arm;
+    _face = raiRestYawFor(_ctrl3d.arm);
     _ctrl3d.start(plan);
     _anim.duration = raiMoveDuration(distance: (dest - from).distance, columnWidth: math.min(screen.width, raiPanelWidth(context)), long: plan.long);
     _anim.forward(from: 0);
@@ -270,7 +275,9 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
       world = proj.worldAt(_pos ?? Offset(proj.screen.width / 2, proj.screen.height / 2), mascot);
       tangent2d = Offset.zero;
     }
-    final yaw = raiYawAt(moving ? t : 1, plan: plan, tangent: tangent2d, armFrom: _yawArmFrom, armTo: plan?.armTo ?? _ctrl3d.arm);
+    // 回転は地面に垂直な軸まわりで途切れなく (D-198): 走行の顔を直前のフレームから連続に追う。
+    if (moving && tangent2d.distance > 0.01) _face = raiFaceYawNear(tangent2d, _face, arm: plan?.armTo ?? _ctrl3d.arm);
+    final yaw = raiYawAt(moving ? t : 1, plan: plan, tangent: tangent2d, armFrom: _yawArmFrom, armTo: plan?.armTo ?? _ctrl3d.arm, face: _face, stopTurn: (path != null && path.to.dx >= path.from.dx) ? -1 : 1);
     final p = proj.project(world);
     _ctrl3d.setFrame(world: world, yaw: yaw, screenPos: p.px, sizePx: p.sizePx);
     if (!ref.read(raiMascot3dProvider) && mounted) setState(() {});

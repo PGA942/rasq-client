@@ -163,18 +163,44 @@ Offset raiLoopOffset(double progress, {required RaiMotionPlan? plan, required do
   return Offset(radius * math.sin(a), radius * (1 - math.cos(a)) * -1);
 }
 
-/// 移動中のヨー (D-195 → D-196): 起動の段で出発側の向きから走行の顔(接線と直交)へ、走行中はその顔、
-/// 停止の段でその場で(最短の回転で)到着側の向き(到着時に上げる腕が基準)に合わせる。短距離も同じ。
-double raiYawAt(double progress, {required RaiMotionPlan? plan, required Offset tangent, required RaiArm armFrom, required RaiArm armTo}) {
+/// 走行中の顔の向きを、直前の向き [prev] に近い方の候補(接線 ±90°)で選び、prev から連続な角度で返す (D-198)。
+double raiFaceYawNear(Offset tangent, double prev, {RaiArm arm = RaiArm.none}) {
+  if (tangent.distance < 0.01) return prev;
+  final t = raiTangentYaw(tangent);
+  final a = raiWrap(t + math.pi / 2);
+  final b = raiWrap(t - math.pi / 2);
+  final da = raiYawDelta(prev, a);
+  final db = raiYawDelta(prev, b);
+  if ((da.abs() - db.abs()).abs() < 1e-6) return prev + raiYawDelta(prev, raiFaceYaw(tangent, arm: arm));
+  return prev + (da.abs() < db.abs() ? da : db);
+}
+
+/// 移動中のヨー (D-195 → D-198): 起動の段で出発側の向きから走行の顔(接線と直交)へ、走行中はその顔、
+/// 停止の段でその場で到着側の向き(到着時に上げる腕が基準)に合わせる。短距離も同じ。
+/// [face] に直前のフレームの「走行の顔」(`raiFaceYawNear` で追った連続な角度)を渡すと、地面に垂直な軸まわりで
+/// **スプラインの延長として途切れなく** 回る(候補の切り替えで跳ねない、±π の折り返しもしない)。
+/// a → b を [dir] の向き(+1 = 正の向き、−1 = 負の向き)で回るときの差。ほぼ 0 なら 0(1 周しない)。
+double raiYawDeltaDir(double a, double b, double dir) {
+  var d = (b - a) % (2 * math.pi);
+  if (d < 0) d += 2 * math.pi; // 0..2π
+  if (dir < 0) d = d - 2 * math.pi; // −2π..0
+  if (d.abs() > 2 * math.pi - 0.05) return 0;
+  return d;
+}
+
+double raiYawAt(double progress, {required RaiMotionPlan? plan, required Offset tangent, required RaiArm armFrom, required RaiArm armTo, double? face, double stopTurn = 0}) {
   final t = progress.clamp(0.0, 1.0);
-  final restTo = raiRestYawFor(armTo);
-  if (plan == null || t >= 1) return restTo;
+  final restTo0 = raiRestYawFor(armTo);
+  final f = face ?? raiFaceYaw(tangent, arm: armTo);
+  // 停止の旋回の向き (D-198): 山なりと同じ向きで回り続ける(0 なら最短)。向きを固定すると、顔が到着側の
+  // 真裏を通るときに最短側が入れ替わって跳ねる問題が無い。
+  double toRest(double from) => stopTurn == 0 ? raiYawDelta(from, restTo0) : raiYawDeltaDir(from, restTo0, stopTurn);
+  if (plan == null || t >= 1) return face == null ? restTo0 : f + toRest(f);
   final restFrom = raiRestYawFor(armFrom);
-  final face = raiFaceYaw(tangent, arm: armTo);
   double smooth(double x) => x * x * (3 - 2 * x);
   final startEnd = plan.steps.first.fraction;
   final stopStart = 1 - plan.steps.last.fraction;
-  if (t < startEnd) return restFrom + raiYawDelta(restFrom, face) * smooth(t / startEnd);
-  if (t < stopStart) return face;
-  return face + raiYawDelta(face, restTo) * smooth((t - stopStart) / (1 - stopStart));
+  if (t < startEnd) return restFrom + raiYawDelta(restFrom, f) * smooth(t / startEnd);
+  if (t < stopStart) return f;
+  return f + toRest(f) * smooth((t - stopStart) / (1 - stopStart));
 }

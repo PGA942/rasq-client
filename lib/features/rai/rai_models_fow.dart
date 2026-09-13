@@ -54,7 +54,7 @@ class RaiModelsBody extends ConsumerWidget {
 
     final ramText = ram?.totalMb == null ? 'RAM: 不明' : 'RAM: ${(ram!.totalMb! / 1024).toStringAsFixed(1)} GB${ram.availableMb == null ? '' : '(空き ${(ram.availableMb! / 1024).toStringAsFixed(1)} GB)'}';
     return ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xl), children: [
-      Text('$raiLocalModelLabel = 端末内で動くモデル。$ramText', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      Text('${llm.spec.codename} = 端末内で動くモデル(${llm.spec.label})。$ramText', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
       const RasqSectionHeader(title: 'ローカル', topMargin: RasqSpacing.sm),
       // 選択中を先頭に(操作ボタンがすぐ見える)。
       for (final m in [...raiModelSpecs.where((m) => m.id == llm.spec.id), ...raiModelSpecs.where((m) => m.id != llm.spec.id)]) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
@@ -99,11 +99,11 @@ class RaiModelsBody extends ConsumerWidget {
         Row(children: [
           RasqPill(label: m.cloud ? 'クラウド' : 'ローカル', color: m.cloud ? scheme.surfaceContainerHighest : RasqColors.link, textColor: m.cloud ? scheme.onSurface : Colors.white),
           const SizedBox(width: RasqSpacing.sm),
-          Expanded(child: Text(m.label, style: RasqTypography.listTile, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(m.codename, key: ValueKey('rai.model.name.${m.id}'), style: RasqTypography.listTile, overflow: TextOverflow.ellipsis)),
           if (selected) const Icon(Icons.check_circle, size: 18, color: RasqColors.link),
         ]),
         const SizedBox(height: RasqSpacing.xs),
-        Text(m.cloud ? '${m.params.toStringAsFixed(0)}B · ${m.engine == RaiEngine.gguf ? 'サーバー側' : 'サーバー側'}' : '${m.engine.label} · ${m.fileName} · ${m.sizeMb} MB', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
+        Text(m.cloud ? '${m.label} · ${m.params.toStringAsFixed(0)}B · サーバー側' : '${m.label} · ${m.engine.label} · ${m.fileName} · ${m.sizeMb} MB', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
         const SizedBox(height: RasqSpacing.xs),
         Row(children: [
           // 完遂率。
