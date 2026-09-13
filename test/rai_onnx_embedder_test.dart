@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rasq_client/features/rai/rai_minilm_tokenizer.dart';
 import 'package:rasq_client/features/rai/rai_onnx_embedder.dart';
 import 'package:rasq_client/features/rai/rai_reference.dart';
 import 'package:rasq_client/features/rai/rai_reference_providers.dart';
@@ -53,4 +54,38 @@ void main() {
     expect(r.topK, greaterThanOrEqualTo(0.6));
     emb.dispose();
   }, skip: available ? false : 'RASQ_SIGLIP_DIR が無い(本物の SigLIP2 ONNX が要る)');
+
+  final mdir = Platform.environment['RASQ_MINILM_DIR'];
+  final mmodel = mdir == null ? null : File('$mdir/model_quantized.onnx');
+  final mavailable = mmodel != null && mmodel.existsSync();
+  test('MiniLM (D-193): 参照ベクトルと一致(1 文ずつ、コサイン行列 ±0.02)、リファレンス検索の top-1', () async {
+    final tok = UnigramTokenizer.fromTsv(File('assets/models/minilm_unigram.tsv').readAsStringSync());
+    final emb = await OnnxRaiEmbedder.loadMiniLm(model: mmodel!, tokenizer: tok);
+    final ref = (jsonDecode(File('test/fixtures/minilm_reference.json').readAsStringSync()) as Map).cast<String, Object?>();
+    final texts = (ref['texts'] as List).cast<String>();
+    // 1 文ずつ(pad の無い)参照と比べる(int8 はバッチの pad 長で少しぶれる)。
+    final dots = (ref['norm_dot_single'] as List).map((r) => (r as List).cast<num>()).toList();
+    final vecs = [for (final t in texts) (await emb.embed([t])).single];
+    expect(vecs.first.length, 384);
+    for (var i = 0; i < texts.length; i++) {
+      for (var j = 0; j < texts.length; j++) {
+        expect(cosine(vecs[i], vecs[j]), closeTo(dots[i][j].toDouble(), 0.02), reason: '${texts[i]} × ${texts[j]}');
+      }
+    }
+    final index = await RaiReferenceIndex.fromJsonl(
+      functionsJsonl: await rootBundle.loadString(raiFunctionsAsset),
+      operationsJsonl: await rootBundle.loadString(raiOperationsAsset),
+      embedder: emb,
+    );
+    final evals = parseJsonl(await rootBundle.loadString(raiEvalAsset));
+    final r = await evaluate(index, evals);
+    // ignore: avoid_print
+    print('minilm top1=${(r.top1 * 100).toStringAsFixed(1)}% top3=${(r.topK * 100).toStringAsFixed(1)}% misses=${r.misses.length}');
+    final hits = await index.searchOperations('友達にこっそりメッセージ');
+    // ignore: avoid_print
+    print('paraphrase: ${index.traces.first}');
+    expect(hits, isNotEmpty);
+    expect(r.top1, greaterThanOrEqualTo(0.4));
+    emb.dispose();
+  }, skip: mavailable ? false : 'RASQ_MINILM_DIR が無い(本物の MiniLM ONNX が要る)');
 }

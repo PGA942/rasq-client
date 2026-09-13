@@ -7,11 +7,14 @@ import 'dart:ui';
 /// - [overshoot]: 目標を少し行き過ぎてから戻る量(距離に対する比)。
 /// 端点は必ず [from] / [to]。
 class RaiPath {
-  RaiPath({required this.from, required this.to, this.bulge = 0.25, this.overshoot = 0.06});
+  RaiPath({required this.from, required this.to, this.bulge = 0.25, this.overshoot = 0.06, this.ribbon = false});
   final Offset from;
   final Offset to;
   final double bulge;
   final double overshoot;
+
+  /// リボン (D-193): 同サイドの長距離移動は S 字(前半は左へ、後半は右へ膨らむ)。
+  final bool ribbon;
 
   double get distance => (to - from).distance;
 
@@ -22,6 +25,11 @@ class RaiPath {
     if (len < 0.5) return [from, from, to, to];
     final dir = d / len;
     final perp = Offset(-dir.dy, dir.dx);
+    if (ribbon) {
+      final p1 = from + dir * (len * 0.3) + perp * (len * bulge);
+      final p2 = to - dir * (len * 0.3) - perp * (len * bulge);
+      return [from, p1, p2, to];
+    }
     final p1 = from + dir * (len * 0.3) + perp * (len * bulge);
     final p2 = to + dir * (len * overshoot) + perp * (len * bulge * 0.4);
     return [from, p1, p2, to];

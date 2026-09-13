@@ -305,6 +305,17 @@ class RaiController extends Notifier<RaiState> {
     await _showStep(state.stepIndex + 1);
   }
 
+  /// 指差した部品が押された (D-193): 少し待ってから次の手順へ(最後なら閉じる)。
+  /// 押した先の画面 / FOW が開いてから次の部品を探せるよう、遅らせる。
+  Future<void> targetTapped() async {
+    if (state.mode != RaiMode.instruction || state.target == null || state.busy) return;
+    final i = state.stepIndex;
+    final seq = _answerSeq;
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (state.stepIndex != i || seq != _answerSeq || state.target == null) return;
+    await next();
+  }
+
   Future<void> _showStep(int i) async {
     final step = state.steps[i];
     state = state.copyWith(stepIndex: i, busy: true);
@@ -315,16 +326,23 @@ class RaiController extends Notifier<RaiState> {
       // 見えている画面 = 一番上の一致(push で積んだ画面は uri に出ないので辿る)。
       final cur = visibleLocationOf(router.routerDelegate.currentConfiguration);
       if (!cur.startsWith(route)) {
-        router.go(route); // 見ていた画面の代わりに(RAi バーは rai 層なので残る)
+        // タブの根(ホーム / 検索 / AsTell / 通知 / DM)は go、それ以外は push (D-193): go だと
+        // 戻るボタンや「決定」(context.pop)の戻り先が無くなる。
+        if (raiTabRoots.contains(route)) {
+          router.go(route);
+        } else {
+          unawaited(router.push(route));
+        }
         await WidgetsBinding.instance.endOfFrame;
       }
     }
-    // 部品の矩形を探す(画面遷移直後は数フレーム待つ)。
+    // 部品の矩形を探す(画面遷移 / FOW のアニメーション直後は少し待つ)。
     Rect? rect;
     if (step.hasTarget) {
-      for (var attempt = 0; attempt < 6 && rect == null; attempt++) {
+      for (var attempt = 0; attempt < 10 && rect == null; attempt++) {
         await WidgetsBinding.instance.endOfFrame;
-        if (attempt > 0) await Future<void>.delayed(const Duration(milliseconds: 80));
+        if (attempt > 0) await Future<void>.delayed(const Duration(milliseconds: 120));
+        if (state.stepIndex != i) return;
         rect = locateWidgetRect(tooltip: step.tooltip, text: step.label);
       }
     }
@@ -333,6 +351,9 @@ class RaiController extends Notifier<RaiState> {
     _record(step.text);
   }
 }
+
+/// タブの根(StatefulShellRoute の枝)。ここへは go、それ以外の画面は push で開く (D-193)。
+const raiTabRoots = {Routes.home, Routes.search, Routes.vc, Routes.notifications, Routes.dm};
 
 final raiProvider = NotifierProvider<RaiController, RaiState>(RaiController.new);
 

@@ -8,10 +8,21 @@ import 'rai_reference.dart';
 /// リファレンス検索の埋め込みモデル (D-190): SigLIP2 のテキスト塔(int8 ONNX、283 MB)を端末に
 /// ダウンロードして onnxruntime で回す。トークナイザー(4 MB)はアプリに同梱。
 /// 未ダウンロード / 失敗時は n-gram 代替(同じ契約)で検索する。
+/// 埋め込みモデルの種類(トークナイザーと入出力の形が違う)。
+enum RaiEmbeddingKind {
+  /// SigLIP2 テキスト塔: input_ids[n,64] → pooler_output(D-190)。
+  siglip2,
+
+  /// 文埋め込み(MiniLM 系): input_ids / attention_mask / token_type_ids → last_hidden_state を平均(D-193)。
+  minilm,
+}
+
 @immutable
 class RaiEmbeddingSpec {
-  const RaiEmbeddingSpec({required this.id, required this.label, required this.fileName, required this.url, required this.sizeMb, required this.tokenizerAsset, required this.dims});
+  const RaiEmbeddingSpec({required this.id, required this.label, required this.fileName, required this.url, required this.sizeMb, required this.tokenizerAsset, required this.dims, this.kind = RaiEmbeddingKind.minilm, this.maxLen = 128});
   final String id;
+  final RaiEmbeddingKind kind;
+  final int maxLen;
   final String label;
   final String fileName;
   final String url;
@@ -20,7 +31,22 @@ class RaiEmbeddingSpec {
   final int dims;
 }
 
+/// 既定 (D-193): paraphrase-multilingual-MiniLM-L12-v2(多言語の文埋め込み、int8 118 MB)。
+/// 投稿の埋め込みにも使う想定で、fastText 蒸留版などに差し替えられるよう `kind` で形を分ける。
 const raiEmbeddingSpec = RaiEmbeddingSpec(
+  id: 'minilm-l12-multilingual-int8',
+  label: 'MiniLM-L12 多言語(paraphrase, int8)',
+  fileName: 'model_quantized.onnx',
+  url: 'https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/onnx/model_quantized.onnx',
+  sizeMb: 118,
+  tokenizerAsset: 'assets/models/minilm_unigram.tsv',
+  dims: 384,
+  kind: RaiEmbeddingKind.minilm,
+  maxLen: 128,
+);
+
+/// SigLIP2 テキスト塔 (D-190)。計測では言い換えに弱かったので既定から外した(差し替え可)。
+const raiSiglip2EmbeddingSpec = RaiEmbeddingSpec(
   id: 'siglip2-base-text-int8',
   label: 'SigLIP2 base(テキスト塔・int8)',
   fileName: 'text_model_int8.onnx',
@@ -28,6 +54,8 @@ const raiEmbeddingSpec = RaiEmbeddingSpec(
   sizeMb: 283,
   tokenizerAsset: 'assets/models/siglip2_tokenizer.model',
   dims: 768,
+  kind: RaiEmbeddingKind.siglip2,
+  maxLen: 64,
 );
 
 enum RaiEmbeddingPhase { notInstalled, downloading, ready, loading, error }

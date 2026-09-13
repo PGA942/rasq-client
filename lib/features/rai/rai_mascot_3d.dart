@@ -20,6 +20,8 @@ class RaiMascot3dController extends ChangeNotifier {
   RaiMotionPlan? _plan;
   double _progress = 0;
   bool _paused = false;
+  /// ヨー(ラジアン、正 = 左を向く)。描画は毎フレーム読むので通知しない。
+  double yaw = 0;
 
   RaiArm get arm => _arm;
   RaiMotionPlan? get plan => _plan;
@@ -169,6 +171,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       _mixer = mixer;
       _three.addAnimationEvent((dt) {
         if (!_ctrl.paused) _mixer?.update(dt);
+        model.rotation.y = _ctrl.yaw;
       });
       _sync();
     } catch (e) {

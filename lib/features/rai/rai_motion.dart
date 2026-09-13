@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 /// RAi の移動モーションの計画 (D-191)。glb のクリップ名に対応する:
@@ -108,4 +109,29 @@ Duration raiMoveDuration({required double distance, required double columnWidth,
   }
   final r = ((distance - half) / (columnWidth * 1.5)).clamp(0.0, 1.0);
   return Duration(milliseconds: (4000 + 2000 * r).round());
+}
+
+/// 静止時のヨー (D-193): 指差す側へ 30°(左腕 = 左を向く = +30°、右腕 = −30°、腕なし = 正面)。
+const raiRestYaw = 30 * math.pi / 180;
+
+/// 走行中に進行方向へ向く角度の上限。
+const raiTravelYaw = 60 * math.pi / 180;
+
+double raiRestYawFor(RaiArm arm) => switch (arm) { RaiArm.left => raiRestYaw, RaiArm.right => -raiRestYaw, RaiArm.none => 0 };
+
+/// 移動中のヨー: 短距離は出発側の向きから到着側の向きへ滑らかに。長距離は起動で進行方向へ向き、
+/// 走行中は進行方向(x 速度の符号)を向き、停止(最後の段)で到着側の向きに合わせる。
+double raiYawAt(double progress, {required RaiMotionPlan? plan, required double velocityDx, required RaiArm armFrom, required RaiArm armTo}) {
+  final t = progress.clamp(0.0, 1.0);
+  final restTo = raiRestYawFor(armTo);
+  if (plan == null || t >= 1) return restTo;
+  final restFrom = raiRestYawFor(armFrom);
+  double smooth(double x) => x * x * (3 - 2 * x);
+  if (!plan.long) return restFrom + (restTo - restFrom) * smooth(t);
+  final travel = velocityDx.abs() < 0.01 ? 0.0 : (velocityDx > 0 ? -raiTravelYaw : raiTravelYaw);
+  final startEnd = plan.steps.first.fraction;
+  final stopStart = 1 - plan.steps.last.fraction;
+  if (t < startEnd) return restFrom + (travel - restFrom) * smooth(t / startEnd);
+  if (t < stopStart) return travel;
+  return travel + (restTo - travel) * smooth((t - stopStart) / (1 - stopStart));
 }

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -68,5 +69,21 @@ void main() {
 
   test('テスト環境では 3D を使わない(FLUTTER_TEST)', () {
     expect(raiMascot3dProvider, isNotNull);
+  });
+
+  test('ヨー (D-193): 静止は指差す側へ 30°、短距離は滑らかに向き替え、長距離は走行中に進行方向を向いて停止で向き合わせ', () {
+    expect(raiRestYawFor(RaiArm.left), closeTo(30 * math.pi / 180, 1e-9));
+    expect(raiRestYawFor(RaiArm.right), closeTo(-30 * math.pi / 180, 1e-9));
+    expect(raiRestYawFor(RaiArm.none), 0);
+    final short = planRaiMotion(from: const Offset(60, 300), to: const Offset(120, 380), columnWidth: 360, centerX: 180, armFrom: RaiArm.right, armTo: RaiArm.left);
+    expect(raiYawAt(0, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(-30 * math.pi / 180, 1e-9));
+    expect(raiYawAt(1, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(30 * math.pi / 180, 1e-9));
+    expect(raiYawAt(0.5, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(0, 1e-9));
+    final long = planRaiMotion(from: const Offset(40, 100), to: const Offset(300, 600), columnWidth: 360, centerX: 180, armFrom: RaiArm.left, armTo: RaiArm.right);
+    expect(raiYawAt(0.5, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-60 * math.pi / 180, 1e-9)); // 右へ走る = 右を向く
+    expect(raiYawAt(0.5, plan: long, velocityDx: -3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(60 * math.pi / 180, 1e-9));
+    expect(raiYawAt(1, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-30 * math.pi / 180, 1e-9)); // 停止で向き合わせ
+    expect(raiYawAt(0.9, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), inExclusiveRange(-60 * math.pi / 180, -30 * math.pi / 180));
+    expect(raiYawAt(0.5, plan: null, velocityDx: 0, armFrom: RaiArm.none, armTo: RaiArm.none), 0);
   });
 }

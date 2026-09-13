@@ -9,6 +9,7 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/login/login_screen.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/rai/rai_embedding_model.dart';
+import 'package:rasq_client/features/profile/profile_edit_screen.dart';
 import 'package:rasq_client/features/rai/rai_home_screen.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
 import 'package:rasq_client/features/rai/rai_llm_device.dart';
@@ -47,6 +48,13 @@ void main() {
       final line = RaiPath(from: const Offset(0, 0), to: const Offset(100, 0), bulge: 0, overshoot: 0);
       expect(line.at(0.5).dy.abs(), lessThan(0.001));
       expect(line.at(0.5).dx, inExclusiveRange(0, 100)); // 3 次ベジエは等速ではない
+    });
+    test('リボン (D-193): 前半と後半で反対側へ膨らむ S 字、端点は同じ', () {
+      final r = RaiPath(from: const Offset(0, 0), to: const Offset(400, 0), bulge: 0.25, ribbon: true);
+      expect(r.at(0), const Offset(0, 0));
+      expect((r.at(1) - const Offset(400, 0)).distance, lessThan(0.001));
+      expect(r.at(0.25).dy.sign, isNot(r.at(0.75).dy.sign)); // 反対側
+      expect(r.at(0.5).dy.abs(), lessThan(1)); // 中央で直線を横切る
     });
     test('距離 0 なら動かない', () {
       final p = RaiPath(from: const Offset(3, 3), to: const Offset(3, 3));
@@ -367,7 +375,7 @@ void main() {
     final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.embed.tile')), 120, scrollable: fowList);
     await tester.pumpAndSettle();
-    expect(find.text('SigLIP2 base(テキスト塔・int8)'), findsOneWidget);
+    expect(find.text('MiniLM-L12 多言語(paraphrase, int8)'), findsOneWidget);
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.embed.phase'))).data, '未ダウンロード');
     expect(find.textContaining('n-gram 代替'), findsOneWidget);
     await clearOfBar(tester, fowList, find.byKey(const ValueKey('rai.embed.download')));
@@ -375,7 +383,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(embedding.installs, 1);
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.embed.phase'))).data, '準備完了');
-    expect(find.textContaining('検索: SigLIP2'), findsOneWidget);
+    expect(find.textContaining('検索: MiniLM-L12'), findsOneWidget);
     // 索引は新しい埋め込み器で組み直される。
     await tester.runAsync(() => c.read(raiReferenceProvider.future));
     await tester.pumpAndSettle();
@@ -386,6 +394,40 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.embed.phase'))).data, '未ダウンロード');
     await tester.runAsync(() => c.read(raiReferenceProvider.future));
     expect((await tester.runAsync(() => c.read(raiEmbedderProvider.future)))!.name, 'ngram-256');
+  });
+
+  testWidgets('指差した部品が押されたら自動で次へ (D-193)、タブ外の画面は push なので戻る / 決定が効く', (tester) async {
+    final c = await pump(tester);
+    RasqSidebar.open(c.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await tester.pumpAndSettle();
+    // 「投稿したい」→ ホームの「投稿」を指差す。そのボタンを押すと(コンポーザーが開き)次の手順へ。
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿したい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).stepIndex, 0);
+    expect(find.text('右下の「投稿」でコンポーザーが開きます'), findsOneWidget);
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).stepIndex, 1);
+    expect(find.textContaining('本文を書いて'), findsOneWidget);
+    expect(c.read(raiProvider).target, isNotNull); // コンポーザーの「画像」を指す
+    await tester.tap(find.byKey(const ValueKey('rai.speech.close')));
+    await tester.pumpAndSettle();
+    // タブ外の画面(プロフィール編集)へは push: ヘッダーの戻るで元の画面へ戻れる。
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '自己紹介を変えたい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileEditScreen), findsOneWidget);
+    expect(c.read(routerProvider).canPop(), isTrue);
+    await tester.tap(find.byKey(const ValueKey('rai.speech.close')));
+    await tester.pumpAndSettle();
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileEditScreen), findsNothing);
   });
 
   testWidgets('ログイン画面の「Raiのインストラクチャ」→ 入力欄付きのバー(インストラクション)', (tester) async {

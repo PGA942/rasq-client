@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import 'rai_embedding_model.dart';
+import 'rai_minilm_tokenizer.dart';
 import 'rai_onnx_embedder.dart';
 import 'rai_reference.dart';
 import 'rai_siglip_tokenizer.dart';
@@ -34,7 +35,7 @@ class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
 
   Future<File> _file() async {
     final base = await getApplicationSupportDirectory();
-    final d = Directory('${base.path}/rai_models/siglip2');
+    final d = Directory('${base.path}/rai_models/${spec.id}');
     if (!await d.exists()) await d.create(recursive: true);
     return File('${d.path}/${spec.fileName}');
   }
@@ -111,8 +112,14 @@ class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
         final f = await _file();
         if (!await f.exists()) return null;
         _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.loading));
-        final tok = SentencePieceBpe.fromModelBytes((await rootBundle.load(spec.tokenizerAsset)).buffer.asUint8List());
-        _embedder = await OnnxRaiEmbedder.load(model: f, tokenizer: tok);
+        switch (spec.kind) {
+          case RaiEmbeddingKind.siglip2:
+            final tok = SentencePieceBpe.fromModelBytes((await rootBundle.load(spec.tokenizerAsset)).buffer.asUint8List());
+            _embedder = await OnnxRaiEmbedder.load(model: f, tokenizer: tok, maxLen: spec.maxLen);
+          case RaiEmbeddingKind.minilm:
+            final tok = UnigramTokenizer.fromTsv(await rootBundle.loadString(spec.tokenizerAsset));
+            _embedder = await OnnxRaiEmbedder.loadMiniLm(model: f, tokenizer: tok, maxLen: spec.maxLen);
+        }
         _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.ready));
         return _embedder;
       } catch (e) {
