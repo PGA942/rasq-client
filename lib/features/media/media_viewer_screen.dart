@@ -1,6 +1,5 @@
 
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -11,6 +10,7 @@ import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import 'video_player.dart';
 import 'viewer_plugin_overlay.dart';
 
 /// 全画面表示(画像/動画): 黒背景、PageView、戻る/…、下部アクションバー、本文.
@@ -26,6 +26,10 @@ class MediaViewerScreen extends ConsumerStatefulWidget {
 class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   late final PageController _ctrl = PageController(initialPage: widget.initialIndex);
   late int _index = widget.initialIndex;
+
+  /// 動画のセッション(ページごと、D-201)。ページを離れると一時停止。
+  final _sessions = <int, VideoSession>{};
+  VideoSession _session(int i) => _sessions.putIfAbsent(i, () => VideoSession(widget.post.media[i]));
   bool _chrome = true;
 
   /// 全画面表示プラグイン (D-167 / D-178 で共通化): 画像ごとの重ねとトークン。
@@ -41,6 +45,9 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
 
   @override
   void dispose() {
+    for (final v in _sessions.values) {
+      v.dispose();
+    }
     _overlays.dispose();
     _ctrl.dispose();
     super.dispose();
@@ -68,6 +75,9 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
             controller: _ctrl,
             itemCount: post.media.length,
             onPageChanged: (i) {
+              for (final e in _sessions.entries) {
+                if (e.key != i) e.value.pause();
+              }
               setState(() => _index = i);
               _askOverlay(i);
             },
@@ -80,8 +90,8 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                   child: m.type == MediaType.file
                       ? Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.insert_drive_file_outlined, color: Colors.white, size: 64), Text(m.fileName ?? '', style: const TextStyle(color: Colors.white))])
                       : m.type == MediaType.video
-                          // 動画 (D-200): その場で再生(タップで再生 / 一時停止、下に進捗)。
-                          ? VideoPage(key: ValueKey('viewer.video.${m.id}'), item: m, active: i == _index)
+                          // 動画 (D-200 → D-201): 面はタップで再生 / 一時停止。操作はアクションバーの上。
+                          ? RasqVideoView(key: ValueKey('viewer.video.${m.id}'), session: _session(i))
                           : _overlays.wrap(i, Image.network(m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
                 ),
               );
@@ -126,6 +136,9 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
               child: SafeArea(
                 top: false,
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  // 動画の操作 (D-201): アクションバーの上に 再生 / シークバー / 5 秒 / 速度。
+                  if (post.media[_index].type == MediaType.video)
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), child: VideoControls(session: _session(_index))),
                   Theme(
                     data: Theme.of(context).copyWith(colorScheme: Theme.of(context).colorScheme.copyWith(onSurface: Colors.white, onSurfaceVariant: Colors.white70)),
                     child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
@@ -154,90 +167,4 @@ class _Circle extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => DecoratedBox(decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle), child: child);
-}
-
-/// 動画のページ (D-200): `video_player` で再生する。初期化できない環境(テスト / 未対応の形式)は
-/// サムネイル + 案内に落ちる。ページを離れると止まる。
-class VideoPage extends StatefulWidget {
-  const VideoPage({super.key, required this.item, this.active = true});
-  final MediaItem item;
-
-  /// 表示中のページか(離れたら一時停止)。
-  final bool active;
-
-  @override
-  State<VideoPage> createState() => _VideoPageState();
-}
-
-class _VideoPageState extends State<VideoPage> {
-  VideoPlayerController? _ctrl;
-  String? _error;
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _init();
-  }
-
-  Future<void> _init() async {
-    try {
-      final c = VideoPlayerController.networkUrl(widget.item.url);
-      _ctrl = c;
-      await c.initialize();
-      c.addListener(_tick);
-      await c.setLooping(true);
-      if (widget.active) await c.play();
-      if (mounted) setState(() => _ready = true);
-    } catch (e) {
-      if (mounted) setState(() => _error = '再生できません: $e');
-    }
-  }
-
-  void _tick() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void didUpdateWidget(covariant VideoPage old) {
-    super.didUpdateWidget(old);
-    final c = _ctrl;
-    if (c == null || !_ready) return;
-    if (widget.active && !old.active) c.play();
-    if (!widget.active && old.active) c.pause();
-  }
-
-  @override
-  void dispose() {
-    _ctrl?.removeListener(_tick);
-    _ctrl?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = _ctrl;
-    if (_error != null || c == null || !_ready) {
-      final thumb = widget.item.thumbnailUrl;
-      return Stack(alignment: Alignment.center, children: [
-        if (thumb != null) Image.network(thumb.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const SizedBox.shrink()),
-        if (_error == null) const CircularProgressIndicator(color: Colors.white) else Text(_error!, key: const ValueKey('viewer.video.error'), style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
-      ]);
-    }
-    final playing = c.value.isPlaying;
-    return GestureDetector(
-      key: const ValueKey('viewer.video.toggle'),
-      onTap: () => playing ? c.pause() : c.play(),
-      child: Stack(alignment: Alignment.center, children: [
-        AspectRatio(aspectRatio: c.value.aspectRatio == 0 ? 16 / 9 : c.value.aspectRatio, child: VideoPlayer(c)),
-        if (!playing) const Icon(Icons.play_circle_fill, color: Colors.white70, size: 72),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: VideoProgressIndicator(c, allowScrubbing: true, colors: const VideoProgressColors(playedColor: RasqColors.link, bufferedColor: Colors.white38, backgroundColor: Colors.white12)),
-        ),
-      ]),
-    );
-  }
 }

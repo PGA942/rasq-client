@@ -217,13 +217,24 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       }
       _mixer = mixer;
       _three.addAnimationEvent((dt) {
-        if (!_ctrl.paused) _mixer?.update(dt);
-        final r = _root;
-        if (r == null) return;
-        r.rotation.y = _ctrl.yaw;
-        if (proj != null) {
-          final w = _ctrl.world;
-          r.position.setValues(w.x, w.y, w.z);
+        // three_js は event が例外を投げると描画ループが止まる(`_updating` が戻らない、D-201)。
+        // ミキサーが壊れても位置だけは動かし続ける。
+        try {
+          if (!_ctrl.paused) _mixer?.update(dt);
+        } catch (e) {
+          debugPrint('RAi 3D: animation mixer failed, disabling clips: $e');
+          _mixer = null;
+        }
+        try {
+          final r = _root;
+          if (r == null) return;
+          r.rotation.y = _ctrl.yaw;
+          if (proj != null) {
+            final w = _ctrl.world;
+            r.position.setValues(w.x, w.y, w.z);
+          }
+        } catch (e) {
+          debugPrint('RAi 3D: frame update failed: $e');
         }
       });
       _sync();
@@ -246,6 +257,15 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
     if (name == _currentName) return;
     final next = _actions[name] ?? _actions[_ctrl.plan?.idleClip ?? 'idle'] ?? _actions['idle'];
     if (next == null) return;
+    try {
+      _playClip(next);
+    } catch (e) {
+      debugPrint('RAi 3D: clip $name failed: $e');
+    }
+    _currentName = name;
+  }
+
+  void _playClip(three.AnimationAction next) {
     next
       ..reset()
       ..setLoop(_ctrl.loop ? three.LoopRepeat : three.LoopOnce, _ctrl.loop ? double.infinity : 1)
@@ -257,7 +277,6 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       next.crossFadeFrom(prev, 0.15);
     }
     _current = next;
-    _currentName = name;
   }
 
   @override

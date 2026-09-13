@@ -20,6 +20,7 @@ class RasqMediaGrid extends StatefulWidget {
     super.key,
     required this.items,
     this.onTapTile,
+    this.onPlayTile,
     this.maxVisible = 4,
     this.borderRadius = RasqSizes.radiusMd,
     this.singleAspectRatio = 16 / 9,
@@ -30,6 +31,9 @@ class RasqMediaGrid extends StatefulWidget {
 
   /// Tap on a revealed tile (index into [items]).
   final ValueChanged<int>? onTapTile;
+
+  /// 動画タイルの再生バッジ(インライン再生、D-201)。null ならバッジは飾り(タイルのタップと同じ)。
+  final ValueChanged<int>? onPlayTile;
   final int maxVisible;
   final double borderRadius;
   final double singleAspectRatio;
@@ -55,6 +59,7 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
           overflow: i == widget.maxVisible - 1 && items.length > widget.maxVisible ? items.length - widget.maxVisible : 0,
           onReveal: () => setState(() => _revealed.add(items[i].id)),
           onTap: widget.onTapTile == null ? null : () => widget.onTapTile!(i),
+          onPlay: widget.onPlayTile == null ? null : () => widget.onPlayTile!(i),
         );
 
     const gap = SizedBox.square(dimension: RasqSpacing.mediaGap);
@@ -96,7 +101,8 @@ class _RasqMediaGridState extends State<RasqMediaGrid> {
 }
 
 class _MediaTile extends StatelessWidget {
-  const _MediaTile({required this.item, required this.revealed, required this.overflow, required this.onReveal, this.onTap});
+  const _MediaTile({required this.item, required this.revealed, required this.overflow, required this.onReveal, this.onTap, this.onPlay});
+  final VoidCallback? onPlay;
 
   final MediaItem item;
   final bool revealed;
@@ -134,7 +140,11 @@ class _MediaTile extends StatelessWidget {
     final overlays = <Widget>[Positioned.fill(child: content)];
 
     if (item.type == MediaType.video) {
-      overlays.add(const Center(child: Icon(Icons.play_circle_fill, color: RasqColors.white, size: 48)));
+      overlays.add(Center(
+        child: onPlay == null
+            ? const Icon(Icons.play_circle_fill, color: RasqColors.white, size: 48)
+            : Semantics(button: true, label: '再生', child: GestureDetector(key: ValueKey('media.play.${item.id}'), onTap: onPlay, child: const Icon(Icons.play_circle_fill, color: RasqColors.white, size: 48))),
+      ));
       if (item.duration != null) {
         overlays.add(Positioned(right: 6, bottom: 6, child: _Chip(_fmt(item.duration!))));
       }

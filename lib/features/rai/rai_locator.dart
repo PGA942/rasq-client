@@ -12,6 +12,8 @@ Rect? locateWidgetRect({String? tooltip, String? text, Key? key, Rect? within}) 
   final candidates = <({Rect rect, RenderBox box})>[];
   void visit(Element e) {
     final w = e.widget;
+    // 見えない枝は探さない (D-201): Offstage / Visibility(false) / Opacity(0)。
+    if ((w is Offstage && w.offstage) || (w is Visibility && !w.visible) || (w is Opacity && w.opacity <= 0.01)) return;
     final hit = (tooltip != null && w is Tooltip && w.message == tooltip) ||
         (text != null && w is Text && w.data == text) ||
         (key != null && w.key == key);
