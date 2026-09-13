@@ -5,7 +5,9 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../home/post_row.dart';
 
 /// 動画の再生 (D-201): 1 本の動画のセッション(video_player のコントローラー + 状態)。
 /// 初期化できない環境(テスト / 未対応形式)は [error] に落ちる。
@@ -113,9 +115,12 @@ String fmtDuration(Duration d) {
 
 /// 動画の面(タップで再生 / 一時停止)。初期化前はサムネイル + くるくる、失敗は案内。
 class RasqVideoView extends StatelessWidget {
-  const RasqVideoView({super.key, required this.session, this.fit = BoxFit.contain});
+  const RasqVideoView({super.key, required this.session, this.fit = BoxFit.contain, this.tapToggles = true});
   final VideoSession session;
   final BoxFit fit;
+
+  /// 面のタップで再生 / 一時停止するか(全画面ビューワーはタップを FOW の開き直しに使うので false、D-203)。
+  final bool tapToggles;
 
   @override
   Widget build(BuildContext context) {
@@ -133,14 +138,12 @@ class RasqVideoView extends StatelessWidget {
               Center(child: Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(session.error!, key: const ValueKey('viewer.video.error'), style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center))),
           ]);
         }
-        return GestureDetector(
-          key: const ValueKey('viewer.video.toggle'),
-          onTap: session.toggle,
-          child: Stack(alignment: Alignment.center, fit: StackFit.expand, children: [
-            Center(child: AspectRatio(aspectRatio: c.value.aspectRatio == 0 ? 16 / 9 : c.value.aspectRatio, child: VideoPlayer(c))),
-            if (!c.value.isPlaying) const Icon(Icons.play_circle_fill, color: Colors.white70, size: 72),
-          ]),
-        );
+        final face = Stack(alignment: Alignment.center, fit: StackFit.expand, children: [
+          Center(child: AspectRatio(aspectRatio: c.value.aspectRatio == 0 ? 16 / 9 : c.value.aspectRatio, child: VideoPlayer(c))),
+          if (!c.value.isPlaying) const Icon(Icons.play_circle_fill, color: Colors.white70, size: 72),
+        ]);
+        if (!tapToggles) return face;
+        return GestureDetector(key: const ValueKey('viewer.video.toggle'), onTap: session.toggle, child: face);
       },
     );
   }
@@ -238,7 +241,9 @@ class VideoPlayerBlock extends StatelessWidget {
 const videoFowId = 'fow.video';
 
 /// インライン再生の FOW (D-201): TL のタイルの再生バッジから(▶ を押したので再生して開く)。
-Future<void> showVideoFow(WidgetRef ref, MediaItem item, {int? column}) async {
+/// 動画の下に投稿をインラインフレームの小表示で出す(「リアクションを表示」ページと同じ、D-203)。
+/// タップでスレッド展開画面へ(FOW は閉じる)。
+Future<void> showVideoFow(WidgetRef ref, MediaItem item, {Post? post, int? column}) async {
   final manager = ref.read(overlayManagerProvider);
   if (manager.contains(videoFowId)) manager.close(videoFowId);
   final session = VideoSession(item, autoplay: true);
@@ -246,10 +251,28 @@ Future<void> showVideoFow(WidgetRef ref, MediaItem item, {int? column}) async {
     await manager.showFow<void>(
       id: videoFowId,
       spec: FowSpec(title: '動画', cancelText: '閉じる', initialHeightFactor: 0.6, maxHeightFactor: 0.9, columnIndex: column ?? 0),
-      // 高さは FOW に合わせる(足りなければスクロール)。動画の高さは枠の高さから操作ぶんを引いた分。
+      // 高さは FOW に合わせる(足りなければスクロール)。動画の高さは枠の高さから操作 + 投稿ぶんを引いた分。
       builder: (_, _) => LayoutBuilder(builder: (context, c) {
-        final h = (c.maxHeight.isFinite ? c.maxHeight - 120 : 240.0).clamp(120.0, 480.0).toDouble();
-        return SingleChildScrollView(padding: const EdgeInsets.all(RasqSpacing.page), child: VideoPlayerBlock(session: session, height: h));
+        final h = (c.maxHeight.isFinite ? c.maxHeight - (post == null ? 120 : 220) : 240.0).clamp(120.0, 480.0).toDouble();
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(RasqSpacing.page),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+            VideoPlayerBlock(session: session, height: h),
+            if (post != null)
+              Padding(
+                padding: const EdgeInsets.only(top: RasqSpacing.sm),
+                child: InlinePostFrame(
+                  key: const ValueKey('video.fow.post'),
+                  post: post,
+                  maxLines: 4,
+                  onTap: () {
+                    context.pushPost(post);
+                    manager.close(videoFowId);
+                  },
+                ),
+              ),
+          ]),
+        );
       }),
     );
   } finally {

@@ -420,6 +420,28 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_viewer_video_fow_expanded.png'));
     debugNetworkImageHttpClientProvider = null;
   });
+
+  testWidgets('inline video FOW from the play badge (D-203)', (tester) async {
+    debugNetworkImageHttpClientProvider = () => _PngHttpClient(png);
+    final author = UserSummary(id: 'u1', account: acc, displayName: 'テスター', avatarUrl: Uri.parse('https://example.test/avatar.png'));
+    final withVideo = Post(
+      id: 'pv2',
+      account: acc,
+      author: author,
+      createdAt: DateTime(2026, 9, 13),
+      body: '昨日のライブの動画。最後の曲だけ切り出しました',
+      media: [MediaItem(id: 'v', type: MediaType.video, url: Uri.parse('https://example.test/v.mp4'), thumbnailUrl: Uri.parse('https://example.test/thumb.png'))],
+    );
+    await pump(tester, posts: [withVideo]);
+    await tester.tap(find.byKey(const ValueKey('media.play.v')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('video_inline_fow.png'));
+    debugNetworkImageHttpClientProvider = null;
+  });
   testWidgets('RAi home + instruction pointing (D-179)', (tester) async {
     final c = await pump(tester);
     RasqSidebar.open(c.read(overlayManagerProvider));

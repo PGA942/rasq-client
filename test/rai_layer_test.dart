@@ -52,4 +52,29 @@ void main() {
     expect(ctrl.sizePx, 180);
     ctrl.dispose();
   });
+
+  group('置き場所 (raiPlaceFor、D-203)', () {
+    const screen = Size(400, 800);
+    test('空きがあれば左右 / 上下の候補にそのまま置く(半透明にしない)', () {
+      final p = raiPlaceFor(const Rect.fromLTWH(200, 300, 150, 40), screen, mascot: 180);
+      expect(p.cramped, isFalse);
+      expect(p.armsDown, isFalse);
+      expect(p.pos, raiAnchorFor(const Rect.fromLTWH(200, 300, 150, 40), screen, mascot: 180));
+    });
+    test('空きが無ければ半透明で、胴体が画面に完全に入るところまで寄せる', () {
+      // 画面いっぱいの部品: 上下左右のどこにも置けない。
+      final p = raiPlaceFor(const Rect.fromLTWH(0, 0, 400, 560), screen, mascot: 180);
+      expect(p.cramped, isTrue);
+      expect(p.pos.dx - 180 * 0.28, greaterThanOrEqualTo(0));
+      expect(p.pos.dx + 180 * 0.28, lessThanOrEqualTo(400));
+      expect(p.pos.dy - 180 * 0.5, greaterThanOrEqualTo(0));
+      expect(p.pos.dy + 180 * 0.625, lessThanOrEqualTo(800 - 180));
+      expect(p.armsDown, isTrue); // 下側にも空きが無い
+    });
+    test('下側に空きがあれば手は下ろさない', () {
+      final p = raiPlaceFor(const Rect.fromLTWH(0, 0, 400, 120), screen, mascot: 180);
+      expect(p.cramped, isFalse); // 下に置ける
+      expect(p.armsDown, isFalse);
+    });
+  });
 }

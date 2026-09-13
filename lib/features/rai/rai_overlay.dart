@@ -220,20 +220,22 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   }
 
 
-  Offset _destination(RaiState s, Size screen, Rect? localTarget) {
+  RaiPlacement _destination(RaiState s, Size screen, Rect? localTarget) {
     if (s.mode == RaiMode.assistant || localTarget == null) {
       // 右下 / 左下(バーの上)。
       final x = _restLeft ? mascot / 2 + RasqSpacing.md : screen.width - mascot / 2 - RasqSpacing.md;
-      return Offset(x, screen.height - 180 - mascot * 0.7);
+      return (pos: Offset(x, screen.height - 180 - mascot * 0.7), cramped: false, armsDown: false);
     }
     _restLeft = localTarget.center.dx > screen.width / 2;
-    return raiAnchorFor(localTarget, screen, mascot: mascot);
+    return raiPlaceFor(localTarget, screen, mascot: mascot);
   }
 
-  void _moveTo(Offset dest, RaiState s, Size screen, Rect? localTarget) {
+  void _moveTo(RaiPlacement place, RaiState s, Size screen, Rect? localTarget) {
     final proj = _projector!;
+    final dest = place.pos;
     final from = _pos ?? dest;
-    final armTo = raiArmFor(dest, s.mode == RaiMode.instruction ? localTarget : null);
+    // 空きが無いとき (D-203): 下側に空きが無ければ手を下ろす。
+    final armTo = place.armsDown ? RaiArm.none : raiArmFor(dest, s.mode == RaiMode.instruction ? localTarget : null);
     if ((from - dest).distance < 1) {
       _pos = dest;
       _path = null;
@@ -336,7 +338,6 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
       _onFrame();
       return layer(const []);
     }
-    _ctrl3d.opacity = 1;
     final localTarget = s.target == null ? null : _toLocal(s.target!);
     _syncBusy(s.busy);
     if (s.target != _lastTarget || s.mode != _lastMode || _pos == null) {
@@ -351,7 +352,10 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
         setState(() => _moveTo(_destination(s, screen, lt), s, screen, lt));
       });
     }
-    final dest = _destination(s, screen, localTarget);
+    final place = _destination(s, screen, localTarget);
+    final dest = place.pos;
+    // 空きが無いときは半透明 (D-203)。
+    _ctrl3d.opacity = place.cramped ? 0.5 : 1;
     final moving = _anim.isAnimating && _path != null;
     // 2D の代替描画: 空間の位置を射影した点と大きさに置く。
     final pos = moving ? _ctrl3d.screenPos : (_pos ?? dest);
@@ -395,7 +399,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
           key: const ValueKey('rai.mascot2d'),
           left: pos.dx - size / 2,
           top: pos.dy - size * 0.625,
-          child: IgnorePointer(child: RaiMascot(size: size, pointing: pointing, controller3d: _ctrl3d)),
+          child: IgnorePointer(child: RaiMascot(size: size, pointing: pointing, controller3d: _ctrl3d, opacity: place.cramped ? 0.5 : 1)),
         ),
     ]);
   }
