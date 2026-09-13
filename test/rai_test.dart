@@ -78,6 +78,20 @@ void main() {
     expect(g.push('思考なし。') + g.push('<') + g.push('b>太字'), '思考なし。<b>太字');
   });
 
+  test('コードネーム (D-198): モデルコード + サイズ', () {
+    expect(raiModelSpecById('qwen3-1.7b-q4km').codename, 'QA Mini');
+    expect(raiModelSpecById('qwen3-0.6b-q4km').codename, 'QA Nano');
+    expect(raiModelSpecById('qwen3-4b-q4km').codename, 'QA Lite+');
+    expect(raiModelSpecById('agents-a1-4b-q4km').codename, 'Agent Lite+');
+    expect(raiModelSpecById('lfm2.5-2.6b').codename, 'Liquid Lite');
+    expect(raiCloudModelSpecs.firstWhere((m) => m.id == 'cloud-qwen3.9-33b-a3b').codename, 'QA Max');
+    expect(raiCloudModelSpecs.firstWhere((m) => m.id == 'cloud-cyllm-jp-150b').codename, 'CyLLM Extreme');
+    expect(raiSizeClass(10), 'Core');
+    expect(raiSizeClass(20), 'Core+');
+    expect(raiSizeClass(100), 'Max+');
+    expect(RaiMode.assistant.modelName, 'QA Mini');
+  });
+
   test('メモリの判定 (raiMemoryVerdict)', () {
     expect(raiMemoryVerdict(modelMb: 2885, totalRamMb: 8192), RaiRamVerdict.ok); // 3.3 GB 必要 / 4.9 GB まで余裕
     expect(raiMemoryVerdict(modelMb: 2885, totalRamMb: 5000), RaiRamVerdict.tight);
@@ -258,6 +272,8 @@ void main() {
     expect(tester.getSize(find.byWidgetPredicate((w) => w is Material && w.elevation == 8)).width, closeTo(tester.getSize(find.byType(RasqApp)).width - 16, 1)); // 幅は入力ウィジェットに揃う (D-185)
     expect(find.text('ローカル'), findsWidgets);
     expect(find.text('完遂率 -%'), findsWidgets);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.name.qwen3-1.7b-q4km'))).data, 'QA Mini'); // コードネーム (D-198)
+    expect(find.textContaining('Qwen3 1.7B (Q4_K_M)'), findsWidgets); // gguf 名は元のまま
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.ram.qwen3-1.7b-q4km'))).data, 'メモリ: 動作可'); // 8 GB の端末
     final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.tile.cloud-cyllm-jp-150b')), 120, scrollable: fowList);
@@ -282,6 +298,7 @@ void main() {
     expect(llm.spec.id, 'qwen3-0.6b-q4km');
     await tester.tap(find.text('閉じる').last); // FOW を閉じる
     await tester.pumpAndSettle();
+    expect(find.text('QA Nano'), findsOneWidget); // バーのチップ
     // インストラクションで参照に無い質問 → 端末内モデルが答える(操作のシステム指示)。
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
     await tester.pumpAndSettle();
