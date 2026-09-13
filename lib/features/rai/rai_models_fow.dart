@@ -189,7 +189,7 @@ class _EmbeddingTile extends ConsumerWidget {
         ]),
         if (st.phase == RaiEmbeddingPhase.downloading) Padding(padding: const EdgeInsets.only(top: RasqSpacing.xs), child: LinearProgressIndicator(value: (st.progress ?? 0) / 100)),
         const SizedBox(height: RasqSpacing.xs),
-        Text(st.ready ? '検索: SigLIP2(意味で引く)' : '検索: n-gram 代替(語の一致で引く。ダウンロードすると言い換えにも強くなる)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text(st.ready ? '検索: ${spec.label}(意味で引く)' : '検索: n-gram 代替(語の一致で引く。ダウンロードすると言い換えにも強くなる)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: RasqSpacing.sm),
         Wrap(spacing: RasqSpacing.sm, runSpacing: RasqSpacing.xs, children: [
           if (st.phase == RaiEmbeddingPhase.notInstalled || st.phase == RaiEmbeddingPhase.error)

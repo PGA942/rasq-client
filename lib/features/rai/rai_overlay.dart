@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -133,6 +134,8 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   static const mascot = raiPointSize;
   late final AnimationController _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
 
+  RaiArm _yawArmFrom = RaiArm.none;
+
   /// 静止位置は右下 / 左下 (D-192): 直前に指した部品が右半分なら左下、それ以外は右下。
   bool _restLeft = false;
   RaiPath? _path;
@@ -144,9 +147,31 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   final _ctrl3d = RaiMascot3dController();
   bool _pausedByBusy = false;
 
+  Rect? _downOnTarget;
+
+  /// 指差した部品へのタップを見張る (D-193): どのウィジェットが処理しても届くグローバルな経路。
+  void _onPointer(PointerEvent e) {
+    final t = ref.read(raiProvider).target;
+    if (t == null) {
+      _downOnTarget = null;
+      return;
+    }
+    final hit = t.inflate(4);
+    if (e is PointerDownEvent) {
+      _downOnTarget = hit.contains(e.position) ? hit : null;
+    } else if (e is PointerUpEvent) {
+      final down = _downOnTarget;
+      _downOnTarget = null;
+      if (down != null && hit.contains(e.position)) ref.read(raiProvider.notifier).targetTapped();
+    } else if (e is PointerCancelEvent) {
+      _downOnTarget = null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
     _anim.addListener(() {
       _ctrl3d.advance(Curves.easeInOutCubic.transform(_anim.value));
       setState(() {});
@@ -161,6 +186,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
 
   @override
   void dispose() {
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
     _anim.dispose();
     _ctrl3d.dispose();
     super.dispose();
@@ -184,9 +210,11 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
       _ctrl3d.idle(armTo);
       return;
     }
-    _path = RaiPath(from: from, to: dest);
     // 起動 / 停止だけか、走行を挟むか(距離が画面幅 / カラム幅の半分以上)。
     final plan = planRaiMotion(from: from, to: dest, columnWidth: math.min(screen.width, raiPanelWidth(context)), centerX: screen.width / 2, armFrom: _ctrl3d.arm, armTo: armTo);
+    // 同サイドの長距離はリボン(S 字)、それ以外は放物線 (D-193)。
+    _path = RaiPath(from: from, to: dest, ribbon: plan.long && !plan.crossesCenter);
+    _yawArmFrom = _ctrl3d.arm;
     _ctrl3d.start(plan);
     _anim.duration = raiMoveDuration(distance: (dest - from).distance, columnWidth: math.min(screen.width, raiPanelWidth(context)), long: plan.long);
     _anim.forward(from: 0);
@@ -227,6 +255,8 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     final velocity = moving ? (path.at((t + 0.02).clamp(0, 1)) - pos) : Offset.zero;
     final tilt = moving ? (velocity.dx / (velocity.distance + 0.001)) * 0.18 : 0.0;
     final pointing = s.target == null ? null : pointingDirection(pos, s.target!.center);
+    // 向き (D-193): 静止はヨー 30°(指差す側へ)、長距離は走りながら進行方向へ向き、停止で向き合わせ。
+    _ctrl3d.yaw = raiYawAt(moving ? t : 1, plan: _ctrl3d.plan, velocityDx: velocity.dx, armFrom: _yawArmFrom, armTo: _ctrl3d.plan?.armTo ?? _ctrl3d.arm);
     // 手前再接近 (D-192): 移動の中ほどで大きく(最大 700 px、画面に収まる範囲)。
     final size = moving ? raiSizeAt(t, approach: raiApproachSizeFor(screen)) : mascot;
     return SizedBox(
