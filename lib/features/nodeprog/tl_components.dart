@@ -179,10 +179,12 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
     return const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [TlAlgorithmComponent(type: 'queryfilter'), TlAlgorithmComponent(type: 'chrono')]);
   }
   final base = scope.startsWith('tl.') ? scope.substring(3) : 'home';
-  if (base.startsWith('list:')) {
+  // リスト TL / カスタムフィード (D-195) はそのリスト / フィードの取得から。
+  if (base.startsWith('list:') || base.startsWith('feed:')) {
     return TlConfig(sources: [TlSourceComponent(tl: base)], algorithms: const [TlAlgorithmComponent(type: 'chrono')]);
   }
-  final tl = ['home', 'social', 'local', 'global'].contains(base) ? base : 'home';
+  // 基本 TL の id は SNS の宣言どおり(home / social / local / global / featured …、D-194)。
+  final tl = base.isEmpty || base.contains(':') ? 'home' : base;
   return TlConfig(sources: [TlSourceComponent(tl: tl)], algorithms: const [TlAlgorithmComponent(type: 'chrono')]);
 }
 

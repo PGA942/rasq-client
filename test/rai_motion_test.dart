@@ -71,27 +71,28 @@ void main() {
     expect(raiMascot3dProvider, isNotNull);
   });
 
-  test('ヨー (D-194): 静止は指差す側へ 30°(左腕 −30° / 右腕 +30°)、短距離は滑らかに、長距離は進行方向 → 後半は背中 → 停止でその場旋回して合わせる', () {
+  test('ヨー (D-195): 静止は指差す側へ 30°、移動中は曲線の接線(右 −90° / 上 180° / 下 0°)、起動 / 停止の段で向き替え', () {
     expect(raiRestYawFor(RaiArm.left), closeTo(-30 * math.pi / 180, 1e-9));
     expect(raiRestYawFor(RaiArm.right), closeTo(30 * math.pi / 180, 1e-9));
-    expect(raiRestYawFor(RaiArm.none), 0);
-    final short = planRaiMotion(from: const Offset(60, 300), to: const Offset(120, 380), columnWidth: 360, centerX: 180, armFrom: RaiArm.right, armTo: RaiArm.left);
-    expect(raiYawAt(0, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(30 * math.pi / 180, 1e-9));
-    expect(raiYawAt(1, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(-30 * math.pi / 180, 1e-9));
-    expect(raiYawAt(0.5, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(0, 1e-9));
+    expect(raiTangentYaw(const Offset(1, 0)), closeTo(-math.pi / 2, 1e-9));
+    expect(raiTangentYaw(const Offset(-1, 0)), closeTo(math.pi / 2, 1e-9));
+    expect(raiTangentYaw(const Offset(0, -1)).abs(), closeTo(math.pi, 1e-9));
+    expect(raiTangentYaw(const Offset(0, 1)), closeTo(0, 1e-9));
+    expect(raiYawDelta(170 * math.pi / 180, -170 * math.pi / 180), closeTo(20 * math.pi / 180, 1e-9)); // 最短
     final long = planRaiMotion(from: const Offset(40, 100), to: const Offset(300, 600), columnWidth: 360, centerX: 180, armFrom: RaiArm.left, armTo: RaiArm.right);
-    // 右へ走る = 時計回り(負)。起動の終わり(20%)で −60°、後半(50〜80%)は背中 −180°。
-    expect(raiYawAt(0.2, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-60 * math.pi / 180, 1e-6));
-    expect(raiYawAt(0.6, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-math.pi, 1e-9));
-    // 停止の段: 同じ方向に回り続けて到着側(+30° ≡ −330°)に合わせる。単調に減る。
-    final a = raiYawAt(0.85, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right);
-    final b = raiYawAt(0.95, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right);
-    expect(a, lessThan(-math.pi));
-    expect(b, lessThan(a));
-    expect(b, greaterThan(30 * math.pi / 180 - 2 * math.pi));
-    expect(raiYawAt(1, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(30 * math.pi / 180, 1e-9));
-    // 左へ走るなら反時計回り(正)。
-    expect(raiYawAt(0.6, plan: long, velocityDx: -3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(math.pi, 1e-9));
-    expect(raiYawAt(0.5, plan: null, velocityDx: 0, armFrom: RaiArm.none, armTo: RaiArm.none), 0);
+    // 走行中は接線そのもの。
+    expect(raiYawAt(0.5, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-math.pi / 2, 1e-9));
+    expect(raiYawAt(0.5, plan: long, tangent: const Offset(0, -2), armFrom: RaiArm.left, armTo: RaiArm.right).abs(), closeTo(math.pi, 1e-9));
+    // 起動: 出発側(−30°)から接線へ。停止: 接線から到着側(+30°)へ。
+    expect(raiYawAt(0, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-30 * math.pi / 180, 1e-9));
+    final mid = raiYawAt(0.1, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right);
+    expect(mid, inExclusiveRange(-math.pi / 2, -30 * math.pi / 180));
+    final stopping = raiYawAt(0.9, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right);
+    expect(stopping, inExclusiveRange(-math.pi / 2, 30 * math.pi / 180));
+    expect(raiYawAt(1, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(30 * math.pi / 180, 1e-9));
+    // 短距離も接線に合わせる。
+    final short = planRaiMotion(from: const Offset(60, 300), to: const Offset(120, 380), columnWidth: 360, centerX: 180, armFrom: RaiArm.right, armTo: RaiArm.left);
+    expect(raiYawAt(0.5, plan: short, tangent: const Offset(0, 1), armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(0, 1e-9));
+    expect(raiYawAt(0.5, plan: null, tangent: Offset.zero, armFrom: RaiArm.none, armTo: RaiArm.none), 0);
   });
 }

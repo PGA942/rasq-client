@@ -114,35 +114,31 @@ Duration raiMoveDuration({required double distance, required double columnWidth,
 /// 静止時のヨー (D-193 → D-194): 指差す側へ 30°(左腕 = −30°、右腕 = +30°、腕なし = 正面)。
 const raiRestYaw = 30 * math.pi / 180;
 
-/// 走行中に進行方向へ向く角度。
-const raiTravelYaw = 60 * math.pi / 180;
-
-/// 後半で背中を見せる角度。
-const raiBackYaw = math.pi;
-
 double raiRestYawFor(RaiArm arm) => switch (arm) { RaiArm.left => -raiRestYaw, RaiArm.right => raiRestYaw, RaiArm.none => 0 };
 
-/// 移動中のヨー (D-194):
-/// - 短距離: 出発側の向きから到着側の向きへ滑らかに。
-/// - 長距離: 起動で進行方向(±60°)を向き → 前半で回り続けて **後半は背中(180°)を見せ** → 停止の段で
-///   **その場で同じ回転方向に旋回し続けて** 到着側の向き(±30°、到着時に上げる腕が基準)に合わせる。
-///   回転方向は山なりの向き = 進行方向(右へ走るなら時計回り = 負)。
-double raiYawAt(double progress, {required RaiMotionPlan? plan, required double velocityDx, required RaiArm armFrom, required RaiArm armTo}) {
+/// 移動曲線の接線 → ヨー (D-195): 画面で下(手前)へ進む = 正面 0、上(奥)= 背中 180°、右 = −90°、左 = +90°。
+double raiTangentYaw(Offset tangent) => tangent.distance < 0.01 ? 0 : math.atan2(-tangent.dx, tangent.dy);
+
+/// a → b の最短の差(−π..π)。
+double raiYawDelta(double a, double b) {
+  var d = (b - a) % (2 * math.pi);
+  if (d > math.pi) d -= 2 * math.pi;
+  if (d < -math.pi) d += 2 * math.pi;
+  return d;
+}
+
+/// 移動中のヨー (D-195): **移動曲線の接線に合わせる**。起動の段で出発側の向きから接線へ、走行中は接線、
+/// 停止の段でその場で(最短の回転で)到着側の向き(到着時に上げる腕が基準)に合わせる。短距離も同じ。
+double raiYawAt(double progress, {required RaiMotionPlan? plan, required Offset tangent, required RaiArm armFrom, required RaiArm armTo}) {
   final t = progress.clamp(0.0, 1.0);
   final restTo = raiRestYawFor(armTo);
   if (plan == null || t >= 1) return restTo;
   final restFrom = raiRestYawFor(armFrom);
+  final along = raiTangentYaw(tangent);
   double smooth(double x) => x * x * (3 - 2 * x);
-  if (!plan.long) return restFrom + (restTo - restFrom) * smooth(t);
-  final dir = velocityDx >= 0 ? -1.0 : 1.0;
-  final travel = dir * raiTravelYaw;
-  final back = dir * raiBackYaw;
-  // 到着側の向きを、背中(±180°)からさらに同じ方向へ回った先の等価角に置く(旋回して合わせる)。
-  final finalYaw = restTo + dir * 2 * math.pi;
   final startEnd = plan.steps.first.fraction;
   final stopStart = 1 - plan.steps.last.fraction;
-  if (t < startEnd) return restFrom + (travel - restFrom) * smooth(t / startEnd);
-  if (t < 0.5) return travel + (back - travel) * smooth((t - startEnd) / (0.5 - startEnd));
-  if (t < stopStart) return back;
-  return back + (finalYaw - back) * smooth((t - stopStart) / (1 - stopStart));
+  if (t < startEnd) return restFrom + raiYawDelta(restFrom, along) * smooth(t / startEnd);
+  if (t < stopStart) return along;
+  return along + raiYawDelta(along, restTo) * smooth((t - stopStart) / (1 - stopStart));
 }

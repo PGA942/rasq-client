@@ -24,6 +24,17 @@ final listsProvider = FutureProvider.autoDispose<List<UserListInfo>>((ref) async
   return s.lists();
 });
 
+/// 保存済みのカスタムフィード (D-195): Bluesky など持つ SNS だけ。無ければ空。
+final savedFeedsProvider = FutureProvider.autoDispose<List<FeedInfo>>((ref) async {
+  final s = ref.watch(currentSnsSessionProvider);
+  if (s == null) return const [];
+  try {
+    return await s.savedFeeds();
+  } catch (_) {
+    return const [];
+  }
+});
+
 final listMembersProvider = FutureProvider.autoDispose.family<List<UserSummary>, String>((ref, id) async {
   final s = ref.watch(currentSnsSessionProvider);
   if (s == null) return const [];
@@ -99,7 +110,10 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
               // 入口。詳細はクリップTL)。既定は公開ネイティブのみ — 非公開は
               // 入力欄のフィルタで表示切替、RASQ 横断はブックマーク欄へ。
               final clips = ref.watch(listsClipsProvider).where((c) => _q.isEmpty || c.name.toLowerCase().contains(_q)).toList();
-              if (list.isEmpty && clips.isEmpty) return const RasqEmptyView(title: 'リストはありません', hint: '＋でリストを作成できます');
+              // カスタムフィード (D-195): Bluesky は「公開リスト」と「カスタムフィード」で欄を分ける。
+              final feeds = (ref.watch(savedFeedsProvider).value ?? const <FeedInfo>[]).where((f) => _q.isEmpty || f.name.toLowerCase().contains(_q)).toList();
+              final bluesky = ref.watch(currentSnsSessionProvider)?.account.kind == SnsKind.bluesky;
+              if (list.isEmpty && clips.isEmpty && feeds.isEmpty) return const RasqEmptyView(title: 'リストはありません', hint: '＋でリストを作成できます');
               Widget listRow(UserListInfo l) => InkWell(
                     onTap: () => context.push('/lists/${Uri.encodeComponent(l.id)}', extra: l),
                     child: Padding(
@@ -136,14 +150,37 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
                       ]),
                     ),
                   );
+              Widget feedRow(FeedInfo f) => InkWell(
+                    key: ValueKey('lists.feed.${f.uri}'),
+                    onTap: () => context.push(Routes.feed(f.uri), extra: f),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.md),
+                      child: Row(children: [
+                        Container(width: 48, height: 48, decoration: BoxDecoration(color: scheme.surfaceContainerHighest, shape: BoxShape.circle), child: const Icon(Icons.rss_feed)),
+                        const SizedBox(width: RasqSpacing.md),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(f.name, style: RasqTypography.displayName),
+                            Text([if (f.creator != null) '@${f.creator}', if (f.likeCount != null) '♥ ${f.likeCount}'].join(' ・ '), style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
+                            if (f.description != null && f.description!.isNotEmpty) Text(f.description!, maxLines: 2, overflow: TextOverflow.ellipsis, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                          ]),
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ]),
+                    ),
+                  );
               return ListView(children: [
                 if (clips.isNotEmpty) ...[
                   const RasqSectionHeader(title: 'クリップ', topMargin: 0),
                   for (final c in clips) ...[clipRow(c), const Divider(height: 1)],
                 ],
                 if (list.isNotEmpty) ...[
-                  if (clips.isNotEmpty) const RasqSectionHeader(title: 'リスト', topMargin: RasqSpacing.md),
+                  if (clips.isNotEmpty || bluesky) RasqSectionHeader(title: bluesky ? '公開リスト' : 'リスト', topMargin: clips.isNotEmpty ? RasqSpacing.md : 0),
                   for (final l in list) ...[listRow(l), const Divider(height: 1)],
+                ],
+                if (feeds.isNotEmpty) ...[
+                  RasqSectionHeader(title: 'カスタムフィード', topMargin: list.isNotEmpty || clips.isNotEmpty ? RasqSpacing.md : 0),
+                  for (final f in feeds) ...[feedRow(f), const Divider(height: 1)],
                 ],
               ]);
             },
@@ -229,6 +266,33 @@ class ListDetailScreen extends ConsumerWidget {
                 : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+/// カスタムフィードの TL (D-195): `feed:<uri>` の投稿列。歯車で TL カスタマイズ(スコープ `tl.feed:<uri>`)。
+class FeedTimelineScreen extends ConsumerWidget {
+  const FeedTimelineScreen({super.key, required this.uri, this.info});
+  final String uri;
+  final FeedInfo? info;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final kind = TimelineKind('feed:$uri', info?.name ?? 'フィード');
+    final tl = ref.watch(timelineProvider(kind));
+    final notifier = ref.read(timelineProvider(kind).notifier);
+    final actions = ref.watch(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[];
+    return Scaffold(
+      appBar: RasqPageHeader(
+        title: info?.name ?? 'フィード',
+        onMore: () {},
+        actions: [RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'フィードTL設定', onPressed: () => context.push(Routes.tlConfig('tl.feed:$uri')))],
+      ),
+      body: tl.when(
+        loading: () => const RasqLoading(),
+        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
+        data: (s) => s.posts.isEmpty ? const RasqEmptyView(title: '投稿はありません') : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier),
       ),
     );
   }
