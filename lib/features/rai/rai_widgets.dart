@@ -512,7 +512,14 @@ const raiBodyInset = 0.22;
 
 /// 目標の矩形に対して RAi を置く位置(上下左右の空いている側)。体が部品の端に**付く**ように、箱の余白ぶん寄せる (D-196)。
 /// 画面下の [reservedBottom](RAi バー + フッター)には置かない — 下の方の部品は上側から指差す。
-Offset raiAnchorFor(Rect target, Size screen, {double mascot = 72, double reservedBottom = 180}) {
+Offset raiAnchorFor(Rect target, Size screen, {double mascot = 72, double reservedBottom = 180}) => raiPlaceFor(target, screen, mascot: mascot, reservedBottom: reservedBottom).pos;
+
+/// 置き場所 (D-203): 上下左右に空きが無ければ [cramped](半透明で出す)。そのときは優先順の先頭の側へ、
+/// **胴体(頭 + コーン)が画面に完全に入る**ところまで寄せる(手とアンテナははみ出してよい)。
+/// 目標の下側に空きが無いときは [armsDown](手を下ろした静止)。
+typedef RaiPlacement = ({Offset pos, bool cramped, bool armsDown});
+
+RaiPlacement raiPlaceFor(Rect target, Size screen, {double mascot = 72, double reservedBottom = 180}) {
   final inset = mascot * raiBodyInset;
   final left = Offset(target.left - mascot / 2 + inset, target.center.dy);
   final right = Offset(target.right + mascot / 2 - inset, target.center.dy);
@@ -521,9 +528,19 @@ Offset raiAnchorFor(Rect target, Size screen, {double mascot = 72, double reserv
   final lowOnScreen = target.center.dy > screen.height - reservedBottom - mascot;
   final candidates = lowOnScreen ? [top, left, right, bottom] : [left, right, top, bottom];
   for (final c in candidates) {
-    if (c.dx - mascot / 2 + inset >= 0 && c.dx + mascot / 2 - inset <= screen.width && c.dy - mascot * 0.7 >= 0 && c.dy + mascot * 0.7 <= screen.height - reservedBottom) return c;
+    if (c.dx - mascot / 2 + inset >= 0 && c.dx + mascot / 2 - inset <= screen.width && c.dy - mascot * 0.7 >= 0 && c.dy + mascot * 0.7 <= screen.height - reservedBottom) {
+      return (pos: c, cramped: false, armsDown: false);
+    }
   }
-  return Offset(screen.width / 2, math.max(mascot, target.top - mascot * 0.7));
+  // 空きが無い: 胴体(腕を除く半幅 0.28、アンテナを除く上 0.5、下 0.625)が入るところまで寄せる。
+  final c = candidates.first;
+  final halfW = mascot * 0.28;
+  final up = mascot * 0.5;
+  final down = mascot * 0.625;
+  final x = c.dx.clamp(halfW, math.max(halfW, screen.width - halfW)).toDouble();
+  final y = c.dy.clamp(up, math.max(up, screen.height - reservedBottom - down)).toDouble();
+  final roomBelow = target.bottom + mascot * 1.4 <= screen.height - reservedBottom;
+  return (pos: Offset(x, y), cramped: true, armsDown: !roomBelow);
 }
 
 /// 発言の履歴 (D-187): タイル = 全文(選択可)+ Q + 時刻、コピー。失敗は赤枠。新しい順。

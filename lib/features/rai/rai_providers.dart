@@ -417,18 +417,38 @@ class RaiController extends Notifier<RaiState> {
       }
     }
     // 部品の矩形を探す(画面遷移 / FOW のアニメーション直後は少し待つ)。
+    // 遷移のアニメーション中に取った矩形はずれる (D-203): 2 回続けて同じ矩形になるまで待つ。
     Rect? rect;
     if (step.hasTarget) {
-      for (var attempt = 0; attempt < 10 && rect == null; attempt++) {
+      Rect? prev;
+      for (var attempt = 0; attempt < 14 && rect == null; attempt++) {
         await WidgetsBinding.instance.endOfFrame;
         if (attempt > 0) await Future<void>.delayed(const Duration(milliseconds: 120));
         if (state.stepIndex != i) return;
-        rect = locateWidgetRect(tooltip: step.tooltip, text: step.label);
+        final r = locateWidgetRect(tooltip: step.tooltip, text: step.label);
+        if (r != null && r == prev) rect = r;
+        prev = r;
       }
+      rect ??= prev;
     }
     if (state.stepIndex != i) return; // 途中で別の質問に変わった
     state = state.copyWith(busy: false, bubble: step.text, target: rect, lineIndex: 0);
     _record(step.text);
+    if (rect != null) unawaited(_followTarget(i, step));
+  }
+
+  /// 指した後もしばらく矩形を追う (D-203): 遷移の終わり / 一覧の読み込みでずれたら目標を更新する。
+  /// タイマーは使わずフレームで数える(描画が止まっていれば追わない)。
+  Future<void> _followTarget(int i, RaiStep step) async {
+    final seq = _answerSeq;
+    for (var k = 0; k < 4; k++) {
+      for (var f = 0; f < 10; f++) {
+        await WidgetsBinding.instance.endOfFrame;
+      }
+      if (state.stepIndex != i || seq != _answerSeq || state.target == null || state.mode != RaiMode.instruction) return;
+      final r = locateWidgetRect(tooltip: step.tooltip, text: step.label);
+      if (r != null && r != state.target) state = state.copyWith(target: r);
+    }
   }
 }
 

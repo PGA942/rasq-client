@@ -147,7 +147,15 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
       backgroundColor: Colors.black,
       body: Stack(children: [
         GestureDetector(
-          onTap: () => setState(() => _chrome = !_chrome),
+          // タップ (D-203): 下側の FOW が消えていれば開き直す(開く手段が無くならないように)。出ていれば上のクロームの表示切替。
+          // 動画の面のタップでは再生を止めない。
+          onTap: () {
+            if (!manager.contains(viewerFowId)) {
+              _openPanel();
+              return;
+            }
+            setState(() => _chrome = !_chrome);
+          },
           child: PageView.builder(
             controller: _ctrl,
             itemCount: post.media.length,
@@ -170,7 +178,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                       ? Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.insert_drive_file_outlined, color: Colors.white, size: 64), Text(m.fileName ?? '', style: const TextStyle(color: Colors.white))])
                       : m.type == MediaType.video
                           // 動画 (D-200 → D-201): 面はタップで再生 / 一時停止。操作は下側の FOW。
-                          ? RasqVideoView(key: ValueKey('viewer.video.${m.id}'), session: _session(i))
+                          ? RasqVideoView(key: ValueKey('viewer.video.${m.id}'), session: _session(i), tapToggles: false)
                           : _overlays.wrap(i, Image.network(m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
                 ),
               );

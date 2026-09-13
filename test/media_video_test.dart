@@ -9,6 +9,7 @@ import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/home/post_row.dart';
 import 'package:rasq_client/features/media/media_viewer_screen.dart';
 import 'package:rasq_client/features/media/video_player.dart';
+import 'package:rasq_client/features/post/post_detail_screen.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -83,6 +84,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RasqVideoView), findsOneWidget);
     expect(find.byKey(const ValueKey('video.controls')), findsOneWidget);
+    // FOW が消えても、面のタップで開き直せる (D-203)。面のタップは再生を止めない(トグルのジェスチャーは無い)。
+    expect(find.byKey(const ValueKey('viewer.video.toggle')), findsNothing);
+    c.read(overlayManagerProvider).close(viewerFowId);
+    await tester.pumpAndSettle();
+    expect(find.byKey(viewerPanelKey), findsNothing);
+    await tester.tapAt(const Offset(180, 300));
+    await tester.pumpAndSettle();
+    expect(find.byKey(viewerPanelKey), findsOneWidget);
     // ビューワーを閉じると FOW も閉じる。
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
@@ -119,8 +128,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('viewer.video.error')), findsOneWidget);
     expect(find.byType(MediaViewerScreen), findsNothing); // ビューアは開かない
-    await tester.tap(find.text('閉じる').last);
+    // 動画の下に投稿のインラインフレーム(「リアクションを表示」ページと同じ、D-203)→ タップでスレッド展開画面、FOW は閉じる。
+    expect(find.byKey(const ValueKey('video.fow.post')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('video.fow.post')));
     await tester.pumpAndSettle();
+    expect(find.byType(PostDetailScreen), findsOneWidget);
     expect(find.byType(VideoPlayerBlock), findsNothing);
   });
 }
