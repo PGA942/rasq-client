@@ -16,6 +16,7 @@ import '../compose/composer_sheet.dart';
 import '../compose/emoji_picker_fow.dart';
 import 'reaction_history.dart';
 import '../post/post_menu.dart';
+import '../media/video_player.dart';
 import '../post/share_fow.dart';
 import '../plugins/slot_plugins.dart';
 import '../vc/astell_post_share.dart';
@@ -200,7 +201,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       bannerText: widget.bannerText,
       dense: widget.dense,
       content: content,
-      media: !collapsible && !hasCw && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, maxVisible: widget.showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i])) : null,
+      media: !collapsible && !hasCw && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, maxVisible: widget.showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]), onPlayTile: (i) => showVideoFow(ref, mediaItems[i], column: fowColumnOf(context))) : null,
       poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
       quote: !collapsible && !hasCw && post.quote != null ? (widget.compactQuote ? InlinePostFrame(post: post.quote!) : quoteTile(context, post.quote!, emojis: emojis, safety: safety)) : null,
       actionBar: widget.actions.isEmpty && post.reactions.isEmpty
