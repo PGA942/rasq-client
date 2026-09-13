@@ -12,8 +12,11 @@ import 'rai_providers.dart';
 /// 体 = コーン)を 2D で。gltf / three.js 相当のモーションは第一期では簡易(位置の
 /// スプライン移動 + 指差し方向で少し傾く)。
 class RaiMascot extends ConsumerWidget {
-  const RaiMascot({super.key, this.size = 96, this.tilt = 0, this.pointing, this.controller3d, this.opacity = 1});
+  const RaiMascot({super.key, this.size = 96, this.tilt = 0, this.pointing, this.controller3d, this.opacity = 1, this.flat = false});
   final double size;
+
+  /// 常に 2D で描く (D-202): 小さいアイコン用。three_js のインスタンスを増やすと空間モードの描画が壊れる。
+  final bool flat;
 
   /// 薄く表示(アシスタントのスタンバイ)。
   final double opacity;
@@ -29,7 +32,7 @@ class RaiMascot extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final three = ref.watch(raiMascot3dProvider);
+    final three = !flat && ref.watch(raiMascot3dProvider);
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Semantics(
       label: 'RAi',
@@ -117,7 +120,7 @@ class RaiIcon extends StatelessWidget {
         height: size,
         decoration: const BoxDecoration(color: RasqColors.yellow, shape: BoxShape.circle),
         alignment: Alignment.center,
-        child: RaiMascot(size: size * 0.55),
+        child: RaiMascot(size: size * 0.55, flat: true),
       );
 }
 

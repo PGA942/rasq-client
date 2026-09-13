@@ -388,6 +388,38 @@ void main() {
     debugNetworkImageHttpClientProvider = null; // テスト本体の中で戻す(不変条件の検査は tearDown より前)
   });
 
+
+  testWidgets('media viewer with the dark video FOW (D-202)', (tester) async {
+    // 画像 URL は全部グラデーション PNG を返す(動画は初期化できないのでサムネイル + 案内)。
+    debugNetworkImageHttpClientProvider = () => _PngHttpClient(png);
+    final author = UserSummary(id: 'u1', account: acc, displayName: 'テスター', avatarUrl: Uri.parse('https://example.test/avatar.png'));
+    final withVideo = Post(
+      id: 'pv',
+      account: acc,
+      author: author,
+      createdAt: DateTime(2026, 9, 13),
+      body: '昨日のライブの動画。最後の曲だけ切り出しました',
+      media: [
+        MediaItem(id: 'v', type: MediaType.video, url: Uri.parse('https://example.test/v.mp4'), thumbnailUrl: Uri.parse('https://example.test/thumb.png')),
+        MediaItem(id: 'i', type: MediaType.image, url: Uri.parse('https://example.test/i.png')),
+      ],
+    );
+    await pump(tester, posts: [withVideo]);
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(routerProvider).push(Routes.viewer, extra: (post: withVideo, index: 0));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    // 折りたたみ: 動画の操作 + アクションバー。
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_viewer_video_fow.png'));
+    // ハンドルを上へ → 展開: 投稿のインライン表示まで。
+    await tester.drag(find.bySemanticsLabel('サイズ変更ハンドル'), const Offset(0, -350));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_viewer_video_fow_expanded.png'));
+    debugNetworkImageHttpClientProvider = null;
+  });
   testWidgets('RAi home + instruction pointing (D-179)', (tester) async {
     final c = await pump(tester);
     RasqSidebar.open(c.read(overlayManagerProvider));

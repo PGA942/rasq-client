@@ -440,18 +440,23 @@ class _FowColumn extends StatelessWidget {
                   alignment: topSide ? Alignment.topCenter : Alignment.bottomCenter,
                   minHeight: 0,
                   maxHeight: double.infinity,
-                  child: _FowPanel(
-                    entry: e,
-                    height: h,
-                    // 最前面(最新)のパネルだけ影付き (D-052: 複数 FOW の判別)。
-                    frontmost: identical(e, frontmostEntry),
-                    topSide: topSide,
-                    anchored: anchor != null,
-                    onCancel: () => onCancel(e),
-                    onConfirm: () => onConfirm(e),
-                    onShowSwitcher: onShowSwitcher,
-                    child: buildContent(e),
-                  ),
+                  // パネルのテーマ (D-202): 指定があればクロームごと差し替える(ビューワーのダーク FOW)。
+                  child: Builder(builder: (ctx) {
+                    final panel = _FowPanel(
+                      entry: e,
+                      height: h,
+                      // 最前面(最新)のパネルだけ影付き (D-052: 複数 FOW の判別)。
+                      frontmost: identical(e, frontmostEntry),
+                      topSide: topSide,
+                      anchored: anchor != null,
+                      onCancel: () => onCancel(e),
+                      onConfirm: () => onConfirm(e),
+                      onShowSwitcher: onShowSwitcher,
+                      child: buildContent(e),
+                    );
+                    final theme = s.theme;
+                    return theme == null ? panel : Theme(data: theme(ctx), child: panel);
+                  }),
                 ),
               ),
               ),
