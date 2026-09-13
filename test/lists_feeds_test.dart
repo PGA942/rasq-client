@@ -17,7 +17,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'support/fakes.dart';
 
 /// D-195: Bluesky アカウントのリストページは「公開リスト」と「カスタムフィード」で欄を分け、
-/// フィードはタップでその TL ページ(歯車で TL 設定、スコープ tl.feed:<uri>)。Misskey 側は従来どおり。
+/// フィードはタップでその TL ページ(歯車で TL 設定、スコープ `tl.feed:<uri>`)。Misskey 側は従来どおり。
 void main() {
   const feeds = [FeedInfo(uri: 'at://did:plc:x/app.bsky.feed.generator/cats', name: 'Cats', description: 'ねこのフィード', likeCount: 3, creator: 'cat.bsky.social')];
   final bsky = AccountSession(account: const AccountId(kind: SnsKind.bluesky, instance: 'bsky.social', handle: 'alice.bsky.social'), pluginId: 'test.bsky', token: 't', createdAt: DateTime(2026, 9, 1), displayName: 'アリス');
@@ -40,18 +40,18 @@ void main() {
     return c;
   }
 
-  testWidgets('Bluesky: 公開リスト / カスタムフィードの欄、フィード → TL ページ → 歯車で tl.feed スコープ', (tester) async {
-    await pump(tester, blueskyCurrent: true);
+  testWidgets('Bluesky: 上部メニュー「リスト / カスタムフィード」、フィード → TL ページ → 歯車で tl.feed スコープ、インポートは検索 / URL', (tester) async {
+    final c = await pump(tester, blueskyCurrent: true);
     expect(find.byType(ListsScreen), findsOneWidget);
-    expect(find.text('公開リスト'), findsOneWidget);
-    expect(find.text('Fediverse Banner'), findsOneWidget); // フェイクのリスト
-    expect(find.text('カスタムフィード'), findsOneWidget);
+    expect(find.text('Fediverse Banner'), findsOneWidget); // 「リスト」タブ(フェイクのリスト)
+    expect(find.text('カスタムフィード'), findsOneWidget); // タブ
+    await tester.tap(find.text('カスタムフィード'));
+    await tester.pumpAndSettle();
     expect(find.text('Cats'), findsOneWidget);
     expect(find.text('@cat.bsky.social ・ ♥ 3'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('lists.feed.at://did:plc:x/app.bsky.feed.generator/cats')));
     await tester.pumpAndSettle();
     expect(find.byType(FeedTimelineScreen), findsOneWidget);
-    expect(find.text('Cats'), findsWidgets); // ヘッダー
     await tester.tap(find.byTooltip('フィードTL設定'));
     await tester.pumpAndSettle();
     expect(find.byType(TimelineConfigScreen), findsOneWidget);
@@ -59,12 +59,33 @@ void main() {
     expect(cfg.sources.single.isFeed, isTrue);
     expect(cfg.sources.single.feedUri, 'at://did:plc:x/app.bsky.feed.generator/cats');
     expect(defaultTlConfig('tl.featured').sources.single.tl, 'featured'); // 宣言どおりの id も通る
+    // インポート: 検索 / URL → リストタイル → タップでフィード TL。
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(ListsScreen), findsOneWidget);
+    await tester.tap(find.byTooltip('リストのインポート'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('lists.import.search')), findsOneWidget);
+    expect(find.text('検索語か URL を入れてください'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('lists.import.search')), 'cat');
+    await tester.pumpAndSettle();
+    expect(find.text('検索結果'), findsOneWidget);
+    expect(find.text('Cats'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('lists.feed.at://did:plc:x/app.bsky.feed.generator/cats')));
+    await tester.pumpAndSettle();
+    expect(find.byType(FeedTimelineScreen), findsOneWidget);
   });
 
-  testWidgets('Misskey: 欄は「リスト」のまま、カスタムフィードは出ない', (tester) async {
+  testWidgets('Misskey: タブ無し、カスタムフィードは出ない、インポートは従来', (tester) async {
     await pump(tester, blueskyCurrent: false);
-    expect(find.text('公開リスト'), findsNothing);
     expect(find.text('カスタムフィード'), findsNothing);
     expect(find.text('Fediverse Banner'), findsOneWidget);
+    expect(find.byTooltip('リストを作成'), findsOneWidget);
+    await tester.tap(find.byTooltip('リストのインポート'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('lists.import.search')), findsNothing);
+    expect(find.text('ローカルからインポート'), findsOneWidget);
   });
 }

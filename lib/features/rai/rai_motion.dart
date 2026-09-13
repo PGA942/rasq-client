@@ -116,29 +116,65 @@ const raiRestYaw = 30 * math.pi / 180;
 
 double raiRestYawFor(RaiArm arm) => switch (arm) { RaiArm.left => -raiRestYaw, RaiArm.right => raiRestYaw, RaiArm.none => 0 };
 
-/// 移動曲線の接線 → ヨー (D-195): 画面で下(手前)へ進む = 正面 0、上(奥)= 背中 180°、右 = −90°、左 = +90°。
+/// 移動曲線の接線 → ヨー: 画面で下(手前)へ進む = 正面 0、上(奥)= 背中 180°、右 = −90°、左 = +90°。
 double raiTangentYaw(Offset tangent) => tangent.distance < 0.01 ? 0 : math.atan2(-tangent.dx, tangent.dy);
 
-/// a → b の最短の差(−π..π)。
-double raiYawDelta(double a, double b) {
-  var d = (b - a) % (2 * math.pi);
+/// −π..π に畳む。
+double raiWrap(double a) {
+  var d = a % (2 * math.pi);
   if (d > math.pi) d -= 2 * math.pi;
   if (d < -math.pi) d += 2 * math.pi;
   return d;
 }
 
-/// 移動中のヨー (D-195): **移動曲線の接線に合わせる**。起動の段で出発側の向きから接線へ、走行中は接線、
+/// a → b の最短の差(−π..π)。
+double raiYawDelta(double a, double b) => raiWrap(b - a);
+
+/// 走行中の顔の向き (D-196): **接線と直交**(横向きに走る)。2 つの候補のうち正面(0°)に近い方、
+/// 同じなら到着時に上げる腕の側(左腕 = 左向き)。
+double raiFaceYaw(Offset tangent, {RaiArm arm = RaiArm.none}) {
+  if (tangent.distance < 0.01) return 0;
+  final t = raiTangentYaw(tangent);
+  final a = raiWrap(t + math.pi / 2);
+  final b = raiWrap(t - math.pi / 2);
+  if ((a.abs() - b.abs()).abs() < 1e-6) {
+    return switch (arm) { RaiArm.left => a > 0 ? a : b, RaiArm.right => a < 0 ? a : b, RaiArm.none => a };
+  }
+  return a.abs() < b.abs() ? a : b;
+}
+
+/// 走行開始 / 終了の小さな円運動 (D-196): 起動の段と停止の段で半径 [radius] の円を 1 周する(端点では 0)。
+/// [clockwise] は山なりと同じ向き(右へ進むなら時計回り)。
+Offset raiLoopOffset(double progress, {required RaiMotionPlan? plan, required double radius, bool clockwise = true}) {
+  if (plan == null) return Offset.zero;
+  final t = progress.clamp(0.0, 1.0);
+  final startEnd = plan.steps.first.fraction;
+  final stopStart = 1 - plan.steps.last.fraction;
+  double phase;
+  if (t < startEnd) {
+    phase = t / startEnd;
+  } else if (t >= stopStart && t < 1) {
+    phase = (t - stopStart) / (1 - stopStart);
+  } else {
+    return Offset.zero;
+  }
+  final a = 2 * math.pi * phase * (clockwise ? 1 : -1);
+  // 円の上端から出発して 1 周(出発点に戻る)。
+  return Offset(radius * math.sin(a), radius * (1 - math.cos(a)) * -1);
+}
+
+/// 移動中のヨー (D-195 → D-196): 起動の段で出発側の向きから走行の顔(接線と直交)へ、走行中はその顔、
 /// 停止の段でその場で(最短の回転で)到着側の向き(到着時に上げる腕が基準)に合わせる。短距離も同じ。
 double raiYawAt(double progress, {required RaiMotionPlan? plan, required Offset tangent, required RaiArm armFrom, required RaiArm armTo}) {
   final t = progress.clamp(0.0, 1.0);
   final restTo = raiRestYawFor(armTo);
   if (plan == null || t >= 1) return restTo;
   final restFrom = raiRestYawFor(armFrom);
-  final along = raiTangentYaw(tangent);
+  final face = raiFaceYaw(tangent, arm: armTo);
   double smooth(double x) => x * x * (3 - 2 * x);
   final startEnd = plan.steps.first.fraction;
   final stopStart = 1 - plan.steps.last.fraction;
-  if (t < startEnd) return restFrom + raiYawDelta(restFrom, along) * smooth(t / startEnd);
-  if (t < stopStart) return along;
-  return along + raiYawDelta(along, restTo) * smooth((t - stopStart) / (1 - stopStart));
+  if (t < startEnd) return restFrom + raiYawDelta(restFrom, face) * smooth(t / startEnd);
+  if (t < stopStart) return face;
+  return face + raiYawDelta(face, restTo) * smooth((t - stopStart) / (1 - stopStart));
 }

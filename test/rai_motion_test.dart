@@ -71,28 +71,35 @@ void main() {
     expect(raiMascot3dProvider, isNotNull);
   });
 
-  test('ヨー (D-195): 静止は指差す側へ 30°、移動中は曲線の接線(右 −90° / 上 180° / 下 0°)、起動 / 停止の段で向き替え', () {
+  test('ヨー (D-196): 走行中の顔は接線と直交(正面に近い側)、起動 / 停止の段で向き替え', () {
     expect(raiRestYawFor(RaiArm.left), closeTo(-30 * math.pi / 180, 1e-9));
     expect(raiRestYawFor(RaiArm.right), closeTo(30 * math.pi / 180, 1e-9));
     expect(raiTangentYaw(const Offset(1, 0)), closeTo(-math.pi / 2, 1e-9));
-    expect(raiTangentYaw(const Offset(-1, 0)), closeTo(math.pi / 2, 1e-9));
-    expect(raiTangentYaw(const Offset(0, -1)).abs(), closeTo(math.pi, 1e-9));
-    expect(raiTangentYaw(const Offset(0, 1)), closeTo(0, 1e-9));
-    expect(raiYawDelta(170 * math.pi / 180, -170 * math.pi / 180), closeTo(20 * math.pi / 180, 1e-9)); // 最短
+    // 右へ走る = 顔は正面(0°)。左へ走る = 正面。上へ走る(接線 180°)= 横向き ±90°(腕の側)。
+    expect(raiFaceYaw(const Offset(1, 0)), closeTo(0, 1e-9));
+    expect(raiFaceYaw(const Offset(-1, 0)), closeTo(0, 1e-9));
+    expect(raiFaceYaw(const Offset(0, -1), arm: RaiArm.left), closeTo(math.pi / 2, 1e-9));
+    expect(raiFaceYaw(const Offset(0, -1), arm: RaiArm.right), closeTo(-math.pi / 2, 1e-9));
+    expect(raiFaceYaw(const Offset(1, 1)).abs(), closeTo(math.pi / 4, 1e-9));
     final long = planRaiMotion(from: const Offset(40, 100), to: const Offset(300, 600), columnWidth: 360, centerX: 180, armFrom: RaiArm.left, armTo: RaiArm.right);
-    // 走行中は接線そのもの。
-    expect(raiYawAt(0.5, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-math.pi / 2, 1e-9));
-    expect(raiYawAt(0.5, plan: long, tangent: const Offset(0, -2), armFrom: RaiArm.left, armTo: RaiArm.right).abs(), closeTo(math.pi, 1e-9));
-    // 起動: 出発側(−30°)から接線へ。停止: 接線から到着側(+30°)へ。
+    expect(raiYawAt(0.5, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(0, 1e-9));
     expect(raiYawAt(0, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-30 * math.pi / 180, 1e-9));
-    final mid = raiYawAt(0.1, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right);
-    expect(mid, inExclusiveRange(-math.pi / 2, -30 * math.pi / 180));
-    final stopping = raiYawAt(0.9, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right);
-    expect(stopping, inExclusiveRange(-math.pi / 2, 30 * math.pi / 180));
     expect(raiYawAt(1, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(30 * math.pi / 180, 1e-9));
-    // 短距離も接線に合わせる。
-    final short = planRaiMotion(from: const Offset(60, 300), to: const Offset(120, 380), columnWidth: 360, centerX: 180, armFrom: RaiArm.right, armTo: RaiArm.left);
-    expect(raiYawAt(0.5, plan: short, tangent: const Offset(0, 1), armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(0, 1e-9));
+    final stopping = raiYawAt(0.9, plan: long, tangent: const Offset(1, 0), armFrom: RaiArm.left, armTo: RaiArm.right);
+    expect(stopping, inExclusiveRange(0, 30 * math.pi / 180));
     expect(raiYawAt(0.5, plan: null, tangent: Offset.zero, armFrom: RaiArm.none, armTo: RaiArm.none), 0);
+  });
+
+  test('円運動 (D-196): 起動 / 停止の段で小さな円を 1 周し、段の端では 0、走行中も 0', () {
+    final long = planRaiMotion(from: const Offset(40, 100), to: const Offset(300, 600), columnWidth: 360, centerX: 180, armFrom: RaiArm.left, armTo: RaiArm.right);
+    expect(raiLoopOffset(0, plan: long, radius: 40), Offset.zero);
+    expect(raiLoopOffset(0.1, plan: long, radius: 40).distance, greaterThan(1)); // 起動の途中
+    expect((raiLoopOffset(0.2, plan: long, radius: 40)).distance, lessThan(1e-6)); // 起動の終わり = 1 周
+    expect(raiLoopOffset(0.5, plan: long, radius: 40), Offset.zero); // 走行中
+    expect(raiLoopOffset(0.9, plan: long, radius: 40).distance, greaterThan(1)); // 停止の途中
+    expect(raiLoopOffset(1, plan: long, radius: 40), Offset.zero);
+    // 時計回り / 反時計回りは x の符号が逆。
+    expect(raiLoopOffset(0.05, plan: long, radius: 40).dx.sign, isNot(raiLoopOffset(0.05, plan: long, radius: 40, clockwise: false).dx.sign));
+    expect(raiLoopOffset(0.1, plan: null, radius: 40), Offset.zero);
   });
 }

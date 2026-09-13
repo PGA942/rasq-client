@@ -219,7 +219,7 @@ void main() {
     final mascotRect = tester.getRect(overlayMascot);
     expect((mascotRect.center - fab.center).distance, lessThan(raiPointSize * 1.6)); // ボタンの脇(大きさ 180 なので中心はその分離れる)
     expect(tester.getRect(find.byKey(const ValueKey('rai.toggle'))).top, lessThan(screen.height / 2)); // バーはボタンを隠さないよう上へ
-    expect(mascotRect.overlaps(fab), isFalse); // 被らない
+    expect(mascotRect.deflate(raiPointSize * raiBodyInset).overlaps(fab), isFalse); // 体は被らない(箱の余白ぶんは部品の端に付く、D-196)
     // ▶ → 2 手順目(部品が無ければ中央)、✕ → RAi は消えるがバーは残る。
     await tester.tap(find.byKey(const ValueKey('rai.next')));
     await tester.pumpAndSettle();
