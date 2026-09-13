@@ -114,7 +114,7 @@ void main() {
       final ang = math.pi * t;
       final tangent = Offset(math.cos(ang), -math.sin(ang));
       face = raiFaceYawNear(tangent, face, arm: RaiArm.right);
-      final y = raiYawAt(t, plan: long, tangent: tangent, armFrom: RaiArm.left, armTo: RaiArm.right, face: face, stopTurn: -1);
+      final y = raiYawAt(t, plan: long, tangent: tangent, armFrom: RaiArm.left, armTo: RaiArm.right, face: face, stopTurn: 1);
       if (prevOut != null) maxStep = math.max(maxStep, (y - prevOut).abs());
       prevOut = y;
     }

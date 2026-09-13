@@ -171,9 +171,14 @@ class _PostRowState extends ConsumerState<PostRow> {
 
     // アクションバー編集(ホスト構成): リスト束ね・並び替え・非表示を適用して Props 化。
     // プラグインのボタン (D-176): このアカウントのスロット設定で有効なものを、タグの近い既存ボタンのバンドルへ。
+    // 投稿が流れてきたアカウントの構成とアクションで出す (D-200): 複数サービスの合流 TL では、
+    // 現在のアカウントのバーではなく、その投稿のアカウント(SNS)のボタン群と並びに上書きする。
+    final ownSession = ref.watch(sessionForAccountProvider(post.account.key));
+    final foreign = ownSession != null && ownSession.account != ref.watch(currentAccountProvider) && widget.actions.isNotEmpty;
+    final snsActions = foreign ? ownSession.actions : widget.actions;
     final merged = mergePluginActions(
-      config: ref.watch(actionBarConfigProvider),
-      snsActions: widget.actions,
+      config: ref.watch(actionBarConfigProvider(post.account.key)),
+      snsActions: snsActions,
       plugins: ref.watch(pluginActionsProvider),
       settings: ref.watch(slotActionSettingsProvider(post.account.key)),
     );

@@ -501,6 +501,26 @@ void main() {
     }
   });
 
+  testWidgets('モード切り替えで RAi ページが自動で開閉する (D-200)', (tester) async {
+    final c = await pump(tester);
+    RasqSidebar.open(c.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RaiHomeScreen), findsOneWidget);
+    // インストラクションへ → RAi ページは閉じる。
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).mode, RaiMode.instruction);
+    expect(find.byType(RaiHomeScreen), findsNothing);
+    expect(find.byKey(const ValueKey('rai.toggle')), findsOneWidget); // バーは残る
+    // アシスタントへ → RAi ページが開く。
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).mode, RaiMode.assistant);
+    expect(find.byType(RaiHomeScreen), findsOneWidget);
+  });
+
   testWidgets('ログイン画面の「Raiのインストラクチャ」→ 入力欄付きのバー(インストラクション)', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;

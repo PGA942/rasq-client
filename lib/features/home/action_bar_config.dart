@@ -120,10 +120,18 @@ class ActionBarConfig {
       );
 }
 
-/// 投稿タイル面の構成。ホストのストレージに永続化(キー `actionBar.post.v1`)。
+/// 投稿タイル面の構成。ホストのストレージに **アカウントごと** に永続化 (D-200: キー `actionBar.post.v1.<accountKey>`。
+/// 旧来の共通キー `actionBar.post.v1` は初回の復元で引き継ぐ)。複数サービスの投稿が 1 本の TL に流れるときは、
+/// 投稿が流れてきたアカウントの構成でバーを出す。
 class ActionBarConfigStore extends Notifier<ActionBarConfig> {
+  ActionBarConfigStore(this.arg);
   static const storageKey = 'actionBar.post.v1';
+
+  /// アカウントの key('' = 旧来の共通構成)。
+  final String arg;
   bool _loaded = false;
+
+  String get _key => arg.isEmpty ? storageKey : '$storageKey.$arg';
 
   @override
   ActionBarConfig build() {
@@ -135,7 +143,8 @@ class ActionBarConfigStore extends Notifier<ActionBarConfig> {
     if (_loaded) return;
     _loaded = true;
     try {
-      final raw = await ref.read(sessionStorageProvider).read(storageKey);
+      final storage = ref.read(sessionStorageProvider);
+      final raw = await storage.read(_key) ?? (arg.isEmpty ? null : await storage.read(storageKey));
       if (raw != null) state = ActionBarConfig.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
     } catch (_) {
       // 壊れた保存値は既定にフォールバック(次の set で上書きされる)。
@@ -144,10 +153,11 @@ class ActionBarConfigStore extends Notifier<ActionBarConfig> {
 
   void set(ActionBarConfig next) {
     state = next;
-    ref.read(sessionStorageProvider).write(storageKey, jsonEncode(next.toJson()));
+    ref.read(sessionStorageProvider).write(_key, jsonEncode(next.toJson()));
   }
 
   void reset() => set(const ActionBarConfig());
 }
 
-final actionBarConfigProvider = NotifierProvider<ActionBarConfigStore, ActionBarConfig>(ActionBarConfigStore.new);
+/// アカウント(`AccountId.key`)ごとの構成。'' は旧来の共通構成。
+final actionBarConfigProvider = NotifierProvider.family<ActionBarConfigStore, ActionBarConfig, String>(ActionBarConfigStore.new);

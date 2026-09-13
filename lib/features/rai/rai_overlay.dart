@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -276,7 +277,8 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
       // 向き (D-199): 3D の接線(地面に平行な成分)を向く。スプラインの延長として途切れなく回る。
       final tan = path.tangent(t);
       if ((tan.x.abs() + tan.z.abs()) > 1e-6) _face = raiUnwrap(_face, raiYaw3(tan.x, tan.z));
-      yaw = raiYawAt(t, plan: plan, tangent: Offset.zero, armFrom: _yawArmFrom, armTo: armTo, face: _face, stopTurn: clockwise ? -1 : 1);
+      // 停止の旋回の向きは山なりと逆側から合わせる(実機で確認、D-200)。
+      yaw = raiYawAt(t, plan: plan, tangent: Offset.zero, armFrom: _yawArmFrom, armTo: armTo, face: _face, stopTurn: clockwise ? 1 : -1);
     } else {
       world = _standbyWorld ?? proj.worldAt(_pos ?? Offset(proj.screen.width / 2, proj.screen.height / 2), mascot);
       yaw = raiRestYawFor(_ctrl3d.arm);
@@ -361,10 +363,17 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
               child: DecoratedBox(decoration: BoxDecoration(border: Border.all(color: RasqColors.accent, width: 2), borderRadius: BorderRadius.circular(RasqSizes.radiusSm))),
             ),
           ),
-        if (three)
+        if (three) ...[
           // 空間モード (D-197): 画面いっぱいの固定ウィジェット。モデルだけが動く。
-          Positioned.fill(child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj, outline: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.85) : null)))
-        else
+          Positioned.fill(child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj, outline: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.85) : null))),
+          // 較正用 (D-200、デバッグビルドだけ): 写像が置いたつもりの位置と大きさ。モデルとずれていれば 3D 側の問題。
+          if (kDebugMode)
+            Positioned(
+              left: pos.dx - size / 2,
+              top: pos.dy - size * 0.625,
+              child: IgnorePointer(child: SizedBox(width: size, height: size * 1.25, child: DecoratedBox(decoration: BoxDecoration(border: Border.all(color: RasqColors.accent.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(8))))),
+            ),
+        ] else
           Positioned(
             left: pos.dx - size / 2,
             top: pos.dy - size * 0.625,
