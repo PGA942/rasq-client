@@ -20,7 +20,7 @@ import 'node_graph.dart';
 /// そのまま使われ、オート構成を壊す自由形はこの UI からは作れない。
 @immutable
 class TlSourceComponent {
-  const TlSourceComponent({this.tl = 'home', this.account = '', this.enabled = true});
+  const TlSourceComponent({this.tl = 'home', this.account = '', this.enabled = true, this.label = ''});
 
   /// TL 種別: home/social/local/global(基本 TL)、`list:<名前 or id>`
   /// (リスト系)、`trend`(現在のトレンド TL = 上位タグの検索結果合流)、
@@ -35,17 +35,24 @@ class TlSourceComponent {
   bool get isList => tl.startsWith('list:');
   bool get isSelf => tl == 'self';
   bool get isDm => tl.startsWith('dm:');
+
+  /// カスタムフィード (D-194): `feed:<at-uri>`(Bluesky。第二期以降は RASQ リストも)。
+  bool get isFeed => tl.startsWith('feed:');
   String get listName => isList ? tl.substring(5) : '';
   String get dmPeer => isDm ? tl.substring(3) : '';
+  String get feedUri => isFeed ? tl.substring(5) : '';
+
+  /// 表示名(フィードの名前など。tl だけでは読めないとき)。
+  final String label;
 
   /// アカウント表記(空 = 現在のアカウント)。
   final String account;
 
-  TlSourceComponent copyWith({String? tl, String? account, bool? enabled}) =>
-      TlSourceComponent(tl: tl ?? this.tl, account: account ?? this.account, enabled: enabled ?? this.enabled);
-  Map<String, Object?> toJson() => {'tl': tl, 'account': account, 'enabled': enabled};
+  TlSourceComponent copyWith({String? tl, String? account, bool? enabled, String? label}) =>
+      TlSourceComponent(tl: tl ?? this.tl, account: account ?? this.account, enabled: enabled ?? this.enabled, label: label ?? this.label);
+  Map<String, Object?> toJson() => {'tl': tl, 'account': account, 'enabled': enabled, if (label.isNotEmpty) 'label': label};
   factory TlSourceComponent.fromJson(Map<String, Object?> j) =>
-      TlSourceComponent(tl: j['tl'] as String? ?? 'home', account: j['account'] as String? ?? '', enabled: j['enabled'] != false);
+      TlSourceComponent(tl: j['tl'] as String? ?? 'home', account: j['account'] as String? ?? '', enabled: j['enabled'] != false, label: j['label'] as String? ?? '');
 }
 
 /// サジェストの基準の選択肢 → 取得 kind(D-121 の対応):
@@ -211,6 +218,8 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
       nodes.add(inst('tl.dm', 's$i', at, values: {'相手': s.dmPeer, 'アカウント': s.account}));
     } else if (s.isList) {
       nodes.add(inst('tl.list', 's$i', at, values: {'リスト': s.listName, 'アカウント': s.account}));
+    } else if (s.isFeed) {
+      nodes.add(inst('tl.feed', 's$i', at, values: {'フィード': s.feedUri, 'アカウント': s.account}));
     } else {
       nodes.add(inst('tl.source', 's$i', at, values: {'TL': s.tl, 'アカウント': s.account}));
     }

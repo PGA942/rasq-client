@@ -4,33 +4,38 @@ import 'package:rasq_store/rasq_store.dart';
 
 /// Fake SNS plugin/session for widget tests — serves a fixed timeline.
 class FakeSnsPlugin extends SnsPlugin {
-  FakeSnsPlugin({required this.posts});
+  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const []});
   final List<Post> Function(AccountId viewer) posts;
+  @override
+  final SnsKind kind;
+  final String id;
 
+  /// カスタムフィード (D-194): Bluesky 役のフェイクが検索で返すもの。
+  final List<FeedInfo> feeds;
   @override
-  SnsKind get kind => SnsKind.misskey;
-  @override
-  PluginManifest get manifest => const PluginManifest(id: 'test.fake', name: 'Fake', version: '0.0.1', kind: PluginKind.sns, supportedSns: [SnsKind.misskey]);
+  PluginManifest get manifest => PluginManifest(id: id, name: 'Fake', version: '0.0.1', kind: PluginKind.sns, supportedSns: [kind]);
   @override
   Future<ServerInfo> inspectServer(String host) async => ServerInfo(host: host, name: 'Fake');
   @override
   Future<AuthFlow> beginAuth(String host, {Uri? callback}) => throw UnimplementedError();
   @override
-  SnsSession open(AccountSession session) => FakeSnsSession(session, posts(session.account));
+  SnsSession open(AccountSession session) => FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind);
 }
 
 class FakeSnsSession extends SnsSessionBase {
-  FakeSnsSession(this.session, List<Post> posts) : _posts = [...posts];
+  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey}) : _posts = [...posts];
   final AccountSession session;
   final List<Post> _posts;
   final List<String> performed = [];
+  final List<FeedInfo> feeds;
+  final SnsKind kind;
 
   @override
   AccountId get account => session.account;
   @override
   String get pluginId => session.pluginId;
   @override
-  List<TimelineKind> get timelines => const [TimelineKind.home, TimelineKind.social];
+  List<TimelineKind> get timelines => kind == SnsKind.bluesky ? const [TimelineKind.home, TimelineKind('global', 'Discover')] : const [TimelineKind.home, TimelineKind.social];
   @override
   List<ActionDescriptor> get actions => const [
         ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信', icon: 'subdirectory_arrow_left'),
@@ -145,6 +150,8 @@ class FakeSnsSession extends SnsSessionBase {
   Future<List<UserListInfo>> lists() async => [UserListInfo(id: 'l1', name: 'Fediverse Banner', memberIds: [_posts.last.author.id])];
   @override
   Future<UserListInfo> listInfo(String listId) async => (await lists()).first;
+  @override
+  Future<List<FeedInfo>> searchFeeds(String query, {int limit = 20}) async => [for (final f in feeds) if (query.isEmpty || f.name.toLowerCase().contains(query.toLowerCase())) f];
   @override
   Future<List<UserSummary>> listMembers(String listId) async => [_posts.last.author];
   @override

@@ -46,6 +46,8 @@ class RaiState {
     this.hits = const [],
     this.situation,
     this.proposal,
+    this.choices = const [],
+    this.lastOperation,
   });
 
   final RaiMode mode;
@@ -89,6 +91,12 @@ class RaiState {
   /// 提案中の操作リファレンスの id。
   final String? proposal;
 
+  /// 曖昧な質問の選択肢 (D-194): 吹き出しの上に出す(id と見出し)。
+  final List<({String id, String index})> choices;
+
+  /// 直前に手順を出した操作 id(入力欄の補完は、ここから分岐する操作を優先する)。
+  final String? lastOperation;
+
   List<String> get lines => bubble == null ? const [] : splitSpeechLines(bubble!);
   String? get currentLine => lines.isEmpty ? (bubble == null ? null : '…') : lines[lineIndex.clamp(0, lines.length - 1)];
   bool get hasMoreLines => lineIndex + 1 < lines.length;
@@ -114,6 +122,8 @@ class RaiState {
     List<({String id, double score})>? hits,
     Object? situation = _keep,
     Object? proposal = _keep,
+    List<({String id, String index})>? choices,
+    Object? lastOperation = _keep,
   }) =>
       RaiState(
         mode: mode ?? this.mode,
@@ -134,6 +144,8 @@ class RaiState {
         hits: hits ?? this.hits,
         situation: identical(situation, _keep) ? this.situation : situation as String?,
         proposal: identical(proposal, _keep) ? this.proposal : proposal as String?,
+        choices: choices ?? this.choices,
+        lastOperation: identical(lastOperation, _keep) ? this.lastOperation : lastOperation as String?,
       );
 
   static const _keep = Object();
@@ -177,7 +189,7 @@ class RaiController extends Notifier<RaiState> {
 
   void dismissBubble() {
     _answerSeq++; // 生成中なら捨てる
-    state = state.copyWith(bubble: null, target: null, steps: const [], stepIndex: 0, lineIndex: 0, busy: false, proposal: null);
+    state = state.copyWith(bubble: null, target: null, steps: const [], stepIndex: 0, lineIndex: 0, busy: false, proposal: null, choices: const []);
   }
 
   /// 「質問する」 (D-189): 操作リファレンスをハイブリッド検索(ベクトル + キーワード)して手順を出す。
@@ -202,11 +214,11 @@ class RaiController extends Notifier<RaiState> {
         await _answerWithLlm(q, system: _assistantSystem);
         return;
       }
-      final op = hits.first.item;
-      final steps = index!.expand(op);
-      final text = proposalLines(op, steps).join('\n');
-      state = state.copyWith(busy: false, bubble: text, target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: op.id);
-      _record(text);
+      if (_ambiguous(hits)) {
+        _askChoice(hits);
+        return;
+      }
+      _propose(index!, hits.first.item);
       return;
     }
     final hits = index == null ? const <RaiHit<RaiOperation>>[] : await index.searchOperations(q);
@@ -217,8 +229,67 @@ class RaiController extends Notifier<RaiState> {
       await _answerWithLlm(q, system: _instructionSystem, fallbackText: 'まだ覚えていない操作です。「投稿」「ログイン」「共有」などで聞いてみてください。');
       return;
     }
-    state = state.copyWith(steps: index!.expand(hits.first.item), stepIndex: 0);
+    if (_ambiguous(hits)) {
+      _askChoice(hits);
+      return;
+    }
+    await _runOperation(index!, hits.first.item);
+  }
+
+  /// 上位 2 つのスコアが近い = 曖昧 (D-194)。
+  static bool _ambiguous(List<RaiHit<RaiOperation>> hits) => hits.length >= 2 && hits[1].score >= hits[0].score - 0.06;
+
+  void _askChoice(List<RaiHit<RaiOperation>> hits) {
+    const text = 'どれのことですか？ 上の選択肢から選んでください';
+    state = state.copyWith(busy: false, bubble: text, target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: null, choices: [for (final h in hits.take(3)) (id: h.item.id, index: h.item.index)]);
+    _record(text);
+  }
+
+  /// 選択肢を選ぶ (D-194)。
+  Future<void> pick(String id) async {
+    final index = await _index();
+    final op = index?.operation(id);
+    if (index == null || op == null) return;
+    state = state.copyWith(choices: const [], busy: true);
+    if (state.mode == RaiMode.assistant) {
+      _propose(index, op);
+    } else {
+      await _runOperation(index, op);
+    }
+  }
+
+  void _propose(RaiReferenceIndex index, RaiOperation op) {
+    final steps = index.expand(op);
+    final text = proposalLines(op, steps).join('\n');
+    state = state.copyWith(busy: false, bubble: text, target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: op.id, choices: const [], lastOperation: op.id);
+    _record(text);
+  }
+
+  Future<void> _runOperation(RaiReferenceIndex index, RaiOperation op) async {
+    state = state.copyWith(steps: index.expand(op), stepIndex: 0, choices: const [], lastOperation: op.id);
     await _showStep(0);
+  }
+
+  /// 入力欄の薄い補完 (D-194): 直前の操作から分岐する操作を優先し、見出し / タグが入力で始まるものを返す。
+  String? suggest(String typed) {
+    final q = typed.trim();
+    if (q.isEmpty) return null;
+    final index = ref.read(raiReferenceProvider).value;
+    if (index == null) return null;
+    final last = state.lastOperation;
+    final ops = [
+      if (last != null) ...index.operations.where((o) => o.base == last),
+      ...index.operations,
+    ];
+    for (final o in ops) {
+      if (o.index.startsWith(q) && o.index != q) return o.index;
+    }
+    for (final o in ops) {
+      for (final t in o.tags) {
+        if (t.startsWith(q) && o.index.contains(t)) return o.index;
+      }
+    }
+    return null;
   }
 
   /// 索引(組めていれば同期で返す。組み上がり待ちなら待つ。読めなければ null = LLM だけで答える)。
@@ -256,7 +327,7 @@ class RaiController extends Notifier<RaiState> {
   Future<void> _answerWithLlm(String q, {required String system, String? fallbackText}) async {
     final llm = ref.read(raiLlmProvider);
     final seq = ++_answerSeq;
-    state = state.copyWith(busy: true, bubble: '…', target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: null);
+    state = state.copyWith(busy: true, bubble: '…', target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: null, choices: const []);
     var text = '';
     try {
       await for (final tok in llm.chat(q, system: system)) {

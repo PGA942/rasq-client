@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
-import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
+import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession, SnsSession, TimelineKind;
 import 'package:rrl_core/rrl_core.dart';
+import 'package:rasq_models/rasq_models.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/providers.dart';
@@ -38,15 +39,47 @@ final _tlDmPeersProvider = FutureProvider<List<String>>((ref) async {
 });
 
 /// 自作リスト(リスト系ソースの候補)。
-final _tlListNamesProvider = FutureProvider<List<String>>((ref) async {
-  final s = ref.watch(currentSnsSessionProvider);
+/// アカウント表記(`@handle@instance`)→ セッション (D-194)。無ければ現在のセッション。
+SnsSession? tlSessionForLabel(Ref ref, String label) {
+  final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+  final s = sessions.where((x) => '${x.account}' == label || x.account.key == label).firstOrNull;
+  if (s == null) return ref.watch(currentSnsSessionProvider);
+  return ref.watch(sessionForAccountProvider(s.account.key));
+}
+
+/// アカウントごとのリスト (D-194)。取れない SNS は空。
+final tlListsProvider = FutureProvider.family<List<UserListInfo>, String>((ref, account) async {
+  final s = tlSessionForLabel(ref, account);
   if (s == null) return const [];
   try {
-    return [for (final l in await s.lists()) l.name];
+    return await s.lists();
   } catch (_) {
     return const [];
   }
 });
+
+/// アカウントごとの基本 TL (D-194): SNS プラグインの宣言(`sns.timelines`)から。
+final tlTimelinesProvider = Provider.family<List<TimelineKind>, String>((ref, account) {
+  final s = tlSessionForLabel(ref, account);
+  return s?.timelines ?? const [TimelineKind.home, TimelineKind.social, TimelineKind.local, TimelineKind.global];
+});
+
+/// カスタムフィードの検索 (D-194: Bluesky)。
+final tlFeedSearchProvider = FutureProvider.family<List<FeedInfo>, ({String account, String query})>((ref, key) async {
+  final s = tlSessionForLabel(ref, key.account);
+  if (s == null) return const [];
+  try {
+    return await s.searchFeeds(key.query);
+  } catch (_) {
+    return const [];
+  }
+});
+
+/// Bluesky のアカウント表記 (D-194: カスタムフィードはいまのところ Bluesky だけ)。
+final tlBlueskyAccountsProvider = Provider<List<String>>((ref) => [
+      for (final s in ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[])
+        if (s.account.kind == SnsKind.bluesky) '${s.account}',
+    ]);
 
 /// タイムラインのカスタマイズ(簡略版, D-121 — ワイヤーフレーム
 /// 「タイムラインのカスタマイズ」)。TL は **SNSタイムライン(取得元)** と
@@ -377,16 +410,22 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         },
       );
 
-  (IconData, String, String, String) _sourceInfo(TlSourceComponent s) => (
-        s.isSelf
-            ? Icons.sync_alt
-            : s.isDm
-                ? Icons.mail_outline
-                : (s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined)),
-        s.isSelf ? 'このタイムラインを取得' : (s.isDm ? 'DM取得' : (s.isTrend ? '現在のトレンドTLを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得'))),
-        s.isSelf ? 'RASQ' : (s.account.isEmpty ? '現在のアカウント' : s.account),
-        'TL: ${s.isSelf ? 'この画面の基礎タイムライン(検索結果/欄の投稿)' : s.isDm ? 'DM: @${s.dmPeer}' : s.isTrend ? 'トレンド上位タグの検索結果' : s.isList ? 'リスト: ${s.listName}' : switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', _ => 'フォロー中 (home)' }}',
-      );
+  (IconData, String, String, String) _sourceInfo(TlSourceComponent s) {
+    final kinds = ref.read(tlTimelinesProvider(s.account));
+    final tlLabel = kinds.where((k) => k.id == s.tl).firstOrNull?.label ?? switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', 'home' => 'フォロー中 (home)', _ => s.tl };
+    return (
+      s.isSelf
+          ? Icons.sync_alt
+          : s.isDm
+              ? Icons.mail_outline
+              : s.isFeed
+                  ? Icons.rss_feed
+                  : (s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined)),
+      s.isSelf ? 'このタイムラインを取得' : (s.isDm ? 'DM取得' : (s.isTrend ? '現在のトレンドTLを取得' : (s.isFeed ? 'カスタムフィードを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得')))),
+      s.isSelf ? 'RASQ' : (s.account.isEmpty ? '(現在のアカウント)' : s.account),
+      'TL: ${s.isSelf ? 'この画面の基礎タイムライン(検索結果/欄の投稿)' : s.isDm ? 'DM: @${s.dmPeer}' : s.isTrend ? 'トレンド上位タグの検索結果' : s.isFeed ? 'フィード: ${s.label.isNotEmpty ? s.label : (s.feedUri.isEmpty ? '未選択' : s.feedUri)}' : s.isList ? 'リスト: ${s.listName.isEmpty ? '未選択' : s.listName}' : tlLabel}',
+    );
+  }
 
   /// … メニュー (D-123): 詳細/一時的な無効化(解除)/ストアページ/削除。
   /// 並べ替えはアクションバー編集と同じシート([_openReorder])に移した。
@@ -782,9 +821,11 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               add: () => widget.onAddSource(TlSourceComponent(tl: 'dm:$peer'))),
       ];
     }
-    // タイムライン側 (D-122): [タイムライン, リスト系, 現在のトレンドTL] に絞る
-    // (+ このタイムライン = 基礎 TL の自己参照, D-124)。
-    final lists = ref.watch(_tlListNamesProvider).value ?? const <String>[];
+    // タイムライン側 (D-122 → D-194): [タイムライン, リストTL, カスタムフィード(Bluesky), 現在のトレンドTL]
+    // (+ このタイムライン = 基礎 TL の自己参照, D-124)。種類 / アカウント / リストは追加後のタイルで選ぶ。
+    final current = '${ref.watch(currentAccountProvider) ?? ''}';
+    final firstTl = ref.watch(tlTimelinesProvider(current)).firstOrNull?.id ?? 'home';
+    final bluesky = ref.watch(tlBlueskyAccountsProvider);
     return [
       _PaletteItem(
           icon: Icons.sync_alt,
@@ -797,17 +838,24 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
           icon: Icons.download_outlined,
           title: 'タイムライン',
           subtitle: 'SNSプラグイン',
-          description: 'SNS の基本タイムライン(フォロー中/おすすめ/ローカル/グローバル)を取り込みます。種類とアカウントは追加後のタイルで選べます。',
+          description: 'アカウントの基本タイムラインを取り込みます。種類はその SNS が出せるもの(フォロー中 / ローカル / グローバル / Discover …)から、アカウントと合わせて追加後のタイルで選べます。',
           supported: allSns,
-          add: () => widget.onAddSource(const TlSourceComponent(tl: 'home'))),
-      for (final name in lists)
+          add: () => widget.onAddSource(TlSourceComponent(tl: firstTl, account: current))),
+      _PaletteItem(
+          icon: Icons.list_alt_outlined,
+          title: 'リストTL',
+          subtitle: 'リスト系',
+          description: 'アカウントと、そのアカウントに含まれるリストのタイムラインを取り込みます(追加後のタイルで選択)。',
+          supported: sessionSns,
+          add: () => widget.onAddSource(TlSourceComponent(tl: 'list:', account: current))),
+      if (bluesky.isNotEmpty)
         _PaletteItem(
-            icon: Icons.list_alt_outlined,
-            title: 'リスト: $name',
+            icon: Icons.rss_feed,
+            title: 'カスタムフィード(Bluesky)',
             subtitle: 'リスト系',
-            description: '自作リスト「$name」のタイムラインを取り込みます。',
-            supported: sessionSns,
-            add: () => widget.onAddSource(TlSourceComponent(tl: 'list:$name'))),
+            description: 'Bluesky のカスタムフィードを検索して取り込みます(第二期以降は RASQ リストもここへ)。',
+            supported: [for (final p in ref.read(pluginRegistryProvider).plugins) if (p.kind == SnsKind.bluesky) p.manifest.name],
+            add: () => widget.onAddSource(TlSourceComponent(tl: 'feed:', account: bluesky.first))),
       _PaletteItem(
           icon: Icons.travel_explore,
           title: '現在のトレンドTL',
@@ -962,9 +1010,12 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
     }
   }
 
+  final _feedQuery = TextEditingController();
+
   @override
   void dispose() {
     _query.dispose();
+    _feedQuery.dispose();
     super.dispose();
   }
 
@@ -1020,19 +1071,27 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
         ]),
       );
     }
+    // アカウント (D-194): 「現在のアカウント」表記は無し。空(従来設定)は現在のアカウントとして扱う。
+    final current = '${ref.watch(currentAccountProvider) ?? ''}';
+    final account = s.account.isEmpty ? current : s.account;
+    final accounts = s.isFeed ? ref.watch(tlBlueskyAccountsProvider) : widget.accounts;
+    final kinds = ref.watch(tlTimelinesProvider(account));
+    final lists = s.isList ? (ref.watch(tlListsProvider(account)).value ?? const <UserListInfo>[]) : const <UserListInfo>[];
     return (
-      {'tl': s.tl, 'account': s.account.isEmpty ? '現在のアカウント' : s.account},
+      {'tl': s.tl, 'account': account},
       RrlNode(t: 'Column', c: [
-        if (!s.isTrend && !s.isList && !s.isDm) ...[
-          _section('TL 種別'),
-          _radio('tl', 'フォロー中 (home)', 'home'),
-          _radio('tl', 'おすすめ (social)', 'social'),
-          _radio('tl', 'ローカル (local)', 'local'),
-          _radio('tl', 'グローバル (global)', 'global'),
-        ],
         _section('アカウント'),
-        _radio('account', '現在のアカウント', '現在のアカウント'),
-        for (final a in widget.accounts) _radio('account', a, a),
+        for (final a in accounts) _radio('account', a, a),
+        if (!s.isTrend && !s.isList && !s.isDm && !s.isFeed) ...[
+          _section('TL 種別(この SNS が出せるもの)'),
+          for (final k in kinds) _radio('tl', k.label, k.id),
+        ],
+        if (s.isList) ...[
+          _section('リスト(このアカウントのもの)'),
+          if (lists.isEmpty) RrlNode(t: 'Text', p: {'text': 'このアカウントにはリストがありません(または取得できません)。'}),
+          for (final l in lists) _radio('tl', l.name, 'list:${l.name}'),
+        ],
+        if (s.isFeed) _section('カスタムフィード(下の欄で検索して選ぶ)'),
       ]),
     );
   }
@@ -1051,12 +1110,20 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
       ];
       widget.onUpdate(cfg.copyWith(algorithms: next));
     } else {
-      final next = [
-        for (var k = 0; k < cfg.sources.length; k++)
-          k == widget.index
-              ? cfg.sources[k].copyWith(tl: key == 'tl' ? '$value' : null, account: key == 'account' ? ('$value' == '現在のアカウント' ? '' : '$value') : null)
-              : cfg.sources[k],
-      ];
+      final cur = cfg.sources[widget.index];
+      var updated = cur.copyWith(tl: key == 'tl' ? '$value' : null, account: key == 'account' ? '$value' : null, label: key == 'label' ? '$value' : null);
+      if (key == 'account') {
+        // アカウントを変えたら、その SNS に無い TL 種別 / 他アカウントのリストは選び直し (D-194)。
+        if (!cur.isTrend && !cur.isList && !cur.isDm && !cur.isFeed && !cur.isSelf) {
+          final kinds = ref.read(tlTimelinesProvider('$value'));
+          if (kinds.isNotEmpty && !kinds.any((k) => k.id == cur.tl)) updated = updated.copyWith(tl: kinds.first.id);
+        } else if (cur.isList) {
+          updated = updated.copyWith(tl: 'list:');
+        } else if (cur.isFeed) {
+          updated = updated.copyWith(tl: 'feed:', label: '');
+        }
+      }
+      final next = [for (var k = 0; k < cfg.sources.length; k++) k == widget.index ? updated : cfg.sources[k]];
       widget.onUpdate(cfg.copyWith(sources: next));
     }
     setState(() {});
@@ -1120,6 +1187,43 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
             RasqWarningListTile(title: 'トレンドの指向性/刺激性', onTap: () => widget.onTendencyAction!('tendency')),
             RasqListTile(title: '好きなジャンル/方向性', onTap: () => widget.onTendencyAction!('genres')),
             RasqListTile(title: 'アクションからジャンルを選択', subtitle: '類似した話題でまとめて、話題性の強いものから', onTap: () => widget.onTendencyAction!('pick')),
+          ],
+          // カスタムフィードの検索 (D-194: Bluesky)。結果をタップで選ぶ。
+          if (!widget.algorithm && widget.index < cfg.sources.length && cfg.sources[widget.index].isFeed) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+              child: TextField(
+                key: const ValueKey('tlcfg.feed.search'),
+                controller: _feedQuery,
+                style: RasqTypography.bodySmall,
+                decoration: const InputDecoration(labelText: 'フィードを検索', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            Builder(builder: (context) {
+              final src = cfg.sources[widget.index];
+              final acct = src.account.isEmpty ? '${ref.watch(currentAccountProvider) ?? ''}' : src.account;
+              final feeds = ref.watch(tlFeedSearchProvider((account: acct, query: _feedQuery.text.trim())));
+              return feeds.when(
+                loading: () => const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))),
+                error: (_, _) => const SizedBox.shrink(),
+                data: (items) => Column(children: [
+                  if (items.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('見つかりません', style: RasqTypography.caption)),
+                  for (final f in items)
+                    RasqListTile(
+                      key: ValueKey('tlcfg.feed.${f.uri}'),
+                      title: f.name,
+                      subtitle: f.description ?? f.uri,
+                      leading: Icon(src.feedUri == f.uri ? Icons.radio_button_checked : Icons.radio_button_off, size: 20),
+                      chevron: false,
+                      onTap: () {
+                        _apply('tl', 'feed:${f.uri}');
+                        _apply('label', f.name);
+                      },
+                    ),
+                ]),
+              );
+            }),
           ],
           if (widget.algorithm && widget.index < cfg.algorithms.length && cfg.algorithms[widget.index].isQueryFilter)
             Padding(

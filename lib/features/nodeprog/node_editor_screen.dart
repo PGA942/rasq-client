@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
@@ -50,14 +51,29 @@ const _paletteExpanded = 0.5;
 
 /// リスト/DM ノードの選択肢 (D-097): ログイン中セッションから引く。
 /// 失敗・未対応は空(値ボックスは自由入力のまま)。
+/// リスト名 (D-194): 全ログインアカウントのリストを合わせる(取れない SNS は飛ばす)。
 final _nodeListNamesProvider = FutureProvider<List<String>>((ref) async {
-  final s = ref.watch(currentSnsSessionProvider);
-  if (s == null) return const [];
-  try {
-    return [for (final l in await s.lists()) l.name];
-  } catch (_) {
-    return const [];
+  final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+  final names = <String>{};
+  for (final s in sessions) {
+    final session = ref.watch(sessionForAccountProvider(s.account.key));
+    if (session == null) continue;
+    try {
+      names.addAll([for (final l in await session.lists()) l.name]);
+    } catch (_) {}
   }
+  return names.toList();
+});
+
+/// TL 種別 (D-194): 各アカウントの SNS が宣言するタイムライン id を合わせる(「現在のアカウント」は無し)。
+final _nodeTimelineIdsProvider = Provider<List<String>>((ref) {
+  final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+  final ids = <String>{};
+  for (final s in sessions) {
+    final session = ref.watch(sessionForAccountProvider(s.account.key));
+    if (session != null) ids.addAll([for (final t in session.timelines) t.id]);
+  }
+  return ids.isEmpty ? const ['home', 'social', 'local', 'global'] : ids.toList();
 });
 
 final _nodeDmPeersProvider = FutureProvider<List<String>>((ref) async {
@@ -92,8 +108,12 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
   final listNames = ref.watch(_nodeListNamesProvider).value ?? const <String>[];
   final dmPeers = ref.watch(_nodeDmPeersProvider).value ?? const <String>[];
   // アカウント選択 (D-106/D-109): ログイン済みアカウントを選択肢に。
-  final accounts = [for (final s in ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${s.account}'];
-  final acctOptions = ['現在のアカウント', ...accounts];
+  final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+  final accounts = [for (final s in sessions) '${s.account}'];
+  // 「現在のアカウント」表記は無し (D-194): アカウントを明示する(空 = 従来設定の互換)。
+  final acctOptions = accounts;
+  final blueskyAccounts = [for (final s in sessions) if (s.account.kind == SnsKind.bluesky) '${s.account}'];
+  final timelineIds = ref.watch(_nodeTimelineIdsProvider);
   NodeCatalogEntry withOptions(NodeCatalogEntry e, String label, List<String> options) {
     if (options.isEmpty) return e;
     return NodeCatalogEntry(
@@ -118,8 +138,10 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
     for (final e in builtinNodeCatalog)
       switch (e.type) {
         'tl.list' => withOptions(withOptions(e, 'リスト', listNames), 'アカウント', acctOptions),
+        'tl.feed' => withOptions(e, 'アカウント', blueskyAccounts),
         'tl.dm' => withOptions(withOptions(e, '相手', dmPeers), 'アカウント', acctOptions),
-        'tl.source' || 'tl.search' || 'tl.myreactions' || 'trend.posts' => withOptions(e, 'アカウント', acctOptions),
+        'tl.source' => withOptions(withOptions(e, 'TL', timelineIds), 'アカウント', acctOptions),
+        'tl.search' || 'tl.myreactions' || 'trend.posts' => withOptions(e, 'アカウント', acctOptions),
         'composer.target' => withOptions(e, 'アカウント', accounts),
         _ => e,
       },

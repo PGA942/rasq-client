@@ -114,6 +114,7 @@ String? _sourceKindOf(GraphNode n) {
   final base = switch (n.type) {
     'tl.source' => input('TL').isEmpty ? 'home' : input('TL'),
     'tl.list' => 'list:${input('リスト')}',
+    'tl.feed' => 'feed:${input('フィード')}',
     'tl.search' => 'search:${input('検索ワード')}',
     'tl.dm' => 'dm:${input('相手')}',
     'tl.myreactions' => 'myreactions',
