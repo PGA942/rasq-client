@@ -240,8 +240,9 @@ class RaiStatusRing extends StatelessWidget {
 /// RAi バー (D-179 / D-180、ワイヤーフレーム p.4): 上段は**そのまま入力欄**(ヒント = 「困ったとき、
 /// お手伝いします！」、質問後はその文がヒントに)。左の ^ で下段(モデルチップ / 状態リング /
 /// トグル / 質問する)を畳む。「質問する」= 送信。
-/// RAi バーの位置(モデル FOW をこの上に付ける、D-192)。
-final raiBarKey = GlobalKey(debugLabel: 'rai.bar');
+/// RAi バーの BuildContext(モデル FOW をこの上に付ける、D-192)。GlobalKey は使わない(D-199: 再親付けで
+/// `_elements.contains(element)` の assert を踏むため)。バーの build のたびに差し替わる。
+BuildContext? raiBarContext;
 
 class RaiBar extends StatefulWidget {
   const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320, this.onSuggest, this.modelLabel});
@@ -322,6 +323,7 @@ class _RaiBarState extends State<RaiBar> {
 
   @override
   Widget build(BuildContext context) {
+    raiBarContext = context;
     final scheme = Theme.of(context).colorScheme;
     final s = widget.state;
     final hint = s.query ?? '困ったとき、お手伝いします！';

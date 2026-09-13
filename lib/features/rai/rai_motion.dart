@@ -163,6 +163,13 @@ Offset raiLoopOffset(double progress, {required RaiMotionPlan? plan, required do
   return Offset(radius * math.sin(a), radius * (1 - math.cos(a)) * -1);
 }
 
+/// 3D の接線(地面に平行な成分)→ ヨー (D-199): モデルは yaw 0 でカメラ(+z)を向くので、進む向き (tx, tz) を
+/// 向くヨーは atan2(tx, tz)。手前へ来る = 正面 0、右へ = +90°、奥へ = 180°。
+double raiYaw3(double tx, double tz) => (tx.abs() + tz.abs()) < 1e-6 ? 0 : math.atan2(tx, tz);
+
+/// [prev] から連続な角度で [target] へ(±π で折り返さない)。
+double raiUnwrap(double prev, double target) => prev + raiYawDelta(prev, target);
+
 /// 走行中の顔の向きを、直前の向き [prev] に近い方の候補(接線 ±90°)で選び、prev から連続な角度で返す (D-198)。
 double raiFaceYawNear(Offset tangent, double prev, {RaiArm arm = RaiArm.none}) {
   if (tangent.distance < 0.01) return prev;

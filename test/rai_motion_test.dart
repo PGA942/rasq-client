@@ -124,4 +124,12 @@ void main() {
     expect(raiFaceYawNear(const Offset(0, -1), -1.4), closeTo(-math.pi / 2, 1e-9));
     expect(raiFaceYawNear(const Offset(1, 0), 3.0), closeTo(math.pi, 1e-9)); // 直前が 172° なら 180° 側(0° へ跳ねない)
   });
+
+  test('3D 接線のヨー (D-199): 手前へ = 正面 0、右へ = +90°、奥へ = 180°、連続化は ±π で折り返さない', () {
+    expect(raiYaw3(0, 1), closeTo(0, 1e-9));
+    expect(raiYaw3(1, 0), closeTo(math.pi / 2, 1e-9));
+    expect(raiYaw3(0, -1).abs(), closeTo(math.pi, 1e-9));
+    expect(raiYaw3(-1, 0), closeTo(-math.pi / 2, 1e-9));
+    expect(raiUnwrap(3.0, -3.0), closeTo(3.0 + (2 * math.pi - 6.0), 1e-9)); // 172° → −172° は +16° 進む
+  });
 }
