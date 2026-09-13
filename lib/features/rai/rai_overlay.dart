@@ -98,7 +98,6 @@ class _RaiBarHost extends ConsumerWidget {
         // RAi の発言は入力ウィジェットの上に 1 行ずつ (D-182)。
         if (speech != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: speech),
         RaiBar(
-        key: raiBarKey,
         state: s,
         onToggleExpanded: n.toggleExpanded,
         onMode: n.setMode,
@@ -148,8 +147,6 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   static const mascot = raiPointSize;
   late final AnimationController _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
 
-  /// レイヤーのローカル座標系(グローバル → ローカルの変換に使う。2 カラムやホストの余白でずれないように、D-197)。
-  final _layerKey = GlobalKey();
 
   RaiArm _yawArmFrom = RaiArm.none;
 
@@ -197,7 +194,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
     _anim.addListener(_onFrame);
     _anim.addStatusListener((st) {
-      if (st == AnimationStatus.completed && _path != null) {
+      if (st == AnimationStatus.completed && _path != null && mounted) {
         _pos = _path!.to;
         _ctrl3d.finish();
         _onFrame();
@@ -213,12 +210,14 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     super.dispose();
   }
 
-  /// グローバル矩形 → このレイヤーのローカル矩形。
+  /// グローバル矩形 → このレイヤーのローカル矩形(2 カラムやホストの余白でずれないように、D-197)。
   Rect _toLocal(Rect global) {
-    final box = _layerKey.currentContext?.findRenderObject();
+    if (!mounted) return global;
+    final box = context.findRenderObject();
     if (box is! RenderBox || !box.hasSize) return global;
     return box.globalToLocal(global.topLeft) & global.size;
   }
+
 
   Offset _destination(RaiState s, Size screen, Rect? localTarget) {
     if (s.mode == RaiMode.assistant || localTarget == null) {
@@ -254,34 +253,41 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
 
   /// 1 フレームぶんの位置 / 向きを空間の座標で計算してコントローラーへ (D-197)。
   /// 3D はウィジェットを動かさずモデルだけ動く。2D の代替描画のときだけ再構築する。
+  /// 3D かどうか(build で更新。フレーム処理では ref を触らない)。
+  bool _threeMode = false;
+
   void _onFrame() {
     final proj = _projector;
-    if (proj == null) return;
+    if (proj == null || !mounted) return;
     final path = _path;
     final t = Curves.easeInOutCubic.transform(_anim.value);
     final moving = _anim.isAnimating && path != null;
     final plan = _ctrl3d.plan;
     _ctrl3d.advance(t);
     RaiVec3 world;
-    Offset tangent2d;
+    double yaw;
+    final armTo = plan?.armTo ?? _ctrl3d.arm;
     if (moving) {
       final stopStart = plan == null ? 1.0 : 1 - plan.steps.last.fraction;
       final clockwise = path.to.dx >= path.from.dx;
       // 円運動は停止時の角度補正のときだけ (D-197)。
       RaiVec3 at(double u) => path.at(u) + raiStopLoop3(u, stopStart: stopStart, projector: proj, restSize: mascot, radiusPx: mascot * 0.25, clockwise: clockwise);
       world = at(t);
-      tangent2d = proj.project(at((t + 0.01).clamp(0, 1))).px - proj.project(at((t - 0.01).clamp(0, 1))).px;
+      // 向き (D-199): 3D の接線(地面に平行な成分)を向く。スプラインの延長として途切れなく回る。
+      final tan = path.tangent(t);
+      if ((tan.x.abs() + tan.z.abs()) > 1e-6) _face = raiUnwrap(_face, raiYaw3(tan.x, tan.z));
+      yaw = raiYawAt(t, plan: plan, tangent: Offset.zero, armFrom: _yawArmFrom, armTo: armTo, face: _face, stopTurn: clockwise ? -1 : 1);
     } else {
-      world = proj.worldAt(_pos ?? Offset(proj.screen.width / 2, proj.screen.height / 2), mascot);
-      tangent2d = Offset.zero;
+      world = _standbyWorld ?? proj.worldAt(_pos ?? Offset(proj.screen.width / 2, proj.screen.height / 2), mascot);
+      yaw = raiRestYawFor(_ctrl3d.arm);
     }
-    // 回転は地面に垂直な軸まわりで途切れなく (D-198): 走行の顔を直前のフレームから連続に追う。
-    if (moving && tangent2d.distance > 0.01) _face = raiFaceYawNear(tangent2d, _face, arm: plan?.armTo ?? _ctrl3d.arm);
-    final yaw = raiYawAt(moving ? t : 1, plan: plan, tangent: tangent2d, armFrom: _yawArmFrom, armTo: plan?.armTo ?? _ctrl3d.arm, face: _face, stopTurn: (path != null && path.to.dx >= path.from.dx) ? -1 : 1);
     final p = proj.project(world);
     _ctrl3d.setFrame(world: world, yaw: yaw, screenPos: p.px, sizePx: p.sizePx);
-    if (!ref.read(raiMascot3dProvider) && mounted) setState(() {});
+    if (!_threeMode && mounted) setState(() {});
   }
+
+  /// アシスタントのスタンバイ (D-199): RAi ホームの枠(グローバル矩形)に大きく薄く出す。
+  RaiVec3? _standbyWorld;
 
   /// LLM の推論中はアニメーションを止める(クリップも移動も)。終わったら続きから。
   void _syncBusy(bool busy) {
@@ -300,17 +306,37 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     final s = ref.watch(raiProvider);
     final screen = MediaQuery.sizeOf(context);
     final three = ref.watch(raiMascot3dProvider);
-    if (s.bubble == null) {
-      return const SizedBox.shrink();
-    }
+    _threeMode = three;
+    final slot = ref.watch(raiStandbySlotProvider);
     _projector ??= RaiProjector(screen: screen);
     if (_projector!.screen != screen) _projector = RaiProjector(screen: screen);
     final proj = _projector!;
+    // スタンバイ (D-199): 吹き出しが無く、アシスタントで RAi ホームの枠があるとき、そこに大きく薄く。
+    final standby = s.bubble == null && s.mode == RaiMode.assistant && slot != null;
+    if (s.bubble == null && !standby) {
+      // 何も出さない(3D は読み込み直しを避けるためウィジェットは残し、隠す)。
+      _ctrl3d.opacity = 0;
+      _standbyWorld = null;
+      return three ? Positioned.fill(child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj))) : const SizedBox.shrink();
+    }
+    if (standby) {
+      final local = _toLocal(slot);
+      _standbyWorld = proj.worldAt(local.center, local.height / 1.25);
+      _ctrl3d.opacity = 0.35;
+      _ctrl3d.idle(RaiArm.none);
+      _pos = null; // 次の移動はスタンバイの位置から
+      _onFrame();
+      return three ? Positioned.fill(child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj, outline: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.85) : null))) : const SizedBox.shrink();
+    }
+    _ctrl3d.opacity = 1;
     final localTarget = s.target == null ? null : _toLocal(s.target!);
     _syncBusy(s.busy);
     if (s.target != _lastTarget || s.mode != _lastMode || _pos == null) {
       _lastTarget = s.target;
       _lastMode = s.mode;
+      // スタンバイから動き出すときは、その位置(射影)を出発点に。
+      if (_pos == null && _standbyWorld != null) _pos = proj.project(_standbyWorld!).px;
+      _standbyWorld = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final lt = s.target == null ? null : _toLocal(s.target!);
@@ -324,7 +350,6 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     final size = moving ? _ctrl3d.sizePx : mascot;
     final pointing = localTarget == null ? null : pointingDirection(pos, localTarget.center);
     return SizedBox(
-      key: _layerKey,
       width: screen.width,
       height: screen.height,
       child: Stack(children: [
@@ -349,3 +374,15 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     );
   }
 }
+
+/// RAi ホームのスタンバイ枠(グローバル矩形、D-199)。ホームが描画のたびに報告し、離れると null。
+class RaiStandbySlot extends Notifier<Rect?> {
+  @override
+  Rect? build() => null;
+  void set(Rect? r) {
+    if (!ref.mounted) return; // 画面の破棄後(テストの終了時など)は無視
+    state = r;
+  }
+}
+
+final raiStandbySlotProvider = NotifierProvider<RaiStandbySlot, Rect?>(RaiStandbySlot.new);

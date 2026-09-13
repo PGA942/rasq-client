@@ -32,9 +32,15 @@ void main() {
     expect(mid, lessThanOrEqualTo(700 + 1e-6));
     expect(path.tangent(0.5).length, greaterThan(0));
     expect(path.screenLength, greaterThan((const Offset(300, 600) - const Offset(40, 100)).distance));
-    // リボンは後半の膨らみが反対側。
-    final ribbon = RaiPath3(projector: proj, from: const Offset(40, 100), to: const Offset(300, 600), restSize: 180, approachSize: 700, ribbon: true);
-    expect(ribbon.controlPoints[2].x, isNot(closeTo(path.controlPoints[2].x, 1e-9)));
+    // 形 (D-199): 横移動は画面の下へ膨らむ U(途中の y が両端より下)、縦移動は S 字(前半と後半で横のずれが逆)。
+    final horiz = RaiPath3(projector: proj, from: const Offset(40, 300), to: const Offset(320, 320), restSize: 180, approachSize: 700);
+    expect(horiz.horizontal, isTrue);
+    expect(proj.project(horiz.at(0.5)).px.dy, greaterThan(320));
+    final vert = RaiPath3(projector: proj, from: const Offset(200, 100), to: const Offset(220, 600), restSize: 180, approachSize: 700);
+    expect(vert.horizontal, isFalse);
+    final line = (const Offset(220, 600) - const Offset(200, 100));
+    double side(Offset p) => (p - const Offset(200, 100)).dx * line.dy - (p - const Offset(200, 100)).dy * line.dx;
+    expect(side(proj.project(vert.at(0.25)).px).sign, isNot(side(proj.project(vert.at(0.75)).px).sign));
     // 距離 0 は動かない。
     final still = RaiPath3(projector: proj, from: const Offset(50, 50), to: const Offset(50, 50), restSize: 180, approachSize: 700);
     expect((still.at(0.5) - still.at(0)).length, lessThan(1e-9));

@@ -31,6 +31,15 @@ class RaiMascot3dController extends ChangeNotifier {
   Offset screenPos = Offset.zero;
   double sizePx = raiPointSize;
 
+  /// 空間モードの見え方(1 = 通常、0.35 = スタンバイの薄い表示、0 = 隠す)。変わったら通知する。
+  double _opacity = 1;
+  double get opacity => _opacity;
+  set opacity(double v) {
+    if ((_opacity - v).abs() < 1e-6) return;
+    _opacity = v;
+    notifyListeners();
+  }
+
   void setFrame({required RaiVec3 world, required double yaw, required Offset screenPos, required double sizePx}) {
     this.world = world;
     this.yaw = yaw;
@@ -225,7 +234,12 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   }
 
   /// コントローラーの状態 → クリップの切り替え(クロスフェード)。
+  double _shownOpacity = 1;
+
   void _sync() {
+    if (widget.isScene && (_ctrl.opacity - _shownOpacity).abs() > 1e-6 && mounted) {
+      setState(() => _shownOpacity = _ctrl.opacity);
+    }
     final mixer = _mixer;
     if (mixer == null) return;
     final name = _ctrl.clip;
@@ -264,7 +278,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       ]),
     );
     if (widget.isScene) {
-      return SizedBox.expand(child: Opacity(opacity: _ready ? widget.opacity : 0, child: Stack(fit: StackFit.expand, children: [
+      return SizedBox.expand(child: Opacity(opacity: _ready ? widget.opacity * _ctrl.opacity : 0, child: Stack(fit: StackFit.expand, children: [
         if (outline != null && tex != null && _ready)
           for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
             Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),

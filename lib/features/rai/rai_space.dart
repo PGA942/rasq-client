@@ -55,7 +55,7 @@ class RaiProjector {
 }
 
 /// 3 次元の 3 次ベジエ (D-197): 両端は待機の奥行き、制御点は再接近の奥行き(山なりに手前へ寄る)。
-/// 横方向の膨らみ [bulge] は 2D の距離に対する比(正 = 進行方向の左)。[ribbon] なら後半は反対側へ(S 字)。
+/// 膨らみ [bulge] は 2D の距離に対する比。横移動は下へ膨らむ U、縦移動は S 字(D-199)。
 class RaiPath3 {
   RaiPath3({required this.projector, required this.from, required this.to, required this.restSize, required this.approachSize, this.bulge = 0.25, this.ribbon = false});
   final RaiProjector projector;
@@ -68,6 +68,9 @@ class RaiPath3 {
 
   late final List<RaiVec3> controlPoints = _controls();
 
+  /// 横移動(|dx| ≥ |dy|)か。横移動は画面で **下へ膨らむ U**、縦移動は **S 字(リボン)**(D-199 の図)。
+  bool get horizontal => (to.dx - from.dx).abs() >= (to.dy - from.dy).abs();
+
   List<RaiVec3> _controls() {
     final p0 = projector.worldAt(from, restSize);
     final p3 = projector.worldAt(to, restSize);
@@ -75,9 +78,20 @@ class RaiPath3 {
     final len = d.distance;
     if (len < 0.5) return [p0, p0, p3, p3];
     final dir = d / len;
-    final perp = Offset(-dir.dy, dir.dx);
-    final c1 = projector.worldAt(from + dir * (len * 0.3) + perp * (len * bulge), approachSize);
-    final c2 = projector.worldAt(to - dir * (len * 0.3) + perp * (len * bulge * (ribbon ? -1 : 0.4)), approachSize);
+    final Offset side1;
+    final Offset side2;
+    if (horizontal) {
+      // U: 両方の制御点を画面の下へ。
+      side1 = Offset(0, len * bulge);
+      side2 = Offset(0, len * bulge);
+    } else {
+      // S(リボン): 進行方向の左へ → 右へ。
+      final perp = Offset(-dir.dy, dir.dx);
+      side1 = perp * (len * bulge);
+      side2 = perp * (len * bulge * (ribbon ? -1 : -1));
+    }
+    final c1 = projector.worldAt(from + dir * (len * 0.3) + side1, approachSize);
+    final c2 = projector.worldAt(to - dir * (len * 0.3) + side2, approachSize);
     return [p0, c1, c2, p3];
   }
 

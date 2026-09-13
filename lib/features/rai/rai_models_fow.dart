@@ -7,7 +7,7 @@ import '../../app/providers.dart';
 import 'rai_embedding_model.dart';
 import 'rai_layout.dart';
 import 'rai_llm.dart';
-import 'rai_widgets.dart' show raiBarKey;
+import 'rai_widgets.dart' show raiBarContext;
 
 /// LLM モデルの FOW (D-183): タイルに ローカル / クラウド、集計された完遂率(35B 未満だけ集計、
 /// 未集計は「-%」)、端末 RAM から見た動作可否のインジケーター、状態と操作(ダウンロード / 使う /
@@ -19,7 +19,8 @@ Future<void> showRaiModelsFow(WidgetRef ref, BuildContext context, {int? column}
   if (manager.contains(raiModelsFowId)) return;
   // 付く場所は文字入力ウィジェットの上 (D-192): バーの矩形をアンカーにして上付き。
   Rect? anchor;
-  final barBox = raiBarKey.currentContext?.findRenderObject();
+  final barCtx = raiBarContext;
+  final barBox = barCtx != null && barCtx.mounted ? barCtx.findRenderObject() : null;
   if (barBox is RenderBox && barBox.hasSize) {
     final tl = barBox.localToGlobal(Offset.zero);
     anchor = tl & barBox.size;
