@@ -168,24 +168,21 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   final _ctrl3d = RaiMascot3dController();
   bool _pausedByBusy = false;
 
-  Rect? _downOnTarget;
+  bool _downOnTarget = false;
 
   /// 指差した部品へのタップを見張る (D-193): どのウィジェットが処理しても届くグローバルな経路。
+  /// 別のコンポーネントの同じボタン(TL の別の投稿のリアクションなど)でも続ける (D-204)。
   void _onPointer(PointerEvent e) {
-    final t = ref.read(raiProvider).target;
-    if (t == null) {
-      _downOnTarget = null;
-      return;
-    }
-    final hit = t.inflate(4);
+    if (!mounted) return;
+    final n = ref.read(raiProvider.notifier);
     if (e is PointerDownEvent) {
-      _downOnTarget = hit.contains(e.position) ? hit : null;
+      _downOnTarget = n.isStepWidgetAt(e.position);
     } else if (e is PointerUpEvent) {
       final down = _downOnTarget;
-      _downOnTarget = null;
-      if (down != null && hit.contains(e.position)) ref.read(raiProvider.notifier).targetTapped();
+      _downOnTarget = false;
+      if (down && n.isStepWidgetAt(e.position)) n.targetTapped();
     } else if (e is PointerCancelEvent) {
-      _downOnTarget = null;
+      _downOnTarget = false;
     }
   }
 
@@ -313,7 +310,12 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     _threeMode = three;
     final slot = ref.watch(raiStandbySlotProvider);
     _projector ??= RaiProjector(screen: screen);
-    if (_projector!.screen != screen) _projector = RaiProjector(screen: screen);
+    if (_projector!.screen != screen) {
+      _projector = RaiProjector(screen: screen);
+      // リサイズ (D-204): レイアウトが変わるので目標の矩形を取り直す。
+      final n = ref.read(raiProvider.notifier);
+      WidgetsBinding.instance.addPostFrameCallback((_) => n.relocate());
+    }
     final proj = _projector!;
     final outline = Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.85) : null;
     // 空間モードのウィジェットは常に同じ Stack の先頭に固定キーで置く (D-202): 出す / 隠す / スタンバイで

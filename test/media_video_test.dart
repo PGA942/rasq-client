@@ -92,11 +92,58 @@ void main() {
     await tester.tapAt(const Offset(180, 300));
     await tester.pumpAndSettle();
     expect(find.byKey(viewerPanelKey), findsOneWidget);
-    // ビューワーを閉じると FOW も閉じる。
+    // FOW を展開して投稿をタップ → スレッド展開画面 (D-204: ビューワーはタブ外なので二重マッチで落ちない)。
+    await tester.drag(find.bySemanticsLabel('サイズ変更ハンドル'), const Offset(0, -350));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byKey(viewerPanelKey), matching: find.text('動画つき')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(PostDetailScreen), findsOneWidget);
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(PostDetailScreen), findsNothing);
+    expect(find.byType(MediaViewerScreen), findsOneWidget);
+    // 展開中はバリアがあるので折りたたんでから、ビューワーを閉じる → FOW も閉じる。
+    await tester.tapAt(const Offset(180, 120));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
     expect(find.byType(MediaViewerScreen), findsNothing);
     expect(find.byKey(viewerPanelKey), findsNothing);
+  });
+
+  testWidgets('上側バーの最右の PiP ボタン → ビューワーを閉じてインライン再生 FOW へ (D-204)', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline));
+    await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)], child: const RasqApp()));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    final acc = fakeSession().account;
+    final post = Post(
+      id: 'v3',
+      account: acc,
+      author: UserSummary(id: 'u1', account: acc, displayName: 'テスター'),
+      createdAt: DateTime(2026, 9, 1),
+      body: '動画つき',
+      media: [MediaItem(id: 'v', type: MediaType.video, url: Uri.parse('https://example.test/v.mp4'))],
+    );
+    c.read(routerProvider).push(Routes.viewer, extra: (post: post, index: 0));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('viewer.pip')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('viewer.pip')));
+    await tester.pumpAndSettle();
+    expect(find.byType(MediaViewerScreen), findsNothing);
+    expect(find.byKey(viewerPanelKey), findsNothing);
+    expect(find.byType(VideoPlayerBlock), findsOneWidget); // インライン再生 FOW
+    expect(find.byKey(const ValueKey('video.fow.post')), findsOneWidget);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('TL のタイルの再生バッジ → インライン再生の FOW(動画 + 操作)', (tester) async {

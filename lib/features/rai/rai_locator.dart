@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -6,9 +8,33 @@ import 'package:flutter/rendering.dart';
 /// ツールチップ(アイコンボタン)/ 表示テキスト(ラベル付きボタン)/ Key で要素木を辿り、
 /// 最初に見つかった描画済みの矩形(グローバル座標)を返す。RRL の `role` 付きノードは
 /// ジオメトリ登録簿(D-072)側で引けるので、ここはネイティブ部品向け。
-Rect? locateWidgetRect({String? tooltip, String? text, Key? key, Rect? within}) {
+Rect? locateWidgetRect({String? tooltip, String? text, Key? key, Rect? within, Rect? near, math.Random? random}) {
+  final all = locateWidgetRects(tooltip: tooltip, text: text, key: key, within: within);
+  if (all.isEmpty) return null;
+  // 前回の矩形に最も近いもの (D-204: 追い直し / リサイズ後の再取得で別のコピーへ飛ばない)。
+  if (near != null) {
+    Rect best = all.first;
+    var bestD = double.infinity;
+    for (final r in all) {
+      final d = (r.center - near.center).distance;
+      if (d < bestD) {
+        bestD = d;
+        best = r;
+      }
+    }
+    return best;
+  }
+  // 同じ部品が複数見えている(TL の各投稿のボタンなど)ときは、表示されている中からランダムに (D-204)。
+  if (random != null && all.length > 1) return all[random.nextInt(all.length)];
+  return all.first;
+}
+
+/// 見えている候補を全部(グローバル矩形)。同じ部品が複数ある(タブの IndexedStack に隠れたページ、
+/// 2 カラムの複製、TL の各投稿のボタン …)ときは、実際に見えている(ヒットテストで当たる)ものだけ (D-197)。
+/// どれも当たらなければ最初のもの。
+List<Rect> locateWidgetRects({String? tooltip, String? text, Key? key, Rect? within}) {
   final root = WidgetsBinding.instance.rootElement;
-  if (root == null) return null;
+  if (root == null) return const [];
   final candidates = <({Rect rect, RenderBox box})>[];
   void visit(Element e) {
     final w = e.widget;
@@ -28,13 +54,9 @@ Rect? locateWidgetRect({String? tooltip, String? text, Key? key, Rect? within}) 
   }
 
   visit(root);
-  if (candidates.isEmpty) return null;
-  // 同じ部品が複数ある(タブの IndexedStack に隠れたページ、2 カラムの複製 …)ときは、
-  // 実際に見えている(ヒットテストで当たる)ものを選ぶ (D-197)。どれも当たらなければ最初のもの。
-  for (final c in candidates) {
-    if (_isHitTestable(c.box, c.rect.center)) return c.rect;
-  }
-  return candidates.first.rect;
+  if (candidates.isEmpty) return const [];
+  final visible = [for (final c in candidates) if (_isHitTestable(c.box, c.rect.center)) c.rect];
+  return visible.isEmpty ? [candidates.first.rect] : visible;
 }
 
 /// その矩形の中心へのヒットテストで、この RenderBox(かその子孫)まで届くか。

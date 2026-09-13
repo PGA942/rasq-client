@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../app/navigation.dart';
 import '../../app/router.dart';
+
+export '../../app/navigation.dart' show visibleLocationOf;
 import 'rai_llm.dart';
 import 'rai_locator.dart';
 import 'rai_reference.dart';
@@ -406,9 +409,15 @@ class RaiController extends Notifier<RaiState> {
       // 見えている画面 = 一番上の一致(push で積んだ画面は uri に出ないので辿る)。
       final cur = visibleLocationOf(router.routerDelegate.currentConfiguration);
       if (!cur.startsWith(route)) {
-        // タブの根(ホーム / 検索 / AsTell / 通知 / DM)は go、それ以外は push (D-193): go だと
-        // 戻るボタンや「決定」(context.pop)の戻り先が無くなる。
-        if (raiTabRoots.contains(route)) {
+        if (routeInHistory(router.routerDelegate.currentConfiguration, route)) {
+          // 履歴にあればそこまで戻る (D-204)。
+          for (var k = 0; k < 12 && router.canPop() && !visibleLocationOf(router.routerDelegate.currentConfiguration).startsWith(route); k++) {
+            router.pop();
+            await WidgetsBinding.instance.endOfFrame;
+          }
+        } else if (raiTabRoots.contains(route)) {
+          // タブの根(ホーム / 検索 / AsTell / 通知 / DM)は go、それ以外は push (D-193): go だと
+          // 戻るボタンや「決定」(context.pop)の戻り先が無くなる。
           router.go(route);
         } else {
           unawaited(router.push(route));
@@ -425,7 +434,9 @@ class RaiController extends Notifier<RaiState> {
         await WidgetsBinding.instance.endOfFrame;
         if (attempt > 0) await Future<void>.delayed(const Duration(milliseconds: 120));
         if (state.stepIndex != i) return;
-        final r = locateWidgetRect(tooltip: step.tooltip, text: step.label);
+        // 同じ部品が複数見えていれば(TL の各投稿のボタンなど)表示されている中からランダムに選び (D-204)、
+        // 以後の取り直しはその近くのものに固定する。
+        final r = locateWidgetRect(tooltip: step.tooltip, text: step.label, near: prev, random: prev == null ? _random : null);
         if (r != null && r == prev) rect = r;
         prev = r;
       }
@@ -446,9 +457,37 @@ class RaiController extends Notifier<RaiState> {
         await WidgetsBinding.instance.endOfFrame;
       }
       if (state.stepIndex != i || seq != _answerSeq || state.target == null || state.mode != RaiMode.instruction) return;
-      final r = locateWidgetRect(tooltip: step.tooltip, text: step.label);
+      final r = locateWidgetRect(tooltip: step.tooltip, text: step.label, near: state.target);
       if (r != null && r != state.target) state = state.copyWith(target: r);
     }
+  }
+
+  final _random = math.Random();
+
+  /// ウィンドウのリサイズ後に矩形を取り直す (D-204: レイアウトが変わっても目標が古いままだった)。
+  Future<void> relocate() async {
+    final i = state.stepIndex;
+    final seq = _answerSeq;
+    if (state.mode != RaiMode.instruction || state.target == null || i >= state.steps.length) return;
+    final step = state.steps[i];
+    for (var f = 0; f < 3; f++) {
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (state.stepIndex != i || seq != _answerSeq || state.target == null) return;
+    final r = locateWidgetRect(tooltip: step.tooltip, text: step.label, near: state.target);
+    if (r != null && r != state.target) state = state.copyWith(target: r);
+  }
+
+  /// 指した部品と同じ部品(別のコンポーネントの同じボタンでもよい、D-204)が [point] にあるか。
+  bool isStepWidgetAt(Offset point) {
+    final t = state.target;
+    if (t == null || state.mode != RaiMode.instruction) return false;
+    if (t.inflate(4).contains(point)) return true;
+    final i = state.stepIndex;
+    if (i >= state.steps.length) return false;
+    final step = state.steps[i];
+    if (!step.hasTarget) return false;
+    return locateWidgetRects(tooltip: step.tooltip, text: step.label).any((r) => r.inflate(4).contains(point));
   }
 }
 
@@ -457,14 +496,3 @@ const raiTabRoots = {Routes.home, Routes.search, Routes.vc, Routes.notifications
 
 final raiProvider = NotifierProvider<RaiController, RaiState>(RaiController.new);
 
-/// いま見えている画面の場所 (D-179): `RouteMatchList.uri` は push で積んだ画面を含まないので、
-/// 一番上の一致(シェルの中 / 積んだ画面)まで辿る。
-String visibleLocationOf(RouteMatchList config) {
-  if (config.isEmpty) return '/';
-  RouteMatchBase m = config.matches.last;
-  while (m is ShellRouteMatch) {
-    m = m.matches.last;
-  }
-  if (m is ImperativeRouteMatch) return visibleLocationOf(m.matches);
-  return m.matchedLocation;
-}
