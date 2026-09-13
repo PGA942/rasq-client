@@ -283,6 +283,8 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
       yaw = raiRestYawFor(_ctrl3d.arm);
     }
     final p = proj.project(world);
+    // NaN は流さない (D-205: 実機で高さ NaN のアサート)。
+    if (p.px.dx.isNaN || p.px.dy.isNaN || p.sizePx.isNaN || yaw.isNaN) return;
     _ctrl3d.setFrame(world: world, yaw: yaw, screenPos: p.px, sizePx: p.sizePx);
     if (!_threeMode && mounted) setState(() {});
   }

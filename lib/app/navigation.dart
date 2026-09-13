@@ -122,12 +122,16 @@ String visibleLocationOf(RouteMatchList config) {
   return m.matchedLocation;
 }
 
-/// 履歴(積まれている画面)に [route] で始まる場所があるか (D-204: あればそこまで戻る)。
+/// 同じ画面か(末尾の `/` は無視)。
+bool sameRoute(String a, String b) => _norm(a) == _norm(b);
+String _norm(String s) => s.length > 1 && s.endsWith('/') ? s.substring(0, s.length - 1) : s;
+
+/// 履歴(積まれている画面)に [route] の画面があるか (D-204: あればそこまで戻る)。
 bool routeInHistory(RouteMatchList config, String route) {
   bool walk(RouteMatchBase m) {
     if (m is ImperativeRouteMatch) return m.matches.matches.any(walk);
     if (m is ShellRouteMatch) return m.matches.any(walk);
-    return m.matchedLocation.startsWith(route);
+    return sameRoute(m.matchedLocation, route);
   }
   return config.matches.any(walk);
 }

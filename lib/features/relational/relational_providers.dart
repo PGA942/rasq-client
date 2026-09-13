@@ -216,6 +216,8 @@ final bundleFolloweePostsProvider = FutureProvider<List<Post>>((ref) async {
   final sessions = ref.watch(sessionsProvider).value;
   final current = sessions?.current;
   final registry = ref.watch(pluginRegistryProvider);
+  // await の後で ref を使わない (D-205: 実機で「Ref after disposed」)。
+  final alternates = ref.read(postAlternatesProvider.notifier);
   final out = [...home];
   final seen = {for (final p in home) '${p.author.key}/${p.id}'};
   // 中身比較の同定 (D-110): 複数アカウントに流れてきた同じ投稿は隠して
@@ -241,7 +243,7 @@ final bundleFolloweePostsProvider = FutureProvider<List<Post>>((ref) async {
     }
   }
   if (dropped.isNotEmpty) {
-    Future.microtask(() => ref.read(postAlternatesProvider.notifier).recordAll(dropped));
+    Future.microtask(() => alternates.recordAll(dropped));
   }
   return out;
 });

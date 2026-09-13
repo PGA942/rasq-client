@@ -69,8 +69,12 @@ class OverlayHost extends StatelessWidget {
   List<Widget> _buildEntry(BuildContext context, RasqOverlayEntry e) {
     final widgets = <Widget>[];
     final behavior = e.effectiveBarrierBehavior;
+    // 各エントリは id でキー付け (D-205): 前にあるエントリ(FOW / ドロップダウン)の出入りで Stack の並びが
+    // ずれても Element が作り直されない(RAi の three_js が毎回作り直されていた)。FOW 群はキー無しのまま
+    // (位置で再利用される従来の挙動に AsTell のルーム FOW の高さアニメーションが依存している)。
     if (behavior != OverlayBarrierBehavior.none) {
       widgets.add(Positioned.fill(
+        key: ValueKey('ov.${e.id}.barrier'),
         child: Semantics(
           label: behavior == OverlayBarrierBehavior.ignore ? null : '閉じる',
           button: behavior != OverlayBarrierBehavior.ignore,
@@ -92,9 +96,9 @@ class OverlayHost extends StatelessWidget {
     }
 
     if (e.layer == OverlayLayer.dropdown && e.anchor != null) {
-      widgets.add(_AnchoredDropdown(anchor: e.anchor!, child: content));
+      widgets.add(_AnchoredDropdown(key: ValueKey('ov.${e.id}'), anchor: e.anchor!, child: content));
     } else {
-      widgets.add(Positioned.fill(child: Align(alignment: e.alignment, child: content)));
+      widgets.add(Positioned.fill(key: ValueKey('ov.${e.id}'), child: Align(alignment: e.alignment, child: content)));
     }
     return widgets;
   }
@@ -627,7 +631,7 @@ class _FowPanelState extends State<_FowPanel> {
 /// Stack の直下限定)で、開くたびに debug 例外が出ていた —
 /// [CustomSingleChildLayout] のデリゲートで座標計算する形に修正 (D-039)。
 class _AnchoredDropdown extends StatelessWidget {
-  const _AnchoredDropdown({required this.anchor, required this.child});
+  const _AnchoredDropdown({super.key, required this.anchor, required this.child});
   final Rect anchor;
   final Widget child;
 

@@ -407,11 +407,13 @@ class RaiController extends Notifier<RaiState> {
     if (route != null) {
       final router = ref.read(routerProvider);
       // 見えている画面 = 一番上の一致(push で積んだ画面は uri に出ないので辿る)。
+      // 手順の画面と**同じ場所**にいるときだけ何もしない (D-205: 前方一致だと `/settings/...` から
+      // `/settings` へ戻れなかった)。
       final cur = visibleLocationOf(router.routerDelegate.currentConfiguration);
-      if (!cur.startsWith(route)) {
+      if (!sameRoute(cur, route)) {
         if (routeInHistory(router.routerDelegate.currentConfiguration, route)) {
           // 履歴にあればそこまで戻る (D-204)。
-          for (var k = 0; k < 12 && router.canPop() && !visibleLocationOf(router.routerDelegate.currentConfiguration).startsWith(route); k++) {
+          for (var k = 0; k < 12 && router.canPop() && !sameRoute(visibleLocationOf(router.routerDelegate.currentConfiguration), route); k++) {
             router.pop();
             await WidgetsBinding.instance.endOfFrame;
           }

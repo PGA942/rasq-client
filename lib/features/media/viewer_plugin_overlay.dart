@@ -8,6 +8,7 @@ import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../plugins/slot_plugins.dart';
+import 'viewer_plugins_screen.dart';
 
 /// 全画面表示プラグイン (D-167、スロット `viewer.overlay`) の共通部 (D-178)。
 ///
@@ -39,7 +40,7 @@ class ViewerPluginOverlays {
   final Map<String, SlotPlugin> _used = {};
 
   Future<void> ask(int i, Uri url) async {
-    final plugins = ref.read(slotPluginsForProvider(SlotIds.viewerOverlay));
+    final plugins = ref.read(viewerOverlayPluginsProvider); // 有効なものだけ (D-205)
     if (plugins.isEmpty || _tokens.containsKey(i)) return;
     _notifier ??= ref.read(slotPluginsProvider.notifier);
     for (final p in plugins) {

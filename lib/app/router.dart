@@ -17,7 +17,9 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
+import '../features/media/viewer_plugins_screen.dart';
 import '../features/login/bluesky_login_screen.dart';
+import '../features/login/mixi2_login_screen.dart';
 import '../features/plugins/media_editor_screen.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
@@ -66,6 +68,9 @@ abstract final class Routes {
 
   /// プロフィールのアイコン / バナーの全画面表示 (D-177)。
   static const imageViewer = '/viewer/image';
+
+  /// 全画面表示プラグインの編集 (D-205)。
+  static const viewerPlugins = '/viewer/plugins';
   static const mediaEditor = '/media-editor';
   static const mediaEditorPro = '/media-editor/pro';
   static const lists = '/lists';
@@ -77,6 +82,7 @@ abstract final class Routes {
   static const loginMisskey = '/login/misskey';
   static const loginMastodon = '/login/mastodon';
   static const loginBluesky = '/login/bluesky';
+  static const loginMixi2 = '/login/mixi2';
 
   /// ノードプログラミング画面 (D-090)。`/nodes/<scope>`。TL スコープの
   /// キャンバスは一旦無効化 (D-121) — TL の歯車は [tlConfig] へ。
@@ -235,6 +241,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               return CustomTransitionPage(child: MediaViewerScreen(post: x.post, initialIndex: x.index), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child));
             },
           ),
+          GoRoute(path: Routes.viewerPlugins, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ViewerPluginsScreen()),
           GoRoute(
             path: Routes.imageViewer,
             parentNavigatorKey: _appNavigatorKey,
@@ -276,6 +283,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(path: 'misskey', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MisskeyLoginScreen()),
               GoRoute(path: 'mastodon', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MastodonLoginScreen()),
               GoRoute(path: 'bluesky', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BlueskyLoginScreen()),
+              GoRoute(path: 'mixi2', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const Mixi2LoginScreen()),
             ],
           ),
         ],

@@ -99,10 +99,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.byType(PostDetailScreen), findsOneWidget);
+    expect(find.byKey(viewerPanelKey), findsNothing); // 上に画面が積まれたら FOW は閉じる (D-205)
     c.read(routerProvider).pop();
     await tester.pumpAndSettle();
     expect(find.byType(PostDetailScreen), findsNothing);
     expect(find.byType(MediaViewerScreen), findsOneWidget);
+    expect(find.byKey(viewerPanelKey), findsOneWidget); // 戻ってきたら開き直す
     // 展開中はバリアがあるので折りたたんでから、ビューワーを閉じる → FOW も閉じる。
     await tester.tapAt(const Offset(180, 120));
     await tester.pumpAndSettle();
