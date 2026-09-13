@@ -6,6 +6,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
@@ -118,6 +119,17 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     }
   }
 
+  /// PiP (D-204): ビューワーを閉じてインライン再生 FOW を同じ位置から開く。
+  void _toPip() {
+    final i = _page.value;
+    final m = widget.post.media[i];
+    if (m.type != MediaType.video) return;
+    final manager = ref.read(overlayManagerProvider);
+    final at = _sessions[i]?.position;
+    Navigator.of(context).maybePop();
+    WidgetsBinding.instance.addPostFrameCallback((_) => showVideoFowWith(manager, m, post: widget.post, startAt: at));
+  }
+
   void _collapse() {
     _spec.userResized = false;
     _spec.heightFactor.value = _spec.heightStops.isEmpty ? viewerFowCollapsedFactor : _spec.heightStops.first;
@@ -208,11 +220,18 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                           const RasqDropdownItem('リンクをコピー', 'copy'),
                           if (m.type == MediaType.video) const RasqDropdownItem('オーバーレイに移動', 'pip'),
                           if (m.alt != null) const RasqDropdownItem('ALTを表示', 'alt'),
-                        ]);
+                        ]).then((v) {
+                          if (v == 'pip') _toPip();
+                        });
                       },
                     ),
                   ),
                 ),
+                // 最右 (D-204): PiP(インライン再生 FOW)へ。再生位置を引き継いでビューワーを閉じる。
+                if (post.media[_page.value].type == MediaType.video) ...[
+                  const SizedBox(width: RasqSpacing.xs),
+                  _Circle(child: RasqIconButton(key: const ValueKey('viewer.pip'), icon: Icons.picture_in_picture_alt_outlined, color: Colors.white, tooltip: 'PiP で再生', onPressed: _toPip)),
+                ],
               ]),
             ),
           ),
@@ -285,6 +304,7 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
             post: post,
             actions: const [],
             onAction: (a, {args = const {}}) => notifier.perform(post, a, args: args),
+            onTap: () => context.pushPost(post),
             hideMedia: true,
           ),
         ]);

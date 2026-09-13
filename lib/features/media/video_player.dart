@@ -14,11 +14,14 @@ import '../home/post_row.dart';
 /// [autoplay] は準備ができ次第再生する(全画面ビューワー、D-202)。[hold] の間は再生しない
 /// (全画面表示プラグインが起動している間)。
 class VideoSession extends ChangeNotifier {
-  VideoSession(this.item, {this.autoplay = false}) {
+  VideoSession(this.item, {this.autoplay = false, this.startAt}) {
     _init();
   }
   final MediaItem item;
   final bool autoplay;
+
+  /// 開始位置(PiP へ移るときに再生位置を引き継ぐ、D-204)。
+  final Duration? startAt;
   VideoPlayerController? controller;
   String? error;
   bool ready = false;
@@ -35,6 +38,7 @@ class VideoSession extends ChangeNotifier {
       if (_disposed) return;
       c.addListener(notifyListeners);
       await c.setLooping(true);
+      if (startAt != null && startAt! > Duration.zero) await c.seekTo(startAt!);
       ready = true;
       if (autoplay && !_hold) await c.play();
       if (!_disposed) notifyListeners();
@@ -243,10 +247,12 @@ const videoFowId = 'fow.video';
 /// インライン再生の FOW (D-201): TL のタイルの再生バッジから(▶ を押したので再生して開く)。
 /// 動画の下に投稿をインラインフレームの小表示で出す(「リアクションを表示」ページと同じ、D-203)。
 /// タップでスレッド展開画面へ(FOW は閉じる)。
-Future<void> showVideoFow(WidgetRef ref, MediaItem item, {Post? post, int? column}) async {
-  final manager = ref.read(overlayManagerProvider);
+Future<void> showVideoFow(WidgetRef ref, MediaItem item, {Post? post, int? column}) => showVideoFowWith(ref.read(overlayManagerProvider), item, post: post, column: column);
+
+/// [showVideoFow] の本体(ビューワーを閉じた後の PiP 遷移など、ref を使えない場面から、D-204)。
+Future<void> showVideoFowWith(OverlayManager manager, MediaItem item, {Post? post, int? column, Duration? startAt}) async {
   if (manager.contains(videoFowId)) manager.close(videoFowId);
-  final session = VideoSession(item, autoplay: true);
+  final session = VideoSession(item, autoplay: true, startAt: startAt);
   try {
     await manager.showFow<void>(
       id: videoFowId,

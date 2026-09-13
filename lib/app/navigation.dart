@@ -25,7 +25,10 @@ extension RasqNavigation on BuildContext {
   /// タブ外からはアプリ直下の複製ルート(`/post` `/user` `/trend`)へ push する。
   bool get _inTab {
     final loc = GoRouterState.of(this).matchedLocation;
-    return loc.startsWith(Routes.home) || loc.startsWith(Routes.search) || loc.startsWith(Routes.vc) || loc.startsWith(Routes.notifications) || loc.startsWith(Routes.dm);
+    // オーバーレイ(FOW)の context はタブの状態を返すが、見えているのがアプリ直下の画面(全画面ビューワーなど)なら
+    // タブ外扱いにする (D-204: ビューワーの FOW から投稿へ遷移すると二重マッチで落ちていた)。
+    final visible = visibleLocationOf(GoRouter.of(this).routerDelegate.currentConfiguration);
+    return _isTabLocation(loc) && _isTabLocation(visible);
   }
 
   /// Opens the thread screen for [post] (nested in the current tab so the
@@ -103,4 +106,28 @@ extension RasqNavigation on BuildContext {
   }
 
   void pushDmRoom(DmRoom room) => push('${Routes.dm}/room/${Uri.encodeComponent(room.peer.id)}', extra: room);
+}
+
+bool _isTabLocation(String loc) => loc.startsWith(Routes.home) || loc.startsWith(Routes.search) || loc.startsWith(Routes.vc) || loc.startsWith(Routes.notifications) || loc.startsWith(Routes.dm);
+
+/// いま見えている画面の場所 (D-179): `RouteMatchList.uri` は push で積んだ画面を含まないので、
+/// 一番上の一致(シェルの中 / 積んだ画面)まで辿る。
+String visibleLocationOf(RouteMatchList config) {
+  if (config.isEmpty) return '/';
+  RouteMatchBase m = config.matches.last;
+  while (m is ShellRouteMatch) {
+    m = m.matches.last;
+  }
+  if (m is ImperativeRouteMatch) return visibleLocationOf(m.matches);
+  return m.matchedLocation;
+}
+
+/// 履歴(積まれている画面)に [route] で始まる場所があるか (D-204: あればそこまで戻る)。
+bool routeInHistory(RouteMatchList config, String route) {
+  bool walk(RouteMatchBase m) {
+    if (m is ImperativeRouteMatch) return m.matches.matches.any(walk);
+    if (m is ShellRouteMatch) return m.matches.any(walk);
+    return m.matchedLocation.startsWith(route);
+  }
+  return config.matches.any(walk);
 }
