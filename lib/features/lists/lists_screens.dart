@@ -74,7 +74,6 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
   Widget build(BuildContext context) {
     final lists = ref.watch(listsProvider);
     final manager = ref.watch(overlayManagerProvider);
-    final scheme = Theme.of(context).colorScheme;
     // 表示設定(非公開クリップ)は KV `lists.view.v1` に永続化。
     final viewSettings = ref.watch(settingsAreaProvider(listsViewArea)).value ?? const <String, Object?>{};
     final showPrivate = viewSettings['showPrivateClips'] == true;
