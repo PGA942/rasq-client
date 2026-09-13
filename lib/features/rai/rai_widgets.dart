@@ -244,8 +244,11 @@ class RaiStatusRing extends StatelessWidget {
 final raiBarKey = GlobalKey(debugLabel: 'rai.bar');
 
 class RaiBar extends StatefulWidget {
-  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320});
+  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320, this.onSuggest});
   final RaiState state;
+
+  /// 薄い補完 (D-194): 入力から候補の見出しを返す(null = 無し)。半角 / 全角スペースで確定。
+  final String? Function(String typed)? onSuggest;
 
   /// 履歴ボタン (D-187): ウィジェットが上に広がって発言の履歴(コピー付き)が出る。
   final VoidCallback? onHistoryToggle;
@@ -288,6 +291,20 @@ class _RaiBarState extends State<RaiBar> {
     super.dispose();
   }
 
+  String? _ghost;
+
+  /// 入力のたびに候補を引く。末尾に半角 / 全角スペースが入ったら候補で確定する。
+  void _onChanged(String text) {
+    if (_ghost != null && (text.endsWith(' ') || text.endsWith('　')) && _ghost!.startsWith(text.substring(0, text.length - 1))) {
+      final g = _ghost!;
+      _input.value = TextEditingValue(text: g, selection: TextSelection.collapsed(offset: g.length));
+      setState(() => _ghost = null);
+      return;
+    }
+    final next = text.trim().isEmpty ? null : widget.onSuggest?.call(text);
+    if (next != _ghost) setState(() => _ghost = next);
+  }
+
   void _submit() {
     final t = _input.text.trim();
     if (t.isEmpty) {
@@ -296,6 +313,7 @@ class _RaiBarState extends State<RaiBar> {
     }
     widget.onSubmit(t);
     _input.clear();
+    _ghost = null;
     _focus.unfocus();
   }
 
@@ -325,21 +343,35 @@ class _RaiBarState extends State<RaiBar> {
             child: Row(children: [
               RasqIconButton(key: const ValueKey('rai.headline'), icon: s.expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 22, tooltip: s.expanded ? '畳む' : '広げる', onPressed: widget.onToggleExpanded),
               Expanded(
-                child: TextField(
-                  key: const ValueKey('rai.input'),
-                  controller: _input,
-                  focusNode: _focus,
-                  style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700),
-                  decoration: InputDecoration(
-                    hintText: hint,
-                    hintStyle: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface),
-                    isDense: true,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xs, vertical: 10),
+                child: Stack(children: [
+                  // 薄い補完 (D-194): 入力の後ろに候補の見出しを薄く敷く。
+                  if (_ghost != null)
+                    Positioned.fill(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xs, vertical: 10),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(_ghost!, key: const ValueKey('rai.ghost'), maxLines: 1, overflow: TextOverflow.clip, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant.withValues(alpha: 0.55))),
+                        ),
+                      ),
+                    ),
+                  TextField(
+                    key: const ValueKey('rai.input'),
+                    controller: _input,
+                    focusNode: _focus,
+                    style: RasqTypography.bodySmall,
+                    decoration: InputDecoration(
+                      hintText: hint,
+                      hintStyle: RasqTypography.bodySmall.copyWith(color: scheme.onSurface),
+                      isDense: true,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xs, vertical: 10),
+                    ),
+                    textInputAction: TextInputAction.send,
+                    onChanged: _onChanged,
+                    onSubmitted: (_) => _submit(),
                   ),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _submit(),
-                ),
+                ]),
               ),
               RasqIconButton(key: const ValueKey('rai.history'), icon: s.historyOpen ? Icons.expand_more : Icons.history, size: 20, tooltip: s.historyOpen ? '履歴を閉じる' : '発言の履歴', onPressed: widget.onHistoryToggle),
               RasqIconButton(icon: Icons.close, size: 18, tooltip: 'RAi を閉じる', onPressed: widget.onClose),

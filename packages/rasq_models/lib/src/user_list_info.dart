@@ -14,6 +14,17 @@ class UserListInfo {
   final bool isPublic;
 }
 
+/// カスタムフィード (D-194: Bluesky のフィードジェネレーター。第二期以降は RASQ リストもここへ)。
+@immutable
+class FeedInfo {
+  const FeedInfo({required this.uri, required this.name, this.description, this.likeCount, this.creator});
+  final String uri;
+  final String name;
+  final String? description;
+  final int? likeCount;
+  final String? creator;
+}
+
 /// Profile fields the user may edit (プロフィール編集). null = unchanged.
 @immutable
 class ProfileUpdate {

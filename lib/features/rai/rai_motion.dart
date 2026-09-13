@@ -111,16 +111,22 @@ Duration raiMoveDuration({required double distance, required double columnWidth,
   return Duration(milliseconds: (4000 + 2000 * r).round());
 }
 
-/// 静止時のヨー (D-193): 指差す側へ 30°(左腕 = 左を向く = +30°、右腕 = −30°、腕なし = 正面)。
+/// 静止時のヨー (D-193 → D-194): 指差す側へ 30°(左腕 = −30°、右腕 = +30°、腕なし = 正面)。
 const raiRestYaw = 30 * math.pi / 180;
 
-/// 走行中に進行方向へ向く角度の上限。
+/// 走行中に進行方向へ向く角度。
 const raiTravelYaw = 60 * math.pi / 180;
 
-double raiRestYawFor(RaiArm arm) => switch (arm) { RaiArm.left => raiRestYaw, RaiArm.right => -raiRestYaw, RaiArm.none => 0 };
+/// 後半で背中を見せる角度。
+const raiBackYaw = math.pi;
 
-/// 移動中のヨー: 短距離は出発側の向きから到着側の向きへ滑らかに。長距離は起動で進行方向へ向き、
-/// 走行中は進行方向(x 速度の符号)を向き、停止(最後の段)で到着側の向きに合わせる。
+double raiRestYawFor(RaiArm arm) => switch (arm) { RaiArm.left => -raiRestYaw, RaiArm.right => raiRestYaw, RaiArm.none => 0 };
+
+/// 移動中のヨー (D-194):
+/// - 短距離: 出発側の向きから到着側の向きへ滑らかに。
+/// - 長距離: 起動で進行方向(±60°)を向き → 前半で回り続けて **後半は背中(180°)を見せ** → 停止の段で
+///   **その場で同じ回転方向に旋回し続けて** 到着側の向き(±30°、到着時に上げる腕が基準)に合わせる。
+///   回転方向は山なりの向き = 進行方向(右へ走るなら時計回り = 負)。
 double raiYawAt(double progress, {required RaiMotionPlan? plan, required double velocityDx, required RaiArm armFrom, required RaiArm armTo}) {
   final t = progress.clamp(0.0, 1.0);
   final restTo = raiRestYawFor(armTo);
@@ -128,10 +134,15 @@ double raiYawAt(double progress, {required RaiMotionPlan? plan, required double 
   final restFrom = raiRestYawFor(armFrom);
   double smooth(double x) => x * x * (3 - 2 * x);
   if (!plan.long) return restFrom + (restTo - restFrom) * smooth(t);
-  final travel = velocityDx.abs() < 0.01 ? 0.0 : (velocityDx > 0 ? -raiTravelYaw : raiTravelYaw);
+  final dir = velocityDx >= 0 ? -1.0 : 1.0;
+  final travel = dir * raiTravelYaw;
+  final back = dir * raiBackYaw;
+  // 到着側の向きを、背中(±180°)からさらに同じ方向へ回った先の等価角に置く(旋回して合わせる)。
+  final finalYaw = restTo + dir * 2 * math.pi;
   final startEnd = plan.steps.first.fraction;
   final stopStart = 1 - plan.steps.last.fraction;
   if (t < startEnd) return restFrom + (travel - restFrom) * smooth(t / startEnd);
-  if (t < stopStart) return travel;
-  return travel + (restTo - travel) * smooth((t - stopStart) / (1 - stopStart));
+  if (t < 0.5) return travel + (back - travel) * smooth((t - startEnd) / (0.5 - startEnd));
+  if (t < stopStart) return back;
+  return back + (finalYaw - back) * smooth((t - stopStart) / (1 - stopStart));
 }

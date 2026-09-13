@@ -328,7 +328,8 @@ void main() {
     await tester.tap(inScreen(find.text('タイムラインを追加')));
     await tester.pumpAndSettle();
     expect(find.text('タイムライン'), findsOneWidget);
-    expect(find.text('リスト: Fediverse Banner'), findsOneWidget);
+    expect(find.text('リストTL'), findsOneWidget); // D-194: リストは追加後にアカウント → リストで選ぶ
+    expect(find.text('カスタムフィード(Bluesky)'), findsNothing); // Bluesky アカウントが無い
     expect(find.text('現在のトレンドTL'), findsOneWidget);
     await tester.tap(find.text('現在のトレンドTL'));
     await tester.pumpAndSettle();
@@ -421,7 +422,7 @@ void main() {
     await tester.tap(find.text('リスト系').last); // ドロップダウン項目
     await tester.pumpAndSettle();
     expect(find.text('タイムライン'), findsNothing);
-    expect(find.text('リスト: Fediverse Banner'), findsOneWidget);
+    expect(find.text('リストTL'), findsOneWidget);
   });
 
   testWidgets('D-124: 「グラフで編集」→ ノードエディタ。グラフ編集で tlcfg は破棄され手組み扱いに', (tester) async {
@@ -526,5 +527,98 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('関係ない話'), findsNothing);
     expect(find.text('まだメッセージはありません'), findsOneWidget);
+  });
+
+  test('D-194: カスタムフィード(feed:<uri>)は tl.feed ノードにコンパイルされ、表示名を持つ', () {
+    final g = compileTlConfig(
+      const TlConfig(sources: [TlSourceComponent(tl: 'feed:at://did:plc:x/app.bsky.feed.generator/cats', account: '@alice.bsky.social@bsky.social', label: 'Cats')], algorithms: [TlAlgorithmComponent(type: 'chrono')], clock: ''),
+      scope: 'tl.home',
+    );
+    final feed = g.nodes.singleWhere((n) => n.type == 'tl.feed');
+    expect(feed.inputs.firstWhere((i) => i.label == 'フィード').value, 'at://did:plc:x/app.bsky.feed.generator/cats');
+    expect(feed.inputs.firstWhere((i) => i.label == 'アカウント').value, '@alice.bsky.social@bsky.social');
+    final round = TlSourceComponent.fromJson(const TlSourceComponent(tl: 'feed:at://x', label: 'Cats').toJson());
+    expect(round.isFeed, isTrue);
+    expect(round.feedUri, 'at://x');
+    expect(round.label, 'Cats');
+  });
+
+  testWidgets('D-194: TL 種別はアカウントの SNS が出せるもの(「現在のアカウント」は無し)、リストTL はアカウント → リスト、Bluesky はカスタムフィードを検索して選ぶ', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final bsky = AccountSession(account: const AccountId(kind: SnsKind.bluesky, instance: 'bsky.social', handle: 'alice.bsky.social'), pluginId: 'test.bsky', token: 't', createdAt: DateTime(2026, 9, 1), displayName: 'アリス');
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson(), bsky.toJson()], 'current': fakeSession().account.key}),
+    });
+    final registry = PluginRegistry()
+      ..register(FakeSnsPlugin(posts: MockData.timeline))
+      ..register(FakeSnsPlugin(posts: MockData.timeline, kind: SnsKind.bluesky, id: 'test.bsky', feeds: const [FeedInfo(uri: 'at://did:plc:x/app.bsky.feed.generator/cats', name: 'Cats', description: 'ねこのフィード'), FeedInfo(uri: 'at://did:plc:x/app.bsky.feed.generator/dogs', name: 'Dogs')]));
+    await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)], child: const RasqApp()));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    await tester.tap(find.byTooltip('タイムライン設定'));
+    await tester.pumpAndSettle();
+    Finder inScreen(Finder f) => find.descendant(of: find.byType(TimelineConfigScreen), matching: f);
+    await tester.tap(inScreen(find.text('フォロー中')));
+    await tester.pumpAndSettle();
+    // タイムラインを追加 → アカウントは現在のもの、TL 種別はその SNS の宣言(フェイク: フォロー中 / ソーシャル)。
+    await tester.tap(inScreen(find.text('タイムラインを追加')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('タイムライン'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('@tester@example.test')), findsWidgets);
+    await tester.tap(inScreen(find.text('タイムラインを取得')).last);
+    await tester.pumpAndSettle();
+    expect(find.text('ノードを設定'), findsOneWidget);
+    expect(find.text('現在のアカウント'), findsNothing);
+    expect(find.text('TL 種別(この SNS が出せるもの)'), findsOneWidget);
+    expect(find.text('ソーシャル'), findsOneWidget);
+    expect(find.text('ローカル (local)'), findsNothing); // 決め打ちの 4 種は出ない
+    await tester.tap(find.text('ソーシャル'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('決定'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('TL: ソーシャル')), findsOneWidget);
+    // リストTL → アカウントのリスト(フェイク: Fediverse Banner)を選ぶ。
+    await tester.tap(inScreen(find.text('タイムラインを追加')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('リストTL'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('TL: リスト: 未選択')), findsOneWidget);
+    await tester.tap(inScreen(find.text('リストTLを取得')));
+    await tester.pumpAndSettle();
+    expect(find.text('リスト(このアカウントのもの)'), findsOneWidget);
+    await tester.tap(find.text('Fediverse Banner'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('決定'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('TL: リスト: Fediverse Banner')), findsOneWidget);
+    // カスタムフィード(Bluesky): 検索して選ぶ。
+    await tester.tap(inScreen(find.text('タイムラインを追加')));
+    await tester.pumpAndSettle();
+    expect(find.text('カスタムフィード(Bluesky)'), findsOneWidget);
+    await tester.tap(find.text('カスタムフィード(Bluesky)'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('@alice.bsky.social@bsky.social')), findsWidgets);
+    await tester.tap(inScreen(find.text('カスタムフィードを取得')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('tlcfg.feed.search')), findsOneWidget);
+    expect(find.text('Cats'), findsOneWidget); // 検索前は人気順(全部)
+    expect(find.text('Dogs'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('tlcfg.feed.search')), 'cat');
+    await tester.pumpAndSettle();
+    expect(find.text('Dogs'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('tlcfg.feed.at://did:plc:x/app.bsky.feed.generator/cats')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('決定'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.text('TL: フィード: Cats')), findsOneWidget);
+    final area = await container.read(settingsAreaProvider('nodeprog.${fakeSession().account.key}.tl.home').future);
+    final graph = NodeGraph.fromJson((jsonDecode(area['graph']! as String) as Map).cast<String, Object?>());
+    final feed = graph.nodes.singleWhere((n) => n.type == 'tl.feed');
+    expect(feed.inputs.firstWhere((i) => i.label == 'フィード').value, 'at://did:plc:x/app.bsky.feed.generator/cats');
+    expect(feed.inputs.firstWhere((i) => i.label == 'アカウント').value, '@alice.bsky.social@bsky.social');
+    expect(graph.nodes.where((n) => n.type == 'tl.list').single.inputs.firstWhere((i) => i.label == 'リスト').value, 'Fediverse Banner');
   });
 }

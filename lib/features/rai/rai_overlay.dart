@@ -83,6 +83,18 @@ class _RaiBarHost extends ConsumerWidget {
     final bar = SizedBox(
       width: raiPanelWidth(context),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
+        // 曖昧な質問の選択肢 (D-194): 吹き出しの上のタイル。
+        if (s.choices.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: RasqSpacing.xs),
+            child: Material(
+              type: MaterialType.transparency,
+              child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, alignment: WrapAlignment.center, children: [
+                for (final c in s.choices)
+                  ActionChip(key: ValueKey('rai.choice.${c.id}'), label: Text(c.index, style: RasqTypography.bodySmall), backgroundColor: Theme.of(context).colorScheme.surface, onPressed: () => n.pick(c.id)),
+              ]),
+            ),
+          ),
         // RAi の発言は入力ウィジェットの上に 1 行ずつ (D-182)。
         if (speech != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: speech),
         RaiBar(
@@ -94,6 +106,7 @@ class _RaiBarHost extends ConsumerWidget {
         onClose: () => hideRai(ref),
         onModelTap: () => showRaiModelsFow(ref, context),
         onHistoryToggle: n.toggleHistory,
+        onSuggest: n.suggest,
         historyMaxHeight: screen.height * 0.45,
         llmNote: switch (llm.phase) {
           RaiLlmPhase.ready || RaiLlmPhase.generating => null,

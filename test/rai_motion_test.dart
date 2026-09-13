@@ -71,19 +71,27 @@ void main() {
     expect(raiMascot3dProvider, isNotNull);
   });
 
-  test('ヨー (D-193): 静止は指差す側へ 30°、短距離は滑らかに向き替え、長距離は走行中に進行方向を向いて停止で向き合わせ', () {
-    expect(raiRestYawFor(RaiArm.left), closeTo(30 * math.pi / 180, 1e-9));
-    expect(raiRestYawFor(RaiArm.right), closeTo(-30 * math.pi / 180, 1e-9));
+  test('ヨー (D-194): 静止は指差す側へ 30°(左腕 −30° / 右腕 +30°)、短距離は滑らかに、長距離は進行方向 → 後半は背中 → 停止でその場旋回して合わせる', () {
+    expect(raiRestYawFor(RaiArm.left), closeTo(-30 * math.pi / 180, 1e-9));
+    expect(raiRestYawFor(RaiArm.right), closeTo(30 * math.pi / 180, 1e-9));
     expect(raiRestYawFor(RaiArm.none), 0);
     final short = planRaiMotion(from: const Offset(60, 300), to: const Offset(120, 380), columnWidth: 360, centerX: 180, armFrom: RaiArm.right, armTo: RaiArm.left);
-    expect(raiYawAt(0, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(-30 * math.pi / 180, 1e-9));
-    expect(raiYawAt(1, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(30 * math.pi / 180, 1e-9));
+    expect(raiYawAt(0, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(30 * math.pi / 180, 1e-9));
+    expect(raiYawAt(1, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(-30 * math.pi / 180, 1e-9));
     expect(raiYawAt(0.5, plan: short, velocityDx: 1, armFrom: RaiArm.right, armTo: RaiArm.left), closeTo(0, 1e-9));
     final long = planRaiMotion(from: const Offset(40, 100), to: const Offset(300, 600), columnWidth: 360, centerX: 180, armFrom: RaiArm.left, armTo: RaiArm.right);
-    expect(raiYawAt(0.5, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-60 * math.pi / 180, 1e-9)); // 右へ走る = 右を向く
-    expect(raiYawAt(0.5, plan: long, velocityDx: -3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(60 * math.pi / 180, 1e-9));
-    expect(raiYawAt(1, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-30 * math.pi / 180, 1e-9)); // 停止で向き合わせ
-    expect(raiYawAt(0.9, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), inExclusiveRange(-60 * math.pi / 180, -30 * math.pi / 180));
+    // 右へ走る = 時計回り(負)。起動の終わり(20%)で −60°、後半(50〜80%)は背中 −180°。
+    expect(raiYawAt(0.2, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-60 * math.pi / 180, 1e-6));
+    expect(raiYawAt(0.6, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(-math.pi, 1e-9));
+    // 停止の段: 同じ方向に回り続けて到着側(+30° ≡ −330°)に合わせる。単調に減る。
+    final a = raiYawAt(0.85, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right);
+    final b = raiYawAt(0.95, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right);
+    expect(a, lessThan(-math.pi));
+    expect(b, lessThan(a));
+    expect(b, greaterThan(30 * math.pi / 180 - 2 * math.pi));
+    expect(raiYawAt(1, plan: long, velocityDx: 3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(30 * math.pi / 180, 1e-9));
+    // 左へ走るなら反時計回り(正)。
+    expect(raiYawAt(0.6, plan: long, velocityDx: -3, armFrom: RaiArm.left, armTo: RaiArm.right), closeTo(math.pi, 1e-9));
     expect(raiYawAt(0.5, plan: null, velocityDx: 0, armFrom: RaiArm.none, armTo: RaiArm.none), 0);
   });
 }

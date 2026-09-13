@@ -552,6 +552,21 @@ class WasmSnsSession extends SnsSessionBase {
     ];
   }
 
+  /// カスタムフィード (D-194): `sns.feeds {query, limit}` → `{feeds: [{uri, name, description?, likeCount?, creator?}]}`。未実装(C01)は空。
+  @override
+  Future<List<FeedInfo>> searchFeeds(String query, {int limit = 20}) async {
+    try {
+      final value = await _call('sns.feeds', {'query': query, 'limit': limit});
+      return [
+        for (final f in (value['feeds'] as List? ?? const []))
+          if (f is Map) FeedInfo(uri: '${f['uri'] ?? ''}', name: '${f['name'] ?? f['displayName'] ?? ''}', description: f['description'] as String?, likeCount: (f['likeCount'] as num?)?.toInt(), creator: f['creator'] as String?),
+      ];
+    } on SnsApiException catch (e) {
+      if (e.code.code != 'C01') rethrow;
+      return const [];
+    }
+  }
+
   @override
   Future<UserListInfo> listInfo(String listId) async {
     final value = await _call('sns.listInfo', {'id': listId});

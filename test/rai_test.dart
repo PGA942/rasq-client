@@ -430,6 +430,60 @@ void main() {
     expect(find.byType(ProfileEditScreen), findsNothing);
   });
 
+  testWidgets('曖昧な質問は吹き出しの上に選択肢 (D-194)、入力欄は薄い補完(スペースで確定)と通常フォント', (tester) async {
+    final c = await pump(tester);
+    RasqSidebar.open(c.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await tester.pumpAndSettle();
+    // 入力欄は通常の太さ。
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('rai.input'))).style?.fontWeight, isNot(FontWeight.w700));
+    // 「アカウント」だけでは複数の操作が同点 → 選択肢。
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'アカウント');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    final st = c.read(raiProvider);
+    expect(st.choices.length, greaterThanOrEqualTo(2));
+    expect(st.steps, isEmpty);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('どれのことですか'));
+    final first = st.choices.first;
+    expect(find.byKey(ValueKey('rai.choice.${first.id}')), findsOneWidget);
+    expect(tester.getRect(find.byKey(ValueKey('rai.choice.${first.id}'))).bottom, lessThanOrEqualTo(tester.getRect(find.byKey(const ValueKey('rai.speech'))).top + 1)); // 吹き出しの上
+    await tester.tap(find.byKey(ValueKey('rai.choice.${first.id}')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).choices, isEmpty);
+    expect(c.read(raiProvider).lastOperation, first.id);
+    expect(c.read(raiProvider).steps, isNotEmpty);
+    await tester.tap(find.byKey(const ValueKey('rai.speech.close')));
+    await tester.pumpAndSettle();
+    // 薄い補完: 「投稿」と打つと見出しの候補が薄く出て、スペースで確定。
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿');
+    await tester.pump();
+    expect(find.byKey(const ValueKey('rai.ghost')), findsOneWidget);
+    final ghost = tester.widget<Text>(find.byKey(const ValueKey('rai.ghost'))).data!;
+    expect(ghost.startsWith('投稿'), isTrue);
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿 ');
+    await tester.pump();
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('rai.input'))).controller!.text, ghost);
+    expect(find.byKey(const ValueKey('rai.ghost')), findsNothing);
+    // 直前の操作から分岐する見出しを優先する: 「投稿する」(post)のあとは post から分岐する操作。
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    if (c.read(raiProvider).choices.isNotEmpty) {
+      await tester.tap(find.byKey(ValueKey('rai.choice.${c.read(raiProvider).choices.first.id}')));
+      await tester.pumpAndSettle();
+    }
+    final last = c.read(raiProvider).lastOperation;
+    expect(last, isNotNull);
+    final branches = c.read(raiReferenceProvider).value!.operations.where((o) => o.base == last).toList();
+    if (branches.isNotEmpty) {
+      final head = branches.first.index.substring(0, 1);
+      expect(c.read(raiProvider.notifier).suggest(head), branches.firstWhere((o) => o.index.startsWith(head), orElse: () => branches.first).index);
+    }
+  });
+
   testWidgets('ログイン画面の「Raiのインストラクチャ」→ 入力欄付きのバー(インストラクション)', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;

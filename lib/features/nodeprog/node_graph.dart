@@ -495,6 +495,18 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
   ),
   // トレンド検索結果取得 (D-106): トレンド上位タグを検索して投稿リストに。
   NodeCatalogEntry(
+    type: 'tl.feed',
+    title: 'カスタムフィード取得',
+    icon: Icons.rss_feed,
+    genre: '取得',
+    description: 'Bluesky のカスタムフィード(フィードジェネレーター)のタイムラインを取得します(at:// の URI で指定。TL カスタマイズでは検索して選べます)。',
+    inputs: [
+      NodePort(label: 'フィード', value: '', dataType: '設定'),
+      NodePort(label: 'アカウント', value: '', dataType: '設定'),
+    ],
+    outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
+  NodeCatalogEntry(
     type: 'trend.posts',
     title: 'トレンド検索結果取得',
     icon: Icons.travel_explore,
