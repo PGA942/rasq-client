@@ -268,8 +268,8 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     final velocity = moving ? (path.at((t + 0.02).clamp(0, 1)) - pos) : Offset.zero;
     final tilt = moving ? (velocity.dx / (velocity.distance + 0.001)) * 0.18 : 0.0;
     final pointing = s.target == null ? null : pointingDirection(pos, s.target!.center);
-    // 向き (D-193): 静止はヨー 30°(指差す側へ)、長距離は走りながら進行方向へ向き、停止で向き合わせ。
-    _ctrl3d.yaw = raiYawAt(moving ? t : 1, plan: _ctrl3d.plan, velocityDx: velocity.dx, armFrom: _yawArmFrom, armTo: _ctrl3d.plan?.armTo ?? _ctrl3d.arm);
+    // 向き (D-195): 静止はヨー 30°(指差す側へ)、移動中は曲線の接線、停止でその場で向き合わせ。
+    _ctrl3d.yaw = raiYawAt(moving ? t : 1, plan: _ctrl3d.plan, tangent: velocity, armFrom: _yawArmFrom, armTo: _ctrl3d.plan?.armTo ?? _ctrl3d.arm);
     // 手前再接近 (D-192): 移動の中ほどで大きく(最大 700 px、画面に収まる範囲)。
     final size = moving ? raiSizeAt(t, approach: raiApproachSizeFor(screen)) : mascot;
     return SizedBox(

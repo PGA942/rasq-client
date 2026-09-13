@@ -85,6 +85,9 @@ abstract final class Routes {
   /// タイムラインのカスタマイズ(簡略版, D-121)。`/tlconfig/<scope>`。
   static String tlConfig(String scope) => '/tlconfig/${Uri.encodeComponent(scope)}';
 
+  /// カスタムフィードの TL (D-195: Bluesky のフィードジェネレーター)。
+  static String feed(String uri) => '/feeds/${Uri.encodeComponent(uri)}';
+
   /// 投稿先のカスタマイズ (D-126: 完全に別ページ)。
   static const composerConfig = '/composerconfig';
 
@@ -219,6 +222,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: Routes.composerConfig, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ComposerConfigScreen()),
           GoRoute(path: '/clips/detail', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => ClipTimelineScreen(clip: state.extra! as ClipInfo)),
           GoRoute(path: '/relational/event', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => RelationalEventScreen(event: state.extra! as ConversationEvent)),
+          GoRoute(path: '/feeds/:uri', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => FeedTimelineScreen(uri: Uri.decodeComponent(s.pathParameters['uri']!), info: s.extra is FeedInfo ? s.extra as FeedInfo : null)),
           GoRoute(path: Routes.lists, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListsScreen(), routes: [
             GoRoute(path: 'import', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListImportScreen()),
             GoRoute(path: ':id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => ListDetailScreen(listId: s.pathParameters['id']!, info: s.extra is UserListInfo ? s.extra as UserListInfo : null)),

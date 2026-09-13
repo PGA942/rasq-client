@@ -567,6 +567,22 @@ class WasmSnsSession extends SnsSessionBase {
     }
   }
 
+  List<FeedInfo> _feedsFrom(Map<String, Object?> value) => [
+        for (final f in (value['feeds'] as List? ?? const []))
+          if (f is Map) FeedInfo(uri: '${f['uri'] ?? ''}', name: '${f['name'] ?? f['displayName'] ?? ''}', description: f['description'] as String?, likeCount: (f['likeCount'] as num?)?.toInt(), creator: f['creator'] as String?),
+      ];
+
+  /// 保存済みフィード (D-195): `sns.savedFeeds {}`。未実装(C01)は空。
+  @override
+  Future<List<FeedInfo>> savedFeeds() async {
+    try {
+      return _feedsFrom(await _call('sns.savedFeeds', const {}));
+    } on SnsApiException catch (e) {
+      if (e.code.code != 'C01') rethrow;
+      return const [];
+    }
+  }
+
   @override
   Future<UserListInfo> listInfo(String listId) async {
     final value = await _call('sns.listInfo', {'id': listId});

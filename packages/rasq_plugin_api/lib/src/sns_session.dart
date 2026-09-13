@@ -60,6 +60,9 @@ abstract class SnsSession {
 
   /// カスタムフィードの検索 (D-194: Bluesky のフィードジェネレーター。持たない SNS は unsupported)。
   Future<List<FeedInfo>> searchFeeds(String query, {int limit = 20});
+
+  /// 保存済み / ピン留めのカスタムフィード (D-195: リストページの「カスタムフィード」欄)。
+  Future<List<FeedInfo>> savedFeeds();
   Future<UserListInfo> listInfo(String listId);
   Future<List<UserSummary>> listMembers(String listId);
   Future<UserListInfo> createList(String name);
@@ -208,6 +211,8 @@ abstract class SnsSessionBase implements SnsSession {
   Future<List<UserListInfo>> lists() => _unsupported('lists');
   @override
   Future<List<FeedInfo>> searchFeeds(String query, {int limit = 20}) => _unsupported('searchFeeds');
+  @override
+  Future<List<FeedInfo>> savedFeeds() => _unsupported('savedFeeds');
   @override
   Future<UserListInfo> listInfo(String listId) => _unsupported('listInfo');
   @override
