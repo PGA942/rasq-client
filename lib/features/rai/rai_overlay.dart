@@ -313,13 +313,19 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     _projector ??= RaiProjector(screen: screen);
     if (_projector!.screen != screen) _projector = RaiProjector(screen: screen);
     final proj = _projector!;
+    final outline = Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.85) : null;
+    // 空間モードのウィジェットは常に同じ Stack の先頭に固定キーで置く (D-202): 出す / 隠す / スタンバイで
+    // 木の形を変えると three_js が作り直され(テクスチャの再生成、破棄時の EGL 例外)、Stack の外に
+    // Positioned を返すと ParentDataWidget の誤用になる(実機のログ)。
+    final scene = three ? Positioned.fill(key: const ValueKey('rai.scene'), child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj, outline: outline))) : null;
+    Widget layer(List<Widget> children) => SizedBox(width: screen.width, height: screen.height, child: Stack(children: [?scene, ...children]));
     // スタンバイ (D-199): 吹き出しが無く、アシスタントで RAi ホームの枠があるとき、そこに大きく薄く。
     final standby = s.bubble == null && s.mode == RaiMode.assistant && slot != null;
     if (s.bubble == null && !standby) {
       // 何も出さない(3D は読み込み直しを避けるためウィジェットは残し、隠す)。
       _ctrl3d.opacity = 0;
       _standbyWorld = null;
-      return three ? Positioned.fill(child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj))) : const SizedBox.shrink();
+      return layer(const []);
     }
     if (standby) {
       final local = _toLocal(slot);
@@ -328,7 +334,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
       _ctrl3d.idle(RaiArm.none);
       _pos = null; // 次の移動はスタンバイの位置から
       _onFrame();
-      return three ? Positioned.fill(child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj, outline: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.85) : null))) : const SizedBox.shrink();
+      return layer(const []);
     }
     _ctrl3d.opacity = 1;
     final localTarget = s.target == null ? null : _toLocal(s.target!);
@@ -351,36 +357,47 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     final pos = moving ? _ctrl3d.screenPos : (_pos ?? dest);
     final size = moving ? _ctrl3d.sizePx : mascot;
     final pointing = localTarget == null ? null : pointingDirection(pos, localTarget.center);
-    return SizedBox(
-      width: screen.width,
-      height: screen.height,
-      child: Stack(children: [
-        // 目標の部品をハイライト(インストラクション)。
-        if (localTarget != null && s.mode == RaiMode.instruction)
-          Positioned.fromRect(
-            rect: localTarget.inflate(6),
+    return layer([
+      // 目標の部品をハイライト(インストラクション)。
+      if (localTarget != null && s.mode == RaiMode.instruction)
+        Positioned.fromRect(
+          key: const ValueKey('rai.highlight'),
+          rect: localTarget.inflate(6),
+          child: IgnorePointer(
+            child: DecoratedBox(decoration: BoxDecoration(border: Border.all(color: RasqColors.accent, width: 2), borderRadius: BorderRadius.circular(RasqSizes.radiusSm))),
+          ),
+        ),
+      if (three) ...[
+        // 較正用 (D-200、デバッグビルドだけ): 写像が置いたつもりの位置と大きさ。毎フレーム追従する (D-202)。
+        // モデルとずれていれば 3D 側の問題。
+        if (kDebugMode)
+          Positioned.fill(
+            key: const ValueKey('rai.frame'),
             child: IgnorePointer(
-              child: DecoratedBox(decoration: BoxDecoration(border: Border.all(color: RasqColors.accent, width: 2), borderRadius: BorderRadius.circular(RasqSizes.radiusSm))),
+              child: AnimatedBuilder(
+                animation: _ctrl3d,
+                builder: (_, _) {
+                  final p = _ctrl3d.screenPos;
+                  final sz = _ctrl3d.sizePx;
+                  return Stack(children: [
+                    Positioned(
+                      left: p.dx - sz / 2,
+                      top: p.dy - sz * 0.625,
+                      child: SizedBox(width: sz, height: sz * 1.25, child: DecoratedBox(decoration: BoxDecoration(border: Border.all(color: RasqColors.accent.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(8)))),
+                    ),
+                  ]);
+                },
+              ),
             ),
           ),
-        if (three) ...[
-          // 空間モード (D-197): 画面いっぱいの固定ウィジェット。モデルだけが動く。
-          Positioned.fill(child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj, outline: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.85) : null))),
-          // 較正用 (D-200、デバッグビルドだけ): 写像が置いたつもりの位置と大きさ。モデルとずれていれば 3D 側の問題。
-          if (kDebugMode)
-            Positioned(
-              left: pos.dx - size / 2,
-              top: pos.dy - size * 0.625,
-              child: IgnorePointer(child: SizedBox(width: size, height: size * 1.25, child: DecoratedBox(decoration: BoxDecoration(border: Border.all(color: RasqColors.accent.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(8))))),
-            ),
-        ] else
-          Positioned(
-            left: pos.dx - size / 2,
-            top: pos.dy - size * 0.625,
-            child: IgnorePointer(child: RaiMascot(size: size, pointing: pointing, controller3d: _ctrl3d)),
-          ),
-      ]),
-    );
+      ] else
+        Positioned(
+          key: const ValueKey('rai.mascot2d'),
+          left: pos.dx - size / 2,
+          top: pos.dy - size * 0.625,
+          child: IgnorePointer(child: RaiMascot(size: size, pointing: pointing, controller3d: _ctrl3d)),
+        ),
+    ]);
   }
 }
 

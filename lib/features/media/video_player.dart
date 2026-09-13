@@ -9,15 +9,20 @@ import '../../app/providers.dart';
 
 /// 動画の再生 (D-201): 1 本の動画のセッション(video_player のコントローラー + 状態)。
 /// 初期化できない環境(テスト / 未対応形式)は [error] に落ちる。
+/// [autoplay] は準備ができ次第再生する(全画面ビューワー、D-202)。[hold] の間は再生しない
+/// (全画面表示プラグインが起動している間)。
 class VideoSession extends ChangeNotifier {
-  VideoSession(this.item) {
+  VideoSession(this.item, {this.autoplay = false}) {
     _init();
   }
   final MediaItem item;
+  final bool autoplay;
   VideoPlayerController? controller;
   String? error;
   bool ready = false;
   double speed = 1;
+  bool _disposed = false;
+  bool _hold = false;
   static const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
   Future<void> _init() async {
@@ -25,11 +30,14 @@ class VideoSession extends ChangeNotifier {
       final c = VideoPlayerController.networkUrl(item.url);
       controller = c;
       await c.initialize();
+      if (_disposed) return;
       c.addListener(notifyListeners);
       await c.setLooping(true);
       ready = true;
-      notifyListeners();
+      if (autoplay && !_hold) await c.play();
+      if (!_disposed) notifyListeners();
     } catch (e) {
+      if (_disposed) return;
       error = '再生できません: $e';
       notifyListeners();
     }
@@ -38,6 +46,15 @@ class VideoSession extends ChangeNotifier {
   bool get playing => controller?.value.isPlaying ?? false;
   Duration get position => controller?.value.position ?? Duration.zero;
   Duration get duration => controller?.value.duration ?? Duration.zero;
+
+  /// ホストが止めている(全画面表示プラグインの起動中、D-202)。true にすると一時停止し、自動再生もしない。
+  bool get hold => _hold;
+  set hold(bool v) {
+    if (_hold == v) return;
+    _hold = v;
+    if (v) pause();
+    notifyListeners();
+  }
 
   Future<void> toggle() async {
     final c = controller;
@@ -50,7 +67,7 @@ class VideoSession extends ChangeNotifier {
   }
 
   Future<void> play() async {
-    if (ready) await controller?.play();
+    if (ready && !_hold) await controller?.play();
   }
 
   Future<void> pause() async {
@@ -79,6 +96,7 @@ class VideoSession extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     controller?.removeListener(notifyListeners);
     controller?.dispose();
     super.dispose();
@@ -128,15 +146,17 @@ class RasqVideoView extends StatelessWidget {
   }
 }
 
-/// 再生の操作 (D-201): 再生 / 一時停止、シークバー(時間)、5 秒戻し / 送り、再生速度。
-/// [vertical] なら縦積み(動画の右に置くとき)。
+/// 再生の操作 (D-201 → D-202 の配置): **左にシークバー(+ 時間)、右に制御ボタン類**(5 秒戻し / 再生 /
+/// 5 秒送り / 速度)。幅が [stackBelow] 未満の小画面環境ではボタン類を下の行へ回す。
 class VideoControls extends StatelessWidget {
-  const VideoControls({super.key, required this.session, this.vertical = false, this.light = true});
+  const VideoControls({super.key, required this.session, this.light = false, this.stackBelow = 440});
   final VideoSession session;
-  final bool vertical;
 
-  /// 暗い背景(ビューア)向けの白。
+  /// 明るい文字(暗い背景に直接置くとき)。false = テーマの onSurface。
   final bool light;
+
+  /// この幅未満ならボタン類を下の行へ(小画面環境)。
+  final double stackBelow;
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +176,8 @@ class VideoControls extends StatelessWidget {
           ),
         );
         final time = Text('${fmtDuration(pos)} / ${fmtDuration(total)}', style: RasqTypography.caption.copyWith(color: color));
-        final buttons = [
+        final seek = Row(children: [Expanded(child: slider), Padding(padding: const EdgeInsets.only(right: RasqSpacing.sm), child: time)]);
+        final buttons = Row(mainAxisSize: MainAxisSize.min, children: [
           RasqIconButton(key: const ValueKey('video.back5'), icon: Icons.replay_5, color: color, tooltip: '5 秒戻す', onPressed: enabled ? () => session.seekBy(-5) : null),
           RasqIconButton(key: const ValueKey('video.play'), icon: session.playing ? Icons.pause_circle_filled : Icons.play_circle_fill, size: 32, color: color, tooltip: session.playing ? '一時停止' : '再生', onPressed: enabled ? session.toggle : null),
           RasqIconButton(key: const ValueKey('video.forward5'), icon: Icons.forward_5, color: color, tooltip: '5 秒送る', onPressed: enabled ? () => session.seekBy(5) : null),
@@ -168,19 +189,16 @@ class VideoControls extends StatelessWidget {
             itemBuilder: (_) => [for (final s in VideoSession.speeds) PopupMenuItem(value: s, child: Text('${s}x'))],
             child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), child: Text('${session.speed}x', style: RasqTypography.bodySmall.copyWith(color: color, fontWeight: FontWeight.w600))),
           ),
-        ];
-        if (vertical) {
-          return Column(key: const ValueKey('video.controls'), mainAxisSize: MainAxisSize.min, children: [
-            ...buttons,
-            const SizedBox(height: RasqSpacing.xs),
-            time,
-            RotatedBox(quarterTurns: 3, child: SizedBox(width: 160, child: slider)),
-          ]);
-        }
-        return Column(key: const ValueKey('video.controls'), mainAxisSize: MainAxisSize.min, children: [
-          Row(children: [Expanded(child: slider), Padding(padding: const EdgeInsets.only(right: RasqSpacing.sm), child: time)]),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: buttons),
         ]);
+        return LayoutBuilder(
+          key: const ValueKey('video.controls'),
+          builder: (context, c) {
+            if (c.maxWidth < stackBelow) {
+              return Column(key: const ValueKey('video.controls.stacked'), mainAxisSize: MainAxisSize.min, children: [seek, buttons]);
+            }
+            return Row(key: const ValueKey('video.controls.row'), children: [Expanded(child: seek), buttons]);
+          },
+        );
       },
     );
   }
@@ -207,10 +225,10 @@ class VideoPlayerBlock extends StatelessWidget {
             return Row(key: const ValueKey('video.block.side'), crossAxisAlignment: CrossAxisAlignment.start, children: [
               video,
               const SizedBox(width: RasqSpacing.md),
-              Expanded(child: SizedBox(height: height, child: Center(child: VideoControls(session: session, vertical: true, light: false)))),
+              Expanded(child: SizedBox(height: height, child: Center(child: VideoControls(session: session)))),
             ]);
           }
-          return Column(key: const ValueKey('video.block.below'), mainAxisSize: MainAxisSize.min, children: [video, VideoControls(session: session, light: false)]);
+          return Column(key: const ValueKey('video.block.below'), mainAxisSize: MainAxisSize.min, children: [video, VideoControls(session: session)]);
         });
       },
     );
@@ -219,11 +237,11 @@ class VideoPlayerBlock extends StatelessWidget {
 
 const videoFowId = 'fow.video';
 
-/// インライン再生の FOW (D-201): TL のタイルの再生バッジから。
+/// インライン再生の FOW (D-201): TL のタイルの再生バッジから(▶ を押したので再生して開く)。
 Future<void> showVideoFow(WidgetRef ref, MediaItem item, {int? column}) async {
   final manager = ref.read(overlayManagerProvider);
   if (manager.contains(videoFowId)) manager.close(videoFowId);
-  final session = VideoSession(item);
+  final session = VideoSession(item, autoplay: true);
   try {
     await manager.showFow<void>(
       id: videoFowId,

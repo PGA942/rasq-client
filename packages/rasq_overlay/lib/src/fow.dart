@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 /// FOW type (原典: UI_Elements「FOWタイプ（3種）」).
 enum FowPanelType { widget, interstitial, system }
@@ -36,6 +36,7 @@ class FowSpec {
     List<double> heightStops = const [],
     this.freeAboveStops = false,
     this.freeBelowStops = false,
+    this.theme,
   })  : heightStops = [...heightStops]..sort(),
         heightFactor = ValueNotifier(initialHeightFactor.clamp(minHeightFactor, maxHeightFactor));
 
@@ -80,6 +81,10 @@ class FowSpec {
 
   /// 最下段より下へ**シームレスに**動かせるか(false = 最下段で止まる)。
   final bool freeBelowStops;
+
+  /// パネルのテーマ (D-202): 指定するとクローム(ハンドル / ヘッダー / 背景)と本体をこのテーマで描く
+  /// (黒背景のビューワーに置くダークモードの FOW など)。null = アプリのテーマ。
+  final ThemeData Function(BuildContext context)? theme;
 
   /// ユーザーがハンドルでサイズ変更したか(呼び出し側の自動フィットが
   /// 手動調整を上書きしないための印。段階が切り替わったらリセットしてよい)。

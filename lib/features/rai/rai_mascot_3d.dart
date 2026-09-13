@@ -40,11 +40,13 @@ class RaiMascot3dController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 毎フレームの位置 / 向き。通知もする(較正枠など画面側の追従用、D-202。3D は毎フレーム読むので軽い)。
   void setFrame({required RaiVec3 world, required double yaw, required Offset screenPos, required double sizePx}) {
     this.world = world;
     this.yaw = yaw;
     this.screenPos = screenPos;
     this.sizePx = sizePx;
+    notifyListeners();
   }
 
   RaiArm get arm => _arm;
@@ -126,9 +128,16 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   late final RaiMascot3dController _fallback = RaiMascot3dController();
   RaiMascot3dController get _ctrl => widget.controller ?? _fallback;
 
+  /// 生きている three_js のインスタンス数 (D-202)。flutter_angle は ANGLE のコンテキストを共有するので、
+  /// 2 つ目を作ると 1 つ目のビューポートが壊れ(モデルが左下に縮んで出る)、破棄で EGL が落ちる。
+  /// 小さいアイコンは 2D([RaiMascot.flat])で描くこと。
+  static int liveInstances = 0;
+
   @override
   void initState() {
     super.initState();
+    liveInstances++;
+    if (liveInstances > 1) debugPrint('RAi 3D: $liveInstances three_js instances alive — the shared ANGLE context distorts the scene (D-202)');
     final proj = widget.projector;
     _three = three.ThreeJS(
       onSetupComplete: () {
@@ -155,9 +164,16 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
 
   @override
   void dispose() {
+    liveInstances--;
     _ctrl.removeListener(_sync);
     _fallback.dispose();
-    _three.dispose();
+    // flutter_angle の破棄は EGL の状態次第で例外を投げる(実機: eglMakeCurrent の null check、D-202)。
+    // 破棄の失敗でフレームを落とさない。
+    try {
+      _three.dispose();
+    } catch (e) {
+      debugPrint('RAi 3D: dispose failed: $e');
+    }
     super.dispose();
   }
 

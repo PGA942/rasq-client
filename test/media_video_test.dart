@@ -11,13 +11,14 @@ import 'package:rasq_client/features/media/media_viewer_screen.dart';
 import 'package:rasq_client/features/media/video_player.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
 
-/// 動画 (D-200): ビューアの動画ページは video_player で再生する。テスト環境(プラグイン無し)では
-/// 初期化に失敗してサムネイル + 案内に落ちる(落ちない・固まらない)。
+/// 動画 (D-200 → D-202): ビューアの動画ページは video_player で再生する。テスト環境(プラグイン無し)では
+/// 初期化に失敗してサムネイル + 案内に落ちる(落ちない・固まらない)。下側はダークモードの FOW。
 void main() {
   testWidgets('ビューアの動画ページ: 初期化できない環境では案内に落ち、ページ切り替えで壊れない', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
@@ -50,20 +51,43 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('viewer.video.error')), findsOneWidget); // プラグイン無し → 案内
-    // 操作 (D-201): アクションバーの上に 再生 / シーク / 5 秒 / 速度(初期化前は無効)。
+    // 下側はダークモードの FOW (D-202): 動画の操作(左にシークバー、右にボタン類)/ アクションバー / 投稿のインライン表示。
+    expect(find.byKey(viewerPanelKey), findsOneWidget);
     expect(find.byKey(const ValueKey('video.controls')), findsOneWidget);
     expect(find.byKey(const ValueKey('video.play')), findsOneWidget);
     expect(find.byKey(const ValueKey('video.back5')), findsOneWidget);
     expect(find.byKey(const ValueKey('video.forward5')), findsOneWidget);
     expect(find.byKey(const ValueKey('video.speed')), findsOneWidget);
     expect(find.byKey(const ValueKey('video.seek')), findsOneWidget);
+    expect(Theme.of(tester.element(find.byKey(const ValueKey('video.controls')))).brightness, Brightness.dark);
+    // 幅 360dp の小画面 → ボタン類はシークバーの下の行。
+    expect(find.byKey(const ValueKey('video.controls.stacked')), findsOneWidget);
+    expect(tester.getRect(find.byKey(const ValueKey('video.seek'))).bottom, lessThanOrEqualTo(tester.getRect(find.byKey(const ValueKey('video.play'))).top + 1));
     expect(tester.getRect(find.byKey(const ValueKey('video.controls'))).bottom, lessThanOrEqualTo(tester.getRect(find.byTooltip('共有')).top + 1)); // アクションバーの上
-    // 次のページへ(画像)→ 戻っても動画ページは生きている。
+    expect(find.descendant(of: find.byKey(viewerPanelKey), matching: find.byType(PostRow)), findsOneWidget); // 投稿のインライン表示
+    expect(find.descendant(of: find.byKey(viewerPanelKey), matching: find.byType(RasqMediaGrid)), findsNothing); // 添付は出さない
+    // 折りたたみ(操作 + アクションバー)⇄ 展開(投稿まで): ハンドルを上へ → 高くなる、外側タップ → 折りたたみに戻る。
+    final collapsed = tester.getRect(find.byKey(viewerPanelKey)).height;
+    await tester.drag(find.bySemanticsLabel('サイズ変更ハンドル'), const Offset(0, -350));
+    await tester.pumpAndSettle();
+    final expanded = tester.getRect(find.byKey(viewerPanelKey)).height;
+    expect(expanded, greaterThan(collapsed + 100));
+    await tester.tapAt(const Offset(180, 120)); // バリア(展開中だけ)
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byKey(viewerPanelKey)).height, lessThan(expanded - 100));
+    // 次のページへ(画像)→ 動画の操作は消え、戻ると動画ページは生きている。
     await tester.drag(find.byType(PageView), const Offset(-500, 0));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('video.controls')), findsNothing);
     await tester.drag(find.byType(PageView), const Offset(500, 0));
     await tester.pumpAndSettle();
     expect(find.byType(RasqVideoView), findsOneWidget);
+    expect(find.byKey(const ValueKey('video.controls')), findsOneWidget);
+    // ビューワーを閉じると FOW も閉じる。
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MediaViewerScreen), findsNothing);
+    expect(find.byKey(viewerPanelKey), findsNothing);
   });
 
   testWidgets('TL のタイルの再生バッジ → インライン再生の FOW(動画 + 操作)', (tester) async {
