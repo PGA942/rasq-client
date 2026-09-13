@@ -83,12 +83,13 @@ class _ActionBarEditBody extends ConsumerWidget {
     final session = ref.watch(currentSnsSessionProvider);
     final account = ref.watch(currentAccountProvider);
     final registry = ref.watch(pluginRegistryProvider);
-    final config = ref.watch(actionBarConfigProvider);
-    final store = ref.read(actionBarConfigProvider.notifier);
+    final accountKey = account?.key ?? '';
+    // アカウントごとの構成 (D-200)。
+    final config = ref.watch(actionBarConfigProvider(accountKey));
+    final store = ref.read(actionBarConfigProvider(accountKey).notifier);
     final manager = ref.read(overlayManagerProvider);
     final snsActions = session?.actions ?? const <ActionDescriptor>[];
     final plugins = ref.watch(pluginActionsProvider);
-    final accountKey = account?.key ?? '';
     final settings = ref.watch(slotActionSettingsProvider(accountKey));
     final settingsStore = ref.read(settingsAreaProvider(slotSettingsArea(accountKey)).notifier);
     // 表示中のバーと同じ合成(プラグインボタン込み)。

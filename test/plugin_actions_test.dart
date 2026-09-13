@@ -154,7 +154,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(ValueKey('actionbar.plugin.${pluginActionId('t.act', 'copy')}')));
     await tester.pumpAndSettle();
-    final cfg = c.read(actionBarConfigProvider);
+    final cfg = c.read(actionBarConfigProvider(fakeSession().account.key));
     expect(cfg.hidden, contains('reply'));
     expect(cfg.order.first, pluginActionId('t.act', 'copy'));
     // リノートの … → 削除(非表示)。
@@ -164,6 +164,6 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除(非表示)'));
     await tester.pumpAndSettle();
-    expect(c.read(actionBarConfigProvider).hidden, containsAll(['reply', 'renote']));
+    expect(c.read(actionBarConfigProvider(fakeSession().account.key)).hidden, containsAll(['reply', 'renote']));
   });
 }

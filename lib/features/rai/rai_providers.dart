@@ -185,7 +185,15 @@ class RaiController extends Notifier<RaiState> {
   /// モード切り替え: 進行中の手順は捨てる。アシスタントは中央固定。
   void setMode(RaiMode mode) {
     if (mode == state.mode) return;
-    state = state.copyWith(mode: mode, bubble: null, target: null, steps: const [], stepIndex: 0);
+    state = state.copyWith(mode: mode, bubble: null, target: null, steps: const [], stepIndex: 0, choices: const []);
+    // RAi ページはモードに合わせて自動で開閉 (D-200): アシスタント → 開く、インストラクション → 閉じる。
+    final router = ref.read(routerProvider);
+    final cur = visibleLocationOf(router.routerDelegate.currentConfiguration);
+    if (mode == RaiMode.assistant) {
+      if (!cur.startsWith(Routes.rai)) unawaited(router.push(Routes.rai));
+    } else if (cur.startsWith(Routes.rai) && router.canPop()) {
+      router.pop();
+    }
   }
 
   void dismissBubble() {
