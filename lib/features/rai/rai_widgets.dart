@@ -499,18 +499,23 @@ Offset pointingDirection(Offset from, Offset to) {
 
 /// 目標の矩形に対して RAi を置く位置(上下左右の空いている側)。画面下の [reservedBottom]
 /// (RAi バー + フッター)には置かない — 下の方の部品は上側から指差す。
+/// RAi の箱(mascot × 1.25)のうち、左右の透明な余白の割合 (D-196: 体が部品の端に付くように、この分だけ寄せる)。
+const raiBodyInset = 0.22;
+
+/// 目標の矩形に対して RAi を置く位置(上下左右の空いている側)。体が部品の端に**付く**ように、箱の余白ぶん寄せる (D-196)。
+/// 画面下の [reservedBottom](RAi バー + フッター)には置かない — 下の方の部品は上側から指差す。
 Offset raiAnchorFor(Rect target, Size screen, {double mascot = 72, double reservedBottom = 180}) {
-  final gap = 12.0;
-  final left = Offset(target.left - gap - mascot / 2, target.center.dy);
-  final right = Offset(target.right + gap + mascot / 2, target.center.dy);
-  final top = Offset(target.center.dx, target.top - gap - mascot * 0.7);
-  final bottom = Offset(target.center.dx, target.bottom + gap + mascot * 0.7);
+  final inset = mascot * raiBodyInset;
+  final left = Offset(target.left - mascot / 2 + inset, target.center.dy);
+  final right = Offset(target.right + mascot / 2 - inset, target.center.dy);
+  final top = Offset(target.center.dx, target.top - mascot * 0.7 + inset * 0.5);
+  final bottom = Offset(target.center.dx, target.bottom + mascot * 0.7 - inset * 0.5);
   final lowOnScreen = target.center.dy > screen.height - reservedBottom - mascot;
   final candidates = lowOnScreen ? [top, left, right, bottom] : [left, right, top, bottom];
   for (final c in candidates) {
-    if (c.dx - mascot / 2 >= 0 && c.dx + mascot / 2 <= screen.width && c.dy - mascot * 0.7 >= 0 && c.dy + mascot * 0.7 <= screen.height - reservedBottom) return c;
+    if (c.dx - mascot / 2 + inset >= 0 && c.dx + mascot / 2 - inset <= screen.width && c.dy - mascot * 0.7 >= 0 && c.dy + mascot * 0.7 <= screen.height - reservedBottom) return c;
   }
-  return Offset(screen.width / 2, math.max(mascot, target.top - gap - mascot * 0.7));
+  return Offset(screen.width / 2, math.max(mascot, target.top - mascot * 0.7));
 }
 
 /// 発言の履歴 (D-187): タイル = 全文(選択可)+ Q + 時刻、コピー。失敗は赤枠。新しい順。

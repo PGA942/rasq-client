@@ -264,8 +264,11 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     final path = _path;
     final t = Curves.easeInOutCubic.transform(_anim.value);
     final moving = _anim.isAnimating && path != null;
-    final pos = moving ? path.at(t) : (_pos ?? dest);
-    final velocity = moving ? (path.at((t + 0.02).clamp(0, 1)) - pos) : Offset.zero;
+    // 走行開始 / 終了の小さな円運動 (D-196) を重ねる。向きは山なりと同じ(右へ進むなら時計回り)。
+    final clockwise = path == null || path.to.dx >= path.from.dx;
+    Offset at(double u) => path!.at(u) + raiLoopOffset(u, plan: _ctrl3d.plan, radius: mascot * 0.25, clockwise: clockwise);
+    final pos = moving ? at(t) : (_pos ?? dest);
+    final velocity = moving ? (at((t + 0.01).clamp(0, 1)) - at((t - 0.01).clamp(0, 1))) : Offset.zero;
     final tilt = moving ? (velocity.dx / (velocity.distance + 0.001)) * 0.18 : 0.0;
     final pointing = s.target == null ? null : pointingDirection(pos, s.target!.center);
     // 向き (D-195): 静止はヨー 30°(指差す側へ)、移動中は曲線の接線、停止でその場で向き合わせ。
