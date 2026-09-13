@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 /// 画面上の部品の位置検索 (D-179、`位置検索関数`)。
 ///
@@ -8,9 +9,8 @@ import 'package:flutter/material.dart';
 Rect? locateWidgetRect({String? tooltip, String? text, Key? key, Rect? within}) {
   final root = WidgetsBinding.instance.rootElement;
   if (root == null) return null;
-  Rect? found;
+  final candidates = <({Rect rect, RenderBox box})>[];
   void visit(Element e) {
-    if (found != null) return;
     final w = e.widget;
     final hit = (tooltip != null && w is Tooltip && w.message == tooltip) ||
         (text != null && w is Text && w.data == text) ||
@@ -19,15 +19,43 @@ Rect? locateWidgetRect({String? tooltip, String? text, Key? key, Rect? within}) 
       final ro = e.findRenderObject();
       if (ro is RenderBox && ro.attached && ro.hasSize && ro.size.width > 0) {
         final r = ro.localToGlobal(Offset.zero) & ro.size;
-        if (within == null || within.overlaps(r)) {
-          found = r;
-          return;
-        }
+        if (within == null || within.overlaps(r)) candidates.add((rect: r, box: ro));
       }
     }
     e.visitChildren(visit);
   }
 
   visit(root);
-  return found;
+  if (candidates.isEmpty) return null;
+  // 同じ部品が複数ある(タブの IndexedStack に隠れたページ、2 カラムの複製 …)ときは、
+  // 実際に見えている(ヒットテストで当たる)ものを選ぶ (D-197)。どれも当たらなければ最初のもの。
+  for (final c in candidates) {
+    if (_isHitTestable(c.box, c.rect.center)) return c.rect;
+  }
+  return candidates.first.rect;
+}
+
+/// その矩形の中心へのヒットテストで、この RenderBox(かその子孫)まで届くか。
+bool _isHitTestable(RenderBox box, Offset globalPoint) {
+  try {
+    final view = RendererBinding.instance.renderViews.firstOrNull;
+    if (view == null) return true;
+    final result = BoxHitTestResult();
+    view.hitTest(result, position: globalPoint);
+    for (final entry in result.path) {
+      final t = entry.target;
+      if (t == box) return true;
+      if (t is RenderObject) {
+        // 子孫が当たっていれば、この部品は見えている。
+        RenderObject? p = t;
+        while (p != null) {
+          if (p == box) return true;
+          p = p.parent;
+        }
+      }
+    }
+    return false;
+  } catch (_) {
+    return true;
+  }
 }
