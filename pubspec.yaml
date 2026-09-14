@@ -92,6 +92,7 @@ flutter:
     - assets/rai/functions.jsonl
     - assets/rai/operations.jsonl
     - assets/rai/eval.jsonl
+    - assets/rai/face.png
     # misskey-wasm-sample plugin binary (built in rasq-sdk-sample; loaded by
     # the WASMプラグイン試験 dev screen).
     - assets/plugins/misskey_wasm_sample.wasm

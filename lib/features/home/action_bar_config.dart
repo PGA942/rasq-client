@@ -13,6 +13,12 @@ import '../../session/session_providers.dart';
 class ActionListDef {
   const ActionListDef({required this.id, required this.name, required this.memberIds, this.icon});
 
+  /// 同じ id を 2 回入れない (D-211: 重複キーで設定 FOW が壊れた)。
+  static List<String> uniq(Iterable<String> ids) {
+    final seen = <String>{};
+    return [for (final id in ids) if (seen.add(id)) id];
+  }
+
   final String id;
   final String name;
   final List<String> memberIds;
@@ -22,14 +28,14 @@ class ActionListDef {
   final String? icon;
 
   ActionListDef copyWith({String? name, List<String>? memberIds, String? icon, bool clearIcon = false}) =>
-      ActionListDef(id: id, name: name ?? this.name, memberIds: memberIds ?? this.memberIds, icon: clearIcon ? null : (icon ?? this.icon));
+      ActionListDef(id: id, name: name ?? this.name, memberIds: uniq(memberIds ?? this.memberIds), icon: clearIcon ? null : (icon ?? this.icon));
 
   Map<String, Object?> toJson() => {'id': id, 'name': name, 'memberIds': memberIds, if (icon != null) 'icon': icon};
 
   factory ActionListDef.fromJson(Map<String, Object?> json) => ActionListDef(
         id: json['id'] as String,
         name: json['name'] as String,
-        memberIds: [for (final m in (json['memberIds'] as List? ?? const [])) m as String],
+        memberIds: uniq([for (final m in (json['memberIds'] as List? ?? const [])) m as String]),
         icon: json['icon'] as String?,
       );
 }

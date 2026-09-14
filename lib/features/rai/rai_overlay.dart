@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
+import 'rai_face.dart';
 import 'rai_layout.dart';
 import 'rai_llm.dart';
 import 'rai_models_fow.dart';
@@ -162,6 +164,8 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   Offset? _pos;
   Rect? _lastTarget;
   RaiMode? _lastMode;
+  int _lastStep = -1;
+  String? _lastBubble;
   RaiProjector? _projector;
 
   /// 3D: 移動の計画(起動 / 走行 / 停止、腕の側)と進み具合、推論中の一時停止、空間の位置。
@@ -186,9 +190,60 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     }
   }
 
+  /// 表情 (D-211): FOW が出現したら 8 → 9 → 10 を順に出し、次の行程(吹き出し / 手順が変わる)まで 10 のまま。
+  /// それ以外は目で、ときどきまばたき。
+  OverlayManager? _overlayManager;
+  Set<String> _fowIds = const {};
+  Timer? _faceTimer;
+  Timer? _blinkTimer;
+  bool _holdingFow = false;
+
+  void _onOverlays() {
+    final m = _overlayManager;
+    if (!mounted || m == null) return;
+    final ids = {for (final e in m.entries) if (e.fow != null) e.id};
+    final appeared = ids.difference(_fowIds).isNotEmpty;
+    _fowIds = ids;
+    if (appeared && ref.read(raiProvider).open) _playFowAppear();
+  }
+
+  void _playFowAppear() {
+    _faceTimer?.cancel();
+    _holdingFow = true;
+    var i = 0;
+    _ctrl3d.face = RaiFace.fowAppear[0];
+    _faceTimer = Timer.periodic(const Duration(milliseconds: 140), (t) {
+      i++;
+      if (!mounted || i >= RaiFace.fowAppear.length) {
+        t.cancel();
+        return;
+      }
+      _ctrl3d.face = RaiFace.fowAppear[i];
+    });
+  }
+
+  /// 次の行程へ: 目に戻す。
+  void _faceIdle() {
+    _faceTimer?.cancel();
+    _holdingFow = false;
+    _ctrl3d.face = RaiFace.eyes;
+  }
+
+  void _blink() {
+    if (!mounted || _holdingFow || _ctrl3d.face != RaiFace.eyes) return;
+    _ctrl3d.face = RaiFace.blink;
+    Timer(const Duration(milliseconds: 120), () {
+      if (mounted && !_holdingFow && _ctrl3d.face == RaiFace.blink) _ctrl3d.face = RaiFace.eyes;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    _overlayManager = ref.read(overlayManagerProvider);
+    _fowIds = {for (final e in _overlayManager!.entries) if (e.fow != null) e.id};
+    _overlayManager!.addListener(_onOverlays);
+    _blinkTimer = Timer.periodic(const Duration(seconds: 4), (_) => _blink());
     GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
     _anim.addListener(_onFrame);
     _anim.addStatusListener((st) {
@@ -202,6 +257,9 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
 
   @override
   void dispose() {
+    _overlayManager?.removeListener(_onOverlays);
+    _faceTimer?.cancel();
+    _blinkTimer?.cancel();
     GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
     _anim.dispose();
     _ctrl3d.dispose();
@@ -344,6 +402,12 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     }
     final localTarget = s.target == null ? null : _toLocal(s.target!);
     _syncBusy(s.busy);
+    // 行程が進んだら表情を目に戻す (D-211)。
+    if (s.stepIndex != _lastStep || s.bubble != _lastBubble) {
+      _lastStep = s.stepIndex;
+      _lastBubble = s.bubble;
+      if (_holdingFow) _faceIdle();
+    }
     if (s.target != _lastTarget || s.mode != _lastMode || _pos == null) {
       _lastTarget = s.target;
       _lastMode = s.mode;

@@ -149,13 +149,13 @@ List<String> actionTags(ActionDescriptor a) => [a.genreTag, a.id, a.label, ...(_
     final li = lists.indexWhere((l) => l.memberIds.contains(target));
     if (li >= 0) {
       final l = lists[li];
-      lists[li] = ActionListDef(id: l.id, name: l.name, memberIds: [...l.memberIds, p.id]);
+      lists[li] = l.copyWith(memberIds: [...l.memberIds, p.id]);
     } else {
       final id = 'auto:$target';
       final ai = lists.indexWhere((l) => l.id == id);
       if (ai >= 0) {
         final l = lists[ai];
-        lists[ai] = ActionListDef(id: l.id, name: l.name, memberIds: [...l.memberIds, p.id]);
+        lists[ai] = l.copyWith(memberIds: [...l.memberIds, p.id]);
       } else {
         lists.add(ActionListDef(id: id, name: m.action.label, memberIds: [target, p.id]));
         // 既存ボタンの位置に自動バンドルを置く(order に無ければ apply が末尾に足す)。
