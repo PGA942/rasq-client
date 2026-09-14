@@ -32,7 +32,14 @@ void main() {
     expect(raiLinksIn('URL なし'), isEmpty);
   });
 
-  test('コントローラー: playOnce は通知して連番が進む、roll は描画側が進める', () {
+  test('案内の呼び出しタグ (D-219): [[instruction:<id>|<n>]] を拾い、本文から外す', () {
+    final calls = raiToolCallsIn('設定はここです [[instruction:post|2]] ほかに [[ instruction : login-bluesky ]]');
+    expect(calls.map((c) => (c.op, c.stopAt)), [('post', 2), ('login-bluesky', null)]);
+    expect(raiStripToolCalls('設定はここです [[instruction:post|2]] \nほかに'), '設定はここです\nほかに');
+    expect(raiToolCallsIn('タグ無し'), isEmpty);
+  });
+
+  test('コントローラー: playOnce は通知して連番が進む、spin(ヨー)は描画側が進める', () {
     final c = RaiMascot3dController();
     var n = 0;
     c.addListener(() => n++);
@@ -40,8 +47,8 @@ void main() {
     expect(c.oneShot, 'accident');
     expect(c.oneShotSeq, 1);
     expect(n, 1);
-    c.rollSpeed = 1;
-    expect(c.roll, 0);
+    c.spinSpeed = 1;
+    expect(c.spin, 0);
     c.dispose();
   });
 
@@ -132,5 +139,51 @@ void main() {
     expect(opened.toString(), 'https://example.com/a/b');
     expect(find.text('example.com'), findsOneWidget);
     expect(find.text('/a/b'), findsOneWidget);
+  });
+
+  testWidgets('LLM の返事の [[instruction:post|1]] で案内が始まり 1 手順目で止まる(階層への到達)、チャットの行にはタグの代わりに注記', (tester) async {
+    final c = await pump(tester);
+    llm.reply = '投稿画面まで案内しますね。 [[instruction:post|1]]';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    final st = c.read(raiProvider);
+    expect(st.mode, RaiMode.instruction);
+    expect(find.byType(RaiHomeScreen), findsNothing); // 案内はインストラクションで(RAi ページは閉じる)
+    expect(st.stopAt, 1);
+    expect(st.steps.length, greaterThan(1));
+    expect(st.stepIndex, 0);
+    expect(st.hasNext, isFalse); // 1 手順目で打ち切り
+    // 返事の行(案内の手順の発言がその後に積まれる)にはタグの代わりに注記。
+    final answer = st.log.firstWhere((u) => u.text.contains('投稿画面まで案内しますね。'));
+    expect(answer.text, contains('案内「投稿する」を 1 手順目まで進めます'));
+    expect(st.log.any((u) => u.text.contains('[[')), isFalse);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('右下の「投稿」'));
+    // ▶ → 続きには進まず終わる(手順は捨てられる)。
+    await tester.tap(find.byKey(const ValueKey('rai.next')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).steps, isEmpty);
+    expect(c.read(raiProvider).stopAt, isNull);
+  });
+
+  testWidgets('「さらに尋ねる」(D-219): 案内の途中でバーのボタン → 案内を打ち切って入力に戻る', (tester) async {
+    final c = await pump(tester);
+    expect(find.byKey(const ValueKey('rai.askMore')), findsNothing); // 案内していないときは無い
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿したい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).steps, isNotEmpty);
+    expect(find.byKey(const ValueKey('rai.askMore')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rai.askMore')));
+    await tester.pumpAndSettle();
+    final st = c.read(raiProvider);
+    expect(st.steps, isEmpty);
+    expect(st.target, isNull);
+    expect(st.bubble, isNull);
+    expect(st.mode, RaiMode.instruction); // モードは変えない
+    expect(find.byKey(const ValueKey('rai.askMore')), findsNothing);
+    expect(st.asking, isTrue); // 入力へ(フォーカス要求)
   });
 }

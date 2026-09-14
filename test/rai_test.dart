@@ -81,8 +81,8 @@ void main() {
   });
 
   test('コードネーム (D-198): モデルコード + サイズ', () {
-    expect(raiModelSpecById('qwen3-1.7b-q4km').codename, 'QA Mini');
-    expect(raiModelSpecById('qwen3-0.6b-q4km').codename, 'QA Nano');
+    expect(raiModelSpecById('qwen3.5-2b-q4km').codename, 'QA Mini');
+    expect(raiModelSpecById('qwen3.5-0.8b-q4km').codename, 'QA Nano');
     expect(raiModelSpecById('agents-a1-4b-q4km').codename, 'Agent Lite+');
     expect(raiModelSpecById('unknown').codename, 'QA Mini'); // 知らない id は既定(D-216: ローカルは 3 つだけ)
     expect(raiCloudModelSpecs.firstWhere((m) => m.id == 'cloud-qwen3.9-33b-a3b').codename, 'QA Max');
@@ -277,9 +277,9 @@ void main() {
     expect(tester.getSize(find.byWidgetPredicate((w) => w is Material && w.elevation == 8)).width, closeTo(tester.getSize(find.byType(RasqApp)).width - 16, 1)); // 幅は入力ウィジェットに揃う (D-185)
     expect(find.text('ローカル'), findsWidgets);
     expect(find.text('完遂率 -%'), findsWidgets);
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.name.qwen3-1.7b-q4km'))).data, 'QA Mini'); // コードネーム (D-198)
-    expect(find.textContaining('Qwen3 1.7B (Q4_K_M)'), findsWidgets); // gguf 名は元のまま
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.ram.qwen3-1.7b-q4km'))).data, 'メモリ: 動作可'); // 8 GB の端末
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.name.qwen3.5-2b-q4km'))).data, 'QA Mini'); // コードネーム (D-198)
+    expect(find.textContaining('Qwen3.5 2B (Q4_K_M)'), findsWidgets); // gguf 名は元のまま
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.ram.qwen3.5-2b-q4km'))).data, 'メモリ: 動作可'); // 8 GB の端末
     final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.tile.cloud-cyllm-jp-150b')), 120, scrollable: fowList);
     await tester.pumpAndSettle();
@@ -288,19 +288,19 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.model.phase.cloud-qwen3.9-33b-a3b'))).data, '未接続');
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.download')), -120, scrollable: fowList);
     await tester.pumpAndSettle();
-    // 既定は Qwen3 1.7B Q4_K_M の GGUF (D-188)。ダウンロード → 準備完了(解放 / 削除が出る)。
-    expect(llm.spec.id, 'qwen3-1.7b-q4km');
+    // 既定は Qwen3.5 2B Q4_K_M の GGUF (D-188 → D-219)。ダウンロード → 準備完了(解放 / 削除が出る)。
+    expect(llm.spec.id, 'qwen3.5-2b-q4km');
     expect(llm.spec.engine, RaiEngine.gguf);
     await tester.tap(find.byKey(const ValueKey('rai.model.download')));
     await tester.pumpAndSettle();
     expect(llm.installs, 1);
     expect(find.byKey(const ValueKey('rai.model.release')), findsOneWidget);
     // 切り替え → Qwen3 0.6B の GGUF(「使う」)。RAi バーの下に隠れないよう少し余分に送る。
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.use.qwen3-0.6b-q4km')), 80, scrollable: fowList);
-    await clearOfBar(tester, fowList, find.byKey(const ValueKey('rai.model.use.qwen3-0.6b-q4km')));
-    await tester.tap(find.byKey(const ValueKey('rai.model.use.qwen3-0.6b-q4km')));
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.model.use.qwen3.5-0.8b-q4km')), 80, scrollable: fowList);
+    await clearOfBar(tester, fowList, find.byKey(const ValueKey('rai.model.use.qwen3.5-0.8b-q4km')));
+    await tester.tap(find.byKey(const ValueKey('rai.model.use.qwen3.5-0.8b-q4km')));
     await tester.pumpAndSettle();
-    expect(llm.spec.id, 'qwen3-0.6b-q4km');
+    expect(llm.spec.id, 'qwen3.5-0.8b-q4km');
     await tester.tap(find.text('閉じる').last); // FOW を閉じる
     await tester.pumpAndSettle();
     expect(find.text('QA Nano'), findsOneWidget); // バーのチップ
@@ -333,7 +333,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.model')));
     await tester.pumpAndSettle();
     // 選択中(0.6B)が先頭に来るので削除はすぐ見える。
-    expect(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3-0.6b-q4km'))).top, lessThan(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3-1.7b-q4km'))).top));
+    expect(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3.5-0.8b-q4km'))).top, lessThan(tester.getRect(find.byKey(const ValueKey('rai.model.tile.qwen3.5-2b-q4km'))).top));
     await tester.tap(find.byKey(const ValueKey('rai.model.delete')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除').last);
