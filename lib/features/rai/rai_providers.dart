@@ -12,6 +12,7 @@ import 'rai_llm.dart';
 import 'rai_locator.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
+import 'rai_functions.dart';
 import 'rai_stats.dart';
 import 'rai_widgets.dart' show splitSpeechLines;
 
@@ -530,8 +531,11 @@ class RaiController extends Notifier<RaiState> {
     final ctx = referenceContext(withIds: true, max: raiPlanMax + 2);
     final planText = plan.isEmpty ? '' : '\nやること: ${plan.join(' / ')}';
     if (ctx.isEmpty) return '$_assistantSystem$planText';
-    return '$_assistantSystem$planText\n案内できる操作(id: 見出し: 手順):\n${ctx.join('\n')}\n操作の案内を始めるときは本文の末尾に [[instruction:<id>|<何手順目まで>]] と書く(途中の画面で止めたいときは手順数を指定、最後までなら数字を省く)。';
+    return '$_assistantSystem$planText\n案内できる操作(id: 見出し: 手順):\n${ctx.join('\n')}\n操作の案内を始めるときは本文の末尾に [[instruction:<id>|<何手順目まで>]] と書く(途中の画面で止めたいときは手順数を指定、最後までなら数字を省く)。$_functionsHint';
   }
+
+  /// 関数の呼び出し (D-221): 本文末尾の `[[call:<関数>|引数=値]]`。取得系は結果を注入して答え直す。
+  static final _functionsHint = '\n使える関数(必要なときだけ本文末尾に [[call:<関数>|引数=値|…]] と書く。取得系は結果を受け取ってから答え直す):\n${raiFunctionUsage.map((u) => '- $u').join('\n')}';
   static const _instructionSystem = 'あなたは SNS ブラウザ RASQ の操作を教える「RAi」です。日本語で、操作手順を短く(3 文以内)答えてください。';
 
   /// 二段の回答 (D-220): ①短い箇条書きの計画(失敗しても無視)→ ②各項目でリファレンスを絞る → ③計画と候補を
@@ -554,6 +558,7 @@ class RaiController extends Notifier<RaiState> {
     if (seq != _answerSeq) return;
     if (plan.isNotEmpty) plan = await _narrowByPlan(plan);
     if (seq != _answerSeq) return;
+    _lastPlan = plan;
     _answerSeq--; // _answerWithLlm が新しい連番を取る
     await _answerWithLlm(q, system: _assistantSystemWithTools(plan: plan));
   }
@@ -600,21 +605,76 @@ class RaiController extends Notifier<RaiState> {
   /// 返事を確定する (D-219): 案内の呼び出しタグを本文から外して記録し、あれば案内を始める(途中中断つき)。
   Future<void> _finishAnswer(String raw, int seq) async {
     final calls = raiToolCallsIn(raw);
-    var text = raiStripToolCalls(raw).trim();
+    final fnCalls = raiFunctionCallsIn(raw);
+    var text = raiStripFunctionCalls(raiStripToolCalls(raw)).trim();
     final index = ref.read(raiReferenceProvider).value;
-    final call = calls.where((c) => index?.operation(c.op) != null).firstOrNull;
+    // 一時停止中 (D-221): 案内は RAi 経由(続きへ / タイル)以外では始めない = LLM の呼び出しは無視する。
+    final call = state.suspended != null ? null : calls.where((c) => index?.operation(c.op) != null).firstOrNull;
     if (call != null) {
       final op = index!.operation(call.op)!;
       final note = call.stopAt == null ? '案内「${op.index}」を始めます' : '案内「${op.index}」を ${call.stopAt} 手順目まで進めます';
       text = text.isEmpty ? note : '$text\n($note)';
+    }
+    // 関数の呼び出し (D-221): 順に実行して注記。取得系があれば再始動予約 → 注入して答え直す。
+    final results = <RaiFunctionResult>[];
+    if (fnCalls.isNotEmpty) {
+      final runner = RaiFunctionRunner(ref, contextTokens: ref.read(raiLlmProvider).contextTokens);
+      for (final c in fnCalls.take(3)) {
+        results.add(await runner.run(c));
+        if (seq != _answerSeq) return;
+      }
+      final notes = [for (final r in results) if (!r.fetched || !r.ok) '(${r.name}: ${r.text})'];
+      if (notes.isNotEmpty) text = text.isEmpty ? notes.join('\n') : '$text\n${notes.join('\n')}';
     }
     state = state.copyWith(busy: false, bubble: text.isEmpty ? '(返事がありませんでした)' : text);
     _record(state.bubble!);
     if (call != null) {
       ref.read(raiStatsProvider.notifier).bump(instructionAsked: true);
       await runInstruction(call.op, stopAt: call.stopAt);
+      return;
+    }
+    final fetched = [for (final r in results) if (r.fetched && r.ok) r];
+    if (fetched.isNotEmpty && _restartDepth < 1) await _restartWithInjection(seq, digest: text, fetched: fetched);
+  }
+
+  /// 再始動予約 (D-221): 予約した取得が終わったら、モデルを解放してから ①計画 ②ここまでのダイジェスト
+  /// ③取得した情報(KV の 4% で打ち切り)を system に注入して、同じ質問に答え直す。生データは [scratch] に
+  /// 置き、注入には鍵(`[名前#n]`)を添える。
+  int _restartDepth = 0;
+  final Map<String, String> scratch = {};
+
+  Future<void> _restartWithInjection(int seq, {required String digest, required List<RaiFunctionResult> fetched}) async {
+    final q = state.query;
+    if (q == null) return;
+    final llm = ref.read(raiLlmProvider);
+    final budget = raiInjectionBudgetChars(llm.contextTokens);
+    final keys = <String>[];
+    final injected = StringBuffer();
+    var used = 0;
+    for (final (i, r) in fetched.indexed) {
+      final key = '${r.name}#${scratch.length + i + 1}';
+      scratch[key] = r.text;
+      keys.add(key);
+      final piece = raiTruncate(r.text, budget - used);
+      injected.writeln('[$key] $piece');
+      used += piece.length;
+      if (used >= budget) break;
+    }
+    _record('取得した情報(${keys.join(', ')})を注入してモデルを再始動します');
+    _restartDepth++;
+    try {
+      await llm.release();
+      if (seq != _answerSeq) return;
+      final plan = _lastPlan.isEmpty ? '' : '\n計画: ${[for (final (i, p) in _lastPlan.indexed) '${i + 1}. $p'].join(' ')}';
+      final system = '${_assistantSystemWithTools(plan: _lastPlan)}$plan\nここまでのダイジェスト: ${raiTruncate(digest, 200)}\n取得した情報(これを使って答え直す):\n${injected.toString().trim()}';
+      _answerSeq--; // 次の _answerWithLlm が新しい連番を取る
+      await _answerWithLlm(q, system: system);
+    } finally {
+      _restartDepth--;
     }
   }
+
+  List<String> _lastPlan = const [];
 
   /// 推論サーバーへ添える文脈 (D-216): 直近の検索で近かった操作(上位 3 つ)の見出しと手順。
   List<String> referenceContext({int max = 3, bool withIds = false}) {
