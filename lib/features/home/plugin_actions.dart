@@ -45,6 +45,27 @@ final pluginActionsProvider = Provider<List<PluginAction>>((ref) => [
         for (final a in p.manifest.actions) PluginAction(plugin: p, decl: a),
     ]);
 
+/// 全画面表示プラグインのトグル (D-214): `viewer.overlay` を宣言したプラグイン(QR コード検出など)は
+/// **全画面アクションバーのボタン**(ON / OFF)として扱う。id は `slot:<pluginId>:viewer.overlay`。
+/// 編集画面の全画面バーの検索に出て、並べ替え / バンドル / 削除(スロット設定で無効)ができる。
+const viewerToggleActionId = 'viewer.overlay';
+
+bool isViewerToggleActionId(String id) => isPluginActionId(id) && id.endsWith(':$viewerToggleActionId');
+
+/// `slot:<pluginId>:viewer.overlay` → pluginId。
+String viewerTogglePluginId(String id) => id.substring('slot:'.length, id.length - viewerToggleActionId.length - 1);
+
+final viewerPluginActionsProvider = Provider<List<PluginAction>>((ref) => [
+      for (final p in ref.watch(slotPluginsForProvider(SlotIds.viewerOverlay)))
+        PluginAction(plugin: p, decl: SlotActionDecl(id: viewerToggleActionId, label: p.manifest.name, icon: 'extension', tags: const ['全画面表示'])),
+    ]);
+
+/// 構成キーに応じたプラグインボタン: 全画面バー(`viewer:` の構成)には全画面表示プラグインのトグルも含む。
+final pluginActionsForProvider = Provider.family<List<PluginAction>, String>((ref, configKey) => [
+      ...ref.watch(pluginActionsProvider),
+      if (configKey.startsWith('viewer:')) ...ref.watch(viewerPluginActionsProvider),
+    ]);
+
 /// アカウントごとのスロット設定(設定エリア `slots.<accountKey>`)。
 @immutable
 class SlotActionSettings {

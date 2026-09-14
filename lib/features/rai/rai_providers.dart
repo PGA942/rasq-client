@@ -12,6 +12,7 @@ import 'rai_llm.dart';
 import 'rai_locator.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
+import 'rai_stats.dart';
 import 'rai_widgets.dart' show splitSpeechLines;
 
 /// RAi のモード (D-179): インストラクション(操作を教える、RAi は部品まで移動して指差す)/
@@ -47,6 +48,8 @@ class RaiState {
     this.lineIndex = 0,
     this.log = const [],
     this.historyOpen = false,
+    this.sidebarOpen = false,
+    this.conversationId,
     this.hits = const [],
     this.situation,
     this.proposal,
@@ -86,6 +89,12 @@ class RaiState {
   final List<RaiUtterance> log;
   final bool historyOpen;
 
+  /// RAi ホームのサイドバー (D-214) が開いている間は入力タイル(バー)を隠す。
+  final bool sidebarOpen;
+
+  /// いまの発言の履歴が属する保存済みの会話(「新しい会話」で区切る)。null = まだ保存していない。
+  final String? conversationId;
+
   /// 直近のリファレンス検索の当たり(id とスコア、D-189)。評価 / 表示用。
   final List<({String id, double score})> hits;
 
@@ -123,6 +132,8 @@ class RaiState {
     int? lineIndex,
     List<RaiUtterance>? log,
     bool? historyOpen,
+    bool? sidebarOpen,
+    Object? conversationId = _keep,
     List<({String id, double score})>? hits,
     Object? situation = _keep,
     Object? proposal = _keep,
@@ -145,6 +156,8 @@ class RaiState {
         lineIndex: lineIndex ?? this.lineIndex,
         log: log ?? this.log,
         historyOpen: historyOpen ?? this.historyOpen,
+        sidebarOpen: sidebarOpen ?? this.sidebarOpen,
+        conversationId: identical(conversationId, _keep) ? this.conversationId : conversationId as String?,
         hits: hits ?? this.hits,
         situation: identical(situation, _keep) ? this.situation : situation as String?,
         proposal: identical(proposal, _keep) ? this.proposal : proposal as String?,
@@ -177,7 +190,35 @@ class RaiController extends Notifier<RaiState> {
 
   void open({RaiMode? mode, bool asking = false}) => state = state.copyWith(open: true, expanded: true, asking: asking, mode: mode);
 
-  void close() => state = const RaiState();
+  void close() {
+    _archiveConversation();
+    state = const RaiState();
+  }
+
+  /// RAi ホームのサイドバー (D-214): 開いている間はバーを隠す。
+  void toggleSidebar({bool? open}) => state = state.copyWith(sidebarOpen: open ?? !state.sidebarOpen);
+
+  /// いまの発言の履歴を会話として保存する(空なら何もしない。既に保存済みの会話なら置き換え)。
+  void _archiveConversation() {
+    final c = RaiConversation.fromLog(state.log, id: state.conversationId);
+    if (c == null) return;
+    ref.read(raiConversationsProvider.notifier).put(c);
+    state = state.copyWith(conversationId: c.id);
+  }
+
+  /// 「新しい会話」(D-214): いまの履歴を保存して空にする。吹き出し / 手順も捨てる。
+  void newConversation() {
+    _archiveConversation();
+    _answerSeq++;
+    state = state.copyWith(log: const [], conversationId: null, bubble: null, target: null, steps: const [], stepIndex: 0, lineIndex: 0, busy: false, proposal: null, choices: const [], historyOpen: false, sidebarOpen: false);
+  }
+
+  /// 保存した会話を開く (D-214): いまの履歴は保存し、その会話の履歴を発言の履歴として出す。
+  void openConversation(RaiConversation c) {
+    if (state.conversationId != c.id) _archiveConversation();
+    _answerSeq++;
+    state = state.copyWith(log: c.log, conversationId: c.id, bubble: null, target: null, steps: const [], stepIndex: 0, lineIndex: 0, busy: false, proposal: null, choices: const [], historyOpen: true, sidebarOpen: false, expanded: true);
+  }
 
   void toggleExpanded() => state = state.copyWith(expanded: !state.expanded, asking: false);
 
@@ -211,9 +252,13 @@ class RaiController extends Notifier<RaiState> {
   Future<void> ask(String query) async {
     final q = query.trim();
     if (q.isEmpty) return;
+    // 実績 (D-214): 聞いた回数と、同じ質問の聞き直し。
+    final repeated = state.history.contains(q);
     final history = [q, ...state.history.where((h) => h != q)].take(20).toList();
     final seq = ++_answerSeq;
     state = state.copyWith(query: q, asking: false, busy: true, history: history, hits: const []);
+    final stats = ref.read(raiStatsProvider.notifier);
+    stats.bump(instructionAsked: state.mode == RaiMode.instruction, assistantAsked: state.mode == RaiMode.assistant, repeated: repeated);
     final index = await _index();
     if (seq != _answerSeq) return;
     if (state.mode == RaiMode.assistant) {
@@ -222,6 +267,8 @@ class RaiController extends Notifier<RaiState> {
       final hits = index == null ? const <RaiHit<RaiOperation>>[] : await index.searchOperations(q, situation: situation);
       if (seq != _answerSeq) return;
       state = state.copyWith(hits: [for (final h in hits) (id: h.item.id, score: h.score)], situation: situation);
+      // アプリについての会話 = 操作リファレンスに当たった (D-214)。
+      if (hits.isNotEmpty) stats.bump(assistantApp: true);
       if (hits.isEmpty) {
         await _answerWithLlm(q, system: _assistantSystem);
         return;
@@ -382,6 +429,8 @@ class RaiController extends Notifier<RaiState> {
 
   Future<void> next() async {
     if (!state.hasNext) {
+      // 最後の手順まで進んだ = 順調に進んだ (D-214)。
+      if (state.mode == RaiMode.instruction && state.steps.isNotEmpty && state.stepIndex == state.steps.length - 1) ref.read(raiStatsProvider.notifier).bump(completed: true);
       dismissBubble();
       return;
     }

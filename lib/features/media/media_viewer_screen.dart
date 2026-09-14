@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -182,78 +183,70 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     }
   }
 
-  /// 全画面アクションバー (D-212): ヘッダーの「…」の左に、`viewer:<accountKey>` の構成で詰めて並べる。
-  /// バンドルはアイコンから出る FOW。
+  /// 全画面アクションバー (D-212 → D-214): ヘッダーの「…」の左に、`viewer:<accountKey>` の構成で詰めて並べる。
+  /// バンドルはアイコンから出る FOW。全画面表示プラグインのトグル(`slot:<id>:viewer.overlay`)もこのバーの
+  /// ボタン(ON = 塗り / アクセント。動画の再生中は出さない)。
   List<Widget> _viewerActionBar() {
     final post = widget.post;
     final session = ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
-    if (actions.isEmpty) return const [];
+    final viewerPlugins = ref.watch(viewerPluginActionsProvider);
+    if (actions.isEmpty && viewerPlugins.isEmpty) return const [];
     final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
+    final i = _page.value;
+    final m = post.media[i];
+    final playing = m.type == MediaType.video && (_sessions[i]?.playing ?? false);
+    final enabled = {for (final p in ref.watch(viewerOverlayPluginsProvider)) p.id};
     final merged = mergePluginActions(
       config: ref.watch(actionBarConfigProvider(ActionBarConfigStore.viewerKey(post.account.key))),
       snsActions: actions,
-      plugins: ref.watch(pluginActionsProvider),
+      plugins: [...ref.watch(pluginActionsProvider), ...viewerPlugins],
       settings: ref.watch(slotActionSettingsProvider(post.account.key)),
     );
     final entries = merged.config.apply(merged.actions);
+    Future<void> perform(ActionDescriptor a) => isViewerToggleActionId(a.id) ? _toggleViewerPlugin(viewerTogglePluginId(a.id)) : notifier.perform(post, a).catchError((_) {});
+    Widget toggle(ActionDescriptor a) {
+      final id = viewerTogglePluginId(a.id);
+      final on = enabled.contains(id);
+      return _Circle(child: RasqIconButton(key: ValueKey('viewer.plugin.$id'), icon: on ? Icons.extension : Icons.extension_outlined, color: on ? RasqColors.accent : Colors.white, tooltip: a.label, onPressed: () => perform(a)));
+    }
     return [
-      for (final e in entries) ...[
-        const SizedBox(width: 2),
-        switch (e) {
-          SingleActionEntry() => _Circle(child: RasqIconButton(key: ValueKey('viewer.action.${e.action.id}'), icon: PostRow.iconFor(e.action.icon, Icons.circle_outlined), color: Colors.white, tooltip: e.action.label, onPressed: () => notifier.perform(post, e.action).catchError((_) {}))),
-          ActionListEntry() => Builder(
-              builder: (bctx) => _Circle(
-                child: Tooltip(
-                  message: e.list.name,
-                  child: InkResponse(
-                    key: ValueKey('viewer.action.list:${e.list.id}'),
-                    radius: 22,
-                    onTap: () {
-                      final box = bctx.findRenderObject() as RenderBox;
-                      showActionBundleMenuFow(ref, anchor: box.localToGlobal(Offset.zero) & box.size, entry: e, onPick: (a) => notifier.perform(post, a).catchError((_) {}));
-                    },
-                    child: SizedBox(width: 40, height: 40, child: Center(child: bundleIconWidget(e.list, e.members, size: 22, color: Colors.white))),
+      for (final e in entries)
+        if (!(playing && e is SingleActionEntry && isViewerToggleActionId(e.action.id))) ...[
+          const SizedBox(width: 2),
+          switch (e) {
+            SingleActionEntry() when isViewerToggleActionId(e.action.id) => toggle(e.action),
+            SingleActionEntry() => _Circle(child: RasqIconButton(key: ValueKey('viewer.action.${e.action.id}'), icon: PostRow.iconFor(e.action.icon, Icons.circle_outlined), color: Colors.white, tooltip: e.action.label, onPressed: () => perform(e.action))),
+            ActionListEntry() => Builder(
+                builder: (bctx) => _Circle(
+                  child: Tooltip(
+                    message: e.list.name,
+                    child: InkResponse(
+                      key: ValueKey('viewer.action.list:${e.list.id}'),
+                      radius: 22,
+                      onTap: () {
+                        final box = bctx.findRenderObject() as RenderBox;
+                        showActionBundleMenuFow(ref, anchor: box.localToGlobal(Offset.zero) & box.size, entry: e, onPick: perform);
+                      },
+                      child: SizedBox(width: 40, height: 40, child: Center(child: bundleIconWidget(e.list, e.members, size: 22, color: Colors.white))),
+                    ),
                   ),
                 ),
               ),
-            ),
-        },
-      ],
+          },
+        ],
       const SizedBox(width: RasqSpacing.xs),
     ];
   }
 
-  /// 全画面表示プラグインのトグル (D-207): 登録済みの `viewer.overlay` プラグインを「…」の右に詰めて並べる。
-  /// ON = 塗り(アクセント)。状態は `slots.viewer` に保存。動画の再生中は出さない。
-  List<Widget> _pluginToggles() {
-    final all = ref.watch(slotPluginsForProvider(SlotIds.viewerOverlay));
-    if (all.isEmpty) return const [];
-    final i = _page.value;
-    final m = widget.post.media[i];
-    if (m.type == MediaType.video && (_sessions[i]?.playing ?? false)) return const [];
-    final enabled = {for (final p in ref.watch(viewerOverlayPluginsProvider)) p.id};
-    return [
-      for (final p in all) ...[
-        const SizedBox(width: 2),
-        _Circle(
-          child: RasqIconButton(
-            key: ValueKey('viewer.plugin.${p.id}'),
-            icon: enabled.contains(p.id) ? Icons.extension : Icons.extension_outlined,
-            color: enabled.contains(p.id) ? RasqColors.accent : Colors.white,
-            tooltip: p.manifest.name,
-            onPressed: () async {
-              final on = !enabled.contains(p.id);
-              await ref.read(settingsAreaProvider(viewerPluginsSettingsArea).notifier).set(viewerPluginEnabledKey(p.id), on);
-              if (!mounted) return;
-              // 有効にしたら、この画像をまだ渡していなければ渡す。無効は重ねを出さないだけ(トークンは残す)。
-              if (on) _askOverlay(_page.value);
-              setState(() {});
-            },
-          ),
-        ),
-      ],
-    ];
+  /// 全画面表示プラグインの ON / OFF (D-207 → D-214): 状態は `slots.viewer` に保存。
+  /// 有効にしたら、この画像をまだ渡していなければ渡す。無効は重ねを出さないだけ(トークンは残す)。
+  Future<void> _toggleViewerPlugin(String pluginId) async {
+    final on = !ref.read(viewerOverlayPluginsProvider).any((p) => p.id == pluginId);
+    await ref.read(settingsAreaProvider(viewerPluginsSettingsArea).notifier).set(viewerPluginEnabledKey(pluginId), on);
+    if (!mounted) return;
+    if (on) _askOverlay(_page.value);
+    setState(() {});
   }
 
   /// PiP (D-204): ビューワーを閉じてインライン再生 FOW を同じ位置から開く。
@@ -343,38 +336,47 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(RasqSpacing.sm),
-              // ヘッダー (D-213): 上付き、全部同じ 40px の丸ボタン。左から 戻る / 枚数 / プラグインのトグル / 全画面
-              // アクションバー / PiP / 「…」(一番右)。
-              child: Row(children: [
-                _Circle(child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: '戻る')),
-                Expanded(child: post.media.length > 1 ? Text('${_page.value + 1} / ${post.media.length}', style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center) : const SizedBox.shrink()),
-                // 全画面表示プラグインの有効 / 無効 (D-207)。動画の再生中は消える。
-                ..._pluginToggles(),
-                // 全画面アクションバー (D-212): `viewer:<accountKey>` の構成。狭ければ横スクロール。
-                Flexible(child: SingleChildScrollView(scrollDirection: Axis.horizontal, reverse: true, child: Row(mainAxisSize: MainAxisSize.min, children: _viewerActionBar()))),
-                // PiP (D-204): 動画のとき。
-                if (post.media[_page.value].type == MediaType.video) ...[
+              // ヘッダー (D-213 → D-214): 上付き、全部同じ 40px の丸ボタン。左から 戻る / 枚数 / 全画面
+              // アクションバー(プラグインのトグル込み) / PiP / 「…」。右側のボタンは右端に寄せる: バーを
+              // Flexible にすると使い切らない余白が末尾に残って右端から離れるので、幅の上限を LayoutBuilder で
+              // 計算して枚数の Expanded に残りを渡す。
+              child: LayoutBuilder(builder: (context, c) {
+                final video = post.media[_page.value].type == MediaType.video;
+                final fixed = 40.0 + 2 + 40 + (video ? 42 : 0) + 56; // 戻る / … / PiP / 枚数の最低幅
+                final barMax = math.max(0.0, c.maxWidth - fixed);
+                return Row(children: [
+                  _Circle(child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: '戻る')),
+                  Expanded(child: post.media.length > 1 ? Text('${_page.value + 1} / ${post.media.length}', style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center) : const SizedBox.shrink()),
+                  // 全画面アクションバー (D-212 → D-214): `viewer:<accountKey>` の構成。全画面表示プラグインの
+                  // トグルもこのバーのボタン(編集画面で並べ替え / 削除 / 検索)。狭ければ横スクロール。
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: barMax),
+                    child: SingleChildScrollView(scrollDirection: Axis.horizontal, reverse: true, child: Row(mainAxisSize: MainAxisSize.min, children: _viewerActionBar())),
+                  ),
+                  // PiP (D-204): 動画のとき。
+                  if (video) ...[
+                    const SizedBox(width: 2),
+                    _Circle(child: RasqIconButton(key: const ValueKey('viewer.pip'), icon: Icons.picture_in_picture_alt_outlined, color: Colors.white, tooltip: 'PiP で再生', onPressed: _toPip)),
+                  ],
                   const SizedBox(width: 2),
-                  _Circle(child: RasqIconButton(key: const ValueKey('viewer.pip'), icon: Icons.picture_in_picture_alt_outlined, color: Colors.white, tooltip: 'PiP で再生', onPressed: _toPip)),
-                ],
-                const SizedBox(width: 2),
-                // 「…」(D-213): 投稿のメニューに準拠(詳細の代わりに「画像を保存」)。
-                Builder(
-                  builder: (ctx) => _Circle(
-                    child: RasqIconButton(
-                      icon: Icons.more_horiz,
-                      color: Colors.white,
-                      tooltip: 'メニュー',
-                      onPressed: () {
-                        final box = ctx.findRenderObject() as RenderBox;
-                        final rect = box.localToGlobal(Offset.zero) & box.size;
-                        final m = post.media[_page.value];
-                        showPostMenu(ctx, ref, post, rect, media: m);
-                      },
+                  // 「…」(D-213): 投稿のメニューに準拠(詳細の代わりに「画像を保存」)。
+                  Builder(
+                    builder: (ctx) => _Circle(
+                      child: RasqIconButton(
+                        icon: Icons.more_horiz,
+                        color: Colors.white,
+                        tooltip: 'メニュー',
+                        onPressed: () {
+                          final box = ctx.findRenderObject() as RenderBox;
+                          final rect = box.localToGlobal(Offset.zero) & box.size;
+                          final m = post.media[_page.value];
+                          showPostMenu(ctx, ref, post, rect, media: m);
+                        },
+                      ),
                     ),
                   ),
-                ),
-              ]),
+                ]);
+              }),
             ),
           ),
       ]),
