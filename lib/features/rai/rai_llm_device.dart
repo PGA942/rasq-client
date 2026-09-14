@@ -412,11 +412,11 @@ class DeviceRaiLlm implements RaiLlm {
   }
 
   @override
-  Stream<String> chat(String prompt, {String? system}) {
+  Stream<String> chat(String prompt, {String? system, int? maxTokens}) {
     if (!_current.ready && _current.phase != RaiLlmPhase.loading) {
       return Stream.error(RaiLlmException(_current.phase == RaiLlmPhase.notInstalled ? '端末内モデル(${_spec.codename})がまだダウンロードされていません' : (_current.message ?? '端末内モデルを使えません')));
     }
-    return _spec.engine == RaiEngine.gguf ? _ggufChat(prompt, system) : _lrChat(prompt, system);
+    return _spec.engine == RaiEngine.gguf ? _ggufChat(prompt, system, maxTokens: maxTokens) : _lrChat(prompt, system);
   }
 
   /// 読み込み (D-217: llama_cpp_dart 0.9 系 = `LlamaEngine`)。ggml の動的バックエンドはライブラリと同じ
@@ -440,7 +440,7 @@ class DeviceRaiLlm implements RaiLlm {
     return engine;
   }
 
-  Stream<String> _ggufChat(String prompt, String? system) {
+  Stream<String> _ggufChat(String prompt, String? system, {int? maxTokens}) {
     final out = StreamController<String>();
     StreamSubscription<lc.GenerationEvent>? events;
     lc.EngineSession? session;
@@ -486,7 +486,7 @@ class DeviceRaiLlm implements RaiLlm {
               prompt: formatted,
               addSpecial: true,
               sampler: const lc.SamplerParams(temperature: 0.4, topP: 0.95, repeatPenalty: 1.1),
-              maxTokens: 512,
+              maxTokens: maxTokens ?? 512,
             )
             .listen(
           (e) {

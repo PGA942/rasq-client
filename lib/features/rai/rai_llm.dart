@@ -177,8 +177,8 @@ abstract class RaiLlm {
   /// 読み込んだモデルを解放する(フォールアップ時に呼ぶ想定)。
   Future<void> release();
 
-  /// 1 問 1 答(トークンのストリーム)。
-  Stream<String> chat(String prompt, {String? system});
+  /// 1 問 1 答(トークンのストリーム)。[maxTokens] は生成の上限(D-220: 箇条書きの計画は短く)。
+  Stream<String> chat(String prompt, {String? system, int? maxTokens});
 }
 
 class RaiLlmException implements Exception {
@@ -297,5 +297,5 @@ class UnavailableRaiLlm implements RaiLlm {
   @override
   Future<void> release() async {}
   @override
-  Stream<String> chat(String prompt, {String? system}) => Stream.error(RaiLlmException(reason));
+  Stream<String> chat(String prompt, {String? system, int? maxTokens}) => Stream.error(RaiLlmException(reason));
 }

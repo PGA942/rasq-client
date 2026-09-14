@@ -141,6 +141,8 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
         n.toggleSidebar(open: false);
+        // 一時停止した案内があれば続きから (D-220)。
+        n.resumeSuspended();
       } catch (_) {}
     });
     super.dispose();

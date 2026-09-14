@@ -166,7 +166,7 @@ void main() {
     expect(c.read(raiProvider).stopAt, isNull);
   });
 
-  testWidgets('「さらに尋ねる」(D-219): 案内の途中でバーのボタン → 案内を打ち切って入力に戻る', (tester) async {
+  testWidgets('「さらに尋ねる」(D-219 → D-220): 案内を一時停止してアシスタント(RAi ページ)へ、戻ると続きから', (tester) async {
     final c = await pump(tester);
     expect(find.byKey(const ValueKey('rai.askMore')), findsNothing); // 案内していないときは無い
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
@@ -174,16 +174,56 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿したい');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
-    expect(c.read(raiProvider).steps, isNotEmpty);
+    final steps = c.read(raiProvider).steps;
+    expect(steps, isNotEmpty);
+    expect(find.byType(RaiHomeScreen), findsNothing);
     expect(find.byKey(const ValueKey('rai.askMore')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('rai.askMore')));
     await tester.pumpAndSettle();
-    final st = c.read(raiProvider);
+    var st = c.read(raiProvider);
+    expect(st.mode, RaiMode.assistant); // モードを切り替えて RAi ページ(チャット)へ
+    expect(find.byType(RaiHomeScreen), findsOneWidget);
     expect(st.steps, isEmpty);
     expect(st.target, isNull);
-    expect(st.bubble, isNull);
-    expect(st.mode, RaiMode.instruction); // モードは変えない
-    expect(find.byKey(const ValueKey('rai.askMore')), findsNothing);
-    expect(st.asking, isTrue); // 入力へ(フォーカス要求)
+    expect(st.suspended, isNotNull);
+    expect(st.suspended!.steps.length, steps.length);
+    expect(st.suspended!.stepIndex, 0); // asking は RAi ページを開くときに戻る(バーはチャットの入力欄)
+    expect(find.byKey(const ValueKey('rai.chat.suspended')), findsOneWidget);
+    expect(find.textContaining('案内を一時停止中(1 / ${steps.length} 手順目)'), findsOneWidget);
+    // 「続きへ」(= 前の画面に戻る)→ インストラクションに戻って同じ手順を指す。
+    await tester.tap(find.byKey(const ValueKey('rai.chat.resume')));
+    await tester.pumpAndSettle();
+    st = c.read(raiProvider);
+    expect(find.byType(RaiHomeScreen), findsNothing);
+    expect(st.mode, RaiMode.instruction);
+    expect(st.suspended, isNull);
+    expect(st.steps.length, steps.length);
+    expect(st.stepIndex, 0);
+    expect(st.target, isNotNull);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('右下の「投稿」'));
+  });
+
+  test('箇条書きの計画 (D-220): 「- 」「・」「1.」を拾い、最大 4 個 / 40 文字で打ち切る', () {
+    expect(RaiController.parsePlan('- 投稿する\n・画像を付ける\n1. 公開範囲を選ぶ\n説明の行\n2) 送信\n- 5 つ目'), ['投稿する', '画像を付ける', '公開範囲を選ぶ', '送信']);
+    expect(RaiController.parsePlan('箇条書きなし'), isEmpty);
+    expect(RaiController.parsePlan('- ${'あ' * 60}').single.length, 40);
+  });
+
+  testWidgets('二段の回答 (D-220): 計画(短い生成)→ 各項目でリファレンスを絞る → 計画と候補を添えて答える', (tester) async {
+    final c = await pump(tester);
+    llm.replies.addAll(['zzzz の状況', '- 投稿する\n- 画像を付ける\n- a\n- b\n- c', 'できますよ。']);
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(llm.systems.length, 3);
+    expect(llm.systems[1], RaiController.raiPlanSystem);
+    expect(llm.maxTokensLog[1], 96);
+    final finalSystem = llm.systems[2]!;
+    expect(finalSystem, contains('やること: 投稿する / 画像を付ける / a / b')); // 4 個で打ち切り
+    expect(finalSystem, isNot(contains('/ c')));
+    expect(finalSystem, contains('post: 投稿する')); // 計画の項目で引いたリファレンス
+    expect(finalSystem, contains('[[instruction:'));
+    expect(c.read(raiProvider).hits.map((h) => h.id), contains('post'));
+    expect(find.descendant(of: find.byKey(const ValueKey('rai.chat.msg.0')), matching: find.text('できますよ。')), findsOneWidget);
   });
 }
