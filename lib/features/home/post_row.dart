@@ -25,6 +25,7 @@ import '../vc/astell_actions.dart';
 import '../vc/astell_links.dart';
 import '../settings/safety.dart';
 import 'action_bar_config.dart';
+import 'action_bundle_fow.dart';
 import 'post_duplicates.dart';
 
 /// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
@@ -378,23 +379,16 @@ class _PostRowState extends ConsumerState<PostRow> {
     }
   }
 
-  /// アクションリスト(束ね)ボタン: タップでメンバーのドロップダウン。
+  /// アクションリスト(束ね)ボタン: タップでアイコンから出るバンドル FOW (D-210)。
   RasqActionBarItem _listItem(ActionListEntry entry) => RasqActionBarItem(
         id: 'list:${entry.list.id}',
         label: entry.list.name,
-        icon: Icons.apps,
+        icon: bundleIconOf(entry.list, entry.members),
+        iconUrl: bundleIconUrlOf(entry.list),
         showCount: false,
-        onAnchorTap: (anchor) async {
-          final manager = ref.read(overlayManagerProvider);
-          final picked = await manager.showDropdown<ActionDescriptor>(
-            id: 'actionbar.list.${entry.list.id}',
-            anchor: anchor,
-            dense: true,
-            items: [for (final a in entry.members) RasqDropdownItem(a.label, a)],
-          );
-          if (picked != null) await _run(picked).catchError((_) {});
-        },
+        onAnchorTap: (anchor) => showActionBundleMenuFow(ref, anchor: anchor, entry: entry, column: fowColumnOf(context), onPick: (a) => _run(a).catchError((_) {})),
       );
+
 
   /// 引用: 投稿カード(埋め込みサイズ)を再利用.
   static Widget quoteTile(BuildContext context, Post q, {Map<String, Uri?> emojis = const {}, SafetySettings safety = const SafetySettings()}) {
@@ -486,4 +480,25 @@ class _CwBody extends ConsumerWidget {
       if (post.quote != null) ...[const SizedBox(height: RasqSpacing.sm), _PostRowState.quoteTile(context, post.quote!, emojis: emojis, safety: safety)],
     ]);
   }
+}
+
+/// バンドルのアイコン (D-210): `member:<id>` はそのメンバーのアイコン、`material:<name>` は Material Icon、
+/// 無指定 / 不明は apps。
+IconData bundleIconOf(ActionListDef list, List<ActionDescriptor> members) {
+  final spec = list.icon;
+  if (spec == null) return Icons.apps;
+  if (spec.startsWith('member:')) {
+    final id = spec.substring('member:'.length);
+    final m = members.where((a) => a.id == id).firstOrNull;
+    return m == null ? Icons.apps : PostRow.iconFor(m.icon, Icons.apps);
+  }
+  if (spec.startsWith('material:')) return PostRow.iconFor(spec.substring('material:'.length), Icons.apps);
+  return Icons.apps;
+}
+
+/// `file:<path>`(写真)のときの画像。
+Uri? bundleIconUrlOf(ActionListDef list) {
+  final spec = list.icon;
+  if (spec == null || !spec.startsWith('file:')) return null;
+  return Uri.file(spec.substring('file:'.length));
 }
