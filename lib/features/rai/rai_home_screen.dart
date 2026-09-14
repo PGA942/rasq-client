@@ -2,8 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../app/router.dart';
 import '../../shell/headers.dart';
 import 'rai_layout.dart';
 import 'rai_mascot_3d.dart';
@@ -193,7 +195,7 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
   }
 }
 
-/// RAi サイドバー (D-214): 新しい会話 / 会話の履歴 / アチーブメント / マクロ(ダミー)。
+/// RAi サイドバー (D-214 → D-215): 新しい会話 / 会話の履歴 / アチーブメント(ページへ)/ マクロ(第二期、遷移しない)。
 class RaiSidebar extends ConsumerWidget {
   const RaiSidebar({super.key, required this.open});
   final bool open;
@@ -264,48 +266,25 @@ class RaiSidebar extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
                 child: Text('まだありません。質問すると、ここに会話が残ります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               ),
-            RasqSectionHeader(title: 'アチーブメント', trailing: Text('$unlocked / ${progress.length}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-            for (final p in progress)
-              Padding(
-                key: ValueKey('rai.sidebar.ach.${p.achievement.id}'),
-                padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
-                child: Row(children: [
-                  Icon(p.unlocked ? Icons.emoji_events : Icons.emoji_events_outlined, size: 24, color: p.unlocked ? RasqColors.yellow : scheme.onSurfaceVariant),
-                  const SizedBox(width: RasqSpacing.sm),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        Expanded(child: Text(p.achievement.title, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, color: p.unlocked ? scheme.onSurface : scheme.onSurfaceVariant))),
-                        Text('${math.min(p.count, p.achievement.threshold)} / ${p.achievement.threshold}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-                      ]),
-                      Text(p.achievement.description, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-                      const SizedBox(height: 4),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
-                        child: LinearProgressIndicator(value: p.fraction, minHeight: 4, backgroundColor: scheme.surfaceContainerHighest, color: p.unlocked ? RasqColors.yellow : RasqColors.accent),
-                      ),
-                    ]),
-                  ),
-                ]),
-              ),
-            RasqSectionHeader(title: 'マクロ', trailing: Text('第二期(ダミー)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-            for (final (i, m) in const [
-              ('おはよう投稿', '毎朝 8 時に定型文を投稿'),
-              ('画像を圧縮して投稿', '添付を 1MB 以下にしてから投稿'),
-              ('通知をまとめて既読', '1 日の終わりに通知を既読に'),
-            ].indexed)
-              RasqListTile(
-                key: ValueKey('rai.sidebar.macro.$i'),
-                title: m.$1,
-                subtitle: m.$2,
-                leading: Icon(Icons.auto_awesome_outlined, size: 20, color: scheme.onSurfaceVariant),
-                trailing: Switch(value: false, onChanged: null),
-                chevron: false,
-                enabled: false,
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-              child: OutlinedButton.icon(key: const ValueKey('rai.sidebar.macro.new'), onPressed: null, icon: const Icon(Icons.add, size: 18), label: const Text('マクロを作成(第二期)')),
+            const RasqSectionHeader(title: 'その他'),
+            // アチーブメントはページ (D-215)。マクロはまだ遷移しない(第二期)。
+            RasqListTile(
+              key: const ValueKey('rai.sidebar.achievements'),
+              title: 'アチーブメント',
+              subtitle: '$unlocked / ${progress.length} 達成',
+              leading: Icon(Icons.emoji_events_outlined, size: 20, color: unlocked > 0 ? RasqColors.yellow : scheme.onSurfaceVariant),
+              onTap: () {
+                n.toggleSidebar(open: false);
+                GoRouter.of(context).push(Routes.raiAchievements);
+              },
+            ),
+            RasqListTile(
+              key: const ValueKey('rai.sidebar.macros'),
+              title: 'マクロ',
+              subtitle: '第二期(まだ開けません)',
+              leading: Icon(Icons.auto_awesome_outlined, size: 20, color: scheme.onSurfaceVariant),
+              chevron: false,
+              enabled: false,
             ),
           ]),
         ),

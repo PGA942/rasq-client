@@ -10,6 +10,7 @@ import 'package:rasq_client/features/login/login_screen.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/rai/rai_embedding_model.dart';
 import 'package:rasq_client/features/profile/profile_edit_screen.dart';
+import 'package:rasq_client/features/rai/rai_achievements_screen.dart';
 import 'package:rasq_client/features/rai/rai_home_screen.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
 import 'package:rasq_client/features/rai/rai_llm_device.dart';
@@ -201,9 +202,11 @@ void main() {
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null);
     final screen = tester.getSize(find.byType(RasqApp));
     final overlayMascot = find.descendant(of: find.byType(RaiMascotLayer), matching: find.byType(RaiMascot));
-    // 静止位置は右下 (D-192: 右下 / 左下、直前に指した部品が右半分なら左下)。
-    expect(tester.getCenter(overlayMascot).dx, closeTo(screen.width - raiPointSize / 2 - RasqSpacing.md, 1));
-    expect(tester.getRect(overlayMascot).bottom, lessThan(tester.getRect(find.byType(RaiBar)).top + 1));
+    // アシスタントは RAi ホームの枠でその場 (D-215): 走って右下へ行かない。中心はスタンバイ枠の中心。
+    final slotRect = tester.getRect(find.byKey(const ValueKey('rai.home.mascot')));
+    expect(tester.getCenter(overlayMascot).dx, closeTo(slotRect.center.dx, 1));
+    expect(tester.getCenter(overlayMascot).dy, closeTo(slotRect.center.dy, 1));
+    expect(tester.getSize(overlayMascot).width, closeTo(slotRect.width, 1));
     // モデルが準備できていれば端末内モデルの返事がトークンで流れる。
     llm.set(RaiLlmStatus(RaiLlmPhase.ready, modelId: llm.spec.id));
     await tester.pumpAndSettle();
@@ -564,12 +567,20 @@ void main() {
     expect(find.text('アチーブメント'), findsOneWidget);
     expect(find.text('マクロ'), findsOneWidget);
     expect(find.textContaining('まだありません'), findsOneWidget);
-    expect(find.byKey(const ValueKey('rai.sidebar.ach.ask1')), findsOneWidget);
-    expect(find.text('0 / 1'), findsWidgets); // まだ 0
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.sidebar.macro.new')), 200, scrollable: find.descendant(of: find.byKey(const ValueKey('rai.sidebar')), matching: find.byType(Scrollable)));
+    // アチーブメントはページ (D-215)、マクロは第二期(遷移しない)。
+    expect(find.text('0 / 8 達成'), findsOneWidget);
+    expect(tester.widget<RasqListTile>(find.byKey(const ValueKey('rai.sidebar.macros'))).enabled, isFalse);
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.achievements')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('rai.sidebar.macro.0')), findsOneWidget); // ダミー(無効)
-    expect(tester.widget<OutlinedButton>(find.byKey(const ValueKey('rai.sidebar.macro.new'))).onPressed, isNull);
+    expect(find.byType(RaiAchievementsScreen), findsOneWidget);
+    expect(c.read(raiProvider).sidebarOpen, isFalse);
+    expect(find.byKey(const ValueKey('rai.sidebar.ach.ask1')), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.achievements.summary'))).data, '0 / 8 達成');
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RaiHomeScreen), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.toggle')));
+    await tester.pumpAndSettle();
     // 外側のタップで閉じる → バーが戻る。
     await tester.tapAt(Offset(tester.getSize(find.byType(RasqApp)).width - 10, 400));
     await tester.pumpAndSettle();
@@ -598,8 +609,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.sidebar.toggle')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rai.sidebar.conv.current')), findsOneWidget);
-    expect(find.descendant(of: find.byKey(const ValueKey('rai.sidebar.ach.ask1')), matching: find.text('1 / 1')), findsOneWidget);
-    expect(find.descendant(of: find.byKey(const ValueKey('rai.sidebar.ach.ask1')), matching: find.byIcon(Icons.emoji_events)), findsOneWidget); // 達成
+    expect(find.text('1 / 8 達成'), findsOneWidget); // 「はじめての質問」が達成
     // 新しい会話 → いまの履歴が保存され、履歴は空、サイドバーは閉じる。
     await tester.tap(find.byKey(const ValueKey('rai.sidebar.new')));
     await tester.pumpAndSettle();

@@ -147,10 +147,17 @@ class RaiMascotLayer extends ConsumerStatefulWidget {
   ConsumerState<RaiMascotLayer> createState() => _RaiMascotLayerState();
 }
 
-class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTickerProviderStateMixin {
+class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProviderStateMixin {
   /// 指差し時の大きさ (D-192: 150〜200 px)。移動の中ほどは再接近の奥行き(最大 700 px)へ寄る。
   static const mascot = raiPointSize;
   late final AnimationController _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
+
+  /// アシスタントのその場旋回 (D-215): 考えている(busy)あいだ回り、返事が出たら正面で止まる。
+  late final AnimationController _spin = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
+  bool _inPlace = false;
+  bool _spinning = false;
+  bool _holdingAnswer = false;
+  bool _lastBusy = false;
 
 
   RaiArm _yawArmFrom = RaiArm.none;
@@ -228,11 +235,23 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   void _faceIdle() {
     _faceTimer?.cancel();
     _holdingFow = false;
+    _holdingAnswer = false;
     _ctrl3d.face = RaiFace.eyes;
   }
 
+  /// 返事が出たときのランダムな表情 (D-215): 吹き出しが消えるまで保つ。
+  static const _expressions = [RaiFace.eyes2, RaiFace.eyesRound, RaiFace.eyesNarrow, RaiFace.clip, RaiFace.camera, RaiFace.globe];
+  final _faceRandom = math.Random();
+
+  void _randomFace() {
+    _faceTimer?.cancel();
+    _holdingFow = false;
+    _holdingAnswer = true;
+    _ctrl3d.face = _expressions[_faceRandom.nextInt(_expressions.length)];
+  }
+
   void _blink() {
-    if (!mounted || _holdingFow || _ctrl3d.face != RaiFace.eyes) return;
+    if (!mounted || _holdingFow || _holdingAnswer || _ctrl3d.face != RaiFace.eyes) return;
     _ctrl3d.face = RaiFace.blink;
     Timer(const Duration(milliseconds: 120), () {
       if (mounted && !_holdingFow && _ctrl3d.face == RaiFace.blink) _ctrl3d.face = RaiFace.eyes;
@@ -248,6 +267,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     _blinkTimer = Timer.periodic(const Duration(seconds: 4), (_) => _blink());
     GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
     _anim.addListener(_onFrame);
+    _spin.addListener(_onFrame);
     _anim.addStatusListener((st) {
       if (st == AnimationStatus.completed && _path != null && mounted) {
         _pos = _path!.to;
@@ -264,6 +284,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     _blinkTimer?.cancel();
     GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
     _anim.dispose();
+    _spin.dispose();
     _ctrl3d.dispose();
     super.dispose();
   }
@@ -340,7 +361,8 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
       yaw = raiYawAt(t, plan: plan, tangent: Offset.zero, armFrom: _yawArmFrom, armTo: armTo, face: _face, stopTurn: clockwise ? 1 : -1);
     } else {
       world = _standbyWorld ?? proj.worldAt(_pos ?? Offset(proj.screen.width / 2, proj.screen.height / 2), mascot);
-      yaw = raiRestYawFor(_ctrl3d.arm);
+      // その場旋回 (D-215): 回っているあいだは 1 周、止まるときは正面(0)へ戻す。
+      yaw = raiRestYawFor(_ctrl3d.arm) + (_inPlace ? _spin.value * 2 * math.pi : 0);
     }
     final p = proj.project(world);
     // NaN は流さない (D-205: 実機で高さ NaN のアサート)。
@@ -386,9 +408,23 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     // Positioned を返すと ParentDataWidget の誤用になる(実機のログ)。
     final scene = three ? Positioned.fill(key: const ValueKey('rai.scene'), child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj, outline: outline))) : null;
     Widget layer(List<Widget> children) => SizedBox(width: screen.width, height: screen.height, child: Stack(children: [?scene, ...children]));
-    // スタンバイ (D-199): 吹き出しが無く、アシスタントで RAi ホームの枠があるとき、そこに大きく薄く。
-    final standby = s.bubble == null && s.mode == RaiMode.assistant && slot != null;
-    if (s.bubble == null && !standby) {
+    // 行程が進んだら表情を目に戻す (D-211)。アシスタントの返事が出たらランダムな表情 (D-215)。
+    if (s.stepIndex != _lastStep || s.bubble != _lastBubble || s.busy != _lastBusy) {
+      final answered = s.mode == RaiMode.assistant && !s.busy && s.bubble != null && s.bubble != '…' && (s.bubble != _lastBubble || _lastBusy);
+      _lastStep = s.stepIndex;
+      _lastBubble = s.bubble;
+      _lastBusy = s.busy;
+      if (answered) {
+        _randomFace();
+      } else if ((_holdingFow || _holdingAnswer) && s.bubble == null) {
+        _faceIdle();
+      }
+    }
+    // スタンバイ (D-199): 吹き出しが無く考えてもいない、アシスタントで RAi ホームの枠があるとき、そこに大きく薄く。
+    // 考えている / 返事があるときは同じ場所でその場旋回 (D-215)。
+    final assistantHome = s.mode == RaiMode.assistant && slot != null;
+    final standby = assistantHome && s.bubble == null && !s.busy;
+    if (s.bubble == null && !standby && !(assistantHome && s.busy)) {
       // 何も出さない(3D は読み込み直しを避けるためウィジェットは残し、隠す)。
       _ctrl3d.opacity = 0;
       _standbyWorld = null;
@@ -411,11 +447,45 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     }
     final localTarget = s.target == null ? null : _toLocal(s.target!);
     _syncBusy(s.busy);
-    // 行程が進んだら表情を目に戻す (D-211)。
-    if (s.stepIndex != _lastStep || s.bubble != _lastBubble) {
-      _lastStep = s.stepIndex;
-      _lastBubble = s.bubble;
-      if (_holdingFow) _faceIdle();
+    // アシスタントはその場 (D-215): RAi ホームの枠があればそこに大きく、無ければいまの場所。走らない。
+    // 考えているあいだは回り、返事が出たら正面で止まる。
+    final inPlace = assistantHome;
+    if (inPlace != _inPlace) {
+      _inPlace = inPlace;
+      if (!inPlace) {
+        _spin.stop();
+        _spin.value = 0;
+        _spinning = false;
+      }
+    }
+    if (inPlace) {
+      if (s.busy && !_spinning) {
+        _spinning = true;
+        _spin.repeat();
+      } else if (!s.busy && _spinning) {
+        _spinning = false;
+        _spin.stop();
+        _spin.animateTo(1, duration: const Duration(milliseconds: 500), curve: Curves.easeOutCubic).whenComplete(() {
+          if (mounted) _spin.value = 0;
+        });
+      }
+      final local = _toLocal(slot);
+      _standbyWorld = proj.worldAt(local.center, local.height / 1.25);
+      _ctrl3d.opacity = 1;
+      if (_ctrl3d.plan != null || _ctrl3d.arm != RaiArm.none) _ctrl3d.idle(RaiArm.none);
+      _pos = null;
+      _lastTarget = s.target;
+      _lastMode = s.mode;
+      _onFrame();
+      return layer([
+        if (!three)
+          Positioned(
+            key: const ValueKey('rai.mascot2d'),
+            left: local.center.dx - local.width / 2,
+            top: local.center.dy - local.height / 2,
+            child: IgnorePointer(child: RaiMascot(size: local.width, controller3d: _ctrl3d)),
+          ),
+      ]);
     }
     if (s.target != _lastTarget || s.mode != _lastMode || _pos == null) {
       _lastTarget = s.target;

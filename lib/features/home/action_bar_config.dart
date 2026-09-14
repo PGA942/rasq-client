@@ -77,10 +77,10 @@ class ActionBarConfig {
   /// リストに入っているアクション id。
   Set<String> get listedIds => {for (final l in lists) ...l.memberIds};
 
-  /// 構成を適用: リスト束ね + 並び替え。非表示は廃止 (D-208): 保存済みの [hidden] は無視する
-  /// (プラグインボタンの有効 / 無効はスロット設定側)。
+  /// 構成を適用: リスト束ね + 並び替え。[hidden] は**バーから外したボタン** (D-215: SNS のボタンも削除 /
+  /// 追加できる。初期構成は全部出す。プラグインボタンの有効 / 無効はスロット設定側)。
   List<ActionBarEntry> apply(List<ActionDescriptor> actions) {
-    final byId = {for (final a in actions) a.id: a};
+    final byId = {for (final a in actions) if (!hidden.contains(a.id)) a.id: a};
     final listById = {for (final l in lists) l.id: l};
     final consumed = <String>{...listedIds};
 
@@ -109,9 +109,9 @@ class ActionBarConfig {
         if (e != null && placed.add(key)) out.add(e);
       }
     }
-    // order に無い単体アクション(登録順)。
+    // order に無い単体アクション(登録順)。外したものは出さない。
     for (final a in actions) {
-      if (!placed.contains(a.id) && !consumed.contains(a.id)) {
+      if (!placed.contains(a.id) && !consumed.contains(a.id) && !hidden.contains(a.id)) {
         out.add(SingleActionEntry(a));
         placed.add(a.id);
       }
