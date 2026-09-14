@@ -28,8 +28,24 @@ class RaiChatList extends ConsumerWidget {
     final index = ref.read(raiReferenceProvider).value;
     final log = s.log.reversed.toList(); // 古い順
     final live = s.bubble != null && (s.busy || log.isEmpty || log.last.text != s.bubble);
+    // 一時停止した案内 (D-220): 戻ると続く。
+    final suspended = s.suspended == null
+        ? null
+        : Container(
+            key: const ValueKey('rai.chat.suspended'),
+            margin: const EdgeInsets.only(bottom: RasqSpacing.sm),
+            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: RasqSpacing.sm),
+            decoration: BoxDecoration(color: RasqColors.accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(RasqSizes.radiusMd), border: Border.all(color: RasqColors.accent.withValues(alpha: 0.5))),
+            child: Row(children: [
+              const Icon(Icons.pause_circle_outline, size: 20),
+              const SizedBox(width: RasqSpacing.xs),
+              Expanded(child: Text('案内を一時停止中(${s.suspended!.stepIndex + 1} / ${s.suspended!.steps.length} 手順目)。前の画面に戻ると続きます。', style: RasqTypography.bodySmall)),
+              TextButton(key: const ValueKey('rai.chat.resume'), onPressed: () => Navigator.of(context).maybePop(), child: const Text('続きへ')),
+            ]),
+          );
     if (log.isEmpty && !live) {
       return ListView(key: const ValueKey('rai.chat.empty'), padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xl, RasqSpacing.page, bottomPadding), children: [
+        ?suspended,
         Text('マクロとか、お任せください！', textAlign: TextAlign.center, style: RasqTypography.title),
         const SizedBox(height: RasqSpacing.xs),
         Text('インストラクション: 操作を聞くと RAi がボタンまで移動して指差します。\nアシスタント: 端末内モデルで答えます。モデルはバーのチップから選べます(マクロは第二期)。', textAlign: TextAlign.center, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
@@ -70,6 +86,7 @@ class RaiChatList extends ConsumerWidget {
       if (s.query != null && s.query != lastQuery) rows.add(_UserRow(key: const ValueKey('rai.chat.user.live'), text: s.query!));
       rows.add(_RaiRow(key: const ValueKey('rai.chat.live'), text: s.bubble!, at: null, error: s.error, latest: true, streaming: s.busy, links: const [], choices: s.busy ? const [] : s.choices, rowIndex: -1));
     }
+    if (suspended != null) rows.add(suspended);
     // 新しいものが下(reverse で下端に寄せる)。
     return ListView(
       key: const ValueKey('rai.chat.list'),

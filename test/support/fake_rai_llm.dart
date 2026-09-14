@@ -9,8 +9,12 @@ class FakeRaiLlm implements RaiLlm {
   RaiLlmStatus _current;
   RaiModelSpec _spec = raiModelSpecs.first;
   String reply;
+
+  /// 順番に返す返事(D-220: 計画 → 回答の 2 段)。空なら [reply]。
+  final List<String> replies = [];
   final List<String> prompts = [];
   final List<String?> systems = [];
+  final List<int?> maxTokensLog = [];
   int released = 0;
   int installs = 0;
 
@@ -46,12 +50,14 @@ class FakeRaiLlm implements RaiLlm {
   Future<void> release() async => released++;
 
   @override
-  Stream<String> chat(String prompt, {String? system}) async* {
+  Stream<String> chat(String prompt, {String? system, int? maxTokens}) async* {
     prompts.add(prompt);
     systems.add(system);
+    maxTokensLog.add(maxTokens);
     if (!_current.ready) throw RaiLlmException('端末内モデル(${_spec.codename})がまだダウンロードされていません');
     set(RaiLlmStatus(RaiLlmPhase.generating, modelId: _spec.id));
-    for (final ch in reply.split('')) {
+    final r = replies.isNotEmpty ? replies.removeAt(0) : reply;
+    for (final ch in r.split('')) {
       yield ch;
     }
     set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
