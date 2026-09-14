@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +29,20 @@ class RaiMascot3dController extends ChangeNotifier {
 
   /// 空間の中の位置(モデルの中心、D-197)。描画は毎フレーム読む。
   RaiVec3 world = const RaiVec3(0, 0, -10);
+
+  /// ロール(奥行き軸まわりの傾き、ラジアン、D-218: チャットの背景でゆっくり旋回)。描画ループが
+  /// [rollSpeed](rad/s)で進める(Flutter 側のティッカーを使わない: テストの pumpAndSettle が止まらない)。
+  double roll = 0;
+  double rollSpeed = 0;
+
+  /// 1 回だけ再生するクリップ (D-218: 失敗時の accident など)。終わったら待機に戻る。
+  String? oneShot;
+  int oneShotSeq = 0;
+  void playOnce(String clip) {
+    oneShot = clip;
+    oneShotSeq++;
+    notifyListeners();
+  }
 
   /// 表情 (D-211): シートの枠番号([RaiFace])。変わったら通知する。
   int _face = RaiFace.eyes;
@@ -194,6 +210,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   @override
   void dispose() {
     liveInstances--;
+    _oneShotTimer?.cancel();
     _ctrl.removeListener(_sync);
     _fallback.dispose();
     _frame.dispose();
@@ -291,6 +308,10 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
           final r = _root;
           if (r == null) return;
           r.rotation.y = _ctrl.yaw;
+          if (_ctrl.rollSpeed != 0) {
+            _ctrl.roll = (_ctrl.roll + dt * _ctrl.rollSpeed) % (2 * math.pi);
+          }
+          r.rotation.z = _ctrl.roll;
           if (proj != null) {
             final w = _ctrl.world;
             r.position.setValues(w.x, w.y, w.z);
@@ -339,6 +360,27 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
     if (_ctrl.face != _shownFace) _applyFace(_ctrl.face);
     final mixer = _mixer;
     if (mixer == null) return;
+    // 1 回だけのクリップ (D-218): 再生して、長さぶん経ったら待機へ戻す。
+    if (_ctrl.oneShotSeq != _shownOneShot) {
+      _shownOneShot = _ctrl.oneShotSeq;
+      final once = _ctrl.oneShot == null ? null : _actions[_ctrl.oneShot!];
+      if (once != null) {
+        try {
+          _playClip(once, loop: false);
+          _currentName = 'once:${_ctrl.oneShot}';
+          _oneShotTimer?.cancel();
+          _oneShotTimer = Timer(Duration(milliseconds: (once.clip.duration * 1000).round().clamp(300, 8000)), () {
+            if (!mounted) return;
+            _currentName = null;
+            _sync();
+          });
+          return;
+        } catch (e) {
+          debugPrint('RAi 3D: one-shot ${_ctrl.oneShot} failed: $e');
+        }
+      }
+    }
+    if (_currentName != null && _currentName!.startsWith('once:')) return; // 再生中は切り替えない
     final name = _ctrl.clip;
     if (name == _currentName) return;
     final next = _actions[name] ?? _actions[_ctrl.plan?.idleClip ?? 'idle'] ?? _actions['idle'];
@@ -411,10 +453,14 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
     }
   }
 
-  void _playClip(three.AnimationAction next) {
+  Timer? _oneShotTimer;
+  int _shownOneShot = 0;
+
+  void _playClip(three.AnimationAction next, {bool? loop}) {
+    final l = loop ?? _ctrl.loop;
     next
       ..reset()
-      ..setLoop(_ctrl.loop ? three.LoopRepeat : three.LoopOnce, _ctrl.loop ? double.infinity : 1)
+      ..setLoop(l ? three.LoopRepeat : three.LoopOnce, l ? double.infinity : 1)
       ..clampWhenFinished = true
       ..enabled = true
       ..play();

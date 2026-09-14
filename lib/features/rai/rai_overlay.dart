@@ -63,6 +63,8 @@ class _RaiBarHost extends ConsumerWidget {
     final n = ref.read(raiProvider.notifier);
     // RAi ホームのサイドバー (D-214) が開いている間は入力タイルを隠す。
     if (s.sidebarOpen) return const SizedBox.shrink(key: ValueKey('rai.bar.hidden'));
+    // チャット (D-218): RAi ホームのアシスタントでは発言 / 選択肢はチャットの行に出る(バーの上には出さない)。
+    final chat = ref.watch(raiChatActiveProvider);
     final llm = ref.watch(raiLlmStatusProvider).value ?? ref.read(raiLlmProvider).current;
     // フッター(タブ)の上に置く。キーボードが出ていればその上。
     final insets = MediaQuery.viewInsetsOf(context).bottom;
@@ -71,7 +73,7 @@ class _RaiBarHost extends ConsumerWidget {
     // 指差す部品がバーの後ろ(画面下)にあるときはバーを上(ヘッダーの下)へ逃がす。
     final t = s.target;
     final atTop = t != null && s.mode == RaiMode.instruction && t.bottom > screen.height - dock - 200;
-    final speech = s.bubble == null
+    final speech = s.bubble == null || chat
         ? null
         : RaiSpeech(
             key: const ValueKey('rai.speech'),
@@ -89,7 +91,7 @@ class _RaiBarHost extends ConsumerWidget {
       width: raiPanelWidth(context),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         // 曖昧な質問の選択肢 (D-194): 吹き出しの上のタイル。
-        if (s.choices.isNotEmpty)
+        if (s.choices.isNotEmpty && !chat)
           Padding(
             padding: const EdgeInsets.only(bottom: RasqSpacing.xs),
             child: Material(
@@ -147,19 +149,16 @@ class RaiMascotLayer extends ConsumerStatefulWidget {
   ConsumerState<RaiMascotLayer> createState() => _RaiMascotLayerState();
 }
 
-class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProviderStateMixin {
+class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTickerProviderStateMixin {
   /// 指差し時の大きさ (D-192: 150〜200 px)。移動の中ほどは再接近の奥行き(最大 700 px)へ寄る。
   static const mascot = raiPointSize;
   late final AnimationController _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
 
-  /// アシスタントの待機モーション (D-215 → D-216): 考えている(busy)あいだ**小さな円**を描いて回り
-  /// (向きは正面のまま)、返事が出たら元の位置で止まる。
-  late final AnimationController _spin = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
-  Rect? _inPlaceLocal;
+  /// チャットの背景 (D-218): 枠の中でロール方向にゆっくり旋回(速さは 3D 側の描画ループが進める)。
   bool _inPlace = false;
-  bool _spinning = false;
   bool _holdingAnswer = false;
   bool _lastBusy = false;
+  bool _lastError = false;
 
 
   RaiArm _yawArmFrom = RaiArm.none;
@@ -181,6 +180,10 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProv
 
   /// 3D: 移動の計画(起動 / 走行 / 停止、腕の側)と進み具合、推論中の一時停止、空間の位置。
   final _ctrl3d = RaiMascot3dController();
+
+  /// テスト用 (D-218): 背景の RAi の腕 / ロール / 1 回だけのクリップを確かめる。
+  @visibleForTesting
+  RaiMascot3dController get controller3d => _ctrl3d;
   bool _pausedByBusy = false;
 
   bool _downOnTarget = false;
@@ -269,7 +272,6 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProv
     _blinkTimer = Timer.periodic(const Duration(seconds: 4), (_) => _blink());
     GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
     _anim.addListener(_onFrame);
-    _spin.addListener(_onFrame);
     _anim.addStatusListener((st) {
       if (st == AnimationStatus.completed && _path != null && mounted) {
         _pos = _path!.to;
@@ -286,7 +288,6 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProv
     _blinkTimer?.cancel();
     GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
     _anim.dispose();
-    _spin.dispose();
     _ctrl3d.dispose();
     super.dispose();
   }
@@ -362,16 +363,9 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProv
       // 停止の旋回の向きは山なりと逆側から合わせる(実機で確認、D-200)。
       yaw = raiYawAt(t, plan: plan, tangent: Offset.zero, armFrom: _yawArmFrom, armTo: armTo, face: _face, stopTurn: clockwise ? 1 : -1);
     } else {
-      final local = _inPlaceLocal;
-      if (_inPlace && local != null) {
-        // 小さな円 (D-216): 枠の幅の 8% を半径に、θ = 0 / 2π で元の位置(raiStopLoop3 と同じ形)。
-        final th = _spin.value * 2 * math.pi;
-        final r = local.width * 0.08;
-        world = proj.worldAt(local.center + Offset(r * math.sin(th), r * (1 - math.cos(th))), local.height / 1.25);
-      } else {
-        world = _standbyWorld ?? proj.worldAt(_pos ?? Offset(proj.screen.width / 2, proj.screen.height / 2), mascot);
-      }
+      world = _standbyWorld ?? proj.worldAt(_pos ?? Offset(proj.screen.width / 2, proj.screen.height / 2), mascot);
       yaw = raiRestYawFor(_ctrl3d.arm);
+
     }
     final p = proj.project(world);
     // NaN は流さない (D-205: 実機で高さ NaN のアサート)。
@@ -429,61 +423,49 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProv
         _faceIdle();
       }
     }
-    // スタンバイ (D-199): 吹き出しが無く考えてもいない、アシスタントで RAi ホームの枠があるとき、そこに大きく薄く。
-    // 考えている / 返事があるときは同じ場所でその場旋回 (D-215)。
+    // チャットの背景 (D-199 → D-218): アシスタントで RAi ホームの枠があるときは、吹き出しの有無に関わらず
+    // 枠の中に薄く出して旋回する(下の inPlace)。それ以外で吹き出しが無ければ隠す。
     final assistantHome = s.mode == RaiMode.assistant && slot != null;
-    final standby = assistantHome && s.bubble == null && !s.busy;
-    if (s.bubble == null && !standby && !(assistantHome && s.busy)) {
+    if (s.bubble == null && !assistantHome) {
       // 何も出さない(3D は読み込み直しを避けるためウィジェットは残し、隠す)。
       _ctrl3d.opacity = 0;
       _standbyWorld = null;
       return layer(const []);
     }
-    if (standby) {
+    // 実機で中央の RAi が出ないときの手がかり (D-214): 枠 → 空間の位置 / 見かけの大きさ。
+    if (kDebugMode && assistantHome && _loggedStandby != slot) {
+      _loggedStandby = slot;
       final local = _toLocal(slot);
-      _standbyWorld = proj.worldAt(local.center, local.height / 1.25);
-      _ctrl3d.opacity = 0.35;
-      _ctrl3d.idle(RaiArm.none);
-      _pos = null; // 次の移動はスタンバイの位置から
-      _onFrame();
-      // 実機で中央の RAi が出ないときの手がかり (D-214): 枠 → 空間の位置 / 見かけの大きさ。
-      if (kDebugMode && _loggedStandby != slot) {
-        _loggedStandby = slot;
-        final p = proj.project(_standbyWorld!);
-        debugPrint('RAi standby: slot=$slot local=$local world=${_standbyWorld!} px=${p.px} size=${p.sizePx.toStringAsFixed(0)} three=$three');
-      }
-      return layer(const []);
+      final w = proj.worldAt(local.center, local.height / 1.25);
+      final p = proj.project(w);
+      debugPrint('RAi standby: slot=$slot local=$local world=$w px=${p.px} size=${p.sizePx.toStringAsFixed(0)} three=$three');
     }
     final localTarget = s.target == null ? null : _toLocal(s.target!);
     _syncBusy(s.busy);
-    // アシスタントはその場 (D-215): RAi ホームの枠があればそこに大きく、無ければいまの場所。走らない。
-    // 考えているあいだは回り、返事が出たら正面で止まる。
+    // チャットの背景 (D-215 → D-218): RAi ホームのアシスタントでは枠の中でロール方向にゆっくり旋回する。
+    // 考えている / 文字が流れているあいだは薄く(0.15)、速めに回る。返事が出たら 0.35 に戻る。
+    // リンク / タイルが出た行が最新なら腕を上げる。失敗の返事は 5% で accident。
     final inPlace = assistantHome;
     if (inPlace != _inPlace) {
       _inPlace = inPlace;
       if (!inPlace) {
-        _spin.stop();
-        _spin.value = 0;
-        _spinning = false;
-        _inPlaceLocal = null;
+        _ctrl3d.roll = 0;
+        _ctrl3d.rollSpeed = 0;
       }
     }
     if (inPlace) {
-      if (s.busy && !_spinning) {
-        _spinning = true;
-        _spin.repeat();
-      } else if (!s.busy && _spinning) {
-        _spinning = false;
-        _spin.stop();
-        _spin.animateTo(1, duration: const Duration(milliseconds: 500), curve: Curves.easeOutCubic).whenComplete(() {
-          if (mounted) _spin.value = 0;
-        });
-      }
+      final streaming = s.busy;
+      // 1 周 24 秒、考えているあいだは 6 秒。
+      _ctrl3d.rollSpeed = 2 * math.pi / (streaming ? 6 : 24);
       final local = _toLocal(slot);
-      _inPlaceLocal = local;
       _standbyWorld = proj.worldAt(local.center, local.height / 1.25);
-      _ctrl3d.opacity = 1;
-      if (_ctrl3d.plan != null || _ctrl3d.arm != RaiArm.none) _ctrl3d.idle(RaiArm.none);
+      _ctrl3d.opacity = streaming ? 0.12 : 0.28;
+      final latest = s.log.firstOrNull;
+      final hasTile = !streaming && latest != null && s.bubble != null && (latest.proposal != null || latest.choices.isNotEmpty || latest.links.isNotEmpty);
+      final arm = hasTile ? RaiArm.right : RaiArm.none;
+      if (_ctrl3d.plan != null || _ctrl3d.arm != arm) _ctrl3d.idle(arm);
+      if (s.error && !_lastError && _faceRandom.nextInt(100) < 5) _ctrl3d.playOnce('accident');
+      _lastError = s.error;
       _pos = null;
       _lastTarget = s.target;
       _lastMode = s.mode;
@@ -494,7 +476,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProv
             key: const ValueKey('rai.mascot2d'),
             left: local.center.dx - local.width / 2,
             top: local.center.dy - local.height / 2,
-            child: IgnorePointer(child: RaiMascot(size: local.width, controller3d: _ctrl3d)),
+            child: IgnorePointer(child: Opacity(opacity: _ctrl3d.opacity, child: RaiMascot(size: local.width, controller3d: _ctrl3d))),
           ),
       ]);
     }
@@ -591,3 +573,6 @@ class RaiStandbySlot extends Notifier<Rect?> {
 }
 
 final raiStandbySlotProvider = NotifierProvider<RaiStandbySlot, Rect?>(RaiStandbySlot.new);
+
+/// チャットが出ているか (D-218): RAi ホームが見えていて(枠がある)アシスタントのとき。
+final raiChatActiveProvider = Provider<bool>((ref) => ref.watch(raiProvider).mode == RaiMode.assistant && ref.watch(raiStandbySlotProvider) != null);

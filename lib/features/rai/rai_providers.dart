@@ -171,18 +171,51 @@ class RaiState {
 /// 発言 1 つ(履歴 FOW のタイル)。
 @immutable
 class RaiUtterance {
-  const RaiUtterance({required this.text, required this.at, this.query, this.error = false});
+  const RaiUtterance({required this.text, required this.at, this.query, this.error = false, this.proposal, this.choices = const []});
   final String text;
   final DateTime at;
   final String? query;
   final bool error;
+
+  /// 提案した操作の id (D-218: チャットでは行の下に「この手順で案内」のタイル)。
+  final String? proposal;
+
+  /// 曖昧なときの選択肢(チャットでは行の下のチップ)。
+  final List<({String id, String index})> choices;
+
+  /// 本文の URL(チャットでは行の下にリンクカード)。
+  List<Uri> get links => raiLinksIn(text);
+}
+
+/// 本文の http(s) URL を拾う(末尾の句読点 / 括弧は落とす)。
+List<Uri> raiLinksIn(String text) {
+  final out = <Uri>[];
+  for (final m in RegExp(r'https?://[^\s<>「」()（）]+').allMatches(text)) {
+    var raw = m.group(0)!;
+    while (raw.isNotEmpty && '.,、。!！?？'.contains(raw[raw.length - 1])) {
+      raw = raw.substring(0, raw.length - 1);
+    }
+    final u = Uri.tryParse(raw);
+    if (u != null && u.host.isNotEmpty) out.add(u);
+  }
+  return out;
 }
 
 class RaiController extends Notifier<RaiState> {
   /// 確定した発言を履歴に積む(50 件まで)。
-  void _record(String text, {bool error = false}) {
+  void _record(String text, {bool error = false, String? proposal, List<({String id, String index})> choices = const []}) {
     if (text.trim().isEmpty || text == '…') return;
-    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error), ...state.log].take(50).toList());
+    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error, proposal: proposal, choices: choices), ...state.log].take(50).toList());
+  }
+
+  /// チャットの提案タイルから案内へ (D-218): インストラクションに切り替え(RAi ページは閉じる)、その操作を進める。
+  Future<void> guide(String opId) async {
+    final index = await _index();
+    final op = index?.operation(opId);
+    if (index == null || op == null) return;
+    setMode(RaiMode.instruction);
+    await WidgetsBinding.instance.endOfFrame;
+    await _runOperation(index, op);
   }
 
   @override
@@ -300,8 +333,9 @@ class RaiController extends Notifier<RaiState> {
 
   void _askChoice(List<RaiHit<RaiOperation>> hits) {
     const text = 'どれのことですか？ 上の選択肢から選んでください';
-    state = state.copyWith(busy: false, bubble: text, target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: null, choices: [for (final h in hits.take(3)) (id: h.item.id, index: h.item.index)]);
-    _record(text);
+    final choices = [for (final h in hits.take(3)) (id: h.item.id, index: h.item.index)];
+    state = state.copyWith(busy: false, bubble: text, target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: null, choices: choices);
+    _record(text, choices: choices);
   }
 
   /// 選択肢を選ぶ (D-194)。
@@ -321,7 +355,7 @@ class RaiController extends Notifier<RaiState> {
     final steps = index.expand(op);
     final text = proposalLines(op, steps).join('\n');
     state = state.copyWith(busy: false, bubble: text, target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: op.id, choices: const [], lastOperation: op.id);
-    _record(text);
+    _record(text, proposal: op.id);
   }
 
   Future<void> _runOperation(RaiReferenceIndex index, RaiOperation op) async {
