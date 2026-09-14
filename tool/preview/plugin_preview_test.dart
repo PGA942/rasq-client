@@ -488,8 +488,6 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('rai.input')), 'bsky のアカウントも使いたい');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('rai.next')));
-    await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_assistant_proposal.png'));
   });
   testWidgets('viewer header with plugin toggle in the action bar, right-aligned (D-214)', (tester) async {

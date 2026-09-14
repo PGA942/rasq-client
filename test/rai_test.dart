@@ -168,15 +168,17 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('rai.input')), '何かできる？');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
-    // 発言は入力ウィジェットの上に 1 行ずつ (D-182): 1 行目 = 端末内モデルの理由、▶ で 2 行目 = フォールアップの理由。
+    // チャット (D-218): RAi ホームのアシスタントでは発言がチャットの行に出る(バーの上の吹き出しは無い)。
     final failed = c.read(raiProvider).bubble!;
     expect(failed, contains('まだダウンロードされていません'));
     expect(failed, contains('フォールアップ先(サーバー側)が未接続です'));
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('まだダウンロードされていません'));
-    expect(tester.getRect(find.byKey(const ValueKey('rai.speech'))).bottom, lessThan(tester.getRect(find.byKey(const ValueKey('rai.input'))).top)); // バーの上
-    await tester.tap(find.byKey(const ValueKey('rai.next')));
-    await tester.pumpAndSettle();
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('フォールアップ先'));
+    expect(find.byKey(const ValueKey('rai.speech')), findsNothing);
+    expect(find.byKey(const ValueKey('rai.chat.user.0')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('rai.chat.user.0')), matching: find.text('何かできる？')), findsOneWidget);
+    final msg0 = tester.widget<Text>(find.descendant(of: find.byKey(const ValueKey('rai.chat.msg.0')), matching: find.byType(Text)).first).data!;
+    expect(msg0, contains('まだダウンロードされていません'));
+    expect(msg0, contains('フォールアップ先'));
+    expect(find.byKey(const ValueKey('rai.chat.live')), findsNothing); // 記録済みなので生成中の行は無い
     expect(find.byKey(const ValueKey('rai.ring.error')), findsOneWidget);
     expect(llm.released, 1);
     // 履歴ボタン (D-187): 入力ウィジェットが上に広がって発言の履歴(全文 + コピー)が出る。
@@ -213,11 +215,11 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('rai.input')), 'こんにちは');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, 'はい、RASQ の RAi です。');
+    expect(c.read(raiProvider).bubble, 'はい、RASQ の RAi です。');
+    expect(find.descendant(of: find.byKey(const ValueKey('rai.chat.msg.1')), matching: find.text('はい、RASQ の RAi です。')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('rai.chat.user.1')), matching: find.text('こんにちは')), findsOneWidget);
     expect(llm.systems.last, contains('アシスタント'));
     expect(find.byKey(const ValueKey('rai.ring.idle')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('rai.speech.close')));
-    await tester.pumpAndSettle();
     // トグル → インストラクション(端末内モデル)。返事は消える。
     await tester.tap(find.byKey(const ValueKey('rai.toggle')));
     await tester.pumpAndSettle();
@@ -359,28 +361,34 @@ void main() {
     expect(st.hits.first.id, 'attach');
     expect(st.target, isNull); // 中央固定
     expect(find.byType(RaiHomeScreen), findsOneWidget); // 画面は動かない
-    // 1 行目 = 見出し、▶ で関数〔id〕と 入力 / 固定 が並ぶ。
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, '「画像を付けて投稿」なら、この順で進めます(3 手順)');
-    await tester.tap(find.byKey(const ValueKey('rai.next')));
-    await tester.pumpAndSettle();
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, '1. 右下の「投稿」でコンポーザーが開きます〔composer.open〕');
-    await tester.tap(find.byKey(const ValueKey('rai.next')));
-    await tester.pumpAndSettle();
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('〔post.attach〕 入力: ファイル 固定: 閲覧注意=false'));
-    await tester.tap(find.byKey(const ValueKey('rai.next')));
-    await tester.pumpAndSettle();
-    final last = tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data!;
-    expect(last, contains('〔post.create〕 入力: 本文 固定: 公開範囲=public CW=false 返信制限=0 作成時刻='));
-    // 提案は履歴(ログ)に全文で残る。
+    // チャット (D-218): 提案は行に全文、行の下に操作タイル(見出し · 手順数 + 「この手順で案内」)。
+    final msg0 = tester.widget<Text>(find.descendant(of: find.byKey(const ValueKey('rai.chat.msg.0')), matching: find.byType(Text)).first).data!;
+    expect(msg0, startsWith('「画像を付けて投稿」なら、この順で進めます(3 手順)'));
+    expect(msg0, contains('1. 右下の「投稿」でコンポーザーが開きます〔composer.open〕'));
+    expect(msg0, contains('〔post.attach〕 入力: ファイル 固定: 閲覧注意=false'));
+    expect(msg0, contains('〔post.create〕 入力: 本文 固定: 公開範囲=public CW=false 返信制限=0 作成時刻='));
+    expect(find.byKey(const ValueKey('rai.chat.proposal.attach')), findsOneWidget);
+    expect(find.text('画像を付けて投稿 · 3 手順'), findsOneWidget);
+    // 提案は履歴(ログ)に全文で残る(タイルの元 = proposal)。
     expect(c.read(raiProvider).log.first.text, contains('3 手順'));
+    expect(c.read(raiProvider).log.first.proposal, 'attach');
     // リファレンスに無い発言(シチュエーションでも引けない)→ LLM の返事。
     llm.reply = 'はい、RASQ の RAi です。';
     await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     expect(c.read(raiProvider).proposal, isNull);
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, 'はい、RASQ の RAi です。');
+    expect(find.descendant(of: find.byKey(const ValueKey('rai.chat.msg.1')), matching: find.text('はい、RASQ の RAi です。')), findsOneWidget);
     expect(llm.systems.last, contains('アシスタント'));
+    // 「この手順で案内」→ インストラクションに切り替わり(RAi ページは閉じる)、1 手順目の部品を指す。
+    await tester.tap(find.byKey(const ValueKey('rai.chat.guide.attach')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).mode, RaiMode.instruction);
+    expect(find.byType(RaiHomeScreen), findsNothing);
+    expect(c.read(raiProvider).steps.length, 3);
+    expect(c.read(raiProvider).lastOperation, 'attach');
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('右下の「投稿」'));
+    expect(c.read(raiProvider).target, isNotNull);
   });
 
   testWidgets('モデル FOW の「検索(リファレンスの埋め込み)」 (D-190): SigLIP2 をダウンロード → 索引が SigLIP2 で組み直る → 削除で n-gram に戻る', (tester) async {

@@ -7,6 +7,7 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart';
 import '../../shell/headers.dart';
+import 'rai_chat.dart';
 import 'rai_layout.dart';
 import 'rai_mascot_3d.dart';
 import 'rai_motion.dart';
@@ -186,29 +187,11 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
           child: SizedBox(
             width: raiPanelWidth(context) + RasqSpacing.page * 2,
             child: LayoutBuilder(builder: (context, c) {
-              // スタンバイ (D-192): 大きな RAi を薄く敷き、その上に「マクロとか、お任せください！」。
-              final standby = raiApproachSize.clamp(raiPointSize, math.max(raiPointSize, math.min(c.maxWidth * 0.95, screen.height * 0.55))).toDouble();
+              // チャット (D-218): 背景に RAi(層側が描く。ここは枠だけ報告)、その上に発言の履歴。
+              final standby = raiApproachSize.clamp(raiPointSize, math.max(raiPointSize, math.min(c.maxWidth * 0.75, screen.height * 0.45))).toDouble();
               return Stack(children: [
-                // 3D (D-199): 描くのは RAi 層の 1 つの空間(ここは枠だけ報告)。2D(テスト)は従来の薄い表示。
-                Positioned(top: RasqSpacing.md, left: 0, right: 0, child: IgnorePointer(child: Center(child: _StandbySlot(size: standby)))),
-                ListView(padding: EdgeInsets.fromLTRB(RasqSpacing.page, standby * 0.9, RasqSpacing.page, 240), children: [
-                  Text('マクロとか、お任せください！', textAlign: TextAlign.center, style: RasqTypography.title),
-                  const SizedBox(height: RasqSpacing.xs),
-                  Text('インストラクション: 操作を聞くと RAi がボタンまで移動して指差します。\nアシスタント: 端末内モデルで答えます。モデルはバーのチップから選べます(マクロは第二期)。', textAlign: TextAlign.center, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-                  if (s.history.isNotEmpty) ...[
-                    const RasqSectionHeader(title: '最近の質問', topMargin: RasqSpacing.xl),
-                    for (final h in s.history)
-                      RasqListTile(
-                        title: h,
-                        leading: Icon(Icons.history, size: 20, color: scheme.onSurfaceVariant),
-                        chevron: false,
-                        onTap: () {
-                          showRai(ref, mode: RaiMode.instruction);
-                          _rai.ask(h);
-                        },
-                      ),
-                  ],
-                ]),
+                Positioned.fill(child: IgnorePointer(child: Center(child: _StandbySlot(size: standby)))),
+                const RaiChatList(),
               ]);
             }),
           ),
