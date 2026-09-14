@@ -165,6 +165,9 @@ abstract class RaiLlm {
   RaiLlmStatus get current;
   Stream<RaiLlmStatus> get statuses;
 
+  /// コンテキスト長(トークン、D-221: 注入の予算 = この 4%)。
+  int get contextTokens => 2048;
+
   /// 選んでいるモデル。
   RaiModelSpec get spec;
 
@@ -270,6 +273,8 @@ class UnavailableRaiLlm implements RaiLlm {
   final _ctrl = StreamController<RaiLlmStatus>.broadcast();
   RaiModelSpec _spec = raiModelSpecs.first;
   late RaiLlmStatus _current = RaiLlmStatus(RaiLlmPhase.unavailable, message: reason, modelId: _spec.id);
+  @override
+  int get contextTokens => 2048;
 
   @override
   RaiLlmStatus get current => _current;

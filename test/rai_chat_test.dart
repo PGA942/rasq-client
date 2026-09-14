@@ -17,6 +17,7 @@ import 'package:rasq_client/features/rai/rai_reference_providers.dart';
 import 'package:rasq_client/features/rai/rai_widgets.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
+import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fake_rai_embedding_model.dart';
@@ -61,7 +62,9 @@ void main() {
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
     });
-    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => const []));
+    // 投稿を 1 つ(関数 posts.fetch の取得先)。
+    final acc = fakeSession().account;
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => [Post(id: 'p1', account: acc, author: UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 14), body: '今日は打ち上げ')]));
     await tester.pumpWidget(ProviderScope(
       overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), raiLlmProvider.overrideWithValue(llm), raiEmbeddingModelProvider.overrideWithValue(FakeRaiEmbeddingModel()), deviceRamReaderProvider.overrideWithValue(() async => (totalMb: 8192, availableMb: 4096))],
       child: const RasqApp(),
@@ -225,5 +228,47 @@ void main() {
     expect(finalSystem, contains('[[instruction:'));
     expect(c.read(raiProvider).hits.map((h) => h.id), contains('post'));
     expect(find.descendant(of: find.byKey(const ValueKey('rai.chat.msg.0')), matching: find.text('できますよ。')), findsOneWidget);
+  });
+
+  testWidgets('関数呼び出しと再始動予約 (D-221): [[call:posts.fetch]] → 取得 → モデル解放 → 計画 / ダイジェスト / 取得情報を注入して答え直す', (tester) async {
+    final c = await pump(tester);
+    llm.replies.addAll(['zzzz の状況', '- 打ち上げの投稿を探す', '探してみます。 [[call:posts.fetch|keyword=打ち上げ|limit=1]]', 'ありました: 今日は打ち上げ です。']);
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(llm.released, 1); // 再始動予約: 取得が終わってからモデルを解放
+    expect(llm.systems.length, 4);
+    final restarted = llm.systems.last!;
+    expect(restarted, contains('計画: 1. 打ち上げの投稿を探す'));
+    expect(restarted, contains('ここまでのダイジェスト: 探してみます。'));
+    expect(restarted, contains('取得した情報'));
+    expect(restarted, contains('[posts.fetch#1]'));
+    expect(restarted, contains('今日は打ち上げ'));
+    expect(restarted.length, lessThan(2500));
+    final st = c.read(raiProvider);
+    expect(st.bubble, 'ありました: 今日は打ち上げ です。');
+    expect(st.log.any((u) => u.text.contains('注入してモデルを再始動します')), isTrue);
+    expect(st.log.any((u) => u.text.contains('[[call:')), isFalse);
+    expect(c.read(raiProvider.notifier).scratch.keys, ['posts.fetch#1']);
+  });
+
+  testWidgets('関数: post.create は投稿し、自動化が許可されないアクションは断る、reference.get は詳細を返す', (tester) async {
+    final c = await pump(tester);
+    llm.replies.addAll(['zzzz の状況', '', '投稿します [[call:post.create|text=RAi から投稿]] [[call:post.action|action=nope|post=p1]]']);
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    final text = c.read(raiProvider).bubble!;
+    expect(text, contains('投稿します'));
+    expect(text, contains('post.create: 投稿しました'));
+    expect(text, contains('アクション nope はありません'));
+    expect(llm.released, 0); // 取得系が無いので再始動しない
+    llm.replies.addAll(['zzzz の状況', '', '調べます [[call:reference.get|id=post]]', '投稿するには「投稿」を押します']);
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq 2');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(llm.released, 1);
+    expect(llm.systems.last, contains('操作「投稿する」(post)'));
+    expect(c.read(raiProvider).bubble, '投稿するには「投稿」を押します');
   });
 }

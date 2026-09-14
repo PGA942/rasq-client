@@ -21,6 +21,8 @@ class FakeRaiLlm implements RaiLlm {
   @override
   RaiLlmStatus get current => _current;
   @override
+  int get contextTokens => 2048;
+  @override
   Stream<RaiLlmStatus> get statuses => _ctrl.stream;
   @override
   RaiModelSpec get spec => _spec;
