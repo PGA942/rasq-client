@@ -209,6 +209,8 @@ extension OverlayPresets on OverlayManager {
           clipBehavior: Clip.antiAlias,
           elevation: 6,
           child: IntrinsicWidth(
+            // 項目が多くて高さ上限を超えたらスクロール(はみ出しにしない、D-205)。
+            child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               for (var i = 0; i < items.length; i++) ...[
                 InkWell(
@@ -236,6 +238,7 @@ extension OverlayPresets on OverlayManager {
                 if (i != items.length - 1) Divider(height: 1, color: scheme.outlineVariant),
               ],
             ]),
+            ),
           ),
         );
       },

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
-import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
@@ -20,15 +19,8 @@ class LoginScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final manager = ref.watch(overlayManagerProvider);
     final hasSessions = ref.watch(sessionsProvider).value?.isLoggedIn ?? false;
 
-    Future<void> notReady(String name) => manager.showAlert(
-          id: 'login.notready',
-          title: '$name は準備中です',
-          message: '$name のプラグインがまだありません。現在は Misskey(MiAuth)と Mastodon(OAuth)からログインできます。',
-          confirmText: 'OK',
-        );
 
     return Scaffold(
       appBar: AppBar(
@@ -50,7 +42,8 @@ class LoginScreen extends ConsumerWidget {
             const SizedBox(height: RasqSpacing.lg),
             _ServiceButton(kind: SnsKind.bluesky, label: 'Blueskyでログイン', onTap: () => context.push(Routes.loginBluesky)),
             _ServiceButton(kind: SnsKind.misskey, label: 'Misskeyでログイン', onTap: () => context.push(Routes.loginMisskey)),
-            _ServiceButton(kind: SnsKind.mixi2, label: 'mixi2でログイン', enabled: false, external: true, onTap: () => notReady('mixi2')),
+            // mixi2 (D-206): サンプルプラグイン(API 申請前はダミーモード)。
+            _ServiceButton(kind: SnsKind.mixi2, label: 'mixi2でログイン', external: true, onTap: () => context.push(Routes.loginMixi2)),
             _ServiceButton(kind: SnsKind.mastodon, label: 'Mastodonでログイン', onTap: () => context.push(Routes.loginMastodon)),
             const SizedBox(height: RasqSpacing.sm),
             FilledButton(
@@ -74,22 +67,20 @@ class LoginScreen extends ConsumerWidget {
 }
 
 class _ServiceButton extends StatelessWidget {
-  const _ServiceButton({required this.kind, required this.label, required this.onTap, this.enabled = true, this.external = false});
+  const _ServiceButton({required this.kind, required this.label, required this.onTap, this.external = false});
   final SnsKind kind;
   final String label;
   final VoidCallback onTap;
-  final bool enabled;
   final bool external;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = enabled ? scheme.onSurface : scheme.onSurfaceVariant;
+    final color = scheme.onSurface;
     return Padding(
       padding: const EdgeInsets.only(bottom: RasqSpacing.md),
       child: Semantics(
         button: true,
-        enabled: enabled,
         label: label,
         child: Material(
           color: Colors.transparent,

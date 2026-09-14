@@ -30,13 +30,13 @@ class RaiProjector {
 
   /// 奥行き d で見える縦の幅(ワールド単位)。
   double visibleHeight(double d) => 2 * d * _tanHalf;
-  double visibleWidth(double d) => visibleHeight(d) * (screen.width / screen.height);
+  double visibleWidth(double d) => visibleHeight(d) * (screen.height <= 0 ? 1 : screen.width / screen.height);
 
   /// 高さ 1 のモデルが [sizePx] に見える奥行き。
-  double depthForSize(double sizePx) => screen.height / (math.max(1, sizePx) * 2 * _tanHalf);
+  double depthForSize(double sizePx) => math.max(1, screen.height) / (math.max(1, sizePx) * 2 * _tanHalf);
 
   /// 奥行き d に置いた高さ 1 のモデルの見かけの大きさ(px)。
-  double sizeAtDepth(double d) => screen.height / visibleHeight(d);
+  double sizeAtDepth(double d) => math.max(1, screen.height) / visibleHeight(d);
 
   /// 画面の点 [px](モデルの中心)と見かけの大きさ [sizePx] → ワールド座標(モデルの中心)。
   RaiVec3 worldAt(Offset px, double sizePx) {

@@ -13,6 +13,7 @@ import '../backend/sns_oauth.dart';
 import 'rasq_accounts.dart';
 import 'session_storage.dart';
 import 'bluesky_auth.dart';
+import 'mixi2_auth.dart';
 
 /// wasm SNS サンプルの pluginId(dev「実登録」とレジストリ解決で共用)。
 const wasmSamplePluginId = 'misskey-wasm-sample';
@@ -49,6 +50,23 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
     loadBytes: () async => (await rootBundle.load('assets/plugins/bluesky_wasm.wasm')).buffer.asUint8List(),
     authFlowFactory: (host, {callback}) async => BlueskyCredentialFlow(plugin: bluesky, host: host),
   );
+  // mixi2 (D-206、サンプル): 公式 API 申請前なのでダミーモード(ホスト `dummy`)で流れを確かめる。
+  late final WasmSnsPlugin mixi2;
+  mixi2 = WasmSnsPlugin(
+    manifest: const PluginManifest(
+      id: mixi2PluginId,
+      name: 'mixi2 (サンプル)',
+      version: '0.1.0',
+      kind: PluginKind.sns,
+      supportedSns: [SnsKind.mixi2],
+      permissions: ['network', 'storage.safe', 'register_action'],
+      official: true,
+      verified: false,
+    ),
+    kind: SnsKind.mixi2,
+    loadBytes: () async => (await rootBundle.load('assets/plugins/mixi2_wasm.wasm')).buffer.asUint8List(),
+    authFlowFactory: mixi2AuthFactory(ref, () => mixi2),
+  );
   final r = PluginRegistry()
     ..register(MisskeyPlugin())
     ..register(WasmSnsPlugin(
@@ -68,6 +86,7 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
     ))
     // Bluesky (D-175): wasm プラグイン。認証はハンドル + アプリパスワード(`sns.login` = createSession)。
     ..register(bluesky)
+    ..register(mixi2)
     // wasm SNS サンプル (D-079: 実登録の口)。この pluginId のセッションは
     // sns.* 境界(WasmSnsSession)として解決され、アプリの通常パイプラインが
     // wasm の上で動く。ログイン UI には出ない(pluginFor は Misskey が先)—

@@ -232,3 +232,10 @@
 {"q": "ブラウザで認証したあとどうするの", "op": "login-browser-auth"}
 {"q": "起動した最初の画面で何を選べばいい", "op": "onboarding"}
 {"q": "初回の案内を飛ばしたい", "op": "onboarding"}
+{"q": "共有テンプレートプラグインの入れ方", "op": "plugin-sample-post-share"}
+{"q": "顔をぼかすプラグインを使いたい", "op": "plugin-sample-media-process"}
+{"q": "QR コードを読み取るプラグイン", "op": "plugin-sample-media-fullscreen"}
+{"q": "画像にペンで描画するプラグイン", "op": "plugin-sample-media-draw"}
+{"q": "後で読むボタンを足すプラグイン", "op": "plugin-sample-post-action"}
+{"q": "ハッシュタグ候補プラグインを入れる", "op": "plugin-sample-composer-text"}
+{"q": "mixi2 でログインしたい", "op": "login-mixi2"}

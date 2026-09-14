@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
@@ -8,6 +9,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../plugins/slot_plugins.dart';
@@ -59,10 +61,33 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     if (mounted) setState(() {});
   });
 
+  /// 上に画面が積まれたら FOW を閉じ、戻ってきたら開き直す (D-205)。
+  GoRouter? _router;
+  bool _closedByNav = false;
+
+  void _onRoute() {
+    final router = _router;
+    final manager = _manager;
+    if (!mounted || router == null || manager == null) return;
+    final onTop = sameRoute(visibleLocationOf(router.routerDelegate.currentConfiguration), Routes.viewer);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!onTop && manager.contains(viewerFowId)) {
+        _closedByNav = true;
+        manager.close(viewerFowId);
+      } else if (onTop && _closedByNav && !manager.contains(viewerFowId)) {
+        _closedByNav = false;
+        _openPanel();
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _spec.heightFactor.addListener(_syncBarrier);
+    _router = ref.read(routerProvider);
+    _router!.routerDelegate.addListener(_onRoute);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _askOverlay(_page.value);
@@ -72,6 +97,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
 
   @override
   void dispose() {
+    _router?.routerDelegate.removeListener(_onRoute);
     _spec.heightFactor.removeListener(_syncBarrier);
     final manager = _manager;
     // 破棄中に他のウィジェットを更新しない: 次のフレームで FOW を閉じる(アプリごと破棄された後なら何もしない)。
@@ -220,8 +246,11 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                           const RasqDropdownItem('リンクをコピー', 'copy'),
                           if (m.type == MediaType.video) const RasqDropdownItem('オーバーレイに移動', 'pip'),
                           if (m.alt != null) const RasqDropdownItem('ALTを表示', 'alt'),
+                          // 全画面表示プラグインの編集 (D-205)。
+                          const RasqDropdownItem('全画面表示プラグイン', 'plugins'),
                         ]).then((v) {
                           if (v == 'pip') _toPip();
+                          if (v == 'plugins') _router?.push(Routes.viewerPlugins);
                         });
                       },
                     ),

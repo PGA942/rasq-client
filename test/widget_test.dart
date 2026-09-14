@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
+import 'package:rasq_client/features/login/mixi2_login_screen.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/search/search_screen.dart';
 import 'package:rasq_client/mock/mock_data.dart';
@@ -35,7 +36,7 @@ Widget app({bool loggedIn = true}) {
 }
 
 void main() {
-  testWidgets('no session → onboarding (RASQ アカウント作成) → skip → login screen (Misskey enabled, others disabled)', (tester) async {
+  testWidgets('no session → onboarding (RASQ アカウント作成) → skip → login screen', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -50,15 +51,14 @@ void main() {
     expect(find.text('SNSにログイン'), findsOneWidget);
     expect(find.text('Misskeyでログイン'), findsOneWidget);
 
-    // Overlays must render above root-level pages too (regression: terms sheet never appeared).
-    // (Bluesky は D-175 でログインできるようになったので、準備中のままの mixi2 で確かめる。)
+    // mixi2 は D-206 でサンプルプラグイン(ダミーモード)のログイン画面が開く。
     expect(find.text('Blueskyでログイン'), findsOneWidget);
     await tester.tap(find.text('mixi2でログイン'));
     await tester.pumpAndSettle();
-    expect(find.text('mixi2 は準備中です'), findsOneWidget);
-    await tester.tap(find.text('OK'));
+    expect(find.byType(Mixi2LoginScreen), findsOneWidget);
+    Navigator.of(tester.element(find.byType(Mixi2LoginScreen))).pop();
     await tester.pumpAndSettle();
-    expect(find.text('mixi2 は準備中です'), findsNothing);
+    expect(find.byType(Mixi2LoginScreen), findsNothing);
 
     // Misskey → server screen → terms sheet appears through the Overlay Manager.
     await tester.tap(find.text('Misskeyでログイン'));

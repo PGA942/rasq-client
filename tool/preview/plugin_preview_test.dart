@@ -442,6 +442,14 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('video_inline_fow.png'));
     debugNetworkImageHttpClientProvider = null;
   });
+
+  testWidgets('mixi2 login screen (D-206)', (tester) async {
+    await pump(tester, posts: const []);
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(routerProvider).push(Routes.loginMixi2);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('login_mixi2.png'));
+  });
   testWidgets('RAi home + instruction pointing (D-179)', (tester) async {
     final c = await pump(tester);
     RasqSidebar.open(c.read(overlayManagerProvider));
