@@ -10,7 +10,13 @@ import 'post_row.dart';
 
 /// バンドルのボタンを押したときの FOW (D-210): **アイコンから出現**する横幅の小さい(600px)FOW。
 /// ヘッダーはバンドル名、下にアクションボタン + 名称のタイル(押下判定はタイル全体)。
-const actionBundleMenuMaxWidth = 600.0;
+const actionBundleMenuMaxWidth = 400.0;
+
+/// タイルの高さ(小さめ、D-211)。
+const actionBundleTileHeight = 40.0;
+
+/// ヘッダー(ハンドル無し + タイトル行)ぶん。
+const actionBundleChromeHeight = 40.0 + 12;
 
 String actionBundleMenuFowId(String listId) => 'actionbar.bundle.menu.$listId';
 
@@ -27,8 +33,11 @@ Future<void> showActionBundleMenuFow(
     manager.close(id);
     return;
   }
-  // 高さ = ヘッダー + タイル数ぶん(画面の 6 割まで)。
-  final tiles = entry.members.length;
+  // 高さ = ヘッダー + タイル数ぶんを全部出す(画面端まで。足りなければ中がスクロール、D-211)。
+  final view = WidgetsBinding.instance.platformDispatcher.views.firstOrNull;
+  final hostH = view == null ? 800.0 : view.physicalSize.height / view.devicePixelRatio;
+  final need = actionBundleChromeHeight + entry.members.length * actionBundleTileHeight + 8;
+  final factor = (need / hostH).clamp(0.08, 0.92);
   final spec = FowSpec(
     title: entry.list.name,
     cancelText: '閉じる',
@@ -37,9 +46,9 @@ Future<void> showActionBundleMenuFow(
     columnIndex: column,
     resizable: false,
     showHandle: false,
-    initialHeightFactor: 0.08 + tiles * 0.07,
-    minHeightFactor: 0.1,
-    maxHeightFactor: 0.6,
+    initialHeightFactor: factor,
+    minHeightFactor: 0.05,
+    maxHeightFactor: 0.92,
   );
   await manager.showFow<void>(
     id: id,
@@ -56,8 +65,10 @@ Future<void> showActionBundleMenuFow(
               manager.close(id);
               await onPick(a);
             },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+            child: SizedBox(
+              height: actionBundleTileHeight,
+              child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
               child: Row(children: [
                 RasqActionButton.icon(icon: PostRow.iconFor(a.icon, Icons.circle_outlined), doneIcon: a.doneIcon == null ? null : PostRow.iconFor(a.doneIcon, Icons.circle), tooltip: a.label, onTap: () async {
                   manager.close(id);
@@ -66,6 +77,7 @@ Future<void> showActionBundleMenuFow(
                 const SizedBox(width: RasqSpacing.sm),
                 Expanded(child: Text(a.label, style: RasqTypography.body.copyWith(color: scheme.onSurface))),
               ]),
+            ),
             ),
           ),
       ]);

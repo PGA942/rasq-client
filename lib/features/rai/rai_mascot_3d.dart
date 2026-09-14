@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:three_js/three_js.dart' as three;
 
+import 'rai_face.dart';
 import 'rai_motion.dart';
 import 'rai_space.dart';
 
@@ -26,6 +27,15 @@ class RaiMascot3dController extends ChangeNotifier {
 
   /// 空間の中の位置(モデルの中心、D-197)。描画は毎フレーム読む。
   RaiVec3 world = const RaiVec3(0, 0, -10);
+
+  /// 表情 (D-211): シートの枠番号([RaiFace])。変わったら通知する。
+  int _face = RaiFace.eyes;
+  int get face => _face;
+  set face(int v) {
+    if (_face == v) return;
+    _face = v;
+    notifyListeners();
+  }
 
   /// 2D の代替描画用: 画面上の位置と見かけの大きさ。
   Offset screenPos = Offset.zero;
@@ -120,6 +130,12 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   late three.ThreeJS _three;
   three.AnimationMixer? _mixer;
   three.Group? _root;
+
+  /// 表情 (D-211): 頭の前面(`Screen`)の材質と、枠ごとのテクスチャ。
+  three.MeshStandardMaterial? _screen;
+  RaiFaceSheet? _sheet;
+  final _faceTextures = <int, three.Texture>{};
+  int? _shownFace;
   final _actions = <String, three.AnimationAction>{};
   three.AnimationAction? _current;
   String? _currentName;
@@ -137,7 +153,15 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   void initState() {
     super.initState();
     liveInstances++;
-    if (liveInstances > 1) debugPrint('RAi 3D: $liveInstances three_js instances alive — the shared ANGLE context distorts the scene (D-202)');
+    if (liveInstances > 1) {
+      // どこに 2 つ目ができたかをログに残す (D-211: 実機で再発したので祖先を数段出す)。
+      final chain = <String>[];
+      context.visitAncestorElements((e) {
+        chain.add(e.widget.runtimeType.toString());
+        return chain.length < 12;
+      });
+      debugPrint('RAi 3D: $liveInstances three_js instances alive — the shared ANGLE context distorts the scene (D-202). scene=${widget.isScene} under: ${chain.join(' < ')}');
+    }
     final proj = widget.projector;
     _three = three.ThreeJS(
       onSetupComplete: () {
@@ -203,9 +227,18 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
           if (m is three.MeshStandardMaterial) {
             if (m.metalness > 0.4) m.metalness = 0.4;
             if (m.roughness < 0.45) m.roughness = 0.45;
+            // 頭の前面 (D-211): 表情のテクスチャを貼る相手。
+            if (o.name == 'Screen' || m.name == 'Screen') _screen = m;
           }
         }
       });
+      // 表情シート (D-211): 読めなければ表情は変えない(黒い面のまま)。
+      _sheet = await RaiFaceSheet.load();
+      if (_sheet!.frames.isNotEmpty && _screen != null) {
+        // 貼るときは白を掛ける(黒い baseColor のままだと真っ黒)。
+        _screen!.color.setRGB(1, 1, 1);
+        _screen!.needsUpdate = true;
+      }
       // 高さ 1 に正規化して足元を原点へ(モデルの寸法に依らずカメラに収める)。
       final box = three.BoundingBox().setFromObject(model);
       final h = (box.max.y - box.min.y).abs();
@@ -267,6 +300,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
     if (widget.isScene && (_ctrl.opacity - _shownOpacity).abs() > 1e-6 && mounted) {
       setState(() => _shownOpacity = _ctrl.opacity);
     }
+    if (_ctrl.face != _shownFace) _applyFace(_ctrl.face);
     final mixer = _mixer;
     if (mixer == null) return;
     final name = _ctrl.clip;
@@ -279,6 +313,31 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       debugPrint('RAi 3D: clip $name failed: $e');
     }
     _currentName = name;
+  }
+
+  /// 表情の枠を貼る (D-211)。テクスチャは枠ごとに 1 回だけ作る。
+  Future<void> _applyFace(int frame) async {
+    final sheet = _sheet;
+    final screen = _screen;
+    if (sheet == null || screen == null || frame < 0 || frame >= sheet.frames.length) return;
+    _shownFace = frame;
+    try {
+      var tex = _faceTextures[frame];
+      if (tex == null) {
+        final img = await three.ImageLoader().fromBytes(sheet.frames[frame]);
+        if (img == null || !mounted) return;
+        tex = three.Texture()
+          ..image = img
+          ..flipY = false
+          ..needsUpdate = true;
+        _faceTextures[frame] = tex;
+      }
+      if (_shownFace != frame) return; // その間に変わった
+      screen.map = tex;
+      screen.needsUpdate = true;
+    } catch (e) {
+      debugPrint('RAi 3D: face $frame failed: $e');
+    }
   }
 
   void _playClip(three.AnimationAction next) {

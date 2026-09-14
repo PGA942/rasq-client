@@ -203,7 +203,8 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
           final settings = ref.watch(slotActionSettingsProvider(accountKey));
           final merged = mergePluginActions(config: config, snsActions: session?.actions ?? const [], plugins: plugins, settings: settings);
           final byId = {for (final a in merged.actions) a.id: a};
-          final members = [for (final id in list.memberIds) if (byId.containsKey(id)) byId[id]!];
+          final memberIds = ActionListDef.uniq(list.memberIds);
+          final members = [for (final id in memberIds) if (byId.containsKey(id)) byId[id]!];
           void update(ActionListDef next) => store.set(config.copyWith(lists: [for (final l in config.lists) l.id == listId ? next : l]));
           String providerOf(String id) => isPluginActionId(id) ? (plugins.where((p) => p.id == id).firstOrNull?.plugin.manifest.name ?? 'プラグイン') : 'SNS のアクション';
           String describe(String id) => isPluginActionId(id) ? (plugins.where((p) => p.id == id).firstOrNull?.plugin.manifest.description ?? '') : 'SNS プラグインが提供するアクション(${byId[id]?.genreTag ?? ''})';
@@ -252,14 +253,15 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               buildDefaultDragHandles: false,
+              // onReorderItem は newIndex を取り出し後の位置で渡す(onReorder と違い自分で補正しない)。
               onReorderItem: (from, to) {
                 final ids = [...list.memberIds];
                 final moved = ids.removeAt(from);
-                ids.insert((to > from ? to - 1 : to).clamp(0, ids.length), moved);
+                ids.insert(to.clamp(0, ids.length), moved);
                 update(list.copyWith(memberIds: ids));
               },
               children: [
-                for (final (i, id) in list.memberIds.indexed)
+                for (final (i, id) in memberIds.indexed)
                   _MemberTile(
                     key: ValueKey('actionbar.bundle.member.$id'),
                     index: i,
@@ -490,7 +492,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
 
     /// 新規バンドル (D-210): 先頭メンバーの位置に置いて設定 FOW を開く。
     Future<void> newBundle(List<String> memberIds) async {
-      final def = ActionListDef(id: DateTime.now().millisecondsSinceEpoch.toRadixString(36), name: 'マイリスト', memberIds: memberIds);
+      final def = ActionListDef(id: DateTime.now().millisecondsSinceEpoch.toRadixString(36), name: 'マイリスト', memberIds: ActionListDef.uniq(memberIds));
       final order = orderOf();
       final first = order.indexWhere(memberIds.contains);
       order.removeWhere(memberIds.contains);

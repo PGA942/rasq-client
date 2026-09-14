@@ -40,7 +40,6 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
   double? _aspect;
   ImageStream? _stream;
   ImageStreamListener? _listener;
-  final _chip = OverlayPortalController();
 
   @override
   void initState() {
@@ -115,38 +114,32 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
       );
     }
     if (widget.name == null) return emoji;
-    return OverlayPortal(
-      controller: _chip,
-      overlayChildBuilder: (context) => _EmojiChip(anchorContext: context, target: this),
-      child: MouseRegion(
-        onEnter: (_) => _chip.show(),
-        onExit: (_) => _chip.hide(),
-        child: GestureDetector(
-          onLongPress: () {
-            _chip.show();
-            Future.delayed(const Duration(seconds: 2), () {
-              if (mounted && _chip.isShowing) _chip.hide();
-            });
-          },
-          child: emoji,
-        ),
-      ),
+    // ホバー / 長押しチップ (D-211): OverlayPortal は、出したまま画面が下(オフステージ)に回ると
+    // レイアウト前の箱がヒットテストされて落ち、以後マウスが効かなくなった(実機)。Tooltip は
+    // Overlay の通常の子として毎フレーム配置されるので安全。
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      richMessage: WidgetSpan(child: _EmojiChip(target: this)),
+      decoration: BoxDecoration(color: scheme.inverseSurface, borderRadius: BorderRadius.circular(6)),
+      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: 4),
+      preferBelow: false,
+      triggerMode: TooltipTriggerMode.longPress,
+      showDuration: const Duration(seconds: 2),
+      waitDuration: Duration.zero,
+      child: emoji,
     );
   }
 }
 
-/// ホバー/長押しチップ: 名前の左横に絵文字(横長なら名前の上)。
+/// ホバー/長押しチップの中身: 名前の左横に絵文字(横長なら名前の上)。
 class _EmojiChip extends StatelessWidget {
-  const _EmojiChip({required this.anchorContext, required this.target});
-  final BuildContext anchorContext;
+  const _EmojiChip({required this.target});
   final _RasqTargetState target;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final w = target.widget;
-    final box = target.context.findRenderObject() as RenderBox?;
-    final origin = box == null ? Offset.zero : box.localToGlobal(Offset.zero);
     final wide = (target._aspect ?? 1.0) > 1.5;
     const chipEmojiHeight = 28.0;
     final emoji = w.url == null
@@ -158,22 +151,11 @@ class _EmojiChip extends StatelessWidget {
           );
     final name = Text(w.name!, style: RasqTypography.caption.copyWith(color: scheme.onInverseSurface));
     final detail = w.chipDetail?.call(context);
-    return Positioned(
-      left: origin.dx,
-      top: origin.dy - (wide ? 64 : 40) - (detail == null ? 0 : 24),
-      child: Material(
-        color: scheme.inverseSurface,
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: 4),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (wide) ...[emoji, const SizedBox(height: 2), name] else Row(mainAxisSize: MainAxisSize.min, children: [emoji, const SizedBox(width: RasqSpacing.sm), name]),
-            // リアクションしたユーザー等の追加行 (D-042)。
-            ?detail,
-          ]),
-        ),
-      ),
-    );
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (wide) ...[emoji, const SizedBox(height: 2), name] else Row(mainAxisSize: MainAxisSize.min, children: [emoji, const SizedBox(width: RasqSpacing.sm), name]),
+      // リアクションしたユーザー等の追加行 (D-042)。
+      ?detail,
+    ]);
   }
 }
 
