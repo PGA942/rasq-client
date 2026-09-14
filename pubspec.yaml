@@ -93,6 +93,8 @@ flutter:
     - assets/rai/operations.jsonl
     - assets/rai/eval.jsonl
     - assets/rai/face.png
+    # 同梱モデル (D-216): `tool/fetch_rai_models.sh` で取得した gzip の GGUF(git には入れない)。
+    - assets/rai_models/
     # misskey-wasm-sample plugin binary (built in rasq-sdk-sample; loaded by
     # the WASMプラグイン試験 dev screen).
     - assets/plugins/misskey_wasm_sample.wasm

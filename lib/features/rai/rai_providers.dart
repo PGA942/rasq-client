@@ -382,12 +382,14 @@ class RaiController extends Notifier<RaiState> {
   static const _assistantSystem = 'あなたは SNS ブラウザ RASQ のアシスタント「RAi」です。日本語で、短く(3 文以内)答えてください。';
   static const _instructionSystem = 'あなたは SNS ブラウザ RASQ の操作を教える「RAi」です。日本語で、操作手順を短く(3 文以内)答えてください。';
 
-  /// 端末内 LLM で答える(トークンを吹き出しへ流す)。だめならフォールアップ → それもだめなら失敗表示。
+  /// 端末内 LLM で答える(トークンを吹き出しへ流す)。だめ / 返事が空ならフォールアップ(推論サーバー、D-216:
+  /// 質問と MiniLM で近かったリファレンスを添える)→ それもだめなら失敗表示。
   Future<void> _answerWithLlm(String q, {required String system, String? fallbackText}) async {
     final llm = ref.read(raiLlmProvider);
     final seq = ++_answerSeq;
     state = state.copyWith(busy: true, bubble: '…', target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: null, choices: const []);
     var text = '';
+    RaiLlmException? failure;
     try {
       await for (final tok in llm.chat(q, system: system)) {
         if (seq != _answerSeq) return;
@@ -395,24 +397,44 @@ class RaiController extends Notifier<RaiState> {
         state = state.copyWith(bubble: text);
       }
       if (seq != _answerSeq) return;
-      state = state.copyWith(busy: false, bubble: text.trim().isEmpty ? '(返事がありませんでした)' : text.trim());
+      if (text.trim().isEmpty) failure = const RaiLlmException('返事がありませんでした');
+    } on RaiLlmException catch (e) {
+      failure = e;
+    }
+    if (seq != _answerSeq) return;
+    if (failure == null) {
+      state = state.copyWith(busy: false, bubble: text.trim());
       _record(state.bubble!);
       return;
-    } on RaiLlmException catch (e) {
-      if (seq != _answerSeq) return;
-      await llm.release(); // フォールアップ時は端末内モデルのメモリを解放する(仕様)
-      try {
-        final reply = await ref.read(raiFallUpProvider).chat(q);
-        if (seq != _answerSeq) return;
-        state = state.copyWith(busy: false, bubble: reply);
-        _record(reply);
-      } on RaiLlmException catch (f) {
-        if (seq != _answerSeq) return;
-        final lines = ['端末内モデル: ${e.message}', 'フォールアップ: ${f.message}', ?fallbackText];
-        state = state.copyWith(busy: false, bubble: lines.join('\n'), error: true);
-        _record(lines.join('\n'), error: true);
-      }
     }
+    final e = failure;
+    await llm.release(); // フォールアップ時は端末内モデルのメモリを解放する(仕様)
+    if (seq != _answerSeq) return;
+    try {
+      final reply = await ref.read(raiFallUpProvider).chat(q, system: system, context: referenceContext());
+      if (seq != _answerSeq) return;
+      state = state.copyWith(busy: false, bubble: reply);
+      _record(reply);
+    } on RaiLlmException catch (f) {
+      if (seq != _answerSeq) return;
+      final lines = ['端末内モデル: ${e.message}', 'フォールアップ: ${f.message}', ?fallbackText];
+      state = state.copyWith(busy: false, bubble: lines.join('\n'), error: true);
+      _record(lines.join('\n'), error: true);
+    }
+  }
+
+  /// 推論サーバーへ添える文脈 (D-216): 直近の検索で近かった操作(上位 3 つ)の見出しと手順。
+  List<String> referenceContext({int max = 3}) {
+    final index = ref.read(raiReferenceProvider).value;
+    if (index == null) return const [];
+    final out = <String>[];
+    for (final h in state.hits.take(max)) {
+      final op = index.operation(h.id);
+      if (op == null) continue;
+      final steps = index.expand(op);
+      out.add('- ${op.index}: ${[for (final s in steps) s.text].join(' → ')}');
+    }
+    return out;
   }
 
   int _answerSeq = 0;

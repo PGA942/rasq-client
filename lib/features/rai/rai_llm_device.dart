@@ -6,12 +6,14 @@ import 'package:archive/archive.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma_litertlm/flutter_gemma_litertlm.dart';
 import 'package:http/http.dart' as http;
 import 'package:llama_cpp_dart/llama_cpp_dart.dart' as lc;
 import 'package:path_provider/path_provider.dart';
 
+import 'rai_bundled.dart';
 import 'rai_llm.dart';
 
 /// 端末の RAM(device_info_plus)。iOS / Android は MB、macOS は bytes で返るので MB に揃える。
@@ -231,7 +233,7 @@ class DeviceRaiLlm implements RaiLlm {
         await _lrEnsureInit();
         installed = await FlutterGemma.isModelInstalled(_spec.fileName);
       }
-      _set(RaiLlmStatus(installed ? RaiLlmPhase.ready : RaiLlmPhase.notInstalled, modelId: _spec.id));
+      _set(RaiLlmStatus(installed ? RaiLlmPhase.ready : RaiLlmPhase.notInstalled, modelId: _spec.id, bundled: !installed && await _isBundled()));
     } catch (e) {
       debugPrint('rai llm refresh: $e');
       _set(RaiLlmStatus(RaiLlmPhase.unavailable, message: 'モデルの状態を確認できません: $e', modelId: _spec.id));
@@ -250,7 +252,54 @@ class DeviceRaiLlm implements RaiLlm {
   @override
   Future<void> install({String? hfToken}) async {
     if (_spec.engine == RaiEngine.litertlm) return _lrInstall(hfToken);
+    if (await _isBundled()) return _bundledInstall();
     return _ggufInstall(hfToken);
+  }
+
+  // ── 同梱モデル (D-216) ──
+  Set<String>? _assets;
+
+  Future<bool> _isBundled() async {
+    if (_spec.engine != RaiEngine.gguf) return false;
+    try {
+      _assets ??= (await AssetManifest.loadFromAssetBundle(rootBundle)).listAssets().toSet();
+    } catch (_) {
+      return false;
+    }
+    return _assets!.contains(raiBundledAsset(_spec));
+  }
+
+  /// 同梱の gzip を `rai_models/` へ伸長する。デスクトップは flutter_assets のファイルを流す。
+  /// モバイルは rootBundle で読む(丸ごとメモリに載るので 1.2 GB を超えるものは対象外 → ダウンロード)。
+  Future<void> _bundledInstall() async {
+    final f = await _ggufFile();
+    final asset = raiBundledAsset(_spec);
+    try {
+      _set(RaiLlmStatus(RaiLlmPhase.downloading, progress: 0, message: '同梱モデルを展開中', modelId: _spec.id, bundled: true));
+      final dir = flutterAssetsDirOf(Platform.resolvedExecutable);
+      final src = dir == null ? null : File('$dir/$asset');
+      if (src != null && await src.exists()) {
+        var lastPct = -1;
+        await gunzipToFile(src, f, onProgress: (done, total) {
+          final pct = (done * 100 ~/ (total == 0 ? 1 : total)).clamp(0, 99);
+          if (pct != lastPct) {
+            lastPct = pct;
+            _set(RaiLlmStatus(RaiLlmPhase.downloading, progress: pct, message: '同梱モデルを展開中', modelId: _spec.id, bundled: true));
+          }
+        });
+      } else {
+        if (_spec.sizeMb > 1200) throw const RaiLlmException('この端末では同梱モデルを展開できません(ダウンロードしてください)');
+        final bytes = await rootBundle.load(asset);
+        final out = gzip.decode(bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
+        final tmp = File('${f.path}.part');
+        await tmp.writeAsBytes(out, flush: true);
+        await tmp.rename(f.path);
+      }
+      _set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
+    } catch (e) {
+      _set(RaiLlmStatus(RaiLlmPhase.notInstalled, message: '展開に失敗しました: $e', modelId: _spec.id, bundled: true));
+      throw RaiLlmException('展開に失敗しました: $e');
+    }
   }
 
   Future<void> _lrInstall(String? hfToken) async {
@@ -412,9 +461,9 @@ class DeviceRaiLlm implements RaiLlm {
         ..nGpuLayers = gpu ? 99 : 0
         ..mainGpu = gpu ? 0 : -1,
       contextParams: lc.ContextParams()
-        ..nCtx = 1024 // メモリ優先 (D-187)
+        ..nCtx = 2048 // D-216: 200 文字程度の返事 + リファレンスの文脈が入る長さ
         ..nBatch = 256
-        ..nPredict = 256
+        ..nPredict = 512
         ..nThreads = 4
         ..nThreadsBatch = 4,
       samplingParams: lc.SamplerParams()
@@ -447,16 +496,50 @@ class DeviceRaiLlm implements RaiLlm {
         history.addMessage(role: lc.Role.assistant, content: '');
         final formatted = history.exportFormat(lc.ChatFormat.chatml, leaveLastAssistantOpen: true);
         final think = ThinkFilter();
+        var visibleChars = 0;
+        // 無応答の見張り (D-216): 最初の見える文字が 30 秒来なければ / 全体で 150 秒を超えたら打ち切って
+        // フォールアップへ(ほぼ全部のモデルが返事無しで止まる症状の逃げ道)。
+        Timer? firstToken;
+        Timer? overall;
+        Future<void> abort(String why) async {
+          if (out.isClosed) return;
+          out.addError(RaiLlmException(why));
+          await out.close();
+          try {
+            await _llama?.stop();
+          } catch (_) {}
+        }
+        firstToken = Timer(const Duration(seconds: 30), () => abort('端末内モデルが 30 秒返事をしませんでした'));
+        overall = Timer(const Duration(seconds: 150), () => abort('端末内モデルの返事が長すぎるので打ち切りました'));
         tokens = llama.stream.listen((t) {
           if (out.isClosed) return;
           final visible = think.push(t);
-          if (visible.isNotEmpty) out.add(visible);
+          if (visible.isNotEmpty) {
+            visibleChars += visible.length;
+            firstToken?.cancel();
+            out.add(visible);
+          }
         });
         completions = llama.completions.listen((e) {
           if (out.isClosed) return;
-          if (!e.success) out.addError(RaiLlmException('生成に失敗しました: $e'));
+          firstToken?.cancel();
+          overall?.cancel();
+          if (!e.success) {
+            out.addError(RaiLlmException('生成に失敗しました: $e'));
+          } else if (visibleChars == 0) {
+            out.addError(const RaiLlmException('端末内モデルから返事がありませんでした(思考だけで終わった可能性)'));
+          }
           out.close();
         });
+        out.onCancel = () async {
+          firstToken?.cancel();
+          overall?.cancel();
+          await tokens?.cancel();
+          await completions?.cancel();
+          try {
+            await _llama?.stop();
+          } catch (_) {}
+        };
         await llama.sendPrompt(formatted);
       } catch (e) {
         if (!out.isClosed) {

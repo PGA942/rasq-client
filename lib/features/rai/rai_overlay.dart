@@ -152,8 +152,10 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProv
   static const mascot = raiPointSize;
   late final AnimationController _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
 
-  /// アシスタントのその場旋回 (D-215): 考えている(busy)あいだ回り、返事が出たら正面で止まる。
+  /// アシスタントの待機モーション (D-215 → D-216): 考えている(busy)あいだ**小さな円**を描いて回り
+  /// (向きは正面のまま)、返事が出たら元の位置で止まる。
   late final AnimationController _spin = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
+  Rect? _inPlaceLocal;
   bool _inPlace = false;
   bool _spinning = false;
   bool _holdingAnswer = false;
@@ -360,9 +362,16 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProv
       // 停止の旋回の向きは山なりと逆側から合わせる(実機で確認、D-200)。
       yaw = raiYawAt(t, plan: plan, tangent: Offset.zero, armFrom: _yawArmFrom, armTo: armTo, face: _face, stopTurn: clockwise ? 1 : -1);
     } else {
-      world = _standbyWorld ?? proj.worldAt(_pos ?? Offset(proj.screen.width / 2, proj.screen.height / 2), mascot);
-      // その場旋回 (D-215): 回っているあいだは 1 周、止まるときは正面(0)へ戻す。
-      yaw = raiRestYawFor(_ctrl3d.arm) + (_inPlace ? _spin.value * 2 * math.pi : 0);
+      final local = _inPlaceLocal;
+      if (_inPlace && local != null) {
+        // 小さな円 (D-216): 枠の幅の 8% を半径に、θ = 0 / 2π で元の位置(raiStopLoop3 と同じ形)。
+        final th = _spin.value * 2 * math.pi;
+        final r = local.width * 0.08;
+        world = proj.worldAt(local.center + Offset(r * math.sin(th), r * (1 - math.cos(th))), local.height / 1.25);
+      } else {
+        world = _standbyWorld ?? proj.worldAt(_pos ?? Offset(proj.screen.width / 2, proj.screen.height / 2), mascot);
+      }
+      yaw = raiRestYawFor(_ctrl3d.arm);
     }
     final p = proj.project(world);
     // NaN は流さない (D-205: 実機で高さ NaN のアサート)。
@@ -456,6 +465,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProv
         _spin.stop();
         _spin.value = 0;
         _spinning = false;
+        _inPlaceLocal = null;
       }
     }
     if (inPlace) {
@@ -470,6 +480,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with TickerProv
         });
       }
       final local = _toLocal(slot);
+      _inPlaceLocal = local;
       _standbyWorld = proj.worldAt(local.center, local.height / 1.25);
       _ctrl3d.opacity = 1;
       if (_ctrl3d.plan != null || _ctrl3d.arm != RaiArm.none) _ctrl3d.idle(RaiArm.none);

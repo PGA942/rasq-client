@@ -56,3 +56,6 @@ packages/*/build/
 
 # 描画確認ハーネスの出力 (D-140)
 tool/preview/*.png
+
+# 同梱モデル (D-216): 取得した gzip の GGUF は入れない
+assets/rai_models/*.gz

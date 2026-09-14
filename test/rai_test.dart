@@ -83,9 +83,8 @@ void main() {
   test('コードネーム (D-198): モデルコード + サイズ', () {
     expect(raiModelSpecById('qwen3-1.7b-q4km').codename, 'QA Mini');
     expect(raiModelSpecById('qwen3-0.6b-q4km').codename, 'QA Nano');
-    expect(raiModelSpecById('qwen3-4b-q4km').codename, 'QA Lite+');
     expect(raiModelSpecById('agents-a1-4b-q4km').codename, 'Agent Lite+');
-    expect(raiModelSpecById('lfm2.5-2.6b').codename, 'Liquid Lite');
+    expect(raiModelSpecById('unknown').codename, 'QA Mini'); // 知らない id は既定(D-216: ローカルは 3 つだけ)
     expect(raiCloudModelSpecs.firstWhere((m) => m.id == 'cloud-qwen3.9-33b-a3b').codename, 'QA Max');
     expect(raiCloudModelSpecs.firstWhere((m) => m.id == 'cloud-cyllm-jp-150b').codename, 'CyLLM Extreme');
     expect(raiSizeClass(10), 'Core');
