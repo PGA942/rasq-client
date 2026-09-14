@@ -67,33 +67,54 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     if (mounted) setState(() {});
   });
 
-  /// 下付き FOW のぶんだけメディアの高さを詰める (D-207): FOW が出現 / 消失したときだけ測る(途中のサイズ変更は
-  /// 追わない)。FOW の合計が画面の 30% 以上なら追わず、ヘッダー付き(上)の FOW があるときは中央のまま。
-  double _fowInset = 0;
+  /// FOW のぶんメディアを寄せる余白(FOW が出現 / 消失したときだけ測る。途中のサイズ変更は追わない)。
+  EdgeInsets _fowInset = EdgeInsets.zero;
   Set<String> _fowIds = const {};
 
+  /// FOW が出る / 消えるたびにメディアを**空いているスペース**へ寄せる (D-207 → D-215)。ホストが置いた矩形
+  /// (`FowSpec.laidOut`)を次のフレームで読み、幅の広い FOW は上下、狭い FOW(壁付け / カラム)は左右の余白に
+  /// する。残りが小さすぎる側は寄せない(被さるほうがまし)。
   void _onOverlays() {
     final manager = _manager;
     if (!mounted || manager == null) return;
-    final fows = [for (final e in manager.entries) if (e.fow != null) e];
-    final ids = {for (final e in fows) e.id};
+    final ids = {for (final e in manager.entries) if (e.fow != null) e.id};
     if (ids.length == _fowIds.length && ids.containsAll(_fowIds)) return;
     _fowIds = ids;
-    final host = MediaQuery.sizeOf(context).height;
-    var bottom = 0.0;
-    var total = 0.0;
-    var anyTop = false;
-    for (final e in fows) {
-      final h = e.fow!.heightFactor.value * host;
-      total += h;
-      if (e.fow!.attachTop) {
-        anyTop = true;
+    // 矩形はホストの build で決まるので 1 フレーム後に読む。
+    WidgetsBinding.instance.addPostFrameCallback((_) => _relayoutForFows());
+  }
+
+  void _relayoutForFows() {
+    final manager = _manager;
+    if (!mounted || manager == null) return;
+    final screen = MediaQuery.sizeOf(context);
+    var top = 0.0, bottom = 0.0, left = 0.0, right = 0.0;
+    for (final e in manager.entries) {
+      final r = e.fow?.laidOut;
+      if (e.fow == null || r == null) continue;
+      if (r.width >= screen.width * 0.6) {
+        if (r.center.dy < screen.height / 2) {
+          top = math.max(top, r.bottom);
+        } else {
+          bottom = math.max(bottom, screen.height - r.top);
+        }
+      } else if (r.center.dx < screen.width / 2) {
+        left = math.max(left, r.right);
       } else {
-        bottom += h;
+        right = math.max(right, screen.width - r.left);
       }
     }
-    final inset = (anyTop || total >= host * 0.3) ? 0.0 : bottom;
-    if ((inset - _fowInset).abs() > 0.5) setState(() => _fowInset = inset);
+    // 残りが 160px を切る軸は寄せない。
+    if (screen.height - top - bottom < 160) {
+      top = 0;
+      bottom = 0;
+    }
+    if (screen.width - left - right < 160) {
+      left = 0;
+      right = 0;
+    }
+    final inset = EdgeInsets.fromLTRB(left, top, right, bottom);
+    if (inset != _fowInset) setState(() => _fowInset = inset);
   }
 
   /// 上に画面が積まれたら FOW を閉じ、戻ってきたら開き直す (D-205)。
@@ -291,7 +312,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
         AnimatedPadding(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          padding: EdgeInsets.only(bottom: _fowInset),
+          padding: _fowInset,
           child: GestureDetector(
           // タップ (D-203): 下側の FOW が消えていれば開き直す(開く手段が無くならないように)。出ていれば上のクロームの表示切替。
           // 動画の面のタップでは再生を止めない。

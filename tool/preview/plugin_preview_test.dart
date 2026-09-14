@@ -539,6 +539,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.sidebar.toggle')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_sidebar.png'));
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.achievements')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_achievements.png'));
   });
 
 }

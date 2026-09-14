@@ -442,6 +442,8 @@ class _FowColumn extends StatelessWidget {
                 FowHAlign.end => slot.x + slot.width - panelW,
               };
             }
+            // 置いた矩形を記録 (D-215): 上側基準なら padTop から、下側基準なら padBottom の上に h。
+            s.laidOut = (suspended?.call(e) ?? false) ? null : Rect.fromLTWH(left, topSide ? padTop : hostH - padBottom - h, panelW, h);
             children.add(Positioned(
               left: left,
               width: panelW,

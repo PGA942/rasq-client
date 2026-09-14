@@ -19,6 +19,7 @@ import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fake_slot_runtime.dart';
@@ -107,9 +108,19 @@ void main() {
     expect(find.byKey(const ValueKey('post.share.copyContent')), findsNothing);
     c.read(overlayManagerProvider).close(postShareFowId);
     await tester.pumpAndSettle();
-    // 下付き FOW(折りたたみ = 画面の 30% 未満)のぶんメディアの高さが詰まる (D-207)。
+    // 下付き FOW のぶんメディアの高さが詰まる (D-207)。
     final panel = tester.getRect(find.byKey(viewerPanelKey));
     expect(tester.getRect(find.byType(PageView)).bottom, lessThanOrEqualTo(panel.top + 1));
+    // ヘッダー付き FOW が出るとメディアはその下へ、消えると戻る (D-215: 空いているスペースへ移動)。
+    final manager = c.read(overlayManagerProvider);
+    manager.showFow<void>(id: 't.top', spec: FowSpec(title: '上', cancelText: '閉じる', attachTop: true, initialHeightFactor: 0.25), semanticsLabel: '上', builder: (_, _) => const SizedBox(height: 80));
+    await tester.pumpAndSettle();
+    final topRect = manager.entries.where((e) => e.id == 't.top').single.fow!.laidOut!;
+    expect(tester.getRect(find.byType(PageView)).top, greaterThanOrEqualTo(topRect.bottom - 1));
+    expect(tester.getRect(find.byType(PageView)).bottom, lessThanOrEqualTo(panel.top + 1)); // 下も詰まったまま
+    manager.close('t.top');
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byType(PageView)).top, 0);
   });
 
   testWidgets('全画面表示プラグインは全画面アクションバーのボタン (D-214): ヘッダーの右端に並ぶ、編集画面の全画面バーで削除 / 検索(QR コード検出など)で戻せる、投稿バーの検索には出ない', (tester) async {

@@ -152,6 +152,9 @@ class FowSpec {
   /// カラム/最大化の変更をホストのレイアウトへ伝えるカウンター。
   final ValueNotifier<int> geometryRev = ValueNotifier(0);
 
+  /// ホストが最後に置いた矩形(ホスト座標、目標の高さ。D-215: ビューワーがメディアを空きへ寄せるのに読む)。
+  Rect? laidOut;
+
   /// 離したときの精算(ホストが列スロット幾何を知っているので毎ビルド
   /// 差し込む)。[FowMoveGrip] が onPanEnd で呼ぶ(dx = 横、dy = 縦)。
   void Function(double dx, double dy)? settleMove;

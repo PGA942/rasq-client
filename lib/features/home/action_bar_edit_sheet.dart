@@ -26,7 +26,7 @@ import 'post_row.dart';
 /// クリック / 右クリックでも)でドロップダウン: 詳細(バンドルには無い、RRL で描く FOW)/ アクションリスト化
 /// (設定 FOW)/ リストの設定 / リストの解除 / 削除(プラグインボタンだけ)。
 /// **押したまま動かす**と: 隙間で並び替え、別のアイコンの上で離すと新規バンドル(設定 FOW へ)、バンドルの上で
-/// 離すとそのバンドルに入って設定 FOW。表示 / 非表示は廃止。
+/// 離すとそのバンドルに入って設定 FOW。SNS のボタンも削除できる(強制配置の廃止 D-215、(+) の検索から戻す)。
 /// 宣言されたプラグインボタン / 束ねる閾値は設定 →「SNSプラグイン」→「プラグインボタン」へ移動 (D-210)。
 const actionBarEditFowId = 'actionbar.edit';
 const actionBarPluginSearchFowId = 'actionbar.plugins';
@@ -57,11 +57,12 @@ Future<void> showActionBarEditSheet(WidgetRef ref, {int column = 0}) async {
 
 /// プラグインボタン / アクションを検索する FOW (D-176 → D-210: 「ノードを検索」に近い作り)。
 /// 登録済みプラグインの `post.action` 宣言と SNS のアクションから選ぶ。戻りは選んだ id(キャンセルは null)。
-Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグインを検索', Set<String> exclude = const {}, bool pluginsOnly = false, String? ownerId, String configKey = ''}) async {
+Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグインを検索', Set<String> exclude = const {}, bool pluginsOnly = false, String? ownerId, String configKey = '', List<ActionDescriptor>? snsCandidates}) async {
   final manager = ref.read(overlayManagerProvider);
   // 全画面バーの構成 (D-214) なら全画面表示プラグイン(QR コード検出など)のトグルも候補。
   final plugins = ref.read(pluginActionsForProvider(configKey));
-  final sns = pluginsOnly ? const <ActionDescriptor>[] : (ref.read(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[]);
+  // SNS のボタン: 指定があればそれ(バーから外したもの、D-215)。無ければ現在のアカウントの全部(pluginsOnly なら無し)。
+  final sns = snsCandidates ?? (pluginsOnly ? const <ActionDescriptor>[] : (ref.read(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[]));
   final query = TextEditingController();
   var genre = 'すべて';
   try {
@@ -391,7 +392,8 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
                     if (id == null) return;
                     if (isPluginActionId(id)) await ref.read(settingsAreaProvider(slotSettingsArea(accountKey)).notifier).set('enabled', {...settings.enabled, id: true});
                     final order = [...config.order]..remove(id);
-                    store.set(config.copyWith(order: order, lists: [for (final l in config.lists) l.id == listId ? l.copyWith(memberIds: [...l.memberIds, id]) : l]));
+                    // バーから外していたボタンをバンドルに入れたら戻す (D-215)。
+                    store.set(config.copyWith(order: order, hidden: {...config.hidden}..remove(id), lists: [for (final l in config.lists) l.id == listId ? l.copyWith(memberIds: [...l.memberIds, id]) : l]));
                   },
                   icon: const Icon(Icons.search, size: 18),
                   label: const Text('プラグインを検索'),
@@ -620,7 +622,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
             items: [
               const RasqDropdownItem('詳細', 'detail'),
               const RasqDropdownItem('アクションリスト化', 'bundle'),
-              if (isPlugin) const RasqDropdownItem('削除', 'delete', destructive: true),
+              const RasqDropdownItem('削除', 'delete', destructive: true),
             ],
           );
           switch (pick) {
@@ -630,8 +632,13 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
             case 'bundle':
               await newBundle([a.id]);
             case 'delete':
-              // プラグインボタンだけ外せる(スロット設定で無効に)。SNS のボタンは非表示にしない (D-208)。
-              await setEnabled(a.id, false);
+              // プラグインボタンはスロット設定で無効に。SNS のボタンは構成の hidden へ(強制配置の廃止、D-215:
+              // (+) の検索から戻せる)。
+              if (isPlugin) {
+                await setEnabled(a.id, false);
+              } else {
+                store.set(config.copyWith(hidden: {...config.hidden, a.id}, order: orderOf()..remove(a.id), lists: listsWithAuto()));
+              }
           }
         case ActionListEntry():
           final auto = e.list.id.startsWith('auto:');
@@ -770,9 +777,15 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
             size: 28,
             tooltip: 'プラグインを検索',
             onPressed: () async {
-              final id = await showActionSearchFow(ref, pluginsOnly: true, ownerId: actionBarEditFowId, configKey: configKey);
+              // 候補 = バーから外した SNS のボタン (D-215) + プラグインボタン。
+              final removed = [for (final a in snsActions) if (config.hidden.contains(a.id)) a];
+              final id = await showActionSearchFow(ref, pluginsOnly: true, ownerId: actionBarEditFowId, configKey: configKey, snsCandidates: removed);
               if (id == null) return;
-              await setEnabled(id, true);
+              if (config.hidden.contains(id)) {
+                store.set(config.copyWith(hidden: {...config.hidden}..remove(id)));
+              } else {
+                await setEnabled(id, true);
+              }
             },
           ),
         ),

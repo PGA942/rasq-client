@@ -162,7 +162,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('actionbar.tile.menu.reply')));
     await tester.pumpAndSettle();
-    expect(find.text('削除'), findsNothing); // SNS のボタンには無い
+    expect(find.text('削除'), findsOneWidget); // SNS のボタンも外せる (D-215)
     await tester.tap(find.text('詳細'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('actionbar.detail.rrl')), findsOneWidget);
@@ -247,6 +247,26 @@ void main() {
     cfg = c.read(actionBarConfigProvider(accountKey));
     expect(cfg.lists, isEmpty);
     expect(cfg.order.take(2), ['reply', 'renote']);
+    // SNS のボタンの削除 (D-215): リノートの (…) → 削除 → バーから消え(hidden)、(+) の検索に出て戻せる。
+    await tester.ensureVisible(find.byKey(const ValueKey('actionbar.tile.menu.renote')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('actionbar.tile.menu.renote')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('削除'));
+    await tester.pumpAndSettle();
+    expect(c.read(actionBarConfigProvider(accountKey)).hidden, {'renote'});
+    expect(find.byKey(const ValueKey('actionbar.tile.renote')), findsNothing);
+    expect(find.byKey(const ValueKey('actionbar.tile.renote.viewer')), findsOneWidget); // 全画面バーは別構成
+    await tester.ensureVisible(find.byKey(const ValueKey('actionbar.plugins.open')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('actionbar.plugins.open')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('actionbar.plugin.renote')), findsOneWidget);
+    expect(find.byKey(const ValueKey('actionbar.plugin.reply')), findsNothing); // 出ているボタンは候補に無い
+    await tester.tap(find.byKey(const ValueKey('actionbar.plugin.renote')));
+    await tester.pumpAndSettle();
+    expect(c.read(actionBarConfigProvider(accountKey)).hidden, isEmpty);
+    expect(find.byKey(const ValueKey('actionbar.tile.renote')), findsOneWidget);
     // 隙間に落として並び替え: 末尾の隙間へリノート(投稿バー)。
     await tester.ensureVisible(find.byKey(const ValueKey('actionbar.tile.renote')));
     await tester.pumpAndSettle();

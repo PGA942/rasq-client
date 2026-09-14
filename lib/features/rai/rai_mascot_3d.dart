@@ -141,6 +141,11 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   String? _currentName;
   bool _failed = false;
   bool _ready = false;
+
+  /// 描画ループ 1 周ごとに増える (D-215): Flutter 側に再合成させるためのカウンター。実機(macOS)では
+  /// スタンバイのように Flutter の木が動かないと、ANGLE のテクスチャの新しい絵が画面に出なかった
+  /// (RAi ホームを開いた直後は中央の RAi が出ず、サイドバーなどで再描画が起きると出た)。
+  final _frame = ValueNotifier<int>(0);
   late final RaiMascot3dController _fallback = RaiMascot3dController();
   RaiMascot3dController get _ctrl => widget.controller ?? _fallback;
 
@@ -191,6 +196,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
     liveInstances--;
     _ctrl.removeListener(_sync);
     _fallback.dispose();
+    _frame.dispose();
     // flutter_angle の破棄は EGL の状態次第で例外を投げる(実機: eglMakeCurrent の null check、D-202)。
     // 破棄の失敗でフレームを落とさない。
     try {
@@ -288,6 +294,8 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
         } catch (e) {
           debugPrint('RAi 3D: frame update failed: $e');
         }
+        // 見えているあいだは Flutter にも 1 フレーム描かせる (D-215)。
+        if (widget.isScene && _ready && _ctrl.opacity > 0) _frame.value++;
       });
       _sync();
     } catch (e) {
@@ -410,12 +418,21 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       ]),
     );
     if (widget.isScene) {
-      return SizedBox.expand(child: Opacity(opacity: _ready ? widget.opacity * _ctrl.opacity : 0, child: Stack(fit: StackFit.expand, children: [
-        if (outline != null && tex != null && _ready)
-          for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
-            Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),
-        _three.build(),
-      ])));
+      return SizedBox.expand(
+        child: Opacity(
+          opacity: _ready ? widget.opacity * _ctrl.opacity : 0,
+          // 描画ループごとに再描画を要求する(中身は描かない、D-215)。
+          child: CustomPaint(
+            foregroundPainter: _RepaintTick(_frame),
+            child: Stack(fit: StackFit.expand, children: [
+              if (outline != null && tex != null && _ready)
+                for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
+                  Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),
+              _three.build(),
+            ]),
+          ),
+        ),
+      );
     }
     return SizedBox(
       width: widget.size,
@@ -426,4 +443,13 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       ),
     );
   }
+}
+
+/// 何も描かないが [repaint] のたびに markNeedsPaint される (D-215): 外部テクスチャの新しいフレームを合成させる。
+class _RepaintTick extends CustomPainter {
+  _RepaintTick(Listenable repaint) : super(repaint: repaint);
+  @override
+  void paint(Canvas canvas, Size size) {}
+  @override
+  bool shouldRepaint(_RepaintTick old) => false;
 }

@@ -43,6 +43,7 @@ import '../features/onboarding/onboarding_screen.dart';
 import '../features/store/plugin_page_screen.dart';
 import '../features/store/review_timeline_screen.dart';
 import '../features/store/store_home_screen.dart';
+import '../features/rai/rai_achievements_screen.dart';
 import '../features/rai/rai_home_screen.dart';
 import '../features/trend/trend_screen.dart';
 import '../features/vc/vc_screen.dart';
@@ -80,6 +81,9 @@ abstract final class Routes {
 
   /// RAi ホーム (D-179)。
   static const rai = '/rai';
+
+  /// RAi のアチーブメント (D-215)。
+  static const raiAchievements = '/rai/achievements';
   static const loginMisskey = '/login/misskey';
   static const loginMastodon = '/login/mastodon';
   static const loginBluesky = '/login/bluesky';
@@ -205,7 +209,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'actionbar-plugins', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ActionBarPluginsScreen()),
           ]),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
-          GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiHomeScreen()),
+          GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiHomeScreen(), routes: [
+            GoRoute(path: 'achievements', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiAchievementsScreen()),
+          ]),
           GoRoute(path: Routes.bookmarks, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BookmarksScreen()),
           // タブ外(リスト/クリップ/設定などアプリ直下のページ)から開く
           // 投稿/ユーザー/トレンドの複製ルート (D-038)。タブ配下の同ルートを
