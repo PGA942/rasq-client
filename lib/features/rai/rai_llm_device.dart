@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
@@ -39,12 +38,12 @@ Future<({int? totalMb, int? availableMb})> deviceRamReader() async {
   return (totalMb: null, availableMb: null);
 }
 
-/// llama.cpp のビルド番号 (D-188): **llama_cpp_dart 0.2.2 のバインディングは b7564(submodule 4ffc47cb)
-/// 向け**。他のビルドは構造体の ABI が違い、`llama_model_default_params` でクラッシュ / ゴミ値で
-/// メモリが膨れる。macOS はまずパッケージ同梱の `bin/MAC_ARM64`(同じコミット)を探し、無ければ
-/// この番号の GitHub Releases を落とす。配布ビルドでは Frameworks に同梱して署名する。
-const llamaCppReleaseTag = 'b7564';
-const llamaCppDartVersion = '0.2.2';
+/// llama.cpp のビルド番号 (D-188 → D-217): **llama_cpp_dart 0.9.0-dev.12 のバインディングは b10182
+/// (afeebe10)向け**(Qwen3.5 系 = Agents-A1 4B が読める)。他のビルドは構造体の ABI が違い、
+/// `llama_model_default_params` でクラッシュ / ゴミ値でメモリが膨れる。macOS は SwiftPM で組み込まれた
+/// xcframework(プロセス内)→ パッケージ同梱の `bin/MAC_ARM64` → この番号の GitHub Releases の順。
+const llamaCppReleaseTag = 'b10182';
+const llamaCppDartVersion = '0.9.0-dev.12';
 
 /// 端末内 LLM の実体 (D-181 / D-182 / D-183): エンジンをモデルごとに切り替える。
 ///
@@ -66,7 +65,7 @@ class DeviceRaiLlm implements RaiLlm {
   Future<void>? _lrInit;
 
   // llama.cpp
-  lc.LlamaParent? _llama;
+  lc.LlamaEngine? _llama;
   String? _llamaModelPath;
   Future<String?>? _libReady;
   StreamSubscription<List<int>>? _download;
@@ -121,19 +120,24 @@ class DeviceRaiLlm implements RaiLlm {
 
   Future<String?> _resolveLlamaLib() async {
     if (Platform.isMacOS) {
+      // 0) SwiftPM で組み込まれた xcframework (D-217: 0.9 系はプラグインとして Runner に入る)。
+      try {
+        DynamicLibrary.process().lookup<NativeFunction<Void Function()>>('llama_backend_init');
+        return null;
+      } catch (_) {}
       // 1) パッケージ同梱の dylib(ABI が確実に一致)。開発ビルド(サンドボックス無し)なら pub cache を読める。
       for (final base in [Platform.environment['PUB_CACHE'], '${Platform.environment['HOME']}/.pub-cache']) {
         if (base == null) continue;
         final packaged = Directory('$base/hosted/pub.dev/llama_cpp_dart-$llamaCppDartVersion/bin/MAC_ARM64');
-        if (await File('${packaged.path}/libmtmd.dylib').exists()) {
+        if (await File('${packaged.path}/libllama.dylib').exists()) {
           await _unquarantine(packaged);
           _preloadLlamaDeps(packaged);
-          return '${packaged.path}/libmtmd.dylib';
+          return '${packaged.path}/libllama.dylib';
         }
       }
       // 2) 同じビルド番号のプレビルトを取得。
       final dir = Directory('${(await _dir('llama_cpp')).path}/$llamaCppReleaseTag');
-      final lib = File('${dir.path}/libmtmd.dylib');
+      final lib = File('${dir.path}/libllama.dylib');
       if (!await lib.exists()) {
         _set(RaiLlmStatus(RaiLlmPhase.loading, message: 'llama.cpp のランタイム($llamaCppReleaseTag)を取得中', modelId: _spec.id));
         await _downloadLlamaRuntime(dir);
@@ -150,8 +154,8 @@ class DeviceRaiLlm implements RaiLlm {
     // iOS / Android: アプリに組み込まれているかを探る(iOS = xcframework、Android = jniLibs)。
     try {
       if (Platform.isAndroid) {
-        DynamicLibrary.open('libmtmd.so');
-        return 'libmtmd.so';
+        DynamicLibrary.open('libllama.so');
+        return 'libllama.so';
       }
       DynamicLibrary.process().lookup<NativeFunction<Void Function()>>('llama_backend_init');
       return null;
@@ -390,7 +394,6 @@ class DeviceRaiLlm implements RaiLlm {
     _llamaModelPath = null;
     if (l != null) {
       try {
-        await l.stop();
         await l.dispose();
       } catch (e) {
         debugPrint('rai llm llama dispose: $e');
@@ -416,137 +419,110 @@ class DeviceRaiLlm implements RaiLlm {
     return _spec.engine == RaiEngine.gguf ? _ggufChat(prompt, system) : _lrChat(prompt, system);
   }
 
-  /// ggml の動的バックエンド (D-188): `ggml_backend_load_all` は実行ファイルの隣しか探さないので、
-  /// ライブラリと同じフォルダーの libggml-metal / blas / cpu(-variant) を明示的に登録する。
-  /// 登録簿はプロセス共通なので、メインアイソレートで読めば LlamaParent の子アイソレートにも効く。
-  bool _backendsLoaded = false;
-  void _loadGgmlBackends(String? libPath) {
-    if (_backendsLoaded || libPath == null) return;
-    final dir = File(libPath).parent;
-    final lib = lc.Llama.lib;
-    final files = dir.listSync().whereType<File>().map((f) => f.uri.pathSegments.last).toList()..sort();
-    var cpuLoaded = false;
-    for (final prefix in ['libggml-metal', 'libggml-blas', 'libggml-cpu']) {
-      for (final name in files) {
-        if (!name.startsWith(prefix) || !(name.endsWith('.dylib') || name.endsWith('.so'))) continue;
-        if (name.contains('.0.')) continue; // 版数付きの複製は飛ばす
-        if (prefix == 'libggml-cpu' && cpuLoaded) break;
-        final p = '${dir.path}/$name'.toNativeUtf8();
-        try {
-          final r = lib.ggml_backend_load(p.cast());
-          debugPrint('ggml backend $name -> ${r.address != 0}');
-          if (r.address != 0 && prefix == 'libggml-cpu') cpuLoaded = true;
-        } catch (e) {
-          debugPrint('ggml backend $name: $e');
-        } finally {
-          calloc.free(p);
-        }
-      }
-    }
-    _backendsLoaded = true;
-  }
-
-  Future<lc.LlamaParent> _llamaLoad(String modelPath) async {
+  /// 読み込み (D-217: llama_cpp_dart 0.9 系 = `LlamaEngine`)。ggml の動的バックエンドはライブラリと同じ
+  /// フォルダーから `LlamaLibrary.load` が読む(`ggml_backend_load_all_from_path`)。プロセスに組み込み済み
+  /// (SwiftPM の xcframework)なら `spawnFromProcess`。
+  Future<lc.LlamaEngine> _llamaLoad(String modelPath) async {
     final cached = _llama;
     if (cached != null && _llamaModelPath == modelPath) return cached;
     await release();
     _set(RaiLlmStatus(RaiLlmPhase.loading, modelId: _spec.id));
     final lib = await _ensureLlamaLib();
-    lc.Llama.libraryPath = lib;
-    _loadGgmlBackends(lib);
     final gpu = Platform.isMacOS || Platform.isIOS; // Metal。GPU が無い環境は main_gpu = -1 でないと読めない
-    final load = lc.LlamaLoad(
-      path: modelPath,
-      modelParams: lc.ModelParams()
-        ..nGpuLayers = gpu ? 99 : 0
-        ..mainGpu = gpu ? 0 : -1,
-      contextParams: lc.ContextParams()
-        ..nCtx = 2048 // D-216: 200 文字程度の返事 + リファレンスの文脈が入る長さ
-        ..nBatch = 256
-        ..nPredict = 512
-        ..nThreads = 4
-        ..nThreadsBatch = 4,
-      samplingParams: lc.SamplerParams()
-        ..temp = 0.4
-        ..topP = 0.95
-        ..penaltyRepeat = 1.1,
-    );
-    final parent = lc.LlamaParent(load);
-    await parent.init();
-    _llama = parent;
+    final modelParams = lc.ModelParams(path: modelPath, gpuLayers: gpu ? 99 : 0, mainGpu: gpu ? 0 : -1);
+    // D-216: 200 文字程度の返事 + リファレンスの文脈が入る長さ。
+    const contextParams = lc.ContextParams(nCtx: 2048, nBatch: 256, nUbatch: 256, nThreads: 4, nThreadsBatch: 4);
+    final engine = lib == null
+        ? await lc.LlamaEngine.spawnFromProcess(modelParams: modelParams, contextParams: contextParams)
+        : await lc.LlamaEngine.spawn(libraryPath: lib, modelParams: modelParams, contextParams: contextParams);
+    _llama = engine;
     _llamaModelPath = modelPath;
-    return parent;
+    return engine;
   }
 
   Stream<String> _ggufChat(String prompt, String? system) {
     final out = StreamController<String>();
-    StreamSubscription<String>? tokens;
-    StreamSubscription<lc.CompletionEvent>? completions;
+    StreamSubscription<lc.GenerationEvent>? events;
+    lc.EngineSession? session;
+    Timer? firstToken;
+    Timer? overall;
+    Future<void> cleanup() async {
+      firstToken?.cancel();
+      overall?.cancel();
+      await events?.cancel();
+      final s = session;
+      session = null;
+      try {
+        await s?.dispose();
+      } catch (_) {}
+    }
     () async {
       try {
         final f = await _ggufFile();
         if (!await f.exists()) throw RaiLlmException('モデルファイルがありません: ${f.path}');
-        final llama = await _llamaLoad(f.path);
+        final engine = await _llamaLoad(f.path);
         _set(RaiLlmStatus(RaiLlmPhase.generating, modelId: _spec.id));
         // ChatML(Agents-A1 / Qwen 系)。system + user を渡し、assistant を開けておく。
-        final history = lc.ChatHistory();
-        // Qwen3 の思考モードは切る(/no_think)。念のため <think>…</think> は出力から落とす。
-        history.addMessage(role: lc.Role.system, content: '${system ?? ''} /no_think'.trim());
-        history.addMessage(role: lc.Role.user, content: prompt);
-        history.addMessage(role: lc.Role.assistant, content: '');
-        final formatted = history.exportFormat(lc.ChatFormat.chatml, leaveLastAssistantOpen: true);
+        // 思考モードは切る (D-217): Qwen3 / Qwen3.5 のテンプレートが enable_thinking=false のときに出す
+        // **空の think ブロック**を assistant の先頭に置く(`/no_think` だけでは思考だけで枠を使い切って
+        // 返事が空になった)。念のため <think>…</think> は出力からも落とす。
+        final formatted = chatMlPrompt(system: system, user: prompt);
         final think = ThinkFilter();
         var visibleChars = 0;
         // 無応答の見張り (D-216): 最初の見える文字が 30 秒来なければ / 全体で 150 秒を超えたら打ち切って
         // フォールアップへ(ほぼ全部のモデルが返事無しで止まる症状の逃げ道)。
-        Timer? firstToken;
-        Timer? overall;
         Future<void> abort(String why) async {
           if (out.isClosed) return;
           out.addError(RaiLlmException(why));
           await out.close();
-          try {
-            await _llama?.stop();
-          } catch (_) {}
+          await cleanup();
         }
         firstToken = Timer(const Duration(seconds: 30), () => abort('端末内モデルが 30 秒返事をしませんでした'));
         overall = Timer(const Duration(seconds: 150), () => abort('端末内モデルの返事が長すぎるので打ち切りました'));
-        tokens = llama.stream.listen((t) {
-          if (out.isClosed) return;
-          final visible = think.push(t);
-          if (visible.isNotEmpty) {
-            visibleChars += visible.length;
-            firstToken?.cancel();
-            out.add(visible);
-          }
-        });
-        completions = llama.completions.listen((e) {
-          if (out.isClosed) return;
-          firstToken?.cancel();
-          overall?.cancel();
-          if (!e.success) {
+        final sess = await engine.createSession();
+        session = sess;
+        events = sess
+            .generate(
+              prompt: formatted,
+              addSpecial: true,
+              sampler: const lc.SamplerParams(temperature: 0.4, topP: 0.95, repeatPenalty: 1.1),
+              maxTokens: 512,
+            )
+            .listen(
+          (e) {
+            if (out.isClosed) return;
+            switch (e) {
+              case lc.TokenEvent():
+                final visible = think.push(e.text);
+                if (visible.isNotEmpty) {
+                  visibleChars += visible.length;
+                  firstToken?.cancel();
+                  out.add(visible);
+                }
+              case lc.DoneEvent():
+                firstToken?.cancel();
+                overall?.cancel();
+                if (visibleChars == 0) out.addError(const RaiLlmException('端末内モデルから返事がありませんでした(思考だけで終わった可能性)'));
+                out.close();
+              case lc.ShiftEvent():
+                break;
+            }
+          },
+          onError: (Object e) {
+            if (out.isClosed) return;
             out.addError(RaiLlmException('生成に失敗しました: $e'));
-          } else if (visibleChars == 0) {
-            out.addError(const RaiLlmException('端末内モデルから返事がありませんでした(思考だけで終わった可能性)'));
-          }
-          out.close();
-        });
-        out.onCancel = () async {
-          firstToken?.cancel();
-          overall?.cancel();
-          await tokens?.cancel();
-          await completions?.cancel();
-          try {
-            await _llama?.stop();
-          } catch (_) {}
-        };
-        await llama.sendPrompt(formatted);
+            out.close();
+          },
+          onDone: () {
+            if (!out.isClosed) out.close();
+          },
+        );
       } catch (e) {
         if (!out.isClosed) {
           final msg = '$e';
           final hint = msg.contains('disallowed by system policy')
               ? '\n「system policy」= サンドボックス / ライブラリ検証で拒否。Debug の entitlements(app-sandbox=false、disable-library-validation)で再ビルドしてください'
-              : msg.contains('dlopen') || msg.contains('Failed to load dynamic library')
+              : msg.contains('dlopen') || msg.contains('Failed to load dynamic library') || msg.contains('failed to open')
                   ? '\nGatekeeper に止められた場合: 「システム設定 > プライバシーとセキュリティ」で許可するか、Application Support/llama_cpp の dylib に xattr -dr com.apple.quarantine を実行してください'
                   : '';
           out.addError(e is RaiLlmException ? e : RaiLlmException('モデルを読み込めません(llama.cpp): $msg$hint'));
@@ -554,16 +530,9 @@ class DeviceRaiLlm implements RaiLlm {
         }
       }
     }();
-    out.onCancel = () async {
-      await tokens?.cancel();
-      await completions?.cancel();
-      try {
-        await _llama?.stop();
-      } catch (_) {}
-    };
+    out.onCancel = cleanup;
     return out.stream.transform(StreamTransformer.fromHandlers(handleDone: (sink) {
-      tokens?.cancel();
-      completions?.cancel();
+      cleanup();
       if (_current.phase == RaiLlmPhase.generating) _set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
       sink.close();
     }));
@@ -599,6 +568,15 @@ class DeviceRaiLlm implements RaiLlm {
       _set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
     }
   }
+}
+
+/// ChatML のプロンプト (D-217): system / user のあと assistant を開け、空の think ブロックで思考を封じる。
+String chatMlPrompt({String? system, required String user}) {
+  final b = StringBuffer();
+  if (system != null && system.trim().isNotEmpty) b.write('<|im_start|>system\n${system.trim()}<|im_end|>\n');
+  b.write('<|im_start|>user\n$user<|im_end|>\n');
+  b.write('<|im_start|>assistant\n<think>\n\n</think>\n\n');
+  return b.toString();
 }
 
 /// `<think>…</think>` を流れてくるトークンから取り除く(タグはトークンをまたぐので溜めて判定)。

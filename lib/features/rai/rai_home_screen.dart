@@ -36,6 +36,35 @@ class _StandbySlotState extends ConsumerState<_StandbySlot> {
     if (ref.read(raiStandbySlotProvider) != rect) _slot.set(rect, owner: this);
   }
 
+  /// 画面遷移のアニメーション中に取った矩形はずれる (D-217: 開いた直後だけ右にずれていた)。
+  /// 2 フレーム続けて同じになるまで(最大 90 フレーム)取り直す。
+  Rect? _last;
+  int _stableFrames = 0;
+  int _budget = 0;
+
+  void _reportUntilStable() {
+    _budget = 90;
+    _stableFrames = 0;
+    _last = null;
+    void tick(Duration _) {
+      if (!mounted) return;
+      final box = context.findRenderObject();
+      final rect = box is RenderBox && box.hasSize ? box.localToGlobal(Offset.zero) & box.size : null;
+      if (rect != null) {
+        if (rect == _last) {
+          _stableFrames++;
+        } else {
+          _stableFrames = 0;
+          _last = rect;
+        }
+        _report();
+      }
+      if (_stableFrames >= 2 || --_budget <= 0) return;
+      WidgetsBinding.instance.addPostFrameCallback(tick);
+    }
+    WidgetsBinding.instance.addPostFrameCallback(tick);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -45,11 +74,24 @@ class _StandbySlotState extends ConsumerState<_StandbySlot> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _report());
+    _reportUntilStable();
+    // 遷移が終わった瞬間にも取り直す。
+    final anim = ModalRoute.of(context)?.animation;
+    if (anim != null && !identical(anim, _routeAnim)) {
+      _routeAnim?.removeStatusListener(_onRouteStatus);
+      _routeAnim = anim;
+      anim.addStatusListener(_onRouteStatus);
+    }
+  }
+
+  Animation<double>? _routeAnim;
+  void _onRouteStatus(AnimationStatus st) {
+    if (st == AnimationStatus.completed && mounted) _reportUntilStable();
   }
 
   @override
   void dispose() {
+    _routeAnim?.removeStatusListener(_onRouteStatus);
     final n = _slot;
     WidgetsBinding.instance.addPostFrameCallback((_) => n.set(null, owner: this));
     super.dispose();

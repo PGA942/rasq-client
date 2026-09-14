@@ -65,7 +65,7 @@ dependencies:
   # Unicode NFKC (D-193: MiniLM の XLM-R トークナイザーの正規化)。
   unorm_dart: ^0.3.2
   three_js: ^0.3.0
-  llama_cpp_dart: ^0.2.2
+  llama_cpp_dart: 0.9.0-dev.12
   device_info_plus: ^13.2.0
   archive: ^4.2.0
   ffi: ^2.2.0
