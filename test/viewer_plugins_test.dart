@@ -7,9 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/media/image_saver.dart';
 import 'package:rasq_client/features/media/media_viewer_screen.dart';
 import 'package:rasq_client/features/media/viewer_plugin_overlay.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
+import 'package:rasq_client/features/post/share_fow.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -36,6 +38,7 @@ void main() {
       body: '画像つき',
       media: [MediaItem(id: 'i', type: MediaType.image, url: Uri.parse('https://example.test/i.jpg'))],
     );
+    final saved = <String>[];
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => [post]));
     final fakes = <String, FakeSlotRuntime Function()>{
       'qr': () => FakeSlotRuntime(
@@ -49,6 +52,10 @@ void main() {
         pluginRegistryProvider.overrideWithValue(registry),
         slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes)),
         viewerImageFetcherProvider.overrideWithValue((url) async => null),
+        imageSaverProvider.overrideWithValue((item) async {
+          saved.add(item.id);
+          return '/tmp/${item.id}.jpg';
+        }),
       ],
       child: const RasqApp(),
     ));
@@ -77,8 +84,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('全画面表示プラグイン'), findsNothing);
     expect(find.text('オーバーレイに移動'), findsNothing);
+    // 投稿のメニューに準拠 (D-213): 詳細の代わりに「画像を保存」、共有 / お気に入り なども並ぶ。
+    expect(find.text('詳細'), findsNothing);
+    expect(find.text('画像を保存'), findsOneWidget);
     expect(find.text('リンクをコピー'), findsOneWidget);
-    await tester.tapAt(const Offset(10, 400));
+    expect(find.text('共有'), findsOneWidget);
+    // 画像を保存 → 差し替えた保存先が呼ばれ、スナックバー。
+    await tester.tap(find.text('画像を保存'));
+    await tester.pumpAndSettle();
+    expect(saved, [post.media.first.id]);
+    expect(find.textContaining('画像を保存しました'), findsOneWidget);
+    // 「…」→ 共有 → 「内容をコピー」の代わりに「画像を保存」。
+    await tester.tap(find.descendant(of: find.byType(MediaViewerScreen), matching: find.byTooltip('メニュー')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('共有'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('post.share.saveImage')), findsOneWidget);
+    expect(find.byKey(const ValueKey('post.share.copyContent')), findsNothing);
+    c.read(overlayManagerProvider).close(postShareFowId);
     await tester.pumpAndSettle();
     // 下付き FOW(折りたたみ = 画面の 30% 未満)のぶんメディアの高さが詰まる (D-207)。
     final panel = tester.getRect(find.byKey(viewerPanelKey));

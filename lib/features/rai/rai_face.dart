@@ -51,9 +51,17 @@ class RaiFaceSheet {
   static Future<RaiFaceSheet> fromBytes(Uint8List png, {int frameWidth = 256, int frameHeight = 171}) async {
     final codec = await ui.instantiateImageCodec(png);
     final image = (await codec.getNextFrame()).image;
+    // 枠の位置はシートから検出する (D-213: 固定の割合だと本物のシートで上段がずれた)。検出できなければ割合。
+    List<ui.Rect>? detected;
+    try {
+      final rgba = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (rgba != null) detected = raiFaceDetectFrames(rgba.buffer.asUint8List(), image.width, image.height);
+    } catch (_) {
+      detected = null;
+    }
     final out = <Uint8List>[];
     for (var i = 0; i < RaiFace.count; i++) {
-      final src = raiFaceFrameRect(i, width: image.width.toDouble(), height: image.height.toDouble());
+      final src = detected != null && i < detected.length ? detected[i] : raiFaceFrameRect(i, width: image.width.toDouble(), height: image.height.toDouble());
       final rec = ui.PictureRecorder();
       final canvas = ui.Canvas(rec);
       canvas.drawImageRect(image, src, ui.Rect.fromLTWH(0, 0, frameWidth.toDouble(), frameHeight.toDouble()), ui.Paint()..filterQuality = ui.FilterQuality.high);
@@ -66,4 +74,47 @@ class RaiFaceSheet {
     image.dispose();
     return RaiFaceSheet(out);
   }
+}
+
+/// シートの黒い枠を検出する (D-213): 暗くて不透明な画素の行 / 列の分布から 3 段 × 4 列の帯を取り、
+/// その交差を枠にする(行 = 段の順、列 = 左から)。3 段 × 4 列にならなければ null(割合の配置に戻す)。
+List<ui.Rect>? raiFaceDetectFrames(Uint8List rgba, int width, int height) {
+  if (width < 8 || height < 8) return null;
+  bool dark(int x, int y) {
+    final i = (y * width + x) * 4;
+    return rgba[i + 3] > 200 && rgba[i] < 80 && rgba[i + 1] < 80 && rgba[i + 2] < 80;
+  }
+
+  List<(int, int)> bands(List<int> counts, int threshold, int minLen) {
+    final out = <(int, int)>[];
+    int? start;
+    for (var i = 0; i <= counts.length; i++) {
+      final on = i < counts.length && counts[i] >= threshold;
+      if (on && start == null) start = i;
+      if (!on && start != null) {
+        if (i - start >= minLen) out.add((start, i));
+        start = null;
+      }
+    }
+    return out;
+  }
+
+  final rows = List<int>.filled(height, 0);
+  final cols = List<int>.filled(width, 0);
+  for (var y = 0; y < height; y++) {
+    for (var x = 0; x < width; x++) {
+      if (dark(x, y)) {
+        rows[y]++;
+        cols[x]++;
+      }
+    }
+  }
+  // 段: その行に幅の 15% 以上の暗い画素。列: その列に高さの 8% 以上(下段は 3 枠なので少なめ)。
+  final rowBands = bands(rows, (width * 0.15).round(), (height * 0.05).round());
+  final colBands = bands(cols, (height * 0.08).round(), (width * 0.05).round());
+  if (rowBands.length != 3 || colBands.length != 4) return null;
+  return [
+    for (final (y0, y1) in rowBands)
+      for (final (x0, x1) in colBands) ui.Rect.fromLTRB(x0.toDouble(), y0.toDouble(), x1.toDouble(), y1.toDouble()),
+  ];
 }

@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
+import 'post_menu.dart';
 import '../compose/account_select.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
@@ -34,7 +35,7 @@ bool isPrivatePost(Post p) => p.isDirect || p.visibility == 'followers' || p.loc
 /// コピーする「内容」= CW + 本文。
 String postShareContent(Post p) => (p.contentWarning != null && p.contentWarning!.isNotEmpty) ? '[${p.contentWarning}] ${p.body}' : p.body;
 
-Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0}) async {
+Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0, MediaItem? media}) async {
   final manager = ref.read(overlayManagerProvider);
   final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
   final candidates = isPrivatePost(post) ? [for (final s in sessions) if (s.account == post.account) s] : sessions;
@@ -42,7 +43,8 @@ Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0}) async 
   final selected = ValueNotifier<AccountSession?>(
     candidates.where((s) => s.account == post.account).firstOrNull ?? candidates.where((s) => s.account.key == current?.account.key).firstOrNull ?? candidates.firstOrNull,
   );
-  final link = postWebUrl(post).toString();
+  // 全画面表示から (D-213): リンクは画像のリンク。
+  final link = media?.url.toString() ?? postWebUrl(post).toString();
 
   Future<void> openComposer(String text, {Uint8List? media, String? mime, String? name}) async {
     final s = selected.value;
@@ -95,7 +97,7 @@ Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0}) async 
       id: postShareFowId,
       spec: spec,
       semanticsLabel: '共有',
-      builder: (ctx, handle) => _ShareBody(post: post, link: link, selected: selected, column: column, onComposer: openComposer, onDm: openDm),
+      builder: (ctx, handle) => _ShareBody(post: post, link: link, selected: selected, column: column, onComposer: openComposer, onDm: openDm, media: media),
     );
   } finally {
     manager.closeOwnedBy(postShareFowId);
@@ -104,7 +106,10 @@ Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0}) async 
 }
 
 class _ShareBody extends ConsumerStatefulWidget {
-  const _ShareBody({required this.post, required this.link, required this.selected, required this.column, required this.onComposer, required this.onDm});
+  const _ShareBody({required this.post, required this.link, required this.selected, required this.column, required this.onComposer, required this.onDm, this.media});
+
+  /// 全画面表示から (D-213): 「内容をコピー」の代わりに「画像を保存」。
+  final MediaItem? media;
   final Post post;
   final String link;
   final ValueNotifier<AccountSession?> selected;
@@ -205,7 +210,10 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
     final post = widget.post;
     return ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.page), children: [
       Row(children: [
-        _ShareChip(key: const ValueKey('post.share.copyContent'), icon: Icons.notes, label: '内容をコピー', onTap: () => _copy(postShareContent(post), '内容')),
+        if (widget.media == null)
+          _ShareChip(key: const ValueKey('post.share.copyContent'), icon: Icons.notes, label: '内容をコピー', onTap: () => _copy(postShareContent(post), '内容'))
+        else
+          _ShareChip(key: const ValueKey('post.share.saveImage'), icon: Icons.download_outlined, label: '画像を保存', onTap: () => saveMediaImage(ref, widget.media!)),
         const SizedBox(width: RasqSpacing.sm),
         _ShareChip(key: const ValueKey('post.share.copyLink'), icon: Icons.link, label: 'リンクをコピー', onTap: () => _copy(widget.link, 'リンク')),
         const SizedBox(width: RasqSpacing.sm),
