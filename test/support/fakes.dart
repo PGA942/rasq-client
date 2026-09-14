@@ -38,7 +38,8 @@ class FakeSnsSession extends SnsSessionBase {
   List<TimelineKind> get timelines => kind == SnsKind.bluesky ? const [TimelineKind.home, TimelineKind('global', 'Discover')] : const [TimelineKind.home, TimelineKind.social];
   @override
   List<ActionDescriptor> get actions => const [
-        ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信', icon: 'subdirectory_arrow_left'),
+        // 返信は実際のプラグイン同様 confirm + interstitial(RAi からの自動実行は不可、D-223)。
+        ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信', icon: 'subdirectory_arrow_left', confirmMode: ConfirmMode.confirm, fow: FowType.interstitial),
         ActionDescriptor(id: 'renote', genreTag: 'Repost', label: 'リノート', icon: 'repeat', doneIcon: 'repeat_on'),
         ActionDescriptor(id: 'reaction', genreTag: 'Reaction', label: 'リアクション', icon: 'favorite_border', doneIcon: 'favorite'),
       ];
@@ -54,6 +55,14 @@ class FakeSnsSession extends SnsSessionBase {
   }
   /// thread() を呼ばれた投稿 id(D-155: どのアカウントのセッションで開いたか)。
   final List<String> threadRequests = [];
+
+  /// 投稿 1 件を取る (D-223: RAi の post.get)。
+  @override
+  Future<Post> post(String id) async => _posts.firstWhere((p) => p.id == id, orElse: () => throw SnsApiException(ErrorCode.notFound));
+
+  /// 本文に query を含む投稿を返す (D-223: RAi の posts.fetch(kind=search) / user.search と同じ作法)。
+  @override
+  Future<Page<Post>> searchPosts(String query, {String? cursor, int limit = 20}) async => cursor != null ? Page.empty() : Page(items: [for (final p in _posts) if (p.body.contains(query)) p].take(limit).toList());
 
   @override
   Future<Thread> thread(String id) async {
@@ -106,12 +115,22 @@ class FakeSnsSession extends SnsSessionBase {
   }
   @override
   Future<Map<String, FollowState>> relationships(List<String> userIds) async => {for (final id in userIds) id: const FollowState()};
+  /// 自分との関係 (D-223: RAi の user.relation)。個別 API 版は既定のまま(フォロー関係なし)。
+  @override
+  Future<FollowState> relationship(String userId) async => const FollowState();
   @override
   Future<List<UserProfile>> users(List<String> ids) async => [for (final p in _posts) if (ids.contains(p.author.id)) UserProfile(summary: p.author)];
   @override
   Future<UserProfile> user(String id) async {
     final u = _posts.map((p) => p.author).firstWhere((a) => a.id == id, orElse: () => throw SnsApiException(ErrorCode.notFound));
     return UserProfile(summary: u, description: u.bio, followersCount: 12, followingCount: 34, postsCount: 56, location: '地球', fields: const [ProfileField(name: '千芋', value: 'https://amzn.jp/19f253fc')]);
+  }
+
+  /// handle からプロフィールを引く (D-223: RAi の user.get(handle=))。
+  @override
+  Future<UserProfile?> userByHandle(String handle, {String? host}) async {
+    final u = _posts.map((p) => p.author).where((a) => a.handle == handle).firstOrNull;
+    return u == null ? null : user(u.id);
   }
   @override
   Future<Page<Post>> userPosts(String id, {String? cursor, int limit = 20, UserPostsFilter filter = UserPostsFilter.posts}) async =>
@@ -158,6 +177,11 @@ class FakeSnsSession extends SnsSessionBase {
   Future<List<UserSummary>> listMembers(String listId) async => [_posts.last.author];
   @override
   Future<void> removeFromList(String listId, String userId) async {}
+  /// リストへの追加 / 新規作成 (D-223: RAi の list.edit / list.create)。
+  @override
+  Future<void> addToList(String listId, String userId) async {}
+  @override
+  Future<UserListInfo> createList(String name) async => UserListInfo(id: 'l-new', name: name);
   @override
   Future<Page<Post>> favorites({String? cursor, int limit = 20}) async => Page(items: _posts.take(1).toList());
   @override
@@ -169,6 +193,11 @@ class FakeSnsSession extends SnsSessionBase {
   Future<ClipInfo> clipInfo(String clipId) async => (await clips()).firstWhere((c) => c.id == clipId);
   @override
   Future<Page<Post>> clipNotes(String clipId, {String? cursor, int limit = 20}) async => Page(items: _posts.take(2).toList());
+  /// クリップの新規作成 / 投稿の追加 (D-223: RAi の clip.create / clip.edit)。
+  @override
+  Future<ClipInfo> createClip(String name, {String? description, bool isPublic = false}) async => ClipInfo(id: 'c-new', name: name, description: description, isPublic: isPublic);
+  @override
+  Future<void> addToClip(String clipId, String postId) async {}
   @override
   Future<List<TrendTag>> trendingTags() async => const [TrendTag(tag: '打上会', usersCount: 117, chart: [1, 3, 2])];
   @override
@@ -178,8 +207,21 @@ class FakeSnsSession extends SnsSessionBase {
     performed.add('$actionId:$postId:${args['undo']}');
     return ActionResult(done: args['undo'] != true, count: 1);
   }
+  /// 通知 2 件(未読 1 / 既読 1)を固定で返す (D-223: RAi の notifications.list)。
   @override
-  Future<Page<NotificationItem>> notifications({String? cursor, int limit = 20}) async => Page.empty();
+  Future<Page<NotificationItem>> notifications({String? cursor, int limit = 20}) async {
+    if (cursor != null) return Page.empty();
+    final author = _posts.last.author;
+    return Page(items: [
+      NotificationItem(id: 'n1', account: account, kind: NotificationKind.reaction, createdAt: DateTime(2026, 9, 14), actors: [author], post: _posts.first, reaction: '👍', read: false),
+      NotificationItem(id: 'n2', account: account, kind: NotificationKind.follow, createdAt: DateTime(2026, 9, 13), actors: [author], read: true),
+    ]);
+  }
+
+  /// 通知の既読処理 (D-223: RAi の notifications.read)。
+  final List<String> markReadCalls = [];
+  @override
+  Future<void> markNotificationsRead() async => markReadCalls.add('read');
 }
 
 AccountSession fakeSession() => AccountSession(
