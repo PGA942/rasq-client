@@ -14,6 +14,7 @@ import 'package:rasq_client/features/rai/rai_motion.dart';
 import 'package:rasq_client/features/rai/rai_overlay.dart';
 import 'package:rasq_client/features/rai/rai_providers.dart';
 import 'package:rasq_client/features/rai/rai_reference_providers.dart';
+import 'package:rasq_client/features/rai/rai_stats.dart';
 import 'package:rasq_client/features/rai/rai_widgets.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
@@ -117,21 +118,56 @@ void main() {
     expect(tester.widget<Opacity>(find.ancestor(of: layerMascot, matching: find.byType(Opacity)).first).opacity, closeTo(0.28, 0.01));
   });
 
-  testWidgets('曖昧な質問 → 行の下に選択肢のチップ(最新の行だけ押せる)→ 選ぶと提案タイル', (tester) async {
+  test('複合の質問の判定 (D-222)', () {
+    expect(RaiController.isCompound('投稿したい'), isFalse);
+    expect(RaiController.isCompound('Bluesky でログインして、投稿もしたい'), isTrue);
+    expect(RaiController.isCompound('Xepos名義の投稿を取得して、そこからトレンドの刺激性をセットアップしてみてください'), isTrue);
+    expect(RaiController.isCompound('通知を切って、DM も止めたい'), isTrue);
+    expect(RaiController.isCompound('ログイン'), isFalse);
+  });
+
+  testWidgets('曖昧 / 複合な質問 (D-222): 止めずに LLM の返事 + 候補タイル、× で候補を外して記録し答え直す、候補の「この手順で案内」で案内へ', (tester) async {
     final c = await pump(tester);
-    llm.reply = 'ログインしたい状況';
-    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'ログイン');
+    // 曖昧な短い質問 → 「どれのことですか」で止めない。
+    llm.reply = 'アカウントの操作はいくつかあります。';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'アカウント');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
-    final st = c.read(raiProvider);
-    if (st.choices.isNotEmpty) {
-      expect(find.byKey(ValueKey('rai.chat.choice.${st.choices.first.id}')), findsOneWidget);
-      await tester.tap(find.byKey(ValueKey('rai.chat.choice.${st.choices.first.id}')));
-      await tester.pumpAndSettle();
-    }
-    expect(c.read(raiProvider).proposal, isNotNull);
-    expect(find.byKey(ValueKey('rai.chat.proposal.${c.read(raiProvider).proposal}')), findsOneWidget);
-    expect(find.byKey(const ValueKey('rai.chat.live')), findsNothing);
+    var st = c.read(raiProvider);
+    expect(st.choices, isEmpty);
+    expect(st.proposal, isNull);
+    expect(st.log.first.candidates.length, greaterThanOrEqualTo(2));
+    expect(find.byKey(const ValueKey('rai.chat.candidates.0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.chat.reject.0')), findsOneWidget);
+    expect(find.text('どれのことですか？ 上の選択肢から選んでください'), findsNothing);
+    final rejected = st.log.first.candidates;
+    // × → 除外して記録、答え直し(新しい行の候補には入らない)。
+    final before = llm.systems.length;
+    await tester.tap(find.byKey(const ValueKey('rai.chat.reject.0')));
+    await tester.pumpAndSettle();
+    st = c.read(raiProvider);
+    expect(llm.systems.length, greaterThan(before));
+    expect(c.read(raiMissesProvider).single.query, 'アカウント');
+    expect(c.read(raiMissesProvider).single.rejected, rejected);
+    expect(await c.read(sessionStorageProvider).read(RaiMissLog.storageKey), contains('アカウント'));
+    expect(st.hits.map((h) => h.id).toSet().intersection(rejected.toSet()), isEmpty);
+    expect(st.log.first.candidates.toSet().intersection(rejected.toSet()), isEmpty);
+    expect(llm.systems.last, contains('違うと言われた操作'));
+    expect(find.byKey(const ValueKey('rai.chat.reject.0')), findsNothing); // 古い行の × は消える
+    // 複合の質問 → 候補タイル(login-bluesky / post のどちらか)+ 返事。候補の「この手順で案内」で案内へ。
+    llm.reply = '順にやりましょう。';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'Bluesky でログインして、投稿もしたい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    st = c.read(raiProvider);
+    expect(st.proposal, isNull);
+    expect(st.log.first.candidates, isNotEmpty);
+    final first = st.log.first.candidates.first;
+    expect(find.byKey(ValueKey('rai.chat.candidate.$first')), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byKey(ValueKey('rai.chat.candidate.$first')), matching: find.byKey(ValueKey('rai.chat.guide.$first'))));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).mode, RaiMode.instruction);
+    expect(c.read(raiProvider).lastOperation, first);
   });
 
   testWidgets('RaiLinkCard はタップで開く(差し替え可)', (tester) async {
