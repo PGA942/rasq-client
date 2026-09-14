@@ -56,18 +56,19 @@ class ActionBarConfig {
   final Set<String> hidden;
   final List<ActionListDef> lists;
 
-  bool get dirty => order.isNotEmpty || hidden.isNotEmpty || lists.isNotEmpty;
+  bool get dirty => order.isNotEmpty || lists.isNotEmpty;
 
   static String listKey(String listId) => 'list:$listId';
 
   /// リストに入っているアクション id。
   Set<String> get listedIds => {for (final l in lists) ...l.memberIds};
 
-  /// 構成を適用: リスト束ね + 並び替え + 非表示除外。
+  /// 構成を適用: リスト束ね + 並び替え。非表示は廃止 (D-208): 保存済みの [hidden] は無視する
+  /// (プラグインボタンの有効 / 無効はスロット設定側)。
   List<ActionBarEntry> apply(List<ActionDescriptor> actions) {
     final byId = {for (final a in actions) a.id: a};
     final listById = {for (final l in lists) l.id: l};
-    final consumed = <String>{...hidden, ...listedIds};
+    final consumed = <String>{...listedIds};
 
     ActionBarEntry? entryFor(String key) {
       if (key.startsWith('list:')) {

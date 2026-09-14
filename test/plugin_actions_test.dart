@@ -19,7 +19,7 @@ import 'support/fake_slot_runtime.dart';
 import 'support/fakes.dart';
 
 /// 投稿のアクションボタン (D-176、契約 v0.7 §2.9): タグで既存ボタンのバンドルへ、アカウントごとのスロット設定、
-/// 「アクションリストの編集」の検索 FOW / … ドロップダウン(詳細 / 置き換え / 削除)。
+/// 「アクションバーの編集」(D-208): タイル + (…) メニュー、ドラッグでバンドル / 並び替え。
 void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
   Post post(String id, String body) => Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 8, 31), body: body, url: Uri.parse('https://example.test/notes/$id'));
@@ -114,7 +114,7 @@ void main() {
     expect(c.read(slotActionSettingsProvider(acc.key)).isEnabled(pluginActionId('t.act', 'copy')), isFalse);
   });
 
-  testWidgets('アクションリストの編集 (D-176): プラグインボタン節のスイッチ / 閾値、「プラグインボタンを検索」FOW、… ドロップダウンの 置き換え / 削除', (tester) async {
+  testWidgets('アクションバーの編集 (D-208): 大きいタイル + (…) メニュー(詳細 / アクションリスト化 / 削除)、隙間に落として並び替え、タイルの上に落としてバンドル、バンドル FOW', (tester) async {
     fakes['act'] = () => FakeSlotRuntime(
           manifest: {
             'id': 't.act', 'name': '投稿ボタン', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action'], 'permissions': ['fow.widget'],
@@ -125,45 +125,83 @@ void main() {
     final c = await pump(tester);
     await c.read(slotPluginsProvider.notifier).register('fake:act', bytes: Uint8List.fromList('act'.codeUnits));
     await tester.pumpAndSettle();
+    final copyId = pluginActionId('t.act', 'copy');
+    final accountKey = fakeSession().account.key;
     // 投稿の … → アクションバーを編集。
     await tester.tap(find.byTooltip('メニュー').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('アクションバーを編集'));
     await tester.pumpAndSettle();
-    expect(find.text('アクションリストの編集'), findsOneWidget);
-    expect(find.byKey(ValueKey('actionbar.slot.${pluginActionId('t.act', 'copy')}')), findsOneWidget);
+    expect(find.text('アクションバーの編集'), findsOneWidget);
+    expect(find.byKey(const ValueKey('actionbar.tile.reply')), findsOneWidget);
+    expect(find.byKey(ValueKey('actionbar.slot.$copyId')), findsOneWidget);
     expect(find.byKey(const ValueKey('actionbar.slot.threshold')), findsOneWidget);
-    // 検索 FOW: 名前で絞って選ぶ → 有効のまま(非表示なら解除)。
+    expect(find.text('非表示'), findsNothing);
+    // (+) → 検索 FOW: 名前で絞って選ぶ → 有効。
     await tester.tap(find.byKey(const ValueKey('actionbar.plugins.open')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(actionBarPluginSearchKey), 'コピー');
     await tester.pumpAndSettle();
-    expect(find.byKey(ValueKey('actionbar.plugin.${pluginActionId('t.act', 'copy')}')), findsOneWidget);
-    await tester.tap(find.byKey(ValueKey('actionbar.plugin.${pluginActionId('t.act', 'copy')}')));
+    await tester.tap(find.byKey(ValueKey('actionbar.plugin.$copyId')));
     await tester.pumpAndSettle();
     expect(find.byKey(actionBarPluginSearchKey), findsNothing);
-    // 返信の … → 置き換え → 検索 FOW で「本文をコピー」→ 返信の位置にプラグインボタン、返信は非表示。
-    final replyRow = find.byKey(const ValueKey('reply'));
-    await tester.ensureVisible(replyRow);
+    // 返信の (…) → 詳細 / アクションリスト化(削除は SNS のボタンには無い)。
+    await tester.tap(find.byKey(const ValueKey('actionbar.tile.menu.reply')));
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(of: replyRow, matching: find.byTooltip('アクションの操作')));
+    expect(find.text('アクションの詳細'), findsOneWidget);
+    expect(find.text('削除'), findsNothing);
+    await tester.tap(find.text('アクションリスト化'));
     await tester.pumpAndSettle();
-    expect(find.text('詳細'), findsOneWidget);
-    expect(find.text('削除(非表示)'), findsOneWidget);
-    await tester.tap(find.text('置き換え'));
+    await tester.enterText(find.byKey(const ValueKey('actionbar.bundle.name')), '返信まわり');
+    await tester.tap(find.text('作成'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(ValueKey('actionbar.plugin.${pluginActionId('t.act', 'copy')}')));
+    var cfg = c.read(actionBarConfigProvider(accountKey));
+    expect(cfg.lists.length, 1);
+    expect(cfg.lists.single.memberIds, ['reply']);
+    expect(cfg.order.first, ActionBarConfig.listKey(cfg.lists.single.id));
+    final listKey = ActionBarConfig.listKey(cfg.lists.single.id);
+    // リノートのタイルをバンドルの上に落とす → バンドルに入り、編集 FOW が開く。
+    final renote = find.byKey(const ValueKey('actionbar.tile.renote'));
+    await tester.ensureVisible(renote);
     await tester.pumpAndSettle();
-    final cfg = c.read(actionBarConfigProvider(fakeSession().account.key));
-    expect(cfg.hidden, contains('reply'));
-    expect(cfg.order.first, pluginActionId('t.act', 'copy'));
-    // リノートの … → 削除(非表示)。
-    await tester.ensureVisible(find.byKey(const ValueKey('renote')));
+    var g = await tester.startGesture(tester.getCenter(renote));
+    await tester.pump(const Duration(milliseconds: 400));
+    await g.moveTo(tester.getCenter(find.byKey(ValueKey('actionbar.tile.$listKey'))));
+    await tester.pump(const Duration(milliseconds: 50));
+    await g.up();
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(of: find.byKey(const ValueKey('renote')), matching: find.byTooltip('アクションの操作')));
+    cfg = c.read(actionBarConfigProvider(accountKey));
+    expect(cfg.lists.single.memberIds, ['reply', 'renote']);
+    expect(find.text('バンドルを編集'), findsOneWidget);
+    expect(find.byKey(const ValueKey('actionbar.bundle.member.renote')), findsOneWidget);
+    // メンバーを外す → バーに戻る。
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('actionbar.bundle.member.renote')), matching: find.byTooltip('バンドルから外す')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('削除(非表示)'));
+    cfg = c.read(actionBarConfigProvider(accountKey));
+    expect(cfg.lists.single.memberIds, ['reply']);
+    expect(cfg.order, contains('renote'));
+    await tester.tap(find.text('閉じる').last);
     await tester.pumpAndSettle();
-    expect(c.read(actionBarConfigProvider(fakeSession().account.key)).hidden, containsAll(['reply', 'renote']));
+    // 隙間に落として並び替え: 末尾の隙間へリノート。
+    await tester.ensureVisible(find.byKey(const ValueKey('actionbar.tile.renote')));
+    await tester.pumpAndSettle();
+    final entriesBefore = c.read(actionBarConfigProvider(accountKey)).order;
+    g = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('actionbar.tile.renote'))));
+    await tester.pump(const Duration(milliseconds: 400));
+    final lastGap = find.byKey(ValueKey('actionbar.gap.${entriesBefore.length}'));
+    await g.moveTo(tester.getCenter(lastGap));
+    await tester.pump(const Duration(milliseconds: 50));
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(c.read(actionBarConfigProvider(accountKey)).order.last, 'renote');
+    // プラグインボタンの (…) → 削除 = スロット設定で無効。
+    await tester.ensureVisible(find.byKey(ValueKey('actionbar.tile.menu.$copyId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('actionbar.tile.menu.$copyId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('削除'));
+    await tester.pumpAndSettle();
+    expect(c.read(slotActionSettingsProvider(accountKey)).isEnabled(copyId), isFalse);
+    expect(find.byKey(ValueKey('actionbar.tile.$copyId')), findsNothing);
   });
 }

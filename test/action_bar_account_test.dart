@@ -19,15 +19,15 @@ void main() {
   const bskyAcc = AccountId(kind: SnsKind.bluesky, instance: 'bsky.social', handle: 'alice.bsky.social');
   Post post(String id, AccountId acc, String body) => Post(id: id, account: acc, author: UserSummary(id: 'u-$id', account: acc, displayName: '誰か'), createdAt: DateTime(2026, 9, 1), body: body);
 
-  testWidgets('別アカウントの投稿のバーは、そのアカウントの構成(非表示)とアクションで出る', (tester) async {
+  testWidgets('別アカウントの投稿のバーは、そのアカウントの構成(並び順)とアクションで出る', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     final bsky = AccountSession(account: bskyAcc, pluginId: 'test.bsky', token: 't', createdAt: DateTime(2026, 9, 1), displayName: 'アリス');
-    // Bluesky アカウントの構成: 返信を非表示。共通キーには何も無い。
+    // Bluesky アカウントの構成: リノートを先頭に(非表示は廃止 D-208)。共通キーには何も無い。
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson(), bsky.toJson()], 'current': fakeSession().account.key}),
-      '${ActionBarConfigStore.storageKey}.${bskyAcc.key}': jsonEncode(const ActionBarConfig(hidden: {'reply'}).toJson()),
+      '${ActionBarConfigStore.storageKey}.${bskyAcc.key}': jsonEncode(const ActionBarConfig(order: ['renote', 'reply']).toJson()),
     });
     final registry = PluginRegistry()
       ..register(FakeSnsPlugin(posts: (_) => [post('m1', misskeyAcc, 'みすきー')]))
@@ -51,13 +51,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50))); // 構成の復元(実 I/O 無し)
     await tester.pumpAndSettle();
-    expect(c.read(actionBarConfigProvider(bskyAcc.key)).hidden, contains('reply'));
-    expect(c.read(actionBarConfigProvider(misskeyAcc.key)).hidden, isEmpty);
-    // Misskey の投稿には返信、Bluesky の投稿には返信が無い(そのアカウントの構成)。
+    expect(c.read(actionBarConfigProvider(bskyAcc.key)).order, ['renote', 'reply']);
+    expect(c.read(actionBarConfigProvider(misskeyAcc.key)).order, isEmpty);
+    // Misskey の投稿は返信が先、Bluesky の投稿はリノートが先(そのアカウントの構成)。
     final rows = find.byType(PostRow);
-    expect(find.descendant(of: rows.first, matching: find.byTooltip('返信')), findsOneWidget);
-    expect(find.descendant(of: rows.last, matching: find.byTooltip('返信')), findsNothing);
-    expect(find.descendant(of: rows.last, matching: find.byTooltip('リノート')), findsOneWidget); // フェイクの宣言(同じ)
+    double x(Finder row, String tip) => tester.getCenter(find.descendant(of: row, matching: find.byTooltip(tip))).dx;
+    expect(x(rows.first, '返信'), lessThan(x(rows.first, 'リノート')));
+    expect(x(rows.last, 'リノート'), lessThan(x(rows.last, '返信')));
   });
 
   test('旧来の共通キーは初回の復元で引き継ぐ', () async {

@@ -13,6 +13,7 @@ import '../../app/router.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../plugins/slot_plugins.dart';
+import '../settings/settings_dsl.dart';
 import 'video_player.dart';
 import 'viewer_plugin_overlay.dart';
 
@@ -61,6 +62,35 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     if (mounted) setState(() {});
   });
 
+  /// 下付き FOW のぶんだけメディアの高さを詰める (D-207): FOW が出現 / 消失したときだけ測る(途中のサイズ変更は
+  /// 追わない)。FOW の合計が画面の 30% 以上なら追わず、ヘッダー付き(上)の FOW があるときは中央のまま。
+  double _fowInset = 0;
+  Set<String> _fowIds = const {};
+
+  void _onOverlays() {
+    final manager = _manager;
+    if (!mounted || manager == null) return;
+    final fows = [for (final e in manager.entries) if (e.fow != null) e];
+    final ids = {for (final e in fows) e.id};
+    if (ids.length == _fowIds.length && ids.containsAll(_fowIds)) return;
+    _fowIds = ids;
+    final host = MediaQuery.sizeOf(context).height;
+    var bottom = 0.0;
+    var total = 0.0;
+    var anyTop = false;
+    for (final e in fows) {
+      final h = e.fow!.heightFactor.value * host;
+      total += h;
+      if (e.fow!.attachTop) {
+        anyTop = true;
+      } else {
+        bottom += h;
+      }
+    }
+    final inset = (anyTop || total >= host * 0.3) ? 0.0 : bottom;
+    if ((inset - _fowInset).abs() > 0.5) setState(() => _fowInset = inset);
+  }
+
   /// 上に画面が積まれたら FOW を閉じ、戻ってきたら開き直す (D-205)。
   GoRouter? _router;
   bool _closedByNav = false;
@@ -88,6 +118,8 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     _spec.heightFactor.addListener(_syncBarrier);
     _router = ref.read(routerProvider);
     _router!.routerDelegate.addListener(_onRoute);
+    _manager = ref.read(overlayManagerProvider);
+    _manager!.addListener(_onOverlays);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _askOverlay(_page.value);
@@ -98,6 +130,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   @override
   void dispose() {
     _router?.routerDelegate.removeListener(_onRoute);
+    _manager?.removeListener(_onOverlays);
     _spec.heightFactor.removeListener(_syncBarrier);
     final manager = _manager;
     // 破棄中に他のウィジェットを更新しない: 次のフレームで FOW を閉じる(アプリごと破棄された後なら何もしない)。
@@ -145,6 +178,38 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     }
   }
 
+  /// 全画面表示プラグインのトグル (D-207): 登録済みの `viewer.overlay` プラグインを「…」の右に詰めて並べる。
+  /// ON = 塗り(アクセント)。状態は `slots.viewer` に保存。動画の再生中は出さない。
+  List<Widget> _pluginToggles() {
+    final all = ref.watch(slotPluginsForProvider(SlotIds.viewerOverlay));
+    if (all.isEmpty) return const [];
+    final i = _page.value;
+    final m = widget.post.media[i];
+    if (m.type == MediaType.video && (_sessions[i]?.playing ?? false)) return const [];
+    final enabled = {for (final p in ref.watch(viewerOverlayPluginsProvider)) p.id};
+    return [
+      for (final p in all) ...[
+        const SizedBox(width: 2),
+        _Circle(
+          child: RasqIconButton(
+            key: ValueKey('viewer.plugin.${p.id}'),
+            icon: enabled.contains(p.id) ? Icons.extension : Icons.extension_outlined,
+            color: enabled.contains(p.id) ? RasqColors.accent : Colors.white,
+            tooltip: p.manifest.name,
+            onPressed: () async {
+              final on = !enabled.contains(p.id);
+              await ref.read(settingsAreaProvider(viewerPluginsSettingsArea).notifier).set(viewerPluginEnabledKey(p.id), on);
+              if (!mounted) return;
+              // 有効にしたら、この画像をまだ渡していなければ渡す。無効は重ねを出さないだけ(トークンは残す)。
+              if (on) _askOverlay(_page.value);
+              setState(() {});
+            },
+          ),
+        ),
+      ],
+    ];
+  }
+
   /// PiP (D-204): ビューワーを閉じてインライン再生 FOW を同じ位置から開く。
   void _toPip() {
     final i = _page.value;
@@ -184,7 +249,11 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(children: [
-        GestureDetector(
+        AnimatedPadding(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.only(bottom: _fowInset),
+          child: GestureDetector(
           // タップ (D-203): 下側の FOW が消えていれば開き直す(開く手段が無くならないように)。出ていれば上のクロームの表示切替。
           // 動画の面のタップでは再生を止めない。
           onTap: () {
@@ -223,6 +292,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
             },
           ),
         ),
+        ),
         if (_chrome)
           SafeArea(
             child: Padding(
@@ -244,18 +314,14 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                         final m = post.media[_page.value];
                         await manager.showDropdown<String>(id: 'viewer.menu', anchor: rect, items: [
                           const RasqDropdownItem('リンクをコピー', 'copy'),
-                          if (m.type == MediaType.video) const RasqDropdownItem('オーバーレイに移動', 'pip'),
                           if (m.alt != null) const RasqDropdownItem('ALTを表示', 'alt'),
-                          // 全画面表示プラグインの編集 (D-205)。
-                          const RasqDropdownItem('全画面表示プラグイン', 'plugins'),
-                        ]).then((v) {
-                          if (v == 'pip') _toPip();
-                          if (v == 'plugins') _router?.push(Routes.viewerPlugins);
-                        });
+                        ]);
                       },
                     ),
                   ),
                 ),
+                // 「…」の右 (D-207): 全画面表示プラグインの有効 / 無効(詰めて並べる。動画の再生中は消える)と PiP。
+                ..._pluginToggles(),
                 // 最右 (D-204): PiP(インライン再生 FOW)へ。再生位置を引き継いでビューワーを閉じる。
                 if (post.media[_page.value].type == MediaType.video) ...[
                   const SizedBox(width: RasqSpacing.xs),

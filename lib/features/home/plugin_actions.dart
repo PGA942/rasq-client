@@ -141,7 +141,6 @@ List<String> actionTags(ActionDescriptor a) => [a.genreTag, a.id, a.label, ...(_
   final order = [...config.order];
   final placedInOrder = order.toSet();
   for (final p in enabled) {
-    if (config.hidden.contains(p.id)) continue;
     // 既に構成に入っている(ユーザーが並べ替えた / リストに入れた)ならそのまま。
     if (placedInOrder.contains(p.id) || lists.any((l) => l.memberIds.contains(p.id))) continue;
     final m = bestMatch(p.decl.tags, snsActions);

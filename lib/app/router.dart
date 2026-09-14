@@ -17,7 +17,6 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
-import '../features/media/viewer_plugins_screen.dart';
 import '../features/login/bluesky_login_screen.dart';
 import '../features/login/mixi2_login_screen.dart';
 import '../features/plugins/media_editor_screen.dart';
@@ -69,8 +68,6 @@ abstract final class Routes {
   /// プロフィールのアイコン / バナーの全画面表示 (D-177)。
   static const imageViewer = '/viewer/image';
 
-  /// 全画面表示プラグインの編集 (D-205)。
-  static const viewerPlugins = '/viewer/plugins';
   static const mediaEditor = '/media-editor';
   static const mediaEditorPro = '/media-editor/pro';
   static const lists = '/lists';
@@ -241,7 +238,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               return CustomTransitionPage(child: MediaViewerScreen(post: x.post, initialIndex: x.index), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child));
             },
           ),
-          GoRoute(path: Routes.viewerPlugins, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ViewerPluginsScreen()),
           GoRoute(
             path: Routes.imageViewer,
             parentNavigatorKey: _appNavigatorKey,

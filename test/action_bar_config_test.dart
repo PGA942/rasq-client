@@ -14,10 +14,10 @@ void main() {
     expect(entries.whereType<SingleActionEntry>().map((e) => e.action.id), ['reply', 'renote', 'reaction', 'favorite']);
   });
 
-  test('並び替え + 非表示', () {
+  test('並び替え(非表示は廃止 D-208: 保存済みの hidden は無視される)', () {
     const config = ActionBarConfig(order: ['reaction', 'reply'], hidden: {'favorite'});
     final ids = [for (final e in config.apply(actions)) (e as SingleActionEntry).action.id];
-    expect(ids, ['reaction', 'reply', 'renote']); // order 先頭 → 残りは登録順、favorite は消える
+    expect(ids, ['reaction', 'reply', 'renote', 'favorite']); // order 先頭 → 残りは登録順、favorite も残る
   });
 
   test('リスト束ね: メンバーはバーから消え、リストが 1 枠になる', () {
