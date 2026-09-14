@@ -30,10 +30,10 @@ class RaiMascot3dController extends ChangeNotifier {
   /// 空間の中の位置(モデルの中心、D-197)。描画は毎フレーム読む。
   RaiVec3 world = const RaiVec3(0, 0, -10);
 
-  /// ロール(奥行き軸まわりの傾き、ラジアン、D-218: チャットの背景でゆっくり旋回)。描画ループが
-  /// [rollSpeed](rad/s)で進める(Flutter 側のティッカーを使わない: テストの pumpAndSettle が止まらない)。
-  double roll = 0;
-  double rollSpeed = 0;
+  /// 旋回(ヨー = 縦軸まわり、ラジアン、D-218 → D-219: チャットの背景でゆっくり回る)。描画ループが
+  /// [spinSpeed](rad/s)で進めて [yaw] に足す(Flutter 側のティッカーを使わない: テストの pumpAndSettle が止まらない)。
+  double spin = 0;
+  double spinSpeed = 0;
 
   /// 1 回だけ再生するクリップ (D-218: 失敗時の accident など)。終わったら待機に戻る。
   String? oneShot;
@@ -307,11 +307,10 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
         try {
           final r = _root;
           if (r == null) return;
-          r.rotation.y = _ctrl.yaw;
-          if (_ctrl.rollSpeed != 0) {
-            _ctrl.roll = (_ctrl.roll + dt * _ctrl.rollSpeed) % (2 * math.pi);
+          if (_ctrl.spinSpeed != 0) {
+            _ctrl.spin = (_ctrl.spin + dt * _ctrl.spinSpeed) % (2 * math.pi);
           }
-          r.rotation.z = _ctrl.roll;
+          r.rotation.y = _ctrl.yaw + _ctrl.spin;
           if (proj != null) {
             final w = _ctrl.world;
             r.position.setValues(w.x, w.y, w.z);

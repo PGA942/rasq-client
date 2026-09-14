@@ -112,6 +112,7 @@ class _RaiBarHost extends ConsumerWidget {
         onClose: () => hideRai(ref),
         onModelTap: () => showRaiModelsFow(ref, context),
         onHistoryToggle: n.toggleHistory,
+        onAskMore: n.cancelInstruction,
         onSuggest: n.suggest,
         modelLabel: ref.watch(raiLlmProvider).spec.codename,
         historyMaxHeight: screen.height * 0.45,
@@ -154,7 +155,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
   static const mascot = raiPointSize;
   late final AnimationController _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
 
-  /// チャットの背景 (D-218): 枠の中でロール方向にゆっくり旋回(速さは 3D 側の描画ループが進める)。
+  /// チャットの背景 (D-218 → D-219): 枠の中でヨー方向(縦軸まわり)にゆっくり旋回(速さは 3D 側の描画ループが進める)。
   bool _inPlace = false;
   bool _holdingAnswer = false;
   bool _lastBusy = false;
@@ -442,21 +443,21 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     }
     final localTarget = s.target == null ? null : _toLocal(s.target!);
     _syncBusy(s.busy);
-    // チャットの背景 (D-215 → D-218): RAi ホームのアシスタントでは枠の中でロール方向にゆっくり旋回する。
+    // チャットの背景 (D-215 → D-219): RAi ホームのアシスタントでは枠の中でヨー方向にゆっくり旋回する。
     // 考えている / 文字が流れているあいだは薄く(0.15)、速めに回る。返事が出たら 0.35 に戻る。
     // リンク / タイルが出た行が最新なら腕を上げる。失敗の返事は 5% で accident。
     final inPlace = assistantHome;
     if (inPlace != _inPlace) {
       _inPlace = inPlace;
       if (!inPlace) {
-        _ctrl3d.roll = 0;
-        _ctrl3d.rollSpeed = 0;
+        _ctrl3d.spin = 0;
+        _ctrl3d.spinSpeed = 0;
       }
     }
     if (inPlace) {
       final streaming = s.busy;
-      // 1 周 24 秒、考えているあいだは 6 秒。
-      _ctrl3d.rollSpeed = 2 * math.pi / (streaming ? 6 : 24);
+      // 1 周 24 秒、考えているあいだは 6 秒(ヨー方向)。
+      _ctrl3d.spinSpeed = 2 * math.pi / (streaming ? 6 : 24);
       final local = _toLocal(slot);
       _standbyWorld = proj.worldAt(local.center, local.height / 1.25);
       _ctrl3d.opacity = streaming ? 0.12 : 0.28;

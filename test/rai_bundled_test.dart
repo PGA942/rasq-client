@@ -6,10 +6,10 @@ import 'package:rasq_client/features/rai/rai_llm.dart';
 
 /// 同梱モデル (D-216): アセットの名前、flutter_assets の場所、gzip の伸長。
 void main() {
-  test('ローカルモデルは 3 つ(Qwen3 1.7B / Agents-A1 4B / Qwen3 0.6B)で、同梱アセット名は <fileName>.gz', () {
-    expect(raiModelSpecs.map((m) => m.id), ['qwen3-1.7b-q4km', 'agents-a1-4b-q4km', 'qwen3-0.6b-q4km']);
+  test('ローカルモデルは 3 つ(Qwen3.5 2B / Agents-A1 4B / Qwen3.5 0.8B)で、同梱アセット名は <fileName>.gz', () {
+    expect(raiModelSpecs.map((m) => m.id), ['qwen3.5-2b-q4km', 'agents-a1-4b-q4km', 'qwen3.5-0.8b-q4km']);
     expect(raiModelSpecs.every((m) => m.engine == RaiEngine.gguf), isTrue);
-    expect(raiBundledAsset(raiModelSpecs.first), 'assets/rai_models/Qwen3-1.7B-Q4_K_M.gguf.gz');
+    expect(raiBundledAsset(raiModelSpecs.first), 'assets/rai_models/Qwen3.5-2B-Q4_K_M.gguf.gz');
   });
 
   test('flutter_assets の場所: macOS は App.framework の中、Linux / Windows は data/、モバイルは null', () {

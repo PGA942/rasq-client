@@ -248,7 +248,7 @@ class RaiStatusRing extends StatelessWidget {
 BuildContext? raiBarContext;
 
 class RaiBar extends StatefulWidget {
-  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320, this.onSuggest, this.modelLabel});
+  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320, this.onSuggest, this.modelLabel, this.onAskMore});
   final RaiState state;
 
   /// チップの表記(選択中モデルのコードネーム、D-198)。null なら既定。
@@ -259,6 +259,9 @@ class RaiBar extends StatefulWidget {
 
   /// 履歴ボタン (D-187): ウィジェットが上に広がって発言の履歴(コピー付き)が出る。
   final VoidCallback? onHistoryToggle;
+
+  /// 「さらに尋ねる」(D-219): 進行中の案内を打ち切って入力に戻る。案内中だけ出す。
+  final VoidCallback? onAskMore;
   final double historyMaxHeight;
 
   /// モデルチップのタップ → モデル FOW (D-183)。
@@ -381,6 +384,14 @@ class _RaiBarState extends State<RaiBar> {
                   ),
                 ]),
               ),
+              // 案内の途中 (D-219): 上段に「さらに尋ねる」= 案内を打ち切って入力へ(入力欄は Expanded なので詰まる)。
+              if (widget.onAskMore != null && s.mode == RaiMode.instruction && (s.steps.isNotEmpty || s.target != null))
+                TextButton(
+                  key: const ValueKey('rai.askMore'),
+                  onPressed: widget.onAskMore,
+                  style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8), tapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: VisualDensity.compact),
+                  child: Text('さらに尋ねる', style: RasqTypography.bodySmall.copyWith(color: RasqColors.link, fontWeight: FontWeight.w600)),
+                ),
               RasqIconButton(key: const ValueKey('rai.history'), icon: s.historyOpen ? Icons.expand_more : Icons.history, size: 20, tooltip: s.historyOpen ? '履歴を閉じる' : '発言の履歴', onPressed: widget.onHistoryToggle),
               RasqIconButton(icon: Icons.close, size: 18, tooltip: 'RAi を閉じる', onPressed: widget.onClose),
             ]),

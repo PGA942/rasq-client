@@ -10,7 +10,7 @@ import '../settings/settings_dsl.dart';
 /// 端末内 LLM(ワイヤーフレームの「Agents-A1-4B」)の配線 (D-181)。
 ///
 /// - 実体は [raiLlmProvider] で差し替える([FlutterGemmaRaiLlm] = LiteRT-LM、テストは偽物)。
-/// - モデルは [raiModelSpecs] から選ぶ(D-216: Qwen3 1.7B(既定)/ Agents-A1 4B / Qwen3 0.6B の GGUF だけ。同梱して展開は選択制)。
+/// - モデルは [raiModelSpecs] から選ぶ(D-216 → D-219: Qwen3.5 2B(既定)/ Agents-A1 4B / Qwen3.5 0.8B の GGUF だけ。同梱して展開は選択制)。
 /// - フォールアップ(セルフホストのクラウド)は [RaiFallUp] — サーバー側が無いので必ず失敗を返す。
 enum RaiLlmPhase { notInstalled, downloading, ready, loading, generating, unavailable }
 
@@ -72,14 +72,15 @@ class RaiModelSpec {
 /// Qwen3 系 / Agents-A1(Qwen3-4B 系)は読める)。
 const raiModelSpecs = <RaiModelSpec>[
   // D-216: ローカルはこの 3 つだけ(アプリに圧縮して同梱、展開は選択制。無ければ HF からダウンロード)。
+  // D-219: Qwen3 → Qwen3.5 系(Agents-A1 と同じ qwen3_5 アーキテクチャ。llama.cpp b10182 で読める)。
   RaiModelSpec(
-    id: 'qwen3-1.7b-q4km',
-    label: 'Qwen3 1.7B (Q4_K_M)',
-    fileName: 'Qwen3-1.7B-Q4_K_M.gguf',
-    url: 'https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf',
-    sizeMb: 1107,
+    id: 'qwen3.5-2b-q4km',
+    label: 'Qwen3.5 2B (Q4_K_M)',
+    fileName: 'Qwen3.5-2B-Q4_K_M.gguf',
+    url: 'https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf',
+    sizeMb: 1281,
     family: 'qwen3',
-    params: 1.7,
+    params: 2,
   ),
   RaiModelSpec(
     id: 'agents-a1-4b-q4km',
@@ -91,13 +92,13 @@ const raiModelSpecs = <RaiModelSpec>[
     params: 4,
   ),
   RaiModelSpec(
-    id: 'qwen3-0.6b-q4km',
-    label: 'Qwen3 0.6B (Q4_K_M)',
-    fileName: 'Qwen3-0.6B-Q4_K_M.gguf',
-    url: 'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf',
-    sizeMb: 397,
+    id: 'qwen3.5-0.8b-q4km',
+    label: 'Qwen3.5 0.8B (Q4_K_M)',
+    fileName: 'Qwen3.5-0.8B-Q4_K_M.gguf',
+    url: 'https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf',
+    sizeMb: 533,
     family: 'qwen3',
-    params: 0.6,
+    params: 0.8,
   ),
 ];
 

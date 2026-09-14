@@ -50,6 +50,7 @@ class RaiState {
     this.historyOpen = false,
     this.sidebarOpen = false,
     this.conversationId,
+    this.stopAt,
     this.hits = const [],
     this.situation,
     this.proposal,
@@ -95,6 +96,12 @@ class RaiState {
   /// いまの発言の履歴が属する保存済みの会話(「新しい会話」で区切る)。null = まだ保存していない。
   final String? conversationId;
 
+  /// 案内を何手順目まで進めるか (D-219: LLM が階層へ到達するために呼ぶ途中中断)。null = 最後まで。
+  final int? stopAt;
+
+  /// 進められる手順の数(stopAt で打ち切る)。
+  int get stepLimit => stopAt == null ? steps.length : math.min(steps.length, stopAt!);
+
   /// 直近のリファレンス検索の当たり(id とスコア、D-189)。評価 / 表示用。
   final List<({String id, double score})> hits;
 
@@ -114,7 +121,7 @@ class RaiState {
   String? get currentLine => lines.isEmpty ? (bubble == null ? null : '…') : lines[lineIndex.clamp(0, lines.length - 1)];
   bool get hasMoreLines => lineIndex + 1 < lines.length;
 
-  bool get hasNext => steps.isNotEmpty && stepIndex + 1 < steps.length;
+  bool get hasNext => steps.isNotEmpty && stepIndex + 1 < stepLimit;
 
   RaiState copyWith({
     RaiMode? mode,
@@ -134,6 +141,7 @@ class RaiState {
     bool? historyOpen,
     bool? sidebarOpen,
     Object? conversationId = _keep,
+    Object? stopAt = _keep,
     List<({String id, double score})>? hits,
     Object? situation = _keep,
     Object? proposal = _keep,
@@ -158,6 +166,7 @@ class RaiState {
         historyOpen: historyOpen ?? this.historyOpen,
         sidebarOpen: sidebarOpen ?? this.sidebarOpen,
         conversationId: identical(conversationId, _keep) ? this.conversationId : conversationId as String?,
+        stopAt: identical(stopAt, _keep) ? this.stopAt : stopAt as int?,
         hits: hits ?? this.hits,
         situation: identical(situation, _keep) ? this.situation : situation as String?,
         proposal: identical(proposal, _keep) ? this.proposal : proposal as String?,
@@ -187,6 +196,21 @@ class RaiUtterance {
   List<Uri> get links => raiLinksIn(text);
 }
 
+/// LLM が書く案内の呼び出し (D-219): `[[instruction:<opId>|<stopAt>]]`(stopAt は省略可)。
+class RaiToolCall {
+  const RaiToolCall({required this.op, this.stopAt});
+  final String op;
+  final int? stopAt;
+}
+
+final _toolCallRe = RegExp(r'\[\[\s*instruction\s*:\s*([\w.\-]+)\s*(?:\|\s*(\d+)\s*)?\]\]');
+
+List<RaiToolCall> raiToolCallsIn(String text) => [
+      for (final m in _toolCallRe.allMatches(text)) RaiToolCall(op: m.group(1)!, stopAt: m.group(2) == null ? null : int.tryParse(m.group(2)!)),
+    ];
+
+String raiStripToolCalls(String text) => text.replaceAll(_toolCallRe, '').replaceAll(RegExp(r'[ \t]+\n'), '\n').trim();
+
 /// 本文の http(s) URL を拾う(末尾の句読点 / 括弧は落とす)。
 List<Uri> raiLinksIn(String text) {
   final out = <Uri>[];
@@ -209,14 +233,7 @@ class RaiController extends Notifier<RaiState> {
   }
 
   /// チャットの提案タイルから案内へ (D-218): インストラクションに切り替え(RAi ページは閉じる)、その操作を進める。
-  Future<void> guide(String opId) async {
-    final index = await _index();
-    final op = index?.operation(opId);
-    if (index == null || op == null) return;
-    setMode(RaiMode.instruction);
-    await WidgetsBinding.instance.endOfFrame;
-    await _runOperation(index, op);
-  }
+  Future<void> guide(String opId) => runInstruction(opId);
 
   @override
   RaiState build() => const RaiState();
@@ -262,7 +279,7 @@ class RaiController extends Notifier<RaiState> {
   /// モード切り替え: 進行中の手順は捨てる。アシスタントは中央固定。
   void setMode(RaiMode mode) {
     if (mode == state.mode) return;
-    state = state.copyWith(mode: mode, bubble: null, target: null, steps: const [], stepIndex: 0, choices: const []);
+    state = state.copyWith(mode: mode, bubble: null, target: null, steps: const [], stepIndex: 0, choices: const [], stopAt: null);
     // RAi ページはモードに合わせて自動で開閉 (D-200): アシスタント → 開く、インストラクション → 閉じる。
     final router = ref.read(routerProvider);
     final cur = visibleLocationOf(router.routerDelegate.currentConfiguration);
@@ -275,7 +292,25 @@ class RaiController extends Notifier<RaiState> {
 
   void dismissBubble() {
     _answerSeq++; // 生成中なら捨てる
-    state = state.copyWith(bubble: null, target: null, steps: const [], stepIndex: 0, lineIndex: 0, busy: false, proposal: null, choices: const []);
+    state = state.copyWith(bubble: null, target: null, steps: const [], stepIndex: 0, lineIndex: 0, busy: false, proposal: null, choices: const [], stopAt: null);
+  }
+
+  /// 「さらに尋ねる」(D-219): 進行中の案内を打ち切って、入力に戻る(入力欄にフォーカス)。
+  void cancelInstruction() {
+    dismissBubble();
+    state = state.copyWith(asking: true, expanded: true, open: true);
+  }
+
+  /// LLM / チャットのタイルから案内を呼ぶ (D-219): インストラクションに切り替え、[stopAt] 手順目で止める
+  /// (階層への到達に使う。null = 最後まで)。
+  Future<void> runInstruction(String opId, {int? stopAt}) async {
+    final index = await _index();
+    final op = index?.operation(opId);
+    if (index == null || op == null) return;
+    setMode(RaiMode.instruction);
+    await WidgetsBinding.instance.endOfFrame;
+    state = state.copyWith(stopAt: stopAt == null || stopAt <= 0 ? null : stopAt);
+    await _runOperation(index, op);
   }
 
   /// 「質問する」 (D-189): 操作リファレンスをハイブリッド検索(ベクトル + キーワード)して手順を出す。
@@ -303,7 +338,7 @@ class RaiController extends Notifier<RaiState> {
       // アプリについての会話 = 操作リファレンスに当たった (D-214)。
       if (hits.isNotEmpty) stats.bump(assistantApp: true);
       if (hits.isEmpty) {
-        await _answerWithLlm(q, system: _assistantSystem);
+        await _answerWithLlm(q, system: _assistantSystemWithTools());
         return;
       }
       if (_ambiguous(hits)) {
@@ -414,6 +449,13 @@ class RaiController extends Notifier<RaiState> {
   }
 
   static const _assistantSystem = 'あなたは SNS ブラウザ RASQ のアシスタント「RAi」です。日本語で、短く(3 文以内)答えてください。';
+
+  /// 案内の呼び出し (D-219): 候補の操作 id を渡し、本文に `[[instruction:<id>|<何手順目まで>]]` と書かせる。
+  String _assistantSystemWithTools() {
+    final ctx = referenceContext(withIds: true);
+    if (ctx.isEmpty) return _assistantSystem;
+    return '$_assistantSystem\n案内できる操作(id: 見出し: 手順):\n${ctx.join('\n')}\n操作の案内を始めるときは本文の末尾に [[instruction:<id>|<何手順目まで>]] と書く(途中の画面で止めたいときは手順数を指定、最後までなら数字を省く)。';
+  }
   static const _instructionSystem = 'あなたは SNS ブラウザ RASQ の操作を教える「RAi」です。日本語で、操作手順を短く(3 文以内)答えてください。';
 
   /// 端末内 LLM で答える(トークンを吹き出しへ流す)。だめ / 返事が空ならフォールアップ(推論サーバー、D-216:
@@ -437,8 +479,7 @@ class RaiController extends Notifier<RaiState> {
     }
     if (seq != _answerSeq) return;
     if (failure == null) {
-      state = state.copyWith(busy: false, bubble: text.trim());
-      _record(state.bubble!);
+      await _finishAnswer(text, seq);
       return;
     }
     final e = failure;
@@ -447,8 +488,7 @@ class RaiController extends Notifier<RaiState> {
     try {
       final reply = await ref.read(raiFallUpProvider).chat(q, system: system, context: referenceContext());
       if (seq != _answerSeq) return;
-      state = state.copyWith(busy: false, bubble: reply);
-      _record(reply);
+      await _finishAnswer(reply, seq);
     } on RaiLlmException catch (f) {
       if (seq != _answerSeq) return;
       final lines = ['端末内モデル: ${e.message}', 'フォールアップ: ${f.message}', ?fallbackText];
@@ -457,8 +497,27 @@ class RaiController extends Notifier<RaiState> {
     }
   }
 
+  /// 返事を確定する (D-219): 案内の呼び出しタグを本文から外して記録し、あれば案内を始める(途中中断つき)。
+  Future<void> _finishAnswer(String raw, int seq) async {
+    final calls = raiToolCallsIn(raw);
+    var text = raiStripToolCalls(raw).trim();
+    final index = ref.read(raiReferenceProvider).value;
+    final call = calls.where((c) => index?.operation(c.op) != null).firstOrNull;
+    if (call != null) {
+      final op = index!.operation(call.op)!;
+      final note = call.stopAt == null ? '案内「${op.index}」を始めます' : '案内「${op.index}」を ${call.stopAt} 手順目まで進めます';
+      text = text.isEmpty ? note : '$text\n($note)';
+    }
+    state = state.copyWith(busy: false, bubble: text.isEmpty ? '(返事がありませんでした)' : text);
+    _record(state.bubble!);
+    if (call != null) {
+      ref.read(raiStatsProvider.notifier).bump(instructionAsked: true);
+      await runInstruction(call.op, stopAt: call.stopAt);
+    }
+  }
+
   /// 推論サーバーへ添える文脈 (D-216): 直近の検索で近かった操作(上位 3 つ)の見出しと手順。
-  List<String> referenceContext({int max = 3}) {
+  List<String> referenceContext({int max = 3, bool withIds = false}) {
     final index = ref.read(raiReferenceProvider).value;
     if (index == null) return const [];
     final out = <String>[];
@@ -466,7 +525,7 @@ class RaiController extends Notifier<RaiState> {
       final op = index.operation(h.id);
       if (op == null) continue;
       final steps = index.expand(op);
-      out.add('- ${op.index}: ${[for (final s in steps) s.text].join(' → ')}');
+      out.add('- ${withIds ? '${op.id}: ' : ''}${op.index}: ${[for (final s in steps) s.text].join(' → ')}');
     }
     return out;
   }
