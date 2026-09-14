@@ -19,7 +19,9 @@ import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/post/share_fow.dart';
 import 'package:rasq_client/features/compose/drafts_fow.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
+import 'package:rasq_client/features/rai/rai_providers.dart';
 import 'package:rasq_client/features/rai/rai_reference_providers.dart';
+import 'package:rasq_client/features/rai/rai_stats.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -490,6 +492,55 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_assistant_proposal.png'));
   });
+  testWidgets('viewer header with plugin toggle in the action bar, right-aligned (D-214)', (tester) async {
+    debugNetworkImageHttpClientProvider = () => _PngHttpClient(png);
+    fakes['qr'] = () => FakeSlotRuntime(
+          manifest: {'id': 't.qr', 'name': 'QR コード検出', 'version': '0.1.0', 'kind': 'action', 'description': '枠を出す', 'slots': ['viewer.overlay'], 'permissions': ['fow.widget']},
+          handler: (self, fn, args) => null,
+        );
+    final author = UserSummary(id: 'u1', account: acc, displayName: 'テスター', avatarUrl: Uri.parse('https://example.test/avatar.png'));
+    final withImages = Post(
+      id: 'pi',
+      account: acc,
+      author: author,
+      createdAt: DateTime(2026, 9, 14),
+      body: '会場の写真',
+      media: [MediaItem(id: 'a', type: MediaType.image, url: Uri.parse('https://example.test/a.png')), MediaItem(id: 'b', type: MediaType.image, url: Uri.parse('https://example.test/b.png'))],
+    );
+    final c = await pump(tester, posts: [withImages]);
+    await c.read(slotPluginsProvider.notifier).register('fake:qr', bytes: Uint8List.fromList('qr'.codeUnits));
+    await tester.pumpAndSettle();
+    c.read(routerProvider).push(Routes.viewer, extra: (post: withImages, index: 0));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump(const Duration(milliseconds: 100));
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_viewer_header.png'));
+    // デスクトップ幅でも右端に寄る。
+    tester.view.physicalSize = const Size(1400, 800);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_viewer_header_wide.png'));
+    debugNetworkImageHttpClientProvider = null;
+  });
+
+  testWidgets('RAi sidebar (D-214)', (tester) async {
+    final c = await pump(tester);
+    RasqSidebar.open(c.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
+    await tester.pumpAndSettle();
+    // 実績と会話が少しある状態。
+    c.read(raiStatsProvider.notifier).bump(instructionAsked: true, completed: true);
+    c.read(raiStatsProvider.notifier).bump(instructionAsked: true, repeated: true);
+    c.read(raiConversationsProvider.notifier).put(RaiConversation(id: 'c1', startedAt: DateTime(2026, 9, 13, 21, 40), title: '投稿したい', log: [RaiUtterance(text: 'ホームの「投稿」を押します', at: DateTime(2026, 9, 13, 21, 40), query: '投稿したい')]));
+    c.read(raiConversationsProvider.notifier).put(RaiConversation(id: 'c2', startedAt: DateTime(2026, 9, 14, 9, 5), title: 'Bluesky でログインしたい', log: [RaiUtterance(text: 'ログイン画面を開きます', at: DateTime(2026, 9, 14, 9, 5), query: 'Bluesky でログインしたい')]));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200))); // アイコン(asset)の復号
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.toggle')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_sidebar.png'));
+  });
+
 }
 
 /// プレビュー用: どの URL にも同じ PNG を 200 で返す HttpClient(`debugNetworkImageHttpClientProvider`)。
@@ -527,4 +578,5 @@ class _PngResponse extends Stream<List<int>> implements HttpClientResponse {
       Stream<List<int>>.value(bytes).listen(onData, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   @override
   dynamic noSuchMethod(Invocation invocation) => null;
+
 }

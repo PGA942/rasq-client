@@ -61,6 +61,8 @@ class _RaiBarHost extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(raiProvider);
     final n = ref.read(raiProvider.notifier);
+    // RAi ホームのサイドバー (D-214) が開いている間は入力タイルを隠す。
+    if (s.sidebarOpen) return const SizedBox.shrink(key: ValueKey('rai.bar.hidden'));
     final llm = ref.watch(raiLlmStatusProvider).value ?? ref.read(raiLlmProvider).current;
     // フッター(タブ)の上に置く。キーボードが出ていればその上。
     final insets = MediaQuery.viewInsetsOf(context).bottom;
@@ -349,6 +351,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
 
   /// アシスタントのスタンバイ (D-199): RAi ホームの枠(グローバル矩形)に大きく薄く出す。
   RaiVec3? _standbyWorld;
+  Rect? _loggedStandby;
 
   /// LLM の推論中はアニメーションを止める(クリップも移動も)。終わったら続きから。
   void _syncBusy(bool busy) {
@@ -398,6 +401,12 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
       _ctrl3d.idle(RaiArm.none);
       _pos = null; // 次の移動はスタンバイの位置から
       _onFrame();
+      // 実機で中央の RAi が出ないときの手がかり (D-214): 枠 → 空間の位置 / 見かけの大きさ。
+      if (kDebugMode && _loggedStandby != slot) {
+        _loggedStandby = slot;
+        final p = proj.project(_standbyWorld!);
+        debugPrint('RAi standby: slot=$slot local=$local world=${_standbyWorld!} px=${p.px} size=${p.sizePx.toStringAsFixed(0)} three=$three');
+      }
       return layer(const []);
     }
     final localTarget = s.target == null ? null : _toLocal(s.target!);
@@ -474,12 +483,29 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
 }
 
 /// RAi ホームのスタンバイ枠(グローバル矩形、D-199)。ホームが描画のたびに報告し、離れると null。
+///
+/// 報告元 [owner] ごとに覚えておき、状態は**最後に報告した生きている枠** (D-214: RAi ホームが積み直された
+/// とき、古い画面の後始末で新しい枠が消えて中央の RAi が出なくなっていた)。
 class RaiStandbySlot extends Notifier<Rect?> {
+  final _rects = <Object, Rect>{};
+
   @override
   Rect? build() => null;
-  void set(Rect? r) {
+
+  void set(Rect? r, {Object? owner}) {
     if (!ref.mounted) return; // 画面の破棄後(テストの終了時など)は無視
-    state = r;
+    if (r == null) {
+      if (owner == null) {
+        _rects.clear();
+      } else {
+        _rects.remove(owner);
+      }
+    } else {
+      final key = owner ?? this;
+      _rects.remove(key);
+      _rects[key] = r;
+    }
+    state = _rects.values.lastOrNull;
   }
 }
 

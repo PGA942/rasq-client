@@ -20,6 +20,7 @@ import 'package:rasq_client/features/rai/rai_providers.dart';
 import 'package:rasq_client/features/rai/rai_reference.dart';
 import 'package:rasq_client/features/rai/rai_reference_providers.dart';
 import 'package:rasq_client/features/rai/rai_spline.dart';
+import 'package:rasq_client/features/rai/rai_stats.dart';
 import 'package:rasq_client/features/rai/rai_widgets.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
@@ -542,4 +543,103 @@ void main() {
     expect(tester.widget<TextField>(find.byKey(const ValueKey('rai.input'))).focusNode?.hasFocus, isTrue); // 入力欄にフォーカス
     expect(find.text(RaiMode.instruction.modelName), findsOneWidget);
   });
+
+  testWidgets('RAi サイドバー (D-214): ← の右のアイコン → 入力タイルが消えてサイドバー(新しい会話 / 会話の履歴 / アチーブメント / マクロ)、実績は質問で進む、会話は区切って保存 / 開き直せる', (tester) async {
+    final c = await pump(tester);
+    RasqSidebar.open(c.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RaiHomeScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.input')), findsOneWidget);
+    // 中央のスタンバイ枠(2D では薄い RAi)は報告されている。
+    expect(c.read(raiStandbySlotProvider), isNotNull);
+    // アイコン → サイドバー。バーは消える。
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.toggle')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).sidebarOpen, isTrue);
+    expect(find.byKey(const ValueKey('rai.input')), findsNothing);
+    expect(find.byKey(const ValueKey('rai.sidebar.new')), findsOneWidget);
+    expect(find.text('会話の履歴'), findsOneWidget);
+    expect(find.text('アチーブメント'), findsOneWidget);
+    expect(find.text('マクロ'), findsOneWidget);
+    expect(find.textContaining('まだありません'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.sidebar.ach.ask1')), findsOneWidget);
+    expect(find.text('0 / 1'), findsWidgets); // まだ 0
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.sidebar.macro.new')), 200, scrollable: find.descendant(of: find.byKey(const ValueKey('rai.sidebar')), matching: find.byType(Scrollable)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rai.sidebar.macro.0')), findsOneWidget); // ダミー(無効)
+    expect(tester.widget<OutlinedButton>(find.byKey(const ValueKey('rai.sidebar.macro.new'))).onPressed, isNull);
+    // 外側のタップで閉じる → バーが戻る。
+    await tester.tapAt(Offset(tester.getSize(find.byType(RasqApp)).width - 10, 400));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).sidebarOpen, isFalse);
+    expect(find.byKey(const ValueKey('rai.input')), findsOneWidget);
+    // インストラクションを聞く → 実績「はじめての質問」が進む(端末内に保存)。
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿したい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiStatsProvider).instructionsAsked, 1);
+    expect(c.read(raiStatsProvider).repeatedAsks, 0);
+    expect(await c.read(sessionStorageProvider).read(RaiStatsStore.storageKey), contains('"instructionsAsked":1'));
+    expect(c.read(raiProvider).log, isNotEmpty);
+    // 同じ質問をもう一度 → 「何度も聞いた」。
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '投稿したい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiStatsProvider).instructionsAsked, 2);
+    expect(c.read(raiStatsProvider).repeatedAsks, 1);
+    // アシスタントへ戻す → RAi ホームが開く (D-200)。サイドバーに「いまの会話」、実績は 1 / 1 で達成。
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RaiHomeScreen), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rai.sidebar.conv.current')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('rai.sidebar.ach.ask1')), matching: find.text('1 / 1')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('rai.sidebar.ach.ask1')), matching: find.byIcon(Icons.emoji_events)), findsOneWidget); // 達成
+    // 新しい会話 → いまの履歴が保存され、履歴は空、サイドバーは閉じる。
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.new')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).sidebarOpen, isFalse);
+    expect(c.read(raiProvider).log, isEmpty);
+    final saved = c.read(raiConversationsProvider);
+    expect(saved.length, 1);
+    expect(saved.single.title, '投稿したい');
+    expect(await c.read(sessionStorageProvider).read(RaiConversationsStore.storageKey), contains('投稿したい'));
+    // 保存した会話を開く → 発言の履歴として戻り、履歴が開く。
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rai.sidebar.conv.current')), findsNothing);
+    await tester.tap(find.byKey(ValueKey('rai.sidebar.conv.${saved.single.id}')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).sidebarOpen, isFalse);
+    expect(c.read(raiProvider).log.length, saved.single.log.length);
+    expect(c.read(raiProvider).conversationId, saved.single.id);
+    expect(find.byKey(const ValueKey('rai.history.list')), findsOneWidget);
+    // 削除。
+    await tester.tap(find.byKey(const ValueKey('rai.history')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rai.sidebar.conv.current')), findsOneWidget); // 開いた会話 = いまの会話
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.new')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.toggle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('rai.sidebar.conv.delete.${saved.single.id}')));
+    await tester.pumpAndSettle();
+    expect(c.read(raiConversationsProvider), isEmpty);
+    // 画面を離れるとサイドバーは閉じた扱い(バーが隠れたままにならない)。
+    await tester.tap(find.byKey(const ValueKey('rai.sidebar.close')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('戻る'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RaiHomeScreen), findsNothing);
+    expect(c.read(raiStandbySlotProvider), isNull);
+    expect(find.byKey(const ValueKey('rai.input')), findsOneWidget);
+  });
+
 }

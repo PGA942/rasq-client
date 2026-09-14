@@ -57,9 +57,10 @@ Future<void> showActionBarEditSheet(WidgetRef ref, {int column = 0}) async {
 
 /// プラグインボタン / アクションを検索する FOW (D-176 → D-210: 「ノードを検索」に近い作り)。
 /// 登録済みプラグインの `post.action` 宣言と SNS のアクションから選ぶ。戻りは選んだ id(キャンセルは null)。
-Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグインを検索', Set<String> exclude = const {}, bool pluginsOnly = false, String? ownerId}) async {
+Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグインを検索', Set<String> exclude = const {}, bool pluginsOnly = false, String? ownerId, String configKey = ''}) async {
   final manager = ref.read(overlayManagerProvider);
-  final plugins = ref.read(pluginActionsProvider);
+  // 全画面バーの構成 (D-214) なら全画面表示プラグイン(QR コード検出など)のトグルも候補。
+  final plugins = ref.read(pluginActionsForProvider(configKey));
   final sns = pluginsOnly ? const <ActionDescriptor>[] : (ref.read(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[]);
   final query = TextEditingController();
   var genre = 'すべて';
@@ -77,7 +78,14 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
             for (final a in sns)
               if (!exclude.contains(a.id)) (id: a.id, label: a.label, subtitle: 'SNS のアクション · ${a.genreTag}', genre: a.genreTag, icon: PostRow.iconFor(a.icon, Icons.circle_outlined)),
             for (final p in plugins)
-              if (!exclude.contains(p.id)) (id: p.id, label: p.decl.label, subtitle: '${p.plugin.manifest.name} · タグ: ${p.decl.tags.join(' / ')}', genre: p.decl.tags.isEmpty ? 'Plugin' : p.decl.tags.first, icon: PostRow.iconFor(p.decl.icon, Icons.extension_outlined)),
+              if (!exclude.contains(p.id))
+                (
+                  id: p.id,
+                  label: p.decl.label,
+                  subtitle: isViewerToggleActionId(p.id) ? '${p.plugin.manifest.name} · 全画面表示プラグイン(ON / OFF のボタン)' : '${p.plugin.manifest.name} · タグ: ${p.decl.tags.join(' / ')}',
+                  genre: p.decl.tags.isEmpty ? 'Plugin' : p.decl.tags.first,
+                  icon: PostRow.iconFor(p.decl.icon, Icons.extension_outlined),
+                ),
           ];
           final genres = ['すべて', ...{for (final r in rows) r.genre}];
           final hits = [
@@ -103,7 +111,7 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
               child: hits.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.all(RasqSpacing.page),
-                      child: Text(rows.isEmpty ? 'post.action を宣言したプラグインがありません(ストアから追加)' : '見つかりません', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                      child: Text(rows.isEmpty ? (configKey.startsWith('viewer:') ? '全画面表示プラグイン / post.action を宣言したプラグインがありません(ストアから追加)' : 'post.action を宣言したプラグインがありません(ストアから追加)') : '見つかりません', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
                     )
                   : ListView(children: [
                       for (final r in hits)
@@ -269,7 +277,7 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
           final list = config.lists.where((l) => l.id == listId).firstOrNull;
           if (list == null) return const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: Text('解除しました'));
           final session = ref.watch(currentSnsSessionProvider);
-          final plugins = ref.watch(pluginActionsProvider);
+          final plugins = ref.watch(pluginActionsForProvider(configKey));
           final accountKey = ref.watch(currentAccountProvider)?.key ?? '';
           final settings = ref.watch(slotActionSettingsProvider(accountKey));
           final merged = mergePluginActions(config: config, snsActions: session?.actions ?? const [], plugins: plugins, settings: settings);
@@ -379,7 +387,7 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
                 TextButton.icon(
                   key: const ValueKey('actionbar.bundle.search'),
                   onPressed: () async {
-                    final id = await showActionSearchFow(ref, exclude: list.memberIds.toSet(), ownerId: actionBarBundleFowId);
+                    final id = await showActionSearchFow(ref, exclude: list.memberIds.toSet(), ownerId: actionBarBundleFowId, configKey: configKey);
                     if (id == null) return;
                     if (isPluginActionId(id)) await ref.read(settingsAreaProvider(slotSettingsArea(accountKey)).notifier).set('enabled', {...settings.enabled, id: true});
                     final order = [...config.order]..remove(id);
@@ -543,7 +551,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
     final store = ref.read(actionBarConfigProvider(configKey).notifier);
     final manager = ref.read(overlayManagerProvider);
     final snsActions = session?.actions ?? const <ActionDescriptor>[];
-    final plugins = ref.watch(pluginActionsProvider);
+    final plugins = ref.watch(pluginActionsForProvider(configKey));
     final settings = ref.watch(slotActionSettingsProvider(accountKey));
     final settingsStore = ref.read(settingsAreaProvider(slotSettingsArea(accountKey)).notifier);
     // 表示中のバーと同じ合成(プラグインボタン込み)。
@@ -762,7 +770,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
             size: 28,
             tooltip: 'プラグインを検索',
             onPressed: () async {
-              final id = await showActionSearchFow(ref, pluginsOnly: true, ownerId: actionBarEditFowId);
+              final id = await showActionSearchFow(ref, pluginsOnly: true, ownerId: actionBarEditFowId, configKey: configKey);
               if (id == null) return;
               await setEnabled(id, true);
             },
