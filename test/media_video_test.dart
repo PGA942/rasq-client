@@ -84,6 +84,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RasqVideoView), findsOneWidget);
     expect(find.byKey(const ValueKey('video.controls')), findsOneWidget);
+    // 全画面アクションバー (D-212): ヘッダーの「…」の左に並ぶ。下の FOW は投稿アクションバー。
+    expect(find.byKey(const ValueKey('viewer.action.reply')), findsOneWidget);
+    expect(tester.getCenter(find.byKey(const ValueKey('viewer.action.reply'))).dx, lessThan(tester.getCenter(find.descendant(of: find.byType(MediaViewerScreen), matching: find.byTooltip('メニュー'))).dx));
     // FOW が消えても、面のタップで開き直せる (D-203)。面のタップは再生を止めない(トグルのジェスチャーは無い)。
     expect(find.byKey(const ValueKey('viewer.video.toggle')), findsNothing);
     c.read(overlayManagerProvider).close(viewerFowId);

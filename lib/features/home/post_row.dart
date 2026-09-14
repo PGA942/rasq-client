@@ -26,6 +26,7 @@ import '../vc/astell_links.dart';
 import '../settings/safety.dart';
 import 'action_bar_config.dart';
 import 'action_bundle_fow.dart';
+import 'material_icons.dart';
 import 'post_duplicates.dart';
 
 /// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
@@ -492,8 +493,18 @@ IconData bundleIconOf(ActionListDef list, List<ActionDescriptor> members) {
     final m = members.where((a) => a.id == id).firstOrNull;
     return m == null ? Icons.apps : PostRow.iconFor(m.icon, Icons.apps);
   }
-  if (spec.startsWith('material:')) return PostRow.iconFor(spec.substring('material:'.length), Icons.apps);
+  if (spec.startsWith('material:')) {
+    final name = spec.substring('material:'.length);
+    return materialIconByName(name) ?? PostRow.iconFor(name, Icons.apps);
+  }
   return Icons.apps;
+}
+
+/// バンドルのアイコンの描画 (D-212): 写真(`file:`)は画像、それ以外はアイコン。
+Widget bundleIconWidget(ActionListDef list, List<ActionDescriptor> members, {required double size, Color? color}) {
+  final url = bundleIconUrlOf(list);
+  if (url != null) return rasqIconImage(url, size: size, fallback: bundleIconOf(list, members));
+  return Icon(bundleIconOf(list, members), size: size, color: color);
 }
 
 /// `file:<path>`(写真)のときの画像。

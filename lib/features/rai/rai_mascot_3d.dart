@@ -228,7 +228,10 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
             if (m.metalness > 0.4) m.metalness = 0.4;
             if (m.roughness < 0.45) m.roughness = 0.45;
             // 頭の前面 (D-211): 表情のテクスチャを貼る相手。
-            if (o.name == 'Screen' || m.name == 'Screen') _screen = m;
+            if (o.name == 'Screen' || m.name == 'Screen') {
+              _screen = m;
+              _remapScreenUv(o);
+            }
           }
         }
       });
@@ -313,6 +316,41 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       debugPrint('RAi 3D: clip $name failed: $e');
     }
     _currentName = name;
+  }
+
+  /// `Screen` の UV を貼り直す (D-212): 元の UV はアトラス風で前面が一部にしか当たらず、表情が細い縦線にしか
+  /// 見えなかった。前面(z が最大の面)の頂点は位置から u = 左→右、v = 上→下(glTF は左上原点、flipY=false)に
+  /// 割り当て、側面 / 背面は枠の黒い隅 (0.01, 0.01) へ。
+  void _remapScreenUv(three.Mesh mesh) {
+    try {
+      final g = mesh.geometry;
+      if (g == null) return;
+      final pos = g.getAttributeFromString('position');
+      final uv = g.getAttributeFromString('uv');
+      if (pos == null || uv == null) return;
+      var minX = double.infinity, maxX = -double.infinity, minY = double.infinity, maxY = -double.infinity, maxZ = -double.infinity;
+      for (var i = 0; i < pos.count; i++) {
+        final x = pos.getX(i)!.toDouble(), y = pos.getY(i)!.toDouble(), z = pos.getZ(i)!.toDouble();
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        if (z > maxZ) maxZ = z;
+      }
+      final w = (maxX - minX).abs() < 1e-6 ? 1.0 : maxX - minX;
+      final h = (maxY - minY).abs() < 1e-6 ? 1.0 : maxY - minY;
+      for (var i = 0; i < pos.count; i++) {
+        final z = pos.getZ(i)!.toDouble();
+        if ((maxZ - z).abs() < 1e-4) {
+          uv.setXY(i, ((pos.getX(i)!.toDouble() - minX) / w).clamp(0.0, 1.0), ((maxY - pos.getY(i)!.toDouble()) / h).clamp(0.0, 1.0));
+        } else {
+          uv.setXY(i, 0.01, 0.01);
+        }
+      }
+      uv.needsUpdate = true;
+    } catch (e) {
+      debugPrint('RAi 3D: screen uv remap failed: $e');
+    }
   }
 
   /// 表情の枠を貼る (D-211)。テクスチャは枠ごとに 1 回だけ作る。

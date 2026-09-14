@@ -181,6 +181,48 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     }
   }
 
+  /// 全画面アクションバー (D-212): ヘッダーの「…」の左に、`viewer:<accountKey>` の構成で詰めて並べる。
+  /// バンドルはアイコンから出る FOW。
+  List<Widget> _viewerActionBar() {
+    final post = widget.post;
+    final session = ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
+    final actions = session?.actions ?? const <ActionDescriptor>[];
+    if (actions.isEmpty) return const [];
+    final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
+    final merged = mergePluginActions(
+      config: ref.watch(actionBarConfigProvider(ActionBarConfigStore.viewerKey(post.account.key))),
+      snsActions: actions,
+      plugins: ref.watch(pluginActionsProvider),
+      settings: ref.watch(slotActionSettingsProvider(post.account.key)),
+    );
+    final entries = merged.config.apply(merged.actions);
+    return [
+      for (final e in entries) ...[
+        const SizedBox(width: 2),
+        switch (e) {
+          SingleActionEntry() => _Circle(child: RasqIconButton(key: ValueKey('viewer.action.${e.action.id}'), icon: PostRow.iconFor(e.action.icon, Icons.circle_outlined), color: Colors.white, tooltip: e.action.label, onPressed: () => notifier.perform(post, e.action).catchError((_) {}))),
+          ActionListEntry() => Builder(
+              builder: (bctx) => _Circle(
+                child: Tooltip(
+                  message: e.list.name,
+                  child: InkResponse(
+                    key: ValueKey('viewer.action.list:${e.list.id}'),
+                    radius: 22,
+                    onTap: () {
+                      final box = bctx.findRenderObject() as RenderBox;
+                      showActionBundleMenuFow(ref, anchor: box.localToGlobal(Offset.zero) & box.size, entry: e, onPick: (a) => notifier.perform(post, a).catchError((_) {}));
+                    },
+                    child: SizedBox(width: 40, height: 40, child: Center(child: bundleIconWidget(e.list, e.members, size: 22, color: Colors.white))),
+                  ),
+                ),
+              ),
+            ),
+        },
+      ],
+      const SizedBox(width: RasqSpacing.xs),
+    ];
+  }
+
   /// 全画面表示プラグインのトグル (D-207): 登録済みの `viewer.overlay` プラグインを「…」の右に詰めて並べる。
   /// ON = 塗り(アクセント)。状態は `slots.viewer` に保存。動画の再生中は出さない。
   List<Widget> _pluginToggles() {
@@ -302,9 +344,9 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
               padding: const EdgeInsets.all(RasqSpacing.sm),
               child: Row(children: [
                 _Circle(child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: '戻る')),
-                const Spacer(),
-                if (post.media.length > 1) Text('${_page.value + 1} / ${post.media.length}', style: const TextStyle(color: Colors.white70)),
-                const Spacer(),
+                Expanded(child: Center(child: post.media.length > 1 ? Text('${_page.value + 1} / ${post.media.length}', style: const TextStyle(color: Colors.white70)) : const SizedBox.shrink())),
+                // 「…」の左 (D-212): 全画面アクションバー(`viewer:<accountKey>` の構成、詰めて並べる。狭ければ横スクロール)。
+                Flexible(child: SingleChildScrollView(scrollDirection: Axis.horizontal, reverse: true, child: Row(mainAxisSize: MainAxisSize.min, children: _viewerActionBar()))),
                 Builder(
                   builder: (ctx) => _Circle(
                     child: RasqIconButton(
@@ -378,9 +420,9 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
     final session = ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
-    // 全画面アクションバーの構成 (D-210): 投稿のバーとは別に `viewer:<accountKey>` で持つ(並び / バンドル)。
+    // 下側の FOW のバーは投稿アクションバーそのまま (D-212: 全画面アクションバーはヘッダーの「…」の左)。
     final merged = mergePluginActions(
-      config: ref.watch(actionBarConfigProvider(ActionBarConfigStore.viewerKey(post.account.key))),
+      config: ref.watch(actionBarConfigProvider(post.account.key)),
       snsActions: actions,
       plugins: ref.watch(pluginActionsProvider),
       settings: ref.watch(slotActionSettingsProvider(post.account.key)),

@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -12,6 +15,7 @@ import '../../app/providers.dart';
 import '../settings/settings_dsl.dart';
 import '../store/store_providers.dart';
 import 'action_bar_config.dart';
+import 'material_icons.dart';
 import 'plugin_actions.dart';
 import 'post_row.dart';
 
@@ -176,6 +180,74 @@ RrlNode actionDetailRrl({required ActionDescriptor action, required String plugi
 
 // ── バンドルの設定 FOW ──────────────────────────────────────────────
 
+/// バンドルの写真アイコンの置き場 (D-212): 選んだ画像はここへコピーして `file:<path>` で持つ(image_picker の一時
+/// ファイルは消えるため)。テストでは差し替える。
+final bundleIconDirProvider = Provider<Future<Directory> Function()>((ref) => () async {
+      final base = await getApplicationSupportDirectory();
+      final dir = Directory('${base.path}/action_icons');
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      return dir;
+    });
+
+/// 写真の選択 (D-212): 既定は image_picker のギャラリー。テストでは差し替える。
+final bundlePhotoPickerProvider = Provider<Future<XFile?> Function()>((ref) => () => ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 256, maxHeight: 256));
+
+/// Material Icon のピッカー FOW (D-212、絵文字ピッカーの流用): 検索 + グリッド。戻りは名前(キャンセルは null)。
+const materialIconPickerFowId = 'actionbar.icon.picker';
+
+Future<String?> showMaterialIconPickerFow(WidgetRef ref, {String? initial, String? ownerId}) async {
+  final manager = ref.read(overlayManagerProvider);
+  final query = TextEditingController();
+  try {
+    return await manager.showFow<String>(
+      id: materialIconPickerFowId,
+      ownerId: ownerId,
+      spec: FowSpec(title: 'Material Icon', cancelText: 'キャンセル', initialHeightFactor: 0.7, maxWidth: 600),
+      semanticsLabel: 'Material Icon',
+      builder: (ctx, _) => StatefulBuilder(
+        builder: (ctx, setLocal) {
+          final scheme = Theme.of(ctx).colorScheme;
+          final q = query.text.trim().toLowerCase();
+          final names = [for (final n in materialIconsByName.keys) if (q.isEmpty || n.contains(q)) n];
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xs),
+              child: RasqInput(key: const ValueKey('actionbar.icon.search'), controller: query, hintText: 'アイコン名で検索(例: star, bolt)', onChanged: (_) => setLocal(() {})),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 76, mainAxisSpacing: 4, crossAxisSpacing: 4, childAspectRatio: 0.85),
+                itemCount: names.length,
+                itemBuilder: (_, i) {
+                  final n = names[i];
+                  final selected = n == initial;
+                  return InkWell(
+                    key: ValueKey('actionbar.icon.$n'),
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => manager.close(materialIconPickerFowId, result: n),
+                    child: Container(
+                      decoration: BoxDecoration(color: selected ? scheme.primaryContainer : null, borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.all(4),
+                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(materialIconsByName[n], size: 26, color: scheme.onSurface),
+                        const SizedBox(height: 2),
+                        Text(n, style: RasqTypography.caption.copyWith(fontSize: 9, color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                      ]),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ]);
+        },
+      ),
+    );
+  } finally {
+    query.dispose();
+  }
+}
+
 /// バンドルの設定 FOW (D-210): リスト名とアイコン(バンドル内のアイコンの使い回し / Material Icon / 写真)、
 /// メンバーのプラグインタイル(アイコン + プラグイン名 + 説明 2 行、ホバーで出るハンドルと … ドロップダウン)、
 /// 「プラグインを検索」で足す、「リストの解除」。
@@ -185,7 +257,6 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
   final initial = ref.read(actionBarConfigProvider(configKey)).lists.where((l) => l.id == listId).firstOrNull;
   if (initial == null) return;
   final name = TextEditingController(text: initial.name);
-  final material = TextEditingController(text: initial.icon != null && initial.icon!.startsWith('material:') ? initial.icon!.substring('material:'.length) : '');
   try {
     await manager.showFow<void>(
       id: actionBarBundleFowId,
@@ -227,25 +298,40 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
                     selected: list.icon == 'member:${a.id}',
                     onSelected: (_) => update(list.copyWith(icon: 'member:${a.id}')),
                   ),
-                // 写真。
+                // Material Icon(ピッカー、D-212)。
+                ChoiceChip(
+                  key: const ValueKey('actionbar.bundle.icon.material'),
+                  avatar: Icon(list.icon?.startsWith('material:') ?? false ? bundleIconOf(list, members) : Icons.apps_outlined, size: 16),
+                  label: Text(list.icon?.startsWith('material:') ?? false ? list.icon!.substring('material:'.length) : 'Material Icon'),
+                  selected: list.icon?.startsWith('material:') ?? false,
+                  onSelected: (_) async {
+                    final n = await showMaterialIconPickerFow(ref, initial: list.icon?.startsWith('material:') ?? false ? list.icon!.substring('material:'.length) : null, ownerId: actionBarBundleFowId);
+                    if (n != null) update(list.copyWith(icon: 'material:$n'));
+                  },
+                ),
+                // 写真 (D-212): アプリの保存領域へコピーしてから `file:` で持つ。
                 ChoiceChip(
                   key: const ValueKey('actionbar.bundle.icon.photo'),
-                  avatar: const Icon(Icons.photo_outlined, size: 16),
+                  avatar: list.icon?.startsWith('file:') ?? false ? SizedBox(width: 18, height: 18, child: bundleIconWidget(list, members, size: 18)) : const Icon(Icons.photo_outlined, size: 16),
                   label: const Text('写真'),
                   selected: list.icon?.startsWith('file:') ?? false,
                   onSelected: (_) async {
-                    final x = await (pickPhoto ?? () => ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 128, maxHeight: 128))();
-                    if (x != null) update(list.copyWith(icon: 'file:${x.path}'));
+                    final Future<XFile?> Function() pick = pickPhoto ?? ref.read(bundlePhotoPickerProvider);
+                    final x = await pick();
+                    if (x == null) return;
+                    try {
+                      final dir = await ref.read(bundleIconDirProvider)();
+                      final f = File('${dir.path}/$listId.png');
+                      await f.writeAsBytes(await x.readAsBytes(), flush: true);
+                      update(list.copyWith(icon: 'file:${f.path}'));
+                      // 同じパスの画像を差し替えたときにキャッシュが残らないように。
+                      imageCache.clear();
+                    } catch (e) {
+                      manager.showAlert(id: 'actionbar.icon.error', title: '写真を使えません', message: '$e', confirmText: 'OK');
+                    }
                   },
                 ),
-              ]),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
-              child: Row(children: [
-                Expanded(child: RasqInput(key: const ValueKey('actionbar.bundle.icon.material'), controller: material, hintText: 'Material Icon の名前(例: star, bolt)', onChanged: (v) => update(v.trim().isEmpty ? list.copyWith(clearIcon: list.icon?.startsWith('material:') ?? false) : list.copyWith(icon: 'material:${v.trim()}')))),
-                const SizedBox(width: RasqSpacing.sm),
-                Icon(bundleIconOf(list, members), size: 24, color: scheme.onSurface),
+                SizedBox(width: 32, height: 32, child: Center(child: bundleIconWidget(list, members, size: 26, color: scheme.onSurface))),
               ]),
             ),
             const RasqSectionHeader(title: 'メンバー'),
@@ -322,7 +408,6 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
     );
   } finally {
     name.dispose();
-    material.dispose();
   }
 }
 
@@ -572,16 +657,19 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
 
     Widget tile(ActionBarEntry e) {
       final key = keyOf(e);
-      final (IconData icon, String label) = switch (e) {
-        SingleActionEntry() => (PostRow.iconFor(e.action.icon, Icons.circle_outlined), e.action.label),
-        ActionListEntry() => (bundleIconOf(e.list, e.members), e.list.name),
+      final label = switch (e) {
+        SingleActionEntry() => e.action.label,
+        ActionListEntry() => e.list.name,
       };
       final face = Container(
         width: actionBarTileSize,
         height: actionBarTileSize,
         decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
         alignment: Alignment.center,
-        child: Icon(icon, size: 28, color: scheme.onSurface),
+        child: switch (e) {
+          SingleActionEntry() => Icon(PostRow.iconFor(e.action.icon, Icons.circle_outlined), size: 28, color: scheme.onSurface),
+          ActionListEntry() => bundleIconWidget(e.list, e.members, size: 28, color: scheme.onSurface),
+        },
       );
       return DragTarget<String>(
         onWillAcceptWithDetails: (d) => d.data != key && d.data.startsWith('$_sfx:'),

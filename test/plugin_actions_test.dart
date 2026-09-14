@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
@@ -27,6 +29,10 @@ void main() {
   late Map<String, FakeSlotRuntime Function()> fakes;
   setUp(() => fakes = {});
 
+  late Directory iconDir;
+  setUp(() => iconDir = Directory.systemTemp.createTempSync('rasq_icons'));
+  tearDown(() => iconDir.deleteSync(recursive: true));
+
   Future<ProviderContainer> pump(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
@@ -36,7 +42,18 @@ void main() {
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => [post('p1', 'こんにちは')]));
     await tester.pumpWidget(ProviderScope(
-      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes))],
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes)),
+        // 写真アイコン (D-212): 置き場は一時ディレクトリ、選択は 2×1 の PNG。
+        bundleIconDirProvider.overrideWithValue(() async => iconDir),
+        bundlePhotoPickerProvider.overrideWithValue(() async {
+          final f = File('${iconDir.path}/picked.png');
+          f.writeAsBytesSync(base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8AAQv8BD/kD/YURmXYAAAAASUVORK5CYII='));
+          return XFile(f.path);
+        }),
+      ],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
@@ -168,6 +185,26 @@ void main() {
     cfg = c.read(actionBarConfigProvider(accountKey));
     expect(cfg.lists.single.name, '返信まわり');
     expect(cfg.lists.single.icon, 'member:reply');
+    // Material Icon のピッカー (D-212): 検索して選ぶ。
+    await tester.tap(find.byKey(const ValueKey('actionbar.bundle.icon.material')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('actionbar.icon.search')), 'star_border');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('actionbar.icon.star_border')));
+    await tester.pumpAndSettle();
+    expect(c.read(actionBarConfigProvider(accountKey)).lists.single.icon, 'material:star_border');
+    // 写真 (D-212): アプリの保存領域へコピーされ、file: で持つ。
+    // ファイル I/O は本物の非同期(FakeAsync では進まない)。
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const ValueKey('actionbar.bundle.icon.photo')));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    final photoIcon = c.read(actionBarConfigProvider(accountKey)).lists.single.icon!;
+    expect(photoIcon, startsWith('file:${iconDir.path}'));
+    expect(File(photoIcon.substring('file:'.length)).existsSync(), isTrue);
+    await tester.tap(find.byKey(const ValueKey('actionbar.bundle.icon.member.reply')));
+    await tester.pumpAndSettle();
     // 「プラグインを検索」→ 本文をコピー をバンドルに足す(スロット設定も有効に)。
     await tester.tap(find.byKey(const ValueKey('actionbar.bundle.search')));
     await tester.pumpAndSettle();
