@@ -14,6 +14,7 @@ import '../home/action_bar_config.dart';
 import '../home/action_bundle_fow.dart';
 import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
+import '../post/post_menu.dart';
 import '../home/timeline_providers.dart';
 import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
@@ -342,36 +343,37 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(RasqSpacing.sm),
+              // ヘッダー (D-213): 上付き、全部同じ 40px の丸ボタン。左から 戻る / 枚数 / プラグインのトグル / 全画面
+              // アクションバー / PiP / 「…」(一番右)。
               child: Row(children: [
                 _Circle(child: RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, color: Colors.white, onPressed: () => Navigator.of(context).maybePop(), tooltip: '戻る')),
-                Expanded(child: Center(child: post.media.length > 1 ? Text('${_page.value + 1} / ${post.media.length}', style: const TextStyle(color: Colors.white70)) : const SizedBox.shrink())),
-                // 「…」の左 (D-212): 全画面アクションバー(`viewer:<accountKey>` の構成、詰めて並べる。狭ければ横スクロール)。
+                Expanded(child: post.media.length > 1 ? Text('${_page.value + 1} / ${post.media.length}', style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center) : const SizedBox.shrink()),
+                // 全画面表示プラグインの有効 / 無効 (D-207)。動画の再生中は消える。
+                ..._pluginToggles(),
+                // 全画面アクションバー (D-212): `viewer:<accountKey>` の構成。狭ければ横スクロール。
                 Flexible(child: SingleChildScrollView(scrollDirection: Axis.horizontal, reverse: true, child: Row(mainAxisSize: MainAxisSize.min, children: _viewerActionBar()))),
+                // PiP (D-204): 動画のとき。
+                if (post.media[_page.value].type == MediaType.video) ...[
+                  const SizedBox(width: 2),
+                  _Circle(child: RasqIconButton(key: const ValueKey('viewer.pip'), icon: Icons.picture_in_picture_alt_outlined, color: Colors.white, tooltip: 'PiP で再生', onPressed: _toPip)),
+                ],
+                const SizedBox(width: 2),
+                // 「…」(D-213): 投稿のメニューに準拠(詳細の代わりに「画像を保存」)。
                 Builder(
                   builder: (ctx) => _Circle(
                     child: RasqIconButton(
                       icon: Icons.more_horiz,
                       color: Colors.white,
                       tooltip: 'メニュー',
-                      onPressed: () async {
+                      onPressed: () {
                         final box = ctx.findRenderObject() as RenderBox;
                         final rect = box.localToGlobal(Offset.zero) & box.size;
                         final m = post.media[_page.value];
-                        await manager.showDropdown<String>(id: 'viewer.menu', anchor: rect, items: [
-                          const RasqDropdownItem('リンクをコピー', 'copy'),
-                          if (m.alt != null) const RasqDropdownItem('ALTを表示', 'alt'),
-                        ]);
+                        showPostMenu(ctx, ref, post, rect, media: m);
                       },
                     ),
                   ),
                 ),
-                // 「…」の右 (D-207): 全画面表示プラグインの有効 / 無効(詰めて並べる。動画の再生中は消える)と PiP。
-                ..._pluginToggles(),
-                // 最右 (D-204): PiP(インライン再生 FOW)へ。再生位置を引き継いでビューワーを閉じる。
-                if (post.media[_page.value].type == MediaType.video) ...[
-                  const SizedBox(width: RasqSpacing.xs),
-                  _Circle(child: RasqIconButton(key: const ValueKey('viewer.pip'), icon: Icons.picture_in_picture_alt_outlined, color: Colors.white, tooltip: 'PiP で再生', onPressed: _toPip)),
-                ],
               ]),
             ),
           ),

@@ -1,3 +1,6 @@
+import 'dart:ui' as ui;
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/features/rai/rai_face.dart';
 import 'package:rasq_client/features/rai/rai_mascot_3d.dart';
@@ -26,6 +29,27 @@ void main() {
     expect(sheet.frames.length, RaiFace.count);
     // PNG シグネチャ。
     expect(sheet.frames.first.sublist(0, 4), [0x89, 0x50, 0x4E, 0x47]);
+  });
+
+  testWidgets('枠はシートの黒い枠から検出する(仮の絵でも固定の割合と数 px 以内で一致)', (tester) async {
+    late List<ui.Rect>? detected;
+    late int w, h;
+    await tester.runAsync(() async {
+      final png = (await rootBundle.load(RaiFaceSheet.asset)).buffer.asUint8List();
+      final codec = await ui.instantiateImageCodec(png);
+      final image = (await codec.getNextFrame()).image;
+      w = image.width;
+      h = image.height;
+      final rgba = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      detected = raiFaceDetectFrames(rgba!.buffer.asUint8List(), w, h);
+    });
+    expect(detected, isNotNull);
+    expect(detected!.length, 12);
+    for (var i = 0; i < RaiFace.count; i++) {
+      final fixed = raiFaceFrameRect(i, width: w.toDouble(), height: h.toDouble());
+      expect((detected![i].left - fixed.left).abs(), lessThan(4), reason: 'frame $i left');
+      expect((detected![i].top - fixed.top).abs(), lessThan(4), reason: 'frame $i top');
+    }
   });
 
   test('コントローラーの face は変わったときだけ通知する', () {

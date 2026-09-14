@@ -11,13 +11,17 @@ import '../../app/providers.dart';
 import '../clips/clip_picker.dart';
 import '../home/action_bar_edit_sheet.dart';
 import '../home/timeline_providers.dart';
+import '../media/image_saver.dart';
+import '../plugins/slot_plugins.dart';
 import '../../shell/third_column.dart';
 import 'share_fow.dart';
 
 /// 投稿コンテキストメニュー(右上の `…` のみで出現 — ワイヤーフレーム注釈).
 /// 自身: 詳細 / リンクをコピー / お気に入り / 削除. 他ユーザー: 詳細 / リンクをコピー /
 /// お気に入り / フォロー(解除) / ミュート / ブロック / 報告. (プラグイン別項目は M3 で登録制に)
-Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect anchor) async {
+/// 全画面表示 (D-213): [media] を渡すと投稿のメニューに準拠しつつ「詳細」を消して「画像を保存」を足す。
+/// 「リンクをコピー」は画像のリンク、「共有」の FOW は「内容をコピー」が「画像を保存」になる。
+Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect anchor, {MediaItem? media}) async {
   final manager = ref.read(overlayManagerProvider);
   final s = ref.read(currentSnsSessionProvider);
   final viewer = ref.read(currentAccountProvider);
@@ -29,7 +33,7 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   final fav = ref.read(actionStateProvider.notifier).of(post.key, 'favorite');
 
   final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
-    const RasqDropdownItem('詳細', 'detail'),
+    if (media == null) const RasqDropdownItem('詳細', 'detail') else const RasqDropdownItem('画像を保存', 'saveImage'),
     const RasqDropdownItem('リンクをコピー', 'copy'),
     const RasqDropdownItem('共有', 'share'),
     const RasqDropdownItem('アクションバーを編集', 'editActions'),
@@ -46,11 +50,13 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   switch (pick) {
     case 'detail':
       context.pushPost(post);
+    case 'saveImage':
+      if (media != null) await saveMediaImage(ref, media);
     case 'copy':
-      final url = post.url ?? Uri.https(post.author.account.instance, '/notes/${post.id}');
+      final url = media?.url ?? post.url ?? Uri.https(post.author.account.instance, '/notes/${post.id}');
       await Clipboard.setData(ClipboardData(text: url.toString()));
     case 'share':
-      await showPostShareFow(ref, post, column: fowColumnOf(context));
+      await showPostShareFow(ref, post, column: fowColumnOf(context), media: media);
     case 'editActions':
       await showActionBarEditSheet(ref);
     case 'favorite':
@@ -74,5 +80,16 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
         await s.deletePost(post.id);
         await ref.read(timelineProvider(TimelineKind.home).notifier).refresh();
       }
+  }
+}
+
+/// 画像を保存して結果をスナックバーに出す (D-213)。
+Future<void> saveMediaImage(WidgetRef ref, MediaItem media) async {
+  final messenger = ref.read(rootMessengerKeyProvider).currentState;
+  try {
+    final path = await ref.read(imageSaverProvider)(media);
+    messenger?.showSnackBar(SnackBar(content: Text('画像を保存しました: $path')));
+  } catch (e) {
+    messenger?.showSnackBar(SnackBar(content: Text('画像を保存できませんでした: $e')));
   }
 }
