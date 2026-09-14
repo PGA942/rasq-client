@@ -230,6 +230,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       model.traverse((o) {
         if (o is three.Mesh) {
           final m = o.material;
+          if (m != null) _materials.add(m);
           if (m is three.MeshStandardMaterial) {
             if (m.metalness > 0.4) m.metalness = 0.4;
             if (m.roughness < 0.45) m.roughness = 0.45;
@@ -259,6 +260,9 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       final root = three.Group()..add(model);
       _root = root;
       _three.scene.add(root);
+      // いまの見え方を材質へ (D-216)。
+      _shownOpacity = _ctrl.opacity;
+      _applyOpacity(_ctrl.opacity);
       if (proj == null) {
         _three.camera.position.setValues(0, 0.6, 3.2);
         _three.camera.lookAt(three.Vector3(0, 0.5, 0));
@@ -307,9 +311,30 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   /// コントローラーの状態 → クリップの切り替え(クロスフェード)。
   double _shownOpacity = 1;
 
+  /// 空間モードの見え方 (D-216): Flutter の `Opacity` でテクスチャを包むと、実機(macOS)では最初から半透明で
+  /// 出した RAi(ホームのスタンバイ)が一度も描かれなかった(一度不透明で描かれたあとは出る)。
+  /// 材質側で掛ける: 0 = モデルを非表示、1 未満 = 透明化。
+  final _materials = <three.Material>[];
+
+  void _applyOpacity(double v) {
+    final r = _root;
+    if (r == null) return;
+    try {
+      r.visible = v > 0.001;
+      for (final m in _materials) {
+        m.transparent = v < 0.999;
+        m.opacity = v.clamp(0.0, 1.0);
+        m.needsUpdate = true;
+      }
+    } catch (e) {
+      debugPrint('RAi 3D: opacity failed: $e');
+    }
+  }
+
   void _sync() {
-    if (widget.isScene && (_ctrl.opacity - _shownOpacity).abs() > 1e-6 && mounted) {
-      setState(() => _shownOpacity = _ctrl.opacity);
+    if (widget.isScene && (_ctrl.opacity - _shownOpacity).abs() > 1e-6) {
+      _shownOpacity = _ctrl.opacity;
+      _applyOpacity(_ctrl.opacity);
     }
     if (_ctrl.face != _shownFace) _applyFace(_ctrl.face);
     final mixer = _mixer;
@@ -418,19 +443,17 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       ]),
     );
     if (widget.isScene) {
+      // 見え方は材質側 (D-216): テクスチャは常にそのまま合成する(Opacity で包まない)。
       return SizedBox.expand(
-        child: Opacity(
-          opacity: _ready ? widget.opacity * _ctrl.opacity : 0,
-          // 描画ループごとに再描画を要求する(中身は描かない、D-215)。
-          child: CustomPaint(
-            foregroundPainter: _RepaintTick(_frame),
-            child: Stack(fit: StackFit.expand, children: [
-              if (outline != null && tex != null && _ready)
-                for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
-                  Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),
-              _three.build(),
-            ]),
-          ),
+        // 描画ループごとに再描画を要求する(中身は描かない、D-215)。
+        child: CustomPaint(
+          foregroundPainter: _RepaintTick(_frame),
+          child: Stack(fit: StackFit.expand, children: [
+            if (outline != null && tex != null && _ready)
+              for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
+                Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),
+            _three.build(),
+          ]),
         ),
       );
     }

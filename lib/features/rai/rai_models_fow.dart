@@ -6,6 +6,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import 'rai_embedding_model.dart';
 import 'rai_layout.dart';
+import '../settings/settings_dsl.dart';
 import 'rai_llm.dart';
 import 'rai_widgets.dart' show raiBarContext;
 
@@ -62,6 +63,7 @@ class RaiModelsBody extends ConsumerWidget {
       const RasqSectionHeader(title: '検索(リファレンスの埋め込み)', topMargin: RasqSpacing.md),
       _EmbeddingTile(ram: ram),
       const RasqSectionHeader(title: 'クラウド(フォールアップ先)', topMargin: RasqSpacing.md),
+      const _ServerTile(),
       for (final m in raiCloudModelSpecs) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
       const SizedBox(height: RasqSpacing.sm),
       Text('完遂率 = 操作の案内 / 返答が最後まで成立した割合の集計(35B 未満のモデルだけ集計、デモでは「-%」)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
@@ -128,7 +130,8 @@ class RaiModelsBody extends ConsumerWidget {
               if (!selected)
                 OutlinedButton(key: ValueKey('rai.model.use.${m.id}'), onPressed: st.phase == RaiLlmPhase.downloading ? null : () => guard(() => llm.select(m)), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: const Text('使う')),
               if (selected && (mine!.phase == RaiLlmPhase.notInstalled || mine.phase == RaiLlmPhase.unavailable))
-                FilledButton.icon(key: const ValueKey('rai.model.download'), onPressed: verdict == RaiRamVerdict.no ? null : () => guard(llm.install), icon: const Icon(Icons.download, size: 16), label: const Text('ダウンロード'), style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
+                // 同梱 (D-216) なら「展開」、無ければ HF から「ダウンロード」。
+                FilledButton.icon(key: const ValueKey('rai.model.download'), onPressed: verdict == RaiRamVerdict.no ? null : () => guard(llm.install), icon: Icon(mine.bundled ? Icons.unarchive_outlined : Icons.download, size: 16), label: Text(mine.bundled ? '展開(同梱)' : 'ダウンロード'), style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
               if (selected && (mine!.ready || mine.phase == RaiLlmPhase.loading))
                 OutlinedButton.icon(key: const ValueKey('rai.model.release'), onPressed: () => guard(llm.release), icon: const Icon(Icons.memory, size: 16), label: const Text('メモリを解放'), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
               if (selected && mine!.ready)
@@ -198,6 +201,58 @@ class _EmbeddingTile extends ConsumerWidget {
           if (st.ready || st.phase == RaiEmbeddingPhase.loading)
             OutlinedButton.icon(key: const ValueKey('rai.embed.delete'), onPressed: () => guard(model.uninstall), icon: const Icon(Icons.delete_outline, size: 16), label: const Text('削除'), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
         ]),
+      ]),
+    );
+  }
+}
+
+/// ローカル推論サーバー (D-216): OpenAI 互換の URL(…/v1)とモデル名。端末内モデルが失敗 / 無応答のとき、
+/// 質問と近かったリファレンスを添えて渡す。設定エリア `rai`。
+class _ServerTile extends ConsumerStatefulWidget {
+  const _ServerTile();
+  @override
+  ConsumerState<_ServerTile> createState() => _ServerTileState();
+}
+
+class _ServerTileState extends ConsumerState<_ServerTile> {
+  final _url = TextEditingController();
+  final _model = TextEditingController();
+  bool _seeded = false;
+
+  @override
+  void dispose() {
+    _url.dispose();
+    _model.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final v = ref.watch(settingsAreaProvider(raiSettingsArea)).value ?? const <String, Object?>{};
+    if (!_seeded) {
+      _seeded = true;
+      _url.text = '${v['serverUrl'] ?? ''}';
+      _model.text = '${v['serverModel'] ?? ''}';
+    }
+    final store = ref.read(settingsAreaProvider(raiSettingsArea).notifier);
+    final configured = _url.text.trim().isNotEmpty;
+    return Container(
+      key: const ValueKey('rai.server.tile'),
+      margin: const EdgeInsets.only(bottom: RasqSpacing.sm),
+      padding: const EdgeInsets.all(RasqSpacing.md),
+      decoration: BoxDecoration(color: scheme.surfaceContainerHighest.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text('ローカル推論サーバー', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600))),
+          RasqPill(label: configured ? '接続先あり' : '未設定', color: configured ? RasqColors.link : scheme.surfaceContainerHighest, textColor: configured ? Colors.white : scheme.onSurface),
+        ]),
+        const SizedBox(height: RasqSpacing.xs),
+        Text('OpenAI 互換のチャット API(llama-server / vLLM など)。端末内モデルが失敗 / 無応答のとき、質問と近かったリファレンスを添えて渡します。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        const SizedBox(height: RasqSpacing.sm),
+        RasqInput(key: const ValueKey('rai.server.url'), controller: _url, hintText: 'http://127.0.0.1:8000/v1', onChanged: (s) => setState(() => store.set('serverUrl', s.trim()))),
+        const SizedBox(height: RasqSpacing.xs),
+        RasqInput(key: const ValueKey('rai.server.model'), controller: _model, hintText: 'モデル名(省略可)', onChanged: (s) => store.set('serverModel', s.trim())),
       ]),
     );
   }

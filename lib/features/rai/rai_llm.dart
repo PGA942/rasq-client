@@ -1,19 +1,26 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+
+import '../settings/settings_dsl.dart';
 
 /// 端末内 LLM(ワイヤーフレームの「Agents-A1-4B」)の配線 (D-181)。
 ///
 /// - 実体は [raiLlmProvider] で差し替える([FlutterGemmaRaiLlm] = LiteRT-LM、テストは偽物)。
-/// - モデルは [raiModelSpecs] から選ぶ(既定 = 仕様の LFM2.5 2.6B。4B 級は Qwen3.5 4B)。
+/// - モデルは [raiModelSpecs] から選ぶ(D-216: Qwen3 1.7B(既定)/ Agents-A1 4B / Qwen3 0.6B の GGUF だけ。同梱して展開は選択制)。
 /// - フォールアップ(セルフホストのクラウド)は [RaiFallUp] — サーバー側が無いので必ず失敗を返す。
 enum RaiLlmPhase { notInstalled, downloading, ready, loading, generating, unavailable }
 
 @immutable
 class RaiLlmStatus {
-  const RaiLlmStatus(this.phase, {this.progress, this.message, this.modelId});
+  const RaiLlmStatus(this.phase, {this.progress, this.message, this.modelId, this.bundled = false});
   final RaiLlmPhase phase;
+
+  /// 未インストールだがアプリに同梱されている (D-216): 「ダウンロード」ではなく「展開」で使える。
+  final bool bundled;
 
   /// ダウンロード中の % (0..100)。
   final int? progress;
@@ -64,6 +71,7 @@ class RaiModelSpec {
 /// 既定 = Qwen3 1.7B Q4_K_M (D-188: llama_cpp_dart 0.2.2 の llama.cpp は b7564(2025-12)で **Qwen3.5 は未対応**。
 /// Qwen3 系 / Agents-A1(Qwen3-4B 系)は読める)。
 const raiModelSpecs = <RaiModelSpec>[
+  // D-216: ローカルはこの 3 つだけ(アプリに圧縮して同梱、展開は選択制。無ければ HF からダウンロード)。
   RaiModelSpec(
     id: 'qwen3-1.7b-q4km',
     label: 'Qwen3 1.7B (Q4_K_M)',
@@ -74,13 +82,13 @@ const raiModelSpecs = <RaiModelSpec>[
     params: 1.7,
   ),
   RaiModelSpec(
-    id: 'qwen3-1.7b-q3km',
-    label: 'Qwen3 1.7B (Q3_K_M・軽量)',
-    fileName: 'Qwen3-1.7B-Q3_K_M.gguf',
-    url: 'https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q3_K_M.gguf',
-    sizeMb: 940,
+    id: 'agents-a1-4b-q4km',
+    label: 'Agents-A1 4B (Q4_K_M)',
+    fileName: 'InternScience_Agents-A1-4B-Q4_K_M.gguf',
+    url: 'https://huggingface.co/bartowski/InternScience_Agents-A1-4B-GGUF/resolve/main/InternScience_Agents-A1-4B-Q4_K_M.gguf',
+    sizeMb: 2885,
     family: 'qwen3',
-    params: 1.7,
+    params: 4,
   ),
   RaiModelSpec(
     id: 'qwen3-0.6b-q4km',
@@ -90,62 +98,6 @@ const raiModelSpecs = <RaiModelSpec>[
     sizeMb: 397,
     family: 'qwen3',
     params: 0.6,
-  ),
-  RaiModelSpec(
-    id: 'qwen3-0.6b-q3km',
-    label: 'Qwen3 0.6B (Q3_K_M・最小)',
-    fileName: 'Qwen3-0.6B-Q3_K_M.gguf',
-    url: 'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q3_K_M.gguf',
-    sizeMb: 347,
-    family: 'qwen3',
-    params: 0.6,
-  ),
-  RaiModelSpec(
-    id: 'qwen3-4b-q4km',
-    label: 'Qwen3 4B (Q4_K_M)',
-    fileName: 'Qwen3-4B-Q4_K_M.gguf',
-    url: 'https://huggingface.co/unsloth/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf',
-    sizeMb: 2497,
-    family: 'qwen3',
-    params: 4,
-  ),
-  RaiModelSpec(
-    id: 'agents-a1-4b-q4km',
-    label: 'Agents-A1 4B (Q4_K_M)',
-    fileName: 'InternScience_Agents-A1-4B-Q4_K_M.gguf',
-    url: 'https://huggingface.co/bartowski/InternScience_Agents-A1-4B-GGUF/resolve/main/InternScience_Agents-A1-4B-Q4_K_M.gguf',
-    sizeMb: 2885,
-    family: 'qwen3',
-  ),
-  RaiModelSpec(
-    id: 'agents-a1-4b-q3km',
-    label: 'Agents-A1 4B (Q3_K_M・軽量)',
-    fileName: 'InternScience_Agents-A1-4B-Q3_K_M.gguf',
-    url: 'https://huggingface.co/bartowski/InternScience_Agents-A1-4B-GGUF/resolve/main/InternScience_Agents-A1-4B-Q3_K_M.gguf',
-    sizeMb: 2447,
-    family: 'qwen3',
-  ),
-  RaiModelSpec(
-    id: 'lfm2.5-2.6b',
-    label: 'LFM2.5 2.6B (LiteRT int4)',
-    fileName: 'LFM2.5-2.6B_int4.litertlm',
-    url: 'https://huggingface.co/litert-community/LFM2.5-2.6B/resolve/main/LFM2.5-2.6B_int4.litertlm',
-    sizeMb: 1668,
-    family: 'general',
-    engine: RaiEngine.litertlm,
-  
-    params: 2.6,
-  ),
-  RaiModelSpec(
-    id: 'qwen3.5-4b',
-    label: 'Qwen3.5 4B (LiteRT mixed int4)',
-    fileName: 'Qwen3.5-4B_mixed_int4.litertlm',
-    url: 'https://huggingface.co/litert-community/Qwen3.5-4B/resolve/main/Qwen3.5-4B_mixed_int4.litertlm',
-    sizeMb: 2754,
-    family: 'qwen3',
-    engine: RaiEngine.litertlm,
-  
-    params: 4,
   ),
 ];
 
@@ -235,15 +187,69 @@ class RaiLlmException implements Exception {
   String toString() => message;
 }
 
-/// フォールアップ先(セルフホストのクラウド)。サーバー側が無いので失敗する。
+/// フォールアップ先 (D-216): OpenAI 互換のチャット API(ローカル推論サーバー = llama-server / vLLM など)。
+/// 端末内モデルが失敗 / 無応答のとき、質問と **MiniLM で近かったリファレンス**(操作の手順)を添えて渡す。
+/// URL が未設定なら従来どおり失敗する。
 class RaiFallUp {
-  const RaiFallUp();
-  Future<String> chat(String prompt) async {
-    throw const RaiLlmException('フォールアップ先(サーバー側)が未接続です');
+  const RaiFallUp({this.baseUrl = '', this.model = '', this.token = '', this.client});
+  final String baseUrl;
+  final String model;
+  final String token;
+  final http.Client? client;
+
+  bool get configured => baseUrl.trim().isNotEmpty;
+
+  Uri get endpoint => Uri.parse('${baseUrl.trim().replaceAll(RegExp(r'/+$'), '')}/chat/completions');
+
+  /// 送るメッセージ(system にリファレンスを添える)。
+  List<Map<String, String>> messages(String prompt, {String? system, List<String> context = const []}) => [
+        if ((system ?? '').isNotEmpty || context.isNotEmpty)
+          {'role': 'system', 'content': [if ((system ?? '').isNotEmpty) system!, if (context.isNotEmpty) '参考(操作リファレンス、近い順):', ...context].join('\n')},
+        {'role': 'user', 'content': prompt},
+      ];
+
+  Future<String> chat(String prompt, {String? system, List<String> context = const []}) async {
+    if (!configured) throw const RaiLlmException('フォールアップ先(サーバー側)が未接続です');
+    final c = client ?? http.Client();
+    try {
+      final res = await c
+          .post(
+            endpoint,
+            headers: {'content-type': 'application/json', if (token.trim().isNotEmpty) 'authorization': 'Bearer ${token.trim()}'},
+            body: jsonEncode({
+              if (model.trim().isNotEmpty) 'model': model.trim(),
+              'messages': messages(prompt, system: system, context: context),
+              'max_tokens': 512,
+              'temperature': 0.4,
+              'stream': false,
+              'chat_template_kwargs': {'enable_thinking': false},
+            }),
+          )
+          .timeout(const Duration(seconds: 90));
+      if (res.statusCode != 200) throw RaiLlmException('推論サーバー HTTP ${res.statusCode}');
+      final j = jsonDecode(utf8.decode(res.bodyBytes)) as Map;
+      final choices = j['choices'] as List? ?? const [];
+      final content = choices.isEmpty ? null : ((choices.first as Map)['message'] as Map?)?['content'];
+      final text = '${content ?? ''}'.replaceAll(RegExp(r'<think>[\s\S]*?</think>'), '').trim();
+      if (text.isEmpty) throw const RaiLlmException('推論サーバーから返事がありませんでした');
+      return text;
+    } on RaiLlmException {
+      rethrow;
+    } catch (e) {
+      throw RaiLlmException('推論サーバーに届きません: $e');
+    } finally {
+      if (client == null) c.close();
+    }
   }
 }
 
-final raiFallUpProvider = Provider<RaiFallUp>((_) => const RaiFallUp());
+/// 推論サーバーの設定エリア (D-216): `serverUrl`(…/v1)/ `serverModel` / `serverToken`。
+const raiSettingsArea = 'rai';
+
+final raiFallUpProvider = Provider<RaiFallUp>((ref) {
+  final v = ref.watch(settingsAreaProvider(raiSettingsArea)).value ?? const <String, Object?>{};
+  return RaiFallUp(baseUrl: '${v['serverUrl'] ?? ''}', model: '${v['serverModel'] ?? ''}', token: '${v['serverToken'] ?? ''}');
+});
 
 /// 実体はアプリ側で登録する(`rai_llm_gemma.dart`、main.dart の override)。未登録なら「使えない」状態の骨格。
 final raiLlmProvider = Provider<RaiLlm>((ref) => UnavailableRaiLlm());
