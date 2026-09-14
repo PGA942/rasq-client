@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/home/action_bar_config.dart';
 import 'package:rasq_client/features/home/action_bar_edit_sheet.dart';
 import 'package:rasq_client/features/home/plugin_actions.dart';
@@ -114,10 +115,10 @@ void main() {
     expect(c.read(slotActionSettingsProvider(acc.key)).isEnabled(pluginActionId('t.act', 'copy')), isFalse);
   });
 
-  testWidgets('アクションバーの編集 (D-208): 大きいタイル + (…) メニュー(詳細 / アクションリスト化 / 削除)、隙間に落として並び替え、タイルの上に落としてバンドル、バンドル FOW', (tester) async {
+  testWidgets('アクションバーの編集 FOW (D-208 → D-210): アカウントタイル / 全画面バー / 投稿バー、(…) メニュー、隙間で並び替え、タイルの上に落としてバンドル → 設定 FOW(名前 / アイコン / メンバー / 検索 / 解除)、詳細は RRL の FOW', (tester) async {
     fakes['act'] = () => FakeSlotRuntime(
           manifest: {
-            'id': 't.act', 'name': '投稿ボタン', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action'], 'permissions': ['fow.widget'],
+            'id': 't.act', 'name': '投稿ボタン', 'version': '0.1.0', 'kind': 'action', 'description': '後で読む・本文をコピーを足すテスト', 'slots': ['post.action'], 'permissions': ['fow.widget'],
             'actions': [{'id': 'copy', 'label': '本文をコピー', 'icon': 'content_copy', 'tags': ['Copy']}],
           },
           handler: (self, fn, args) => {'result': {'done': true}},
@@ -127,40 +128,70 @@ void main() {
     await tester.pumpAndSettle();
     final copyId = pluginActionId('t.act', 'copy');
     final accountKey = fakeSession().account.key;
-    // 投稿の … → アクションバーを編集。
+    // 投稿の … → アクションバーを編集(FOW)。
     await tester.tap(find.byTooltip('メニュー').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('アクションバーを編集'));
     await tester.pumpAndSettle();
     expect(find.text('アクションバーの編集'), findsOneWidget);
+    expect(find.byKey(const ValueKey('actionbar.account')), findsOneWidget);
+    expect(find.text('全画面アクションバー'), findsOneWidget);
+    expect(find.text('投稿アクションバー'), findsOneWidget);
+    expect(find.byKey(const ValueKey('actionbar.tile.reply.viewer')), findsOneWidget);
     expect(find.byKey(const ValueKey('actionbar.tile.reply')), findsOneWidget);
-    expect(find.byKey(ValueKey('actionbar.slot.$copyId')), findsOneWidget);
-    expect(find.byKey(const ValueKey('actionbar.slot.threshold')), findsOneWidget);
-    expect(find.text('非表示'), findsNothing);
-    // (+) → 検索 FOW: 名前で絞って選ぶ → 有効。
-    await tester.tap(find.byKey(const ValueKey('actionbar.plugins.open')));
+    expect(find.byKey(const ValueKey('actionbar.slot.threshold')), findsNothing); // 設定へ移動 (D-210)
+    // 返信の (…) → 詳細 = RRL で描く FOW(プラグインの見出し + アクションの詳細)。
+    await tester.ensureVisible(find.byKey(const ValueKey('actionbar.tile.menu.reply')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('actionbar.tile.menu.reply')));
+    await tester.pumpAndSettle();
+    expect(find.text('削除'), findsNothing); // SNS のボタンには無い
+    await tester.tap(find.text('詳細'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('actionbar.detail.rrl')), findsOneWidget);
+    expect(find.text('スロット(ジャンル)'), findsOneWidget);
+    await tester.tap(find.text('閉じる').last);
+    await tester.pumpAndSettle();
+    // アクションリスト化 → バンドルができて設定 FOW が開く。名前を変え、アイコンはメンバーの使い回しに。
+    await tester.tap(find.byKey(const ValueKey('actionbar.tile.menu.reply')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('アクションリスト化'));
+    await tester.pumpAndSettle();
+    expect(find.text('バンドルの設定'), findsOneWidget);
+    var cfg = c.read(actionBarConfigProvider(accountKey));
+    expect(cfg.lists.single.memberIds, ['reply']);
+    final listId = cfg.lists.single.id;
+    await tester.enterText(find.byKey(const ValueKey('actionbar.bundle.name')), '返信まわり');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('actionbar.bundle.icon.member.reply')));
+    await tester.pumpAndSettle();
+    cfg = c.read(actionBarConfigProvider(accountKey));
+    expect(cfg.lists.single.name, '返信まわり');
+    expect(cfg.lists.single.icon, 'member:reply');
+    // 「プラグインを検索」→ 本文をコピー をバンドルに足す(スロット設定も有効に)。
+    await tester.tap(find.byKey(const ValueKey('actionbar.bundle.search')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(actionBarPluginSearchKey), 'コピー');
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(ValueKey('actionbar.plugin.$copyId')));
     await tester.pumpAndSettle();
-    expect(find.byKey(actionBarPluginSearchKey), findsNothing);
-    // 返信の (…) → 詳細 / アクションリスト化(削除は SNS のボタンには無い)。
-    await tester.tap(find.byKey(const ValueKey('actionbar.tile.menu.reply')));
+    cfg = c.read(actionBarConfigProvider(accountKey));
+    expect(cfg.lists.single.memberIds, ['reply', copyId]);
+    expect(find.byKey(ValueKey('actionbar.bundle.member.$copyId')), findsOneWidget);
+    expect(find.text('後で読む・本文をコピーを足すテスト'), findsOneWidget); // プラグインタイルの説明
+    // メンバーの … → バンドルから外す → バーに戻る。
+    await tester.tap(find.descendant(of: find.byKey(ValueKey('actionbar.bundle.member.$copyId')), matching: find.byTooltip('メンバーの操作')));
     await tester.pumpAndSettle();
-    expect(find.text('アクションの詳細'), findsOneWidget);
-    expect(find.text('削除'), findsNothing);
-    await tester.tap(find.text('アクションリスト化'));
+    await tester.tap(find.text('バンドルから外す'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const ValueKey('actionbar.bundle.name')), '返信まわり');
-    await tester.tap(find.text('作成'));
-    await tester.pumpAndSettle();
-    var cfg = c.read(actionBarConfigProvider(accountKey));
-    expect(cfg.lists.length, 1);
+    cfg = c.read(actionBarConfigProvider(accountKey));
     expect(cfg.lists.single.memberIds, ['reply']);
-    expect(cfg.order.first, ActionBarConfig.listKey(cfg.lists.single.id));
-    final listKey = ActionBarConfig.listKey(cfg.lists.single.id);
-    // リノートのタイルをバンドルの上に落とす → バンドルに入り、編集 FOW が開く。
+    expect(cfg.order, contains(copyId));
+    await tester.tap(find.text('閉じる').last);
+    await tester.pumpAndSettle();
+    expect(find.text('バンドルの設定'), findsNothing);
+    // リノートのタイルをバンドルの上に落とす → バンドルに入り、設定 FOW が開く。
+    final listKey = ActionBarConfig.listKey(listId);
     final renote = find.byKey(const ValueKey('actionbar.tile.renote'));
     await tester.ensureVisible(renote);
     await tester.pumpAndSettle();
@@ -172,28 +203,26 @@ void main() {
     await tester.pumpAndSettle();
     cfg = c.read(actionBarConfigProvider(accountKey));
     expect(cfg.lists.single.memberIds, ['reply', 'renote']);
-    expect(find.text('バンドルを編集'), findsOneWidget);
-    expect(find.byKey(const ValueKey('actionbar.bundle.member.renote')), findsOneWidget);
-    // メンバーを外す → バーに戻る。
-    await tester.tap(find.descendant(of: find.byKey(const ValueKey('actionbar.bundle.member.renote')), matching: find.byTooltip('バンドルから外す')));
+    expect(find.text('バンドルの設定'), findsOneWidget);
+    // リストの解除 → 中身がバーに戻る。
+    await tester.tap(find.byKey(const ValueKey('actionbar.bundle.dissolve')));
     await tester.pumpAndSettle();
     cfg = c.read(actionBarConfigProvider(accountKey));
-    expect(cfg.lists.single.memberIds, ['reply']);
-    expect(cfg.order, contains('renote'));
-    await tester.tap(find.text('閉じる').last);
-    await tester.pumpAndSettle();
-    // 隙間に落として並び替え: 末尾の隙間へリノート。
+    expect(cfg.lists, isEmpty);
+    expect(cfg.order.take(2), ['reply', 'renote']);
+    // 隙間に落として並び替え: 末尾の隙間へリノート(投稿バー)。
     await tester.ensureVisible(find.byKey(const ValueKey('actionbar.tile.renote')));
     await tester.pumpAndSettle();
-    final entriesBefore = c.read(actionBarConfigProvider(accountKey)).order;
+    final n = c.read(actionBarConfigProvider(accountKey)).order.length;
     g = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('actionbar.tile.renote'))));
     await tester.pump(const Duration(milliseconds: 400));
-    final lastGap = find.byKey(ValueKey('actionbar.gap.${entriesBefore.length}'));
-    await g.moveTo(tester.getCenter(lastGap));
+    await g.moveTo(tester.getCenter(find.byKey(ValueKey('actionbar.gap.$n'))));
     await tester.pump(const Duration(milliseconds: 50));
     await g.up();
     await tester.pumpAndSettle();
     expect(c.read(actionBarConfigProvider(accountKey)).order.last, 'renote');
+    // 全画面バーは別の構成: こちらは動いていない。
+    expect(c.read(actionBarConfigProvider(ActionBarConfigStore.viewerKey(accountKey))).order, isEmpty);
     // プラグインボタンの (…) → 削除 = スロット設定で無効。
     await tester.ensureVisible(find.byKey(ValueKey('actionbar.tile.menu.$copyId')));
     await tester.pumpAndSettle();
@@ -203,5 +232,43 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.read(slotActionSettingsProvider(accountKey)).isEnabled(copyId), isFalse);
     expect(find.byKey(ValueKey('actionbar.tile.$copyId')), findsNothing);
+  });
+
+  testWidgets('設定 → SNSプラグイン → プラグインボタン (D-210): 宣言されたボタンのスイッチと束ねる閾値', (tester) async {
+    fakes['act'] = () => FakeSlotRuntime(
+          manifest: {'id': 't.act', 'name': '投稿ボタン', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action'], 'permissions': ['fow.widget'], 'actions': [{'id': 'copy', 'label': '本文をコピー', 'icon': 'content_copy', 'tags': ['Copy']}]},
+          handler: (self, fn, args) => {'result': {'done': true}},
+        );
+    final c = await pump(tester);
+    await c.read(slotPluginsProvider.notifier).register('fake:act', bytes: Uint8List.fromList('act'.codeUnits));
+    await tester.pumpAndSettle();
+    final copyId = pluginActionId('t.act', 'copy');
+    c.read(routerProvider).push('/settings/actionbar-plugins');
+    await tester.pumpAndSettle();
+    expect(find.text('プラグインボタン'), findsWidgets);
+    expect(find.byKey(const ValueKey('actionbar.slot.threshold')), findsOneWidget);
+    await tester.tap(find.byKey(ValueKey('actionbar.slot.$copyId')));
+    await tester.pumpAndSettle();
+    expect(c.read(slotActionSettingsProvider(fakeSession().account.key)).isEnabled(copyId), isFalse);
+  });
+
+  testWidgets('バンドルのボタン (D-210): アイコンから出る FOW(バンドル名 + ボタン + 名称のタイル)→ タイル全体で実行', (tester) async {
+    fakes['act'] = () => FakeSlotRuntime(
+          manifest: {'id': 't.act', 'name': '投稿ボタン', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action'], 'permissions': ['fow.widget'], 'actions': [{'id': 'later', 'label': '後で読む', 'icon': 'bookmark_add', 'tags': ['Favorite']}]},
+          handler: (self, fn, args) => {'result': {'done': true, 'message': '後で読むに入れました'}},
+        );
+    final c = await pump(tester);
+    await c.read(slotPluginsProvider.notifier).register('fake:act', bytes: Uint8List.fromList('act'.codeUnits));
+    await tester.pumpAndSettle();
+    final laterId = pluginActionId('t.act', 'later');
+    // 「リアクション」のバンドル(自動)→ タップで FOW。
+    await tester.tap(find.byTooltip('リアクション').first);
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey('actionbar.bundle.pick.$laterId')), findsOneWidget);
+    expect(find.text('リアクション'), findsWidgets); // FOW のヘッダー
+    await tester.tap(find.byKey(ValueKey('actionbar.bundle.pick.$laterId')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey('actionbar.bundle.pick.$laterId')), findsNothing);
+    expect(find.text('後で読むに入れました'), findsOneWidget);
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../tokens/sizes.dart';
@@ -185,7 +187,7 @@ class _ActionBarButton extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                mute(Image.network(item.iconUrl.toString(), width: 20, height: 20, errorBuilder: (_, _, _) => Icon(item.icon, size: 20))),
+                mute(rasqIconImage(item.iconUrl!, size: 20, fallback: item.icon)),
                 if (showCount && count > 0) Padding(padding: const EdgeInsets.only(left: 4), child: Text('$count', style: RasqTypography.count)),
               ]),
             ),
@@ -228,4 +230,12 @@ class _ActionBarButton extends StatelessWidget {
       },
     );
   }
+}
+
+/// アイコン画像 (D-210): `file:` は端末の写真、それ以外はネットワーク。読めなければ [fallback]。
+Widget rasqIconImage(Uri url, {required double size, required IconData fallback}) {
+  if (url.scheme == 'file') {
+    return ClipRRect(borderRadius: BorderRadius.circular(size / 4), child: Image.file(File(url.toFilePath()), width: size, height: size, fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(fallback, size: size)));
+  }
+  return Image.network(url.toString(), width: size, height: size, errorBuilder: (_, _, _) => Icon(fallback, size: size));
 }

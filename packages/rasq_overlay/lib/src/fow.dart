@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 /// FOW type (原典: UI_Elements「FOWタイプ（3種）」).
 enum FowPanelType { widget, interstitial, system }
 
+/// FOW の横位置 (D-209): 最大幅がカラムより狭いときにどちらへ寄せるか。
+enum FowHAlign { start, center, end }
+
 /// FOW confirm modes (原典: UI_status confirmMode + 何をやる.md Stickオプション).
 enum FowConfirmMode { immediate, confirm, saveDiscard, stick }
 
@@ -37,6 +40,10 @@ class FowSpec {
     this.freeAboveStops = false,
     this.freeBelowStops = false,
     this.theme,
+    this.attachTop = false,
+    this.anchor,
+    this.anchorBelow,
+    this.hAlign = FowHAlign.center,
   })  : heightStops = [...heightStops]..sort(),
         heightFactor = ValueNotifier(initialHeightFactor.clamp(minHeightFactor, maxHeightFactor));
 
@@ -116,12 +123,15 @@ class FowSpec {
   /// 所属カラム(ホストの列スロット index。範囲外は clamp される)。
   int columnIndex;
 
-  /// パネルの最大幅 (D-185): カラムより狭ければカラムの中央に置く(RAi の入力ウィジェット幅に揃える等)。
+  /// パネルの最大幅 (D-185): カラムより狭ければ [hAlign] の側に置く(既定は中央。RAi の入力ウィジェット幅に揃える等)。
   final double? maxWidth;
+
+  /// 最大幅がカラムより狭いときの横位置 (D-209): 左 / 中央 / 右。アンカー付きなら [anchor] の横位置に寄せる。
+  final FowHAlign hAlign;
 
   /// アプリヘッダーへの下付き (D-065)。false = 従来のフッター上/画面下端。
   /// FOW 内ヘッダー/フッターを縦へウィンドウ高さの 1 割以上動かすと切替。
-  bool attachTop = false;
+  bool attachTop;
 
   /// 実物アクションボタン/バーへのアンカー (D-065、グローバル矩形)。
   /// 基本は下付き(ボタンの下辺に FOW 上辺)、下の余白が足りなければ

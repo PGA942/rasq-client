@@ -305,7 +305,7 @@ void main() {
     await tester.tap(find.text('アクションバーを編集'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('action_bar_edit_plugins.png'));
-    await tester.tapAt(const Offset(180, 40));
+    await tester.tap(find.text('閉じる').last);
     await tester.pumpAndSettle();
     // 下書き FOW。
     await tester.tap(find.byTooltip('投稿'));

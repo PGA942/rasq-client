@@ -10,6 +10,9 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../home/action_bar_config.dart';
+import '../home/action_bundle_fow.dart';
+import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../plugins/slot_plugins.dart';
@@ -375,6 +378,14 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
     final session = ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
+    // 全画面アクションバーの構成 (D-210): 投稿のバーとは別に `viewer:<accountKey>` で持つ(並び / バンドル)。
+    final merged = mergePluginActions(
+      config: ref.watch(actionBarConfigProvider(ActionBarConfigStore.viewerKey(post.account.key))),
+      snsActions: actions,
+      plugins: ref.watch(pluginActionsProvider),
+      settings: ref.watch(slotActionSettingsProvider(post.account.key)),
+    );
+    final entries = merged.config.apply(merged.actions);
     return ValueListenableBuilder<int>(
       key: viewerPanelKey,
       valueListenable: widget.page,
@@ -387,8 +398,22 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
             // 動画の操作 (D-201 → D-202): 左にシークバー、右にボタン類(小画面では下の行)。
             if (m != null && m.type == MediaType.video) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), child: VideoControls(session: widget.sessionOf(i))),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              for (final a in actions)
-                RasqActionButton.icon(icon: PostRow.iconFor(a.icon, Icons.circle_outlined), doneIcon: a.doneIcon == null ? null : PostRow.iconFor(a.doneIcon, Icons.circle), tooltip: a.label, onTap: () => notifier.perform(post, a).catchError((_) {})),
+              for (final e in entries)
+                switch (e) {
+                  SingleActionEntry() => RasqActionButton.icon(icon: PostRow.iconFor(e.action.icon, Icons.circle_outlined), doneIcon: e.action.doneIcon == null ? null : PostRow.iconFor(e.action.doneIcon, Icons.circle), tooltip: e.action.label, onTap: () => notifier.perform(post, e.action).catchError((_) {})),
+                  // バンドル: アイコンから出る FOW (D-210)。
+                  ActionListEntry() => Builder(
+                      key: ValueKey('viewer.bundle.${e.list.id}'),
+                      builder: (bctx) => RasqActionButton.icon(
+                        icon: bundleIconOf(e.list, e.members),
+                        tooltip: e.list.name,
+                        onTap: () {
+                          final box = bctx.findRenderObject() as RenderBox;
+                          showActionBundleMenuFow(ref, anchor: box.localToGlobal(Offset.zero) & box.size, entry: e, onPick: (a) => notifier.perform(post, a).catchError((_) {}));
+                        },
+                      ),
+                    ),
+                },
               RasqActionButton.icon(icon: Icons.ios_share, tooltip: '共有', onTap: () {}),
             ]),
             Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),

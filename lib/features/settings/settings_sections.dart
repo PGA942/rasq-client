@@ -1,3 +1,5 @@
+import '../../app/router.dart';
+
 /// 設定第一階層 (テキストベース仕様 — UI_status「設定第2階層以降はテキストベースで仕様を決める方針」).
 /// Wireframe P7: 各セクションの項目名。この画面群は M4 で FOW/DSL 描画に置き換わる。
 class SettingsRow {
@@ -35,6 +37,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('プライバシーとセーフモード', route: '/settings/dsl/sns.safety'),
     SettingsRow('リスト', route: '/lists'),
     SettingsRow('ミュート/ブロック', route: '/settings/mute-block'),
+    SettingsRow('プラグインボタン', subtitle: '宣言されたボタンの有効 / 無効と束ねる閾値', route: Routes.actionBarPlugins),
     SettingsRow('カスタムモーションとアニメーション'),
     SettingsRow('リソースと広告'),
     SettingsRow('ヘルプ、法的表示'),

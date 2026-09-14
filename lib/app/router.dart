@@ -36,6 +36,7 @@ import '../features/users/follows_screen.dart';
 import '../features/users/user_page_screen.dart';
 import '../features/users/profile_image_viewer.dart';
 import '../features/search/search_screen.dart';
+import '../features/settings/action_bar_plugins_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/backend_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
@@ -57,6 +58,9 @@ abstract final class Routes {
   static const notifications = '/notifications';
   static const dm = '/dm';
   static const settings = '/settings';
+
+  /// プラグインボタン (D-210): 宣言されたボタンの有効 / 無効と束ねる閾値。
+  static const actionBarPlugins = '/settings/actionbar-plugins';
   static const catalog = '/catalog';
   static const wasmDev = '/dev/wasm';
   static const login = '/login';
@@ -197,6 +201,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             // その他の設定 → 投稿コンポーザー (D-131)。
             GoRoute(path: 'composer', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ComposerSettingsScreen()),
             GoRoute(path: 'server', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BackendSettingsScreen()),
+            // プラグインボタン (D-210): 宣言されたボタン / 束ねる閾値。
+            GoRoute(path: 'actionbar-plugins', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ActionBarPluginsScreen()),
           ]),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
           GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiHomeScreen()),

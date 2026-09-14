@@ -427,10 +427,23 @@ class _FowColumn extends StatelessWidget {
             final gapBottom = !pinned && anchor == null && !attachTopEff ? lift : 0.0;
             if (s.childGapTop.value != gapTop) s.childGapTop.value = gapTop;
             if (s.childGapBottom.value != gapBottom) s.childGapBottom.value = gapBottom;
-            // 最大幅 (D-185): 指定があればカラムの中央に寄せる。
+            // 最大幅 (D-185): 指定があればカラムの中で [FowSpec.hAlign] の側に寄せる(既定は中央)。
+            // アンカー付き (D-209) はアンカーの横位置に寄せる(ボタンから出現したように見える)。
             final panelW = s.maxWidth != null && s.maxWidth! < slot.width ? s.maxWidth! : slot.width;
+            double left;
+            if (panelW >= slot.width) {
+              left = slot.x;
+            } else if (anchor != null) {
+              left = (anchor.center.dx - panelW / 2).clamp(slot.x, slot.x + slot.width - panelW);
+            } else {
+              left = switch (s.hAlign) {
+                FowHAlign.start => slot.x,
+                FowHAlign.center => slot.x + (slot.width - panelW) / 2,
+                FowHAlign.end => slot.x + slot.width - panelW,
+              };
+            }
             children.add(Positioned(
-              left: slot.x + (slot.width - panelW) / 2,
+              left: left,
               width: panelW,
               top: 0,
               bottom: 0,

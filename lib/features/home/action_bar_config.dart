@@ -11,18 +11,26 @@ import '../../session/session_providers.dart';
 /// 1 ボタンとして出て、タップでメンバーのドロップダウンが開く。
 @immutable
 class ActionListDef {
-  const ActionListDef({required this.id, required this.name, required this.memberIds});
+  const ActionListDef({required this.id, required this.name, required this.memberIds, this.icon});
 
   final String id;
   final String name;
   final List<String> memberIds;
 
-  Map<String, Object?> toJson() => {'id': id, 'name': name, 'memberIds': memberIds};
+  /// バンドルのアイコン (D-210): `member:<actionId>`(バンドル内のアイコンを使い回す)/ `material:<name>`
+  /// (Material Icon の名前)/ `file:<path>`(写真)。null = 既定(apps)。
+  final String? icon;
+
+  ActionListDef copyWith({String? name, List<String>? memberIds, String? icon, bool clearIcon = false}) =>
+      ActionListDef(id: id, name: name ?? this.name, memberIds: memberIds ?? this.memberIds, icon: clearIcon ? null : (icon ?? this.icon));
+
+  Map<String, Object?> toJson() => {'id': id, 'name': name, 'memberIds': memberIds, if (icon != null) 'icon': icon};
 
   factory ActionListDef.fromJson(Map<String, Object?> json) => ActionListDef(
         id: json['id'] as String,
         name: json['name'] as String,
         memberIds: [for (final m in (json['memberIds'] as List? ?? const [])) m as String],
+        icon: json['icon'] as String?,
       );
 }
 
@@ -132,7 +140,10 @@ class ActionBarConfigStore extends Notifier<ActionBarConfig> {
   final String arg;
   bool _loaded = false;
 
+  /// 全画面ビューワーのバー (D-210) は `viewer:<accountKey>` で別の構成を持つ。
   String get _key => arg.isEmpty ? storageKey : '$storageKey.$arg';
+
+  static String viewerKey(String accountKey) => 'viewer:$accountKey';
 
   @override
   ActionBarConfig build() {
@@ -145,7 +156,7 @@ class ActionBarConfigStore extends Notifier<ActionBarConfig> {
     _loaded = true;
     try {
       final storage = ref.read(sessionStorageProvider);
-      final raw = await storage.read(_key) ?? (arg.isEmpty ? null : await storage.read(storageKey));
+      final raw = await storage.read(_key) ?? (arg.isEmpty || arg.startsWith('viewer:') ? null : await storage.read(storageKey));
       if (raw != null) state = ActionBarConfig.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
     } catch (_) {
       // 壊れた保存値は既定にフォールバック(次の set で上書きされる)。
