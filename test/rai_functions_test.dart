@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/features/rai/rai_functions.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -83,6 +84,50 @@ void main() {
       final r = await raiGuard('x', () async => const RaiFunctionResult(name: 'x', text: 'ok', fetched: true));
       expect(r.text, 'ok');
       expect(r.fetched, isTrue);
+    });
+  });
+
+  group('settings.set のゲート (D-225)', () {
+    final spec = SettingsPageSpec.fromJson({
+      'schema': 'rasq.settings-page/1',
+      'area': 'x',
+      'title': 'x',
+      'defaults': {'textScale': 100, 'openCw': false, 'mode': 'blur', 'secret': 'a', 'readonly': 1},
+      'root': {
+        't': 'Column',
+        'c': [
+          {'t': 'SliderListTile', 'k': 'textScale', 'p': {'min': 85, 'max': 130}, 'on': {'change': 'settings.set'}},
+          {'t': 'SwitchListTile', 'k': 'openCw', 'on': {'change': 'settings.set'}},
+          {'t': 'RadioListTile', 'k': 'mode', 'p': {'value': 'blur'}, 'on': {'change': 'settings.set'}},
+          {'t': 'RadioListTile', 'k': 'mode', 'p': {'value': 'hide', 'tags': ['操作禁止']}, 'on': {'change': 'settings.set'}},
+          {'t': 'Input', 'k': 'secret', 'p': {'password': true}, 'on': {'change': 'settings.set'}},
+          {'t': 'ValueListTile', 'k': 'readonly'},
+          {'t': 'ListTile', 'k': 'settings/security', 'on': {'tap': 'web.open'}},
+        ],
+      },
+    });
+
+    test('書けるのは settings.set で書くタイルがあり、パスワード / 操作禁止タグの無いキーだけ', () {
+      expect(raiSettingsWritable(spec, 'textScale').ok, isTrue);
+      expect(raiSettingsWritable(spec, 'openCw').ok, isTrue);
+      expect(raiSettingsWritable(spec, 'mode').reason, contains('操作禁止タグ'));
+      expect(raiSettingsWritable(spec, 'secret').reason, contains('パスワード'));
+      expect(raiSettingsWritable(spec, 'readonly').reason, contains('画面から書ける設定ではありません'));
+      expect(raiSettingsWritable(spec, 'settings/security').reason, contains('という設定はありません'));
+      expect(raiSettingsWritable(spec, 'nope').ok, isFalse);
+    });
+
+    test('値は既定値の型 / ラジオの選択肢 / スライダーの範囲に合わせる', () {
+      expect(raiCoerceSettingValue(spec, 'textScale', '110'), 110);
+      expect(raiCoerceSettingValue(spec, 'textScale', '110%'), 110);
+      expect(raiCoerceSettingValue(spec, 'textScale', '200'), isNull);
+      expect(raiCoerceSettingValue(spec, 'textScale', '大きめ'), isNull);
+      expect(raiCoerceSettingValue(spec, 'openCw', 'on'), isTrue);
+      expect(raiCoerceSettingValue(spec, 'openCw', 'オフ'), isFalse);
+      expect(raiCoerceSettingValue(spec, 'openCw', 'maybe'), isNull);
+      expect(raiCoerceSettingValue(spec, 'mode', 'hide'), 'hide');
+      expect(raiCoerceSettingValue(spec, 'mode', 'show'), isNull);
+      expect(raiCoerceSettingValue(spec, 'secret', 'b'), 'b');
     });
   });
 

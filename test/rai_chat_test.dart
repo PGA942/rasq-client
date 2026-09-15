@@ -1,10 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId;
 import 'package:rasq_client/features/rai/rai_chat.dart';
 import 'package:rasq_client/features/rai/rai_embedding_model.dart';
 import 'package:rasq_client/features/rai/rai_home_screen.dart';
@@ -16,9 +18,11 @@ import 'package:rasq_client/features/rai/rai_providers.dart';
 import 'package:rasq_client/features/rai/rai_reference_providers.dart';
 import 'package:rasq_client/features/rai/rai_stats.dart';
 import 'package:rasq_client/features/rai/rai_widgets.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fake_rai_embedding_model.dart';
@@ -57,11 +61,15 @@ void main() {
   late FakeRaiLlm llm;
   /// [extraPosts] (D-223): 既定の 1 投稿(p1)に足す分。user.search など複数ユーザーが要る関数のテスト用
   /// (既存テストは渡さないので p1 だけの挙動は変わらない)。
-  Future<ProviderContainer> pump(WidgetTester tester, {List<Post> Function(AccountId)? extraPosts, SnsKind kind = SnsKind.misskey}) async {
+  Future<ProviderContainer> pump(WidgetTester tester, {List<Post> Function(AccountId)? extraPosts, SnsKind kind = SnsKind.misskey, List<String> settingsPages = const []}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     llm = FakeRaiLlm(phase: RaiLlmPhase.ready);
+    // rootBundle は loadString の Future をプロセス全体でキャッシュする。前のテストの fake async ゾーンで完了した
+    // Future を別のテストから await すると、伝播のマイクロタスクが死んだゾーンに積まれて永遠に返らない
+    // (settings.get → settings.set の順で踏んだ)。テストごとに空にする。
+    rootBundle.clear();
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
     });
@@ -70,6 +78,7 @@ void main() {
     final registry = PluginRegistry()
       ..register(FakeSnsPlugin(
         kind: kind,
+        settingsPages: settingsPages,
         posts: (_) => [
           Post(id: 'p1', account: acc, author: UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 14), body: '今日は打ち上げ'),
           ...?extraPosts?.call(acc),
@@ -421,6 +430,59 @@ void main() {
       expect(restarted, contains('[settings.get#1]'));
       expect(restarted, contains('appearance.display.textScale = 100'));
       expect(c.read(raiProvider).bubble, '既定の 100% のままです。');
+    });
+
+    testWidgets('settings.set (D-225): 既定設定のパスワード不要なキーを書く、範囲外は断る', (tester) async {
+      final c = await pump(tester);
+      llm.replies.addAll(['zzzz の状況', '', '大きくします [[call:settings.set|area=appearance.display|key=textScale|value=110]] [[call:settings.set|area=appearance.display|key=textScale|value=200]]']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 0);
+      final bubble = c.read(raiProvider).bubble!;
+      expect(bubble, contains('appearance.display.textScale を 110 にしました'));
+      expect(bubble, contains('「textScale」に「200」は入れられません'));
+      expect(c.read(settingsAreaProvider('appearance.display')).value?['textScale'], 110);
+    });
+
+    testWidgets('settings.set (D-225): プラグイン設定は操作禁止タグの無いキーだけ書く', (tester) async {
+      final page = jsonEncode({
+        'schema': 'rasq.settings-page/1',
+        'area': 'timeline',
+        'title': 'タイムライン',
+        'defaults': {'withRenotes': true, 'purge': false},
+        'root': {
+          't': 'Column',
+          'c': [
+            {'t': 'SwitchListTile', 'k': 'withRenotes', 'p': {'title': 'リノートを表示', 'value': r'$.settings.withRenotes'}, 'on': {'change': 'settings.set'}},
+            {'t': 'SwitchListTile', 'k': 'purge', 'p': {'title': '全部消す', 'value': r'$.settings.purge', 'tags': ['操作禁止']}, 'on': {'change': 'settings.set'}},
+          ],
+        },
+      });
+      final c = await pump(tester, settingsPages: [page]);
+      llm.replies.addAll(['zzzz の状況', '', '変えます [[call:settings.set|area=sns.timeline|key=withRenotes|value=off]] [[call:settings.set|area=sns.timeline|key=purge|value=on]]']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      final bubble = c.read(raiProvider).bubble!;
+      expect(bubble, contains('sns.timeline.withRenotes を false にしました'));
+      expect(bubble, contains('「purge」は操作禁止タグが付いているので RAi からは書きません'));
+      expect(c.read(settingsAreaProvider('sns.timeline')).value, {'withRenotes': false});
+    });
+
+    testWidgets('post.reply (D-225): 送らずにコンポーザーへ下書きを入れる(送信はユーザー)', (tester) async {
+      final c = await pump(tester);
+      final session = c.read(currentSnsSessionProvider) as FakeSnsSession;
+      llm.replies.addAll(['zzzz の状況', '', '返信の下書きです [[call:post.reply|post=p1|text=おつかれさまでした！]]']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(c.read(raiProvider).bubble, contains('post.reply: 返信の下書きをコンポーザーに入れました(送信はしていません)'));
+      // コンポーザー(返信 stick)が開き、本文が入っている。投稿はされていない。
+      expect(find.text('おつかれさまでした！'), findsOneWidget);
+      expect(session.lastDraft, isNull);
+      c.read(overlayManagerProvider).close(composerFowId, reason: OverlayCloseReason.discard);
+      await tester.pumpAndSettle();
     });
 
     testWidgets('app.actions: 自動化できる投稿アクション一覧を取る(reply は自動化不可)', (tester) async {

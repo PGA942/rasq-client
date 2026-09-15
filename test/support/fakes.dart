@@ -4,11 +4,15 @@ import 'package:rasq_store/rasq_store.dart';
 
 /// Fake SNS plugin/session for widget tests — serves a fixed timeline.
 class FakeSnsPlugin extends SnsPlugin {
-  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const []});
+  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const []});
   final List<Post> Function(AccountId viewer) posts;
   @override
   final SnsKind kind;
   final String id;
+
+  /// 設定第二階層ページ (D-225): RAi の settings.set のゲート(操作禁止タグ)のテスト用。
+  @override
+  final List<String> settingsPages;
 
   /// カスタムフィード (D-194): Bluesky 役のフェイクが検索で返すもの。
   final List<FeedInfo> feeds;

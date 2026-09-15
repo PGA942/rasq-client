@@ -1,9 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rrl_core/rrl_core.dart';
 
 import '../../app/providers.dart';
+import '../../app/router.dart';
+import '../compose/compose_target.dart';
+import '../compose/composer_sheet.dart';
 import '../settings/settings_dsl.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
@@ -66,6 +72,67 @@ String raiTruncate(String s, int chars) => s.length <= chars ? s : '${s.substrin
 /// アクションを RAi から自動で実行してよいか(プラグインの宣言に従う)。
 bool raiCanAutomate(ActionDescriptor a) => a.automation == AutomationPolicy.allowed && a.fow == FowType.none;
 
+/// 設定ページのノードに付ける「操作禁止」タグ (D-225): `p.tags` に入っていれば RAi は書かない。
+/// プラグインの設定ページ(`rasq.settings-page/1`)は JSON なので、`"p": {"tags": ["操作禁止"]}` で宣言する。
+const raiNoAutomationTag = '操作禁止';
+
+/// ホスト(既定)の設定でパスワードが要るキーの印 (D-225): `"p": {"password": true}`。
+/// 現状の静的ページには無く、`web.open`(web 版へ逃がす)のタイルは defaults にキーが無いので元から書けない。
+const raiPasswordProp = 'password';
+
+/// 設定キーを RAi が書いてよいか (D-225)。ユーザー指定: 既定設定はパスワードの要らない部分、
+/// プラグイン設定は操作禁止タグを付けていない部分。判定は spec の RRL ツリーで、そのキー(`k`)を
+/// `settings.set` で書くタイルが 1 つ以上あり、かつどのタイルにも [raiPasswordProp] / [raiNoAutomationTag] が
+/// 無いこと。理由文は拒否のときだけ。
+({bool ok, String reason}) raiSettingsWritable(SettingsPageSpec spec, String key) {
+  if (!spec.defaults.containsKey(key)) return (ok: false, reason: '「${spec.area}」に「$key」という設定はありません(ある: ${spec.defaults.keys.join(', ')})');
+  final nodes = raiSettingsNodesFor(spec.root, key);
+  if (!nodes.any((n) => n.on['change'] == 'settings.set')) return (ok: false, reason: '「$key」は画面から書ける設定ではありません');
+  for (final n in nodes) {
+    if (n.p[raiPasswordProp] == true) return (ok: false, reason: '「$key」はパスワードが要るので RAi からは書きません');
+    final tags = n.p['tags'];
+    if (tags is List && tags.contains(raiNoAutomationTag)) return (ok: false, reason: '「$key」は操作禁止タグが付いているので RAi からは書きません');
+  }
+  return (ok: true, reason: '');
+}
+
+/// ツリーから `k == key` のノードを集める。
+List<RrlNode> raiSettingsNodesFor(RrlNode root, String key) => [
+      if (root.k == key) root,
+      for (final c in root.c) ...raiSettingsNodesFor(c, key),
+    ];
+
+/// LLM の文字列引数を設定値の型に合わせる (D-225): 既定値が bool / num / String のどれかで判断し、
+/// ラジオの選択肢(`RadioListTile` の `p.value`)やスライダーの範囲(`p.min` / `p.max`)があればそれも見る。
+/// 合わなければ null(呼び出し側が理由を添えて断る)。
+Object? raiCoerceSettingValue(SettingsPageSpec spec, String key, String raw) {
+  final current = spec.defaults[key];
+  final v = raw.trim();
+  final nodes = raiSettingsNodesFor(spec.root, key);
+  final choices = [for (final n in nodes) if (n.t == 'RadioListTile' && n.p.containsKey('value')) n.p['value']];
+  if (choices.isNotEmpty) {
+    for (final c in choices) {
+      if ('$c' == v) return c;
+    }
+    return null;
+  }
+  if (current is bool) {
+    return switch (v.toLowerCase()) { 'true' || 'on' || 'yes' || '1' || 'オン' || 'はい' => true, 'false' || 'off' || 'no' || '0' || 'オフ' || 'いいえ' => false, _ => null };
+  }
+  if (current is num) {
+    final n = num.tryParse(v.replaceAll('%', ''));
+    if (n == null) return null;
+    for (final node in nodes) {
+      final min = node.p['min'], max = node.p['max'];
+      if (min is num && n < min) return null;
+      if (max is num && n > max) return null;
+    }
+    return current is int && n is double && n == n.roundToDouble() ? n.round() : n;
+  }
+  if (current is String || current == null) return v;
+  return null;
+}
+
 /// 一覧の行を予算まで積む共有ヘルパー (D-223): [head] の後に「N 件中 M 件」を添え、収まらない分は落とす
 /// (最初の 1 行も入らなければ切り詰めて 1 行だけ残す)。空なら「該当なし」。
 String raiFoldLines(List<String> lines, int budget, {required String head}) {
@@ -105,7 +172,7 @@ Future<RaiFunctionResult> raiGuard(String name, Future<RaiFunctionResult> Functi
 const raiFunctionUsage = <String>[
   'posts.fetch(kind=home|search, keyword=語, sort=new|reactions, limit=数): 投稿本文を取る',
   'reference.get(id=操作か関数の id): リファレンスの詳細を取る',
-  'post.create(text=本文): 投稿する',
+  'post.create(text=本文): 投稿する。post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる(送信はユーザー)',
   'post.action(action=アクション id, post=投稿 id): 投稿にアクション(自動化が許可されたものだけ)',
   'astell.rooms(): AsTell のルーム一覧を取る',
   'astell.create(title=題名): AsTell のルームを作る',
@@ -124,7 +191,7 @@ const raiFunctionUsage = <String>[
   'follow.set(user, on=true|false): フォローする/外す',
   'list.edit(list, user, add=true|false)・list.create(name): リストにユーザーを足す/外す・作る',
   'clip.edit(clip, post, add=true|false)・clip.create(name): クリップに投稿を足す/外す・作る(Misskey のみ)',
-  'settings.get(area, key): アプリの設定値を読む(設定ページにあるキーのみ)',
+  'settings.get(area, key)・settings.set(area, key, value): 設定を読む/書く(設定ページのキーのみ。書けるのはパスワード不要で操作禁止タグの無いもの)',
   'app.actions(): この SNS で自動化できる投稿アクション一覧を取る',
 ];
 
@@ -212,6 +279,13 @@ class RaiFunctionRunner {
           return await _clipCreate(c);
         case 'settings.get':
           return await _settingsGet(c);
+        case 'settings.set':
+          return await _settingsSet(c);
+        case 'post.compose':
+        case 'post.reply':
+        case 'post.quote':
+        case 'dm.compose':
+          return await _composeFill(c);
         case 'app.actions':
           return await _appActions(c);
       }
@@ -694,6 +768,61 @@ class RaiFunctionRunner {
     final value = values[key] ?? spec.defaults[key];
     return RaiFunctionResult(name: c.name, text: raiTruncate('$area.$key = $value', budget), fetched: true);
   }
+
+  /// settings.set(area, key, value): 設定を書く (D-225)。[raiSettingsWritable] で「既定設定はパスワード不要の
+  /// 部分 / プラグイン設定は操作禁止タグの無い部分」に絞り、値は [raiCoerceSettingValue] で型 / 選択肢 / 範囲を
+  /// 合わせる。書き込み先は画面と同じ([SettingsAreaStore] / [RemoteSettingsStore])なので、プラグインへの
+  /// 即時反映(applySettings)やサーバー保存もそのまま効く。
+  Future<RaiFunctionResult> _settingsSet(RaiFunctionCall c) async {
+    final area = c.arg('area').trim();
+    final key = c.arg('key').trim();
+    final raw = c.arg('value');
+    if (area.isEmpty || key.isEmpty || raw.trim().isEmpty) return RaiFunctionResult(name: c.name, text: 'area= と key= と value= を指定してください', ok: false);
+    final SettingsPageSpec spec;
+    try {
+      spec = await ref.read(settingsPageSpecProvider(area).future);
+    } catch (e) {
+      return RaiFunctionResult(name: c.name, text: '設定ページ「$area」はありません', ok: false);
+    }
+    final gate = raiSettingsWritable(spec, key);
+    if (!gate.ok) return RaiFunctionResult(name: c.name, text: gate.reason, ok: false);
+    final value = raiCoerceSettingValue(spec, key, raw);
+    if (value == null) return RaiFunctionResult(name: c.name, text: '「$key」に「${raw.trim()}」は入れられません(今の値: ${spec.defaults[key]})', ok: false);
+    if (spec.isRemote) {
+      await ref.read(remoteSettingsProvider(spec.area).notifier).set(key, value);
+    } else {
+      await ref.read(settingsAreaProvider(area).notifier).set(key, value);
+    }
+    return RaiFunctionResult(name: c.name, text: '$area.$key を $value にしました');
+  }
+
+  /// post.compose(text) / post.reply(post, text) / post.quote(post, text) / dm.compose(room, text):
+  /// 送信 / 返信系は自動化不可 (D-225、ユーザー指定)。代わりに**コンポーザーを開いて本文を入れる**だけにし、
+  /// 送るかどうかはユーザーが決める。開いたコンポーザーは待たない(閉じるまで答えが止まらないように)。
+  Future<RaiFunctionResult> _composeFill(RaiFunctionCall c) => raiGuard(c.name, () async {
+        final text = c.arg('text').trim();
+        if (text.isEmpty) return RaiFunctionResult(name: c.name, text: '本文(text=)がありません', ok: false);
+        final s = _session();
+        final ComposeTarget target;
+        switch (c.name) {
+          case 'post.reply':
+          case 'post.quote':
+            final id = c.arg('post').trim();
+            if (id.isEmpty) return RaiFunctionResult(name: c.name, text: '投稿 id (post=) がありません', ok: false);
+            final p = await s.post(id);
+            target = c.name == 'post.reply' ? ComposeReply(p) : ComposeQuote(p);
+          case 'dm.compose':
+            final id = c.arg('room').trim();
+            if (id.isEmpty) return RaiFunctionResult(name: c.name, text: 'ルーム id (room=) がありません', ok: false);
+            final room = (await s.dmRooms()).where((r) => r.id == id).firstOrNull;
+            if (room == null) return RaiFunctionResult(name: c.name, text: 'DM ルーム $id はありません', ok: false);
+            target = ComposeDm(room);
+          default:
+            target = const ComposeNormal();
+        }
+        unawaited(showComposerWith(target, manager: ref.read(overlayManagerProvider), router: ref.read(routerProvider), initialText: text));
+        return RaiFunctionResult(name: c.name, text: '${target.title}の下書きをコンポーザーに入れました(送信はしていません)');
+      });
 
   /// app.actions(): この SNS で自動化できる投稿アクション一覧を取る (D-223)。モデルが post.action の
   /// action= を当てられるようにする(費用対効果が高い、報告書 §2-4 参照)。
