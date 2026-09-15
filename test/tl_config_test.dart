@@ -14,6 +14,7 @@ import 'package:rasq_client/features/nodeprog/tl_components.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -125,6 +126,15 @@ void main() {
     );
     out = await runNodeGraph(g2, fetch: (_) async => posts, selfQuery: 'りんご');
     expect([for (final p in out!) p.id], ['p2']);
+
+    // 除外 (D-227): ワードを含む投稿を落とす(ワードミュート)。JSON 往復でも残る。
+    const ex = TlAlgorithmComponent(type: 'queryfilter', query: 'みかん', exclude: true);
+    expect(TlAlgorithmComponent.fromJson(ex.toJson()).exclude, isTrue);
+    expect(ex.title, '検索絞り込み(除外)');
+    final g3 = compileTlConfig(const TlConfig(sources: [TlSourceComponent(tl: 'home')], algorithms: [ex], clock: ''), scope: 'tl.home');
+    expect(g3.nodes.firstWhere((n) => n.type == 'filter.query').inputs.firstWhere((i) => i.label == '除外').value, 'true');
+    out = await runNodeGraph(g3, fetch: (_) async => posts, selfQuery: 'りんご');
+    expect([for (final p in out!) p.id], ['p1']);
 
     // trend.following の既定構成に検索絞り込みが入っている。
     expect(defaultTlConfig('trend.following').algorithms.first.type, 'queryfilter');
@@ -318,6 +328,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('プラグインノードを検索'), findsOneWidget);
     expect(find.textContaining('対応: Fake'), findsWidgets);
+    // パレットの ∨ (D-227): 押すとチップの列が出て、「並び替え」「ジャンル」のドロップダウンが開く
+    // (以前はフォーカスの変化で組み直しておらず、∨ にもハンドラが無かった)。
+    expect(find.text('並び替え: 関連順'), findsNothing);
+    await tester.tap(find.descendant(of: find.byType(RasqExpandableSearchBox), matching: find.byIcon(Icons.keyboard_arrow_down)));
+    await tester.pumpAndSettle();
+    expect(find.text('並び替え: 関連順'), findsOneWidget);
+    await tester.tap(find.text('ジャンル: すべて'));
+    await tester.pumpAndSettle();
+    expect(container.read(overlayManagerProvider).contains('tlconfig.palette.genre'), isTrue); // ドロップダウンが開いた
+    container.read(overlayManagerProvider).close('tlconfig.palette.genre');
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(RasqExpandableSearchBox), matching: find.byIcon(Icons.keyboard_arrow_down)).first);
+    await tester.pumpAndSettle();
+    expect(find.text('並び替え: 関連順'), findsNothing); // ∨ でまた畳める
     await tester.tap(find.text('サジェスト'));
     await tester.pumpAndSettle();
     expect(find.text('プラグインノードを検索'), findsNothing); // 追加で閉じる

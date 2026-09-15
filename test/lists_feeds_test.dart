@@ -9,6 +9,7 @@ import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/lists/lists_screens.dart';
 import 'package:rasq_client/features/nodeprog/timeline_config_screen.dart';
 import 'package:rasq_client/features/nodeprog/tl_components.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -76,6 +77,30 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('lists.feed.at://did:plc:x/app.bsky.feed.generator/cats')));
     await tester.pumpAndSettle();
     expect(find.byType(FeedTimelineScreen), findsOneWidget);
+    // フィードの保存 (D-227): 保存済みなら「保存を外す」、外すと「フィードを保存」。ヘッダーと行の両方に同じボタン。
+    expect(find.byTooltip('保存を外す'), findsOneWidget);
+    await tester.tap(find.byTooltip('保存を外す'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('フィードを保存'), findsOneWidget);
+    expect(await (c.read(currentSnsSessionProvider) as FakeSnsSession).savedFeeds(), isEmpty);
+    await tester.tap(find.byTooltip('フィードを保存'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('保存を外す'), findsOneWidget);
+    // タイムラインに取り込む (D-227): ホームの TL カスタマイズの取り込み元に feed:<uri> が足される(画面を通らずに同じ保存先へ)。
+    await tester.tap(find.byKey(const ValueKey('feed.import')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('「Cats」をホームのタイムラインに取り込みました'), findsOneWidget);
+    final area = await c.read(settingsAreaProvider('nodeprog.${bsky.account.key}.tl.home').future);
+    final home = TlConfig.fromJson((jsonDecode(area['tlcfg'] as String) as Map).cast<String, Object?>());
+    expect(home.sources.map((s) => s.tl), contains('feed:at://did:plc:x/app.bsky.feed.generator/cats'));
+    expect(home.sources.last.account, '${bsky.account}');
+    expect(area['graph'], contains('tl.feed'));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    // 2 回目は足さない。
+    await tester.tap(find.byKey(const ValueKey('feed.import')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('もうホームのタイムラインに入っています'), findsOneWidget);
   });
 
   testWidgets('Misskey: タブ無し、カスタムフィードは出ない、インポートは従来', (tester) async {

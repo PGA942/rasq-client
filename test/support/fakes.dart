@@ -176,7 +176,18 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<List<FeedInfo>> searchFeeds(String query, {int limit = 20}) async => [for (final f in feeds) if (query.isEmpty || f.name.toLowerCase().contains(query.toLowerCase())) f];
   @override
-  Future<List<FeedInfo>> savedFeeds() async => kind == SnsKind.bluesky ? feeds : throw UnsupportedError('no feeds');
+  Future<List<FeedInfo>> savedFeeds() async => kind == SnsKind.bluesky ? (saved ??= [...feeds]) : throw UnsupportedError('no feeds');
+
+  /// 保存済みフィード (D-227): 最初は [feeds] 全部。saveFeed で足す / 外す。
+  List<FeedInfo>? saved;
+  @override
+  Future<List<FeedInfo>> saveFeed(String uri, {bool on = true}) async {
+    if (kind != SnsKind.bluesky) throw UnsupportedError('no feeds');
+    final cur = saved ??= [...feeds];
+    cur.removeWhere((f) => f.uri == uri);
+    if (on) cur.add(feeds.where((f) => f.uri == uri).firstOrNull ?? FeedInfo(uri: uri, name: uri.split('/').last));
+    return [...cur];
+  }
   @override
   Future<List<UserSummary>> listMembers(String listId) async => [_posts.last.author];
   @override

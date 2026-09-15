@@ -15,7 +15,10 @@ import 'rai_providers.dart';
 
 @immutable
 class RaiStats {
-  const RaiStats({this.instructionsAsked = 0, this.assistantAsked = 0, this.assistantAppAsked = 0, this.instructionsCompleted = 0, this.repeatedAsks = 0});
+  const RaiStats({this.instructionsAsked = 0, this.assistantAsked = 0, this.assistantAppAsked = 0, this.instructionsCompleted = 0, this.repeatedAsks = 0, this.automations = 0});
+
+  /// 「スキップ」→ 承認して RAi に任せた回数 (D-226)。
+  final int automations;
 
   /// インストラクション(操作の案内)を聞いた回数。
   final int instructionsAsked;
@@ -32,12 +35,13 @@ class RaiStats {
   /// 同じ質問をもう一度聞いた回数(何度も聞いた)。
   final int repeatedAsks;
 
-  RaiStats copyWith({int? instructionsAsked, int? assistantAsked, int? assistantAppAsked, int? instructionsCompleted, int? repeatedAsks}) => RaiStats(
+  RaiStats copyWith({int? instructionsAsked, int? assistantAsked, int? assistantAppAsked, int? instructionsCompleted, int? repeatedAsks, int? automations}) => RaiStats(
         instructionsAsked: instructionsAsked ?? this.instructionsAsked,
         assistantAsked: assistantAsked ?? this.assistantAsked,
         assistantAppAsked: assistantAppAsked ?? this.assistantAppAsked,
         instructionsCompleted: instructionsCompleted ?? this.instructionsCompleted,
         repeatedAsks: repeatedAsks ?? this.repeatedAsks,
+        automations: automations ?? this.automations,
       );
 
   Map<String, Object?> toJson() => {
@@ -46,6 +50,7 @@ class RaiStats {
         'assistantAppAsked': assistantAppAsked,
         'instructionsCompleted': instructionsCompleted,
         'repeatedAsks': repeatedAsks,
+        'automations': automations,
       };
 
   factory RaiStats.fromJson(Map<String, Object?> j) => RaiStats(
@@ -54,10 +59,11 @@ class RaiStats {
         assistantAppAsked: (j['assistantAppAsked'] as num?)?.toInt() ?? 0,
         instructionsCompleted: (j['instructionsCompleted'] as num?)?.toInt() ?? 0,
         repeatedAsks: (j['repeatedAsks'] as num?)?.toInt() ?? 0,
+        automations: (j['automations'] as num?)?.toInt() ?? 0,
       );
 
   @override
-  bool operator ==(Object other) => other is RaiStats && other.instructionsAsked == instructionsAsked && other.assistantAsked == assistantAsked && other.assistantAppAsked == assistantAppAsked && other.instructionsCompleted == instructionsCompleted && other.repeatedAsks == repeatedAsks;
+  bool operator ==(Object other) => other is RaiStats && other.instructionsAsked == instructionsAsked && other.assistantAsked == assistantAsked && other.assistantAppAsked == assistantAppAsked && other.instructionsCompleted == instructionsCompleted && other.repeatedAsks == repeatedAsks && other.automations == automations;
   @override
   int get hashCode => Object.hash(instructionsAsked, assistantAsked, assistantAppAsked, instructionsCompleted, repeatedAsks);
 }
@@ -83,6 +89,7 @@ final raiAchievements = <RaiAchievement>[
   RaiAchievement(id: 'done1', title: '一発で完走', description: '案内を最後の手順まで進めた', threshold: 1, count: (s) => s.instructionsCompleted),
   RaiAchievement(id: 'done10', title: '完走マスター', description: '案内を 10 回最後まで進めた', threshold: 10, count: (s) => s.instructionsCompleted),
   RaiAchievement(id: 'again3', title: '復習中', description: '同じ操作を 3 回聞き直した', threshold: 3, count: (s) => s.repeatedAsks),
+  RaiAchievement(id: 'auto1', title: 'おまかせ', description: '「スキップ」で RAi に任せた', threshold: 1, count: (s) => s.automations),
 ];
 
 @immutable
@@ -117,13 +124,14 @@ class RaiStatsStore extends Notifier<RaiStats> {
 
   void _save() => ref.read(sessionStorageProvider).write(storageKey, jsonEncode(state.toJson())).catchError((_) {});
 
-  void bump({bool instructionAsked = false, bool assistantAsked = false, bool assistantApp = false, bool completed = false, bool repeated = false}) {
+  void bump({bool instructionAsked = false, bool assistantAsked = false, bool assistantApp = false, bool completed = false, bool repeated = false, bool automated = false}) {
     state = state.copyWith(
       instructionsAsked: state.instructionsAsked + (instructionAsked ? 1 : 0),
       assistantAsked: state.assistantAsked + (assistantAsked ? 1 : 0),
       assistantAppAsked: state.assistantAppAsked + (assistantApp ? 1 : 0),
       instructionsCompleted: state.instructionsCompleted + (completed ? 1 : 0),
       repeatedAsks: state.repeatedAsks + (repeated ? 1 : 0),
+      automations: state.automations + (automated ? 1 : 0),
     );
     _save();
   }

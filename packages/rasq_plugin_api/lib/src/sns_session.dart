@@ -63,6 +63,10 @@ abstract class SnsSession {
 
   /// 保存済み / ピン留めのカスタムフィード (D-195: リストページの「カスタムフィード」欄)。
   Future<List<FeedInfo>> savedFeeds();
+
+  /// カスタムフィードを保存する / 保存から外す (D-227: フィード行・フィード TL の「フィードを保存」)。
+  /// 戻り値 = 保存後の保存済みフィード。持たない SNS は unsupported。
+  Future<List<FeedInfo>> saveFeed(String uri, {bool on = true});
   Future<UserListInfo> listInfo(String listId);
   Future<List<UserSummary>> listMembers(String listId);
   Future<UserListInfo> createList(String name);
@@ -213,6 +217,8 @@ abstract class SnsSessionBase implements SnsSession {
   Future<List<FeedInfo>> searchFeeds(String query, {int limit = 20}) => _unsupported('searchFeeds');
   @override
   Future<List<FeedInfo>> savedFeeds() => _unsupported('savedFeeds');
+  @override
+  Future<List<FeedInfo>> saveFeed(String uri, {bool on = true}) => _unsupported('saveFeed');
   @override
   Future<UserListInfo> listInfo(String listId) => _unsupported('listInfo');
   @override

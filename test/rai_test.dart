@@ -575,14 +575,14 @@ void main() {
     expect(find.text('マクロ'), findsOneWidget);
     expect(find.textContaining('まだありません'), findsOneWidget);
     // アチーブメントはページ (D-215)、マクロは第二期(遷移しない)。
-    expect(find.text('0 / 8 達成'), findsOneWidget);
+    expect(find.text('0 / 9 達成'), findsOneWidget);
     expect(tester.widget<RasqListTile>(find.byKey(const ValueKey('rai.sidebar.macros'))).enabled, isFalse);
     await tester.tap(find.byKey(const ValueKey('rai.sidebar.achievements')));
     await tester.pumpAndSettle();
     expect(find.byType(RaiAchievementsScreen), findsOneWidget);
     expect(c.read(raiProvider).sidebarOpen, isFalse);
     expect(find.byKey(const ValueKey('rai.sidebar.ach.ask1')), findsOneWidget);
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.achievements.summary'))).data, '0 / 8 達成');
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.achievements.summary'))).data, '0 / 9 達成');
     await tester.tap(find.byTooltip('戻る'));
     await tester.pumpAndSettle();
     expect(find.byType(RaiHomeScreen), findsOneWidget);
@@ -616,7 +616,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.sidebar.toggle')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rai.sidebar.conv.current')), findsOneWidget);
-    expect(find.text('1 / 8 達成'), findsOneWidget); // 「はじめての質問」が達成
+    expect(find.text('1 / 9 達成'), findsOneWidget); // 「はじめての質問」が達成
     // 新しい会話 → いまの履歴が保存され、履歴は空、サイドバーは閉じる。
     await tester.tap(find.byKey(const ValueKey('rai.sidebar.new')));
     await tester.pumpAndSettle();

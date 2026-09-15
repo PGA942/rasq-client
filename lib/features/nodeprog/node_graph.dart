@@ -416,10 +416,11 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '検索絞り込み',
     icon: Icons.manage_search,
     genre: '加工',
-    description: '検索ワードに合う投稿だけ通します。ワードが空のときは、このページの検索ワード/タグを使います。',
+    description: '検索ワードに合う投稿だけ通します。ワードが空のときは、このページの検索ワード/タグを使います。「除外」を true にすると、合う投稿を落とします(ワードミュート)。',
     inputs: [
       NodePort(label: '投稿リスト', dataType: '投稿リスト'),
       NodePort(label: '検索ワード', value: '', dataType: '設定'),
+      NodePort(label: '除外', value: 'false', dataType: '設定', options: ['false', 'true']),
     ],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),

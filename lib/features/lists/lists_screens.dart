@@ -15,6 +15,8 @@ import '../clips/index_toc.dart';
 import '../clips/virtual_index.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../nodeprog/tl_components.dart';
+import '../nodeprog/tl_config_store.dart';
 import '../settings/settings_dsl.dart';
 import '../users/user_list.dart';
 
@@ -209,28 +211,76 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
   }
 }
 
-/// カスタムフィードの行 (D-195/196): 名前・作者・♥・説明。タップでフィード TL。
-Widget _feedRow(BuildContext context, FeedInfo f) {
-  final scheme = Theme.of(context).colorScheme;
-  return InkWell(
-    key: ValueKey('lists.feed.${f.uri}'),
-    onTap: () => context.push(Routes.feed(f.uri), extra: f),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.md),
-      child: Row(children: [
-        Container(width: 48, height: 48, decoration: BoxDecoration(color: scheme.surfaceContainerHighest, shape: BoxShape.circle), child: const Icon(Icons.rss_feed)),
-        const SizedBox(width: RasqSpacing.md),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(f.name, style: RasqTypography.displayName),
-            Text([if (f.creator != null) '@${f.creator}', if (f.likeCount != null) '♥ ${f.likeCount}'].join(' ・ '), style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
-            if (f.description != null && f.description!.isNotEmpty) Text(f.description!, maxLines: 2, overflow: TextOverflow.ellipsis, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-          ]),
-        ),
-        const Icon(Icons.chevron_right),
-      ]),
-    ),
-  );
+/// カスタムフィードの行 (D-195/196): 名前・作者・♥・説明。タップでフィード TL。右に「フィードを保存」(D-227)。
+Widget _feedRow(BuildContext context, FeedInfo f) => _FeedRow(key: ValueKey('lists.feed.${f.uri}'), feed: f);
+
+class _FeedRow extends ConsumerWidget {
+  const _FeedRow({super.key, required this.feed});
+  final FeedInfo feed;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final f = feed;
+    return InkWell(
+      onTap: () => context.push(Routes.feed(f.uri), extra: f),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.md),
+        child: Row(children: [
+          Container(width: 48, height: 48, decoration: BoxDecoration(color: scheme.surfaceContainerHighest, shape: BoxShape.circle), child: const Icon(Icons.rss_feed)),
+          const SizedBox(width: RasqSpacing.md),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(f.name, style: RasqTypography.displayName),
+              Text([if (f.creator != null) '@${f.creator}', if (f.likeCount != null) '♥ ${f.likeCount}'].join(' ・ '), style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant)),
+              if (f.description != null && f.description!.isNotEmpty) Text(f.description!, maxLines: 2, overflow: TextOverflow.ellipsis, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            ]),
+          ),
+          FeedSaveButton(uri: f.uri),
+          const Icon(Icons.chevron_right),
+        ]),
+      ),
+    );
+  }
+}
+
+/// 「フィードを保存」/「保存を外す」(D-227): 保存済みフィード([savedFeedsProvider])にあるかで印を変え、
+/// [SnsSession.saveFeed] で切り替える。持たない SNS では何もしない(非対応の知らせ)。
+class FeedSaveButton extends ConsumerWidget {
+  const FeedSaveButton({super.key, required this.uri, this.size = 22});
+  final String uri;
+  final double size;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final saved = ref.watch(savedFeedsProvider).value?.any((f) => f.uri == uri) ?? false;
+    return RasqIconButton(
+      key: ValueKey('lists.feed.save.$uri'),
+      icon: saved ? Icons.bookmark : Icons.bookmark_border,
+      size: size,
+      tooltip: saved ? '保存を外す' : 'フィードを保存',
+      color: saved ? RasqColors.link : null,
+      onPressed: () async {
+        final s = ref.read(currentSnsSessionProvider);
+        if (s == null) return;
+        try {
+          await s.saveFeed(uri, on: !saved);
+          ref.invalidate(savedFeedsProvider);
+        } catch (e) {
+          ref.read(overlayManagerProvider).showAlert(id: 'lists.feed.save', title: saved ? '保存を外せませんでした' : '保存できませんでした', message: e is UnsupportedError ? 'この SNS はフィードの保存に対応していません' : '$e', confirmText: 'OK');
+        }
+      },
+    );
+  }
+}
+
+/// 「タイムラインに取り込む」(D-227): 開いているフィードをホームの TL カスタマイズの取り込み元に足す。
+/// 保存の作法は TL カスタマイズ画面と同じ([addTlSource])。足したらホームの TL を読み直す。
+Future<String> importFeedToHome(ProviderContainer c, {required String uri, required String name}) async {
+  final acc = c.read(currentAccountProvider);
+  if (acc == null) return 'ログインしていません';
+  final added = await addTlSource(c, acc.key, 'tl.home', TlSourceComponent(tl: 'feed:$uri', account: '$acc', label: name));
+  if (!added) return '「$name」はもうホームのタイムラインに入っています';
+  c.invalidate(timelineProvider(TimelineKind.home));
+  return '「$name」をホームのタイムラインに取り込みました(タブ行の歯車で確認できます)';
 }
 
 /// リストの中身: ヘッダータイル + tabs ∨ユーザー / 投稿.
@@ -311,7 +361,20 @@ class FeedTimelineScreen extends ConsumerWidget {
       appBar: RasqPageHeader(
         title: info?.name ?? 'フィード',
         onMore: () {},
-        actions: [RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'フィードTL設定', onPressed: () => context.push(Routes.tlConfig('tl.feed:$uri')))],
+        actions: [
+          FeedSaveButton(uri: uri, size: 20),
+          RasqIconButton(
+            key: const ValueKey('feed.import'),
+            icon: Icons.playlist_add,
+            size: 20,
+            tooltip: 'タイムラインに取り込む',
+            onPressed: () async {
+              final msg = await importFeedToHome(ProviderScope.containerOf(context), uri: uri, name: info?.name ?? uri);
+              ref.read(overlayManagerProvider).showAlert(id: 'feed.import', title: 'タイムラインに取り込む', message: msg, confirmText: 'OK');
+            },
+          ),
+          RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'フィードTL設定', onPressed: () => context.push(Routes.tlConfig('tl.feed:$uri'))),
+        ],
       ),
       body: tl.when(
         loading: () => const RasqLoading(),

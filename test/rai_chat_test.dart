@@ -4,19 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId;
 import 'package:rasq_client/features/rai/rai_chat.dart';
 import 'package:rasq_client/features/rai/rai_embedding_model.dart';
+import 'package:rasq_client/features/rai/rai_functions.dart';
 import 'package:rasq_client/features/rai/rai_home_screen.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
 import 'package:rasq_client/features/rai/rai_mascot_3d.dart';
 import 'package:rasq_client/features/rai/rai_motion.dart';
 import 'package:rasq_client/features/rai/rai_overlay.dart';
 import 'package:rasq_client/features/rai/rai_providers.dart';
+import 'package:rasq_client/features/rai/rai_reference.dart';
 import 'package:rasq_client/features/rai/rai_reference_providers.dart';
 import 'package:rasq_client/features/rai/rai_stats.dart';
+import 'package:rasq_client/features/nodeprog/tl_components.dart';
+import 'package:rasq_client/features/rai/rai_web_search.dart';
 import 'package:rasq_client/features/rai/rai_widgets.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -61,7 +67,7 @@ void main() {
   late FakeRaiLlm llm;
   /// [extraPosts] (D-223): 既定の 1 投稿(p1)に足す分。user.search など複数ユーザーが要る関数のテスト用
   /// (既存テストは渡さないので p1 だけの挙動は変わらない)。
-  Future<ProviderContainer> pump(WidgetTester tester, {List<Post> Function(AccountId)? extraPosts, SnsKind kind = SnsKind.misskey, List<String> settingsPages = const []}) async {
+  Future<ProviderContainer> pump(WidgetTester tester, {List<Post> Function(AccountId)? extraPosts, SnsKind kind = SnsKind.misskey, List<String> settingsPages = const [], List<FeedInfo> feeds = const [], RaiWebSearch? webSearch}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -70,22 +76,27 @@ void main() {
     // Future を別のテストから await すると、伝播のマイクロタスクが死んだゾーンに積まれて永遠に返らない
     // (settings.get → settings.set の順で踏んだ)。テストごとに空にする。
     rootBundle.clear();
+    // Bluesky 役 (D-227): アカウントの kind も bluesky にする(関数の Bluesky 判定は AccountId.kind)。
+    final session = kind == SnsKind.bluesky
+        ? AccountSession(account: const AccountId(kind: SnsKind.bluesky, instance: 'bsky.social', handle: 'tester.bsky.social'), pluginId: fakeSession().pluginId, token: 't', createdAt: DateTime(2026, 8, 22), displayName: 'テスター')
+        : fakeSession();
     final storage = MemorySessionStorage({
-      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [session.toJson()], 'current': session.account.key}),
     });
     // 投稿を 1 つ(関数 posts.fetch の取得先)。
-    final acc = fakeSession().account;
+    final acc = session.account;
     final registry = PluginRegistry()
       ..register(FakeSnsPlugin(
         kind: kind,
         settingsPages: settingsPages,
+        feeds: feeds,
         posts: (_) => [
           Post(id: 'p1', account: acc, author: UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 14), body: '今日は打ち上げ'),
           ...?extraPosts?.call(acc),
         ],
       ));
     await tester.pumpWidget(ProviderScope(
-      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), raiLlmProvider.overrideWithValue(llm), raiEmbeddingModelProvider.overrideWithValue(FakeRaiEmbeddingModel()), deviceRamReaderProvider.overrideWithValue(() async => (totalMb: 8192, availableMb: 4096))],
+      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), raiLlmProvider.overrideWithValue(llm), raiEmbeddingModelProvider.overrideWithValue(FakeRaiEmbeddingModel()), deviceRamReaderProvider.overrideWithValue(() async => (totalMb: 8192, availableMb: 4096)), if (webSearch != null) raiWebSearchProvider.overrideWithValue(webSearch)],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
@@ -186,6 +197,66 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.read(raiProvider).mode, RaiMode.instruction);
     expect(c.read(raiProvider).lastOperation, first);
+  });
+
+  testWidgets('スキップ → 自動化 (D-226): 候補タイルの「スキップ」で RAi がやる動きの説明 + 承認タイル、「実行する」で部品を押して進め、入力が要る手順から案内に切り替える', (tester) async {
+    final c = await pump(tester);
+    llm.reply = '順にやりましょう。';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'Bluesky でログインして、投稿もしたい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    final first = c.read(raiProvider).log.first.candidates.first;
+    // 候補タイルに「スキップ」がある。
+    expect(find.byKey(ValueKey('rai.chat.skip.$first')), findsOneWidget);
+    // 「投稿する」で試す: 1 手順目(右下の「投稿」を押す)は自動、2 手順目は本文の入力が要る。
+    await c.read(raiProvider.notifier).skip('post');
+    await tester.pumpAndSettle();
+    var st = c.read(raiProvider);
+    expect(st.log.first.approval, 'post');
+    expect(st.log.first.text, contains('「投稿する」は案内を出さずに私がやります(2 手順のうち 1 手順まで)'));
+    expect(st.log.first.text, contains('(ここからは案内: 「本文」の入力が要る)'));
+    expect(find.byKey(const ValueKey('rai.chat.approval.post')), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.chat.approve.post')), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.chat.decline.post')), findsOneWidget);
+    // 「実行する」→ インストラクションモード(RAi ページは閉じる)、ホームの「投稿」が押されてコンポーザーが開き、
+    // 2 手順目から案内(指差し)に切り替わる。
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('rai.chat.approve.post'))).onPressed, isNotNull);
+    await tester.ensureVisible(find.byKey(const ValueKey('rai.chat.approve.post')));
+    await tester.tap(find.byKey(const ValueKey('rai.chat.approve.post')));
+    await tester.pumpAndSettle();
+    st = c.read(raiProvider);
+    expect(st.mode, RaiMode.instruction);
+    expect(find.byType(RaiHomeScreen), findsNothing);
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isTrue); // ホームの「投稿」が押されてコンポーザーが開いた
+    expect(st.stepIndex, 1);
+    expect(st.steps.length, 2);
+    expect(st.busy, isFalse);
+    expect(st.bubble, contains('本文を書いて'));
+    expect(st.log.any((u) => u.text.contains('1 手順目まで自動で進めました') && u.text.contains('「本文」の入力が要る')), isTrue);
+    expect(c.read(raiStatsProvider).automations, 1);
+    expect(raiAchievements.firstWhere((a) => a.id == 'auto1').count(c.read(raiStatsProvider)), 1);
+    c.read(overlayManagerProvider).close(composerFowId, reason: OverlayCloseReason.discard);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('承認タイルの「やめる」(D-226): 何もせず断りの行だけ、古い行の承認タイルは押せない', (tester) async {
+    final c = await pump(tester);
+    await c.read(raiProvider.notifier).skip('post');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.chat.decline.post')));
+    await tester.pumpAndSettle();
+    final st = c.read(raiProvider);
+    expect(st.mode, RaiMode.assistant);
+    expect(st.log.first.text, contains('「投稿する」は案内で進めるときに'));
+    expect(st.log.first.approval, isNull);
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('rai.chat.approve.post'))).onPressed, isNull);
+    expect(c.read(raiStatsProvider).automations, 0);
+  });
+
+  test('自動でできる手順数 (D-226): 入力が要る / 部品も画面も無い手順で止まる', () {
+    expect(RaiController.automatableUntil(const [RaiStep('a', tooltip: 'x'), RaiStep('b', route: '/home'), RaiStep('c', tooltip: 'y', inputs: ['本文'])]), 2);
+    expect(RaiController.automatableUntil(const [RaiStep('a', tooltip: 'x'), RaiStep('b')]), 1);
+    expect(RaiController.automatableUntil(const [RaiStep('a', tooltip: 'x'), RaiStep('b', label: 'y')]), 2);
   });
 
   testWidgets('RaiLinkCard はタップで開く(差し替え可)', (tester) async {
@@ -483,6 +554,57 @@ void main() {
       expect(session.lastDraft, isNull);
       c.read(overlayManagerProvider).close(composerFowId, reason: OverlayCloseReason.discard);
       await tester.pumpAndSettle();
+    });
+
+    testWidgets('timeline.addFeed / timeline.excludeWord / feed.save (D-227): ホームの TL にフィードを取り込み、ワードを除外し、フィードを保存から外す', (tester) async {
+      const feeds = [FeedInfo(uri: 'at://did:plc:x/app.bsky.feed.generator/sakamoto', name: 'サカモトデイズ', description: '作品のフィード')];
+      final c = await pump(tester, kind: SnsKind.bluesky, feeds: feeds);
+      llm.replies.addAll(['zzzz の状況', '', 'やります [[call:timeline.addFeed|feed=サカモト]] [[call:timeline.excludeWord|word=ネタバレ]] [[call:feed.save|feed=at://did:plc:x/app.bsky.feed.generator/sakamoto|on=false]]']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 0);
+      final bubble = c.read(raiProvider).bubble!;
+      final acc = c.read(currentAccountSessionProvider)!.account;
+      expect(acc.kind, SnsKind.bluesky);
+      expect(bubble, contains('「サカモトデイズ」($acc)をホームのタイムラインに取り込みました'));
+      expect(bubble, contains('「ネタバレ」を含む投稿を home のタイムラインから除外するようにしました'));
+      expect(bubble, contains('「サカモトデイズ」を保存から外しました(保存済み 0 件)'));
+      final area = await c.read(settingsAreaProvider('nodeprog.${acc.key}.tl.home').future);
+      final cfg = TlConfig.fromJson((jsonDecode(area['tlcfg'] as String) as Map).cast<String, Object?>());
+      expect(cfg.sources.map((s) => s.tl), contains('feed:at://did:plc:x/app.bsky.feed.generator/sakamoto'));
+      expect(cfg.algorithms.where((a) => a.isQueryFilter && a.exclude && a.query == 'ネタバレ').length, 1);
+      // Bluesky ではないアカウントでは取り込めない。
+      llm.replies.addAll(['zzzz の状況', '', 'もう一度 [[call:timeline.addFeed|feed=サカモト|account=@nobody@x.test]]']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz rrrr');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(c.read(raiProvider).bubble, contains('Bluesky のアカウントがありません'));
+    });
+
+    testWidgets('web.search (D-228): 既定(第一期)では無効で一覧にも出ない', (tester) async {
+      final c = await pump(tester);
+      llm.replies.addAll(['zzzz の状況', '', '調べます [[call:web.search|q=サカモトデイズ]]']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.systems.last, isNot(contains('web.search(')));
+      expect(llm.released, 0);
+      expect(c.read(raiProvider).bubble, contains('web 検索は第一期では無効です'));
+    });
+
+    testWidgets('web.search (D-228): 有効(鍵つき)なら一覧に出て、検索して注入 → 答え直す', (tester) async {
+      final client = MockClient((_) async => http.Response.bytes(utf8.encode(jsonEncode({'web': {'results': [{'title': 'SAKAMOTO DAYS', 'url': 'https://example.test/sd', 'description': '漫画'}]}})), 200));
+      final c = await pump(tester, webSearch: RaiWebSearch(token: 'k', enabled: true, client: client, mode: RaiWebMode.web));
+      llm.replies.addAll(['zzzz の状況', '', '調べます [[call:web.search|q=サカモトデイズ|count=1]]', '漫画です。']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 1);
+      expect(raiWebSearchUsage, contains('web.search(')); // 有効なら関数一覧に足される行(一覧は候補があるときだけ system に入る)
+      expect(llm.systems.last, contains('[web.search#1]'));
+      expect(llm.systems.last, contains('SAKAMOTO DAYS — 漫画 [https://example.test/sd]'));
+      expect(c.read(raiProvider).bubble, '漫画です。');
     });
 
     testWidgets('app.actions: 自動化できる投稿アクション一覧を取る(reply は自動化不可)', (tester) async {

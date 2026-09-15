@@ -80,6 +80,7 @@ class RaiChatList extends ConsumerWidget {
         proposalSteps: u.proposal == null || index == null ? 0 : (index.operation(u.proposal!) == null ? 0 : index.expand(index.operation(u.proposal!)!).length),
         choices: u.choices,
         candidates: [for (final id in u.candidates) if (index?.operation(id) != null) (index!.operation(id)!, index.expand(index.operation(id)!).length)],
+        approval: u.approval,
         rowIndex: i,
       ));
     }
@@ -117,8 +118,11 @@ class _UserRow extends StatelessWidget {
 }
 
 class _RaiRow extends ConsumerWidget {
-  const _RaiRow({super.key, required this.text, required this.at, required this.error, required this.latest, required this.links, required this.choices, required this.rowIndex, this.streaming = false, this.proposal, this.proposalSteps = 0, this.candidates = const []});
+  const _RaiRow({super.key, required this.text, required this.at, required this.error, required this.latest, required this.links, required this.choices, required this.rowIndex, this.streaming = false, this.proposal, this.proposalSteps = 0, this.candidates = const [], this.approval});
   final String text;
+
+  /// 承認待ちの自動化の操作 id (D-226)。
+  final String? approval;
   final DateTime? at;
   final bool error;
   final bool latest;
@@ -159,13 +163,15 @@ class _RaiRow extends ConsumerWidget {
             if (at != null) Padding(padding: const EdgeInsets.only(top: 2, left: 4), child: Text(RasqTimestamp.format(at!), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
             // 行の下のタイル (D-218)。
             for (final (k, u) in links.indexed) RaiLinkCard(key: ValueKey('rai.chat.link.$rowIndex.$k'), url: u),
-            if (op != null) _ProposalTile(op: op, steps: proposalSteps, onGuide: () => n.guide(op.id)),
+            if (op != null) _ProposalTile(op: op, steps: proposalSteps, onGuide: () => n.guide(op.id), onSkip: () => n.skip(op.id)),
+            // 承認タイル (D-226): 「スキップ」の説明の下。最新の行だけ押せる。
+            if (approval != null) _ApprovalTile(opId: approval!, enabled: latest, onApprove: () => n.approve(approval!), onDecline: () => n.decline(approval!)),
             // 候補 (D-222): 返事の下に並べ、右の × で「これじゃない」→ 除外して答え直す。
             if (candidates.isNotEmpty)
               Row(key: ValueKey('rai.chat.candidates.$rowIndex'), crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    for (final (c, steps) in candidates) _ProposalTile(key: ValueKey('rai.chat.candidate.${c.id}'), op: c, steps: steps, onGuide: () => n.guide(c.id)),
+                    for (final (c, steps) in candidates) _ProposalTile(key: ValueKey('rai.chat.candidate.${c.id}'), op: c, steps: steps, onGuide: () => n.guide(c.id), onSkip: () => n.skip(c.id)),
                   ]),
                 ),
                 if (latest)
@@ -189,12 +195,13 @@ class _RaiRow extends ConsumerWidget {
   }
 }
 
-/// 提案の操作タイル: 見出し + 手順数 + 「この手順で案内」。
+/// 提案の操作タイル: 見出し + 手順数 + 「スキップ」(D-226: 案内を出さずに RAi がやる)+ 「この手順で案内」。
 class _ProposalTile extends StatelessWidget {
-  const _ProposalTile({super.key, required this.op, required this.steps, required this.onGuide});
+  const _ProposalTile({super.key, required this.op, required this.steps, required this.onGuide, required this.onSkip});
   final RaiOperation op;
   final int steps;
   final VoidCallback onGuide;
+  final VoidCallback onSkip;
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -205,11 +212,44 @@ class _ProposalTile extends StatelessWidget {
       margin: const EdgeInsets.only(top: RasqSpacing.xs),
       padding: const EdgeInsets.all(RasqSpacing.sm),
       decoration: BoxDecoration(color: scheme.surfaceContainerHighest.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+      // 見出しの行とボタンの行 (D-226: 「スキップ」が増えて 1 行に収まらない幅がある)。
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          const Icon(Icons.route_outlined, size: 20),
+          const SizedBox(width: RasqSpacing.xs),
+          Expanded(child: Text('$title · $steps 手順', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600))),
+        ]),
+        Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+          TextButton(key: ValueKey('rai.chat.skip.$id'), onPressed: onSkip, style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)), child: const Text('スキップ')),
+          const SizedBox(width: RasqSpacing.xs),
+          FilledButton(key: ValueKey('rai.chat.guide.$id'), onPressed: onGuide, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: const Text('この手順で案内')),
+        ]),
+      ]),
+    );
+  }
+}
+
+/// 承認タイル (D-226): 「スキップ」の説明の下。「実行する」で RAi が手順を自動で進める、「やめる」で何もしない。
+class _ApprovalTile extends StatelessWidget {
+  const _ApprovalTile({required this.opId, required this.enabled, required this.onApprove, required this.onDecline});
+  final String opId;
+  final bool enabled;
+  final VoidCallback onApprove;
+  final VoidCallback onDecline;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: ValueKey('rai.chat.approval.$opId'),
+      margin: const EdgeInsets.only(top: RasqSpacing.xs),
+      padding: const EdgeInsets.all(RasqSpacing.sm),
+      decoration: BoxDecoration(color: RasqColors.link.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(RasqSizes.radiusMd), border: Border.all(color: RasqColors.link.withValues(alpha: 0.5))),
       child: Row(children: [
-        const Icon(Icons.route_outlined, size: 20),
+        const Icon(Icons.auto_awesome, size: 20),
         const SizedBox(width: RasqSpacing.xs),
-        Expanded(child: Text('$title · $steps 手順', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600))),
-        FilledButton(key: ValueKey('rai.chat.guide.$id'), onPressed: onGuide, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: const Text('この手順で案内')),
+        Expanded(child: Text('RAi に任せますか？', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurface))),
+        TextButton(key: ValueKey('rai.chat.decline.$opId'), onPressed: enabled ? onDecline : null, style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)), child: const Text('やめる')),
+        FilledButton(key: ValueKey('rai.chat.approve.$opId'), onPressed: enabled ? onApprove : null, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: const Text('実行する')),
       ]),
     );
   }
