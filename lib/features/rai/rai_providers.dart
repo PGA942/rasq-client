@@ -187,11 +187,14 @@ class RaiState {
 /// 発言 1 つ(履歴 FOW のタイル)。
 @immutable
 class RaiUtterance {
-  const RaiUtterance({required this.text, required this.at, this.query, this.error = false, this.proposal, this.choices = const []});
+  const RaiUtterance({required this.text, required this.at, this.query, this.error = false, this.proposal, this.choices = const [], this.candidates = const []});
   final String text;
   final DateTime at;
   final String? query;
   final bool error;
+
+  /// 返事の下に並べる候補の操作 id (D-222: 複合 / 曖昧な質問は LLM の返事 + 候補タイル、右の × で「これじゃない」)。
+  final List<String> candidates;
 
   /// 提案した操作の id (D-218: チャットでは行の下に「この手順で案内」のタイル)。
   final String? proposal;
@@ -245,9 +248,35 @@ List<Uri> raiLinksIn(String text) {
 
 class RaiController extends Notifier<RaiState> {
   /// 確定した発言を履歴に積む(50 件まで)。
-  void _record(String text, {bool error = false, String? proposal, List<({String id, String index})> choices = const []}) {
+  void _record(String text, {bool error = false, String? proposal, List<({String id, String index})> choices = const [], List<String> candidates = const []}) {
     if (text.trim().isEmpty || text == '…') return;
-    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error, proposal: proposal, choices: choices), ...state.log].take(50).toList());
+    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error, proposal: proposal, choices: choices, candidates: candidates), ...state.log].take(50).toList());
+  }
+
+  /// 複合の質問か (D-222): 長い / 「〜して、〜」のように動作が続く / 読点で区切られている。
+  static bool isCompound(String q) {
+    final t = q.trim();
+    if (t.length >= 28) return true;
+    // て形で次の動作が続く(〜して、〜 / 〜切って、〜 / 〜してから〜)。
+    if (RegExp(r'(?:[てで]|してから|したら|した上で|しつつ)[、,\s].{3,}').hasMatch(t)) return true;
+    if (RegExp(r'(?:して|してから|したら|した上で|しつつ).{4,}').hasMatch(t)) return true;
+    if (t.contains('、') && t.length >= 12) return true;
+    return false;
+  }
+
+  /// 今回の質問で外した候補 (D-222)。質問が変わると空になる。
+  final Set<String> _excluded = {};
+  List<String> _pendingCandidates = const [];
+
+  /// 候補タイルの × (D-222): 候補を除外して記録し、計画 → 除外つきの検索 → 関数つきの LLM 回答をやり直す。
+  Future<void> rejectCandidates(List<String> ids) async {
+    final q = state.query;
+    if (q == null || ids.isEmpty) return;
+    _excluded.addAll(ids);
+    ref.read(raiMissesProvider.notifier).add(RaiMiss(query: q, situation: state.situation, rejected: ids, at: DateTime.now()));
+    _answerSeq++;
+    state = state.copyWith(hits: [for (final h in state.hits) if (!_excluded.contains(h.id)) h], proposal: null, choices: const []);
+    await _answerWithPlan(q, candidates: const []);
   }
 
   /// チャットの提案タイルから案内へ (D-218): インストラクションに切り替え(RAi ページは閉じる)、その操作を進める。
@@ -365,6 +394,7 @@ class RaiController extends Notifier<RaiState> {
     final repeated = state.history.contains(q);
     final history = [q, ...state.history.where((h) => h != q)].take(20).toList();
     final seq = ++_answerSeq;
+    if (q != state.query) _excluded.clear();
     state = state.copyWith(query: q, asking: false, busy: true, history: history, hits: const []);
     final stats = ref.read(raiStatsProvider.notifier);
     stats.bump(instructionAsked: state.mode == RaiMode.instruction, assistantAsked: state.mode == RaiMode.assistant, repeated: repeated);
@@ -373,8 +403,9 @@ class RaiController extends Notifier<RaiState> {
     if (state.mode == RaiMode.assistant) {
       final situation = await _situate(q);
       if (seq != _answerSeq) return;
-      final hits = index == null ? const <RaiHit<RaiOperation>>[] : await index.searchOperations(q, situation: situation);
+      final found = index == null ? const <RaiHit<RaiOperation>>[] : await index.searchOperations(q, situation: situation);
       if (seq != _answerSeq) return;
+      final hits = [for (final h in found) if (!_excluded.contains(h.item.id)) h];
       state = state.copyWith(hits: [for (final h in hits) (id: h.item.id, score: h.score)], situation: situation);
       // アプリについての会話 = 操作リファレンスに当たった (D-214)。
       if (hits.isNotEmpty) stats.bump(assistantApp: true);
@@ -382,11 +413,12 @@ class RaiController extends Notifier<RaiState> {
         await _answerWithPlan(q);
         return;
       }
-      if (_ambiguous(hits)) {
-        _askChoice(hits);
+      // 単一の短い質問で迷いが無ければ即提案 (D-222)。複合 / 曖昧なら LLM の返事 + 候補タイル(止めない)。
+      if (!isCompound(q) && !_ambiguous(hits)) {
+        _propose(index!, hits.first.item);
         return;
       }
-      _propose(index!, hits.first.item);
+      await _answerWithPlan(q, candidates: [for (final h in hits.take(3)) h.item.id]);
       return;
     }
     final hits = index == null ? const <RaiHit<RaiOperation>>[] : await index.searchOperations(q);
@@ -517,9 +549,9 @@ class RaiController extends Notifier<RaiState> {
     if (index == null || plan.isEmpty) return const [];
     final ids = <String>[for (final h in state.hits) h.id];
     for (final item in plan) {
-      final hits = await index.searchOperations(item, k: 1);
+      final hits = await index.searchOperations(item, k: 2);
       for (final h in hits) {
-        if (!ids.contains(h.item.id)) ids.add(h.item.id);
+        if (!ids.contains(h.item.id) && !_excluded.contains(h.item.id)) ids.add(h.item.id);
       }
     }
     state = state.copyWith(hits: [for (final id in ids) (id: id, score: 0)]);
@@ -540,9 +572,10 @@ class RaiController extends Notifier<RaiState> {
 
   /// 二段の回答 (D-220): ①短い箇条書きの計画(失敗しても無視)→ ②各項目でリファレンスを絞る → ③計画と候補を
   /// 添えて答える(案内の呼び出しつき)。計画が取れなければ従来どおり一段で答える。
-  Future<void> _answerWithPlan(String q) async {
+  Future<void> _answerWithPlan(String q, {List<String> candidates = const []}) async {
     final llm = ref.read(raiLlmProvider);
     final seq = ++_answerSeq;
+    _pendingCandidates = candidates;
     state = state.copyWith(busy: true, bubble: '…', target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: null, choices: const []);
     var plan = const <String>[];
     try {
@@ -598,7 +631,9 @@ class RaiController extends Notifier<RaiState> {
       if (seq != _answerSeq) return;
       final lines = ['端末内モデル: ${e.message}', 'フォールアップ: ${f.message}', ?fallbackText];
       state = state.copyWith(busy: false, bubble: lines.join('\n'), error: true);
-      _record(lines.join('\n'), error: true);
+      // 候補は返事が出せなくても並べる (D-222: 選べる)。
+      _record(lines.join('\n'), error: true, candidates: _pendingCandidates);
+      _pendingCandidates = const [];
     }
   }
 
@@ -627,7 +662,8 @@ class RaiController extends Notifier<RaiState> {
       if (notes.isNotEmpty) text = text.isEmpty ? notes.join('\n') : '$text\n${notes.join('\n')}';
     }
     state = state.copyWith(busy: false, bubble: text.isEmpty ? '(返事がありませんでした)' : text);
-    _record(state.bubble!);
+    _record(state.bubble!, candidates: _pendingCandidates);
+    _pendingCandidates = const [];
     if (call != null) {
       ref.read(raiStatsProvider.notifier).bump(instructionAsked: true);
       await runInstruction(call.op, stopAt: call.stopAt);
@@ -682,11 +718,13 @@ class RaiController extends Notifier<RaiState> {
     if (index == null) return const [];
     final out = <String>[];
     for (final h in state.hits.take(max)) {
+      if (_excluded.contains(h.id)) continue;
       final op = index.operation(h.id);
       if (op == null) continue;
       final steps = index.expand(op);
       out.add('- ${withIds ? '${op.id}: ' : ''}${op.index}: ${[for (final s in steps) s.text].join(' → ')}');
     }
+    if (_excluded.isNotEmpty) out.add('(違うと言われた操作: ${_excluded.join(', ')})');
     return out;
   }
 

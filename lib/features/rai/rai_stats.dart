@@ -202,3 +202,49 @@ class RaiConversationsStore extends Notifier<List<RaiConversation>> {
 }
 
 final raiConversationsProvider = NotifierProvider<RaiConversationsStore, List<RaiConversation>>(RaiConversationsStore.new);
+
+/// 外れた候補の記録 (D-222): チャットの候補タイルの × で「これじゃない」と言われた質問。次のリファレンス拡充の素材。
+@immutable
+class RaiMiss {
+  const RaiMiss({required this.query, required this.rejected, required this.at, this.situation});
+  final String query;
+  final String? situation;
+  final List<String> rejected;
+  final DateTime at;
+
+  Map<String, Object?> toJson() => {'query': query, if (situation != null) 'situation': situation, 'rejected': rejected, 'at': at.toIso8601String()};
+  factory RaiMiss.fromJson(Map<String, Object?> j) => RaiMiss(
+        query: '${j['query'] ?? ''}',
+        situation: j['situation'] as String?,
+        rejected: [for (final r in (j['rejected'] as List? ?? const [])) '$r'],
+        at: DateTime.tryParse('${j['at']}') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      );
+}
+
+class RaiMissLog extends Notifier<List<RaiMiss>> {
+  static const storageKey = 'rai.misses.v1';
+  static const max = 200;
+  bool _loaded = false;
+
+  @override
+  List<RaiMiss> build() {
+    _restore();
+    return const [];
+  }
+
+  Future<void> _restore() async {
+    if (_loaded) return;
+    _loaded = true;
+    try {
+      final raw = await ref.read(sessionStorageProvider).read(storageKey);
+      if (raw != null && ref.mounted) state = [for (final e in (jsonDecode(raw) as List).cast<Map>()) RaiMiss.fromJson(e.cast<String, Object?>())];
+    } catch (_) {}
+  }
+
+  void add(RaiMiss m) {
+    state = [m, ...state].take(max).toList();
+    ref.read(sessionStorageProvider).write(storageKey, jsonEncode([for (final x in state) x.toJson()])).catchError((_) {});
+  }
+}
+
+final raiMissesProvider = NotifierProvider<RaiMissLog, List<RaiMiss>>(RaiMissLog.new);

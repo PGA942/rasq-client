@@ -79,6 +79,7 @@ class RaiChatList extends ConsumerWidget {
         proposal: u.proposal == null ? null : index?.operation(u.proposal!),
         proposalSteps: u.proposal == null || index == null ? 0 : (index.operation(u.proposal!) == null ? 0 : index.expand(index.operation(u.proposal!)!).length),
         choices: u.choices,
+        candidates: [for (final id in u.candidates) if (index?.operation(id) != null) (index!.operation(id)!, index.expand(index.operation(id)!).length)],
         rowIndex: i,
       ));
     }
@@ -116,7 +117,7 @@ class _UserRow extends StatelessWidget {
 }
 
 class _RaiRow extends ConsumerWidget {
-  const _RaiRow({super.key, required this.text, required this.at, required this.error, required this.latest, required this.links, required this.choices, required this.rowIndex, this.streaming = false, this.proposal, this.proposalSteps = 0});
+  const _RaiRow({super.key, required this.text, required this.at, required this.error, required this.latest, required this.links, required this.choices, required this.rowIndex, this.streaming = false, this.proposal, this.proposalSteps = 0, this.candidates = const []});
   final String text;
   final DateTime? at;
   final bool error;
@@ -127,6 +128,9 @@ class _RaiRow extends ConsumerWidget {
   final int proposalSteps;
   final List<({String id, String index})> choices;
   final int rowIndex;
+
+  /// 候補の操作(タイル)と手順数 (D-222)。最新の行だけ × で外せる。
+  final List<(RaiOperation, int)> candidates;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -156,6 +160,20 @@ class _RaiRow extends ConsumerWidget {
             // 行の下のタイル (D-218)。
             for (final (k, u) in links.indexed) RaiLinkCard(key: ValueKey('rai.chat.link.$rowIndex.$k'), url: u),
             if (op != null) _ProposalTile(op: op, steps: proposalSteps, onGuide: () => n.guide(op.id)),
+            // 候補 (D-222): 返事の下に並べ、右の × で「これじゃない」→ 除外して答え直す。
+            if (candidates.isNotEmpty)
+              Row(key: ValueKey('rai.chat.candidates.$rowIndex'), crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    for (final (c, steps) in candidates) _ProposalTile(key: ValueKey('rai.chat.candidate.${c.id}'), op: c, steps: steps, onGuide: () => n.guide(c.id)),
+                  ]),
+                ),
+                if (latest)
+                  Padding(
+                    padding: const EdgeInsets.only(top: RasqSpacing.xs),
+                    child: RasqIconButton(key: ValueKey('rai.chat.reject.$rowIndex'), icon: Icons.close, size: 18, tooltip: 'これじゃない(候補を外して答え直す)', onPressed: () => n.rejectCandidates([for (final (c, _) in candidates) c.id])),
+                  ),
+              ]),
             if (choices.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: RasqSpacing.xs),
@@ -173,7 +191,7 @@ class _RaiRow extends ConsumerWidget {
 
 /// 提案の操作タイル: 見出し + 手順数 + 「この手順で案内」。
 class _ProposalTile extends StatelessWidget {
-  const _ProposalTile({required this.op, required this.steps, required this.onGuide});
+  const _ProposalTile({super.key, required this.op, required this.steps, required this.onGuide});
   final RaiOperation op;
   final int steps;
   final VoidCallback onGuide;
