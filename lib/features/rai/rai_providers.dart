@@ -14,6 +14,7 @@ import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
 import 'rai_functions.dart';
 import 'rai_stats.dart';
+import 'rai_web_search.dart';
 import 'rai_widgets.dart' show splitSpeechLines;
 
 /// RAi のモード (D-179): インストラクション(操作を教える、RAi は部品まで移動して指差す)/
@@ -187,11 +188,14 @@ class RaiState {
 /// 発言 1 つ(履歴 FOW のタイル)。
 @immutable
 class RaiUtterance {
-  const RaiUtterance({required this.text, required this.at, this.query, this.error = false, this.proposal, this.choices = const [], this.candidates = const []});
+  const RaiUtterance({required this.text, required this.at, this.query, this.error = false, this.proposal, this.choices = const [], this.candidates = const [], this.approval});
   final String text;
   final DateTime at;
   final String? query;
   final bool error;
+
+  /// 承認待ちの自動化 (D-226: 「スキップ」→ RAi がやる動きの説明の下に承認タイル)。操作 id。
+  final String? approval;
 
   /// 返事の下に並べる候補の操作 id (D-222: 複合 / 曖昧な質問は LLM の返事 + 候補タイル、右の × で「これじゃない」)。
   final List<String> candidates;
@@ -248,9 +252,123 @@ List<Uri> raiLinksIn(String text) {
 
 class RaiController extends Notifier<RaiState> {
   /// 確定した発言を履歴に積む(50 件まで)。
-  void _record(String text, {bool error = false, String? proposal, List<({String id, String index})> choices = const [], List<String> candidates = const []}) {
+  void _record(String text, {bool error = false, String? proposal, List<({String id, String index})> choices = const [], List<String> candidates = const [], String? approval}) {
     if (text.trim().isEmpty || text == '…') return;
-    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error, proposal: proposal, choices: choices, candidates: candidates), ...state.log].take(50).toList());
+    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error, proposal: proposal, choices: choices, candidates: candidates, approval: approval), ...state.log].take(50).toList());
+  }
+
+  /// 「スキップ」(D-226): 案内を出さずに RAi がやる動きを説明し、承認タイルを出す。実際に動くのは [approve] から。
+  /// 入力が要る手順(関数の「必ず入力する」引数)や部品の無い手順は自動でできないので、そこからは案内に切り替えると
+  /// 説明に添える。
+  Future<void> skip(String opId) async {
+    final index = await _index();
+    final op = index?.operation(opId);
+    if (index == null || op == null) return;
+    final steps = index.expand(op);
+    final stopAt = automatableUntil(steps);
+    final b = StringBuffer('「${op.index}」は案内を出さずに私がやります(${stopAt == steps.length ? '$stopAt 手順' : '${steps.length} 手順のうち $stopAt 手順まで'}):');
+    for (var i = 0; i < steps.length; i++) {
+      final st = steps[i];
+      b.write('\n${i + 1}. ${st.text}');
+      if (i == stopAt) b.write('(ここからは案内: ${st.inputs.isNotEmpty ? '「${st.inputs.join('、')}」の入力が要る' : '押す部品が無い'})');
+    }
+    b.write('\nよければ「実行する」を押してください。');
+    // 吹き出しも同じ文にする(チャットは吹き出しと最新の行が違うと「生成中の行」を出すので、承認タイルが最新にならない)。
+    state = state.copyWith(bubble: b.toString(), busy: false, lineIndex: 0);
+    _record(b.toString(), approval: opId);
+  }
+
+  /// 自動でできる手順数 (D-226): 先頭から、部品(押す相手)があって入力の要らない手順が続く限り。部品の無い手順は
+  /// 画面を開くだけ(route)なら通し、それも無ければ止まる。
+  static int automatableUntil(List<RaiStep> steps) {
+    for (var i = 0; i < steps.length; i++) {
+      final st = steps[i];
+      if (st.inputs.isNotEmpty) return i;
+      if (!st.hasTarget && st.route == null) return i;
+    }
+    return steps.length;
+  }
+
+  /// 承認タイルの「実行する」(D-226): インストラクションモードに切り替えて(RAi ページは閉じる)手順を自動で進める。
+  /// 各手順は画面を開く → 部品を探す → 押す。押せない / 見つからない手順で止まり、そこから通常の案内に切り替える。
+  Future<void> approve(String opId) async {
+    final index = await _index();
+    final op = index?.operation(opId);
+    if (index == null || op == null) return;
+    dropSuspended();
+    setMode(RaiMode.instruction);
+    await WidgetsBinding.instance.endOfFrame;
+    final seq = ++_answerSeq;
+    final steps = index.expand(op);
+    final until = automatableUntil(steps);
+    state = state.copyWith(steps: steps, stepIndex: 0, choices: const [], stopAt: null, lastOperation: op.id, busy: true, target: null, lineIndex: 0);
+    ref.read(raiStatsProvider.notifier).bump(automated: true);
+    var done = 0;
+    String? failure;
+    for (var i = 0; i < until; i++) {
+      final st = steps[i];
+      state = state.copyWith(stepIndex: i, bubble: '自動で進めています(${i + 1} / ${steps.length}): ${st.text}', lineIndex: 0);
+      final route = st.route;
+      if (route != null) await _navigateTo(route);
+      if (seq != _answerSeq) return;
+      if (st.hasTarget) {
+        final ok = await _activateTarget(st, seq);
+        if (seq != _answerSeq) return;
+        if (!ok) {
+          failure = '${i + 1} 手順目「${st.text}」の部品が見つからない(押せない)';
+          break;
+        }
+        // 押した先の画面 / FOW が開いてから次を探す(案内の targetTapped と同じ待ち)。
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        if (seq != _answerSeq) return;
+      }
+      done = i + 1;
+    }
+    if (done >= steps.length) {
+      state = state.copyWith(busy: false, bubble: '「${op.index}」を自動で進めました(${steps.length} 手順)', target: null, steps: const [], stepIndex: 0);
+      _record(state.bubble!);
+      ref.read(raiStatsProvider.notifier).bump(completed: true);
+      return;
+    }
+    final why = failure ?? (steps[done].inputs.isNotEmpty ? '${done + 1} 手順目「${steps[done].text}」は「${steps[done].inputs.join('、')}」の入力が要る' : '${done + 1} 手順目「${steps[done].text}」は押す部品が無い');
+    _record('$done 手順目まで自動で進めました。$whyので、ここからは案内します');
+    state = state.copyWith(busy: false);
+    await _showStep(done);
+  }
+
+  /// 承認タイルの「やめる」(D-226)。
+  void decline(String opId) {
+    final op = ref.read(raiReferenceProvider).value?.operation(opId);
+    final text = 'わかりました。「${op?.index ?? opId}」は案内で進めるときに「この手順で案内」を押してください';
+    state = state.copyWith(bubble: text, lineIndex: 0);
+    _record(text);
+  }
+
+  /// 手順の部品を押す (D-226): 案内と同じ探し方(2 回続けて同じ矩形になるまで待つ)で要素を見つけ、[raiActivate]。
+  Future<bool> _activateTarget(RaiStep step, int seq) async {
+    Rect? prev;
+    for (var attempt = 0; attempt < 14; attempt++) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (attempt > 0) await Future<void>.delayed(const Duration(milliseconds: 120));
+      if (seq != _answerSeq) return false;
+      final r = locateWidgetRect(tooltip: step.tooltip, text: step.label, near: prev);
+      if (r != null && r == prev) {
+        state = state.copyWith(target: r);
+        final elements = locateWidgetElements(tooltip: step.tooltip, text: step.label);
+        Element? best;
+        for (final e in elements) {
+          final ro = e.findRenderObject();
+          if (ro is RenderBox && ro.attached && (ro.localToGlobal(Offset.zero) & ro.size) == r) best = e;
+        }
+        best ??= elements.firstOrNull;
+        if (best == null) return false;
+        final ok = raiActivate(best);
+        await WidgetsBinding.instance.endOfFrame;
+        return ok;
+      }
+      prev = r;
+    }
+    return false;
   }
 
   /// 複合の質問か (D-222): 長い / 「〜して、〜」のように動作が続く / 読点で区切られている。
@@ -563,11 +681,15 @@ class RaiController extends Notifier<RaiState> {
     final ctx = referenceContext(withIds: true, max: raiPlanMax + 2);
     final planText = plan.isEmpty ? '' : '\nやること: ${plan.join(' / ')}';
     if (ctx.isEmpty) return '$_assistantSystem$planText';
-    return '$_assistantSystem$planText\n案内できる操作(id: 見出し: 手順):\n${ctx.join('\n')}\n操作の案内を始めるときは本文の末尾に [[instruction:<id>|<何手順目まで>]] と書く(途中の画面で止めたいときは手順数を指定、最後までなら数字を省く)。$_functionsHint';
+    return '$_assistantSystem$planText\n案内できる操作(id: 見出し: 手順):\n${ctx.join('\n')}\n操作の案内を始めるときは本文の末尾に [[instruction:<id>|<何手順目まで>]] と書く(途中の画面で止めたいときは手順数を指定、最後までなら数字を省く)。${_functionsHint()}';
   }
 
   /// 関数の呼び出し (D-221): 本文末尾の `[[call:<関数>|引数=値]]`。取得系は結果を注入して答え直す。
-  static final _functionsHint = '\n使える関数(必要なときだけ本文末尾に [[call:<関数>|引数=値|…]] と書く。取得系は結果を受け取ってから答え直す):\n${raiFunctionUsage.map((u) => '- $u').join('\n')}';
+  /// web 検索 (D-228) は使えるときだけ足す(第一期では無効)。
+  String _functionsHint() {
+    final web = ref.read(raiWebSearchProvider).available;
+    return '\n使える関数(必要なときだけ本文末尾に [[call:<関数>|引数=値|…]] と書く。取得系は結果を受け取ってから答え直す):\n${[...raiFunctionUsage, if (web) raiWebSearchUsage].map((u) => '- $u').join('\n')}';
+  }
   static const _instructionSystem = 'あなたは SNS ブラウザ RASQ の操作を教える「RAi」です。日本語で、操作手順を短く(3 文以内)答えてください。';
 
   /// 二段の回答 (D-220): ①短い箇条書きの計画(失敗しても無視)→ ②各項目でリファレンスを絞る → ③計画と候補を
@@ -766,29 +888,7 @@ class RaiController extends Notifier<RaiState> {
     state = state.copyWith(stepIndex: i, busy: true);
     // 先に画面を開く(ディープリンク)。
     final route = step.route;
-    if (route != null) {
-      final router = ref.read(routerProvider);
-      // 見えている画面 = 一番上の一致(push で積んだ画面は uri に出ないので辿る)。
-      // 手順の画面と**同じ場所**にいるときだけ何もしない (D-205: 前方一致だと `/settings/...` から
-      // `/settings` へ戻れなかった)。
-      final cur = visibleLocationOf(router.routerDelegate.currentConfiguration);
-      if (!sameRoute(cur, route)) {
-        if (routeInHistory(router.routerDelegate.currentConfiguration, route)) {
-          // 履歴にあればそこまで戻る (D-204)。
-          for (var k = 0; k < 12 && router.canPop() && !sameRoute(visibleLocationOf(router.routerDelegate.currentConfiguration), route); k++) {
-            router.pop();
-            await WidgetsBinding.instance.endOfFrame;
-          }
-        } else if (raiTabRoots.contains(route)) {
-          // タブの根(ホーム / 検索 / AsTell / 通知 / DM)は go、それ以外は push (D-193): go だと
-          // 戻るボタンや「決定」(context.pop)の戻り先が無くなる。
-          router.go(route);
-        } else {
-          unawaited(router.push(route));
-        }
-        await WidgetsBinding.instance.endOfFrame;
-      }
-    }
+    if (route != null) await _navigateTo(route);
     // 部品の矩形を探す(画面遷移 / FOW のアニメーション直後は少し待つ)。
     // 遷移のアニメーション中に取った矩形はずれる (D-203): 2 回続けて同じ矩形になるまで待つ。
     Rect? rect;
@@ -810,6 +910,30 @@ class RaiController extends Notifier<RaiState> {
     state = state.copyWith(busy: false, bubble: step.text, target: rect, lineIndex: 0);
     _record(step.text);
     if (rect != null) unawaited(_followTarget(i, step));
+  }
+
+  /// 手順の画面を開く(ディープリンク)。案内 (D-193 / D-204 / D-205) と自動化 (D-226) で共通。
+  Future<void> _navigateTo(String route) async {
+    final router = ref.read(routerProvider);
+    // 見えている画面 = 一番上の一致(push で積んだ画面は uri に出ないので辿る)。
+    // 手順の画面と**同じ場所**にいるときだけ何もしない (D-205: 前方一致だと `/settings/...` から
+    // `/settings` へ戻れなかった)。
+    final cur = visibleLocationOf(router.routerDelegate.currentConfiguration);
+    if (sameRoute(cur, route)) return;
+    if (routeInHistory(router.routerDelegate.currentConfiguration, route)) {
+      // 履歴にあればそこまで戻る (D-204)。
+      for (var k = 0; k < 12 && router.canPop() && !sameRoute(visibleLocationOf(router.routerDelegate.currentConfiguration), route); k++) {
+        router.pop();
+        await WidgetsBinding.instance.endOfFrame;
+      }
+    } else if (raiTabRoots.contains(route)) {
+      // タブの根(ホーム / 検索 / AsTell / 通知 / DM)は go、それ以外は push (D-193): go だと
+      // 戻るボタンや「決定」(context.pop)の戻り先が無くなる。
+      router.go(route);
+    } else {
+      unawaited(router.push(route));
+    }
+    await WidgetsBinding.instance.endOfFrame;
   }
 
   /// 指した後もしばらく矩形を追う (D-203): 遷移の終わり / 一覧の読み込みでずれたら目標を更新する。

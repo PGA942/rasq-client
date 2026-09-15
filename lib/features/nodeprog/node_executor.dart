@@ -236,10 +236,10 @@ Future<List<Post>> _applyStep(NodeGraph g, Map<String, GraphNode> byId, GraphNod
       final raw = step.inputs.where((i) => i.label == '検索ワード').firstOrNull?.value?.trim() ?? '';
       final word = (raw.isEmpty ? (env.selfQuery ?? '') : raw).replaceFirst(RegExp(r'^#'), '').toLowerCase();
       if (word.isEmpty) return posts;
-      return [
-        for (final p in posts)
-          if (p.body.toLowerCase().contains(word) || p.author.displayName.toLowerCase().contains(word) || (p.contentWarning ?? '').toLowerCase().contains(word)) p,
-      ];
+      // 除外 (D-227): ワードを含む投稿を落とす(ワードミュート)。
+      final exclude = step.inputs.where((i) => i.label == '除外').firstOrNull?.value?.trim() == 'true';
+      bool hit(Post p) => p.body.toLowerCase().contains(word) || p.author.displayName.toLowerCase().contains(word) || (p.contentWarning ?? '').toLowerCase().contains(word);
+      return [for (final p in posts) if (hit(p) != exclude) p];
     case 'sort':
     case 'remove':
       // ML ノードのスコアは投稿一括で先に計算しておく(条件評価は同期)。

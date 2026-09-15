@@ -10,11 +10,15 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
+import '../home/timeline_providers.dart';
+import '../nodeprog/tl_components.dart';
+import '../nodeprog/tl_config_store.dart';
 import '../settings/settings_dsl.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
+import 'rai_web_search.dart';
 
 /// RAi が呼べる関数 (D-221): LLM の返事の `[[call:<関数>|引数=値|…]]` を実行する。
 ///
@@ -185,7 +189,8 @@ const raiFunctionUsage = <String>[
   'trends.tags(limit): トレンドのタグを取る',
   'lists.list()・lists.members(list): リストとメンバーを取る',
   'clips.list(user=)・clips.notes(clip, limit): クリップを取る(Misskey のみ)',
-  'feeds.list(keyword=): カスタムフィードを取る(Bluesky のみ、keyword 無しは保存済み)',
+  'feeds.list(keyword=)・feed.save(feed=uri|語, on=true|false): カスタムフィードを取る/保存する(Bluesky のみ、keyword 無しは保存済み)',
+  'timeline.addFeed(feed=uri|語, account=)・timeline.excludeWord(word, scope=home|social|local|global): ホームの TL にカスタムフィードを取り込む/そのワードを含む投稿を除外する',
   'dm.rooms(): DM ルーム一覧を取る',
   'emoji.find(keyword, limit): keyword を含むカスタム絵文字を探す',
   'follow.set(user, on=true|false): フォローする/外す',
@@ -194,6 +199,9 @@ const raiFunctionUsage = <String>[
   'settings.get(area, key)・settings.set(area, key, value): 設定を読む/書く(設定ページのキーのみ。書けるのはパスワード不要で操作禁止タグの無いもの)',
   'app.actions(): この SNS で自動化できる投稿アクション一覧を取る',
 ];
+
+/// web 検索の行 (D-228): 使えるとき([RaiWebSearch.available])だけ system の一覧に足す。
+const raiWebSearchUsage = 'web.search(q=語や質問, count=数): web を検索して答えや上位の題名 / URL / 説明を取る(アプリの外の知識が要るとき)';
 
 class RaiFunctionRunner {
   RaiFunctionRunner(this.ref, {this.contextTokens = 2048});
@@ -281,6 +289,14 @@ class RaiFunctionRunner {
           return await _settingsGet(c);
         case 'settings.set':
           return await _settingsSet(c);
+        case 'feed.save':
+          return await _feedSave(c);
+        case 'web.search':
+          return await _webSearch(c);
+        case 'timeline.addFeed':
+          return await _timelineAddFeed(c);
+        case 'timeline.excludeWord':
+          return await _timelineExcludeWord(c);
         case 'post.compose':
         case 'post.reply':
         case 'post.quote':
@@ -667,7 +683,8 @@ class RaiFunctionRunner {
         final keyword = c.arg('keyword').trim();
         final s = _session();
         final feeds = keyword.isEmpty ? await s.savedFeeds() : await s.searchFeeds(keyword, limit: _limitOf(c));
-        final lines = [for (final f in feeds) '${f.name}${f.description == null || f.description!.isEmpty ? '' : ' — ${f.description}'}'];
+        // uri を添える (D-227): feed.save / timeline.addFeed の feed= に渡せるように。
+        final lines = [for (final f in feeds) '${f.name}${f.description == null || f.description!.isEmpty ? '' : ' — ${f.description}'} [${f.uri}]'];
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'フィード'), budget), fetched: true);
       });
 
@@ -823,6 +840,97 @@ class RaiFunctionRunner {
         unawaited(showComposerWith(target, manager: ref.read(overlayManagerProvider), router: ref.read(routerProvider), initialText: text));
         return RaiFunctionResult(name: c.name, text: '${target.title}の下書きをコンポーザーに入れました(送信はしていません)');
       });
+
+  /// feed= を解く (D-227): at:// / bsky.app の URL ならそのまま(検索で 1 件に解決)、語なら検索の先頭。
+  Future<FeedInfo?> _resolveFeed(SnsSession s, String feed) async {
+    final q = feed.trim();
+    if (q.isEmpty) return null;
+    final found = await s.searchFeeds(q, limit: 5);
+    if (q.startsWith('at://')) {
+      final hit = found.where((f) => f.uri == q).firstOrNull;
+      if (hit != null) return hit;
+      // 保存済みにあれば名前が分かる(検索が uri を解けないプラグイン向け)。
+      try {
+        final saved = (await s.savedFeeds()).where((f) => f.uri == q).firstOrNull;
+        if (saved != null) return saved;
+      } catch (_) {}
+      return FeedInfo(uri: q, name: q.split('/').last);
+    }
+    return found.firstOrNull;
+  }
+
+  /// Bluesky のセッション (D-227): account= の名義(@handle@instance)があればそれ、無ければ現在のアカウントが
+  /// Bluesky ならそれ、それも無ければ最初の Bluesky アカウント。
+  (AccountSession, SnsSession)? _blueskySession(String account) {
+    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final bluesky = [for (final s in sessions) if (s.account.kind == SnsKind.bluesky) s];
+    AccountSession? pick;
+    if (account.trim().isNotEmpty) {
+      final a = account.trim().replaceFirst(RegExp(r'^@'), '');
+      pick = bluesky.where((s) => '${s.account}'.replaceFirst(RegExp(r'^@'), '') == a || s.account.handle == a || s.account.key == account.trim()).firstOrNull;
+    } else {
+      final cur = ref.read(currentAccountSessionProvider);
+      pick = cur != null && cur.account.kind == SnsKind.bluesky ? cur : bluesky.firstOrNull;
+    }
+    if (pick == null) return null;
+    try {
+      return (pick, ref.read(pluginRegistryProvider).session(pick));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// feed.save(feed, on): カスタムフィードを保存する / 外す (D-227、Bluesky のみ)。
+  Future<RaiFunctionResult> _feedSave(RaiFunctionCall c) => raiGuard(c.name, () async {
+        final s = _session();
+        final f = await _resolveFeed(s, c.arg('feed'));
+        if (f == null) return RaiFunctionResult(name: c.name, text: 'フィード「${c.arg('feed')}」が見つかりません', ok: false);
+        final on = c.arg('on', 'true').toLowerCase() != 'false';
+        final saved = await s.saveFeed(f.uri, on: on);
+        return RaiFunctionResult(name: c.name, text: '「${f.name}」を${on ? '保存しました' : '保存から外しました'}(保存済み ${saved.length} 件)');
+      });
+
+  /// timeline.addFeed(feed, account): ホームの TL カスタマイズにカスタムフィードを取り込み元として足す (D-227)。
+  /// 画面(TL カスタマイズ → タイムラインを追加 → カスタムフィード)を通らずに、同じ保存先へ書く。
+  Future<RaiFunctionResult> _timelineAddFeed(RaiFunctionCall c) => raiGuard(c.name, () async {
+        final picked = _blueskySession(c.arg('account'));
+        if (picked == null) return RaiFunctionResult(name: c.name, text: 'Bluesky のアカウントがありません(カスタムフィードは Bluesky のみ)', ok: false);
+        final (acc, s) = picked;
+        final f = await _resolveFeed(s, c.arg('feed'));
+        if (f == null) return RaiFunctionResult(name: c.name, text: 'フィード「${c.arg('feed')}」が見つかりません', ok: false);
+        final owner = ref.read(currentAccountSessionProvider)?.account.key ?? acc.account.key;
+        final added = await addTlSource(ref.container, owner, 'tl.home', TlSourceComponent(tl: 'feed:${f.uri}', account: '${acc.account}', label: f.name));
+        if (!added) return RaiFunctionResult(name: c.name, text: '「${f.name}」はもうホームのタイムラインに入っています');
+        ref.invalidate(timelineProvider(TimelineKind.home));
+        return RaiFunctionResult(name: c.name, text: '「${f.name}」(${acc.account})をホームのタイムラインに取り込みました');
+      });
+
+  /// timeline.excludeWord(word, scope): そのワードを含む投稿を TL から落とす検索絞り込み(除外)を足す (D-227)。
+  Future<RaiFunctionResult> _timelineExcludeWord(RaiFunctionCall c) => raiGuard(c.name, () async {
+        final word = c.arg('word').trim();
+        if (word.isEmpty) return RaiFunctionResult(name: c.name, text: 'ワード(word=)がありません', ok: false);
+        final scope = switch (c.arg('scope', 'home').trim()) { 'social' => 'tl.social', 'local' => 'tl.local', 'global' => 'tl.global', _ => 'tl.home' };
+        final owner = ref.read(currentAccountSessionProvider)?.account.key;
+        if (owner == null) return RaiFunctionResult(name: c.name, text: 'ログインしていません', ok: false);
+        final added = await addTlAlgorithm(ref.container, owner, scope, TlAlgorithmComponent(type: 'queryfilter', query: word, exclude: true));
+        if (!added) return RaiFunctionResult(name: c.name, text: '「$word」の除外はもう入っています');
+        ref.invalidate(timelineProvider(TimelineKind.home));
+        return RaiFunctionResult(name: c.name, text: '「$word」を含む投稿を ${scope.substring(3)} のタイムラインから除外するようにしました');
+      });
+
+  /// web.search(q, count): Brave Search (D-228)。第一期では無効(有効化と鍵は [RaiWebSearch] 参照)。
+  Future<RaiFunctionResult> _webSearch(RaiFunctionCall c) async {
+    final q = c.arg('q', c.arg('query')).trim();
+    if (q.isEmpty) return RaiFunctionResult(name: c.name, text: '検索語(q=)がありません', ok: false);
+    final ws = ref.read(raiWebSearchProvider);
+    try {
+      final hits = await ws.query(q, count: int.tryParse(c.arg('count', '5')) ?? 5);
+      final lines = [for (final h in hits) '${h.title}${h.description.isEmpty ? '' : ' — ${raiTruncate(h.description, ws.mode == RaiWebMode.answers ? budget : 120)}'}${h.url == null ? '' : ' [${h.url}]'}'];
+      return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'web「$q」'), budget), fetched: true);
+    } on RaiWebSearchException catch (e) {
+      return RaiFunctionResult(name: c.name, text: e.message, ok: false);
+    }
+  }
 
   /// app.actions(): この SNS で自動化できる投稿アクション一覧を取る (D-223)。モデルが post.action の
   /// action= を当てられるようにする(費用対効果が高い、報告書 §2-4 参照)。

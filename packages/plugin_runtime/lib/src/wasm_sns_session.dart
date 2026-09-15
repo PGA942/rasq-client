@@ -572,6 +572,18 @@ class WasmSnsSession extends SnsSessionBase {
           if (f is Map) FeedInfo(uri: '${f['uri'] ?? ''}', name: '${f['name'] ?? f['displayName'] ?? ''}', description: f['description'] as String?, likeCount: (f['likeCount'] as num?)?.toInt(), creator: f['creator'] as String?),
       ];
 
+  /// フィードの保存 (D-227): `sns.saveFeed {uri, on}` → 保存後の `{feeds: [...]}`。未実装(C01)は unsupported のまま投げる
+  /// (UI は非対応と分かるように)。
+  @override
+  Future<List<FeedInfo>> saveFeed(String uri, {bool on = true}) async {
+    try {
+      return _feedsFrom(await _call('sns.saveFeed', {'uri': uri, 'on': on}));
+    } on SnsApiException catch (e) {
+      if (e.code.code != 'C01') rethrow;
+      throw UnsupportedError('$pluginId does not support saveFeed');
+    }
+  }
+
   /// 保存済みフィード (D-195): `sns.savedFeeds {}`。未実装(C01)は空。
   @override
   Future<List<FeedInfo>> savedFeeds() async {

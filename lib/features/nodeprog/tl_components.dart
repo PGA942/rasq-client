@@ -76,7 +76,7 @@ String suggestFromKind(String from) => switch (from) {
 
 @immutable
 class TlAlgorithmComponent {
-  const TlAlgorithmComponent({required this.type, this.what = 'キーワード', this.from = '投稿内容', this.pluginLabel = '', this.enabled = true, this.query = '', this.params = const {}});
+  const TlAlgorithmComponent({required this.type, this.what = 'キーワード', this.from = '投稿内容', this.pluginLabel = '', this.enabled = true, this.query = '', this.exclude = false, this.params = const {}});
 
   /// plugin: のパラメーター (D-169): プラグインの RRL 設定ページ(`tl.params`)で編集した値。
   final Map<String, Object?> params;
@@ -101,6 +101,9 @@ class TlAlgorithmComponent {
   /// queryfilter: 検索ワード('' = このページの検索ワード/タグ, D-125)。
   final String query;
 
+  /// queryfilter: ワードを含む投稿を**除外**する (D-227: ネタバレなどのワードミュート)。false = 含む投稿だけ通す。
+  final bool exclude;
+
   bool get isSuggest => type == 'suggest';
   bool get isFilter => type == 'filter';
   bool get isQueryFilter => type == 'queryfilter';
@@ -114,14 +117,14 @@ class TlAlgorithmComponent {
         'chrono' => '時系列順',
         'suggest' => '$whatを$fromからサジェスト',
         'filter' => '$whatを$fromから絞り込み',
-        'queryfilter' => '検索絞り込み',
+        'queryfilter' => exclude ? '検索絞り込み(除外)' : '検索絞り込み',
         'tendency' => '指向性/刺激性(プロファイル)',
         _ => pluginLabel.isEmpty ? 'カスタム(TLプラグイン)' : pluginLabel,
       };
 
-  TlAlgorithmComponent copyWith({String? what, String? from, bool? enabled, String? query, Map<String, Object?>? params}) => TlAlgorithmComponent(
-      type: type, what: what ?? this.what, from: from ?? this.from, pluginLabel: pluginLabel, enabled: enabled ?? this.enabled, query: query ?? this.query, params: params ?? this.params);
-  Map<String, Object?> toJson() => {'type': type, 'what': what, 'from': from, 'pluginLabel': pluginLabel, 'enabled': enabled, 'query': query, if (params.isNotEmpty) 'params': params};
+  TlAlgorithmComponent copyWith({String? what, String? from, bool? enabled, String? query, bool? exclude, Map<String, Object?>? params}) => TlAlgorithmComponent(
+      type: type, what: what ?? this.what, from: from ?? this.from, pluginLabel: pluginLabel, enabled: enabled ?? this.enabled, query: query ?? this.query, exclude: exclude ?? this.exclude, params: params ?? this.params);
+  Map<String, Object?> toJson() => {'type': type, 'what': what, 'from': from, 'pluginLabel': pluginLabel, 'enabled': enabled, 'query': query, if (exclude) 'exclude': true, if (params.isNotEmpty) 'params': params};
   factory TlAlgorithmComponent.fromJson(Map<String, Object?> j) => TlAlgorithmComponent(
       type: j['type'] as String? ?? 'chrono',
       what: j['what'] as String? ?? 'キーワード',
@@ -129,6 +132,7 @@ class TlAlgorithmComponent {
       pluginLabel: j['pluginLabel'] as String? ?? '',
       enabled: j['enabled'] != false,
       query: j['query'] as String? ?? '',
+      exclude: j['exclude'] == true,
       params: (j['params'] as Map?)?.cast<String, Object?>() ?? const {});
 }
 
@@ -260,7 +264,7 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
     if (a.isQueryFilter) {
       // 検索絞り込み (D-125): ワード空 = このページの検索ワード/タグ。
       final id = 'a$i';
-      nodes.add(inst('filter.query', id, Offset(x, 60), values: {'検索ワード': a.query}));
+      nodes.add(inst('filter.query', id, Offset(x, 60), values: {'検索ワード': a.query, '除外': a.exclude ? 'true' : 'false'}));
       edges.add(GraphEdge(from: out, fromPort: 0, to: id, toPort: 0));
       out = id;
       col++;

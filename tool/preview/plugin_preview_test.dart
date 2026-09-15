@@ -521,6 +521,30 @@ void main() {
     debugNetworkImageHttpClientProvider = null;
   });
 
+  testWidgets('RAi skip → approval tile → automation (D-226)', (tester) async {
+    final c = await pump(tester);
+    RasqSidebar.open(c.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sidebar.rai')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => c.read(raiReferenceProvider.future));
+    await tester.pumpAndSettle();
+    final llm = c.read(raiLlmProvider) as FakeRaiLlm;
+    llm.reply = '順にやりましょう。まずログインしてから、投稿画面を開きます。';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'Bluesky でログインして、投稿もしたい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_chat_candidates_skip.png'));
+    await c.read(raiProvider.notifier).skip('post');
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_chat_approval.png'));
+    await tester.tap(find.byKey(const ValueKey('rai.chat.approve.post')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_chat_automated.png'));
+  });
+
   testWidgets('RAi sidebar (D-214)', (tester) async {
     final c = await pump(tester);
     RasqSidebar.open(c.read(overlayManagerProvider));

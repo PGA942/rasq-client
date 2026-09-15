@@ -722,10 +722,15 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
   /// リスト系)で絞り込む。ノードパレットと同じチップ UI。
   String _genre = 'すべて';
 
+  /// ∨ で開いたままにする (D-227: フォーカスの変化で組み直していなかったのでチップの列が出ず、
+  /// 「並び替え」「ジャンル」のドロップダウンが押せなかった)。
+  bool _filterOpen = false;
+
   @override
   void initState() {
     super.initState();
     _search.addListener(() => setState(() {}));
+    _focus.addListener(() => setState(() {}));
   }
 
   @override
@@ -880,10 +885,11 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
     final bar = Padding(
       padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 6, RasqSpacing.sm, 6),
       child: RasqExpandableSearchBox(
-        expanded: _focus.hasFocus,
+        expanded: _filterOpen || _focus.hasFocus,
         controller: _search,
         focusNode: _focus,
         hintText: 'プラグインノードを検索',
+        onDropdownTap: () => setState(() => _filterOpen = !_filterOpen),
         filterChips: [
           RasqFilterChipItem(
             label: '並び替え: 関連順',
@@ -1239,6 +1245,20 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
                   ]));
                 },
               ),
+            ),
+          // 除外 (D-227): ワードを含む投稿を落とす(ネタバレなどのワードミュート)。
+          if (widget.algorithm && widget.index < cfg.algorithms.length && cfg.algorithms[widget.index].isQueryFilter)
+            RasqSwitchListTile(
+              key: const ValueKey('tlcfg.queryfilter.exclude'),
+              title: 'このワードを含む投稿を除外する',
+              subtitle: 'オフなら含む投稿だけ通します',
+              value: cfg.algorithms[widget.index].exclude,
+              onChanged: (v) {
+                final c = widget.cfgOf();
+                widget.onUpdate(c.copyWith(algorithms: [
+                  for (var k = 0; k < c.algorithms.length; k++) k == widget.index ? c.algorithms[k].copyWith(exclude: v) : c.algorithms[k],
+                ]));
+              },
             ),
         ]),
       ),
