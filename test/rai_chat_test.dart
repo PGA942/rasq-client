@@ -55,7 +55,9 @@ void main() {
   });
 
   late FakeRaiLlm llm;
-  Future<ProviderContainer> pump(WidgetTester tester) async {
+  /// [extraPosts] (D-223): 既定の 1 投稿(p1)に足す分。user.search など複数ユーザーが要る関数のテスト用
+  /// (既存テストは渡さないので p1 だけの挙動は変わらない)。
+  Future<ProviderContainer> pump(WidgetTester tester, {List<Post> Function(AccountId)? extraPosts, SnsKind kind = SnsKind.misskey}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -65,7 +67,14 @@ void main() {
     });
     // 投稿を 1 つ(関数 posts.fetch の取得先)。
     final acc = fakeSession().account;
-    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (_) => [Post(id: 'p1', account: acc, author: UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 14), body: '今日は打ち上げ')]));
+    final registry = PluginRegistry()
+      ..register(FakeSnsPlugin(
+        kind: kind,
+        posts: (_) => [
+          Post(id: 'p1', account: acc, author: UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 14), body: '今日は打ち上げ'),
+          ...?extraPosts?.call(acc),
+        ],
+      ));
     await tester.pumpWidget(ProviderScope(
       overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), raiLlmProvider.overrideWithValue(llm), raiEmbeddingModelProvider.overrideWithValue(FakeRaiEmbeddingModel()), deviceRamReaderProvider.overrideWithValue(() async => (totalMb: 8192, availableMb: 4096))],
       child: const RasqApp(),
@@ -306,5 +315,136 @@ void main() {
     expect(llm.released, 1);
     expect(llm.systems.last, contains('操作「投稿する」(post)'));
     expect(c.read(raiProvider).bubble, '投稿するには「投稿」を押します');
+  });
+
+  group('関数の拡充 (D-223): 既存 SNS プラグイン関数のラップ', () {
+    testWidgets('timeline.list: TL を取って注入 → 答え直す', (tester) async {
+      final c = await pump(tester);
+      llm.replies.addAll(['zzzz の状況', '', 'TL を見ます [[call:timeline.list|kind=home|limit=5]]', 'TL はこちらです。']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 1);
+      final restarted = llm.systems.last!;
+      expect(restarted, contains('[timeline.list#1]'));
+      expect(restarted, contains('TL(home)'));
+      expect(restarted, contains('今日は打ち上げ'));
+      expect(c.read(raiProvider).bubble, 'TL はこちらです。');
+    });
+
+    testWidgets('post.thread: 投稿とその返信を取る', (tester) async {
+      final c = await pump(tester);
+      llm.replies.addAll(['zzzz の状況', '', 'スレッドを見ます [[call:post.thread|post=p1]]', 'これですね。']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 1);
+      final restarted = llm.systems.last!;
+      expect(restarted, contains('[post.thread#1]'));
+      expect(restarted, contains('スレッド'));
+      expect(restarted, contains('今日は打ち上げ'));
+      expect(c.read(raiProvider).bubble, 'これですね。');
+    });
+
+    testWidgets('user.search: keyword でユーザーを検索する', (tester) async {
+      final c = await pump(tester,
+          extraPosts: (acc) => [
+                Post(id: 'p2', account: acc, author: UserSummary(id: 'u2', account: const AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'yamada'), displayName: '山田'), createdAt: DateTime(2026, 9, 14), body: '別の投稿'),
+              ]);
+      llm.replies.addAll(['zzzz の状況', '', '探します [[call:user.search|keyword=山田|limit=5]]', '山田さんが見つかりました。']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 1);
+      final restarted = llm.systems.last!;
+      expect(restarted, contains('[user.search#1]'));
+      expect(restarted, contains('@yamada'));
+      expect(restarted, contains('山田'));
+      expect(c.read(raiProvider).bubble, '山田さんが見つかりました。');
+    });
+
+    testWidgets('notifications.list: 未読件数つきで通知を取る', (tester) async {
+      final c = await pump(tester);
+      llm.replies.addAll(['zzzz の状況', '', '通知を見ます [[call:notifications.list|kind=all|limit=5]]', '未読が 1 件あります。']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 1);
+      final restarted = llm.systems.last!;
+      expect(restarted, contains('[notifications.list#1]'));
+      expect(restarted, contains('通知(未読 1 件)'));
+      expect(restarted, contains('リアクション'));
+      expect(c.read(raiProvider).bubble, '未読が 1 件あります。');
+    });
+
+    testWidgets('trends.tags: トレンドのタグを取る', (tester) async {
+      final c = await pump(tester);
+      llm.replies.addAll(['zzzz の状況', '', 'トレンドを見ます [[call:trends.tags|limit=5]]', '「打上会」が人気です。']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 1);
+      final restarted = llm.systems.last!;
+      expect(restarted, contains('[trends.tags#1]'));
+      expect(restarted, contains('#打上会(117 人)'));
+      expect(c.read(raiProvider).bubble, '「打上会」が人気です。');
+    });
+
+    testWidgets('follow.set: フォローする(実行系、取得系ではないので再始動しない)', (tester) async {
+      final c = await pump(tester);
+      llm.replies.addAll(['zzzz の状況', '', 'フォローします [[call:follow.set|user=u1|on=true]]']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 0);
+      expect(c.read(raiProvider).bubble, contains('follow.set: フォローしました'));
+    });
+
+    testWidgets('notifications.read: 通知を既読にする(実行系)', (tester) async {
+      final c = await pump(tester);
+      llm.replies.addAll(['zzzz の状況', '', '既読にします [[call:notifications.read]]']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 0);
+      expect(c.read(raiProvider).bubble, contains('notifications.read: 通知を既読にしました'));
+    });
+
+    testWidgets('settings.get: 設定ページにあるキーの値を読む(ホストの静的ページ)', (tester) async {
+      final c = await pump(tester);
+      llm.replies.addAll(['zzzz の状況', '', '設定を見ます [[call:settings.get|area=appearance.display|key=textScale]]', '既定の 100% のままです。']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 1);
+      final restarted = llm.systems.last!;
+      expect(restarted, contains('[settings.get#1]'));
+      expect(restarted, contains('appearance.display.textScale = 100'));
+      expect(c.read(raiProvider).bubble, '既定の 100% のままです。');
+    });
+
+    testWidgets('app.actions: 自動化できる投稿アクション一覧を取る(reply は自動化不可)', (tester) async {
+      final c = await pump(tester);
+      llm.replies.addAll(['zzzz の状況', '', 'アクションを見ます [[call:app.actions]]', 'リノートとリアクションができます。']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 1);
+      final restarted = llm.systems.last!;
+      expect(restarted, contains('[app.actions#1]'));
+      expect(restarted, contains('renote: リノート'));
+      expect(restarted, contains('reply: 返信(自動化不可)'));
+      expect(c.read(raiProvider).bubble, 'リノートとリアクションができます。');
+    });
+
+    testWidgets('非対応の関数呼び出し: UnsupportedError は「この SNS では使えません(関数名)」に日本語化される', (tester) async {
+      final c = await pump(tester); // 既定 kind=misskey → savedFeeds は非対応(Bluesky 役のみ実装)
+      llm.replies.addAll(['zzzz の状況', '', 'フィードを見ます [[call:feeds.list]]']);
+      await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
+      await tester.tap(find.byKey(const ValueKey('rai.ask')));
+      await tester.pumpAndSettle();
+      expect(llm.released, 0); // 非対応(fetched=false)なので再始動しない
+      expect(c.read(raiProvider).bubble, contains('この SNS では使えません(feeds.list)'));
+    });
   });
 }
