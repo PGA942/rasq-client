@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -46,8 +47,12 @@ const composerFowId = 'fow.composer';
 /// [initialText] は本文の初期値(AsTell の共有リンク転送 D-159 など)。下書きが
 /// 残っていればそちらを優先する。
 /// [postAs] は投稿先アカウントの初期値(共有 FOW で選んだアカウント、D-170)。
-Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles}) async {
-  final manager = ref.read(overlayManagerProvider);
+Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles}) =>
+    showComposerWith(manager: ref.read(overlayManagerProvider), router: ref.read(routerProvider), target, resident: resident, onPosted: onPosted, column: column, initialText: initialText, postAs: postAs, initialFiles: initialFiles);
+
+/// [showComposer] の本体 (D-225): Widget の外(RAi の関数 `post.reply` などのオートフィル)からも
+/// 開けるよう、[OverlayManager] と [GoRouter] を直接受ける。
+Future<Post?> showComposerWith(ComposeTarget target, {required OverlayManager manager, required GoRouter router, bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles}) async {
   // 返信 / ダイレクト投稿は **stick FOW** (D-047): ヘッダー無しで根本が
   // フッターメニュー/キーボードの上に貼り付き、タップ(フォーカス)すると
   // ヘッダーと返信先タイルが上から割り込んでくる(書き込み領域とアクション
@@ -84,9 +89,8 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident =
         );
   // stick は特定の返信/DM ページに張り付くもの (D-048): ページ遷移(戻る・
   // タブ切替・別投稿へ移動)を検知したら自動で消滅する。
-  final router = stick ? ref.read(routerProvider) : null;
   void onNavigate() => manager.close(composerFowId, reason: OverlayCloseReason.discard);
-  router?.routerDelegate.addListener(onNavigate);
+  if (stick) router.routerDelegate.addListener(onNavigate);
   try {
     final res = await manager.showFow<Post>(
       id: composerFowId,
@@ -105,7 +109,7 @@ Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident =
     );
     return res;
   } finally {
-    router?.routerDelegate.removeListener(onNavigate);
+    if (stick) router.routerDelegate.removeListener(onNavigate);
     manager.closeOwnedBy(composerFowId);
   }
 }
