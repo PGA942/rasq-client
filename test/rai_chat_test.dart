@@ -11,11 +11,14 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId;
+import 'package:rasq_client/features/nodeprog/node_canvas.dart';
+import 'package:rasq_client/features/nodeprog/node_editor_screen.dart';
 import 'package:rasq_client/features/rai/rai_automation.dart';
 import 'package:rasq_client/features/rai/rai_chat.dart';
 import 'package:rasq_client/features/rai/rai_embedding_model.dart';
 import 'package:rasq_client/features/rai/rai_functions.dart';
 import 'package:rasq_client/features/rai/rai_home_screen.dart';
+import 'package:rasq_client/features/rai/rai_layout.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
 import 'package:rasq_client/features/rai/rai_mascot_3d.dart';
 import 'package:rasq_client/features/rai/rai_motion.dart';
@@ -41,6 +44,14 @@ import 'support/fakes.dart';
 
 /// RAi ホームのチャット (D-218): 行の下のリンクカード / 選択肢、背景の RAi(薄さ / 腕 / accident)、
 /// 本文の URL 抽出、コントローラーのロール / 1 回だけのクリップ。
+/// チャットの行の本文 (D-232: 返事は Text.rich のリッチテキストなので plain text で読む)。
+String raiRowText(WidgetTester tester, int row) {
+  final rich = find.descendant(of: find.byKey(ValueKey('rai.chat.rich.$row')), matching: find.byType(Text));
+  if (rich.evaluate().isNotEmpty) return tester.widgetList<Text>(rich).map((t) => t.data ?? t.textSpan!.toPlainText()).join('\n');
+  final t = tester.widget<Text>(find.descendant(of: find.byKey(ValueKey('rai.chat.msg.$row')), matching: find.byType(Text)).first); // 失敗の行は赤の Text
+  return t.data ?? t.textSpan!.toPlainText();
+}
+
 void main() {
   test('本文の URL を拾う(末尾の句読点 / 括弧は落とす)', () {
     final links = raiLinksIn('詳しくは https://example.com/docs/a を見てください。ほかに https://x.test/p?q=1)、もあります');
@@ -145,7 +156,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     expect(c.read(raiProvider).error, isTrue);
-    final msg1 = tester.widget<Text>(find.descendant(of: find.byKey(const ValueKey('rai.chat.msg.1')), matching: find.byType(Text)).first).data!;
+    final msg1 = raiRowText(tester, 1);
     expect(msg1, contains('返事がありませんでした'));
     expect((layerState.controller3d as RaiMascot3dController).arm, RaiArm.none);
     expect(tester.widget<Opacity>(find.ancestor(of: layerMascot, matching: find.byType(Opacity)).first).opacity, closeTo(0.28, 0.01));
@@ -272,6 +283,44 @@ void main() {
     expect(c.read(raiProvider).bubble, contains('右下の「投稿」'));
   });
 
+  testWidgets('入力タイルの移動 (D-233): 掴み手で上へ → 上端に吸着して保存、広い画面ではカラムへスナップ', (tester) async {
+    final c = await pump(tester);
+    expect(c.read(raiBarPlacementProvider), const RaiBarPlacement());
+    final before = tester.getRect(find.byType(RaiBar));
+    // 掴み手を段階的に動かす(tester.drag の 1 回の move だと pan の update が積まれない)。
+    Future<void> dragGrip(Offset by) async {
+      final gesture = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('rai.grip'))));
+      await gesture.moveBy(by / 4);
+      await tester.pump();
+      await gesture.moveBy(by * 3 / 4);
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+    }
+    // 上へ大きく動かす → y=0(ヘッダーの下)に吸着。
+    await dragGrip(const Offset(0, -500));
+    var p = c.read(raiBarPlacementProvider);
+    expect(p.y, 0);
+    expect(p.atTop, isTrue);
+    final after = tester.getRect(find.byType(RaiBar));
+    expect(after.top, lessThan(before.top - 200));
+    expect((await c.read(sessionStorageProvider).read('rai.v1'))!, contains('"barY":0'));
+    // 中ほどへ → 比率で残る(吸着しない)。
+    await dragGrip(Offset(0, (before.top - after.top) / 2));
+    p = c.read(raiBarPlacementProvider);
+    expect(p.y, greaterThan(0.15));
+    expect(p.y, lessThan(0.85));
+    // 広い画面(2 カラム): 右へ動かすと第 3 カラムのスロットへ。
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpAndSettle();
+    await dragGrip(const Offset(600, 0));
+    p = c.read(raiBarPlacementProvider);
+    expect(p.column, 1);
+    final wide = tester.getRect(find.byType(RaiBar));
+    expect(wide.center.dx, greaterThan(700));
+  });
+
   testWidgets('承認タイルの「やめる」(D-226): 何もせず断りの行だけ、古い行の承認タイルは押せない', (tester) async {
     final c = await pump(tester);
     await c.read(raiProvider.notifier).skip('post');
@@ -324,6 +373,17 @@ void main() {
     expect(trace.firstWhere((s) => s.fn == 'feeds.search').status, RaiAutoStatus.done); // 聞き直した検索も済
     expect(trace.where((s) => s.status == RaiAutoStatus.skipped), isNotEmpty);
     expect(trace.where((s) => s.status == RaiAutoStatus.asking), isEmpty);
+    // インラインのノード表示 (D-234): TL カスタマイズを書いたので、RAi ページの行の下にホームのグラフが 80% で出る。
+    expect(RaiController.raiGraphScopeOf(trace), 'tl.home');
+    expect(st.log.first.graphScope, 'tl.home');
+    c.read(raiProvider.notifier).setMode(RaiMode.assistant);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('inline.nodes')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('inline.nodes')), matching: find.byType(NodeCard)), findsWidgets);
+    expect(find.text('tl.home · 80%'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('inline.nodes.expand')));
+    await tester.pumpAndSettle();
+    expect(find.byType(NodeEditorScreen), findsOneWidget); // 拡大 → 全画面のエディタ
   });
 
   testWidgets('自動化の取り込み先 (D-229): 任されていなければ選択肢タイルで聞き、「トレンドの指向性」なら tendency.seed で好きなジャンルに足す', (tester) async {

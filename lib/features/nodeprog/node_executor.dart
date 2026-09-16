@@ -305,8 +305,57 @@ Future<List<String>?> _textArrayOutOf(NodeGraph g, Map<String, GraphNode> byId, 
       final payload = await _loadSlot(g, n, env);
       final texts = payload?['texts'];
       return texts is List ? texts.cast<String>() : null;
+    case 'convert.split':
+      // 変換 (D-235): 上流のテキストを区切りで配列に。
+      final text = await _upstreamText(g, byId, n, env);
+      if (text == null) return null;
+      final sep = _separatorOf(n);
+      return [for (final t in text.split(sep)) if (t.trim().isNotEmpty) t.trim()];
   }
   return null;
+}
+
+/// 区切りの設定(改行 / カンマ / 空白)→ 実際の区切り。
+Pattern _separatorOf(GraphNode n) => switch (n.inputs.where((i) => i.label == '区切り').firstOrNull?.value?.trim()) {
+      'カンマ' => RegExp(r'[,、，]'),
+      '空白' => RegExp(r'\s+'),
+      _ => RegExp(r'\r?\n'),
+    };
+
+String _joinerOf(GraphNode n) => switch (n.inputs.where((i) => i.label == '区切り').firstOrNull?.value?.trim()) { 'カンマ' => ',', '空白' => ' ', _ => '\n' };
+
+/// [n] のテキスト出力 (D-235): テキスト定数 / ファイルリーダー / 結合。
+Future<String?> _textOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, _ExecEnv env) async {
+  switch (n.type) {
+    case 'text.const':
+      final v = n.inputs.firstOrNull?.value?.trim() ?? '';
+      return v.isEmpty ? null : v;
+    case 'file':
+      final path = n.inputs.firstOrNull?.value?.trim() ?? '';
+      if (path.isEmpty) return null;
+      try {
+        final resolved = path.startsWith('~') ? path.replaceFirst('~', Platform.environment['HOME'] ?? '') : path;
+        final text = await File(resolved).readAsString();
+        return text.trim().isEmpty ? null : text;
+      } catch (_) {
+        return null; // 読めないファイルは無視
+      }
+    case 'convert.join':
+      final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == n.id && e.toPort == 0).firstOrNull;
+      final up = edge == null ? null : byId[edge.from];
+      if (up == null) return null;
+      final texts = await _textArrayOutOf(g, byId, up, env);
+      if (texts == null || texts.isEmpty) return null;
+      return texts.join(_joinerOf(n));
+  }
+  return null;
+}
+
+/// 入力 0 番に繋がるノードのテキスト。
+Future<String?> _upstreamText(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, _ExecEnv env) async {
+  final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == n.id && e.toPort == 0).firstOrNull;
+  final up = edge == null ? null : byId[edge.from];
+  return up == null ? null : _textOutOf(g, byId, up, env);
 }
 
 /// [n] のベクトル出力を評価する(SigLIP埋め込み/読み出し)。
@@ -567,14 +616,10 @@ Future<List<String>> _textSources(NodeGraph g, Map<String, GraphNode> byId, Grap
     if (e.cond || e.toIcon || e.to != ml.id) continue;
     final src = byId[e.from];
     if (src == null) continue;
-    if (src.type == 'file') {
-      final path = src.inputs.firstOrNull?.value?.trim() ?? '';
-      if (path.isEmpty) continue;
-      try {
-        final resolved = path.startsWith('~') ? path.replaceFirst('~', Platform.environment['HOME'] ?? '') : path;
-        final text = await File(resolved).readAsString();
-        if (text.trim().isNotEmpty) out.add(text);
-      } catch (_) {} // 読めないファイルは無視
+    if (src.type == 'file' || src.type == 'text.const' || src.type == 'convert.join') {
+      // テキストを出すノード (D-235: 定数 / ファイル / 結合)。
+      final text = await _textOutOf(g, byId, src, env);
+      if (text != null) out.add(text);
     } else {
       final texts = await _textArrayOutOf(g, byId, src, env);
       if (texts != null) out.addAll(texts.where((t) => t.trim().isNotEmpty));

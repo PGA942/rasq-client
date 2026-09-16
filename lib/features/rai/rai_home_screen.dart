@@ -187,7 +187,8 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
         // 大画面はコラム形式 (D-185): 入力ウィジェットと同じ幅の列を中央に。
         Center(
           child: SizedBox(
-            width: raiPanelWidth(context) + RasqSpacing.page * 2,
+            // チャット列の幅 (D-232): 600px 未満は全幅、以上は増えた分の 1/2 まで。
+            width: raiChatWidth(context),
             child: LayoutBuilder(builder: (context, c) {
               // チャット (D-218): 背景に RAi(層側が描く。ここは枠だけ報告)、その上に発言の履歴。
               final standby = raiApproachSize.clamp(raiPointSize, math.max(raiPointSize, math.min(c.maxWidth * 0.75, screen.height * 0.45))).toDouble();

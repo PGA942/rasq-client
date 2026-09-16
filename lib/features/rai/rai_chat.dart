@@ -4,7 +4,10 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'rai_automation.dart';
+import '../../app/providers.dart';
+import '../nodeprog/inline_node_graph.dart';
 import 'rai_providers.dart';
+import 'rai_rich_text.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
 import 'rai_widgets.dart';
@@ -70,6 +73,16 @@ class RaiChatList extends ConsumerWidget {
         lastQuery = u.query;
         rows.add(_UserRow(key: ValueKey('rai.chat.user.$i'), text: u.query!));
       }
+      // 案内の手順 (D-232): 連続する同じ操作の手順は 1 つの角丸タイルに(丸数字 + 交互の背景)。
+      if (u.step != null) {
+        final group = <RaiUtterance>[u];
+        while (i + 1 < log.length && log[i + 1].step == (group.last.step ?? 0) + 1 && log[i + 1].opId == u.opId && (log[i + 1].query == null || log[i + 1].query == lastQuery)) {
+          i++;
+          group.add(log[i]);
+        }
+        rows.add(_InstructionTile(key: ValueKey('rai.chat.steps.${i - group.length + 1}'), title: u.opId == null ? null : index?.operation(u.opId!)?.index, steps: group));
+        continue;
+      }
       rows.add(_RaiRow(
         key: ValueKey('rai.chat.msg.$i'),
         text: u.text,
@@ -83,6 +96,7 @@ class RaiChatList extends ConsumerWidget {
         candidates: [for (final id in u.candidates) if (index?.operation(id) != null) (index!.operation(id)!, index.expand(index.operation(id)!).length)],
         approval: u.approval,
         trace: u.trace,
+        graphScope: u.graphScope,
         rowIndex: i,
       ));
     }
@@ -120,7 +134,7 @@ class _UserRow extends StatelessWidget {
 }
 
 class _RaiRow extends ConsumerWidget {
-  const _RaiRow({super.key, required this.text, required this.at, required this.error, required this.latest, required this.links, required this.choices, required this.rowIndex, this.streaming = false, this.proposal, this.proposalSteps = 0, this.candidates = const [], this.approval, this.trace = const []});
+  const _RaiRow({super.key, required this.text, required this.at, required this.error, required this.latest, required this.links, required this.choices, required this.rowIndex, this.streaming = false, this.proposal, this.proposalSteps = 0, this.candidates = const [], this.approval, this.trace = const [], this.graphScope});
   final String text;
 
   /// 承認待ちの自動化の操作 id (D-226)。
@@ -128,6 +142,9 @@ class _RaiRow extends ConsumerWidget {
 
   /// 自動化の工程 (D-229)。
   final List<RaiAutoStep> trace;
+
+  /// インラインのノード表示のスコープ (D-234)。
+  final String? graphScope;
   final DateTime? at;
   final bool error;
   final bool latest;
@@ -154,16 +171,14 @@ class _RaiRow extends ConsumerWidget {
         const SizedBox(width: RasqSpacing.xs),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: RasqSpacing.sm),
-              decoration: BoxDecoration(
-                color: scheme.surface.withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(RasqSizes.radiusLg),
-                border: Border.all(color: error ? RasqColors.danger : scheme.outlineVariant),
-              ),
+            // 返事は枠なしのリッチテキスト (D-232)。失敗は赤の文字、生成中はドット。
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xs, vertical: RasqSpacing.xs),
               child: thinking
                   ? const _ThinkingDots()
-                  : Text(text, style: RasqTypography.body.copyWith(color: error ? RasqColors.danger : scheme.onSurface)),
+                  : error
+                      ? Text(text, style: RasqTypography.body.copyWith(color: RasqColors.danger))
+                      : RaiRichText(text, key: ValueKey('rai.chat.rich.$rowIndex')),
             ),
             if (at != null) Padding(padding: const EdgeInsets.only(top: 2, left: 4), child: Text(RasqTimestamp.format(at!), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
             // 行の下のタイル (D-218)。
@@ -173,6 +188,12 @@ class _RaiRow extends ConsumerWidget {
             if (approval != null) _ApprovalTile(opId: approval!, enabled: latest, onApprove: () => n.approve(approval!), onDecline: () => n.decline(approval!)),
             // 工程タイル (D-229): 自動化の各手順の状態(関数で済 / 畳んだ / 案内へ / 失敗)。視覚的なデバッグ用。
             if (trace.isNotEmpty) _TraceTile(key: ValueKey('rai.chat.trace.$rowIndex'), steps: trace),
+            // インラインのノード表示 (D-234): 自動化が書いたグラフを 80% で。拡大で全画面のエディタへ。
+            if (graphScope != null)
+              Padding(
+                padding: const EdgeInsets.only(top: RasqSpacing.xs),
+                child: InlineNodeGraph(key: ValueKey('rai.chat.graph.$rowIndex'), scope: graphScope!, accountKey: ref.read(currentAccountProvider)?.key),
+              ),
             // 候補 (D-222): 返事の下に並べ、右の × で「これじゃない」→ 除外して答え直す。
             if (candidates.isNotEmpty)
               Row(key: ValueKey('rai.chat.candidates.$rowIndex'), crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -231,6 +252,50 @@ class _ProposalTile extends StatelessWidget {
           const SizedBox(width: RasqSpacing.xs),
           FilledButton(key: ValueKey('rai.chat.guide.$id'), onPressed: onGuide, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: const Text('この手順で案内')),
         ]),
+      ]),
+    );
+  }
+}
+
+/// インストラクション履歴のタイル (D-232): 角丸の枠の中に、手順ごとに丸数字 + 文(背景はグレー / 白の交互)。
+class _InstructionTile extends StatelessWidget {
+  const _InstructionTile({super.key, required this.title, required this.steps});
+  final String? title;
+  final List<RaiUtterance> steps;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: RasqSpacing.sm, right: 32),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Padding(padding: EdgeInsets.only(top: 2), child: RaiIcon(size: 28)),
+        const SizedBox(width: RasqSpacing.xs),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(color: scheme.surface.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(RasqSizes.radiusLg), border: Border.all(color: scheme.outlineVariant)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                if (title != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.xs, RasqSpacing.md, 2),
+                    child: Text('案内「$title」', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+                  ),
+                for (final (k, u) in steps.indexed)
+                  Container(
+                    key: ValueKey('rai.chat.step.${u.step}'),
+                    color: k.isEven ? scheme.surfaceContainerHighest.withValues(alpha: 0.55) : Colors.transparent,
+                    padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      SizedBox(width: 22, child: Text(raiCircled(u.step ?? k + 1), style: RasqTypography.body.copyWith(color: RasqColors.link, fontWeight: FontWeight.w600))),
+                      Expanded(child: Text(u.text, style: RasqTypography.body.copyWith(color: scheme.onSurface))),
+                    ]),
+                  ),
+              ]),
+            ),
+            Padding(padding: const EdgeInsets.only(top: 2, left: 4), child: Text(RasqTimestamp.format(steps.last.at), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+          ]),
+        ),
       ]),
     );
   }

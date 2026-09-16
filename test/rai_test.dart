@@ -35,6 +35,14 @@ import 'support/fakes.dart';
 
 /// RAi (D-179): バー(トグル / 質問する)、インストラクションの参照、部品へのスプライン移動、
 /// アシスタントは中央固定、RAi ホーム。
+/// チャットの行の本文 (D-232: 返事は Text.rich のリッチテキストなので plain text で読む)。
+String raiRowText(WidgetTester tester, int row) {
+  final rich = find.descendant(of: find.byKey(ValueKey('rai.chat.rich.$row')), matching: find.byType(Text));
+  if (rich.evaluate().isNotEmpty) return tester.widgetList<Text>(rich).map((t) => t.data ?? t.textSpan!.toPlainText()).join('\n');
+  final t = tester.widget<Text>(find.descendant(of: find.byKey(ValueKey('rai.chat.msg.$row')), matching: find.byType(Text)).first); // 失敗の行は赤の Text
+  return t.data ?? t.textSpan!.toPlainText();
+}
+
 void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
   Post post(String id, String body) => Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 8, 31), body: body);
@@ -175,7 +183,7 @@ void main() {
     expect(find.byKey(const ValueKey('rai.speech')), findsNothing);
     expect(find.byKey(const ValueKey('rai.chat.user.0')), findsOneWidget);
     expect(find.descendant(of: find.byKey(const ValueKey('rai.chat.user.0')), matching: find.text('何かできる？')), findsOneWidget);
-    final msg0 = tester.widget<Text>(find.descendant(of: find.byKey(const ValueKey('rai.chat.msg.0')), matching: find.byType(Text)).first).data!;
+    final msg0 = raiRowText(tester, 0);
     expect(msg0, contains('まだダウンロードされていません'));
     expect(msg0, contains('フォールアップ先'));
     expect(find.byKey(const ValueKey('rai.chat.live')), findsNothing); // 記録済みなので生成中の行は無い
@@ -362,7 +370,7 @@ void main() {
     expect(st.target, isNull); // 中央固定
     expect(find.byType(RaiHomeScreen), findsOneWidget); // 画面は動かない
     // チャット (D-218): 提案は行に全文、行の下に操作タイル(見出し · 手順数 + 「この手順で案内」)。
-    final msg0 = tester.widget<Text>(find.descendant(of: find.byKey(const ValueKey('rai.chat.msg.0')), matching: find.byType(Text)).first).data!;
+    final msg0 = raiRowText(tester, 0);
     expect(msg0, startsWith('「画像を付けて投稿」なら、この順で進めます(3 手順)'));
     expect(msg0, contains('1. 右下の「投稿」でコンポーザーが開きます〔composer.open〕'));
     expect(msg0, contains('〔post.attach〕 入力: ファイル 固定: 閲覧注意=false'));

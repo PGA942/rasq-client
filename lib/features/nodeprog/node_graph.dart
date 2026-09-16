@@ -303,6 +303,41 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     inputs: [NodePort(label: '間隔', value: '15秒', dataType: '数値')],
     outputs: [NodePort(label: 'クロック', dataType: 'クロック')],
   ),
+  // 変換 (D-235): 型を噛ませるためのノード。テキスト定数 → ML の基準 / キーワード、
+  // 分割(テキスト → テキスト配列)、結合(テキスト配列 → テキスト)。
+  NodeCatalogEntry(
+    type: 'text.const',
+    title: 'テキスト',
+    icon: Icons.short_text,
+    genre: '変換',
+    description: '書いた文をテキストとして出します。類似性 / キーワードの基準や、分割の入力に繋げます。',
+    inputs: [NodePort(label: '文', value: '', dataType: '設定')],
+    outputs: [NodePort(label: 'テキスト', dataType: 'テキスト')],
+  ),
+  NodeCatalogEntry(
+    type: 'convert.split',
+    title: '分割',
+    icon: Icons.call_split,
+    genre: '変換',
+    description: 'テキストを区切り(改行 / カンマ / 空白)でテキスト配列にします。キーワードリストや保存の入力に繋げます。',
+    inputs: [
+      NodePort(label: 'テキスト', dataType: 'テキスト'),
+      NodePort(label: '区切り', value: '改行', dataType: '設定', options: ['改行', 'カンマ', '空白']),
+    ],
+    outputs: [NodePort(label: 'テキスト配列', dataType: 'テキスト配列')],
+  ),
+  NodeCatalogEntry(
+    type: 'convert.join',
+    title: '結合',
+    icon: Icons.call_merge,
+    genre: '変換',
+    description: 'テキスト配列を区切り(改行 / カンマ / 空白)で 1 つのテキストにします。',
+    inputs: [
+      NodePort(label: 'テキスト配列', dataType: 'テキスト配列'),
+      NodePort(label: '区切り', value: '改行', dataType: '設定', options: ['改行', 'カンマ', '空白']),
+    ],
+    outputs: [NodePort(label: 'テキスト', dataType: 'テキスト')],
+  ),
   NodeCatalogEntry(
     type: 'random',
     title: 'ランダム',
@@ -797,4 +832,74 @@ NodeGraph? insertAccountIntoBundleGraph(NodeGraph g, String accountLabel) {
     return NodeGraph(nodes: [...g.nodes, withValues], edges: [...g.edges, GraphEdge(from: withValues.id, fromPort: 0, to: up.id, toPort: free)]);
   }
   return null;
+}
+
+/// 整理整頓 (D-235): データの流れ(出力 → 入力、クロック → アイコン)で層(左から右)を決め、層の中は
+/// 縦に等間隔で並べる。条件ノード(条件接続でぶら下がるもの)は親の下に置く。座標以外は変えない。
+NodeGraph tidyGraph(NodeGraph g, {double gapX = 60, double gapY = 24}) {
+  if (g.nodes.isEmpty) return g;
+  final byId = {for (final n in g.nodes) n.id: n};
+  // 条件の子(cond で親に付くノード)は層の計算から外し、親の下に置く。
+  final condChildren = <String, List<String>>{};
+  final isCondChild = <String>{};
+  for (final e in g.edges) {
+    if (e.cond && byId.containsKey(e.from) && byId.containsKey(e.to)) {
+      condChildren.putIfAbsent(e.from, () => []).add(e.to);
+      isCondChild.add(e.to);
+    }
+  }
+  final data = [for (final e in g.edges) if (!e.cond && byId.containsKey(e.from) && byId.containsKey(e.to)) e];
+  // 層 = 最長経路(入ってくる辺の層 + 1)。循環は無視。
+  final layer = <String, int>{};
+  int depthOf(String id, Set<String> seen) {
+    final cached = layer[id];
+    if (cached != null) return cached;
+    if (!seen.add(id)) return 0;
+    var d = 0;
+    for (final e in data) {
+      if (e.to == id && !isCondChild.contains(e.from)) {
+        final up = depthOf(e.from, seen) + 1;
+        if (up > d) d = up;
+      }
+    }
+    layer[id] = d;
+    return d;
+  }
+  for (final n in g.nodes) {
+    if (!isCondChild.contains(n.id)) depthOf(n.id, {});
+  }
+  final columns = <int, List<GraphNode>>{};
+  for (final n in g.nodes) {
+    if (isCondChild.contains(n.id)) continue;
+    columns.putIfAbsent(layer[n.id] ?? 0, () => []).add(n);
+  }
+  final placed = <String, GraphNode>{};
+  final cols = columns.keys.toList()..sort();
+  var x = 0.0;
+  for (final c in cols) {
+    final list = columns[c]!..sort((a, b) => a.y.compareTo(b.y));
+    var y = 0.0;
+    for (final n in list) {
+      placed[n.id] = n.copyWith(x: x, y: y);
+      y += _tidyHeight(n) + gapY;
+      // 条件の子を下に(深さ優先で縦に積む)。
+      final stack = [...(condChildren[n.id] ?? const <String>[])];
+      while (stack.isNotEmpty) {
+        final cid = stack.removeAt(0);
+        final child = byId[cid];
+        if (child == null || placed.containsKey(cid)) continue;
+        placed[cid] = child.copyWith(x: x, y: y);
+        y += _tidyHeight(child) + gapY;
+        stack.insertAll(0, condChildren[cid] ?? const <String>[]);
+      }
+    }
+    x += 190 + gapX;
+  }
+  return NodeGraph(nodes: [for (final n in g.nodes) placed[n.id] ?? n], edges: g.edges);
+}
+
+double _tidyHeight(GraphNode n) {
+  final inputsBlock = n.inputs.isEmpty ? 0.0 : 18 + n.inputs.length * 26;
+  final outputsBlock = n.outputs.isEmpty ? 0.0 : 18 + n.outputs.length * 26;
+  return (n.hasCondIn ? 14 : 0) + 34 + inputsBlock + outputsBlock + (n.condOutCount > 0 ? 14 : 6);
 }

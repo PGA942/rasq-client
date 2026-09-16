@@ -130,6 +130,51 @@ void main() {
     expect(none, isNotNull);
   });
 
+  test('変換ノード (D-235): テキスト定数 → 分割(カンマ) → 結合(改行) → 分割(改行) → 保存 でテキスト配列が渡る', () async {
+    GraphNode withValue(GraphNode n, String label, String v) => n.copyWith(inputs: [for (final i in n.inputs) i.label == label ? i.copyWith(value: v) : i]);
+    final store = <String, Object?>{};
+    final g = NodeGraph(
+      nodes: [
+        withValue(step('text.const', 't1'), '文', '猫, 犬 ,鳥'),
+        withValue(step('convert.split', 's1'), '区切り', 'カンマ'),
+        withValue(step('convert.join', 'j1'), '区切り', '改行'),
+        withValue(step('convert.split', 's2'), '区切り', '改行'),
+        withValue(step('storage.save', 'w1'), 'スロット', 'words'),
+      ],
+      edges: [
+        data('t1', 's1'),
+        data('s1', 'j1'),
+        data('j1', 's2'),
+        const GraphEdge(from: 's2', fromPort: 0, to: 'w1', toPort: 1),
+      ],
+    );
+    final out = await runNodeGraph(g, fetch: fetch, storageWrite: (slot, value) async => store[slot] = value, storageRead: (s) async => store[s]);
+    expect(out, isNull); // TL 終端は無い
+    expect(((store['words'] as Map)['texts'] as List).cast<String>(), ['猫', '犬', '鳥']);
+    // 接続可否: テキスト → 設定は繋げない、テキスト → テキスト配列も不可(分割を噛ませる)。
+    final t = builtinNodeCatalog.firstWhere((e) => e.type == 'text.const');
+    final sp = builtinNodeCatalog.firstWhere((e) => e.type == 'convert.split');
+    expect(portsCompatible(t.outputs.first, sp.inputs.first), isTrue);
+    expect(portsCompatible(t.outputs.first, sp.inputs[1]), isFalse);
+  });
+
+  test('整理整頓 (D-235): データの流れの層で左から右、層の中は縦に並ぶ。条件の子は親の下', () {
+    final g = NodeGraph(
+      nodes: [source('n1').copyWith(x: 500, y: 500), step('remove', 'n2').copyWith(x: 10, y: 10), timelineNode('n3').copyWith(x: 300, y: 900), cond('c1', value: '広告').copyWith(x: 900, y: 0)],
+      edges: [data('n1', 'n2'), data('n2', 'n3'), condEdge('n2', 'c1')],
+    );
+    final t = tidyGraph(g);
+    final byId = {for (final n in t.nodes) n.id: n};
+    expect(byId['n1']!.x, 0);
+    expect(byId['n2']!.x, greaterThan(byId['n1']!.x));
+    expect(byId['n3']!.x, greaterThan(byId['n2']!.x));
+    expect(byId['n1']!.y, 0);
+    // 条件の子 c1 は remove(n2)と同じ列で、その下。
+    expect(byId['c1']!.x, byId['n2']!.x);
+    expect(byId['c1']!.y, greaterThan(byId['n2']!.y));
+    expect(t.edges, g.edges);
+  });
+
   test('鎖が未完成なら null(実行しない)', () async {
     // タイムラインノードに何も繋がっていない。
     final g = NodeGraph(nodes: [source('n1'), timelineNode('n3')], edges: const []);
