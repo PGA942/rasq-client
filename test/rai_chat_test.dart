@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId;
 import 'package:rasq_client/features/rai/rai_automation.dart';
 import 'package:rasq_client/features/rai/rai_chat.dart';
@@ -250,6 +252,24 @@ void main() {
     expect(raiAchievements.firstWhere((a) => a.id == 'auto1').count(c.read(raiStatsProvider)), 1);
     c.read(overlayManagerProvider).close(composerFowId, reason: OverlayCloseReason.discard);
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('案内の画面移動 (D-230): 別のタブから始めても手順の画面(タブの根)へ go する(pop で手前に戻るだけだったバグ)', (tester) async {
+    final c = await pump(tester);
+    final router = c.read(routerProvider);
+    c.read(raiProvider.notifier).setMode(RaiMode.instruction); // RAi ページを閉じる
+    await tester.pumpAndSettle();
+    router.go(Routes.search);
+    await tester.pumpAndSettle();
+    router.push(Routes.lists); // 検索タブの上にリストページ
+    await tester.pumpAndSettle();
+    expect(visibleLocationOf(router.routerDelegate.currentConfiguration), startsWith(Routes.lists));
+    // endOfFrame を待つのでフレームを回しながら(await すると進まない)。
+    unawaited(c.read(raiProvider.notifier).runInstruction('post')); // 1 手順目の画面は /home(タブの根)
+    await tester.pumpAndSettle();
+    expect(visibleLocationOf(router.routerDelegate.currentConfiguration), Routes.home);
+    expect(c.read(raiProvider).stepIndex, 0);
+    expect(c.read(raiProvider).bubble, contains('右下の「投稿」'));
   });
 
   testWidgets('承認タイルの「やめる」(D-226): 何もせず断りの行だけ、古い行の承認タイルは押せない', (tester) async {
