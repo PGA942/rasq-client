@@ -9,6 +9,7 @@ import 'package:http/testing.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId;
+import 'package:rasq_client/features/rai/rai_automation.dart';
 import 'package:rasq_client/features/rai/rai_chat.dart';
 import 'package:rasq_client/features/rai/rai_embedding_model.dart';
 import 'package:rasq_client/features/rai/rai_functions.dart';
@@ -25,6 +26,7 @@ import 'package:rasq_client/features/nodeprog/tl_components.dart';
 import 'package:rasq_client/features/rai/rai_web_search.dart';
 import 'package:rasq_client/features/rai/rai_widgets.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/features/trend/tendency_profile.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -199,27 +201,24 @@ void main() {
     expect(c.read(raiProvider).lastOperation, first);
   });
 
-  testWidgets('スキップ → 自動化 (D-226): 候補タイルの「スキップ」で RAi がやる動きの説明 + 承認タイル、「実行する」で部品を押して進め、入力が要る手順から案内に切り替える', (tester) async {
+  testWidgets('スキップ → 自動化 (D-226 → D-229): 承認タイル → 関数で進め、足りない本文は選択肢タイル(FOW)で聞き、答えでコンポーザーに下書きが入る', (tester) async {
     final c = await pump(tester);
     llm.reply = '順にやりましょう。';
     await tester.enterText(find.byKey(const ValueKey('rai.input')), 'Bluesky でログインして、投稿もしたい');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     final first = c.read(raiProvider).log.first.candidates.first;
-    // 候補タイルに「スキップ」がある。
-    expect(find.byKey(ValueKey('rai.chat.skip.$first')), findsOneWidget);
-    // 「投稿する」で試す: 1 手順目(右下の「投稿」を押す)は自動、2 手順目は本文の入力が要る。
+    expect(find.byKey(ValueKey('rai.chat.skip.$first')), findsOneWidget); // 候補タイルに「スキップ」
+    // 「投稿する」: 1 手順目(コンポーザーを開く)は畳まれ、2 手順目 post.create → post.compose(本文は途中で聞く)。
     await c.read(raiProvider.notifier).skip('post');
     await tester.pumpAndSettle();
     var st = c.read(raiProvider);
     expect(st.log.first.approval, 'post');
-    expect(st.log.first.text, contains('「投稿する」は案内を出さずに私がやります(2 手順のうち 1 手順まで)'));
-    expect(st.log.first.text, contains('(ここからは案内: 「本文」の入力が要る)'));
+    expect(st.log.first.text, contains('「投稿する」は案内を出さずに私が関数でやります'));
+    expect(st.log.first.text, contains('(関数で代替)'));
+    expect(st.log.first.text, contains('→ post.compose'));
+    expect(st.log.first.text, contains('本文 は実行の途中で選んでもらいます'));
     expect(find.byKey(const ValueKey('rai.chat.approval.post')), findsOneWidget);
-    expect(find.byKey(const ValueKey('rai.chat.approve.post')), findsOneWidget);
-    expect(find.byKey(const ValueKey('rai.chat.decline.post')), findsOneWidget);
-    // 「実行する」→ インストラクションモード(RAi ページは閉じる)、ホームの「投稿」が押されてコンポーザーが開き、
-    // 2 手順目から案内(指差し)に切り替わる。
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('rai.chat.approve.post'))).onPressed, isNotNull);
     await tester.ensureVisible(find.byKey(const ValueKey('rai.chat.approve.post')));
     await tester.tap(find.byKey(const ValueKey('rai.chat.approve.post')));
@@ -227,13 +226,27 @@ void main() {
     st = c.read(raiProvider);
     expect(st.mode, RaiMode.instruction);
     expect(find.byType(RaiHomeScreen), findsNothing);
-    expect(c.read(overlayManagerProvider).contains(composerFowId), isTrue); // ホームの「投稿」が押されてコンポーザーが開いた
-    expect(st.stepIndex, 1);
-    expect(st.steps.length, 2);
+    // 本文が質問に無い → 選択肢タイル(入力タイルの上の FOW)で聞く。
+    expect(find.byKey(const ValueKey('rai.ask.fow')), findsOneWidget);
+    expect(st.bubble, contains('本文 はどれにしますか'));
+    expect(c.read(raiProvider.notifier).autoPlan, isNotNull);
+    await tester.enterText(find.byKey(const ValueKey('rai.ask.text')), 'いいことがありますように！');
+    await tester.tap(find.byKey(const ValueKey('rai.ask.ok')));
+    await tester.pumpAndSettle();
+    st = c.read(raiProvider);
+    expect(find.byKey(const ValueKey('rai.ask.fow')), findsNothing);
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isTrue); // コンポーザーが本文つきで開いた(送信はしない)
+    expect(find.text('いいことがありますように！'), findsWidgets);
+    expect((c.read(currentSnsSessionProvider) as FakeSnsSession).lastDraft, isNull);
     expect(st.busy, isFalse);
-    expect(st.bubble, contains('本文を書いて'));
-    expect(st.log.any((u) => u.text.contains('1 手順目まで自動で進めました') && u.text.contains('「本文」の入力が要る')), isTrue);
+    expect(st.bubble, contains('「投稿する」を関数で進めました'));
+    final trace = st.log.first.trace;
+    expect(trace.length, 2);
+    expect(trace.first.status, RaiAutoStatus.skipped);
+    expect(trace.last.status, RaiAutoStatus.done);
+    expect(find.byKey(const ValueKey('rai.chat.trace.0')), findsNothing); // 工程タイルは RAi ページ(閉じている)で出る
     expect(c.read(raiStatsProvider).automations, 1);
+    expect(c.read(raiStatsProvider).instructionsCompleted, 1);
     expect(raiAchievements.firstWhere((a) => a.id == 'auto1').count(c.read(raiStatsProvider)), 1);
     c.read(overlayManagerProvider).close(composerFowId, reason: OverlayCloseReason.discard);
     await tester.pumpAndSettle();
@@ -253,10 +266,96 @@ void main() {
     expect(c.read(raiStatsProvider).automations, 0);
   });
 
-  test('自動でできる手順数 (D-226): 入力が要る / 部品も画面も無い手順で止まる', () {
-    expect(RaiController.automatableUntil(const [RaiStep('a', tooltip: 'x'), RaiStep('b', route: '/home'), RaiStep('c', tooltip: 'y', inputs: ['本文'])]), 2);
-    expect(RaiController.automatableUntil(const [RaiStep('a', tooltip: 'x'), RaiStep('b')]), 1);
-    expect(RaiController.automatableUntil(const [RaiStep('a', tooltip: 'x'), RaiStep('b', label: 'y')]), 2);
+  testWidgets('自動化の分岐 (D-229、Bluesky): 検索で見つからなければ別の語を聞き、取り込み先は質問から読んでホームの TL に取り込む(しおりも)', (tester) async {
+    const feeds = [FeedInfo(uri: 'at://did:plc:x/app.bsky.feed.generator/cats', name: 'Cats', description: 'ねこ')];
+    final c = await pump(tester, kind: SnsKind.bluesky, feeds: feeds);
+    final session = c.read(currentSnsSessionProvider) as FakeSnsSession;
+    session.saved = []; // 保存済みは空から
+    llm.reply = '順にやりましょう。';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '鳥のカスタムフィードをホームのタイムラインに取り込みたい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    await c.read(raiProvider.notifier).skip('feed-import');
+    await tester.pumpAndSettle();
+    var st = c.read(raiProvider);
+    expect(st.log.first.text, contains('質問から: フィード=鳥、取り込み先=ホームのタイムライン'));
+    await tester.tap(find.byKey(const ValueKey('rai.chat.approve.feed-import')));
+    await tester.pumpAndSettle();
+    // 「鳥」のフィードは無い → 別の語を聞く(止まる / 聞く)。
+    expect(find.byKey(const ValueKey('rai.ask.fow')), findsOneWidget);
+    expect(c.read(raiProvider).bubble, contains('フィード が見つかりません'));
+    await tester.enterText(find.byKey(const ValueKey('rai.ask.text')), 'Cats');
+    await tester.tap(find.byKey(const ValueKey('rai.ask.ok')));
+    await tester.pumpAndSettle();
+    st = c.read(raiProvider);
+    expect(find.byKey(const ValueKey('rai.ask.fow')), findsNothing);
+    expect(st.bubble, contains('「カスタムフィードを保存してホームのタイムラインに取り込む」を関数で進めました'));
+    expect(st.bubble, contains('「Cats」を保存しました'));
+    expect(st.bubble, contains('をホームのタイムラインに取り込みました'));
+    expect((await session.savedFeeds()).map((f) => f.uri), contains('at://did:plc:x/app.bsky.feed.generator/cats'));
+    final acc = c.read(currentAccountSessionProvider)!.account;
+    final area = await c.read(settingsAreaProvider('nodeprog.${acc.key}.tl.home').future);
+    final cfg = TlConfig.fromJson((jsonDecode(area['tlcfg'] as String) as Map).cast<String, Object?>());
+    expect(cfg.sources.map((s) => s.tl), contains('feed:at://did:plc:x/app.bsky.feed.generator/cats'));
+    final trace = st.log.first.trace;
+    final done = trace.where((s) => s.status == RaiAutoStatus.done).map((s) => s.binding!.call).toList();
+    expect(done, contains('feeds.list'));
+    expect(done.sublist(done.length - 2), ['feed.save', 'timeline.addFeed']);
+    expect(trace.firstWhere((s) => s.fn == 'feeds.search').status, RaiAutoStatus.done); // 聞き直した検索も済
+    expect(trace.where((s) => s.status == RaiAutoStatus.skipped), isNotEmpty);
+    expect(trace.where((s) => s.status == RaiAutoStatus.asking), isEmpty);
+  });
+
+  testWidgets('自動化の取り込み先 (D-229): 任されていなければ選択肢タイルで聞き、「トレンドの指向性」なら tendency.seed で好きなジャンルに足す', (tester) async {
+    const feeds = [FeedInfo(uri: 'at://did:plc:x/app.bsky.feed.generator/birds', name: '鳥', description: 'とり')];
+    final c = await pump(tester, kind: SnsKind.bluesky, feeds: feeds, extraPosts: (acc) => [
+      for (var i = 0; i < 5; i++) Post(id: 'b$i', account: acc, author: UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 9, 10 + i), body: '#野鳥 の観察会、カワセミとシジュウカラを見た $i'),
+    ]);
+    llm.reply = 'やりましょう。';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '鳥のフィードを取り込める?');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    await c.read(raiProvider.notifier).skip('feed-import');
+    await tester.pumpAndSettle();
+    expect(c.read(raiProvider).log.first.text, contains('取り込み先 は実行の途中で選んでもらいます'));
+    await tester.tap(find.byKey(const ValueKey('rai.chat.approve.feed-import')));
+    await tester.pumpAndSettle();
+    // 取り込み先を聞く FOW(自由入力なし、3 択)。
+    expect(find.byKey(const ValueKey('rai.ask.fow')), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.ask.text')), findsNothing);
+    expect(find.text('トレンドの指向性'), findsOneWidget);
+    await tester.tap(find.text('トレンドの指向性'));
+    await tester.pumpAndSettle();
+    final st = c.read(raiProvider);
+    expect(st.bubble, contains('をトレンドの指向性(好きなジャンル)に足しました'));
+    expect((await c.read(tendencyProfileProvider.future)).genres, isNotEmpty);
+    final trace = st.log.first.trace;
+    expect(trace.firstWhere((s) => s.fn == 'timeline.importFeed').status, RaiAutoStatus.done);
+    expect(trace.firstWhere((s) => s.fn == 'timeline.importFeed').detail, contains('指向性'));
+    expect(st.bubble, isNot(contains('ホームのタイムラインに取り込みました'))); // 取り込み先は指向性だけ
+  });
+
+  test('計画 (D-229): fn の対応で bound / 手前の UI は畳む / 後ろの部品つきは案内へ、質問からの抽出と「任せる」', () {
+    const op = RaiOperation(id: 'x', index: 'テスト');
+    final plan = RaiAutoPlan.build(op, const [RaiStep('歯車を押す', tooltip: '設定'), RaiStep('フィードを足す', fn: 'timeline.addFeed', inputs: ['フィード']), RaiStep('決定を押す', label: '決定'), RaiStep('説明だけ')], '「鳥」のフィードをホームの TL へ');
+    expect(plan.steps.map((s) => s.status).toList(), [RaiAutoStatus.skipped, RaiAutoStatus.pending, RaiAutoStatus.guide, RaiAutoStatus.skipped]);
+    expect(plan.hasBound, isTrue);
+    expect(plan.guideFrom, 2);
+    expect(plan.inputsNeeded, ['フィード', '取り込み先']);
+    expect(plan.entrusted, isFalse);
+    expect(raiExtractInput('フィード', '「鳥」のフィードをホームの TL へ'), '鳥');
+    expect(raiExtractInput('フィード', '猫のカスタムフィードを取り込む'), '猫');
+    expect(raiExtractInput('ワード', 'ネタバレを除外したい'), 'ネタバレ');
+    expect(raiExtractInput('本文', '「おはよう」と投稿して'), 'おはよう');
+    expect(raiExtractInput('取り込み先', 'フィードをトレンドの指向性へ'), 'トレンドの指向性');
+    expect(raiExtractInput('取り込み先', 'タイムラインと指向性の両方'), '両方');
+    expect(raiExtractInput('本文', 'よろしく'), isNull);
+    expect(raiEntrusted('あとは任せる'), isTrue);
+    expect(raiEntrusted('自動でやって'), isTrue);
+    expect(raiEntrusted('フィードを取り込む'), isFalse);
+    final none = RaiAutoPlan.build(op, const [RaiStep('a', tooltip: 'x')], 'q');
+    expect(none.hasBound, isFalse);
+    expect(none.describe(), contains('案内(指差し)で進めます'));
   });
 
   testWidgets('RaiLinkCard はタップで開く(差し替え可)', (tester) async {

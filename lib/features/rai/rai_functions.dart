@@ -6,8 +6,12 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rrl_core/rrl_core.dart';
 
+import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../lists/lists_screens.dart' show listsProvider, savedFeedsProvider;
+import '../trend/genre_topics.dart';
+import '../trend/tendency_profile.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../home/timeline_providers.dart';
@@ -54,13 +58,28 @@ List<RaiFunctionCall> raiFunctionCallsIn(String text) => [
 
 String raiStripFunctionCalls(String text) => text.replaceAll(_callRe, '').replaceAll(RegExp(r'[ \t]+\n'), '\n').trim();
 
+/// 取得結果の候補 1 件 (D-229: 自動化の選択肢に使う。id は次の関数に渡す値、label は表示)。
+@immutable
+class RaiFunctionItem {
+  const RaiFunctionItem({required this.id, required this.label});
+  final String id;
+  final String label;
+  @override
+  bool operator ==(Object other) => other is RaiFunctionItem && other.id == id && other.label == label;
+  @override
+  int get hashCode => Object.hash(id, label);
+}
+
 @immutable
 class RaiFunctionResult {
-  const RaiFunctionResult({required this.name, required this.text, this.fetched = false, this.ok = true});
+  const RaiFunctionResult({required this.name, required this.text, this.fetched = false, this.ok = true, this.items = const []});
   final String name;
 
   /// 注入 / 注記に使う本文。
   final String text;
+
+  /// 構造化した候補(取得系、D-229)。
+  final List<RaiFunctionItem> items;
 
   /// 取得系(再始動予約の対象)。
   final bool fetched;
@@ -174,9 +193,9 @@ Future<RaiFunctionResult> raiGuard(String name, Future<RaiFunctionResult> Functi
 /// 関数の一覧(system に出す 1 行ずつ)。呼べる範囲は関連する関数をまとめて 1 行にし、system の
 /// 肥大化(D-220 の 2500 文字上限)を抑える。
 const raiFunctionUsage = <String>[
-  'posts.fetch(kind=home|search, keyword=語, sort=new|reactions, limit=数): 投稿本文を取る',
+  'posts.fetch(kind=home|search, keyword, sort=new|reactions, limit)・page.read(filter, tag): 投稿本文/いま開いている画面の表示データを取る',
   'reference.get(id=操作か関数の id): リファレンスの詳細を取る',
-  'post.create(text=本文): 投稿する。post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる(送信はユーザー)',
+  'post.create(text): 投稿する。post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる',
   'post.action(action=アクション id, post=投稿 id): 投稿にアクション(自動化が許可されたものだけ)',
   'astell.rooms(): AsTell のルーム一覧を取る',
   'astell.create(title=題名): AsTell のルームを作る',
@@ -189,14 +208,14 @@ const raiFunctionUsage = <String>[
   'trends.tags(limit): トレンドのタグを取る',
   'lists.list()・lists.members(list): リストとメンバーを取る',
   'clips.list(user=)・clips.notes(clip, limit): クリップを取る(Misskey のみ)',
-  'feeds.list(keyword=)・feed.save(feed=uri|語, on=true|false): カスタムフィードを取る/保存する(Bluesky のみ、keyword 無しは保存済み)',
-  'timeline.addFeed(feed=uri|語, account=)・timeline.excludeWord(word, scope=home|social|local|global): ホームの TL にカスタムフィードを取り込む/そのワードを含む投稿を除外する',
+  'feeds.list(keyword=)・feed.save(feed=uri|語, on): カスタムフィードを取る/保存する(Bluesky のみ、keyword 無しは保存済み)',
+  'timeline.addFeed(feed=uri|語)・timeline.filterWord(word, mode=include|exclude)・tendency.seed(source=feed:uri|語): ホーム TL にフィードを取り込む/ワードで通す・除外/取得元の特徴語を指向性に足す',
   'dm.rooms(): DM ルーム一覧を取る',
   'emoji.find(keyword, limit): keyword を含むカスタム絵文字を探す',
   'follow.set(user, on=true|false): フォローする/外す',
   'list.edit(list, user, add=true|false)・list.create(name): リストにユーザーを足す/外す・作る',
   'clip.edit(clip, post, add=true|false)・clip.create(name): クリップに投稿を足す/外す・作る(Misskey のみ)',
-  'settings.get(area, key)・settings.set(area, key, value): 設定を読む/書く(設定ページのキーのみ。書けるのはパスワード不要で操作禁止タグの無いもの)',
+  'settings.get(area, key)・settings.set(area, key, value): 設定を読む/書く(設定ページのキーのみ。パスワード不要・操作禁止タグ無しだけ書ける)',
   'app.actions(): この SNS で自動化できる投稿アクション一覧を取る',
 ];
 
@@ -296,7 +315,12 @@ class RaiFunctionRunner {
         case 'timeline.addFeed':
           return await _timelineAddFeed(c);
         case 'timeline.excludeWord':
-          return await _timelineExcludeWord(c);
+        case 'timeline.filterWord':
+          return await _timelineFilterWord(c);
+        case 'page.read':
+          return await _pageRead(c);
+        case 'tendency.seed':
+          return await _tendencySeed(c);
         case 'post.compose':
         case 'post.reply':
         case 'post.quote':
@@ -683,9 +707,9 @@ class RaiFunctionRunner {
         final keyword = c.arg('keyword').trim();
         final s = _session();
         final feeds = keyword.isEmpty ? await s.savedFeeds() : await s.searchFeeds(keyword, limit: _limitOf(c));
-        // uri を添える (D-227): feed.save / timeline.addFeed の feed= に渡せるように。
+        // uri を添える (D-227): feed.save / timeline.addFeed の feed= に渡せるように。候補 (D-229) は自動化の選択肢に。
         final lines = [for (final f in feeds) '${f.name}${f.description == null || f.description!.isEmpty ? '' : ' — ${f.description}'} [${f.uri}]'];
-        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'フィード'), budget), fetched: true);
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'フィード'), budget), fetched: true, items: [for (final f in feeds) RaiFunctionItem(id: f.uri, label: f.name)]);
       });
 
   /// dm.rooms(): DM ルーム一覧を取る (D-223)。
@@ -905,17 +929,94 @@ class RaiFunctionRunner {
         return RaiFunctionResult(name: c.name, text: '「${f.name}」(${acc.account})をホームのタイムラインに取り込みました');
       });
 
-  /// timeline.excludeWord(word, scope): そのワードを含む投稿を TL から落とす検索絞り込み(除外)を足す (D-227)。
-  Future<RaiFunctionResult> _timelineExcludeWord(RaiFunctionCall c) => raiGuard(c.name, () async {
+  /// timeline.excludeWord(word, scope) / timeline.filterWord(word, mode=include|exclude, scope): 検索絞り込みを足す (D-227 / D-229)。
+  /// excludeWord は mode=exclude の別名。include はそのワードを含む投稿だけ通す。
+  Future<RaiFunctionResult> _timelineFilterWord(RaiFunctionCall c) => raiGuard(c.name, () async {
         final word = c.arg('word').trim();
         if (word.isEmpty) return RaiFunctionResult(name: c.name, text: 'ワード(word=)がありません', ok: false);
+        final exclude = c.name == 'timeline.excludeWord' || c.arg('mode', 'exclude').trim() != 'include';
         final scope = switch (c.arg('scope', 'home').trim()) { 'social' => 'tl.social', 'local' => 'tl.local', 'global' => 'tl.global', _ => 'tl.home' };
         final owner = ref.read(currentAccountSessionProvider)?.account.key;
         if (owner == null) return RaiFunctionResult(name: c.name, text: 'ログインしていません', ok: false);
-        final added = await addTlAlgorithm(ref.container, owner, scope, TlAlgorithmComponent(type: 'queryfilter', query: word, exclude: true));
-        if (!added) return RaiFunctionResult(name: c.name, text: '「$word」の除外はもう入っています');
+        final added = await addTlAlgorithm(ref.container, owner, scope, TlAlgorithmComponent(type: 'queryfilter', query: word, exclude: exclude));
+        if (!added) return RaiFunctionResult(name: c.name, text: '「$word」の${exclude ? '除外' : '絞り込み'}はもう入っています');
         ref.invalidate(timelineProvider(TimelineKind.home));
-        return RaiFunctionResult(name: c.name, text: '「$word」を含む投稿を ${scope.substring(3)} のタイムラインから除外するようにしました');
+        return RaiFunctionResult(name: c.name, text: exclude ? '「$word」を含む投稿を ${scope.substring(3)} のタイムラインから除外するようにしました' : '「$word」を含む投稿だけを ${scope.substring(3)} のタイムラインに通すようにしました');
+      });
+
+  /// page.read(filter, tag): いま開いている画面の表示データを取る (D-229: 自動化は画面を押さず、ページへ直接行って
+  /// データを関数で読む)。ホーム(フォロー中の TL)/ フィード TL / リスト(リスト + 保存済みフィード)/ 通知 / DM。
+  /// filter= は本文 / 名前の部分一致、tag= は `#タグ` の一致。
+  Future<RaiFunctionResult> _pageRead(RaiFunctionCall c) => raiGuard(c.name, () async {
+        final router = ref.read(routerProvider);
+        final loc = visibleLocationOf(router.routerDelegate.currentConfiguration);
+        final filter = c.arg('filter').trim().toLowerCase();
+        final tag = c.arg('tag').trim().replaceFirst(RegExp(r'^#'), '').toLowerCase();
+        bool keep(String text) {
+          final t = text.toLowerCase();
+          if (filter.isNotEmpty && !t.contains(filter)) return false;
+          if (tag.isNotEmpty && !t.contains('#$tag')) return false;
+          return true;
+        }
+        List<String> lines;
+        String head;
+        List<RaiFunctionItem> items = const [];
+        if (loc.startsWith('/feeds/')) {
+          final uri = Uri.decodeComponent(loc.substring('/feeds/'.length).split('?').first);
+          final page = await _session().timeline(TimelineKind('feed:$uri', 'フィード'), limit: 20);
+          lines = [for (final p in page.items) if (keep(p.body)) _line(p)];
+          head = 'フィード TL';
+        } else if (loc.startsWith(Routes.lists)) {
+          final lists = await ref.read(listsProvider.future);
+          List<FeedInfo> feeds = const [];
+          try {
+            feeds = await ref.read(savedFeedsProvider.future);
+          } catch (_) {}
+          lines = [for (final l in lists) if (keep(l.name)) 'リスト ${l.name} [${l.id}]', for (final f in feeds) if (keep(f.name)) 'フィード ${f.name} [${f.uri}]'];
+          items = [for (final f in feeds) if (keep(f.name)) RaiFunctionItem(id: f.uri, label: f.name)];
+          head = 'リストページ';
+        } else if (loc.startsWith(Routes.notifications)) {
+          final page = await _session().notifications();
+          lines = [for (final n in page.items) if (keep('${n.kind.name} ${n.post?.body ?? ''}')) '${n.kind.name}: ${n.actors.map((a) => '@${a.handle}').join(', ')}${n.post == null ? '' : ' — ${raiTruncate(n.post!.body, 60)}'}'];
+          head = '通知';
+        } else if (loc.startsWith(Routes.dm)) {
+          final rooms = await _session().dmRooms();
+          lines = [for (final r in rooms) if (keep(r.displayTitle)) '${r.displayTitle} [${r.id}]'];
+          head = 'DM';
+        } else {
+          final st = ref.read(timelineProvider(TimelineKind.home)).value;
+          final posts = st?.posts ?? (await _session().timeline(TimelineKind.home, limit: 20)).items;
+          lines = [for (final p in posts) if (keep(p.body)) _line(p)];
+          head = 'ホーム TL';
+        }
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: '$head($loc)'), budget), fetched: true, items: items);
+      });
+
+  /// tendency.seed(source): 取得元の投稿から特徴語を抜き、トレンドの指向性(好きなジャンル)に足す (D-229)。
+  /// source = `feed:<uri>` / `list:<id>` / `tag:<語>` / フィード名(検索して先頭)。
+  Future<RaiFunctionResult> _tendencySeed(RaiFunctionCall c) => raiGuard(c.name, () async {
+        var source = c.arg('source').trim();
+        if (source.isEmpty) return RaiFunctionResult(name: c.name, text: '取り込み元(source=)がありません', ok: false);
+        final s = _session();
+        String label = source;
+        if (!source.startsWith('feed:') && !source.startsWith('list:') && !source.startsWith('tag:')) {
+          final f = await _resolveFeed(s, source);
+          if (f == null) return RaiFunctionResult(name: c.name, text: 'フィード「$source」が見つかりません', ok: false);
+          source = 'feed:${f.uri}';
+          label = f.name;
+        } else if (source.startsWith('feed:')) {
+          label = source.substring(5).split('/').last;
+        }
+        final kind = source.startsWith('feed:') ? TimelineKind(source, label) : _timelineKindOf(source);
+        final page = await s.timeline(kind, limit: 40);
+        if (page.items.isEmpty) return RaiFunctionResult(name: c.name, text: '「$label」に投稿が無いので特徴語を取れません', ok: false);
+        final topics = topicsOf(page.items, top: 4);
+        final words = <String>{for (final t in topics) ...t.genres.take(3)}.take(8).toList();
+        if (words.isEmpty) return RaiFunctionResult(name: c.name, text: '「$label」から特徴語を取れませんでした', ok: false);
+        final profile = await ref.read(tendencyProfileProvider.future);
+        final merged = {...profile.genres, ...words}.toList();
+        await saveTendencyProfile(ref, profile.copyWith(genres: merged, enabled: true));
+        return RaiFunctionResult(name: c.name, text: '「$label」の特徴語(${words.join('、')})をトレンドの指向性(好きなジャンル)に足しました');
       });
 
   /// web.search(q, count): Brave Search (D-228)。第一期では無効(有効化と鍵は [RaiWebSearch] 参照)。

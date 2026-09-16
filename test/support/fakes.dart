@@ -174,7 +174,7 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<UserListInfo> listInfo(String listId) async => (await lists()).first;
   @override
-  Future<List<FeedInfo>> searchFeeds(String query, {int limit = 20}) async => [for (final f in feeds) if (query.isEmpty || f.name.toLowerCase().contains(query.toLowerCase())) f];
+  Future<List<FeedInfo>> searchFeeds(String query, {int limit = 20}) async => [for (final f in feeds) if (query.isEmpty || f.uri == query || f.name.toLowerCase().contains(query.toLowerCase())) f]; // at:// は実プラグイン同様 1 件に解く
   @override
   Future<List<FeedInfo>> savedFeeds() async => kind == SnsKind.bluesky ? (saved ??= [...feeds]) : throw UnsupportedError('no feeds');
 
