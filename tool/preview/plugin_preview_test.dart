@@ -542,7 +542,19 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_chat_approval.png'));
     await tester.tap(find.byKey(const ValueKey('rai.chat.approve.post')));
     await tester.pumpAndSettle();
+    // 本文は質問に無い → 選択肢タイル(入力タイルの上の FOW、D-229)。
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_chat_ask_fow.png'));
+    await tester.enterText(find.byKey(const ValueKey('rai.ask.text')), 'いいことがありますように！');
+    await tester.tap(find.byKey(const ValueKey('rai.ask.ok')));
+    await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_chat_automated.png'));
+    // 工程タイル: RAi ページに戻ると最新の行の下に出る。
+    c.read(overlayManagerProvider).closeOwnedBy('fow.composer');
+    c.read(overlayManagerProvider).close('fow.composer');
+    await tester.pumpAndSettle();
+    c.read(raiProvider.notifier).setMode(RaiMode.assistant);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_chat_trace.png'));
   });
 
   testWidgets('RAi sidebar (D-214)', (tester) async {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'rai_automation.dart';
 import 'rai_providers.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
@@ -81,6 +82,7 @@ class RaiChatList extends ConsumerWidget {
         choices: u.choices,
         candidates: [for (final id in u.candidates) if (index?.operation(id) != null) (index!.operation(id)!, index.expand(index.operation(id)!).length)],
         approval: u.approval,
+        trace: u.trace,
         rowIndex: i,
       ));
     }
@@ -118,11 +120,14 @@ class _UserRow extends StatelessWidget {
 }
 
 class _RaiRow extends ConsumerWidget {
-  const _RaiRow({super.key, required this.text, required this.at, required this.error, required this.latest, required this.links, required this.choices, required this.rowIndex, this.streaming = false, this.proposal, this.proposalSteps = 0, this.candidates = const [], this.approval});
+  const _RaiRow({super.key, required this.text, required this.at, required this.error, required this.latest, required this.links, required this.choices, required this.rowIndex, this.streaming = false, this.proposal, this.proposalSteps = 0, this.candidates = const [], this.approval, this.trace = const []});
   final String text;
 
   /// 承認待ちの自動化の操作 id (D-226)。
   final String? approval;
+
+  /// 自動化の工程 (D-229)。
+  final List<RaiAutoStep> trace;
   final DateTime? at;
   final bool error;
   final bool latest;
@@ -166,6 +171,8 @@ class _RaiRow extends ConsumerWidget {
             if (op != null) _ProposalTile(op: op, steps: proposalSteps, onGuide: () => n.guide(op.id), onSkip: () => n.skip(op.id)),
             // 承認タイル (D-226): 「スキップ」の説明の下。最新の行だけ押せる。
             if (approval != null) _ApprovalTile(opId: approval!, enabled: latest, onApprove: () => n.approve(approval!), onDecline: () => n.decline(approval!)),
+            // 工程タイル (D-229): 自動化の各手順の状態(関数で済 / 畳んだ / 案内へ / 失敗)。視覚的なデバッグ用。
+            if (trace.isNotEmpty) _TraceTile(key: ValueKey('rai.chat.trace.$rowIndex'), steps: trace),
             // 候補 (D-222): 返事の下に並べ、右の × で「これじゃない」→ 除外して答え直す。
             if (candidates.isNotEmpty)
               Row(key: ValueKey('rai.chat.candidates.$rowIndex'), crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -224,6 +231,50 @@ class _ProposalTile extends StatelessWidget {
           const SizedBox(width: RasqSpacing.xs),
           FilledButton(key: ValueKey('rai.chat.guide.$id'), onPressed: onGuide, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: const Text('この手順で案内')),
         ]),
+      ]),
+    );
+  }
+}
+
+/// 工程タイル (D-229): 手順ごとの状態を 1 行ずつ。✓ = 関数で済、⤵ = 畳んだ(関数で代替 / 説明だけ)、
+/// 👉 = 案内へ、✗ = 失敗、? = 選択待ち。
+class _TraceTile extends StatelessWidget {
+  const _TraceTile({super.key, required this.steps});
+  final List<RaiAutoStep> steps;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(top: RasqSpacing.xs),
+      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
+      decoration: BoxDecoration(color: scheme.surfaceContainerHighest.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('工程', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        for (final s in steps)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(
+                switch (s.status) {
+                  RaiAutoStatus.done => Icons.check_circle_outline,
+                  RaiAutoStatus.skipped => Icons.subdirectory_arrow_right,
+                  RaiAutoStatus.guide => Icons.touch_app_outlined,
+                  RaiAutoStatus.failed => Icons.error_outline,
+                  RaiAutoStatus.asking => Icons.help_outline,
+                  _ => Icons.radio_button_unchecked,
+                },
+                size: 16,
+                color: switch (s.status) { RaiAutoStatus.done => RasqColors.link, RaiAutoStatus.failed => RasqColors.danger, _ => scheme.onSurfaceVariant },
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  '${s.index + 1}. ${s.text}${s.binding == null ? '' : ' → ${s.binding!.call}'}${s.detail.isEmpty ? '' : '(${s.detail})'}',
+                  style: RasqTypography.caption.copyWith(color: s.status == RaiAutoStatus.skipped ? scheme.onSurfaceVariant : scheme.onSurface),
+                ),
+              ),
+            ]),
+          ),
       ]),
     );
   }

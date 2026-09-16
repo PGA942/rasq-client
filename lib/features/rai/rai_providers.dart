@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/navigation.dart';
+import '../../app/providers.dart';
 import '../../app/router.dart';
 
 export '../../app/navigation.dart' show visibleLocationOf;
@@ -12,10 +13,13 @@ import 'rai_llm.dart';
 import 'rai_locator.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
+import 'rai_ask_fow.dart';
+import 'rai_automation.dart';
 import 'rai_functions.dart';
 import 'rai_stats.dart';
 import 'rai_web_search.dart';
-import 'rai_widgets.dart' show splitSpeechLines;
+import 'rai_layout.dart' show raiPanelWidth;
+import 'rai_widgets.dart' show splitSpeechLines, raiBarContext;
 
 /// RAi のモード (D-179): インストラクション(操作を教える、RAi は部品まで移動して指差す)/
 /// アシスタント(第二期: LLM。今は枠とトグルだけ、RAi は中央固定)。
@@ -188,7 +192,7 @@ class RaiState {
 /// 発言 1 つ(履歴 FOW のタイル)。
 @immutable
 class RaiUtterance {
-  const RaiUtterance({required this.text, required this.at, this.query, this.error = false, this.proposal, this.choices = const [], this.candidates = const [], this.approval});
+  const RaiUtterance({required this.text, required this.at, this.query, this.error = false, this.proposal, this.choices = const [], this.candidates = const [], this.approval, this.trace = const []});
   final String text;
   final DateTime at;
   final String? query;
@@ -196,6 +200,9 @@ class RaiUtterance {
 
   /// 承認待ちの自動化 (D-226: 「スキップ」→ RAi がやる動きの説明の下に承認タイル)。操作 id。
   final String? approval;
+
+  /// 自動化の工程 (D-229): 各手順の状態(関数で済 / 畳んだ / 案内へ / 失敗)。行の下に工程タイルとして出す。
+  final List<RaiAutoStep> trace;
 
   /// 返事の下に並べる候補の操作 id (D-222: 複合 / 曖昧な質問は LLM の返事 + 候補タイル、右の × で「これじゃない」)。
   final List<String> candidates;
@@ -252,88 +259,51 @@ List<Uri> raiLinksIn(String text) {
 
 class RaiController extends Notifier<RaiState> {
   /// 確定した発言を履歴に積む(50 件まで)。
-  void _record(String text, {bool error = false, String? proposal, List<({String id, String index})> choices = const [], List<String> candidates = const [], String? approval}) {
+  void _record(String text, {bool error = false, String? proposal, List<({String id, String index})> choices = const [], List<String> candidates = const [], String? approval, List<RaiAutoStep> trace = const []}) {
     if (text.trim().isEmpty || text == '…') return;
-    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error, proposal: proposal, choices: choices, candidates: candidates, approval: approval), ...state.log].take(50).toList());
+    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error, proposal: proposal, choices: choices, candidates: candidates, approval: approval, trace: trace), ...state.log].take(50).toList());
   }
 
-  /// 「スキップ」(D-226): 案内を出さずに RAi がやる動きを説明し、承認タイルを出す。実際に動くのは [approve] から。
-  /// 入力が要る手順(関数の「必ず入力する」引数)や部品の無い手順は自動でできないので、そこからは案内に切り替えると
-  /// 説明に添える。
+  /// 「スキップ」(D-226 → D-229): 案内を出さずに **関数で** やる計画([RaiAutoPlan])を組んで説明し、承認タイルを出す。
+  /// 関数の対応が無い操作は「案内で進めます」と伝える(承認しても案内になる)。
   Future<void> skip(String opId) async {
     final index = await _index();
     final op = index?.operation(opId);
     if (index == null || op == null) return;
-    final steps = index.expand(op);
-    final stopAt = automatableUntil(steps);
-    final b = StringBuffer('「${op.index}」は案内を出さずに私がやります(${stopAt == steps.length ? '$stopAt 手順' : '${steps.length} 手順のうち $stopAt 手順まで'}):');
-    for (var i = 0; i < steps.length; i++) {
-      final st = steps[i];
-      b.write('\n${i + 1}. ${st.text}');
-      if (i == stopAt) b.write('(ここからは案内: ${st.inputs.isNotEmpty ? '「${st.inputs.join('、')}」の入力が要る' : '押す部品が無い'})');
-    }
-    b.write('\nよければ「実行する」を押してください。');
+    final plan = RaiAutoPlan.build(op, index.expand(op), state.query ?? '');
+    _plans[opId] = plan;
+    final text = plan.describe();
     // 吹き出しも同じ文にする(チャットは吹き出しと最新の行が違うと「生成中の行」を出すので、承認タイルが最新にならない)。
-    state = state.copyWith(bubble: b.toString(), busy: false, lineIndex: 0);
-    _record(b.toString(), approval: opId);
+    state = state.copyWith(bubble: text, busy: false, lineIndex: 0);
+    _record(text, approval: opId);
   }
 
-  /// 自動でできる手順数 (D-226): 先頭から、部品(押す相手)があって入力の要らない手順が続く限り。部品の無い手順は
-  /// 画面を開くだけ(route)なら通し、それも無ければ止まる。
-  static int automatableUntil(List<RaiStep> steps) {
-    for (var i = 0; i < steps.length; i++) {
-      final st = steps[i];
-      if (st.inputs.isNotEmpty) return i;
-      if (!st.hasTarget && st.route == null) return i;
-    }
-    return steps.length;
-  }
+  final Map<String, RaiAutoPlan> _plans = {};
 
-  /// 承認タイルの「実行する」(D-226): インストラクションモードに切り替えて(RAi ページは閉じる)手順を自動で進める。
-  /// 各手順は画面を開く → 部品を探す → 押す。押せない / 見つからない手順で止まり、そこから通常の案内に切り替える。
+  /// 実行中の計画 (D-229)。
+  RaiAutoPlan? _auto;
+  @visibleForTesting
+  RaiAutoPlan? get autoPlan => _auto;
+
+  /// 承認タイルの「実行する」(D-229): インストラクションモードへ(RAi ページは閉じる)→ 対応のある手順を関数で進める。
+  /// 対応が無い操作は通常の案内へ。
   Future<void> approve(String opId) async {
     final index = await _index();
     final op = index?.operation(opId);
     if (index == null || op == null) return;
+    final plan = _plans[opId] ?? RaiAutoPlan.build(op, index.expand(op), state.query ?? '');
+    if (!plan.hasBound) {
+      await runInstruction(opId);
+      return;
+    }
     dropSuspended();
     setMode(RaiMode.instruction);
     await WidgetsBinding.instance.endOfFrame;
     final seq = ++_answerSeq;
-    final steps = index.expand(op);
-    final until = automatableUntil(steps);
-    state = state.copyWith(steps: steps, stepIndex: 0, choices: const [], stopAt: null, lastOperation: op.id, busy: true, target: null, lineIndex: 0);
+    state = state.copyWith(steps: index.expand(op), stepIndex: 0, choices: const [], stopAt: null, lastOperation: op.id, busy: true, target: null, lineIndex: 0);
     ref.read(raiStatsProvider.notifier).bump(automated: true);
-    var done = 0;
-    String? failure;
-    for (var i = 0; i < until; i++) {
-      final st = steps[i];
-      state = state.copyWith(stepIndex: i, bubble: '自動で進めています(${i + 1} / ${steps.length}): ${st.text}', lineIndex: 0);
-      final route = st.route;
-      if (route != null) await _navigateTo(route);
-      if (seq != _answerSeq) return;
-      if (st.hasTarget) {
-        final ok = await _activateTarget(st, seq);
-        if (seq != _answerSeq) return;
-        if (!ok) {
-          failure = '${i + 1} 手順目「${st.text}」の部品が見つからない(押せない)';
-          break;
-        }
-        // 押した先の画面 / FOW が開いてから次を探す(案内の targetTapped と同じ待ち)。
-        await Future<void>.delayed(const Duration(milliseconds: 350));
-        if (seq != _answerSeq) return;
-      }
-      done = i + 1;
-    }
-    if (done >= steps.length) {
-      state = state.copyWith(busy: false, bubble: '「${op.index}」を自動で進めました(${steps.length} 手順)', target: null, steps: const [], stepIndex: 0);
-      _record(state.bubble!);
-      ref.read(raiStatsProvider.notifier).bump(completed: true);
-      return;
-    }
-    final why = failure ?? (steps[done].inputs.isNotEmpty ? '${done + 1} 手順目「${steps[done].text}」は「${steps[done].inputs.join('、')}」の入力が要る' : '${done + 1} 手順目「${steps[done].text}」は押す部品が無い');
-    _record('$done 手順目まで自動で進めました。$whyので、ここからは案内します');
-    state = state.copyWith(busy: false);
-    await _showStep(done);
+    _auto = plan;
+    await _runAuto(seq);
   }
 
   /// 承認タイルの「やめる」(D-226)。
@@ -344,32 +314,152 @@ class RaiController extends Notifier<RaiState> {
     _record(text);
   }
 
-  /// 手順の部品を押す (D-226): 案内と同じ探し方(2 回続けて同じ矩形になるまで待つ)で要素を見つけ、[raiActivate]。
-  Future<bool> _activateTarget(RaiStep step, int seq) async {
-    Rect? prev;
-    for (var attempt = 0; attempt < 14; attempt++) {
-      await WidgetsBinding.instance.endOfFrame;
-      if (attempt > 0) await Future<void>.delayed(const Duration(milliseconds: 120));
-      if (seq != _answerSeq) return false;
-      final r = locateWidgetRect(tooltip: step.tooltip, text: step.label, near: prev);
-      if (r != null && r == prev) {
-        state = state.copyWith(target: r);
-        final elements = locateWidgetElements(tooltip: step.tooltip, text: step.label);
-        Element? best;
-        for (final e in elements) {
-          final ro = e.findRenderObject();
-          if (ro is RenderBox && ro.attached && (ro.localToGlobal(Offset.zero) & ro.size) == r) best = e;
+  /// 計画を進める (D-229): 対応のある手順だけ、入力を埋めて関数を呼ぶ。足りない入力は選択肢タイルで聞いて中断し、
+  /// 答えが来たら同じ手順から続ける。取得系が空なら別の語を聞く(止まる / 進む / 聞く)。
+  Future<void> _runAuto(int seq) async {
+    if (_auto == null) return;
+    RaiAutoPlan plan = _auto!;
+    final runner = RaiFunctionRunner(ref, contextTokens: ref.read(raiLlmProvider).contextTokens);
+    for (var i = plan.cursor; i < plan.steps.length; i++) {
+      if (seq != _answerSeq) return;
+      final st = plan.steps[i];
+      if (!st.bound) continue;
+      final b = st.binding!;
+      state = state.copyWith(bubble: '自動で進めています(${i + 1} / ${plan.steps.length}): ${st.text}', lineIndex: 0, stepIndex: i);
+      // 入力を埋める。
+      for (final label in b.inputs) {
+        if (plan.inputs.containsKey(label)) continue;
+        final v = _resolveInput(plan, label);
+        if (v != null) {
+          plan = plan.copyWith(inputs: {...plan.inputs, label: v});
+          continue;
         }
-        best ??= elements.firstOrNull;
-        if (best == null) return false;
-        final ok = raiActivate(best);
-        await WidgetsBinding.instance.endOfFrame;
-        return ok;
+        final options = label == raiDestinationLabel ? [for (final d in raiDestinations) RaiFunctionItem(id: d, label: d)] : (plan.candidates[label] ?? const <RaiFunctionItem>[]);
+        _auto = plan.copyWith(cursor: i).withStep(i, st.with_(status: RaiAutoStatus.asking, detail: '$label を選ぶ'));
+        await _askInput(RaiAutoAsk(label: label, question: label == raiDestinationLabel ? '「${plan.title}」の取り込み先はどれにしますか？' : '$label はどれにしますか？', options: options, allowFree: label != raiDestinationLabel, hint: options.isEmpty ? null : '候補から選ぶか、ほかの語を入れてください'), seq);
+        return;
       }
-      prev = r;
+      // 実行(取り込み先が「両方」なら 2 つ)。
+      var detail = '';
+      var failed = false;
+      for (final c in _callsFor(b, plan)) {
+        final r = await runner.run(c);
+        if (seq != _answerSeq) return;
+        detail = detail.isEmpty ? r.text : '$detail / ${r.text}';
+        if (r.fetched && b.produces != null) plan = plan.copyWith(candidates: {...plan.candidates, b.produces!: r.items});
+        if (!r.ok) {
+          failed = true;
+          break;
+        }
+      }
+      if (!failed && b.fetch && b.produces != null) {
+        // 取得の分岐: 空 → 別の語を聞く、複数 → 任されていなければ選ばせる、1 件 → それ。
+        final items = plan.candidates[b.produces!] ?? const <RaiFunctionItem>[];
+        final label = b.produces!;
+        if (items.isEmpty) {
+          _auto = plan.copyWith(cursor: i, inputs: {...plan.inputs}..remove(label)).withStep(i, st.with_(status: RaiAutoStatus.asking, detail: '$label が見つからない'));
+          await _askInput(RaiAutoAsk(label: label, question: '$label が見つかりません。別の $label で探しますか？', options: const [], allowFree: true), seq);
+          return;
+        }
+        if (items.length == 1 || plan.entrusted) {
+          plan = plan.copyWith(inputs: {...plan.inputs, label: items.first.id});
+        } else {
+          _auto = plan.copyWith(cursor: i + 1).withStep(i, st.with_(status: RaiAutoStatus.done, detail: detail));
+          await _askInput(RaiAutoAsk(label: label, question: '$label はどれにしますか？(${items.length} 件)', options: items, allowFree: true, hint: '候補から選ぶか、ほかの語を入れてください'), seq);
+          return;
+        }
+      }
+      plan = plan.withStep(i, st.with_(status: failed ? RaiAutoStatus.failed : RaiAutoStatus.done, detail: detail));
+      _auto = plan;
+      if (failed) {
+        _finishAuto(plan, failedAt: i);
+        return;
+      }
     }
-    return false;
+    _finishAuto(plan);
   }
+
+  /// 入力を埋める順 (D-229): これまでの答え → 質問文から抽出 → 取得結果の候補(1 件 / 任されていれば先頭)→ null(聞く)。
+  String? _resolveInput(RaiAutoPlan plan, String label) {
+    final given = plan.inputs[label];
+    if (given != null) return given;
+    final items = plan.candidates[label];
+    if (items != null && items.isNotEmpty && (items.length == 1 || plan.entrusted)) return items.first.id;
+    final extracted = raiExtractInput(label, plan.question);
+    if (extracted != null) return extracted;
+    if (label == raiDestinationLabel && plan.entrusted) return raiDestinationHome;
+    return null;
+  }
+
+  /// 呼ぶ関数 (D-229): 引数の `$ラベル` を埋める。取り込み先が「トレンドの指向性」なら tendency.seed、「両方」なら両方。
+  List<RaiFunctionCall> _callsFor(RaiAutoBinding b, RaiAutoPlan plan) {
+    final args = {for (final e in b.args.entries) e.key: e.value.startsWith(r'$') ? (plan.inputs[e.value.substring(1)] ?? '') : e.value};
+    final base = RaiFunctionCall(name: b.call, args: args);
+    if (!b.destination) return [base];
+    final feed = plan.inputs['フィード'] ?? '';
+    final seed = RaiFunctionCall(name: 'tendency.seed', args: {'source': feed.startsWith('at://') ? 'feed:$feed' : feed});
+    return switch (plan.inputs[raiDestinationLabel]) { raiDestinationTendency => [seed], raiDestinationBoth => [base, seed], _ => [base] };
+  }
+
+  /// 選択肢タイル (D-229): 入力タイルの上の FOW。答えが来たら同じ計画を続ける、「やめる」なら止める。
+  Future<void> _askInput(RaiAutoAsk ask, int seq) async {
+    state = state.copyWith(busy: false, bubble: ask.question, lineIndex: 0);
+    Rect? anchor;
+    final barCtx = raiBarContext;
+    final barBox = barCtx != null && barCtx.mounted ? barCtx.findRenderObject() : null;
+    if (barBox is RenderBox && barBox.hasSize) anchor = barBox.localToGlobal(Offset.zero) & barBox.size;
+    final v = await showRaiAskFow(ref.read(overlayManagerProvider), ask, anchor: anchor, maxWidth: barCtx != null && barCtx.mounted ? raiPanelWidth(barCtx) : null);
+    if (seq != _answerSeq) return;
+    if (v == null) {
+      final plan = _auto;
+      if (plan != null) _finishAuto(plan, cancelled: true);
+      return;
+    }
+    await answerAsk(v, seq: seq);
+  }
+
+  /// 選択肢タイルの答え (D-229)。テストからも呼べる。
+  Future<void> answerAsk(String value, {int? seq}) async {
+    final plan = _auto;
+    if (plan == null) return;
+    final asking = plan.steps.where((s) => s.status == RaiAutoStatus.asking).firstOrNull;
+    final label = asking?.detail.split(' ').first ?? plan.inputsNeeded.firstOrNull;
+    if (label == null) return;
+    var next = plan.copyWith(inputs: {...plan.inputs, label: value});
+    if (asking != null) next = next.withStep(asking.index, asking.with_(status: RaiAutoStatus.pending, detail: ''));
+    _auto = next;
+    state = state.copyWith(busy: true);
+    await _runAuto(seq ?? _answerSeq);
+  }
+
+  /// 計画の終わり (D-229): 工程(各手順の状態)を行に残し、残った部品つき手順があれば案内へ、無ければ完走。
+  void _finishAuto(RaiAutoPlan plan, {int? failedAt, bool cancelled = false}) {
+    _auto = null;
+    final trace = plan.steps;
+    if (cancelled) {
+      state = state.copyWith(busy: false, bubble: '「${plan.title}」の自動化をやめました', target: null, steps: const [], stepIndex: 0);
+      _record(state.bubble!, trace: trace);
+      return;
+    }
+    if (failedAt != null) {
+      state = state.copyWith(busy: false, bubble: '「${plan.title}」の ${failedAt + 1} 手順目で止まりました: ${trace[failedAt].detail}', target: null, steps: const [], stepIndex: 0);
+      _record(state.bubble!, trace: trace);
+      return;
+    }
+    final guideFrom = plan.guideFrom;
+    if (guideFrom >= 0) {
+      final done = trace.where((s) => s.status == RaiAutoStatus.done).length;
+      _record('$done 手順を関数で進めました。${guideFrom + 1} 手順目「${trace[guideFrom].text}」からは押す部品があるので案内します', trace: trace);
+      state = state.copyWith(busy: false);
+      unawaited(_showStep(guideFrom));
+      return;
+    }
+    final results = [for (final s in trace) if (s.status == RaiAutoStatus.done && s.detail.isNotEmpty) s.detail];
+    state = state.copyWith(busy: false, bubble: '「${plan.title}」を関数で進めました${results.isEmpty ? '' : ':\n${results.join('\n')}'}', target: null, steps: const [], stepIndex: 0);
+    _record(state.bubble!, trace: trace);
+    ref.read(raiStatsProvider.notifier).bump(completed: true);
+  }
+
 
   /// 複合の質問か (D-222): 長い / 「〜して、〜」のように動作が続く / 読点で区切られている。
   static bool isCompound(String q) {
