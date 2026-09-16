@@ -11,6 +11,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
+import '../../shell/third_column.dart';
 import 'rai_face.dart';
 import 'rai_layout.dart';
 import 'rai_llm.dart';
@@ -55,10 +56,44 @@ void hideRai(WidgetRef ref) {
   ref.read(raiProvider.notifier).close();
 }
 
-class _RaiBarHost extends ConsumerWidget {
+class _RaiBarHost extends ConsumerStatefulWidget {
   const _RaiBarHost();
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RaiBarHost> createState() => _RaiBarHostState();
+}
+
+class _RaiBarHostState extends ConsumerState<_RaiBarHost> {
+  /// ドラッグ中のずれ (D-233)。離したら列スロット / 縦の比率に精算して保存。
+  Offset _drag = Offset.zero;
+  final _barKey = GlobalKey();
+
+  void _onDragEnd(BuildContext context, List<FowColumnSlot> slots, double top, double bottom) {
+    final box = _barKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) {
+      setState(() => _drag = Offset.zero);
+      return;
+    }
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    final center = rect.center;
+    var column = 0;
+    if (slots.isNotEmpty) {
+      var bestD = double.infinity;
+      for (var i = 0; i < slots.length; i++) {
+        final d = (center.dx - (slots[i].x + slots[i].width / 2)).abs();
+        if (d < bestD) {
+          bestD = d;
+          column = i;
+        }
+      }
+    }
+    final avail = (bottom - top - rect.height).clamp(1.0, double.infinity);
+    final y = ((rect.top - top) / avail).clamp(0.0, 1.0);
+    ref.read(raiBarPlacementProvider.notifier).set(RaiBarPlacement(column: column, y: y));
+    setState(() => _drag = Offset.zero);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final s = ref.watch(raiProvider);
     final n = ref.read(raiProvider.notifier);
     // RAi ホームのサイドバー (D-214) が開いている間は入力タイルを隠す。
@@ -87,7 +122,13 @@ class _RaiBarHost extends ConsumerWidget {
             onClose: n.dismissBubble,
             onHistory: () => n.toggleHistory(open: true),
           );
+    // 置き場 (D-233): カラム(列スロット)と縦の比率。指差しの逃がし(atTop)は一時的に上へ。
+    final placement = ref.watch(raiBarPlacementProvider);
+    final slots = fowColumnSlotsOf(context, thirdColumnOccupied: ref.watch(thirdColumnProvider) != null);
+    final top = fowTopInsetOf(context) + RasqSpacing.sm;
+    final bottom = screen.height - (dock + RasqSpacing.sm + (insets > 0 ? 0 : MediaQuery.paddingOf(context).bottom));
     final bar = SizedBox(
+      key: _barKey,
       width: raiPanelWidth(context),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         // 曖昧な質問の選択肢 (D-194): 吹き出しの上のタイル。
@@ -114,6 +155,8 @@ class _RaiBarHost extends ConsumerWidget {
         onHistoryToggle: n.toggleHistory,
         onAskMore: n.cancelInstruction,
         onSuggest: n.suggest,
+        onDragUpdate: (d) => setState(() => _drag += d),
+        onDragEnd: () => _onDragEnd(context, slots, top, bottom),
         modelLabel: ref.watch(raiLlmProvider).spec.codename,
         historyMaxHeight: screen.height * 0.45,
         llmNote: switch (llm.phase) {
@@ -126,16 +169,23 @@ class _RaiBarHost extends ConsumerWidget {
       ),
       ]),
     );
+    // 横: 列スロットの中心(単一スロットなら画面中央)。縦: 比率 → Alignment(-1 = 上、1 = 下)。
+    final barW = raiPanelWidth(context);
+    double xAlign = 0;
+    if (slots.isNotEmpty) {
+      final slot = slots[placement.column.clamp(0, slots.length - 1)];
+      final room = (screen.width - barW - RasqSpacing.sm * 2) / 2;
+      xAlign = room <= 0 ? 0 : (((slot.x + slot.width / 2) - screen.width / 2) / room).clamp(-1.0, 1.0);
+    }
+    final yAlign = atTop ? -1.0 : placement.y * 2 - 1;
     return SizedBox.expand(
       child: AnimatedAlign(
-        duration: const Duration(milliseconds: 260),
+        duration: _drag == Offset.zero ? const Duration(milliseconds: 260) : Duration.zero,
         curve: Curves.easeOutCubic,
-        alignment: atTop ? Alignment.topCenter : Alignment.bottomCenter,
+        alignment: Alignment(xAlign, yAlign),
         child: Padding(
-          padding: atTop
-              ? EdgeInsets.fromLTRB(RasqSpacing.sm, fowTopInsetOf(context) + RasqSpacing.sm, RasqSpacing.sm, 0)
-              : EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, dock + RasqSpacing.sm + (insets > 0 ? 0 : MediaQuery.paddingOf(context).bottom)),
-          child: bar,
+          padding: EdgeInsets.fromLTRB(RasqSpacing.sm, top, RasqSpacing.sm, screen.height - bottom),
+          child: Transform.translate(offset: _drag, child: bar),
         ),
       ),
     );

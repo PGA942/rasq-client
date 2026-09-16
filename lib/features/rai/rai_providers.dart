@@ -192,7 +192,7 @@ class RaiState {
 /// 発言 1 つ(履歴 FOW のタイル)。
 @immutable
 class RaiUtterance {
-  const RaiUtterance({required this.text, required this.at, this.query, this.error = false, this.proposal, this.choices = const [], this.candidates = const [], this.approval, this.trace = const []});
+  const RaiUtterance({required this.text, required this.at, this.query, this.error = false, this.proposal, this.choices = const [], this.candidates = const [], this.approval, this.trace = const [], this.step, this.opId, this.graphScope});
   final String text;
   final DateTime at;
   final String? query;
@@ -203,6 +203,15 @@ class RaiUtterance {
 
   /// 自動化の工程 (D-229): 各手順の状態(関数で済 / 畳んだ / 案内へ / 失敗)。行の下に工程タイルとして出す。
   final List<RaiAutoStep> trace;
+
+  /// インラインのノード表示 (D-234): 自動化が TL カスタマイズ(グラフ)を書いたとき、そのスコープ(`tl.home` など)。
+  /// チャットでは行の下に 80% のノードキャンバスを出す。
+  final String? graphScope;
+
+  /// 案内の手順の発言 (D-232): 何手順目か(1 始まり)と操作 id。チャットでは連続する手順を 1 つの角丸タイルに
+  /// まとめ、丸数字で並べる。null = 通常の返事(枠なしのリッチテキスト)。
+  final int? step;
+  final String? opId;
 
   /// 返事の下に並べる候補の操作 id (D-222: 複合 / 曖昧な質問は LLM の返事 + 候補タイル、右の × で「これじゃない」)。
   final List<String> candidates;
@@ -259,9 +268,15 @@ List<Uri> raiLinksIn(String text) {
 
 class RaiController extends Notifier<RaiState> {
   /// 確定した発言を履歴に積む(50 件まで)。
-  void _record(String text, {bool error = false, String? proposal, List<({String id, String index})> choices = const [], List<String> candidates = const [], String? approval, List<RaiAutoStep> trace = const []}) {
+  void _record(String text, {bool error = false, String? proposal, List<({String id, String index})> choices = const [], List<String> candidates = const [], String? approval, List<RaiAutoStep> trace = const [], int? step, String? opId, String? graphScope}) {
     if (text.trim().isEmpty || text == '…') return;
-    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error, proposal: proposal, choices: choices, candidates: candidates, approval: approval, trace: trace), ...state.log].take(50).toList());
+    state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error, proposal: proposal, choices: choices, candidates: candidates, approval: approval, trace: trace, step: step, opId: opId, graphScope: graphScope), ...state.log].take(50).toList());
+  }
+
+  /// 自動化が TL カスタマイズ(ホームのグラフ)を書いたか (D-234)。
+  static String? raiGraphScopeOf(List<RaiAutoStep> trace) {
+    const writers = {'timeline.addFeed', 'timeline.filterWord', 'timeline.excludeWord'};
+    return trace.any((s) => s.status == RaiAutoStatus.done && writers.contains(s.binding?.call)) ? 'tl.home' : null;
   }
 
   /// 「スキップ」(D-226 → D-229): 案内を出さずに **関数で** やる計画([RaiAutoPlan])を組んで説明し、承認タイルを出す。
@@ -456,7 +471,7 @@ class RaiController extends Notifier<RaiState> {
     }
     final results = [for (final s in trace) if (s.status == RaiAutoStatus.done && s.detail.isNotEmpty) s.detail];
     state = state.copyWith(busy: false, bubble: '「${plan.title}」を関数で進めました${results.isEmpty ? '' : ':\n${results.join('\n')}'}', target: null, steps: const [], stepIndex: 0);
-    _record(state.bubble!, trace: trace);
+    _record(state.bubble!, trace: trace, graphScope: raiGraphScopeOf(trace));
     ref.read(raiStatsProvider.notifier).bump(completed: true);
   }
 
@@ -976,9 +991,11 @@ class RaiController extends Notifier<RaiState> {
   Future<void> _showStep(int i) async {
     final step = state.steps[i];
     state = state.copyWith(stepIndex: i, busy: true);
-    // 先に画面を開く(ディープリンク)。
+    // 先に画面を開く(ディープリンク)。ただし部品がいまの画面にあれば動かない (D-231): TL カスタマイズなどの
+    // 子画面の手順は route がタブの根(ホーム)なので、そのまま移動すると子画面から戻ってしまう。
     final route = step.route;
-    if (route != null) await _navigateTo(route);
+    final onScreen = step.hasTarget && locateWidgetRect(tooltip: step.tooltip, text: step.label) != null;
+    if (route != null && !onScreen) await _navigateTo(route);
     // 部品の矩形を探す(画面遷移 / FOW のアニメーション直後は少し待つ)。
     // 遷移のアニメーション中に取った矩形はずれる (D-203): 2 回続けて同じ矩形になるまで待つ。
     Rect? rect;
@@ -998,7 +1015,7 @@ class RaiController extends Notifier<RaiState> {
     }
     if (state.stepIndex != i) return; // 途中で別の質問に変わった
     state = state.copyWith(busy: false, bubble: step.text, target: rect, lineIndex: 0);
-    _record(step.text);
+    _record(step.text, step: i + 1, opId: state.lastOperation);
     if (rect != null) unawaited(_followTarget(i, step));
   }
 

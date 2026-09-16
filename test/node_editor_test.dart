@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/nodeprog/node_canvas.dart';
 import 'package:rasq_client/features/nodeprog/node_editor_screen.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/features/nodeprog/node_tabs.dart';
@@ -14,6 +15,7 @@ import 'package:rasq_client/features/nodeprog/composer_config_screen.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
@@ -150,6 +152,62 @@ void main() {
     await tester.pumpAndSettle();
     await openEditor(tester, container, 'tl.home');
     expect(onCanvas(find.text('ファイルリーダー')), findsNWidgets(2));
+  });
+
+  testWidgets('操作面 (D-235): ツールバーで拡大 / 縮小 / 全体表示、範囲選択で複数を選んで削除、整理整頓で並び直す', (tester) async {
+    final container = await pump(tester);
+    await openEditor(tester, container, 'tl.home');
+    Future<NodeGraph> saved() async => NodeGraph.fromJson((jsonDecode((await container.read(settingsAreaProvider('nodeprog.${fakeSession().account.key}.tl.home').future))['graph'] as String) as Map).cast<String, Object?>());
+    expect(find.text('100%'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('nodes.zoomIn')));
+    await tester.pumpAndSettle();
+    expect(find.text('125%'), findsOneWidget);
+    // 拡大すると同じノードのカードが大きく描かれる。
+    final before = tester.getRect(onCanvas(find.byType(NodeCard)).first);
+    await tester.tap(find.byKey(const ValueKey('nodes.zoomReset')));
+    await tester.pumpAndSettle();
+    expect(find.text('100%'), findsOneWidget);
+    final after = tester.getRect(onCanvas(find.byType(NodeCard)).first);
+    expect(before.width, greaterThan(after.width));
+    await tester.tap(find.byKey(const ValueKey('nodes.zoomOut')));
+    await tester.pumpAndSettle();
+    expect(find.text('80%'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('nodes.fit')));
+    await tester.pumpAndSettle();
+    expect(find.text('100%'), findsNothing); // 全体が収まる倍率に(既定配置は縮む)
+    // 整理整頓: 保存され、取得ノードが最左に来る。
+    await tester.tap(find.byKey(const ValueKey('nodes.tidy')));
+    await tester.pumpAndSettle();
+    var g = await saved();
+    final xs = {for (final n in g.nodes) n.type: n.x};
+    expect(xs['clock'], 0); // クロック → 取得(アイコン接続)→ タイムライン の順に左から
+    expect(xs['tl.source'], greaterThan(xs['clock']!));
+    expect(xs['timeline'], greaterThan(xs['tl.source']!));
+    // 範囲選択 → 全部囲む → 削除ボタンが効く → ノードが消える。
+    await tester.tap(find.byKey(const ValueKey('nodes.zoomReset')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('nodes.select')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<RasqIconButton>(find.byKey(const ValueKey('nodes.deleteSelected'))).onPressed, isNull);
+    // 縮小してノードを左上に寄せ、右上の空いた所から矩形を引く(カードの上で始めると移動になる)。
+    for (var k = 0; k < 5; k++) {
+      await tester.tap(find.byKey(const ValueKey('nodes.zoomOut')));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('40%'), findsOneWidget);
+    final canvas = tester.getRect(onCanvas(find.byType(NodeGraphCanvas)));
+    final gesture = await tester.startGesture(Offset(canvas.right - 6, canvas.top + 70));
+    await gesture.moveBy(const Offset(-40, 40));
+    await tester.pump();
+    await gesture.moveTo(Offset(canvas.left + 2, canvas.bottom - 80));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(tester.widget<RasqIconButton>(find.byKey(const ValueKey('nodes.deleteSelected'))).onPressed, isNotNull);
+    await tester.tap(find.byKey(const ValueKey('nodes.deleteSelected')));
+    await tester.pumpAndSettle();
+    g = await saved();
+    expect(g.nodes.length, lessThan(3)); // 少なくとも囲んだ分は消えた
   });
 
   testWidgets('D-099: 空白の長押し → カスタム関数の作成画面 → 作成でノードが置かれ、定義が残る', (tester) async {

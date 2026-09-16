@@ -154,7 +154,7 @@ class RaiConversation {
         'id': id,
         'startedAt': startedAt.toIso8601String(),
         'title': title,
-        'log': [for (final u in log) {'text': u.text, 'at': u.at.toIso8601String(), if (u.query != null) 'query': u.query, if (u.error) 'error': true}],
+        'log': [for (final u in log) {'text': u.text, 'at': u.at.toIso8601String(), if (u.query != null) 'query': u.query, if (u.error) 'error': true, if (u.step != null) 'step': u.step, if (u.opId != null) 'op': u.opId}],
       };
 
   factory RaiConversation.fromJson(Map<String, Object?> j) => RaiConversation(
@@ -163,7 +163,7 @@ class RaiConversation {
         title: '${j['title'] ?? ''}',
         log: [
           for (final e in (j['log'] as List? ?? const []).cast<Map>())
-            RaiUtterance(text: '${e['text'] ?? ''}', at: DateTime.tryParse('${e['at']}') ?? DateTime.fromMillisecondsSinceEpoch(0), query: e['query'] as String?, error: e['error'] == true),
+            RaiUtterance(text: '${e['text'] ?? ''}', at: DateTime.tryParse('${e['at']}') ?? DateTime.fromMillisecondsSinceEpoch(0), query: e['query'] as String?, error: e['error'] == true, step: (e['step'] as num?)?.toInt(), opId: e['op'] as String?),
         ],
       );
 

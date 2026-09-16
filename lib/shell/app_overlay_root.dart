@@ -26,6 +26,19 @@ double fowDockInsetOf(BuildContext ctx, GoRouter router) {
 /// 上端 = ステータスバー + ページヘッダー高さ。
 double fowTopInsetOf(BuildContext ctx) => MediaQuery.paddingOf(ctx).top + RasqSizes.headerHeight;
 
+/// FOW の列スロット (D-062): タブレット幅では第2 / 第3カラムの幾何。840px 未満は空(単一スロット = 中央)。
+/// RAi の入力タイルのカラム移動 (D-233) も同じスロットを使う。
+List<FowColumnSlot> fowColumnSlotsOf(BuildContext ctx, {required bool thirdColumnOccupied}) {
+  final total = MediaQuery.sizeOf(ctx).width;
+  if (total < 840) return const <FowColumnSlot>[];
+  final content = total - 72;
+  final col2W = (thirdColumnOccupied ? kSearchHomeColumnWidth : content - kSearchHomeColumnWidth).clamp(kSearchHomeColumnWidth, content - kSearchHomeColumnWidth < kSearchHomeColumnWidth ? content / 2 : content - kSearchHomeColumnWidth).toDouble();
+  return [
+    FowColumnSlot(x: 72, width: col2W),
+    FowColumnSlot(x: 72 + col2W, width: content - col2W),
+  ];
+}
+
 /// Wraps the whole app navigator (tab shell *and* root-level pages such as
 /// login / settings / catalog) so every overlay request — from any screen or
 /// plugin — is rendered by the single [OverlayHost].
@@ -56,17 +69,7 @@ class AppOverlayRoot extends ConsumerWidget {
             fowPinnedWidth: kSearchHomeColumnWidth,
             // FOW の列スロット (D-062): タブレット幅では第2/第3カラムの幾何を
             // 供給し、FOW はカラム中心に揃いカラム幅に収まる。
-            fowColumns: (ctx) {
-              final total = MediaQuery.sizeOf(ctx).width;
-              if (total < 840) return const <FowColumnSlot>[];
-              final occupied = ref.read(thirdColumnProvider) != null;
-              final content = total - 72;
-              final col2W = (occupied ? kSearchHomeColumnWidth : content - kSearchHomeColumnWidth).clamp(kSearchHomeColumnWidth, content - kSearchHomeColumnWidth < kSearchHomeColumnWidth ? content / 2 : content - kSearchHomeColumnWidth).toDouble();
-              return [
-                FowColumnSlot(x: 72, width: col2W),
-                FowColumnSlot(x: 72 + col2W, width: content - col2W),
-              ];
-            },
+            fowColumns: (ctx) => fowColumnSlotsOf(ctx, thirdColumnOccupied: ref.read(thirdColumnProvider) != null),
             child: child,
           ),
         ),

@@ -248,8 +248,12 @@ class RaiStatusRing extends StatelessWidget {
 BuildContext? raiBarContext;
 
 class RaiBar extends StatefulWidget {
-  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320, this.onSuggest, this.modelLabel, this.onAskMore});
+  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320, this.onSuggest, this.modelLabel, this.onAskMore, this.onDragUpdate, this.onDragEnd});
   final RaiState state;
+
+  /// 掴んで移動 (D-233): 左上の掴み手をドラッグ。大きさは変えない。null なら掴み手を出さない。
+  final ValueChanged<Offset>? onDragUpdate;
+  final VoidCallback? onDragEnd;
 
   /// チップの表記(選択中モデルのコードネーム、D-198)。null なら既定。
   final String? modelLabel;
@@ -352,6 +356,16 @@ class _RaiBarState extends State<RaiBar> {
           SizedBox(
             height: 40,
             child: Row(children: [
+              // 掴み手 (D-233): カラム / 上下へ動かす。
+              if (widget.onDragUpdate != null)
+                GestureDetector(
+                  key: const ValueKey('rai.grip'),
+                  behavior: HitTestBehavior.opaque,
+                  onPanUpdate: (d) => widget.onDragUpdate!(d.delta),
+                  onPanEnd: (_) => widget.onDragEnd?.call(),
+                  onPanCancel: () => widget.onDragEnd?.call(),
+                  child: Padding(padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8), child: Icon(Icons.drag_indicator, size: 18, color: scheme.onSurfaceVariant)),
+                ),
               RasqIconButton(key: const ValueKey('rai.headline'), icon: s.expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 22, tooltip: s.expanded ? '畳む' : '広げる', onPressed: widget.onToggleExpanded),
               Expanded(
                 child: Stack(children: [
