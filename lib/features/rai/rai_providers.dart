@@ -1010,17 +1010,21 @@ class RaiController extends Notifier<RaiState> {
     // `/settings` へ戻れなかった)。
     final cur = visibleLocationOf(router.routerDelegate.currentConfiguration);
     if (sameRoute(cur, route)) return;
+    // タブの根(ホーム / 検索 / AsTell / 通知 / DM)は常に go (D-230): 別のタブにいると「履歴にある」判定になり、
+    // pop で手前の画面へ戻るだけで手順の画面に着かなかった(「次へ」で前のページに戻るバグ)。
+    if (raiTabRoots.contains(route)) {
+      router.go(route);
+      await WidgetsBinding.instance.endOfFrame;
+      return;
+    }
     if (routeInHistory(router.routerDelegate.currentConfiguration, route)) {
       // 履歴にあればそこまで戻る (D-204)。
       for (var k = 0; k < 12 && router.canPop() && !sameRoute(visibleLocationOf(router.routerDelegate.currentConfiguration), route); k++) {
         router.pop();
         await WidgetsBinding.instance.endOfFrame;
       }
-    } else if (raiTabRoots.contains(route)) {
-      // タブの根(ホーム / 検索 / AsTell / 通知 / DM)は go、それ以外は push (D-193): go だと
-      // 戻るボタンや「決定」(context.pop)の戻り先が無くなる。
-      router.go(route);
     } else {
+      // タブの根以外は push (D-193): go だと戻るボタンや「決定」(context.pop)の戻り先が無くなる。
       unawaited(router.push(route));
     }
     await WidgetsBinding.instance.endOfFrame;
