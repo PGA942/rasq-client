@@ -151,11 +151,38 @@ void main() {
     final out = await runNodeGraph(g, fetch: fetch, storageWrite: (slot, value) async => store[slot] = value, storageRead: (s) async => store[s]);
     expect(out, isNull); // TL 終端は無い
     expect(((store['words'] as Map)['texts'] as List).cast<String>(), ['猫', '犬', '鳥']);
-    // 接続可否: テキスト → 設定は繋げない、テキスト → テキスト配列も不可(分割を噛ませる)。
+    // 接続可否: テキスト → テキストは可、テキスト → テキスト配列は不可(分割を噛ませる)、テキスト → 設定(区切り)は可 (D-236)。
     final t = builtinNodeCatalog.firstWhere((e) => e.type == 'text.const');
     final sp = builtinNodeCatalog.firstWhere((e) => e.type == 'convert.split');
+    final sv = builtinNodeCatalog.firstWhere((e) => e.type == 'storage.save');
     expect(portsCompatible(t.outputs.first, sp.inputs.first), isTrue);
-    expect(portsCompatible(t.outputs.first, sp.inputs[1]), isFalse);
+    expect(portsCompatible(t.outputs.first, sv.inputs[1]), isFalse);
+    expect(portsCompatible(t.outputs.first, sp.inputs[1]), isTrue);
+  });
+
+  test('何か → 設定 / 投稿 1 件 (D-236): テキストで検索ワードを駆動、投稿を取り出して本文をテキストに', () async {
+    GraphNode withValue(GraphNode n, String label, String v) => n.copyWith(inputs: [for (final i in n.inputs) i.label == label ? i.copyWith(value: v) : i]);
+    // text.const「猫」 → filter.query の 検索ワード(設定ポート)。
+    final g = NodeGraph(
+      nodes: [source('n1'), step('filter.query', 'f1'), timelineNode('n3'), withValue(step('text.const', 't1'), '文', '猫')],
+      edges: [data('n1', 'f1'), data('f1', 'n3'), const GraphEdge(from: 't1', fromPort: 0, to: 'f1', toPort: 1)],
+    );
+    final out = await runNodeGraph(g, fetch: fetch);
+    expect([for (final p in out!) p.id], ['p4']);
+    // 接続可否: テキスト → 設定は可、投稿リスト → 設定は不可、JSON の「パラメーター」は不可。
+    final t = builtinNodeCatalog.firstWhere((e) => e.type == 'text.const');
+    final fq = builtinNodeCatalog.firstWhere((e) => e.type == 'filter.query');
+    expect(portsCompatible(t.outputs.first, fq.inputs[1]), isTrue);
+    expect(portsCompatible(source('x').outputs.first, fq.inputs[1]), isFalse);
+    expect(settingsPortAccepts(t.outputs.first, const NodePort(label: 'パラメーター', value: '{}', dataType: '設定')), isFalse);
+    // 投稿を取り出す(2 番目)→ 本文 → 分割 → 保存。
+    final store = <String, Object?>{};
+    final g2 = NodeGraph(
+      nodes: [source('n1'), withValue(step('list.first', 'l1'), '番号', '2'), step('post.text', 'pt'), withValue(step('convert.split', 's1'), '区切り', '空白'), withValue(step('storage.save', 'w1'), 'スロット', 'body')],
+      edges: [data('n1', 'l1'), data('l1', 'pt'), data('pt', 's1'), const GraphEdge(from: 's1', fromPort: 0, to: 'w1', toPort: 1)],
+    );
+    await runNodeGraph(g2, fetch: fetch, storageWrite: (slot, value) async => store[slot] = value, storageRead: (s) async => store[s]);
+    expect(((store['body'] as Map)['texts'] as List).cast<String>(), ['ふつうの投稿']);
   });
 
   test('整理整頓 (D-235): データの流れの層で左から右、層の中は縦に並ぶ。条件の子は親の下', () {

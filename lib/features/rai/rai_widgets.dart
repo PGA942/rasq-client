@@ -337,7 +337,15 @@ class _RaiBarState extends State<RaiBar> {
     final scheme = Theme.of(context).colorScheme;
     final s = widget.state;
     final hint = s.query ?? '困ったとき、お手伝いします！';
-    return Material(
+    // 掴んで移動 (D-233 → D-236): FOW と同じく**タイル全体**が移動判定(掴み手は無し)。入力欄やボタンは
+    // 自分のジェスチャを優先する。
+    return GestureDetector(
+      key: const ValueKey('rai.bar'),
+      behavior: HitTestBehavior.translucent,
+      onPanUpdate: widget.onDragUpdate == null ? null : (d) => widget.onDragUpdate!(d.delta),
+      onPanEnd: widget.onDragEnd == null ? null : (_) => widget.onDragEnd!(),
+      onPanCancel: widget.onDragEnd,
+      child: Material(
       color: scheme.surface,
       elevation: 6,
       shape: RoundedRectangleBorder(side: BorderSide(color: scheme.onSurface, width: 1.2), borderRadius: BorderRadius.circular(RasqSizes.radiusLg)),
@@ -356,16 +364,6 @@ class _RaiBarState extends State<RaiBar> {
           SizedBox(
             height: 40,
             child: Row(children: [
-              // 掴み手 (D-233): カラム / 上下へ動かす。
-              if (widget.onDragUpdate != null)
-                GestureDetector(
-                  key: const ValueKey('rai.grip'),
-                  behavior: HitTestBehavior.opaque,
-                  onPanUpdate: (d) => widget.onDragUpdate!(d.delta),
-                  onPanEnd: (_) => widget.onDragEnd?.call(),
-                  onPanCancel: () => widget.onDragEnd?.call(),
-                  child: Padding(padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8), child: Icon(Icons.drag_indicator, size: 18, color: scheme.onSurfaceVariant)),
-                ),
               RasqIconButton(key: const ValueKey('rai.headline'), icon: s.expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 22, tooltip: s.expanded ? '畳む' : '広げる', onPressed: widget.onToggleExpanded),
               Expanded(
                 child: Stack(children: [
@@ -414,8 +412,9 @@ class _RaiBarState extends State<RaiBar> {
             Padding(
               padding: const EdgeInsets.only(top: RasqSpacing.xs),
               child: Row(children: [
-                // モデルチップ。
+                // モデルチップ(空きは Spacer と 4:1 で分け、コードネームが先に潰れないように)。
                 Flexible(
+                  flex: 4,
                   child: InkWell(
                     key: const ValueKey('rai.model'),
                     onTap: widget.onModelTap,
@@ -432,6 +431,8 @@ class _RaiBarState extends State<RaiBar> {
                     ),
                   ),
                 ),
+                // モデルのコードネーム以外は右寄せ (D-236: 幅が広がっても右に揃う)。
+                const Spacer(flex: 1),
                 const SizedBox(width: RasqSpacing.sm),
                 RaiStatusRing(busy: s.busy, error: s.error),
                 const SizedBox(width: RasqSpacing.sm),
@@ -446,6 +447,7 @@ class _RaiBarState extends State<RaiBar> {
               ]),
             ),
         ]),
+      ),
       ),
     );
   }

@@ -21,7 +21,7 @@ double raiChatWidth(BuildContext context) {
   return w < raiChatBaseWidth ? w : raiChatBaseWidth + (w - raiChatBaseWidth) / 2;
 }
 
-/// 入力タイルの置き場 (D-233): カラム(列スロットの番号)と縦位置(0 = ヘッダーの下、1 = フッターの上、間は自由)。
+/// 入力タイルの置き場 (D-233 → D-236): カラム(列スロットの番号)と縦位置(0 = ヘッダーの下、1 = フッターの上)。
 /// 大きさは変えない。設定エリア `rai` の `barColumn` / `barY` に保存。
 @immutable
 class RaiBarPlacement {
@@ -44,9 +44,9 @@ class RaiBarPlacementStore extends Notifier<RaiBarPlacement> {
     return RaiBarPlacement(column: (v['barColumn'] as num?)?.toInt() ?? 0, y: ((v['barY'] as num?)?.toDouble() ?? 1).clamp(0, 1));
   }
 
-  /// 離したときの精算 (D-233): 縦は端から 15% 以内なら端に吸着。
+  /// 離したときの精算 (D-233 → D-236): 付く場所はカラム内の上(ヘッダーの下)か下(フッターの上)だけ。
   void set(RaiBarPlacement p) {
-    final y = p.y < 0.15 ? 0.0 : (p.y > 0.85 ? 1.0 : p.y);
+    final y = p.y < 0.5 ? 0.0 : 1.0;
     final next = RaiBarPlacement(column: p.column, y: y);
     state = next;
     final store = ref.read(settingsAreaProvider(raiSettingsArea).notifier);

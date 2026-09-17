@@ -8,6 +8,9 @@ import '../../app/providers.dart';
 import '../nodeprog/inline_node_graph.dart';
 import 'rai_providers.dart';
 import 'rai_rich_text.dart';
+import 'rai_trace_graph.dart';
+import 'rai_llm.dart' show raiSettingsArea;
+import '../settings/settings_dsl.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
 import 'rai_widgets.dart';
@@ -303,12 +306,24 @@ class _InstructionTile extends StatelessWidget {
 
 /// 工程タイル (D-229): 手順ごとの状態を 1 行ずつ。✓ = 関数で済、⤵ = 畳んだ(関数で代替 / 説明だけ)、
 /// 👉 = 案内へ、✗ = 失敗、? = 選択待ち。
-class _TraceTile extends StatelessWidget {
+class _TraceTile extends ConsumerStatefulWidget {
   const _TraceTile({super.key, required this.steps});
   final List<RaiAutoStep> steps;
   @override
+  ConsumerState<_TraceTile> createState() => _TraceTileState();
+}
+
+class _TraceTileState extends ConsumerState<_TraceTile> {
+  /// 工程グラフ (D-236): 3 手順以上で自動表示(設定 `rai.traceGraphAuto`、既定 on)。それ未満 / off なら
+  /// 「グラフビューで表示」ボタン。
+  bool? _showGraph;
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final steps = widget.steps;
+    final auto = (ref.watch(settingsAreaProvider(raiSettingsArea)).value ?? const <String, Object?>{})['traceGraphAuto'] != false;
+    final showGraph = _showGraph ?? (auto && steps.length >= 3);
     return Container(
       margin: const EdgeInsets.only(top: RasqSpacing.xs),
       padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
@@ -339,6 +354,20 @@ class _TraceTile extends StatelessWidget {
                 ),
               ),
             ]),
+          ),
+        // 工程グラフ (D-236)。
+        if (showGraph)
+          Padding(padding: const EdgeInsets.only(top: RasqSpacing.xs), child: RaiTraceGraph(key: const ValueKey('rai.chat.tracegraph'), trace: steps))
+        else
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              key: const ValueKey('rai.chat.tracegraph.show'),
+              onPressed: () => setState(() => _showGraph = true),
+              style: TextButton.styleFrom(minimumSize: const Size(0, 28), padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
+              icon: const Icon(Icons.account_tree_outlined, size: 16),
+              label: Text('グラフビューで表示', style: RasqTypography.caption),
+            ),
           ),
       ]),
     );
