@@ -1,0 +1,283 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
+
+import '../../app/providers.dart';
+import '../../app/router.dart';
+import '../../backend/learning_api.dart';
+import '../../backend/orgate_client.dart';
+import '../../backend/rasq_account.dart';
+import '../../backend/rasq_consent.dart';
+import '../../shell/headers.dart';
+import '../../shell/rasq_account_fow.dart';
+
+/// 学習へのデータ提供 (D-243): 状態の確認、同意、撤回、撤回用のコード。
+///
+/// 任意で、既定は「提供しない」。RASQ の利用規約への同意とは別の画面にしてある(登録の FOW では聞かない)。
+/// 同意の前に要点と説明文書を示し、チェックを入れてからだけ同意できる。撤回はいつでも、受付が閉じていてもできる。
+class LearningScreen extends ConsumerStatefulWidget {
+  const LearningScreen({super.key});
+  @override
+  ConsumerState<LearningScreen> createState() => _LearningScreenState();
+}
+
+class _LearningScreenState extends ConsumerState<LearningScreen> {
+  bool _busy = false;
+  String? _message;
+  String? _code;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadCode());
+  }
+
+  Future<void> _loadCode() async {
+    final code = await ref.read(learningProvider.notifier).savedCode();
+    if (mounted) setState(() => _code = code);
+  }
+
+  Future<void> _run(Future<String?> Function() body) async {
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      final m = await body();
+      if (mounted) setState(() => _message = m);
+    } on OrgateException catch (e) {
+      if (mounted) setState(() => _message = 'できませんでした — $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// 同意の確認: 要点を読んでチェックを入れたときだけ進める。
+  Future<bool> _confirmGrant(LearningStatus s) async {
+    final manager = ref.read(overlayManagerProvider);
+    final agreed = ValueNotifier(false);
+    final ok = await manager.showBottomSheet<bool>(
+      id: 'learning.grant',
+      title: '学習へのデータ提供',
+      confirmText: '同意して提供する',
+      confirmEnabled: agreed,
+      builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        Widget point(String t) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('・$t', style: RasqTypography.bodySmall));
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.lg),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            point('任意です。断っても RASQ の機能はそのまま使えます。いつでも撤回できます'),
+            point('対象は、自分で書いた公開の投稿と、自分で付けた関連判定の正解ラベルだけです'),
+            point('DM、限定公開の投稿、AsTell の会話、他人の投稿の引用本文や転載画像は対象にしません'),
+            point('リレーショナルタイムラインの関連判定の改善だけに使います'),
+            point('学習したモデルは利用者の端末へ配布します。元のデータは配布しません'),
+            point('データは取得から最大 ${s.retentionYears} 年で消します。撤回したときは ${s.withdrawDays} 日以内を目標に消します'),
+            point('すでに配布したモデルは次の更新で作り直します。端末に渡った古いモデルの完全な回収までは約束できません'),
+            TextButton(onPressed: () => ref.read(routerProvider).push('/settings/dsl/about.learning'), child: const Text('説明の全文を読む')),
+            ValueListenableBuilder<bool>(
+              valueListenable: agreed,
+              builder: (_, v, _) => RasqListTile(
+                key: const ValueKey('learning.agree'),
+                title: '説明を読み、データの提供に同意します',
+                chevron: false,
+                onTap: () => agreed.value = !v,
+                trailing: Checkbox(value: v, onChanged: (x) => agreed.value = x ?? false),
+              ),
+            ),
+            Text('文書の版: $rasqLearningVersion', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          ]),
+        );
+      },
+    );
+    return ok == true && agreed.value;
+  }
+
+  /// 年齢の申告(登録の FOW より前に作ったアカウント向け)。
+  Future<void> _declareAge() async {
+    final manager = ref.read(overlayManagerProvider);
+    final age = ValueNotifier<RasqAgeBand?>(null);
+    final guardian = ValueNotifier(false);
+    final ready = ValueNotifier(false);
+    void sync() => ready.value = age.value != null && (!age.value!.needsGuardian || guardian.value);
+    age.addListener(sync);
+    guardian.addListener(sync);
+    final ok = await manager.showBottomSheet<bool>(
+      id: 'learning.age',
+      title: '年齢の申告',
+      confirmText: '申告する',
+      confirmEnabled: ready,
+      builder: (ctx) => ListenableBuilder(
+        listenable: Listenable.merge([age, guardian]),
+        builder: (_, _) => Column(mainAxisSize: MainAxisSize.min, children: [
+          for (final a in RasqAgeBand.values)
+            RasqRadioListTile<RasqAgeBand>(key: ValueKey('learning.age.${a.wire}'), title: a.label, value: a, groupValue: age.value, onChanged: (v) => age.value = v),
+          if (age.value?.needsGuardian ?? false)
+            RasqListTile(
+              key: const ValueKey('learning.guardian'),
+              title: '保護者の同意を得ています',
+              chevron: false,
+              onTap: () => guardian.value = !guardian.value,
+              trailing: Checkbox(value: guardian.value, onChanged: (x) => guardian.value = x ?? false),
+            ),
+        ]),
+      ),
+    );
+    if (ok != true || age.value == null) return;
+    await _run(() async {
+      final client = ref.read(centralClientProvider)!;
+      final api = RasqConsentApi(client);
+      await api.put('age', version: rasqTermsVersion, granted: true, detail: age.value!.wire);
+      if (age.value!.needsGuardian) await api.put('guardian', version: rasqTermsVersion, granted: true);
+      ref.invalidate(learningProvider);
+      return '年齢を申告しました';
+    });
+  }
+
+  Future<void> _withdrawByCode() async {
+    final manager = ref.read(overlayManagerProvider);
+    final input = TextEditingController();
+    final ok = await manager.showBottomSheet<bool>(
+      id: 'learning.code',
+      title: '撤回用のコードで撤回',
+      confirmText: '撤回する',
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(RasqSpacing.page),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('同意したときに発行されたコードを入れます。提供した RASQ アカウントに入れなくなった場合でも撤回できます。', style: RasqTypography.bodySmall),
+          const SizedBox(height: RasqSpacing.sm),
+          RasqInput(key: const ValueKey('learning.code.input'), controller: input, hintText: '撤回用のコード'),
+        ]),
+      ),
+    );
+    if (ok != true || input.text.trim().isEmpty) return;
+    await _run(() async {
+      await ref.read(learningProvider.notifier).withdrawByCode(input.text);
+      return '撤回しました。提供済みのデータは 30 日以内を目標に消します';
+    });
+  }
+
+  String _reasonText(String? r) => switch (r) {
+        'age-required' => '年齢の申告が必要です',
+        'under-16' => '学習へのデータ提供は 16 歳以上でできます',
+        'guardian-required' => '16〜17 歳の人は、保護者の同意が必要です',
+        _ => '',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final configured = ref.watch(centralConfiguredProvider);
+    final account = ref.watch(orgateAccountProvider);
+    final noAccount = account.hasValue && account.value == null;
+    final state = ref.watch(learningProvider);
+    final notifier = ref.read(learningProvider.notifier);
+    final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    return Scaffold(
+      appBar: const RasqPageHeader(title: '学習へのデータ提供'),
+      body: ListView(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
+          child: Text(
+            'リレーショナルタイムラインの関連判定をよくするために、自分の公開の投稿と正解ラベルを学習用に提供できます。任意で、既定は「提供しない」です。断っても RASQ の機能はそのまま使えます。',
+            style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ),
+        RasqListTile(title: '説明を読む', subtitle: '対象のデータ、目的、保存する期間、撤回したとき', onTap: () => context.push('/settings/dsl/about.learning')),
+        const RasqSectionHeader(title: '状態'),
+        if (!configured)
+          RasqListTile(title: 'RASQ サーバーの接続先が未設定です', subtitle: '接続先を入れると確認できます', onTap: () => context.push('/settings/server'))
+        else if (noAccount)
+          RasqListTile(key: const ValueKey('learning.needAccount'), title: 'RASQ アカウントが未作成です', subtitle: 'データの提供は RASQ アカウントごとに記録します', onTap: () => openRasqAccountFow(ref))
+        else
+          state.when(
+            loading: () => const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: RasqLoading()),
+            error: (e, _) => Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('取得できませんでした: $e', style: RasqTypography.bodySmall.copyWith(color: RasqColors.danger))),
+            data: (s) {
+              if (s == null) return const SizedBox.shrink();
+              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                RasqValueListTile(key: const ValueKey('learning.status'), title: 'データの提供', value: s.granted ? '提供する' : '提供しない'),
+                if (s.granted && s.since != null) RasqValueListTile(title: '同意した日', value: RasqTimestamp.format(s.since!)),
+                RasqValueListTile(title: '受付', value: s.open ? '受付中' : 'まだ始まっていません'),
+                RasqValueListTile(title: '年齢の申告', value: s.ageBand == null ? '未申告' : RasqAgeBand.values.firstWhere((a) => a.wire == s.ageBand, orElse: () => RasqAgeBand.adult).label),
+                RasqValueListTile(title: '提供済みのデータ', value: '投稿 ${s.posts} 件 ・ ラベル ${s.labels} 件'),
+                RasqValueListTile(title: 'このデータを使ったモデル', value: s.models.isEmpty ? 'なし' : s.models.join('、')),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+                  child: s.granted
+                      ? OutlinedButton(
+                          key: const ValueKey('learning.withdraw'),
+                          onPressed: _busy
+                              ? null
+                              : () async {
+                                  final ok = await ref.read(overlayManagerProvider).showAlert(
+                                        id: 'learning.withdraw',
+                                        title: 'データの提供をやめる',
+                                        message: '新しい収集と学習への投入をすぐに止めます。提供済みのデータは ${s.withdrawDays} 日以内を目標に消します。すでに配布したモデルは次の更新で作り直します。',
+                                        confirmText: '撤回する',
+                                        cancelText: 'キャンセル',
+                                        destructive: true,
+                                      );
+                                  if (!ok) return;
+                                  await _run(() async {
+                                    await notifier.withdraw();
+                                    if (mounted) setState(() => _code = null);
+                                    return '撤回しました';
+                                  });
+                                },
+                          child: const Text('提供をやめる(撤回)'),
+                        )
+                      : !s.eligible
+                          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                              Text(_reasonText(s.reason), key: const ValueKey('learning.reason'), style: RasqTypography.bodySmall),
+                              if (s.reason != 'under-16')
+                                OutlinedButton(key: const ValueKey('learning.declareAge'), onPressed: _busy ? null : _declareAge, child: const Text('年齢を申告する')),
+                            ])
+                          : FilledButton(
+                              key: const ValueKey('learning.grant'),
+                              onPressed: _busy || !s.open
+                                  ? null
+                                  : () async {
+                                      if (!await _confirmGrant(s)) return;
+                                      await _run(() async {
+                                        final code = await notifier.grant();
+                                        if (mounted) setState(() => _code = code);
+                                        return '提供を始めました。下の撤回用のコードを控えてください';
+                                      });
+                                    },
+                              child: Text(s.open ? '内容を確認して同意する' : '受付はまだ始まっていません'),
+                            ),
+                ),
+                if (_message != null) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text(_message!, key: const ValueKey('learning.message'), style: RasqTypography.bodySmall)),
+                if (s.granted && _code != null) ...[
+                  const RasqSectionHeader(title: '撤回用のコード'),
+                  RasqListTile(
+                    key: const ValueKey('learning.code'),
+                    title: _code!,
+                    subtitle: 'タップでコピー。RASQ アカウントに入れなくなっても、このコードで撤回できます',
+                    chevron: false,
+                    onTap: () {
+                      unawaited(Clipboard.setData(ClipboardData(text: _code!)));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('撤回用のコードをコピーしました')));
+                    },
+                  ),
+                ] else if (s.granted && s.hasWithdrawCode)
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('撤回用のコードは、同意した端末に控えてあります。', style: caption)),
+              ]);
+            },
+          ),
+        const RasqSectionHeader(title: 'そのほか'),
+        RasqListTile(key: const ValueKey('learning.byCode'), title: '撤回用のコードで撤回', subtitle: '提供した RASQ アカウントに入れなくなったとき', onTap: configured ? _withdrawByCode : null),
+        Padding(
+          padding: const EdgeInsets.all(RasqSpacing.page),
+          child: Text('RASQ アカウントを削除したときも、提供の停止と提供済みデータの削除が同時に始まります。ほかの人がデータを提供しているかどうかは、だれにも調べられません。', style: caption),
+        ),
+      ]),
+    );
+  }
+}

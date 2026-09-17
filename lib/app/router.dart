@@ -22,6 +22,7 @@ import '../features/login/mixi2_login_screen.dart';
 import '../features/plugins/media_editor_screen.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
+import '../features/settings/learning_screen.dart';
 import '../features/settings/legal_screen.dart';
 import '../features/settings/notify_token_screen.dart';
 import '../features/settings/mute_block_screen.dart';
@@ -109,6 +110,7 @@ abstract final class Routes {
 
   /// 通知専用のアクセストークン (D-239)。
   static const settingsNotifyToken = '/settings/notify-token';
+  static const settingsLearning = '/settings/learning';
 
   /// プラグインストア (M4 / D-120)。
   static const store = '/store';
@@ -215,6 +217,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'server', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BackendSettingsScreen()),
             GoRoute(path: 'legal', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LegalScreen()),
             GoRoute(path: 'notify-token', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const NotifyTokenScreen()),
+            GoRoute(path: 'learning', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LearningScreen()),
             // プラグインボタン (D-210): 宣言されたボタン / 束ねる閾値。
             GoRoute(path: 'actionbar-plugins', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ActionBarPluginsScreen()),
           ]),

@@ -8,7 +8,7 @@ import 'orgate_client.dart';
 
 /// 文書の版。文書(`assets/settings/about.terms.rrl.json` など)を変えたら上げる。
 const rasqTermsVersion = '2026-09-17-draft';
-const rasqPrivacyVersion = '2026-09-17-draft';
+const rasqPrivacyVersion = '2026-09-17-draft2';
 
 /// 年齢の申告。RASQ の利用は 13 歳以上。
 enum RasqAgeBand {

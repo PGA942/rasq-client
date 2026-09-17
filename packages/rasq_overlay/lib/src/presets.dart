@@ -19,6 +19,8 @@ extension OverlayPresets on OverlayManager {
     VoidCallback? onConfirm,
     String? ownerId,
     double? maxHeightFactor = 0.9,
+    // false の間は確定ボタンを押せない(同意のチェックなど、中身がそろうまで進ませない)。
+    ValueListenable<bool>? confirmEnabled,
   }) async {
     final result = await show(RasqOverlayEntry(
       id: id,
@@ -48,12 +50,17 @@ extension OverlayPresets on OverlayManager {
                       const SizedBox(width: 80),
                     Expanded(child: Center(child: Text(title ?? '', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)))),
                     if (confirmText != null)
-                      TextButton(
-                        onPressed: () {
-                          onConfirm?.call();
-                          handle.close(result: true);
-                        },
-                        child: Text(confirmText, style: TextStyle(color: scheme.primary)),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: confirmEnabled ?? const AlwaysStoppedAnimation(true),
+                        builder: (context, enabled, _) => TextButton(
+                          onPressed: enabled
+                              ? () {
+                                  onConfirm?.call();
+                                  handle.close(result: true);
+                                }
+                              : null,
+                          child: Text(confirmText, style: TextStyle(color: enabled ? scheme.primary : scheme.onSurfaceVariant)),
+                        ),
                       )
                     else
                       const SizedBox(width: 80),

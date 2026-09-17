@@ -605,6 +605,11 @@ void main() {
     c.read(routerProvider).push('/settings/dsl/about.learning');
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('legal_learning.png'));
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    c.read(routerProvider).push(Routes.settingsLearning);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('learning_screen.png'));
   });
 
   testWidgets('RAi sidebar (D-214)', (tester) async {
