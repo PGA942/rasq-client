@@ -195,7 +195,7 @@ Future<RaiFunctionResult> raiGuard(String name, Future<RaiFunctionResult> Functi
 const raiFunctionUsage = <String>[
   'posts.fetch(kind=home|search, keyword, sort=new|reactions, limit)・page.read(filter, tag): 投稿本文/いま開いている画面の表示データを取る',
   'reference.get(id=操作か関数の id): リファレンスの詳細を取る',
-  'post.create(text): 投稿する。post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる',
+  'post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる(投稿・返信・DM の送信は自動化不可 = ユーザーが押す)',
   'post.action(action=アクション id, post=投稿 id): 投稿にアクション(自動化が許可されたものだけ)',
   'astell.rooms(): AsTell のルーム一覧を取る',
   'astell.create(title=題名): AsTell のルームを作る',
@@ -222,6 +222,15 @@ const raiFunctionUsage = <String>[
 /// web 検索の行 (D-228): 使えるとき([RaiWebSearch.available])だけ system の一覧に足す。
 const raiWebSearchUsage = 'web.search(q=語や質問, count=数): web を検索して答えや上位の題名 / URL / 説明を取る(アプリの外の知識が要るとき)';
 
+/// 自動化不可の関数 (D-237): 送信 / 返信 / DM の送信はユーザーが押す。呼ばれたらエラーにして、代替
+/// (コンポーザーのオートフィル)を代わりに実行して知らせる。
+const raiNonAutomatable = <String, String>{
+  'post.create': 'post.compose',
+  'post.send': 'post.compose',
+  'dm.send': 'dm.compose',
+  'post.reply.send': 'post.reply',
+};
+
 class RaiFunctionRunner {
   RaiFunctionRunner(this.ref, {this.contextTokens = 2048});
   final Ref ref;
@@ -230,14 +239,17 @@ class RaiFunctionRunner {
   int get budget => raiInjectionBudgetChars(contextTokens);
 
   Future<RaiFunctionResult> run(RaiFunctionCall c) async {
+    final alt = raiNonAutomatable[c.name];
+    if (alt != null) {
+      final r = await run(RaiFunctionCall(name: alt, args: c.args));
+      return RaiFunctionResult(name: c.name, text: '${c.name} は自動化不可です(送信はユーザーが押します)。代わりに $alt: ${r.text}', ok: false);
+    }
     try {
       switch (c.name) {
         case 'posts.fetch':
           return await _postsFetch(c);
         case 'reference.get':
           return await _referenceGet(c);
-        case 'post.create':
-          return await _postCreate(c);
         case 'post.action':
           return await _postAction(c);
         case 'astell.rooms':
@@ -390,20 +402,13 @@ class RaiFunctionRunner {
     return RaiFunctionResult(name: c.name, text: 'リファレンスに $id はありません', fetched: true, ok: false);
   }
 
-  Future<RaiFunctionResult> _postCreate(RaiFunctionCall c) async {
-    final text = c.arg('text').trim();
-    if (text.isEmpty) return RaiFunctionResult(name: c.name, text: '本文がありません', ok: false);
-    final p = await _session().createPost(NewPost(text: text));
-    return RaiFunctionResult(name: c.name, text: '投稿しました [${p.id}]');
-  }
-
   Future<RaiFunctionResult> _postAction(RaiFunctionCall c) async {
     final s = _session();
     final actionId = c.arg('action').trim();
     final postId = c.arg('post').trim();
     final a = s.actions.where((x) => x.id == actionId).firstOrNull;
     if (a == null) return RaiFunctionResult(name: c.name, text: 'アクション $actionId はありません', ok: false);
-    if (!raiCanAutomate(a)) return RaiFunctionResult(name: c.name, text: '「${a.label}」は自動化が許可されていません(RAi からは実行しません)', ok: false);
+    if (!raiCanAutomate(a)) return RaiFunctionResult(name: c.name, text: '「${a.label}」は自動化が許可されていません(RAi からは実行しません)。代わりに案内(この手順で案内)で進めるか、ユーザーが押してください', ok: false);
     final r = await s.performAction(actionId, postId);
     return RaiFunctionResult(name: c.name, text: '${a.label} を実行しました(${r.done ? '済' : '未'})');
   }

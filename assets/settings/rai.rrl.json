@@ -1,0 +1,23 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "rai",
+  "title": "RAi(アシスタント)",
+  "defaults": { "traceGraphAuto": true },
+  "root": {
+    "t": "Column",
+    "c": [
+      { "t": "SectionHeader", "p": { "title": "自動化" } },
+      {
+        "t": "SwitchListTile",
+        "k": "traceGraphAuto",
+        "p": {
+          "title": "工程グラフを自動で表示",
+          "subtitle": "RAi に任せた自動化が 3 手順以上のとき、工程をノードのグラフで自動表示します。オフなら「グラフビューで表示」ボタンになります",
+          "value": "$.settings.traceGraphAuto"
+        },
+        "on": { "change": "settings.set" }
+      },
+      { "t": "Text", "p": { "text": "推論サーバーや web 検索の鍵は RAi バーのモデルチップから設定します。" } }
+    ]
+  }
+}
