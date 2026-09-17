@@ -85,7 +85,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('クッキーについて', route: '/settings/dsl/about.cookies'),
     SettingsRow('プライバシーポリシー', route: '/settings/dsl/about.privacy'),
     SettingsRow('利用規約', route: '/settings/dsl/about.terms'),
-    SettingsRow('学習へのデータ提供について', route: '/settings/dsl/about.learning'),
+    SettingsRow('学習へのデータ提供', subtitle: '任意。既定は「提供しない」', route: Routes.settingsLearning),
     SettingsRow('AsTell の利用について', route: '/settings/dsl/about.astell'),
     SettingsRow('リソースと広告', route: '/settings/dsl/resources'),
     SettingsRow('ヘルプ、法的表示', route: Routes.settingsLegal),
