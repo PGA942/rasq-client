@@ -69,6 +69,9 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('プラグインの詳細設定'),
     SettingsRow('キャッシュネットワークの設定'),
   ]),
+  'rai': SettingsSection('RAi(アシスタント)', [
+    SettingsRow('工程グラフの自動表示', route: '/settings/dsl/rai'),
+  ]),
   'notifications': SettingsSection('通知', [
     SettingsRow('プロファイル', route: 'notificationPrefs'),
     SettingsRow('アクセストークン'),

@@ -32,6 +32,7 @@ import 'package:rasq_client/features/nodeprog/tl_components.dart';
 import 'package:rasq_client/features/rai/rai_web_search.dart';
 import 'package:rasq_client/features/rai/rai_widgets.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/features/settings/settings_sections.dart';
 import 'package:rasq_client/features/trend/tendency_profile.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
@@ -324,6 +325,32 @@ void main() {
     expect(wide.width, lessThanOrEqualTo(col0W)); // 第 3 カラム(狭い)に合わせる
   });
 
+  testWidgets('設定画面の RAi ページ (D-237): 工程グラフの自動表示を切れる', (tester) async {
+    final c = await pump(tester);
+    rootBundle.clear();
+    c.read(routerProvider).push('/settings/dsl/rai');
+    await tester.pumpAndSettle();
+    expect(find.text('工程グラフを自動で表示'), findsOneWidget);
+    await tester.tap(find.text('工程グラフを自動で表示'));
+    await tester.pumpAndSettle();
+    expect((await c.read(sessionStorageProvider).read('rai.v1'))!, contains('"traceGraphAuto":false'));
+    expect(settingsSections['rai']!.rows.first.route, '/settings/dsl/rai');
+  });
+
+  testWidgets('入力タイルの幅 (D-237): カラム幅 600px 未満は最大幅、以上は増えた分の 1/2 まで', (tester) async {
+    await pump(tester); // 360 幅 → 全幅(左右 8px)
+    expect(tester.getRect(find.byType(RaiBar)).width, closeTo(360 - 16, 1));
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpAndSettle();
+    // 840px 未満なので列スロットは無く、画面幅 800 → 600 + 100 = 700 − 16。
+    expect(tester.getRect(find.byType(RaiBar)).width, closeTo(700 - 16, 1));
+    // 展開行の「質問する」は右端に付く。
+    final bar = tester.getRect(find.byType(RaiBar));
+    final ask = tester.getRect(find.byKey(const ValueKey('rai.ask')));
+    expect(bar.right - ask.right, lessThan(12));
+  });
+
   testWidgets('承認タイルの「やめる」(D-226): 何もせず断りの行だけ、古い行の承認タイルは押せない', (tester) async {
     final c = await pump(tester);
     await c.read(raiProvider.notifier).skip('post');
@@ -483,25 +510,33 @@ void main() {
     expect(find.text('/a/b'), findsOneWidget);
   });
 
-  testWidgets('LLM の返事の [[instruction:post|1]] で案内が始まり 1 手順目で止まる(階層への到達)、チャットの行にはタグの代わりに注記', (tester) async {
+  testWidgets('LLM の返事の [[instruction:post|1]] は勝手に始めず提案タイルに (D-237)、「この手順で案内」で 1 手順目まで進めて止まる', (tester) async {
     final c = await pump(tester);
     llm.reply = '投稿画面まで案内しますね。 [[instruction:post|1]]';
     await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
-    final st = c.read(raiProvider);
+    var st = c.read(raiProvider);
+    expect(st.mode, RaiMode.assistant); // 勝手にインストラクションへ移らない
+    expect(find.byType(RaiHomeScreen), findsOneWidget);
+    expect(st.steps, isEmpty);
+    final answer = st.log.firstWhere((u) => u.text.contains('投稿画面まで案内しますね。'));
+    expect(answer.text, contains('案内「投稿する」を 1 手順目まで進める用意をしました'));
+    expect(answer.proposal, 'post');
+    expect(st.log.any((u) => u.text.contains('[[')), isFalse);
+    expect(find.byKey(const ValueKey('rai.chat.guide.post')), findsOneWidget);
+    expect(find.byKey(const ValueKey('rai.chat.skip.post')), findsOneWidget);
+    // タイルから始めると LLM の指定どおり 1 手順目で止まる。
+    await tester.tap(find.byKey(const ValueKey('rai.chat.guide.post')));
+    await tester.pumpAndSettle();
+    st = c.read(raiProvider);
     expect(st.mode, RaiMode.instruction);
-    expect(find.byType(RaiHomeScreen), findsNothing); // 案内はインストラクションで(RAi ページは閉じる)
+    expect(find.byType(RaiHomeScreen), findsNothing);
     expect(st.stopAt, 1);
     expect(st.steps.length, greaterThan(1));
     expect(st.stepIndex, 0);
     expect(st.hasNext, isFalse); // 1 手順目で打ち切り
-    // 返事の行(案内の手順の発言がその後に積まれる)にはタグの代わりに注記。
-    final answer = st.log.firstWhere((u) => u.text.contains('投稿画面まで案内しますね。'));
-    expect(answer.text, contains('案内「投稿する」を 1 手順目まで進めます'));
-    expect(st.log.any((u) => u.text.contains('[[')), isFalse);
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('右下の「投稿」'));
-    // ▶ → 続きには進まず終わる(手順は捨てられる)。
     await tester.tap(find.byKey(const ValueKey('rai.next')));
     await tester.pumpAndSettle();
     expect(c.read(raiProvider).steps, isEmpty);
@@ -599,9 +634,16 @@ void main() {
     await tester.pumpAndSettle();
     final text = c.read(raiProvider).bubble!;
     expect(text, contains('投稿します'));
-    expect(text, contains('post.create: 投稿しました'));
+    // 送信は自動化不可 (D-237): 投稿せず、代わりにコンポーザーへ下書き。
+    expect(text, contains('post.create は自動化不可です'));
+    expect(text, contains('代わりに post.compose: ノートの作成の下書きをコンポーザーに入れました'));
+    expect((c.read(currentSnsSessionProvider) as FakeSnsSession).lastDraft, isNull);
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isTrue);
+    expect(find.text('RAi から投稿'), findsWidgets);
     expect(text, contains('アクション nope はありません'));
     expect(llm.released, 0); // 取得系が無いので再始動しない
+    c.read(overlayManagerProvider).close(composerFowId, reason: OverlayCloseReason.discard);
+    await tester.pumpAndSettle();
     llm.replies.addAll(['zzzz の状況', '', '調べます [[call:reference.get|id=post]]', '投稿するには「投稿」を押します']);
     await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq 2');
     await tester.tap(find.byKey(const ValueKey('rai.ask')));

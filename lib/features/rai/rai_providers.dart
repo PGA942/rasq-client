@@ -503,7 +503,13 @@ class RaiController extends Notifier<RaiState> {
   }
 
   /// チャットの提案タイルから案内へ (D-218): インストラクションに切り替え(RAi ページは閉じる)、その操作を進める。
-  Future<void> guide(String opId) => runInstruction(opId);
+  Future<void> guide(String opId) {
+    ref.read(raiStatsProvider.notifier).bump(instructionAsked: true);
+    return runInstruction(opId, stopAt: _proposalStopAt.remove(opId));
+  }
+
+  /// LLM が指定した「何手順目まで」(D-237: タイルから始めるときに使う)。
+  final Map<String, int?> _proposalStopAt = {};
 
   @override
   RaiState build() => const RaiState();
@@ -872,10 +878,12 @@ class RaiController extends Notifier<RaiState> {
     final index = ref.read(raiReferenceProvider).value;
     // 一時停止中 (D-221): 案内は RAi 経由(続きへ / タイル)以外では始めない = LLM の呼び出しは無視する。
     final call = state.suspended != null ? null : calls.where((c) => index?.operation(c.op) != null).firstOrNull;
+    // 案内は勝手に始めない (D-237): タグは提案タイル(この手順で案内 / スキップ)にして、ユーザーが押してから。
     if (call != null) {
       final op = index!.operation(call.op)!;
-      final note = call.stopAt == null ? '案内「${op.index}」を始めます' : '案内「${op.index}」を ${call.stopAt} 手順目まで進めます';
+      final note = call.stopAt == null ? '案内「${op.index}」を用意しました(下のタイルから始められます)' : '案内「${op.index}」を ${call.stopAt} 手順目まで進める用意をしました(下のタイルから)';
       text = text.isEmpty ? note : '$text\n($note)';
+      _proposalStopAt[call.op] = call.stopAt;
     }
     // 関数の呼び出し (D-221): 順に実行して注記。取得系があれば再始動予約 → 注入して答え直す。
     final results = <RaiFunctionResult>[];
@@ -889,13 +897,8 @@ class RaiController extends Notifier<RaiState> {
       if (notes.isNotEmpty) text = text.isEmpty ? notes.join('\n') : '$text\n${notes.join('\n')}';
     }
     state = state.copyWith(busy: false, bubble: text.isEmpty ? '(返事がありませんでした)' : text);
-    _record(state.bubble!, candidates: _pendingCandidates);
+    _record(state.bubble!, candidates: _pendingCandidates, proposal: call?.op);
     _pendingCandidates = const [];
-    if (call != null) {
-      ref.read(raiStatsProvider.notifier).bump(instructionAsked: true);
-      await runInstruction(call.op, stopAt: call.stopAt);
-      return;
-    }
     final fetched = [for (final r in results) if (r.fetched && r.ok) r];
     if (fetched.isNotEmpty && _restartDepth < 1) await _restartWithInjection(seq, digest: text, fetched: fetched);
   }

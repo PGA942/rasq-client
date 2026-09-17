@@ -127,8 +127,9 @@ class _RaiBarHostState extends ConsumerState<_RaiBarHost> {
     final slots = fowColumnSlotsOf(context, thirdColumnOccupied: ref.watch(thirdColumnProvider) != null);
     final top = fowTopInsetOf(context) + RasqSpacing.sm;
     final bottom = screen.height - (dock + RasqSpacing.sm + (insets > 0 ? 0 : MediaQuery.paddingOf(context).bottom));
-    // 幅 (D-236): 列スロットがあればその幅に合わせる(FOW と同じ)。無ければ従来の幅。
-    final barW = slots.isEmpty ? raiPanelWidth(context) : (slots[placement.column.clamp(0, slots.length - 1)].width - RasqSpacing.sm * 2).clamp(raiPanelWidth(context), 900.0);
+    // 幅 (D-237): チャット列と同じ規則 — カラム幅 600px 未満なら最大幅、以上は増えた分の 1/2 まで。
+    final colW = slots.isEmpty ? screen.width : slots[placement.column.clamp(0, slots.length - 1)].width;
+    final barW = (colW < raiChatBaseWidth ? colW : raiChatBaseWidth + (colW - raiChatBaseWidth) / 2) - RasqSpacing.sm * 2;
     final bar = SizedBox(
       key: _barKey,
       width: barW,

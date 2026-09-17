@@ -412,9 +412,10 @@ class _RaiBarState extends State<RaiBar> {
             Padding(
               padding: const EdgeInsets.only(top: RasqSpacing.xs),
               child: Row(children: [
-                // モデルチップ(空きは Spacer と 4:1 で分け、コードネームが先に潰れないように)。
-                Flexible(
-                  flex: 4,
+                // モデルチップは左寄せの自然幅、状態リング / モードトグル / 質問する は常に右付き (D-237)。
+                Expanded(
+                  child: Align(
+                  alignment: Alignment.centerLeft,
                   child: InkWell(
                     key: const ValueKey('rai.model'),
                     onTap: widget.onModelTap,
@@ -430,9 +431,8 @@ class _RaiBarState extends State<RaiBar> {
                     ]),
                     ),
                   ),
+                  ),
                 ),
-                // モデルのコードネーム以外は右寄せ (D-236: 幅が広がっても右に揃う)。
-                const Spacer(flex: 1),
                 const SizedBox(width: RasqSpacing.sm),
                 RaiStatusRing(busy: s.busy, error: s.error),
                 const SizedBox(width: RasqSpacing.sm),
