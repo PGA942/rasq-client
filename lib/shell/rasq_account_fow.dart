@@ -8,9 +8,12 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
 import '../app/providers.dart';
 import '../app/router.dart';
+import '../backend/notify_api.dart';
 import '../backend/orgate_client.dart';
 import '../backend/rasq_account.dart';
 import '../session/sanctions.dart';
+import 'rasq_register_fow.dart';
+import 'third_column.dart';
 import '../features/notifications/notifications_screen.dart';
 
 /// RASQ アカウントの選択/編集 FOW (D-138: サイドバー右上の … から)。
@@ -133,6 +136,7 @@ class RasqAccountPanel extends ConsumerWidget {
         const RasqDropdownItem('アカウント設定', 'settings'),
         const RasqDropdownItem('通知設定', 'notifications'),
         RasqDropdownItem('ログアウト', 'logout', destructive: true, enabled: r.isCentral),
+        if (r.isCentral) const RasqDropdownItem('RASQ アカウントを削除', 'delete', destructive: true),
       ]);
       if (!context.mounted) return;
       switch (pick) {
@@ -156,6 +160,28 @@ class RasqAccountPanel extends ConsumerWidget {
           await ref.read(orgateAccountProvider.notifier).signOut();
           await ref.read(rasqAccountsProvider.notifier).detachCentral(r.id);
           toast('RASQ アカウントからログアウトしました');
+        case 'delete':
+          // アカウント削除 (D-241 / S-015)。学習へのデータ提供の撤回と、提供済みデータの削除も一緒に始まる
+          // (「別に撤回しない限り残る」にはしない = ストアのアカウント削除要件)。
+          final ok = await manager.showAlert(
+            id: 'rasq.account.delete',
+            title: 'RASQ アカウントを削除',
+            message: 'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、AsTell のルームと共有、通知トークン、同意の記録を削除します。'
+                '学習へのデータ提供に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n'
+                '元に戻せません。SNS のログインは端末に残り、「この端末のみ」のアカウントに戻ります。各 SNS 上のアカウントと投稿は消えません。',
+            confirmText: '削除する',
+            cancelText: 'キャンセル',
+            destructive: true,
+          );
+          if (!ok) return;
+          try {
+            await ref.read(orgateAccountProvider.notifier).deleteAccount();
+            await ref.read(rasqAccountsProvider.notifier).detachCentral(r.id);
+            ref.invalidate(notifyStoreProvider);
+            toast('RASQ アカウントを削除しました');
+          } on OrgateException catch (e) {
+            toast('削除できませんでした: ${e.message}');
+          }
         default:
           break;
       }
@@ -164,18 +190,9 @@ class RasqAccountPanel extends ConsumerWidget {
     Future<void> create() async {
       final name = ref.read(rasqAccountProvider).displayName;
       try {
-        final account = await ref.read(orgateAccountProvider.notifier).createAccount(displayName: name);
-        if (account == null) {
-          toast('RASQ Central の接続先が設定されていません');
-          return;
-        }
-        final rec = await ref.read(rasqAccountsProvider.notifier).attachCentral(
-              centralAccountId: account.id,
-              handle: account.handle,
-              displayName: account.displayName,
-              avatarUrl: account.avatarUrl,
-            );
-        if (!context.mounted) return;
+        // 登録の FOW (D-241): 利用規約 / 年齢 / バンドルを置き換えるか → 登録 → 同意の記録。
+        final rec = await registerRasqAccount(ref, displayName: name, column: fowColumnOf(context), onMessage: toast);
+        if (rec == null || !context.mounted) return;
         await openRasqProfileSheet(context, ref, record: rec);
       } on OrgateException catch (e) {
         toast('RASQ アカウントを作成できませんでした: ${e.message}');

@@ -349,6 +349,8 @@ void main() {
       var meCalls = 0;
       final client = MockClient((req) async {
         if (req.url.path.endsWith('/auth/device')) {
+          // 取り直しは「既存のアカウントへ戻るだけ」(D-241: 同意なしに新規アカウントを作らない)。
+          expect((jsonDecode(req.body) as Map)['restoreOnly'], isTrue);
           return http.Response('{"accountId":"a","handle":"rasq_x","displayName":"X","token":"fresh"}', 200,
               headers: {'content-type': 'application/json'});
         }
@@ -366,6 +368,29 @@ void main() {
       final account = await container.read(orgateAccountProvider.future);
       expect(account, isNotNull);
       expect(meCalls, 2);
+    });
+
+    test('取り直しでサーバーにアカウントが無ければ(削除 / 作り直し)、新規に作らず未作成へ戻る (D-241)', () async {
+      final client = MockClient((req) async {
+        if (req.url.path.endsWith('/auth/device')) {
+          return http.Response(jsonEncode({'error': {'code': '404', 'message': 'no account for this device'}}), 404, headers: {'content-type': 'application/json'});
+        }
+        return http.Response(jsonEncode({'error': {'code': '401', 'message': 'expired'}}), 401, headers: {'content-type': 'application/json'});
+      });
+      final storage = MemorySessionStorage({
+        OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'dev-1', 'token': 'stale', 'accountId': 'a'}),
+      });
+      final container = ProviderContainer(overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        orgateClientProvider.overrideWithValue(OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: client)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ]);
+      addTearDown(container.dispose);
+      expect(await container.read(orgateAccountProvider.future), isNull);
+      final stored = (jsonDecode((await storage.read(OrgateAccountNotifier.storageKey))!) as Map);
+      expect(stored['deviceId'], 'dev-1');
+      expect(stored['token'], isNull);
     });
 
     test('接続先が未設定なら何もしない(サーバー無しでも動く)', () async {

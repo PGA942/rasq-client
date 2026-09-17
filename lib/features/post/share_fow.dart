@@ -197,6 +197,12 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
   void _astell() {
     final room = ref.read(astellSessionProvider)?.room;
     if (room == null) return;
+    // 限定公開の投稿の本文をルーム全員へ配らない (D-242)。
+    final blocked = astellShareBlockReason(widget.post);
+    if (blocked != null) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(blocked)));
+      return;
+    }
     ref.read(astellSessionProvider.notifier).share('post', astellPostPayloadOf(widget.post));
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('「${room.title}」に共有しました')));
     ref.read(overlayManagerProvider).close(postShareFowId);

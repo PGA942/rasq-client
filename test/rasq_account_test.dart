@@ -9,11 +9,13 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
+import 'package:rasq_client/backend/rasq_consent.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/sanctions.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/rasq_account_fow.dart';
+import 'package:rasq_client/shell/rasq_register_fow.dart';
 import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -129,6 +131,168 @@ void main() {
       expect(sessions.sessions.length, 2);
       expect(other.sessionKeys, isEmpty);
     });
+  });
+
+  /// Central のまね (D-241 / S-015): 端末登録 / me / 同意 / バンドル / 削除。
+  ({MockClient client, List<String> calls, List<Map<String, Object?>> consents, Set<String> bundle}) fakeCentral({bool restored = false, Set<String>? serverBundle}) {
+    final calls = <String>[];
+    final consents = <Map<String, Object?>>[];
+    final bundle = serverBundle ?? <String>{};
+    var deleted = false;
+    http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
+    final client = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      calls.add('${req.method} $path${req.url.hasQuery ? '?${req.url.query}' : ''}');
+      if (req.method == 'POST' && path == '/auth/device') return json({'accountId': 'acc-1', 'handle': 'rasq_tester', 'displayName': 'テスター', 'token': 'device-token', 'restored': restored});
+      if (req.headers['authorization'] != 'Bearer device-token' || deleted) return json({'error': {'code': '401', 'message': 'valid bearer token required'}}, 401);
+      if (req.method == 'GET' && path == '/me') return json({'id': 'acc-1', 'handle': 'rasq_tester', 'displayName': 'テスター', 'createdAt': '2026-09-17T00:00:00Z'});
+      if (req.method == 'DELETE' && path == '/me') {
+        if (req.url.queryParameters['confirm'] != 'rasq_tester') return json({'error': {'code': '400', 'message': 'confirm'}}, 400);
+        deleted = true;
+        return http.Response('', 204);
+      }
+      if (req.method == 'PUT' && path.startsWith('/me/consents/')) {
+        final b = (jsonDecode(req.body) as Map).cast<String, Object?>();
+        consents.add({'kind': path.split('/').last, ...b});
+        return json({'kind': path.split('/').last, ...b, 'createdAt': '2026-09-17T00:00:00Z'});
+      }
+      if (req.method == 'GET' && path == '/me/sns-accounts') return json([for (final k in bundle) {'accountKey': k}]);
+      if (req.method == 'PUT' && path == '/me/sns-accounts') {
+        final b = (jsonDecode(req.body) as Map).cast<String, Object?>();
+        bundle.add('${b['kind']}:${b['instance']}:${b['handle']}');
+        return json(b);
+      }
+      if (req.method == 'DELETE' && path.startsWith('/me/sns-accounts/')) {
+        bundle.remove(Uri.decodeComponent(path.split('/').last));
+        return http.Response('', 204);
+      }
+      return json([]);
+    });
+    return (client: client, calls: calls, consents: consents, bundle: bundle);
+  }
+
+  Future<ProviderContainer> pumpWithCentral(WidgetTester tester, MockClient client) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p-${v.handle}', v, '${v.handle} の投稿')]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(seededStorage()),
+        pluginRegistryProvider.overrideWithValue(registry),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: client, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    RasqSidebar.open(container.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('RASQ アカウント'));
+    await tester.pumpAndSettle();
+    return container;
+  }
+
+  testWidgets('RASQ アカウントの登録 FOW (D-241): 規約と年齢に同意するまで登録できない → 登録 → 同意を記録 → バンドルを置き換える → 削除', (tester) async {
+    final central = fakeCentral(serverBundle: {'misskey:old.example:gone'});
+    final container = await pumpWithCentral(tester, central.client);
+    await tester.tap(find.text('RASQ アカウントを作成'));
+    await tester.pumpAndSettle();
+    // 登録の前に FOW。まだサーバーへは何も送っていない。
+    expect(find.text('RASQ アカウントの登録'), findsOneWidget);
+    expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
+    FilledButton submit() => tester.widget<FilledButton>(find.byKey(const ValueKey('register.submit')));
+    expect(submit().onPressed, isNull);
+    await tester.tap(find.byKey(const ValueKey('register.agree')));
+    await tester.pumpAndSettle();
+    expect(submit().onPressed, isNull); // 年齢がまだ
+    // 16〜17 歳は保護者の同意も要る。
+    await tester.ensureVisible(find.byKey(const ValueKey('register.age.16-17')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('register.age.16-17')));
+    await tester.pumpAndSettle();
+    expect(submit().onPressed, isNull);
+    await tester.ensureVisible(find.byKey(const ValueKey('register.guardian')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('register.guardian')));
+    await tester.pumpAndSettle();
+    expect(submit().onPressed, isNotNull);
+    // バンドルは「置き換える」が既定(この端末に SNS アカウントが 2 件ある)。
+    await tester.ensureVisible(find.byKey(const ValueKey('register.bundle.keep')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('ログイン中の 2 件'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('register.submit')));
+    await tester.pumpAndSettle();
+    // 登録 → 同意の記録(学習は含めない)。
+    expect(central.calls.where((c) => c == 'POST /auth/device').length, 1);
+    expect(central.consents.map((c) => '${c['kind']}:${c['granted']}:${c['detail'] ?? ''}'), ['terms:true:', 'privacy:true:', 'age:true:16-17', 'guardian:true:']);
+    expect(central.consents.first['version'], rasqTermsVersion);
+    expect(central.consents.any((c) => c['kind'] == 'learning'), isFalse);
+    // プロフィール編集のシートが続く(従来どおり)→ 閉じる。
+    expect(find.text('プロフィール編集'), findsOneWidget);
+    container.read(overlayManagerProvider).close('rasq.profile.edit');
+    await tester.pumpAndSettle();
+    // 台帳に載り、SNS アカウントを引き継ぐ。サーバーの前のバンドルは置き換わる。
+    final rec = container.read(currentRasqAccountProvider)!;
+    expect(rec.isCentral, isTrue);
+    expect(rec.sessionKeys, [acc1.key, acc2.key]);
+    expect(rec.pruneBundle, isTrue);
+    expect(central.bundle, {acc1.key, acc2.key});
+
+    // 削除: … → RASQ アカウントを削除 → 確認 → DELETE /me?confirm=<handle> → 「この端末のみ」へ戻る。
+    final centralRow = find.ancestor(of: find.textContaining('rasq_tester'), matching: find.byType(RasqUserRow)).first;
+    await tester.ensureVisible(centralRow);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: centralRow, matching: find.byTooltip('アカウントの操作')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('RASQ アカウントを削除'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('学習へのデータ提供に同意していた場合は'), findsOneWidget);
+    await tester.tap(find.text('削除する'));
+    await tester.pumpAndSettle();
+    expect(central.calls, contains('DELETE /me?confirm=rasq_tester'));
+    expect(container.read(orgateAccountProvider).value, isNull);
+    expect(container.read(currentRasqAccountProvider)!.isCentral, isFalse);
+    expect(container.read(currentRasqAccountProvider)!.sessionKeys.toSet(), {acc1.key, acc2.key});
+  });
+
+  testWidgets('登録 FOW で「置き換えない」(D-241): SNS アカウントは「この端末のみ」に残り、サーバーのバンドルは消さない。キャンセルなら登録しない', (tester) async {
+    final central = fakeCentral(restored: true, serverBundle: {'misskey:old.example:kept'});
+    final container = await pumpWithCentral(tester, central.client);
+    // キャンセル → 何も送らない。
+    await tester.tap(find.text('RASQ アカウントを作成'));
+    await tester.pumpAndSettle();
+    container.read(overlayManagerProvider).close(rasqRegisterFowId);
+    await tester.pumpAndSettle();
+    expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
+    expect(container.read(currentRasqAccountProvider)?.isCentral ?? false, isFalse);
+
+    await tester.tap(find.text('RASQ アカウントを作成'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('register.agree')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('register.age.18+')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('register.age.18+')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('register.guardian')), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('register.bundle.keep')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('register.bundle.keep')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('register.submit')));
+    await tester.pumpAndSettle();
+    expect(find.text('この端末の RASQ アカウントへ戻りました'), findsOneWidget); // restored
+    container.read(overlayManagerProvider).close('rasq.profile.edit');
+    await tester.pumpAndSettle();
+    final rec = container.read(currentRasqAccountProvider)!;
+    expect(rec.isCentral, isTrue);
+    expect(rec.sessionKeys, isEmpty);
+    expect(rec.pruneBundle, isFalse);
+    expect(central.bundle, {'misskey:old.example:kept'});
+    expect(central.consents.map((c) => c['kind']), ['terms', 'privacy', 'age']);
   });
 
   testWidgets('アカウント処置の案内と解除申請 (D-151/D-152): 案内が出て、申請シートから POST /me/sanctions/{id}/appeal', (tester) async {

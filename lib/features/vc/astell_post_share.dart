@@ -41,6 +41,22 @@ Uri postWebUrl(Post p) =>
 String _mediaType(MediaType t) => switch (t) { MediaType.image => 'image', MediaType.video => 'video', MediaType.gif => 'gif', MediaType.file => 'file' };
 MediaType _mediaTypeOf(String? t) => switch (t) { 'image' => MediaType.image, 'video' => MediaType.video, 'gif' => MediaType.gif, _ => MediaType.file };
 
+/// ルーム全員に本文ごと見せてよい公開範囲(Central の `SHAREABLE_VISIBILITY` と同じ)。
+const astellShareableVisibility = {'public', 'home', 'unlisted'};
+
+/// AsTell へ**本文ごと**共有できない理由 (D-242 / S-016)。共有してよければ null。
+///
+/// 限定公開 / DM / ローカル限定 / 公開範囲が不明な投稿は、共有する人にしか読めないかもしれない。
+/// その本文をルーム全員へ配らない。リンクだけの共有は別(見る側の権限で開く)。サーバーも同じ検査をする。
+String? astellShareBlockReason(Post p) {
+  if (p.source != PostSource.note || p.isDirect) return 'ダイレクトの投稿は AsTell に共有できません';
+  if (p.localOnly) return 'ローカル限定の投稿は AsTell に共有できません';
+  final v = p.visibility;
+  if (v == null || v.isEmpty) return '公開範囲が分からない投稿は AsTell に共有できません';
+  if (!astellShareableVisibility.contains(v)) return '公開範囲が限定された投稿は AsTell に共有できません';
+  return null;
+}
+
 /// 手元の投稿 → 共有 payload。
 Map<String, Object?> astellPostPayloadOf(Post p) {
   final media = [
@@ -59,6 +75,10 @@ Map<String, Object?> astellPostPayloadOf(Post p) {
     if (thumb != null) 'thumbnailUrl': (thumb.thumbnailUrl ?? thumb.url).toString(),
     'media': media,
     'createdAt': p.createdAt.toUtc().toIso8601String(),
+    // 公開範囲と閲覧注意は本文とは別の情報として持つ (D-242)。サーバーは visibility を検査する。
+    if (p.visibility != null) 'visibility': p.visibility,
+    'localOnly': p.localOnly,
+    if (p.contentWarning != null && p.contentWarning!.isNotEmpty) 'cw': p.contentWarning,
   };
 }
 
@@ -95,4 +115,9 @@ AccountId? astellAccountForPost(Map<String, Object?> payload, Iterable<AccountSe
     if (ok(s.account)) return s.account;
   }
   return null;
+}
+
+/// 本文ごとの共有を止めた(呼び元はリンクの共有へ切り替える)。
+class AstellShareBlocked implements Exception {
+  const AstellShareBlocked();
 }
