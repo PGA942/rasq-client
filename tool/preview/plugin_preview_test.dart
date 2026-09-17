@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
+import 'package:rasq_client/shell/rasq_register_fow.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/plugins/media_editor_screen.dart';
@@ -583,6 +584,27 @@ void main() {
     c.read(routerProvider).push('/settings/legal');
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('settings_legal.png'));
+  });
+
+  testWidgets('RASQ account register FOW (D-241)', (tester) async {
+    final c = await pump(tester);
+    unawaited(showRasqRegisterFow(c.read(overlayManagerProvider), snsCount: 2, onOpenDoc: (_) {}));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('register_fow.png'));
+    await tester.tap(find.byKey(const ValueKey('register.agree')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('register.age.16-17')));
+    await tester.tap(find.byKey(const ValueKey('register.age.16-17')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('register.bundle.keep')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('register_fow_bundle.png'));
+    c.read(overlayManagerProvider).close(rasqRegisterFowId);
+    await tester.pumpAndSettle();
+    rootBundle.clear();
+    c.read(routerProvider).push('/settings/dsl/about.learning');
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('legal_learning.png'));
   });
 
   testWidgets('RAi sidebar (D-214)', (tester) async {

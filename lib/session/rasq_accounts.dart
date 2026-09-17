@@ -44,6 +44,7 @@ class RasqAccountRecord {
     this.avatarUrl,
     this.centralAccountId,
     this.sessionKeys = const [],
+    this.pruneBundle = true,
     required this.createdAt,
   });
 
@@ -62,6 +63,10 @@ class RasqAccountRecord {
 
   /// このアカウントに属する SNS セッション(`AccountId.key`)。
   final List<String> sessionKeys;
+
+  /// サーバーのアカウントバンドルを、この端末の SNS アカウントで**置き換える**か (D-241)。
+  /// false = 登録のときに「置き換えない」を選んだ: 足すだけで、サーバーにだけある分は消さない。
+  final bool pruneBundle;
   final DateTime createdAt;
 
   bool get isCentral => kind == RasqAccountKind.central;
@@ -74,6 +79,7 @@ class RasqAccountRecord {
         avatarUrl: clearAvatar ? null : (avatarUrl ?? this.avatarUrl),
         centralAccountId: centralAccountId,
         sessionKeys: sessionKeys ?? this.sessionKeys,
+        pruneBundle: pruneBundle,
         createdAt: createdAt,
       );
 
@@ -85,6 +91,7 @@ class RasqAccountRecord {
         'avatarUrl': avatarUrl?.toString(),
         'centralAccountId': centralAccountId,
         'sessionKeys': sessionKeys,
+        if (!pruneBundle) 'pruneBundle': false,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -96,6 +103,7 @@ class RasqAccountRecord {
         avatarUrl: switch (j['avatarUrl']) { final String u when u.isNotEmpty => Uri.tryParse(u), _ => null },
         centralAccountId: j['centralAccountId'] as String?,
         sessionKeys: [for (final k in (j['sessionKeys'] as List? ?? const [])) if (k is String) k],
+        pruneBundle: j['pruneBundle'] != false,
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
       );
 }
@@ -196,6 +204,9 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
   /// Central のアカウントを台帳に載せて現在にする。**現在のアカウントの SNS
   /// セッションはそのまま引き継ぐ**(端末ローカルから Central へ「昇格」する
   /// 使い方が基本 — バンドルが空になって再ログインを迫られないように)。
+  ///
+  /// [inheritSessions] = false は登録の FOW で「置き換えない」を選んだとき (D-241): SNS アカウントは
+  /// 「この端末のみ」に残し、サーバーのバンドルも消さない([RasqAccountRecord.pruneBundle] = false)。
   Future<RasqAccountRecord> attachCentral({required String centralAccountId, required String handle, required String displayName, Uri? avatarUrl, bool inheritSessions = true}) async {
     final cur = _cur;
     final id = 'central-$centralAccountId';
@@ -214,6 +225,7 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
       avatarUrl: avatarUrl,
       centralAccountId: centralAccountId,
       sessionKeys: inherited,
+      pruneBundle: inheritSessions,
       createdAt: DateTime.now(),
     );
     await _persist(cur.copyWith(accounts: [...cur.accounts, rec], currentId: id, onboardingDone: true));

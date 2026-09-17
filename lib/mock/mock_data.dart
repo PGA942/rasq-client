@@ -50,6 +50,7 @@ abstract final class MockData {
       Post(
         id: 'p1',
         account: viewer,
+        visibility: 'public',
         author: douglas,
         createdAt: now.subtract(const Duration(minutes: 3)),
         body: '4..\n3..\n2..\n1..\nLet\'s Take off!!!',
@@ -59,6 +60,7 @@ abstract final class MockData {
       Post(
         id: 'p2',
         account: viewer,
+        visibility: 'public',
         author: animalPoll,
         createdAt: now.subtract(const Duration(hours: 2)),
         body: '犬派？猫派？',
@@ -68,6 +70,7 @@ abstract final class MockData {
       Post(
         id: 'p3',
         account: viewer,
+        visibility: 'public',
         author: jikoAppeal,
         createdAt: now.subtract(const Duration(days: 1)),
         body: '自虐的に誕生日を祝った人には永遠にプレゼントが贈られないという都市伝説があってだな…',

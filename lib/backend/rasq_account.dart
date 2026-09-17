@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
 import '../session/session_providers.dart';
 import '../session/session_storage.dart';
+import '../session/rasq_accounts.dart';
 import 'orgate_client.dart';
 
 /// RASQ アカウント (D-087) — アカウントバンドルの顔。
@@ -96,6 +97,10 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// 端末 id(`POST /auth/device` と同じ。プッシュの端末登録 (D-239) でも使う)。
   String? get deviceId => _creds?.deviceId;
 
+  /// 直近の登録が既存のアカウントへの復帰だったか(`POST /auth/device` の `restored`、S-015)。
+  bool get lastRestored => _lastRestored;
+  bool _lastRestored = false;
+
   void _publishToken() => ref.read(orgateTokenHolderProvider).token = _creds?.token;
 
   @override
@@ -116,8 +121,18 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     } on OrgateException catch (e) {
       // トークンが失効していたら 1 回だけ取り直す(端末側で消えた場合など)。
       if (e.code.code != '401') rethrow;
-      debugPrint('rasq account: token rejected, re-registering the device');
-      await _registerDevice(client, storage);
+      debugPrint('rasq account: token rejected, restoring the device');
+      try {
+        // **既存のアカウントへ戻るだけ**(D-241 / S-015 `restoreOnly`)。サーバーにアカウントが無い
+        // (削除した / サーバーを作り直した)なら新規には作らない — 新規の発行は同意の FOW のあとだけ。
+        await _registerDevice(client, storage, restoreOnly: true);
+      } on OrgateException catch (e2) {
+        if (e2.code.code != '404') rethrow;
+        _creds = _DeviceCredentials(deviceId: _creds!.deviceId);
+        await storage.write(storageKey, jsonEncode(_creds!.toJson()));
+        _publishToken();
+        return null;
+      }
       return RasqAccount.fromJson(await client.getJson('/me'));
     }
   }
@@ -141,19 +156,21 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     return creds;
   }
 
-  Future<void> _registerDevice(OrgateClient client, SessionStorage storage, {String? displayName}) async {
+  Future<void> _registerDevice(OrgateClient client, SessionStorage storage, {String? displayName, bool restoreOnly = false}) async {
     // 表示名の初期値は、指定が無ければ既にログインしている SNS アカウントから借りる。
     final first = ref.read(sessionsProvider).value?.sessions.firstOrNull;
     final name = displayName ?? first?.displayName;
     final res = await client.postJson('/auth/device', {
       'deviceId': _creds!.deviceId,
       if (name != null && name.isNotEmpty) 'displayName': name,
+      if (restoreOnly) 'restoreOnly': true,
     });
     _creds = _DeviceCredentials(
       deviceId: _creds!.deviceId,
       token: res['token'] as String?,
       accountId: res['accountId'] as String?,
     );
+    _lastRestored = res['restored'] == true;
     await storage.write(storageKey, jsonEncode(_creds!.toJson()));
     _publishToken();
   }
@@ -184,6 +201,17 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     state = const AsyncData(null);
   }
 
+  /// RASQ アカウントを削除する (D-241 / S-015 `DELETE /me?confirm=<handle>`)。サーバー上の本人に
+  /// 紐づくデータがすべて消え、学習へのデータ提供の撤回も同時に始まる。端末はトークンを捨てる
+  /// (端末 id は残るが、消したアカウントへは戻れない = 次に作ると新しいアカウント)。
+  Future<void> deleteAccount() async {
+    final client = ref.read(centralClientProvider);
+    final account = state.value;
+    if (client == null || account == null) return;
+    await client.delete('/me', {'confirm': account.handle});
+    await signOut();
+  }
+
   Future<void> updateProfile({String? handle, String? displayName, String? avatarUrl}) async {
     final client = ref.read(centralClientProvider);
     if (client == null) return;
@@ -197,7 +225,10 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
 
   /// ログイン済み SNS アカウントをバンドルへ写す。**トークンは送らない。**
   /// サーバーが知るのは「どのアカウントが束ねられているか」だけ。
-  Future<void> syncBundle(List<AccountSession> sessions) async {
+  ///
+  /// [prune] = false なら足すだけで、サーバーにだけあるアカウントは消さない(登録の FOW で
+  /// 「置き換えない」を選んだアカウント、D-241)。
+  Future<void> syncBundle(List<AccountSession> sessions, {bool prune = true}) async {
     final client = ref.read(centralClientProvider);
     if (client == null || state.value == null) return;
     final wanted = {for (final s in sessions) s.account.key: s};
@@ -217,6 +248,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
           if (s.avatarUrl != null) 'avatarUrl': s.avatarUrl.toString(),
         });
       }
+      if (!prune) return;
       for (final gone in existingKeys.where((k) => k.isNotEmpty && !wanted.containsKey(k))) {
         await client.delete('/me/sns-accounts/${Uri.encodeComponent(gone)}');
       }
@@ -235,6 +267,7 @@ final orgateBundleSyncProvider = Provider<void>((ref) {
   final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
   final account = ref.watch(orgateAccountProvider).value;
   if (account == null || sessions.isEmpty) return;
+  final prune = ref.watch(currentRasqAccountProvider)?.pruneBundle ?? true;
   // build 中の書き込みを避けるため次のマイクロタスクへ逃がす。
-  Future.microtask(() => ref.read(orgateAccountProvider.notifier).syncBundle(sessions));
+  Future.microtask(() => ref.read(orgateAccountProvider.notifier).syncBundle(sessions, prune: prune));
 });

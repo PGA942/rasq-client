@@ -27,6 +27,8 @@ class LegalScreen extends ConsumerWidget {
         RasqListTile(title: 'ヘルプ', onTap: () => context.push('/settings/dsl/about.help')),
         RasqListTile(title: '利用規約', onTap: () => context.push('/settings/dsl/about.terms')),
         RasqListTile(title: 'プライバシーポリシー', onTap: () => context.push('/settings/dsl/about.privacy')),
+        RasqListTile(title: '学習へのデータ提供について', onTap: () => context.push('/settings/dsl/about.learning')),
+        RasqListTile(title: 'AsTell の利用について', onTap: () => context.push('/settings/dsl/about.astell')),
         RasqListTile(title: 'クッキーについて', onTap: () => context.push('/settings/dsl/about.cookies')),
         const RasqSectionHeader(title: 'SNS プラグインの規約'),
         for (final p in plugins)

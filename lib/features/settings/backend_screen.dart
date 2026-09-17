@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../shell/headers.dart';
+import '../../shell/rasq_account_fow.dart';
 import 'settings_dsl.dart';
 
 /// RASQ サーバーの接続設定 (`/settings/server`)。
@@ -75,20 +76,27 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
       setState(() { _busy = false; _probe = '接続先を入力してください(例: http://192.168.3.14:8080)'; });
       return;
     }
+    // 接続の成否は公開の口 `/store-key` だけで決める。`/me` は RASQ アカウントが要るので、未作成の
+    // 端末では 401 になる — それは「接続できない」ではない (D-240)。
+    final Map<String, Object?> key;
     try {
-      final key = await client.getJson('/store-key');
-      final me = await client.getJson('/me');
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          _probe = '接続 OK — 署名鍵 ${key['algorithm']} ${(key['publicKey'] as String? ?? '').substring(0, 12)}…'
-              '\nRASQ アカウント: @${me['handle']} (${me['displayName']})';
-        });
-      }
+      key = await client.getJson('/store-key');
     } on OrgateException catch (e) {
       if (mounted) setState(() { _busy = false; _probe = '接続できませんでした(${ref.read(centralBaseUrlProvider)})— $e'; });
+      return;
     }
+    final ok = '接続 OK — 署名鍵 ${key['algorithm']} ${_head(key['publicKey'] as String? ?? '')}…';
+    String accountLine;
+    try {
+      final me = await client.getJson('/me');
+      accountLine = 'RASQ アカウント: @${me['handle']} (${me['displayName']})';
+    } on OrgateException catch (e) {
+      accountLine = e.code.code == '401' ? 'RASQ アカウント: 未作成(下の「RASQ アカウントを開く」から作成できます)' : 'RASQ アカウントを取得できませんでした — $e';
+    }
+    if (mounted) setState(() { _busy = false; _probe = '$ok\n$accountLine'; });
   }
+
+  static String _head(String s) => s.length <= 12 ? s : s.substring(0, 12);
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +152,11 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
           loading: () => const RasqLoading(),
           error: (e, _) => Text('アカウントを取得できませんでした: $e', style: RasqTypography.bodySmall.copyWith(color: RasqTokens.of(context).danger)),
           data: (a) => a == null
-              ? Text(central == null ? '接続先が設定されていません。' : 'RASQ アカウントは未作成です。サイドバーの … → RASQ アカウントから作成できます。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
+              ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(central == null ? '接続先が設定されていません。' : 'RASQ アカウントは未作成です。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                  if (central != null)
+                    TextButton(key: const ValueKey('backend.account'), onPressed: () => openRasqAccountFow(ref), child: const Text('RASQ アカウントを開く')),
+                ])
               : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('@${a.handle}', style: RasqTypography.title),
                   Text(a.displayName, style: RasqTypography.bodySmall),

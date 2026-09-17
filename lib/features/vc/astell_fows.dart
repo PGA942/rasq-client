@@ -647,6 +647,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         final payload = await _resolvePost(text, ref_);
         ref.read(astellSessionProvider.notifier).share('post', payload);
         return;
+      } on AstellShareBlocked {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('公開範囲が限定された投稿なので、リンクとして共有します')));
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('投稿を取れなかったのでリンクとして共有します: $e')));
       }
@@ -661,7 +663,12 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       final session = ref.read(sessionForAccountProvider(acct.key));
       if (session != null) {
         try {
-          return astellPostPayloadOf(await session.post(r.id));
+          final post = await session.post(r.id);
+          // 自分のトークンでしか読めない投稿は、本文を配らずリンクとして共有する (D-242)。
+          if (astellShareBlockReason(post) != null) throw const AstellShareBlocked();
+          return astellPostPayloadOf(post);
+        } on AstellShareBlocked {
+          rethrow;
         } catch (e) {
           debugPrint('astell: plugin post fetch failed, falling back to central: $e');
         }

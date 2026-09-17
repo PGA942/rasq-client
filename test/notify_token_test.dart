@@ -139,4 +139,31 @@ void main() {
     expect(await storage.read(notifyTokenStorageKey), isNull);
     expect(find.text('未発行'), findsOneWidget);
   });
+
+  testWidgets('RASQ アカウントが未作成なら、発行ボタンではなくアカウント作成の案内を出す(D-240)', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final mock = MockClient((req) async => http.Response.bytes(utf8.encode(jsonEncode({'error': {'code': '401', 'message': 'valid bearer token required'}})), 401, headers: {'content-type': 'application/json'}));
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(routerProvider).push(Routes.settingsNotifyToken);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('notify.needAccount')), findsOneWidget);
+    expect(find.byKey(const ValueKey('notify.enable')), findsNothing);
+  });
 }

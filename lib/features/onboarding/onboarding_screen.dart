@@ -6,9 +6,9 @@ import 'package:rasq_design/rasq_design.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
-import '../../backend/rasq_account.dart';
 import '../../session/rasq_accounts.dart';
 import '../../shell/rasq_account_fow.dart';
+import '../../shell/rasq_register_fow.dart';
 
 /// 初回オンボーディング (D-138): RASQ アカウントの作成を求める。
 ///
@@ -37,17 +37,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _create() async {
     setState(() => _busy = true);
     try {
-      final account = await ref.read(orgateAccountProvider.notifier).createAccount();
-      if (account == null) {
-        _toast('RASQ Central の接続先が設定されていません');
-        return;
-      }
-      final rec = await ref.read(rasqAccountsProvider.notifier).attachCentral(
-            centralAccountId: account.id,
-            handle: account.handle,
-            displayName: account.displayName,
-            avatarUrl: account.avatarUrl,
-          );
+      // 登録の FOW (D-241): 利用規約 / 年齢 / バンドルを置き換えるか → 登録 → 同意の記録。
+      final rec = await registerRasqAccount(ref, onMessage: _toast);
+      if (rec == null) return;
       await ref.read(rasqAccountsProvider.notifier).completeOnboarding();
       if (!mounted) return;
       await openRasqProfileSheet(context, ref, record: rec);

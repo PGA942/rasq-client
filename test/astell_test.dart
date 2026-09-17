@@ -31,7 +31,7 @@ import 'support/fakes.dart';
 /// (共有 / 退出)、作成 FOW。データは Central 未接続時のモック。
 void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
-  Post post(String id, String body) => Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 8, 31), body: body);
+  Post post(String id, String body, {String visibility = 'public'}) => Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 8, 31), body: body, visibility: visibility);
 
   /// 下段の左端ボタン群(横 ListView、狭幅は 2 つまで)を [tooltip] のボタンまでスクロール (D-148)。
   Future<void> scrollActions(WidgetTester tester, String tooltip, {bool back = false}) => tester.scrollUntilVisible(
@@ -947,6 +947,40 @@ void main() {
     expect(astellAccountForPost(payload, [fakeSession()]), acc);
     expect(astellAccountForPost({'sns': 'misskey', 'instance': 'other.example'}, [fakeSession()]), isNull);
     expect(astellAccountForPost({'sns': 'mastodon', 'instance': 'example.test'}, [fakeSession()]), isNull);
+  });
+
+  test('AsTell の投稿共有は公開範囲を見る (D-242): public / home / unlisted だけ本文ごと共有できる', () {
+    Post post({String? visibility, bool localOnly = false, PostSource source = PostSource.note, String? cw}) => Post(
+        id: 'n1', account: acc, author: UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime.utc(2026, 9, 1), body: '本文', visibility: visibility, localOnly: localOnly, source: source, contentWarning: cw);
+    for (final v in ['public', 'home', 'unlisted']) {
+      expect(astellShareBlockReason(post(visibility: v)), isNull, reason: v);
+    }
+    for (final v in ['followers', 'private', 'specified', 'direct']) {
+      expect(astellShareBlockReason(post(visibility: v)), isNotNull, reason: v);
+    }
+    expect(astellShareBlockReason(post()), contains('公開範囲が分からない'));
+    expect(astellShareBlockReason(post(visibility: 'public', localOnly: true)), contains('ローカル限定'));
+    expect(astellShareBlockReason(post(visibility: 'public', source: PostSource.chatMessage)), isNotNull);
+    // 公開範囲と閲覧注意は payload に独立して載る(サーバーが visibility を検査する)。
+    final payload = astellPostPayloadOf(post(visibility: 'home', cw: 'ネタバレ'));
+    expect(payload['visibility'], 'home');
+    expect(payload['localOnly'], false);
+    expect(payload['cw'], 'ネタバレ');
+  });
+
+  testWidgets('フォロワー限定の投稿は AsTell に共有しない (D-242): 共有 FOW の「AsTell に共有」は理由を出して止まる', (tester) async {
+    final container = await pump(tester, posts: [post('p1', 'フォロワー向けの投稿', visibility: 'followers')]);
+    await container.read(astellSessionProvider.notifier).join((await container.read(astellClientProvider).room('r-launch'))!);
+    await tester.pumpAndSettle();
+    final before = container.read(astellSessionProvider)!.shares.length;
+    await tester.tap(find.byTooltip('メニュー').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('共有'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('post.share.astell')));
+    await tester.pumpAndSettle();
+    expect(find.text('公開範囲が限定された投稿は AsTell に共有できません'), findsOneWidget);
+    expect(container.read(astellSessionProvider)!.shares.length, before);
   });
 
   testWidgets('AsTell で投稿を共有 (D-166): 投稿メニュー → 参加中のルームへ post 共有、チャット行のタップで一致するアカウントならアプリ内展開、URL 入力は解決して post', (tester) async {
