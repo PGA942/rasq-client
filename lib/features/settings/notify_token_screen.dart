@@ -8,7 +8,9 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../../backend/notify_api.dart';
 import '../../backend/orgate_client.dart';
+import '../../backend/rasq_account.dart';
 import '../../shell/headers.dart';
+import '../../shell/rasq_account_fow.dart';
 
 /// 通知専用のアクセストークン (D-239 / Central S-014): 発行してこの端末をプッシュ登録、テスト通知、失効、
 /// 配下トークン(マクロ / AsTell 共用)の発行。配信は当面ダミー(APNs / FCM は未接続)なので、テスト通知は
@@ -44,6 +46,8 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final configured = ref.watch(centralConfiguredProvider);
+    final account = ref.watch(orgateAccountProvider);
+    final noAccount = account.hasValue && account.value == null;
     final state = ref.watch(notifyStoreProvider);
     final store = ref.read(notifyStoreProvider.notifier);
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
@@ -62,6 +66,9 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
         const RasqValueListTile(title: 'プッシュ配信', value: 'ダミー(APNs / FCM は未接続)'),
         if (!configured)
           RasqListTile(title: 'RASQ サーバーの接続先が未設定です', subtitle: '接続先を入れると発行できます', onTap: () => context.push('/settings/server'))
+        else if (noAccount)
+          // RASQ アカウントが無いと発行は 401 になる — 先に案内する (D-240)。
+          RasqListTile(key: const ValueKey('notify.needAccount'), title: 'RASQ アカウントが未作成です', subtitle: '作成すると通知トークンを発行できます', onTap: () => openRasqAccountFow(ref))
         else
           state.when(
             loading: () => const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: RasqLoading()),
