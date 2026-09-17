@@ -1,0 +1,32 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "trend.cdn",
+  "title": "キャッシュネットワークの設定",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "状態"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "キャッシュネットワーク",
+          "value": "未提供(第二期)"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "トレンドの取得結果を CDN(キャッシュネットワーク)から読む仕組みは、RASQ サーバーの配信基盤と同時に入ります。第一期は各 SNS から直接取得します。",
+          "pad": 16,
+          "size": 13
+        }
+      }
+    ]
+  }
+}

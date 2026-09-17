@@ -1,0 +1,51 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "about.terms",
+  "title": "利用規約",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "β版の暫定文書(草案)"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "正式な利用規約は公開前に差し替えます。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "RASQ は複数の SNS を 1 つの画面で扱うブラウザです。各 SNS での投稿や行為には、その SNS の利用規約が適用されます(ログイン時に各プラグインの規約を表示します)。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "通報や制裁(発言の制限など)は RASQ サーバーの審査に基づき、RASQ アカウントの単位で適用されます。異議は RASQ アカウントの画面から申し立てられます。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/settings/legal",
+        "p": {
+          "title": "ヘルプ、法的表示(プラグインの規約 / ライセンス)"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      }
+    ]
+  }
+}

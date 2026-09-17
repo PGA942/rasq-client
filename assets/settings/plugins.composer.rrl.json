@@ -1,0 +1,59 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "plugins.composer",
+  "title": "投稿プラグイン",
+  "defaults": {
+    "enabled": true
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "コンポーザー"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "enabled",
+        "p": {
+          "title": "投稿プラグインを使う",
+          "value": "$.settings.enabled",
+          "subtitle": "コンポーザーのテキスト変換(composer.text)とメディア編集(composer.media)のプラグインを有効にします"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "オフにすると、コンポーザーとメディアエディターのプラグイン欄が空になります。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/settings/composer",
+        "p": {
+          "title": "投稿コンポーザーの設定"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/store",
+        "p": {
+          "title": "プラグインストア"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      }
+    ]
+  }
+}

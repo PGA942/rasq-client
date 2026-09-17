@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../settings/settings_dsl.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../plugins/slot_plugins.dart';
@@ -94,7 +95,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           await ref.read(timelineProvider(DynamicTimelines.featured).notifier).refresh();
         },
         child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
-          // AdSlot — renderer-owned insertion point (検索ホーム固定位置).
+          // AdSlot — renderer-owned insertion point (検索ホーム固定位置). 設定「リソースと広告」(D-238) で隠せる。
+          if (settingValue(ref, 'resources', 'showAds', true) != false)
           Container(
             height: 200,
             alignment: Alignment.center,

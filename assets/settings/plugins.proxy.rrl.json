@@ -1,0 +1,50 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "plugins.proxy",
+  "title": "RASQプラグインプロキシの購読",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "状態"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "購読",
+          "value": "未購読"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "提供",
+          "value": "第二期(RASQ サーバーの課金基盤と同時)"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "プラグインプロキシは、wasm プラグインの外部通信を RASQ サーバー経由に束ねる有料サービスです。第一期では提供していないため、プラグインは端末から直接 SNS / 自前サーバーへ通信します。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/settings/server",
+        "p": {
+          "title": "RASQ サーバーの接続先",
+          "subtitle": "プロキシの提供開始後はここで選んだサーバーを使います"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      }
+    ]
+  }
+}

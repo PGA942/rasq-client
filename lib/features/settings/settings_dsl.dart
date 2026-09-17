@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession, SnsSession;
@@ -137,7 +138,14 @@ class SettingsAreaStore extends AsyncNotifier<Map<String, Object?>> {
   }
 
   Future<void> set(String key, Object? value) async {
-    final next = {...state.value ?? const <String, Object?>{}, key: value};
+    // 読み込みが終わってから書く (D-238): 読み込み中に書くと、後から届いた読み込み結果(保存前の値)で上書きされる。
+    Map<String, Object?> base = state.value ?? const <String, Object?>{};
+    if (!state.hasValue) {
+      try {
+        base = await future;
+      } catch (_) {}
+    }
+    final next = {...base, ...state.value ?? const <String, Object?>{}, key: value};
     state = AsyncData(next);
     await ref.read(sessionStorageProvider).write(storageKey, jsonEncode(next));
     if (!_isPlugin) return;
@@ -246,6 +254,9 @@ class SettingsDslScreen extends ConsumerWidget {
           case 'web.open':
             final instance = ref.read(currentAccountProvider)?.instance;
             if (instance != null) launchUrl(Uri.https(instance, '/$key'), mode: LaunchMode.externalApplication);
+          case 'route.push':
+            // アプリ内の画面へ (D-238): `k` = ルート(`/store` など。`:` は含められない)。
+            if (key.startsWith('/')) context.push(key);
         }
       },
     );

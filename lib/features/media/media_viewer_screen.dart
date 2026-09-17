@@ -276,7 +276,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     final m = widget.post.media[i];
     if (m.type != MediaType.video) return;
     final manager = ref.read(overlayManagerProvider);
-    final at = _sessions[i]?.position;
+    final at = VideoPrefs.pipKeepPosition ? _sessions[i]?.position : null; // 再生位置の引き継ぎ (D-238 の設定)
     Navigator.of(context).maybePop();
     WidgetsBinding.instance.addPostFrameCallback((_) => showVideoFowWith(manager, m, post: widget.post, startAt: at));
   }

@@ -13,6 +13,13 @@ import '../home/post_row.dart';
 /// 初期化できない環境(テスト / 未対応形式)は [error] に落ちる。
 /// [autoplay] は準備ができ次第再生する(全画面ビューワー、D-202)。[hold] の間は再生しない
 /// (全画面表示プラグインが起動している間)。
+/// 動画の設定 (D-238「ピクチャインピクチャ」、設定エリア `appearance.video`): アプリの根が設定の変化で書き換える。
+class VideoPrefs {
+  static bool autoplay = true;
+  static double defaultSpeed = 1.0;
+  static bool pipKeepPosition = true;
+}
+
 class VideoSession extends ChangeNotifier {
   VideoSession(this.item, {this.autoplay = false, this.startAt}) {
     _init();
@@ -40,7 +47,10 @@ class VideoSession extends ChangeNotifier {
       await c.setLooping(true);
       if (startAt != null && startAt! > Duration.zero) await c.seekTo(startAt!);
       ready = true;
-      if (autoplay && !_hold) await c.play();
+      // 既定の再生速度 / 自動再生 (D-238)。
+      speed = VideoPrefs.defaultSpeed;
+      if (speed != 1.0) await c.setPlaybackSpeed(speed);
+      if (autoplay && VideoPrefs.autoplay && !_hold) await c.play();
       if (!_disposed) notifyListeners();
     } catch (e) {
       if (_disposed) return;

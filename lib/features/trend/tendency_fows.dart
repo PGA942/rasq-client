@@ -36,8 +36,15 @@ Future<void> showTrendProfileSheet(BuildContext context, WidgetRef ref) async {
         ),
         const SizedBox(height: RasqSpacing.xs),
         RasqWarningListTile(title: 'トレンドの指向性/刺激性', subtitle: '指向性 ${_dirLabel(profile.directionality)} ・ 刺激性 ${_stimLabel(profile)}', onTap: () => openTendencyFow(ctx, ref)),
-        RasqListTile(title: 'トレンドプラグインの設定', subtitle: 'サーバーサイドのトレンドプロバイダー(準備中)', onTap: () => manager.showAlert(id: 'trend.profile.plugins', title: 'トレンドプラグインの設定', message: 'トレンドプロバイダープラグインの配布(ストア)後にここへ繋ぎます。', confirmText: 'OK')),
-        RasqListTile(title: 'キャッシュネットワークの設定', subtitle: 'CDN からの読み込み(準備中)', onTap: () => manager.showAlert(id: 'trend.profile.cdn', title: 'キャッシュネット設定', message: 'CDN の URL / 取得期間 / メディアのみ、はキャッシュネット実装時にここへ繋ぎます。', confirmText: 'OK')),
+        // 設定ページへ (D-238): トレンドプラグインの有効 / 無効、キャッシュネットワークの状態。
+        RasqListTile(title: 'トレンドプラグインの設定', subtitle: '検索ホームの候補チップ(trend.suggest)', onTap: () {
+          manager.close('trend.profile');
+          ref.read(routerProvider).push('/settings/dsl/plugins.trend');
+        }),
+        RasqListTile(title: 'キャッシュネットワークの設定', subtitle: '未提供(第二期)', onTap: () {
+          manager.close('trend.profile');
+          ref.read(routerProvider).push('/settings/dsl/trend.cdn');
+        }),
         RasqListTile(
           title: 'アルゴリズム(ノード)を編集',
           subtitle: 'トレンドの取得・並べ替えの鎖(ml.tendency ノードでこのプロファイルを使えます)',

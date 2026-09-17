@@ -1,0 +1,69 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "about.help",
+  "title": "ヘルプ",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "使い方"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "操作に迷ったら RAi に聞いてください。サイドメニューの RAi から、インストラクション(ボタンまで案内)とアシスタント(端末内モデルで回答、関数で代行)が使えます。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/rai",
+        "p": {
+          "title": "RAi を開く"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "困ったとき"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "ログインできない / 投稿が届かないときは、まず「SNSプラグイン → セキュリティ」で権限を確認し、一度ログアウトして入り直してください。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/settings/dsl/sns.security",
+        "p": {
+          "title": "セキュリティ(権限とトークン)"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/settings/server",
+        "p": {
+          "title": "RASQ サーバーの接続先"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      }
+    ]
+  }
+}

@@ -6,7 +6,10 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
+import '../../shell/rasq_account_fow.dart';
 import '../notifications/notifications_screen.dart';
+import '../relational/relational_timeline_view.dart' show openRelationalTuning;
+import '../trend/tendency_fows.dart';
 import 'settings_sections.dart';
 
 /// Generic first-level settings page driven by [settingsSections].
@@ -47,25 +50,37 @@ class SettingsSectionScreen extends ConsumerWidget {
               },
             )
           else if (r.warning)
-            RasqWarningListTile(title: r.title, onTap: () => _placeholder(manager, r.title))
+            RasqWarningListTile(title: r.title, onTap: () => _open(context, ref, manager, r))
           else
             RasqListTile(
               title: r.title,
               subtitle: r.subtitle,
               trailing: r.external ? const Icon(Icons.north_east, size: 18) : null,
-              onTap: () {
-                if (r.route == 'notificationPrefs') {
-                  showNotificationPrefs(ref);
-                } else if (r.route != null) {
-                  context.push(r.route!);
-                } else {
-                  _placeholder(manager, r.title);
-                }
-              },
+              onTap: () => _open(context, ref, manager, r),
             ),
         if (section.note != null) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(section.note!, style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))),
       ]),
     );
+  }
+
+  /// 行の行き先 (D-238): 画面(route)/ FOW やシートを開く印(`action:` …)/ まだ無ければ従来の案内。
+  void _open(BuildContext context, WidgetRef ref, OverlayManager manager, SettingsRow r) {
+    switch (r.route) {
+      case 'notificationPrefs':
+        showNotificationPrefs(ref);
+      case settingsActionTrendGenres:
+        openGenreFow(context, ref);
+      case settingsActionTrendTendency:
+        openTendencyFow(context, ref);
+      case settingsActionRelationalTuning:
+        openRelationalTuning(ref);
+      case settingsActionRasqAccount:
+        openRasqAccountFow(ref);
+      case null:
+        _placeholder(manager, r.title);
+      default:
+        context.push(r.route!);
+    }
   }
 
   Future<void> _placeholder(OverlayManager manager, String title) => manager.showAlert(id: 'settings.placeholder', title: title, message: 'この設定は第二階層以降の仕様確定後(M4: FOW/DSL 描画)に実装します。', confirmText: 'OK');

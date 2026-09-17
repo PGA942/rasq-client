@@ -1,0 +1,47 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "astell.tiles",
+  "title": "Tellタイル",
+  "defaults": {
+    "headerStrip": true,
+    "headerMax": 4
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "ホームのヘッダー"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "headerStrip",
+        "p": {
+          "title": "フォロー中のホストの AsTell をヘッダーに出す",
+          "value": "$.settings.headerStrip",
+          "subtitle": "開催中のルームを、ホームのヘッダーの角丸の枠に並べます"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SliderListTile",
+        "k": "headerMax",
+        "p": {
+          "title": "並べる数",
+          "value": "$.settings.headerMax",
+          "min": 1,
+          "max": 8,
+          "divisions": 7,
+          "unit": "件"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      }
+    ]
+  }
+}

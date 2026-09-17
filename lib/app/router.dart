@@ -22,6 +22,7 @@ import '../features/login/mixi2_login_screen.dart';
 import '../features/plugins/media_editor_screen.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
+import '../features/settings/legal_screen.dart';
 import '../features/settings/mute_block_screen.dart';
 import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
@@ -101,6 +102,9 @@ abstract final class Routes {
 
   /// 投稿先のカスタマイズ (D-126: 完全に別ページ)。
   static const composerConfig = '/composerconfig';
+
+  /// ヘルプ、法的表示 (D-238)。
+  static const settingsLegal = '/settings/legal';
 
   /// プラグインストア (M4 / D-120)。
   static const store = '/store';
@@ -205,6 +209,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             // その他の設定 → 投稿コンポーザー (D-131)。
             GoRoute(path: 'composer', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ComposerSettingsScreen()),
             GoRoute(path: 'server', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BackendSettingsScreen()),
+            GoRoute(path: 'legal', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LegalScreen()),
             // プラグインボタン (D-210): 宣言されたボタン / 束ねる閾値。
             GoRoute(path: 'actionbar-plugins', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ActionBarPluginsScreen()),
           ]),

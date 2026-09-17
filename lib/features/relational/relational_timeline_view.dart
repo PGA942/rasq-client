@@ -127,7 +127,13 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
   /// FOW(widget タイプ)= 背面のタイムラインが動いたまま調整できる。
   /// 絵文字ピッカー FOW と同じ作法: キャンセル(空白クリック・esc 含む)で
   /// 開いたときの設定に巻き戻し、決定で確定。
-  Future<void> _openTuning() async {
+  Future<void> _openTuning() => openRelationalTuning(ref);
+}
+
+/// リレーショナル TL 調整の FOW (D-028)。関連タブの調整ボタンと、設定「投稿クラスター」(D-238) から開く。
+/// FOW(widget タイプ)= 背面のタイムラインが動いたまま調整できる。キャンセルで開いたときの設定に巻き戻し、決定で確定。
+Future<void> openRelationalTuning(WidgetRef ref) async {
+  {
     final manager = ref.read(overlayManagerProvider);
     final store = ref.read(relationalSettingsProvider.notifier);
     final snapshot = ref.read(relationalSettingsProvider);

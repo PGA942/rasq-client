@@ -121,7 +121,10 @@ class _NodeWidget extends StatelessWidget {
         final size = (_prop('size') as num?)?.toDouble();
         final bold = rrlTruthy(_prop('bold'));
         final color = _rrlColor(_prop('color'));
-        return Text(rrlString(_prop('text')), style: RasqTypography.body.copyWith(fontSize: size, fontWeight: bold ? FontWeight.w700 : null, color: color));
+        final text = Text(rrlString(_prop('text')), style: RasqTypography.body.copyWith(fontSize: size, fontWeight: bold ? FontWeight.w700 : null, color: color));
+        // 余白 (D-238): 設定ページの説明文など。`pad` = 左右の余白(上下はその半分)。
+        final pad = (_prop('pad') as num?)?.toDouble();
+        return pad == null ? text : Padding(padding: EdgeInsets.symmetric(horizontal: pad, vertical: pad / 2), child: text);
       case 'Icon':
         return Icon(rrlIconFor(rrlString(_prop('icon'))), size: (_prop('size') as num?)?.toDouble() ?? 20, color: _rrlColor(_prop('color')));
       case 'Image':

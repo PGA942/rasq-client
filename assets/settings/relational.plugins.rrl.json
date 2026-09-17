@@ -1,0 +1,42 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "relational.plugins",
+  "title": "プラグインの詳細設定",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "状態"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "プラグイン枠",
+          "value": "未定義"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "リレーショナルタイムライン用のプラグイン枠(束ね方の差し替え)は契約 v0.7 にはまだありません。ML の類似度は RASQ サーバーの ML ゲートウェイを使います。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/settings/server",
+        "p": {
+          "title": "RASQ サーバーの接続先"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      }
+    ]
+  }
+}

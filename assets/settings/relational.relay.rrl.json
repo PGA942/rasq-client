@@ -1,0 +1,32 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "relational.relay",
+  "title": "Relayタイル",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "状態"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "提供",
+          "value": "アルゴリズム確定後(D-011)"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "Relay タイルは、会話イベントをまたいで話題が受け渡された流れ(リレー)を 1 枚のタイルにまとめる表示です。束ね方が固まってから足します。いまは「投稿クラスター」の調整で会話イベントの束ね方を変えられます。",
+          "pad": 16,
+          "size": 13
+        }
+      }
+    ]
+  }
+}

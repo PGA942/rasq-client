@@ -182,8 +182,20 @@ const muteWordsKey = 'words';
 /// 登録済みプラグイン一覧。
 final slotPluginsProvider = NotifierProvider<SlotPluginsNotifier, List<SlotPlugin>>(SlotPluginsNotifier.new);
 
-/// スロット別。
-final slotPluginsForProvider = Provider.family<List<SlotPlugin>, String>((ref, slot) => [for (final p in ref.watch(slotPluginsProvider)) if (p.has(slot)) p]);
+/// スロットの有効 / 無効 (D-238「プラグインの構成」): 設定エリア → スロット。キー `enabled`(既定 on)。
+const slotSettingsAreas = <String, String>{
+  SlotIds.trendSuggest: 'plugins.trend',
+  SlotIds.composerText: 'plugins.composer',
+  SlotIds.composerMedia: 'plugins.composer',
+  SlotIds.tl: 'plugins.timeline',
+};
+
+/// スロット別。設定で切ったスロットは空(プラグインは呼ばれない)。
+final slotPluginsForProvider = Provider.family<List<SlotPlugin>, String>((ref, slot) {
+  final area = slotSettingsAreas[slot];
+  if (area != null && ref.watch(settingsAreaProvider(area)).value?['enabled'] == false) return const [];
+  return [for (final p in ref.watch(slotPluginsProvider)) if (p.has(slot)) p];
+});
 
 /// 登録の失敗などの直近メッセージ(dev 画面が表示)。
 final slotPluginsNoticeProvider = NotifierProvider<SlotPluginsNotice, String?>(SlotPluginsNotice.new);

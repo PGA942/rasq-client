@@ -1,0 +1,65 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "appearance.notifications",
+  "title": "通知の表示形式",
+  "defaults": {
+    "defaultTab": "all",
+    "showReminders": true
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "通知ページ"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "defaultTab",
+        "p": {
+          "title": "「すべて」から開く",
+          "value": "all",
+          "group": "$.settings.defaultTab"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "defaultTab",
+        "p": {
+          "title": "「フォロー中」から開く",
+          "value": "following",
+          "group": "$.settings.defaultTab",
+          "subtitle": "フォローしている人からの通知だけを先に見ます"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "showReminders",
+        "p": {
+          "title": "AsTell の開始通知の予定を上に出す",
+          "value": "$.settings.showReminders",
+          "subtitle": "登録した開始通知(端末のローカル通知)の一覧を通知ページの上に表示します"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "通知する種別は「通知 → プロファイル」で選びます(端末に保存されます)。",
+          "pad": 16,
+          "size": 13
+        }
+      }
+    ]
+  }
+}

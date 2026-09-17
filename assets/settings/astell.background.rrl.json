@@ -1,0 +1,64 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "astell.background",
+  "title": "画面オフ時の動作",
+  "defaults": {
+    "onScreenOff": "keep"
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "通話中に画面を消したとき"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "onScreenOff",
+        "p": {
+          "title": "通話を続ける",
+          "value": "keep",
+          "group": "$.settings.onScreenOff",
+          "subtitle": "音声はそのまま、画面共有の受信だけ止めます"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "onScreenOff",
+        "p": {
+          "title": "マイクをミュートして続ける",
+          "value": "mute",
+          "group": "$.settings.onScreenOff"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "onScreenOff",
+        "p": {
+          "title": "ルームから出る",
+          "value": "leave",
+          "group": "$.settings.onScreenOff"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "この設定は保存されますが、適用は通話の常駐化(バックグラウンド音声)の実装後です。第一期の AsTell は画面が点いている間だけ動きます。",
+          "pad": 16,
+          "size": 13
+        }
+      }
+    ]
+  }
+}
