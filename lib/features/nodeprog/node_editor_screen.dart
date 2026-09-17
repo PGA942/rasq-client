@@ -189,6 +189,9 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   Rect? _marquee;
   final Set<String> _selectedIds = {};
 
+  /// ツールバーの位置 (D-236): 右上からのずれ(dx ≤ 0、dy ≥ 0)。設定 `nodeprog.ui` の `toolbar` に保存。
+  Offset _toolbarShift = Offset.zero;
+
   /// ピンチの起点(前回のスケール)。
   double _scaleStart = 1.0;
   Offset _focalStart = Offset.zero;
@@ -239,6 +242,10 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
     super.initState();
     _manager = ref.read(overlayManagerProvider);
     _loadGraph();
+    ref.read(settingsAreaProvider('nodeprog.ui').future).then((v) {
+      final t = v['toolbar'];
+      if (t is Map && mounted) setState(() => _toolbarShift = Offset((t['dx'] as num?)?.toDouble() ?? 0, (t['dy'] as num?)?.toDouble() ?? 0));
+    }).catchError((_) {});
     WidgetsBinding.instance.addPostFrameCallback((_) => _openPalette());
   }
 
@@ -941,14 +948,14 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   Offset _localToGraph(Offset local) => (local - _pan) / _scale;
 
   /// ドロップ位置に最も近い反対側ポートを拾う(30px 以内)。
-  ({String node, int port})? _hitPort(Offset at, {required bool wantOutput}) {
+  ({String node, int port})? _hitPort(Offset at, {required bool wantOutput, NodePort? from}) {
     ({String node, int port})? best;
     var bestD = 30.0;
     for (final n in _graph.nodes) {
       final ports = wantOutput ? n.outputs : n.inputs;
       for (var i = 0; i < ports.length; i++) {
-        // 設定ポート (D-235) は繋ぐ相手が無い = 落とし先にしない(隣のポートを奪っていた)。
-        if (!wantOutput && ports[i].dataType == '設定') continue;
+        // 設定ポート (D-235 / D-236): テキスト系の出力を引いているときだけ落とし先になる(それ以外は隣を奪わない)。
+        if (!wantOutput && ports[i].dataType == '設定' && !(from != null && settingsPortAccepts(from, ports[i]))) continue;
         final c = wantOutput ? NodeGeometry.outputCenter(n, i) : NodeGeometry.inputCenter(n, i);
         final d = (c - at).distance;
         if (d < bestD) {
@@ -1015,7 +1022,9 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
         }
       }
     } else {
-      final target = _hitPort(at, wantOutput: !drag.isOutput);
+      final byIdAll = {for (final n in _graph.nodes) n.id: n};
+      final fromPort = drag.isOutput ? byIdAll[drag.node]?.outputs.elementAtOrNull(drag.port) : null;
+      final target = _hitPort(at, wantOutput: !drag.isOutput, from: fromPort);
       if (target != null) {
         if (drag.isOutput) {
           _connect((node: drag.node, port: drag.port), target);
@@ -1119,6 +1128,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
                       });
                     },
                     onLongPressStart: (d) => _createFunction(_toGraph(d.globalPosition)),
+                    // ダブルタップ (D-236): 範囲選択モードの切り替え(ツールバーと同じ)。
+                    onDoubleTap: () => setState(() => _selectMode = !_selectMode),
                     onScaleStart: (d) {
                       _scaleStart = _scale;
                       _focalStart = d.localFocalPoint;
@@ -1184,7 +1195,22 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
                 if (_loaded && _graph.nodes.isEmpty)
                   const Positioned.fill(child: IgnorePointer(child: RasqEmptyView(title: 'ノードがありません', hint: '下の検索から追加(タップで詳細、長押しでドラッグ)'))),
                 // ツールバー (D-235): 範囲選択 / 削除 / 整理整頓 / − / % / + / 全体。
-                Positioned(top: 8, right: 8, child: _toolbar(context)),
+                // ツールバー (D-236): RAi の入力タイルと同じく掴んで動かせる(既定は右上)。
+                Positioned(
+                  top: 8 + _toolbarShift.dy,
+                  right: 8 - _toolbarShift.dx,
+                  child: GestureDetector(
+                    key: const ValueKey('nodes.toolbar'),
+                    behavior: HitTestBehavior.translucent,
+                    onPanUpdate: (d) => setState(() {
+                      final box = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
+                      final size = box?.size ?? const Size(360, 480);
+                      _toolbarShift = Offset((_toolbarShift.dx + d.delta.dx).clamp(-(size.width - 60), 0.0), (_toolbarShift.dy + d.delta.dy).clamp(0.0, size.height - 60));
+                    }),
+                    onPanEnd: (_) => ref.read(settingsAreaProvider('nodeprog.ui').notifier).set('toolbar', {'dx': _toolbarShift.dx, 'dy': _toolbarShift.dy}),
+                    child: _toolbar(context),
+                  ),
+                ),
               ]),
             ),
           ),

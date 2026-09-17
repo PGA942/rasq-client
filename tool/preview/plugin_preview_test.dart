@@ -555,6 +555,11 @@ void main() {
     c.read(raiProvider.notifier).setMode(RaiMode.assistant);
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_chat_trace.png'));
+    // 工程グラフ (D-236): 2 手順なのでボタン → 押すとノード表示。
+    await tester.ensureVisible(find.byKey(const ValueKey('rai.chat.tracegraph.show')));
+    await tester.tap(find.byKey(const ValueKey('rai.chat.tracegraph.show')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_chat_tracegraph.png'));
   });
 
   testWidgets('RAi sidebar (D-214)', (tester) async {

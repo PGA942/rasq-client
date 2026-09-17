@@ -44,9 +44,11 @@ Future<List<Post>?> runNodeGraph(
   String? selfQuery,
   String terminal = 'timeline',
 }) async {
-  final byId = {for (final n in g.nodes) n.id: n};
   final env = _ExecEnv(
       fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite, onDuplicate: onDuplicate, loadFunction: loadFunction, selfQuery: selfQuery);
+  // 何か → 設定 (D-236): 設定ポートに繋がれたテキスト / テキスト配列を先に評価して値ボックスへ入れる。
+  g = await _materializeSettings(g, env);
+  final byId = {for (final n in g.nodes) n.id: n};
 
   // storage.safe 保存ノード (D-104/D-105): **終端評価より先に**書く — 同じ
   // グラフ内の「読み出し」が同一実行で新しいプロファイルを見られるように。
@@ -315,6 +317,34 @@ Future<List<String>?> _textArrayOutOf(NodeGraph g, Map<String, GraphNode> byId, 
   return null;
 }
 
+/// 設定ポートの駆動 (D-236): 設定ポートへの辺があれば、上流のテキスト(テキスト配列は改行で結合)で
+/// 値を置き換えたグラフを返す。上流が評価できなければ元の値のまま。
+Future<NodeGraph> _materializeSettings(NodeGraph g, _ExecEnv env) async {
+  final byId = {for (final n in g.nodes) n.id: n};
+  final incoming = [for (final e in g.edges) if (!e.cond && !e.toIcon && (byId[e.to]?.inputs.elementAtOrNull(e.toPort)?.dataType == '設定')) e];
+  if (incoming.isEmpty) return g;
+  final nodes = <String, GraphNode>{...byId};
+  for (final e in incoming) {
+    final up = byId[e.from];
+    final to = nodes[e.to];
+    if (up == null || to == null) continue;
+    String? value = await _textOutOf(g, byId, up, env);
+    value ??= (await _textArrayOutOf(g, byId, up, env))?.join('\n');
+    if (value == null) continue;
+    nodes[e.to] = to.copyWith(inputs: [for (final (i, p) in to.inputs.indexed) i == e.toPort ? p.copyWith(value: value) : p]);
+  }
+  return NodeGraph(nodes: [for (final n in g.nodes) nodes[n.id] ?? n], edges: g.edges);
+}
+
+/// [n] の投稿 1 件の出力 (D-236): `list.first`(投稿リストの何番目か)。
+Future<Post?> _postOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, _ExecEnv env) async {
+  if (n.type != 'list.first') return null;
+  final posts = await _upstreamPosts(g, byId, n, env);
+  if (posts == null || posts.isEmpty) return null;
+  final idx = (int.tryParse(n.inputs.where((i) => i.label == '番号').firstOrNull?.value?.trim() ?? '1') ?? 1).clamp(1, posts.length);
+  return posts[idx - 1];
+}
+
 /// 区切りの設定(改行 / カンマ / 空白)→ 実際の区切り。
 Pattern _separatorOf(GraphNode n) => switch (n.inputs.where((i) => i.label == '区切り').firstOrNull?.value?.trim()) {
       'カンマ' => RegExp(r'[,、，]'),
@@ -347,6 +377,14 @@ Future<String?> _textOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphNode n
       final texts = await _textArrayOutOf(g, byId, up, env);
       if (texts == null || texts.isEmpty) return null;
       return texts.join(_joinerOf(n));
+    case 'post.text':
+      // 投稿の本文 (D-236): 上流の投稿 1 件。
+      final edge = g.edges.where((e) => !e.cond && !e.toIcon && e.to == n.id && e.toPort == 0).firstOrNull;
+      final up = edge == null ? null : byId[edge.from];
+      if (up == null) return null;
+      final post = await _postOutOf(g, byId, up, env);
+      final body = post?.body.trim() ?? '';
+      return body.isEmpty ? null : body;
   }
   return null;
 }
@@ -616,7 +654,7 @@ Future<List<String>> _textSources(NodeGraph g, Map<String, GraphNode> byId, Grap
     if (e.cond || e.toIcon || e.to != ml.id) continue;
     final src = byId[e.from];
     if (src == null) continue;
-    if (src.type == 'file' || src.type == 'text.const' || src.type == 'convert.join') {
+    if (src.type == 'file' || src.type == 'text.const' || src.type == 'convert.join' || src.type == 'post.text') {
       // テキストを出すノード (D-235: 定数 / ファイル / 結合)。
       final text = await _textOutOf(g, byId, src, env);
       if (text != null) out.add(text);

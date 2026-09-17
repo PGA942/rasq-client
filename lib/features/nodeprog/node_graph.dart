@@ -53,6 +53,10 @@ Color nodeTypeColor(String dataType) => switch (dataType) {
       // ベクトル (D-104): SigLIP 埋め込み等のプロファイル(保存/類似度の基準)。
       'ベクトル' => const Color(0xFF5C6BC0),
       '投稿リスト' => const Color(0xFF42A5F5),
+      // 投稿 1 件 (D-236): リストの先頭などを取り出して本文をテキストにする経路。
+      '投稿' => const Color(0xFF1E88E5),
+      // 工程 (D-236): RAi の自動化の手順の並び(工程グラフ)。
+      '工程' => const Color(0xFF7E57C2),
       // 条件接続部 (D-094): 上下方向の紫。設定はノード内の値ボックス専用
       // (接続相手が存在しないのでどこにも繋がらない)。
       '条件' => const Color(0xFFAB47BC),
@@ -63,10 +67,16 @@ Color nodeTypeColor(String dataType) => switch (dataType) {
 /// 2 ポートが接続可能か (D-092): ジャンル(dataType)一致が必須。
 /// 両端が形式(format)を指定していて食い違う場合も不可。
 bool portsCompatible(NodePort out, NodePort input) {
+  // 何か → 設定 (D-236): テキスト / テキスト配列は設定ポート(JSON の「パラメーター」以外)を駆動できる
+  // (実行時に上流の値で置き換える)。
+  if (input.dataType == '設定') return settingsPortAccepts(out, input);
   if (out.dataType != input.dataType) return false;
   if (out.format != null && input.format != null && out.format != input.format) return false;
   return true;
 }
+
+/// 設定ポートに繋げる出力か (D-236)。
+bool settingsPortAccepts(NodePort out, NodePort input) => input.dataType == '設定' && input.label != 'パラメーター' && (out.dataType == 'テキスト' || out.dataType == 'テキスト配列');
 
 @immutable
 class GraphNode {
@@ -336,6 +346,27 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
       NodePort(label: 'テキスト配列', dataType: 'テキスト配列'),
       NodePort(label: '区切り', value: '改行', dataType: '設定', options: ['改行', 'カンマ', '空白']),
     ],
+    outputs: [NodePort(label: 'テキスト', dataType: 'テキスト')],
+  ),
+  NodeCatalogEntry(
+    type: 'list.first',
+    title: '投稿を取り出す',
+    icon: Icons.filter_1_outlined,
+    genre: '変換',
+    description: '投稿リストの何番目かの投稿を 1 件取り出します(1 = 先頭)。本文をテキストにして基準や設定に繋げます。',
+    inputs: [
+      NodePort(label: '投稿リスト', dataType: '投稿リスト'),
+      NodePort(label: '番号', value: '1', dataType: '設定'),
+    ],
+    outputs: [NodePort(label: '投稿', dataType: '投稿')],
+  ),
+  NodeCatalogEntry(
+    type: 'post.text',
+    title: '投稿の本文',
+    icon: Icons.notes,
+    genre: '変換',
+    description: '投稿 1 件の本文をテキストにします。',
+    inputs: [NodePort(label: '投稿', dataType: '投稿')],
     outputs: [NodePort(label: 'テキスト', dataType: 'テキスト')],
   ),
   NodeCatalogEntry(

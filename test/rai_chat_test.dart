@@ -27,6 +27,7 @@ import 'package:rasq_client/features/rai/rai_providers.dart';
 import 'package:rasq_client/features/rai/rai_reference.dart';
 import 'package:rasq_client/features/rai/rai_reference_providers.dart';
 import 'package:rasq_client/features/rai/rai_stats.dart';
+import 'package:rasq_client/features/rai/rai_trace_graph.dart';
 import 'package:rasq_client/features/nodeprog/tl_components.dart';
 import 'package:rasq_client/features/rai/rai_web_search.dart';
 import 'package:rasq_client/features/rai/rai_widgets.dart';
@@ -283,13 +284,15 @@ void main() {
     expect(c.read(raiProvider).bubble, contains('右下の「投稿」'));
   });
 
-  testWidgets('入力タイルの移動 (D-233): 掴み手で上へ → 上端に吸着して保存、広い画面ではカラムへスナップ', (tester) async {
+  testWidgets('入力タイルの移動 (D-233 → D-236): タイル全体を掴んで上へ → ヘッダーの下に付く、下へ → フッターの上、広い画面ではカラムの幅に合わせてスナップ', (tester) async {
     final c = await pump(tester);
     expect(c.read(raiBarPlacementProvider), const RaiBarPlacement());
+    expect(find.byKey(const ValueKey('rai.grip')), findsNothing); // 掴み手は無い
     final before = tester.getRect(find.byType(RaiBar));
-    // 掴み手を段階的に動かす(tester.drag の 1 回の move だと pan の update が積まれない)。
-    Future<void> dragGrip(Offset by) async {
-      final gesture = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('rai.grip'))));
+    // タイルの右下の余白(入力欄やボタンの外)を掴んで段階的に動かす。
+    Future<void> dragBar(Offset by) async {
+      final r = tester.getRect(find.byKey(const ValueKey('rai.bar')));
+      final gesture = await tester.startGesture(Offset(r.right - 4, r.bottom - 3));
       await gesture.moveBy(by / 4);
       await tester.pump();
       await gesture.moveBy(by * 3 / 4);
@@ -297,28 +300,28 @@ void main() {
       await gesture.up();
       await tester.pumpAndSettle();
     }
-    // 上へ大きく動かす → y=0(ヘッダーの下)に吸着。
-    await dragGrip(const Offset(0, -500));
+    await dragBar(const Offset(0, -500));
     var p = c.read(raiBarPlacementProvider);
     expect(p.y, 0);
-    expect(p.atTop, isTrue);
     final after = tester.getRect(find.byType(RaiBar));
     expect(after.top, lessThan(before.top - 200));
     expect((await c.read(sessionStorageProvider).read('rai.v1'))!, contains('"barY":0'));
-    // 中ほどへ → 比率で残る(吸着しない)。
-    await dragGrip(Offset(0, (before.top - after.top) / 2));
+    // 半分より下へ → フッターの上に戻る(間には止まらない)。
+    await dragBar(Offset(0, (before.top - after.top) * 0.75));
     p = c.read(raiBarPlacementProvider);
-    expect(p.y, greaterThan(0.15));
-    expect(p.y, lessThan(0.85));
-    // 広い画面(2 カラム): 右へ動かすと第 3 カラムのスロットへ。
+    expect(p.y, 1);
+    // 広い画面(2 カラム): 右へ動かすと第 3 カラムのスロットへ、幅はカラムに合わせて広がる。
     tester.view.physicalSize = const Size(1400, 900);
     tester.view.devicePixelRatio = 1;
     await tester.pumpAndSettle();
-    await dragGrip(const Offset(600, 0));
+    final col0W = tester.getRect(find.byType(RaiBar)).width;
+    expect(col0W, greaterThan(520)); // 第 2 カラムの幅に合わせて広がる
+    await dragBar(const Offset(600, 0));
     p = c.read(raiBarPlacementProvider);
     expect(p.column, 1);
     final wide = tester.getRect(find.byType(RaiBar));
     expect(wide.center.dx, greaterThan(700));
+    expect(wide.width, lessThanOrEqualTo(col0W)); // 第 3 カラム(狭い)に合わせる
   });
 
   testWidgets('承認タイルの「やめる」(D-226): 何もせず断りの行だけ、古い行の承認タイルは押せない', (tester) async {
@@ -381,9 +384,41 @@ void main() {
     expect(find.byKey(const ValueKey('inline.nodes')), findsOneWidget);
     expect(find.descendant(of: find.byKey(const ValueKey('inline.nodes')), matching: find.byType(NodeCard)), findsWidgets);
     expect(find.text('tl.home · 80%'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('inline.nodes.expand')));
+    // 工程グラフ (D-236): 3 手順以上なので自動表示。設定を off にすると「グラフビューで表示」ボタンになり、押すと出る。
+    expect(find.byKey(const ValueKey('rai.chat.tracegraph')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('rai.chat.tracegraph')), matching: find.byType(NodeCard)).evaluate().length, greaterThanOrEqualTo(3));
+    expect(find.textContaining('工程 '), findsWidgets);
+    await c.read(settingsAreaProvider(raiSettingsArea).notifier).set('traceGraphAuto', false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rai.chat.tracegraph')), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('rai.chat.tracegraph.show')));
+    await tester.tap(find.byKey(const ValueKey('rai.chat.tracegraph.show')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rai.chat.tracegraph')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('inline.nodes.expand')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('inline.nodes.expand')), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.byType(NodeEditorScreen), findsOneWidget); // 拡大 → 全画面のエディタ
+  });
+
+  test('工程グラフ (D-236): 手順がノードに、順に「工程」の辺で繋がり、左から右に並ぶ', () {
+    final trace = [
+      const RaiAutoStep(index: 0, text: '歯車を押す', status: RaiAutoStatus.skipped, detail: '関数で代替'),
+      RaiAutoStep(index: 1, text: 'フィードを足す', fn: 'timeline.addFeed', binding: raiAutoBindings['timeline.addFeed'], status: RaiAutoStatus.done, detail: '取り込みました'),
+      const RaiAutoStep(index: 2, text: '決定を押す', status: RaiAutoStatus.guide, detail: '押す部品は案内で'),
+    ];
+    final g = raiTraceToGraph(trace);
+    expect(g.nodes.length, 3);
+    expect(g.edges.length, 2);
+    expect(g.nodes.map((n) => n.type).toSet(), {'rai.step'});
+    expect(g.nodes[1].title, startsWith('✓ 2.'));
+    expect(g.nodes[1].inputs.map((p) => p.value), containsAll(['関数で済', 'timeline.addFeed']));
+    expect(g.nodes[0].x, lessThan(g.nodes[1].x));
+    expect(g.nodes[1].x, lessThan(g.nodes[2].x));
+    expect(g.edges.first.from, 's0');
+    expect(g.edges.first.to, 's1');
+    expect(raiTraceIcon(g.nodes[2]), Icons.touch_app_outlined);
   });
 
   testWidgets('自動化の取り込み先 (D-229): 任されていなければ選択肢タイルで聞き、「トレンドの指向性」なら tendency.seed で好きなジャンルに足す', (tester) async {

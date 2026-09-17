@@ -210,6 +210,39 @@ void main() {
     expect(g.nodes.length, lessThan(3)); // 少なくとも囲んだ分は消えた
   });
 
+  testWidgets('操作面 (D-236): 空白のダブルタップで範囲選択モード、ツールバーは掴んで動かせて位置が残る', (tester) async {
+    final container = await pump(tester);
+    await openEditor(tester, container, 'tl.home');
+    final canvas = tester.getRect(onCanvas(find.byType(NodeGraphCanvas)));
+    IconData selectIcon() => tester.widget<RasqIconButton>(find.byKey(const ValueKey('nodes.select'))).icon;
+    expect(selectIcon(), Icons.highlight_alt_outlined);
+    // 縮小して右上を空け、そこをダブルタップ。
+    for (var k = 0; k < 5; k++) {
+      await tester.tap(find.byKey(const ValueKey('nodes.zoomOut')));
+      await tester.pumpAndSettle();
+    }
+    final empty = Offset(canvas.right - 6, canvas.top + 70);
+    await tester.tapAt(empty);
+    await tester.pump(const Duration(milliseconds: 80));
+    await tester.tapAt(empty);
+    await tester.pumpAndSettle();
+    expect(selectIcon(), Icons.highlight_alt);
+    // ツールバーを左下へ。
+    final toolbarBefore = tester.getRect(find.byKey(const ValueKey('nodes.toolbar')));
+    final g = await tester.startGesture(Offset(toolbarBefore.right - 2, toolbarBefore.center.dy));
+    await g.moveBy(const Offset(-30, 20));
+    await tester.pump();
+    await g.moveBy(const Offset(-70, 80));
+    await tester.pump();
+    await g.up();
+    await tester.pumpAndSettle();
+    final toolbarAfter = tester.getRect(find.byKey(const ValueKey('nodes.toolbar')));
+    expect(toolbarAfter.left, lessThan(toolbarBefore.left - 50));
+    expect(toolbarAfter.top, greaterThan(toolbarBefore.top + 50));
+    final ui = await container.read(settingsAreaProvider('nodeprog.ui').future);
+    expect((ui['toolbar'] as Map)['dy'], greaterThan(50));
+  });
+
   testWidgets('D-099: 空白の長押し → カスタム関数の作成画面 → 作成でノードが置かれ、定義が残る', (tester) async {
     final container = await pump(tester);
     await openEditor(tester, container);

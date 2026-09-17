@@ -127,9 +127,11 @@ class _RaiBarHostState extends ConsumerState<_RaiBarHost> {
     final slots = fowColumnSlotsOf(context, thirdColumnOccupied: ref.watch(thirdColumnProvider) != null);
     final top = fowTopInsetOf(context) + RasqSpacing.sm;
     final bottom = screen.height - (dock + RasqSpacing.sm + (insets > 0 ? 0 : MediaQuery.paddingOf(context).bottom));
+    // 幅 (D-236): 列スロットがあればその幅に合わせる(FOW と同じ)。無ければ従来の幅。
+    final barW = slots.isEmpty ? raiPanelWidth(context) : (slots[placement.column.clamp(0, slots.length - 1)].width - RasqSpacing.sm * 2).clamp(raiPanelWidth(context), 900.0);
     final bar = SizedBox(
       key: _barKey,
-      width: raiPanelWidth(context),
+      width: barW,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         // 曖昧な質問の選択肢 (D-194): 吹き出しの上のタイル。
         if (s.choices.isNotEmpty && !chat)
@@ -170,7 +172,6 @@ class _RaiBarHostState extends ConsumerState<_RaiBarHost> {
       ]),
     );
     // 横: 列スロットの中心(単一スロットなら画面中央)。縦: 比率 → Alignment(-1 = 上、1 = 下)。
-    final barW = raiPanelWidth(context);
     double xAlign = 0;
     if (slots.isNotEmpty) {
       final slot = slots[placement.column.clamp(0, slots.length - 1)];
