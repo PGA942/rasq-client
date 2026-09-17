@@ -1,0 +1,49 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "plugins.timeline",
+  "title": "カスタムタイムラインを配置",
+  "defaults": {
+    "enabled": true
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "TL プラグイン"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "enabled",
+        "p": {
+          "title": "カスタムタイムラインを使う",
+          "value": "$.settings.enabled",
+          "subtitle": "TL プラグイン(tl)が宣言したタイムラインをホームのタブと「タイムラインをカスタマイズ」のアルゴリズムに出します"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "並びや取り込みは、ホームのタブ行の歯車(タイムラインをカスタマイズ)から組みます。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/store",
+        "p": {
+          "title": "プラグインストア"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      }
+    ]
+  }
+}

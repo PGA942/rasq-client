@@ -1,0 +1,61 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "astell.trend",
+  "title": "トレンドタイムラインへの配信",
+  "defaults": {
+    "showTrending": true,
+    "showRecommended": true
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "AsTell ホームの欄"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "showRecommended",
+        "p": {
+          "title": "「おすすめ」を表示",
+          "value": "$.settings.showRecommended"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "showTrending",
+        "p": {
+          "title": "「トレンド」を表示",
+          "value": "$.settings.showTrending",
+          "subtitle": "トレンドのルームを AsTell ホームに並べます"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "トレンドのタイムライン(検索ホーム)へのルームの差し込みは、トレンドのノード(アルゴリズム)側で組みます。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/tlconfig/trend",
+        "p": {
+          "title": "トレンドをカスタマイズ"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      }
+    ]
+  }
+}

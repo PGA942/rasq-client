@@ -62,6 +62,10 @@ class RasqMfmTransform extends StatefulWidget {
     return Duration(milliseconds: (seconds * 1000).round());
   }
 
+  /// アプリの設定 (D-238「カスタムモーションとアニメーション」): 動く装飾を再生するか / 速さの倍率(1.0 = 標準)。
+  /// ホストが起動時と設定変更時に書き換える。変更は表示中の装飾にもすぐ効く。
+  static final ValueNotifier<({bool enabled, double speed})> motion = ValueNotifier((enabled: true, speed: 1.0));
+
   @override
   State<RasqMfmTransform> createState() => _RasqMfmTransformState();
 }
@@ -72,11 +76,26 @@ class _RasqMfmTransformState extends State<RasqMfmTransform> with SingleTickerPr
   static const _animated = {'shake', 'spin', 'jump', 'bounce', 'rainbow', 'twitch', 'jelly', 'tada'};
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final wantsAnimation = _animated.contains(widget.fn) && !MediaQuery.disableAnimationsOf(context);
+  void initState() {
+    super.initState();
+    RasqMfmTransform.motion.addListener(_onMotion);
+  }
+
+  void _onMotion() {
+    if (!mounted) return;
+    _controller?.dispose();
+    _controller = null;
+    _sync();
+    setState(() {});
+  }
+
+  void _sync() {
+    final m = RasqMfmTransform.motion.value;
+    final wantsAnimation = _animated.contains(widget.fn) && m.enabled && !MediaQuery.disableAnimationsOf(context);
     if (wantsAnimation && _controller == null) {
-      _controller = AnimationController(vsync: this, duration: RasqMfmTransform.speedOf(widget.args, _defaultSpeed(widget.fn)))..repeat();
+      final base = RasqMfmTransform.speedOf(widget.args, _defaultSpeed(widget.fn));
+      final scaled = Duration(microseconds: (base.inMicroseconds / (m.speed <= 0 ? 1.0 : m.speed)).round());
+      _controller = AnimationController(vsync: this, duration: scaled)..repeat();
     } else if (!wantsAnimation) {
       _controller?.dispose();
       _controller = null;
@@ -84,7 +103,14 @@ class _RasqMfmTransformState extends State<RasqMfmTransform> with SingleTickerPr
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
+  }
+
+  @override
   void dispose() {
+    RasqMfmTransform.motion.removeListener(_onMotion);
     _controller?.dispose();
     super.dispose();
   }

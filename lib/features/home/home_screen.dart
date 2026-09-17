@@ -13,6 +13,7 @@ import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../compose/compose_target.dart';
+import '../settings/settings_dsl.dart';
 import '../compose/composer_sheet.dart';
 import '../nodeprog/node_tabs.dart';
 import '../relational/relational_timeline_view.dart';
@@ -54,7 +55,9 @@ class HomeScreen extends ConsumerWidget {
       initialIndex: initial,
       child: Scaffold(
         // フォロー中のホストの AsTell (D-163): ヘッダーの角丸四角形にバンドルを並べる。
-        appBar: RasqHomeHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref), vcWidget: const AstellHeaderStrip()),
+        appBar: RasqHomeHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref), 
+            // Tell タイル (D-238、設定 `astell.tiles`): 出す / 出さないと並べる数。
+            vcWidget: settingValue(ref, 'astell.tiles', 'headerStrip', true) == false ? null : AstellHeaderStrip(max: ((settingValue(ref, 'astell.tiles', 'headerMax', 4) as num).round()).clamp(1, 8))),
         body: Column(children: [
           Container(
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),

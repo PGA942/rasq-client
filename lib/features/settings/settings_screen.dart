@@ -35,6 +35,7 @@ class SettingsScreen extends ConsumerWidget {
         RasqListTile(title: 'ASTell', onTap: () => context.push('/settings/section/astell')),
         RasqListTile(title: 'リレーショナルタイムライン', onTap: () => context.push('/settings/section/relational')),
         RasqListTile(title: 'トレンド', onTap: () => context.push('/settings/section/trend')),
+        RasqListTile(title: 'RAi(アシスタント)', onTap: () => context.push('/settings/section/rai')),
         RasqListTile(title: '通知', onTap: () => context.push('/settings/section/notifications')),
         RasqListTile(title: 'RASQについて', onTap: () => context.push('/settings/section/about')),
         RasqListTile(title: 'ミュート/ブロック', onTap: () => context.pushMuteBlock()),

@@ -1,0 +1,50 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "plugins.trend",
+  "title": "カスタムトレンドの配信",
+  "defaults": {
+    "enabled": true
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "トレンドプラグイン"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "enabled",
+        "p": {
+          "title": "トレンドプラグインの候補を表示",
+          "value": "$.settings.enabled",
+          "subtitle": "検索ホームのトレンド欄に、入れているトレンドプラグイン(trend.suggest)の候補チップを出します"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "オフにすると、プラグインは呼び出されません(入れたままでも通信しません)。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/store",
+        "p": {
+          "title": "プラグインストア",
+          "subtitle": "トレンドプラグインを探す / 管理する"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      }
+    ]
+  }
+}

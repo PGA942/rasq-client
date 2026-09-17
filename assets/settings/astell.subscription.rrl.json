@@ -1,0 +1,39 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "astell.subscription",
+  "title": "ASTell 4Uを購読",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "状態"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "購読",
+          "value": "未購読"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "提供",
+          "value": "第二期"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "ASTell 4U は、AsTell のおすすめ(For You)配信とサーバー側の文字起こし / 要約の有料プランです。第一期では提供していません。おすすめ欄は RASQ サーバーの無料の推薦で動きます。",
+          "pad": 16,
+          "size": 13
+        }
+      }
+    ]
+  }
+}

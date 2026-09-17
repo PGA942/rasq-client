@@ -562,6 +562,29 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('rai_chat_tracegraph.png'));
   });
 
+  testWidgets('settings filled in (D-238)', (tester) async {
+    final c = await pump(tester);
+    rootBundle.clear();
+    c.read(routerProvider).push('/settings/section/plugins');
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('settings_plugins.png'));
+    await tester.tap(find.text('カスタムトレンドの配信'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('settings_plugins_trend.png'));
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    c.read(routerProvider).push('/settings/dsl/appearance.video');
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('settings_video.png'));
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    c.read(routerProvider).push('/settings/legal');
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('settings_legal.png'));
+  });
+
   testWidgets('RAi sidebar (D-214)', (tester) async {
     final c = await pump(tester);
     RasqSidebar.open(c.read(overlayManagerProvider));

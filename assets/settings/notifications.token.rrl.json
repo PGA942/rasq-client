@@ -1,0 +1,42 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "notifications.token",
+  "title": "アクセストークン",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "状態"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "プッシュ通知",
+          "value": "未提供(端末のローカル通知のみ)"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "通知専用のアクセストークンは、サーバーからのプッシュ通知(FCM / APNs)を受けるための読み取り専用トークンです。第一期にはプッシュ基盤が無いため発行しません。通知はアプリを開いている間の取得と、AsTell の開始通知(ローカル通知)で届きます。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/settings/dsl/sns.security",
+        "p": {
+          "title": "SNS のアクセストークンと権限"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "appearance.video",
+  "title": "ピクチャインピクチャ",
+  "defaults": {
+    "autoplay": true,
+    "defaultSpeed": "1.0",
+    "pipKeepPosition": true
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "動画"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "autoplay",
+        "p": {
+          "title": "開いたら自動で再生",
+          "value": "$.settings.autoplay",
+          "subtitle": "全画面ビューワーと小窓(PiP)で、準備ができ次第再生します"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "pipKeepPosition",
+        "p": {
+          "title": "小窓へ移るとき再生位置を引き継ぐ",
+          "value": "$.settings.pipKeepPosition",
+          "subtitle": "全画面の「小窓で再生」を押したときの続きから再生します"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "既定の再生速度"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "defaultSpeed",
+        "p": {
+          "title": "0.75×",
+          "value": "0.75",
+          "group": "$.settings.defaultSpeed"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "defaultSpeed",
+        "p": {
+          "title": "1.0×(標準)",
+          "value": "1.0",
+          "group": "$.settings.defaultSpeed"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "defaultSpeed",
+        "p": {
+          "title": "1.25×",
+          "value": "1.25",
+          "group": "$.settings.defaultSpeed"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "defaultSpeed",
+        "p": {
+          "title": "1.5×",
+          "value": "1.5",
+          "group": "$.settings.defaultSpeed"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "defaultSpeed",
+        "p": {
+          "title": "2.0×",
+          "value": "2.0",
+          "group": "$.settings.defaultSpeed"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "小窓は FOW なので、掴んでカラムや上下へ動かせます。",
+          "pad": 16,
+          "size": 13
+        }
+      }
+    ]
+  }
+}

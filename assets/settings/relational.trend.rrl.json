@@ -1,0 +1,42 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "relational.trend",
+  "title": "トレンドタイムラインへの配信",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "状態"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "提供",
+          "value": "アルゴリズム確定後(D-011)"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "関連タブの会話イベントをトレンドのタイムラインへ流す配信は、トレンド側のノード(アルゴリズム)に「関連タイムライン」ノードを置く形で組めます。",
+          "pad": 16,
+          "size": 13
+        }
+      },
+      {
+        "t": "ListTile",
+        "k": "/tlconfig/trend",
+        "p": {
+          "title": "トレンドをカスタマイズ"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      }
+    ]
+  }
+}

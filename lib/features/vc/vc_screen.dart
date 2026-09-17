@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../settings/settings_dsl.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
@@ -67,11 +69,12 @@ class VcScreen extends ConsumerWidget {
                   onTap: () => open(r),
                 ),
             ],
-            section('おすすめ', h.recommended, emptyHint: 'おすすめの VC はまだありません'),
+            if (settingValue(ref, 'astell.trend', 'showRecommended', true) != false) section('おすすめ', h.recommended, emptyHint: 'おすすめの VC はまだありません'),
             // 近日開催 (D-159): 開催予約中のルーム(予約時刻の近い順)。
             if (h.upcoming.isNotEmpty) section('近日開催', h.upcoming),
-            section('トレンド', h.trending, emptyHint: 'トレンドの VC はまだありません', onSettings: () {}),
-            section('フォロー中', h.following, emptyHint: 'フォロー中のユーザーの VC はありません', onSettings: () {}),
+            // 欄の歯車 (D-238): AsTell の設定ページへ。
+            if (settingValue(ref, 'astell.trend', 'showTrending', true) != false) section('トレンド', h.trending, emptyHint: 'トレンドの VC はまだありません', onSettings: () => context.push('/settings/dsl/astell.trend')),
+            section('フォロー中', h.following, emptyHint: 'フォロー中のユーザーの VC はありません', onSettings: () => context.push('/settings/dsl/astell.tiles')),
             const SizedBox(height: 80),
           ]),
         ),

@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:material_ui/material_ui.dart' as mui;
 
 import '../features/plugins/slot_plugins.dart';
+import '../features/media/video_player.dart' show VideoPrefs;
 import '../features/settings/settings_dsl.dart';
 import 'providers.dart';
 import 'router.dart';
@@ -20,6 +21,12 @@ class RasqApp extends ConsumerWidget {
     // spin/rainbow 等は既にこれを見て静止画に縮退する。
     final textScale = (settingValue(ref, 'appearance.display', 'textScale', 100) as num).toDouble() / 100.0;
     final reduceMotion = settingValue(ref, 'appearance.motion', 'reduceMotion', false) == true;
+    // MFM の動き / 動画の既定 (D-238): 描画側の静的な設定へ流す。
+    final mfm = (enabled: settingValue(ref, 'appearance.mfm', 'animations', true) != false, speed: ((settingValue(ref, 'appearance.mfm', 'speed', 100) as num).toDouble() / 100.0).clamp(0.25, 4.0));
+    if (RasqMfmTransform.motion.value != mfm) WidgetsBinding.instance.addPostFrameCallback((_) => RasqMfmTransform.motion.value = mfm);
+    VideoPrefs.autoplay = settingValue(ref, 'appearance.video', 'autoplay', true) != false;
+    VideoPrefs.defaultSpeed = double.tryParse('${settingValue(ref, 'appearance.video', 'defaultSpeed', '1.0')}') ?? 1.0;
+    VideoPrefs.pipKeepPosition = settingValue(ref, 'appearance.video', 'pipKeepPosition', true) != false;
     return MaterialApp.router(
       title: 'RASQ',
       // スロットプラグインのトースト出口 (D-167)。

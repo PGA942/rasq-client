@@ -1,0 +1,46 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "about.subscription",
+  "title": "購読状況",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "RASQ の購読"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "プラン",
+          "value": "無料(第一期は購読プラン無し)"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "プラグインプロキシ",
+          "value": "未購読"
+        }
+      },
+      {
+        "t": "ValueListTile",
+        "p": {
+          "title": "ASTell 4U",
+          "value": "未購読"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "有料プランは第二期に RASQ アカウントに紐づけて提供します。",
+          "pad": 16,
+          "size": 13
+        }
+      }
+    ]
+  }
+}

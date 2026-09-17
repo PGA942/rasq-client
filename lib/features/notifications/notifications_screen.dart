@@ -6,6 +6,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
 
+import '../settings/settings_dsl.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
@@ -47,8 +48,12 @@ class NotificationsScreen extends ConsumerWidget {
     final follows = ref.watch(followStateProvider);
     bool isFollowed(UserSummary u) => viewer != null && (follows[followKey(viewer.key, '${viewer.kind.name}:${viewer.instance}:${u.id}')]?.following ?? false);
 
+    // 通知の表示形式 (D-238、設定 `appearance.notifications`): 最初に開くタブと、開始通知の予定の欄。
+    final startFollowing = settingValue(ref, 'appearance.notifications', 'defaultTab', 'all') == 'following';
+    final showReminders = settingValue(ref, 'appearance.notifications', 'showReminders', true) != false;
     return DefaultTabController(
       length: tabs.length,
+      initialIndex: startFollowing && tabs.length > 1 ? 1 : 0,
       child: Scaffold(
         appBar: RasqNotificationHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref)),
         body: Column(children: [
@@ -57,7 +62,7 @@ class NotificationsScreen extends ConsumerWidget {
             RasqIconButton(icon: Icons.settings, size: 20, onPressed: () => showNotificationPrefs(ref), tooltip: '通知プロファイル設定'),
           ]),
           // 登録した開始通知 (D-160): 端末のローカル通知に入れた予定。
-          const _AstellReminders(),
+          if (showReminders) const _AstellReminders(),
           Expanded(
             child: TabBarView(children: [
               _List(items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future)),
