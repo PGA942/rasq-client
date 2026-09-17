@@ -42,21 +42,37 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  /// 入力を正して保存する (D-239)。解釈できない入力は保存せず、理由を出す。戻り値 = 保存できたか。
+  Future<bool> _save({bool quiet = false}) async {
+    final central = _central.text.trim();
+    final edge = _url.text.trim();
+    final centralUri = central.isEmpty ? null : normalizeServerUrl(central);
+    final edgeUri = edge.isEmpty ? null : normalizeServerUrl(edge);
+    if ((central.isNotEmpty && centralUri == null) || (edge.isNotEmpty && edgeUri == null)) {
+      setState(() => _probe = '接続先を解釈できません。「http://192.168.3.14:8080」や「https://central.example」の形で入れてください。');
+      return false;
+    }
     setState(() => _busy = true);
-    await ref.read(settingsAreaProvider(backendSettingsArea).notifier).set('baseUrl', _url.text.trim());
-    await ref.read(settingsAreaProvider(backendSettingsArea).notifier).set('centralUrl', _central.text.trim());
+    // 正した形を欄にも戻す(スキームの補完など)。
+    _central.text = centralUri?.toString() ?? '';
+    _url.text = edgeUri?.toString() ?? '';
+    await ref.read(settingsAreaProvider(backendSettingsArea).notifier).set('baseUrl', _url.text);
+    await ref.read(settingsAreaProvider(backendSettingsArea).notifier).set('centralUrl', _central.text);
     // 接続先が変わったので、アカウントとストアを取り直す。
     ref.invalidate(orgateAccountProvider);
     ref.invalidate(storeKeyProbeProvider);
-    if (mounted) setState(() { _busy = false; _probe = null; });
+    if (mounted) setState(() { _busy = false; if (!quiet) _probe = '保存しました'; });
+    return true;
   }
 
+  /// 接続テスト (D-239): **いま入力してある接続先**で試す(先に保存する。以前は保存前の値で試して
+  /// 「接続先が設定されていません」になった)。
   Future<void> _test() async {
+    if (!await _save(quiet: true)) return;
     setState(() { _busy = true; _probe = null; });
     final client = ref.read(centralClientProvider);
     if (client == null) {
-      setState(() { _busy = false; _probe = '接続先が設定されていません'; });
+      setState(() { _busy = false; _probe = '接続先を入力してください(例: http://192.168.3.14:8080)'; });
       return;
     }
     try {
@@ -70,7 +86,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
         });
       }
     } on OrgateException catch (e) {
-      if (mounted) setState(() { _busy = false; _probe = '接続できませんでした — $e'; });
+      if (mounted) setState(() { _busy = false; _probe = '接続できませんでした(${ref.read(centralBaseUrlProvider)})— $e'; });
     }
   }
 
@@ -100,20 +116,20 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
         const SizedBox(height: RasqSpacing.md),
         Text('RASQ Central の接続先(空ならエッジを流用)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 4),
-        RasqInput(controller: _central, hintText: 'https://central.rasq.example', keyboardType: TextInputType.url),
+        RasqInput(key: const ValueKey('backend.central'), controller: _central, hintText: 'https://central.rasq.example', keyboardType: TextInputType.url),
         const SizedBox(height: RasqSpacing.sm),
         Text('エッジ(orgate-server)の接続先', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 4),
-        RasqInput(controller: _url, hintText: 'https://orgate.example', keyboardType: TextInputType.url),
+        RasqInput(key: const ValueKey('backend.edge'), controller: _url, hintText: 'https://orgate.example', keyboardType: TextInputType.url),
         const SizedBox(height: RasqSpacing.sm),
         Row(children: [
-          Expanded(child: FilledButton(onPressed: _busy ? null : _save, child: const Text('保存'))),
+          Expanded(child: FilledButton(key: const ValueKey('backend.save'), onPressed: _busy ? null : () => _save(), child: const Text('保存'))),
           const SizedBox(width: RasqSpacing.sm),
-          Expanded(child: OutlinedButton(onPressed: _busy ? null : _test, child: const Text('接続テスト'))),
+          Expanded(child: OutlinedButton(key: const ValueKey('backend.test'), onPressed: _busy ? null : _test, child: const Text('接続テスト'))),
         ]),
         if (_probe != null) ...[
           const SizedBox(height: RasqSpacing.sm),
-          Text(_probe!, style: RasqTypography.bodySmall),
+          Text(_probe!, key: const ValueKey('backend.probe'), style: RasqTypography.bodySmall),
         ],
         const SizedBox(height: RasqSpacing.sm),
         Text(

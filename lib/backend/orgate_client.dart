@@ -41,20 +41,30 @@ const backendSettingsArea = 'backend';
 final orgateBaseUrlProvider = Provider<Uri?>((ref) {
   final override = ref.watch(settingsAreaProvider(backendSettingsArea)).value?['baseUrl'];
   final raw = (override is String && override.trim().isNotEmpty) ? override.trim() : _defaultBaseUrl;
-  if (raw.isEmpty) return null;
-  final uri = Uri.tryParse(raw.endsWith('/') ? raw.substring(0, raw.length - 1) : raw);
-  if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
-  return uri;
+  return normalizeServerUrl(raw);
 });
 
 /// サーバーに繋がる構成かどうか。false ならストアはモック、RASQ アカウントは
 /// 最初のログインアカウントからの流用に縮退する。
 final orgateConfiguredProvider = Provider<bool>((ref) => ref.watch(orgateBaseUrlProvider) != null);
 
-Uri? _parseBase(String raw) {
-  if (raw.isEmpty) return null;
-  final uri = Uri.tryParse(raw.endsWith('/') ? raw.substring(0, raw.length - 1) : raw);
-  if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
+Uri? _parseBase(String raw) => normalizeServerUrl(raw);
+
+/// 接続先の入力を正す (D-239): 前後の空白 / 全角の「:/.」/ 末尾の `/` を直し、スキームが無ければ
+/// IP アドレス・localhost・ポート付きは `http://`、それ以外は `https://` を補う。解釈できなければ null。
+Uri? normalizeServerUrl(String raw) {
+  var t = raw.trim().replaceAll('\uFF1A', ':').replaceAll('\uFF0F', '/').replaceAll('\uFF0E', '.').replaceAll(RegExp(r'\s+'), '');
+  if (t.isEmpty) return null;
+  if (!RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*://').hasMatch(t)) {
+    final hostPart = t.split('/').first;
+    final local = RegExp(r'^(\d{1,3}(\.\d{1,3}){3}|localhost|\[[0-9a-fA-F:]+\]|[^.]+)(:\d+)?$').hasMatch(hostPart) || RegExp(r':\d+$').hasMatch(hostPart);
+    t = '${local ? 'http' : 'https'}://$t';
+  }
+  while (t.endsWith('/')) {
+    t = t.substring(0, t.length - 1);
+  }
+  final uri = Uri.tryParse(t);
+  if (uri == null || !uri.hasScheme || uri.host.isEmpty || (uri.scheme != 'http' && uri.scheme != 'https')) return null;
   return uri;
 }
 
@@ -93,6 +103,9 @@ class OrgateClient {
   final String? Function()? tokenProvider;
 
   static const _timeout = Duration(seconds: 20);
+
+  /// 同じ接続先 / HTTP クライアントで、別のトークンを使う口 (D-239: 通知専用のアクセストークンで受信箱を読む)。
+  OrgateClient withToken(String? Function() tokenProvider) => OrgateClient(baseUrl: baseUrl, httpClient: _http, tokenProvider: tokenProvider);
 
   Uri _url(String path, [Map<String, String?> query = const {}]) {
     final q = {for (final e in query.entries) if (e.value != null && e.value!.isNotEmpty) e.key: e.value!};

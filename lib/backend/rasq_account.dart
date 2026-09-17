@@ -93,6 +93,9 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// 現在のトークン(build 完了前は null)。
   String? get token => _creds?.token;
 
+  /// 端末 id(`POST /auth/device` と同じ。プッシュの端末登録 (D-239) でも使う)。
+  String? get deviceId => _creds?.deviceId;
+
   void _publishToken() => ref.read(orgateTokenHolderProvider).token = _creds?.token;
 
   @override

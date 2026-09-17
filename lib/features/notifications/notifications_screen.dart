@@ -9,6 +9,7 @@ import 'package:rasq_store/rasq_store.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../../text/inline_spans.dart';
@@ -98,7 +99,10 @@ Future<void> showNotificationPrefs(WidgetRef ref) {
               }
             },
           ),
-        RasqListTile(title: '通知専用のアクセストークン', onTap: () {}),
+        RasqListTile(title: '通知専用のアクセストークン', onTap: () {
+            ref.read(overlayManagerProvider).close('notifications.prefs');
+            ref.read(routerProvider).push(Routes.settingsNotifyToken);
+          }),
         const SizedBox(height: 8),
       ]);
     }),

@@ -74,7 +74,7 @@ const settingsSections = <String, SettingsSection>{
   ]),
   'notifications': SettingsSection('通知', [
     SettingsRow('プロファイル', route: 'notificationPrefs'),
-    SettingsRow('アクセストークン', subtitle: 'プッシュ通知用(未提供)', route: '/settings/dsl/notifications.token'),
+    SettingsRow('アクセストークン', subtitle: '通知専用のトークンの発行 / 失効、端末のプッシュ登録', route: Routes.settingsNotifyToken),
     SettingsRow('セキュリティ', subtitle: 'SNS の権限とアクセストークン', route: '/settings/dsl/sns.security'),
   ]),
   'about': SettingsSection('RASQについて', [
