@@ -18,7 +18,6 @@ import '../home/post_row.dart';
 import '../post/post_menu.dart';
 import '../home/timeline_providers.dart';
 import '../plugins/slot_plugins.dart';
-import '../settings/settings_dsl.dart';
 import 'video_player.dart';
 import 'viewer_plugin_overlay.dart';
 
@@ -228,8 +227,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     Future<void> perform(ActionDescriptor a) => isViewerToggleActionId(a.id) ? _toggleViewerPlugin(viewerTogglePluginId(a.id)) : notifier.perform(post, a).catchError((_) {});
     Widget toggle(ActionDescriptor a) {
       final id = viewerTogglePluginId(a.id);
-      final on = enabled.contains(id);
-      return _Circle(child: RasqIconButton(key: ValueKey('viewer.plugin.$id'), icon: on ? Icons.extension : Icons.extension_outlined, color: on ? RasqColors.accent : Colors.white, tooltip: a.label, onPressed: () => perform(a)));
+      return ViewerPluginToggle(pluginId: id, label: a.label, enabled: enabled.contains(id), status: _overlays.statusOf(i, id), onPressed: () => perform(a));
     }
     return [
       for (final e in entries)
@@ -260,14 +258,13 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     ];
   }
 
-  /// 全画面表示プラグインの ON / OFF (D-207 → D-214): 状態は `slots.viewer` に保存。
-  /// 有効にしたら、この画像をまだ渡していなければ渡す。無効は重ねを出さないだけ(トークンは残す)。
+  /// 全画面表示プラグインの ON / OFF (D-207 → D-214 → D-246): 状態は `slots.viewer` に保存。失敗中はやり直し。
   Future<void> _toggleViewerPlugin(String pluginId) async {
-    final on = !ref.read(viewerOverlayPluginsProvider).any((p) => p.id == pluginId);
-    await ref.read(settingsAreaProvider(viewerPluginsSettingsArea).notifier).set(viewerPluginEnabledKey(pluginId), on);
-    if (!mounted) return;
-    if (on) _askOverlay(_page.value);
-    setState(() {});
+    final i = _page.value;
+    final m = widget.post.media[i];
+    final url = m.type == MediaType.video ? m.thumbnailUrl : (m.type == MediaType.image || m.type == MediaType.gif ? m.url : null);
+    await _overlays.toggle(pluginId, i, url);
+    if (mounted) setState(() {});
   }
 
   /// PiP (D-204): ビューワーを閉じてインライン再生 FOW を同じ位置から開く。

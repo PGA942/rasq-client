@@ -710,12 +710,22 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   void textDone(String token) => _textReplace.remove(token);
 
-  /// メディア全画面 (CONTRACT §2.4)。戻りは重ねる RRL(無ければ null)。
-  Future<RrlNode?> viewerOpen(SlotPlugin plugin, {required String token, required String url, required String mimeType, required int width, required int height, Uint8List? bytes, required void Function(RrlNode root) onOverlay}) async {
+  /// メディア全画面 (CONTRACT §2.4)。戻りは重ねる RRL(無ければ null)と、失敗の説明(成功なら null)。
+  /// 契約では壊れた入力(`D01`)は「黙って重ねない」だが、ユーザーには理由を見せる (D-246: トグルに出す)。
+  Future<({RrlNode? root, String? error})> viewerOpen(SlotPlugin plugin, {required String token, required String url, required String mimeType, required int width, required int height, Uint8List? bytes, required void Function(RrlNode root) onOverlay}) async {
     _overlaySet[token] = onOverlay;
-    final v = await plugin.value('viewer.open', {'token': token, 'url': url, 'mimeType': mimeType, 'width': width, 'height': height, if (bytes != null) 'bytesB64': base64Encode(bytes)});
-    final root = v?['root'];
-    return root is Map ? RrlNode.fromJson(root.cast<String, Object?>()) : null;
+    try {
+      final r = await plugin.call('viewer.open', {'token': token, 'url': url, 'mimeType': mimeType, 'width': width, 'height': height, if (bytes != null) 'bytesB64': base64Encode(bytes)});
+      if (r['ok'] != true) {
+        final e = r['error'];
+        return (root: null, error: e is Map ? '${e['code'] ?? ''} ${e['message'] ?? ''}'.trim() : 'プラグインがエラーを返しました');
+      }
+      final root = (r['value'] as Map?)?['root'];
+      return (root: root is Map ? RrlNode.fromJson(root.cast<String, Object?>()) : null, error: null);
+    } catch (e) {
+      debugPrint('slot plugin ${plugin.manifest.id}.viewer.open: $e');
+      return (root: null, error: '$e');
+    }
   }
 
   void viewerClose(SlotPlugin plugin, String token) {
