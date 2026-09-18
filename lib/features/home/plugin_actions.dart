@@ -78,11 +78,69 @@ SlotActionDecl viewerToggleDecl(SlotManifest m) {
   );
 }
 
-/// 構成キーに応じたプラグインボタン: 全画面バー(`viewer:` の構成)には全画面表示プラグインのトグルも含む。
-final pluginActionsForProvider = Provider.family<List<PluginAction>, String>((ref, configKey) => [
-      ...ref.watch(pluginActionsProvider),
-      if (configKey.startsWith('viewer:')) ...ref.watch(viewerPluginActionsProvider),
+// ── 加工画面の下段バー (D-249、契約 v0.10) ─────────────────────────────
+
+/// 加工画面の下段バーの構成キー: `editor:image` / `editor:video`(アカウントに依らない)。
+const editorImageConfigKey = 'editor:image';
+const editorVideoConfigKey = 'editor:video';
+
+bool isEditorConfigKey(String configKey) => configKey.startsWith('editor:');
+
+String editorConfigKeyFor(String mimeType) => mimeType.startsWith('image/') ? editorImageConfigKey : editorVideoConfigKey;
+
+/// プラグインボタンの有効 / 無効と閾値の置き場: 加工画面は `slots.editor`、ほかはアカウントごと。
+String slotSettingsKeyFor(String configKey, String accountKey) => isEditorConfigKey(configKey) ? 'editor' : accountKey;
+
+/// 宣言が無い `composer.media` プラグインのボタン(プラグイン名 + パズルのアイコン、画像だけ)。
+const mediaEditDefaultActionId = 'composer.media';
+
+/// 内蔵の編集(pro_image_editor)。id は `editor:<tool>`。動画にも同じものが出る。
+const editorBuiltinActions = <ActionDescriptor>[
+  ActionDescriptor(id: 'editor:cropRotate', genreTag: 'Transform', label: 'クロップ / 回転', icon: 'crop_rotate', doneIcon: 'crop_rotate', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:paint', genreTag: 'Draw', label: 'ペイント', icon: 'edit', doneIcon: 'edit', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:text', genreTag: 'Text', label: 'テキスト', icon: 'text_fields', doneIcon: 'text_fields', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:emoji', genreTag: 'Sticker', label: '絵文字', icon: 'sentiment_satisfied_alt', doneIcon: 'sentiment_satisfied_alt', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:filter', genreTag: 'Filter', label: 'フィルター', icon: 'filter', doneIcon: 'filter', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:blur', genreTag: 'Blur', label: 'ぼかし', icon: 'blur_on', doneIcon: 'blur_on', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:tune', genreTag: 'Tune', label: '調整', icon: 'tune', doneIcon: 'tune', countSource: CountSource.none),
+];
+
+/// `composer.media` プラグインの下段バーのボタン(契約 v0.10): マニフェストの `actions` の
+/// `slot: "composer.media"` の項目。1 つも宣言していないプラグインは、従来どおり画像にだけ出る既定のボタン 1 つ。
+List<SlotActionDecl> mediaEditDecls(SlotManifest m) {
+  final declared = [for (final a in m.actions) if (a.slot == SlotIds.composerMedia) a];
+  if (declared.isNotEmpty) return declared;
+  return [SlotActionDecl(id: mediaEditDefaultActionId, label: m.name, icon: 'extension', tags: const ['Plugin'], slot: SlotIds.composerMedia)];
+}
+
+final mediaPluginActionsProvider = Provider<List<PluginAction>>((ref) => [
+      for (final p in ref.watch(slotPluginsForProvider(SlotIds.composerMedia)))
+        for (final a in mediaEditDecls(p.manifest)) PluginAction(plugin: p, decl: a),
     ]);
+
+/// 構成キーに応じたプラグインボタン: 全画面バー(`viewer:` の構成)には全画面表示プラグインのトグルも含む。
+/// 加工画面(`editor:` の構成)は `composer.media` の宣言だけ(その種類の添付に出るもの)。
+final pluginActionsForProvider = Provider.family<List<PluginAction>, String>((ref, configKey) {
+  if (isEditorConfigKey(configKey)) {
+    final mime = configKey == editorImageConfigKey ? 'image/*' : 'video/*';
+    return [for (final a in ref.watch(mediaPluginActionsProvider)) if (mediaAcceptsKind(a.decl.accepts, mime)) a];
+  }
+  return [
+    ...ref.watch(pluginActionsProvider),
+    if (configKey.startsWith('viewer:')) ...ref.watch(viewerPluginActionsProvider),
+  ];
+});
+
+/// バーの種類(`image/*` / `video/*`)に出うる宣言か: 拡張子だけの宣言はどちらにも出うる(実際の添付で絞る)。
+/// 音声(`audio/*`)は動画のバーで扱う(音声だけのファイルは動画として編集する)。
+bool mediaAcceptsKind(List<String> accepts, String kind) {
+  if (accepts.isEmpty) return kind == 'image/*';
+  final major = kind.substring(0, kind.indexOf('/'));
+  return accepts.any((a) {
+    final t = a.trim().toLowerCase();
+    return t.startsWith('.') || t == '*' || t == '*/*' || t.startsWith('$major/') || (major == 'video' && t.startsWith('audio/'));
+  });
+}
 
 /// アカウントごとのスロット設定(設定エリア `slots.<accountKey>`)。
 @immutable

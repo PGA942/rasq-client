@@ -146,7 +146,7 @@ class ActionBarConfigStore extends Notifier<ActionBarConfig> {
   final String arg;
   bool _loaded = false;
 
-  /// 全画面ビューワーのバー (D-210) は `viewer:<accountKey>` で別の構成を持つ。
+  /// 全画面ビューワーのバー (D-210) は `viewer:<accountKey>`、加工画面の下段バー (D-249) は `editor:image` / `editor:video` で別の構成を持つ。
   String get _key => arg.isEmpty ? storageKey : '$storageKey.$arg';
 
   static String viewerKey(String accountKey) => 'viewer:$accountKey';
@@ -162,7 +162,7 @@ class ActionBarConfigStore extends Notifier<ActionBarConfig> {
     _loaded = true;
     try {
       final storage = ref.read(sessionStorageProvider);
-      final raw = await storage.read(_key) ?? (arg.isEmpty || arg.startsWith('viewer:') ? null : await storage.read(storageKey));
+      final raw = await storage.read(_key) ?? (arg.isEmpty || arg.startsWith('viewer:') || arg.startsWith('editor:') ? null : await storage.read(storageKey));
       if (raw != null) state = ActionBarConfig.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
     } catch (_) {
       // 壊れた保存値は既定にフォールバック(次の set で上書きされる)。

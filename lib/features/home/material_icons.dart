@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Material Icon の名前 → アイコン (D-212、バンドルのアイコンとピッカー用)。よく使う 1087 個(`Icons` の基本形)。
+/// Material Icon の名前 → アイコン (D-212、バンドルのアイコンとピッカー用)。よく使う 1089 個(`Icons` の基本形)。
 /// 生成: flutter/lib/src/material/icons.dart をキーワードで絞り込み。
 const materialIconsByName = <String, IconData>{
   'access_alarm': Icons.access_alarm,
@@ -105,6 +105,7 @@ const materialIconsByName = <String, IconData>{
   'bluetooth_disabled': Icons.bluetooth_disabled,
   'bluetooth_drive': Icons.bluetooth_drive,
   'bluetooth_searching': Icons.bluetooth_searching,
+  'blur_on': Icons.blur_on,
   'bolt': Icons.bolt,
   'book': Icons.book,
   'book_online': Icons.book_online,
@@ -972,6 +973,7 @@ const materialIconsByName = <String, IconData>{
   'tag_faces': Icons.tag_faces,
   'tap_and_play': Icons.tap_and_play,
   'terminal': Icons.terminal,
+  'text_fields': Icons.text_fields,
   'text_format': Icons.text_format,
   'text_rotate_up': Icons.text_rotate_up,
   'text_rotate_vertical': Icons.text_rotate_vertical,

@@ -8,7 +8,8 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
-import 'package:rasq_client/features/plugins/media_editor_screen.dart';
+import 'package:rasq_client/features/home/plugin_actions.dart';
+import 'package:rasq_client/features/plugins/media_plugin_panel.dart';
 import 'package:rasq_client/features/plugins/pro_media_editor_screen.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -57,7 +58,7 @@ void main() {
     }
   }
 
-  testWidgets('pro_image_editor が開き、プラグイン無しなら下段バーに「プラグイン」は無い、✕ で null', (tester) async {
+  testWidgets('pro_image_editor が開き、プラグイン無しなら下段バーは内蔵の編集だけ、✕ で null', (tester) async {
     final c = await pump(tester);
     // コンポーザー FOW を開いたまま加工へ → FOW は退避(エディターの前に出ない)、閉じると戻る (D-174)。
     await tester.tap(find.byTooltip('投稿'));
@@ -71,7 +72,20 @@ void main() {
     expect(manager.isFowSuspended(composer), isTrue);
     expect(find.text('クロップ / 回転'), findsOneWidget); // 日本語化
     expect(find.text('ペイント'), findsOneWidget);
-    expect(find.byKey(proMediaEditorPluginKey), findsNothing);
+    expect(find.byKey(proMediaEditorBarKey('editor:cropRotate')), findsOneWidget);
+    expect(find.byKey(proMediaEditorBarEditKey), findsOneWidget);
+    expect(find.byIcon(Icons.extension), findsNothing);
+    // 「バーの編集」: 加工画面のバーだけの編集 FOW が(退避されずに)開く。内蔵の編集もタイルで並ぶ。
+    await tester.ensureVisible(find.byKey(proMediaEditorBarEditKey));
+    await settle(tester);
+    await tester.tap(find.byKey(proMediaEditorBarEditKey));
+    await settle(tester);
+    expect(find.text('加工画面のバー(画像)'), findsOneWidget);
+    expect(find.text('投稿アクションバー'), findsNothing);
+    expect(find.byKey(const ValueKey('actionbar.tile.editor:cropRotate.editor.image')), findsOneWidget);
+    expect(manager.isFowSuspended(manager.entries.where((e) => e.id == 'actionbar.edit').single), isFalse);
+    manager.close('actionbar.edit');
+    await settle(tester);
     await tester.tap(find.byIcon(Icons.clear).first);
     await settle(tester);
     expect(await future, isNull);
@@ -79,7 +93,7 @@ void main() {
     expect(manager.isFowSuspended(composer), isFalse);
   });
 
-  testWidgets('「プラグイン」→ 焼き込んだ画像でメディアエディター → 適用 → 結果が pro_image_editor の背景になる', (tester) async {
+  testWidgets('宣言の無いプラグインのボタン → 焼き込んだ画像で編集パネル → 適用 → 結果が pro_image_editor の背景になる', (tester) async {
     late FakeSlotRuntime rt;
     fakes['m'] = () => rt = FakeSlotRuntime(
           manifest: {'id': 't.m', 'name': 'テスト加工', 'version': '0.1.0', 'kind': 'action', 'slots': ['composer.media'], 'permissions': ['fow.widget']},
@@ -100,25 +114,88 @@ void main() {
     await settle(tester);
     c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: png, name: 'a.jpg', mimeType: 'image/jpeg'));
     await settle(tester);
-    expect(find.byKey(proMediaEditorPluginKey), findsOneWidget);
-    await tester.ensureVisible(find.byKey(proMediaEditorPluginKey)); // 下段バーは横スクロール(右端)
+    final button = find.byKey(proMediaEditorBarKey('slot:t.m:composer.media'));
+    expect(button, findsOneWidget);
+    await tester.ensureVisible(button); // 下段バーは横スクロール(右端)
     await settle(tester);
-    await tester.tap(find.byKey(proMediaEditorPluginKey));
+    await tester.tap(button);
     await settle(tester);
     // バイパス: プラグインのエディターが開き、media.edit には焼き込んだ画像(変更無しなら元のバイト)が渡る。
-    expect(find.byType(MediaEditorScreen), findsOneWidget);
+    expect(find.byType(MediaPluginPanel), findsOneWidget);
     final edit = rt.calls.where((x) => x.$1 == 'media.edit').single.$2;
     expect((edit['bytesB64'] as String).startsWith('iVBORw0KGgo'), isTrue); // PNG で焼き込む(元と同じ画でも再エンコードされる)
     expect(edit['mimeType'], 'image/png');
     expect(edit['name'], 'a.png');
+    expect(edit.containsKey('actionId'), isFalse); // 既定のボタンは宣言 id を渡さない
     await tester.tap(find.byKey(const ValueKey('media.editor.apply')));
     await settle(tester);
     expect(rt.calls.where((x) => x.$1 == 'media.commit').length, 1);
-    expect(find.byType(MediaEditorScreen), findsNothing);
+    expect(find.byType(MediaPluginPanel), findsNothing);
     expect(find.byType(ProImageEditor), findsOneWidget);
     // 背景が差し替わり、レイヤー無し・履歴に 1 段(適用前へは戻れない = 焼き込み)。
     final state = tester.state<ProImageEditorState>(find.byType(ProImageEditor));
     expect(state.stateManager.activeBackgroundImage?.byteArray, png);
     expect(state.activeLayers, isEmpty);
+  });
+
+  testWidgets('下段バーの宣言 (D-249、契約 v0.10): accepts で出し分け、タグが近い内蔵の編集へ束ねる、宣言 id の編集をすぐ始める', (tester) async {
+    late FakeSlotRuntime rt;
+    fakes['d'] = () => rt = FakeSlotRuntime(
+          manifest: {
+            'id': 't.d', 'name': '宣言つき', 'version': '0.1.0', 'kind': 'action', 'slots': ['composer.media'], 'permissions': ['fow.widget'],
+            'actions': [
+              {'id': 'glaze', 'slot': 'composer.media', 'label': 'Glaze', 'icon': 'auto_awesome', 'tags': ['Filter']},
+              {'id': 'wave', 'slot': 'composer.media', 'label': '波形', 'icon': 'graphic_eq', 'tags': ['Audio'], 'accepts': ['audio/*', 'video/*']},
+              {'id': 'gifonly', 'slot': 'composer.media', 'label': 'GIF', 'tags': ['Gif'], 'accepts': ['.gif']},
+            ],
+          },
+          handler: (self, fn, args) {
+            switch (fn) {
+              case 'media.edit':
+                return {'genres': [{'id': 'tone', 'actions': [{'id': 'glaze', 'label': 'Glaze'}]}]};
+              case 'media.action' || 'media.cancel':
+                return {};
+            }
+            return null;
+          },
+        );
+    final c = await pump(tester);
+    await c.read(slotPluginsProvider.notifier).register('fake:d', bytes: Uint8List.fromList('d'.codeUnits));
+    await settle(tester);
+    // 出し分け: 画像のバーには Glaze(accepts 無し = image/*)と GIF(拡張子は実際の添付で絞る)、動画のバーには 波形。
+    expect(c.read(pluginActionsForProvider(editorImageConfigKey)).map((a) => a.decl.id), ['glaze', 'gifonly']);
+    expect(c.read(pluginActionsForProvider(editorVideoConfigKey)).map((a) => a.decl.id), ['wave', 'gifonly']);
+    // 投稿のアクションボタンには混ざらない。
+    expect(c.read(pluginActionsProvider), isEmpty);
+
+    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: png, name: 'a.jpg', mimeType: 'image/jpeg'));
+    await settle(tester);
+    // a.jpg なので GIF 専用は出ない。Glaze はタグ Filter → 内蔵の「フィルター」とのバンドル(auto:editor:filter)に入る。
+    expect(find.byKey(proMediaEditorBarKey('slot:t.d:gifonly')), findsNothing);
+    expect(find.byKey(proMediaEditorBarKey('slot:t.d:glaze')), findsNothing);
+    expect(find.byKey(proMediaEditorBarKey('editor:filter')), findsNothing);
+    final bundle = find.byKey(proMediaEditorBarKey('list:auto:editor:filter'));
+    expect(bundle, findsOneWidget);
+    await tester.ensureVisible(bundle);
+    await settle(tester);
+    await tester.tap(bundle);
+    await settle(tester);
+    await tester.tap(find.text('Glaze'));
+    await settle(tester);
+    expect(find.byType(MediaPluginPanel), findsOneWidget);
+    expect(rt.calls.where((x) => x.$1 == 'media.edit').single.$2['actionId'], 'glaze');
+    // 宣言 id と同じ編集があるので、開いた直後に media.action。
+    final act = rt.calls.where((x) => x.$1 == 'media.action').single.$2;
+    expect((act['genre'], act['action']), ('tone', 'glaze'));
+  });
+
+  test('mediaAccepts: MIME の型 / 完全一致 / 拡張子、空は image/*', () {
+    expect(mediaAccepts(const [], mimeType: 'image/png'), isTrue);
+    expect(mediaAccepts(const [], mimeType: 'video/mp4'), isFalse);
+    expect(mediaAccepts(const ['video/*', 'audio/*'], mimeType: 'audio/mpeg'), isTrue);
+    expect(mediaAccepts(const ['video/mp4'], mimeType: 'video/quicktime'), isFalse);
+    expect(mediaAccepts(const ['.GIF'], mimeType: 'image/gif', name: 'Anim.gif'), isTrue);
+    expect(mediaAccepts(const ['.gif'], mimeType: 'image/png', name: 'a.png'), isFalse);
+    expect(mediaAccepts(const ['*/*'], mimeType: 'application/pdf'), isTrue);
   });
 }

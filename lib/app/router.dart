@@ -19,7 +19,6 @@ import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
 import '../features/login/bluesky_login_screen.dart';
 import '../features/login/mixi2_login_screen.dart';
-import '../features/plugins/media_editor_screen.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
 import '../features/settings/learning_screen.dart';
@@ -76,7 +75,6 @@ abstract final class Routes {
   /// プロフィールのアイコン / バナーの全画面表示 (D-177)。
   static const imageViewer = '/viewer/image';
 
-  static const mediaEditor = '/media-editor';
   static const mediaEditorPro = '/media-editor/pro';
   static const lists = '/lists';
   static const bookmarks = '/bookmarks';
@@ -270,12 +268,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               final x = s.extra as ({Uri url, String? title});
               return CustomTransitionPage(child: ProfileImageViewerScreen(url: x.url, title: x.title), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child));
             },
-          ),
-          // メディアエディター (D-169): 添付をプラグインで加工する全画面。
-          GoRoute(
-            path: Routes.mediaEditor,
-            parentNavigatorKey: _appNavigatorKey,
-            pageBuilder: (_, s) => CustomTransitionPage(child: MediaEditorScreen(args: s.extra! as MediaEditorArgs), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child)),
           ),
           // 添付の加工 (D-173): pro_image_editor(基本)→ プラグインへバイパス。
           GoRoute(
