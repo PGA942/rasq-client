@@ -74,6 +74,7 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
                         ViewerPluginToggle(
                           pluginId: a.plugin.id,
                           label: a.decl.label,
+                          iconName: a.decl.icon,
                           enabled: ref.watch(viewerOverlayPluginsProvider).any((p) => p.id == a.plugin.id),
                           status: _overlays.statusOf(0, a.plugin.id),
                           onPressed: () => _overlays.toggle(a.plugin.id, 0, widget.url),
