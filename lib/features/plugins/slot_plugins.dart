@@ -65,6 +65,7 @@ class SlotManifest {
                 icon: a['icon'] as String?,
                 tags: [for (final t in (a['tags'] as List? ?? const [])) if (t is String) t],
                 slot: a['slot'] as String?,
+                accepts: [for (final t in (a['accepts'] as List? ?? const [])) if (t is String) t],
               ),
         ],
       );
@@ -96,7 +97,7 @@ class SlotManifest {
 
 /// `post.action` のボタン宣言 (§2.9): タグ = 希望スロット(既存ボタンのタグと比べて束ねる)。
 class SlotActionDecl {
-  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const [], this.slot});
+  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const [], this.slot, this.accepts = const []});
   final String id;
   final String label;
   final String? icon;
@@ -106,7 +107,29 @@ class SlotActionDecl {
   /// ON / OFF ボタンの見た目の宣言(押したときの call は無い)。
   final String? slot;
 
+  /// 出現する添付の種類(契約 v0.10、`composer.media` の宣言だけ): MIME の型(`image/*` / `video/mp4` / `audio/*`)か
+  /// 拡張子(`.gif`)。空 = `image/*`(従来どおり画像だけ)。
+  final List<String> accepts;
+
   bool get isPostAction => slot == null || slot == SlotIds.postAction;
+}
+
+/// 添付(MIME + ファイル名)が宣言の `accepts` に当てはまるか(契約 v0.10)。空の宣言は `image/*`。
+bool mediaAccepts(List<String> accepts, {required String mimeType, String name = ''}) {
+  final mime = mimeType.toLowerCase();
+  final file = name.toLowerCase();
+  for (final raw in accepts.isEmpty ? const ['image/*'] : accepts) {
+    final a = raw.trim().toLowerCase();
+    if (a == '*' || a == '*/*') return true;
+    if (a.startsWith('.')) {
+      if (file.endsWith(a)) return true;
+    } else if (a.endsWith('/*')) {
+      if (mime.startsWith(a.substring(0, a.length - 1))) return true;
+    } else if (a == mime) {
+      return true;
+    }
+  }
+  return false;
 }
 
 abstract final class SlotIds {
@@ -602,30 +625,15 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     }
   }
 
-  /// コンポーザーの添付 (CONTRACT §2.2)。戻りは即時差し替え(あれば)。
-  Future<void> mediaEdit(SlotPlugin plugin, {required int index, required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, String? name) onReplace, String? fowOwner, int column = 0}) async {
-    _setFowContext(plugin, fowOwner, column);
-    final token = 'media-${DateTime.now().microsecondsSinceEpoch}';
-    _mediaReplace[token] = onReplace;
-    final v = await plugin.value('media.edit', {'token': token, 'index': index, 'name': name, 'mimeType': mimeType, 'bytesB64': base64Encode(bytes)});
-    if (v != null && v['bytesB64'] is String) {
-      try {
-        onReplace(base64Decode(v['bytesB64'] as String), '${v['mimeType'] ?? mimeType}', v['name'] as String?);
-      } catch (e) {
-        _toast('${plugin.manifest.name}: 画像を受け取れませんでした($e)');
-      }
-    }
-  }
-
   /// メディアエディター (D-169、契約 v0.2 §2.2): `media.edit` を開いて genres を受ける。
   /// 戻り null = エディター形ではない(旧形 / 即差し替え形)。
-  Future<MediaEditSession?> mediaEditorOpen(SlotPlugin plugin, {required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, int? width, int? height) onPreview, required void Function(Uint8List bytes, String mime, String? name) onReplace, void Function(RrlNode? root)? onOverlay, String? fowOwner, int column = 0}) async {
+  Future<MediaEditSession?> mediaEditorOpen(SlotPlugin plugin, {required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, int? width, int? height) onPreview, required void Function(Uint8List bytes, String mime, String? name) onReplace, void Function(RrlNode? root)? onOverlay, String? actionId, String? fowOwner, int column = 0}) async {
     _setFowContext(plugin, fowOwner, column, barrierless: true);
     final token = 'media-${DateTime.now().microsecondsSinceEpoch}';
     _mediaPreview[token] = onPreview;
     _mediaReplace[token] = onReplace;
     if (onOverlay != null) _mediaOverlay[token] = onOverlay;
-    final v = await plugin.value('media.edit', {'token': token, 'index': 0, 'name': name, 'mimeType': mimeType, 'bytesB64': base64Encode(bytes)});
+    final v = await plugin.value('media.edit', {'token': token, 'index': 0, 'name': name, 'mimeType': mimeType, 'actionId': ?actionId, 'bytesB64': base64Encode(bytes)});
     if (v == null) {
       _mediaPreview.remove(token);
       _mediaReplace.remove(token);

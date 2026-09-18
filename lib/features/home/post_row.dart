@@ -100,7 +100,8 @@ class PostRow extends ConsumerStatefulWidget {
     'bookmark': Icons.bookmark,
   };
 
-  static IconData iconFor(String? name, IconData fallback) => _icons[name] ?? fallback;
+  /// 投稿ボタンの小さい表 → Material の全アイコン表 (D-249: 宣言のアイコン名はどのバーでも同じように引く)。
+  static IconData iconFor(String? name, IconData fallback) => _icons[name] ?? materialIconByName(name) ?? fallback;
 
   @override
   ConsumerState<PostRow> createState() => _PostRowState();

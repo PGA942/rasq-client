@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
-import 'package:rasq_client/features/plugins/media_editor_screen.dart';
+import 'package:rasq_client/features/plugins/media_plugin_panel.dart';
 import 'package:rasq_client/features/nodeprog/node_editor_screen.dart';
 import 'package:rasq_client/features/nodeprog/node_executor.dart' show pluginParamsOf;
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
@@ -62,6 +62,17 @@ void main() {
     final p = await c.read(slotPluginsProvider.notifier).register('fake:$name', bytes: Uint8List.fromList(name.codeUnits));
     expect(p, isNotNull, reason: c.read(slotPluginsNoticeProvider));
     return p!;
+  }
+
+  /// 編集パネル (D-249) を単体で開く(本番では加工画面の上に重なる)。結果は onDone で返り、パネルは閉じる。
+  Future<MediaEditResult?> openPanel(WidgetTester tester, SlotPlugin plugin, Uint8List bytes) {
+    // 加工画面と同じ「app」ナビゲーター(FOW / ドロップダウンの層より下)に積む。
+    final nav = tester.stateList<NavigatorState>(find.byType(Navigator)).firstWhere((n) => '${n.widget.key}'.contains('app'));
+    return nav.push<MediaEditResult>(PageRouteBuilder(
+      pageBuilder: (ctx, _, _) => MediaPluginPanel(plugin: plugin, bytes: bytes, name: 'a.png', mimeType: 'image/png', onDone: (r) => Navigator.of(ctx).pop(r)),
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+    ));
   }
 
   setUp(() => fakes = {});
@@ -177,7 +188,8 @@ void main() {
     expect(tester.widget<TextField>(field).controller!.text, 'こんにちは #打上会 ');
     // 添付: 画像を足すのはピッカー経由なので、ここでは加工の口(media.edit → 即差し替え)を直接通す。
     var replaced = <Object?>[];
-    await c.read(slotPluginsProvider.notifier).mediaEdit(c.read(slotPluginsForProvider(SlotIds.composerMedia)).single, index: 0, name: 'a.png', mimeType: 'image/png', bytes: Uint8List.fromList([9, 9]), onReplace: (b, m, n) => replaced = [b, m, n]);
+    final session = await c.read(slotPluginsProvider.notifier).mediaEditorOpen(c.read(slotPluginsForProvider(SlotIds.composerMedia)).single, name: 'a.png', mimeType: 'image/png', bytes: Uint8List.fromList([9, 9]), onPreview: (_, _, _, _) {}, onReplace: (b, m, n) => replaced = [b, m, n]);
+    expect(session, isNull); // 即差し替え形はセッションにならない
     expect(media.calls.single.$1, 'media.edit');
     expect((media.calls.single.$2['bytesB64'] as String), base64Encode([9, 9]));
     expect(replaced, [Uint8List.fromList([1, 2, 3, 4]), 'image/png', 'edited.png']);
@@ -235,9 +247,8 @@ void main() {
     expect(find.textContaining('ミュート語に追加しました'), findsOneWidget);
   });
 
-  testWidgets('メディアエディター (D-171 §2.2): プラグイン / ジャンルの見方、下付き横リスト → media.action、下付き FOW でプレビューが縮む、別プラグインは直列合成、適用 → media.commit', (tester) async {
+  testWidgets('プラグインの編集パネル (D-249 §2.2): 下付き横リスト → media.action、下付き FOW でプレビューが縮む、適用 → media.commit', (tester) async {
     late FakeSlotRuntime rt;
-    late FakeSlotRuntime rt2;
     final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
     final catalog = {'genres': [
       {'id': 'tone', 'actions': [{'id': 'gamma', 'label': 'ガンマ', 'icon': 'brightness_6'}, {'id': 'reset', 'label': 'リセット'}]},
@@ -267,35 +278,14 @@ void main() {
             return null;
           },
         );
-    // 2 つめ: 加工(process)だけを持つプラグイン(media.catalog あり)。
-    fakes['media2'] = () => rt2 = FakeSlotRuntime(
-          manifest: manifest('t.media2', ['composer.media']),
-          handler: (self, fn, args) {
-            switch (fn) {
-              case 'media.catalog' || 'media.edit':
-                return {'genres': [{'id': 'process', 'actions': [{'id': 'blur', 'label': 'ぼかし'}]}]};
-              case 'media.action':
-                return {};
-              case 'media.commit':
-                return {'bytesB64': base64Encode([9, 9]), 'mimeType': 'image/jpeg', 'name': 'blurred.jpg'};
-              case 'media.cancel':
-                return {};
-            }
-            return null;
-          },
-        );
     final c = await pump(tester);
     final plugin = await register(c, 'media');
-    await register(c, 'media2');
-    final future = c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: plugin, bytes: png, name: 'a.png', mimeType: 'image/png'));
+    final future = openPanel(tester, plugin, png);
     await tester.pumpAndSettle();
-    expect(find.byType(MediaEditorScreen), findsOneWidget);
+    expect(find.byType(MediaPluginPanel), findsOneWidget);
     expect(rt.calls.where((x) => x.$1 == 'media.edit').length, 1);
-    expect(rt.calls.where((x) => x.$1 == 'media.catalog').length, 1);
-    expect(rt2.calls.where((x) => x.$1 == 'media.catalog').length, 1);
-    // 見方「プラグイン」: 右の列 = プラグイン、下の横リスト = 選んだプラグインの全編集ボタン。
-    expect(find.byKey(const ValueKey('media.plugin.t.media')), findsOneWidget);
-    expect(find.byKey(const ValueKey('media.plugin.t.media2')), findsOneWidget);
+    // 下の横リスト = このプラグインの全編集ボタン(プラグイン / ジャンルの切り替え列はもう無い)。
+    expect(find.byKey(const ValueKey('media.editor.pick')), findsNothing);
     expect(find.byKey(const ValueKey('media.action.t.media.tone.gamma')), findsOneWidget);
     expect(find.byKey(const ValueKey('media.action.t.media.transform.rotl')), findsOneWidget);
     expect(find.byKey(const ValueKey('media.action.t.media.sticker.cat')), findsOneWidget);
@@ -315,38 +305,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<Slider>(find.byType(Slider)).value, greaterThan(1.0));
     expect(rt.calls.where((x) => x.$1 == 'gammaChanged'), isNotEmpty);
-    // ↓ で見方を「ジャンル」に: 右の列 = 既定 5 種 + カスタム(スタンプ)、下 = そのジャンルの編集(全プラグイン)。
-    await tester.tap(find.byKey(const ValueKey('media.editor.pick')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('ジャンル'));
-    await tester.pumpAndSettle();
-    final genreList = find.descendant(of: find.byType(MediaEditorScreen), matching: find.byType(Scrollable)).last;
-    for (final g in ['tone', 'process', 'transform', 'add', 'draw', 'sticker']) {
-      await tester.scrollUntilVisible(find.byKey(ValueKey('media.genre.$g')), 60, scrollable: genreList);
-      expect(find.byKey(ValueKey('media.genre.$g')), findsOneWidget, reason: g);
-    }
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('media.genre.tone')), -60, scrollable: genreList);
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('media.action.t.media.tone.gamma')), findsOneWidget);
-    expect(find.byKey(const ValueKey('media.action.t.media.transform.rotl')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('media.genre.process')));
-    await tester.pumpAndSettle();
-    // 別プラグインの編集 → 今のプラグインを commit(直列合成)→ 次の media.edit に結果を渡す。
-    await tester.tap(find.byKey(const ValueKey('media.action.t.media2.process.blur')));
-    await tester.pumpAndSettle();
-    expect(rt.calls.where((x) => x.$1 == 'media.commit').length, 1);
-    final edit2 = rt2.calls.where((x) => x.$1 == 'media.edit').single.$2;
-    expect(edit2['bytesB64'], base64Encode([1, 2, 3]));
-    expect(edit2['name'], 'edited.png');
-    expect(rt2.calls.where((x) => x.$1 == 'media.action').single.$2['action'], 'blur');
-    expect(find.byType(Slider), findsNothing); // 前のプラグインの下付き FOW は閉じる
-    // 適用 → 今のプラグイン(media2)の media.commit の結果が呼び出し元へ。
+    // 適用 → media.commit の結果が呼び出し元へ。
     await tester.tap(find.byKey(const ValueKey('media.editor.apply')));
     await tester.pumpAndSettle();
     final result = await future;
-    expect(result!.bytes, [9, 9]);
-    expect(result.name, 'blurred.jpg');
-    expect(find.byType(MediaEditorScreen), findsNothing);
+    expect(result!.bytes, [1, 2, 3]);
+    expect(result.name, 'edited.png');
+    expect(find.byType(MediaPluginPanel), findsNothing);
   });
 
   testWidgets('TL プラグイン = アルゴリズム部品 (D-169 §2.6): タブにはならず、ノードを設定 FOW にプラグインの RRL、tl.sort に params', (tester) async {
@@ -502,7 +467,7 @@ void main() {
         );
     final c = await pump(tester);
     final plugin = await register(c, 'ov');
-    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: plugin, bytes: png, name: 'a.png', mimeType: 'image/png'));
+    openPanel(tester, plugin, png);
     await tester.pumpAndSettle();
     // 横リスト: 2 つしか無いので中央に並ぶ(左右の余白が等しい)。
     final strip = tester.getRect(find.byKey(mediaEditorStripKey));
@@ -554,7 +519,7 @@ void main() {
         );
     final c = await pump(tester);
     final plugin = await register(c, 'snap');
-    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: plugin, bytes: png, name: 'a.png', mimeType: 'image/png'));
+    openPanel(tester, plugin, png);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('media.action.t.snap.process.sticker')));
     await tester.pumpAndSettle();

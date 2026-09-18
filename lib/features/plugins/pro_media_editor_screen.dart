@@ -10,23 +10,32 @@ import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
-import '../../app/navigation.dart';
 import '../../app/providers.dart';
-import 'media_editor_screen.dart';
+import '../home/action_bar_config.dart';
+import '../home/action_bar_edit_sheet.dart';
+import '../home/action_bundle_fow.dart';
+import '../home/plugin_actions.dart';
+import '../home/post_row.dart';
+import 'media_plugin_panel.dart';
 import 'slot_plugins.dart';
 
-/// 添付の加工 (D-173): 基本動作は **pro_image_editor**(ネイティブ実装: クロップ / 回転 / ペイント /
+/// 添付の加工 (D-173 → D-249): 基本動作は **pro_image_editor**(ネイティブ実装: クロップ / 回転 / ペイント /
 /// テキスト / 絵文字 / フィルター / ぼかし / 調整)、アセットに無いフィルターや wasm / ONNX を使う編集は
-/// **プラグインのメディアエディター**([MediaEditorScreen]、D-169〜D-172)へバイパスする。
+/// **プラグインの編集パネル**([MediaPluginPanel])をこの画面の上に重ねる。
 ///
-/// バイパス: 下段バーの「プラグイン」→ 今の見た目を `captureEditorImage` で 1 枚に焼き込み → プラグイン画面 →
-/// 適用結果を新しい背景にして戻る(レイヤー / フィルター / 調整 / ぼかし / 変形は焼き込み済みなので空にする)。
-/// 「ひとつ戻す」でプラグイン適用前には戻れない(背景を差し替えるため)。
+/// 下段バー (D-249、契約 v0.10): 内蔵の編集(`editor:<tool>`)+ プラグインが宣言したボタン(マニフェストの `actions` の
+/// `slot: "composer.media"`、添付の種類は `accepts`)を、投稿 / 全画面のアクションバーと同じ仕組みで並べる
+/// (並べ替え / バンドル / 削除、タグが近い内蔵の編集へ自動で束ねる)。構成は `editor:image` / `editor:video`。
 ///
-/// 動画 (D-174): `mimeType` が `video/*` なら pro_image_editor の動画モード(トリム / ペイント / テキスト /
-/// 絵文字 / フィルター / ぼかし / 調整)。再生は `video_player`、書き出しは `pro_video_editor`(端末ネイティブ、
-/// mp4)。動画にはプラグインのバイパスは無い。
+/// プラグインのボタン: 今の見た目を `captureEditorImage` で 1 枚に焼き込み → パネル → 適用結果を新しい背景にする
+/// (レイヤー / フィルター / 調整 / ぼかし / 変形は焼き込み済みなので空にする)。「ひとつ戻す」でプラグイン適用前には
+/// 戻れない(背景を差し替えるため)。
+///
+/// 動画 (D-174): `mimeType` が `video/*` なら pro_image_editor の動画モード。再生は `video_player`、書き出しは
+/// `pro_video_editor`(端末ネイティブ、mp4)。動画を受ける(`accepts`)プラグインのボタンは、元のファイルをそのまま
+/// プラグインへ渡し、結果で添付を差し替えて閉じる(焼き込みはしない)。
 class ProMediaEditorArgs {
   const ProMediaEditorArgs({required this.bytes, required this.name, required this.mimeType});
   final Uint8List bytes;
@@ -45,7 +54,9 @@ Future<File> videoEditTempFile(Directory dir, String name) async {
   return File('${dir.path}/rasq_edit_${DateTime.now().microsecondsSinceEpoch}.$ext');
 }
 
-const proMediaEditorPluginKey = Key('media.pro.plugin');
+/// 下段バーのボタンのキー: `media.pro.bar.<id>`(id = `editor:<tool>` / `slot:<pluginId>:<actionId>` / `list:<listId>`)。
+Key proMediaEditorBarKey(String id) => ValueKey('media.pro.bar.$id');
+const proMediaEditorBarEditKey = Key('media.pro.bar.edit');
 
 /// pro_image_editor の日本語。
 const rasqEditorI18n = I18n(
@@ -104,6 +115,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   final _barScroll = ScrollController();
   bool _closing = false;
   bool _bypassing = false;
+
+  /// 重ねているプラグインの編集パネル(無ければ null)。
+  ({PluginAction action, Uint8List bytes, String name, String mimeType, Completer<MediaEditResult?> done})? _panel;
   late final OverlayManager _overlay = ref.read(overlayManagerProvider);
 
   // ── 動画 (D-174) ──
@@ -123,7 +137,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // 下の FOW(コンポーザー等)は退避 (D-174): エディターの前に出ないように。State は保持される。
-      _overlay.setFowSuspend((e) => true);
+      _overlay.setFowSuspend(_suspendAll);
     });
     if (_isVideo) _initVideo();
   }
@@ -254,21 +268,34 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     Navigator.of(context).pop(result);
   }
 
-  /// プラグインへバイパス (D-173): 焼き込み → プラグインのエディター → 結果を新しい背景に。
-  Future<void> _bypass(ProImageEditorState editor) async {
+  /// プラグインの編集パネルを重ねて、結果を待つ。
+  Future<MediaEditResult?> _runPanel(PluginAction action, {required Uint8List bytes, required String name, required String mimeType}) async {
+    final done = Completer<MediaEditResult?>();
+    setState(() => _panel = (action: action, bytes: bytes, name: name, mimeType: mimeType, done: done));
+    final result = await done.future;
+    if (!mounted) return null;
+    setState(() => _panel = null);
+    _overlay.setFowSuspend(_suspendAll); // パネルが戻すので、こちらでまた退避する
+    return result;
+  }
+
+  /// 下の FOW(コンポーザー等)は退避。下段バーの編集(`actionbar.*`)と、そこから開く FOW / ドロップダウンは出す。
+  static bool _suspendAll(RasqOverlayEntry e) => !e.id.startsWith('actionbar.') && !e.id.startsWith('media.pro.');
+
+  /// プラグインのボタン (D-173 → D-249): 焼き込み → パネル → 結果を新しい背景に。動画は元のファイルを渡して差し替え。
+  Future<void> _runPlugin(ProImageEditorState editor, PluginAction action) async {
     if (_bypassing) return;
-    final plugins = ref.read(slotPluginsForProvider(SlotIds.composerMedia));
-    if (plugins.isEmpty) return;
-    // 選択シートは挟まない(D-174: 動線を増やさない)。プラグインの切り替えはメディアエディター側の右列で。
-    final pick = plugins.first;
     _bypassing = true;
     try {
+      if (_isVideo) {
+        final result = await _runPanel(action, bytes: widget.args.bytes, name: widget.args.name, mimeType: widget.args.mimeType);
+        if (result != null) _finish(result);
+        return;
+      }
       final bytes = await editor.captureEditorImage();
       if (!mounted || bytes.isEmpty) return;
-      final result = await context.pushMediaEditor(plugin: pick, bytes: bytes, name: _outName, mimeType: 'image/png');
-      if (!mounted) return;
-      _overlay.setFowSuspend((e) => true); // メディアエディターが戻すので、こちらでまた退避する
-      if (result == null) return;
+      final result = await _runPanel(action, bytes: bytes, name: _outName, mimeType: 'image/png');
+      if (result == null || !mounted) return;
       // 焼き込み済みの状態を空にして、結果を背景に。
       editor.addHistory(layers: [], filters: [], tuneAdjustments: [], blur: 0, transformConfigs: TransformConfigs.empty());
       await editor.updateBackgroundImage(EditorImage(byteArray: result.bytes), updateHistory: false);
@@ -277,10 +304,49 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     }
   }
 
-  Widget _bar(ProImageEditorState editor, Key key, bool hasPlugins) {
+  String get _configKey => editorConfigKeyFor(widget.args.mimeType);
+
+  /// この添付に出るプラグインボタン(宣言の `accepts` を実際の MIME / ファイル名で絞る)。
+  List<PluginAction> get _pluginActions => [
+        for (final a in ref.watch(pluginActionsForProvider(_configKey)))
+          if (mediaAccepts(a.decl.accepts, mimeType: widget.args.mimeType, name: widget.args.name)) a,
+      ];
+
+  void _perform(ProImageEditorState editor, ActionDescriptor a, List<PluginAction> plugins) {
+    switch (a.id) {
+      case 'editor:cropRotate':
+        editor.openCropRotateEditor();
+      case 'editor:paint':
+        editor.openPaintEditor();
+      case 'editor:text':
+        editor.openTextEditor();
+      case 'editor:emoji':
+        editor.openEmojiEditor();
+      case 'editor:filter':
+        editor.openFilterEditor();
+      case 'editor:blur':
+        editor.openBlurEditor();
+      case 'editor:tune':
+        editor.openTuneEditor();
+      default:
+        final p = plugins.where((x) => x.id == a.id).firstOrNull;
+        if (p != null) _runPlugin(editor, p);
+    }
+  }
+
+  Widget _bar(ProImageEditorState editor, Key key) {
     const style = TextStyle(fontSize: 10, color: Colors.white);
-    Widget item(String label, IconData icon, VoidCallback onTap, {Key? key, Color color = Colors.white}) =>
-        FlatIconTextButton(key: key, label: Text(label, style: style.copyWith(color: color)), icon: Icon(icon, size: 22, color: color), onPressed: onTap);
+    Widget item(String id, String label, Widget icon, void Function(BuildContext ctx) onTap, {Color color = Colors.white, Key? key}) => Builder(
+          builder: (ctx) => FlatIconTextButton(key: key ?? proMediaEditorBarKey(id), label: Text(label, style: style.copyWith(color: color)), icon: icon, onPressed: () => onTap(ctx)),
+        );
+    final plugins = _pluginActions;
+    final merged = mergePluginActions(
+      config: ref.watch(actionBarConfigProvider(_configKey)),
+      snsActions: editorBuiltinActions,
+      plugins: plugins,
+      settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(_configKey, ''))),
+    );
+    final entries = merged.config.apply(merged.actions);
     return Scrollbar(
       key: key,
       controller: _barScroll,
@@ -296,15 +362,27 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                item('クロップ / 回転', Icons.crop_rotate_rounded, editor.openCropRotateEditor),
-                item('ペイント', Icons.edit_rounded, editor.openPaintEditor),
-                item('テキスト', Icons.text_fields, editor.openTextEditor),
-                item('絵文字', Icons.sentiment_satisfied_alt_rounded, editor.openEmojiEditor),
-                item('フィルター', Icons.filter, editor.openFilterEditor),
-                item('ぼかし', Icons.blur_on, editor.openBlurEditor),
-                item('調整', Icons.tune_rounded, editor.openTuneEditor),
-                // プラグイン (D-173): アセットに無いフィルター / wasm / ONNX はこちらへバイパス。
-                if (hasPlugins) item('プラグイン', Icons.extension_outlined, () => _bypass(editor), key: proMediaEditorPluginKey, color: RasqColors.accent),
+                for (final e in entries)
+                  switch (e) {
+                    SingleActionEntry() => item(
+                        e.action.id,
+                        e.action.label,
+                        Icon(PostRow.iconFor(e.action.icon, Icons.extension_outlined), size: 22, color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white),
+                        (_) => _perform(editor, e.action, plugins),
+                        color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white,
+                      ),
+                    ActionListEntry() => item(
+                        ActionBarConfig.listKey(e.list.id),
+                        e.list.name,
+                        SizedBox(width: 22, height: 22, child: Center(child: bundleIconWidget(e.list, e.members, size: 22, color: Colors.white))),
+                        (ctx) {
+                          final box = ctx.findRenderObject() as RenderBox;
+                          showActionBundleMenuFow(ref, anchor: box.localToGlobal(Offset.zero) & box.size, entry: e, onPick: (a) async => _perform(editor, a, plugins));
+                        },
+                      ),
+                  },
+                // バーの編集(並べ替え / バンドル / プラグインボタンの追加・削除)。
+                item('edit', 'バーの編集', const Icon(Icons.dashboard_customize_outlined, size: 22, color: Colors.white54), (_) => showActionBarEditSheet(ref, surfaces: [_isVideo ? ActionBarSurface.editorVideo : ActionBarSurface.editorImage]), color: Colors.white54, key: proMediaEditorBarEditKey),
               ]),
             ),
           ),
@@ -313,11 +391,36 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     );
   }
 
+  /// エディターの上にプラグインの編集パネルを重ねる。
+  Widget _withPanel(Widget editor) {
+    final p = _panel;
+    return Stack(fit: StackFit.expand, children: [
+      editor,
+      if (p != null)
+        Positioned.fill(
+          child: MediaPluginPanel(
+            key: ValueKey('media.panel.${p.action.id}'),
+            plugin: p.action.plugin,
+            bytes: p.bytes,
+            name: p.name,
+            mimeType: p.mimeType,
+            actionId: p.action.decl.id == mediaEditDefaultActionId ? null : p.action.decl.id,
+            onDone: (r) {
+              if (!p.done.isCompleted) p.done.complete(r);
+            },
+          ),
+        ),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isVideo) return _buildVideo(context);
-    final hasPlugins = ref.watch(slotPluginsForProvider(SlotIds.composerMedia)).isNotEmpty;
-    return ProImageEditor.memory(
+    // バーの中身(プラグイン / 構成)の変化で作り直す。
+    ref.watch(pluginActionsForProvider(_configKey));
+    ref.watch(actionBarConfigProvider(_configKey));
+    ref.watch(slotActionSettingsProvider('editor'));
+    return _withPanel(ProImageEditor.memory(
       widget.args.bytes,
       key: _editorKey,
       callbacks: ProImageEditorCallbacks(
@@ -332,11 +435,11 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         imageGeneration: const ImageGenerationConfigs(outputFormat: OutputFormat.png),
         mainEditor: MainEditorConfigs(
           widgets: MainEditorWidgets(
-            bottomBar: (editor, rebuildStream, key) => ReactiveWidget(stream: rebuildStream, builder: (_) => _bar(editor, key, hasPlugins)),
+            bottomBar: (editor, rebuildStream, key) => ReactiveWidget(stream: rebuildStream, builder: (_) => _bar(editor, key)),
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildVideo(BuildContext context) {
@@ -353,7 +456,10 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         ),
       );
     }
-    return ProImageEditor.video(
+    ref.watch(pluginActionsForProvider(_configKey));
+    ref.watch(actionBarConfigProvider(_configKey));
+    ref.watch(slotActionSettingsProvider('editor'));
+    return _withPanel(ProImageEditor.video(
       v,
       key: _editorKey,
       callbacks: ProImageEditorCallbacks(
@@ -377,10 +483,10 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         mainEditor: MainEditorConfigs(
           tools: const [SubEditorMode.paint, SubEditorMode.text, SubEditorMode.cropRotate, SubEditorMode.tune, SubEditorMode.filter, SubEditorMode.blur, SubEditorMode.emoji],
           widgets: MainEditorWidgets(
-            bottomBar: (editor, rebuildStream, key) => ReactiveWidget(stream: rebuildStream, builder: (_) => _bar(editor, key, false)),
+            bottomBar: (editor, rebuildStream, key) => ReactiveWidget(stream: rebuildStream, builder: (_) => _bar(editor, key)),
           ),
         ),
       ),
-    );
+    ));
   }
 }
