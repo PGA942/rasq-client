@@ -23,3 +23,5 @@ export 'src/wasm_timeline_plugin.dart';
 export 'src/wasm_plugin_controller.dart';
 export 'src/wasm_plugin_view.dart';
 export 'src/wasm_plugin_worker.dart';
+// .rasqpkg(zstd 圧縮 tar、D-034)の展開に使う zstd の復号。ネイティブランタイム内蔵(純 Rust の ruzstd)。
+export 'package:rasq_wasm_runtime/rasq_wasm_runtime.dart' show rasqZstdDecompress, RasqZstdException;
