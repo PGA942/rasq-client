@@ -14,7 +14,7 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/shell/rasq_register_fow.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
-import 'package:rasq_client/features/plugins/media_editor_screen.dart';
+import 'package:rasq_client/features/plugins/media_plugin_panel.dart';
 import 'package:rasq_client/features/plugins/pro_media_editor_screen.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/post/share_fow.dart';
@@ -82,6 +82,16 @@ void main() {
     png = (await img.toByteData(format: ImageByteFormat.png))!.buffer.asUint8List();
   });
 
+  /// 編集パネル (D-249) を単体で開く(本番では加工画面の上に重なる)。
+  void openPanel(WidgetTester tester, SlotPlugin plugin, Uint8List bytes) {
+    final nav = tester.stateList<NavigatorState>(find.byType(Navigator)).firstWhere((n) => '${n.widget.key}'.contains('app'));
+    nav.push<MediaEditResult>(PageRouteBuilder(
+      pageBuilder: (ctx, _, _) => MediaPluginPanel(plugin: plugin, bytes: bytes, name: 'photo.png', mimeType: 'image/png', onDone: (r) => Navigator.of(ctx).pop(r)),
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+    ));
+  }
+
   testWidgets('media editor + inline hashtag fow', (tester) async {
     fakes['media'] = () => FakeSlotRuntime(
           manifest: {'id': 'sample.composer-media', 'name': 'メディア加工', 'version': '0.2.0', 'kind': 'action', 'slots': ['composer.media'], 'permissions': ['fow.widget']},
@@ -127,7 +137,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('composer_hashtag_inline_fow.png'));
     // メディアエディター。
-    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: media!, bytes: png, name: 'photo.png', mimeType: 'image/png'));
+    openPanel(tester, media!, png);
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor.png'));
     // 横リストは中央から始まる (D-172) ので、左端のガンマまで戻す。
@@ -137,12 +147,6 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('media.action.sample.composer-media.tone.gamma')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_param_fow.png'));
-    await tester.tap(find.byKey(const ValueKey('media.editor.pick')));
-    await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_pick.png'));
-    await tester.tap(find.text('ジャンル'));
-    await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_genre.png'));
   });
 
   testWidgets('post share fow + inline plugin fow (D-170)', (tester) async {
@@ -216,7 +220,7 @@ void main() {
     final c = await pump(tester);
     final tf = await c.read(slotPluginsProvider.notifier).register('fake:tf', bytes: Uint8List.fromList('tf'.codeUnits));
     await tester.pumpAndSettle();
-    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: tf!, bytes: png, name: 'photo.png', mimeType: 'image/png'));
+    openPanel(tester, tf!, png);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('media.action.sample.media-transform.transform.crop')));
     await tester.pumpAndSettle();
@@ -238,7 +242,7 @@ void main() {
     for (var i = 0; i < 8; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    await tester.ensureVisible(find.byKey(proMediaEditorPluginKey));
+    await tester.ensureVisible(find.byKey(proMediaEditorBarEditKey)); // 下段バーの右端(プラグインのボタン + バーの編集)
     await tester.pump(const Duration(milliseconds: 300));
     await expectLater(find.byType(RasqApp), matchesGoldenFile('media_editor_pro.png'));
   });
@@ -265,7 +269,7 @@ void main() {
     final c = await pump(tester);
     final p = await c.read(slotPluginsProvider.notifier).register('fake:snap', bytes: Uint8List.fromList('snap'.codeUnits));
     await tester.pumpAndSettle();
-    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: p!, bytes: png, name: 'photo.png', mimeType: 'image/png'));
+    openPanel(tester, p!, png);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('media.action.sample.media-process.process.sticker')));
     await tester.pumpAndSettle();
