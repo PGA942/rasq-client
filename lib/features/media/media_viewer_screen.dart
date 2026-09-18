@@ -227,7 +227,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     Future<void> perform(ActionDescriptor a) => isViewerToggleActionId(a.id) ? _toggleViewerPlugin(viewerTogglePluginId(a.id)) : notifier.perform(post, a).catchError((_) {});
     Widget toggle(ActionDescriptor a) {
       final id = viewerTogglePluginId(a.id);
-      return ViewerPluginToggle(pluginId: id, label: a.label, enabled: enabled.contains(id), status: _overlays.statusOf(i, id), onPressed: () => perform(a));
+      return ViewerPluginToggle(pluginId: id, label: a.label, iconName: a.icon, enabled: enabled.contains(id), status: _overlays.statusOf(i, id), onPressed: () => perform(a));
     }
     return [
       for (final e in entries)

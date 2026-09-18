@@ -174,13 +174,25 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
 
     final name = m.manifest['name'] as String? ?? pluginId;
     final slots = ref.read(slotPluginsProvider.notifier);
-    // 登録元は `store:<id>`(.rasqpkg の子は `store:<id>#<childId>`)— 次回起動はストアから取り直して読み込む。
-    final sources = package != null
-        ? [for (final p in package.slotPlugins) p.id == pluginId ? 'store:$pluginId' : 'store:$pluginId#${p.id}']
-        : [if (isWasmBytes(bytes)) 'store:$pluginId']; // 配布物が wasm そのもの(スロットプラグイン、D-168)
+    final record = InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: DateTime.now());
+
+    if (package == null) {
+      // 配布物が生の wasm(D-168)や中身の無いモック: 従来どおり、先にインストール済みにしてからスロット登録を試みる。
+      // SNS プラグインの wasm は `plugin.manifest` を持たないので登録はできない — 掲載が kind = sns なら試みない、
+      // 分からなければ試みて、だめでもインストール自体は残す(エラーは返す)。
+      await _persist([...state.where((p) => p.id != pluginId), record]);
+      if (isWasmBytes(bytes) && m.manifest['kind'] != 'sns') {
+        final slot = await slots.register('store:$pluginId', bytes: bytes);
+        if (slot == null) return (error: ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした', verification: verified);
+      }
+      return (error: null, verification: verified);
+    }
+
+    // .rasqpkg: 中のスロットプラグイン(root が sns 以外なら root、それと子)を全部登録できて初めてインストール済みにする。
+    // 登録元は `store:<id>`(子は `store:<id>#<childId>`)— 次回起動はストアから取り直して読み込む。
     final registered = <String>[];
-    for (final source in sources) {
-      final slot = await slots.register(source, bytes: bytes);
+    for (final p in package.slotPlugins) {
+      final slot = await slots.register(p.id == pluginId ? 'store:$pluginId' : 'store:$pluginId#${p.id}', bytes: bytes);
       if (slot == null) {
         // 途中で失敗したら、この配布物から入れたものを外して、入れなかったことにする。
         for (final id in registered) {
@@ -190,10 +202,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       }
       registered.add(slot.id);
     }
-    await _persist([
-      ...state.where((p) => p.id != pluginId),
-      InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: DateTime.now()),
-    ]);
+    await _persist([...state.where((p) => p.id != pluginId), record]);
     return (error: null, verification: verified);
   }
 

@@ -42,7 +42,8 @@ class PluginAction {
 
 final pluginActionsProvider = Provider<List<PluginAction>>((ref) => [
       for (final p in ref.watch(slotPluginsForProvider(SlotIds.postAction)))
-        for (final a in p.manifest.actions) PluginAction(plugin: p, decl: a),
+        for (final a in p.manifest.actions)
+          if (a.isPostAction) PluginAction(plugin: p, decl: a), // ほかのスロット向けの宣言(viewer.overlay など)は投稿のボタンにしない
     ]);
 
 /// 全画面表示プラグインのトグル (D-214): `viewer.overlay` を宣言したプラグイン(QR コード検出など)は
@@ -55,10 +56,27 @@ bool isViewerToggleActionId(String id) => isPluginActionId(id) && id.endsWith(':
 /// `slot:<pluginId>:viewer.overlay` → pluginId。
 String viewerTogglePluginId(String id) => id.substring('slot:'.length, id.length - viewerToggleActionId.length - 1);
 
+///
+/// 見た目はマニフェストの宣言(契約 v0.9: `actions` の `slot: "viewer.overlay"` の項目の label / icon / tags)。
+/// 宣言が無ければプラグイン名と既定のアイコン。ボタンの id は宣言の `id` に依らず `viewer.overlay` 固定(保存した並びが変わらない)。
 final viewerPluginActionsProvider = Provider<List<PluginAction>>((ref) => [
       for (final p in ref.watch(slotPluginsForProvider(SlotIds.viewerOverlay)))
-        PluginAction(plugin: p, decl: SlotActionDecl(id: viewerToggleActionId, label: p.manifest.name, icon: 'extension', tags: const ['全画面表示'])),
+        PluginAction(plugin: p, decl: viewerToggleDecl(p.manifest)),
     ]);
+
+/// 既定のアイコン名(宣言が無いとき)。トグルはこの名前なら 塗り / 線 のパズルのアイコンで ON / OFF を出す。
+const viewerToggleDefaultIcon = 'extension';
+
+SlotActionDecl viewerToggleDecl(SlotManifest m) {
+  final declared = m.actions.where((a) => a.slot == SlotIds.viewerOverlay).firstOrNull;
+  return SlotActionDecl(
+    id: viewerToggleActionId,
+    label: declared?.label ?? m.name,
+    icon: declared?.icon ?? viewerToggleDefaultIcon,
+    tags: {'全画面表示', ...?declared?.tags}.toList(),
+    slot: SlotIds.viewerOverlay,
+  );
+}
 
 /// 構成キーに応じたプラグインボタン: 全画面バー(`viewer:` の構成)には全画面表示プラグインのトグルも含む。
 final pluginActionsForProvider = Provider.family<List<PluginAction>, String>((ref, configKey) => [

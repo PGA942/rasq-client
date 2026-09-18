@@ -64,6 +64,7 @@ class SlotManifest {
                 label: a['label'] as String? ?? a['id'] as String,
                 icon: a['icon'] as String?,
                 tags: [for (final t in (a['tags'] as List? ?? const [])) if (t is String) t],
+                slot: a['slot'] as String?,
               ),
         ],
       );
@@ -95,11 +96,17 @@ class SlotManifest {
 
 /// `post.action` のボタン宣言 (§2.9): タグ = 希望スロット(既存ボタンのタグと比べて束ねる)。
 class SlotActionDecl {
-  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const []});
+  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const [], this.slot});
   final String id;
   final String label;
   final String? icon;
   final List<String> tags;
+
+  /// このボタンが属するスロット(契約 v0.9)。null = `post.action`。`viewer.overlay` = 全画面アクションバーの
+  /// ON / OFF ボタンの見た目の宣言(押したときの call は無い)。
+  final String? slot;
+
+  bool get isPostAction => slot == null || slot == SlotIds.postAction;
 }
 
 abstract final class SlotIds {

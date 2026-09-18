@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/home/plugin_actions.dart';
 import 'package:rasq_client/features/media/viewer_plugin_overlay.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/users/profile_image_viewer.dart';
@@ -95,6 +96,26 @@ void main() {
     expect(rt.calls.where((x) => x.$1 == 'viewer.open').length, 1);
     expect(tip(tester, 't.qr'), contains('検出あり'));
     expect(find.text('枠'), findsOneWidget);
+  });
+
+  testWidgets('ボタンの宣言 (契約 v0.9): actions[].slot = viewer.overlay の label / icon を使い、投稿のボタンにはしない', (tester) async {
+    final declared = {...manifest('t.decl'), 'name': '長いプラグイン名', 'actions': [{'id': 'toggle', 'slot': 'viewer.overlay', 'label': 'QR コード検出', 'icon': 'qr_code_scanner', 'tags': ['QR']}]};
+    final c = await pump(tester, {
+      'decl': () => FakeSlotRuntime(manifest: declared, handler: (_, fn, args) => fn == 'viewer.open' ? <String, Object?>{} : null),
+      'plain': () => FakeSlotRuntime(manifest: manifest('t.plain'), handler: (_, fn, args) => fn == 'viewer.open' ? <String, Object?>{} : null),
+    }, (_) async => png);
+    expect(c.read(pluginActionsProvider), isEmpty);
+    final a = c.read(viewerPluginActionsProvider).firstWhere((x) => x.plugin.id == 't.decl');
+    expect((a.id, a.decl.label, a.decl.icon), ('slot:t.decl:viewer.overlay', 'QR コード検出', 'qr_code_scanner'));
+    expect(a.decl.tags, ['全画面表示', 'QR']);
+    c.read(routerProvider).push(Routes.viewer, extra: (post: post, index: 0));
+    await tester.pumpAndSettle();
+    await settleAsync(tester);
+    expect(tip(tester, 't.decl'), startsWith('QR コード検出'));
+    expect(find.descendant(of: find.byKey(const ValueKey('viewer.plugin.t.decl')), matching: find.byIcon(Icons.qr_code_scanner)), findsOneWidget);
+    // 宣言の無いものは従来どおり(名前 + パズルのアイコン)
+    expect(tip(tester, 't.plain'), startsWith('t.plain'));
+    expect(find.descendant(of: find.byKey(const ValueKey('viewer.plugin.t.plain')), matching: find.byIcon(Icons.extension)), findsOneWidget);
   });
 
   testWidgets('プロフィール画像の全画面にも全画面アクションバー(プラグインのトグル)', (tester) async {

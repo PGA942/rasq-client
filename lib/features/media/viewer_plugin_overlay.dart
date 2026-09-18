@@ -8,6 +8,9 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
+import '../home/plugin_actions.dart' show viewerToggleDefaultIcon;
+import '../home/material_icons.dart';
+import '../home/post_row.dart';
 import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
 
@@ -254,9 +257,12 @@ class ViewerOverlay {
 /// 警告色。投稿のビューワーとプロフィール画像のビューワーで同じもの。(印は静止画: 回る輪だと終わらない処理の間
 /// 画面が落ち着かず、テストの pumpAndSettle も終わらない。)
 class ViewerPluginToggle extends StatelessWidget {
-  const ViewerPluginToggle({super.key, required this.pluginId, required this.label, required this.enabled, required this.status, required this.onPressed});
+  const ViewerPluginToggle({super.key, required this.pluginId, required this.label, this.iconName, required this.enabled, required this.status, required this.onPressed});
   final String pluginId;
   final String label;
+
+  /// 宣言されたアイコン名(契約 v0.9)。無い / 既定なら パズルの 塗り(ON)/ 線(OFF)。宣言があれば色で ON / OFF を出す。
+  final String? iconName;
   final bool enabled;
   final ViewerPluginStatus status;
   final VoidCallback onPressed;
@@ -265,8 +271,15 @@ class ViewerPluginToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     final failed = enabled && status.phase == ViewerPluginPhase.failed;
     final asking = enabled && status.phase == ViewerPluginPhase.asking;
+    final declared = iconName != null && iconName != viewerToggleDefaultIcon;
+    final icon = failed
+        ? Icons.error_outline
+        : declared
+            // 宣言のアイコン名: 投稿ボタンの小さい表 → Material の全アイコン表 (D-212) → 既定
+            ? PostRow.iconFor(iconName, materialIconByName(iconName) ?? Icons.extension)
+            : (enabled ? Icons.extension : Icons.extension_outlined);
     final color = !enabled
-        ? Colors.white
+        ? (declared ? Colors.white54 : Colors.white)
         : failed
             ? RasqTokens.of(context).danger
             : status.phase == ViewerPluginPhase.none
@@ -276,7 +289,7 @@ class ViewerPluginToggle extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
       child: Stack(alignment: Alignment.center, children: [
-        RasqIconButton(key: ValueKey('viewer.plugin.$pluginId'), icon: failed ? Icons.error_outline : (enabled ? Icons.extension : Icons.extension_outlined), color: color, tooltip: tip, onPressed: onPressed),
+        RasqIconButton(key: ValueKey('viewer.plugin.$pluginId'), icon: icon, color: color, tooltip: tip, onPressed: onPressed),
         if (asking) const Positioned(right: 4, bottom: 4, child: IgnorePointer(child: Icon(Icons.hourglass_top, size: 12, color: Colors.white))),
       ]),
     );
