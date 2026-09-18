@@ -14,6 +14,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
 import '../home/action_bar_config.dart';
+import '../media/audio_visualizer_video.dart';
 import '../home/action_bar_edit_sheet.dart';
 import '../home/action_bundle_fow.dart';
 import '../home/plugin_actions.dart';
@@ -57,6 +58,7 @@ Future<File> videoEditTempFile(Directory dir, String name) async {
 /// 下段バーのボタンのキー: `media.pro.bar.<id>`(id = `editor:<tool>` / `slot:<pluginId>:<actionId>` / `list:<listId>`)。
 Key proMediaEditorBarKey(String id) => ValueKey('media.pro.bar.$id');
 const proMediaEditorBarEditKey = Key('media.pro.bar.edit');
+const proMediaEditorAudioNoteKey = Key('media.pro.audio.note');
 
 /// pro_image_editor の日本語。
 const rasqEditorI18n = I18n(
@@ -121,7 +123,12 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   late final OverlayManager _overlay = ref.read(overlayManagerProvider);
 
   // ── 動画 (D-174) ──
-  bool get _isVideo => widget.args.mimeType.startsWith('video/');
+  /// 動画のエディターで開くもの: 動画と、音声だけのファイル (D-250: 開くときに Visualizer の動画へ変換する)。
+  bool get _isVideo => widget.args.mimeType.startsWith('video/') || _isAudio;
+  bool get _isAudio => widget.args.mimeType.startsWith('audio/');
+
+  /// 音声 → 動画の変換の進み具合(0..1、変換中だけ)。
+  double? _audioProgress;
   VideoPlayerController? _player;
   ProVideoController? _video;
   pve.VideoMetadata? _meta;
@@ -144,13 +151,36 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   Future<void> _initVideo() async {
     try {
-      final f = await videoEditTempFile(await getTemporaryDirectory(), widget.args.name);
+      // 変換できない端末では、ファイルを書く前に伝える。
+      if (_isAudio && !audioVideoSupported) throw UnsupportedError('この端末では音声を動画にできません(Android / iOS / macOS だけ)。音声のまま添付できます');
+      var f = await videoEditTempFile(await getTemporaryDirectory(), widget.args.name);
       await f.writeAsBytes(widget.args.bytes, flush: true);
       if (!mounted) {
         _deleteQuietly(f);
         return;
       }
       _videoFile = f;
+      if (_isAudio) {
+        // 音声 → 2560×1440 の動画(左にアイコン、右に Wave Visualizer)。以降はこの動画を編集する。
+        if (mounted) setState(() => _audioProgress = 0);
+        final video = await buildAudioVisualizerVideo(
+          audio: f,
+          workDir: f.parent,
+          title: widget.args.name,
+          accent: RasqColors.accent,
+          onProgress: (p) {
+            if (mounted) setState(() => _audioProgress = p);
+          },
+        );
+        _deleteQuietly(f);
+        f = video;
+        if (!mounted) {
+          _deleteQuietly(f);
+          return;
+        }
+        _videoFile = f;
+        setState(() => _audioProgress = null);
+      }
       final player = VideoPlayerController.file(f);
       _player = player;
       await player.initialize();
@@ -174,7 +204,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         if (mounted) _video?.thumbnails = [for (final b in frames) MemoryImage(b)];
       }
     } catch (e) {
-      if (mounted) setState(() => _videoError = '動画を開けませんでした: $e');
+      if (mounted) setState(() => _videoError = e is UnsupportedError ? '${e.message}' : '${_isAudio ? '音声' : '動画'}を開けませんでした: $e');
     }
   }
 
@@ -450,7 +480,13 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         backgroundColor: Colors.black,
         body: SafeArea(
           child: Stack(children: [
-            Center(child: err == null ? const CircularProgressIndicator() : Padding(padding: const EdgeInsets.all(24), child: Text(err, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center))),
+            Center(
+              child: err == null
+                  ? Column(mainAxisSize: MainAxisSize.min, children: [
+                      CircularProgressIndicator(value: _audioProgress),
+                      if (_audioProgress != null) Padding(padding: const EdgeInsets.only(top: 16), child: Text('音声を動画に変換しています… ${(_audioProgress! * 100).round()}%', key: proMediaEditorAudioNoteKey, style: const TextStyle(color: Colors.white70))),
+                    ])
+                  : Padding(padding: const EdgeInsets.all(24), child: Text(err, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center))),
             Positioned(left: 8, top: 8, child: RasqIconButton(icon: Icons.close, color: Colors.white, tooltip: 'キャンセル', onPressed: () => _finish(null))),
           ]),
         ),
