@@ -31,6 +31,8 @@ dependencies:
   cryptography: ^2.9.0
   http: ^1.2.0
   image_picker: ^1.1.2
+  # 動画 / 音声のファイル選択 (D-250: image_picker のギャラリーは音声を出せない)。
+  file_selector: ^1.0.3
   rasq_models:
     path: packages/rasq_models
   rasq_design:

@@ -29,6 +29,7 @@ import 'compose_providers.dart';
 export 'compose_providers.dart' show ComposerInitialFile;
 import 'account_select.dart';
 import 'compose_target.dart';
+import 'media_file_pick.dart';
 import 'drafts_fow.dart';
 import 'emoji_picker_fow.dart';
 import 'mfm_picker_fow.dart';
@@ -1065,17 +1066,27 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
   }
 
-  /// 動画 (D-174): ギャラリーから 1 本。編集は pro_image_editor の動画モード。
-  Future<void> _pickVideo() async {
-    final picker = ImagePicker();
+  /// 動画 (D-174 → D-250): ライブラリから動画 1 本、またはファイルから動画 / **音声** 1 本。
+  /// 音声はそのまま添付になる(加工を開くと Visualizer の動画へ変換される)。
+  Future<void> _pickVideo(Rect anchor) async {
+    final from = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'composer.video.source', ownerId: composerFowId, anchor: anchor, dense: true, items: const [
+      RasqDropdownItem('ライブラリの動画', 'library'),
+      RasqDropdownItem('ファイルから(動画 / 音声)', 'file'),
+    ]);
+    if (from == null || !mounted) return;
     try {
-      final f = await picker.pickVideo(source: ImageSource.gallery);
+      final f = from == 'file' ? await ref.read(mediaFilePickerProvider)() : await ImagePicker().pickVideo(source: ImageSource.gallery);
       if (f == null || _files.length >= 4) return;
       final name = f.name.isEmpty ? 'video.mp4' : f.name;
-      _files.add(_Attachment(bytes: await f.readAsBytes(), name: name, mimeType: f.mimeType ?? (name.toLowerCase().endsWith('.mov') ? 'video/quicktime' : 'video/mp4')));
+      final mime = mediaMimeFor(name, reported: f.mimeType);
+      if (mime == null) {
+        setState(() => _error = '動画 / 音声のファイルではありません: $name');
+        return;
+      }
+      _files.add(_Attachment(bytes: await f.readAsBytes(), name: name, mimeType: mime));
       setState(() {});
     } catch (e) {
-      setState(() => _error = '動画を選択できませんでした: $e');
+      setState(() => _error = '動画 / 音声を選択できませんでした: $e');
     }
   }
 
@@ -1370,7 +1381,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 RasqActionButton.icon(icon: Icons.photo_camera_outlined, tooltip: 'カメラ', onTap: _busy ? null : () => _pick(camera: true)),
                 RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= 4 ? null : () => _pick()),
-                RasqActionButton.icon(icon: Icons.videocam_outlined, tooltip: '動画', onTap: _busy || _files.length >= 4 ? null : _pickVideo),
+                Builder(builder: (ctx) => RasqActionButton.icon(icon: Icons.videocam_outlined, tooltip: '動画 / 音声', onTap: _busy || _files.length >= 4 ? null : () {
+                  final box = ctx.findRenderObject() as RenderBox;
+                  _pickVideo(box.localToGlobal(Offset.zero) & box.size);
+                })),
                 RasqActionButton.icon(icon: Icons.visibility_outlined, doneIcon: Icons.visibility, done: _cwOn, tooltip: '隠す(注釈)', onTap: () => setState(() => _cwOn = !_cwOn)),
                 if (!_isDm) RasqActionButton.icon(icon: Icons.poll_outlined, doneIcon: Icons.poll, done: _poll != null, tooltip: '投票', onTap: () => setState(() => _poll = _poll == null ? PollDraft() : null)),
                 RasqActionButton.icon(
@@ -1452,13 +1466,14 @@ class _AttachmentTile extends StatelessWidget {
 
   /// プラグインで加工 (D-167)。null なら出さない。
   final VoidCallback? onEdit;
-  bool get _isVideo => (a.mimeType ?? '').startsWith('video/');
+  bool get _isAudio => (a.mimeType ?? '').startsWith('audio/');
+  bool get _isVideo => (a.mimeType ?? '').startsWith('video/') || _isAudio;
 
   @override
   Widget build(BuildContext context) => Stack(children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          // 動画 (D-174): サムネイルは作らず再生アイコン + ファイル名。
+          // 動画 (D-174) / 音声 (D-250): サムネイルは作らず 再生 / 波形 のアイコン + ファイル名。
           child: _isVideo
               ? Container(
                   width: 88,
@@ -1466,7 +1481,7 @@ class _AttachmentTile extends StatelessWidget {
                   color: Colors.black87,
                   padding: const EdgeInsets.all(6),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.play_circle_outline, color: Colors.white, size: 28),
+                    Icon(_isAudio ? Icons.graphic_eq : Icons.play_circle_outline, color: Colors.white, size: 28),
                     const SizedBox(height: 4),
                     Text(a.name, style: RasqTypography.caption.copyWith(color: Colors.white70, fontSize: 9), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
                   ]),
