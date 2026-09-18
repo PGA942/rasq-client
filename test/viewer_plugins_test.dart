@@ -74,7 +74,9 @@ void main() {
     await tester.pumpAndSettle();
     final toggle = find.byKey(const ValueKey('viewer.plugin.t.qr'));
     expect(toggle, findsOneWidget);
-    expect(find.descendant(of: toggle, matching: find.byIcon(Icons.extension)), findsOneWidget);
+    // このテストは画像を取れない(fetcher が null)。黙らずにトグルへ出す (D-246): 警告の印 + 理由。
+    expect(find.descendant(of: toggle, matching: find.byIcon(Icons.error_outline)), findsOneWidget);
+    expect(tester.widget<RasqIconButton>(toggle).tooltip, contains('画像を取得できませんでした'));
     await tester.tap(toggle);
     await tester.pumpAndSettle();
     expect(c.read(viewerOverlayPluginsProvider), isEmpty);
