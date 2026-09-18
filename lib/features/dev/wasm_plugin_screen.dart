@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -16,6 +17,7 @@ import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
 import '../home/post_row.dart';
 import '../plugins/slot_plugins.dart';
+import '../store/rasqpkg.dart';
 
 /// WASM プラグイン試験画面 (dev)。misskey-wasm-sample(rasq-sdk-sample で
 /// ビルドした .wasm)をインポートし、plugin_runtime 経由で描画する:
@@ -42,6 +44,9 @@ class WasmPluginScreen extends ConsumerStatefulWidget {
 class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
   WasmPluginViewModel? _controller;
   String? _loadError;
+
+  /// .rasqpkg を読み込んだときの説明(中身 / 開発者鍵の署名の有無)。
+  String? _pkgNote;
   final _hostField = TextEditingController(text: 'misskey.io');
   final _pathField = TextEditingController();
   bool _busy = false;
@@ -133,10 +138,24 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
           }
         }
       }
-      final bytes = file.readAsBytesSync();
+      var bytes = file.readAsBytesSync();
       _lastBytes = bytes;
       _lastSource = file.path;
+      String? note;
+      // サイドロード (WF P-23): .rasqpkg は展開・検証して、root(SNS プラグインなら最初の子)を読み込む。
+      // 隣に `<pkg>.sig.json`(`rasq build` の開発者鍵の署名)があれば確かめて、鍵の指紋を出す。
+      if (isRasqPackage(bytes)) {
+        final pkg = RasqPackage.open(bytes, decompress: ref.read(rasqpkgZstdProvider));
+        final target = pkg.slotPlugins.firstOrNull ?? pkg.root;
+        if (target.id != pkg.root.id) _lastSource = '${file.path}#${target.id}';
+        final sigFile = File('${file.path}.sig.json');
+        final signed = sigFile.existsSync() ? await verifyDevSignature(bytes, (jsonDecode(sigFile.readAsStringSync()) as Map).cast<String, Object?>()) : null;
+        note = '.rasqpkg: ${pkg.root.id} ${pkg.root.version}(子 ${pkg.children.length})→ ${target.id} を読み込み。'
+            '${signed != null ? '開発者鍵の署名 OK(指紋 $signed)。ストアの審査は通っていません' : '署名なし(.sig.json がありません)。出どころを確かめられません'}';
+        bytes = target.wasm;
+      }
       await _start(bytes);
+      if (mounted) setState(() => _pkgNote = note);
     } catch (e) {
       setState(() => _loadError = '$raw の読み込みに失敗(絶対パスか ~/ 始まりで指定してください): $e');
     }
@@ -360,6 +379,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
                 TextButton(onPressed: () => ref.read(slotPluginsProvider.notifier).unregister(p.id), child: const Text('解除')),
               ]),
             if (_loadError != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_loadError!, style: RasqTypography.caption.copyWith(color: RasqTokens.of(context).danger))),
+            if (_pkgNote != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_pkgNote!, style: RasqTypography.caption)),
             if (controller?.lastResult != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),

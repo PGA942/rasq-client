@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart' show sha512;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../settings/settings_dsl.dart';
+import '../store/rasqpkg.dart';
 import '../store/store_providers.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
@@ -267,12 +269,22 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     try {
       final raw = await ref.read(sessionStorageProvider).read(slotPluginsStorageKey);
       if (raw == null) return;
+      // 同じ .rasqpkg から複数(root と子)を読むので、取り直しはプラグイン id ごとに 1 回。
+      final artifacts = <String, Uint8List>{};
       for (final p in (jsonDecode(raw) as List)) {
         if (p is! String) continue;
-        // ストアからのインストール (D-168): 配布物を取り直す(モックは同梱アセット)。
+        // ストアからのインストール (D-168): 配布物を取り直す(モックは同梱アセット)。`store:<id>#<childId>` は
+        // .rasqpkg の中の子。取り直したものは**インストール時に検証した SHA-512 と同じ**でなければ読み込まない
+        // (ストア署名を確かめたのはインストール時だけなので、ここで別物にすり替わっていないことを見る)。
         if (p.startsWith('store:')) {
+          final pluginId = splitPackageSource(p).container.substring(6);
           try {
-            final bytes = await ref.read(storeClientProvider).downloadArtifact(p.substring(6), 'bundle');
+            final bytes = artifacts[pluginId] ??= await ref.read(storeClientProvider).downloadArtifact(pluginId, 'bundle');
+            final expected = ref.read(installedPluginsProvider).where((x) => x.id == pluginId).firstOrNull?.sha512;
+            if (expected != null && expected.isNotEmpty && expected != '-' && sha512.convert(bytes).toString() != expected) {
+              ref.read(slotPluginsNoticeProvider.notifier).set('$pluginId: 取り直した配布物がインストール時と違うため読み込みません(ストアで入れ直してください)');
+              continue;
+            }
             await register(p, bytes: bytes, persist: false);
           } catch (e) {
             debugPrint('slot plugin restore $p: $e');
@@ -291,9 +303,20 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   }
 
   /// 読み込んで登録。`bytes` を渡せばファイルを読まない(同梱アセット等)。
+  ///
+  /// 中身が `.rasqpkg`(zstd)なら展開・検証して、その中の 1 つを登録する: `source` の `#<pluginId>` が指す子、
+  /// 無ければ root。登録するのは sns 以外(SNS プラグイン本体の差し替えはここではしない)。
   Future<SlotPlugin?> register(String source, {Uint8List? bytes, bool persist = true}) async {
     try {
-      final data = bytes ?? File(source).readAsBytesSync();
+      final (:container, :pluginId) = splitPackageSource(source);
+      var data = bytes ?? File(container).readAsBytesSync();
+      String? expectedId;
+      if (isRasqPackage(data)) {
+        final entry = RasqPackage.open(data, decompress: ref.read(rasqpkgZstdProvider)).plugin(pluginId);
+        if (entry.isSns) throw StateError('${entry.id} は SNS プラグインです(スロットには登録できません)');
+        data = entry.wasm;
+        expectedId = entry.id;
+      }
       final loader = ref.read(slotRuntimeLoaderProvider);
       // マニフェストを読むために一度素の権限で起動し、宣言に合わせて起動し直す。
       var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {});
@@ -306,6 +329,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       if (manifest.id.isEmpty) {
         runtime.dispose();
         throw StateError('plugin.manifest.id が空です');
+      }
+      // 配布物の目次が言う id と、wasm 自身が名乗る id が同じこと(別のプラグインを入れ物に紛れ込ませない)。
+      if (expectedId != null && manifest.id != expectedId) {
+        runtime.dispose();
+        throw StateError('配布物の目次は $expectedId なのに、wasm は ${manifest.id} を名乗っています');
       }
       runtime.dispose();
       runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns);

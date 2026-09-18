@@ -19,7 +19,7 @@ variables:
   SECRET_DETECTION_ENABLED: 'true'
   PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
   CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
-  SDK_SAMPLE_BRANCH: "agent/other-api-plugins"
+  SDK_SAMPLE_BRANCH: "main"
   FLUTTER_PIN: "3.47.2"
 
 include:
