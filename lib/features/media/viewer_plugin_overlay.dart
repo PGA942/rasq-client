@@ -9,6 +9,7 @@ import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../home/plugin_actions.dart' show viewerToggleDefaultIcon;
+import '../home/material_icons.dart';
 import '../home/post_row.dart';
 import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
@@ -274,7 +275,8 @@ class ViewerPluginToggle extends StatelessWidget {
     final icon = failed
         ? Icons.error_outline
         : declared
-            ? PostRow.iconFor(iconName, Icons.extension)
+            // 宣言のアイコン名: 投稿ボタンの小さい表 → Material の全アイコン表 (D-212) → 既定
+            ? PostRow.iconFor(iconName, materialIconByName(iconName) ?? Icons.extension)
             : (enabled ? Icons.extension : Icons.extension_outlined);
     final color = !enabled
         ? (declared ? Colors.white54 : Colors.white)
