@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -31,6 +32,17 @@ class ProMediaEditorArgs {
   final Uint8List bytes;
   final String name;
   final String mimeType;
+}
+
+/// 動画編集の一時ファイル (D-248)。
+/// - 置き場を先に作る: macOS(サンドボックス無し)の `~/Library/Caches/<bundle id>` は path_provider が作らないので、
+///   無いと書き込みの open が PathNotFoundException になる。
+/// - ファイル名に元の名前を使わない(空白 / 日本語 / `/` をネイティブ側のパス処理へ渡さない)。拡張子だけ引き継ぐ。
+Future<File> videoEditTempFile(Directory dir, String name) async {
+  await dir.create(recursive: true);
+  final m = RegExp(r'\.([A-Za-z0-9]{1,5})$').firstMatch(name);
+  final ext = (m?.group(1) ?? 'mp4').toLowerCase();
+  return File('${dir.path}/rasq_edit_${DateTime.now().microsecondsSinceEpoch}.$ext');
 }
 
 const proMediaEditorPluginKey = Key('media.pro.plugin');
@@ -118,17 +130,20 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   Future<void> _initVideo() async {
     try {
-      final dir = await getTemporaryDirectory();
-      final f = File('${dir.path}/rasq_edit_${DateTime.now().microsecondsSinceEpoch}_${widget.args.name}');
+      final f = await videoEditTempFile(await getTemporaryDirectory(), widget.args.name);
       await f.writeAsBytes(widget.args.bytes, flush: true);
+      if (!mounted) {
+        _deleteQuietly(f);
+        return;
+      }
       _videoFile = f;
       final player = VideoPlayerController.file(f);
+      _player = player;
       await player.initialize();
       await player.setLooping(false);
       await player.pause();
       final meta = await pve.ProVideoEditor.instance.getMetadata(pve.EditorVideo.file(f.path));
       if (!mounted) return;
-      _player = player;
       _meta = meta;
       _video = ProVideoController(
         videoPlayer: AspectRatio(aspectRatio: player.value.aspectRatio == 0 ? 16 / 9 : player.value.aspectRatio, child: VideoPlayer(player)),
@@ -148,6 +163,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       if (mounted) setState(() => _videoError = '動画を開けませんでした: $e');
     }
   }
+
+  static void _deleteQuietly(File f) => unawaited(f.delete().then<void>((_) {}, onError: (_) {}));
 
   void _onPlayerTick() {
     final p = _player;
@@ -226,7 +243,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     _player?.removeListener(_onPlayerTick);
     _player?.dispose();
     _video?.dispose();
-    _videoFile?.delete().catchError((_) => _videoFile!);
+    final f = _videoFile;
+    if (f != null) _deleteQuietly(f);
     super.dispose();
   }
 
