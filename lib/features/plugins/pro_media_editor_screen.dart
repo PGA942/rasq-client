@@ -2,9 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 import 'package:path_provider/path_provider.dart';
@@ -57,6 +60,13 @@ Future<File> videoEditTempFile(Directory dir, String name) async {
   final ext = (m?.group(1) ?? 'mp4').toLowerCase();
   return File('${dir.path}/rasq_edit_${DateTime.now().microsecondsSinceEpoch}.$ext');
 }
+
+/// Visualizer の設定で選んだファイル(左の絵 / 背景の動画)の置き場 (D-253)。ピッカーの一時ファイルは消えるので、
+/// アプリの保存領域へ写して、設定にはそのパスを持つ。テストで差し替える。
+final visualizerDirProvider = Provider<Future<Directory> Function()>((ref) => () async {
+      final base = await getApplicationSupportDirectory();
+      return Directory('${base.path}/visualizer');
+    });
 
 /// 下段バーのボタンのキー: `media.pro.bar.<id>`(id = `editor:<tool>` / `slot:<pluginId>:<actionId>` / `list:<listId>`)。
 Key proMediaEditorBarKey(String id) => ValueKey('media.pro.bar.$id');
@@ -142,6 +152,10 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   AudioPcm? _pcm;
   AudioVisualizerConfig _vizConfig = const AudioVisualizerConfig();
 
+  /// 左の絵に使うアカウントのアイコン(読み込み済み。無ければ null = 音符)。
+  ui.Image? _avatar;
+  bool _avatarTried = false;
+
   /// エディターの作り直し(書き出し直した動画で開き直す)ごとに増やす。
   int _videoGeneration = 0;
   VideoPlayerController? _player;
@@ -188,22 +202,84 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     }
   }
 
-  /// 音声 → 2560×1440 の動画(その瞬間のスペクトル + シークバー、D-251)。画面が閉じられていたら null。
+  Future<ui.Image?> _loadImageFile(String path) async {
+    try {
+      return await decodeUiImage(await File(path).readAsBytes());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// アカウントのアイコン(1 回だけ取りに行く。取れなければ音符のまま)。
+  Future<ui.Image?> _loadAvatar() async {
+    if (_avatarTried) return _avatar;
+    _avatarTried = true;
+    final url = ref.read(currentUserProvider).avatarUrl;
+    if (url == null) return null;
+    try {
+      final r = await http.get(url).timeout(const Duration(seconds: 8));
+      if (r.statusCode == 200) _avatar = await decodeUiImage(r.bodyBytes);
+    } catch (_) {}
+    return _avatar;
+  }
+
+  Future<ui.Image?> _leftImageFor(AudioVisualizerConfig c) async => switch (c.left) {
+        AudioVisualizerLeft.avatar => await _loadAvatar(),
+        AudioVisualizerLeft.file => c.leftImagePath == null ? null : await _loadImageFile(c.leftImagePath!),
+        _ => null,
+      };
+
+  /// 選んだファイルをアプリの保存領域へ写す(同じ種類の古いものは消す)。戻りは写した先のパス。
+  Future<String?> _keepPicked(XFile? picked, String kind) async {
+    if (picked == null) return null;
+    final dir = await ref.read(visualizerDirProvider)();
+    await dir.create(recursive: true);
+    for (final old in dir.listSync().whereType<File>()) {
+      if (old.uri.pathSegments.last.startsWith('${kind}_')) _deleteQuietly(old);
+    }
+    final m = RegExp(r'\.([A-Za-z0-9]{1,5})$').firstMatch(picked.name);
+    final out = File('${dir.path}/${kind}_${DateTime.now().microsecondsSinceEpoch}.${(m?.group(1) ?? (kind == 'bg' ? 'mp4' : 'png')).toLowerCase()}');
+    await out.writeAsBytes(await picked.readAsBytes(), flush: true);
+    return out.path;
+  }
+
+  /// 背景の動画の、その時刻の 1 枚(設定 FOW のプレビュー用。端末ネイティブだけ)。
+  Future<ui.Image?> _videoFrameAt(String path, Duration at) async {
+    if (!audioVideoSupported) return null;
+    try {
+      final video = pve.EditorVideo.file(path);
+      final meta = await pve.ProVideoEditor.instance.getMetadata(video);
+      final frames = await pve.ProVideoEditor.instance.getThumbnails(pve.ThumbnailConfigs(video: video, outputSize: const Size(640, 360), timestamps: [audioBackgroundTimeAt(at, meta.duration)], boxFit: pve.ThumbnailBoxFit.cover, outputFormat: pve.ThumbnailFormat.jpeg));
+      return frames.isEmpty ? null : await decodeUiImage(frames.first);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 音声 → 2560×1440 の動画(その瞬間のスペクトル + シークバー、D-251 / D-253)。画面が閉じられていたら null。
   Future<File?> _buildVisualizer() async {
     final audio = _audioFile!;
     if (mounted) setState(() => _audioProgress = 0);
     _pcm ??= await loadAudioPcm(audio, audio.parent);
-    final video = await buildAudioVisualizerVideo(
-      audio: audio,
-      pcm: _pcm!,
-      workDir: audio.parent,
-      config: _vizConfig,
-      title: widget.args.name,
-      cancelled: () => !mounted,
-      onProgress: (p) {
-        if (mounted) setState(() => _audioProgress = p);
-      },
-    );
+    final leftImage = await _leftImageFor(_vizConfig);
+    File video;
+    try {
+      video = await buildAudioVisualizerVideo(
+        audio: audio,
+        pcm: _pcm!,
+        workDir: audio.parent,
+        config: _vizConfig,
+        title: widget.args.name,
+        leftImage: leftImage,
+        cancelled: () => !mounted,
+        onProgress: (p) {
+          if (mounted) setState(() => _audioProgress = p);
+        },
+      );
+    } finally {
+      // 選んだ画像はその都度読む(アイコンは持ち続ける)。
+      if (leftImage != null && !identical(leftImage, _avatar)) leftImage.dispose();
+    }
     if (!mounted) {
       _deleteQuietly(video);
       return null;
@@ -239,7 +315,20 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   /// 下段バーの「Visualizer」(D-251): 設定 FOW → 決定で保存して、動画を書き出し直して開き直す。
   Future<void> _editVisualizer() async {
-    final next = await showAudioVisualizerFow(_overlay, initial: _vizConfig, pcm: _pcm, position: _player?.value.position ?? Duration.zero, title: widget.args.name);
+    final next = await showAudioVisualizerFow(
+      _overlay,
+      initial: _vizConfig,
+      pcm: _pcm,
+      position: _player?.value.position ?? Duration.zero,
+      title: widget.args.name,
+      host: AudioVisualizerFowHost(
+        avatar: await _loadAvatar(),
+        loadImage: _loadImageFile,
+        loadVideoFrame: _videoFrameAt,
+        pickImage: () async => _keepPicked(await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1024, maxHeight: 1024), 'left'),
+        pickVideo: () async => _keepPicked(await ImagePicker().pickVideo(source: ImageSource.gallery), 'bg'),
+      ),
+    );
     if (next == null || next == _vizConfig || !mounted) return;
     _vizConfig = next;
     await ref.read(sessionStorageProvider).write(audioVisualizerStorageKey, jsonEncode(next.toJson()));
@@ -348,6 +437,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     if (f != null) _deleteQuietly(f);
     final a = _audioFile;
     if (a != null) _deleteQuietly(a);
+    _avatar?.dispose();
     super.dispose();
   }
 
