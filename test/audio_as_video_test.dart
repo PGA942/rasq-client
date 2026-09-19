@@ -57,15 +57,30 @@ void main() {
     return data.buffer.asUint8List();
   }
 
-  test('フレームの割り当て: 既定 30fps、長い音声は上限の枚数に収まるよう fps を下げる', () {
+  test('フレームの割り当て: 既定 25fps、長い音声は上限の枚数に収まるよう fps を下げる', () {
     final short = audioFramePlan(const Duration(seconds: 10));
-    expect((short.frames, short.fps), (300, 30.0));
+    expect((short.frames, short.fps), (250, 25.0));
+    expect(const AudioVisualizerConfig().fps, 25);
     expect(audioFramePlan(const Duration(seconds: 10), fps: 60).frames, 600);
     final long = audioFramePlan(const Duration(minutes: 10));
     expect(long.frames, audioMaxFrames);
-    expect(long.fps, closeTo(15, 0.01));
+    expect(long.fps, closeTo(12.5, 0.01));
     expect(long.each.inMicroseconds * long.frames, closeTo(const Duration(minutes: 10).inMicroseconds, audioMaxFrames));
-    expect(audioFramePlan(Duration.zero).frames, 30); // 長さが取れなくても 1 秒ぶん
+    expect(audioFramePlan(Duration.zero).frames, 25); // 長さが取れなくても 1 秒ぶん
+  });
+
+  test('フェードと背景のループ (D-253): 先頭 / 末尾で明るさが 0 → 1 → 0、背景の時刻は動画の長さで折り返す', () {
+    const c = AudioVisualizerConfig(fadeIn: 2, fadeOut: 4);
+    const total = Duration(seconds: 60);
+    expect(audioFadeAt(Duration.zero, total, c), 0);
+    expect(audioFadeAt(const Duration(seconds: 1), total, c), closeTo(0.5, 1e-9));
+    expect(audioFadeAt(const Duration(seconds: 30), total, c), 1);
+    expect(audioFadeAt(const Duration(seconds: 58), total, c), closeTo(0.5, 1e-9));
+    expect(audioFadeAt(total, total, c), 0);
+    expect(audioFadeAt(Duration.zero, total, const AudioVisualizerConfig()), 1); // 既定はフェードなし
+    expect(audioBackgroundTimeAt(const Duration(seconds: 25), const Duration(seconds: 10)), const Duration(seconds: 5));
+    expect(audioBackgroundTimeAt(const Duration(seconds: 3), const Duration(seconds: 10)), const Duration(seconds: 3));
+    expect(audioBackgroundTimeAt(const Duration(seconds: 3), Duration.zero), Duration.zero);
   });
 
   test('WAV: ステレオ 48kHz → モノラル 24kHz、長さはそのまま。WAV でなければ FormatException', () {
@@ -91,17 +106,25 @@ void main() {
     expect(falling[peak(low)], closeTo(low[peak(low)] * 0.82, 1e-9));
   });
 
-  test('設定: JSON の往復、範囲外は丸める、壊れた保存値は既定', () {
-    const c = AudioVisualizerConfig(fps: 24, bands: 96, style: AudioVisualizerStyle.line, background: Color(0xFF0B1020), barColor: Color(0xFFFF5C8A), showIcon: false, fine: true);
+  test('設定: JSON の往復(タイトル / 説明は保存しない)、範囲外は丸める、旧形の showIcon を引き継ぐ、壊れた保存値は既定', () {
+    const c = AudioVisualizerConfig(fps: 24, bands: 96, style: AudioVisualizerStyle.line, background: Color(0xFF0B1020), barColor: Color(0xFFFF5C8A), left: AudioVisualizerLeft.file, leftImagePath: '/x/left.png', textPosition: AudioVisualizerTextPosition.above, textColor: Color(0xFFFFD54F), textScale: 1.4, backgroundVideoPath: '/x/bg.mp4', backgroundDim: 0.5, fadeIn: 1.5, fadeOut: 3, fine: true);
     expect(AudioVisualizerConfig.decode(jsonEncode(c.toJson())), c);
-    expect(AudioVisualizerConfig.fromJson({'fps': 500, 'bands': 1}).fps, 60);
-    expect(AudioVisualizerConfig.fromJson({'fps': 500, 'bands': 1}).bands, 16);
+    final withText = c.copyWith(title: '曲名', description: '説明');
+    expect(withText.toJson().containsKey('title'), isFalse);
+    expect(AudioVisualizerConfig.decode(jsonEncode(withText.toJson())).title, isNull);
+    expect(withText == c, isFalse); // 同じ設定でも文字が違えば書き出し直す
+    expect(AudioVisualizerConfig.fromJson({'fps': 500, 'bands': 1, 'textScale': 9, 'fadeIn': 99, 'backgroundDim': 2}).toJson(), containsPair('fps', 60));
+    final clamped = AudioVisualizerConfig.fromJson({'fps': 500, 'bands': 1, 'textScale': 9, 'fadeIn': 99, 'backgroundDim': 2});
+    expect((clamped.bands, clamped.textScale, clamped.fadeIn, clamped.backgroundDim), (16, 2.0, 5.0, 0.8));
+    expect(AudioVisualizerConfig.fromJson({'showIcon': false}).left, AudioVisualizerLeft.none);
+    expect(const AudioVisualizerConfig().left, AudioVisualizerLeft.avatar);
+    expect(c.copyWith(clearBackgroundVideo: true).backgroundVideoPath, isNull);
     expect(AudioVisualizerConfig.decode('{broken'), const AudioVisualizerConfig());
     expect(const AudioVisualizerConfig().paintSize, const ui.Size(1280, 720));
   });
 
   testWidgets('フレームの絵: 背景色、バーは設定の色、中央のシークバーは再生位置まで色が付く', (tester) async {
-    const config = AudioVisualizerConfig(barColor: Color(0xFF00FF00), background: Color(0xFF000010), showIcon: false);
+    const config = AudioVisualizerConfig(barColor: Color(0xFF00FF00), background: Color(0xFF000010), left: AudioVisualizerLeft.none);
     final image = await tester.runAsync(() async {
       final png = await renderAudioFramePng(spectrum: List.filled(64, 0.8), progress: 0.5, size: const ui.Size(640, 360), config: config);
       final codec = await ui.instantiateImageCodec(png);
@@ -122,27 +145,72 @@ void main() {
     expect(px(0.75, 0.5), isNot((0, 255, 0)));
   });
 
-  testWidgets('設定 FOW: 値を変えるとプレビューが描き直され、決定で設定が返る', (tester) async {
+  testWidgets('フレームの絵 (D-253): 背景の動画のコマ + 暗さ、左の絵、フェードで全体が暗くなる', (tester) async {
+    Future<ui.Image> solid(Color c) async {
+      final rec = ui.PictureRecorder();
+      Canvas(rec).drawRect(const Rect.fromLTWH(0, 0, 8, 8), Paint()..color = c);
+      return rec.endRecording().toImage(8, 8);
+    }
+
+    Future<ByteData> render(AudioVisualizerConfig config, {ui.Image? bg, ui.Image? left, double fade = 1}) async {
+      final png = await renderAudioFramePng(spectrum: List.filled(32, 0.1), progress: 0.2, size: const ui.Size(640, 360), config: config, background: bg, leftImage: left, fade: fade);
+      final codec = await ui.instantiateImageCodec(png);
+      return (await (await codec.getNextFrame()).image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+    }
+
+    (int, int, int) px(ByteData d, double fx, double fy) {
+      final o = ((fy * 360).floor() * 640 + (fx * 640).floor()) * 4;
+      return (d.getUint8(o), d.getUint8(o + 1), d.getUint8(o + 2));
+    }
+
+    await tester.runAsync(() async {
+      final red = await solid(const Color(0xFFFF0000)), blue = await solid(const Color(0xFF0000FF));
+      // 背景の動画(赤)に暗さ 50% → 隅は暗い赤。左の絵(青)は左の列の中央に出る。
+      final d = await render(const AudioVisualizerConfig(left: AudioVisualizerLeft.file, backgroundDim: 0.5, showTitle: false), bg: red, left: blue);
+      final corner = px(d, 0.01, 0.02);
+      expect(corner.$1, inInclusiveRange(120, 135));
+      expect((corner.$2, corner.$3), (0, 0));
+      expect(px(d, 0.17, 0.5), (0, 0, 255));
+      // フェード 0 = 真っ黒。
+      final black = await render(const AudioVisualizerConfig(left: AudioVisualizerLeft.none), bg: red, fade: 0);
+      expect(px(black, 0.5, 0.5), (0, 0, 0));
+      expect(px(black, 0.01, 0.02), (0, 0, 0));
+    });
+  });
+
+  testWidgets('設定 FOW: 値を変えるとプレビューが描き直され、決定で設定が返る(左の絵 / 文字 / 背景の動画 / フェード、D-253)', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     final manager = OverlayManager();
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: OverlayHost(manager: manager, child: const SizedBox.expand()))));
     final pcm = AudioPcm.parseWav(sineWav(hz: 440));
-    final future = showAudioVisualizerFow(manager, initial: const AudioVisualizerConfig(), pcm: pcm, position: const Duration(milliseconds: 500), title: 'a.m4a');
+    final future = showAudioVisualizerFow(manager, initial: const AudioVisualizerConfig(), pcm: pcm, position: const Duration(milliseconds: 500), title: 'a.m4a', host: AudioVisualizerFowHost(pickVideo: () async => '/keep/bg_1.mp4', pickImage: () async => '/keep/left_1.png'));
     await tester.pumpAndSettle();
     expect(find.byKey(audioVisualizerPreviewKey), findsOneWidget);
     final list = find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)).first;
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('viz.style.line')), 60, scrollable: list);
-    await tester.tap(find.byKey(const ValueKey('viz.style.line')));
+    Future<void> tapKey(String key) async {
+      await tester.scrollUntilVisible(find.byKey(ValueKey(key)), 80, scrollable: list);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ValueKey(key)));
+      await tester.pumpAndSettle();
+    }
+
+    await tapKey('viz.style.line');
+    await tapKey('viz.left.file');
+    await tapKey('viz.left.pick');
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('viz.description.text')), 80, scrollable: list);
+    await tester.enterText(find.byKey(const ValueKey('viz.title.text')), '曲名');
+    await tester.enterText(find.byKey(const ValueKey('viz.description.text')), 'アルバムより');
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('viz.icon')), 80, scrollable: list);
-    await tester.tap(find.byKey(const ValueKey('viz.icon')));
-    await tester.pumpAndSettle();
+    await tapKey('viz.text.above');
+    await tapKey('viz.bgvideo.pick');
+    expect(find.byKey(const ValueKey('viz.bgvideo.dim')), findsOneWidget); // 選ぶと暗さの項目が出る
     await tester.tap(find.text('決定'));
     await tester.pumpAndSettle();
     final c = (await future)!;
-    expect((c.style, c.showIcon, c.fps), (AudioVisualizerStyle.line, false, 30));
+    expect((c.style, c.left, c.leftImagePath, c.fps), (AudioVisualizerStyle.line, AudioVisualizerLeft.file, '/keep/left_1.png', 25));
+    expect((c.title, c.description, c.textPosition, c.backgroundVideoPath), ('曲名', 'アルバムより', AudioVisualizerTextPosition.above, '/keep/bg_1.mp4'));
   });
 
   test('MIME: 端末が返した動画 / 音声の型を優先、無ければ拡張子、どちらでもなければ null', () {

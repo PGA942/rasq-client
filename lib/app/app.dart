@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' as cui;
 import 'package:material_ui/material_ui.dart' as mui;
 
 import '../features/plugins/slot_plugins.dart';
@@ -33,7 +34,9 @@ class RasqApp extends ConsumerWidget {
       scaffoldMessengerKey: ref.watch(rootMessengerKeyProvider),
       debugShowCheckedModeBanner: false,
       // pro_image_editor (D-173) は material_ui の AppBar/Scaffold を使うので、その MaterialLocalizations も要る。
-      localizationsDelegates: const [mui.DefaultMaterialLocalizations.delegate],
+      // iOS / macOS では閉じるときの確認が cupertino_ui のダイアログ(showAdaptiveDialog)になるので、その
+      // CupertinoLocalizations も要る (D-253: 無いと × / 戻るで例外になり、閉じられなかった)。
+      localizationsDelegates: const [mui.DefaultMaterialLocalizations.delegate, cui.DefaultCupertinoLocalizations.delegate],
       theme: RasqTheme.light(),
       darkTheme: RasqTheme.dark(),
       themeMode: switch (mode) {

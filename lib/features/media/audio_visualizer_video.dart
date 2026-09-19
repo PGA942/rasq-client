@@ -10,8 +10,10 @@ import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 /// 音声だけのファイルを動画にする (D-250 → D-251)。
 ///
 /// 加工画面は動画のエディターなので、音声(`audio/*`)は開くときに **2560×1440 の動画**へ変換する。
-/// 絵は **その瞬間のスペクトル**(左から右に 低音 → 高音)を 1 フレームごとに描く(既定 30fps)。バーの列の
-/// 中央(高さ方向)に**シークバー**(再生位置までバーの色、つまみ付き)。左に黒地 + アイコン(消せる)。
+/// 絵は **その瞬間のスペクトル**(左から右に 低音 → 高音)を 1 フレームごとに描く(既定 25fps)。バーの列の
+/// 中央(高さ方向)に**シークバー**(再生位置までバーの色、つまみ付き)。左に絵(既定はアカウントのアイコン / 選んだ画像 /
+/// 音符 / なし)+ タイトル・説明(絵の上か下、色と大きさ)。背景は単色か**動画**(その瞬間のコマを取り出して描く。短ければ
+/// ループ、上に暗さを掛ける)。先頭 / 末尾にフェード (D-253)。
 ///
 /// 流れ(端末ネイティブ = Android / iOS / macOS だけ。pro_video_editor の 音声の取り出し / StopMotion が要る):
 /// 1. `extractAudioToFile` で WAV に → [AudioPcm.parseWav](モノラル、≤ 24kHz に間引き)
@@ -23,8 +25,8 @@ import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 /// 加工画面の下段バーの「Visualizer」から変える(その場のフレームをプレビュー、決定で書き出し直す)。
 const audioVideoSize = ui.Size(2560, 1440);
 
-/// フレームの上限(これを超える長さは fps を下げて収める)。30fps で 5 分。
-const audioMaxFrames = 9000;
+/// フレームの上限(これを超える長さは fps を下げて収める)。25fps で 5 分。
+const audioMaxFrames = 7500;
 
 /// 波形の形。
 enum AudioVisualizerStyle {
@@ -36,11 +38,50 @@ enum AudioVisualizerStyle {
   final String label;
 }
 
+/// 左の絵 (D-253)。
+enum AudioVisualizerLeft {
+  avatar('アカウントのアイコン'),
+  file('選んだ画像'),
+  glyph('音符のアイコン'),
+  none('なし(波形を横いっぱいに)');
+
+  const AudioVisualizerLeft(this.label);
+  final String label;
+}
+
+/// タイトル / 説明を左の絵のどちらに付けるか。
+enum AudioVisualizerTextPosition {
+  below('絵の下'),
+  above('絵の上');
+
+  const AudioVisualizerTextPosition(this.label);
+  final String label;
+}
+
 @immutable
 class AudioVisualizerConfig {
-  const AudioVisualizerConfig({this.fps = 30, this.bands = 64, this.style = AudioVisualizerStyle.mirror, this.background = const Color(0xFF000000), this.barColor = const Color(0xFF4F8DFD), this.showIcon = true, this.showTitle = true, this.fine = false});
+  const AudioVisualizerConfig({
+    this.fps = 25,
+    this.bands = 64,
+    this.style = AudioVisualizerStyle.mirror,
+    this.background = const Color(0xFF000000),
+    this.barColor = const Color(0xFF4F8DFD),
+    this.left = AudioVisualizerLeft.avatar,
+    this.leftImagePath,
+    this.showTitle = true,
+    this.textPosition = AudioVisualizerTextPosition.below,
+    this.textColor,
+    this.textScale = 1.0,
+    this.backgroundVideoPath,
+    this.backgroundDim = 0.35,
+    this.fadeIn = 0,
+    this.fadeOut = 0,
+    this.fine = false,
+    this.title,
+    this.description = '',
+  });
 
-  /// 10〜60。
+  /// 10〜60。既定 25(30 だと 2 分の音声の書き出しに 3 分ほどかかった、D-253)。
   final int fps;
 
   /// 帯域(バー)の数。16〜128。
@@ -48,26 +89,97 @@ class AudioVisualizerConfig {
   final AudioVisualizerStyle style;
   final Color background;
   final Color barColor;
-  final bool showIcon;
+
+  /// 左の絵。[AudioVisualizerLeft.file] は [leftImagePath](アプリの保存領域に写したもの)。
+  final AudioVisualizerLeft left;
+  final String? leftImagePath;
+
+  /// タイトル / 説明を出すか、絵の上下どちらか、色(null = 背景に合わせて白 / 黒)、大きさ(0.6〜2.0 倍)。
   final bool showTitle;
+  final AudioVisualizerTextPosition textPosition;
+  final Color? textColor;
+  final double textScale;
+
+  /// 背景の動画(アプリの保存領域に写したもの。音声より短ければループ)と、その上に掛ける暗さ(0〜0.8)。
+  final String? backgroundVideoPath;
+  final double backgroundDim;
+
+  /// 絵のフェードイン / フェードアウト(秒、0〜5。黒から / 黒へ)。
+  final double fadeIn;
+  final double fadeOut;
 
   /// 描画の細かさ: false = 1280×720 で描いて 2560×1440 へ拡大(速い)、true = 2560×1440 で描く(約 4 倍かかる)。
   final bool fine;
 
+  /// タイトル(null = ファイル名)と説明。**保存しない**(その音声ごとの中身)。
+  final String? title;
+  final String description;
+
+  bool get showLeft => left != AudioVisualizerLeft.none;
   ui.Size get paintSize => fine ? audioVideoSize : audioVideoSize / 2;
 
-  AudioVisualizerConfig copyWith({int? fps, int? bands, AudioVisualizerStyle? style, Color? background, Color? barColor, bool? showIcon, bool? showTitle, bool? fine}) => AudioVisualizerConfig(
+  AudioVisualizerConfig copyWith({
+    int? fps,
+    int? bands,
+    AudioVisualizerStyle? style,
+    Color? background,
+    Color? barColor,
+    AudioVisualizerLeft? left,
+    String? leftImagePath,
+    bool? showTitle,
+    AudioVisualizerTextPosition? textPosition,
+    Color? textColor,
+    bool clearTextColor = false,
+    double? textScale,
+    String? backgroundVideoPath,
+    bool clearBackgroundVideo = false,
+    double? backgroundDim,
+    double? fadeIn,
+    double? fadeOut,
+    bool? fine,
+    String? title,
+    String? description,
+  }) =>
+      AudioVisualizerConfig(
         fps: (fps ?? this.fps).clamp(10, 60),
         bands: (bands ?? this.bands).clamp(16, 128),
         style: style ?? this.style,
         background: background ?? this.background,
         barColor: barColor ?? this.barColor,
-        showIcon: showIcon ?? this.showIcon,
+        left: left ?? this.left,
+        leftImagePath: leftImagePath ?? this.leftImagePath,
         showTitle: showTitle ?? this.showTitle,
+        textPosition: textPosition ?? this.textPosition,
+        textColor: clearTextColor ? null : (textColor ?? this.textColor),
+        textScale: (textScale ?? this.textScale).clamp(0.6, 2.0),
+        backgroundVideoPath: clearBackgroundVideo ? null : (backgroundVideoPath ?? this.backgroundVideoPath),
+        backgroundDim: (backgroundDim ?? this.backgroundDim).clamp(0.0, 0.8),
+        fadeIn: (fadeIn ?? this.fadeIn).clamp(0.0, 5.0),
+        fadeOut: (fadeOut ?? this.fadeOut).clamp(0.0, 5.0),
         fine: fine ?? this.fine,
+        title: title ?? this.title,
+        description: description ?? this.description,
       );
 
-  Map<String, Object?> toJson() => {'fps': fps, 'bands': bands, 'style': style.name, 'background': background.toARGB32(), 'barColor': barColor.toARGB32(), 'showIcon': showIcon, 'showTitle': showTitle, 'fine': fine};
+  /// 保存する形(タイトル / 説明は入れない)。
+  Map<String, Object?> toJson() => {
+        'fps': fps,
+        'bands': bands,
+        'style': style.name,
+        'background': background.toARGB32(),
+        'barColor': barColor.toARGB32(),
+        'left': left.name,
+        if (leftImagePath != null) 'leftImagePath': leftImagePath,
+        'showTitle': showTitle,
+        'textPosition': textPosition.name,
+        if (textColor != null) 'textColor': textColor!.toARGB32(),
+        'textScale': textScale,
+        if (backgroundVideoPath != null) 'backgroundVideoPath': backgroundVideoPath,
+        'backgroundDim': backgroundDim,
+        'fadeIn': fadeIn,
+        'fadeOut': fadeOut,
+        'fine': fine,
+      };
 
   factory AudioVisualizerConfig.fromJson(Map<String, Object?> j) => const AudioVisualizerConfig().copyWith(
         fps: (j['fps'] as num?)?.toInt(),
@@ -75,8 +187,17 @@ class AudioVisualizerConfig {
         style: AudioVisualizerStyle.values.where((s) => s.name == j['style']).firstOrNull,
         background: j['background'] is int ? Color(j['background'] as int) : null,
         barColor: j['barColor'] is int ? Color(j['barColor'] as int) : null,
-        showIcon: j['showIcon'] as bool?,
+        // 旧形 (D-251) の showIcon: false = なし。
+        left: AudioVisualizerLeft.values.where((s) => s.name == j['left']).firstOrNull ?? (j['showIcon'] == false ? AudioVisualizerLeft.none : null),
+        leftImagePath: j['leftImagePath'] as String?,
         showTitle: j['showTitle'] as bool?,
+        textPosition: AudioVisualizerTextPosition.values.where((s) => s.name == j['textPosition']).firstOrNull,
+        textColor: j['textColor'] is int ? Color(j['textColor'] as int) : null,
+        textScale: (j['textScale'] as num?)?.toDouble(),
+        backgroundVideoPath: j['backgroundVideoPath'] as String?,
+        backgroundDim: (j['backgroundDim'] as num?)?.toDouble(),
+        fadeIn: (j['fadeIn'] as num?)?.toDouble(),
+        fadeOut: (j['fadeOut'] as num?)?.toDouble(),
         fine: j['fine'] as bool?,
       );
 
@@ -90,13 +211,25 @@ class AudioVisualizerConfig {
   }
 
   @override
-  bool operator ==(Object other) => other is AudioVisualizerConfig && jsonEncode(other.toJson()) == jsonEncode(toJson());
+  bool operator ==(Object other) => other is AudioVisualizerConfig && jsonEncode(other.toJson()) == jsonEncode(toJson()) && other.title == title && other.description == description;
   @override
-  int get hashCode => jsonEncode(toJson()).hashCode;
+  int get hashCode => Object.hash(jsonEncode(toJson()), title, description);
 }
 
+/// フェードの明るさ(0 = 真っ黒、1 = そのまま): 先頭 [AudioVisualizerConfig.fadeIn] 秒で上がり、末尾 fadeOut 秒で下がる。
+double audioFadeAt(Duration at, Duration total, AudioVisualizerConfig config) {
+  final t = at.inMicroseconds / 1e6, end = total.inMicroseconds / 1e6;
+  var v = 1.0;
+  if (config.fadeIn > 0) v = math.min(v, t / config.fadeIn);
+  if (config.fadeOut > 0) v = math.min(v, (end - t) / config.fadeOut);
+  return v.clamp(0.0, 1.0);
+}
+
+/// 背景の動画のどこを出すか: 音声より短ければループ。
+Duration audioBackgroundTimeAt(Duration at, Duration videoDuration) => videoDuration <= Duration.zero ? Duration.zero : Duration(microseconds: at.inMicroseconds % videoDuration.inMicroseconds);
+
 /// フレームの割り当て: 設定の fps、長すぎる音声は [audioMaxFrames] 枚に収まるまで fps を下げる。
-({int frames, Duration each, double fps}) audioFramePlan(Duration total, {int fps = 30}) {
+({int frames, Duration each, double fps}) audioFramePlan(Duration total, {int fps = 25}) {
   final seconds = math.max(total.inMicroseconds / 1e6, 1.0);
   final want = (seconds * fps).ceil();
   final frames = want.clamp(1, audioMaxFrames);
@@ -238,26 +371,64 @@ List<double> spectrumAt(AudioPcm pcm, Duration at, {int bands = 64, List<double>
   return out;
 }
 
+/// 画像を枠いっぱいに(cover)描く。
+void _drawCover(Canvas canvas, ui.Image image, Rect dst, {Paint? paint}) {
+  final iw = image.width.toDouble(), ih = image.height.toDouble();
+  final scale = math.max(dst.width / iw, dst.height / ih);
+  final sw = dst.width / scale, sh = dst.height / scale;
+  canvas.drawImageRect(image, Rect.fromLTWH((iw - sw) / 2, (ih - sh) / 2, sw, sh), dst, paint ?? (Paint()..filterQuality = FilterQuality.medium));
+}
+
 /// 1 フレームを描く。[spectrum] = 帯域の高さ(0..1、左 = 低音)、[progress] = 再生位置(0..1)。
-void paintAudioFrame(Canvas canvas, ui.Size size, {required List<double> spectrum, required double progress, AudioVisualizerConfig config = const AudioVisualizerConfig(), IconData icon = Icons.music_note_rounded, String? title}) {
+/// [background] = 背景の動画のその瞬間の 1 枚、[leftImage] = 左の絵(アイコン / 選んだ画像)、[fade] = 明るさ(0..1)。
+void paintAudioFrame(Canvas canvas, ui.Size size, {required List<double> spectrum, required double progress, AudioVisualizerConfig config = const AudioVisualizerConfig(), IconData icon = Icons.music_note_rounded, String? title, ui.Image? background, ui.Image? leftImage, double fade = 1}) {
   final w = size.width, h = size.height;
   final bg = config.background;
-  final onBg = bg.computeLuminance() > 0.5 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
-  canvas.drawRect(Offset.zero & size, Paint()..color = bg);
+  final full = Offset.zero & size;
+  canvas.drawRect(full, Paint()..color = bg);
+  var onBg = bg.computeLuminance() > 0.5 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+  if (background != null) {
+    _drawCover(canvas, background, full);
+    if (config.backgroundDim > 0) canvas.drawRect(full, Paint()..color = const Color(0xFF000000).withValues(alpha: config.backgroundDim));
+    onBg = const Color(0xFFFFFFFF);
+  }
+  final textColor = config.textColor ?? onBg;
   var areaLeft = h * 0.08;
-  if (config.showIcon) {
-    // 左: アイコン(角丸の枠の中)+ ファイル名。
+  if (config.showLeft) {
+    // 左: 絵(角丸)+ タイトル / 説明(絵の上か下)。
     final left = Rect.fromLTWH(0, 0, w * 0.34, h);
-    final badge = Rect.fromCenter(center: left.center, width: h * 0.36, height: h * 0.36);
-    canvas.drawRRect(RRect.fromRectAndRadius(badge, Radius.circular(h * 0.05)), Paint()..color = onBg.withValues(alpha: 0.09));
-    final glyph = TextPainter(
-      text: TextSpan(text: String.fromCharCode(icon.codePoint), style: TextStyle(fontFamily: icon.fontFamily, package: icon.fontPackage, fontSize: h * 0.22, color: config.barColor)),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    glyph.paint(canvas, badge.center - Offset(glyph.width / 2, glyph.height / 2));
-    if (config.showTitle && title != null && title.isNotEmpty) {
-      final t = TextPainter(text: TextSpan(text: title, style: TextStyle(fontSize: h * 0.032, color: onBg.withValues(alpha: 0.7))), textDirection: TextDirection.ltr, maxLines: 1, ellipsis: '…')..layout(maxWidth: left.width - h * 0.1);
-      t.paint(canvas, Offset(left.center.dx - t.width / 2, badge.bottom + h * 0.045));
+    final heading = config.title ?? title ?? '';
+    final lines = <TextPainter>[
+      if (config.showTitle && heading.isNotEmpty)
+        TextPainter(text: TextSpan(text: heading, style: TextStyle(fontSize: h * 0.036 * config.textScale, fontWeight: FontWeight.w700, color: textColor)), textDirection: TextDirection.ltr, textAlign: TextAlign.center, maxLines: 2, ellipsis: '…')..layout(maxWidth: left.width - h * 0.08),
+      if (config.showTitle && config.description.isNotEmpty)
+        TextPainter(text: TextSpan(text: config.description, style: TextStyle(fontSize: h * 0.026 * config.textScale, color: textColor.withValues(alpha: 0.78))), textDirection: TextDirection.ltr, textAlign: TextAlign.center, maxLines: 3, ellipsis: '…')..layout(maxWidth: left.width - h * 0.08),
+    ];
+    final gap = h * 0.018;
+    final textH = lines.fold(0.0, (s, t) => s + t.height) + (lines.isEmpty ? 0 : gap * lines.length);
+    final side = math.min(h * 0.36, h * 0.8 - textH);
+    final blockH = side + textH;
+    final top = (h - blockH) / 2;
+    final above = config.textPosition == AudioVisualizerTextPosition.above;
+    final badge = Rect.fromLTWH(left.center.dx - side / 2, above ? top + textH : top, side, side);
+    final rr = RRect.fromRectAndRadius(badge, Radius.circular(side * 0.14));
+    if (leftImage != null && config.left != AudioVisualizerLeft.glyph) {
+      canvas.save();
+      canvas.clipRRect(rr);
+      _drawCover(canvas, leftImage, badge);
+      canvas.restore();
+    } else {
+      canvas.drawRRect(rr, Paint()..color = onBg.withValues(alpha: 0.09));
+      final glyph = TextPainter(
+        text: TextSpan(text: String.fromCharCode(icon.codePoint), style: TextStyle(fontFamily: icon.fontFamily, package: icon.fontPackage, fontSize: side * 0.6, color: config.barColor)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      glyph.paint(canvas, badge.center - Offset(glyph.width / 2, glyph.height / 2));
+    }
+    var y = above ? top : badge.bottom + gap;
+    for (final t in lines) {
+      t.paint(canvas, Offset(left.center.dx - t.width / 2, y));
+      y += t.height + gap;
     }
     areaLeft = left.right;
   }
@@ -295,19 +466,21 @@ void paintAudioFrame(Canvas canvas, ui.Size size, {required List<double> spectru
       }
     }
   }
-  // シークバー: 溝(背景色で抜いてから薄い線)+ 再生済み + つまみ。
+  // シークバー: 溝 + 再生済み + つまみ(背景が動画のときは溝を背景色で抜かない)。
   final track = Rect.fromLTRB(area.left, seekY - h * 0.006, area.right, seekY + h * 0.006);
-  canvas.drawRect(track.inflate(h * 0.012), Paint()..color = bg);
-  canvas.drawRRect(RRect.fromRectAndRadius(track, Radius.circular(h * 0.006)), Paint()..color = onBg.withValues(alpha: 0.22));
+  if (background == null) canvas.drawRect(track.inflate(h * 0.012), Paint()..color = bg);
+  canvas.drawRRect(RRect.fromRectAndRadius(track, Radius.circular(h * 0.006)), Paint()..color = onBg.withValues(alpha: background == null ? 0.22 : 0.4));
   canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTRB(track.left, track.top, track.left + track.width * p, track.bottom), Radius.circular(h * 0.006)), bar);
   canvas.drawCircle(Offset(track.left + track.width * p, seekY), h * 0.016, Paint()..color = onBg);
+  // フェード(黒から / 黒へ)。
+  if (fade < 1) canvas.drawRect(full, Paint()..color = const Color(0xFF000000).withValues(alpha: (1 - fade).clamp(0.0, 1.0)));
 }
 
 /// 1 フレームを PNG に(本番は設定の [AudioVisualizerConfig.paintSize]。テストは小さく描ける)。
-Future<Uint8List> renderAudioFramePng({required List<double> spectrum, required double progress, AudioVisualizerConfig config = const AudioVisualizerConfig(), ui.Size? size, String? title}) async {
+Future<Uint8List> renderAudioFramePng({required List<double> spectrum, required double progress, AudioVisualizerConfig config = const AudioVisualizerConfig(), ui.Size? size, String? title, ui.Image? background, ui.Image? leftImage, double fade = 1}) async {
   final s = size ?? config.paintSize;
   final rec = ui.PictureRecorder();
-  paintAudioFrame(Canvas(rec), s, spectrum: spectrum, progress: progress, config: config, title: title);
+  paintAudioFrame(Canvas(rec), s, spectrum: spectrum, progress: progress, config: config, title: title, background: background, leftImage: leftImage, fade: fade);
   final pic = rec.endRecording();
   final img = await pic.toImage(s.width.round(), s.height.round());
   pic.dispose();
@@ -343,22 +516,77 @@ Future<AudioPcm> loadAudioPcm(File audio, Directory workDir) async {
   }
 }
 
+/// 画像のバイト列 → [ui.Image](失敗は null)。
+Future<ui.Image?> decodeUiImage(Uint8List bytes) async {
+  try {
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    codec.dispose();
+    return frame.image;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// 背景の動画のコマを、まとめて取り出す単位と、取り出す間隔(背景は毎フレームでなくてよい: 最大 15fps)。
+const _bgBatch = 48;
+const audioBackgroundMaxFps = 15.0;
+
 /// 標本 + 設定 → 動画ファイル(mp4)。[workDir] に途中のファイル(フレーム / 無音の動画)を作り、終わったら消す。
-/// [onProgress] = 0..1(フレーム作り 0〜0.7、書き出し 0.7〜1)。
-Future<File> buildAudioVisualizerVideo({required File audio, required AudioPcm pcm, required Directory workDir, AudioVisualizerConfig config = const AudioVisualizerConfig(), String? title, void Function(double progress)? onProgress, bool Function()? cancelled}) async {
+/// [leftImage] = 左の絵(呼び出し側が用意。null なら音符)。背景の動画は設定のパスから、その瞬間のコマを取り出して描く
+/// (短ければループ)。[onProgress] = 0..1(フレーム作り 0〜0.7、書き出し 0.7〜1)。
+Future<File> buildAudioVisualizerVideo({required File audio, required AudioPcm pcm, required Directory workDir, AudioVisualizerConfig config = const AudioVisualizerConfig(), String? title, ui.Image? leftImage, void Function(double progress)? onProgress, bool Function()? cancelled}) async {
   if (!audioVideoSupported) throw UnsupportedError('この端末では音声を動画にできません(Android / iOS / macOS だけ)');
   final id = DateTime.now().microsecondsSinceEpoch;
   final dir = Directory('${workDir.path}/rasq_audio_$id');
   await dir.create(recursive: true);
+  ui.Image? bgImage;
   try {
-    final plan = audioFramePlan(pcm.duration, fps: config.fps);
+    final total = pcm.duration;
+    final plan = audioFramePlan(total, fps: config.fps);
+    // 背景の動画: 長さを調べて、取り出す時刻(ループ込み)を決める。読めなければ背景なしで続ける。
+    final bgPath = config.backgroundVideoPath;
+    pve.EditorVideo? bgVideo;
+    var bgDuration = Duration.zero;
+    if (bgPath != null && File(bgPath).existsSync()) {
+      try {
+        bgVideo = pve.EditorVideo.file(bgPath);
+        bgDuration = (await pve.ProVideoEditor.instance.getMetadata(bgVideo)).duration;
+      } catch (_) {
+        bgVideo = null;
+      }
+    }
+    final bgEvery = bgVideo == null ? 1 : math.max(1, (plan.fps / audioBackgroundMaxFps).ceil());
+    var bgQueue = <Uint8List>[];
+    var bgNext = 0; // 次に取り出す「背景のコマ番号」(= フレーム番号 / bgEvery)
+
     final frames = <pve.StopMotionFrame>[];
     List<double>? prev;
     for (var i = 0; i < plan.frames; i++) {
       if (cancelled?.call() ?? false) throw StateError('cancelled');
       final at = plan.each * i;
+      if (bgVideo != null && i % bgEvery == 0) {
+        if (bgQueue.isEmpty) {
+          final count = math.min(_bgBatch, ((plan.frames - i) / bgEvery).ceil());
+          final stamps = [for (var k = 0; k < count; k++) audioBackgroundTimeAt(plan.each * ((bgNext + k) * bgEvery), bgDuration)];
+          try {
+            bgQueue = await pve.ProVideoEditor.instance.getThumbnails(pve.ThumbnailConfigs(video: bgVideo, outputSize: config.paintSize, timestamps: stamps, boxFit: pve.ThumbnailBoxFit.cover, outputFormat: pve.ThumbnailFormat.jpeg));
+          } catch (_) {
+            bgQueue = [];
+            bgVideo = null; // 取り出せなければ、以降は背景なし
+          }
+          bgNext += count;
+        }
+        if (bgQueue.isNotEmpty) {
+          final next = await decodeUiImage(bgQueue.removeAt(0));
+          if (next != null) {
+            bgImage?.dispose();
+            bgImage = next;
+          }
+        }
+      }
       prev = spectrumAt(pcm, at, bands: config.bands, previous: prev);
-      final png = await renderAudioFramePng(spectrum: prev, progress: plan.frames == 1 ? 0 : i / (plan.frames - 1), config: config, title: title);
+      final png = await renderAudioFramePng(spectrum: prev, progress: plan.frames == 1 ? 0 : i / (plan.frames - 1), config: config, title: title, background: bgImage, leftImage: leftImage, fade: audioFadeAt(at, total, config));
       final f = File('${dir.path}/f_${i.toString().padLeft(5, '0')}.png');
       await f.writeAsBytes(png);
       frames.add(pve.StopMotionFrame(image: pve.EditorLayerImage.file(f), duration: plan.each));
@@ -381,6 +609,7 @@ Future<File> buildAudioVisualizerVideo({required File audio, required AudioPcm p
     onProgress?.call(1);
     return File(out);
   } finally {
+    bgImage?.dispose();
     try {
       await dir.delete(recursive: true);
     } catch (_) {}

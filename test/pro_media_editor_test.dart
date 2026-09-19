@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -228,6 +228,28 @@ void main() {
     expect(state.activeLayers.length, 1);
     expect(state.activeLayers.single, isA<WidgetLayer>());
     expect(identical(state.stateManager.activeBackgroundImage, background), isTrue);
+  });
+
+  testWidgets('macOS / iOS (D-253): 変更ありで × → 確認は Cupertino のダイアログ。例外にならず「やめる」で閉じる', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      final c = await pump(tester);
+      final future = c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: png, name: 'a.jpg', mimeType: 'image/jpeg'));
+      await settle(tester);
+      final state = tester.state<ProImageEditorState>(find.byType(ProImageEditor));
+      state.addLayer(WidgetLayer(widget: const SizedBox(width: 10, height: 10))); // 変更あり → 閉じるときに確認が出る
+      await settle(tester);
+      state.closeEditor();
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text('加工をやめますか？'), findsOneWidget);
+      await tester.tap(find.text('やめる'));
+      await settle(tester);
+      expect(await future, isNull);
+      expect(find.byType(ProImageEditor), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   test('mediaAccepts: MIME の型 / 完全一致 / 拡張子、空は image/*', () {
