@@ -13,6 +13,7 @@ import '../../session/bluesky_auth.dart' show blueskyPluginId;
 import '../../session/mixi2_auth.dart' show mixi2PluginId;
 import '../../session/session_providers.dart' show mastodonPluginId;
 import 'rasqpkg.dart';
+import 'sticker_packs.dart';
 import 'store_client.dart';
 import 'store_models.dart';
 
@@ -188,6 +189,17 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       return (error: null, verification: verified);
     }
 
+    // アセットパック (D-252、契約 v0.11): コードは無い。画像を端末に保存して、加工画面のステッカーに出す。
+    if (package.root.isAssets) {
+      try {
+        await ref.read(stickerPacksProvider.notifier).install(package);
+      } catch (e) {
+        return (error: 'アセットパックを保存できませんでした: $e', verification: verified);
+      }
+      await _persist([...state.where((p) => p.id != pluginId), record]);
+      return (error: null, verification: verified);
+    }
+
     // .rasqpkg: 中のスロットプラグイン(root が sns 以外なら root、それと子)を全部登録できて初めてインストール済みにする。
     // 登録元は `store:<id>`(子は `store:<id>#<childId>`)— 次回起動はストアから取り直して読み込む。
     final registered = <String>[];
@@ -208,6 +220,8 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
 
   Future<void> uninstall(String pluginId) async {
     await _persist([...state.where((p) => p.id != pluginId)]);
+    // アセットパック (D-252) なら保存した画像も消す。
+    await ref.read(stickerPacksProvider.notifier).uninstall(pluginId);
     // スロット登録 (D-168) も外す(登録元 `store:<id>` と、.rasqpkg の子 `store:<id>#<childId>`)。
     final slots = ref.read(slotPluginsProvider.notifier);
     for (final p in ref.read(slotPluginsProvider).where((p) => p.source == 'store:$pluginId' || p.source.startsWith('store:$pluginId#'))) {

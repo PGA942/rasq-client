@@ -60,7 +60,32 @@ class RasqPackagePlugin {
   final String? template;
 
   bool get isSns => kind == 'sns';
+
+  /// アセットパック(契約 v0.11 §2.10): wasm を持たない。[wasm] は空。
+  bool get isAssets => kind == 'assets';
 }
+
+/// アセットパックの 1 枚(`manifest.assets[]` + 中身)。
+@immutable
+class RasqPackSticker {
+  const RasqPackSticker({required this.id, required this.path, required this.bytes, this.label, this.tags = const []});
+  final String id;
+  final String path;
+  final Uint8List bytes;
+  final String? label;
+  final List<String> tags;
+}
+
+/// 画像のマジックナンバー(PNG / JPEG / WebP / GIF)。アセットパックの中身はこれだけ。
+bool isPackImage(Uint8List b) =>
+    (b.length > 8 && b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47) ||
+    (b.length > 3 && b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF) ||
+    (b.length > 12 && b[0] == 0x52 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x46 && b[8] == 0x57 && b[9] == 0x45 && b[10] == 0x42 && b[11] == 0x50) ||
+    (b.length > 6 && b[0] == 0x47 && b[1] == 0x49 && b[2] == 0x46 && b[3] == 0x38);
+
+/// アセットパックの上限(契約 v0.11): 1 枚 2 MiB、256 枚。
+const rasqPackMaxImageBytes = 2 * 1024 * 1024;
+const rasqPackMaxImages = 256;
 
 @immutable
 class RasqPackageLib {
@@ -96,7 +121,15 @@ class RasqPackage {
   final List<RasqPackageRequirement> requires;
 
   /// スロットに登録できるもの: root(sns 以外)と children。
-  List<RasqPackagePlugin> get slotPlugins => [if (!root.isSns) root, ...children];
+  List<RasqPackagePlugin> get slotPlugins => [if (!root.isSns && !root.isAssets) root, ...children];
+
+  /// アセットパックのステッカー(`use: "sticker"`)。アセットパックでなければ空。
+  List<RasqPackSticker> get stickers => [
+        if (root.isAssets)
+          for (final a in (root.manifest['assets'] as List? ?? const []))
+            if (a is Map && a['use'] == 'sticker' && a['id'] is String && assets[a['path']] != null)
+              RasqPackSticker(id: a['id'] as String, path: a['path'] as String, bytes: assets[a['path']]!, label: a['label'] as String?, tags: [for (final t in (a['tags'] as List? ?? const [])) if (t is String) t]),
+      ];
 
   /// id で引く(null / 空 = root)。無ければ例外。
   RasqPackagePlugin plugin(String? id) {
@@ -183,6 +216,12 @@ class RasqPackage {
       if (manifest['id'] != id || manifest['version'] != version || manifest['kind'] != kind) {
         throw RasqPackageException('$manifestPath: id / version / kind が目次($id $version $kind)と違います');
       }
+      // アセットパック(v0.11)は wasm を持たない(持っていたら入れ物として不正)。root だけがなれる。
+      if (kind == 'assets') {
+        if (what != 'root') throw RasqPackageException('bundle.json: 子 $id は kind = assets にできません');
+        if (spec['wasm'] != null) throw RasqPackageException('bundle.json: アセットパック $id が wasm を持っています');
+        return RasqPackagePlugin(id: id, version: version, kind: kind, manifest: manifest, wasm: Uint8List(0), template: null);
+      }
       return RasqPackagePlugin(id: id, version: version, kind: kind, manifest: manifest, wasm: fileOf(spec['wasm'], id, wasm: true), template: spec['template'] as String?);
     }
 
@@ -211,6 +250,19 @@ class RasqPackage {
     for (final a in listOf('assets')) {
       if (a is! Map || a['path'] is! String) throw const RasqPackageException('bundle.json: assets の形が違います');
       assets[a['path'] as String] = fileOf(a, 'asset ${a['path']}');
+    }
+    if (root.isAssets) {
+      // アセットパック: コードを一切含まない(wasm を入れ物に紛れ込ませない)、中身は画像だけ、上限つき。
+      if (children.isNotEmpty || libs.isNotEmpty || listOf('models').isNotEmpty) throw const RasqPackageException('bundle.json: アセットパックは children / libs / models を持てません');
+      if (files.values.any(isWasmModule)) throw const RasqPackageException('アセットパックに wasm が入っています');
+      if (assets.isEmpty || assets.length > rasqPackMaxImages) throw RasqPackageException('アセットパックの画像は 1〜$rasqPackMaxImages 枚です: ${assets.length}');
+      for (final e in assets.entries) {
+        if (!isPackImage(e.value)) throw RasqPackageException('${e.key}: 画像(PNG / JPEG / WebP / GIF)ではありません');
+        if (e.value.length > rasqPackMaxImageBytes) throw RasqPackageException('${e.key}: 大きすぎます(1 枚 ${rasqPackMaxImageBytes ~/ 1024 ~/ 1024} MiB まで)');
+      }
+      for (final a in (root.manifest['assets'] as List? ?? const [])) {
+        if (a is! Map || a['path'] is! String || !assets.containsKey(a['path'])) throw RasqPackageException('manifest.assets の ${a is Map ? a['path'] : a} が配布物の目次にありません');
+      }
     }
     for (final m in listOf('models')) {
       if (m is! Map || m['manifest'] is! String) throw const RasqPackageException('bundle.json: models の形が違います');
@@ -249,7 +301,7 @@ class RasqPackage {
 
 final _pluginId = RegExp(r'^[a-z0-9]+(\.[a-z0-9_-]+)+$');
 final _semver = RegExp(r'^\d+\.\d+\.\d+([-+][0-9A-Za-z.-]+)?$');
-const _kinds = {'sns', 'action', 'view', 'trend', 'mediaViewer', 'postProcessor'};
+const _kinds = {'sns', 'action', 'view', 'trend', 'mediaViewer', 'postProcessor', 'assets'};
 final _pathChars = RegExp(r'^[A-Za-z0-9_][A-Za-z0-9_./-]*$');
 
 /// 配布物内のパスの文法(`bundle.schema.json` の `path`): 相対、`..` なし、英数字と `_ . / -` だけ。
