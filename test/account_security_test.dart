@@ -74,7 +74,7 @@ void main() {
           me['emailPending'] = body['email'];
           return json({'email': body['email'], 'expiresInSeconds': 900}, 202);
         case 'POST /me/email/verify':
-          if (body['code'] != '123456') return err(400, 'invalid or expired code');
+          if (body['code'] != '3mJr7AoUXx') return err(400, 'invalid or expired code');
           me
             ..['email'] = me.remove('emailPending')
             ..['emailVerified'] = true;
@@ -108,11 +108,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('security.email.send')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('security.email.pending')), findsOneWidget);
-    await tester.enterText(find.byKey(const ValueKey('security.email.code')), '000000');
+    await tester.enterText(find.byKey(const ValueKey('security.email.code')), '11111-11111');
     await tester.tap(find.byKey(const ValueKey('security.email.verify')));
     await tester.pumpAndSettle();
     expect(find.text('コードが違うか、期限が切れています'), findsOneWidget);
-    await tester.enterText(find.byKey(const ValueKey('security.email.code')), '123456');
+    await tester.enterText(find.byKey(const ValueKey('security.email.code')), '3mJr7AoUXx');
     await tester.tap(find.byKey(const ValueKey('security.email.verify')));
     await tester.pumpAndSettle();
     expect(find.text('taro@example.com'), findsOneWidget);
@@ -156,7 +156,7 @@ void main() {
         case 'POST /auth/login/email/request':
           return http.Response('', 204);
         case 'POST /auth/login/email/confirm':
-          return body['code'] == '654321' ? json({'accountId': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'token': 'login-token', 'restored': true}) : err(400, 'invalid or expired code');
+          return body['code'] == '9zYx8-WvUt7' ? json({'accountId': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'token': 'login-token', 'restored': true}) : err(400, 'invalid or expired code');
         case 'GET /me/sns-accounts':
           return json(<Object>[]);
       }
@@ -178,7 +178,7 @@ void main() {
     expect(find.byKey(const ValueKey('login.password')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('login.sendCode')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const ValueKey('login.code')), '654321');
+    await tester.enterText(find.byKey(const ValueKey('login.code')), '9zYx8-WvUt7');
     await tester.tap(find.byKey(const ValueKey('login.submit')));
     await tester.pumpAndSettle();
     expect(bodies['POST /auth/login/email/confirm'], containsPair('deviceId', 'device-abc'));

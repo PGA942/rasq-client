@@ -33,7 +33,7 @@ String _ago(DateTime? t) {
 }
 
 /// アカウントのセキュリティ (D-268 / S-019): メールアドレスの登録と確認、パスワード、ログイン中の端末、アカウントの削除。
-/// メールで届くのはどれも 6 桁コード(リンクは無い)。
+/// メールで届くのはどれも 確認コード(リンクは無い)。
 class AccountSecurityScreen extends ConsumerStatefulWidget {
   const AccountSecurityScreen({super.key});
   @override
@@ -132,7 +132,7 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
       body: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.xl), children: [
         // ── メール ──
         const RasqSectionHeader(title: 'メールアドレス'),
-        pad(Text('登録すると、パスワードを忘れたときの再設定、メールでのログイン、大事な操作の確認とお知らせに使えます。ほかの人には見えません。メールに届くのは 6 桁のコードだけです(リンクは送りません)。', style: caption)),
+        pad(Text('登録すると、パスワードを忘れたときの再設定、メールでのログイン、大事な操作の確認とお知らせに使えます。ほかの人には見えません。メールに届くのは 確認コードだけです(リンクは送りません)。', style: caption)),
         RasqValueListTile(key: const ValueKey('security.email'), title: 'いまのメール', value: account.emailVerified ? (account.email ?? '') : '未登録'),
         pad(Row(children: [
           Expanded(child: RasqInput(key: const ValueKey('security.email.input'), controller: _email, hintText: account.emailVerified ? '新しいメールアドレス' : 'メールアドレス', keyboardType: TextInputType.emailAddress)),
@@ -317,17 +317,20 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
   }
 }
 
-/// 6 桁コードの欄。
+/// 確認コードの欄(Base58 で 10 文字。メールには `3mJr7-AoUXx` の形で載る)。大文字と小文字は区別する。
+/// 貼り付けの空白や `-` はサーバーが無視するので、そのまま送る(Base58 に無い字だけ落とす)。
 class _CodeInput extends StatelessWidget {
   const _CodeInput({super.key, required this.controller});
   final TextEditingController controller;
   @override
   Widget build(BuildContext context) => TextField(
         controller: controller,
-        keyboardType: TextInputType.number,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
-        decoration: const InputDecoration(hintText: '6 桁のコード', isDense: true),
-        style: const TextStyle(letterSpacing: 4),
+        autocorrect: false,
+        enableSuggestions: false,
+        keyboardType: TextInputType.visiblePassword,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[1-9A-HJ-NP-Za-km-z\- ]')), LengthLimitingTextInputFormatter(16)],
+        decoration: const InputDecoration(hintText: '確認コード(例 3mJr7-AoUXx)', isDense: true),
+        style: const TextStyle(letterSpacing: 2, fontFeatures: [FontFeature.tabularFigures()]),
       );
 }
 
@@ -421,7 +424,7 @@ class _AccountLoginScreenState extends ConsumerState<AccountLoginScreen> {
         pad(Text(
           switch (_mode) {
             _LoginMode.password => 'ハンドル(@ は無くてもよい)か、確認済みのメールアドレスと、パスワードで入ります。',
-            _LoginMode.code => '確認済みのメールアドレスへ 6 桁のコードを送ります。パスワードは要りません。',
+            _LoginMode.code => '確認済みのメールアドレスへ確認コードを送ります。パスワードは要りません。',
             _LoginMode.reset => '確認済みのメールアドレスへコードを送り、新しいパスワードを決めます。すべての端末がログアウトになり、前のパスワードで暗号化した同期データは復号できなくなります。',
           },
           style: caption,
