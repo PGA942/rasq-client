@@ -30,8 +30,7 @@ export 'compose_providers.dart' show ComposerInitialFile;
 import 'account_select.dart';
 import 'compose_target.dart';
 import 'media_file_pick.dart';
-import 'post_image_picker_fow.dart';
-import '../media/viewer_plugin_overlay.dart' show viewerImageFetcherProvider;
+import 'post_image_fow.dart';
 import 'drafts_fow.dart';
 import 'emoji_picker_fow.dart';
 import 'mfm_picker_fow.dart';
@@ -1095,29 +1094,21 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Future<void> _pickImageSource(Rect anchor) async {
     final from = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'composer.image.source', ownerId: composerFowId, anchor: anchor, dense: true, items: const [
       RasqDropdownItem('ライブラリの画像', 'library'),
-      RasqDropdownItem('投稿から探す', 'posts'),
+      RasqDropdownItem('投稿を画像にする', 'posts'),
     ]);
     if (from == null || !mounted) return;
     return from == 'posts' ? _pickFromPosts() : _pick();
   }
 
-  /// 投稿から画像を探す (D-258): SNS の投稿(公開範囲が限定でないもの)の画像を 1 枚選んで、取ってきて添付にする。
+  /// ノート画像の追加 (D-258 → D-259): 投稿を選ぶと、**タイムラインと同じ投稿タイルを画像にしたもの**が添付になる。
   Future<void> _pickFromPosts() async {
-    final picked = await showPostImagePickerFow(ref, ownerId: composerFowId, column: _column);
+    final picked = await showPostImageFow(ref, ownerId: composerFowId, column: _column);
     if (picked == null || !mounted || _files.length >= 4) return;
-    setState(() => _error = null);
-    try {
-      final bytes = await ref.read(viewerImageFetcherProvider)(picked.item.url);
-      if (!mounted) return;
-      if (bytes == null || bytes.isEmpty) return setState(() => _error = '画像を取得できませんでした');
-      final last = picked.item.url.pathSegments.isEmpty ? '' : picked.item.url.pathSegments.last;
-      final ext = RegExp(r'\.(png|jpe?g|gif|webp|avif)$', caseSensitive: false).firstMatch(last)?.group(1)?.toLowerCase();
-      final name = picked.item.fileName ?? (ext == null ? 'image.${picked.item.type == MediaType.gif ? 'gif' : 'jpg'}' : last);
-      final mime = switch (ext) { 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp', 'avif' => 'image/avif', 'jpg' || 'jpeg' => 'image/jpeg', _ => picked.item.type == MediaType.gif ? 'image/gif' : null };
-      setState(() => _files.add(_Attachment(bytes: bytes, name: name, mimeType: mime)..sensitive = picked.item.sensitive));
-    } catch (e) {
-      if (mounted) setState(() => _error = '画像を取得できませんでした: $e');
-    }
+    setState(() {
+      _error = null;
+      // 元の投稿に注釈 / センシティブな画像があれば、画像にしたものもセンシティブに。
+      _files.add(_Attachment(bytes: picked.bytes, name: picked.name, mimeType: 'image/png')..sensitive = picked.post.contentWarning != null || picked.post.media.any((m) => m.sensitive));
+    });
   }
 
   bool get _canSend {
@@ -1410,7 +1401,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               scrollDirection: Axis.horizontal,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 RasqActionButton.icon(icon: Icons.photo_camera_outlined, tooltip: 'カメラ', onTap: _busy ? null : () => _pick(camera: true)),
-                // 画像 (D-258): ライブラリ / 投稿から探す(ツールバーの幅を増やさないよう、動画と同じくドロップダウンで分ける)。
+                // 画像 (D-258 → D-259): ライブラリ / 投稿を画像にする(ツールバーの幅を増やさないよう、動画と同じくドロップダウンで分ける)。
                 Builder(builder: (ctx) => RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= 4 ? null : () {
                   final box = ctx.findRenderObject() as RenderBox;
                   _pickImageSource(box.localToGlobal(Offset.zero) & box.size);
