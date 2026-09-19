@@ -28,7 +28,7 @@ import 'orgate_client.dart';
 
 @immutable
 class RasqAccount {
-  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt, this.email, this.emailVerified = false, this.emailPending, this.hasPassword = false, this.roles = const []});
+  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt, this.email, this.emailVerified = false, this.emailPending, this.hasPassword = false, this.roles = const [], this.bio = '', this.bannerUrl, this.location = '', this.birthday = '', this.links = const []});
 
   final String id;
   final String handle;
@@ -47,6 +47,13 @@ class RasqAccount {
   /// 役割(`developer` / `reviewer`)。
   final List<String> roles;
 
+  /// プロフィールの項目 (S-020)。[birthday] = `YYYY-MM-DD` か、年を伏せた `MM-DD`。[links] は 8 組まで。
+  final String bio;
+  final Uri? bannerUrl;
+  final String location;
+  final String birthday;
+  final List<({String label, String url})> links;
+
   factory RasqAccount.fromJson(Map<String, Object?> j) => RasqAccount(
         id: j['id'] as String? ?? j['accountId'] as String? ?? '',
         handle: j['handle'] as String? ?? '',
@@ -58,6 +65,11 @@ class RasqAccount {
         emailPending: j['emailPending'] as String?,
         hasPassword: j['hasPassword'] == true,
         roles: [for (final r in j['roles'] as List? ?? const []) '$r'],
+        bio: j['bio'] as String? ?? '',
+        bannerUrl: switch (j['bannerUrl']) { final String u when u.isNotEmpty => Uri.tryParse(u), _ => null },
+        location: j['location'] as String? ?? '',
+        birthday: j['birthday'] as String? ?? '',
+        links: [for (final l in j['links'] as List? ?? const []) if (l is Map) (label: '${l['label'] ?? ''}', url: '${l['url'] ?? ''}')],
       );
 
   /// サイドバーのバンドルタイルが使う形。ハンドルはインスタンスなしの素の
@@ -253,6 +265,38 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     await storage.write(storageKey, jsonEncode(_creds!.toJson()));
     _publishToken();
     return refresh();
+  }
+
+  /// プロフィールをまとめて保存 (S-020): 画像(選び直したものだけ)→ 項目。`null` は「そのまま」、空文字は「消す」。
+  Future<RasqAccount?> saveProfile({
+    String? handle,
+    String? displayName,
+    String? bio,
+    String? location,
+    String? birthday,
+    List<({String label, String url})>? links,
+    ({List<int> bytes, String contentType})? avatar,
+    ({List<int> bytes, String contentType})? banner,
+    bool removeAvatar = false,
+    bool removeBanner = false,
+  }) async {
+    final client = ref.read(centralClientProvider);
+    if (client == null) return null;
+    if (avatar != null) await client.putBytes('/me/avatar', avatar.bytes, contentType: avatar.contentType);
+    if (banner != null) await client.putBytes('/me/banner', banner.bytes, contentType: banner.contentType);
+    if (removeAvatar && avatar == null) await client.delete('/me/avatar');
+    if (removeBanner && banner == null) await client.delete('/me/banner');
+    final res = await client.patchJson('/me', {
+      'handle': ?handle,
+      'displayName': ?displayName,
+      'bio': ?bio,
+      'location': ?location,
+      'birthday': ?birthday,
+      if (links != null) 'links': [for (final l in links) {'label': l.label, 'url': l.url}],
+    });
+    final account = RasqAccount.fromJson(res);
+    state = AsyncData(account);
+    return account;
   }
 
   Future<void> updateProfile({String? handle, String? displayName, String? avatarUrl}) async {

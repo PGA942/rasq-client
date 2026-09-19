@@ -29,6 +29,7 @@ import '../features/settings/mute_block_screen.dart';
 import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
 import '../features/profile/profile_edit_screen.dart';
+import '../features/profile/rasq_profile_edit_screen.dart';
 import '../features/clips/clip_timeline_screen.dart';
 import '../features/lists/lists_screens.dart';
 import '../features/relational/relational_engine.dart';
@@ -221,6 +222,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'server', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BackendSettingsScreen()),
             GoRoute(path: 'legal', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LegalScreen()),
             GoRoute(path: 'notify-token', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const NotifyTokenScreen()),
+            GoRoute(path: 'rasq-profile', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RasqProfileEditScreen()),
             GoRoute(path: 'security', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountSecurityScreen()),
             GoRoute(path: 'account-login', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountLoginScreen()),
             GoRoute(path: 'learning', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LearningScreen()),
