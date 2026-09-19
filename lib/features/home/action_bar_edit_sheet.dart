@@ -80,7 +80,7 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
   // 全画面バーの構成 (D-214) なら全画面表示プラグイン(QR コード検出など)のトグルも候補。
   final plugins = ref.read(pluginActionsForProvider(configKey));
   // SNS のボタン: 指定があればそれ(バーから外したもの、D-215)。無ければ現在のアカウントの全部(pluginsOnly なら無し)。
-  final sns = snsCandidates ?? (pluginsOnly ? const <ActionDescriptor>[] : (isEditorConfigKey(configKey) ? editorBuiltinActions : (ref.read(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[])));
+  final sns = snsCandidates ?? (pluginsOnly ? const <ActionDescriptor>[] : (isEditorConfigKey(configKey) ? editorBuiltinActionsFor(configKey) : (ref.read(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[])));
   final query = TextEditingController();
   var genre = 'すべて';
   try {
@@ -299,7 +299,7 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
           final plugins = ref.watch(pluginActionsForProvider(configKey));
           final accountKey = slotSettingsKeyFor(configKey, ref.watch(currentAccountProvider)?.key ?? '');
           final settings = ref.watch(slotActionSettingsProvider(accountKey));
-          final merged = mergePluginActions(config: config, snsActions: isEditorConfigKey(configKey) ? editorBuiltinActions : (session?.actions ?? const []), plugins: plugins, settings: settings);
+          final merged = mergePluginActions(config: config, snsActions: isEditorConfigKey(configKey) ? editorBuiltinActionsFor(configKey) : (session?.actions ?? const []), plugins: plugins, settings: settings);
           final byId = {for (final a in merged.actions) a.id: a};
           final memberIds = ActionListDef.uniq(list.memberIds);
           final members = [for (final id in memberIds) if (byId.containsKey(id)) byId[id]!];
@@ -572,7 +572,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
     final manager = ref.read(overlayManagerProvider);
     // 加工画面のバーの土台は内蔵の編集(SNS のアクションではない)。プラグインボタンの有効 / 無効は `slots.editor`。
     final isEditor = widget.surface.isEditor;
-    final snsActions = isEditor ? editorBuiltinActions : (session?.actions ?? const <ActionDescriptor>[]);
+    final snsActions = isEditor ? editorBuiltinActionsFor(configKey) : (session?.actions ?? const <ActionDescriptor>[]);
     final plugins = ref.watch(pluginActionsForProvider(configKey));
     final settingsKey = slotSettingsKeyFor(configKey, accountKey);
     final settings = ref.watch(slotActionSettingsProvider(settingsKey));

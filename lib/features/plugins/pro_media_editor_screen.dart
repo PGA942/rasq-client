@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -14,6 +15,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
 import '../home/action_bar_config.dart';
+import '../media/audio_visualizer_fow.dart';
 import '../media/audio_visualizer_video.dart';
 import '../home/action_bar_edit_sheet.dart';
 import '../home/action_bundle_fow.dart';
@@ -129,6 +131,14 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   /// 音声 → 動画の変換の進み具合(0..1、変換中だけ)。
   double? _audioProgress;
+
+  /// 音声 (D-251): 元の音声(一時ファイル)/ 標本 / Visualizer の設定。設定を変えたら動画を書き出し直す。
+  File? _audioFile;
+  AudioPcm? _pcm;
+  AudioVisualizerConfig _vizConfig = const AudioVisualizerConfig();
+
+  /// エディターの作り直し(書き出し直した動画で開き直す)ごとに増やす。
+  int _videoGeneration = 0;
   VideoPlayerController? _player;
   ProVideoController? _video;
   pve.VideoMetadata? _meta;
@@ -159,52 +169,94 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         _deleteQuietly(f);
         return;
       }
-      _videoFile = f;
       if (_isAudio) {
-        // 音声 → 2560×1440 の動画(左にアイコン、右に Wave Visualizer)。以降はこの動画を編集する。
-        if (mounted) setState(() => _audioProgress = 0);
-        final video = await buildAudioVisualizerVideo(
-          audio: f,
-          workDir: f.parent,
-          title: widget.args.name,
-          accent: RasqColors.accent,
-          onProgress: (p) {
-            if (mounted) setState(() => _audioProgress = p);
-          },
-        );
-        _deleteQuietly(f);
+        _audioFile = f;
+        _vizConfig = AudioVisualizerConfig.decode(await ref.read(sessionStorageProvider).read(audioVisualizerStorageKey));
+        final video = await _buildVisualizer();
+        if (video == null) return;
         f = video;
-        if (!mounted) {
-          _deleteQuietly(f);
-          return;
-        }
-        _videoFile = f;
-        setState(() => _audioProgress = null);
       }
-      final player = VideoPlayerController.file(f);
-      _player = player;
-      await player.initialize();
-      await player.setLooping(false);
-      await player.pause();
-      final meta = await pve.ProVideoEditor.instance.getMetadata(pve.EditorVideo.file(f.path));
-      if (!mounted) return;
-      _meta = meta;
-      _video = ProVideoController(
-        videoPlayer: AspectRatio(aspectRatio: player.value.aspectRatio == 0 ? 16 / 9 : player.value.aspectRatio, child: VideoPlayer(player)),
-        initialResolution: meta.resolution,
-        videoDuration: meta.duration,
-        fileSize: meta.fileSize,
-        bitrate: meta.bitrate,
-      );
-      player.addListener(_onPlayerTick);
-      setState(() {});
-      // サムネイル(トリムバー)は端末ネイティブでだけ作る。
-      if (!Platform.isLinux && !Platform.isWindows) {
-        final frames = await pve.ProVideoEditor.instance.getKeyFrames(pve.KeyFramesConfigs(video: pve.EditorVideo.file(f.path), outputSize: const Size.square(120), boxFit: pve.ThumbnailBoxFit.cover, maxOutputFrames: 10, outputFormat: pve.ThumbnailFormat.jpeg));
-        if (mounted) _video?.thumbnails = [for (final b in frames) MemoryImage(b)];
-      }
+      _videoFile = f;
+      await _openVideo(f);
     } catch (e) {
       if (mounted) setState(() => _videoError = e is UnsupportedError ? '${e.message}' : '${_isAudio ? '音声' : '動画'}を開けませんでした: $e');
+    }
+  }
+
+  /// 音声 → 2560×1440 の動画(その瞬間のスペクトル + シークバー、D-251)。画面が閉じられていたら null。
+  Future<File?> _buildVisualizer() async {
+    final audio = _audioFile!;
+    if (mounted) setState(() => _audioProgress = 0);
+    _pcm ??= await loadAudioPcm(audio, audio.parent);
+    final video = await buildAudioVisualizerVideo(
+      audio: audio,
+      pcm: _pcm!,
+      workDir: audio.parent,
+      config: _vizConfig,
+      title: widget.args.name,
+      cancelled: () => !mounted,
+      onProgress: (p) {
+        if (mounted) setState(() => _audioProgress = p);
+      },
+    );
+    if (!mounted) {
+      _deleteQuietly(video);
+      return null;
+    }
+    setState(() => _audioProgress = null);
+    return video;
+  }
+
+  Future<void> _openVideo(File f) async {
+    final player = VideoPlayerController.file(f);
+    _player = player;
+    await player.initialize();
+    await player.setLooping(false);
+    await player.pause();
+    final meta = await pve.ProVideoEditor.instance.getMetadata(pve.EditorVideo.file(f.path));
+    if (!mounted) return;
+    _meta = meta;
+    _video = ProVideoController(
+      videoPlayer: AspectRatio(aspectRatio: player.value.aspectRatio == 0 ? 16 / 9 : player.value.aspectRatio, child: VideoPlayer(player)),
+      initialResolution: meta.resolution,
+      videoDuration: meta.duration,
+      fileSize: meta.fileSize,
+      bitrate: meta.bitrate,
+    );
+    player.addListener(_onPlayerTick);
+    setState(() {});
+    // サムネイル(トリムバー)は端末ネイティブでだけ作る。
+    if (!Platform.isLinux && !Platform.isWindows) {
+      final frames = await pve.ProVideoEditor.instance.getKeyFrames(pve.KeyFramesConfigs(video: pve.EditorVideo.file(f.path), outputSize: const Size.square(120), boxFit: pve.ThumbnailBoxFit.cover, maxOutputFrames: 10, outputFormat: pve.ThumbnailFormat.jpeg));
+      if (mounted) _video?.thumbnails = [for (final b in frames) MemoryImage(b)];
+    }
+  }
+
+  /// 下段バーの「Visualizer」(D-251): 設定 FOW → 決定で保存して、動画を書き出し直して開き直す。
+  Future<void> _editVisualizer() async {
+    final next = await showAudioVisualizerFow(_overlay, initial: _vizConfig, pcm: _pcm, position: _player?.value.position ?? Duration.zero, title: widget.args.name);
+    if (next == null || next == _vizConfig || !mounted) return;
+    _vizConfig = next;
+    await ref.read(sessionStorageProvider).write(audioVisualizerStorageKey, jsonEncode(next.toJson()));
+    final old = _videoFile;
+    final player = _player;
+    player?.removeListener(_onPlayerTick);
+    setState(() {
+      _player = null;
+      _video = null;
+      _meta = null;
+      _trim = null;
+      _videoGeneration++;
+    });
+    await player?.dispose();
+    try {
+      final video = await _buildVisualizer();
+      if (video == null) return;
+      if (old != null) _deleteQuietly(old);
+      _videoFile = video;
+      await _openVideo(video);
+    } catch (e) {
+      if (mounted) setState(() => _videoError = '動画を書き出し直せませんでした: $e');
     }
   }
 
@@ -289,6 +341,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     _video?.dispose();
     final f = _videoFile;
     if (f != null) _deleteQuietly(f);
+    final a = _audioFile;
+    if (a != null) _deleteQuietly(a);
     super.dispose();
   }
 
@@ -358,6 +412,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         editor.openBlurEditor();
       case 'editor:tune':
         editor.openTuneEditor();
+      case editorVisualizerActionId:
+        _editVisualizer();
       default:
         final p = plugins.where((x) => x.id == a.id).firstOrNull;
         if (p != null) _runPlugin(editor, p);
@@ -372,7 +428,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     final plugins = _pluginActions;
     final merged = mergePluginActions(
       config: ref.watch(actionBarConfigProvider(_configKey)),
-      snsActions: editorBuiltinActions,
+      // 「Visualizer」は音声を開いているときだけ(動画のバーの構成には常に居る)。
+      snsActions: [for (final a in editorBuiltinActionsFor(_configKey)) if (a.id != editorVisualizerActionId || _isAudio) a],
       plugins: plugins,
       settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(_configKey, ''))),
     );
@@ -497,7 +554,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     ref.watch(slotActionSettingsProvider('editor'));
     return _withPanel(ProImageEditor.video(
       v,
-      key: _editorKey,
+      key: ValueKey('media.pro.video.$_videoGeneration'),
       callbacks: ProImageEditorCallbacks(
         onCompleteWithParameters: _renderVideo,
         onCloseEditor: (mode) {

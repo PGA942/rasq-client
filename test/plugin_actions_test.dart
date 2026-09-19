@@ -268,9 +268,11 @@ void main() {
     expect(c.read(actionBarConfigProvider(accountKey)).hidden, isEmpty);
     expect(find.byKey(const ValueKey('actionbar.tile.renote')), findsOneWidget);
     // 隙間に落として並び替え: 末尾の隙間へリノート(投稿バー)。
-    await tester.ensureVisible(find.byKey(const ValueKey('actionbar.tile.renote')));
-    await tester.pumpAndSettle();
+    // 落とす先の隙間(1 段上の行)が FOW のヘッダーに隠れない位置まで戻す(編集 FOW は面が増えて長い、D-251)。
     final n = c.read(actionBarConfigProvider(accountKey)).order.length;
+    final sheet = find.descendant(of: find.byType(SingleChildScrollView), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('actionbar.surface.viewer')), -60, scrollable: sheet);
+    await tester.pumpAndSettle();
     g = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('actionbar.tile.renote'))));
     await tester.pump(const Duration(milliseconds: 400));
     await g.moveTo(tester.getCenter(find.byKey(ValueKey('actionbar.gap.$n'))));
