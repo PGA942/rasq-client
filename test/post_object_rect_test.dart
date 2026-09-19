@@ -36,4 +36,13 @@ void main() {
     expect(mediaContainerExt('ID3.....'.codeUnits), 'mp3');
     expect(mediaContainerExt([1, 2, 3]), isNull);
   });
+
+  test('objectRectFromScreen: 画面で測った枠 → 絵の画素 (D-265)', () {
+    // 2560×1440 の動画が、画面の (160, 290) から 1504×846 で出ている。オブジェクトは (686, 368) から 451×248。
+    final r = objectRectFromScreen(reference: const Rect.fromLTWH(160, 290, 1504, 846), object: const Rect.fromLTWH(686, 368, 451, 248), image: const Size(2560, 1440));
+    expect(r.left, closeTo(526 * 2560 / 1504, 1e-6));
+    expect(r.top, closeTo(78 * 1440 / 846, 1e-6));
+    expect(r.width, closeTo(451 * 2560 / 1504, 1e-6));
+    expect(objectRectFromScreen(reference: Rect.zero, object: const Rect.fromLTWH(0, 0, 1, 1), image: const Size(10, 10)), Rect.zero);
+  });
 }
