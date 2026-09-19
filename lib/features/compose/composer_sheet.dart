@@ -30,7 +30,6 @@ export 'compose_providers.dart' show ComposerInitialFile;
 import 'account_select.dart';
 import 'compose_target.dart';
 import 'media_file_pick.dart';
-import 'post_image_fow.dart';
 import 'drafts_fow.dart';
 import 'emoji_picker_fow.dart';
 import 'mfm_picker_fow.dart';
@@ -1091,26 +1090,6 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
   }
 
-  Future<void> _pickImageSource(Rect anchor) async {
-    final from = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'composer.image.source', ownerId: composerFowId, anchor: anchor, dense: true, items: const [
-      RasqDropdownItem('ライブラリの画像', 'library'),
-      RasqDropdownItem('投稿を画像にする', 'posts'),
-    ]);
-    if (from == null || !mounted) return;
-    return from == 'posts' ? _pickFromPosts() : _pick();
-  }
-
-  /// ノート画像の追加 (D-258 → D-259): 投稿を選ぶと、**タイムラインと同じ投稿タイルを画像にしたもの**が添付になる。
-  Future<void> _pickFromPosts() async {
-    final picked = await showPostImageFow(ref, ownerId: composerFowId, column: _column);
-    if (picked == null || !mounted || _files.length >= 4) return;
-    setState(() {
-      _error = null;
-      // 元の投稿に注釈 / センシティブな画像があれば、画像にしたものもセンシティブに。
-      _files.add(_Attachment(bytes: picked.bytes, name: picked.name, mimeType: picked.mimeType)..sensitive = picked.post.contentWarning != null || picked.post.media.any((m) => m.sensitive));
-    });
-  }
-
   bool get _canSend {
     if (_busy || _session == null) return false;
     final hasText = _text.text.trim().isNotEmpty;
@@ -1401,11 +1380,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               scrollDirection: Axis.horizontal,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 RasqActionButton.icon(icon: Icons.photo_camera_outlined, tooltip: 'カメラ', onTap: _busy ? null : () => _pick(camera: true)),
-                // 画像 (D-258 → D-259): ライブラリ / 投稿を画像にする(ツールバーの幅を増やさないよう、動画と同じくドロップダウンで分ける)。
-                Builder(builder: (ctx) => RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= 4 ? null : () {
-                  final box = ctx.findRenderObject() as RenderBox;
-                  _pickImageSource(box.localToGlobal(Offset.zero) & box.size);
-                })),
+                RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= 4 ? null : () => _pick()),
                 Builder(builder: (ctx) => RasqActionButton.icon(icon: Icons.videocam_outlined, tooltip: '動画 / 音声', onTap: _busy || _files.length >= 4 ? null : () {
                   final box = ctx.findRenderObject() as RenderBox;
                   _pickVideo(box.localToGlobal(Offset.zero) & box.size);

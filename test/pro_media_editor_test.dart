@@ -277,6 +277,41 @@ void main() {
     expect(state.activeLayers.single.interaction.enableMove, isTrue);
   });
 
+  testWidgets('加工画面で「ノート」を置いて × →「やめる」: 退避中のコンポーザーは書きかけのまま戻る。Escape でも閉じない', (tester) async {
+    final c = await pump(tester);
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '書きかけの投稿');
+    await tester.pump();
+    final manager = c.read(overlayManagerProvider);
+    final future = c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: png, name: 'a.jpg', mimeType: 'image/jpeg'));
+    await settle(tester);
+    final button = find.byKey(proMediaEditorBarKey('editor:post'));
+    await tester.ensureVisible(button);
+    await settle(tester);
+    await tester.tap(button);
+    await settle(tester);
+    await tester.tap(find.byKey(const ValueKey('postImage.post.p1')));
+    await settle(tester);
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const ValueKey('postImage.confirm')));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    });
+    await settle(tester);
+    expect(tester.state<ProImageEditorState>(find.byType(ProImageEditor)).activeLayers, hasLength(1));
+    // Escape(戻る)は、隠れているコンポーザーを閉じない。
+    manager.handleBack();
+    await settle(tester);
+    expect(manager.contains('fow.composer'), isTrue);
+    await tester.tap(find.byIcon(Icons.clear).first);
+    await settle(tester);
+    await tester.tap(find.text('やめる'));
+    await settle(tester);
+    expect(await future, isNull);
+    expect(find.byType(ProImageEditor), findsNothing);
+    expect(find.text('書きかけの投稿'), findsOneWidget);
+  });
+
   test('mediaAccepts: MIME の型 / 完全一致 / 拡張子、空は image/*', () {
     expect(mediaAccepts(const [], mimeType: 'image/png'), isTrue);
     expect(mediaAccepts(const [], mimeType: 'video/mp4'), isFalse);

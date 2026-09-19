@@ -21,6 +21,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
 import '../compose/post_image_fow.dart';
+import '../compose/post_video.dart';
 import '../home/action_bar_config.dart';
 import '../media/audio_visualizer_fow.dart';
 import '../media/audio_visualizer_video.dart';
@@ -143,6 +144,15 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   /// 完了時の処理中(二重に走らせない)。
   bool _completing = false;
+
+  /// 置いてある「動く投稿」(D-261): レイヤーの meta `rasqPostVideo` → 動画の中身と、タイルの 高さ / 幅。完了で動画に書き出す。
+  final Map<String, ({Uint8List video, double width, double aspect})> _motionPosts = {};
+
+  /// 動画の書き出しに失敗した直後(エディターの「完了 → 閉じる」を 1 回だけ無視して、加工を続けられるようにする)。
+  bool _renderFailed = false;
+
+  /// 置いた投稿オブジェクトの絵(閉じるときに捨てる)。
+  final List<ui.Image> _postImages = [];
 
   /// 今のエディター(バーを描くたびに覚える。ステッカー一覧からプラグインを呼ぶ用)。
   ProImageEditorState? _imageEditor;
@@ -432,7 +442,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       final dot = n.lastIndexOf('.');
       _finish(MediaEditResult(bytes: bytes, mimeType: 'video/mp4', name: '${dot > 0 ? n.substring(0, dot) : n}.mp4'));
     } catch (e) {
-      if (mounted) setState(() => _videoError = '動画を書き出せませんでした: $e');
+      // 失敗を黙って閉じない(変更が入らないまま戻ってしまう): 伝えて、加工画面に留まる。
+      _renderFailed = true;
+      _notify('動画を書き出せませんでした: $e');
     }
   }
 
@@ -455,6 +467,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     final a = _audioFile;
     if (a != null) _deleteQuietly(a);
     _avatar?.dispose();
+    for (final i in _postImages) {
+      i.dispose();
+    }
     super.dispose();
   }
 
@@ -605,27 +620,35 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     try {
       final pixels = [for (final f in _filters.values) if (f.spec.value.mode == MediaFilterMode.pixels) f];
       final editor = _imageEditor;
-      if (pixels.isEmpty || editor == null) return _finish(MediaEditResult(bytes: bytes, mimeType: 'image/png', name: _outName));
-      for (final f in pixels) {
-        editor.removeLayer(f.layer);
-      }
-      var out = await editor.captureEditorImage();
-      if (!mounted) return;
-      if (out.isEmpty) out = bytes;
+      var out = bytes;
       var mime = 'image/png';
-      final failed = <String>[];
-      final slots = ref.read(slotPluginsProvider.notifier);
-      for (final f in pixels) {
-        final r = await slots.filterApply(f.action.plugin, actionId: f.action.decl.id, seed: f.seed, width: f.width, height: f.height, bytes: out, mimeType: mime, params: f.params.isEmpty ? null : Map.of(f.params));
-        if (!mounted) return;
-        if (r == null) {
-          failed.add(f.action.decl.label);
-        } else {
-          out = r.$1;
-          mime = r.$2;
+      if (pixels.isNotEmpty && editor != null) {
+        for (final f in pixels) {
+          editor.removeLayer(f.layer);
         }
+        out = await editor.captureEditorImage();
+        if (!mounted) return;
+        if (out.isEmpty) out = bytes;
+        final failed = <String>[];
+        final slots = ref.read(slotPluginsProvider.notifier);
+        for (final f in pixels) {
+          final r = await slots.filterApply(f.action.plugin, actionId: f.action.decl.id, seed: f.seed, width: f.width, height: f.height, bytes: out, mimeType: mime, params: f.params.isEmpty ? null : Map.of(f.params));
+          if (!mounted) return;
+          if (r == null) {
+            failed.add(f.action.decl.label);
+          } else {
+            out = r.$1;
+            mime = r.$2;
+          }
+        }
+        if (failed.isNotEmpty) _notify('適用できなかったフィルター: ${failed.join(' / ')}(この加工は入っていません)');
       }
-      if (failed.isNotEmpty) _notify('適用できなかったフィルター: ${failed.join(' / ')}(この加工は入っていません)');
+      // 動く投稿 (D-261) が置いてあれば、画像を土台にした動画にする。できなければ静止画のまま(投稿の静止画は焼き込み済み)。
+      if (editor != null && _motionPosts.isNotEmpty) {
+        final video = await _renderWithPostVideos(editor, out);
+        if (!mounted) return;
+        if (video != null) return _finish(video);
+      }
       final n = _outName;
       _finish(MediaEditResult(bytes: out, mimeType: mime, name: mime == 'image/png' ? n : '${n.substring(0, n.lastIndexOf('.'))}.${mime == 'image/jpeg' ? 'jpg' : mime.split('/').last}'));
     } finally {
@@ -633,12 +656,83 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     }
   }
 
-  /// 「ノート」(D-260): 「ノート画像の追加」FOW で投稿を選び、その投稿タイルの画像を**オブジェクト(レイヤー)**として置く
-  /// (動かす / 拡縮 / 回転 / 削除は pro_image_editor)。画像にも動画にも置ける。オブジェクトは静止画だけ。
+  /// 画像 + 動く投稿 → 動画 (D-261)。いま置いてあるレイヤーの位置 / 大きさから、絵の画素での枠を出して重ねる。
+  Future<MediaEditResult?> _renderWithPostVideos(ProImageEditorState editor, Uint8List image) async {
+    final layers = [for (final l in editor.activeLayers) if (l is WidgetLayer && _motionPosts.containsKey(l.meta?['rasqPostVideo'])) l];
+    if (layers.isEmpty) return null; // 置いたあとで消した
+    if (editor.stateManager.transformConfigs.isNotEmpty) {
+      _notify('クロップ / 回転と、動く投稿は一緒に使えません。投稿は静止画で入れました');
+      return null;
+    }
+    final files = <File>[];
+    try {
+      final decoded = await decodeUiImage(image);
+      if (decoded == null) return null;
+      final size = ui.Size(decoded.width.toDouble(), decoded.height.toDouble());
+      decoded.dispose();
+      final dir = await getTemporaryDirectory();
+      final posts = <({File video, ui.Rect rect})>[];
+      for (final l in layers) {
+        final m = _motionPosts[l.meta!['rasqPostVideo']]!;
+        final f = await videoEditTempFile(dir, 'post-${posts.length}.mp4');
+        await f.writeAsBytes(m.video);
+        files.add(f);
+        posts.add((video: f, rect: postObjectRectInImage(image: size, shown: editor.sizesManager.decodedImageSize, offset: l.offset, width: m.width, aspect: m.aspect, scale: l.scale)));
+      }
+      final out = await buildImageWithPostVideos(imagePng: image, imageSize: size, posts: posts, workDir: dir);
+      files.add(out);
+      final bytes = await out.readAsBytes();
+      final n = _outName;
+      return MediaEditResult(bytes: bytes, mimeType: 'video/mp4', name: '${n.substring(0, n.lastIndexOf('.'))}.mp4');
+    } catch (e) {
+      _notify('動画にできなかったので、投稿は静止画で入れました: $e');
+      return null;
+    } finally {
+      for (final f in files) {
+        _deleteQuietly(f);
+      }
+    }
+  }
+
+  /// 「ノート」(D-260 → D-261): 「ノート画像の追加」FOW で投稿を選び、その投稿タイルを**オブジェクト(レイヤー)**として置く
+  /// (動かす / 拡縮 / 回転 / 削除は pro_image_editor)。画像にも動画にも置ける。
+  /// 画像の加工中に**動く / 鳴る投稿**を選ぶと「動画に変換しますか?」と尋ねる。はい → 置くのは静止画のまま、完了したときに
+  /// 画像を土台にした動画へ書き出す(その位置で投稿が動く。回転はできない)。動画の加工中は静止画だけ。
   Future<void> _addPostObject(ProImageEditorState editor) async {
-    final picked = await showPostImageFow(ref, id: 'media.pro.postImage', allowVideo: false);
+    final canVideo = !_isVideo && audioVideoSupported;
+    final picked = await showPostImageFow(
+      ref,
+      id: 'media.pro.postImage',
+      allowVideo: canVideo,
+      confirmVideo: !canVideo
+          ? null
+          : (motion) => _overlay.showAlert(
+                id: 'media.pro.postVideo.confirm',
+                title: '動画に変換しますか?',
+                message: '${postMotionNote(motion)}\n「動画にする」を選ぶと、完了したときに、この画像を土台にした動画として書き出します(置いた場所で投稿が動きます)。「静止画で貼る」なら、その瞬間の画像だけを貼ります。',
+                confirmText: '動画にする',
+                cancelText: '静止画で貼る',
+              ),
+    );
     if (picked == null || !mounted) return;
-    editor.addLayer(WidgetLayer(widget: Image.memory(picked.bytes, fit: BoxFit.contain, gaplessPlayback: true), meta: {'rasqPost': picked.post.key}));
+    final still = picked.still ?? picked.bytes;
+    final isVideo = picked.mimeType == 'video/mp4' && picked.still != null;
+    // 復号してから置く(書き出しの瞬間に復号待ちで空にならないよう、RawImage で同期に描く)。
+    final image = await decodeUiImage(still);
+    if (image == null) return;
+    if (!mounted) return image.dispose();
+    _postImages.add(image);
+    final shown = editor.sizesManager.decodedImageSize;
+    final width = (shown.width * 0.7).clamp(80.0, 480.0).toDouble();
+    final id = '${picked.post.key}#${DateTime.now().microsecondsSinceEpoch}';
+    if (isVideo) _motionPosts[id] = (video: picked.bytes, width: width, aspect: image.height / image.width);
+    editor.addLayer(WidgetLayer(
+      width: width,
+      interaction: LayerInteraction(enableEdit: false, enableRotate: !isVideo),
+      widget: SizedBox(width: width, child: AspectRatio(aspectRatio: image.width / image.height, child: RawImage(image: image, fit: BoxFit.fill))),
+      meta: {'rasqPost': picked.post.key, if (isVideo) 'rasqPostVideo': id},
+    ));
+    if (isVideo) _notify('完了すると、動画として書き出します');
   }
 
   String get _configKey => editorConfigKeyFor(widget.args.mimeType);
@@ -829,7 +923,12 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       callbacks: ProImageEditorCallbacks(
         onCompleteWithParameters: _renderVideo,
         onCloseEditor: (mode) {
-          if (mode == EditorMode.main) _finish(null);
+          if (mode != EditorMode.main) return;
+          if (_renderFailed) {
+            _renderFailed = false;
+            return;
+          }
+          _finish(null);
         },
         videoEditorCallbacks: VideoEditorCallbacks(
           onPlay: () => _player?.play(),

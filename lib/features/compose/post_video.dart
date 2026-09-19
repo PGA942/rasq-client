@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -57,6 +58,14 @@ String postMotionLabel(PostMotion m) => switch (m) {
       PostMotion.video => '動画にする(付いている動画を、タイルの中で再生。音つき)',
       PostMotion.audio => '動画にする(タイルの静止画 + 付いている音声)',
       PostMotion.animated => '動画にする(動いている様子を $postAnimatedFps コマ/秒で ${postAnimatedDuration.inSeconds} 秒)',
+      PostMotion.none => '',
+    };
+
+/// 加工画面の「動画に変換しますか?」に添える説明。
+String postMotionNote(PostMotion m) => switch (m) {
+      PostMotion.video => 'この投稿には動画が付いています。',
+      PostMotion.audio => 'この投稿には音声が付いています。',
+      PostMotion.animated => 'この投稿には動く絵(GIF / 動く MFM)があります。',
       PostMotion.none => '',
     };
 
@@ -180,6 +189,70 @@ Future<File> buildPostVideo({required Post post, required PostMotion motion, req
       );
     }
     onProgress?.call(1);
+    return File(out);
+  } finally {
+    try {
+      await dir.delete(recursive: true);
+    } catch (_) {}
+  }
+}
+
+/// 加工画面に置いた投稿オブジェクトの、**絵の画素での枠** (D-261)。pro_image_editor のレイヤーは「表示している絵の中心からの
+/// ずれ([offset])× 表示の大きさ」で持つので、元の絵の画素へ直す。[aspect] = 高さ / 幅。回転は見ない(動く投稿は回せない)。
+ui.Rect postObjectRectInImage({required ui.Size image, required ui.Size shown, required ui.Offset offset, required double width, required double aspect, required double scale}) {
+  final k = shown.width <= 0 ? 1.0 : image.width / shown.width;
+  final w = width * scale * k;
+  final h = w * aspect;
+  final center = ui.Offset(image.width / 2 + offset.dx * k, image.height / 2 + offset.dy * k);
+  return ui.Rect.fromCenter(center: center, width: w, height: h);
+}
+
+/// 書き出す動画の大きさ: 長辺 [maxSide] まで縮めて偶数に。返り値の factor を枠にも掛ける。
+({ui.Size canvas, double factor}) postCanvasFor(ui.Size image, {double maxSide = 1920}) {
+  final f = image.longestSide > maxSide ? maxSide / image.longestSide : 1.0;
+  return (canvas: evenPixelSize(image, f), factor: f);
+}
+
+/// 画像 + 動く投稿 → mp4 (D-261): 加工した画像([imagePng]、投稿の静止画も焼き込み済み)を土台に、[posts] の動画をそれぞれの枠へ重ねる。
+/// 長さは一番長い投稿の動画に合わせる(短いものは止まる)。音は投稿の動画のもの。
+Future<File> buildImageWithPostVideos({required Uint8List imagePng, required ui.Size imageSize, required List<({File video, ui.Rect rect})> posts, required Directory workDir}) async {
+  final id = DateTime.now().microsecondsSinceEpoch;
+  final dir = Directory('${workDir.path}/rasq_postimg_$id');
+  await dir.create(recursive: true);
+  final out = '${workDir.path}/rasq_postimg_$id.mp4';
+  try {
+    final editor = pve.ProVideoEditor.instance;
+    final (:canvas, :factor) = postCanvasFor(imageSize);
+    final still = File('${dir.path}/image.png');
+    await still.writeAsBytes(imagePng);
+    var length = const Duration(seconds: 1);
+    final lengths = <Duration>[];
+    for (final p in posts) {
+      final d = _cap((await editor.getMetadata(pve.EditorVideo.file(p.video.path))).duration);
+      lengths.add(d);
+      if (d > length) length = d;
+    }
+    final base = '${dir.path}/base.mp4';
+    await editor.renderStopMotionToFile(base, pve.StopMotionRenderData(id: 'rasq-postimg-base-$id', frames: [pve.StopMotionFrame(image: pve.EditorLayerImage.file(still), duration: length)], frameRate: 10, resolution: canvas, fit: pve.StopMotionFit.stretch, outputFormat: pve.VideoOutputFormat.mp4));
+    await editor.renderVideoToFile(
+      out,
+      pve.VideoRenderData(
+        id: 'rasq-postimg-comp-$id',
+        composition: pve.VideoComposition(canvasSize: canvas, layers: [
+          pve.VideoLayer(clips: [pve.VideoSegment(video: pve.EditorVideo.file(base))]),
+          for (var i = 0; i < posts.length; i++)
+            pve.VideoLayer(clips: [
+              pve.VideoSegment(
+                video: pve.EditorVideo.file(posts[i].video.path),
+                endTime: lengths[i],
+                transform: pve.SegmentTransform(offset: posts[i].rect.topLeft * factor, size: posts[i].rect.size * factor, fit: pve.SegmentFit.cover),
+              ),
+            ]),
+        ]),
+        enableAudio: true,
+        outputFormat: pve.VideoOutputFormat.mp4,
+      ),
+    );
     return File(out);
   } finally {
     try {

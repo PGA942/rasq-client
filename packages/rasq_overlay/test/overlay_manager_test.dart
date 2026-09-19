@@ -73,6 +73,21 @@ void main() {
       expect(m.contains('modal'), isTrue);
     });
 
+    test('handleBack は退避中の FOW を閉じない(全画面の加工画面の下のコンポーザー)', () {
+      final m = OverlayManager();
+      RasqOverlayEntry fow(String id) => RasqOverlayEntry(id: id, layer: OverlayLayer.fow, barrierBehavior: OverlayBarrierBehavior.dismiss, builder: (_, _) => const SizedBox());
+      m.show(fow('fow.composer'));
+      m.show(fow('media.pro.child'));
+      m.setFowSuspend((e) => e.id == 'fow.composer');
+      m.handleBack();
+      expect(m.contains('media.pro.child'), isFalse);
+      m.handleBack(); // 残りは退避中のコンポーザーだけ → 何もしない
+      expect(m.contains('fow.composer'), isTrue);
+      m.setFowSuspend(null);
+      m.handleBack();
+      expect(m.contains('fow.composer'), isFalse);
+    });
+
     test('closeOwnedBy isolates a crashed plugin', () {
       final m = OverlayManager();
       m.show(entry('p1.sheet', OverlayLayer.bottomSheet, owner: 'plugin-1'));

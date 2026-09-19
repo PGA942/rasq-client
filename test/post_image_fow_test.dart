@@ -60,7 +60,7 @@ void main() {
     expect(searchHistoryAgo(now.subtract(const Duration(days: 1)), now: now), '1 日前');
   });
 
-  testWidgets('コンポーザー → FOW: タブ、限定公開は出ない、絞り込み、最近の検索 → 検索結果 → 絞り込み、決定で投稿タイルが PNG の添付になる', (tester) async {
+  testWidgets('FOW: タブ、限定公開は出ない、絞り込み、最近の検索 → 検索結果 → 絞り込み、決定で投稿タイルの PNG が返る', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -79,11 +79,9 @@ void main() {
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('投稿'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('画像'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('投稿を画像にする'));
+    // 入口は加工画面の「ノート」だけ(コンポーザーには置かない)。ここでは FOW を直接開く。
+    expect(find.text('投稿を画像にする'), findsNothing);
+    final result = showPostImageFow(tester.element(find.byType(RasqApp)) as WidgetRef);
     await tester.pumpAndSettle();
 
     // ヘッダーとタブ。決定は選ぶまで押せない。
@@ -122,7 +120,7 @@ void main() {
     await tester.enterText(find.byKey(postImageFilterKey), '');
     await tester.pumpAndSettle();
 
-    // 選ぶ → 決定 → 投稿タイルの PNG が添付に(注釈つきの投稿なのでセンシティブ)。
+    // 選ぶ → 決定 → 投稿タイルの PNG。
     await tester.tap(find.byKey(const ValueKey('postImage.post.p4')));
     await tester.pumpAndSettle();
     expect(tester.widget<TextButton>(find.byKey(postImageConfirmKey)).onPressed, isNotNull);
@@ -132,8 +130,10 @@ void main() {
     });
     await tester.pumpAndSettle();
     expect(find.text('ノート画像の追加'), findsNothing);
-    expect(find.byTooltip('センシティブ解除'), findsOneWidget);
-    expect(find.byKey(const ValueKey('postImage.asVideo')), findsNothing);
+    final picked = (await result)!;
+    expect((picked.mimeType, picked.post.id), ('image/png', 'p4'));
+    expect(picked.still, isNull);
+    expect(picked.bytes.sublist(1, 4), 'PNG'.codeUnits);
   });
 
   testWidgets('投稿タイルの画像化: 不透明な PNG、タイルの大きさ × 倍率', (tester) async {

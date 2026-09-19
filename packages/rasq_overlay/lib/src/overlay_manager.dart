@@ -31,6 +31,8 @@ class OverlayManager extends ChangeNotifier {
   /// Topmost entry that blocks input (ignores `rai`/`fow`/`vcVideo`).
   RasqOverlayEntry? get topBlocking {
     for (final e in _entries.reversed) {
+      // 退避中の FOW(全画面の加工画面の下に隠れているコンポーザー等)は、戻る / Escape の相手にしない。
+      if (e.layer == OverlayLayer.fow && isFowSuspended(e)) continue;
       if (e.effectiveBarrierBehavior != OverlayBarrierBehavior.none) return e;
     }
     return null;
