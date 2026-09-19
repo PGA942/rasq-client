@@ -28,6 +28,7 @@ import '../home/action_bundle_fow.dart';
 import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
 import 'media_filter.dart';
+import 'media_filter_fow.dart';
 import 'media_plugin_panel.dart';
 import 'slot_plugins.dart';
 import 'sticker_picker.dart';
@@ -504,16 +505,17 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     }
   }
 
-  /// カスタムフィルターの ON / OFF (D-255): ON = `filter.preview` の描画リストを、絵いっぱいの動かせないレイヤーとして重ねる。
+  /// カスタムフィルターのボタン (D-255 → D-257): OFF → ON(`filter.preview` の描画リストをレイヤーとして重ねる。パラメーターが
+  /// あれば調整の FOW も開く)。ON のとき: パラメーターがあれば FOW を開き直す(外すのは FOW の「外す」)、無ければ OFF。
   Future<void> _toggleFilter(ProImageEditorState editor, PluginAction action) async {
-    final active = _filters.remove(action.id);
+    final active = _filters[action.id];
     if (active != null) {
-      editor.removeLayer(active.layer);
-      setState(() {});
-      return;
+      if (active.spec.value.params.isEmpty) return _removeFilter(editor, active);
+      return _openFilterFow(editor, active);
     }
     if (_bypassing) return;
     _bypassing = true;
+    final _ActiveFilter added;
     try {
       final size = editor.sizesManager.originalImageSize ?? editor.sizesManager.decodedImageSize;
       final seed = DateTime.now().microsecondsSinceEpoch & 0x7fffffff;
@@ -525,20 +527,71 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         return;
       }
       final shown = editor.sizesManager.decodedImageSize;
-      final layer = WidgetLayer(
-        width: shown.width,
+      final live = ValueNotifier(spec);
+      final object = spec.object;
+      final WidgetLayer layer;
+      if (object == null) {
         // 絵いっぱい・動かせない・選べない(ただの見た目)。
-        interaction: LayerInteraction(enableMove: false, enableScale: false, enableRotate: false, enableSelection: false, enableEdit: false),
-        meta: {'rasqFilter': action.id},
-        widget: IgnorePointer(child: SizedBox(width: shown.width, height: shown.height, child: CustomPaint(painter: MediaFilterPainter(spec)))),
-      );
+        layer = WidgetLayer(
+          width: shown.width,
+          interaction: LayerInteraction(enableMove: false, enableScale: false, enableRotate: false, enableSelection: false, enableEdit: false),
+          meta: {'rasqFilter': action.id},
+          widget: IgnorePointer(child: SizedBox(width: shown.width, height: shown.height, child: CustomPaint(painter: MediaFilterPainter(live)))),
+        );
+      } else {
+        // 動かせるオブジェクト (契約 v0.13): 短辺 × size の正方形を、絵の (x, y) に置く。移動 / 拡縮 / 回転はできる(中身の編集は無い)。
+        final side = object.size * shown.shortestSide;
+        layer = WidgetLayer(
+          width: side,
+          offset: Offset((object.x - 0.5) * shown.width, (object.y - 0.5) * shown.height),
+          interaction: LayerInteraction(enableEdit: false),
+          meta: {'rasqFilter': action.id},
+          widget: SizedBox(width: side, height: side, child: CustomPaint(painter: MediaFilterPainter(live))),
+        );
+      }
       editor.addLayer(layer, blockSelectLayer: true);
-      _filters[action.id] = _ActiveFilter(action: action, seed: seed, spec: spec, layer: layer, width: size.width.round(), height: size.height.round());
+      added = _filters[action.id] = _ActiveFilter(action: action, seed: seed, spec: live, layer: layer, width: size.width.round(), height: size.height.round(), params: {for (final p in spec.params) p.id: p.value});
       if (spec.dropped > 0) _notify('${action.decl.label}: 描画が多すぎるので ${spec.dropped} 個を省きました');
       setState(() {});
     } finally {
       _bypassing = false;
     }
+    if (added.spec.value.params.isNotEmpty && mounted) await _openFilterFow(editor, added);
+  }
+
+  void _removeFilter(ProImageEditorState editor, _ActiveFilter f) {
+    _filters.remove(f.action.id);
+    editor.removeLayer(f.layer);
+    if (mounted) setState(() {});
+  }
+
+  /// 調整の FOW (D-257、契約 v0.13): スライダーを動かすたびに `filter.preview` を呼び直して、置いてあるレイヤーの絵を差し替える。
+  Future<void> _openFilterFow(ProImageEditorState editor, _ActiveFilter f) async {
+    final remove = await showMediaFilterFow(
+      _overlay,
+      title: f.action.decl.label,
+      spec: f.spec,
+      onChanged: (id, value) async {
+        f.params[id] = value;
+        // 呼び直しは 1 つずつ(動かしている間に溜まったぶんは、最後の値だけ送る)。
+        if (f.busy) {
+          f.dirty = true;
+          return;
+        }
+        f.busy = true;
+        try {
+          do {
+            f.dirty = false;
+            final raw = await ref.read(slotPluginsProvider.notifier).filterPreview(f.action.plugin, actionId: f.action.decl.id, width: f.width, height: f.height, seed: f.seed, params: Map.of(f.params));
+            final next = parseMediaFilterSpec(raw);
+            if (next != null && next.ops.isNotEmpty && _filters[f.action.id] == f) f.spec.value = next;
+          } while (f.dirty && mounted);
+        } finally {
+          f.busy = false;
+        }
+      },
+    );
+    if (remove == true && mounted && _filters[f.action.id] == f) _removeFilter(editor, f);
   }
 
   void _notify(String message) => ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(message)));
@@ -549,7 +602,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     if (_completing) return;
     _completing = true;
     try {
-      final pixels = [for (final f in _filters.values) if (f.spec.mode == MediaFilterMode.pixels) f];
+      final pixels = [for (final f in _filters.values) if (f.spec.value.mode == MediaFilterMode.pixels) f];
       final editor = _imageEditor;
       if (pixels.isEmpty || editor == null) return _finish(MediaEditResult(bytes: bytes, mimeType: 'image/png', name: _outName));
       for (final f in pixels) {
@@ -562,7 +615,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       final failed = <String>[];
       final slots = ref.read(slotPluginsProvider.notifier);
       for (final f in pixels) {
-        final r = await slots.filterApply(f.action.plugin, actionId: f.action.decl.id, seed: f.seed, width: f.width, height: f.height, bytes: out, mimeType: mime);
+        final r = await slots.filterApply(f.action.plugin, actionId: f.action.decl.id, seed: f.seed, width: f.width, height: f.height, bytes: out, mimeType: mime, params: f.params.isEmpty ? null : Map.of(f.params));
         if (!mounted) return;
         if (r == null) {
           failed.add(f.action.decl.label);
@@ -804,15 +857,22 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   }
 }
 
-/// 掛かっているカスタムフィルター 1 つ (D-255)。
+/// 掛かっているカスタムフィルター 1 つ (D-255 / D-257)。
 class _ActiveFilter {
-  _ActiveFilter({required this.action, required this.seed, required this.spec, required this.layer, required this.width, required this.height});
+  _ActiveFilter({required this.action, required this.seed, required this.spec, required this.layer, required this.width, required this.height, required this.params});
   final PluginAction action;
 
   /// 掛けている間変わらない乱数の種(プレビューと `filter.apply` で同じ絵になるように)。
   final int seed;
-  final MediaFilterSpec spec;
+
+  /// いまの描画リスト(パラメーターを変えると差し替わる。レイヤーはこれを見て描き直す)。
+  final ValueNotifier<MediaFilterSpec> spec;
   final WidgetLayer layer;
   final int width;
   final int height;
+
+  /// いまのパラメーター(id → 値)。`filter.preview` の呼び直しと `filter.apply` に付ける。
+  final Map<String, double> params;
+  bool busy = false;
+  bool dirty = false;
 }
