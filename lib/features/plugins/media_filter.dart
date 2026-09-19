@@ -29,9 +29,34 @@ class MediaFilterOp {
   final BlendMode blend;
 }
 
+/// 調整できる値 1 つ(契約 v0.13。ホストがスライダーで出す)。
+@immutable
+class MediaFilterParam {
+  const MediaFilterParam({required this.id, required this.label, required this.min, required this.max, required this.step, required this.value});
+  final String id;
+  final String label;
+  final double min, max, step, value;
+
+  int? get divisions => step <= 0 ? null : ((max - min) / step).round().clamp(1, 1000);
+  String format(double v) => step >= 1 ? v.round().toString() : v.toStringAsFixed(step >= 0.1 ? 1 : 2);
+}
+
+/// 動かせるオブジェクトの初期の置き場所(契約 v0.13): 中心(絵に対する 0..1)と一辺(短辺に対する割合)の正方形。
+@immutable
+class MediaFilterObject {
+  const MediaFilterObject({required this.x, required this.y, required this.size});
+  final double x, y, size;
+}
+
 @immutable
 class MediaFilterSpec {
-  const MediaFilterSpec({required this.mode, required this.ops, this.matrix, this.dropped = 0});
+  const MediaFilterSpec({required this.mode, required this.ops, this.matrix, this.dropped = 0, this.params = const [], this.object});
+
+  /// 調整できる値(あればホストが FOW を出す)。
+  final List<MediaFilterParam> params;
+
+  /// あれば、描画リストは絵いっぱいではなく動かせるオブジェクト(`ops` の座標はその正方形に対する 0..1)。
+  final MediaFilterObject? object;
   final MediaFilterMode mode;
   final List<MediaFilterOp> ops;
 
@@ -93,9 +118,21 @@ MediaFilterSpec? parseMediaFilterSpec(Object? raw) {
       blend: _blends[o['blend']] ?? BlendMode.srcOver,
     ));
   }
+  final params = <MediaFilterParam>[];
+  for (final p in (raw['params'] as List? ?? const [])) {
+    if (p is! Map || p['id'] is! String || p['min'] is! num || p['max'] is! num) continue;
+    final min = n(p['min']), max = n(p['max']);
+    if (max <= min || params.any((x) => x.id == p['id'])) continue;
+    params.add(MediaFilterParam(id: p['id'] as String, label: p['label'] as String? ?? p['id'] as String, min: min, max: max, step: n(p['step']).clamp(0.0, max - min), value: n(p['value'], min).clamp(min, max)));
+  }
+  final o = raw['object'];
+  final object = o is Map && o['size'] is num && n(o['size']) > 0 ? MediaFilterObject(x: n(o['x'], 0.5).clamp(0.0, 1.0), y: n(o['y'], 0.5).clamp(0.0, 1.0), size: n(o['size']).clamp(0.02, 4.0)) : null;
   final m = raw['matrix'];
   return MediaFilterSpec(
-    mode: raw['mode'] == 'pixels' ? MediaFilterMode.pixels : MediaFilterMode.overlay,
+    params: params,
+    object: object,
+    // オブジェクトはレイヤーとして焼き込むしかない(pixels とは併用できない)。
+    mode: raw['mode'] == 'pixels' && object == null ? MediaFilterMode.pixels : MediaFilterMode.overlay,
     ops: ops,
     matrix: m is List && m.length == 20 && m.every((v) => v is num) ? [for (final v in m) (v as num).toDouble()] : null,
     dropped: dropped,
@@ -138,11 +175,12 @@ void paintMediaFilter(Canvas canvas, Size size, MediaFilterSpec spec) {
   canvas.restore();
 }
 
+/// [spec] が差し替わるたびに描き直す(パラメーターの調整中も、レイヤーそのものは置いたまま)。
 class MediaFilterPainter extends CustomPainter {
-  const MediaFilterPainter(this.spec);
-  final MediaFilterSpec spec;
+  MediaFilterPainter(this.spec) : super(repaint: spec);
+  final ValueNotifier<MediaFilterSpec> spec;
   @override
-  void paint(Canvas canvas, Size size) => paintMediaFilter(canvas, size, spec);
+  void paint(Canvas canvas, Size size) => paintMediaFilter(canvas, size, spec.value);
   @override
   bool shouldRepaint(MediaFilterPainter old) => old.spec != spec;
 }
