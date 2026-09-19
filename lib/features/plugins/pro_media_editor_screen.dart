@@ -436,8 +436,18 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         outputFormat: pve.VideoOutputFormat.mp4,
         bitrate: m.bitrate,
       );
-      final bytes = await pve.ProVideoEditor.instance.renderVideo(data);
+      var bytes = await pve.ProVideoEditor.instance.renderVideo(data);
       if (!mounted) return;
+      // 動くオブジェクト (D-262): 書き出した動画の上へ、置いた位置でもう一度重ねる(静止画は 1 回目で焼き込み済み)。
+      final moving = [for (final l in p.layers) if (l is WidgetLayer && _motionPosts.containsKey(l.meta?['rasqPostVideo'])) l];
+      if (moving.isNotEmpty) {
+        if (p.isTransformed) {
+          _notify('クロップ / 回転と、動くオブジェクトは一緒に使えません。静止画で入れました');
+        } else {
+          bytes = await _overlayOnVideo(bytes, moving) ?? bytes;
+          if (!mounted) return;
+        }
+      }
       final n = widget.args.name;
       final dot = n.lastIndexOf('.');
       _finish(MediaEditResult(bytes: bytes, mimeType: 'video/mp4', name: '${dot > 0 ? n.substring(0, dot) : n}.mp4'));
@@ -446,6 +456,47 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       _renderFailed = true;
       _notify('動画を書き出せませんでした: $e');
     }
+  }
+
+  /// 書き出した動画 + 動くオブジェクト (D-262)。失敗したら null(静止画のまま)。
+  Future<Uint8List?> _overlayOnVideo(Uint8List rendered, List<WidgetLayer> layers) async {
+    final editor = _imageEditor;
+    if (editor == null) return null;
+    final files = <File>[];
+    try {
+      final dir = await getTemporaryDirectory();
+      final base = await videoEditTempFile(dir, 'overlay-base.mp4');
+      await base.writeAsBytes(rendered);
+      files.add(base);
+      final meta = await pve.ProVideoEditor.instance.getMetadata(pve.EditorVideo.file(base.path));
+      final turned = meta.rotation == 90 || meta.rotation == 270;
+      final size = turned ? ui.Size(meta.resolution.height, meta.resolution.width) : meta.resolution;
+      final out = await videoEditTempFile(dir, 'overlay-out.mp4');
+      files.add(out);
+      await overlayVideosOnVideo(base: base, canvas: size, length: meta.duration, posts: await _motionFiles(editor, layers, size, files), out: out);
+      return await out.readAsBytes();
+    } catch (e) {
+      _notify('動くオブジェクトを重ねられなかったので、静止画で入れました: $e');
+      return null;
+    } finally {
+      for (final f in files) {
+        _deleteQuietly(f);
+      }
+    }
+  }
+
+  /// 動くオブジェクトの動画をファイルに出して、絵([size])の画素での枠と組にする。
+  Future<List<({File video, ui.Rect rect})>> _motionFiles(ProImageEditorState editor, List<WidgetLayer> layers, ui.Size size, List<File> created) async {
+    final dir = await getTemporaryDirectory();
+    final posts = <({File video, ui.Rect rect})>[];
+    for (final l in layers) {
+      final m = _motionPosts[l.meta!['rasqPostVideo']]!;
+      final f = await videoEditTempFile(dir, 'object-${posts.length}.mp4');
+      await f.writeAsBytes(m.video);
+      created.add(f);
+      posts.add((video: f, rect: postObjectRectInImage(image: size, shown: editor.sizesManager.decodedImageSize, offset: l.offset, width: m.width, aspect: m.aspect, scale: l.scale)));
+    }
+    return posts;
   }
 
   /// 差し替え後のファイル名(pro_image_editor の出力は PNG)。
@@ -671,14 +722,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       final size = ui.Size(decoded.width.toDouble(), decoded.height.toDouble());
       decoded.dispose();
       final dir = await getTemporaryDirectory();
-      final posts = <({File video, ui.Rect rect})>[];
-      for (final l in layers) {
-        final m = _motionPosts[l.meta!['rasqPostVideo']]!;
-        final f = await videoEditTempFile(dir, 'post-${posts.length}.mp4');
-        await f.writeAsBytes(m.video);
-        files.add(f);
-        posts.add((video: f, rect: postObjectRectInImage(image: size, shown: editor.sizesManager.decodedImageSize, offset: l.offset, width: m.width, aspect: m.aspect, scale: l.scale)));
-      }
+      final posts = await _motionFiles(editor, layers, size, files);
       final out = await buildImageWithPostVideos(imagePng: image, imageSize: size, posts: posts, workDir: dir);
       files.add(out);
       final bytes = await out.readAsBytes();
@@ -699,40 +743,81 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   /// 画像の加工中に**動く / 鳴る投稿**を選ぶと「動画に変換しますか?」と尋ねる。はい → 置くのは静止画のまま、完了したときに
   /// 画像を土台にした動画へ書き出す(その位置で投稿が動く。回転はできない)。動画の加工中は静止画だけ。
   Future<void> _addPostObject(ProImageEditorState editor) async {
-    final canVideo = !_isVideo && audioVideoSupported;
     final picked = await showPostImageFow(
       ref,
       id: 'media.pro.postImage',
-      allowVideo: canVideo,
-      confirmVideo: !canVideo
-          ? null
-          : (motion) => _overlay.showAlert(
-                id: 'media.pro.postVideo.confirm',
-                title: '動画に変換しますか?',
-                message: '${postMotionNote(motion)}\n「動画にする」を選ぶと、完了したときに、この画像を土台にした動画として書き出します(置いた場所で投稿が動きます)。「静止画で貼る」なら、その瞬間の画像だけを貼ります。',
-                confirmText: '動画にする',
-                cancelText: '静止画で貼る',
-              ),
+      allowVideo: audioVideoSupported,
+      // 動画の加工中は変換が要らないので、FOW の中のスイッチ(動画にする / 静止画)で選ぶ。
+      confirmVideo: _isVideo ? null : (motion) => _confirmToVideo(postMotionNote(motion)),
     );
     if (picked == null || !mounted) return;
-    final still = picked.still ?? picked.bytes;
     final isVideo = picked.mimeType == 'video/mp4' && picked.still != null;
+    await _addObject(editor, still: picked.still ?? picked.bytes, video: isVideo ? picked.bytes : null, meta: {'rasqPost': picked.post.key});
+  }
+
+  Future<bool> _confirmToVideo(String note) => _overlay.showAlert(
+        id: 'media.pro.postVideo.confirm',
+        title: '動画に変換しますか?',
+        message: '$note\n「動画にする」を選ぶと、完了したときに、この画像を土台にした動画として書き出します(置いた場所で動きます)。「静止画で貼る」なら、その瞬間の画像だけを貼ります。',
+        confirmText: '動画にする',
+        cancelText: '静止画で貼る',
+      );
+
+  /// オブジェクト(レイヤー)を置く。[video] があれば「動くオブジェクト」: 置くのは静止画 [still] のまま、完了で動画を重ねる(回転は不可)。
+  Future<void> _addObject(ProImageEditorState editor, {required Uint8List still, Uint8List? video, Map<String, Object?> meta = const {}}) async {
     // 復号してから置く(書き出しの瞬間に復号待ちで空にならないよう、RawImage で同期に描く)。
     final image = await decodeUiImage(still);
-    if (image == null) return;
+    if (image == null) return _notify('画像を読めませんでした');
     if (!mounted) return image.dispose();
     _postImages.add(image);
     final shown = editor.sizesManager.decodedImageSize;
-    final width = (shown.width * 0.7).clamp(80.0, 480.0).toDouble();
-    final id = '${picked.post.key}#${DateTime.now().microsecondsSinceEpoch}';
-    if (isVideo) _motionPosts[id] = (video: picked.bytes, width: width, aspect: image.height / image.width);
+    // 縦長は高さで抑える(絵の高さの 6 割まで)。
+    final aspect = image.height / image.width;
+    var width = (shown.width * 0.6).clamp(80.0, 480.0).toDouble();
+    if (width * aspect > shown.height * 0.6) width = shown.height * 0.6 / aspect;
+    final id = '${DateTime.now().microsecondsSinceEpoch}';
+    if (video != null) _motionPosts[id] = (video: video, width: width, aspect: aspect);
     editor.addLayer(WidgetLayer(
       width: width,
-      interaction: LayerInteraction(enableEdit: false, enableRotate: !isVideo),
+      interaction: LayerInteraction(enableEdit: false, enableRotate: video == null),
       widget: SizedBox(width: width, child: AspectRatio(aspectRatio: image.width / image.height, child: RawImage(image: image, fit: BoxFit.fill))),
-      meta: {'rasqPost': picked.post.key, if (isVideo) 'rasqPostVideo': id},
+      meta: {...meta, if (video != null) 'rasqPostVideo': id},
     ));
-    if (isVideo) _notify('完了すると、動画として書き出します');
+    if (video != null && !_isVideo) _notify('完了すると、動画として書き出します');
+  }
+
+  /// 「メディア」(D-262): 端末の画像 / 動画を、オブジェクトとして置く。動画は最初のコマを置いて、完了で動画を重ねる。
+  Future<void> _addMediaObject(ProImageEditorState editor, Rect anchor) async {
+    final kind = !audioVideoSupported
+        ? 'image'
+        : await _overlay.showDropdown<String>(id: 'media.pro.addMedia', anchor: anchor, dense: true, items: const [RasqDropdownItem('画像を追加', 'image'), RasqDropdownItem('動画を追加', 'video')]);
+    if (kind == null || !mounted) return;
+    try {
+      if (kind == 'image') {
+        final f = await ImagePicker().pickImage(source: ImageSource.gallery);
+        if (f == null || !mounted) return;
+        return await _addObject(editor, still: await f.readAsBytes(), meta: const {'rasqMedia': 'image'});
+      }
+      final f = await ImagePicker().pickVideo(source: ImageSource.gallery);
+      if (f == null || !mounted) return;
+      final bytes = await f.readAsBytes();
+      final tmp = await videoEditTempFile(await getTemporaryDirectory(), 'object-pick.mp4');
+      await tmp.writeAsBytes(bytes);
+      Uint8List? still;
+      try {
+        final frames = await pve.ProVideoEditor.instance.getThumbnails(pve.ThumbnailConfigs(video: pve.EditorVideo.file(tmp.path), outputSize: const Size(1280, 1280), timestamps: const [Duration.zero], boxFit: pve.ThumbnailBoxFit.contain, outputFormat: pve.ThumbnailFormat.png));
+        if (frames.isNotEmpty) still = frames.first;
+      } finally {
+        _deleteQuietly(tmp);
+      }
+      if (!mounted) return;
+      if (still == null) return _notify('動画の最初のコマを取れませんでした');
+      final asVideo = _isVideo || await _confirmToVideo('動画をオブジェクトとして置きます。');
+      if (!mounted) return;
+      await _addObject(editor, still: still, video: asVideo ? bytes : null, meta: const {'rasqMedia': 'video'});
+    } catch (e) {
+      _notify('メディアを追加できませんでした: $e');
+    }
   }
 
   String get _configKey => editorConfigKeyFor(widget.args.mimeType);
@@ -753,6 +838,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         editor.openTextEditor();
       case 'editor:post':
         _addPostObject(editor);
+      case 'editor:media':
+        final screen = MediaQuery.sizeOf(context);
+        _addMediaObject(editor, Rect.fromLTWH(screen.width / 2 - 80, screen.height - 140, 160, 40));
       case 'editor:sticker':
         editor.openStickerEditor();
       case 'editor:emoji':

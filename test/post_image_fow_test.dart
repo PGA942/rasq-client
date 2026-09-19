@@ -94,6 +94,20 @@ void main() {
     expect(find.descendant(of: find.byKey(const ValueKey('postImage.post.p1')), matching: find.byType(PostRow)), findsOneWidget);
     expect(find.byKey(const ValueKey('postImage.post.p2')), findsNothing);
     expect(find.byKey(const ValueKey('postImage.excluded')), findsOneWidget);
+    // 見た目 (D-262): 既定は TL。インライン = 小さいカード、スレッド = 全部見せる PostRow。選択は保存される。
+    expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('postImage.style.timeline'))).selected, isTrue);
+    final tlHeight = tester.getSize(find.byKey(const ValueKey('postImage.post.p1'))).height;
+    await tester.tap(find.byKey(const ValueKey('postImage.style.inline')));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byKey(const ValueKey('postImage.post.p1')), matching: find.byType(InlinePostFrame)), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('postImage.post.p1')), matching: find.byType(PostRow)), findsNothing);
+    expect(tester.getSize(find.byKey(const ValueKey('postImage.post.p1'))).height, lessThan(tlHeight + 1));
+    expect(await storage.read(postTileStyleStorageKey), 'inline');
+    await tester.tap(find.byKey(const ValueKey('postImage.style.thread')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<PostRow>(find.descendant(of: find.byKey(const ValueKey('postImage.post.p1')), matching: find.byType(PostRow))).showAllMedia, isTrue);
+    await tester.tap(find.byKey(const ValueKey('postImage.style.timeline')));
+    await tester.pumpAndSettle();
     // 絞り込み(いま出ている一覧を言葉で絞る)。
     await tester.enterText(find.byKey(postImageFilterKey), '天気');
     await tester.pumpAndSettle();

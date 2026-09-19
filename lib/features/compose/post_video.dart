@@ -213,50 +213,56 @@ ui.Rect postObjectRectInImage({required ui.Size image, required ui.Size shown, r
   return (canvas: evenPixelSize(image, f), factor: f);
 }
 
-/// 画像 + 動く投稿 → mp4 (D-261): 加工した画像([imagePng]、投稿の静止画も焼き込み済み)を土台に、[posts] の動画をそれぞれの枠へ重ねる。
-/// 長さは一番長い投稿の動画に合わせる(短いものは止まる)。音は投稿の動画のもの。
+/// 画像 + 動くオブジェクト → mp4 (D-261): 加工した画像([imagePng]、オブジェクトの静止画も焼き込み済み)を土台に、[posts] の動画をそれぞれの枠へ重ねる。
+/// 長さは一番長い動画に合わせる(短いものは止まる)。音は重ねた動画のもの。
 Future<File> buildImageWithPostVideos({required Uint8List imagePng, required ui.Size imageSize, required List<({File video, ui.Rect rect})> posts, required Directory workDir}) async {
   final id = DateTime.now().microsecondsSinceEpoch;
   final dir = Directory('${workDir.path}/rasq_postimg_$id');
   await dir.create(recursive: true);
-  final out = '${workDir.path}/rasq_postimg_$id.mp4';
   try {
     final editor = pve.ProVideoEditor.instance;
     final (:canvas, :factor) = postCanvasFor(imageSize);
     final still = File('${dir.path}/image.png');
     await still.writeAsBytes(imagePng);
     var length = const Duration(seconds: 1);
-    final lengths = <Duration>[];
     for (final p in posts) {
       final d = _cap((await editor.getMetadata(pve.EditorVideo.file(p.video.path))).duration);
-      lengths.add(d);
       if (d > length) length = d;
     }
-    final base = '${dir.path}/base.mp4';
-    await editor.renderStopMotionToFile(base, pve.StopMotionRenderData(id: 'rasq-postimg-base-$id', frames: [pve.StopMotionFrame(image: pve.EditorLayerImage.file(still), duration: length)], frameRate: 10, resolution: canvas, fit: pve.StopMotionFit.stretch, outputFormat: pve.VideoOutputFormat.mp4));
-    await editor.renderVideoToFile(
-      out,
-      pve.VideoRenderData(
-        id: 'rasq-postimg-comp-$id',
-        composition: pve.VideoComposition(canvasSize: canvas, layers: [
-          pve.VideoLayer(clips: [pve.VideoSegment(video: pve.EditorVideo.file(base))]),
-          for (var i = 0; i < posts.length; i++)
-            pve.VideoLayer(clips: [
-              pve.VideoSegment(
-                video: pve.EditorVideo.file(posts[i].video.path),
-                endTime: lengths[i],
-                transform: pve.SegmentTransform(offset: posts[i].rect.topLeft * factor, size: posts[i].rect.size * factor, fit: pve.SegmentFit.cover),
-              ),
-            ]),
-        ]),
-        enableAudio: true,
-        outputFormat: pve.VideoOutputFormat.mp4,
-      ),
-    );
-    return File(out);
+    final base = File('${dir.path}/base.mp4');
+    await editor.renderStopMotionToFile(base.path, pve.StopMotionRenderData(id: 'rasq-postimg-base-$id', frames: [pve.StopMotionFrame(image: pve.EditorLayerImage.file(still), duration: length)], frameRate: 10, resolution: canvas, fit: pve.StopMotionFit.stretch, outputFormat: pve.VideoOutputFormat.mp4));
+    return await overlayVideosOnVideo(base: base, canvas: canvas, length: length, posts: [for (final p in posts) (video: p.video, rect: ui.Rect.fromLTWH(p.rect.left * factor, p.rect.top * factor, p.rect.width * factor, p.rect.height * factor))], out: File('${workDir.path}/rasq_postimg_$id.mp4'));
   } finally {
     try {
       await dir.delete(recursive: true);
     } catch (_) {}
   }
+}
+
+/// 動画 + 動くオブジェクト → mp4 (D-262): 書き出し済みの動画 [base]([canvas] = その画素の大きさ、[length] = 長さ)の上へ、
+/// [posts] の動画をそれぞれの枠(画素)へ重ねる。重ねる動画は頭から流し、土台より長いぶんは切る。
+Future<File> overlayVideosOnVideo({required File base, required ui.Size canvas, required Duration length, required List<({File video, ui.Rect rect})> posts, required File out}) async {
+  final editor = pve.ProVideoEditor.instance;
+  final id = DateTime.now().microsecondsSinceEpoch;
+  final ends = <Duration>[];
+  for (final p in posts) {
+    final d = (await editor.getMetadata(pve.EditorVideo.file(p.video.path))).duration;
+    ends.add(d > length ? length : d);
+  }
+  await editor.renderVideoToFile(
+    out.path,
+    pve.VideoRenderData(
+      id: 'rasq-overlay-$id',
+      composition: pve.VideoComposition(canvasSize: canvas, layers: [
+        pve.VideoLayer(clips: [pve.VideoSegment(video: pve.EditorVideo.file(base.path))]),
+        for (var i = 0; i < posts.length; i++)
+          pve.VideoLayer(clips: [
+            pve.VideoSegment(video: pve.EditorVideo.file(posts[i].video.path), endTime: ends[i], transform: pve.SegmentTransform(offset: posts[i].rect.topLeft, size: posts[i].rect.size, fit: pve.SegmentFit.cover)),
+          ]),
+      ]),
+      enableAudio: true,
+      outputFormat: pve.VideoOutputFormat.mp4,
+    ),
+  );
+  return out;
 }
