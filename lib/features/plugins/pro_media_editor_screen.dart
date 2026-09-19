@@ -8,6 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+// LayerInteraction は公開ライブラリから export されていない(レイヤーを「動かせない / 選べない」にする唯一の口)。
+// ignore: implementation_imports
+import 'package:pro_image_editor/core/models/layers/layer_interaction.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 import 'package:path_provider/path_provider.dart';
@@ -24,6 +27,7 @@ import '../home/action_bar_edit_sheet.dart';
 import '../home/action_bundle_fow.dart';
 import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
+import 'media_filter.dart';
 import 'media_plugin_panel.dart';
 import 'slot_plugins.dart';
 import 'sticker_picker.dart';
@@ -131,6 +135,12 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   final _barScroll = ScrollController();
   bool _closing = false;
   bool _bypassing = false;
+
+  /// 掛かっているカスタムフィルター (D-255、契約 v0.12)。ボタンの id → 状態(フラグ管理: 掛かっているか / 完了時に apply が要るか)。
+  final Map<String, _ActiveFilter> _filters = {};
+
+  /// 完了時の処理中(二重に走らせない)。
+  bool _completing = false;
 
   /// 今のエディター(バーを描くたびに覚える。ステッカー一覧からプラグインを呼ぶ用)。
   ProImageEditorState? _imageEditor;
@@ -468,6 +478,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   /// プラグインのボタン (D-173 → D-249): 焼き込み → パネル → 結果を新しい背景に。動画は元のファイルを渡して差し替え。
   Future<void> _runPlugin(ProImageEditorState editor, PluginAction action) async {
+    if (action.decl.isFilterOutput && !_isVideo) return _toggleFilter(editor, action);
     if (_bypassing) return;
     _bypassing = true;
     try {
@@ -490,6 +501,81 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       await editor.updateBackgroundImage(EditorImage(byteArray: result.bytes), updateHistory: false);
     } finally {
       _bypassing = false;
+    }
+  }
+
+  /// カスタムフィルターの ON / OFF (D-255): ON = `filter.preview` の描画リストを、絵いっぱいの動かせないレイヤーとして重ねる。
+  Future<void> _toggleFilter(ProImageEditorState editor, PluginAction action) async {
+    final active = _filters.remove(action.id);
+    if (active != null) {
+      editor.removeLayer(active.layer);
+      setState(() {});
+      return;
+    }
+    if (_bypassing) return;
+    _bypassing = true;
+    try {
+      final size = editor.sizesManager.originalImageSize ?? editor.sizesManager.decodedImageSize;
+      final seed = DateTime.now().microsecondsSinceEpoch & 0x7fffffff;
+      final raw = await ref.read(slotPluginsProvider.notifier).filterPreview(action.plugin, actionId: action.decl.id, width: size.width.round(), height: size.height.round(), seed: seed);
+      final spec = parseMediaFilterSpec(raw);
+      if (!mounted) return;
+      if (spec == null || spec.ops.isEmpty) {
+        _notify('${action.decl.label}: フィルターを受け取れませんでした');
+        return;
+      }
+      final shown = editor.sizesManager.decodedImageSize;
+      final layer = WidgetLayer(
+        width: shown.width,
+        // 絵いっぱい・動かせない・選べない(ただの見た目)。
+        interaction: LayerInteraction(enableMove: false, enableScale: false, enableRotate: false, enableSelection: false, enableEdit: false),
+        meta: {'rasqFilter': action.id},
+        widget: IgnorePointer(child: SizedBox(width: shown.width, height: shown.height, child: CustomPaint(painter: MediaFilterPainter(spec)))),
+      );
+      editor.addLayer(layer, blockSelectLayer: true);
+      _filters[action.id] = _ActiveFilter(action: action, seed: seed, spec: spec, layer: layer, width: size.width.round(), height: size.height.round());
+      if (spec.dropped > 0) _notify('${action.decl.label}: 描画が多すぎるので ${spec.dropped} 個を省きました');
+      setState(() {});
+    } finally {
+      _bypassing = false;
+    }
+  }
+
+  void _notify(String message) => ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(message)));
+
+  /// 完了 (D-255): `mode: "pixels"` のフィルターが掛かっていれば、そのプレビューを外して焼き込み直し、押した順に `filter.apply` を通す。
+  /// 失敗したフィルターは飛ばして伝える(プレビューの見た目を黙って焼き込まない)。
+  Future<void> _complete(Uint8List bytes) async {
+    if (_completing) return;
+    _completing = true;
+    try {
+      final pixels = [for (final f in _filters.values) if (f.spec.mode == MediaFilterMode.pixels) f];
+      final editor = _imageEditor;
+      if (pixels.isEmpty || editor == null) return _finish(MediaEditResult(bytes: bytes, mimeType: 'image/png', name: _outName));
+      for (final f in pixels) {
+        editor.removeLayer(f.layer);
+      }
+      var out = await editor.captureEditorImage();
+      if (!mounted) return;
+      if (out.isEmpty) out = bytes;
+      var mime = 'image/png';
+      final failed = <String>[];
+      final slots = ref.read(slotPluginsProvider.notifier);
+      for (final f in pixels) {
+        final r = await slots.filterApply(f.action.plugin, actionId: f.action.decl.id, seed: f.seed, width: f.width, height: f.height, bytes: out, mimeType: mime);
+        if (!mounted) return;
+        if (r == null) {
+          failed.add(f.action.decl.label);
+        } else {
+          out = r.$1;
+          mime = r.$2;
+        }
+      }
+      if (failed.isNotEmpty) _notify('適用できなかったフィルター: ${failed.join(' / ')}(この加工は入っていません)');
+      final n = _outName;
+      _finish(MediaEditResult(bytes: out, mimeType: mime, name: mime == 'image/png' ? n : '${n.substring(0, n.lastIndexOf('.'))}.${mime == 'image/jpeg' ? 'jpg' : mime.split('/').last}'));
+    } finally {
+      _completing = false;
     }
   }
 
@@ -562,7 +648,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
                     SingleActionEntry() => item(
                         e.action.id,
                         e.action.label,
-                        Icon(PostRow.iconFor(e.action.icon, Icons.extension_outlined), size: 22, color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white),
+                        Icon(_filters.containsKey(e.action.id) ? Icons.check_circle : PostRow.iconFor(e.action.icon, Icons.extension_outlined), size: 22, color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white),
                         (_) => _perform(editor, e.action, plugins),
                         color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white,
                       ),
@@ -619,7 +705,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       widget.args.bytes,
       key: _editorKey,
       callbacks: ProImageEditorCallbacks(
-        onImageEditingComplete: (bytes) async => _finish(MediaEditResult(bytes: bytes, mimeType: 'image/png', name: _outName)),
+        onImageEditingComplete: _complete,
         onCloseEditor: (mode) {
           if (mode == EditorMode.main) _finish(null);
         },
@@ -716,4 +802,17 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       ),
     ));
   }
+}
+
+/// 掛かっているカスタムフィルター 1 つ (D-255)。
+class _ActiveFilter {
+  _ActiveFilter({required this.action, required this.seed, required this.spec, required this.layer, required this.width, required this.height});
+  final PluginAction action;
+
+  /// 掛けている間変わらない乱数の種(プレビューと `filter.apply` で同じ絵になるように)。
+  final int seed;
+  final MediaFilterSpec spec;
+  final WidgetLayer layer;
+  final int width;
+  final int height;
 }
