@@ -189,6 +189,47 @@ void main() {
     expect((act['genre'], act['action']), ('tone', 'glaze'));
   });
 
+  testWidgets('ステッカー (D-252): 一覧にアセットパックと「プラグインで作る」、output: sticker の結果は背景ではなくレイヤーになる', (tester) async {
+    late FakeSlotRuntime rt;
+    fakes['g'] = () => rt = FakeSlotRuntime(
+          manifest: {
+            'id': 't.g', 'name': 'ジェネレーター', 'version': '0.1.0', 'kind': 'action', 'slots': ['composer.media'], 'permissions': ['fow.widget'],
+            'actions': [{'id': 'qr', 'slot': 'composer.media', 'label': 'QR を作る', 'icon': 'qr_code_2', 'tags': ['Generator'], 'output': 'sticker'}],
+          },
+          handler: (self, fn, args) => switch (fn) {
+            'media.edit' => {'genres': [{'id': 'add', 'actions': [{'id': 'make', 'label': '作る'}]}]},
+            'media.action' || 'media.cancel' => {},
+            'media.commit' => {'bytesB64': base64Encode(png), 'mimeType': 'image/png'},
+            _ => null,
+          },
+        );
+    final c = await pump(tester);
+    await c.read(slotPluginsProvider.notifier).register('fake:g', bytes: Uint8List.fromList('g'.codeUnits));
+    await settle(tester);
+    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: png, name: 'a.jpg', mimeType: 'image/jpeg'));
+    await settle(tester);
+    final state = tester.state<ProImageEditorState>(find.byType(ProImageEditor));
+    final background = state.stateManager.activeBackgroundImage;
+    // ステッカー一覧: パックは未インストール、ジェネレーターが並ぶ。
+    final button = find.byKey(proMediaEditorBarKey('editor:sticker'));
+    await tester.ensureVisible(button);
+    await settle(tester);
+    await tester.tap(button);
+    await settle(tester);
+    expect(find.text('プラグインで作る'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('sticker.generate.slot:t.g:qr')));
+    await settle(tester);
+    expect(find.byType(MediaPluginPanel), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('media.editor.apply')));
+    await settle(tester);
+    expect(rt.calls.where((x) => x.$1 == 'media.commit').length, 1);
+    expect(find.byType(MediaPluginPanel), findsNothing);
+    // 背景はそのまま、レイヤーが 1 枚増える。
+    expect(state.activeLayers.length, 1);
+    expect(state.activeLayers.single, isA<WidgetLayer>());
+    expect(identical(state.stateManager.activeBackgroundImage, background), isTrue);
+  });
+
   test('mediaAccepts: MIME の型 / 完全一致 / 拡張子、空は image/*', () {
     expect(mediaAccepts(const [], mimeType: 'image/png'), isTrue);
     expect(mediaAccepts(const [], mimeType: 'video/mp4'), isFalse);

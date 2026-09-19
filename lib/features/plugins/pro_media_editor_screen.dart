@@ -23,6 +23,7 @@ import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
 import 'media_plugin_panel.dart';
 import 'slot_plugins.dart';
+import 'sticker_picker.dart';
 
 /// 添付の加工 (D-173 → D-249): 基本動作は **pro_image_editor**(ネイティブ実装: クロップ / 回転 / ペイント /
 /// テキスト / 絵文字 / フィルター / ぼかし / 調整)、アセットに無いフィルターや wasm / ONNX を使う編集は
@@ -104,6 +105,7 @@ const rasqEditorI18n = I18n(
   tuneEditor: I18nTuneEditor(bottomNavigationBarText: '調整', back: '戻る', done: '完了', brightness: '明るさ', contrast: 'コントラスト', saturation: '彩度', exposure: '露出', hue: '色相', temperature: '色温度', fade: 'フェード', tint: 'ティント', undo: 'ひとつ戻す', redo: 'やり直す'),
   filterEditor: I18nFilterEditor(bottomNavigationBarText: 'フィルター', back: '戻る', done: '完了'),
   blurEditor: I18nBlurEditor(bottomNavigationBarText: 'ぼかし', back: '戻る', done: '完了'),
+  stickerEditor: I18nStickerEditor(bottomNavigationBarText: 'ステッカー'),
   emojiEditor: I18nEmojiEditor(bottomNavigationBarText: '絵文字', search: '検索', categoryRecent: '最近', categorySmileys: '顔と人', categoryAnimals: '動物と自然', categoryFood: '食べ物', categoryActivities: 'アクティビティ', categoryTravel: '旅行と場所', categoryObjects: 'もの', categorySymbols: '記号', categoryFlags: '旗'),
 );
 
@@ -119,6 +121,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   final _barScroll = ScrollController();
   bool _closing = false;
   bool _bypassing = false;
+
+  /// 今のエディター(バーを描くたびに覚える。ステッカー一覧からプラグインを呼ぶ用)。
+  ProImageEditorState? _imageEditor;
 
   /// 重ねているプラグインの編集パネル(無ければ null)。
   ({PluginAction action, Uint8List bytes, String name, String mimeType, Completer<MediaEditResult?> done})? _panel;
@@ -380,6 +385,11 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       if (!mounted || bytes.isEmpty) return;
       final result = await _runPanel(action, bytes: bytes, name: _outName, mimeType: 'image/png');
       if (result == null || !mounted) return;
+      // ジェネレーター(契約 v0.11 の `output: "sticker"`): 背景は変えず、結果をステッカーのレイヤーとして置く。
+      if (action.decl.isStickerOutput) {
+        editor.addLayer(WidgetLayer(widget: Image.memory(result.bytes, fit: BoxFit.contain, gaplessPlayback: true)));
+        return;
+      }
       // 焼き込み済みの状態を空にして、結果を背景に。
       editor.addHistory(layers: [], filters: [], tuneAdjustments: [], blur: 0, transformConfigs: TransformConfigs.empty());
       await editor.updateBackgroundImage(EditorImage(byteArray: result.bytes), updateHistory: false);
@@ -404,6 +414,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         editor.openPaintEditor();
       case 'editor:text':
         editor.openTextEditor();
+      case 'editor:sticker':
+        editor.openStickerEditor();
       case 'editor:emoji':
         editor.openEmojiEditor();
       case 'editor:filter':
@@ -421,6 +433,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   }
 
   Widget _bar(ProImageEditorState editor, Key key) {
+    _imageEditor = editor;
     const style = TextStyle(fontSize: 10, color: Colors.white);
     Widget item(String id, String label, Widget icon, void Function(BuildContext ctx) onTap, {Color color = Colors.white, Key? key}) => Builder(
           builder: (ctx) => FlatIconTextButton(key: key ?? proMediaEditorBarKey(id), label: Text(label, style: style.copyWith(color: color)), icon: icon, onPressed: () => onTap(ctx)),
@@ -518,6 +531,19 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       ),
       configs: ProImageEditorConfigs(
         i18n: rasqEditorI18n,
+        stickerEditor: StickerEditorConfigs(
+          builder: (setLayer, scrollController) => StickerPicker(
+            setLayer: setLayer,
+            scrollController: scrollController,
+            generators: [for (final a in _pluginActions) if (a.decl.isStickerOutput && !_isVideo) a],
+            onGenerate: (a) {
+              // ステッカー一覧を閉じてから、プラグインの編集パネルへ。
+              Navigator.of(context).maybePop();
+              final editor = _imageEditor;
+              if (editor != null) _runPlugin(editor, a);
+            },
+          ),
+        ),
         // 出力は PNG(バイパスの往復で劣化させない。添付の差し替えも PNG)。
         imageGeneration: const ImageGenerationConfigs(outputFormat: OutputFormat.png),
         mainEditor: MainEditorConfigs(
@@ -572,9 +598,22 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       ),
       configs: ProImageEditorConfigs(
         i18n: rasqEditorI18n,
+        stickerEditor: StickerEditorConfigs(
+          builder: (setLayer, scrollController) => StickerPicker(
+            setLayer: setLayer,
+            scrollController: scrollController,
+            generators: [for (final a in _pluginActions) if (a.decl.isStickerOutput && !_isVideo) a],
+            onGenerate: (a) {
+              // ステッカー一覧を閉じてから、プラグインの編集パネルへ。
+              Navigator.of(context).maybePop();
+              final editor = _imageEditor;
+              if (editor != null) _runPlugin(editor, a);
+            },
+          ),
+        ),
         videoEditor: const VideoEditorConfigs(initialMuted: false, initialPlay: false, isAudioSupported: false, minTrimDuration: Duration(seconds: 1)),
         mainEditor: MainEditorConfigs(
-          tools: const [SubEditorMode.paint, SubEditorMode.text, SubEditorMode.cropRotate, SubEditorMode.tune, SubEditorMode.filter, SubEditorMode.blur, SubEditorMode.emoji],
+          tools: const [SubEditorMode.paint, SubEditorMode.text, SubEditorMode.cropRotate, SubEditorMode.tune, SubEditorMode.filter, SubEditorMode.blur, SubEditorMode.emoji, SubEditorMode.sticker],
           widgets: MainEditorWidgets(
             bottomBar: (editor, rebuildStream, key) => ReactiveWidget(stream: rebuildStream, builder: (_) => _bar(editor, key)),
           ),

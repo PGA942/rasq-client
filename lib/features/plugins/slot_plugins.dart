@@ -66,6 +66,7 @@ class SlotManifest {
                 tags: [for (final t in (a['tags'] as List? ?? const [])) if (t is String) t],
                 slot: a['slot'] as String?,
                 accepts: [for (final t in (a['accepts'] as List? ?? const [])) if (t is String) t],
+                output: a['output'] as String?,
               ),
         ],
       );
@@ -97,7 +98,7 @@ class SlotManifest {
 
 /// `post.action` のボタン宣言 (§2.9): タグ = 希望スロット(既存ボタンのタグと比べて束ねる)。
 class SlotActionDecl {
-  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const [], this.slot, this.accepts = const []});
+  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const [], this.slot, this.accepts = const [], this.output});
   final String id;
   final String label;
   final String? icon;
@@ -110,6 +111,11 @@ class SlotActionDecl {
   /// 出現する添付の種類(契約 v0.10、`composer.media` の宣言だけ): MIME の型(`image/*` / `video/mp4` / `audio/*`)か
   /// 拡張子(`.gif`)。空 = `image/*`(従来どおり画像だけ)。
   final List<String> accepts;
+
+  /// `media.commit` の結果の置き方(契約 v0.11、`composer.media` の宣言だけ): null / `replace` = 背景を差し替える、
+  /// `sticker` = ステッカーのレイヤーとして置く(ジェネレーター)。
+  final String? output;
+  bool get isStickerOutput => output == 'sticker';
 
   bool get isPostAction => slot == null || slot == SlotIds.postAction;
 }
