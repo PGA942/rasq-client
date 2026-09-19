@@ -133,6 +133,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('ノート画像の追加'), findsNothing);
     expect(find.byTooltip('センシティブ解除'), findsOneWidget);
+    expect(find.byKey(const ValueKey('postImage.asVideo')), findsNothing);
   });
 
   testWidgets('投稿タイルの画像化: 不透明な PNG、タイルの大きさ × 倍率', (tester) async {
