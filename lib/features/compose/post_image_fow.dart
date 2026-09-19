@@ -36,7 +36,8 @@ const postImageFilterKey = Key('postImage.filter');
 const postImageConfirmKey = Key('postImage.confirm');
 
 /// 画像(PNG)か動画(mp4、D-260)にした投稿 1 つ。
-typedef PostImageResult = ({Uint8List bytes, String name, String mimeType, Post post});
+/// [still] = 動画にしたとき (`video/mp4`) の、同じタイルの静止画(PNG)。加工画面が、置き場所を決めるオブジェクトに使う。
+typedef PostImageResult = ({Uint8List bytes, String name, String mimeType, Post post, Uint8List? still});
 
 /// 添付に使ってよい投稿か: 公開範囲が フォロワーのみ / 指名 / ダイレクト(プラグインごとの言い方を含む)でないこと。
 /// 公開範囲を持たない SNS(null)は公開として扱う。
@@ -102,7 +103,8 @@ Future<Uint8List?> capturePostTile(GlobalKey boundaryKey, {double pixelRatio = 3
 
 /// [id] = FOW の id(加工画面から開くときは、加工画面が退避させない id を渡す)。[allowVideo] = 動く / 鳴る投稿を動画にできるか
 /// (加工画面のオブジェクトは静止画だけ)。
-Future<PostImageResult?> showPostImageFow(WidgetRef ref, {String? ownerId, int column = 0, String id = postImageFowId, bool allowVideo = true}) {
+/// [confirmVideo] = 動く / 鳴る投稿で「決定」を押したときに、動画にするかを呼び出し側で尋ねる(渡すと、FOW の中の切り替えは出ない)。
+Future<PostImageResult?> showPostImageFow(WidgetRef ref, {String? ownerId, int column = 0, String id = postImageFowId, bool allowVideo = true, Future<bool> Function(PostMotion motion)? confirmVideo}) {
   final manager = ref.read(overlayManagerProvider);
   if (manager.contains(id)) return Future.value();
   final canConfirm = ValueNotifier(false);
@@ -129,7 +131,7 @@ Future<PostImageResult?> showPostImageFow(WidgetRef ref, {String? ownerId, int c
           ),
         ),
         semanticsLabel: 'ノート画像の追加',
-        builder: (_, _) => _Body(fowId: id, allowVideo: allowVideo && audioVideoSupported, canConfirm: canConfirm, confirm: confirm, onDone: (r) => manager.close(id, result: r)),
+        builder: (_, _) => _Body(fowId: id, allowVideo: allowVideo && audioVideoSupported, confirmVideo: confirmVideo, canConfirm: canConfirm, confirm: confirm, onDone: (r) => manager.close(id, result: r)),
       )
       .whenComplete(() {
         canConfirm.dispose();
@@ -138,9 +140,10 @@ Future<PostImageResult?> showPostImageFow(WidgetRef ref, {String? ownerId, int c
 }
 
 class _Body extends ConsumerStatefulWidget {
-  const _Body({required this.fowId, required this.allowVideo, required this.canConfirm, required this.confirm, required this.onDone});
+  const _Body({required this.fowId, required this.allowVideo, this.confirmVideo, required this.canConfirm, required this.confirm, required this.onDone});
   final String fowId;
   final bool allowVideo;
+  final Future<bool> Function(PostMotion motion)? confirmVideo;
   final ValueNotifier<bool> canConfirm;
   final ValueNotifier<VoidCallback?> confirm;
   final ValueChanged<PostImageResult> onDone;
@@ -312,8 +315,16 @@ class _BodyState extends ConsumerState<_Body> {
     setState(() => _capturing = true);
     final name = 'post-${post.id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_')}';
     try {
-      final motion = widget.allowVideo && _asVideo ? postMotionOf(post) : PostMotion.none;
+      var motion = widget.allowVideo ? postMotionOf(post) : PostMotion.none;
       if (motion != PostMotion.none) {
+        final ask = widget.confirmVideo;
+        final yes = ask == null ? _asVideo : await ask(motion);
+        if (!mounted) return;
+        if (!yes) motion = PostMotion.none;
+      }
+      if (motion != PostMotion.none) {
+        final still = await capturePostTile(key);
+        if (!mounted) return;
         setState(() => _videoProgress = 0);
         final video = await buildPostVideo(
           post: post,
@@ -329,14 +340,14 @@ class _BodyState extends ConsumerState<_Body> {
         try {
           await video.delete();
         } catch (_) {}
-        if (mounted) widget.onDone((bytes: bytes, name: '$name.mp4', mimeType: 'video/mp4', post: post));
+        if (mounted) widget.onDone((bytes: bytes, name: '$name.mp4', mimeType: 'video/mp4', post: post, still: still));
         return;
       }
       final bytes = await capturePostTile(key);
       if (!mounted) return;
       // 選んだあとで遠くまでスクロールすると、タイルが画面に無くて写せない(一覧は見えるところだけ作る)。
       if (bytes == null) return setState(() => _notice = '選んだ投稿が画面に出ている状態で、もう一度「決定」を押してください');
-      widget.onDone((bytes: bytes, name: '$name.png', mimeType: 'image/png', post: post));
+      widget.onDone((bytes: bytes, name: '$name.png', mimeType: 'image/png', post: post, still: null));
     } catch (e) {
       if (mounted) setState(() => _notice = '動画にできませんでした: $e');
     } finally {
@@ -412,7 +423,7 @@ class _BodyState extends ConsumerState<_Body> {
           child: Text('公開範囲が フォロワーのみ / 指名 の投稿 $_excluded 件は出していません。', key: const ValueKey('postImage.excluded'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ),
       // 動く / 鳴る投稿を選んだとき (D-260): 動画にするか、その瞬間の静止画にするか。
-      if (widget.allowVideo && _selected != null && postMotionOf(_selected!) != PostMotion.none)
+      if (widget.allowVideo && widget.confirmVideo == null && _selected != null && postMotionOf(_selected!) != PostMotion.none)
         RasqSwitchListTile(key: const ValueKey('postImage.asVideo'), title: postMotionLabel(postMotionOf(_selected!)), subtitle: 'オフ = その瞬間の静止画', value: _asVideo, enabled: !_capturing, onChanged: (v) => setState(() => _asVideo = v)),
       if (_videoProgress != null)
         Padding(
