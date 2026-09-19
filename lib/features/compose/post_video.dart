@@ -116,6 +116,36 @@ Future<File?> _capturePng(GlobalKey boundaryKey, double pixelRatio, File out) as
   }
 }
 
+/// 中身の先頭から、入れ物の拡張子を当てる(URL / ファイル名に拡張子が無い・違うことがある。AVFoundation は拡張子も見る)。
+/// 分からなければ null。
+String? mediaContainerExt(List<int> b) {
+  bool at(int i, String s) => b.length >= i + s.length && String.fromCharCodes(b.sublist(i, i + s.length)) == s;
+  if (at(4, 'ftyp')) {
+    if (at(8, 'qt  ')) return 'mov';
+    if (at(8, 'M4A ') || at(8, 'M4B ')) return 'm4a';
+    return 'mp4';
+  }
+  if (b.length >= 4 && b[0] == 0x1A && b[1] == 0x45 && b[2] == 0xDF && b[3] == 0xA3) return 'webm';
+  if (at(0, 'OggS')) return 'ogg';
+  if (at(0, 'fLaC')) return 'flac';
+  if (at(0, 'RIFF') && at(8, 'WAVE')) return 'wav';
+  if (at(0, 'RIFF') && at(8, 'AVI ')) return 'avi';
+  if (at(0, 'ID3') || (b.length >= 2 && b[0] == 0xFF && (b[1] & 0xE0) == 0xE0)) return 'mp3';
+  return null;
+}
+
+/// Apple の端末(AVFoundation)が読めない入れ物。
+const _appleUnreadable = {'webm', 'ogg', 'avi', 'flac'};
+
+/// 段ごとに、どこで失敗したかを付ける(端末のエラーは中身が分からないことが多い)。
+Future<T> _stage<T>(String what, Future<T> Function() run) async {
+  try {
+    return await run();
+  } catch (e) {
+    throw StateError('$what: $e');
+  }
+}
+
 Future<File> _download(Uri url, File out) async {
   final res = await http.get(url).timeout(const Duration(seconds: 60));
   if (res.statusCode != 200) throw HttpException('HTTP ${res.statusCode}', uri: url);
@@ -163,10 +193,15 @@ Future<File> buildPostVideo({required Post post, required PostMotion motion, req
     final still = await _capturePng(boundaryKey, pixelRatio, File('${dir.path}/tile.png'));
     if (still == null) throw StateError('投稿が画面に出ていません');
     onProgress?.call(0.1);
-    final ext = (item.fileName ?? item.url.path).split('.').last.toLowerCase();
-    final source = await _download(item.url, File('${dir.path}/source.${RegExp(r'^[a-z0-9]{1,5}$').hasMatch(ext) ? ext : (motion == PostMotion.video ? 'mp4' : 'm4a')}'));
+    final named = (item.fileName ?? item.url.path).split('.').last.toLowerCase();
+    var source = await _stage('元のファイルを取得できませんでした', () => _download(item.url, File('${dir.path}/source.bin')));
+    // 拡張子は中身から決める(無ければ名前、それも無ければ mp4 / m4a)。
+    final head = await source.openRead(0, 16).fold<List<int>>([], (a, c) => a..addAll(c));
+    final ext = mediaContainerExt(head) ?? (RegExp(r'^[a-z0-9]{1,5}$').hasMatch(named) ? named : (motion == PostMotion.video ? 'mp4' : 'm4a'));
+    if ((Platform.isMacOS || Platform.isIOS) && _appleUnreadable.contains(ext)) throw StateError('この端末は $ext 形式を読めません(静止画なら貼れます)');
+    source = await source.rename('${dir.path}/source.$ext');
     onProgress?.call(0.35);
-    final length = _cap((await editor.getMetadata(pve.EditorVideo.file(source.path))).duration);
+    final length = _cap((await _stage('元のファイル(.$ext、${await source.length()} バイト)を開けませんでした', () => editor.getMetadata(pve.EditorVideo.file(source.path)))).duration);
     final base = '${dir.path}/base.mp4';
     await editor.renderStopMotionToFile(base, pve.StopMotionRenderData(id: 'rasq-post-base-$id', frames: [pve.StopMotionFrame(image: pve.EditorLayerImage.file(still), duration: length)], frameRate: 10, resolution: canvas, fit: pve.StopMotionFit.stretch, outputFormat: pve.VideoOutputFormat.mp4));
     onProgress?.call(0.6);

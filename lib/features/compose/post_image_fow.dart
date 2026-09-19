@@ -412,6 +412,8 @@ class _BodyState extends ConsumerState<_Body> {
       });
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      // 上の欄は、FOW を低くしたときにはみ出さないよう、入りきらなければ中で送れる。
+      Flexible(flex: 0, fit: FlexFit.loose, child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
       // ── アカウント + 絞り込みの欄 ──
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xs),
@@ -493,6 +495,7 @@ class _BodyState extends ConsumerState<_Body> {
           child: Row(children: [Expanded(child: LinearProgressIndicator(value: _videoProgress)), const SizedBox(width: RasqSpacing.sm), Text('動画にしています… ${(_videoProgress! * 100).round()}%', style: RasqTypography.caption)]),
         ),
       if (_notice != null) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs), child: Text(_notice!, style: RasqTypography.caption.copyWith(color: scheme.error))),
+      ]))),
       // ── 一覧 ──
       Expanded(child: _showingHistory ? _history(scheme) : _list(scheme, shown)),
     ]);
