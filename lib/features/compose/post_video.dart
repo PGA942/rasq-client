@@ -242,6 +242,15 @@ ui.Rect postObjectRectInImage({required ui.Size image, required ui.Size shown, r
   return ui.Rect.fromCenter(center: center, width: w, height: h);
 }
 
+/// 画面で測った枠から、絵の画素での枠へ (D-265): [reference] = 絵 / 動画が画面に出ている枠、[object] = オブジェクトが出ている枠
+/// (どちらも画面の座標)。レイヤーの数値から計算するより確実(動画の加工では、表示の大きさの数値が当てにならなかった)。
+ui.Rect objectRectFromScreen({required ui.Rect reference, required ui.Rect object, required ui.Size image}) {
+  if (reference.width <= 0 || reference.height <= 0) return ui.Rect.zero;
+  final kx = image.width / reference.width;
+  final ky = image.height / reference.height;
+  return ui.Rect.fromLTWH((object.left - reference.left) * kx, (object.top - reference.top) * ky, object.width * kx, object.height * ky);
+}
+
 /// 書き出す動画の大きさ: 長辺 [maxSide] まで縮めて偶数に。返り値の factor を枠にも掛ける。
 ({ui.Size canvas, double factor}) postCanvasFor(ui.Size image, {double maxSide = 1920}) {
   final f = image.longestSide > maxSide ? maxSide / image.longestSide : 1.0;
