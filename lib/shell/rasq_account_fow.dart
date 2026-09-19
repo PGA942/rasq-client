@@ -135,6 +135,7 @@ class RasqAccountPanel extends ConsumerWidget {
         const RasqDropdownItem('プロフィール編集', 'profile'),
         const RasqDropdownItem('アカウント設定', 'settings'),
         const RasqDropdownItem('通知設定', 'notifications'),
+        if (r.isCentral) const RasqDropdownItem('セキュリティ(メール / パスワード / 端末)', 'security'),
         RasqDropdownItem('ログアウト', 'logout', destructive: true, enabled: r.isCentral),
         if (r.isCentral) const RasqDropdownItem('RASQ アカウントを削除', 'delete', destructive: true),
       ]);
@@ -147,6 +148,9 @@ class RasqAccountPanel extends ConsumerWidget {
           context.push('${Routes.settings}/server');
         case 'notifications':
           await showNotificationPrefs(ref);
+        case 'security':
+          onDone();
+          context.push('${Routes.settings}/security');
         case 'logout':
           final ok = await manager.showAlert(
             id: 'rasq.account.logout',
@@ -174,6 +178,14 @@ class RasqAccountPanel extends ConsumerWidget {
             destructive: true,
           );
           if (!ok) return;
+          // メールが確認済みのアカウントは、確認コードが要る (S-019) → セキュリティの画面で。
+          if (ref.read(orgateAccountProvider).value?.emailVerified == true) {
+            if (!context.mounted) return;
+            onDone();
+            context.push('${Routes.settings}/security');
+            toast('削除には、メールの確認コードが要ります。「アカウントの削除」から進めてください');
+            return;
+          }
           try {
             await ref.read(orgateAccountProvider.notifier).deleteAccount();
             await ref.read(rasqAccountsProvider.notifier).detachCentral(r.id);
@@ -273,11 +285,27 @@ class RasqAccountPanel extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.md),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (ledger.central == null) ...[
-            FilledButton.icon(
-              onPressed: centralOk ? create : null,
-              icon: const RasqBrandIcon(size: 18),
-              label: const Text('RASQ アカウントを作成'),
-            ),
+            // 作成と、既存のアカウントへのログイン (S-019) を 1 行に(FOW の高さを増やさない)。
+            Row(children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: centralOk ? create : null,
+                  icon: const RasqBrandIcon(size: 18),
+                  label: const Text('RASQ アカウントを作成'),
+                ),
+              ),
+              const SizedBox(width: RasqSpacing.xs),
+              TextButton(
+                key: const ValueKey('rasq.account.login'),
+                onPressed: centralOk
+                    ? () {
+                        onDone();
+                        context.push('${Routes.settings}/account-login');
+                      }
+                    : null,
+                child: const Text('ログイン'),
+              ),
+            ]),
             if (!centralOk)
               Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
                 Text('RASQ Central の接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
