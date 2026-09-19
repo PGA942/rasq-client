@@ -155,6 +155,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   /// 書き出しのために画面を写す間は false(動画の面は写せないので、下の静止画を見せる)。
   final ValueNotifier<bool> _objectsLive = ValueNotifier(true);
 
+  /// 再生器の入れ物(オブジェクト 1 つに 1 つ。用意の途中でも、ここにあれば作り直さない)。
+  final Map<String, ValueNotifier<VideoPlayerController?>> _objectPlayerHolders = {};
+
   /// 画面に出ている動くオブジェクト(id → その要素。先に出たものが先頭 = 加工画面の本物。書き出しの写し用の複製は後ろ)。
   final Map<String, List<BuildContext>> _objectContexts = {};
 
@@ -560,9 +563,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     final a = _audioFile;
     if (a != null) _deleteQuietly(a);
     _avatar?.dispose();
-    for (final o in _objectPlayers.values) {
-      o.player.value?.dispose();
-      _deleteQuietly(o.file);
+    for (final id in _objectPlayerHolders.keys.toList()) {
+      _disposeObjectPlayer(id);
     }
     for (final i in _postImages) {
       i.dispose();
@@ -573,6 +575,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   void _finish(MediaEditResult? result) {
     if (_closing || !mounted) return;
     _closing = true;
+    for (final o in _objectPlayers.values) {
+      o.player.value?.pause();
+    }
     Navigator.of(context).pop(result);
   }
 
@@ -828,6 +833,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     if (video != null) _motionPosts[id] = (video: video, width: width, aspect: aspect);
     final settings = _objectSettings[id] = ValueNotifier(const MediaObjectSettings());
     settings.addListener(() => _applyObjectSettings(id));
+    // 再生器は 1 つだけ作る(見た目の作り直しのたびに作ると、音が重なって、閉じても止まらない)。
+    final player = video == null ? null : _startObjectPlayer(id, video);
     editor.addLayer(WidgetLayer(
       width: width,
       interaction: LayerInteraction(enableEdit: false, enableRotate: video == null),
@@ -842,7 +849,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
               child: video == null
                   ? RawImage(image: image, fit: BoxFit.fill)
                   // 半透明のときは、書き出しの写しに静止画を入れない(下に焼き込むと、重ねた動画と二重に濃くなる)。
-                  : _MotionObject(still: image, player: _startObjectPlayer(id, video), live: _objectsLive, hideStillOnCapture: set.opacity < 1, mounted: _objectContexts.putIfAbsent(id, () => [])),
+                  : _MotionObject(still: image, player: player!, live: _objectsLive, hideStillOnCapture: set.opacity < 1, mounted: _objectContexts.putIfAbsent(id, () => [])),
             ),
           ),
         ),
@@ -855,7 +862,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   /// 動くオブジェクトを、加工画面の中でも再生する (D-264)。繰り返し再生。画像の加工中は音も出す。動画の加工中は無音で、
   /// 本体の再生 / 一時停止に合わせる(音が重なるのを避ける。書き出しには入る)。用意できなければ静止画のまま。
   ValueNotifier<VideoPlayerController?> _startObjectPlayer(String id, Uint8List video) {
-    final holder = ValueNotifier<VideoPlayerController?>(null);
+    final existing = _objectPlayerHolders[id];
+    if (existing != null) return existing;
+    final holder = _objectPlayerHolders[id] = ValueNotifier<VideoPlayerController?>(null);
     () async {
       File? file;
       try {
@@ -863,7 +872,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         await file.writeAsBytes(video, flush: true);
         final c = VideoPlayerController.file(file);
         await c.initialize();
-        if (!mounted) {
+        // 用意している間に、画面が閉じた / オブジェクトが消された。
+        if (!mounted || _objectPlayerHolders[id] != holder) {
           await c.dispose();
           return _deleteQuietly(file);
         }
@@ -899,6 +909,17 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     final editor = _imageEditor;
     final current = editor?.activeLayers.where((l) => l.meta?['rasqObject'] == id).firstOrNull;
     if (editor != null && current != null) editor.removeLayer(current);
+    _disposeObjectPlayer(id as String);
+  }
+
+  void _disposeObjectPlayer(String id) {
+    final holder = _objectPlayerHolders.remove(id);
+    final o = _objectPlayers.remove(id);
+    final c = holder?.value ?? o?.player.value;
+    holder?.value = null;
+    c?.pause();
+    c?.dispose();
+    if (o != null) _deleteQuietly(o.file);
   }
 
   void _setObjectsPlaying(bool playing) {
@@ -1084,7 +1105,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       widget.args.bytes,
       key: _editorKey,
       callbacks: ProImageEditorCallbacks(
-        mainEditorCallbacks: MainEditorCallbacks(onLayerTapUp: _editObject),
+        mainEditorCallbacks: MainEditorCallbacks(onLayerTapUp: _editObject, onRemoveLayer: (l) => _objectPlayerHolders[l.meta?['rasqObject']]?.value?.pause()),
         onImageEditingStarted: () => _objectsLive.value = false,
         onImageEditingComplete: _complete,
         onCloseEditor: (mode) {
@@ -1144,7 +1165,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       v,
       key: ValueKey('media.pro.video.$_videoGeneration'),
       callbacks: ProImageEditorCallbacks(
-        mainEditorCallbacks: MainEditorCallbacks(onLayerTapUp: _editObject),
+        mainEditorCallbacks: MainEditorCallbacks(onLayerTapUp: _editObject, onRemoveLayer: (l) => _objectPlayerHolders[l.meta?['rasqObject']]?.value?.pause()),
         onImageEditingStarted: () => _objectsLive.value = false,
         onCompleteWithParameters: _renderVideo,
         onCloseEditor: (mode) {
