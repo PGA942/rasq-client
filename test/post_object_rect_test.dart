@@ -24,4 +24,16 @@ void main() {
     expect(small.canvas.width % 2, 0);
     expect(small.canvas.height % 2, 0);
   });
+
+  test('mediaContainerExt: 中身の先頭から入れ物を当てる', () {
+    List<int> ftyp(String brand) => [0, 0, 0, 24, ...'ftyp'.codeUnits, ...brand.codeUnits, 0, 0, 0, 0];
+    expect(mediaContainerExt(ftyp('isom')), 'mp4');
+    expect(mediaContainerExt(ftyp('qt  ')), 'mov');
+    expect(mediaContainerExt(ftyp('M4A ')), 'm4a');
+    expect(mediaContainerExt([0x1A, 0x45, 0xDF, 0xA3, 0, 0]), 'webm');
+    expect(mediaContainerExt('OggS....'.codeUnits), 'ogg');
+    expect(mediaContainerExt([...'RIFF'.codeUnits, 0, 0, 0, 0, ...'WAVE'.codeUnits]), 'wav');
+    expect(mediaContainerExt('ID3.....'.codeUnits), 'mp3');
+    expect(mediaContainerExt([1, 2, 3]), isNull);
+  });
 }

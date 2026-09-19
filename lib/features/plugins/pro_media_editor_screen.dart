@@ -491,8 +491,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     final posts = <({File video, ui.Rect rect})>[];
     for (final l in layers) {
       final m = _motionPosts[l.meta!['rasqPostVideo']]!;
-      final f = await videoEditTempFile(dir, 'object-${posts.length}.mp4');
-      await f.writeAsBytes(m.video);
+      final f = await videoEditTempFile(dir, 'object-${posts.length}.${mediaContainerExt(m.video.length > 16 ? m.video.sublist(0, 16) : m.video) ?? 'mp4'}');
+      await f.writeAsBytes(m.video, flush: true);
       created.add(f);
       posts.add((video: f, rect: postObjectRectInImage(image: size, shown: editor.sizesManager.decodedImageSize, offset: l.offset, width: m.width, aspect: m.aspect, scale: l.scale)));
     }
@@ -801,12 +801,17 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       final f = await ImagePicker().pickVideo(source: ImageSource.gallery);
       if (f == null || !mounted) return;
       final bytes = await f.readAsBytes();
-      final tmp = await videoEditTempFile(await getTemporaryDirectory(), 'object-pick.mp4');
-      await tmp.writeAsBytes(bytes);
+      // 拡張子は中身から(ピッカーの名前に拡張子が無い / 違うことがある)。
+      final ext = mediaContainerExt(bytes.length > 16 ? bytes.sublist(0, 16) : bytes) ?? 'mp4';
+      final tmp = await videoEditTempFile(await getTemporaryDirectory(), 'object-pick.$ext');
+      await tmp.writeAsBytes(bytes, flush: true);
       Uint8List? still;
       try {
         final frames = await pve.ProVideoEditor.instance.getThumbnails(pve.ThumbnailConfigs(video: pve.EditorVideo.file(tmp.path), outputSize: const Size(1280, 1280), timestamps: const [Duration.zero], boxFit: pve.ThumbnailBoxFit.contain, outputFormat: pve.ThumbnailFormat.png));
         if (frames.isNotEmpty) still = frames.first;
+      } catch (e) {
+        if (mounted) _notify('動画(.$ext、${bytes.length} バイト)の最初のコマを取れませんでした: $e');
+        return;
       } finally {
         _deleteQuietly(tmp);
       }
