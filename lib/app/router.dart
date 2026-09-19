@@ -42,6 +42,7 @@ import '../features/settings/action_bar_plugins_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/backend_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
+import '../features/store/installed_plugins_screen.dart';
 import '../features/store/plugin_page_screen.dart';
 import '../features/store/review_timeline_screen.dart';
 import '../features/store/store_home_screen.dart';
@@ -113,6 +114,10 @@ abstract final class Routes {
   /// プラグインストア (M4 / D-120)。
   static const store = '/store';
   static String storePlugin(String id) => '/store/plugin/${Uri.encodeComponent(id)}';
+
+  /// インストール済み (D-256): 一覧と 1 件のページ(ストアの掲載とは別。掲載が消えていても開ける)。
+  static const storeInstalled = '/store/installed';
+  static String storeInstalledPlugin(String id) => '/store/installed/${Uri.encodeComponent(id)}';
 
   /// レビュー TL (D-137)。
   static String storePluginReviews(String id) => '/store/plugin/${Uri.encodeComponent(id)}/reviews';
@@ -278,6 +283,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: Routes.catalog, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const CatalogScreen()),
           // プラグインストア (M4 / D-120)。
           GoRoute(path: Routes.store, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const StoreHomeScreen()),
+          GoRoute(path: Routes.storeInstalled, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const InstalledPluginsScreen()),
+          GoRoute(
+              path: '/store/installed/:id',
+              parentNavigatorKey: _appNavigatorKey,
+              builder: (_, s) => InstalledPluginScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
           GoRoute(
               path: '/store/plugin/:id',
               parentNavigatorKey: _appNavigatorKey,

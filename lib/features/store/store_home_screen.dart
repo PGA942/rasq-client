@@ -59,6 +59,15 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
             hintText: 'プラグインを検索',
           ),
         ),
+        // インストール済み (D-256): 別ページ。ストアにつながらないとき / 検索中でも開ける(手元の記録だけで描く)。
+        if (installed.isNotEmpty)
+          RasqListTile(
+            key: const ValueKey('store.home.installed'),
+            leading: const Icon(Icons.download_done_outlined),
+            title: 'インストール済み',
+            subtitle: '${installed.length} 件 ・ バージョン / 権限の確認、削除',
+            onTap: () => context.push(Routes.storeInstalled),
+          ),
         Expanded(
           child: results != null
               ? results.when(
@@ -72,17 +81,6 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
                   loading: () => const RasqLoading(),
                   error: (e, _) => RasqEmptyView(title: 'ストアに接続できませんでした', hint: '$e'),
                   data: (h) => ListView(children: [
-                    if (installed.isNotEmpty) ...[
-                      const RasqSectionHeader(title: 'インストール済み', topMargin: 0),
-                      for (final p in installed)
-                        RasqPluginTile(
-                          icon: Icons.extension,
-                          title: p.name,
-                          subtitle: 'v${p.version} ・ 検証済み SHA-512',
-                          onTap: () => context.push(Routes.storePlugin(p.id)),
-                        ),
-                      const Divider(height: 1),
-                    ],
                     if (h.bookmarks.isNotEmpty) ...[
                       const RasqSectionHeader(title: 'ブックマーク', topMargin: 0),
                       for (final c in h.bookmarks) ...[tile(c), const Divider(height: 1)],

@@ -499,3 +499,47 @@ class _SparklinePainter extends CustomPainter {
   @override
   bool shouldRepaint(_SparklinePainter old) => old.values != values || old.line != line || old.grid != grid;
 }
+
+/// 「プライバシーと必要な権限」の全文(権限の種別ごと → 外部通信とデータ → 実行環境)。ストアのページの下付きシートと、
+/// インストール済みのページ (D-256) で使う。
+class SafetyDetail extends StatelessWidget {
+  const SafetyDetail({super.key, required this.safety});
+  final SafetyBlock safety;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      if (safety.permissions.isEmpty) Padding(padding: const EdgeInsets.only(top: RasqSpacing.md), child: Text('必要な権限: なし', style: RasqTypography.bodySmall)),
+      for (final g in PermissionKind.group(safety.permissions)) ...[
+        Padding(
+          padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs),
+          child: Text('${g.kind.label}${g.kind.description.isEmpty ? '' : ' — ${g.kind.description}'}', style: RasqTypography.listTile),
+        ),
+        for (final p in g.entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.key_outlined, size: 16),
+              const SizedBox(width: 6),
+              Expanded(child: Text(p.reason.isEmpty ? p.permission : '${p.permission} — ${p.reason}', style: RasqTypography.bodySmall)),
+            ]),
+          ),
+      ],
+      Padding(padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs), child: Text('外部通信とデータ', style: RasqTypography.listTile)),
+      Text(safety.externalHosts.isEmpty ? '外部通信先: なし' : '外部通信先: ${safety.externalHosts.join('、')}', style: RasqTypography.bodySmall),
+      if (safety.dataHandling.isNotEmpty) Text('データの扱い: ${safety.dataHandling}', style: RasqTypography.bodySmall),
+      if (safety.externalSdks.isNotEmpty) Text('外部 SDK: ${safety.externalSdks.join('、')}', style: RasqTypography.bodySmall),
+      Padding(padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs), child: Text('実行環境', style: RasqTypography.listTile)),
+      Text(
+        [
+          if (safety.crashFreeRate != null) '正常起動率 ${(safety.crashFreeRate! * 100).toStringAsFixed(1)}%',
+          safety.backgroundExecution ? 'バックグラウンド実行あり' : 'バックグラウンド実行なし',
+          safety.usesGpu ? 'GPU 使用' : 'GPU 不使用',
+          safety.adPlacements.isEmpty ? '広告なし' : '広告あり(${safety.adPlacements.join('、')})',
+        ].join(' ・ '),
+        style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
+      ),
+    ]);
+  }
+}
