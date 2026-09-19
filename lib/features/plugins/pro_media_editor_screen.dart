@@ -148,6 +148,12 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   /// 置いてある「動く投稿」(D-261): レイヤーの meta `rasqPostVideo` → 動画の中身と、タイルの 高さ / 幅。完了で動画に書き出す。
   final Map<String, ({Uint8List video, double width, double aspect})> _motionPosts = {};
 
+  /// 動くオブジェクトの、加工画面での再生 (D-264): id → 再生器(用意できるまで null)と、その元のファイル。
+  final Map<String, ({ValueNotifier<VideoPlayerController?> player, File file})> _objectPlayers = {};
+
+  /// 書き出しのために画面を写す間は false(動画の面は写せないので、下の静止画を見せる)。
+  final ValueNotifier<bool> _objectsLive = ValueNotifier(true);
+
   /// 動画の書き出しに失敗した直後(エディターの「完了 → 閉じる」を 1 回だけ無視して、加工を続けられるようにする)。
   bool _renderFailed = false;
 
@@ -518,6 +524,10 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     final a = _audioFile;
     if (a != null) _deleteQuietly(a);
     _avatar?.dispose();
+    for (final o in _objectPlayers.values) {
+      o.player.value?.dispose();
+      _deleteQuietly(o.file);
+    }
     for (final i in _postImages) {
       i.dispose();
     }
@@ -718,7 +728,10 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     final files = <File>[];
     try {
       final decoded = await decodeUiImage(image);
-      if (decoded == null) return null;
+      if (decoded == null) {
+        _notify('動画にできなかったので、静止画で入れました(画像を読めませんでした)');
+        return null;
+      }
       final size = ui.Size(decoded.width.toDouble(), decoded.height.toDouble());
       decoded.dispose();
       final dir = await getTemporaryDirectory();
@@ -780,10 +793,56 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     editor.addLayer(WidgetLayer(
       width: width,
       interaction: LayerInteraction(enableEdit: false, enableRotate: video == null),
-      widget: SizedBox(width: width, child: AspectRatio(aspectRatio: image.width / image.height, child: RawImage(image: image, fit: BoxFit.fill))),
+      widget: SizedBox(
+        width: width,
+        child: AspectRatio(
+          aspectRatio: image.width / image.height,
+          child: video == null ? RawImage(image: image, fit: BoxFit.fill) : _MotionObject(still: image, player: _startObjectPlayer(id, video), live: _objectsLive),
+        ),
+      ),
       meta: {...meta, if (video != null) 'rasqPostVideo': id},
     ));
     if (video != null && !_isVideo) _notify('完了すると、動画として書き出します');
+  }
+
+  /// 動くオブジェクトを、加工画面の中でも再生する (D-264)。繰り返し再生。画像の加工中は音も出す。動画の加工中は無音で、
+  /// 本体の再生 / 一時停止に合わせる(音が重なるのを避ける。書き出しには入る)。用意できなければ静止画のまま。
+  ValueNotifier<VideoPlayerController?> _startObjectPlayer(String id, Uint8List video) {
+    final holder = ValueNotifier<VideoPlayerController?>(null);
+    () async {
+      File? file;
+      try {
+        file = await videoEditTempFile(await getTemporaryDirectory(), 'object-play.${mediaContainerExt(video.length > 16 ? video.sublist(0, 16) : video) ?? 'mp4'}');
+        await file.writeAsBytes(video, flush: true);
+        final c = VideoPlayerController.file(file);
+        await c.initialize();
+        await c.setLooping(true);
+        await c.setVolume(_isVideo ? 0 : 1);
+        if (!mounted) {
+          await c.dispose();
+          return _deleteQuietly(file);
+        }
+        _objectPlayers[id] = (player: holder, file: file);
+        holder.value = c;
+        if (!_isVideo || _player?.value.isPlaying == true) await c.play();
+      } catch (_) {
+        if (file != null) _deleteQuietly(file);
+      }
+    }();
+    return holder;
+  }
+
+  void _setObjectsPlaying(bool playing) {
+    for (final o in _objectPlayers.values) {
+      final c = o.player.value;
+      if (c == null) continue;
+      if (playing) {
+        c.seekTo(Duration.zero);
+        c.play();
+      } else {
+        c.pause();
+      }
+    }
   }
 
   /// 「メディア」(D-262): 端末の画像 / 動画を、オブジェクトとして置く。動画は最初のコマを置いて、完了で動画を重ねる。
@@ -956,6 +1015,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       widget.args.bytes,
       key: _editorKey,
       callbacks: ProImageEditorCallbacks(
+        onImageEditingStarted: () => _objectsLive.value = false,
         onImageEditingComplete: _complete,
         onCloseEditor: (mode) {
           if (mode == EditorMode.main) _finish(null);
@@ -1014,18 +1074,26 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       v,
       key: ValueKey('media.pro.video.$_videoGeneration'),
       callbacks: ProImageEditorCallbacks(
+        onImageEditingStarted: () => _objectsLive.value = false,
         onCompleteWithParameters: _renderVideo,
         onCloseEditor: (mode) {
           if (mode != EditorMode.main) return;
           if (_renderFailed) {
             _renderFailed = false;
+            _objectsLive.value = true;
             return;
           }
           _finish(null);
         },
         videoEditorCallbacks: VideoEditorCallbacks(
-          onPlay: () => _player?.play(),
-          onPause: () => _player?.pause(),
+          onPlay: () {
+            _player?.play();
+            _setObjectsPlaying(true);
+          },
+          onPause: () {
+            _player?.pause();
+            _setObjectsPlaying(false);
+          },
           onMuteToggle: (muted) => _player?.setVolume(muted ? 0 : 1),
           onTrimSpanUpdate: (span) {
             if (_player?.value.isPlaying == true) _player?.pause();
@@ -1078,4 +1146,26 @@ class _ActiveFilter {
   final Map<String, double> params;
   bool busy = false;
   bool dirty = false;
+}
+
+/// 動くオブジェクト (D-264): 下に静止画、上に再生中の動画。再生器が無い間 / 書き出しのために写す間は静止画だけ。
+class _MotionObject extends StatelessWidget {
+  const _MotionObject({required this.still, required this.player, required this.live});
+  final ui.Image still;
+  final ValueNotifier<VideoPlayerController?> player;
+  final ValueNotifier<bool> live;
+
+  @override
+  Widget build(BuildContext context) => Stack(fit: StackFit.expand, children: [
+        RawImage(image: still, fit: BoxFit.fill),
+        ValueListenableBuilder<bool>(
+          valueListenable: live,
+          builder: (_, on, _) => !on
+              ? const SizedBox.shrink()
+              : ValueListenableBuilder<VideoPlayerController?>(
+                  valueListenable: player,
+                  builder: (_, c, _) => c == null ? const SizedBox.shrink() : FittedBox(fit: BoxFit.fill, child: SizedBox(width: c.value.size.width, height: c.value.size.height, child: VideoPlayer(c))),
+                ),
+        ),
+      ]);
 }
