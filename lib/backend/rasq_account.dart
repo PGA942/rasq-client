@@ -28,7 +28,7 @@ import 'orgate_client.dart';
 
 @immutable
 class RasqAccount {
-  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt});
+  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt, this.email, this.emailVerified = false, this.emailPending, this.hasPassword = false, this.roles = const []});
 
   final String id;
   final String handle;
@@ -36,12 +36,28 @@ class RasqAccount {
   final Uri? avatarUrl;
   final DateTime? createdAt;
 
+  /// メールアドレス (S-019)。自分にだけ見える。[emailPending] = 確認待ちの新しいメール。
+  final String? email;
+  final bool emailVerified;
+  final String? emailPending;
+
+  /// パスワードが設定済みか(別の端末からログインできるか)。
+  final bool hasPassword;
+
+  /// 役割(`developer` / `reviewer`)。
+  final List<String> roles;
+
   factory RasqAccount.fromJson(Map<String, Object?> j) => RasqAccount(
         id: j['id'] as String? ?? j['accountId'] as String? ?? '',
         handle: j['handle'] as String? ?? '',
         displayName: j['displayName'] as String? ?? '',
         avatarUrl: switch (j['avatarUrl']) { final String u when u.isNotEmpty => Uri.tryParse(u), _ => null },
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
+        email: j['email'] as String?,
+        emailVerified: j['emailVerified'] == true,
+        emailPending: j['emailPending'] as String?,
+        hasPassword: j['hasPassword'] == true,
+        roles: [for (final r in j['roles'] as List? ?? const []) '$r'],
       );
 
   /// サイドバーのバンドルタイルが使う形。ハンドルはインスタンスなしの素の
@@ -204,12 +220,39 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// RASQ アカウントを削除する (D-241 / S-015 `DELETE /me?confirm=<handle>`)。サーバー上の本人に
   /// 紐づくデータがすべて消え、学習へのデータ提供の撤回も同時に始まる。端末はトークンを捨てる
   /// (端末 id は残るが、消したアカウントへは戻れない = 次に作ると新しいアカウント)。
-  Future<void> deleteAccount() async {
+  /// [code] = メールが確認済みのアカウントで要る、`account.delete` の確認コード (S-019)。
+  Future<void> deleteAccount({String? code}) async {
     final client = ref.read(centralClientProvider);
     final account = state.value;
     if (client == null || account == null) return;
-    await client.delete('/me', {'confirm': account.handle});
+    await client.delete('/me', {'confirm': account.handle, 'code': ?code});
     await signOut();
+  }
+
+  /// この端末の安定 ID(ログインのとき、端末ごとに 1 本のトークンにするために渡す)。
+  Future<String> ensureDeviceId() async => (_creds ??= await _loadOrCreateCredentials(ref.read(sessionStorageProvider))).deviceId;
+
+  /// `GET /me` を取り直す(メールの確認 / パスワードの設定のあと)。
+  Future<RasqAccount?> refresh() async {
+    final client = ref.read(centralClientProvider);
+    if (client == null || _creds?.token == null) return state.value;
+    final account = RasqAccount.fromJson(await client.getJson('/me'));
+    state = AsyncData(account);
+    return account;
+  }
+
+  /// 既存のアカウントへのログイン (S-019): `/auth/login` / `/auth/login/email/confirm` の応答のトークンを、この端末のものにする。
+  Future<RasqAccount?> adoptLogin(Map<String, Object?> res) async {
+    final client = ref.read(centralClientProvider);
+    final token = res['token'] as String?;
+    if (client == null || token == null || token.isEmpty) return null;
+    final storage = ref.read(sessionStorageProvider);
+    _creds ??= await _loadOrCreateCredentials(storage);
+    _creds = _DeviceCredentials(deviceId: _creds!.deviceId, token: token, accountId: res['accountId'] as String?);
+    _lastRestored = true;
+    await storage.write(storageKey, jsonEncode(_creds!.toJson()));
+    _publishToken();
+    return refresh();
   }
 
   Future<void> updateProfile({String? handle, String? displayName, String? avatarUrl}) async {
