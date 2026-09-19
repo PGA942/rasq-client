@@ -14,6 +14,7 @@ import '../home/timeline_providers.dart';
 import '../trend/tendency_fows.dart';
 import '../trend/trend_providers.dart';
 import 'search_filter.dart';
+import 'search_history.dart';
 import 'search_filter_bar_view.dart';
 
 /// 検索ホーム / トレンドホーム: 広告枠(AdSlot) → トレンド(ワード一覧) → Today.
@@ -75,7 +76,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   genreCandidates: genreCandidates,
                   onSubmitted: (q) {
                     final tag = q.trim().replaceFirst(RegExp(r'^#'), '');
-                    if (tag.isNotEmpty) context.pushTrend(tag);
+                    if (tag.isEmpty) return;
+                    // 最近の検索 (D-259): 掛けていたジャンルの絞り込みも一緒に控える。
+                    ref.read(searchHistoryProvider.notifier).record(tag, chips: ref.read(searchFilterProvider).genres);
+                    context.pushTrend(tag);
                   },
                 ),
               ),
