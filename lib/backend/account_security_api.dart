@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'orgate_client.dart';
 import 'rasq_account.dart';
 
-/// メール認証とアカウントの強化 (S-019) の口。メールで届くのはどれも 6 桁コード(15 分、5 回まで)。
+/// メール認証とアカウントの強化 (S-019) の口。メールで届くのはどれも確認コード(Base58 で 10 文字)(15 分、5 回まで)。
 @immutable
 class RasqLoginSession {
   const RasqLoginSession({required this.sessionId, this.deviceId, this.label, this.createdAt, this.lastUsedAt, this.expiresAt, this.lastIp, this.userAgent, this.current = false});
