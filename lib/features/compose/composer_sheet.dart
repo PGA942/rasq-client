@@ -1107,7 +1107,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     setState(() {
       _error = null;
       // 元の投稿に注釈 / センシティブな画像があれば、画像にしたものもセンシティブに。
-      _files.add(_Attachment(bytes: picked.bytes, name: picked.name, mimeType: 'image/png')..sensitive = picked.post.contentWarning != null || picked.post.media.any((m) => m.sensitive));
+      _files.add(_Attachment(bytes: picked.bytes, name: picked.name, mimeType: picked.mimeType)..sensitive = picked.post.contentWarning != null || picked.post.media.any((m) => m.sensitive));
     });
   }
 

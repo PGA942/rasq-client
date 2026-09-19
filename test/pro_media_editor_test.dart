@@ -252,6 +252,31 @@ void main() {
     }
   });
 
+  testWidgets('「ノート」(D-260): 加工画面から「ノート画像の追加」→ 選んだ投稿タイルがオブジェクト(レイヤー)として置かれる', (tester) async {
+    final c = await pump(tester);
+    c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: png, name: 'a.jpg', mimeType: 'image/jpeg'));
+    await settle(tester);
+    final state = tester.state<ProImageEditorState>(find.byType(ProImageEditor));
+    final button = find.byKey(proMediaEditorBarKey('editor:post'));
+    await tester.ensureVisible(button);
+    await settle(tester);
+    await tester.tap(button);
+    await settle(tester);
+    // 加工画面は下の FOW を退避させるが、この FOW は出る。
+    expect(find.text('ノート画像の追加'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('postImage.post.p1')));
+    await settle(tester);
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const ValueKey('postImage.confirm')));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    });
+    await settle(tester);
+    expect(find.text('ノート画像の追加'), findsNothing);
+    expect(state.activeLayers.single, isA<WidgetLayer>());
+    expect(state.activeLayers.single.meta?['rasqPost'], isNotNull);
+    expect(state.activeLayers.single.interaction.enableMove, isTrue);
+  });
+
   test('mediaAccepts: MIME の型 / 完全一致 / 拡張子、空は image/*', () {
     expect(mediaAccepts(const [], mimeType: 'image/png'), isTrue);
     expect(mediaAccepts(const [], mimeType: 'video/mp4'), isFalse);

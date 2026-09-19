@@ -20,6 +20,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../compose/post_image_fow.dart';
 import '../home/action_bar_config.dart';
 import '../media/audio_visualizer_fow.dart';
 import '../media/audio_visualizer_video.dart';
@@ -632,6 +633,14 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     }
   }
 
+  /// 「ノート」(D-260): 「ノート画像の追加」FOW で投稿を選び、その投稿タイルの画像を**オブジェクト(レイヤー)**として置く
+  /// (動かす / 拡縮 / 回転 / 削除は pro_image_editor)。画像にも動画にも置ける。オブジェクトは静止画だけ。
+  Future<void> _addPostObject(ProImageEditorState editor) async {
+    final picked = await showPostImageFow(ref, id: 'media.pro.postImage', allowVideo: false);
+    if (picked == null || !mounted) return;
+    editor.addLayer(WidgetLayer(widget: Image.memory(picked.bytes, fit: BoxFit.contain, gaplessPlayback: true), meta: {'rasqPost': picked.post.key}));
+  }
+
   String get _configKey => editorConfigKeyFor(widget.args.mimeType);
 
   /// この添付に出るプラグインボタン(宣言の `accepts` を実際の MIME / ファイル名で絞る)。
@@ -648,6 +657,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         editor.openPaintEditor();
       case 'editor:text':
         editor.openTextEditor();
+      case 'editor:post':
+        _addPostObject(editor);
       case 'editor:sticker':
         editor.openStickerEditor();
       case 'editor:emoji':
