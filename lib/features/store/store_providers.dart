@@ -23,7 +23,8 @@ import 'store_models.dart';
 /// テストは override して差し替える。
 final storeClientProvider = Provider<StoreClient>((ref) {
   final client = ref.watch(centralClientProvider);
-  return client == null ? MockStoreClient() : HttpStoreClient(client);
+  // Central につないでいても、アプリに同梱しているサンプル(Central に掲載の無いもの)のページ / 配布物は同梱のカタログで答える (D-256)。
+  return client == null ? MockStoreClient() : BundledFallbackStoreClient(HttpStoreClient(client), MockStoreClient());
 });
 
 final storeHomeProvider = FutureProvider((ref) => ref.watch(storeClientProvider).home());
@@ -175,7 +176,13 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
 
     final name = m.manifest['name'] as String? ?? pluginId;
     final slots = ref.read(slotPluginsProvider.notifier);
-    final record = InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: DateTime.now());
+    // 掲載の写し (D-256): 取れなくてもインストールは続ける(写しが無いだけ)。
+    InstalledInfo? info;
+    try {
+      final d = await client.plugin(pluginId);
+      if (d != null) info = InstalledInfo.of(d);
+    } catch (_) {}
+    final record = InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: DateTime.now(), info: info);
 
     if (package == null) {
       // 配布物が生の wasm(D-168)や中身の無いモック: 従来どおり、先にインストール済みにしてからスロット登録を試みる。

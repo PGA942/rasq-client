@@ -73,6 +73,49 @@ const storeSlotSamples = <({String id, String asset, String name, String summary
 /// モックストア (M4 v1)。掲載物 = 実在する同梱 wasm サンプル + 架空の
 /// 掲載例。**検証パイプラインは本物**: manifest の SHA-512 は配布物バイトから
 /// 計算し、インストール側が downloadArtifact の結果と照合する。
+/// Central + 同梱カタログ (D-256): ふだんは [primary](Central)。**アプリに同梱しているサンプル**([bundledIds])で、Central に
+/// 掲載が無い(404 = null)/ つながらないものだけ、[bundled](同梱のカタログ)で答える。サンプルのページが開けない・
+/// 起動時の読み込み直しができない、を防ぐ。一覧 / 検索 / レビューの投稿などは Central のまま。
+class BundledFallbackStoreClient implements StoreClient {
+  BundledFallbackStoreClient(this.primary, this.bundled);
+  final StoreClient primary;
+  final StoreClient bundled;
+
+  static final Set<String> bundledIds = {storeSamplePluginId, for (final s in storeSlotSamples) s.id};
+
+  Future<T> _or<T>(String id, Future<T> Function(StoreClient c) call, bool Function(T value) missing) async {
+    if (!bundledIds.contains(id)) return call(primary);
+    try {
+      final v = await call(primary);
+      if (!missing(v)) return v;
+    } catch (_) {}
+    return call(bundled);
+  }
+
+  @override
+  Future<StoreHomeSections> home() => primary.home();
+  @override
+  Future<List<StorePluginCard>> search(String q) => primary.search(q);
+  @override
+  Future<StorePluginDetail?> plugin(String id) => _or(id, (c) => c.plugin(id), (v) => v == null);
+  @override
+  Future<InstallManifest?> manifest(String id, {String? version}) => _or(id, (c) => c.manifest(id, version: version), (v) => v == null);
+  @override
+  Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version}) => _or(pluginId, (c) => c.downloadArtifact(pluginId, artifactId, version: version), (v) => false);
+  @override
+  Future<List<StoreReview>> reviews(String id, {ReviewSort sort = ReviewSort.helpful}) => _or(id, (c) => c.reviews(id, sort: sort), (v) => v.isEmpty);
+  @override
+  Future<List<ReleaseNote>> releases(String id) => _or(id, (c) => c.releases(id), (v) => v.isEmpty);
+  @override
+  Future<StoreReview> createReview(String pluginId, {required int rating, String title = '', String body = '', String? usedVersion}) => primary.createReview(pluginId, rating: rating, title: title, body: body, usedVersion: usedVersion);
+  @override
+  Future<void> voteReview(String pluginId, String reviewId, ReviewVote vote) => primary.voteReview(pluginId, reviewId, vote);
+  @override
+  Future<void> setBookmark(String pluginId, bool bookmarked) => primary.setBookmark(pluginId, bookmarked);
+  @override
+  Future<List<StorePluginCard>> bookmarks() => primary.bookmarks();
+}
+
 class MockStoreClient implements StoreClient {
   final _bytesCache = <String, Uint8List>{};
 

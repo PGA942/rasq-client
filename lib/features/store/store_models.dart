@@ -191,6 +191,19 @@ class SafetyBlock {
   final List<String> externalSdks;
   final List<String> adPlacements;
 
+  /// 端末に控える形([InstalledInfo]。`fromJson` で読み戻せる)。
+  Map<String, Object?> toJson() => {
+        'rasqFeatures': rasqFeatures,
+        'permissions': [for (final p in permissions) {'permission': p.permission, 'reason': p.reason}],
+        'externalHosts': externalHosts,
+        'dataHandling': dataHandling,
+        if (crashFreeRate != null) 'crashFreeRate': crashFreeRate,
+        'backgroundExecution': backgroundExecution,
+        'usesGpu': usesGpu,
+        'externalSdks': externalSdks,
+        'adPlacements': adPlacements,
+      };
+
   factory SafetyBlock.fromJson(Map<String, Object?> j) => SafetyBlock(
         rasqFeatures: _strings(j['rasqFeatures']),
         permissions: _permissions(j['permissions']),
@@ -520,10 +533,33 @@ class ReleaseNote {
       );
 }
 
+/// インストール時に控える掲載の写し (D-256): ストアの掲載が消えても / つながらなくても、インストール済みのページで
+/// 「何を入れたか」(見出し部と、プライバシーと必要な権限)を見せられるように。
+@immutable
+class InstalledInfo {
+  const InstalledInfo({this.summary = '', this.description = '', this.developerName = '', this.iconUrl, this.safety = const SafetyBlock()});
+  final String summary;
+  final String description;
+  final String developerName;
+  final Uri? iconUrl;
+  final SafetyBlock safety;
+
+  factory InstalledInfo.of(StorePluginDetail d) => InstalledInfo(summary: d.summary, description: d.description, developerName: d.developerName, iconUrl: d.iconUrl, safety: d.safety);
+
+  Map<String, Object?> toJson() => {'summary': summary, 'description': description, 'developerName': developerName, if (iconUrl != null) 'iconUrl': '$iconUrl', 'safety': safety.toJson()};
+  factory InstalledInfo.fromJson(Map<String, Object?> j) => InstalledInfo(
+        summary: j['summary'] as String? ?? '',
+        description: j['description'] as String? ?? '',
+        developerName: j['developerName'] as String? ?? '',
+        iconUrl: j['iconUrl'] is String ? Uri.tryParse(j['iconUrl'] as String) : null,
+        safety: j['safety'] is Map ? SafetyBlock.fromJson((j['safety'] as Map).cast<String, Object?>()) : const SafetyBlock(),
+      );
+}
+
 /// インストール済みプラグイン(KV `store.installed.v1` に永続化)。
 @immutable
 class InstalledPlugin {
-  const InstalledPlugin({required this.id, required this.name, required this.version, required this.sha512, required this.installedAt});
+  const InstalledPlugin({required this.id, required this.name, required this.version, required this.sha512, required this.installedAt, this.info});
   final String id;
   final String name;
   final String version;
@@ -532,12 +568,16 @@ class InstalledPlugin {
   final String sha512;
   final DateTime installedAt;
 
-  Map<String, Object?> toJson() => {'id': id, 'name': name, 'version': version, 'sha512': sha512, 'installedAt': installedAt.toIso8601String()};
+  /// 掲載の写し (D-256)。それより前に入れたものは null。
+  final InstalledInfo? info;
+
+  Map<String, Object?> toJson() => {'id': id, 'name': name, 'version': version, 'sha512': sha512, 'installedAt': installedAt.toIso8601String(), if (info != null) 'info': info!.toJson()};
   factory InstalledPlugin.fromJson(Map<String, Object?> j) => InstalledPlugin(
         id: j['id'] as String,
         name: j['name'] as String? ?? '',
         version: j['version'] as String? ?? '',
         sha512: j['sha512'] as String? ?? '',
         installedAt: DateTime.tryParse(j['installedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+        info: j['info'] is Map ? InstalledInfo.fromJson((j['info'] as Map).cast<String, Object?>()) : null,
       );
 }
