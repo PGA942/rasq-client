@@ -8,7 +8,9 @@ import 'package:http/testing.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
+import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
+import 'package:rasq_client/features/profile/rasq_profile_edit_screen.dart';
 import 'package:rasq_client/backend/rasq_consent.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
@@ -230,9 +232,16 @@ void main() {
     expect(central.consents.map((c) => '${c['kind']}:${c['granted']}:${c['detail'] ?? ''}'), ['terms:true:', 'privacy:true:', 'age:true:16-17', 'guardian:true:']);
     expect(central.consents.first['version'], rasqTermsVersion);
     expect(central.consents.any((c) => c['kind'] == 'learning'), isFalse);
-    // プロフィール編集のシートが続く(従来どおり)→ 閉じる。
-    expect(find.text('プロフィール編集'), findsOneWidget);
-    container.read(overlayManagerProvider).close('rasq.profile.edit');
+    // プロフィールの編集画面が続く (D-269: SNS のプロフィール編集と同じ作り。FOW は閉じる)→ 戻る。
+    expect(find.byType(RasqProfileEditScreen), findsOneWidget);
+    expect(find.text('プロフィールの更新'), findsOneWidget);
+    container.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    // FOW は閉じているので、もう一度開く(以降の確認のため)。
+    expect(find.text('RASQ アカウントの登録'), findsNothing);
+    RasqSidebar.open(container.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('RASQ アカウント'));
     await tester.pumpAndSettle();
     // 台帳に載り、SNS アカウントを引き継ぐ。サーバーの前のバンドルは置き換わる。
     final rec = container.read(currentRasqAccountProvider)!;

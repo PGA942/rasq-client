@@ -142,7 +142,7 @@ class RasqAccountPanel extends ConsumerWidget {
       if (!context.mounted) return;
       switch (pick) {
         case 'profile':
-          await openRasqProfileSheet(context, ref, record: r);
+          await openRasqProfileSheet(context, ref, record: r, beforeNavigate: onDone);
         case 'settings':
           onDone();
           context.push('${Routes.settings}/server');
@@ -205,7 +205,7 @@ class RasqAccountPanel extends ConsumerWidget {
         // 登録の FOW (D-241): 利用規約 / 年齢 / バンドルを置き換えるか → 登録 → 同意の記録。
         final rec = await registerRasqAccount(ref, displayName: name, column: fowColumnOf(context), onMessage: toast);
         if (rec == null || !context.mounted) return;
-        await openRasqProfileSheet(context, ref, record: rec);
+        await openRasqProfileSheet(context, ref, record: rec, beforeNavigate: onDone);
       } on OrgateException catch (e) {
         toast('RASQ アカウントを作成できませんでした: ${e.message}');
       }
@@ -335,7 +335,15 @@ class RasqAccountPanel extends ConsumerWidget {
 
 /// プロフィール編集シート: 表示名(+ Central はハンドル)。Central は
 /// `PATCH /me` の結果を台帳へ写す。ローカルは台帳が正本。
-Future<void> openRasqProfileSheet(BuildContext context, WidgetRef ref, {required RasqAccountRecord record}) async {
+/// [beforeNavigate] = 画面へ移る前に呼ぶ(FOW を閉じる。FOW は画面より前に出るので、開いたままだと編集画面を覆う)。
+Future<void> openRasqProfileSheet(BuildContext context, WidgetRef ref, {required RasqAccountRecord record, VoidCallback? beforeNavigate}) async {
+  // Central のアカウントは、SNS のプロフィール編集と同じ作りの画面で (D-269)。この端末だけのアカウントは、表示名だけのシート。
+  if (record.isCentral && record.id == ref.read(rasqAccountsProvider).value?.central?.id) {
+    final router = GoRouter.of(context);
+    beforeNavigate?.call();
+    await router.push('${Routes.settings}/rasq-profile');
+    return;
+  }
   final manager = ref.read(overlayManagerProvider);
   final current = summaryOfRecord(ref, record, isCurrent: record.id == ref.read(currentRasqAccountProvider)?.id);
   final name = TextEditingController(text: current.displayName);
