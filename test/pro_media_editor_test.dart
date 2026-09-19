@@ -73,6 +73,7 @@ void main() {
     expect(find.text('クロップ / 回転'), findsOneWidget); // 日本語化
     expect(find.text('ペイント'), findsOneWidget);
     expect(find.byKey(proMediaEditorBarKey('editor:cropRotate')), findsOneWidget);
+    expect(find.byKey(proMediaEditorBarKey('editor:media'), skipOffstage: false), findsOneWidget); // 画像 / 動画のオブジェクト (D-262)
     expect(find.byKey(proMediaEditorBarEditKey), findsOneWidget);
     expect(find.byIcon(Icons.extension), findsNothing);
     // 「バーの編集」: 加工画面のバーだけの編集 FOW が(退避されずに)開く。内蔵の編集もタイルで並ぶ。

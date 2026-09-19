@@ -71,6 +71,26 @@ class PostImageTab {
   static List<PostImageTab> of(SnsSession session) => [for (final t in session.timelines) PostImageTab('tl:${t.id}', t.label), mine, reacted, favorites, astell, searches];
 }
 
+/// 貼る投稿の見た目 (D-262)。一覧もこの見た目で並ぶ(見えているものが、そのまま画像になる)。
+enum PostTileStyle {
+  /// スレッド展開時の本文(全文 + メディアを全部)。
+  thread('thread', 'スレッド'),
+
+  /// タイムラインでの表示(長い本文は畳む)。
+  timeline('timeline', 'TL'),
+
+  /// インライン表示(小アバター + 本文 3 行 + サムネイル)。一番小さい。
+  inline('inline', 'インライン');
+
+  const PostTileStyle(this.id, this.label);
+  final String id;
+  final String label;
+  static PostTileStyle of(String? id) => values.firstWhere((v) => v.id == id, orElse: () => timeline);
+}
+
+/// 選んだ見た目の保存先。
+const postTileStyleStorageKey = 'postImage.style.v1';
+
 /// 1 ページぶん取りに行く。[search] があれば投稿検索(「最近の検索」のタイルから)。
 Future<Page<Post>> fetchPostImagePage(SnsSession session, PostImageTab tab, {String? search, String? cursor}) async {
   const limit = 30;
@@ -173,12 +193,16 @@ class _BodyState extends ConsumerState<_Body> {
 
   /// 動く / 鳴る投稿を動画にするか (D-260)。選んだ投稿が対象のときだけ出るスイッチ。
   bool _asVideo = true;
+
+  /// 投稿の見た目 (D-262、前回の選択を覚える)。
+  PostTileStyle _style = PostTileStyle.timeline;
   double? _videoProgress;
 
   @override
   void initState() {
     super.initState();
     widget.confirm.value = _confirm;
+    _loadStyle();
     WidgetsBinding.instance.addPostFrameCallback((_) => _reload());
   }
 
@@ -187,6 +211,20 @@ class _BodyState extends ConsumerState<_Body> {
     _filter.dispose();
     _tabScroll.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadStyle() async {
+    try {
+      final v = await ref.read(sessionStorageProvider).read(postTileStyleStorageKey);
+      if (mounted && v != null) setState(() => _style = PostTileStyle.of(v));
+    } catch (_) {}
+  }
+
+  Future<void> _setStyle(PostTileStyle v) async {
+    setState(() => _style = v);
+    try {
+      await ref.read(sessionStorageProvider).write(postTileStyleStorageKey, v.id);
+    } catch (_) {}
   }
 
   SnsSession? get _session => ref.read(currentSnsSessionProvider);
@@ -415,6 +453,30 @@ class _BodyState extends ConsumerState<_Body> {
         ])),
       ),
       const Divider(height: 1),
+      // ── 見た目 (D-262) ──
+      if (!_showingHistory)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
+          child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+            Text('見た目', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            const SizedBox(width: RasqSpacing.sm),
+            for (final v in PostTileStyle.values)
+              Padding(
+                padding: const EdgeInsets.only(right: RasqSpacing.xs),
+                child: ChoiceChip(
+                  key: ValueKey('postImage.style.${v.id}'),
+                  label: Text(v.label),
+                  selected: _style == v,
+                  visualDensity: VisualDensity.compact,
+                  onSelected: _capturing
+                      ? null
+                      : (_) {
+                          _setStyle(v);
+                        },
+                ),
+              ),
+          ])),
+        ),
       if (_search != null)
         RasqListTile(key: const ValueKey('postImage.search.back'), leading: const Icon(Icons.arrow_back), title: '「$_search」の検索結果', subtitle: '最近の検索に戻る', chevron: false, onTap: () => _switchTab(PostImageTab.searches)),
       if (_excluded > 0)
@@ -489,7 +551,7 @@ class _BodyState extends ConsumerState<_Body> {
         }
         final p = shown[i];
         final on = _selected?.key == p.key;
-        return _PostTile(key: ValueKey('postImage.post.${p.id}'), post: p, boundaryKey: _tileKeys.putIfAbsent(p.key, GlobalKey.new), selected: on, onTap: () => _select(on ? null : p));
+        return _PostTile(key: ValueKey('postImage.post.${p.id}'), post: p, style: _style, boundaryKey: _tileKeys.putIfAbsent(p.key, GlobalKey.new), selected: on, onTap: () => _select(on ? null : p));
       },
     );
   }
@@ -498,8 +560,9 @@ class _BodyState extends ConsumerState<_Body> {
 /// 投稿タイル(タイムラインと同じ [PostRow])。押すと選ぶだけ(中のリンクやボタンは効かせない)。
 /// 画像にするのは [boundaryKey] の中(選択の枠は外側 = 写らない)。背景は不透明(透けた PNG にしない)。
 class _PostTile extends StatelessWidget {
-  const _PostTile({super.key, required this.post, required this.boundaryKey, required this.selected, required this.onTap});
+  const _PostTile({super.key, required this.post, required this.style, required this.boundaryKey, required this.selected, required this.onTap});
   final Post post;
+  final PostTileStyle style;
   final GlobalKey boundaryKey;
   final bool selected;
   final VoidCallback onTap;
@@ -517,7 +580,14 @@ class _PostTile extends StatelessWidget {
         child: AbsorbPointer(
           child: RepaintBoundary(
             key: boundaryKey,
-            child: ColoredBox(color: scheme.surface, child: PostRow(post: post, actions: const [], onAction: _noop, showAllMedia: true)),
+            child: ColoredBox(
+              color: scheme.surface,
+              child: switch (style) {
+                PostTileStyle.thread => PostRow(post: post, actions: const [], onAction: _noop, showReplyParent: false, compactQuote: true, showAllMedia: true),
+                PostTileStyle.timeline => PostRow(post: post, actions: const [], onAction: _noop),
+                PostTileStyle.inline => Padding(padding: const EdgeInsets.all(RasqSpacing.sm), child: InlinePostFrame(post: post, onTap: () {})),
+              },
+            ),
           ),
         ),
       ),

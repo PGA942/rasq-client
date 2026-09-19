@@ -100,6 +100,7 @@ const editorBuiltinActions = <ActionDescriptor>[
   ActionDescriptor(id: 'editor:paint', genreTag: 'Draw', label: 'ペイント', icon: 'edit', doneIcon: 'edit', countSource: CountSource.none),
   ActionDescriptor(id: 'editor:text', genreTag: 'Text', label: 'テキスト', icon: 'text_fields', doneIcon: 'text_fields', countSource: CountSource.none),
   ActionDescriptor(id: 'editor:post', genreTag: 'Post', label: 'ノート', icon: 'article', doneIcon: 'article', countSource: CountSource.none),
+  ActionDescriptor(id: 'editor:media', genreTag: 'Media', label: 'メディア', icon: 'add_photo_alternate', doneIcon: 'add_photo_alternate', countSource: CountSource.none),
   ActionDescriptor(id: 'editor:sticker', genreTag: 'Sticker', label: 'ステッカー', icon: 'auto_awesome_mosaic', doneIcon: 'auto_awesome_mosaic', countSource: CountSource.none),
   ActionDescriptor(id: 'editor:emoji', genreTag: 'Emoji', label: '絵文字', icon: 'sentiment_satisfied_alt', doneIcon: 'sentiment_satisfied_alt', countSource: CountSource.none),
   ActionDescriptor(id: 'editor:filter', genreTag: 'Filter', label: 'フィルター', icon: 'filter', doneIcon: 'filter', countSource: CountSource.none),
