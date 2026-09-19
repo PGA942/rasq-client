@@ -21,7 +21,10 @@ const _barColors = <(String, Color)>[('青', Color(0xFF4F8DFD)), ('水色', Colo
 /// FOW が外から借りるもの (D-253): 絵の読み込みとファイル選び(選んだファイルは呼び出し側がアプリの保存領域へ写して、
 /// そのパスを返す = 設定として持ち続けられる)。どれも無ければその項目は出るが、選べない / プレビューに出ないだけ。
 class AudioVisualizerFowHost {
-  const AudioVisualizerFowHost({this.avatar, this.loadImage, this.loadVideoFrame, this.pickImage, this.pickVideo});
+  const AudioVisualizerFowHost({this.avatar, this.loadImage, this.loadVideoFrame, this.pickImage, this.pickVideo, this.lastTimings});
+
+  /// 前回の書き出しの内訳(あれば「書き出し」の節に出す)。
+  final AudioBuildTimings? lastTimings;
 
   /// アカウントのアイコン(読み込み済み)。
   final ui.Image? avatar;
@@ -244,7 +247,16 @@ class _BodyState extends State<_Body> {
       RasqSliderListTile(key: const ValueKey('viz.fadein'), title: 'フェードイン', value: _c.fadeIn, min: 0, max: 5, divisions: 10, valueLabel: _c.fadeIn == 0 ? 'なし' : '${_c.fadeIn.toStringAsFixed(1)} 秒', onChanged: (v) => _set(_c.copyWith(fadeIn: v))),
       RasqSliderListTile(key: const ValueKey('viz.fadeout'), title: 'フェードアウト', value: _c.fadeOut, min: 0, max: 5, divisions: 10, valueLabel: _c.fadeOut == 0 ? 'なし' : '${_c.fadeOut.toStringAsFixed(1)} 秒', onChanged: (v) => _set(_c.copyWith(fadeOut: v))),
       const RasqSectionHeader(title: '書き出し'),
-      RasqSwitchListTile(key: const ValueKey('viz.fine'), title: '細かく描く(2560×1440)', subtitle: 'オフ = 1280×720 で描いて拡大(書き出しが約 4 倍速い)', value: _c.fine, onChanged: (v) => _set(_c.copyWith(fine: v))),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+        child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
+          for (final q in AudioVisualizerQuality.values) ChoiceChip(key: ValueKey('viz.quality.${q.name}'), label: Text(q.label, style: RasqTypography.caption), selected: _c.quality == q, onSelected: (_) => _set(_c.copyWith(quality: q))),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
+        child: Text('${widget.host.lastTimings == null ? '' : '前回の書き出し: ${widget.host.lastTimings}。\n'}波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      ),
     ]);
   }
 }

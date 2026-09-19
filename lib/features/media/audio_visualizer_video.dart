@@ -58,6 +58,22 @@ enum AudioVisualizerTextPosition {
   final String label;
 }
 
+/// フレームを描く大きさ(出力はいつも 2560×1440。小さく描いて拡大するほど速い)。左の絵と文字は別の 1 枚として
+/// いつも 2560×1440 で描くので、ここで変わるのは波形とシークバー(と背景の動画)の細かさだけ (D-254)。
+enum AudioVisualizerQuality {
+  fast('速い(960×540)', ui.Size(960, 540)),
+  standard('標準(1280×720)', ui.Size(1280, 720)),
+  fine('細かい(2560×1440、約 4 倍かかる)', audioVideoSize);
+
+  const AudioVisualizerQuality(this.label, this.size);
+  final String label;
+  final ui.Size size;
+}
+
+/// 何を描くか (D-254): 書き出しでは、毎フレーム変わるもの([dynamicOnly])と変わらないもの([staticOnly] = 左の絵と文字、
+/// 透明の上に 1 枚だけ)を分ける。プレビューは [all]。
+enum AudioFrameLayers { all, dynamicOnly, staticOnly }
+
 @immutable
 class AudioVisualizerConfig {
   const AudioVisualizerConfig({
@@ -76,7 +92,7 @@ class AudioVisualizerConfig {
     this.backgroundDim = 0.35,
     this.fadeIn = 0,
     this.fadeOut = 0,
-    this.fine = false,
+    this.quality = AudioVisualizerQuality.standard,
     this.title,
     this.description = '',
   });
@@ -108,15 +124,14 @@ class AudioVisualizerConfig {
   final double fadeIn;
   final double fadeOut;
 
-  /// 描画の細かさ: false = 1280×720 で描いて 2560×1440 へ拡大(速い)、true = 2560×1440 で描く(約 4 倍かかる)。
-  final bool fine;
+  final AudioVisualizerQuality quality;
 
   /// タイトル(null = ファイル名)と説明。**保存しない**(その音声ごとの中身)。
   final String? title;
   final String description;
 
   bool get showLeft => left != AudioVisualizerLeft.none;
-  ui.Size get paintSize => fine ? audioVideoSize : audioVideoSize / 2;
+  ui.Size get paintSize => quality.size;
 
   AudioVisualizerConfig copyWith({
     int? fps,
@@ -136,7 +151,7 @@ class AudioVisualizerConfig {
     double? backgroundDim,
     double? fadeIn,
     double? fadeOut,
-    bool? fine,
+    AudioVisualizerQuality? quality,
     String? title,
     String? description,
   }) =>
@@ -156,7 +171,7 @@ class AudioVisualizerConfig {
         backgroundDim: (backgroundDim ?? this.backgroundDim).clamp(0.0, 0.8),
         fadeIn: (fadeIn ?? this.fadeIn).clamp(0.0, 5.0),
         fadeOut: (fadeOut ?? this.fadeOut).clamp(0.0, 5.0),
-        fine: fine ?? this.fine,
+        quality: quality ?? this.quality,
         title: title ?? this.title,
         description: description ?? this.description,
       );
@@ -178,7 +193,7 @@ class AudioVisualizerConfig {
         'backgroundDim': backgroundDim,
         'fadeIn': fadeIn,
         'fadeOut': fadeOut,
-        'fine': fine,
+        'quality': quality.name,
       };
 
   factory AudioVisualizerConfig.fromJson(Map<String, Object?> j) => const AudioVisualizerConfig().copyWith(
@@ -198,7 +213,8 @@ class AudioVisualizerConfig {
         backgroundDim: (j['backgroundDim'] as num?)?.toDouble(),
         fadeIn: (j['fadeIn'] as num?)?.toDouble(),
         fadeOut: (j['fadeOut'] as num?)?.toDouble(),
-        fine: j['fine'] as bool?,
+        // 旧形 (D-251) の fine: true = 細かい。
+        quality: AudioVisualizerQuality.values.where((q) => q.name == j['quality']).firstOrNull ?? (j['fine'] == true ? AudioVisualizerQuality.fine : null),
       );
 
   static AudioVisualizerConfig decode(String? raw) {
@@ -381,20 +397,24 @@ void _drawCover(Canvas canvas, ui.Image image, Rect dst, {Paint? paint}) {
 
 /// 1 フレームを描く。[spectrum] = 帯域の高さ(0..1、左 = 低音)、[progress] = 再生位置(0..1)。
 /// [background] = 背景の動画のその瞬間の 1 枚、[leftImage] = 左の絵(アイコン / 選んだ画像)、[fade] = 明るさ(0..1)。
-void paintAudioFrame(Canvas canvas, ui.Size size, {required List<double> spectrum, required double progress, AudioVisualizerConfig config = const AudioVisualizerConfig(), IconData icon = Icons.music_note_rounded, String? title, ui.Image? background, ui.Image? leftImage, double fade = 1}) {
+void paintAudioFrame(Canvas canvas, ui.Size size, {required List<double> spectrum, required double progress, AudioVisualizerConfig config = const AudioVisualizerConfig(), IconData icon = Icons.music_note_rounded, String? title, ui.Image? background, ui.Image? leftImage, double fade = 1, AudioFrameLayers layers = AudioFrameLayers.all, bool hasBackgroundVideo = false}) {
   final w = size.width, h = size.height;
   final bg = config.background;
   final full = Offset.zero & size;
-  canvas.drawRect(full, Paint()..color = bg);
+  final drawDynamic = layers != AudioFrameLayers.staticOnly, drawStatic = layers != AudioFrameLayers.dynamicOnly;
+  if (drawDynamic) canvas.drawRect(full, Paint()..color = bg);
   var onBg = bg.computeLuminance() > 0.5 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
-  if (background != null) {
-    _drawCover(canvas, background, full);
-    if (config.backgroundDim > 0) canvas.drawRect(full, Paint()..color = const Color(0xFF000000).withValues(alpha: config.backgroundDim));
+  if (background != null || hasBackgroundVideo) {
+    if (background != null && drawDynamic) {
+      _drawCover(canvas, background, full);
+      if (config.backgroundDim > 0) canvas.drawRect(full, Paint()..color = const Color(0xFF000000).withValues(alpha: config.backgroundDim));
+    }
     onBg = const Color(0xFFFFFFFF);
   }
   final textColor = config.textColor ?? onBg;
   var areaLeft = h * 0.08;
-  if (config.showLeft) {
+  if (config.showLeft) areaLeft = w * 0.34;
+  if (config.showLeft && drawStatic) {
     // 左: 絵(角丸)+ タイトル / 説明(絵の上か下)。
     final left = Rect.fromLTWH(0, 0, w * 0.34, h);
     final heading = config.title ?? title ?? '';
@@ -430,8 +450,8 @@ void paintAudioFrame(Canvas canvas, ui.Size size, {required List<double> spectru
       t.paint(canvas, Offset(left.center.dx - t.width / 2, y));
       y += t.height + gap;
     }
-    areaLeft = left.right;
   }
+  if (!drawDynamic) return;
   final area = Rect.fromLTRB(areaLeft, h * 0.16, w - h * 0.08, h * 0.84);
   final n = spectrum.length;
   final p = progress.clamp(0.0, 1.0);
@@ -477,10 +497,10 @@ void paintAudioFrame(Canvas canvas, ui.Size size, {required List<double> spectru
 }
 
 /// 1 フレームを PNG に(本番は設定の [AudioVisualizerConfig.paintSize]。テストは小さく描ける)。
-Future<Uint8List> renderAudioFramePng({required List<double> spectrum, required double progress, AudioVisualizerConfig config = const AudioVisualizerConfig(), ui.Size? size, String? title, ui.Image? background, ui.Image? leftImage, double fade = 1}) async {
+Future<Uint8List> renderAudioFramePng({required List<double> spectrum, required double progress, AudioVisualizerConfig config = const AudioVisualizerConfig(), ui.Size? size, String? title, ui.Image? background, ui.Image? leftImage, double fade = 1, AudioFrameLayers layers = AudioFrameLayers.all, bool hasBackgroundVideo = false}) async {
   final s = size ?? config.paintSize;
   final rec = ui.PictureRecorder();
-  paintAudioFrame(Canvas(rec), s, spectrum: spectrum, progress: progress, config: config, title: title, background: background, leftImage: leftImage, fade: fade);
+  paintAudioFrame(Canvas(rec), s, spectrum: spectrum, progress: progress, config: config, title: title, background: background, leftImage: leftImage, fade: fade, layers: layers, hasBackgroundVideo: hasBackgroundVideo);
   final pic = rec.endRecording();
   final img = await pic.toImage(s.width.round(), s.height.round());
   pic.dispose();
@@ -528,6 +548,29 @@ Future<ui.Image?> decodeUiImage(Uint8List bytes) async {
   }
 }
 
+/// 書き出しにかかった時間の内訳(どこが重いかを設定 FOW に出す。端末ごとに違うので、調整の手がかり)。
+@immutable
+class AudioBuildTimings {
+  const AudioBuildTimings({required this.frameCount, required this.frames, required this.encode, required this.mux});
+  final int frameCount;
+
+  /// フレームを描いて PNG にする / 無音の動画にエンコードする / 音声と左の絵を重ねて 2560×1440 で出す。
+  final Duration frames;
+  final Duration encode;
+  final Duration mux;
+  Duration get total => frames + encode + mux;
+
+  static String _s(Duration d) => '${(d.inMilliseconds / 1000).toStringAsFixed(1)} 秒';
+  @override
+  String toString() => '合計 ${_s(total)}($frameCount フレーム: 描画 ${_s(frames)} / エンコード ${_s(encode)} / 仕上げ ${_s(mux)})';
+}
+
+/// 出力のビットレート(平らな絵なので 2560×1440 でも控えめでよい。小さいほどエンコードもアップロードも軽い)。
+const audioVideoBitrate = 6000000;
+
+/// 同時に PNG 化 / 書き込みするフレーム数 (D-254)。エンジン側の描画と圧縮は別スレッドなので、待ちを重ねるだけで速くなる。
+const audioRenderParallel = 4;
+
 /// 背景の動画のコマを、まとめて取り出す単位と、取り出す間隔(背景は毎フレームでなくてよい: 最大 15fps)。
 const _bgBatch = 48;
 const audioBackgroundMaxFps = 15.0;
@@ -535,12 +578,13 @@ const audioBackgroundMaxFps = 15.0;
 /// 標本 + 設定 → 動画ファイル(mp4)。[workDir] に途中のファイル(フレーム / 無音の動画)を作り、終わったら消す。
 /// [leftImage] = 左の絵(呼び出し側が用意。null なら音符)。背景の動画は設定のパスから、その瞬間のコマを取り出して描く
 /// (短ければループ)。[onProgress] = 0..1(フレーム作り 0〜0.7、書き出し 0.7〜1)。
-Future<File> buildAudioVisualizerVideo({required File audio, required AudioPcm pcm, required Directory workDir, AudioVisualizerConfig config = const AudioVisualizerConfig(), String? title, ui.Image? leftImage, void Function(double progress)? onProgress, bool Function()? cancelled}) async {
+Future<File> buildAudioVisualizerVideo({required File audio, required AudioPcm pcm, required Directory workDir, AudioVisualizerConfig config = const AudioVisualizerConfig(), String? title, ui.Image? leftImage, void Function(double progress)? onProgress, void Function(AudioBuildTimings timings)? onTimings, bool Function()? cancelled}) async {
   if (!audioVideoSupported) throw UnsupportedError('この端末では音声を動画にできません(Android / iOS / macOS だけ)');
   final id = DateTime.now().microsecondsSinceEpoch;
   final dir = Directory('${workDir.path}/rasq_audio_$id');
   await dir.create(recursive: true);
   ui.Image? bgImage;
+  final clock = Stopwatch()..start();
   try {
     final total = pcm.duration;
     final plan = audioFramePlan(total, fps: config.fps);
@@ -560,12 +604,20 @@ Future<File> buildAudioVisualizerVideo({required File audio, required AudioPcm p
     var bgQueue = <Uint8List>[];
     var bgNext = 0; // 次に取り出す「背景のコマ番号」(= フレーム番号 / bgEvery)
 
-    final frames = <pve.StopMotionFrame>[];
+    // 毎フレーム変わるもの(背景 + 波形 + シークバー + フェード)だけをフレームに描く。PNG 化と書き込みは [audioRenderParallel] 枚
+    // ぶん並べて待つ(スペクトルは前のフレームに依るので、計算だけは順番に)。
+    final frames = List<pve.StopMotionFrame?>.filled(plan.frames, null);
+    final hasBg = bgVideo != null;
     List<double>? prev;
+    final inFlight = <Future<void>>[];
+    var done = 0;
     for (var i = 0; i < plan.frames; i++) {
       if (cancelled?.call() ?? false) throw StateError('cancelled');
       final at = plan.each * i;
       if (bgVideo != null && i % bgEvery == 0) {
+        // 背景のコマを差し替える前に、前のコマを使っている描画を終わらせる。
+        await Future.wait(inFlight);
+        inFlight.clear();
         if (bgQueue.isEmpty) {
           final count = math.min(_bgBatch, ((plan.frames - i) / bgEvery).ceil());
           final stamps = [for (var k = 0; k < count; k++) audioBackgroundTimeAt(plan.each * ((bgNext + k) * bgEvery), bgDuration)];
@@ -585,15 +637,36 @@ Future<File> buildAudioVisualizerVideo({required File audio, required AudioPcm p
           }
         }
       }
-      prev = spectrumAt(pcm, at, bands: config.bands, previous: prev);
-      final png = await renderAudioFramePng(spectrum: prev, progress: plan.frames == 1 ? 0 : i / (plan.frames - 1), config: config, title: title, background: bgImage, leftImage: leftImage, fade: audioFadeAt(at, total, config));
-      final f = File('${dir.path}/f_${i.toString().padLeft(5, '0')}.png');
-      await f.writeAsBytes(png);
-      frames.add(pve.StopMotionFrame(image: pve.EditorLayerImage.file(f), duration: plan.each));
-      if (i % 5 == 0) onProgress?.call(0.7 * (i + 1) / plan.frames);
+      final spectrum = prev = spectrumAt(pcm, at, bands: config.bands, previous: prev);
+      final index = i;
+      inFlight.add(() async {
+        final png = await renderAudioFramePng(spectrum: spectrum, progress: plan.frames == 1 ? 0 : index / (plan.frames - 1), config: config, background: bgImage, fade: audioFadeAt(at, total, config), layers: AudioFrameLayers.dynamicOnly, hasBackgroundVideo: hasBg);
+        final f = File('${dir.path}/f_${index.toString().padLeft(5, '0')}.png');
+        await f.writeAsBytes(png);
+        frames[index] = pve.StopMotionFrame(image: pve.EditorLayerImage.file(f), duration: plan.each);
+        done++;
+        if (done % 10 == 0) onProgress?.call(0.7 * done / plan.frames);
+      }());
+      if (inFlight.length >= audioRenderParallel) {
+        await Future.wait(inFlight);
+        inFlight.clear();
+      }
+    }
+    await Future.wait(inFlight);
+    final framesTime = clock.elapsed;
+    // 変わらないもの(左の絵 + 文字): 透明の上に 2560×1440 で 1 枚だけ描き、書き出しのときに重ねる
+    // (毎フレームに写真を描き込むと PNG 化が重くなる。1 枚ならいつも細かく描ける)。フェードは同じ秒数で付ける。
+    File? overlay;
+    if (config.showLeft) {
+      final png = await renderAudioFramePng(spectrum: const [], progress: 0, config: config, size: audioVideoSize, title: title, leftImage: leftImage, layers: AudioFrameLayers.staticOnly, hasBackgroundVideo: hasBg);
+      overlay = File('${dir.path}/overlay.png');
+      await overlay.writeAsBytes(png);
     }
     final silent = '${dir.path}/silent.mp4';
-    await pve.ProVideoEditor.instance.renderStopMotionToFile(silent, pve.StopMotionRenderData(id: 'rasq-audio-$id', frames: frames, frameRate: plan.fps, resolution: audioVideoSize, fit: pve.StopMotionFit.stretch, outputFormat: pve.VideoOutputFormat.mp4));
+    await pve.ProVideoEditor.instance.renderStopMotionToFile(silent, // 1 回目(無音の動画)は**描いた大きさのまま**エンコードする (D-254): 2560×1440 のエンコードを 2 回やらない。
+        // 拡大は 2 回目(音声と左の絵を重ねる回)に任せる。中間なのでビットレートは高め。
+        pve.StopMotionRenderData(id: 'rasq-audio-$id', frames: [for (final f in frames) f!], frameRate: plan.fps, resolution: config.paintSize, fit: pve.StopMotionFit.stretch, outputFormat: pve.VideoOutputFormat.mp4, bitrate: 12000000));
+    final encodeTime = clock.elapsed - framesTime;
     onProgress?.call(0.88);
     final out = '${workDir.path}/rasq_audio_$id.mp4';
     await pve.ProVideoEditor.instance.renderVideoToFile(
@@ -601,12 +674,24 @@ Future<File> buildAudioVisualizerVideo({required File audio, required AudioPcm p
       pve.VideoRenderData(
         id: 'rasq-audio-mux-$id',
         videoSegments: [pve.VideoSegment(video: pve.EditorVideo.file(silent))],
+        imageLayers: [
+          if (overlay != null)
+            pve.ImageLayer(image: pve.EditorLayerImage.file(overlay), animations: [
+              if (config.fadeIn > 0) pve.LayerAnimation(type: pve.LayerAnimationType.fade, phase: pve.AnimationPhase.animateIn, duration: Duration(milliseconds: (config.fadeIn * 1000).round())),
+              if (config.fadeOut > 0) pve.LayerAnimation(type: pve.LayerAnimationType.fade, phase: pve.AnimationPhase.animateOut, duration: Duration(milliseconds: (config.fadeOut * 1000).round())),
+            ]),
+        ],
         audioTracks: [pve.VideoAudioTrack(path: audio.path)],
         enableAudio: true,
         outputFormat: pve.VideoOutputFormat.mp4,
+        // 出力の大きさ = 2560×1440(custom の resolution は「その大きさのキャンバスに収めて出す」指定)。
+        qualityConfig: const pve.VideoQualityConfig(bitrate: audioVideoBitrate, resolution: audioVideoSize, preset: pve.VideoQualityPreset.custom),
       ),
     );
     onProgress?.call(1);
+    final timings = AudioBuildTimings(frameCount: plan.frames, frames: framesTime, encode: encodeTime, mux: clock.elapsed - framesTime - encodeTime);
+    debugPrint('audio visualizer: $timings');
+    onTimings?.call(timings);
     return File(out);
   } finally {
     bgImage?.dispose();
