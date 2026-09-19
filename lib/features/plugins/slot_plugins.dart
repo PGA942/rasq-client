@@ -117,6 +117,9 @@ class SlotActionDecl {
   final String? output;
   bool get isStickerOutput => output == 'sticker';
 
+  /// カスタムフィルター(契約 v0.12): ON / OFF のボタン。`filter.preview` の描画リストを重ね、完了のとき焼き込むか `filter.apply`。
+  bool get isFilterOutput => output == 'filter';
+
   bool get isPostAction => slot == null || slot == SlotIds.postAction;
 }
 
@@ -678,6 +681,21 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       ));
     }
     return genres;
+  }
+
+  /// カスタムフィルター (契約 v0.12): 描画リスト。戻りは `filter.preview` の value(無ければ null)。
+  Future<Map<String, dynamic>?> filterPreview(SlotPlugin plugin, {required String actionId, required int width, required int height, required int seed}) =>
+      plugin.value('filter.preview', {'actionId': actionId, 'width': width, 'height': height, 'seed': seed});
+
+  /// カスタムフィルターの `mode: "pixels"`: 焼き込んだ 1 枚を渡して、書き換えた結果を受け取る。失敗は null。
+  Future<(Uint8List, String)?> filterApply(SlotPlugin plugin, {required String actionId, required int seed, required int width, required int height, required Uint8List bytes, String mimeType = 'image/png'}) async {
+    final v = await plugin.value('filter.apply', {'actionId': actionId, 'seed': seed, 'width': width, 'height': height, 'mimeType': mimeType, 'bytesB64': base64Encode(bytes)});
+    if (v == null || v['bytesB64'] is! String) return null;
+    try {
+      return (base64Decode(v['bytesB64'] as String), '${v['mimeType'] ?? mimeType}');
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> mediaAction(MediaEditSession s, String genre, String action) => s.plugin.value('media.action', {'token': s.token, 'genre': genre, 'action': action});
