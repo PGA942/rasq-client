@@ -105,6 +105,13 @@ const editorBuiltinActions = <ActionDescriptor>[
   ActionDescriptor(id: 'editor:tune', genreTag: 'Tune', label: '調整', icon: 'tune', doneIcon: 'tune', countSource: CountSource.none),
 ];
 
+/// 音声の Visualizer の設定 (D-251)。動画のバーの先頭。音声を開いているときだけ出る。
+const editorVisualizerActionId = 'editor:visualizer';
+const editorVisualizerAction = ActionDescriptor(id: editorVisualizerActionId, genreTag: 'Audio', label: 'Visualizer', icon: 'graphic_eq', doneIcon: 'graphic_eq', countSource: CountSource.none);
+
+/// バー(構成キー)ごとの内蔵の編集。
+List<ActionDescriptor> editorBuiltinActionsFor(String configKey) => configKey == editorVideoConfigKey ? const [editorVisualizerAction, ...editorBuiltinActions] : editorBuiltinActions;
+
 /// `composer.media` プラグインの下段バーのボタン(契約 v0.10): マニフェストの `actions` の
 /// `slot: "composer.media"` の項目。1 つも宣言していないプラグインは、従来どおり画像にだけ出る既定のボタン 1 つ。
 List<SlotActionDecl> mediaEditDecls(SlotManifest m) {
