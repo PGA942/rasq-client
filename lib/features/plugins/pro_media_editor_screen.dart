@@ -152,6 +152,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   AudioPcm? _pcm;
   AudioVisualizerConfig _vizConfig = const AudioVisualizerConfig();
 
+  /// 前回の書き出しの内訳(設定 FOW に出す)。
+  AudioBuildTimings? _vizTimings;
+
   /// 左の絵に使うアカウントのアイコン(読み込み済み。無ければ null = 音符)。
   ui.Image? _avatar;
   bool _avatarTried = false;
@@ -272,6 +275,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         title: widget.args.name,
         leftImage: leftImage,
         cancelled: () => !mounted,
+        onTimings: (t) => _vizTimings = t,
         onProgress: (p) {
           if (mounted) setState(() => _audioProgress = p);
         },
@@ -323,6 +327,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       title: widget.args.name,
       host: AudioVisualizerFowHost(
         avatar: await _loadAvatar(),
+        lastTimings: _vizTimings,
         loadImage: _loadImageFile,
         loadVideoFrame: _videoFrameAt,
         pickImage: () async => _keepPicked(await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1024, maxHeight: 1024), 'left'),

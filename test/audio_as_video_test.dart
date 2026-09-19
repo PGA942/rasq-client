@@ -107,7 +107,7 @@ void main() {
   });
 
   test('設定: JSON の往復(タイトル / 説明は保存しない)、範囲外は丸める、旧形の showIcon を引き継ぐ、壊れた保存値は既定', () {
-    const c = AudioVisualizerConfig(fps: 24, bands: 96, style: AudioVisualizerStyle.line, background: Color(0xFF0B1020), barColor: Color(0xFFFF5C8A), left: AudioVisualizerLeft.file, leftImagePath: '/x/left.png', textPosition: AudioVisualizerTextPosition.above, textColor: Color(0xFFFFD54F), textScale: 1.4, backgroundVideoPath: '/x/bg.mp4', backgroundDim: 0.5, fadeIn: 1.5, fadeOut: 3, fine: true);
+    const c = AudioVisualizerConfig(fps: 24, bands: 96, style: AudioVisualizerStyle.line, background: Color(0xFF0B1020), barColor: Color(0xFFFF5C8A), left: AudioVisualizerLeft.file, leftImagePath: '/x/left.png', textPosition: AudioVisualizerTextPosition.above, textColor: Color(0xFFFFD54F), textScale: 1.4, backgroundVideoPath: '/x/bg.mp4', backgroundDim: 0.5, fadeIn: 1.5, fadeOut: 3, quality: AudioVisualizerQuality.fast);
     expect(AudioVisualizerConfig.decode(jsonEncode(c.toJson())), c);
     final withText = c.copyWith(title: '曲名', description: '説明');
     expect(withText.toJson().containsKey('title'), isFalse);
@@ -121,6 +121,8 @@ void main() {
     expect(c.copyWith(clearBackgroundVideo: true).backgroundVideoPath, isNull);
     expect(AudioVisualizerConfig.decode('{broken'), const AudioVisualizerConfig());
     expect(const AudioVisualizerConfig().paintSize, const ui.Size(1280, 720));
+    expect(c.paintSize, const ui.Size(960, 540));
+    expect(AudioVisualizerConfig.fromJson({'fine': true}).quality, AudioVisualizerQuality.fine); // 旧形
   });
 
   testWidgets('フレームの絵: 背景色、バーは設定の色、中央のシークバーは再生位置まで色が付く', (tester) async {
@@ -175,6 +177,33 @@ void main() {
       final black = await render(const AudioVisualizerConfig(left: AudioVisualizerLeft.none), bg: red, fade: 0);
       expect(px(black, 0.5, 0.5), (0, 0, 0));
       expect(px(black, 0.01, 0.02), (0, 0, 0));
+    });
+  });
+
+  testWidgets('描き分け (D-254): フレームには毎回変わるものだけ、左の絵と文字は透明の上の 1 枚', (tester) async {
+    await tester.runAsync(() async {
+      final rec = ui.PictureRecorder();
+      Canvas(rec).drawRect(const Rect.fromLTWH(0, 0, 8, 8), Paint()..color = const Color(0xFF0000FF));
+      final blue = await rec.endRecording().toImage(8, 8);
+      const config = AudioVisualizerConfig(left: AudioVisualizerLeft.file, showTitle: false, background: Color(0xFF101010), barColor: Color(0xFF00FF00));
+      Future<ByteData> render(AudioFrameLayers layers) async {
+        final png = await renderAudioFramePng(spectrum: List.filled(32, 0.8), progress: 0.5, size: const ui.Size(640, 360), config: config, leftImage: blue, layers: layers);
+        final codec = await ui.instantiateImageCodec(png);
+        return (await (await codec.getNextFrame()).image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      }
+
+      List<int> px(ByteData d, double fx, double fy) {
+        final o = ((fy * 360).floor() * 640 + (fx * 640).floor()) * 4;
+        return [d.getUint8(o), d.getUint8(o + 1), d.getUint8(o + 2), d.getUint8(o + 3)];
+      }
+
+      final dynamicOnly = await render(AudioFrameLayers.dynamicOnly);
+      expect(px(dynamicOnly, 0.17, 0.5), [0x10, 0x10, 0x10, 255]); // 左の絵は描かない(背景色のまま)
+      expect(px(dynamicOnly, 0.45, 0.5), [0, 255, 0, 255]); // シークバー(波形の場所は左の絵ありのときと同じ)
+      final staticOnly = await render(AudioFrameLayers.staticOnly);
+      expect(px(staticOnly, 0.17, 0.5), [0, 0, 255, 255]); // 左の絵
+      expect(px(staticOnly, 0.7, 0.5)[3], 0); // ほかは透明(波形もシークバーも無い)
+      expect(px(staticOnly, 0.01, 0.02)[3], 0);
     });
   });
 
