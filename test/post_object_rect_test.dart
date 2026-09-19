@@ -45,4 +45,12 @@ void main() {
     expect(r.width, closeTo(451 * 2560 / 1504, 1e-6));
     expect(objectRectFromScreen(reference: Rect.zero, object: const Rect.fromLTWH(0, 0, 1, 1), image: const Size(10, 10)), Rect.zero);
   });
+
+  test('overlayClipPlan: 繰り返しの並べ方 (D-266)', () {
+    const s = Duration(seconds: 1);
+    expect(overlayClipPlan(s * 4, s * 10, loop: true), [(start: Duration.zero, take: s * 4), (start: s * 4, take: s * 4), (start: s * 8, take: s * 2)]);
+    expect(overlayClipPlan(s * 4, s * 10, loop: false), [(start: Duration.zero, take: s * 4)]);
+    expect(overlayClipPlan(s * 20, s * 10, loop: true), [(start: Duration.zero, take: s * 10)]);
+    expect(overlayClipPlan(Duration.zero, s, loop: true), isEmpty);
+  });
 }

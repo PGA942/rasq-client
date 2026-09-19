@@ -276,6 +276,14 @@ void main() {
     expect(state.activeLayers.single, isA<WidgetLayer>());
     expect(state.activeLayers.single.meta?['rasqPost'], isNotNull);
     expect(state.activeLayers.single.interaction.enableMove, isTrue);
+    // オブジェクトを押す → フッターから編集の FOW (D-266)。静止画は不透明度だけ。「削除」でレイヤーが消える。
+    await tester.tap(find.byType(RawImage).first);
+    await settle(tester);
+    expect(find.byKey(const ValueKey('mediaObject.opacity')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mediaObject.loop')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('mediaObject.remove')));
+    await settle(tester);
+    expect(state.activeLayers, isEmpty);
   });
 
   testWidgets('加工画面で「ノート」を置いて × →「やめる」: 退避中のコンポーザーは書きかけのまま戻る。Escape でも閉じない', (tester) async {

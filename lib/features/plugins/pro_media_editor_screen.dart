@@ -31,6 +31,7 @@ import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
 import 'media_filter.dart';
 import 'media_filter_fow.dart';
+import 'media_object_fow.dart';
 import 'media_plugin_panel.dart';
 import 'slot_plugins.dart';
 import 'sticker_picker.dart';
@@ -157,8 +158,11 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   /// 画面に出ている動くオブジェクト(id → その要素。先に出たものが先頭 = 加工画面の本物。書き出しの写し用の複製は後ろ)。
   final Map<String, List<BuildContext>> _objectContexts = {};
 
-  /// 本体の動画が画面に出ている枠を測るためのキー。
-  final GlobalKey _videoAreaKey = GlobalKey();
+  /// 本体の動画が画面に出ている要素(枠を測る。エディターは動画の面を複数の場所に作るので GlobalKey は使えない。先頭 = 最初に出たもの)。
+  final List<BuildContext> _videoAreaContexts = [];
+
+  /// 置いたオブジェクトの設定 (D-266): meta `rasqObject` → 繰り返し / 速さ / 音 / 不透明度。
+  final Map<String, ValueNotifier<MediaObjectSettings>> _objectSettings = {};
 
   /// 動画の書き出しに失敗した直後(エディターの「完了 → 閉じる」を 1 回だけ無視して、加工を続けられるようにする)。
   bool _renderFailed = false;
@@ -336,7 +340,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     if (!mounted) return;
     _meta = meta;
     _video = ProVideoController(
-      videoPlayer: AspectRatio(aspectRatio: player.value.aspectRatio == 0 ? 16 / 9 : player.value.aspectRatio, child: VideoPlayer(player, key: _videoAreaKey)),
+      videoPlayer: AspectRatio(aspectRatio: player.value.aspectRatio == 0 ? 16 / 9 : player.value.aspectRatio, child: _Registered(mounted: _videoAreaContexts, child: VideoPlayer(player))),
       initialResolution: meta.resolution,
       videoDuration: meta.duration,
       fileSize: meta.fileSize,
@@ -498,9 +502,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   }
 
   /// 動くオブジェクトの動画をファイルに出して、絵([size])の画素での枠と組にする。
-  Future<List<({File video, ui.Rect rect})>> _motionFiles(ProImageEditorState editor, List<WidgetLayer> layers, ui.Size size, List<File> created) async {
+  Future<List<OverlayVideo>> _motionFiles(ProImageEditorState editor, List<WidgetLayer> layers, ui.Size size, List<File> created) async {
     final dir = await getTemporaryDirectory();
-    final posts = <({File video, ui.Rect rect})>[];
+    final posts = <OverlayVideo>[];
     for (final l in layers) {
       final m = _motionPosts[l.meta!['rasqPostVideo']]!;
       final f = await videoEditTempFile(dir, 'object-${posts.length}.${mediaContainerExt(m.video.length > 16 ? m.video.sublist(0, 16) : m.video) ?? 'mp4'}');
@@ -508,7 +512,15 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       created.add(f);
       // 枠は画面で測る(動画の加工)。測れなければ、レイヤーの数値から。
       final measured = _measureObject(l.meta!['rasqPostVideo'] as String, size);
-      posts.add((video: f, rect: measured ?? postObjectRectInImage(image: size, shown: editor.sizesManager.decodedImageSize, offset: l.offset, width: m.width, aspect: m.aspect, scale: l.scale)));
+      final set = _objectSettings[l.meta!['rasqObject']]?.value ?? const MediaObjectSettings();
+      posts.add((
+        video: f,
+        rect: measured ?? postObjectRectInImage(image: size, shown: editor.sizesManager.decodedImageSize, offset: l.offset, width: m.width, aspect: m.aspect, scale: l.scale),
+        loop: set.loop,
+        speed: set.speed,
+        volume: set.volume,
+        opacity: set.opacity,
+      ));
     }
     return posts;
   }
@@ -522,7 +534,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   /// 動くオブジェクトの枠を、本体の動画の枠と比べて測る(絵 [size] の画素で)。測れなければ null。
   Rect? _measureObject(String id, ui.Size size) {
-    final reference = _screenRectOf(_videoAreaKey.currentContext);
+    final reference = _videoAreaContexts.map(_screenRectOf).whereType<Rect>().firstOrNull;
     final object = _screenRectOf((_objectContexts[id] ?? const []).where((c) => c.mounted).firstOrNull);
     if (reference == null || object == null) return null;
     final r = objectRectFromScreen(reference: reference, object: object, image: size);
@@ -814,6 +826,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     if (width * aspect > shown.height * 0.6) width = shown.height * 0.6 / aspect;
     final id = '${DateTime.now().microsecondsSinceEpoch}';
     if (video != null) _motionPosts[id] = (video: video, width: width, aspect: aspect);
+    final settings = _objectSettings[id] = ValueNotifier(const MediaObjectSettings());
+    settings.addListener(() => _applyObjectSettings(id));
     editor.addLayer(WidgetLayer(
       width: width,
       interaction: LayerInteraction(enableEdit: false, enableRotate: video == null),
@@ -821,10 +835,19 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         width: width,
         child: AspectRatio(
           aspectRatio: image.width / image.height,
-          child: video == null ? RawImage(image: image, fit: BoxFit.fill) : _MotionObject(still: image, player: _startObjectPlayer(id, video), live: _objectsLive, mounted: _objectContexts.putIfAbsent(id, () => [])),
+          child: ValueListenableBuilder<MediaObjectSettings>(
+            valueListenable: settings,
+            builder: (_, set, _) => Opacity(
+              opacity: set.opacity,
+              child: video == null
+                  ? RawImage(image: image, fit: BoxFit.fill)
+                  // 半透明のときは、書き出しの写しに静止画を入れない(下に焼き込むと、重ねた動画と二重に濃くなる)。
+                  : _MotionObject(still: image, player: _startObjectPlayer(id, video), live: _objectsLive, hideStillOnCapture: set.opacity < 1, mounted: _objectContexts.putIfAbsent(id, () => [])),
+            ),
+          ),
         ),
       ),
-      meta: {...meta, if (video != null) 'rasqPostVideo': id},
+      meta: {...meta, 'rasqObject': id, if (video != null) 'rasqPostVideo': id},
     ));
     if (video != null && !_isVideo) _notify('完了すると、動画として書き出します');
   }
@@ -840,20 +863,42 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         await file.writeAsBytes(video, flush: true);
         final c = VideoPlayerController.file(file);
         await c.initialize();
-        await c.setLooping(true);
-        await c.setVolume(_isVideo ? 0 : 1);
         if (!mounted) {
           await c.dispose();
           return _deleteQuietly(file);
         }
         _objectPlayers[id] = (player: holder, file: file);
         holder.value = c;
+        _applyObjectSettings(id);
         if (!_isVideo || _player?.value.isPlaying == true) await c.play();
       } catch (_) {
         if (file != null) _deleteQuietly(file);
       }
     }();
     return holder;
+  }
+
+  /// 設定を、加工画面の再生へ(不透明度は見た目の側が読む)。動画の加工中は、音は出さない(本体と重なる。書き出しには入る)。
+  void _applyObjectSettings(String id) {
+    final c = _objectPlayers[id]?.player.value;
+    final set = _objectSettings[id]?.value;
+    if (c == null || set == null) return;
+    c.setLooping(set.loop);
+    c.setPlaybackSpeed(set.speed);
+    c.setVolume(_isVideo ? 0 : set.volume);
+  }
+
+  /// オブジェクトを押した (D-266): 再生していないときだけ、フッターから編集の FOW を出す。
+  Future<void> _editObject(Layer layer) async {
+    final id = layer.meta?['rasqObject'];
+    final settings = _objectSettings[id];
+    if (settings == null || _player?.value.isPlaying == true) return;
+    final isVideo = _motionPosts.containsKey(id);
+    final remove = await showMediaObjectFow(_overlay, title: layer.meta?['rasqPost'] != null ? 'ノート' : (isVideo ? '動画' : '画像'), isVideo: isVideo, settings: settings);
+    if (remove != true || !mounted) return;
+    final editor = _imageEditor;
+    final current = editor?.activeLayers.where((l) => l.meta?['rasqObject'] == id).firstOrNull;
+    if (editor != null && current != null) editor.removeLayer(current);
   }
 
   void _setObjectsPlaying(bool playing) {
@@ -1039,6 +1084,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       widget.args.bytes,
       key: _editorKey,
       callbacks: ProImageEditorCallbacks(
+        mainEditorCallbacks: MainEditorCallbacks(onLayerTapUp: _editObject),
         onImageEditingStarted: () => _objectsLive.value = false,
         onImageEditingComplete: _complete,
         onCloseEditor: (mode) {
@@ -1098,6 +1144,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       v,
       key: ValueKey('media.pro.video.$_videoGeneration'),
       callbacks: ProImageEditorCallbacks(
+        mainEditorCallbacks: MainEditorCallbacks(onLayerTapUp: _editObject),
         onImageEditingStarted: () => _objectsLive.value = false,
         onCompleteWithParameters: _renderVideo,
         onCloseEditor: (mode) {
@@ -1111,6 +1158,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         },
         videoEditorCallbacks: VideoEditorCallbacks(
           onPlay: () {
+            _overlay.close(mediaObjectFowId);
             _player?.play();
             _setObjectsPlaying(true);
           },
@@ -1175,7 +1223,8 @@ class _ActiveFilter {
 /// 動くオブジェクト (D-264): 下に静止画、上に再生中の動画。再生器が無い間 / 書き出しのために写す間は静止画だけ。
 /// 画面に出ている間、自分の要素を [mounted] に載せる(書き出しのとき、画面上の枠を測るため。D-265)。
 class _MotionObject extends StatefulWidget {
-  const _MotionObject({required this.still, required this.player, required this.live, required this.mounted});
+  const _MotionObject({required this.still, required this.player, required this.live, required this.mounted, this.hideStillOnCapture = false});
+  final bool hideStillOnCapture;
   final ui.Image still;
   final ValueNotifier<VideoPlayerController?> player;
   final ValueNotifier<bool> live;
@@ -1200,7 +1249,7 @@ class _MotionObjectState extends State<_MotionObject> {
 
   @override
   Widget build(BuildContext context) => Stack(fit: StackFit.expand, children: [
-        RawImage(image: widget.still, fit: BoxFit.fill),
+        ValueListenableBuilder<bool>(valueListenable: widget.live, builder: (_, on, _) => !on && widget.hideStillOnCapture ? const SizedBox.shrink() : RawImage(image: widget.still, fit: BoxFit.fill)),
         ValueListenableBuilder<bool>(
           valueListenable: widget.live,
           builder: (_, on, _) => !on
@@ -1211,4 +1260,31 @@ class _MotionObjectState extends State<_MotionObject> {
                 ),
         ),
       ]);
+}
+
+/// 画面に出ている間、自分の要素を [mounted] に載せる(画面上の枠を測るため。GlobalKey と違って、同じものが複数の場所に出てもよい)。
+class _Registered extends StatefulWidget {
+  const _Registered({required this.mounted, required this.child});
+  final List<BuildContext> mounted;
+  final Widget child;
+
+  @override
+  State<_Registered> createState() => _RegisteredState();
+}
+
+class _RegisteredState extends State<_Registered> {
+  @override
+  void initState() {
+    super.initState();
+    widget.mounted.add(context);
+  }
+
+  @override
+  void dispose() {
+    widget.mounted.remove(context);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
