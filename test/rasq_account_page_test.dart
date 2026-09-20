@@ -49,15 +49,22 @@ void main() {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
-    final posts = [
-      {'id': 'p1', 'body': 'はじめての投稿', 'images': <Object>[], 'createdAt': '2026-09-20T00:00:00Z'},
-      {'id': 'p2', 'body': 'ふたつめ', 'images': <Object>[], 'createdAt': '2026-09-19T00:00:00Z'},
+    const author = {'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ'};
+    final posts = <Map<String, Object?>>[
+      {'id': 'p1', 'author': author, 'body': 'はじめての投稿', 'images': <Object>[], 'createdAt': '2026-09-20T00:00:00Z', 'replyCount': 0, 'rebroadCount': 0, 'rebroaded': false, 'queues': <Object>[]},
+      {
+        'id': 'p2', 'author': author, 'body': 'ふたつめ', 'images': <Object>[], 'createdAt': '2026-09-19T00:00:00Z', 'replyCount': 2, 'rebroadCount': 1, 'rebroaded': false,
+        'queues': [{'packId': 'dev.pack', 'stickerId': 'star', 'url': 'https://central.test/api/v1/plugins/dev.pack/stickers/star', 'count': 3, 'mine': false}],
+      },
+      // ほかの人の投稿のリブロー(上限には数えない)。
+      {'id': 'p9', 'author': {'id': 'acc-2', 'handle': 'hanako', 'displayName': 'ハナコ'}, 'body': 'ハナコの投稿', 'images': <Object>[], 'createdAt': '2026-09-18T00:00:00Z', 'rebroadedBy': author, 'rebroaded': true, 'rebroadCount': 1},
     ];
     final links = [
       {'accountKey': 'misskey:mk.example:taro', 'kind': 'misskey', 'instance': 'mk.example', 'handle': 'taro', 'displayName': 'タロ@みすきー', 'serverName': 'Mk Example', 'profileUrl': 'https://mk.example/@taro', 'visibility': 'auto', 'autoVisible': true, 'visible': true},
       {'accountKey': 'misskey:mk.example:kagi', 'kind': 'misskey', 'instance': 'mk.example', 'handle': 'kagi', 'displayName': 'かぎ', 'visibility': 'auto', 'autoVisible': false, 'visible': false},
     ];
     final calls = <String>[];
+    final replies = <Map<String, Object?>>[];
     final mock = MockClient((req) async {
       final path = req.url.path.replaceFirst('/api/v1', '');
       calls.add('${req.method} $path');
@@ -77,6 +84,20 @@ void main() {
         case 'DELETE /me/posts/p1':
           posts.removeWhere((p) => p['id'] == 'p1');
           return http.Response('', 204);
+        case 'PUT /posts/p2/rebroad':
+          posts[posts.indexWhere((p) => p['id'] == 'p2')]
+            ..['rebroaded'] = true
+            ..['rebroadCount'] = 2;
+          return json(posts.firstWhere((p) => p['id'] == 'p2'));
+        case 'PUT /posts/p2/queue':
+          final q = (posts.firstWhere((p) => p['id'] == 'p2')['queues'] as List).first as Map;
+          q
+            ..['mine'] = true
+            ..['count'] = 4;
+          return json(posts.firstWhere((p) => p['id'] == 'p2'));
+        case 'POST /me/posts':
+          replies.add((jsonDecode(req.body) as Map).cast<String, Object?>());
+          return json({'id': 'r1', 'author': author, 'body': 'x', 'isReply': true}, 201);
         case 'GET /me/sns-accounts':
           return json(links);
         case 'PATCH /me/sns-accounts/misskey%3Amk.example%3Akagi':
@@ -121,7 +142,41 @@ void main() {
     expect(find.byKey(const ValueKey('rasqPage.compose')), findsOneWidget);
     expect(find.textContaining('(2 / 3)'), findsOneWidget);
     expect(find.text('はじめての投稿'), findsOneWidget);
-    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPage.post.p1')), matching: find.byTooltip('投稿を削除')));
+    // リブローは上限に数えない(通常の投稿 2 件 + リブロー 1 件 = 2 / 3)。リブローの帯が出る。
+    expect(find.text('タロ がリブロー'), findsOneWidget);
+    // アクションバー: リブロー → 件数と印が変わる。キューのチップ → 同じ絵を自分も付ける。返信 → replyTo つきで送る。
+    await tester.tap(find.byKey(const ValueKey('rasqPost.p2.rebroad')));
+    await tester.pumpAndSettle();
+    expect(calls, contains('PUT /posts/p2/rebroad'));
+    expect(find.descendant(of: find.byKey(const ValueKey('rasqPost.p2.rebroad')), matching: find.text('2')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rasqPost.p2.queue.dev.pack.star')));
+    await tester.pumpAndSettle();
+    expect(calls, contains('PUT /posts/p2/queue'));
+    await tester.tap(find.byKey(const ValueKey('rasqPost.p2.reply')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.descendant(of: find.byKey(const ValueKey('rasqReply.body')), matching: find.byType(TextField)), 'いいですね');
+    await tester.tap(find.text('返信').last);
+    await tester.pumpAndSettle();
+    expect(replies.single, {'body': 'いいですね', 'replyTo': 'p2'});
+    // キューのボタン: アセットパックが無ければ、ストアへの案内。
+    // 右下の「RASQ に投稿」に隠れない位置まで送る。
+    await tester.drag(find.byKey(const ValueKey('rasqPost.p2')), const Offset(0, -250));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rasqPost.p2.queue')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rasqQueue.empty')), findsOneWidget);
+    c.read(overlayManagerProvider).close('rasq.post.queuePicker');
+    await tester.pumpAndSettle();
+    // … = ほかの SNS と同じドロップダウン。削除はこの中(自分の投稿だけ)。
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('投稿の操作')));
+    await tester.pumpAndSettle();
+    expect(find.text('リンクをコピー'), findsOneWidget);
+    expect(find.text('削除'), findsNothing);
+    c.read(overlayManagerProvider).close('rasq.post.more');
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p1')), matching: find.byTooltip('投稿の操作')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('削除'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除する'));
     await tester.pumpAndSettle();

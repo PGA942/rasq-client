@@ -30,6 +30,7 @@ import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
 import '../features/profile/profile_edit_screen.dart';
 import '../features/profile/rasq_account_page_screen.dart';
+import '../features/profile/rasq_post_screen.dart';
 import '../features/profile/rasq_profile_edit_screen.dart';
 import '../features/clips/clip_timeline_screen.dart';
 import '../features/lists/lists_screens.dart';
@@ -117,6 +118,8 @@ abstract final class Routes {
   /// プラグインストア (M4 / D-120)。
   static const store = '/store';
   /// RASQ アカウントページ (D-270)。
+  /// RASQ の投稿のスレッド (D-271)。
+  static String rasqPost(String id) => '/rasq-post/${Uri.encodeComponent(id)}';
   static String rasqAccount(String handle) => '/rasq/${Uri.encodeComponent(handle)}';
   static String storePlugin(String id) => '/store/plugin/${Uri.encodeComponent(id)}';
 
@@ -232,6 +235,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             // プラグインボタン (D-210): 宣言されたボタン / 束ねる閾値。
             GoRoute(path: 'actionbar-plugins', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ActionBarPluginsScreen()),
           ]),
+          GoRoute(path: '/rasq-post/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqPostScreen(postId: s.pathParameters['id']!)),
           GoRoute(path: '/rasq/:handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!)),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
           GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiHomeScreen(), routes: [

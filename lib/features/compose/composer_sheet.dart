@@ -33,6 +33,9 @@ import 'media_file_pick.dart';
 import 'drafts_fow.dart';
 import 'emoji_picker_fow.dart';
 import 'mfm_picker_fow.dart';
+import '../../backend/orgate_client.dart';
+import '../../backend/rasq_account.dart';
+import '../../backend/rasq_account_page_api.dart';
 import '../plugins/slot_plugins.dart';
 import 'poll_editor.dart';
 
@@ -581,6 +584,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   AccountSession? _postAs;
   bool _targetsOpen = false;
 
+  /// RASQ 指定 (D-271): バンドルタイルの RASQ アカウントの行を**長押し**すると、SNS ではなく RASQ アカウントとして投稿する
+  /// (アカウントページの「投稿」に出る。本文 1000 文字 + 画像 4 枚、第一期は 3 件まで)。通常の新規投稿のときだけ。
+  bool _rasqTarget = false;
+
   /// 複数選択モード (D-128): アカウントごとに 非選択(0)→ 通常投稿(1)→
   /// **ノードを通した連動投稿**(2, ポスト先グラフにそのアカウントの
   /// ノード設定がある場合のみ)を循環する。選択分は送信時に連動投稿される。
@@ -783,8 +790,17 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         InkWell(
+          key: const ValueKey('composer.rasqRow'),
           borderRadius: BorderRadius.circular(12),
           onTap: () => setState(() => _targetsOpen = false),
+          // 長押し = RASQ 指定の入り切り (D-271)。
+          onLongPress: widget.target is! ComposeNormal || ref.read(orgateAccountProvider).value == null
+              ? null
+              : () => setState(() {
+                    _rasqTarget = !_rasqTarget;
+                    _targetsOpen = false;
+                    _error = null;
+                  }),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
             child: Row(children: [
@@ -796,6 +812,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   Text('@${rasq.account.handle}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
                 ]),
               ),
+              if (_rasqTarget) Padding(padding: const EdgeInsets.only(right: 4), child: Text('RASQ に投稿', style: RasqTypography.caption.copyWith(color: tokens.link))),
+              if (_rasqTarget) Icon(Icons.check, size: 16, color: tokens.link),
               const Icon(Icons.keyboard_arrow_up, size: 20),
             ]),
           ),
@@ -811,6 +829,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 } else {
                   setState(() {
                     _postAs = s;
+                    _rasqTarget = false;
                     _targetsOpen = false;
                   });
                   // 連動の下書き (D-129: delivery=draft): このアカウント宛の
@@ -1100,7 +1119,55 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     return (hasText || hasMedia || (_poll != null && pollOk)) && !(_isDm && _files.length > 1);
   }
 
+  /// RASQ アカウントとして投稿する (D-271)。SNS の投稿先 / 連動 / 公開範囲 / 投票 / 注釈は関係しない。
+  Future<void> _sendRasq() async {
+    final api = ref.read(rasqAccountPageApiProvider);
+    final me = ref.read(orgateAccountProvider).value;
+    if (api == null || me == null) return setState(() => _error = 'RASQ アカウントにログインしていません');
+    final unsupported = _poll != null
+        ? '投票'
+        : (_cwOn && _cw.text.trim().isNotEmpty ? '注釈' : (_files.any((f) => !(f.mimeType ?? 'image/').startsWith('image/')) ? '動画 / 音声' : null));
+    if (unsupported != null) return setState(() => _error = 'RASQ への投稿では、$unsupported は使えません(本文と画像 4 枚まで)');
+    if (_text.text.trim().length > 1000) return setState(() => _error = 'RASQ への投稿は 1000 文字までです');
+    final sanctions = ref.read(rasqSanctionsProvider).value ?? RasqSanctions.none;
+    final blocked = sanctions.blockedMessage('post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
+    if (blocked != null) return setState(() => _error = blocked);
+    setState(() {
+      _busy = true;
+      _error = null;
+      _progress = '送信中…';
+    });
+    try {
+      await api.createPost(_text.text.trim(), images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg')]);
+      ref.invalidate(rasqAccountPageProvider(me.handle));
+      if (_draftId != null) _drafts.clear(_draftId!);
+      _skipDraftOnDispose = true;
+      ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(const SnackBar(content: Text('RASQ に投稿しました')));
+      if (widget.resident) {
+        if (mounted) {
+          _skipDraftOnDispose = false;
+          setState(() {
+            _resetDraft();
+            _rasqTarget = false;
+          });
+        }
+      } else {
+        widget.onClose?.call();
+      }
+    } on OrgateException catch (e) {
+      if (mounted) setState(() => _error = e.code.code == '409' ? 'RASQ への投稿は 3 件までです。アカウントページで古い投稿を消してから投稿してください' : 'RASQ に投稿できませんでした: ${e.message}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+      }
+    }
+  }
+
   Future<void> _send() async {
+    if (_rasqTarget) return _sendRasq();
     final session = _session;
     if (session == null) return;
     // 連動投稿の計画 (D-129): confirm の届け方があれば**送信前(busy に入る
@@ -1299,9 +1366,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             Align(
               alignment: Alignment.centerLeft,
               child: AccountSelectPill(
-                account: me.account,
-                displayName: me.displayName,
-                avatarUrl: me.avatarUrl,
+                key: ValueKey(_rasqTarget ? 'composer.pill.rasq' : 'composer.pill.sns'),
+                // RASQ 指定 (D-271) のときは、RASQ アカウントの顔を出す。
+                account: _rasqTarget ? ref.watch(rasqAccountProvider).account : me.account,
+                displayName: _rasqTarget ? ref.watch(rasqAccountProvider).displayName : me.displayName,
+                avatarUrl: _rasqTarget ? ref.watch(rasqAccountProvider).avatarUrl : me.avatarUrl,
                 open: _targetsOpen,
                 tooltip: _isDm ? '' : '投稿先を選ぶ',
                 onTap: _isDm ? null : () => setState(() => _targetsOpen = !_targetsOpen),

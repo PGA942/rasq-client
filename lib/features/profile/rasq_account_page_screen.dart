@@ -15,6 +15,7 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../../shell/headers.dart';
+import 'rasq_post_tile.dart';
 import 'rasq_profile_edit_screen.dart' show profileImageContentType;
 
 /// RASQ アカウントページ (D-270 / S-021)。
@@ -59,7 +60,7 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
   }
 
   Future<void> _compose(RasqPostList posts) async {
-    if (posts.posts.length >= posts.limit) return _toast('投稿は ${posts.limit} 件までです。古い投稿を消してから投稿してください');
+    if (posts.posts.where((p) => p.rebroadedBy == null).length >= posts.limit) return _toast('投稿は ${posts.limit} 件までです。古い投稿を消してから投稿してください');
     final draft = await showRasqPostSheet(ref);
     if (draft == null || !mounted) return;
     setState(() => _busy = true);
@@ -71,17 +72,6 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
       _toast(e.code.code == '409' ? '投稿は ${posts.limit} 件までです' : '投稿できませんでした: ${e.message}');
     } finally {
       if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _delete(RasqAccountPost p) async {
-    final ok = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.delete', title: '投稿を削除', message: 'この投稿と、付いている画像を削除します。元に戻せません。', confirmText: '削除する', cancelText: 'キャンセル', destructive: true);
-    if (!ok || !mounted) return;
-    try {
-      await ref.read(rasqAccountPageApiProvider)!.deletePost(p.id);
-      ref.invalidate(rasqAccountPageProvider(widget.handle));
-    } on OrgateException catch (e) {
-      _toast('削除できませんでした: ${e.message}');
     }
   }
 
@@ -122,7 +112,7 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
               ),
             ],
             body: TabBarView(children: [
-              _PostsTab(posts: d.posts, profile: d.profile, isMine: isMine, onDelete: _delete),
+              _PostsTab(posts: d.posts, isMine: isMine, onChanged: () => ref.invalidate(rasqAccountPageProvider(widget.handle))),
               _MediaTab(posts: d.posts),
               _message(context, '作成したリストは、今後ここに出ます。'),
               _PluginsTab(profile: d.profile),
@@ -268,11 +258,12 @@ class RasqSnsTileChip extends StatelessWidget {
 }
 
 class _PostsTab extends StatelessWidget {
-  const _PostsTab({required this.posts, required this.profile, required this.isMine, required this.onDelete});
+  const _PostsTab({required this.posts, required this.isMine, required this.onChanged});
   final RasqPostList posts;
-  final RasqPublicProfile profile;
   final bool isMine;
-  final ValueChanged<RasqAccountPost> onDelete;
+
+  /// 投稿が変わった / 消えた(ページを取り直す)。
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -282,36 +273,10 @@ class _PostsTab extends StatelessWidget {
       if (isMine)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Text('RASQ アカウントとしての投稿は、いまは ${posts.limit} 件までです(${posts.posts.length} / ${posts.limit})。SNS アカウントの投稿をまとめて出す機能は、今後の対応です。', key: const ValueKey('rasqPage.posts.note'), style: caption),
+          child: Text('RASQ アカウントとしての投稿は、いまは ${posts.limit} 件までです(${posts.posts.where((p) => p.rebroadedBy == null).length} / ${posts.limit})。SNS アカウントの投稿をまとめて出す機能は、今後の対応です。', key: const ValueKey('rasqPage.posts.note'), style: caption),
         ),
       if (posts.posts.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('投稿はまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
-      for (final p in posts.posts)
-        Container(
-          key: ValueKey('rasqPage.post.${p.id}'),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
-          padding: const EdgeInsets.all(RasqSpacing.page),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            RasqAvatar(imageUrl: profile.avatarUrl, size: 36, fallbackLabel: profile.displayName.isEmpty ? profile.handle : profile.displayName),
-            const SizedBox(width: RasqSpacing.sm),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(child: Text(profile.displayName.isEmpty ? profile.handle : profile.displayName, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-                  if (p.createdAt != null) Text('${p.createdAt!.toLocal().month}/${p.createdAt!.toLocal().day}', style: caption),
-                  if (isMine) RasqIconButton(icon: Icons.delete_outline, size: 18, tooltip: '投稿を削除', onPressed: () => onDelete(p)),
-                ]),
-                if (p.body.isNotEmpty) Text(p.body),
-                if (p.images.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: RasqSpacing.sm),
-                    child: Wrap(spacing: 6, runSpacing: 6, children: [
-                      for (final i in p.images) ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(i.url.toString(), width: p.images.length == 1 ? 260 : 126, height: p.images.length == 1 ? 180 : 126, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox(width: 126, height: 126))),
-                    ]),
-                  ),
-              ]),
-            ),
-          ]),
-        ),
+      for (final p in posts.posts) RasqPostTileView(post: p, onChanged: onChanged, onOpen: () => context.push(Routes.rasqPost(p.id))),
     ]);
   }
 }
