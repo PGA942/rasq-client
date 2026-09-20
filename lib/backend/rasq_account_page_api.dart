@@ -90,24 +90,102 @@ class RasqPostImage {
   final int height;
 }
 
+/// 投稿の作者。
+@immutable
+class RasqPostAuthor {
+  const RasqPostAuthor({required this.id, required this.handle, required this.displayName, this.avatarUrl});
+  final String id;
+  final String handle;
+  final String displayName;
+  final Uri? avatarUrl;
+  String get label => displayName.isEmpty ? handle : displayName;
+
+  static RasqPostAuthor? fromJson(Object? j) => j is Map
+      ? RasqPostAuthor(id: '${j['id'] ?? ''}', handle: '${j['handle'] ?? ''}', displayName: '${j['displayName'] ?? ''}', avatarUrl: _http(j['avatarUrl']))
+      : null;
+}
+
+/// キュー(アセットパックの絵でのリアクション)を、絵ごとにまとめたもの (S-022)。
+@immutable
+class RasqQueueCount {
+  const RasqQueueCount({required this.packId, required this.stickerId, required this.url, required this.count, this.mine = false});
+  final String packId;
+  final String stickerId;
+
+  /// 絵(Central がパックから取り出して配る。パックを入れていなくても見える)。
+  final Uri url;
+  final int count;
+  final bool mine;
+}
+
 /// RASQ アカウントとしての投稿。
 @immutable
 class RasqAccountPost {
-  const RasqAccountPost({required this.id, required this.body, this.images = const [], this.createdAt});
+  const RasqAccountPost({
+    required this.id,
+    required this.body,
+    this.author,
+    this.images = const [],
+    this.createdAt,
+    this.replyTo,
+    this.isReply = false,
+    this.replyCount = 0,
+    this.rebroadCount = 0,
+    this.rebroaded = false,
+    this.queues = const [],
+    this.rebroadedBy,
+  });
   final String id;
   final String body;
+  final RasqPostAuthor? author;
   final List<RasqPostImage> images;
   final DateTime? createdAt;
+
+  /// 返信の元(消えていれば null で [isReply] だけ true)。
+  final String? replyTo;
+  final bool isReply;
+  final int replyCount;
+  final int rebroadCount;
+
+  /// 自分がリブローしているか。
+  final bool rebroaded;
+  final List<RasqQueueCount> queues;
+
+  /// 一覧で、誰かのリブローとして出ているとき。
+  final RasqPostAuthor? rebroadedBy;
+
+  /// 共有の行き先(Web の個別ページ)。
+  Uri permalink(Uri central) => central.replace(path: '/p/$id', query: null);
 
   factory RasqAccountPost.fromJson(Map<String, Object?> j) => RasqAccountPost(
         id: j['id'] as String? ?? '',
         body: j['body'] as String? ?? '',
+        author: RasqPostAuthor.fromJson(j['author']),
         images: [
           for (final i in j['images'] as List? ?? const [])
             if (i is Map && _http(i['url']) != null) RasqPostImage(id: '${i['id']}', url: _http(i['url'])!, width: (i['width'] as num?)?.toInt() ?? 0, height: (i['height'] as num?)?.toInt() ?? 0),
         ],
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
+        replyTo: j['replyTo'] as String?,
+        isReply: j['isReply'] == true,
+        replyCount: (j['replyCount'] as num?)?.toInt() ?? 0,
+        rebroadCount: (j['rebroadCount'] as num?)?.toInt() ?? 0,
+        rebroaded: j['rebroaded'] == true,
+        queues: [
+          for (final q in j['queues'] as List? ?? const [])
+            if (q is Map && _http(q['url']) != null) RasqQueueCount(packId: '${q['packId']}', stickerId: '${q['stickerId']}', url: _http(q['url'])!, count: (q['count'] as num?)?.toInt() ?? 0, mine: q['mine'] == true),
+        ],
+        rebroadedBy: RasqPostAuthor.fromJson(j['rebroadedBy']),
       );
+}
+
+/// 投稿 1 つと、その前後(`GET /posts/{id}`)。
+@immutable
+class RasqThread {
+  const RasqThread({required this.post, this.parent, this.replies = const []});
+  final RasqAccountPost post;
+  final RasqAccountPost? parent;
+  final List<RasqAccountPost> replies;
 }
 
 @immutable
@@ -229,6 +307,30 @@ class RasqAccountPageApi {
 
   Future<void> deletePost(String id) => _client.delete('/me/posts/$id');
 
+  // ── アクション (S-022) ──
+  Future<RasqThread> thread(String id) async {
+    final j = await _client.getJson('/posts/$id');
+    RasqAccountPost? one(Object? v) => v is Map ? RasqAccountPost.fromJson(v.cast<String, Object?>()) : null;
+    return RasqThread(post: one(j['post'])!, parent: one(j['parent']), replies: [for (final r in j['replies'] as List? ?? const []) if (one(r) != null) one(r)!]);
+  }
+
+  /// 返信(文字だけ、500 文字まで)。
+  Future<RasqAccountPost> reply(String postId, String body) async => RasqAccountPost.fromJson(await _client.postJson('/me/posts', {'body': body, 'replyTo': postId}));
+
+  /// リブローの入り切り。戻り = 更新後の投稿。
+  Future<RasqAccountPost> setRebroad(String postId, {required bool on}) async {
+    if (on) return RasqAccountPost.fromJson(await _client.putJson('/posts/$postId/rebroad', const {}));
+    await _client.delete('/posts/$postId/rebroad');
+    return (await thread(postId)).post;
+  }
+
+  /// キュー: アセットパックの絵でリアクション(そのパックをインストールしていること)。null で外す。
+  Future<RasqAccountPost> setQueue(String postId, ({String packId, String stickerId})? sticker) async {
+    if (sticker != null) return RasqAccountPost.fromJson(await _client.putJson('/posts/$postId/queue', {'packId': sticker.packId, 'stickerId': sticker.stickerId}));
+    await _client.delete('/posts/$postId/queue');
+    return (await thread(postId)).post;
+  }
+
   Future<List<RasqSnsLink>> mySnsLinks() async => [for (final l in await _client.getList('/me/sns-accounts')) if (l is Map) RasqSnsLink.fromJson(l.cast<String, Object?>())];
 
   Future<RasqSnsLink> setSnsVisibility(String accountKey, SnsTileVisibility v) async =>
@@ -246,4 +348,11 @@ final rasqAccountPageProvider = FutureProvider.autoDispose.family<({RasqPublicPr
   if (api == null) throw StateError('RASQ Central の接続先が未設定です');
   final (profile, posts) = await (api.profile(handle), api.posts(handle)).wait;
   return (profile: profile, posts: posts);
+});
+
+/// 投稿 1 つのスレッド。
+final rasqThreadProvider = FutureProvider.autoDispose.family<RasqThread, String>((ref, id) async {
+  final api = ref.watch(rasqAccountPageApiProvider);
+  if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+  return api.thread(id);
 });
