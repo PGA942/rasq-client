@@ -28,6 +28,7 @@ import 'composer_learning.dart';
 import 'compose_providers.dart';
 export 'compose_providers.dart' show ComposerInitialFile;
 import 'account_select.dart';
+import '../home/account_affinity.dart';
 import 'compose_target.dart';
 import 'media_file_pick.dart';
 import 'drafts_fow.dart';
@@ -1278,6 +1279,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ComposeDm(room: final r) => await session.sendDm(r, draft),
         _ => await session.createPost(draft),
       };
+      // 返信 / 引用した相手を、投稿したアカウントの「やりとり」として覚える (D-280: 共有 / リノートに使うアカウントの予測の材料)。
+      final talkedTo = replyTo ?? quoteOf;
+      if (talkedTo != null) ref.read(accountAffinityProvider.notifier).record(Post(id: talkedTo.id, account: session.account, author: talkedTo.author, createdAt: talkedTo.createdAt, body: '')).ignore();
       // 複数選択モード (D-128/D-129): 計画の実行 — auto/confirm 済みは投稿、
       // draft はそのアカウント宛の下書き。正規表現加工 (D-130) も各送信先に。
       final (linkErrors, linkedPosted) = await _executeMultiPlan(multiPlan, NewPost(
