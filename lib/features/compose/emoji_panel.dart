@@ -218,11 +218,17 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
     }
     if (stickers == null) {
     if (q.isEmpty && recent.isNotEmpty) {
-      label('履歴');
-      grid([for (final e in recent) _CellSpec(e, _urlFor(e, custom.value))]);
+      // 履歴は全アカウント共通なので、**このアカウントのサーバーに無いカスタム絵文字は出さない** (D-282。
+      // 以前は別のアカウントの絵文字が並び、「ピッカーの中身が切り替わらない」ように見えていた)。
+      final usable = [for (final e in recent) if (_usable(e, custom.value)) e];
+      if (usable.isNotEmpty) {
+        label('履歴');
+        grid([for (final e in usable) _CellSpec(e, _urlFor(e, custom.value))]);
+      }
     }
     if (q.isEmpty) {
-      final predicted = _prediction(custom.value);
+      // 予測も同じ: 履歴 / 付いているリアクション(他サーバーのものは名前だけ借りている)由来の、このサーバーに無い絵文字は出さない。
+      final predicted = [for (final e in _prediction(custom.value)) if (_usable(e, custom.value)) e];
       if (predicted.isNotEmpty) {
         label('予測');
         grid([for (final e in predicted) _CellSpec(e, _urlFor(e, custom.value))]);
@@ -383,6 +389,21 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
         grid([for (final s in entry.value.take(EmojiPanel.collapsedCount)) cell(s)]);
       }
     }
+  }
+
+  // このアカウントのサーバーにあるカスタム絵文字の名前(一覧が変わったときだけ作り直す)。
+  Set<String>? _names;
+  List<EmojiInfo>? _namesFrom;
+
+  /// このアカウントで使える絵文字か: Unicode はいつでも、カスタム(`:name:`)はサーバーの一覧にあるものだけ(読み込み中は出さない)。
+  bool _usable(String e, List<EmojiInfo>? custom) {
+    if (!e.startsWith(':')) return true;
+    if (custom == null) return false;
+    if (_names == null || !identical(_namesFrom, custom)) {
+      _names = {for (final c in custom) c.name};
+      _namesFrom = custom;
+    }
+    return _names!.contains(e.substring(1, e.length - 1).split('@').first);
   }
 
   static Uri? _urlFor(String e, List<EmojiInfo>? custom) {

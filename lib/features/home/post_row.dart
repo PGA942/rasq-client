@@ -118,6 +118,13 @@ class _PostRowState extends ConsumerState<PostRow> {
 
   Post get post => _actAs ?? widget.post;
 
+  @override
+  void didUpdateWidget(PostRow old) {
+    super.didUpdateWidget(old);
+    // 行が別の投稿に使い回されたら、↓ の切り替えは持ち越さない (D-282)。
+    if (old.post.key != widget.post.key) _actAs = null;
+  }
+
   /// [_actAs] 中はそのコピーでアクションを実行する。
   PostActionHandler get _onAction => (_actAs != null && widget.actionsFor != null) ? widget.actionsFor!(post) : widget.onAction;
 
@@ -375,11 +382,14 @@ class _PostRowState extends ConsumerState<PostRow> {
     // リアクション済みなら、確認なしで取り消す (D-281)。
     if (a.genreTag == 'Reaction' && st.done) return _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
     if (a.genreTag != 'Reaction' || !a.iconPerPost) return _run(a).catchError((_) {});
-    final predicted = ref.read(reactionHistoryProvider.notifier).predictFor(post);
+    // 待つ前に、実行先を掴む(待っている間に行が別の投稿に使い回されても、押した投稿に付ける。D-282)。
+    final shown = post;
+    final handler = _onAction;
+    final predicted = ref.read(reactionHistoryProvider.notifier).predictFor(shown);
     final reaction = predicted == null ? null : await _sendable(predicted);
     if (!mounted) return;
-    if (reaction == null) return _openReactionPicker(a, anchor);
-    await _onAction(a, args: {'reaction': reaction}).then((_) => ref.read(reactionHistoryProvider.notifier).record(reaction)).catchError((_) {});
+    if (reaction == null) return post.key == shown.key ? _openReactionPicker(a, anchor) : null;
+    await handler(a, args: {'reaction': reaction}).then((_) => ref.read(reactionHistoryProvider.notifier).record(reaction)).catchError((_) {});
   }
 
   /// 予測を、このアカウントのサーバーで付けられる形に。付けられなければ null。
@@ -395,11 +405,18 @@ class _PostRowState extends ConsumerState<PostRow> {
   }
 
   /// リアクションの絵文字ピッカー。**実物のリアクションボタンにアンカー**する (D-065: 基本下付き・余白不足で上付き)。
+  ///
+  /// **開いた時点の投稿と実行先を掴んでおく** (D-282): ピッカーを開いている間に TL へ投稿が足されると、この行の State が別の投稿に
+  /// 使い回されることがあり、選んだ瞬間の `post` / `_onAction` を読むと、隣の投稿にリアクションしてしまっていた。
   void _openReactionPicker(ActionDescriptor a, Rect anchor) {
-    openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context), anchor: anchor, accountKey: post.account.key,
-        predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
-        existingReactions: post.reactions, onPick: (e) {
-      _onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
+    final target = post;
+    final handler = _onAction;
+    // 行が作り直されて(TL の取り直しなど)この State が捨てられたあとに選ばれても動くよう、ref もここで読んでおく。
+    final history = ref.read(reactionHistoryProvider.notifier);
+    openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context), anchor: anchor, accountKey: target.account.key,
+        predictionContext: '${target.contentWarning ?? ''} ${target.body} ${target.quote?.body ?? ''}',
+        existingReactions: target.reactions, onPick: (e) {
+      handler(a, args: {'reaction': e}).then((_) => history.record(e)).catchError((_) {});
     });
   }
 

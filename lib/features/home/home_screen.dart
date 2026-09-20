@@ -196,6 +196,8 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
               // 上付きバナー行 (D-085): TL プラグインのバッジ(RT 行と同スタイル)。
               final badge = tl.badges[p.id];
               return PostRow(
+                // 投稿ごとのキー (D-282): TL に投稿が足されても、行の State(↓ の切り替え / 開いているピッカーの相手)が隣の投稿へずれない。
+                key: ValueKey('tl.post.${p.key}'),
                 post: p,
                 actions: actions,
                 onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args),
