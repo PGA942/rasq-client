@@ -10,6 +10,7 @@ import '../session/session_providers.dart';
 import '../session/session_storage.dart';
 import '../session/rasq_accounts.dart';
 import 'orgate_client.dart';
+import 'rasq_account_page_api.dart';
 
 /// RASQ アカウント (D-087) — アカウントバンドルの顔。
 ///
@@ -315,6 +316,41 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   ///
   /// [prune] = false なら足すだけで、サーバーにだけあるアカウントは消さない(登録の FOW で
   /// 「置き換えない」を選んだアカウント、D-241)。
+  /// アプリを開いている間に 1 回だけ調べる(同期のたびに SNS へ取りに行かない)。
+  final Map<String, Map<String, Object?>> _tileCache = {};
+
+  /// タイルに要る情報を、その SNS から取る。**鍵アカウント**か、**直近の投稿の公開範囲がフォロワーのみに寄っている**なら
+  /// `autoVisible: false`([snsAutoVisible])。どれも付随情報なので、失敗は握りつぶす。
+  Future<Map<String, Object?>> _tileInfo(AccountSession s) async {
+    final cached = _tileCache[s.account.key];
+    if (cached != null) return cached;
+    final out = <String, Object?>{};
+    try {
+      final registry = ref.read(pluginRegistryProvider);
+      final session = registry.session(s);
+      final me = await session.me();
+      final profile = await session.user(me.id);
+      List<String?> visibilities = const [];
+      try {
+        visibilities = [for (final p in (await session.userPosts(me.id, limit: 20)).items) p.visibility];
+      } catch (_) {}
+      out['autoVisible'] = snsAutoVisible(isLocked: profile.isLocked, recentVisibilities: visibilities);
+      final url = profile.profileUrl ?? profile.url;
+      if (url != null && (url.scheme == 'https' || url.scheme == 'http')) out['profileUrl'] = url.toString();
+      try {
+        final info = await registry.plugin(s.pluginId)?.inspectServer(s.account.instance);
+        if (info != null) {
+          if (info.name.isNotEmpty) out['serverName'] = info.name;
+          if (info.iconUrl != null) out['serverIconUrl'] = info.iconUrl.toString();
+        }
+      } catch (_) {}
+      _tileCache[s.account.key] = out;
+    } catch (e) {
+      debugPrint('rasq account: tile info unavailable for ${s.account.key}: $e');
+    }
+    return out;
+  }
+
   Future<void> syncBundle(List<AccountSession> sessions, {bool prune = true}) async {
     final client = ref.read(centralClientProvider);
     if (client == null || state.value == null) return;
@@ -326,6 +362,9 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
           if (e is Map) e['accountKey'] as String? ?? '',
       };
       for (final s in wanted.values) {
+        // アカウントページのタイル (S-021): 自動で出してよいか / サーバーの名前とアイコン / その SNS 上のプロフィール。
+        // 取れなければ送らない(サーバーは前の値のまま。新規は「出す」)。
+        final tile = await _tileInfo(s);
         await client.putJson('/me/sns-accounts', {
           'kind': s.account.kind.name,
           'instance': s.account.instance,
@@ -333,6 +372,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
           'pluginId': s.pluginId,
           if (s.displayName != null) 'displayName': s.displayName,
           if (s.avatarUrl != null) 'avatarUrl': s.avatarUrl.toString(),
+          ...tile,
         });
       }
       if (!prune) return;
