@@ -28,8 +28,11 @@ import 'emoji_prediction.dart';
 /// 数千個のコールバック登録が FPS を殺していたため廃止(ListView の遅延
 /// ビルドが同じ役割をゼロコストで果たす)。
 class EmojiPanel extends ConsumerStatefulWidget {
-  const EmojiPanel({super.key, required this.onPick, this.height, this.predictionContext, this.existingReactions = const {}, this.actionBar, this.spec, this.stickers});
+  const EmojiPanel({super.key, required this.onPick, this.accountKey, this.height, this.predictionContext, this.existingReactions = const {}, this.actionBar, this.spec, this.stickers});
   final ValueChanged<String> onPick;
+
+  /// どのアカウントのカスタム絵文字を出すか (D-278)。null = いま表示しているアカウント。
+  final String? accountKey;
 
   /// Fixed height; null = fill the parent (FOW panel).
   final double? height;
@@ -192,7 +195,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final custom = ref.watch(customEmojisProvider);
+    final custom = ref.watch(customEmojisForProvider(widget.accountKey));
     final recent = ref.watch(recentEmojiProvider);
     final q = _q.text.trim().toLowerCase();
 

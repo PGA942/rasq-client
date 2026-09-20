@@ -79,3 +79,16 @@ class ReactionHistoryStore extends AsyncNotifier<Map<String, int>> {
 }
 
 final reactionHistoryProvider = AsyncNotifierProvider<ReactionHistoryStore, Map<String, int>>(ReactionHistoryStore.new);
+
+/// 他サーバーのカスタム絵文字(`:name@host:`)なら、その名前。Unicode / 自サーバーの絵文字(`:name:` / `:name@.:`)は null。
+/// 他サーバーの絵文字はそのままでは付けられない(サーバーが別の絵文字にすり替える)ので、同じ名前の自サーバーの絵文字に読み替えるか、
+/// 無ければピッカーを開く (D-278)。
+String? remoteReactionName(String reaction) {
+  if (!reaction.startsWith(':') || !reaction.endsWith(':') || reaction.length < 3) return null;
+  final inner = reaction.substring(1, reaction.length - 1);
+  final at = inner.indexOf('@');
+  if (at <= 0) return null;
+  final host = inner.substring(at + 1);
+  return host.isEmpty || host == '.' ? null : inner.substring(0, at);
+}
+

@@ -128,6 +128,16 @@ class _ActionBarButton extends StatelessWidget {
     };
   }
 
+  /// タップ: 矩形つき([RasqActionBarItem.onAnchorTap])があれば、そちらを優先する。絵文字 / 画像のアイコンを出しているときも同じ。
+  VoidCallback? _tap(BuildContext ctx) {
+    final anchorTap = item.onAnchorTap;
+    if (anchorTap == null) return item.onTap;
+    return () {
+      final box = ctx.findRenderObject() as RenderBox;
+      anchorTap(box.localToGlobal(Offset.zero) & box.size);
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final count = item.count ?? 0;
@@ -157,7 +167,7 @@ class _ActionBarButton extends StatelessWidget {
           selected: item.done,
           label: item.label,
           child: InkResponse(
-            onTap: item.enabled ? item.onTap : null,
+            onTap: item.enabled ? _tap(context) : null,
             onLongPress: item.enabled ? _longPress(context) : null,
             radius: 24,
             child: ConstrainedBox(
@@ -181,7 +191,7 @@ class _ActionBarButton extends StatelessWidget {
           selected: item.done,
           label: item.label,
           child: InkResponse(
-            onTap: item.enabled ? item.onTap : null,
+            onTap: item.enabled ? _tap(context) : null,
             onLongPress: item.enabled ? _longPress(context) : null,
             radius: 24,
             child: ConstrainedBox(
@@ -197,14 +207,7 @@ class _ActionBarButton extends StatelessWidget {
     }
     return Builder(
       builder: (ctx) {
-        VoidCallback? onTap = item.onTap;
-        final anchorTap = item.onAnchorTap;
-        if (anchorTap != null) {
-          onTap = () {
-            final box = ctx.findRenderObject() as RenderBox;
-            anchorTap(box.localToGlobal(Offset.zero) & box.size);
-          };
-        }
+        final onTap = _tap(ctx);
         return showCount
             ? RasqActionButton.iconCount(
                 icon: item.icon,
