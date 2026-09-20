@@ -112,12 +112,52 @@ class RasqPostTileView extends ConsumerWidget {
     await _run(context, ref, (api) => api.reply(post.id, text));
   }
 
+  Widget? _media() => post.images.isEmpty
+      ? null
+      : RasqMediaGrid(items: [for (final i in post.images) MediaItem(id: i.id, type: MediaType.image, url: i.url, sensitive: i.sensitive, width: i.width == 0 ? null : i.width, height: i.height == 0 ? null : i.height)], maxVisible: 6);
+
+  /// 本文 + 投票(+ 注釈つきのときはメディアも)。
+  Widget _body(BuildContext context, WidgetRef ref) {
+    final p = post.poll;
+    final media = post.cw.isNotEmpty ? _media() : null;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (post.body.isNotEmpty) Text(post.body, style: focused ? RasqTypography.body.copyWith(fontSize: 16) : RasqTypography.body),
+      if (media != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: media),
+      if (p != null)
+        Padding(
+          padding: const EdgeInsets.only(top: RasqSpacing.sm),
+          child: RasqPollWidget(
+            key: ValueKey('rasqPost.${post.id}.poll'),
+            poll: Poll(
+              options: [for (final c in p.choices) PollOption(text: c.text, votes: c.votes)],
+              multiple: p.multiple,
+              expiresAt: p.expiresAt,
+              votedIndices: {for (var i = 0; i < p.choices.length; i++) if (p.choices[i].voted) i},
+            ),
+            // 選んだものを 1 つずつ送る(複数選択は選択肢ごとに 1 票)。
+            onVote: p.expired
+                ? null
+                : (picked) => _run(context, ref, (api) async {
+                      for (final i in picked) {
+                        await api.vote(post.id, i);
+                      }
+                    }),
+          ),
+        ),
+    ]);
+  }
+
   /// キューのキー(絵文字ピッカー / リアクションのチップで使う 1 つの文字列)。
-  static String queueKey(String packId, String stickerId) => '$packId|$stickerId';
+  static String queueKey(String? packId, String stickerId) => packId == null ? likeReaction : ':$packId|$stickerId:';
+
+  /// いいね(パックを使わないキュー)のリアクション表記。
+  static const likeReaction = '❤';
 
   /// キュー: **絵文字ピッカーの使い回し**(履歴 / 予測 / パックごとの省略表示 / 検索。D-273)。リアクションと同じく、ボタンに張り付いて出る。
   Future<void> _queue(BuildContext context, WidgetRef ref, Rect? anchor) async {
     if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインするとキューできます');
+    // いいねのみ (S-023): ピッカーは出さず、いいねを付ける。
+    if (post.likeOnly) return _run(context, ref, (api) => api.like(post.id));
     await ref.read(stickerPacksProvider.notifier).ready;
     if (!context.mounted) return;
     final packs = ref.read(stickerPacksProvider);
@@ -132,10 +172,10 @@ class RasqPostTileView extends ConsumerWidget {
       closeOnPick: true,
       anchor: anchor,
       predictionContext: post.body,
-      existingReactions: {for (final q in post.queues) queueKey(q.packId, q.stickerId): q.count},
+      existingReactions: {for (final q in post.queues) if (!q.like) '${q.packId}|${q.stickerId}': q.count},
       stickers: [
         for (final pack in packs)
-          for (final s in pack.stickers) EmojiPanelSticker(key: queueKey(pack.id, s.id), group: pack.name, label: s.label, tags: s.tags, file: s.file),
+          for (final s in pack.stickers) EmojiPanelSticker(key: '${pack.id}|${s.id}', group: pack.name, label: s.label, tags: s.tags, file: s.file),
       ],
       onPick: (key) {
         final parts = key.split('|');
@@ -184,25 +224,34 @@ class RasqPostTileView extends ConsumerWidget {
               }
             : null,
         content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (post.body.isNotEmpty) Text(post.body, style: focused ? RasqTypography.body.copyWith(fontSize: 16) : RasqTypography.body),
+          // 注釈 (CW) つきは、注釈だけ見せて、中身は押すまで畳む(SNS の投稿と同じ)。
+          if (post.cw.isNotEmpty) _CwFold(cw: post.cw, child: _body(context, ref))
+          else
+            _body(context, ref),
           // 付いているキュー = リアクションのチップ(絵 + 件数。自分のものはハイライト)。押すと、同じ絵を自分も付ける / 外す。
           if (post.queues.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: RasqSpacing.sm),
               child: RasqReactionChips(
-                reactions: {for (final q in post.queues) ':${queueKey(q.packId, q.stickerId)}:': q.count},
-                emojiUrls: {for (final q in post.queues) ':${queueKey(q.packId, q.stickerId)}:': q.url},
-                myReaction: mine == null ? null : ':${queueKey(mine.packId, mine.stickerId)}:',
+                reactions: {for (final q in post.queues) queueKey(q.packId, q.stickerId): q.count},
+                emojiUrls: {for (final q in post.queues) if (q.url != null) queueKey(q.packId, q.stickerId): q.url!},
+                myReaction: mine == null ? null : queueKey(mine.packId, mine.stickerId),
                 onTap: (r) {
+                  final isMineChip = mine != null && queueKey(mine.packId, mine.stickerId) == r;
                   final parts = r.replaceAll(':', '').split('|');
-                  if (parts.length != 2) return;
-                  final isMineChip = mine != null && mine.packId == parts[0] && mine.stickerId == parts[1];
-                  _run(context, ref, (api) => api.setQueue(post.id, isMineChip ? null : (packId: parts[0], stickerId: parts[1])));
+                  if (isMineChip) {
+                    _run(context, ref, (api) => api.setQueue(post.id, null));
+                  } else if (r == likeReaction) {
+                    _run(context, ref, (api) => api.like(post.id));
+                  } else if (parts.length == 2) {
+                    _run(context, ref, (api) => api.setQueue(post.id, (packId: parts[0], stickerId: parts[1])));
+                  }
                 },
               ),
             ),
         ]),
-        media: post.images.isEmpty ? null : RasqMediaGrid(items: [for (final i in post.images) MediaItem(id: i.id, type: MediaType.image, url: i.url, width: i.width == 0 ? null : i.width, height: i.height == 0 ? null : i.height)]),
+        // 注釈つきのときは、メディアも畳みの中(_body)に入れる。
+        media: post.cw.isNotEmpty ? null : _media(),
         // アクションバー: 返信 / リブロー (ReBroad) / キュー (Queue) + 共有。キューは、付けていれば押すと外す、長押しでピッカー(Misskey のリアクションと同じ)。
         actionBar: Builder(
           builder: (bar) => RasqActionBar(
@@ -221,9 +270,10 @@ class RasqPostTileView extends ConsumerWidget {
               ),
               RasqActionBarItem(
                 id: 'queue',
-                label: 'キュー',
-                icon: Icons.add_reaction_outlined,
-                doneIcon: Icons.add_reaction,
+                // いいねのみ (S-023) の投稿は、ボタンも ❤ に。
+                label: post.likeOnly ? 'いいね' : 'キュー',
+                icon: post.likeOnly ? Icons.favorite_border : Icons.add_reaction_outlined,
+                doneIcon: post.likeOnly ? Icons.favorite : Icons.add_reaction,
                 done: mine != null,
                 doneColor: tokens.link,
                 showCount: false,
@@ -251,3 +301,26 @@ class RasqPostTileView extends ConsumerWidget {
   }
 }
 
+/// 注釈 (CW) の畳み: 注釈と「もっと見る」→ 押すと中身。
+class _CwFold extends StatefulWidget {
+  const _CwFold({required this.cw, required this.child});
+  final String cw;
+  final Widget child;
+  @override
+  State<_CwFold> createState() => _CwFoldState();
+}
+
+class _CwFoldState extends State<_CwFold> {
+  bool _open = false;
+  @override
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(widget.cw, style: RasqTypography.body),
+        TextButton(
+          key: const ValueKey('rasqPost.cw.toggle'),
+          style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 28), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          onPressed: () => setState(() => _open = !_open),
+          child: Text(_open ? '隠す' : 'もっと見る'),
+        ),
+        if (_open) widget.child,
+      ]);
+}

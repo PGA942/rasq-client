@@ -9,6 +9,7 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
+import 'package:rasq_client/features/compose/poll_editor.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -64,5 +65,57 @@ void main() {
     await tester.pumpAndSettle();
     expect(sent.single, {'body': 'RASQ からこんにちは'});
     expect(find.text('RASQ に投稿しました'), findsOneWidget);
+  });
+
+  testWidgets('RASQ 指定でも、注釈と投票は SNS と同じに使える(投票は 6 個まで)。送るのは cw / poll つきの POST /me/posts', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final sent = <Map<String, Object?>>[];
+    final mock = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      if (req.method == 'GET' && path == '/me') return json({'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ'});
+      if (req.method == 'POST' && path == '/me/posts') {
+        sent.add((jsonDecode(req.body) as Map).cast<String, Object?>());
+        return json({'id': 'p1', 'body': 'x'}, 201);
+      }
+      return json({'error': {'code': '404', 'message': 'not found'}}, 404);
+    });
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+      OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'device-abc', 'token': 'device-token', 'accountId': 'acc-1'}),
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('composer.pill.sns')));
+    await tester.pumpAndSettle();
+    await tester.longPress(find.byKey(const ValueKey('composer.rasqRow')));
+    await tester.pumpAndSettle();
+    // 注釈 + 投票。
+    await tester.tap(find.byTooltip('隠す(注釈)'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '注釈..'), 'ネタバレ');
+    await tester.tap(find.byTooltip('投票'));
+    await tester.pumpAndSettle();
+    final choices = find.descendant(of: find.byType(PollEditor), matching: find.byType(TextField));
+    await tester.enterText(choices.at(0), 'はい');
+    await tester.enterText(choices.at(1), 'いいえ');
+    expect(tester.widget<PollEditor>(find.byType(PollEditor)).maxChoices, 6);
+    await tester.enterText(find.byType(TextField).first.evaluate().isEmpty ? find.byType(TextField).first : find.widgetWithText(TextField, 'いいことがありますように！'), '本文');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, '送信'));
+    await tester.pumpAndSettle();
+    expect(sent.single, {'body': '本文', 'cw': 'ネタバレ', 'poll': {'choices': ['はい', 'いいえ'], 'multiple': false}});
   });
 }
