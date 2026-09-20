@@ -9,6 +9,8 @@ import 'package:rasq_design/rasq_design.dart';
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
+import '../../backend/rasq_account_page_api.dart';
+import 'rasq_account_page_screen.dart' show RasqSnsTileChip;
 import '../../shell/headers.dart';
 
 /// 選んだ画像の content-type(名前か、ピッカーの申告から)。サーバーは中身で判定し直すので、目安でよい。
@@ -40,8 +42,37 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
   bool _removeAvatar = false;
   bool _removeBanner = false;
   RasqAccount? _loaded;
+
+  /// アカウントページの SNS タイル (D-270): 出す / 出さないを、アカウントごとに。変えたらすぐ保存する(「決定」を待たない)。
+  List<RasqSnsLink>? _snsLinks;
   bool _busy = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSnsLinks());
+  }
+
+  Future<void> _loadSnsLinks() async {
+    final api = ref.read(rasqAccountPageApiProvider);
+    if (api == null || ref.read(orgateAccountProvider).value == null) return;
+    try {
+      final links = await api.mySnsLinks();
+      if (mounted) setState(() => _snsLinks = links);
+    } on OrgateException catch (_) {}
+  }
+
+  Future<void> _setSnsVisibility(RasqSnsLink link, SnsTileVisibility v) async {
+    final api = ref.read(rasqAccountPageApiProvider);
+    if (api == null) return;
+    try {
+      final updated = await api.setSnsVisibility(link.accountKey, v);
+      if (mounted) setState(() => _snsLinks = [for (final l in _snsLinks ?? const <RasqSnsLink>[]) l.accountKey == updated.accountKey ? updated : l]);
+    } on OrgateException catch (e) {
+      if (mounted) setState(() => _error = rasqProfileMessage(e));
+    }
+  }
 
   @override
   void dispose() {
@@ -230,6 +261,32 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                     ),
                 ]),
               ),
+              // ── アカウントページに出す SNS アカウント (D-270) ──
+              if ((_snsLinks ?? const []).isNotEmpty)
+                _Labeled(
+                  'アカウントページに出す SNS アカウント',
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('「自動」は、鍵アカウントと、直近の投稿の公開範囲がフォロワーのみに寄っているアカウントを出しません。薄いタイルは、いまは出ていないものです。変更はすぐ反映されます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                    const SizedBox(height: RasqSpacing.sm),
+                    for (final l in _snsLinks!)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
+                        // 縦に積む(電話の幅では、タイルと 3 択が 1 行に入らない)。
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          SizedBox(height: 40, child: RasqSnsTileChip(tile: l.tile, dimmed: !l.visible)),
+                          const SizedBox(height: RasqSpacing.xs),
+                          SegmentedButton<SnsTileVisibility>(
+                            key: ValueKey('rasqProfile.sns.${l.accountKey}'),
+                            showSelectedIcon: false,
+                            style: const ButtonStyle(visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                            segments: [for (final v in SnsTileVisibility.values) ButtonSegment(value: v, label: Text(v == SnsTileVisibility.auto ? '自動(${l.autoVisible ? '表示' : '非表示'})' : v.label, style: const TextStyle(fontSize: 12)))],
+                            selected: {l.visibility},
+                            onSelectionChanged: (s) => _setSnsVisibility(l, s.first),
+                          ),
+                        ]),
+                      ),
+                  ]),
+                ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
                 child: Text('プロフィールは、RASQ の公開ページとストアのレビューに出ます。画像はサーバーで縮めて保存し直します(位置情報などは残りません)。メールアドレスとパスワードは「セキュリティ」から。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),

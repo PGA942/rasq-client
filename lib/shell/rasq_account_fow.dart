@@ -132,6 +132,7 @@ class RasqAccountPanel extends ConsumerWidget {
 
     Future<void> more(RasqAccountRecord r, Rect anchor) async {
       final pick = await manager.showDropdown<String>(id: 'rasq.account.more', anchor: anchor, dense: true, items: [
+        if (r.isCentral) const RasqDropdownItem('アカウントページ', 'page'),
         const RasqDropdownItem('プロフィール編集', 'profile'),
         const RasqDropdownItem('アカウント設定', 'settings'),
         const RasqDropdownItem('通知設定', 'notifications'),
@@ -141,6 +142,11 @@ class RasqAccountPanel extends ConsumerWidget {
       ]);
       if (!context.mounted) return;
       switch (pick) {
+        case 'page':
+          final handle = ref.read(orgateAccountProvider).value?.handle ?? r.handle;
+          if (handle == null || handle.isEmpty) return;
+          onDone();
+          context.push(Routes.rasqAccount(handle));
         case 'profile':
           await openRasqProfileSheet(context, ref, record: r, beforeNavigate: onDone);
         case 'settings':
