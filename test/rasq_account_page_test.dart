@@ -58,7 +58,7 @@ void main() {
         'queues': [{'packId': 'dev.pack', 'stickerId': 'star', 'url': 'https://central.test/api/v1/plugins/dev.pack/stickers/star', 'count': 3, 'mine': false}],
       },
       // ほかの人の投稿のリブロー(上限には数えない)。
-      {'id': 'p9', 'author': {'id': 'acc-2', 'handle': 'hanako', 'displayName': 'ハナコ'}, 'body': 'ハナコの投稿', 'images': <Object>[], 'createdAt': '2026-09-18T00:00:00Z', 'rebroadedBy': author, 'rebroaded': true, 'rebroadCount': 1},
+      {'id': 'p9', 'author': {'id': 'acc-2', 'handle': 'hanako', 'displayName': 'ハナコ'}, 'body': 'ハナコの投稿', 'images': <Object>[], 'createdAt': '2026-09-18T00:00:00Z', 'rebroadedBy': author, 'rebroadId': 'rb9', 'rebroaded': true, 'rebroadCount': 1},
     ];
     final links = [
       {'accountKey': 'misskey:mk.example:taro', 'kind': 'misskey', 'instance': 'mk.example', 'handle': 'taro', 'displayName': 'タロ@みすきー', 'serverName': 'Mk Example', 'profileUrl': 'https://mk.example/@taro', 'visibility': 'auto', 'autoVisible': true, 'visible': true},
@@ -85,11 +85,11 @@ void main() {
         case 'DELETE /me/posts/p1':
           posts.removeWhere((p) => p['id'] == 'p1');
           return http.Response('', 204);
-        case 'DELETE /posts/p9/rebroad':
+        case 'DELETE /rebroads/rb9':
           return http.Response('', 204);
         case 'GET /posts/p9':
           return json({'post': posts.firstWhere((p) => p['id'] == 'p9'), 'replies': <Object>[]});
-        case 'PUT /posts/p2/rebroad':
+        case 'POST /posts/p2/rebroad':
           posts[posts.indexWhere((p) => p['id'] == 'p2')]
             ..['rebroaded'] = true
             ..['rebroadCount'] = 2;
@@ -156,12 +156,16 @@ void main() {
     // タイルは SNS の投稿と同じ部品(RasqPostTile / RasqReactionChips / RasqActionBar。D-273)。
     final p2 = find.byKey(const ValueKey('rasqPost.p2'));
     expect(find.descendant(of: p2, matching: find.byType(RasqPostTile)), findsOneWidget);
-    await tester.tap(find.descendant(of: p2, matching: find.byTooltip('リブロー')));
-    await tester.pumpAndSettle();
-    expect(calls, contains('PUT /posts/p2/rebroad'));
-    // ボタンは入り切りにしない (D-274): リブロー済みでも、ボタンは「リブロー」のまま(取り消しは … から)。
-    expect(find.descendant(of: p2, matching: find.byTooltip('リブロー')), findsOneWidget);
-    expect(find.descendant(of: p2, matching: find.byTooltip('リブローをやめる')), findsNothing);
+    // リブローのボタン = バンドル(リブロー / 引用。D-276)。ふつうのタイルでは、何度でもリブローできる。
+    for (var n = 1; n <= 2; n++) {
+      await tester.tap(find.descendant(of: p2, matching: find.byTooltip('リブロー')));
+      await tester.pumpAndSettle();
+      expect(find.text('引用'), findsOneWidget);
+      expect(find.text('リブローを取り消す'), findsNothing);
+      await tester.tap(find.text('リブロー').last);
+      await tester.pumpAndSettle();
+      expect(calls.where((c) => c == 'POST /posts/p2/rebroad').length, n);
+    }
     // 付いているキュー = リアクションのチップ。押すと、同じ絵を自分も付ける。
     await tester.tap(find.descendant(of: p2, matching: find.byType(RasqReactionChips)));
     await tester.pumpAndSettle();
@@ -181,12 +185,14 @@ void main() {
     expect(find.text('アセットパックがありません'), findsOneWidget);
     await tester.tap(find.text('閉じる'));
     await tester.pumpAndSettle();
-    // 自分のリブローの帯(「タロ がリブロー」)の横の … → リブローを取り消す (D-274)。
-    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('リノートの操作')));
+    // 自分のリブローとして出ているタイルでは、ボタンが「リブローを取り消す」になり、その 1 回だけを取り消す (D-276)。帯の … は無い。
+    expect(find.byTooltip('リノートの操作'), findsNothing);
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('リブローを取り消す')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('リブローを取り消す'));
+    expect(find.text('リブロー'), findsNothing);
+    await tester.tap(find.text('リブローを取り消す').last);
     await tester.pumpAndSettle();
-    expect(calls, contains('DELETE /posts/p9/rebroad'));
+    expect(calls, contains('DELETE /rebroads/rb9'));
     // … = ほかの SNS と同じドロップダウン。削除はこの中(自分の投稿だけ)。
     await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('メニュー')));
     await tester.pumpAndSettle();

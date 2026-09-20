@@ -8,6 +8,7 @@ import 'package:rasq_store/rasq_store.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../backend/rasq_account_page_api.dart';
 import '../clips/clip_picker.dart';
 import '../home/action_bar_edit_sheet.dart';
 import '../home/timeline_providers.dart';
@@ -23,6 +24,16 @@ import 'share_fow.dart';
 /// 「リンクをコピー」は画像のリンク、「共有」の FOW は「内容をコピー」が「画像を保存」になる。
 Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect anchor, {MediaItem? media}) async {
   final manager = ref.read(overlayManagerProvider);
+  // RASQ の投稿 (D-276。全画面表示の … から来る): SNS の操作は効かないので、保存とリンクだけ。
+  if (isRasqPost(post)) {
+    final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
+      if (media != null && media.type == MediaType.image) const RasqDropdownItem('画像を保存', 'saveImage'),
+      const RasqDropdownItem('リンクをコピー', 'copy'),
+    ]);
+    if (pick == 'saveImage' && media != null) await saveMediaImage(ref, media);
+    if (pick == 'copy') await Clipboard.setData(ClipboardData(text: '${post.url ?? media?.url ?? ''}'));
+    return;
+  }
   final s = ref.read(currentSnsSessionProvider);
   final viewer = ref.read(currentAccountProvider);
   final me = ref.read(currentUserProvider);

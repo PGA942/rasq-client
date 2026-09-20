@@ -8,7 +8,11 @@ import 'package:http/testing.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
+import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
+import 'package:rasq_client/backend/rasq_account_page_api.dart';
+import 'package:rasq_client/features/compose/compose_target.dart';
+import 'package:rasq_client/features/compose/composer_sheet.dart';
 import 'package:rasq_client/features/compose/poll_editor.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -117,5 +121,48 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '送信'));
     await tester.pumpAndSettle();
     expect(sent.single, {'body': '本文', 'cw': 'ネタバレ', 'poll': {'choices': ['はい', 'いいえ'], 'multiple': false}});
+  });
+
+  testWidgets('RASQ の投稿の引用 (D-276): 投稿先は RASQ に固定、送るのは quoteOf つきの POST /me/posts', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final sent = <Map<String, Object?>>[];
+    final mock = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      if (req.method == 'GET' && path == '/me') return json({'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ'});
+      if (req.method == 'POST' && path == '/me/posts') {
+        sent.add((jsonDecode(req.body) as Map).cast<String, Object?>());
+        return json({'id': 'p1', 'body': 'x'}, 201);
+      }
+      return json({'error': {'code': '404', 'message': 'not found'}}, 404);
+    });
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+      OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'device-abc', 'token': 'device-token', 'accountId': 'acc-1'}),
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    const source = RasqAccountPost(id: 'src-1', body: '引用される投稿', author: RasqPostAuthor(id: 'acc-2', handle: 'hanako', displayName: 'ハナコ'));
+    showComposerWith(ComposeQuote(source.toPost()), manager: c.read(overlayManagerProvider), router: c.read(routerProvider));
+    await tester.pumpAndSettle();
+    // RASQ 指定を渡さなくても、RASQ の投稿の引用は RASQ に固定。元の投稿のプレビューが出る。
+    expect(find.byKey(const ValueKey('composer.pill.rasq')), findsOneWidget);
+    expect(find.text('引用される投稿'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).first, 'これはいい');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, '送信'));
+    await tester.pumpAndSettle();
+    expect(sent.single, {'body': 'これはいい', 'quoteOf': 'src-1'});
   });
 }

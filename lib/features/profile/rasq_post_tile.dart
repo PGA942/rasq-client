@@ -12,14 +12,21 @@ import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
+import '../../app/navigation.dart';
+import '../compose/compose_target.dart';
+import '../compose/composer_sheet.dart';
 import '../compose/emoji_panel.dart';
 import '../compose/emoji_picker_fow.dart';
+import '../media/video_player.dart';
+import '../../shell/third_column.dart';
 import '../store/sticker_packs.dart';
 
 /// RASQ の投稿のタイル (D-271 / S-022)。
 ///
 /// 上: (リブローの帯)/ アイコン / 表示名・@handle / 日付 / **…**(ほかの SNS と同じドロップダウン: リンクをコピー /
 /// ブラウザで開く / 自分の投稿なら削除)。下のアクションバー: **返信 / リブロー (ReBroad、🔁) / キュー (Queue) / 共有**。
+/// リブローのボタンは、SNS のリノートと同じバンドル (D-276): 「リブロー / 引用」。リブローは何度でもできる。
+/// **自分のリブローとして出ているタイル**では「リブローを取り消す / 引用」になり、その 1 回だけを取り消す。
 /// キュー = ストアでインストール(購入)した署名済みアセットパックの絵でのリアクション。付いているキューは、絵 + 件数のチップで出る
 /// (絵はサーバーが配るので、そのパックを入れていなくても見える。チップを押すと、同じ絵を自分も付ける / 外す)。
 class RasqPostTileView extends ConsumerWidget {
@@ -53,6 +60,7 @@ class RasqPostTileView extends ConsumerWidget {
       _toast(context, switch (e.code.code) {
         '403' when e.message.contains('install') => 'このパックをストアからインストールすると、この絵でキューできます',
         '403' => 'この投稿には操作できません',
+        '409' when e.message.contains('rebroad') => 'この投稿は、これ以上リブローできません',
         '409' => '返信は 100 件までです。古い返信を消してください',
         '404' => 'この投稿 / 絵は、もうありません',
         _ => '失敗しました: ${e.message}',
@@ -69,8 +77,6 @@ class RasqPostTileView extends ConsumerWidget {
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.more', anchor: anchor, dense: true, items: [
       const RasqDropdownItem('リンクをコピー', 'copy'),
       const RasqDropdownItem('ブラウザで開く', 'open'),
-      // リブローの取り消しは、帯の … か、ここから(ボタンは入り切りにしない。D-274)。
-      if (post.rebroaded) const RasqDropdownItem('リブローを取り消す', 'unrebroad', destructive: true),
       if (isMine) const RasqDropdownItem('削除', 'delete', destructive: true),
     ]);
     if (!context.mounted || pick == null) return;
@@ -82,8 +88,6 @@ class RasqPostTileView extends ConsumerWidget {
         if (context.mounted) _toast(context, 'リンクをコピーしました');
       case 'open':
         if (link != null) await launchUrl(link, mode: LaunchMode.externalApplication);
-      case 'unrebroad':
-        await _run(context, ref, (api) => api.setRebroad(post.id, on: false));
       case 'delete':
         final ok = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.delete', title: '投稿を削除', message: 'この投稿と、付いている画像を削除します。元に戻せません。', confirmText: '削除する', cancelText: 'キャンセル', destructive: true);
         if (!ok || !context.mounted) return;
@@ -112,14 +116,23 @@ class RasqPostTileView extends ConsumerWidget {
     await _run(context, ref, (api) => api.reply(post.id, text));
   }
 
-  Widget? _media() => post.images.isEmpty
-      ? null
-      : RasqMediaGrid(items: [for (final i in post.images) MediaItem(id: i.id, type: MediaType.image, url: i.url, sensitive: i.sensitive, width: i.width == 0 ? null : i.width, height: i.height == 0 ? null : i.height)], maxVisible: 6);
+  /// メディア: SNS の投稿と同じグリッド。タップで全画面表示、動画の再生ボタンで動画の FOW (D-276)。
+  Widget? _media(BuildContext context, WidgetRef ref) {
+    if (post.images.isEmpty) return null;
+    final asPost = post.toPost(central: ref.read(centralBaseUrlProvider));
+    return RasqMediaGrid(
+      items: asPost.media,
+      maxVisible: 6,
+      onTapTile: (i) => context.openViewer(asPost, i),
+      onPlayTile: (i) => showVideoFow(ref, asPost.media[i], post: asPost, column: fowColumnOf(context)),
+    );
+  }
 
   /// 本文 + 投票(+ 注釈つきのときはメディアも)。
   Widget _body(BuildContext context, WidgetRef ref) {
     final p = post.poll;
-    final media = post.cw.isNotEmpty ? _media() : null;
+    final media = post.cw.isNotEmpty ? _media(context, ref) : null;
+    final q = post.quote;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (post.body.isNotEmpty) Text(post.body, style: focused ? RasqTypography.body.copyWith(fontSize: 16) : RasqTypography.body),
       if (media != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: media),
@@ -144,6 +157,9 @@ class RasqPostTileView extends ConsumerWidget {
                     }),
           ),
         ),
+      if (q != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: _quote(context, q))
+      else if (post.isQuote)
+        Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text('引用元の投稿は見られません', key: ValueKey('rasqPost.${post.id}.quoteGone'), style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))),
     ]);
   }
 
@@ -152,6 +168,43 @@ class RasqPostTileView extends ConsumerWidget {
 
   /// いいね(パックを使わないキュー)のリアクション表記。
   static const likeReaction = '❤';
+
+  /// リブローのバンドル (D-276): ふつうのタイルでは「リブロー / 引用」(リブローは何度でも)。
+  /// 自分のリブローとして出ているタイルでは「リブローを取り消す / 引用」(その 1 回だけを取り消す)。
+  Future<void> _rebroadBundle(BuildContext context, WidgetRef ref, Rect anchor, {required bool myRebroad}) async {
+    if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインするとリブローできます');
+    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.rebroad.${post.id}', anchor: anchor, dense: true, items: [
+      if (myRebroad) const RasqDropdownItem('リブローを取り消す', 'undo', destructive: true) else const RasqDropdownItem('リブロー', 'rebroad'),
+      const RasqDropdownItem('引用', 'quote'),
+    ]);
+    if (!context.mounted || pick == null) return;
+    switch (pick) {
+      case 'rebroad':
+        await _run(context, ref, (api) => api.rebroad(post.id));
+      case 'undo':
+        final id = post.rebroadId;
+        if (id != null) await _run(context, ref, (api) => api.deleteRebroad(id));
+      case 'quote':
+        if (post.visibility == 'followers') return _toast(context, 'フォロワー限定の投稿は引用できません');
+        // SNS の引用と同じコンポーザーを、RASQ 指定で開く(送ると、呼び出し側が取り直す)。
+        await showComposer(ref, ComposeQuote(post.toPost()), rasqTarget: true, column: fowColumnOf(context));
+        onChanged();
+    }
+  }
+
+  /// 引用の元: SNS の引用と同じ、埋め込みサイズのタイル。
+  Widget _quote(BuildContext context, RasqAccountPost q) {
+    final p = q.toPost();
+    return RasqPostTile(
+      key: ValueKey('rasqPost.${post.id}.quote'),
+      variant: RasqPostTileVariant.embedded,
+      author: p.author,
+      createdAt: p.createdAt,
+      content: Text(q.cw.isNotEmpty ? q.cw : q.body, style: RasqTypography.bodySmall, maxLines: 6, overflow: TextOverflow.ellipsis),
+      media: q.cw.isEmpty && p.media.isNotEmpty ? RasqMediaGrid(items: p.media) : null,
+      onTap: () => context.push(Routes.rasqPost(q.id)),
+    );
+  }
 
   /// キュー: **絵文字ピッカーの使い回し**(履歴 / 予測 / パックごとの省略表示 / 検索。D-273)。リアクションと同じく、ボタンに張り付いて出る。
   Future<void> _queue(BuildContext context, WidgetRef ref, Rect? anchor) async {
@@ -192,6 +245,8 @@ class RasqPostTileView extends ConsumerWidget {
     final me = ref.watch(orgateAccountProvider).value;
     final isMine = me != null && author != null && me.id == author.id;
     final mine = post.queues.where((q) => q.mine).firstOrNull;
+    // 自分のリブローとして出ているタイルか(ここでだけ、リブローのボタンが「取り消す」になる。D-276)。
+    final myRebroad = me != null && post.rebroadedBy?.id == me.id && post.rebroadId != null;
     UserSummary summary(RasqPostAuthor? a) => UserSummary(
           id: 'rasq:${a?.id ?? ''}',
           account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: a?.handle ?? ''),
@@ -216,13 +271,6 @@ class RasqPostTileView extends ConsumerWidget {
         onAuthorTap: author == null ? null : () => context.push(Routes.rasqAccount(author.handle)),
         // … = ほかの SNS の投稿と同じドロップダウン(削除はこの中)。
         onMore: (anchor) => _more(context, ref, anchor, isMine),
-        // 自分のリブローなら、帯の横の … から取り消せる (D-274)。
-        onBannerMore: post.rebroadedBy != null && me != null && post.rebroadedBy!.id == me.id
-            ? (anchor) async {
-                final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.rebroad.banner', anchor: anchor, dense: true, items: const [RasqDropdownItem('リブローを取り消す', 'undo', destructive: true)]);
-                if (pick == 'undo' && context.mounted) await _run(context, ref, (api) => api.setRebroad(post.id, on: false));
-              }
-            : null,
         content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           // 注釈 (CW) つきは、注釈だけ見せて、中身は押すまで畳む(SNS の投稿と同じ)。
           if (post.cw.isNotEmpty) _CwFold(cw: post.cw, child: _body(context, ref))
@@ -251,22 +299,23 @@ class RasqPostTileView extends ConsumerWidget {
             ),
         ]),
         // 注釈つきのときは、メディアも畳みの中(_body)に入れる。
-        media: post.cw.isNotEmpty ? null : _media(),
+        media: post.cw.isNotEmpty ? null : _media(context, ref),
         // アクションバー: 返信 / リブロー (ReBroad) / キュー (Queue) + 共有。キューは、付けていれば押すと外す、長押しでピッカー(Misskey のリアクションと同じ)。
         actionBar: Builder(
           builder: (bar) => RasqActionBar(
             items: [
               RasqActionBarItem(id: 'reply', label: '返信', icon: Icons.chat_bubble_outline, count: post.replyCount, onTap: () => _reply(context, ref)),
-              // リブローのボタンは入り切りにしない (D-274。SNS のリノートと同じ): いつ押しても「リブロー」。取り消しは帯の … / 投稿の … から。
+              // リブロー (D-276): SNS のリノートと同じバンドル(リブロー / 引用)。ふつうのタイルでは何度でもリブローできる。
+              // 自分のリブローとして出ているタイルでは、済みの色になり、バンドルの 1 つ目が「リブローを取り消す」になる。
               RasqActionBarItem(
                 id: 'rebroad',
-                label: 'リブロー',
+                label: myRebroad ? 'リブローを取り消す' : 'リブロー',
                 icon: Icons.repeat,
                 doneIcon: Icons.repeat, // 完了アイコンが無いと、部品が済みのボタンを無効にする
-                done: post.rebroaded,
+                done: myRebroad,
                 doneColor: tokens.link,
-                count: post.rebroadCount,
-                onTap: () => post.rebroaded ? _toast(context, 'リブロー済みです(取り消すのは … から)') : _run(context, ref, (api) => api.setRebroad(post.id, on: true)),
+                count: post.rebroadCount + post.quoteCount,
+                onTap: () => _rebroadBundle(context, ref, rectOf(bar), myRebroad: myRebroad),
               ),
               RasqActionBarItem(
                 id: 'queue',

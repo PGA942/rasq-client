@@ -8,6 +8,7 @@ import '../features/trend/trend_screen.dart';
 import '../features/users/follows_screen.dart';
 import '../features/users/user_page_screen.dart';
 import '../shell/third_column.dart';
+import '../backend/rasq_account_page_api.dart';
 import 'router.dart';
 import '../features/plugins/media_plugin_panel.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
@@ -33,6 +34,11 @@ extension RasqNavigation on BuildContext {
   /// Opens the thread screen for [post] (nested in the current tab so the
   /// global nav stays visible; タブ外ではアプリ直下ルートへ).
   void pushPost(Post post) {
+    // RASQ の投稿 (D-276) は、RASQ のスレッド画面へ。
+    if (isRasqPost(post)) {
+      push(Routes.rasqPost(post.id));
+      return;
+    }
     final base = _inTab ? _tabBase : '';
     final loc = '$base/post/${Uri.encodeComponent(post.id)}';
     // ペインモデル (D-057): タブレット幅では第3カラム(current)に開く。
