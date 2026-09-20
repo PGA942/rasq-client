@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/backend/orgate_client.dart';
+import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/features/nodeprog/tl_components.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
@@ -169,5 +173,70 @@ void main() {
     await tester.tap(find.text('@second@example.test'));
     await tester.pumpAndSettle();
     expect(find.text('連動ドラフトです'), findsOneWidget);
+  });
+
+  testWidgets('RASQ への連動投稿 (D-286): 設定で有効にすると RASQ の行も選べ、送信で SNS と同時に RASQ へも届く', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
+    final sent = <Map<String, Object?>>[];
+    final mock = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      if (req.method == 'GET' && path == '/me') return json({'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ'});
+      if (req.method == 'POST' && path == '/me/posts') {
+        sent.add((jsonDecode(req.body) as Map).cast<String, Object?>());
+        return json({'id': 'p1', 'body': 'x'}, 201);
+      }
+      return json({'error': {'code': '404', 'message': 'not found'}}, 404);
+    });
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [session(acc1).toJson()], 'current': acc1.key}),
+      OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'device-abc', 'token': 'device-token', 'accountId': 'acc-1'}),
+      'composer.prefs.v1': jsonEncode({'rasqLinked': true}),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [postOf(v)]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    // ポスト先グラフ: RASQ アカウントの素のポスト先ノード(条件なし = 常に成立)。ラベルは、アプリが RASQ アカウントに付けるもの。
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    final label = '${c.read(rasqAccountProvider).account}';
+    final target = builtinNodeCatalog.firstWhere((e) => e.type == 'composer.target').instantiate('t0', Offset.zero);
+    final graph = NodeGraph(nodes: [target.copyWith(inputs: [target.inputs.first.copyWith(value: label)])]);
+    await c.read(settingsAreaProvider('nodeprog.${acc1.key}.composer').future);
+    await c.read(settingsAreaProvider('nodeprog.${acc1.key}.composer').notifier).set('graph', jsonEncode(graph.toJson()));
+    await tester.tap(find.byTooltip('投稿'));
+    await tester.pumpAndSettle();
+    // 主投稿先を tester に固定(RASQ のノードが常に成立するので、放っておくと RASQ 指定になる)。
+    await tester.tap(find.byTooltip('投稿先を選ぶ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('@tester@example.test'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('投稿先を選ぶ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('複数選択モード'));
+    await tester.pumpAndSettle();
+    // RASQ の行: 非選択 → 通常投稿 → ノード連動。
+    await tester.tap(find.byKey(const ValueKey('composer.rasqRow')));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byKey(const ValueKey('composer.rasqRow.multi')), matching: find.text('通常投稿')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('composer.rasqRow')));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byKey(const ValueKey('composer.rasqRow.multi')), matching: find.text('ノード連動')), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'SNS と RASQ の両方へ');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('送信'));
+    await tester.pumpAndSettle();
+    expect((registry.session(session(acc1)) as FakeSnsSession).lastDraft?.text, 'SNS と RASQ の両方へ');
+    expect(sent.single, {'body': 'SNS と RASQ の両方へ'});
   });
 }

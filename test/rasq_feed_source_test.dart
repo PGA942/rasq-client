@@ -35,4 +35,20 @@ void main() {
     expect(input('TL'), rasqPostsKind);
     expect(input('アカウント') ?? '', isEmpty);
   });
+
+  test('RASQ アカウントの「自分の投稿」は、SNS のセッションではなく RASQ の投稿に解決する (D-286)', () async {
+    final session = FakeSnsSession(fakeSession(), [post]);
+    var asked = 0;
+    Future<List<Post>> mine() async {
+      asked++;
+      return [post];
+    }
+
+    expect((await resolveNodeFetch(session, 'acct:@taro@rasq|myposts', rasqMine: mine)).single.id, 'r1');
+    expect(asked, 1);
+    // 口が無い / RASQ に無い種類は、空(表示中の SNS アカウントの投稿で代用しない)。
+    expect(await resolveNodeFetch(session, 'acct:@taro@rasq|myposts'), isEmpty);
+    expect(await resolveNodeFetch(session, 'acct:@taro@rasq|myreactions', rasqMine: mine), isEmpty);
+    expect(asked, 1);
+  });
 }

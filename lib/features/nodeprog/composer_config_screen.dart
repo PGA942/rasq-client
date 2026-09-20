@@ -253,8 +253,8 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
                   _regexTile(scheme, f),
                   for (var i = 0; i < f.extraRegexes.length; i++) _extraRegexTile(scheme, f, i),
                   _addNodeButton('ノードを追加', () => _update(_tab, f.copyWith(extraRegexes: [...f.extraRegexes, const ComposerRegexSpec()]))),
-                  // RASQ のタブには出さない (D-283): RASQ への連動投稿は、まだ無い。
-                  if (_tab != _rasqLabel) ...[
+                  // RASQ のタブでは、RASQ への連動投稿を設定で有効にしているときだけ (D-286)。
+                  if (_tab != _rasqLabel || (ref.watch(settingsAreaProvider('composer.prefs')).value ?? const {})['rasqLinked'] == true) ...[
                   // ---- 連動投稿の届け方 (D-129/D-131) ------------------------
                   const RasqSectionHeader(title: '連動投稿の届け方'),
                   Padding(
