@@ -11,6 +11,7 @@ import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/backend/rasq_account_page_api.dart';
+import 'package:rasq_client/features/media/media_viewer_screen.dart';
 import 'package:rasq_client/features/profile/rasq_account_page_screen.dart';
 import 'package:rasq_client/features/profile/rasq_profile_edit_screen.dart';
 import 'package:rasq_client/mock/mock_data.dart';
@@ -54,11 +55,11 @@ void main() {
     final posts = <Map<String, Object?>>[
       {'id': 'p1', 'author': author, 'body': 'はじめての投稿', 'images': <Object>[], 'createdAt': '2026-09-20T00:00:00Z', 'replyCount': 0, 'rebroadCount': 0, 'rebroaded': false, 'queues': <Object>[]},
       {
-        'id': 'p2', 'author': author, 'body': 'ふたつめ', 'images': <Object>[], 'createdAt': '2026-09-19T00:00:00Z', 'replyCount': 2, 'rebroadCount': 1, 'rebroaded': false,
+        'id': 'p2', 'author': author, 'body': 'ふたつめ', 'images': [{'id': 'v2', 'url': 'https://central.test/api/v1/post-images/v2', 'type': 'video'}], 'createdAt': '2026-09-19T00:00:00Z', 'replyCount': 2, 'rebroadCount': 1, 'rebroaded': false,
         'queues': [{'packId': 'dev.pack', 'stickerId': 'star', 'url': 'https://central.test/api/v1/plugins/dev.pack/stickers/star', 'count': 3, 'mine': false}],
       },
-      // ほかの人の投稿のリブロー(上限には数えない)。
-      {'id': 'p9', 'author': {'id': 'acc-2', 'handle': 'hanako', 'displayName': 'ハナコ'}, 'body': 'ハナコの投稿', 'images': <Object>[], 'createdAt': '2026-09-18T00:00:00Z', 'rebroadedBy': author, 'rebroadId': 'rb9', 'rebroaded': true, 'rebroadCount': 1},
+      // ほかの人の投稿のリブロード(上限には数えない)。
+      {'id': 'p9', 'author': {'id': 'acc-2', 'handle': 'hanako', 'displayName': 'ハナコ'}, 'body': 'ハナコの投稿', 'images': [{'id': 'v9', 'url': 'https://central.test/api/v1/post-images/v9', 'type': 'video'}], 'createdAt': '2026-09-18T00:00:00Z', 'rebroadedBy': author, 'rebroadId': 'rb9', 'rebroaded': true, 'rebroadCount': 1},
     ];
     final links = [
       {'accountKey': 'misskey:mk.example:taro', 'kind': 'misskey', 'instance': 'mk.example', 'handle': 'taro', 'displayName': 'タロ@みすきー', 'serverName': 'Mk Example', 'profileUrl': 'https://mk.example/@taro', 'visibility': 'auto', 'autoVisible': true, 'visible': true},
@@ -147,22 +148,22 @@ void main() {
     expect(find.byKey(const ValueKey('rasqPage.compose')), findsOneWidget);
     expect(find.textContaining('(2 / 3)'), findsOneWidget);
     expect(find.text('はじめての投稿'), findsOneWidget);
-    // リブローは上限に数えない(通常の投稿 2 件 + リブロー 1 件 = 2 / 3)。リブローの帯が出る。
+    // リブロードは上限に数えない(通常の投稿 2 件 + リブロード 1 件 = 2 / 3)。リブロードの帯が出る。
     final pageScroll = find.descendant(of: find.byType(RasqAccountPageScreen), matching: find.byType(Scrollable)).first;
-    await tester.scrollUntilVisible(find.text('タロ がリブロー'), 200, scrollable: pageScroll);
-    expect(find.text('タロ がリブロー'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('タロ がリブロード'), 200, scrollable: pageScroll);
+    expect(find.text('タロ がリブロード'), findsOneWidget);
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rasqPost.p2')), -200, scrollable: pageScroll);
-    // アクションバー: リブロー → 件数と印が変わる。キューのチップ → 同じ絵を自分も付ける。返信 → replyTo つきで送る。
+    // アクションバー: リブロード → 件数と印が変わる。キューのチップ → 同じ絵を自分も付ける。返信 → replyTo つきで送る。
     // タイルは SNS の投稿と同じ部品(RasqPostTile / RasqReactionChips / RasqActionBar。D-273)。
     final p2 = find.byKey(const ValueKey('rasqPost.p2'));
     expect(find.descendant(of: p2, matching: find.byType(RasqPostTile)), findsOneWidget);
-    // リブローのボタン = バンドル(リブロー / 引用。D-276)。ふつうのタイルでは、何度でもリブローできる。
+    // リブロードのボタン = バンドル(リブロード / 引用。D-276)。ふつうのタイルでは、何度でもリブロードできる。
     for (var n = 1; n <= 2; n++) {
-      await tester.tap(find.descendant(of: p2, matching: find.byTooltip('リブロー')));
+      await tester.tap(find.descendant(of: p2, matching: find.byTooltip('リブロード')));
       await tester.pumpAndSettle();
       expect(find.text('引用'), findsOneWidget);
-      expect(find.text('リブローを取り消す'), findsNothing);
-      await tester.tap(find.text('リブロー').last);
+      expect(find.text('リブロードを取り消す'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('actionbar.bundle.pick.rebroad')));
       await tester.pumpAndSettle();
       expect(calls.where((c) => c == 'POST /posts/p2/rebroad').length, n);
     }
@@ -185,12 +186,12 @@ void main() {
     expect(find.text('アセットパックがありません'), findsOneWidget);
     await tester.tap(find.text('閉じる'));
     await tester.pumpAndSettle();
-    // 自分のリブローとして出ているタイルでは、ボタンが「リブローを取り消す」になり、その 1 回だけを取り消す (D-276)。帯の … は無い。
+    // 自分のリブロードとして出ているタイルでは、ボタンが「リブロードを取り消す」になり、その 1 回だけを取り消す (D-276)。帯の … は無い。
     expect(find.byTooltip('リノートの操作'), findsNothing);
-    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('リブローを取り消す')));
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('リブロードを取り消す')));
     await tester.pumpAndSettle();
-    expect(find.text('リブロー'), findsNothing);
-    await tester.tap(find.text('リブローを取り消す').last);
+    expect(find.byKey(const ValueKey('actionbar.bundle.pick.rebroad')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('actionbar.bundle.pick.undo')));
     await tester.pumpAndSettle();
     expect(calls, contains('DELETE /rebroads/rb9'));
     // … = ほかの SNS と同じドロップダウン。削除はこの中(自分の投稿だけ)。
@@ -199,6 +200,9 @@ void main() {
     expect(find.text('リンクをコピー'), findsOneWidget);
     expect(find.text('削除'), findsNothing);
     c.read(overlayManagerProvider).close('rasq.post.more');
+    await tester.pumpAndSettle();
+    // いちばん上の投稿まで戻す(下へ送ってあるので)。
+    await tester.drag(find.byType(NestedScrollView), const Offset(0, 1500));
     await tester.pumpAndSettle();
     await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p1')), matching: find.byTooltip('メニュー')));
     await tester.pumpAndSettle();
@@ -209,13 +213,27 @@ void main() {
     expect(find.text('はじめての投稿'), findsNothing);
     expect(find.textContaining('(1 / 3)'), findsOneWidget);
     // プラグインのタブ: 公開したもの / レビューしたもの。
+    // タブは 6 つ (D-277)。狭い画面では横に送って出す。
+    await tester.ensureVisible(find.text('プラグイン'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('プラグイン'));
     await tester.pumpAndSettle();
     expect(find.text('タロの道具'), findsOneWidget);
-    expect(find.textContaining('★★★★'), findsOneWidget);
-    await tester.tap(find.text('リスト'));
+    // レビューは別のタブ (D-277)。
+    expect(find.textContaining('★★★★'), findsNothing);
+    await tester.ensureVisible(find.text('レビュー'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('今後ここに出ます'), findsOneWidget);
+    await tester.tap(find.text('レビュー'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('★★★★'), findsOneWidget);
+    expect(find.text('タロの道具'), findsNothing);
+    for (final tab in ['リスト', 'クリップ']) {
+      await tester.ensureVisible(find.text(tab));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(tab));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('今後ここに出ます'), findsOneWidget);
+    }
 
     // 編集 → タイルの出し分け: 鍵アカウントは「自動(非表示)」→「表示」にすると出る。
     await tester.tap(find.byKey(const ValueKey('rasqPage.edit')));
@@ -238,5 +256,14 @@ void main() {
     await tester.drag(find.byType(NestedScrollView), const Offset(0, 1200));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rasqPage.tile.misskey:mk.example:kagi')), findsOneWidget);
+    // メディアのタブ: グリッドのタイルを押すと、その投稿の全画面表示が開く (D-277)。リブロードした他人の投稿のメディアは並べない。
+    await tester.ensureVisible(find.text('メディア'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('メディア'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rasqPage.media.v9')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('rasqPage.media.v2')));
+    await tester.pumpAndSettle();
+    expect(find.byType(MediaViewerScreen), findsOneWidget);
   });
 }

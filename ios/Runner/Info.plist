@@ -71,5 +71,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- 開発用の Central など、IP アドレス / .local / ホスト名だけの相手への http を許す(動画の再生は OS のプレイヤーが取りに行くので、
+	     ここで許さないと ATS に止められる。-1022)。公開のホスト名への http は、これまでどおり止まる。 -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

@@ -13,7 +13,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'support/fakes.dart';
 
 void main() {
-  testWidgets('リノートボタンは既定バンドル: タップでリノート/引用ノートのドロップダウン → 引用でコンポーザー (D-039)', (tester) async {
+  testWidgets('リノートボタンは既定バンドル: タップでリノート/引用ノートのバンドル FOW → 引用でコンポーザー (D-039 → D-277)', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -31,10 +31,11 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // 最初の投稿のリノートボタン(tooltip 'リノート')をタップ → ドロップダウン。
+    // 最初の投稿のリノートボタン(tooltip 'リノート')をタップ → バンドル FOW(ドロップダウンはやめた。D-277)。
+    expect(find.byKey(const ValueKey('actionbar.bundle.pick.renote')), findsNothing);
     await tester.tap(find.byTooltip('リノート').first);
     await tester.pumpAndSettle();
-    expect(find.text('リノート'), findsWidgets);
+    expect(find.byKey(const ValueKey('actionbar.bundle.pick.renote')), findsOneWidget);
     expect(find.text('引用ノート'), findsOneWidget);
 
     // 引用ノート → コンポーザー(タイトル『引用』+ 対象プレビュー)。
@@ -70,7 +71,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('リノートを取り消す'), findsNothing);
       expect(find.text('引用ノート'), findsOneWidget);
-      await tester.tap(find.text('リノート').last);
+      await tester.tap(find.byKey(const ValueKey('actionbar.bundle.pick.renote')));
       await tester.pumpAndSettle();
     }
     // 自分のリノートのタイル: 1 つ目が「リノートを取り消す」。
@@ -78,6 +79,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('リノートを取り消す'), findsOneWidget);
     expect(find.text('引用ノート'), findsOneWidget);
-    expect(find.text('リノート'), findsNothing);
+    expect(find.byKey(const ValueKey('actionbar.bundle.pick.undo')), findsOneWidget);
+    expect(find.byKey(const ValueKey('actionbar.bundle.pick.renote')), findsNothing);
   });
 }
