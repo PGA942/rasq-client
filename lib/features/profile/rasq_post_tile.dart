@@ -1,10 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -13,6 +12,8 @@ import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
+import '../compose/emoji_panel.dart';
+import '../compose/emoji_picker_fow.dart';
 import '../store/sticker_packs.dart';
 
 /// RASQ の投稿のタイル (D-271 / S-022)。
@@ -107,197 +108,125 @@ class RasqPostTileView extends ConsumerWidget {
     await _run(context, ref, (api) => api.reply(post.id, text));
   }
 
-  Future<void> _queue(BuildContext context, WidgetRef ref) async {
+  /// キューのキー(絵文字ピッカー / リアクションのチップで使う 1 つの文字列)。
+  static String queueKey(String packId, String stickerId) => '$packId|$stickerId';
+
+  /// キュー: **絵文字ピッカーの使い回し**(履歴 / 予測 / パックごとの省略表示 / 検索。D-273)。リアクションと同じく、ボタンに張り付いて出る。
+  Future<void> _queue(BuildContext context, WidgetRef ref, Rect? anchor) async {
     if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインするとキューできます');
-    final mine = post.queues.where((q) => q.mine).firstOrNull;
-    final pick = await showRasqQueuePicker(ref, current: mine == null ? null : (packId: mine.packId, stickerId: mine.stickerId));
-    if (pick == null || !context.mounted) return;
-    await _run(context, ref, (api) => api.setQueue(post.id, pick.remove ? null : (packId: pick.packId, stickerId: pick.stickerId)));
+    await ref.read(stickerPacksProvider.notifier).ready;
+    if (!context.mounted) return;
+    final packs = ref.read(stickerPacksProvider);
+    if (packs.isEmpty) {
+      final go = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.noPacks', title: 'アセットパックがありません', message: 'キューは、ストアでインストール(購入)したアセットパックの絵でのリアクションです。', confirmText: 'ストアで探す', cancelText: '閉じる');
+      if (go && context.mounted) context.push(Routes.store);
+      return;
+    }
+    await openEmojiPicker(
+      ref,
+      title: 'キュー',
+      closeOnPick: true,
+      anchor: anchor,
+      predictionContext: post.body,
+      existingReactions: {for (final q in post.queues) queueKey(q.packId, q.stickerId): q.count},
+      stickers: [
+        for (final pack in packs)
+          for (final s in pack.stickers) EmojiPanelSticker(key: queueKey(pack.id, s.id), group: pack.name, label: s.label, tags: s.tags, file: s.file),
+      ],
+      onPick: (key) {
+        final parts = key.split('|');
+        if (parts.length != 2 || !context.mounted) return;
+        _run(context, ref, (api) => api.setQueue(post.id, (packId: parts[0], stickerId: parts[1])));
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
-    final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
     final author = post.author;
     final me = ref.watch(orgateAccountProvider).value;
     final isMine = me != null && author != null && me.id == author.id;
-    final d = post.createdAt?.toLocal();
-    return InkWell(
+    final mine = post.queues.where((q) => q.mine).firstOrNull;
+    UserSummary summary(RasqPostAuthor? a) => UserSummary(
+          id: 'rasq:${a?.id ?? ''}',
+          account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: a?.handle ?? ''),
+          displayName: a?.label ?? '',
+          avatarUrl: a?.avatarUrl,
+        );
+    Rect rectOf(BuildContext c) {
+      final box = c.findRenderObject() as RenderBox?;
+      return box == null ? Rect.zero : box.localToGlobal(Offset.zero) & box.size;
+    }
+
+    // SNS の投稿と同じタイル(L2 の RasqPostTile)に載せる: ヘッダー / … / 本文 / メディア / リアクションのチップ / アクションバー。
+    return KeyedSubtree(
       key: ValueKey('rasqPost.${post.id}'),
-      onTap: onOpen,
-      child: Container(
-        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.sm, 0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (post.rebroadedBy != null)
+      child: RasqPostTile(
+        author: summary(author),
+        createdAt: post.createdAt ?? DateTime.now(),
+        // 帯: リブロー(RASQ の言い方で出す。部品の既定は「リノート」)> 返信の印。
+        bannerIcon: post.rebroadedBy != null ? Icons.repeat : (post.isReply && !focused ? Icons.reply : null),
+        bannerText: post.rebroadedBy != null ? '${post.rebroadedBy!.label} がリブロー' : (post.isReply && !focused ? (post.replyTo == null ? '削除された投稿への返信' : '返信') : null),
+        onTap: onOpen,
+        onAuthorTap: author == null ? null : () => context.push(Routes.rasqAccount(author.handle)),
+        // … = ほかの SNS の投稿と同じドロップダウン(削除はこの中)。
+        onMore: (anchor) => _more(context, ref, anchor, isMine),
+        content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (post.body.isNotEmpty) Text(post.body, style: focused ? RasqTypography.body.copyWith(fontSize: 16) : RasqTypography.body),
+          // 付いているキュー = リアクションのチップ(絵 + 件数。自分のものはハイライト)。押すと、同じ絵を自分も付ける / 外す。
+          if (post.queues.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(left: 44, bottom: 2),
-              child: Row(children: [Icon(Icons.repeat, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Flexible(child: Text('${post.rebroadedBy!.label} がリブロー', style: caption, overflow: TextOverflow.ellipsis))]),
+              padding: const EdgeInsets.only(top: RasqSpacing.sm),
+              child: RasqReactionChips(
+                reactions: {for (final q in post.queues) ':${queueKey(q.packId, q.stickerId)}:': q.count},
+                emojiUrls: {for (final q in post.queues) ':${queueKey(q.packId, q.stickerId)}:': q.url},
+                myReaction: mine == null ? null : ':${queueKey(mine.packId, mine.stickerId)}:',
+                onTap: (r) {
+                  final parts = r.replaceAll(':', '').split('|');
+                  if (parts.length != 2) return;
+                  final isMineChip = mine != null && mine.packId == parts[0] && mine.stickerId == parts[1];
+                  _run(context, ref, (api) => api.setQueue(post.id, isMineChip ? null : (packId: parts[0], stickerId: parts[1])));
+                },
+              ),
             ),
-          if (post.isReply && !focused)
-            Padding(padding: const EdgeInsets.only(left: 44, bottom: 2), child: Row(children: [Icon(Icons.reply, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text(post.replyTo == null ? '削除された投稿への返信' : '返信', style: caption)])),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            InkWell(
-              customBorder: const CircleBorder(),
-              onTap: author == null ? null : () => context.push(Routes.rasqAccount(author.handle)),
-              child: RasqAvatar(imageUrl: author?.avatarUrl, size: 36, fallbackLabel: author?.label ?? '?'),
-            ),
-            const SizedBox(width: RasqSpacing.sm),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Flexible(child: Text(author?.label ?? '', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-                  const SizedBox(width: 6),
-                  Flexible(child: Text('@${author?.handle ?? ''}', style: caption, overflow: TextOverflow.ellipsis)),
-                  const Spacer(),
-                  if (d != null) Text('${d.month}/${d.day} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}', style: caption),
-                  // … = ほかの SNS の投稿と同じドロップダウン(削除はこの中)。
-                  Builder(
-                    builder: (b) => RasqIconButton(
-                      icon: Icons.more_horiz,
-                      size: 18,
-                      tooltip: '投稿の操作',
-                      onPressed: () {
-                        final box = b.findRenderObject() as RenderBox;
-                        _more(context, ref, box.localToGlobal(Offset.zero) & box.size, isMine);
-                      },
-                    ),
-                  ),
-                ]),
-                if (post.body.isNotEmpty) Text(post.body, style: focused ? RasqTypography.body : RasqTypography.bodySmall),
-                if (post.images.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: RasqSpacing.sm),
-                    child: Wrap(spacing: 6, runSpacing: 6, children: [
-                      for (final i in post.images)
-                        ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(i.url.toString(), width: post.images.length == 1 ? 260 : 126, height: post.images.length == 1 ? 180 : 126, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox(width: 126, height: 126))),
-                    ]),
-                  ),
-                // 付いているキュー(絵 + 件数)。押すと、同じ絵を自分も付ける / 外す。
-                if (post.queues.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: RasqSpacing.sm),
-                    child: Wrap(spacing: 6, runSpacing: 6, children: [
-                      for (final q in post.queues)
-                        Material(
-                          color: q.mine ? tokens.link.withValues(alpha: 0.12) : scheme.surfaceContainerHighest,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: q.mine ? tokens.link : Colors.transparent)),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            key: ValueKey('rasqPost.${post.id}.queue.${q.packId}.${q.stickerId}'),
-                            onTap: () => _run(context, ref, (api) => api.setQueue(post.id, q.mine ? null : (packId: q.packId, stickerId: q.stickerId))),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                Image.network(q.url.toString(), width: 22, height: 22, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_outlined, size: 18)),
-                                const SizedBox(width: 4),
-                                Text('${q.count}', style: caption),
-                              ]),
-                            ),
-                          ),
-                        ),
-                    ]),
-                  ),
-                // ── アクションバー: 返信 / リブロー / キュー / 共有 ──
-                Row(children: [
-                  RasqActionButton.iconCount(key: ValueKey('rasqPost.${post.id}.reply'), icon: Icons.chat_bubble_outline, count: post.replyCount, tooltip: '返信', onTap: () => _reply(context, ref)),
-                  const SizedBox(width: RasqSpacing.md),
-                  RasqActionButton.iconCount(
-                    key: ValueKey('rasqPost.${post.id}.rebroad'),
-                    icon: Icons.repeat,
-                    count: post.rebroadCount,
-                    done: post.rebroaded,
-                    doneColor: tokens.link,
-                    tooltip: post.rebroaded ? 'リブローをやめる' : 'リブロー',
-                    onTap: () => _run(context, ref, (api) => api.setRebroad(post.id, on: !post.rebroaded)),
-                  ),
-                  const SizedBox(width: RasqSpacing.md),
-                  RasqActionButton.icon(key: ValueKey('rasqPost.${post.id}.queue'), icon: Icons.add_reaction_outlined, doneIcon: Icons.add_reaction, done: post.queues.any((q) => q.mine), doneColor: tokens.link, tooltip: 'キュー', onTap: () => _queue(context, ref)),
-                  const SizedBox(width: RasqSpacing.md),
-                  RasqActionButton.icon(
-                    key: ValueKey('rasqPost.${post.id}.share'),
-                    icon: Icons.ios_share,
-                    tooltip: '共有',
-                    onTap: () async {
-                      final link = _permalink(ref);
-                      if (link == null) return;
-                      await Clipboard.setData(ClipboardData(text: link.toString()));
-                      if (context.mounted) _toast(context, 'リンクをコピーしました');
-                    },
-                  ),
-                ]),
-              ]),
-            ),
-          ]),
         ]),
+        media: post.images.isEmpty ? null : RasqMediaGrid(items: [for (final i in post.images) MediaItem(id: i.id, type: MediaType.image, url: i.url, width: i.width == 0 ? null : i.width, height: i.height == 0 ? null : i.height)]),
+        // アクションバー: 返信 / リブロー (ReBroad) / キュー (Queue) + 共有。キューは、付けていれば押すと外す、長押しでピッカー(Misskey のリアクションと同じ)。
+        actionBar: Builder(
+          builder: (bar) => RasqActionBar(
+            items: [
+              RasqActionBarItem(id: 'reply', label: '返信', icon: Icons.chat_bubble_outline, count: post.replyCount, onTap: () => _reply(context, ref)),
+              RasqActionBarItem(id: 'rebroad', label: post.rebroaded ? 'リブローをやめる' : 'リブロー', icon: Icons.repeat, done: post.rebroaded, doneColor: tokens.link, count: post.rebroadCount, onTap: () => _run(context, ref, (api) => api.setRebroad(post.id, on: !post.rebroaded))),
+              RasqActionBarItem(
+                id: 'queue',
+                label: 'キュー',
+                icon: Icons.add_reaction_outlined,
+                doneIcon: Icons.add_reaction,
+                done: mine != null,
+                doneColor: tokens.link,
+                showCount: false,
+                onTap: () => mine != null ? _run(context, ref, (api) => api.setQueue(post.id, null)) : _queue(context, ref, rectOf(bar)),
+                onLongPress: () => _queue(context, ref, rectOf(bar)),
+              ),
+            ],
+            trailing: [
+              RasqActionButton.icon(
+                key: ValueKey('rasqPost.${post.id}.share'),
+                icon: Icons.ios_share,
+                tooltip: '共有',
+                onTap: () async {
+                  final link = _permalink(ref);
+                  if (link == null) return;
+                  await Clipboard.setData(ClipboardData(text: link.toString()));
+                  if (context.mounted) _toast(context, 'リンクをコピーしました');
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-/// キューの絵を選ぶ: インストール済みのアセットパックのステッカー。[current] = いま付けているもの(「外す」を出す)。
-Future<({String packId, String stickerId, bool remove})?> showRasqQueuePicker(WidgetRef ref, {({String packId, String stickerId})? current}) async {
-  await ref.read(stickerPacksProvider.notifier).ready;
-  final packs = ref.read(stickerPacksProvider);
-  final manager = ref.read(overlayManagerProvider);
-  const id = 'rasq.post.queuePicker';
-  return manager.showFow<({String packId, String stickerId, bool remove})>(
-    id: id,
-    spec: FowSpec(title: 'キュー', cancelText: '閉じる', initialHeightFactor: 0.5, minHeightFactor: 0.25, maxHeightFactor: 0.85, maxWidth: 560),
-    semanticsLabel: 'キューの絵を選ぶ',
-    builder: (context, _) {
-      final scheme = Theme.of(context).colorScheme;
-      return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.md), children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Text('ストアでインストール(購入)したアセットパックの絵で、リアクションします。1 つの投稿に 1 つです。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-        ),
-        if (current != null)
-          RasqListTile(key: const ValueKey('rasqQueue.remove'), title: 'いまのキューを外す', chevron: false, onTap: () => manager.close(id, result: (packId: current.packId, stickerId: current.stickerId, remove: true))),
-        if (packs.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(RasqSpacing.page),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('アセットパックが入っていません。', key: const ValueKey('rasqQueue.empty'), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
-              TextButton(
-                onPressed: () {
-                  manager.close(id);
-                  ref.read(routerProvider).push(Routes.store);
-                },
-                child: const Text('ストアで探す'),
-              ),
-            ]),
-          ),
-        for (final pack in packs) ...[
-          RasqSectionHeader(title: pack.name),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-            child: Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final s in pack.stickers)
-                Tooltip(
-                  message: s.label ?? s.id,
-                  child: InkWell(
-                    key: ValueKey('rasqQueue.${pack.id}.${s.id}'),
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () => manager.close(id, result: (packId: pack.id, stickerId: s.id, remove: false)),
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: current != null && current.packId == pack.id && current.stickerId == s.id ? RasqTokens.of(context).link : scheme.outlineVariant),
-                      ),
-                      child: Image.file(File(s.file), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_outlined)),
-                    ),
-                  ),
-                ),
-            ]),
-          ),
-        ],
-      ]);
-    },
-  );
-}

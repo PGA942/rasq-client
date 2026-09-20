@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -26,7 +28,7 @@ import 'emoji_prediction.dart';
 /// 数千個のコールバック登録が FPS を殺していたため廃止(ListView の遅延
 /// ビルドが同じ役割をゼロコストで果たす)。
 class EmojiPanel extends ConsumerStatefulWidget {
-  const EmojiPanel({super.key, required this.onPick, this.height, this.predictionContext, this.existingReactions = const {}, this.actionBar, this.spec});
+  const EmojiPanel({super.key, required this.onPick, this.height, this.predictionContext, this.existingReactions = const {}, this.actionBar, this.spec, this.stickers});
   final ValueChanged<String> onPick;
 
   /// Fixed height; null = fill the parent (FOW panel).
@@ -54,6 +56,10 @@ class EmojiPanel extends ConsumerStatefulWidget {
 
   /// 対象投稿に既に付いているリアクション(リアクション用途のとき)。
   final Map<String, int> existingReactions;
+
+  /// **ステッカーのピッカー**として使う (D-273: RASQ の投稿のキュー)。渡すと、絵文字(デフォルト / サーバー)の代わりに
+  /// これを並べる: 履歴 → 予測 → パックごと。作りは絵文字のときと同じ(検索 / 省略表示 / 予測)。[onPick] には [EmojiPanelSticker.key] が来る。
+  final List<EmojiPanelSticker>? stickers;
 
   static const unicode = ['😀', '😂', '🥹', '😍', '🤔', '😭', '😡', '🥳', '😴', '🙏', '👍', '👎', '👏', '🙌', '💪', '❤️', '💔', '🔥', '✨', '🎉', '🚀', '🌙', '☀️', '🌸', '🍣', '🍜', '☕', '🍺', '🐱', '🐶', '🐟', '🦀', '💡', '📌', '✅', '❌', '⚠️', '💯', '🆗', '🔁'];
 
@@ -192,8 +198,9 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
 
     // フラットな行リストを組み立てる(重い Widget 生成は各行の build まで遅延)。
     final rows = <Widget Function()>[];
+    final stickers = widget.stickers;
     void label(String t) => rows.add(() => _label(t));
-    void grid(List<_CellSpec> cells) => rows.add(() => _grid([for (final c in cells) _EmojiCell(text: c.text, url: c.url, onTap: () => _pick(c.text))]));
+    void grid(List<_CellSpec> cells) => rows.add(() => _grid([for (final c in cells) _EmojiCell(text: c.text, url: c.url, file: c.file, tooltip: c.tooltip, onTap: () => _pick(c.text))]));
     void chunked(List<_CellSpec> cells) {
       for (var i = 0; i < cells.length; i += EmojiPanel.chunkSize) {
         final chunk = cells.sublist(i, (i + EmojiPanel.chunkSize).clamp(0, cells.length));
@@ -203,6 +210,10 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
 
     _CellSpec spec(EmojiInfo e) => _CellSpec(':${e.name}:', e.url);
 
+    if (stickers != null) {
+      _stickerRows(stickers, q, scheme, label: label, grid: grid, chunked: chunked, rows: rows);
+    }
+    if (stickers == null) {
     if (q.isEmpty && recent.isNotEmpty) {
       label('履歴');
       grid([for (final e in recent) _CellSpec(e, _urlFor(e, custom.value))]);
@@ -264,6 +275,8 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
         break;
     }
 
+    }
+
     return Container(
       height: widget.height,
       // リアクションピッカー(ヘッダーレス)ではバーが枠の上辺そのものなので
@@ -297,6 +310,78 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
     );
   }
 
+  // ── ステッカーのピッカー (D-273) ──
+  List<String>? _stickerPredicted;
+
+  void _stickerRows(
+    List<EmojiPanelSticker> stickers,
+    String q,
+    ColorScheme scheme, {
+    required void Function(String) label,
+    required void Function(List<_CellSpec>) grid,
+    required void Function(List<_CellSpec>) chunked,
+    required List<Widget Function()> rows,
+  }) {
+    _CellSpec cell(EmojiPanelSticker s) => _CellSpec(s.key, s.url, file: s.file, tooltip: s.label ?? s.key);
+    final byKey = {for (final s in stickers) s.key: s};
+    if (stickers.isEmpty) {
+      rows.add(() => Padding(padding: const EdgeInsets.all(8), child: Text('使えるアセットパックがありません(ストアからインストールできます)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))));
+      return;
+    }
+    if (q.isNotEmpty) {
+      final hit = [for (final s in stickers) if (s.matches(q)) s];
+      label('検索結果');
+      if (hit.isEmpty) {
+        rows.add(() => Padding(padding: const EdgeInsets.all(8), child: Text('見つかりません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))));
+      } else {
+        chunked([for (final s in hit) cell(s)]);
+      }
+      return;
+    }
+    // 履歴: 絵文字と同じ置き場(最近使ったもの)から、ステッカーのものだけ。
+    final recent = [for (final k in ref.watch(recentEmojiProvider)) if (byKey[k] != null) byKey[k]!];
+    if (recent.isNotEmpty) {
+      label('履歴');
+      grid([for (final s in recent) cell(s)]);
+    }
+    // 予測: 絵文字の予測と同じ式(本文との語句一致 / 既に付いているもの / 最近使った)を、ラベルとタグに当てる。
+    _stickerPredicted ??= predictEmojis(
+      context: widget.predictionContext ?? '',
+      existingReactions: {for (final e in widget.existingReactions.entries) ':${e.key}:': e.value},
+      recent: [for (final k in ref.read(recentEmojiProvider)) if (byKey[k] != null) ':$k:'],
+      custom: [for (final s in stickers) EmojiInfo(name: s.key, url: s.url ?? Uri(), aliases: [if (s.label != null) s.label!, ...s.tags])],
+    );
+    final predicted = [for (final p in _stickerPredicted!) if (byKey[p.substring(1, p.length - 1)] != null) byKey[p.substring(1, p.length - 1)]!];
+    if (predicted.isNotEmpty) {
+      label('予測');
+      grid([for (final s in predicted) cell(s)]);
+    }
+    // パックごと(絵文字のジャンルと同じ省略表示)。
+    final byPack = <String, List<EmojiPanelSticker>>{};
+    for (final s in stickers) {
+      byPack.putIfAbsent(s.group, () => []).add(s);
+    }
+    for (final entry in byPack.entries) {
+      final open = _expanded.contains(entry.key) || byPack.length == 1;
+      rows.add(() => InkWell(
+            onTap: () => setState(() => open ? _expanded.remove(entry.key) : _expanded.add(entry.key)),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(children: [
+                Expanded(child: Text('・${entry.key}', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
+                Text('${entry.value.length}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                if (byPack.length > 1) Icon(open ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 16, color: scheme.onSurfaceVariant),
+              ]),
+            ),
+          ));
+      if (open) {
+        chunked([for (final s in entry.value) cell(s)]);
+      } else {
+        grid([for (final s in entry.value.take(EmojiPanel.collapsedCount)) cell(s)]);
+      }
+    }
+  }
+
   static Uri? _urlFor(String e, List<EmojiInfo>? custom) {
     if (!e.startsWith(':') || custom == null) return null;
     final name = e.substring(1, e.length - 1);
@@ -308,15 +393,35 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
 }
 
 class _CellSpec {
-  const _CellSpec(this.text, this.url);
+  const _CellSpec(this.text, this.url, {this.file, this.tooltip});
   final String text;
   final Uri? url;
+
+  /// 端末上の画像(インストール済みのアセットパックのステッカー)。
+  final String? file;
+  final String? tooltip;
+}
+
+/// ステッカー 1 枚(ピッカーに並べる)。[key] = 選んだときに返す文字列、[group] = パックの名前。
+@immutable
+class EmojiPanelSticker {
+  const EmojiPanelSticker({required this.key, required this.group, this.label, this.tags = const [], this.file, this.url});
+  final String key;
+  final String group;
+  final String? label;
+  final List<String> tags;
+  final String? file;
+  final Uri? url;
+
+  bool matches(String q) => (label ?? '').toLowerCase().contains(q) || key.toLowerCase().contains(q) || group.toLowerCase().contains(q) || tags.any((t) => t.toLowerCase().contains(q));
 }
 
 class _EmojiCell extends StatelessWidget {
-  const _EmojiCell({required this.text, required this.onTap, this.url});
+  const _EmojiCell({required this.text, required this.onTap, this.url, this.file, this.tooltip});
   final String text;
   final Uri? url;
+  final String? file;
+  final String? tooltip;
   final VoidCallback onTap;
 
   @override
@@ -330,7 +435,12 @@ class _EmojiCell extends StatelessWidget {
           // 可変幅表示 + ホバー/長押しチップ (D-040: Miria 方式参考)。
           // widthFactor: 1 で shrink-wrap — 素の Center は有界制約で全幅に
           // 広がり、Wrap で 1 行 1 絵文字になってしまう (D-042 修正)。
-          child: Center(widthFactor: 1, child: RasqCustomEmoji(url: url, fallbackText: text, height: 26, name: text.startsWith(':') ? text.replaceAll(':', '') : text)),
+          child: Center(
+            widthFactor: 1,
+            child: file != null
+                ? Tooltip(message: tooltip ?? text, child: Image.file(File(file!), key: ValueKey('emoji.sticker.$text'), height: 30, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_outlined, size: 20)))
+                : RasqCustomEmoji(url: url, fallbackText: text, height: 26, name: text.startsWith(':') ? text.replaceAll(':', '') : text),
+          ),
         ),
       );
 }

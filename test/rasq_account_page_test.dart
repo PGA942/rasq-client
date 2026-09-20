@@ -15,6 +15,7 @@ import 'package:rasq_client/features/profile/rasq_account_page_screen.dart';
 import 'package:rasq_client/features/profile/rasq_profile_edit_screen.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
@@ -143,38 +144,45 @@ void main() {
     expect(find.textContaining('(2 / 3)'), findsOneWidget);
     expect(find.text('はじめての投稿'), findsOneWidget);
     // リブローは上限に数えない(通常の投稿 2 件 + リブロー 1 件 = 2 / 3)。リブローの帯が出る。
+    final pageScroll = find.descendant(of: find.byType(RasqAccountPageScreen), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.text('タロ がリブロー'), 200, scrollable: pageScroll);
     expect(find.text('タロ がリブロー'), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('rasqPost.p2')), -200, scrollable: pageScroll);
     // アクションバー: リブロー → 件数と印が変わる。キューのチップ → 同じ絵を自分も付ける。返信 → replyTo つきで送る。
-    await tester.tap(find.byKey(const ValueKey('rasqPost.p2.rebroad')));
+    // タイルは SNS の投稿と同じ部品(RasqPostTile / RasqReactionChips / RasqActionBar。D-273)。
+    final p2 = find.byKey(const ValueKey('rasqPost.p2'));
+    expect(find.descendant(of: p2, matching: find.byType(RasqPostTile)), findsOneWidget);
+    await tester.tap(find.descendant(of: p2, matching: find.byTooltip('リブロー')));
     await tester.pumpAndSettle();
     expect(calls, contains('PUT /posts/p2/rebroad'));
-    expect(find.descendant(of: find.byKey(const ValueKey('rasqPost.p2.rebroad')), matching: find.text('2')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('rasqPost.p2.queue.dev.pack.star')));
+    expect(find.descendant(of: p2, matching: find.byTooltip('リブローをやめる')), findsOneWidget);
+    // 付いているキュー = リアクションのチップ。押すと、同じ絵を自分も付ける。
+    await tester.tap(find.descendant(of: p2, matching: find.byType(RasqReactionChips)));
     await tester.pumpAndSettle();
     expect(calls, contains('PUT /posts/p2/queue'));
-    await tester.tap(find.byKey(const ValueKey('rasqPost.p2.reply')));
+    await tester.tap(find.descendant(of: p2, matching: find.byTooltip('返信')));
     await tester.pumpAndSettle();
     await tester.enterText(find.descendant(of: find.byKey(const ValueKey('rasqReply.body')), matching: find.byType(TextField)), 'いいですね');
     await tester.tap(find.text('返信').last);
     await tester.pumpAndSettle();
     expect(replies.single, {'body': 'いいですね', 'replyTo': 'p2'});
-    // キューのボタン: アセットパックが無ければ、ストアへの案内。
+    // キューのボタン: 付けていれば、押すと外す(Misskey のリアクションと同じ)。アセットパックが無ければ、長押しでストアへの案内。
     // 右下の「RASQ に投稿」に隠れない位置まで送る。
     await tester.drag(find.byKey(const ValueKey('rasqPost.p2')), const Offset(0, -250));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('rasqPost.p2.queue')));
+    await tester.longPress(find.descendant(of: p2, matching: find.byTooltip('キュー')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('rasqQueue.empty')), findsOneWidget);
-    c.read(overlayManagerProvider).close('rasq.post.queuePicker');
+    expect(find.text('アセットパックがありません'), findsOneWidget);
+    await tester.tap(find.text('閉じる'));
     await tester.pumpAndSettle();
     // … = ほかの SNS と同じドロップダウン。削除はこの中(自分の投稿だけ)。
-    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('投稿の操作')));
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('メニュー')));
     await tester.pumpAndSettle();
     expect(find.text('リンクをコピー'), findsOneWidget);
     expect(find.text('削除'), findsNothing);
     c.read(overlayManagerProvider).close('rasq.post.more');
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p1')), matching: find.byTooltip('投稿の操作')));
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p1')), matching: find.byTooltip('メニュー')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除'));
     await tester.pumpAndSettle();
@@ -207,6 +215,9 @@ void main() {
     expect(tester.widget<SegmentedButton<SnsTileVisibility>>(seg).selected, {SnsTileVisibility.show});
     // 戻ると、ページにも出る。
     c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    // (一覧を送ってあるので、上へ戻してから見る。)
+    await tester.drag(find.byType(NestedScrollView), const Offset(0, 1200));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('rasqPage.tile.misskey:mk.example:kagi')), findsOneWidget);
   });
