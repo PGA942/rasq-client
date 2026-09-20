@@ -135,7 +135,8 @@ class _PostRowState extends ConsumerState<PostRow> {
       post: astellPostPayloadOf(post),
       account: {'sns': acc.kind.name, 'instance': acc.instance, 'handle': acc.handle},
       column: column,
-      onComposerOpen: (text, media, mime, name) => showComposer(ref, const ComposeNormal(), initialText: text, column: column, initialFiles: media == null ? null : [ComposerInitialFile(bytes: media, name: name ?? 'plugin.png', mimeType: mime)]),
+      // プラグインが開くコンポーザーも、↓ で切り替えたアカウントで (D-278)。
+      onComposerOpen: (text, media, mime, name) => showComposer(ref, const ComposeNormal(), initialText: text, column: column, postAs: ref.read(sessionsProvider).value?.allSessions.where((s) => s.account.key == acc.key).firstOrNull, initialFiles: media == null ? null : [ComposerInitialFile(bytes: media, name: name ?? 'plugin.png', mimeType: mime)]),
     );
     if (message != null && message.isNotEmpty) messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
@@ -305,7 +306,14 @@ class _PostRowState extends ConsumerState<PostRow> {
     if (iconText == null && iconUrl == null && isReaction && !st.done) {
       final predicted = ref.watch(reactionHistoryProvider).value == null ? null : ref.read(reactionHistoryProvider.notifier).predictFor(post);
       if (predicted != null) {
-        if (predicted.startsWith(':')) {
+        final remote = remoteReactionName(predicted);
+        if (remote != null) {
+          // 他サーバーの絵文字 (D-278): 同じ名前の絵文字が自サーバーにあれば、それを予測として出す(押すとそれが付く)。
+          // 無ければ何も出さない(押すとピッカーが開く)。
+          final cache = ref.watch(emojiCacheProvider);
+          if (!cache.containsKey(remote)) WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? ref.read(emojiCacheProvider.notifier).request([remote]) : null);
+          iconUrl = cache[remote];
+        } else if (predicted.startsWith(':')) {
           iconUrl = post.reactionEmojis[predicted];
         } else {
           iconText = predicted;
@@ -332,34 +340,49 @@ class _PostRowState extends ConsumerState<PostRow> {
       // Repost はデフォルトの**アクションバンドル**(D-039): タップで
       // リノート / 引用ノートのドロップダウン(ユーザー編集のリスト化とは
       // 別で、(+) の編集導線には出ない組み込みバンドル)。
-      onTap: isRepost ? null : () => _performReactionAware(a, st),
-      onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : null,
+      onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : (anchor) => _performReactionAware(a, st, anchor),
       // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行。
       // ピッカーは**実物のリアクションボタンにアンカー**する (D-065:
       // 基本下付き・余白不足で上付き。D-055 の複製バーは置かない)。
-      onAnchorLongPress: isReaction
-          ? (anchor) => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context), anchor: anchor,
-                  predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
-                  existingReactions: post.reactions, onPick: (e) {
-                _onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
-              })
-          : null,
+      onAnchorLongPress: isReaction ? (anchor) => _openReactionPicker(a, anchor) : null,
     );
   }
 
   /// 短押し。リアクションは**予測絵文字**を添えて実行する (D-039:
   /// 事前学習なしのヒューリスティック — 自分の履歴 × 投稿に付いている
   /// リアクション。reaction-predictor モデル配線後は ml.infer に置換)。
-  void _performReactionAware(ActionDescriptor a, ActionState st) {
-    if (a.genreTag == 'Reaction' && !st.done) {
-      final predicted = ref.read(reactionHistoryProvider.notifier).predictFor(post);
-      widget
-          .onAction(a, args: predicted == null ? const {} : {'reaction': predicted})
-          .then((_) => predicted == null ? null : ref.read(reactionHistoryProvider.notifier).record(predicted))
-          .catchError((_) {});
-      return;
+  ///
+  /// **付けられる予測が無いときは、ピッカーを開く** (D-278): だれもリアクションしていなくて履歴も無い / 予測が他サーバーの絵文字で、
+  /// 同じ名前のものが自サーバーに無い。以前は絵文字を添えずに送っていて、SNS 側の既定(👍)が付いていた。
+  /// [_actAs] で別のアカウントに切り替えているときは、そのアカウントで付ける(以前は元のアカウントで付けていた)。
+  Future<void> _performReactionAware(ActionDescriptor a, ActionState st, Rect anchor) async {
+    if (a.genreTag != 'Reaction' || st.done || !a.iconPerPost) return _run(a).catchError((_) {});
+    final predicted = ref.read(reactionHistoryProvider.notifier).predictFor(post);
+    final reaction = predicted == null ? null : await _sendable(predicted);
+    if (!mounted) return;
+    if (reaction == null) return _openReactionPicker(a, anchor);
+    await _onAction(a, args: {'reaction': reaction}).then((_) => ref.read(reactionHistoryProvider.notifier).record(reaction)).catchError((_) {});
+  }
+
+  /// 予測を、このアカウントのサーバーで付けられる形に。付けられなければ null。
+  Future<String?> _sendable(String predicted) async {
+    final remote = remoteReactionName(predicted);
+    if (remote == null) return predicted;
+    final session = ref.read(sessionForAccountProvider(post.account.key)) ?? ref.read(currentSnsSessionProvider);
+    try {
+      return await session?.emojiUrl(remote) == null ? null : ':$remote:';
+    } catch (_) {
+      return null;
     }
-    _run(a).catchError((_) {});
+  }
+
+  /// リアクションの絵文字ピッカー。**実物のリアクションボタンにアンカー**する (D-065: 基本下付き・余白不足で上付き)。
+  void _openReactionPicker(ActionDescriptor a, Rect anchor) {
+    openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context), anchor: anchor, accountKey: post.account.key,
+        predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
+        existingReactions: post.reactions, onPick: (e) {
+      _onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
+    });
   }
 
   ActionDescriptor? get _repostAction => widget.actions.where((a) => a.genreTag == 'Repost').firstOrNull;

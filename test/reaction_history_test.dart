@@ -67,4 +67,14 @@ void main() {
     expect(restored['🎉'], 2);
     expect(jsonDecode((await storage.read(reactionHistoryStorageKey))!), isA<Map>());
   });
+
+  test('他サーバーの絵文字だけを見分ける (D-278)', () {
+    expect(remoteReactionName(':blob@other.example:'), 'blob');
+    // 自サーバー / Unicode / 壊れた形は、読み替えない。
+    expect(remoteReactionName(':blob:'), isNull);
+    expect(remoteReactionName(':blob@.:'), isNull);
+    expect(remoteReactionName('👍'), isNull);
+    expect(remoteReactionName(':@other.example:'), isNull);
+    expect(remoteReactionName('::'), isNull);
+  });
 }

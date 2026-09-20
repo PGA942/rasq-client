@@ -1484,14 +1484,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 RasqActionButton.icon(
                   icon: Icons.emoji_emotions_outlined,
                   tooltip: '絵文字',
-                  onTap: () => openEmojiPicker(ref, ownerId: composerFowId, column: _column, predictionContext: _text.text, onPick: (e) {
+                  // 絵文字は、**投稿するアカウント**のサーバーのもの (D-278。切り替えに追従する)。
+                  onTap: () => openEmojiPicker(ref, ownerId: composerFowId, column: _column, predictionContext: _text.text, accountKey: _effectivePostAs?.account.key, onPick: (e) {
                     _insert(e);
                     _focus.requestFocus();
                   }),
                 ),
                 // MFM/Markdown ピッカー (D-045/D-046: 起動ボタンはツールバー側)。
                 Builder(builder: (context) {
-                  final mfm = ref.watch(currentAccountProvider)?.kind == SnsKind.misskey;
+                  // 投稿するアカウントの SNS に合わせる (D-278。切り替えに追従する)。RASQ 指定のときは装飾を送れないので Markdown 側。
+                  final mfm = !_rasqTarget && (_effectivePostAs?.account ?? ref.watch(currentAccountProvider))?.kind == SnsKind.misskey;
                   return RasqActionButton.icon(
                     icon: Icons.code,
                     tooltip: mfm ? 'MFM' : 'Markdown',

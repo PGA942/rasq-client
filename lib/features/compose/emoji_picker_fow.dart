@@ -22,6 +22,8 @@ Future<void> openEmojiPicker(
   Widget? actionBar,
   int column = 0,
   Rect? anchor,
+  // どのアカウントのカスタム絵文字を出すか (D-278)。null = いま表示しているアカウント。
+  String? accountKey,
   // ステッカーのピッカーとして使う (D-273)。
   List<EmojiPanelSticker>? stickers,
 }) async {
@@ -61,6 +63,7 @@ Future<void> openEmojiPicker(
     barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
     spec: spec,
     builder: (ctx, handle) => EmojiPanel(
+      accountKey: accountKey,
       predictionContext: predictionContext,
       existingReactions: existingReactions,
       actionBar: actionBar,

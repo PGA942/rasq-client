@@ -13,6 +13,15 @@ final customEmojisProvider = FutureProvider<List<EmojiInfo>>((ref) async {
   return s.customEmojis();
 });
 
+/// あるアカウントのカスタム絵文字 (D-278): コンポーザーで投稿するアカウントを切り替えているとき / 別のアカウントとして
+/// リアクションするときに、**そのアカウントのサーバーの絵文字**を出す。null = いま表示しているアカウント。
+final customEmojisForProvider = FutureProvider.family<List<EmojiInfo>, String?>((ref, accountKey) async {
+  if (accountKey == null) return ref.watch(customEmojisProvider.future);
+  final s = ref.watch(sessionForAccountProvider(accountKey)) ?? ref.watch(currentSnsSessionProvider);
+  if (s == null) return const [];
+  return s.customEmojis();
+});
+
 /// Recently used emoji (「履歴」) — in-memory for now (persist in M2 settings).
 class RecentEmojiStore extends Notifier<List<String>> {
   @override
