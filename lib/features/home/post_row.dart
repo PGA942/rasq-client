@@ -340,9 +340,8 @@ class _PostRowState extends ConsumerState<PostRow> {
         if (remote != null) {
           // 他サーバーの絵文字 (D-278): 同じ名前の絵文字が自サーバーにあれば、それを予測として出す(押すとそれが付く)。
           // 無ければ何も出さない(押すとピッカーが開く)。
-          final cache = ref.watch(emojiCacheProvider);
-          if (!cache.containsKey(remote)) WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? ref.read(emojiCacheProvider.notifier).request([remote]) : null);
-          iconUrl = cache[remote];
+          // 引くのは、**投稿が流れてきたアカウント**のサーバー (D-284。総合 TL では、表示中のアカウントとは限らない)。
+          iconUrl = ref.watch(accountEmojiUrlProvider((account: post.account.key, name: remote))).value;
         } else if (predicted.startsWith(':')) {
           iconUrl = post.reactionEmojis[predicted];
         } else {

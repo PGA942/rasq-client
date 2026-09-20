@@ -69,7 +69,8 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
     case 'share':
       await showPostShareFow(ref, post, column: fowColumnOf(context), media: media);
     case 'editActions':
-      await showActionBarEditSheet(ref);
+      // その投稿が流れてきたアカウントのバーを編集する (D-284)。全画面表示から開いたときも同じ。
+      await showActionBarEditSheet(ref, accountKey: post.account.key);
     case 'favorite':
       final fa = s.actions.where((a) => a.id == 'favorite').firstOrNull;
       if (fa != null) await ref.read(timelineProvider(TimelineKind.home).notifier).perform(post, fa);

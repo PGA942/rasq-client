@@ -74,6 +74,15 @@ void main() {
     expect(bestMatch(['Copy'], [reaction, renote])!.score, lessThan(0.85));
   });
 
+  test('構成キー → どのアカウントのバーか (D-284)', () {
+    expect(accountKeyOfConfigKey('misskey:mk.example:me'), 'misskey:mk.example:me');
+    expect(accountKeyOfConfigKey('viewer:misskey:mk.example:me'), 'misskey:mk.example:me');
+    // 内蔵のバー(加工画面 / RASQ の投稿)と、旧来の共通構成は、アカウントに属さない。
+    expect(accountKeyOfConfigKey(editorImageConfigKey), isNull);
+    expect(accountKeyOfConfigKey(rasqPostConfigKey), isNull);
+    expect(accountKeyOfConfigKey(''), isNull);
+  });
+
   testWidgets('宣言だけでバンドルに入る → タップで post.action(post / account)→ message がトースト、composer.open でコンポーザー、スロット設定で無効化', (tester) async {
     late FakeSlotRuntime rt;
     fakes['act'] = () => rt = FakeSlotRuntime(
