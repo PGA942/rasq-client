@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import 'orgate_client.dart';
+import 'rasq_account.dart';
 
 /// RASQ アカウントページ (S-021) の口とモデル。
 
@@ -173,6 +174,58 @@ const rasqPostInstance = 'rasq';
 /// RASQ の投稿を SNS の投稿の形にしたものか(SNS のアクションは効かないので、出さない)。
 bool isRasqPost(Post post) => post.account.kind == SnsKind.other && post.account.instance == rasqPostInstance;
 
+/// RASQ の通知 1 件 (S-026)。
+@immutable
+class RasqNotice {
+  const RasqNotice({required this.id, required this.kind, required this.title, required this.body, this.postId, this.actor, this.createdAt});
+  static const kinds = {'post.mention', 'post.reply', 'post.quote', 'astell.quote'};
+  final String id;
+  final String kind;
+  final String title;
+  final String body;
+  final String? postId;
+  final RasqPostAuthor? actor;
+  final DateTime? createdAt;
+
+  factory RasqNotice.fromJson(Map<String, Object?> j) {
+    final payload = j['payload'] is Map ? (j['payload'] as Map).cast<String, Object?>() : const <String, Object?>{};
+    return RasqNotice(
+      id: '${j['id']}',
+      kind: '${j['kind']}',
+      title: j['title'] as String? ?? '',
+      body: j['body'] as String? ?? '',
+      postId: payload['postId'] as String?,
+      actor: RasqPostAuthor.fromJson(payload['actor']),
+      createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
+    );
+  }
+}
+
+/// 自分宛ての RASQ の通知。ログインしていなければ空。
+final rasqNoticesProvider = FutureProvider.autoDispose<List<RasqNotice>>((ref) async {
+  final api = ref.watch(rasqAccountPageApiProvider);
+  if (api == null || ref.watch(orgateAccountProvider).value == null) return const [];
+  return api.notifications();
+});
+
+/// 本文を、メンションで区切る (S-026)。リンクにするのは [mentions] にあるハンドルだけ(大文字小文字は見ない)。
+/// 戻り = (文字列, メンションならそのハンドル)。
+List<(String, String?)> splitMentions(String body, Iterable<String> mentions) {
+  final known = {for (final m in mentions) m.toLowerCase()};
+  if (known.isEmpty) return [(body, null)];
+  final out = <(String, String?)>[];
+  var last = 0;
+  for (final m in RegExp(r'(?<![A-Za-z0-9_@.])@([A-Za-z0-9_]{1,32})(?![A-Za-z0-9_]|@)').allMatches(body)) {
+    final handle = m.group(1)!;
+    if (!known.contains(handle.toLowerCase())) continue;
+    if (m.start > last) out.add((body.substring(last, m.start), null));
+    out.add((m.group(0)!, handle));
+    last = m.end;
+  }
+  if (last < body.length) out.add((body.substring(last), null));
+  return out;
+}
+
 /// RASQ アカウントとしての投稿。
 @immutable
 class RasqAccountPost {
@@ -193,6 +246,7 @@ class RasqAccountPost {
     this.isQuote = false,
     this.quote,
     this.quoteCount = 0,
+    this.mentions = const [],
     this.cw = '',
     this.visibility = 'public',
     this.reactionAcceptance,
@@ -224,6 +278,9 @@ class RasqAccountPost {
   final bool isQuote;
   final RasqAccountPost? quote;
   final int quoteCount;
+
+  /// 本文のメンション (S-026)。投稿した時点で実在したアカウントだけ(タイルは、これだけをリンクにする)。
+  final List<RasqPostAuthor> mentions;
 
   /// RASQ の投稿を、SNS の投稿の形に(全画面表示 / 引用のコンポーザーなど、共通の部品に渡すため)。
   /// アカウントは `other / rasq`([isRasqPost] で見分ける)。
@@ -282,6 +339,7 @@ class RasqAccountPost {
         isQuote: j['isQuote'] == true,
         quote: j['quote'] is Map ? RasqAccountPost.fromJson((j['quote'] as Map).cast<String, Object?>()) : null,
         quoteCount: (j['quoteCount'] as num?)?.toInt() ?? 0,
+        mentions: [for (final m in j['mentions'] as List? ?? const []) if (RasqPostAuthor.fromJson(m) != null) RasqPostAuthor.fromJson(m)!],
       );
 }
 
@@ -432,6 +490,18 @@ class RasqAccountPageApi {
       if (poll != null) 'poll': {'choices': poll.choices, 'multiple': poll.multiple, if (poll.expiresAfter != null) 'expiresInSeconds': poll.expiresAfter!.inSeconds},
     }));
   }
+
+  /// アカウントの検索 (S-026。コンポーザーの @ 補完)。
+  Future<List<RasqPostAuthor>> searchAccounts(String q, {int limit = 8}) async => [
+        for (final a in await _client.getList('/accounts/search', {'q': q, 'limit': '$limit'}))
+          if (RasqPostAuthor.fromJson(a) != null) RasqPostAuthor.fromJson(a)!,
+      ];
+
+  /// 自分宛ての通知 (S-026): メンション / 返信 / 引用 / AsTell での引用。
+  Future<List<RasqNotice>> notifications({int limit = 50}) async => [
+        for (final n in await _client.getList('/me/notifications', {'limit': '$limit'}))
+          if (n is Map && RasqNotice.kinds.contains(n['kind'])) RasqNotice.fromJson(n.cast<String, Object?>()),
+      ];
 
   /// フィード (S-025): 自分とフォロー中の RASQ アカウントの投稿 + リブロード。[until] = 前のページの `nextUntil`。
   Future<({List<RasqAccountPost> posts, String? nextUntil})> feed({String? until, int limit = 30}) async {

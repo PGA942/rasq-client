@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -151,7 +152,7 @@ class RasqPostTileView extends ConsumerWidget {
     final media = post.cw.isNotEmpty ? _media(context, ref) : null;
     final q = post.quote;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (post.body.isNotEmpty) Text(post.body, style: focused ? RasqTypography.body.copyWith(fontSize: 16) : RasqTypography.body),
+      if (post.body.isNotEmpty) _RasqBodyText(post: post, style: focused ? RasqTypography.body.copyWith(fontSize: 16) : RasqTypography.body),
       if (media != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: media),
       if (p != null)
         Padding(
@@ -455,4 +456,50 @@ class _CwFoldState extends State<_CwFold> {
         ),
         if (_open) widget.child,
       ]);
+}
+
+/// 本文 (S-026): メンション(`@handle`。投稿した時点で実在したアカウントだけ)はリンクになり、押すとそのアカウントのページへ。
+class _RasqBodyText extends StatefulWidget {
+  const _RasqBodyText({required this.post, required this.style});
+  final RasqAccountPost post;
+  final TextStyle style;
+  @override
+  State<_RasqBodyText> createState() => _RasqBodyTextState();
+}
+
+class _RasqBodyTextState extends State<_RasqBodyText> {
+  final _taps = <TapGestureRecognizer>[];
+
+  @override
+  void dispose() {
+    for (final t in _taps) {
+      t.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final post = widget.post;
+    if (post.mentions.isEmpty) return Text(post.body, style: widget.style);
+    for (final t in _taps) {
+      t.dispose();
+    }
+    _taps.clear();
+    final link = RasqTokens.of(context).link;
+    return Text.rich(
+      key: ValueKey('rasqPost.${post.id}.body'),
+      TextSpan(style: widget.style, children: [
+        for (final (text, handle) in splitMentions(post.body, [for (final m in post.mentions) m.handle]))
+          if (handle == null)
+            TextSpan(text: text)
+          else
+            TextSpan(text: text, style: TextStyle(color: link), recognizer: (() {
+              final t = TapGestureRecognizer()..onTap = () => context.push(Routes.rasqAccount(handle));
+              _taps.add(t);
+              return t;
+            })()),
+      ]),
+    );
+  }
 }

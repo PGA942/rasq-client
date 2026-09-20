@@ -165,4 +165,47 @@ void main() {
     await tester.pumpAndSettle();
     expect(sent.single, {'body': 'これはいい', 'quoteOf': 'src-1'});
   });
+
+  testWidgets('@ 補完 (D-285): RASQ 指定では Central のアカウント検索、SNS では searchUsers。候補を押すと、その場のメンションに置き換わる', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final asked = <String>[];
+    final mock = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      if (req.method == 'GET' && path == '/me') return json({'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ'});
+      if (req.method == 'GET' && path == '/accounts/search') {
+        asked.add(req.url.queryParameters['q'] ?? '');
+        return json([{'id': 'acc-2', 'handle': 'hanako', 'displayName': 'ハナコ'}]);
+      }
+      return json({'error': {'code': '404', 'message': 'not found'}}, 404);
+    });
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+      OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'device-abc', 'token': 'device-token', 'accountId': 'acc-1'}),
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    showComposerWith(const ComposeNormal(), manager: c.read(overlayManagerProvider), router: c.read(routerProvider), rasqTarget: true);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'やあ @ha');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(asked, ['ha']);
+    expect(find.byKey(const ValueKey('composer.mentions')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('composer.mention.@hanako')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField).first).controller!.text, 'やあ @hanako ');
+    expect(find.byKey(const ValueKey('composer.mentions')), findsNothing);
+  });
 }
