@@ -39,7 +39,8 @@ enum ActionBarSurface {
   post('', '投稿アクションバー'),
   viewer('.viewer', '全画面アクションバー'),
   editorImage('.editor.image', '加工画面のバー(画像)'),
-  editorVideo('.editor.video', '加工画面のバー(動画 / 音声)');
+  editorVideo('.editor.video', '加工画面のバー(動画 / 音声)'),
+  rasqPost('.rasq', 'RASQ の投稿のバー');
 
   const ActionBarSurface(this.keySuffix, this.title);
 
@@ -47,6 +48,9 @@ enum ActionBarSurface {
   final String keySuffix;
   final String title;
   bool get isEditor => this == editorImage || this == editorVideo;
+
+  /// 土台が SNS のアクションではないバー(加工画面 / RASQ の投稿。D-279)。
+  bool get isBuiltin => isEditor || this == rasqPost;
 }
 
 String actionBarConfigKey(ActionBarSurface surface, String accountKey) => switch (surface) {
@@ -54,6 +58,7 @@ String actionBarConfigKey(ActionBarSurface surface, String accountKey) => switch
       ActionBarSurface.viewer => ActionBarConfigStore.viewerKey(accountKey),
       ActionBarSurface.editorImage => editorImageConfigKey,
       ActionBarSurface.editorVideo => editorVideoConfigKey,
+      ActionBarSurface.rasqPost => rasqPostConfigKey,
     };
 
 /// タイルの大きさ (D-208: 少し大型化)。
@@ -80,7 +85,7 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
   // 全画面バーの構成 (D-214) なら全画面表示プラグイン(QR コード検出など)のトグルも候補。
   final plugins = ref.read(pluginActionsForProvider(configKey));
   // SNS のボタン: 指定があればそれ(バーから外したもの、D-215)。無ければ現在のアカウントの全部(pluginsOnly なら無し)。
-  final sns = snsCandidates ?? (pluginsOnly ? const <ActionDescriptor>[] : (isEditorConfigKey(configKey) ? editorBuiltinActionsFor(configKey) : (ref.read(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[])));
+  final sns = snsCandidates ?? (pluginsOnly ? const <ActionDescriptor>[] : (isBuiltinConfigKey(configKey) ? builtinActionsFor(configKey) : (ref.read(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[])));
   final query = TextEditingController();
   var genre = 'すべて';
   try {
@@ -95,7 +100,7 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
           final q = query.text.trim().toLowerCase();
           final rows = <({String id, String label, String subtitle, String genre, IconData icon})>[
             for (final a in sns)
-              if (!exclude.contains(a.id)) (id: a.id, label: a.label, subtitle: '${isEditorConfigKey(configKey) ? '内蔵の編集' : 'SNS のアクション'} · ${a.genreTag}', genre: a.genreTag, icon: PostRow.iconFor(a.icon, Icons.circle_outlined)),
+              if (!exclude.contains(a.id)) (id: a.id, label: a.label, subtitle: '${isEditorConfigKey(configKey) ? '内蔵の編集' : configKey == rasqPostConfigKey ? 'RASQ のアクション' : 'SNS のアクション'} · ${a.genreTag}', genre: a.genreTag, icon: PostRow.iconFor(a.icon, Icons.circle_outlined)),
             for (final p in plugins)
               if (!exclude.contains(p.id))
                 (
@@ -299,7 +304,7 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
           final plugins = ref.watch(pluginActionsForProvider(configKey));
           final accountKey = slotSettingsKeyFor(configKey, ref.watch(currentAccountProvider)?.key ?? '');
           final settings = ref.watch(slotActionSettingsProvider(accountKey));
-          final merged = mergePluginActions(config: config, snsActions: isEditorConfigKey(configKey) ? editorBuiltinActionsFor(configKey) : (session?.actions ?? const []), plugins: plugins, settings: settings);
+          final merged = mergePluginActions(config: config, snsActions: isBuiltinConfigKey(configKey) ? builtinActionsFor(configKey) : (session?.actions ?? const []), plugins: plugins, settings: settings);
           final byId = {for (final a in merged.actions) a.id: a};
           final memberIds = ActionListDef.uniq(list.memberIds);
           final members = [for (final id in memberIds) if (byId.containsKey(id)) byId[id]!];
@@ -527,7 +532,7 @@ class _ActionBarEditBody extends ConsumerWidget {
           ]),
         ),
         // ── バーごとの編集(全画面 → 投稿 → 加工画面)──
-        for (final surface in surfaces ?? const [ActionBarSurface.viewer, ActionBarSurface.post, ActionBarSurface.editorImage, ActionBarSurface.editorVideo]) ...[
+        for (final surface in surfaces ?? const [ActionBarSurface.viewer, ActionBarSurface.post, ActionBarSurface.editorImage, ActionBarSurface.editorVideo, ActionBarSurface.rasqPost]) ...[
           RasqSectionHeader(title: surface.title),
           _ActionBarTiles(key: ValueKey('actionbar.surface.${surface.name}'), surface: surface, accountKey: accountKey),
         ],
@@ -572,7 +577,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
     final manager = ref.read(overlayManagerProvider);
     // 加工画面のバーの土台は内蔵の編集(SNS のアクションではない)。プラグインボタンの有効 / 無効は `slots.editor`。
     final isEditor = widget.surface.isEditor;
-    final snsActions = isEditor ? editorBuiltinActionsFor(configKey) : (session?.actions ?? const <ActionDescriptor>[]);
+    final snsActions = widget.surface.isBuiltin ? builtinActionsFor(configKey) : (session?.actions ?? const <ActionDescriptor>[]);
     final plugins = ref.watch(pluginActionsForProvider(configKey));
     final settingsKey = slotSettingsKeyFor(configKey, accountKey);
     final settings = ref.watch(slotActionSettingsProvider(settingsKey));
@@ -581,7 +586,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
     final merged = mergePluginActions(config: config, snsActions: snsActions, plugins: plugins, settings: settings);
     final actions = merged.actions;
     final entries = merged.config.apply(actions);
-    final pluginName = isEditor ? 'RASQ(内蔵の編集)' : (registry.plugins.where((p) => p.manifest.id == session?.pluginId).firstOrNull?.manifest.name ?? session?.pluginId ?? '');
+    final pluginName = isEditor ? 'RASQ(内蔵の編集)' : widget.surface == ActionBarSurface.rasqPost ? 'RASQ' : (registry.plugins.where((p) => p.manifest.id == session?.pluginId).firstOrNull?.manifest.name ?? session?.pluginId ?? '');
     String providerOf(ActionDescriptor a) => isPluginActionId(a.id) ? (plugins.where((p) => p.id == a.id).firstOrNull?.plugin.manifest.name ?? 'プラグイン') : pluginName;
     Future<void> setEnabled(String id, bool on) => settingsStore.set('enabled', {...settings.enabled, id: on});
 

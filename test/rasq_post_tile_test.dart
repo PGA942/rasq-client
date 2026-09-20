@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account_page_api.dart';
 import 'package:rasq_client/features/profile/rasq_post_tile.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -88,5 +90,20 @@ void main() {
     expect(find.text('元の投稿です'), findsOneWidget);
     expect(find.text('ハナコ'), findsOneWidget);
     expect(find.byKey(const ValueKey('rasqPost.p4.quoteGone')), findsOneWidget);
+  });
+
+  testWidgets('アクションバーは編集できる構成から組む (D-279)。既定の並びは 返信 / リブロード / キュー', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    const post = RasqAccountPost(id: 'p5', body: '本文', author: RasqPostAuthor(id: 'a', handle: 'taro', displayName: 'タロ'));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage({})), pluginRegistryProvider.overrideWithValue(PluginRegistry()), centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test'))],
+      child: MaterialApp(home: Scaffold(body: RasqPostTileView(post: post, onChanged: () {}))),
+    ));
+    await tester.pump();
+    // 既定の並び: 返信 / リブロード / キュー。
+    final bar = tester.widget<RasqActionBar>(find.byType(RasqActionBar));
+    expect([for (final i in bar.items) i.id], ['reply', 'rebroad', 'queue']);
   });
 }
