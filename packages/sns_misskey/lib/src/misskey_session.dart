@@ -245,7 +245,12 @@ class MisskeySession extends SnsSessionBase {
     // Misskey returns myReaction on the note itself; we re-derive from raw
     // fetches in timeline() (see mapper counts). Done flags need the raw note,
     // so callers that need exact "done" should use [noteStates].
-    return super.actionStates(posts);
+    // 投稿の myReaction から「済み」とアイコンを出す (D-281)。カスタム絵文字は、このサーバーの絵文字の URL で。
+    final base = await super.actionStates(posts);
+    for (final p in posts) {
+      if (p.myReaction != null) base[p.id]?['reaction'] = ActionResult(done: true, count: base[p.id]?['reaction']?.count, icon: reactionIcon(p.myReaction, host));
+    }
+    return base;
   }
 
   /// `myReaction` 文字列 → ボタンアイコン (D-040)。Unicode はテキスト、

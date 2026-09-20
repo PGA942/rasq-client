@@ -38,6 +38,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('リスト', route: '/lists'),
     SettingsRow('ミュート/ブロック', route: '/settings/mute-block'),
     SettingsRow('プラグインボタン', subtitle: '宣言されたボタンの有効 / 無効と束ねる閾値', route: Routes.actionBarPlugins),
+    SettingsRow('リアクションの予測', subtitle: 'だれも付けていない投稿でも予測するか', route: '/settings/dsl/plugins.reaction'),
     SettingsRow('共有 / リノートに使うアカウント', subtitle: '複数のアカウントに見えている投稿を、どのアカウントで扱うか', route: '/settings/dsl/plugins.accountPick'),
     SettingsRow('カスタムモーションとアニメーション', route: '/settings/dsl/appearance.mfm'),
     SettingsRow('リソースと広告', route: '/settings/dsl/resources'),
