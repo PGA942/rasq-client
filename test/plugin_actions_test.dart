@@ -194,10 +194,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.read(actionBarConfigProvider(accountKey)).lists.single.icon, 'material:star_border');
     // 写真 (D-212): アプリの保存領域へコピーされ、file: で持つ。
-    // ファイル I/O は本物の非同期(FakeAsync では進まない)。
+    // ファイル I/O は本物の非同期(FakeAsync では進まない)。固定待ちだと遅い CI で落ちるので、書き終わるまで待つ。
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const ValueKey('actionbar.bundle.icon.photo')));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      for (var i = 0; i < 200; i++) {
+        if (c.read(actionBarConfigProvider(accountKey)).lists.single.icon?.startsWith('file:') ?? false) break;
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
     });
     await tester.pumpAndSettle();
     final photoIcon = c.read(actionBarConfigProvider(accountKey)).lists.single.icon!;
