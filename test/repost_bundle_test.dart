@@ -41,4 +41,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('引用'), findsOneWidget);
   });
+
+  testWidgets('リノート済みでもボタンは無効にならない (D-274): もう一度開けて、「リノートを取り消す」が出る', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('リノート').first);
+    await tester.pumpAndSettle();
+    expect(find.text('リノートを取り消す'), findsNothing); // まだリノートしていない
+    await tester.tap(find.text('リノート').last);
+    await tester.pumpAndSettle();
+    // 済みになっても、ボタンは押せる。ドロップダウンに「リノートを取り消す」が増える。
+    await tester.tap(find.byTooltip('リノート').first);
+    await tester.pumpAndSettle();
+    expect(find.text('リノートを取り消す'), findsOneWidget);
+    expect(find.text('引用ノート'), findsOneWidget);
+  });
 }

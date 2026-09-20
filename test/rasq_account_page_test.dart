@@ -85,6 +85,10 @@ void main() {
         case 'DELETE /me/posts/p1':
           posts.removeWhere((p) => p['id'] == 'p1');
           return http.Response('', 204);
+        case 'DELETE /posts/p9/rebroad':
+          return http.Response('', 204);
+        case 'GET /posts/p9':
+          return json({'post': posts.firstWhere((p) => p['id'] == 'p9'), 'replies': <Object>[]});
         case 'PUT /posts/p2/rebroad':
           posts[posts.indexWhere((p) => p['id'] == 'p2')]
             ..['rebroaded'] = true
@@ -155,7 +159,9 @@ void main() {
     await tester.tap(find.descendant(of: p2, matching: find.byTooltip('リブロー')));
     await tester.pumpAndSettle();
     expect(calls, contains('PUT /posts/p2/rebroad'));
-    expect(find.descendant(of: p2, matching: find.byTooltip('リブローをやめる')), findsOneWidget);
+    // ボタンは入り切りにしない (D-274): リブロー済みでも、ボタンは「リブロー」のまま(取り消しは … から)。
+    expect(find.descendant(of: p2, matching: find.byTooltip('リブロー')), findsOneWidget);
+    expect(find.descendant(of: p2, matching: find.byTooltip('リブローをやめる')), findsNothing);
     // 付いているキュー = リアクションのチップ。押すと、同じ絵を自分も付ける。
     await tester.tap(find.descendant(of: p2, matching: find.byType(RasqReactionChips)));
     await tester.pumpAndSettle();
@@ -175,6 +181,12 @@ void main() {
     expect(find.text('アセットパックがありません'), findsOneWidget);
     await tester.tap(find.text('閉じる'));
     await tester.pumpAndSettle();
+    // 自分のリブローの帯(「タロ がリブロー」)の横の … → リブローを取り消す (D-274)。
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('リノートの操作')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('リブローを取り消す'));
+    await tester.pumpAndSettle();
+    expect(calls, contains('DELETE /posts/p9/rebroad'));
     // … = ほかの SNS と同じドロップダウン。削除はこの中(自分の投稿だけ)。
     await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('メニュー')));
     await tester.pumpAndSettle();

@@ -30,6 +30,12 @@ class OverlayManager extends ChangeNotifier {
 
   /// Topmost entry that blocks input (ignores `rai`/`fow`/`vcVideo`).
   RasqOverlayEntry? get topBlocking {
+    // サイドバーの前に持ち上げた FOW (D-274) は、サイドバーより先に戻る / Escape を受ける。
+    if (_entries.any((e) => e.layer == OverlayLayer.sidebar)) {
+      for (final e in _entries.reversed) {
+        if (e.layer == OverlayLayer.fow && (e.fow?.aboveSidebar ?? false) && !isFowSuspended(e) && e.effectiveBarrierBehavior != OverlayBarrierBehavior.none) return e;
+      }
+    }
     for (final e in _entries.reversed) {
       // 退避中の FOW(全画面の加工画面の下に隠れているコンポーザー等)は、戻る / Escape の相手にしない。
       if (e.layer == OverlayLayer.fow && isFowSuspended(e)) continue;

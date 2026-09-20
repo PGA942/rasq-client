@@ -371,10 +371,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('RASQ アカウント'));
     await tester.pumpAndSettle();
-    // … ではサイドバーを閉じない (D-272): FOW はサイドバーの右に寄せて出る(重ならない)。幅が足りないときだけ閉じる。
+    // … ではサイドバーを閉じない (D-272 → D-274): FOW は、後ろを暗くしてサイドバーの上に被さって出る。
     final overlay = container.read(overlayManagerProvider);
-    final wide = tester.view.physicalSize.width / tester.view.devicePixelRatio >= 700;
-    expect(overlay.contains(RasqSidebar.overlayId), wide);
+    expect(overlay.contains(RasqSidebar.overlayId), isTrue);
+    expect(overlay.byId(rasqAccountFowId)!.fow!.aboveSidebar, isTrue);
     expect(overlay.contains(rasqAccountFowId), isTrue);
 
     expect(find.byType(RasqAccountPanel), findsOneWidget);

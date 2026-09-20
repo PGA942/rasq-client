@@ -51,19 +51,36 @@ class OverlayHost extends StatelessWidget {
           },
           child: Stack(
             fit: StackFit.expand,
-            children: [
-              child,
-              for (final e in entries)
-                if (e.layer == OverlayLayer.fow) ...[
-                  // FOW group is rendered once, at the position of the first FOW entry.
-                  if (entries.firstWhere((x) => x.layer == OverlayLayer.fow) == e) ..._buildFowGroup(context, entries.where((x) => x.layer == OverlayLayer.fow).toList()),
-                ] else
-                  ..._buildEntry(context, e),
-            ],
+            children: _layers(context, entries),
           ),
         );
       },
     );
+  }
+
+  /// 重ね順に並べる。FOW 群は最初の FOW の位置に 1 回だけ。ただし `aboveSidebar` の FOW があれば、サイドバーの**前**に描く (D-274)。
+  List<Widget> _layers(BuildContext context, List<RasqOverlayEntry> entries) {
+    final fows = entries.where((x) => x.layer == OverlayLayer.fow).toList();
+    final lift = fows.any((e) => e.fow?.aboveSidebar ?? false) && entries.any((e) => e.layer == OverlayLayer.sidebar);
+    final out = <Widget>[child];
+    var placed = fows.isEmpty;
+    for (final e in entries) {
+      if (e.layer == OverlayLayer.fow) {
+        if (!placed && !lift) {
+          out.addAll(_buildFowGroup(context, fows));
+          placed = true;
+        }
+        continue;
+      }
+      // サイドバーより後ろのレイヤーに入る直前(= サイドバーの直後)に、持ち上げた FOW 群を置く。
+      if (!placed && lift && e.layer.index > OverlayLayer.sidebar.index) {
+        out.addAll(_buildFowGroup(context, fows));
+        placed = true;
+      }
+      out.addAll(_buildEntry(context, e));
+    }
+    if (!placed) out.addAll(_buildFowGroup(context, fows));
+    return out;
   }
 
   List<Widget> _buildEntry(BuildContext context, RasqOverlayEntry e) {
@@ -113,7 +130,7 @@ class OverlayHost extends StatelessWidget {
       // グレーアウト(スクリム)はインタースティシャル(+ボタンの投稿
       // コンポーザー等)のときだけ (D-052)。ピッカー類の「余白クリックで
       // 消失」は**透明バリア**で受ける(背面を暗くしない)。
-      final dim = blocking.fow?.blocksContent ?? false;
+      final dim = (blocking.fow?.blocksContent ?? false) || (blocking.fow?.dimBehind ?? false);
       widgets.add(Positioned.fill(
         child: Semantics(
           label: '閉じる',
@@ -276,7 +293,16 @@ class _FowColumn extends StatelessWidget {
       FowColumnSlot pinSlot(int wall) => wall < 0
           ? FowColumnSlot(x: effSlots.first.x, width: pinW)
           : FowColumnSlot(x: effSlots.last.x + effSlots.last.width - pinW, width: pinW);
-      FowColumnSlot slotOf(FowSpec s) => s.pinnedWall != 0 ? pinSlot(s.pinnedWall) : effSlots[s.columnIndex.clamp(0, effSlots.length - 1)];
+      FowColumnSlot slotOf(FowSpec s) {
+        if (s.pinnedWall != 0) return pinSlot(s.pinnedWall);
+        final slot = effSlots[s.columnIndex.clamp(0, effSlots.length - 1)];
+        // カラムが狭すぎるなら、全カラムにまたがる (D-274)。
+        final need = s.spanColumnsBelow;
+        if (need != null && slot.width < need && effSlots.length > 1) {
+          return FowColumnSlot(x: effSlots.first.x, width: effSlots.last.x + effSlots.last.width - effSlots.first.x);
+        }
+        return slot;
+      }
       int nearest(double center) {
         var best = 0;
         var bestD = double.infinity;

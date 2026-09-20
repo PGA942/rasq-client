@@ -44,6 +44,9 @@ class FowSpec {
     this.anchor,
     this.anchorBelow,
     this.hAlign = FowHAlign.center,
+    this.aboveSidebar = false,
+    this.dimBehind = false,
+    this.spanColumnsBelow,
   })  : heightStops = [...heightStops]..sort(),
         heightFactor = ValueNotifier(initialHeightFactor.clamp(minHeightFactor, maxHeightFactor));
 
@@ -125,6 +128,16 @@ class FowSpec {
 
   /// パネルの最大幅 (D-185): カラムより狭ければ [hAlign] の側に置く(既定は中央。RAi の入力ウィジェット幅に揃える等)。
   final double? maxWidth;
+
+  /// サイドバーより前に出す (D-274)。サイドバーから開く FOW(RASQ アカウント)用: サイドバーは FOW のレイヤーより前にあるので、
+  /// そのままだとサイドバーの下に隠れる。1 つでもこれが立った FOW があれば、FOW 群ごとサイドバーの前に描く。
+  final bool aboveSidebar;
+
+  /// 後ろを暗くする(インタースティシャルでなくても)。[aboveSidebar] と組にして「ブラックアウトさせながら被さる」。
+  final bool dimBehind;
+
+  /// カラムの幅がこれより狭ければ、**全カラムにまたがって**出す (D-274)。2 カラムで、左カラムに入りきらない FOW 用。
+  final double? spanColumnsBelow;
 
   /// 最大幅がカラムより狭いときの横位置 (D-209): 左 / 中央 / 右。アンカー付きなら [anchor] の横位置に寄せる。
   final FowHAlign hAlign;

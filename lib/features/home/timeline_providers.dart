@@ -546,7 +546,10 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     if (session == null) return;
     final store = ref.read(actionStateProvider.notifier);
     final before = store.of(post.key, action.id);
-    final undo = args.containsKey('reaction') ? false : before.done;
+    // `forceUndo` (D-274): 状態の入り切りではなく、向きを指定する(リノートのボタンは何度でも「リノート」、取り消しは帯の … から)。
+    final forced = args['forceUndo'];
+    args = {...args}..remove('forceUndo');
+    final undo = forced is bool ? forced : (args.containsKey('reaction') ? false : before.done);
     store.applyOptimistic(post.key, action.id, done: !undo);
     try {
       final r = await session.performAction(action.id, post.id, args: {...args, 'undo': undo});

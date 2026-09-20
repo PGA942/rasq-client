@@ -69,6 +69,8 @@ class RasqPostTileView extends ConsumerWidget {
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.more', anchor: anchor, dense: true, items: [
       const RasqDropdownItem('リンクをコピー', 'copy'),
       const RasqDropdownItem('ブラウザで開く', 'open'),
+      // リブローの取り消しは、帯の … か、ここから(ボタンは入り切りにしない。D-274)。
+      if (post.rebroaded) const RasqDropdownItem('リブローを取り消す', 'unrebroad', destructive: true),
       if (isMine) const RasqDropdownItem('削除', 'delete', destructive: true),
     ]);
     if (!context.mounted || pick == null) return;
@@ -80,6 +82,8 @@ class RasqPostTileView extends ConsumerWidget {
         if (context.mounted) _toast(context, 'リンクをコピーしました');
       case 'open':
         if (link != null) await launchUrl(link, mode: LaunchMode.externalApplication);
+      case 'unrebroad':
+        await _run(context, ref, (api) => api.setRebroad(post.id, on: false));
       case 'delete':
         final ok = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.delete', title: '投稿を削除', message: 'この投稿と、付いている画像を削除します。元に戻せません。', confirmText: '削除する', cancelText: 'キャンセル', destructive: true);
         if (!ok || !context.mounted) return;
@@ -172,6 +176,13 @@ class RasqPostTileView extends ConsumerWidget {
         onAuthorTap: author == null ? null : () => context.push(Routes.rasqAccount(author.handle)),
         // … = ほかの SNS の投稿と同じドロップダウン(削除はこの中)。
         onMore: (anchor) => _more(context, ref, anchor, isMine),
+        // 自分のリブローなら、帯の横の … から取り消せる (D-274)。
+        onBannerMore: post.rebroadedBy != null && me != null && post.rebroadedBy!.id == me.id
+            ? (anchor) async {
+                final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.rebroad.banner', anchor: anchor, dense: true, items: const [RasqDropdownItem('リブローを取り消す', 'undo', destructive: true)]);
+                if (pick == 'undo' && context.mounted) await _run(context, ref, (api) => api.setRebroad(post.id, on: false));
+              }
+            : null,
         content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (post.body.isNotEmpty) Text(post.body, style: focused ? RasqTypography.body.copyWith(fontSize: 16) : RasqTypography.body),
           // 付いているキュー = リアクションのチップ(絵 + 件数。自分のものはハイライト)。押すと、同じ絵を自分も付ける / 外す。
@@ -197,7 +208,17 @@ class RasqPostTileView extends ConsumerWidget {
           builder: (bar) => RasqActionBar(
             items: [
               RasqActionBarItem(id: 'reply', label: '返信', icon: Icons.chat_bubble_outline, count: post.replyCount, onTap: () => _reply(context, ref)),
-              RasqActionBarItem(id: 'rebroad', label: post.rebroaded ? 'リブローをやめる' : 'リブロー', icon: Icons.repeat, done: post.rebroaded, doneColor: tokens.link, count: post.rebroadCount, onTap: () => _run(context, ref, (api) => api.setRebroad(post.id, on: !post.rebroaded))),
+              // リブローのボタンは入り切りにしない (D-274。SNS のリノートと同じ): いつ押しても「リブロー」。取り消しは帯の … / 投稿の … から。
+              RasqActionBarItem(
+                id: 'rebroad',
+                label: 'リブロー',
+                icon: Icons.repeat,
+                doneIcon: Icons.repeat, // 完了アイコンが無いと、部品が済みのボタンを無効にする
+                done: post.rebroaded,
+                doneColor: tokens.link,
+                count: post.rebroadCount,
+                onTap: () => post.rebroaded ? _toast(context, 'リブロー済みです(取り消すのは … から)') : _run(context, ref, (api) => api.setRebroad(post.id, on: true)),
+              ),
               RasqActionBarItem(
                 id: 'queue',
                 label: 'キュー',
