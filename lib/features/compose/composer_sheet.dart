@@ -239,6 +239,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Post? get _replyTo => switch (widget.target) { ComposeReply(to: final p) => p, _ => null };
   Post? get _quoteOf => switch (widget.target) { ComposeQuote(of: final p) => p, _ => null };
 
+  /// RASQ の投稿の引用 (D-276): 投稿先は RASQ に固定(SNS には引用できない)。
+  bool get _rasqQuote => _quoteOf != null && isRasqPost(_quoteOf!);
+
   /// ダイレクト投稿への返信 = 公開範囲をダイレクト(specified)に固定 (D-047)。
   bool get _directReply => _replyTo?.isDirect ?? false;
 
@@ -380,7 +383,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
     // 共有 FOW で選んだアカウント / プラグインが添えた画像 (D-170)。
     if (widget.initialPostAs != null) _postAs = widget.initialPostAs;
-    if (widget.initialRasqTarget && widget.target is ComposeNormal) _rasqTarget = true;
+    if ((widget.initialRasqTarget && widget.target is ComposeNormal) || _rasqQuote) _rasqTarget = true;
     for (final f in widget.initialFiles ?? const <ComposerInitialFile>[]) {
       _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive);
     }
@@ -838,7 +841,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 } else {
                   setState(() {
                     _postAs = s;
-                    _rasqTarget = false;
+                    _rasqTarget = _rasqQuote;
                     _targetsOpen = false;
                   });
                   // 連動の下書き (D-129: delivery=draft): このアカウント宛の
@@ -1128,16 +1131,15 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     return (hasText || hasMedia || (_poll != null && pollOk)) && !(_isDm && _files.length > 1);
   }
 
-  /// RASQ アカウントとして投稿する (D-271)。SNS の投稿先 / 連動 / 公開範囲 / 投票 / 注釈は関係しない。
   /// RASQ アカウントとして投稿する (D-271 → D-275)。作り方は SNS と共通: 注釈 / 公開範囲 / リアクションの受け入れ(いいねのみ)/
   /// センシティブな画像 / 投票。**違うのは、連合に関わるもの(連合なし、リモート向けの受け入れ)が無いことと、上限**
-  /// (画像 6 枚 / 投票 6 個 / 本文 1000 文字)。動画 / 音声と、投稿先の連動は使えない。
+  /// (添付 6 つ / 投票 6 個 / 本文 1000 文字)。動画 / 音声も付けられる(D-276。32 MiB まで)。引用は RASQ の投稿だけ。投稿先の連動は使えない。
   Future<void> _sendRasq() async {
     final api = ref.read(rasqAccountPageApiProvider);
     final me = ref.read(orgateAccountProvider).value;
     if (api == null || me == null) return setState(() => _error = 'RASQ アカウントにログインしていません');
-    if (_files.any((f) => !(f.mimeType ?? 'image/').startsWith('image/'))) return setState(() => _error = 'RASQ への投稿では、動画 / 音声は使えません(画像 $rasqPostMaxImages 枚まで)');
-    if (_files.length > rasqPostMaxImages) return setState(() => _error = 'RASQ への投稿は、画像 $rasqPostMaxImages 枚までです');
+    if (_files.any((f) => f.bytes.length > rasqPostMaxMediaBytes)) return setState(() => _error = 'RASQ への投稿では、動画 / 音声は 1 つ ${rasqPostMaxMediaBytes ~/ (1024 * 1024)} MB までです');
+    if (_files.length > rasqPostMaxImages) return setState(() => _error = 'RASQ への投稿は、添付 $rasqPostMaxImages つまでです');
     if (_text.text.trim().length > rasqPostMaxChars) return setState(() => _error = 'RASQ への投稿は $rasqPostMaxChars 文字までです');
     final poll = _poll;
     if (poll != null && poll.texts.length > rasqPostMaxPollChoices) return setState(() => _error = 'RASQ への投稿は、投票の選択肢 $rasqPostMaxPollChoices 個までです');
@@ -1160,6 +1162,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         visibility: visibility,
         likeOnly: opts.reactionAcceptance == 'likeOnly',
         poll: poll == null ? null : (choices: poll.texts, multiple: poll.multiple, expiresAfter: poll.expiresAfter),
+        quoteOf: _rasqQuote ? _quoteOf!.id : null,
       );
       ref.invalidate(rasqAccountPageProvider(me.handle));
       if (_draftId != null) _drafts.clear(_draftId!);

@@ -11,6 +11,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../backend/rasq_account_page_api.dart';
 import '../home/action_bar_config.dart';
 import '../home/action_bundle_fow.dart';
 import '../home/plugin_actions.dart';
@@ -208,7 +209,8 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   /// ボタン(ON = 塗り / アクセント。動画の再生中は出さない)。
   List<Widget> _viewerActionBar() {
     final post = widget.post;
-    final session = ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
+    // RASQ の投稿 (D-276) には、SNS のアクションは効かないので出さない。
+    final session = isRasqPost(post) ? null : ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final viewerPlugins = ref.watch(viewerPluginActionsProvider);
     if (actions.isEmpty && viewerPlugins.isEmpty) return const [];
@@ -439,7 +441,8 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
   Widget build(BuildContext context) {
     final post = widget.post;
     // アクションは投稿が流れてきたアカウントのもの (D-200)。無ければ現在のアカウント。
-    final session = ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
+    // RASQ の投稿 (D-276) には、SNS のアクションは効かないので出さない。
+    final session = isRasqPost(post) ? null : ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
     // 下側の FOW のバーは投稿アクションバーそのまま (D-212: 全画面アクションバーはヘッダーの「…」の左)。

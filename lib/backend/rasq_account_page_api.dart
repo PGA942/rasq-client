@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:rasq_models/rasq_models.dart';
+
 import 'orgate_client.dart';
 
 /// RASQ アカウントページ (S-021) の口とモデル。
@@ -83,8 +85,22 @@ class RasqSnsLink {
 
 @immutable
 class RasqPostImage {
-  const RasqPostImage({required this.id, required this.url, this.width = 0, this.height = 0, this.sensitive = false});
+  const RasqPostImage({required this.id, required this.url, this.width = 0, this.height = 0, this.sensitive = false, this.type = 'image'});
   final String id;
+
+  /// image / video / audio (S-024)。
+  final String type;
+
+  /// ほかの SNS の投稿と同じ部品(メディアグリッド / 全画面表示)に渡す形。音声は「ファイル」として出る。
+  MediaItem toMediaItem() => MediaItem(
+        id: id,
+        type: switch (type) { 'video' => MediaType.video, 'audio' => MediaType.file, _ => MediaType.image },
+        url: url,
+        sensitive: sensitive,
+        fileName: type == 'audio' ? '音声' : null,
+        width: width == 0 ? null : width,
+        height: height == 0 ? null : height,
+      );
   final Uri url;
   final int width;
   final int height;
@@ -112,6 +128,9 @@ class RasqPoll {
 
 /// RASQ に投稿するときの上限 (S-023)。SNS のコンポーザーと共通にしつつ、ここだけ違う。
 const rasqPostMaxImages = 6;
+
+/// 動画 / 音声 1 つの大きさ (S-024)。
+const rasqPostMaxMediaBytes = 32 * 1024 * 1024;
 const rasqPostMaxPollChoices = 6;
 const rasqPostMaxChars = 1000;
 
@@ -148,6 +167,12 @@ class RasqQueueCount {
   final bool mine;
 }
 
+/// [RasqAccountPost.toPost] が付けるインスタンス名。
+const rasqPostInstance = 'rasq';
+
+/// RASQ の投稿を SNS の投稿の形にしたものか(SNS のアクションは効かないので、出さない)。
+bool isRasqPost(Post post) => post.account.kind == SnsKind.other && post.account.instance == rasqPostInstance;
+
 /// RASQ アカウントとしての投稿。
 @immutable
 class RasqAccountPost {
@@ -164,6 +189,10 @@ class RasqAccountPost {
     this.rebroaded = false,
     this.queues = const [],
     this.rebroadedBy,
+    this.rebroadId,
+    this.isQuote = false,
+    this.quote,
+    this.quoteCount = 0,
     this.cw = '',
     this.visibility = 'public',
     this.reactionAcceptance,
@@ -188,6 +217,27 @@ class RasqAccountPost {
   /// 一覧で、誰かのリブローとして出ているとき。
   final RasqPostAuthor? rebroadedBy;
 
+  /// そのリブロー 1 回の id(取り消すときに使う。S-024)。
+  final String? rebroadId;
+
+  /// 引用 (S-024): 引用として書かれたか / 元の投稿(消えた・見られないなら null)/ この投稿が引用された数。
+  final bool isQuote;
+  final RasqAccountPost? quote;
+  final int quoteCount;
+
+  /// RASQ の投稿を、SNS の投稿の形に(全画面表示 / 引用のコンポーザーなど、共通の部品に渡すため)。
+  /// アカウントは `other / rasq`([isRasqPost] で見分ける)。
+  Post toPost({Uri? central}) => Post(
+        id: id,
+        url: central == null ? null : permalink(central),
+        account: AccountId(kind: SnsKind.other, instance: rasqPostInstance, handle: author?.handle ?? ''),
+        author: UserSummary(id: 'rasq:${author?.id ?? ''}', account: AccountId(kind: SnsKind.other, instance: rasqPostInstance, handle: author?.handle ?? ''), displayName: author?.label ?? '', avatarUrl: author?.avatarUrl),
+        createdAt: createdAt ?? DateTime.now(),
+        body: body,
+        contentWarning: cw.isEmpty ? null : cw,
+        media: [for (final i in images) i.toMediaItem()],
+      );
+
   /// 注釈 (CW)。空 = なし。
   final String cw;
 
@@ -208,7 +258,7 @@ class RasqAccountPost {
         author: RasqPostAuthor.fromJson(j['author']),
         images: [
           for (final i in j['images'] as List? ?? const [])
-            if (i is Map && _http(i['url']) != null) RasqPostImage(id: '${i['id']}', url: _http(i['url'])!, width: (i['width'] as num?)?.toInt() ?? 0, height: (i['height'] as num?)?.toInt() ?? 0, sensitive: i['sensitive'] == true),
+            if (i is Map && _http(i['url']) != null) RasqPostImage(id: '${i['id']}', url: _http(i['url'])!, width: (i['width'] as num?)?.toInt() ?? 0, height: (i['height'] as num?)?.toInt() ?? 0, sensitive: i['sensitive'] == true, type: i['type'] as String? ?? 'image'),
         ],
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
         cw: j['cw'] as String? ?? '',
@@ -226,6 +276,10 @@ class RasqAccountPost {
               RasqQueueCount(packId: q['packId'] as String?, stickerId: '${q['stickerId']}', url: _http(q['url']), like: q['like'] == true, count: (q['count'] as num?)?.toInt() ?? 0, mine: q['mine'] == true),
         ],
         rebroadedBy: RasqPostAuthor.fromJson(j['rebroadedBy']),
+        rebroadId: j['rebroadId'] as String?,
+        isQuote: j['isQuote'] == true,
+        quote: j['quote'] is Map ? RasqAccountPost.fromJson((j['quote'] as Map).cast<String, Object?>()) : null,
+        quoteCount: (j['quoteCount'] as num?)?.toInt() ?? 0,
       );
 }
 
@@ -355,11 +409,13 @@ class RasqAccountPageApi {
     String visibility = 'public',
     bool likeOnly = false,
     ({List<String> choices, bool multiple, Duration? expiresAfter})? poll,
+    String? quoteOf,
   }) async {
     final ids = <String>[];
     final sensitive = <String>[];
     for (final i in images) {
-      final id = '${(await _client.postBytes('/me/posts/images', i.bytes, contentType: i.contentType))['id']}';
+      // 画像も動画 / 音声も同じ口(サーバーが中身で見分ける。S-024)。
+      final id = '${(await _client.postBytes('/me/posts/media', i.bytes, contentType: i.contentType))['id']}';
       ids.add(id);
       if (i.sensitive) sensitive.add(id);
     }
@@ -370,6 +426,7 @@ class RasqAccountPageApi {
       if (cw.isNotEmpty) 'cw': cw,
       if (visibility != 'public') 'visibility': visibility,
       if (likeOnly) 'reactionAcceptance': 'likeOnly',
+      'quoteOf': ?quoteOf,
       if (poll != null) 'poll': {'choices': poll.choices, 'multiple': poll.multiple, if (poll.expiresAfter != null) 'expiresInSeconds': poll.expiresAfter!.inSeconds},
     }));
   }
@@ -391,12 +448,11 @@ class RasqAccountPageApi {
   /// 返信(文字だけ、500 文字まで)。
   Future<RasqAccountPost> reply(String postId, String body) async => RasqAccountPost.fromJson(await _client.postJson('/me/posts', {'body': body, 'replyTo': postId}));
 
-  /// リブローの入り切り。戻り = 更新後の投稿。
-  Future<RasqAccountPost> setRebroad(String postId, {required bool on}) async {
-    if (on) return RasqAccountPost.fromJson(await _client.putJson('/posts/$postId/rebroad', const {}));
-    await _client.delete('/posts/$postId/rebroad');
-    return (await thread(postId)).post;
-  }
+  /// リブロー (S-024): 押すたびに 1 回増える(同じ投稿を何度でも)。戻り = 更新後の投稿。
+  Future<RasqAccountPost> rebroad(String postId) async => RasqAccountPost.fromJson(await _client.postJson('/posts/$postId/rebroad', const {}));
+
+  /// リブロー 1 回を取り消す([RasqAccountPost.rebroadId])。
+  Future<void> deleteRebroad(String rebroadId) => _client.delete('/rebroads/$rebroadId');
 
   /// キュー: アセットパックの絵でリアクション(そのパックをインストールしていること)。null で外す。
   Future<RasqAccountPost> setQueue(String postId, ({String packId, String stickerId})? sticker) async {

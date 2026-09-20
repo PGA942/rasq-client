@@ -5,9 +5,10 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/backend/rasq_account_page_api.dart';
 import 'package:rasq_client/features/profile/rasq_post_tile.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
-/// RASQ の投稿のタイル (D-274): リブロー済みでも、ボタンは「リブロー」のまま(押してもタイルは開かない)。
+/// RASQ の投稿のタイル (D-274 → D-276): リブロー済みでも、ボタンは「リブロー」のまま(押してもタイルは開かない)。
 void main() {
   testWidgets('リブロー済みのボタンを押しても、取り消しにもタイルのタップにもならない', (tester) async {
     var opened = 0;
@@ -20,7 +21,8 @@ void main() {
     await tester.tap(find.byTooltip('リブロー'));
     await tester.pump();
     expect(opened, 0);
-    expect(find.textContaining('リブロー済みです'), findsOneWidget);
+    expect(find.textContaining('ログインするとリブローできます'), findsOneWidget);
+    expect(find.byTooltip('リブローを取り消す'), findsNothing);
     await tester.tap(find.text('本文'));
     await tester.pump();
     expect(opened, 1);
@@ -53,5 +55,38 @@ void main() {
     expect(find.byTooltip('いいね'), findsOneWidget);
     expect(find.byTooltip('キュー'), findsNothing);
     expect(find.text('❤'), findsWidgets);
+  });
+
+  testWidgets('引用 / 動画・音声 (D-276)', (tester) async {
+    final post = RasqAccountPost(
+      id: 'p3',
+      body: '引用します',
+      isQuote: true,
+      author: const RasqPostAuthor(id: 'a', handle: 'taro', displayName: 'タロ'),
+      quote: RasqAccountPost(id: 'p0', body: '元の投稿です', author: const RasqPostAuthor(id: 'b', handle: 'hanako', displayName: 'ハナコ'), images: [RasqPostImage(id: 'v0', url: Uri.parse('https://central.test/v0'), type: 'video')]),
+      images: [
+        RasqPostImage(id: 'v1', url: Uri.parse('https://central.test/v1'), type: 'video'),
+        RasqPostImage(id: 'a1', url: Uri.parse('https://central.test/a1'), type: 'audio', sensitive: true),
+      ],
+    );
+    // SNS の投稿と同じ部品に渡す形: 動画は動画、音声はファイル。RASQ の投稿だと見分けられる。
+    final asPost = post.toPost(central: Uri.parse('https://central.test'));
+    expect([for (final m in asPost.media) m.type], [MediaType.video, MediaType.file]);
+    expect(asPost.media[1].sensitive, isTrue);
+    expect(isRasqPost(asPost), isTrue);
+    expect('${asPost.url}', 'https://central.test/p/p3');
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage({})), pluginRegistryProvider.overrideWithValue(PluginRegistry())],
+      child: MaterialApp(home: Scaffold(body: SingleChildScrollView(child: Column(children: [
+        RasqPostTileView(post: post, onChanged: () {}),
+        // 元が消えた / 見られない引用。
+        RasqPostTileView(post: const RasqAccountPost(id: 'p4', body: '消えた引用', isQuote: true, author: RasqPostAuthor(id: 'a', handle: 'taro', displayName: 'タロ')), onChanged: () {}),
+      ])))),
+    ));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('rasqPost.p3.quote')), findsOneWidget);
+    expect(find.text('元の投稿です'), findsOneWidget);
+    expect(find.text('ハナコ'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rasqPost.p4.quoteGone')), findsOneWidget);
   });
 }

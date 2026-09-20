@@ -203,8 +203,6 @@ class _PostRowState extends ConsumerState<PostRow> {
       createdAt: post.createdAt,
       nameSpans: nameSpans,
       repostedBy: post.repostedBy,
-      // 自分のリノートなら、帯の横の … から取り消せる (D-274)。
-      onBannerMore: _canUndoRepost ? _repostBannerMenu : null,
       bannerIcon: widget.bannerIcon,
       bannerText: widget.bannerText,
       dense: widget.dense,
@@ -366,21 +364,12 @@ class _PostRowState extends ConsumerState<PostRow> {
 
   ActionDescriptor? get _repostAction => widget.actions.where((a) => a.genreTag == 'Repost').firstOrNull;
 
-  /// この投稿が**自分のリノート**として流れてきているか(帯の … を出す)。
+  /// この投稿が**自分のリノート**として流れてきているか (D-276)。ここでだけ、リノートのバンドルが「リノートを取り消す」になる。
   bool get _canUndoRepost {
     final by = post.repostedBy;
     if (by == null || _repostAction == null) return false;
     final sessions = ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[];
     return sessions.any((s) => s.account.key == by.account.key);
-  }
-
-  Future<void> _repostBannerMenu(Rect anchor) async {
-    final a = _repostAction;
-    if (a == null) return;
-    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'post.repost.banner.${post.key}', anchor: anchor, dense: true, items: const [
-      RasqDropdownItem('リノートを取り消す', 'undo', destructive: true),
-    ]);
-    if (pick == 'undo') await _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
   }
 
   /// リノート/引用ノートの組み込みバンドル (D-039)。
@@ -390,10 +379,10 @@ class _PostRowState extends ConsumerState<PostRow> {
       id: 'actionbar.repost.${post.key}',
       anchor: anchor,
       dense: true,
-      // ボタンは入り切りにしない (D-274): いつ押しても「リノート」。取り消しは、リノートの帯の … か、ここの「リノートを取り消す」から。
+      // ボタンは入り切りにしない (D-274 → D-276): ふつうの投稿では、いつ押しても「リノート」(何度でも)。
+      // 自分のリノートとして流れてきたタイルでだけ、1 つ目が「リノートを取り消す」になる(帯の … はやめた)。
       items: [
-        const RasqDropdownItem('リノート', 'renote'),
-        if (st.done) const RasqDropdownItem('リノートを取り消す', 'undo', destructive: true),
+        if (_canUndoRepost) const RasqDropdownItem('リノートを取り消す', 'undo', destructive: true) else const RasqDropdownItem('リノート', 'renote'),
         const RasqDropdownItem('引用ノート', 'quote'),
       ],
     );
