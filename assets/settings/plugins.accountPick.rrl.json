@@ -1,0 +1,31 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "plugins.accountPick",
+  "title": "共有 / リノートに使うアカウント",
+  "defaults": {
+    "preferCurrent": true
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "同じ投稿が、複数のアカウントに見えているとき"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "preferCurrent",
+        "p": {
+          "title": "指定しているアカウントを優先",
+          "value": "$.settings.preferCurrent",
+          "subtitle": "SNS アカウントを選んで見ているときは、そのアカウントで共有 / リノートします。切ると、直近のやりとり(リアクション / リノート / 返信)から、その相手とよく話しているアカウントを予測して選びます。RASQ アカウントでまとめて見ているときは、いつも予測で選びます"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      }
+    ]
+  }
+}

@@ -12,6 +12,7 @@ import 'post_menu.dart';
 import '../compose/account_select.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
+import '../home/account_affinity.dart';
 import '../plugins/slot_plugins.dart';
 import '../vc/astell_post_share.dart';
 import '../vc/astell_providers.dart';
@@ -40,8 +41,10 @@ Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0, MediaIt
   final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
   final candidates = isPrivatePost(post) ? [for (final s in sessions) if (s.account == post.account) s] : sessions;
   final current = ref.read(currentAccountSessionProvider);
+  // 使うアカウント (D-280): 指定中の SNS アカウント(設定で外せる)/ やりとりからの予測 → 従来の順(受け取ったアカウント → 表示中 → 先頭)。
+  final picked = pickActingAccount(ref, post, [for (final s in candidates) s.account.key]);
   final selected = ValueNotifier<AccountSession?>(
-    candidates.where((s) => s.account == post.account).firstOrNull ?? candidates.where((s) => s.account.key == current?.account.key).firstOrNull ?? candidates.firstOrNull,
+    candidates.where((s) => s.account.key == picked).firstOrNull ?? candidates.where((s) => s.account == post.account).firstOrNull ?? candidates.where((s) => s.account.key == current?.account.key).firstOrNull ?? candidates.firstOrNull,
   );
   // 全画面表示から (D-213): リンクは画像のリンク。
   final link = media?.url.toString() ?? postWebUrl(post).toString();

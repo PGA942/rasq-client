@@ -25,6 +25,7 @@ import '../vc/astell_actions.dart';
 import '../vc/astell_links.dart';
 import '../settings/safety.dart';
 import 'action_bar_config.dart';
+import 'account_affinity.dart';
 import 'action_bundle_fow.dart';
 import 'material_icons.dart';
 import 'post_duplicates.dart';
@@ -395,11 +396,30 @@ class _PostRowState extends ConsumerState<PostRow> {
     return sessions.any((s) => s.account.key == by.account.key);
   }
 
+  /// リノート / 引用に使うコピー (D-280)。いまのコピーのままなら null(↓ で選んでいる / 見えているのが 1 アカウントだけ /
+  /// 自分のリノートの取り消し / 予測がいまのアカウント)。
+  Post? _predictedCopy() {
+    if (_actAs != null || widget.actionsFor == null || _canUndoRepost) return null;
+    final copies = [widget.post, ...ref.read(postAlternatesProvider)[widget.post.key] ?? const <Post>[]];
+    if (copies.length < 2) return null;
+    final key = pickActingAccount(ref, widget.post, [for (final c in copies) c.account.key]);
+    final copy = copies.where((c) => c.account.key == key).firstOrNull;
+    return copy == null || copy.key == widget.post.key ? null : copy;
+  }
+
   /// リノート/引用ノートの組み込みバンドル (D-039)。
   Future<void> _repostBundle(ActionDescriptor a, ActionState st, Rect anchor) async {
     // ドロップダウンはやめて、バンドル FOW に統一 (D-277)。
     // ボタンは入り切りにしない (D-274 → D-276): ふつうの投稿では、いつ押しても「リノート」(何度でも)。
     // 自分のリノートとして流れてきたタイルでだけ、1 つ目が「リノートを取り消す」になる。
+    // どのアカウントでリノートするか (D-280): 同じ投稿が複数のアカウントに見えていて、↓ で選んでいなければ、予測したアカウントで。
+    // だまって切り替えない: 別のアカウントになるときは、行の名前に「(@… で)」と出す。
+    final target = _predictedCopy();
+    final handler = target == null ? _onAction : widget.actionsFor!(target);
+    final via = target == null ? '' : '(@${target.account.handle}@${target.account.instance} で)';
+    // 名前はリテラルのまま持つ(RAi の操作リファレンスが、この文字列でボタンを探す)。
+    const renoteLabel = 'リノート';
+    const quoteLabel = '引用ノート';
     final picked = await showBundleMenuFow<String>(
       ref.read(overlayManagerProvider),
       id: 'actionbar.repost.${post.key}',
@@ -407,19 +427,19 @@ class _PostRowState extends ConsumerState<PostRow> {
       anchor: anchor,
       column: fowColumnOf(context),
       items: [
-        if (_canUndoRepost) const BundleMenuItem(value: 'undo', label: 'リノートを取り消す', icon: Icons.repeat, destructive: true) else const BundleMenuItem(value: 'renote', label: 'リノート', icon: Icons.repeat),
-        const BundleMenuItem(value: 'quote', label: '引用ノート', icon: Icons.format_quote),
+        if (_canUndoRepost) const BundleMenuItem(value: 'undo', label: 'リノートを取り消す', icon: Icons.repeat, destructive: true) else BundleMenuItem(value: 'renote', label: '$renoteLabel$via', icon: Icons.repeat),
+        BundleMenuItem(value: 'quote', label: '$quoteLabel$via', icon: Icons.format_quote),
       ],
     );
     if (!mounted) return;
     switch (picked) {
       case 'renote':
-        await _onAction(a, args: const {'forceUndo': false}).catchError((_) {});
+        await handler(a, args: const {'forceUndo': false}).catchError((_) {});
       case 'undo':
         await _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
       case 'quote':
         if (!mounted) return;
-        await showComposer(ref, ComposeQuote(post), column: fowColumnOf(context));
+        await showComposer(ref, ComposeQuote(target ?? post), column: fowColumnOf(context));
     }
   }
 

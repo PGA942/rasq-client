@@ -1,3 +1,4 @@
+import 'account_affinity.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -553,6 +554,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     store.applyOptimistic(post.key, action.id, done: !undo);
     try {
       final r = await session.performAction(action.id, post.id, args: {...args, 'undo': undo});
+      // どのアカウントでこの相手と関わったか (D-280: 共有 / リノートに使うアカウントの予測の材料)。
+      if (!undo) ref.read(accountAffinityProvider.notifier).record(post).ignore();
       store.apply(post.key, action.id, ActionState(done: r.done, count: r.count ?? before.count, iconUrl: action.iconPerPost ? (r.icon?.url ?? before.iconUrl) : null, iconText: action.iconPerPost ? (r.icon?.text ?? (r.icon?.url != null ? null : before.iconText)) : null));
     } catch (e) {
       store.apply(post.key, action.id, before);
