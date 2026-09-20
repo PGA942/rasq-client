@@ -539,6 +539,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   @override
   void dispose() {
     _textPluginTimer?.cancel();
+    _mentionTimer?.cancel();
     _slots?.textDone(_textToken);
     // 余白クリック/ページ遷移などで閉じたときの自動下書き (D-051)。
     // unmount 中は provider を変更できないためマイクロタスクへ遅延する。
@@ -1091,6 +1092,65 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   bool get _isDm => widget.target is ComposeDm;
   int get _max => _session?.maxPostLength ?? 500;
 
+  // ── @ 補完 (D-285) ──
+  List<({String insert, String name, Uri? avatarUrl})> _mentionHits = const [];
+  Timer? _mentionTimer;
+  int _mentionSeq = 0;
+
+  /// キャレットの直前の `@…`(打っている途中のメンション)。無ければ null。戻り = (@ の位置, 打った文字)。
+  (int, String)? get _mentionAtCaret {
+    final v = _text.value;
+    if (!v.selection.isValid || !v.selection.isCollapsed) return null;
+    return mentionQueryAt(v.text, v.selection.start);
+  }
+
+  void _scheduleMentionSearch() {
+    _mentionTimer?.cancel();
+    final q = _mentionAtCaret;
+    if (q == null || q.$2.isEmpty) {
+      if (_mentionHits.isNotEmpty) setState(() => _mentionHits = const []);
+      return;
+    }
+    _mentionTimer = Timer(const Duration(milliseconds: 250), () => _searchMentions(q.$2));
+  }
+
+  /// 候補を引く: RASQ 指定なら Central のアカウント検索、そうでなければ投稿するアカウントの SNS のユーザー検索
+  /// (全 SNS プラグイン共通の `searchUsers`)。別のサーバーの人は `@handle@host` で入れる。
+  Future<void> _searchMentions(String q) async {
+    final seq = ++_mentionSeq;
+    var hits = <({String insert, String name, Uri? avatarUrl})>[];
+    try {
+      if (_rasqTarget) {
+        final api = ref.read(rasqAccountPageApiProvider);
+        hits = [for (final a in await api?.searchAccounts(q) ?? const <RasqPostAuthor>[]) (insert: '@${a.handle}', name: a.label, avatarUrl: a.avatarUrl)];
+      } else {
+        final session = _session;
+        final me = session?.account;
+        final page = await session?.searchUsers(q, limit: 8);
+        hits = [
+          for (final u in page?.items ?? const <UserSummary>[])
+            (insert: u.account.instance == me?.instance ? '@${u.handle}' : '@${u.handle}@${u.account.instance}', name: u.displayName, avatarUrl: u.avatarUrl),
+        ];
+      }
+    } catch (_) {
+      // 検索できない SNS / 通信の失敗: 候補を出さないだけ。
+    }
+    if (!mounted || seq != _mentionSeq) return;
+    setState(() => _mentionHits = hits);
+  }
+
+  /// 打っている途中の `@…` を、選んだメンションに置き換える。
+  void _applyMention(String mention) {
+    final q = _mentionAtCaret;
+    final v = _text.value;
+    final start = q?.$1 ?? (v.selection.isValid ? v.selection.start : v.text.length);
+    final end = v.selection.isValid ? v.selection.start : v.text.length;
+    final next = v.text.replaceRange(start, end, '$mention ');
+    _text.value = TextEditingValue(text: next, selection: TextSelection.collapsed(offset: start + mention.length + 1));
+    setState(() => _mentionHits = const []);
+    _focus.requestFocus();
+  }
+
   void _insert(String s) {
     final v = _text.value;
     final sel = v.selection.isValid ? v.selection : TextSelection.collapsed(offset: v.text.length);
@@ -1443,6 +1503,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     style: RasqTypography.bodySmall,
                     decoration: InputDecoration(hintText: _isDm ? 'メッセージを入力..' : 'いいことがありますように！', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
                     onChanged: (_) {
+                      _scheduleMentionSearch(); // @ 補完 (D-285)
                       _syncStickHeight();
                       _scheduleTargetEval(); // ポスト先の条件を打ち直し毎に再評価 (D-116)
                       _scheduleTextPlugins(); // テキスト加工プラグイン (D-167)
@@ -1481,6 +1542,24 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       // padding を置く。子ピッカーが付いている側の padding が子の高さに
       // 伸びて(いなければ 0px)、入力部・バーが子に被らない。
       if (widget.spec != null) FowChildGap(spec: widget.spec!, top: true),
+      // @ 補完の候補 (D-285): 本文で `@…` を打っている間だけ、ツールバーの上に並ぶ。押すと、その場のメンションに置き換わる。
+      if (_mentionHits.isNotEmpty)
+        SizedBox(
+          key: const ValueKey('composer.mentions'),
+          height: 44,
+          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), children: [
+            for (final h in _mentionHits)
+              Padding(
+                padding: const EdgeInsets.only(right: 6, top: 4, bottom: 4),
+                child: ActionChip(
+                  key: ValueKey('composer.mention.${h.insert}'),
+                  avatar: RasqAvatar(imageUrl: h.avatarUrl, size: 20, fallbackLabel: h.name),
+                  label: Text('${h.name}  ${h.insert}', style: RasqTypography.caption),
+                  onPressed: () => _applyMention(h.insert),
+                ),
+              ),
+          ]),
+        ),
       // Toolbar (コンポーザーツールバー = アクションバーの左寄せバリエーション)
       // FOW 内フッター = 掴んで左右カラム間移動 (D-062)。
       _grip(Container(
@@ -1620,3 +1699,14 @@ class _AttachmentTile extends StatelessWidget {
 
 /// キャンセル時のポップアップの選択 (D-177)。
 enum _CloseChoice { overwrite, saveNew, discard }
+
+/// [caret] の直前で打っている途中のメンション (D-285): `(@ の位置, @ のあとの文字)`。`@` の前は行頭か空白など(メールアドレスの途中は拾わない)。
+/// `@user@host` の host を打っている途中も、まとめて 1 つ(検索には user の部分を使う)。
+(int, String)? mentionQueryAt(String text, int caret) {
+  if (caret < 0 || caret > text.length) return null;
+  final m = RegExp(r'(?:^|[\s(「、。])@([A-Za-z0-9_.-]*)(?:@[A-Za-z0-9_.-]*)?$').firstMatch(text.substring(0, caret));
+  if (m == null) return null;
+  final at = text.lastIndexOf('@${m.group(1)}', caret);
+  final start = text.substring(0, caret).indexOf('@', m.start);
+  return (start < 0 ? at : start, m.group(1)!);
+}
