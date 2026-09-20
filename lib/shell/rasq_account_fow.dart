@@ -26,7 +26,9 @@ import '../features/notifications/notifications_screen.dart';
 ///   「SNS アカウントを追加」。
 const rasqAccountFowId = 'fow.rasq.accounts';
 
-Future<void> openRasqAccountFow(WidgetRef ref, {int column = 0}) async {
+/// [onNavigate] = FOW から別の画面へ移るときに呼ぶ(サイドバーを開いたまま FOW を出しているとき、サイドバーも閉じる。D-272)。
+/// [besideWidth] = サイドバーを開いたまま出すときの、サイドバーの右に残る幅(FOW を右に寄せて、この幅に収める。サイドバーは FOW より前に出るので、重なると隠れる)。
+Future<void> openRasqAccountFow(WidgetRef ref, {int column = 0, VoidCallback? onNavigate, double? besideWidth}) async {
   final manager = ref.read(overlayManagerProvider);
   final spec = FowSpec(
     type: FowPanelType.widget,
@@ -37,13 +39,15 @@ Future<void> openRasqAccountFow(WidgetRef ref, {int column = 0}) async {
     cancelText: '閉じる',
     dockAboveFooter: true,
     columnIndex: column,
+    maxWidth: besideWidth,
+    hAlign: besideWidth == null ? FowHAlign.center : FowHAlign.end,
   );
   await manager.showFow<void>(
     id: rasqAccountFowId,
     spec: spec,
     semanticsLabel: 'RASQ アカウント',
     barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
-    builder: (ctx, handle) => RasqAccountPanel(onDone: handle.close),
+    builder: (ctx, handle) => RasqAccountPanel(onDone: handle.close, onNavigate: onNavigate),
   );
 }
 
@@ -107,8 +111,11 @@ UserSummary summaryOfRecord(WidgetRef ref, RasqAccountRecord r, {required bool i
 }
 
 class RasqAccountPanel extends ConsumerWidget {
-  const RasqAccountPanel({super.key, required this.onDone});
+  const RasqAccountPanel({super.key, required this.onDone, this.onNavigate});
   final VoidCallback onDone;
+
+  /// 別の画面へ移るとき(FOW を閉じるのに加えて呼ぶ)。
+  final VoidCallback? onNavigate;
 
   Rect _rectOf(BuildContext context) {
     final box = context.findRenderObject() as RenderBox?;
@@ -130,8 +137,17 @@ class RasqAccountPanel extends ConsumerWidget {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
     }
 
+    // 別の画面へ移る: FOW を閉じ、サイドバーから開いていればサイドバーも閉じる。
+    void leave() {
+      onDone();
+      onNavigate?.call();
+    }
+
     Future<void> more(RasqAccountRecord r, Rect anchor) async {
       final pick = await manager.showDropdown<String>(id: 'rasq.account.more', anchor: anchor, dense: true, items: [
+        // ↓ のメニュー (D-272): これまで FOW の下にあった「SNS アカウントを追加」と、設定への入口もここに。
+        const RasqDropdownItem('SNS アカウントを追加', 'addSns'),
+        const RasqDropdownItem('設定', 'allSettings'),
         if (r.isCentral) const RasqDropdownItem('アカウントページ', 'page'),
         const RasqDropdownItem('プロフィール編集', 'profile'),
         const RasqDropdownItem('アカウント設定', 'settings'),
@@ -142,20 +158,26 @@ class RasqAccountPanel extends ConsumerWidget {
       ]);
       if (!context.mounted) return;
       switch (pick) {
+        case 'addSns':
+          leave();
+          context.push(Routes.login);
+        case 'allSettings':
+          leave();
+          context.push(Routes.settings);
         case 'page':
           final handle = ref.read(orgateAccountProvider).value?.handle ?? r.handle;
           if (handle == null || handle.isEmpty) return;
-          onDone();
+          leave();
           context.push(Routes.rasqAccount(handle));
         case 'profile':
-          await openRasqProfileSheet(context, ref, record: r, beforeNavigate: onDone);
+          await openRasqProfileSheet(context, ref, record: r, beforeNavigate: leave);
         case 'settings':
-          onDone();
+          leave();
           context.push('${Routes.settings}/server');
         case 'notifications':
           await showNotificationPrefs(ref);
         case 'security':
-          onDone();
+          leave();
           context.push('${Routes.settings}/security');
         case 'logout':
           final ok = await manager.showAlert(
@@ -187,7 +209,7 @@ class RasqAccountPanel extends ConsumerWidget {
           // メールが確認済みのアカウントは、確認コードが要る (S-019) → セキュリティの画面で。
           if (ref.read(orgateAccountProvider).value?.emailVerified == true) {
             if (!context.mounted) return;
-            onDone();
+            leave();
             context.push('${Routes.settings}/security');
             toast('削除には、メールの確認コードが要ります。「アカウントの削除」から進めてください');
             return;
@@ -211,7 +233,7 @@ class RasqAccountPanel extends ConsumerWidget {
         // 登録の FOW (D-241): 利用規約 / 年齢 / バンドルを置き換えるか → 登録 → 同意の記録。
         final rec = await registerRasqAccount(ref, displayName: name, column: fowColumnOf(context), onMessage: toast);
         if (rec == null || !context.mounted) return;
-        await openRasqProfileSheet(context, ref, record: rec, beforeNavigate: onDone);
+        await openRasqProfileSheet(context, ref, record: rec, beforeNavigate: leave);
       } on OrgateException catch (e) {
         toast('RASQ アカウントを作成できませんでした: ${e.message}');
       }
@@ -270,8 +292,8 @@ class RasqAccountPanel extends ConsumerWidget {
                   ),
                   trailing: Builder(
                     builder: (buttonContext) => RasqIconButton(
-                      icon: Icons.more_horiz,
-                      size: 20,
+                      icon: Icons.keyboard_arrow_down,
+                      size: 22,
                       tooltip: 'アカウントの操作',
                       onPressed: () => more(r, _rectOf(buttonContext)),
                     ),
@@ -290,49 +312,56 @@ class RasqAccountPanel extends ConsumerWidget {
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.md),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (ledger.central == null) ...[
-            // 作成と、既存のアカウントへのログイン (S-019) を 1 行に(FOW の高さを増やさない)。
-            Row(children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: centralOk ? create : null,
+          // 下のボタン (D-272): 「RASQ アカウントを追加」(作成 / 既存のアカウントにログイン)と「チャイルドセーフ」(セーフモードの設定)。
+          // 「SNS アカウントを追加」は、各アカウントの ↓ のメニューへ移した。2 つは 1 行に並べる(縦に積むと一覧が狭くなり、
+          // 電話の幅では処置の案内が隠れる)。
+          Row(children: [
+            Expanded(
+              child: Builder(
+                builder: (b) => FilledButton.icon(
+                  key: const ValueKey('rasq.account.add'),
+                  onPressed: !centralOk
+                      ? null
+                      : () async {
+                          final box = b.findRenderObject() as RenderBox;
+                          final pick = await manager.showDropdown<String>(id: 'rasq.account.add', anchor: box.localToGlobal(Offset.zero) & box.size, dense: true, items: [
+                            RasqDropdownItem('新しく作成', 'create', enabled: ledger.central == null),
+                            const RasqDropdownItem('既存のアカウントにログイン', 'login'),
+                          ]);
+                          if (!context.mounted) return;
+                          if (pick == 'create') return create();
+                          if (pick == 'login') {
+                            leave();
+                            context.push('${Routes.settings}/account-login');
+                          }
+                        },
                   icon: const RasqBrandIcon(size: 18),
-                  label: const Text('RASQ アカウントを作成'),
+                  label: const Text('RASQ アカウントを追加', overflow: TextOverflow.ellipsis),
                 ),
               ),
-              const SizedBox(width: RasqSpacing.xs),
+            ),
+            const SizedBox(width: RasqSpacing.xs),
+            OutlinedButton.icon(
+              key: const ValueKey('rasq.account.childSafe'),
+              onPressed: () {
+                leave();
+                context.push('${Routes.settings}/dsl/sns.safety');
+              },
+              icon: const Icon(Icons.child_care_outlined, size: 18),
+              label: const Text('チャイルドセーフ'),
+            ),
+          ]),
+          if (!centralOk)
+            Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              Text('RASQ Central の接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               TextButton(
-                key: const ValueKey('rasq.account.login'),
-                onPressed: centralOk
-                    ? () {
-                        onDone();
-                        context.push('${Routes.settings}/account-login');
-                      }
-                    : null,
-                child: const Text('ログイン'),
+                onPressed: () {
+                  leave();
+                  context.push('${Routes.settings}/server');
+                },
+                child: const Text('接続先を設定'),
               ),
             ]),
-            if (!centralOk)
-              Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                Text('RASQ Central の接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-                TextButton(
-                  onPressed: () {
-                    onDone();
-                    context.push('${Routes.settings}/server');
-                  },
-                  child: const Text('接続先を設定'),
-                ),
-              ]),
-            const SizedBox(height: RasqSpacing.xs),
-          ],
-          OutlinedButton.icon(
-            onPressed: () {
-              onDone();
-              context.push(Routes.login);
-            },
-            icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
-            label: const Text('SNS アカウントを追加'),
-          ),
         ]),
       ),
     ]);

@@ -200,7 +200,10 @@ void main() {
   testWidgets('RASQ アカウントの登録 FOW (D-241): 規約と年齢に同意するまで登録できない → 登録 → 同意を記録 → バンドルを置き換える → 削除', (tester) async {
     final central = fakeCentral(serverBundle: {'misskey:old.example:gone'});
     final container = await pumpWithCentral(tester, central.client);
-    await tester.tap(find.text('RASQ アカウントを作成'));
+    // 下のボタン (D-272): 「RASQ アカウントを追加」→「新しく作成」。
+    await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('新しく作成'));
     await tester.pumpAndSettle();
     // 登録の前に FOW。まだサーバーへは何も送っていない。
     expect(find.text('RASQ アカウントの登録'), findsOneWidget);
@@ -271,14 +274,20 @@ void main() {
     final central = fakeCentral(restored: true, serverBundle: {'misskey:old.example:kept'});
     final container = await pumpWithCentral(tester, central.client);
     // キャンセル → 何も送らない。
-    await tester.tap(find.text('RASQ アカウントを作成'));
+    // 下のボタン (D-272): 「RASQ アカウントを追加」→「新しく作成」。
+    await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('新しく作成'));
     await tester.pumpAndSettle();
     container.read(overlayManagerProvider).close(rasqRegisterFowId);
     await tester.pumpAndSettle();
     expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
     expect(container.read(currentRasqAccountProvider)?.isCentral ?? false, isFalse);
 
-    await tester.tap(find.text('RASQ アカウントを作成'));
+    // 下のボタン (D-272): 「RASQ アカウントを追加」→「新しく作成」。
+    await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('新しく作成'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('register.agree')));
     await tester.pumpAndSettle();
@@ -362,6 +371,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('RASQ アカウント'));
     await tester.pumpAndSettle();
+    // … ではサイドバーを閉じない (D-272): FOW はサイドバーの右に寄せて出る(重ならない)。幅が足りないときだけ閉じる。
+    final overlay = container.read(overlayManagerProvider);
+    final wide = tester.view.physicalSize.width / tester.view.devicePixelRatio >= 700;
+    expect(overlay.contains(RasqSidebar.overlayId), wide);
+    expect(overlay.contains(rasqAccountFowId), isTrue);
 
     expect(find.byType(RasqAccountPanel), findsOneWidget);
     final row = find.byType(RasqUserRow);
@@ -369,14 +383,16 @@ void main() {
     expect(find.descendant(of: row, matching: find.text('tester')), findsOneWidget);
     expect(find.descendant(of: row, matching: find.text('@tester')), findsOneWidget);
     expect(find.textContaining('この端末のみ ・ SNS 2件 ・ 使用中'), findsOneWidget);
-    expect(find.text('RASQ アカウントを作成'), findsOneWidget); // Central 未設定なので無効
-    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'RASQ アカウントを作成')).onPressed, isNull);
-    expect(find.text('SNS アカウントを追加'), findsOneWidget);
+    expect(find.text('RASQ アカウントを追加'), findsOneWidget); // Central 未設定なので無効
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('rasq.account.add'))).onPressed, isNull);
+    expect(find.byKey(const ValueKey('rasq.account.childSafe')), findsOneWidget);
+    // 「SNS アカウントを追加」は、各アカウントの ↓ のメニューへ (D-272)。
+    expect(find.text('SNS アカウントを追加'), findsNothing);
 
     // 行の … → ログアウト / アカウント設定 / プロフィール編集 / 通知設定(ローカルはログアウト不可)。
     await tester.tap(find.descendant(of: row, matching: find.byTooltip('アカウントの操作')));
     await tester.pumpAndSettle();
-    for (final label in ['プロフィール編集', 'アカウント設定', '通知設定', 'ログアウト']) {
+    for (final label in ['SNS アカウントを追加', '設定', 'プロフィール編集', 'アカウント設定', '通知設定', 'ログアウト']) {
       expect(find.text(label), findsOneWidget);
     }
 
