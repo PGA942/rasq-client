@@ -81,4 +81,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(bar).dy, greaterThan(tester.getTopLeft(search).dy));
   });
+
+  testWidgets('履歴 / 予測には、このアカウントのサーバーにあるカスタム絵文字だけを出す (D-282)', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final emojis = [EmojiInfo(name: 'here', url: Uri.parse('https://e/here.webp'), category: 'A')];
+    late ProviderContainer c;
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(MemorySessionStorage()),
+        customEmojisProvider.overrideWith((ref) async => emojis),
+      ],
+      child: MaterialApp(
+        theme: RasqTheme.light(),
+        home: Scaffold(body: Consumer(builder: (context, ref, _) {
+          c = ProviderScope.containerOf(context);
+          // 付いているリアクション: 他サーバーの絵文字(名前だけ借りてくる)。このサーバーに無いものは、予測に出さない。
+          return EmojiPanel(onPick: (_) {}, height: 1100, existingReactions: const {':elsewhere@other.example:': 9, ':here@.:': 2});
+        })),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    // 別のアカウントで使った絵文字(このサーバーには無い)と、あるもの、Unicode を履歴へ。
+    c.read(recentEmojiProvider.notifier)
+      ..push(':elsewhere:')
+      ..push(':here:')
+      ..push('🎉');
+    await tester.pumpAndSettle();
+    Finder cell(String e) => find.byWidgetPredicate((w) => w is RasqCustomEmoji && w.fallbackText == e);
+    expect(cell(':elsewhere:'), findsNothing);
+    expect(cell(':here:'), findsWidgets);
+    expect(cell('🎉'), findsWidgets);
+  });
 }

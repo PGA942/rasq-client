@@ -7,6 +7,7 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/compose/emoji_panel.dart';
+import 'package:rasq_client/features/home/timeline_providers.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -89,5 +90,40 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(RasqReactionChips), matching: find.text('🎉')).first);
     await tester.pumpAndSettle();
     expect(performed().last, 'reaction:n1:true');
+  });
+
+  testWidgets('ピッカーを開いている間に TL へ投稿が足されても、押した投稿にリアクションする (D-282)', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+    });
+    Post make(AccountId viewer, String id, String body) => Post(id: id, account: viewer, author: MockData.douglas, createdAt: DateTime.now(), body: body);
+    final plugin = FakeSnsPlugin(localEmojis: const {}, posts: (viewer) => [make(viewer, 'old', 'もとの投稿')]);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(plugin))],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    // だれも付けていない → 短押しでピッカーが開く。
+    await tester.tap(find.byTooltip('リアクション').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(EmojiPanel), findsOneWidget);
+    // 開いている間に、上へ新しい投稿が足される。
+    for (final session in plugin.opened) {
+      session.prepend(make(session.account, 'new', 'あとから来た投稿'));
+    }
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    // 表示中の TL がどれでも、取り直す。
+    for (final kind in const [TimelineKind.home, TimelineKind.social, TimelineKind.bundle]) {
+      await c.read(timelineProvider(kind).notifier).refresh();
+    }
+    await tester.pumpAndSettle();
+    expect(find.text('あとから来た投稿'), findsOneWidget);
+    // 絵文字を選ぶ → もとの投稿に付く。
+    await tester.tap(find.descendant(of: find.byType(EmojiPanel), matching: find.text('👍')).first);
+    await tester.pumpAndSettle();
+    expect([for (final s in plugin.opened) ...s.performed], ['reaction:old:false']);
   });
 }

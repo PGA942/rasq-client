@@ -40,6 +40,9 @@ class FakeSnsSession extends SnsSessionBase {
   FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey, this.localEmojis}) : _posts = [...posts];
   final Set<String>? localEmojis;
 
+  /// TL の先頭に投稿を足す(取り直すと出る)。
+  void prepend(Post p) => _posts.insert(0, p);
+
   /// 送ったリアクション(`args['reaction']`。無ければ null)。
   final List<String?> reactionsSent = [];
   @override
