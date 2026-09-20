@@ -51,12 +51,13 @@ const composerFowId = 'fow.composer';
 /// [initialText] は本文の初期値(AsTell の共有リンク転送 D-159 など)。下書きが
 /// 残っていればそちらを優先する。
 /// [postAs] は投稿先アカウントの初期値(共有 FOW で選んだアカウント、D-170)。
-Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles}) =>
-    showComposerWith(manager: ref.read(overlayManagerProvider), router: ref.read(routerProvider), target, resident: resident, onPosted: onPosted, column: column, initialText: initialText, postAs: postAs, initialFiles: initialFiles);
+/// [rasqTarget] = RASQ 指定で開く (D-275。アカウントページの「RASQ に投稿」から)。
+Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles, bool rasqTarget = false}) =>
+    showComposerWith(manager: ref.read(overlayManagerProvider), router: ref.read(routerProvider), target, resident: resident, onPosted: onPosted, column: column, initialText: initialText, postAs: postAs, initialFiles: initialFiles, rasqTarget: rasqTarget);
 
 /// [showComposer] の本体 (D-225): Widget の外(RAi の関数 `post.reply` などのオートフィル)からも
 /// 開けるよう、[OverlayManager] と [GoRouter] を直接受ける。
-Future<Post?> showComposerWith(ComposeTarget target, {required OverlayManager manager, required GoRouter router, bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles}) async {
+Future<Post?> showComposerWith(ComposeTarget target, {required OverlayManager manager, required GoRouter router, bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles, bool rasqTarget = false}) async {
   // 返信 / ダイレクト投稿は **stick FOW** (D-047): ヘッダー無しで根本が
   // フッターメニュー/キーボードの上に貼り付き、タップ(フォーカス)すると
   // ヘッダーと返信先タイルが上から割り込んでくる(書き込み領域とアクション
@@ -106,6 +107,7 @@ Future<Post?> showComposerWith(ComposeTarget target, {required OverlayManager ma
         initialText: initialText,
         initialPostAs: postAs,
         initialFiles: initialFiles,
+        initialRasqTarget: rasqTarget,
         // 常駐は送信で閉じない(本体が下書きをリセットして残る)。
         onSent: resident ? (p) => onPosted?.call(p) : (p) => handle.close(result: p),
         onClose: () => handle.close(),
@@ -189,13 +191,16 @@ class _Attachment {
 }
 
 class _ComposerBody extends ConsumerStatefulWidget {
-  const _ComposerBody({required this.target, required this.onSent, this.spec, this.onClose, this.resident = false, this.initialText, this.initialPostAs, this.initialFiles});
+  const _ComposerBody({required this.target, required this.onSent, this.spec, this.onClose, this.resident = false, this.initialText, this.initialPostAs, this.initialFiles, this.initialRasqTarget = false});
   final ComposeTarget target;
 
   /// 本文の初期値(下書きが無いときだけ)。
   final String? initialText;
   final AccountSession? initialPostAs;
   final List<ComposerInitialFile>? initialFiles;
+
+  /// RASQ 指定で開く (D-275)。
+  final bool initialRasqTarget;
   final ValueChanged<Post> onSent;
 
   /// stick モード (D-047) の高さ調整用(展開/折りたたみで heightFactor を動かす)。
@@ -375,6 +380,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
     // 共有 FOW で選んだアカウント / プラグインが添えた画像 (D-170)。
     if (widget.initialPostAs != null) _postAs = widget.initialPostAs;
+    if (widget.initialRasqTarget && widget.target is ComposeNormal) _rasqTarget = true;
     for (final f in widget.initialFiles ?? const <ComposerInitialFile>[]) {
       _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive);
     }
@@ -587,6 +593,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// RASQ 指定 (D-271): バンドルタイルの RASQ アカウントの行を**長押し**すると、SNS ではなく RASQ アカウントとして投稿する
   /// (アカウントページの「投稿」に出る。本文 1000 文字 + 画像 4 枚、第一期は 3 件まで)。通常の新規投稿のときだけ。
   bool _rasqTarget = false;
+
+  /// 添付の上限: SNS は 4 枚、RASQ は 6 枚 (S-023)。
+  int get _maxFiles => _rasqTarget ? rasqPostMaxImages : 4;
 
   /// 複数選択モード (D-128): アカウントごとに 非選択(0)→ 通常投稿(1)→
   /// **ノードを通した連動投稿**(2, ポスト先グラフにそのアカウントの
@@ -1075,7 +1084,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final picker = ImagePicker();
     try {
       final files = camera ? [await picker.pickImage(source: ImageSource.camera)].whereType<XFile>().toList() : await picker.pickMultiImage();
-      for (final f in files.take(4 - _files.length)) {
+      for (final f in files.take(_maxFiles - _files.length)) {
         _files.add(_Attachment(bytes: await f.readAsBytes(), name: f.name, mimeType: f.mimeType));
       }
       setState(() {});
@@ -1095,7 +1104,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     if (from == null || !mounted) return;
     try {
       final f = from == 'file' ? await ref.read(mediaFilePickerProvider)() : await ImagePicker().pickVideo(source: ImageSource.gallery);
-      if (f == null || _files.length >= 4) return;
+      if (f == null || _files.length >= _maxFiles) return;
       final name = f.name.isEmpty ? 'video.mp4' : f.name;
       final mime = mediaMimeFor(name, reported: f.mimeType);
       if (mime == null) {
@@ -1120,25 +1129,38 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   /// RASQ アカウントとして投稿する (D-271)。SNS の投稿先 / 連動 / 公開範囲 / 投票 / 注釈は関係しない。
+  /// RASQ アカウントとして投稿する (D-271 → D-275)。作り方は SNS と共通: 注釈 / 公開範囲 / リアクションの受け入れ(いいねのみ)/
+  /// センシティブな画像 / 投票。**違うのは、連合に関わるもの(連合なし、リモート向けの受け入れ)が無いことと、上限**
+  /// (画像 6 枚 / 投票 6 個 / 本文 1000 文字)。動画 / 音声と、投稿先の連動は使えない。
   Future<void> _sendRasq() async {
     final api = ref.read(rasqAccountPageApiProvider);
     final me = ref.read(orgateAccountProvider).value;
     if (api == null || me == null) return setState(() => _error = 'RASQ アカウントにログインしていません');
-    final unsupported = _poll != null
-        ? '投票'
-        : (_cwOn && _cw.text.trim().isNotEmpty ? '注釈' : (_files.any((f) => !(f.mimeType ?? 'image/').startsWith('image/')) ? '動画 / 音声' : null));
-    if (unsupported != null) return setState(() => _error = 'RASQ への投稿では、$unsupported は使えません(本文と画像 4 枚まで)');
-    if (_text.text.trim().length > 1000) return setState(() => _error = 'RASQ への投稿は 1000 文字までです');
+    if (_files.any((f) => !(f.mimeType ?? 'image/').startsWith('image/'))) return setState(() => _error = 'RASQ への投稿では、動画 / 音声は使えません(画像 $rasqPostMaxImages 枚まで)');
+    if (_files.length > rasqPostMaxImages) return setState(() => _error = 'RASQ への投稿は、画像 $rasqPostMaxImages 枚までです');
+    if (_text.text.trim().length > rasqPostMaxChars) return setState(() => _error = 'RASQ への投稿は $rasqPostMaxChars 文字までです');
+    final poll = _poll;
+    if (poll != null && poll.texts.length > rasqPostMaxPollChoices) return setState(() => _error = 'RASQ への投稿は、投票の選択肢 $rasqPostMaxPollChoices 個までです');
     final sanctions = ref.read(rasqSanctionsProvider).value ?? RasqSanctions.none;
     final blocked = sanctions.blockedMessage('post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
     if (blocked != null) return setState(() => _error = blocked);
+    // 公開設定は SNS と同じ FOW から。RASQ に無いもの(指名 / リモート向けの受け入れ)は、近いものへ寄せる。
+    final opts = ref.read(composeOptionsProvider);
+    final visibility = const {'public', 'home', 'followers'}.contains(opts.visibility) ? opts.visibility : 'followers';
     setState(() {
       _busy = true;
       _error = null;
       _progress = '送信中…';
     });
     try {
-      await api.createPost(_text.text.trim(), images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg')]);
+      await api.createPost(
+        _text.text.trim(),
+        images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
+        cw: _cwOn ? _cw.text.trim() : '',
+        visibility: visibility,
+        likeOnly: opts.reactionAcceptance == 'likeOnly',
+        poll: poll == null ? null : (choices: poll.texts, multiple: poll.multiple, expiresAfter: poll.expiresAfter),
+      );
       ref.invalidate(rasqAccountPageProvider(me.handle));
       if (_draftId != null) _drafts.clear(_draftId!);
       _skipDraftOnDispose = true;
@@ -1423,7 +1445,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   ),
                 ),
               ),
-            if (_poll != null) PollEditor(draft: _poll!, onRemove: () => setState(() => _poll = null)),
+            if (_poll != null) PollEditor(draft: _poll!, maxChoices: _rasqTarget ? rasqPostMaxPollChoices : 10, onRemove: () => setState(() => _poll = null)),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: RasqSpacing.sm),
@@ -1449,8 +1471,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               scrollDirection: Axis.horizontal,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 RasqActionButton.icon(icon: Icons.photo_camera_outlined, tooltip: 'カメラ', onTap: _busy ? null : () => _pick(camera: true)),
-                RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= 4 ? null : () => _pick()),
-                Builder(builder: (ctx) => RasqActionButton.icon(icon: Icons.videocam_outlined, tooltip: '動画 / 音声', onTap: _busy || _files.length >= 4 ? null : () {
+                RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= _maxFiles ? null : () => _pick()),
+                Builder(builder: (ctx) => RasqActionButton.icon(icon: Icons.videocam_outlined, tooltip: '動画 / 音声', onTap: _busy || _files.length >= _maxFiles ? null : () {
                   final box = ctx.findRenderObject() as RenderBox;
                   _pickVideo(box.localToGlobal(Offset.zero) & box.size);
                 })),

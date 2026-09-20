@@ -1,11 +1,7 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:rasq_design/rasq_design.dart';
-import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/navigation.dart';
@@ -15,9 +11,11 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../../shell/headers.dart';
+import '../../shell/third_column.dart' show fowColumnOf;
+import '../compose/compose_target.dart';
+import '../compose/composer_sheet.dart';
 import 'rasq_page_history.dart';
 import 'rasq_post_tile.dart';
-import 'rasq_profile_edit_screen.dart' show profileImageContentType;
 
 /// RASQ アカウントページ (D-270 / S-021)。
 ///
@@ -33,7 +31,6 @@ class RasqAccountPageScreen extends ConsumerStatefulWidget {
 }
 
 class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
-  bool _busy = false;
 
   void _toast(String m) {
     if (!mounted) return;
@@ -60,20 +57,11 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) _toast('開けませんでした: $url');
   }
 
+  /// 「RASQ に投稿」= いつものコンポーザーを RASQ 指定で開く (D-275。SNS の投稿と同じ作り方: 注釈 / 公開範囲 / 投票 / 画像)。
   Future<void> _compose(RasqPostList posts) async {
     if (posts.posts.where((p) => p.rebroadedBy == null).length >= posts.limit) return _toast('投稿は ${posts.limit} 件までです。古い投稿を消してから投稿してください');
-    final draft = await showRasqPostSheet(ref);
-    if (draft == null || !mounted) return;
-    setState(() => _busy = true);
-    try {
-      await ref.read(rasqAccountPageApiProvider)!.createPost(draft.body, images: draft.images);
-      ref.invalidate(rasqAccountPageProvider(widget.handle));
-      _toast('投稿しました');
-    } on OrgateException catch (e) {
-      _toast(e.code.code == '409' ? '投稿は ${posts.limit} 件までです' : '投稿できませんでした: ${e.message}');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    await showComposer(ref, const ComposeNormal(), rasqTarget: true, column: fowColumnOf(context));
+    if (mounted) ref.invalidate(rasqAccountPageProvider(widget.handle));
   }
 
   @override
@@ -96,7 +84,7 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
         }, child: const Text('編集'))],
       ),
       floatingActionButton: isMine && page.hasValue
-          ? FloatingActionButton.extended(key: const ValueKey('rasqPage.compose'), onPressed: _busy ? null : () => _compose(page.value!.posts), icon: const Icon(Icons.edit_outlined), label: const Text('RASQ に投稿'))
+          ? FloatingActionButton.extended(key: const ValueKey('rasqPage.compose'), onPressed: () => _compose(page.value!.posts), icon: const Icon(Icons.edit_outlined), label: const Text('RASQ に投稿'))
           : null,
       body: page.when(
         loading: () => const RasqLoading(),
@@ -331,48 +319,4 @@ class _PluginsTab extends StatelessWidget {
       for (final g in profile.reviewed) tile(g),
     ]);
   }
-}
-
-/// RASQ アカウントとしての投稿を書くシート: 本文(1000 文字まで)+ 画像 4 枚まで。
-Future<({String body, List<({List<int> bytes, String contentType})> images})?> showRasqPostSheet(WidgetRef ref) async {
-  final body = TextEditingController();
-  final images = <({Uint8List bytes, String contentType})>[];
-  final ok = await ref.read(overlayManagerProvider).showBottomSheet<bool>(
-        id: 'rasq.post.compose',
-        title: 'RASQ に投稿',
-        confirmText: '投稿',
-        builder: (ctx) => StatefulBuilder(
-          builder: (ctx, setState) => Padding(
-            padding: const EdgeInsets.all(RasqSpacing.page),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              RasqInput(key: const ValueKey('rasqPost.body'), controller: body, hintText: 'いまどうしてる?(1000 文字まで)', maxLines: 5, autofocus: true),
-              const SizedBox(height: RasqSpacing.sm),
-              Wrap(spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                for (var i = 0; i < images.length; i++)
-                  Stack(children: [
-                    ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(images[i].bytes, width: 64, height: 64, fit: BoxFit.cover)),
-                    Positioned(right: 0, top: 0, child: RasqIconButton(icon: Icons.cancel, size: 16, tooltip: '外す', onPressed: () => setState(() => images.removeAt(i)))),
-                  ]),
-                if (images.length < 4)
-                  OutlinedButton.icon(
-                    key: const ValueKey('rasqPost.addImage'),
-                    onPressed: () async {
-                      final x = await ImagePicker().pickImage(source: ImageSource.gallery);
-                      if (x == null) return;
-                      final v = (bytes: await x.readAsBytes(), contentType: profileImageContentType(x.name, x.mimeType));
-                      setState(() => images.add(v));
-                    },
-                    icon: const Icon(Icons.image_outlined, size: 18),
-                    label: const Text('画像'),
-                  ),
-              ]),
-              const SizedBox(height: RasqSpacing.xs),
-              Text('RASQ の公開ページに出ます。画像はサーバーで縮めて保存し直します(位置情報などは残りません)。', style: RasqTypography.caption.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
-            ]),
-          ),
-        ),
-      );
-  final text = body.text.trim();
-  if (ok != true || (text.isEmpty && images.isEmpty)) return null;
-  return (body: text, images: [for (final i in images) (bytes: i.bytes as List<int>, contentType: i.contentType)]);
 }

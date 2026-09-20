@@ -83,12 +83,37 @@ class RasqSnsLink {
 
 @immutable
 class RasqPostImage {
-  const RasqPostImage({required this.id, required this.url, this.width = 0, this.height = 0});
+  const RasqPostImage({required this.id, required this.url, this.width = 0, this.height = 0, this.sensitive = false});
   final String id;
   final Uri url;
   final int width;
   final int height;
+  final bool sensitive;
 }
+
+/// 投票 (S-023)。
+@immutable
+class RasqPoll {
+  const RasqPoll({required this.choices, this.multiple = false, this.expiresAt, this.expired = false});
+  final List<({String text, int votes, bool voted})> choices;
+  final bool multiple;
+  final DateTime? expiresAt;
+  final bool expired;
+
+  static RasqPoll? fromJson(Object? j) => j is! Map
+      ? null
+      : RasqPoll(
+          choices: [for (final c in j['choices'] as List? ?? const []) if (c is Map) (text: '${c['text'] ?? ''}', votes: (c['votes'] as num?)?.toInt() ?? 0, voted: c['voted'] == true)],
+          multiple: j['multiple'] == true,
+          expiresAt: DateTime.tryParse(j['expiresAt'] as String? ?? ''),
+          expired: j['expired'] == true,
+        );
+}
+
+/// RASQ に投稿するときの上限 (S-023)。SNS のコンポーザーと共通にしつつ、ここだけ違う。
+const rasqPostMaxImages = 6;
+const rasqPostMaxPollChoices = 6;
+const rasqPostMaxChars = 1000;
 
 /// 投稿の作者。
 @immutable
@@ -108,12 +133,17 @@ class RasqPostAuthor {
 /// キュー(アセットパックの絵でのリアクション)を、絵ごとにまとめたもの (S-022)。
 @immutable
 class RasqQueueCount {
-  const RasqQueueCount({required this.packId, required this.stickerId, required this.url, required this.count, this.mine = false});
-  final String packId;
+  const RasqQueueCount({required this.packId, required this.stickerId, required this.url, required this.count, this.mine = false, this.like = false});
+
+  /// アセットパックの絵のとき。いいね([like])なら null。
+  final String? packId;
   final String stickerId;
 
-  /// 絵(Central がパックから取り出して配る。パックを入れていなくても見える)。
-  final Uri url;
+  /// いいね(パックを使わないキュー。S-023)。
+  final bool like;
+
+  /// 絵(Central がパックから取り出して配る。パックを入れていなくても見える)。いいねは null(❤ を描く)。
+  final Uri? url;
   final int count;
   final bool mine;
 }
@@ -134,6 +164,10 @@ class RasqAccountPost {
     this.rebroaded = false,
     this.queues = const [],
     this.rebroadedBy,
+    this.cw = '',
+    this.visibility = 'public',
+    this.reactionAcceptance,
+    this.poll,
   });
   final String id;
   final String body;
@@ -154,6 +188,17 @@ class RasqAccountPost {
   /// 一覧で、誰かのリブローとして出ているとき。
   final RasqPostAuthor? rebroadedBy;
 
+  /// 注釈 (CW)。空 = なし。
+  final String cw;
+
+  /// public / home / followers。
+  final String visibility;
+
+  /// `likeOnly` = いいねのみ(キューの絵は受けない)。
+  final String? reactionAcceptance;
+  bool get likeOnly => reactionAcceptance == 'likeOnly';
+  final RasqPoll? poll;
+
   /// 共有の行き先(Web の個別ページ)。
   Uri permalink(Uri central) => central.replace(path: '/p/$id', query: null);
 
@@ -163,9 +208,13 @@ class RasqAccountPost {
         author: RasqPostAuthor.fromJson(j['author']),
         images: [
           for (final i in j['images'] as List? ?? const [])
-            if (i is Map && _http(i['url']) != null) RasqPostImage(id: '${i['id']}', url: _http(i['url'])!, width: (i['width'] as num?)?.toInt() ?? 0, height: (i['height'] as num?)?.toInt() ?? 0),
+            if (i is Map && _http(i['url']) != null) RasqPostImage(id: '${i['id']}', url: _http(i['url'])!, width: (i['width'] as num?)?.toInt() ?? 0, height: (i['height'] as num?)?.toInt() ?? 0, sensitive: i['sensitive'] == true),
         ],
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
+        cw: j['cw'] as String? ?? '',
+        visibility: j['visibility'] as String? ?? 'public',
+        reactionAcceptance: j['reactionAcceptance'] as String?,
+        poll: RasqPoll.fromJson(j['poll']),
         replyTo: j['replyTo'] as String?,
         isReply: j['isReply'] == true,
         replyCount: (j['replyCount'] as num?)?.toInt() ?? 0,
@@ -173,7 +222,8 @@ class RasqAccountPost {
         rebroaded: j['rebroaded'] == true,
         queues: [
           for (final q in j['queues'] as List? ?? const [])
-            if (q is Map && _http(q['url']) != null) RasqQueueCount(packId: '${q['packId']}', stickerId: '${q['stickerId']}', url: _http(q['url'])!, count: (q['count'] as num?)?.toInt() ?? 0, mine: q['mine'] == true),
+            if (q is Map && (q['like'] == true || _http(q['url']) != null))
+              RasqQueueCount(packId: q['packId'] as String?, stickerId: '${q['stickerId']}', url: _http(q['url']), like: q['like'] == true, count: (q['count'] as num?)?.toInt() ?? 0, mine: q['mine'] == true),
         ],
         rebroadedBy: RasqPostAuthor.fromJson(j['rebroadedBy']),
       );
@@ -297,13 +347,37 @@ class RasqAccountPageApi {
   }
 
   /// 画像を先に上げて、id を付けて投稿する。
-  Future<RasqAccountPost> createPost(String body, {List<({List<int> bytes, String contentType})> images = const []}) async {
+  /// SNS の投稿と同じ項目 (S-023): 注釈 / 公開範囲 / いいねのみ / センシティブな画像 / 投票。連合に関わるものは無い。
+  Future<RasqAccountPost> createPost(
+    String body, {
+    List<({List<int> bytes, String contentType, bool sensitive})> images = const [],
+    String cw = '',
+    String visibility = 'public',
+    bool likeOnly = false,
+    ({List<String> choices, bool multiple, Duration? expiresAfter})? poll,
+  }) async {
     final ids = <String>[];
+    final sensitive = <String>[];
     for (final i in images) {
-      ids.add('${(await _client.postBytes('/me/posts/images', i.bytes, contentType: i.contentType))['id']}');
+      final id = '${(await _client.postBytes('/me/posts/images', i.bytes, contentType: i.contentType))['id']}';
+      ids.add(id);
+      if (i.sensitive) sensitive.add(id);
     }
-    return RasqAccountPost.fromJson(await _client.postJson('/me/posts', {'body': body, if (ids.isNotEmpty) 'imageIds': ids}));
+    return RasqAccountPost.fromJson(await _client.postJson('/me/posts', {
+      'body': body,
+      if (ids.isNotEmpty) 'imageIds': ids,
+      if (sensitive.isNotEmpty) 'sensitiveImageIds': sensitive,
+      if (cw.isNotEmpty) 'cw': cw,
+      if (visibility != 'public') 'visibility': visibility,
+      if (likeOnly) 'reactionAcceptance': 'likeOnly',
+      if (poll != null) 'poll': {'choices': poll.choices, 'multiple': poll.multiple, if (poll.expiresAfter != null) 'expiresInSeconds': poll.expiresAfter!.inSeconds},
+    }));
   }
+
+  /// いいね(パックを使わないキュー)。
+  Future<RasqAccountPost> like(String postId) async => RasqAccountPost.fromJson(await _client.putJson('/posts/$postId/queue', const {'like': true}));
+
+  Future<RasqAccountPost> vote(String postId, int choice) async => RasqAccountPost.fromJson(await _client.postJson('/posts/$postId/poll/vote', {'choice': choice}));
 
   Future<void> deletePost(String id) => _client.delete('/me/posts/$id');
 
