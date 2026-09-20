@@ -8,9 +8,9 @@ import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
-/// RASQ の投稿のタイル (D-274 → D-276): リブロー済みでも、ボタンは「リブロー」のまま(押してもタイルは開かない)。
+/// RASQ の投稿のタイル (D-274 → D-276): リブロード済みでも、ボタンは「リブロード」のまま(押してもタイルは開かない)。
 void main() {
-  testWidgets('リブロー済みのボタンを押しても、取り消しにもタイルのタップにもならない', (tester) async {
+  testWidgets('リブロード済みのボタンを押しても、取り消しにもタイルのタップにもならない', (tester) async {
     var opened = 0;
     const post = RasqAccountPost(id: 'p1', body: '本文', author: RasqPostAuthor(id: 'a', handle: 'taro', displayName: 'タロ'), rebroaded: true, rebroadCount: 1);
     await tester.pumpWidget(ProviderScope(
@@ -18,11 +18,11 @@ void main() {
       child: MaterialApp(home: Scaffold(body: RasqPostTileView(post: post, onChanged: () {}, onOpen: () => opened++))),
     ));
     await tester.pump();
-    await tester.tap(find.byTooltip('リブロー'));
+    await tester.tap(find.byTooltip('リブロード'));
     await tester.pump();
     expect(opened, 0);
-    expect(find.textContaining('ログインするとリブローできます'), findsOneWidget);
-    expect(find.byTooltip('リブローを取り消す'), findsNothing);
+    expect(find.textContaining('ログインするとリブロードできます'), findsOneWidget);
+    expect(find.byTooltip('リブロードを取り消す'), findsNothing);
     await tester.tap(find.text('本文'));
     await tester.pump();
     expect(opened, 1);

@@ -17,16 +17,17 @@ import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../compose/emoji_panel.dart';
 import '../compose/emoji_picker_fow.dart';
+import '../home/action_bundle_fow.dart';
 import '../media/video_player.dart';
 import '../../shell/third_column.dart';
 import '../store/sticker_packs.dart';
 
 /// RASQ の投稿のタイル (D-271 / S-022)。
 ///
-/// 上: (リブローの帯)/ アイコン / 表示名・@handle / 日付 / **…**(ほかの SNS と同じドロップダウン: リンクをコピー /
-/// ブラウザで開く / 自分の投稿なら削除)。下のアクションバー: **返信 / リブロー (ReBroad、🔁) / キュー (Queue) / 共有**。
-/// リブローのボタンは、SNS のリノートと同じバンドル (D-276): 「リブロー / 引用」。リブローは何度でもできる。
-/// **自分のリブローとして出ているタイル**では「リブローを取り消す / 引用」になり、その 1 回だけを取り消す。
+/// 上: (リブロードの帯)/ アイコン / 表示名・@handle / 日付 / **…**(ほかの SNS と同じドロップダウン: リンクをコピー /
+/// ブラウザで開く / 自分の投稿なら削除)。下のアクションバー: **返信 / リブロード (ReBroad、🔁) / キュー (Queue) / 共有**。
+/// リブロードのボタンは、SNS のリノートと同じバンドル (D-276): 「リブロード / 引用」。リブロードは何度でもできる。
+/// **自分のリブロードとして出ているタイル**では「リブロードを取り消す / 引用」になり、その 1 回だけを取り消す。
 /// キュー = ストアでインストール(購入)した署名済みアセットパックの絵でのリアクション。付いているキューは、絵 + 件数のチップで出る
 /// (絵はサーバーが配るので、そのパックを入れていなくても見える。チップを押すと、同じ絵を自分も付ける / 外す)。
 class RasqPostTileView extends ConsumerWidget {
@@ -54,13 +55,16 @@ class RasqPostTileView extends ConsumerWidget {
     if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインすると使えます');
     try {
       await action(api);
+      // 自分のアカウントページも取り直す (D-277): スレッド画面からリブロード / 引用しても、投稿欄にすぐ出るように。
+      final me = ref.read(orgateAccountProvider).value;
+      if (me != null) ref.invalidate(rasqAccountPageProvider(me.handle));
       onChanged();
     } on OrgateException catch (e) {
       if (!context.mounted) return;
       _toast(context, switch (e.code.code) {
         '403' when e.message.contains('install') => 'このパックをストアからインストールすると、この絵でキューできます',
         '403' => 'この投稿には操作できません',
-        '409' when e.message.contains('rebroad') => 'この投稿は、これ以上リブローできません',
+        '409' when e.message.contains('rebroad') => 'この投稿は、これ以上リブロードできません',
         '409' => '返信は 100 件までです。古い返信を消してください',
         '404' => 'この投稿 / 絵は、もうありません',
         _ => '失敗しました: ${e.message}',
@@ -169,14 +173,22 @@ class RasqPostTileView extends ConsumerWidget {
   /// いいね(パックを使わないキュー)のリアクション表記。
   static const likeReaction = '❤';
 
-  /// リブローのバンドル (D-276): ふつうのタイルでは「リブロー / 引用」(リブローは何度でも)。
-  /// 自分のリブローとして出ているタイルでは「リブローを取り消す / 引用」(その 1 回だけを取り消す)。
+  /// リブロードのバンドル (D-276): ふつうのタイルでは「リブロード / 引用」(リブロードは何度でも)。
+  /// 自分のリブロードとして出ているタイルでは「リブロードを取り消す / 引用」(その 1 回だけを取り消す)。
   Future<void> _rebroadBundle(BuildContext context, WidgetRef ref, Rect anchor, {required bool myRebroad}) async {
-    if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインするとリブローできます');
-    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.rebroad.${post.id}', anchor: anchor, dense: true, items: [
-      if (myRebroad) const RasqDropdownItem('リブローを取り消す', 'undo', destructive: true) else const RasqDropdownItem('リブロー', 'rebroad'),
-      const RasqDropdownItem('引用', 'quote'),
-    ]);
+    if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインするとリブロードできます');
+    // SNS のリノートと同じく、ドロップダウンではなくバンドル FOW で出す (D-277)。
+    final pick = await showBundleMenuFow<String>(
+      ref.read(overlayManagerProvider),
+      id: 'rasq.post.rebroad.${post.id}',
+      title: 'リブロード',
+      anchor: anchor,
+      column: fowColumnOf(context),
+      items: [
+        if (myRebroad) const BundleMenuItem(value: 'undo', label: 'リブロードを取り消す', icon: Icons.repeat, destructive: true) else const BundleMenuItem(value: 'rebroad', label: 'リブロード', icon: Icons.repeat),
+        const BundleMenuItem(value: 'quote', label: '引用', icon: Icons.format_quote),
+      ],
+    );
     if (!context.mounted || pick == null) return;
     switch (pick) {
       case 'rebroad':
@@ -245,7 +257,7 @@ class RasqPostTileView extends ConsumerWidget {
     final me = ref.watch(orgateAccountProvider).value;
     final isMine = me != null && author != null && me.id == author.id;
     final mine = post.queues.where((q) => q.mine).firstOrNull;
-    // 自分のリブローとして出ているタイルか(ここでだけ、リブローのボタンが「取り消す」になる。D-276)。
+    // 自分のリブロードとして出ているタイルか(ここでだけ、リブロードのボタンが「取り消す」になる。D-276)。
     final myRebroad = me != null && post.rebroadedBy?.id == me.id && post.rebroadId != null;
     UserSummary summary(RasqPostAuthor? a) => UserSummary(
           id: 'rasq:${a?.id ?? ''}',
@@ -264,9 +276,9 @@ class RasqPostTileView extends ConsumerWidget {
       child: RasqPostTile(
         author: summary(author),
         createdAt: post.createdAt ?? DateTime.now(),
-        // 帯: リブロー(RASQ の言い方で出す。部品の既定は「リノート」)> 返信の印。
+        // 帯: リブロード(RASQ の言い方で出す。部品の既定は「リノート」)> 返信の印。
         bannerIcon: post.rebroadedBy != null ? Icons.repeat : (post.isReply && !focused ? Icons.reply : null),
-        bannerText: post.rebroadedBy != null ? '${post.rebroadedBy!.label} がリブロー' : (post.isReply && !focused ? (post.replyTo == null ? '削除された投稿への返信' : '返信') : null),
+        bannerText: post.rebroadedBy != null ? '${post.rebroadedBy!.label} がリブロード' : (post.isReply && !focused ? (post.replyTo == null ? '削除された投稿への返信' : '返信') : null),
         onTap: onOpen,
         onAuthorTap: author == null ? null : () => context.push(Routes.rasqAccount(author.handle)),
         // … = ほかの SNS の投稿と同じドロップダウン(削除はこの中)。
@@ -300,16 +312,16 @@ class RasqPostTileView extends ConsumerWidget {
         ]),
         // 注釈つきのときは、メディアも畳みの中(_body)に入れる。
         media: post.cw.isNotEmpty ? null : _media(context, ref),
-        // アクションバー: 返信 / リブロー (ReBroad) / キュー (Queue) + 共有。キューは、付けていれば押すと外す、長押しでピッカー(Misskey のリアクションと同じ)。
+        // アクションバー: 返信 / リブロード (ReBroad) / キュー (Queue) + 共有。キューは、付けていれば押すと外す、長押しでピッカー(Misskey のリアクションと同じ)。
         actionBar: Builder(
           builder: (bar) => RasqActionBar(
             items: [
               RasqActionBarItem(id: 'reply', label: '返信', icon: Icons.chat_bubble_outline, count: post.replyCount, onTap: () => _reply(context, ref)),
-              // リブロー (D-276): SNS のリノートと同じバンドル(リブロー / 引用)。ふつうのタイルでは何度でもリブローできる。
-              // 自分のリブローとして出ているタイルでは、済みの色になり、バンドルの 1 つ目が「リブローを取り消す」になる。
+              // リブロード (D-276): SNS のリノートと同じバンドル(リブロード / 引用)。ふつうのタイルでは何度でもリブロードできる。
+              // 自分のリブロードとして出ているタイルでは、済みの色になり、バンドルの 1 つ目が「リブロードを取り消す」になる。
               RasqActionBarItem(
                 id: 'rebroad',
-                label: myRebroad ? 'リブローを取り消す' : 'リブロー',
+                label: myRebroad ? 'リブロードを取り消す' : 'リブロード',
                 icon: Icons.repeat,
                 doneIcon: Icons.repeat, // 完了アイコンが無いと、部品が済みのボタンを無効にする
                 done: myRebroad,

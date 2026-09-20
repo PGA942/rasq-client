@@ -374,18 +374,21 @@ class _PostRowState extends ConsumerState<PostRow> {
 
   /// リノート/引用ノートの組み込みバンドル (D-039)。
   Future<void> _repostBundle(ActionDescriptor a, ActionState st, Rect anchor) async {
-    final manager = ref.read(overlayManagerProvider);
-    final picked = await manager.showDropdown<String>(
+    // ドロップダウンはやめて、バンドル FOW に統一 (D-277)。
+    // ボタンは入り切りにしない (D-274 → D-276): ふつうの投稿では、いつ押しても「リノート」(何度でも)。
+    // 自分のリノートとして流れてきたタイルでだけ、1 つ目が「リノートを取り消す」になる。
+    final picked = await showBundleMenuFow<String>(
+      ref.read(overlayManagerProvider),
       id: 'actionbar.repost.${post.key}',
+      title: a.label,
       anchor: anchor,
-      dense: true,
-      // ボタンは入り切りにしない (D-274 → D-276): ふつうの投稿では、いつ押しても「リノート」(何度でも)。
-      // 自分のリノートとして流れてきたタイルでだけ、1 つ目が「リノートを取り消す」になる(帯の … はやめた)。
+      column: fowColumnOf(context),
       items: [
-        if (_canUndoRepost) const RasqDropdownItem('リノートを取り消す', 'undo', destructive: true) else const RasqDropdownItem('リノート', 'renote'),
-        const RasqDropdownItem('引用ノート', 'quote'),
+        if (_canUndoRepost) const BundleMenuItem(value: 'undo', label: 'リノートを取り消す', icon: Icons.repeat, destructive: true) else const BundleMenuItem(value: 'renote', label: 'リノート', icon: Icons.repeat),
+        const BundleMenuItem(value: 'quote', label: '引用ノート', icon: Icons.format_quote),
       ],
     );
+    if (!mounted) return;
     switch (picked) {
       case 'renote':
         await _onAction(a, args: const {'forceUndo': false}).catchError((_) {});

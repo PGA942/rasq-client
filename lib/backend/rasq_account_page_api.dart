@@ -210,14 +210,14 @@ class RasqAccountPost {
   final int replyCount;
   final int rebroadCount;
 
-  /// 自分がリブローしているか。
+  /// 自分がリブロードしているか。
   final bool rebroaded;
   final List<RasqQueueCount> queues;
 
-  /// 一覧で、誰かのリブローとして出ているとき。
+  /// 一覧で、誰かのリブロードとして出ているとき。
   final RasqPostAuthor? rebroadedBy;
 
-  /// そのリブロー 1 回の id(取り消すときに使う。S-024)。
+  /// そのリブロード 1 回の id(取り消すときに使う。S-024)。
   final String? rebroadId;
 
   /// 引用 (S-024): 引用として書かれたか / 元の投稿(消えた・見られないなら null)/ この投稿が引用された数。
@@ -448,10 +448,10 @@ class RasqAccountPageApi {
   /// 返信(文字だけ、500 文字まで)。
   Future<RasqAccountPost> reply(String postId, String body) async => RasqAccountPost.fromJson(await _client.postJson('/me/posts', {'body': body, 'replyTo': postId}));
 
-  /// リブロー (S-024): 押すたびに 1 回増える(同じ投稿を何度でも)。戻り = 更新後の投稿。
+  /// リブロード (S-024): 押すたびに 1 回増える(同じ投稿を何度でも)。戻り = 更新後の投稿。
   Future<RasqAccountPost> rebroad(String postId) async => RasqAccountPost.fromJson(await _client.postJson('/posts/$postId/rebroad', const {}));
 
-  /// リブロー 1 回を取り消す([RasqAccountPost.rebroadId])。
+  /// リブロード 1 回を取り消す([RasqAccountPost.rebroadId])。
   Future<void> deleteRebroad(String rebroadId) => _client.delete('/rebroads/$rebroadId');
 
   /// キュー: アセットパックの絵でリアクション(そのパックをインストールしていること)。null で外す。

@@ -21,7 +21,7 @@ import 'rasq_post_tile.dart';
 ///
 /// 上から: バナー / アイコン / 表示名・ハンドル / 自己紹介 / 場所・誕生日・登録した年月・リンク →
 /// **SNS アカウントのタイル**(横に流れる。アカウント名 → サーバーのアイコン → サーバー名。タップで、ログイン中の SNS なら
-/// アプリ内のユーザーページ、そうでなければブラウザ)→ タブ **投稿 / メディア / リスト(第二期)/ プラグイン**。
+/// アプリ内のユーザーページ、そうでなければブラウザ)→ タブ **投稿 / メディア / リスト / クリップ(どちらも第二期)/ プラグイン / レビュー** (D-277)。
 /// 自分のページでは「編集」と、RASQ アカウントとしての投稿(第一期は 3 件まで)の作成 / 削除ができる。
 class RasqAccountPageScreen extends ConsumerStatefulWidget {
   const RasqAccountPageScreen({super.key, required this.handle});
@@ -93,14 +93,14 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
           child: Text(e is OrgateException && e.code.code == '404' ? '@${widget.handle} という RASQ アカウントはありません' : '読み込めませんでした: ${e is OrgateException ? e.message : e}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
         ),
         data: (d) => DefaultTabController(
-          length: 4,
+          length: 6,
           child: NestedScrollView(
             headerSliverBuilder: (_, _) => [
               SliverToBoxAdapter(child: _Header(profile: d.profile, onTile: _openTile)),
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _TabBarDelegate(
-                  TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: const [Tab(text: '投稿'), Tab(text: 'メディア'), Tab(text: 'リスト'), Tab(text: 'プラグイン')]),
+                  TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: const [Tab(text: '投稿'), Tab(text: 'メディア'), Tab(text: 'リスト'), Tab(text: 'クリップ'), Tab(text: 'プラグイン'), Tab(text: 'レビュー')]),
                   scheme.surface,
                 ),
               ),
@@ -109,7 +109,9 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
               _PostsTab(posts: d.posts, isMine: isMine, onChanged: () => ref.invalidate(rasqAccountPageProvider(widget.handle))),
               _MediaTab(posts: d.posts),
               _message(context, '作成したリストは、今後ここに出ます。'),
-              _PluginsTab(profile: d.profile),
+              _message(context, '公開したクリップは、今後ここに出ます。'),
+              _PluginsTab(profile: d.profile, reviews: false),
+              _PluginsTab(profile: d.profile, reviews: true),
             ]),
           ),
         ),
@@ -275,25 +277,56 @@ class _PostsTab extends StatelessWidget {
   }
 }
 
-class _MediaTab extends StatelessWidget {
+class _MediaTab extends ConsumerWidget {
   const _MediaTab({required this.posts});
   final RasqPostList posts;
   @override
-  Widget build(BuildContext context) {
-    final images = [for (final p in posts.posts) ...p.images];
-    if (images.isEmpty) return _message(context, 'メディアはまだありません。');
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final central = ref.watch(centralBaseUrlProvider);
+    // 注釈つきの投稿のメディアは、ここには並べない(Web のページと同じ)。センシティブなものは伏せて出す。
+    final cells = [
+      for (final p in posts.posts)
+        if (p.cw.isEmpty && p.rebroadedBy == null)
+          for (var i = 0; i < p.images.length; i++) (post: p, index: i),
+    ];
+    if (cells.isEmpty) return _message(context, 'メディアはまだありません。');
     return GridView.builder(
       padding: const EdgeInsets.all(RasqSpacing.sm),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 160, mainAxisSpacing: 4, crossAxisSpacing: 4),
-      itemCount: images.length,
-      itemBuilder: (_, i) => ClipRRect(borderRadius: BorderRadius.circular(6), child: Image.network(images[i].url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink())),
+      itemCount: cells.length,
+      itemBuilder: (_, n) {
+        final cell = cells[n];
+        final m = cell.post.images[cell.index];
+        final Widget face = switch (m.type) {
+          _ when m.sensitive => Container(color: scheme.surfaceContainerHighest, child: Icon(Icons.visibility_off_outlined, color: scheme.onSurfaceVariant)),
+          'image' => Image.network(m.url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+          'video' => Container(color: Colors.black, child: const Icon(Icons.play_circle_outline, color: Colors.white, size: 36)),
+          _ => Container(color: scheme.surfaceContainerHighest, child: Icon(Icons.audiotrack, color: scheme.onSurfaceVariant)),
+        };
+        // タップ = その投稿の全画面表示を、このメディアの位置で開く (D-277)。
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: ValueKey('rasqPage.media.${m.id}'),
+              onTap: () => context.openViewer(cell.post.toPost(central: central), cell.index),
+              child: face,
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 class _PluginsTab extends StatelessWidget {
-  const _PluginsTab({required this.profile});
+  const _PluginsTab({required this.profile, required this.reviews});
   final RasqPublicProfile profile;
+
+  /// false = 「プラグイン」タブ(公開したもの)/ true = 「レビュー」タブ(レビューしたもの)。D-277 で 2 つに分けた。
+  final bool reviews;
 
   @override
   Widget build(BuildContext context) {
@@ -310,13 +343,10 @@ class _PluginsTab extends StatelessWidget {
           subtitle: g.rating == null ? g.summary : '${'★' * g.rating!.clamp(0, 5)} ${g.reviewTitle.isEmpty ? g.reviewBody : g.reviewTitle}',
           onTap: () => context.push('/store/plugin/${Uri.encodeComponent(g.id)}'),
         );
+    final items = reviews ? profile.reviewed : profile.published;
+    if (items.isEmpty) return _message(context, reviews ? 'レビューはまだありません。' : '公開したプラグインはありません。');
     return ListView(padding: const EdgeInsets.only(bottom: 96), children: [
-      const RasqSectionHeader(title: '公開したプラグイン'),
-      if (profile.published.isEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('公開したプラグインはありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
-      for (final g in profile.published) tile(g),
-      const RasqSectionHeader(title: 'レビューしたプラグイン'),
-      if (profile.reviewed.isEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('レビューはまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
-      for (final g in profile.reviewed) tile(g),
+      for (final g in items) tile(g),
     ]);
   }
 }

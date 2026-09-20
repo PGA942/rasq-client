@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
@@ -37,12 +41,41 @@ class VideoSession extends ChangeNotifier {
   bool _hold = false;
   static const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
+  /// http の動画を手元に落としたもの(あれば、閉じるときに消す)。
+  File? _local;
+
+  /// OS のプレイヤーが http を断ったとき (ATS。-1022) の逃げ道: アプリの側で落として、ファイルとして再生する。
+  Future<VideoPlayerController> _open() async {
+    final direct = VideoPlayerController.networkUrl(item.url);
+    try {
+      await direct.initialize();
+      return direct;
+    } catch (_) {
+      // 待たない: 作るのに失敗した再生器の dispose は、終わらないことがある。
+      direct.dispose().ignore();
+      if (item.url.scheme != 'http' || kIsWeb) rethrow;
+    }
+    final res = await http.get(item.url);
+    if (res.statusCode != 200) throw StateError('HTTP ${res.statusCode}');
+    final dir = await Directory.systemTemp.createTemp('rasq_video');
+    final path = item.url.path.toLowerCase();
+    final f = File('${dir.path}/video${path.endsWith('.webm') ? '.webm' : path.endsWith('.mov') ? '.mov' : '.mp4'}');
+    await f.writeAsBytes(res.bodyBytes, flush: true);
+    _local = f;
+    final c = VideoPlayerController.file(f);
+    await c.initialize();
+    return c;
+  }
+
   Future<void> _init() async {
     try {
-      final c = VideoPlayerController.networkUrl(item.url);
+      final c = await _open();
+      if (_disposed) {
+        await c.dispose();
+        _dropLocal();
+        return;
+      }
       controller = c;
-      await c.initialize();
-      if (_disposed) return;
       c.addListener(notifyListeners);
       await c.setLooping(true);
       if (startAt != null && startAt! > Duration.zero) await c.seekTo(startAt!);
@@ -110,11 +143,18 @@ class VideoSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _dropLocal() {
+    final f = _local;
+    _local = null;
+    if (f != null) f.parent.delete(recursive: true).catchError((_) => f.parent);
+  }
+
   @override
   void dispose() {
     _disposed = true;
     controller?.removeListener(notifyListeners);
     controller?.dispose();
+    _dropLocal();
     super.dispose();
   }
 }
