@@ -433,6 +433,15 @@ class RasqAccountPageApi {
     }));
   }
 
+  /// フィード (S-025): 自分とフォロー中の RASQ アカウントの投稿 + リブロード。[until] = 前のページの `nextUntil`。
+  Future<({List<RasqAccountPost> posts, String? nextUntil})> feed({String? until, int limit = 30}) async {
+    final j = await _client.getJson('/me/feed?limit=$limit${until == null ? '' : '&until=${Uri.encodeQueryComponent(until)}'}');
+    return (
+      posts: [for (final p in j['posts'] as List? ?? const []) if (p is Map) RasqAccountPost.fromJson(p.cast<String, Object?>())],
+      nextUntil: j['nextUntil'] as String?,
+    );
+  }
+
   /// いいね(パックを使わないキュー)。
   Future<RasqAccountPost> like(String postId) async => RasqAccountPost.fromJson(await _client.putJson('/posts/$postId/queue', const {'like': true}));
 
@@ -483,6 +492,16 @@ final rasqAccountPageProvider = FutureProvider.autoDispose.family<({RasqPublicPr
 });
 
 /// 投稿 1 つのスレッド。
+/// TL に流れてきた RASQ の投稿の原本 (D-283)。TL は SNS の投稿の形 ([RasqAccountPost.toPost]) で持つので、タイルを描くときにここから引く。
+class RasqFeedPosts extends Notifier<Map<String, RasqAccountPost>> {
+  @override
+  Map<String, RasqAccountPost> build() => const {};
+  // 同じ投稿が何度も出る(リブロード)ときは、新しいほう(先に来たほう)を残す。
+  void put(Iterable<RasqAccountPost> posts) => state = {...state, for (final p in posts.toList().reversed) p.id: p};
+}
+
+final rasqFeedPostsProvider = NotifierProvider<RasqFeedPosts, Map<String, RasqAccountPost>>(RasqFeedPosts.new);
+
 final rasqThreadProvider = FutureProvider.autoDispose.family<RasqThread, String>((ref, id) async {
   final api = ref.watch(rasqAccountPageApiProvider);
   if (api == null) throw StateError('RASQ Central の接続先が未設定です');

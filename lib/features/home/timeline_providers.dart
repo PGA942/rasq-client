@@ -1,3 +1,7 @@
+import '../../backend/orgate_client.dart';
+import '../../backend/rasq_account.dart';
+import '../../backend/rasq_account_page_api.dart';
+import '../nodeprog/tl_components.dart' show rasqPostsKind;
 import 'account_affinity.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -95,7 +99,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       c = _nodeCursors[kid];
       if (c == null) return const []; // 読了
     }
-    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next);
+    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next, rasqFeed: (until) => fetchRasqFeed(ref, until));
   }
 
   /// カスタム関数の中身グラフ (D-118)。
@@ -573,7 +577,15 @@ final timelineProvider = AsyncNotifierProvider.family<TimelineNotifier, Timeline
 /// [onCursor] (D-117) には取得ページの続きトークンを報告する(枝ごとの
 /// ページング用。null = 末尾まで読了)。
 Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
-    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor}) async {
+    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor, Future<(List<Post>, String?)> Function(String? until)? rasqFeed}) async {
+  // RASQ の投稿 (D-283): SNS のセッションではなく、Central のフィード(自分とフォロー中の RASQ アカウント)。
+  // `acct:` で包まれていても拾う(包んだまま流すと、現在の SNS のセッションで取りに行ってしまう)。
+  if ((kid.startsWith('acct:') ? kid.substring(kid.indexOf('|') + 1) : kid) == rasqPostsKind) {
+    if (rasqFeed == null) return const [];
+    final (posts, next) = await rasqFeed(cursor);
+    onCursor?.call(next);
+    return posts;
+  }
   // アカウント指定 (D-109): `acct:<@handle@instance>|<kind>` — そのアカウントの
   // セッションで残りを解決する(見つからなければ渡されたセッションのまま)。
   if (kid.startsWith('acct:')) {
@@ -626,4 +638,20 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
     return finish(await session.timeline(TimelineKind('dm:${r.peer.id}', 'DM'), cursor: cursor));
   }
   return finish(await session.timeline(TimelineKind(kid, kid), cursor: cursor));
+}
+
+/// RASQ の投稿のフィード (D-283)。TL のタイルは RASQ の投稿の形 ([RasqAccountPost]) で描くので、原本を [rasqFeedPostsProvider] に置く。
+/// ログインしていなければ空。
+Future<(List<Post>, String?)> fetchRasqFeed(Ref ref, String? until) async {
+  final api = ref.read(rasqAccountPageApiProvider);
+  if (api == null || ref.read(orgateAccountProvider).value == null) return (const <Post>[], null);
+  try {
+    final page = await api.feed(until: until);
+    ref.read(rasqFeedPostsProvider.notifier).put(page.posts);
+    final central = ref.read(centralBaseUrlProvider);
+    return ([for (final p in page.posts) p.toPost(central: central)], page.nextUntil);
+  } catch (e) {
+    debugPrint('rasq feed: $e');
+    return (const <Post>[], null);
+  }
 }

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 
 import 'node_graph.dart';
 
+/// 取得の kind id: RASQ の投稿 (D-283)。`resolveNodeFetch` が Central のフィードに解決する。
+const rasqPostsKind = 'rasq:posts';
+
 /// TL カスタマイズの簡略化 (D-121, 原典: ワイヤーフレーム「タイムラインの
 /// カスタマイズ」+ ユーザー検討案)。自由形のノードキャンバスは TL スコープ
 /// では**一旦無効化**し、TL は 2 種類のコンポーネントの積みで組む:
@@ -34,6 +37,9 @@ class TlSourceComponent {
   bool get isTrend => tl == 'trend';
   bool get isList => tl.startsWith('list:');
   bool get isSelf => tl == 'self';
+
+  /// RASQ の投稿 (D-283): 自分とフォロー中の RASQ アカウントの投稿(Central のフィード)。SNS のアカウントは関係しない。
+  bool get isRasq => tl == rasqPostsKind;
   bool get isDm => tl.startsWith('dm:');
 
   /// カスタムフィード (D-194): `feed:<at-uri>`(Bluesky。第二期以降は RASQ リストも)。
@@ -216,6 +222,9 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
     final at = Offset(24, 40.0 + i * 170);
     if (s.isTrend) {
       nodes.add(inst('trend.posts', 's$i', at, values: {'アカウント': s.account}));
+    } else if (s.isRasq) {
+      // RASQ の投稿 (D-283): アカウントは付けない(`acct:` で包むと、SNS のセッションを探しに行ってしまう)。
+      nodes.add(inst('tl.source', 's$i', at, values: {'TL': rasqPostsKind}));
     } else if (s.isSelf) {
       // この画面の基礎 TL (D-124): 実行側の resolveNodeFetch が selfItems を返す。
       nodes.add(inst('tl.source', 's$i', at, values: {'TL': 'self'}));

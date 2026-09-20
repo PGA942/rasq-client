@@ -598,6 +598,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// (アカウントページの「投稿」に出る。本文 1000 文字 + 画像 4 枚、第一期は 3 件まで)。通常の新規投稿のときだけ。
   bool _rasqTarget = false;
 
+  /// RASQ 指定を、ポスト先ノードの一致で自動で入れたか (D-283)。手で入り切りしたら false。
+  bool _rasqSuggested = false;
+
   /// 添付の上限: SNS は 4 つ、RASQ は 6 つ (S-023 / D-276: RASQ も動画・音声を付けられる)。
   int get _maxFiles => _rasqTarget ? rasqPostMaxImages : 4;
 
@@ -767,7 +770,18 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     // 投稿アカウントの自動選択 (D-131: その他の設定 → 投稿コンポーザー)。
     // オフでも一致マーク/並び替えは出す(自動で顔は切り替えない)。
     final autoAccount = (ref.read(settingsAreaProvider('composer.prefs')).value ?? const {})['autoAccount'] != false;
+    // RASQ アカウントのポスト先ノード (D-283): いちばんに一致したら、RASQ 指定にする(手で選んでいないとき、通常の投稿だけ)。
+    // 一致しなくなったら、自動で入れたぶんだけ戻す。
+    final rasqLabel = ref.read(orgateAccountProvider).value == null ? null : '${ref.read(rasqAccountProvider).account}';
+    final rasqFirst = autoAccount && rasqLabel != null && choices.isNotEmpty && choices.first.$1 == rasqLabel && widget.target is ComposeNormal && _postAs == null;
     setState(() {
+      if (rasqFirst && !_rasqTarget) {
+        _rasqTarget = true;
+        _rasqSuggested = true;
+      } else if (!rasqFirst && _rasqSuggested) {
+        _rasqTarget = false;
+        _rasqSuggested = false;
+      }
       _matchedTargets = [for (final c in choices) c.$1];
       _suggestedPostAs = !autoAccount || choices.isEmpty ? null : find(choices.first.$1);
       _suggestedFallback = !autoAccount || choices.isEmpty ? null : choices.first.$2;
@@ -811,6 +825,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               ? null
               : () => setState(() {
                     _rasqTarget = !_rasqTarget;
+                    _rasqSuggested = false;
                     _targetsOpen = false;
                     _error = null;
                   }),
