@@ -413,6 +413,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   (IconData, String, String, String) _sourceInfo(TlSourceComponent s) {
     final kinds = ref.read(tlTimelinesProvider(s.account));
     final tlLabel = kinds.where((k) => k.id == s.tl).firstOrNull?.label ?? switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', 'home' => 'フォロー中 (home)', _ => s.tl };
+    if (s.isRasq) return (Icons.hub_outlined, 'RASQ の投稿を取得', 'RASQ', 'TL: 自分とフォロー中の RASQ アカウントの投稿');
     return (
       s.isSelf
           ? Icons.sync_alt
@@ -839,6 +840,14 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
           description: 'この画面の基礎タイムライン(タブ/検索結果/リスト/欄の投稿)をそのまま取り込みます。',
           supported: allSns,
           add: () => widget.onAddSource(const TlSourceComponent(tl: 'self'))),
+      // RASQ の投稿 (D-283): SNS のアカウントではなく、RASQ アカウント(Central)のフィード。
+      _PaletteItem(
+          icon: Icons.hub_outlined,
+          title: 'RASQ の投稿',
+          subtitle: 'RASQ',
+          description: '自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。SNS の投稿と同じタイムラインに混ぜられます。',
+          supported: allSns,
+          add: () => widget.onAddSource(const TlSourceComponent(tl: rasqPostsKind))),
       _PaletteItem(
           icon: Icons.download_outlined,
           title: 'タイムライン',
@@ -1069,6 +1078,14 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
       );
     }
     final s = cfg.sources[widget.index];
+    if (s.isRasq) {
+      return (
+        const {},
+        const RrlNode(t: 'Column', c: [
+          RrlNode(t: 'Text', p: {'text': '自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。RASQ アカウントにログインしているときだけ流れます。パラメーターはありません。'}),
+        ]),
+      );
+    }
     if (s.isSelf) {
       return (
         const {},

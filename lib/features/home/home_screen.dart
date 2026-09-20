@@ -7,6 +7,8 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../backend/rasq_account_page_api.dart';
+import '../profile/rasq_post_tile.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
@@ -187,6 +189,12 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                 return const SizedBox(height: 80);
               }
               final p = tl.posts[i];
+              // RASQ の投稿 (D-283。TL のソース「RASQ の投稿」): SNS のアクションは効かないので、RASQ のタイルで描く。
+              if (isRasqPost(p)) {
+                final original = ref.watch(rasqFeedPostsProvider.select((m) => m[p.id]));
+                if (original == null) return const SizedBox.shrink();
+                return RasqPostTileView(key: ValueKey('tl.rasq.${p.id}'), post: original, onChanged: notifier.refresh, onOpen: () => context.pushPost(p));
+              }
               // 投稿カスタマイザ (D-082): 置き換えタイルがあれば RRL で描く
               // (V5 検証済み。スレッドナビと可視性 lifecycle はホスト側)。
               final tile = tl.customTiles[p.id];

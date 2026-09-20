@@ -7,6 +7,8 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../backend/rasq_account_page_api.dart';
+import '../profile/rasq_post_tile.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/third_column.dart';
@@ -167,6 +169,11 @@ class _PostRowState extends ConsumerState<PostRow> {
 
   @override
   Widget build(BuildContext context) {
+    // RASQ の投稿 (D-283。TL のソース「RASQ の投稿」)は、どの画面でも RASQ のタイルで描く(SNS のアクションは効かない)。
+    if (isRasqPost(widget.post)) {
+      final original = ref.watch(rasqFeedPostsProvider.select((m) => m[widget.post.id]));
+      return original == null ? const SizedBox.shrink() : RasqPostTileView(post: original, onChanged: () {}, onOpen: widget.onTap ?? () => context.pushPost(widget.post));
+    }
     final tokens = RasqTokens.of(context);
     final emojis = ref.watch(emojiCacheProvider);
     final isRead = ref.watch(isReadProvider(post.key));
