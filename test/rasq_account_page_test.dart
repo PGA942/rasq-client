@@ -198,6 +198,7 @@ void main() {
     await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p9')), matching: find.byTooltip('メニュー')));
     await tester.pumpAndSettle();
     expect(find.text('リンクをコピー'), findsOneWidget);
+    expect(find.text('アクションバーを編集'), findsOneWidget);
     expect(find.text('削除'), findsNothing);
     c.read(overlayManagerProvider).close('rasq.post.more');
     await tester.pumpAndSettle();

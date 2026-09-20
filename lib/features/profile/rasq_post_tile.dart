@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
@@ -17,7 +18,16 @@ import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../compose/emoji_panel.dart';
 import '../compose/emoji_picker_fow.dart';
+import '../compose/compose_providers.dart';
+import '../home/action_bar_config.dart';
+import '../home/action_bar_edit_sheet.dart';
 import '../home/action_bundle_fow.dart';
+import '../home/plugin_actions.dart';
+import '../home/post_row.dart';
+import '../plugins/slot_plugins.dart';
+import '../post/share_fow.dart';
+import '../vc/astell_post_share.dart';
+import 'rasq_queue_prediction.dart';
 import '../media/video_player.dart';
 import '../../shell/third_column.dart';
 import '../store/sticker_packs.dart';
@@ -81,6 +91,7 @@ class RasqPostTileView extends ConsumerWidget {
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.more', anchor: anchor, dense: true, items: [
       const RasqDropdownItem('リンクをコピー', 'copy'),
       const RasqDropdownItem('ブラウザで開く', 'open'),
+      const RasqDropdownItem('アクションバーを編集', 'editActions'),
       if (isMine) const RasqDropdownItem('削除', 'delete', destructive: true),
     ]);
     if (!context.mounted || pick == null) return;
@@ -90,6 +101,8 @@ class RasqPostTileView extends ConsumerWidget {
         if (link == null) return;
         await Clipboard.setData(ClipboardData(text: link.toString()));
         if (context.mounted) _toast(context, 'リンクをコピーしました');
+      case 'editActions':
+        await showActionBarEditSheet(ref, column: fowColumnOf(context), surfaces: const [ActionBarSurface.rasqPost]);
       case 'open':
         if (link != null) await launchUrl(link, mode: LaunchMode.externalApplication);
       case 'delete':
@@ -204,6 +217,25 @@ class RasqPostTileView extends ConsumerWidget {
     }
   }
 
+  /// プラグインのボタン (D-279): SNS の投稿と同じ `post.action`。投稿は SNS の投稿の形で渡し、アカウントは `rasq`。
+  Future<void> _runPlugin(BuildContext context, WidgetRef ref, ActionDescriptor a) async {
+    final pa = ref.read(pluginActionsProvider).where((x) => x.id == a.id).firstOrNull;
+    if (pa == null) return;
+    final asPost = post.toPost(central: ref.read(centralBaseUrlProvider));
+    final column = fowColumnOf(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final message = await ref.read(slotPluginsProvider.notifier).postAction(
+          pa.plugin,
+          actionId: pa.decl.id,
+          post: astellPostPayloadOf(asPost),
+          account: {'sns': 'rasq', 'instance': rasqPostInstance, 'handle': ref.read(orgateAccountProvider).value?.handle ?? ''},
+          column: column,
+          // プラグインが開くコンポーザーは、RASQ 指定で。
+          onComposerOpen: (text, media, mime, name) => showComposer(ref, const ComposeNormal(), initialText: text, column: column, rasqTarget: true, initialFiles: media == null ? null : [ComposerInitialFile(bytes: media, name: name ?? 'plugin.png', mimeType: mime)]),
+        );
+    if (message != null && message.isNotEmpty) messenger?.showSnackBar(SnackBar(content: Text(message)));
+  }
+
   /// 引用の元: SNS の引用と同じ、埋め込みサイズのタイル。
   Widget _quote(BuildContext context, RasqAccountPost q) {
     final p = q.toPost();
@@ -265,10 +297,65 @@ class RasqPostTileView extends ConsumerWidget {
           displayName: a?.label ?? '',
           avatarUrl: a?.avatarUrl,
         );
-    Rect rectOf(BuildContext c) {
-      final box = c.findRenderObject() as RenderBox?;
-      return box == null ? Rect.zero : box.localToGlobal(Offset.zero) & box.size;
+
+    // アクションバーの構成 (D-279): 内蔵の 返信 / リブロード / キュー + プラグインのボタン(`post.action`)。並びとバンドルは編集できる。
+    final merged = mergePluginActions(
+      config: ref.watch(actionBarConfigProvider(rasqPostConfigKey)),
+      snsActions: rasqPostBuiltinActions,
+      plugins: ref.watch(pluginActionsForProvider(rasqPostConfigKey)),
+      settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(rasqPostConfigKey, ''))),
+    );
+    final entries = merged.config.apply(merged.actions);
+    // キューの予測 (D-279): 付けていない投稿のボタンに、予測した絵を薄く出す。短押しでその絵を付ける(無ければピッカー)。
+    final predicted = mine != null || post.likeOnly || me == null
+        ? null
+        : predictQueue(post, ownedPacks: {for (final p in ref.watch(stickerPacksProvider)) p.id}, recent: ref.watch(recentEmojiProvider), central: ref.watch(centralBaseUrlProvider));
+
+    Future<void> perform(ActionDescriptor a, Rect anchor) async {
+      switch (a.id) {
+        case rasqReplyActionId:
+          return _reply(context, ref);
+        case rasqRebroadActionId:
+          return _rebroadBundle(context, ref, anchor, myRebroad: myRebroad);
+        case rasqQueueActionId:
+          if (mine != null) return _run(context, ref, (api) => api.setQueue(post.id, null));
+          if (predicted != null) return _run(context, ref, (api) => api.setQueue(post.id, (packId: predicted.packId, stickerId: predicted.stickerId)));
+          return _queue(context, ref, anchor);
+        default:
+          return _runPlugin(context, ref, a);
+      }
     }
+
+    RasqActionBarItem item(ActionDescriptor a) => switch (a.id) {
+          rasqReplyActionId => RasqActionBarItem(id: 'reply', label: '返信', icon: Icons.chat_bubble_outline, count: post.replyCount, onAnchorTap: (r) => perform(a, r)),
+          // リブロード (D-276): SNS のリノートと同じバンドル(リブロード / 引用)。ふつうのタイルでは何度でもリブロードできる。
+          // 自分のリブロードとして出ているタイルでは、済みの色になり、バンドルの 1 つ目が「リブロードを取り消す」になる。
+          rasqRebroadActionId => RasqActionBarItem(
+              id: 'rebroad',
+              label: myRebroad ? 'リブロードを取り消す' : 'リブロード',
+              icon: Icons.repeat,
+              doneIcon: Icons.repeat, // 完了アイコンが無いと、部品が済みのボタンを無効にする
+              done: myRebroad,
+              doneColor: tokens.link,
+              count: post.rebroadCount + post.quoteCount,
+              onAnchorTap: (r) => perform(a, r),
+            ),
+          rasqQueueActionId => RasqActionBarItem(
+              id: 'queue',
+              // いいねのみ (S-023) の投稿は、ボタンも ❤ に。
+              label: post.likeOnly ? 'いいね' : 'キュー',
+              icon: post.likeOnly ? Icons.favorite_border : Icons.add_reaction_outlined,
+              doneIcon: post.likeOnly ? Icons.favorite : Icons.add_reaction,
+              done: mine != null,
+              doneColor: tokens.link,
+              showCount: false,
+              iconUrl: predicted?.url,
+              mutedIcon: predicted != null,
+              onAnchorTap: (r) => perform(a, r),
+              onAnchorLongPress: (r) => _queue(context, ref, r),
+            ),
+          _ => RasqActionBarItem(id: a.id, label: a.label, icon: PostRow.iconFor(a.icon, Icons.extension_outlined), showCount: false, onAnchorTap: (r) => perform(a, r)),
+        };
 
     // SNS の投稿と同じタイル(L2 の RasqPostTile)に載せる: ヘッダー / … / 本文 / メディア / リアクションのチップ / アクションバー。
     return KeyedSubtree(
@@ -315,44 +402,28 @@ class RasqPostTileView extends ConsumerWidget {
         // アクションバー: 返信 / リブロード (ReBroad) / キュー (Queue) + 共有。キューは、付けていれば押すと外す、長押しでピッカー(Misskey のリアクションと同じ)。
         actionBar: Builder(
           builder: (bar) => RasqActionBar(
+            // 並び / バンドル / プラグインのボタンは、SNS の投稿バーと同じ仕組み (D-279。構成は `rasq:post`)。
             items: [
-              RasqActionBarItem(id: 'reply', label: '返信', icon: Icons.chat_bubble_outline, count: post.replyCount, onTap: () => _reply(context, ref)),
-              // リブロード (D-276): SNS のリノートと同じバンドル(リブロード / 引用)。ふつうのタイルでは何度でもリブロードできる。
-              // 自分のリブロードとして出ているタイルでは、済みの色になり、バンドルの 1 つ目が「リブロードを取り消す」になる。
-              RasqActionBarItem(
-                id: 'rebroad',
-                label: myRebroad ? 'リブロードを取り消す' : 'リブロード',
-                icon: Icons.repeat,
-                doneIcon: Icons.repeat, // 完了アイコンが無いと、部品が済みのボタンを無効にする
-                done: myRebroad,
-                doneColor: tokens.link,
-                count: post.rebroadCount + post.quoteCount,
-                onTap: () => _rebroadBundle(context, ref, rectOf(bar), myRebroad: myRebroad),
-              ),
-              RasqActionBarItem(
-                id: 'queue',
-                // いいねのみ (S-023) の投稿は、ボタンも ❤ に。
-                label: post.likeOnly ? 'いいね' : 'キュー',
-                icon: post.likeOnly ? Icons.favorite_border : Icons.add_reaction_outlined,
-                doneIcon: post.likeOnly ? Icons.favorite : Icons.add_reaction,
-                done: mine != null,
-                doneColor: tokens.link,
-                showCount: false,
-                onTap: () => mine != null ? _run(context, ref, (api) => api.setQueue(post.id, null)) : _queue(context, ref, rectOf(bar)),
-                onLongPress: () => _queue(context, ref, rectOf(bar)),
-              ),
+              for (final e in entries)
+                switch (e) {
+                  SingleActionEntry() => item(e.action),
+                  ActionListEntry() => RasqActionBarItem(
+                      id: 'list:${e.list.id}',
+                      label: e.list.name,
+                      icon: bundleIconOf(e.list, e.members),
+                      iconUrl: bundleIconUrlOf(e.list),
+                      showCount: false,
+                      onAnchorTap: (anchor) => showActionBundleMenuFow(ref, anchor: anchor, entry: e, column: fowColumnOf(context), onPick: (a) => perform(a, anchor)),
+                    ),
+                },
             ],
             trailing: [
               RasqActionButton.icon(
                 key: ValueKey('rasqPost.${post.id}.share'),
                 icon: Icons.ios_share,
                 tooltip: '共有',
-                onTap: () async {
-                  final link = _permalink(ref);
-                  if (link == null) return;
-                  await Clipboard.setData(ClipboardData(text: link.toString()));
-                  if (context.mounted) _toast(context, 'リンクをコピーしました');
-                },
+                // SNS の投稿と同じ共有 FOW (D-279。リンク / 内容のコピー、引用、DM、共有プラグイン)。
+                onTap: () => showPostShareFow(ref, post.toPost(central: ref.read(centralBaseUrlProvider)), column: fowColumnOf(context)),
               ),
             ],
           ),

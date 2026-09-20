@@ -235,6 +235,8 @@ class RasqAccountPost {
         createdAt: createdAt ?? DateTime.now(),
         body: body,
         contentWarning: cw.isEmpty ? null : cw,
+        // 共有 FOW が「フォロワー限定は広げない」の判断に使う。
+        visibility: visibility,
         media: [for (final i in images) i.toMediaItem()],
       );
 

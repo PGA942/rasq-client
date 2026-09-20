@@ -86,10 +86,25 @@ const editorVideoConfigKey = 'editor:video';
 
 bool isEditorConfigKey(String configKey) => configKey.startsWith('editor:');
 
+/// RASQ の投稿のバー (D-279): SNS の投稿バーと同じく、並び替え / バンドル / プラグインのボタンを持てる。土台は RASQ の内蔵のアクション。
+const rasqPostConfigKey = 'rasq:post';
+const rasqReplyActionId = 'rasq.reply';
+const rasqRebroadActionId = 'rasq.rebroad';
+const rasqQueueActionId = 'rasq.queue';
+const rasqPostBuiltinActions = [
+  ActionDescriptor(id: rasqReplyActionId, genreTag: 'Reply', label: '返信', icon: 'chat_bubble_outline'),
+  ActionDescriptor(id: rasqRebroadActionId, genreTag: 'Repost', label: 'リブロード', icon: 'repeat', doneIcon: 'repeat'),
+  ActionDescriptor(id: rasqQueueActionId, genreTag: 'Reaction', label: 'キュー', icon: 'add_reaction_outlined', doneIcon: 'add_reaction', iconPerPost: true, countSource: CountSource.none),
+];
+
+/// 土台が SNS のアクションではなく、アプリ内蔵のもののバー(加工画面 / RASQ の投稿)。
+bool isBuiltinConfigKey(String configKey) => isEditorConfigKey(configKey) || configKey == rasqPostConfigKey;
+List<ActionDescriptor> builtinActionsFor(String configKey) => configKey == rasqPostConfigKey ? rasqPostBuiltinActions : editorBuiltinActionsFor(configKey);
+
 String editorConfigKeyFor(String mimeType) => mimeType.startsWith('image/') ? editorImageConfigKey : editorVideoConfigKey;
 
 /// プラグインボタンの有効 / 無効と閾値の置き場: 加工画面は `slots.editor`、ほかはアカウントごと。
-String slotSettingsKeyFor(String configKey, String accountKey) => isEditorConfigKey(configKey) ? 'editor' : accountKey;
+String slotSettingsKeyFor(String configKey, String accountKey) => isEditorConfigKey(configKey) ? 'editor' : (configKey == rasqPostConfigKey ? 'rasq' : accountKey);
 
 /// 宣言が無い `composer.media` プラグインのボタン(プラグイン名 + パズルのアイコン、画像だけ)。
 const mediaEditDefaultActionId = 'composer.media';
