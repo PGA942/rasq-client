@@ -97,6 +97,12 @@ const rasqPostBuiltinActions = [
   ActionDescriptor(id: rasqQueueActionId, genreTag: 'Reaction', label: 'キュー', icon: 'add_reaction_outlined', doneIcon: 'add_reaction', iconPerPost: true, countSource: CountSource.none),
 ];
 
+/// 構成キー → どのアカウントのバーか (D-284)。投稿バー = アカウントの key、全画面バー = `viewer:<key>`。内蔵のバー / 旧来の共通構成は null。
+String? accountKeyOfConfigKey(String configKey) {
+  if (configKey.isEmpty || isBuiltinConfigKey(configKey)) return null;
+  return configKey.startsWith('viewer:') ? configKey.substring('viewer:'.length) : configKey;
+}
+
 /// 土台が SNS のアクションではなく、アプリ内蔵のもののバー(加工画面 / RASQ の投稿)。
 bool isBuiltinConfigKey(String configKey) => isEditorConfigKey(configKey) || configKey == rasqPostConfigKey;
 List<ActionDescriptor> builtinActionsFor(String configKey) => configKey == rasqPostConfigKey ? rasqPostBuiltinActions : editorBuiltinActionsFor(configKey);

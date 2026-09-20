@@ -330,3 +330,14 @@ class EmojiCache extends Notifier<Map<String, Uri?>> {
 }
 
 final emojiCacheProvider = NotifierProvider<EmojiCache, Map<String, Uri?>>(EmojiCache.new);
+
+/// あるアカウントのサーバーの絵文字の URL (D-284)。総合 TL では、投稿が流れてきたアカウントごとにサーバーが違うので、
+/// 表示中のアカウント([emojiCacheProvider])ではなく、そのアカウントで引く。無ければ null。
+final accountEmojiUrlProvider = FutureProvider.family<Uri?, ({String account, String name})>((ref, k) async {
+  final session = ref.watch(sessionForAccountProvider(k.account));
+  try {
+    return await session?.emojiUrl(k.name);
+  } catch (_) {
+    return null;
+  }
+});

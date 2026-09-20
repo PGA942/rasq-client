@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rrl_core/rrl_core.dart';
@@ -65,14 +66,16 @@ String actionBarConfigKey(ActionBarSurface surface, String accountKey) => switch
 const actionBarTileSize = 56.0;
 
 /// [surfaces] を渡すとそのバーだけ(加工画面から開くとき)。既定は全部。
-Future<void> showActionBarEditSheet(WidgetRef ref, {int column = 0, List<ActionBarSurface>? surfaces}) async {
+/// [accountKey] = どのアカウントのバーを編集するか (D-284)。投稿の … から開くときは、**その投稿が流れてきたアカウント**(総合 TL では、
+/// 表示中のアカウントとは限らない)。null = 表示中のアカウント。
+Future<void> showActionBarEditSheet(WidgetRef ref, {int column = 0, List<ActionBarSurface>? surfaces, String? accountKey}) async {
   final manager = ref.read(overlayManagerProvider);
   if (manager.contains(actionBarEditFowId)) return;
   await manager.showFow<void>(
     id: actionBarEditFowId,
     spec: FowSpec(title: 'アクションバーの編集', cancelText: '閉じる', initialHeightFactor: 0.85, maxHeightFactor: 0.92, maxWidth: 640, columnIndex: column),
     semanticsLabel: 'アクションバーの編集',
-    builder: (_, _) => _ActionBarEditBody(surfaces: surfaces),
+    builder: (_, _) => _ActionBarEditBody(surfaces: surfaces, accountKey: accountKey),
   );
 }
 
@@ -85,7 +88,7 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
   // 全画面バーの構成 (D-214) なら全画面表示プラグイン(QR コード検出など)のトグルも候補。
   final plugins = ref.read(pluginActionsForProvider(configKey));
   // SNS のボタン: 指定があればそれ(バーから外したもの、D-215)。無ければ現在のアカウントの全部(pluginsOnly なら無し)。
-  final sns = snsCandidates ?? (pluginsOnly ? const <ActionDescriptor>[] : (isBuiltinConfigKey(configKey) ? builtinActionsFor(configKey) : (ref.read(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[])));
+  final sns = snsCandidates ?? (pluginsOnly ? const <ActionDescriptor>[] : (isBuiltinConfigKey(configKey) ? builtinActionsFor(configKey) : (ref.read(sessionForAccountProvider(accountKeyOfConfigKey(configKey)))?.actions ?? const <ActionDescriptor>[])));
   final query = TextEditingController();
   var genre = 'すべて';
   try {
@@ -300,9 +303,10 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
           final config = ref.watch(actionBarConfigProvider(configKey));
           final list = config.lists.where((l) => l.id == listId).firstOrNull;
           if (list == null) return const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: Text('解除しました'));
-          final session = ref.watch(currentSnsSessionProvider);
+          // そのバーのアカウントの SNS のアクション (D-284)。
+          final session = ref.watch(sessionForAccountProvider(accountKeyOfConfigKey(configKey)));
           final plugins = ref.watch(pluginActionsForProvider(configKey));
-          final accountKey = slotSettingsKeyFor(configKey, ref.watch(currentAccountProvider)?.key ?? '');
+          final accountKey = slotSettingsKeyFor(configKey, accountKeyOfConfigKey(configKey) ?? ref.watch(currentAccountProvider)?.key ?? '');
           final settings = ref.watch(slotActionSettingsProvider(accountKey));
           final merged = mergePluginActions(config: config, snsActions: isBuiltinConfigKey(configKey) ? builtinActionsFor(configKey) : (session?.actions ?? const []), plugins: plugins, settings: settings);
           final byId = {for (final a in merged.actions) a.id: a};
@@ -502,15 +506,18 @@ class _MemberTileState extends State<_MemberTile> {
 // ── 編集 FOW の本体 ──────────────────────────────────────────────────
 
 class _ActionBarEditBody extends ConsumerWidget {
-  const _ActionBarEditBody({this.surfaces});
+  const _ActionBarEditBody({this.surfaces, this.accountKey});
   final List<ActionBarSurface>? surfaces;
+  final String? accountKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final me = ref.watch(currentUserProvider);
-    final account = ref.watch(currentAccountProvider);
-    final accountKey = account?.key ?? '';
+    // 編集するアカウント (D-284): 指定があればそれ(投稿が流れてきたアカウント)、無ければ表示中のアカウント。
+    final picked = this.accountKey == null ? null : ref.watch(sessionsProvider).value?.allSessions.where((s) => s.account.key == this.accountKey).firstOrNull;
+    final current = ref.watch(currentUserProvider);
+    final me = picked == null ? current : UserSummary(id: current.id, account: picked.account, displayName: picked.displayName ?? picked.account.handle, avatarUrl: picked.avatarUrl);
+    final accountKey = picked?.account.key ?? ref.watch(currentAccountProvider)?.key ?? '';
     return SingleChildScrollView(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         // ── アカウントタイル ──
@@ -568,7 +575,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final session = ref.watch(currentSnsSessionProvider);
+    final session = ref.watch(sessionForAccountProvider(widget.accountKey.isEmpty ? null : widget.accountKey));
     final registry = ref.watch(pluginRegistryProvider);
     final accountKey = widget.accountKey;
     final configKey = actionBarConfigKey(widget.surface, accountKey);
