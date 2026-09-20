@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/compose/emoji_panel.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -62,5 +64,30 @@ void main() {
     await tester.tap(find.byTooltip('リアクション').first);
     await tester.pumpAndSettle();
     expect(sent(plugin), ['🎉']);
+  });
+
+  testWidgets('リアクション済みのボタン / 自分のチップを押すと、確認なしで取り消す。スレッドを開いて戻っても、済みの表示のまま (D-281)', (tester) async {
+    final plugin = await pump(tester, const {'🎉': 4});
+    await tester.tap(find.byTooltip('リアクション').first);
+    await tester.pumpAndSettle();
+    expect(sent(plugin), ['🎉']);
+    List<String> performed() => [for (final s in plugin.opened) ...s.performed];
+    // スレッドを開いて戻る: 状態が「未リアクション」で上書きされない(ボタンを押すと、付け直しではなく取り消しになる)。
+    await tester.tap(find.text('こんにちは').first);
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('リアクション').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(EmojiPanel), findsNothing);
+    expect(performed().last, 'reaction:n1:true');
+    expect(sent(plugin), ['🎉'], reason: '付け直していない');
+    // もう一度付けてから、自分のチップで取り消す。
+    await tester.tap(find.byTooltip('リアクション').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(RasqReactionChips), matching: find.text('🎉')).first);
+    await tester.pumpAndSettle();
+    expect(performed().last, 'reaction:n1:true');
   });
 }

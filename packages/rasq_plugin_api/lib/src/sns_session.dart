@@ -33,9 +33,7 @@ abstract class SnsSession {
 
   /// Current state of every action for a batch of posts (after a fetch).
   /// Default derives from [Post.counts]; plugins override for done flags.
-  Future<Map<String, Map<String, ActionResult>>> actionStates(List<Post> posts) async => {
-        for (final p in posts) p.id: {for (final a in actions) a.id: ActionResult(done: false, count: p.counts[a.id])},
-      };
+  Future<Map<String, Map<String, ActionResult>>> actionStates(List<Post> posts) async => defaultActionStates(actions, posts);
 
   Future<Page<NotificationItem>> notifications({String? cursor, int limit = 20});
   Future<void> markNotificationsRead();
@@ -184,9 +182,7 @@ abstract class SnsSessionBase implements SnsSession {
   @override
   Future<ActionResult> performAction(String actionId, String postId, {Map<String, Object?> args = const {}}) => _unsupported('performAction');
   @override
-  Future<Map<String, Map<String, ActionResult>>> actionStates(List<Post> posts) async => {
-        for (final p in posts) p.id: {for (final a in actions) a.id: ActionResult(done: false, count: p.counts[a.id])},
-      };
+  Future<Map<String, Map<String, ActionResult>>> actionStates(List<Post> posts) async => defaultActionStates(actions, posts);
   @override
   Future<Page<NotificationItem>> notifications({String? cursor, int limit = 20}) => _unsupported('notifications');
   @override
@@ -298,3 +294,19 @@ abstract class SnsSessionBase implements SnsSession {
   @override
   Future<void> close() async {}
 }
+
+/// [SnsSession.actionStates] の既定: 件数は [Post.counts] から。**リアクションは [Post.myReaction] から「済み」とアイコンを出す**
+/// (D-281: これが無いと、スレッド画面を開くたびに「未リアクション・アイコンなし」で上書きされ、ボタンが予測表示に戻っていた)。
+Map<String, Map<String, ActionResult>> defaultActionStates(List<ActionDescriptor> actions, List<Post> posts) => {
+      for (final p in posts)
+        p.id: {
+          for (final a in actions)
+            a.id: a.genreTag == 'Reaction' && p.myReaction != null
+                ? ActionResult(
+                    done: true,
+                    count: p.counts[a.id],
+                    icon: !p.myReaction!.startsWith(':') ? ActionIcon.text(p.myReaction!) : (p.reactionEmojis[p.myReaction!] == null ? null : ActionIcon.url(p.reactionEmojis[p.myReaction!]!)),
+                  )
+                : ActionResult(done: false, count: p.counts[a.id]),
+        },
+    };

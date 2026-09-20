@@ -57,7 +57,10 @@ void main() {
 
     // 合計 2 未満の投稿: 交差(👍 だけ付いている)→ 👍。
     expect(store.predictFor(post(const {'👍': 1})), '👍');
-    // リアクションゼロ → 自分の最頻 🎉。
+    // リアクションゼロ → 予測しない (D-281。自分の最頻に偏りすぎたため)。設定を入れると、自分の最頻 🎉。
+    expect(store.predictFor(post(const {})), isNull);
+    ReactionPrefs.predictWhenEmpty = true;
+    addTearDown(() => ReactionPrefs.predictWhenEmpty = false);
     expect(store.predictFor(post(const {})), '🎉');
 
     // 永続化: 別コンテナで復元。

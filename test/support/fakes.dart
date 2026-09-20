@@ -237,6 +237,13 @@ class FakeSnsSession extends SnsSessionBase {
   Future<ActionResult> performAction(String actionId, String postId, {Map<String, Object?> args = const {}}) async {
     performed.add('$actionId:$postId:${args['undo']}');
     if (actionId == 'reaction' && args['undo'] != true) reactionsSent.add(args['reaction'] as String?);
+    if (actionId == 'reaction' && localEmojis != null) {
+      final i = _posts.indexWhere((p) => p.id == postId);
+      if (i >= 0) {
+        final p = _posts[i];
+        _posts[i] = Post(id: p.id, account: p.account, author: p.author, createdAt: p.createdAt, body: p.body, reactions: p.reactions, reactionEmojis: p.reactionEmojis, myReaction: args['undo'] == true ? null : args['reaction'] as String?);
+      }
+    }
     return ActionResult(done: args['undo'] != true, count: 1);
   }
   /// 通知 2 件(未読 1 / 既読 1)を固定で返す (D-223: RAi の notifications.list)。

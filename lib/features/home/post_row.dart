@@ -121,6 +121,20 @@ class _PostRowState extends ConsumerState<PostRow> {
   /// [_actAs] 中はそのコピーでアクションを実行する。
   PostActionHandler get _onAction => (_actAs != null && widget.actionsFor != null) ? widget.actionsFor!(post) : widget.onAction;
 
+  /// いま自分が付けているリアクション (D-281)。投稿の `myReaction` は取得したときのものなので、この画面で付けた / 外したぶんは
+  /// アクションの状態から読む: 外していれば null、付け直していれば、ボタンのアイコンと同じ絵文字のチップ。
+  String? get _myReaction {
+    final a = widget.actions.where((x) => x.genreTag == 'Reaction').firstOrNull;
+    if (a == null) return post.myReaction;
+    final st = ref.watch(actionStateOfProvider((postKey: post.key, actionId: a.id)));
+    if (!st.done) return null;
+    for (final r in post.reactions.keys) {
+      if (st.iconText != null && r == st.iconText) return r;
+      if (st.iconUrl != null && post.reactionEmojis[r] == st.iconUrl) return r;
+    }
+    return st.iconText == null && st.iconUrl == null ? post.myReaction : null;
+  }
+
   /// タップの実行: プラグインのボタン (D-176) はスロット登録簿へ、それ以外は SNS のアクションへ。
   Future<void> _run(ActionDescriptor a, {Map<String, Object?> args = const {}}) => isPluginActionId(a.id) ? _runPlugin(a) : _onAction(a, args: args);
 
@@ -221,7 +235,7 @@ class _PostRowState extends ConsumerState<PostRow> {
                 RasqReactionChips(
                   reactions: post.reactions,
                   emojiUrls: post.reactionEmojis,
-                  myReaction: post.myReaction,
+                  myReaction: _myReaction,
                   // チップにリアクションしたユーザー(アイコン+名前)を表示
                   // (D-042)。チップを開いたときだけ SNS API を叩く。
                   usersLoader: (r) async {
@@ -236,8 +250,9 @@ class _PostRowState extends ConsumerState<PostRow> {
                   onTap: (r) {
                     final a = widget.actions.where((x) => x.genreTag == 'Reaction').firstOrNull;
                     if (a == null) return;
-                    if (r == post.myReaction) {
-                      _onAction(a).catchError((_) {}); // 自分の → 解除
+                    if (r == _myReaction) {
+                      // 自分の → 確認なしで取り消す (D-281)。
+                      _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
                     } else {
                       _onAction(a, args: {'reaction': r}).then((_) => ref.read(reactionHistoryProvider.notifier).record(r)).catchError((_) {});
                     }
@@ -357,7 +372,9 @@ class _PostRowState extends ConsumerState<PostRow> {
   /// 同じ名前のものが自サーバーに無い。以前は絵文字を添えずに送っていて、SNS 側の既定(👍)が付いていた。
   /// [_actAs] で別のアカウントに切り替えているときは、そのアカウントで付ける(以前は元のアカウントで付けていた)。
   Future<void> _performReactionAware(ActionDescriptor a, ActionState st, Rect anchor) async {
-    if (a.genreTag != 'Reaction' || st.done || !a.iconPerPost) return _run(a).catchError((_) {});
+    // リアクション済みなら、確認なしで取り消す (D-281)。
+    if (a.genreTag == 'Reaction' && st.done) return _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
+    if (a.genreTag != 'Reaction' || !a.iconPerPost) return _run(a).catchError((_) {});
     final predicted = ref.read(reactionHistoryProvider.notifier).predictFor(post);
     final reaction = predicted == null ? null : await _sendable(predicted);
     if (!mounted) return;
