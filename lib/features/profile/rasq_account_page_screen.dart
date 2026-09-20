@@ -15,6 +15,7 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../../shell/headers.dart';
+import 'rasq_page_history.dart';
 import 'rasq_post_tile.dart';
 import 'rasq_profile_edit_screen.dart' show profileImageContentType;
 
@@ -79,6 +80,11 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final page = ref.watch(rasqAccountPageProvider(widget.handle));
+    // 開いたページを履歴に (D-272。サイドバーの … の横に出る)。読み込めたときに 1 回。
+    ref.listen(rasqAccountPageProvider(widget.handle), (_, next) {
+      final p = next.value?.profile;
+      if (p != null) ref.read(rasqPageHistoryProvider.notifier).record(RasqVisited(handle: p.handle, displayName: p.displayName, avatarUrl: p.avatarUrl));
+    });
     final me = ref.watch(orgateAccountProvider).value;
     final isMine = me != null && me.handle.toLowerCase() == widget.handle.toLowerCase();
     return Scaffold(
