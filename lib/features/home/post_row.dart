@@ -203,6 +203,8 @@ class _PostRowState extends ConsumerState<PostRow> {
       createdAt: post.createdAt,
       nameSpans: nameSpans,
       repostedBy: post.repostedBy,
+      // 自分のリノートなら、帯の横の … から取り消せる (D-274)。
+      onBannerMore: _canUndoRepost ? _repostBannerMenu : null,
       bannerIcon: widget.bannerIcon,
       bannerText: widget.bannerText,
       dense: widget.dense,
@@ -317,7 +319,9 @@ class _PostRowState extends ConsumerState<PostRow> {
       id: a.id,
       label: a.label,
       icon: icon,
-      doneIcon: doneIcon,
+      // リノートのボタンは、済みでも無効にしない (D-274): 完了アイコンの宣言が無いと部品が無効化するので、同じアイコンを渡す
+      // (何度でもリノート / 引用でき、取り消しはリノートの帯の … やドロップダウンから)。
+      doneIcon: doneIcon ?? (isRepost ? icon : null),
       done: st.done,
       count: st.count ?? post.counts[a.id],
       showCount: a.countSource != CountSource.none,
@@ -360,6 +364,25 @@ class _PostRowState extends ConsumerState<PostRow> {
     _run(a).catchError((_) {});
   }
 
+  ActionDescriptor? get _repostAction => widget.actions.where((a) => a.genreTag == 'Repost').firstOrNull;
+
+  /// この投稿が**自分のリノート**として流れてきているか(帯の … を出す)。
+  bool get _canUndoRepost {
+    final by = post.repostedBy;
+    if (by == null || _repostAction == null) return false;
+    final sessions = ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[];
+    return sessions.any((s) => s.account.key == by.account.key);
+  }
+
+  Future<void> _repostBannerMenu(Rect anchor) async {
+    final a = _repostAction;
+    if (a == null) return;
+    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'post.repost.banner.${post.key}', anchor: anchor, dense: true, items: const [
+      RasqDropdownItem('リノートを取り消す', 'undo', destructive: true),
+    ]);
+    if (pick == 'undo') await _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
+  }
+
   /// リノート/引用ノートの組み込みバンドル (D-039)。
   Future<void> _repostBundle(ActionDescriptor a, ActionState st, Rect anchor) async {
     final manager = ref.read(overlayManagerProvider);
@@ -367,14 +390,18 @@ class _PostRowState extends ConsumerState<PostRow> {
       id: 'actionbar.repost.${post.key}',
       anchor: anchor,
       dense: true,
+      // ボタンは入り切りにしない (D-274): いつ押しても「リノート」。取り消しは、リノートの帯の … か、ここの「リノートを取り消す」から。
       items: [
-        RasqDropdownItem(st.done ? 'リノート解除' : 'リノート', 'renote'),
+        const RasqDropdownItem('リノート', 'renote'),
+        if (st.done) const RasqDropdownItem('リノートを取り消す', 'undo', destructive: true),
         const RasqDropdownItem('引用ノート', 'quote'),
       ],
     );
     switch (picked) {
       case 'renote':
-        await _onAction(a).catchError((_) {});
+        await _onAction(a, args: const {'forceUndo': false}).catchError((_) {});
+      case 'undo':
+        await _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
       case 'quote':
         if (!mounted) return;
         await showComposer(ref, ComposeQuote(post), column: fowColumnOf(context));

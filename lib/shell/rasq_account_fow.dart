@@ -27,8 +27,9 @@ import '../features/notifications/notifications_screen.dart';
 const rasqAccountFowId = 'fow.rasq.accounts';
 
 /// [onNavigate] = FOW から別の画面へ移るときに呼ぶ(サイドバーを開いたまま FOW を出しているとき、サイドバーも閉じる。D-272)。
-/// [besideWidth] = サイドバーを開いたまま出すときの、サイドバーの右に残る幅(FOW を右に寄せて、この幅に収める。サイドバーは FOW より前に出るので、重なると隠れる)。
-Future<void> openRasqAccountFow(WidgetRef ref, {int column = 0, VoidCallback? onNavigate, double? besideWidth}) async {
+/// [overSidebar] = サイドバーを開いたまま出す (D-274): **後ろを暗くして、サイドバーの上に被せる**。1 カラムなら全幅、2 カラムなら左カラム
+/// (左カラムに入りきらない幅なら、2 カラムにまたがる)。
+Future<void> openRasqAccountFow(WidgetRef ref, {int column = 0, VoidCallback? onNavigate, bool overSidebar = false}) async {
   final manager = ref.read(overlayManagerProvider);
   final spec = FowSpec(
     type: FowPanelType.widget,
@@ -39,8 +40,9 @@ Future<void> openRasqAccountFow(WidgetRef ref, {int column = 0, VoidCallback? on
     cancelText: '閉じる',
     dockAboveFooter: true,
     columnIndex: column,
-    maxWidth: besideWidth,
-    hAlign: besideWidth == null ? FowHAlign.center : FowHAlign.end,
+    aboveSidebar: overSidebar,
+    dimBehind: overSidebar,
+    spanColumnsBelow: overSidebar ? 360 : null,
   );
   await manager.showFow<void>(
     id: rasqAccountFowId,

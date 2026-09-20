@@ -53,6 +53,7 @@ class RasqPostTile extends StatelessWidget {
     this.repostedBy,
     this.bannerIcon,
     this.bannerText,
+    this.onBannerMore,
     this.avatar,
     this.media,
     this.poll,
@@ -76,6 +77,9 @@ class RasqPostTile extends StatelessWidget {
   /// [UserSummary.displayName].
   final List<RasqSpan>? nameSpans;
   final UserSummary? repostedBy;
+
+  /// 帯(「〜がリノートしました」など)の横の … (D-274)。自分のリノート / リブローのとき、ここから取り消す。矩形 = ドロップダウンの錨。
+  final ValueChanged<Rect>? onBannerMore;
 
   /// 上付きバナー行 (D-085): RT 行と同スタイルの「アイコン + テキスト」。
   /// TL プラグイン(tl.customize の badges)や RRL の PostTile props から渡る。
@@ -180,6 +184,24 @@ class RasqPostTile extends StatelessWidget {
         Icon(icon, size: 14, color: scheme.onSurfaceVariant),
         const SizedBox(width: 4),
         Flexible(child: Text(text, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
+        // 帯の横の … (D-274): 自分のリノート / リブローを、ここから取り消す。
+        if (onBannerMore != null)
+          Builder(
+            builder: (b) => Padding(
+              padding: const EdgeInsets.only(left: 2),
+              child: Tooltip(
+                message: 'リノートの操作',
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () {
+                    final box = b.findRenderObject() as RenderBox;
+                    onBannerMore!(box.localToGlobal(Offset.zero) & box.size);
+                  },
+                  child: Padding(padding: const EdgeInsets.all(2), child: Icon(Icons.more_horiz, size: 16, color: scheme.onSurfaceVariant)),
+                ),
+              ),
+            ),
+          ),
       ]),
     );
 

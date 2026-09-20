@@ -33,14 +33,9 @@ class RasqSidebar extends ConsumerWidget {
 
   static const String overlayId = 'app.sidebar';
 
-  /// サイドバーのバリア(外を押すと閉じる)を効かせるか (D-272)。サイドバーを開いたまま RASQ アカウントの FOW を出している間は切る
-  /// (バリアは FOW より前にあるので、効いたままだと FOW を操作できない)。
-  static final ValueNotifier<bool> barrierEnabled = ValueNotifier(true);
-
   static Future<void> open(OverlayManager manager) => manager.show(RasqOverlayEntry(
         id: overlayId,
         layer: OverlayLayer.sidebar,
-        barrierEnabled: barrierEnabled,
         alignment: Alignment.centerLeft,
         semanticsLabel: 'サイドバー',
         builder: (context, handle) => RasqSidebar(handle: handle),
@@ -101,20 +96,9 @@ class RasqSidebar extends ConsumerWidget {
                 RasqIconButton(
                   icon: Icons.more_horiz,
                   tooltip: 'RASQ アカウント',
-                  onPressed: () async {
-                    // サイドバーは FOW より前に出るので、FOW はサイドバーの右に寄せて出す。右に 360px 残らなければ、これまで通り閉じる。
-                    final beside = MediaQuery.sizeOf(context).width - width;
-                    if (beside < 360) {
-                      handle.close();
-                      return openRasqAccountFow(ref);
-                    }
-                    RasqSidebar.barrierEnabled.value = false;
-                    try {
-                      await openRasqAccountFow(ref, onNavigate: handle.close, besideWidth: beside);
-                    } finally {
-                      RasqSidebar.barrierEnabled.value = true;
-                    }
-                  },
+                  // サイドバーは閉じない (D-272 → D-274): FOW は、後ろを暗くしてサイドバーの上に被さって出る
+                  // (1 カラム = 全幅 / 2 カラム = 左カラム、入りきらなければ 2 カラムにまたがる)。別の画面へ移るときは、サイドバーも閉じる。
+                  onPressed: () => openRasqAccountFow(ref, onNavigate: handle.close, overSidebar: true),
                 ),
               ]),
             ),
