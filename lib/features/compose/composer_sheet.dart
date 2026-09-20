@@ -597,7 +597,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// (アカウントページの「投稿」に出る。本文 1000 文字 + 画像 4 枚、第一期は 3 件まで)。通常の新規投稿のときだけ。
   bool _rasqTarget = false;
 
-  /// 添付の上限: SNS は 4 枚、RASQ は 6 枚 (S-023)。
+  /// 添付の上限: SNS は 4 つ、RASQ は 6 つ (S-023 / D-276: RASQ も動画・音声を付けられる)。
   int get _maxFiles => _rasqTarget ? rasqPostMaxImages : 4;
 
   /// 複数選択モード (D-128): アカウントごとに 非選択(0)→ 通常投稿(1)→
