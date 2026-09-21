@@ -5,6 +5,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../app/providers.dart';
 import '../app/router.dart';
+import '../backend/account_security_api.dart';
 import '../backend/orgate_client.dart';
 import '../backend/rasq_account.dart';
 import '../backend/rasq_consent.dart';
@@ -18,6 +19,9 @@ import '../backend/rasq_consent.dart';
 ///
 /// 学習へのデータ提供はここでは聞かない(別の任意の同意、既定は「なし」)。
 const rasqRegisterFowId = 'fow.rasq.register';
+
+/// パスワードの最短 (S-019)。
+const rasqPasswordMinChars = 8;
 
 Future<RasqRegisterChoice?> showRasqRegisterFow(OverlayManager manager, {required int snsCount, required ValueChanged<String> onOpenDoc, int column = 0}) {
   return manager.showFow<RasqRegisterChoice>(
@@ -56,8 +60,30 @@ class _RegisterPanelState extends State<_RegisterPanel> {
   RasqAgeBand? _age;
   bool _guardian = false;
   bool _replace = true;
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _show = false;
 
-  bool get _ready => _agree && _age != null && (!_age!.needsGuardian || _guardian);
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  /// パスワードの手前の確かめ(サーバーの決まり S-019 と同じ: 8〜256 文字、1 種類の字だけは不可)。よくあるもの / ハンドルと同じ、はサーバーが断る。
+  String? get _passwordError {
+    final p = _password.text;
+    if (p.isEmpty) return null;
+    if (p.characters.length < rasqPasswordMinChars) return '$rasqPasswordMinChars 文字以上にしてください';
+    if (p.characters.length > 256) return '256 文字までです';
+    if (p.characters.toSet().length == 1) return '同じ字の繰り返しは使えません';
+    return null;
+  }
+
+  bool get _passwordOk => _password.text.isNotEmpty && _passwordError == null && _confirm.text == _password.text;
+
+  bool get _ready => _agree && _age != null && (!_age!.needsGuardian || _guardian) && _passwordOk;
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +139,34 @@ class _RegisterPanelState extends State<_RegisterPanel> {
               onChanged: (v) => setState(() => _replace = v),
             ),
           ],
+          // パスワード (D-299): 必須。ほかの端末 / Web 版からこのアカウントに入る手段になる(端末を失くしても戻れる)。
+          const RasqSectionHeader(title: 'パスワード', topMargin: RasqSpacing.md),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              TextField(
+                key: const ValueKey('register.password'),
+                controller: _password,
+                obscureText: !_show,
+                autofillHints: const [AutofillHints.newPassword],
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: 'パスワード($rasqPasswordMinChars 文字以上)',
+                  errorText: _passwordError,
+                  suffixIcon: IconButton(icon: Icon(_show ? Icons.visibility_off : Icons.visibility), tooltip: _show ? '隠す' : '表示', onPressed: () => setState(() => _show = !_show)),
+                ),
+              ),
+              TextField(
+                key: const ValueKey('register.passwordConfirm'),
+                controller: _confirm,
+                obscureText: !_show,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(labelText: 'パスワード(確認)', errorText: _confirm.text.isNotEmpty && _confirm.text != _password.text ? '一致しません' : null),
+              ),
+              const SizedBox(height: RasqSpacing.xs),
+              Text('ほかの端末や Web 版から、このアカウントにログインするときに使います。', style: caption),
+            ]),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
             child: Text('学習へのデータ提供は、この登録には含まれません(別の任意の同意で、既定は「提供しない」です)。RASQ アカウントはいつでも削除できます。', style: caption),
@@ -123,7 +177,7 @@ class _RegisterPanelState extends State<_RegisterPanel> {
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.md),
         child: FilledButton(
           key: const ValueKey('register.submit'),
-          onPressed: _ready ? () => widget.onDone(RasqRegisterChoice(age: _age!, replaceBundle: widget.snsCount > 0 ? _replace : true)) : null,
+          onPressed: _ready ? () => widget.onDone(RasqRegisterChoice(age: _age!, replaceBundle: widget.snsCount > 0 ? _replace : true, password: _password.text)) : null,
           child: const Text('同意して登録する'),
         ),
       ),
@@ -155,6 +209,16 @@ Future<RasqAccountRecord?> registerRasqAccount(WidgetRef ref, {String? displayNa
     } on OrgateException catch (e) {
       // 古いサーバー(S-015 より前)には同意の口が無い。登録は続ける。
       debugPrint('rasq register: consent was not recorded: $e');
+    }
+  }
+  // パスワード (D-299)。すでに設定済みのアカウントへ戻ったとき(この端末の前のアカウント)は、変えない。
+  final security = ref.read(accountSecurityApiProvider);
+  if (choice.password.isNotEmpty && !account.hasPassword && security != null) {
+    try {
+      await security.setPassword(choice.password);
+      await notifier.refresh();
+    } on OrgateException catch (e) {
+      onMessage('アカウントは作成しましたが、パスワードを設定できませんでした(${accountSecurityMessage(e)})。設定 →「アカウントの保護」から設定してください');
     }
   }
   if (notifier.lastRestored) onMessage('この端末の RASQ アカウントへ戻りました');

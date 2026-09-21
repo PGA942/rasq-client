@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:plugin_runtime/plugin_runtime.dart' show rasqZstdWarmUp;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:web/web.dart' as web;
 
@@ -25,4 +27,14 @@ class _InsecureWebSessionStorage implements SessionStorage {
   Future<void> write(String key, String value) async => web.window.localStorage.setItem('$_prefix$key', value);
   @override
   Future<void> delete(String key) async => web.window.localStorage.removeItem('$_prefix$key');
+}
+
+/// 起動時の支度 (D-299): .rasqpkg(zstd 圧縮 tar)を開くための zstd の wasm を読み込んでおく(失敗しても起動は続ける。ストアからの導入だけが断られる)。
+Future<void> prepareDeviceRuntime() async {
+  try {
+    final data = await rootBundle.load('assets/web/zstd.wasm');
+    await rasqZstdWarmUp(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
+  } catch (e) {
+    debugPrint('RASQ: zstd の wasm を読み込めませんでした: $e');
+  }
 }

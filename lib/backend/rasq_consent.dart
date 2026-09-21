@@ -26,8 +26,11 @@ enum RasqAgeBand {
 
 /// 登録の FOW で選んだ内容。
 class RasqRegisterChoice {
-  const RasqRegisterChoice({required this.age, required this.replaceBundle});
+  const RasqRegisterChoice({required this.age, required this.replaceBundle, this.password = ''});
   final RasqAgeBand age;
+
+  /// 登録と同時に設定するパスワード (D-299。必須: ほかの端末 / Web 版から入る手段になる)。
+  final String password;
 
   /// この端末の SNS アカウントを RASQ アカウントのバンドルにする(サーバーの前のバンドルは置き換わる)。
   /// false = 置き換えない(SNS アカウントは「この端末のみ」に残り、サーバーのバンドルも消さない)。

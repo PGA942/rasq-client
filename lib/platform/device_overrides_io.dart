@@ -23,3 +23,6 @@ List<Override> deviceOverrides() => [
         return (embedder: e, dispose: e.dispose);
       }),
     ];
+
+/// 起動時の支度。端末では何もしない(Web 版は zstd の wasm を読み込む)。
+Future<void> prepareDeviceRuntime() async {}
