@@ -185,7 +185,7 @@ class RasqVideoView extends StatelessWidget {
         if (session.error != null || c == null || !session.ready) {
           final thumb = session.item.thumbnailUrl;
           return Stack(alignment: Alignment.center, fit: StackFit.expand, children: [
-            if (thumb != null) Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, thumb.toString(), fit: fit, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+            if (thumb != null) Image.network(webHtmlElementStrategy: rasqWebImageStrategy, thumb.toString(), fit: fit, errorBuilder: (_, _, _) => const SizedBox.shrink()),
             if (session.error == null)
               const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)))
             else

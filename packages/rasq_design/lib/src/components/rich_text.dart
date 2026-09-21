@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../theme/rasq_tokens_extension.dart';
 import 'custom_emoji.dart';
 import 'mfm.dart';
+import '../platform/web_image.dart';
 
 /// Inline span model for RSL (RASQ Subassembly Language) output.
 ///
@@ -154,7 +155,7 @@ class _RasqRichTextState extends State<RasqRichText> {
                 ),
           RasqInlineImageSpan() => WidgetSpan(
               alignment: PlaceholderAlignment.middle,
-              child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, s.url.toString(), height: s.height, semanticLabel: s.alt, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+              child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, s.url.toString(), height: s.height, semanticLabel: s.alt, errorBuilder: (_, _, _) => const SizedBox.shrink()),
             ),
           RasqLinkSpan() => TextSpan(text: s.text, style: linkStyle, recognizer: _tap(s.onTap)),
           RasqMentionSpan() => TextSpan(text: '@${s.handle}', style: linkStyle, recognizer: _tap(s.onTap)),

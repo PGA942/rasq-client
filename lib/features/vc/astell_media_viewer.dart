@@ -30,7 +30,7 @@ class AstellMediaViewer extends StatelessWidget {
             child: Stack(alignment: Alignment.center, children: [
               if (url != null)
                 InteractiveViewer(
-                  child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, size: 64, color: Colors.white54)),
+                  child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, size: 64, color: Colors.white54)),
                 )
               else
                 const Icon(Icons.insert_drive_file_outlined, size: 64, color: Colors.white54),

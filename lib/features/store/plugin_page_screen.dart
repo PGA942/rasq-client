@@ -237,7 +237,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
             height: 56,
             decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(14)),
             clipBehavior: Clip.antiAlias,
-            child: d.iconUrl != null ? Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, d.iconUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.extension_outlined, size: 30)) : const Icon(Icons.extension_outlined, size: 30),
+            child: d.iconUrl != null ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, d.iconUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.extension_outlined, size: 30)) : const Icon(Icons.extension_outlined, size: 30),
           ),
           const SizedBox(width: RasqSpacing.md),
           Expanded(
@@ -488,7 +488,7 @@ class _Banner extends StatelessWidget {
       height: 110,
       width: double.infinity,
       child: url != null
-          ? Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => _placeholder(scheme))
+          ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => _placeholder(scheme))
           : _placeholder(scheme),
     );
   }
@@ -509,7 +509,7 @@ class _Screenshot extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(border: Border.all(color: scheme.outline), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
       clipBehavior: Clip.antiAlias,
-      child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Center(child: Icon(Icons.broken_image_outlined))),
+      child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Center(child: Icon(Icons.broken_image_outlined))),
     );
   }
 }

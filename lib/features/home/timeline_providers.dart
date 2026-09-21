@@ -527,6 +527,20 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
   }
 
+  /// 上の更新タイル (D-298) からの更新: **読み込んである投稿は残したまま、新しいぶんを上に足す**(引っ張って更新 = [refresh] は、最新の 1 ページに置き換える)。
+  /// 新しいページが手元の投稿とつながらない(間が空いた)ときと、総合 TL(カーソルを作り直す)は、[refresh] と同じ置き換えになる。
+  Future<void> refreshNewer() async {
+    final before = state.value;
+    await refresh();
+    final after = state.value;
+    if (before == null || after == null || after.error != null || kind == TimelineKind.bundle) return;
+    final fresh = {for (final p in after.posts) p.id};
+    if (!before.posts.any((p) => fresh.contains(p.id))) return;
+    final tail = [for (final p in before.posts) if (!fresh.contains(p.id)) p];
+    if (tail.isEmpty) return;
+    state = AsyncData(after.copyWith(posts: [...after.posts, ...tail], cursor: before.cursor, clearCursor: before.cursor == null, customTiles: {...before.customTiles, ...after.customTiles}, badges: {...before.badges, ...after.badges}));
+  }
+
   Future<void> loadMore() async {
     final cur = state.value;
     final session = _session;

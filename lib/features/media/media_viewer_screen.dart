@@ -345,7 +345,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                       : m.type == MediaType.video
                           // 動画 (D-200 → D-201): 面はタップで再生 / 一時停止。操作は下側の FOW。
                           ? RasqVideoView(key: ValueKey('viewer.video.${m.id}'), session: _session(i), tapToggles: false)
-                          : _overlays.wrap(i, Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
+                          : _overlays.wrap(i, Image.network(webHtmlElementStrategy: rasqWebImageStrategy, m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
                 ),
               );
             },

@@ -92,7 +92,7 @@ class AstellTile extends StatelessWidget {
               ? ClipRRect(
                   borderRadius: BorderRadius.circular(RasqSizes.radiusSm),
                   child: Stack(fit: StackFit.expand, children: [
-                    Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, room.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
+                    Image.network(webHtmlElementStrategy: rasqWebImageStrategy, room.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
                     Positioned(left: 4, right: 4, bottom: 4, child: _Genres(genres: room.genres, color: Colors.white)),
                   ]),
                 )

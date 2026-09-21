@@ -135,7 +135,7 @@ class _ScreenFrame extends StatelessWidget {
           ),
           clipBehavior: Clip.antiAlias,
           child: share.thumbnailUrl != null
-              ? Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, share.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.desktop_windows, size: 14, color: scheme.onSurfaceVariant))
+              ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, share.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.desktop_windows, size: 14, color: scheme.onSurfaceVariant))
               : Icon(Icons.desktop_windows, size: 14, color: scheme.onSurfaceVariant),
         ),
       ),
@@ -1297,7 +1297,7 @@ class _StickScreen extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: Stack(fit: StackFit.expand, children: [
             if (sc.thumbnailUrl != null)
-              Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, sc.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant))
+              Image.network(webHtmlElementStrategy: rasqWebImageStrategy, sc.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant))
             else
               Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant),
             if (muted) const Positioned(right: 2, bottom: 2, child: Icon(Icons.volume_off, size: 12, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)])),
@@ -1371,7 +1371,7 @@ class _ShareTile extends StatelessWidget {
                 width: 56,
                 height: 40,
                 child: Stack(fit: StackFit.expand, children: [
-                  Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, thumb.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.movie_outlined, size: 18, color: scheme.onSurfaceVariant))),
+                  Image.network(webHtmlElementStrategy: rasqWebImageStrategy, thumb.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.movie_outlined, size: 18, color: scheme.onSurfaceVariant))),
                   if (share.isVideo) const Center(child: Icon(Icons.play_circle_fill, size: 22, color: Colors.white)),
                 ]),
               ),
@@ -1478,7 +1478,7 @@ class _SharesSection extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: SizedBox(width: 48, height: 36, child: Stack(fit: StackFit.expand, children: [
-              Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, sh.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
+              Image.network(webHtmlElementStrategy: rasqWebImageStrategy, sh.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
               if (sh.isVideo) const Center(child: Icon(Icons.play_circle_fill, size: 18, color: Colors.white)),
             ])),
           ),
@@ -1544,7 +1544,7 @@ class _ViewingScreenPanel extends StatelessWidget {
           aspectRatio: 16 / 7,
           child: Stack(fit: StackFit.expand, children: [
             if (sc.thumbnailUrl != null)
-              Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, sc.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
+              Image.network(webHtmlElementStrategy: rasqWebImageStrategy, sc.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
             else
               ColoredBox(color: scheme.surfaceContainerHighest),
             Positioned(left: 8, top: 8, child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1633,7 +1633,7 @@ class _MemberRow extends StatelessWidget {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: p.screenShare!.thumbnailUrl != null
-                    ? Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, p.screenShare!.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant))
+                    ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, p.screenShare!.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant))
                     : Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant),
               ),
             ),
@@ -1807,7 +1807,7 @@ class _HostStreamPanel extends StatelessWidget {
             aspectRatio: 16 / 7,
             child: Stack(fit: StackFit.expand, children: [
               if (stream.thumbnailUrl != null)
-                Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, stream.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
+                Image.network(webHtmlElementStrategy: rasqWebImageStrategy, stream.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
               else
                 ColoredBox(color: scheme.surfaceContainerHighest),
               const Center(child: Icon(Icons.play_circle_fill, size: 40, color: Colors.white70)),
@@ -1847,7 +1847,7 @@ class _HostStreamTile extends StatelessWidget {
           height: 44,
           child: Stack(fit: StackFit.expand, children: [
             if (stream.thumbnailUrl != null)
-              Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, stream.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
+              Image.network(webHtmlElementStrategy: rasqWebImageStrategy, stream.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
             else
               ColoredBox(color: scheme.surfaceContainerHighest),
             const Center(child: Icon(Icons.play_circle_fill, size: 20, color: Colors.white70)),
