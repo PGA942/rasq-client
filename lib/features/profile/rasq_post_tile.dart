@@ -93,6 +93,7 @@ class RasqPostTileView extends ConsumerWidget {
 
   Future<void> _more(BuildContext context, WidgetRef ref, Rect anchor, bool isMine) async {
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'rasq.post.more', anchor: anchor, dense: true, items: [
+      const RasqDropdownItem('リアクションを表示', 'reactions'),
       const RasqDropdownItem('リンクをコピー', 'copy'),
       const RasqDropdownItem('ブラウザで開く', 'open'),
       const RasqDropdownItem('アクションバーを編集', 'editActions'),
@@ -101,6 +102,8 @@ class RasqPostTileView extends ConsumerWidget {
     if (!context.mounted || pick == null) return;
     final link = _permalink(ref);
     switch (pick) {
+      case 'reactions':
+        await context.push(Routes.rasqPostReactions(post.id));
       case 'copy':
         if (link == null) return;
         await Clipboard.setData(ClipboardData(text: link.toString()));

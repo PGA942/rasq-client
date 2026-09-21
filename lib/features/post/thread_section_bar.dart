@@ -21,7 +21,8 @@ class ThreadSectionBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
       height: RasqSizes.minTap,
       child: Row(children: [
-        Builder(
+        // 狭い幅でも、右のボタンを押し出さない(並び順の表記から縮める)。
+        Expanded(child: Align(alignment: Alignment.centerLeft, child: Builder(
           builder: (ctx) {
             Rect anchor() {
               final box = ctx.findRenderObject() as RenderBox;
@@ -35,13 +36,12 @@ class ThreadSectionBar extends StatelessWidget {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 const Icon(Icons.keyboard_arrow_down, size: 18),
                 const SizedBox(width: 4),
-                Text(label, style: RasqTypography.tab),
-                if (order != ThreadSortOrder.none) Padding(padding: const EdgeInsets.only(left: 6), child: Text(order.label, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+                Flexible(child: Text(label, overflow: TextOverflow.ellipsis, maxLines: 1, style: RasqTypography.tab)),
+                if (order != ThreadSortOrder.none) Flexible(child: Padding(padding: const EdgeInsets.only(left: 6), child: Text(order.label, overflow: TextOverflow.ellipsis, maxLines: 1, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)))),
               ]),
             );
           },
-        ),
-        const Spacer(),
+        ))),
         ?trailing,
       ]),
     );

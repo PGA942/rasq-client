@@ -12,6 +12,7 @@ import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/post/thread_section_bar.dart';
 import 'package:rasq_client/features/profile/rasq_post_screen.dart';
+import 'package:rasq_client/features/profile/rasq_reactions_screen.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -82,5 +83,66 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '返信'));
     await tester.pumpAndSettle();
     expect(sent.single, {'body': '@hanako なるほど', 'replyTo': 'p1'});
+  });
+
+  testWidgets('「リアクションを表示」: 帯の右から開き、キュー / リブロード / 引用した人が見える。帯の長押しで欄を切り替える (D-294)', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    const hanako = {'id': 'acc-2', 'handle': 'hanako', 'displayName': 'ハナコ'};
+    const jiro = {'id': 'acc-3', 'handle': 'jiro', 'displayName': 'ジロー'};
+    final mock = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      if (req.method == 'GET' && path == '/me') return json({'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ'});
+      if (req.method == 'GET' && path == '/posts/p1') {
+        return json({'post': {'id': 'p1', 'author': hanako, 'body': 'もとの投稿', 'createdAt': '2026-09-20T00:00:00Z', 'queues': [{'packId': null, 'stickerId': 'like', 'like': true, 'count': 1, 'mine': false}]}, 'replies': []});
+      }
+      if (req.method == 'GET' && path == '/posts/p1/reactions') {
+        return json({
+          'queues': [{'packId': null, 'stickerId': 'like', 'like': true, 'count': 1, 'mine': false, 'accounts': [{'account': jiro, 'at': '2026-09-20T01:00:00Z'}]}],
+          'rebroads': [{'account': hanako, 'at': '2026-09-20T02:00:00Z'}],
+          'quotes': [{'id': 'q1', 'author': jiro, 'body': '引用しました', 'isQuote': true, 'quoteId': 'p1', 'createdAt': '2026-09-20T03:00:00Z'}],
+        });
+      }
+      return json({'error': {'code': '404', 'message': 'not found'}}, 404);
+    });
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(routerProvider).push(Routes.rasqPost('p1'));
+    await tester.pumpAndSettle();
+
+    // 帯の長押し → 「リブロード」: 返信欄の場所に、リブロードした人が出る。
+    await tester.longPress(find.byKey(const ValueKey('thread.section.bar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('リブロード').last);
+    await tester.pumpAndSettle();
+    expect(find.text('@hanako'), findsWidgets);
+    expect(find.byKey(const ValueKey('rasqRx.actor.hanako.0')), findsOneWidget);
+
+    // 帯の右 → 「リアクションを表示」のページ。最初はキューのタブ。絵の行を押すと、付けた人が開く。
+    await tester.tap(find.byKey(const ValueKey('rasqThread.showReactions')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RasqReactionsScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('rasqRx.actor.jiro.0')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('rasqRx.queue.❤')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rasqRx.actor.jiro.0')), findsOneWidget);
+    // 引用のタブ: 引用した投稿が並ぶ。
+    await tester.tap(find.text('引用').last);
+    await tester.pumpAndSettle();
+    expect(find.text('引用しました'), findsOneWidget);
   });
 }
