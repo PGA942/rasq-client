@@ -4,6 +4,7 @@ import 'package:plugin_runtime/plugin_runtime.dart' show rasqZstdWarmUp;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:web/web.dart' as web;
 
+import '../session/central_vault_storage.dart';
 import '../session/session_providers.dart';
 import '../session/session_storage.dart';
 
@@ -12,7 +13,8 @@ import '../session/session_storage.dart';
 /// 保存先: flutter_secure_storage の Web 実装は WebCrypto を使うので、**安全なコンテキスト(https / localhost)でしか動かない**。
 /// 開発用に http で開いたとき(tailnet のアドレスなど)だけ、localStorage にそのまま置く代わりを使う。本番は https で配ること。
 List<Override> deviceOverrides() => [
-      if (!web.window.isSecureContext) sessionStorageProvider.overrideWithValue(_InsecureWebSessionStorage()),
+      // SNS のログイン情報は Central の保管庫へ (D-300)。ブラウザに置くのは RASQ のトークンなど、それ以外だけ。
+      sessionStorageProvider.overrideWith((ref) => CentralVaultSessionStorage(ref, web.window.isSecureContext ? SecureSessionStorage() : _InsecureWebSessionStorage())),
     ];
 
 class _InsecureWebSessionStorage implements SessionStorage {
