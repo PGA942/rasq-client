@@ -1,0 +1,31 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "plugins.emoji",
+  "title": "絵文字の検索",
+  "defaults": {
+    "semantic": true
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "絵文字ピッカーの検索"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "semantic",
+        "p": {
+          "title": "意味の近い絵文字も探す",
+          "value": "$.settings.semantic",
+          "subtitle": "名前や別名に打った文字が入っていなくても、意味の近い絵文字を後ろに並べます。端末内の検索用モデル(RAi →「モデル」→ 検索)を入れてあるときだけ効きます。計算は端末の中だけで行い、打った文字は外へ送りません。初めて開いたサーバーでは、裏で索引を作るあいだ「準備中」と出ます"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      }
+    ]
+  }
+}
