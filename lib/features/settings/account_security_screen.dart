@@ -317,6 +317,16 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
   }
 }
 
+/// 確認コードの欄に入ったものを、サーバーへ送る形に (S-028)。
+/// - メールの確認リンク(`…/auth/email/open#p=…&e=…&t=<長いトークン>` や `rasq://auth/email?…&t=…`)を貼り付けたら、トークンだけを取り出す。
+/// - それ以外は、Base58 と `-` / 空白だけを残す(短いコードは 10 文字、長いトークンは 40 文字)。
+String emailCodeFromInput(String input) {
+  final link = RegExp(r'[#?&]t=([1-9A-HJ-NP-Za-km-z]{20,64})').firstMatch(input);
+  if (link != null) return link.group(1)!;
+  final kept = input.replaceAll(RegExp(r'[^1-9A-HJ-NP-Za-km-z\- ]'), '');
+  return kept.length > 48 ? kept.substring(0, 48) : kept;
+}
+
 /// 確認コードの欄(Base58 で 10 文字。メールには `3mJr7-AoUXx` の形で載る)。大文字と小文字は区別する。
 /// 貼り付けの空白や `-` はサーバーが無視するので、そのまま送る(Base58 に無い字だけ落とす)。
 class _CodeInput extends StatelessWidget {
@@ -328,8 +338,9 @@ class _CodeInput extends StatelessWidget {
         autocorrect: false,
         enableSuggestions: false,
         keyboardType: TextInputType.visiblePassword,
-        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[1-9A-HJ-NP-Za-km-z\- ]')), LengthLimitingTextInputFormatter(16)],
-        decoration: const InputDecoration(hintText: '確認コード(例 3mJr7-AoUXx)', isDense: true),
+        // 短いコードのほか、メールのリンク / QR の長いトークン (S-028) も受ける。リンクごと貼り付けたら、トークンだけを取り出す。
+        inputFormatters: [TextInputFormatter.withFunction((_, next) => next.copyWith(text: emailCodeFromInput(next.text), selection: TextSelection.collapsed(offset: emailCodeFromInput(next.text).length)))],
+        decoration: const InputDecoration(hintText: '確認コード(例 3mJr7-AoUXx)', helperText: 'メールのリンクを貼り付けても確認できます', isDense: true),
         style: const TextStyle(letterSpacing: 2, fontFeatures: [FontFeature.tabularFigures()]),
       );
 }

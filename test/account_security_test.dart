@@ -21,6 +21,16 @@ import 'support/fakes.dart';
 
 /// アカウントのセキュリティ (D-268 / S-019)。サーバーは MockClient で Central の口をまねる。
 void main() {
+  test('確認コードの欄: メールのリンクを貼り付けたら、長いトークンだけを取り出す (S-028)', () {
+    const token = '3mJr7AoUXx3mJr7AoUXx3mJr7AoUXx3mJr7AoUXx';
+    expect(emailCodeFromInput('https://central.example/auth/email/open#p=verify&e=a%40example.com&t=$token'), token);
+    expect(emailCodeFromInput('rasq://auth/email?p=login&e=a%40example.com&t=$token'), token);
+    // 短いコード / 長いトークンは、そのまま。Base58 に無い字(0 / O / I / l など)は落とす。
+    expect(emailCodeFromInput('3mJr7-AoUXx'), '3mJr7-AoUXx');
+    expect(emailCodeFromInput(token), token);
+    expect(emailCodeFromInput('0OIl3m!'), '3m');
+  });
+
   http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
   http.Response err(int code, String message) => json({'error': {'code': '$code', 'message': message}}, code);
 
