@@ -4,9 +4,12 @@ import 'package:plugin_runtime/plugin_runtime.dart' show rasqZstdWarmUp;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:web/web.dart' as web;
 
+import '../features/emoji/emoji_index_providers.dart';
+import '../features/rai/rai_embedding_model.dart';
 import '../session/central_vault_storage.dart';
 import '../session/session_providers.dart';
 import '../session/session_storage.dart';
+import 'web/web_embedding_model.dart';
 
 /// Web 版 (D-295): 端末内のモデル(RAi の LLM / 埋め込み / 絵文字の画像検索)は載らない。既定の「使えない」のまま。
 ///
@@ -14,6 +17,15 @@ import '../session/session_storage.dart';
 /// 開発用に http で開いたとき(tailnet のアドレスなど)だけ、localStorage にそのまま置く代わりを使う。本番は https で配ること。
 List<Override> deviceOverrides() => [
       // SNS のログイン情報は Central の保管庫へ (D-300)。ブラウザに置くのは RASQ のトークンなど、それ以外だけ。
+      // 端末内の埋め込みモデル (D-302): onnxruntime-web でブラウザの中で回す。LLM は載らない(既定の「使えない」のまま)。
+      raiEmbeddingModelProvider.overrideWith((_) => WebRaiEmbeddingModel()),
+      emojiTextModelProvider.overrideWith((_) => WebRaiEmbeddingModel(spec: raiSiglip2EmbeddingSpec)),
+      emojiVisionModelProvider.overrideWith((_) => WebRaiEmbeddingModel(spec: emojiVisionEmbeddingSpec)),
+      emojiImageEmbedderLoaderProvider.overrideWithValue((model) async {
+        if (model is! WebRaiEmbeddingModel) return null;
+        final e = await WebEmojiImageEmbedder.load(model);
+        return e == null ? null : (embedder: e, dispose: e.dispose);
+      }),
       sessionStorageProvider.overrideWith((ref) => CentralVaultSessionStorage(ref, web.window.isSecureContext ? SecureSessionStorage() : _InsecureWebSessionStorage())),
     ];
 
