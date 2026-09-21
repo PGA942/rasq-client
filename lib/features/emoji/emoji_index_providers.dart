@@ -1,0 +1,113 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:rasq_models/rasq_models.dart';
+
+import '../compose/compose_providers.dart';
+import '../rai/rai_reference.dart' show NgramRaiEmbedder, RaiEmbedder;
+import '../rai/rai_reference_providers.dart';
+import '../settings/settings_dsl.dart';
+import 'emoji_index.dart';
+
+/// 設定エリア (D-290)。`semantic`(既定 true): 絵文字の検索に、意味検索を足す(埋め込みモデルを入れてあるときだけ効く)。
+const emojiSearchSettingsArea = 'plugins.emoji';
+
+/// 索引の置き場(`ApplicationSupport/emoji_index`)。テストでは差し替える。
+final emojiIndexDirProvider = Provider<Future<Directory> Function()>((ref) => () async {
+      final base = await getApplicationSupportDirectory();
+      return Directory('${base.path}/emoji_index');
+    });
+
+/// 意味検索に使う埋め込み (D-290)。**本物のモデルがあるときだけ**(n-gram の代用は、部分一致より良くならないので使わない)。
+final emojiEmbedderProvider = FutureProvider<RaiEmbedder?>((ref) async {
+  if (ref.watch(settingsAreaProvider(emojiSearchSettingsArea)).value?['semantic'] == false) return null;
+  final e = await ref.watch(raiEmbedderProvider.future);
+  return e is NgramRaiEmbedder ? null : e;
+});
+
+/// 索引づくりの進み具合(アカウントの key → (済み, 全部))。ピッカーが「準備中」を出すのに使う。
+class EmojiIndexProgress extends Notifier<Map<String, (int, int)>> {
+  @override
+  Map<String, (int, int)> build() => const {};
+  void set(String key, int done, int total) => state = {...state, key: (done, total)};
+  void clear(String key) => state = {for (final e in state.entries) if (e.key != key) e.key: e.value};
+}
+
+final emojiIndexProgressProvider = NotifierProvider<EmojiIndexProgress, Map<String, (int, int)>>(EmojiIndexProgress.new);
+
+String _fileName(String accountKey, RaiEmbedder e) => '${accountKey.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')}.${e.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')}.bin';
+
+/// あるアカウントのサーバーの絵文字の索引 (D-290)。
+///
+/// 1. ディスクの索引を読む(同じモデルで、絵文字の名前が全部入っていれば、そのまま使う)。
+/// 2. 足りなければ、**バックグラウンドで埋め込む**(32 件ずつ。モデルの推論は UI スレッドの外で動く)。前の索引のベクトルは使い回す。
+/// 3. できたらディスクへ。モデルが変わったら、ファイル名が変わるので作り直しになる。
+///
+/// 埋め込みモデルが無い / 設定で切っているときは null(検索は、これまでどおりの部分一致だけ)。
+final emojiIndexProvider = FutureProvider.family<EmojiEmbeddingIndex?, String?>((ref, accountKey) async {
+  final embedder = await ref.watch(emojiEmbedderProvider.future);
+  if (embedder == null) return null;
+  final List<EmojiInfo> emojis = await ref.watch(customEmojisForProvider(accountKey).future);
+  if (emojis.isEmpty) return null;
+  final key = accountKey ?? '_current';
+  var stopped = false;
+  ref.onDispose(() => stopped = true);
+
+  File? file;
+  EmojiEmbeddingIndex? cached;
+  try {
+    final dir = await ref.read(emojiIndexDirProvider)();
+    await dir.create(recursive: true);
+    file = File('${dir.path}/${_fileName(key, embedder)}');
+    if (await file.exists()) cached = EmojiEmbeddingIndex.fromBytes(await file.readAsBytes());
+  } catch (e) {
+    debugPrint('emoji index: cache unavailable: $e');
+  }
+  if (cached != null && cached.model == embedder.name) {
+    final have = cached.names.toSet();
+    if (emojis.every((e) => have.contains(e.name))) return cached;
+  }
+  final progress = ref.read(emojiIndexProgressProvider.notifier);
+  try {
+    final built = await EmojiEmbeddingIndex.build(
+      emojis: emojis,
+      embedder: embedder,
+      reuse: cached,
+      onProgress: (done, total) => scheduleMicrotask(() {
+        if (!stopped) progress.set(key, done, total);
+      }),
+      shouldStop: () => stopped,
+    );
+    if (built == null) return cached;
+    try {
+      await file?.writeAsBytes(built.toBytes(), flush: true);
+    } catch (e) {
+      debugPrint('emoji index: cannot save: $e');
+    }
+    return built;
+  } catch (e) {
+    debugPrint('emoji index: build failed: $e');
+    return cached;
+  } finally {
+    if (!stopped) scheduleMicrotask(() => progress.clear(key));
+  }
+});
+
+/// 検索の文 → 絵文字の点数(名前 → コサイン)。索引が無ければ空。打つたびに呼ばれるので、文の埋め込みは 1 回ずつ。
+final emojiSearchProvider = FutureProvider.autoDispose.family<Map<String, double>, ({String? accountKey, String query})>((ref, k) async {
+  final q = k.query.trim();
+  if (q.length < 2) return const {};
+  final index = await ref.watch(emojiIndexProvider(k.accountKey).future);
+  final embedder = await ref.watch(emojiEmbedderProvider.future);
+  if (index == null || embedder == null || index.length == 0) return const {};
+  // 打っている途中の連打を間引く(次の 1 文字が来たら、この provider は捨てられる)。
+  var alive = true;
+  ref.onDispose(() => alive = false);
+  await Future<void>.delayed(const Duration(milliseconds: 180));
+  if (!alive) return const {};
+  final v = await embedder.embed([q]);
+  return v.isEmpty ? const {} : index.scores(v.first);
+});

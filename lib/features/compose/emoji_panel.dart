@@ -8,6 +8,8 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../home/reaction_history.dart';
+import '../emoji/emoji_index.dart';
+import '../emoji/emoji_index_providers.dart';
 import 'compose_providers.dart';
 import 'emoji_prediction.dart';
 
@@ -243,7 +245,10 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
     // サーバー(独自の絵文字): ジャンル毎に省略表示 (D-043)。
     switch (custom) {
       case AsyncData(value: final list):
-        final filtered = q.isEmpty ? list : [for (final e in list) if (e.name.toLowerCase().contains(q) || e.aliases.any((a) => a.toLowerCase().contains(q))) e];
+        // 検索 (D-290): これまでの部分一致は必ず入り、端末の埋め込みモデルがあれば、意味の近い絵文字を後ろに足す。
+        // 意味検索の点数は非同期に来る(来るまでは部分一致だけを出す。来たら並びが伸びる)。
+        final semantic = q.isEmpty ? null : ref.watch(emojiSearchProvider((accountKey: widget.accountKey, query: q))).value;
+        final filtered = filterAndRankEmojis(list, q, semantic);
         if (filtered.isEmpty) {
           rows.add(() => Padding(padding: const EdgeInsets.all(8), child: Text('独自の絵文字はありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))));
         } else if (q.isNotEmpty) {
@@ -305,6 +310,8 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
             padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.md, 4),
             child: RasqSearchBar(controller: _q, hintText: '検索', onChanged: (_) => setState(() {})),
           ),
+          // 意味検索の索引づくり (D-290): ピッカーを開いたら裏で始める(モデルを入れてあるときだけ)。進み具合を 1 行で出す。
+          if (stickers == null) _EmojiIndexProgressLine(accountKey: widget.accountKey),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.md, 0, RasqSpacing.md, 12),
@@ -467,4 +474,21 @@ class _EmojiCell extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// 「意味検索を準備中 n / m」(D-290)。索引づくりを始める役も兼ねる(この行が、索引の provider を見ている)。
+class _EmojiIndexProgressLine extends ConsumerWidget {
+  const _EmojiIndexProgressLine({required this.accountKey});
+  final String? accountKey;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(emojiIndexProvider(accountKey));
+    final p = ref.watch(emojiIndexProgressProvider)[accountKey ?? '_current'];
+    if (p == null || p.$2 == 0 || p.$1 >= p.$2) return const SizedBox.shrink();
+    return Padding(
+      key: const ValueKey('emoji.index.progress'),
+      padding: const EdgeInsets.fromLTRB(RasqSpacing.md, 0, RasqSpacing.md, 4),
+      child: Text('意味検索を準備中 ${p.$1} / ${p.$2}', style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+    );
+  }
 }
