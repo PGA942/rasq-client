@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:onnxruntime/onnxruntime.dart';
 
 import '../rai/rai_reference.dart' show NgramRaiEmbedder;
+import 'emoji_image_decode.dart';
 import 'emoji_image_preprocess.dart';
 import 'emoji_image_embedder.dart';
 
@@ -47,20 +47,7 @@ class OnnxEmojiImageEmbedder implements EmojiImageEmbedder {
     return OnnxEmojiImageEmbedder._(session, out);
   }
 
-  /// 絵(PNG / WebP / GIF …)→ 224×224 の RGBA。動く絵は 1 コマ目。読めなければ null。
-  static Future<Uint8List?> decodeRgba(Uint8List encoded) async {
-    try {
-      final codec = await ui.instantiateImageCodec(encoded, targetWidth: size, targetHeight: size, allowUpscaling: true);
-      final frame = await codec.getNextFrame();
-      final data = await frame.image.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
-      frame.image.dispose();
-      codec.dispose();
-      final bytes = data?.buffer.asUint8List();
-      return bytes == null || bytes.length != size * size * 4 ? null : bytes;
-    } catch (_) {
-      return null;
-    }
-  }
+  static Future<Uint8List?> decodeRgba(Uint8List encoded) => decodeEmojiRgba(encoded, size: size);
 
   @override
   Future<List<List<double>?>> embedImages(List<Uint8List> encoded) async {

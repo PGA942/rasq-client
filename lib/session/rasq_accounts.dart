@@ -274,6 +274,20 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
     ]));
   }
 
+  /// Web 版 (D-302): 保管庫でログイン中の SNS アカウント [keys] を、RASQ(Central)アカウントに所属させる。
+  /// ほかのブラウザでログインしたぶんは、この端末の台帳にはまだ載っていない(載せないと、セッションはあるのに見えない)。
+  /// 保管庫から消えたもの(ほかの端末でログアウト)は外す。Central のアカウントが無ければ何もしない。
+  Future<void> adoptCentralSessionKeys(List<String> keys) async {
+    final cur = state.value;
+    final central = cur?.central;
+    if (cur == null || central == null) return;
+    if (central.sessionKeys.length == keys.length && central.sessionKeys.toSet().containsAll(keys)) return;
+    await _persist(cur.copyWith(accounts: [
+      for (final a in cur.accounts)
+        a.id == central.id ? a.copyWith(sessionKeys: keys) : a.copyWith(sessionKeys: [for (final k in a.sessionKeys) if (!keys.contains(k)) k]),
+    ]));
+  }
+
   /// SNS ログアウト: どのアカウントからも外す。
   Future<void> removeSessionKey(String key) async {
     final cur = _cur;
