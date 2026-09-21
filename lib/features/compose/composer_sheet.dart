@@ -244,6 +244,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// RASQ の投稿の引用 (D-276): 投稿先は RASQ に固定(SNS には引用できない)。
   bool get _rasqQuote => _quoteOf != null && isRasqPost(_quoteOf!);
 
+  /// RASQ の投稿への返信 (D-292): SNS の返信と同じコンポーザー(スレッド画面の常駐コンポーザーも)で、投稿先は RASQ に固定。
+  /// 返信は文字だけ(500 文字まで)。
+  bool get _rasqReply => _replyTo != null && isRasqPost(_replyTo!);
+
   /// ダイレクト投稿への返信 = 公開範囲をダイレクト(specified)に固定 (D-047)。
   bool get _directReply => _replyTo?.isDirect ?? false;
 
@@ -369,8 +373,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     if (t is ComposeReply) {
       final a = t.to.author;
       final me = ref.read(currentAccountProvider);
-      final mention = a.account.instance == me?.instance ? '@${a.handle}' : '@${a.handle}@${a.account.instance}';
-      _mentionPrefill = '$mention ';
+      // RASQ の投稿への返信 (D-292) は、RASQ のハンドルだけ(`@handle`)。
+      final mention = isRasqPost(t.to) || a.account.instance == me?.instance ? '@${a.handle}' : '@${a.handle}@${a.account.instance}';
+      // 自分の RASQ の投稿への返信には、自分へのメンションを入れない。
+      final selfRasq = isRasqPost(t.to) && a.handle.toLowerCase() == ref.read(orgateAccountProvider).value?.handle.toLowerCase();
+      _mentionPrefill = selfRasq ? null : '$mention ';
       final cw = t.to.contentWarning;
       _cwPrefill = (cw != null && cw.isNotEmpty) ? cw : null;
       if (widget.resident) {
@@ -385,7 +392,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
     // 共有 FOW で選んだアカウント / プラグインが添えた画像 (D-170)。
     if (widget.initialPostAs != null) _postAs = widget.initialPostAs;
-    if ((widget.initialRasqTarget && widget.target is ComposeNormal) || _rasqQuote) _rasqTarget = true;
+    if ((widget.initialRasqTarget && widget.target is ComposeNormal) || _rasqQuote || _rasqReply) _rasqTarget = true;
     for (final f in widget.initialFiles ?? const <ComposerInitialFile>[]) {
       _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive);
     }
@@ -905,7 +912,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 } else {
                   setState(() {
                     _postAs = s;
-                    _rasqTarget = _rasqQuote;
+                    _rasqTarget = _rasqQuote || _rasqReply;
                     _targetsOpen = false;
                   });
                   // 連動の下書き (D-129: delivery=draft): このアカウント宛の
@@ -1293,6 +1300,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final me = ref.read(orgateAccountProvider).value;
     if (api == null || me == null) return setState(() => _error = 'RASQ アカウントにログインしていません');
     if (_files.any((f) => f.bytes.length > rasqPostMaxMediaBytes)) return setState(() => _error = 'RASQ への投稿では、動画 / 音声は 1 つ ${rasqPostMaxMediaBytes ~/ (1024 * 1024)} MB までです');
+    if (_rasqReply && (_files.isNotEmpty || _poll != null)) return setState(() => _error = 'RASQ の返信は、文字だけです(添付 / 投票は付けられません)');
+    if (_rasqReply && _text.text.trim().length > rasqReplyMaxChars) return setState(() => _error = 'RASQ の返信は $rasqReplyMaxChars 文字までです');
     if (_files.length > rasqPostMaxImages) return setState(() => _error = 'RASQ への投稿は、添付 $rasqPostMaxImages つまでです');
     if (_text.text.trim().length > rasqPostMaxChars) return setState(() => _error = 'RASQ への投稿は $rasqPostMaxChars 文字までです');
     final poll = _poll;
@@ -1309,7 +1318,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       _progress = '送信中…';
     });
     try {
-      await api.createPost(
+      final created = _rasqReply
+          ? await api.reply(_replyTo!.id, _text.text.trim())
+          : await api.createPost(
         _text.text.trim(),
         images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
         cw: _cwOn ? _cw.text.trim() : '',
@@ -1327,14 +1338,19 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
           _skipDraftOnDispose = false;
           setState(() {
             _resetDraft();
-            _rasqTarget = false;
+            // 返信 / 引用は RASQ に固定のまま(常駐の返信コンポーザーは、続けて返信できる)。
+            _rasqTarget = _rasqQuote || _rasqReply;
           });
         }
+        // スレッド画面が取り直せるように知らせる。
+        widget.onSent(created.toPost(central: ref.read(centralBaseUrlProvider)));
+      } else if (_rasqReply) {
+        widget.onSent(created.toPost(central: ref.read(centralBaseUrlProvider)));
       } else {
         widget.onClose?.call();
       }
     } on OrgateException catch (e) {
-      if (mounted) setState(() => _error = e.code.code == '409' ? 'RASQ への投稿は 3 件までです。アカウントページで古い投稿を消してから投稿してください' : 'RASQ に投稿できませんでした: ${e.message}');
+      if (mounted) setState(() => _error = e.code.code == '409' && _rasqReply ? 'RASQ の返信は 100 件までです。古い返信を消してください' : e.code.code == '409' ? 'RASQ への投稿は 3 件までです。アカウントページで古い投稿を消してから投稿してください' : 'RASQ に投稿できませんでした: ${e.message}');
     } finally {
       if (mounted) {
         setState(() {

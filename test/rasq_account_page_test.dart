@@ -173,8 +173,11 @@ void main() {
     expect(calls, contains('PUT /posts/p2/queue'));
     await tester.tap(find.descendant(of: p2, matching: find.byTooltip('返信')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.descendant(of: find.byKey(const ValueKey('rasqReply.body')), matching: find.byType(TextField)), 'いいですね');
-    await tester.tap(find.text('返信').last);
+    // 返信は、SNS の返信と同じコンポーザーで(投稿先は RASQ に固定。D-292)。
+    expect(find.byKey(const ValueKey('composer.pill.rasq')), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'いいですね');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, '返信'));
     await tester.pumpAndSettle();
     expect(replies.single, {'body': 'いいですね', 'replyTo': 'p2'});
     // キューのボタン: 付けていれば、押すと外す(Misskey のリアクションと同じ)。アセットパックが無ければ、長押しでストアへの案内。

@@ -130,6 +130,9 @@ class RasqPoll {
 /// RASQ に投稿するときの上限 (S-023)。SNS のコンポーザーと共通にしつつ、ここだけ違う。
 const rasqPostMaxImages = 6;
 
+/// 返信(文字だけ)の長さ (S-022)。
+const rasqReplyMaxChars = 500;
+
 /// 動画 / 音声 1 つの大きさ (S-024)。
 const rasqPostMaxMediaBytes = 32 * 1024 * 1024;
 const rasqPostMaxPollChoices = 6;
@@ -373,6 +376,10 @@ class RasqAccountPost {
         contentWarning: cw.isEmpty ? null : cw,
         // 共有 FOW が「フォロワー限定は広げない」の判断に使う。
         visibility: visibility,
+        // 返信の並び替え(リアクション数)に使う (D-292): キューの数を、リアクションとして写す。
+        reactions: {for (final q in queues) q.like ? '❤' : ':${q.packId}|${q.stickerId}:': q.count},
+        counts: {'reply': replyCount, 'rebroad': rebroadCount + quoteCount},
+        replyToId: replyTo,
         media: [for (final i in images) i.toMediaItem()],
       );
 
