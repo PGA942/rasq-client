@@ -1,0 +1,21 @@
+# Web 版 (D-299) の zstd 復号。.rasqpkg(zstd 圧縮 tar)の展開に使う。端末ではネイティブのランタイム (rasq_wasm_runtime) が同じ ruzstd を持っている。
+# ビルド: cargo build --release --target wasm32-unknown-unknown → target/…/rasq_zstd_wasm.wasm を assets/web/zstd.wasm へ。
+[package]
+name = "rasq-zstd-wasm"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+ruzstd = "0.8"
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
+strip = true
+
+[workspace]

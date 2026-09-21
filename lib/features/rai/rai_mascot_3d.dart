@@ -16,7 +16,8 @@ import 'rai_space.dart';
 /// LLM の推論中は [RaiMascot3dController.paused] でミキサーを止める。
 ///
 /// テスト(FLUTTER_TEST)と Web では使わず、2D の painter に落ちる([raiMascot3dProvider])。
-final raiMascot3dProvider = Provider<bool>((_) => !kIsWeb && !Platform.environment.containsKey('FLUTTER_TEST'));
+// Web 版 (D-300): three_js は WebGL の canvas に描く(`Platform` は Web では触れないので、先に kIsWeb を見る)。
+final raiMascot3dProvider = Provider<bool>((_) => kIsWeb || !Platform.environment.containsKey('FLUTTER_TEST'));
 
 /// 3D 側へ渡す状態: 静止時の腕、移動中の計画と進み具合、一時停止。
 class RaiMascot3dController extends ChangeNotifier {
@@ -475,13 +476,13 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
     if (_failed) return const SizedBox.shrink();
     final tex = _three.texture;
     final outline = widget.outline;
-    // 縁取り (D-192): 同じテクスチャを一色に塗って 8 方向へずらし、本体の下に敷く。
-    Widget copy() => Transform.scale(scaleY: Platform.isAndroid ? 1 : -1, child: Texture(textureId: tex!.textureId));
+    // 縁取り (D-192): 同じテクスチャを一色に塗って 8 方向へずらし、本体の下に敷く。Web 版 (D-300) には Texture が無いので、縁取りなしで出す。
+    Widget copy() => Transform.scale(scaleY: defaultTargetPlatform == TargetPlatform.android ? 1 : -1, child: Texture(textureId: tex!.textureId));
     final scene = SizedBox(
       width: RaiMascot3d.renderWidth,
       height: RaiMascot3d.renderHeight,
       child: Stack(fit: StackFit.expand, children: [
-        if (outline != null && tex != null && _ready)
+        if (!kIsWeb && outline != null && tex != null && _ready)
           for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
             Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),
         _three.build(),
@@ -494,7 +495,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
         child: CustomPaint(
           foregroundPainter: _RepaintTick(_frame),
           child: Stack(fit: StackFit.expand, children: [
-            if (outline != null && tex != null && _ready)
+            if (!kIsWeb && outline != null && tex != null && _ready)
               for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
                 Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),
             _three.build(),

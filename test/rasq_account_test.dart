@@ -147,6 +147,7 @@ void main() {
       calls.add('${req.method} $path${req.url.hasQuery ? '?${req.url.query}' : ''}');
       if (req.method == 'POST' && path == '/auth/device') return json({'accountId': 'acc-1', 'handle': 'rasq_tester', 'displayName': 'テスター', 'token': 'device-token', 'restored': restored});
       if (req.headers['authorization'] != 'Bearer device-token' || deleted) return json({'error': {'code': '401', 'message': 'valid bearer token required'}}, 401);
+      if (req.method == 'POST' && path == '/auth/password') return http.Response('', 204);
       if (req.method == 'GET' && path == '/me') return json({'id': 'acc-1', 'handle': 'rasq_tester', 'displayName': 'テスター', 'createdAt': '2026-09-17T00:00:00Z'});
       if (req.method == 'DELETE' && path == '/me') {
         if (req.url.queryParameters['confirm'] != 'rasq_tester') return json({'error': {'code': '400', 'message': 'confirm'}}, 400);
@@ -223,6 +224,21 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('register.guardian')));
     await tester.pumpAndSettle();
+    expect(submit().onPressed, isNull); // パスワードがまだ
+    // パスワード (D-299): 必須。
+    Future<void> typePassword(String pw, [String? confirm]) async {
+      await tester.ensureVisible(find.byKey(const ValueKey('register.password')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const ValueKey('register.password')), pw);
+      await tester.enterText(find.byKey(const ValueKey('register.passwordConfirm')), confirm ?? pw);
+      await tester.pumpAndSettle();
+    }
+
+    await typePassword('short');
+    expect(submit().onPressed, isNull);
+    await typePassword('correct horse', 'correct hors');
+    expect(submit().onPressed, isNull); // 確認が違う
+    await typePassword('correct horse');
     expect(submit().onPressed, isNotNull);
     // バンドルは「置き換える」が既定(この端末に SNS アカウントが 2 件ある)。
     await tester.ensureVisible(find.byKey(const ValueKey('register.bundle.keep')));
@@ -232,6 +248,7 @@ void main() {
     await tester.pumpAndSettle();
     // 登録 → 同意の記録(学習は含めない)。
     expect(central.calls.where((c) => c == 'POST /auth/device').length, 1);
+    expect(central.calls.where((c) => c == 'POST /auth/password').length, 1, reason: '登録と同時にパスワードを設定する (D-299)');
     expect(central.consents.map((c) => '${c['kind']}:${c['granted']}:${c['detail'] ?? ''}'), ['terms:true:', 'privacy:true:', 'age:true:16-17', 'guardian:true:']);
     expect(central.consents.first['version'], rasqTermsVersion);
     expect(central.consents.any((c) => c['kind'] == 'learning'), isFalse);
@@ -302,6 +319,11 @@ void main() {
     await tester.ensureVisible(find.byKey(const ValueKey('register.bundle.keep')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('register.bundle.keep')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('register.password')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('register.password')), 'correct horse');
+    await tester.enterText(find.byKey(const ValueKey('register.passwordConfirm')), 'correct horse');
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('register.submit')));
     await tester.pumpAndSettle();

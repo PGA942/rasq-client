@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:plugin_runtime/plugin_runtime.dart' show rasqZstdWarmUp;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:web/web.dart' as web;
 
+import '../session/central_vault_storage.dart';
 import '../session/session_providers.dart';
 import '../session/session_storage.dart';
 
@@ -10,7 +13,8 @@ import '../session/session_storage.dart';
 /// 保存先: flutter_secure_storage の Web 実装は WebCrypto を使うので、**安全なコンテキスト(https / localhost)でしか動かない**。
 /// 開発用に http で開いたとき(tailnet のアドレスなど)だけ、localStorage にそのまま置く代わりを使う。本番は https で配ること。
 List<Override> deviceOverrides() => [
-      if (!web.window.isSecureContext) sessionStorageProvider.overrideWithValue(_InsecureWebSessionStorage()),
+      // SNS のログイン情報は Central の保管庫へ (D-300)。ブラウザに置くのは RASQ のトークンなど、それ以外だけ。
+      sessionStorageProvider.overrideWith((ref) => CentralVaultSessionStorage(ref, web.window.isSecureContext ? SecureSessionStorage() : _InsecureWebSessionStorage())),
     ];
 
 class _InsecureWebSessionStorage implements SessionStorage {
@@ -25,4 +29,14 @@ class _InsecureWebSessionStorage implements SessionStorage {
   Future<void> write(String key, String value) async => web.window.localStorage.setItem('$_prefix$key', value);
   @override
   Future<void> delete(String key) async => web.window.localStorage.removeItem('$_prefix$key');
+}
+
+/// 起動時の支度 (D-299): .rasqpkg(zstd 圧縮 tar)を開くための zstd の wasm を読み込んでおく(失敗しても起動は続ける。ストアからの導入だけが断られる)。
+Future<void> prepareDeviceRuntime() async {
+  try {
+    final data = await rootBundle.load('assets/web/zstd.wasm');
+    await rasqZstdWarmUp(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
+  } catch (e) {
+    debugPrint('RASQ: zstd の wasm を読み込めませんでした: $e');
+  }
 }

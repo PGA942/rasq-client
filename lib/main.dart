@@ -14,6 +14,7 @@ const _probeHost = String.fromEnvironment('RASQ_PROBE');
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kDebugMode && _probeHost.isNotEmpty) await _probe(_probeHost);
+  await prepareDeviceRuntime();
   runApp(ProviderScope(
     // 端末だけの実装(端末内モデルなど)。Web 版では空 (D-295)。
     overrides: deviceOverrides(),
