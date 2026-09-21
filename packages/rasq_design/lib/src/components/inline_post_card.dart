@@ -87,7 +87,7 @@ class _Thumbnails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    Widget img(Uri u) => Image.network(u.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.image_outlined, size: 14, color: scheme.onSurfaceVariant)));
+    Widget img(Uri u) => Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, u.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.image_outlined, size: 14, color: scheme.onSurfaceVariant)));
     Widget cell(int i) => Expanded(
           child: Stack(fit: StackFit.expand, children: [
             img(urls[i]),

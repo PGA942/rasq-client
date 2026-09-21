@@ -93,7 +93,7 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
       // 数 px にレタボ化されて見えなくなっていた (D-041)。
       emoji = ConstrainedBox(
         constraints: BoxConstraints(maxWidth: widget.height * 3, maxHeight: widget.height),
-        child: Image.network(
+        child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, 
           url.toString(),
           height: widget.height,
           fit: BoxFit.fitHeight,
@@ -105,7 +105,7 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
       emoji = SizedBox(
         width: RasqCustomEmoji.displayWidth(_aspect!, widget.height),
         height: widget.height,
-        child: Image.network(
+        child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, 
           url.toString(),
           fit: BoxFit.contain,
           semanticLabel: widget.semanticLabel ?? widget.name,
@@ -147,7 +147,7 @@ class _EmojiChip extends StatelessWidget {
         : SizedBox(
             width: RasqCustomEmoji.displayWidth(target._aspect ?? 1.0, chipEmojiHeight),
             height: chipEmojiHeight,
-            child: Image.network(w.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => Text(w.fallbackText)),
+            child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, w.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => Text(w.fallbackText)),
           );
     final name = Text(w.name!, style: RasqTypography.caption.copyWith(color: scheme.onInverseSurface));
     final detail = w.chipDetail?.call(context);

@@ -51,6 +51,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
+  bool get _hasCentral => ref.read(rasqAccountsProvider).value?.accounts.any((a) => a.isCentral) ?? false;
+
+  /// すでに RASQ アカウントを持っている人 (D-296): ログイン(パスワード / メールのコード)→ できていたら、オンボーディングを済みにする。
+  Future<void> _login() async {
+    await context.push('${Routes.settings}/account-login');
+    // ログインできていれば、台帳に Central のアカウントが付いている(閉じたあとに付くので、少し待つ)。
+    for (var i = 0; i < 50 && mounted && !_hasCentral; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    if (!mounted || !_hasCentral) return;
+    await ref.read(rasqAccountsProvider.notifier).completeOnboarding();
+    if (mounted) context.go(Routes.login);
+  }
+
   Future<void> _skip() async {
     setState(() => _busy = true);
     await ref.read(rasqAccountsProvider.notifier).completeOnboarding(skipped: true);
@@ -91,6 +105,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 Text('RASQ Central の接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 TextButton(onPressed: () => context.push('${Routes.settings}/server'), child: const Text('接続先を設定')),
               ]),
+            const SizedBox(height: RasqSpacing.sm),
+            OutlinedButton.icon(
+              key: const ValueKey('onboarding.login'),
+              onPressed: _busy || !centralOk ? null : _login,
+              icon: const Icon(Icons.login, size: 18),
+              label: const Text('RASQ アカウントにログイン'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+            ),
             const SizedBox(height: RasqSpacing.sm),
             OutlinedButton(
               onPressed: _busy ? null : _skip,

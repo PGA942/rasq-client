@@ -96,7 +96,7 @@ class InstalledPluginScreen extends ConsumerWidget {
                 width: 64,
                 height: 64,
                 color: scheme.surfaceContainerHighest,
-                child: iconUrl != null ? Image.network('$iconUrl', fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.extension_outlined, size: 30)) : const Icon(Icons.extension_outlined, size: 30),
+                child: iconUrl != null ? Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, '$iconUrl', fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.extension_outlined, size: 30)) : const Icon(Icons.extension_outlined, size: 30),
               ),
             ),
             const SizedBox(width: RasqSpacing.md),

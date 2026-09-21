@@ -302,7 +302,7 @@ class _Reaction extends StatelessWidget {
   Widget build(BuildContext context) {
     if (r.startsWith(':')) {
       final url = emojis[r.substring(1, r.length - 1).replaceAll('@.', '')];
-      return url == null ? Text(r, style: RasqTypography.caption) : Image.network(url.toString(), height: 18, errorBuilder: (_, _, _) => Text(r, style: RasqTypography.caption));
+      return url == null ? Text(r, style: RasqTypography.caption) : Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, url.toString(), height: 18, errorBuilder: (_, _, _) => Text(r, style: RasqTypography.caption));
     }
     return Text(r, style: const TextStyle(fontSize: 16));
   }

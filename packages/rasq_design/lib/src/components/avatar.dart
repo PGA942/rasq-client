@@ -61,7 +61,7 @@ class RasqAvatar extends StatelessWidget {
                   ),
                 ),
               )
-            : Image.network(
+            : Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, 
                 imageUrl.toString(),
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest),
