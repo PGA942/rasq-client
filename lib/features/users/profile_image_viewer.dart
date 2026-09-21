@@ -48,7 +48,7 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
             minScale: 1,
             maxScale: 5,
             child: Center(
-              child: _overlays.wrap(0, Image.network(widget.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
+              child: _overlays.wrap(0, Image.network(webHtmlElementStrategy: rasqWebImageStrategy, widget.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
             ),
           ),
         ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
+import '../platform/web_image.dart';
 
 /// リンク先バナー (RRL tag `link`): OGP-style card under the post body.
 /// VC links are *not* rendered here — the host swaps in the VC component
@@ -35,7 +36,7 @@ class RasqLinkBanner extends StatelessWidget {
                 SizedBox(
                   width: 88,
                   height: 88,
-                  child: Image.network(imageUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.link, color: scheme.onSurfaceVariant))),
+                  child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, imageUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.link, color: scheme.onSurfaceVariant))),
                 )
               else
                 SizedBox(width: 56, height: 88, child: Icon(Icons.link, color: scheme.onSurfaceVariant)),

@@ -175,51 +175,91 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
             child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: '投稿はありません', hint: '下に引っ張って更新')]),
           );
         }
+        // 並びは 2 つの sliver (D-298): **中心 (center) より上に、あとから足された新しい投稿**、中心から下に、もとの投稿。
+        // 上に足しても中心は動かないので、見ている位置はそのまま(上へスクロールすると、新しいぶんが出てくる)。
+        // もとの先頭の投稿が一覧から消えた(置き換わった)ら、中心を作り直して先頭へ戻す。
+        var split = _baseKey == null ? -1 : tl.posts.indexWhere((p) => p.key == _baseKey);
+        if (split < 0) {
+          split = 0;
+          final reset = _baseKey != null;
+          _baseKey = tl.posts.first.key;
+          if (reset) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_scroll.hasClients) _scroll.jumpTo(0);
+            });
+          }
+        }
+        final newer = tl.posts.sublist(0, split);
+        final base = tl.posts.sublist(split);
+        Widget row(Post p) => Column(mainAxisSize: MainAxisSize.min, children: [_item(context, tl, p, notifier, session, actions), const Divider()]);
         return RefreshIndicator(
           onRefresh: notifier.refresh,
-          child: ListView.separated(
+          child: CustomScrollView(
             controller: _scroll,
+            center: _centerKey,
             physics: const AlwaysScrollableScrollPhysics(),
-            itemCount: tl.posts.length + 1,
-            separatorBuilder: (_, _) => const Divider(),
-            itemBuilder: (context, i) {
-              if (i == tl.posts.length) {
-                if (tl.loadingMore) return const RasqLoading();
-                if (tl.error != null) return Padding(padding: const EdgeInsets.all(16), child: Center(child: TextButton(onPressed: notifier.loadMore, child: const Text('読み込みに失敗しました。再試行'))));
-                return const SizedBox(height: 80);
-              }
-              final p = tl.posts[i];
-              // RASQ の投稿 (D-283。TL のソース「RASQ の投稿」): SNS のアクションは効かないので、RASQ のタイルで描く。
-              if (isRasqPost(p)) {
-                final original = ref.watch(rasqFeedPostsProvider.select((m) => m[p.id]));
-                if (original == null) return const SizedBox.shrink();
-                return RasqPostTileView(key: ValueKey('tl.rasq.${p.id}'), post: original, onChanged: notifier.refresh, onOpen: () => context.pushPost(p));
-              }
-              // 投稿カスタマイザ (D-082): 置き換えタイルがあれば RRL で描く
-              // (V5 検証済み。スレッドナビと可視性 lifecycle はホスト側)。
-              final tile = tl.customTiles[p.id];
-              if (tile != null && widget.kind.id.startsWith('custom:') && session is WasmSnsSession) {
-                return CustomTileRow(timelineId: widget.kind.id.substring('custom:'.length), post: p, node: tile, plugin: session.timelinePlugin);
-              }
-              // 上付きバナー行 (D-085): TL プラグインのバッジ(RT 行と同スタイル)。
-              final badge = tl.badges[p.id];
-              return PostRow(
-                // 投稿ごとのキー (D-282): TL に投稿が足されても、行の State(↓ の切り替え / 開いているピッカーの相手)が隣の投稿へずれない。
-                key: ValueKey('tl.post.${p.key}'),
-                post: p,
-                actions: actions,
-                onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args),
-                // アカウント選択 (D-110): ↓ で切り替えたコピーで実行(所属
-                // アカウントへのルーティングは perform 側)。
-                actionsFor: (shown) => (a, {args = const {}}) => notifier.perform(shown, a, args: args),
-                onTap: () => context.pushPost(p),
-                bannerIcon: badge == null ? null : rrlIconFor(badge.icon, Icons.label_outline),
-                bannerText: badge?.text,
-              );
-            },
+            slivers: [
+              // 中心より上は、中心から遠ざかる向きに並ぶ: 0 = 中心のすぐ上(いちばん古い「新しい投稿」)… 最後 = いちばん上の更新タイル。
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, j) => j == newer.length
+                      ? TimelineEdgeTile(key: const ValueKey('tl.edge.top'), scroll: _scroll, label: '新しい投稿を読み込む', busyLabel: '更新しています…', onLoad: notifier.refreshNewer)
+                      : row(newer[newer.length - 1 - j]),
+                  childCount: newer.length + 1,
+                ),
+              ),
+              SliverList(
+                key: _centerKey,
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    if (i == base.length) {
+                      // いちばん下の更新タイル: 見えたら続きを読む(スクロールでも読むが、届かなかった / 失敗したときの手がかり)。
+                      if (tl.error != null) return Padding(padding: const EdgeInsets.all(16), child: Center(child: TextButton(onPressed: notifier.loadMore, child: const Text('読み込みに失敗しました。再試行'))));
+                      if (!tl.hasMore) return const SizedBox(height: 80);
+                      return Padding(padding: const EdgeInsets.only(bottom: 80), child: TimelineEdgeTile(key: const ValueKey('tl.edge.bottom'), scroll: _scroll, label: '続きを読み込む', busyLabel: '読み込んでいます…', busy: tl.loadingMore, onLoad: notifier.loadMore));
+                    }
+                    return row(base[i]);
+                  },
+                  childCount: base.length + 1,
+                ),
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+
+  final _centerKey = GlobalKey();
+  String? _baseKey;
+
+  Widget _item(BuildContext context, TimelineState tl, Post p, TimelineNotifier notifier, SnsSession? session, List<ActionDescriptor> actions) {
+    // RASQ の投稿 (D-283。TL のソース「RASQ の投稿」): SNS のアクションは効かないので、RASQ のタイルで描く。
+    if (isRasqPost(p)) {
+      final original = ref.watch(rasqFeedPostsProvider.select((m) => m[p.id]));
+      if (original == null) return const SizedBox.shrink();
+      return RasqPostTileView(key: ValueKey('tl.rasq.${p.id}'), post: original, onChanged: notifier.refresh, onOpen: () => context.pushPost(p));
+    }
+    // 投稿カスタマイザ (D-082): 置き換えタイルがあれば RRL で描く
+    // (V5 検証済み。スレッドナビと可視性 lifecycle はホスト側)。
+    final tile = tl.customTiles[p.id];
+    if (tile != null && widget.kind.id.startsWith('custom:') && session is WasmSnsSession) {
+      return CustomTileRow(timelineId: widget.kind.id.substring('custom:'.length), post: p, node: tile, plugin: session.timelinePlugin);
+    }
+    // 上付きバナー行 (D-085): TL プラグインのバッジ(RT 行と同スタイル)。
+    final badge = tl.badges[p.id];
+    return PostRow(
+      // 投稿ごとのキー (D-282): TL に投稿が足されても、行の State(↓ の切り替え / 開いているピッカーの相手)が隣の投稿へずれない。
+      key: ValueKey('tl.post.${p.key}'),
+      post: p,
+      actions: actions,
+      onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args),
+      // アカウント選択 (D-110): ↓ で切り替えたコピーで実行(所属
+      // アカウントへのルーティングは perform 側)。
+      actionsFor: (shown) => (a, {args = const {}}) => notifier.perform(shown, a, args: args),
+      onTap: () => context.pushPost(p),
+      bannerIcon: badge == null ? null : rrlIconFor(badge.icon, Icons.label_outline),
+      bannerText: badge?.text,
     );
   }
 }
@@ -234,6 +274,100 @@ class _ErrorList extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRetry,
       child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 80), RasqErrorView(code: code, onRetry: onRetry, retryLabel: '再読み込み')]),
+    );
+  }
+}
+
+/// TL のいちばん上 / いちばん下の更新タイル (D-298)。**見えたら自分で読み込む**(引っ張れない PC / Web でも更新できる)。押しても読み込む。
+/// 同じタイルが出たままのあいだは、繰り返さない(いちど隠れて、また見えたら読む)。出てすぐの連打を避けるため、前回から [minInterval] は空ける。
+class TimelineEdgeTile extends StatefulWidget {
+  const TimelineEdgeTile({super.key, required this.scroll, required this.label, required this.busyLabel, required this.onLoad, this.busy = false, this.minInterval = const Duration(seconds: 8)});
+  /// 一覧のスクロール(見えたかどうかを、動くたびに確かめる)。
+  final Listenable scroll;
+  final String label;
+  final String busyLabel;
+  final Future<void> Function() onLoad;
+  final bool busy;
+  final Duration minInterval;
+
+  static final Map<Key, DateTime> _last = {};
+
+  @override
+  State<TimelineEdgeTile> createState() => _TimelineEdgeTileState();
+}
+
+class _TimelineEdgeTileState extends State<TimelineEdgeTile> {
+  bool _busy = false;
+
+  bool _wasVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scroll.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _check());
+  }
+
+  @override
+  void didUpdateWidget(TimelineEdgeTile old) {
+    super.didUpdateWidget(old);
+    if (old.scroll != widget.scroll) {
+      old.scroll.removeListener(_onScroll);
+      widget.scroll.addListener(_onScroll);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.scroll.removeListener(_onScroll);
+    super.dispose();
+  }
+
+  /// スクロールの通知は、配置の前に来る(その時点の位置は古い)。配置が済んだあとで確かめる。
+  void _onScroll() => WidgetsBinding.instance.addPostFrameCallback((_) => _check());
+
+  /// 画面に**見えた**ときに読む(一覧は画面の外も先に組み立てるので、組み立てられただけでは読まない)。
+  void _check() {
+    if (!mounted) return;
+    final box = context.findRenderObject();
+    final viewport = Scrollable.maybeOf(context)?.context.findRenderObject();
+    if (box is! RenderBox || viewport is! RenderBox || !box.attached || !box.hasSize || !viewport.hasSize) return;
+    final top = box.localToGlobal(Offset.zero, ancestor: viewport).dy;
+    final visible = top < viewport.size.height && top + box.size.height > 0;
+    if (visible && !_wasVisible) _load(auto: true);
+    _wasVisible = visible;
+  }
+
+  Future<void> _load({bool auto = false}) async {
+    if (!mounted || _busy || widget.busy) return;
+    final key = widget.key;
+    final last = key == null ? null : TimelineEdgeTile._last[key];
+    if (auto && last != null && DateTime.now().difference(last) < widget.minInterval) return;
+    if (key != null) TimelineEdgeTile._last[key] = DateTime.now();
+    setState(() => _busy = true);
+    try {
+      await widget.onLoad();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final busy = _busy || widget.busy;
+    return InkWell(
+      onTap: busy ? null : _load,
+      child: Container(
+        height: RasqSizes.minTap,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (busy) const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) else Icon(Icons.refresh, size: 16, color: scheme.onSurfaceVariant),
+          const SizedBox(width: RasqSpacing.sm),
+          Text(busy ? widget.busyLabel : widget.label, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        ]),
+      ),
     );
   }
 }

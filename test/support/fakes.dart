@@ -68,8 +68,12 @@ class FakeSnsSession extends SnsSessionBase {
       ];
   @override
   Future<UserSummary> me() async => UserSummary(id: 'me', account: account, displayName: 'テスター');
+  /// TL を取りに来た回数(更新タイルのテスト用)。
+  int timelineFetches = 0;
+
   @override
   Future<Page<Post>> timeline(TimelineKind kind, {String? cursor, int limit = 20}) async {
+    timelineFetches++;
     if (cursor != null) return Page.empty();
     if (kind.id.startsWith('tag:')) return Page(items: _posts.where((p) => p.id == 'p1').toList());
     if (kind.id.startsWith('dm:')) return Page(items: [_posts.last]);

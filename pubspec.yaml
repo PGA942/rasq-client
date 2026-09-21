@@ -30,6 +30,8 @@ dependencies:
   # ストア配布物の ed25519 署名検証 (D-034)。純 Dart 実装で全プラットフォーム同一。
   cryptography: ^2.9.0
   http: ^1.2.0
+  # Web 版 (D-295): 安全でないコンテキスト(開発用の http)での保存先に localStorage を使う。
+  web: ^1.1.1
   image_picker: ^1.1.2
   # 動画 / 音声のファイル選択 (D-250: image_picker のギャラリーは音声を出せない)。
   file_selector: ^1.0.3

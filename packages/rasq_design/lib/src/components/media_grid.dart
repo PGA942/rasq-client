@@ -7,6 +7,7 @@ import '../theme/rasq_tokens_extension.dart';
 import '../tokens/colors.dart';
 import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
+import '../platform/web_image.dart';
 
 /// MediaGrid — layout auto-adjusts by count (1枚フル幅 / 2枚横並び / 3枚以上グリッド、
 /// [maxVisible] を超える分は最後のタイルに「+N」。スレッド展開など全部見せたい所は
@@ -117,7 +118,7 @@ class _MediaTile extends StatelessWidget {
     final hidden = item.sensitive && !revealed;
 
     Widget content = switch (item.type) {
-      MediaType.image || MediaType.gif || MediaType.video => Image.network(
+      MediaType.image || MediaType.gif || MediaType.video => Image.network(webHtmlElementStrategy: rasqWebImageStrategy, 
           (item.thumbnailUrl ?? item.url).toString(),
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.broken_image_outlined, color: scheme.onSurfaceVariant)),

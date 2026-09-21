@@ -183,7 +183,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loggedIn = sessions.value?.isLoggedIn ?? false;
       // 未ログインでも開ける画面: カタログ/開発用、オンボーディング、接続先設定
       // (オンボーディングから Central の接続先を入れるため)。
-      const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server'};
+      // RASQ アカウントへのログイン (D-296) も、オンボーディングから開く。
+      const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server', '${Routes.settings}/account-login'};
       // 初回オンボーディング (D-138): 台帳が空(= 新規端末)ならまず RASQ
       // アカウント作成の案内へ。SNS ログイン済みの端末は移行で済み扱い。
       final onboardingDone = ledger.value?.onboardingDone ?? false;

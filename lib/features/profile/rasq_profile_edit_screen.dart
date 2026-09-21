@@ -181,7 +181,7 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                   width: double.infinity,
                   child: _banner != null
                       ? Image.memory(_banner!.bytes, fit: BoxFit.cover)
-                      : (a.bannerUrl == null || _removeBanner ? ColoredBox(color: scheme.surfaceContainerHighest) : Image.network(a.bannerUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))),
+                      : (a.bannerUrl == null || _removeBanner ? ColoredBox(color: scheme.surfaceContainerHighest) : Image.network(webHtmlElementStrategy: rasqWebImageStrategy, a.bannerUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))),
                 ),
                 Positioned(
                   right: 8,

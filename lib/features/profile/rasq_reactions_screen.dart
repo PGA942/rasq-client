@@ -170,7 +170,7 @@ class RasqQueueSections extends StatelessWidget {
               SizedBox(
                 width: 32,
                 child: g.queue.url != null
-                    ? Image.network('${g.queue.url}', height: 26, errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_outlined, size: 22))
+                    ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, '${g.queue.url}', height: 26, errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported_outlined, size: 22))
                     : const Text('❤', style: TextStyle(fontSize: 22)),
               ),
               const SizedBox(width: RasqSpacing.md),

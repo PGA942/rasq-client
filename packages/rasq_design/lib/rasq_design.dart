@@ -6,6 +6,7 @@
 /// as the implementation of L2 Standard Components (D-002).
 library;
 
+export 'src/platform/web_image.dart';
 export 'src/tokens/colors.dart';
 export 'src/tokens/spacing.dart';
 export 'src/tokens/sizes.dart';

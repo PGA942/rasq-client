@@ -120,7 +120,8 @@ void main() {
       await c.read(timelineProvider(kind).notifier).refresh();
     }
     await tester.pumpAndSettle();
-    expect(find.text('あとから来た投稿'), findsOneWidget);
+    // 新しい投稿は、見ている位置を動かさずに**上へ**足される (D-298)。一覧には入っている。
+    expect([for (final kind in const [TimelineKind.home, TimelineKind.social, TimelineKind.bundle]) c.read(timelineProvider(kind)).value?.posts.firstOrNull?.id].contains('new'), isTrue);
     // 絵文字を選ぶ → もとの投稿に付く。
     await tester.tap(find.descendant(of: find.byType(EmojiPanel), matching: find.text('👍')).first);
     await tester.pumpAndSettle();
