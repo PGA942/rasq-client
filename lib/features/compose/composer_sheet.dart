@@ -645,7 +645,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       return await composerLinkGates(
         graph,
         draft,
-        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine),
       );
     } catch (_) {
       return const {};
@@ -683,6 +683,28 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   Set<String> _linkable = const {};
+
+  /// RASQ としての自分の投稿(ポスト先の絞り込みで、RASQ のタブの「自分の投稿」と比べる。D-286)。
+  Future<List<Post>> _rasqMine() async {
+    final api = ref.read(rasqAccountPageApiProvider);
+    final me = ref.read(orgateAccountProvider).value;
+    if (api == null || me == null) return const [];
+    try {
+      return [for (final p in (await api.posts(me.handle)).posts) if (p.rebroadedBy == null) p.toPost()];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// RASQ への連動投稿 (D-286)。設定「投稿コンポーザー → RASQ アカウントへも連動投稿する」(既定 off)+ RASQ にログイン中のときだけ。
+  bool get _rasqLinkEnabled => ref.read(orgateAccountProvider).value != null && (ref.read(settingsAreaProvider('composer.prefs')).value ?? const {})['rasqLinked'] == true;
+
+  /// 連動の計画は [AccountSession] で持つので、RASQ は仮のセッション(pluginId = [rasqLinkPluginId])で表す。
+  /// 送るときに見分けて、SNS のプラグインではなく Central へ投稿する。
+  AccountSession get _rasqLinkSession {
+    final rasq = ref.read(rasqAccountProvider);
+    return AccountSession(account: rasq.account, pluginId: rasqLinkPluginId, token: '', createdAt: DateTime.fromMillisecondsSinceEpoch(0), displayName: rasq.displayName, avatarUrl: rasq.avatarUrl);
+  }
 
   Future<void> _cycleMulti(String label) async {
     if (_linkable.isEmpty) _linkable = await _linkedCapableAccounts();
@@ -753,7 +775,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       return await composerTargetChoices(
         graph,
         draft,
-        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine),
         storageRead: (slot) async => (await ref.read(settingsAreaProvider(storageArea).future))[slot],
       );
     } catch (_) {
@@ -820,16 +842,30 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         InkWell(
           key: const ValueKey('composer.rasqRow'),
           borderRadius: BorderRadius.circular(12),
-          onTap: () => setState(() => _targetsOpen = false),
+          // 複数選択モード (D-286): SNS の行と同じく、タップで 非選択 → 通常投稿 → ノード連動(設定で有効のとき)。
+          onTap: () => _multiSelect && _rasqLinkEnabled && !_rasqTarget ? _cycleMulti('${rasq.account}') : setState(() => _targetsOpen = false),
           // 長押し = RASQ 指定の入り切り (D-271)。
           onLongPress: widget.target is! ComposeNormal || ref.read(orgateAccountProvider).value == null
               ? null
-              : () => setState(() {
+              : () {
+                  setState(() {
                     _rasqTarget = !_rasqTarget;
                     _rasqSuggested = false;
                     _targetsOpen = false;
                     _error = null;
-                  }),
+                  });
+                  // 連動の下書き (D-129 / D-286: delivery=draft): RASQ 宛の下書きがあれば、空のコンポーザーに復元して消費する。
+                  final key = 'linked:${rasq.account.key}';
+                  final linked = ref.read(composeDraftsProvider)[key];
+                  if (_rasqTarget && linked != null && _text.text.trim().isEmpty) {
+                    _text.text = linked.text;
+                    _text.selection = TextSelection.collapsed(offset: _text.text.length);
+                    _cwOn = linked.cwOn;
+                    _cw.text = linked.cw;
+                    _drafts.clear(key);
+                    setState(() {});
+                  }
+                },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
             child: Row(children: [
@@ -841,6 +877,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   Text('@${rasq.account.handle}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
                 ]),
               ),
+              if (_multiSelect && _rasqLinkEnabled && !_rasqTarget)
+                Padding(
+                  key: const ValueKey('composer.rasqRow.multi'),
+                  padding: const EdgeInsets.only(right: 4),
+                  child: switch (_multiSel['${rasq.account}'] ?? _selNone) {
+                    _selNormal => Text('通常投稿', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                    _selLinked => Text('ノード連動', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                    _ => Icon(Icons.radio_button_unchecked, size: 16, color: scheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                  },
+                ),
               if (_rasqTarget) Padding(padding: const EdgeInsets.only(right: 4), child: Text('RASQ に投稿', style: RasqTypography.caption.copyWith(color: tokens.link))),
               if (_rasqTarget) Icon(Icons.check, size: 16, color: tokens.link),
               const Icon(Icons.keyboard_arrow_up, size: 20),
@@ -961,7 +1007,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final cfg = await _composerAccountCfg();
     final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
     final plan = <(AccountSession, Map<String, String>?, String)>[];
-    for (final s in sessions) {
+    // RASQ も連動先にできる (D-286)。RASQ 指定で投稿しているとき(= 主投稿先が RASQ)は、RASQ 自身には連動しない。
+    for (final s in [...sessions, if (_rasqLinkEnabled && !_rasqTarget) _rasqLinkSession]) {
       final label = '${s.account}';
       final mode = _multiSel[label] ?? _selNone;
       if (mode == _selNone || s.account.key == primaryKey) continue;
@@ -1044,6 +1091,29 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       if (delivery == 'draft') {
         // 下書きだけ作る (D-129): 次にそのアカウントを投稿先に選ぶと復元。
         _drafts.save('linked:${s.account.key}', ComposeDraft(text: text, cw: cw ?? '', cwOn: cw != null));
+        continue;
+      }
+      // RASQ への連動 (D-286): SNS のプラグインではなく、Central へ。RASQ に無いもの(指名 / 連合なし)は近いものへ寄せ、上限を超える分は送らない。
+      if (s.pluginId == rasqLinkPluginId) {
+        try {
+          final api = ref.read(rasqAccountPageApiProvider);
+          if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+          if (text.length > rasqPostMaxChars || _files.length > rasqPostMaxImages || (base.poll?.choices.length ?? 0) > rasqPostMaxPollChoices) throw StateError('RASQ の上限を超えています');
+          await api.createPost(
+            text,
+            images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
+            cw: cw ?? '',
+            visibility: const {'public', 'home', 'followers'}.contains(visibility) ? visibility! : (visibility == null ? 'public' : 'followers'),
+            likeOnly: base.reactionAcceptance == 'likeOnly',
+            poll: base.poll == null ? null : (choices: base.poll!.choices, multiple: base.poll!.multiple, expiresAfter: base.poll!.expiresAfter),
+          );
+          final me = ref.read(orgateAccountProvider).value;
+          if (me != null) ref.invalidate(rasqAccountPageProvider(me.handle));
+          posted.add(label);
+        } catch (e) {
+          errors.add(label);
+          debugPrint('連動投稿 $label: $e');
+        }
         continue;
       }
       try {
@@ -1710,3 +1780,6 @@ enum _CloseChoice { overwrite, saveNew, discard }
   final start = text.substring(0, caret).indexOf('@', m.start);
   return (start < 0 ? at : start, m.group(1)!);
 }
+
+/// 連動の計画の中で、RASQ アカウントを表す仮のセッションの pluginId (D-286)。
+const rasqLinkPluginId = 'rasq.central';
