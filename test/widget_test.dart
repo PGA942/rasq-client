@@ -36,6 +36,39 @@ Widget app({bool loggedIn = true}) {
 }
 
 void main() {
+  testWidgets('ログアウトしたあとは、SNS のログインより先に RASQ アカウントのログイン画面 (D-301)', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    // オンボーディングは済んでいて、RASQ アカウントは無く(ログアウト後)、SNS のログインも無い端末。
+    final storage = MemorySessionStorage({
+      RasqAccountsNotifier.storageKey: jsonEncode({
+        'accounts': [
+          {'id': 'local', 'kind': 'local', 'createdAt': DateTime.now().toIso8601String(), 'sessionKeys': <String>[]},
+        ],
+        'current': 'local',
+        'onboardingDone': true,
+      }),
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    // 主なボタンは「ログイン」。SNS のログイン画面は、まだ出さない。
+    expect(find.text('RASQ アカウントにログインしますか?'), findsOneWidget);
+    expect(find.text('SNSにログイン'), findsNothing);
+    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('onboarding.login'))), isA<FilledButton>());
+    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey('onboarding.create'))), isA<OutlinedButton>());
+    // 「SNS アカウントだけで使う」で、これまでどおり SNS のログインへ。
+    await tester.tap(find.byKey(const ValueKey('onboarding.skip')));
+    await tester.pumpAndSettle();
+    expect(find.text('SNSにログイン'), findsOneWidget);
+  });
+
   testWidgets('no session → onboarding (RASQ アカウント作成) → skip → login screen', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;

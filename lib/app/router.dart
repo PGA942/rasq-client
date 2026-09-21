@@ -185,10 +185,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // (オンボーディングから Central の接続先を入れるため)。
       // RASQ アカウントへのログイン (D-296) も、オンボーディングから開く。
       const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server', '${Routes.settings}/account-login'};
-      // 初回オンボーディング (D-138): 台帳が空(= 新規端末)ならまず RASQ
-      // アカウント作成の案内へ。SNS ログイン済みの端末は移行で済み扱い。
-      final onboardingDone = ledger.value?.onboardingDone ?? false;
-      if (!onboardingDone && !loggedIn && !open.contains(loc) && !onLogin) return Routes.onboarding;
+      // RASQ アカウントが無いあいだは、**SNS のログインより先に** RASQ アカウントの画面へ (D-138 → D-301)。
+      // 新規の端末(台帳が空)も、ログアウトしたあとも同じ入口。SNS ログイン済みの端末は移行で済み扱い。
+      // そこから「SNS アカウントだけで使う」を選べば `Routes.login` へ行き、`onLogin` で留まる。
+      final hasCentral = ledger.value?.accounts.any((a) => a.isCentral) ?? false;
+      if (!hasCentral && !loggedIn && !open.contains(loc) && !onLogin) return Routes.onboarding;
       if (!loggedIn && !onLogin && !open.contains(loc)) return Routes.login;
       if (loggedIn && loc == Routes.onboarding) return Routes.home;
       return null;
