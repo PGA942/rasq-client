@@ -16,8 +16,10 @@ import 'rai_space.dart';
 /// LLM の推論中は [RaiMascot3dController.paused] でミキサーを止める。
 ///
 /// テスト(FLUTTER_TEST)と Web では使わず、2D の painter に落ちる([raiMascot3dProvider])。
-// Web 版 (D-300): three_js は WebGL の canvas に描く(`Platform` は Web では触れないので、先に kIsWeb を見る)。
-final raiMascot3dProvider = Provider<bool>((_) => kIsWeb || !Platform.environment.containsKey('FLUTTER_TEST'));
+// Web では使わない (D-300 → D-303): three_js の土台 (flutter_angle) は端末のテクスチャに描くので、Web では
+// 最初のフレームが出ないまま**アプリ全体が起動しない**(ヘッドレス Chrome で確認。白い画面 + `Uncaught`)。
+// Web は 2D の RAi([RaiMascot] の painter)で描く。`Platform` は Web では触れないので、先に kIsWeb を見る。
+final raiMascot3dProvider = Provider<bool>((_) => !kIsWeb && !Platform.environment.containsKey('FLUTTER_TEST'));
 
 /// 3D 側へ渡す状態: 静止時の腕、移動中の計画と進み具合、一時停止。
 class RaiMascot3dController extends ChangeNotifier {
@@ -174,6 +176,11 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   @override
   void initState() {
     super.initState();
+    if (kIsWeb) {
+      // 念のため (D-303): Web で直に作られても、アプリを道連れにしない(2D も描かず、場所だけ空ける)。
+      _failed = true;
+      return;
+    }
     liveInstances++;
     if (liveInstances > 1) {
       // どこに 2 つ目ができたかをログに残す (D-211: 実機で再発したので祖先を数段出す)。
@@ -210,6 +217,10 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
 
   @override
   void dispose() {
+    if (kIsWeb) {
+      super.dispose();
+      return;
+    }
     liveInstances--;
     _oneShotTimer?.cancel();
     _ctrl.removeListener(_sync);
