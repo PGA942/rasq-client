@@ -40,6 +40,12 @@ class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
     return File('${d.path}/${spec.fileName}');
   }
 
+  /// ダウンロード済みのモデルのファイル(無ければ null)。画像側 (D-293) は、これを絵文字の埋め込み器が読む。
+  Future<File?> installedFile() async {
+    final f = await _file();
+    return await f.exists() ? f : null;
+  }
+
   @override
   Future<void> refresh() async {
     if (_current.phase == RaiEmbeddingPhase.downloading) return;
@@ -119,6 +125,10 @@ class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
           case RaiEmbeddingKind.minilm:
             final tok = UnigramTokenizer.fromTsv(await rootBundle.loadString(spec.tokenizerAsset));
             _embedder = await OnnxRaiEmbedder.loadMiniLm(model: f, tokenizer: tok, maxLen: spec.maxLen);
+          case RaiEmbeddingKind.siglip2Vision:
+            // 画像側は、文の埋め込み器にはならない(絵文字の索引が [installedFile] から読む)。
+            _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.ready));
+            return null;
         }
         _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.ready));
         return _embedder;

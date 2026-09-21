@@ -483,7 +483,9 @@ class _EmojiIndexProgressLine extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(emojiIndexProvider(accountKey));
-    final p = ref.watch(emojiIndexProgressProvider)[accountKey ?? '_current'];
+    ref.watch(emojiImageIndexProvider(accountKey)); // 絵そのものの索引 (D-293。画像側のモデルがあるときだけ)
+    final all = ref.watch(emojiIndexProgressProvider);
+    final p = all[accountKey ?? '_current'] ?? all['${accountKey ?? '_current'}#image'];
     if (p == null || p.$2 == 0 || p.$1 >= p.$2) return const SizedBox.shrink();
     return Padding(
       key: const ValueKey('emoji.index.progress'),
