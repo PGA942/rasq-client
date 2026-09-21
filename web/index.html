@@ -41,6 +41,10 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <!-- RAi の 3D (D-304): three_js (flutter_angle) が Web で描くのに要る GL の橋渡し。版を固定して同梱(CDN は引かない)。 -->
+  <script src="vendor/flutter_angle/gles_bindings.js"></script>
+  <!-- 3D の canvas は見せるだけ。クリック / スクロールは下の Flutter に通す(空間モードは全画面に重なる)。 -->
+  <style>canvas[id^="canvas-id"], flt-platform-view:has(> canvas[id^="canvas-id"]) { pointer-events: none; }</style>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

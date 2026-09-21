@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:three_js/three_js.dart' as three;
 
+import '../../platform/web_gl_bindings.dart';
 import 'rai_face.dart';
 import 'rai_motion.dart';
 import 'rai_space.dart';
@@ -16,10 +17,10 @@ import 'rai_space.dart';
 /// LLM の推論中は [RaiMascot3dController.paused] でミキサーを止める。
 ///
 /// テスト(FLUTTER_TEST)と Web では使わず、2D の painter に落ちる([raiMascot3dProvider])。
-// Web では使わない (D-300 → D-303): three_js の土台 (flutter_angle) は端末のテクスチャに描くので、Web では
-// 最初のフレームが出ないまま**アプリ全体が起動しない**(ヘッドレス Chrome で確認。白い画面 + `Uncaught`)。
-// Web は 2D の RAi([RaiMascot] の painter)で描く。`Platform` は Web では触れないので、先に kIsWeb を見る。
-final raiMascot3dProvider = Provider<bool>((_) => !kIsWeb && !Platform.environment.containsKey('FLUTTER_TEST'));
+// Web 版 (D-300 → D-303 → D-304): three_js の土台 (flutter_angle) は、Web では `gles_bindings.js`(index.html で読み込む。
+// `web/vendor/flutter_angle/`)の関数を呼ぶ。**読み込まれていないと最初のフレームが返らず、アプリごと起動しなくなる**ので、
+// あるときだけ 3D、無ければ 2D([RaiMascot] の painter)。`Platform` は Web では触れないので、先に kIsWeb を見る。
+final raiMascot3dProvider = Provider<bool>((_) => kIsWeb ? webGlBindingsLoaded() : !Platform.environment.containsKey('FLUTTER_TEST'));
 
 /// 3D 側へ渡す状態: 静止時の腕、移動中の計画と進み具合、一時停止。
 class RaiMascot3dController extends ChangeNotifier {
@@ -176,8 +177,8 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   @override
   void initState() {
     super.initState();
-    if (kIsWeb) {
-      // 念のため (D-303): Web で直に作られても、アプリを道連れにしない(2D も描かず、場所だけ空ける)。
+    if (kIsWeb && !webGlBindingsLoaded()) {
+      // 念のため (D-303): 橋渡しの JS が無い Web で直に作られても、アプリを道連れにしない(場所だけ空ける)。
       _failed = true;
       return;
     }
@@ -217,7 +218,9 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
 
   @override
   void dispose() {
-    if (kIsWeb) {
+    if (_failed && kIsWeb) {
+      _fallback.dispose();
+      _frame.dispose();
       super.dispose();
       return;
     }
