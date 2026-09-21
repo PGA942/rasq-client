@@ -169,6 +169,8 @@ class RasqQueueCount {
   final Uri? url;
   final int count;
   final bool mine;
+
+  static RasqQueueCount fromJson(Map q) => RasqQueueCount(packId: q['packId'] as String?, stickerId: '${q['stickerId']}', url: _http(q['url']), like: q['like'] == true, count: (q['count'] as num?)?.toInt() ?? 0, mine: q['mine'] == true);
 }
 
 /// [RasqAccountPost.toPost] が付けるインスタンス名。
@@ -418,7 +420,7 @@ class RasqAccountPost {
         queues: [
           for (final q in j['queues'] as List? ?? const [])
             if (q is Map && (q['like'] == true || _http(q['url']) != null))
-              RasqQueueCount(packId: q['packId'] as String?, stickerId: '${q['stickerId']}', url: _http(q['url']), like: q['like'] == true, count: (q['count'] as num?)?.toInt() ?? 0, mine: q['mine'] == true),
+              RasqQueueCount.fromJson(q),
         ],
         rebroadedBy: RasqPostAuthor.fromJson(j['rebroadedBy']),
         rebroadId: j['rebroadId'] as String?,
@@ -437,6 +439,30 @@ class RasqThread {
   final RasqAccountPost post;
   final RasqAccountPost? parent;
   final List<RasqAccountPost> replies;
+}
+
+/// 誰が、いつ(キュー / リブロードの 1 件。S-030)。
+typedef RasqReactionActor = ({RasqPostAuthor account, DateTime at});
+
+/// 「リアクションを表示」(S-030 / D-294): キューした人(絵ごと)/ リブロードした人 / 引用した投稿。
+@immutable
+class RasqPostReactions {
+  const RasqPostReactions({this.queues = const [], this.rebroads = const [], this.quotes = const []});
+  final List<({RasqQueueCount queue, List<RasqReactionActor> accounts})> queues;
+  final List<RasqReactionActor> rebroads;
+  final List<RasqAccountPost> quotes;
+
+  static List<RasqReactionActor> _actors(Object? v) => [
+        for (final a in v as List? ?? const [])
+          if (a is Map && RasqPostAuthor.fromJson(a['account']) != null)
+            (account: RasqPostAuthor.fromJson(a['account'])!, at: DateTime.tryParse('${a['at']}')?.toLocal() ?? DateTime.fromMillisecondsSinceEpoch(0)),
+      ];
+
+  factory RasqPostReactions.fromJson(Map<String, Object?> j) => RasqPostReactions(
+        queues: [for (final q in j['queues'] as List? ?? const []) if (q is Map) (queue: RasqQueueCount.fromJson(q), accounts: _actors(q['accounts']))],
+        rebroads: _actors(j['rebroads']),
+        quotes: [for (final p in j['quotes'] as List? ?? const []) if (p is Map) RasqAccountPost.fromJson(p.cast<String, Object?>())],
+      );
 }
 
 @immutable
@@ -644,6 +670,9 @@ class RasqAccountPageApi {
     return RasqThread(post: one(j['post'])!, parent: one(j['parent']), replies: [for (final r in j['replies'] as List? ?? const []) if (one(r) != null) one(r)!]);
   }
 
+  /// 誰がキュー / リブロード / 引用したか (S-030)。
+  Future<RasqPostReactions> reactions(String id) async => RasqPostReactions.fromJson(await _client.getJson('/posts/$id/reactions'));
+
   /// 返信(文字だけ、500 文字まで)。
   Future<RasqAccountPost> reply(String postId, String body) async => RasqAccountPost.fromJson(await _client.postJson('/me/posts', {'body': body, 'replyTo': postId}));
 
@@ -694,4 +723,10 @@ final rasqThreadProvider = FutureProvider.autoDispose.family<RasqThread, String>
   final api = ref.watch(rasqAccountPageApiProvider);
   if (api == null) throw StateError('RASQ Central の接続先が未設定です');
   return api.thread(id);
+});
+
+final rasqPostReactionsProvider = FutureProvider.autoDispose.family<RasqPostReactions, String>((ref, id) async {
+  final api = ref.watch(rasqAccountPageApiProvider);
+  if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+  return api.reactions(id);
 });

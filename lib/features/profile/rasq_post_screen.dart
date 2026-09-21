@@ -17,6 +17,18 @@ import '../post/thread_section.dart';
 import '../post/thread_section_bar.dart';
 import '../settings/settings_dsl.dart';
 import 'rasq_post_tile.dart';
+import 'rasq_reactions_screen.dart';
+
+/// 返信欄に出すもの (D-294): 帯の長押しで切り替える(SNS の欄の切り替え D-070 と同じ)。保存先も同じ(キーは `rasqMode`)。
+enum RasqSectionMode {
+  replies('返信'),
+  queues('キュー'),
+  rebroads('リブロード'),
+  quotes('引用');
+
+  const RasqSectionMode(this.label);
+  final String label;
+}
 
 /// RASQ の投稿の詳細 (D-271 / S-022 → D-292): **SNS の投稿の詳細 (Misskey) と同じ作り**。
 ///
@@ -33,8 +45,19 @@ class RasqPostScreen extends ConsumerStatefulWidget {
 class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
   bool _composerScheduled = false;
   bool _composerDismissed = false; // ✕ で閉じた(このページにいる間は、返信ボタンを押すまで出さない)
+  final Set<String> _openQueues = {};
 
-  void _refresh() => ref.invalidate(rasqThreadProvider(widget.postId));
+  void _refresh() {
+    ref.invalidate(rasqThreadProvider(widget.postId));
+    ref.invalidate(rasqPostReactionsProvider(widget.postId));
+  }
+
+  Future<void> _switchMode(Rect rect, RasqSectionMode current) async {
+    final m = await ref.read(overlayManagerProvider).showDropdown<RasqSectionMode>(id: 'rasqThread.mode', anchor: rect, dense: true, items: [
+      for (final x in RasqSectionMode.values) RasqDropdownItem(x.label, x, checked: x == current),
+    ]);
+    if (m != null) await ref.read(settingsAreaProvider(threadRepliesKvArea).notifier).set('rasqMode', m.name);
+  }
 
   /// 常駐の返信コンポーザー (D-050 と同じ流儀): このページが最前面のときだけ置く。ページを移ると自動で消える。
   void _ensureReplyComposer(RasqAccountPost target) {
@@ -68,6 +91,7 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
     final thread = ref.watch(rasqThreadProvider(widget.postId));
     final saved = ref.watch(settingsAreaProvider(threadRepliesKvArea)).value ?? const <String, Object?>{};
     final order = ThreadSortOrder.values.asNameMap()[saved['order']] ?? ThreadSortOrder.none;
+    final mode = RasqSectionMode.values.asNameMap()[saved['rasqMode']] ?? RasqSectionMode.replies;
     final target = thread.value?.post;
     if (target != null) _ensureReplyComposer(target);
     // 返信ボタン: 消した常駐コンポーザーを呼び戻す (D-096 と同じ)。
@@ -95,12 +119,34 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
             if (t.parent == null && t.post.isReply)
               Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: Text('元の投稿は削除されています。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
             RasqPostTileView(post: t.post, focused: true, onChanged: _refresh, onReply: reply),
-            ThreadSectionBar(label: '返信 ${t.replies.length}', order: order, onSortTap: (r) => _sort(r, order)),
-            if (t.replies.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('返信はまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
-            for (final r in sorted) ...[
-              RasqPostTileView(key: ValueKey('rasqThread.reply.${r.id}'), post: r, onChanged: _refresh, onOpen: () => context.push(Routes.rasqPost(r.id))),
-              const Divider(),
-            ],
+            // 帯: 短押し = 並び順(返信のとき)、長押し = 欄の切り替え、右 = 「リアクションを表示」のページへ (D-294)。
+            ThreadSectionBar(
+              label: mode == RasqSectionMode.replies ? '返信 ${t.replies.length}' : mode.label,
+              order: mode == RasqSectionMode.replies ? order : ThreadSortOrder.none,
+              onSortTap: mode == RasqSectionMode.replies ? (r) => _sort(r, order) : null,
+              onModeTap: (r) => _switchMode(r, mode),
+              trailing: TextButton(
+                key: const ValueKey('rasqThread.showReactions'),
+                onPressed: () => context.push(Routes.rasqPostReactions(t.post.id)),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('リアクションを表示'), Icon(Icons.chevron_right, size: 18)]),
+              ),
+            ),
+            if (mode == RasqSectionMode.replies) ...[
+              if (t.replies.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('返信はまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
+              for (final r in sorted) ...[
+                RasqPostTileView(key: ValueKey('rasqThread.reply.${r.id}'), post: r, onChanged: _refresh, onOpen: () => context.push(Routes.rasqPost(r.id))),
+                const Divider(),
+              ],
+            ] else
+              ref.watch(rasqPostReactionsProvider(widget.postId)).when(
+                    loading: () => const RasqLoading(),
+                    error: (e, _) => Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('読み込めませんでした: ${e is OrgateException ? e.message : e}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
+                    data: (rx) => switch (mode) {
+                      RasqSectionMode.queues => RasqQueueSections(groups: rx.queues, open: _openQueues, shrinkWrap: true, onToggle: (k) => setState(() => _openQueues.contains(k) ? _openQueues.remove(k) : _openQueues.add(k))),
+                      RasqSectionMode.rebroads => RasqActorList(actors: rx.rebroads, empty: 'リブロードはありません', shrinkWrap: true),
+                      _ => RasqPostTileList(posts: rx.quotes, empty: '引用はありません', onChanged: _refresh, shrinkWrap: true),
+                    },
+                  ),
           ]);
         },
       ),

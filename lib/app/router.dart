@@ -31,6 +31,7 @@ import '../features/settings/settings_section_screen.dart';
 import '../features/profile/profile_edit_screen.dart';
 import '../features/profile/rasq_account_page_screen.dart';
 import '../features/profile/rasq_post_screen.dart';
+import '../features/profile/rasq_reactions_screen.dart';
 import '../features/profile/rasq_profile_edit_screen.dart';
 import '../features/clips/clip_timeline_screen.dart';
 import '../features/lists/lists_screens.dart';
@@ -120,6 +121,7 @@ abstract final class Routes {
   /// RASQ アカウントページ (D-270)。
   /// RASQ の投稿のスレッド (D-271)。
   static String rasqPost(String id) => '/rasq-post/${Uri.encodeComponent(id)}';
+  static String rasqPostReactions(String id) => '${rasqPost(id)}/reactions';
   static String rasqAccount(String handle) => '/rasq/${Uri.encodeComponent(handle)}';
   static String storePlugin(String id) => '/store/plugin/${Uri.encodeComponent(id)}';
 
@@ -236,6 +238,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'actionbar-plugins', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ActionBarPluginsScreen()),
           ]),
           GoRoute(path: '/rasq-post/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqPostScreen(postId: s.pathParameters['id']!)),
+          GoRoute(path: '/rasq-post/:id/reactions', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqReactionsScreen(postId: s.pathParameters['id']!)),
           GoRoute(path: '/rasq/:handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!)),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
           GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiHomeScreen(), routes: [

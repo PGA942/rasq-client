@@ -47,6 +47,11 @@ extension RasqNavigation on BuildContext {
   }
 
   void pushReactions(Post post) {
+    // RASQ の投稿 (D-294) は、RASQ の「リアクションを表示」へ。
+    if (isRasqPost(post)) {
+      push(Routes.rasqPostReactions(post.id));
+      return;
+    }
     // 第3カラム内 (D-061): matchedLocation は第2カラムのルートを指すため、
     // entry 自身の location を基準にする(そのままだとリンクが切れる)。
     final pane = PaneScope.maybeOf(this)?.entry;
