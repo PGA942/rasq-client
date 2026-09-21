@@ -15,6 +15,10 @@ enum RaiEmbeddingKind {
 
   /// 文埋め込み(MiniLM 系): input_ids / attention_mask / token_type_ids → last_hidden_state を平均(D-193)。
   minilm,
+
+  /// SigLIP2 の**画像側** (D-293): pixel_values[n,3,224,224] → pooler_output。文の埋め込み器にはならない(`embedder()` は null)。
+  /// 絵文字の絵を埋め込むのに使う。ダウンロード / 削除の管理だけを、文のモデルと共用する。
+  siglip2Vision,
 }
 
 @immutable
@@ -121,7 +125,36 @@ class RaiEmbeddingException implements Exception {
   String toString() => message;
 }
 
+/// SigLIP2 の画像側 (D-293)。int8。絵文字の絵を、SigLIP2 のテキスト側と同じ空間に埋め込む。
+const emojiVisionEmbeddingSpec = RaiEmbeddingSpec(
+  id: 'siglip2-base-vision-int8',
+  label: 'SigLIP2 base(画像側・int8)',
+  fileName: 'vision_model_int8.onnx',
+  url: 'https://huggingface.co/onnx-community/siglip2-base-patch16-224-ONNX/resolve/main/onnx/vision_model_int8.onnx',
+  sizeMb: 95,
+  tokenizerAsset: '',
+  dims: 768,
+  kind: RaiEmbeddingKind.siglip2Vision,
+  maxLen: 0,
+);
+
 final raiEmbeddingModelProvider = Provider<RaiEmbeddingModel>((_) => const UnavailableRaiEmbeddingModel());
+
+/// 絵文字の画像検索 (D-293) の 2 つのモデル: 文を埋め込む SigLIP2 のテキスト側と、絵を埋め込む画像側。
+/// **同じ SigLIP2 の組でないと、文と絵を比べられない**(RAi の検索の既定は MiniLM なので、別に持つ)。
+/// 実機では main が端末の実装に差し替える。既定(テスト)は「使えない」。
+final emojiTextModelProvider = Provider<RaiEmbeddingModel>((_) => const UnavailableRaiEmbeddingModel());
+final emojiVisionModelProvider = Provider<RaiEmbeddingModel>((_) => const UnavailableRaiEmbeddingModel());
+
+StreamProvider<RaiEmbeddingStatus> _statusOf(Provider<RaiEmbeddingModel> p) => StreamProvider<RaiEmbeddingStatus>((ref) async* {
+      final m = ref.watch(p);
+      yield m.current;
+      unawaited(m.refresh());
+      yield* m.statuses;
+    });
+
+final emojiTextStatusProvider = _statusOf(emojiTextModelProvider);
+final emojiVisionStatusProvider = _statusOf(emojiVisionModelProvider);
 
 final raiEmbeddingStatusProvider = StreamProvider<RaiEmbeddingStatus>((ref) async* {
   final m = ref.watch(raiEmbeddingModelProvider);

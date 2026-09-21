@@ -93,6 +93,56 @@ class EmojiEmbeddingIndex {
     return EmojiEmbeddingIndex._(embedder.name, dims, names, flat);
   }
 
+  /// **絵そのもの**から作る (D-293)。名前が意味を持たない絵文字(`blob123` など)にも効く。
+  /// [fetch] = 絵を取ってくる(失敗は null)。[embed] = 絵の並び → ベクトル(読めない絵は null)。[chunk] 件ずつ進め、間で中断を見る。
+  /// [reuse] に同じモデルの索引があれば、名前が同じ絵文字は使い回す(絵の取り直しもしない)。
+  static Future<EmojiEmbeddingIndex?> buildFromImages({
+    required List<EmojiInfo> emojis,
+    required String model,
+    required Future<Uint8List?> Function(EmojiInfo e) fetch,
+    required Future<List<List<double>?>> Function(List<Uint8List> images) embed,
+    EmojiEmbeddingIndex? reuse,
+    int chunk = 8,
+    void Function(int done, int total)? onProgress,
+    bool Function()? shouldStop,
+  }) async {
+    final old = reuse != null && reuse.model == model ? {for (var i = 0; i < reuse.names.length; i++) reuse.names[i]: i} : const <String, int>{};
+    final vectors = <String, List<double>>{};
+    final todo = <EmojiInfo>[];
+    final seen = <String>{};
+    for (final e in emojis) {
+      if (!seen.add(e.name)) continue;
+      final hit = old[e.name];
+      if (hit != null) {
+        vectors[e.name] = reuse!._row(hit);
+      } else {
+        todo.add(e);
+      }
+    }
+    var done = vectors.length;
+    final total = done + todo.length;
+    onProgress?.call(done, total);
+    var dims = reuse != null && old.isNotEmpty ? reuse.dims : 0;
+    for (var i = 0; i < todo.length; i += chunk) {
+      if (shouldStop?.call() ?? false) return null;
+      final part = todo.sublist(i, (i + chunk).clamp(0, todo.length));
+      final images = await Future.wait([for (final e in part) fetch(e)]);
+      final have = [for (var k = 0; k < part.length; k++) if (images[k] != null) k];
+      if (have.isNotEmpty) {
+        final got = await embed([for (final k in have) images[k]!]);
+        for (var j = 0; j < have.length && j < got.length; j++) {
+          final v = got[j];
+          if (v == null) continue;
+          if (dims == 0) dims = v.length;
+          if (v.length == dims) vectors[part[have[j]].name] = v;
+        }
+      }
+      done += part.length;
+      onProgress?.call(done, total);
+    }
+    return EmojiEmbeddingIndex.fromVectors(model: model, dims: dims, vectors: vectors);
+  }
+
   /// 外で計算されたベクトルから(Central が配るもの)。次元が合わない行は捨てる。
   factory EmojiEmbeddingIndex.fromVectors({required String model, required int dims, required Map<String, List<double>> vectors}) {
     final names = [for (final e in vectors.entries) if (e.value.length == dims) e.key];
@@ -176,3 +226,26 @@ List<EmojiInfo> filterAndRankEmojis(List<EmojiInfo> list, String query, Map<Stri
 /// 1 行の点数(索引が無い / 次元が違えば空)。
 Map<String, double> emojiScoresOf(EmojiEmbeddingIndex? index, List<double>? queryVector) => index == null || queryVector == null ? const {} : index.scores(queryVector);
 
+/// 絵の点数を、部分一致のうしろに足せる点数へ写すときの下限(= [filterAndRankEmojis] のしきい値)。
+const imageScoreFloor = 0.28;
+
+/// 文と絵のコサイン (D-293) → 並びを保った点数。上位 [top] 件のうち、いちばん上との差が [window] 以内で、[minCosine] 以上のものだけ。
+/// (SigLIP の文と絵のコサインは小さく出るので、決まったしきい値ではなく、**その検索の中での上位**を取る。)
+Map<String, double> rescaleImageScores(Map<String, double> cosines, {int top = 24, double window = 0.05, double minCosine = 0.04}) {
+  if (cosines.isEmpty) return const {};
+  final ranked = cosines.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+  final best = ranked.first.value;
+  if (best < minCosine) return const {};
+  return {
+    for (final e in ranked.take(top))
+      if (e.value >= minCosine && best - e.value <= window) e.key: imageScoreFloor + (e.value - (best - window)),
+  };
+}
+
+/// 文の索引の点数と、絵の索引の点数を合わせる(同じ絵文字は、高いほう)。
+Map<String, double> mergeEmojiScores(Map<String, double> byText, Map<String, double> byImage) {
+  if (byImage.isEmpty) return byText;
+  final out = {...byText};
+  byImage.forEach((k, v) => out[k] = (out[k] ?? -1) > v ? out[k]! : v);
+  return out;
+}

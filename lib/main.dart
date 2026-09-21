@@ -19,7 +19,11 @@ Future<void> main() async {
   if (kDebugMode && _probeHost.isNotEmpty) await _probe(_probeHost);
   runApp(ProviderScope(
     // RAi の端末内モデル (D-181): 実機では flutter_gemma(LiteRT-LM)。テストは既定(使えない骨格)か偽物。
-    overrides: [raiLlmProvider.overrideWith((_) => DeviceRaiLlm()), deviceRamReaderProvider.overrideWithValue(deviceRamReader), raiEmbeddingModelProvider.overrideWith((_) => DeviceRaiEmbeddingModel())],
+    overrides: [raiLlmProvider.overrideWith((_) => DeviceRaiLlm()), deviceRamReaderProvider.overrideWithValue(deviceRamReader), raiEmbeddingModelProvider.overrideWith((_) => DeviceRaiEmbeddingModel()),
+      // 絵文字の画像検索 (D-293): SigLIP2 のテキスト側 + 画像側。
+      emojiTextModelProvider.overrideWith((_) => DeviceRaiEmbeddingModel(spec: raiSiglip2EmbeddingSpec)),
+      emojiVisionModelProvider.overrideWith((_) => DeviceRaiEmbeddingModel(spec: emojiVisionEmbeddingSpec)),
+    ],
     child: const RasqApp(),
   ));
 }

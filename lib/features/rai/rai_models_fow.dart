@@ -62,6 +62,10 @@ class RaiModelsBody extends ConsumerWidget {
       for (final m in [...raiModelSpecs.where((m) => m.id == llm.spec.id), ...raiModelSpecs.where((m) => m.id != llm.spec.id)]) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
       const RasqSectionHeader(title: '検索(リファレンスの埋め込み)', topMargin: RasqSpacing.md),
       _EmbeddingTile(ram: ram),
+      // 絵文字の画像検索 (D-293): 文と絵を同じ空間で比べるので、SigLIP2 の 2 つが揃って初めて効く。
+      if (ref.watch(emojiVisionModelProvider) is! UnavailableRaiEmbeddingModel) const RasqSectionHeader(title: '絵文字の画像検索(2 つとも要ります)', topMargin: RasqSpacing.md),
+      _EmbeddingTile(ram: ram, model: emojiTextModelProvider, status: emojiTextStatusProvider, tag: 'emojiText', readyNote: '絵文字の検索で、打った文を SigLIP2 の空間に埋め込みます', idleNote: '絵文字の絵を、意味で探せるようになります(画像側も入れてください)'),
+      _EmbeddingTile(ram: ram, model: emojiVisionModelProvider, status: emojiVisionStatusProvider, tag: 'emojiVision', readyNote: '絵文字の絵を、裏で少しずつ埋め込みます(サーバーごとに 1 回)', idleNote: '名前が意味を持たない絵文字も、絵の中身で探せるようになります'),
       const RasqSectionHeader(title: 'クラウド(フォールアップ先)', topMargin: RasqSpacing.md),
       const _ServerTile(),
       for (final m in raiCloudModelSpecs) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
@@ -154,14 +158,23 @@ class RaiModelsBody extends ConsumerWidget {
 
 /// リファレンス検索の埋め込みモデル (D-190): SigLIP2 のテキスト塔。未ダウンロードなら n-gram 代替で検索する。
 class _EmbeddingTile extends ConsumerWidget {
-  const _EmbeddingTile({required this.ram});
+  const _EmbeddingTile({required this.ram, this.model, this.status, this.tag = 'embed', this.readyNote, this.idleNote});
   final ({int? totalMb, int? availableMb})? ram;
+
+  /// どのモデルのタイルか(既定 = RAi の検索の埋め込み)。
+  final Provider<RaiEmbeddingModel>? model;
+  final StreamProvider<RaiEmbeddingStatus>? status;
+  final String tag;
+  final String? readyNote;
+  final String? idleNote;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final model = ref.watch(raiEmbeddingModelProvider);
-    final st = ref.watch(raiEmbeddingStatusProvider).value ?? model.current;
+    final model = ref.watch(this.model ?? raiEmbeddingModelProvider);
+    // 端末実行の無い環境では、絵文字の画像検索のタイルは出さない(D-293)。
+    if (this.model != null && model is UnavailableRaiEmbeddingModel) return const SizedBox.shrink();
+    final st = ref.watch(status ?? raiEmbeddingStatusProvider).value ?? model.current;
     final spec = model.spec;
     final verdict = raiMemoryVerdict(modelMb: spec.sizeMb, totalRamMb: ram?.totalMb);
     Future<void> guard(Future<void> Function() f) async {
@@ -173,7 +186,7 @@ class _EmbeddingTile extends ConsumerWidget {
     }
 
     return Container(
-      key: const ValueKey('rai.embed.tile'),
+      key: ValueKey('rai.$tag.tile'),
       margin: const EdgeInsets.only(bottom: RasqSpacing.sm),
       padding: const EdgeInsets.all(RasqSpacing.md),
       decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(RasqSizes.radiusMd), border: Border.all(color: st.ready ? RasqColors.link : scheme.outlineVariant, width: st.ready ? 2 : 1)),
@@ -184,22 +197,25 @@ class _EmbeddingTile extends ConsumerWidget {
           Expanded(child: Text(spec.label, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
         ]),
         const SizedBox(height: RasqSpacing.xs),
-        Text('onnxruntime · ${spec.fileName} · ${spec.sizeMb} MB · ${spec.dims} 次元', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
+        Text('onnxruntime · ${spec.fileName} · 約 ${spec.sizeMb} MB · ${spec.dims} 次元', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
         const SizedBox(height: RasqSpacing.xs),
         Row(children: [
           Text('メモリ: ${verdict.label}', style: RasqTypography.caption),
           const SizedBox(width: RasqSpacing.md),
-          Text(st.label, key: const ValueKey('rai.embed.phase'), style: RasqTypography.caption.copyWith(color: st.phase == RaiEmbeddingPhase.error ? RasqColors.danger : scheme.onSurfaceVariant)),
+          Text(st.label, key: ValueKey('rai.$tag.phase'), style: RasqTypography.caption.copyWith(color: st.phase == RaiEmbeddingPhase.error ? RasqColors.danger : scheme.onSurfaceVariant)),
         ]),
         if (st.phase == RaiEmbeddingPhase.downloading) Padding(padding: const EdgeInsets.only(top: RasqSpacing.xs), child: LinearProgressIndicator(value: (st.progress ?? 0) / 100)),
         const SizedBox(height: RasqSpacing.xs),
-        Text(st.ready ? '検索: ${spec.label}(意味で引く)' : '検索: n-gram 代替(語の一致で引く。ダウンロードすると言い換えにも強くなる)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        if (readyNote != null)
+          Text(st.ready ? readyNote! : (idleNote ?? ''), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
+        else
+          Text(st.ready ? '検索: ${spec.label}(意味で引く)' : '検索: n-gram 代替(語の一致で引く。ダウンロードすると言い換えにも強くなる)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: RasqSpacing.sm),
         Wrap(spacing: RasqSpacing.sm, runSpacing: RasqSpacing.xs, children: [
           if (st.phase == RaiEmbeddingPhase.notInstalled || st.phase == RaiEmbeddingPhase.error)
-            FilledButton.icon(key: const ValueKey('rai.embed.download'), onPressed: verdict == RaiRamVerdict.no ? null : () => guard(model.install), icon: const Icon(Icons.download, size: 16), label: const Text('ダウンロード'), style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
+            FilledButton.icon(key: ValueKey('rai.$tag.download'), onPressed: verdict == RaiRamVerdict.no ? null : () => guard(model.install), icon: const Icon(Icons.download, size: 16), label: const Text('ダウンロード'), style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
           if (st.ready || st.phase == RaiEmbeddingPhase.loading)
-            OutlinedButton.icon(key: const ValueKey('rai.embed.delete'), onPressed: () => guard(model.uninstall), icon: const Icon(Icons.delete_outline, size: 16), label: const Text('削除'), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
+            OutlinedButton.icon(key: ValueKey('rai.$tag.delete'), onPressed: () => guard(model.uninstall), icon: const Icon(Icons.delete_outline, size: 16), label: const Text('削除'), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12))),
         ]),
       ]),
     );
