@@ -217,6 +217,6 @@ class _ReactionGlyph extends StatelessWidget {
   final double size;
   @override
   Widget build(BuildContext context) => url != null
-      ? Image.network(url.toString(), height: size, errorBuilder: (_, _, _) => Text(reaction, style: TextStyle(fontSize: size * 0.5)))
+      ? Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, url.toString(), height: size, errorBuilder: (_, _, _) => Text(reaction, style: TextStyle(fontSize: size * 0.5)))
       : Text(reaction.startsWith(':') ? reaction : reaction, style: TextStyle(fontSize: reaction.startsWith(':') ? size * 0.45 : size * 0.85));
 }

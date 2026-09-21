@@ -117,7 +117,7 @@ class _MediaTile extends StatelessWidget {
     final hidden = item.sensitive && !revealed;
 
     Widget content = switch (item.type) {
-      MediaType.image || MediaType.gif || MediaType.video => Image.network(
+      MediaType.image || MediaType.gif || MediaType.video => Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, 
           (item.thumbnailUrl ?? item.url).toString(),
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.broken_image_outlined, color: scheme.onSurfaceVariant)),

@@ -114,7 +114,8 @@ Future<AuthFlow> Function(String host, {Uri? callback}) brokeredAuthFactory(
     try {
       res = await client.postJson('/auth/sns/$provider/begin', {
         'host': host,
-        'appCallback': ?callback?.toString(),
+        // Web 版 (D-296): 戻すアプリのリンクが無い。着地ページは「このタブを閉じて、認証を確認」と案内する (S-032)。
+        'appCallback': ?(kIsWeb ? 'web' : callback?.toString()),
       });
     } on OrgateException catch (e) {
       throw SnsApiException(e.code.copyWith(message: e.message));

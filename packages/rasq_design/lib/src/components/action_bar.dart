@@ -240,5 +240,5 @@ Widget rasqIconImage(Uri url, {required double size, required IconData fallback}
   if (url.scheme == 'file') {
     return ClipRRect(borderRadius: BorderRadius.circular(size / 4), child: Image.file(File(url.toFilePath()), width: size, height: size, fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(fallback, size: size)));
   }
-  return Image.network(url.toString(), width: size, height: size, errorBuilder: (_, _, _) => Icon(fallback, size: size));
+  return Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, url.toString(), width: size, height: size, errorBuilder: (_, _, _) => Icon(fallback, size: size));
 }

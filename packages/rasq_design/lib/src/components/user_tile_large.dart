@@ -78,7 +78,7 @@ class RasqUserTileLarge extends StatelessWidget {
                   child: Semantics(
                     button: onBannerTap != null,
                     label: 'バナー画像',
-                    child: Image.network(profile.bannerUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
+                    child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, profile.bannerUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
                   ),
                 ),
         ),

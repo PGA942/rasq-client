@@ -123,7 +123,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               width: double.infinity,
               child: _banner != null
                   ? Image.memory(_banner!.bytes, fit: BoxFit.cover)
-                  : (p.bannerUrl == null ? ColoredBox(color: scheme.surfaceContainerHighest) : Image.network(p.bannerUrl.toString(), fit: BoxFit.cover)),
+                  : (p.bannerUrl == null ? ColoredBox(color: scheme.surfaceContainerHighest) : Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, p.bannerUrl.toString(), fit: BoxFit.cover)),
             ),
             Positioned(right: 8, bottom: 8, child: _PickButton(onTap: () => _pick(true))),
           ]),

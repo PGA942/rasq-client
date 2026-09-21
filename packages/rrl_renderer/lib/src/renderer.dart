@@ -143,7 +143,7 @@ class _NodeWidget extends StatelessWidget {
         }
         final src = rrlUri(raw);
         if (src == null) return const _ErrorBox('Image without src');
-        return Image.network(src.toString(), width: width, height: height, fit: width == null && height == null ? BoxFit.cover : BoxFit.contain, errorBuilder: (_, _, _) => const _ErrorBox('image'));
+        return Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, src.toString(), width: width, height: height, fit: width == null && height == null ? BoxFit.cover : BoxFit.contain, errorBuilder: (_, _, _) => const _ErrorBox('image'));
       case 'Row':
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: _children(scope));
       case 'Column':

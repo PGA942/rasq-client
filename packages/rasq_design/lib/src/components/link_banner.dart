@@ -35,7 +35,7 @@ class RasqLinkBanner extends StatelessWidget {
                 SizedBox(
                   width: 88,
                   height: 88,
-                  child: Image.network(imageUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.link, color: scheme.onSurfaceVariant))),
+                  child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, imageUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.link, color: scheme.onSurfaceVariant))),
                 )
               else
                 SizedBox(width: 56, height: 88, child: Icon(Icons.link, color: scheme.onSurfaceVariant)),

@@ -48,7 +48,7 @@ class RasqSnsPill extends StatelessWidget {
                 ? dot
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(dotSize * 0.25),
-                    child: Image.network(
+                    child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, 
                       url.toString(),
                       width: dotSize,
                       height: dotSize,

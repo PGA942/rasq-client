@@ -149,7 +149,7 @@ class _Header extends StatelessWidget {
         SizedBox(
           height: 120,
           width: double.infinity,
-          child: p.bannerUrl == null ? ColoredBox(color: scheme.surfaceContainerHighest) : Image.network(p.bannerUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
+          child: p.bannerUrl == null ? ColoredBox(color: scheme.surfaceContainerHighest) : Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, p.bannerUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
         ),
         Positioned(
           left: RasqSpacing.page,
@@ -238,7 +238,7 @@ class RasqSnsTileChip extends StatelessWidget {
               Text(tile.label, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(width: 8),
               if (tile.serverIconUrl != null)
-                ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(tile.serverIconUrl.toString(), width: 18, height: 18, fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.dns_outlined, size: 16, color: scheme.onSurfaceVariant)))
+                ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, tile.serverIconUrl.toString(), width: 18, height: 18, fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.dns_outlined, size: 16, color: scheme.onSurfaceVariant)))
               else
                 Icon(Icons.dns_outlined, size: 16, color: scheme.onSurfaceVariant),
               const SizedBox(width: 4),
@@ -369,7 +369,7 @@ class _MediaTab extends ConsumerWidget {
         final m = cell.post.images[cell.index];
         final Widget face = switch (m.type) {
           _ when m.sensitive => Container(color: scheme.surfaceContainerHighest, child: Icon(Icons.visibility_off_outlined, color: scheme.onSurfaceVariant)),
-          'image' => Image.network(m.url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+          'image' => Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, m.url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink()),
           'video' => Container(color: Colors.black, child: const Icon(Icons.play_circle_outline, color: Colors.white, size: 36)),
           _ => Container(color: scheme.surfaceContainerHighest, child: Icon(Icons.audiotrack, color: scheme.onSurfaceVariant)),
         };
@@ -406,7 +406,7 @@ class _PluginsTab extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             child: g.iconUrl == null
                 ? Container(width: 40, height: 40, color: scheme.surfaceContainerHighest, child: const Icon(Icons.extension_outlined, size: 20))
-                : Image.network(g.iconUrl.toString(), width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (_, _, _) => Container(width: 40, height: 40, color: scheme.surfaceContainerHighest)),
+                : Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, g.iconUrl.toString(), width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (_, _, _) => Container(width: 40, height: 40, color: scheme.surfaceContainerHighest)),
           ),
           title: g.name,
           subtitle: g.rating == null ? g.summary : '${'★' * g.rating!.clamp(0, 5)} ${g.reviewTitle.isEmpty ? g.reviewBody : g.reviewTitle}',

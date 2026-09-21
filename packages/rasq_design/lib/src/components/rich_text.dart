@@ -154,7 +154,7 @@ class _RasqRichTextState extends State<RasqRichText> {
                 ),
           RasqInlineImageSpan() => WidgetSpan(
               alignment: PlaceholderAlignment.middle,
-              child: Image.network(s.url.toString(), height: s.height, semanticLabel: s.alt, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+              child: Image.network(webHtmlElementStrategy: WebHtmlElementStrategy.fallback, s.url.toString(), height: s.height, semanticLabel: s.alt, errorBuilder: (_, _, _) => const SizedBox.shrink()),
             ),
           RasqLinkSpan() => TextSpan(text: s.text, style: linkStyle, recognizer: _tap(s.onTap)),
           RasqMentionSpan() => TextSpan(text: '@${s.handle}', style: linkStyle, recognizer: _tap(s.onTap)),
