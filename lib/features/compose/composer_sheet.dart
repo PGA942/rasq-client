@@ -29,6 +29,7 @@ import 'compose_providers.dart';
 export 'compose_providers.dart' show ComposerInitialFile;
 import 'account_select.dart';
 import '../home/account_affinity.dart';
+import 'kana_romaji.dart';
 import 'compose_target.dart';
 import 'media_file_pick.dart';
 import 'drafts_fow.dart';
@@ -1188,23 +1189,30 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// (全 SNS プラグイン共通の `searchUsers`)。別のサーバーの人は `@handle@host` で入れる。
   Future<void> _searchMentions(String q) async {
     final seq = ++_mentionSeq;
-    var hits = <({String insert, String name, Uri? avatarUrl})>[];
-    try {
-      if (_rasqTarget) {
-        final api = ref.read(rasqAccountPageApiProvider);
-        hits = [for (final a in await api?.searchAccounts(q) ?? const <RasqPostAuthor>[]) (insert: '@${a.handle}', name: a.label, avatarUrl: a.avatarUrl)];
-      } else {
-        final session = _session;
-        final me = session?.account;
-        final page = await session?.searchUsers(q, limit: 8);
-        hits = [
-          for (final u in page?.items ?? const <UserSummary>[])
-            (insert: u.account.instance == me?.instance ? '@${u.handle}' : '@${u.handle}@${u.account.instance}', name: u.displayName, avatarUrl: u.avatarUrl),
-        ];
+    final hits = <({String insert, String name, Uri? avatarUrl})>[];
+    // 打ったままの文字(表示名に当たる)と、かなをローマ字に読み替えたもの(ハンドルに当たる。D-289)の両方で引いて、合わせる。
+    final romaji = kanaToRomaji(q);
+    for (final term in [q, if (romaji != null && romaji != q.toLowerCase()) romaji]) {
+      try {
+        if (_rasqTarget) {
+          final api = ref.read(rasqAccountPageApiProvider);
+          hits.addAll([for (final a in await api?.searchAccounts(term) ?? const <RasqPostAuthor>[]) (insert: '@${a.handle}', name: a.label, avatarUrl: a.avatarUrl)]);
+        } else {
+          final session = _session;
+          final me = session?.account;
+          final page = await session?.searchUsers(term, limit: 8);
+          hits.addAll([
+            for (final u in page?.items ?? const <UserSummary>[])
+              (insert: u.account.instance == me?.instance ? '@${u.handle}' : '@${u.handle}@${u.account.instance}', name: u.displayName, avatarUrl: u.avatarUrl),
+          ]);
+        }
+      } catch (_) {
+        // 検索できない SNS / 通信の失敗: 候補を出さないだけ。
       }
-    } catch (_) {
-      // 検索できない SNS / 通信の失敗: 候補を出さないだけ。
     }
+    // 同じ人は 1 回。
+    final seen = <String>{};
+    hits.retainWhere((h) => seen.add(h.insert));
     if (!mounted || seq != _mentionSeq) return;
     setState(() => _mentionHits = hits);
   }
@@ -1770,15 +1778,15 @@ class _AttachmentTile extends StatelessWidget {
 /// キャンセル時のポップアップの選択 (D-177)。
 enum _CloseChoice { overwrite, saveNew, discard }
 
-/// [caret] の直前で打っている途中のメンション (D-285): `(@ の位置, @ のあとの文字)`。`@` の前は行頭か空白など(メールアドレスの途中は拾わない)。
-/// `@user@host` の host を打っている途中も、まとめて 1 つ(検索には user の部分を使う)。
+/// [caret] の直前で打っている途中のメンション (D-285 → D-289): `(@ の位置, @ のあとの文字)`。
+/// - `@` のあとは、**空白と `@` 以外なら何でも**(日本語の表示名で探せるように。以前は英数字だけで、日本語を打つと反応しなかった)。
+/// - `@` の前は、行頭 / 空白 / 記号 / **日本語の文字**(日本語は語の間に空白を入れない)。英数字や `.` の直後は拾わない(メールアドレスの途中)。
+/// - `@user@host` の host を打っている途中も、まとめて 1 つ(検索には user の部分を使う)。
 (int, String)? mentionQueryAt(String text, int caret) {
   if (caret < 0 || caret > text.length) return null;
-  final m = RegExp(r'(?:^|[\s(「、。])@([A-Za-z0-9_.-]*)(?:@[A-Za-z0-9_.-]*)?$').firstMatch(text.substring(0, caret));
+  final m = RegExp(r'(?:^|[^A-Za-z0-9_.@])@([^\s@]*)(?:@[A-Za-z0-9_.-]*)?$').firstMatch(text.substring(0, caret));
   if (m == null) return null;
-  final at = text.lastIndexOf('@${m.group(1)}', caret);
-  final start = text.substring(0, caret).indexOf('@', m.start);
-  return (start < 0 ? at : start, m.group(1)!);
+  return (text.substring(0, caret).indexOf('@', m.start), m.group(1)!);
 }
 
 /// 連動の計画の中で、RASQ アカウントを表す仮のセッションの pluginId (D-286)。
