@@ -81,7 +81,6 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('セキュリティ', subtitle: 'SNS の権限とアクセストークン', route: '/settings/dsl/sns.security'),
   ]),
   'about': SettingsSection('RASQについて', [
-    SettingsRow('アカウント', subtitle: 'RASQ アカウント', route: settingsActionRasqAccount),
     SettingsRow('RASQ サーバー', subtitle: 'プラグインストア / RASQ アカウント / ログインの接続先', route: '/settings/server'),
     SettingsRow('ヘルプ', route: '/settings/dsl/about.help'),
     SettingsRow('購読状況', route: '/settings/dsl/about.subscription'),
@@ -99,4 +98,3 @@ const settingsSections = <String, SettingsSection>{
 const settingsActionTrendGenres = 'action:trend.genres';
 const settingsActionTrendTendency = 'action:trend.tendency';
 const settingsActionRelationalTuning = 'action:relational.tuning';
-const settingsActionRasqAccount = 'action:rasq.account';

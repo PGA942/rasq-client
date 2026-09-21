@@ -112,17 +112,21 @@ UserSummary summaryOfRecord(WidgetRef ref, RasqAccountRecord r, {required bool i
   );
 }
 
+/// アカウント FOW で、操作を開いているアカウント (D-291)。null = どれも畳んでいる。
+class RasqAccountFowExpanded extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void toggle(String id) => state = state == id ? null : id;
+}
+
+final rasqAccountFowExpandedProvider = NotifierProvider<RasqAccountFowExpanded, String?>(RasqAccountFowExpanded.new);
+
 class RasqAccountPanel extends ConsumerWidget {
   const RasqAccountPanel({super.key, required this.onDone, this.onNavigate});
   final VoidCallback onDone;
 
   /// 別の画面へ移るとき(FOW を閉じるのに加えて呼ぶ)。
   final VoidCallback? onNavigate;
-
-  Rect _rectOf(BuildContext context) {
-    final box = context.findRenderObject() as RenderBox?;
-    return box == null ? Rect.zero : box.localToGlobal(Offset.zero) & box.size;
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -131,6 +135,7 @@ class RasqAccountPanel extends ConsumerWidget {
     final manager = ref.watch(overlayManagerProvider);
     final ledger = ref.watch(rasqAccountsProvider).value ?? const RasqAccountsState();
     final current = ledger.current;
+    final expandedId = ref.watch(rasqAccountFowExpandedProvider);
     final currentSns = ref.watch(currentAccountProvider);
     final unread = ref.watch(unreadNotificationCountProvider);
     final centralOk = ref.watch(centralConfiguredProvider);
@@ -145,9 +150,8 @@ class RasqAccountPanel extends ConsumerWidget {
       onNavigate?.call();
     }
 
-    Future<void> more(RasqAccountRecord r, Rect anchor) async {
-      final pick = await manager.showDropdown<String>(id: 'rasq.account.more', anchor: anchor, dense: true, items: [
-        // ↓ のメニュー (D-272): これまで FOW の下にあった「SNS アカウントを追加」と、設定への入口もここに。
+    // ↓ で開く操作の一覧 (D-272 → D-291): ドロップダウンをやめて、**タイルの下に折りたたみで出す**(もう一度 ↓ で畳む)。
+    List<RasqDropdownItem<String>> itemsOf(RasqAccountRecord r) => [
         const RasqDropdownItem('SNS アカウントを追加', 'addSns'),
         const RasqDropdownItem('設定', 'allSettings'),
         if (r.isCentral) const RasqDropdownItem('アカウントページ', 'page'),
@@ -157,7 +161,9 @@ class RasqAccountPanel extends ConsumerWidget {
         if (r.isCentral) const RasqDropdownItem('セキュリティ(メール / パスワード / 端末)', 'security'),
         RasqDropdownItem('ログアウト', 'logout', destructive: true, enabled: r.isCentral),
         if (r.isCentral) const RasqDropdownItem('RASQ アカウントを削除', 'delete', destructive: true),
-      ]);
+      ];
+
+    Future<void> act(RasqAccountRecord r, String pick) async {
       if (!context.mounted) return;
       switch (pick) {
         case 'addSns':
@@ -292,13 +298,12 @@ class RasqAccountPanel extends ConsumerWidget {
                     width: 24,
                     child: Center(child: RasqBadge(count: badgeCount, dot: false)),
                   ),
-                  trailing: Builder(
-                    builder: (buttonContext) => RasqIconButton(
-                      icon: Icons.keyboard_arrow_down,
-                      size: 22,
-                      tooltip: 'アカウントの操作',
-                      onPressed: () => more(r, _rectOf(buttonContext)),
-                    ),
+                  trailing: RasqIconButton(
+                    key: ValueKey('rasq.account.toggle.${r.id}'),
+                    icon: expandedId == r.id ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 22,
+                    tooltip: expandedId == r.id ? '操作を畳む' : 'アカウントの操作',
+                    onPressed: () => ref.read(rasqAccountFowExpandedProvider.notifier).toggle(r.id),
                   ),
                   onTap: () async {
                     await ref.read(rasqAccountsProvider.notifier).select(r.id);
@@ -307,6 +312,26 @@ class RasqAccountPanel extends ConsumerWidget {
                 ),
               );
             }),
+            // 折りたたみの中身 (D-291): そのアカウントの操作。開いているのは 1 つだけ。
+            if (expandedId == r.id)
+              Container(
+                key: ValueKey('rasq.account.actions.${r.id}'),
+                color: scheme.surfaceContainerLow,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  for (final item in itemsOf(r))
+                    InkWell(
+                      key: ValueKey('rasq.account.action.${r.id}.${item.value}'),
+                      onTap: item.enabled ? () => act(r, item.value) : null,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(RasqSpacing.page + 40, 10, RasqSpacing.page, 10),
+                        child: Text(
+                          item.label,
+                          style: RasqTypography.bodySmall.copyWith(color: !item.enabled ? scheme.onSurfaceVariant.withValues(alpha: 0.5) : (item.destructive ? tokens.danger : scheme.onSurface)),
+                        ),
+                      ),
+                    ),
+                ]),
+              ),
             const Divider(height: 1),
           ],
         ]),
@@ -428,5 +453,33 @@ Future<void> openRasqProfileSheet(BuildContext context, WidgetRef ref, {required
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('プロフィールを保存しました')));
   } on OrgateException catch (e) {
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存できませんでした: ${e.message}')));
+  }
+}
+
+/// RASQ アカウントのタイル (D-291): サイドバーのバンドルタイルと同じ見た目(大きいアイコン / 表示名 / @handle)。
+/// 設定の「RASQについて」の最上部に置く。押すと、アカウントの FOW。
+class RasqAccountTile extends ConsumerWidget {
+  const RasqAccountTile({super.key});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final rasq = ref.watch(rasqAccountProvider);
+    return InkWell(
+      onTap: () => openRasqAccountFow(ref),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.md),
+        child: Row(children: [
+          RasqAvatar(imageUrl: rasq.avatarUrl, size: RasqSizes.avatarLg, fallbackLabel: rasq.displayName),
+          const SizedBox(width: RasqSpacing.md),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(rasq.displayName, style: RasqTypography.title, overflow: TextOverflow.ellipsis),
+              Text('@${rasq.account.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
+            ]),
+          ),
+          RasqIconButton(icon: Icons.more_horiz, tooltip: 'RASQ アカウント', onPressed: () => openRasqAccountFow(ref)),
+        ]),
+      ),
+    );
   }
 }

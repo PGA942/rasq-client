@@ -9,7 +9,6 @@ import '../app/navigation.dart';
 import '../app/providers.dart';
 import '../app/router.dart';
 import '../backend/rasq_account.dart';
-import '../features/profile/rasq_page_history.dart';
 import 'rasq_account_fow.dart';
 
 /// アカウントリストの開閉 (D-087: バンドルタイルの ^ ボタン)。アプリ起動中は
@@ -55,7 +54,8 @@ class RasqSidebar extends ConsumerWidget {
     final sessions = ref.watch(sessionsProvider).value ?? const SessionsState();
     final bundle = sessions.bundleView;
     final expanded = ref.watch(sidebarAccountsExpandedProvider);
-    final history = ref.watch(rasqPageHistoryProvider);
+    final ledger = ref.watch(rasqAccountsProvider).value ?? const RasqAccountsState();
+    final others = [for (final r in ledger.accounts) if (r.id != ledger.current?.id) r];
     final width = (MediaQuery.sizeOf(context).width * 0.78).clamp(240.0, 340.0);
     void go(String route) {
       handle.close();
@@ -74,23 +74,24 @@ class RasqSidebar extends ConsumerWidget {
               child: Row(children: [
                 const RasqLogo(height: 22),
                 const Spacer(),
-                // … の横 = 開いた RASQ アカウントページの履歴 (D-272。新しい順に 3 つ、タップでそのページへ)。まだ無ければ自分のアイコン。
-                if (history.isEmpty)
-                  RasqAvatar(imageUrl: rasq.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: rasq.displayName)
-                else
-                  for (final v in history.take(3))
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Tooltip(
-                        message: '@${v.handle}',
+                // … の左横 (D-272 → D-291): **いま使っていない RASQ アカウント**(ゲスト = 「この端末のみ」のバンドルも含む)を、2 つまで。
+                // 押すと、そのアカウントに切り替える(開いたアカウントページの履歴を出すのは、やめた)。
+                for (final r in others.take(2))
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Builder(builder: (context) {
+                      final u = summaryOfRecord(ref, r, isCurrent: false);
+                      return Tooltip(
+                        message: '${u.displayName} に切り替える',
                         child: InkWell(
-                          key: ValueKey('sidebar.history.${v.handle}'),
+                          key: ValueKey('sidebar.otherAccount.${r.id}'),
                           customBorder: const CircleBorder(),
-                          onTap: () => go(Routes.rasqAccount(v.handle)),
-                          child: RasqAvatar(imageUrl: v.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: v.displayName.isEmpty ? v.handle : v.displayName),
+                          onTap: () => ref.read(rasqAccountsProvider.notifier).select(r.id),
+                          child: RasqAvatar(imageUrl: u.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: u.displayName),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
+                  ),
                 // … = RASQ アカウントの選択/編集 FOW (D-138。D-087 のドロップ
                 // ダウンは FOW 内の「SNS アカウントを追加」「アカウント設定」へ)。
                 RasqIconButton(
