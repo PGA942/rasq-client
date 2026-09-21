@@ -27,6 +27,9 @@ class SettingsSectionScreen extends ConsumerWidget {
     return Scaffold(
       appBar: RasqPageHeader(title: section.title, onMore: () {}),
       body: ListView(children: [
+        // 「RASQについて」の最上部 (D-291): RASQ アカウントのタイル(サイドバーのバンドルタイルと同じ見た目)。
+        // 押すとアカウントの FOW。これまでの「アカウント >」の行は、これに置き換えた。
+        if (sectionId == 'about') const RasqAccountTile(key: ValueKey('settings.about.account')),
         for (final r in section.rows)
           if (sectionId == 'appearance' && r.title == 'フォントやカラースキーム')
             RasqValueListTile(
@@ -74,8 +77,6 @@ class SettingsSectionScreen extends ConsumerWidget {
         openTendencyFow(context, ref);
       case settingsActionRelationalTuning:
         openRelationalTuning(ref);
-      case settingsActionRasqAccount:
-        openRasqAccountFow(ref);
       case null:
         _placeholder(manager, r.title);
       default:

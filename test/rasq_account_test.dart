@@ -259,6 +259,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.descendant(of: centralRow, matching: find.byTooltip('アカウントの操作')));
     await tester.pumpAndSettle();
+    // ↓ の操作は、タイルの下に折りたたみで出る (D-291)。一覧の中なので、画面内に送ってから押す。
+    await tester.ensureVisible(find.text('RASQ アカウントを削除'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('RASQ アカウントを削除'));
     await tester.pumpAndSettle();
     expect(find.textContaining('学習へのデータ提供に同意していた場合は'), findsOneWidget);
@@ -397,13 +400,17 @@ void main() {
     }
 
     // プロフィール編集(ローカル): 表示名だけ変えられる → 顔が変わる。
+    // ↓ の操作は、タイルの下に折りたたみで出る (D-291)。一覧の中なので、画面内に送ってから押す。
+    await tester.ensureVisible(find.text('プロフィール編集'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('プロフィール編集'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'tester').first, 'わたし');
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
     expect(container.read(rasqAccountProvider).displayName, 'わたし');
-    expect(find.descendant(of: find.byType(RasqUserRow), matching: find.text('わたし')), findsOneWidget);
+    // 顔(表示名)が変わる。操作の折りたたみで一覧が送られているので、画面の外も含めて探す。
+    expect(find.text('わたし', skipOffstage: false), findsWidgets);
   });
 
   testWidgets('初回オンボーディング: 新規端末は案内 → スキップで「この端末のみ」→ SNS ログインへ', (tester) async {
