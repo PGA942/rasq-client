@@ -42,7 +42,7 @@ import '../store/sticker_packs.dart';
 /// キュー = ストアでインストール(購入)した署名済みアセットパックの絵でのリアクション。付いているキューは、絵 + 件数のチップで出る
 /// (絵はサーバーが配るので、そのパックを入れていなくても見える。チップを押すと、同じ絵を自分も付ける / 外す)。
 class RasqPostTileView extends ConsumerWidget {
-  const RasqPostTileView({super.key, required this.post, required this.onChanged, this.onOpen, this.focused = false});
+  const RasqPostTileView({super.key, required this.post, required this.onChanged, this.onOpen, this.focused = false, this.onReply});
   final RasqAccountPost post;
 
   /// 投稿が変わった / 消えた(呼び出し側が取り直す)。
@@ -53,6 +53,9 @@ class RasqPostTileView extends ConsumerWidget {
 
   /// スレッド画面の主役(本文を大きく)。
   final bool focused;
+
+  /// 返信ボタンを、呼び出し側で受ける(投稿の詳細: 常駐の返信コンポーザーを呼び戻す。D-292)。null なら、返信のコンポーザーを開く。
+  final VoidCallback? onReply;
 
   void _toast(BuildContext context, String m) {
     ScaffoldMessenger.of(context)
@@ -113,25 +116,12 @@ class RasqPostTileView extends ConsumerWidget {
     }
   }
 
+  /// 返信 (D-292): SNS の返信と同じコンポーザーで(投稿先は RASQ に固定。文字だけ、500 文字まで)。以前は、専用の簡易シートだった。
   Future<void> _reply(BuildContext context, WidgetRef ref) async {
     if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインすると返信できます');
-    final body = TextEditingController();
-    final ok = await ref.read(overlayManagerProvider).showBottomSheet<bool>(
-          id: 'rasq.post.reply',
-          title: '@${post.author?.handle ?? ''} に返信',
-          confirmText: '返信',
-          builder: (ctx) => Padding(
-            padding: const EdgeInsets.all(RasqSpacing.page),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              RasqInput(key: const ValueKey('rasqReply.body'), controller: body, hintText: '返信を書く(文字だけ、500 文字まで)', maxLines: 4, autofocus: true),
-              const SizedBox(height: RasqSpacing.xs),
-              Text('返信は RASQ の公開ページに出ます。', style: RasqTypography.caption.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
-            ]),
-          ),
-        );
-    final text = body.text.trim();
-    if (ok != true || text.isEmpty || !context.mounted) return;
-    await _run(context, ref, (api) => api.reply(post.id, text));
+    if (onReply != null) return onReply!();
+    final sent = await showComposer(ref, ComposeReply(post.toPost(central: ref.read(centralBaseUrlProvider))), column: fowColumnOf(context));
+    if (sent != null) onChanged();
   }
 
   /// メディア: SNS の投稿と同じグリッド。タップで全画面表示、動画の再生ボタンで動画の FOW (D-276)。
