@@ -174,6 +174,81 @@ const rasqPostInstance = 'rasq';
 /// RASQ の投稿を SNS の投稿の形にしたものか(SNS のアクションは効かないので、出さない)。
 bool isRasqPost(Post post) => post.account.kind == SnsKind.other && post.account.instance == rasqPostInstance;
 
+/// 固定投稿 1 件 (S-027)。`source: rasq`(ref = 投稿の id)/ `sns`(ref = `<accountKey>|<postId>`)。
+typedef RasqPin = ({String source, String ref});
+
+/// 固定できる数。
+const rasqMaxPins = 5;
+
+/// アカウントページに出る、SNS アカウントの投稿 1 件 (S-027)。中身は `rasq.post/1`(SNS プラグインとの境界と同じワイヤ形)。
+@immutable
+class RasqSnsPost {
+  const RasqSnsPost({required this.accountKey, required this.kind, required this.instance, required this.wire, this.createdAt});
+  final String accountKey;
+  final String kind;
+  final String instance;
+  final Map<String, Object?> wire;
+  final DateTime? createdAt;
+  String get postId => '${wire['id']}';
+  RasqPin get pin => (source: 'sns', ref: '$accountKey|$postId');
+
+  /// SNS の投稿の形に。[viewer] = 見ている人の、**同じサーバーのアカウント**(あれば、その人のセッションでリアクションなどができる)。
+  /// 無ければ、投稿した SNS アカウント自身を入れる(読むだけ)。
+  Post toPost({AccountId? viewer}) => SnsWire.postFrom(wire,
+      account: viewer ?? AccountId(kind: SnsKind.values.asNameMap()[kind] ?? SnsKind.other, instance: instance, handle: accountKey.split(':').last));
+
+  factory RasqSnsPost.fromJson(Map<String, Object?> j) => RasqSnsPost(
+        accountKey: '${j['accountKey']}',
+        kind: '${j['kind']}',
+        instance: '${j['instance']}',
+        wire: (j['post'] as Map).cast<String, Object?>(),
+        createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
+      );
+}
+
+/// SNS のトークンを預けている状態 (S-027)。
+@immutable
+class RasqVaultStatus {
+  const RasqVaultStatus({required this.hasToken, this.postCount = 0, this.lastFetchAt, this.lastError});
+  final bool hasToken;
+  final int postCount;
+  final DateTime? lastFetchAt;
+  final String? lastError;
+  factory RasqVaultStatus.fromJson(Map<String, Object?> j) => RasqVaultStatus(
+        hasToken: j['hasToken'] == true,
+        postCount: (j['postCount'] as num?)?.toInt() ?? 0,
+        lastFetchAt: DateTime.tryParse(j['lastFetchAt'] as String? ?? ''),
+        lastError: j['lastError'] as String?,
+      );
+}
+
+/// 投稿タブの並び (S-027): 固定(固定した順)→ 残りを新しい順(RASQ の投稿と SNS の投稿を混ぜる)。
+/// 戻りの各要素は、`rasq` か `sns` のどちらか一方だけが入る。
+List<({RasqAccountPost? rasq, RasqSnsPost? sns, bool pinned})> orderAccountPosts(RasqPostList list) {
+  final pinnedRasq = {for (final p in list.pins) if (p.source == 'rasq') p.ref};
+  final pinnedSns = {for (final p in list.pins) if (p.source == 'sns') p.ref};
+  final out = <({RasqAccountPost? rasq, RasqSnsPost? sns, bool pinned})>[];
+  for (final pin in list.pins) {
+    if (pin.source == 'rasq') {
+      // リブロードとして出ている行ではなく、投稿そのもの。
+      final p = list.posts.where((x) => x.id == pin.ref && x.rebroadedBy == null).firstOrNull;
+      if (p != null) out.add((rasq: p, sns: null, pinned: true));
+    } else {
+      final p = list.snsPosts.where((x) => x.pin.ref == pin.ref).firstOrNull;
+      if (p != null) out.add((rasq: null, sns: p, pinned: true));
+    }
+  }
+  final rest = <({RasqAccountPost? rasq, RasqSnsPost? sns, bool pinned})>[
+    for (final p in list.posts)
+      if (!(pinnedRasq.contains(p.id) && p.rebroadedBy == null)) (rasq: p, sns: null, pinned: false),
+    for (final p in list.snsPosts)
+      if (!pinnedSns.contains(p.pin.ref)) (rasq: null, sns: p, pinned: false),
+  ];
+  DateTime at(({RasqAccountPost? rasq, RasqSnsPost? sns, bool pinned}) e) => e.rasq?.rebroadedAt ?? e.rasq?.createdAt ?? e.sns?.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+  rest.sort((a, b) => at(b).compareTo(at(a)));
+  return [...out, ...rest];
+}
+
 /// RASQ の通知 1 件 (S-026)。
 @immutable
 class RasqNotice {
@@ -243,6 +318,7 @@ class RasqAccountPost {
     this.queues = const [],
     this.rebroadedBy,
     this.rebroadId,
+    this.rebroadedAt,
     this.isQuote = false,
     this.quote,
     this.quoteCount = 0,
@@ -270,6 +346,9 @@ class RasqAccountPost {
 
   /// 一覧で、誰かのリブロードとして出ているとき。
   final RasqPostAuthor? rebroadedBy;
+
+  /// リブロードされた時刻(一覧での並びに使う)。
+  final DateTime? rebroadedAt;
 
   /// そのリブロード 1 回の id(取り消すときに使う。S-024)。
   final String? rebroadId;
@@ -336,6 +415,7 @@ class RasqAccountPost {
         ],
         rebroadedBy: RasqPostAuthor.fromJson(j['rebroadedBy']),
         rebroadId: j['rebroadId'] as String?,
+        rebroadedAt: DateTime.tryParse(j['rebroadedAt'] as String? ?? ''),
         isQuote: j['isQuote'] == true,
         quote: j['quote'] is Map ? RasqAccountPost.fromJson((j['quote'] as Map).cast<String, Object?>()) : null,
         quoteCount: (j['quoteCount'] as num?)?.toInt() ?? 0,
@@ -354,8 +434,14 @@ class RasqThread {
 
 @immutable
 class RasqPostList {
-  const RasqPostList({required this.posts, required this.limit, required this.source});
+  const RasqPostList({required this.posts, required this.limit, required this.source, this.snsPosts = const [], this.pins = const []});
   final List<RasqAccountPost> posts;
+
+  /// SNS アカウントの投稿 (S-027)。本人が SNS のトークンを Central に預けているぶんだけ(公開 / ホームの投稿、100 件まで)。
+  final List<RasqSnsPost> snsPosts;
+
+  /// 固定投稿 (S-027)。固定した順。
+  final List<RasqPin> pins;
 
   /// 持てる件数(第一期は 3)。
   final int limit;
@@ -457,8 +543,33 @@ class RasqAccountPageApi {
       posts: [for (final p in j['posts'] as List? ?? const []) if (p is Map) RasqAccountPost.fromJson(p.cast<String, Object?>())],
       limit: (j['limit'] as num?)?.toInt() ?? 3,
       source: j['source'] as String? ?? 'rasq',
+      snsPosts: [for (final p in j['snsPosts'] as List? ?? const []) if (p is Map && p['post'] is Map) RasqSnsPost.fromJson(p.cast<String, Object?>())],
+      pins: [for (final p in j['pins'] as List? ?? const []) if (p is Map) (source: '${p['source']}', ref: '${p['ref']}')],
     );
   }
+
+  // ── SNS の投稿をまとめて出す / 固定投稿 (S-027) ──
+  /// 預けているか / 何件持っているか。トークンそのものは返ってこない。サーバーがこの機能を閉じていれば null。
+  Future<RasqVaultStatus?> vaultStatus(String accountKey) async {
+    try {
+      return RasqVaultStatus.fromJson(await _client.getJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token'));
+    } on OrgateException catch (e) {
+      if (e.code.code == '501' || e.code.code == '404') return null;
+      rethrow;
+    }
+  }
+
+  /// SNS のアクセストークンを Central に預ける。**本人の明示の同意のあとにだけ**呼ぶ。
+  Future<RasqVaultStatus> depositToken(String accountKey, String token) async =>
+      RasqVaultStatus.fromJson(await _client.putJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token', {'token': token}));
+
+  /// 預けたトークンと、取ってきた投稿を消す。
+  Future<void> withdrawToken(String accountKey) => _client.delete('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token');
+
+  /// 固定投稿を、この並びに置き換える(5 件まで)。
+  Future<void> setPins(List<RasqPin> pins) => _client.putJson('/me/pins', {
+        'pins': [for (final p in pins) {'source': p.source, 'ref': p.ref}],
+      });
 
   /// 画像を先に上げて、id を付けて投稿する。
   /// SNS の投稿と同じ項目 (S-023): 注釈 / 公開範囲 / いいねのみ / センシティブな画像 / 投票。連合に関わるものは無い。
