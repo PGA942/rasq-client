@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
-import 'package:rasq_wasm_runtime/rasq_wasm_runtime.dart';
+import 'wasm_runtime.dart';
 
 import 'host_environment.dart';
 
