@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
@@ -283,6 +284,8 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                             selected: {l.visibility},
                             onSelectionChanged: (s) => _setSnsVisibility(l, s.first),
                           ),
+                          // 投稿もアカウントページに出す (S-027): SNS のアクセストークンを Central に預ける。同意してから。
+                          _SnsPostsSwitch(key: ValueKey('rasqProfile.snsPosts.${l.accountKey}'), accountKey: l.accountKey, onMessage: (m) => ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(SnackBar(content: Text(m)))),
                         ]),
                       ),
                   ]),
@@ -339,6 +342,103 @@ class _RoundButton extends StatelessWidget {
         shape: CircleBorder(side: BorderSide(color: scheme.outlineVariant)),
         child: InkWell(customBorder: const CircleBorder(), onTap: onTap, child: Padding(padding: const EdgeInsets.all(4), child: Icon(icon, size: 18))),
       ),
+    );
+  }
+}
+
+/// 「この SNS アカウントの投稿も、アカウントページに出す」(S-027)。
+///
+/// 入れると、**その SNS のアクセストークンを RASQ Central に預ける**ことになる(Central が、本人の公開の投稿を取りに行くため)。
+/// 重い同意なので、何が起きるかを書いた確認を必ず挟む。切ると、預けたトークンと取ってきた投稿を Central から消す。
+class _SnsPostsSwitch extends ConsumerStatefulWidget {
+  const _SnsPostsSwitch({super.key, required this.accountKey, required this.onMessage});
+  final String accountKey;
+  final void Function(String) onMessage;
+  @override
+  ConsumerState<_SnsPostsSwitch> createState() => _SnsPostsSwitchState();
+}
+
+class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
+  RasqVaultStatus? _status;
+  bool _loaded = false;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final st = await ref.read(rasqAccountPageApiProvider)?.vaultStatus(widget.accountKey);
+      if (mounted) {
+        setState(() {
+          _status = st;
+          _loaded = true;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loaded = true);
+    }
+  }
+
+  Future<void> _set(bool on) async {
+    final api = ref.read(rasqAccountPageApiProvider);
+    if (api == null || _busy) return;
+    if (!on) {
+      setState(() => _busy = true);
+      try {
+        await api.withdrawToken(widget.accountKey);
+        if (mounted) setState(() => _status = const RasqVaultStatus(hasToken: false));
+        widget.onMessage('預けたトークンと、取ってきた投稿を消しました');
+      } on OrgateException catch (e) {
+        widget.onMessage('消せませんでした: ${e.message}');
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+      return;
+    }
+    // このアプリが持っている、その SNS アカウントのセッション(トークン)。
+    final session = ref.read(sessionsProvider).value?.allSessions.where((s) => s.account.key == widget.accountKey).firstOrNull;
+    if (session == null || session.token.isEmpty) return widget.onMessage('この端末に、そのアカウントのログインがありません');
+    final ok = await ref.read(overlayManagerProvider).showAlert(
+          id: 'rasqProfile.snsPosts.consent',
+          title: 'アクセストークンを RASQ に預けます',
+          message: '${session.account} の投稿をアカウントページに出すために、この SNS の**アクセストークンを RASQ Central に預けます**。\n\n'
+              '・Central は、あなたの**公開 / ホームの投稿を読む**ためだけに使います(投稿・フォローなどの操作はしません)。\n'
+              '・フォロワー限定 / 指名 / ローカルのみの投稿は、保存しません。\n'
+              '・トークンは暗号化して保存し、アプリにも他の人にも返しません。\n'
+              '・このスイッチを切ると、預けたトークンと取ってきた投稿は、すぐに消えます。\n\n'
+              'トークンは、そのアカウントを操作できる鍵です。心配なときは、預けたあとでも SNS 側の設定からそのトークンを無効にできます。',
+          confirmText: '同意して預ける',
+          cancelText: 'やめる',
+        );
+    if (!ok || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final st = await api.depositToken(widget.accountKey, session.token);
+      if (mounted) setState(() => _status = st);
+      widget.onMessage(st.lastError == null ? '${st.postCount} 件の投稿を取ってきました' : '預けましたが、投稿を取れませんでした(${st.lastError})');
+    } on OrgateException catch (e) {
+      widget.onMessage(e.code.code == '501' ? 'このサーバーでは、まだ使えません' : '預けられませんでした: ${e.message}');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // サーバーがこの機能を閉じている / まだ分からない間は、出さない。
+    if (!_loaded || _status == null) return const SizedBox.shrink();
+    final st = _status!;
+    return RasqSwitchListTile(
+      title: '投稿もアカウントページに出す',
+      subtitle: st.hasToken
+          ? (st.lastError != null ? '取得に失敗しています: ${st.lastError}' : '${st.postCount} 件(公開 / ホームの投稿。30 分ごとに更新)')
+          : 'SNS のアクセストークンを RASQ に預けます(入れるときに確認が出ます)',
+      value: st.hasToken,
+      onChanged: _busy ? null : _set,
     );
   }
 }

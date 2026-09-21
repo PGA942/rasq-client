@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/navigation.dart';
@@ -12,8 +13,11 @@ import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart' show fowColumnOf;
+import '../../session/session_providers.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
+import '../home/post_row.dart';
+import '../home/timeline_providers.dart';
 import 'rasq_page_history.dart';
 import 'rasq_post_tile.dart';
 
@@ -253,7 +257,7 @@ class RasqSnsTileChip extends StatelessWidget {
   }
 }
 
-class _PostsTab extends StatelessWidget {
+class _PostsTab extends ConsumerWidget {
   const _PostsTab({required this.posts, required this.isMine, required this.onChanged});
   final RasqPostList posts;
   final bool isMine;
@@ -261,19 +265,90 @@ class _PostsTab extends StatelessWidget {
   /// 投稿が変わった / 消えた(ページを取り直す)。
   final VoidCallback onChanged;
 
+  /// 固定の入り切り (S-027)。5 件まで。
+  Future<void> _togglePin(BuildContext context, WidgetRef ref, RasqPin pin) async {
+    final api = ref.read(rasqAccountPageApiProvider);
+    if (api == null) return;
+    final has = posts.pins.contains(pin);
+    final messenger = ScaffoldMessenger.of(context);
+    if (!has && posts.pins.length >= rasqMaxPins) {
+      messenger.showSnackBar(const SnackBar(content: Text('固定できるのは $rasqMaxPins 件までです')));
+      return;
+    }
+    try {
+      await api.setPins(has ? [for (final p in posts.pins) if (p != pin) p] : [pin, ...posts.pins]);
+      onChanged();
+    } on OrgateException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('固定できませんでした: ${e.message}')));
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    final items = orderAccountPosts(posts);
+    // 見ている人が、同じサーバーにアカウントを持っていれば、そのアカウントで SNS の投稿にリアクションなどができる (S-027)。
+    final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    Widget pinBar(RasqPin pin, bool pinned) => Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 6, RasqSpacing.page, 0),
+          child: Row(children: [
+            if (pinned) ...[Icon(Icons.push_pin, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text('固定された投稿', style: caption)],
+            const Spacer(),
+            if (isMine)
+              TextButton(
+                key: ValueKey('rasqPage.pin.${pin.source}.${pin.ref}'),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 24), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                onPressed: () => _togglePin(context, ref, pin),
+                child: Text(pinned ? '固定を外す' : '固定する', style: RasqTypography.caption),
+              ),
+          ]),
+        );
     return ListView(padding: const EdgeInsets.only(bottom: 96), children: [
       if (isMine)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
           child: Text('RASQ アカウントとしての投稿は、いまは ${posts.limit} 件までです(${posts.posts.where((p) => p.rebroadedBy == null).length} / ${posts.limit})。SNS アカウントの投稿をまとめて出す機能は、今後の対応です。', key: const ValueKey('rasqPage.posts.note'), style: caption),
         ),
-      if (posts.posts.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('投稿はまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
-      for (final p in posts.posts) RasqPostTileView(post: p, onChanged: onChanged, onOpen: () => context.push(Routes.rasqPost(p.id))),
+      if (items.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('投稿はまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
+      for (final e in items)
+        if (e.rasq != null) ...[
+          // 固定できるのは、自分の投稿そのもの(リブロードとして出ている行は固定しない)。
+          if (e.pinned || (isMine && e.rasq!.rebroadedBy == null && !e.rasq!.isReply)) pinBar((source: 'rasq', ref: e.rasq!.id), e.pinned),
+          RasqPostTileView(post: e.rasq!, onChanged: onChanged, onOpen: () => context.push(Routes.rasqPost(e.rasq!.id))),
+        ] else ...[
+          if (e.pinned || isMine) pinBar(e.sns!.pin, e.pinned),
+          _SnsPostRow(key: ValueKey('rasqPage.sns.${e.sns!.pin.ref}'), post: e.sns!, sessions: sessions),
+          const Divider(),
+        ],
     ]);
+  }
+}
+
+/// アカウントページに出る SNS の投稿 (S-027)。SNS の投稿と同じ行 ([PostRow]) で描く。
+/// **見ている人が、同じ種類・同じサーバーのアカウントを持っていれば**、そのアカウントのセッションでリアクション / リノートなどができる
+/// (投稿の id が、そのサーバーの中でそのまま通じるため)。持っていなければ、読むだけ(タップで、その SNS のページを開く)。
+class _SnsPostRow extends ConsumerWidget {
+  const _SnsPostRow({super.key, required this.post, required this.sessions});
+  final RasqSnsPost post;
+  final List<AccountSession> sessions;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mine = sessions.where((s) => s.account.kind.name == post.kind && s.account.instance == post.instance).firstOrNull;
+    final p = post.toPost(viewer: mine?.account);
+    final session = mine == null ? null : ref.watch(sessionForAccountProvider(mine.account.key));
+    return PostRow(
+      post: p,
+      actions: session?.actions ?? const [],
+      onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args),
+      onTap: mine != null
+          ? () => context.pushPost(p)
+          : () {
+              final url = p.url;
+              if (url != null) launchUrl(url, mode: LaunchMode.externalApplication);
+            },
+    );
   }
 }
 
