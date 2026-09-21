@@ -9,7 +9,6 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../compose/compose_providers.dart';
 import '../rai/rai_embedding_model.dart';
-import '../rai/rai_embedding_model_device.dart';
 import '../rai/rai_reference.dart' show NgramRaiEmbedder, RaiEmbedder;
 import '../rai/rai_reference_providers.dart';
 import '../settings/settings_dsl.dart';
@@ -108,14 +107,16 @@ final emojiImageEmbedderProvider = FutureProvider<EmojiImageEmbedder?>((ref) asy
   final text = ref.watch(emojiTextStatusProvider).value;
   final vision = ref.watch(emojiVisionStatusProvider).value;
   if (text == null || vision == null || !text.ready || !vision.ready) return null;
-  final model = ref.watch(emojiVisionModelProvider);
-  if (model is! DeviceRaiEmbeddingModel) return null;
-  final file = await model.installedFile();
-  if (file == null) return null;
-  final e = await OnnxEmojiImageEmbedder.load(model: file);
-  ref.onDispose(e.dispose);
-  return e;
+  final loaded = await ref.watch(emojiImageEmbedderLoaderProvider)(ref.watch(emojiVisionModelProvider));
+  if (loaded == null) return null;
+  ref.onDispose(loaded.dispose);
+  return loaded.embedder;
 });
+
+/// 入っているモデルから、絵の埋め込み器を作る口。端末では onnxruntime(`device_overrides_io.dart` が差し替える)。
+/// 既定(テスト / Web 版 D-295)は「無い」。
+typedef EmojiImageEmbedderLoader = Future<({EmojiImageEmbedder embedder, void Function() dispose})?> Function(RaiEmbeddingModel model);
+final emojiImageEmbedderLoaderProvider = Provider<EmojiImageEmbedderLoader>((_) => (_) async => null);
 
 /// 絵の索引と比べる文の埋め込み器(SigLIP2 のテキスト側)。
 final emojiImageQueryEmbedderProvider = FutureProvider<RaiEmbedder?>((ref) async {

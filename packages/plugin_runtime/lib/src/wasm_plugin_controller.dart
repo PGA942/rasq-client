@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:rasq_wasm_runtime/rasq_wasm_runtime.dart';
+import 'wasm_runtime.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart' show RrlGeometryRegistry;
 
