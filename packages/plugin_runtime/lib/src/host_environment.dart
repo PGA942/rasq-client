@@ -110,6 +110,7 @@ class RasqHostEnvironment {
     this.fowPermissions = const {'widget'},
     this.onAppFn,
     this.appFns = const {},
+    this.permissions = const {},
   }) : storage = storage ?? {};
 
   /// アプリ向けホスト関数の中継 (D-167)。null → E01。
@@ -118,6 +119,16 @@ class RasqHostEnvironment {
   /// 許可されたアプリ向けホスト関数名(スロット登録時にマニフェストの
   /// permissions / slots から決める)。範囲外は E01。
   final Set<String> appFns;
+
+  /// マニフェストが宣言した権限 (D-004)。宣言の無い権限を要する host-fn は
+  /// E01 で拒否する。既定は空集合 = 全拒否: 権限ゲートの既定値が「許可」だと、
+  /// 新しい呼び出し元が指定を忘れた時点で黙って強制が外れるため。
+  final Set<String> permissions;
+
+  /// ランタイム内でネイティブ `net.fetch` を短絡してよいか (D-023)。
+  /// `network` 権限が無ければ false。短絡された呼び出しは Dart の
+  /// ディスパッチャを通らないので、ここで止めないとゲートごと迂回される。
+  bool get nativeFetchEnabled => nativeFetch && permissions.contains(RasqPermissions.network);
 
   /// Serve `net.fetch` inside the wasm runtime (blocking rustls HTTP —
   /// mobile-capable, D-023). Takes precedence over [fetch]; the runtime
@@ -170,14 +181,20 @@ class RasqHostEnvironment {
   Object? _invoke(String fn, Map<String, Object?> args) {
     switch (fn) {
       case RasqHostFns.storageGet:
+        _requireStorage(args);
         return {'value': storage[_storageKey(args)]};
       case RasqHostFns.storageSet:
+        _requireStorage(args);
         storage[_storageKey(args)] = args['value'];
         return const <String, Object?>{};
       case RasqHostFns.storageDelete:
+        _requireStorage(args);
         storage.remove(_storageKey(args));
         return const <String, Object?>{};
       case RasqHostFns.netFetch:
+        if (!permissions.contains(RasqPermissions.network)) {
+          throw _HostFnError('E01', 'network not permitted');
+        }
         final fetcher = fetch;
         if (fetcher == null) throw _HostFnError('B01', 'network backend not available');
         final url = Uri.tryParse('${args['url']}');
@@ -275,7 +292,17 @@ class RasqHostEnvironment {
     }
   }
 
-  static String _storageKey(Map<String, Object?> args) => '${args['ns'] ?? 'safe'}:${args['key']}';
+  /// `storage.*` は名前空間ごとに別権限 (`storage.safe` / `storage.unsafe`)。
+  void _requireStorage(Map<String, Object?> args) {
+    final ns = _storageNs(args);
+    if (!permissions.contains(RasqPermissions.storageFor(ns))) {
+      throw _HostFnError('E01', 'storage.$ns not permitted');
+    }
+  }
+
+  static String _storageNs(Map<String, Object?> args) => '${args['ns'] ?? 'safe'}';
+
+  static String _storageKey(Map<String, Object?> args) => '${_storageNs(args)}:${args['key']}';
 }
 
 class _HostFnError implements Exception {

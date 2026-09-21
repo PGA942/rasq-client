@@ -135,10 +135,11 @@ class _AsyncSlotRuntime implements SlotRuntime {
 }
 
 /// wasm バイト列 → 実行中のプラグイン。テストは偽物に差し替える。
-typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns});
+typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions});
 
-final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns}) async {
-      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns);
+final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions}) async {
+      // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
+      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions);
       await c.load();
       if (c.lastError != null && c.document == null) {
         c.dispose();
@@ -296,7 +297,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final data = bytes ?? File(source).readAsBytesSync();
       final loader = ref.read(slotRuntimeLoaderProvider);
       // マニフェストを読むために一度素の権限で起動し、宣言に合わせて起動し直す。
-      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {});
+      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {});
       final m = (await runtime.invoke('plugin.manifest', const {}))['value'];
       if (m is! Map) {
         runtime.dispose();
@@ -308,7 +309,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         throw StateError('plugin.manifest.id が空です');
       }
       runtime.dispose();
-      runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns);
+      runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns, permissions: manifest.permissions.toSet());
       if (_disposed) {
         runtime.dispose(); // 読み込み中にプロバイダーが捨てられた(テストの再構築など)
         return null;

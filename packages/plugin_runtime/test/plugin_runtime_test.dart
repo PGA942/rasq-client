@@ -49,6 +49,11 @@ Widget wrap(Widget child) => MaterialApp(
       ),
     );
 
+/// サンプルプラグインが function.json で宣言する権限 (D-004)。ランタイムの
+/// ゲートはこの宣言に載っている host-fn しか通さないので、テストでも実物と
+/// 同じ宣言を通す。
+const _samplePermissions = {RasqPermissions.network, RasqPermissions.storageSafe};
+
 void main() {
   if (!wasmFile.existsSync()) {
     test('misskey-wasm-sample built', () {}, skip: 'build misskey-wasm-sample first (rust/README.md)');
@@ -69,7 +74,7 @@ void main() {
 
     test('timeline: net.fetch (fake) → treeUpdated → new snapshot pulled', () {
       final requests = <SyncFetchRequest>[];
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         requests.add(req);
         return SyncFetchResponse(status: 200, bodyText: cannedNotes);
       });
@@ -93,7 +98,7 @@ void main() {
     });
 
     test('timeline with no network backend → B01 error, tree unchanged', () {
-      final controller = WasmPluginController(wasmBytes: bytes); // env without fetch
+      final controller = WasmPluginController(wasmBytes: bytes, env: RasqHostEnvironment(permissions: _samplePermissions)); // 権限はあるが fetch 未注入
       addTearDown(controller.dispose);
       controller.load();
       final result = controller.invoke('timeline');
@@ -103,7 +108,7 @@ void main() {
     });
 
     test('applyPatch applies on the initial tree; after timeline it resyncs (V10)', () {
-      final env = RasqHostEnvironment(fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
       final controller = WasmPluginController(wasmBytes: bytes, env: env);
       addTearDown(controller.dispose);
       controller.load();
@@ -121,7 +126,7 @@ void main() {
 
   group('WasmPluginView (import & render the ported plugin)', () {
     testWidgets('renders the fetched timeline through RrlRenderer/L2', (tester) async {
-      final env = RasqHostEnvironment(fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
       final controller = WasmPluginController(wasmBytes: bytes, env: env);
       addTearDown(controller.dispose);
       controller.load();
@@ -138,7 +143,7 @@ void main() {
     });
 
     testWidgets('tapping an action routes the event back into the plugin as a call', (tester) async {
-      final env = RasqHostEnvironment(fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
       final controller = WasmPluginController(wasmBytes: bytes, env: env);
       addTearDown(controller.dispose);
       controller.load();
@@ -159,7 +164,7 @@ void main() {
     });
 
     testWidgets('MFM in the note body renders as a transform span', (tester) async {
-      final env = RasqHostEnvironment(fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
       final controller = WasmPluginController(wasmBytes: bytes, env: env);
       addTearDown(controller.dispose);
       controller.load();
@@ -297,7 +302,7 @@ void main() {
       // PNG のマジックナンバー + UTF-8 にならないバイト。文字列経路だと壊れる。
       final png = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0xFF, 0xFE]);
       SyncFetchRequest? seen;
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         seen = req;
         return const SyncFetchResponse(
           status: 200,
@@ -335,7 +340,7 @@ void main() {
 
     test('applySettings (D-044): TL 設定が毎呼び出しの settings に載り、取得パラメーターに効く', () async {
       final bodies = <String>[];
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         bodies.add(req.body ?? '');
         return SyncFetchResponse(status: 200, bodyText: cannedNotes);
       });
@@ -357,7 +362,7 @@ void main() {
 
     test('settingsRead / settingsWrite (D-044): remote ページはサーバーが真実', () async {
       final writes = <String>[];
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         final endpoint = req.url.path.replaceFirst('/api/', '');
         if (endpoint == 'i/update') {
           writes.add(req.body ?? '');
@@ -385,7 +390,7 @@ void main() {
 
     test('sns.lists / listMembers / createList / add / remove', () async {
       final calls = <String>[];
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         final endpoint = req.url.path.replaceFirst('/api/', '');
         calls.add(endpoint);
         return switch (endpoint) {
@@ -419,7 +424,7 @@ void main() {
     });
 
     test('sns.clips / clipNotes / userPlays', () async {
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         final endpoint = req.url.path.replaceFirst('/api/', '');
         return switch (endpoint) {
           'clips/list' => const SyncFetchResponse(status: 200, bodyText: '[{"id":"c1","name":"あとで読む","description":"メモ","isPublic":false,"notesCount":3}]'),
@@ -453,7 +458,7 @@ void main() {
     ({WasmSnsSession session, List<String> calls, List<String> bodies}) sessionWith(Map<String, Object?> routes) {
       final calls = <String>[];
       final bodies = <String>[];
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         final endpoint = req.url.path.replaceFirst('/api/', '');
         calls.add(endpoint);
         bodies.add(req.body ?? '');
@@ -578,7 +583,7 @@ void main() {
 
     test('sns.relationships / setFollowing: 鍵アカウントは requested で返る', () async {
       var created = false;
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         final endpoint = req.url.path.replaceFirst('/api/', '');
         if (endpoint == 'following/create') {
           created = true;
@@ -714,7 +719,7 @@ void main() {
     const viewer = AccountId(kind: SnsKind.misskey, instance: 'misskey.example', handle: 'me');
 
     test('sns.timeline → Post ワイヤ → Page<Post>(net.fetch はホスト代理)', () async {
-      final env = RasqHostEnvironment(fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
       final controller = WasmPluginController(wasmBytes: bytes, env: env);
       addTearDown(controller.dispose);
       controller.load();
@@ -757,7 +762,7 @@ void main() {
           },
         },
       ]);
-      final env = RasqHostEnvironment(fetch: (_) => SyncFetchResponse(status: 200, bodyText: pureRenote));
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (_) => SyncFetchResponse(status: 200, bodyText: pureRenote));
       final controller = WasmPluginController(wasmBytes: bytes, env: env);
       addTearDown(controller.dispose);
       controller.load();
@@ -792,7 +797,7 @@ void main() {
         },
       ]);
       final asked = <String>[];
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         asked.add('${req.url.path}:${jsonDecode(req.body ?? '{}')['noteId'] ?? ''}');
         if (req.url.path.endsWith('notes/timeline') || req.url.path.endsWith('notes/local-timeline')) {
           return SyncFetchResponse(status: 200, bodyText: pureRenote);
@@ -821,7 +826,7 @@ void main() {
     });
 
     test('sns.emojis (D-111): カスタム絵文字の取得と emojiUrl(未掲載は /emoji/ 縮退)', () async {
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         if (req.url.path.endsWith('emojis')) {
           return SyncFetchResponse(status: 200, bodyText: jsonEncode({
             'emojis': [
@@ -849,7 +854,7 @@ void main() {
 
     test('sns.actions / sns.thread / sns.performAction (D-075)', () async {
       final requests = <String>[];
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         requests.add(req.url.path);
         if (req.url.path.endsWith('notes/show')) return SyncFetchResponse(status: 200, bodyText: jsonEncode(jsonDecode(cannedNotes)[0]));
         if (req.url.path.endsWith('notes/conversation')) return SyncFetchResponse(status: 200, bodyText: jsonEncode([jsonDecode(cannedNotes)[1]]));
@@ -895,7 +900,7 @@ void main() {
       final replyNote = {'id': 'r1', 'text': '返信です', 'user': douglas, 'files': [], 'reactions': {}, 'replyId': 'n1', 'reply': plain};
       final quoteNote = {'id': 'q1', 'text': '引用です', 'user': douglas, 'files': [], 'reactions': {}, 'renote': plain};
       final seen = <String, Map<String, Object?>>{};
-      final env = RasqHostEnvironment(fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
         final ep = req.url.path.split('/api/').last;
         seen[ep] = (jsonDecode(req.body ?? '{}') as Map).cast<String, Object?>();
         final Object? out = switch (ep) {
@@ -965,7 +970,7 @@ void main() {
 
     test('実登録の口 (D-079): WasmSnsPlugin → PluginRegistry 解決、TL 前にアクション自動取り込み、close で破棄', () async {
       final plugin = WasmSnsPlugin(
-        manifest: const PluginManifest(id: 'misskey-wasm-sample', name: 'Misskey (wasm sample)', version: '0.1.0', kind: PluginKind.sns, supportedSns: [SnsKind.misskey]),
+        manifest: const PluginManifest(id: 'misskey-wasm-sample', name: 'Misskey (wasm sample)', version: '0.1.0', kind: PluginKind.sns, supportedSns: [SnsKind.misskey], permissions: [RasqPermissions.network, RasqPermissions.storageSafe]),
         kind: SnsKind.misskey,
         nativeFetch: false, // ワーカーはネットワーク無し(net.fetch → B01)
         loadBytes: () async => bytes,
@@ -1039,7 +1044,7 @@ void main() {
     });
 
     test('エラーは SnsApiException(コード付き)へ写る', () async {
-      final controller = WasmPluginController(wasmBytes: bytes); // fetch なし → B01
+      final controller = WasmPluginController(wasmBytes: bytes, env: RasqHostEnvironment(permissions: _samplePermissions)); // 権限はあるが fetch 未注入 → B01
       addTearDown(controller.dispose);
       controller.load();
       final session = WasmSnsSession(account: viewer, invoke: (fn, args) async => controller.invoke(fn, args));
@@ -1068,7 +1073,7 @@ void main() {
   });
 
   test('RasqHostEnvironment: storage round trip + unknown fn C01', () {
-    final env = RasqHostEnvironment();
+    final env = RasqHostEnvironment(permissions: _samplePermissions);
     final set = jsonDecode(env.dispatch(jsonEncode({'schema': 'rasq.hostfn/1', 'callId': '1', 'fn': 'storage.set', 'args': {'ns': 'safe', 'key': 'k', 'value': 42}})));
     expect(set['ok'], true);
     final got = jsonDecode(env.dispatch(jsonEncode({'schema': 'rasq.hostfn/1', 'callId': '2', 'fn': 'storage.get', 'args': {'ns': 'safe', 'key': 'k'}})));
@@ -1077,6 +1082,59 @@ void main() {
     expect(unknown['error']['code'], 'C01');
     final ml = jsonDecode(env.dispatch(jsonEncode({'schema': 'rasq.hostfn/1', 'callId': '4', 'fn': 'ml.infer', 'args': {'model': 'x'}})));
     expect(ml['error']['code'], 'E01');
+  });
+
+  group('権限ゲート (D-004): 宣言に無い権限を要する host-fn は E01', () {
+    Map<String, dynamic> call(RasqHostEnvironment env, String fn, Map<String, Object?> args) =>
+        (jsonDecode(env.dispatch(jsonEncode({'schema': 'rasq.hostfn/1', 'callId': '1', 'fn': fn, 'args': args}))) as Map).cast<String, dynamic>();
+
+    test('net.fetch: network 未宣言なら、fetch バックエンドがあっても拒否', () {
+      var reached = false;
+      final env = RasqHostEnvironment(fetch: (_) {
+        reached = true;
+        return const SyncFetchResponse(status: 200, bodyText: '{}');
+      });
+      final res = call(env, 'net.fetch', {'url': 'https://example.com/'});
+      expect(res['ok'], false);
+      expect(res['error']['code'], 'E01');
+      // バックエンドへ到達していない = 権限判定が実行より前にある。
+      expect(reached, isFalse);
+    });
+
+    test('net.fetch: network を宣言すれば通る', () {
+      final env = RasqHostEnvironment(
+        permissions: const {RasqPermissions.network},
+        fetch: (_) => const SyncFetchResponse(status: 200, bodyText: '{}'),
+      );
+      expect(call(env, 'net.fetch', {'url': 'https://example.com/'})['ok'], true);
+    });
+
+    test('storage.*: storage.safe 未宣言なら読み書き削除とも拒否', () {
+      final env = RasqHostEnvironment();
+      expect(call(env, 'storage.set', {'ns': 'safe', 'key': 'k', 'value': 1})['error']['code'], 'E01');
+      expect(call(env, 'storage.get', {'ns': 'safe', 'key': 'k'})['error']['code'], 'E01');
+      expect(call(env, 'storage.delete', {'ns': 'safe', 'key': 'k'})['error']['code'], 'E01');
+      expect(env.storage, isEmpty);
+    });
+
+    test('storage.*: ns ごとに別権限 — safe の宣言で unsafe は開かない', () {
+      final env = RasqHostEnvironment(permissions: const {RasqPermissions.storageSafe});
+      expect(call(env, 'storage.set', {'ns': 'safe', 'key': 'k', 'value': 1})['ok'], true);
+      expect(call(env, 'storage.set', {'ns': 'unsafe', 'key': 'k', 'value': 1})['error']['code'], 'E01');
+    });
+
+    test('storage.*: 未知の ns は fail-closed(両方宣言していても通さない)', () {
+      final env = RasqHostEnvironment(permissions: const {RasqPermissions.storageSafe, RasqPermissions.storageUnsafe});
+      expect(call(env, 'storage.set', {'ns': 'nope', 'key': 'k', 'value': 1})['error']['code'], 'E01');
+    });
+
+    test('ネイティブ net.fetch は network 未宣言なら短絡させない (迂回防止, D-023)', () {
+      // ランタイム内で短絡された net.fetch は Dart のディスパッチャを通らない。
+      // フラグ自体を落とさないと、上の E01 ゲートごと迂回される。
+      expect(RasqHostEnvironment(nativeFetch: true).nativeFetchEnabled, isFalse);
+      expect(RasqHostEnvironment(nativeFetch: true, permissions: const {RasqPermissions.network}).nativeFetchEnabled, isTrue);
+      expect(RasqHostEnvironment(nativeFetch: false, permissions: const {RasqPermissions.network}).nativeFetchEnabled, isFalse);
+    });
   });
 }
 

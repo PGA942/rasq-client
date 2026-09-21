@@ -6,6 +6,9 @@ import 'package:plugin_runtime/plugin_runtime.dart';
 
 /// 本物の Bluesky wasm (D-175) を同期コントローラ + net.fetch のモックで通す:
 /// sns.login(createSession + getProfile)→ トークン JSON、sns.timeline(getTimeline)→ Post ワイヤ、期限切れ → refreshSession。
+/// サンプルプラグインが function.json で宣言する権限 (D-004)。
+const _samplePermissions = {'network', 'storage.safe'};
+
 void main() {
   final f = File('assets/plugins/bluesky_wasm.wasm');
   if (!f.existsSync() || f.lengthSync() == 0) {
@@ -47,6 +50,7 @@ void main() {
   test('sns.login → session/me、sns.timeline → Post ワイヤ(リポスト展開、⭐、url)、ExpiredToken → refreshSession + storage.set', () {
     final storage = <String, Object?>{};
     final env = RasqHostEnvironment(
+      permissions: _samplePermissions,
       fetch: handler,
       storage: storage,
     );

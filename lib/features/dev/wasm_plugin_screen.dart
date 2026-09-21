@@ -153,7 +153,10 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       });
       return;
     }
-    final controller = AsyncWasmPluginController(wasmBytes: bytes);
+    // 手元の .wasm を直接読む開発用サーフェス: マニフェストが無いので
+    // 宣言を引けない。ストア経由の導入 (slot_plugins / WasmSnsPlugin) は
+    // 宣言どおりに絞られる。
+    final controller = AsyncWasmPluginController(wasmBytes: bytes, permissions: RasqPermissions.all);
     _wireFowSurface(controller);
     setState(() {
       _controller = controller;

@@ -13,7 +13,7 @@ import 'host_environment.dart';
 /// その場で組み立てる。alert は自動確認、ログはメッセージでメインへ流す。
 @immutable
 class WasmWorkerConfig {
-  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}, this.appFns = const {}});
+  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}, this.appFns = const {}, this.permissions = const {}});
 
   final Uint8List wasmBytes;
   final bool nativeFetch;
@@ -24,6 +24,9 @@ class WasmWorkerConfig {
 
   /// 許可されたアプリ向けホスト関数 (D-167)。
   final Set<String> appFns;
+
+  /// マニフェストが宣言した権限 (D-004)。`network` / `storage.*` のゲートに使う。
+  final Set<String> permissions;
 }
 
 /// WASM プラグインを専用 isolate で動かすワーカー (D-023 の後段)。
@@ -157,8 +160,10 @@ Future<void> _workerMain(List<Object?> init) async {
             // アプリ向けホスト関数 (D-167) も同じく fire-and-forget で中継。
             appFns: config.appFns,
             onAppFn: (fn, args) => respond.send({'app': {'fn': fn, 'args': args}}),
+            permissions: config.permissions,
           );
-          plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetch);
+          // nativeFetchEnabled: `network` 未宣言なら短絡させない (D-023)。
+          plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetchEnabled);
           respond.send({'id': id, 'ok': true, 'result': 'pong'});
         case 'snapshot':
           respond.send({'id': id, 'ok': true, 'result': plugin!.snapshot()});

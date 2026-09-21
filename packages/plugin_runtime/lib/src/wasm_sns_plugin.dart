@@ -49,7 +49,8 @@ class WasmSnsPlugin extends SnsPlugin {
   final Map<String, Future<AsyncWasmPluginController>> _controllers = {};
 
   Future<AsyncWasmPluginController> _controllerFor(String accountKey) => _controllers.putIfAbsent(accountKey, () async {
-        final c = AsyncWasmPluginController(wasmBytes: await _loadBytes(), fowPermissions: fowPermissions, nativeFetch: nativeFetch);
+        // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
+        final c = AsyncWasmPluginController(wasmBytes: await _loadBytes(), fowPermissions: fowPermissions, nativeFetch: nativeFetch, permissions: manifest.permissions.toSet());
         await c.load();
         return c;
       });
