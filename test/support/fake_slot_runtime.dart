@@ -25,6 +25,9 @@ class FakeSlotRuntime extends ChangeNotifier with WasmFowSurfaceMixin implements
   @override
   set onAppFn(AppFnRelay? relay) => _appFn = relay;
 
+  @override
+  Stream<Map<String, Object?>> get fetchShapes => const Stream.empty();
+
   /// プラグイン側からホスト関数を呼ぶ(fire-and-forget、テストがトリガー)。
   void hostFn(String fn, Map<String, Object?> args) => _appFn?.call(fn, args);
 

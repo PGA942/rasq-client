@@ -22,6 +22,7 @@ import '../store/rasqpkg.dart';
 import '../store/store_providers.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
+import 'fetch_shape_telemetry.dart';
 
 /// スロットプラグイン (D-167、契約 = `plugin-sample/CONTRACT.md`)。
 ///
@@ -168,6 +169,9 @@ abstract class SlotRuntime {
   WasmPluginViewModel get view;
   Future<Map<String, dynamic>> invoke(String fn, Map<String, Object?> args);
   set onAppFn(AppFnRelay? relay);
+
+  /// 初めて見た `net.fetch` の形(値は無い)。同意があればストアへ報告する。
+  Stream<Map<String, Object?>> get fetchShapes;
   void dispose();
 }
 
@@ -180,6 +184,8 @@ class _AsyncSlotRuntime implements SlotRuntime {
   Future<Map<String, dynamic>> invoke(String fn, Map<String, Object?> args) => controller.invoke(fn, args);
   @override
   set onAppFn(AppFnRelay? relay) => controller.onAppFn = relay;
+  @override
+  Stream<Map<String, Object?>> get fetchShapes => controller.fetchShapes;
   @override
   void dispose() => controller.dispose();
 }
@@ -395,6 +401,9 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final plugin = SlotPlugin(manifest: manifest, source: source, runtime: runtime);
       runtime.onAppFn = (fn, args) => _onAppFn(plugin, fn, args);
       _wireFow(plugin);
+      // 通信の形(同意した端末だけ、初めて見たものだけ)。版はプラグインの自己申告。
+      final telemetry = ref.read(fetchShapeTelemetryProvider);
+      runtime.fetchShapes.listen((s) => telemetry.report(manifest.id, manifest.version, s));
       // 同じ id は差し替え。
       for (final old in state.where((p) => p.id == manifest.id)) {
         old.runtime.dispose();

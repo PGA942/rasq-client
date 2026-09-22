@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -20,6 +21,12 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
 
   /// アプリ向けホスト関数の中継先 (D-167)。ワーカーからの `{fn, args}` を受ける。
   AppFnRelay? onAppFn;
+
+  final _shapes = StreamController<Map<String, Object?>>.broadcast();
+
+  /// 初めて見た `net.fetch` の形 (`{hash, shape}` / `{overflow: true}`)。値は無い。
+  /// アプリはユーザーの同意があればストアに報告する。
+  Stream<Map<String, Object?>> get fetchShapes => _shapes.stream;
 
   @override
   final RrlGeometryRegistry geometry = RrlGeometryRegistry();
@@ -60,6 +67,9 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
           _lastError = 'app relay failed: $e';
           _notify();
         }
+      });
+      _worker!.fetchShapes.listen((s) {
+        if (!_disposed) _shapes.add(s);
       });
       await pullSnapshot();
     } catch (e) {
@@ -165,6 +175,7 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
     _disposed = true;
     _worker?.dispose();
     _worker = null;
+    _shapes.close();
     super.dispose();
   }
 }

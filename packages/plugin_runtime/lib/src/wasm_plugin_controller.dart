@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -45,6 +46,19 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
 
   /// 1 呼び出しあたりの fuel 予算。null ならランタイム既定(重いほう)。
   final int? fuelPerCall;
+
+  final _shapes = StreamController<Map<String, Object?>>.broadcast();
+
+  /// 初めて見た `net.fetch` の形 (`{hash, shape}` / `{overflow: true}`)。値は無い。
+  Stream<Map<String, Object?>> get fetchShapes => _shapes.stream;
+
+  void _drainShapes() {
+    final p = _plugin;
+    if (p == null || _shapes.isClosed) return;
+    for (final s in p.takeFetchShapes()) {
+      _shapes.add(s);
+    }
+  }
 
   @override
   final RrlGeometryRegistry geometry = RrlGeometryRegistry();
@@ -94,6 +108,7 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
     final plugin = _require();
     try {
       final message = (jsonDecode(plugin.snapshot()) as Map).cast<String, Object?>();
+      _drainShapes();
       _document = RrlDocument.fromSnapshot(message);
       _lastError = null;
     } catch (e) {
@@ -106,6 +121,7 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
   Map<String, dynamic> invoke(String fn, [Map<String, Object?> args = const {}]) {
     final plugin = _require();
     final result = (jsonDecode(plugin.call(fn: fn, argsJson: jsonEncode(args), callId: 'call-${_callSeq++}')) as Map).cast<String, dynamic>();
+    _drainShapes();
     _lastResult = result;
     final value = result['ok'] == true ? result['value'] as Map? : null;
     if (value?['treeUpdated'] == true) {
@@ -125,6 +141,7 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
     final Map<String, Object?> message;
     try {
       message = (jsonDecode(plugin.patch()) as Map).cast<String, Object?>();
+      _drainShapes();
     } catch (e) {
       _lastError = 'patch failed: $e';
       notifyListeners();
@@ -172,6 +189,7 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
   void dispose() {
     _plugin?.dispose();
     _plugin = null;
+    _shapes.close();
     super.dispose();
   }
 }

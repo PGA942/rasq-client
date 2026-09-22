@@ -29,7 +29,12 @@ class WasmSnsPlugin extends SnsPlugin {
     this.fowPermissions = const {'widget'},
     this.nativeFetch = true,
     this.authFlowFactory,
+    this.onFetchShape,
   }) : _loadBytes = loadBytes; // ignore: prefer_initializing_formals
+
+  /// 初めて見た `net.fetch` の形(値は無い)の受け口。アプリが同意を見て
+  /// ストアへ報告する。null なら捨てる。
+  final void Function(String pluginId, String version, Map<String, Object?> shape)? onFetchShape;
 
   /// 認証フローの供給元。null なら [beginAuth] は [UnsupportedError]。
   final Future<AuthFlow> Function(String host, {Uri? callback})? authFlowFactory;
@@ -64,6 +69,8 @@ class WasmSnsPlugin extends SnsPlugin {
           fetchHosts: network.hosts.toSet(), instanceAllowed: network.instance,
         );
         await c.load();
+        final hook = onFetchShape;
+        if (hook != null) c.fetchShapes.listen((s) => hook(manifest.id, manifest.version, s));
         return c;
       });
 

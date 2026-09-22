@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -78,6 +79,26 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     final echo = ((controller.lastResult!['value'] as Map)['echo'] as Map).cast<String, Object?>();
     expect(echo['fn'], 'openThread');
+    controller.dispose();
+  });
+
+  test('通信の形: 初めて見た net.fetch の形だけがワーカーから流れてくる(値は入らない)', () async {
+    final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false, permissions: _samplePermissions, fetchHosts: _sampleHosts);
+    await controller.load();
+    final shapes = <Map<String, Object?>>[];
+    final sub = controller.fetchShapes.listen(shapes.add);
+    // ネットワーク無しのワーカー: net.fetch は B01 で返るが、形はランタイムが呼び出し前に控える。
+    await controller.invoke('timeline', {'host': 'misskey.example', 'limit': 10});
+    await controller.invoke('timeline', {'host': 'misskey.example', 'limit': 20}); // 同じ形 → 2 度目は出ない
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(shapes, hasLength(1), reason: '$shapes');
+    final shape = (shapes.single['shape'] as Map).cast<String, Object?>();
+    expect(shapes.single['hash'], hasLength(16));
+    expect(shape['host'], 'misskey.example');
+    expect(shape['method'], 'POST');
+    expect('${shape['path']}', startsWith('/api/'));
+    expect(jsonEncode(shape), isNot(contains('"limit":10')), reason: '値が漏れている');
+    await sub.cancel();
     controller.dispose();
   });
 }

@@ -24,6 +24,13 @@ class WasmPluginWorker {
   final _logs = StreamController<String>.broadcast();
   final _fows = StreamController<Map<String, Object?>>.broadcast();
   final _apps = StreamController<Map<String, Object?>>.broadcast();
+  final _shapes = StreamController<Map<String, Object?>>.broadcast();
+
+  /// このワーカーが初めて見た `net.fetch` の**形**(値は無い: host / method / パスの
+  /// テンプレート / query のキー / ヘッダ名 / 本文のキー構造)。要素は `{hash, shape}`、
+  /// 上限を超えたら `{overflow: true}` が 1 度。アプリはユーザーの同意があれば
+  /// ストアに報告する(承認後に通信の形が変わった版を審査が読み直すため)。
+  Stream<Map<String, Object?>> get fetchShapes => _shapes.stream;
 
   /// ホスト関数のログ(hostFn 呼び出し名など)。
   Stream<String> get logs => _logs.stream;
@@ -68,6 +75,12 @@ class WasmPluginWorker {
       _apps.add((map['app'] as Map).cast<String, Object?>());
       return;
     }
+    if (map['shapes'] != null) {
+      for (final s in map['shapes'] as List) {
+        _shapes.add((s as Map).cast<String, Object?>());
+      }
+      return;
+    }
     final completer = _pending.remove(map['id']);
     if (completer == null) return;
     if (map['ok'] == true) {
@@ -102,6 +115,7 @@ class WasmPluginWorker {
     _logs.close();
     _fows.close();
     _apps.close();
+    _shapes.close();
     _isolate.kill(priority: Isolate.beforeNextEvent);
   }
 }
@@ -118,6 +132,12 @@ Future<void> _workerMain(List<Object?> init) async {
 
   RasqWasmPlugin? plugin;
   RasqHostEnvironment? env;
+
+  // ランタイムが控えた通信の形(初めて見たものだけ)をメインへ流す。
+  void drainShapes() {
+    final shapes = plugin?.takeFetchShapes() ?? const [];
+    if (shapes.isNotEmpty) respond.send({'shapes': shapes});
+  }
 
   commands.listen((message) {
     if (message is SendPort) {
@@ -158,10 +178,13 @@ Future<void> _workerMain(List<Object?> init) async {
           respond.send({'id': id, 'ok': true, 'result': env!.instanceHost ?? ''});
         case 'snapshot':
           respond.send({'id': id, 'ok': true, 'result': plugin!.snapshot()});
+          drainShapes();
         case 'patch':
           respond.send({'id': id, 'ok': true, 'result': plugin!.patch()});
+          drainShapes();
         case 'call':
           respond.send({'id': id, 'ok': true, 'result': plugin!.call(fn: '${map['fn']}', argsJson: '${map['args']}', callId: '${map['callId']}')});
+          drainShapes();
         case 'dispose':
           plugin?.dispose();
           plugin = null;

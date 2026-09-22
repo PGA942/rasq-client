@@ -28,6 +28,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('投稿プラグイン', route: '/settings/dsl/plugins.composer'),
     SettingsRow('カスタムタイムラインを配置', route: '/settings/dsl/plugins.timeline'),
     SettingsRow('プラグインの詳細設定', subtitle: 'プラグインストア(インストール済みの管理)', route: Routes.store),
+    SettingsRow('通信の形の報告', subtitle: 'プラグインの通信の形(値は含まない)を、初めて見たときだけストアへ。既定はオフ', route: '/settings/dsl/plugins.telemetry'),
   ]),
   'sns': SettingsSection('SNSプラグイン', [
     // 第二階層 = プラグイン提供の設定 DSL ページ (D-044, `sns.<短area>`)。
