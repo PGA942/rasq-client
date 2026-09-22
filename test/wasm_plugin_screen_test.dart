@@ -18,6 +18,9 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 /// サンプルプラグインが function.json で宣言する権限 (D-004)。
 const _samplePermissions = {'network', 'storage.safe'};
 
+/// テストの偽サーバー(接続先の宣言 schema v0.12。misskey.io はサンプルの既定 host)。
+const _sampleHosts = {'misskey.io'};
+
 void main() {
   final wasmFile = File('../rasq-sdk-sample/rust/target/wasm32-unknown-unknown/release/misskey_wasm_sample.wasm');
 
@@ -39,7 +42,7 @@ void main() {
         'reactions': {'👍': 3},
       },
     ]);
-    final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) => SyncFetchResponse(status: 200, bodyText: canned));
+    final env = RasqHostEnvironment(permissions: _samplePermissions, fetchHosts: _sampleHosts, fetch: (req) => SyncFetchResponse(status: 200, bodyText: canned));
 
     await tester.pumpWidget(ProviderScope(
       overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage())],
@@ -83,7 +86,7 @@ void main() {
         'reactions': {'👍': 3},
       },
     ]);
-    final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) => SyncFetchResponse(status: 200, bodyText: canned));
+    final env = RasqHostEnvironment(permissions: _samplePermissions, fetchHosts: _sampleHosts, fetch: (req) => SyncFetchResponse(status: 200, bodyText: canned));
     await tester.pumpWidget(ProviderScope(
       overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage())],
       child: MaterialApp(

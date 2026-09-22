@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 /// その場で組み立てる。alert は自動確認、ログはメッセージでメインへ流す。
 @immutable
 class WasmWorkerConfig {
-  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}, this.appFns = const {}, this.permissions = const {}, this.fuelPerCall});
+  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}, this.appFns = const {}, this.permissions = const {}, this.fuelPerCall, this.fetchHosts = const {}, this.instanceAllowed = false});
 
   final Uint8List wasmBytes;
   final bool nativeFetch;
@@ -24,4 +24,11 @@ class WasmWorkerConfig {
 
   /// 1 呼び出しあたりの fuel 予算。null ならランタイム既定(重いほう)。
   final int? fuelPerCall;
+
+  /// マニフェスト `network.hosts` (schema v0.12)。空 = どこにも繋げない。
+  final Set<String> fetchHosts;
+
+  /// マニフェスト `network.instance`: セッションのインスタンスを後から
+  /// 許可してよいか(`grantHost`)。偽なら grant は無視される。
+  final bool instanceAllowed;
 }

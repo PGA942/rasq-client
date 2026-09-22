@@ -13,8 +13,8 @@ import 'wasm_worker.dart';
 /// (専用 isolate)で動かし、UI isolate をブロックしない。
 /// `net.fetch`(ランタイム内蔵)や重い snapshot 生成中も画面が止まらない。
 class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin implements WasmPluginViewModel {
-  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}, Set<String> fowPermissions = const {'widget'}, Set<String> appFns = const {}, Set<String> permissions = const {}, int? fuelPerCall})
-      : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall);
+  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}, Set<String> fowPermissions = const {'widget'}, Set<String> appFns = const {}, Set<String> permissions = const {}, int? fuelPerCall, Set<String> fetchHosts = const {}, bool instanceAllowed = false})
+      : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall, fetchHosts: fetchHosts, instanceAllowed: instanceAllowed);
 
   final WasmWorkerConfig _config;
 
@@ -79,6 +79,10 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
     }
     _notify();
   }
+
+  /// セッションのインスタンスのホストを `net.fetch` に許可する (schema v0.12
+  /// `network.instance`)。宣言が無いプラグインでは何も起きない。
+  Future<void> grantHost(String? host) => _require().grantHost(host);
 
   Future<Map<String, dynamic>> invoke(String fn, [Map<String, Object?> args = const {}]) async {
     final worker = _require();

@@ -14,7 +14,7 @@ class RasqWasmPlugin {
   // ignore: unused_element
   RasqWasmPlugin._();
 
-  factory RasqWasmPlugin.fromBytes(Uint8List wasmBytes, {RasqHostFnHandler? hostFn, bool nativeFetch = false, int? fuelPerCall}) => throw RasqWasmInstantiateException();
+  factory RasqWasmPlugin.fromBytes(Uint8List wasmBytes, {RasqHostFnHandler? hostFn, bool nativeFetch = false, int? fuelPerCall, Set<String> fetchHosts = const {}}) => throw RasqWasmInstantiateException();
 
   /// fuel の予算 (`rasq_wasm_runtime_core` の `FUEL_BUDGET_*` と同じ値)。Web では
   /// 読み込みの時点で断るので実際には効かないが、`fuelBudgetFor` は起動前に呼ばれる。
@@ -24,6 +24,7 @@ class RasqWasmPlugin {
   String snapshot() => throw RasqWasmInstantiateException();
   String patch() => throw RasqWasmInstantiateException();
   String call({required String fn, required String argsJson, required String callId}) => throw RasqWasmInstantiateException();
+  void setFetchHosts(Set<String> hosts) {}
   void dispose() {}
 }
 

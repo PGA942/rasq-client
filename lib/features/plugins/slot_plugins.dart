@@ -37,7 +37,7 @@ import '../vc/astell_providers.dart';
 /// `plugin.manifest` の答え。
 @immutable
 class SlotManifest {
-  const SlotManifest({required this.id, required this.name, this.version = '0.0.0', this.kind = 'action', this.description = '', this.slots = const [], this.permissions = const [], this.actions = const []});
+  const SlotManifest({required this.id, required this.name, this.version = '0.0.0', this.kind = 'action', this.description = '', this.slots = const [], this.permissions = const [], this.actions = const [], this.network});
   final String id;
   final String name;
   final String version;
@@ -49,6 +49,13 @@ class SlotManifest {
   /// 投稿のアクションボタン (契約 v0.7 §2.9、D-176): `post.action` の宣言。
   final List<SlotActionDecl> actions;
 
+  /// `net.fetch` の接続先 (schema v0.12)。null = 宣言なし = どこにも繋げない。
+  /// スロットプラグインにはセッションが無いので `instance` は効かず、`hosts` だけ。
+  final PluginNetwork? network;
+
+  /// ランタイムに渡す接続先の宣言。
+  Set<String> get fetchHosts => (network ?? PluginNetwork.none).hosts.toSet();
+
   factory SlotManifest.fromJson(Map<String, Object?> j) => SlotManifest(
         id: j['id'] as String? ?? '',
         name: j['name'] as String? ?? j['id'] as String? ?? '',
@@ -57,6 +64,7 @@ class SlotManifest {
         description: j['description'] as String? ?? '',
         slots: [for (final s in (j['slots'] as List? ?? const [])) if (s is String) s],
         permissions: [for (final s in (j['permissions'] as List? ?? const [])) if (s is String) s],
+        network: j['network'] is Map ? PluginNetwork.fromJson((j['network'] as Map).cast<String, Object?>()) : null,
         actions: [
           for (final a in (j['actions'] as List? ?? const []))
             if (a is Map && a['id'] is String)
@@ -177,11 +185,11 @@ class _AsyncSlotRuntime implements SlotRuntime {
 }
 
 /// wasm バイト列 → 実行中のプラグイン。テストは偽物に差し替える。
-typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall});
+typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall, required Set<String> fetchHosts});
 
-final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions, required fuelPerCall}) async {
+final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions, required fuelPerCall, required fetchHosts}) async {
       // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
-      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall);
+      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall, fetchHosts: fetchHosts);
       await c.load();
       if (c.lastError != null && c.document == null) {
         c.dispose();
@@ -361,7 +369,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final loader = ref.read(slotRuntimeLoaderProvider);
       // マニフェストを読むために一度素の権限で起動し、宣言に合わせて起動し直す。
       // 1 段目はマニフェストを読むだけ。予算はランタイム既定(重いほう)に任せる。
-      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {}, fuelPerCall: null);
+      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {}, fuelPerCall: null, fetchHosts: const {});
       final m = (await runtime.invoke('plugin.manifest', const {}))['value'];
       if (m is! Map) {
         runtime.dispose();
@@ -379,7 +387,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       }
       runtime.dispose();
       runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns, permissions: manifest.permissions.toSet(),
-          fuelPerCall: fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet()));
+          fuelPerCall: fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet()), fetchHosts: manifest.fetchHosts);
       if (_disposed) {
         runtime.dispose(); // 読み込み中にプロバイダーが捨てられた(テストの再構築など)
         return null;

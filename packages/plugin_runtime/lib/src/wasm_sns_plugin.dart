@@ -49,10 +49,20 @@ class WasmSnsPlugin extends SnsPlugin {
 
   final Map<String, Future<AsyncWasmPluginController>> _controllers = {};
 
+  /// インスタンスのホストを渡し済みのアカウント(controller の生存と同じ寿命)。
+  final Set<String> _granted = {};
+
   Future<AsyncWasmPluginController> _controllerFor(String accountKey) => _controllers.putIfAbsent(accountKey, () async {
         // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
+        // 接続先も同じ (schema v0.12): `network.hosts` は静的に、インスタンスは
+        // セッションごとに `grantHost` で。宣言が無ければどこにも繋げない。
         final permissions = manifest.permissions.toSet();
-        final c = AsyncWasmPluginController(wasmBytes: await _loadBytes(), fowPermissions: fowPermissions, nativeFetch: nativeFetch, permissions: permissions, fuelPerCall: fuelBudgetFor(permissions: permissions));
+        final network = manifest.network ?? PluginNetwork.none;
+        final c = AsyncWasmPluginController(
+          wasmBytes: await _loadBytes(), fowPermissions: fowPermissions, nativeFetch: nativeFetch, permissions: permissions,
+          fuelPerCall: fuelBudgetFor(permissions: permissions),
+          fetchHosts: network.hosts.toSet(), instanceAllowed: network.instance,
+        );
         await c.load();
         return c;
       });
@@ -65,6 +75,9 @@ class WasmSnsPlugin extends SnsPlugin {
   /// 認証前の呼び出し)。戻りは `{ok, value}` / `{ok:false, error}` の生の結果。
   Future<Map<String, dynamic>> callAnonymous(String fn, Map<String, Object?> args) async {
     final controller = await _controllerFor(_anonymousKey);
+    // 匿名の呼び出しはまだセッションが無いので、ホストが渡す `args.host`
+    // (ユーザーが選んだ先)をそのまま今回のインスタンスとして許可する。
+    await controller.grantHost(args['host'] is String ? args['host'] as String : null);
     return controller.invoke(fn, args);
   }
 
@@ -76,6 +89,7 @@ class WasmSnsPlugin extends SnsPlugin {
     // — サーバー検索画面が出せなくなるより、名前だけでも出す方がよい。
     try {
       final controller = await _controllerFor(_anonymousKey);
+      await controller.grantHost(h);
       final result = await controller.invoke('sns.inspectServer', {'host': h});
       if (result['ok'] == true) {
         final s = ((result['value'] as Map?)?['server'] as Map?)?.cast<String, Object?>();
@@ -126,8 +140,15 @@ class WasmSnsPlugin extends SnsPlugin {
       pluginId: manifest.id,
       // 接続先とトークンはホストが毎回供給する(v1 の規約、PROTOCOL §4.3)。
       extraArgs: {'host': session.account.instance, 'token': session.token},
-      invoke: (fn, args) async => (await _controllerFor(key)).invoke(fn, args),
+      // `network.instance`: ランタイムに許可するのも同じホスト。ワーカーごとに
+      // 1 アカウントなので、初回に一度渡せばよい(メッセージは順序を保つ)。
+      invoke: (fn, args) async {
+        final c = await _controllerFor(key);
+        if (_granted.add(key)) await c.grantHost(session.account.instance);
+        return c.invoke(fn, args);
+      },
       onClose: () async {
+        _granted.remove(key);
         final pending = _controllers.remove(key);
         if (pending != null) (await pending).dispose();
       },

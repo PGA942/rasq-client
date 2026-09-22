@@ -66,6 +66,12 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
 
   bool get isLoaded => _plugin != null;
 
+  /// セッションのインスタンスのホストを `net.fetch` に許可する (schema v0.12
+  /// `network.instance`)。ネイティブ経路にも同じ集合を渡す。
+  void grantHost(String? host) {
+    if (env.grantInstance(host)) _plugin?.setFetchHosts(env.effectiveFetchHosts);
+  }
+
   void load() {
     if (_plugin != null) return;
     // fow.open/close の中継 (D-064): 環境の検証を通った要求を UI 側
@@ -74,7 +80,7 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
     try {
       // nativeFetchEnabled: `network` 未宣言ならランタイム内短絡を許さない。
       // ここを env.nativeFetch のままにすると、この経路だけ権限ゲートを迂回できる。
-      _plugin = RasqWasmPlugin.fromBytes(_bytes, hostFn: env.dispatch, nativeFetch: env.nativeFetchEnabled, fuelPerCall: fuelPerCall);
+      _plugin = RasqWasmPlugin.fromBytes(_bytes, hostFn: env.dispatch, nativeFetch: env.nativeFetchEnabled, fuelPerCall: fuelPerCall, fetchHosts: env.effectiveFetchHosts);
       _lastError = null;
       pullSnapshot();
     } on RasqWasmInstantiateException catch (e) {

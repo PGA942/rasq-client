@@ -43,6 +43,37 @@ abstract final class RasqPermissions {
   };
 }
 
+/// `function.json` の `network` (schema v0.12): `net.fetch` が繋いでよい先。
+///
+/// `network` 権限は「どこへでも」ではない。繋ぐ先を宣言し、ランタイムは
+/// それ以外のホストを E01 で弾く。宣言が無い = どこにも繋げない (fail-closed)。
+///
+/// - [hosts]: 完全一致(`misskey.io`)/ `*.example.com`(サブドメインだけ、
+///   apex は別に書く)/ `*`(どこでも。開発用の面だけが使い、審査では旗)。
+/// - [instance]: そのセッションのアカウントが属するインスタンスへ繋いでよい。
+///   ユーザーが選ぶ先なので静的には書けず、ホストが毎回の call に渡す
+///   `args.host` と同じものをランタイムに与える。
+@immutable
+class PluginNetwork {
+  const PluginNetwork({this.hosts = const [], this.instance = false});
+
+  final List<String> hosts;
+  final bool instance;
+
+  /// 何も繋げない宣言(権限だけ書いて `network` を省いた場合に等しい)。
+  static const none = PluginNetwork();
+
+  Map<String, Object?> toJson() => {
+        if (hosts.isNotEmpty) 'hosts': hosts,
+        if (instance) 'instance': true,
+      };
+
+  factory PluginNetwork.fromJson(Map<String, Object?> json) => PluginNetwork(
+        hosts: [for (final h in (json['hosts'] as List? ?? const [])) if (h is String) h.trim().toLowerCase()],
+        instance: json['instance'] as bool? ?? false,
+      );
+}
+
 /// Subset of `function.json` the host needs at install/boot time.
 /// Full schema (WASM imports, constants, slot declarations) is M3.
 @immutable
@@ -56,6 +87,7 @@ class PluginManifest {
     this.description,
     this.supportedSns = const [],
     this.permissions = const [],
+    this.network,
     this.actions = const [],
     this.termsOfService,
     this.verified = false,
@@ -76,6 +108,10 @@ class PluginManifest {
   /// Operation vocabulary (D-004): `network`, `gpu_ml`, `storage.safe`,
   /// `register_action`, `transform_content`, `tag_media`, …
   final List<String> permissions;
+
+  /// `net.fetch` の接続先の宣言。null = 宣言なし = どこにも繋げない。
+  final PluginNetwork? network;
+
   final List<ActionDescriptor> actions;
 
   /// Markdown shown on the 利用規約画面 before first login.
@@ -94,6 +130,7 @@ class PluginManifest {
         if (description != null) 'description': description,
         'supportedSns': supportedSns.map((e) => e.name).toList(),
         'permissions': permissions,
+        if (network != null) 'network': network!.toJson(),
         'actions': actions.map((a) => a.toJson()).toList(),
         if (termsOfService != null) 'termsOfService': termsOfService,
         'verified': verified,
@@ -109,6 +146,7 @@ class PluginManifest {
         description: json['description'] as String?,
         supportedSns: [for (final s in (json['supportedSns'] as List? ?? const [])) SnsKind.values.byName(s as String)],
         permissions: [for (final p in (json['permissions'] as List? ?? const [])) p as String],
+        network: json['network'] is Map ? PluginNetwork.fromJson((json['network'] as Map).cast<String, Object?>()) : null,
         actions: [for (final a in (json['actions'] as List? ?? const [])) ActionDescriptor.fromJson(a as Map<String, Object?>)],
         termsOfService: json['termsOfService'] as String?,
         verified: json['verified'] as bool? ?? false,

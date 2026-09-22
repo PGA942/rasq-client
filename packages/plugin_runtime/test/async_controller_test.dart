@@ -7,6 +7,7 @@ import 'package:plugin_runtime/plugin_runtime.dart';
 /// ワーカー isolate 版コントローラ: UI isolate を塞がずに同じ境界を張れるか。
 /// サンプルプラグインが function.json で宣言する権限 (D-004)。
 const _samplePermissions = {'network', 'storage.safe'};
+const _sampleHosts = {'misskey.example'};
 
 void main() {
   final wasmFile = File('../../../rasq-sdk-sample/rust/target/wasm32-unknown-unknown/release/misskey_wasm_sample.wasm');
@@ -17,7 +18,7 @@ void main() {
   final bytes = Uint8List.fromList(wasmFile.readAsBytesSync());
 
   test('load → snapshot → storageRoundTrip(ワーカー内 storage)→ dispose', () async {
-    final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false, permissions: _samplePermissions);
+    final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false, permissions: _samplePermissions, fetchHosts: _sampleHosts);
     await controller.load();
     expect(controller.document, isNotNull);
     expect(controller.document!.rev, 1);
@@ -30,7 +31,7 @@ void main() {
   });
 
   test('patch → rev2、fetch バックエンド無しの timeline は B01', () async {
-    final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false, permissions: _samplePermissions);
+    final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false, permissions: _samplePermissions, fetchHosts: _sampleHosts);
     await controller.load();
     await controller.applyPatch();
     expect(controller.document!.rev, 2);
@@ -42,7 +43,7 @@ void main() {
   });
 
   test('FOW surface (D-064): ワーカー中継で fow.open → タップで fow.close → onClosed 通知', () async {
-    final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false, permissions: _samplePermissions);
+    final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false, permissions: _samplePermissions, fetchHosts: _sampleHosts);
     await controller.load();
     WasmFowRequest? opened;
     final closes = <(String, Object?)>[];
@@ -71,7 +72,7 @@ void main() {
   });
 
   test('handleEvent は fire-and-forget で call になる', () async {
-    final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false, permissions: _samplePermissions);
+    final controller = AsyncWasmPluginController(wasmBytes: bytes, nativeFetch: false, permissions: _samplePermissions, fetchHosts: _sampleHosts);
     await controller.load();
     controller.handleEvent('scope:node', 'tap', fn: 'openThread', payload: {'postId': 'p1'});
     await Future<void>.delayed(const Duration(milliseconds: 300));
