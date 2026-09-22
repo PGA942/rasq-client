@@ -16,8 +16,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
-import '../settings/settings_dsl.dart';
 import '../media/image_scale.dart';
+import '../settings/settings_dsl.dart';
+import '../store/rasqpkg.dart';
 import '../store/store_providers.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
