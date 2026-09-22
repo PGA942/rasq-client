@@ -1,0 +1,38 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "plugins.telemetry",
+  "title": "通信の形の報告",
+  "defaults": {
+    "fetchShapes": false
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "プラグインの通信の形をストアに報告する"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "fetchShapes",
+        "p": {
+          "title": "初めて見た通信の形を報告する",
+          "value": "$.settings.fetchShapes",
+          "subtitle": "プラグインが行う通信の「形」(接続先のホスト、メソッド、パスの型、ヘッダの名前、送る JSON のキーの構造)だけを、この端末で初めて見たときに 1 度だけ RASQ のストアへ送ります。トークン、本文、ユーザー名、URL の中の ID などの値は送りません。審査は、承認したあとで通信の形が変わったプラグインを読み直すためにこれを使います。既定はオフです。"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "送るもの: 例 {host: misskey.example, method: POST, path: /api/users/{hex}/notes, headers: [content-type], body: {i: s, limit: n}}。送らないもの: 値そのもの。同じ形は 2 度と送りません。同意はストアの同意記録にも残り、切ると撤回として記録されます。",
+          "style": "caption"
+        }
+      }
+    ]
+  }
+}

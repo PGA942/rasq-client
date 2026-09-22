@@ -25,6 +25,7 @@ class RasqWasmPlugin {
   String patch() => throw RasqWasmInstantiateException();
   String call({required String fn, required String argsJson, required String callId}) => throw RasqWasmInstantiateException();
   void setFetchHosts(Set<String> hosts) {}
+  List<Map<String, Object?>> takeFetchShapes() => const [];
   void dispose() {}
 }
 

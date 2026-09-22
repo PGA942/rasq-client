@@ -27,8 +27,12 @@ class WasmPluginWorker {
   final _logs = StreamController<String>.broadcast();
   final _fows = StreamController<Map<String, Object?>>.broadcast();
   final _apps = StreamController<Map<String, Object?>>.broadcast();
+  final _shapes = StreamController<Map<String, Object?>>.broadcast();
 
   Stream<String> get logs => _logs.stream;
+
+  /// 初めて見た `net.fetch` の形(端末版と同じ計算を Worker の JS でする)。
+  Stream<Map<String, Object?>> get fetchShapes => _shapes.stream;
   Stream<Map<String, Object?>> get appRequests => _apps.stream;
   Stream<Map<String, Object?>> get fowRequests => _fows.stream;
 
@@ -69,6 +73,7 @@ class WasmPluginWorker {
     if (map['log'] != null) return _logs.add('${map['log']}');
     if (map['fow'] != null) return _fows.add((map['fow'] as Map).cast<String, Object?>());
     if (map['app'] != null) return _apps.add((map['app'] as Map).cast<String, Object?>());
+    if (map['shape'] != null) return _shapes.add((map['shape'] as Map).cast<String, Object?>());
     final completer = _pending.remove(map['id']);
     if (completer == null) return;
     if (map['ok'] == true) {
@@ -99,6 +104,7 @@ class WasmPluginWorker {
     _logs.close();
     _fows.close();
     _apps.close();
+    _shapes.close();
   }
 
   Future<void> dispose() async => _close();
@@ -146,7 +152,63 @@ function hostPermitted(host) {
 }
 function hostOf(url) { try { return new URL(url).hostname.toLowerCase(); } catch (_) { return ""; } }
 
+// ── 通信の形 (端末版 rasq_wasm_runtime_core の fetch_shape と同じ規則。片方を変えたらもう片方も) ──
+const seenShapes = new Set();
+let shapesOverflow = false;
+const MAX_FETCH_SHAPES = 256;
+function fnv1a64(s) {
+  let h = 0xcbf29ce484222325n;
+  for (const b of new TextEncoder().encode(s)) { h ^= BigInt(b); h = (h * 0x100000001b3n) & 0xffffffffffffffffn; }
+  return h.toString(16).padStart(16, "0");
+}
+function segKind(s) {
+  if (!s) return "";
+  if (/^[0-9]+$/.test(s)) return "{n}";
+  if (s.length === 36 && (s.match(/-/g) || []).length === 4 && /^[0-9a-fA-F-]+$/.test(s)) return "{uuid}";
+  if (s.length >= 16 && /^[0-9a-fA-F]+$/.test(s)) return "{hex}";
+  if (s.includes("@")) return "{acct}";
+  if (s.length > 24 || !/^[A-Za-z0-9._-]+$/.test(s)) return "{s}";
+  return s.toLowerCase();
+}
+function skeleton(v, depth) {
+  if (depth >= 4) return "…";
+  if (v === null) return null;
+  if (Array.isArray(v)) return v.length ? [skeleton(v[0], depth + 1)] : [];
+  if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort().slice(0, 64)) o[k] = skeleton(v[k], depth + 1); return o; }
+  if (typeof v === "string") return "s";
+  if (typeof v === "number") return "n";
+  if (typeof v === "boolean") return "b";
+  return null;
+}
+// serde_json の Map は BTreeMap なので、正規形はキーをソートした JSON。
+function canonical(v) {
+  if (Array.isArray(v)) return "[" + v.map(canonical).join(",") + "]";
+  if (v && typeof v === "object") return "{" + Object.keys(v).sort().map((k) => JSON.stringify(k) + ":" + canonical(v[k])).join(",") + "}";
+  return JSON.stringify(v);
+}
+function fetchShape(args) {
+  const url = String(args.url || "");
+  if (!(url.startsWith("https://") || url.startsWith("http://"))) return null;
+  let u; try { u = new URL(url); } catch (_) { return null; }
+  const path = "/" + u.pathname.split("/").filter((s) => s).map(segKind).join("/");
+  const query = Array.from(new Set(Array.from(u.searchParams.keys()).map((k) => k.toLowerCase()))).sort();
+  const headers = Array.from(new Set(Object.keys(args.headers || {}).map((k) => k.toLowerCase()))).sort();
+  let body = "none";
+  if (typeof args.body === "string") { try { const j = JSON.parse(args.body); body = (j && typeof j === "object") ? skeleton(j, 0) : "text"; } catch (_) { body = "text"; } }
+  else if (args.body && typeof args.body === "object") body = (typeof args.body.b64 === "string") ? "bytes" : skeleton(args.body, 0);
+  const shape = {host: u.hostname.toLowerCase(), method: String(args.method || "GET").toUpperCase(), path, query, headers, body};
+  return {hash: fnv1a64(canonical(shape)), shape};
+}
+function recordShape(args) {
+  const s = fetchShape(args);
+  if (!s || seenShapes.has(s.hash)) return;
+  if (seenShapes.size >= MAX_FETCH_SHAPES) { if (!shapesOverflow) { shapesOverflow = true; send({shape: {overflow: true}}); } return; }
+  seenShapes.add(s.hash);
+  send({shape: s});
+}
+
 function netFetch(args) {
+  recordShape(args); // 通信の形は、通る通らないに関わらず控える(端末版のランタイムと同じ)
   if (!cfg.permissions.includes("network")) throw new HostFnError("E01", "network not permitted");
   const url = String(args.url || "");
   if (!(url.startsWith("https://") || url.startsWith("http://"))) throw new HostFnError("B03", "bad url: " + url);

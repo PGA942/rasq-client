@@ -1182,6 +1182,21 @@ void main() {
       expect(call(notDeclared, 'net.fetch', {'url': 'https://misskey.example/'})['error']['code'], 'E01');
     });
 
+    test('通信の形: 同期コントローラでも invoke のあとに流れる。B01 でも E01 でも控えられる', () {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetchHosts: const {'misskey.example'}, fetch: (_) => SyncFetchResponse(status: 200, bodyText: cannedNotes));
+      final controller = WasmPluginController(wasmBytes: bytes, env: env);
+      addTearDown(controller.dispose);
+      final shapes = <Map<String, Object?>>[];
+      controller.fetchShapes.listen(shapes.add);
+      controller.load();
+      controller.invoke('timeline', {'host': 'misskey.example', 'limit': 10});
+      controller.invoke('timeline', {'host': 'other.example', 'limit': 10}); // 宣言外 → E01。それでも形は控える(ホストが違うので別の形)
+      return Future<void>.delayed(Duration.zero).then((_) {
+        expect(shapes.map((s) => (s['shape'] as Map)['host']), ['misskey.example', 'other.example']);
+        expect(shapes.map((s) => s['hash']).toSet(), hasLength(2));
+      });
+    });
+
     test('ネイティブ net.fetch は network 未宣言なら短絡させない (迂回防止, D-023)', () {
       // ランタイム内で短絡された net.fetch は Dart のディスパッチャを通らない。
       // フラグ自体を落とさないと、上の E01 ゲートごと迂回される。

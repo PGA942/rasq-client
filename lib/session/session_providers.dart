@@ -14,6 +14,7 @@ import 'rasq_accounts.dart';
 import 'session_storage.dart';
 import 'bluesky_auth.dart';
 import 'mixi2_auth.dart';
+import '../features/plugins/fetch_shape_telemetry.dart';
 
 /// wasm SNS サンプルの pluginId(dev「実登録」とレジストリ解決で共用)。
 const wasmSamplePluginId = 'misskey-wasm-sample';
@@ -33,6 +34,9 @@ final sessionStorageProvider = Provider<SessionStorage>((ref) => SecureSessionSt
 ///   ブローカー経由**(インスタンスごとの client_secret が要るため)。
 ///   サーバー未設定ならログイン開始時にその旨のエラーを返す。
 final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
+  // 通信の形の報告(同意した端末だけ)。同梱の SNS プラグインはストアに版が無いので
+  // 404 で捨てられるが、ストアから入れた SNS プラグインと同じ口を通しておく。
+  void onFetchShape(String pluginId, String version, Map<String, Object?> s) => ref.read(fetchShapeTelemetryProvider).report(pluginId, version, s);
   // Bluesky (D-175): 認証フローがプラグイン自身(匿名ワーカー)を使うので先に作る。
   late final WasmSnsPlugin bluesky;
   bluesky = WasmSnsPlugin(
@@ -51,6 +55,7 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
     kind: SnsKind.bluesky,
     loadBytes: () async => (await rootBundle.load('assets/plugins/bluesky_wasm.wasm')).buffer.asUint8List(),
     authFlowFactory: (host, {callback}) async => BlueskyCredentialFlow(plugin: bluesky, host: host),
+    onFetchShape: onFetchShape,
   );
   // mixi2 (D-206、サンプル): 公式 API 申請前なのでダミーモード(ホスト `dummy`)で流れを確かめる。
   late final WasmSnsPlugin mixi2;
@@ -69,6 +74,7 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
     kind: SnsKind.mixi2,
     loadBytes: () async => (await rootBundle.load('assets/plugins/mixi2_wasm.wasm')).buffer.asUint8List(),
     authFlowFactory: mixi2AuthFactory(ref, () => mixi2),
+    onFetchShape: onFetchShape,
   );
   final r = PluginRegistry()
     ..register(MisskeyPlugin())
@@ -87,6 +93,7 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
       kind: SnsKind.mastodon,
       loadBytes: () async => (await rootBundle.load('assets/plugins/mastodon_wasm.wasm')).buffer.asUint8List(),
       authFlowFactory: brokeredAuthFactory(ref, provider: 'mastodon', pluginId: mastodonPluginId, kind: SnsKind.mastodon),
+      onFetchShape: onFetchShape,
     ))
     // Bluesky (D-175): wasm プラグイン。認証はハンドル + アプリパスワード(`sns.login` = createSession)。
     ..register(bluesky)
@@ -99,6 +106,7 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
       manifest: const PluginManifest(id: wasmSamplePluginId, name: 'Misskey (wasm sample)', version: '0.1.0', kind: PluginKind.sns, supportedSns: [SnsKind.misskey], permissions: ['network', 'storage.safe'], network: PluginNetwork(instance: true)),
       kind: SnsKind.misskey,
       loadBytes: () async => (await rootBundle.load('assets/plugins/misskey_wasm_sample.wasm')).buffer.asUint8List(),
+      onFetchShape: onFetchShape,
     ));
   ref.onDispose(() async {
     await r.closeAll();
