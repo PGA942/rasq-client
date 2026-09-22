@@ -6,9 +6,13 @@ import 'package:flutter/material.dart';
 import 'image_scale.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
+import '../home/plugin_actions.dart' show viewerToggleDefaultIcon;
+import '../home/material_icons.dart';
+import '../home/post_row.dart';
 import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
 
@@ -37,6 +41,40 @@ final viewerOverlayPluginsProvider = Provider<List<SlotPlugin>>((ref) {
   return [for (final p in all) if (v[viewerPluginEnabledKey(p.id)] != false) p];
 });
 
+/// その画像について、プラグイン 1 つがいまどうなっているか (D-246)。黙って失敗しない: トグルに出す。
+enum ViewerPluginPhase {
+  /// まだ渡していない(無効 / これから)。
+  idle,
+
+  /// 画像を取得中 / プラグインが見ている最中(wasm はインタープリタで動くので、大きい画像は数秒かかる)。
+  asking,
+
+  /// 重ねを出している。
+  shown,
+
+  /// 見たが、重ねるものは無かった。
+  none,
+
+  /// 画像を取れなかった / プラグインがエラーを返した。オフ → オンで渡し直す。
+  failed,
+}
+
+@immutable
+class ViewerPluginStatus {
+  const ViewerPluginStatus(this.phase, [this.message]);
+  final ViewerPluginPhase phase;
+  final String? message;
+  static const idle = ViewerPluginStatus(ViewerPluginPhase.idle);
+
+  String get label => switch (phase) {
+        ViewerPluginPhase.idle => '',
+        ViewerPluginPhase.asking => '画像を見ています…',
+        ViewerPluginPhase.shown => '検出あり',
+        ViewerPluginPhase.none => '検出なし',
+        ViewerPluginPhase.failed => '失敗: ${message ?? ''}(オフ → オンでやり直す)',
+      };
+}
+
 class ViewerPluginOverlays {
   ViewerPluginOverlays(this.ref, {required this.onChanged});
   final WidgetRef ref;
@@ -49,6 +87,27 @@ class ViewerPluginOverlays {
 
   /// 画像 index → 渡したプラグイン id → トークン。
   final Map<int, Map<String, String>> _tokens = {};
+
+  /// 画像 index → プラグイン id → 状態。
+  final Map<int, Map<String, ViewerPluginStatus>> _status = {};
+
+  ViewerPluginStatus statusOf(int i, String pluginId) => _status[i]?[pluginId] ?? ViewerPluginStatus.idle;
+
+  void _setStatus(int i, String pluginId, ViewerPluginStatus st) {
+    if (_disposed) return;
+    _status.putIfAbsent(i, () => {})[pluginId] = st;
+    onChanged();
+  }
+
+  /// 有効 / 無効を切り替える(`slots.viewer` に保存)。有効にしたら、この画像をまだ渡せていなければ渡す
+  /// (前に失敗したものはここでやり直しになる)。無効は重ねを出さないだけ(トークンは残す)。
+  Future<void> toggle(String pluginId, int i, Uri? url) async {
+    final enabled = ref.read(viewerOverlayPluginsProvider).any((p) => p.id == pluginId);
+    await ref.read(settingsAreaProvider(viewerPluginsSettingsArea).notifier).set(viewerPluginEnabledKey(pluginId), !enabled);
+    if (_disposed) return;
+    if (!enabled && url != null) await ask(i, url);
+    onChanged();
+  }
 
   /// その画像の重ね(有効なプラグインのぶんだけ)。
   List<ViewerOverlay> overlaysOf(int i) {
@@ -63,34 +122,42 @@ class ViewerPluginOverlays {
 
   Future<void> ask(int i, Uri url) async {
     // 有効で、まだ渡していないプラグインだけ (D-205 / D-207: 後から有効にしたものにも渡す)。
+    // 渡せなかったもの(画像の取得失敗 / プラグインのエラー)は記録を外して、次の ask でやり直せるようにする。
     final asked = _tokens.putIfAbsent(i, () => {});
     final plugins = [for (final p in ref.read(viewerOverlayPluginsProvider)) if (!asked.containsKey(p.id)) p];
     if (plugins.isEmpty) return;
     _notifier ??= ref.read(slotPluginsProvider.notifier);
-    for (final p in plugins) {
-      _used[p.id] = p;
-    }
     final token = 'viewer-${identityHashCode(this)}-$i';
     for (final p in plugins) {
+      _used[p.id] = p;
       asked[p.id] = token;
+      _setStatus(i, p.id, const ViewerPluginStatus(ViewerPluginPhase.asking));
     }
+    void failAll(String why) {
+      for (final p in plugins) {
+        asked.remove(p.id);
+        _setStatus(i, p.id, ViewerPluginStatus(ViewerPluginPhase.failed, why));
+      }
+    }
+
     Uint8List? bytes;
     var width = 0;
     var height = 0;
     try {
       final src = await ref.read(viewerImageFetcherProvider)(url);
-      if (src != null) {
-        final scaled = await downscalePng(src, 1024);
-        bytes = scaled.$1;
-        width = scaled.$2;
-        height = scaled.$3;
-      }
+      if (src == null) return failAll('画像を取得できませんでした');
+      final scaled = await downscalePng(src, 1024);
+      bytes = scaled.$1;
+      width = scaled.$2;
+      height = scaled.$3;
     } catch (e) {
       debugPrint('viewer overlay: fetch failed: $e');
+      return failAll('画像を取得できませんでした($e)');
     }
-    if (_disposed || width == 0 || height == 0) return;
+    if (_disposed) return;
+    if (width == 0 || height == 0) return failAll('画像を読めませんでした');
     for (final p in plugins) {
-      final root = await _notifier!.viewerOpen(
+      final (:root, :error) = await _notifier!.viewerOpen(
         p,
         token: token,
         url: url.toString(),
@@ -100,13 +167,21 @@ class ViewerPluginOverlays {
         bytes: bytes,
         onOverlay: (root) => _set(i, ViewerOverlay(root: root, width: width, height: height, plugin: p)),
       );
-      if (root != null) _set(i, ViewerOverlay(root: root, width: width, height: height, plugin: p));
+      if (error != null) {
+        asked.remove(p.id);
+        _setStatus(i, p.id, ViewerPluginStatus(ViewerPluginPhase.failed, error));
+      } else if (root != null) {
+        _set(i, ViewerOverlay(root: root, width: width, height: height, plugin: p));
+      } else {
+        _setStatus(i, p.id, const ViewerPluginStatus(ViewerPluginPhase.none));
+      }
     }
   }
 
   void _set(int i, ViewerOverlay ov) {
     if (_disposed) return;
     _overlays.putIfAbsent(i, () => {})[ov.plugin.id] = ov;
+    _status.putIfAbsent(i, () => {})[ov.plugin.id] = const ViewerPluginStatus(ViewerPluginPhase.shown);
     onChanged();
   }
 
@@ -182,4 +257,47 @@ class ViewerOverlay {
   final int width;
   final int height;
   final SlotPlugin plugin;
+}
+
+/// 全画面表示プラグインのトグル (D-214 → D-246): ON = 塗り / アクセント。処理中は砂時計の印、検出なしは薄く、失敗は
+/// 警告色。投稿のビューワーとプロフィール画像のビューワーで同じもの。(印は静止画: 回る輪だと終わらない処理の間
+/// 画面が落ち着かず、テストの pumpAndSettle も終わらない。)
+class ViewerPluginToggle extends StatelessWidget {
+  const ViewerPluginToggle({super.key, required this.pluginId, required this.label, this.iconName, required this.enabled, required this.status, required this.onPressed});
+  final String pluginId;
+  final String label;
+
+  /// 宣言されたアイコン名(契約 v0.9)。無い / 既定なら パズルの 塗り(ON)/ 線(OFF)。宣言があれば色で ON / OFF を出す。
+  final String? iconName;
+  final bool enabled;
+  final ViewerPluginStatus status;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final failed = enabled && status.phase == ViewerPluginPhase.failed;
+    final asking = enabled && status.phase == ViewerPluginPhase.asking;
+    final declared = iconName != null && iconName != viewerToggleDefaultIcon;
+    final icon = failed
+        ? Icons.error_outline
+        : declared
+            // 宣言のアイコン名: 投稿ボタンの小さい表 → Material の全アイコン表 (D-212) → 既定
+            ? PostRow.iconFor(iconName, materialIconByName(iconName) ?? Icons.extension)
+            : (enabled ? Icons.extension : Icons.extension_outlined);
+    final color = !enabled
+        ? (declared ? Colors.white54 : Colors.white)
+        : failed
+            ? RasqTokens.of(context).danger
+            : status.phase == ViewerPluginPhase.none
+                ? Colors.white70
+                : RasqColors.accent;
+    final tip = enabled && status.label.isNotEmpty ? '$label — ${status.label}' : label;
+    return DecoratedBox(
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
+      child: Stack(alignment: Alignment.center, children: [
+        RasqIconButton(key: ValueKey('viewer.plugin.$pluginId'), icon: icon, color: color, tooltip: tip, onPressed: onPressed),
+        if (asking) const Positioned(right: 4, bottom: 4, child: IgnorePointer(child: Icon(Icons.hourglass_top, size: 12, color: Colors.white))),
+      ]),
+    );
+  }
 }

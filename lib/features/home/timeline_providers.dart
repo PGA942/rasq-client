@@ -1,3 +1,8 @@
+import '../../backend/orgate_client.dart';
+import '../../backend/rasq_account.dart';
+import '../../backend/rasq_account_page_api.dart';
+import '../nodeprog/tl_components.dart' show rasqPostsKind;
+import 'account_affinity.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -94,7 +99,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       c = _nodeCursors[kid];
       if (c == null) return const []; // 読了
     }
-    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next);
+    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next, rasqFeed: (until) => fetchRasqFeed(ref, until), rasqMine: () => fetchRasqMine(ref));
   }
 
   /// カスタム関数の中身グラフ (D-118)。
@@ -522,6 +527,20 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
   }
 
+  /// 上の更新タイル (D-298) からの更新: **読み込んである投稿は残したまま、新しいぶんを上に足す**(引っ張って更新 = [refresh] は、最新の 1 ページに置き換える)。
+  /// 新しいページが手元の投稿とつながらない(間が空いた)ときと、総合 TL(カーソルを作り直す)は、[refresh] と同じ置き換えになる。
+  Future<void> refreshNewer() async {
+    final before = state.value;
+    await refresh();
+    final after = state.value;
+    if (before == null || after == null || after.error != null || kind == TimelineKind.bundle) return;
+    final fresh = {for (final p in after.posts) p.id};
+    if (!before.posts.any((p) => fresh.contains(p.id))) return;
+    final tail = [for (final p in before.posts) if (!fresh.contains(p.id)) p];
+    if (tail.isEmpty) return;
+    state = AsyncData(after.copyWith(posts: [...after.posts, ...tail], cursor: before.cursor, clearCursor: before.cursor == null, customTiles: {...before.customTiles, ...after.customTiles}, badges: {...before.badges, ...after.badges}));
+  }
+
   Future<void> loadMore() async {
     final cur = state.value;
     final session = _session;
@@ -546,10 +565,15 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     if (session == null) return;
     final store = ref.read(actionStateProvider.notifier);
     final before = store.of(post.key, action.id);
-    final undo = args.containsKey('reaction') ? false : before.done;
+    // `forceUndo` (D-274): 状態の入り切りではなく、向きを指定する(リノートのボタンは何度でも「リノート」、取り消しは帯の … から)。
+    final forced = args['forceUndo'];
+    args = {...args}..remove('forceUndo');
+    final undo = forced is bool ? forced : (args.containsKey('reaction') ? false : before.done);
     store.applyOptimistic(post.key, action.id, done: !undo);
     try {
       final r = await session.performAction(action.id, post.id, args: {...args, 'undo': undo});
+      // どのアカウントでこの相手と関わったか (D-280: 共有 / リノートに使うアカウントの予測の材料)。
+      if (!undo) ref.read(accountAffinityProvider.notifier).record(post).ignore();
       store.apply(post.key, action.id, ActionState(done: r.done, count: r.count ?? before.count, iconUrl: action.iconPerPost ? (r.icon?.url ?? before.iconUrl) : null, iconText: action.iconPerPost ? (r.icon?.text ?? (r.icon?.url != null ? null : before.iconText)) : null));
     } catch (e) {
       store.apply(post.key, action.id, before);
@@ -567,14 +591,30 @@ final timelineProvider = AsyncNotifierProvider.family<TimelineNotifier, Timeline
 /// [onCursor] (D-117) には取得ページの続きトークンを報告する(枝ごとの
 /// ページング用。null = 末尾まで読了)。
 Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
-    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor}) async {
+    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor, Future<(List<Post>, String?)> Function(String? until)? rasqFeed, Future<List<Post>> Function()? rasqMine}) async {
+  // RASQ の投稿 (D-283): SNS のセッションではなく、Central のフィード(自分とフォロー中の RASQ アカウント)。
+  // `acct:` で包まれていても拾う(包んだまま流すと、現在の SNS のセッションで取りに行ってしまう)。
+  if ((kid.startsWith('acct:') ? kid.substring(kid.indexOf('|') + 1) : kid) == rasqPostsKind) {
+    if (rasqFeed == null) return const [];
+    final (posts, next) = await rasqFeed(cursor);
+    onCursor?.call(next);
+    return posts;
+  }
   // アカウント指定 (D-109): `acct:<@handle@instance>|<kind>` — そのアカウントの
   // セッションで残りを解決する(見つからなければ渡されたセッションのまま)。
   if (kid.startsWith('acct:')) {
     final sep = kid.indexOf('|');
     if (sep > 5) {
+      // RASQ アカウント(`@handle@rasq`)の「自分の投稿」(D-286): 投稿先のカスタマイズの RASQ のタブで、自分の投稿と比べる基準。
+      // SNS のセッションは無いので、RASQ としての投稿を返す(以前は、表示中の SNS アカウントの投稿と比べていた)。
+      if (kid.substring(5, sep).endsWith('@$rasqPostInstance')) {
+        final kind = kid.substring(sep + 1);
+        if (rasqMine == null || !const {'myposts', 'myreplies', 'home', 'self'}.contains(kind)) return const [];
+        onCursor?.call(null);
+        return rasqMine();
+      }
       final other = sessionFor?.call(kid.substring(5, sep));
-      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor, onCursor: onCursor);
+      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor, onCursor: onCursor, rasqFeed: rasqFeed, rasqMine: rasqMine);
     }
   }
   // `self` (D-124): この画面の基礎タイムライン(検索結果/リスト/欄の投稿)を
@@ -620,4 +660,34 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
     return finish(await session.timeline(TimelineKind('dm:${r.peer.id}', 'DM'), cursor: cursor));
   }
   return finish(await session.timeline(TimelineKind(kid, kid), cursor: cursor));
+}
+
+/// RASQ の投稿のフィード (D-283)。TL のタイルは RASQ の投稿の形 ([RasqAccountPost]) で描くので、原本を [rasqFeedPostsProvider] に置く。
+/// ログインしていなければ空。
+Future<(List<Post>, String?)> fetchRasqFeed(Ref ref, String? until) async {
+  final api = ref.read(rasqAccountPageApiProvider);
+  if (api == null || ref.read(orgateAccountProvider).value == null) return (const <Post>[], null);
+  try {
+    final page = await api.feed(until: until);
+    ref.read(rasqFeedPostsProvider.notifier).put(page.posts);
+    final central = ref.read(centralBaseUrlProvider);
+    return ([for (final p in page.posts) p.toPost(central: central)], page.nextUntil);
+  } catch (e) {
+    debugPrint('rasq feed: $e');
+    return (const <Post>[], null);
+  }
+}
+
+/// RASQ アカウントとしての自分の投稿 (D-286)。ログインしていなければ空。
+Future<List<Post>> fetchRasqMine(Ref ref) async {
+  final api = ref.read(rasqAccountPageApiProvider);
+  final me = ref.read(orgateAccountProvider).value;
+  if (api == null || me == null) return const [];
+  try {
+    final central = ref.read(centralBaseUrlProvider);
+    return [for (final p in (await api.posts(me.handle)).posts) if (p.rebroadedBy == null) p.toPost(central: central)];
+  } catch (e) {
+    debugPrint('rasq mine: $e');
+    return const [];
+  }
 }

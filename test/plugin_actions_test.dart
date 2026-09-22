@@ -74,6 +74,15 @@ void main() {
     expect(bestMatch(['Copy'], [reaction, renote])!.score, lessThan(0.85));
   });
 
+  test('構成キー → どのアカウントのバーか (D-284)', () {
+    expect(accountKeyOfConfigKey('misskey:mk.example:me'), 'misskey:mk.example:me');
+    expect(accountKeyOfConfigKey('viewer:misskey:mk.example:me'), 'misskey:mk.example:me');
+    // 内蔵のバー(加工画面 / RASQ の投稿)と、旧来の共通構成は、アカウントに属さない。
+    expect(accountKeyOfConfigKey(editorImageConfigKey), isNull);
+    expect(accountKeyOfConfigKey(rasqPostConfigKey), isNull);
+    expect(accountKeyOfConfigKey(''), isNull);
+  });
+
   testWidgets('宣言だけでバンドルに入る → タップで post.action(post / account)→ message がトースト、composer.open でコンポーザー、スロット設定で無効化', (tester) async {
     late FakeSlotRuntime rt;
     fakes['act'] = () => rt = FakeSlotRuntime(
@@ -194,10 +203,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.read(actionBarConfigProvider(accountKey)).lists.single.icon, 'material:star_border');
     // 写真 (D-212): アプリの保存領域へコピーされ、file: で持つ。
-    // ファイル I/O は本物の非同期(FakeAsync では進まない)。
+    // ファイル I/O は本物の非同期(FakeAsync では進まない)。固定待ちだと遅い CI で落ちるので、書き終わるまで待つ。
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const ValueKey('actionbar.bundle.icon.photo')));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      for (var i = 0; i < 200; i++) {
+        if (c.read(actionBarConfigProvider(accountKey)).lists.single.icon?.startsWith('file:') ?? false) break;
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
     });
     await tester.pumpAndSettle();
     final photoIcon = c.read(actionBarConfigProvider(accountKey)).lists.single.icon!;
@@ -268,9 +280,11 @@ void main() {
     expect(c.read(actionBarConfigProvider(accountKey)).hidden, isEmpty);
     expect(find.byKey(const ValueKey('actionbar.tile.renote')), findsOneWidget);
     // 隙間に落として並び替え: 末尾の隙間へリノート(投稿バー)。
-    await tester.ensureVisible(find.byKey(const ValueKey('actionbar.tile.renote')));
-    await tester.pumpAndSettle();
+    // 落とす先の隙間(1 段上の行)が FOW のヘッダーに隠れない位置まで戻す(編集 FOW は面が増えて長い、D-251)。
     final n = c.read(actionBarConfigProvider(accountKey)).order.length;
+    final sheet = find.descendant(of: find.byType(SingleChildScrollView), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('actionbar.surface.viewer')), -60, scrollable: sheet);
+    await tester.pumpAndSettle();
     g = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('actionbar.tile.renote'))));
     await tester.pump(const Duration(milliseconds: 400));
     await g.moveTo(tester.getCenter(find.byKey(ValueKey('actionbar.gap.$n'))));

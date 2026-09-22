@@ -4,10 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sns_misskey/sns_misskey.dart';
 
 import 'app/app.dart';
-import 'features/rai/rai_llm.dart';
-import 'features/rai/rai_embedding_model.dart';
-import 'features/rai/rai_embedding_model_device.dart';
-import 'features/rai/rai_llm_device.dart';
+import 'platform/device_overrides.dart';
 import 'session/session_storage.dart';
 
 /// Dev-only connectivity probe: `flutter run --dart-define=RASQ_PROBE=misskey.io`
@@ -17,9 +14,10 @@ const _probeHost = String.fromEnvironment('RASQ_PROBE');
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kDebugMode && _probeHost.isNotEmpty) await _probe(_probeHost);
+  await prepareDeviceRuntime();
   runApp(ProviderScope(
-    // RAi の端末内モデル (D-181): 実機では flutter_gemma(LiteRT-LM)。テストは既定(使えない骨格)か偽物。
-    overrides: [raiLlmProvider.overrideWith((_) => DeviceRaiLlm()), deviceRamReaderProvider.overrideWithValue(deviceRamReader), raiEmbeddingModelProvider.overrideWith((_) => DeviceRaiEmbeddingModel())],
+    // 端末だけの実装(端末内モデルなど)。Web 版では空 (D-295)。
+    overrides: deviceOverrides(),
     child: const RasqApp(),
   ));
 }

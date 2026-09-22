@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:three_js/three_js.dart' as three;
 
+import '../../platform/web_gl_bindings.dart';
 import 'rai_face.dart';
 import 'rai_motion.dart';
 import 'rai_space.dart';
@@ -16,7 +17,10 @@ import 'rai_space.dart';
 /// LLM の推論中は [RaiMascot3dController.paused] でミキサーを止める。
 ///
 /// テスト(FLUTTER_TEST)と Web では使わず、2D の painter に落ちる([raiMascot3dProvider])。
-final raiMascot3dProvider = Provider<bool>((_) => !kIsWeb && !Platform.environment.containsKey('FLUTTER_TEST'));
+// Web 版 (D-300 → D-303 → D-304): three_js の土台 (flutter_angle) は、Web では `gles_bindings.js`(index.html で読み込む。
+// `web/vendor/flutter_angle/`)の関数を呼ぶ。**読み込まれていないと最初のフレームが返らず、アプリごと起動しなくなる**ので、
+// あるときだけ 3D、無ければ 2D([RaiMascot] の painter)。`Platform` は Web では触れないので、先に kIsWeb を見る。
+final raiMascot3dProvider = Provider<bool>((_) => kIsWeb ? webGlBindingsLoaded() : !Platform.environment.containsKey('FLUTTER_TEST'));
 
 /// 3D 側へ渡す状態: 静止時の腕、移動中の計画と進み具合、一時停止。
 class RaiMascot3dController extends ChangeNotifier {
@@ -173,6 +177,11 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
   @override
   void initState() {
     super.initState();
+    if (kIsWeb && !webGlBindingsLoaded()) {
+      // 念のため (D-303): 橋渡しの JS が無い Web で直に作られても、アプリを道連れにしない(場所だけ空ける)。
+      _failed = true;
+      return;
+    }
     liveInstances++;
     if (liveInstances > 1) {
       // どこに 2 つ目ができたかをログに残す (D-211: 実機で再発したので祖先を数段出す)。
@@ -209,6 +218,12 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
 
   @override
   void dispose() {
+    if (_failed && kIsWeb) {
+      _fallback.dispose();
+      _frame.dispose();
+      super.dispose();
+      return;
+    }
     liveInstances--;
     _oneShotTimer?.cancel();
     _ctrl.removeListener(_sync);
@@ -475,13 +490,13 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
     if (_failed) return const SizedBox.shrink();
     final tex = _three.texture;
     final outline = widget.outline;
-    // 縁取り (D-192): 同じテクスチャを一色に塗って 8 方向へずらし、本体の下に敷く。
-    Widget copy() => Transform.scale(scaleY: Platform.isAndroid ? 1 : -1, child: Texture(textureId: tex!.textureId));
+    // 縁取り (D-192): 同じテクスチャを一色に塗って 8 方向へずらし、本体の下に敷く。Web 版 (D-300) には Texture が無いので、縁取りなしで出す。
+    Widget copy() => Transform.scale(scaleY: defaultTargetPlatform == TargetPlatform.android ? 1 : -1, child: Texture(textureId: tex!.textureId));
     final scene = SizedBox(
       width: RaiMascot3d.renderWidth,
       height: RaiMascot3d.renderHeight,
       child: Stack(fit: StackFit.expand, children: [
-        if (outline != null && tex != null && _ready)
+        if (!kIsWeb && outline != null && tex != null && _ready)
           for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
             Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),
         _three.build(),
@@ -494,7 +509,7 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
         child: CustomPaint(
           foregroundPainter: _RepaintTick(_frame),
           child: Stack(fit: StackFit.expand, children: [
-            if (outline != null && tex != null && _ready)
+            if (!kIsWeb && outline != null && tex != null && _ready)
               for (final d in const [Offset(-3, 0), Offset(3, 0), Offset(0, -3), Offset(0, 3), Offset(-2, -2), Offset(2, -2), Offset(-2, 2), Offset(2, 2)])
                 Transform.translate(offset: d, child: ColorFiltered(colorFilter: ColorFilter.mode(outline, BlendMode.srcIn), child: copy())),
             _three.build(),

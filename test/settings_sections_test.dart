@@ -29,7 +29,7 @@ import 'support/fakes.dart';
 /// 設定全般 (D-238): すべての行に行き先がある、ホストの設定ページ(静的 RRL)は全部読める、
 /// 設定値が実際に読まれる(プラグイン枠 / Tell タイル / 広告枠 / 通知 / 動画 / MFM)。
 void main() {
-  const actions = {settingsActionTrendGenres, settingsActionTrendTendency, settingsActionRelationalTuning, settingsActionRasqAccount, 'notificationPrefs'};
+  const actions = {settingsActionTrendGenres, settingsActionTrendTendency, settingsActionRelationalTuning, 'notificationPrefs'};
 
   test('すべての行に行き先がある(「フォントやカラースキーム」は画面内のシート)、ホストの DSL ページは全部パースできる', () {
     final hostAreas = <String>{};

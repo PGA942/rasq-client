@@ -19,16 +19,20 @@ import '../features/post/reactions_screen.dart';
 import '../features/media/media_viewer_screen.dart';
 import '../features/login/bluesky_login_screen.dart';
 import '../features/login/mixi2_login_screen.dart';
-import '../features/plugins/media_editor_screen.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
 import '../features/settings/learning_screen.dart';
 import '../features/settings/legal_screen.dart';
+import '../features/settings/account_security_screen.dart';
 import '../features/settings/notify_token_screen.dart';
 import '../features/settings/mute_block_screen.dart';
 import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
 import '../features/profile/profile_edit_screen.dart';
+import '../features/profile/rasq_account_page_screen.dart';
+import '../features/profile/rasq_post_screen.dart';
+import '../features/profile/rasq_reactions_screen.dart';
+import '../features/profile/rasq_profile_edit_screen.dart';
 import '../features/clips/clip_timeline_screen.dart';
 import '../features/lists/lists_screens.dart';
 import '../features/relational/relational_engine.dart';
@@ -43,6 +47,7 @@ import '../features/settings/action_bar_plugins_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/backend_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
+import '../features/store/installed_plugins_screen.dart';
 import '../features/store/plugin_page_screen.dart';
 import '../features/store/review_timeline_screen.dart';
 import '../features/store/store_home_screen.dart';
@@ -76,7 +81,6 @@ abstract final class Routes {
   /// プロフィールのアイコン / バナーの全画面表示 (D-177)。
   static const imageViewer = '/viewer/image';
 
-  static const mediaEditor = '/media-editor';
   static const mediaEditorPro = '/media-editor/pro';
   static const lists = '/lists';
   static const bookmarks = '/bookmarks';
@@ -114,7 +118,16 @@ abstract final class Routes {
 
   /// プラグインストア (M4 / D-120)。
   static const store = '/store';
+  /// RASQ アカウントページ (D-270)。
+  /// RASQ の投稿のスレッド (D-271)。
+  static String rasqPost(String id) => '/rasq-post/${Uri.encodeComponent(id)}';
+  static String rasqPostReactions(String id) => '${rasqPost(id)}/reactions';
+  static String rasqAccount(String handle) => '/rasq/${Uri.encodeComponent(handle)}';
   static String storePlugin(String id) => '/store/plugin/${Uri.encodeComponent(id)}';
+
+  /// インストール済み (D-256): 一覧と 1 件のページ(ストアの掲載とは別。掲載が消えていても開ける)。
+  static const storeInstalled = '/store/installed';
+  static String storeInstalledPlugin(String id) => '/store/installed/${Uri.encodeComponent(id)}';
 
   /// レビュー TL (D-137)。
   static String storePluginReviews(String id) => '/store/plugin/${Uri.encodeComponent(id)}/reviews';
@@ -170,11 +183,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loggedIn = sessions.value?.isLoggedIn ?? false;
       // 未ログインでも開ける画面: カタログ/開発用、オンボーディング、接続先設定
       // (オンボーディングから Central の接続先を入れるため)。
-      const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server'};
-      // 初回オンボーディング (D-138): 台帳が空(= 新規端末)ならまず RASQ
-      // アカウント作成の案内へ。SNS ログイン済みの端末は移行で済み扱い。
-      final onboardingDone = ledger.value?.onboardingDone ?? false;
-      if (!onboardingDone && !loggedIn && !open.contains(loc) && !onLogin) return Routes.onboarding;
+      // RASQ アカウントへのログイン (D-296) も、オンボーディングから開く。
+      const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server', '${Routes.settings}/account-login'};
+      // RASQ アカウントが無いあいだは、**SNS のログインより先に** RASQ アカウントの画面へ (D-138 → D-301)。
+      // 新規の端末(台帳が空)も、ログアウトしたあとも同じ入口。SNS ログイン済みの端末は移行で済み扱い。
+      // そこから「SNS アカウントだけで使う」を選べば `Routes.login` へ行き、`onLogin` で留まる。
+      final hasCentral = ledger.value?.accounts.any((a) => a.isCentral) ?? false;
+      if (!hasCentral && !loggedIn && !open.contains(loc) && !onLogin) return Routes.onboarding;
       if (!loggedIn && !onLogin && !open.contains(loc)) return Routes.login;
       if (loggedIn && loc == Routes.onboarding) return Routes.home;
       return null;
@@ -217,10 +232,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'server', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BackendSettingsScreen()),
             GoRoute(path: 'legal', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LegalScreen()),
             GoRoute(path: 'notify-token', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const NotifyTokenScreen()),
+            GoRoute(path: 'rasq-profile', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RasqProfileEditScreen()),
+            GoRoute(path: 'security', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountSecurityScreen()),
+            GoRoute(path: 'account-login', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountLoginScreen()),
             GoRoute(path: 'learning', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LearningScreen()),
             // プラグインボタン (D-210): 宣言されたボタン / 束ねる閾値。
             GoRoute(path: 'actionbar-plugins', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ActionBarPluginsScreen()),
           ]),
+          GoRoute(path: '/rasq-post/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqPostScreen(postId: s.pathParameters['id']!)),
+          GoRoute(path: '/rasq-post/:id/reactions', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqReactionsScreen(postId: s.pathParameters['id']!)),
+          GoRoute(path: '/rasq/:handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!)),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
           GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiHomeScreen(), routes: [
             GoRoute(path: 'achievements', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiAchievementsScreen()),
@@ -271,12 +292,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               return CustomTransitionPage(child: ProfileImageViewerScreen(url: x.url, title: x.title), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child));
             },
           ),
-          // メディアエディター (D-169): 添付をプラグインで加工する全画面。
-          GoRoute(
-            path: Routes.mediaEditor,
-            parentNavigatorKey: _appNavigatorKey,
-            pageBuilder: (_, s) => CustomTransitionPage(child: MediaEditorScreen(args: s.extra! as MediaEditorArgs), transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child)),
-          ),
           // 添付の加工 (D-173): pro_image_editor(基本)→ プラグインへバイパス。
           GoRoute(
             path: Routes.mediaEditorPro,
@@ -286,6 +301,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: Routes.catalog, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const CatalogScreen()),
           // プラグインストア (M4 / D-120)。
           GoRoute(path: Routes.store, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const StoreHomeScreen()),
+          GoRoute(path: Routes.storeInstalled, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const InstalledPluginsScreen()),
+          GoRoute(
+              path: '/store/installed/:id',
+              parentNavigatorKey: _appNavigatorKey,
+              builder: (_, s) => InstalledPluginScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
           GoRoute(
               path: '/store/plugin/:id',
               parentNavigatorKey: _appNavigatorKey,

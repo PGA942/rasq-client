@@ -6,6 +6,7 @@ import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
 import 'avatar.dart';
 import 'rich_text.dart';
+import '../platform/web_image.dart';
 
 /// インラインフレームの小表示 (D-156、ワイヤーフレーム p.1 右端 / p.5 右端):
 /// 別の面の中に投稿を埋め込むときのコンパクトなカード。小アバター + 名前 +
@@ -87,7 +88,7 @@ class _Thumbnails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    Widget img(Uri u) => Image.network(u.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.image_outlined, size: 14, color: scheme.onSurfaceVariant)));
+    Widget img(Uri u) => Image.network(webHtmlElementStrategy: rasqWebImageStrategy, u.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.image_outlined, size: 14, color: scheme.onSurfaceVariant)));
     Widget cell(int i) => Expanded(
           child: Stack(fit: StackFit.expand, children: [
             img(urls[i]),

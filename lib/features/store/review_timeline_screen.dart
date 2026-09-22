@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
+
+import '../../app/router.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
@@ -93,8 +96,8 @@ class _ReviewList extends ConsumerWidget {
         return StoreReviewTile(
           pluginId: pluginId,
           review: r,
-          // RASQ アカウントのページはまだ無い(D-087 の後段)。導線だけ先に置く。
-          onAuthorTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('@${reviewAuthorOf(r).handle} の RASQ アカウントページは準備中です'))),
+          // 著者 → RASQ アカウントページ (D-270)。ハンドルの無いレビュー(匿名 / 同梱のサンプル)は行き先が無い。
+          onAuthorTap: r.authorHandle.isEmpty ? null : () => context.push(Routes.rasqAccount(r.authorHandle)),
           onMore: (rect) async {
             final pick = await manager.showDropdown<String>(id: 'store.review.more', anchor: rect, items: const [
               RasqDropdownItem('リンクをコピー', 'copy'),

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
 
+import '../../backend/rasq_account.dart';
+import '../../backend/rasq_account_page_api.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
@@ -42,7 +45,9 @@ class NotificationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final me = ref.watch(currentUserProvider);
-    final tabs = [const RasqTabItem('すべて'), const RasqTabItem('フォロー中')];
+    // RASQ の通知 (D-285): メンション / 返信 / 引用 / AsTell での引用。RASQ アカウントにログインしているときだけタブが出る。
+    final rasq = ref.watch(orgateAccountProvider).value != null;
+    final tabs = [const RasqTabItem('すべて'), const RasqTabItem('フォロー中'), if (rasq) const RasqTabItem('RASQ')];
     final items = ref.watch(notificationsProvider);
     final prefs = ref.watch(notificationPrefsProvider);
     final viewer = ref.watch(currentAccountProvider);
@@ -68,6 +73,7 @@ class NotificationsScreen extends ConsumerWidget {
             child: TabBarView(children: [
               _List(items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future)),
               _List(items: items.whenData((p) => p.items.where((n) => prefs.isOn(n.kind) && n.actors.any(isFollowed)).toList()), onRefresh: () => ref.refresh(notificationsProvider.future), emptyTitle: 'フォロー中の通知はありません'),
+              if (rasq) const _RasqNotices(),
             ]),
           ),
         ]),
@@ -296,7 +302,7 @@ class _Reaction extends StatelessWidget {
   Widget build(BuildContext context) {
     if (r.startsWith(':')) {
       final url = emojis[r.substring(1, r.length - 1).replaceAll('@.', '')];
-      return url == null ? Text(r, style: RasqTypography.caption) : Image.network(url.toString(), height: 18, errorBuilder: (_, _, _) => Text(r, style: RasqTypography.caption));
+      return url == null ? Text(r, style: RasqTypography.caption) : Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), height: 18, errorBuilder: (_, _, _) => Text(r, style: RasqTypography.caption));
     }
     return Text(r, style: const TextStyle(fontSize: 16));
   }
@@ -363,5 +369,50 @@ class _TimerTile extends StatelessWidget {
       const SizedBox(width: RasqSpacing.md),
       Expanded(child: Text(item.kind == NotificationKind.vc ? 'ブックマークしたVCが始まります！' : 'タイマー付きブックマーク', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurface))),
     ]);
+  }
+}
+
+/// RASQ の通知の一覧 (D-285)。押すと、その投稿のスレッドへ。
+class _RasqNotices extends ConsumerWidget {
+  const _RasqNotices();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notices = ref.watch(rasqNoticesProvider);
+    final scheme = Theme.of(context).colorScheme;
+    return RefreshIndicator(
+      onRefresh: () => ref.refresh(rasqNoticesProvider.future),
+      child: notices.when(
+        loading: () => const RasqLoading(),
+        error: (e, _) => ListView(children: [const SizedBox(height: 120), RasqEmptyView(title: '読み込めませんでした', hint: '$e')]),
+        data: (list) => list.isEmpty
+            ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: 'RASQ の通知はありません', hint: 'メンション / 返信 / 引用が届くと、ここに出ます')])
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: list.length,
+                separatorBuilder: (_, _) => const Divider(),
+                itemBuilder: (context, i) {
+                  final n = list[i];
+                  return RasqListTile(
+                    key: ValueKey('rasqNotice.${n.id}'),
+                    leading: Stack(clipBehavior: Clip.none, children: [
+                      RasqAvatar(imageUrl: n.actor?.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: n.actor?.label ?? 'R'),
+                      Positioned(
+                        right: -4,
+                        bottom: -4,
+                        child: CircleAvatar(
+                          radius: 9,
+                          backgroundColor: scheme.surface,
+                          child: Icon(switch (n.kind) { 'post.mention' => Icons.alternate_email, 'post.reply' => Icons.reply, 'astell.quote' => Icons.graphic_eq, _ => Icons.format_quote }, size: 12, color: scheme.primary),
+                        ),
+                      ),
+                    ]),
+                    title: n.title,
+                    subtitle: n.body,
+                    onTap: n.postId == null ? null : () => context.push(Routes.rasqPost(n.postId!)),
+                  );
+                },
+              ),
+      ),
+    );
   }
 }

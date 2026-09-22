@@ -28,10 +28,16 @@ import 'composer_learning.dart';
 import 'compose_providers.dart';
 export 'compose_providers.dart' show ComposerInitialFile;
 import 'account_select.dart';
+import '../home/account_affinity.dart';
+import 'kana_romaji.dart';
 import 'compose_target.dart';
+import 'media_file_pick.dart';
 import 'drafts_fow.dart';
 import 'emoji_picker_fow.dart';
 import 'mfm_picker_fow.dart';
+import '../../backend/orgate_client.dart';
+import '../../backend/rasq_account.dart';
+import '../../backend/rasq_account_page_api.dart';
 import '../plugins/slot_plugins.dart';
 import 'poll_editor.dart';
 
@@ -47,12 +53,13 @@ const composerFowId = 'fow.composer';
 /// [initialText] は本文の初期値(AsTell の共有リンク転送 D-159 など)。下書きが
 /// 残っていればそちらを優先する。
 /// [postAs] は投稿先アカウントの初期値(共有 FOW で選んだアカウント、D-170)。
-Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles}) =>
-    showComposerWith(manager: ref.read(overlayManagerProvider), router: ref.read(routerProvider), target, resident: resident, onPosted: onPosted, column: column, initialText: initialText, postAs: postAs, initialFiles: initialFiles);
+/// [rasqTarget] = RASQ 指定で開く (D-275。アカウントページの「RASQ に投稿」から)。
+Future<Post?> showComposer(WidgetRef ref, ComposeTarget target, {bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles, bool rasqTarget = false}) =>
+    showComposerWith(manager: ref.read(overlayManagerProvider), router: ref.read(routerProvider), target, resident: resident, onPosted: onPosted, column: column, initialText: initialText, postAs: postAs, initialFiles: initialFiles, rasqTarget: rasqTarget);
 
 /// [showComposer] の本体 (D-225): Widget の外(RAi の関数 `post.reply` などのオートフィル)からも
 /// 開けるよう、[OverlayManager] と [GoRouter] を直接受ける。
-Future<Post?> showComposerWith(ComposeTarget target, {required OverlayManager manager, required GoRouter router, bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles}) async {
+Future<Post?> showComposerWith(ComposeTarget target, {required OverlayManager manager, required GoRouter router, bool resident = false, ValueChanged<Post>? onPosted, int column = 0, String? initialText, AccountSession? postAs, List<ComposerInitialFile>? initialFiles, bool rasqTarget = false}) async {
   // 返信 / ダイレクト投稿は **stick FOW** (D-047): ヘッダー無しで根本が
   // フッターメニュー/キーボードの上に貼り付き、タップ(フォーカス)すると
   // ヘッダーと返信先タイルが上から割り込んでくる(書き込み領域とアクション
@@ -102,6 +109,7 @@ Future<Post?> showComposerWith(ComposeTarget target, {required OverlayManager ma
         initialText: initialText,
         initialPostAs: postAs,
         initialFiles: initialFiles,
+        initialRasqTarget: rasqTarget,
         // 常駐は送信で閉じない(本体が下書きをリセットして残る)。
         onSent: resident ? (p) => onPosted?.call(p) : (p) => handle.close(result: p),
         onClose: () => handle.close(),
@@ -185,13 +193,16 @@ class _Attachment {
 }
 
 class _ComposerBody extends ConsumerStatefulWidget {
-  const _ComposerBody({required this.target, required this.onSent, this.spec, this.onClose, this.resident = false, this.initialText, this.initialPostAs, this.initialFiles});
+  const _ComposerBody({required this.target, required this.onSent, this.spec, this.onClose, this.resident = false, this.initialText, this.initialPostAs, this.initialFiles, this.initialRasqTarget = false});
   final ComposeTarget target;
 
   /// 本文の初期値(下書きが無いときだけ)。
   final String? initialText;
   final AccountSession? initialPostAs;
   final List<ComposerInitialFile>? initialFiles;
+
+  /// RASQ 指定で開く (D-275)。
+  final bool initialRasqTarget;
   final ValueChanged<Post> onSent;
 
   /// stick モード (D-047) の高さ調整用(展開/折りたたみで heightFactor を動かす)。
@@ -229,6 +240,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   Post? get _replyTo => switch (widget.target) { ComposeReply(to: final p) => p, _ => null };
   Post? get _quoteOf => switch (widget.target) { ComposeQuote(of: final p) => p, _ => null };
+
+  /// RASQ の投稿の引用 (D-276): 投稿先は RASQ に固定(SNS には引用できない)。
+  bool get _rasqQuote => _quoteOf != null && isRasqPost(_quoteOf!);
+
+  /// RASQ の投稿への返信 (D-292): SNS の返信と同じコンポーザー(スレッド画面の常駐コンポーザーも)で、投稿先は RASQ に固定。
+  /// 返信は文字だけ(500 文字まで)。
+  bool get _rasqReply => _replyTo != null && isRasqPost(_replyTo!);
 
   /// ダイレクト投稿への返信 = 公開範囲をダイレクト(specified)に固定 (D-047)。
   bool get _directReply => _replyTo?.isDirect ?? false;
@@ -355,8 +373,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     if (t is ComposeReply) {
       final a = t.to.author;
       final me = ref.read(currentAccountProvider);
-      final mention = a.account.instance == me?.instance ? '@${a.handle}' : '@${a.handle}@${a.account.instance}';
-      _mentionPrefill = '$mention ';
+      // RASQ の投稿への返信 (D-292) は、RASQ のハンドルだけ(`@handle`)。
+      final mention = isRasqPost(t.to) || a.account.instance == me?.instance ? '@${a.handle}' : '@${a.handle}@${a.account.instance}';
+      // 自分の RASQ の投稿への返信には、自分へのメンションを入れない。
+      final selfRasq = isRasqPost(t.to) && a.handle.toLowerCase() == ref.read(orgateAccountProvider).value?.handle.toLowerCase();
+      _mentionPrefill = selfRasq ? null : '$mention ';
       final cw = t.to.contentWarning;
       _cwPrefill = (cw != null && cw.isNotEmpty) ? cw : null;
       if (widget.resident) {
@@ -371,6 +392,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
     // 共有 FOW で選んだアカウント / プラグインが添えた画像 (D-170)。
     if (widget.initialPostAs != null) _postAs = widget.initialPostAs;
+    if ((widget.initialRasqTarget && widget.target is ComposeNormal) || _rasqQuote || _rasqReply) _rasqTarget = true;
     for (final f in widget.initialFiles ?? const <ComposerInitialFile>[]) {
       _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive);
     }
@@ -525,6 +547,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   @override
   void dispose() {
     _textPluginTimer?.cancel();
+    _mentionTimer?.cancel();
     _slots?.textDone(_textToken);
     // 余白クリック/ページ遷移などで閉じたときの自動下書き (D-051)。
     // unmount 中は provider を変更できないためマイクロタスクへ遅延する。
@@ -580,6 +603,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   AccountSession? _postAs;
   bool _targetsOpen = false;
 
+  /// RASQ 指定 (D-271): バンドルタイルの RASQ アカウントの行を**長押し**すると、SNS ではなく RASQ アカウントとして投稿する
+  /// (アカウントページの「投稿」に出る。本文 1000 文字 + 画像 4 枚、第一期は 3 件まで)。通常の新規投稿のときだけ。
+  bool _rasqTarget = false;
+
+  /// RASQ 指定を、ポスト先ノードの一致で自動で入れたか (D-283)。手で入り切りしたら false。
+  bool _rasqSuggested = false;
+
+  /// 添付の上限: SNS は 4 つ、RASQ は 6 つ (S-023 / D-276: RASQ も動画・音声を付けられる)。
+  int get _maxFiles => _rasqTarget ? rasqPostMaxImages : 4;
+
   /// 複数選択モード (D-128): アカウントごとに 非選択(0)→ 通常投稿(1)→
   /// **ノードを通した連動投稿**(2, ポスト先グラフにそのアカウントの
   /// ノード設定がある場合のみ)を循環する。選択分は送信時に連動投稿される。
@@ -620,7 +653,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       return await composerLinkGates(
         graph,
         draft,
-        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine),
       );
     } catch (_) {
       return const {};
@@ -658,6 +691,28 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   Set<String> _linkable = const {};
+
+  /// RASQ としての自分の投稿(ポスト先の絞り込みで、RASQ のタブの「自分の投稿」と比べる。D-286)。
+  Future<List<Post>> _rasqMine() async {
+    final api = ref.read(rasqAccountPageApiProvider);
+    final me = ref.read(orgateAccountProvider).value;
+    if (api == null || me == null) return const [];
+    try {
+      return [for (final p in (await api.posts(me.handle)).posts) if (p.rebroadedBy == null) p.toPost()];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// RASQ への連動投稿 (D-286)。設定「投稿コンポーザー → RASQ アカウントへも連動投稿する」(既定 off)+ RASQ にログイン中のときだけ。
+  bool get _rasqLinkEnabled => ref.read(orgateAccountProvider).value != null && (ref.read(settingsAreaProvider('composer.prefs')).value ?? const {})['rasqLinked'] == true;
+
+  /// 連動の計画は [AccountSession] で持つので、RASQ は仮のセッション(pluginId = [rasqLinkPluginId])で表す。
+  /// 送るときに見分けて、SNS のプラグインではなく Central へ投稿する。
+  AccountSession get _rasqLinkSession {
+    final rasq = ref.read(rasqAccountProvider);
+    return AccountSession(account: rasq.account, pluginId: rasqLinkPluginId, token: '', createdAt: DateTime.fromMillisecondsSinceEpoch(0), displayName: rasq.displayName, avatarUrl: rasq.avatarUrl);
+  }
 
   Future<void> _cycleMulti(String label) async {
     if (_linkable.isEmpty) _linkable = await _linkedCapableAccounts();
@@ -728,7 +783,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       return await composerTargetChoices(
         graph,
         draft,
-        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount),
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine),
         storageRead: (slot) async => (await ref.read(settingsAreaProvider(storageArea).future))[slot],
       );
     } catch (_) {
@@ -746,7 +801,18 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     // 投稿アカウントの自動選択 (D-131: その他の設定 → 投稿コンポーザー)。
     // オフでも一致マーク/並び替えは出す(自動で顔は切り替えない)。
     final autoAccount = (ref.read(settingsAreaProvider('composer.prefs')).value ?? const {})['autoAccount'] != false;
+    // RASQ アカウントのポスト先ノード (D-283): いちばんに一致したら、RASQ 指定にする(手で選んでいないとき、通常の投稿だけ)。
+    // 一致しなくなったら、自動で入れたぶんだけ戻す。
+    final rasqLabel = ref.read(orgateAccountProvider).value == null ? null : '${ref.read(rasqAccountProvider).account}';
+    final rasqFirst = autoAccount && rasqLabel != null && choices.isNotEmpty && choices.first.$1 == rasqLabel && widget.target is ComposeNormal && _postAs == null;
     setState(() {
+      if (rasqFirst && !_rasqTarget) {
+        _rasqTarget = true;
+        _rasqSuggested = true;
+      } else if (!rasqFirst && _rasqSuggested) {
+        _rasqTarget = false;
+        _rasqSuggested = false;
+      }
       _matchedTargets = [for (final c in choices) c.$1];
       _suggestedPostAs = !autoAccount || choices.isEmpty ? null : find(choices.first.$1);
       _suggestedFallback = !autoAccount || choices.isEmpty ? null : choices.first.$2;
@@ -782,8 +848,32 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         InkWell(
+          key: const ValueKey('composer.rasqRow'),
           borderRadius: BorderRadius.circular(12),
-          onTap: () => setState(() => _targetsOpen = false),
+          // 複数選択モード (D-286): SNS の行と同じく、タップで 非選択 → 通常投稿 → ノード連動(設定で有効のとき)。
+          onTap: () => _multiSelect && _rasqLinkEnabled && !_rasqTarget ? _cycleMulti('${rasq.account}') : setState(() => _targetsOpen = false),
+          // 長押し = RASQ 指定の入り切り (D-271)。
+          onLongPress: widget.target is! ComposeNormal || ref.read(orgateAccountProvider).value == null
+              ? null
+              : () {
+                  setState(() {
+                    _rasqTarget = !_rasqTarget;
+                    _rasqSuggested = false;
+                    _targetsOpen = false;
+                    _error = null;
+                  });
+                  // 連動の下書き (D-129 / D-286: delivery=draft): RASQ 宛の下書きがあれば、空のコンポーザーに復元して消費する。
+                  final key = 'linked:${rasq.account.key}';
+                  final linked = ref.read(composeDraftsProvider)[key];
+                  if (_rasqTarget && linked != null && _text.text.trim().isEmpty) {
+                    _text.text = linked.text;
+                    _text.selection = TextSelection.collapsed(offset: _text.text.length);
+                    _cwOn = linked.cwOn;
+                    _cw.text = linked.cw;
+                    _drafts.clear(key);
+                    setState(() {});
+                  }
+                },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: 6),
             child: Row(children: [
@@ -795,6 +885,18 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   Text('@${rasq.account.handle}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
                 ]),
               ),
+              if (_multiSelect && _rasqLinkEnabled && !_rasqTarget)
+                Padding(
+                  key: const ValueKey('composer.rasqRow.multi'),
+                  padding: const EdgeInsets.only(right: 4),
+                  child: switch (_multiSel['${rasq.account}'] ?? _selNone) {
+                    _selNormal => Text('通常投稿', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                    _selLinked => Text('ノード連動', style: RasqTypography.caption.copyWith(color: tokens.link)),
+                    _ => Icon(Icons.radio_button_unchecked, size: 16, color: scheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                  },
+                ),
+              if (_rasqTarget) Padding(padding: const EdgeInsets.only(right: 4), child: Text('RASQ に投稿', style: RasqTypography.caption.copyWith(color: tokens.link))),
+              if (_rasqTarget) Icon(Icons.check, size: 16, color: tokens.link),
               const Icon(Icons.keyboard_arrow_up, size: 20),
             ]),
           ),
@@ -810,6 +912,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                 } else {
                   setState(() {
                     _postAs = s;
+                    _rasqTarget = _rasqQuote || _rasqReply;
                     _targetsOpen = false;
                   });
                   // 連動の下書き (D-129: delivery=draft): このアカウント宛の
@@ -912,7 +1015,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final cfg = await _composerAccountCfg();
     final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
     final plan = <(AccountSession, Map<String, String>?, String)>[];
-    for (final s in sessions) {
+    // RASQ も連動先にできる (D-286)。RASQ 指定で投稿しているとき(= 主投稿先が RASQ)は、RASQ 自身には連動しない。
+    for (final s in [...sessions, if (_rasqLinkEnabled && !_rasqTarget) _rasqLinkSession]) {
       final label = '${s.account}';
       final mode = _multiSel[label] ?? _selNone;
       if (mode == _selNone || s.account.key == primaryKey) continue;
@@ -997,6 +1101,29 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         _drafts.save('linked:${s.account.key}', ComposeDraft(text: text, cw: cw ?? '', cwOn: cw != null));
         continue;
       }
+      // RASQ への連動 (D-286): SNS のプラグインではなく、Central へ。RASQ に無いもの(指名 / 連合なし)は近いものへ寄せ、上限を超える分は送らない。
+      if (s.pluginId == rasqLinkPluginId) {
+        try {
+          final api = ref.read(rasqAccountPageApiProvider);
+          if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+          if (text.length > rasqPostMaxChars || _files.length > rasqPostMaxImages || (base.poll?.choices.length ?? 0) > rasqPostMaxPollChoices) throw StateError('RASQ の上限を超えています');
+          await api.createPost(
+            text,
+            images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
+            cw: cw ?? '',
+            visibility: const {'public', 'home', 'followers'}.contains(visibility) ? visibility! : (visibility == null ? 'public' : 'followers'),
+            likeOnly: base.reactionAcceptance == 'likeOnly',
+            poll: base.poll == null ? null : (choices: base.poll!.choices, multiple: base.poll!.multiple, expiresAfter: base.poll!.expiresAfter),
+          );
+          final me = ref.read(orgateAccountProvider).value;
+          if (me != null) ref.invalidate(rasqAccountPageProvider(me.handle));
+          posted.add(label);
+        } catch (e) {
+          errors.add(label);
+          debugPrint('連動投稿 $label: $e');
+        }
+        continue;
+      }
       try {
         final session = registry.session(s);
         // メディアは各アカウントのサーバーへ上げ直す(id は流用できない)。
@@ -1043,6 +1170,72 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   bool get _isDm => widget.target is ComposeDm;
   int get _max => _session?.maxPostLength ?? 500;
 
+  // ── @ 補完 (D-285) ──
+  List<({String insert, String name, Uri? avatarUrl})> _mentionHits = const [];
+  Timer? _mentionTimer;
+  int _mentionSeq = 0;
+
+  /// キャレットの直前の `@…`(打っている途中のメンション)。無ければ null。戻り = (@ の位置, 打った文字)。
+  (int, String)? get _mentionAtCaret {
+    final v = _text.value;
+    if (!v.selection.isValid || !v.selection.isCollapsed) return null;
+    return mentionQueryAt(v.text, v.selection.start);
+  }
+
+  void _scheduleMentionSearch() {
+    _mentionTimer?.cancel();
+    final q = _mentionAtCaret;
+    if (q == null || q.$2.isEmpty) {
+      if (_mentionHits.isNotEmpty) setState(() => _mentionHits = const []);
+      return;
+    }
+    _mentionTimer = Timer(const Duration(milliseconds: 250), () => _searchMentions(q.$2));
+  }
+
+  /// 候補を引く: RASQ 指定なら Central のアカウント検索、そうでなければ投稿するアカウントの SNS のユーザー検索
+  /// (全 SNS プラグイン共通の `searchUsers`)。別のサーバーの人は `@handle@host` で入れる。
+  Future<void> _searchMentions(String q) async {
+    final seq = ++_mentionSeq;
+    final hits = <({String insert, String name, Uri? avatarUrl})>[];
+    // 打ったままの文字(表示名に当たる)と、かなをローマ字に読み替えたもの(ハンドルに当たる。D-289)の両方で引いて、合わせる。
+    final romaji = kanaToRomaji(q);
+    for (final term in [q, if (romaji != null && romaji != q.toLowerCase()) romaji]) {
+      try {
+        if (_rasqTarget) {
+          final api = ref.read(rasqAccountPageApiProvider);
+          hits.addAll([for (final a in await api?.searchAccounts(term) ?? const <RasqPostAuthor>[]) (insert: '@${a.handle}', name: a.label, avatarUrl: a.avatarUrl)]);
+        } else {
+          final session = _session;
+          final me = session?.account;
+          final page = await session?.searchUsers(term, limit: 8);
+          hits.addAll([
+            for (final u in page?.items ?? const <UserSummary>[])
+              (insert: u.account.instance == me?.instance ? '@${u.handle}' : '@${u.handle}@${u.account.instance}', name: u.displayName, avatarUrl: u.avatarUrl),
+          ]);
+        }
+      } catch (_) {
+        // 検索できない SNS / 通信の失敗: 候補を出さないだけ。
+      }
+    }
+    // 同じ人は 1 回。
+    final seen = <String>{};
+    hits.retainWhere((h) => seen.add(h.insert));
+    if (!mounted || seq != _mentionSeq) return;
+    setState(() => _mentionHits = hits);
+  }
+
+  /// 打っている途中の `@…` を、選んだメンションに置き換える。
+  void _applyMention(String mention) {
+    final q = _mentionAtCaret;
+    final v = _text.value;
+    final start = q?.$1 ?? (v.selection.isValid ? v.selection.start : v.text.length);
+    final end = v.selection.isValid ? v.selection.start : v.text.length;
+    final next = v.text.replaceRange(start, end, '$mention ');
+    _text.value = TextEditingValue(text: next, selection: TextSelection.collapsed(offset: start + mention.length + 1));
+    setState(() => _mentionHits = const []);
+    _focus.requestFocus();
+  }
+
   void _insert(String s) {
     final v = _text.value;
     final sel = v.selection.isValid ? v.selection : TextSelection.collapsed(offset: v.text.length);
@@ -1055,7 +1248,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final picker = ImagePicker();
     try {
       final files = camera ? [await picker.pickImage(source: ImageSource.camera)].whereType<XFile>().toList() : await picker.pickMultiImage();
-      for (final f in files.take(4 - _files.length)) {
+      for (final f in files.take(_maxFiles - _files.length)) {
         _files.add(_Attachment(bytes: await f.readAsBytes(), name: f.name, mimeType: f.mimeType));
       }
       setState(() {});
@@ -1065,17 +1258,27 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
   }
 
-  /// 動画 (D-174): ギャラリーから 1 本。編集は pro_image_editor の動画モード。
-  Future<void> _pickVideo() async {
-    final picker = ImagePicker();
+  /// 動画 (D-174 → D-250): ライブラリから動画 1 本、またはファイルから動画 / **音声** 1 本。
+  /// 音声はそのまま添付になる(加工を開くと Visualizer の動画へ変換される)。
+  Future<void> _pickVideo(Rect anchor) async {
+    final from = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'composer.video.source', ownerId: composerFowId, anchor: anchor, dense: true, items: const [
+      RasqDropdownItem('ライブラリの動画', 'library'),
+      RasqDropdownItem('ファイルから(動画 / 音声)', 'file'),
+    ]);
+    if (from == null || !mounted) return;
     try {
-      final f = await picker.pickVideo(source: ImageSource.gallery);
-      if (f == null || _files.length >= 4) return;
+      final f = from == 'file' ? await ref.read(mediaFilePickerProvider)() : await ImagePicker().pickVideo(source: ImageSource.gallery);
+      if (f == null || _files.length >= _maxFiles) return;
       final name = f.name.isEmpty ? 'video.mp4' : f.name;
-      _files.add(_Attachment(bytes: await f.readAsBytes(), name: name, mimeType: f.mimeType ?? (name.toLowerCase().endsWith('.mov') ? 'video/quicktime' : 'video/mp4')));
+      final mime = mediaMimeFor(name, reported: f.mimeType);
+      if (mime == null) {
+        setState(() => _error = '動画 / 音声のファイルではありません: $name');
+        return;
+      }
+      _files.add(_Attachment(bytes: await f.readAsBytes(), name: name, mimeType: mime));
       setState(() {});
     } catch (e) {
-      setState(() => _error = '動画を選択できませんでした: $e');
+      setState(() => _error = '動画 / 音声を選択できませんでした: $e');
     }
   }
 
@@ -1089,7 +1292,77 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     return (hasText || hasMedia || (_poll != null && pollOk)) && !(_isDm && _files.length > 1);
   }
 
+  /// RASQ アカウントとして投稿する (D-271 → D-275)。作り方は SNS と共通: 注釈 / 公開範囲 / リアクションの受け入れ(いいねのみ)/
+  /// センシティブな画像 / 投票。**違うのは、連合に関わるもの(連合なし、リモート向けの受け入れ)が無いことと、上限**
+  /// (添付 6 つ / 投票 6 個 / 本文 1000 文字)。動画 / 音声も付けられる(D-276。32 MiB まで)。引用は RASQ の投稿だけ。投稿先の連動は使えない。
+  Future<void> _sendRasq() async {
+    final api = ref.read(rasqAccountPageApiProvider);
+    final me = ref.read(orgateAccountProvider).value;
+    if (api == null || me == null) return setState(() => _error = 'RASQ アカウントにログインしていません');
+    if (_files.any((f) => f.bytes.length > rasqPostMaxMediaBytes)) return setState(() => _error = 'RASQ への投稿では、動画 / 音声は 1 つ ${rasqPostMaxMediaBytes ~/ (1024 * 1024)} MB までです');
+    if (_rasqReply && (_files.isNotEmpty || _poll != null)) return setState(() => _error = 'RASQ の返信は、文字だけです(添付 / 投票は付けられません)');
+    if (_rasqReply && _text.text.trim().length > rasqReplyMaxChars) return setState(() => _error = 'RASQ の返信は $rasqReplyMaxChars 文字までです');
+    if (_files.length > rasqPostMaxImages) return setState(() => _error = 'RASQ への投稿は、添付 $rasqPostMaxImages つまでです');
+    if (_text.text.trim().length > rasqPostMaxChars) return setState(() => _error = 'RASQ への投稿は $rasqPostMaxChars 文字までです');
+    final poll = _poll;
+    if (poll != null && poll.texts.length > rasqPostMaxPollChoices) return setState(() => _error = 'RASQ への投稿は、投票の選択肢 $rasqPostMaxPollChoices 個までです');
+    final sanctions = ref.read(rasqSanctionsProvider).value ?? RasqSanctions.none;
+    final blocked = sanctions.blockedMessage('post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
+    if (blocked != null) return setState(() => _error = blocked);
+    // 公開設定は SNS と同じ FOW から。RASQ に無いもの(指名 / リモート向けの受け入れ)は、近いものへ寄せる。
+    final opts = ref.read(composeOptionsProvider);
+    final visibility = const {'public', 'home', 'followers'}.contains(opts.visibility) ? opts.visibility : 'followers';
+    setState(() {
+      _busy = true;
+      _error = null;
+      _progress = '送信中…';
+    });
+    try {
+      final created = _rasqReply
+          ? await api.reply(_replyTo!.id, _text.text.trim())
+          : await api.createPost(
+        _text.text.trim(),
+        images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
+        cw: _cwOn ? _cw.text.trim() : '',
+        visibility: visibility,
+        likeOnly: opts.reactionAcceptance == 'likeOnly',
+        poll: poll == null ? null : (choices: poll.texts, multiple: poll.multiple, expiresAfter: poll.expiresAfter),
+        quoteOf: _rasqQuote ? _quoteOf!.id : null,
+      );
+      ref.invalidate(rasqAccountPageProvider(me.handle));
+      if (_draftId != null) _drafts.clear(_draftId!);
+      _skipDraftOnDispose = true;
+      ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(const SnackBar(content: Text('RASQ に投稿しました')));
+      if (widget.resident) {
+        if (mounted) {
+          _skipDraftOnDispose = false;
+          setState(() {
+            _resetDraft();
+            // 返信 / 引用は RASQ に固定のまま(常駐の返信コンポーザーは、続けて返信できる)。
+            _rasqTarget = _rasqQuote || _rasqReply;
+          });
+        }
+        // スレッド画面が取り直せるように知らせる。
+        widget.onSent(created.toPost(central: ref.read(centralBaseUrlProvider)));
+      } else if (_rasqReply) {
+        widget.onSent(created.toPost(central: ref.read(centralBaseUrlProvider)));
+      } else {
+        widget.onClose?.call();
+      }
+    } on OrgateException catch (e) {
+      if (mounted) setState(() => _error = e.code.code == '409' && _rasqReply ? 'RASQ の返信は 100 件までです。古い返信を消してください' : e.code.code == '409' ? 'RASQ への投稿は 3 件までです。アカウントページで古い投稿を消してから投稿してください' : 'RASQ に投稿できませんでした: ${e.message}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+        });
+      }
+    }
+  }
+
   Future<void> _send() async {
+    if (_rasqTarget) return _sendRasq();
     final session = _session;
     if (session == null) return;
     // 連動投稿の計画 (D-129): confirm の届け方があれば**送信前(busy に入る
@@ -1175,6 +1448,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ComposeDm(room: final r) => await session.sendDm(r, draft),
         _ => await session.createPost(draft),
       };
+      // 返信 / 引用した相手を、投稿したアカウントの「やりとり」として覚える (D-280: 共有 / リノートに使うアカウントの予測の材料)。
+      final talkedTo = replyTo ?? quoteOf;
+      if (talkedTo != null) ref.read(accountAffinityProvider.notifier).record(Post(id: talkedTo.id, account: session.account, author: talkedTo.author, createdAt: talkedTo.createdAt, body: '')).ignore();
       // 複数選択モード (D-128/D-129): 計画の実行 — auto/confirm 済みは投稿、
       // draft はそのアカウント宛の下書き。正規表現加工 (D-130) も各送信先に。
       final (linkErrors, linkedPosted) = await _executeMultiPlan(multiPlan, NewPost(
@@ -1288,9 +1564,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             Align(
               alignment: Alignment.centerLeft,
               child: AccountSelectPill(
-                account: me.account,
-                displayName: me.displayName,
-                avatarUrl: me.avatarUrl,
+                key: ValueKey(_rasqTarget ? 'composer.pill.rasq' : 'composer.pill.sns'),
+                // RASQ 指定 (D-271) のときは、RASQ アカウントの顔を出す。
+                account: _rasqTarget ? ref.watch(rasqAccountProvider).account : me.account,
+                displayName: _rasqTarget ? ref.watch(rasqAccountProvider).displayName : me.displayName,
+                avatarUrl: _rasqTarget ? ref.watch(rasqAccountProvider).avatarUrl : me.avatarUrl,
                 open: _targetsOpen,
                 tooltip: _isDm ? '' : '投稿先を選ぶ',
                 onTap: _isDm ? null : () => setState(() => _targetsOpen = !_targetsOpen),
@@ -1319,6 +1597,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     style: RasqTypography.bodySmall,
                     decoration: InputDecoration(hintText: _isDm ? 'メッセージを入力..' : 'いいことがありますように！', border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none),
                     onChanged: (_) {
+                      _scheduleMentionSearch(); // @ 補完 (D-285)
                       _syncStickHeight();
                       _scheduleTargetEval(); // ポスト先の条件を打ち直し毎に再評価 (D-116)
                       _scheduleTextPlugins(); // テキスト加工プラグイン (D-167)
@@ -1343,7 +1622,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   ),
                 ),
               ),
-            if (_poll != null) PollEditor(draft: _poll!, onRemove: () => setState(() => _poll = null)),
+            if (_poll != null) PollEditor(draft: _poll!, maxChoices: _rasqTarget ? rasqPostMaxPollChoices : 10, onRemove: () => setState(() => _poll = null)),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: RasqSpacing.sm),
@@ -1357,6 +1636,24 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       // padding を置く。子ピッカーが付いている側の padding が子の高さに
       // 伸びて(いなければ 0px)、入力部・バーが子に被らない。
       if (widget.spec != null) FowChildGap(spec: widget.spec!, top: true),
+      // @ 補完の候補 (D-285): 本文で `@…` を打っている間だけ、ツールバーの上に並ぶ。押すと、その場のメンションに置き換わる。
+      if (_mentionHits.isNotEmpty)
+        SizedBox(
+          key: const ValueKey('composer.mentions'),
+          height: 44,
+          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), children: [
+            for (final h in _mentionHits)
+              Padding(
+                padding: const EdgeInsets.only(right: 6, top: 4, bottom: 4),
+                child: ActionChip(
+                  key: ValueKey('composer.mention.${h.insert}'),
+                  avatar: RasqAvatar(imageUrl: h.avatarUrl, size: 20, fallbackLabel: h.name),
+                  label: Text('${h.name}  ${h.insert}', style: RasqTypography.caption),
+                  onPressed: () => _applyMention(h.insert),
+                ),
+              ),
+          ]),
+        ),
       // Toolbar (コンポーザーツールバー = アクションバーの左寄せバリエーション)
       // FOW 内フッター = 掴んで左右カラム間移動 (D-062)。
       _grip(Container(
@@ -1369,21 +1666,26 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               scrollDirection: Axis.horizontal,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 RasqActionButton.icon(icon: Icons.photo_camera_outlined, tooltip: 'カメラ', onTap: _busy ? null : () => _pick(camera: true)),
-                RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= 4 ? null : () => _pick()),
-                RasqActionButton.icon(icon: Icons.videocam_outlined, tooltip: '動画', onTap: _busy || _files.length >= 4 ? null : _pickVideo),
+                RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= _maxFiles ? null : () => _pick()),
+                Builder(builder: (ctx) => RasqActionButton.icon(icon: Icons.videocam_outlined, tooltip: '動画 / 音声', onTap: _busy || _files.length >= _maxFiles ? null : () {
+                  final box = ctx.findRenderObject() as RenderBox;
+                  _pickVideo(box.localToGlobal(Offset.zero) & box.size);
+                })),
                 RasqActionButton.icon(icon: Icons.visibility_outlined, doneIcon: Icons.visibility, done: _cwOn, tooltip: '隠す(注釈)', onTap: () => setState(() => _cwOn = !_cwOn)),
                 if (!_isDm) RasqActionButton.icon(icon: Icons.poll_outlined, doneIcon: Icons.poll, done: _poll != null, tooltip: '投票', onTap: () => setState(() => _poll = _poll == null ? PollDraft() : null)),
                 RasqActionButton.icon(
                   icon: Icons.emoji_emotions_outlined,
                   tooltip: '絵文字',
-                  onTap: () => openEmojiPicker(ref, ownerId: composerFowId, column: _column, predictionContext: _text.text, onPick: (e) {
+                  // 絵文字は、**投稿するアカウント**のサーバーのもの (D-278。切り替えに追従する)。
+                  onTap: () => openEmojiPicker(ref, ownerId: composerFowId, column: _column, predictionContext: _text.text, accountKey: _effectivePostAs?.account.key, onPick: (e) {
                     _insert(e);
                     _focus.requestFocus();
                   }),
                 ),
                 // MFM/Markdown ピッカー (D-045/D-046: 起動ボタンはツールバー側)。
                 Builder(builder: (context) {
-                  final mfm = ref.watch(currentAccountProvider)?.kind == SnsKind.misskey;
+                  // 投稿するアカウントの SNS に合わせる (D-278。切り替えに追従する)。RASQ 指定のときは装飾を送れないので Markdown 側。
+                  final mfm = !_rasqTarget && (_effectivePostAs?.account ?? ref.watch(currentAccountProvider))?.kind == SnsKind.misskey;
                   return RasqActionButton.icon(
                     icon: Icons.code,
                     tooltip: mfm ? 'MFM' : 'Markdown',
@@ -1452,13 +1754,14 @@ class _AttachmentTile extends StatelessWidget {
 
   /// プラグインで加工 (D-167)。null なら出さない。
   final VoidCallback? onEdit;
-  bool get _isVideo => (a.mimeType ?? '').startsWith('video/');
+  bool get _isAudio => (a.mimeType ?? '').startsWith('audio/');
+  bool get _isVideo => (a.mimeType ?? '').startsWith('video/') || _isAudio;
 
   @override
   Widget build(BuildContext context) => Stack(children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          // 動画 (D-174): サムネイルは作らず再生アイコン + ファイル名。
+          // 動画 (D-174) / 音声 (D-250): サムネイルは作らず 再生 / 波形 のアイコン + ファイル名。
           child: _isVideo
               ? Container(
                   width: 88,
@@ -1466,7 +1769,7 @@ class _AttachmentTile extends StatelessWidget {
                   color: Colors.black87,
                   padding: const EdgeInsets.all(6),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.play_circle_outline, color: Colors.white, size: 28),
+                    Icon(_isAudio ? Icons.graphic_eq : Icons.play_circle_outline, color: Colors.white, size: 28),
                     const SizedBox(height: 4),
                     Text(a.name, style: RasqTypography.caption.copyWith(color: Colors.white70, fontSize: 9), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
                   ]),
@@ -1490,3 +1793,17 @@ class _AttachmentTile extends StatelessWidget {
 
 /// キャンセル時のポップアップの選択 (D-177)。
 enum _CloseChoice { overwrite, saveNew, discard }
+
+/// [caret] の直前で打っている途中のメンション (D-285 → D-289): `(@ の位置, @ のあとの文字)`。
+/// - `@` のあとは、**空白と `@` 以外なら何でも**(日本語の表示名で探せるように。以前は英数字だけで、日本語を打つと反応しなかった)。
+/// - `@` の前は、行頭 / 空白 / 記号 / **日本語の文字**(日本語は語の間に空白を入れない)。英数字や `.` の直後は拾わない(メールアドレスの途中)。
+/// - `@user@host` の host を打っている途中も、まとめて 1 つ(検索には user の部分を使う)。
+(int, String)? mentionQueryAt(String text, int caret) {
+  if (caret < 0 || caret > text.length) return null;
+  final m = RegExp(r'(?:^|[^A-Za-z0-9_.@])@([^\s@]*)(?:@[A-Za-z0-9_.-]*)?$').firstMatch(text.substring(0, caret));
+  if (m == null) return null;
+  return (text.substring(0, caret).indexOf('@', m.start), m.group(1)!);
+}
+
+/// 連動の計画の中で、RASQ アカウントを表す仮のセッションの pluginId (D-286)。
+const rasqLinkPluginId = 'rasq.central';

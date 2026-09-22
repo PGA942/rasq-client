@@ -11,6 +11,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../backend/rasq_account_page_api.dart';
 import '../home/action_bar_config.dart';
 import '../home/action_bundle_fow.dart';
 import '../home/plugin_actions.dart';
@@ -18,7 +19,6 @@ import '../home/post_row.dart';
 import '../post/post_menu.dart';
 import '../home/timeline_providers.dart';
 import '../plugins/slot_plugins.dart';
-import '../settings/settings_dsl.dart';
 import 'video_player.dart';
 import 'viewer_plugin_overlay.dart';
 
@@ -209,7 +209,8 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   /// ボタン(ON = 塗り / アクセント。動画の再生中は出さない)。
   List<Widget> _viewerActionBar() {
     final post = widget.post;
-    final session = ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
+    // RASQ の投稿 (D-276) には、SNS のアクションは効かないので出さない。
+    final session = isRasqPost(post) ? null : ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final viewerPlugins = ref.watch(viewerPluginActionsProvider);
     if (actions.isEmpty && viewerPlugins.isEmpty) return const [];
@@ -228,8 +229,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     Future<void> perform(ActionDescriptor a) => isViewerToggleActionId(a.id) ? _toggleViewerPlugin(viewerTogglePluginId(a.id)) : notifier.perform(post, a).catchError((_) {});
     Widget toggle(ActionDescriptor a) {
       final id = viewerTogglePluginId(a.id);
-      final on = enabled.contains(id);
-      return _Circle(child: RasqIconButton(key: ValueKey('viewer.plugin.$id'), icon: on ? Icons.extension : Icons.extension_outlined, color: on ? RasqColors.accent : Colors.white, tooltip: a.label, onPressed: () => perform(a)));
+      return ViewerPluginToggle(pluginId: id, label: a.label, iconName: a.icon, enabled: enabled.contains(id), status: _overlays.statusOf(i, id), onPressed: () => perform(a));
     }
     return [
       for (final e in entries)
@@ -260,14 +260,13 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     ];
   }
 
-  /// 全画面表示プラグインの ON / OFF (D-207 → D-214): 状態は `slots.viewer` に保存。
-  /// 有効にしたら、この画像をまだ渡していなければ渡す。無効は重ねを出さないだけ(トークンは残す)。
+  /// 全画面表示プラグインの ON / OFF (D-207 → D-214 → D-246): 状態は `slots.viewer` に保存。失敗中はやり直し。
   Future<void> _toggleViewerPlugin(String pluginId) async {
-    final on = !ref.read(viewerOverlayPluginsProvider).any((p) => p.id == pluginId);
-    await ref.read(settingsAreaProvider(viewerPluginsSettingsArea).notifier).set(viewerPluginEnabledKey(pluginId), on);
-    if (!mounted) return;
-    if (on) _askOverlay(_page.value);
-    setState(() {});
+    final i = _page.value;
+    final m = widget.post.media[i];
+    final url = m.type == MediaType.video ? m.thumbnailUrl : (m.type == MediaType.image || m.type == MediaType.gif ? m.url : null);
+    await _overlays.toggle(pluginId, i, url);
+    if (mounted) setState(() {});
   }
 
   /// PiP (D-204): ビューワーを閉じてインライン再生 FOW を同じ位置から開く。
@@ -346,7 +345,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
                       : m.type == MediaType.video
                           // 動画 (D-200 → D-201): 面はタップで再生 / 一時停止。操作は下側の FOW。
                           ? RasqVideoView(key: ValueKey('viewer.video.${m.id}'), session: _session(i), tapToggles: false)
-                          : _overlays.wrap(i, Image.network(m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
+                          : _overlays.wrap(i, Image.network(webHtmlElementStrategy: rasqWebImageStrategy, m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
                 ),
               );
             },
@@ -442,7 +441,8 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
   Widget build(BuildContext context) {
     final post = widget.post;
     // アクションは投稿が流れてきたアカウントのもの (D-200)。無ければ現在のアカウント。
-    final session = ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
+    // RASQ の投稿 (D-276) には、SNS のアクションは効かないので出さない。
+    final session = isRasqPost(post) ? null : ref.watch(sessionForAccountProvider(post.account.key)) ?? ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
     // 下側の FOW のバーは投稿アクションバーそのまま (D-212: 全画面アクションバーはヘッダーの「…」の左)。

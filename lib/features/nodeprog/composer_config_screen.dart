@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
+import '../../backend/rasq_account.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart' show Routes, routerProvider;
 import '../../shell/headers.dart';
@@ -44,7 +45,9 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
   bool _handEdited = false;
 
   String get _area => nodeprogAreaFor(ref.read(currentAccountProvider)?.key, 'composer');
-  List<String> get _accounts => [for (final s in ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${s.account}'];
+  /// RASQ アカウントのタブ (D-283)。ログインしているときだけ。条件に合うと、コンポーザーが RASQ 指定になる。
+  String? get _rasqLabel => ref.read(orgateAccountProvider).value == null ? null : '${ref.read(rasqAccountProvider).account}';
+  List<String> get _accounts => [for (final s in ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${s.account}', ?_rasqLabel];
 
   late final OverlayManager _manager;
   late final TextEditingController _fallbackCw = TextEditingController();
@@ -78,7 +81,10 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
       }
       setState(() {
         _cfg = cfg;
-        _tab = _accounts.contains(_tab) ? _tab : (_accounts.firstOrNull ?? '');
+        // RASQ アカウント(バンドル)で見ているときは、RASQ のタブから (D-283)。それ以外は、いま見ている SNS アカウントのタブから。
+        final bundle = ref.read(sessionsProvider).value?.bundleView ?? false;
+        final preferred = bundle ? _rasqLabel : '${ref.read(currentAccountProvider) ?? ''}';
+        _tab = _accounts.contains(_tab) ? _tab : (_accounts.contains(preferred) ? preferred! : (_accounts.firstOrNull ?? ''));
         _fallbackCw.text = (cfg[_tab] ?? const ComposerAccountFilter()).fallbackCw;
         _handEdited = raw is! String && area['graph'] is String;
         _loaded = true;
@@ -247,6 +253,8 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
                   _regexTile(scheme, f),
                   for (var i = 0; i < f.extraRegexes.length; i++) _extraRegexTile(scheme, f, i),
                   _addNodeButton('ノードを追加', () => _update(_tab, f.copyWith(extraRegexes: [...f.extraRegexes, const ComposerRegexSpec()]))),
+                  // RASQ のタブでは、RASQ への連動投稿を設定で有効にしているときだけ (D-286)。
+                  if (_tab != _rasqLabel || (ref.watch(settingsAreaProvider('composer.prefs')).value ?? const {})['rasqLinked'] == true) ...[
                   // ---- 連動投稿の届け方 (D-129/D-131) ------------------------
                   const RasqSectionHeader(title: '連動投稿の届け方'),
                   Padding(
@@ -284,6 +292,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
                   ),
                   for (var i = 0; i < f.linkFilters.length; i++) _extraFilterTile(scheme, f, i, linked: true),
                   _addNodeButton('ノードを追加', () => _update(_tab, f.copyWith(linkFilters: [...f.linkFilters, const ComposerFilterSpec()]))),
+                  ],
                 ]),
     );
   }
@@ -417,7 +426,7 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
   /// 連動元のアカウント選択 (D-131): バンドルタイル型(RASQ 行なし)・
   /// 複数選択。すべてチェック = 制限なし(`['*']`)。
   Widget _linkSourcesTile(ColorScheme scheme, RasqTokens tokens, ComposerAccountFilter f) {
-    final others = [for (final a in _accounts) if (a != _tab) a];
+    final others = [for (final a in _accounts) if (a != _tab && a != _rasqLabel) a];
     bool checkedOf(String a) => f.linkAllowedFrom(a);
     void toggle(String a) {
       final next = {for (final o in others) o: checkedOf(o)};

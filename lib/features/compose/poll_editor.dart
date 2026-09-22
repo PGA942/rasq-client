@@ -20,8 +20,11 @@ class PollDraft {
 }
 
 class PollEditor extends StatefulWidget {
-  const PollEditor({super.key, required this.draft, required this.onRemove});
+  const PollEditor({super.key, required this.draft, required this.onRemove, this.maxChoices = 10});
   final PollDraft draft;
+
+  /// 選択肢の上限(SNS は 10、RASQ は 6。S-023)。
+  final int maxChoices;
   final VoidCallback onRemove;
   @override
   State<PollEditor> createState() => _PollEditorState();
@@ -59,7 +62,7 @@ class _PollEditorState extends State<PollEditor> {
           const SizedBox(width: RasqSizes.minTap),
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: d.choices.length >= 10 ? null : () => setState(() => d.choices.add(TextEditingController())),
+              onPressed: d.choices.length >= widget.maxChoices ? null : () => setState(() => d.choices.add(TextEditingController())),
               icon: const Icon(Icons.add),
               label: const Text('その他'),
               style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), alignment: Alignment.centerLeft),

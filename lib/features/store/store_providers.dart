@@ -9,6 +9,11 @@ import '../../backend/orgate_client.dart';
 import '../settings/settings_dsl.dart';
 import 'http_store_client.dart';
 import '../plugins/slot_plugins.dart';
+import '../../session/bluesky_auth.dart' show blueskyPluginId;
+import '../../session/mixi2_auth.dart' show mixi2PluginId;
+import '../../session/session_providers.dart' show mastodonPluginId;
+import 'rasqpkg.dart';
+import 'sticker_packs.dart';
 import 'store_client.dart';
 import 'store_models.dart';
 
@@ -18,7 +23,8 @@ import 'store_models.dart';
 /// テストは override して差し替える。
 final storeClientProvider = Provider<StoreClient>((ref) {
   final client = ref.watch(centralClientProvider);
-  return client == null ? MockStoreClient() : HttpStoreClient(client);
+  // Central につないでいても、アプリに同梱しているサンプル(Central に掲載の無いもの)のページ / 配布物は同梱のカタログで答える (D-256)。
+  return client == null ? MockStoreClient() : BundledFallbackStoreClient(HttpStoreClient(client), MockStoreClient());
 });
 
 final storeHomeProvider = FutureProvider((ref) => ref.watch(storeClientProvider).home());
@@ -150,31 +156,91 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     if (!verified.ok) return (error: verified.message, verification: verified);
     debugPrint('store: $pluginId ${m.version} — ${verified.message}');
 
-    final name = m.manifest['name'] as String? ?? pluginId;
-    await _persist([
-      ...state.where((p) => p.id != pluginId),
-      InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: DateTime.now()),
-    ]);
-    // 配布物が wasm そのもの(スロットプラグイン、D-168)ならスロットに登録する。
-    // 登録元は `store:<id>` — 次回起動はストアから取り直して読み込む。
-    if (isWasmBytes(bytes)) {
-      final slot = await ref.read(slotPluginsProvider.notifier).register('store:$pluginId', bytes: bytes);
-      if (slot == null) return (error: ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした', verification: verified);
+    // 配布物が .rasqpkg(zstd 圧縮 tar、D-034)なら、署名を確かめた入れ物の**中身**を目次と突き合わせる。
+    // 何も登録する前に全部見る: 壊れた / 食い違った配布物は「インストール済み」にもしない。
+    RasqPackage? package;
+    if (isRasqPackage(bytes)) {
+      try {
+        package = RasqPackage.open(bytes, decompress: ref.read(rasqpkgZstdProvider));
+      } on RasqPackageException catch (e) {
+        return (error: '配布物の中身を検証できませんでした: ${e.message}', verification: verified);
+      }
+      if (package.root.id != pluginId || package.root.version != m.version) {
+        return (error: '配布物の中身(${package.root.id} ${package.root.version})がストアの掲載($pluginId ${m.version})と違います', verification: verified);
+      }
+      // 土台の SNS プラグイン(他人の土台に足す子、D-244c)。第一期は id の有無だけを見る(版の範囲は見ない)。
+      final available = {...bundledSnsPluginIds, for (final p in state) p.id};
+      final missing = [for (final r in package.requires) if (!available.contains(r.id)) '${r.id} ${r.version}'];
+      if (missing.isNotEmpty) return (error: 'このプラグインには ${missing.join(' / ')} が必要です(未対応のため入れられません)', verification: verified);
     }
+
+    final name = m.manifest['name'] as String? ?? pluginId;
+    final slots = ref.read(slotPluginsProvider.notifier);
+    // 掲載の写し (D-256): 取れなくてもインストールは続ける(写しが無いだけ)。
+    InstalledInfo? info;
+    try {
+      final d = await client.plugin(pluginId);
+      if (d != null) info = InstalledInfo.of(d);
+    } catch (_) {}
+    final record = InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: DateTime.now(), info: info);
+
+    if (package == null) {
+      // 配布物が生の wasm(D-168)や中身の無いモック: 従来どおり、先にインストール済みにしてからスロット登録を試みる。
+      // SNS プラグインの wasm は `plugin.manifest` を持たないので登録はできない — 掲載が kind = sns なら試みない、
+      // 分からなければ試みて、だめでもインストール自体は残す(エラーは返す)。
+      await _persist([...state.where((p) => p.id != pluginId), record]);
+      if (isWasmBytes(bytes) && m.manifest['kind'] != 'sns') {
+        final slot = await slots.register('store:$pluginId', bytes: bytes);
+        if (slot == null) return (error: ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした', verification: verified);
+      }
+      return (error: null, verification: verified);
+    }
+
+    // アセットパック (D-252、契約 v0.11): コードは無い。画像を端末に保存して、加工画面のステッカーに出す。
+    if (package.root.isAssets) {
+      try {
+        await ref.read(stickerPacksProvider.notifier).install(package);
+      } catch (e) {
+        return (error: 'アセットパックを保存できませんでした: $e', verification: verified);
+      }
+      await _persist([...state.where((p) => p.id != pluginId), record]);
+      return (error: null, verification: verified);
+    }
+
+    // .rasqpkg: 中のスロットプラグイン(root が sns 以外なら root、それと子)を全部登録できて初めてインストール済みにする。
+    // 登録元は `store:<id>`(子は `store:<id>#<childId>`)— 次回起動はストアから取り直して読み込む。
+    final registered = <String>[];
+    for (final p in package.slotPlugins) {
+      final slot = await slots.register(p.id == pluginId ? 'store:$pluginId' : 'store:$pluginId#${p.id}', bytes: bytes);
+      if (slot == null) {
+        // 途中で失敗したら、この配布物から入れたものを外して、入れなかったことにする。
+        for (final id in registered) {
+          await slots.unregister(id);
+        }
+        return (error: ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした', verification: verified);
+      }
+      registered.add(slot.id);
+    }
+    await _persist([...state.where((p) => p.id != pluginId), record]);
     return (error: null, verification: verified);
   }
 
   Future<void> uninstall(String pluginId) async {
     await _persist([...state.where((p) => p.id != pluginId)]);
-    // スロット登録 (D-168) も外す(登録元 `store:<id>`)。
+    // アセットパック (D-252) なら保存した画像も消す。
+    await ref.read(stickerPacksProvider.notifier).uninstall(pluginId);
+    // スロット登録 (D-168) も外す(登録元 `store:<id>` と、.rasqpkg の子 `store:<id>#<childId>`)。
     final slots = ref.read(slotPluginsProvider.notifier);
-    for (final p in ref.read(slotPluginsProvider).where((p) => p.source == 'store:$pluginId')) {
+    for (final p in ref.read(slotPluginsProvider).where((p) => p.source == 'store:$pluginId' || p.source.startsWith('store:$pluginId#'))) {
       await slots.unregister(p.id);
     }
   }
 }
 
 final installedPluginsProvider = NotifierProvider<InstalledPlugins, List<InstalledPlugin>>(InstalledPlugins.new);
+
+/// アプリに同梱している SNS プラグイン(`.rasqpkg` の `requires` を満たせる土台)。
+const bundledSnsPluginIds = {'rasq.official.misskey', mastodonPluginId, blueskyPluginId, mixi2PluginId};
 
 /// wasm バイナリか(`\0asm`)。ストアの配布物がスロットプラグインかの判定 (D-168)。
 bool isWasmBytes(Uint8List b) => b.length > 4 && b[0] == 0 && b[1] == 0x61 && b[2] == 0x73 && b[3] == 0x6d;

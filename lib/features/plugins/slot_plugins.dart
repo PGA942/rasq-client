@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart' show sha512;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -63,6 +64,9 @@ class SlotManifest {
                 label: a['label'] as String? ?? a['id'] as String,
                 icon: a['icon'] as String?,
                 tags: [for (final t in (a['tags'] as List? ?? const [])) if (t is String) t],
+                slot: a['slot'] as String?,
+                accepts: [for (final t in (a['accepts'] as List? ?? const [])) if (t is String) t],
+                output: a['output'] as String?,
               ),
         ],
       );
@@ -94,11 +98,47 @@ class SlotManifest {
 
 /// `post.action` のボタン宣言 (§2.9): タグ = 希望スロット(既存ボタンのタグと比べて束ねる)。
 class SlotActionDecl {
-  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const []});
+  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const [], this.slot, this.accepts = const [], this.output});
   final String id;
   final String label;
   final String? icon;
   final List<String> tags;
+
+  /// このボタンが属するスロット(契約 v0.9)。null = `post.action`。`viewer.overlay` = 全画面アクションバーの
+  /// ON / OFF ボタンの見た目の宣言(押したときの call は無い)。
+  final String? slot;
+
+  /// 出現する添付の種類(契約 v0.10、`composer.media` の宣言だけ): MIME の型(`image/*` / `video/mp4` / `audio/*`)か
+  /// 拡張子(`.gif`)。空 = `image/*`(従来どおり画像だけ)。
+  final List<String> accepts;
+
+  /// `media.commit` の結果の置き方(契約 v0.11、`composer.media` の宣言だけ): null / `replace` = 背景を差し替える、
+  /// `sticker` = ステッカーのレイヤーとして置く(ジェネレーター)。
+  final String? output;
+  bool get isStickerOutput => output == 'sticker';
+
+  /// カスタムフィルター(契約 v0.12): ON / OFF のボタン。`filter.preview` の描画リストを重ね、完了のとき焼き込むか `filter.apply`。
+  bool get isFilterOutput => output == 'filter';
+
+  bool get isPostAction => slot == null || slot == SlotIds.postAction;
+}
+
+/// 添付(MIME + ファイル名)が宣言の `accepts` に当てはまるか(契約 v0.10)。空の宣言は `image/*`。
+bool mediaAccepts(List<String> accepts, {required String mimeType, String name = ''}) {
+  final mime = mimeType.toLowerCase();
+  final file = name.toLowerCase();
+  for (final raw in accepts.isEmpty ? const ['image/*'] : accepts) {
+    final a = raw.trim().toLowerCase();
+    if (a == '*' || a == '*/*') return true;
+    if (a.startsWith('.')) {
+      if (file.endsWith(a)) return true;
+    } else if (a.endsWith('/*')) {
+      if (mime.startsWith(a.substring(0, a.length - 1))) return true;
+    } else if (a == mime) {
+      return true;
+    }
+  }
+  return false;
 }
 
 abstract final class SlotIds {
@@ -269,12 +309,22 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     try {
       final raw = await ref.read(sessionStorageProvider).read(slotPluginsStorageKey);
       if (raw == null) return;
+      // 同じ .rasqpkg から複数(root と子)を読むので、取り直しはプラグイン id ごとに 1 回。
+      final artifacts = <String, Uint8List>{};
       for (final p in (jsonDecode(raw) as List)) {
         if (p is! String) continue;
-        // ストアからのインストール (D-168): 配布物を取り直す(モックは同梱アセット)。
+        // ストアからのインストール (D-168): 配布物を取り直す(モックは同梱アセット)。`store:<id>#<childId>` は
+        // .rasqpkg の中の子。取り直したものは**インストール時に検証した SHA-512 と同じ**でなければ読み込まない
+        // (ストア署名を確かめたのはインストール時だけなので、ここで別物にすり替わっていないことを見る)。
         if (p.startsWith('store:')) {
+          final pluginId = splitPackageSource(p).container.substring(6);
           try {
-            final bytes = await ref.read(storeClientProvider).downloadArtifact(p.substring(6), 'bundle');
+            final bytes = artifacts[pluginId] ??= await ref.read(storeClientProvider).downloadArtifact(pluginId, 'bundle');
+            final expected = ref.read(installedPluginsProvider).where((x) => x.id == pluginId).firstOrNull?.sha512;
+            if (expected != null && expected.isNotEmpty && expected != '-' && sha512.convert(bytes).toString() != expected) {
+              ref.read(slotPluginsNoticeProvider.notifier).set('$pluginId: 取り直した配布物がインストール時と違うため読み込みません(ストアで入れ直してください)');
+              continue;
+            }
             await register(p, bytes: bytes, persist: false);
           } catch (e) {
             debugPrint('slot plugin restore $p: $e');
@@ -293,9 +343,20 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   }
 
   /// 読み込んで登録。`bytes` を渡せばファイルを読まない(同梱アセット等)。
+  ///
+  /// 中身が `.rasqpkg`(zstd)なら展開・検証して、その中の 1 つを登録する: `source` の `#<pluginId>` が指す子、
+  /// 無ければ root。登録するのは sns 以外(SNS プラグイン本体の差し替えはここではしない)。
   Future<SlotPlugin?> register(String source, {Uint8List? bytes, bool persist = true}) async {
     try {
-      final data = bytes ?? File(source).readAsBytesSync();
+      final (:container, :pluginId) = splitPackageSource(source);
+      var data = bytes ?? File(container).readAsBytesSync();
+      String? expectedId;
+      if (isRasqPackage(data)) {
+        final entry = RasqPackage.open(data, decompress: ref.read(rasqpkgZstdProvider)).plugin(pluginId);
+        if (entry.isSns) throw StateError('${entry.id} は SNS プラグインです(スロットには登録できません)');
+        data = entry.wasm;
+        expectedId = entry.id;
+      }
       final loader = ref.read(slotRuntimeLoaderProvider);
       // マニフェストを読むために一度素の権限で起動し、宣言に合わせて起動し直す。
       // 1 段目はマニフェストを読むだけ。予算はランタイム既定(重いほう)に任せる。
@@ -309,6 +370,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       if (manifest.id.isEmpty) {
         runtime.dispose();
         throw StateError('plugin.manifest.id が空です');
+      }
+      // 配布物の目次が言う id と、wasm 自身が名乗る id が同じこと(別のプラグインを入れ物に紛れ込ませない)。
+      if (expectedId != null && manifest.id != expectedId) {
+        runtime.dispose();
+        throw StateError('配布物の目次は $expectedId なのに、wasm は ${manifest.id} を名乗っています');
       }
       runtime.dispose();
       runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns, permissions: manifest.permissions.toSet(),
@@ -631,7 +697,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   /// メディアエディター (D-169、契約 v0.2 §2.2): `media.edit` を開いて genres を受ける。
   /// 戻り null = エディター形ではない(旧形 / 即差し替え形)。
-  Future<MediaEditSession?> mediaEditorOpen(SlotPlugin plugin, {required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, int? width, int? height) onPreview, required void Function(Uint8List bytes, String mime, String? name) onReplace, void Function(RrlNode? root)? onOverlay, String? fowOwner, int column = 0}) async {
+  Future<MediaEditSession?> mediaEditorOpen(SlotPlugin plugin, {required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, int? width, int? height) onPreview, required void Function(Uint8List bytes, String mime, String? name) onReplace, void Function(RrlNode? root)? onOverlay, String? actionId, String? fowOwner, int column = 0}) async {
     _setFowContext(plugin, fowOwner, column, barrierless: true);
     final token = 'media-${DateTime.now().microsecondsSinceEpoch}';
     _mediaPreview[token] = onPreview;
@@ -677,6 +743,21 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       ));
     }
     return genres;
+  }
+
+  /// カスタムフィルター (契約 v0.12): 描画リスト。戻りは `filter.preview` の value(無ければ null)。
+  Future<Map<String, dynamic>?> filterPreview(SlotPlugin plugin, {required String actionId, required int width, required int height, required int seed, Map<String, double>? params}) =>
+      plugin.value('filter.preview', {'actionId': actionId, 'width': width, 'height': height, 'seed': seed, 'params': ?params});
+
+  /// カスタムフィルターの `mode: "pixels"`: 焼き込んだ 1 枚を渡して、書き換えた結果を受け取る。失敗は null。
+  Future<(Uint8List, String)?> filterApply(SlotPlugin plugin, {required String actionId, required int seed, required int width, required int height, required Uint8List bytes, String mimeType = 'image/png', Map<String, double>? params}) async {
+    final v = await plugin.value('filter.apply', {'actionId': actionId, 'seed': seed, 'width': width, 'height': height, 'params': ?params, 'mimeType': mimeType, 'bytesB64': base64Encode(bytes)});
+    if (v == null || v['bytesB64'] is! String) return null;
+    try {
+      return (base64Decode(v['bytesB64'] as String), '${v['mimeType'] ?? mimeType}');
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> mediaAction(MediaEditSession s, String genre, String action) => s.plugin.value('media.action', {'token': s.token, 'genre': genre, 'action': action});
@@ -730,12 +811,22 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   void textDone(String token) => _textReplace.remove(token);
 
-  /// メディア全画面 (CONTRACT §2.4)。戻りは重ねる RRL(無ければ null)。
-  Future<RrlNode?> viewerOpen(SlotPlugin plugin, {required String token, required String url, required String mimeType, required int width, required int height, Uint8List? bytes, required void Function(RrlNode root) onOverlay}) async {
+  /// メディア全画面 (CONTRACT §2.4)。戻りは重ねる RRL(無ければ null)と、失敗の説明(成功なら null)。
+  /// 契約では壊れた入力(`D01`)は「黙って重ねない」だが、ユーザーには理由を見せる (D-246: トグルに出す)。
+  Future<({RrlNode? root, String? error})> viewerOpen(SlotPlugin plugin, {required String token, required String url, required String mimeType, required int width, required int height, Uint8List? bytes, required void Function(RrlNode root) onOverlay}) async {
     _overlaySet[token] = onOverlay;
-    final v = await plugin.value('viewer.open', {'token': token, 'url': url, 'mimeType': mimeType, 'width': width, 'height': height, if (bytes != null) 'bytesB64': base64Encode(bytes)});
-    final root = v?['root'];
-    return root is Map ? RrlNode.fromJson(root.cast<String, Object?>()) : null;
+    try {
+      final r = await plugin.call('viewer.open', {'token': token, 'url': url, 'mimeType': mimeType, 'width': width, 'height': height, if (bytes != null) 'bytesB64': base64Encode(bytes)});
+      if (r['ok'] != true) {
+        final e = r['error'];
+        return (root: null, error: e is Map ? '${e['code'] ?? ''} ${e['message'] ?? ''}'.trim() : 'プラグインがエラーを返しました');
+      }
+      final root = (r['value'] as Map?)?['root'];
+      return (root: root is Map ? RrlNode.fromJson(root.cast<String, Object?>()) : null, error: null);
+    } catch (e) {
+      debugPrint('slot plugin ${plugin.manifest.id}.viewer.open: $e');
+      return (root: null, error: '$e');
+    }
   }
 
   void viewerClose(SlotPlugin plugin, String token) {

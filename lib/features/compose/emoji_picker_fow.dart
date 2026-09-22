@@ -22,6 +22,10 @@ Future<void> openEmojiPicker(
   Widget? actionBar,
   int column = 0,
   Rect? anchor,
+  // どのアカウントのカスタム絵文字を出すか (D-278)。null = いま表示しているアカウント。
+  String? accountKey,
+  // ステッカーのピッカーとして使う (D-273)。
+  List<EmojiPanelSticker>? stickers,
 }) async {
   final manager = ref.read(overlayManagerProvider);
   // FOW のクロームは 2 系統 (D-055):
@@ -59,9 +63,11 @@ Future<void> openEmojiPicker(
     barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
     spec: spec,
     builder: (ctx, handle) => EmojiPanel(
+      accountKey: accountKey,
       predictionContext: predictionContext,
       existingReactions: existingReactions,
       actionBar: actionBar,
+      stickers: stickers,
       spec: actionBar == null ? null : spec,
       onPick: (e) {
         onPick(e);

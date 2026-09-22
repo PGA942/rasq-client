@@ -169,4 +169,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(handle).dy, greaterThanOrEqualTo(100));
   });
+
+  testWidgets('サイドバーの前に出る FOW (D-274): 後ろを暗くしてサイドバーに被さる。戻る / Escape は FOW が先。狭いカラムなら全カラムにまたがる', (tester) async {
+    tester.view.physicalSize = const Size(900, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final m = OverlayManager();
+    var sidebarTaps = 0;
+    m.show(RasqOverlayEntry(id: 'sidebar', layer: OverlayLayer.sidebar, alignment: Alignment.centerLeft, builder: (_, _) => GestureDetector(onTap: () => sidebarTaps++, child: Container(width: 340, height: double.infinity, color: Colors.white))));
+    var fowTaps = 0;
+    m.showFow<void>(
+      id: 'accounts',
+      barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
+      spec: FowSpec(title: 'アカウント', cancelText: '閉じる', aboveSidebar: true, dimBehind: true, spanColumnsBelow: 360, initialHeightFactor: 0.5),
+      builder: (_, _) => GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => fowTaps++, child: const SizedBox.expand(key: ValueKey('fow.body'))),
+    );
+    // 2 カラム: 左 300px は狭い(< 360)→ 2 カラムにまたがる。
+    await tester.pumpWidget(host(m, columns: (_) => const [FowColumnSlot(x: 0, width: 300), FowColumnSlot(x: 300, width: 600)]));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(fowPanel()).width, 900);
+    // サイドバー(x < 340)と重なる位置を押す → 前にいる FOW が受ける。
+    await tester.tapAt(Offset(100, tester.getCenter(find.byKey(const ValueKey('fow.body'))).dy));
+    expect((fowTaps, sidebarTaps), (1, 0));
+    // 暗い幕(FOW の上の余白)を押す → FOW だけ閉じ、サイドバーは残る。
+    expect(m.handleBack(), isTrue);
+    expect((m.contains('accounts'), m.contains('sidebar')), (false, true));
+
+    // 左カラムが広ければ、左カラムに収まる。
+    m.showFow<void>(id: 'accounts', spec: FowSpec(title: 'アカウント', cancelText: '閉じる', aboveSidebar: true, spanColumnsBelow: 360), builder: (_, _) => const SizedBox.expand());
+    await tester.pumpWidget(host(m, columns: (_) => const [FowColumnSlot(x: 0, width: 400), FowColumnSlot(x: 400, width: 500)]));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(fowPanel()).width, 400);
+  });
 }

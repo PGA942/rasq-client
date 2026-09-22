@@ -4,8 +4,14 @@ import 'package:rasq_store/rasq_store.dart';
 
 /// Fake SNS plugin/session for widget tests — serves a fixed timeline.
 class FakeSnsPlugin extends SnsPlugin {
-  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const []});
+  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const [], this.localEmojis});
   final List<Post> Function(AccountId viewer) posts;
+
+  /// 渡すと、Misskey のように**絵文字でリアクションする**セッションになる(`iconPerPost`。D-278)。中身 = 自サーバーにある絵文字の名前。
+  final Set<String>? localEmojis;
+
+  /// 開いたセッション(テストから、送ったリアクションを見る)。
+  final List<FakeSnsSession> opened = [];
   @override
   final SnsKind kind;
   final String id;
@@ -23,11 +29,24 @@ class FakeSnsPlugin extends SnsPlugin {
   @override
   Future<AuthFlow> beginAuth(String host, {Uri? callback}) => throw UnimplementedError();
   @override
-  SnsSession open(AccountSession session) => FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind);
+  SnsSession open(AccountSession session) {
+    final s = FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind, localEmojis: localEmojis);
+    opened.add(s);
+    return s;
+  }
 }
 
 class FakeSnsSession extends SnsSessionBase {
-  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey}) : _posts = [...posts];
+  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey, this.localEmojis}) : _posts = [...posts];
+  final Set<String>? localEmojis;
+
+  /// TL の先頭に投稿を足す(取り直すと出る)。
+  void prepend(Post p) => _posts.insert(0, p);
+
+  /// 送ったリアクション(`args['reaction']`。無ければ null)。
+  final List<String?> reactionsSent = [];
+  @override
+  Future<Uri?> emojiUrl(String shortcode) async => (localEmojis ?? const {}).contains(shortcode) ? Uri.parse('https://example.test/emoji/$shortcode.png') : null;
   final AccountSession session;
   final List<Post> _posts;
   final List<String> performed = [];
@@ -41,16 +60,20 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   List<TimelineKind> get timelines => kind == SnsKind.bluesky ? const [TimelineKind.home, TimelineKind('global', 'Discover')] : const [TimelineKind.home, TimelineKind.social];
   @override
-  List<ActionDescriptor> get actions => const [
+  List<ActionDescriptor> get actions => [
         // 返信は実際のプラグイン同様 confirm + interstitial(RAi からの自動実行は不可、D-223)。
-        ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信', icon: 'subdirectory_arrow_left', confirmMode: ConfirmMode.confirm, fow: FowType.interstitial),
-        ActionDescriptor(id: 'renote', genreTag: 'Repost', label: 'リノート', icon: 'repeat', doneIcon: 'repeat_on'),
-        ActionDescriptor(id: 'reaction', genreTag: 'Reaction', label: 'リアクション', icon: 'favorite_border', doneIcon: 'favorite'),
+        const ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信', icon: 'subdirectory_arrow_left', confirmMode: ConfirmMode.confirm, fow: FowType.interstitial),
+        const ActionDescriptor(id: 'renote', genreTag: 'Repost', label: 'リノート', icon: 'repeat', doneIcon: 'repeat_on'),
+        ActionDescriptor(id: 'reaction', genreTag: 'Reaction', label: 'リアクション', icon: 'favorite_border', doneIcon: 'favorite', iconPerPost: localEmojis != null),
       ];
   @override
   Future<UserSummary> me() async => UserSummary(id: 'me', account: account, displayName: 'テスター');
+  /// TL を取りに来た回数(更新タイルのテスト用)。
+  int timelineFetches = 0;
+
   @override
   Future<Page<Post>> timeline(TimelineKind kind, {String? cursor, int limit = 20}) async {
+    timelineFetches++;
     if (cursor != null) return Page.empty();
     if (kind.id.startsWith('tag:')) return Page(items: _posts.where((p) => p.id == 'p1').toList());
     if (kind.id.startsWith('dm:')) return Page(items: [_posts.last]);
@@ -220,6 +243,14 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<ActionResult> performAction(String actionId, String postId, {Map<String, Object?> args = const {}}) async {
     performed.add('$actionId:$postId:${args['undo']}');
+    if (actionId == 'reaction' && args['undo'] != true) reactionsSent.add(args['reaction'] as String?);
+    if (actionId == 'reaction' && localEmojis != null) {
+      final i = _posts.indexWhere((p) => p.id == postId);
+      if (i >= 0) {
+        final p = _posts[i];
+        _posts[i] = Post(id: p.id, account: p.account, author: p.author, createdAt: p.createdAt, body: p.body, reactions: p.reactions, reactionEmojis: p.reactionEmojis, myReaction: args['undo'] == true ? null : args['reaction'] as String?);
+      }
+    }
     return ActionResult(done: args['undo'] != true, count: 1);
   }
   /// 通知 2 件(未読 1 / 既読 1)を固定で返す (D-223: RAi の notifications.list)。

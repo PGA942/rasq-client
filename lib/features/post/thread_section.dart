@@ -63,3 +63,6 @@ final threadQuotesProvider = FutureProvider.autoDispose.family<List<Post>, ({Str
   if (s == null) return const [];
   return (await s.quotes(k.id, limit: 30)).items;
 });
+
+/// 返信欄の設定の置き場(`threadReplies.v1`。全スレッドで共有。SNS / RASQ 共通)。
+const threadRepliesKvArea = 'threadReplies';

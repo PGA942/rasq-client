@@ -8,10 +8,10 @@ import '../features/trend/trend_screen.dart';
 import '../features/users/follows_screen.dart';
 import '../features/users/user_page_screen.dart';
 import '../shell/third_column.dart';
+import '../backend/rasq_account_page_api.dart';
 import 'router.dart';
-import '../features/plugins/media_editor_screen.dart';
+import '../features/plugins/media_plugin_panel.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
-import '../features/plugins/slot_plugins.dart';
 import 'dart:typed_data';
 
 /// Navigation helpers shared by rows/screens.
@@ -34,6 +34,11 @@ extension RasqNavigation on BuildContext {
   /// Opens the thread screen for [post] (nested in the current tab so the
   /// global nav stays visible; タブ外ではアプリ直下ルートへ).
   void pushPost(Post post) {
+    // RASQ の投稿 (D-276) は、RASQ のスレッド画面へ。
+    if (isRasqPost(post)) {
+      push(Routes.rasqPost(post.id));
+      return;
+    }
     final base = _inTab ? _tabBase : '';
     final loc = '$base/post/${Uri.encodeComponent(post.id)}';
     // ペインモデル (D-057): タブレット幅では第3カラム(current)に開く。
@@ -42,6 +47,11 @@ extension RasqNavigation on BuildContext {
   }
 
   void pushReactions(Post post) {
+    // RASQ の投稿 (D-294) は、RASQ の「リアクションを表示」へ。
+    if (isRasqPost(post)) {
+      push(Routes.rasqPostReactions(post.id));
+      return;
+    }
     // 第3カラム内 (D-061): matchedLocation は第2カラムのルートを指すため、
     // entry 自身の location を基準にする(そのままだとリンクが切れる)。
     final pane = PaneScope.maybeOf(this)?.entry;
@@ -81,10 +91,6 @@ extension RasqNavigation on BuildContext {
 
   /// プロフィールのアイコン / バナーを全画面で (D-177)。
   void openImage(Uri url, {String? title}) => push(Routes.imageViewer, extra: (url: url, title: title));
-
-  /// メディアエディター (D-169): 全画面で加工して結果を返す(キャンセルは null)。
-  Future<MediaEditResult?> pushMediaEditor({required SlotPlugin plugin, required Uint8List bytes, required String name, required String mimeType}) =>
-      push<MediaEditResult>(Routes.mediaEditor, extra: MediaEditorArgs(plugin: plugin, bytes: bytes, name: name, mimeType: mimeType));
 
   /// 添付の加工 (D-173): 基本 = pro_image_editor、プラグインはそこからバイパス。
   Future<MediaEditResult?> pushProMediaEditor({required Uint8List bytes, required String name, required String mimeType}) =>

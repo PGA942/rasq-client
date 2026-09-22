@@ -10,6 +10,7 @@ import '../session/session_providers.dart';
 import '../session/session_storage.dart';
 import '../session/rasq_accounts.dart';
 import 'orgate_client.dart';
+import 'rasq_account_page_api.dart';
 
 /// RASQ アカウント (D-087) — アカウントバンドルの顔。
 ///
@@ -28,7 +29,7 @@ import 'orgate_client.dart';
 
 @immutable
 class RasqAccount {
-  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt});
+  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt, this.email, this.emailVerified = false, this.emailPending, this.hasPassword = false, this.roles = const [], this.bio = '', this.bannerUrl, this.location = '', this.birthday = '', this.links = const []});
 
   final String id;
   final String handle;
@@ -36,12 +37,40 @@ class RasqAccount {
   final Uri? avatarUrl;
   final DateTime? createdAt;
 
+  /// メールアドレス (S-019)。自分にだけ見える。[emailPending] = 確認待ちの新しいメール。
+  final String? email;
+  final bool emailVerified;
+  final String? emailPending;
+
+  /// パスワードが設定済みか(別の端末からログインできるか)。
+  final bool hasPassword;
+
+  /// 役割(`developer` / `reviewer`)。
+  final List<String> roles;
+
+  /// プロフィールの項目 (S-020)。[birthday] = `YYYY-MM-DD` か、年を伏せた `MM-DD`。[links] は 8 組まで。
+  final String bio;
+  final Uri? bannerUrl;
+  final String location;
+  final String birthday;
+  final List<({String label, String url})> links;
+
   factory RasqAccount.fromJson(Map<String, Object?> j) => RasqAccount(
         id: j['id'] as String? ?? j['accountId'] as String? ?? '',
         handle: j['handle'] as String? ?? '',
         displayName: j['displayName'] as String? ?? '',
         avatarUrl: switch (j['avatarUrl']) { final String u when u.isNotEmpty => Uri.tryParse(u), _ => null },
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
+        email: j['email'] as String?,
+        emailVerified: j['emailVerified'] == true,
+        emailPending: j['emailPending'] as String?,
+        hasPassword: j['hasPassword'] == true,
+        roles: [for (final r in j['roles'] as List? ?? const []) '$r'],
+        bio: j['bio'] as String? ?? '',
+        bannerUrl: switch (j['bannerUrl']) { final String u when u.isNotEmpty => Uri.tryParse(u), _ => null },
+        location: j['location'] as String? ?? '',
+        birthday: j['birthday'] as String? ?? '',
+        links: [for (final l in j['links'] as List? ?? const []) if (l is Map) (label: '${l['label'] ?? ''}', url: '${l['url'] ?? ''}')],
       );
 
   /// サイドバーのバンドルタイルが使う形。ハンドルはインスタンスなしの素の
@@ -204,12 +233,71 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// RASQ アカウントを削除する (D-241 / S-015 `DELETE /me?confirm=<handle>`)。サーバー上の本人に
   /// 紐づくデータがすべて消え、学習へのデータ提供の撤回も同時に始まる。端末はトークンを捨てる
   /// (端末 id は残るが、消したアカウントへは戻れない = 次に作ると新しいアカウント)。
-  Future<void> deleteAccount() async {
+  /// [code] = メールが確認済みのアカウントで要る、`account.delete` の確認コード (S-019)。
+  Future<void> deleteAccount({String? code}) async {
     final client = ref.read(centralClientProvider);
     final account = state.value;
     if (client == null || account == null) return;
-    await client.delete('/me', {'confirm': account.handle});
+    await client.delete('/me', {'confirm': account.handle, 'code': ?code});
     await signOut();
+  }
+
+  /// この端末の安定 ID(ログインのとき、端末ごとに 1 本のトークンにするために渡す)。
+  Future<String> ensureDeviceId() async => (_creds ??= await _loadOrCreateCredentials(ref.read(sessionStorageProvider))).deviceId;
+
+  /// `GET /me` を取り直す(メールの確認 / パスワードの設定のあと)。
+  Future<RasqAccount?> refresh() async {
+    final client = ref.read(centralClientProvider);
+    if (client == null || _creds?.token == null) return state.value;
+    final account = RasqAccount.fromJson(await client.getJson('/me'));
+    state = AsyncData(account);
+    return account;
+  }
+
+  /// 既存のアカウントへのログイン (S-019): `/auth/login` / `/auth/login/email/confirm` の応答のトークンを、この端末のものにする。
+  Future<RasqAccount?> adoptLogin(Map<String, Object?> res) async {
+    final client = ref.read(centralClientProvider);
+    final token = res['token'] as String?;
+    if (client == null || token == null || token.isEmpty) return null;
+    final storage = ref.read(sessionStorageProvider);
+    _creds ??= await _loadOrCreateCredentials(storage);
+    _creds = _DeviceCredentials(deviceId: _creds!.deviceId, token: token, accountId: res['accountId'] as String?);
+    _lastRestored = true;
+    await storage.write(storageKey, jsonEncode(_creds!.toJson()));
+    _publishToken();
+    return refresh();
+  }
+
+  /// プロフィールをまとめて保存 (S-020): 画像(選び直したものだけ)→ 項目。`null` は「そのまま」、空文字は「消す」。
+  Future<RasqAccount?> saveProfile({
+    String? handle,
+    String? displayName,
+    String? bio,
+    String? location,
+    String? birthday,
+    List<({String label, String url})>? links,
+    ({List<int> bytes, String contentType})? avatar,
+    ({List<int> bytes, String contentType})? banner,
+    bool removeAvatar = false,
+    bool removeBanner = false,
+  }) async {
+    final client = ref.read(centralClientProvider);
+    if (client == null) return null;
+    if (avatar != null) await client.putBytes('/me/avatar', avatar.bytes, contentType: avatar.contentType);
+    if (banner != null) await client.putBytes('/me/banner', banner.bytes, contentType: banner.contentType);
+    if (removeAvatar && avatar == null) await client.delete('/me/avatar');
+    if (removeBanner && banner == null) await client.delete('/me/banner');
+    final res = await client.patchJson('/me', {
+      'handle': ?handle,
+      'displayName': ?displayName,
+      'bio': ?bio,
+      'location': ?location,
+      'birthday': ?birthday,
+      if (links != null) 'links': [for (final l in links) {'label': l.label, 'url': l.url}],
+    });
+    final account = RasqAccount.fromJson(res);
+    state = AsyncData(account);
+    return account;
   }
 
   Future<void> updateProfile({String? handle, String? displayName, String? avatarUrl}) async {
@@ -228,6 +316,41 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   ///
   /// [prune] = false なら足すだけで、サーバーにだけあるアカウントは消さない(登録の FOW で
   /// 「置き換えない」を選んだアカウント、D-241)。
+  /// アプリを開いている間に 1 回だけ調べる(同期のたびに SNS へ取りに行かない)。
+  final Map<String, Map<String, Object?>> _tileCache = {};
+
+  /// タイルに要る情報を、その SNS から取る。**鍵アカウント**か、**直近の投稿の公開範囲がフォロワーのみに寄っている**なら
+  /// `autoVisible: false`([snsAutoVisible])。どれも付随情報なので、失敗は握りつぶす。
+  Future<Map<String, Object?>> _tileInfo(AccountSession s) async {
+    final cached = _tileCache[s.account.key];
+    if (cached != null) return cached;
+    final out = <String, Object?>{};
+    try {
+      final registry = ref.read(pluginRegistryProvider);
+      final session = registry.session(s);
+      final me = await session.me();
+      final profile = await session.user(me.id);
+      List<String?> visibilities = const [];
+      try {
+        visibilities = [for (final p in (await session.userPosts(me.id, limit: 20)).items) p.visibility];
+      } catch (_) {}
+      out['autoVisible'] = snsAutoVisible(isLocked: profile.isLocked, recentVisibilities: visibilities);
+      final url = profile.profileUrl ?? profile.url;
+      if (url != null && (url.scheme == 'https' || url.scheme == 'http')) out['profileUrl'] = url.toString();
+      try {
+        final info = await registry.plugin(s.pluginId)?.inspectServer(s.account.instance);
+        if (info != null) {
+          if (info.name.isNotEmpty) out['serverName'] = info.name;
+          if (info.iconUrl != null) out['serverIconUrl'] = info.iconUrl.toString();
+        }
+      } catch (_) {}
+      _tileCache[s.account.key] = out;
+    } catch (e) {
+      debugPrint('rasq account: tile info unavailable for ${s.account.key}: $e');
+    }
+    return out;
+  }
+
   Future<void> syncBundle(List<AccountSession> sessions, {bool prune = true}) async {
     final client = ref.read(centralClientProvider);
     if (client == null || state.value == null) return;
@@ -239,6 +362,9 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
           if (e is Map) e['accountKey'] as String? ?? '',
       };
       for (final s in wanted.values) {
+        // アカウントページのタイル (S-021): 自動で出してよいか / サーバーの名前とアイコン / その SNS 上のプロフィール。
+        // 取れなければ送らない(サーバーは前の値のまま。新規は「出す」)。
+        final tile = await _tileInfo(s);
         await client.putJson('/me/sns-accounts', {
           'kind': s.account.kind.name,
           'instance': s.account.instance,
@@ -246,6 +372,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
           'pluginId': s.pluginId,
           if (s.displayName != null) 'displayName': s.displayName,
           if (s.avatarUrl != null) 'avatarUrl': s.avatarUrl.toString(),
+          ...tile,
         });
       }
       if (!prune) return;

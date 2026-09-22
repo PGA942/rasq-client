@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' as cui;
 import 'package:material_ui/material_ui.dart' as mui;
 
+import '../features/home/reaction_history.dart';
 import '../features/plugins/slot_plugins.dart';
 import '../features/media/video_player.dart' show VideoPrefs;
 import '../features/settings/settings_dsl.dart';
@@ -24,6 +26,7 @@ class RasqApp extends ConsumerWidget {
     // MFM の動き / 動画の既定 (D-238): 描画側の静的な設定へ流す。
     final mfm = (enabled: settingValue(ref, 'appearance.mfm', 'animations', true) != false, speed: ((settingValue(ref, 'appearance.mfm', 'speed', 100) as num).toDouble() / 100.0).clamp(0.25, 4.0));
     if (RasqMfmTransform.motion.value != mfm) WidgetsBinding.instance.addPostFrameCallback((_) => RasqMfmTransform.motion.value = mfm);
+    ReactionPrefs.predictWhenEmpty = settingValue(ref, reactionSettingsArea, 'predictWhenEmpty', false) == true;
     VideoPrefs.autoplay = settingValue(ref, 'appearance.video', 'autoplay', true) != false;
     VideoPrefs.defaultSpeed = double.tryParse('${settingValue(ref, 'appearance.video', 'defaultSpeed', '1.0')}') ?? 1.0;
     VideoPrefs.pipKeepPosition = settingValue(ref, 'appearance.video', 'pipKeepPosition', true) != false;
@@ -33,7 +36,9 @@ class RasqApp extends ConsumerWidget {
       scaffoldMessengerKey: ref.watch(rootMessengerKeyProvider),
       debugShowCheckedModeBanner: false,
       // pro_image_editor (D-173) は material_ui の AppBar/Scaffold を使うので、その MaterialLocalizations も要る。
-      localizationsDelegates: const [mui.DefaultMaterialLocalizations.delegate],
+      // iOS / macOS では閉じるときの確認が cupertino_ui のダイアログ(showAdaptiveDialog)になるので、その
+      // CupertinoLocalizations も要る (D-253: 無いと × / 戻るで例外になり、閉じられなかった)。
+      localizationsDelegates: const [mui.DefaultMaterialLocalizations.delegate, cui.DefaultCupertinoLocalizations.delegate],
       theme: RasqTheme.light(),
       darkTheme: RasqTheme.dark(),
       themeMode: switch (mode) {

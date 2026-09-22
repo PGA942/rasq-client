@@ -5,8 +5,10 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../app/navigation.dart';
 import '../app/providers.dart';
 import '../app/router.dart';
+import '../backend/rasq_account.dart';
 import 'rasq_account_fow.dart';
 
 /// アカウントリストの開閉 (D-087: バンドルタイルの ^ ボタン)。アプリ起動中は
@@ -52,6 +54,8 @@ class RasqSidebar extends ConsumerWidget {
     final sessions = ref.watch(sessionsProvider).value ?? const SessionsState();
     final bundle = sessions.bundleView;
     final expanded = ref.watch(sidebarAccountsExpandedProvider);
+    final ledger = ref.watch(rasqAccountsProvider).value ?? const RasqAccountsState();
+    final others = [for (final r in ledger.accounts) if (r.id != ledger.current?.id) r];
     final width = (MediaQuery.sizeOf(context).width * 0.78).clamp(240.0, 340.0);
     void go(String route) {
       handle.close();
@@ -70,16 +74,32 @@ class RasqSidebar extends ConsumerWidget {
               child: Row(children: [
                 const RasqLogo(height: 22),
                 const Spacer(),
-                RasqAvatar(imageUrl: rasq.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: rasq.displayName),
+                // … の左横 (D-272 → D-291): **いま使っていない RASQ アカウント**(ゲスト = 「この端末のみ」のバンドルも含む)を、2 つまで。
+                // 押すと、そのアカウントに切り替える(開いたアカウントページの履歴を出すのは、やめた)。
+                for (final r in others.take(2))
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Builder(builder: (context) {
+                      final u = summaryOfRecord(ref, r, isCurrent: false);
+                      return Tooltip(
+                        message: '${u.displayName} に切り替える',
+                        child: InkWell(
+                          key: ValueKey('sidebar.otherAccount.${r.id}'),
+                          customBorder: const CircleBorder(),
+                          onTap: () => ref.read(rasqAccountsProvider.notifier).select(r.id),
+                          child: RasqAvatar(imageUrl: u.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: u.displayName),
+                        ),
+                      );
+                    }),
+                  ),
                 // … = RASQ アカウントの選択/編集 FOW (D-138。D-087 のドロップ
                 // ダウンは FOW 内の「SNS アカウントを追加」「アカウント設定」へ)。
                 RasqIconButton(
                   icon: Icons.more_horiz,
                   tooltip: 'RASQ アカウント',
-                  onPressed: () {
-                    handle.close();
-                    openRasqAccountFow(ref);
-                  },
+                  // サイドバーは閉じない (D-272 → D-274): FOW は、後ろを暗くしてサイドバーの上に被さって出る
+                  // (1 カラム = 全幅 / 2 カラム = 左カラム、入りきらなければ 2 カラムにまたがる)。別の画面へ移るときは、サイドバーも閉じる。
+                  onPressed: () => openRasqAccountFow(ref, onNavigate: handle.close, overSidebar: true),
                 ),
               ]),
             ),
@@ -87,6 +107,9 @@ class RasqSidebar extends ConsumerWidget {
             // 総合表示(全アカウントの TL が「総合」に合流)、^ でリスト開閉。
             InkWell(
               onTap: () async {
+                // もう総合表示なら、もう一度押すと RASQ アカウントページへ (D-272)。
+                final central = ref.read(orgateAccountProvider).value;
+                if (bundle && central != null) return go(Routes.rasqAccount(central.handle));
                 await ref.read(sessionsProvider.notifier).setBundleView(true);
                 handle.close();
               },
@@ -156,6 +179,12 @@ class RasqSidebar extends ConsumerWidget {
     final selected = !bundle && s.account.key == sessions.current?.account.key;
     return InkWell(
       onTap: () async {
+        // 表示中のアカウントをもう一度押すと、そのアカウントのプロフィールページへ (D-272)。
+        if (selected) {
+          final me = ref.read(currentUserProvider);
+          handle.close();
+          return context.pushUser(me);
+        }
         await ref.read(sessionsProvider.notifier).setCurrent(s.account);
         handle.close();
       },

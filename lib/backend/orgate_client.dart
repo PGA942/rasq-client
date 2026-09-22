@@ -185,6 +185,19 @@ class OrgateClient {
     return (body as Map?)?.cast<String, Object?>() ?? const {};
   }
 
+  /// 生バイト列の PUT(プロフィールの画像など)。応答は JSON。
+  Future<Map<String, Object?>> putBytes(String path, List<int> bytes, {required String contentType}) async {
+    final http.Response r;
+    try {
+      r = await _http.put(_url(path), headers: {..._headers(), 'content-type': contentType}, body: bytes).timeout(_timeout * 6);
+    } on Exception catch (e) {
+      throw OrgateException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable'), '$e');
+    }
+    if (r.statusCode >= 400) _fail(r);
+    final body = r.bodyBytes.isEmpty ? const {} : jsonDecode(utf8.decode(r.bodyBytes));
+    return (body as Map?)?.cast<String, Object?>() ?? const {};
+  }
+
   /// JSON を送ってバイト列(音声など)を受ける。
   Future<Uint8List> postForBytes(String path, Object body) async {
     final http.Response r;

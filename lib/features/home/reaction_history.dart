@@ -19,6 +19,14 @@ import '../../session/session_providers.dart';
 /// 保存は KV `reaction.history.v1`(D-035 規約)。
 const reactionHistoryStorageKey = 'reaction.history.v1';
 
+/// 設定エリア。`predictWhenEmpty`(既定 false): だれもリアクションしていない投稿でも、自分の履歴から予測する。
+const reactionSettingsArea = 'plugins.reaction';
+
+/// リアクションの設定 (D-281)。動画の設定 (`VideoPrefs`) と同じく、アプリの根が設定の変化で書き換える。
+class ReactionPrefs {
+  static bool predictWhenEmpty = false;
+}
+
 class ReactionHistoryStore extends AsyncNotifier<Map<String, int>> {
   @override
   Future<Map<String, int>> build() async {
@@ -50,6 +58,8 @@ class ReactionHistoryStore extends AsyncNotifier<Map<String, int>> {
   /// 計算は純ローカル(ネットワーク・ML なし)なので、**表示されたタイミングの
   /// パッシブ駆動**で全投稿に対して走らせてよい。
   String? predictFor(Post post) {
+    // だれもリアクションしていない投稿は、予測しない (D-281)。自分の最頻の絵文字に偏りすぎたため。設定で戻せる。
+    if (post.reactions.isEmpty && !ReactionPrefs.predictWhenEmpty) return null;
     final total = post.reactions.values.fold<int>(0, (a, b) => a + b);
     if (total >= 2) {
       final ranked = post.reactions.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
@@ -79,3 +89,16 @@ class ReactionHistoryStore extends AsyncNotifier<Map<String, int>> {
 }
 
 final reactionHistoryProvider = AsyncNotifierProvider<ReactionHistoryStore, Map<String, int>>(ReactionHistoryStore.new);
+
+/// 他サーバーのカスタム絵文字(`:name@host:`)なら、その名前。Unicode / 自サーバーの絵文字(`:name:` / `:name@.:`)は null。
+/// 他サーバーの絵文字はそのままでは付けられない(サーバーが別の絵文字にすり替える)ので、同じ名前の自サーバーの絵文字に読み替えるか、
+/// 無ければピッカーを開く (D-278)。
+String? remoteReactionName(String reaction) {
+  if (!reaction.startsWith(':') || !reaction.endsWith(':') || reaction.length < 3) return null;
+  final inner = reaction.substring(1, reaction.length - 1);
+  final at = inner.indexOf('@');
+  if (at <= 0) return null;
+  final host = inner.substring(at + 1);
+  return host.isEmpty || host == '.' ? null : inner.substring(0, at);
+}
+

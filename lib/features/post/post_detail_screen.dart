@@ -18,6 +18,7 @@ import '../settings/settings_dsl.dart';
 import '../users/user_list.dart';
 import 'reactions_screen.dart';
 import 'thread_section.dart';
+import 'thread_section_bar.dart';
 
 /// スレッド展開画面: ancestors → 対象投稿 → 「∨ 返信 / リアクションを表示 >」→
 /// replies (thread line) → さらに表示 → 返信バー(コンポーザーは次段階).
@@ -32,9 +33,12 @@ final threadProvider = FutureProvider.autoDispose.family<Thread, ThreadKey>((ref
   final all = [...t.ancestors, t.post, ...t.descendants];
   final states = await s.actionStates(all);
   final store = ref.read(actionStateProvider.notifier);
+  // 投稿ごとのアイコン(リアクション済みの絵文字)も渡す (D-281)。宣言した (`iconPerPost`) アクションだけ。
+  final perPost = {for (final a in s.actions) if (a.iconPerPost) a.id};
   store.applyAll({
     for (final p in all)
-      for (final e in (states[p.id] ?? const <String, ActionResult>{}).entries) (postKey: p.key, actionId: e.key): ActionState(done: e.value.done, count: e.value.count),
+      for (final e in (states[p.id] ?? const <String, ActionResult>{}).entries)
+        (postKey: p.key, actionId: e.key): ActionState(done: e.value.done, count: e.value.count, iconUrl: perPost.contains(e.key) ? e.value.icon?.url : null, iconText: perPost.contains(e.key) ? e.value.icon?.text : null),
   });
   return t;
 });
@@ -53,7 +57,7 @@ class PostDetailScreen extends ConsumerStatefulWidget {
 class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   /// 返信欄の並び順/表示種類 (D-070)。**キャッシュに残す** — KV
   /// `threadReplies.v1`(設定 DSL と同じ規約)に保存し、全スレッドで共有。
-  static const _kvArea = 'threadReplies';
+  static const _kvArea = threadRepliesKvArea;
   String get postId => widget.postId;
   Post? get initial => widget.initial;
 
@@ -195,7 +199,6 @@ class _ThreadBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     // 返信欄は**リプライだけ** (D-071、Twitter 寄せ): Misskey の
     // notes/children は引用リノートも混ざって返る — 引用は「共有(引用
     // ノート)」欄で見るので、ここでは replyTo を持つものに絞る。
@@ -207,34 +210,13 @@ class _ThreadBody extends StatelessWidget {
       // スレッド展開はインラインフレームモード (D-156): 引用は小表示。
       // メイン投稿は添付を全部並べる(5 枚目以降も、D-177)。
       PostRow(post: post, actions: actions, onAction: (d, {args = const {}}) => onAction(post, d, args: args), showReplyParent: ancestors.isEmpty, onActAs: onActAs, compactQuote: true, showAllMedia: true),
-      Container(
-        decoration: BoxDecoration(border: Border.symmetric(horizontal: BorderSide(color: scheme.onSurface, width: 1))),
-        padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-        height: RasqSizes.minTap,
-        child: Row(children: [
-          Builder(
-            // ∨: 短押し = 並び順、**長押し = 欄の切り替え** (D-070)。
-            builder: (ctx) {
-              Rect anchor() {
-                final box = ctx.findRenderObject() as RenderBox;
-                return box.localToGlobal(Offset.zero) & box.size;
-              }
-
-              return InkWell(
-                onTap: onSortTap == null ? null : () => onSortTap!(anchor()),
-                onLongPress: onModeTap == null ? null : () => onModeTap!(anchor()),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.keyboard_arrow_down, size: 18),
-                  const SizedBox(width: 4),
-                  Text(mode.shortLabel, style: RasqTypography.tab),
-                  if (order != ThreadSortOrder.none) Padding(padding: const EdgeInsets.only(left: 6), child: Text(order.label, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-                ]),
-              );
-            },
-          ),
-          const Spacer(),
-          TextButton(onPressed: onShowReactions, child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('リアクションを表示'), Icon(Icons.chevron_right, size: 18)])),
-        ]),
+      // 返信欄の上の帯は、RASQ の投稿の詳細と共通の部品 (D-292)。
+      ThreadSectionBar(
+        label: mode.shortLabel,
+        order: order,
+        onSortTap: onSortTap,
+        onModeTap: onModeTap,
+        trailing: TextButton(onPressed: onShowReactions, child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('リアクションを表示'), Icon(Icons.chevron_right, size: 18)])),
       ),
       if (loading) const RasqLoading(),
       if (mode == ThreadSectionMode.replies) ...[

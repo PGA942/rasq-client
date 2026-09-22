@@ -149,10 +149,23 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
       appBar: RasqPageHeader(title: 'プラグイン', onMore: () {}),
       body: detail.when(
         loading: () => const RasqLoading(),
-        error: (e, _) => RasqEmptyView(title: 'ストアに接続できませんでした', hint: '$e'),
-        data: (d) => d == null ? const RasqEmptyView(title: 'このプラグインは見つかりませんでした', hint: '取り下げられた可能性があります') : _page(d),
+        // 掲載が無い / つながらないときも、インストール済みなら手元の情報のページ(削除もそこ)へ行ける (D-256)。
+        error: (e, _) => _missing('ストアに接続できませんでした', '$e'),
+        data: (d) => d == null ? _missing('このプラグインは見つかりませんでした', '取り下げられた可能性があります') : _page(d),
       ),
     );
+  }
+
+  Widget _missing(String title, String hint) {
+    final installed = ref.watch(installedPluginsProvider).any((p) => p.id == widget.pluginId);
+    return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      RasqEmptyView(title: title, hint: hint),
+      if (installed)
+        Padding(
+          padding: const EdgeInsets.only(top: RasqSpacing.md),
+          child: FilledButton(key: const ValueKey('store.plugin.openInstalled'), onPressed: () => context.push(Routes.storeInstalledPlugin(widget.pluginId)), child: const Text('インストール済みの情報を見る')),
+        ),
+    ]);
   }
 
   Widget _page(StorePluginDetail d) {
@@ -224,7 +237,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
             height: 56,
             decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(14)),
             clipBehavior: Clip.antiAlias,
-            child: d.iconUrl != null ? Image.network(d.iconUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.extension_outlined, size: 30)) : const Icon(Icons.extension_outlined, size: 30),
+            child: d.iconUrl != null ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, d.iconUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.extension_outlined, size: 30)) : const Icon(Icons.extension_outlined, size: 30),
           ),
           const SizedBox(width: RasqSpacing.md),
           Expanded(
@@ -458,38 +471,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
       id: 'store.safety',
       title: 'プライバシーと必要な権限',
       builder: (ctx) {
-        final scheme = Theme.of(ctx).colorScheme;
-        return ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page), children: [
-          for (final g in PermissionKind.group(d.safety.permissions)) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs),
-              child: Text('${g.kind.label}${g.kind.description.isEmpty ? '' : ' — ${g.kind.description}'}', style: RasqTypography.listTile),
-            ),
-            for (final p in g.entries)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Icon(Icons.key_outlined, size: 16),
-                  const SizedBox(width: 6),
-                  Expanded(child: Text('${p.permission} — ${p.reason}', style: RasqTypography.bodySmall)),
-                ]),
-              ),
-          ],
-          Padding(padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs), child: Text('外部通信とデータ', style: RasqTypography.listTile)),
-          Text(d.safety.externalHosts.isEmpty ? '外部通信先: なし' : '外部通信先: ${d.safety.externalHosts.join('、')}', style: RasqTypography.bodySmall),
-          if (d.safety.dataHandling.isNotEmpty) Text('データの扱い: ${d.safety.dataHandling}', style: RasqTypography.bodySmall),
-          if (d.safety.externalSdks.isNotEmpty) Text('外部 SDK: ${d.safety.externalSdks.join('、')}', style: RasqTypography.bodySmall),
-          Padding(padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs), child: Text('実行環境', style: RasqTypography.listTile)),
-          Text(
-            [
-              if (d.safety.crashFreeRate != null) '正常起動率 ${(d.safety.crashFreeRate! * 100).toStringAsFixed(1)}%',
-              d.safety.backgroundExecution ? 'バックグラウンド実行あり' : 'バックグラウンド実行なし',
-              d.safety.usesGpu ? 'GPU 使用' : 'GPU 不使用',
-              d.safety.adPlacements.isEmpty ? '広告なし' : '広告あり(${d.safety.adPlacements.join('、')})',
-            ].join(' ・ '),
-            style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
-          ),
-        ]);
+        return SingleChildScrollView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page), child: SafetyDetail(safety: d.safety));
       },
     );
   }
@@ -506,7 +488,7 @@ class _Banner extends StatelessWidget {
       height: 110,
       width: double.infinity,
       child: url != null
-          ? Image.network(url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => _placeholder(scheme))
+          ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => _placeholder(scheme))
           : _placeholder(scheme),
     );
   }
@@ -527,7 +509,7 @@ class _Screenshot extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(border: Border.all(color: scheme.outline), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
       clipBehavior: Clip.antiAlias,
-      child: Image.network(url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Center(child: Icon(Icons.broken_image_outlined))),
+      child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Center(child: Icon(Icons.broken_image_outlined))),
     );
   }
 }

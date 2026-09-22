@@ -84,7 +84,8 @@ abstract final class SnsWire {
         ],
         multiple: j['multiple'] == true,
         expiresAt: j['expiresAt'] is String ? DateTime.tryParse(j['expiresAt'] as String) : null,
-        votedIndices: {for (final i in (j['voted'] as List? ?? const [])) (i as num).toInt()},
+        // `voted` は投票した選択肢の番号の並び。真偽値で送ってくるプラグイン(Mastodon の `voted: false`)があるので、並びでなければ「なし」として読む(投稿ごと落とさない)。
+        votedIndices: {if (j['voted'] case final List v) for (final i in v) if (i is num) i.toInt()},
       );
 
   static Map<String, Object?> post(Post p) => {

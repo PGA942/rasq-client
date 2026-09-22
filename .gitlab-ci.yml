@@ -19,7 +19,7 @@ variables:
   SECRET_DETECTION_ENABLED: 'true'
   PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
   CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
-  SDK_SAMPLE_BRANCH: "agent/other-api-plugins"
+  SDK_SAMPLE_BRANCH: "main"
   FLUTTER_PIN: "3.47.2"
 
 include:
@@ -66,6 +66,39 @@ flutter:
     - flutter analyze
     - flutter test
     - for p in packages/*; do (cd "$p" && flutter test); done
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+# Web 版 (D-295 → D-303): ブラウザでしか出ない壊れ方(three_js の 3D で、アプリ全体が起動しなくなった)を
+# 手元と同じやり方で止める。`test/web` はブラウザの中で走るので Chrome が要る(イメージには入っていないので入れる)。
+web:
+  stage: test
+  image: ghcr.io/cirruslabs/flutter:3.44.0
+  cache:
+    key: pub-$CI_COMMIT_REF_SLUG
+    paths:
+      - .pub-cache/
+  before_script:
+    - git config --global --add safe.directory "$FLUTTER_HOME"
+    - git -C "$FLUTTER_HOME" fetch --depth 1 origin "refs/tags/$FLUTTER_PIN:refs/tags/$FLUTTER_PIN"
+    - git -C "$FLUTTER_HOME" checkout -q "$FLUTTER_PIN"
+    # plugin_runtime は rasq-sdk-sample への path 依存(ビルドフックが cargo を呼ぶ)。
+    - |
+      SDK_DIR="$CI_PROJECT_DIR/../rasq-sdk-sample"
+      rm -rf "$SDK_DIR"
+      git clone --depth 1 -b "$SDK_SAMPLE_BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/orgate-question/rasq-sdk-sample.git" "$SDK_DIR" \
+        || git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/orgate-question/rasq-sdk-sample.git" "$SDK_DIR"
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+    - export PATH="$CARGO_HOME/bin:$PATH"
+    # Web のテストを走らせるブラウザ(イメージには入っていない)。
+    - curl -fsSL -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends /tmp/chrome.deb && rm -f /tmp/chrome.deb
+    - export CHROME_EXECUTABLE=/usr/bin/google-chrome
+  script:
+    - flutter pub get
+    - flutter build web --no-tree-shake-icons
+    - flutter test --platform chrome test/web
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH

@@ -7,6 +7,8 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../backend/rasq_account_page_api.dart';
+import '../profile/rasq_post_tile.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/third_column.dart';
@@ -25,6 +27,7 @@ import '../vc/astell_actions.dart';
 import '../vc/astell_links.dart';
 import '../settings/safety.dart';
 import 'action_bar_config.dart';
+import 'account_affinity.dart';
 import 'action_bundle_fow.dart';
 import 'material_icons.dart';
 import 'post_duplicates.dart';
@@ -100,7 +103,8 @@ class PostRow extends ConsumerStatefulWidget {
     'bookmark': Icons.bookmark,
   };
 
-  static IconData iconFor(String? name, IconData fallback) => _icons[name] ?? fallback;
+  /// 投稿ボタンの小さい表 → Material の全アイコン表 (D-249: 宣言のアイコン名はどのバーでも同じように引く)。
+  static IconData iconFor(String? name, IconData fallback) => _icons[name] ?? materialIconByName(name) ?? fallback;
 
   @override
   ConsumerState<PostRow> createState() => _PostRowState();
@@ -116,8 +120,29 @@ class _PostRowState extends ConsumerState<PostRow> {
 
   Post get post => _actAs ?? widget.post;
 
+  @override
+  void didUpdateWidget(PostRow old) {
+    super.didUpdateWidget(old);
+    // 行が別の投稿に使い回されたら、↓ の切り替えは持ち越さない (D-282)。
+    if (old.post.key != widget.post.key) _actAs = null;
+  }
+
   /// [_actAs] 中はそのコピーでアクションを実行する。
   PostActionHandler get _onAction => (_actAs != null && widget.actionsFor != null) ? widget.actionsFor!(post) : widget.onAction;
+
+  /// いま自分が付けているリアクション (D-281)。投稿の `myReaction` は取得したときのものなので、この画面で付けた / 外したぶんは
+  /// アクションの状態から読む: 外していれば null、付け直していれば、ボタンのアイコンと同じ絵文字のチップ。
+  String? get _myReaction {
+    final a = widget.actions.where((x) => x.genreTag == 'Reaction').firstOrNull;
+    if (a == null) return post.myReaction;
+    final st = ref.watch(actionStateOfProvider((postKey: post.key, actionId: a.id)));
+    if (!st.done) return null;
+    for (final r in post.reactions.keys) {
+      if (st.iconText != null && r == st.iconText) return r;
+      if (st.iconUrl != null && post.reactionEmojis[r] == st.iconUrl) return r;
+    }
+    return st.iconText == null && st.iconUrl == null ? post.myReaction : null;
+  }
 
   /// タップの実行: プラグインのボタン (D-176) はスロット登録簿へ、それ以外は SNS のアクションへ。
   Future<void> _run(ActionDescriptor a, {Map<String, Object?> args = const {}}) => isPluginActionId(a.id) ? _runPlugin(a) : _onAction(a, args: args);
@@ -134,7 +159,8 @@ class _PostRowState extends ConsumerState<PostRow> {
       post: astellPostPayloadOf(post),
       account: {'sns': acc.kind.name, 'instance': acc.instance, 'handle': acc.handle},
       column: column,
-      onComposerOpen: (text, media, mime, name) => showComposer(ref, const ComposeNormal(), initialText: text, column: column, initialFiles: media == null ? null : [ComposerInitialFile(bytes: media, name: name ?? 'plugin.png', mimeType: mime)]),
+      // プラグインが開くコンポーザーも、↓ で切り替えたアカウントで (D-278)。
+      onComposerOpen: (text, media, mime, name) => showComposer(ref, const ComposeNormal(), initialText: text, column: column, postAs: ref.read(sessionsProvider).value?.allSessions.where((s) => s.account.key == acc.key).firstOrNull, initialFiles: media == null ? null : [ComposerInitialFile(bytes: media, name: name ?? 'plugin.png', mimeType: mime)]),
     );
     if (message != null && message.isNotEmpty) messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
@@ -143,6 +169,11 @@ class _PostRowState extends ConsumerState<PostRow> {
 
   @override
   Widget build(BuildContext context) {
+    // RASQ の投稿 (D-283。TL のソース「RASQ の投稿」)は、どの画面でも RASQ のタイルで描く(SNS のアクションは効かない)。
+    if (isRasqPost(widget.post)) {
+      final original = ref.watch(rasqFeedPostsProvider.select((m) => m[widget.post.id]));
+      return original == null ? const SizedBox.shrink() : RasqPostTileView(post: original, onChanged: () {}, onOpen: widget.onTap ?? () => context.pushPost(widget.post));
+    }
     final tokens = RasqTokens.of(context);
     final emojis = ref.watch(emojiCacheProvider);
     final isRead = ref.watch(isReadProvider(post.key));
@@ -218,7 +249,7 @@ class _PostRowState extends ConsumerState<PostRow> {
                 RasqReactionChips(
                   reactions: post.reactions,
                   emojiUrls: post.reactionEmojis,
-                  myReaction: post.myReaction,
+                  myReaction: _myReaction,
                   // チップにリアクションしたユーザー(アイコン+名前)を表示
                   // (D-042)。チップを開いたときだけ SNS API を叩く。
                   usersLoader: (r) async {
@@ -233,8 +264,9 @@ class _PostRowState extends ConsumerState<PostRow> {
                   onTap: (r) {
                     final a = widget.actions.where((x) => x.genreTag == 'Reaction').firstOrNull;
                     if (a == null) return;
-                    if (r == post.myReaction) {
-                      _onAction(a).catchError((_) {}); // 自分の → 解除
+                    if (r == _myReaction) {
+                      // 自分の → 確認なしで取り消す (D-281)。
+                      _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
                     } else {
                       _onAction(a, args: {'reaction': r}).then((_) => ref.read(reactionHistoryProvider.notifier).record(r)).catchError((_) {});
                     }
@@ -304,7 +336,13 @@ class _PostRowState extends ConsumerState<PostRow> {
     if (iconText == null && iconUrl == null && isReaction && !st.done) {
       final predicted = ref.watch(reactionHistoryProvider).value == null ? null : ref.read(reactionHistoryProvider.notifier).predictFor(post);
       if (predicted != null) {
-        if (predicted.startsWith(':')) {
+        final remote = remoteReactionName(predicted);
+        if (remote != null) {
+          // 他サーバーの絵文字 (D-278): 同じ名前の絵文字が自サーバーにあれば、それを予測として出す(押すとそれが付く)。
+          // 無ければ何も出さない(押すとピッカーが開く)。
+          // 引くのは、**投稿が流れてきたアカウント**のサーバー (D-284。総合 TL では、表示中のアカウントとは限らない)。
+          iconUrl = ref.watch(accountEmojiUrlProvider((account: post.account.key, name: remote))).value;
+        } else if (predicted.startsWith(':')) {
           iconUrl = post.reactionEmojis[predicted];
         } else {
           iconText = predicted;
@@ -316,7 +354,9 @@ class _PostRowState extends ConsumerState<PostRow> {
       id: a.id,
       label: a.label,
       icon: icon,
-      doneIcon: doneIcon,
+      // リノートのボタンは、済みでも無効にしない (D-274): 完了アイコンの宣言が無いと部品が無効化するので、同じアイコンを渡す
+      // (何度でもリノート / 引用でき、取り消しはリノートの帯の … やドロップダウンから)。
+      doneIcon: doneIcon ?? (isRepost ? icon : null),
       done: st.done,
       count: st.count ?? post.counts[a.id],
       showCount: a.countSource != CountSource.none,
@@ -329,54 +369,117 @@ class _PostRowState extends ConsumerState<PostRow> {
       // Repost はデフォルトの**アクションバンドル**(D-039): タップで
       // リノート / 引用ノートのドロップダウン(ユーザー編集のリスト化とは
       // 別で、(+) の編集導線には出ない組み込みバンドル)。
-      onTap: isRepost ? null : () => _performReactionAware(a, st),
-      onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : null,
+      onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : (anchor) => _performReactionAware(a, st, anchor),
       // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行。
       // ピッカーは**実物のリアクションボタンにアンカー**する (D-065:
       // 基本下付き・余白不足で上付き。D-055 の複製バーは置かない)。
-      onAnchorLongPress: isReaction
-          ? (anchor) => openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context), anchor: anchor,
-                  predictionContext: '${post.contentWarning ?? ''} ${post.body} ${post.quote?.body ?? ''}',
-                  existingReactions: post.reactions, onPick: (e) {
-                _onAction(a, args: {'reaction': e}).then((_) => ref.read(reactionHistoryProvider.notifier).record(e)).catchError((_) {});
-              })
-          : null,
+      onAnchorLongPress: isReaction ? (anchor) => _openReactionPicker(a, anchor) : null,
     );
   }
 
   /// 短押し。リアクションは**予測絵文字**を添えて実行する (D-039:
   /// 事前学習なしのヒューリスティック — 自分の履歴 × 投稿に付いている
   /// リアクション。reaction-predictor モデル配線後は ml.infer に置換)。
-  void _performReactionAware(ActionDescriptor a, ActionState st) {
-    if (a.genreTag == 'Reaction' && !st.done) {
-      final predicted = ref.read(reactionHistoryProvider.notifier).predictFor(post);
-      widget
-          .onAction(a, args: predicted == null ? const {} : {'reaction': predicted})
-          .then((_) => predicted == null ? null : ref.read(reactionHistoryProvider.notifier).record(predicted))
-          .catchError((_) {});
-      return;
+  ///
+  /// **付けられる予測が無いときは、ピッカーを開く** (D-278): だれもリアクションしていなくて履歴も無い / 予測が他サーバーの絵文字で、
+  /// 同じ名前のものが自サーバーに無い。以前は絵文字を添えずに送っていて、SNS 側の既定(👍)が付いていた。
+  /// [_actAs] で別のアカウントに切り替えているときは、そのアカウントで付ける(以前は元のアカウントで付けていた)。
+  Future<void> _performReactionAware(ActionDescriptor a, ActionState st, Rect anchor) async {
+    // リアクション済みなら、確認なしで取り消す (D-281)。
+    if (a.genreTag == 'Reaction' && st.done) return _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
+    if (a.genreTag != 'Reaction' || !a.iconPerPost) return _run(a).catchError((_) {});
+    // 待つ前に、実行先を掴む(待っている間に行が別の投稿に使い回されても、押した投稿に付ける。D-282)。
+    final shown = post;
+    final handler = _onAction;
+    final predicted = ref.read(reactionHistoryProvider.notifier).predictFor(shown);
+    final reaction = predicted == null ? null : await _sendable(predicted);
+    if (!mounted) return;
+    if (reaction == null) return post.key == shown.key ? _openReactionPicker(a, anchor) : null;
+    await handler(a, args: {'reaction': reaction}).then((_) => ref.read(reactionHistoryProvider.notifier).record(reaction)).catchError((_) {});
+  }
+
+  /// 予測を、このアカウントのサーバーで付けられる形に。付けられなければ null。
+  Future<String?> _sendable(String predicted) async {
+    final remote = remoteReactionName(predicted);
+    if (remote == null) return predicted;
+    final session = ref.read(sessionForAccountProvider(post.account.key)) ?? ref.read(currentSnsSessionProvider);
+    try {
+      return await session?.emojiUrl(remote) == null ? null : ':$remote:';
+    } catch (_) {
+      return null;
     }
-    _run(a).catchError((_) {});
+  }
+
+  /// リアクションの絵文字ピッカー。**実物のリアクションボタンにアンカー**する (D-065: 基本下付き・余白不足で上付き)。
+  ///
+  /// **開いた時点の投稿と実行先を掴んでおく** (D-282): ピッカーを開いている間に TL へ投稿が足されると、この行の State が別の投稿に
+  /// 使い回されることがあり、選んだ瞬間の `post` / `_onAction` を読むと、隣の投稿にリアクションしてしまっていた。
+  void _openReactionPicker(ActionDescriptor a, Rect anchor) {
+    final target = post;
+    final handler = _onAction;
+    // 行が作り直されて(TL の取り直しなど)この State が捨てられたあとに選ばれても動くよう、ref もここで読んでおく。
+    final history = ref.read(reactionHistoryProvider.notifier);
+    openEmojiPicker(ref, closeOnPick: true, title: 'リアクション', column: fowColumnOf(context), anchor: anchor, accountKey: target.account.key,
+        predictionContext: '${target.contentWarning ?? ''} ${target.body} ${target.quote?.body ?? ''}',
+        existingReactions: target.reactions, onPick: (e) {
+      handler(a, args: {'reaction': e}).then((_) => history.record(e)).catchError((_) {});
+    });
+  }
+
+  ActionDescriptor? get _repostAction => widget.actions.where((a) => a.genreTag == 'Repost').firstOrNull;
+
+  /// この投稿が**自分のリノート**として流れてきているか (D-276)。ここでだけ、リノートのバンドルが「リノートを取り消す」になる。
+  bool get _canUndoRepost {
+    final by = post.repostedBy;
+    if (by == null || _repostAction == null) return false;
+    final sessions = ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[];
+    return sessions.any((s) => s.account.key == by.account.key);
+  }
+
+  /// リノート / 引用に使うコピー (D-280)。いまのコピーのままなら null(↓ で選んでいる / 見えているのが 1 アカウントだけ /
+  /// 自分のリノートの取り消し / 予測がいまのアカウント)。
+  Post? _predictedCopy() {
+    if (_actAs != null || widget.actionsFor == null || _canUndoRepost) return null;
+    final copies = [widget.post, ...ref.read(postAlternatesProvider)[widget.post.key] ?? const <Post>[]];
+    if (copies.length < 2) return null;
+    final key = pickActingAccount(ref, widget.post, [for (final c in copies) c.account.key]);
+    final copy = copies.where((c) => c.account.key == key).firstOrNull;
+    return copy == null || copy.key == widget.post.key ? null : copy;
   }
 
   /// リノート/引用ノートの組み込みバンドル (D-039)。
   Future<void> _repostBundle(ActionDescriptor a, ActionState st, Rect anchor) async {
-    final manager = ref.read(overlayManagerProvider);
-    final picked = await manager.showDropdown<String>(
+    // ドロップダウンはやめて、バンドル FOW に統一 (D-277)。
+    // ボタンは入り切りにしない (D-274 → D-276): ふつうの投稿では、いつ押しても「リノート」(何度でも)。
+    // 自分のリノートとして流れてきたタイルでだけ、1 つ目が「リノートを取り消す」になる。
+    // どのアカウントでリノートするか (D-280): 同じ投稿が複数のアカウントに見えていて、↓ で選んでいなければ、予測したアカウントで。
+    // だまって切り替えない: 別のアカウントになるときは、行の名前に「(@… で)」と出す。
+    final target = _predictedCopy();
+    final handler = target == null ? _onAction : widget.actionsFor!(target);
+    final via = target == null ? '' : '(@${target.account.handle}@${target.account.instance} で)';
+    // 名前はリテラルのまま持つ(RAi の操作リファレンスが、この文字列でボタンを探す)。
+    const renoteLabel = 'リノート';
+    const quoteLabel = '引用ノート';
+    final picked = await showBundleMenuFow<String>(
+      ref.read(overlayManagerProvider),
       id: 'actionbar.repost.${post.key}',
+      title: a.label,
       anchor: anchor,
-      dense: true,
+      column: fowColumnOf(context),
       items: [
-        RasqDropdownItem(st.done ? 'リノート解除' : 'リノート', 'renote'),
-        const RasqDropdownItem('引用ノート', 'quote'),
+        if (_canUndoRepost) const BundleMenuItem(value: 'undo', label: 'リノートを取り消す', icon: Icons.repeat, destructive: true) else BundleMenuItem(value: 'renote', label: '$renoteLabel$via', icon: Icons.repeat),
+        BundleMenuItem(value: 'quote', label: '$quoteLabel$via', icon: Icons.format_quote),
       ],
     );
+    if (!mounted) return;
     switch (picked) {
       case 'renote':
-        await _onAction(a).catchError((_) {});
+        await handler(a, args: const {'forceUndo': false}).catchError((_) {});
+      case 'undo':
+        await _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
       case 'quote':
         if (!mounted) return;
-        await showComposer(ref, ComposeQuote(post), column: fowColumnOf(context));
+        await showComposer(ref, ComposeQuote(target ?? post), column: fowColumnOf(context));
     }
   }
 

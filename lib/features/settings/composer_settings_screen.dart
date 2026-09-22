@@ -23,6 +23,14 @@ class ComposerSettingsScreen extends ConsumerWidget {
           value: autoAccount,
           onChanged: (v) => ref.read(settingsAreaProvider('composer.prefs').notifier).set('autoAccount', v),
         ),
+        // RASQ への連動投稿 (D-286)。
+        RasqSwitchListTile(
+          key: const ValueKey('composerPrefs.rasqLinked'),
+          title: 'RASQ アカウントへも連動投稿する',
+          subtitle: '複数選択モードで、RASQ アカウントの行も選べるようになります(通常投稿 / ノード連動)。届け方と絞り込みは「投稿先のカスタマイズ」の RASQ のタブで決めます。RASQ の上限(1000 文字 / 添付 6 つ / 投票 6 個 / 投稿 3 件)を超える投稿は、RASQ へは送られません',
+          value: area['rasqLinked'] == true,
+          onChanged: (v) => ref.read(settingsAreaProvider('composer.prefs').notifier).set('rasqLinked', v),
+        ),
       ]),
     );
   }

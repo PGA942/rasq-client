@@ -1,0 +1,6 @@
+{
+  "alg": "ed25519",
+  "digest": "sha512:22733a2c0f7a6b7957469195298d27fd35a1e75a971d16943416f20aaf2cb620ca218649101beaf06d213e666d6b9d85535959496ddb3cb8e9cf6a4c52642d27",
+  "publicKey": "OVEGz49X1yEG+95z53WsfWGJRHdBebwY/GSE17qfblg=",
+  "signature": "2P49YW/8ziqG5AT9xG9k/BZEAbrP4o9vdAa0RO6om5e9W3LJtv8o9fOJrytxaBfvsFz7RgL8QXibVWflRGZdBw=="
+}

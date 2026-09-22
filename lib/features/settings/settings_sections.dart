@@ -38,6 +38,9 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('リスト', route: '/lists'),
     SettingsRow('ミュート/ブロック', route: '/settings/mute-block'),
     SettingsRow('プラグインボタン', subtitle: '宣言されたボタンの有効 / 無効と束ねる閾値', route: Routes.actionBarPlugins),
+    SettingsRow('絵文字の検索', subtitle: '意味の近い絵文字も探す(端末内のモデル)', route: '/settings/dsl/plugins.emoji'),
+    SettingsRow('リアクションの予測', subtitle: 'だれも付けていない投稿でも予測するか', route: '/settings/dsl/plugins.reaction'),
+    SettingsRow('共有 / リノートに使うアカウント', subtitle: '複数のアカウントに見えている投稿を、どのアカウントで扱うか', route: '/settings/dsl/plugins.accountPick'),
     SettingsRow('カスタムモーションとアニメーション', route: '/settings/dsl/appearance.mfm'),
     SettingsRow('リソースと広告', route: '/settings/dsl/resources'),
     SettingsRow('ヘルプ、法的表示', route: Routes.settingsLegal),
@@ -78,7 +81,6 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('セキュリティ', subtitle: 'SNS の権限とアクセストークン', route: '/settings/dsl/sns.security'),
   ]),
   'about': SettingsSection('RASQについて', [
-    SettingsRow('アカウント', subtitle: 'RASQ アカウント', route: settingsActionRasqAccount),
     SettingsRow('RASQ サーバー', subtitle: 'プラグインストア / RASQ アカウント / ログインの接続先', route: '/settings/server'),
     SettingsRow('ヘルプ', route: '/settings/dsl/about.help'),
     SettingsRow('購読状況', route: '/settings/dsl/about.subscription'),
@@ -96,4 +98,3 @@ const settingsSections = <String, SettingsSection>{
 const settingsActionTrendGenres = 'action:trend.genres';
 const settingsActionTrendTendency = 'action:trend.tendency';
 const settingsActionRelationalTuning = 'action:relational.tuning';
-const settingsActionRasqAccount = 'action:rasq.account';

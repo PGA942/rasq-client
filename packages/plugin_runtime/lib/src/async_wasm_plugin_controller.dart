@@ -7,7 +7,7 @@ import 'package:rrl_renderer/rrl_renderer.dart' show RrlGeometryRegistry;
 import 'host_environment.dart' show AppFnRelay;
 import 'wasm_fow.dart';
 import 'wasm_plugin_controller.dart';
-import 'wasm_plugin_worker.dart';
+import 'wasm_worker.dart';
 
 /// [WasmPluginController] の非同期版: プラグインを [WasmPluginWorker]
 /// (専用 isolate)で動かし、UI isolate をブロックしない。
