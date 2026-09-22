@@ -1,5 +1,6 @@
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
-import 'package:rasq_wasm_runtime/rasq_wasm_runtime.dart';
+
+import 'wasm_runtime.dart';
 
 /// ビットマップを触るプラグインを見分けるスロット (§2.2)。
 const kComposerMediaSlot = 'composer.media';

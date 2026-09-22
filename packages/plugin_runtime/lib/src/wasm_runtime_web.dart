@@ -16,6 +16,11 @@ class RasqWasmPlugin {
 
   factory RasqWasmPlugin.fromBytes(Uint8List wasmBytes, {RasqHostFnHandler? hostFn, bool nativeFetch = false}) => throw RasqWasmInstantiateException();
 
+  /// fuel の予算 (`rasq_wasm_runtime_core` の `FUEL_BUDGET_*` と同じ値)。Web では
+  /// 読み込みの時点で断るので実際には効かないが、`fuelBudgetFor` は起動前に呼ばれる。
+  static int get mediaFuelBudget => 6000000000;
+  static int get standardFuelBudget => 50000000;
+
   String snapshot() => throw RasqWasmInstantiateException();
   String patch() => throw RasqWasmInstantiateException();
   String call({required String fn, required String argsJson, required String callId}) => throw RasqWasmInstantiateException();
