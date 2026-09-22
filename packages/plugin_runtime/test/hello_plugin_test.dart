@@ -8,6 +8,9 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 /// SDK の最小サンプル hello-rasq-plugin (D-077) が SDK ドキュメントどおりに
 /// 動き続けることの回帰テスト(サンプル = 仕様のショーケース)。
+/// hello プラグインが宣言する権限 (D-004)。
+const _helloPermissions = {RasqPermissions.storageSafe};
+
 void main() {
   final wasmFile = File('../../../rasq-sdk-sample/rust/target/wasm32-unknown-unknown/release/hello_rasq_plugin.wasm');
   if (!wasmFile.existsSync()) {
@@ -18,7 +21,7 @@ void main() {
   const viewer = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'me');
 
   test('RRL 画面 + storage + 本体 patch(挨拶する)', () {
-    final controller = WasmPluginController(wasmBytes: bytes);
+    final controller = WasmPluginController(wasmBytes: bytes, env: RasqHostEnvironment(permissions: _helloPermissions));
     addTearDown(controller.dispose);
     controller.load();
     expect(controller.document!.root.findByKey('greeting')!.p['text'], 'こんにちは、RASQ!');
@@ -31,7 +34,7 @@ void main() {
   });
 
   test('FOW surface + surface patch + 閉時通知(パネルを開く → +1)', () async {
-    final controller = WasmPluginController(wasmBytes: bytes);
+    final controller = WasmPluginController(wasmBytes: bytes, env: RasqHostEnvironment(permissions: _helloPermissions));
     addTearDown(controller.dispose);
     controller.load();
     WasmFowRequest? opened;
@@ -52,7 +55,7 @@ void main() {
   });
 
   test('SNS 抽象関数(canned): sns.timeline / actions / performAction', () async {
-    final controller = WasmPluginController(wasmBytes: bytes);
+    final controller = WasmPluginController(wasmBytes: bytes, env: RasqHostEnvironment(permissions: _helloPermissions));
     addTearDown(controller.dispose);
     controller.load();
     final session = WasmSnsSession(account: viewer, invoke: (fn, args) async => controller.invoke(fn, args));

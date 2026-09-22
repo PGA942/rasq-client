@@ -6,7 +6,31 @@ import 'wasm_runtime.dart';
 import 'host_environment.dart';
 import 'wasm_worker_config.dart';
 
-export 'wasm_worker_config.dart';
+/// ワーカー isolate に渡す構成(isolate 間で送れる値だけ)。
+///
+/// ホスト関数のクロージャは isolate を跨げないため、ワーカー側の
+/// [RasqHostEnvironment] は「storage の初期値 + nativeFetch フラグ」から
+/// その場で組み立てる。alert は自動確認、ログはメッセージでメインへ流す。
+@immutable
+class WasmWorkerConfig {
+  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}, this.appFns = const {}, this.permissions = const {}, this.fuelPerCall});
+
+  final Uint8List wasmBytes;
+  final bool nativeFetch;
+  final Map<String, Object?> seedStorage;
+
+  /// 許可された FOW type (D-064)。ワーカー側の環境にそのまま渡る。
+  final Set<String> fowPermissions;
+
+  /// 許可されたアプリ向けホスト関数 (D-167)。
+  final Set<String> appFns;
+
+  /// マニフェストが宣言した権限 (D-004)。`network` / `storage.*` のゲートに使う。
+  final Set<String> permissions;
+
+  /// 1 呼び出しあたりの fuel 予算。null ならランタイム既定(重いほう)。
+  final int? fuelPerCall;
+}
 
 /// WASM プラグインを専用 isolate で動かすワーカー (D-023 の後段)。
 ///
@@ -139,8 +163,10 @@ Future<void> _workerMain(List<Object?> init) async {
             // アプリ向けホスト関数 (D-167) も同じく fire-and-forget で中継。
             appFns: config.appFns,
             onAppFn: (fn, args) => respond.send({'app': {'fn': fn, 'args': args}}),
+            permissions: config.permissions,
           );
-          plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetch);
+          // nativeFetchEnabled: `network` 未宣言なら短絡させない (D-023)。
+          plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetchEnabled, fuelPerCall: config.fuelPerCall);
           respond.send({'id': id, 'ok': true, 'result': 'pong'});
         case 'snapshot':
           respond.send({'id': id, 'ok': true, 'result': plugin!.snapshot()});

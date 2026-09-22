@@ -17,7 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../settings/settings_dsl.dart';
-import '../store/rasqpkg.dart';
+import '../media/image_scale.dart';
 import '../store/store_providers.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
@@ -176,10 +176,11 @@ class _AsyncSlotRuntime implements SlotRuntime {
 }
 
 /// wasm バイト列 → 実行中のプラグイン。テストは偽物に差し替える。
-typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns});
+typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall});
 
-final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns}) async {
-      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns);
+final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions, required fuelPerCall}) async {
+      // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
+      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall);
       await c.load();
       if (c.lastError != null && c.document == null) {
         c.dispose();
@@ -358,7 +359,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       }
       final loader = ref.read(slotRuntimeLoaderProvider);
       // マニフェストを読むために一度素の権限で起動し、宣言に合わせて起動し直す。
-      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {});
+      // 1 段目はマニフェストを読むだけ。予算はランタイム既定(重いほう)に任せる。
+      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {}, fuelPerCall: null);
       final m = (await runtime.invoke('plugin.manifest', const {}))['value'];
       if (m is! Map) {
         runtime.dispose();
@@ -375,7 +377,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         throw StateError('配布物の目次は $expectedId なのに、wasm は ${manifest.id} を名乗っています');
       }
       runtime.dispose();
-      runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns);
+      runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns, permissions: manifest.permissions.toSet(),
+          fuelPerCall: fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet()));
       if (_disposed) {
         runtime.dispose(); // 読み込み中にプロバイダーが捨てられた(テストの再構築など)
         return null;
@@ -634,6 +637,64 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     }
   }
 
+  /// メディアプラグインへ渡す前に縮める長辺の上限 (CONTRACT §2.2)。
+  ///
+  /// ランタイムの fuel 予算は 1 呼び出し 60 億。実測では `media.edit` が
+  /// 2048x1536 で 21.5 億に対し、12MP (4032x3024) では 84.6 億で予算を超え、
+  /// E02 で落ちる。インタプリタを 12 秒ブロックするのは上限を上げる理由には
+  /// ならないので、渡す前にホストが縮める。
+  ///
+  /// 縮めると `media.commit` が返す「本サイズ」もこの寸法になる。解像度は
+  /// 落ちるが、落とさなければ編集自体ができない。
+  static const mediaEditMaxSide = 2048;
+
+  /// 編集へ渡す前に、大きすぎる画像だけを縮める。
+  ///
+  /// 画素数はヘッダーから読む(復号しない)。**復号まで進むのは上限を
+  /// 超えていると分かったときだけ**で、それ以外はバイト列に触らない。
+  /// 復号は背景スレッドへ出るため、毎回待つ作りにすると UI の経路が
+  /// 実非同期に引きずられる。
+  ///
+  /// 画像以外・読めない形式・縮小に失敗したものはそのまま通す。ここで
+  /// 落としても添付が編集できなくなるだけで、歯止めはランタイム側の
+  /// fuel 上限(超過は E02)が担う。
+  Future<ScaledImage> _fitForEdit(SlotPlugin plugin, Uint8List bytes, String mimeType) async {
+    final passthrough = ScaledImage(bytes: bytes, mimeType: mimeType, width: 0, height: 0, scaled: false);
+    if (!mimeType.startsWith('image/')) return passthrough;
+    final size = imageSizeFromHeader(bytes);
+    if (size == null) return passthrough;
+    final (width, height) = size;
+    if (width <= mediaEditMaxSide && height <= mediaEditMaxSide) {
+      return ScaledImage(bytes: bytes, mimeType: mimeType, width: width, height: height, scaled: false);
+    }
+    try {
+      final fitted = await fitWithin(bytes, mediaEditMaxSide, mimeType: mimeType);
+      if (fitted.scaled) {
+        _toast('${plugin.manifest.name}: 編集のため長辺 $mediaEditMaxSide px に縮小しました');
+      }
+      return fitted;
+    } catch (e) {
+      debugPrint('media.edit: 縮小できませんでした($e)');
+      return passthrough;
+    }
+  }
+
+  /// コンポーザーの添付 (CONTRACT §2.2)。戻りは即時差し替え(あれば)。
+  Future<void> mediaEdit(SlotPlugin plugin, {required int index, required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, String? name) onReplace, String? fowOwner, int column = 0}) async {
+    _setFowContext(plugin, fowOwner, column);
+    final token = 'media-${DateTime.now().microsecondsSinceEpoch}';
+    _mediaReplace[token] = onReplace;
+    final fitted = await _fitForEdit(plugin, bytes, mimeType);
+    final v = await plugin.value('media.edit', {'token': token, 'index': index, 'name': name, 'mimeType': fitted.mimeType, if (fitted.width > 0) 'width': fitted.width, if (fitted.height > 0) 'height': fitted.height, 'bytesB64': base64Encode(fitted.bytes)});
+    if (v != null && v['bytesB64'] is String) {
+      try {
+        onReplace(base64Decode(v['bytesB64'] as String), '${v['mimeType'] ?? mimeType}', v['name'] as String?);
+      } catch (e) {
+        _toast('${plugin.manifest.name}: 画像を受け取れませんでした($e)');
+      }
+    }
+  }
+
   /// メディアエディター (D-169、契約 v0.2 §2.2): `media.edit` を開いて genres を受ける。
   /// 戻り null = エディター形ではない(旧形 / 即差し替え形)。
   Future<MediaEditSession?> mediaEditorOpen(SlotPlugin plugin, {required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, int? width, int? height) onPreview, required void Function(Uint8List bytes, String mime, String? name) onReplace, void Function(RrlNode? root)? onOverlay, String? actionId, String? fowOwner, int column = 0}) async {
@@ -642,7 +703,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     _mediaPreview[token] = onPreview;
     _mediaReplace[token] = onReplace;
     if (onOverlay != null) _mediaOverlay[token] = onOverlay;
-    final v = await plugin.value('media.edit', {'token': token, 'index': 0, 'name': name, 'mimeType': mimeType, 'actionId': ?actionId, 'bytesB64': base64Encode(bytes)});
+    final fitted = await _fitForEdit(plugin, bytes, mimeType);
+    final v = await plugin.value('media.edit', {'token': token, 'index': 0, 'name': name, 'mimeType': fitted.mimeType, if (fitted.width > 0) 'width': fitted.width, if (fitted.height > 0) 'height': fitted.height, 'bytesB64': base64Encode(fitted.bytes)});
     if (v == null) {
       _mediaPreview.remove(token);
       _mediaReplace.remove(token);

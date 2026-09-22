@@ -15,6 +15,9 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 /// End-to-end: the dev screen imports the real misskey-wasm-sample binary,
 /// fetches a (canned) timeline through the host boundary and renders it.
+/// サンプルプラグインが function.json で宣言する権限 (D-004)。
+const _samplePermissions = {'network', 'storage.safe'};
+
 void main() {
   final wasmFile = File('../rasq-sdk-sample/rust/target/wasm32-unknown-unknown/release/misskey_wasm_sample.wasm');
 
@@ -36,7 +39,7 @@ void main() {
         'reactions': {'👍': 3},
       },
     ]);
-    final env = RasqHostEnvironment(fetch: (req) => SyncFetchResponse(status: 200, bodyText: canned));
+    final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) => SyncFetchResponse(status: 200, bodyText: canned));
 
     await tester.pumpWidget(ProviderScope(
       overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage())],
@@ -80,7 +83,7 @@ void main() {
         'reactions': {'👍': 3},
       },
     ]);
-    final env = RasqHostEnvironment(fetch: (req) => SyncFetchResponse(status: 200, bodyText: canned));
+    final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) => SyncFetchResponse(status: 200, bodyText: canned));
     await tester.pumpWidget(ProviderScope(
       overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage())],
       child: MaterialApp(

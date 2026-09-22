@@ -13,8 +13,8 @@ import 'wasm_worker.dart';
 /// (専用 isolate)で動かし、UI isolate をブロックしない。
 /// `net.fetch`(ランタイム内蔵)や重い snapshot 生成中も画面が止まらない。
 class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin implements WasmPluginViewModel {
-  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}, Set<String> fowPermissions = const {'widget'}, Set<String> appFns = const {}})
-      : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage, fowPermissions: fowPermissions, appFns: appFns);
+  AsyncWasmPluginController({required Uint8List wasmBytes, bool nativeFetch = true, Map<String, Object?> seedStorage = const {}, Set<String> fowPermissions = const {'widget'}, Set<String> appFns = const {}, Set<String> permissions = const {}, int? fuelPerCall})
+      : _config = WasmWorkerConfig(wasmBytes: wasmBytes, nativeFetch: nativeFetch, seedStorage: seedStorage, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall);
 
   final WasmWorkerConfig _config;
 

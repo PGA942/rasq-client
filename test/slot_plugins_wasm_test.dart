@@ -7,6 +7,9 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 /// 本物の wasm(plugin-sample の dist/)を同期コントローラで動かし、スロット契約
 /// (D-167)の ABI が rasq-plugin-kit の export で通ることを確かめる。ビルドが無ければスキップ。
+/// サンプルプラグインが function.json で宣言する権限 (D-004)。
+const _samplePermissions = {RasqPermissions.network, RasqPermissions.storageSafe};
+
 void main() {
   final dist = Directory('../plugin-sample/dist');
   Future<WasmPluginController?> load(String name, RasqHostEnvironment env) async {
@@ -52,6 +55,7 @@ void main() {
     final app = <(String, Map<String, Object?>)>[];
     final fows = <(String, Map<String, Object?>)>[];
     final env = RasqHostEnvironment(
+      permissions: _samplePermissions,
       onFow: (fn, args) {
         fows.add((fn, args));
         return null;
@@ -80,6 +84,7 @@ void main() {
     final app = <(String, Map<String, Object?>)>[];
     final fows = <(String, Map<String, Object?>)>[];
     final env = RasqHostEnvironment(
+      permissions: _samplePermissions,
       onFow: (fn, args) {
         fows.add((fn, args));
         return null;
@@ -115,6 +120,7 @@ void main() {
   test('media-transform-plugin (§2.2 v0.5): media.catalog / media.edit(preview に width/height)/ rotate → overlay + drag / crop → commit', () async {
     final app = <(String, Map<String, Object?>)>[];
     final env = RasqHostEnvironment(
+      permissions: _samplePermissions,
       appFns: {RasqHostFns.composerMediaPreview, RasqHostFns.composerMediaOverlay, RasqHostFns.composerMediaReplace, RasqHostFns.toast},
       onAppFn: (fn, args) => app.add((fn, args)),
     );
@@ -148,6 +154,7 @@ void main() {
     final app = <(String, Map<String, Object?>)>[];
     final fows = <(String, Map<String, Object?>)>[];
     final env = RasqHostEnvironment(
+      permissions: _samplePermissions,
       onFow: (fn, args) {
         fows.add((fn, args));
         return null;
@@ -183,6 +190,7 @@ void main() {
     final app = <(String, Map<String, Object?>)>[];
     final fows = <(String, Map<String, Object?>)>[];
     final env = RasqHostEnvironment(
+      permissions: _samplePermissions,
       onFow: (fn, args) {
         fows.add((fn, args));
         return null;
