@@ -15,6 +15,7 @@
 library;
 
 export 'src/async_wasm_plugin_controller.dart';
+export 'src/fuel_budget.dart';
 export 'src/host_environment.dart';
 export 'src/wasm_fow.dart';
 export 'src/wasm_sns_plugin.dart';

@@ -36,12 +36,15 @@ abstract class WasmPluginViewModel implements Listenable {
 /// v1 calls are synchronous on the calling isolate (PROTOCOL §4.1) — run
 /// heavy plugins off the UI isolate later.
 class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin implements WasmPluginViewModel {
-  WasmPluginController({required Uint8List wasmBytes, RasqHostEnvironment? env})
+  WasmPluginController({required Uint8List wasmBytes, RasqHostEnvironment? env, this.fuelPerCall})
       : _bytes = wasmBytes,
         env = env ?? RasqHostEnvironment();
 
   final Uint8List _bytes;
   final RasqHostEnvironment env;
+
+  /// 1 呼び出しあたりの fuel 予算。null ならランタイム既定(重いほう)。
+  final int? fuelPerCall;
 
   @override
   final RrlGeometryRegistry geometry = RrlGeometryRegistry();
@@ -69,7 +72,9 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
     // コールバック(onFowOpen/onFowClose)へ写す。
     env.onFow ??= (fn, args) => handleFowHostFn(fn, args, scope: _document?.scope ?? 'plugin');
     try {
-      _plugin = RasqWasmPlugin.fromBytes(_bytes, hostFn: env.dispatch, nativeFetch: env.nativeFetch);
+      // nativeFetchEnabled: `network` 未宣言ならランタイム内短絡を許さない。
+      // ここを env.nativeFetch のままにすると、この経路だけ権限ゲートを迂回できる。
+      _plugin = RasqWasmPlugin.fromBytes(_bytes, hostFn: env.dispatch, nativeFetch: env.nativeFetchEnabled, fuelPerCall: fuelPerCall);
       _lastError = null;
       pullSnapshot();
     } on RasqWasmInstantiateException catch (e) {

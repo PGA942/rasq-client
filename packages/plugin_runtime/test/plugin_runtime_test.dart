@@ -8,6 +8,7 @@ import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rasq_wasm_runtime/rasq_wasm_runtime.dart';
 
 /// The real Misskey sample plugin, built from rasq-sdk-sample:
 /// `cargo build --release --target wasm32-unknown-unknown -p misskey-wasm-sample`.
@@ -1084,6 +1085,8 @@ void main() {
     expect(ml['error']['code'], 'E01');
   });
 
+  _fuelBudgetTests();
+
   group('権限ゲート (D-004): 宣言に無い権限を要する host-fn は E01', () {
     Map<String, dynamic> call(RasqHostEnvironment env, String fn, Map<String, Object?> args) =>
         (jsonDecode(env.dispatch(jsonEncode({'schema': 'rasq.hostfn/1', 'callId': '1', 'fn': fn, 'args': args}))) as Map).cast<String, dynamic>();
@@ -1151,4 +1154,25 @@ int _indexOfBytes(List<int> haystack, List<int> needle) {
     if (ok) return i;
   }
   return -1;
+}
+
+void _fuelBudgetTests() {
+  group('fuel 予算: 分ける軸はビットマップを触るかどうか', () {
+    test('composer.media スロット / replace_media / tag_media は重いほう', () {
+      expect(fuelBudgetFor(permissions: const {}, slots: const {kComposerMediaSlot}), RasqWasmPlugin.mediaFuelBudget);
+      expect(fuelBudgetFor(permissions: const {RasqPermissions.replaceMedia}), RasqWasmPlugin.mediaFuelBudget);
+      expect(fuelBudgetFor(permissions: const {RasqPermissions.tagMedia}), RasqWasmPlugin.mediaFuelBudget);
+    });
+
+    test('それ以外は絞られる', () {
+      expect(fuelBudgetFor(permissions: const {RasqPermissions.network}), RasqWasmPlugin.standardFuelBudget);
+      expect(fuelBudgetFor(permissions: const {RasqPermissions.storageSafe}, slots: const {'tl'}), RasqWasmPlugin.standardFuelBudget);
+      expect(fuelBudgetFor(permissions: const {}), RasqWasmPlugin.standardFuelBudget);
+    });
+
+    test('絞ったほうが実際に小さくないと、配線しても意味が無い', () {
+      expect(RasqWasmPlugin.standardFuelBudget, lessThan(RasqWasmPlugin.mediaFuelBudget));
+      expect(RasqWasmPlugin.standardFuelBudget, greaterThan(0));
+    });
+  });
 }

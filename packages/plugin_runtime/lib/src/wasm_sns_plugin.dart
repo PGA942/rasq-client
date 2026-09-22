@@ -3,6 +3,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'async_wasm_plugin_controller.dart';
+import 'fuel_budget.dart';
 import 'wasm_sns_session.dart';
 
 /// wasm SNS プラグインの**実登録の口** (D-079 / M5d): [SnsPlugin] 契約を
@@ -50,7 +51,8 @@ class WasmSnsPlugin extends SnsPlugin {
 
   Future<AsyncWasmPluginController> _controllerFor(String accountKey) => _controllers.putIfAbsent(accountKey, () async {
         // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
-        final c = AsyncWasmPluginController(wasmBytes: await _loadBytes(), fowPermissions: fowPermissions, nativeFetch: nativeFetch, permissions: manifest.permissions.toSet());
+        final permissions = manifest.permissions.toSet();
+        final c = AsyncWasmPluginController(wasmBytes: await _loadBytes(), fowPermissions: fowPermissions, nativeFetch: nativeFetch, permissions: permissions, fuelPerCall: fuelBudgetFor(permissions: permissions));
         await c.load();
         return c;
       });

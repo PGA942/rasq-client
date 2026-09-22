@@ -13,7 +13,7 @@ import 'host_environment.dart';
 /// その場で組み立てる。alert は自動確認、ログはメッセージでメインへ流す。
 @immutable
 class WasmWorkerConfig {
-  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}, this.appFns = const {}, this.permissions = const {}});
+  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}, this.appFns = const {}, this.permissions = const {}, this.fuelPerCall});
 
   final Uint8List wasmBytes;
   final bool nativeFetch;
@@ -27,6 +27,9 @@ class WasmWorkerConfig {
 
   /// マニフェストが宣言した権限 (D-004)。`network` / `storage.*` のゲートに使う。
   final Set<String> permissions;
+
+  /// 1 呼び出しあたりの fuel 予算。null ならランタイム既定(重いほう)。
+  final int? fuelPerCall;
 }
 
 /// WASM プラグインを専用 isolate で動かすワーカー (D-023 の後段)。
@@ -163,7 +166,7 @@ Future<void> _workerMain(List<Object?> init) async {
             permissions: config.permissions,
           );
           // nativeFetchEnabled: `network` 未宣言なら短絡させない (D-023)。
-          plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetchEnabled);
+          plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetchEnabled, fuelPerCall: config.fuelPerCall);
           respond.send({'id': id, 'ok': true, 'result': 'pong'});
         case 'snapshot':
           respond.send({'id': id, 'ok': true, 'result': plugin!.snapshot()});

@@ -135,11 +135,11 @@ class _AsyncSlotRuntime implements SlotRuntime {
 }
 
 /// wasm バイト列 → 実行中のプラグイン。テストは偽物に差し替える。
-typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions});
+typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall});
 
-final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions}) async {
+final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions, required fuelPerCall}) async {
       // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
-      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions);
+      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall);
       await c.load();
       if (c.lastError != null && c.document == null) {
         c.dispose();
@@ -297,7 +297,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final data = bytes ?? File(source).readAsBytesSync();
       final loader = ref.read(slotRuntimeLoaderProvider);
       // マニフェストを読むために一度素の権限で起動し、宣言に合わせて起動し直す。
-      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {});
+      // 1 段目はマニフェストを読むだけ。予算はランタイム既定(重いほう)に任せる。
+      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {}, fuelPerCall: null);
       final m = (await runtime.invoke('plugin.manifest', const {}))['value'];
       if (m is! Map) {
         runtime.dispose();
@@ -309,7 +310,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         throw StateError('plugin.manifest.id が空です');
       }
       runtime.dispose();
-      runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns, permissions: manifest.permissions.toSet());
+      runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns, permissions: manifest.permissions.toSet(),
+          fuelPerCall: fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet()));
       if (_disposed) {
         runtime.dispose(); // 読み込み中にプロバイダーが捨てられた(テストの再構築など)
         return null;
