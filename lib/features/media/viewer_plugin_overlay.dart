@@ -2,6 +2,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import 'image_scale.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:rrl_core/rrl_core.dart';
@@ -156,6 +158,10 @@ class ViewerPluginOverlays {
   }
 
   /// 長辺 [max] に縮めた PNG と画素数。
+  ///
+  /// ここは**常に PNG を渡す**契約(重ねの座標系が画素数で決まる)なので、
+  /// 縮めない場合も PNG へ揃える。渡す前に縮めるだけの
+  /// [fitWithin] とは要求が違うため、復号を 1 回で済ませる形で別に持つ。
   static Future<(Uint8List, int, int)> downscalePng(Uint8List src, int max) async {
     final probe = await ui.instantiateImageCodec(src);
     final frame = await probe.getNextFrame();

@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
 import '../settings/settings_dsl.dart';
+import '../media/image_scale.dart';
 import '../store/store_providers.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
@@ -570,12 +571,55 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     }
   }
 
+  /// メディアプラグインへ渡す前に縮める長辺の上限 (CONTRACT §2.2)。
+  ///
+  /// ランタイムの fuel 予算は 1 呼び出し 60 億。実測では `media.edit` が
+  /// 2048x1536 で 21.5 億に対し、12MP (4032x3024) では 84.6 億で予算を超え、
+  /// E02 で落ちる。インタプリタを 12 秒ブロックするのは上限を上げる理由には
+  /// ならないので、渡す前にホストが縮める。
+  ///
+  /// 縮めると `media.commit` が返す「本サイズ」もこの寸法になる。解像度は
+  /// 落ちるが、落とさなければ編集自体ができない。
+  static const mediaEditMaxSide = 2048;
+
+  /// 編集へ渡す前に、大きすぎる画像だけを縮める。
+  ///
+  /// 画素数はヘッダーから読む(復号しない)。**復号まで進むのは上限を
+  /// 超えていると分かったときだけ**で、それ以外はバイト列に触らない。
+  /// 復号は背景スレッドへ出るため、毎回待つ作りにすると UI の経路が
+  /// 実非同期に引きずられる。
+  ///
+  /// 画像以外・読めない形式・縮小に失敗したものはそのまま通す。ここで
+  /// 落としても添付が編集できなくなるだけで、歯止めはランタイム側の
+  /// fuel 上限(超過は E02)が担う。
+  Future<ScaledImage> _fitForEdit(SlotPlugin plugin, Uint8List bytes, String mimeType) async {
+    final passthrough = ScaledImage(bytes: bytes, mimeType: mimeType, width: 0, height: 0, scaled: false);
+    if (!mimeType.startsWith('image/')) return passthrough;
+    final size = imageSizeFromHeader(bytes);
+    if (size == null) return passthrough;
+    final (width, height) = size;
+    if (width <= mediaEditMaxSide && height <= mediaEditMaxSide) {
+      return ScaledImage(bytes: bytes, mimeType: mimeType, width: width, height: height, scaled: false);
+    }
+    try {
+      final fitted = await fitWithin(bytes, mediaEditMaxSide, mimeType: mimeType);
+      if (fitted.scaled) {
+        _toast('${plugin.manifest.name}: 編集のため長辺 $mediaEditMaxSide px に縮小しました');
+      }
+      return fitted;
+    } catch (e) {
+      debugPrint('media.edit: 縮小できませんでした($e)');
+      return passthrough;
+    }
+  }
+
   /// コンポーザーの添付 (CONTRACT §2.2)。戻りは即時差し替え(あれば)。
   Future<void> mediaEdit(SlotPlugin plugin, {required int index, required String name, required String mimeType, required Uint8List bytes, required void Function(Uint8List bytes, String mime, String? name) onReplace, String? fowOwner, int column = 0}) async {
     _setFowContext(plugin, fowOwner, column);
     final token = 'media-${DateTime.now().microsecondsSinceEpoch}';
     _mediaReplace[token] = onReplace;
-    final v = await plugin.value('media.edit', {'token': token, 'index': index, 'name': name, 'mimeType': mimeType, 'bytesB64': base64Encode(bytes)});
+    final fitted = await _fitForEdit(plugin, bytes, mimeType);
+    final v = await plugin.value('media.edit', {'token': token, 'index': index, 'name': name, 'mimeType': fitted.mimeType, if (fitted.width > 0) 'width': fitted.width, if (fitted.height > 0) 'height': fitted.height, 'bytesB64': base64Encode(fitted.bytes)});
     if (v != null && v['bytesB64'] is String) {
       try {
         onReplace(base64Decode(v['bytesB64'] as String), '${v['mimeType'] ?? mimeType}', v['name'] as String?);
@@ -593,7 +637,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     _mediaPreview[token] = onPreview;
     _mediaReplace[token] = onReplace;
     if (onOverlay != null) _mediaOverlay[token] = onOverlay;
-    final v = await plugin.value('media.edit', {'token': token, 'index': 0, 'name': name, 'mimeType': mimeType, 'bytesB64': base64Encode(bytes)});
+    final fitted = await _fitForEdit(plugin, bytes, mimeType);
+    final v = await plugin.value('media.edit', {'token': token, 'index': 0, 'name': name, 'mimeType': fitted.mimeType, if (fitted.width > 0) 'width': fitted.width, if (fitted.height > 0) 'height': fitted.height, 'bytesB64': base64Encode(fitted.bytes)});
     if (v == null) {
       _mediaPreview.remove(token);
       _mediaReplace.remove(token);
