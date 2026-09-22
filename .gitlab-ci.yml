@@ -48,11 +48,17 @@ flutter:
     - git -C "$FLUTTER_HOME" checkout -q "$FLUTTER_PIN"
     - flutter --version
     # Sibling checkout of the SDK repo (path dependency of plugin_runtime).
+    # 対になる SDK 側の変更は同じ名前のブランチで出す: あればそれを、無ければ
+    # SDK_SAMPLE_BRANCH (main) を使う。2 つの MR にまたがる変更を、SDK を先に
+    # マージしなくても検証できるようにするため。
     - |
       SDK_DIR="$CI_PROJECT_DIR/../rasq-sdk-sample"
+      SDK_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/orgate-question/rasq-sdk-sample.git"
       rm -rf "$SDK_DIR"
-      git clone --depth 1 -b "$SDK_SAMPLE_BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/orgate-question/rasq-sdk-sample.git" "$SDK_DIR" \
-        || git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/orgate-question/rasq-sdk-sample.git" "$SDK_DIR"
+      for b in "${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_REF_NAME}" "$SDK_SAMPLE_BRANCH"; do
+        if git clone --depth 1 -b "$b" "$SDK_URL" "$SDK_DIR" 2>/dev/null; then echo "rasq-sdk-sample: branch $b"; break; fi
+      done
+      [ -d "$SDK_DIR" ] || git clone --depth 1 "$SDK_URL" "$SDK_DIR"
     # Rust for the rasq_wasm_runtime build hook (host dylib) and the wasm sample.
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
     - export PATH="$CARGO_HOME/bin:$PATH"

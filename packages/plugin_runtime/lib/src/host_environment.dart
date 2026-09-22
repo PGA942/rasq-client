@@ -111,7 +111,11 @@ class RasqHostEnvironment {
     this.onAppFn,
     this.appFns = const {},
     this.permissions = const {},
-  }) : storage = storage ?? {};
+    this.fetchHosts = const {},
+    this.instanceAllowed = false,
+    String? instanceHost,
+  })  : storage = storage ?? {},
+        _instanceHost = instanceHost?.trim().toLowerCase();
 
   /// アプリ向けホスト関数の中継 (D-167)。null → E01。
   AppFnRelay? onAppFn;
@@ -124,6 +128,37 @@ class RasqHostEnvironment {
   /// E01 で拒否する。既定は空集合 = 全拒否: 権限ゲートの既定値が「許可」だと、
   /// 新しい呼び出し元が指定を忘れた時点で黙って強制が外れるため。
   final Set<String> permissions;
+
+  /// マニフェスト `network.hosts` (schema v0.12): `net.fetch` が繋いでよい先。
+  /// 完全一致 / `*.example.com` / `*`。既定は空集合 = どこにも繋げない。
+  /// `network` 権限があっても、ここが空で [instanceHost] も無ければ全部 E01。
+  final Set<String> fetchHosts;
+
+  /// マニフェスト `network.instance`: セッションのインスタンスへ繋いでよいか。
+  /// 偽なら [grantInstance] は何もしない(宣言していない権限を、呼び出し側の
+  /// 都合で後から足せないようにする)。
+  final bool instanceAllowed;
+
+  String? _instanceHost;
+
+  /// 今のセッションに与えられているインスタンスのホスト(小文字)。
+  String? get instanceHost => _instanceHost;
+
+  /// セッションのインスタンス(ホストが `args.host` に渡すもの)を許可する。
+  /// [instanceAllowed] が偽なら無視。戻りは実際に変わったか。
+  bool grantInstance(String? host) {
+    if (!instanceAllowed) return false;
+    final h = host?.trim().toLowerCase();
+    final next = (h == null || h.isEmpty) ? null : h;
+    if (next == _instanceHost) return false;
+    _instanceHost = next;
+    return true;
+  }
+
+  /// ランタイムのネイティブ経路へ渡す集合(宣言 + インスタンス)。
+  /// Dart 側のゲート ([fetchHostPermitted]) と Rust 側 (`rasq_wasm_set_fetch_hosts`)
+  /// は同じ規則で判定するので、この集合を渡せば両経路の判定が揃う。
+  Set<String> get effectiveFetchHosts => {...fetchHosts, ?_instanceHost};
 
   /// ランタイム内でネイティブ `net.fetch` を短絡してよいか (D-023)。
   /// `network` 権限が無ければ false。短絡された呼び出しは Dart の
@@ -200,6 +235,11 @@ class RasqHostEnvironment {
         final url = Uri.tryParse('${args['url']}');
         if (url == null || !(url.isScheme('https') || url.isScheme('http'))) {
           throw _HostFnError('B03', 'bad url: ${args['url']}');
+        }
+        // 宣言した先だけ (schema v0.12)。ここで止めないと `network` 権限が
+        // 「どこへでも」の意味になり、審査で接続先を見る意味が無くなる。
+        if (!fetchHostPermitted(url.host, effectiveFetchHosts)) {
+          throw _HostFnError('E01', 'host not permitted: ${url.host}');
         }
         final SyncFetchResponse res;
         try {
@@ -303,6 +343,31 @@ class RasqHostEnvironment {
   static String _storageNs(Map<String, Object?> args) => '${args['ns'] ?? 'safe'}';
 
   static String _storageKey(Map<String, Object?> args) => '${_storageNs(args)}:${args['key']}';
+}
+
+/// `host` が許可パターンのどれかに当たるか。
+///
+/// パターンは 3 種類だけ(Rust 側 `rasq_wasm_runtime_core::host_permitted` と
+/// 同じ規則。片方を変えるならもう片方も変えること):
+/// - `example.com`   … 完全一致
+/// - `*.example.com` … サブドメイン(1 段以上)。apex は別に書く
+/// - `*`             … どこでも。開発用の面だけが使う値で、審査では旗になる
+///
+/// 大文字小文字は区別しない。空のホスト(`https://` だけ等)は常に不許可。
+bool fetchHostPermitted(String host, Set<String> patterns) {
+  final h = host.trim().toLowerCase();
+  if (h.isEmpty) return false;
+  for (final raw in patterns) {
+    final p = raw.trim().toLowerCase();
+    if (p == '*') return true;
+    if (p.startsWith('*.')) {
+      final suffix = p.substring(2);
+      if (h.length > suffix.length + 1 && h.endsWith('.$suffix')) return true;
+    } else if (h == p) {
+      return true;
+    }
+  }
+  return false;
 }
 
 class _HostFnError implements Exception {

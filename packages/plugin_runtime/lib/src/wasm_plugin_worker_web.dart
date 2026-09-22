@@ -52,6 +52,10 @@ class WasmPluginWorker {
         'fowPermissions': config.fowPermissions.toList(),
         'appFns': config.appFns.toList(),
         'knownAppFns': RasqHostFns.appFns.toList(),
+        // 権限のゲート (D-004) と接続先の宣言 (schema v0.12) は端末版と同じ規則で Worker の中で効かせる。
+        'permissions': config.permissions.toList(),
+        'fetchHosts': config.fetchHosts.toList(),
+        'instanceAllowed': config.instanceAllowed,
       });
     } catch (_) {
       worker._close();
@@ -86,6 +90,9 @@ class WasmPluginWorker {
   Future<String> patch() => _request('patch');
   Future<String> call({required String fn, required String argsJson, required String callId}) => _request('call', {'fn': fn, 'args': argsJson, 'callId': callId});
 
+  /// セッションのインスタンスのホストを `net.fetch` に許可する(マニフェストが `network.instance` を宣言している場合だけ効く)。
+  Future<String> grantHost(String? host) => _request('grantHost', {'host': host});
+
   void _close() {
     _worker.terminate();
     web.URL.revokeObjectURL(_url);
@@ -100,7 +107,7 @@ class WasmPluginWorker {
 /// Worker の中身(JS)。Blob から起こすので、配るファイルは増えない。
 const _workerSource = r'''
 "use strict";
-let inst = null, storage = {}, cfg = {fowPermissions: [], appFns: [], knownAppFns: []};
+let inst = null, storage = {}, cfg = {fowPermissions: [], appFns: [], knownAppFns: [], permissions: [], fetchHosts: [], instanceAllowed: false, instanceHost: null};
 const enc = new TextEncoder(), dec = new TextDecoder();
 const TOKEN_FNS = ["composer.media.replace","composer.media.preview","composer.text.replace","viewer.overlay.set","composer.open","composer.media.overlay"];
 const send = (m) => self.postMessage(JSON.stringify(m));
@@ -124,9 +131,27 @@ function bytesToB64(bytes) { let bin = ""; for (let i = 0; i < bytes.length; i +
 
 class HostFnError extends Error { constructor(code, message) { super(message); this.code = code; } }
 
+// 端末版 (host_environment.dart の fetchHostPermitted / Rust の host_permitted) と同じ規則:
+// 完全一致 / "*.example.com" はサブドメインだけ / "*" はどこでも。空のホストは常に不許可。
+function hostPermitted(host) {
+  const h = String(host || "").trim().toLowerCase();
+  if (!h) return false;
+  const pats = cfg.fetchHosts.concat(cfg.instanceHost ? [cfg.instanceHost] : []);
+  return pats.some((raw) => {
+    const p = String(raw).trim().toLowerCase();
+    if (p === "*") return true;
+    if (p.startsWith("*.")) { const suf = p.slice(2); return h.length > suf.length + 1 && h.endsWith("." + suf); }
+    return h === p;
+  });
+}
+function hostOf(url) { try { return new URL(url).hostname.toLowerCase(); } catch (_) { return ""; } }
+
 function netFetch(args) {
+  if (!cfg.permissions.includes("network")) throw new HostFnError("E01", "network not permitted");
   const url = String(args.url || "");
   if (!(url.startsWith("https://") || url.startsWith("http://"))) throw new HostFnError("B03", "bad url: " + url);
+  // 宣言した先だけ (schema v0.12)。
+  if (!hostPermitted(hostOf(url))) throw new HostFnError("E01", "host not permitted: " + hostOf(url));
   const xhr = new XMLHttpRequest();
   xhr.open(String(args.method || "GET").toUpperCase(), url, false);
   xhr.responseType = "arraybuffer";
@@ -141,6 +166,8 @@ function netFetch(args) {
     body = args.body;
   }
   try { xhr.send(body); } catch (e) { throw new HostFnError("B01", "fetch failed (network / CORS): " + e); }
+  // 同期 XHR はリダイレクトを勝手に追う(端末版は追わない)。飛んだ先が宣言外なら、応答をプラグインに渡さない。
+  if (xhr.responseURL && !hostPermitted(hostOf(xhr.responseURL))) throw new HostFnError("E01", "redirected to a host that is not permitted: " + hostOf(xhr.responseURL));
   const headers = {};
   for (const line of (xhr.getAllResponseHeaders() || "").trim().split(/[\r\n]+/)) {
     const i = line.indexOf(":");
@@ -153,11 +180,14 @@ function netFetch(args) {
 }
 
 function invoke(fn, args) {
-  const key = () => String(args.ns == null ? "safe" : args.ns) + ":" + String(args.key);
+  const ns = () => String(args.ns == null ? "safe" : args.ns);
+  const key = () => ns() + ":" + String(args.key);
+  // storage.* は ns ごとに別権限 (D-004)。端末版の _requireStorage と同じ。
+  const requireStorage = () => { if (!cfg.permissions.includes("storage." + ns())) throw new HostFnError("E01", "storage." + ns() + " not permitted"); };
   switch (fn) {
-    case "storage.get": { const v = storage[key()]; return {value: v === undefined ? null : v}; }
-    case "storage.set": storage[key()] = args.value === undefined ? null : args.value; return {};
-    case "storage.delete": delete storage[key()]; return {};
+    case "storage.get": { requireStorage(); const v = storage[key()]; return {value: v === undefined ? null : v}; }
+    case "storage.set": requireStorage(); storage[key()] = args.value === undefined ? null : args.value; return {};
+    case "storage.delete": requireStorage(); delete storage[key()]; return {};
     case "net.fetch": return netFetch(args);
     case "alert": return {confirmed: true};
     case "ml.infer": throw new HostFnError("E01", "ml.infer backend not wired yet (model: " + args.model + ")");
@@ -209,13 +239,19 @@ self.onmessage = async (ev) => {
     switch (m.op) {
       case "init": {
         storage = Object.assign({}, m.storage || {});
-        cfg = {fowPermissions: m.fowPermissions || [], appFns: m.appFns || [], knownAppFns: m.knownAppFns || []};
+        cfg = {fowPermissions: m.fowPermissions || [], appFns: m.appFns || [], knownAppFns: m.knownAppFns || [],
+               permissions: m.permissions || [], fetchHosts: m.fetchHosts || [], instanceAllowed: !!m.instanceAllowed, instanceHost: null};
         const {instance} = await WebAssembly.instantiate(b64ToBytes(m.wasm), {rasq: {host_fn: hostFn}});
         for (const name of ["memory", "alloc", "dealloc", "snapshot", "patch", "call"]) {
           if (!instance.exports[name]) throw new Error("missing export: " + name);
         }
         inst = instance;
         return send({id: m.id, ok: true, result: "pong"});
+      }
+      case "grantHost": {
+        // 宣言 (network.instance) が無ければ無視する: 呼び出し側の都合で権限を後から足せない。
+        if (cfg.instanceAllowed) { const h = String(m.host || "").trim().toLowerCase(); cfg.instanceHost = h || null; }
+        return send({id: m.id, ok: true, result: cfg.instanceHost || ""});
       }
       case "snapshot": return send({id: m.id, ok: true, result: readPacked(inst.exports.snapshot())});
       case "patch": return send({id: m.id, ok: true, result: readPacked(inst.exports.patch())});

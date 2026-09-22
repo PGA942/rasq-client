@@ -18,6 +18,12 @@ void main() {
   test('manifest json round-trip', () {
     const m = PluginManifest(id: 'x', name: 'X', version: '1.0.0', kind: PluginKind.sns, actions: [ActionDescriptor(id: 'like', genreTag: 'Reaction', label: 'like')]);
     final back = PluginManifest.fromJson(m.toJson());
+    // network (schema v0.12): 宣言が無ければ null のまま(= どこにも繋げない)。
+    expect(back.network, isNull);
+    final net = PluginManifest.fromJson(const PluginManifest(id: 'n', name: 'N', version: '1.0.0', kind: PluginKind.sns, permissions: ['network'], network: PluginNetwork(hosts: ['Bsky.Social', '*.example.com'], instance: true)).toJson());
+    expect(net.network!.hosts, ['bsky.social', '*.example.com']); // 小文字に揃える
+    expect(net.network!.instance, isTrue);
+    expect(PluginNetwork.fromJson(const {}).toJson(), isEmpty);
     expect(back.actions.single.genreTag, 'Reaction');
     expect(PluginManifest.fromJson(const PluginManifest(id: 'y', name: 'Y', version: '1.0.0', kind: PluginKind.sns, actions: [ActionDescriptor(id: 'r', genreTag: 'Reaction', label: 'r', iconPerPost: true)]).toJson()).actions.single.iconPerPost, isTrue);
     expect(back.kind, PluginKind.sns);

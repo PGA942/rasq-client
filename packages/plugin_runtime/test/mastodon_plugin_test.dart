@@ -19,6 +19,9 @@ File get wasmFile => File('../../../rasq-sdk-sample/rust/target/wasm32-unknown-u
 /// 同じ宣言を通す。
 const _samplePermissions = {RasqPermissions.network, RasqPermissions.storageSafe};
 
+/// テストの偽サーバー。宣言に無いホストは E01 になる (schema v0.12)。
+const _sampleHosts = {'mastodon.example', 'x.test', 'example.com'};
+
 void main() {
   if (!wasmFile.existsSync()) {
     test('mastodon-wasm built', () {}, skip: 'build mastodon-wasm first (rust/README.md)');
@@ -68,7 +71,7 @@ void main() {
   ({WasmSnsSession session, List<String> paths, List<String> auth}) sessionWith(Map<String, Object?> routes) {
     final paths = <String>[];
     final auth = <String>[];
-    final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
+    final env = RasqHostEnvironment(permissions: _samplePermissions, fetchHosts: _sampleHosts, fetch: (req) {
       paths.add(req.url.path);
       auth.add(req.headers['Authorization'] ?? '');
       final canned = routes[req.url.path];
@@ -155,7 +158,7 @@ void main() {
 
     test('sns.performAction: お気に入りはトグルで、件数が返る', () async {
       var favourited = false;
-      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetchHosts: _sampleHosts, fetch: (req) {
         if (req.url.path == '/api/v1/statuses/s1') {
           return SyncFetchResponse(status: 200, bodyText: jsonEncode({'id': 's1', 'favourited': favourited, 'favourites_count': favourited ? 10 : 9}));
         }
@@ -257,7 +260,7 @@ void main() {
 
     test('sns.sendDm: 本文に相手のメンションが前置される', () async {
       String? sentBody;
-      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetchHosts: _sampleHosts, fetch: (req) {
         if (req.url.path == '/api/v1/accounts/u1') {
           return const SyncFetchResponse(status: 200, bodyText: '{"id":"u1","acct":"peer@remote.test"}');
         }
@@ -297,7 +300,7 @@ void main() {
     test('sns.uploadMedia: multipart がバイナリのまま渡り、v2 の media を返す', () async {
       final jpeg = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0xFF, 0xFE]);
       SyncFetchRequest? seen;
-      final env = RasqHostEnvironment(permissions: _samplePermissions, fetch: (req) {
+      final env = RasqHostEnvironment(permissions: _samplePermissions, fetchHosts: _sampleHosts, fetch: (req) {
         seen = req;
         return const SyncFetchResponse(
           status: 200,

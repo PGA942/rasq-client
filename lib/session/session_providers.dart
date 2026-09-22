@@ -43,6 +43,8 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
       kind: PluginKind.sns,
       supportedSns: [SnsKind.bluesky],
       permissions: ['network', 'storage.safe', 'register_action'],
+      // createSession は bsky.social、以後の XRPC はアカウントの PDS(= instance)。
+      network: PluginNetwork(hosts: ['bsky.social'], instance: true),
       official: true,
       verified: true,
     ),
@@ -60,6 +62,7 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
       kind: PluginKind.sns,
       supportedSns: [SnsKind.mixi2],
       permissions: ['network', 'storage.safe', 'register_action'],
+      network: PluginNetwork(instance: true),
       official: true,
       verified: false,
     ),
@@ -77,6 +80,7 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
         kind: PluginKind.sns,
         supportedSns: [SnsKind.mastodon],
         permissions: ['network', 'storage.safe', 'register_action'],
+        network: PluginNetwork(instance: true),
         official: true,
         verified: true,
       ),
@@ -92,7 +96,7 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
     // wasm の上で動く。ログイン UI には出ない(pluginFor は Misskey が先)—
     // 登録は dev 画面の「実登録」から。
     ..register(WasmSnsPlugin(
-      manifest: const PluginManifest(id: wasmSamplePluginId, name: 'Misskey (wasm sample)', version: '0.1.0', kind: PluginKind.sns, supportedSns: [SnsKind.misskey]),
+      manifest: const PluginManifest(id: wasmSamplePluginId, name: 'Misskey (wasm sample)', version: '0.1.0', kind: PluginKind.sns, supportedSns: [SnsKind.misskey], permissions: ['network', 'storage.safe'], network: PluginNetwork(instance: true)),
       kind: SnsKind.misskey,
       loadBytes: () async => (await rootBundle.load('assets/plugins/misskey_wasm_sample.wasm')).buffer.asUint8List(),
     ));

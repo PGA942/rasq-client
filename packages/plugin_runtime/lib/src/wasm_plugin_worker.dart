@@ -90,6 +90,10 @@ class WasmPluginWorker {
   Future<String> call({required String fn, required String argsJson, required String callId}) =>
       _request('call', {'fn': fn, 'args': argsJson, 'callId': callId});
 
+  /// セッションのインスタンスのホストを `net.fetch` に許可する(マニフェストが
+  /// `network.instance` を宣言している場合だけ効く)。null で取り消し。
+  Future<String> grantHost(String? host) => _request('grantHost', {'host': host});
+
   Future<void> dispose() async {
     try {
       await _request('dispose').timeout(const Duration(seconds: 2));
@@ -140,10 +144,18 @@ Future<void> _workerMain(List<Object?> init) async {
             appFns: config.appFns,
             onAppFn: (fn, args) => respond.send({'app': {'fn': fn, 'args': args}}),
             permissions: config.permissions,
+            fetchHosts: config.fetchHosts,
+            instanceAllowed: config.instanceAllowed,
           );
           // nativeFetchEnabled: `network` 未宣言なら短絡させない (D-023)。
-          plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetchEnabled, fuelPerCall: config.fuelPerCall);
+          // fetchHosts: ネイティブ経路も同じ宣言で縛る(Dart のゲートを通らないため)。
+          plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetchEnabled, fuelPerCall: config.fuelPerCall, fetchHosts: env!.effectiveFetchHosts);
           respond.send({'id': id, 'ok': true, 'result': 'pong'});
+        case 'grantHost':
+          // セッションのインスタンス (schema v0.12 `network.instance`)。宣言が
+          // 無ければ env が無視するので、ここで判断はしない。
+          if (env!.grantInstance(map['host'] as String?)) plugin!.setFetchHosts(env!.effectiveFetchHosts);
+          respond.send({'id': id, 'ok': true, 'result': env!.instanceHost ?? ''});
         case 'snapshot':
           respond.send({'id': id, 'ok': true, 'result': plugin!.snapshot()});
         case 'patch':

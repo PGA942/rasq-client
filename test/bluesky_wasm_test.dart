@@ -9,6 +9,9 @@ import 'package:plugin_runtime/plugin_runtime.dart';
 /// サンプルプラグインが function.json で宣言する権限 (D-004)。
 const _samplePermissions = {'network', 'storage.safe'};
 
+/// テストの偽サーバー(接続先の宣言 schema v0.12。misskey.io はサンプルの既定 host)。
+const _sampleHosts = {'bsky.app', 'bsky.social', 'cdn', 'misskey.io'};
+
 void main() {
   final f = File('assets/plugins/bluesky_wasm.wasm');
   if (!f.existsSync() || f.lengthSync() == 0) {
@@ -51,6 +54,7 @@ void main() {
     final storage = <String, Object?>{};
     final env = RasqHostEnvironment(
       permissions: _samplePermissions,
+      fetchHosts: _sampleHosts,
       fetch: handler,
       storage: storage,
     );
