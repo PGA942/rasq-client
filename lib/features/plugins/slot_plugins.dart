@@ -705,7 +705,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     _mediaReplace[token] = onReplace;
     if (onOverlay != null) _mediaOverlay[token] = onOverlay;
     final fitted = await _fitForEdit(plugin, bytes, mimeType);
-    final v = await plugin.value('media.edit', {'token': token, 'index': 0, 'name': name, 'mimeType': fitted.mimeType, if (fitted.width > 0) 'width': fitted.width, if (fitted.height > 0) 'height': fitted.height, 'bytesB64': base64Encode(fitted.bytes)});
+    final v = await plugin.value('media.edit', {'token': token, 'index': 0, 'name': name, 'mimeType': fitted.mimeType, 'actionId': ?actionId, if (fitted.width > 0) 'width': fitted.width, if (fitted.height > 0) 'height': fitted.height, 'bytesB64': base64Encode(fitted.bytes)});
     if (v == null) {
       _mediaPreview.remove(token);
       _mediaReplace.remove(token);
