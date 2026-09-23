@@ -348,7 +348,7 @@ void main() {
 
     testWidgets('temp (契約 v0.14 §2.2 / §2.11): 審査済みの宣言 auto: true のフィルターは開いた瞬間に掛かる(FOW は開かない)、サイドロードの宣言は読まない、長押しで「次からも自動でオフ」', (tester) async {
       late FakeSlotRuntime rt;
-      Map<String, Object?> filter(String id, String label, {bool? auto}) => {'id': id, 'slot': 'composer.media', 'label': label, 'tags': [label], 'output': 'filter', if (auto != null) 'auto': auto};
+      Map<String, Object?> filter(String id, String label, {bool? auto}) => {'id': id, 'slot': 'composer.media', 'label': label, 'tags': [label], 'output': 'filter', 'auto': ?auto};
       Map<String, Object?>? preview(String fn, Map<String, Object?> args) => fn == 'filter.preview'
           ? {'mode': 'overlay', 'params': [{'id': 'w', 'label': '太さ', 'min': 0.1, 'max': 1.0, 'step': 0.1, 'value': 0.5}], 'ops': [{'op': 'rect', 'x': 0, 'y': 0, 'w': 1, 'h': 1, 'color': '#00FF00', 'opacity': 0.3}]}
           : null;
