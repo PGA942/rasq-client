@@ -158,6 +158,7 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
   Future<SessionsState> build() async {
     // 現在の RASQ アカウント (D-138) が変われば見せるセッションも変わる。
     // 見守り中 (D-307) は、保護者が許した SNS(種類 / サーバー)のセッションだけを見せる。
+    // (箱はチャイルドセーフが書く。ここからチャイルドセーフには依存しない。)
     ref.watch(childSnsAllowProvider);
     final ledger = await ref.watch(rasqAccountsProvider.future);
     final raw = await ref.read(sessionStorageProvider).read(storageKey);

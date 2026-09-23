@@ -52,6 +52,14 @@ class ChildSafeController extends AsyncNotifier<ChildSafeState> {
       _lifecycle = null; // バインディングの無いテスト
     }
     ref.onDispose(() => _lifecycle?.dispose());
+    // 使ってよい SNS をセッションの一覧へ渡す(依存の無い箱に書く。build の最中は書かない)。
+    listenSelf((_, next) {
+      final v = next.value;
+      final sns = v != null && v.managed ? v.policy?.allow?.sns : null;
+      Future.microtask(() {
+        if (ref.mounted) ref.read(childSnsAllowProvider.notifier).set(sns);
+      });
+    });
     // ログイン / ログアウト / 別のアカウントで取り直す。起動のときの 1 回もここから(build の後)。
     ref.listen(orgateAccountProvider, (prev, next) {
       if (next.isLoading || prev?.value?.id == next.value?.id && prev?.hasValue == true) return;
@@ -256,7 +264,18 @@ final childSafeClockProvider = NotifierProvider<ChildSafeClock, DateTime>(ChildS
 
 /// 関所 (D-307)。見守られていなければ素通しの [ChildGate]。
 /// 使ってよい SNS(見守られていなければ null)。セッションの一覧 ([SessionsNotifier]) が見せる分を絞る。
-final childSnsAllowProvider = Provider<ChildSafeSnsAllow?>((ref) => ref.watch(childSafeProvider.select((s) => s.value?.managed == true ? s.value?.policy?.allow?.sns : null)));
+/// [childSafeProvider] が書き込む**依存の無い箱**(セッション → チャイルドセーフ → RASQ アカウント → セッション の
+/// 循環を作らないため。[OrgateTokenHolder] と同じ考え方)。
+class ChildSnsAllowStore extends Notifier<ChildSafeSnsAllow?> {
+  @override
+  ChildSafeSnsAllow? build() => null;
+  void set(ChildSafeSnsAllow? v) {
+    if (jsonEncode(v?.toJson()) == jsonEncode(state?.toJson())) return;
+    state = v;
+  }
+}
+
+final childSnsAllowProvider = NotifierProvider<ChildSnsAllowStore, ChildSafeSnsAllow?>(ChildSnsAllowStore.new);
 
 final childGateProvider = Provider<ChildGate>((ref) {
   final s = ref.watch(childSafeProvider).value;
@@ -368,11 +387,8 @@ List<String> topicLabelsOf(String text) {
 final childSafeDailyProvider = Provider<ChildSafeDaily>((ref) => ChildSafeDaily(ref.watch(sessionStorageProvider)));
 
 /// 送る前の判定 (D-307): 見守りの制限(機能 / 1 日の上限 / 本文の強さ)。通れば null。止めたら「止めた数」を数える。
-Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String text, bool dm = false, bool media = false}) async {
-  final gate = ref.read(childGateProvider);
+Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDaily daily, DateTime now, {required String text, bool dm = false, bool media = false}) async {
   if (!gate.supervised) return null;
-  final daily = ref.read(childSafeDailyProvider);
-  final now = ref.read(childSafeNowProvider)();
   ChildComposeVerdict? v;
   final feature = dm ? gate.blockedMessage('dm') : (media ? gate.blockedMessage('post.media') : null);
   if (gate.locked) {
@@ -387,6 +403,10 @@ Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String
   if (v != null) await daily.recordBlocked(now: now);
   return v;
 }
+
+/// [childComposeVerdictFor] の画面用。
+Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String text, bool dm = false, bool media = false}) =>
+    childComposeVerdictFor(ref.read(childGateProvider), ref.read(childSafeDailyProvider), ref.read(childSafeNowProvider)(), text: text, dm: dm, media: media);
 
 /// 送れた (D-307): 1 日の数と話題の見出しを数える(見守られていなければ何もしない)。
 Future<void> childComposeSent(WidgetRef ref, String text) async {
