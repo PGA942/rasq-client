@@ -16,6 +16,7 @@ import '../../shell/headers.dart';
 import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
 import '../home/post_row.dart';
+import '../plugins/sideload_trust.dart';
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart';
 
@@ -150,8 +151,11 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
         if (target.id != pkg.root.id) _lastSource = '${file.path}#${target.id}';
         final sigFile = File('${file.path}.sig.json');
         final signed = sigFile.existsSync() ? await verifyDevSignature(bytes, (jsonDecode(sigFile.readAsStringSync()) as Map).cast<String, Object?>()) : null;
+        // スロットに登録したときの段 (D-306): 自分の開発者鍵の署名ならフル機能、ほかは制限モード(GPU は閉)。
+        final own = signed != null && ref.read(ownDevKeyFingerprintsProvider).contains(signed);
         note = '.rasqpkg: ${pkg.root.id} ${pkg.root.version}(子 ${pkg.children.length})→ ${target.id} を読み込み。'
-            '${signed != null ? '開発者鍵の署名 OK(指紋 $signed)。ストアの審査は通っていません' : '署名なし(.sig.json がありません)。出どころを確かめられません'}';
+            '${signed != null ? '開発者鍵の署名 OK(指紋 $signed)。ストアの審査は通っていません' : '署名なし(.sig.json がありません)。出どころを確かめられません'}。'
+            'スロットに登録すると${own ? 'フル機能(自分の鍵の署名)' : '制限モード(自分の鍵の署名ではないため GPU は閉)'}';
         bytes = target.wasm;
       }
       await _start(bytes);
@@ -176,6 +180,9 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
     // 宣言を引けない。ストア経由の導入 (slot_plugins / WasmSnsPlugin) は
     // 宣言どおりに絞られる。gpu.compute (D-081) も、`network` と同じくこの画面では開ける
     // (手元で読み込んだこと自体が付与。RasqPermissions.all に gpu_ml が入っている)。
+    // 注意: この画面は debug ビルド限定ではない(サイドメニューの「WASMプラグイン試験 (dev)」、未ログインでも開ける)。
+    // 「スロットに登録」したもの (slot_plugins) は D-306 の SideloadTrust に従い、自分の署名が無ければ制限モード(GPU 閉)。
+    // TODO(制限モード): この試験画面そのものの門(debug 限定にする / 同じ SideloadTrust に揃える)は制限モードの残りと一緒に決める。
     final controller = AsyncWasmPluginController(wasmBytes: bytes, permissions: RasqPermissions.all, gpuCompute: true);
     _wireFowSurface(controller);
     setState(() {

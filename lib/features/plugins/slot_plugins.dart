@@ -24,6 +24,7 @@ import '../store/store_providers.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
 import 'fetch_shape_telemetry.dart';
+import 'sideload_trust.dart';
 
 /// スロットプラグイン (D-167、契約 = `plugin-sample/CONTRACT.md`)。
 ///
@@ -219,7 +220,7 @@ typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {requi
 
 final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions, required fuelPerCall, required fetchHosts, required gpuCompute}) async {
       // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
-      // gpu.compute はさらに gpuCompute(審査済み / dev の付与)が要る。`gpu_ml` の宣言はワーカーの env が重ねて見る。
+      // gpu.compute はさらに gpuCompute(審査済み / 自分の署名のサイドロード、D-306)が要る。`gpu_ml` の宣言はワーカーの env が重ねて見る。
       final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall, fetchHosts: fetchHosts, gpuCompute: gpuCompute);
       await c.load();
       if (c.lastError != null && c.document == null) {
@@ -237,17 +238,19 @@ bool isReviewedSlotSource(String source) => source.startsWith('store:');
 /// Dart の host_fn の権限検査を通らないので、既定は閉で、埋込側がインスタンスごとに開ける(rasq-sdk-sample
 /// docs/host-functions.md「gpu.compute の権限と上限」)。どちらもマニフェストの `gpu_ml` の宣言が要る:
 /// - ストア (`store:`): 審査を通った配布物のマニフェストが `gpu_ml` を宣言していれば開ける。
-/// - サイドロード: `network` などほかの権限と同じ扱い — dev 画面で読み込んで「スロットに登録」したこと自体が
-///   付与で(権限ごとの確認はまだ無い)、宣言どおりに開ける(register の 2 段目の起動と同じ規則)。
-///
-/// なので今はどちらも「`gpu_ml` の宣言があれば開ける」になる。サイドロードに権限ごとの確認を足すときは、
-/// [source] を見てここで絞る(呼び出し側は変えない)。
-bool slotGpuComputeAllowed(SlotManifest manifest, {required String source}) => manifest.permissions.contains(RasqPermissions.gpuMl);
+/// - サイドロード(ファイル / `asset:`): **自分の開発者鍵の署名がある場合 ([SideloadTrust.full]) だけ**宣言どおりに開ける。
+///   それ以外(署名なし / 他人の鍵 / 素の `.wasm`)は制限モードで閉(D-306、ユーザー決定 2026-09-24)。
+///   [sideloadTrust] は register が [sideloadTrustOf] で決めた段。ストアの登録では見ない。
+bool slotGpuComputeAllowed(SlotManifest manifest, {required String source, required SideloadTrust sideloadTrust}) =>
+    manifest.permissions.contains(RasqPermissions.gpuMl) && (isReviewedSlotSource(source) || sideloadTrust.isFull);
 
 @immutable
 class SlotPlugin {
-  const SlotPlugin({required this.manifest, required this.source, required this.runtime});
+  const SlotPlugin({required this.manifest, required this.source, required this.runtime, this.sideloadTrust = SideloadTrust.restricted});
   final SlotManifest manifest;
+
+  /// サイドロードの信頼の段(D-306: 自分の署名 = full、ほかは制限モード)。ストア (`store:`) のものは審査で決まるので見ない。
+  final SideloadTrust sideloadTrust;
 
   /// 読み込み元(ファイルパス、または `asset:<name>`)。
   final String source;
@@ -412,6 +415,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     try {
       final (:container, :pluginId) = splitPackageSource(source);
       var data = bytes ?? File(container).readAsBytesSync();
+      // サイドロードの信頼の段 (D-306): 展開する前の配布物そのものと、隣の `.sig.json` で決める。
+      // 次回起動の読み直しでも毎回ここを通る(登録時の結果を覚えておかない)。
+      final sideloadTrust = isReviewedSlotSource(source)
+          ? SideloadTrust.restricted
+          : await sideloadTrustOf(data, signature: await readSideloadSignature(container), ownFingerprints: ref.read(ownDevKeyFingerprintsProvider));
       String? expectedId;
       if (isRasqPackage(data)) {
         final entry = RasqPackage.open(data, decompress: ref.read(rasqpkgZstdProvider)).plugin(pluginId);
@@ -441,12 +449,12 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       runtime.dispose();
       runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns, permissions: manifest.permissions.toSet(),
           fuelPerCall: fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet()), fetchHosts: manifest.fetchHosts,
-          gpuCompute: slotGpuComputeAllowed(manifest, source: source));
+          gpuCompute: slotGpuComputeAllowed(manifest, source: source, sideloadTrust: sideloadTrust));
       if (_disposed) {
         runtime.dispose(); // 読み込み中にプロバイダーが捨てられた(テストの再構築など)
         return null;
       }
-      final plugin = SlotPlugin(manifest: manifest, source: source, runtime: runtime);
+      final plugin = SlotPlugin(manifest: manifest, source: source, runtime: runtime, sideloadTrust: sideloadTrust);
       runtime.onAppFn = (fn, args) => _onAppFn(plugin, fn, args);
       _wireFow(plugin);
       // 通信の形(同意した端末だけ、初めて見たものだけ)。版はプラグインの自己申告。
