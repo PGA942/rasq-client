@@ -1,0 +1,256 @@
+import 'package:flutter/foundation.dart';
+import 'package:rasq_models/rasq_models.dart';
+
+import '../../session/sanctions.dart';
+import '../trend/tendency_profile.dart';
+import 'child_safe_api.dart' show ChildSafeGuardianStatus;
+import 'child_safe_policy.dart';
+
+/// 子の端末のチャイルドセーフの状態 (D-307)。`childSafeProvider` が持ち、[ChildGate] が読む。
+@immutable
+class ChildSafeState {
+  const ChildSafeState({
+    this.managed = false,
+    this.state = 'none',
+    this.policy,
+    this.revision = 0,
+    this.parentHandle,
+    this.parentDisplayName,
+    this.accountId,
+    this.guardian = ChildSafeGuardianStatus.none,
+    this.offline = false,
+    this.error,
+  });
+
+  /// 見守られている(一度でも `managed` だった端末は、オンラインで「終わった」と確かめるまで true のまま)。
+  final bool managed;
+
+  /// `pending_setup` / `active` / `unverified`(署名を確かめられない)/ `none`。
+  final String state;
+
+  /// 最後に署名を確かめた制限。null = まだ無い。
+  final ChildSafePolicy? policy;
+  final int revision;
+  final String? parentHandle;
+  final String? parentDisplayName;
+
+  /// 制限が結びついている子のアカウント id(署名の `childAccountId`)。
+  final String? accountId;
+
+  /// 自分が保護者として確認済みか(だれでも返る)。
+  final ChildSafeGuardianStatus guardian;
+
+  /// 直近の取り直しが届かなかった(前の制限のまま)。
+  final bool offline;
+
+  /// 署名が合わない、など(前の制限のまま)。
+  final String? error;
+
+  /// 使わせない(保護者が決めるまで / 署名を確かめた制限が無い)。
+  bool get locked => managed && (state == 'pending_setup' || policy == null);
+
+  ChildSafeState copyWith({ChildSafeGuardianStatus? guardian, bool? offline, String? error, bool clearError = false}) => ChildSafeState(
+        managed: managed,
+        state: state,
+        policy: policy,
+        revision: revision,
+        parentHandle: parentHandle,
+        parentDisplayName: parentDisplayName,
+        accountId: accountId,
+        guardian: guardian ?? this.guardian,
+        offline: offline ?? this.offline,
+        error: clearError ? null : (error ?? this.error),
+      );
+}
+
+/// 止めたときの決まり文句(RAi の関数など)。
+const childSafeBlockedText = '保護者が止めています';
+
+/// コンポーザーの判定の結果: 止めた理由と、印を付ける範囲。
+@immutable
+class ChildComposeVerdict {
+  const ChildComposeVerdict(this.message, {this.start, this.end});
+  final String message;
+  final int? start;
+  final int? end;
+  bool get hasRange => start != null && end != null && end! > start!;
+}
+
+/// 関所 (D-307): 見守りの制限を、面ごとに問い合わせる口。見守られていなければ、どれも素通し。
+/// 時刻は作ったとき([now])で固定(`childSafeClockProvider` が切り替わりの時刻に作り直す)。
+@immutable
+class ChildGate {
+  ChildGate({this.state = const ChildSafeState(), DateTime? now}) : now = now ?? DateTime.now();
+  final ChildSafeState state;
+  final DateTime now;
+
+  static final off = ChildGate();
+
+  bool get supervised => state.managed;
+  bool get locked => state.locked;
+  ChildSafePolicy? get policy => supervised ? state.policy : null;
+  ChildSafeAllow? get allow => policy?.allow;
+
+  /// 見守りの時間の中か。
+  bool get inTimeWindow => policy?.time.contains(now) ?? false;
+  String get windowLabel => policy == null ? '' : '${policy!.time.start}〜${policy!.time.end}';
+
+  // ── 機能 / 検索 ──
+
+  bool featureAllowed(String id) => !supervised || (!locked && allow?.features?[id] != false);
+  bool searchAllowed(String id) => !supervised || (!locked && allow?.search?[id] != false);
+
+  /// 機能が止まっているときの案内。アカウントの処置 ([RasqSanctions]) が先。止まっていなければ null。
+  String? blockedMessage(String feature, [RasqSanctions sanctions = RasqSanctions.none]) {
+    final s = sanctions.blockedMessage(feature);
+    if (s != null) return s;
+    if (!supervised) return null;
+    if (locked) return '保護者が設定を決めるまで使えません';
+    final label = RasqSanctions.featureLabels[feature] ?? feature;
+    if (!featureAllowed(feature)) return '$childSafeBlockedText($label)';
+    if (feature == 'dm' && inTimeWindow && policy!.time.hideDirectMessages) return '見守りの時間($windowLabel)は DM を使えません';
+    return null;
+  }
+
+  /// 画面(ルート)を開けない理由。開けるなら null。
+  String? routeBlockReason(String loc) {
+    if (!supervised) return null;
+    bool under(String p) => loc == p || loc.startsWith('$p/');
+    if (under('/vc')) {
+      if (!featureAllowed('astell.join')) return '保護者が AsTell を止めています';
+      if (inTimeWindow) return '見守りの時間($windowLabel)は AsTell を使えません';
+    }
+    if (under('/dm')) {
+      if (!featureAllowed('dm')) return '保護者が DM を止めています';
+      if (inTimeWindow && policy!.time.hideDirectMessages) return '見守りの時間($windowLabel)は DM を使えません';
+    }
+    if (under('/notifications') && inTimeWindow && policy!.time.hideNotifications) return '見守りの時間($windowLabel)は通知を見られません';
+    if (under('/rai') && !raiEnabled) return '保護者が RAi を止めています';
+    if (under('/store') && !under('/store/installed') && !searchAllowed('store')) return '保護者がプラグインストアを止めています';
+    if ((under('/search') || under('/trend')) && !const ['posts', 'users', 'trend'].any(searchAllowed)) return '保護者が検索を止めています';
+    if (loc.startsWith('/login/') && !canAddAccounts) return '保護者が SNS アカウントの追加を止めています';
+    return null;
+  }
+
+  // ── タイムライン / 投稿 ──
+
+  /// 刺激性の見方: 怒り / 嫌悪は少しでも、恐れ / 悲しみは強めのときだけ数える([TendencyScorer.stimulusPenaltyOf])。
+  static const stimulusProfile = TendencyProfile(stimulus: {'anger': 0, 'disgust': 0, 'fear': 0.25, 'sadness': 0.5});
+
+  static double stimulusOfText(String text) => tendencyScorer.stimulusPenaltyOf(_textPost(text), stimulusProfile);
+  static double stimulusOf(Post p) => tendencyScorer.stimulusPenaltyOf(p.contentWarning == null ? p : _textPost('${p.contentWarning} ${p.body} ${p.quote?.body ?? ''}'), stimulusProfile);
+
+  static Post _textPost(String text) => Post(
+        id: '-',
+        account: const AccountId(kind: SnsKind.other, instance: 'rasq', handle: '-'),
+        author: const UserSummary(id: '-', account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: '-'), displayName: '-'),
+        createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+        body: text,
+      );
+
+  /// 話題(語やタグ)のどれかに当たるか。当て方はトレンドの「好きではないジャンル」と同じ(特徴語か本文に含まれる)。
+  static bool matchesTopic(Post p, List<String> topics) => topics.isNotEmpty && tendencyScorer.isDisliked(p, TendencyProfile(disliked: topics));
+
+  /// この投稿を見せないか(判定の強さ / 止める話題 / 見守りの時間の「この話題だけ」)。
+  bool postHidden(Post p) {
+    final pol = policy;
+    if (pol == null) return false;
+    if (pol.timeline.enabled) {
+      if (stimulusOf(p) >= pol.timeline.level.stimulusThreshold) return true;
+      if (matchesTopic(p, pol.timeline.blockedTopics)) return true;
+    }
+    if (inTimeWindow && !matchesTopic(p, pol.time.allowedTopics)) return true;
+    return false;
+  }
+
+  List<Post> filterPosts(List<Post> posts) => policy == null ? posts : [for (final p in posts) if (!postHidden(p)) p];
+
+  /// 投稿の詳細を開けない理由。開けるなら null。
+  String? postDetailBlockReason(Post? p) {
+    if (!supervised) return null;
+    if (inTimeWindow && policy!.time.hidePostDetail) return '見守りの時間($windowLabel)は投稿の詳細を開けません';
+    if (p != null && postHidden(p)) return 'この投稿は表示できません';
+    return null;
+  }
+
+  /// タイムラインが変わる設定の目印(TL を作り直す判断に使う)。
+  String get timelineSignature {
+    final pol = policy;
+    if (pol == null) return supervised ? 'locked' : '-';
+    return '${pol.timeline.enabled}|${pol.timeline.level.wire}|${pol.timeline.blockedTopics.join(',')}|$inTimeWindow|${pol.time.allowedTopics.join(',')}';
+  }
+
+  // ── コンポーザー ──
+
+  /// 本文の判定(強さの閾値以上なら送らない)。当たった語に印を付ける範囲を返す。通れば null。
+  ChildComposeVerdict? judgeText(String text) {
+    final pol = policy;
+    if (pol == null || !pol.composer.enabled || text.trim().isEmpty) return null;
+    if (stimulusOfText(text) < pol.composer.level.stimulusThreshold) return null;
+    // 上限を超えた感情の語のうち、先頭のもの。
+    final emo = emotionLexiconOf(text);
+    final hit = emotionLexiconMatches(text).where((m) => (emo[m.emotion] ?? 0) > stimulusProfile.stimulusCap(m.emotion)).firstOrNull;
+    final word = hit == null ? '' : '「${text.substring(hit.start, hit.end)}」';
+    return ChildComposeVerdict('保護者の設定(${pol.composer.level.label})により、この表現$wordは送れません。言い換えてください', start: hit?.start, end: hit?.end);
+  }
+
+  int? get postsPerDay => policy?.postsPerDay;
+
+  // ── プラグイン ──
+
+  bool pluginAllowed(String pluginId, String slot) {
+    if (!supervised) return true;
+    if (locked) return false;
+    final pl = allow?.plugins;
+    return pl == null || pl.permits(pluginId, slot);
+  }
+
+  String? installBlockReason(String pluginId) {
+    if (!supervised) return null;
+    if (locked) return '保護者が設定を決めるまで使えません';
+    final pl = allow?.plugins;
+    if (pl == null) return null;
+    return switch (pl.install) {
+      ChildSafeInstall.none => '保護者がプラグインのインストールを止めています',
+      ChildSafeInstall.listed => pl.ids.contains(pluginId) ? null : '保護者が選んだプラグインだけ入れられます',
+      ChildSafeInstall.any => null,
+    };
+  }
+
+  // ── SNS アカウント ──
+
+  bool sessionVisible(AccountId a) {
+    if (!supervised) return true;
+    final s = allow?.sns;
+    return s == null || s.permits(a.kind.name, a.instance);
+  }
+
+  bool get canAddAccounts => !supervised || (!locked && (allow?.sns?.addAccounts ?? true));
+
+  // ── RAi ──
+
+  bool get raiEnabled => !supervised || (!locked && (allow?.rai?.enabled ?? true));
+
+  /// 関数を呼べない理由(「保護者が止めています」)。呼べるなら null。**まとまりの分からない関数は、見守り中は呼ばない。**
+  String? raiBlockReason(String fn) {
+    if (!supervised) return null;
+    final group = raiFunctionGroups[fn];
+    if (locked || group == null) return '$childSafeBlockedText($fn)';
+    if (group == 'rai.web' && !searchAllowed('web')) return '$childSafeBlockedText($fn)';
+    if (fn.startsWith('dm.') && !featureAllowed('dm')) return '$childSafeBlockedText($fn)';
+    if (group == 'rai.astell' && !featureAllowed('astell.join')) return '$childSafeBlockedText($fn)';
+    final r = allow?.rai;
+    if (r == null) return null;
+    if (!r.enabled || r.deny.contains(fn) || r.deny.contains(group) || !r.groups.contains(group)) return '$childSafeBlockedText($fn)';
+    return null;
+  }
+
+  /// 関数優先の自動化 (D-229) を使えるか(`allow.rai.automation`)。
+  bool get raiAutomation => !supervised || (!locked && (allow == null || allow!.rai == null || allow!.rai!.automation));
+  bool get raiWeb => raiBlockReason('web.search') == null;
+
+  // ── 表示 ──
+
+  /// 閲覧注意のメディアは、見守り中は必ず隠す(`sns.safety` は読むだけ)。
+  bool get forceHideSensitive => supervised;
+}
