@@ -153,6 +153,8 @@ AccountId = { kind, instance, handle }   key = "kind:instance:handle"
 
 PostTile スロット×権限(原典一致): avatar=`decorate_avatar`(審査済みのみ) / content=`transform_content`(sideload は GPU/Net 不可) / media=sideload は `tag_media` のみ、審査済みは `replace_media` / action=`register_action`(審査済み) / 完全置き換え=`replace_tile`(審査済み+審査制約)。interstitial の GPU/ML は審査済みのみ。ストアは審査済みのみ掲載。メディアビューワープラグインは全画面遷移時のみ RRL 描画。
 
+`gpu.compute`(D-081)はランタイムの中で wgpu に短絡され host_fn の権限検査を通らないので、**ランタイムの門は既定で閉**(`E01` permission denied)。ホストはインスタンスごとに `RasqWasmPlugin.fromBytes(gpuCompute: env.gpuComputeEnabled)` で開ける(D-306): `gpuComputeEnabled` = 審査済み(ストアの `store:` 登録 / SNS プラグインは `verified`)またはサイドロードの付与(dev 画面での読み込み・登録。`network` と同じ扱い)**かつ** `gpu_ml` の宣言。Web 版はまだ `gpu.compute` を持たず常に `E01`(→ `ml.infer` へ縮退)。引数の上限と 10 秒の壁時計は rasq-sdk-sample `docs/host-functions.md`。
+
 ---
 
 ## 9. エラーコード(`ErrorCode`)

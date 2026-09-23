@@ -174,8 +174,9 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
     }
     // 手元の .wasm を直接読む開発用サーフェス: マニフェストが無いので
     // 宣言を引けない。ストア経由の導入 (slot_plugins / WasmSnsPlugin) は
-    // 宣言どおりに絞られる。
-    final controller = AsyncWasmPluginController(wasmBytes: bytes, permissions: RasqPermissions.all);
+    // 宣言どおりに絞られる。gpu.compute (D-081) も、`network` と同じくこの画面では開ける
+    // (手元で読み込んだこと自体が付与。RasqPermissions.all に gpu_ml が入っている)。
+    final controller = AsyncWasmPluginController(wasmBytes: bytes, permissions: RasqPermissions.all, gpuCompute: true);
     _wireFowSurface(controller);
     setState(() {
       _controller = controller;

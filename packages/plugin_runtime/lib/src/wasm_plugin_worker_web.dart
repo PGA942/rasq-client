@@ -266,6 +266,9 @@ function invoke(fn, args) {
       if (typeof args.id !== "string" || !args.id) throw new HostFnError("D01", "fow.close: id required");
       send({fow: {fn, args}});
       return {};
+    // gpu.compute (D-081) は Web ではまだ無い(WebGPU への写しは未実装)ので、門に関係なく常に E01 = ml.infer へ縮退。
+    // 実装するときは端末版と同じ門(審査済み / dev の付与 = WasmWorkerConfig.gpuCompute、かつ permissions に gpu_ml)と、
+    // rasq-sdk-sample docs/host-functions.md「gpu.compute の権限と上限」の上限・10 秒の壁時計を Worker の中で守ること。
     case "gpu.compute": throw new HostFnError("E01", "gpu.compute requires the native runtime (fall back to ml.infer)");
     case "wasm.call": case "store.read": case "geometry.lookup": throw new HostFnError("E01", fn + " not wired yet");
     default:

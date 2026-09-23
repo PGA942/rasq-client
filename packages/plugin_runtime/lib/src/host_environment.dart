@@ -114,6 +114,7 @@ class RasqHostEnvironment {
     this.permissions = const {},
     this.fetchHosts = const {},
     this.instanceAllowed = false,
+    this.gpuCompute = false,
     String? instanceHost,
   })  : storage = storage ?? {},
         _instanceHost = instanceHost?.trim().toLowerCase();
@@ -165,6 +166,17 @@ class RasqHostEnvironment {
   /// `network` 権限が無ければ false。短絡された呼び出しは Dart の
   /// ディスパッチャを通らないので、ここで止めないとゲートごと迂回される。
   bool get nativeFetchEnabled => nativeFetch && permissions.contains(RasqPermissions.network);
+
+  /// 埋込側が `gpu.compute` (D-081) を開けてよいと判断したか。ストアの審査を通った
+  /// プラグイン(サイドロードは dev 画面での付与)だけが真を渡す。既定は偽 = 閉。
+  /// 実際に開けるかは [gpuComputeEnabled](`gpu_ml` の宣言も要る)。
+  final bool gpuCompute;
+
+  /// ランタイムの `gpu.compute` を開けてよいか(`RasqWasmPlugin.fromBytes(gpuCompute:)`)。
+  /// [gpuCompute] が真で、かつマニフェストが `gpu_ml` を宣言しているときだけ真。
+  /// `gpu.compute` はランタイム内(wgpu)で短絡されて Dart のディスパッチャを通らないので、
+  /// ここで止めないと `gpu_ml` の宣言も審査も無いプラグインが GPU に触れる。
+  bool get gpuComputeEnabled => gpuCompute && permissions.contains(RasqPermissions.gpuMl);
 
   /// Serve `net.fetch` inside the wasm runtime (blocking rustls HTTP —
   /// mobile-capable, D-023). Takes precedence over [fetch]; the runtime
@@ -297,7 +309,8 @@ class RasqHostEnvironment {
         if (id is! String || id.isEmpty) throw _HostFnError('D01', 'fow.close: id required');
         return relay(fn, args) ?? const <String, Object?>{};
       case RasqHostFns.gpuCompute:
-        // gpu.compute (D-081) はランタイム内(wgpu)で短絡処理される —
+        // gpu.compute (D-081) はランタイム内(wgpu)で短絡処理される(門は
+        // [gpuComputeEnabled] → `rasq_wasm_set_gpu_compute`、閉なら E01 もランタイムが返す)。
         // ここへ来るのは旧ランタイムのみ。プラグインはクラウド
         // カルクレーター(ml.infer)へフォールバックする規約。
         throw _HostFnError('E01', 'gpu.compute requires the native runtime (fall back to ml.infer)');

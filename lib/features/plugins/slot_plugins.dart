@@ -214,11 +214,13 @@ class _AsyncSlotRuntime implements SlotRuntime {
 }
 
 /// wasm バイト列 → 実行中のプラグイン。テストは偽物に差し替える。
-typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall, required Set<String> fetchHosts});
+/// [gpuCompute] = `gpu.compute` (D-081) を開けるか([slotGpuComputeAllowed] の答え)。
+typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall, required Set<String> fetchHosts, required bool gpuCompute});
 
-final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions, required fuelPerCall, required fetchHosts}) async {
+final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions, required fuelPerCall, required fetchHosts, required gpuCompute}) async {
       // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
-      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall, fetchHosts: fetchHosts);
+      // gpu.compute はさらに gpuCompute(審査済み / dev の付与)が要る。`gpu_ml` の宣言はワーカーの env が重ねて見る。
+      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall, fetchHosts: fetchHosts, gpuCompute: gpuCompute);
       await c.load();
       if (c.lastError != null && c.document == null) {
         c.dispose();
@@ -226,6 +228,21 @@ final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {
       }
       return _AsyncSlotRuntime(c);
     });
+
+/// 登録元がストア(審査済み、D-168)か。`store:<id>` / `store:<id>#<childId>`。それ以外(ファイルのパス /
+/// `asset:<name>`)は dev 画面からのサイドロード。
+bool isReviewedSlotSource(String source) => source.startsWith('store:');
+
+/// `gpu.compute` (D-081) の門をランタイムで開けるか。`gpu.compute` はランタイム内(wgpu)で短絡され、
+/// Dart の host_fn の権限検査を通らないので、既定は閉で、埋込側がインスタンスごとに開ける(rasq-sdk-sample
+/// docs/host-functions.md「gpu.compute の権限と上限」)。どちらもマニフェストの `gpu_ml` の宣言が要る:
+/// - ストア (`store:`): 審査を通った配布物のマニフェストが `gpu_ml` を宣言していれば開ける。
+/// - サイドロード: `network` などほかの権限と同じ扱い — dev 画面で読み込んで「スロットに登録」したこと自体が
+///   付与で(権限ごとの確認はまだ無い)、宣言どおりに開ける(register の 2 段目の起動と同じ規則)。
+///
+/// なので今はどちらも「`gpu_ml` の宣言があれば開ける」になる。サイドロードに権限ごとの確認を足すときは、
+/// [source] を見てここで絞る(呼び出し側は変えない)。
+bool slotGpuComputeAllowed(SlotManifest manifest, {required String source}) => manifest.permissions.contains(RasqPermissions.gpuMl);
 
 @immutable
 class SlotPlugin {
@@ -241,7 +258,7 @@ class SlotPlugin {
 
   /// 審査済みか(ストアからインストールしたもの、D-168)。サイドロード(ファイル / 同梱アセット)は未審査として扱い、
   /// 宣言の `auto`(temp)を読まない(契約 v0.14 §2.11)。
-  bool get isReviewed => source.startsWith('store:');
+  bool get isReviewed => isReviewedSlotSource(source);
   Future<Map<String, dynamic>> call(String fn, Map<String, Object?> args) => runtime.invoke(fn, args);
 
   /// `call` の `value`(失敗は null)。
@@ -405,7 +422,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final loader = ref.read(slotRuntimeLoaderProvider);
       // マニフェストを読むために一度素の権限で起動し、宣言に合わせて起動し直す。
       // 1 段目はマニフェストを読むだけ。予算はランタイム既定(重いほう)に任せる。
-      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {}, fuelPerCall: null, fetchHosts: const {});
+      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {}, fuelPerCall: null, fetchHosts: const {}, gpuCompute: false);
       final m = (await runtime.invoke('plugin.manifest', const {}))['value'];
       if (m is! Map) {
         runtime.dispose();
@@ -423,7 +440,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       }
       runtime.dispose();
       runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns, permissions: manifest.permissions.toSet(),
-          fuelPerCall: fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet()), fetchHosts: manifest.fetchHosts);
+          fuelPerCall: fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet()), fetchHosts: manifest.fetchHosts,
+          gpuCompute: slotGpuComputeAllowed(manifest, source: source));
       if (_disposed) {
         runtime.dispose(); // 読み込み中にプロバイダーが捨てられた(テストの再構築など)
         return null;

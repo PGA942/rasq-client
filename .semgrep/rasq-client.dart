@@ -54,7 +54,7 @@ Future<void> requests(Uri url, http.Client? injected, http.Request req) async {
 
 // ── rasq-client-runtime-fetch-gate ───────────────────────────────────────────
 class RasqWasmPlugin {
-  factory RasqWasmPlugin.fromBytes(Uint8List bytes, {Object? hostFn, bool nativeFetch = false, int? fuelPerCall, Set<String> fetchHosts = const {}}) => throw UnimplementedError();
+  factory RasqWasmPlugin.fromBytes(Uint8List bytes, {Object? hostFn, bool nativeFetch = false, int? fuelPerCall, Set<String> fetchHosts = const {}, bool gpuCompute = false}) => throw UnimplementedError();
 }
 
 class Env {
@@ -62,17 +62,26 @@ class Env {
   bool get nativeFetchEnabled => true;
   Set<String> get effectiveFetchHosts => const {};
   Set<String> get fetchHosts => const {};
+  bool get gpuCompute => true;
+  bool get gpuComputeEnabled => true;
 }
 
 void runtimes(Uint8List bytes, Env env, Env? maybeEnv) {
   // ok: rasq-client-runtime-fetch-gate
-  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: env.nativeFetchEnabled, fuelPerCall: null, fetchHosts: env.effectiveFetchHosts);
+  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: env.nativeFetchEnabled, fuelPerCall: null, fetchHosts: env.effectiveFetchHosts, gpuCompute: env.gpuComputeEnabled);
   // ok: rasq-client-runtime-fetch-gate
-  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: maybeEnv!.nativeFetchEnabled, fetchHosts: maybeEnv!.effectiveFetchHosts);
+  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: maybeEnv!.nativeFetchEnabled, fetchHosts: maybeEnv!.effectiveFetchHosts, gpuCompute: maybeEnv!.gpuComputeEnabled);
   // ruleid: rasq-client-runtime-fetch-gate
-  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: env.nativeFetch, fetchHosts: env.effectiveFetchHosts);
+  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: env.nativeFetch, fetchHosts: env.effectiveFetchHosts, gpuCompute: env.gpuComputeEnabled);
   // ruleid: rasq-client-runtime-fetch-gate
-  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: env.nativeFetchEnabled, fetchHosts: env.fetchHosts);
+  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: env.nativeFetchEnabled, fetchHosts: env.fetchHosts, gpuCompute: env.gpuComputeEnabled);
+  // gpuCompute を省く / env の判定以外(宣言だけ・定数)を渡す。
+  // ruleid: rasq-client-runtime-fetch-gate
+  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: env.nativeFetchEnabled, fetchHosts: env.effectiveFetchHosts);
+  // ruleid: rasq-client-runtime-fetch-gate
+  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: env.nativeFetchEnabled, fetchHosts: env.effectiveFetchHosts, gpuCompute: env.gpuCompute);
+  // ruleid: rasq-client-runtime-fetch-gate
+  RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: env.nativeFetchEnabled, fetchHosts: env.effectiveFetchHosts, gpuCompute: true);
   // ruleid: rasq-client-runtime-fetch-gate
   RasqWasmPlugin.fromBytes(bytes, hostFn: null, nativeFetch: true);
   // ruleid: rasq-client-runtime-fetch-gate
