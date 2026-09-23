@@ -18,6 +18,8 @@ import '../../session/sanctions.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
 import '../../text/inline_spans.dart';
+import '../home/plugin_actions.dart';
+import '../home/post_row.dart' show PostRow;
 import '../home/timeline_providers.dart' show resolveNodeFetch;
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
@@ -228,8 +230,43 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Timer? _textPluginTimer;
   late final String _textToken = 'composer-${identityHashCode(this)}';
   SlotPluginsNotifier? _slots; // dispose で ref を触らないための写し
+
+  /// テキスト加工プラグインの ON / OFF(契約 v0.14 §2.3 temp、D-305): ActionKey → このコンポーザーでの状態(面ローカル、保存しない)。
+  /// 最初に見たとき初期状態(利用者の上書き → 審査済みの宣言 auto → 既定 ON)で埋める。オフのあいだ `text.changed` は送らない。
+  final Map<String, bool> _textPluginOn = {};
   String? _error;
   String? _progress;
+  bool _textPluginIsOn(PluginAction a) => _textPluginOn.putIfAbsent(a.id, () => a.effectiveAuto(ref.read(actionButtonPrefsProvider)));
+
+  /// 入力欄の上のチップ行: switch がオンの `composer.text` プラグインごとに ON / OFF。長押しで「次からも自動でオン / オフ」。
+  Widget _textPluginChips(List<PluginAction> actions) => Padding(
+        padding: const EdgeInsets.only(bottom: RasqSpacing.xs),
+        child: Wrap(spacing: RasqSpacing.xs, runSpacing: 2, children: [
+          for (final a in actions)
+            Builder(
+              builder: (ctx) => GestureDetector(
+                onLongPress: () {
+                  final box = ctx.findRenderObject() as RenderBox;
+                  showActionTempMenu(ref, anchor: box.localToGlobal(Offset.zero) & box.size, action: a, ownerId: composerFowId);
+                },
+                child: FilterChip(
+                  key: ValueKey('composer.textPlugin.${a.plugin.id}'),
+                  avatar: Icon(PostRow.iconFor(a.decl.icon, Icons.extension_outlined), size: 16),
+                  label: Text(a.decl.label, style: RasqTypography.caption),
+                  tooltip: '${a.plugin.manifest.name}(テキスト加工)',
+                  selected: _textPluginIsOn(a),
+                  showCheckmark: false,
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  onSelected: (on) => setState(() {
+                    _textPluginOn[a.id] = on;
+                    if (on) _scheduleTextPlugins();
+                  }),
+                ),
+              ),
+            ),
+        ]),
+      );
 
   // stick FOW (D-047/D-049) の高さ: 折りたたみ = 入力行 + ツールバーだけ、
   // 展開 = ヘッダー + 返信先タイルが割り込む。定数は実測が入るまでの初期値で、
@@ -514,8 +551,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   /// 本文の変化をテキスト加工プラグインへ (D-167、CONTRACT §2.3)。200ms デバウンス。
+  /// switch がオンで、このコンポーザーでオン(チップ)のプラグインだけ (契約 v0.14)。
   void _scheduleTextPlugins() {
-    final plugins = ref.read(slotPluginsForProvider(SlotIds.composerText));
+    final plugins = [for (final a in ref.read(composerTextPluginsProvider)) if (_textPluginIsOn(a)) a.plugin];
     if (plugins.isEmpty) return;
     _slots ??= ref.read(slotPluginsProvider.notifier);
     _textPluginTimer?.cancel();
@@ -1578,6 +1616,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  // テキスト加工プラグインの ON / OFF チップ (契約 v0.14 §2.3)。
+                  if (ref.watch(composerTextPluginsProvider).isNotEmpty) _textPluginChips(ref.watch(composerTextPluginsProvider)),
                   if (_cwOn)
                     Row(children: [
                       Icon(Icons.visibility_outlined, size: 18, color: scheme.onSurfaceVariant),

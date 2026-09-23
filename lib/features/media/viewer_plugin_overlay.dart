@@ -10,11 +10,10 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
-import '../home/plugin_actions.dart' show viewerToggleDefaultIcon;
+import '../home/plugin_actions.dart';
 import '../home/material_icons.dart';
 import '../home/post_row.dart';
 import '../plugins/slot_plugins.dart';
-import '../settings/settings_dsl.dart';
 
 /// 全画面表示プラグイン (D-167、スロット `viewer.overlay`) の共通部 (D-178)。
 ///
@@ -28,17 +27,16 @@ final viewerImageFetcherProvider = Provider<Future<Uint8List?> Function(Uri url)
       return res.statusCode == 200 ? res.bodyBytes : null;
     });
 
-/// 全画面表示プラグインの有効 / 無効 (D-205 → D-207): 全画面の右上のアイコンで切り替え、設定エリア `slots.viewer` に保存。
-/// 無効なプラグインには画像を渡さず、重ねも出さない(停止時に RRL の重ねが複数出るかどうかをここで決める)。
-const viewerPluginsSettingsArea = 'slots.viewer';
-
-String viewerPluginEnabledKey(String id) => 'enabled.$id';
-
-/// 有効な全画面表示プラグイン(ビューワーが画像を渡す相手)。
+/// 全画面表示プラグインの ON / OFF (D-205 → D-207 → D-305): 全画面のアクションバーのトグルで切り替える。
+/// 契約 v0.14 §2.4 / §2.11(temp): 切り替えた値は**その全画面限り**で永続しない([ViewerPluginOverlays] が面ローカルに持つ)。
+/// 開いた瞬間の初期状態は [PluginAction.effectiveAuto](利用者の上書き → 宣言の `auto` → ホスト既定 = オン)。
+/// v0.13 までの「`slots.viewer` に保存して次の全画面にも引き継ぐ」はやめ、保存されていた値は起動時に
+/// `slots.global` の `auto`(次から自動でオン / オフ)へ写す([migrateViewerPluginSettings])。
+///
+/// switch がオンの全画面表示プラグイン(ビューワーが画像を渡しうる相手)。switch を切ったものは面に出ず、画像も渡さない。
 final viewerOverlayPluginsProvider = Provider<List<SlotPlugin>>((ref) {
-  final all = ref.watch(slotPluginsForProvider(SlotIds.viewerOverlay));
-  final v = ref.watch(settingsAreaProvider(viewerPluginsSettingsArea)).value ?? const <String, Object?>{};
-  return [for (final p in all) if (v[viewerPluginEnabledKey(p.id)] != false) p];
+  final prefs = ref.watch(actionButtonPrefsProvider);
+  return [for (final a in ref.watch(viewerPluginActionsProvider)) if (prefs.switchOn(a.id)) a.plugin];
 });
 
 /// その画像について、プラグイン 1 つがいまどうなっているか (D-246)。黙って失敗しない: トグルに出す。
@@ -91,6 +89,18 @@ class ViewerPluginOverlays {
   /// 画像 index → プラグイン id → 状態。
   final Map<int, Map<String, ViewerPluginStatus>> _status = {};
 
+  /// プラグイン id → この全画面での ON / OFF(面ローカル、契約 v0.14 temp)。最初に見たとき初期状態で埋める。
+  final Map<String, bool> _on = {};
+
+  /// この全画面でオンか。switch を切ったものは常にオフ。初期状態は [PluginAction.effectiveAuto](切り替えは [toggle])。
+  bool isOn(String pluginId) {
+    final action = ref.read(viewerPluginActionsProvider).where((a) => a.plugin.id == pluginId).firstOrNull;
+    if (action == null) return false;
+    final prefs = ref.read(actionButtonPrefsProvider);
+    if (!prefs.switchOn(action.id)) return false;
+    return _on.putIfAbsent(pluginId, () => action.effectiveAuto(prefs));
+  }
+
   ViewerPluginStatus statusOf(int i, String pluginId) => _status[i]?[pluginId] ?? ViewerPluginStatus.idle;
 
   void _setStatus(int i, String pluginId, ViewerPluginStatus st) {
@@ -99,21 +109,18 @@ class ViewerPluginOverlays {
     onChanged();
   }
 
-  /// 有効 / 無効を切り替える(`slots.viewer` に保存)。有効にしたら、この画像をまだ渡せていなければ渡す
-  /// (前に失敗したものはここでやり直しになる)。無効は重ねを出さないだけ(トークンは残す)。
+  /// ON / OFF を切り替える(この全画面限り。保存しない、契約 v0.14 temp)。オンにしたら、この画像をまだ渡せていなければ渡す
+  /// (前に失敗したものはここでやり直しになる)。オフは重ねを出さないだけ(トークンは残す)。
   Future<void> toggle(String pluginId, int i, Uri? url) async {
-    final enabled = ref.read(viewerOverlayPluginsProvider).any((p) => p.id == pluginId);
-    await ref.read(settingsAreaProvider(viewerPluginsSettingsArea).notifier).set(viewerPluginEnabledKey(pluginId), !enabled);
+    final enabled = isOn(pluginId);
+    _on[pluginId] = !enabled;
     if (_disposed) return;
     if (!enabled && url != null) await ask(i, url);
     onChanged();
   }
 
-  /// その画像の重ね(有効なプラグインのぶんだけ)。
-  List<ViewerOverlay> overlaysOf(int i) {
-    final enabled = {for (final p in ref.read(viewerOverlayPluginsProvider)) p.id};
-    return [for (final e in (_overlays[i] ?? const <String, ViewerOverlay>{}).entries) if (enabled.contains(e.key)) e.value];
-  }
+  /// その画像の重ね(オンのプラグインのぶんだけ)。
+  List<ViewerOverlay> overlaysOf(int i) => [for (final e in (_overlays[i] ?? const <String, ViewerOverlay>{}).entries) if (isOn(e.key)) e.value];
 
   /// [i] 番目の画像 [url] をプラグインへ渡す(登録が無い / 済みなら何もしない)。
   /// dispose では ref を使えない(Riverpod 3)ので、使った登録簿と対象プラグインを覚えておく。
@@ -124,7 +131,7 @@ class ViewerPluginOverlays {
     // 有効で、まだ渡していないプラグインだけ (D-205 / D-207: 後から有効にしたものにも渡す)。
     // 渡せなかったもの(画像の取得失敗 / プラグインのエラー)は記録を外して、次の ask でやり直せるようにする。
     final asked = _tokens.putIfAbsent(i, () => {});
-    final plugins = [for (final p in ref.read(viewerOverlayPluginsProvider)) if (!asked.containsKey(p.id)) p];
+    final plugins = [for (final p in ref.read(viewerOverlayPluginsProvider)) if (isOn(p.id) && !asked.containsKey(p.id)) p];
     if (plugins.isEmpty) return;
     _notifier ??= ref.read(slotPluginsProvider.notifier);
     final token = 'viewer-${identityHashCode(this)}-$i';
@@ -263,9 +270,12 @@ class ViewerOverlay {
 /// 警告色。投稿のビューワーとプロフィール画像のビューワーで同じもの。(印は静止画: 回る輪だと終わらない処理の間
 /// 画面が落ち着かず、テストの pumpAndSettle も終わらない。)
 class ViewerPluginToggle extends StatelessWidget {
-  const ViewerPluginToggle({super.key, required this.pluginId, required this.label, this.iconName, required this.enabled, required this.status, required this.onPressed});
+  const ViewerPluginToggle({super.key, required this.pluginId, required this.label, this.iconName, required this.enabled, required this.status, required this.onPressed, this.onLongPress});
   final String pluginId;
   final String label;
+
+  /// 長押し(契約 v0.14 temp): 「次からも自動でオン / オフ」のメニュー。引数はボタンの矩形(メニューの錨)。
+  final void Function(Rect anchor)? onLongPress;
 
   /// 宣言されたアイコン名(契約 v0.9)。無い / 既定なら パズルの 塗り(ON)/ 線(OFF)。宣言があれば色で ON / OFF を出す。
   final String? iconName;
@@ -292,12 +302,27 @@ class ViewerPluginToggle extends StatelessWidget {
                 ? Colors.white70
                 : RasqColors.accent;
     final tip = enabled && status.label.isNotEmpty ? '$label — ${status.label}' : label;
+    final onLongPress = this.onLongPress;
     return DecoratedBox(
       decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
-      child: Stack(alignment: Alignment.center, children: [
-        RasqIconButton(key: ValueKey('viewer.plugin.$pluginId'), icon: icon, color: color, tooltip: tip, onPressed: onPressed),
-        if (asking) const Positioned(right: 4, bottom: 4, child: IgnorePointer(child: Icon(Icons.hourglass_top, size: 12, color: Colors.white))),
-      ]),
+      child: Builder(
+        builder: (ctx) => Stack(alignment: Alignment.center, children: [
+          RasqIconButton(
+            key: ValueKey('viewer.plugin.$pluginId'),
+            icon: icon,
+            color: color,
+            tooltip: tip,
+            onPressed: onPressed,
+            onLongPress: onLongPress == null
+                ? null
+                : () {
+                    final box = ctx.findRenderObject() as RenderBox;
+                    onLongPress(box.localToGlobal(Offset.zero) & box.size);
+                  },
+          ),
+          if (asking) const Positioned(right: 4, bottom: 4, child: IgnorePointer(child: Icon(Icons.hourglass_top, size: 12, color: Colors.white))),
+        ]),
+      ),
     );
   }
 }

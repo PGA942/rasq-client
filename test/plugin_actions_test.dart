@@ -15,6 +15,7 @@ import 'package:rasq_client/features/home/plugin_actions.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -81,6 +82,73 @@ void main() {
     expect(accountKeyOfConfigKey(editorImageConfigKey), isNull);
     expect(accountKeyOfConfigKey(rasqPostConfigKey), isNull);
     expect(accountKeyOfConfigKey(''), isNull);
+  });
+
+  group('ボタン共通の属性 (契約 v0.14 §2.11、D-305)', () {
+    PluginAction action(Map<String, Object?> decl, {String source = 'store:t.p', List<String> permissions = const ['fow.widget']}) {
+      final m = SlotManifest.fromJson({'id': 't.p', 'name': 'P', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action', 'viewer.overlay', 'composer.media', 'composer.text'], 'permissions': permissions, 'actions': [decl]});
+      return PluginAction(plugin: SlotPlugin(manifest: m, source: source, runtime: FakeSlotRuntime(manifest: const {}, handler: (self, fn, args) => null)), decl: m.actions.single);
+    }
+
+    const reaction = ActionDescriptor(id: 'reaction', genreTag: 'Reaction', label: 'リアクション');
+    const reply = ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信');
+
+    test('placement: auto は宣言だけで置かれる、manual(tags 無しも)は構成に入っているときだけ', () {
+      final auto = action({'id': 'later', 'label': '後で', 'tags': ['Favorite']});
+      final manual = action({'id': 'pin', 'label': '留める', 'tags': ['Pin'], 'placement': 'manual'});
+      final noTags = action({'id': 'bare', 'label': '素', 'placement': 'manual'});
+      expect((auto.isManual, manual.isManual, noTags.isManual), (false, true, true));
+      final plugins = [auto, manual, noTags];
+      var m = mergePluginActions(config: const ActionBarConfig(), snsActions: [reaction, reply], plugins: plugins, settings: const SlotActionSettings());
+      expect(m.actions.map((a) => a.id), [reaction.id, reply.id, auto.id]); // manual は出ない
+      expect(m.config.lists.single.memberIds, [reaction.id, auto.id]); // Favorite → リアクションのバンドル
+      // (+) で足した(並びに入った)manual は出る。バンドルに入れたものも同じ。
+      m = mergePluginActions(config: ActionBarConfig(order: [reaction.id, manual.id], lists: [ActionListDef(id: 'l', name: 'L', memberIds: [reply.id, noTags.id])]), snsActions: [reaction, reply], plugins: plugins, settings: const SlotActionSettings());
+      expect(m.actions.map((a) => a.id), containsAll([manual.id, noTags.id]));
+      expect(m.config.order, contains(manual.id));
+    });
+
+    test('switch: オフのボタンは合成にも候補にも出ず、temp は評価しない。アカウントごとの有効 / 無効とは AND', () {
+      final a = action({'id': 'later', 'label': '後で', 'tags': ['Favorite'], 'auto': true}, permissions: ['fow.widget', 'auto_hook']);
+      final prefs = ActionButtonPrefs(switches: {a.id: false});
+      expect(prefs.switchOn(a.id), isFalse);
+      expect(a.effectiveAuto(const ActionButtonPrefs()), isTrue);
+      expect(a.effectiveAuto(prefs), isFalse);
+      expect(mergePluginActions(config: const ActionBarConfig(), snsActions: [reaction], plugins: [a], settings: const SlotActionSettings(), prefs: prefs).actions.map((x) => x.id), [reaction.id]);
+      expect(mergePluginActions(config: const ActionBarConfig(), snsActions: [reaction], plugins: [a], settings: SlotActionSettings(enabled: {a.id: false})).actions.map((x) => x.id), [reaction.id]);
+      // 保存の形: {"switch": {ActionKey: bool}, "auto": {ActionKey: bool}}。上書きの外し方(null)。
+      final j = ActionButtonPrefs.fromJson({'switch': {a.id: false}, 'auto': {a.id: false, 'junk': 'x'}});
+      expect((j.switchOn(a.id), j.autoOverride(a.id), j.autoOverride('junk')), (false, false, false));
+      expect(j.autoWith(a.id, null).containsKey(a.id), isFalse);
+    });
+
+    test('temp の既定: 面ごとのホスト既定 → 審査済みの宣言 → 利用者の上書き。post.action は auto_hook が要り、サイドロードは宣言を読まない', () {
+      final viewer = action({'id': 'toggle', 'slot': 'viewer.overlay', 'label': 'QR', 'tags': ['QR']});
+      final text = action({'id': 't', 'slot': 'composer.text', 'label': '校正', 'tags': ['Text']});
+      final filter = action({'id': 'glaze', 'slot': 'composer.media', 'label': 'Glaze', 'tags': ['Glaze'], 'output': 'filter'});
+      final edit = action({'id': 'edit', 'slot': 'composer.media', 'label': '編集', 'tags': ['Edit'], 'auto': true});
+      final post = action({'id': 'later', 'label': '後で', 'tags': ['Favorite']});
+      const none = ActionButtonPrefs();
+      expect([viewer, text, filter, post].map((a) => a.effectiveAuto(none)), [true, true, false, false]);
+      expect([viewer, text, filter, post].map((a) => a.hasTemp), [true, true, true, false]);
+      expect((edit.hasTemp, edit.effectiveAuto(none)), (false, false)); // replace / sticker は状態を持たない
+      // 宣言 auto(審査済み)→ 利用者の上書きが勝つ。
+      final declaredOff = action({'id': 'toggle', 'slot': 'viewer.overlay', 'label': 'QR', 'tags': ['QR'], 'auto': false});
+      expect(declaredOff.effectiveAuto(none), isFalse);
+      expect(declaredOff.effectiveAuto(ActionButtonPrefs(auto: {declaredOff.id: true})), isTrue);
+      // サイドロード(未審査)の宣言は読まない → ホスト既定。
+      expect(action({'id': 'toggle', 'slot': 'viewer.overlay', 'label': 'QR', 'tags': ['QR'], 'auto': false}, source: 'file:/x.wasm').effectiveAuto(none), isTrue);
+      // post.action の auto: true は auto_hook のある審査済みだけ。destructive / autoHookForbidden は不可。
+      final hook = action({'id': 'mark', 'label': '既読', 'tags': ['Read'], 'auto': true}, permissions: ['fow.widget', 'auto_hook']);
+      expect((hook.canAutoRun, hook.hasTemp, hook.effectiveAuto(none)), (true, true, true));
+      expect(action({'id': 'mark', 'label': '既読', 'tags': ['Read'], 'auto': true}).canAutoRun, isFalse);
+      expect(action({'id': 'mark', 'label': '既読', 'tags': ['Read'], 'auto': true}, source: 'file:/x.wasm', permissions: ['fow.widget', 'auto_hook']).canAutoRun, isFalse);
+      expect(action({'id': 'del', 'label': '消す', 'tags': ['Delete'], 'auto': true, 'destructive': true}, permissions: ['fow.widget', 'auto_hook']).canAutoRun, isFalse);
+      expect(action({'id': 'x', 'label': 'x', 'tags': ['X'], 'auto': true, 'autoHookForbidden': true}, permissions: ['fow.widget', 'auto_hook']).canAutoRun, isFalse);
+      // 利用者の上書きがあっても、自動実行できないボタンは false のまま。
+      expect(action({'id': 'later', 'label': '後で', 'tags': ['Favorite']}).effectiveAuto(ActionButtonPrefs(auto: {'slot:t.p:later': true})), isFalse);
+      expect(postTransformActionId('t.p'), 'slot:t.p:post.transform');
+    });
   });
 
   testWidgets('宣言だけでバンドルに入る → タップで post.action(post / account)→ message がトースト、composer.open でコンポーザー、スロット設定で無効化', (tester) async {
@@ -305,22 +373,110 @@ void main() {
     expect(find.byKey(ValueKey('actionbar.tile.$copyId')), findsNothing);
   });
 
-  testWidgets('設定 → SNSプラグイン → プラグインボタン (D-210): 宣言されたボタンのスイッチと束ねる閾値', (tester) async {
+  testWidgets('post.action の temp (契約 v0.14 §2.9): auto_hook のある審査済みの auto: true は、タイルごとに 1 回 auto: true で呼ばれる(トースト無し)。権限が無い / サイドロード / switch オフは動かない', (tester) async {
+    late FakeSlotRuntime hook;
+    late FakeSlotRuntime noHook;
+    late FakeSlotRuntime side;
+    // バーが溢れないよう、t.hook の「既読」以外は Favorite → リアクションのバンドルに入れる。
+    Map<String, Object?> manifest(String id, {required List<String> permissions, bool bundled = true}) => {
+          'id': id, 'name': id, 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action'], 'permissions': permissions,
+          'actions': [
+            {'id': 'mark', 'label': '既読', 'icon': 'done', 'tags': [bundled ? 'Favorite' : 'Read'], 'auto': true},
+            if (!bundled) {'id': 'copy', 'label': 'コピー', 'icon': 'content_copy', 'tags': ['Favorite']},
+          ],
+        };
+    Map<String, Object?> handler(String fn, Map<String, Object?> args) => {'result': {'done': true, 'message': '${args['actionId']} を実行しました'}};
+    fakes['store:t.hook'] = () => hook = FakeSlotRuntime(manifest: manifest('t.hook', permissions: ['fow.widget', 'auto_hook'], bundled: false), handler: (self, fn, args) => handler(fn, args));
+    fakes['store:t.nohook'] = () => noHook = FakeSlotRuntime(manifest: manifest('t.nohook', permissions: ['fow.widget']), handler: (self, fn, args) => handler(fn, args));
+    fakes['side'] = () => side = FakeSlotRuntime(manifest: manifest('t.side', permissions: ['fow.widget', 'auto_hook']), handler: (self, fn, args) => handler(fn, args));
+    final c = await pump(tester);
+    final slots = c.read(slotPluginsProvider.notifier);
+    await slots.register('store:t.hook', bytes: Uint8List.fromList('hook'.codeUnits));
+    await slots.register('store:t.nohook', bytes: Uint8List.fromList('nohook'.codeUnits));
+    await slots.register('fake:side', bytes: Uint8List.fromList('side'.codeUnits));
+    await tester.pumpAndSettle();
+    final markId = pluginActionId('t.hook', 'mark');
+    final prefs = c.read(actionButtonPrefsProvider);
+    final byId = {for (final a in c.read(pluginActionsProvider)) a.id: a};
+    expect((byId[markId]!.canAutoRun, byId[markId]!.hasTemp, byId[markId]!.effectiveAuto(prefs)), (true, true, true));
+    expect(byId[pluginActionId('t.hook', 'copy')]!.effectiveAuto(prefs), isFalse); // 既定 OFF
+    expect((byId[pluginActionId('t.nohook', 'mark')]!.canAutoRun, byId[pluginActionId('t.nohook', 'mark')]!.hasTemp), (false, false)); // auto_hook が無い
+    expect(byId[pluginActionId('t.side', 'mark')]!.canAutoRun, isFalse); // サイドロード
+    // TL の投稿 p1 のタイルが作られた → t.hook の mark だけが auto: true で 1 回。message はトーストに出ない。
+    Iterable<Map<String, Object?>> autoCalls(FakeSlotRuntime rt) => rt.calls.where((x) => x.$1 == 'post.action').map((x) => x.$2);
+    expect(autoCalls(hook).map((a) => (a['actionId'], a['auto'])), [('mark', true)]);
+    expect((autoCalls(hook).single['post'] as Map)['url'], 'https://example.test/notes/p1');
+    expect(autoCalls(noHook), isEmpty);
+    expect(autoCalls(side), isEmpty);
+    expect(find.text('mark を実行しました'), findsNothing);
+    // 描き直しても同じ投稿にはもう呼ばない。
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(autoCalls(hook).length, 1);
+    // 手で押したときは auto が付かず、message がトーストに出る(ボタン自体は今までどおり)。
+    await tester.tap(find.byTooltip('既読'));
+    await tester.pumpAndSettle();
+    expect(autoCalls(hook).last.containsKey('auto'), isFalse);
+    expect(find.text('mark を実行しました'), findsOneWidget);
+    // switch オフ(端末全体): ボタンが消え、temp も評価しない(false)。
+    await setActionSwitch(c.read(settingsAreaProvider(actionButtonPrefsArea).notifier), c.read(actionButtonPrefsProvider), markId, false);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('既読'), findsNothing);
+    expect(byId[markId]!.effectiveAuto(c.read(actionButtonPrefsProvider)), isFalse);
+  });
+
+  testWidgets('設定 → SNSプラグイン → プラグインボタン (D-210 → D-305): 面ごとの節に switch と「面を開いたとき自動でオン」、このアカウントの有効 / 無効と束ねる閾値', (tester) async {
     fakes['act'] = () => FakeSlotRuntime(
           manifest: {'id': 't.act', 'name': '投稿ボタン', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action'], 'permissions': ['fow.widget'], 'actions': [{'id': 'copy', 'label': '本文をコピー', 'icon': 'content_copy', 'tags': ['Copy']}]},
           handler: (self, fn, args) => {'result': {'done': true}},
         );
+    fakes['qr'] = () => FakeSlotRuntime(manifest: {'id': 't.qr', 'name': 'QR 検出', 'version': '0.1.0', 'kind': 'mediaViewer', 'slots': ['viewer.overlay'], 'permissions': ['fow.widget']}, handler: (self, fn, args) => null);
     final c = await pump(tester);
     await c.read(slotPluginsProvider.notifier).register('fake:act', bytes: Uint8List.fromList('act'.codeUnits));
+    await c.read(slotPluginsProvider.notifier).register('fake:qr', bytes: Uint8List.fromList('qr'.codeUnits));
     await tester.pumpAndSettle();
     final copyId = pluginActionId('t.act', 'copy');
+    final qrId = pluginActionId('t.qr', viewerToggleActionId);
     c.read(routerProvider).push('/settings/actionbar-plugins');
     await tester.pumpAndSettle();
     expect(find.text('プラグインボタン'), findsWidgets);
-    expect(find.byKey(const ValueKey('actionbar.slot.threshold')), findsOneWidget);
+    final list = find.byType(Scrollable).first;
+    // 一覧は長いので、先頭に戻してから目当ての行までスクロールする(下へしか進まないので)。
+    Future<void> show(Finder f) async {
+      tester.state<ScrollableState>(list).position.jumpTo(0);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(f, 120, scrollable: list);
+      await tester.pumpAndSettle();
+    }
+
+    // 面ごとの節。投稿タイルの「本文をコピー」は switch だけ(auto_hook が無いので temp の行は出ない)、全画面の QR は switch + temp。
+    for (final title in ['投稿タイル', '全画面', '加工画面', 'コンポーザー本文', '投稿加工(自動)']) {
+      await show(find.text(title));
+      expect(find.text(title), findsOneWidget);
+    }
+    await show(find.byKey(ValueKey('actionbar.switch.$copyId')));
+    expect(find.byKey(ValueKey('actionbar.auto.$copyId')), findsNothing);
+    expect(find.textContaining('単体で末尾'), findsOneWidget); // 配置の説明
+    await show(find.byKey(ValueKey('actionbar.auto.$qrId')));
+    expect(find.text('既定(オン)'), findsOneWidget); // ホスト既定
+    await tester.tap(find.byKey(ValueKey('actionbar.auto.$qrId')));
+    await tester.pumpAndSettle();
+    expect(c.read(actionButtonPrefsProvider).autoOverride(qrId), isFalse);
+    expect(find.textContaining('設定で上書き中'), findsOneWidget);
+    // このアカウント: 有効 / 無効(従来)と閾値。
+    await show(find.byKey(ValueKey('actionbar.slot.$copyId')));
     await tester.tap(find.byKey(ValueKey('actionbar.slot.$copyId')));
     await tester.pumpAndSettle();
     expect(c.read(slotActionSettingsProvider(fakeSession().account.key)).isEnabled(copyId), isFalse);
+    await show(find.byKey(const ValueKey('actionbar.slot.threshold')));
+    expect(find.byKey(const ValueKey('actionbar.slot.threshold')), findsOneWidget);
+    // switch(端末全体)を切る → prefs に書かれ、このアカウントの行は触れなくなる。
+    await show(find.byKey(ValueKey('actionbar.switch.$copyId')));
+    await tester.tap(find.byKey(ValueKey('actionbar.switch.$copyId')));
+    await tester.pumpAndSettle();
+    expect(c.read(actionButtonPrefsProvider).switchOn(copyId), isFalse);
+    await show(find.byKey(ValueKey('actionbar.slot.$copyId')));
+    expect(tester.widget<RasqSwitchListTile>(find.byKey(ValueKey('actionbar.slot.$copyId'))).enabled, isFalse);
   });
 
   testWidgets('バンドルのボタン (D-210): アイコンから出る FOW(バンドル名 + ボタン + 名称のタイル)→ タイル全体で実行', (tester) async {

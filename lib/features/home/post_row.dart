@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -23,6 +25,7 @@ import '../post/share_fow.dart';
 import '../plugins/slot_plugins.dart';
 import '../vc/astell_post_share.dart';
 import 'plugin_actions.dart';
+import 'post_action_auto.dart';
 import '../vc/astell_actions.dart';
 import '../vc/astell_links.dart';
 import '../settings/safety.dart';
@@ -123,9 +126,43 @@ class _PostRowState extends ConsumerState<PostRow> {
   @override
   void didUpdateWidget(PostRow old) {
     super.didUpdateWidget(old);
-    // 行が別の投稿に使い回されたら、↓ の切り替えは持ち越さない (D-282)。
-    if (old.post.key != widget.post.key) _actAs = null;
+    // 行が別の投稿に使い回されたら、↓ の切り替えは持ち越さない (D-282)。自動実行も新しい投稿について頼み直す。
+    if (old.post.key != widget.post.key) {
+      _actAs = null;
+      _autoPlugins = null;
+    }
   }
+
+  /// 自動実行を頼んだときのプラグイン一覧。同じ一覧・同じ投稿なら二度頼まない(投稿ごとに 1 回は [PostActionAutoRuns] が守る)。
+  /// プラグインが後から読み込まれる(起動直後の読み直し / ストアからの追加)と一覧が変わるので、build のたびに見る。
+  List<PluginAction>? _autoPlugins;
+
+  /// post.action の temp (契約 v0.14 §2.9、D-305): タイルが作られたら、自動実行できるボタンを投稿ごとに 1 回呼ぶ。
+  void _scheduleAutoPluginActions(List<PluginAction> plugins) {
+    if (identical(_autoPlugins, plugins)) return;
+    _autoPlugins = plugins;
+    if (isRasqPost(widget.post) || !hasAutoPostActions(plugins)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final acc = post.account;
+      runAutoPostActions(
+        ref,
+        postKey: post.key,
+        settingsKey: acc.key,
+        plugins: plugins,
+        payload: astellPostPayloadOf(post),
+        account: _pluginAccount(acc),
+        column: fowColumnOf(context),
+        onComposerOpen: _composerOpenFor(acc, fowColumnOf(context)),
+      );
+    });
+  }
+
+  static Map<String, Object?> _pluginAccount(AccountId acc) => {'sns': acc.kind.name, 'instance': acc.instance, 'handle': acc.handle};
+
+  /// プラグインが開くコンポーザーも、↓ で切り替えたアカウントで (D-278)。
+  void Function(String text, Uint8List? media, String? mime, String? name) _composerOpenFor(AccountId acc, int column) =>
+      (text, media, mime, name) => showComposer(ref, const ComposeNormal(), initialText: text, column: column, postAs: ref.read(sessionsProvider).value?.allSessions.where((s) => s.account.key == acc.key).firstOrNull, initialFiles: media == null ? null : [ComposerInitialFile(bytes: media, name: name ?? 'plugin.png', mimeType: mime)]);
 
   /// [_actAs] 中はそのコピーでアクションを実行する。
   PostActionHandler get _onAction => (_actAs != null && widget.actionsFor != null) ? widget.actionsFor!(post) : widget.onAction;
@@ -157,10 +194,9 @@ class _PostRowState extends ConsumerState<PostRow> {
       pa.plugin,
       actionId: pa.decl.id,
       post: astellPostPayloadOf(post),
-      account: {'sns': acc.kind.name, 'instance': acc.instance, 'handle': acc.handle},
+      account: _pluginAccount(acc),
       column: column,
-      // プラグインが開くコンポーザーも、↓ で切り替えたアカウントで (D-278)。
-      onComposerOpen: (text, media, mime, name) => showComposer(ref, const ComposeNormal(), initialText: text, column: column, postAs: ref.read(sessionsProvider).value?.allSessions.where((s) => s.account.key == acc.key).firstOrNull, initialFiles: media == null ? null : [ComposerInitialFile(bytes: media, name: name ?? 'plugin.png', mimeType: mime)]),
+      onComposerOpen: _composerOpenFor(acc, column),
     );
     if (message != null && message.isNotEmpty) messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
@@ -213,11 +249,14 @@ class _PostRowState extends ConsumerState<PostRow> {
     final ownSession = ref.watch(sessionForAccountProvider(post.account.key));
     final foreign = ownSession != null && ownSession.account != ref.watch(currentAccountProvider) && widget.actions.isNotEmpty;
     final snsActions = foreign ? ownSession.actions : widget.actions;
+    final plugins = ref.watch(pluginActionsProvider);
+    _scheduleAutoPluginActions(plugins);
     final merged = mergePluginActions(
       config: ref.watch(actionBarConfigProvider(post.account.key)),
       snsActions: snsActions,
-      plugins: ref.watch(pluginActionsProvider),
+      plugins: plugins,
       settings: ref.watch(slotActionSettingsProvider(post.account.key)),
+      prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
     final actionItems = [

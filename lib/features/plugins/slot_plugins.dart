@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
+import '../home/plugin_actions.dart' show actionButtonPrefsProvider, migrateViewerPluginSettings, postTransformActionId;
 import '../media/image_scale.dart';
 import '../settings/settings_dsl.dart';
 import '../store/rasqpkg.dart';
@@ -77,6 +78,10 @@ class SlotManifest {
                 slot: a['slot'] as String?,
                 accepts: [for (final t in (a['accepts'] as List? ?? const [])) if (t is String) t],
                 output: a['output'] as String?,
+                auto: a['auto'] is bool ? a['auto'] as bool : null,
+                placement: a['placement'] == SlotActionDecl.placementManual ? SlotActionDecl.placementManual : SlotActionDecl.placementAuto,
+                destructive: a['destructive'] == true,
+                autoHookForbidden: a['autoHookForbidden'] == true,
               ),
         ],
       );
@@ -107,8 +112,11 @@ class SlotManifest {
 }
 
 /// `post.action` のボタン宣言 (§2.9): タグ = 希望スロット(既存ボタンのタグと比べて束ねる)。
+/// ボタン共通の属性 (契約 v0.14 §2.11、D-305): [auto](temp = 面が作られた瞬間の初期状態)と [placement](自動配置か手動か)。
 class SlotActionDecl {
-  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const [], this.slot, this.accepts = const [], this.output});
+  const SlotActionDecl({required this.id, required this.label, this.icon, this.tags = const [], this.slot, this.accepts = const [], this.output, this.auto, this.placement = placementAuto, this.destructive = false, this.autoHookForbidden = false});
+  static const placementAuto = 'auto';
+  static const placementManual = 'manual';
   final String id;
   final String label;
   final String? icon;
@@ -131,6 +139,21 @@ class SlotActionDecl {
   bool get isFilterOutput => output == 'filter';
 
   bool get isPostAction => slot == null || slot == SlotIds.postAction;
+
+  /// temp の宣言(契約 v0.14): 面が作られた瞬間にオンで始めるか。null = 面ごとのホスト既定
+  /// (viewer.overlay: true、composer.media の filter: false、composer.text: true、post.action: false)。
+  /// 審査済み(ストアから入れた)プラグインの宣言だけ読む。
+  final bool? auto;
+
+  /// placement の宣言(契約 v0.14): `auto` = 宣言だけで自動配置、`manual` = 利用者が (+) で足すまで出ない。
+  final String placement;
+
+  /// `destructive` / `autoHookForbidden`(契約 v0.14): どちらかが立っていれば post.action の自動実行(temp)はしない。
+  final bool destructive;
+  final bool autoHookForbidden;
+
+  /// 手動配置か: `placement: "manual"`、または tags を省いた post.action のボタン(契約 v0.14 §2.9)。
+  bool get isManual => placement == placementManual || (isPostAction && tags.isEmpty);
 }
 
 /// 添付(MIME + ファイル名)が宣言の `accepts` に当てはまるか(契約 v0.10)。空の宣言は `image/*`。
@@ -215,6 +238,10 @@ class SlotPlugin {
 
   String get id => manifest.id;
   bool has(String slot) => manifest.slots.contains(slot);
+
+  /// 審査済みか(ストアからインストールしたもの、D-168)。サイドロード(ファイル / 同梱アセット)は未審査として扱い、
+  /// 宣言の `auto`(temp)を読まない(契約 v0.14 §2.11)。
+  bool get isReviewed => source.startsWith('store:');
   Future<Map<String, dynamic>> call(String fn, Map<String, Object?> args) => runtime.invoke(fn, args);
 
   /// `call` の `value`(失敗は null)。
@@ -321,6 +348,9 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   }
 
   Future<void> _restore() async {
+    // 全画面トグルの保存の移行 (契約 v0.14 §2.4、D-305): プラグインを読み直す前に 1 回。
+    await migrateViewerPluginSettings(ref);
+    if (_disposed) return;
     try {
       final raw = await ref.read(sessionStorageProvider).read(slotPluginsStorageKey);
       if (raw == null) return;
@@ -854,9 +884,12 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   }
 
   /// 投稿加工 (CONTRACT §2.5): 登録済みプラグインを順に通す。
+  /// switch(契約 v0.14 §2.11、D-305)で切ったもの(ActionKey `slot:<pluginId>:post.transform`)は通さない。
   Future<List<Post>> transform(List<Post> posts) async {
     var out = posts;
+    final prefs = ref.read(actionButtonPrefsProvider);
     for (final p in forSlot(SlotIds.postTransform)) {
+      if (!prefs.switchOn(postTransformActionId(p.id))) continue;
       final v = await p.value('post.transform', {'posts': [for (final x in out) SnsWire.post(x)]});
       final m = v?['posts'];
       if (m is! Map) continue;
@@ -924,12 +957,14 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   /// 投稿のアクションボタン (CONTRACT §2.9、D-176): ユーザーが押した。戻りは `result.message`(トースト用)。
   /// `composer.open` は [onComposerOpen] へ(呼び出し元の投稿の面から開く)。
-  Future<String?> postAction(SlotPlugin plugin, {required String actionId, required Map<String, Object?> post, required Map<String, Object?> account, required void Function(String text, Uint8List? media, String? mime, String? name) onComposerOpen, String? fowOwner, int column = 0}) async {
+  /// [auto] = temp の自動実行(契約 v0.14 §2.9): タイルが作られたときに 1 回、`auto: true` を添えて呼ぶ。`message` は返さない(トーストに出さない)。
+  Future<String?> postAction(SlotPlugin plugin, {required String actionId, required Map<String, Object?> post, required Map<String, Object?> account, required void Function(String text, Uint8List? media, String? mime, String? name) onComposerOpen, String? fowOwner, int column = 0, bool auto = false}) async {
     _setFowContext(plugin, fowOwner, column);
     final token = 'action-${DateTime.now().microsecondsSinceEpoch}';
     _composerOpen[token] = onComposerOpen;
     try {
-      final v = await plugin.value('post.action', {'token': token, 'actionId': actionId, 'post': post, 'account': account});
+      final v = await plugin.value('post.action', {'token': token, 'actionId': actionId, 'post': post, 'account': account, if (auto) 'auto': true});
+      if (auto) return null;
       final r = (v?['result'] as Map?)?.cast<String, Object?>();
       return r?['message'] as String?;
     } finally {

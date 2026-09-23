@@ -218,18 +218,28 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     final i = _page.value;
     final m = post.media[i];
     final playing = m.type == MediaType.video && (_sessions[i]?.playing ?? false);
-    final enabled = {for (final p in ref.watch(viewerOverlayPluginsProvider)) p.id};
     final merged = mergePluginActions(
       config: ref.watch(actionBarConfigProvider(ActionBarConfigStore.viewerKey(post.account.key))),
       snsActions: actions,
       plugins: [...ref.watch(pluginActionsProvider), ...viewerPlugins],
       settings: ref.watch(slotActionSettingsProvider(post.account.key)),
+      prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
     Future<void> perform(ActionDescriptor a) => isViewerToggleActionId(a.id) ? _toggleViewerPlugin(viewerTogglePluginId(a.id)) : notifier.perform(post, a).catchError((_) {});
     Widget toggle(ActionDescriptor a) {
       final id = viewerTogglePluginId(a.id);
-      return ViewerPluginToggle(pluginId: id, label: a.label, iconName: a.icon, enabled: enabled.contains(id), status: _overlays.statusOf(i, id), onPressed: () => perform(a));
+      final action = viewerPlugins.where((p) => p.id == a.id).firstOrNull;
+      return ViewerPluginToggle(
+        pluginId: id,
+        label: a.label,
+        iconName: a.icon,
+        // ON / OFF はこの全画面限り(契約 v0.14 temp)。長押しで「次からも自動でオン / オフ」。
+        enabled: _overlays.isOn(id),
+        status: _overlays.statusOf(i, id),
+        onPressed: () => perform(a),
+        onLongPress: action == null ? null : (anchor) => showActionTempMenu(ref, anchor: anchor, action: action),
+      );
     }
     return [
       for (final e in entries)
@@ -260,7 +270,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     ];
   }
 
-  /// 全画面表示プラグインの ON / OFF (D-207 → D-214 → D-246): 状態は `slots.viewer` に保存。失敗中はやり直し。
+  /// 全画面表示プラグインの ON / OFF (D-207 → D-214 → D-246 → D-305): この全画面限り(保存しない)。失敗中はやり直し。
   Future<void> _toggleViewerPlugin(String pluginId) async {
     final i = _page.value;
     final m = widget.post.media[i];
@@ -451,6 +461,7 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
       snsActions: actions,
       plugins: ref.watch(pluginActionsProvider),
       settings: ref.watch(slotActionSettingsProvider(post.account.key)),
+      prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
     return ValueListenableBuilder<int>(

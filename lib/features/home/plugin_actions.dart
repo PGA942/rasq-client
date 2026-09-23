@@ -1,7 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show Rect;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../app/providers.dart';
 import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
 import 'action_bar_config.dart';
@@ -15,11 +20,130 @@ import 'action_bar_config.dart';
 ///   バンドルを自動生成)。届かなければ単体で末尾。
 /// - アカウントごとのスロット設定([SlotActionSettings]): ボタンごとの有効 / 無効と閾値。
 ///   「アクションリストの編集」の「プラグインボタン」節から。
+/// - ボタン共通の 3 属性 (契約 v0.14 §2.11、D-305)。どれも ActionKey 単位で直交する:
+///   - **switch** = 端末全体の主電源([ActionButtonPrefs.switchOn]、設定エリア `slots.global` の `switch`)。オフなら
+///     全アカウント・全面で出ず、自動でも動かない(temp も評価しない)。アカウントごとの有効 / 無効とは AND。
+///   - **temp** = 面が作られた瞬間の初期状態([PluginAction.effectiveAuto])。宣言 `actions[].auto` → 利用者の上書き
+///     (`slots.global` の `auto`)。面の中で切り替えた値はその面限りで永続しない。
+///   - **placement** = 宣言だけで自動配置されるか([SlotActionDecl.isManual])。manual は利用者が (+) で足すまで出ない。
 
 /// ホスト側の id: `slot:<pluginId>:<actionId>`。
 String pluginActionId(String pluginId, String actionId) => 'slot:$pluginId:$actionId';
 
 bool isPluginActionId(String id) => id.startsWith('slot:');
+
+/// `slot:<pluginId>:<actionId>` → pluginId(プラグインボタンでなければ null)。
+String? pluginIdOfActionId(String id) {
+  if (!isPluginActionId(id)) return null;
+  final rest = id.substring('slot:'.length);
+  final i = rest.indexOf(':');
+  return i < 0 ? rest : rest.substring(0, i);
+}
+
+// ── ボタン共通の設定 (契約 v0.14 §2.11、D-305) ─────────────────────────
+
+/// 端末全体のボタン設定の置き場(設定エリア、保存キー `slots.global.v1`): `{"switch": {ActionKey: bool}, "auto": {ActionKey: bool}}`。
+const actionButtonPrefsArea = 'slots.global';
+
+/// switch / temp の上書き。未指定 = switch オン、temp は宣言 → ホスト既定。
+@immutable
+class ActionButtonPrefs {
+  const ActionButtonPrefs({this.switches = const {}, this.auto = const {}});
+  static const switchKey = 'switch';
+  static const autoKey = 'auto';
+
+  /// ActionKey → 主電源。未指定はオン。
+  final Map<String, bool> switches;
+
+  /// ActionKey → 利用者が決めた初期状態(宣言とホスト既定に勝つ)。未指定は無し。
+  final Map<String, bool> auto;
+
+  bool switchOn(String id) => switches[id] ?? true;
+  bool? autoOverride(String id) => auto[id];
+
+  Map<String, bool> switchesWith(String id, bool on) => {...switches, id: on};
+
+  /// null = 上書きを外す(宣言 / ホスト既定に戻す)。
+  Map<String, bool> autoWith(String id, bool? on) => on == null ? ({...auto}..remove(id)) : {...auto, id: on};
+
+  static Map<String, bool> _bools(Object? v) => {for (final e in ((v as Map?) ?? const {}).entries) '${e.key}': e.value == true};
+
+  factory ActionButtonPrefs.fromJson(Map<String, Object?> j) => ActionButtonPrefs(switches: _bools(j[switchKey]), auto: _bools(j[autoKey]));
+}
+
+final actionButtonPrefsProvider = Provider<ActionButtonPrefs>((ref) {
+  final v = ref.watch(settingsAreaProvider(actionButtonPrefsArea)).value;
+  return v == null ? const ActionButtonPrefs() : ActionButtonPrefs.fromJson(v);
+});
+
+/// temp の上書きを書く(設定画面と、面の中の長押し「次からも自動でオン / オフ」から)。null = 宣言 / ホスト既定に戻す。
+Future<void> setActionAuto(SettingsAreaStore store, ActionButtonPrefs prefs, String id, bool? on) => store.set(ActionButtonPrefs.autoKey, prefs.autoWith(id, on));
+
+/// switch を書く(設定画面から)。
+Future<void> setActionSwitch(SettingsAreaStore store, ActionButtonPrefs prefs, String id, bool on) => store.set(ActionButtonPrefs.switchKey, prefs.switchesWith(id, on));
+
+/// 面の中の長押し(契約 v0.14 §2.11): 「次からも自動でオン / オフ」のドロップダウン。今の面の状態は変えない(temp は次に面を作るときの初期状態)。
+Future<void> showActionTempMenu(WidgetRef ref, {required Rect anchor, required PluginAction action, String? ownerId}) async {
+  final prefs = ref.read(actionButtonPrefsProvider);
+  final current = action.effectiveAuto(prefs);
+  final pick = await ref.read(overlayManagerProvider).showDropdown<String>(
+    id: 'actionbar.temp.menu',
+    ownerId: ownerId,
+    anchor: anchor,
+    dense: true,
+    items: [
+      RasqDropdownItem('次からも自動でオン', 'on', checked: current),
+      RasqDropdownItem('次からも自動でオフ', 'off', checked: !current),
+      if (prefs.autoOverride(action.id) != null) const RasqDropdownItem('プラグインの既定に戻す', 'reset'),
+    ],
+  );
+  if (pick == null) return;
+  await setActionAuto(ref.read(settingsAreaProvider(actionButtonPrefsArea).notifier), prefs, action.id, pick == 'reset' ? null : pick == 'on');
+}
+
+/// v0.13 までの全画面トグルの保存(設定エリア `slots.viewer`、`enabled.<pluginId>`)を、1 回だけ `slots.global` の `auto`
+/// (ActionKey `slot:<pluginId>:viewer.overlay`)へ写して捨てる(契約 v0.14 §2.4)。次に開いたときの初期状態が今までと同じになる。
+/// 既に `auto` に値があるキーは上書きしない。起動時のプラグインの読み直し([SlotPluginsNotifier])から呼ぶ。
+const legacyViewerPluginsStorageKey = 'slots.viewer.v1';
+
+Future<void> migrateViewerPluginSettings(Ref ref) async {
+  final storage = ref.read(sessionStorageProvider);
+  final String? raw;
+  try {
+    raw = await storage.read(legacyViewerPluginsStorageKey);
+  } catch (_) {
+    return;
+  }
+  if (raw == null) return;
+  try {
+    final legacy = (jsonDecode(raw) as Map).cast<String, Object?>();
+    final store = ref.read(settingsAreaProvider(actionButtonPrefsArea).notifier);
+    final prefs = ActionButtonPrefs.fromJson(await ref.read(settingsAreaProvider(actionButtonPrefsArea).future));
+    final auto = {...prefs.auto};
+    const prefix = 'enabled.';
+    for (final e in legacy.entries) {
+      if (!e.key.startsWith(prefix) || e.value is! bool) continue;
+      auto.putIfAbsent(pluginActionId(e.key.substring(prefix.length), viewerToggleActionId), () => e.value == true);
+    }
+    if (auto.length != prefs.auto.length) await store.set(ActionButtonPrefs.autoKey, auto);
+  } catch (e) {
+    debugPrint('viewer plugin settings migration: $e');
+  }
+  try {
+    await storage.delete(legacyViewerPluginsStorageKey);
+  } catch (_) {}
+}
+
+/// 面ごとのホスト既定(宣言も設定も無いときの temp。今までの挙動と同じ)。
+bool hostDefaultAuto(SlotActionDecl decl) => switch (decl.slot) {
+      SlotIds.viewerOverlay => true,
+      SlotIds.composerText => true,
+      SlotIds.composerMedia => false,
+      _ => false,
+    };
+
+/// `post.transform`(自動、ボタン無し)の ActionKey `slot:<pluginId>:post.transform`。switch だけを持つ(オフ = 端末全体で通さない)。
+String postTransformActionId(String pluginId) => pluginActionId(pluginId, SlotIds.postTransform);
 
 /// 登録済みプラグインの `post.action` 宣言(全アカウント共通の候補)。
 class PluginAction {
@@ -27,6 +151,35 @@ class PluginAction {
   final SlotPlugin plugin;
   final SlotActionDecl decl;
   String get id => pluginActionId(plugin.id, decl.id);
+
+  /// 手動配置か(契約 v0.14 placement): 構成に入っていなければ自動では置かない。
+  bool get isManual => decl.isManual;
+
+  /// この面で temp(初期状態)を持つボタンか。post.action は自動実行できるもの([canAutoRun])だけ、
+  /// composer.media はカスタムフィルター(ON / OFF のボタン)だけ、viewer.overlay / composer.text は常に。
+  bool get hasTemp => switch (decl.slot) {
+        SlotIds.viewerOverlay || SlotIds.composerText => true,
+        SlotIds.composerMedia => decl.isFilterOutput,
+        _ => decl.isPostAction && canAutoRun,
+      };
+
+  /// post.action の temp = タイルごとに 1 回の自動実行(契約 v0.14 §2.9、旧 auto_hook の置き換え)。
+  /// 審査済みで `auto_hook` 権限があり、`destructive` / `autoHookForbidden` でないボタンだけ。
+  bool get canAutoRun => decl.isPostAction && plugin.isReviewed && plugin.manifest.permissions.contains('auto_hook') && !decl.destructive && !decl.autoHookForbidden;
+
+  /// 宣言の `auto`(審査済みだけ読む)→ 無ければホスト既定。temp を持たないボタン([hasTemp]: 自動実行できない post.action、
+  /// filter でない composer.media)は宣言があっても常に false。
+  bool get declaredAuto {
+    if (!hasTemp) return false;
+    final a = decl.auto;
+    return plugin.isReviewed && a != null ? a : hostDefaultAuto(decl);
+  }
+
+  /// 面が作られた瞬間の初期状態(temp): switch オフ → false(評価しない)、利用者の上書き → 宣言 → ホスト既定。
+  bool effectiveAuto(ActionButtonPrefs prefs) {
+    if (!prefs.switchOn(id) || !hasTemp) return false;
+    return prefs.autoOverride(id) ?? declaredAuto;
+  }
 
   /// アクションバー用の記述子(genreTag = 先頭のタグ)。
   ActionDescriptor get descriptor => ActionDescriptor(
@@ -75,8 +228,29 @@ SlotActionDecl viewerToggleDecl(SlotManifest m) {
     icon: declared?.icon ?? viewerToggleDefaultIcon,
     tags: {'全画面表示', ...?declared?.tags}.toList(),
     slot: SlotIds.viewerOverlay,
+    auto: declared?.auto,
+    placement: declared?.placement ?? SlotActionDecl.placementAuto,
   );
 }
+
+// ── コンポーザー本文の ON / OFF チップ (契約 v0.14 §2.3、D-305) ──────────
+
+/// `composer.text` のプラグインごとの ON / OFF。ActionKey は `slot:<pluginId>:composer.text`(宣言の `id` に依らない)。
+/// 見た目は `actions` の `slot: "composer.text"` の項目(label / icon)、無ければプラグイン名 + 既定のアイコン。
+SlotActionDecl composerTextDecl(SlotManifest m) {
+  final declared = m.actions.where((a) => a.slot == SlotIds.composerText).firstOrNull;
+  return SlotActionDecl(id: SlotIds.composerText, label: declared?.label ?? m.name, icon: declared?.icon ?? viewerToggleDefaultIcon, tags: declared?.tags ?? const [], slot: SlotIds.composerText, auto: declared?.auto);
+}
+
+final composerTextPluginActionsProvider = Provider<List<PluginAction>>((ref) => [
+      for (final p in ref.watch(slotPluginsForProvider(SlotIds.composerText))) PluginAction(plugin: p, decl: composerTextDecl(p.manifest)),
+    ]);
+
+/// switch がオンの `composer.text` プラグイン(コンポーザーが `text.changed` を送りうる相手。面の中の ON / OFF は別)。
+final composerTextPluginsProvider = Provider<List<PluginAction>>((ref) {
+  final prefs = ref.watch(actionButtonPrefsProvider);
+  return [for (final a in ref.watch(composerTextPluginActionsProvider)) if (prefs.switchOn(a.id)) a];
+});
 
 // ── 加工画面の下段バー (D-249、契約 v0.10) ─────────────────────────────
 
@@ -151,15 +325,20 @@ final mediaPluginActionsProvider = Provider<List<PluginAction>>((ref) => [
 
 /// 構成キーに応じたプラグインボタン: 全画面バー(`viewer:` の構成)には全画面表示プラグインのトグルも含む。
 /// 加工画面(`editor:` の構成)は `composer.media` の宣言だけ(その種類の添付に出るもの)。
+/// switch(契約 v0.14)を切ったボタンは含めない(バーにも (+) の検索にも出ない。戻すのは設定画面)。
 final pluginActionsForProvider = Provider.family<List<PluginAction>, String>((ref, configKey) {
+  final prefs = ref.watch(actionButtonPrefsProvider);
+  final List<PluginAction> all;
   if (isEditorConfigKey(configKey)) {
     final mime = configKey == editorImageConfigKey ? 'image/*' : 'video/*';
-    return [for (final a in ref.watch(mediaPluginActionsProvider)) if (mediaAcceptsKind(a.decl.accepts, mime)) a];
+    all = [for (final a in ref.watch(mediaPluginActionsProvider)) if (mediaAcceptsKind(a.decl.accepts, mime)) a];
+  } else {
+    all = [
+      ...ref.watch(pluginActionsProvider),
+      if (configKey.startsWith('viewer:')) ...ref.watch(viewerPluginActionsProvider),
+    ];
   }
-  return [
-    ...ref.watch(pluginActionsProvider),
-    if (configKey.startsWith('viewer:')) ...ref.watch(viewerPluginActionsProvider),
-  ];
+  return [for (final a in all) if (prefs.switchOn(a.id)) a];
 });
 
 /// バーの種類(`image/*` / `video/*`)に出うる宣言か: 拡張子だけの宣言はどちらにも出うる(実際の添付で絞る)。
@@ -256,13 +435,18 @@ List<String> actionTags(ActionDescriptor a) => [a.genreTag, a.id, a.label, ...(_
 ///
 /// プラグインボタンは既存ボタンのバンドルへ: 既存ボタンがユーザーのアクションリストにあれば
 /// その末尾に、無ければ `auto:<既存 id>` のリスト(既存 + プラグイン)を作って既存ボタンの位置に置く。
+/// 契約 v0.14 (D-305): switch を切ったボタンは出さない(アカウントごとの有効 / 無効と AND)。
+/// `placement: "manual"`(tags 無しの post.action を含む)のボタンは、構成(並び / リスト)に入っているときだけ出す
+/// = 利用者が (+) の検索で足すまで自動では置かない。
 ({List<ActionDescriptor> actions, ActionBarConfig config}) mergePluginActions({
   required ActionBarConfig config,
   required List<ActionDescriptor> snsActions,
   required List<PluginAction> plugins,
   required SlotActionSettings settings,
+  ActionButtonPrefs prefs = const ActionButtonPrefs(),
 }) {
-  final enabled = [for (final p in plugins) if (settings.isEnabled(p.id)) p];
+  bool placed(PluginAction p) => config.order.contains(p.id) || config.lists.any((l) => l.memberIds.contains(p.id));
+  final enabled = [for (final p in plugins) if (settings.isEnabled(p.id) && prefs.switchOn(p.id) && (!p.isManual || placed(p))) p];
   if (enabled.isEmpty) return (actions: snsActions, config: config);
   final all = [...snsActions, for (final p in enabled) p.descriptor];
   final lists = [for (final l in config.lists) l];

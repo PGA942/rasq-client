@@ -14,9 +14,9 @@ import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/features/nodeprog/timeline_config_screen.dart';
 import 'package:rasq_client/features/nodeprog/tl_components.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart' show settingsAreaProvider;
+import 'package:rasq_client/features/home/plugin_actions.dart';
 import 'package:rasq_client/features/home/timeline_providers.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
-import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -76,6 +76,28 @@ void main() {
   }
 
   setUp(() => fakes = {});
+
+  test('マニフェストの actions (契約 v0.14 §2.11): auto / placement / destructive / autoHookForbidden を読む、tags 無しの post.action は manual', () {
+    final m = SlotManifest.fromJson({
+      'id': 't.d', 'name': 'D', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action', 'composer.media'],
+      'actions': [
+        {'id': 'a', 'label': 'A', 'tags': ['X']},
+        {'id': 'b', 'label': 'B', 'tags': ['X'], 'auto': true, 'placement': 'manual', 'destructive': true, 'autoHookForbidden': true},
+        {'id': 'c', 'label': 'C', 'placement': 'manual'},
+        {'id': 'd', 'label': 'D', 'tags': ['X'], 'auto': 'yes', 'placement': 'pinned'}, // 形の違う値は既定に
+        {'id': 'e', 'slot': 'composer.media', 'label': 'E', 'output': 'filter', 'auto': false},
+      ],
+    });
+    final byId = {for (final a in m.actions) a.id: a};
+    expect((byId['a']!.auto, byId['a']!.placement, byId['a']!.isManual, byId['a']!.destructive, byId['a']!.autoHookForbidden), (null, 'auto', false, false, false));
+    expect((byId['b']!.auto, byId['b']!.placement, byId['b']!.isManual, byId['b']!.destructive, byId['b']!.autoHookForbidden), (true, 'manual', true, true, true));
+    expect(byId['c']!.tags, isEmpty);
+    expect(byId['c']!.isManual, isTrue);
+    expect((byId['d']!.auto, byId['d']!.placement, byId['d']!.isManual), (null, 'auto', false));
+    expect((byId['e']!.auto, byId['e']!.isFilterOutput, byId['e']!.isManual), (false, true, false)); // composer.media は tags 無しでも manual ではない
+    expect(SlotPlugin(manifest: m, source: 'store:t.d', runtime: FakeSlotRuntime(manifest: const {}, handler: (self, fn, args) => null)).isReviewed, isTrue);
+    expect(SlotPlugin(manifest: m, source: 'file:/x.wasm', runtime: FakeSlotRuntime(manifest: const {}, handler: (self, fn, args) => null)).isReviewed, isFalse);
+  });
 
   testWidgets('登録と永続化: マニフェストの slots で振り分け、パスは端末に残り、解除で消える', (tester) async {
     fakes['a'] = () => FakeSlotRuntime(manifest: manifest('t.a', ['post.transform', 'trend.suggest']), handler: (_, fn, args) => null);
@@ -147,7 +169,7 @@ void main() {
     expect(rt.calls.where((x) => x.$1 == 'astell.event' && x.$2['type'] == 'closed'), isNotEmpty);
   });
 
-  testWidgets('コンポーザー (§2.2/§2.3): 添付の「プラグインで加工」→ media.edit → composer.media.replace、本文の # → text.changed(trigger)→ composer.text.replace', (tester) async {
+  testWidgets('コンポーザー (§2.2/§2.3): 添付の「プラグインで加工」→ media.edit → composer.media.replace、本文の # → text.changed(trigger)→ composer.text.replace、ON / OFF チップ (v0.14)', (tester) async {
     late FakeSlotRuntime media;
     late FakeSlotRuntime text;
     fakes['media'] = () => media = FakeSlotRuntime(
@@ -172,12 +194,25 @@ void main() {
             return fn == 'text.changed' ? {} : null;
           },
         );
+    // 審査済み(ストアから)で auto: false を宣言 → チップは OFF で始まり、text.changed は来ない (契約 v0.14 §2.3)。
+    late FakeSlotRuntime off;
+    fakes['store:t.off'] = () => off = FakeSlotRuntime(
+          manifest: {...manifest('t.off', ['composer.text']), 'actions': [{'id': 'fix', 'slot': 'composer.text', 'label': '校正', 'icon': 'spellcheck', 'tags': ['Text'], 'auto': false}]},
+          handler: (self, fn, args) => fn == 'text.changed' ? {} : null,
+        );
     final c = await pump(tester);
     await register(c, 'media');
     await register(c, 'text');
+    await c.read(slotPluginsProvider.notifier).register('store:t.off', bytes: Uint8List.fromList('off'.codeUnits));
     // コンポーザーを開く(ホーム右下の +)。
     await tester.tap(find.byTooltip('投稿'));
     await tester.pumpAndSettle();
+    // 入力欄の上の ON / OFF チップ: 宣言が無い t.text は名前 + 既定 ON、t.off は宣言の label で OFF。
+    final textChip = find.byKey(const ValueKey('composer.textPlugin.t.text'));
+    final offChip = find.byKey(const ValueKey('composer.textPlugin.t.off'));
+    expect(tester.widget<FilterChip>(textChip).selected, isTrue);
+    expect(tester.widget<FilterChip>(offChip).selected, isFalse);
+    expect(find.text('校正'), findsOneWidget);
     final field = find.byType(TextField).first;
     await tester.enterText(field, 'こんにちは #uch');
     await tester.pump(const Duration(milliseconds: 300));
@@ -186,6 +221,23 @@ void main() {
     expect(changed.$2['trigger'], '#uch');
     expect(changed.$2['text'], 'こんにちは #uch');
     expect(tester.widget<TextField>(field).controller!.text, 'こんにちは #打上会 ');
+    expect(off.calls.where((x) => x.$1 == 'text.changed'), isEmpty);
+    // チップで t.text を OFF、t.off を ON(このコンポーザー限り。保存しない)→ 送る相手が入れ替わる。
+    await tester.tap(textChip);
+    await tester.tap(offChip);
+    await tester.pumpAndSettle();
+    text.calls.clear();
+    await tester.enterText(field, 'こんにちは #打上会 あ');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    expect(text.calls.where((x) => x.$1 == 'text.changed'), isEmpty);
+    expect(off.calls.where((x) => x.$1 == 'text.changed').last.$2['text'], 'こんにちは #打上会 あ');
+    expect(c.read(actionButtonPrefsProvider).autoOverride(pluginActionId('t.off', SlotIds.composerText)), isNull); // 設定には書かれない
+    // switch オフ(端末全体): チップが消え、送る相手からも外れる。
+    await setActionSwitch(c.read(settingsAreaProvider(actionButtonPrefsArea).notifier), c.read(actionButtonPrefsProvider), pluginActionId('t.off', SlotIds.composerText), false);
+    await tester.pumpAndSettle();
+    expect(offChip, findsNothing);
+    expect(c.read(composerTextPluginsProvider).map((a) => a.plugin.id), ['t.text']);
     // 添付: 画像を足すのはピッカー経由なので、ここでは加工の口(media.edit → 即差し替え)を直接通す。
     var replaced = <Object?>[];
     final session = await c.read(slotPluginsProvider.notifier).mediaEditorOpen(c.read(slotPluginsForProvider(SlotIds.composerMedia)).single, name: 'a.png', mimeType: 'image/png', bytes: Uint8List.fromList([9, 9]), onPreview: (_, _, _, _) {}, onReplace: (b, m, n) => replaced = [b, m, n]);
