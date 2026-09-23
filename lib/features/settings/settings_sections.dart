@@ -23,7 +23,7 @@ class SettingsSection {
 const settingsSections = <String, SettingsSection>{
   'plugins': SettingsSection('プラグインの構成', [
     SettingsRow('RASQプラグインプロキシの購読', subtitle: '未購読(第二期)', route: '/settings/dsl/plugins.proxy'),
-    SettingsRow('投稿にプラグインオートメーションを配置', subtitle: '投稿のアクションバーに出すプラグインボタン', route: Routes.actionBarPlugins),
+    SettingsRow('投稿にプラグインオートメーションを配置', subtitle: '投稿のアクションバーに出すプラグインボタン(主電源 / 自動でオン / 配置)', route: Routes.actionBarPlugins),
     SettingsRow('カスタムトレンドの配信', route: '/settings/dsl/plugins.trend'),
     SettingsRow('投稿プラグイン', route: '/settings/dsl/plugins.composer'),
     SettingsRow('カスタムタイムラインを配置', route: '/settings/dsl/plugins.timeline'),
@@ -38,7 +38,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('プライバシーとセーフモード', route: '/settings/dsl/sns.safety'),
     SettingsRow('リスト', route: '/lists'),
     SettingsRow('ミュート/ブロック', route: '/settings/mute-block'),
-    SettingsRow('プラグインボタン', subtitle: '宣言されたボタンの有効 / 無効と束ねる閾値', route: Routes.actionBarPlugins),
+    SettingsRow('プラグインボタン', subtitle: '面ごとの主電源と「開いたとき自動でオン」、このアカウントの有効 / 無効と束ねる閾値', route: Routes.actionBarPlugins),
     SettingsRow('絵文字の検索', subtitle: '意味の近い絵文字も探す(端末内のモデル)', route: '/settings/dsl/plugins.emoji'),
     SettingsRow('リアクションの予測', subtitle: 'だれも付けていない投稿でも予測するか', route: '/settings/dsl/plugins.reaction'),
     SettingsRow('共有 / リノートに使うアカウント', subtitle: '複数のアカウントに見えている投稿を、どのアカウントで扱うか', route: '/settings/dsl/plugins.accountPick'),

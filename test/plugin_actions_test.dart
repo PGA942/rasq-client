@@ -15,6 +15,7 @@ import 'package:rasq_client/features/home/plugin_actions.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -357,22 +358,58 @@ void main() {
     expect(byId[markId]!.effectiveAuto(c.read(actionButtonPrefsProvider)), isFalse);
   });
 
-  testWidgets('設定 → SNSプラグイン → プラグインボタン (D-210): 宣言されたボタンのスイッチと束ねる閾値', (tester) async {
+  testWidgets('設定 → SNSプラグイン → プラグインボタン (D-210 → D-305): 面ごとの節に switch と「面を開いたとき自動でオン」、このアカウントの有効 / 無効と束ねる閾値', (tester) async {
     fakes['act'] = () => FakeSlotRuntime(
           manifest: {'id': 't.act', 'name': '投稿ボタン', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action'], 'permissions': ['fow.widget'], 'actions': [{'id': 'copy', 'label': '本文をコピー', 'icon': 'content_copy', 'tags': ['Copy']}]},
           handler: (self, fn, args) => {'result': {'done': true}},
         );
+    fakes['qr'] = () => FakeSlotRuntime(manifest: {'id': 't.qr', 'name': 'QR 検出', 'version': '0.1.0', 'kind': 'mediaViewer', 'slots': ['viewer.overlay'], 'permissions': ['fow.widget']}, handler: (self, fn, args) => null);
     final c = await pump(tester);
     await c.read(slotPluginsProvider.notifier).register('fake:act', bytes: Uint8List.fromList('act'.codeUnits));
+    await c.read(slotPluginsProvider.notifier).register('fake:qr', bytes: Uint8List.fromList('qr'.codeUnits));
     await tester.pumpAndSettle();
     final copyId = pluginActionId('t.act', 'copy');
+    final qrId = pluginActionId('t.qr', viewerToggleActionId);
     c.read(routerProvider).push('/settings/actionbar-plugins');
     await tester.pumpAndSettle();
     expect(find.text('プラグインボタン'), findsWidgets);
-    expect(find.byKey(const ValueKey('actionbar.slot.threshold')), findsOneWidget);
+    final list = find.byType(Scrollable).first;
+    // 一覧は長いので、先頭に戻してから目当ての行までスクロールする(下へしか進まないので)。
+    Future<void> show(Finder f) async {
+      tester.state<ScrollableState>(list).position.jumpTo(0);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(f, 120, scrollable: list);
+      await tester.pumpAndSettle();
+    }
+
+    // 面ごとの節。投稿タイルの「本文をコピー」は switch だけ(auto_hook が無いので temp の行は出ない)、全画面の QR は switch + temp。
+    for (final title in ['投稿タイル', '全画面', '加工画面', 'コンポーザー本文', '投稿加工(自動)']) {
+      await show(find.text(title));
+      expect(find.text(title), findsOneWidget);
+    }
+    await show(find.byKey(ValueKey('actionbar.switch.$copyId')));
+    expect(find.byKey(ValueKey('actionbar.auto.$copyId')), findsNothing);
+    expect(find.textContaining('単体で末尾'), findsOneWidget); // 配置の説明
+    await show(find.byKey(ValueKey('actionbar.auto.$qrId')));
+    expect(find.text('既定(オン)'), findsOneWidget); // ホスト既定
+    await tester.tap(find.byKey(ValueKey('actionbar.auto.$qrId')));
+    await tester.pumpAndSettle();
+    expect(c.read(actionButtonPrefsProvider).autoOverride(qrId), isFalse);
+    expect(find.textContaining('設定で上書き中'), findsOneWidget);
+    // このアカウント: 有効 / 無効(従来)と閾値。
+    await show(find.byKey(ValueKey('actionbar.slot.$copyId')));
     await tester.tap(find.byKey(ValueKey('actionbar.slot.$copyId')));
     await tester.pumpAndSettle();
     expect(c.read(slotActionSettingsProvider(fakeSession().account.key)).isEnabled(copyId), isFalse);
+    await show(find.byKey(const ValueKey('actionbar.slot.threshold')));
+    expect(find.byKey(const ValueKey('actionbar.slot.threshold')), findsOneWidget);
+    // switch(端末全体)を切る → prefs に書かれ、このアカウントの行は触れなくなる。
+    await show(find.byKey(ValueKey('actionbar.switch.$copyId')));
+    await tester.tap(find.byKey(ValueKey('actionbar.switch.$copyId')));
+    await tester.pumpAndSettle();
+    expect(c.read(actionButtonPrefsProvider).switchOn(copyId), isFalse);
+    await show(find.byKey(ValueKey('actionbar.slot.$copyId')));
+    expect(tester.widget<RasqSwitchListTile>(find.byKey(ValueKey('actionbar.slot.$copyId'))).enabled, isFalse);
   });
 
   testWidgets('バンドルのボタン (D-210): アイコンから出る FOW(バンドル名 + ボタン + 名称のタイル)→ タイル全体で実行', (tester) async {
