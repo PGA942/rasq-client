@@ -298,6 +298,7 @@ class RasqPostTileView extends ConsumerWidget {
       snsActions: rasqPostBuiltinActions,
       plugins: ref.watch(pluginActionsForProvider(rasqPostConfigKey)),
       settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(rasqPostConfigKey, ''))),
+      prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
     // キューの予測 (D-279): 付けていない投稿のボタンに、予測した絵を薄く出す。短押しでその絵を付ける(無ければピッカー)。

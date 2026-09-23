@@ -109,7 +109,8 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
                 (
                   id: p.id,
                   label: p.decl.label,
-                  subtitle: isViewerToggleActionId(p.id) ? '${p.plugin.manifest.name} · 全画面表示プラグイン(ON / OFF のボタン)' : '${p.plugin.manifest.name} · タグ: ${p.decl.tags.join(' / ')}',
+                  // 手動配置 (契約 v0.14 placement): 宣言だけでは置かれないので、ここで足す。
+                  subtitle: '${isViewerToggleActionId(p.id) ? '${p.plugin.manifest.name} · 全画面表示プラグイン(ON / OFF のボタン)' : '${p.plugin.manifest.name} · タグ: ${p.decl.tags.join(' / ')}'}${p.isManual ? ' · 手動配置' : ''}',
                   genre: p.decl.tags.isEmpty ? 'Plugin' : p.decl.tags.first,
                   icon: PostRow.iconFor(p.decl.icon, Icons.extension_outlined),
                 ),
@@ -308,7 +309,7 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
           final plugins = ref.watch(pluginActionsForProvider(configKey));
           final accountKey = slotSettingsKeyFor(configKey, accountKeyOfConfigKey(configKey) ?? ref.watch(currentAccountProvider)?.key ?? '');
           final settings = ref.watch(slotActionSettingsProvider(accountKey));
-          final merged = mergePluginActions(config: config, snsActions: isBuiltinConfigKey(configKey) ? builtinActionsFor(configKey) : (session?.actions ?? const []), plugins: plugins, settings: settings);
+          final merged = mergePluginActions(config: config, snsActions: isBuiltinConfigKey(configKey) ? builtinActionsFor(configKey) : (session?.actions ?? const []), plugins: plugins, settings: settings, prefs: ref.watch(actionButtonPrefsProvider));
           final byId = {for (final a in merged.actions) a.id: a};
           final memberIds = ActionListDef.uniq(list.memberIds);
           final members = [for (final id in memberIds) if (byId.containsKey(id)) byId[id]!];
@@ -590,7 +591,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
     final settings = ref.watch(slotActionSettingsProvider(settingsKey));
     final settingsStore = ref.read(settingsAreaProvider(slotSettingsArea(settingsKey)).notifier);
     // 表示中のバーと同じ合成(プラグインボタン込み)。
-    final merged = mergePluginActions(config: config, snsActions: snsActions, plugins: plugins, settings: settings);
+    final merged = mergePluginActions(config: config, snsActions: snsActions, plugins: plugins, settings: settings, prefs: ref.watch(actionButtonPrefsProvider));
     final actions = merged.actions;
     final entries = merged.config.apply(actions);
     final pluginName = isEditor ? 'RASQ(内蔵の編集)' : widget.surface == ActionBarSurface.rasqPost ? 'RASQ' : (registry.plugins.where((p) => p.manifest.id == session?.pluginId).firstOrNull?.manifest.name ?? session?.pluginId ?? '');

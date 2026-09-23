@@ -1026,6 +1026,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       snsActions: [for (final a in editorBuiltinActionsFor(_configKey)) if (a.id != editorVisualizerActionId || _isAudio) a],
       plugins: plugins,
       settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(_configKey, ''))),
+      prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
     return Scrollbar(

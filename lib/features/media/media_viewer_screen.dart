@@ -224,6 +224,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
       snsActions: actions,
       plugins: [...ref.watch(pluginActionsProvider), ...viewerPlugins],
       settings: ref.watch(slotActionSettingsProvider(post.account.key)),
+      prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
     Future<void> perform(ActionDescriptor a) => isViewerToggleActionId(a.id) ? _toggleViewerPlugin(viewerTogglePluginId(a.id)) : notifier.perform(post, a).catchError((_) {});
@@ -451,6 +452,7 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
       snsActions: actions,
       plugins: ref.watch(pluginActionsProvider),
       settings: ref.watch(slotActionSettingsProvider(post.account.key)),
+      prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
     return ValueListenableBuilder<int>(

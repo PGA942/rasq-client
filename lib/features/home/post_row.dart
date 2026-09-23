@@ -218,6 +218,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       snsActions: snsActions,
       plugins: ref.watch(pluginActionsProvider),
       settings: ref.watch(slotActionSettingsProvider(post.account.key)),
+      prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
     final actionItems = [
