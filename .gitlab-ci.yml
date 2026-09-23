@@ -100,7 +100,8 @@ osv:
     name: ghcr.io/google/osv-scanner:v2.6.0
     entrypoint: [""]
   script:
-    - osv-scanner scan --lockfile pubspec.lock --lockfile tool/zstd-wasm/Cargo.lock
+    # イメージの ENTRYPOINT が /osv-scanner で、PATH には無い。
+    - /osv-scanner scan --lockfile pubspec.lock --lockfile tool/zstd-wasm/Cargo.lock
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
