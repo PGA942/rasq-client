@@ -91,7 +91,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _home(BuildContext context, ColorScheme scheme, AsyncValue<List<TrendTag>> trends, AsyncValue<dynamic> today, List<ActionDescriptor> actions) {
+  Widget _home(BuildContext context, ColorScheme scheme, AsyncValue<List<TrendTag>> trends, AsyncValue<TimelineState> today, List<ActionDescriptor> actions) {
     return RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(trendingTagsProvider);

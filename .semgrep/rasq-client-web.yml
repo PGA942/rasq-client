@@ -1,0 +1,41 @@
+# rasq-client の Web 版 (generic: 書式の文字列を見る)。例は rasq-client-web.txt。
+# Worker の JS は Dart の文字列 (packages/plugin_runtime/lib/src/wasm_plugin_worker_web.dart の
+# `_workerSource`) の中にあるので、Dart の規則では見えない。ここは正規表現で見る。
+rules:
+  - id: rasq-client-web-fetch-gate
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Worker の同期 XHR (net.fetch) は、開く前に宣言した接続先 (hostPermitted(hostOf(url))) を確かめ、
+      送ったあとにリダイレクト先 (hostPermitted(hostOf(xhr.responseURL))) を確かめてから応答を渡します。
+      どちらかが消えると、Web 版だけ接続先の宣言を迂回できます。
+    paths:
+      include:
+        - "**/wasm_plugin_worker_web.dart"
+    pattern-either:
+      # xhr.open の前 (同じ関数の中、600 文字以内) に接続先の確認が無い。
+      - patterns:
+          - pattern-regex: 'new XMLHttpRequest\(\)'
+          - pattern-not-regex: 'hostPermitted\(hostOf\(url\)\)[\s\S]{0,600}?new XMLHttpRequest\(\)'
+      # xhr.send のあと (600 文字以内) にリダイレクト先の確認が無い。
+      - patterns:
+          - pattern-regex: 'xhr\.send\('
+          - pattern-not-regex: 'xhr\.send\([\s\S]{0,600}?hostPermitted\(hostOf\(xhr\.responseURL\)\)'
+
+  - id: rasq-client-web-dynamic-code
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      文字列からコードや HTML を作る口 (eval / new Function / importScripts / innerHTML / document.write)
+      と、古い dart:html / dart:js は使いません。プラグインの文字列が混ざると、そのままアプリの
+      生成元でスクリプトになります。package:web + dart:js_interop を使ってください。
+    paths:
+      include:
+        - "**/*.dart"
+        - "**/*.js"
+        - "**/*.html"
+      exclude:
+        - "**/web/vendor/**"
+        - "**/build/**"
+        - "**/.dart_tool/**"
+    pattern-regex: '(?<![\w.$])(?:eval|importScripts|new Function|document\.write(?:ln)?|execScript)\s*\(|\.(?:innerHTML|outerHTML)\s*=[^=]|\.insertAdjacentHTML\s*\(|[''"]dart:(?:html|js|js_util)[''"]'

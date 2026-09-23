@@ -79,7 +79,7 @@ void main() {
     expect(p.source, 'store:sample.post-process');
     expect(p.manifest.id, 'sample.post-process');
     final v = await p.value('post.transform', {'posts': [{'id': 'x', 'body': '今日', 'createdAt': '2026-09-10T00:00:00Z'}]});
-    expect((v!['posts'] as Map)['x']['body'], '9/10(今日)');
+    expect(((v!['posts'] as Map)['x'] as Map)['body'], '9/10(今日)');
     final out = await c.read(slotPluginsProvider.notifier).transform([post('p1', '今日は打ち上げ')]);
     expect(out.single.body, '8/31(今日)は打ち上げ');
     await c.read(installedPluginsProvider.notifier).uninstall('sample.post-process');

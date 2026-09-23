@@ -46,7 +46,7 @@ void main() {
     final c = await load('post_process_plugin', RasqHostEnvironment());
     if (c == null) return markTestSkipped('plugin-sample/dist not built');
     final v = value(c.invoke('post.transform', {'posts': [{'id': 'p', 'body': '今日は晴れ https://example.com/今日', 'createdAt': '2026-09-10T15:30:00.000Z'}, {'id': 'q', 'body': 'なし', 'createdAt': '2026-09-10T00:00:00Z'}]}));
-    expect((v['posts'] as Map)['p']['body'], '9/11(今日)は晴れ https://example.com/今日');
+    expect(((v['posts'] as Map)['p'] as Map)['body'], '9/11(今日)は晴れ https://example.com/今日');
     expect((v['posts'] as Map).containsKey('q'), isFalse);
     c.dispose();
   });
@@ -129,7 +129,7 @@ void main() {
     final m = value(c.invoke('plugin.manifest', const {}));
     expect(m['id'], 'sample.media-transform');
     final cat = value(c.invoke('media.catalog', const {}));
-    expect((cat['genres'] as List).single['id'], 'transform');
+    expect(((cat['genres'] as List).single as Map)['id'], 'transform');
     // 2×1 の PNG(赤 / 青)。
     const png = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8AAQv8BD/kD/YURmXYAAAAASUVORK5CYII=';
     value(c.invoke('media.edit', {'token': 't1', 'index': 0, 'name': 'a.png', 'mimeType': 'image/png', 'bytesB64': png}));
@@ -165,7 +165,7 @@ void main() {
     final c = await load('media_draw_plugin', env);
     if (c == null) return markTestSkipped('plugin-sample/dist not built');
     expect(value(c.invoke('plugin.manifest', const {}))['id'], 'sample.media-draw');
-    expect((value(c.invoke('media.catalog', const {}))['genres'] as List).single['id'], 'draw');
+    expect(((value(c.invoke('media.catalog', const {}))['genres'] as List).single as Map)['id'], 'draw');
     const png = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8AAQv8BD/kD/YURmXYAAAAASUVORK5CYII=';
     value(c.invoke('media.edit', {'token': 't1', 'index': 0, 'name': 'a.png', 'mimeType': 'image/png', 'bytesB64': png}));
     value(c.invoke('media.action', {'token': 't1', 'genre': 'draw', 'action': 'pen'}));
@@ -201,7 +201,7 @@ void main() {
     final c = await load('media_process_plugin', env);
     if (c == null) return markTestSkipped('plugin-sample/dist not built');
     expect(value(c.invoke('plugin.manifest', const {}))['id'], 'sample.media-process');
-    expect((value(c.invoke('media.catalog', const {}))['genres'] as List).single['id'], 'process');
+    expect(((value(c.invoke('media.catalog', const {}))['genres'] as List).single as Map)['id'], 'process');
     const png = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8AAQv8BD/kD/YURmXYAAAAASUVORK5CYII=';
     value(c.invoke('media.edit', {'token': 't1', 'index': 0, 'name': 'a.png', 'mimeType': 'image/png', 'bytesB64': png}));
     value(c.invoke('media.action', {'token': 't1', 'genre': 'process', 'action': 'faces'}));

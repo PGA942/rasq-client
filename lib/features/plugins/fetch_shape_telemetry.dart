@@ -87,6 +87,7 @@ class FetchShapeTelemetry {
       final version = e.key.substring(at + 1);
       // 1 回に 16 件まで(Central の上限)。
       for (var i = 0; i < e.value.length; i += 16) {
+        if (!enabled) return; // 送っている間に同意が切れた: 残りは捨てる(同意の記録も触らない)
         final chunk = e.value.sublist(i, i + 16 > e.value.length ? e.value.length : i + 16);
         try {
           await client.postJson('/plugins/${Uri.encodeComponent(pluginId)}/versions/${Uri.encodeComponent(version)}/fetch-shapes', {'shapes': chunk});
@@ -105,7 +106,8 @@ class FetchShapeTelemetry {
       }
     }
     // 同意の記録は、実際に何かを送ったときに 1 度だけ(送っていないのに記録だけ残さない)。
-    if (sent) await _syncConsent(granted: true);
+    // 送り終わるまでに切られていたら、撤回の記録を上書きしない。
+    if (sent && enabled) await _syncConsent(granted: true);
   }
 
   /// 同意を Central にも残す(1 度だけ)。切ったときは撤回を記録する。

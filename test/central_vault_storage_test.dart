@@ -63,13 +63,13 @@ void main() {
     await s.write('other.key', 'v');
     final doc = jsonDecode(t.vault[key]!) as Map;
     expect(doc['v'], 2);
-    expect((doc['ops'] as Map).values.single['op'], 'login');
+    expect(((doc['ops'] as Map).values.single as Map)['op'], 'login');
     expect(t.local.keys, isNot(contains(key)));
     expect(await t.local.read('other.key'), 'v');
     expect(handles(await s.read(key)), ['a']);
     // 全部消す = 「ログアウトした」という操作として残る(保管庫ごとは消さない)。
     await s.delete(key);
-    expect(((jsonDecode(t.vault[key]!) as Map)['ops'] as Map).values.single['op'], 'logout');
+    expect((((jsonDecode(t.vault[key]!) as Map)['ops'] as Map).values.single as Map)['op'], 'logout');
     expect(handles(await s.read(key)), isEmpty);
   });
 

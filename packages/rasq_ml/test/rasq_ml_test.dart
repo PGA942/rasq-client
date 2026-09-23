@@ -64,7 +64,7 @@ void main() {
       final entities = await gateway.zeroShotEntities(['ストラトローンチ発射!'], labels: ['product', 'person']);
       expect(posted.toString(), 'https://ml.example/v2/models/server-model/infer');
       final sent = jsonDecode('$postedBody') as Map;
-      final inner = jsonDecode(((sent['inputs'] as List).first as Map)['data'].first as String) as Map;
+      final inner = jsonDecode((((sent['inputs'] as List).first as Map)['data'] as List).first as String) as Map;
       expect(inner['labels'], ['product', 'person']);
       expect(entities.single.single.text, 'ストラトローンチ');
       expect(entities.single.single.score, closeTo(0.91, 1e-9));

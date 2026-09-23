@@ -1,3 +1,5 @@
+// host-fn の応答 JSON(dynamic)をそのまま辿るテストなので、このファイルだけ dynamic 呼び出しを許す。
+// ignore_for_file: avoid_dynamic_calls
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';

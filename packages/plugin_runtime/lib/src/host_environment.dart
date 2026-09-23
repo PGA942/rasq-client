@@ -76,6 +76,7 @@ SyncFetchResponse curlSyncFetch(SyncFetchRequest request) {
       '-w', '%{http_code}',
       request.url.toString(),
     ];
+    // nosemgrep: rasq-client-subprocess — v1 の開発用経路 (D-023 のネイティブ経路が本線)。引数は配列で渡し、シェルは通さない。-L を付けないのでリダイレクトは追わない。
     final result = Process.runSync('curl', args, stdoutEncoding: utf8, stderrEncoding: utf8);
     if (result.exitCode != 0) {
       throw ProcessException('curl', args, result.stderr.toString(), result.exitCode);

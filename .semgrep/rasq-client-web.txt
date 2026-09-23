@@ -1,0 +1,48 @@
+rasq-client-web.yml の規則の例 (`semgrep --test .semgrep`)。generic なので拡張子は何でもよい。
+
+── rasq-client-web-fetch-gate ──
+接続先を確かめてから開き、送ったあとにリダイレクト先を確かめる (wasm_plugin_worker_web.dart の netFetch と同じ形):
+function netFetchOk(args) {
+  const url = String(args.url || "");
+  if (!hostPermitted(hostOf(url))) throw new HostFnError("E01", "host not permitted: " + hostOf(url));
+  // ok: rasq-client-web-fetch-gate
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", url, false);
+  // ok: rasq-client-web-fetch-gate
+  try { xhr.send(body); } catch (e) { throw new HostFnError("B01", "fetch failed: " + e); }
+  if (xhr.responseURL && !hostPermitted(hostOf(xhr.responseURL))) throw new HostFnError("E01", "redirected");
+  return xhr.status;
+}
+
+接続先の確認が無い / リダイレクト先の確認が無い:
+function netFetchBad(args) {
+  const url = String(args.url || "");
+  // ruleid: rasq-client-web-fetch-gate
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", url, false);
+  // ruleid: rasq-client-web-fetch-gate
+  try { xhr.send(body); } catch (e) { throw new HostFnError("B01", "fetch failed: " + e); }
+  return xhr.status;
+}
+
+── rasq-client-web-dynamic-code ──
+// ruleid: rasq-client-web-dynamic-code
+const f = new Function("return 1");
+// ruleid: rasq-client-web-dynamic-code
+eval(code);
+// ruleid: rasq-client-web-dynamic-code
+importScripts(url);
+// ruleid: rasq-client-web-dynamic-code
+el.innerHTML = html;
+// ruleid: rasq-client-web-dynamic-code
+document.write(html);
+// ruleid: rasq-client-web-dynamic-code
+import 'dart:html' as html;
+// ok: rasq-client-web-dynamic-code
+import 'dart:js_interop';
+// ok: rasq-client-web-dynamic-code
+if (el.innerHTML == "") {}
+// ok: rasq-client-web-dynamic-code
+el.textContent = text;
+// ok: rasq-client-web-dynamic-code
+final v = evaluate(x);

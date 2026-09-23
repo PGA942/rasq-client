@@ -1,3 +1,4 @@
+import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:test/test.dart';
 
@@ -44,7 +45,7 @@ class _P extends SnsPlugin {
   @override
   Future<ServerInfo> inspectServer(String host) => throw UnimplementedError();
   @override
-  get kind => throw UnimplementedError();
+  SnsKind get kind => throw UnimplementedError();
   @override
   SnsSession open(AccountSession session) => throw UnimplementedError();
 }

@@ -1,3 +1,5 @@
+// 手で叩く確認用の CLI。出力は print でよい。
+// ignore_for_file: avoid_print
 import 'package:sns_misskey/sns_misskey.dart';
 
 Future<void> main(List<String> args) async {

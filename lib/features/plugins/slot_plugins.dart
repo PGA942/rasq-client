@@ -504,8 +504,9 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       case RasqHostFns.clipboardSet:
         Clipboard.setData(ClipboardData(text: '${args['text'] ?? ''}'));
       case RasqHostFns.urlOpen:
+        // scheme はランタイム側 (host_environment / Worker) で http(s) に絞っているが、ここでも確かめる。
         final u = Uri.tryParse('${args['url']}');
-        if (u != null) launchUrl(u, mode: LaunchMode.externalApplication);
+        if (u != null && (u.isScheme('https') || u.isScheme('http'))) launchUrl(u, mode: LaunchMode.externalApplication);
       case RasqHostFns.muteAdd:
         _muteAdd(plugin, '${args['text'] ?? ''}');
       case RasqHostFns.astellShare:

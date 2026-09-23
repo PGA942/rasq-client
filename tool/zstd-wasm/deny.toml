@@ -1,0 +1,37 @@
+# cargo-deny の設定 (tool/zstd-wasm: Web 版の zstd 復号 wasm)。CI の `deny` ジョブが
+# `cargo deny check` で回す。rasq-central の deny.toml と同じ方針。
+#
+# 端末版の wasm ランタイム (rasq_wasm_runtime / rasq_wasm_runtime_core) は別リポジトリ
+# rasq-sdk-sample にあり、このリポジトリからは path 依存で参照するだけ。そちらの依存は
+# そちらの CI で見る。
+#
+# - advisories: RustSec の脆弱性がある版を使っていたら落とす(依存を上げて直す)。
+# - licenses: 今の依存が使っているライセンスだけを許す。新しいライセンスが入ったら
+#   ここで止まるので、中身を見てから足す。
+# - bans / sources: crates.io 以外 (git / 別のレジストリ) から来る依存を拒否する。
+[graph]
+all-features = true
+
+[advisories]
+unmaintained = "workspace"
+yanked = "deny"
+ignore = []
+
+[licenses]
+confidence-threshold = 0.9
+allow = [
+  "MIT",
+]
+
+[licenses.private]
+# 配らない (publish = false)。
+ignore = true
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

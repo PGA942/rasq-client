@@ -70,6 +70,6 @@ void main() {
     // 保存は自分のキーへ。
     c.read(actionBarConfigProvider(misskeyAcc.key).notifier).set(const ActionBarConfig(hidden: {'reply'}));
     expect(await storage.read('${ActionBarConfigStore.storageKey}.${misskeyAcc.key}'), isNotNull);
-    expect(jsonDecode((await storage.read(ActionBarConfigStore.storageKey))!)['hidden'], ['renote']); // 共通キーはそのまま
+    expect((jsonDecode((await storage.read(ActionBarConfigStore.storageKey))!) as Map)['hidden'], ['renote']); // 共通キーはそのまま
   });
 }
