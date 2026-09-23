@@ -1,3 +1,5 @@
+// three_js の BufferAttribute / Object3D は dynamic 型の API なので、このファイルだけ dynamic 呼び出しを許す。
+// ignore_for_file: avoid_dynamic_calls
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -418,8 +420,9 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       final uv = g.getAttributeFromString('uv');
       if (pos == null || uv == null) return;
       var minX = double.infinity, maxX = -double.infinity, minY = double.infinity, maxY = -double.infinity, maxZ = -double.infinity;
-      for (var i = 0; i < pos.count; i++) {
-        final x = pos.getX(i)!.toDouble(), y = pos.getY(i)!.toDouble(), z = pos.getZ(i)!.toDouble();
+      final count = pos.count as int;
+      for (var i = 0; i < count; i++) {
+        final x = (pos.getX(i) as num).toDouble(), y = (pos.getY(i) as num).toDouble(), z = (pos.getZ(i) as num).toDouble();
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
@@ -428,10 +431,10 @@ class _RaiMascot3dState extends State<RaiMascot3d> {
       }
       final w = (maxX - minX).abs() < 1e-6 ? 1.0 : maxX - minX;
       final h = (maxY - minY).abs() < 1e-6 ? 1.0 : maxY - minY;
-      for (var i = 0; i < pos.count; i++) {
-        final z = pos.getZ(i)!.toDouble();
+      for (var i = 0; i < count; i++) {
+        final z = (pos.getZ(i) as num).toDouble();
         if ((maxZ - z).abs() < 1e-4) {
-          uv.setXY(i, ((pos.getX(i)!.toDouble() - minX) / w).clamp(0.0, 1.0), ((maxY - pos.getY(i)!.toDouble()) / h).clamp(0.0, 1.0));
+          uv.setXY(i, (((pos.getX(i) as num).toDouble() - minX) / w).clamp(0.0, 1.0), ((maxY - (pos.getY(i) as num).toDouble()) / h).clamp(0.0, 1.0));
         } else {
           uv.setXY(i, 0.01, 0.01);
         }

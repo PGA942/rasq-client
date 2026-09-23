@@ -115,9 +115,9 @@ class DeviceRaiLlm implements RaiLlm {
   // ── llama.cpp のネイティブライブラリ ──
 
   /// 使えるライブラリのパス(null = プロセスに組み込み済み)。無ければ例外。
-  Future<String?> _ensureLlamaLib() => _libReady ??= _resolveLlamaLib().catchError((Object e) {
+  Future<String?> _ensureLlamaLib() => _libReady ??= _resolveLlamaLib().catchError((Object e, StackTrace st) {
         _libReady = null;
-        throw e;
+        Error.throwWithStackTrace(e, st);
       });
 
   Future<String?> _resolveLlamaLib() async {
@@ -183,6 +183,7 @@ class DeviceRaiLlm implements RaiLlm {
 
   Future<void> _unquarantine(Directory dir) async {
     try {
+      // nosemgrep: rasq-client-subprocess — macOS で取得した llama のライブラリの隔離属性を外す。コマンドは固定パス、引数は配列。
       await Process.run('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', dir.path]);
     } catch (e) {
       debugPrint('llama runtime xattr: $e');
@@ -190,6 +191,7 @@ class DeviceRaiLlm implements RaiLlm {
     try {
       await for (final f in dir.list()) {
         if (f is File && f.path.contains('.dylib')) {
+          // nosemgrep: rasq-client-subprocess — 同上 (ad hoc 署名)。コマンドは固定パス、引数は配列。
           await Process.run('/usr/bin/codesign', ['--force', '--sign', '-', f.path]);
         }
       }
@@ -332,7 +334,7 @@ class DeviceRaiLlm implements RaiLlm {
       _set(RaiLlmStatus(RaiLlmPhase.downloading, progress: 0, modelId: _spec.id));
       final req = http.Request('GET', Uri.parse(_spec.url));
       if (hfToken != null && hfToken.isNotEmpty) req.headers['Authorization'] = 'Bearer $hfToken';
-      final res = await client.send(req);
+      final res = await client.send(req).timeout(const Duration(seconds: 60));
       if (res.statusCode != 200) throw RaiLlmException('HTTP ${res.statusCode}');
       final total = res.contentLength ?? _spec.sizeMb * 1000 * 1000;
       final sink = tmp.openWrite();

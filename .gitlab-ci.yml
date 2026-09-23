@@ -11,6 +11,9 @@
 #     2. installs a minimal Rust toolchain + wasm32 target
 #     3. builds misskey-wasm-sample so the wasm-dependent tests run instead of skipping
 # - GitLab security templates (SAST / Secret Detection) kept from the initial setup
+# - 静的チェック (README「静的チェック」): semgrep (このコードベースの約束)、osv (依存の既知の脆弱性)、
+#   deny (tool/zstd-wasm の Rust 依存)。flutter ジョブの `flutter analyze` は analysis_options.yaml の
+#   strict-casts と lint で見る。
 stages:
 - test
 - secret-detection
@@ -75,6 +78,48 @@ flutter:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
+
+# このコードベースの約束 (.semgrep/)。規則の例で規則そのものを確かめてから、lib / packages / test / tool / web に掛ける。
+# `--test` は隠しディレクトリ (.semgrep) の中の例を見つけないので、いったん写してから回す。
+semgrep:
+  stage: test
+  image: semgrep/semgrep:1.177.0
+  script:
+    - rm -rf /tmp/semgrep-rules && cp -r .semgrep /tmp/semgrep-rules && semgrep --test --metrics=off /tmp/semgrep-rules
+    - semgrep scan --metrics=off --error --config .semgrep --exclude .semgrep --exclude build --exclude .dart_tool --exclude vendor lib packages test tool web
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+# 依存の既知の脆弱性 (OSV): pub のロック (pubspec.lock) と、Web 版の zstd の wasm (tool/zstd-wasm/Cargo.lock)。
+# `dart pub outdated` は新しさを見るだけで脆弱性は見ないので、別に回す。スケジュール実行でも回す
+# (コードが変わらなくても、新しい脆弱性が出たら気づくため)。
+osv:
+  stage: test
+  image:
+    name: ghcr.io/google/osv-scanner:v2.6.0
+    entrypoint: [""]
+  script:
+    - osv-scanner scan --lockfile pubspec.lock --lockfile tool/zstd-wasm/Cargo.lock
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# tool/zstd-wasm (Web 版の zstd 復号) の Rust 依存: RustSec・ライセンス・出どころ (deny.toml)。
+# 端末版のランタイム (rasq_wasm_runtime) は rasq-sdk-sample 側にあり、そちらの CI で見る。
+deny:
+  stage: test
+  image: rust:1
+  variables:
+    CARGO_DENY_VERSION: "0.20.2"
+  script:
+    - curl -sSfL "https://github.com/EmbarkStudios/cargo-deny/releases/download/${CARGO_DENY_VERSION}/cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl.tar.gz" | tar xz --strip-components=1 -C /usr/local/bin
+    - cd tool/zstd-wasm && cargo deny check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
 
 # Web 版 (D-295 → D-303): ブラウザでしか出ない壊れ方(three_js の 3D で、アプリ全体が起動しなくなった)を
 # 手元と同じやり方で止める。`test/web` はブラウザの中で走るので Chrome が要る(イメージには入っていないので入れる)。

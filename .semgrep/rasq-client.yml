@@ -1,0 +1,128 @@
+# rasq-client 固有の静的チェック (Semgrep、Dart)。CI の `semgrep` ジョブが --error で回す。
+#
+# 汎用の規則 (GitLab SAST / Secret Detection、`flutter analyze` の lint) は別に回っている。ここに置くのは
+# このコードベースが守っている約束で、崩れたら気づきたいもの。どれも現状のコードでは 0 件
+# (例外は `// nosemgrep: <id>` と理由を並べて書く)。
+# 規則の効き方は 同じ名前の .dart の注釈つきの例で確かめる (`semgrep --test .semgrep`)。
+# Worker の JS (Dart の文字列の中) と web/ に掛ける generic の規則は rasq-client-web.yml。
+rules:
+  - id: rasq-client-secret-in-log
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      ログにトークン / パスワード / 秘密鍵らしき値を出しています。debugPrint の出力は端末のログ
+      (adb logcat / Console.app / ブラウザのコンソール) に残り、他のアプリや添付されたログから
+      読めるので、値を出さずに「あった / 無かった」だけにしてください。
+    patterns:
+      - pattern-either:
+          - pattern: debugPrint($S, ...)
+          - pattern: print($S)
+          - pattern: log($S, ...)
+          - pattern: stdout.writeln($S)
+          - pattern: stderr.writeln($S)
+          - pattern: stdout.write($S)
+          - pattern: stderr.write($S)
+      # 補間 (`$token` / `${session.token}` / `${t.trim()}` は拾えない) に token などを含む識別子。
+      # `${tokens.length}` のような数や有無は値ではないので通す。
+      - metavariable-regex:
+          metavariable: $S
+          regex: '(?is).*\$\{?[\w.!?]*(?:token|password|passwd|secret|private_?key|api_?key|hf_?token)s?\b(?!\.(?:length|isEmpty|isNotEmpty|hashCode|runtimeType)\b).*'
+
+  - id: rasq-client-http-timeout
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      タイムアウトの無い HTTP 要求です。相手が応答しないだけで、待っている画面や isolate が
+      止まったままになります(`.timeout(const Duration(...))` を付ける。共有クライアントは
+      OrgateClient / MisskeyApi のように timeout を持たせる)。
+    # `.timeout(...)` の除外は枝ごとに置く(pattern-either の外に置くと、名前付き引数のある呼び出しで効かない)。
+    patterns:
+      - pattern-either:
+          # package:http のトップレベル関数(クライアント無し)。
+          - patterns:
+              - pattern: http.$M(...)
+              - pattern-not-inside: $X.timeout(...)
+          # その場で作ったクライアント(`http.Client()` / `client ?? http.Client()`)の要求。
+          # 共有クライアント (OrgateClient / MisskeyApi のフィールド) は、そのクラスが timeout を持つ。
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: |
+                      final $C = http.Client();
+                      ...
+                  - pattern-inside: |
+                      final $C = $X ?? http.Client();
+                      ...
+                  - pattern-inside: |
+                      var $C = http.Client();
+                      ...
+                  - pattern-inside: |
+                      var $C = $X ?? http.Client();
+                      ...
+              - pattern: $C.$M(...)
+              - pattern-not-inside: $Y.timeout(...)
+      - metavariable-regex:
+          metavariable: $M
+          regex: '^(?:get|post|put|patch|delete|head|read|readBytes|send)$'
+
+  - id: rasq-client-runtime-fetch-gate
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      ランタイム (RasqWasmPlugin.fromBytes) のネイティブ net.fetch は Dart のディスパッチャを通らないので、
+      `nativeFetch:` は env.nativeFetchEnabled(`network` 権限が無ければ短絡させない)、`fetchHosts:` は
+      env.effectiveFetchHosts(宣言 + インスタンス)を渡してください。どちらかを別の値にすると、
+      この経路だけ権限ゲートと接続先の宣言を迂回できます。
+    paths:
+      exclude:
+        - "**/wasm_runtime*.dart"   # 定義側(FFI / Web の代替)
+        - "**/test/**"
+    patterns:
+      - pattern: RasqWasmPlugin.fromBytes(...)
+      - pattern-not: |
+          RasqWasmPlugin.fromBytes(..., nativeFetch: $E.nativeFetchEnabled, ..., fetchHosts: $E.effectiveFetchHosts, ...)
+      - pattern-not: |
+          RasqWasmPlugin.fromBytes(..., nativeFetch: $E!.nativeFetchEnabled, ..., fetchHosts: $E!.effectiveFetchHosts, ...)
+
+  - id: rasq-client-host-match-shared
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      ホスト名をサフィックスで照合しています。net.fetch の接続先の判定は fetchHostPermitted
+      (packages/plugin_runtime/lib/src/host_environment.dart。Rust の host_permitted / Worker の
+      hostPermitted と同じ規則) の 1 か所だけにしてください。写しを作ると規則がずれます。
+    paths:
+      exclude:
+        - "**/host_environment.dart"
+    patterns:
+      - pattern: $H.endsWith($A)
+      - metavariable-regex:
+          metavariable: $A
+          regex: '^r?[''"]\.\$|^[''"]\.[''"]\s*\+'
+
+  - id: rasq-client-launch-url-external
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      launchUrl はプラグインや投稿本文から来た URL も開くので、必ず外部のブラウザ / アプリ
+      (mode: LaunchMode.externalApplication) で開いてください。アプリ内 WebView で開くと、
+      そのページがアプリの顔をして動きます。
+    pattern-either:
+      - patterns:
+          - pattern: launchUrl(...)
+          - pattern-not: |
+              launchUrl(..., mode: LaunchMode.externalApplication, ...)
+      - pattern: LaunchMode.inAppWebView
+      - pattern: LaunchMode.inAppBrowserView
+
+  - id: rasq-client-subprocess
+    languages: [dart]
+    severity: ERROR
+    message: >-
+      外部コマンドの起動です。このアプリでは開発用の面 (curl の v1 経路、macOS の署名) だけが使い、
+      引数はシェルを通さず配列で渡します。入れるなら理由と一緒に
+      `// nosemgrep: rasq-client-subprocess` を書き、審査で見てください。
+    pattern-either:
+      - pattern: Process.run(...)
+      - pattern: Process.runSync(...)
+      - pattern: Process.start(...)
+      - pattern: Process.startSync(...)

@@ -18,11 +18,11 @@ Future<void> main(List<String> args) async {
   final q = words.isEmpty ? 'SAKAMOTO DAYS のアニメは何期まで放送されていますか？' : words.join(' ');
   if (web) {
     final uri = Uri.parse('https://api.search.brave.com/res/v1/web/search').replace(queryParameters: {'q': q, 'count': '3', 'search_lang': 'ja', 'country': 'JP'});
-    final res = await http.get(uri, headers: {'accept': 'application/json', 'x-subscription-token': key});
+    final res = await http.get(uri, headers: {'accept': 'application/json', 'x-subscription-token': key}).timeout(const Duration(seconds: 20));
     stdout.writeln('HTTP ${res.statusCode}');
     final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map;
     final results = ((body['web'] as Map?)?['results'] as List?) ?? const [];
-    for (final r in results) {
+    for (final r in results.cast<Map>()) {
       stdout.writeln('- ${r['title']} [${r['url']}]\n  ${'${r['description'] ?? ''}'.replaceAll(RegExp(r'<[^>]+>'), '')}');
     }
     stdout.writeln('${results.length} 件(0 件なら鍵のプランが web 検索を含まない = Answers の口を使う)');
@@ -39,7 +39,7 @@ Future<void> main(List<String> args) async {
         {'role': 'user', 'content': '$q\n\n(検索結果に基づいて日本語で簡潔に、200 文字以内で答えてください。根拠の URL があれば末尾に添えてください)'},
       ],
     }),
-  );
+  ).timeout(const Duration(seconds: 30));
   stdout.writeln('HTTP ${res.statusCode}');
   final text = utf8.decode(res.bodyBytes);
   if (res.statusCode != 200) {

@@ -151,7 +151,7 @@ void main() {
     expect(find.byKey(const ValueKey('rai.speech')), findsNothing); // バーの上には出ない
     // リンクの行が最新 → 腕を上げる(コントローラーの腕)。
     final layerState = tester.state(find.byType(RaiMascotLayer)) as dynamic;
-    expect((layerState.controller3d as RaiMascot3dController).arm, RaiArm.right);
+    expect((layerState.controller3d as RaiMascot3dController).arm, RaiArm.right); // ignore: avoid_dynamic_calls, State は private
     // 次の質問(考え中)で腕は下がり、RAi はさらに薄い(0.15)。返事は文字なしにして失敗 → フォールアップも無し → 失敗表示。
     llm.reply = '';
     await tester.enterText(find.byKey(const ValueKey('rai.input')), 'zzzz qqqq');
@@ -160,7 +160,7 @@ void main() {
     expect(c.read(raiProvider).error, isTrue);
     final msg1 = raiRowText(tester, 1);
     expect(msg1, contains('返事がありませんでした'));
-    expect((layerState.controller3d as RaiMascot3dController).arm, RaiArm.none);
+    expect((layerState.controller3d as RaiMascot3dController).arm, RaiArm.none); // ignore: avoid_dynamic_calls, State は private
     expect(tester.widget<Opacity>(find.ancestor(of: layerMascot, matching: find.byType(Opacity)).first).opacity, closeTo(0.28, 0.01));
   });
 

@@ -69,7 +69,7 @@ class _StandbySlotState extends ConsumerState<_StandbySlot> {
   @override
   void initState() {
     super.initState();
-    _slot; // 早めに解決しておく
+    _slot; // ignore: unnecessary_statements, 早めに解決しておく
   }
 
   @override
@@ -128,7 +128,7 @@ class _RaiHomeScreenState extends ConsumerState<RaiHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _rai; // dispose では ref を使えないので先に解決しておく
+    _rai; // ignore: unnecessary_statements, dispose では ref を使えないので先に解決しておく
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) showRai(ref, mode: RaiMode.assistant);
     });

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rasq_store/rasq_store.dart';
 
 import '../../app/providers.dart';
 import '../users/user_list.dart';
@@ -37,7 +38,7 @@ final trendAnalysisProvider = FutureProvider.autoDispose.family<TrendAnalysis, S
     score.update(p.author.id, (v) => v + p.reactionTotal, ifAbsent: () => p.reactionTotal);
   }
   final ids = score.keys.toList();
-  final rel = ids.isEmpty ? const <String, dynamic>{} : await s.relationships(ids);
+  final rel = ids.isEmpty ? const <String, FollowState>{} : await s.relationships(ids);
   await ref.read(userListHelperProvider).primeRelationships(ids);
   final following = {for (final e in rel.entries) if (e.value.following == true) e.key};
   final rankedIds = ids..sort((a, b) => score[b]!.compareTo(score[a]!));

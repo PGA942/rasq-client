@@ -55,7 +55,7 @@ class VideoSession extends ChangeNotifier {
       direct.dispose().ignore();
       if (item.url.scheme != 'http' || kIsWeb) rethrow;
     }
-    final res = await http.get(item.url);
+    final res = await http.get(item.url).timeout(const Duration(seconds: 60));
     if (res.statusCode != 200) throw StateError('HTTP ${res.statusCode}');
     final dir = await Directory.systemTemp.createTemp('rasq_video');
     final path = item.url.path.toLowerCase();

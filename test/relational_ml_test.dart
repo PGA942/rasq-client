@@ -38,7 +38,7 @@ MlGateway fakeGateway() {
       baseUrl: Uri.parse('https://ml.example'),
       post: (url, {headers, body}) async {
         final sent = jsonDecode('$body') as Map;
-        final input = jsonDecode(((sent['inputs'] as List).first as Map)['data'].first as String) as Map;
+        final input = jsonDecode((((sent['inputs'] as List).first as Map)['data'] as List).first as String) as Map;
         final texts = (input['texts'] as List).cast<String>();
         final out = jsonEncode({'embeddings': [for (final t in texts) fakeEmbedding(t)]});
         return http.Response.bytes(

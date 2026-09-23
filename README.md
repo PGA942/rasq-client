@@ -33,6 +33,22 @@ for p in packages/*; do (cd "$p" && flutter test); done
 flutter run              # 起動。サイドバー →「コンポーネントカタログ (dev)」で部品一覧
 ```
 
+静的チェック(CI の `flutter` の analyze / `semgrep` / `osv` / `deny`。GitLab の SAST と秘密情報の検出は別に回る):
+
+```sh
+flutter analyze                                    # analysis_options.yaml: strict-casts + lint(packages/* も同じ規則)
+cp -r .semgrep /tmp/semgrep-rules && semgrep --test --metrics=off /tmp/semgrep-rules   # 規則の例で規則そのものを確かめる(隠しディレクトリの中では見つからない)
+semgrep scan --metrics=off --error --config .semgrep --exclude .semgrep --exclude build --exclude .dart_tool --exclude vendor lib packages test tool web
+osv-scanner scan --lockfile pubspec.lock --lockfile tool/zstd-wasm/Cargo.lock   # 依存の既知の脆弱性
+(cd tool/zstd-wasm && cargo deny check)            # Web 版 zstd wasm の Rust 依存 (deny.toml)
+```
+
+`.semgrep/` はこのコードベースの約束: ログに出るトークン、タイムアウトの無い HTTP 要求、ランタイムの
+ネイティブ net.fetch に渡す権限ゲート (`nativeFetchEnabled` / `effectiveFetchHosts`)、接続先の照合の写し
+(`fetchHostPermitted` の 1 か所だけ)、`launchUrl` の外部ブラウザ固定、外部コマンド、Web 版 Worker の
+接続先 / リダイレクトの確認、`eval` / `innerHTML` / `dart:html`。確かめたうえでの例外は、その行の前に
+`// nosemgrep: <規則の id> — 理由` と書く。
+
 設計原則(抜粋):
 
 - **状態はDSLの外**: 状態は `rasq_store` の Notifier に置き、コンポーネントは Props で受け取るだけ(SNSプラグイン → Store → Props)。

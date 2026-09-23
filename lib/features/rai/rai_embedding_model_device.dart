@@ -66,7 +66,7 @@ class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
       _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.downloading, progress: 0));
       final req = http.Request('GET', Uri.parse(spec.url));
       if (hfToken != null && hfToken.isNotEmpty) req.headers['Authorization'] = 'Bearer $hfToken';
-      final res = await client.send(req);
+      final res = await client.send(req).timeout(const Duration(seconds: 60));
       if (res.statusCode != 200) throw RaiEmbeddingException('HTTP ${res.statusCode}');
       final total = res.contentLength ?? spec.sizeMb * 1000 * 1000;
       final sink = tmp.openWrite();
