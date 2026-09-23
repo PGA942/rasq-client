@@ -56,8 +56,12 @@ class RaiTarget {
 
 /// 関数リファレンスの 1 行。
 class RaiFunction {
-  const RaiFunction({required this.id, required this.does, this.tags = const [], this.params = const [], this.route, this.target});
+  const RaiFunction({required this.id, required this.does, this.tags = const [], this.params = const [], this.route, this.target, this.group});
   final String id;
+
+  /// RAi の関数のまとまり (D-307: チャイルドセーフで、保護者がまとまりごとに許す)。`rai.guide` / `rai.read` /
+  /// `rai.compose` / `rai.act` / `rai.settings` / `rai.astell` / `rai.web`。
+  final String? group;
 
   /// どんなことができるか(検索 / 提案の本文)。
   final String does;
@@ -81,6 +85,7 @@ class RaiFunction {
         params: [for (final p in (j['params'] as List? ?? const [])) RaiParam.fromJson((p as Map).cast<String, Object?>())],
         route: j['route'] as String?,
         target: RaiTarget.fromJson(j['target']),
+        group: j['group'] as String?,
       );
 }
 

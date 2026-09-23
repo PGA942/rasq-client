@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../settings/settings_dsl.dart';
 import 'rai_llm.dart' show raiSettingsArea;
 
@@ -137,5 +138,7 @@ final raiWebSearchProvider = Provider<RaiWebSearch>((ref) {
   final v = ref.watch(settingsAreaProvider(raiSettingsArea)).value ?? const <String, Object?>{};
   final key = raiBraveKeyDefine.isNotEmpty ? raiBraveKeyDefine : '${v['braveKey'] ?? ''}';
   final mode = (raiWebModeDefine.isNotEmpty ? raiWebModeDefine : '${v['braveMode'] ?? ''}') == 'web' ? RaiWebMode.web : RaiWebMode.answers;
+  // チャイルドセーフ (D-307): 保護者が web 検索(`rai.web` / 検索の `web`)を許していなければ使えない。
+  if (!ref.watch(childGateProvider.select((g) => g.raiWeb))) return RaiWebSearch(token: key, mode: mode, enabled: false);
   return RaiWebSearch(token: key, mode: mode);
 });
