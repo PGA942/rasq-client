@@ -143,6 +143,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   /// 掛かっているカスタムフィルター (D-255、契約 v0.12)。ボタンの id → 状態(フラグ管理: 掛かっているか / 完了時に apply が要るか)。
   final Map<String, _ActiveFilter> _filters = {};
 
+  /// 開いた瞬間に掛けるフィルター(契約 v0.14 temp、D-305)を済ませたか(1 回だけ)。
+  bool _autoFiltersDone = false;
+
   /// 完了時の処理中(二重に走らせない)。
   bool _completing = false;
 
@@ -623,9 +626,31 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     }
   }
 
+  /// 開いた瞬間に掛けるカスタムフィルター(契約 v0.14 §2.2 temp、D-305): `auto`(利用者の上書き → 審査済みの宣言 → 既定 OFF)が
+  /// オンのものを、画像の寸法が決まってから 1 回だけ掛ける(調整の FOW は開かない)。切り替えた値はこの加工画面限り。
+  void _applyAutoFilters(ProImageEditorState editor, List<PluginAction> plugins) {
+    if (_autoFiltersDone || _isVideo) return;
+    final prefs = ref.read(actionButtonPrefsProvider);
+    final auto = [for (final a in plugins) if (a.decl.isFilterOutput && a.effectiveAuto(prefs)) a];
+    if (auto.isEmpty) {
+      _autoFiltersDone = true;
+      return;
+    }
+    final size = editor.sizesManager.originalImageSize ?? editor.sizesManager.decodedImageSize;
+    if (size.width <= 0 || size.height <= 0) return; // まだ復号前: 次にバーを描くときにもう一度
+    _autoFiltersDone = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      for (final a in auto) {
+        if (!mounted) return;
+        if (!_filters.containsKey(a.id)) await _toggleFilter(editor, a, openFow: false);
+      }
+    });
+  }
+
   /// カスタムフィルターのボタン (D-255 → D-257): OFF → ON(`filter.preview` の描画リストをレイヤーとして重ねる。パラメーターが
   /// あれば調整の FOW も開く)。ON のとき: パラメーターがあれば FOW を開き直す(外すのは FOW の「外す」)、無ければ OFF。
-  Future<void> _toggleFilter(ProImageEditorState editor, PluginAction action) async {
+  /// [openFow] = false は自動で掛けるとき(FOW を開かない)。
+  Future<void> _toggleFilter(ProImageEditorState editor, PluginAction action, {bool openFow = true}) async {
     final active = _filters[action.id];
     if (active != null) {
       if (active.spec.value.params.isEmpty) return _removeFilter(editor, active);
@@ -674,7 +699,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     } finally {
       _bypassing = false;
     }
-    if (added.spec.value.params.isNotEmpty && mounted) await _openFilterFow(editor, added);
+    if (openFow && added.spec.value.params.isNotEmpty && mounted) await _openFilterFow(editor, added);
   }
 
   void _removeFilter(ProImageEditorState editor, _ActiveFilter f) {
@@ -1013,13 +1038,27 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     }
   }
 
+  /// カスタムフィルターのボタンなら、長押しで temp のメニューを開く関数(ほかのボタンは null)。
+  void Function(BuildContext ctx)? _filterTempMenu(List<PluginAction> plugins, String id) {
+    final a = plugins.where((p) => p.id == id && p.decl.isFilterOutput).firstOrNull;
+    if (a == null || _isVideo) return null;
+    return (ctx) {
+      final box = ctx.findRenderObject() as RenderBox;
+      showActionTempMenu(ref, anchor: box.localToGlobal(Offset.zero) & box.size, action: a);
+    };
+  }
+
   Widget _bar(ProImageEditorState editor, Key key) {
     _imageEditor = editor;
     const style = TextStyle(fontSize: 10, color: Colors.white);
-    Widget item(String id, String label, Widget icon, void Function(BuildContext ctx) onTap, {Color color = Colors.white, Key? key}) => Builder(
-          builder: (ctx) => FlatIconTextButton(key: key ?? proMediaEditorBarKey(id), label: Text(label, style: style.copyWith(color: color)), icon: icon, onPressed: () => onTap(ctx)),
+    Widget item(String id, String label, Widget icon, void Function(BuildContext ctx) onTap, {Color color = Colors.white, Key? key, void Function(BuildContext ctx)? onLongPress}) => Builder(
+          builder: (ctx) {
+            final button = FlatIconTextButton(key: key ?? proMediaEditorBarKey(id), label: Text(label, style: style.copyWith(color: color)), icon: icon, onPressed: () => onTap(ctx));
+            return onLongPress == null ? button : GestureDetector(onLongPress: () => onLongPress(ctx), child: button);
+          },
         );
     final plugins = _pluginActions;
+    _applyAutoFilters(editor, plugins);
     final merged = mergePluginActions(
       config: ref.watch(actionBarConfigProvider(_configKey)),
       // 「Visualizer」は音声を開いているときだけ(動画のバーの構成には常に居る)。
@@ -1052,6 +1091,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
                         Icon(_filters.containsKey(e.action.id) ? Icons.check_circle : PostRow.iconFor(e.action.icon, Icons.extension_outlined), size: 22, color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white),
                         (_) => _perform(editor, e.action, plugins),
                         color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white,
+                        // フィルターの長押し (契約 v0.14 temp): 「次からも自動でオン / オフ」。
+                        onLongPress: _filterTempMenu(plugins, e.action.id),
                       ),
                     ActionListEntry() => item(
                         ActionBarConfig.listKey(e.list.id),

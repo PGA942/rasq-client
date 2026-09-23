@@ -9,6 +9,7 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/home/plugin_actions.dart';
 import 'package:rasq_client/features/plugins/media_filter.dart';
 import 'package:rasq_client/features/plugins/media_plugin_panel.dart';
 import 'package:rasq_client/features/plugins/pro_media_editor_screen.dart';
@@ -343,6 +344,60 @@ void main() {
       await settle(tester);
       expect(state.activeLayers, isEmpty);
       expect(find.byKey(const ValueKey('filter.remove')), findsNothing);
+    });
+
+    testWidgets('temp (契約 v0.14 §2.2 / §2.11): 審査済みの宣言 auto: true のフィルターは開いた瞬間に掛かる(FOW は開かない)、サイドロードの宣言は読まない、長押しで「次からも自動でオフ」', (tester) async {
+      late FakeSlotRuntime rt;
+      Map<String, Object?> filter(String id, String label, {bool? auto}) => {'id': id, 'slot': 'composer.media', 'label': label, 'tags': [label], 'output': 'filter', if (auto != null) 'auto': auto};
+      Map<String, Object?>? preview(String fn, Map<String, Object?> args) => fn == 'filter.preview'
+          ? {'mode': 'overlay', 'params': [{'id': 'w', 'label': '太さ', 'min': 0.1, 'max': 1.0, 'step': 0.1, 'value': 0.5}], 'ops': [{'op': 'rect', 'x': 0, 'y': 0, 'w': 1, 'h': 1, 'color': '#00FF00', 'opacity': 0.3}]}
+          : null;
+      fakes['store:t.a'] = () => rt = FakeSlotRuntime(
+            manifest: {
+              'id': 't.a', 'name': '自動', 'version': '0.1.0', 'kind': 'action', 'slots': ['composer.media'], 'permissions': ['fow.widget'],
+              'actions': [filter('halo', 'Halo', auto: true), filter('glaze', 'Glaze')],
+            },
+            handler: (self, fn, args) => preview(fn, args),
+          );
+      late FakeSlotRuntime side;
+      fakes['side'] = () => side = FakeSlotRuntime(
+            manifest: {
+              'id': 't.side', 'name': 'サイドロード', 'version': '0.1.0', 'kind': 'action', 'slots': ['composer.media'], 'permissions': ['fow.widget'],
+              'actions': [filter('tint', 'Tint', auto: true)],
+            },
+            handler: (self, fn, args) => preview(fn, args),
+          );
+      final c = await pump(tester);
+      final slots = c.read(slotPluginsProvider.notifier);
+      await slots.register('store:t.a', bytes: Uint8List.fromList('a'.codeUnits));
+      await slots.register('fake:side', bytes: Uint8List.fromList('side'.codeUnits));
+      await settle(tester);
+      final haloId = pluginActionId('t.a', 'halo');
+      final prefs = c.read(actionButtonPrefsProvider);
+      final byId = {for (final a in c.read(pluginActionsForProvider(editorImageConfigKey))) a.id: a};
+      expect(byId[haloId]!.effectiveAuto(prefs), isTrue);
+      expect(byId[pluginActionId('t.a', 'glaze')]!.effectiveAuto(prefs), isFalse); // 既定 OFF
+      expect(byId[pluginActionId('t.side', 'tint')]!.effectiveAuto(prefs), isFalse); // サイドロードの auto は読まない
+      c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: png, name: 'a.jpg', mimeType: 'image/jpeg'));
+      await settle(tester);
+      await settle(tester);
+      final state = tester.state<ProImageEditorState>(find.byType(ProImageEditor));
+      // 開いた瞬間に Halo だけが掛かっている(filter.preview 1 回、レイヤー 1 枚)。パラメーターがあっても調整の FOW は開かない。
+      expect(rt.calls.where((x) => x.$1 == 'filter.preview').map((x) => x.$2['actionId']), ['halo']);
+      expect(side.calls.where((x) => x.$1 == 'filter.preview'), isEmpty);
+      expect(state.activeLayers.length, 1);
+      expect(find.byKey(const ValueKey('filter.remove')), findsNothing);
+      // 長押し → 「次からも自動でオフ」: この加工画面は変わらず、設定が書かれる(次に開いたときは掛からない)。
+      final halo = find.byKey(proMediaEditorBarKey(haloId));
+      await tester.ensureVisible(halo);
+      await settle(tester);
+      await tester.longPress(halo);
+      await settle(tester);
+      expect(find.text('次からも自動でオフ'), findsOneWidget);
+      await tester.tap(find.text('次からも自動でオフ'));
+      await settle(tester);
+      expect(c.read(actionButtonPrefsProvider).autoOverride(haloId), isFalse);
+      expect(state.activeLayers.length, 1);
     });
   });
 }
