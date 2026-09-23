@@ -24,6 +24,7 @@ import '../home/action_bar_config.dart';
 import '../home/action_bar_edit_sheet.dart';
 import '../home/action_bundle_fow.dart';
 import '../home/plugin_actions.dart';
+import '../home/post_action_auto.dart';
 import '../home/post_row.dart';
 import '../plugins/slot_plugins.dart';
 import '../post/share_fow.dart';
@@ -222,12 +223,36 @@ class RasqPostTileView extends ConsumerWidget {
           pa.plugin,
           actionId: pa.decl.id,
           post: astellPostPayloadOf(asPost),
-          account: {'sns': 'rasq', 'instance': rasqPostInstance, 'handle': ref.read(orgateAccountProvider).value?.handle ?? ''},
+          account: _pluginAccount(ref),
           column: column,
-          // プラグインが開くコンポーザーは、RASQ 指定で。
-          onComposerOpen: (text, media, mime, name) => showComposer(ref, const ComposeNormal(), initialText: text, column: column, rasqTarget: true, initialFiles: media == null ? null : [ComposerInitialFile(bytes: media, name: name ?? 'plugin.png', mimeType: mime)]),
+          onComposerOpen: _composerOpenFor(ref, column),
         );
     if (message != null && message.isNotEmpty) messenger?.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Map<String, Object?> _pluginAccount(WidgetRef ref) => {'sns': 'rasq', 'instance': rasqPostInstance, 'handle': ref.read(orgateAccountProvider).value?.handle ?? ''};
+
+  /// プラグインが開くコンポーザーは、RASQ 指定で。
+  void Function(String text, Uint8List? media, String? mime, String? name) _composerOpenFor(WidgetRef ref, int column) =>
+      (text, media, mime, name) => showComposer(ref, const ComposeNormal(), initialText: text, column: column, rasqTarget: true, initialFiles: media == null ? null : [ComposerInitialFile(bytes: media, name: name ?? 'plugin.png', mimeType: mime)]);
+
+  /// post.action の temp (契約 v0.14 §2.9、D-305): タイルが作られたら、自動実行できるボタンを投稿ごとに 1 回呼ぶ(RASQ の投稿も同じ)。
+  void _scheduleAutoPluginActions(BuildContext context, WidgetRef ref, List<PluginAction> plugins) {
+    if (!hasAutoPostActions(plugins)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      final column = fowColumnOf(context);
+      runAutoPostActions(
+        ref,
+        postKey: 'rasq:${post.id}',
+        settingsKey: slotSettingsKeyFor(rasqPostConfigKey, ''),
+        plugins: plugins,
+        payload: astellPostPayloadOf(post.toPost(central: ref.read(centralBaseUrlProvider))),
+        account: _pluginAccount(ref),
+        column: column,
+        onComposerOpen: _composerOpenFor(ref, column),
+      );
+    });
   }
 
   /// 引用の元: SNS の引用と同じ、埋め込みサイズのタイル。
@@ -293,10 +318,12 @@ class RasqPostTileView extends ConsumerWidget {
         );
 
     // アクションバーの構成 (D-279): 内蔵の 返信 / リブロード / キュー + プラグインのボタン(`post.action`)。並びとバンドルは編集できる。
+    final pluginActions = ref.watch(pluginActionsForProvider(rasqPostConfigKey));
+    _scheduleAutoPluginActions(context, ref, pluginActions);
     final merged = mergePluginActions(
       config: ref.watch(actionBarConfigProvider(rasqPostConfigKey)),
       snsActions: rasqPostBuiltinActions,
-      plugins: ref.watch(pluginActionsForProvider(rasqPostConfigKey)),
+      plugins: pluginActions,
       settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(rasqPostConfigKey, ''))),
       prefs: ref.watch(actionButtonPrefsProvider),
     );

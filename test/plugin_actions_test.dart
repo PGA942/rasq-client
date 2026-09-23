@@ -305,6 +305,58 @@ void main() {
     expect(find.byKey(ValueKey('actionbar.tile.$copyId')), findsNothing);
   });
 
+  testWidgets('post.action の temp (契約 v0.14 §2.9): auto_hook のある審査済みの auto: true は、タイルごとに 1 回 auto: true で呼ばれる(トースト無し)。権限が無い / サイドロード / switch オフは動かない', (tester) async {
+    late FakeSlotRuntime hook;
+    late FakeSlotRuntime noHook;
+    late FakeSlotRuntime side;
+    // バーが溢れないよう、t.hook の「既読」以外は Favorite → リアクションのバンドルに入れる。
+    Map<String, Object?> manifest(String id, {required List<String> permissions, bool bundled = true}) => {
+          'id': id, 'name': id, 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action'], 'permissions': permissions,
+          'actions': [
+            {'id': 'mark', 'label': '既読', 'icon': 'done', 'tags': [bundled ? 'Favorite' : 'Read'], 'auto': true},
+            if (!bundled) {'id': 'copy', 'label': 'コピー', 'icon': 'content_copy', 'tags': ['Favorite']},
+          ],
+        };
+    Map<String, Object?> handler(String fn, Map<String, Object?> args) => {'result': {'done': true, 'message': '${args['actionId']} を実行しました'}};
+    fakes['store:t.hook'] = () => hook = FakeSlotRuntime(manifest: manifest('t.hook', permissions: ['fow.widget', 'auto_hook'], bundled: false), handler: (self, fn, args) => handler(fn, args));
+    fakes['store:t.nohook'] = () => noHook = FakeSlotRuntime(manifest: manifest('t.nohook', permissions: ['fow.widget']), handler: (self, fn, args) => handler(fn, args));
+    fakes['side'] = () => side = FakeSlotRuntime(manifest: manifest('t.side', permissions: ['fow.widget', 'auto_hook']), handler: (self, fn, args) => handler(fn, args));
+    final c = await pump(tester);
+    final slots = c.read(slotPluginsProvider.notifier);
+    await slots.register('store:t.hook', bytes: Uint8List.fromList('hook'.codeUnits));
+    await slots.register('store:t.nohook', bytes: Uint8List.fromList('nohook'.codeUnits));
+    await slots.register('fake:side', bytes: Uint8List.fromList('side'.codeUnits));
+    await tester.pumpAndSettle();
+    final markId = pluginActionId('t.hook', 'mark');
+    final prefs = c.read(actionButtonPrefsProvider);
+    final byId = {for (final a in c.read(pluginActionsProvider)) a.id: a};
+    expect((byId[markId]!.canAutoRun, byId[markId]!.hasTemp, byId[markId]!.effectiveAuto(prefs)), (true, true, true));
+    expect(byId[pluginActionId('t.hook', 'copy')]!.effectiveAuto(prefs), isFalse); // 既定 OFF
+    expect((byId[pluginActionId('t.nohook', 'mark')]!.canAutoRun, byId[pluginActionId('t.nohook', 'mark')]!.hasTemp), (false, false)); // auto_hook が無い
+    expect(byId[pluginActionId('t.side', 'mark')]!.canAutoRun, isFalse); // サイドロード
+    // TL の投稿 p1 のタイルが作られた → t.hook の mark だけが auto: true で 1 回。message はトーストに出ない。
+    Iterable<Map<String, Object?>> autoCalls(FakeSlotRuntime rt) => rt.calls.where((x) => x.$1 == 'post.action').map((x) => x.$2);
+    expect(autoCalls(hook).map((a) => (a['actionId'], a['auto'])), [('mark', true)]);
+    expect((autoCalls(hook).single['post'] as Map)['url'], 'https://example.test/notes/p1');
+    expect(autoCalls(noHook), isEmpty);
+    expect(autoCalls(side), isEmpty);
+    expect(find.text('mark を実行しました'), findsNothing);
+    // 描き直しても同じ投稿にはもう呼ばない。
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(autoCalls(hook).length, 1);
+    // 手で押したときは auto が付かず、message がトーストに出る(ボタン自体は今までどおり)。
+    await tester.tap(find.byTooltip('既読'));
+    await tester.pumpAndSettle();
+    expect(autoCalls(hook).last.containsKey('auto'), isFalse);
+    expect(find.text('mark を実行しました'), findsOneWidget);
+    // switch オフ(端末全体): ボタンが消え、temp も評価しない(false)。
+    await setActionSwitch(c.read(settingsAreaProvider(actionButtonPrefsArea).notifier), c.read(actionButtonPrefsProvider), markId, false);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('既読'), findsNothing);
+    expect(byId[markId]!.effectiveAuto(c.read(actionButtonPrefsProvider)), isFalse);
+  });
+
   testWidgets('設定 → SNSプラグイン → プラグインボタン (D-210): 宣言されたボタンのスイッチと束ねる閾値', (tester) async {
     fakes['act'] = () => FakeSlotRuntime(
           manifest: {'id': 't.act', 'name': '投稿ボタン', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action'], 'permissions': ['fow.widget'], 'actions': [{'id': 'copy', 'label': '本文をコピー', 'icon': 'content_copy', 'tags': ['Copy']}]},
