@@ -36,6 +36,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('タイムライン', route: '/settings/dsl/sns.timeline'),
     SettingsRow('セキュリティ', route: '/settings/dsl/sns.security'),
     SettingsRow('プライバシーとセーフモード', route: '/settings/dsl/sns.safety'),
+    SettingsRow('チャイルドセーフ', subtitle: '保護者として見守る / チャイルドモード(保護者のコードでつなぐ)', route: Routes.childSafe),
     SettingsRow('リスト', route: '/lists'),
     SettingsRow('ミュート/ブロック', route: '/settings/mute-block'),
     SettingsRow('プラグインボタン', subtitle: '面ごとの主電源と「開いたとき自動でオン」、このアカウントの有効 / 無効と束ねる閾値', route: Routes.actionBarPlugins),

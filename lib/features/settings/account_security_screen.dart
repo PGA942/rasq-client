@@ -474,6 +474,9 @@ class _AccountLoginScreenState extends ConsumerState<AccountLoginScreen> {
                 }),
             child: Text(_mode == _LoginMode.reset ? 'パスワードを決めてログイン' : 'ログイン'),
           )),
+        // チャイルドセーフ (D-307): 保護者がアプリで作った子のアカウントへ、1 度きりのコードで入る。
+        const RasqSectionHeader(title: '子のアカウント'),
+        RasqListTile(key: const ValueKey('login.childCode'), title: '保護者からのコードでログイン', subtitle: '保護者が作った子のアカウントに入ります', onTap: () => context.push('/child-safe/login')),
       ]),
     );
   }

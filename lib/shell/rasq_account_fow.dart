@@ -372,7 +372,10 @@ class RasqAccountPanel extends ConsumerWidget {
               key: const ValueKey('rasq.account.childSafe'),
               onPressed: () {
                 leave();
-                context.push('${Routes.settings}/dsl/sns.safety');
+                // チャイルドセーフ (D-307): 保護者(`GET /me` の roles に guardian)は見守りの画面へ、ほかは入口へ
+                // (保護者の確認 / チャイルドモード / セーフモード)。
+                final guardian = ref.read(orgateAccountProvider).value?.roles.contains('guardian') ?? false;
+                context.push(guardian ? Routes.childSafeGuardian : Routes.childSafe);
               },
               icon: const Icon(Icons.child_care_outlined, size: 18),
               label: const Text('チャイルドセーフ'),
