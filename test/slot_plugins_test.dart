@@ -77,6 +77,28 @@ void main() {
 
   setUp(() => fakes = {});
 
+  test('マニフェストの actions (契約 v0.14 §2.11): auto / placement / destructive / autoHookForbidden を読む、tags 無しの post.action は manual', () {
+    final m = SlotManifest.fromJson({
+      'id': 't.d', 'name': 'D', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action', 'composer.media'],
+      'actions': [
+        {'id': 'a', 'label': 'A', 'tags': ['X']},
+        {'id': 'b', 'label': 'B', 'tags': ['X'], 'auto': true, 'placement': 'manual', 'destructive': true, 'autoHookForbidden': true},
+        {'id': 'c', 'label': 'C', 'placement': 'manual'},
+        {'id': 'd', 'label': 'D', 'tags': ['X'], 'auto': 'yes', 'placement': 'pinned'}, // 形の違う値は既定に
+        {'id': 'e', 'slot': 'composer.media', 'label': 'E', 'output': 'filter', 'auto': false},
+      ],
+    });
+    final byId = {for (final a in m.actions) a.id: a};
+    expect((byId['a']!.auto, byId['a']!.placement, byId['a']!.isManual, byId['a']!.destructive, byId['a']!.autoHookForbidden), (null, 'auto', false, false, false));
+    expect((byId['b']!.auto, byId['b']!.placement, byId['b']!.isManual, byId['b']!.destructive, byId['b']!.autoHookForbidden), (true, 'manual', true, true, true));
+    expect(byId['c']!.tags, isEmpty);
+    expect(byId['c']!.isManual, isTrue);
+    expect((byId['d']!.auto, byId['d']!.placement, byId['d']!.isManual), (null, 'auto', false));
+    expect((byId['e']!.auto, byId['e']!.isFilterOutput, byId['e']!.isManual), (false, true, false)); // composer.media は tags 無しでも manual ではない
+    expect(SlotPlugin(manifest: m, source: 'store:t.d', runtime: FakeSlotRuntime(manifest: const {}, handler: (self, fn, args) => null)).isReviewed, isTrue);
+    expect(SlotPlugin(manifest: m, source: 'file:/x.wasm', runtime: FakeSlotRuntime(manifest: const {}, handler: (self, fn, args) => null)).isReviewed, isFalse);
+  });
+
   testWidgets('登録と永続化: マニフェストの slots で振り分け、パスは端末に残り、解除で消える', (tester) async {
     fakes['a'] = () => FakeSlotRuntime(manifest: manifest('t.a', ['post.transform', 'trend.suggest']), handler: (_, fn, args) => null);
     final c = await pump(tester);

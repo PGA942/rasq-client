@@ -167,17 +167,17 @@ class PluginAction {
   /// 審査済みで `auto_hook` 権限があり、`destructive` / `autoHookForbidden` でないボタンだけ。
   bool get canAutoRun => decl.isPostAction && plugin.isReviewed && plugin.manifest.permissions.contains('auto_hook') && !decl.destructive && !decl.autoHookForbidden;
 
-  /// 宣言の `auto`(審査済みだけ読む)→ 無ければホスト既定。post.action で自動実行できないものは常に false。
+  /// 宣言の `auto`(審査済みだけ読む)→ 無ければホスト既定。temp を持たないボタン([hasTemp]: 自動実行できない post.action、
+  /// filter でない composer.media)は宣言があっても常に false。
   bool get declaredAuto {
-    if (decl.isPostAction && !canAutoRun) return false;
+    if (!hasTemp) return false;
     final a = decl.auto;
     return plugin.isReviewed && a != null ? a : hostDefaultAuto(decl);
   }
 
   /// 面が作られた瞬間の初期状態(temp): switch オフ → false(評価しない)、利用者の上書き → 宣言 → ホスト既定。
   bool effectiveAuto(ActionButtonPrefs prefs) {
-    if (!prefs.switchOn(id)) return false;
-    if (decl.isPostAction && !canAutoRun) return false;
+    if (!prefs.switchOn(id) || !hasTemp) return false;
     return prefs.autoOverride(id) ?? declaredAuto;
   }
 

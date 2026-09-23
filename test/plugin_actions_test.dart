@@ -84,6 +84,73 @@ void main() {
     expect(accountKeyOfConfigKey(''), isNull);
   });
 
+  group('ボタン共通の属性 (契約 v0.14 §2.11、D-305)', () {
+    PluginAction action(Map<String, Object?> decl, {String source = 'store:t.p', List<String> permissions = const ['fow.widget']}) {
+      final m = SlotManifest.fromJson({'id': 't.p', 'name': 'P', 'version': '0.1.0', 'kind': 'action', 'slots': ['post.action', 'viewer.overlay', 'composer.media', 'composer.text'], 'permissions': permissions, 'actions': [decl]});
+      return PluginAction(plugin: SlotPlugin(manifest: m, source: source, runtime: FakeSlotRuntime(manifest: const {}, handler: (self, fn, args) => null)), decl: m.actions.single);
+    }
+
+    const reaction = ActionDescriptor(id: 'reaction', genreTag: 'Reaction', label: 'リアクション');
+    const reply = ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信');
+
+    test('placement: auto は宣言だけで置かれる、manual(tags 無しも)は構成に入っているときだけ', () {
+      final auto = action({'id': 'later', 'label': '後で', 'tags': ['Favorite']});
+      final manual = action({'id': 'pin', 'label': '留める', 'tags': ['Pin'], 'placement': 'manual'});
+      final noTags = action({'id': 'bare', 'label': '素', 'placement': 'manual'});
+      expect((auto.isManual, manual.isManual, noTags.isManual), (false, true, true));
+      final plugins = [auto, manual, noTags];
+      var m = mergePluginActions(config: const ActionBarConfig(), snsActions: [reaction, reply], plugins: plugins, settings: const SlotActionSettings());
+      expect(m.actions.map((a) => a.id), [reaction.id, reply.id, auto.id]); // manual は出ない
+      expect(m.config.lists.single.memberIds, [reaction.id, auto.id]); // Favorite → リアクションのバンドル
+      // (+) で足した(並びに入った)manual は出る。バンドルに入れたものも同じ。
+      m = mergePluginActions(config: ActionBarConfig(order: [reaction.id, manual.id], lists: [ActionListDef(id: 'l', name: 'L', memberIds: [reply.id, noTags.id])]), snsActions: [reaction, reply], plugins: plugins, settings: const SlotActionSettings());
+      expect(m.actions.map((a) => a.id), containsAll([manual.id, noTags.id]));
+      expect(m.config.order, contains(manual.id));
+    });
+
+    test('switch: オフのボタンは合成にも候補にも出ず、temp は評価しない。アカウントごとの有効 / 無効とは AND', () {
+      final a = action({'id': 'later', 'label': '後で', 'tags': ['Favorite'], 'auto': true}, permissions: ['fow.widget', 'auto_hook']);
+      final prefs = ActionButtonPrefs(switches: {a.id: false});
+      expect(prefs.switchOn(a.id), isFalse);
+      expect(a.effectiveAuto(const ActionButtonPrefs()), isTrue);
+      expect(a.effectiveAuto(prefs), isFalse);
+      expect(mergePluginActions(config: const ActionBarConfig(), snsActions: [reaction], plugins: [a], settings: const SlotActionSettings(), prefs: prefs).actions.map((x) => x.id), [reaction.id]);
+      expect(mergePluginActions(config: const ActionBarConfig(), snsActions: [reaction], plugins: [a], settings: SlotActionSettings(enabled: {a.id: false})).actions.map((x) => x.id), [reaction.id]);
+      // 保存の形: {"switch": {ActionKey: bool}, "auto": {ActionKey: bool}}。上書きの外し方(null)。
+      final j = ActionButtonPrefs.fromJson({'switch': {a.id: false}, 'auto': {a.id: false, 'junk': 'x'}});
+      expect((j.switchOn(a.id), j.autoOverride(a.id), j.autoOverride('junk')), (false, false, false));
+      expect(j.autoWith(a.id, null).containsKey(a.id), isFalse);
+    });
+
+    test('temp の既定: 面ごとのホスト既定 → 審査済みの宣言 → 利用者の上書き。post.action は auto_hook が要り、サイドロードは宣言を読まない', () {
+      final viewer = action({'id': 'toggle', 'slot': 'viewer.overlay', 'label': 'QR', 'tags': ['QR']});
+      final text = action({'id': 't', 'slot': 'composer.text', 'label': '校正', 'tags': ['Text']});
+      final filter = action({'id': 'glaze', 'slot': 'composer.media', 'label': 'Glaze', 'tags': ['Glaze'], 'output': 'filter'});
+      final edit = action({'id': 'edit', 'slot': 'composer.media', 'label': '編集', 'tags': ['Edit'], 'auto': true});
+      final post = action({'id': 'later', 'label': '後で', 'tags': ['Favorite']});
+      const none = ActionButtonPrefs();
+      expect([viewer, text, filter, post].map((a) => a.effectiveAuto(none)), [true, true, false, false]);
+      expect([viewer, text, filter, post].map((a) => a.hasTemp), [true, true, true, false]);
+      expect((edit.hasTemp, edit.effectiveAuto(none)), (false, false)); // replace / sticker は状態を持たない
+      // 宣言 auto(審査済み)→ 利用者の上書きが勝つ。
+      final declaredOff = action({'id': 'toggle', 'slot': 'viewer.overlay', 'label': 'QR', 'tags': ['QR'], 'auto': false});
+      expect(declaredOff.effectiveAuto(none), isFalse);
+      expect(declaredOff.effectiveAuto(ActionButtonPrefs(auto: {declaredOff.id: true})), isTrue);
+      // サイドロード(未審査)の宣言は読まない → ホスト既定。
+      expect(action({'id': 'toggle', 'slot': 'viewer.overlay', 'label': 'QR', 'tags': ['QR'], 'auto': false}, source: 'file:/x.wasm').effectiveAuto(none), isTrue);
+      // post.action の auto: true は auto_hook のある審査済みだけ。destructive / autoHookForbidden は不可。
+      final hook = action({'id': 'mark', 'label': '既読', 'tags': ['Read'], 'auto': true}, permissions: ['fow.widget', 'auto_hook']);
+      expect((hook.canAutoRun, hook.hasTemp, hook.effectiveAuto(none)), (true, true, true));
+      expect(action({'id': 'mark', 'label': '既読', 'tags': ['Read'], 'auto': true}).canAutoRun, isFalse);
+      expect(action({'id': 'mark', 'label': '既読', 'tags': ['Read'], 'auto': true}, source: 'file:/x.wasm', permissions: ['fow.widget', 'auto_hook']).canAutoRun, isFalse);
+      expect(action({'id': 'del', 'label': '消す', 'tags': ['Delete'], 'auto': true, 'destructive': true}, permissions: ['fow.widget', 'auto_hook']).canAutoRun, isFalse);
+      expect(action({'id': 'x', 'label': 'x', 'tags': ['X'], 'auto': true, 'autoHookForbidden': true}, permissions: ['fow.widget', 'auto_hook']).canAutoRun, isFalse);
+      // 利用者の上書きがあっても、自動実行できないボタンは false のまま。
+      expect(action({'id': 'later', 'label': '後で', 'tags': ['Favorite']}).effectiveAuto(ActionButtonPrefs(auto: {'slot:t.p:later': true})), isFalse);
+      expect(postTransformActionId('t.p'), 'slot:t.p:post.transform');
+    });
+  });
+
   testWidgets('宣言だけでバンドルに入る → タップで post.action(post / account)→ message がトースト、composer.open でコンポーザー、スロット設定で無効化', (tester) async {
     late FakeSlotRuntime rt;
     fakes['act'] = () => rt = FakeSlotRuntime(
