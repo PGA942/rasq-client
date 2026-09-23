@@ -16,7 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
-import '../home/plugin_actions.dart' show actionButtonPrefsProvider, postTransformActionId;
+import '../home/plugin_actions.dart' show actionButtonPrefsProvider, migrateViewerPluginSettings, postTransformActionId;
 import '../media/image_scale.dart';
 import '../settings/settings_dsl.dart';
 import '../store/rasqpkg.dart';
@@ -348,6 +348,9 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   }
 
   Future<void> _restore() async {
+    // 全画面トグルの保存の移行 (契約 v0.14 §2.4、D-305): プラグインを読み直す前に 1 回。
+    await migrateViewerPluginSettings(ref);
+    if (_disposed) return;
     try {
       final raw = await ref.read(sessionStorageProvider).read(slotPluginsStorageKey);
       if (raw == null) return;

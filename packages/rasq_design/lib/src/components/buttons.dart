@@ -81,10 +81,13 @@ class RasqGradientButton extends StatelessWidget {
 
 /// Circular icon button with guaranteed 44dp target (header `…`, back, etc.).
 class RasqIconButton extends StatelessWidget {
-  const RasqIconButton({super.key, required this.icon, this.onPressed, this.tooltip, this.color, this.size = 22, this.badge});
+  const RasqIconButton({super.key, required this.icon, this.onPressed, this.onLongPress, this.tooltip, this.color, this.size = 22, this.badge});
 
   final IconData icon;
   final VoidCallback? onPressed;
+
+  /// 長押し(押せるときだけ効く)。
+  final VoidCallback? onLongPress;
   final String? tooltip;
   final Color? color;
   final double size;
@@ -98,6 +101,7 @@ class RasqIconButton extends StatelessWidget {
     }
     return IconButton(
       onPressed: onPressed,
+      onLongPress: onLongPress,
       tooltip: tooltip,
       icon: iconWidget,
       constraints: const BoxConstraints(minWidth: RasqSizes.minTap, minHeight: RasqSizes.minTap),

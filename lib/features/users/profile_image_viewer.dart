@@ -71,14 +71,17 @@ class _ProfileImageViewerScreenState extends ConsumerState<ProfileImageViewerScr
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       for (final a in ref.watch(viewerPluginActionsProvider)) ...[
                         const SizedBox(width: 2),
-                        ViewerPluginToggle(
-                          pluginId: a.plugin.id,
-                          label: a.decl.label,
-                          iconName: a.decl.icon,
-                          enabled: ref.watch(viewerOverlayPluginsProvider).any((p) => p.id == a.plugin.id),
-                          status: _overlays.statusOf(0, a.plugin.id),
-                          onPressed: () => _overlays.toggle(a.plugin.id, 0, widget.url),
-                        ),
+                        if (ref.watch(viewerOverlayPluginsProvider).any((p) => p.id == a.plugin.id)) // switch を切ったものは出さない (契約 v0.14)
+                          ViewerPluginToggle(
+                            pluginId: a.plugin.id,
+                            label: a.decl.label,
+                            iconName: a.decl.icon,
+                            // ON / OFF はこの全画面限り(契約 v0.14 temp)。長押しで「次からも自動でオン / オフ」。
+                            enabled: _overlays.isOn(a.plugin.id),
+                            status: _overlays.statusOf(0, a.plugin.id),
+                            onPressed: () => _overlays.toggle(a.plugin.id, 0, widget.url),
+                            onLongPress: (anchor) => showActionTempMenu(ref, anchor: anchor, action: a),
+                          ),
                       ],
                     ]),
                   ),

@@ -1,7 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show Rect;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../app/providers.dart';
 import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
 import 'action_bar_config.dart';
@@ -70,6 +75,64 @@ final actionButtonPrefsProvider = Provider<ActionButtonPrefs>((ref) {
   final v = ref.watch(settingsAreaProvider(actionButtonPrefsArea)).value;
   return v == null ? const ActionButtonPrefs() : ActionButtonPrefs.fromJson(v);
 });
+
+/// temp の上書きを書く(設定画面と、面の中の長押し「次からも自動でオン / オフ」から)。null = 宣言 / ホスト既定に戻す。
+Future<void> setActionAuto(SettingsAreaStore store, ActionButtonPrefs prefs, String id, bool? on) => store.set(ActionButtonPrefs.autoKey, prefs.autoWith(id, on));
+
+/// switch を書く(設定画面から)。
+Future<void> setActionSwitch(SettingsAreaStore store, ActionButtonPrefs prefs, String id, bool on) => store.set(ActionButtonPrefs.switchKey, prefs.switchesWith(id, on));
+
+/// 面の中の長押し(契約 v0.14 §2.11): 「次からも自動でオン / オフ」のドロップダウン。今の面の状態は変えない(temp は次に面を作るときの初期状態)。
+Future<void> showActionTempMenu(WidgetRef ref, {required Rect anchor, required PluginAction action, String? ownerId}) async {
+  final prefs = ref.read(actionButtonPrefsProvider);
+  final current = action.effectiveAuto(prefs);
+  final pick = await ref.read(overlayManagerProvider).showDropdown<String>(
+    id: 'actionbar.temp.menu',
+    ownerId: ownerId,
+    anchor: anchor,
+    dense: true,
+    items: [
+      RasqDropdownItem('次からも自動でオン', 'on', checked: current),
+      RasqDropdownItem('次からも自動でオフ', 'off', checked: !current),
+      if (prefs.autoOverride(action.id) != null) const RasqDropdownItem('プラグインの既定に戻す', 'reset'),
+    ],
+  );
+  if (pick == null) return;
+  await setActionAuto(ref.read(settingsAreaProvider(actionButtonPrefsArea).notifier), prefs, action.id, pick == 'reset' ? null : pick == 'on');
+}
+
+/// v0.13 までの全画面トグルの保存(設定エリア `slots.viewer`、`enabled.<pluginId>`)を、1 回だけ `slots.global` の `auto`
+/// (ActionKey `slot:<pluginId>:viewer.overlay`)へ写して捨てる(契約 v0.14 §2.4)。次に開いたときの初期状態が今までと同じになる。
+/// 既に `auto` に値があるキーは上書きしない。起動時のプラグインの読み直し([SlotPluginsNotifier])から呼ぶ。
+const legacyViewerPluginsStorageKey = 'slots.viewer.v1';
+
+Future<void> migrateViewerPluginSettings(Ref ref) async {
+  final storage = ref.read(sessionStorageProvider);
+  final String? raw;
+  try {
+    raw = await storage.read(legacyViewerPluginsStorageKey);
+  } catch (_) {
+    return;
+  }
+  if (raw == null) return;
+  try {
+    final legacy = (jsonDecode(raw) as Map).cast<String, Object?>();
+    final store = ref.read(settingsAreaProvider(actionButtonPrefsArea).notifier);
+    final prefs = ActionButtonPrefs.fromJson(await ref.read(settingsAreaProvider(actionButtonPrefsArea).future));
+    final auto = {...prefs.auto};
+    const prefix = 'enabled.';
+    for (final e in legacy.entries) {
+      if (!e.key.startsWith(prefix) || e.value is! bool) continue;
+      auto.putIfAbsent(pluginActionId(e.key.substring(prefix.length), viewerToggleActionId), () => e.value == true);
+    }
+    if (auto.length != prefs.auto.length) await store.set(ActionButtonPrefs.autoKey, auto);
+  } catch (e) {
+    debugPrint('viewer plugin settings migration: $e');
+  }
+  try {
+    await storage.delete(legacyViewerPluginsStorageKey);
+  } catch (_) {}
+}
 
 /// 面ごとのホスト既定(宣言も設定も無いときの temp。今までの挙動と同じ)。
 bool hostDefaultAuto(SlotActionDecl decl) => switch (decl.slot) {
