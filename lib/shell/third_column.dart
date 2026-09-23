@@ -7,6 +7,8 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../app/providers.dart';
 import '../app/router.dart';
 import '../features/compose/composer_sheet.dart' show composerFowId;
+import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
+import '../features/child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_dsl.dart';
 
@@ -194,6 +196,8 @@ class ThirdColumnView extends ConsumerWidget {
     }
 
     final empty = settingValue(ref, 'thirdColumn', 'empty', 'search') as String? ?? 'search';
+    // チャイルドセーフ (D-307): 検索を止めていれば出さない。
+    final blockedSearch = ref.watch(childGateProvider).routeBlockReason('/search');
     return PaneScope(
       entry: null,
       child: Column(children: [
@@ -223,7 +227,7 @@ class ThirdColumnView extends ConsumerWidget {
         Expanded(
           child: switch (empty) {
             'none' => const RasqEmptyView(title: '第3カラム', hint: 'FOW をここへ移動できます(M5c)'),
-            _ => const SearchScreen(),
+            _ => blockedSearch != null ? ChildSafeBlockedView(message: blockedSearch) : const SearchScreen(),
           },
         ),
       ]),

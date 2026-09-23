@@ -5,7 +5,10 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../app/providers.dart';
 import '../backend/rasq_account.dart';
+import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
+import '../features/child_safe/child_safe_screens.dart' show ChildSafeWindowBanner;
 import '../features/notifications/notifications_screen.dart';
+import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'nav.dart';
 import 'sidebar.dart';
 import 'third_column.dart';
@@ -38,6 +41,25 @@ class RasqShell extends ConsumerWidget {
   }
 }
 
+/// タブのルート(チャイルドセーフの関所に問い合わせる)。
+String _tabPath(RasqNavTab t) => switch (t) { RasqNavTab.home => '/home', RasqNavTab.search => '/search', RasqNavTab.vc => '/vc', RasqNavTab.notifications => '/notifications', RasqNavTab.dm => '/dm' };
+
+/// チャイルドセーフ (D-307): 止めているタブは薄く出し、押したら理由を出す(ルーターも止める)。
+String? _tabBlocked(WidgetRef ref, RasqNavTab t) => ref.watch(childGateProvider).routeBlockReason(_tabPath(t));
+
+void _goTab(WidgetRef ref, StatefulNavigationShell shell, int i) {
+  final reason = ref.read(childGateProvider).routeBlockReason(_tabPath(RasqNavTab.values[i]));
+  if (reason != null) {
+    ref.read(rootMessengerKeyProvider).currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(reason)));
+    return;
+  }
+  shell.goBranch(i, initialLocation: i == shell.currentIndex);
+}
+
+Widget _greyed(bool blocked, Widget child) => blocked ? Opacity(opacity: 0.38, child: child) : child;
+
 class _MobileLayout extends ConsumerWidget {
   const _MobileLayout({required this.shell});
   final StatefulNavigationShell shell;
@@ -46,19 +68,20 @@ class _MobileLayout extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: shell,
+      // 見守りの時間の帯 (D-307)。
+      body: Column(children: [const ChildSafeWindowBanner(), Expanded(child: shell)]),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.onSurface, width: 1.2))),
         child: NavigationBar(
           selectedIndex: shell.currentIndex,
-          onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+          onDestinationSelected: (i) => _goTab(ref, shell, i),
           destinations: [
             for (final t in RasqNavTab.values)
               NavigationDestination(
-                icon: _LongPressable(tab: t, child: _navIcon(t, selected: false)),
+                icon: _greyed(_tabBlocked(ref, t) != null, _LongPressable(tab: t, child: _navIcon(t, selected: false))),
                 selectedIcon: _LongPressable(tab: t, child: _navIcon(t, selected: true)),
                 label: t.label,
-                tooltip: t.label,
+                tooltip: _tabBlocked(ref, t) ?? t.label,
               ),
           ],
         ),
@@ -113,10 +136,10 @@ class _TabletLayout extends ConsumerWidget {
                 const SizedBox(height: RasqSpacing.lg),
                 for (final t in RasqNavTab.values)
                   IconButton(
-                    tooltip: t.label,
+                    tooltip: _tabBlocked(ref, t) ?? t.label,
                     isSelected: shell.currentIndex == t.index,
-                    onPressed: () => shell.goBranch(t.index, initialLocation: t.index == shell.currentIndex),
-                    icon: _navIcon(t, selected: false),
+                    onPressed: () => _goTab(ref, shell, t.index),
+                    icon: _greyed(_tabBlocked(ref, t) != null, _navIcon(t, selected: false)),
                     selectedIcon: _navIcon(t, selected: true),
                   ),
               ]),
@@ -126,7 +149,7 @@ class _TabletLayout extends ConsumerWidget {
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
             width: col2Width.toDouble(),
-            child: ClipRect(child: shell),
+            child: ClipRect(child: Column(children: [const ChildSafeWindowBanner(), Expanded(child: shell)])),
           ),
           // 第3カラム (D-056/D-057): 空のときは検索(設定で変更可)。ページが
           // 開くと広がり、M5c 以降は FOW の移動先になる。

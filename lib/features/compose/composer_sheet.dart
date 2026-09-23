@@ -15,6 +15,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../session/sanctions.dart';
+import '../child_safe/child_safe_providers.dart' show childComposeVerdict, childComposeSent;
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
 import '../../text/inline_spans.dart';
@@ -1347,6 +1348,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final sanctions = ref.read(rasqSanctionsProvider).value ?? RasqSanctions.none;
     final blocked = sanctions.blockedMessage('post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
     if (blocked != null) return setState(() => _error = blocked);
+    if (!await _childSafeAllows(dm: false)) return;
     // 公開設定は SNS と同じ FOW から。RASQ に無いもの(指名 / リモート向けの受け入れ)は、近いものへ寄せる。
     final opts = ref.read(composeOptionsProvider);
     final visibility = const {'public', 'home', 'followers'}.contains(opts.visibility) ? opts.visibility : 'followers';
@@ -1368,6 +1370,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         quoteOf: _rasqQuote ? _quoteOf!.id : null,
       );
       ref.invalidate(rasqAccountPageProvider(me.handle));
+      await childComposeSent(ref, _text.text.trim());
       if (_draftId != null) _drafts.clear(_draftId!);
       _skipDraftOnDispose = true;
       ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(const SnackBar(content: Text('RASQ に投稿しました')));
@@ -1399,6 +1402,19 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
   }
 
+  /// チャイルドセーフ (D-307): 見守りの制限(DM / メディア / 1 日の数 / 本文の強さ)。止めたら理由を出し、当たった語を選んで印を付ける。
+  Future<bool> _childSafeAllows({required bool dm}) async {
+    final verdict = await childComposeVerdict(ref, text: _text.text, dm: dm, media: _files.isNotEmpty);
+    if (verdict == null) return true;
+    if (!mounted) return false;
+    setState(() => _error = verdict.message);
+    if (verdict.hasRange && verdict.end! <= _text.text.length) {
+      _text.selection = TextSelection(baseOffset: verdict.start!, extentOffset: verdict.end!);
+      _focus.requestFocus();
+    }
+    return false;
+  }
+
   Future<void> _send() async {
     if (_rasqTarget) return _sendRasq();
     final session = _session;
@@ -1422,6 +1438,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       setState(() => _error = blocked);
       return;
     }
+    if (!await _childSafeAllows(dm: _isDm)) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -1486,6 +1503,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ComposeDm(room: final r) => await session.sendDm(r, draft),
         _ => await session.createPost(draft),
       };
+      await childComposeSent(ref, _text.text.trim());
       // 返信 / 引用した相手を、投稿したアカウントの「やりとり」として覚える (D-280: 共有 / リノートに使うアカウントの予測の材料)。
       final talkedTo = replyTo ?? quoteOf;
       if (talkedTo != null) ref.read(accountAffinityProvider.notifier).record(Post(id: talkedTo.id, account: session.account, author: talkedTo.author, createdAt: talkedTo.createdAt, body: '')).ignore();

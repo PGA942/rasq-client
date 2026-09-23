@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'settings_dsl.dart';
 
 /// プラグイン設定「プライバシーとセーフモード」(D-044, `sns.safety`) の
@@ -42,4 +43,9 @@ class SafetySettings {
   }
 }
 
-final safetySettingsProvider = Provider<SafetySettings>((ref) => SafetySettings.of(ref.watch(snsSettingValuesProvider('safety')).value ?? const {}));
+final safetySettingsProvider = Provider<SafetySettings>((ref) {
+  final s = SafetySettings.of(ref.watch(snsSettingValuesProvider('safety')).value ?? const {});
+  // チャイルドセーフ (D-307): 見守り中は、閲覧注意のメディアを必ず取り除く(設定は読むだけ)。
+  if (ref.watch(childGateProvider.select((g) => g.forceHideSensitive))) return SafetySettings(sensitiveMedia: 'hide', openCw: s.openCw);
+  return s;
+});

@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
 import '../../text/inline_spans.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/plugin_actions.dart' show actionButtonPrefsProvider, migrateViewerPluginSettings, postTransformActionId;
 import '../media/image_scale.dart';
 import '../settings/settings_dsl.dart';
@@ -278,7 +279,9 @@ const slotSettingsAreas = <String, String>{
 final slotPluginsForProvider = Provider.family<List<SlotPlugin>, String>((ref, slot) {
   final area = slotSettingsAreas[slot];
   if (area != null && ref.watch(settingsAreaProvider(area)).value?['enabled'] == false) return const [];
-  return [for (final p in ref.watch(slotPluginsProvider)) if (p.has(slot)) p];
+  // チャイルドセーフ (D-307): 保護者が許したプラグイン / スロットだけ。
+  final gate = ref.watch(childGateProvider);
+  return [for (final p in ref.watch(slotPluginsProvider)) if (p.has(slot) && gate.pluginAllowed(p.id, slot)) p];
 });
 
 /// 登録の失敗などの直近メッセージ(dev 画面が表示)。
@@ -458,7 +461,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     await _persist();
   }
 
-  List<SlotPlugin> forSlot(String slot) => [for (final p in state) if (p.has(slot)) p];
+  List<SlotPlugin> forSlot(String slot) {
+    // チャイルドセーフ (D-307): 保護者が許したプラグイン(`allow.plugins.ids`)とスロット(`allow.plugins.slots`)だけ。
+    final gate = ref.read(childGateProvider);
+    return [for (final p in state) if (p.has(slot) && gate.pluginAllowed(p.id, slot)) p];
+  }
 
   // ── FOW(プラグインの拡張面)────────────────────────────────────────
 
@@ -926,7 +933,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     final parts = slotTlId.startsWith('slot:') ? slotTlId.substring(5).split(':') : const <String>[];
     if (parts.length < 2) return posts;
     final plugin = state.where((p) => p.id == parts.first).firstOrNull;
-    if (plugin == null) return posts;
+    // チャイルドセーフ (D-307): 許していないプラグインの並べ替えは素通し。
+    if (plugin == null || !ref.read(childGateProvider).pluginAllowed(plugin.id, SlotIds.tl)) return posts;
     return sort(plugin, parts.sublist(1).join(':'), posts, params: params);
   }
 

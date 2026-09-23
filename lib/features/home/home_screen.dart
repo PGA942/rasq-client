@@ -20,6 +20,7 @@ import '../compose/composer_sheet.dart';
 import '../nodeprog/node_tabs.dart';
 import '../relational/relational_timeline_view.dart';
 import '../vc/astell_actions.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'custom_tile_row.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
@@ -41,7 +42,13 @@ class HomeScreen extends ConsumerWidget {
     // ノードTLタブ (D-101): ノードエディタの「+」で作ったタブ。総合表示では
     // **全アカウント分を集合表示** (D-108、… メニューの設定でオフにできる)。
     final nodeTabs = ref.watch(nodeTabsProvider);
-    final kinds = bundle
+    // チャイルドセーフ (D-307): 見守りの時間は、全アカウントのグローバル TL を 1 本に合流した TL だけ
+    // (フォロー中 / AsTell もここへ畳む)。AsTell を止めていればヘッダーの AsTell も出さない。
+    final gate = ref.watch(childGateProvider);
+    final window = gate.inTimeWindow;
+    final kinds = window
+        ? const [childSafeWindowKind]
+        : bundle
         ? [
             TimelineKind.bundle,
             TimelineKind.relational,
@@ -53,13 +60,15 @@ class HomeScreen extends ConsumerWidget {
     final initial = kinds.indexOf(bundle ? TimelineKind.bundle : TimelineKind.home).clamp(0, kinds.length - 1);
 
     return DefaultTabController(
+      // タブの数が変わる(見守りの時間の出入り)と作り直す。
+      key: ValueKey('home.tabs.$window'),
       length: tabs.length,
       initialIndex: initial,
       child: Scaffold(
         // フォロー中のホストの AsTell (D-163): ヘッダーの角丸四角形にバンドルを並べる。
         appBar: RasqHomeHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref), 
             // Tell タイル (D-238、設定 `astell.tiles`): 出す / 出さないと並べる数。
-            vcWidget: settingValue(ref, 'astell.tiles', 'headerStrip', true) == false ? null : AstellHeaderStrip(max: ((settingValue(ref, 'astell.tiles', 'headerMax', 4) as num).round()).clamp(1, 8))),
+            vcWidget: settingValue(ref, 'astell.tiles', 'headerStrip', true) == false || window || !gate.featureAllowed('astell.join') ? null : AstellHeaderStrip(max: ((settingValue(ref, 'astell.tiles', 'headerMax', 4) as num).round()).clamp(1, 8))),
         body: Column(children: [
           Container(
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
@@ -70,7 +79,7 @@ class HomeScreen extends ConsumerWidget {
               // タイムライン設定 (D-090/D-121): 簡略版のカスタマイズ画面へ
               // (SNSタイムライン + アルゴリズムのコンポーネント積み。
               // 自由形ノードキャンバスは一旦無効化)。
-              Builder(builder: (ctx) {
+              if (!window) Builder(builder: (ctx) {
                 return RasqIconButton(
                   icon: Icons.settings,
                   size: 20,

@@ -14,6 +14,8 @@ import '../users/user_list.dart';
 import 'tendency_fows.dart';
 import 'trend_analysis.dart';
 import 'trend_providers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
+import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 
 /// トレンドTL(検索結果): ∨ノート / フォロー中 / ユーザー.
 /// ノート = 「フォロー中の反応」 + 「トレンド」(タグTL)。
@@ -66,7 +68,9 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     ].take(maxGenreChips).toList();
     final tabs = [const RasqTabItem('ノート'), const RasqTabItem('フォロー中'), const RasqTabItem('ユーザー')];
 
-    List<Post> apply(List<Post> posts) => applySearchFilter(posts, filter, query: widget.tag);
+    // チャイルドセーフ (D-307): 検索結果も TL と同じ絞り込み。
+    final gate = ref.watch(childGateProvider);
+    List<Post> apply(List<Post> posts) => gate.filterPosts(applySearchFilter(posts, filter, query: widget.tag));
 
     Widget rows(List<Post> posts) => Column(children: [
           for (final p in posts) ...[PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)), const Divider()],
@@ -153,6 +157,9 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                       : ListView(children: [rows(posts)]);
                 },
               ),
+              if (!gate.searchAllowed('users'))
+                const ChildSafeBlockedView(message: '保護者がユーザーの検索を止めています')
+              else
               rankedUsers.when(
                 loading: () => const RasqLoading(),
                 error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),

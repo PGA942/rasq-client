@@ -9,6 +9,8 @@ import '../app/navigation.dart';
 import '../app/providers.dart';
 import '../app/router.dart';
 import '../backend/rasq_account.dart';
+import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
+import '../features/child_safe/child_safe_screens.dart' show ChildSafeBadge;
 import 'rasq_account_fow.dart';
 
 /// アカウントリストの開閉 (D-087: バンドルタイルの ^ ボタン)。アプリ起動中は
@@ -121,7 +123,11 @@ class RasqSidebar extends ConsumerWidget {
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(rasq.displayName, style: RasqTypography.title.copyWith(color: bundle ? tokens.link : null), overflow: TextOverflow.ellipsis),
-                      Text('@${rasq.account.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
+                      Row(children: [
+                        Flexible(child: Text('@${rasq.account.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis)),
+                        // チャイルドセーフ (D-307): 見守られているアカウント。
+                        if (ref.watch(childGateProvider).supervised) ...[const SizedBox(width: 4), const ChildSafeBadge()],
+                      ]),
                     ]),
                   ),
                   RasqIconButton(
