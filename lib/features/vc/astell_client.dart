@@ -429,6 +429,9 @@ class MockAstellClient implements AstellClient {
   /// テスト/デバッグ用: サーバーからのメッセージを接続中の全員に流す(held / rejected / closed など)。
   void emit(String roomId, Map<String, Object?> message) => _broadcast(roomId, message);
 
+  /// 端末から送ったメッセージの記録(テストで、何を送ったかを見る)。
+  final sent = <Map<String, Object?>>[];
+
   @override
   Future<List<AstellFollowEntry>> followers() async => seededFollowers;
 
@@ -574,6 +577,7 @@ class _MockConnection implements AstellConnection {
 
   @override
   void send(Map<String, Object?> message) {
+    client.sent.add(message);
     switch (message['type']) {
       case 'ping':
         _controller.add({'type': 'pong'});
