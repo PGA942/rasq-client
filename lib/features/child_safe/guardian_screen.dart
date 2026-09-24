@@ -10,7 +10,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
 import '../../shell/headers.dart';
-import '../plugins/slot_plugins.dart';
 import '../store/store_providers.dart' show installedPluginsProvider;
 import '../trend/example_match.dart';
 import '../trend/example_picker.dart';
@@ -276,7 +275,58 @@ class _OneTimeCode extends StatelessWidget {
   }
 }
 
-/// `/child-safe/guardian/:handle`: 子ごとの設定(オンボーディングのような順)/ 14 日の要約 / 見守りを終える。
+/// 保護者の設定のページ (D-315)。AsTell のルームのタブ(`RasqTabs`)と同じ見た目で並べる(順に進める「次へ / 戻る」は無い)。
+enum GuardianPage {
+  timeline('TL'),
+  composer('投稿'),
+  astell('AsTell'),
+  plugins('プラグイン'),
+  sns('SNS'),
+  screenTime('スクリーンタイム'),
+  other('その他');
+
+  const GuardianPage(this.label);
+  final String label;
+
+  /// 話題の一覧の面([childSafeTopicErrors] のキー)→ ページ。
+  static GuardianPage ofTopicSection(String section) => switch (section) {
+        'timeline' => timeline,
+        'composer' => composer,
+        _ => screenTime,
+      };
+}
+
+/// 機能のスイッチを置くページ (D-315)。カタログの id で決め、知らない id は「その他」(どれも落とさない)。
+GuardianPage guardianPageOfFeature(String id) => switch (id) {
+      _ when id.startsWith('astell.') => GuardianPage.astell,
+      'dm' || 'sns.addAccount' => GuardianPage.sns,
+      'store.install' || 'store.review' => GuardianPage.plugins,
+      _ => GuardianPage.other,
+    };
+
+/// 例のチップを出すページ (D-315): プラグイン(ストアの掲載もプラグイン)は「プラグイン」、投稿 / クリップ / リスト / ことばは「TL」。
+bool guardianPluginExample(ContentExample e) => e.kind == ExampleKind.plugin;
+
+/// ページのタブを上に留める(rasq_design `RasqCollapsibleTabScaffold` の留め方と同じ)。
+class _PinnedTabs extends SliverPersistentHeaderDelegate {
+  _PinnedTabs(this.tabs, this.background);
+  final RasqTabs tabs;
+  final Color background;
+  @override
+  double get minExtent => tabs.preferredSize.height + 1;
+  @override
+  double get maxExtent => tabs.preferredSize.height + 1;
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => ColoredBox(color: background, child: Column(children: [tabs, const Divider(height: 1)]));
+  @override
+  bool shouldRebuild(_PinnedTabs old) => true;
+}
+
+/// マニフェストの `id` の形(Central `allow.plugins.ids` と同じ)。
+final _pluginIdShape = RegExp(r'^[a-z0-9]+(\.[a-z0-9_-]+)+$');
+
+/// `/child-safe/guardian/:handle`: 子ごとの設定(ページのタブ)/ 14 日の要約 / 見守りを終える。
+/// 上から: 子の行 → 強さ(プリセット)と「設定をインポート」→ ページのタブ → そのページ。保存は下のボタン 1 つ(どのページからでも)。
 class GuardianChildScreen extends ConsumerStatefulWidget {
   const GuardianChildScreen({super.key, required this.handle});
   final String handle;
@@ -284,34 +334,71 @@ class GuardianChildScreen extends ConsumerStatefulWidget {
   ConsumerState<GuardianChildScreen> createState() => _GuardianChildScreenState();
 }
 
-class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
+class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> with SingleTickerProviderStateMixin {
   ChildSafePolicy? _draft;
-  int _step = 0;
+  late final TabController _tabs;
   bool _busy = false;
   String? _error;
 
+  /// 保存しようとして見つかった、有効な面の空のホワイトリスト(面 → 文)。その面を直すと消える。
+  Map<String, String> _topicErrors = const {};
+
+  /// 読み込んだ設定の時間が、もとの形の「空 = その間は何も流さない」だった(新しい形では書けないので、案内を出す)。
+  bool _legacyNothingAtNight = false;
+
+  /// 「id で足す」の形の誤り(入力欄のすぐ下に出す)。
+  String? _pluginIdError;
+
   /// 出し直したログインのコード(1 度だけ見せる)。
   ({String code, DateTime? expiresAt, String link})? _loginCode;
-  final _blocked = TextEditingController();
-  final _allowed = TextEditingController();
+  final _tlTopics = TextEditingController();
+  final _composerTopics = TextEditingController();
+  final _timeTopics = TextEditingController();
   final _posts = TextEditingController();
   final _startAt = TextEditingController();
   final _endAt = TextEditingController();
+  final _pluginId = TextEditingController();
 
-  static const _steps = ['強さ', 'TL と投稿', '時間', 'バンドルから選ぶ', '確認'];
+  final _scroll = ScrollController();
+
+  /// タブより上(子の行と強さ)。ページを切り替えたとき、タブの位置から見せるために高さを測る。
+  final _headerKey = GlobalKey();
+  int _shownPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = TabController(length: GuardianPage.values.length, vsync: this)..addListener(_onTab);
+  }
+
+  void _onTab() {
+    if (!mounted || _tabs.index == _shownPage) return;
+    _shownPage = _tabs.index;
+    // 下まで送っていたら、新しいページはタブ(上に留まる)のすぐ下から見せる。
+    final header = (_headerKey.currentContext?.findRenderObject() as RenderBox?)?.size.height;
+    if (header != null && _scroll.hasClients && _scroll.offset > header) _scroll.jumpTo(header);
+    setState(() {});
+  }
 
   @override
   void dispose() {
-    for (final c in [_blocked, _allowed, _posts, _startAt, _endAt]) {
+    _tabs.dispose();
+    _scroll.dispose();
+    for (final c in [_tlTopics, _composerTopics, _timeTopics, _posts, _startAt, _endAt, _pluginId]) {
       c.dispose();
     }
     super.dispose();
   }
 
+  GuardianPage get _page => GuardianPage.values[_tabs.index];
+
   void _load(ChildSafePolicy p) {
     _draft = p;
-    _blocked.text = p.timeline.blockedTopics.join(', ');
-    _allowed.text = p.time.allowedTopics.join(', ');
+    _topicErrors = const {};
+    _legacyNothingAtNight = p.time.enabled && p.time.topics.legacy && p.time.topics.isEmptyWhitelist;
+    _tlTopics.text = p.timeline.topics.topics.join(', ');
+    _composerTopics.text = p.composer.topics.topics.join(', ');
+    _timeTopics.text = p.time.topics.topics.join(', ');
     _posts.text = p.postsPerDay?.toString() ?? '';
     _startAt.text = p.time.start;
     _endAt.text = p.time.end;
@@ -325,13 +412,14 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
 
   static List<String> _words(String s) => [for (final w in s.split(RegExp(r'[,、\s]+'))) if (w.trim().isNotEmpty) w.trim()];
 
-  /// 入力欄の値を下書きへ写す。
+  /// 入力欄の値を下書きへ写す(話題はいつも新しい形 `topicMode` + `topics` で書く。D-315)。
   ChildSafePolicy _collect() {
     final d = _draft!;
     final ppd = int.tryParse(_posts.text.trim());
     return d.copyWith(
-      timeline: d.timeline.copyWith(blockedTopics: _words(_blocked.text)),
-      time: d.time.copyWith(allowedTopics: _words(_allowed.text), start: _clock(_startAt.text), end: _clock(_endAt.text)),
+      timeline: d.timeline.copyWith(topics: d.timeline.topics.copyWith(topics: _words(_tlTopics.text))),
+      composer: d.composer.copyWith(topics: d.composer.topics.copyWith(topics: _words(_composerTopics.text))),
+      time: d.time.copyWith(topics: d.time.topics.copyWith(topics: _words(_timeTopics.text)), start: _clock(_startAt.text), end: _clock(_endAt.text)),
       postsPerDay: ppd,
       clearPostsPerDay: ppd == null,
     );
@@ -341,11 +429,52 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
   ChildSafeAllow get _allow => _draft!.allow ?? const ChildSafeAllow();
   void _setAllow(ChildSafeAllow Function(ChildSafeAllow a) f) => _set((d) => d.copyWith(allow: f(d.allow ?? const ChildSafeAllow())));
 
-  Future<void> _save() async {
+  /// 面 [section] の話題を変える(その面の「空のホワイトリスト」の知らせは消す)。
+  void _setTopics(String section, ChildSafePolicy Function(ChildSafePolicy d) f) {
+    _topicErrors = {..._topicErrors}..remove(section);
+    _set(f);
+  }
+
+  /// 保存: 入力を確かめ(時刻 / 有効な面の空のホワイトリスト → そのページを開いて知らせ、送らない)、要約のシートで確かめてから送る。
+  Future<void> _confirmAndSave() async {
+    if (ref.read(childSafeApiProvider) == null || _busy || _draft == null) return;
+    final policy = _collect();
+    setState(() => _draft = policy);
+    if (ChildSafeTime.minutesOf(policy.time.start) == null || ChildSafeTime.minutesOf(policy.time.end) == null) {
+      setState(() => _error = '時刻は HH:MM で入れてください');
+      _tabs.animateTo(GuardianPage.screenTime.index);
+      return;
+    }
+    final errors = childSafeTopicErrors(policy);
+    setState(() {
+      _topicErrors = errors;
+      _error = null;
+    });
+    if (errors.isNotEmpty) {
+      _tabs.animateTo(GuardianPage.ofTopicSection(errors.keys.first).index);
+      return;
+    }
+    final lines = childSafeSummaryLines(ChildGate(state: ChildSafeState(managed: true, state: 'active', policy: policy)));
+    final ok = await ref.read(overlayManagerProvider).showBottomSheet<bool>(
+          id: 'guardian.confirm',
+          title: 'この設定を送る',
+          confirmText: '送る',
+          builder: (context) => SingleChildScrollView(
+            key: const ValueKey('guardian.confirm'),
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.md),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text('@${widget.handle} の端末には、Central が署名した設定が届きます(端末で確かめてから当てはめます)。', style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              const SizedBox(height: RasqSpacing.sm),
+              for (final l in lines) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('・$l', style: RasqTypography.bodySmall)),
+            ]),
+          ),
+        );
+    if (ok == true && mounted) await _save(policy);
+  }
+
+  Future<void> _save(ChildSafePolicy policy) async {
     final api = ref.read(childSafeApiProvider);
     if (api == null || _busy) return;
-    final policy = _collect();
-    if (ChildSafeTime.minutesOf(policy.time.start) == null || ChildSafeTime.minutesOf(policy.time.end) == null) return setState(() => _error = '時刻は HH:MM で入れてください');
     setState(() {
       _busy = true;
       _error = null;
@@ -365,6 +494,56 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  /// 「設定をインポート」: 年齢の帯の既定 / ほかの子の設定(設定が済んでいる子がいるときだけ)。読み込むのは下書きだけ(保存は別)。
+  Future<void> _importMenu(BuildContext anchorContext, ChildSafeChildDetail d, ChildSafeCatalog catalog, List<ChildSafeChildRow> others) async {
+    final box = anchorContext.findRenderObject() as RenderBox?;
+    final anchor = box == null ? const Rect.fromLTWH(0, 120, 1, 1) : box.localToGlobal(Offset.zero) & box.size;
+    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'guardian.import', anchor: anchor, items: [
+      RasqDropdownItem('${d.row.ageBand} の既定を読み込む', 'preset'),
+      if (others.isNotEmpty) const RasqDropdownItem('ほかの子の設定をコピー', 'copy'),
+    ]);
+    if (!mounted) return;
+    switch (pick) {
+      case 'preset':
+        setState(() {
+          _load(catalog.presetFor(d.row.ageBand));
+          _error = null;
+        });
+        _loaded('${d.row.ageBand} の既定を読み込みました');
+      case 'copy':
+        await _copyFrom(others);
+    }
+  }
+
+  /// ほかの子のいまの設定を、子の詳細 (`GET /me/child-safe/children/{handle}`) から読んで下書きにする。
+  Future<void> _copyFrom(List<ChildSafeChildRow> others) async {
+    final from = others.length == 1
+        ? others.single.handle
+        : await ref.read(overlayManagerProvider).showChoiceAlert<String>(
+            id: 'guardian.import.child',
+            title: 'どの子の設定をコピーしますか',
+            choices: [for (final c in others) RasqAlertChoice('${c.displayName.isEmpty ? c.handle : c.displayName}  @${c.handle}', c.handle, key: ValueKey('guardian.import.child.${c.handle}'))],
+          );
+    final api = ref.read(childSafeApiProvider);
+    if (from == null || api == null || !mounted) return;
+    try {
+      final settings = (await api.child(from)).settings;
+      if (!mounted) return;
+      if (settings == null) return setState(() => _error = '@$from は、まだ設定が済んでいません');
+      setState(() {
+        _load(settings);
+        _error = null;
+      });
+      _loaded('@$from の設定をコピーしました');
+    } catch (e) {
+      if (mounted) setState(() => _error = childSafeErrorMessage(e));
+    }
+  }
+
+  void _loaded(String what) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text('$what(まだ保存していません)')));
 
   Future<void> _reissueLoginCode() async {
     final api = ref.read(childSafeApiProvider);
@@ -407,56 +586,113 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
   Widget build(BuildContext context) {
     final detail = ref.watch(childSafeChildDetailProvider(widget.handle));
     final catalog = ref.watch(childSafeCatalogProvider).value ?? ChildSafeCatalog.fallback;
+    // コピーできるのは、ほかの見守っている子のうち設定が済んでいる子(設定待ちの子には写すものが無い)。
+    final others = [for (final c in ref.watch(childSafeGuardianProvider).value?.children ?? const <ChildSafeChildRow>[]) if (c.handle != widget.handle && !c.pending) c];
+    final loaded = detail.value;
+    if (_draft == null && loaded != null) _load(loaded.settings ?? catalog.presetFor(loaded.row.ageBand));
     return Scaffold(
       appBar: RasqPageHeader(title: '@${widget.handle}'),
       body: detail.when(
         loading: () => const RasqLoading(),
         error: (e, _) => RasqEmptyView(title: '読み込めませんでした', hint: childSafeErrorMessage(e)),
-        data: (d) {
-          if (_draft == null) _load(d.settings ?? catalog.presetFor(d.row.ageBand));
-          return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.xl), children: [
-            RasqValueListTile(title: d.row.displayName.isEmpty ? d.row.handle : d.row.displayName, value: '${_stateLabel(d.row)}・${d.row.ageBand}'),
-            const RasqSectionHeader(title: '設定(アプリだけで変えられます)'),
-            _pad(Wrap(spacing: 4, runSpacing: 4, children: [
-              for (var i = 0; i < _steps.length; i++)
-                ChoiceChip(key: ValueKey('guardian.step.$i'), label: Text('${i + 1}. ${_steps[i]}'), selected: _step == i, onSelected: (_) => setState(() => _step = i)),
-            ])),
-            ..._stepBody(context, d, catalog),
-            if (_error != null) _pad(Text(_error!, key: const ValueKey('guardian.child.error'), style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.error))),
-            _pad(Row(children: [
-              if (_step > 0) OutlinedButton(key: const ValueKey('guardian.step.back'), onPressed: () => setState(() => _step--), child: const Text('戻る')),
-              const Spacer(),
-              if (_step < _steps.length - 1)
-                FilledButton(
-                  key: const ValueKey('guardian.step.next'),
-                  onPressed: () => setState(() {
-                    _draft = _collect();
-                    _step++;
-                  }),
-                  child: const Text('次へ'),
-                )
-              else
-                FilledButton(key: const ValueKey('guardian.save'), onPressed: _busy ? null : _save, child: const Text('保存して子の端末へ送る')),
-            ])),
-            const RasqSectionHeader(title: '最近の発信内容の要約(14 日)'),
-            ..._summary(context, d.summary),
-            if (d.row.createdByGuardian) ...[
-              const RasqSectionHeader(title: '子の端末のログイン'),
-              RasqListTile(
-                key: const ValueKey('guardian.loginCode'),
-                title: 'コードを出し直す',
-                subtitle: '子の端末の「保護者からのコードでログイン」に入れるコード(10 分・1 回だけ。前のコードは使えなくなります)',
-                enabled: !_busy,
-                chevron: false,
-                onTap: _reissueLoginCode,
+        // 子の行と強さは流れて消え、ページのタブは上に留まる(RasqCollapsibleTabScaffold と同じ並び。ページは 1 本の縦の流れ)。
+        data: (d) => CustomScrollView(controller: _scroll, slivers: [
+          SliverToBoxAdapter(
+            child: Column(key: _headerKey, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              RasqValueListTile(title: d.row.displayName.isEmpty ? d.row.handle : d.row.displayName, value: '${_stateLabel(d.row)}・${d.row.ageBand}'),
+              _presetArea(context, d, catalog, others),
+            ]),
+          ),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _PinnedTabs(
+              RasqTabs(
+                key: const ValueKey('guardian.tabs'),
+                controller: _tabs,
+                items: [
+                  for (final pg in GuardianPage.values)
+                    RasqTabItem(pg.label, id: pg.name, icon: _topicErrors.keys.any((k) => GuardianPage.ofTopicSection(k) == pg) ? Icons.error_outline : null),
+                ],
+                // 7 ページあるので、狭い画面では横に流す(見た目は AsTell のルームのタブと同じ部品)。
+                mode: RasqTabsMode.extensible,
+                showChevron: false,
               ),
-              if (_loginCode != null) _OneTimeCode(title: '@${widget.handle} のログインのコード', code: _loginCode!.code, expiresAt: _loginCode!.expiresAt, link: _loginCode!.link, onClose: () => setState(() => _loginCode = null)),
-            ],
-            const RasqSectionHeader(title: '見守りを終える'),
-            RasqListTile(key: const ValueKey('guardian.end'), title: '見守りを終える', subtitle: '制限をすべて外します', chevron: false, titleColor: Theme.of(context).colorScheme.error, onTap: _end),
-          ]);
-        },
+              Theme.of(context).colorScheme.surface,
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.only(bottom: RasqSpacing.xl),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                KeyedSubtree(key: ValueKey('guardian.page.${_page.name}'), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: _pageBody(context, _page, d, catalog))),
+                if (_error != null) _pad(Text(_error!, key: const ValueKey('guardian.child.error'), style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.error))),
+                const RasqSectionHeader(title: '最近の発信内容の要約(14 日)'),
+                ..._summary(context, d.summary),
+                if (d.row.createdByGuardian) ...[
+                  const RasqSectionHeader(title: '子の端末のログイン'),
+                  RasqListTile(
+                    key: const ValueKey('guardian.loginCode'),
+                    title: 'コードを出し直す',
+                    subtitle: '子の端末の「保護者からのコードでログイン」に入れるコード(10 分・1 回だけ。前のコードは使えなくなります)',
+                    enabled: !_busy,
+                    chevron: false,
+                    onTap: _reissueLoginCode,
+                  ),
+                  if (_loginCode != null) _OneTimeCode(title: '@${widget.handle} のログインのコード', code: _loginCode!.code, expiresAt: _loginCode!.expiresAt, link: _loginCode!.link, onClose: () => setState(() => _loginCode = null)),
+                ],
+                const RasqSectionHeader(title: '見守りを終える'),
+                RasqListTile(key: const ValueKey('guardian.end'), title: '見守りを終える', subtitle: '制限をすべて外します', chevron: false, titleColor: Theme.of(context).colorScheme.error, onTap: _end),
+              ]),
+            ),
+          ),
+        ]),
       ),
+      // 保存はどのページからでも(下に 1 つ)。送る前に要約のシートで確かめる。
+      bottomNavigationBar: loaded == null
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(key: const ValueKey('guardian.save'), onPressed: _busy ? null : _confirmAndSave, child: const Text('保存して子の端末へ送る')),
+                ),
+              ),
+            ),
+    );
+  }
+
+  /// 子の行の下: 強さ(プリセット)と、丸い「設定をインポート」。
+  Widget _presetArea(BuildContext context, ChildSafeChildDetail d, ChildSafeCatalog catalog, List<ChildSafeChildRow> others) {
+    final p = _draft!;
+    final caption = RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
+    return Padding(
+      key: const ValueKey('guardian.presetArea'),
+      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(
+            child: SegmentedButton<ChildSafeLevel>(
+              key: const ValueKey('guardian.preset'),
+              showSelectedIcon: false,
+              segments: [for (final l in ChildSafeLevel.values) ButtonSegment(value: l, label: Text(l.label))],
+              selected: {ChildSafeLevel.fromWire(p.preset ?? p.timeline.level.wire)},
+              onSelectionChanged: (s) => _set((d) => d.withPreset(s.first)),
+            ),
+          ),
+          const SizedBox(width: RasqSpacing.sm),
+          Builder(
+            builder: (anchor) => IconButton.filledTonal(
+              key: const ValueKey('guardian.import'),
+              tooltip: '設定をインポート',
+              icon: const Icon(Icons.download_outlined),
+              onPressed: () => _importMenu(anchor, d, catalog, others),
+            ),
+          ),
+        ]),
+        const SizedBox(height: RasqSpacing.xs),
+        Text('強さを選ぶと、タイムラインと投稿の判定の強さがそろいます。右の丸いボタンで、${d.row.ageBand} の既定やほかの子の設定を読み込めます。', style: caption),
+      ]),
     );
   }
 
@@ -470,154 +706,222 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
     ];
   }
 
-  List<Widget> _stepBody(BuildContext context, ChildSafeChildDetail d, ChildSafeCatalog catalog) {
-    final caption = RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
-    final p = _draft!;
-    switch (_step) {
-      case 0:
-        return [
-          _pad(Text('年齢の帯 ${d.row.ageBand} の既定から始めます。強さを選ぶと、タイムラインと投稿の判定の強さがそろいます。', style: caption)),
-          _pad(SegmentedButton<ChildSafeLevel>(
-            key: const ValueKey('guardian.preset'),
-            segments: [for (final l in ChildSafeLevel.values) ButtonSegment(value: l, label: Text(l.label))],
-            selected: {ChildSafeLevel.fromWire(p.preset ?? p.timeline.level.wire)},
-            onSelectionChanged: (s) => _set((d) => d.withPreset(s.first)),
-          )),
-          RasqListTile(key: const ValueKey('guardian.preset.reset'), title: '${d.row.ageBand} の既定に戻す', chevron: false, onTap: () => setState(() => _load(catalog.presetFor(d.row.ageBand)))),
-        ];
-      case 1:
-        DropdownButton<ChildSafeLevel> level(ChildSafeLevel v, ValueChanged<ChildSafeLevel> on) => DropdownButton(value: v, items: [for (final l in ChildSafeLevel.values) DropdownMenuItem(value: l, child: Text(l.label))], onChanged: (x) => x == null ? null : on(x));
-        return [
-          RasqSwitchListTile(key: const ValueKey('guardian.timeline.enabled'), title: 'タイムラインを絞る', subtitle: '強い言葉の投稿を見せない', value: p.timeline.enabled, onChanged: (v) => _set((d) => d.copyWith(timeline: d.timeline.copyWith(enabled: v)))),
-          _pad(Row(children: [const Text('タイムラインの強さ'), const Spacer(), level(p.timeline.level, (l) => _set((d) => d.copyWith(timeline: d.timeline.copyWith(level: l))))])),
-          _pad(RasqInput(key: const ValueKey('guardian.timeline.blocked'), controller: _blocked, hintText: '見せない話題(語やタグを「,」で区切る)')),
-          RasqSwitchListTile(key: const ValueKey('guardian.composer.enabled'), title: '投稿を判定する', subtitle: '強い言葉は送らない(当たった語に印を付けて止める)', value: p.composer.enabled, onChanged: (v) => _set((d) => d.copyWith(composer: d.composer.copyWith(enabled: v)))),
-          _pad(Row(children: [const Text('投稿の強さ'), const Spacer(), level(p.composer.level, (l) => _set((d) => d.copyWith(composer: d.composer.copyWith(level: l))))])),
-          _pad(RasqInput(key: const ValueKey('guardian.postsPerDay'), controller: _posts, hintText: '1 日に送れる投稿の数(空 = 決めない、0〜1000)', keyboardType: TextInputType.number)),
-        ];
-      case 2:
-        return [
-          RasqSwitchListTile(key: const ValueKey('guardian.time.enabled'), title: '見守りの時間', subtitle: 'その間は、許した話題だけが流れる 1 本のタイムラインになります(子の端末の時計)', value: p.time.enabled, onChanged: (v) => _set((d) => d.copyWith(time: d.time.copyWith(enabled: v)))),
-          _pad(Row(children: [
-            Expanded(child: RasqInput(key: const ValueKey('guardian.time.start'), controller: _startAt, hintText: '始まり 21:00')),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('〜')),
-            Expanded(child: RasqInput(key: const ValueKey('guardian.time.end'), controller: _endAt, hintText: '終わり 06:00')),
-          ])),
-          _pad(RasqInput(key: const ValueKey('guardian.time.allowed'), controller: _allowed, hintText: 'その間に流す話題(「,」で区切る。空 = 何も流さない)')),
-          RasqSwitchListTile(title: '通知を隠す', value: p.time.hideNotifications, onChanged: (v) => _set((d) => d.copyWith(time: d.time.copyWith(hideNotifications: v)))),
-          RasqSwitchListTile(title: '投稿の詳細を開かせない', value: p.time.hidePostDetail, onChanged: (v) => _set((d) => d.copyWith(time: d.time.copyWith(hidePostDetail: v)))),
-          RasqSwitchListTile(title: 'DM を隠す', value: p.time.hideDirectMessages, onChanged: (v) => _set((d) => d.copyWith(time: d.time.copyWith(hideDirectMessages: v)))),
-        ];
-      case 3:
-        return _bundleStep(context, catalog);
-      default:
-        final lines = childSafeSummaryLines(ChildGate(state: ChildSafeState(managed: true, state: 'active', policy: p)));
-        return [
-          _pad(Text('子の端末には、Central が署名した設定が届きます(端末で確かめてから当てはめます)。', style: caption)),
-          for (final l in lines) _pad(Text('・$l', style: RasqTypography.bodySmall)),
-        ];
-    }
-  }
+  List<Widget> _pageBody(BuildContext context, GuardianPage page, ChildSafeChildDetail d, ChildSafeCatalog catalog) => switch (page) {
+        GuardianPage.timeline => _timelinePage(context),
+        GuardianPage.composer => _composerPage(context),
+        GuardianPage.astell => _astellPage(context, catalog),
+        GuardianPage.plugins => _pluginsPage(context, d, catalog),
+        GuardianPage.sns => _snsPage(context, catalog),
+        GuardianPage.screenTime => _screenTimePage(context),
+        GuardianPage.other => _otherPage(context, catalog),
+      };
 
-  /// 例で決める (D-314): 許す例 / 止める例の数と一覧(✕で外す)、「例を選ぶ」で共通の FOW(自分の最近のアクション /
-  /// プラグイン / クリップ / リストと、ストアの掲載)を開く。
-  List<Widget> _examplesSection(BuildContext context) {
-    final caption = RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
-    final ex = _allow.examples ?? ContentExamples.none;
-    Widget chip(ContentExample e, bool allow, int i) => InputChip(
-          key: ValueKey('guardian.example.${allow ? 'allow' : 'deny'}.$i'),
-          avatar: Icon(allow ? Icons.check_circle_outline : Icons.block, size: 16),
-          deleteIcon: const Icon(Icons.close, size: 16),
-          deleteButtonTooltipMessage: '外す',
-          label: Text('${e.kind.label}: ${e.shortLabel}'),
-          onDeleted: () => _setAllow((x) => x.copyWith(examples: (x.examples ?? ContentExamples.none).without(e))),
-        );
+  TextStyle _caption(BuildContext context) => RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
+
+  Widget _levelRow(String label, ChildSafeLevel value, ValueChanged<ChildSafeLevel> onChanged, {Key? key}) => _pad(Row(children: [
+        Text(label),
+        const Spacer(),
+        DropdownButton<ChildSafeLevel>(key: key, value: value, items: [for (final l in ChildSafeLevel.values) DropdownMenuItem(value: l, child: Text(l.label))], onChanged: (x) => x == null ? null : onChanged(x)),
+      ]));
+
+  /// 話題の一覧 (D-315): ホワイトリスト / ブラックリストの切り替えと、「,」区切りの話題。空のホワイトリストの知らせもここに出す。
+  List<Widget> _topicsEditor(
+    BuildContext context, {
+    required String section,
+    required String label,
+    required ChildSafeTopics topics,
+    required TextEditingController controller,
+    required String allowHint,
+    required String denyHint,
+    required String allowNote,
+    required String denyNote,
+    required ChildSafePolicy Function(ChildSafePolicy d, ChildSafeTopicMode m) withMode,
+  }) {
+    final caption = _caption(context);
+    final error = _topicErrors[section];
     return [
-      const RasqSectionHeader(title: '例で決める'),
-      _pad(Text(
-        'id の一覧で全部を決めるかわりに、「こういうものは許す / 止める」を例で選びます。子の端末は、プラグイン(名前・説明)/ クリップ / リストの中身が例に近いかで決めます。'
-        '止める例に近いものは「自由」でも使えません。「例に近いもの」にすると、選んだものと許す例に近いものを使えます(選んだものは、止める例に近くても使えます)。',
-        style: caption,
+      _pad(Row(children: [
+        Expanded(child: Text(label)),
+        DropdownButton<ChildSafeTopicMode>(
+          key: ValueKey('guardian.$section.topicMode'),
+          value: topics.mode,
+          items: [for (final m in ChildSafeTopicMode.values) DropdownMenuItem(value: m, child: Text(m.label))],
+          onChanged: (m) => m == null ? null : _setTopics(section, (d) => withMode(d, m)),
+        ),
+      ])),
+      _pad(RasqInput(
+        key: ValueKey('guardian.$section.topics'),
+        controller: controller,
+        hintText: topics.allow ? allowHint : denyHint,
+        onChanged: error == null ? null : (_) => setState(() => _topicErrors = {..._topicErrors}..remove(section)),
       )),
-      RasqListTile(
-        key: const ValueKey('guardian.examples.pick'),
-        title: '例を選ぶ',
-        subtitle: '許す例 ${ex.allow.length} / 止める例 ${ex.deny.length}(あなたの最近のアクション / プラグイン / クリップ / リスト、ストアから)',
-        onTap: _pickExamples,
-      ),
-      if (ex.isNotEmpty)
-        _pad(Wrap(spacing: 4, runSpacing: 4, children: [
-          for (final (i, e) in ex.allow.indexed) chip(e, true, i),
-          for (final (i, e) in ex.deny.indexed) chip(e, false, i),
-        ])),
+      _pad(Text(topics.allow ? allowNote : denyNote, style: caption)),
+      if (error != null) _pad(Text(error, key: ValueKey('guardian.$section.topics.error'), style: caption.copyWith(color: Theme.of(context).colorScheme.error))),
     ];
   }
 
-  Future<void> _pickExamples() async {
-    final before = _allow.examples ?? ContentExamples.none;
-    final decisions = await openExamplePickFow(
-      context,
-      ref,
-      id: 'guardian.examples',
-      title: '例で選ぶ(@${widget.handle})',
-      sources: [...ownExampleSources(ref), storeExampleSource(ref)],
-      initial: before,
-      allowLabel: '許す例',
-      denyLabel: '止める例',
-      intro: '中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、新しいプラグイン / クリップ / リストを例との近さで分けます。',
-    );
-    if (decisions == null || !mounted) return;
-    _setAllow((x) {
-      var ex = x.examples ?? ContentExamples.none;
-      for (final d in decisions) {
-        ex = ex.withExample(d.candidate.example, allow: d.allow);
-      }
-      return x.copyWith(examples: ex);
-    });
+  Widget _featureSwitch(ChildSafeCatalogItem f) => RasqSwitchListTile(
+        key: ValueKey('guardian.feature.${f.id}'),
+        title: f.label,
+        value: _allow.features?[f.id] ?? childSafePresetDefault(_draft!.preset, 'features', f.id),
+        onChanged: (v) => _setAllow((x) => x.copyWith(features: {...?x.features, f.id: v})),
+      );
+
+  /// そのページの機能のスイッチ(カタログの順)。「その他」には、カタログに無いが設定にある id も出す(落とさない)。
+  List<Widget> _featuresOn(ChildSafeCatalog catalog, GuardianPage page) => [
+        for (final f in catalog.features)
+          if (guardianPageOfFeature(f.id) == page) _featureSwitch(f),
+        if (page == GuardianPage.other)
+          for (final id in (_allow.features ?? const <String, bool>{}).keys)
+            if (!catalog.features.any((f) => f.id == id) && guardianPageOfFeature(id) == page) _featureSwitch(ChildSafeCatalogItem(id, id)),
+      ];
+
+  List<Widget> _timelinePage(BuildContext context) {
+    final p = _draft!;
+    return [
+      RasqSwitchListTile(key: const ValueKey('guardian.timeline.enabled'), title: 'タイムラインを絞る', subtitle: '強い言葉の投稿を見せず、話題で絞ります', value: p.timeline.enabled, onChanged: (v) => _set((d) => d.copyWith(timeline: d.timeline.copyWith(enabled: v)))),
+      _levelRow('タイムラインの強さ', p.timeline.level, (l) => _set((d) => d.copyWith(timeline: d.timeline.copyWith(level: l)))),
+      ..._topicsEditor(
+        context,
+        section: 'timeline',
+        label: 'タイムラインの話題',
+        topics: p.timeline.topics,
+        controller: _tlTopics,
+        allowHint: '流す話題(語やタグを「,」で区切る)',
+        denyHint: '見せない話題(語やタグを「,」で区切る)',
+        allowNote: 'ホワイトリスト: どれかの話題に当たる投稿だけが、タイムラインに流れます。',
+        denyNote: 'ブラックリスト: 当たる投稿を見せません(空 = 話題では絞りません)。',
+        withMode: (d, m) => d.copyWith(timeline: d.timeline.copyWith(topics: d.timeline.topics.copyWith(mode: m))),
+      ),
+      ..._examplesSection(context, plugins: false),
+    ];
   }
 
-  /// バンドルから選ぶ: SNS(自分のバンドルの種類 / サーバー)/ プラグイン(自分が入れたもの、スロットごと)/ 機能 / 検索 / RAi。
-  List<Widget> _bundleStep(BuildContext context, ChildSafeCatalog catalog) {
-    final caption = RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
-    final a = _allow;
-    final sns = a.sns ?? const ChildSafeSnsAllow();
-    final plugins = a.plugins ?? const ChildSafePluginsAllow();
-    final rai = a.rai ?? const ChildSafeRaiAllow(groups: ['rai.guide', 'rai.read', 'rai.compose']);
-    final sessions = ref.watch(sessionsProvider).value?.allSessions ?? const [];
-    final kinds = {...sns.kinds, for (final s in sessions) s.account.kind.name}.toList()..sort();
-    final instances = {...sns.instances, for (final s in sessions) s.account.instance.toLowerCase()}.toList()..sort();
-    final installed = ref.watch(installedPluginsProvider);
-    final registered = {for (final sp in ref.watch(slotPluginsProvider)) sp.id: sp};
-    final slots = <String>{
-      for (final id in plugins.ids)
-        for (final s in registered[id]?.manifest.slots ?? const <String>[]) s,
-    }.toList()
-      ..sort();
-    Widget chip(String label, bool on, ValueChanged<bool> f, {Key? key}) => FilterChip(key: key, label: Text(label), selected: on, onSelected: f);
-    List<String> toggle(List<String> l, String v, bool on) => on ? {...l, v}.toList() : [for (final x in l) if (x != v) x];
+  List<Widget> _composerPage(BuildContext context) {
+    final p = _draft!;
     return [
-      const RasqSectionHeader(title: 'SNS'),
-      _pad(Text('子が使ってよい SNS の種類とサーバー(あなたのバンドルから)。サーバーを選ばなければ、その種類ならどこでも。保護者の SNS のログインは貸しません。', style: caption)),
-      _pad(Wrap(spacing: 4, children: [for (final k in kinds) chip(k, sns.kinds.contains(k), (v) => _setAllow((x) => x.copyWith(sns: sns.copyWith(kinds: toggle(sns.kinds, k, v)))), key: ValueKey('guardian.sns.kind.$k'))])),
-      _pad(Wrap(spacing: 4, children: [for (final i in instances) chip(i, sns.instances.contains(i), (v) => _setAllow((x) => x.copyWith(sns: sns.copyWith(instances: toggle(sns.instances, i, v)))), key: ValueKey('guardian.sns.instance.$i'))])),
-      RasqSwitchListTile(key: const ValueKey('guardian.sns.add'), title: '子が SNS アカウントを足せる', value: sns.addAccounts, onChanged: (v) => _setAllow((x) => x.copyWith(sns: sns.copyWith(addAccounts: v)))),
-      const RasqSectionHeader(title: 'プラグイン'),
-      if (installed.isEmpty) _pad(Text('あなたが入れたプラグインはありません。', style: caption)),
-      for (final ip in installed)
-        RasqSwitchListTile(key: ValueKey('guardian.plugin.${ip.id}'), title: ip.name.isEmpty ? ip.id : ip.name, subtitle: registered[ip.id]?.manifest.slots.join(' / ') ?? ip.id, value: plugins.ids.contains(ip.id), onChanged: (v) => _setAllow((x) => x.copyWith(plugins: plugins.copyWith(ids: toggle(plugins.ids, ip.id, v))))),
-      for (final s in slots)
-        RasqSwitchListTile(key: ValueKey('guardian.slot.$s'), title: 'スロット $s', subtitle: '選んだプラグインのうち、ここに出すもの', value: plugins.slots[s] != false, onChanged: (v) => _setAllow((x) => x.copyWith(plugins: plugins.copyWith(slots: {...plugins.slots, s: v})))),
+      RasqSwitchListTile(key: const ValueKey('guardian.composer.enabled'), title: '投稿を判定する', subtitle: '強い言葉と話題で、送る前に止めます(当たった語に印を付けて止める)', value: p.composer.enabled, onChanged: (v) => _set((d) => d.copyWith(composer: d.composer.copyWith(enabled: v)))),
+      _levelRow('投稿の強さ', p.composer.level, (l) => _set((d) => d.copyWith(composer: d.composer.copyWith(level: l)))),
+      _pad(RasqInput(key: const ValueKey('guardian.postsPerDay'), controller: _posts, hintText: '1 日に送れる投稿の数(空 = 決めない、0〜1000)', keyboardType: TextInputType.number)),
+      ..._topicsEditor(
+        context,
+        section: 'composer',
+        label: '投稿の話題',
+        topics: p.composer.topics,
+        controller: _composerTopics,
+        allowHint: '送れる話題(語やタグを「,」で区切る)',
+        denyHint: '送れない話題(語やタグを「,」で区切る)',
+        allowNote: 'ホワイトリスト: どれかの話題に当たる投稿だけ送れます(DM には当てません)。',
+        denyNote: 'ブラックリスト: 当たる投稿は送れません(空 = 話題では止めません。DM には当てません)。',
+        withMode: (d, m) => d.copyWith(composer: d.composer.copyWith(topics: d.composer.topics.copyWith(mode: m))),
+      ),
+    ];
+  }
+
+  List<Widget> _astellPage(BuildContext context, ChildSafeCatalog catalog) => [
+        _pad(Text('AsTell(ルームの通話・チャット・共有)で、子ができること。', style: _caption(context))),
+        ..._featuresOn(catalog, GuardianPage.astell),
+      ];
+
+  List<Widget> _pluginsPage(BuildContext context, ChildSafeChildDetail d, ChildSafeCatalog catalog) {
+    final caption = _caption(context);
+    final plugins = _allow.plugins ?? const ChildSafePluginsAllow();
+    final installed = {for (final ip in ref.watch(installedPluginsProvider)) if (ip.name.isNotEmpty) ip.id: ip.name};
+    String nameOf(String id) => d.pluginNames[id] ?? installed[id] ?? id;
+    return [
+      ..._featuresOn(catalog, GuardianPage.plugins),
+      const RasqSectionHeader(title: 'インストール'),
+      _pad(Text('子が自分で入れられる範囲。プラグインは増えていくので、ひとつずつではなく、下の「例」で大まかに決めます。', style: caption)),
       _pad(Wrap(key: const ValueKey('guardian.plugins.install'), spacing: 4, runSpacing: 4, children: [
         for (final m in ChildSafeInstall.values)
           ChoiceChip(key: ValueKey('guardian.plugins.install.${m.wire}'), label: Text(m.label), selected: plugins.install == m, onSelected: (_) => _setAllow((x) => x.copyWith(plugins: plugins.copyWith(install: m)))),
       ])),
-      ..._examplesSection(context),
-      const RasqSectionHeader(title: '機能'),
-      for (final f in catalog.features)
-        RasqSwitchListTile(key: ValueKey('guardian.feature.${f.id}'), title: f.label, value: a.features?[f.id] ?? childSafePresetDefault(_draft!.preset, 'features', f.id), onChanged: (v) => _setAllow((x) => x.copyWith(features: {...?x.features, f.id: v}))),
-      const RasqSectionHeader(title: '検索'),
-      for (final f in catalog.search)
-        RasqSwitchListTile(key: ValueKey('guardian.search.${f.id}'), title: f.label, value: a.search?[f.id] ?? childSafePresetDefault(_draft!.preset, 'search', f.id), onChanged: (v) => _setAllow((x) => x.copyWith(search: {...?x.search, f.id: v}))),
+      const RasqSectionHeader(title: '名前で許しているプラグイン'),
+      _pad(Text(plugins.ids.isEmpty ? 'ありません。' : 'ここにあるものは、止める例に近くても使えます(✕ で外す)。', style: caption)),
+      if (plugins.ids.isNotEmpty)
+        _pad(Wrap(spacing: 4, runSpacing: 4, children: [
+          for (final id in plugins.ids)
+            InputChip(
+              key: ValueKey('guardian.plugin.id.$id'),
+              label: Text(nameOf(id)),
+              tooltip: id,
+              deleteIcon: const Icon(Icons.close, size: 16),
+              deleteButtonTooltipMessage: '外す',
+              onDeleted: () => _setAllow((x) => x.copyWith(plugins: plugins.copyWith(ids: [for (final i in plugins.ids) if (i != id) i]))),
+            ),
+        ])),
+      _pad(Row(children: [
+        Expanded(child: RasqInput(key: const ValueKey('guardian.plugins.addId'), controller: _pluginId, hintText: 'id で足す(例: jp.example.quiz)', onSubmitted: (_) => _addPluginId())),
+        TextButton(key: const ValueKey('guardian.plugins.addId.submit'), onPressed: _addPluginId, child: const Text('足す')),
+      ])),
+      if (_pluginIdError != null) _pad(Text(_pluginIdError!, key: const ValueKey('guardian.plugins.addId.error'), style: caption.copyWith(color: Theme.of(context).colorScheme.error))),
+      ..._examplesSection(context, plugins: true),
+    ];
+  }
+
+  /// id で足す(子がサイドロードしたものも。Central は形だけを確かめる)。
+  void _addPluginId() {
+    final id = _pluginId.text.trim();
+    if (id.isEmpty) return;
+    if (!_pluginIdShape.hasMatch(id)) return setState(() => _pluginIdError = 'プラグインの id の形ではありません(英小文字・数字・「.」「_」「-」、例: jp.example.quiz)');
+    final plugins = _allow.plugins ?? const ChildSafePluginsAllow();
+    _pluginId.clear();
+    _pluginIdError = null;
+    _setAllow((x) => x.copyWith(plugins: plugins.copyWith(ids: plugins.ids.contains(id) ? plugins.ids : [...plugins.ids, id])));
+  }
+
+  List<Widget> _snsPage(BuildContext context, ChildSafeCatalog catalog) {
+    final sns = _allow.sns ?? const ChildSafeSnsAllow();
+    final sessions = ref.watch(sessionsProvider).value?.allSessions ?? const [];
+    final kinds = {...sns.kinds, for (final s in sessions) s.account.kind.name}.toList()..sort();
+    final instances = {...sns.instances, for (final s in sessions) s.account.instance.toLowerCase()}.toList()..sort();
+    Widget chip(String label, bool on, ValueChanged<bool> f, {Key? key}) => FilterChip(key: key, label: Text(label), selected: on, onSelected: f);
+    List<String> toggle(List<String> l, String v, bool on) => on ? {...l, v}.toList() : [for (final x in l) if (x != v) x];
+    return [
+      _pad(Text('子が使ってよい SNS の種類とサーバー(あなたのバンドルから)。サーバーを選ばなければ、その種類ならどこでも。保護者の SNS のログインは貸しません。', style: _caption(context))),
+      _pad(Wrap(spacing: 4, children: [for (final k in kinds) chip(k, sns.kinds.contains(k), (v) => _setAllow((x) => x.copyWith(sns: sns.copyWith(kinds: toggle(sns.kinds, k, v)))), key: ValueKey('guardian.sns.kind.$k'))])),
+      _pad(Wrap(spacing: 4, children: [for (final i in instances) chip(i, sns.instances.contains(i), (v) => _setAllow((x) => x.copyWith(sns: sns.copyWith(instances: toggle(sns.instances, i, v)))), key: ValueKey('guardian.sns.instance.$i'))])),
+      RasqSwitchListTile(key: const ValueKey('guardian.sns.add'), title: '子が SNS アカウントを足せる', value: sns.addAccounts, onChanged: (v) => _setAllow((x) => x.copyWith(sns: sns.copyWith(addAccounts: v)))),
+      ..._featuresOn(catalog, GuardianPage.sns),
+    ];
+  }
+
+  List<Widget> _screenTimePage(BuildContext context) {
+    final p = _draft!;
+    return [
+      RasqSwitchListTile(key: const ValueKey('guardian.time.enabled'), title: '見守りの時間', subtitle: 'その間は、1 本のタイムラインになります(子の端末の時計)', value: p.time.enabled, onChanged: (v) => _set((d) => d.copyWith(time: d.time.copyWith(enabled: v)))),
+      _pad(Row(children: [
+        Expanded(child: RasqInput(key: const ValueKey('guardian.time.start'), controller: _startAt, hintText: '始まり 21:00')),
+        const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text('〜')),
+        Expanded(child: RasqInput(key: const ValueKey('guardian.time.end'), controller: _endAt, hintText: '終わり 06:00')),
+      ])),
+      if (_legacyNothingAtNight)
+        _pad(Text('いまの設定は、以前の形の「その間は何も流さない」です。この形は新しく保存できないので、流す話題を入れるか、ブラックリストにしてから保存してください。',
+            key: const ValueKey('guardian.time.legacyNote'), style: _caption(context))),
+      ..._topicsEditor(
+        context,
+        section: 'time',
+        label: 'その間の話題',
+        topics: p.time.topics,
+        controller: _timeTopics,
+        allowHint: 'その間に流す話題(語やタグを「,」で区切る)',
+        denyHint: 'その間に流さない話題(語やタグを「,」で区切る)',
+        allowNote: 'ホワイトリスト: その間は、どれかの話題に当たる投稿だけが流れます。',
+        denyNote: 'ブラックリスト: その間は、当たる投稿を流しません(空 = 話題では絞りません)。',
+        withMode: (d, m) => d.copyWith(time: d.time.copyWith(topics: d.time.topics.copyWith(mode: m))),
+      ),
+      RasqSwitchListTile(key: const ValueKey('guardian.time.hideNotifications'), title: '通知を隠す', value: p.time.hideNotifications, onChanged: (v) => _set((d) => d.copyWith(time: d.time.copyWith(hideNotifications: v)))),
+      RasqSwitchListTile(key: const ValueKey('guardian.time.hidePostDetail'), title: '投稿の詳細を開かせない', value: p.time.hidePostDetail, onChanged: (v) => _set((d) => d.copyWith(time: d.time.copyWith(hidePostDetail: v)))),
+      RasqSwitchListTile(key: const ValueKey('guardian.time.hideDirectMessages'), title: 'DM を隠す', value: p.time.hideDirectMessages, onChanged: (v) => _set((d) => d.copyWith(time: d.time.copyWith(hideDirectMessages: v)))),
+    ];
+  }
+
+  /// その他: RAi / 検索 / ほかのページに属さない機能(カタログに無い id も)。
+  List<Widget> _otherPage(BuildContext context, ChildSafeCatalog catalog) {
+    final a = _allow;
+    final rai = a.rai ?? const ChildSafeRaiAllow(groups: ['rai.guide', 'rai.read', 'rai.compose']);
+    List<String> toggle(List<String> l, String v, bool on) => on ? {...l, v}.toList() : [for (final x in l) if (x != v) x];
+    return [
       const RasqSectionHeader(title: 'RAi'),
       RasqSwitchListTile(key: const ValueKey('guardian.rai.enabled'), title: 'RAi を使える', value: rai.enabled, onChanged: (v) => _setAllow((x) => x.copyWith(rai: rai.copyWith(enabled: v)))),
       for (final g in catalog.raiGroups)
@@ -629,6 +933,77 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
           onChanged: (v) => _setAllow((x) => x.copyWith(rai: rai.copyWith(groups: toggle(rai.groups, g.id, v)))),
         ),
       RasqSwitchListTile(key: const ValueKey('guardian.rai.automation'), title: '関数での自動化', subtitle: 'オフなら、案内(指差し)だけで進めます', value: rai.automation, onChanged: (v) => _setAllow((x) => x.copyWith(rai: rai.copyWith(automation: v)))),
+      const RasqSectionHeader(title: '検索'),
+      for (final f in catalog.search)
+        RasqSwitchListTile(key: ValueKey('guardian.search.${f.id}'), title: f.label, value: a.search?[f.id] ?? childSafePresetDefault(_draft!.preset, 'search', f.id), onChanged: (v) => _setAllow((x) => x.copyWith(search: {...?x.search, f.id: v}))),
+      const RasqSectionHeader(title: '機能'),
+      ..._featuresOn(catalog, GuardianPage.other),
     ];
+  }
+
+  /// 例で決める (D-314): ページごとに自分の種類だけ(プラグインのページ = プラグイン / ストア、TL のページ = 最近のアクション /
+  /// クリップ / リスト)。許す例 / 止める例の数と一覧(✕で外す)、「例を選ぶ」で共通の FOW を開く。
+  List<Widget> _examplesSection(BuildContext context, {required bool plugins}) {
+    final caption = _caption(context);
+    final scope = plugins ? 'plugins' : 'tl';
+    final ex = _allow.examples ?? ContentExamples.none;
+    final allow = [for (final e in ex.allow) if (guardianPluginExample(e) == plugins) e];
+    final deny = [for (final e in ex.deny) if (guardianPluginExample(e) == plugins) e];
+    Widget chip(ContentExample e, bool isAllow, int i) => InputChip(
+          key: ValueKey('guardian.example.$scope.${isAllow ? 'allow' : 'deny'}.$i'),
+          avatar: Icon(isAllow ? Icons.check_circle_outline : Icons.block, size: 16),
+          deleteIcon: const Icon(Icons.close, size: 16),
+          deleteButtonTooltipMessage: '外す',
+          label: Text('${e.kind.label}: ${e.shortLabel}'),
+          onDeleted: () => _setAllow((x) => x.copyWith(examples: (x.examples ?? ContentExamples.none).without(e))),
+        );
+    return [
+      RasqSectionHeader(title: plugins ? '例で決める(プラグイン)' : '例で決める(クリップ / リスト)'),
+      _pad(Text(
+        plugins
+            ? '「こういうプラグインは許す / 止める」を例で選びます。子の端末は、プラグインの名前・説明が例に近いかで決めます。止める例に近いものは「自由」でも使えません。'
+                '「例に近いもの」にすると、名前で許したものと、許す例に近いものを使えます。'
+            : '「こういうものは許す / 止める」を、あなたの最近のアクション / クリップ / リストから選びます。子のクリップ / リストのうち、中身が止める例に近いものは、一覧にもタイムラインにも出ません。',
+        style: caption,
+      )),
+      RasqListTile(
+        key: ValueKey('guardian.examples.pick.$scope'),
+        title: plugins ? '例を選ぶ(プラグイン / ストア)' : '例を選ぶ(最近のアクション / クリップ / リスト)',
+        subtitle: '許す例 ${allow.length} / 止める例 ${deny.length}',
+        onTap: () => _pickExamples(plugins: plugins),
+      ),
+      if (allow.isNotEmpty || deny.isNotEmpty)
+        _pad(Wrap(spacing: 4, runSpacing: 4, children: [
+          for (final (i, e) in allow.indexed) chip(e, true, i),
+          for (final (i, e) in deny.indexed) chip(e, false, i),
+        ])),
+    ];
+  }
+
+  Future<void> _pickExamples({required bool plugins}) async {
+    final all = _allow.examples ?? ContentExamples.none;
+    final mine = ContentExamples(allow: [for (final e in all.allow) if (guardianPluginExample(e) == plugins) e], deny: [for (final e in all.deny) if (guardianPluginExample(e) == plugins) e]);
+    final own = ownExampleSources(ref);
+    final decisions = await openExamplePickFow(
+      context,
+      ref,
+      id: 'guardian.examples.${plugins ? 'plugins' : 'tl'}',
+      title: plugins ? 'プラグインの例(@${widget.handle})' : 'TL の例(@${widget.handle})',
+      sources: plugins ? [...own.where((s) => s.id == 'plugins'), storeExampleSource(ref)] : [...own.where((s) => s.id != 'plugins')],
+      initial: mine,
+      allowLabel: '許す例',
+      denyLabel: '止める例',
+      intro: plugins
+          ? '中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、新しいプラグインを例との近さで分けます。'
+          : '中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、クリップ / リストを例との近さで分けます。',
+    );
+    if (decisions == null || !mounted) return;
+    _setAllow((x) {
+      var ex = x.examples ?? ContentExamples.none;
+      for (final d in decisions) {
+        ex = ex.withExample(d.candidate.example, allow: d.allow);
+      }
+      return x.copyWith(examples: ex);
+    });
   }
 }

@@ -45,36 +45,96 @@ List<String> _strings(Object? v) => [for (final e in v is List ? v : const []) i
 Map<String, bool> _bools(Object? v) => {for (final e in (v is Map ? v : const {}).entries) if (e.value is bool) '${e.key}': e.value as bool};
 Map<String, Object?> _map(Object? v) => v is Map ? v.cast<String, Object?>() : const {};
 
+/// 話題の一覧の見方 (D-315): ホワイトリスト(どれかの話題に当たるものだけ)/ ブラックリスト(当たるものを止める)。
+enum ChildSafeTopicMode {
+  allow('allow', 'ホワイトリスト'),
+  deny('deny', 'ブラックリスト');
+
+  const ChildSafeTopicMode(this.wire, this.label);
+  final String wire;
+  final String label;
+  static ChildSafeTopicMode? fromWire(Object? w) => values.where((m) => m.wire == w).firstOrNull;
+}
+
+/// 面(タイムライン / 投稿 / 見守りの時間)ごとの話題の一覧 (D-315)。Central `docs/API.md` の「話題の一覧」。
+///
+/// - 新しい形: `topicMode`(`allow` / `deny`)+ `topics`。アプリはいつもこの形で書く([toJson])。
+/// - もとの形: `timeline.blockedTopics`(= ブラックリスト)/ `time.allowedTopics`(= ホワイトリスト)。子の端末は両方を読む
+///   (新しい形があればそれ)。**もとの形の空のホワイトリスト**(時間)は、いままでどおり「何も流さない」。新しい形の
+///   空のホワイトリストは、面が有効なら Central が受け付けない([childSafeTopicErrors])。
+@immutable
+class ChildSafeTopics {
+  const ChildSafeTopics({this.mode = ChildSafeTopicMode.deny, this.topics = const [], this.legacy = false});
+  final ChildSafeTopicMode mode;
+  final List<String> topics;
+
+  /// もとの形(`blockedTopics` / `allowedTopics`、どちらも無い面を含む)から読んだ。
+  final bool legacy;
+
+  bool get allow => mode == ChildSafeTopicMode.allow;
+
+  /// 空のホワイトリスト(面が有効なら、新しい形では保存できない)。
+  bool get isEmptyWhitelist => allow && topics.isEmpty;
+
+  /// 目印(TL を作り直す判断に使う)。
+  String get signature => '${mode.wire}:${topics.join(',')}';
+
+  /// [j] の面から読む。[legacyKey] = もとの欄(無ければ null)、[legacyMode] = もとの欄の見方。
+  factory ChildSafeTopics.read(Map<String, Object?> j, {String? legacyKey, ChildSafeTopicMode legacyMode = ChildSafeTopicMode.deny}) {
+    if (j.containsKey('topicMode') || j.containsKey('topics')) {
+      return ChildSafeTopics(mode: ChildSafeTopicMode.fromWire(j['topicMode']) ?? legacyMode, topics: _strings(j['topics']));
+    }
+    return ChildSafeTopics(mode: legacyMode, topics: legacyKey == null ? const [] : _strings(j[legacyKey]), legacy: true);
+  }
+
+  Map<String, Object?> toJson() => {'topicMode': mode.wire, 'topics': topics};
+  ChildSafeTopics copyWith({ChildSafeTopicMode? mode, List<String>? topics}) => ChildSafeTopics(mode: mode ?? this.mode, topics: topics ?? this.topics);
+
+  @override
+  bool operator ==(Object other) => other is ChildSafeTopics && other.mode == mode && other.legacy == legacy && listEquals(other.topics, topics);
+  @override
+  int get hashCode => Object.hash(mode, legacy, Object.hashAll(topics));
+}
+
 @immutable
 class ChildSafeTimeline {
-  const ChildSafeTimeline({this.enabled = false, this.level = ChildSafeLevel.strict, this.blockedTopics = const []});
+  const ChildSafeTimeline({this.enabled = false, this.level = ChildSafeLevel.strict, this.topics = const ChildSafeTopics()});
   final bool enabled;
   final ChildSafeLevel level;
-  final List<String> blockedTopics;
-  factory ChildSafeTimeline.fromJson(Map<String, Object?> j) => ChildSafeTimeline(enabled: j['enabled'] == true, level: ChildSafeLevel.fromWire(j['level']), blockedTopics: _strings(j['blockedTopics']));
-  Map<String, Object?> toJson() => {'enabled': enabled, 'level': level.wire, 'blockedTopics': blockedTopics};
-  ChildSafeTimeline copyWith({bool? enabled, ChildSafeLevel? level, List<String>? blockedTopics}) =>
-      ChildSafeTimeline(enabled: enabled ?? this.enabled, level: level ?? this.level, blockedTopics: blockedTopics ?? this.blockedTopics);
+
+  /// 流す / 見せない話題(もとの形 `blockedTopics` = ブラックリスト)。
+  final ChildSafeTopics topics;
+  factory ChildSafeTimeline.fromJson(Map<String, Object?> j) =>
+      ChildSafeTimeline(enabled: j['enabled'] == true, level: ChildSafeLevel.fromWire(j['level']), topics: ChildSafeTopics.read(j, legacyKey: 'blockedTopics'));
+  Map<String, Object?> toJson() => {'enabled': enabled, 'level': level.wire, ...topics.toJson()};
+  ChildSafeTimeline copyWith({bool? enabled, ChildSafeLevel? level, ChildSafeTopics? topics}) =>
+      ChildSafeTimeline(enabled: enabled ?? this.enabled, level: level ?? this.level, topics: topics ?? this.topics);
 }
 
 @immutable
 class ChildSafeComposer {
-  const ChildSafeComposer({this.enabled = false, this.level = ChildSafeLevel.strict});
+  const ChildSafeComposer({this.enabled = false, this.level = ChildSafeLevel.strict, this.topics = const ChildSafeTopics()});
   final bool enabled;
   final ChildSafeLevel level;
-  factory ChildSafeComposer.fromJson(Map<String, Object?> j) => ChildSafeComposer(enabled: j['enabled'] == true, level: ChildSafeLevel.fromWire(j['level']));
-  Map<String, Object?> toJson() => {'enabled': enabled, 'level': level.wire};
-  ChildSafeComposer copyWith({bool? enabled, ChildSafeLevel? level}) => ChildSafeComposer(enabled: enabled ?? this.enabled, level: level ?? this.level);
+
+  /// 送れる / 送れない話題 (D-315。もとの形は無い: 無い = 話題では止めない)。
+  final ChildSafeTopics topics;
+  factory ChildSafeComposer.fromJson(Map<String, Object?> j) => ChildSafeComposer(enabled: j['enabled'] == true, level: ChildSafeLevel.fromWire(j['level']), topics: ChildSafeTopics.read(j));
+  Map<String, Object?> toJson() => {'enabled': enabled, 'level': level.wire, ...topics.toJson()};
+  ChildSafeComposer copyWith({bool? enabled, ChildSafeLevel? level, ChildSafeTopics? topics}) =>
+      ChildSafeComposer(enabled: enabled ?? this.enabled, level: level ?? this.level, topics: topics ?? this.topics);
 }
 
 /// 見守りの時間。`start` / `end` = `HH:MM`(**子の端末の時計**)。`end` が早ければ次の日まで。
 @immutable
 class ChildSafeTime {
-  const ChildSafeTime({this.enabled = false, this.start = '21:00', this.end = '06:00', this.allowedTopics = const [], this.hideNotifications = true, this.hidePostDetail = false, this.hideDirectMessages = true});
+  const ChildSafeTime({this.enabled = false, this.start = '21:00', this.end = '06:00', this.topics = const ChildSafeTopics(), this.hideNotifications = true, this.hidePostDetail = false, this.hideDirectMessages = true});
   final bool enabled;
   final String start;
   final String end;
-  final List<String> allowedTopics;
+
+  /// その間に流す / 流さない話題(もとの形 `allowedTopics` = ホワイトリスト。もとの形だけ、空 = 何も流さない)。
+  final ChildSafeTopics topics;
   final bool hideNotifications;
   final bool hidePostDetail;
   final bool hideDirectMessages;
@@ -110,7 +170,7 @@ class ChildSafeTime {
         enabled: j['enabled'] == true,
         start: j['start'] as String? ?? '21:00',
         end: j['end'] as String? ?? '06:00',
-        allowedTopics: _strings(j['allowedTopics']),
+        topics: ChildSafeTopics.read(j, legacyKey: 'allowedTopics', legacyMode: ChildSafeTopicMode.allow),
         hideNotifications: j['hideNotifications'] != false,
         hidePostDetail: j['hidePostDetail'] == true,
         hideDirectMessages: j['hideDirectMessages'] != false,
@@ -119,16 +179,16 @@ class ChildSafeTime {
         'enabled': enabled,
         'start': start,
         'end': end,
-        'allowedTopics': allowedTopics,
+        ...topics.toJson(),
         'hideNotifications': hideNotifications,
         'hidePostDetail': hidePostDetail,
         'hideDirectMessages': hideDirectMessages,
       };
-  ChildSafeTime copyWith({bool? enabled, String? start, String? end, List<String>? allowedTopics, bool? hideNotifications, bool? hidePostDetail, bool? hideDirectMessages}) => ChildSafeTime(
+  ChildSafeTime copyWith({bool? enabled, String? start, String? end, ChildSafeTopics? topics, bool? hideNotifications, bool? hidePostDetail, bool? hideDirectMessages}) => ChildSafeTime(
         enabled: enabled ?? this.enabled,
         start: start ?? this.start,
         end: end ?? this.end,
-        allowedTopics: allowedTopics ?? this.allowedTopics,
+        topics: topics ?? this.topics,
         hideNotifications: hideNotifications ?? this.hideNotifications,
         hidePostDetail: hidePostDetail ?? this.hidePostDetail,
         hideDirectMessages: hideDirectMessages ?? this.hideDirectMessages,
@@ -447,9 +507,10 @@ Map<String, Object?> _preset(String level,
     {
       'schema': ChildSafePolicy.schemaV2,
       'preset': level,
-      'timeline': {'enabled': true, 'level': level, 'blockedTopics': <String>[]},
-      'composer': {'enabled': true, 'level': level},
-      'time': {'end': '06:00', 'allowedTopics': <String>[], 'hidePostDetail': false, ...time},
+      // 話題 (D-315): TL / 投稿 = ホワイトリストの空(保護者が話題を足すまで保存できない)、時間 = ブラックリストの空。
+      'timeline': {'enabled': true, 'level': level, 'topicMode': 'allow', 'topics': <String>[]},
+      'composer': {'enabled': true, 'level': level, 'topicMode': 'allow', 'topics': <String>[]},
+      'time': {'end': '06:00', 'topicMode': 'deny', 'topics': <String>[], 'hidePostDetail': false, ...time},
       'postsPerDay': postsPerDay,
       'allow': {
         'sns': {'kinds': <String>[], 'instances': <String>[], 'addAccounts': sns},
@@ -468,6 +529,16 @@ bool childSafePresetDefault(String? preset, String kind, String id) {
   final m = allow is Map ? allow[kind] : null;
   return m is Map ? m[id] != false : true;
 }
+
+/// 保存の前の確かめ (D-315): 有効な面(`timeline` / `composer` / `time`)の空のホワイトリスト → 面 → 文。
+/// Central も同じものを `400`(`timeline.topics: …`)で断る。ブラックリストは空でよい(= 話題では絞らない)。
+Map<String, String> childSafeTopicErrors(ChildSafePolicy p) => {
+      if (p.timeline.enabled && p.timeline.topics.isEmptyWhitelist) 'timeline': childSafeEmptyWhitelistText,
+      if (p.composer.enabled && p.composer.topics.isEmptyWhitelist) 'composer': childSafeEmptyWhitelistText,
+      if (p.time.enabled && p.time.topics.isEmptyWhitelist) 'time': childSafeEmptyWhitelistText,
+    };
+
+const childSafeEmptyWhitelistText = 'ホワイトリストが空です。話題を 1 つ以上入れるか、ブラックリストにしてください';
 
 // ── RAi の関数のまとまり ─────────────────────────────────────────────────
 

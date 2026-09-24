@@ -118,7 +118,7 @@ class ChildSafeSummary {
 /// `GET /me/child-safe/children/{handle}`。
 @immutable
 class ChildSafeChildDetail {
-  const ChildSafeChildDetail({required this.row, this.settings, this.signature, this.issuedAt, this.summary = const ChildSafeSummary()});
+  const ChildSafeChildDetail({required this.row, this.settings, this.signature, this.issuedAt, this.summary = const ChildSafeSummary(), this.pluginNames = const {}});
   final ChildSafeChildRow row;
 
   /// null = まだ決めていない(`pending_setup`)。
@@ -126,12 +126,19 @@ class ChildSafeChildDetail {
   final String? signature;
   final String? issuedAt;
   final ChildSafeSummary summary;
+
+  /// `resolved.plugins` のうち、ストアにあるものの id → 名前(`allow.plugins.ids` のチップの表示だけ。署名の外)。
+  final Map<String, String> pluginNames;
   factory ChildSafeChildDetail.fromJson(Map<String, Object?> j) => ChildSafeChildDetail(
         row: ChildSafeChildRow.fromJson(j),
         settings: j['settings'] is Map ? ChildSafePolicy.fromJson((j['settings'] as Map).cast<String, Object?>()) : null,
         signature: j['signature'] as String?,
         issuedAt: j['issuedAt']?.toString(),
         summary: j['summary'] is Map ? ChildSafeSummary.fromJson((j['summary'] as Map).cast<String, Object?>()) : const ChildSafeSummary(),
+        pluginNames: {
+          for (final r in (j['resolved'] is Map ? (j['resolved'] as Map)['plugins'] : null) as List? ?? const [])
+            if (r is Map && r['id'] is String && r['name'] is String) r['id'] as String: r['name'] as String,
+        },
       );
 }
 

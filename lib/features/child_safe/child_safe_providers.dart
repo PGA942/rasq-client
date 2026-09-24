@@ -396,7 +396,7 @@ List<String> topicLabelsOf(String text) {
 
 final childSafeDailyProvider = Provider<ChildSafeDaily>((ref) => ChildSafeDaily(ref.watch(sessionStorageProvider)));
 
-/// 送る前の判定 (D-307): 見守りの制限(機能 / 1 日の上限 / 本文の強さ)。通れば null。止めたら「止めた数」を数える。
+/// 送る前の判定 (D-307): 見守りの制限(機能 / 1 日の上限 / 本文の強さ / 投稿の話題 (D-315。DM には当てない))。通れば null。止めたら「止めた数」を数える。
 Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDaily daily, DateTime now, {required String text, bool dm = false, bool media = false}) async {
   if (!gate.supervised) return null;
   ChildComposeVerdict? v;
@@ -408,7 +408,7 @@ Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDai
   } else if (gate.postsPerDay != null && await daily.postsOn(ChildSafeDaily.dateOf(now)) >= gate.postsPerDay!) {
     v = ChildComposeVerdict('今日はもう ${gate.postsPerDay} 件送りました(保護者が決めた 1 日の数)。また明日');
   } else {
-    v = gate.judgeText(text);
+    v = gate.judgeText(text, dm: dm);
   }
   if (v != null) await daily.recordBlocked(now: now);
   return v;
