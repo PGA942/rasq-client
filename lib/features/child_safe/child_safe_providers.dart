@@ -340,10 +340,12 @@ class ChildSafeDaily {
     await _putDay(r, date, day);
   }
 
-  /// 終わった日(今日より前)のまだ送っていない分を、1 日 1 回ずつ報告する。14 日より前は捨てる。
+  /// 終わった日(今日より前)のまだ送っていない分を、1 日 1 回ずつ報告する。Central が受けるのは直近 14 日
+  /// (今日を入れて 14 日 = 13 日前まで)なので、それより前は捨てる。Central が `400` で断った日(日本の日付との
+  /// ずれなど)も捨てて先へ進む(1 日が詰まって、後の日が送れなくならないように)。
   Future<void> flush(ChildSafeApi api, {required DateTime now}) async {
     final today = dateOf(now);
-    final oldest = dateOf(now.subtract(const Duration(days: 14)));
+    final oldest = dateOf(now.subtract(const Duration(days: 13)));
     final r = await _report();
     final days = (r['days'] as Map? ?? {}).cast<String, Object?>();
     final sent = [for (final s in r['sent'] as List? ?? const []) '$s'];
@@ -358,10 +360,14 @@ class ChildSafeDaily {
       final day = (days[date] as Map).cast<String, Object?>();
       final topics = (day['topics'] as Map? ?? {}).cast<String, Object?>().entries.toList()..sort((a, b) => ((b.value as num?) ?? 0).compareTo((a.value as num?) ?? 0));
       try {
-        await api.report(date: date, posts: await postsOn(date), blocked: (day['blocked'] as num?)?.toInt() ?? 0, topics: [for (final e in topics.take(5)) e.key]);
+        await api.report(date: date, posts: await postsOn(date), blocked: (day['blocked'] as num?)?.toInt() ?? 0, topics: [for (final e in topics.take(5)) e.key.length > 40 ? e.key.substring(0, 40) : e.key]);
         sent.add(date);
       } on OrgateException catch (e) {
         debugPrint('child-safe: report failed (${e.code.code})');
+        if (e.code.code == '400') {
+          sent.add(date);
+          continue;
+        }
         break;
       }
     }

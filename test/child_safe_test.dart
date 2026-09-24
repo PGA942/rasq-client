@@ -301,6 +301,9 @@ void main() {
             return s == null ? json({'error': {'code': '503', 'message': 'down'}}, 503) : json(s);
           case 'GET /store-key':
             return json({'algorithm': 'ed25519', 'publicKey': signer.publicKey});
+          case 'POST /me/child-safe/report' when bodies.last['date'] == '2026-09-11':
+            // Central の日本の日付では 14 日より前(端末の時計とのずれ)。
+            return json({'error': {'code': '400', 'message': 'date: 直近 14 日の日付です'}}, 400);
           case 'POST /me/child-safe/ack':
           case 'POST /me/child-safe/report':
             return http.Response('', 204);
@@ -433,6 +436,19 @@ void main() {
       // 2 回目は送らない(1 日 1 回)。
       await t.c.read(childSafeProvider.notifier).refresh();
       expect([for (final b in t.bodies) if (b.containsKey('date')) b], hasLength(1));
+    });
+
+    test('1 日の報告: Central が受ける 14 日(13 日前まで)だけ。400 の日は捨てて先へ進む', () async {
+      final st = await active();
+      final t = setup(() => st);
+      final daily = t.c.read(childSafeDailyProvider);
+      for (final d in [10, 11, 20]) {
+        await daily.recordSent('宿題 #宿題', now: DateTime(2026, 9, d, 20));
+      }
+      await sync(t.c);
+      expect([for (final b in t.bodies) if (b.containsKey('date')) b['date']], ['2026-09-11', '2026-09-20']);
+      await t.c.read(childSafeProvider.notifier).refresh();
+      expect([for (final b in t.bodies) if (b.containsKey('date')) b['date']], hasLength(2));
     });
   });
 
