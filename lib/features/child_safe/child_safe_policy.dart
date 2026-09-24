@@ -130,14 +130,14 @@ class ChildSafeTime {
       );
 }
 
-/// 使ってよい SNS。`kinds` が空 = どれも使えない。`instances` が空 = その種類ならどのサーバーでも。
+/// 使ってよい SNS。`kinds` / `instances` が空 = その軸では絞らない(Central `docs/API.md`)。
 @immutable
 class ChildSafeSnsAllow {
   const ChildSafeSnsAllow({this.kinds = const [], this.instances = const [], this.addAccounts = false});
   final List<String> kinds;
   final List<String> instances;
   final bool addAccounts;
-  bool permits(String kind, String instance) => kinds.contains(kind) && (instances.isEmpty || instances.contains(instance.toLowerCase()));
+  bool permits(String kind, String instance) => (kinds.isEmpty || kinds.contains(kind.toLowerCase())) && (instances.isEmpty || instances.contains(instance.toLowerCase()));
   factory ChildSafeSnsAllow.fromJson(Map<String, Object?> j) =>
       ChildSafeSnsAllow(kinds: _strings(j['kinds']), instances: [for (final i in _strings(j['instances'])) i.toLowerCase()], addAccounts: j['addAccounts'] == true);
   Map<String, Object?> toJson() => {'kinds': kinds, 'instances': instances, 'addAccounts': addAccounts};
@@ -157,7 +157,8 @@ enum ChildSafeInstall {
   static ChildSafeInstall fromWire(Object? w) => values.where((v) => v.wire == w).firstOrNull ?? none;
 }
 
-/// 使ってよいプラグイン。`ids` = 使ってよいプラグイン(入っていても、ここに無ければ呼ばない)。
+/// 使ってよいプラグイン(Central `docs/API.md` の `allow.plugins`)。`install` が `any` なら入っているものはどれでも、
+/// `none` / `listed` なら `ids` のものだけ(入っていても、ここに無ければ呼ばない)。
 /// `slots` = スロットごとの可否(書いていないスロットは可)。
 @immutable
 class ChildSafePluginsAllow {
@@ -165,7 +166,7 @@ class ChildSafePluginsAllow {
   final List<String> ids;
   final Map<String, bool> slots;
   final ChildSafeInstall install;
-  bool permits(String pluginId, String slot) => ids.contains(pluginId) && slots[slot] != false;
+  bool permits(String pluginId, String slot) => (install == ChildSafeInstall.any || ids.contains(pluginId)) && slots[slot] != false;
   factory ChildSafePluginsAllow.fromJson(Map<String, Object?> j) => ChildSafePluginsAllow(ids: _strings(j['ids']), slots: _bools(j['slots']), install: ChildSafeInstall.fromWire(j['install']));
   Map<String, Object?> toJson() => {'ids': ids, 'slots': slots, 'install': install.wire};
   ChildSafePluginsAllow copyWith({List<String>? ids, Map<String, bool>? slots, ChildSafeInstall? install}) =>
@@ -326,63 +327,121 @@ class ChildSafeCatalog {
     );
   }
 
-  /// サーバーから取れないとき(オフライン / 古い Central)の控え。Central の既定と同じ考え方
-  /// (13-15 = きびしめ、16-17 = ふつう、18+ = ゆるめ)。
+  /// サーバーから取れないとき(オフライン / 古い Central)の控え。**Central の `policy::catalog()` と同じ値**
+  /// (`test/fixtures/child_safe_catalog.json` と突き合わせている。Central を変えたら、ここと fixture も)。
   static final fallback = ChildSafeCatalog(
     version: 1,
     features: const [
-      ChildSafeCatalogItem('dm', 'DM'),
       ChildSafeCatalogItem('astell.join', 'AsTell への参加'),
       ChildSafeCatalogItem('astell.create', 'AsTell ルームの作成'),
       ChildSafeCatalogItem('astell.share', 'AsTell での共有・チャット'),
       ChildSafeCatalogItem('astell.stream', 'AsTell の画面共有・配信'),
-      ChildSafeCatalogItem('reaction', 'リアクション'),
-      ChildSafeCatalogItem('post.media', 'メディア付き投稿'),
-      ChildSafeCatalogItem('account.follow', 'RASQ アカウントのフォロー'),
       ChildSafeCatalogItem('store.review', 'ストアのレビュー投稿'),
+      ChildSafeCatalogItem('account.follow', 'RASQ アカウントのフォロー'),
+      ChildSafeCatalogItem('post', '投稿'),
+      ChildSafeCatalogItem('post.media', '画像・動画つきの投稿'),
+      ChildSafeCatalogItem('dm', 'ダイレクトメッセージ'),
+      ChildSafeCatalogItem('reaction', 'リアクション'),
+      ChildSafeCatalogItem('relational', 'つながりの表示(フォロー / フォロワー)'),
+      ChildSafeCatalogItem('trend', 'トレンド'),
+      ChildSafeCatalogItem('lists', 'リスト'),
+      ChildSafeCatalogItem('notifications', '通知'),
+      ChildSafeCatalogItem('store.install', 'プラグインのインストール'),
+      ChildSafeCatalogItem('sns.addAccount', 'SNS アカウントの追加'),
     ],
     search: const [
-      ChildSafeCatalogItem('posts', '投稿'),
-      ChildSafeCatalogItem('users', 'ユーザー'),
-      ChildSafeCatalogItem('trend', 'トレンド'),
-      ChildSafeCatalogItem('store', 'プラグインストア'),
-      ChildSafeCatalogItem('web', 'web 検索'),
+      ChildSafeCatalogItem('posts', '投稿の検索'),
+      ChildSafeCatalogItem('users', 'ユーザーの検索'),
+      ChildSafeCatalogItem('trend', 'トレンドの検索'),
+      ChildSafeCatalogItem('store', 'ストアの検索'),
+      ChildSafeCatalogItem('web', 'Web の検索'),
     ],
     raiGroups: const [
-      ChildSafeCatalogItem('rai.guide', '操作の案内'),
-      ChildSafeCatalogItem('rai.read', '読む(TL / 投稿 / ユーザー)'),
-      ChildSafeCatalogItem('rai.compose', '下書きを書く'),
-      ChildSafeCatalogItem('rai.act', 'アクション(フォロー / リスト / クリップ)'),
-      ChildSafeCatalogItem('rai.settings', '設定を変える'),
-      ChildSafeCatalogItem('rai.astell', 'AsTell'),
-      ChildSafeCatalogItem('rai.web', 'web 検索'),
+      ChildSafeCatalogItem('rai.guide', '使い方の案内'),
+      ChildSafeCatalogItem('rai.read', '読む(要約・翻訳)'),
+      ChildSafeCatalogItem('rai.compose', '書く手伝い'),
+      ChildSafeCatalogItem('rai.act', '操作の代行'),
+      ChildSafeCatalogItem('rai.settings', '設定の変更'),
+      ChildSafeCatalogItem('rai.astell', 'AsTell の手伝い'),
+      ChildSafeCatalogItem('rai.web', 'Web の調べもの'),
       ChildSafeCatalogItem('rai.assistant', 'アシスタント', phase: 2),
       ChildSafeCatalogItem('rai.macro', 'マクロ', phase: 2),
       ChildSafeCatalogItem('rai.automation', '自動化', phase: 2),
     ],
-    presets: {
-      '13-15': _preset('strict', time: true, start: '21:00', postsPerDay: 10, addAccounts: false, install: 'none', features: {'dm': false, 'astell.join': false, 'astell.create': false, 'astell.stream': false}, search: {'posts': true, 'users': false, 'trend': true, 'store': false, 'web': false}, rai: ['rai.guide', 'rai.read', 'rai.compose'], automation: false),
-      '16-17': _preset('standard', time: true, start: '23:00', postsPerDay: 30, addAccounts: false, install: 'listed', features: {'dm': true, 'astell.join': true, 'astell.create': false, 'astell.stream': false}, search: {'posts': true, 'users': true, 'trend': true, 'store': true, 'web': false}, rai: ['rai.guide', 'rai.read', 'rai.compose', 'rai.act', 'rai.settings'], automation: false),
-      '18+': _preset('mild', time: false, start: '23:00', postsPerDay: null, addAccounts: true, install: 'any', features: {'dm': true, 'astell.join': true, 'astell.create': true, 'astell.stream': true}, search: {'posts': true, 'users': true, 'trend': true, 'store': true, 'web': true}, rai: childSafeRaiGroups, automation: true),
-    },
+    presets: {'13-15': childSafePresets['strict']!, '16-17': childSafePresets['standard']!, '18+': childSafePresets['mild']!},
   );
+}
 
-  static Map<String, Object?> _preset(String level, {required bool time, required String start, required int? postsPerDay, required bool addAccounts, required String install, required Map<String, bool> features, required Map<String, bool> search, required List<String> rai, required bool automation}) => {
-        'schema': ChildSafePolicy.schemaV2,
-        'preset': level,
-        'timeline': {'enabled': true, 'level': level, 'blockedTopics': <String>[]},
-        'composer': {'enabled': true, 'level': level},
-        'time': {'enabled': time, 'start': start, 'end': '06:00', 'allowedTopics': <String>[], 'hideNotifications': true, 'hidePostDetail': false, 'hideDirectMessages': true},
-        'postsPerDay': postsPerDay,
-        'allow': {
-          'sns': {'kinds': <String>[], 'instances': <String>[], 'addAccounts': addAccounts},
-          'plugins': {'ids': <String>[], 'slots': <String, bool>{}, 'install': install},
-          'features': features,
-          'search': search,
-          'rai': {'enabled': true, 'groups': rai, 'deny': <String>[], 'automation': automation},
-        },
-        'source': {'catalogVersion': 1},
-      };
+/// プリセットの中身(Central `Settings::preset`。カタログの `presets` と同じ)。控え([ChildSafeCatalog.fallback])と、
+/// `allow.features` / `allow.search` に書いていない id の既定([childSafePresetDefault])に使う。
+final childSafePresets = <String, Map<String, Object?>>{
+  'strict': _preset(
+    'strict',
+    time: {'enabled': true, 'start': '21:00', 'hideNotifications': true, 'hideDirectMessages': true},
+    postsPerDay: 10,
+    sns: false,
+    plugins: {'slots': {'post.action': false}, 'install': 'none'},
+    features: {'astell.create': false, 'astell.join': false, 'astell.share': false, 'astell.stream': false, 'dm': false, 'sns.addAccount': false, 'store.install': false, 'store.review': false},
+    search: {'posts': true, 'store': false, 'trend': true, 'users': false, 'web': false},
+    rai: ['rai.guide', 'rai.read', 'rai.compose'],
+    automation: false,
+  ),
+  'standard': _preset(
+    'standard',
+    time: {'enabled': true, 'start': '23:00', 'hideNotifications': true, 'hideDirectMessages': false},
+    postsPerDay: 30,
+    sns: false,
+    plugins: {'slots': <String, bool>{}, 'install': 'listed'},
+    features: {'astell.create': false, 'astell.stream': false, 'sns.addAccount': false},
+    search: {'posts': true, 'store': true, 'trend': true, 'users': true, 'web': false},
+    rai: ['rai.guide', 'rai.read', 'rai.compose', 'rai.settings', 'rai.astell'],
+    automation: false,
+  ),
+  'mild': _preset(
+    'mild',
+    time: {'enabled': false, 'start': '21:00', 'hideNotifications': false, 'hideDirectMessages': false},
+    postsPerDay: null,
+    sns: true,
+    plugins: {'slots': <String, bool>{}, 'install': 'any'},
+    features: <String, bool>{},
+    search: {'posts': true, 'store': true, 'trend': true, 'users': true, 'web': true},
+    rai: childSafeRaiGroups,
+    automation: true,
+  ),
+};
+
+Map<String, Object?> _preset(String level,
+        {required Map<String, Object?> time,
+        required int? postsPerDay,
+        required bool sns,
+        required Map<String, Object?> plugins,
+        required Map<String, bool> features,
+        required Map<String, bool> search,
+        required List<String> rai,
+        required bool automation}) =>
+    {
+      'schema': ChildSafePolicy.schemaV2,
+      'preset': level,
+      'timeline': {'enabled': true, 'level': level, 'blockedTopics': <String>[]},
+      'composer': {'enabled': true, 'level': level},
+      'time': {'end': '06:00', 'allowedTopics': <String>[], 'hidePostDetail': false, ...time},
+      'postsPerDay': postsPerDay,
+      'allow': {
+        'sns': {'kinds': <String>[], 'instances': <String>[], 'addAccounts': sns},
+        'plugins': {'ids': <String>[], ...plugins},
+        'features': features,
+        'search': search,
+        'rai': {'enabled': true, 'groups': rai, 'deny': <String>[], 'automation': automation},
+      },
+      'source': {'catalogVersion': 1},
+    };
+
+/// `allow.features` / `allow.search` に書いていない id の値: `preset` のプリセットの値、無ければ「許す」(Central と同じ規則。
+/// Central は保存のときに埋めて署名するので、ふつうは届いた値に全部ある)。[kind] = `features` / `search`。
+bool childSafePresetDefault(String? preset, String kind, String id) {
+  final allow = childSafePresets[preset]?['allow'];
+  final m = allow is Map ? allow[kind] : null;
+  return m is Map ? m[id] != false : true;
 }
 
 // ── RAi の関数のまとまり ─────────────────────────────────────────────────

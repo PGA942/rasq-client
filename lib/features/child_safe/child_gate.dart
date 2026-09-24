@@ -97,8 +97,9 @@ class ChildGate {
 
   // ── 機能 / 検索 ──
 
-  bool featureAllowed(String id) => !supervised || (!locked && allow?.features?[id] != false);
-  bool searchAllowed(String id) => !supervised || (!locked && allow?.search?[id] != false);
+  /// `allow` が無ければ許す。書いていない id は `preset` のプリセットの値(Central と同じ規則)。
+  bool featureAllowed(String id) => !supervised || (!locked && (allow == null || (allow!.features?[id] ?? childSafePresetDefault(policy!.preset, 'features', id))));
+  bool searchAllowed(String id) => !supervised || (!locked && (allow == null || (allow!.search?[id] ?? childSafePresetDefault(policy!.preset, 'search', id))));
 
   /// 機能が止まっているときの案内。アカウントの処置 ([RasqSanctions]) が先。止まっていなければ null。
   String? blockedMessage(String feature, [RasqSanctions sanctions = RasqSanctions.none]) {
@@ -208,6 +209,7 @@ class ChildGate {
   String? installBlockReason(String pluginId) {
     if (!supervised) return null;
     if (locked) return '保護者が設定を決めるまで使えません';
+    if (!featureAllowed('store.install')) return '保護者がプラグインのインストールを止めています';
     final pl = allow?.plugins;
     if (pl == null) return null;
     return switch (pl.install) {
@@ -225,7 +227,8 @@ class ChildGate {
     return s == null || s.permits(a.kind.name, a.instance);
   }
 
-  bool get canAddAccounts => !supervised || (!locked && (allow?.sns?.addAccounts ?? true));
+  /// `allow.sns.addAccounts` と、機能の `sns.addAccount` のどちらも許しているとき(Central の `PUT /me/sns-accounts` と同じ)。
+  bool get canAddAccounts => !supervised || (!locked && featureAllowed('sns.addAccount') && (allow?.sns?.addAccounts ?? true));
 
   // ── RAi ──
 
@@ -241,7 +244,8 @@ class ChildGate {
     if (group == 'rai.astell' && !featureAllowed('astell.join')) return '$childSafeBlockedText($fn)';
     final r = allow?.rai;
     if (r == null) return null;
-    if (!r.enabled || r.deny.contains(fn) || r.deny.contains(group) || !r.groups.contains(group)) return '$childSafeBlockedText($fn)';
+    // `deny` はまとまりの id か `<まとまり>.<関数>`(Central が確かめる形)。
+    if (!r.enabled || r.deny.contains(group) || r.deny.contains('$group.$fn') || !r.groups.contains(group)) return '$childSafeBlockedText($fn)';
     return null;
   }
 

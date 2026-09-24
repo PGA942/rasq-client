@@ -464,10 +464,10 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
       )),
       const RasqSectionHeader(title: '機能'),
       for (final f in catalog.features)
-        RasqSwitchListTile(key: ValueKey('guardian.feature.${f.id}'), title: f.label, value: a.features?[f.id] != false, onChanged: (v) => _setAllow((x) => x.copyWith(features: {...?x.features, f.id: v}))),
+        RasqSwitchListTile(key: ValueKey('guardian.feature.${f.id}'), title: f.label, value: a.features?[f.id] ?? childSafePresetDefault(_draft!.preset, 'features', f.id), onChanged: (v) => _setAllow((x) => x.copyWith(features: {...?x.features, f.id: v}))),
       const RasqSectionHeader(title: '検索'),
       for (final f in catalog.search)
-        RasqSwitchListTile(key: ValueKey('guardian.search.${f.id}'), title: f.label, value: a.search?[f.id] != false, onChanged: (v) => _setAllow((x) => x.copyWith(search: {...?x.search, f.id: v}))),
+        RasqSwitchListTile(key: ValueKey('guardian.search.${f.id}'), title: f.label, value: a.search?[f.id] ?? childSafePresetDefault(_draft!.preset, 'search', f.id), onChanged: (v) => _setAllow((x) => x.copyWith(search: {...?x.search, f.id: v}))),
       const RasqSectionHeader(title: 'RAi'),
       RasqSwitchListTile(key: const ValueKey('guardian.rai.enabled'), title: 'RAi を使える', value: rai.enabled, onChanged: (v) => _setAllow((x) => x.copyWith(rai: rai.copyWith(enabled: v)))),
       for (final g in catalog.raiGroups)

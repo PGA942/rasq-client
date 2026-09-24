@@ -14,7 +14,7 @@ class ChildSafeGuardianStatus {
   const ChildSafeGuardianStatus({this.verified = false, this.method, this.country, this.verifiedAt});
   final bool verified;
 
-  /// `jpki` / `self` など。
+  /// `jpki` / `self_declared`(Central の `guardian.method`)。
   final String? method;
   final String? country;
   final DateTime? verifiedAt;
@@ -25,7 +25,7 @@ class ChildSafeGuardianStatus {
         country: j['country'] as String?,
         verifiedAt: DateTime.tryParse('${j['verifiedAt'] ?? ''}'),
       );
-  String get methodLabel => switch (method) { 'jpki' => 'マイナンバーカード (JPKI)', 'self' || 'self_declaration' => '自己申告', null => '—', final m => m };
+  String get methodLabel => switch (method) { 'jpki' => 'マイナンバーカード (JPKI)', 'self_declared' => '自己申告', null => '—', final m => m };
 }
 
 /// 見守っている子の 1 行(`GET /me/child-safe/guardian` の `children[]`)。
@@ -59,19 +59,35 @@ class ChildSafeChildRow {
 /// `GET /me/child-safe/guardian`。
 @immutable
 class ChildSafeGuardianInfo {
-  const ChildSafeGuardianInfo({this.status = ChildSafeGuardianStatus.none, this.pledgeVersion, this.requiredMethod, this.jpkiMode, this.children = const []});
+  const ChildSafeGuardianInfo({this.status = ChildSafeGuardianStatus.none, this.pledgeVersion, this.requiredMethod, this.jpkiMode, this.emailVerified = false, this.ageBand, this.pledgeAccepted = false, this.children = const []});
   final ChildSafeGuardianStatus status;
   final String? pledgeVersion;
+
+  /// `jpki` / `self_declared` / null(国をまだ申告していない)。
   final String? requiredMethod;
+
+  /// `off`(準備中)/ `dummy`(開発用)/ `oidc`。
   final String? jpkiMode;
+
+  /// `requirements`(自己申告の前提): 確認済みのメール / 最新の年齢の申告 / いまの版の誓約に同意済みか。
+  final bool emailVerified;
+  final String? ageBand;
+  final bool pledgeAccepted;
   final List<ChildSafeChildRow> children;
-  factory ChildSafeGuardianInfo.fromJson(Map<String, Object?> j) => ChildSafeGuardianInfo(
-        status: ChildSafeGuardianStatus.fromJson(j),
-        pledgeVersion: j['pledgeVersion']?.toString(),
-        requiredMethod: j['requiredMethod'] as String?,
-        jpkiMode: j['jpkiMode'] as String?,
-        children: [for (final c in j['children'] as List? ?? const []) if (c is Map) ChildSafeChildRow.fromJson(c.cast<String, Object?>())],
-      );
+  bool get jpkiAvailable => jpkiMode != null && jpkiMode != 'off';
+  factory ChildSafeGuardianInfo.fromJson(Map<String, Object?> j) {
+    final req = j['requirements'] is Map ? (j['requirements'] as Map).cast<String, Object?>() : const <String, Object?>{};
+    return ChildSafeGuardianInfo(
+      status: ChildSafeGuardianStatus.fromJson(j),
+      pledgeVersion: j['pledgeVersion']?.toString(),
+      requiredMethod: j['requiredMethod'] as String?,
+      jpkiMode: j['jpkiMode'] as String?,
+      emailVerified: req['emailVerified'] == true,
+      ageBand: req['ageBand'] as String?,
+      pledgeAccepted: req['pledgeAccepted'] == true,
+      children: [for (final c in j['children'] as List? ?? const []) if (c is Map) ChildSafeChildRow.fromJson(c.cast<String, Object?>())],
+    );
+  }
 }
 
 /// 1 日ぶんの要約(**値は無い**: 数と話題の見出しだけ)。
@@ -167,15 +183,15 @@ final childSafeApiProvider = Provider<ChildSafeApi?>((ref) {
   return client == null ? null : ChildSafeApi(client);
 });
 
-/// サーバーのエラーを 1 行に。
+/// サーバーのエラーを 1 行に。Central のメッセージは日本語なので、決まった言い換えが無いものはそのまま出す。
 String childSafeErrorMessage(Object e) {
   if (e is! OrgateException) return '$e';
   return switch (e.code.code) {
-    '404' => 'コードが違うか、期限が切れています',
-    '409' when e.message.contains('taken') || e.message.contains('handle') => 'そのハンドルは使われています',
-    '409' => 'もう見守られている(か、だれかを見守っている)アカウントです',
+    '404' when e.message.isEmpty || e.message == 'not found' => 'コードが違うか、期限が切れています',
+    '409' when e.message.contains('taken') || e.message.contains('handle') || e.message.contains('ハンドル') => 'そのハンドルは使われています',
+    '409' when e.message.isEmpty => 'もう見守られている(か、だれかを見守っている)アカウントです',
     '410' => 'コードの期限が切れたか、もう使われています。保護者に出し直してもらってください',
-    '403' => 'この端末ではログインできません',
+    '403' when e.message.contains('device') => 'この端末ではログインできません',
     '429' => '試行が多すぎます。しばらく待ってから、やり直してください',
     _ => e.message,
   };

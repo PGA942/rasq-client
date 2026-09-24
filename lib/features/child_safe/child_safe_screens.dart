@@ -156,12 +156,12 @@ List<String> childSafeSummaryLines(ChildGate gate) {
   ];
   final a = p.allow;
   if (a != null) {
-    if (a.sns != null) out.add('使える SNS: ${a.sns!.kinds.isEmpty ? 'なし' : a.sns!.kinds.join('・')}${a.sns!.instances.isEmpty ? '' : '(${a.sns!.instances.join('・')})'}${a.sns!.addAccounts ? '' : '、追加はできません'}');
+    if (a.sns != null) out.add('使える SNS: ${a.sns!.kinds.isEmpty ? 'どれでも' : a.sns!.kinds.join('・')}${a.sns!.instances.isEmpty ? '' : '(${a.sns!.instances.join('・')})'}${a.sns!.addAccounts ? '' : '、追加はできません'}');
     final off = [for (final e in {...?a.features}.entries) if (!e.value) ChildSafeCatalog.fallback.features.where((f) => f.id == e.key).firstOrNull?.label ?? e.key];
     if (off.isNotEmpty) out.add('止めている機能: ${off.join('・')}');
     final searchOff = [for (final e in {...?a.search}.entries) if (!e.value) ChildSafeCatalog.fallback.search.where((f) => f.id == e.key).firstOrNull?.label ?? e.key];
     if (searchOff.isNotEmpty) out.add('止めている検索: ${searchOff.join('・')}');
-    if (a.plugins != null) out.add('プラグイン: ${a.plugins!.ids.length} 個まで・インストールは${a.plugins!.install.label}');
+    if (a.plugins != null) out.add('プラグイン: ${a.plugins!.install == ChildSafeInstall.any ? 'どれでも' : '選んだ ${a.plugins!.ids.length} 個だけ'}・インストールは${a.plugins!.install.label}');
     if (a.rai != null) out.add(a.rai!.enabled ? 'RAi: ${a.rai!.groups.length} 種類の関数${a.rai!.automation ? '' : '(自動化なし)'}' : 'RAi: 使えません');
   }
   return out;

@@ -1,0 +1,346 @@
+{
+  "features": [
+    {
+      "id": "astell.join",
+      "label": "AsTell への参加"
+    },
+    {
+      "id": "astell.create",
+      "label": "AsTell ルームの作成"
+    },
+    {
+      "id": "astell.share",
+      "label": "AsTell での共有・チャット"
+    },
+    {
+      "id": "astell.stream",
+      "label": "AsTell の画面共有・配信"
+    },
+    {
+      "id": "store.review",
+      "label": "ストアのレビュー投稿"
+    },
+    {
+      "id": "account.follow",
+      "label": "RASQ アカウントのフォロー"
+    },
+    {
+      "id": "post",
+      "label": "投稿"
+    },
+    {
+      "id": "post.media",
+      "label": "画像・動画つきの投稿"
+    },
+    {
+      "id": "dm",
+      "label": "ダイレクトメッセージ"
+    },
+    {
+      "id": "reaction",
+      "label": "リアクション"
+    },
+    {
+      "id": "relational",
+      "label": "つながりの表示(フォロー / フォロワー)"
+    },
+    {
+      "id": "trend",
+      "label": "トレンド"
+    },
+    {
+      "id": "lists",
+      "label": "リスト"
+    },
+    {
+      "id": "notifications",
+      "label": "通知"
+    },
+    {
+      "id": "store.install",
+      "label": "プラグインのインストール"
+    },
+    {
+      "id": "sns.addAccount",
+      "label": "SNS アカウントの追加"
+    }
+  ],
+  "presets": {
+    "13-15": {
+      "allow": {
+        "features": {
+          "astell.create": false,
+          "astell.join": false,
+          "astell.share": false,
+          "astell.stream": false,
+          "dm": false,
+          "sns.addAccount": false,
+          "store.install": false,
+          "store.review": false
+        },
+        "plugins": {
+          "ids": [],
+          "install": "none",
+          "slots": {
+            "post.action": false
+          }
+        },
+        "rai": {
+          "automation": false,
+          "deny": [],
+          "enabled": true,
+          "groups": [
+            "rai.guide",
+            "rai.read",
+            "rai.compose"
+          ]
+        },
+        "search": {
+          "posts": true,
+          "store": false,
+          "trend": true,
+          "users": false,
+          "web": false
+        },
+        "sns": {
+          "addAccounts": false,
+          "instances": [],
+          "kinds": []
+        }
+      },
+      "composer": {
+        "enabled": true,
+        "level": "strict"
+      },
+      "postsPerDay": 10,
+      "preset": "strict",
+      "schema": "rasq.child-safe/2",
+      "source": {
+        "catalogVersion": 1
+      },
+      "time": {
+        "allowedTopics": [],
+        "enabled": true,
+        "end": "06:00",
+        "hideDirectMessages": true,
+        "hideNotifications": true,
+        "hidePostDetail": false,
+        "start": "21:00"
+      },
+      "timeline": {
+        "blockedTopics": [],
+        "enabled": true,
+        "level": "strict"
+      }
+    },
+    "16-17": {
+      "allow": {
+        "features": {
+          "astell.create": false,
+          "astell.stream": false,
+          "sns.addAccount": false
+        },
+        "plugins": {
+          "ids": [],
+          "install": "listed",
+          "slots": {}
+        },
+        "rai": {
+          "automation": false,
+          "deny": [],
+          "enabled": true,
+          "groups": [
+            "rai.guide",
+            "rai.read",
+            "rai.compose",
+            "rai.settings",
+            "rai.astell"
+          ]
+        },
+        "search": {
+          "posts": true,
+          "store": true,
+          "trend": true,
+          "users": true,
+          "web": false
+        },
+        "sns": {
+          "addAccounts": false,
+          "instances": [],
+          "kinds": []
+        }
+      },
+      "composer": {
+        "enabled": true,
+        "level": "standard"
+      },
+      "postsPerDay": 30,
+      "preset": "standard",
+      "schema": "rasq.child-safe/2",
+      "source": {
+        "catalogVersion": 1
+      },
+      "time": {
+        "allowedTopics": [],
+        "enabled": true,
+        "end": "06:00",
+        "hideDirectMessages": false,
+        "hideNotifications": true,
+        "hidePostDetail": false,
+        "start": "23:00"
+      },
+      "timeline": {
+        "blockedTopics": [],
+        "enabled": true,
+        "level": "standard"
+      }
+    },
+    "18+": {
+      "allow": {
+        "features": {},
+        "plugins": {
+          "ids": [],
+          "install": "any",
+          "slots": {}
+        },
+        "rai": {
+          "automation": true,
+          "deny": [],
+          "enabled": true,
+          "groups": [
+            "rai.guide",
+            "rai.read",
+            "rai.compose",
+            "rai.act",
+            "rai.settings",
+            "rai.astell",
+            "rai.web"
+          ]
+        },
+        "search": {
+          "posts": true,
+          "store": true,
+          "trend": true,
+          "users": true,
+          "web": true
+        },
+        "sns": {
+          "addAccounts": true,
+          "instances": [],
+          "kinds": []
+        }
+      },
+      "composer": {
+        "enabled": true,
+        "level": "mild"
+      },
+      "postsPerDay": null,
+      "preset": "mild",
+      "schema": "rasq.child-safe/2",
+      "source": {
+        "catalogVersion": 1
+      },
+      "time": {
+        "allowedTopics": [],
+        "enabled": false,
+        "end": "06:00",
+        "hideDirectMessages": false,
+        "hideNotifications": false,
+        "hidePostDetail": false,
+        "start": "21:00"
+      },
+      "timeline": {
+        "blockedTopics": [],
+        "enabled": true,
+        "level": "mild"
+      }
+    }
+  },
+  "raiGroups": [
+    {
+      "id": "rai.guide",
+      "label": "使い方の案内",
+      "phase": 1
+    },
+    {
+      "id": "rai.read",
+      "label": "読む(要約・翻訳)",
+      "phase": 1
+    },
+    {
+      "id": "rai.compose",
+      "label": "書く手伝い",
+      "phase": 1
+    },
+    {
+      "id": "rai.act",
+      "label": "操作の代行",
+      "phase": 1
+    },
+    {
+      "id": "rai.settings",
+      "label": "設定の変更",
+      "phase": 1
+    },
+    {
+      "id": "rai.astell",
+      "label": "AsTell の手伝い",
+      "phase": 1
+    },
+    {
+      "id": "rai.web",
+      "label": "Web の調べもの",
+      "phase": 1
+    },
+    {
+      "id": "rai.assistant",
+      "label": "アシスタント",
+      "phase": 2
+    },
+    {
+      "id": "rai.macro",
+      "label": "マクロ",
+      "phase": 2
+    },
+    {
+      "id": "rai.automation",
+      "label": "自動化",
+      "phase": 2
+    }
+  ],
+  "schema": "rasq.child-safe/2",
+  "search": [
+    {
+      "id": "posts",
+      "label": "投稿の検索"
+    },
+    {
+      "id": "users",
+      "label": "ユーザーの検索"
+    },
+    {
+      "id": "trend",
+      "label": "トレンドの検索"
+    },
+    {
+      "id": "store",
+      "label": "ストアの検索"
+    },
+    {
+      "id": "web",
+      "label": "Web の検索"
+    }
+  ],
+  "serverFeatures": [
+    "astell.join",
+    "astell.create",
+    "astell.share",
+    "astell.stream",
+    "store.review",
+    "account.follow",
+    "post",
+    "post.media",
+    "sns.addAccount"
+  ],
+  "version": 1
+}

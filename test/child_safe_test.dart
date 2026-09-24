@@ -220,6 +220,8 @@ void main() {
       expect(g.installBlockReason('jp.rasq.sample'), contains('インストール'));
       final listed = v2();
       ((listed['allow'] as Map)['plugins'] as Map)['install'] = 'listed';
+      // strict のプリセットは store.install も止める(書いていない id はプリセットの値)ので、ここでは許す。
+      ((listed['allow'] as Map)['features'] as Map)['store.install'] = true;
       expect(gateOf(listed).installBlockReason('jp.rasq.sample'), isNull);
       expect(gateOf(listed).installBlockReason('other.plugin'), contains('選んだ'));
       expect(g.sessionVisible(const AccountId(kind: SnsKind.misskey, instance: 'misskey.io', handle: 'k')), isTrue);
@@ -438,7 +440,96 @@ void main() {
     OrgateException e(String code, String m) => OrgateException(ErrorCode.tryParse(code)!, m);
     expect(childSafeErrorMessage(e('410', 'gone')), contains('期限'));
     expect(childSafeErrorMessage(e('409', 'handle taken')), contains('ハンドル'));
-    expect(childSafeErrorMessage(e('404', 'no')), contains('コード'));
+    expect(childSafeErrorMessage(e('409', 'そのハンドルは使われています')), 'そのハンドルは使われています');
+    expect(childSafeErrorMessage(e('409', 'このアカウントは、もう見守られています')), 'このアカウントは、もう見守られています');
+    expect(childSafeErrorMessage(e('404', 'not found')), contains('コード'));
+    expect(childSafeErrorMessage(e('404', '見守っているアカウントに、そのハンドルはありません')), contains('ハンドル'));
+    // 403 は Central の文のまま(端末の 403 だけ言い換える)。
+    expect(childSafeErrorMessage(e('403', '保護者の確認が済んでいません(POST /me/child-safe/guardian/verify)')), contains('保護者の確認'));
+    expect(childSafeErrorMessage(e('403', 'this device cannot sign in')), contains('端末'));
+  });
+
+  group('Central との形 (docs/API.md)', () {
+    Map<String, Object?> fixture() => (jsonDecode(File('test/fixtures/child_safe_catalog.json').readAsStringSync()) as Map).cast<String, Object?>();
+
+    test('カタログ: Central の応答(知らない欄つき)を読める / 控えは Central と同じ値', () {
+      final j = fixture();
+      expect(j.keys, containsAll(['schema', 'serverFeatures']));
+      final c = ChildSafeCatalog.fromJson(j);
+      final f = ChildSafeCatalog.fallback;
+      List<(String, String, int)> rows(List<ChildSafeCatalogItem> l) => [for (final i in l) (i.id, i.label, i.phase)];
+      expect(rows(f.features), rows(c.features));
+      expect(rows(f.search), rows(c.search));
+      expect(rows(f.raiGroups), rows(c.raiGroups));
+      expect(f.version, c.version);
+      for (final band in childSafeAgeBands) {
+        expect(canonicalJson(f.presets[band]), canonicalJson(c.presets[band]), reason: band);
+      }
+      // プリセットは帯ごと。strict は AsTell の共有とストアのレビューも止める。
+      final strict = gateOf(c.presets['13-15']!);
+      for (final id in ['dm', 'astell.join', 'astell.create', 'astell.share', 'astell.stream', 'store.install', 'store.review', 'sns.addAccount']) {
+        expect(strict.featureAllowed(id), isFalse, reason: id);
+      }
+      expect(strict.featureAllowed('post'), isTrue);
+      expect([for (final s in c.search) if (strict.searchAllowed(s.id)) s.id], ['posts', 'trend']);
+      expect(strict.pluginAllowed('any.plugin', 'tl'), isFalse); // install none + ids なし
+      expect(strict.installBlockReason('any.plugin'), isNotNull);
+      final standard = gateOf(c.presets['16-17']!);
+      expect([for (final x in c.features) if (!standard.featureAllowed(x.id)) x.id], ['astell.create', 'astell.stream', 'sns.addAccount']);
+      expect(standard.searchAllowed('web'), isFalse);
+      expect(standard.raiBlockReason('astell.rooms'), isNull);
+      expect(standard.raiBlockReason('follow.set'), isNotNull); // rai.act なし
+      expect(standard.raiBlockReason('web.search'), isNotNull);
+      final mild = gateOf(c.presets['18+']!);
+      expect([for (final x in c.features) if (!mild.featureAllowed(x.id)) x.id], isEmpty);
+      expect(mild.pluginAllowed('any.plugin', 'post.action'), isTrue); // install any
+      expect(mild.installBlockReason('any.plugin'), isNull);
+      expect(mild.sessionVisible(const AccountId(kind: SnsKind.bluesky, instance: 'bsky.social', handle: 'x')), isTrue); // kinds が空 = 絞らない
+      expect(mild.canAddAccounts, isTrue);
+      expect(mild.raiAutomation, isTrue);
+      expect(mild.raiBlockReason('web.search'), isNull);
+    });
+
+    test('書いていない機能 / 検索の id はプリセットの値。deny は <まとまり>.<関数>。SNS の追加は 2 つとも見る', () {
+      final s = v2();
+      final allow = s['allow'] as Map;
+      allow['features'] = <String, Object?>{'dm': true};
+      allow['search'] = <String, Object?>{};
+      allow['rai'] = {'enabled': true, 'groups': ['rai.guide', 'rai.read', 'rai.compose'], 'deny': ['rai.compose.post.reply'], 'automation': false};
+      (allow['sns'] as Map)['addAccounts'] = true;
+      final g = gateOf(s);
+      expect(g.featureAllowed('dm'), isTrue);
+      expect(g.featureAllowed('astell.share'), isFalse); // strict のプリセット
+      expect(g.searchAllowed('users'), isFalse);
+      expect(g.searchAllowed('posts'), isTrue);
+      expect(g.raiBlockReason('post.compose'), isNull);
+      expect(g.raiBlockReason('post.reply'), isNotNull);
+      expect(g.canAddAccounts, isFalse); // sns.addAccount はプリセットで止まる
+      final custom = v2()..['preset'] = 'custom';
+      ((custom['allow'] as Map)['sns'] as Map)['addAccounts'] = true;
+      expect(gateOf(custom).featureAllowed('astell.share'), isTrue);
+      expect(gateOf(custom).canAddAccounts, isTrue);
+    });
+
+    test('応答: 知らない欄を無視して読む(guardian / 子の詳細 / 要約)', () {
+      final g = ChildSafeGuardianInfo.fromJson({
+        'verified': true, 'method': 'self_declared', 'country': 'US', 'verifiedAt': '2026-09-24T12:00:00Z', 'pledgeVersion': '2026-09-24',
+        'requiredMethod': 'self_declared', 'jpkiMode': 'off', 'requirements': {'emailVerified': true, 'ageBand': '18+', 'pledgeAccepted': true, 'future': 1},
+        'children': [{'handle': 'kid', 'displayName': 'こども', 'state': 'active', 'revision': 2, 'appliedRevision': 2, 'ageBand': '13-15', 'createdByGuardian': true, 'linkedAt': '2026-09-24T12:00:00Z', 'updatedAt': '2026-09-24T12:00:00Z', 'extra': {}}],
+        'somethingNew': [1, 2],
+      });
+      expect((g.status.verified, g.status.methodLabel, g.requiredMethod, g.jpkiAvailable, g.emailVerified, g.ageBand, g.pledgeAccepted), (true, '自己申告', 'self_declared', false, true, '18+', true));
+      expect((g.children.single.handle, g.children.single.applied, g.children.single.createdByGuardian), ('kid', true, true));
+      final d = ChildSafeChildDetail.fromJson({
+        'handle': 'kid', 'displayName': 'こども', 'state': 'active', 'revision': 2, 'appliedRevision': 1, 'ageBand': '13-15', 'createdByGuardian': false,
+        'linkedAt': '2026-09-24T12:00:00Z', 'updatedAt': '2026-09-24T12:00:00Z', 'settings': fixture()['presets'] is Map ? (fixture()['presets'] as Map)['13-15'] : null,
+        'signature': 'c2ln', 'issuedAt': '2026-09-24T12:00:00Z', 'presetDefaults': (fixture()['presets'] as Map)['13-15'],
+        'summary': {'since': '2026-09-11', 'days': [{'date': '2026-09-24', 'posts': 3, 'rasqPosts': 1, 'blocked': 1, 'topics': ['ゲーム'], 'reported': true}]},
+      });
+      expect((d.row.applied, d.settings?.preset, d.signature, d.summary.days.single.posts), (false, 'strict', 'c2ln', 3));
+      expect(d.summary.days.single.topics, ['ゲーム']);
+      expect(ChildSafeChildDetail.fromJson({'handle': 'kid', 'state': 'pending_setup', 'settings': null, 'signature': null, 'issuedAt': null}).settings, isNull);
+    });
   });
 }
 
