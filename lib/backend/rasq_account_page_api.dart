@@ -33,7 +33,7 @@ bool snsAutoVisible({required bool isLocked, required Iterable<String?> recentVi
 /// ページに出る SNS アカウントのタイル。
 @immutable
 class RasqSnsTile {
-  const RasqSnsTile({required this.kind, required this.instance, required this.handle, this.displayName, this.avatarUrl, this.serverName, this.serverIconUrl, this.profileUrl});
+  const RasqSnsTile({required this.kind, required this.instance, required this.handle, this.displayName, this.avatarUrl, this.serverName, this.serverIconUrl, this.profileUrl, this.verified = false, this.verifiedMethod});
   final String kind;
   final String instance;
   final String handle;
@@ -44,6 +44,16 @@ class RasqSnsTile {
 
   /// その SNS 上のプロフィール(タップの行き先)。
   final Uri? profileUrl;
+
+  /// 持ち主の確認が済んでいるか (D-313)。[verifiedMethod] = `profile`(SNS のプロフィールの確認の文)/ `keybase`(Keybase の証明)。
+  final bool verified;
+  final String? verifiedMethod;
+
+  /// 確認の方法を、画面に出す言葉で。
+  String get verifiedLabel => switch (verifiedMethod) { 'keybase' => 'Keybase の証明で確認済み', _ => 'プロフィールで確認済み' };
+
+  /// `kind:instance:handle`(大小文字は区別しない比較に使う)。
+  String get key => '$kind:$instance:$handle';
 
   /// タイルの左に出す名前。
   String get label => (displayName ?? '').isEmpty ? handle : displayName!;
@@ -60,7 +70,76 @@ class RasqSnsTile {
         serverName: j['serverName'] as String?,
         serverIconUrl: _http(j['serverIconUrl']),
         profileUrl: _http(j['profileUrl']),
+        verified: j['verified'] == true,
+        verifiedMethod: j['verifiedMethod'] as String?,
       );
+}
+
+/// RASQ アカウントの Keybase (D-313)。公開ページにも出る。
+@immutable
+class RasqKeybase {
+  const RasqKeybase({required this.username, this.verifiedAt});
+  final String username;
+  final DateTime? verifiedAt;
+
+  /// Keybase のプロフィール。
+  Uri get profileUrl => Uri.https('keybase.io', '/$username');
+
+  static RasqKeybase? fromJson(Object? j) => j is Map && '${j['username'] ?? ''}'.isNotEmpty
+      ? RasqKeybase(username: '${j['username']}', verifiedAt: DateTime.tryParse('${j['verifiedAt'] ?? ''}'))
+      : null;
+}
+
+/// 持ち主の確認を始めた結果 (`POST /me/sns-accounts/{key}/verify/start`)。[text] をその SNS のプロフィールに貼ってもらう。
+@immutable
+class RasqSnsVerifyStart {
+  const RasqSnsVerifyStart({required this.code, required this.text, this.expiresAt, this.where = const ['bio']});
+  final String code;
+  final String text;
+  final DateTime? expiresAt;
+
+  /// コードを探す場所: `bio`(自己紹介)/ `fields`(プロフィールの項目)。
+  final List<String> where;
+
+  factory RasqSnsVerifyStart.fromJson(Map<String, Object?> j) => RasqSnsVerifyStart(
+        code: '${j['code'] ?? ''}',
+        text: '${j['text'] ?? ''}',
+        expiresAt: DateTime.tryParse('${j['expiresAt'] ?? ''}'),
+        where: [for (final w in j['where'] as List? ?? const ['bio']) '$w'],
+      );
+}
+
+/// Keybase の確認を始めた結果 (`POST /me/keybase/start`)。
+@immutable
+class RasqKeybaseStart {
+  const RasqKeybaseStart({required this.username, required this.statement, required this.command, this.expiresAt});
+  final String username;
+
+  /// 署名してもらう文(これとぴったり同じでなければ通らない)。
+  final String statement;
+
+  /// そのまま端末に貼れる `keybase sign -m '…'`。
+  final String command;
+  final DateTime? expiresAt;
+
+  factory RasqKeybaseStart.fromJson(Map<String, Object?> j) => RasqKeybaseStart(
+        username: '${j['username'] ?? ''}',
+        statement: '${j['statement'] ?? ''}',
+        command: '${j['command'] ?? ''}',
+        expiresAt: DateTime.tryParse('${j['expiresAt'] ?? ''}'),
+      );
+}
+
+/// Keybase を確かめた / 読み直した結果 (`POST /me/keybase/verify`)。
+@immutable
+class RasqKeybaseStatus {
+  const RasqKeybaseStatus({this.keybase, this.verifiedLinks = const []});
+  final RasqKeybase? keybase;
+
+  /// Keybase の証明で確認済みになった、つないだ SNS アカウント(`accountKey`)。
+  final List<String> verifiedLinks;
+
+  factory RasqKeybaseStatus.fromJson(Map<String, Object?> j) => RasqKeybaseStatus(keybase: RasqKeybase.fromJson(j['keybase']), verifiedLinks: [for (final k in j['verifiedLinks'] as List? ?? const []) '$k']);
 }
 
 /// 自分のバンドルの 1 行(編集画面で、出す / 出さないを決める)。
@@ -511,6 +590,7 @@ class RasqPublicProfile {
     this.birthday = '',
     this.links = const [],
     this.createdAt,
+    this.keybase,
     this.snsAccounts = const [],
     this.published = const [],
     this.reviewed = const [],
@@ -525,6 +605,9 @@ class RasqPublicProfile {
   final String birthday;
   final List<({String label, Uri url})> links;
   final DateTime? createdAt;
+
+  /// 確かめた Keybase (D-313)。
+  final RasqKeybase? keybase;
   final List<RasqSnsTile> snsAccounts;
 
   /// 開発者として公開しているプラグイン / レビューしたプラグイン。
@@ -545,6 +628,7 @@ class RasqPublicProfile {
             if (l is Map && _http(l['url']) != null) (label: '${l['label'] ?? ''}', url: _http(l['url'])!),
         ],
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
+        keybase: RasqKeybase.fromJson(j['keybase']),
         snsAccounts: [for (final s in j['snsAccounts'] as List? ?? const []) if (s is Map) RasqSnsTile.fromJson(s.cast<String, Object?>())],
         published: [
           for (final p in j['plugins'] as List? ?? const [])
@@ -764,6 +848,24 @@ class RasqAccountPageApi {
 
   Future<RasqSnsLink> setSnsVisibility(String accountKey, SnsTileVisibility v) async =>
       RasqSnsLink.fromJson(await _client.patchJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}', {'visibility': v.id}));
+
+  /// 持ち主の確認 (D-313): 一度きりのコードと、プロフィールに貼る文をもらう。やり直すと前のコードは使えなくなる。
+  Future<RasqSnsVerifyStart> startSnsVerification(String accountKey) async =>
+      RasqSnsVerifyStart.fromJson(await _client.postJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/verify/start', const {}));
+
+  /// Central にその SNS の公開のプロフィールを読んでもらい、コードがあれば確認済み。無ければ 409。
+  Future<RasqSnsLink> checkSnsVerification(String accountKey) async {
+    final j = await _client.postJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/verify/check', const {});
+    return RasqSnsLink.fromJson((j['link'] as Map? ?? j).cast<String, Object?>());
+  }
+
+  /// Keybase (D-313): 署名してもらう文をもらう。
+  Future<RasqKeybaseStart> startKeybase(String username) async => RasqKeybaseStart.fromJson(await _client.postJson('/me/keybase/start', {'username': username}));
+
+  /// `keybase sign` の出力を確かめてもらう。[signature] を省くと、つないだ Keybase の証明を読み直すだけ。
+  Future<RasqKeybaseStatus> verifyKeybase({String? signature}) async => RasqKeybaseStatus.fromJson(await _client.postJson('/me/keybase/verify', {'signature': ?signature}));
+
+  Future<void> unlinkKeybase() => _client.delete('/me/keybase');
 }
 
 final rasqAccountPageApiProvider = Provider<RasqAccountPageApi?>((ref) {

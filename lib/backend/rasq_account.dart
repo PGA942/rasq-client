@@ -29,7 +29,7 @@ import 'rasq_account_page_api.dart';
 
 @immutable
 class RasqAccount {
-  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt, this.email, this.emailVerified = false, this.emailPending, this.hasPassword = false, this.roles = const [], this.bio = '', this.bannerUrl, this.location = '', this.birthday = '', this.links = const [], this.showLinksOnSnsProfiles = true});
+  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt, this.email, this.emailVerified = false, this.emailPending, this.hasPassword = false, this.roles = const [], this.bio = '', this.bannerUrl, this.location = '', this.birthday = '', this.links = const [], this.showLinksOnSnsProfiles = true, this.keybase});
 
   final String id;
   final String handle;
@@ -59,6 +59,9 @@ class RasqAccount {
   /// この人の SNS のプロフィールを見ても、RASQ アカウントとほかのアカウントは出ない(アカウントページのタイルはそのまま)。
   final bool showLinksOnSnsProfiles;
 
+  /// 確かめた Keybase (D-313)。公開ページにも出る。
+  final RasqKeybase? keybase;
+
   factory RasqAccount.fromJson(Map<String, Object?> j) => RasqAccount(
         id: j['id'] as String? ?? j['accountId'] as String? ?? '',
         handle: j['handle'] as String? ?? '',
@@ -76,6 +79,7 @@ class RasqAccount {
         birthday: j['birthday'] as String? ?? '',
         links: [for (final l in j['links'] as List? ?? const []) if (l is Map) (label: '${l['label'] ?? ''}', url: '${l['url'] ?? ''}')],
         showLinksOnSnsProfiles: j['showLinksOnSnsProfiles'] != false,
+        keybase: RasqKeybase.fromJson(j['keybase']),
       );
 
   /// サイドバーのバンドルタイルが使う形。ハンドルはインスタンスなしの素の

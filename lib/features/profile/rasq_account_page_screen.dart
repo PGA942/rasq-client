@@ -187,6 +187,13 @@ class _Header extends StatelessWidget {
                 onTap: () => launchUrl(l.url, mode: LaunchMode.externalApplication),
                 child: _Meta(Icons.link, l.label.isEmpty ? l.url.host : l.label, color: scheme.primary),
               ),
+            // 確かめた Keybase (D-313)。タップで Keybase のプロフィール。
+            if (p.keybase != null)
+              InkWell(
+                key: const ValueKey('rasqPage.keybase'),
+                onTap: () => launchUrl(p.keybase!.profileUrl, mode: LaunchMode.externalApplication),
+                child: _Meta(Icons.key_outlined, 'Keybase: @${p.keybase!.username}', color: scheme.primary),
+              ),
           ]),
         ]),
       ),
@@ -253,6 +260,14 @@ class RasqSnsTileChip extends StatelessWidget {
                 Icon(Icons.dns_outlined, size: 16, color: scheme.onSurfaceVariant),
               const SizedBox(width: 4),
               Text(tile.serverLabel, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              // 持ち主の確認が済んだアカウント (D-313)。
+              if (tile.verified) ...[
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: tile.verifiedLabel,
+                  child: Icon(Icons.verified, key: ValueKey('rasqPage.tile.verified.${tile.key}'), size: 14, color: scheme.primary, semanticLabel: tile.verifiedLabel),
+                ),
+              ],
             ]),
           ),
         ),
