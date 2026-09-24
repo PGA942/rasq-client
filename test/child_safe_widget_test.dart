@@ -1,10 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
@@ -248,6 +250,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(created.single, {'handle': 'kid2', 'displayName': 'キッド2', 'ageBand': '16-17'});
     expect(find.text('ABCD-EFGH-JKLM'), findsOneWidget);
+    // QR (D-309): 中身はログインのリンク(Central の link が無ければ同じ形を作る)。
+    expect(find.byType(QrImageView), findsOneWidget);
+    expect(tester.widget<SelectableText>(find.byKey(const ValueKey('guardian.code.link'))).data, 'rasq://child-safe/login?code=ABCD-EFGH-JKLM');
 
     // 子の設定: 年齢の帯の既定 → 順に進めて保存。
     await tester.ensureVisible(find.byKey(const ValueKey('guardian.child.kid')));
@@ -283,6 +288,56 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('guardian.loginCode')));
     await tester.pumpAndSettle();
     expect(find.text('NEWC-ODEA-BCDE'), findsOneWidget);
+    Finder onChild(String key) => find.descendant(of: find.byType(GuardianChildScreen), matching: find.byKey(ValueKey(key)));
+    expect(onChild('guardian.code.qr'), findsOneWidget);
+    expect(tester.widget<SelectableText>(onChild('guardian.code.link')).data, 'rasq://child-safe/login?code=NEWCODEABCDE');
+  });
+
+  /// 端末(Android / iOS)がリンクを開いたときと同じ口: `flutter/navigation` の `pushRouteInformation`(URI の全体)。
+  Future<void> openLink(WidgetTester tester, String location) async {
+    await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+      'flutter/navigation',
+      SystemChannels.navigation.codec.encodeMethodCall(MethodCall('pushRouteInformation', {'location': location})),
+      (_) {},
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('QR のリンク (D-309): rasq://child-safe/pair?code=… でコード入りの「チャイルドモード」が開く(押すまで送らない)', (tester) async {
+    Map<String, Object?>? pairBody;
+    Map<String, Object?> status = {'managed': false, 'guardian': {'verified': false}};
+    final c = await pump(tester, central((route, body) async {
+      switch (route) {
+        case 'GET /me/child-safe':
+          return json(status);
+        case 'POST /me/child-safe/pair':
+          pairBody = body;
+          status = {'managed': true, 'state': 'pending_setup', 'parent': {'handle': 'mama'}, 'revision': 0, 'settings': null};
+          return json(status);
+      }
+      return null;
+    }));
+    // ほかの rasq:// は開かない(ホームのまま)。
+    await openLink(tester, 'rasq://astell/room-1');
+    expect(c.read(routerProvider).routerDelegate.currentConfiguration.uri.path, Routes.home);
+
+    await openLink(tester, 'rasq://child-safe/pair?code=abcd-efgh');
+    expect(find.byType(ChildPairScreen), findsOneWidget);
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('childSafe.pair.code'))).controller!.text, 'ABCD-EFGH');
+    expect(find.byKey(const ValueKey('childSafe.fromLink')), findsOneWidget);
+    expect(pairBody, isNull); // 自動では送らない
+    await tester.tap(find.byKey(const ValueKey('childSafe.pair.submit')));
+    await tester.pumpAndSettle();
+    expect(pairBody, {'code': 'ABCD-EFGH'});
+    expect(find.byType(ChildSafePendingScreen), findsOneWidget);
+  });
+
+  testWidgets('QR のリンク (D-309): rasq://child-safe/login?code=… はログインしていなくてもコード入りで開く', (tester) async {
+    await pump(tester, central((route, _) async => route == 'GET /me/child-safe' ? json({'managed': false, 'guardian': {'verified': false}}) : null), loggedIn: false);
+    await openLink(tester, 'rasq://child-safe/login?code=ABCD-EFGH-JKLM');
+    expect(find.byType(ChildLoginScreen), findsOneWidget);
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('childSafe.login.code'))).controller!.text, 'ABCD-EFGH-JKLM');
+    expect(find.byKey(const ValueKey('childSafe.fromLink')), findsOneWidget);
   });
 }
 

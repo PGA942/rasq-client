@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
 
@@ -235,19 +237,55 @@ class ChildGate {
   bool get raiEnabled => !supervised || (!locked && (allow?.rai?.enabled ?? true));
 
   /// 関数を呼べない理由(「保護者が止めています」)。呼べるなら null。**まとまりの分からない関数は、見守り中は呼ばない。**
-  String? raiBlockReason(String fn) {
-    if (!supervised) return null;
-    final group = raiFunctionGroups[fn];
-    if (locked || group == null) return '$childSafeBlockedText($fn)';
-    if (group == 'rai.web' && !searchAllowed('web')) return '$childSafeBlockedText($fn)';
-    if (fn.startsWith('dm.') && !featureAllowed('dm')) return '$childSafeBlockedText($fn)';
-    if (group == 'rai.astell' && !featureAllowed('astell.join')) return '$childSafeBlockedText($fn)';
+  String? raiBlockReason(String fn) => _raiGroupBlocked(fn, raiFunctionGroups[fn]) ? '$childSafeBlockedText($fn)' : null;
+
+  /// まとまり [group] の関数 [fn] を止めているか(実行 [raiBlockReason] と案内 [raiGuideAllowed] で同じ規則)。
+  bool _raiGroupBlocked(String fn, String? group) {
+    if (!supervised) return false;
+    if (locked || group == null) return true;
+    if (group == 'rai.web' && !searchAllowed('web')) return true;
+    if (fn.startsWith('dm.') && !featureAllowed('dm')) return true;
+    if (group == 'rai.astell' && !featureAllowed('astell.join')) return true;
     final r = allow?.rai;
-    if (r == null) return null;
+    if (r == null) return false;
     // `deny` はまとまりの id か `<まとまり>.<関数>`(Central が確かめる形)。
-    if (!r.enabled || r.deny.contains(group) || r.deny.contains('$group.$fn') || !r.groups.contains(group)) return '$childSafeBlockedText($fn)';
-    return null;
+    return !r.enabled || r.deny.contains(group) || r.deny.contains('$group.$fn') || !r.groups.contains(group);
   }
+
+  /// RAi の案内 (D-309): リファレンスの関数 [id](まとまり [group]、部品のある画面 [route])を、検索の結果 / 操作の手順に
+  /// 出してよいか。実行と同じまとまりの規則([_raiGroupBlocked]。**まとまりの分からない関数は、見守り中は案内しない**)に、
+  /// 止めている機能 / 検索([raiGuideRequirementOf])と、開けない画面([raiGuideRouteAllowed])を足す。
+  bool raiGuideAllowed(String id, String? group, String? route) {
+    if (!supervised) return true;
+    if (_raiGroupBlocked(id, group)) return false;
+    final req = raiGuideRequirementOf(id, group);
+    if (req != null && !_requirementAllowed(req)) return false;
+    return route == null || raiGuideRouteAllowed(route);
+  }
+
+  bool _requirementAllowed(String req) {
+    final i = req.indexOf(':');
+    final kind = req.substring(0, i), id = req.substring(i + 1);
+    if (kind == 'search') return searchAllowed(id);
+    return switch (id) {
+      'sns.addAccount' => canAddAccounts,
+      // インストールは機能と `allow.plugins.install`(none なら何も入れられない)の両方。
+      'store.install' => featureAllowed(id) && allow?.plugins?.install != ChildSafeInstall.none,
+      _ => featureAllowed(id),
+    };
+  }
+
+  /// 案内が開く / 指す画面を開けるか([routeBlockReason] と同じ。SNS アカウントの追加の入口 `/login` そのものも)。
+  bool raiGuideRouteAllowed(String route) {
+    if (!supervised) return true;
+    final path = Uri.tryParse(route)?.path ?? route;
+    if (routeBlockReason(path) != null) return false;
+    if (path == '/login' && !canAddAccounts) return false;
+    return true;
+  }
+
+  /// 案内の絞り込みが変わる目印(RAi の索引を絞り直す判断に使う。時計だけ進んでも変わらない)。
+  String get raiGuideSignature => !supervised ? '-' : '$locked|$inTimeWindow|${jsonEncode(policy?.toJson())}';
 
   /// 関数優先の自動化 (D-229) を使えるか(`allow.rai.automation`)。
   bool get raiAutomation => !supervised || (!locked && (allow == null || allow!.rai == null || allow!.rai!.automation));

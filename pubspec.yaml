@@ -75,6 +75,8 @@ dependencies:
   device_info_plus: ^13.2.0
   archive: ^4.2.0
   ffi: ^2.2.0
+  # チャイルドセーフのつなぐ / ログインのコードの QR (D-309)。純 Dart の描画(依存は qr だけ)で全プラットフォーム同じ。
+  qr_flutter: ^4.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

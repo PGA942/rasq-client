@@ -343,15 +343,23 @@ class RaiSearchTrace {
 
 /// ハイブリッド索引(ベクトル + キーワード)。
 class RaiReferenceIndex {
-  RaiReferenceIndex._(this.functions, this.operations, this.embedder, this._fnVectors, this._opVectors);
+  RaiReferenceIndex._(this.functions, this.operations, this.embedder, this._fnVectors, this._opVectors, {List<RaiOperation>? resolveFrom, List<RaiSearchTrace>? traces, this.restricted = false})
+      : _resolveFrom = resolveFrom ?? operations,
+        traces = traces ?? [];
   final List<RaiFunction> functions;
   final List<RaiOperation> operations;
   final RaiEmbedder embedder;
   final List<List<double>> _fnVectors;
   final List<List<double>> _opVectors;
 
-  /// 直近の検索の記録(新しい順、100 件まで)。
-  final List<RaiSearchTrace> traces = [];
+  /// 分岐 (D-192) の元を探す一覧。絞った索引 ([restrictTo]) でも元の全部(隠した操作が分岐の元でも、共有の手順は解ける)。
+  final List<RaiOperation> _resolveFrom;
+
+  /// [restrictTo] で絞った索引か。
+  final bool restricted;
+
+  /// 直近の検索の記録(新しい順、100 件まで)。絞った索引も元と同じ記録に書く。
+  final List<RaiSearchTrace> traces;
 
   /// ベクトルの重み(残りはキーワード)。
   static const weight = 0.5;
@@ -381,6 +389,35 @@ class RaiReferenceIndex {
       if (o.id == id) return o;
     }
     return null;
+  }
+
+  /// 案内してよいものだけの索引 (D-309: チャイルドセーフの見守り中)。ベクトルは元のものを使い、組み直さない。
+  /// - 関数: [allowFunction] が true のものだけ(検索 / [function] / `reference.get` に出ない)。
+  /// - 操作: 分岐を解いた手順のどれかが、隠した関数 / リファレンスに無い関数 (id だけの [RaiFunction] で問う) /
+  ///   開けない画面([allowRoute]。手順の `route`、無ければ関数の `route`)を使うなら隠す(検索 / [operation] / 候補の一覧に出ない)。
+  RaiReferenceIndex restrictTo({required bool Function(RaiFunction f) allowFunction, required bool Function(String route) allowRoute}) {
+    final fnKeep = [for (var i = 0; i < functions.length; i++) if (allowFunction(functions[i])) i];
+    bool opAllowed(RaiOperation op) {
+      for (final st in resolvedSteps(op)) {
+        final f = st.fn == null ? null : function(st.fn!);
+        if (st.fn != null && !allowFunction(f ?? RaiFunction(id: st.fn!, does: ''))) return false;
+        final route = st.route ?? f?.route;
+        if (route != null && !allowRoute(route)) return false;
+      }
+      return true;
+    }
+
+    final opKeep = [for (var i = 0; i < operations.length; i++) if (opAllowed(operations[i])) i];
+    return RaiReferenceIndex._(
+      [for (final i in fnKeep) functions[i]],
+      [for (final i in opKeep) operations[i]],
+      embedder,
+      [for (final i in fnKeep) _fnVectors[i]],
+      [for (final i in opKeep) _opVectors[i]],
+      resolveFrom: _resolveFrom,
+      traces: traces,
+      restricted: true,
+    );
   }
 
   /// 操作リファレンスを引く(閾値未満は返さない)。[situation] を渡すとそれも問い合わせに足す。
@@ -420,7 +457,7 @@ class RaiReferenceIndex {
   List<RaiOperationStep> resolvedSteps(RaiOperation op, {Set<String>? seen}) {
     final visited = seen ?? <String>{};
     if (op.base == null || !visited.add(op.id)) return op.steps;
-    final b = operation(op.base!);
+    final b = _resolveFrom.where((o) => o.id == op.base).firstOrNull;
     if (b == null || visited.contains(b.id)) return op.steps;
     final shared = resolvedSteps(b, seen: visited);
     return [...shared.take(op.branchAt.clamp(0, shared.length)), ...op.steps];

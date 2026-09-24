@@ -166,15 +166,16 @@ class ChildSafeApi {
     return (code: '${r['code'] ?? ''}', expiresAt: DateTime.tryParse('${r['expiresAt'] ?? ''}'), link: r['link'] as String?);
   }
 
-  Future<({String handle, String loginCode, DateTime? expiresAt})> createChild({required String handle, required String displayName, required String ageBand}) async {
+  /// → ログインのコードと、その QR の中身 `link`(`rasq://child-safe/login?code=…`)。
+  Future<({String handle, String loginCode, DateTime? expiresAt, String? link})> createChild({required String handle, required String displayName, required String ageBand}) async {
     final r = await _client.postJson('/me/child-safe/children', {'handle': handle, 'displayName': displayName, 'ageBand': ageBand});
-    return (handle: '${r['handle'] ?? handle}', loginCode: '${r['loginCode'] ?? ''}', expiresAt: DateTime.tryParse('${r['expiresAt'] ?? ''}'));
+    return (handle: '${r['handle'] ?? handle}', loginCode: '${r['loginCode'] ?? ''}', expiresAt: DateTime.tryParse('${r['expiresAt'] ?? ''}'), link: r['link'] as String?);
   }
 
-  /// 保護者が作った子の、ログインのコードを出し直す(前のコードは使えなくなる)。
-  Future<({String handle, String loginCode, DateTime? expiresAt})> reissueLoginCode(String handle) async {
+  /// 保護者が作った子の、ログインのコードを出し直す(前のコードは使えなくなる)。形は [createChild] と同じ。
+  Future<({String handle, String loginCode, DateTime? expiresAt, String? link})> reissueLoginCode(String handle) async {
     final r = await _client.postJson('/me/child-safe/children/${Uri.encodeComponent(handle)}/login-code', const {});
-    return (handle: '${r['handle'] ?? handle}', loginCode: '${r['loginCode'] ?? ''}', expiresAt: DateTime.tryParse('${r['expiresAt'] ?? ''}'));
+    return (handle: '${r['handle'] ?? handle}', loginCode: '${r['loginCode'] ?? ''}', expiresAt: DateTime.tryParse('${r['expiresAt'] ?? ''}'), link: r['link'] as String?);
   }
 
   /// マイナンバーカード (JPKI) での保護者の確認を始める → 開く URL(`dummy` のときは Central の相対パス)。
