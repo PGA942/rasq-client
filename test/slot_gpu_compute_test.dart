@@ -69,7 +69,7 @@ void main() {
       expect(await sideloadTrustOf(pkgBytes, signature: otherSig, ownFingerprints: {myFp}), SideloadTrust.restricted);
       expect(await sideloadTrustOf(pkgBytes, signature: otherSig, ownFingerprints: {otherFp}), SideloadTrust.full); // 指紋で決まる
       expect(await sideloadTrustOf(pkgBytes, signature: null, ownFingerprints: {myFp}), SideloadTrust.restricted);
-      expect(await sideloadTrustOf(pkgBytes, signature: mySig, ownFingerprints: const {}), SideloadTrust.restricted); // 今の既定(口が無い)
+      expect(await sideloadTrustOf(pkgBytes, signature: mySig, ownFingerprints: const {}), SideloadTrust.restricted); // 鍵が未登録 / 一覧が未着(local・ログアウトも空)
       // 配布物の差し替え / 署名の改ざん / 鍵のすり替え(他人の鍵で署名して publicKey だけ自分のもの)。
       final tampered = Uint8List.fromList(pkgBytes)..[pkgBytes.length - 1] ^= 1;
       expect(await sideloadTrustOf(tampered, signature: mySig, ownFingerprints: {myFp}), SideloadTrust.restricted);
@@ -155,7 +155,7 @@ void main() {
 
       expect(await gpuFor(container(perms, ownFingerprints: {fingerprint}, ids: ids), path), (true, SideloadTrust.full));
       expect(await gpuFor(container(perms, ownFingerprints: {'0123456789abcdef'}, ids: ids), path), (false, SideloadTrust.restricted)); // 他人の鍵
-      expect(await gpuFor(container(perms, ids: ids), path), (false, SideloadTrust.restricted)); // 今の既定: 自分の鍵を知る口が無い
+      expect(await gpuFor(container(perms, ids: ids), path), (false, SideloadTrust.restricted)); // 自分の鍵の一覧が空(未登録 / 未着)
       // 自分の鍵でも gpu_ml の宣言が無ければ閉。
       expect(await gpuFor(container({path: [RasqPermissions.fowWidget]}, ownFingerprints: {fingerprint}, ids: ids), path), (false, SideloadTrust.full));
       // 署名のあとで配布物が差し替わった → 制限モード。

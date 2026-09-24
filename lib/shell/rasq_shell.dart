@@ -5,6 +5,7 @@ import 'package:rasq_design/rasq_design.dart';
 
 import '../app/providers.dart';
 import '../backend/rasq_account.dart';
+import '../features/plugins/sideload_trust.dart' show ownDevKeyFingerprintsProvider;
 import '../features/notifications/notifications_screen.dart';
 import 'nav.dart';
 import 'sidebar.dart';
@@ -27,6 +28,8 @@ class RasqShell extends ConsumerWidget {
     // 生きているので、ここで 1 度 watch しておけばログインの増減に追随する。
     // 接続先が未設定なら何もしない。
     ref.watch(orgateBundleSyncProvider);
+    // 自分の開発者鍵の指紋 (D-306) を起動時から取っておく(サイドロードの段を決める。変わってもシェルは作り直さない)。
+    ref.listen(ownDevKeyFingerprintsProvider, (_, _) {});
     return LayoutBuilder(builder: (context, constraints) {
       final tablet = constraints.maxWidth >= RasqSizes.tabletBreakpoint;
       return tablet ? _TabletLayout(shell: navigationShell) : _MobileLayout(shell: navigationShell);

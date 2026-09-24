@@ -360,6 +360,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     });
     // AsTell の出来事をプラグインへ (CONTRACT §2.1 `astell.event`)。
     ref.listen<AstellSessionState?>(astellSessionProvider, _onAstellChanged);
+    // 自分の開発者鍵の一覧 (D-306) が届いた / 変わった: 登録済みのサイドロードの段を確かめ直す(起動直後の読み直しは
+    // 一覧が届く前に走るので、ここで full へ上がる。鍵を失効すれば restricted へ下がる)。
+    ref.listen<Set<String>>(ownDevKeyFingerprintsProvider, (prev, next) {
+      if (!setEquals(prev, next)) Future.microtask(_reevaluateSideloadTrust);
+    });
     if (!_restored) {
       _restored = true;
       Future.microtask(_restore);
@@ -417,9 +422,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       var data = bytes ?? File(container).readAsBytesSync();
       // サイドロードの信頼の段 (D-306): 展開する前の配布物そのものと、隣の `.sig.json` で決める。
       // 次回起動の読み直しでも毎回ここを通る(登録時の結果を覚えておかない)。
+      // 一覧が届く前 / 変わる途中に読んだ段は、登録のあとで [_reevaluateSideloadTrust] が確かめ直す。
+      final ownFingerprints = ref.read(ownDevKeyFingerprintsProvider);
       final sideloadTrust = isReviewedSlotSource(source)
           ? SideloadTrust.restricted
-          : await sideloadTrustOf(data, signature: await readSideloadSignature(container), ownFingerprints: ref.read(ownDevKeyFingerprintsProvider));
+          : await sideloadTrustOf(data, signature: await readSideloadSignature(container), ownFingerprints: ownFingerprints);
       String? expectedId;
       if (isRasqPackage(data)) {
         final entry = RasqPackage.open(data, decompress: ref.read(rasqpkgZstdProvider)).plugin(pluginId);
@@ -467,10 +474,57 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       _set([for (final p in state) if (p.id != manifest.id) p, plugin]);
       if (persist) await _persist();
       ref.read(slotPluginsNoticeProvider.notifier).set('${manifest.name} を登録しました(${manifest.slots.join(', ')})');
+      // 登録している間に鍵の一覧が変わった(listen は、まだ state に無いこのプラグインを見られなかった)。
+      if (!plugin.isReviewed && !setEquals(ownFingerprints, ref.read(ownDevKeyFingerprintsProvider))) Future.microtask(_reevaluateSideloadTrust);
       return plugin;
     } catch (e) {
       if (!_disposed) ref.read(slotPluginsNoticeProvider.notifier).set('登録できませんでした: $e');
       return null;
+    }
+  }
+
+  bool _reevaluating = false;
+  bool _reevaluateAgain = false;
+
+  /// 登録済みのサイドロード(ストア以外)の [SideloadTrust] を、いまの [ownDevKeyFingerprintsProvider] で確かめ直す (D-306)。
+  /// **段が変わったものだけ**読み直す(`register` で起動し直す = `gpu.compute` の門を開け直す / 閉じ直す。プラグインの実行中の
+  /// 状態はそこで捨てる)。変わらないものは触らない。配布物が読めなくなったもの(ファイルが消えた)はそのまま。
+  /// **いつ**: 鍵の一覧が変わったとき(listen)と、登録の途中で一覧が変わったとき。次回起動の読み直しでも `register` が毎回確かめる。
+  Future<void> _reevaluateSideloadTrust() async {
+    if (_disposed) return;
+    if (_reevaluating) {
+      _reevaluateAgain = true;
+      return;
+    }
+    _reevaluating = true;
+    try {
+      do {
+        _reevaluateAgain = false;
+        final own = ref.read(ownDevKeyFingerprintsProvider);
+        for (final p in [...state]) {
+          if (_disposed) return;
+          if (p.isReviewed) continue;
+          final container = splitPackageSource(p.source).container;
+          final Uint8List bytes;
+          try {
+            if (container.startsWith('asset:')) {
+              final data = await rootBundle.load(container.substring(6));
+              bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+            } else {
+              bytes = File(container).readAsBytesSync();
+            }
+          } catch (e) {
+            debugPrint('slot plugin ${p.id}: sideload trust not re-evaluated (unreadable): $e');
+            continue;
+          }
+          final trust = await sideloadTrustOf(bytes, signature: await readSideloadSignature(container), ownFingerprints: own);
+          if (_disposed) return;
+          // 読み直しのあいだに外された / 差し替えられたものは見ない。
+          if (trust != p.sideloadTrust && state.any((x) => identical(x, p))) await register(p.source, bytes: bytes, persist: false);
+        }
+      } while (_reevaluateAgain && !_disposed);
+    } finally {
+      _reevaluating = false;
     }
   }
 
