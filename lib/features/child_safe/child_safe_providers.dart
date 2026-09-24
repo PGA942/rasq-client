@@ -120,7 +120,8 @@ class ChildSafeController extends AsyncNotifier<ChildSafeState> {
   /// 取り直す(重ねて呼ばれたら、走っている 1 回を待つ)。
   Future<void> refresh() => _inflight ??= _sync().whenComplete(() => _inflight = null);
 
-  /// 知らせ(受信箱 / プッシュ)の種類が `child_safe` なら取り直す。
+  /// 知らせ(受信箱 / プッシュ)の種類が `child_safe` なら取り直す。受信箱は `CentralInbox`(起動 / 復帰 / ログインで
+  /// `GET /me/notifications` を読む)が `handleChildSafeNotices` を通して呼ぶ (D-309)。プッシュが本物になったら同じ口へ。
   Future<void> onNotification(String kind) async {
     if (kind == 'child_safe') await refresh();
   }

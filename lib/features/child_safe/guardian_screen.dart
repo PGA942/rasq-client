@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,6 +14,7 @@ import '../plugins/slot_plugins.dart';
 import '../store/store_providers.dart' show installedPluginsProvider;
 import 'child_gate.dart';
 import 'child_safe_api.dart';
+import 'child_safe_links.dart';
 import 'child_safe_policy.dart';
 import 'child_safe_screens.dart' show childSafeSummaryLines;
 
@@ -192,7 +194,7 @@ class _GuardianScreenState extends ConsumerState<GuardianScreen> {
                             _creating = false;
                             _handle.clear();
                             _name.clear();
-                            _shown = (title: '@${r.handle} のログインのコード(子の端末の「保護者からのコードでログイン」に入れる)', code: r.loginCode, expiresAt: r.expiresAt, link: null);
+                            _shown = (title: '@${r.handle} のログインのコード(子の端末の「保護者からのコードでログイン」に入れるか、子の端末のカメラで QR を読む)', code: r.loginCode, expiresAt: r.expiresAt, link: r.link ?? childSafeLoginLink(r.loginCode));
                           });
                         }),
                 child: const Text('作る'),
@@ -206,7 +208,7 @@ class _GuardianScreenState extends ConsumerState<GuardianScreen> {
               chevron: false,
               onTap: () => _run((api) async {
                 final r = await api.createPairing();
-                setState(() => _shown = (title: 'つなぐコード(子の端末の「チャイルドモード」に入れる)', code: r.code, expiresAt: r.expiresAt, link: r.link));
+                setState(() => _shown = (title: 'つなぐコード(子の端末の「チャイルドモード」に入れるか、子の端末のカメラで QR を読む)', code: r.code, expiresAt: r.expiresAt, link: r.link ?? childSafePairLink(r.code)));
               }),
             ),
           ]);
@@ -216,7 +218,9 @@ class _GuardianScreenState extends ConsumerState<GuardianScreen> {
   }
 }
 
-/// 1 度だけ見せるコード(コピーできる。QR は読み取りの準備ができてから)。
+/// 1 度だけ見せるコード(コピーできる)と、その QR (D-309)。QR の中身はリンク(`rasq://child-safe/pair?code=…` /
+/// `…/login?code=…`)。子の端末のカメラアプリで読むと、コード入りの画面が開く(Android / iOS)。
+/// 暗い外観でも読めるよう、QR は白地に黒で描く。
 class _OneTimeCode extends StatelessWidget {
   const _OneTimeCode({required this.title, required this.code, this.expiresAt, this.link, required this.onClose});
   final String title;
@@ -237,10 +241,30 @@ class _OneTimeCode extends StatelessWidget {
           const SizedBox(height: RasqSpacing.sm),
           SelectableText(code, key: const ValueKey('guardian.code.value'), style: RasqTypography.title.copyWith(letterSpacing: 3, fontFeatures: const [FontFeature.tabularFigures()])),
           if (expiresAt != null) Text('${_fmt(expiresAt)} まで。この画面を閉じると、もう出せません(出し直すと前のコードは使えなくなります)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-          if (link != null) SelectableText(link!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-          Row(children: [
+          if (link != null) ...[
+            const SizedBox(height: RasqSpacing.sm),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(RasqSpacing.sm),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                child: QrImageView(
+                  key: const ValueKey('guardian.code.qr'),
+                  data: link!,
+                  size: 200,
+                  backgroundColor: Colors.white,
+                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
+                  dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
+                  semanticsLabel: 'コードの QR',
+                ),
+              ),
+            ),
+            const SizedBox(height: RasqSpacing.xs),
+            SelectableText(link!, key: const ValueKey('guardian.code.link'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          ],
+          // 狭い画面でもはみ出さないよう、折り返す。
+          Wrap(spacing: RasqSpacing.xs, crossAxisAlignment: WrapCrossAlignment.center, children: [
             TextButton.icon(onPressed: () => Clipboard.setData(ClipboardData(text: code)), icon: const Icon(Icons.copy, size: 16), label: const Text('コピー')),
-            const Spacer(),
+            if (link != null) TextButton.icon(key: const ValueKey('guardian.code.copyLink'), onPressed: () => Clipboard.setData(ClipboardData(text: link!)), icon: const Icon(Icons.link, size: 16), label: const Text('リンクをコピー')),
             TextButton(onPressed: onClose, child: const Text('閉じる')),
           ]),
         ]),
@@ -264,7 +288,7 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
   String? _error;
 
   /// 出し直したログインのコード(1 度だけ見せる)。
-  ({String code, DateTime? expiresAt})? _loginCode;
+  ({String code, DateTime? expiresAt, String link})? _loginCode;
   final _blocked = TextEditingController();
   final _allowed = TextEditingController();
   final _posts = TextEditingController();
@@ -348,7 +372,7 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
     });
     try {
       final r = await api.reissueLoginCode(widget.handle);
-      if (mounted) setState(() => _loginCode = (code: r.loginCode, expiresAt: r.expiresAt));
+      if (mounted) setState(() => _loginCode = (code: r.loginCode, expiresAt: r.expiresAt, link: r.link ?? childSafeLoginLink(r.loginCode)));
     } catch (e) {
       if (mounted) setState(() => _error = childSafeErrorMessage(e));
     } finally {
@@ -423,7 +447,7 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
                 chevron: false,
                 onTap: _reissueLoginCode,
               ),
-              if (_loginCode != null) _OneTimeCode(title: '@${widget.handle} のログインのコード', code: _loginCode!.code, expiresAt: _loginCode!.expiresAt, onClose: () => setState(() => _loginCode = null)),
+              if (_loginCode != null) _OneTimeCode(title: '@${widget.handle} のログインのコード', code: _loginCode!.code, expiresAt: _loginCode!.expiresAt, link: _loginCode!.link, onClose: () => setState(() => _loginCode = null)),
             ],
             const RasqSectionHeader(title: '見守りを終える'),
             RasqListTile(key: const ValueKey('guardian.end'), title: '見守りを終える', subtitle: '制限をすべて外します', chevron: false, titleColor: Theme.of(context).colorScheme.error, onTap: _end),

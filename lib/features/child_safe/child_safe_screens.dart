@@ -11,8 +11,11 @@ import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../settings/account_security_screen.dart' show accountDeviceLabel;
 import 'child_gate.dart';
 import 'child_safe_api.dart';
+import 'child_safe_links.dart';
 import 'child_safe_policy.dart';
 import 'child_safe_providers.dart';
+
+export 'child_safe_links.dart' show childSafeCodeFromInput;
 
 /// チャイルドセーフの画面(子の側と入口)(D-307)。保護者の画面は guardian_screen.dart。
 
@@ -167,24 +170,38 @@ List<String> childSafeSummaryLines(ChildGate gate) {
   return out;
 }
 
-/// コードの形に寄せる(大文字、`ABCD-EFGH` の `-` と空白はそのまま送ってよい)。
-String childSafeCodeFromInput(String input) {
-  final link = RegExp(r'[?&]code=([A-Za-z0-9-]+)').firstMatch(input);
-  final raw = link?.group(1) ?? input;
-  return raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9-]'), '');
+/// リンク(QR)から開いたときの注意: 入っているコードを確かめてから押す(自動では送らない)。
+Widget _fromLinkNote(BuildContext context, String what) {
+  final scheme = Theme.of(context).colorScheme;
+  return _pad(Container(
+    key: const ValueKey('childSafe.fromLink'),
+    padding: const EdgeInsets.all(RasqSpacing.sm),
+    decoration: BoxDecoration(color: scheme.tertiaryContainer, borderRadius: BorderRadius.circular(8)),
+    child: Text('リンク(QR)からコードを入れました。自分の保護者から受け取ったものか確かめてから「$what」を押してください。知らない人のリンクなら、押さずに閉じてください。',
+        style: RasqTypography.caption.copyWith(color: scheme.onTertiaryContainer)),
+  ));
 }
 
 /// 子の端末: いまのアカウントを、保護者のコードでつなぐ (`POST /me/child-safe/pair`)。
+/// [initialCode] = リンク `rasq://child-safe/pair?code=…`(端末のカメラで QR を読んだとき)から開いたときのコード(送らずに入れるだけ)。
 class ChildPairScreen extends ConsumerStatefulWidget {
-  const ChildPairScreen({super.key});
+  const ChildPairScreen({super.key, this.initialCode});
+  final String? initialCode;
   @override
   ConsumerState<ChildPairScreen> createState() => _ChildPairScreenState();
 }
 
 class _ChildPairScreenState extends ConsumerState<ChildPairScreen> {
-  final _code = TextEditingController();
+  late final _code = TextEditingController(text: widget.initialCode ?? '');
   bool _busy = false;
   String? _error;
+
+  // 画面を開いたまま別のリンクが来たら、そのコードに入れ替える(送らない)。
+  @override
+  void didUpdateWidget(covariant ChildPairScreen old) {
+    super.didUpdateWidget(old);
+    if (widget.initialCode != null && widget.initialCode != old.initialCode) _code.text = widget.initialCode!;
+  }
 
   @override
   void dispose() {
@@ -224,6 +241,7 @@ class _ChildPairScreenState extends ConsumerState<ChildPairScreen> {
           RasqListTile(title: '既存の RASQ アカウントにログイン', onTap: () => context.push('/settings/account-login')),
         ] else ...[
           _pad(Text('@${account.handle} を、保護者の見守りにつなぎます。保護者の画面(アプリか Web コンソール)に出ているコード(8 字、例 ABCD-EFGH)を入れてください。つないだら、保護者が設定を決めるまでアプリは使えません。', style: caption)),
+          if (widget.initialCode?.isNotEmpty == true) _fromLinkNote(context, 'つなぐ'),
           _pad(TextField(
             key: const ValueKey('childSafe.pair.code'),
             controller: _code,
@@ -236,8 +254,15 @@ class _ChildPairScreenState extends ConsumerState<ChildPairScreen> {
           )),
           if (_error != null) _pad(Text(_error!, key: const ValueKey('childSafe.pair.error'), style: caption.copyWith(color: scheme.error))),
           _pad(FilledButton(key: const ValueKey('childSafe.pair.submit'), onPressed: _busy ? null : _pair, child: const Text('つなぐ'))),
-          // TODO(D-307): QR の読み取り(中身 `rasq://child-safe/pair?code=…`)。いまはコードの入力と、リンクの貼り付け。
-          _pad(Text('QR の読み取りは準備中です。リンク(rasq://child-safe/pair?code=…)を貼り付けても、つなげます。', style: caption)),
+          // QR (D-309): アプリの中では読まない(カメラのパッケージは入れていない)。Android / iOS は端末のカメラアプリで
+          // 読むと `rasq://child-safe/pair?code=…` でこの画面が開く。ほかの面はコードの入力と、リンクの貼り付け。
+          _pad(Text(
+            childSafeLinksOpenApp
+                ? '保護者の画面の QR は、この端末のカメラアプリで読むと、コードが入った状態でこの画面が開きます。リンク(rasq://child-safe/pair?code=…)を貼り付けても、つなげます。'
+                : 'この端末では QR を読めません。コードを入れるか、リンク(rasq://child-safe/pair?code=…)を貼り付けてください。',
+            key: const ValueKey('childSafe.pair.qrHint'),
+            style: caption,
+          )),
         ],
       ]),
     );
@@ -246,16 +271,25 @@ class _ChildPairScreenState extends ConsumerState<ChildPairScreen> {
 
 /// 子の端末: 保護者が作ったアカウントへ、1 度きりのコードでログイン (`POST /auth/child-login`)。
 /// **この端末の SNS アカウントは引き継がない**(保護者の SNS のトークンも貸さない)。
+/// [initialCode] = リンク `rasq://child-safe/login?code=…` から開いたときのコード(送らずに入れるだけ)。
 class ChildLoginScreen extends ConsumerStatefulWidget {
-  const ChildLoginScreen({super.key});
+  const ChildLoginScreen({super.key, this.initialCode});
+  final String? initialCode;
   @override
   ConsumerState<ChildLoginScreen> createState() => _ChildLoginScreenState();
 }
 
 class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
-  final _code = TextEditingController();
+  late final _code = TextEditingController(text: widget.initialCode ?? '');
   bool _busy = false;
   String? _error;
+
+  // 画面を開いたまま別のリンクが来たら、そのコードに入れ替える(送らない)。
+  @override
+  void didUpdateWidget(covariant ChildLoginScreen old) {
+    super.didUpdateWidget(old);
+    if (widget.initialCode != null && widget.initialCode != old.initialCode) _code.text = widget.initialCode!;
+  }
 
   @override
   void dispose() {
@@ -300,6 +334,7 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
       appBar: const RasqPageHeader(title: '保護者からのコードでログイン'),
       body: ListView(children: [
         _pad(Text('保護者がアプリで子のアカウントを作ると、1 度だけ使えるコードが出ます。そのコードを入れると、この端末がそのアカウントになります。この端末の SNS アカウントは引き継ぎません。', style: caption)),
+        if (widget.initialCode?.isNotEmpty == true) _fromLinkNote(context, 'ログイン'),
         _pad(TextField(
           key: const ValueKey('childSafe.login.code'),
           controller: _code,

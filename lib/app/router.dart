@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../features/catalog/catalog_screen.dart';
+import '../features/child_safe/child_safe_links.dart';
 import '../features/child_safe/child_safe_providers.dart';
 import '../features/child_safe/child_safe_screens.dart';
 import '../features/child_safe/guardian_screen.dart';
@@ -189,6 +190,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: Routes.home,
     refreshListenable: refresh,
     redirect: (context, state) {
+      // 外から来たリンク (D-309): Android / iOS はリンクの全体(`rasq://child-safe/pair?code=…`)を場所として渡してくる。
+      // チャイルドセーフのリンクはアプリの中の画面へ(コードは入れるだけで送らない)。ほかの `rasq://` は開かずホームへ。
+      if (state.uri.scheme == childSafeLinkScheme) return childSafeDeepLinkLocation(state.uri) ?? Routes.home;
       final sessions = ref.read(sessionsProvider);
       final ledger = ref.read(rasqAccountsProvider);
       final loc = state.matchedLocation;
@@ -350,8 +354,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'guardian', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const GuardianScreen(), routes: [
               GoRoute(path: ':handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => GuardianChildScreen(handle: Uri.decodeComponent(s.pathParameters['handle']!))),
             ]),
-            GoRoute(path: 'pair', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ChildPairScreen()),
-            GoRoute(path: 'login', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ChildLoginScreen()),
+            // `?code=` = リンク(QR)から開いたとき (D-309)。
+            GoRoute(path: 'pair', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => ChildPairScreen(initialCode: s.uri.queryParameters['code'])),
+            GoRoute(path: 'login', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => ChildLoginScreen(initialCode: s.uri.queryParameters['code'])),
             GoRoute(path: 'pending', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ChildSafePendingScreen()),
           ]),
           GoRoute(

@@ -39,6 +39,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- チャイルドセーフのリンク (D-309): 保護者の画面の QR(rasq://child-safe/pair?code=… / …/login?code=…)を
+                 端末のカメラで読むと、この画面がコード入りで開く。Flutter の deep link(既定で有効)が URI の全体を
+                 ルーターへ渡す。つなぐ / ログインは画面で押すまで送らない。ほかの rasq:// は受けない(host を絞る)。 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="rasq" android:host="child-safe"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

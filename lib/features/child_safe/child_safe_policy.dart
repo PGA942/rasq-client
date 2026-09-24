@@ -507,6 +507,54 @@ const raiFunctionGroups = <String, String>{
   'web.search': 'rai.web',
 };
 
+/// RAi の案内 (D-309): リファレンス(`assets/rai/functions.jsonl`)の関数 id → 止まっていたら案内しない機能 / 検索。
+/// 値は `features:<id>`(`allow.features`)か `search:<id>`(`allow.search`)。まとまり(`group`)と画面(`route`)は
+/// [ChildGate.raiGuideAllowed] がこれとは別に見る。完全一致が先、無ければ [raiGuideRequirementPrefixes] の頭の一致。
+const raiGuideRequirements = <String, String>{
+  'post.shareDm': 'features:dm',
+  'post.attach': 'features:post.media',
+  'media.edit': 'features:post.media',
+  'media.editPlugin': 'features:post.media',
+  'post.react': 'features:reaction',
+  'react.pick': 'features:reaction',
+  'plugins.install': 'features:store.install',
+  'plugins.review': 'features:store.review',
+  'relational.tune': 'features:relational',
+  'astell.create': 'features:astell.create',
+  'astell.schedule': 'features:astell.create',
+  'astell.share': 'features:astell.share',
+  'account.add': 'features:sns.addAccount',
+  'search.posts': 'search:posts',
+  'search.hashtag': 'search:posts',
+  'search.users': 'search:users',
+  'plugins.search': 'search:store',
+  'plugins.store': 'search:store',
+};
+
+/// [raiGuideRequirements] の頭の一致(長いほうが先に当たるよう、使う側で長い順に見る)。
+const raiGuideRequirementPrefixes = <String, String>{
+  'dm.': 'features:dm',
+  'login.': 'features:sns.addAccount',
+  'lists.': 'features:lists',
+  'list.': 'features:lists',
+  'notifications.': 'features:notifications',
+  'trend.': 'features:trend',
+  'plugin.sample.': 'features:store.install',
+};
+
+/// 関数 id の案内に要る機能 / 検索([raiGuideRequirements] → [raiGuideRequirementPrefixes])。書く手伝い(`rai.compose`)の
+/// DM 以外は「投稿」。無ければ null。
+String? raiGuideRequirementOf(String id, String? group) {
+  final exact = raiGuideRequirements[id];
+  if (exact != null) return exact;
+  final prefixes = raiGuideRequirementPrefixes.keys.toList()..sort((a, b) => b.length.compareTo(a.length));
+  for (final p in prefixes) {
+    if (id.startsWith(p)) return raiGuideRequirementPrefixes[p];
+  }
+  if (group == 'rai.compose') return 'features:post';
+  return null;
+}
+
 // ── 署名 ───────────────────────────────────────────────────────────────
 
 /// canonical JSON(Central `docs/API.md` の「署名」。参照のベクトルも同じ節)。**手で書く**(`jsonEncode` には頼らない):

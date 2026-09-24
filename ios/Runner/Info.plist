@@ -71,6 +71,20 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- チャイルドセーフのリンク (D-309): 保護者の画面の QR(rasq://child-safe/pair?code=… / …/login?code=…)を端末のカメラで
+	     読むと、アプリがコード入りの画面で開く(FlutterSceneDelegate が URI の全体をルーターへ渡す。つなぐ / ログインは押すまで送らない)。
+	     iOS は host を絞れないので、ルーターがチャイルドセーフ以外の rasq:// をホームへ落とす。 -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>rasq.child-safe</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>rasq</string>
+			</array>
+		</dict>
+	</array>
 	<!-- 開発用の Central など、IP アドレス / .local / ホスト名だけの相手への http を許す(動画の再生は OS のプレイヤーが取りに行くので、
 	     ここで許さないと ATS に止められる。-1022)。公開のホスト名への http は、これまでどおり止まる。 -->
 	<key>NSAppTransportSecurity</key>
