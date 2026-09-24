@@ -171,12 +171,33 @@ class ChildSafeApi {
     return (handle: '${r['handle'] ?? handle}', loginCode: '${r['loginCode'] ?? ''}', expiresAt: DateTime.tryParse('${r['expiresAt'] ?? ''}'));
   }
 
+  /// 保護者が作った子の、ログインのコードを出し直す(前のコードは使えなくなる)。
+  Future<({String handle, String loginCode, DateTime? expiresAt})> reissueLoginCode(String handle) async {
+    final r = await _client.postJson('/me/child-safe/children/${Uri.encodeComponent(handle)}/login-code', const {});
+    return (handle: '${r['handle'] ?? handle}', loginCode: '${r['loginCode'] ?? ''}', expiresAt: DateTime.tryParse('${r['expiresAt'] ?? ''}'));
+  }
+
+  /// マイナンバーカード (JPKI) での保護者の確認を始める → 開く URL(`dummy` のときは Central の相対パス)。
+  /// [pledgeVersion] = 画面で同意してもらった誓約の版(Central が誓約の同意として記録する)。
+  Future<String?> jpkiStart({required String pledgeVersion}) async =>
+      (await _client.postJson('/me/child-safe/guardian/jpki/start', {'country': 'JP', 'pledgeVersion': pledgeVersion}))['url'] as String?;
+
   Future<ChildSafeChildDetail> child(String handle) async => ChildSafeChildDetail.fromJson(await _client.getJson('/me/child-safe/children/${Uri.encodeComponent(handle)}'));
   Future<int> putSettings(String handle, ChildSafePolicy policy) async =>
       ((await _client.putJson('/me/child-safe/children/${Uri.encodeComponent(handle)}/settings', policy.toJson()))['revision'] as num?)?.toInt() ?? 0;
   Future<void> end(String handle) => _client.postJson('/me/child-safe/children/${Uri.encodeComponent(handle)}/end', const {});
   Future<ChildSafeSummary> summary(String handle) async => ChildSafeSummary.fromJson(await _client.getJson('/me/child-safe/children/${Uri.encodeComponent(handle)}/summary'));
 }
+
+/// 保護者の誓約(Central の Web コンソール `/console/child/verify` と同じ文。版は [childSafePledgeVersion])。
+/// Central の `pledgeVersion` がこの版と違えば、アプリでは同意を取らず Web コンソールへ回す(古い文で同意させない)。
+const childSafePledgeVersion = '2026-09-24';
+const childSafePledge = [
+  '私は、見守るお子さんの親権者、またはそれに準じる保護者です。',
+  '見守りは、お子さんの安全のために使い、お子さんの年齢と成長に合わせて見直します。',
+  'お子さんの投稿の中身は RASQ Central に送られず、見られるのは日ごとの数と話題の名前だけであることを理解しています。',
+  '申告が事実と違うとわかったときは、確認を取り消されることがあります。',
+];
 
 final childSafeApiProvider = Provider<ChildSafeApi?>((ref) {
   final client = ref.watch(centralClientProvider);

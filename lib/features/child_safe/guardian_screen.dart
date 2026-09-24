@@ -59,6 +59,27 @@ Future<void> openGuardianVerification(WidgetRef ref) async {
   await launchUrl(base.replace(path: '${base.path}/console/child/verify'), mode: LaunchMode.externalApplication);
 }
 
+/// マイナンバーカード (JPKI) での確認: 誓約に同意してもらってから `POST …/guardian/jpki/start {country: JP, pledgeVersion}`、
+/// 返った URL(デジタル認証アプリへ / 開発用のダミーは Central の相対パス)を外のブラウザで開く。
+/// 誓約の版がアプリの知っている版と違えば、Web コンソールへ回す。
+Future<void> startJpkiVerification(WidgetRef ref, ChildSafeGuardianInfo g) async {
+  if (g.pledgeVersion != childSafePledgeVersion) return openGuardianVerification(ref);
+  final ok = await ref.read(overlayManagerProvider).showAlert(
+        id: 'childSafe.pledge',
+        title: '保護者の誓約(版 $childSafePledgeVersion)',
+        message: '${[for (final l in childSafePledge) '・$l'].join('\n')}\n\n同意すると、マイナンバーカード(デジタル認証アプリ)での確認に進みます(日本にお住まいの方)。',
+        confirmText: '同意して進む',
+        cancelText: 'キャンセル',
+      );
+  final api = ref.read(childSafeApiProvider);
+  final base = ref.read(centralBaseUrlProvider);
+  if (!ok || api == null || base == null) return;
+  final url = await api.jpkiStart(pledgeVersion: childSafePledgeVersion);
+  if (url == null || url.isEmpty) return;
+  final target = url.startsWith('/') ? base.replace(path: '${base.path.replaceFirst(RegExp(r'/$'), '')}${Uri.parse(url).path}', query: Uri.parse(url).query) : Uri.parse(url);
+  await launchUrl(target, mode: LaunchMode.externalApplication);
+}
+
 /// `/child-safe/guardian`。
 class GuardianScreen extends ConsumerStatefulWidget {
   const GuardianScreen({super.key});
@@ -121,7 +142,15 @@ class _GuardianScreenState extends ConsumerState<GuardianScreen> {
               value: verified ? '${g.status.methodLabel}${g.status.country == null ? '' : '・${g.status.country}'}${g.status.verifiedAt == null ? '' : '・${_fmt(g.status.verifiedAt)}'}' : '',
             ),
             if (!verified) ...[
-              _pad(Text('子のアカウントを作る / つなぐ前に、Web コンソールで保護者の確認をします(日本はマイナンバーカード (JPKI)、ほかの国は自己申告)。', style: caption)),
+              _pad(Text('子のアカウントを作る / つなぐ前に、保護者の確認をします(日本はマイナンバーカード (JPKI)、ほかの国は Web コンソールでの自己申告)。', style: caption)),
+              if (g.jpkiAvailable)
+                RasqListTile(
+                  key: const ValueKey('guardian.verify.jpki'),
+                  title: 'マイナンバーカードで確認する',
+                  subtitle: '日本にお住まいの方。誓約に同意してから、外のブラウザで開きます${g.jpkiMode == 'dummy' ? '(開発用のダミー)' : ''}',
+                  enabled: !_busy,
+                  onTap: () => _run((_) => startJpkiVerification(ref, g)),
+                ),
               RasqListTile(key: const ValueKey('guardian.verify'), title: 'Web コンソールで確認する', subtitle: '外のブラウザで開きます', onTap: () => openGuardianVerification(ref)),
             ],
             RasqSectionHeader(title: '見守っている子(${g.children.length} / 8)'),
@@ -149,7 +178,7 @@ class _GuardianScreenState extends ConsumerState<GuardianScreen> {
               _pad(RasqInput(key: const ValueKey('guardian.create.name'), controller: _name, hintText: '表示名')),
               _pad(SegmentedButton<String>(
                 key: const ValueKey('guardian.create.band'),
-                segments: [for (final b in childSafeAgeBands) ButtonSegment(value: b, label: Text(b))],
+                segments: [for (final b in childSafeChildBands) ButtonSegment(value: b, label: Text(b))],
                 selected: {_band},
                 onSelectionChanged: (s) => setState(() => _band = s.first),
               )),
@@ -233,6 +262,9 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
   int _step = 0;
   bool _busy = false;
   String? _error;
+
+  /// 出し直したログインのコード(1 度だけ見せる)。
+  ({String code, DateTime? expiresAt})? _loginCode;
   final _blocked = TextEditingController();
   final _allowed = TextEditingController();
   final _posts = TextEditingController();
@@ -258,6 +290,12 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
     _endAt.text = p.time.end;
   }
 
+  /// `9:00` → `09:00`(Central は `HH:MM` の 2 桁だけを受け付ける)。読めなければそのまま。
+  static String _clock(String s) {
+    final m = ChildSafeTime.minutesOf(s);
+    return m == null ? s.trim() : '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
+  }
+
   static List<String> _words(String s) => [for (final w in s.split(RegExp(r'[,、\s]+'))) if (w.trim().isNotEmpty) w.trim()];
 
   /// 入力欄の値を下書きへ写す。
@@ -266,7 +304,7 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
     final ppd = int.tryParse(_posts.text.trim());
     return d.copyWith(
       timeline: d.timeline.copyWith(blockedTopics: _words(_blocked.text)),
-      time: d.time.copyWith(allowedTopics: _words(_allowed.text), start: _startAt.text.trim(), end: _endAt.text.trim()),
+      time: d.time.copyWith(allowedTopics: _words(_allowed.text), start: _clock(_startAt.text), end: _clock(_endAt.text)),
       postsPerDay: ppd,
       clearPostsPerDay: ppd == null,
     );
@@ -294,6 +332,23 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text('保存しました(設定 $revision)。子の端末に届くと「届いています」になります')));
       }
+    } catch (e) {
+      if (mounted) setState(() => _error = childSafeErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _reissueLoginCode() async {
+    final api = ref.read(childSafeApiProvider);
+    if (api == null || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final r = await api.reissueLoginCode(widget.handle);
+      if (mounted) setState(() => _loginCode = (code: r.loginCode, expiresAt: r.expiresAt));
     } catch (e) {
       if (mounted) setState(() => _error = childSafeErrorMessage(e));
     } finally {
@@ -358,6 +413,18 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
             ])),
             const RasqSectionHeader(title: '最近の発信内容の要約(14 日)'),
             ..._summary(context, d.summary),
+            if (d.row.createdByGuardian) ...[
+              const RasqSectionHeader(title: '子の端末のログイン'),
+              RasqListTile(
+                key: const ValueKey('guardian.loginCode'),
+                title: 'コードを出し直す',
+                subtitle: '子の端末の「保護者からのコードでログイン」に入れるコード(10 分・1 回だけ。前のコードは使えなくなります)',
+                enabled: !_busy,
+                chevron: false,
+                onTap: _reissueLoginCode,
+              ),
+              if (_loginCode != null) _OneTimeCode(title: '@${widget.handle} のログインのコード', code: _loginCode!.code, expiresAt: _loginCode!.expiresAt, onClose: () => setState(() => _loginCode = null)),
+            ],
             const RasqSectionHeader(title: '見守りを終える'),
             RasqListTile(key: const ValueKey('guardian.end'), title: '見守りを終える', subtitle: '制限をすべて外します', chevron: false, titleColor: Theme.of(context).colorScheme.error, onTap: _end),
           ]);

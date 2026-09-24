@@ -214,6 +214,7 @@ void main() {
             'revision': 0,
             'appliedRevision': 0,
             'ageBand': '13-15',
+            'createdByGuardian': true,
             'settings': null,
             'summary': {
               'days': [
@@ -221,6 +222,8 @@ void main() {
               ],
             },
           });
+        case 'POST /me/child-safe/children/kid/login-code':
+          return json({'handle': 'kid', 'loginCode': 'NEWC-ODEA-BCDE', 'expiresAt': '2026-09-25T00:00:00Z', 'link': 'rasq://child-safe/login?code=NEWCODEABCDE'}, 201);
         case 'PUT /me/child-safe/children/kid/settings':
           puts.add(body);
           return json({'revision': 1, 'signature': 'x', 'issuedAt': '2026-09-24T00:00:00Z'});
@@ -237,6 +240,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('guardian.create.handle')), '@kid2');
     await tester.enterText(find.byKey(const ValueKey('guardian.create.name')), 'キッド2');
+    expect(find.descendant(of: find.byKey(const ValueKey('guardian.create.band')), matching: find.text('18+')), findsNothing); // 子は 13-17 だけ
     await tester.tap(find.text('16-17'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('guardian.create.submit')));
@@ -270,6 +274,15 @@ void main() {
     expect((saved['timeline'] as Map)['blockedTopics'], ['ホラー', '事件']);
     expect(((saved['allow'] as Map)['sns'] as Map)['kinds'], ['misskey']);
     expect(((saved['allow'] as Map)['rai'] as Map)['groups'], ['rai.guide', 'rai.read', 'rai.compose']);
+    // 13-15 の既定(カタログが取れないので控え = Central と同じ値): AsTell の共有とストアのレビューも止める。
+    expect((saved['allow'] as Map)['features'], containsPair('astell.share', false));
+    expect((saved['allow'] as Map)['features'], containsPair('store.review', false));
+
+    // 親が作った子: ログインのコードを出し直す。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('guardian.loginCode')), 200, scrollable: find.descendant(of: find.byType(GuardianChildScreen), matching: find.byType(Scrollable)).first);
+    await tester.tap(find.byKey(const ValueKey('guardian.loginCode')));
+    await tester.pumpAndSettle();
+    expect(find.text('NEWC-ODEA-BCDE'), findsOneWidget);
   });
 }
 

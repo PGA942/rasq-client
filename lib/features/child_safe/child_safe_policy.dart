@@ -32,6 +32,9 @@ enum ChildSafeLevel {
 /// 年齢の帯 (13-15 / 16-17 / 18+)。カタログの `presets` のキー。
 const childSafeAgeBands = ['13-15', '16-17', '18+'];
 
+/// 保護者が作れる子のアカウントの帯(Central の `POST /me/child-safe/children` は 13-15 / 16-17 だけ)。
+const childSafeChildBands = ['13-15', '16-17'];
+
 /// RAi の関数のまとまり。第二期のもの([childSafeRaiPhase2Groups])は、いまは選べるだけ。
 const childSafeRaiGroups = ['rai.guide', 'rai.read', 'rai.compose', 'rai.act', 'rai.settings', 'rai.astell', 'rai.web'];
 const childSafeRaiPhase2Groups = ['rai.assistant', 'rai.macro', 'rai.automation'];
