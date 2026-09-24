@@ -488,6 +488,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
 
   void _onInputChanged() {
     final text = _input.text;
+    // 相手の画面にも下書きを出す (D-311)。送る間隔と、強い言葉の判定は AstellSession の側。
+    ref.read(astellSessionProvider.notifier).setDraft(text);
     setState(() {
       if (text.isEmpty) {
         _draftStartedAt = null;
@@ -691,6 +693,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     final text = _input.text.trim();
     if (text.isEmpty) return;
     final isLink = text.startsWith('http://') || text.startsWith('https://');
+    ref.read(astellSessionProvider.notifier).clearDraft();
     _input.clear(); // → リスナーが下書き枠を消す
     // SNS の投稿 URL はインラインで共有 (D-166): 自分のアカウントのインスタンスなら
     // プラグイン(トークン)で、そうでなければ Central の公開 API 解決で。取れなければリンク。
@@ -1067,6 +1070,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         for (final t in s.transcripts) _ChatEntry(at: t.createdAt, author: t.displayName, text: t.text, transcript: true, id: t.id, pinned: t.pinned, handle: t.handle),
         for (final sh in s.shares) _ChatEntry(at: sh.createdAt, author: sh.handle == myHandle || sh.accountId == 'me' ? 'あなた' : sh.displayName, text: sh.headline, kind: sh.kind, id: sh.id, pinned: sh.pinned, handle: sh.handle),
         if (_draftStartedAt != null) _ChatEntry(at: _draftStartedAt!, author: 'あなた', text: _input.text, draft: true),
+        // ほかの人の下書き (D-311): 書き始めた位置に差し込む。
+        for (final d in s.drafts.values) _ChatEntry(at: d.startedAt, author: d.displayName, text: d.text, draft: true, handle: d.handle),
       ]..sort((a, b) => a.at.compareTo(b.at));
 
   Widget _chatTab(BuildContext context, AstellSessionState s, String myHandle) {
@@ -1106,7 +1111,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
                 ])),
               ),
             ),
-            if (e.draft) Text('下書き', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            if (e.draft) Text(e.handle == null ? '下書き' : '入力中', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             // ピン留め (D-146): 共有欄へ出す/外す。モデレーターだけ (D-149)。
             if (e.id != null && s.isModerator)
               RasqIconButton(

@@ -178,6 +178,63 @@ void main() {
       await session.leave();
       expect(container.read(astellSessionProvider), isNull);
     });
+
+    test('入力中の下書き (D-311): 1 秒ごとに送る / 強い言葉の回は送らない / 送ったら取り消す / 相手の下書きを受ける', () async {
+      final client = MockAstellClient();
+      final container = ProviderContainer(overrides: [
+        sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
+        astellClientProvider.overrideWithValue(client),
+      ]);
+      addTearDown(container.dispose);
+      final session = container.read(astellSessionProvider.notifier);
+      await session.join(MockAstellClient.seededRooms().first);
+      await Future<void>.delayed(Duration.zero);
+      List<Object?> drafts() => [for (final m in client.sent) if (m['type'] == 'draft') m['text']];
+      const tick = Duration(milliseconds: 1100);
+
+      expect(astellDraftAllowed('あしたは晴れ'), isTrue);
+      expect(astellDraftAllowed('ふざけるな'), isFalse);
+
+      session.setDraft('あー');
+      expect(drafts(), isEmpty, reason: 'すぐには送らない(間隔ごと)');
+      await Future<void>.delayed(tick);
+      expect(drafts(), ['あー']);
+      await Future<void>.delayed(tick);
+      expect(drafts(), ['あー'], reason: '変わっていなければ送らない');
+      session.setDraft('あーふざけるな');
+      await Future<void>.delayed(tick);
+      expect(drafts(), ['あー'], reason: '強い言葉が入った回は送らない(相手には直前のまま)');
+      session.setDraft('あーふざけ…いや、明日は晴れ');
+      await Future<void>.delayed(tick);
+      expect(drafts().length, 1, reason: 'まだ強い言葉が残っている');
+      session.setDraft('明日は晴れ');
+      await Future<void>.delayed(tick);
+      expect(drafts(), ['あー', '明日は晴れ']);
+      session.clearDraft();
+      expect(drafts(), ['あー', '明日は晴れ', null], reason: '送った / 消したら、すぐ取り消す');
+      session.clearDraft();
+      expect(drafts().length, 3, reason: '取り消すものが無ければ送らない');
+
+      // 相手の下書き: 受ける → その人の発言が届いたら消える / 取り消し / 退出で消える。自分の折り返しは無視。
+      client.emit('r-launch', {'type': 'draft', 'peerId': 'p2', 'accountId': 'tivard', 'handle': 'tivard', 'displayName': 'TiVard', 'text': 'いま打ってる', 'startedAt': '2026-09-24T01:00:00Z'});
+      client.emit('r-launch', {'type': 'draft', 'peerId': 'me', 'accountId': 'me', 'handle': 'me', 'displayName': 'あなた', 'text': 'x', 'startedAt': '2026-09-24T01:00:00Z'});
+      await Future<void>.delayed(Duration.zero);
+      var s = container.read(astellSessionProvider)!;
+      expect(s.drafts.keys, ['p2']);
+      expect(s.drafts['p2']!.startedAt, DateTime.utc(2026, 9, 24, 1));
+      client.emit('r-launch', {'type': 'share', 'share': {'id': 'x1', 'accountId': 'tivard', 'handle': 'tivard', 'displayName': 'TiVard', 'kind': 'text', 'payload': {'text': 'いま打ってる'}, 'createdAt': '2026-09-24T01:00:05Z'}});
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(astellSessionProvider)!.drafts, isEmpty);
+      client.emit('r-launch', {'type': 'draft', 'peerId': 'p3', 'accountId': 'yamahaya', 'handle': 'yamahaya', 'displayName': '山ハヤ', 'text': 'えっと', 'startedAt': '2026-09-24T01:01:00Z'});
+      client.emit('r-launch', {'type': 'draft', 'peerId': 'p2', 'accountId': 'tivard', 'handle': 'tivard', 'displayName': 'TiVard', 'text': 'つぎ', 'startedAt': '2026-09-24T01:02:00Z'});
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(astellSessionProvider)!.drafts.length, 2);
+      client.emit('r-launch', {'type': 'draft', 'peerId': 'p3', 'text': null});
+      client.emit('r-launch', {'type': 'peer-left', 'peerId': 'p2'});
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(astellSessionProvider)!.drafts, isEmpty);
+      await session.leave();
+    });
   });
 
   testWidgets('VC ホーム: おすすめ / トレンド / フォロー中 にタイル(ホスト / タイトル / 要約 / ジャンル / LIVE / 見てみる)', (tester) async {
@@ -339,6 +396,14 @@ void main() {
     // チャット入力(字幕オン時): 入力開始で下書き枠 + 「送信完了する」、全消去で消える、送信で共有。
     await tester.tap(inRoom('チャット'));
     await tester.pumpAndSettle();
+    // ほかの人の下書き (D-311): 書き始めの時刻の位置に「入力中」で差し込まれ、取り消しで消える。
+    (container.read(astellClientProvider) as MockAstellClient).emit('r-launch', {'type': 'draft', 'peerId': 'p3', 'accountId': 'yamahaya', 'handle': 'yamahaya', 'displayName': '山ハヤ', 'text': 'スタビライザーの件だけど', 'startedAt': DateTime.now().toUtc().toIso8601String()});
+    await tester.pumpAndSettle();
+    expect(find.text('入力中'), findsOneWidget);
+    expect(find.textContaining('スタビライザーの件だけど'), findsOneWidget);
+    (container.read(astellClientProvider) as MockAstellClient).emit('r-launch', {'type': 'draft', 'peerId': 'p3', 'text': null});
+    await tester.pumpAndSettle();
+    expect(find.text('入力中'), findsNothing);
     expect(find.byTooltip('共有する'), findsOneWidget);
     // キーボードが出て FOW が縮んでも(閉じて伸び戻る間も)compact に切り替わらず、入力欄と
     // 選んでいたタブが残る (D-178: 以前は TextField ごと消えてキーボードが一瞬で閉じていた)。

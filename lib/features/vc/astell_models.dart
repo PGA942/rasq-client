@@ -495,3 +495,30 @@ class AstellTranscript {
         createdAt: _date(j['createdAt']),
       );
 }
+
+/// ほかの参加者の入力中の下書き (D-311)。保存されない。`startedAt` = 書き始め(サーバーの時刻)で、
+/// チャットのその位置に差し込む。
+@immutable
+class AstellDraft {
+  const AstellDraft({required this.peerId, required this.accountId, required this.handle, required this.displayName, required this.text, required this.startedAt});
+  final String peerId;
+  final String accountId;
+  final String handle;
+  final String displayName;
+  final String text;
+  final DateTime startedAt;
+
+  /// `{"type":"draft",…}`。`text` が null / 空なら取り消し(null を返す)。
+  static AstellDraft? fromJson(Map<String, Object?> j) {
+    final text = j['text'] as String?;
+    if (text == null || text.trim().isEmpty) return null;
+    return AstellDraft(
+      peerId: j['peerId'] as String? ?? '',
+      accountId: j['accountId'] as String? ?? '',
+      handle: j['handle'] as String? ?? '',
+      displayName: j['displayName'] as String? ?? '',
+      text: text,
+      startedAt: _date(j['startedAt']),
+    );
+  }
+}

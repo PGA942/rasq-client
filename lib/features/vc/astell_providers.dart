@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
+import '../child_safe/child_gate.dart';
+import '../child_safe/child_safe_policy.dart';
 import '../settings/settings_dsl.dart';
 import '../../session/session_providers.dart';
 import 'astell_client.dart';
@@ -98,6 +100,7 @@ class AstellSessionState {
     this.peers = const [],
     this.shares = const [],
     this.transcripts = const [],
+    this.drafts = const {},
     this.connected = false,
     this.micOn = false,
     this.captionsOn = true,
@@ -117,6 +120,9 @@ class AstellSessionState {
   final List<AstellPeer> peers;
   final List<AstellShare> shares;
   final List<AstellTranscript> transcripts;
+
+  /// ほかの参加者の入力中の下書き (D-311)。peerId ごと。
+  final Map<String, AstellDraft> drafts;
   final bool connected;
 
   /// マイク(音声は M5 後段 — 今は表示状態だけ)。
@@ -159,6 +165,7 @@ class AstellSessionState {
     List<AstellPeer>? peers,
     List<AstellShare>? shares,
     List<AstellTranscript>? transcripts,
+    Map<String, AstellDraft>? drafts,
     bool? connected,
     bool? micOn,
     bool? captionsOn,
@@ -180,6 +187,7 @@ class AstellSessionState {
         peers: peers ?? this.peers,
         shares: shares ?? this.shares,
         transcripts: transcripts ?? this.transcripts,
+        drafts: drafts ?? this.drafts,
         connected: connected ?? this.connected,
         micOn: micOn ?? this.micOn,
         captionsOn: captionsOn ?? this.captionsOn,
@@ -247,7 +255,15 @@ class AstellSession extends Notifier<AstellSessionState?> {
         final p = m['peer'];
         if (p is Map) state = s.copyWith(peers: [...s.peers, AstellPeer.fromJson(p.cast<String, Object?>())]);
       case 'peer-left':
-        state = s.copyWith(peers: [for (final p in s.peers) if (p.peerId != m['peerId']) p]);
+        state = s.copyWith(peers: [for (final p in s.peers) if (p.peerId != m['peerId']) p], drafts: {...s.drafts}..remove(m['peerId']));
+      // ほかの参加者の入力中の下書き (D-311)。null / 空で取り消し。
+      case 'draft':
+        final peerId = m['peerId'] as String?;
+        if (peerId == null || peerId == s.myPeerId) break;
+        final d = AstellDraft.fromJson(m);
+        final next = {...s.drafts}..remove(peerId);
+        if (d != null) next[peerId] = d;
+        state = s.copyWith(drafts: next);
       case 'peer-state':
         final p = m['peer'];
         if (p is Map) {
@@ -299,8 +315,9 @@ class AstellSession extends Notifier<AstellSessionState?> {
         final x = m['share'];
         if (x is Map) {
           final sh = AstellShare.fromJson(x.cast<String, Object?>());
-          // 同じ id はピン留め等の更新 (D-146)。
+          // 同じ id はピン留め等の更新 (D-146)。発言が届いたら、その人の下書きは消す(取り消しより先に届くことがある)。
           state = s.copyWith(
+            drafts: s.drafts.values.any((d) => d.accountId == sh.accountId) ? {for (final e in s.drafts.entries) if (e.value.accountId != sh.accountId) e.key: e.value} : null,
             shares: s.shares.any((e) => e.id == sh.id) ? [for (final e in s.shares) e.id == sh.id ? sh : e] : [...s.shares, sh],
             clearNotice: sh.accountId == s.myAccountId, // 保留が明けた
           );
@@ -314,6 +331,44 @@ class AstellSession extends Notifier<AstellSessionState?> {
   }
 
   void share(String kind, Map<String, Object?> payload) => _conn?.send({'type': 'share', 'kind': kind, 'payload': payload});
+
+  // ── 入力中の下書き (D-311) ──
+  // 入力欄の文字を [astellDraftInterval] ごとに送る。送る前に刺激性を見て、強い言葉が入っていれば
+  // その回は送らない(打ちかけの一瞬でも相手に見えないように。制限モードに関係なく常に)。
+  // 相手側では、書き始めた時刻の位置に差し込まれる。
+  String _draftText = '';
+  String? _draftSent;
+  Timer? _draftTimer;
+
+  /// 入力欄の文字が変わった。
+  void setDraft(String text) {
+    _draftText = text;
+    if (text.trim().isEmpty) {
+      _flushDraft();
+      return;
+    }
+    _draftTimer ??= Timer.periodic(astellDraftInterval, (_) => _flushDraft());
+  }
+
+  /// 送った / 消したとき: すぐ取り消す。
+  void clearDraft() {
+    _draftText = '';
+    _flushDraft();
+  }
+
+  void _flushDraft() {
+    final text = _draftText.trim().isEmpty ? '' : _draftText;
+    if (text.isEmpty) {
+      _draftTimer?.cancel();
+      _draftTimer = null;
+      if (_draftSent != null) _conn?.send({'type': 'draft', 'text': null});
+      _draftSent = null;
+      return;
+    }
+    if (text == _draftSent || !astellDraftAllowed(text)) return;
+    _conn?.send({'type': 'draft', 'text': text});
+    _draftSent = text;
+  }
 
   /// ルーム設定の更新結果(PATCH の応答)を反映する。
   void applyRoom(AstellRoom room) {
@@ -451,6 +506,10 @@ class AstellSession extends Notifier<AstellSessionState?> {
   /// 切断は待たない — ソケットの close 完了(相手側の done 配送)に UI を
   /// 引きずられないため。購読は先に外すので、以後のメッセージは無視される。
   Future<void> _teardown() async {
+    _draftTimer?.cancel();
+    _draftTimer = null;
+    _draftText = '';
+    _draftSent = null;
     final sub = _sub;
     final conn = _conn;
     _sub = null;
@@ -461,3 +520,11 @@ class AstellSession extends Notifier<AstellSessionState?> {
 }
 
 final astellSessionProvider = NotifierProvider<AstellSession, AstellSessionState?>(AstellSession.new);
+
+/// 下書きを送る間隔 (D-311)。
+const astellDraftInterval = Duration(seconds: 1);
+
+/// この下書きを相手に見せてよいか (D-311): 刺激性(語彙の判定、emotion8 と同じ軸)が
+/// チャイルドセーフの「きびしめ」の閾値に届いたら見せない。止めるのは下書きの表示だけで、
+/// 送った発言はふだんどおり(処置があれば検閲)。
+bool astellDraftAllowed(String text) => ChildGate.stimulusOfText(text) < ChildSafeLevel.strict.stimulusThreshold;
