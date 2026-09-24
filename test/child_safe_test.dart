@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart' show sha512;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -93,6 +94,38 @@ void main() {
   group('署名 (ストアの鍵の ed25519、sha512(canonical JSON))', () {
     test('canonical JSON: キーを再帰的に並べ、空白なし、UTF-8 のまま', () {
       expect(canonicalJson({'b': 1, 'a': {'d': [true, null], 'c': 'あ"'}}), '{"a":{"c":"あ\\"","d":[true,null]},"b":1}');
+    });
+
+    // Central `docs/API.md`「署名」の参照のベクトル(Central `policy::tests::reference_vector_matches_the_contract` と同じ値)。
+    test('参照のベクトル: Central と同じ決まった形 / SHA-512 / 署名', () async {
+      final settings = jsonDecode(referenceSettingsJson);
+      final canonical = canonicalJson({'childAccountId': '00000000-0000-4000-8000-000000000001', 'revision': 7, 'settings': settings, 'issuedAt': '2026-09-24T12:34:56Z'});
+      expect(canonical, referenceCanonical);
+      expect(sha512.convert(utf8.encode(canonical)).toString(), referenceSha512);
+      final digest = childSafeSigningDigest(childAccountId: '00000000-0000-4000-8000-000000000001', revision: 7, settings: settings, issuedAt: '2026-09-24T12:34:56Z');
+      expect(digest, hasLength(64));
+      expect(digest, sha512.convert(utf8.encode(referenceCanonical)).bytes);
+      // 試験の鍵(秘密鍵 = 32 バイトすべて 0x07)。Central が作った署名を、アプリの検証の道(SHA-512 の生 64 バイトに ed25519)で確かめる。
+      final signer = await TestSigner.create(7);
+      expect(signer.publicKey, referencePublicKey);
+      expect(await signer.sign('00000000-0000-4000-8000-000000000001', 7, settings, '2026-09-24T12:34:56Z'), referenceSignature);
+      Future<bool> check(Object? set, {int revision = 7}) => verifyChildSafeSignature(
+          publicKey: referencePublicKey, signature: referenceSignature, childAccountId: '00000000-0000-4000-8000-000000000001', revision: revision, settings: set, issuedAt: '2026-09-24T12:34:56Z');
+      expect(await check(settings), isTrue);
+      expect(await check(settings, revision: 8), isFalse);
+      expect(await check({...(settings as Map).cast<String, Object?>(), 'é': 2}), isFalse);
+    });
+
+    test('canonical JSON: UTF-8 のバイト順 / 決めていない値は断る(検証は false)', () async {
+      // UTF-16 の順なら 😀 (D83D) が ｚ (FF5A) より前。UTF-8 の順(Central)では後。
+      expect(canonicalJson({'😀': 1, 'ｚ': 2, 'é': 3, 'Z': 4}), '{"Z":4,"é":3,"ｚ":2,"😀":1}');
+      expect(canonicalJson({'s': '\u007f /\u0001'}), '{"s":"\u007f /\\u0001"}');
+      expect(canonicalJson(10.0), '10'); // Web では整数も double
+      expect(() => canonicalJson(1.5), throwsArgumentError);
+      expect(() => canonicalJson('\ud800'), throwsArgumentError);
+      expect(() => canonicalJson({1: 'x'}), throwsArgumentError);
+      final s = await TestSigner.create();
+      expect(await verifyChildSafeSignature(publicKey: s.publicKey, signature: await s.sign('k', 1, {'a': 1}, 't'), childAccountId: 'k', revision: 1, settings: {'a': 1.5}, issuedAt: 't'), isFalse);
     });
 
     test('正しい署名だけ通る(別のアカウント / 版 / 中身 / 鍵は落ちる)', () async {

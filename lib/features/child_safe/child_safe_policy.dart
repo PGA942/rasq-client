@@ -447,15 +447,89 @@ const raiFunctionGroups = <String, String>{
 
 // ── 署名 ───────────────────────────────────────────────────────────────
 
-/// canonical JSON: オブジェクトのキーを再帰的に並べ替え、空白を入れない。文字列の書き方は
-/// `jsonEncode` と同じ(`"` `\` と制御文字だけをエスケープし、ほかは UTF-8 のまま)。
+/// canonical JSON(Central `docs/API.md` の「署名」。参照のベクトルも同じ節)。**手で書く**(`jsonEncode` には頼らない):
+/// - オブジェクトのキーは **UTF-8 のバイト順**(Dart の `String.compareTo` は UTF-16 の順で、U+E000〜U+FFFF と
+///   U+10000 以上の並びが逆になる)。入れ子も同じ。配列の順はそのまま。空白は入れない。
+/// - 文字列は `"` `\` と U+0000〜U+001F だけをエスケープ(`\b` `\t` `\n` `\f` `\r` はその形、ほかは `\u00xx` の小文字)。
+///   それ以外(日本語 / `/` / U+007F / U+2028 など)は UTF-8 のまま。
+/// - 数は整数だけ。`null` / `true` / `false` はそのまま。
+///
+/// 決めていない値(小数 / 対になっていないサロゲート / Map・List 以外のオブジェクト)は [ArgumentError](署名の検証は false)。
 String canonicalJson(Object? v) {
-  if (v is Map) {
-    final keys = [for (final k in v.keys) '$k']..sort();
-    return '{${[for (final k in keys) '${jsonEncode(k)}:${canonicalJson(v[k])}'].join(',')}}';
+  final out = StringBuffer();
+  _writeCanonical(v, out);
+  return out.toString();
+}
+
+int _compareUtf8(String a, String b) {
+  final x = utf8.encode(a), y = utf8.encode(b);
+  final n = x.length < y.length ? x.length : y.length;
+  for (var i = 0; i < n; i++) {
+    if (x[i] != y[i]) return x[i] - y[i];
   }
-  if (v is List) return '[${[for (final e in v) canonicalJson(e)].join(',')}]';
-  return jsonEncode(v);
+  return x.length - y.length;
+}
+
+void _writeCanonical(Object? v, StringBuffer out) {
+  switch (v) {
+    case null:
+      out.write('null');
+    case bool b:
+      out.write(b ? 'true' : 'false');
+    case int i:
+      out.write(i);
+    case double d when d.isFinite && d == d.truncateToDouble() && d.abs() <= 9007199254740991:
+      out.write(d.toInt()); // Web では整数も double で届く
+    case String str:
+      _writeCanonicalString(str, out);
+    case Map m:
+      final keys = [
+        for (final k in m.keys)
+          if (k is String) k else throw ArgumentError.value(k, 'key', 'canonical JSON のキーは文字列だけです'),
+      ]..sort(_compareUtf8);
+      out.write('{');
+      for (var i = 0; i < keys.length; i++) {
+        if (i > 0) out.write(',');
+        _writeCanonicalString(keys[i], out);
+        out.write(':');
+        _writeCanonical(m[keys[i]], out);
+      }
+      out.write('}');
+    case List l:
+      out.write('[');
+      for (var i = 0; i < l.length; i++) {
+        if (i > 0) out.write(',');
+        _writeCanonical(l[i], out);
+      }
+      out.write(']');
+    default:
+      throw ArgumentError.value(v, 'value', 'canonical JSON にできない値です');
+  }
+}
+
+const _shortEscapes = {0x08: r'\b', 0x09: r'\t', 0x0a: r'\n', 0x0c: r'\f', 0x0d: r'\r', 0x22: r'\"', 0x5c: r'\\'};
+
+void _writeCanonicalString(String s, StringBuffer out) {
+  out.write('"');
+  final units = s.codeUnits;
+  for (var i = 0; i < units.length; i++) {
+    final c = units[i];
+    final short = _shortEscapes[c];
+    if (short != null) {
+      out.write(short);
+    } else if (c < 0x20) {
+      out.write(r'\u00');
+      out.write(c.toRadixString(16).padLeft(2, '0'));
+    } else if (c >= 0xd800 && c <= 0xdbff && i + 1 < units.length && units[i + 1] >= 0xdc00 && units[i + 1] <= 0xdfff) {
+      out.writeCharCode(c);
+      out.writeCharCode(units[++i]);
+    } else if (c >= 0xd800 && c <= 0xdfff) {
+      throw ArgumentError.value(s, 'string', '対になっていないサロゲートがあります');
+    } else {
+      out.writeCharCode(c);
+    }
+  }
+  out.write('"');
 }
 
 /// 署名の対象(SHA-512 の生 64 バイト)。
