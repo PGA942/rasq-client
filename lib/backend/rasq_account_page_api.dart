@@ -557,6 +557,65 @@ class RasqPublicProfile {
       );
 }
 
+/// SNS のプロフィールから引いた、その人の RASQ アカウント (D-312。`GET /accounts/by-sns`)。
+/// 中身は公開ページ (`GET /accounts/{handle}`) に出ているものだけ。
+@immutable
+class RasqSnsOwner {
+  const RasqSnsOwner({required this.account, this.snsAccounts = const []});
+  final RasqPostAuthor account;
+
+  /// 公開ページのタイルと同じもの(引いたアカウント自身も含む)。
+  final List<RasqSnsTile> snsAccounts;
+
+  static RasqSnsOwner? fromJson(Map<String, Object?> j) {
+    final a = RasqPostAuthor.fromJson(j['account']);
+    if (a == null || a.handle.isEmpty) return null;
+    return RasqSnsOwner(account: a, snsAccounts: [for (final s in j['snsAccounts'] as List? ?? const []) if (s is Map) RasqSnsTile.fromJson(s.cast<String, Object?>())]);
+  }
+}
+
+/// SNS のプロフィールに並べる「ほかのアカウント」(D-312)。
+///
+/// 省くもの: **見ているアカウント自身**と、**自己紹介(と補足の項目)に書いてあるアカウント**。見せたいアカウントは
+/// たいてい自己紹介に書いてあるので、同じものを 2 度出さない。書いてあるかは、`@handle@instance` / `instance/@handle` /
+/// タイルの行き先の URL / ドメイン形のハンドル(Bluesky)/ 同じサーバーなら `@handle` で見る(大小文字は区別しない)。
+List<RasqSnsTile> snsProfileOtherAccounts(RasqSnsOwner owner, {required AccountId viewing, String? bio, Iterable<String> extraTexts = const []}) {
+  final text = [bio ?? '', ...extraTexts].join('\n').toLowerCase();
+  return [
+    for (final t in owner.snsAccounts)
+      if (!_isSameAccount(t, viewing) && !snsAccountMentionedIn(t, text, viewingInstance: viewing.instance)) t,
+  ];
+}
+
+bool _isSameAccount(RasqSnsTile t, AccountId a) =>
+    t.kind == a.kind.name && t.instance.toLowerCase() == a.instance.toLowerCase() && t.handle.toLowerCase() == a.handle.toLowerCase();
+
+/// [lowerText](小文字にした本文)に、タイルのアカウントが書いてあるか。
+bool snsAccountMentionedIn(RasqSnsTile t, String lowerText, {String? viewingInstance}) {
+  if (lowerText.isEmpty) return false;
+  final handle = t.handle.toLowerCase().replaceFirst(RegExp('^@'), '');
+  final host = t.instance.toLowerCase();
+  if (handle.isEmpty) return false;
+  final needles = <String>[
+    '@$handle@$host',
+    '$host/@$handle',
+    '$host/users/$handle',
+    'bsky.app/profile/$handle',
+    if (t.profileUrl != null) t.profileUrl!.toString().toLowerCase().replaceFirst(RegExp('^https?://'), '').replaceFirst(RegExp(r'/+$'), ''),
+  ];
+  for (final n in needles) {
+    if (n.isNotEmpty && _containsToken(lowerText, n)) return true;
+  }
+  // ドメイン形のハンドル(Bluesky の `taro.bsky.social`)は、それだけで 1 つに決まる。
+  if (handle.contains('.') && _containsToken(lowerText, handle)) return true;
+  // 同じサーバーの人は `@handle` だけで書く(Misskey / Mastodon のローカルのメンション)。
+  if (viewingInstance != null && viewingInstance.toLowerCase() == host && RegExp('(^|[^\\w@.-])@${RegExp.escape(handle)}(?![\\w@-]|\\.\\w)').hasMatch(lowerText)) return true;
+  return false;
+}
+
+/// [needle] が、前後を別の語につながれずに現れるか(`@taro` が `@taroo` に、`mk.example/@taro` が `sub.mk.example/@taro` に当たらないように)。
+bool _containsToken(String text, String needle) => RegExp('(^|[^\\w.-])${RegExp.escape(needle)}(?![\\w-]|\\.\\w)').hasMatch(text);
+
 /// http(s) の URL だけ受ける(サーバーから来た値でも、リンク / 画像に使う前に確かめる)。
 Uri? _http(Object? v) {
   if (v is! String || v.isEmpty) return null;
@@ -569,6 +628,18 @@ class RasqAccountPageApi {
   final OrgateClient _client;
 
   Future<RasqPublicProfile> profile(String handle) async => RasqPublicProfile.fromJson(await _client.getJson('/accounts/${Uri.encodeComponent(handle)}'));
+
+  /// SNS アカウント(`kind:instance:handle`)→ それを公開ページに出している RASQ アカウント (D-312)。
+  /// **トークンを付けずに**聞く(誰のプロフィールを見ているかを、見ている人のアカウントに結びつけない)。
+  /// つながっていない / 出していない / 本人が切っている → null(サーバーはどれも同じ 404)。
+  Future<RasqSnsOwner?> bySns(String accountKey) async {
+    try {
+      return RasqSnsOwner.fromJson(await _client.withToken(() => null).getJson('/accounts/by-sns', {'key': accountKey}));
+    } on OrgateException catch (e) {
+      if (e.code.code == '404' || e.code.code == '400') return null;
+      rethrow;
+    }
+  }
 
   Future<RasqPostList> posts(String handle) async {
     final j = await _client.getJson('/accounts/${Uri.encodeComponent(handle)}/posts');
@@ -706,6 +777,37 @@ final rasqAccountPageProvider = FutureProvider.autoDispose.family<({RasqPublicPr
   if (api == null) throw StateError('RASQ Central の接続先が未設定です');
   final (profile, posts) = await (api.profile(handle), api.posts(handle)).wait;
   return (profile: profile, posts: posts);
+});
+
+/// [rasqSnsOwnerProvider] の控え。同じプロフィールを行き来するたびに Central へ聞き直さない(10 分)。
+class RasqSnsOwnerCache {
+  static const ttl = Duration(minutes: 10);
+  static const maxEntries = 200;
+  final _entries = <String, ({DateTime at, Future<RasqSnsOwner?> value})>{};
+
+  Future<RasqSnsOwner?> get(String key, Future<RasqSnsOwner?> Function() fetch) {
+    final hit = _entries[key];
+    if (hit != null && DateTime.now().difference(hit.at) < ttl) return hit.value;
+    if (_entries.length >= maxEntries) _entries.remove(_entries.keys.first);
+    // 失敗(つながらない等)は null として控える(出さないだけ。プロフィールを開くたびに待たせない)。
+    final value = fetch().then<RasqSnsOwner?>((v) => v, onError: (Object _) => null);
+    _entries[key] = (at: DateTime.now(), value: value);
+    return value;
+  }
+
+  void clear() => _entries.clear();
+}
+
+final rasqSnsOwnerCacheProvider = Provider<RasqSnsOwnerCache>((ref) {
+  ref.watch(rasqAccountPageApiProvider); // 接続先が変わったら捨てる
+  return RasqSnsOwnerCache();
+});
+
+/// SNS のプロフィールに出す、その人の RASQ アカウント (D-312)。Central が無い / 404 / 失敗は、どれも null(何も出さない)。
+final rasqSnsOwnerProvider = FutureProvider.autoDispose.family<RasqSnsOwner?, String>((ref, accountKey) async {
+  final api = ref.watch(rasqAccountPageApiProvider);
+  if (api == null || accountKey.isEmpty) return null;
+  return ref.watch(rasqSnsOwnerCacheProvider).get(accountKey.toLowerCase(), () => api.bySns(accountKey));
 });
 
 /// 投稿 1 つのスレッド。

@@ -42,23 +42,7 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
       ..showSnackBar(SnackBar(content: Text(m)));
   }
 
-  /// タイルのタップ: その SNS にログイン中ならアプリ内のユーザーページ、そうでなければブラウザ。
-  Future<void> _openTile(RasqSnsTile t) async {
-    final sessions = ref.read(sessionsProvider).value?.allSessions ?? const [];
-    final mine = sessions.where((s) => s.account.instance == t.instance && s.account.kind.name == t.kind).firstOrNull;
-    if (mine != null) {
-      try {
-        final session = ref.read(pluginRegistryProvider).session(mine);
-        final user = await session.userByHandle(t.handle, host: t.instance);
-        if (user != null && mounted) return context.pushUser(user.summary);
-      } catch (_) {
-        // 取れなければブラウザへ。
-      }
-    }
-    final url = t.profileUrl;
-    if (url == null) return _toast('このアカウントの行き先が分かりません');
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) _toast('開けませんでした: $url');
-  }
+  Future<void> _openTile(RasqSnsTile t) => openRasqSnsTile(context, ref, t);
 
   /// 「RASQ に投稿」= いつものコンポーザーを RASQ 指定で開く (D-275。SNS の投稿と同じ作り方: 注釈 / 公開範囲 / 投票 / 画像)。
   Future<void> _compose(RasqPostList posts) async {
@@ -116,6 +100,32 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
       ),
     );
   }
+}
+
+/// SNS アカウントのタイルのタップ: その SNS にログイン中ならアプリ内のユーザーページ、そうでなければブラウザ。
+/// アカウントページと、SNS のプロフィールの「RASQ アカウント」欄 (D-312) で使う。
+Future<void> openRasqSnsTile(BuildContext context, WidgetRef ref, RasqSnsTile t) async {
+  void toast(String m) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(m)));
+  }
+
+  final sessions = ref.read(sessionsProvider).value?.allSessions ?? const [];
+  final mine = sessions.where((s) => s.account.instance == t.instance && s.account.kind.name == t.kind).firstOrNull;
+  if (mine != null) {
+    try {
+      final session = ref.read(pluginRegistryProvider).session(mine);
+      final user = await session.userByHandle(t.handle, host: t.instance);
+      if (user != null && context.mounted) return context.pushUser(user.summary);
+    } catch (_) {
+      // 取れなければブラウザへ。
+    }
+  }
+  final url = t.profileUrl;
+  if (url == null) return toast('このアカウントの行き先が分かりません');
+  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) toast('開けませんでした: $url');
 }
 
 Widget _message(BuildContext context, String text) => ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [Text(text, style: RasqTypography.bodySmall.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))]);
