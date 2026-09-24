@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../features/catalog/catalog_screen.dart';
+import '../features/child_safe/child_safe_providers.dart';
+import '../features/child_safe/child_safe_screens.dart';
+import '../features/child_safe/guardian_screen.dart';
+import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../features/dev/wasm_plugin_screen.dart';
 import '../features/dm/dm_room_screen.dart';
 import '../features/dm/dm_screen.dart';
@@ -129,6 +133,14 @@ abstract final class Routes {
   static const storeInstalled = '/store/installed';
   static String storeInstalledPlugin(String id) => '/store/installed/${Uri.encodeComponent(id)}';
 
+  /// チャイルドセーフ (D-307): 入口 / 保護者 / 子の設定 / コードでつなぐ / コードでログイン / 設定待ちの鍵。
+  static const childSafe = '/child-safe';
+  static const childSafeGuardian = '/child-safe/guardian';
+  static String childSafeChild(String handle) => '/child-safe/guardian/${Uri.encodeComponent(handle)}';
+  static const childSafePair = '/child-safe/pair';
+  static const childSafeLogin = '/child-safe/login';
+  static const childSafePending = '/child-safe/pending';
+
   /// レビュー TL (D-137)。
   static String storePluginReviews(String id) => '/store/plugin/${Uri.encodeComponent(id)}/reviews';
 }
@@ -168,6 +180,8 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefresh();
   ref.listen(sessionsProvider, (_, _) => refresh.refresh());
   ref.listen(rasqAccountsProvider, (_, _) => refresh.refresh());
+  // チャイルドセーフ (D-307): 設定待ちの鍵 / 止めた画面。
+  ref.listen(childGateProvider, (_, _) => refresh.refresh());
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -184,7 +198,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       // 未ログインでも開ける画面: カタログ/開発用、オンボーディング、接続先設定
       // (オンボーディングから Central の接続先を入れるため)。
       // RASQ アカウントへのログイン (D-296) も、オンボーディングから開く。
-      const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server', '${Routes.settings}/account-login'};
+      const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server', '${Routes.settings}/account-login', Routes.childSafeLogin};
+      // チャイルドセーフ (D-307): 保護者が決めるまで(署名を確かめた制限が無いあいだ)は、設定待ちの画面だけ。
+      // ログインし直すための画面(RASQ アカウント / 保護者のコード / 接続先)は開ける。
+      final gate = ref.read(childGateProvider);
+      if (gate.locked) {
+        const whileLocked = {Routes.childSafePending, '${Routes.settings}/account-login', '${Routes.settings}/server', Routes.childSafeLogin};
+        return whileLocked.contains(loc) ? null : Routes.childSafePending;
+      }
+      if (loc == Routes.childSafePending) return Routes.home;
+      final blocked = gate.routeBlockReason(loc);
+      if (blocked != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(rootMessengerKeyProvider).currentState
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(blocked))));
+        return Routes.home;
+      }
       // RASQ アカウントが無いあいだは、**SNS のログインより先に** RASQ アカウントの画面へ (D-138 → D-301)。
       // 新規の端末(台帳が空)も、ログアウトしたあとも同じ入口。SNS ログイン済みの端末は移行で済み扱い。
       // そこから「SNS アカウントだけで使う」を選べば `Routes.login` へ行き、`onLogin` で留まる。
@@ -316,6 +345,15 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, s) => ReviewTimelineScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
           GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const WasmPluginScreen()),
           GoRoute(path: Routes.onboarding, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingScreen()),
+          // チャイルドセーフ (D-307)。
+          GoRoute(path: Routes.childSafe, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ChildSafeHubScreen(), routes: [
+            GoRoute(path: 'guardian', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const GuardianScreen(), routes: [
+              GoRoute(path: ':handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => GuardianChildScreen(handle: Uri.decodeComponent(s.pathParameters['handle']!))),
+            ]),
+            GoRoute(path: 'pair', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ChildPairScreen()),
+            GoRoute(path: 'login', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ChildLoginScreen()),
+            GoRoute(path: 'pending', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ChildSafePendingScreen()),
+          ]),
           GoRoute(
             path: Routes.login,
             parentNavigatorKey: _appNavigatorKey,

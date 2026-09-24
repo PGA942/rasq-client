@@ -15,6 +15,7 @@ import 'session_storage.dart';
 import 'bluesky_auth.dart';
 import 'mixi2_auth.dart';
 import '../features/plugins/fetch_shape_telemetry.dart';
+import '../features/child_safe/child_safe_providers.dart' show childSnsAllowProvider;
 
 /// wasm SNS サンプルの pluginId(dev「実登録」とレジストリ解決で共用)。
 const wasmSamplePluginId = 'misskey-wasm-sample';
@@ -156,6 +157,9 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
   @override
   Future<SessionsState> build() async {
     // 現在の RASQ アカウント (D-138) が変われば見せるセッションも変わる。
+    // 見守り中 (D-307) は、保護者が許した SNS(種類 / サーバー)のセッションだけを見せる。
+    // (箱はチャイルドセーフが書く。ここからチャイルドセーフには依存しない。)
+    ref.watch(childSnsAllowProvider);
     final ledger = await ref.watch(rasqAccountsProvider.future);
     final raw = await ref.read(sessionStorageProvider).read(storageKey);
     if (raw == null) return const SessionsState();
@@ -174,7 +178,11 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
   /// なら所属内の先頭へ寄せる。
   SessionsState _view(List<AccountSession> all, {String? currentKey, bool bundleView = false, RasqAccountsState? ledger}) {
     final owner = (ledger ?? ref.read(rasqAccountsProvider).value ?? const RasqAccountsState()).current;
-    final visible = owner == null ? all : [for (final s in all) if (owner.sessionKeys.contains(s.account.key)) s];
+    final sns = ref.read(childSnsAllowProvider);
+    final visible = [
+      for (final s in all)
+        if ((owner == null || owner.sessionKeys.contains(s.account.key)) && (sns == null || sns.permits(s.account.kind.name, s.account.instance))) s,
+    ];
     final key = visible.any((s) => s.account.key == currentKey) ? currentKey : visible.firstOrNull?.account.key;
     return SessionsState(sessions: visible, currentKey: key, bundleView: bundleView, allSessions: all);
   }
@@ -188,6 +196,8 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
   }
 
   Future<void> add(AuthResult result) async {
+    final sns = ref.read(childSnsAllowProvider);
+    if (sns != null && !sns.addAccounts) throw StateError('保護者が SNS アカウントの追加を止めています');
     final cur = state.value ?? const SessionsState();
     // 新しいログインは現在の RASQ アカウントに所属させる (D-138)。
     await ref.read(rasqAccountsProvider.notifier).addSessionKey(result.session.account.key);

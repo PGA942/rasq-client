@@ -168,6 +168,25 @@ Map<String, double> emotionLexiconOf(String text) {
   return out;
 }
 
+/// 語彙ルールに当たった箇所(チャイルドセーフのコンポーザーの判定が、止めた範囲に印を付けるため。D-307)。
+/// 位置は [text] の中の添字(小文字にしても長さが変わらない字の範囲で正しい)。先頭から順。
+List<({String emotion, int start, int end})> emotionLexiconMatches(String text) {
+  final lower = text.toLowerCase();
+  final out = <({String emotion, int start, int end})>[];
+  for (final e in TendencyProfile.emotions) {
+    for (final w in _emotionLexicon[e]!) {
+      final key = w.toLowerCase();
+      var idx = lower.indexOf(key);
+      while (idx >= 0) {
+        out.add((emotion: e, start: idx, end: idx + key.length));
+        idx = lower.indexOf(key, idx + key.length);
+      }
+    }
+  }
+  out.sort((a, b) => a.start != b.start ? a.start.compareTo(b.start) : b.end.compareTo(a.end));
+  return out;
+}
+
 /// プロファイルへの適合度 (0〜1) と、その内訳。
 @immutable
 class TendencyScore {

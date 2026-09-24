@@ -6,6 +6,7 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../rai/rai_overlay.dart';
 import '../rai/rai_providers.dart';
 
@@ -39,6 +40,9 @@ class LoginScreen extends ConsumerWidget {
               child: Text('初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。',
                   style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
             ),
+            // チャイルドセーフ (D-307): 保護者が SNS アカウントの追加を止めていれば、そう伝える(ルーターも先へ進ませない)。
+            if (!ref.watch(childGateProvider).canAddAccounts)
+              Text('保護者が SNS アカウントの追加を止めています', key: const ValueKey('childSafe.login.blocked'), style: RasqTypography.bodySmall.copyWith(color: scheme.error), textAlign: TextAlign.center),
             const SizedBox(height: RasqSpacing.lg),
             _ServiceButton(kind: SnsKind.bluesky, label: 'Blueskyでログイン', onTap: () => context.push(Routes.loginBluesky)),
             _ServiceButton(kind: SnsKind.misskey, label: 'Misskeyでログイン', onTap: () => context.push(Routes.loginMisskey)),

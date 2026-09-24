@@ -27,6 +27,7 @@ import '../trend/tendency_profile.dart';
 import 'post_duplicates.dart';
 import '../relational/relational_providers.dart' show mlGatewayProvider;
 import '../settings/settings_dsl.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 
 /// カスタム TL の宣言 (M5e / D-080): 現在のセッションが wasm 境界
 /// ([WasmSnsSession])のとき、その TL レンダラー契約(`tl.timelines`)から
@@ -130,9 +131,36 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     return s == null ? null : ref.read(pluginRegistryProvider).session(s);
   }
 
+  /// 見守りの時間 (D-307): 全アカウントのグローバル TL を 1 本に合流し、許された話題だけを流す。
+  Future<List<Post>> _fetchChildWindow() async {
+    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final registry = ref.read(pluginRegistryProvider);
+    final out = <Post>[];
+    final seen = <String>{};
+    for (final s in sessions) {
+      try {
+        final session = registry.session(s);
+        final kinds = session.timelines;
+        final kind = kinds.contains(TimelineKind.global) ? TimelineKind.global : (kinds.contains(TimelineKind.local) ? TimelineKind.local : TimelineKind.home);
+        final page = await session.timeline(kind);
+        _applyStates(page.items, await session.actionStates(page.items));
+        for (final p in page.items) {
+          if (seen.add('${p.author.key}/${p.id}')) out.add(p);
+        }
+      } catch (e) {
+        debugPrint('child-safe window TL ${s.account.key}: $e');
+      }
+    }
+    out.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return ref.read(childGateProvider).filterPosts(out);
+  }
+
   @override
   Future<TimelineState> build() async {
     ref.watch(currentAccountProvider); // rebuild per account
+    // チャイルドセーフ (D-307): 判定の強さ / 止める話題 / 見守りの時間が変われば取り直す。
+    ref.watch(childGateProvider.select((g) => g.timelineSignature));
+    if (kind == childSafeWindowKind) return TimelineState(posts: await _fetchChildWindow());
     ref.onDispose(() {
       _clockTimer?.cancel();
       _clockTimer = null;
@@ -250,7 +278,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       } catch (_) {}
     }
     _armClock(nodeGraphClockInterval(graph));
-    final folded = _foldDuplicates(result);
+    final folded = ref.read(childGateProvider).filterPosts(_foldDuplicates(result));
     ref.read(emojiCacheProvider.notifier).request({for (final p in folded) ...InlineSpans.emojiShortcodes(p.body), for (final p in folded) ...InlineSpans.emojiShortcodes(p.author.displayName)});
     return folded;
   }
@@ -332,6 +360,13 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
     _bundleCursors = next;
     out.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    // チャイルドセーフ (D-307): 見せない投稿を落とす。
+    final visible = ref.read(childGateProvider).filterPosts(out);
+    if (visible.length != out.length) {
+      out
+        ..clear()
+        ..addAll(visible);
+    }
     _applyStates(out, states);
     ref.read(emojiCacheProvider.notifier).request({for (final p in out) ...InlineSpans.emojiShortcodes(p.body), for (final p in out) ...InlineSpans.emojiShortcodes(p.author.displayName)});
     // カーソルはアカウント別に持つので、状態側にはダミーの続きトークンだけ渡す。
@@ -353,7 +388,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         final deco = await session.timelinePlugin.customize(spec.id, composed);
         _applyStates(composed, states);
         ref.read(emojiCacheProvider.notifier).request({for (final p in composed) ...InlineSpans.emojiShortcodes(p.body)});
-        return (Page(items: composed, nextCursor: base.nextCursor), states, deco);
+        return (Page(items: ref.read(childGateProvider).filterPosts(composed), nextCursor: base.nextCursor), states, deco);
       }
     }
     Page<Post> page;
@@ -471,6 +506,9 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         debugPrint('tendency: $e');
       }
     }
+    // チャイルドセーフ (D-307): 判定の強さ / 止める話題で見せない投稿を落とす(全 TL 共通、最後に掛ける)。
+    final gate = ref.read(childGateProvider);
+    if (gate.supervised) page = Page(items: gate.filterPosts(page.items), nextCursor: page.nextCursor);
     _applyStates(page.items, states);
     ref.read(emojiCacheProvider.notifier).request({for (final p in page.items) ...InlineSpans.emojiShortcodes(p.body), for (final p in page.items) ...InlineSpans.emojiShortcodes(p.author.displayName)});
     return (page, states, const TimelineDecorations());
@@ -495,6 +533,10 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   Future<void> refresh() async {
     final session = _session;
     if (session == null) return;
+    if (kind == childSafeWindowKind) {
+      state = AsyncData(TimelineState(posts: await _fetchChildWindow()));
+      return;
+    }
     try {
       if (kind == TimelineKind.bundle) {
         _bundleCursors = {};
@@ -584,6 +626,9 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
 }
 
 final timelineProvider = AsyncNotifierProvider.family<TimelineNotifier, TimelineState, TimelineKind>(TimelineNotifier.new);
+
+/// 見守りの時間の 1 本の TL (D-307)。ホームのタブはこれだけになる(フォロー中 / AsTell もここへ畳む)。
+const childSafeWindowKind = TimelineKind('childsafe.window', '見守りの時間', extensible: false);
 
 /// 取得ノード (D-097) の kind 解決(TL/関連/トレンドで共用): リストは
 /// 名前 → id、DM は相手ハンドル → ルームの peer id をアプリ側で引く。

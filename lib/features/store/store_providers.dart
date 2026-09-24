@@ -9,6 +9,7 @@ import '../../backend/orgate_client.dart';
 import '../settings/settings_dsl.dart';
 import 'http_store_client.dart';
 import '../plugins/slot_plugins.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../session/bluesky_auth.dart' show blueskyPluginId;
 import '../../session/mixi2_auth.dart' show mixi2PluginId;
 import '../../session/session_providers.dart' show mastodonPluginId;
@@ -133,6 +134,9 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
   /// 「Ver.〇〇をインストール」, D-137)。省略時は stable 最新。既に別の版が
   /// 入っていれば置き換える(アカウントごとの版固定は M4 後段)。
   Future<({String? error, ArtifactVerification? verification})> install(String pluginId, {String? version}) async {
+    // チャイルドセーフ (D-307): 保護者のインストールの決め(none / listed / any)。
+    final childBlocked = ref.read(childGateProvider).installBlockReason(pluginId);
+    if (childBlocked != null) return (error: childBlocked, verification: null);
     final client = ref.read(storeClientProvider);
     final InstallManifest? m;
     try {

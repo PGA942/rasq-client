@@ -12,6 +12,8 @@ import '../../app/router.dart';
 import '../lists/lists_screens.dart' show listsProvider, savedFeedsProvider;
 import '../trend/genre_topics.dart';
 import '../trend/tendency_profile.dart';
+import '../child_safe/child_gate.dart';
+import '../child_safe/child_safe_providers.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../home/timeline_providers.dart';
@@ -219,6 +221,16 @@ const raiFunctionUsage = <String>[
   'app.actions(): この SNS で自動化できる投稿アクション一覧を取る',
 ];
 
+/// 見守り中 (D-307) に system へ出す関数の一覧: 行の関数が**全部**呼べる行だけ。
+List<String> raiFunctionUsageFor(ChildGate gate) {
+  if (!gate.supervised) return raiFunctionUsage;
+  final name = RegExp(r'(?:^|・)([a-z][\w.]*)\(');
+  return [
+    for (final u in raiFunctionUsage)
+      if (name.allMatches(u.split(': ').first).every((m) => gate.raiBlockReason(m.group(1)!) == null)) u,
+  ];
+}
+
 /// web 検索の行 (D-228): 使えるとき([RaiWebSearch.available])だけ system の一覧に足す。
 const raiWebSearchUsage = 'web.search(q=語や質問, count=数): web を検索して答えや上位の題名 / URL / 説明を取る(アプリの外の知識が要るとき)';
 
@@ -239,6 +251,9 @@ class RaiFunctionRunner {
   int get budget => raiInjectionBudgetChars(contextTokens);
 
   Future<RaiFunctionResult> run(RaiFunctionCall c) async {
+    // チャイルドセーフ (D-307): 保護者が許したまとまりの関数だけ。まとまりの分からない関数は、見守り中は呼ばない。
+    final blocked = ref.read(childGateProvider).raiBlockReason(c.name);
+    if (blocked != null) return RaiFunctionResult(name: c.name, text: blocked, ok: false);
     final alt = raiNonAutomatable[c.name];
     if (alt != null) {
       final r = await run(RaiFunctionCall(name: alt, args: c.args));

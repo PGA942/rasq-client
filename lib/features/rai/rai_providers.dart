@@ -18,6 +18,7 @@ import 'rai_automation.dart';
 import 'rai_functions.dart';
 import 'rai_stats.dart';
 import 'rai_web_search.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'rai_layout.dart' show raiPanelWidth;
 import 'rai_widgets.dart' show splitSpeechLines, raiBarContext;
 
@@ -307,7 +308,8 @@ class RaiController extends Notifier<RaiState> {
     final op = index?.operation(opId);
     if (index == null || op == null) return;
     final plan = _plans[opId] ?? RaiAutoPlan.build(op, index.expand(op), state.query ?? '');
-    if (!plan.hasBound) {
+    // 関数優先の自動化は、見守り中は保護者が許したときだけ (D-307)。許していなければ案内で進める。
+    if (!plan.hasBound || !ref.read(childGateProvider).raiAutomation) {
       await runInstruction(opId);
       return;
     }
@@ -799,7 +801,8 @@ class RaiController extends Notifier<RaiState> {
   /// web 検索 (D-228) は使えるときだけ足す(第一期では無効)。
   String _functionsHint() {
     final web = ref.read(raiWebSearchProvider).available;
-    return '\n使える関数(必要なときだけ本文末尾に [[call:<関数>|引数=値|…]] と書く。取得系は結果を受け取ってから答え直す):\n${[...raiFunctionUsage, if (web) raiWebSearchUsage].map((u) => '- $u').join('\n')}';
+    // チャイルドセーフ (D-307): 保護者が許したまとまりの関数だけを並べる。
+    return '\n使える関数(必要なときだけ本文末尾に [[call:<関数>|引数=値|…]] と書く。取得系は結果を受け取ってから答え直す):\n${[...raiFunctionUsageFor(ref.read(childGateProvider)), if (web) raiWebSearchUsage].map((u) => '- $u').join('\n')}';
   }
   static const _instructionSystem = 'あなたは SNS ブラウザ RASQ の操作を教える「RAi」です。日本語で、操作手順を短く(3 文以内)答えてください。';
 

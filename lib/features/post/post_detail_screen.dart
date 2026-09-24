@@ -10,6 +10,7 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../home/post_row.dart';
@@ -116,6 +117,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     }
 
     final replyTarget = thread.value?.post ?? initial;
+    // チャイルドセーフ (D-307): 見せない投稿 / 見守りの時間に詳細を開かせない設定なら、中身も返信欄も出さない。
+    final gate = ref.watch(childGateProvider);
+    final childBlocked = gate.postDetailBlockReason(replyTarget);
+    if (childBlocked != null) {
+      return Scaffold(
+        appBar: RasqPageHeader(title: '投稿', leadingAvatar: me),
+        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: 'この投稿は表示できません', hint: childBlocked == 'この投稿は表示できません' ? '見守りの設定は保護者が決めています' : childBlocked),
+      );
+    }
     if (replyTarget != null) _ensureReplyComposer(replyTarget);
 
     // 保存済みの並び順/表示種類 (D-070)。リアクション欄は Misskey のみ —
@@ -153,7 +163,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           }
           return RasqErrorView(code: code, onRetry: () => ref.invalidate(threadProvider(threadKey)), retryLabel: '再読み込み');
         },
-        data: (t) => body(t.post, t.ancestors, t.descendants),
+        data: (t) => body(t.post, gate.filterPosts(t.ancestors), gate.filterPosts(t.descendants)),
       ),
     );
   }

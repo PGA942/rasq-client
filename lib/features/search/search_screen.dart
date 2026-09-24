@@ -11,6 +11,8 @@ import '../plugins/slot_plugins.dart';
 import '../../shell/rasq_shell.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
+import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView, ChildSafeGreyed;
 import '../trend/tendency_fows.dart';
 import '../trend/trend_providers.dart';
 import 'search_filter.dart';
@@ -70,7 +72,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
               const SizedBox(width: RasqSpacing.sm),
               Expanded(
-                child: SearchFilterBox(
+                // チャイルドセーフ (D-307): 保護者が投稿の検索を止めていれば、入力欄を薄くして理由を出す。
+                child: ChildSafeGreyed(
+                  reason: ref.watch(childGateProvider).searchAllowed('posts') ? null : '保護者が投稿の検索を止めています',
+                  child: SearchFilterBox(
                   controller: _controller,
                   focusNode: _focus,
                   genreCandidates: genreCandidates,
@@ -82,6 +87,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     context.pushTrend(tag);
                   },
                 ),
+                ),
               ),
             ]),
           ),
@@ -92,6 +98,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _home(BuildContext context, ColorScheme scheme, AsyncValue<List<TrendTag>> trends, AsyncValue<TimelineState> today, List<ActionDescriptor> actions) {
+    // チャイルドセーフ (D-307): トレンドを止めていれば、トレンドと Today を出さない。
+    if (!ref.watch(childGateProvider).searchAllowed('trend')) return const ChildSafeBlockedView(message: '保護者がトレンドを止めています');
     return RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(trendingTagsProvider);
