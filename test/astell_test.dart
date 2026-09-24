@@ -246,7 +246,13 @@ void main() {
     expect(find.text('ざっくり要約'), findsOneWidget);
     expect(find.byType(AstellMembersRow), findsOneWidget);
     expect(find.text('TiVard'), findsOneWidget);
-    expect(find.text('他2人'), findsOneWidget); // 5 人中 3 人表示
+    // ホスト(ダグラス、接続中)は参加メンバーの行から外れて、上の「ホスト」の枠に出る。
+    expect(find.text('ホスト'), findsOneWidget);
+    expect(find.byType(AstellHostRow), findsOneWidget);
+    expect(find.descendant(of: find.byType(AstellHostRow), matching: find.text('ダグラス')), findsOneWidget);
+    expect(find.descendant(of: find.byType(AstellHostRow), matching: find.text('参加中')), findsOneWidget);
+    expect(find.descendant(of: find.byType(AstellMembersRow), matching: find.text('ダグラス')), findsNothing);
+    expect(find.text('他1人'), findsOneWidget); // ホストを除く 4 人中 3 人表示
     expect(find.byType(AstellGenreChips), findsOneWidget);
     expect(find.text('参加'), findsOneWidget);
 
@@ -489,6 +495,9 @@ void main() {
     await tester.tap(inRoom('ルーム'));
     await tester.pumpAndSettle();
     expect(find.text('参加メンバー(5)'), findsOneWidget);
+    // ルームタブはホストが先頭(役割のピル付き)。
+    final firstName = tester.widgetList<Text>(find.descendant(of: find.byType(AstellRoomBody), matching: find.textContaining('@'))).first.data;
+    expect(firstName, '@douglas');
     // メンバー行 (D-147): @handle + 画面共有枠 + スピーカー + 「…」。
     expect(find.text('@tivard'), findsOneWidget);
     expect(find.byTooltip('画面共有を表示'), findsOneWidget); // TiVard の枠

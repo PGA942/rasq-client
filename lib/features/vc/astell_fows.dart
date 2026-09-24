@@ -54,6 +54,54 @@ Widget _label(BuildContext context, String text) => Padding(
       child: Text(text, style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
     );
 
+/// ホストの行: ルームを作った人の顔 / 名前 / @handle と、いま参加しているか。
+/// 参加 FOW とルーム FOW のホームで、「参加メンバー」の上に置く(参加メンバーの行からはホストを除く)。
+class AstellHostRow extends StatelessWidget {
+  const AstellHostRow({super.key, required this.room, required this.peers});
+  final AstellRoom room;
+  final List<AstellPeer> peers;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final here = peers.where((p) => p.accountId == room.ownerId).firstOrNull;
+    final (label, color) = here != null
+        ? ('参加中', RasqColors.accent)
+        : room.isScheduled
+            ? ('開催前', RasqColors.sub)
+            : ('不在', scheme.outline);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
+      child: Row(children: [
+        RasqAvatar(
+          // 接続中ならピアの顔(最新)、いなければルームのオーナーの顔。
+          imageUrl: here?.avatarUrl ?? room.ownerAvatarUrl,
+          size: RasqSizes.avatarLg,
+          fallbackLabel: room.ownerDisplayName,
+          badge: here == null ? null : _StateBadge(icon: here.micOn ? Icons.mic : Icons.volume_up, color: here.micOn ? RasqColors.accent : RasqColors.sub),
+        ),
+        const SizedBox(width: RasqSpacing.md),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(room.ownerDisplayName, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text('@${room.ownerHandle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+        RasqPill(label: label, color: color, textColor: Colors.white),
+      ]),
+    );
+  }
+}
+
+/// ホストを除いた参加メンバーと、その人数(`peerCount` はホストを含む)。
+(List<AstellPeer>, int?) _guests(AstellRoom room, List<AstellPeer> peers, {int? peerCount}) {
+  final guests = [for (final p in peers) if (p.accountId != room.ownerId) p];
+  if (peerCount == null) return (guests, null);
+  final hostHere = guests.length != peers.length;
+  final total = peerCount - (hostHere ? 1 : 0);
+  return (guests, total > guests.length ? total : null);
+}
+
 /// 参加メンバー行: アバター(マイク/スピーカーのバッジ)+ 名前、3 人まで + 「他N人」。
 /// 画面共有中のピアは**マイク表示の左に画面共有枠**(D-146)。タップで共有枠に表示。
 class AstellMembersRow extends StatelessWidget {
@@ -247,8 +295,13 @@ class _PreviewBody extends ConsumerWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
         child: ListView(padding: EdgeInsets.zero, children: [
+          _label(context, 'ホスト'),
+          AstellHostRow(room: room, peers: peers),
           _label(context, '参加メンバー'),
-          AstellMembersRow(peers: peers, totalCount: room.peerCount > peers.length ? room.peerCount : null),
+          Builder(builder: (context) {
+            final (guests, total) = _guests(room, peers, peerCount: room.peerCount);
+            return AstellMembersRow(peers: guests, totalCount: total);
+          }),
           if (room.locked)
             Padding(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
@@ -996,8 +1049,10 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   Widget _homeTab(BuildContext context, AstellSessionState s, bool isOwner) {
     final room = s.room;
     return ListView(padding: EdgeInsets.zero, children: [
+      _label(context, 'ホスト'),
+      AstellHostRow(room: room, peers: s.peers),
       _label(context, '参加メンバー'),
-      AstellMembersRow(peers: s.peers, viewingPeerId: s.viewingPeerId, onViewScreen: (id) => ref.read(astellSessionProvider.notifier).viewScreen(s.viewingPeerId == id ? null : id)),
+      AstellMembersRow(peers: _guests(room, s.peers).$1, viewingPeerId: s.viewingPeerId, onViewScreen: (id) => ref.read(astellSessionProvider.notifier).viewScreen(s.viewingPeerId == id ? null : id)),
       const Divider(height: RasqSpacing.md),
       RasqSwitchListTile(title: 'プレビューにざっくり要約を表示する', value: room.showSummary, enabled: isOwner, onChanged: isOwner ? (v) => _patch({'showSummary': v}) : null),
       RasqSwitchListTile(title: 'ジャンルを自動選択する', value: room.autoGenre, enabled: isOwner, onChanged: isOwner ? (v) => _patch({'autoGenre': v}) : null),
@@ -1109,7 +1164,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       _label(context, '参加メンバー(${s.peers.length})'),
       // ワイヤーフレーム右下 (D-147): アバター(マイク)+ 名前/@handle + 画面共有枠 +
       // スピーカー(ミュート切替)+ 「…」。
-      for (final p in s.peers)
+      for (final (_, p) in [...s.peers.indexed]..sort((a, b) => _rank(s.room, a.$2) != _rank(s.room, b.$2) ? _rank(s.room, a.$2).compareTo(_rank(s.room, b.$2)) : a.$1.compareTo(b.$1)))
         _MemberRow(
           peer: p,
           self: p.peerId == s.myPeerId,
@@ -1576,6 +1631,9 @@ class _ViewingScreenPanel extends StatelessWidget {
     );
   }
 }
+
+/// ルームタブの並び: ホスト → モデレーター → ほか(同じ順位の中は入った順のまま。Dart の sort は安定でないので、元の位置で比べる)。
+int _rank(AstellRoom room, AstellPeer p) => p.accountId == room.ownerId ? 0 : (room.moderators.contains(p.accountId) ? 1 : 2);
 
 /// ルームタブの参加メンバー行 (D-147、ワイヤーフレーム右下): アバター(マイクのバッジ)+
 /// 名前 / @handle + 画面共有枠(タップで共有枠に表示)+ スピーカー(ミュート切替)+ 「…」。
