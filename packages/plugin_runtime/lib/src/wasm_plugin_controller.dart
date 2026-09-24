@@ -94,7 +94,8 @@ class WasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin imple
     try {
       // nativeFetchEnabled: `network` 未宣言ならランタイム内短絡を許さない。
       // ここを env.nativeFetch のままにすると、この経路だけ権限ゲートを迂回できる。
-      _plugin = RasqWasmPlugin.fromBytes(_bytes, hostFn: env.dispatch, nativeFetch: env.nativeFetchEnabled, fuelPerCall: fuelPerCall, fetchHosts: env.effectiveFetchHosts);
+      // gpuComputeEnabled: gpu.compute もランタイム内短絡なので同じ理由で env の判定を渡す (D-081)。
+      _plugin = RasqWasmPlugin.fromBytes(_bytes, hostFn: env.dispatch, nativeFetch: env.nativeFetchEnabled, fuelPerCall: fuelPerCall, fetchHosts: env.effectiveFetchHosts, gpuCompute: env.gpuComputeEnabled);
       _lastError = null;
       pullSnapshot();
     } on RasqWasmInstantiateException catch (e) {

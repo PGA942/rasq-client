@@ -68,10 +68,12 @@ rules:
     languages: [dart]
     severity: ERROR
     message: >-
-      ランタイム (RasqWasmPlugin.fromBytes) のネイティブ net.fetch は Dart のディスパッチャを通らないので、
-      `nativeFetch:` は env.nativeFetchEnabled(`network` 権限が無ければ短絡させない)、`fetchHosts:` は
-      env.effectiveFetchHosts(宣言 + インスタンス)を渡してください。どちらかを別の値にすると、
-      この経路だけ権限ゲートと接続先の宣言を迂回できます。
+      ランタイム (RasqWasmPlugin.fromBytes) のネイティブ net.fetch と gpu.compute は Dart のディスパッチャを
+      通らないので、`nativeFetch:` は env.nativeFetchEnabled(`network` 権限が無ければ短絡させない)、
+      `fetchHosts:` は env.effectiveFetchHosts(宣言 + インスタンス)、`gpuCompute:` は env.gpuComputeEnabled
+      (審査済み / dev の付与、かつ `gpu_ml` の宣言。D-081)を、この順で明示して渡してください。どれかを
+      別の値にしたり省いたりすると、この経路だけ権限ゲートと接続先の宣言を迂回できます(gpuCompute を
+      省くと閉のままなので安全側ですが、判定を 1 か所に揃えるため必須にしています)。
     paths:
       exclude:
         - "**/wasm_runtime*.dart"   # 定義側(FFI / Web の代替)
@@ -79,9 +81,9 @@ rules:
     patterns:
       - pattern: RasqWasmPlugin.fromBytes(...)
       - pattern-not: |
-          RasqWasmPlugin.fromBytes(..., nativeFetch: $E.nativeFetchEnabled, ..., fetchHosts: $E.effectiveFetchHosts, ...)
+          RasqWasmPlugin.fromBytes(..., nativeFetch: $E.nativeFetchEnabled, ..., fetchHosts: $E.effectiveFetchHosts, ..., gpuCompute: $E.gpuComputeEnabled, ...)
       - pattern-not: |
-          RasqWasmPlugin.fromBytes(..., nativeFetch: $E!.nativeFetchEnabled, ..., fetchHosts: $E!.effectiveFetchHosts, ...)
+          RasqWasmPlugin.fromBytes(..., nativeFetch: $E!.nativeFetchEnabled, ..., fetchHosts: $E!.effectiveFetchHosts, ..., gpuCompute: $E!.gpuComputeEnabled, ...)
 
   - id: rasq-client-host-match-shared
     languages: [dart]

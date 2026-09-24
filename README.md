@@ -44,7 +44,7 @@ osv-scanner scan --lockfile pubspec.lock --lockfile tool/zstd-wasm/Cargo.lock   
 ```
 
 `.semgrep/` はこのコードベースの約束: ログに出るトークン、タイムアウトの無い HTTP 要求、ランタイムの
-ネイティブ net.fetch に渡す権限ゲート (`nativeFetchEnabled` / `effectiveFetchHosts`)、接続先の照合の写し
+ネイティブ net.fetch / gpu.compute に渡す権限ゲート (`nativeFetchEnabled` / `effectiveFetchHosts` / `gpuComputeEnabled`)、接続先の照合の写し
 (`fetchHostPermitted` の 1 か所だけ)、`launchUrl` の外部ブラウザ固定、外部コマンド、Web 版 Worker の
 接続先 / リダイレクトの確認、`eval` / `innerHTML` / `dart:html`。確かめたうえでの例外は、その行の前に
 `// nosemgrep: <規則の id> — 理由` と書く。

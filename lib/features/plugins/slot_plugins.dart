@@ -24,6 +24,7 @@ import '../store/store_providers.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
 import 'fetch_shape_telemetry.dart';
+import 'sideload_trust.dart';
 
 /// スロットプラグイン (D-167、契約 = `plugin-sample/CONTRACT.md`)。
 ///
@@ -214,11 +215,13 @@ class _AsyncSlotRuntime implements SlotRuntime {
 }
 
 /// wasm バイト列 → 実行中のプラグイン。テストは偽物に差し替える。
-typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall, required Set<String> fetchHosts});
+/// [gpuCompute] = `gpu.compute` (D-081) を開けるか([slotGpuComputeAllowed] の答え)。
+typedef SlotRuntimeLoader = Future<SlotRuntime> Function(Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall, required Set<String> fetchHosts, required bool gpuCompute});
 
-final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions, required fuelPerCall, required fetchHosts}) async {
+final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {required source, required fowPermissions, required appFns, required permissions, required fuelPerCall, required fetchHosts, required gpuCompute}) async {
       // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
-      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall, fetchHosts: fetchHosts);
+      // gpu.compute はさらに gpuCompute(審査済み / 自分の署名のサイドロード、D-306)が要る。`gpu_ml` の宣言はワーカーの env が重ねて見る。
+      final c = AsyncWasmPluginController(wasmBytes: bytes, fowPermissions: fowPermissions, appFns: appFns, permissions: permissions, fuelPerCall: fuelPerCall, fetchHosts: fetchHosts, gpuCompute: gpuCompute);
       await c.load();
       if (c.lastError != null && c.document == null) {
         c.dispose();
@@ -227,10 +230,27 @@ final slotRuntimeLoaderProvider = Provider<SlotRuntimeLoader>((ref) => (bytes, {
       return _AsyncSlotRuntime(c);
     });
 
+/// 登録元がストア(審査済み、D-168)か。`store:<id>` / `store:<id>#<childId>`。それ以外(ファイルのパス /
+/// `asset:<name>`)は dev 画面からのサイドロード。
+bool isReviewedSlotSource(String source) => source.startsWith('store:');
+
+/// `gpu.compute` (D-081) の門をランタイムで開けるか。`gpu.compute` はランタイム内(wgpu)で短絡され、
+/// Dart の host_fn の権限検査を通らないので、既定は閉で、埋込側がインスタンスごとに開ける(rasq-sdk-sample
+/// docs/host-functions.md「gpu.compute の権限と上限」)。どちらもマニフェストの `gpu_ml` の宣言が要る:
+/// - ストア (`store:`): 審査を通った配布物のマニフェストが `gpu_ml` を宣言していれば開ける。
+/// - サイドロード(ファイル / `asset:`): **自分の開発者鍵の署名がある場合 ([SideloadTrust.full]) だけ**宣言どおりに開ける。
+///   それ以外(署名なし / 他人の鍵 / 素の `.wasm`)は制限モードで閉(D-306、ユーザー決定 2026-09-24)。
+///   [sideloadTrust] は register が [sideloadTrustOf] で決めた段。ストアの登録では見ない。
+bool slotGpuComputeAllowed(SlotManifest manifest, {required String source, required SideloadTrust sideloadTrust}) =>
+    manifest.permissions.contains(RasqPermissions.gpuMl) && (isReviewedSlotSource(source) || sideloadTrust.isFull);
+
 @immutable
 class SlotPlugin {
-  const SlotPlugin({required this.manifest, required this.source, required this.runtime});
+  const SlotPlugin({required this.manifest, required this.source, required this.runtime, this.sideloadTrust = SideloadTrust.restricted});
   final SlotManifest manifest;
+
+  /// サイドロードの信頼の段(D-306: 自分の署名 = full、ほかは制限モード)。ストア (`store:`) のものは審査で決まるので見ない。
+  final SideloadTrust sideloadTrust;
 
   /// 読み込み元(ファイルパス、または `asset:<name>`)。
   final String source;
@@ -241,7 +261,7 @@ class SlotPlugin {
 
   /// 審査済みか(ストアからインストールしたもの、D-168)。サイドロード(ファイル / 同梱アセット)は未審査として扱い、
   /// 宣言の `auto`(temp)を読まない(契約 v0.14 §2.11)。
-  bool get isReviewed => source.startsWith('store:');
+  bool get isReviewed => isReviewedSlotSource(source);
   Future<Map<String, dynamic>> call(String fn, Map<String, Object?> args) => runtime.invoke(fn, args);
 
   /// `call` の `value`(失敗は null)。
@@ -340,6 +360,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     });
     // AsTell の出来事をプラグインへ (CONTRACT §2.1 `astell.event`)。
     ref.listen<AstellSessionState?>(astellSessionProvider, _onAstellChanged);
+    // 自分の開発者鍵の一覧 (D-306) が届いた / 変わった: 登録済みのサイドロードの段を確かめ直す(起動直後の読み直しは
+    // 一覧が届く前に走るので、ここで full へ上がる。鍵を失効すれば restricted へ下がる)。
+    ref.listen<Set<String>>(ownDevKeyFingerprintsProvider, (prev, next) {
+      if (!setEquals(prev, next)) Future.microtask(_reevaluateSideloadTrust);
+    });
     if (!_restored) {
       _restored = true;
       Future.microtask(_restore);
@@ -395,6 +420,13 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     try {
       final (:container, :pluginId) = splitPackageSource(source);
       var data = bytes ?? File(container).readAsBytesSync();
+      // サイドロードの信頼の段 (D-306): 展開する前の配布物そのものと、隣の `.sig.json` で決める。
+      // 次回起動の読み直しでも毎回ここを通る(登録時の結果を覚えておかない)。
+      // 一覧が届く前 / 変わる途中に読んだ段は、登録のあとで [_reevaluateSideloadTrust] が確かめ直す。
+      final ownFingerprints = ref.read(ownDevKeyFingerprintsProvider);
+      final sideloadTrust = isReviewedSlotSource(source)
+          ? SideloadTrust.restricted
+          : await sideloadTrustOf(data, signature: await readSideloadSignature(container), ownFingerprints: ownFingerprints);
       String? expectedId;
       if (isRasqPackage(data)) {
         final entry = RasqPackage.open(data, decompress: ref.read(rasqpkgZstdProvider)).plugin(pluginId);
@@ -405,7 +437,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final loader = ref.read(slotRuntimeLoaderProvider);
       // マニフェストを読むために一度素の権限で起動し、宣言に合わせて起動し直す。
       // 1 段目はマニフェストを読むだけ。予算はランタイム既定(重いほう)に任せる。
-      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {}, fuelPerCall: null, fetchHosts: const {});
+      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {}, fuelPerCall: null, fetchHosts: const {}, gpuCompute: false);
       final m = (await runtime.invoke('plugin.manifest', const {}))['value'];
       if (m is! Map) {
         runtime.dispose();
@@ -423,12 +455,13 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       }
       runtime.dispose();
       runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns, permissions: manifest.permissions.toSet(),
-          fuelPerCall: fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet()), fetchHosts: manifest.fetchHosts);
+          fuelPerCall: fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet()), fetchHosts: manifest.fetchHosts,
+          gpuCompute: slotGpuComputeAllowed(manifest, source: source, sideloadTrust: sideloadTrust));
       if (_disposed) {
         runtime.dispose(); // 読み込み中にプロバイダーが捨てられた(テストの再構築など)
         return null;
       }
-      final plugin = SlotPlugin(manifest: manifest, source: source, runtime: runtime);
+      final plugin = SlotPlugin(manifest: manifest, source: source, runtime: runtime, sideloadTrust: sideloadTrust);
       runtime.onAppFn = (fn, args) => _onAppFn(plugin, fn, args);
       _wireFow(plugin);
       // 通信の形(同意した端末だけ、初めて見たものだけ)。版はプラグインの自己申告。
@@ -441,10 +474,57 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       _set([for (final p in state) if (p.id != manifest.id) p, plugin]);
       if (persist) await _persist();
       ref.read(slotPluginsNoticeProvider.notifier).set('${manifest.name} を登録しました(${manifest.slots.join(', ')})');
+      // 登録している間に鍵の一覧が変わった(listen は、まだ state に無いこのプラグインを見られなかった)。
+      if (!plugin.isReviewed && !setEquals(ownFingerprints, ref.read(ownDevKeyFingerprintsProvider))) Future.microtask(_reevaluateSideloadTrust);
       return plugin;
     } catch (e) {
       if (!_disposed) ref.read(slotPluginsNoticeProvider.notifier).set('登録できませんでした: $e');
       return null;
+    }
+  }
+
+  bool _reevaluating = false;
+  bool _reevaluateAgain = false;
+
+  /// 登録済みのサイドロード(ストア以外)の [SideloadTrust] を、いまの [ownDevKeyFingerprintsProvider] で確かめ直す (D-306)。
+  /// **段が変わったものだけ**読み直す(`register` で起動し直す = `gpu.compute` の門を開け直す / 閉じ直す。プラグインの実行中の
+  /// 状態はそこで捨てる)。変わらないものは触らない。配布物が読めなくなったもの(ファイルが消えた)はそのまま。
+  /// **いつ**: 鍵の一覧が変わったとき(listen)と、登録の途中で一覧が変わったとき。次回起動の読み直しでも `register` が毎回確かめる。
+  Future<void> _reevaluateSideloadTrust() async {
+    if (_disposed) return;
+    if (_reevaluating) {
+      _reevaluateAgain = true;
+      return;
+    }
+    _reevaluating = true;
+    try {
+      do {
+        _reevaluateAgain = false;
+        final own = ref.read(ownDevKeyFingerprintsProvider);
+        for (final p in [...state]) {
+          if (_disposed) return;
+          if (p.isReviewed) continue;
+          final container = splitPackageSource(p.source).container;
+          final Uint8List bytes;
+          try {
+            if (container.startsWith('asset:')) {
+              final data = await rootBundle.load(container.substring(6));
+              bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+            } else {
+              bytes = File(container).readAsBytesSync();
+            }
+          } catch (e) {
+            debugPrint('slot plugin ${p.id}: sideload trust not re-evaluated (unreadable): $e');
+            continue;
+          }
+          final trust = await sideloadTrustOf(bytes, signature: await readSideloadSignature(container), ownFingerprints: own);
+          if (_disposed) return;
+          // 読み直しのあいだに外された / 差し替えられたものは見ない。
+          if (trust != p.sideloadTrust && state.any((x) => identical(x, p))) await register(p.source, bytes: bytes, persist: false);
+        }
+      } while (_reevaluateAgain && !_disposed);
+    } finally {
+      _reevaluating = false;
     }
   }
 
