@@ -12,6 +12,7 @@ import 'package:rasq_client/features/child_safe/child_gate.dart';
 import 'package:rasq_client/features/child_safe/child_safe_api.dart';
 import 'package:rasq_client/features/child_safe/child_safe_policy.dart';
 import 'package:rasq_client/features/child_safe/child_safe_providers.dart';
+import 'package:rasq_client/features/child_safe/child_safe_screens.dart' show childSafeSummaryLines;
 import 'package:rasq_client/features/rai/rai_functions.dart';
 import 'package:rasq_client/features/rai/rai_reference.dart';
 import 'package:rasq_client/session/session_providers.dart';
@@ -39,7 +40,8 @@ void main() {
       final p = ChildSafePolicy.fromJson(v2());
       expect(p.schema, ChildSafePolicy.schemaV2);
       expect(p.timeline.level, ChildSafeLevel.strict);
-      expect(p.timeline.blockedTopics, ['ホラー']);
+      expect(p.timeline.topics, const ChildSafeTopics(topics: ['ホラー'], legacy: true)); // もとの形 blockedTopics = ブラックリスト
+      expect(p.time.topics, const ChildSafeTopics(mode: ChildSafeTopicMode.allow, topics: ['宿題'], legacy: true));
       expect(p.postsPerDay, 10);
       expect(p.time.contains(DateTime(2026, 9, 24, 22)), isTrue);
       expect(p.time.contains(DateTime(2026, 9, 24, 5, 59)), isTrue);
@@ -210,6 +212,91 @@ void main() {
       expect((await childComposeVerdictFor(g, daily, now.add(const Duration(days: 1)), text: 'dm', dm: true))?.message, contains('DM'));
       // アカウントの処置 (sanctions) が先に出る。
       expect(g.blockedMessage('post', RasqSanctionsStub.post), contains('アカウントの処置'));
+    });
+
+    test('話題の一覧 (D-315): 新しい形を読み、書くときはいつも新しい形。もとの形の意味はそのまま', () {
+      final s = v2()
+        ..['timeline'] = {'enabled': true, 'level': 'mild', 'topicMode': 'allow', 'topics': ['宿題', '#部活']}
+        ..['composer'] = {'enabled': true, 'level': 'mild', 'topicMode': 'deny', 'topics': ['ホラー']}
+        ..['time'] = {'enabled': true, 'start': '21:00', 'end': '06:00', 'topicMode': 'deny', 'topics': <String>[], 'hideNotifications': true};
+      final p = ChildSafePolicy.fromJson(s);
+      expect(p.timeline.topics, const ChildSafeTopics(mode: ChildSafeTopicMode.allow, topics: ['宿題', '#部活']));
+      expect(p.composer.topics.mode, ChildSafeTopicMode.deny);
+      expect(p.time.topics, const ChildSafeTopics());
+      // もとの形から読んでも、書くのは新しい形(もとの欄は書かない)。
+      final legacy = ChildSafePolicy.fromJson(v2()).toJson();
+      expect(legacy['timeline'], {'enabled': true, 'level': 'strict', 'topicMode': 'deny', 'topics': ['ホラー']});
+      expect((legacy['time'] as Map)['topicMode'], 'allow');
+      expect((legacy['time'] as Map).containsKey('allowedTopics'), isFalse);
+      expect(legacy['composer'], {'enabled': true, 'level': 'strict', 'topicMode': 'deny', 'topics': <String>[]});
+      // もとの形で欄が無い: TL = 空のブラックリスト、時間 = 空のホワイトリスト(= 何も流さない)、投稿 = 空のブラックリスト。
+      final bare = ChildSafePolicy.fromJson({'timeline': {'enabled': true}, 'time': {'enabled': true}});
+      expect((bare.timeline.topics.allow, bare.time.topics.allow, bare.composer.topics.allow), (false, true, false));
+      expect(bare.time.topics.legacy, isTrue);
+      // 保存の前の確かめ: 有効な面の空のホワイトリストだけ。
+      expect(childSafeTopicErrors(p), isEmpty);
+      final empty = p.copyWith(timeline: p.timeline.copyWith(topics: const ChildSafeTopics(mode: ChildSafeTopicMode.allow)), composer: p.composer.copyWith(enabled: false, topics: const ChildSafeTopics(mode: ChildSafeTopicMode.allow)));
+      expect(childSafeTopicErrors(empty).keys, ['timeline']);
+      expect(childSafeTopicErrors(ChildSafePolicy.fromJson(v2()..['time'] = {'enabled': true, 'allowedTopics': <String>[]})).keys, ['time']);
+    });
+
+    test('TL / 見守りの時間の話題 (D-315): ホワイトリスト = 当たるものだけ、ブラックリスト = 当たるものを見せない', () {
+      final posts = [post('hw', '宿題おわった'), post('club', '今日の部活 #部活'), post('movie', 'ホラー映画を見た'), post('sky', '今日は晴れ')];
+      List<String> shown(Map<String, Object?> s, {DateTime? now}) => [for (final p in gateOf(s, now: now).filterPosts(posts)) p.id];
+      Map<String, Object?> with_(Map<String, Object?> timeline, [Map<String, Object?>? time]) => v2()
+        ..['timeline'] = {'enabled': true, 'level': 'mild', ...timeline}
+        ..['time'] = {'enabled': true, 'start': '21:00', 'end': '06:00', ...?time};
+      expect(shown(with_({'topicMode': 'allow', 'topics': ['宿題', '部活']})), ['hw', 'club']);
+      expect(shown(with_({'topicMode': 'deny', 'topics': ['ホラー']})), ['hw', 'club', 'sky']);
+      expect(shown(with_({'topicMode': 'deny', 'topics': <String>[]})), ['hw', 'club', 'movie', 'sky']);
+      // TL が無効なら、TL の話題は見ない。
+      expect(shown(with_({'enabled': false, 'topicMode': 'allow', 'topics': ['宿題']})), hasLength(4));
+      // 夜(22 時): 時間の話題も重なる。新しい形のブラックリスト / ホワイトリスト、もとの形の空 = 何も流さない。
+      final night = DateTime(2026, 9, 24, 22);
+      expect(shown(with_({'topicMode': 'deny', 'topics': <String>[]}, {'topicMode': 'deny', 'topics': ['部活']}), now: night), ['hw', 'movie', 'sky']);
+      expect(shown(with_({'topicMode': 'deny', 'topics': <String>[]}, {'topicMode': 'deny', 'topics': <String>[]}), now: night), hasLength(4));
+      expect(shown(with_({'topicMode': 'allow', 'topics': ['宿題', '部活']}, {'topicMode': 'allow', 'topics': ['宿題']}), now: night), ['hw']);
+      expect(shown(with_({'topicMode': 'deny', 'topics': <String>[]}, {'allowedTopics': <String>[]}), now: night), isEmpty);
+      // 目印: 見方が変わると TL を作り直す。
+      expect(gateOf(with_({'topicMode': 'allow', 'topics': ['宿題']})).timelineSignature, isNot(gateOf(with_({'topicMode': 'deny', 'topics': ['宿題']})).timelineSignature));
+    });
+
+    test('投稿の話題 (D-315): ホワイトリストは当たる投稿だけ、ブラックリストは当たった語に印を付けて止める。DM には当てない', () async {
+      Map<String, Object?> composer(Map<String, Object?> c) => v2()..['composer'] = {'enabled': true, 'level': 'mild', ...c};
+      final allow = gateOf(composer({'topicMode': 'allow', 'topics': ['宿題', '部活']}));
+      expect(allow.judgeText('宿題おわった'), isNull);
+      expect(allow.judgeText('今日は #部活 がんばった'), isNull);
+      final off = allow.judgeText('今日は晴れ');
+      expect(off?.message, contains('宿題・部活'));
+      expect(off!.hasRange, isFalse);
+      expect(allow.judgeText('今日は晴れ', dm: true), isNull); // DM は強さだけ
+      final deny = gateOf(composer({'topicMode': 'deny', 'topics': ['ホラー', 'ゲーム課金']}));
+      expect(deny.judgeText('宿題おわった'), isNull);
+      final v = deny.judgeText('きのうのホラー映画こわかった');
+      expect(v?.message, contains('「ホラー」'));
+      expect('きのうのホラー映画こわかった'.substring(v!.start!, v.end!), 'ホラー');
+      expect(deny.judgeText('ホラー', dm: true), isNull);
+      // 強さが先(強い言葉は、話題に合っていても止める)。空のブラックリスト / もとの形(投稿の話題なし)は止めない。
+      expect(gateOf(composer({'level': 'strict', 'topicMode': 'allow', 'topics': ['宿題']})).judgeText('宿題やらないバカ')?.message, contains('「バカ」'));
+      expect(gateOf(composer({'topicMode': 'deny', 'topics': <String>[]})).judgeText('ホラー'), isNull);
+      expect(gateOf(composer({})).judgeText('ホラー'), isNull);
+      // 投稿を判定しないなら、話題も見ない。送る前の判定 (childComposeVerdictFor) からも同じ。
+      expect(gateOf(composer({'enabled': false, 'topicMode': 'allow', 'topics': ['宿題']})).judgeText('今日は晴れ'), isNull);
+      final daily = ChildSafeDaily(MemorySessionStorage());
+      expect((await childComposeVerdictFor(deny, daily, DateTime(2026, 9, 24, 12), text: 'ホラーの話'))?.message, contains('ホラー'));
+    });
+
+    test('要約の行 (D-315): 面ごとの話題の見方', () {
+      final s = v2()
+        ..['timeline'] = {'enabled': true, 'level': 'mild', 'topicMode': 'allow', 'topics': ['宿題']}
+        ..['composer'] = {'enabled': true, 'level': 'mild', 'topicMode': 'deny', 'topics': ['ホラー']};
+      final lines = childSafeSummaryLines(gateOf(s));
+      expect(lines, contains('タイムライン: ゆるめ(流す話題: 宿題)'));
+      expect(lines, contains('投稿の判定: ゆるめ(送れない話題: ホラー)'));
+      expect(lines, contains('見守りの時間: 21:00〜06:00(流す話題: 宿題)'));
+      final legacyNight = childSafeSummaryLines(gateOf(v2()..['time'] = {'enabled': true, 'allowedTopics': <String>[]}));
+      expect(legacyNight, contains('見守りの時間: 21:00〜06:00(投稿は流れません)'));
+      expect(childSafeSummaryLines(gateOf(v2()..['composer'] = {'enabled': true, 'level': 'strict'})), contains('投稿の判定: きびしめ'));
     });
 
     test('プラグイン / インストール / SNS', () {

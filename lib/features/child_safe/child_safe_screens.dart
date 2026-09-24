@@ -52,7 +52,8 @@ class ChildSafeWindowBanner extends ConsumerWidget {
     final gate = ref.watch(childGateProvider);
     if (!gate.inTimeWindow) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
-    final topics = gate.policy!.time.allowedTopics;
+    final topics = gate.policy!.time.topics;
+    final list = topics.topics.join('・');
     return Material(
       key: const ValueKey('childSafe.windowBanner'),
       color: scheme.tertiaryContainer,
@@ -65,7 +66,7 @@ class ChildSafeWindowBanner extends ConsumerWidget {
             const SizedBox(width: RasqSpacing.sm),
             Expanded(
               child: Text(
-                '見守りの時間(${gate.windowLabel})です。${topics.isEmpty ? '投稿は流れません' : '「${topics.join('・')}」の話題だけが流れます'}',
+                '見守りの時間(${gate.windowLabel})です。${topics.allow ? (list.isEmpty ? '投稿は流れません' : '「$list」の話題だけが流れます') : (list.isEmpty ? '' : '「$list」の話題は流れません')}',
                 style: RasqTypography.caption.copyWith(color: scheme.onTertiaryContainer),
               ),
             ),
@@ -147,15 +148,19 @@ class ChildSafeHubScreen extends ConsumerWidget {
   }
 }
 
+/// 話題の一覧 (D-315) の短い注記(`(流す話題: a・b)`)。空のブラックリストは書かない。
+String _topicsNote(ChildSafeTopics t, {required String allow, required String deny}) =>
+    t.topics.isEmpty && !t.allow ? '' : '(${t.allow ? allow : deny}: ${t.topics.isEmpty ? 'なし' : t.topics.join('・')})';
+
 /// 見守りの制限を、子に見せる短い行に。
 List<String> childSafeSummaryLines(ChildGate gate) {
   final p = gate.policy;
   if (p == null) return const [];
   final out = <String>[
-    if (p.timeline.enabled) 'タイムライン: ${p.timeline.level.label}${p.timeline.blockedTopics.isEmpty ? '' : '(見せない話題: ${p.timeline.blockedTopics.join('・')})'}',
-    if (p.composer.enabled) '投稿の判定: ${p.composer.level.label}',
+    if (p.timeline.enabled) 'タイムライン: ${p.timeline.level.label}${_topicsNote(p.timeline.topics, allow: '流す話題', deny: '見せない話題')}',
+    if (p.composer.enabled) '投稿の判定: ${p.composer.level.label}${_topicsNote(p.composer.topics, allow: '送れる話題', deny: '送れない話題')}',
     if (p.postsPerDay != null) '1 日に送れる投稿: ${p.postsPerDay} 件',
-    if (p.time.enabled) '見守りの時間: ${p.time.start}〜${p.time.end}',
+    if (p.time.enabled) '見守りの時間: ${p.time.start}〜${p.time.end}${p.time.topics.isEmptyWhitelist ? '(投稿は流れません)' : _topicsNote(p.time.topics, allow: '流す話題', deny: '流さない話題')}',
   ];
   final a = p.allow;
   if (a != null) {

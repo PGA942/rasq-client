@@ -110,7 +110,9 @@
       },
       "composer": {
         "enabled": true,
-        "level": "strict"
+        "level": "strict",
+        "topicMode": "allow",
+        "topics": []
       },
       "postsPerDay": 10,
       "preset": "strict",
@@ -119,18 +121,20 @@
         "catalogVersion": 1
       },
       "time": {
-        "allowedTopics": [],
         "enabled": true,
         "end": "06:00",
         "hideDirectMessages": true,
         "hideNotifications": true,
         "hidePostDetail": false,
-        "start": "21:00"
+        "start": "21:00",
+        "topicMode": "deny",
+        "topics": []
       },
       "timeline": {
-        "blockedTopics": [],
         "enabled": true,
-        "level": "strict"
+        "level": "strict",
+        "topicMode": "allow",
+        "topics": []
       }
     },
     "16-17": {
@@ -172,7 +176,9 @@
       },
       "composer": {
         "enabled": true,
-        "level": "standard"
+        "level": "standard",
+        "topicMode": "allow",
+        "topics": []
       },
       "postsPerDay": 30,
       "preset": "standard",
@@ -181,18 +187,20 @@
         "catalogVersion": 1
       },
       "time": {
-        "allowedTopics": [],
         "enabled": true,
         "end": "06:00",
         "hideDirectMessages": false,
         "hideNotifications": true,
         "hidePostDetail": false,
-        "start": "23:00"
+        "start": "23:00",
+        "topicMode": "deny",
+        "topics": []
       },
       "timeline": {
-        "blockedTopics": [],
         "enabled": true,
-        "level": "standard"
+        "level": "standard",
+        "topicMode": "allow",
+        "topics": []
       }
     },
     "18+": {
@@ -232,7 +240,9 @@
       },
       "composer": {
         "enabled": true,
-        "level": "mild"
+        "level": "mild",
+        "topicMode": "allow",
+        "topics": []
       },
       "postsPerDay": null,
       "preset": "mild",
@@ -241,18 +251,20 @@
         "catalogVersion": 1
       },
       "time": {
-        "allowedTopics": [],
         "enabled": false,
         "end": "06:00",
         "hideDirectMessages": false,
         "hideNotifications": false,
         "hidePostDetail": false,
-        "start": "21:00"
+        "start": "21:00",
+        "topicMode": "deny",
+        "topics": []
       },
       "timeline": {
-        "blockedTopics": [],
         "enabled": true,
-        "level": "mild"
+        "level": "mild",
+        "topicMode": "allow",
+        "topics": []
       }
     }
   },

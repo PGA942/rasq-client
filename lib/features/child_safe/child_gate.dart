@@ -155,15 +155,19 @@ class ChildGate {
   /// 話題(語やタグ)のどれかに当たるか。当て方はトレンドの「好きではないジャンル」と同じ(特徴語か本文に含まれる)。
   static bool matchesTopic(Post p, List<String> topics) => topics.isNotEmpty && tendencyScorer.isDisliked(p, TendencyProfile(disliked: topics));
 
-  /// この投稿を見せないか(判定の強さ / 止める話題 / 見守りの時間の「この話題だけ」)。
+  /// 話題の一覧を通るか (D-315): ホワイトリスト = どれかに当たる(空なら何も通らない。もとの形の時間の「空 = 何も流さない」)、
+  /// ブラックリスト = どれにも当たらない(空なら全部通る)。
+  static bool passesTopics(Post p, ChildSafeTopics t) => t.allow ? matchesTopic(p, t.topics) : !matchesTopic(p, t.topics);
+
+  /// この投稿を見せないか(判定の強さ / タイムラインの話題 / 見守りの時間の話題)。
   bool postHidden(Post p) {
     final pol = policy;
     if (pol == null) return false;
     if (pol.timeline.enabled) {
       if (stimulusOf(p) >= pol.timeline.level.stimulusThreshold) return true;
-      if (matchesTopic(p, pol.timeline.blockedTopics)) return true;
+      if (!passesTopics(p, pol.timeline.topics)) return true;
     }
-    if (inTimeWindow && !matchesTopic(p, pol.time.allowedTopics)) return true;
+    if (inTimeWindow && !passesTopics(p, pol.time.topics)) return true;
     return false;
   }
 
@@ -181,15 +185,41 @@ class ChildGate {
   String get timelineSignature {
     final pol = policy;
     if (pol == null) return supervised ? 'locked' : '-';
-    return '${pol.timeline.enabled}|${pol.timeline.level.wire}|${pol.timeline.blockedTopics.join(',')}|$inTimeWindow|${pol.time.allowedTopics.join(',')}';
+    return '${pol.timeline.enabled}|${pol.timeline.level.wire}|${pol.timeline.topics.signature}|$inTimeWindow|${pol.time.topics.signature}';
   }
 
   // ── コンポーザー ──
 
-  /// 本文の判定(強さの閾値以上なら送らない)。当たった語に印を付ける範囲を返す。通れば null。
-  ChildComposeVerdict? judgeText(String text) {
+  /// 本文の判定: 強さの閾値以上なら送らない、次に投稿の話題 (D-315。ホワイトリスト = どれかの話題に当たる投稿だけ、
+  /// ブラックリスト = 当たる投稿は送らない)。当たった語に印を付ける範囲を返す。通れば null。
+  /// 話題は**投稿だけ**に当てる([dm] = DM の本文は強さだけ。話題の一覧は保護者の「投稿」のページのもの)。
+  ChildComposeVerdict? judgeText(String text, {bool dm = false}) {
     final pol = policy;
     if (pol == null || !pol.composer.enabled || text.trim().isEmpty) return null;
+    return _judgeStimulus(pol, text) ?? (dm ? null : _judgeTopics(pol.composer.topics, text));
+  }
+
+  ChildComposeVerdict? _judgeTopics(ChildSafeTopics t, String text) {
+    final post = _textPost(text);
+    if (t.allow) {
+      if (matchesTopic(post, t.topics)) return null;
+      final shown = t.topics.take(5).join('・');
+      return ChildComposeVerdict(t.topics.isEmpty ? '保護者の設定により、いまは投稿を送れません' : '保護者の設定により、決められた話題($shown${t.topics.length > 5 ? ' など' : ''})の投稿だけ送れます。話題に合うように書いてください');
+    }
+    if (!matchesTopic(post, t.topics)) return null;
+    // 当たった話題のうち、本文にそのまま出てくる最初のものに印を付ける(特徴語だけで当たったときは印なし)。
+    final lower = text.toLowerCase();
+    ({String topic, int start, int end})? hit;
+    for (final topic in t.topics) {
+      final key = topic.replaceFirst(RegExp(r'^#'), '').toLowerCase();
+      final i = key.isEmpty || lower.length != text.length ? -1 : lower.indexOf(key);
+      if (i >= 0 && (hit == null || i < hit.start)) hit = (topic: topic, start: i, end: i + key.length);
+    }
+    final label = hit?.topic ?? t.topics.firstWhere((x) => matchesTopic(post, [x]), orElse: () => t.topics.first);
+    return ChildComposeVerdict('保護者の設定により、「$label」の話題の投稿は送れません。書き換えてください', start: hit?.start, end: hit?.end);
+  }
+
+  ChildComposeVerdict? _judgeStimulus(ChildSafePolicy pol, String text) {
     if (stimulusOfText(text) < pol.composer.level.stimulusThreshold) return null;
     // 上限を超えた感情の語のうち、先頭のもの。
     final emo = emotionLexiconOf(text);
