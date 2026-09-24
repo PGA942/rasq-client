@@ -21,6 +21,7 @@ import '../media/image_scale.dart';
 import '../settings/settings_dsl.dart';
 import '../store/rasqpkg.dart';
 import '../store/store_providers.dart';
+import '../trend/example_match.dart' show pluginExamplePieces;
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
 import 'fetch_shape_telemetry.dart';
@@ -266,6 +267,9 @@ class SlotPlugin {
   String get id => manifest.id;
   bool has(String slot) => manifest.slots.contains(slot);
 
+  /// 例との近さを測る中身(名前 + 説明 + スロット。チャイルドセーフの `allow.examples`、D-314)。
+  List<String> get examplePieces => pluginExamplePieces(name: manifest.name, description: manifest.description, slots: manifest.slots);
+
   /// 審査済みか(ストアからインストールしたもの、D-168)。サイドロード(ファイル / 同梱アセット)は未審査として扱い、
   /// 宣言の `auto`(temp)を読まない(契約 v0.14 §2.11)。
   bool get isReviewed => isReviewedSlotSource(source);
@@ -310,7 +314,7 @@ final slotPluginsForProvider = Provider.family<List<SlotPlugin>, String>((ref, s
   if (area != null && ref.watch(settingsAreaProvider(area)).value?['enabled'] == false) return const [];
   // チャイルドセーフ (D-307): 保護者が許したプラグイン / スロットだけ。
   final gate = ref.watch(childGateProvider);
-  return [for (final p in ref.watch(slotPluginsProvider)) if (p.has(slot) && gate.pluginAllowed(p.id, slot)) p];
+  return [for (final p in ref.watch(slotPluginsProvider)) if (p.has(slot) && gate.pluginAllowed(p.id, slot, text: p.examplePieces)) p];
 });
 
 /// 登録の失敗などの直近メッセージ(dev 画面が表示)。
@@ -554,7 +558,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   List<SlotPlugin> forSlot(String slot) {
     // チャイルドセーフ (D-307): 保護者が許したプラグイン(`allow.plugins.ids`)とスロット(`allow.plugins.slots`)だけ。
     final gate = ref.read(childGateProvider);
-    return [for (final p in state) if (p.has(slot) && gate.pluginAllowed(p.id, slot)) p];
+    return [for (final p in state) if (p.has(slot) && gate.pluginAllowed(p.id, slot, text: p.examplePieces)) p];
   }
 
   // ── FOW(プラグインの拡張面)────────────────────────────────────────
@@ -1030,7 +1034,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     if (parts.length < 2) return posts;
     final plugin = state.where((p) => p.id == parts.first).firstOrNull;
     // チャイルドセーフ (D-307): 許していないプラグインの並べ替えは素通し。
-    if (plugin == null || !ref.read(childGateProvider).pluginAllowed(plugin.id, SlotIds.tl)) return posts;
+    if (plugin == null || !ref.read(childGateProvider).pluginAllowed(plugin.id, SlotIds.tl, text: plugin.examplePieces)) return posts;
     return sort(plugin, parts.sublist(1).join(':'), posts, params: params);
   }
 

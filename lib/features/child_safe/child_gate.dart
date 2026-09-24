@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../../session/sanctions.dart';
+import '../trend/example_match.dart';
 import '../trend/tendency_profile.dart';
 import 'child_safe_api.dart' show ChildSafeGuardianStatus;
 import 'child_safe_policy.dart';
@@ -199,27 +200,70 @@ class ChildGate {
 
   int? get postsPerDay => policy?.postsPerDay;
 
+  // ── 例 (D-314) ──
+
+  /// 保護者の例(許す例 / 止める例)。無ければ null。
+  ContentExamples? get examples => supervised ? allow?.examples : null;
+
+  /// 止める例があるか(クリップ / リストの中身を読んで確かめる価値があるか)。
+  bool get hasDenyExamples => (examples?.deny.isNotEmpty ?? false) && !locked;
+
+  /// 中身の文([pieces])と例の近さ。例が無ければ null。
+  ExampleScores? _scores(List<String>? pieces) {
+    final ex = examples;
+    if (ex == null || ex.isEmpty || pieces == null) return null;
+    return exampleScoresOf(pieces, ex);
+  }
+
   // ── プラグイン ──
 
-  bool pluginAllowed(String pluginId, String slot) {
+  /// [text] = マニフェストの中身(名前 / 説明 / スロット。`pluginExamplePieces`)。例との近さに使う(無ければ例では決めない)。
+  bool pluginAllowed(String pluginId, String slot, {List<String>? text}) {
     if (!supervised) return true;
     if (locked) return false;
     final pl = allow?.plugins;
-    return pl == null || pl.permits(pluginId, slot);
+    final scores = _scores(text);
+    // `allow.plugins` が無くても、止める例に近いものは使わない(`any` と同じ扱い)。
+    if (pl == null) return !(scores?.nearDeny ?? false);
+    return pl.permits(pluginId, slot, scores: scores);
   }
 
-  String? installBlockReason(String pluginId) {
+  /// インストールできない理由。[text] はマニフェストの中身(ストアから構成を取ったあとに、もう 1 度確かめる)。
+  /// `examples` の決めは、中身が分からないうち([text] が null)は通す(構成を取ってから決める)。
+  String? installBlockReason(String pluginId, {List<String>? text}) {
     if (!supervised) return null;
     if (locked) return '保護者が設定を決めるまで使えません';
     if (!featureAllowed('store.install')) return '保護者がプラグインのインストールを止めています';
     final pl = allow?.plugins;
-    if (pl == null) return null;
+    final scores = _scores(text);
+    const nearDeny = '保護者が止めている例に近いプラグインです';
+    if (pl == null) return (scores?.nearDeny ?? false) ? nearDeny : null;
+    if (pl.ids.contains(pluginId)) return pl.install == ChildSafeInstall.none ? '保護者がプラグインのインストールを止めています' : null;
     return switch (pl.install) {
       ChildSafeInstall.none => '保護者がプラグインのインストールを止めています',
-      ChildSafeInstall.listed => pl.ids.contains(pluginId) ? null : '保護者が選んだプラグインだけ入れられます',
-      ChildSafeInstall.any => null,
+      ChildSafeInstall.listed => '保護者が選んだプラグインだけ入れられます',
+      ChildSafeInstall.any => (scores?.nearDeny ?? false) ? nearDeny : null,
+      ChildSafeInstall.examples => text == null
+          ? null
+          : scores?.nearDeny ?? false
+              ? nearDeny
+              : (scores?.nearAllow ?? false)
+                  ? null
+                  : '保護者が選んだプラグインと、許す例に近いものだけ入れられます',
     };
   }
+
+  // ── クリップ / リスト (D-314) ──
+
+  /// クリップ / リストを出さないか: 中身(名前 + 説明 [meta]、含まれる投稿の本文 [posts])が止める例に近い
+  /// ([collectionScoresOf]。近い投稿が 3 割以上か、名前 / 全体が近い)。
+  bool collectionHidden(String meta, [List<String> posts = const []]) {
+    if (!supervised || !hasDenyExamples) return false;
+    return collectionScoresOf(meta: meta, posts: posts, examples: ContentExamples(deny: examples!.deny)).nearDeny;
+  }
+
+  /// クリップ / リストの判定が変わる目印(読み直しの判断に使う)。
+  String get collectionSignature => !hasDenyExamples ? '-' : [for (final e in examples!.deny) e.key].join('|');
 
   // ── SNS アカウント ──
 

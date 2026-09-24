@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/trend/example_match.dart';
 import 'package:rasq_client/features/trend/genre_topics.dart';
 import 'package:rasq_client/features/trend/tendency_fows.dart';
 import 'package:rasq_client/features/trend/tendency_profile.dart';
@@ -141,20 +142,20 @@ void main() {
     await tester.tap(find.text('最近のアクションから好きなものを選択'));
     await tester.pumpAndSettle();
     expect(find.text('アクションからジャンルを選択'), findsOneWidget);
-    // 縦に並べて好き/好きではないは下に 1 組 (D-158)。話題は 2 つ、既定の対象は先頭。
+    // 縦に並べて好き/好きではないは下に 1 組 (D-158)。話題は 2 つ、既定の対象は先頭(D-314: 共通の「例から選ぶ」FOW のカード)。
     expect(find.widgetWithText(FilledButton, '好き'), findsOneWidget);
-    expect(find.byKey(const ValueKey('genre.like')), findsOneWidget);
-    expect(find.byKey(const ValueKey('genre.dislike')), findsOneWidget);
-    expect(find.byWidgetPredicate((w) => w.key is ValueKey && (w.key as ValueKey).value.toString().startsWith('genre.topic.')), findsNWidgets(2));
+    expect(find.byKey(const ValueKey('example.allow')), findsOneWidget);
+    expect(find.byKey(const ValueKey('example.deny')), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w.key is ValueKey && (w.key as ValueKey).value.toString().startsWith('example.card.')), findsNWidgets(2));
     expect(find.text('+1 件'), findsOneWidget); // 打上会の話題は代表 + 1 件
     // 打上会の話題(先頭 = 話題性が高い)を好き。
-    await tester.tap(find.byKey(const ValueKey('genre.like')));
+    await tester.tap(find.byKey(const ValueKey('example.allow')));
     await tester.pumpAndSettle();
-    expect(find.byWidgetPredicate((w) => w.key is ValueKey && (w.key as ValueKey).value.toString().startsWith('genre.topic.')), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w.key is ValueKey && (w.key as ValueKey).value.toString().startsWith('example.card.')), findsOneWidget);
     // カレーの話題: 「料理」を外して「好きではない」。
     await tester.tap(find.text('#料理'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('genre.dislike')));
+    await tester.tap(find.byKey(const ValueKey('example.deny')));
     await tester.pumpAndSettle();
     expect(find.text('全部見ました'), findsOneWidget);
     await tester.tap(find.text('決定').last);
@@ -179,5 +180,58 @@ void main() {
     final applied = tendencyScorer.apply(posts, profile);
     expect(applied.map((p) => p.id), isNot(contains('p2')));
     expect(applied.map((p) => p.id), containsAll(['p1', 'p3']));
+  });
+
+  testWidgets('例から選ぶ (D-314): 最近のアクションのほか、クリップ / リストの中身も例にでき、TL の採点に効く', (tester) async {
+    final container = await pump(tester);
+    await tester.tap(find.byTooltip('検索'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('トレンド設定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('+ ジャンルを追加'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('最近のアクションから好きなものを選択'));
+    await tester.pumpAndSettle();
+    // 出どころのチップ: 最近のアクション / プラグイン / クリップ / リスト(ストアは保護者の設定だけ)。
+    for (final id in ['actions', 'plugins', 'clips', 'lists']) {
+      expect(find.byKey(ValueKey('example.source.$id')), findsOneWidget);
+    }
+    expect(find.byKey(const ValueKey('example.source.store')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('example.source.plugins')));
+    await tester.pumpAndSettle();
+    expect(find.text('入れているプラグインはありません'), findsOneWidget);
+
+    // クリップ: 名前と、含まれる投稿の先頭がカードに出る。先頭(公開クリップ)を「好きではない」、次は「とばす」。
+    await tester.tap(find.byKey(const ValueKey('example.source.clips')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('example.card.clip:c-pub')), findsOneWidget);
+    expect(find.text('公開クリップ'), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('example.card.clip:c-pub')), matching: find.textContaining('ロケット発射', findRichText: true)), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('example.deny')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('example.skip')));
+    await tester.pumpAndSettle();
+    expect(find.text('全部見ました'), findsOneWidget);
+
+    // リスト: リストのタイムラインの先頭つき。カードをタップして選び、右スワイプで「好き」。
+    await tester.tap(find.byKey(const ValueKey('example.source.lists')));
+    await tester.pumpAndSettle();
+    expect(find.text('Fediverse Banner'), findsOneWidget);
+    await tester.drag(find.byKey(const ValueKey('example.card.list:l1')), const Offset(500, 0));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('好き 1 / 好きではない 1'), findsWidgets);
+    await tester.tap(find.text('決定').last);
+    await tester.pumpAndSettle();
+    // 好きなジャンルの FOW に例のチップ(タップで外せる)。
+    expect(find.byKey(const ValueKey('trend.example.deny.clip:c-pub')), findsOneWidget);
+    expect(find.byKey(const ValueKey('trend.example.allow.list:l1')), findsOneWidget);
+    await tester.tap(find.text('決定'));
+    await tester.pumpAndSettle();
+    final profile = await container.read(tendencyProfileProvider.future);
+    expect(profile.examples.deny.single.kind, ExampleKind.clip);
+    expect(profile.examples.deny.single.text, contains('公開クリップ'));
+    expect(profile.examples.allow.single.ref, 'l1');
+    expect(profile.genres, isEmpty); // クリップ / リストのカードにはジャンルの候補が無い(例だけが入る)
+    expect(profile.active, isTrue);
   });
 }

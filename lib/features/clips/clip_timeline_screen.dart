@@ -8,6 +8,9 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../session/session_providers.dart';
 import '../../shell/headers.dart';
+import '../child_safe/child_safe_collections.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
+import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../relational/relational_event_screen.dart';
@@ -81,6 +84,17 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
 
     // ヘッダーはリレーショナルページと同じブロック(D-037):
     // 参加メンバー + 実在語見出し + 説明 + キーワードチップ。
+    // チャイルドセーフ (D-314): 止める例に近い中身のクリップは開かない(自分のものは一覧からも外している。他人のクリップは
+    // 読んだ中身で決める)。確かめ終わるまでは中身を出さない。
+    final gate = ref.watch(childGateProvider);
+    if (gate.hasDenyExamples) {
+      final hidden = ref.watch(childSafeHiddenCollectionsProvider).value;
+      if (hidden == null || (_posts == null && _error == null)) return Scaffold(appBar: RasqPageHeader(title: widget.clip.name), body: const RasqLoading());
+      if (childSafeCollectionHidden(gate, hidden, kind: 'clip', id: widget.clip.id, name: widget.clip.name, description: widget.clip.description) ||
+          gate.collectionHidden(childSafeCollectionMeta(widget.clip.name, widget.clip.description), [for (final p in posts) '${p.body} ${p.quote?.body ?? ''}'])) {
+        return Scaffold(appBar: RasqPageHeader(title: widget.clip.name), body: const ChildSafeBlockedView(message: '保護者がこのクリップを止めています'));
+      }
+    }
     final selfKey = ref.watch(currentUserProvider).key;
     final memberSeen = <String>{};
     final members = [for (final p in posts) if (memberSeen.add(p.author.key)) p.author];

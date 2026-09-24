@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../../app/providers.dart';
+import '../child_safe/child_safe_collections.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../settings/settings_dsl.dart';
 import 'host_clips.dart';
 
@@ -47,13 +49,21 @@ const listsViewArea = 'lists.view';
 final listsClipsProvider = Provider.autoDispose<List<ClipInfo>>((ref) {
   final showPrivate = ref.watch(settingsAreaProvider(listsViewArea)).value?['showPrivateClips'] == true;
   final native = ref.watch(myNativeClipsProvider).value ?? const <ClipInfo>[];
-  return [for (final c in native) if (c.isPublic || showPrivate) c];
+  return _childSafeVisible(ref, [for (final c in native) if (c.isPublic || showPrivate) c]);
 });
+
+/// チャイルドセーフ (D-314): 保護者の止める例に近い中身のクリップは出さない。
+List<ClipInfo> _childSafeVisible(Ref ref, List<ClipInfo> clips) {
+  final gate = ref.watch(childGateProvider);
+  if (!gate.hasDenyExamples) return clips;
+  final hidden = ref.watch(childSafeHiddenCollectionsProvider).value;
+  return [for (final c in clips) if (!childSafeCollectionHidden(gate, hidden, kind: 'clip', id: c.id, name: c.name, description: c.description)) c];
+}
 
 /// ブックマーク欄に出すクリップ: RASQ 横断クリップ + 非公開ネイティブ
 /// クリップ(どちらも「自分のための保存」なのでブックマークと同じ置き場)。
 final bookmarkClipsProvider = Provider.autoDispose<List<ClipInfo>>((ref) {
   final native = ref.watch(myNativeClipsProvider).value ?? const <ClipInfo>[];
   final host = ref.watch(hostClipsProvider).value ?? const <HostClip>[];
-  return [for (final c in host) c.info, for (final c in native) if (!c.isPublic) c];
+  return _childSafeVisible(ref, [for (final c in host) c.info, for (final c in native) if (!c.isPublic) c]);
 });

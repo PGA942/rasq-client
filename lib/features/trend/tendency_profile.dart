@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../nodeprog/node_tabs.dart';
 import '../relational/relational_engine.dart';
 import '../settings/settings_dsl.dart';
+import 'example_match.dart';
 
 /// トレンドの指向性 / 刺激性のプロファイル (D-153、ワイヤーフレーム p.2)。
 ///
@@ -19,6 +20,8 @@ import '../settings/settings_dsl.dart';
 ///   端末側の実働は語彙ルール(GRU/emotion8 は ml.infer 配線後)。
 /// - **好きなジャンル/方向性**: チップ。SNS 側の設定に任せる / アクションから
 ///   自動抽出 / 最近のアクションから選ぶ (D-154)。
+/// - **例** (D-314): 「好き」/「好きではない」にした投稿 / プラグイン / クリップ / リストの中身そのもの
+///   ([ContentExamples])。語 1 つではなく、もの全体との近さで測る([exampleScoresOf])。
 ///
 /// 保存先は storage.safe のスロット [slot](アカウント別領域、旧共有領域に
 /// フォールバック) — **ノード(`ml.tendency`)と TL の既定適用が同じプロファイルを
@@ -33,6 +36,7 @@ class TendencyProfile {
     this.disliked = const [],
     this.autoGenre = false,
     this.snsDefault = false,
+    this.examples = ContentExamples.none,
     this.updatedAt,
   });
 
@@ -69,6 +73,9 @@ class TendencyProfile {
 
   /// SNS 側の設定に任せる(= 端末側では掛けない)。
   final bool snsDefault;
+
+  /// 好きな例(`allow`)/ 好きではない例(`deny`) (D-314)。
+  final ContentExamples examples;
   final DateTime? updatedAt;
 
   static const none = TendencyProfile(enabled: false);
@@ -78,8 +85,11 @@ class TendencyProfile {
   /// 指向性のしきい値: 狭い(0)で 0.5、広い(1)で 0(= 落とさない)。
   double get directionThreshold => (1 - directionality.clamp(0.0, 1.0)) * 0.5;
 
+  /// 好きな方向(ジャンルか好きな例)があるか。無ければ指向性では落とさない。
+  bool get hasDirection => genres.isNotEmpty || examples.allow.isNotEmpty;
+
   /// 何か効く設定があるか(TL に掛ける価値があるか)。
-  bool get active => enabled && !snsDefault && (genres.isNotEmpty || disliked.isNotEmpty || stimulus.values.any((v) => v < 1.0));
+  bool get active => enabled && !snsDefault && (genres.isNotEmpty || disliked.isNotEmpty || examples.isNotEmpty || stimulus.values.any((v) => v < 1.0));
 
   TendencyProfile copyWith({
     bool? enabled,
@@ -89,6 +99,7 @@ class TendencyProfile {
     List<String>? disliked,
     bool? autoGenre,
     bool? snsDefault,
+    ContentExamples? examples,
     DateTime? updatedAt,
   }) =>
       TendencyProfile(
@@ -99,6 +110,7 @@ class TendencyProfile {
         disliked: disliked ?? this.disliked,
         autoGenre: autoGenre ?? this.autoGenre,
         snsDefault: snsDefault ?? this.snsDefault,
+        examples: examples ?? this.examples,
         updatedAt: updatedAt ?? this.updatedAt,
       );
 
@@ -110,6 +122,7 @@ class TendencyProfile {
         'disliked': disliked,
         'autoGenre': autoGenre,
         'snsDefault': snsDefault,
+        if (examples.isNotEmpty) 'examples': examples.toJson(),
         'updatedAt': (updatedAt ?? DateTime.now()).toIso8601String(),
       };
 
@@ -121,6 +134,7 @@ class TendencyProfile {
         disliked: [for (final g in (j['disliked'] as List? ?? const [])) if (g is String && g.trim().isNotEmpty) g.trim()],
         autoGenre: j['autoGenre'] == true,
         snsDefault: j['snsDefault'] == true,
+        examples: ContentExamples.fromJson(j['examples']),
         updatedAt: j['updatedAt'] is String ? DateTime.tryParse(j['updatedAt'] as String) : null,
       );
 
@@ -204,11 +218,12 @@ class TendencyScorer {
   /// 感情推定の差し替え口(emotion8 の ml.infer が入ったらここに刺す)。
   final Map<String, double> Function(String text) emotionOf;
 
-  /// 指向性: 好きなジャンルへの近さ。タグ/特徴語の一致は 1、それ以外は
-  /// 文字 n-gram の cos(ジャンル語は短いので語ごとに最大値)。
+  /// 指向性: 好きなジャンル / 好きな例への近さ。タグ/特徴語の一致は 1、それ以外は
+  /// 文字 n-gram の cos(ジャンル語は短いので語ごとに最大値)。好きな例は、例との類似度を
+  /// [exampleNearThreshold] で 1 に揃えた値(近い例があれば 1)。
   double directionOf(Post p, TendencyProfile profile) {
-    if (profile.genres.isEmpty) return 1.0;
-    final text = '${p.body} ${p.quote?.body ?? ''}';
+    if (!profile.hasDirection) return 1.0;
+    final text = _textOf(p);
     final lower = text.toLowerCase();
     final features = extractFeatures(p);
     var best = 0.0;
@@ -219,19 +234,26 @@ class TendencyScorer {
       if (features.contains(key) || lower.contains(key)) return 1.0;
       best = math.max(best, cosineOfProfiles(charNgramProfile(key), bodyProfile));
     }
+    if (profile.examples.allow.isNotEmpty) {
+      final s = exampleScoresOf([text], ContentExamples(allow: profile.examples.allow)).allow;
+      best = math.max(best, math.min(1.0, s / exampleNearThreshold));
+    }
     return best;
   }
 
+  /// 好きではない: 嫌いなジャンルの語(特徴語か本文に含まれる)、または好きではない例に近く、好きな例よりもそちらに近い。
   bool isDisliked(Post p, TendencyProfile profile) {
-    if (profile.disliked.isEmpty) return false;
-    final lower = '${p.body} ${p.quote?.body ?? ''}'.toLowerCase();
+    if (profile.disliked.isEmpty && profile.examples.deny.isEmpty) return false;
+    final lower = _textOf(p).toLowerCase();
     final features = extractFeatures(p);
     for (final g in profile.disliked) {
       final key = g.replaceFirst(RegExp(r'^#'), '').toLowerCase();
       if (key.isNotEmpty && (features.contains(key) || lower.contains(key))) return true;
     }
-    return false;
+    return profile.examples.deny.isNotEmpty && exampleScoresOf([_textOf(p)], profile.examples).leansDeny;
   }
+
+  static String _textOf(Post p) => '${p.body} ${p.quote?.body ?? ''}';
 
   /// 刺激性の超過: 各感情の(推定 − 上限)の正の部分の合計(最大 1)。
   double stimulusPenaltyOf(Post p, TendencyProfile profile) {
@@ -255,7 +277,7 @@ class TendencyScorer {
     for (final p in posts) {
       final s = score(p, profile);
       if (s.disliked) continue;
-      if (profile.genres.isNotEmpty && s.direction < profile.directionThreshold) continue;
+      if (profile.hasDirection && s.direction < profile.directionThreshold) continue;
       if (s.stimulusPenalty >= 0.75) continue;
       scored.add((p, s.value));
     }

@@ -164,7 +164,16 @@ List<String> childSafeSummaryLines(ChildGate gate) {
     if (off.isNotEmpty) out.add('止めている機能: ${off.join('・')}');
     final searchOff = [for (final e in {...?a.search}.entries) if (!e.value) ChildSafeCatalog.fallback.search.where((f) => f.id == e.key).firstOrNull?.label ?? e.key];
     if (searchOff.isNotEmpty) out.add('止めている検索: ${searchOff.join('・')}');
-    if (a.plugins != null) out.add('プラグイン: ${a.plugins!.install == ChildSafeInstall.any ? 'どれでも' : '選んだ ${a.plugins!.ids.length} 個だけ'}・インストールは${a.plugins!.install.label}');
+    if (a.plugins != null) {
+      final ids = a.plugins!.ids.length;
+      out.add('プラグイン: ${switch (a.plugins!.install) {
+        ChildSafeInstall.any => 'どれでも',
+        ChildSafeInstall.examples => '選んだ $ids 個と、許す例に近いもの',
+        _ => '選んだ $ids 個だけ',
+      }}・インストールは${a.plugins!.install.label}');
+    }
+    final ex = a.examples;
+    if (ex != null && ex.isNotEmpty) out.add('例: 許す例 ${ex.allow.length} / 止める例 ${ex.deny.length}(止める例に近いプラグイン / クリップ / リストは出ません)');
     if (a.rai != null) out.add(a.rai!.enabled ? 'RAi: ${a.rai!.groups.length} 種類の関数${a.rai!.automation ? '' : '(自動化なし)'}' : 'RAi: 使えません');
   }
   return out;

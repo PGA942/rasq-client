@@ -10,6 +10,9 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
+import '../child_safe/child_safe_collections.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
+import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../clips/clip_providers.dart';
 import '../clips/index_toc.dart';
 import '../clips/virtual_index.dart';
@@ -23,7 +26,12 @@ import '../users/user_list.dart';
 final listsProvider = FutureProvider.autoDispose<List<UserListInfo>>((ref) async {
   final s = ref.watch(currentSnsSessionProvider);
   if (s == null) return const [];
-  return s.lists();
+  final lists = await s.lists();
+  // チャイルドセーフ (D-314): 保護者の止める例に近い中身のリストは出さない(中身を確かめ終わってから出す)。
+  final gate = ref.watch(childGateProvider);
+  if (!gate.hasDenyExamples) return lists;
+  final hidden = await ref.watch(childSafeHiddenCollectionsProvider.future);
+  return [for (final l in lists) if (!childSafeCollectionHidden(gate, hidden, kind: 'list', id: l.id, name: l.name, description: l.description)) l];
 });
 
 /// 保存済みのカスタムフィード (D-195): Bluesky など持つ SNS だけ。無ければ空。
@@ -298,6 +306,17 @@ class ListDetailScreen extends ConsumerWidget {
     final actions = ref.watch(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[];
     final scheme = Theme.of(context).colorScheme;
     final tabs = [const RasqTabItem('ユーザー'), const RasqTabItem('投稿')];
+    // チャイルドセーフ (D-314): 止める例に近い中身のリストは開かない(一覧からも外している。リンクで来たとき)。
+    final gate = ref.watch(childGateProvider);
+    if (gate.hasDenyExamples) {
+      final hidden = ref.watch(childSafeHiddenCollectionsProvider).value;
+      if (hidden == null) return Scaffold(appBar: RasqPageHeader(title: info?.name ?? 'リスト'), body: const RasqLoading());
+      final loaded = tl.value?.posts ?? const <Post>[];
+      if (childSafeCollectionHidden(gate, hidden, kind: 'list', id: listId, name: info?.name ?? '', description: info?.description) ||
+          gate.collectionHidden(childSafeCollectionMeta(info?.name ?? '', info?.description), [for (final p in loaded) '${p.body} ${p.quote?.body ?? ''}'])) {
+        return Scaffold(appBar: RasqPageHeader(title: info?.name ?? 'リスト'), body: const ChildSafeBlockedView(message: '保護者がこのリストを止めています'));
+      }
+    }
     return DefaultTabController(
       length: 2,
       child: Scaffold(
