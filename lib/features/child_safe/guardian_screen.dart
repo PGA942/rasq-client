@@ -12,6 +12,9 @@ import '../../backend/orgate_client.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart';
 import '../store/store_providers.dart' show installedPluginsProvider;
+import '../trend/example_match.dart';
+import '../trend/example_picker.dart';
+import '../trend/example_sources.dart';
 import 'child_gate.dart';
 import 'child_safe_api.dart';
 import 'child_safe_links.dart';
@@ -516,6 +519,63 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
     }
   }
 
+  /// 例で決める (D-314): 許す例 / 止める例の数と一覧(✕で外す)、「例を選ぶ」で共通の FOW(自分の最近のアクション /
+  /// プラグイン / クリップ / リストと、ストアの掲載)を開く。
+  List<Widget> _examplesSection(BuildContext context) {
+    final caption = RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
+    final ex = _allow.examples ?? ContentExamples.none;
+    Widget chip(ContentExample e, bool allow, int i) => InputChip(
+          key: ValueKey('guardian.example.${allow ? 'allow' : 'deny'}.$i'),
+          avatar: Icon(allow ? Icons.check_circle_outline : Icons.block, size: 16),
+          deleteIcon: const Icon(Icons.close, size: 16),
+          deleteButtonTooltipMessage: '外す',
+          label: Text('${e.kind.label}: ${e.shortLabel}'),
+          onDeleted: () => _setAllow((x) => x.copyWith(examples: (x.examples ?? ContentExamples.none).without(e))),
+        );
+    return [
+      const RasqSectionHeader(title: '例で決める'),
+      _pad(Text(
+        'id の一覧で全部を決めるかわりに、「こういうものは許す / 止める」を例で選びます。子の端末は、プラグイン(名前・説明)/ クリップ / リストの中身が例に近いかで決めます。'
+        '止める例に近いものは「自由」でも使えません。「例に近いもの」にすると、選んだものと許す例に近いものを使えます(選んだものは、止める例に近くても使えます)。',
+        style: caption,
+      )),
+      RasqListTile(
+        key: const ValueKey('guardian.examples.pick'),
+        title: '例を選ぶ',
+        subtitle: '許す例 ${ex.allow.length} / 止める例 ${ex.deny.length}(あなたの最近のアクション / プラグイン / クリップ / リスト、ストアから)',
+        onTap: _pickExamples,
+      ),
+      if (ex.isNotEmpty)
+        _pad(Wrap(spacing: 4, runSpacing: 4, children: [
+          for (final (i, e) in ex.allow.indexed) chip(e, true, i),
+          for (final (i, e) in ex.deny.indexed) chip(e, false, i),
+        ])),
+    ];
+  }
+
+  Future<void> _pickExamples() async {
+    final before = _allow.examples ?? ContentExamples.none;
+    final decisions = await openExamplePickFow(
+      context,
+      ref,
+      id: 'guardian.examples',
+      title: '例で選ぶ(@${widget.handle})',
+      sources: [...ownExampleSources(ref), storeExampleSource(ref)],
+      initial: before,
+      allowLabel: '許す例',
+      denyLabel: '止める例',
+      intro: '中身を見て、子に「許す例」/「止める例」を選びます(右 / 左スワイプでも)。子の端末は、新しいプラグイン / クリップ / リストを例との近さで分けます。',
+    );
+    if (decisions == null || !mounted) return;
+    _setAllow((x) {
+      var ex = x.examples ?? ContentExamples.none;
+      for (final d in decisions) {
+        ex = ex.withExample(d.candidate.example, allow: d.allow);
+      }
+      return x.copyWith(examples: ex);
+    });
+  }
+
   /// バンドルから選ぶ: SNS(自分のバンドルの種類 / サーバー)/ プラグイン(自分が入れたもの、スロットごと)/ 機能 / 検索 / RAi。
   List<Widget> _bundleStep(BuildContext context, ChildSafeCatalog catalog) {
     final caption = RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
@@ -547,12 +607,11 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> {
         RasqSwitchListTile(key: ValueKey('guardian.plugin.${ip.id}'), title: ip.name.isEmpty ? ip.id : ip.name, subtitle: registered[ip.id]?.manifest.slots.join(' / ') ?? ip.id, value: plugins.ids.contains(ip.id), onChanged: (v) => _setAllow((x) => x.copyWith(plugins: plugins.copyWith(ids: toggle(plugins.ids, ip.id, v))))),
       for (final s in slots)
         RasqSwitchListTile(key: ValueKey('guardian.slot.$s'), title: 'スロット $s', subtitle: '選んだプラグインのうち、ここに出すもの', value: plugins.slots[s] != false, onChanged: (v) => _setAllow((x) => x.copyWith(plugins: plugins.copyWith(slots: {...plugins.slots, s: v})))),
-      _pad(SegmentedButton<ChildSafeInstall>(
-        key: const ValueKey('guardian.plugins.install'),
-        segments: [for (final m in ChildSafeInstall.values) ButtonSegment(value: m, label: Text(m.label))],
-        selected: {plugins.install},
-        onSelectionChanged: (m) => _setAllow((x) => x.copyWith(plugins: plugins.copyWith(install: m.first))),
-      )),
+      _pad(Wrap(key: const ValueKey('guardian.plugins.install'), spacing: 4, runSpacing: 4, children: [
+        for (final m in ChildSafeInstall.values)
+          ChoiceChip(key: ValueKey('guardian.plugins.install.${m.wire}'), label: Text(m.label), selected: plugins.install == m, onSelected: (_) => _setAllow((x) => x.copyWith(plugins: plugins.copyWith(install: m)))),
+      ])),
+      ..._examplesSection(context),
       const RasqSectionHeader(title: '機能'),
       for (final f in catalog.features)
         RasqSwitchListTile(key: ValueKey('guardian.feature.${f.id}'), title: f.label, value: a.features?[f.id] ?? childSafePresetDefault(_draft!.preset, 'features', f.id), onChanged: (v) => _setAllow((x) => x.copyWith(features: {...?x.features, f.id: v}))),

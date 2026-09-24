@@ -9,8 +9,8 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../nodeprog/node_executor.dart';
 import '../relational/relational_engine.dart';
-import '../home/post_row.dart';
-import 'genre_topics.dart';
+import 'example_picker.dart';
+import 'example_sources.dart';
 import 'tendency_profile.dart';
 
 /// トレンドプロファイル設定 (D-153、ワイヤーフレーム p.2 中段下): 検索ホーム/
@@ -184,6 +184,23 @@ Future<void> openGenreFow(BuildContext context, WidgetRef ref) async {
             RasqIconButton(icon: Icons.add, tooltip: 'ジャンルを追加', onPressed: () => add(input.text)),
           ]),
         ),
+        if (draft.examples.isNotEmpty) ...[
+          _label(ctx, '例(好き ${draft.examples.allow.length} / 好きではない ${draft.examples.deny.length}。タップで外す)'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+            child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
+              for (final (allow, side) in [(true, draft.examples.allow), (false, draft.examples.deny)])
+                for (final e in side)
+                  RasqTogglePillButton(
+                    key: ValueKey('trend.example.${allow ? 'allow' : 'deny'}.${e.key}'),
+                    label: '${allow ? '好き' : '好きではない'}: ${e.shortLabel}',
+                    activeLabel: '${allow ? '好き' : '好きではない'}: ${e.shortLabel} ✕',
+                    active: allow,
+                    onPressed: () => setSheet(() => draft = draft.copyWith(examples: draft.examples.without(e))),
+                  ),
+            ]),
+          ),
+        ],
         if (draft.disliked.isNotEmpty) ...[
           _label(ctx, '好きではない(タップで外す)'),
           Padding(
@@ -237,134 +254,47 @@ List<String> genreCandidatesOf(Post p, {int max = 6}) {
 /// 頻出順に(GLiNER 抽出ノードと同じ [topFeaturesOf])。
 List<String> autoGenresOf(List<Post> reacted, {int max = 8}) => [for (final f in topFeaturesOf(reacted, max: max * 2)) if (f.length >= 2 && !RegExp(r'^\d+$').hasMatch(f)) f].take(max).toList();
 
-/// 最近のアクションから好きなものを選択 (D-154/D-157): リアクション済みの投稿を
-/// **類似話題でまとめ**(n-gram/特徴語 → Louvain、`topicsOf`)、話題性の強い上位
-/// 2〜3 件をカードで同時に出す。各カードの候補ジャンルをタップで選び「好き」/
-/// 「好きではない」(右/左スワイプでも)。全部決めると次の話題群。
+/// 最近のアクションから好きなものを選択 (D-154/D-157 → D-314): 共通の「例から選ぶ」FOW([openExamplePickFow])で、
+/// リアクション済みの投稿を**類似話題でまとめ**(n-gram/特徴語 → Louvain、`topicsOf`)、話題性の強い順に 3 件ずつ
+/// カードで出す。上のチップで**入れているプラグイン / クリップ / リスト**の中身からも選べる。「好き」/「好きではない」
+/// (右/左スワイプでも)で、そのもの全体が好きな例 / 好きではない例になり(`TendencyProfile.examples`)、話題のカードで
+/// 選んでいたジャンルの候補は、いままでどおり好きなジャンル / 好きではないジャンルにも入る。
 /// 戻り値は編集後のプロファイル(決定せず閉じたら null)。
 Future<TendencyProfile?> openGenrePickFow(BuildContext context, WidgetRef ref, {required TendencyProfile base, int perPage = 3}) async {
-  final manager = ref.read(overlayManagerProvider);
-  final session = ref.read(currentSnsSessionProvider);
-  var draft = base;
-  List<Post> reacted = const [];
-  String? error;
-  if (session != null) {
-    try {
-      reacted = (await session.reactedPosts(limit: 40)).items;
-    } catch (e) {
-      error = '$e';
-    }
+  List<ExampleCandidate>? recent;
+  Object? error;
+  try {
+    recent = await recentActionCandidates(ref);
+  } catch (e) {
+    error = e;
   }
-  // 話題ごとに 1 枚(代表投稿)。決めた話題は消え、無くなったら残りの投稿で次の話題群。
-  var pool = [...reacted];
-  var topics = topicsOf(pool, top: perPage);
-  final selected = <int, Set<String>>{};
-  int? focused; // 下のボタンの対象 (D-158)
-  var decided = 0;
   if (!context.mounted) return null;
-  final done = await manager.showBottomSheet<bool>(
+  final sources = ownExampleSources(ref, recent: error == null ? recent : null);
+  final decisions = await openExamplePickFow(
+    context,
+    ref,
     id: 'trend.genres.pick',
     title: 'アクションからジャンルを選択',
-    confirmText: '決定',
-    builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
-      final scheme = Theme.of(ctx).colorScheme;
-      if (error != null) return Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('最近のアクションを取得できませんでした: $error', style: RasqTypography.bodySmall.copyWith(color: scheme.error)));
-      if (reacted.isEmpty) return const Padding(padding: EdgeInsets.all(RasqSpacing.page), child: RasqEmptyView(title: '最近のアクションがありません', hint: 'リアクションやブックマークをすると、ここから好きなジャンルを選べます'));
-      if (topics.isEmpty) {
-        return Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqEmptyView(title: '全部見ました', hint: '好き ${draft.genres.length} / 好きではない ${draft.disliked.length}。決定で保存します'));
-      }
-      void decide(GenreTopic t, bool like) {
-        final sel = selected[t.id] ?? t.genres.take(2).toSet();
-        final picked = sel.isEmpty ? t.genres.take(1).toList() : sel.toList();
-        if (like) {
-          draft = draft.copyWith(genres: [...draft.genres, for (final g in picked) if (!draft.genres.contains(g)) g], disliked: [for (final d in draft.disliked) if (!picked.contains(d)) d]);
-        } else {
-          draft = draft.copyWith(disliked: [...draft.disliked, for (final g in picked) if (!draft.disliked.contains(g)) g], genres: [for (final d in draft.genres) if (!picked.contains(d)) d]);
-        }
-        decided++;
-        // この話題の投稿をプールから外し、話題が尽きたら次の話題群を組む。
-        final keys = {for (final p in t.posts) p.key};
-        pool = [for (final p in pool) if (!keys.contains(p.key)) p];
-        topics = [for (final x in topics) if (x.id != t.id) x];
-        if (topics.isEmpty && pool.isNotEmpty) topics = topicsOf(pool, top: perPage);
-        selected.remove(t.id);
-        setSheet(() {});
-      }
-
-      // 縦に 3 枚並べて、好き/好きではないは挟まずに下に 1 組 (D-158)。カードを
-      // タップして対象の話題を選ぶ(既定は先頭)。スワイプはカードごとに効く。
-      focused ??= topics.first.id;
-      if (!topics.any((t) => t.id == focused)) focused = topics.first.id;
-      final current = topics.firstWhere((t) => t.id == focused);
-      return Column(mainAxisSize: MainAxisSize.min, children: [
-        Flexible(
-          child: ListView(shrinkWrap: true, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-              child: Text('最近のアクションを類似した話題でまとめ、話題性の強いものから ${topics.length} 件ずつ出しています。話題をタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。(${decided + 1}〜 / 残り ${pool.length} 件)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-            ),
-            for (final t in topics)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-                child: Dismissible(
-                  key: ValueKey('genre.pick.${t.representative.key}'),
-                  direction: DismissDirection.horizontal,
-                  confirmDismiss: (dir) async {
-                    decide(t, dir == DismissDirection.startToEnd); // 右へ = 好き
-                    return false; // 自分でカードを差し替える
-                  },
-                  background: Container(alignment: Alignment.centerLeft, padding: const EdgeInsets.only(left: RasqSpacing.page), child: const Text('好き', style: TextStyle(color: RasqColors.link, fontWeight: FontWeight.w700))),
-                  secondaryBackground: Container(alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: RasqSpacing.page), child: Text('好きではない', style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w700))),
-                  child: GestureDetector(
-                    key: ValueKey('genre.topic.${t.id}'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => setSheet(() => focused = t.id),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(RasqSizes.radiusLg),
-                        border: Border.all(color: t.id == focused ? RasqColors.link : scheme.outlineVariant, width: t.id == focused ? 2 : 1),
-                        color: t.id == focused ? RasqColors.link.withValues(alpha: 0.06) : null,
-                      ),
-                      padding: const EdgeInsets.all(RasqSpacing.xs),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        // インラインフレームの小表示 (D-156)。右上に話題の件数。
-                        InlinePostFrame(post: t.representative, maxLines: 3, onTap: () => setSheet(() => focused = t.id), badge: t.posts.length > 1 ? RasqPill(label: '+${t.posts.length - 1} 件', color: RasqColors.sub, textColor: Colors.white) : null),
-                        Padding(
-                          padding: const EdgeInsets.only(top: RasqSpacing.xs),
-                          child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-                            if (t.genres.isEmpty) Text('この話題からはジャンルを拾えませんでした', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-                            for (final g in t.genres)
-                              RasqTogglePillButton(
-                                label: '#$g',
-                                activeLabel: '#$g',
-                                active: (selected[t.id] ?? t.genres.take(2).toSet()).contains(g),
-                                onPressed: () => setSheet(() {
-                                  focused = t.id;
-                                  final sel = selected.putIfAbsent(t.id, () => t.genres.take(2).toSet());
-                                  sel.contains(g) ? sel.remove(g) : sel.add(g);
-                                }),
-                              ),
-                          ]),
-                        ),
-                      ]),
-                    ),
-                  ),
-                ),
-              ),
-            const SizedBox(height: RasqSpacing.sm),
-          ]),
-        ),
-        const Divider(height: 1),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
-          child: Row(children: [
-            Expanded(child: OutlinedButton(key: const ValueKey('genre.dislike'), onPressed: () => decide(current, false), child: const Text('好きではない'))),
-            const SizedBox(width: RasqSpacing.sm),
-            Expanded(child: FilledButton(key: const ValueKey('genre.like'), onPressed: () => decide(current, true), child: const Text('好き'))),
-          ]),
-        ),
-      ]);
-    }),
+    sources: sources,
+    initial: base.examples,
+    perPage: perPage,
+    intro: '最近のアクションを類似した話題でまとめ、話題性の強いものから $perPage 件ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。',
   );
-  return done == true ? draft : null;
+  return decisions == null ? null : applyTrendDecisions(base, decisions);
+}
+
+/// 決め([ExampleDecision])をプロファイルへ: そのものを好きな例 / 好きではない例に入れ、選んでいたジャンルは
+/// 好きなジャンル / 好きではないジャンルへ(反対側からは外す。D-154 と同じ)。決めた順に当てる。
+TendencyProfile applyTrendDecisions(TendencyProfile base, List<ExampleDecision> decisions) {
+  var draft = base;
+  for (final d in decisions) {
+    final picked = d.genres;
+    if (d.allow) {
+      draft = draft.copyWith(genres: [...draft.genres, for (final g in picked) if (!draft.genres.contains(g)) g], disliked: [for (final x in draft.disliked) if (!picked.contains(x)) x]);
+    } else {
+      draft = draft.copyWith(disliked: [...draft.disliked, for (final g in picked) if (!draft.disliked.contains(g)) g], genres: [for (final x in draft.genres) if (!picked.contains(x)) x]);
+    }
+    draft = draft.copyWith(examples: draft.examples.withExample(d.candidate.example, allow: d.allow));
+  }
+  return draft;
 }

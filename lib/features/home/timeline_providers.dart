@@ -100,7 +100,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       c = _nodeCursors[kid];
       if (c == null) return const []; // 読了
     }
-    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next, rasqFeed: (until) => fetchRasqFeed(ref, until), rasqMine: () => fetchRasqMine(ref));
+    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next, rasqFeed: (until) => fetchRasqFeed(ref, until), rasqMine: () => fetchRasqMine(ref), listHidden: ref.read(childGateProvider).collectionHidden);
   }
 
   /// カスタム関数の中身グラフ (D-118)。
@@ -636,7 +636,7 @@ const childSafeWindowKind = TimelineKind('childsafe.window', '見守りの時間
 /// [onCursor] (D-117) には取得ページの続きトークンを報告する(枝ごとの
 /// ページング用。null = 末尾まで読了)。
 Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
-    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor, Future<(List<Post>, String?)> Function(String? until)? rasqFeed, Future<List<Post>> Function()? rasqMine}) async {
+    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor, Future<(List<Post>, String?)> Function(String? until)? rasqFeed, Future<List<Post>> Function()? rasqMine, bool Function(String meta, List<String> bodies)? listHidden}) async {
   // RASQ の投稿 (D-283): SNS のセッションではなく、Central のフィード(自分とフォロー中の RASQ アカウント)。
   // `acct:` で包まれていても拾う(包んだまま流すと、現在の SNS のセッションで取りに行ってしまう)。
   if ((kid.startsWith('acct:') ? kid.substring(kid.indexOf('|') + 1) : kid) == rasqPostsKind) {
@@ -659,7 +659,7 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
         return rasqMine();
       }
       final other = sessionFor?.call(kid.substring(5, sep));
-      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor, onCursor: onCursor, rasqFeed: rasqFeed, rasqMine: rasqMine);
+      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor, onCursor: onCursor, rasqFeed: rasqFeed, rasqMine: rasqMine, listHidden: listHidden);
     }
   }
   // `self` (D-124): この画面の基礎タイムライン(検索結果/リスト/欄の投稿)を
@@ -694,7 +694,10 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
     final lists = await session.lists();
     final l = lists.where((x) => x.name == name || x.id == name).firstOrNull;
     if (l == null) return const [];
-    return finish(await session.timeline(TimelineKind.list(l.id, l.name), cursor: cursor));
+    final page = await session.timeline(TimelineKind.list(l.id, l.name), cursor: cursor);
+    // チャイルドセーフ (D-314): 止める例に近い中身のリストは、タイムラインにも流さない。
+    if (listHidden != null && listHidden('${l.name} ${l.description ?? ''}'.trim(), [for (final p in page.items) '${p.body} ${p.quote?.body ?? ''}'])) return const [];
+    return finish(page);
   }
   if (kid.startsWith('dm:')) {
     final who = kid.substring(3).trim().replaceFirst('@', '');

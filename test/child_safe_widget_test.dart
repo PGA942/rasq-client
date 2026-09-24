@@ -12,6 +12,7 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
+import 'package:rasq_client/features/child_safe/child_safe_collections.dart';
 import 'package:rasq_client/features/child_safe/child_safe_providers.dart';
 import 'package:rasq_client/features/child_safe/child_safe_screens.dart';
 import 'package:rasq_client/features/child_safe/guardian_screen.dart';
@@ -338,6 +339,127 @@ void main() {
     expect(find.byType(ChildLoginScreen), findsOneWidget);
     expect(tester.widget<TextField>(find.byKey(const ValueKey('childSafe.login.code'))).controller!.text, 'ABCD-EFGH-JKLM');
     expect(find.byKey(const ValueKey('childSafe.fromLink')), findsOneWidget);
+  });
+
+  testWidgets('保護者: 例で決める (D-314) — 自分のクリップ / ストアの掲載から許す例 / 止める例を選び、外し、install=examples で保存', (tester) async {
+    final puts = <Map<String, Object?>>[];
+    final c = await pump(tester, central((route, body) async {
+      switch (route) {
+        case 'GET /me/child-safe/guardian':
+          return json({
+            'verified': true,
+            'method': 'jpki',
+            'children': [
+              {'handle': 'kid', 'displayName': 'キッド', 'state': 'active', 'revision': 1, 'appliedRevision': 1, 'ageBand': '16-17', 'createdByGuardian': false},
+            ],
+          });
+        case 'GET /me/child-safe/children/kid':
+          return json({'handle': 'kid', 'displayName': 'キッド', 'state': 'active', 'revision': 1, 'appliedRevision': 1, 'ageBand': '16-17', 'createdByGuardian': false, 'settings': null, 'summary': {'days': []}});
+        case 'GET /plugins': // ストアの検索(空 = 一覧)
+          return json({
+            'items': [
+              {'id': 'jp.example.casino', 'name': 'カジノ攻略', 'summary': 'オンラインカジノのスロットで一攫千金'},
+              {'id': 'jp.example.quiz', 'name': '計算ドリル', 'summary': '算数の計算を毎日 1 問ずつ練習するクイズ'},
+            ],
+          });
+        case 'PUT /me/child-safe/children/kid/settings':
+          puts.add(body);
+          return json({'revision': 2, 'signature': 'x', 'issuedAt': '2026-09-24T00:00:00Z'});
+      }
+      return null;
+    }, id: 'mama-1', roles: ['guardian']));
+    c.read(routerProvider).push('/child-safe/guardian/kid');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('guardian.step.3')));
+    await tester.pumpAndSettle();
+    final scrollable = find.descendant(of: find.byType(GuardianChildScreen), matching: find.byType(Scrollable)).first;
+    Future<void> show(String key, double delta) async {
+      await tester.scrollUntilVisible(find.byKey(ValueKey(key)), delta, scrollable: scrollable);
+      await tester.ensureVisible(find.byKey(ValueKey(key)));
+      await tester.pumpAndSettle();
+    }
+
+    await show('guardian.examples.pick', 200);
+    expect(find.textContaining('許す例 0 / 止める例 0'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('guardian.examples.pick')));
+    await tester.pumpAndSettle();
+
+    // 共通の FOW: 自分の最近のアクション / プラグイン / クリップ / リストと、ストア。ボタンは「許す例」/「止める例」。
+    expect(find.text('例で選ぶ(@kid)'), findsOneWidget);
+    for (final id in ['actions', 'plugins', 'clips', 'lists', 'store']) {
+      expect(find.byKey(ValueKey('example.source.$id')), findsOneWidget);
+    }
+    expect(find.widgetWithText(FilledButton, '許す例'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, '止める例'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('example.source.store')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('example.search')), findsOneWidget);
+    expect(find.text('カジノ攻略'), findsOneWidget);
+    expect(find.text('オンラインカジノのスロットで一攫千金'), findsOneWidget); // 掲載の説明がカードに出る
+    await tester.tap(find.byKey(const ValueKey('example.deny'))); // カジノ攻略 = 止める例
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('example.allow'))); // 計算ドリル = 許す例
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('example.source.clips')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('example.deny'))); // 公開クリップ = 止める例
+    await tester.pumpAndSettle();
+    expect(find.textContaining('許す例 1 / 止める例 2'), findsWidgets);
+    await tester.tap(find.text('決定').last);
+    await tester.pumpAndSettle();
+
+    // 要約と一覧(✕で外す)。
+    await show('guardian.examples.pick', 200);
+    expect(find.textContaining('許す例 1 / 止める例 2'), findsOneWidget);
+    await show('guardian.example.deny.1', 200);
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('guardian.example.deny.1')), matching: find.byIcon(Icons.close)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('guardian.example.deny.1'), skipOffstage: false), findsNothing);
+    await show('guardian.examples.pick', -200);
+    expect(find.textContaining('許す例 1 / 止める例 1'), findsOneWidget);
+    await show('guardian.plugins.install.examples', -200);
+    await tester.tap(find.byKey(const ValueKey('guardian.plugins.install.examples')));
+    await tester.pumpAndSettle();
+    await show('guardian.step.4', -300);
+    await tester.tap(find.byKey(const ValueKey('guardian.step.4')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('許す例に近いもの'), findsWidgets); // 確認の要約
+    await tester.tap(find.byKey(const ValueKey('guardian.save')));
+    await tester.pumpAndSettle();
+    final allow = puts.single['allow'] as Map;
+    expect((allow['plugins'] as Map)['install'], 'examples');
+    final examples = allow['examples'] as Map;
+    expect([for (final e in examples['deny'] as List) (e as Map)['ref']], ['jp.example.casino']);
+    expect([for (final e in examples['allow'] as List) (e as Map)['ref']], ['jp.example.quiz']);
+    expect(((examples['deny'] as List).single as Map)['kind'], 'plugin');
+    expect(((examples['deny'] as List).single as Map)['text'], contains('オンラインカジノ'));
+  });
+
+  testWidgets('子の端末 (D-314): 止める例に近い中身のクリップ / リストは一覧に出ず、開いても止まる', (tester) async {
+    final settings = kidSettings();
+    (settings['allow'] as Map)['examples'] = {
+      'allow': <Object?>[],
+      'deny': [
+        {'kind': 'post', 'text': '今日は晴れ'},
+      ],
+    };
+    final st = await active(settings);
+    final c = await pump(tester, central((route, _) async => route == 'GET /me/child-safe' ? json(st) : null));
+    expect(c.read(childGateProvider).hasDenyExamples, isTrue);
+    c.read(routerProvider).push(Routes.lists);
+    await tester.pumpAndSettle();
+    // 中身(今日は晴れ …)が止める例に近い: クリップもリストも出さない。
+    expect(find.text('公開クリップ'), findsNothing);
+    expect(find.text('Fediverse Banner'), findsNothing);
+    expect(c.read(childSafeHiddenCollectionsProvider).value, containsAll(['clip:c-pub', 'list:l1']));
+    // リンクで来ても開かない。
+    c.read(routerProvider).push('/lists/l1');
+    await tester.pumpAndSettle();
+    expect(find.text('保護者がこのリストを止めています'), findsOneWidget);
+    // 子に見せる要約にも出る。
+    c.read(routerProvider).push(Routes.childSafe);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('止める例 1'), findsOneWidget);
   });
 }
 

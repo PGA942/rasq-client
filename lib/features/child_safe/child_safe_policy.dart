@@ -4,6 +4,8 @@ import 'package:crypto/crypto.dart' show sha512;
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 
+import '../trend/example_match.dart';
+
 /// チャイルドセーフ v2 の制限(ポリシー)と、その署名 (D-307)。
 ///
 /// 親(保護者)の RASQ アカウントが決め、Central が署名して子の端末へ渡す。**当てはめるのは子の端末**
@@ -148,11 +150,13 @@ class ChildSafeSnsAllow {
       ChildSafeSnsAllow(kinds: kinds ?? this.kinds, instances: instances ?? this.instances, addAccounts: addAccounts ?? this.addAccounts);
 }
 
-/// プラグインのインストール: `none`(入れられない)/ `listed`(`ids` のものだけ)/ `any`。
+/// プラグインのインストール: `none`(入れられない)/ `listed`(`ids` のものだけ)/ `any` /
+/// `examples`(`ids` のものと、許す例に近く止める例に近くないもの。D-314)。
 enum ChildSafeInstall {
   none('none', '入れられない'),
   listed('listed', '選んだものだけ'),
-  any('any', '自由');
+  any('any', '自由'),
+  examples('examples', '例に近いもの');
 
   const ChildSafeInstall(this.wire, this.label);
   final String wire;
@@ -161,7 +165,9 @@ enum ChildSafeInstall {
 }
 
 /// 使ってよいプラグイン(Central `docs/API.md` の `allow.plugins`)。`install` が `any` なら入っているものはどれでも、
-/// `none` / `listed` なら `ids` のものだけ(入っていても、ここに無ければ呼ばない)。
+/// `none` / `listed` なら `ids` のものだけ(入っていても、ここに無ければ呼ばない)、`examples` なら `ids` のものと
+/// 許す例に近いもの。**`ids` がいちばん強い**(名指しで許したものは、止める例に近くても使える)。`ids` に無いものは、
+/// 止める例に近ければ `any` でも使えない([scores] = マニフェストの中身と `allow.examples` の近さ。D-314)。
 /// `slots` = スロットごとの可否(書いていないスロットは可)。
 @immutable
 class ChildSafePluginsAllow {
@@ -169,7 +175,18 @@ class ChildSafePluginsAllow {
   final List<String> ids;
   final Map<String, bool> slots;
   final ChildSafeInstall install;
-  bool permits(String pluginId, String slot) => (install == ChildSafeInstall.any || ids.contains(pluginId)) && slots[slot] != false;
+  bool permits(String pluginId, String slot, {ExampleScores? scores}) => slots[slot] != false && permitsPlugin(pluginId, scores: scores);
+
+  /// スロットを見ない可否。[scores] が null(中身が分からない)なら、例では許さない / 止めない。
+  bool permitsPlugin(String pluginId, {ExampleScores? scores}) {
+    if (ids.contains(pluginId)) return true;
+    return switch (install) {
+      ChildSafeInstall.any => !(scores?.nearDeny ?? false),
+      ChildSafeInstall.examples => scores != null && scores.nearAllow && !scores.nearDeny,
+      ChildSafeInstall.none || ChildSafeInstall.listed => false,
+    };
+  }
+
   factory ChildSafePluginsAllow.fromJson(Map<String, Object?> j) => ChildSafePluginsAllow(ids: _strings(j['ids']), slots: _bools(j['slots']), install: ChildSafeInstall.fromWire(j['install']));
   Map<String, Object?> toJson() => {'ids': ids, 'slots': slots, 'install': install.wire};
   ChildSafePluginsAllow copyWith({List<String>? ids, Map<String, bool>? slots, ChildSafeInstall? install}) =>
@@ -193,7 +210,7 @@ class ChildSafeRaiAllow {
 /// `allow`: 書いてある面だけを絞る(書いていない面 = 止めない)。
 @immutable
 class ChildSafeAllow {
-  const ChildSafeAllow({this.sns, this.plugins, this.features, this.search, this.rai});
+  const ChildSafeAllow({this.sns, this.plugins, this.features, this.search, this.rai, this.examples});
   final ChildSafeSnsAllow? sns;
   final ChildSafePluginsAllow? plugins;
 
@@ -204,12 +221,16 @@ class ChildSafeAllow {
   final Map<String, bool>? search;
   final ChildSafeRaiAllow? rai;
 
+  /// 例で決める (D-314): 許す例 / 止める例。null = 例では絞らない。
+  final ContentExamples? examples;
+
   factory ChildSafeAllow.fromJson(Map<String, Object?> j) => ChildSafeAllow(
         sns: j['sns'] is Map ? ChildSafeSnsAllow.fromJson(_map(j['sns'])) : null,
         plugins: j['plugins'] is Map ? ChildSafePluginsAllow.fromJson(_map(j['plugins'])) : null,
         features: j['features'] is Map ? _bools(j['features']) : null,
         search: j['search'] is Map ? _bools(j['search']) : null,
         rai: j['rai'] is Map ? ChildSafeRaiAllow.fromJson(_map(j['rai'])) : null,
+        examples: j['examples'] is Map ? ContentExamples.fromJson(j['examples']) : null,
       );
   Map<String, Object?> toJson() => {
         if (sns != null) 'sns': sns!.toJson(),
@@ -217,9 +238,10 @@ class ChildSafeAllow {
         if (features != null) 'features': features,
         if (search != null) 'search': search,
         if (rai != null) 'rai': rai!.toJson(),
+        if (examples != null && examples!.isNotEmpty) 'examples': examples!.toJson(),
       };
-  ChildSafeAllow copyWith({ChildSafeSnsAllow? sns, ChildSafePluginsAllow? plugins, Map<String, bool>? features, Map<String, bool>? search, ChildSafeRaiAllow? rai}) =>
-      ChildSafeAllow(sns: sns ?? this.sns, plugins: plugins ?? this.plugins, features: features ?? this.features, search: search ?? this.search, rai: rai ?? this.rai);
+  ChildSafeAllow copyWith({ChildSafeSnsAllow? sns, ChildSafePluginsAllow? plugins, Map<String, bool>? features, Map<String, bool>? search, ChildSafeRaiAllow? rai, ContentExamples? examples}) => ChildSafeAllow(
+      sns: sns ?? this.sns, plugins: plugins ?? this.plugins, features: features ?? this.features, search: search ?? this.search, rai: rai ?? this.rai, examples: examples ?? this.examples);
 }
 
 /// 制限の全体(`rasq.child-safe/2`)。

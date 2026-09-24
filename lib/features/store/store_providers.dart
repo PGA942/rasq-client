@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../backend/orgate_client.dart';
 import '../settings/settings_dsl.dart';
+import '../trend/example_match.dart' show pluginExamplePieces;
 import 'http_store_client.dart';
 import '../plugins/slot_plugins.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -146,6 +147,14 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       return (error: e.message, verification: null);
     }
     if (m == null) return (error: version == null ? '構成(マニフェスト)を取得できませんでした' : 'Ver.$version の構成が見つかりませんでした', verification: null);
+    // チャイルドセーフの例 (D-314): 構成の中身(名前 / 説明 / スロット)が分かったので、例との近さでもう 1 度。
+    final manifestText = pluginExamplePieces(
+      name: '${m.manifest['name'] ?? pluginId}',
+      description: '${m.manifest['description'] ?? ''}',
+      slots: [for (final s in (m.manifest['slots'] as List? ?? const [])) if (s is String) s],
+    );
+    final exampleBlocked = ref.read(childGateProvider).installBlockReason(pluginId, text: manifestText);
+    if (exampleBlocked != null) return (error: exampleBlocked, verification: null);
     final bundle = m.bundle;
     if (bundle == null) return (error: '配布物がありません', verification: null);
 
