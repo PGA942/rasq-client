@@ -8,10 +8,12 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
 import 'rasq_account_page_screen.dart' show RasqSnsTileChip;
+import 'rasq_ownership_screens.dart' show rasqVerifiableKinds;
 import '../../shell/headers.dart';
 
 /// 選んだ画像の content-type(名前か、ピッカーの申告から)。サーバーは中身で判定し直すので、目安でよい。
@@ -73,6 +75,12 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
     } on OrgateException catch (e) {
       if (mounted) setState(() => _error = rasqProfileMessage(e));
     }
+  }
+
+  /// 持ち主の確認の画面 (D-313)。戻ったら、確認済みの印を出し直す。
+  Future<void> _openVerify(RasqSnsLink link) async {
+    await context.push(Routes.rasqSnsVerify(link.accountKey));
+    await _loadSnsLinks();
   }
 
   /// 「SNS のプロフィールにも、つないだアカウントを出す」(D-312)。変えたらすぐ保存する。
@@ -293,6 +301,21 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                             selected: {l.visibility},
                             onSelectionChanged: (s) => _setSnsVisibility(l, s.first),
                           ),
+                          // 持ち主の確認 (D-313): 済んでいれば印、まだなら確認の画面へ。
+                          if (l.tile.verified)
+                            Padding(
+                              key: ValueKey('rasqProfile.verified.${l.accountKey}'),
+                              padding: const EdgeInsets.only(top: RasqSpacing.xs),
+                              child: Row(children: [Icon(Icons.verified, size: 16, color: scheme.primary), const SizedBox(width: 4), Text('持ち主を確認済み(${l.tile.verifiedLabel})', style: RasqTypography.caption)]),
+                            )
+                          else if (rasqVerifiableKinds.contains(l.tile.kind))
+                            TextButton.icon(
+                              key: ValueKey('rasqProfile.verify.${l.accountKey}'),
+                              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                              onPressed: () => _openVerify(l),
+                              icon: const Icon(Icons.verified_outlined, size: 16),
+                              label: const Text('持ち主を確認'),
+                            ),
                           // 投稿もアカウントページに出す (S-027): SNS のアクセストークンを Central に預ける。同意してから。
                           _SnsPostsSwitch(key: ValueKey('rasqProfile.snsPosts.${l.accountKey}'), accountKey: l.accountKey, onMessage: (m) => ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(SnackBar(content: Text(m)))),
                         ]),
@@ -308,6 +331,21 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                   subtitle: 'アプリで誰かがあなたの SNS のプロフィールを見たとき、この RASQ アカウントと、アカウントページに出しているほかのアカウントを出します。自己紹介に書いてあるものは重ねて出しません。変更はすぐ反映されます。',
                   value: (account ?? a).showLinksOnSnsProfiles,
                   onChanged: _setShowOnSns,
+                ),
+              ),
+              // ── Keybase (D-313) ──
+              _Labeled(
+                'Keybase',
+                RasqListTile(
+                  key: const ValueKey('rasqProfile.keybase'),
+                  title: (account ?? a).keybase == null ? 'Keybase をつなぐ' : 'Keybase: @${(account ?? a).keybase!.username}',
+                  subtitle: (account ?? a).keybase == null ? 'Keybase のアカウントで署名して、この RASQ アカウントとつなぎます。アカウントページに出ます' : '確認済み。アカウントページに出ます',
+                  leading: Icon((account ?? a).keybase == null ? Icons.key_outlined : Icons.verified, color: (account ?? a).keybase == null ? null : scheme.primary),
+                  divider: false,
+                  onTap: () async {
+                    await context.push(Routes.rasqKeybase);
+                    await _loadSnsLinks(); // Keybase の証明で確認済みになったリンクを出し直す
+                  },
                 ),
               ),
               Padding(

@@ -37,6 +37,7 @@ import '../features/profile/profile_edit_screen.dart';
 import '../features/profile/rasq_account_page_screen.dart';
 import '../features/profile/rasq_post_screen.dart';
 import '../features/profile/rasq_reactions_screen.dart';
+import '../features/profile/rasq_ownership_screens.dart';
 import '../features/profile/rasq_profile_edit_screen.dart';
 import '../features/clips/clip_timeline_screen.dart';
 import '../features/lists/lists_screens.dart';
@@ -120,6 +121,10 @@ abstract final class Routes {
   /// 通知専用のアクセストークン (D-239)。
   static const settingsNotifyToken = '/settings/notify-token';
   static const settingsLearning = '/settings/learning';
+
+  /// 持ち主の確認 (D-313): つないだ SNS アカウントごと / RASQ アカウントの Keybase。
+  static String rasqSnsVerify(String accountKey) => '/settings/rasq-verify/${Uri.encodeComponent(accountKey)}';
+  static const rasqKeybase = '/settings/rasq-keybase';
 
   /// プラグインストア (M4 / D-120)。
   static const store = '/store';
@@ -266,6 +271,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'legal', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LegalScreen()),
             GoRoute(path: 'notify-token', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const NotifyTokenScreen()),
             GoRoute(path: 'rasq-profile', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RasqProfileEditScreen()),
+            GoRoute(path: 'rasq-verify/:key', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqSnsVerifyScreen(accountKey: s.pathParameters['key']!)),
+            GoRoute(path: 'rasq-keybase', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RasqKeybaseScreen()),
             GoRoute(path: 'security', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountSecurityScreen()),
             GoRoute(path: 'account-login', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountLoginScreen()),
             GoRoute(path: 'learning', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LearningScreen()),

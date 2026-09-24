@@ -31,6 +31,9 @@ class RasqLinksOnSnsProfile extends ConsumerWidget {
       extraTexts: [for (final f in profile.fields) '${f.name} ${f.value}', if (profile.url != null) profile.url.toString()],
     );
     final a = owner.account;
+    // 見ている SNS アカウントを、この RASQ アカウントが持ち主として確かめているか (D-313)。
+    final viewingKey = profile.summary.account.key.toLowerCase();
+    final viewing = owner.snsAccounts.where((t) => t.key.toLowerCase() == viewingKey).firstOrNull;
     return Padding(
       key: const ValueKey('snsProfile.rasq'),
       padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
@@ -54,6 +57,13 @@ class RasqLinksOnSnsProfile extends ConsumerWidget {
                 Flexible(child: Text('@${a.handle}', style: muted, overflow: TextOverflow.ellipsis)),
                 const SizedBox(width: 4),
                 const RasqBrandIcon(size: 14),
+                if (viewing != null && viewing.verified) ...[
+                  const SizedBox(width: 6),
+                  Tooltip(
+                    message: 'このアカウントの持ち主を確認済み(${viewing.verifiedLabel})',
+                    child: Icon(Icons.verified, key: const ValueKey('snsProfile.rasq.verified'), size: 16, color: scheme.primary, semanticLabel: '持ち主を確認済み'),
+                  ),
+                ],
                 const Spacer(),
                 Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
               ]),
