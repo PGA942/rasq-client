@@ -58,8 +58,10 @@ void main() {
     return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
   }
 
-  Future<SlotPlugin> register(ProviderContainer c, String name) async {
-    final p = await c.read(slotPluginsProvider.notifier).register('fake:$name', bytes: Uint8List.fromList(name.codeUnits));
+  /// [reviewed] = 審査済み(ストア)として登録する。astell.share / mute.add / composer.open / url.open は
+  /// サイドロードの制限モード (D-308) で閉じるので、それを使う試験はストアの登録にする。
+  Future<SlotPlugin> register(ProviderContainer c, String name, {bool reviewed = false}) async {
+    final p = await c.read(slotPluginsProvider.notifier).register(reviewed ? 'store:t.$name' : 'fake:$name', bytes: Uint8List.fromList(name.codeUnits));
     expect(p, isNotNull, reason: c.read(slotPluginsNoticeProvider));
     return p!;
   }
@@ -137,7 +139,7 @@ void main() {
           },
         );
     final c = await pump(tester);
-    await register(c, 'astell');
+    await register(c, 'astell', reviewed: true);
     // 参加してルーム FOW を開く。
     await c.read(astellSessionProvider.notifier).join((await c.read(astellClientProvider).room('r-launch'))!);
     await tester.tap(find.byTooltip('AsTell'));
@@ -287,7 +289,7 @@ void main() {
     late FakeSlotRuntime rt;
     fakes['qr'] = () => rt = FakeSlotRuntime(manifest: manifest('t.qr', ['viewer.overlay'], permissions: ['fow.widget', 'mute.words']), handler: (_, fn, args) => null);
     final c = await pump(tester);
-    final p = await register(c, 'qr');
+    final p = await register(c, 'qr', reviewed: true);
     expect(p.manifest.appFns, containsAll(['mute.add', 'viewer.overlay.set', 'clipboard.set', 'url.open']));
     rt.hostFn('mute.add', {'text': 'https://spam.example/'});
     await tester.pumpAndSettle();

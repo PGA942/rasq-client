@@ -126,6 +126,9 @@ class ChildSafeController extends AsyncNotifier<ChildSafeState> {
   }
 
   Future<void> _sync() async {
+    // build の直後の microtask で来るので、そのあいだに捨てられていたら何もしない(サイドロードの段 D-308 が
+    // 見守りの有無を読むようになり、登録の一覧と一緒に作られて捨てられることが増えた)。
+    if (!ref.mounted) return;
     final api = ref.read(childSafeApiProvider);
     if (api == null) return;
     RasqAccount? me;

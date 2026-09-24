@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:crypto/crypto.dart' show sha512;
 import 'package:flutter/foundation.dart';
@@ -239,11 +238,18 @@ bool isReviewedSlotSource(String source) => source.startsWith('store:');
 /// Dart の host_fn の権限検査を通らないので、既定は閉で、埋込側がインスタンスごとに開ける(rasq-sdk-sample
 /// docs/host-functions.md「gpu.compute の権限と上限」)。どちらもマニフェストの `gpu_ml` の宣言が要る:
 /// - ストア (`store:`): 審査を通った配布物のマニフェストが `gpu_ml` を宣言していれば開ける。
-/// - サイドロード(ファイル / `asset:`): **自分の開発者鍵の署名がある場合 ([SideloadTrust.full]) だけ**宣言どおりに開ける。
-///   それ以外(署名なし / 他人の鍵 / 素の `.wasm`)は制限モードで閉(D-306、ユーザー決定 2026-09-24)。
+/// - サイドロード(ファイル / `asset:`): **自分の開発者鍵の署名がある場合 ([SideloadTrust.full])** とアプリ同梱のアセット
+///   ([SideloadTrust.bundled]) だけ宣言どおりに開ける。それ以外(署名なし / 他人の鍵 / 素の `.wasm`)は制限モードで閉
+///   (D-306 / D-308、ユーザー決定 2026-09-24)。
 ///   [sideloadTrust] は register が [sideloadTrustOf] で決めた段。ストアの登録では見ない。
+/// 表の値は [slotCapabilitiesFor] → [SideloadCapabilities.gpuEnabled](D-308 の表と同じ 1 か所)。
 bool slotGpuComputeAllowed(SlotManifest manifest, {required String source, required SideloadTrust sideloadTrust}) =>
-    manifest.permissions.contains(RasqPermissions.gpuMl) && (isReviewedSlotSource(source) || sideloadTrust.isFull);
+    manifest.permissions.contains(RasqPermissions.gpuMl) && slotCapabilitiesFor(source, sideloadTrust).gpuEnabled;
+
+/// スロットプラグインに開けてよい能力 (D-308): ストア (`store:`、審査済み) は宣言どおり ([SideloadCapabilities.full])、
+/// サイドロードは段 ([SideloadTrust.capabilities]、自分の署名 = フル / ほか = 制限モード)。
+SideloadCapabilities slotCapabilitiesFor(String source, SideloadTrust sideloadTrust) =>
+    isReviewedSlotSource(source) ? SideloadCapabilities.full : sideloadTrust.capabilities;
 
 @immutable
 class SlotPlugin {
@@ -263,6 +269,9 @@ class SlotPlugin {
   /// 審査済みか(ストアからインストールしたもの、D-168)。サイドロード(ファイル / 同梱アセット)は未審査として扱い、
   /// 宣言の `auto`(temp)を読まない(契約 v0.14 §2.11)。
   bool get isReviewed => isReviewedSlotSource(source);
+
+  /// 開けてよい能力 (D-308)。ストアは宣言どおり、サイドロードは [sideloadTrust] の表の行。
+  SideloadCapabilities get capabilities => slotCapabilitiesFor(source, sideloadTrust);
   Future<Map<String, dynamic>> call(String fn, Map<String, Object?> args) => runtime.invoke(fn, args);
 
   /// `call` の `value`(失敗は null)。
@@ -422,14 +431,15 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   Future<SlotPlugin?> register(String source, {Uint8List? bytes, bool persist = true}) async {
     try {
       final (:container, :pluginId) = splitPackageSource(source);
-      var data = bytes ?? File(container).readAsBytesSync();
-      // サイドロードの信頼の段 (D-306): 展開する前の配布物そのものと、隣の `.sig.json` で決める。
+      // `asset:` はアプリ同梱のアセット(次回起動の読み直しは bytes 無しで来る)。
+      var data = bytes ?? await readSideloadContainer(container);
+      // サイドロードの信頼の段 (D-306 / D-308): 展開する前の配布物そのものと、隣の `.sig.json` で決める(同梱のアセットはフル)。
       // 次回起動の読み直しでも毎回ここを通る(登録時の結果を覚えておかない)。
       // 一覧が届く前 / 変わる途中に読んだ段は、登録のあとで [_reevaluateSideloadTrust] が確かめ直す。
       final ownFingerprints = ref.read(ownDevKeyFingerprintsProvider);
       final sideloadTrust = isReviewedSlotSource(source)
           ? SideloadTrust.restricted
-          : await sideloadTrustOf(data, signature: await readSideloadSignature(container), ownFingerprints: ownFingerprints);
+          : await sideloadTrustOfContainer(container, data, ownFingerprints: ownFingerprints);
       String? expectedId;
       if (isRasqPackage(data)) {
         final entry = RasqPackage.open(data, decompress: ref.read(rasqpkgZstdProvider)).plugin(pluginId);
@@ -438,9 +448,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         expectedId = entry.id;
       }
       final loader = ref.read(slotRuntimeLoaderProvider);
+      // 制限モード (D-308): 宣言をさらに絞る表の行。ストアは宣言どおり。
+      final caps = slotCapabilitiesFor(source, sideloadTrust);
       // マニフェストを読むために一度素の権限で起動し、宣言に合わせて起動し直す。
-      // 1 段目はマニフェストを読むだけ。予算はランタイム既定(重いほう)に任せる。
-      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {}, fuelPerCall: null, fetchHosts: const {}, gpuCompute: false);
+      // 1 段目はマニフェストを読むだけ。予算はランタイム既定(重いほう)に任せる(制限モードはその倍率)。
+      var runtime = await loader(data, source: source, fowPermissions: const {'widget'}, appFns: const {}, permissions: const {}, fuelPerCall: caps.fuelPerCall(null), fetchHosts: const {}, gpuCompute: false);
       final m = (await runtime.invoke('plugin.manifest', const {}))['value'];
       if (m is! Map) {
         runtime.dispose();
@@ -457,8 +469,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         throw StateError('配布物の目次は $expectedId なのに、wasm は ${manifest.id} を名乗っています');
       }
       runtime.dispose();
-      runtime = await loader(data, source: source, fowPermissions: manifest.fowPermissions, appFns: manifest.appFns, permissions: manifest.permissions.toSet(),
-          fuelPerCall: fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet()), fetchHosts: manifest.fetchHosts,
+      // 2 段目は宣言どおり、ただし制限モード (D-308) の表で絞る: `network` / `storage.unsafe` / `gpu_ml` /
+      // `fow.interstitial` / `fow.system` を権限から外し、接続先を空に、閉じるアプリ向けホスト関数を外し、fuel は倍率を掛ける。
+      // 外したものはワーカーの環境(端末: RasqHostEnvironment、Web: Worker の JS)が `E01` で断る(どちらも同じ config を受ける)。
+      runtime = await loader(data, source: source, fowPermissions: caps.fowKinds(manifest.fowPermissions), appFns: caps.appFns(manifest.appFns), permissions: caps.permissions(manifest.permissions),
+          fuelPerCall: caps.fuelPerCall(fuelBudgetFor(permissions: manifest.permissions.toSet(), slots: manifest.slots.toSet())), fetchHosts: caps.fetchHosts(manifest.fetchHosts),
           gpuCompute: slotGpuComputeAllowed(manifest, source: source, sideloadTrust: sideloadTrust));
       if (_disposed) {
         runtime.dispose(); // 読み込み中にプロバイダーが捨てられた(テストの再構築など)
@@ -510,17 +525,12 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
           final container = splitPackageSource(p.source).container;
           final Uint8List bytes;
           try {
-            if (container.startsWith('asset:')) {
-              final data = await rootBundle.load(container.substring(6));
-              bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-            } else {
-              bytes = File(container).readAsBytesSync();
-            }
+            bytes = await readSideloadContainer(container);
           } catch (e) {
             debugPrint('slot plugin ${p.id}: sideload trust not re-evaluated (unreadable): $e');
             continue;
           }
-          final trust = await sideloadTrustOf(bytes, signature: await readSideloadSignature(container), ownFingerprints: own);
+          final trust = await sideloadTrustOfContainer(container, bytes, ownFingerprints: own);
           if (_disposed) return;
           // 読み直しのあいだに外された / 差し替えられたものは見ない。
           if (trust != p.sideloadTrust && state.any((x) => identical(x, p))) await register(p.source, bytes: bytes, persist: false);
@@ -613,6 +623,12 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   void _onAppFn(SlotPlugin plugin, String fn, Map<String, Object?> args) {
     if (_disposed) return;
+    // 制限モード (D-308) で閉じた関数は、ワーカーの環境が `E01` で断っていてここへは来ない。念のためここでも落とす
+    // (トーストは出さない: プラグインは `E01` を受け取っている。チャイルドセーフの関所とも重ねて知らせない)。
+    if (plugin.capabilities.blockedHostFns.contains(fn)) {
+      debugPrint('slot plugin ${plugin.id}: $fn is closed in restricted mode (D-308)');
+      return;
+    }
     switch (fn) {
       case RasqHostFns.toast:
         _toast('${plugin.manifest.name}: ${args['message'] ?? ''}');

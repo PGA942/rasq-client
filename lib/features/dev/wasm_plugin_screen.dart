@@ -31,6 +31,9 @@ import '../store/rasqpkg.dart';
 ///
 /// 通常はワーカー isolate(AsyncWasmPluginController)で実行し UI を
 /// ブロックしない。テストは envOverride で同期コントローラに差し替える。
+///
+/// 読み込んだものに与える権限は [devScreenGrantFor] (D-308): debug ビルドだけ全権限、release では
+/// スロット登録と同じ [SideloadTrust](自分の鍵で署名した `.rasqpkg` = フル、ほか = 制限モード)。
 class WasmPluginScreen extends ConsumerStatefulWidget {
   const WasmPluginScreen({super.key, this.wasmBytesOverride, this.envOverride});
 
@@ -42,7 +45,51 @@ class WasmPluginScreen extends ConsumerStatefulWidget {
   ConsumerState<WasmPluginScreen> createState() => _WasmPluginScreenState();
 }
 
+/// dev 試験画面が読み込んだものに与える権限 (D-308)。マニフェストを読まずに動かす面なので、権限は語彙の全部
+/// ([RasqPermissions.all])から段の表で絞る。
+@immutable
+class DevScreenGrant {
+  const DevScreenGrant({required this.label, required this.permissions, required this.fowPermissions, required this.gpuCompute, required this.fuelPerCall, this.trust});
+
+  /// 画面に出す段の名前(「デバッグビルド: 全権限」/「フル」/「制限」)。
+  final String label;
+  final Set<String> permissions;
+  final Set<String> fowPermissions;
+  final bool gpuCompute;
+
+  /// null = ランタイム既定。
+  final int? fuelPerCall;
+
+  /// release で使った段(debug の全権限では null)。
+  final SideloadTrust? trust;
+
+  bool get isDebugAll => trust == null;
+}
+
+/// dev 試験画面の門 (D-308) — [debug] は `kDebugMode`(試験では両方を渡す)。
+/// - debug ビルド: 明示の開発用サンドボックスとして全権限(`RasqPermissions.all`、FOW は全種類、`gpu.compute` を開ける)。
+/// - release ビルド: スロット登録と同じ [trust](自分の鍵の署名 = フル / ほか = 制限モード)の表
+///   ([SideloadTrust.capabilities]) で絞る。制限モードでは `network` / `storage.unsafe` / `gpu_ml` /
+///   `fow.interstitial` / `fow.system` を外し、fuel は倍率を掛ける。
+DevScreenGrant devScreenGrantFor({required bool debug, required SideloadTrust trust}) {
+  if (debug) {
+    return const DevScreenGrant(label: 'デバッグビルド: 全権限', permissions: RasqPermissions.all, fowPermissions: sideloadFowKinds, gpuCompute: true, fuelPerCall: null);
+  }
+  final caps = trust.capabilities;
+  return DevScreenGrant(
+    label: trust.label,
+    permissions: caps.permissions(RasqPermissions.all),
+    fowPermissions: caps.fowKinds(sideloadFowKinds),
+    gpuCompute: caps.gpuEnabled,
+    fuelPerCall: caps.fuelPerCall(null),
+    trust: trust,
+  );
+}
+
 class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
+  /// いま読み込んでいるものに与えた権限 (D-308)。
+  DevScreenGrant? _grant;
+
   WasmPluginViewModel? _controller;
   String? _loadError;
 
@@ -116,7 +163,9 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       final bytes = widget.wasmBytesOverride ?? (await rootBundle.load(asset)).buffer.asUint8List();
       _lastBytes = bytes;
       _lastSource = 'asset:$asset';
-      await _start(bytes);
+      // アプリ同梱のアセットはアプリと同じ信頼 = フル (D-308)。rootBundle から読んだものだけ(試験の差し替えのバイト列は制限モード)。
+      final trust = widget.wasmBytesOverride == null ? SideloadTrust.bundled : SideloadTrust.restricted;
+      await _start(bytes, trust: trust);
     } catch (e) {
       setState(() => _loadError = 'アセットの読み込みに失敗: $e');
     }
@@ -143,6 +192,8 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       _lastBytes = bytes;
       _lastSource = file.path;
       String? note;
+      // 段 (D-306 / D-308) は展開する前の配布物と隣の .sig.json で決める(スロット登録と同じ sideloadTrustOfContainer)。
+      final trust = await sideloadTrustOfContainer(file.path, bytes, ownFingerprints: ref.read(ownDevKeyFingerprintsProvider));
       // サイドロード (WF P-23): .rasqpkg は展開・検証して、root(SNS プラグインなら最初の子)を読み込む。
       // 隣に `<pkg>.sig.json`(`rasq build` の開発者鍵の署名)があれば確かめて、鍵の指紋を出す。
       if (isRasqPackage(bytes)) {
@@ -151,22 +202,22 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
         if (target.id != pkg.root.id) _lastSource = '${file.path}#${target.id}';
         final sigFile = File('${file.path}.sig.json');
         final signed = sigFile.existsSync() ? await verifyDevSignature(bytes, (jsonDecode(sigFile.readAsStringSync()) as Map).cast<String, Object?>()) : null;
-        // スロットに登録したときの段 (D-306): 自分の開発者鍵の署名ならフル機能、ほかは制限モード(GPU は閉)。
-        final own = signed != null && ref.read(ownDevKeyFingerprintsProvider).contains(signed);
         note = '.rasqpkg: ${pkg.root.id} ${pkg.root.version}(子 ${pkg.children.length})→ ${target.id} を読み込み。'
             '${signed != null ? '開発者鍵の署名 OK(指紋 $signed)。ストアの審査は通っていません' : '署名なし(.sig.json がありません)。出どころを確かめられません'}。'
-            'スロットに登録すると${own ? 'フル機能(自分の鍵の署名)' : '制限モード(自分の鍵の署名ではないため GPU は閉)'}';
+            'スロットに登録すると${trust.isFull ? 'フル機能(自分の鍵の署名)' : '制限モード(自分の鍵の署名ではないため、通信 / GPU / storage.unsafe / interstitial・system の FOW / 共有・コンポーザー・ミュート・URL を開く関数は閉)'}';
         bytes = target.wasm;
       }
-      await _start(bytes);
+      await _start(bytes, trust: trust);
       if (mounted) setState(() => _pkgNote = note);
     } catch (e) {
       setState(() => _loadError = '$raw の読み込みに失敗(絶対パスか ~/ 始まりで指定してください): $e');
     }
   }
 
-  Future<void> _start(Uint8List bytes) async {
+  Future<void> _start(Uint8List bytes, {required SideloadTrust trust}) async {
     _disposeController();
+    final grant = devScreenGrantFor(debug: kDebugMode, trust: trust);
+    _grant = grant;
     if (widget.envOverride != null) {
       final controller = WasmPluginController(wasmBytes: bytes, env: widget.envOverride)..load();
       _wireFowSurface(controller);
@@ -176,14 +227,11 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       });
       return;
     }
-    // 手元の .wasm を直接読む開発用サーフェス: マニフェストが無いので
-    // 宣言を引けない。ストア経由の導入 (slot_plugins / WasmSnsPlugin) は
-    // 宣言どおりに絞られる。gpu.compute (D-081) も、`network` と同じくこの画面では開ける
-    // (手元で読み込んだこと自体が付与。RasqPermissions.all に gpu_ml が入っている)。
-    // 注意: この画面は debug ビルド限定ではない(サイドメニューの「WASMプラグイン試験 (dev)」、未ログインでも開ける)。
-    // 「スロットに登録」したもの (slot_plugins) は D-306 の SideloadTrust に従い、自分の署名が無ければ制限モード(GPU 閉)。
-    // TODO(制限モード): この試験画面そのものの門(debug 限定にする / 同じ SideloadTrust に揃える)は制限モードの残りと一緒に決める。
-    final controller = AsyncWasmPluginController(wasmBytes: bytes, permissions: RasqPermissions.all, gpuCompute: true);
+    // 手元の .wasm を直接読む開発用サーフェス: マニフェストが無いので宣言を引けない。ストア経由の導入
+    // (slot_plugins / WasmSnsPlugin) は宣言どおりに絞られる。この画面は debug ビルド限定ではない
+    // (サイドメニューの「WASMプラグイン試験 (dev)」、未ログインでも開ける)ので、門は [devScreenGrantFor] (D-308):
+    // 全権限は debug ビルドだけ、release はスロット登録と同じ SideloadTrust の表で絞る(素の .wasm は制限モード)。
+    final controller = AsyncWasmPluginController(wasmBytes: bytes, permissions: grant.permissions, fowPermissions: grant.fowPermissions, fuelPerCall: grant.fuelPerCall, gpuCompute: grant.gpuCompute);
     _wireFowSurface(controller);
     setState(() {
       _controller = controller;
@@ -363,6 +411,16 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
               ),
             ]),
             const SizedBox(height: RasqSpacing.xs),
+            // 段 (D-308): この画面で読み込んだものの権限と、スロットに登録したときの段の説明。
+            if (_grant != null)
+              Text(
+                _grant!.isDebugAll
+                    ? '${_grant!.label}(release ビルドでは段で絞ります: $sideloadTrustHint)'
+                    : 'この画面: ${switch (_grant!.trust!) { SideloadTrust.full => 'フル機能', SideloadTrust.bundled => 'フル機能(アプリ同梱)', SideloadTrust.restricted => '制限モード' }} — $sideloadTrustHint',
+                key: const ValueKey('wasm.dev.mode'),
+                style: RasqTypography.caption.copyWith(color: _grant!.isDebugAll || _grant!.trust!.isFull ? scheme.onSurfaceVariant : RasqTokens.of(context).danger),
+              ),
+            const SizedBox(height: RasqSpacing.xs),
             // スロット登録 (D-167): 読み込んだ wasm をアプリの各所(AsTell / コンポーザー /
             // ビューワー / TL / トレンド)から呼べるように常駐させる。パスは端末に残る。
             Row(children: [
@@ -384,9 +442,11 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
               const SizedBox(width: RasqSpacing.sm),
               Expanded(child: Text(ref.watch(slotPluginsNoticeProvider) ?? '登録済み: ${ref.watch(slotPluginsProvider).length}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis)),
             ]),
+            Text('スロットの段: フル / 制限 — $sideloadTrustHint', key: const ValueKey('wasm.slot.modeHint'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             for (final p in ref.watch(slotPluginsProvider))
               Row(children: [
-                Expanded(child: Text('${p.manifest.name} ${p.manifest.version} — ${p.manifest.slots.join(', ')}', style: RasqTypography.caption, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                // 段 (D-308): ストアは審査済み、サイドロードは フル / 制限。
+                Expanded(child: Text('${p.manifest.name} ${p.manifest.version} [${p.isReviewed ? '審査済み' : p.sideloadTrust.label}] — ${p.manifest.slots.join(', ')}', style: RasqTypography.caption, maxLines: 1, overflow: TextOverflow.ellipsis)),
                 TextButton(onPressed: () => ref.read(slotPluginsProvider.notifier).unregister(p.id), child: const Text('解除')),
               ]),
             if (_loadError != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_loadError!, style: RasqTypography.caption.copyWith(color: RasqTokens.of(context).danger))),

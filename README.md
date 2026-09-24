@@ -33,6 +33,11 @@ for p in packages/*; do (cd "$p" && flutter test); done
 flutter run              # 起動。サイドバー →「コンポーネントカタログ (dev)」で部品一覧
 ```
 
+プラグインのサイドロード(「WASMプラグイン試験 (dev)」から読み込む / スロットに登録する)は、**自分の開発者鍵で署名した
+`.rasqpkg`(`rasq build` が隣に `.sig.json` を出す)とアプリ同梱のものだけフル機能**、ほかは**制限モード**
+(通信 / GPU / `storage.unsafe` / interstitial・system の FOW / `composer.open`・`astell.share`・`mute.add`・`url.open` が閉、fuel は半分)。
+試験画面の全権限は debug ビルドだけ。表は `lib/features/plugins/sideload_trust.dart`(D-308、`docs/PLUGIN_CONTRACT.md` §8)。
+
 静的チェック(CI の `flutter` の analyze / `semgrep` / `osv` / `deny`。GitLab の SAST と秘密情報の検出は別に回る):
 
 ```sh

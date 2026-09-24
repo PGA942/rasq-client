@@ -16,6 +16,12 @@ export 'wasm_worker_config.dart';
 /// v1 の host_fn は同期なので、`net.fetch` は Worker の中の**同期 XHR**で出す(Worker の中なら UI は止まらない)。
 /// ブラウザの通信なので、相手のサーバーが CORS を許していること(Mastodon / Bluesky の API は許している)。
 /// `storage.*` / `fow.*` / アプリ向けホスト関数は、端末版のワーカーと同じ振る舞い(storage はワーカーの中、fow / アプリ向けはメインへ中継)。
+///
+/// サイドロードの制限モード (D-308) は、埋込側が [WasmWorkerConfig] を絞って渡す(`permissions` から `network` /
+/// `storage.unsafe` / `gpu_ml` / `fow.interstitial` / `fow.system` を外す、`fetchHosts` を空に、閉じる関数を `appFns` から外す)。
+/// Worker の JS はその値で端末版と同じ門(`E01`)を掛ける: `net.fetch` = `permissions` の `network` と `hostPermitted`、
+/// `storage.*` = `storage.<ns>`、`fow.open` = `fowPermissions`、アプリ向け = `appFns`。**fuel の予算は Web には無い**
+/// (ブラウザの WebAssembly は fuel を数えない。`fuelPerCall` はここでは効かない)。
 class WasmPluginWorker {
   WasmPluginWorker._(this._worker, this._url);
 
