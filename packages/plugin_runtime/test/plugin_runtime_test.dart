@@ -1271,5 +1271,14 @@ void _fuelBudgetTests() {
       expect(RasqWasmPlugin.standardFuelBudget, lessThan(RasqWasmPlugin.mediaFuelBudget));
       expect(RasqWasmPlugin.standardFuelBudget, greaterThan(0));
     });
+
+    test('scaleFuelBudget: 倍率を掛ける(制限モード 0.5、D-308)。null = ランタイム既定(重いほう)に掛ける', () {
+      expect(scaleFuelBudget(RasqWasmPlugin.standardFuelBudget, 0.5), RasqWasmPlugin.standardFuelBudget ~/ 2);
+      expect(scaleFuelBudget(RasqWasmPlugin.mediaFuelBudget, 0.5), RasqWasmPlugin.mediaFuelBudget ~/ 2);
+      expect(scaleFuelBudget(null, 0.5), RasqWasmPlugin.mediaFuelBudget ~/ 2);
+      expect(scaleFuelBudget(RasqWasmPlugin.standardFuelBudget, 1), RasqWasmPlugin.standardFuelBudget);
+      expect(scaleFuelBudget(null, 1), isNull);
+      expect(scaleFuelBudget(100, 0), 1); // 0 には落とさない
+    });
   });
 }

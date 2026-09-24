@@ -21,3 +21,14 @@ int fuelBudgetFor({required Set<String> permissions, Set<String> slots = const {
       permissions.contains(RasqPermissions.tagMedia);
   return touchesBitmaps ? RasqWasmPlugin.mediaFuelBudget : RasqWasmPlugin.standardFuelBudget;
 }
+
+/// fuel 予算 [budget] に倍率 [factor] を掛ける(サイドロードの制限モードは 0.5、D-308)。
+///
+/// [budget] が null = ランタイム既定(重いほう = [RasqWasmPlugin.mediaFuelBudget])として掛ける。
+/// [factor] が 1 以上なら [budget] をそのまま返す(null は null のまま = ランタイム既定)。
+/// 0 以下は 1 に丸める(予算 0 = 何も動かない、を倍率の書き損じで作らない)。
+int? scaleFuelBudget(int? budget, double factor) {
+  if (factor >= 1) return budget;
+  final scaled = ((budget ?? RasqWasmPlugin.mediaFuelBudget) * factor).floor();
+  return scaled < 1 ? 1 : scaled;
+}

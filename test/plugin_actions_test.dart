@@ -174,7 +174,8 @@ void main() {
           },
         );
     final c = await pump(tester);
-    final p = await c.read(slotPluginsProvider.notifier).register('fake:act', bytes: Uint8List.fromList('act'.codeUnits));
+    // composer.open / astell.share / mute.add / url.open はサイドロードの制限モード (D-308) で閉じるので、審査済み(ストア)として登録する。
+    final p = await c.read(slotPluginsProvider.notifier).register('store:t.act', bytes: Uint8List.fromList('act'.codeUnits));
     expect(p!.manifest.actions.length, 3);
     expect(p.manifest.appFns, contains('composer.open'));
     await tester.pumpAndSettle();
