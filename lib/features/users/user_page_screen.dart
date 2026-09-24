@@ -16,6 +16,7 @@ import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../text/inline_spans.dart';
 import '../clips/clip_providers.dart';
+import '../profile/rasq_links_on_sns_profile.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import 'user_list.dart';
@@ -63,25 +64,29 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
           // (ノートには両方とも流さない。純リノートはノートに残る)。
           final tabs = [const RasqTabItem('ノート'), const RasqTabItem('返信'), const RasqTabItem('引用'), const RasqTabItem('メディア'), const RasqTabItem('クリップ/Play')];
           return RasqCollapsibleTabScaffold(
-            header: RasqUserTileLarge(
-              profile: p,
-              isSelf: isSelf,
-              following: isSelf ? null : st.following,
-              followedBy: st.followedBy,
-              requested: st.requested,
-              restricted: restricted,
-              onShowRestricted: () => setState(() => _showRestricted = true),
-              // アイコン / バナーのタップで全画面表示 (D-177)。
-              onAvatarTap: p.summary.avatarUrl == null ? null : () => context.openImage(p.summary.avatarUrl!, title: p.summary.displayName),
-              onBannerTap: p.bannerUrl == null ? null : () => context.openImage(p.bannerUrl!, title: p.summary.displayName),
-              bio: p.description == null ? null : RasqRichText(InlineSpans.parse(p.description!, emojis: ref.watch(emojiCacheProvider), onLink: (u) => launchUrl(u, mode: LaunchMode.externalApplication), onHashtag: (t) => context.pushTrend(t)), style: RasqTypography.body),
-              onFollowTap: () => ref.read(userListHelperProvider).toggleFollow(p.summary),
-              onEditTap: () => context.push(Routes.profileEdit),
-              onNotifyTap: () {},
-              onFollowingTap: () => context.pushFollows(p.summary, followers: false),
-              onFollowersTap: () => context.pushFollows(p.summary, followers: true),
-              onLinkTap: (u) => launchUrl(u, mode: LaunchMode.externalApplication),
-            ),
+            header: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              RasqUserTileLarge(
+                profile: p,
+                isSelf: isSelf,
+                following: isSelf ? null : st.following,
+                followedBy: st.followedBy,
+                requested: st.requested,
+                restricted: restricted,
+                onShowRestricted: () => setState(() => _showRestricted = true),
+                // アイコン / バナーのタップで全画面表示 (D-177)。
+                onAvatarTap: p.summary.avatarUrl == null ? null : () => context.openImage(p.summary.avatarUrl!, title: p.summary.displayName),
+                onBannerTap: p.bannerUrl == null ? null : () => context.openImage(p.bannerUrl!, title: p.summary.displayName),
+                bio: p.description == null ? null : RasqRichText(InlineSpans.parse(p.description!, emojis: ref.watch(emojiCacheProvider), onLink: (u) => launchUrl(u, mode: LaunchMode.externalApplication), onHashtag: (t) => context.pushTrend(t)), style: RasqTypography.body),
+                onFollowTap: () => ref.read(userListHelperProvider).toggleFollow(p.summary),
+                onEditTap: () => context.push(Routes.profileEdit),
+                onNotifyTap: () {},
+                onFollowingTap: () => context.pushFollows(p.summary, followers: false),
+                onFollowersTap: () => context.pushFollows(p.summary, followers: true),
+                onLinkTap: (u) => launchUrl(u, mode: LaunchMode.externalApplication),
+              ),
+              // この人の RASQ アカウントと、ほかにつないでいるアカウント (D-312)。制限中 / 凍結中は出さない。
+              if (!restricted && !p.isSuspended) RasqLinksOnSnsProfile(profile: p),
+            ]),
             tabs: RasqTabs(items: tabs),
             tabViews: restricted
                 ? [for (final _ in tabs) const RasqEmptyView(title: '制限されたユーザーです', hint: '「表示」を押すと内容を表示します')]

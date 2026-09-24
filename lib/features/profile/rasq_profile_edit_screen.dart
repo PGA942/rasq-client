@@ -75,6 +75,15 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
     }
   }
 
+  /// 「SNS のプロフィールにも、つないだアカウントを出す」(D-312)。変えたらすぐ保存する。
+  Future<void> _setShowOnSns(bool on) async {
+    try {
+      await ref.read(orgateAccountProvider.notifier).setShowLinksOnSnsProfiles(on);
+    } on OrgateException catch (e) {
+      if (mounted) setState(() => _error = rasqProfileMessage(e));
+    }
+  }
+
   @override
   void dispose() {
     for (final c in [_name, _handle, _bio, _location, _birthday]) {
@@ -290,6 +299,17 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                       ),
                   ]),
                 ),
+              // ── SNS のプロフィールにも出す (D-312) ──
+              _Labeled(
+                'SNS のプロフィール',
+                RasqSwitchListTile(
+                  key: const ValueKey('rasqProfile.showOnSns'),
+                  title: 'SNS のプロフィールにも、つないだアカウントを出す',
+                  subtitle: 'アプリで誰かがあなたの SNS のプロフィールを見たとき、この RASQ アカウントと、アカウントページに出しているほかのアカウントを出します。自己紹介に書いてあるものは重ねて出しません。変更はすぐ反映されます。',
+                  value: (account ?? a).showLinksOnSnsProfiles,
+                  onChanged: _setShowOnSns,
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
                 child: Text('プロフィールは、RASQ の公開ページとストアのレビューに出ます。画像はサーバーで縮めて保存し直します(位置情報などは残りません)。メールアドレスとパスワードは「セキュリティ」から。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
