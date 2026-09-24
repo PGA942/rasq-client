@@ -1062,20 +1062,49 @@ void main() {
   });
 
   test('gpu.compute (D-081): WGSL compute で f32 配列を 2 倍(GPU 無しは E01 でクラウドへ縮退)', () {
-    final controller = WasmPluginController(wasmBytes: bytes);
+    // 門を開ける: 審査済み(gpuCompute)かつ gpu_ml の宣言。
+    final controller = WasmPluginController(wasmBytes: bytes, env: RasqHostEnvironment(permissions: {RasqPermissions.gpuMl}, gpuCompute: true));
     addTearDown(controller.dispose);
     controller.load();
     final result = controller.invoke('gpuDouble', {'values': [1, 2.5, 3]});
     if (result['ok'] != true) {
       // GPU アダプターの無い環境: E01 = クラウドカルクレーターへの
-      // フォールバック規約どおり。
+      // フォールバック規約どおり。門は開いているので「permission denied」ではない。
       expect((result['error'] as Map)['code'], 'E01', reason: '$result');
+      expect('${(result['error'] as Map)['message']}', isNot(contains('permission denied')), reason: '$result');
       markTestSkipped('no gpu adapter: $result');
       return;
     }
     final value = (result['value'] as Map).cast<String, Object?>();
     expect(value['placement'], 'device');
     expect((value['values'] as List).map((v) => (v as num).toDouble()).toList(), [2.0, 5.0, 6.0]);
+  });
+
+  group('gpu.compute の門 (D-081): 既定は閉、審査済み + gpu_ml のときだけ開ける', () {
+    test('gpuComputeEnabled = gpuCompute かつ gpu_ml の宣言', () {
+      expect(RasqHostEnvironment().gpuComputeEnabled, isFalse); // 既定は閉
+      expect(RasqHostEnvironment(permissions: {RasqPermissions.gpuMl}).gpuComputeEnabled, isFalse); // 宣言だけ(未審査)
+      expect(RasqHostEnvironment(permissions: RasqPermissions.all.difference({RasqPermissions.gpuMl}), gpuCompute: true).gpuComputeEnabled, isFalse); // 審査済みでも宣言が無い
+      expect(RasqHostEnvironment(permissions: {RasqPermissions.gpuMl}, gpuCompute: true).gpuComputeEnabled, isTrue);
+      expect(WasmWorkerConfig(wasmBytes: Uint8List(0)).gpuCompute, isFalse); // ワーカーの構成も既定は閉
+    });
+
+    // ランタイムが門を閉じたまま答えること(GPU の有無に関係なく決まる)。
+    for (final (label, env) in [
+      ('既定の env', RasqHostEnvironment()),
+      ('gpu_ml の宣言だけ(gpuCompute 偽)', RasqHostEnvironment(permissions: {RasqPermissions.gpuMl})),
+      ('gpuCompute 真でも gpu_ml の宣言が無い', RasqHostEnvironment(permissions: _samplePermissions, gpuCompute: true)),
+    ]) {
+      test('閉: $label → E01 permission denied', () {
+        final controller = WasmPluginController(wasmBytes: bytes, env: env);
+        addTearDown(controller.dispose);
+        controller.load();
+        final result = controller.invoke('gpuDouble', {'values': [1, 2]});
+        expect(result['ok'], isFalse, reason: '$result');
+        expect((result['error'] as Map)['code'], 'E01');
+        expect('${(result['error'] as Map)['message']}', contains('permission denied'));
+      });
+    }
   });
 
   test('RasqHostEnvironment: storage round trip + unknown fn C01', () {

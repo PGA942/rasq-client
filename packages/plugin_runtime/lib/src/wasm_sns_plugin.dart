@@ -67,6 +67,8 @@ class WasmSnsPlugin extends SnsPlugin {
           wasmBytes: await _loadBytes(), fowPermissions: fowPermissions, nativeFetch: nativeFetch, permissions: permissions,
           fuelPerCall: fuelBudgetFor(permissions: permissions),
           fetchHosts: network.hosts.toSet(), instanceAllowed: network.instance,
+          // gpu.compute (D-081): 審査済み (`verified`) のマニフェストだけ。`gpu_ml` の宣言は env が重ねて見る。
+          gpuCompute: manifest.verified,
         );
         await c.load();
         final hook = onFetchShape;

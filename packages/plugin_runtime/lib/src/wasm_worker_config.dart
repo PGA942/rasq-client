@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 /// その場で組み立てる。alert は自動確認、ログはメッセージでメインへ流す。
 @immutable
 class WasmWorkerConfig {
-  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}, this.appFns = const {}, this.permissions = const {}, this.fuelPerCall, this.fetchHosts = const {}, this.instanceAllowed = false});
+  const WasmWorkerConfig({required this.wasmBytes, this.nativeFetch = true, this.seedStorage = const {}, this.fowPermissions = const {'widget'}, this.appFns = const {}, this.permissions = const {}, this.fuelPerCall, this.fetchHosts = const {}, this.instanceAllowed = false, this.gpuCompute = false});
 
   final Uint8List wasmBytes;
   final bool nativeFetch;
@@ -31,4 +31,8 @@ class WasmWorkerConfig {
   /// マニフェスト `network.instance`: セッションのインスタンスを後から
   /// 許可してよいか(`grantHost`)。偽なら grant は無視される。
   final bool instanceAllowed;
+
+  /// `gpu.compute` (D-081) を開けてよいか(審査済み / dev の付与)。`gpu_ml` の宣言と
+  /// 合わせて [RasqHostEnvironment.gpuComputeEnabled] で決まる。既定は閉。
+  final bool gpuCompute;
 }

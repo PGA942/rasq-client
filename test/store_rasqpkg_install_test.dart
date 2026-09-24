@@ -67,7 +67,7 @@ void main() {
   }
 
   /// 偽ランタイム: 登録元で選ぶ。渡ってきたバイト列が**展開後の wasm** であることも見る。
-  SlotRuntimeLoader loaderFor(Map<String, String> sourceToId, {List<String>? seen}) => (Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall, required Set<String> fetchHosts}) async {
+  SlotRuntimeLoader loaderFor(Map<String, String> sourceToId, {List<String>? seen}) => (Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall, required Set<String> fetchHosts, required bool gpuCompute}) async {
         expect(isWasmModule(bytes), isTrue, reason: '$source には展開後の wasm が渡る');
         seen?.add(source);
         final id = sourceToId[source];

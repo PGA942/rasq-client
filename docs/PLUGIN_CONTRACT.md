@@ -153,6 +153,12 @@ AccountId = { kind, instance, handle }   key = "kind:instance:handle"
 
 PostTile スロット×権限(原典一致): avatar=`decorate_avatar`(審査済みのみ) / content=`transform_content`(sideload は GPU/Net 不可) / media=sideload は `tag_media` のみ、審査済みは `replace_media` / action=`register_action`(審査済み) / 完全置き換え=`replace_tile`(審査済み+審査制約)。interstitial の GPU/ML は審査済みのみ。ストアは審査済みのみ掲載。メディアビューワープラグインは全画面遷移時のみ RRL 描画。
 
+`gpu.compute`(D-081)はランタイムの中で wgpu に短絡され host_fn の権限検査を通らないので、**ランタイムの門は既定で閉**(`E01` permission denied)。ホストはインスタンスごとに `RasqWasmPlugin.fromBytes(gpuCompute: env.gpuComputeEnabled)` で開ける(D-306): `gpuComputeEnabled` = 審査済み(ストアの `store:` 登録 / SNS プラグインは `verified`)または**自分の署名のサイドロード**(`SideloadTrust.full`)**かつ** `gpu_ml` の宣言。
+
+**サイドロードの段 (D-306、ユーザー決定 2026-09-24)**: サイドロードは**自分の署名がある場合だけフル機能**、それ以外は**制限モード**。自分の署名 = `.rasqpkg` の隣の `<pkg>.sig.json`(`rasq build` の出力)が配布物と合い、鍵の指紋がこのアカウントが Central に登録した開発者鍵のどれかと同じこと。署名なし / 他人の鍵 / 素の `.wasm` は制限モードで、**制限モードでは `gpu.compute` は閉**。制限モードで絞るほかの権限はまだ決めていない(今後)。いまのクライアントは自分の鍵の指紋を Central から読めないので、当面は**全てのサイドロードが制限モード**。dev の wasm 試験画面(スロットに登録する前の試し読み)は明示の開発用サンドボックスとして開けたまま。
+
+Web 版はまだ `gpu.compute` を持たず常に `E01`(→ `ml.infer` へ縮退)。引数の上限と 10 秒の壁時計は rasq-sdk-sample `docs/host-functions.md`。
+
 ---
 
 ## 9. エラーコード(`ErrorCode`)

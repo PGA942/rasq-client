@@ -166,10 +166,12 @@ Future<void> _workerMain(List<Object?> init) async {
             permissions: config.permissions,
             fetchHosts: config.fetchHosts,
             instanceAllowed: config.instanceAllowed,
+            gpuCompute: config.gpuCompute,
           );
           // nativeFetchEnabled: `network` 未宣言なら短絡させない (D-023)。
           // fetchHosts: ネイティブ経路も同じ宣言で縛る(Dart のゲートを通らないため)。
-          plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetchEnabled, fuelPerCall: config.fuelPerCall, fetchHosts: env!.effectiveFetchHosts);
+          // gpuComputeEnabled: 審査済み(または dev の付与)かつ `gpu_ml` 宣言のときだけ開ける (D-081)。
+          plugin ??= RasqWasmPlugin.fromBytes(config.wasmBytes, hostFn: env!.dispatch, nativeFetch: env!.nativeFetchEnabled, fuelPerCall: config.fuelPerCall, fetchHosts: env!.effectiveFetchHosts, gpuCompute: env!.gpuComputeEnabled);
           respond.send({'id': id, 'ok': true, 'result': 'pong'});
         case 'grantHost':
           // セッションのインスタンス (schema v0.12 `network.instance`)。宣言が

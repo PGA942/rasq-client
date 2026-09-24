@@ -7,6 +7,7 @@ import '../app/providers.dart';
 import '../backend/rasq_account.dart';
 import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
 import '../features/child_safe/child_safe_screens.dart' show ChildSafeWindowBanner;
+import '../features/plugins/sideload_trust.dart' show ownDevKeyFingerprintsProvider;
 import '../features/notifications/notifications_screen.dart';
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'nav.dart';
@@ -30,6 +31,8 @@ class RasqShell extends ConsumerWidget {
     // 生きているので、ここで 1 度 watch しておけばログインの増減に追随する。
     // 接続先が未設定なら何もしない。
     ref.watch(orgateBundleSyncProvider);
+    // 自分の開発者鍵の指紋 (D-306) を起動時から取っておく(サイドロードの段を決める。変わってもシェルは作り直さない)。
+    ref.listen(ownDevKeyFingerprintsProvider, (_, _) {});
     return LayoutBuilder(builder: (context, constraints) {
       final tablet = constraints.maxWidth >= RasqSizes.tabletBreakpoint;
       return tablet ? _TabletLayout(shell: navigationShell) : _MobileLayout(shell: navigationShell);
