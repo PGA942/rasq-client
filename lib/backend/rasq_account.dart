@@ -9,6 +9,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 import '../session/session_providers.dart';
 import '../session/session_storage.dart';
 import '../session/rasq_accounts.dart';
+import '../session/sns_share.dart' show SnsShareStore;
 import 'orgate_client.dart';
 import 'rasq_account_page_api.dart';
 
@@ -426,6 +427,8 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     _creds = _creds!.withToken(account.id, token);
     _lastRestored = true;
     await _save(storage);
+    // SNS のアクセストークンの端末間共有 (D-319): 新しくログインした端末は、次の見回りで共有を求める(元の端末に問いが出る)。
+    await SnsShareStore(storage).markRequest(account.id);
     var bundle = const <String>[];
     try {
       bundle = [for (final e in await bound.getList('/me/sns-accounts')) if (e is Map && e['accountKey'] is String) e['accountKey'] as String];
