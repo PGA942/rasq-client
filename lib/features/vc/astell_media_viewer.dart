@@ -2,16 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import 'astell_models.dart';
+import 'astell_stream.dart';
 
-/// 共有メディアの全画面表示 (D-145 / D-149)。黒背景 + 画像(動画は ▶ の静止画。
-/// 再生は M5 後段)。インターフェースは**全画面表示プラグイン**(メディアビューワー
-/// D-004 ③)の口 — 加工(クロップ等)はしない。下段 = プラグイン / 保存 / 共有。
+/// 共有メディアの全画面表示 (D-145 / D-149)。黒背景 + 画像(動画は ▶ の静止画)。
+/// ホストの配信 / ピアの画面共有は LiveKit の映像 (D-317、[liveIdentity])、届くまでは静止画。
+/// インターフェースは**全画面表示プラグイン**(メディアビューワー D-004 ③)の口 — 加工(クロップ等)はしない。
+/// 下段 = プラグイン / 保存 / 共有。
 class AstellMediaViewer extends StatelessWidget {
-  const AstellMediaViewer({super.key, required this.share});
+  const AstellMediaViewer({super.key, required this.share, this.liveIdentity, this.liveScreen = false});
   final AstellShare share;
 
-  static Future<void> open(BuildContext context, AstellShare share) =>
-      Navigator.of(context, rootNavigator: true).push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => AstellMediaViewer(share: share)));
+  /// LiveKit の映像を出す人(RASQ アカウントの id)。null なら静止画だけ。
+  final String? liveIdentity;
+
+  /// 画面共有の映像か(偽ならカメラ)。
+  final bool liveScreen;
+
+  static Future<void> open(BuildContext context, AstellShare share, {String? liveIdentity, bool liveScreen = false}) => Navigator.of(context, rootNavigator: true)
+      .push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => AstellMediaViewer(share: share, liveIdentity: liveIdentity, liveScreen: liveScreen)));
 
   @override
   Widget build(BuildContext context) {
@@ -26,17 +34,21 @@ class AstellMediaViewer extends StatelessWidget {
       ),
       body: Column(children: [
         Expanded(
-          child: Center(
-            child: Stack(alignment: Alignment.center, children: [
-              if (url != null)
-                InteractiveViewer(
-                  child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, size: 64, color: Colors.white54)),
-                )
-              else
-                const Icon(Icons.insert_drive_file_outlined, size: 64, color: Colors.white54),
-              if (share.isVideo) const Icon(Icons.play_circle_fill, size: 72, color: Colors.white70),
-            ]),
-          ),
+          child: Builder(builder: (context) {
+            final still = Center(
+              child: Stack(alignment: Alignment.center, children: [
+                if (url != null)
+                  InteractiveViewer(
+                    child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, size: 64, color: Colors.white54)),
+                  )
+                else
+                  const Icon(Icons.insert_drive_file_outlined, size: 64, color: Colors.white54),
+                if (share.isVideo) const Icon(Icons.play_circle_fill, size: 72, color: Colors.white70),
+              ]),
+            );
+            final who = liveIdentity;
+            return who == null ? still : AstellLiveVideo(identity: who, screen: liveScreen, fallback: still);
+          }),
         ),
         // 下段: 全画面表示プラグインの並び(左 = プラグインのスロット、右 = 保存 / 共有)。
         SafeArea(

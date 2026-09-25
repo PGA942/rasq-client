@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,11 +15,14 @@ import '../settings/settings_dsl.dart';
 import '../trend/tendency_profile.dart';
 import 'astell_actions.dart';
 import 'astell_bookmarks.dart';
+import 'astell_call.dart' show astellMeshCap;
 import 'astell_links.dart';
 import 'astell_media_viewer.dart';
 import 'astell_models.dart';
 import 'astell_post_share.dart';
 import 'astell_providers.dart';
+import 'astell_stream.dart';
+import 'astell_stream_livekit.dart' show astellNeedsScreenPicker, pickAstellScreenSource;
 
 /// AsTell の 3 つの FOW (D-139、ワイヤーフレーム p.3):
 ///
@@ -30,7 +34,7 @@ import 'astell_providers.dart';
 /// - [openAstellCreateFow] 作成 FOW — タイトル / フォロワーを招待 / ウェルカム
 ///   メッセージ / トグル 2 つ / 下段(**作成**)
 ///
-/// 音声・映像(WebRTC)はまだ繋がない — マイク/画面のボタンは状態表示だけ。
+/// 音声は通話(P2P、D-317)、映像(ホストの配信 / 画面共有)は LiveKit(D-317)。
 const astellPreviewFowId = 'fow.astell.preview';
 const astellRoomFowId = 'fow.astell.room';
 const astellCreateFowId = 'fow.astell.create';
@@ -131,7 +135,7 @@ class AstellMembersRow extends StatelessWidget {
                 size: RasqSizes.avatarXl,
                 fallbackLabel: p.displayName,
                 // マイク/スピーカーは背景色の縁取りつき円の内側に (D-142: 素のアイコンは見づらい)。
-                badge: _StateBadge(icon: p.micOn ? Icons.mic : Icons.volume_up, color: p.micOn ? RasqColors.accent : RasqColors.sub),
+                badge: _StateBadge(icon: p.speaking ? Icons.graphic_eq : (p.micOn ? Icons.mic : Icons.volume_up), color: p.speaking ? astellSpeakingColor : (p.micOn ? RasqColors.accent : RasqColors.sub)),
               ),
               // 画面共有枠: マイク表示の左(左下)。タップで共有枠に表示(選択中は強調)。
               if (p.screenShare != null)
@@ -190,6 +194,9 @@ class _ScreenFrame extends StatelessWidget {
     );
   }
 }
+
+/// 話している印の色 (D-317)。字幕のボタンと同じ緑。
+const astellSpeakingColor = Color(0xFF2EBF8F);
 
 /// アバター右下の状態バッジ: 色つきの円 + 背景色の縁取り、アイコンは白で内側に。
 class _StateBadge extends StatelessWidget {
@@ -256,7 +263,7 @@ class _RoundButton extends StatelessWidget {
 }
 
 Future<void> _notYet(BuildContext context, String what) async {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$what は M5 後段(WebRTC 接続)で入ります')));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$what は今後の対応です')));
 }
 
 // ── 参加 FOW ──────────────────────────────────────────────────────
@@ -612,14 +619,19 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
             child: Text('接続しています…', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
-        if (s.screenShareOn)
+        // 自分が LiveKit に上げている間 (D-317): 画面共有 / ホストの配信。
+        if (s.screenShareOn || (s.streaming != null && room.hostStream != null))
           Container(
             color: RasqColors.sub.withValues(alpha: 0.12),
-            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.xs, 0),
             child: Row(children: [
-              const Icon(Icons.desktop_windows, size: 16, color: RasqColors.sub),
+              Icon(s.screenShareOn ? Icons.desktop_windows : Icons.videocam, size: 16, color: RasqColors.sub),
               const SizedBox(width: RasqSpacing.xs),
-              Expanded(child: Text('画面共有モード(映像の送出は M5 後段)', style: RasqTypography.caption.copyWith(color: RasqColors.sub))),
+              Expanded(child: Text(s.screenShareOn ? '画面を共有しています' : (s.streaming == 'screen' ? '画面を配信しています' : 'カメラで配信しています'), style: RasqTypography.caption.copyWith(color: RasqColors.sub))),
+              TextButton(
+                onPressed: s.screenShareOn ? () => session.toggleScreenShare() : session.stopHostStream,
+                child: Text(s.screenShareOn ? '共有をやめる' : '配信を止める', style: RasqTypography.caption.copyWith(color: RasqColors.danger, fontWeight: FontWeight.w700)),
+              ),
             ]),
           ),
         // ── 共有枠 (D-146): ピン留め/クリックしたピアの画面共有 ──
@@ -630,9 +642,9 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
             onFullscreen: () => _openPeerScreen(context, s.viewingPeer!),
             onMore: (rect) => _peerMenu(context, s, s.viewingPeer!, rect, pinned: true),
           )
-        // ── ホストの配信 (D-145): 動画/画面のプレビュー ──
+        // ── ホストの配信 (D-145): 動画/画面のプレビュー。映像は LiveKit (D-317) ──
         else if (room.hostStream != null)
-          _HostStreamPanel(stream: room.hostStream!, onTap: () => _openStream(context, room)),
+          _HostStreamPanel(stream: room.hostStream!, ownerId: room.ownerId, onTap: () => _openStream(context, room)),
         // ── 共有 = チャットからピン留めしたもの + 自動表示の種類 (D-146) ──
         _SharesSection(
           items: _sharedItems(s),
@@ -674,7 +686,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         drafting: _drafting,
         onSpeaker: session.toggleSpeaker,
         onMic: session.toggleMic,
-        onScreen: session.toggleScreenShare,
+        onScreen: () => _toggleScreen(context),
         onCaptions: session.toggleCaptions,
         onSendText: _sendText,
         onPickFile: _pickAndShare,
@@ -795,14 +807,39 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     return items;
   }
 
-  /// ピアの画面共有を全画面(映像は M5 後段、今はサムネイル)。
+  /// ピアの画面共有を全画面(映像は LiveKit、D-317。届くまではサムネイル)。
   Future<void> _openPeerScreen(BuildContext context, AstellPeer peer) {
     final sc = peer.screenShare!;
     return AstellMediaViewer.open(
       context,
       AstellShare(id: 'screen-${peer.peerId}', accountId: peer.accountId, handle: peer.handle, displayName: peer.displayName, kind: 'media',
           payload: {'title': sc.title.isEmpty ? '${peer.displayName} の画面' : sc.title, 'mimeType': 'video/screen', 'thumbnailUrl': sc.thumbnailUrl?.toString()}, createdAt: DateTime.now()),
+      liveIdentity: peer.accountId,
+      liveScreen: true,
     );
+  }
+
+  /// 画面共有の切り替え (D-317)。デスクトップは始める前に画面 / ウィンドウを選ぶ。
+  Future<void> _toggleScreen(BuildContext context) async {
+    final session = ref.read(astellSessionProvider.notifier);
+    final s = ref.read(astellSessionProvider);
+    if (s == null) return;
+    String? source;
+    if (!s.screenShareOn && astellNeedsScreenPicker) {
+      source = await pickAstellScreenSource(context);
+      if (source == null) return;
+    }
+    await session.toggleScreenShare(screenSourceId: source);
+  }
+
+  /// ホストの配信を始める (D-317): カメラ / 画面。
+  Future<void> _startHostStream(BuildContext context, String kind) async {
+    String? source;
+    if (kind == 'screen' && astellNeedsScreenPicker) {
+      source = await pickAstellScreenSource(context);
+      if (source == null) return;
+    }
+    await ref.read(astellSessionProvider.notifier).startHostStream(kind, screenSourceId: source);
   }
 
   /// 歯車 (D-146): 共有欄の自動表示(メディアタイプ別)と読み上げ音声。
@@ -849,6 +886,34 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               child: Text('本命は rasq-judge の GoEmotion(発信の感情傾向)で、学習が要るので今はサーバーのダミー判定(表示名に hostile / 荒らし を含む人だけ敵対的)。オンにすると敵対的と判定された人は入室できません。メンバー行の「…」から判定結果を見られます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ),
           ],
+          if (isOwner) ...[
+            const Divider(height: RasqSpacing.md),
+            // ホストの配信 (D-317): LiveKit に上げる。止めるまで `hostStream` が立つ。
+            _label(ctx, '配信(ホスト)'),
+            if (ref.watch(astellSessionProvider.select((x) => x?.screenShareOn == true ? null : x?.streaming)) case final kind? when room.hostStream != null)
+              RasqListTile(
+                title: '配信を止める',
+                subtitle: kind == 'screen' ? '画面を配信しています' : 'カメラで配信しています',
+                titleColor: RasqColors.danger,
+                chevron: false,
+                leading: const Icon(Icons.stop_circle_outlined, color: RasqColors.danger),
+                onTap: () => ref.read(astellSessionProvider.notifier).stopHostStream(),
+              )
+            else ...[
+              RasqListTile(title: 'カメラで配信する', leading: const Icon(Icons.videocam_outlined), chevron: false, onTap: () => _startHostStream(ctx, 'camera')),
+              RasqListTile(
+                title: '画面を配信する',
+                subtitle: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS ? 'iPhone / iPad はこのアプリの画面だけ(ほかのアプリは映りません)' : null,
+                leading: const Icon(Icons.desktop_windows_outlined),
+                chevron: false,
+                onTap: () => _startHostStream(ctx, 'screen'),
+              ),
+            ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+              child: Text('映像とマイクを配信サーバー(LiveKit)に上げます。参加者は通話の声のまま映像を見られ、通話に入りきらない人($astellMeshCap 人目より後)は配信であなたの声を聞きます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            ),
+          ],
           const Divider(height: RasqSpacing.md),
           _label(ctx, '自動再生'),
           RasqSwitchListTile(
@@ -862,14 +927,14 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
           for (final v in voices.voices) RasqRadioListTile<String?>(title: v.label, value: v.id, groupValue: room.ttsVoice, onChanged: isOwner ? (_) => _patch({'ttsVoice': v.id}) : null),
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
-            child: Text(isOwner ? 'チャットと共有の読み上げは Central 側で合成します(端末での再生は M5 後段)。' : '読み上げ音声はホストが選びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            child: Text(isOwner ? 'チャットと共有の読み上げは Central 側で合成します(端末での再生は今後の対応)。' : '読み上げ音声はホストが選びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
         ]);
       }),
     );
   }
 
-  /// ホストの配信をタップ → 全画面(再生は M5 後段、今は静止画)。
+  /// ホストの配信をタップ → 全画面(映像は LiveKit、D-317。届くまでは静止画)。
   Future<void> _openStream(BuildContext context, AstellRoom room) {
     final st = room.hostStream!;
     final share = AstellShare(
@@ -881,7 +946,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       payload: {'title': st.title.isEmpty ? '${room.ownerDisplayName} の配信' : st.title, 'mimeType': st.isScreen ? 'video/screen' : 'video/stream', 'thumbnailUrl': st.thumbnailUrl?.toString()},
       createdAt: st.startedAt ?? room.createdAt,
     );
-    return AstellMediaViewer.open(context, share);
+    return AstellMediaViewer.open(context, share, liveIdentity: room.ownerId, liveScreen: st.isScreen);
   }
 
   /// タイルのタップ (D-145): メディア = 全画面 / 投稿 = 対応 SNS プラグインがあればアプリ内、
@@ -936,7 +1001,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   }
 
   /// ピアの「…」(D-147、ワイヤーフレーム右下): 共有枠のピン留め/解除 / 全画面 /
-  /// ミュート / フォロー / ブロック / 通報。ミュートは手元だけ(音声は M5 後段)。
+  /// ミュート / フォロー / ブロック / 通報。ミュートは手元だけ(その人の声を鳴らさない、D-317)。
   Future<void> _peerMenu(BuildContext context, AstellSessionState s, AstellPeer peer, Rect anchor, {required bool pinned}) async {
     final manager = ref.read(overlayManagerProvider);
     final session = ref.read(astellSessionProvider.notifier);
@@ -1263,7 +1328,7 @@ class _Footer extends StatelessWidget {
       _RoundButton(icon: s.speakerMuted ? Icons.volume_off : Icons.volume_up, tooltip: s.speakerMuted ? 'スピーカーミュート解除' : 'スピーカーミュート', filled: s.speakerMuted ? RasqColors.danger : null, onPressed: onSpeaker),
       s.forceMuted
           ? const _RoundButton(icon: Icons.mic_off, tooltip: 'モデレーターにミュートされています', filled: RasqColors.danger, onPressed: null)
-          : _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン(音声は M5 後段)', filled: s.micOn ? RasqColors.accent : null, onPressed: onMic),
+          : _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン', filled: s.micOn ? RasqColors.accent : null, onPressed: onMic),
       _RoundButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: onScreen),
       if (viewing != null) _RoundButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: onFullscreen),
       _RoundButton(icon: Icons.extension_outlined, tooltip: onPlugin == null ? 'プラグインアクション(未登録)' : 'プラグインアクション', filled: onPlugin == null ? null : RasqColors.sub, onPressed: onPlugin),
@@ -1335,7 +1400,7 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// stick の左端 (D-148): 共有枠にあるピアの画面の映像(今はサムネイル)。タップで全画面。
+/// stick の左端 (D-148): 共有枠にあるピアの画面の映像(LiveKit、D-317。届くまではサムネイル)。タップで全画面。
 class _StickScreen extends StatelessWidget {
   const _StickScreen({super.key, required this.peer, required this.muted, this.onTap});
   final AstellPeer peer;
@@ -1356,10 +1421,14 @@ class _StickScreen extends StatelessWidget {
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), border: Border.all(color: RasqColors.link, width: 1.5), color: scheme.surfaceContainerHighest),
           clipBehavior: Clip.antiAlias,
           child: Stack(fit: StackFit.expand, children: [
-            if (sc.thumbnailUrl != null)
-              Image.network(webHtmlElementStrategy: rasqWebImageStrategy, sc.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant))
-            else
-              Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant),
+            AstellLiveVideo(
+              identity: peer.accountId,
+              screen: true,
+              fit: BoxFit.cover,
+              fallback: sc.thumbnailUrl != null
+                  ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, sc.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant))
+                  : Icon(Icons.desktop_windows, size: 18, color: scheme.onSurfaceVariant),
+            ),
             if (muted) const Positioned(right: 2, bottom: 2, child: Icon(Icons.volume_off, size: 12, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)])),
           ]),
         ),
@@ -1603,10 +1672,17 @@ class _ViewingScreenPanel extends StatelessWidget {
         child: AspectRatio(
           aspectRatio: 16 / 7,
           child: Stack(fit: StackFit.expand, children: [
-            if (sc.thumbnailUrl != null)
-              Image.network(webHtmlElementStrategy: rasqWebImageStrategy, sc.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
-            else
-              ColoredBox(color: scheme.surfaceContainerHighest),
+            // 映像は LiveKit (D-317)。届くまではサムネイル。
+            ColoredBox(
+              color: Colors.black,
+              child: AstellLiveVideo(
+                identity: peer.accountId,
+                screen: true,
+                fallback: sc.thumbnailUrl != null
+                    ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, sc.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
+                    : ColoredBox(color: scheme.surfaceContainerHighest),
+              ),
+            ),
             Positioned(left: 8, top: 8, child: Row(mainAxisSize: MainAxisSize.min, children: [
               RasqPill(label: '画面共有', color: RasqColors.sub, textColor: Colors.white),
               if (muted) ...[const SizedBox(width: 4), RasqPill(label: 'ミュート中', color: RasqColors.danger, textColor: Colors.white)],
@@ -1667,7 +1743,8 @@ class _MemberRow extends StatelessWidget {
           size: RasqSizes.avatarLg,
           fallbackLabel: p.displayName,
           // 全員向けミュート (D-149) は赤のマイクオフ。
-          badge: _StateBadge(icon: p.micOn ? Icons.mic : Icons.mic_off, color: p.mutedByMod ? RasqColors.danger : (p.micOn ? RasqColors.accent : scheme.outline)),
+          // 話している間 (D-317) は緑の波形。
+          badge: _StateBadge(icon: p.speaking && !p.mutedByMod ? Icons.graphic_eq : (p.micOn ? Icons.mic : Icons.mic_off), color: p.mutedByMod ? RasqColors.danger : (p.speaking ? astellSpeakingColor : (p.micOn ? RasqColors.accent : scheme.outline))),
         ),
         const SizedBox(width: RasqSpacing.md),
         Expanded(
@@ -1854,8 +1931,11 @@ class _InviteeChip extends StatelessWidget {
 
 /// ホストの配信パネル(展開時、共有欄の上): 16:9 のプレビュー + LIVE + タイトル。
 class _HostStreamPanel extends StatelessWidget {
-  const _HostStreamPanel({required this.stream, required this.onTap});
+  const _HostStreamPanel({required this.stream, required this.ownerId, required this.onTap});
   final AstellHostStream stream;
+
+  /// ホスト(LiveKit の identity)。
+  final String ownerId;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
@@ -1869,11 +1949,21 @@ class _HostStreamPanel extends StatelessWidget {
           child: AspectRatio(
             aspectRatio: 16 / 7,
             child: Stack(fit: StackFit.expand, children: [
-              if (stream.thumbnailUrl != null)
-                Image.network(webHtmlElementStrategy: rasqWebImageStrategy, stream.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
-              else
-                ColoredBox(color: scheme.surfaceContainerHighest),
-              const Center(child: Icon(Icons.play_circle_fill, size: 40, color: Colors.white70)),
+              // 映像は LiveKit (D-317)。届くまではサムネイル + ▶。
+              ColoredBox(
+                color: Colors.black,
+                child: AstellLiveVideo(
+                  identity: ownerId,
+                  screen: stream.isScreen,
+                  fallback: Stack(fit: StackFit.expand, children: [
+                    if (stream.thumbnailUrl != null)
+                      Image.network(webHtmlElementStrategy: rasqWebImageStrategy, stream.thumbnailUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest))
+                    else
+                      ColoredBox(color: scheme.surfaceContainerHighest),
+                    const Center(child: Icon(Icons.play_circle_fill, size: 40, color: Colors.white70)),
+                  ]),
+                ),
+              ),
               Positioned(left: 8, top: 8, child: RasqPill(label: 'LIVE', color: RasqColors.live, textColor: Colors.white)),
               Positioned(
                 left: 8,

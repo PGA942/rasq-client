@@ -333,7 +333,7 @@ void main() {
     expect(find.textContaining('TiVard の画面'), findsOneWidget);
     expect(find.byKey(astellFooterActionsKey), findsOneWidget);
     expect(find.byTooltip('スピーカーミュート'), findsOneWidget);
-    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
+    expect(find.byTooltip('マイクオン'), findsOneWidget);
     expect(find.byTooltip('画面共有'), findsNothing); // 狭幅(360px)は 2 つまで → 横スクロールの先
     await scrollActions(tester, '画面共有');
     await tester.pumpAndSettle();
@@ -368,7 +368,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(astellStickScreenKey), findsOneWidget);
     expect(find.byKey(astellFooterActionsKey), findsNothing);
-    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsNothing);
+    expect(find.byTooltip('マイクオン'), findsNothing);
     expect(find.byTooltip('字幕オフ'), findsOneWidget);
     expect(find.byTooltip('退出'), findsOneWidget);
     expect(find.byTooltip('設定'), findsNothing);
@@ -482,7 +482,7 @@ void main() {
     expect(find.byKey(astellRoomHeaderKey), findsNothing);
     expect(find.widgetWithText(TextField, 'input..'), findsNothing);
     expect(find.byTooltip('スピーカーミュート'), findsOneWidget);
-    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
+    expect(find.byTooltip('マイクオン'), findsOneWidget);
     expect(find.byTooltip('画面共有'), findsNothing); // 3 つ目は横スクロールの先
     expect(find.byTooltip('退出'), findsOneWidget);
     expect(find.byTooltip('共有する'), findsNothing);
@@ -517,7 +517,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
     expect(find.textContaining('TiVard の画面'), findsOneWidget);
-    expect(find.byTooltip('マイクオン(音声は M5 後段)'), findsOneWidget);
+    expect(find.byTooltip('マイクオン'), findsOneWidget);
     expect(find.byTooltip('全画面'), findsWidgets);
     await tester.ensureVisible(find.byTooltip('共有枠に表示中'));
     await tester.tap(find.byTooltip('共有枠に表示中'));
@@ -551,7 +551,7 @@ void main() {
     await tester.tap(find.byTooltip('画面共有'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.screenShareOn, isTrue);
-    expect(find.textContaining('画面共有モード'), findsOneWidget);
+    expect(find.text('画面を共有しています'), findsOneWidget);
     await tester.tap(find.byTooltip('画面共有オフ'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.screenShareOn, isFalse);
@@ -786,6 +786,18 @@ void main() {
     await tester.tap(find.widgetWithText(RasqSwitchListTile, '発信傾向で入室を絞る(ダミー判定)'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.room.tendencyFilter, isTrue);
+    // ホストの配信 (D-317): カメラで配信 → hostStream が立ち「配信を止める」に → 止めると消える。
+    await tester.scrollUntilVisible(find.text('カメラで配信する'), 80, scrollable: sheet());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('カメラで配信する'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.room.hostStream?.kind, 'video');
+    expect(container.read(astellSessionProvider)!.streaming, 'camera');
+    expect(find.text('配信を止める'), findsWidgets);
+    await tester.tap(find.widgetWithText(RasqListTile, '配信を止める'));
+    await tester.pumpAndSettle();
+    expect(container.read(astellSessionProvider)!.room.hostStream, isNull);
+    expect(find.text('カメラで配信する'), findsOneWidget);
     await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
     // BAN → 参加者から消え、設定の BAN 一覧に載る → 解除。

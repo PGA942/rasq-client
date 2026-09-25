@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show WebSocket;
 
 import 'package:rasq_models/rasq_models.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../backend/orgate_client.dart';
 import 'astell_models.dart';
@@ -66,6 +66,13 @@ abstract class AstellClient {
   /// シグナリング WebSocket。welcome / peer-joined / share / transcript … を
   /// そのまま JSON で流す。
   Future<AstellConnection> connect(String roomId);
+
+  /// 通話の ICE サーバー (D-317、`GET /astell/ice`)。RTCPeerConnection の `iceServers` にそのまま渡す。
+  Future<List<Map<String, Object?>>> iceServers();
+
+  /// 配信 (D-317) の LiveKit のトークン(`POST /astell/rooms/{id}/stream-token`)。
+  /// [publish] = 映す(ホストの配信 / 画面共有)、偽 = 見る / 聞くだけ。未設定の Central は 501。
+  Future<AstellStreamToken> streamToken(String roomId, {required bool publish});
 }
 
 /// ルームへの接続 1 本。
@@ -282,6 +289,8 @@ class MockAstellClient implements AstellClient {
       clearTtsVoice: patch.containsKey('ttsVoice') && patch['ttsVoice'] == null,
       scheduledAt: patch['scheduledAt'] is String ? DateTime.tryParse(patch['scheduledAt'] as String)?.toLocal() : null,
       clearSchedule: patch.containsKey('scheduledAt') && patch['scheduledAt'] == null,
+      hostStream: patch['hostStream'] is Map ? AstellHostStream.fromJson((patch['hostStream'] as Map).cast<String, Object?>()) : null,
+      clearHostStream: patch.containsKey('hostStream') && patch['hostStream'] == null,
     );
     _rooms[i] = r;
     _broadcast(id, {'type': 'room', 'room': _roomJson(r)});
@@ -544,6 +553,20 @@ class MockAstellClient implements AstellClient {
     _connections.add(c);
     return c;
   }
+
+  @override
+  Future<List<Map<String, Object?>>> iceServers() async => const [
+        {'urls': 'stun:stun.l.google.com:19302'},
+      ];
+
+  /// モックは LiveKit に繋がない(ルームの配信の口は `NullAstellStreamer` が受ける)。記録だけ(テスト用)。
+  final streamTokens = <({String roomId, bool publish})>[];
+
+  @override
+  Future<AstellStreamToken> streamToken(String roomId, {required bool publish}) async {
+    streamTokens.add((roomId: roomId, publish: publish));
+    return AstellStreamToken(url: 'ws://livekit.mock', token: 'mock-token', room: 'astell-$roomId', identity: _me.accountId, canPublish: publish);
+  }
 }
 
 class _MockConnection implements AstellConnection {
@@ -761,17 +784,27 @@ class HttpAstellClient implements AstellClient {
       path: '${baseUrl.path}/api/v1/astell/rooms/${Uri.encodeComponent(roomId)}/ws',
       queryParameters: {'token': t},
     );
-    final ws = await WebSocket.connect(url.toString());
+    // Web 版でも繋げるように web_socket_channel(dart:io の WebSocket はブラウザで動かない、D-317)。
+    final ws = WebSocketChannel.connect(url);
+    await ws.ready;
     return _WsConnection(ws);
   }
+
+  @override
+  Future<List<Map<String, Object?>>> iceServers() async =>
+      [for (final e in ((await _client.getJson('/astell/ice'))['iceServers'] as List? ?? const [])) if (e is Map) e.cast<String, Object?>()];
+
+  @override
+  Future<AstellStreamToken> streamToken(String roomId, {required bool publish}) async =>
+      AstellStreamToken.fromJson(await _client.postJson('${_room(roomId)}/stream-token', {'role': publish ? 'publish' : 'subscribe'}));
 }
 
 class _WsConnection implements AstellConnection {
   _WsConnection(this._ws);
-  final WebSocket _ws;
+  final WebSocketChannel _ws;
 
   @override
-  Stream<Map<String, Object?>> get messages => _ws.map((e) {
+  Stream<Map<String, Object?>> get messages => _ws.stream.map((e) {
         try {
           return (jsonDecode(e as String) as Map).cast<String, Object?>();
         } catch (_) {
@@ -780,10 +813,10 @@ class _WsConnection implements AstellConnection {
       });
 
   @override
-  void send(Map<String, Object?> message) => _ws.add(jsonEncode(message));
+  void send(Map<String, Object?> message) => _ws.sink.add(jsonEncode(message));
 
   @override
-  Future<void> close() => _ws.close();
+  Future<void> close() => _ws.sink.close();
 }
 
 /// 端末ローカル用: モックのピアと同じ [UserSummary] を作る補助(テスト/表示)。

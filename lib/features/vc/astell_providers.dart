@@ -10,8 +10,13 @@ import '../child_safe/child_gate.dart';
 import '../child_safe/child_safe_policy.dart';
 import '../settings/settings_dsl.dart';
 import '../../session/session_providers.dart';
+import 'astell_call.dart';
 import 'astell_client.dart';
+import 'astell_media.dart';
+import 'astell_media_webrtc.dart';
 import 'astell_models.dart';
+import 'astell_stream.dart';
+import 'astell_stream_livekit.dart';
 
 /// AsTell クライアント (D-139)。Central に繋がっていれば HTTP、無ければモック。
 final astellClientProvider = Provider<AstellClient>((ref) {
@@ -23,6 +28,25 @@ final astellClientProvider = Provider<AstellClient>((ref) {
   final holder = ref.read(orgateTokenHolderProvider);
   return HttpAstellClient(client, baseUrl: base, token: () => holder.token);
 });
+
+/// 通話の音声の口 (D-317)。ルームに入るたびに 1 つ作る。Central に繋がっていれば flutter_webrtc、
+/// モックのルームは何もしない口(通話は作らない)。テストは偽物に差し替える。
+final astellMediaFactoryProvider = Provider<AstellMedia Function()>((ref) {
+  if (ref.watch(astellClientProvider) is MockAstellClient) return NullAstellMedia.new;
+  return WebRtcAstellMedia.new;
+});
+
+/// 配信の口 (D-317)。LiveKit、モックのルームは何も映さない口。
+final astellStreamerFactoryProvider = Provider<AstellStreamer Function()>((ref) {
+  if (ref.watch(astellClientProvider) is MockAstellClient) return NullAstellStreamer.new;
+  return LiveKitAstellStreamer.new;
+});
+
+/// 話している印のために声の大きさを見る間隔 (D-317)。null なら見ない(テスト)。
+final astellLevelIntervalProvider = Provider<Duration?>((ref) => const Duration(milliseconds: 400));
+
+/// 満員で通話に入れなかったときの案内 (D-317)。
+const astellCallFullNotice = '通話は満員です($astellMeshCap 人まで)。声は届きません — ホストが配信していれば、配信で聞けます';
 
 /// 自分の RASQ アカウント id (D-164): 参加中なら welcome の値、無ければクライアント
 /// (モックは 'me')か RASQ アカウントの id(`rasq:` 接頭辞を外す)。
@@ -111,6 +135,9 @@ class AstellSessionState {
     this.mutedPeerIds = const {},
     this.speakerMuted = false,
     this.forceMuted = false,
+    this.callFull = false,
+    this.streamConnected = false,
+    this.streaming,
     this.error,
     this.notice,
   });
@@ -127,26 +154,35 @@ class AstellSessionState {
   final Map<String, AstellDraft> drafts;
   final bool connected;
 
-  /// マイク(音声は M5 後段 — 今は表示状態だけ)。
+  /// マイク (D-317): 立っている間だけ通話(P2P)と、配信中なら LiveKit へ声を送る。
   final bool micOn;
 
   /// 字幕(文字起こしの表示)。
   final bool captionsOn;
 
-  /// 画面共有モード(映像は M5 後段 — 今は表示状態だけ)。
+  /// 画面共有 (D-317): 画面を LiveKit に上げ、`state.screenShare` を立てている。
   final bool screenShareOn;
 
   /// 共有枠に表示している(ピン留め/クリックした)ピアの画面共有 (D-146)。
   final String? viewingPeerId;
 
-  /// 手元でミュートしたピア (D-147)。音声は M5 後段なので今は表示と台帳だけ。
+  /// 手元でミュートしたピア (D-147)。その人の声を鳴らさない(通話も配信も、D-317)。
   final Set<String> mutedPeerIds;
 
-  /// スピーカーミュート (D-148): 受け取る音声を全部止める(音声は M5 後段)。
+  /// スピーカーミュート (D-148): 受け取る音声を全部止める(D-317)。
   final bool speakerMuted;
 
   /// モデレーターに全員向けミュートされている (D-149)。マイクは立てられない。
   final bool forceMuted;
+
+  /// 満員で通話に入れなかった (D-317)。声は送れず、配信があれば LiveKit で聞く。
+  final bool callFull;
+
+  /// 配信(LiveKit)に繋がっている (D-317)。映像は [AstellLiveVideo] が出す。
+  final bool streamConnected;
+
+  /// 自分が LiveKit に上げているもの (D-317): `camera` / `screen` / null。
+  final String? streaming;
   final String? error;
 
   /// 情報の案内(検閲の保留など、D-151)。エラーではない。
@@ -177,6 +213,10 @@ class AstellSessionState {
     Set<String>? mutedPeerIds,
     bool? speakerMuted,
     bool? forceMuted,
+    bool? callFull,
+    bool? streamConnected,
+    String? streaming,
+    bool clearStreaming = false,
     String? error,
     bool clearError = false,
     String? notice,
@@ -198,6 +238,9 @@ class AstellSessionState {
         mutedPeerIds: mutedPeerIds ?? this.mutedPeerIds,
         speakerMuted: speakerMuted ?? this.speakerMuted,
         forceMuted: forceMuted ?? this.forceMuted,
+        callFull: callFull ?? this.callFull,
+        streamConnected: streamConnected ?? this.streamConnected,
+        streaming: clearStreaming ? null : (streaming ?? this.streaming),
         error: clearError ? null : (error ?? this.error),
         notice: clearNotice ? null : (notice ?? this.notice),
       );
@@ -205,10 +248,27 @@ class AstellSessionState {
 
 /// ルーム接続の状態機械 (D-139): join → welcome で確定 → peer-joined/left /
 /// share / transcript / room / closed を反映 → leave で切る。同時に 1 ルーム。
-/// WebRTC のメディアはまだ繋がない(offer/answer は受け流す。M5 後段)。
+///
+/// 通話 (D-317): welcome で [AstellCallMesh] を作り、offer / answer / ice / peer-left を渡す(音声だけの
+/// P2P メッシュ)。配信 (D-317): ホストの配信や画面共有があれば LiveKit に繋いで映像を受け、自分の配信 /
+/// 画面共有は LiveKit に上げる([AstellStreamer])。
 class AstellSession extends Notifier<AstellSessionState?> {
   AstellConnection? _conn;
   StreamSubscription<Map<String, Object?>>? _sub;
+  AstellMedia? _media;
+  AstellCallMesh? _mesh;
+  AstellStreamer? _streamer;
+  bool _streamBusy = false;
+
+  /// 自動で見に行くのを止めた(未設定 / 断られた)。同じルームでは繰り返さない。
+  bool _streamGaveUp = false;
+
+  /// 配信の口(繋いでいなければ null)。[AstellLiveVideo] が映像を読む。
+  AstellStreamer? get streamer => _streamer;
+
+  /// 通話の手順(テスト用)。
+  @visibleForTesting
+  AstellCallMesh? get mesh => _mesh;
 
   @override
   AstellSessionState? build() {
@@ -219,6 +279,8 @@ class AstellSession extends Notifier<AstellSessionState?> {
   Future<void> join(AstellRoom room) async {
     await leave();
     state = AstellSessionState(room: room);
+    _media = ref.read(astellMediaFactoryProvider)();
+    _streamGaveUp = false;
     try {
       final conn = await ref.read(astellClientProvider).connect(room.id);
       _conn = conn;
@@ -253,11 +315,20 @@ class AstellSession extends Notifier<AstellSessionState?> {
           transcripts: [for (final x in (m['transcripts'] as List? ?? const [])) if (x is Map) AstellTranscript.fromJson(x.cast<String, Object?>())],
         );
         _autoPlay(state!.peers.where((p) => p.peerId != state!.myPeerId && p.screenShare != null).firstOrNull);
+        _startCall();
+        _syncWatching();
       case 'peer-joined':
         final p = m['peer'];
         if (p is Map) state = s.copyWith(peers: [...s.peers, AstellPeer.fromJson(p.cast<String, Object?>())]);
+        _applyPlayback();
       case 'peer-left':
         state = s.copyWith(peers: [for (final p in s.peers) if (p.peerId != m['peerId']) p], drafts: {...s.drafts}..remove(m['peerId']));
+        if (m['peerId'] case final String id) unawaited(_mesh?.peerLeft(id));
+        _applyPlayback();
+        _syncWatching();
+      // 通話のシグナリング (D-317): 手順は AstellCallMesh。
+      case 'offer' || 'answer' || 'ice':
+        unawaited(_mesh?.handle(m));
       // ほかの参加者の入力中の下書き (D-311)。null / 空で取り消し。
       case 'draft':
         final peerId = m['peerId'] as String?;
@@ -272,7 +343,14 @@ class AstellSession extends Notifier<AstellSessionState?> {
           final peer = AstellPeer.fromJson(p.cast<String, Object?>());
           if (peer.peerId == s.myPeerId) {
             // 自分の状態の折り返しは参加者に入れない。強制ミュート (D-149) だけ拾う。
-            if (peer.mutedByMod != s.forceMuted) state = s.copyWith(forceMuted: peer.mutedByMod, micOn: peer.mutedByMod ? false : null);
+            if (peer.mutedByMod != s.forceMuted) {
+              state = s.copyWith(forceMuted: peer.mutedByMod, micOn: peer.mutedByMod ? false : null);
+              // 強制ミュート: 声を止める(通話も配信も)。
+              if (peer.mutedByMod) {
+                _media?.setMicEnabled(false);
+                unawaited(_streamer?.setMic(false));
+              }
+            }
             break;
           }
           final before = s.peers.where((e) => e.peerId == peer.peerId).firstOrNull;
@@ -283,6 +361,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
           );
           // 画面共有が**始まった**ら自動再生 (D-147)。
           if (peer.screenShare != null && before?.screenShare == null) _autoPlay(peer);
+          _syncWatching();
         }
       case 'share-removed':
         state = s.copyWith(shares: [for (final x in s.shares) if (x.id != m['shareId']) x]);
@@ -295,12 +374,17 @@ class AstellSession extends Notifier<AstellSessionState?> {
       case 'room':
         final x = m['room'];
         if (x is Map) state = s.copyWith(room: AstellRoom.fromJson(x.cast<String, Object?>()));
+        _syncWatching();
       case 'closed':
-        state = s.copyWith(connected: false, error: m['reason'] == 'moderation' ? '運営によりルームが閉鎖されました' : 'ホストがルームを終了しました');
+        state = s.copyWith(connected: false, streamConnected: false, clearStreaming: true, screenShareOn: false, error: m['reason'] == 'moderation' ? '運営によりルームが閉鎖されました' : 'ホストがルームを終了しました');
+        unawaited(_stopMedia());
       case 'kicked':
         // モデレーションで追い出された (D-149)。接続は切る(状態は残して案内を出す)。
         state = s.copyWith(
           connected: false,
+          streamConnected: false,
+          clearStreaming: true,
+          screenShareOn: false,
           error: switch (m['reason']) {
             'banned' => 'このルームから BAN されました',
             'sanctioned' => 'アカウントの処置により退出させられました',
@@ -327,7 +411,6 @@ class AstellSession extends Notifier<AstellSessionState?> {
       case 'error':
         state = s.copyWith(error: m['message'] as String?);
       default:
-        // offer / answer / ice はメディア接続(M5 後段)で扱う。
         break;
     }
   }
@@ -390,10 +473,156 @@ class AstellSession extends Notifier<AstellSessionState?> {
     });
   }
 
-  void toggleMic() {
-    if (state == null || state!.forceMuted) return; // 強制ミュート中は立てられない
-    state = state!.copyWith(micOn: !state!.micOn);
+  /// マイク (D-317): 立てるときに初めてマイクを開く(OS の許可)。開けなければ理由を出して立てない。
+  Future<void> toggleMic() async {
+    final s = state;
+    if (s == null || s.forceMuted) return; // 強制ミュート中は立てられない
+    final on = !s.micOn;
+    final media = _media;
+    if (on && media != null && media.available) {
+      final blocked = media.micBlocked;
+      if (blocked != null) {
+        state = s.copyWith(error: AstellMediaException(blocked).message);
+        return;
+      }
+      try {
+        if (!media.micOpen) await media.openMic();
+      } catch (e) {
+        if (state != null) state = state!.copyWith(error: AstellMediaException.from(e).message);
+        return;
+      }
+    }
+    final now = state;
+    if (now == null || now.forceMuted) return;
+    _media?.setMicEnabled(on);
+    state = now.copyWith(micOn: on, clearError: on && now.error != null);
     _sendState();
+    unawaited(_streamer?.setMic(on));
+    if (on && now.callFull && now.streaming == null) state = state!.copyWith(notice: astellCallFullNotice);
+  }
+
+  // ── 通話 (D-317) ──
+
+  void _startCall() {
+    final s = state;
+    final media = _media;
+    final me = s?.myPeerId;
+    if (s == null || media == null || !media.available || me == null) return;
+    unawaited(_mesh?.close());
+    final mesh = _mesh = AstellCallMesh(
+      media: media,
+      send: (m) => _conn?.send(m),
+      iceServers: ref.read(astellClientProvider).iceServers,
+      onChanged: _onCallChanged,
+      onError: (message) {
+        if (state != null) state = state!.copyWith(error: message);
+      },
+      levelInterval: ref.read(astellLevelIntervalProvider),
+    );
+    mesh.setPlayback(speakerMuted: s.speakerMuted, mutedPeerIds: s.mutedPeerIds);
+    unawaited(mesh.start(me, [for (final p in s.peers) p.peerId]));
+  }
+
+  /// 通話の接続 / 話している人が変わった: 参加者の `speaking` と、満員の案内。
+  void _onCallChanged() {
+    final s = state;
+    final mesh = _mesh;
+    if (s == null || mesh == null) return;
+    final speaking = mesh.speaking;
+    final becameFull = mesh.full && !s.callFull;
+    state = s.copyWith(
+      peers: [for (final p in s.peers) p.speaking == speaking.contains(p.peerId) ? p : p.copyWith(speaking: speaking.contains(p.peerId))],
+      callFull: mesh.full,
+      notice: becameFull ? astellCallFullNotice : null,
+    );
+    _applyPlayback();
+  }
+
+  /// 鳴らす声: 通話はスピーカーミュート / 手元のミュートで止める。配信(LiveKit)の声は、通話で繋がっている人
+  /// なら鳴らさない(二重にしない)— 満員で通話に入れなかった人は、ホストの声を配信で聞く。
+  void _applyPlayback() {
+    final s = state;
+    if (s == null) return;
+    _mesh?.setPlayback(speakerMuted: s.speakerMuted, mutedPeerIds: s.mutedPeerIds);
+    _streamer?.setAudioPolicy(_playsOnStream);
+  }
+
+  bool _playsOnStream(String identity) {
+    final s = state;
+    if (s == null || s.speakerMuted || identity == s.myAccountId) return false;
+    final peers = [for (final p in s.peers) if (p.accountId == identity) p];
+    if (peers.any((p) => s.mutedPeerIds.contains(p.peerId))) return false;
+    final linked = _mesh?.peerIds ?? const <String>{};
+    return !peers.any((p) => linked.contains(p.peerId));
+  }
+
+  // ── 配信 (D-317) ──
+
+  /// LiveKit に繋ぐ(繋いでいればそのまま。上げるのに見るだけのトークンなら取り直す)。
+  Future<AstellStreamer> _ensureStream({required bool publish}) async {
+    final s = state;
+    if (s == null) throw StateError('ルームに入っていません');
+    final have = _streamer;
+    if (have != null && have.connected && (!publish || have.canPublish)) return have;
+    final token = await ref.read(astellClientProvider).streamToken(s.room.id, publish: publish);
+    final st = _streamer ??= ref.read(astellStreamerFactoryProvider)();
+    await st.connect(token);
+    if (state != null) state = state!.copyWith(streamConnected: true);
+    _applyPlayback();
+    return st;
+  }
+
+  /// 見る側: ホストの配信か、ほかの人の画面共有があれば LiveKit に繋ぐ。どちらも無く、自分も上げていなければ切る。
+  void _syncWatching() {
+    final s = state;
+    if (s == null || !s.connected || _streamBusy) return;
+    final want = s.room.hostStream != null || s.peers.any((p) => p.peerId != s.myPeerId && p.screenShare != null);
+    final st = _streamer;
+    if (want && (st == null || !st.connected) && !_streamGaveUp) {
+      _streamBusy = true;
+      unawaited(_ensureStream(publish: false).then((_) {}, onError: (Object e) {
+        _streamGaveUp = true;
+        if (state != null) state = state!.copyWith(notice: '映像を受けられません: ${astellStreamErrorText(e)}');
+      }).whenComplete(() => _streamBusy = false));
+    } else if (!want && st != null && st.connected && st.publishing == null) {
+      unawaited(st.disconnect());
+      state = s.copyWith(streamConnected: false);
+    }
+  }
+
+  /// ホストの配信を始める(オーナー、D-317): カメラ / 画面 + マイクを LiveKit に上げ、`hostStream` を立てる。
+  Future<void> startHostStream(String kind, {String? screenSourceId}) async {
+    final s = state;
+    if (s == null || !s.isOwner || s.streaming != null) {
+      if (s != null && s.screenShareOn) state = s.copyWith(error: '画面共有中は配信を始められません(共有をやめてから)');
+      return;
+    }
+    try {
+      final st = await _ensureStream(publish: true);
+      await st.publish(kind, mic: s.micOn && !s.forceMuted, screenSourceId: screenSourceId);
+      final room = await ref.read(astellClientProvider).updateRoom(s.room.id, {
+        'hostStream': {'kind': kind == 'screen' ? 'screen' : 'video', 'title': s.room.title, 'startedAt': DateTime.now().toUtc().toIso8601String()},
+      });
+      if (state != null) state = state!.copyWith(room: room, streaming: kind, clearError: true);
+    } catch (e) {
+      await _streamer?.unpublish();
+      if (state != null) state = state!.copyWith(error: '配信を始められません: ${astellStreamErrorText(e)}');
+    }
+  }
+
+  /// ホストの配信を止める(`hostStream` を null に)。
+  Future<void> stopHostStream() async {
+    final s = state;
+    if (s == null) return;
+    await _streamer?.unpublish();
+    if (state != null) state = state!.copyWith(clearStreaming: true);
+    try {
+      final room = await ref.read(astellClientProvider).updateRoom(s.room.id, {'hostStream': null});
+      if (state != null) state = state!.copyWith(room: room);
+    } catch (e) {
+      if (state != null) state = state!.copyWith(error: '配信の印を消せませんでした: $e');
+    }
+    _syncWatching();
   }
 
   // ── モデレーション (D-149) ──
@@ -447,18 +676,21 @@ class AstellSession extends Notifier<AstellSessionState?> {
     state = s.copyWith(viewingPeerId: peer.peerId);
   }
 
-  /// スピーカーミュート切替 (D-148)。
+  /// スピーカーミュート切替 (D-148)。受ける声を全部止める(D-317)。
   void toggleSpeaker() {
-    if (state != null) state = state!.copyWith(speakerMuted: !state!.speakerMuted);
+    if (state == null) return;
+    state = state!.copyWith(speakerMuted: !state!.speakerMuted);
+    _applyPlayback();
   }
 
-  /// ピアを手元でミュート/解除 (D-147)。
+  /// ピアを手元でミュート/解除 (D-147)。その人の声を鳴らさない(D-317)。
   void toggleMute(String peerId) {
     final s = state;
     if (s == null) return;
     final next = {...s.mutedPeerIds};
     if (!next.remove(peerId)) next.add(peerId);
     state = s.copyWith(mutedPeerIds: next);
+    _applyPlayback();
   }
 
   /// ピアの画面共有を共有枠に表示する/やめる (D-146)。
@@ -485,9 +717,32 @@ class AstellSession extends Notifier<AstellSessionState?> {
     if (state != null) state = state!.copyWith(captionsOn: !state!.captionsOn);
   }
 
-  void toggleScreenShare() {
+  /// 画面共有 (D-317): 画面を LiveKit に上げてから `state.screenShare` を立てる(上げられなければ立てない)。
+  /// [screenSourceId] はデスクトップで選んだ画面 / ウィンドウ。
+  Future<void> toggleScreenShare({String? screenSourceId}) async {
+    final s = state;
+    if (s == null) return;
+    if (s.screenShareOn) {
+      if (s.streaming == 'screen') await _streamer?.unpublish();
+      if (state == null) return;
+      state = state!.copyWith(screenShareOn: false, clearStreaming: s.streaming == 'screen');
+      _sendState();
+      _syncWatching();
+      return;
+    }
+    if (s.streaming != null) {
+      state = s.copyWith(error: '配信中は画面共有を始められません(配信を止めてから)');
+      return;
+    }
+    try {
+      final st = await _ensureStream(publish: true);
+      await st.publish('screen', mic: s.micOn && !s.forceMuted, screenSourceId: screenSourceId);
+    } catch (e) {
+      if (state != null) state = state!.copyWith(error: '画面共有を始められません: ${astellStreamErrorText(e)}');
+      return;
+    }
     if (state == null) return;
-    state = state!.copyWith(screenShareOn: !state!.screenShareOn);
+    state = state!.copyWith(screenShareOn: true, streaming: 'screen', clearError: true);
     _sendState();
   }
 
@@ -501,8 +756,26 @@ class AstellSession extends Notifier<AstellSessionState?> {
   }
 
   Future<void> leave() async {
+    final s = state;
+    // ホストが配信したまま出る: 印を消す(待たない)。
+    if (s != null && s.isOwner && s.streaming != null && !s.screenShareOn && s.room.hostStream != null) {
+      unawaited(ref.read(astellClientProvider).updateRoom(s.room.id, {'hostStream': null}).then((_) {}, onError: (Object e) => debugPrint('astell: hostStream: $e')));
+    }
     await _teardown();
     state = null;
+  }
+
+  /// 通話と配信を閉じる(退出 / 閉鎖 / キック)。
+  Future<void> _stopMedia() async {
+    final mesh = _mesh;
+    final media = _media;
+    final st = _streamer;
+    _mesh = null;
+    _media = null;
+    _streamer = null;
+    await mesh?.close();
+    await media?.dispose();
+    await st?.disconnect();
   }
 
   /// 切断は待たない — ソケットの close 完了(相手側の done 配送)に UI を
@@ -518,7 +791,21 @@ class AstellSession extends Notifier<AstellSessionState?> {
     _conn = null;
     unawaited(sub?.cancel());
     unawaited(conn?.close().catchError((Object e) => debugPrint('astell: close: $e')));
+    unawaited(_stopMedia().catchError((Object e) => debugPrint('astell: media: $e')));
   }
+}
+
+/// 配信の失敗を 1 行に (D-317)。
+String astellStreamErrorText(Object e) {
+  if (e is AstellMediaException) return e.message;
+  if (e is OrgateException) {
+    return switch (e.code.code) {
+      '501' => '配信サーバー(LiveKit)が設定されていません',
+      '403' => '許可されていません(${e.message})',
+      _ => e.message,
+    };
+  }
+  return '$e';
 }
 
 final astellSessionProvider = NotifierProvider<AstellSession, AstellSessionState?>(AstellSession.new);

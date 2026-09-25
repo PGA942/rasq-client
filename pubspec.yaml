@@ -77,6 +77,15 @@ dependencies:
   ffi: ^2.2.0
   # チャイルドセーフのつなぐ / ログインのコードの QR (D-309)。純 Dart の描画(依存は qr だけ)で全プラットフォーム同じ。
   qr_flutter: ^4.1.0
+  # AsTell の通話 (D-317): 音声だけの P2P メッシュ(シグナリングは Central の WS)。livekit_client と同じ版に揃える
+  # (livekit_client が flutter_webrtc をこの版に固定している)。
+  flutter_webrtc: ^1.6.2+hotfix.3
+  # AsTell の配信 (D-317): ホストの配信 / 画面共有の映像と、通話に入りきらない人の聞き取り(自前の LiveKit)。
+  livekit_client: ^2.13.0
+  # Android の画面の取り込みに要る前面サービス(mediaProjection、Android 14 から必須、D-317)。
+  flutter_background: ^1.3.1
+  # AsTell の WS を Web 版でも(dart:io の WebSocket はブラウザで動かない、D-317)。
+  web_socket_channel: ^3.0.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
