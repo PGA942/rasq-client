@@ -14,6 +14,7 @@ import '../backend/orgate_client.dart';
 import '../backend/rasq_account.dart';
 import '../features/child_safe/child_safe_providers.dart' show childSnsAllowProvider;
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
+import '../notify/central_inbox.dart' show CentralNotice;
 import 'central_vault_storage.dart' show SessionOp, SessionOps;
 import 'rasq_accounts.dart';
 import 'session_providers.dart';
@@ -39,6 +40,10 @@ import 'sns_share_crypto.dart';
 ///   - K を持っていれば、本体と、この端末の SNS のログイン / ログアウトを混ぜる([mergeSnsShare])。
 /// - ログアウトは、ログアウトの記録(時刻つき)として本体に残し、ほかの端末でもログアウトにする(古い一覧を持った端末が、
 ///   次に本体を書くときに蘇らせない。30 日で捨てる。捨てたあとも、同期したことのあるアカウントが本体から消えていれば外す)。
+/// - **承認の問いを早く** (D-322): 新しい端末が共有を求めると、Central が同じアカウントの端末へ知らせる(受信箱の
+///   `sns_share.request`)。開いているアプリには即時の知らせ([CentralInbox] の長いポーリング)ですぐ届き、[handleSnsShareNotices] が
+///   すぐ見回って問いを出す(45 秒の見回りを待たない)。求めている端末の側も、承認を待っている間は [snsSharePollWhileWaitingProvider] おきに
+///   見回って(上限つき)、承認されたらすぐ取り込む。取り込んだら [SnsShareView.joins] を進め、SNS のログイン画面は TL へ移る。
 
 /// Central のアカウントの共有の状態。
 enum SnsShareMode {
@@ -272,10 +277,24 @@ final snsShareAskProvider = Provider<SnsShareAsk>((ref) => (q) => ref.read(overl
 /// 見回りの間隔(0 = タイマーでは回さない。テスト用)。Web 版の保管庫の見回り (D-302) と同じ 45 秒。
 final snsSharePollIntervalProvider = Provider<Duration>((ref) => const Duration(seconds: 45));
 
+/// 承認を待っている間の見回り (D-322): `every` おきに、待ち始めてから `limit` まで(そのあとは、ふだんの見回りだけ)。
+/// `every` が 0 なら回さない(テスト用)。
+final snsSharePollWhileWaitingProvider = Provider<({Duration every, Duration limit})>((ref) => (every: const Duration(seconds: 3), limit: const Duration(minutes: 5)));
+
+/// 受信箱の知らせの種類: 新しい端末が共有を求めた(Central の `sns_share.request`。中身は端末の名前と deviceId だけ)。
+const snsShareRequestKind = 'sns_share.request';
+
+/// `sns_share.request` の受け手 ([CentralInbox]): 答えずに閉じた問いも出し直して、すぐ見回る(問いの答えは待たない。
+/// 受信箱の読みを、ユーザーが答えるまで止めないように)。
+Future<void> handleSnsShareNotices(Ref ref, List<CentralNotice> notices) async {
+  final devices = {for (final n in notices) if (n.payload['deviceId'] is String) n.payload['deviceId'] as String};
+  unawaited(ref.read(snsShareProvider.notifier).onRequested(devices));
+}
+
 /// 画面が見る形。
 @immutable
 class SnsShareView {
-  const SnsShareView({this.accountId, this.status, this.busy = false});
+  const SnsShareView({this.accountId, this.status, this.busy = false, this.joins = 0});
 
   /// いま見ている Central のアカウント(ログインしていなければ null)。
   final String? accountId;
@@ -283,6 +302,9 @@ class SnsShareView {
   /// Central の答え(まだ / 取れなければ null)。
   final SnsShareStatus? status;
   final bool busy;
+
+  /// 承認を待っていたこの端末が、共有されたログインを取り込んだ回数 (D-322。SNS のログイン画面が TL へ移る合図)。
+  final int joins;
 }
 
 class _Ctx {
@@ -294,6 +316,13 @@ class _Ctx {
 
 class SnsShareNotifier extends Notifier<SnsShareView> {
   Timer? _timer;
+
+  /// 承認を待っている間の見回り (D-322) と、待ち始めた時刻。
+  Timer? _waitTimer;
+  DateTime? _waitingSince;
+
+  /// 承認を待っていたアカウント(取り込めたら [SnsShareView.joins] を進める)。
+  final Set<String> _wasWaiting = {};
   AppLifecycleListener? _lifecycle;
   Future<void>? _inflight;
   bool _again = false;
@@ -312,11 +341,13 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     if (every > Duration.zero) _timer = Timer.periodic(every, (_) => unawaited(check()));
     ref.onDispose(() {
       _timer?.cancel();
+      _waitTimer?.cancel();
       _lifecycle?.dispose();
     });
     ref.listen(orgateAccountProvider.select((a) => a.value?.id), (prev, next) {
       if (prev == next) return;
       state = SnsShareView(accountId: next);
+      _waitingSince = null;
       unawaited(check());
     });
     // この端末で SNS にログイン / ログアウトしたら、共有中なら本体へ。
@@ -350,7 +381,30 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     // 見回りの途中でアカウントが切り替わっていたら、前のアカウントの答えは出さない。
     final current = ref.read(orgateAccountProvider).value?.id;
     if (current != null && current != c.accountId) return;
-    state = SnsShareView(accountId: c.accountId, status: s, busy: busy);
+    if (s.waiting) _wasWaiting.add(c.accountId);
+    state = SnsShareView(accountId: c.accountId, status: s, busy: busy, joins: state.accountId == c.accountId ? state.joins : 0);
+  }
+
+  /// 承認を待っている間は、数秒おきに見回る(待ち始めてから上限まで)。待っていなければ止める。
+  void _scheduleWhileWaiting() {
+    _waitTimer?.cancel();
+    _waitTimer = null;
+    if (!ref.mounted) return;
+    if (!(state.status?.waiting ?? false)) {
+      _waitingSince = null;
+      return;
+    }
+    final p = ref.read(snsSharePollWhileWaitingProvider);
+    if (p.every <= Duration.zero) return;
+    final since = _waitingSince ??= DateTime.now();
+    if (DateTime.now().difference(since) >= p.limit) return;
+    _waitTimer = Timer(p.every, () => unawaited(check()));
+  }
+
+  /// 新しい端末が共有を求めた知らせ (D-322、[handleSnsShareNotices]): その端末について答えずに閉じた問いも出し直して、すぐ見回る。
+  Future<void> onRequested(Set<String> deviceIds) {
+    _dismissed.removeWhere((k) => k.endsWith(':first') || deviceIds.any((d) => k.endsWith(':$d')));
+    return check();
   }
 
   /// 1 回見回る(重ねて呼ばれたら、走っている 1 回のあとにもう 1 回)。
@@ -365,6 +419,8 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
       if (_again && ref.mounted) {
         _again = false;
         unawaited(check());
+      } else {
+        _scheduleWhileWaiting();
       }
     });
     return run;
@@ -495,8 +551,13 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
           if (e.value.session != null && after[e.key] == snsShareFingerprint(e.value.session!)) e.key: after[e.key]!,
       };
       await _store.update(c.accountId, (e) => {...e, 'keyId': keyId, 'known': nextKnown});
+      final joined = _wasWaiting.remove(c.accountId) && imported > 0;
       if (imported > 0) {
         ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text('共有されたアクセストークンで、SNS アカウントに一斉ログインしました($imported 件)')));
+      }
+      // 承認を待っていた端末が取り込めた: SNS のログイン画面は TL へ (D-322)。
+      if (joined && ref.mounted && state.accountId == c.accountId) {
+        state = SnsShareView(accountId: state.accountId, status: state.status, busy: state.busy, joins: state.joins + 1);
       }
       return;
     }
@@ -546,6 +607,9 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     } finally {
       final s = state.status;
       if (s != null && ref.mounted) _publish(c, s);
+      // 設定から求め直したら、承認を待つ間の見回りも始め直す。
+      _waitingSince = null;
+      _scheduleWhileWaiting();
     }
   }
 
