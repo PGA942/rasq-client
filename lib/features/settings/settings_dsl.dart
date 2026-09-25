@@ -204,6 +204,23 @@ final snsSettingValuesProvider = FutureProvider.family<Map<String, Object?>, Str
   return {...spec.defaults, ...values};
 });
 
+/// ページの JSON に書けない既定値(端末の種類で変わるもの)(D-316)。ページの `defaults` に重ねて、画面の値の既定にする。
+/// 値を使う側も、保存が無ければ同じ既定を使う(例: [timelineEdgeTilesProvider] の元)。
+final hostSettingDefaultsProvider = Provider.family<Map<String, Object?>, String>((ref, area) => switch (area) {
+      // TL の上下の「投稿を読み込む」: 電話のアプリは引っ張って更新できるので、既定は出さない。Web 版とデスクトップは出す。
+      timelineDisplayArea => {'edgeTiles': !ref.watch(mobileAppProvider)},
+      _ => const <String, Object?>{},
+    });
+
+/// TL の表示の設定 (D-316)。
+const timelineDisplayArea = 'appearance.timeline';
+
+/// TL のいちばん上 / いちばん下に「投稿を読み込む」のタイル (D-298) を出すか (D-316)。
+final timelineEdgeTilesProvider = Provider<bool>((ref) {
+  final v = ref.watch(settingsAreaProvider(timelineDisplayArea)).value?['edgeTiles'];
+  return v is bool ? v : ref.watch(hostSettingDefaultsProvider(timelineDisplayArea))['edgeTiles'] != false;
+});
+
 /// area の設定値(既定値マージ済み)を同期的に読むヘルパー。アプリ側で
 /// 値を適用する場所(テーマ/モーション等)から使う。
 Object? settingValue(WidgetRef ref, String area, String key, Object? fallback) => ref.watch(settingsAreaProvider(area)).value?[key] ?? fallback;
@@ -239,7 +256,7 @@ class SettingsDslScreen extends ConsumerWidget {
       // 疑似 instanceScope: ホスト自身の静的ページ(プラグイン非経由)。
       instanceScope: 'rasq.host.settings:-:0:$area',
       scope: RrlScope({
-        'settings': {...s.defaults, ...values},
+        'settings': {...s.defaults, if (!s.isRemote && !area.startsWith('sns.')) ...ref.watch(hostSettingDefaultsProvider(area)), ...values},
       }),
       onEvent: (nodeId, kind, {String? fn, Map<String, Object?> payload = const {}}) {
         // nodeId = `<instanceScope>:<node.k>`、設定キー/パス = ノードの k。

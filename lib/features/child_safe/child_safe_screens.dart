@@ -321,16 +321,15 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
       _error = null;
     });
     final accounts = ref.read(orgateAccountProvider.notifier);
-    final ledger = ref.read(rasqAccountsProvider.notifier);
     final childSafe = ref.read(childSafeProvider.notifier);
     try {
       final res = await api.childLogin(code: code, deviceId: await accounts.ensureDeviceId());
       // 先に画面を閉じてから、アカウントをこの端末のものにする(ログイン画面と同じ理由)。
       if (mounted) context.pop();
       await WidgetsBinding.instance.endOfFrame;
+      // 台帳にも載せて、いまのアカウントにする(いまのアカウントの SNS は持ち込まない。D-316)。
       final account = await accounts.adoptLogin(res);
       if (account == null) return _toast(ref, 'ログインできませんでした');
-      await ledger.attachCentral(centralAccountId: account.id, handle: account.handle, displayName: account.displayName, avatarUrl: account.avatarUrl, inheritSessions: false);
       await childSafe.refresh();
       _toast(ref, '@${account.handle} にログインしました(${accountDeviceLabel()})');
     } on OrgateException catch (e) {
@@ -418,9 +417,11 @@ class ChildSafePendingScreen extends ConsumerWidget {
 /// 設定待ちの画面の「ログアウト」: RASQ アカウントからログアウトして台帳から外す。まだ守る制限が無ければ控えも消える。
 Future<void> childSafeSignOut(WidgetRef ref) async {
   final ledger = ref.read(rasqAccountsProvider.notifier);
-  final central = ref.read(rasqAccountsProvider).value?.central;
+  // いま使っている Central のアカウントからだけ出る(D-316: ほかの Central のアカウントのトークンは残す)。
+  final me = ref.read(orgateAccountProvider).value;
+  final central = ref.read(rasqAccountsProvider).value?.centralRecord(me?.id);
   final childSafe = ref.read(childSafeProvider.notifier);
-  await ref.read(orgateAccountProvider.notifier).signOut();
+  await ref.read(orgateAccountProvider.notifier).signOut(accountId: me?.id);
   if (central != null) await ledger.detachCentral(central.id);
   await childSafe.refresh();
 }

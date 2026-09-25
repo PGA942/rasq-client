@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../backend/orgate_client.dart';
+import '../../backend/rasq_account.dart' show currentCentralAccountIdProvider;
 import '../settings/settings_dsl.dart';
 import '../trend/example_match.dart' show pluginExamplePieces;
 import 'http_store_client.dart';
@@ -25,6 +26,8 @@ import 'store_models.dart';
 /// テストは override して差し替える。
 final storeClientProvider = Provider<StoreClient>((ref) {
   final client = ref.watch(centralClientProvider);
+  // RASQ アカウントを切り替えたら作り直す(D-316: ブックマークなどは、アカウントごと)。
+  ref.watch(currentCentralAccountIdProvider);
   // Central につないでいても、アプリに同梱しているサンプル(Central に掲載の無いもの)のページ / 配布物は同梱のカタログで答える (D-256)。
   return client == null ? MockStoreClient() : BundledFallbackStoreClient(HttpStoreClient(client), MockStoreClient());
 });

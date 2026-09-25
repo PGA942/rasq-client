@@ -18,7 +18,8 @@ import 'session_storage.dart';
 ///   従来のシステム)。
 /// - [RasqAccountKind.central]: RASQ Central (`rasq-central`) に実体がある
 ///   アカウント。プロフィール/バンドル/インストール履歴がサーバーへ同期される。
-///   端末資格情報は [OrgateAccountNotifier] が持つ(1 台に 1 つ)。
+///   端末資格情報は [OrgateAccountNotifier] が持つ(Central のアカウントごとに 1 本のトークン。D-316)。
+///   台帳の「いま」が、どのトークンで Central と話すかを決める(`centralTargetOf`)。
 ///
 /// 永続化は KV `rasq.accounts.v1`(セキュアストレージ)。SNS セッションの
 /// 実体は従来どおり `rasq.sessions.v1` にあり、こちらは**所属(キー)**だけを
@@ -119,7 +120,17 @@ class RasqAccountsState {
   final bool onboardingDone;
 
   RasqAccountRecord? get current => accounts.where((a) => a.id == currentId).firstOrNull ?? accounts.firstOrNull;
-  RasqAccountRecord? get central => accounts.where((a) => a.isCentral).firstOrNull;
+
+  /// 台帳に Central のアカウントがあるか。
+  bool get hasCentral => accounts.any((a) => a.isCentral);
+
+  /// いまのアカウントが Central のものならそれ(「この端末のみ」なら null)。D-316: 「最初の Central のアカウント」は使わない
+  /// (Central のアカウントが 2 つ以上あると、名前と中身が食い違う)。
+  RasqAccountRecord? get currentCentral => current?.isCentral == true ? current : null;
+
+  /// Central のアカウント id から、その行。
+  RasqAccountRecord? centralRecord(String? centralAccountId) =>
+      centralAccountId == null ? null : accounts.where((a) => a.isCentral && a.centralAccountId == centralAccountId).firstOrNull;
 
   RasqAccountsState copyWith({List<RasqAccountRecord>? accounts, String? currentId, bool? onboardingDone}) =>
       RasqAccountsState(accounts: accounts ?? this.accounts, currentId: currentId ?? this.currentId, onboardingDone: onboardingDone ?? this.onboardingDone);
@@ -201,22 +212,32 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
     await _persist(_cur.copyWith(onboardingDone: true));
   }
 
-  /// Central のアカウントを台帳に載せて現在にする。**現在のアカウントの SNS
-  /// セッションはそのまま引き継ぐ**(端末ローカルから Central へ「昇格」する
-  /// 使い方が基本 — バンドルが空になって再ログインを迫られないように)。
+  /// Central のアカウントを台帳に載せて現在にする。既定では**現在のアカウントの SNS
+  /// セッションをそのまま引き継ぐ**(端末ローカルから Central へ「昇格」する
+  /// 使い方 = 新規登録 — バンドルが空になって再ログインを迫られないように)。
   ///
-  /// [inheritSessions] = false は登録の FOW で「置き換えない」を選んだとき (D-241): SNS アカウントは
-  /// 「この端末のみ」に残し、サーバーのバンドルも消さない([RasqAccountRecord.pruneBundle] = false)。
-  Future<RasqAccountRecord> attachCentral({required String centralAccountId, required String handle, required String displayName, Uri? avatarUrl, bool inheritSessions = true}) async {
+  /// [inheritSessions] = false は登録の FOW で「置き換えない」を選んだとき (D-241) と、**既存のアカウントへのログイン**
+  /// (D-316: 前のアカウントの SNS を持ち込まない)。[pruneBundle] = サーバーのバンドルを、この端末の SNS アカウントで
+  /// 置き換えるか(省けば [inheritSessions] と同じ)。[adoptKeys] = そのアカウントに入れる SNS セッション(ログインのとき、
+  /// そのアカウントのバンドルにあって、この端末にもログインがあるもの)。
+  Future<RasqAccountRecord> attachCentral({
+    required String centralAccountId,
+    required String handle,
+    required String displayName,
+    Uri? avatarUrl,
+    bool inheritSessions = true,
+    bool? pruneBundle,
+    List<String> adoptKeys = const [],
+  }) async {
     final cur = _cur;
     final id = 'central-$centralAccountId';
     final existing = cur.accounts.where((a) => a.id == id).firstOrNull;
     if (existing != null) {
-      final updated = existing.copyWith(handle: handle, displayName: displayName, avatarUrl: avatarUrl);
+      final updated = existing.copyWith(handle: handle, displayName: displayName, avatarUrl: avatarUrl, sessionKeys: {...existing.sessionKeys, ...adoptKeys}.toList());
       await _persist(cur.copyWith(accounts: [for (final a in cur.accounts) a.id == id ? updated : a], currentId: id));
       return updated;
     }
-    final inherited = inheritSessions ? (cur.current?.sessionKeys ?? const <String>[]) : const <String>[];
+    final inherited = {...inheritSessions ? (cur.current?.sessionKeys ?? const <String>[]) : const <String>[], ...adoptKeys}.toList();
     final rec = RasqAccountRecord(
       id: id,
       kind: RasqAccountKind.central,
@@ -225,7 +246,7 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
       avatarUrl: avatarUrl,
       centralAccountId: centralAccountId,
       sessionKeys: inherited,
-      pruneBundle: inheritSessions,
+      pruneBundle: pruneBundle ?? inheritSessions,
       createdAt: DateTime.now(),
     );
     await _persist(cur.copyWith(accounts: [...cur.accounts, rec], currentId: id, onboardingDone: true));
@@ -251,6 +272,18 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
     await _persist(cur.copyWith(currentId: id));
   }
 
+  /// Central のプロフィール(`GET /me`)を、その行へ写す (D-316)。使っていないアカウントの行(サイドバー / アカウントの FOW)は
+  /// 台帳の値で出すので、ほかの端末で変えた名前もここで追いつく。同じなら何もしない。
+  Future<void> syncCentralProfile(String centralAccountId, {required String handle, required String displayName, Uri? avatarUrl}) async {
+    final cur = state.value;
+    final rec = cur?.centralRecord(centralAccountId);
+    if (cur == null || rec == null) return;
+    if (rec.handle == handle && rec.displayName == displayName && rec.avatarUrl == avatarUrl) return;
+    await _persist(cur.copyWith(accounts: [
+      for (final a in cur.accounts) a.id == rec.id ? a.copyWith(handle: handle, displayName: displayName, avatarUrl: avatarUrl, clearAvatar: avatarUrl == null) : a,
+    ]));
+  }
+
   /// 表示名/ハンドルの更新(ローカルはここが正本、Central は PATCH /me の結果を写す)。
   Future<void> updateProfile(String id, {String? handle, String? displayName, Uri? avatarUrl}) async {
     final cur = _cur;
@@ -274,17 +307,25 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
     ]));
   }
 
-  /// Web 版 (D-302): 保管庫でログイン中の SNS アカウント [keys] を、RASQ(Central)アカウントに所属させる。
+  /// Web 版 (D-302): 保管庫でログイン中の SNS アカウント [keys] を、その保管庫の持ち主の Central のアカウント
+  /// ([centralAccountId]。D-316: 「最初の」Central のアカウントではない)に所属させる。
   /// ほかのブラウザでログインしたぶんは、この端末の台帳にはまだ載っていない(載せないと、セッションはあるのに見えない)。
-  /// 保管庫から消えたもの(ほかの端末でログアウト)は外す。Central のアカウントが無ければ何もしない。
-  Future<void> adoptCentralSessionKeys(List<String> keys) async {
+  /// 保管庫から消えたもの(ほかの端末でログアウト)は外す。「この端末のみ」の行からは外す(ほかの Central のアカウントの
+  /// 行はそのまま — そのアカウントの保管庫を読んだときに合わせる)。台帳にそのアカウントが無ければ何もしない。
+  Future<void> adoptCentralSessionKeys(List<String> keys, {required String centralAccountId}) async {
     final cur = state.value;
-    final central = cur?.central;
+    final central = cur?.centralRecord(centralAccountId);
     if (cur == null || central == null) return;
-    if (central.sessionKeys.length == keys.length && central.sessionKeys.toSet().containsAll(keys)) return;
+    final locals = cur.accounts.where((a) => !a.isCentral && a.sessionKeys.any(keys.contains));
+    if (locals.isEmpty && central.sessionKeys.length == keys.length && central.sessionKeys.toSet().containsAll(keys)) return;
     await _persist(cur.copyWith(accounts: [
       for (final a in cur.accounts)
-        a.id == central.id ? a.copyWith(sessionKeys: keys) : a.copyWith(sessionKeys: [for (final k in a.sessionKeys) if (!keys.contains(k)) k]),
+        if (a.id == central.id)
+          a.copyWith(sessionKeys: keys)
+        else if (!a.isCentral)
+          a.copyWith(sessionKeys: [for (final k in a.sessionKeys) if (!keys.contains(k)) k])
+        else
+          a,
     ]));
   }
 

@@ -15,6 +15,7 @@ import '../session/sanctions.dart';
 import 'rasq_register_fow.dart';
 import 'third_column.dart';
 import '../features/notifications/notifications_screen.dart';
+import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 
 /// RASQ アカウントの選択/編集 FOW (D-138: サイドバー右上の … から)。
 ///
@@ -163,7 +164,20 @@ class RasqAccountPanel extends ConsumerWidget {
         if (r.isCentral) const RasqDropdownItem('RASQ アカウントを削除', 'delete', destructive: true),
       ];
 
+    // そのアカウントの操作は、**そのアカウントに切り替えてから**行う (D-316): 開く画面(アカウントページ / プロフィール /
+    // セキュリティ / 削除)は、いまの Central のアカウントのトークンで話すので、切り替えずに開くと別のアカウントの中身になる。
+    Future<void> useAccount(RasqAccountRecord r) async {
+      if (ref.read(currentRasqAccountProvider)?.id == r.id) return;
+      await ref.read(rasqAccountsProvider.notifier).select(r.id);
+      try {
+        await ref.read(orgateAccountProvider.future);
+      } catch (_) {}
+    }
+
     Future<void> act(RasqAccountRecord r, String pick) async {
+      if (!context.mounted) return;
+      // ログアウトだけは切り替えずに、そのアカウントから出る。
+      if (pick != 'logout') await useAccount(r);
       if (!context.mounted) return;
       switch (pick) {
         case 'addSns':
@@ -173,7 +187,7 @@ class RasqAccountPanel extends ConsumerWidget {
           leave();
           context.push(Routes.settings);
         case 'page':
-          final handle = ref.read(orgateAccountProvider).value?.handle ?? r.handle;
+          final handle = ref.read(currentCentralHandleProvider) ?? r.handle;
           if (handle == null || handle.isEmpty) return;
           leave();
           context.push(Routes.rasqAccount(handle));
@@ -197,7 +211,8 @@ class RasqAccountPanel extends ConsumerWidget {
             destructive: true,
           );
           if (!ok) return;
-          await ref.read(orgateAccountProvider.notifier).signOut();
+          // そのアカウントのトークンだけを捨てる(ほかの RASQ アカウントのログインは残る。D-316)。
+          await ref.read(orgateAccountProvider.notifier).signOut(accountId: r.centralAccountId);
           await ref.read(rasqAccountsProvider.notifier).detachCentral(r.id);
           toast('RASQ アカウントからログアウトしました');
         case 'delete':
@@ -214,6 +229,11 @@ class RasqAccountPanel extends ConsumerWidget {
             destructive: true,
           );
           if (!ok) return;
+          // 切り替えたはずのアカウントと違う(ログインが切れている)なら、消さない。
+          if (ref.read(orgateAccountProvider).value?.id != r.centralAccountId) {
+            toast('このアカウントに、もう一度ログインしてから削除してください');
+            return;
+          }
           // メールが確認済みのアカウントは、確認コードが要る (S-019) → セキュリティの画面で。
           if (ref.read(orgateAccountProvider).value?.emailVerified == true) {
             if (!context.mounted) return;
@@ -248,6 +268,9 @@ class RasqAccountPanel extends ConsumerWidget {
     }
 
     final sanctions = ref.watch(rasqSanctionsProvider).value ?? RasqSanctions.none;
+    // この端末がトークンを持っていない Central のアカウント(ログインが切れた / 前の版で上書きされた)には「ログインが必要」(D-316)。
+    final signedIn = ref.watch(centralSignedInAccountIdsProvider);
+    bool needsLogin(RasqAccountRecord r) => centralOk && signedIn != null && r.isCentral && !signedIn.contains(r.centralAccountId);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
         child: ListView(padding: EdgeInsets.zero, children: [
@@ -293,7 +316,7 @@ class RasqAccountPanel extends ConsumerWidget {
                 color: isCurrent ? tokens.link.withValues(alpha: 0.06) : null,
                 child: RasqUserRow(
                   user: user,
-                  subtitle: '${r.kind.label} ・ SNS $snsCount件${isCurrent ? ' ・ 使用中' : ''}',
+                  subtitle: '${r.kind.label} ・ SNS $snsCount件${isCurrent ? ' ・ 使用中' : ''}${needsLogin(r) ? ' ・ ログインが必要' : ''}',
                   leading: SizedBox(
                     width: 24,
                     child: Center(child: RasqBadge(count: badgeCount, dot: false)),
@@ -306,8 +329,17 @@ class RasqAccountPanel extends ConsumerWidget {
                     onPressed: () => ref.read(rasqAccountFowExpandedProvider.notifier).toggle(r.id),
                   ),
                   onTap: () async {
+                    final relogin = needsLogin(r);
+                    final router = ref.read(routerProvider);
+                    final messenger = ref.read(rootMessengerKeyProvider);
                     await ref.read(rasqAccountsProvider.notifier).select(r.id);
                     onDone();
+                    // トークンが無ければ、そのアカウントでログインし直す画面へ(FOW は閉じたので、ルーターから)。
+                    if (relogin) {
+                      onNavigate?.call();
+                      router.push('${Routes.settings}/account-login');
+                      messenger.currentState?.showSnackBar(SnackBar(content: Text('@${r.handle ?? ''} に、もう一度ログインしてください')));
+                    }
                   },
                 ),
               );
@@ -352,7 +384,7 @@ class RasqAccountPanel extends ConsumerWidget {
                       : () async {
                           final box = b.findRenderObject() as RenderBox;
                           final pick = await manager.showDropdown<String>(id: 'rasq.account.add', anchor: box.localToGlobal(Offset.zero) & box.size, dense: true, items: [
-                            RasqDropdownItem('新しく作成', 'create', enabled: ledger.central == null),
+                            RasqDropdownItem('新しく作成', 'create', enabled: !ledger.hasCentral),
                             const RasqDropdownItem('既存のアカウントにログイン', 'login'),
                           ]);
                           if (!context.mounted) return;
@@ -403,7 +435,7 @@ class RasqAccountPanel extends ConsumerWidget {
 /// [beforeNavigate] = 画面へ移る前に呼ぶ(FOW を閉じる。FOW は画面より前に出るので、開いたままだと編集画面を覆う)。
 Future<void> openRasqProfileSheet(BuildContext context, WidgetRef ref, {required RasqAccountRecord record, VoidCallback? beforeNavigate}) async {
   // Central のアカウントは、SNS のプロフィール編集と同じ作りの画面で (D-269)。この端末だけのアカウントは、表示名だけのシート。
-  if (record.isCentral && record.id == ref.read(rasqAccountsProvider).value?.central?.id) {
+  if (record.isCentral && record.id == ref.read(currentRasqAccountProvider)?.id) {
     final router = GoRouter.of(context);
     beforeNavigate?.call();
     await router.push('${Routes.settings}/rasq-profile');

@@ -110,11 +110,11 @@ void main() {
       await container.read(orgateAccountProvider.notifier).signOut();
       await container.read(rasqAccountsProvider.notifier).detachCentral(rec.id);
       final ledger = container.read(rasqAccountsProvider).value!;
-      expect(ledger.central, isNull);
+      expect(ledger.hasCentral, isFalse);
       expect(ledger.current!.kind, RasqAccountKind.local);
       expect(ledger.current!.sessionKeys.toSet(), {acc1.key, acc2.key});
       final stored = jsonDecode((await container.read(sessionStorageProvider).read(OrgateAccountNotifier.storageKey))!) as Map;
-      expect(stored['token'], isNull);
+      expect(stored['tokens'], isEmpty);
     });
 
     test('RASQ アカウントを切り替えると見える SNS セッションが変わる(所属外は隠れる)', () async {

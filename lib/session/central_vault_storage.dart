@@ -18,6 +18,8 @@ import 'session_storage.dart';
 ///   保管庫を開くのに RASQ のトークンが要るので。
 /// - RASQ アカウントにログインしていない間は、メモリにだけ持つ(タブを閉じると消える。Web 版は RASQ アカウントでのログインが前提)。
 ///   ログインしたら、メモリのぶんを預ける。RASQ アカウントが変わったら、SNS のセッションを読み直す。
+/// - 保管庫は **Central のアカウントごと** (D-316)。読み書きは、そのときのアカウントのトークンに縛った口で行い、
+///   アカウントを切り替えたら「最後に知った状態」も捨てる(前のアカウントのログインを、次のアカウントの保管庫へ持ち込まない)。
 /// - 前の版(ブラウザに置いていた)のぶんが残っていれば、保管庫へ移してブラウザからは消す。
 class CentralVaultSessionStorage implements SessionStorage {
   CentralVaultSessionStorage(this._ref, this.local, {this.pollInterval = const Duration(seconds: 45)}) {
@@ -27,18 +29,34 @@ class CentralVaultSessionStorage implements SessionStorage {
 
   void _watchAccount() {
     if (!_ref.mounted) return;
-    _ref.listen(orgateAccountProvider.select((a) => a.value?.id), (prev, next) async {
+    // [orgateAccountProvider] は listen しない(このプロバイダーは、アカウントの読み込みから読まれる。listen すると循環になる)。
+    // 代わりに、トークンの箱が知らせる「いまのアカウント」を見る。
+    final holder = _ref.read(orgateTokenHolderProvider);
+    var prev = holder.accountId;
+    void onChange() {
+      final next = holder.accountId;
       if (prev == next) return;
-      if (next != null) {
-        // ログインした: メモリにだけ持っていたぶんを預ける。
-        for (final e in Map.of(_memory).entries) {
-          if (await _put(e.key, e.value)) _memory.remove(e.key);
-        }
-      } else {
-        _memory.clear();
+      prev = next;
+      Future.microtask(() => _onAccountChanged(next));
+    }
+
+    holder.addListener(onChange);
+    _ref.onDispose(() => holder.removeListener(onChange));
+  }
+
+  Future<void> _onAccountChanged(String? next) async {
+    if (!_ref.mounted) return;
+    _known = SessionOps();
+    _knownFor = null;
+    if (next != null) {
+      // ログインした: メモリにだけ持っていたぶんを預ける。
+      for (final e in Map.of(_memory).entries) {
+        if (await _put(e.key, e.value)) _memory.remove(e.key);
       }
-      _ref.invalidate(sessionsProvider);
-    });
+    } else {
+      _memory.clear();
+    }
+    if (_ref.mounted) _ref.invalidate(sessionsProvider);
   }
 
   final Ref _ref;
@@ -50,18 +68,28 @@ class CentralVaultSessionStorage implements SessionStorage {
 
   static const vaulted = {SessionsNotifier.storageKey};
 
-  Future<OrgateClient?> _client() async {
+  /// いまの Central のアカウントと、そのトークンに縛った口。ログインしていなければ null。
+  Future<({OrgateClient client, String accountId})?> _client() async {
+    final String? accountId;
     try {
-      if (await _ref.read(orgateAccountProvider.future) == null) return null;
+      accountId = (await _ref.read(orgateAccountProvider.future))?.id;
     } catch (_) {
       return null;
     }
-    return _ref.read(centralClientProvider);
+    if (accountId == null) return null;
+    final token = _ref.read(orgateAccountProvider.notifier).tokenFor(accountId);
+    final base = _ref.read(centralClientProvider);
+    if (base == null || token == null) return null;
+    return (client: base.withToken(() => token), accountId: accountId);
   }
 
   Future<bool> _put(String key, String value) async {
-    final client = await _client();
-    if (client == null) return false;
+    final c = await _client();
+    if (c == null) return false;
+    return _putWith(c.client, key, value);
+  }
+
+  Future<bool> _putWith(OrgateClient client, String key, String value) async {
     try {
       await client.putJson('/me/vault/$key', {'value': value});
       return true;
@@ -85,20 +113,32 @@ class CentralVaultSessionStorage implements SessionStorage {
 
   /// この端末(タブ)が最後に知った状態。ログイン / ログアウトの操作は、これとの差から起こす。
   SessionOps _known = SessionOps();
+
+  /// [_known] がどの Central のアカウントの保管庫のものか。
+  String? _knownFor;
+
+  /// [accountId] の保管庫を触る前に: 別のアカウントの「最後に知った状態」なら捨てる。
+  void _forAccount(String accountId) {
+    if (_knownFor == accountId) return;
+    _known = SessionOps();
+    _knownFor = accountId;
+  }
   Timer? _poll;
 
   @override
   Future<String?> read(String key) async {
     if (!vaulted.contains(key)) return local.read(key);
-    final client = await _client();
-    if (client == null) return _memory[key];
+    final c = await _client();
+    if (c == null) return _memory[key];
+    final client = c.client;
+    _forAccount(c.accountId);
     final remote = await _fetch(client, key);
     if (remote == null) return _memory[key] ?? _known.toSessionsJson();
     // 前の版がブラウザ / メモリに置いていたぶんがあれば、操作として足してから、ブラウザのぶんを消す。
     final old = _memory[key] ?? await local.read(key);
     if (old != null) {
       final merged = remote.merged(SessionOps().applying(old, at: DateTime.fromMillisecondsSinceEpoch(0)));
-      if (await _put(key, merged.encode())) {
+      if (await _putWith(client, key, merged.encode())) {
         _memory.remove(key);
         await local.delete(key);
       }
@@ -107,30 +147,32 @@ class CentralVaultSessionStorage implements SessionStorage {
       _known = remote;
     }
     _startPolling(key);
-    _adoptKeys();
+    _adoptKeys(c.accountId);
     return _known.toSessionsJson();
   }
 
   @override
   Future<void> write(String key, String value) async {
     if (!vaulted.contains(key)) return local.write(key, value);
-    final client = await _client();
-    if (client == null) {
+    final c = await _client();
+    if (c == null) {
       _memory[key] = value;
       return;
     }
+    final client = c.client;
+    _forAccount(c.accountId);
     // いま保管庫にある台帳に、この端末の操作(知っていた状態との差)を重ねる。ほかの端末の操作は消さない。
     final mine = _known.applying(value, at: DateTime.now());
     final remote = await _fetch(client, key);
     final merged = (remote ?? SessionOps()).merged(mine).pruned(DateTime.now());
-    if (await _put(key, merged.encode())) {
+    if (await _putWith(client, key, merged.encode())) {
       _memory.remove(key);
     } else {
       _memory[key] = value;
     }
     final changedElsewhere = !merged.sameLoginsAs(mine);
     _known = merged;
-    _adoptKeys();
+    _adoptKeys(c.accountId);
     // ほかの端末でのログイン / ログアウトが混ざっていたら、画面にも反映する。
     if (changedElsewhere) Future.microtask(() => _ref.mounted ? _ref.invalidate(sessionsProvider) : null);
   }
@@ -148,21 +190,22 @@ class CentralVaultSessionStorage implements SessionStorage {
     if (_poll != null || pollInterval == Duration.zero) return;
     _poll = Timer.periodic(pollInterval, (_) async {
       if (!_ref.mounted) return;
-      final client = await _client();
-      if (client == null) return;
-      final remote = await _fetch(client, key);
-      if (remote != null && _ref.mounted && !remote.sameLoginsAs(_known)) _ref.invalidate(sessionsProvider);
+      final c = await _client();
+      if (c == null || c.accountId != _knownFor) return;
+      final remote = await _fetch(c.client, key);
+      if (remote != null && _ref.mounted && c.accountId == _knownFor && !remote.sameLoginsAs(_known)) _ref.invalidate(sessionsProvider);
     });
     _ref.onDispose(() => _poll?.cancel());
   }
 
   /// 保管庫でログイン中の SNS アカウントを、この端末の台帳の RASQ アカウントに所属させる
   /// (別のブラウザでログインしたぶんは、こちらの台帳にはまだ載っていない — 載せないと、あるのに見えない)。
-  void _adoptKeys() {
+  /// [accountId] = 読んだ保管庫の持ち主(D-316: 読んでいるあいだに切り替わっても、別のアカウントの行へ入れない)。
+  void _adoptKeys(String accountId) {
     final keys = _known.loggedInKeys;
     Future.microtask(() async {
       if (!_ref.mounted) return;
-      await _ref.read(rasqAccountsProvider.notifier).adoptCentralSessionKeys(keys);
+      await _ref.read(rasqAccountsProvider.notifier).adoptCentralSessionKeys(keys, centralAccountId: accountId);
     });
   }
 }

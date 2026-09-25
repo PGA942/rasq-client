@@ -51,6 +51,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('インターフェースの表示サイズ', route: '/settings/dsl/appearance.display'),
     SettingsRow('フォントやカラースキーム'),
     SettingsRow('モーションの抑制', route: '/settings/dsl/appearance.motion'),
+    SettingsRow('タイムラインの表示', subtitle: 'TL の上下の「投稿を読み込む」', route: '/settings/dsl/appearance.timeline'),
     SettingsRow('ピクチャインピクチャ', route: '/settings/dsl/appearance.video'),
     SettingsRow('通知の表示形式', route: '/settings/dsl/appearance.notifications'),
   ]),

@@ -208,6 +208,10 @@ void main() {
     // いちばん上の投稿まで戻す(下へ送ってあるので)。
     await tester.drag(find.byType(NestedScrollView), const Offset(0, 1500));
     await tester.pumpAndSettle();
+    // SNS をつないでいて、SNS の投稿がまだ無い → 預ける画面への案内 (D-316)。そのぶん、投稿は少し下にある。
+    expect(find.byKey(const ValueKey('rasqPage.posts.snsHint')), findsOneWidget);
+    await Scrollable.ensureVisible(tester.element(find.descendant(of: find.byKey(const ValueKey('rasqPost.p1')), matching: find.byTooltip('メニュー'))), alignment: 0.5);
+    await tester.pumpAndSettle();
     await tester.tap(find.descendant(of: find.byKey(const ValueKey('rasqPost.p1')), matching: find.byTooltip('メニュー')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除'));

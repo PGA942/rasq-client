@@ -207,13 +207,16 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
 
 /// Misskey (MiAuth) — クライアント単体で完結する。
 class MisskeyLoginScreen extends StatelessWidget {
-  const MisskeyLoginScreen({super.key});
+  const MisskeyLoginScreen({super.key, this.host});
+
+  /// 入力欄に先に入れておくサーバー(RASQ アカウントのバンドルからログインするとき。D-316)。
+  final String? host;
 
   @override
   Widget build(BuildContext context) => SnsLoginScreen(
         pluginId: MisskeyPlugin.pluginId,
         kind: SnsKind.misskey,
-        defaultHost: 'misskey.io',
+        defaultHost: host ?? 'misskey.io',
         authButtonLabel: 'ブラウザで認証する (MiAuth)',
       );
 }
@@ -221,13 +224,16 @@ class MisskeyLoginScreen extends StatelessWidget {
 /// Mastodon (OAuth) — インスタンスごとの client_secret が要るので、
 /// トークン発行は orgate-server の OAuth ブローカーが代行する (D-135)。
 class MastodonLoginScreen extends StatelessWidget {
-  const MastodonLoginScreen({super.key});
+  const MastodonLoginScreen({super.key, this.host});
+
+  /// 入力欄に先に入れておくサーバー(RASQ アカウントのバンドルからログインするとき。D-316)。
+  final String? host;
 
   @override
   Widget build(BuildContext context) => SnsLoginScreen(
         pluginId: mastodonPluginId,
         kind: SnsKind.mastodon,
-        defaultHost: 'mastodon.social',
+        defaultHost: host ?? 'mastodon.social',
         authButtonLabel: 'ブラウザで認証する (OAuth)',
         hostHint: 'インスタンスのURLを入力 (例: mastodon.social)',
       );

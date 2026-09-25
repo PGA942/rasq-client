@@ -88,7 +88,16 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
               ),
             ],
             body: TabBarView(children: [
-              _PostsTab(posts: d.posts, isMine: isMine, onChanged: () => ref.invalidate(rasqAccountPageProvider(widget.handle))),
+              _PostsTab(
+                posts: d.posts,
+                isMine: isMine,
+                snsLinked: d.profile.snsAccounts.isNotEmpty,
+                onChanged: () => ref.invalidate(rasqAccountPageProvider(widget.handle)),
+                onOpenSnsPostsSettings: () async {
+                  await context.push('${Routes.settings}/rasq-profile');
+                  ref.invalidate(rasqAccountPageProvider(widget.handle));
+                },
+              ),
               _MediaTab(posts: d.posts),
               _message(context, '作成したリストは、今後ここに出ます。'),
               _message(context, '公開したクリップは、今後ここに出ます。'),
@@ -277,9 +286,15 @@ class RasqSnsTileChip extends StatelessWidget {
 }
 
 class _PostsTab extends ConsumerWidget {
-  const _PostsTab({required this.posts, required this.isMine, required this.onChanged});
+  const _PostsTab({required this.posts, required this.isMine, required this.onChanged, this.snsLinked = false, this.onOpenSnsPostsSettings});
   final RasqPostList posts;
   final bool isMine;
+
+  /// ページに SNS アカウントのタイルが出ているか。
+  final bool snsLinked;
+
+  /// SNS の投稿を出す設定(アクセストークンを預けるスイッチ、S-027)の画面を開く。
+  final VoidCallback? onOpenSnsPostsSettings;
 
   /// 投稿が変わった / 消えた(ページを取り直す)。
   final VoidCallback onChanged;
@@ -327,7 +342,30 @@ class _PostsTab extends ConsumerWidget {
       if (isMine)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Text('RASQ アカウントとしての投稿は、いまは ${posts.limit} 件までです(${posts.posts.where((p) => p.rebroadedBy == null).length} / ${posts.limit})。SNS アカウントの投稿をまとめて出す機能は、今後の対応です。', key: const ValueKey('rasqPage.posts.note'), style: caption),
+          child: Text('RASQ アカウントとしての投稿は、いまは ${posts.limit} 件までです(${posts.posts.where((p) => p.rebroadedBy == null).length} / ${posts.limit})。SNS アカウントの投稿は、そのアカウントのアクセストークンを RASQ に預けると、ここに一緒に出ます。', key: const ValueKey('rasqPage.posts.note'), style: caption),
+        ),
+      // 自分のページで、SNS アカウントはつないであるのに、その投稿が 1 件も出ていない (D-316): トークンを預けていない
+      // (か、取れていない)。「投稿が出ない」と見えるので、預ける画面への入口を出す。ほかの人が見るときは出さない。
+      if (isMine && snsLinked && posts.snsPosts.isEmpty)
+        Container(
+          key: const ValueKey('rasqPage.posts.snsHint'),
+          margin: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+          padding: const EdgeInsets.all(RasqSpacing.sm),
+          decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(RasqSizes.radiusSm), border: Border.all(color: scheme.outlineVariant)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('つないだ SNS アカウントの投稿は、まだここに出ていません。', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 2),
+            Text('プロフィール編集の「アカウントページに出す SNS アカウント」で、アカウントごとに「投稿もアカウントページに出す」を入れると(その SNS のアクセストークンを RASQ に預けます)、公開 / ホームの投稿がここに出ます。', style: caption),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                key: const ValueKey('rasqPage.posts.snsHint.open'),
+                onPressed: onOpenSnsPostsSettings,
+                icon: const Icon(Icons.tune, size: 16),
+                label: const Text('SNS の投稿を出す設定へ'),
+              ),
+            ),
+          ]),
         ),
       if (items.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('投稿はまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
       for (final e in items)
