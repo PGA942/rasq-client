@@ -11,6 +11,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
+import '../../shell/column_layout.dart';
 import '../../shell/third_column.dart';
 import 'rai_face.dart';
 import 'rai_layout.dart';
@@ -124,7 +125,7 @@ class _RaiBarHostState extends ConsumerState<_RaiBarHost> {
           );
     // 置き場 (D-233): カラム(列スロット)と縦の比率。指差しの逃がし(atTop)は一時的に上へ。
     final placement = ref.watch(raiBarPlacementProvider);
-    final slots = fowColumnSlotsOf(context, thirdColumnOccupied: ref.watch(thirdColumnProvider) != null);
+    final slots = fowColumnSlotsOf(context, thirdColumnOccupied: ref.watch(thirdColumnProvider) != null, layout: ref.watch(columnLayoutProvider));
     final top = fowTopInsetOf(context) + RasqSpacing.sm;
     final bottom = screen.height - (dock + RasqSpacing.sm + (insets > 0 ? 0 : MediaQuery.paddingOf(context).bottom));
     // 幅 (D-237): チャット列と同じ規則 — カラム幅 600px 未満なら最大幅、以上は増えた分の 1/2 まで。

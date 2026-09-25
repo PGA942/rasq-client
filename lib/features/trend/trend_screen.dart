@@ -6,6 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../shell/third_column.dart' show paneBack;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../search/search_filter.dart';
@@ -87,7 +88,15 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.xs),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              RasqIconButton(icon: Icons.arrow_back_ios_new, size: 18, tooltip: 'トレンドホームへ戻る', onPressed: () => Navigator.of(context).maybePop()),
+              // 第3カラムに開いているとき (D-320) は、ほかのページの < と同じくカラムの中で戻る(前が無ければ閉じる)。
+              RasqIconButton(
+                icon: Icons.arrow_back_ios_new,
+                size: 18,
+                tooltip: 'トレンドホームへ戻る',
+                onPressed: () {
+                  if (!paneBack(context)) Navigator.of(context).maybePop();
+                },
+              ),
               Expanded(
                 child: SearchFilterBox(
                   controller: _searchController,

@@ -56,7 +56,7 @@ class ThirdColumnStore extends Notifier<ThirdColumnEntry?> {
 
 final thirdColumnProvider = NotifierProvider<ThirdColumnStore, ThirdColumnEntry?>(ThirdColumnStore.new);
 
-/// 検索ホーム幅 = 狭いカラムの幅。
+/// 検索ホーム幅 = 狭いカラム(小型カラム)の既定の幅。設定「カラムの幅」 (D-320) で変えられる(`splitColumns`)。
 const double kSearchHomeColumnWidth = 320;
 
 /// 第3カラムの中身に被せる印。ページの open がどのカラム発かを判定する。
@@ -134,6 +134,18 @@ void paneBackTo(BuildContext context, ThirdColumnEntry current, {ThirdColumnEntr
     container.read(overlayManagerProvider).close(composerFowId);
     container.read(thirdColumnProvider.notifier).close();
   }
+}
+
+/// 独自の戻るボタンを持つページ(トレンドTL など)の戻り (D-320)。第3カラムのページなら [paneBackTo] で 1 つ前へ
+/// (previous が無ければ閉じて検索へ)戻して true。第3カラムの外なら false(呼び出し側が router / Navigator で戻る)。
+///
+/// 第3カラムのページは Navigator のルートではないので、`Navigator.maybePop` では戻れない(サイドの検索欄から
+/// 開いた検索結果が大型のまま閉じられなかった)。[RasqPageHeader] の < と同じ戻り方にそろえる。
+bool paneBack(BuildContext context) {
+  final entry = context.getInheritedWidgetOfExactType<PaneScope>()?.entry;
+  if (entry == null || entry.location == null) return false;
+  paneBackTo(context, entry, target: entry.previous);
+  return true;
 }
 
 /// FOW を開くときの初期カラム (D-062): 第3カラムのページ内から開かれた
