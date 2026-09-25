@@ -19,6 +19,7 @@ import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../compose/emoji_picker_fow.dart';
 import 'reaction_history.dart';
+import 'reaction_mode.dart';
 import '../post/post_menu.dart';
 import '../media/video_player.dart';
 import '../post/share_fow.dart';
@@ -259,10 +260,15 @@ class _PostRowState extends ConsumerState<PostRow> {
       prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
+    // リアクションの受け方 (D-321): 投稿の SNS の `Reaction` の宣言(絵文字でリアクションできるか)と、投稿の「いいねのみ」から決める。
+    // 合流 TL では、表示中のアカウントではなく投稿のアカウントの宣言を先に見る(Misskey のバーで Bluesky の投稿を見ていても、いいねとして出す)。
+    final reactionMode = reactionModeOf(post, [...?ownSession?.actions, ...widget.actions].where((a) => a.genreTag == 'Reaction').firstOrNull);
+    // 角丸のチップ(絵文字 + 数)は、絵文字でリアクションできる投稿だけ。いいねだけの投稿は、数をいいねのボタンに出す。
+    final showChips = reactionMode == PostReactionMode.emoji && post.reactions.isNotEmpty;
     final actionItems = [
       for (final e in entries)
         switch (e) {
-          SingleActionEntry() => _item(e.action, tokens),
+          SingleActionEntry() => _item(e.action, tokens, reactionMode),
           ActionListEntry() => _listItem(e),
         },
     ];
@@ -279,12 +285,12 @@ class _PostRowState extends ConsumerState<PostRow> {
       media: !collapsible && !hasCw && !widget.hideMedia && mediaItems.isNotEmpty ? RasqMediaGrid(items: mediaItems, maxVisible: widget.showAllMedia ? mediaItems.length : 4, onTapTile: (i) => context.openViewer(post, mediaIndex[i]), onPlayTile: (i) => showVideoFow(ref, mediaItems[i], post: post, column: fowColumnOf(context))) : null,
       poll: !collapsible && !hasCw && post.poll != null ? RasqPollWidget(poll: post.poll!) : null,
       quote: !collapsible && !hasCw && post.quote != null ? (widget.compactQuote ? InlinePostFrame(post: post.quote!) : quoteTile(context, post.quote!, emojis: emojis, safety: safety)) : null,
-      actionBar: widget.actions.isEmpty && post.reactions.isEmpty
+      actionBar: widget.actions.isEmpty && !showChips
           ? null
           : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               // 投稿内のリアクション数表示 (D-040): アクションバーの上に
               // 角丸タイル(絵文字+数、自分のはハイライト、タップで同調/解除)。
-              if (post.reactions.isNotEmpty)
+              if (showChips)
                 RasqReactionChips(
                   reactions: post.reactions,
                   emojiUrls: post.reactionEmojis,
@@ -360,19 +366,24 @@ class _PostRowState extends ConsumerState<PostRow> {
   }
 
   /// ActionDescriptor + ActionState (Store) → ActionBar props.
-  RasqActionBarItem _item(ActionDescriptor a, RasqTokens tokens) {
+  RasqActionBarItem _item(ActionDescriptor a, RasqTokens tokens, PostReactionMode reactionMode) {
     final st = ref.watch(actionStateOfProvider((postKey: post.key, actionId: a.id)));
-    final icon = PostRow.iconFor(a.icon, Icons.circle_outlined);
-    final doneIcon = a.doneIcon == null ? null : PostRow.iconFor(a.doneIcon, icon);
     final isReaction = a.genreTag == 'Reaction';
     final isRepost = a.genreTag == 'Repost';
+    // いいねだけの投稿の SNS のリアクションボタン (D-321): 絵文字のアイコン / 予測 / ピッカーを使わない。数はここに出す。
+    final likeButton = isReaction && reactionMode != PostReactionMode.emoji && !isPluginActionId(a.id);
+    // 「いいねのみ」の Misskey のノートは、ボタンも ❤ に(RASQ の投稿の「いいねのみ」と同じ)。
+    final likeOnly = likeButton && reactionMode == PostReactionMode.likeOnly;
+    final icon = likeOnly ? Icons.favorite_border : PostRow.iconFor(a.icon, Icons.circle_outlined);
+    final doneIcon = likeOnly ? Icons.favorite : (a.doneIcon == null ? null : PostRow.iconFor(a.doneIcon, icon));
     // 予測絵文字の表示 (D-041): リアクションしていない**全ての投稿**で、
     // 表示されたタイミングにパッシブ計算(純ローカル、ネットワーク/ML なし)。
     // Unicode はテキスト、カスタムは投稿の reactionEmojis から画像で表示。
-    String? iconText = st.iconText;
-    Uri? iconUrl = st.iconUrl;
+    // 絵文字でリアクションできない投稿 (D-321) は、付けた絵文字(❤ / ⭐)にも予測にも差し替えない。
+    String? iconText = likeButton ? null : st.iconText;
+    Uri? iconUrl = likeButton ? null : st.iconUrl;
     var predictedIcon = false;
-    if (iconText == null && iconUrl == null && isReaction && !st.done) {
+    if (iconText == null && iconUrl == null && isReaction && !st.done && reactionMode == PostReactionMode.emoji) {
       final predicted = ref.watch(reactionHistoryProvider).value == null ? null : ref.read(reactionHistoryProvider.notifier).predictFor(post);
       if (predicted != null) {
         final remote = remoteReactionName(predicted);
@@ -391,14 +402,16 @@ class _PostRowState extends ConsumerState<PostRow> {
     }
     return RasqActionBarItem(
       id: a.id,
-      label: a.label,
+      label: likeOnly ? 'いいね' : a.label,
       icon: icon,
       // リノートのボタンは、済みでも無効にしない (D-274): 完了アイコンの宣言が無いと部品が無効化するので、同じアイコンを渡す
       // (何度でもリノート / 引用でき、取り消しはリノートの帯の … やドロップダウンから)。
       doneIcon: doneIcon ?? (isRepost ? icon : null),
       done: st.done,
-      count: st.count ?? post.counts[a.id],
-      showCount: a.countSource != CountSource.none,
+      // いいねの数 (D-321): チップを出さないぶん、ボタンに。アクション id の数が無ければ、プラグインの規約の `reaction` 欄
+      // (Mastodon / mixi2 はお気に入り数をここに載せる)→ リアクションの合計。
+      count: st.count ?? post.counts[a.id] ?? (likeButton ? post.counts['reaction'] ?? (post.reactions.isEmpty ? null : post.reactionTotal) : null),
+      showCount: likeButton || a.countSource != CountSource.none,
       enabled: st.enabled,
       doneColor: isReaction ? tokens.live : null,
       iconUrl: iconUrl,
@@ -408,11 +421,12 @@ class _PostRowState extends ConsumerState<PostRow> {
       // Repost はデフォルトの**アクションバンドル**(D-039): タップで
       // リノート / 引用ノートのドロップダウン(ユーザー編集のリスト化とは
       // 別で、(+) の編集導線には出ない組み込みバンドル)。
-      onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : (anchor) => _performReactionAware(a, st, anchor),
+      onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : (anchor) => _performReactionAware(a, st, anchor, reactionMode),
       // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行。
       // ピッカーは**実物のリアクションボタンにアンカー**する (D-065:
       // 基本下付き・余白不足で上付き。D-055 の複製バーは置かない)。
-      onAnchorLongPress: isReaction ? (anchor) => _openReactionPicker(a, anchor) : null,
+      // 絵文字でリアクションできない投稿 (D-321: Mastodon / Bluesky / mixi2、Misskey の「いいねのみ」)では、長押ししてもピッカーを開かない。
+      onAnchorLongPress: isReaction && reactionMode == PostReactionMode.emoji ? (anchor) => _openReactionPicker(a, anchor) : null,
     );
   }
 
@@ -423,10 +437,14 @@ class _PostRowState extends ConsumerState<PostRow> {
   /// **付けられる予測が無いときは、ピッカーを開く** (D-278): だれもリアクションしていなくて履歴も無い / 予測が他サーバーの絵文字で、
   /// 同じ名前のものが自サーバーに無い。以前は絵文字を添えずに送っていて、SNS 側の既定(👍)が付いていた。
   /// [_actAs] で別のアカウントに切り替えているときは、そのアカウントで付ける(以前は元のアカウントで付けていた)。
-  Future<void> _performReactionAware(ActionDescriptor a, ActionState st, Rect anchor) async {
+  ///
+  /// 絵文字でリアクションできない投稿 (D-321) では予測もピッカーも使わない: いいねだけの SNS はボタンの入り切り、
+  /// Misskey の「いいねのみ」のノートは ❤ を付ける。
+  Future<void> _performReactionAware(ActionDescriptor a, ActionState st, Rect anchor, PostReactionMode mode) async {
     // リアクション済みなら、確認なしで取り消す (D-281)。
     if (a.genreTag == 'Reaction' && st.done) return _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
-    if (a.genreTag != 'Reaction' || !a.iconPerPost) return _run(a).catchError((_) {});
+    if (a.genreTag == 'Reaction' && mode == PostReactionMode.likeOnly && !isPluginActionId(a.id)) return _onAction(a, args: const {'reaction': likeOnlyReaction}).catchError((_) {});
+    if (a.genreTag != 'Reaction' || !a.iconPerPost || mode != PostReactionMode.emoji) return _run(a).catchError((_) {});
     // 待つ前に、実行先を掴む(待っている間に行が別の投稿に使い回されても、押した投稿に付ける。D-282)。
     final shown = post;
     final handler = _onAction;

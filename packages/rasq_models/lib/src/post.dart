@@ -58,6 +58,7 @@ class Post {
     this.reactions = const {},
     this.reactionEmojis = const {},
     this.myReaction,
+    this.reactionAcceptance,
     this.source = PostSource.note,
     this.url,
   });
@@ -108,6 +109,10 @@ class Post {
   /// Viewer's own reaction, if any.
   final String? myReaction;
 
+  /// どのリアクションを受けるか (D-321: Misskey の `reactionAcceptance`。`likeOnly` / `likeOnlyForRemote` … / null = 何でも)。
+  /// 「いいねのみ」の投稿では、ホストがチップとピッカーを出さない。持たない SNS は null。
+  final String? reactionAcceptance;
+
   /// Where this post came from (normal note vs. chat message).
   final PostSource source;
 
@@ -140,6 +145,7 @@ class Post {
         reactions: reactions,
         reactionEmojis: reactionEmojis,
         myReaction: myReaction,
+        reactionAcceptance: reactionAcceptance,
         source: source,
         url: url,
       );

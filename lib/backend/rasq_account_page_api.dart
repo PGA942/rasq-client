@@ -459,6 +459,7 @@ class RasqAccountPost {
         visibility: visibility,
         // 返信の並び替え(リアクション数)に使う (D-292): キューの数を、リアクションとして写す。
         reactions: {for (final q in queues) q.like ? '❤' : ':${q.packId}|${q.stickerId}:': q.count},
+        reactionAcceptance: reactionAcceptance,
         counts: {'reply': replyCount, 'rebroad': rebroadCount + quoteCount},
         replyToId: replyTo,
         media: [for (final i in images) i.toMediaItem()],

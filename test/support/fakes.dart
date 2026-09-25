@@ -4,11 +4,14 @@ import 'package:rasq_store/rasq_store.dart';
 
 /// Fake SNS plugin/session for widget tests — serves a fixed timeline.
 class FakeSnsPlugin extends SnsPlugin {
-  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const [], this.localEmojis});
+  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const [], this.localEmojis, this.reactionActionId = 'reaction'});
   final List<Post> Function(AccountId viewer) posts;
 
   /// 渡すと、Misskey のように**絵文字でリアクションする**セッションになる(`iconPerPost`。D-278)。中身 = 自サーバーにある絵文字の名前。
   final Set<String>? localEmojis;
+
+  /// リアクションのボタンの id(Mastodon のお気に入りは `favourite` のように、SNS ごとに違う。D-321)。
+  final String reactionActionId;
 
   /// 開いたセッション(テストから、送ったリアクションを見る)。
   final List<FakeSnsSession> opened = [];
@@ -30,15 +33,16 @@ class FakeSnsPlugin extends SnsPlugin {
   Future<AuthFlow> beginAuth(String host, {Uri? callback}) => throw UnimplementedError();
   @override
   SnsSession open(AccountSession session) {
-    final s = FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind, localEmojis: localEmojis);
+    final s = FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind, localEmojis: localEmojis, reactionActionId: reactionActionId);
     opened.add(s);
     return s;
   }
 }
 
 class FakeSnsSession extends SnsSessionBase {
-  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey, this.localEmojis}) : _posts = [...posts];
+  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey, this.localEmojis, this.reactionActionId = 'reaction'}) : _posts = [...posts];
   final Set<String>? localEmojis;
+  final String reactionActionId;
 
   /// TL の先頭に投稿を足す(取り直すと出る)。
   void prepend(Post p) => _posts.insert(0, p);
@@ -64,7 +68,7 @@ class FakeSnsSession extends SnsSessionBase {
         // 返信は実際のプラグイン同様 confirm + interstitial(RAi からの自動実行は不可、D-223)。
         const ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信', icon: 'subdirectory_arrow_left', confirmMode: ConfirmMode.confirm, fow: FowType.interstitial),
         const ActionDescriptor(id: 'renote', genreTag: 'Repost', label: 'リノート', icon: 'repeat', doneIcon: 'repeat_on'),
-        ActionDescriptor(id: 'reaction', genreTag: 'Reaction', label: 'リアクション', icon: 'favorite_border', doneIcon: 'favorite', iconPerPost: localEmojis != null),
+        ActionDescriptor(id: reactionActionId, genreTag: 'Reaction', label: 'リアクション', icon: 'favorite_border', doneIcon: 'favorite', iconPerPost: localEmojis != null),
       ];
   @override
   Future<UserSummary> me() async => UserSummary(id: 'me', account: account, displayName: 'テスター');
@@ -243,12 +247,12 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<ActionResult> performAction(String actionId, String postId, {Map<String, Object?> args = const {}}) async {
     performed.add('$actionId:$postId:${args['undo']}');
-    if (actionId == 'reaction' && args['undo'] != true) reactionsSent.add(args['reaction'] as String?);
-    if (actionId == 'reaction' && localEmojis != null) {
+    if (actionId == reactionActionId && args['undo'] != true) reactionsSent.add(args['reaction'] as String?);
+    if (actionId == reactionActionId && localEmojis != null) {
       final i = _posts.indexWhere((p) => p.id == postId);
       if (i >= 0) {
         final p = _posts[i];
-        _posts[i] = Post(id: p.id, account: p.account, author: p.author, createdAt: p.createdAt, body: p.body, reactions: p.reactions, reactionEmojis: p.reactionEmojis, myReaction: args['undo'] == true ? null : args['reaction'] as String?);
+        _posts[i] = Post(id: p.id, account: p.account, author: p.author, createdAt: p.createdAt, body: p.body, reactions: p.reactions, reactionEmojis: p.reactionEmojis, myReaction: args['undo'] == true ? null : args['reaction'] as String?, reactionAcceptance: p.reactionAcceptance);
       }
     }
     return ActionResult(done: args['undo'] != true, count: 1);

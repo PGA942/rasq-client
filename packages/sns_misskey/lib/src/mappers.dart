@@ -144,6 +144,7 @@ abstract final class MisskeyMappers {
         reactions: inner.reactions,
         reactionEmojis: inner.reactionEmojis,
         myReaction: inner.myReaction,
+        reactionAcceptance: inner.reactionAcceptance,
         url: inner.url,
       );
     }
@@ -184,6 +185,8 @@ abstract final class MisskeyMappers {
           if (e.value is String) ':${e.key}:': Uri.parse(e.value as String),
       },
       myReaction: j['myReaction'] as String?,
+      // 「いいねのみ」のノート (D-321): ホストがチップとピッカーを出さない。
+      reactionAcceptance: j['reactionAcceptance'] as String?,
       url: _uri(j['url']) ?? _uri(j['uri']) ?? Uri.https(host, '/notes/${j['id']}'),
     );
   }

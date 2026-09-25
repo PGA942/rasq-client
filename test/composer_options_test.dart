@@ -18,14 +18,14 @@ import 'support/fakes.dart';
 void main() {
   late PluginRegistry registry;
 
-  Widget app({List<Post> Function(AccountId viewer)? posts}) {
+  Widget app({List<Post> Function(AccountId viewer)? posts, Set<String>? localEmojis}) {
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({
         'sessions': [fakeSession().toJson()],
         'current': fakeSession().account.key,
       }),
     });
-    registry = PluginRegistry()..register(FakeSnsPlugin(posts: posts ?? MockData.timeline));
+    registry = PluginRegistry()..register(FakeSnsPlugin(posts: posts ?? MockData.timeline, localEmojis: localEmojis));
     return ProviderScope(
       overrides: [
         sessionStorageProvider.overrideWithValue(storage),
@@ -352,7 +352,8 @@ void main() {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(app());
+    // ピッカーを開くのは、絵文字でリアクションできる SNS だけ (D-321)。
+    await tester.pumpWidget(app(localEmojis: const {}));
     await tester.pumpAndSettle();
 
     await tester.longPress(find.byIcon(Icons.favorite_border).first);

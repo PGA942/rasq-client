@@ -53,10 +53,12 @@ void main() {
     expect(find.text('中身の本文'), findsOneWidget);
     expect(find.byKey(const ValueKey('rasqPost.p2.poll')), findsOneWidget);
     expect(find.text('はい'), findsOneWidget);
-    // いいねのみ: ボタンは ❤(いいね)、付いているいいねは ❤ のチップ。
+    // いいねのみ: ボタンは ❤(いいね)。付いているいいねはチップにせず、数をボタンに (D-321)。
     expect(find.byTooltip('いいね'), findsOneWidget);
     expect(find.byTooltip('キュー'), findsNothing);
-    expect(find.text('❤'), findsWidgets);
+    expect(find.byType(RasqReactionChips), findsNothing);
+    final like = tester.widget<RasqActionBar>(find.byType(RasqActionBar)).items.firstWhere((i) => i.id == 'queue');
+    expect((like.count, like.showCount), (3, true));
   });
 
   testWidgets('引用 / 動画・音声 (D-276)', (tester) async {
