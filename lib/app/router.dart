@@ -371,8 +371,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             parentNavigatorKey: _appNavigatorKey,
             builder: (_, _) => const LoginScreen(),
             routes: [
-              GoRoute(path: 'misskey', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MisskeyLoginScreen()),
-              GoRoute(path: 'mastodon', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const MastodonLoginScreen()),
+              GoRoute(path: 'misskey', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => MisskeyLoginScreen(host: s.uri.queryParameters['host'])),
+              GoRoute(path: 'mastodon', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => MastodonLoginScreen(host: s.uri.queryParameters['host'])),
               GoRoute(path: 'bluesky', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const BlueskyLoginScreen()),
               GoRoute(path: 'mixi2', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const Mixi2LoginScreen()),
             ],

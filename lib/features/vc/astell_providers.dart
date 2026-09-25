@@ -17,6 +17,8 @@ import 'astell_models.dart';
 final astellClientProvider = Provider<AstellClient>((ref) {
   final client = ref.watch(centralClientProvider);
   final base = ref.watch(centralBaseUrlProvider);
+  // RASQ アカウントを切り替えたら作り直す(D-316: フォロー / ブロック / ホームは、アカウントごと)。
+  ref.watch(currentCentralAccountIdProvider);
   if (client == null || base == null) return MockAstellClient();
   final holder = ref.read(orgateTokenHolderProvider);
   return HttpAstellClient(client, baseUrl: base, token: () => holder.token);

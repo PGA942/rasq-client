@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../backend/rasq_account_page_api.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../rai/rai_overlay.dart';
 import '../rai/rai_providers.dart';
@@ -43,6 +45,8 @@ class LoginScreen extends ConsumerWidget {
             // チャイルドセーフ (D-307): 保護者が SNS アカウントの追加を止めていれば、そう伝える(ルーターも先へ進ませない)。
             if (!ref.watch(childGateProvider).canAddAccounts)
               Text('保護者が SNS アカウントの追加を止めています', key: const ValueKey('childSafe.login.blocked'), style: RasqTypography.bodySmall.copyWith(color: scheme.error), textAlign: TextAlign.center),
+            // 既存の RASQ アカウントへログインした端末 (D-316): そのアカウントの SNS アカウントのうち、まだこの端末で入っていないもの。
+            const _BundleAccounts(),
             const SizedBox(height: RasqSpacing.lg),
             _ServiceButton(kind: SnsKind.bluesky, label: 'Blueskyでログイン', onTap: () => context.push(Routes.loginBluesky)),
             _ServiceButton(kind: SnsKind.misskey, label: 'Misskeyでログイン', onTap: () => context.push(Routes.loginMisskey)),
@@ -66,6 +70,67 @@ class LoginScreen extends ConsumerWidget {
           ]),
         ),
       ),
+    );
+  }
+}
+
+/// いまの RASQ アカウントのバンドル(Central にある SNS アカウント)のうち、この端末でまだそのアカウントに入っていないもの (D-316)。
+/// 押すと、この端末にログインがあればそのまま入れ、無ければその SNS のログイン画面(サーバーを入れた状態)へ。
+class _BundleAccounts extends ConsumerWidget {
+  const _BundleAccounts();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final links = ref.watch(currentBundleLinksProvider).value ?? const <RasqSnsLink>[];
+    final state = ref.watch(sessionsProvider).value;
+    final mine = {for (final s in state?.sessions ?? const <AccountSession>[]) s.account.key};
+    final onDevice = {for (final s in state?.allSessions ?? const <AccountSession>[]) s.account.key};
+    final pending = [for (final l in links) if (!mine.contains(l.accountKey)) l];
+    if (pending.isEmpty) return const SizedBox.shrink();
+    final handle = ref.watch(currentRasqAccountProvider)?.handle;
+    Future<void> open(RasqSnsLink l) async {
+      if (onDevice.contains(l.accountKey)) {
+        await ref.read(rasqAccountsProvider.notifier).addSessionKey(l.accountKey);
+        return;
+      }
+      final t = l.tile;
+      final host = Uri.encodeQueryComponent(t.instance);
+      context.push(switch (t.kind) {
+        'misskey' => '${Routes.loginMisskey}?host=$host',
+        'mastodon' => '${Routes.loginMastodon}?host=$host',
+        'bluesky' => Routes.loginBluesky,
+        'mixi2' => Routes.loginMixi2,
+        _ => Routes.loginMisskey,
+      });
+    }
+
+    return Container(
+      key: const ValueKey('login.bundle'),
+      margin: const EdgeInsets.only(top: RasqSpacing.sm),
+      padding: const EdgeInsets.all(RasqSpacing.sm),
+      decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('${handle == null || handle.isEmpty ? 'この RASQ アカウント' : '@$handle'} の SNS アカウント', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+        Text('この端末では、まだログインしていません。押すとログインできます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 168),
+          child: ListView(shrinkWrap: true, children: [
+            for (final l in pending)
+              InkWell(
+                key: ValueKey('login.bundle.${l.accountKey}'),
+                onTap: () => open(l),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(children: [
+                    Expanded(child: Text('${l.tile.label}  @${l.tile.handle}@${l.tile.instance}', style: RasqTypography.bodySmall, overflow: TextOverflow.ellipsis)),
+                    Text(onDevice.contains(l.accountKey) ? '使う' : 'ログイン', style: RasqTypography.bodySmall.copyWith(color: scheme.primary)),
+                  ]),
+                ),
+              ),
+          ]),
+        ),
+      ]),
     );
   }
 }

@@ -158,8 +158,8 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
             removeAvatar: _removeAvatar,
             removeBanner: _removeBanner,
           );
-      // 台帳(サイドバーの表示)にも写す。
-      final central = ref.read(rasqAccountsProvider).value?.central;
+      // 台帳(サイドバーの表示)の、そのアカウントの行にも写す(D-316: 台帳の「最初の」Central のアカウントではない)。
+      final central = ref.read(rasqAccountsProvider).value?.centralRecord(account?.id);
       if (account != null && central != null) {
         await ref.read(rasqAccountsProvider.notifier).updateProfile(central.id, handle: account.handle, displayName: account.displayName, avatarUrl: account.avatarUrl);
       }

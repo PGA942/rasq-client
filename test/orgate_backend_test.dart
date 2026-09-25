@@ -341,7 +341,9 @@ void main() {
 
       // 端末 ID とトークンが残り、次回は登録をやり直さない。
       final stored = jsonDecode((await container.read(sessionStorageProvider).read(OrgateAccountNotifier.storageKey))!) as Map;
-      expect(stored['token'], 'secret-token');
+      // アカウントごとのトークン (D-316)。
+      expect(stored['tokens'], {'c3446e59-b937-4a1b-9050-335da9dc346b': 'secret-token'});
+      expect(stored['currentAccountId'], 'c3446e59-b937-4a1b-9050-335da9dc346b');
       expect(stored['deviceId'], isNotEmpty);
     });
 
@@ -390,7 +392,7 @@ void main() {
       expect(await container.read(orgateAccountProvider.future), isNull);
       final stored = (jsonDecode((await storage.read(OrgateAccountNotifier.storageKey))!) as Map);
       expect(stored['deviceId'], 'dev-1');
-      expect(stored['token'], isNull);
+      expect(stored['tokens'], isEmpty);
     });
 
     test('接続先が未設定なら何もしない(サーバー無しでも動く)', () async {

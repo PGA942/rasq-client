@@ -186,7 +186,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(loginBody, {'code': 'KIDCODE1', 'deviceId': 'device-kid'});
     expect(loginAuth, isNull); // Bearer は付けない
-    final central = c.read(rasqAccountsProvider).value!.central!;
+    final central = c.read(rasqAccountsProvider).value!.currentCentral!;
     expect(central.centralAccountId, 'kid-1');
     expect(central.sessionKeys, isEmpty); // 保護者 / 端末の SNS のログインは貸さない
     expect(find.byType(ChildSafePendingScreen), findsOneWidget);

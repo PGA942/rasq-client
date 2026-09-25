@@ -173,6 +173,8 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
     final session = ref.watch(currentSnsSessionProvider);
     final notifier = ref.read(timelineProvider(widget.kind).notifier);
     final actions = session?.actions ?? const <ActionDescriptor>[];
+    // 上下の「投稿を読み込む」(D-298)。電話のアプリは既定で出さない(引っ張って更新 / スクロールで続きを読む。D-316)。
+    final edgeTiles = ref.watch(timelineEdgeTilesProvider);
 
     return state.when(
       loading: () => const RasqLoading(),
@@ -214,7 +216,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                   (context, j) => j == newer.length
                       ? TimelineEdgeTile(key: const ValueKey('tl.edge.top'), scroll: _scroll, label: '新しい投稿を読み込む', busyLabel: '更新しています…', onLoad: notifier.refreshNewer)
                       : row(newer[newer.length - 1 - j]),
-                  childCount: newer.length + 1,
+                  childCount: newer.length + (edgeTiles ? 1 : 0),
                 ),
               ),
               SliverList(
@@ -225,6 +227,14 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                       // いちばん下の更新タイル: 見えたら続きを読む(スクロールでも読むが、届かなかった / 失敗したときの手がかり)。
                       if (tl.error != null) return Padding(padding: const EdgeInsets.all(16), child: Center(child: TextButton(onPressed: notifier.loadMore, child: const Text('読み込みに失敗しました。再試行'))));
                       if (!tl.hasMore) return const SizedBox(height: 80);
+                      // タイルを出さないとき: 続きはスクロールで読む。読んでいるあいだだけ、くるくるを出す。
+                      if (!edgeTiles) {
+                        return SizedBox(
+                          key: const ValueKey('tl.edge.bottom.plain'),
+                          height: 80,
+                          child: tl.loadingMore ? const Align(alignment: Alignment.topCenter, child: Padding(padding: EdgeInsets.all(16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))) : null,
+                        );
+                      }
                       return Padding(padding: const EdgeInsets.only(bottom: 80), child: TimelineEdgeTile(key: const ValueKey('tl.edge.bottom'), scroll: _scroll, label: '続きを読み込む', busyLabel: '読み込んでいます…', busy: tl.loadingMore, onLoad: notifier.loadMore));
                     }
                     return row(base[i]);

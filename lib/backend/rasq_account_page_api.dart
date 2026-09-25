@@ -558,7 +558,7 @@ class RasqPostList {
   /// 持てる件数(第一期は 3)。
   final int limit;
 
-  /// `rasq` = RASQ アカウントとしての投稿(SNS の投稿をまとめて出すのは後段)。
+  /// `rasq` = RASQ アカウントとしての投稿(SNS の投稿は [snsPosts] に別で来る)。
   final String source;
 }
 
@@ -870,7 +870,17 @@ class RasqAccountPageApi {
 
 final rasqAccountPageApiProvider = Provider<RasqAccountPageApi?>((ref) {
   final client = ref.watch(centralClientProvider);
+  // RASQ アカウントを切り替えたら作り直す(D-316: 自分のページ / フィード / 通知 / 預けたトークンの状態は、アカウントごと)。
+  ref.watch(currentCentralAccountIdProvider);
   return client == null ? null : RasqAccountPageApi(client);
+});
+
+/// いまの RASQ アカウントのバンドル(Central にある SNS アカウントの一覧)(D-316)。既存のアカウントへログインした端末で、
+/// まだこの端末でそのアカウントに入っていない SNS アカウントを、SNS のログイン画面に出すのに使う。
+final currentBundleLinksProvider = FutureProvider.autoDispose<List<RasqSnsLink>>((ref) async {
+  final api = ref.watch(rasqAccountPageApiProvider);
+  if (api == null || ref.watch(currentCentralAccountIdProvider) == null) return const [];
+  return api.mySnsLinks();
 });
 
 /// ページ 1 枚ぶん(プロフィール + 投稿)。

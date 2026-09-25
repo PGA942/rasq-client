@@ -1,0 +1,22 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "appearance.timeline",
+  "title": "タイムラインの表示",
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      { "t": "SectionHeader", "p": { "title": "更新" } },
+      {
+        "t": "SwitchListTile",
+        "k": "edgeTiles",
+        "p": {
+          "title": "TL の上下に「投稿を読み込む」を出す",
+          "subtitle": "見えると、新しい投稿 / 続きを読み込みます。既定は、電話のアプリでは出さず(下に引っ張って更新)、Web 版とパソコンでは出します",
+          "value": "$.settings.edgeTiles"
+        },
+        "on": { "change": "settings.set" }
+      }
+    ]
+  }
+}

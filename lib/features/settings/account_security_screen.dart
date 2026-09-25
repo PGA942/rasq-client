@@ -292,7 +292,8 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
   Future<void> _deleteWith(String? code) async {
     setState(() => _busy = true);
     try {
-      final central = ref.read(rasqAccountsProvider).value?.central;
+      // 消すのは、いま使っている Central のアカウント(D-316: 台帳の「最初の」Central のアカウントではない)。
+      final central = ref.read(rasqAccountsProvider).value?.centralRecord(ref.read(orgateAccountProvider).value?.id);
       await ref.read(orgateAccountProvider.notifier).deleteAccount(code: code);
       _toast('RASQ アカウントを削除しました');
       // 先に閉じてから台帳を直す(ログインと同じ理由: ルーターの作り直しと重ねない)。
@@ -392,12 +393,12 @@ class _AccountLoginScreenState extends ConsumerState<AccountLoginScreen> {
     }
   }
 
-  /// ログインできた → **先に画面を閉じてから**、アカウントをこの端末のものにする。
+  /// ログインできた → **先に画面を閉じてから**、アカウントをこの端末のものにする(台帳に載せて、いまのアカウントにする。
+  /// いまのアカウントの SNS は持ち込まない。D-316)。
   /// 下の画面(止まっている Consumer)が動き出す瞬間にアカウントが変わっていると、Riverpod が build の最中に作り直しを
   /// 始めてしまう。台帳の変化はルーターの作り直し(refresh)も起こし、閉じるのと重なると、閉じたはずの画面が戻ってくる。
   Future<void> _adopt(Map<String, Object?> res) async {
     final accounts = ref.read(orgateAccountProvider.notifier);
-    final ledger = ref.read(rasqAccountsProvider.notifier);
     final messenger = ref.read(rootMessengerKeyProvider);
     if (mounted) context.pop();
     await WidgetsBinding.instance.endOfFrame;
@@ -406,7 +407,6 @@ class _AccountLoginScreenState extends ConsumerState<AccountLoginScreen> {
       messenger.currentState?.showSnackBar(const SnackBar(content: Text('ログインできませんでした')));
       return;
     }
-    await ledger.attachCentral(centralAccountId: account.id, handle: account.handle, displayName: account.displayName, avatarUrl: account.avatarUrl);
     messenger.currentState?.showSnackBar(SnackBar(content: Text('@${account.handle} にログインしました')));
   }
 
