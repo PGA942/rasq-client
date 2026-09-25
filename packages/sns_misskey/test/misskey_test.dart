@@ -74,6 +74,14 @@ void main() {
       expect(quote.repostedBy, isNull);
     });
 
+    test('reactionAcceptance (D-321): ノートの「いいねのみ」を載せる。純リノートは中身のノートのもの', () {
+      final like = MisskeyMappers.note({...note('n4'), 'reactionAcceptance': 'likeOnly'}, viewer: viewer, host: 'misskey.test');
+      expect(like.reactionAcceptance, 'likeOnly');
+      final pure = MisskeyMappers.note(note('r2', text: null, renote: {...note('n5'), 'reactionAcceptance': 'likeOnlyForRemote'}), viewer: viewer, host: 'misskey.test');
+      expect(pure.reactionAcceptance, 'likeOnlyForRemote');
+      expect(MisskeyMappers.note(note('n6'), viewer: viewer, host: 'misskey.test').reactionAcceptance, isNull);
+    });
+
     test('remote user keeps its own host', () {
       final u = MisskeyMappers.user(user('bob', host: 'other.example'), account: viewer, host: 'misskey.test');
       expect(u.account.instance, 'other.example');

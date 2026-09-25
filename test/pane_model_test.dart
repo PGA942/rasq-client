@@ -32,7 +32,8 @@ void main() {
         'current': fakeSession().account.key,
       }),
     });
-    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post(v)]));
+    // リアクションピッカーを開く(D-065)ので、絵文字でリアクションできる SNS として (D-321)。
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post(v)], localEmojis: const {}));
     await tester.pumpWidget(ProviderScope(
       overrides: [
         sessionStorageProvider.overrideWithValue(storage),

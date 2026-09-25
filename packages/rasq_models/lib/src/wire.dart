@@ -109,6 +109,7 @@ abstract final class SnsWire {
         if (p.reactions.isNotEmpty) 'reactions': p.reactions,
         if (p.reactionEmojis.isNotEmpty) 'reactionEmojis': {for (final e in p.reactionEmojis.entries) e.key: e.value.toString()},
         'myReaction': ?p.myReaction,
+        'reactionAcceptance': ?p.reactionAcceptance,
         if (p.source != PostSource.note) 'source': p.source.name,
         'url': ?p.url?.toString(),
       };
@@ -138,6 +139,7 @@ abstract final class SnsWire {
             if (e.value is String && Uri.tryParse(e.value as String) != null) '${e.key}': Uri.parse(e.value as String),
         },
         myReaction: j['myReaction'] as String?,
+        reactionAcceptance: j['reactionAcceptance'] as String?,
         source: PostSource.values.asNameMap()['${j['source']}'] ?? PostSource.note,
         url: j['url'] is String ? Uri.tryParse(j['url'] as String) : null,
       );

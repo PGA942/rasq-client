@@ -333,6 +333,10 @@ class RasqPostTileView extends ConsumerWidget {
         ? null
         : predictQueue(post, ownedPacks: {for (final p in ref.watch(stickerPacksProvider)) p.id}, recent: ref.watch(recentEmojiProvider), central: ref.watch(centralBaseUrlProvider));
 
+    // いいねのみ (D-321): ❤ はチップに出さず、数をいいねのボタンに(絵のキューが残っていれば、それはチップのまま)。
+    final chips = [for (final q in post.queues) if (!(post.likeOnly && q.like)) q];
+    final likes = post.queues.where((q) => q.like).fold(0, (n, q) => n + q.count);
+
     Future<void> perform(ActionDescriptor a, Rect anchor) async {
       switch (a.id) {
         case rasqReplyActionId:
@@ -364,13 +368,14 @@ class RasqPostTileView extends ConsumerWidget {
             ),
           rasqQueueActionId => RasqActionBarItem(
               id: 'queue',
-              // いいねのみ (S-023) の投稿は、ボタンも ❤ に。
+              // いいねのみ (S-023) の投稿は、ボタンも ❤ に。いいねの数はチップではなくボタンに出す (D-321: SNS の「いいねのみ」と同じ)。
               label: post.likeOnly ? 'いいね' : 'キュー',
               icon: post.likeOnly ? Icons.favorite_border : Icons.add_reaction_outlined,
               doneIcon: post.likeOnly ? Icons.favorite : Icons.add_reaction,
               done: mine != null,
               doneColor: tokens.link,
-              showCount: false,
+              count: post.likeOnly ? likes : null,
+              showCount: post.likeOnly,
               iconUrl: predicted?.url,
               mutedIcon: predicted != null,
               onAnchorTap: (r) => perform(a, r),
@@ -398,11 +403,11 @@ class RasqPostTileView extends ConsumerWidget {
           else
             _body(context, ref),
           // 付いているキュー = リアクションのチップ(絵 + 件数。自分のものはハイライト)。押すと、同じ絵を自分も付ける / 外す。
-          if (post.queues.isNotEmpty)
+          if (chips.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: RasqSpacing.sm),
               child: RasqReactionChips(
-                reactions: {for (final q in post.queues) queueKey(q.packId, q.stickerId): q.count},
+                reactions: {for (final q in chips) queueKey(q.packId, q.stickerId): q.count},
                 emojiUrls: {for (final q in post.queues) if (q.url != null) queueKey(q.packId, q.stickerId): q.url!},
                 myReaction: mine == null ? null : queueKey(mine.packId, mine.stickerId),
                 onTap: (r) {
