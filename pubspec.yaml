@@ -80,6 +80,9 @@ dependencies:
   # AsTell の通話 (D-317): 音声だけの P2P メッシュ(シグナリングは Central の WS)。livekit_client と同じ版に揃える
   # (livekit_client が flutter_webrtc をこの版に固定している)。
   flutter_webrtc: ^1.6.2+hotfix.3
+  # Web 版の通話の声 (D-318): 受けたトラックの中身(JS の MediaStreamTrack)を <audio> に繋ぐ。flutter_webrtc の Web 実装そのもの
+  # (版は flutter_webrtc が決める)。
+  dart_webrtc: ^1.8.2
   # AsTell の配信 (D-317): ホストの配信 / 画面共有の映像と、通話に入りきらない人の聞き取り(自前の LiveKit)。
   livekit_client: ^2.13.0
   # Android の画面の取り込みに要る前面サービス(mediaProjection、Android 14 から必須、D-317)。

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../backend/rasq_account.dart' show centralSignedInAccountIdsProvider;
 import '../features/catalog/catalog_screen.dart';
 import '../features/child_safe/child_safe_links.dart';
 import '../features/child_safe/child_safe_providers.dart';
@@ -177,6 +178,30 @@ GoRoute get _userRoute => GoRoute(
       ],
     );
 
+/// 入口の振り分け (D-138 → D-301 → D-318)。null = その場所のまま。
+///
+/// - SNS にログインしていれば(いまの RASQ アカウントに SNS のセッションがあれば)そのまま。オンボーディングにいればホームへ。
+/// - SNS にログインしていないとき、**RASQ アカウントに入っていなければ、SNS のログインより先に RASQ アカウントの入口
+///   (オンボーディング)へ**。新規の端末(台帳が空)も、ログアウトしたあとも同じ入口。そこから「SNS アカウントだけで使う」を
+///   選べば [Routes.login] へ行き、そこに留まる。
+/// - 「RASQ アカウントに入っている」= 台帳の「いま」が Central のアカウントで、この端末がそのトークンを持っている
+///   ([signedInCentral]。null = 資格情報をまだ読み終えていない → 決まるまで待つ)。D-316 からはログアウトしても台帳に
+///   ほかの Central のアカウントが残る / トークンの無い行が残るので、「台帳に Central のアカウントがあるか」では決めない
+///   (決めていたので、ログアウトして起動すると RASQ アカウントの入口を飛ばして SNS のログインが出ていた)。
+@visibleForTesting
+String? entryRedirect({required String loc, required bool loggedIn, required RasqAccountsState? ledger, required Set<String>? signedInCentral}) {
+  // 未ログインでも開ける画面: カタログ/開発用、オンボーディング、接続先設定
+  // (オンボーディングから Central の接続先を入れるため)。
+  // RASQ アカウントへのログイン (D-296) も、オンボーディングから開く。
+  const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server', '${Routes.settings}/account-login', Routes.childSafeLogin};
+  if (loggedIn) return loc == Routes.onboarding ? Routes.home : null;
+  if (loc.startsWith(Routes.login) || open.contains(loc)) return null;
+  final central = ledger?.currentCentral;
+  if (central == null) return Routes.onboarding;
+  if (signedInCentral == null) return null;
+  return signedInCentral.contains(central.centralAccountId) ? Routes.login : Routes.onboarding;
+}
+
 /// Bridges Riverpod state → GoRouter.refreshListenable.
 class _RouterRefresh extends ChangeNotifier {
   void refresh() => notifyListeners();
@@ -186,6 +211,8 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefresh();
   ref.listen(sessionsProvider, (_, _) => refresh.refresh());
   ref.listen(rasqAccountsProvider, (_, _) => refresh.refresh());
+  // RASQ アカウントのトークン (D-318): 端末の資格情報を読み終えたら / ログアウトしたら、入口を決め直す。
+  ref.listen(centralSignedInAccountIdsProvider, (_, _) => refresh.refresh());
   // チャイルドセーフ (D-307): 設定待ちの鍵 / 止めた画面。
   ref.listen(childGateProvider, (_, _) => refresh.refresh());
   ref.onDispose(refresh.dispose);
@@ -201,13 +228,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final sessions = ref.read(sessionsProvider);
       final ledger = ref.read(rasqAccountsProvider);
       final loc = state.matchedLocation;
-      final onLogin = loc.startsWith(Routes.login);
       if (sessions.isLoading || ledger.isLoading) return null; // keep splash until storage is read
-      final loggedIn = sessions.value?.isLoggedIn ?? false;
-      // 未ログインでも開ける画面: カタログ/開発用、オンボーディング、接続先設定
-      // (オンボーディングから Central の接続先を入れるため)。
-      // RASQ アカウントへのログイン (D-296) も、オンボーディングから開く。
-      const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server', '${Routes.settings}/account-login', Routes.childSafeLogin};
       // チャイルドセーフ (D-307): 保護者が決めるまで(署名を確かめた制限が無いあいだ)は、設定待ちの画面だけ。
       // ログインし直すための画面(RASQ アカウント / 保護者のコード / 接続先)は開ける。
       final gate = ref.read(childGateProvider);
@@ -223,14 +244,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           ..showSnackBar(SnackBar(content: Text(blocked))));
         return Routes.home;
       }
-      // RASQ アカウントが無いあいだは、**SNS のログインより先に** RASQ アカウントの画面へ (D-138 → D-301)。
-      // 新規の端末(台帳が空)も、ログアウトしたあとも同じ入口。SNS ログイン済みの端末は移行で済み扱い。
-      // そこから「SNS アカウントだけで使う」を選べば `Routes.login` へ行き、`onLogin` で留まる。
-      final hasCentral = ledger.value?.accounts.any((a) => a.isCentral) ?? false;
-      if (!hasCentral && !loggedIn && !open.contains(loc) && !onLogin) return Routes.onboarding;
-      if (!loggedIn && !onLogin && !open.contains(loc)) return Routes.login;
-      if (loggedIn && loc == Routes.onboarding) return Routes.home;
-      return null;
+      return entryRedirect(
+        loc: loc,
+        loggedIn: sessions.value?.isLoggedIn ?? false,
+        ledger: ledger.value,
+        signedInCentral: ref.read(centralSignedInAccountIdsProvider),
+      );
     },
     routes: [
       ShellRoute(

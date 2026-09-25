@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'astell_web_audio.dart' show astellBrowserSecureContext;
+
 /// AsTell の通話の音声 (D-317) の境界。
 ///
 /// 通話はピア同士の WebRTC(音声だけのメッシュ)。シグナリングは Central の WS の
@@ -67,6 +69,16 @@ abstract class AstellPeerLink {
   Future<void> close();
 }
 
+/// 相手の声を鳴らす口 (D-318)。Web は受けた音声を `<audio>` に繋がないと鳴らない(ネイティブは受けたトラックが
+/// そのまま鳴るので要らない)。実物は `astell_web_audio_web.dart`、テストは偽物。
+abstract class AstellRemoteAudio {
+  /// 鳴らす / 止める(スピーカーミュート / 手元のミュート)。
+  void setMuted(bool muted);
+
+  /// `<audio>` を外す。
+  Future<void> dispose();
+}
+
 /// 接続の出来事の受け口。
 @immutable
 class AstellLinkHandlers {
@@ -128,9 +140,12 @@ class AstellMediaException implements Exception {
 }
 
 /// Web 版が安全でない場所(http で、localhost 以外)で開かれているか。getUserMedia / 画面の取り込みは
-/// https か localhost でしか使えない。[page] はテスト用(既定はいまのページ)。
-bool astellInsecureWebContext({bool web = kIsWeb, Uri? page}) {
+/// https か localhost でしか使えない。ブラウザが答えられれば `window.isSecureContext` をそのまま使い(https なら
+/// マイクを使える)、答えられないときだけページの URL で決める。[page] / [secureContext] はテスト用。
+bool astellInsecureWebContext({bool web = kIsWeb, Uri? page, bool? secureContext}) {
   if (!web) return false;
+  final secure = secureContext ?? (page == null ? astellBrowserSecureContext() : null);
+  if (secure != null) return !secure;
   final u = page ?? Uri.base;
   if (u.scheme != 'http') return false;
   return !const {'localhost', '127.0.0.1', '::1', '[::1]'}.contains(u.host);
