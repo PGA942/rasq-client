@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background/flutter_background.dart';
@@ -7,6 +9,7 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 import 'astell_media.dart';
 import 'astell_models.dart';
 import 'astell_stream.dart';
+import 'astell_web_audio.dart' show astellOnNextUserGesture;
 
 /// 配信の実物 (D-317): livekit_client。
 ///
@@ -14,6 +17,8 @@ import 'astell_stream.dart';
 ///   iOS は**アプリの中だけ**(端末全体は ReplayKit の Broadcast Extension が要る — まだ作っていない)、
 ///   デスクトップは画面 / ウィンドウを選ぶ([pickAstellScreenSource])、Web はブラウザの選択。
 /// - 声は [setAudioPolicy] で相手ごとに鳴らす / 止める(通話で聞こえている人の声は二重にしない)。
+/// - Web の声: livekit_client が `<audio>` を作って `play()` する。ブラウザの自動再生の制限で断られると
+///   `AudioPlaybackStatusChanged(isPlaying: false)` が来るので、次にページを触ったときに `room.startAudio()` する (D-318)。
 class LiveKitAstellStreamer extends AstellStreamer {
   lk.Room? _room;
   lk.EventsListener<lk.RoomEvent>? _events;
@@ -42,6 +47,15 @@ class LiveKitAstellStreamer extends AstellStreamer {
       _applyAudio();
       notifyListeners();
     });
+    if (kIsWeb) {
+      events.on<lk.AudioPlaybackStatusChanged>((e) {
+        if (!e.isPlaying) _resumeAudioOnGesture(room);
+      });
+      // 一度断られたあと(canPlaybackAudio が false のまま)に来た声は、状態が変わらないので上の知らせが来ない。
+      events.on<lk.TrackSubscribedEvent>((e) {
+        if (e.track is lk.RemoteAudioTrack && !room.canPlaybackAudio) _resumeAudioOnGesture(room);
+      });
+    }
     _room = room;
     _events = events;
     _canPublish = token.canPublish;
@@ -74,6 +88,18 @@ class LiveKitAstellStreamer extends AstellStreamer {
     _publishing = kind;
     notifyListeners();
   }
+
+  /// Web: 自動再生が断られた声を、次の操作で鳴らし直す(まだ断られていれば、また次の操作で)。
+  void _resumeAudioOnGesture(lk.Room room) {
+    if (_resumeQueued) return;
+    _resumeQueued = true;
+    astellOnNextUserGesture(() {
+      _resumeQueued = false;
+      if (identical(_room, room)) unawaited(room.startAudio());
+    });
+  }
+
+  bool _resumeQueued = false;
 
   /// Android の画面の取り込みは、同意のあと前面サービスを立ててから(Android 14 から必須)。
   Future<void> _startScreenCapture() async {

@@ -1,8 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:livekit_client/livekit_client.dart' show AudioManager;
 
 import 'astell_media.dart';
+import 'astell_web_audio.dart';
+
+/// 相手 1 人との接続を作る口(既定は flutter_webrtc の `createPeerConnection`)。テストは偽物。
+typedef AstellPeerConnectionFactory = Future<RTCPeerConnection> Function(Map<String, dynamic> configuration);
+
+/// マイクを開く口(既定は `navigator.mediaDevices.getUserMedia`)。テストは偽物。
+typedef AstellUserMedia = Future<MediaStream> Function(Map<String, dynamic> constraints);
+
+/// 受けた音声を鳴らし始める口(Web は `<audio>`、ネイティブは null = 繋がなくても鳴る)。[muted] = はじめから止めておく。
+typedef AstellRemoteAudioPlayer = AstellRemoteAudio? Function(MediaStreamTrack track, {required bool muted});
 
 /// 通話の音声の実物 (D-317): flutter_webrtc(Android / iOS / macOS / Windows / Linux / Web)。
 ///
@@ -10,9 +22,20 @@ import 'astell_media.dart';
 ///   `micOn` の間だけ流す。開く前に作った接続にも、開いたときに `replaceTrack` で差し込む。
 /// - 相手ごとの接続は、送受信の音声 1 本だけ。offer を出す側が `addTransceiver(audio, sendrecv)`、受ける側は
 ///   相手の offer でできた 1 本を `sendrecv` にしてから answer を作る — マイクの出し入れで繋ぎ直さない。
-/// - 相手の声: ネイティブは受けたトラックがそのまま鳴る。Web は `<audio>` が要るので、見えないレンダラーに繋ぐ。
-///   ミュートは受けたトラックの `enabled`。
+/// - 相手の声: ネイティブは受けたトラックがそのまま鳴る。Web は `<audio>` が要るので、受けた**トラック**を繋ぐ
+///   (`ontrack` の `streams` は、こちらの送り方では空。D-318)。ミュートは受けたトラックの `enabled` と `<audio>` の muted。
+/// - Web のマイク: https(安全なコンテキスト)なら、ネイティブと同じく開ける。http のときだけ [micBlocked]。
 class WebRtcAstellMedia implements AstellMedia {
+  WebRtcAstellMedia({AstellPeerConnectionFactory? peerConnection, AstellUserMedia? userMedia, AstellRemoteAudioPlayer? remoteAudio, bool? web})
+      : _peerConnection = peerConnection ?? createPeerConnection,
+        _userMedia = userMedia ?? ((constraints) => navigator.mediaDevices.getUserMedia(constraints)),
+        _remoteAudio = remoteAudio ?? playAstellRemoteAudio,
+        _web = web ?? kIsWeb;
+
+  final AstellPeerConnectionFactory _peerConnection;
+  final AstellUserMedia _userMedia;
+  final AstellRemoteAudioPlayer _remoteAudio;
+  final bool _web;
   MediaStream? _mic;
   bool _micEnabled = false;
   final Set<_WebRtcLink> _links = {};
@@ -22,7 +45,7 @@ class WebRtcAstellMedia implements AstellMedia {
   bool get available => true;
 
   @override
-  AstellMediaIssue? get micBlocked => astellInsecureWebContext() ? AstellMediaIssue.insecureContext : null;
+  AstellMediaIssue? get micBlocked => astellInsecureWebContext(web: _web) ? AstellMediaIssue.insecureContext : null;
 
   @override
   bool get micOpen => _mic != null;
@@ -35,7 +58,7 @@ class WebRtcAstellMedia implements AstellMedia {
     final blocked = micBlocked;
     if (blocked != null) throw AstellMediaException(blocked);
     try {
-      _mic = await navigator.mediaDevices.getUserMedia({
+      _mic = await _userMedia({
         'audio': {'echoCancellation': true, 'noiseSuppression': true, 'autoGainControl': true},
         'video': false,
       });
@@ -62,11 +85,11 @@ class WebRtcAstellMedia implements AstellMedia {
   @override
   Future<AstellPeerLink> createLink(String peerId, {required bool offerer, required List<Map<String, Object?>> iceServers, required AstellLinkHandlers handlers}) async {
     await _routeToSpeaker();
-    final pc = await createPeerConnection({
+    final pc = await _peerConnection({
       'iceServers': iceServers,
       'sdpSemantics': 'unified-plan',
     });
-    final link = _WebRtcLink(peerId, pc, handlers, onClosed: _links.remove);
+    final link = _WebRtcLink(peerId, pc, handlers, remoteAudio: _remoteAudio, onClosed: _links.remove);
     await link.init(offerer: offerer, mic: _micTrack);
     _links.add(link);
     return link;
@@ -76,7 +99,7 @@ class WebRtcAstellMedia implements AstellMedia {
   /// 端末の音のセッションは livekit_client の AudioManager が持つ(読み込んだ時点で flutter_webrtc の
   /// 管理を止めて、同じ WebRTC のエンジンの状態から決める)ので、出し先もそこへ頼む。
   Future<void> _routeToSpeaker() async {
-    if (_speakerRouted || kIsWeb) return;
+    if (_speakerRouted || _web) return;
     _speakerRouted = true;
     if (defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS) return;
     try {
@@ -109,20 +132,21 @@ class WebRtcAstellMedia implements AstellMedia {
 }
 
 class _WebRtcLink implements AstellPeerLink {
-  _WebRtcLink(this.peerId, this._pc, this._handlers, {required this.onClosed});
+  _WebRtcLink(this.peerId, this._pc, this._handlers, {required AstellRemoteAudioPlayer remoteAudio, required this.onClosed}) : _playRemote = remoteAudio;
 
   @override
   final String peerId;
   final RTCPeerConnection _pc;
   final AstellLinkHandlers _handlers;
   final void Function(_WebRtcLink link) onClosed;
+  final AstellRemoteAudioPlayer _playRemote;
 
   RTCSignalingState? _signaling = RTCSignalingState.RTCSignalingStateStable;
   bool _hasRemote = false;
   bool _playback = true;
   bool _closed = false;
   MediaStreamTrack? _remoteAudio;
-  RTCVideoRenderer? _webAudio;
+  AstellRemoteAudio? _out;
   MediaStreamTrack? _pendingMic;
 
   Future<void> init({required bool offerer, MediaStreamTrack? mic}) async {
@@ -142,7 +166,7 @@ class _WebRtcLink implements AstellPeerLink {
       if (e.track.kind != 'audio') return;
       _remoteAudio = e.track;
       e.track.enabled = _playback;
-      if (kIsWeb && e.streams.isNotEmpty) _playOnWeb(e.streams.first);
+      _playOut(e.track);
     };
     if (offerer) {
       // 送受信の音声 1 本。マイクがまだ無ければ空で出しておき、開いたら差し込む。
@@ -155,15 +179,18 @@ class _WebRtcLink implements AstellPeerLink {
     if (offerer && mic != null) await attachMic(mic);
   }
 
-  Future<void> _playOnWeb(MediaStream stream) async {
-    final r = _webAudio ??= RTCVideoRenderer();
+  /// Web: 受けたトラックを `<audio>` に繋ぐ(`e.streams` は見ない — 送る側が `addTransceiver` + `replaceTrack` なので、
+  /// SDP にストリームが載らず空になる。D-318)。同じ接続で別のトラックが来たら、前の `<audio>` は外す。
+  void _playOut(MediaStreamTrack track) {
+    if (_closed) return;
+    final before = _out;
     try {
-      await r.initialize();
-      r.srcObject = stream;
-      r.muted = !_playback;
+      _out = _playRemote(track, muted: !_playback);
     } catch (e) {
       debugPrint('astell media: web audio: $e');
+      _out = null;
     }
+    if (before != null && !identical(before, _out)) unawaited(before.dispose());
   }
 
   Future<RTCRtpTransceiver?> _audioTransceiver() async {
@@ -245,7 +272,7 @@ class _WebRtcLink implements AstellPeerLink {
   void setPlayback(bool on) {
     _playback = on;
     _remoteAudio?.enabled = on;
-    _webAudio?.muted = !on;
+    _out?.setMuted(!on);
   }
 
   @override
@@ -268,9 +295,9 @@ class _WebRtcLink implements AstellPeerLink {
     _closed = true;
     onClosed(this);
     try {
-      _webAudio?.srcObject = null;
-      await _webAudio?.dispose();
+      await _out?.dispose();
     } catch (_) {}
+    _out = null;
     await _pc.close();
     await _pc.dispose();
   }

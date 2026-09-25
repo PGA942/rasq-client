@@ -7,6 +7,7 @@ import 'package:rasq_design/rasq_design.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
+import '../../backend/rasq_account.dart' show centralSignedInAccountIdsProvider, orgateAccountProvider;
 import '../../shell/rasq_account_fow.dart';
 import '../../shell/rasq_register_fow.dart';
 
@@ -15,6 +16,8 @@ import '../../shell/rasq_register_fow.dart';
 /// - **初回**(台帳が空): 「作成しますか?」— 作成が主、ログインとスキップが従。
 /// - **ログアウトしたあと**(オンボーディング済みで、RASQ アカウントが無い): 「ログイン」が主、作成とスキップが従。
 ///   Web 版では SNS のログインも RASQ アカウントに預けてある (D-300) ので、ここで入り直すと SNS のログインごと戻る。
+/// - この端末でログインしたままのほかの RASQ アカウントが台帳にあれば(D-316 の複数アカウントで、ひとつからログアウト
+///   した)、そのアカウントで続けるボタンも出す(D-318: パスワードを入れ直さずに切り替える)。
 ///
 /// 旧: 初回オンボーディング (D-138): RASQ アカウントの作成を求める。
 ///
@@ -57,7 +60,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
-  bool get _hasCentral => ref.read(rasqAccountsProvider).value?.accounts.any((a) => a.isCentral) ?? false;
+  /// いまの RASQ アカウントが Central のもので、この端末がそのトークンを持っているか(ログインで台帳に載り、いまのアカウントに
+  /// なる)。D-318: 台帳にほかの Central のアカウント / トークンの無い行が残っていても、それだけではログインできたことにしない。
+  bool get _hasCentral {
+    final id = ref.read(rasqAccountsProvider).value?.currentCentral?.centralAccountId;
+    return id != null && ref.read(orgateAccountProvider.notifier).signedInAccountIds.contains(id);
+  }
 
   /// すでに RASQ アカウントを持っている人 (D-296): ログイン(パスワード / メールのコード)→ できていたら、オンボーディングを済みにする。
   Future<void> _login() async {
@@ -68,11 +76,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     if (!mounted || !_hasCentral) return;
     await ref.read(rasqAccountsProvider.notifier).completeOnboarding();
-    // Web 版 (D-300) は、RASQ アカウントに SNS のログインを預けてある。戻ってきていれば、そのままホームへ。
+    await _proceed();
+  }
+
+  /// RASQ アカウントに入ったあと: SNS のログインが戻ってきていれば(Web 版 D-300 の保管庫 / そのアカウントの SNS)ホームへ、
+  /// 無ければ SNS のログインへ。
+  Future<void> _proceed() async {
     for (var i = 0; i < 20 && mounted && !_loggedIn; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
     if (mounted) context.go(_loggedIn ? Routes.home : Routes.login);
+  }
+
+  /// この端末でログインしたままのほかの RASQ アカウントで続ける (D-318): 台帳で切り替えるだけ(トークンは端末にある)。
+  Future<void> _resume(RasqAccountRecord r) async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(rasqAccountsProvider.notifier).select(r.id);
+      try {
+        await ref.read(orgateAccountProvider.future);
+      } catch (_) {}
+      await _proceed();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   bool get _loggedIn => ref.read(sessionsProvider).value?.isLoggedIn ?? false;
@@ -88,7 +115,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final scheme = Theme.of(context).colorScheme;
     final centralOk = ref.watch(centralConfiguredProvider);
     // ログアウトしたあと (D-301): 初回の案内ではなく、ログインを主にする。
-    final returning = ref.watch(rasqAccountsProvider).value?.onboardingDone ?? false;
+    final ledger = ref.watch(rasqAccountsProvider).value;
+    final returning = ledger?.onboardingDone ?? false;
+    // この端末がトークンを持っている Central のアカウント(ひとつからログアウトしても、ほかは残る。D-316)。
+    final signedIn = ref.watch(centralSignedInAccountIdsProvider) ?? const <String>{};
+    final resumable = [for (final a in ledger?.accounts ?? const <RasqAccountRecord>[]) if (a.isCentral && signedIn.contains(a.centralAccountId)) a];
 
     Widget action({required Key key, required Widget icon, required String label, required VoidCallback? onPressed, required bool primary}) => primary
         ? FilledButton.icon(key: key, onPressed: onPressed, icon: icon, label: Text(label), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)))
@@ -140,6 +171,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 Text('RASQ Central の接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 TextButton(onPressed: () => context.push('${Routes.settings}/server'), child: const Text('接続先を設定')),
               ]),
+            for (final r in resumable) ...[
+              const SizedBox(height: RasqSpacing.sm),
+              OutlinedButton.icon(
+                key: ValueKey('onboarding.resume.${r.id}'),
+                onPressed: _busy ? null : () => _resume(r),
+                icon: const Icon(Icons.swap_horiz, size: 18),
+                label: Text('${r.displayName ?? r.handle ?? 'RASQ アカウント'}${r.handle == null ? '' : '(@${r.handle})'}で続ける', overflow: TextOverflow.ellipsis),
+                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+              ),
+            ],
             const SizedBox(height: RasqSpacing.sm),
             returning ? create(primary: false) : login(primary: false),
             const SizedBox(height: RasqSpacing.sm),
