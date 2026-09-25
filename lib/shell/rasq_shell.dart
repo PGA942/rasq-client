@@ -10,6 +10,7 @@ import '../features/child_safe/child_safe_screens.dart' show ChildSafeWindowBann
 import '../features/plugins/sideload_trust.dart' show ownDevKeyFingerprintsProvider;
 import '../features/notifications/notifications_screen.dart';
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
+import 'column_layout.dart';
 import 'nav.dart';
 import 'sidebar.dart';
 import 'third_column.dart';
@@ -123,12 +124,14 @@ class _TabletLayout extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     // ペインモデル (D-057): 第3カラムにページが開いている間は第2カラムが
-    // 検索ホーム幅(狭)へ縮み、第3カラムが広がる。空のときは逆。
+    // 小型カラムへ縮み、第3カラムが大型に広がる。空のときは逆。
+    // 小型 / 大型の幅は設定「カラムの幅」 (D-320) の比で決める。
     final occupied = ref.watch(thirdColumnProvider) != null;
+    final layout = ref.watch(columnLayoutProvider);
     return Scaffold(
       body: LayoutBuilder(builder: (context, constraints) {
-        final total = constraints.maxWidth - 72;
-        final col2Width = (occupied ? kSearchHomeColumnWidth : total - kSearchHomeColumnWidth).clamp(kSearchHomeColumnWidth, total - kSearchHomeColumnWidth < kSearchHomeColumnWidth ? total / 2 : total - kSearchHomeColumnWidth);
+        final split = splitColumns(constraints.maxWidth - 72, layout);
+        final col2Width = occupied ? split.small : split.large;
         return Row(children: [
           // Sidebar rail (何も開いてない時はサイドバー).
           Container(
@@ -151,7 +154,7 @@ class _TabletLayout extends ConsumerWidget {
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
-            width: col2Width.toDouble(),
+            width: col2Width,
             child: ClipRect(child: Column(children: [const ChildSafeWindowBanner(), Expanded(child: shell)])),
           ),
           // 第3カラム (D-056/D-057): 空のときは検索(設定で変更可)。ページが

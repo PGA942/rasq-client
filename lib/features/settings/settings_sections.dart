@@ -50,6 +50,7 @@ const settingsSections = <String, SettingsSection>{
   'appearance': SettingsSection('アプリの外観', [
     SettingsRow('インターフェースの表示サイズ', route: '/settings/dsl/appearance.display'),
     SettingsRow('フォントやカラースキーム'),
+    SettingsRow('カラムの幅', subtitle: '幅の広い画面の小型 / 大型カラムの比(1:1 / 2:3 / 3:5 / 幅を固定)', route: Routes.settingsColumns),
     SettingsRow('モーションの抑制', route: '/settings/dsl/appearance.motion'),
     SettingsRow('タイムラインの表示', subtitle: 'TL の上下の「投稿を読み込む」', route: '/settings/dsl/appearance.timeline'),
     SettingsRow('ピクチャインピクチャ', route: '/settings/dsl/appearance.video'),
