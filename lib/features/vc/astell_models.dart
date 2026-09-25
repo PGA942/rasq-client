@@ -364,6 +364,8 @@ class AstellPeer {
 
   /// マイク状態(`state.micOn`、シグナリングの `state` で共有)。
   final bool micOn;
+
+  /// 話している(通話で受けている声の大きさから、手元で決める。D-317)。
   final bool speaking;
 
   /// このピアの画面共有。null = していない。
@@ -388,14 +390,14 @@ class AstellPeer {
     );
   }
 
-  AstellPeer copyWith({bool? micOn, AstellScreenShare? screenShare, bool clearScreenShare = false, bool? mutedByMod}) => AstellPeer(
+  AstellPeer copyWith({bool? micOn, bool? speaking, AstellScreenShare? screenShare, bool clearScreenShare = false, bool? mutedByMod}) => AstellPeer(
         peerId: peerId,
         accountId: accountId,
         handle: handle,
         displayName: displayName,
         avatarUrl: avatarUrl,
         micOn: micOn ?? this.micOn,
-        speaking: speaking,
+        speaking: speaking ?? this.speaking,
         screenShare: clearScreenShare ? null : (screenShare ?? this.screenShare),
         mutedByMod: mutedByMod ?? this.mutedByMod,
       );
@@ -521,4 +523,25 @@ class AstellDraft {
       startedAt: _date(j['startedAt']),
     );
   }
+}
+
+/// 配信 (D-317): `POST /astell/rooms/{id}/stream-token` の応答(LiveKit に繋ぐ URL とトークン)。
+@immutable
+class AstellStreamToken {
+  const AstellStreamToken({required this.url, required this.token, required this.room, required this.identity, required this.canPublish, this.expiresAt});
+  final String url;
+  final String token;
+  final String room;
+  final String identity;
+  final bool canPublish;
+  final DateTime? expiresAt;
+
+  factory AstellStreamToken.fromJson(Map<String, Object?> j) => AstellStreamToken(
+        url: j['url'] as String? ?? '',
+        token: j['token'] as String? ?? '',
+        room: j['room'] as String? ?? '',
+        identity: j['identity'] as String? ?? '',
+        canPublish: j['canPublish'] == true,
+        expiresAt: j['expiresAt'] is String ? DateTime.tryParse(j['expiresAt'] as String) : null,
+      );
 }

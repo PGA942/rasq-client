@@ -7,6 +7,8 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_angle
   flutter_gemma
   flutter_secure_storage_linux
+  flutter_webrtc
+  livekit_client
   pro_video_editor
   url_launcher_linux
 )

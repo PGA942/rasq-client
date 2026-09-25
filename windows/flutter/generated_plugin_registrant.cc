@@ -11,6 +11,8 @@
 #include <flutter_angle/flutter_angle_plugin.h>
 #include <flutter_gemma/flutter_gemma_plugin.h>
 #include <flutter_secure_storage_windows/flutter_secure_storage_windows_plugin.h>
+#include <flutter_webrtc/flutter_web_r_t_c_plugin.h>
+#include <livekit_client/live_kit_plugin.h>
 #include <pro_video_editor/pro_video_editor_plugin_c_api.h>
 #include <url_launcher_windows/url_launcher_windows.h>
 
@@ -25,6 +27,10 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("FlutterGemmaPlugin"));
   FlutterSecureStorageWindowsPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FlutterSecureStorageWindowsPlugin"));
+  FlutterWebRTCPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("FlutterWebRTCPlugin"));
+  LiveKitPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("LiveKitPlugin"));
   ProVideoEditorPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ProVideoEditorPluginCApi"));
   UrlLauncherWindowsRegisterWithRegistrar(
