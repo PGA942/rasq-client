@@ -329,6 +329,24 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
     ]));
   }
 
+  /// SNS のアクセストークンの端末間共有 (D-319): ほかの端末から取り込んだ SNS セッション [keys] を、その Central のアカウント
+  /// ([centralAccountId]) の行に足す。「この端末のみ」の行にあれば、そちらからは外す(同じ SNS を 2 か所に数えない)。
+  /// 台帳にそのアカウントが無ければ何もしない。
+  Future<void> addCentralSessionKeys(List<String> keys, {required String centralAccountId}) async {
+    final cur = state.value;
+    final central = cur?.centralRecord(centralAccountId);
+    if (cur == null || central == null || keys.isEmpty) return;
+    await _persist(cur.copyWith(accounts: [
+      for (final a in cur.accounts)
+        if (a.id == central.id)
+          a.copyWith(sessionKeys: {...a.sessionKeys, ...keys}.toList())
+        else if (!a.isCentral)
+          a.copyWith(sessionKeys: [for (final k in a.sessionKeys) if (!keys.contains(k)) k])
+        else
+          a,
+    ]));
+  }
+
   /// SNS ログアウト: どのアカウントからも外す。
   Future<void> removeSessionKey(String key) async {
     final cur = _cur;

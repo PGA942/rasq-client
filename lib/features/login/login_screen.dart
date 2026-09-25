@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/rasq_account_page_api.dart';
+import '../../session/sns_share.dart' show snsShareWaitingProvider;
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../rai/rai_overlay.dart';
 import '../rai/rai_providers.dart';
@@ -47,6 +48,21 @@ class LoginScreen extends ConsumerWidget {
               Text('保護者が SNS アカウントの追加を止めています', key: const ValueKey('childSafe.login.blocked'), style: RasqTypography.bodySmall.copyWith(color: scheme.error), textAlign: TextAlign.center),
             // 既存の RASQ アカウントへログインした端末 (D-316): そのアカウントの SNS アカウントのうち、まだこの端末で入っていないもの。
             const _BundleAccounts(),
+            // SNS のアクセストークンの端末間共有 (D-319): 元の端末の承認を待っている間の案内(ログインボタンはそのまま使える)。
+            if (ref.watch(snsShareWaitingProvider))
+              Container(
+                key: const ValueKey('login.shareWaiting'),
+                margin: const EdgeInsets.only(top: RasqSpacing.sm),
+                padding: const EdgeInsets.all(RasqSpacing.sm),
+                decoration: BoxDecoration(color: scheme.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  Icon(Icons.devices_outlined, color: scheme.primary),
+                  const SizedBox(width: RasqSpacing.sm),
+                  Expanded(
+                    child: Text('元の端末で共有を承認すると、SNS アカウントに一斉ログインします', style: RasqTypography.bodySmall),
+                  ),
+                ]),
+              ),
             const SizedBox(height: RasqSpacing.lg),
             _ServiceButton(kind: SnsKind.bluesky, label: 'Blueskyでログイン', onTap: () => context.push(Routes.loginBluesky)),
             _ServiceButton(kind: SnsKind.misskey, label: 'Misskeyでログイン', onTap: () => context.push(Routes.loginMisskey)),

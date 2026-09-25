@@ -12,6 +12,8 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
+import '../../session/sns_share.dart' show snsShareProvider;
+import 'sns_share_section.dart';
 
 /// この端末の呼び名(ログイン中の端末の一覧に出る)。
 String accountDeviceLabel() => 'RASQ (${switch (defaultTargetPlatform) {
@@ -82,6 +84,8 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
     try {
       final list = await api.sessions();
       if (mounted) setState(() => _sessions = list);
+      // 端末を失効させると、その端末の共有の鍵も消える (D-319)。共有の一覧も取り直す。
+      if (mounted) ref.read(snsShareProvider.notifier).check();
     } on OrgateException catch (_) {}
   }
 
@@ -239,6 +243,9 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
                       child: const Text('ログアウト'),
                     ),
             ),
+
+        // ── SNS のアクセストークンの共有 (D-319) ──
+        const SnsShareSection(),
 
         // ── 確認コードの入力(メールを外す / 削除)──
         if (_pending == ConfirmAction.emailRemove || _pending == ConfirmAction.accountDelete) ...[

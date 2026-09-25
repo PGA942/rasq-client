@@ -233,6 +233,36 @@ class OrgateClient {
     return r.bodyBytes;
   }
 
+  /// ユーザーデータ同期 (`GET /me/data/{area}`) の中身と版(`ETag`)。無ければ null。
+  Future<({Uint8List bytes, int version})?> getData(String area) async {
+    final http.Response r;
+    try {
+      r = await _http.get(_url('/me/data/$area'), headers: _headers()).timeout(_timeout);
+    } on Exception catch (e) {
+      throw OrgateException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable'), '$e');
+    }
+    if (r.statusCode == 404) return null;
+    if (r.statusCode >= 400) _fail(r);
+    return (bytes: r.bodyBytes, version: _etagVersion(r.headers['etag']) ?? 0);
+  }
+
+  /// ユーザーデータ同期 (`PUT /me/data/{area}`) で置き換える。[ifMatch] = 読んだときの版(ほかの端末が先に書いていれば
+  /// `409` の [OrgateException])。[encrypted] = 端末で暗号化済み(`X-Rasq-Encrypted`)。戻り = 新しい版。
+  Future<int?> putData(String area, List<int> bytes, {String contentType = 'application/json', bool encrypted = false, int? ifMatch}) async {
+    final http.Response r;
+    try {
+      r = await _http
+          .put(_url('/me/data/$area'), headers: {..._headers(), 'content-type': contentType, if (encrypted) 'x-rasq-encrypted': 'true', if (ifMatch != null) 'if-match': '"$ifMatch"'}, body: bytes)
+          .timeout(_timeout);
+    } on Exception catch (e) {
+      throw OrgateException(ErrorCode.app(ErrorFamily.affectedSettings, '01', title: 'Network Unreachable'), '$e');
+    }
+    if (r.statusCode >= 400) _fail(r);
+    return _etagVersion(r.headers['etag']);
+  }
+
+  static int? _etagVersion(String? etag) => etag == null ? null : int.tryParse(etag.replaceAll('"', '').trim());
+
   void close() => _http.close();
 }
 

@@ -8,6 +8,7 @@ import '../backend/rasq_account.dart';
 import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
 import '../features/child_safe/child_safe_screens.dart' show ChildSafeWindowBanner;
 import '../features/plugins/sideload_trust.dart' show ownDevKeyFingerprintsProvider;
+import '../session/sns_share.dart' show snsShareProvider;
 import '../features/notifications/notifications_screen.dart';
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'nav.dart';
@@ -33,6 +34,8 @@ class RasqShell extends ConsumerWidget {
     ref.watch(orgateBundleSyncProvider);
     // 自分の開発者鍵の指紋 (D-306) を起動時から取っておく(サイドロードの段を決める。変わってもシェルは作り直さない)。
     ref.listen(ownDevKeyFingerprintsProvider, (_, _) {});
+    // SNS のアクセストークンの端末間共有 (D-319): 起動から見回りを続ける(新しい端末の承認の問い / 本体との同期)。
+    ref.listen(snsShareProvider, (_, _) {});
     return LayoutBuilder(builder: (context, constraints) {
       final tablet = constraints.maxWidth >= RasqSizes.tabletBreakpoint;
       return tablet ? _TabletLayout(shell: navigationShell) : _MobileLayout(shell: navigationShell);
