@@ -47,6 +47,39 @@ abstract class AstellStreamer extends ChangeNotifier {
 
   /// 切る。
   Future<void> disconnect();
+
+  /// 繋がり方の様子(開発者向けの表示、D-323)。実物は上げている / 受けているトラックまで出す。
+  AstellStreamDiagnostics diagnostics() => AstellStreamDiagnostics(connection: connected ? 'connected' : 'disconnected', canPublish: canPublish, publishing: publishing);
+}
+
+/// 配信(LiveKit)の様子 (D-323)。
+@immutable
+class AstellStreamDiagnostics {
+  const AstellStreamDiagnostics({required this.connection, this.canPublish = false, this.publishing, this.local = const [], this.remote = const {}, this.canPlaybackAudio});
+
+  /// `disconnected` / `connecting` / `reconnecting` / `connected`。
+  final String connection;
+  final bool canPublish;
+  final String? publishing;
+
+  /// 自分が上げているトラック(`screenShareVideo video` の形)。
+  final List<String> local;
+
+  /// ほかの参加者(identity)ごとの、相手が上げているトラックと受けているか。
+  final Map<String, List<String>> remote;
+
+  /// Web: ブラウザが声を鳴らせているか(自動再生の制限)。ネイティブは null。
+  final bool? canPlaybackAudio;
+
+  /// 受けている(購読した)トラックの数。
+  int get subscribed => remote.values.expand((t) => t).where((t) => t.contains('受信中')).length;
+
+  List<String> lines() => [
+        '配信: $connection${canPublish ? '(上げられる)' : ''}${publishing != null ? ' / 上げているもの: $publishing' : ''}${canPlaybackAudio == false ? ' / 声: ブラウザが止めている(操作待ち)' : ''}',
+        '自分のトラック: ${local.isEmpty ? 'なし' : local.join(', ')}',
+        if (remote.isEmpty) 'ほかの参加者: なし' else ...[for (final e in remote.entries) '${e.key.length > 8 ? e.key.substring(0, 8) : e.key}: ${e.value.isEmpty ? 'トラック無し' : e.value.join(', ')}'],
+        '受けているトラック: $subscribed',
+      ];
 }
 
 /// 何も映さない口(モックのルーム)。繋いだ / 上げたことだけ覚える。

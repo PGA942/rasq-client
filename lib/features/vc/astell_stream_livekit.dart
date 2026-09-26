@@ -16,6 +16,10 @@ import 'astell_web_audio.dart' show astellOnNextUserGesture;
 /// - 画面の取り込み: Android は MediaProjection の同意 + 前面サービス(flutter_background、`mediaProjection`)、
 ///   iOS は**アプリの中だけ**(端末全体は ReplayKit の Broadcast Extension が要る — まだ作っていない)、
 ///   デスクトップは画面 / ウィンドウを選ぶ([pickAstellScreenSource])、Web はブラウザの選択。
+///   iOS は `setScreenShareEnabled` を使わない: livekit_client(2.4 から)は iOS だとそこで Broadcast Extension の
+///   選択を出すだけで、拡張が無いと**何も上げずに** null を返す(エラーにもならない)。自分でトラックを作って上げる
+///   ([astellScreenCaptureInApp]、D-323)。上げたあとは、映像のトラックが本当に上がったかを確かめる。
+/// - 様子 (D-323): 上げた / 受けたトラックをログ(`astell stream:`)に出し、[diagnostics] で一覧にする。
 /// - 声は [setAudioPolicy] で相手ごとに鳴らす / 止める(通話で聞こえている人の声は二重にしない)。
 /// - Web の声: livekit_client が `<audio>` を作って `play()` する。ブラウザの自動再生の制限で断られると
 ///   `AudioPlaybackStatusChanged(isPlaying: false)` が来るので、次にページを触ったときに `room.startAudio()` する (D-318)。
@@ -47,6 +51,14 @@ class LiveKitAstellStreamer extends AstellStreamer {
       _applyAudio();
       notifyListeners();
     });
+    // 実機での切り分け用 (D-323): 上げた / 受けたトラックと、繋がり方の変化。
+    events
+      ..on<lk.LocalTrackPublishedEvent>((e) => _log('published ${e.publication.source.name} ${e.publication.kind.name}'))
+      ..on<lk.TrackPublishedEvent>((e) => _log('${_short(e.participant.identity)} published ${e.publication.source.name} ${e.publication.kind.name}'))
+      ..on<lk.TrackSubscribedEvent>((e) => _log('subscribed ${_short(e.participant.identity)} ${e.publication.source.name} ${e.publication.kind.name}'))
+      ..on<lk.TrackSubscriptionExceptionEvent>((e) => _log('subscription failed ${_short(e.participant?.identity ?? '?')} ${e.sid}: ${e.reason.name}'))
+      ..on<lk.RoomReconnectingEvent>((_) => _log('reconnecting'))
+      ..on<lk.RoomDisconnectedEvent>((e) => _log('disconnected (${e.reason?.name})'));
     if (kIsWeb) {
       events.on<lk.AudioPlaybackStatusChanged>((e) {
         if (!e.isPlaying) _resumeAudioOnGesture(room);
@@ -60,25 +72,43 @@ class LiveKitAstellStreamer extends AstellStreamer {
     _events = events;
     _canPublish = token.canPublish;
     await room.connect(token.url, token.token);
+    _log('connected to ${token.url} as ${token.canPublish ? 'publisher' : 'subscriber'} (${room.remoteParticipants.length} remote)');
     _applyAudio();
     notifyListeners();
   }
+
+  static String _short(String id) => id.length > 8 ? id.substring(0, 8) : id;
+
+  static void _log(String message) => debugPrint('astell stream: $message');
 
   @override
   Future<void> publish(String kind, {required bool mic, String? screenSourceId}) async {
     final lp = _room?.localParticipant;
     if (lp == null || !_canPublish) throw StateError('配信サーバーに繋がっていません');
     if (kind == 'screen' && astellInsecureWebContext()) throw const AstellMediaException(AstellMediaIssue.insecureContext);
+    final source = kind == 'screen' ? lk.TrackSource.screenShareVideo : lk.TrackSource.camera;
     try {
       if (kind == 'screen') {
         await _startScreenCapture();
-        await lp.setScreenShareEnabled(
-          true,
-          captureScreenAudio: false,
-          screenShareCaptureOptions: lk.ScreenShareCaptureOptions(sourceId: screenSourceId, maxFrameRate: 15),
-        );
+        final options = lk.ScreenShareCaptureOptions(sourceId: screenSourceId, maxFrameRate: 15);
+        if (astellScreenCaptureInApp() && lp.getTrackPublicationBySource(source) == null) {
+          // iOS: このアプリの画面(ReplayKit の RPScreenRecorder)を自分でトラックにして上げる。
+          final track = await lk.LocalVideoTrack.createScreenShareTrack(options);
+          try {
+            await lp.publishVideoTrack(track);
+          } catch (_) {
+            await track.stop();
+            rethrow;
+          }
+        } else {
+          await lp.setScreenShareEnabled(true, captureScreenAudio: false, screenShareCaptureOptions: options);
+        }
       } else {
         await lp.setCameraEnabled(true);
+      }
+      // 上がったか: 何も上げずに戻る道がある(iOS の setScreenShareEnabled など)。黙って「共有中」にしない。
+      if (lp.getTrackPublicationBySource(source) == null) {
+        throw const AstellMediaException(AstellMediaIssue.unsupported, '映像を配信サーバーに上げられませんでした');
       }
       await lp.setMicrophoneEnabled(mic);
     } catch (e) {
@@ -205,6 +235,31 @@ class LiveKitAstellStreamer extends AstellStreamer {
   }
 
   @override
+  AstellStreamDiagnostics diagnostics() {
+    final room = _room;
+    if (room == null) return const AstellStreamDiagnostics(connection: 'disconnected');
+    String pubLine(lk.TrackPublication pub) => '${pub.source.name} ${pub.kind.name}${pub.muted ? '(ミュート)' : ''}';
+    return AstellStreamDiagnostics(
+      connection: room.connectionState.name,
+      canPublish: canPublish,
+      publishing: _publishing,
+      local: [for (final pub in room.localParticipant?.trackPublications.values ?? const <lk.LocalTrackPublication>[]) pubLine(pub)],
+      remote: {
+        for (final p in room.remoteParticipants.values)
+          p.identity: [
+            for (final pub in p.trackPublications.values)
+              '${pubLine(pub)}: ${switch (pub.subscriptionState) {
+                lk.TrackSubscriptionState.subscribed => '受信中${pub.kind == lk.TrackType.VIDEO && pub.streamState == lk.StreamState.paused ? '(サーバーが一時停止 — 表示されていない)' : ''}',
+                lk.TrackSubscriptionState.notAllowed => '許可されていない',
+                lk.TrackSubscriptionState.unsubscribed => '未受信',
+              }}',
+          ],
+      },
+      canPlaybackAudio: kIsWeb ? room.canPlaybackAudio : null,
+    );
+  }
+
+  @override
   Future<void> disconnect() async {
     final room = _room;
     final events = _events;
@@ -225,6 +280,12 @@ class LiveKitAstellStreamer extends AstellStreamer {
     notifyListeners();
   }
 }
+
+/// 画面の取り込みを、LiveKit の `setScreenShareEnabled` ではなく自分で作ったトラックで上げるか (D-323)。
+/// iOS(アプリ)だけ: livekit_client の `setScreenShareEnabled` は iOS だと Broadcast Extension の選択を出すだけで、
+/// 拡張が無いと何も上げない。flutter_webrtc の `getDisplayMedia` は `deviceId` に `broadcast` を付けなければ
+/// このアプリの画面(RPScreenRecorder)を取る。[web] / [platform] はテスト用。
+bool astellScreenCaptureInApp({bool web = kIsWeb, TargetPlatform? platform}) => !web && (platform ?? defaultTargetPlatform) == TargetPlatform.iOS;
 
 /// デスクトップ(macOS / Windows / Linux)で画面の取り込みの前に、画面 / ウィンドウを選ぶか。
 bool get astellNeedsScreenPicker => !kIsWeb && const {TargetPlatform.macOS, TargetPlatform.windows, TargetPlatform.linux}.contains(defaultTargetPlatform);

@@ -75,6 +75,21 @@ class AstellCallMesh {
   /// その相手の声が繋がっているか。
   bool connectedTo(String peerId) => _links[peerId]?.state == AstellLinkState.connected;
 
+  /// 使っている ICE サーバーの URL(資格情報は出さない)。まだ読んでいなければ null (D-323)。
+  List<String>? get iceServerUrls => _ice == null
+      ? null
+      : [
+          for (final e in _ice!)
+            ...switch (e['urls']) {
+              final String u => [u],
+              final List<Object?> us => us.whereType<String>(),
+              _ => const <String>[],
+            },
+        ];
+
+  /// 相手ごとの接続の様子(開発者向けの表示、D-323)。
+  Future<List<AstellLinkDiagnostics>> diagnostics() async => [for (final l in [..._links.values]) await l.link.diagnostics()];
+
   /// 1 本の列に積む(前の処理が終わってから)。戻り値はその処理の終わり(テスト用)。
   Future<void> _enqueue(Future<void> Function() run) {
     final next = _queue.then((_) async {

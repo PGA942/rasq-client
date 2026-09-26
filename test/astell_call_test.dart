@@ -8,6 +8,8 @@ import 'package:rasq_client/features/vc/astell_media.dart';
 import 'package:rasq_client/features/vc/astell_models.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/astell_stream.dart';
+import 'package:rasq_client/features/vc/astell_stream_livekit.dart' show astellScreenCaptureInApp;
+import 'package:rasq_client/features/vc/astell_web_audio.dart' show astellAudioAwaitingGesture;
 import 'package:rasq_client/session/session_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -316,6 +318,34 @@ void main() {
       await session.leave();
     });
 
+    test('接続の状態(開発者向け、D-323): 自分・マイク・ICE サーバー・相手ごとの接続・配信を行にする', () async {
+      final session = await join(MockAstellClient.seededRooms().first);
+      final lines = await session.diagnostics();
+      expect(lines.first, startsWith('自分: peer me'));
+      expect(lines, contains(startsWith('マイク: 下ろしている / まだ開いていない')));
+      expect(lines, contains('通話: 接続 5 本 / ICE サーバー: stun:stun.l.google.com:19302'));
+      expect(lines.where((l) => l.startsWith('— ')), hasLength(5));
+      expect(lines, contains('  接続 connected / ICE -(収集 -)/ SDP have-local-offer'));
+      // r-launch には TiVard の画面共有があるので、見るだけで配信に繋いでいる。
+      expect(lines, contains('配信: connected'));
+      await session.leave();
+      expect(await session.diagnostics(), ['ルームに入っていません']);
+    });
+
+    test('Web でブラウザが声の自動再生を止めている間は「触ると鳴ります」を出し、鳴ったら消す (D-323)', () async {
+      final session = await join(MockAstellClient.seededRooms().first);
+      astellAudioAwaitingGesture.value = true;
+      expect(container.read(astellSessionProvider)!.notice, astellAudioBlockedNotice);
+      expect(await session.diagnostics(), contains(startsWith('声: ブラウザが自動再生を止めている')));
+      astellAudioAwaitingGesture.value = false;
+      expect(container.read(astellSessionProvider)!.notice, isNull);
+      await session.leave();
+      // 退出したあとは見ない。
+      astellAudioAwaitingGesture.value = true;
+      expect(container.read(astellSessionProvider), isNull);
+      astellAudioAwaitingGesture.value = false;
+    });
+
     test('満員(welcome に $astellMeshCap 人以上)なら通話に入らず、案内を出す', () async {
       final session = await join(MockAstellClient.seededRooms().first);
       client.sent.clear();
@@ -427,6 +457,36 @@ void main() {
       await session.leave();
     });
 
+    test('iOS の画面共有は LiveKit の setScreenShareEnabled を使わず自分でトラックを作る(Broadcast Extension が無いと何も上げないので、D-323)', () {
+      expect(astellScreenCaptureInApp(web: false, platform: TargetPlatform.iOS), isTrue);
+      expect(astellScreenCaptureInApp(web: true, platform: TargetPlatform.iOS), isFalse, reason: 'Safari はブラウザの getDisplayMedia');
+      for (final p in [TargetPlatform.android, TargetPlatform.macOS, TargetPlatform.windows, TargetPlatform.linux]) {
+        expect(astellScreenCaptureInApp(web: false, platform: p), isFalse, reason: '$p');
+      }
+    });
+
+    test('配信の様子(開発者向け、D-323): 上げている / 受けているトラックと数', () {
+      const d = AstellStreamDiagnostics(
+        connection: 'connected',
+        local: ['microphone audio'],
+        remote: {
+          'e7cc4808-771e-46c5-841b-06ba648605ab': ['screenShareVideo video: 受信中', 'microphone audio: 受信中'],
+          'a21fc79e': [],
+        },
+        canPlaybackAudio: false,
+      );
+      expect(d.subscribed, 2);
+      expect(d.lines(), [
+        '配信: connected / 声: ブラウザが止めている(操作待ち)',
+        '自分のトラック: microphone audio',
+        'e7cc4808: screenShareVideo video: 受信中, microphone audio: 受信中',
+        'a21fc79e: トラック無し',
+        '受けているトラック: 2',
+      ]);
+      // 偽物 / 何もしない口は、繋がっているかだけ。
+      expect(NullAstellStreamer().diagnostics().lines().first, '配信: disconnected');
+    });
+
     test('Central が配信を用意していない (501) / 断った (403) ときの言い換え', () {
       expect(astellStreamErrorText(OrgateException(ErrorCode.tryParse('501')!, 'streaming is not configured')), '配信サーバー(LiveKit)が設定されていません');
       expect(astellStreamErrorText(OrgateException(ErrorCode.tryParse('403')!, 'streaming is limited to moderators in this room')), contains('許可されていません'));
@@ -530,6 +590,9 @@ class FakeLink implements AstellPeerLink {
 
   @override
   Future<double> remoteAudioLevel() async => level;
+
+  @override
+  Future<AstellLinkDiagnostics> diagnostics() async => AstellLinkDiagnostics(peerId: peerId, connectionState: closed ? 'closed' : 'connected', signalingState: state);
 
   @override
   Future<void> close() async => closed = true;

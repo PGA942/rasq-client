@@ -66,6 +66,9 @@ abstract class AstellPeerLink {
   /// 相手の声の大きさ(0〜1、受けている音声の audioLevel)。話している印に使う。
   Future<double> remoteAudioLevel();
 
+  /// 接続の様子(開発者向けの表示、D-323)。
+  Future<AstellLinkDiagnostics> diagnostics();
+
   Future<void> close();
 }
 
@@ -74,6 +77,9 @@ abstract class AstellPeerLink {
 abstract class AstellRemoteAudio {
   /// 鳴らす / 止める(スピーカーミュート / 手元のミュート)。
   void setMuted(bool muted);
+
+  /// いまの様子 (D-323): `playing` / `blocked`(自動再生の制限で止められ、次の操作を待っている)/ `muted` / `paused` / `closed`。
+  String get state;
 
   /// `<audio>` を外す。
   Future<void> dispose();
@@ -168,4 +174,156 @@ class NullAstellMedia implements AstellMedia {
       throw StateError('NullAstellMedia does not make calls');
   @override
   Future<void> dispose() async {}
+}
+
+// ── 接続の様子(開発者向け、D-323) ──
+// 実機でしか起きない「繋がったのに聞こえない」を切り分けるため、ICE の状態・出した / 受けた候補の種類・選ばれた
+// 候補の組・送受信のバイト数・Web の `<audio>` の様子を 1 か所に集める。設定の「接続の状態(開発者向け)」とログに出す。
+
+/// ICE の候補 1 行(`candidate:… <address> <port> typ <type> …`)の種類。`host` / `host(mDNS)` / `srflx` / `prflx` /
+/// `relay`、TCP なら `/tcp` を付ける。空(候補の終わり)や読めない行は null。
+/// ブラウザは自分の host 候補の IP を `<uuid>.local`(mDNS)で隠す — 相手がそれを引けなければ、その候補には繋がらない。
+String? astellCandidateKind(String? candidate) {
+  if (candidate == null) return null;
+  final f = candidate.trim().split(RegExp(r'\s+'));
+  final typ = f.indexOf('typ');
+  if (typ < 0 || typ + 1 >= f.length || f.length < 6) return null;
+  final type = f[typ + 1];
+  final mdns = type == 'host' && f[4].toLowerCase().endsWith('.local');
+  final tcp = f[2].toLowerCase() == 'tcp';
+  return '$type${mdns ? '(mDNS)' : ''}${tcp ? '/tcp' : ''}';
+}
+
+/// `getStats()` の報告 1 つ(W3C の名前: `transport` / `candidate-pair` / `local-candidate` / `remote-candidate` /
+/// `inbound-rtp` / `outbound-rtp` …)。
+typedef AstellStatsReport = ({String id, String type, Map<Object?, Object?> values});
+
+/// 接続の統計のまとめ (D-323)。取れなかったものは null。
+@immutable
+class AstellRtcStats {
+  const AstellRtcStats({this.pairState, this.localCandidate, this.remoteCandidate, this.bytesSent, this.bytesReceived, this.packetsReceived, this.packetsLost, this.audioLevel});
+
+  /// 選ばれた候補の組の状態(`succeeded` など)。
+  final String? pairState;
+
+  /// 選ばれた組の自分 / 相手の候補(`prflx udp 100.64.0.1:50000` の形)。
+  final String? localCandidate;
+  final String? remoteCandidate;
+
+  /// 音声の送った / 受けたバイト数(`outbound-rtp` / `inbound-rtp`)。
+  final int? bytesSent;
+  final int? bytesReceived;
+  final int? packetsReceived;
+  final int? packetsLost;
+
+  /// 受けている声の大きさ(0〜1)。
+  final double? audioLevel;
+
+  /// 報告からまとめる。選ばれた組は `transport.selectedCandidatePairId`、無ければ `selected` / `nominated` で
+  /// `succeeded` の組(ブラウザとネイティブで持ち方が違う)。
+  static AstellRtcStats from(Iterable<AstellStatsReport> reports) {
+    final byId = {for (final r in reports) r.id: r};
+    int? asInt(Object? v) => v is num ? v.toInt() : (v is String ? int.tryParse(v) : null);
+    double? asDouble(Object? v) => v is num ? v.toDouble() : (v is String ? double.tryParse(v) : null);
+    bool isAudio(Map<Object?, Object?> v) => v['kind'] == 'audio' || v['mediaType'] == 'audio';
+
+    AstellStatsReport? pair;
+    for (final r in reports) {
+      final id = r.values['selectedCandidatePairId'];
+      if (r.type == 'transport' && id is String && byId[id] != null) pair = byId[id];
+    }
+    final pairs = [for (final r in reports) if (r.type == 'candidate-pair') r];
+    pair ??= pairs.where((r) => r.values['selected'] == true).firstOrNull;
+    pair ??= pairs.where((r) => r.values['nominated'] == true && r.values['state'] == 'succeeded').firstOrNull;
+    pair ??= pairs.where((r) => r.values['state'] == 'succeeded').firstOrNull;
+
+    String? candidate(Object? id) {
+      final c = id is String ? byId[id] : null;
+      if (c == null) return null;
+      final v = c.values;
+      final address = v['address'] ?? v['ip'];
+      final port = v['port'];
+      return [v['candidateType'], v['protocol'], if (address != null) '$address${port != null ? ':$port' : ''}'].whereType<Object>().join(' ');
+    }
+
+    int? bytesSent, bytesReceived, packetsReceived, packetsLost;
+    double? level;
+    for (final r in reports) {
+      final v = r.values;
+      if (!isAudio(v)) continue;
+      if (r.type == 'inbound-rtp') {
+        bytesReceived = (bytesReceived ?? 0) + (asInt(v['bytesReceived']) ?? 0);
+        packetsReceived = (packetsReceived ?? 0) + (asInt(v['packetsReceived']) ?? 0);
+        packetsLost = (packetsLost ?? 0) + (asInt(v['packetsLost']) ?? 0);
+        final l = asDouble(v['audioLevel']);
+        if (l != null && l > (level ?? -1)) level = l;
+      } else if (r.type == 'outbound-rtp') {
+        bytesSent = (bytesSent ?? 0) + (asInt(v['bytesSent']) ?? 0);
+      }
+    }
+    return AstellRtcStats(
+      pairState: pair?.values['state'] as String?,
+      localCandidate: candidate(pair?.values['localCandidateId']),
+      remoteCandidate: candidate(pair?.values['remoteCandidateId']),
+      bytesSent: bytesSent,
+      bytesReceived: bytesReceived,
+      packetsReceived: packetsReceived,
+      packetsLost: packetsLost,
+      audioLevel: level,
+    );
+  }
+}
+
+/// 相手 1 人との接続の様子 (D-323)。
+@immutable
+class AstellLinkDiagnostics {
+  const AstellLinkDiagnostics({
+    required this.peerId,
+    this.connectionState,
+    this.iceConnectionState,
+    this.iceGatheringState,
+    this.signalingState,
+    this.localCandidates = const {},
+    this.remoteCandidates = const {},
+    this.stats = const AstellRtcStats(),
+    this.remoteAudio = false,
+    this.playout,
+    this.micAttached = false,
+  });
+
+  final String peerId;
+
+  /// W3C の綴り(`new` / `connecting` / `connected` / `disconnected` / `failed` / `closed` など)。
+  final String? connectionState;
+  final String? iceConnectionState;
+  final String? iceGatheringState;
+  final String? signalingState;
+
+  /// 出した / 受けた ICE の候補の種類ごとの数([astellCandidateKind])。
+  final Map<String, int> localCandidates;
+  final Map<String, int> remoteCandidates;
+  final AstellRtcStats stats;
+
+  /// 相手の声のトラックを受けたか(`ontrack`)。
+  final bool remoteAudio;
+
+  /// Web の `<audio>` の様子([AstellRemoteAudio.state])。ネイティブは null(繋がなくても鳴る)。
+  final String? playout;
+
+  /// 送る側にマイクを差し込んだか。
+  final bool micAttached;
+
+  /// 表示とログの行。
+  List<String> lines() {
+    String tally(Map<String, int> m) => m.isEmpty ? 'なし' : [for (final e in m.entries) '${e.key}×${e.value}'].join(' ');
+    String num(int? v) => v == null ? '-' : '$v';
+    final s = stats;
+    return [
+      '接続 ${connectionState ?? '-'} / ICE ${iceConnectionState ?? '-'}(収集 ${iceGatheringState ?? '-'})/ SDP ${signalingState ?? '-'}',
+      '候補: 自分 ${tally(localCandidates)} / 相手 ${tally(remoteCandidates)}',
+      '選ばれた組: ${s.pairState ?? 'なし'}${s.localCandidate != null || s.remoteCandidate != null ? '(自分 ${s.localCandidate ?? '?'} ⇄ 相手 ${s.remoteCandidate ?? '?'})' : ''}',
+      '音声: 送 ${num(s.bytesSent)} B / 受 ${num(s.bytesReceived)} B(${num(s.packetsReceived)} パケット、欠 ${num(s.packetsLost)})/ 声の大きさ ${s.audioLevel?.toStringAsFixed(3) ?? '-'}',
+      '相手の声: ${remoteAudio ? '受けた' : 'まだ'}${playout != null ? ' / <audio> $playout' : ''} / マイク: ${micAttached ? '差し込み済み' : 'まだ'}',
+    ];
+  }
 }

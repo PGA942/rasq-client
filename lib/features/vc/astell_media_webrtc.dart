@@ -25,6 +25,8 @@ typedef AstellRemoteAudioPlayer = AstellRemoteAudio? Function(MediaStreamTrack t
 /// - 相手の声: ネイティブは受けたトラックがそのまま鳴る。Web は `<audio>` が要るので、受けた**トラック**を繋ぐ
 ///   (`ontrack` の `streams` は、こちらの送り方では空。D-318)。ミュートは受けたトラックの `enabled` と `<audio>` の muted。
 /// - Web のマイク: https(安全なコンテキスト)なら、ネイティブと同じく開ける。http のときだけ [micBlocked]。
+/// - 様子 (D-323): 接続 / ICE の状態の変化と、受けた声・`<audio>` の様子をログ(`astell call:`)に出し、
+///   [AstellPeerLink.diagnostics] で ICE の候補の種類・選ばれた組・送受信のバイト数を返す(設定の「接続の状態」)。
 class WebRtcAstellMedia implements AstellMedia {
   WebRtcAstellMedia({AstellPeerConnectionFactory? peerConnection, AstellUserMedia? userMedia, AstellRemoteAudioPlayer? remoteAudio, bool? web})
       : _peerConnection = peerConnection ?? createPeerConnection,
@@ -142,6 +144,12 @@ class _WebRtcLink implements AstellPeerLink {
   final AstellRemoteAudioPlayer _playRemote;
 
   RTCSignalingState? _signaling = RTCSignalingState.RTCSignalingStateStable;
+  String? _connection;
+  String? _ice;
+  String? _gathering;
+  final Map<String, int> _localKinds = {};
+  final Map<String, int> _remoteKinds = {};
+  bool _micAttached = false;
   bool _hasRemote = false;
   bool _playback = true;
   bool _closed = false;
@@ -153,20 +161,31 @@ class _WebRtcLink implements AstellPeerLink {
     _pc.onSignalingState = (s) => _signaling = s;
     _pc.onIceCandidate = (c) {
       if (c.candidate == null || _closed) return;
+      _tally(_localKinds, c.candidate);
       _handlers.onIceCandidate({'candidate': c.candidate, 'sdpMid': c.sdpMid, 'sdpMLineIndex': c.sdpMLineIndex});
     };
-    _pc.onConnectionState = (s) => _handlers.onState(switch (s) {
-          RTCPeerConnectionState.RTCPeerConnectionStateConnected => AstellLinkState.connected,
-          RTCPeerConnectionState.RTCPeerConnectionStateDisconnected => AstellLinkState.disconnected,
-          RTCPeerConnectionState.RTCPeerConnectionStateFailed => AstellLinkState.failed,
-          RTCPeerConnectionState.RTCPeerConnectionStateClosed => AstellLinkState.closed,
-          _ => AstellLinkState.connecting,
-        });
+    _pc.onIceGatheringState = (s) => _gathering = _w3c(s.name, 'RTCIceGatheringState');
+    _pc.onIceConnectionState = (s) {
+      _ice = _w3c(s.name, 'RTCIceConnectionState');
+      _log('ice=$_ice (candidates: local ${_kinds(_localKinds)} / remote ${_kinds(_remoteKinds)})');
+    };
+    _pc.onConnectionState = (s) {
+      _connection = _w3c(s.name, 'RTCPeerConnectionState');
+      _log('connection=$_connection');
+      _handlers.onState(switch (s) {
+        RTCPeerConnectionState.RTCPeerConnectionStateConnected => AstellLinkState.connected,
+        RTCPeerConnectionState.RTCPeerConnectionStateDisconnected => AstellLinkState.disconnected,
+        RTCPeerConnectionState.RTCPeerConnectionStateFailed => AstellLinkState.failed,
+        RTCPeerConnectionState.RTCPeerConnectionStateClosed => AstellLinkState.closed,
+        _ => AstellLinkState.connecting,
+      });
+    };
     _pc.onTrack = (e) {
       if (e.track.kind != 'audio') return;
       _remoteAudio = e.track;
       e.track.enabled = _playback;
       _playOut(e.track);
+      _log('remote audio track (streams: ${e.streams.length}${_out != null ? ', <audio> ${_out!.state}' : ''})');
     };
     if (offerer) {
       // 送受信の音声 1 本。マイクがまだ無ければ空で出しておき、開いたら差し込む。
@@ -208,7 +227,23 @@ class _WebRtcLink implements AstellPeerLink {
     final t = await _audioTransceiver();
     if (t == null) return; // 受ける側で、まだ相手の offer が来ていない — setRemoteDescription のあとで差し込む
     await t.sender.replaceTrack(track);
+    _micAttached = true;
   }
+
+  static void _tally(Map<String, int> into, String? candidate) {
+    final kind = astellCandidateKind(candidate);
+    if (kind != null) into[kind] = (into[kind] ?? 0) + 1;
+  }
+
+  static String _kinds(Map<String, int> m) => m.isEmpty ? '-' : [for (final e in m.entries) '${e.key}:${e.value}'].join(',');
+
+  /// `RTCIceConnectionStateConnected` → `connected`(W3C の綴り)。
+  static String _w3c(String name, String prefix) {
+    final rest = name.startsWith(prefix) ? name.substring(prefix.length) : name;
+    return rest.isEmpty ? rest : rest[0].toLowerCase() + rest.substring(1);
+  }
+
+  void _log(String message) => debugPrint('astell call: ${peerId.length > 8 ? peerId.substring(0, 8) : peerId} $message');
 
   @override
   String get signalingState => switch (_signaling) {
@@ -253,7 +288,10 @@ class _WebRtcLink implements AstellPeerLink {
       if (t != null) {
         await t.setDirection(TransceiverDirection.SendRecv);
         final mic = _pendingMic;
-        if (mic != null) await t.sender.replaceTrack(mic);
+        if (mic != null) {
+          await t.sender.replaceTrack(mic);
+          _micAttached = true;
+        }
       }
     }
   }
@@ -265,8 +303,10 @@ class _WebRtcLink implements AstellPeerLink {
   }
 
   @override
-  Future<void> addIceCandidate(Map<String, Object?> candidate) =>
-      _pc.addCandidate(RTCIceCandidate(candidate['candidate'] as String?, candidate['sdpMid'] as String?, (candidate['sdpMLineIndex'] as num?)?.toInt()));
+  Future<void> addIceCandidate(Map<String, Object?> candidate) {
+    _tally(_remoteKinds, candidate['candidate'] as String?);
+    return _pc.addCandidate(RTCIceCandidate(candidate['candidate'] as String?, candidate['sdpMid'] as String?, (candidate['sdpMLineIndex'] as num?)?.toInt()));
+  }
 
   @override
   void setPlayback(bool on) {
@@ -287,6 +327,31 @@ class _WebRtcLink implements AstellPeerLink {
       if (audio && remote && l is num && l > level) level = l.toDouble();
     }
     return level;
+  }
+
+  @override
+  Future<AstellLinkDiagnostics> diagnostics() async {
+    var stats = const AstellRtcStats();
+    if (!_closed) {
+      try {
+        stats = AstellRtcStats.from([for (final r in await _pc.getStats()) (id: r.id, type: r.type, values: r.values)]);
+      } catch (e) {
+        debugPrint('astell call: stats: $e');
+      }
+    }
+    return AstellLinkDiagnostics(
+      peerId: peerId,
+      connectionState: _closed ? 'closed' : _connection,
+      iceConnectionState: _ice,
+      iceGatheringState: _gathering,
+      signalingState: signalingState,
+      localCandidates: {..._localKinds},
+      remoteCandidates: {..._remoteKinds},
+      stats: stats,
+      remoteAudio: _remoteAudio != null,
+      playout: _out?.state,
+      micAttached: _micAttached,
+    );
   }
 
   @override

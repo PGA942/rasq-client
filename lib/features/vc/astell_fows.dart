@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -929,10 +931,27 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
             child: Text(isOwner ? 'チャットと共有の読み上げは Central 側で合成します(端末での再生は今後の対応)。' : '読み上げ音声はホストが選びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
+          const Divider(height: RasqSpacing.md),
+          // 実機で「聞こえない / 映らない」を切り分ける (D-323)。
+          _label(ctx, '接続の状態(開発者向け)'),
+          RasqListTile(
+            title: '通話 / 配信の接続を見る',
+            subtitle: 'ICE の状態・候補・送受信の量・受けているトラック',
+            leading: const Icon(Icons.network_check),
+            onTap: () => _openDiagnostics(),
+          ),
         ]);
       }),
     );
   }
+
+  /// 接続の状態(開発者向け、D-323)。1 秒ごとに読み直す。
+  Future<void> _openDiagnostics() => ref.read(overlayManagerProvider).showBottomSheet<void>(
+        id: 'astell.room.diagnostics',
+        title: '接続の状態',
+        cancelText: '閉じる',
+        builder: (_) => const _AstellDiagnosticsView(),
+      );
 
   /// ホストの配信をタップ → 全画面(映像は LiveKit、D-317。届くまでは静止画)。
   Future<void> _openStream(BuildContext context, AstellRoom room) {
@@ -1809,6 +1828,59 @@ class _MemberRow extends StatelessWidget {
 }
 
 /// 設定シートの BAN 一覧 (D-149): オーナーが解除できる。
+/// 通話 / 配信の接続の様子 (D-323)。[AstellSession.diagnostics] を 1 秒ごとに読み直して出す。コピーできる。
+class _AstellDiagnosticsView extends ConsumerStatefulWidget {
+  const _AstellDiagnosticsView();
+  @override
+  ConsumerState<_AstellDiagnosticsView> createState() => _AstellDiagnosticsViewState();
+}
+
+class _AstellDiagnosticsViewState extends ConsumerState<_AstellDiagnosticsView> {
+  List<String> _lines = const [];
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _refresh());
+  }
+
+  Future<void> _refresh() async {
+    final lines = await ref.read(astellSessionProvider.notifier).diagnostics();
+    if (mounted) setState(() => _lines = lines);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = _lines.join('\n');
+    return ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page), children: [
+      SelectableText(text, style: RasqTypography.caption.copyWith(fontFamily: 'monospace', color: scheme.onSurface)),
+      const SizedBox(height: RasqSpacing.sm),
+      Row(children: [
+        Expanded(
+          child: Text('ブラウザ / Xcode のログにも「astell call:」「astell stream:」で出ます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        ),
+        TextButton.icon(
+          icon: const Icon(Icons.copy, size: 16),
+          label: const Text('コピー'),
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: text));
+            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('コピーしました')));
+          },
+        ),
+      ]),
+    ]);
+  }
+}
+
 class _BanList extends ConsumerStatefulWidget {
   const _BanList({required this.roomId});
   final String roomId;
