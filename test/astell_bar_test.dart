@@ -31,29 +31,28 @@ void main() {
       resolveAstellBar(config: config, plugins: plugins, settings: settings, buttons: buttons([...available ?? allBuiltin, for (final p in plugins) p.id]));
 
   group('並び (D-324)', () {
-    test('既定の並び = これまでの下段(スピーカー / マイク / 保留 / 画面共有 / 全画面 / プラグイン / 字幕)。全画面は共有枠に画面があるときだけ', () {
-      expect(keys(resolve(const ActionBarConfig())), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.hold, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins, AstellBarIds.captions]);
-      expect(keys(resolve(const ActionBarConfig(), available: allBuiltin.where((id) => id != AstellBarIds.fullscreen))), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.hold, AstellBarIds.screen, AstellBarIds.plugins, AstellBarIds.captions]);
+    test('既定の並び = これまでの下段(スピーカー / マイク / 画面共有 / 全画面 / 字幕。「プラグインアクション」は D-328 で廃止)。全画面は共有枠に画面があるときだけ', () {
+      expect(keys(resolve(const ActionBarConfig())), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.captions]);
+      expect(keys(resolve(const ActionBarConfig(), available: allBuiltin.where((id) => id != AstellBarIds.fullscreen))), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.captions]);
     });
 
     test('並べ替え: 保存した順に。並びに無いボタンは後ろ', () {
-      final config = ActionBarConfig(order: [AstellBarIds.captions, AstellBarIds.mic, AstellBarIds.speaker, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins, AstellBarIds.hold]);
-      expect(keys(resolve(config)), [AstellBarIds.captions, AstellBarIds.mic, AstellBarIds.speaker, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins, AstellBarIds.hold]);
+      final config = ActionBarConfig(order: [AstellBarIds.captions, AstellBarIds.mic, AstellBarIds.speaker, AstellBarIds.screen, AstellBarIds.fullscreen]);
+      expect(keys(resolve(config)), [AstellBarIds.captions, AstellBarIds.mic, AstellBarIds.speaker, AstellBarIds.screen, AstellBarIds.fullscreen]);
     });
 
     test('非表示: hidden のボタンは出さない。外すと元の位置に戻る', () {
-      final hidden = resolve(const ActionBarConfig(hidden: {AstellBarIds.speaker, AstellBarIds.plugins, AstellBarIds.hold}));
+      final hidden = resolve(const ActionBarConfig(hidden: {AstellBarIds.speaker}));
       expect(keys(hidden), [AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.captions]);
-      expect(keys(resolve(const ActionBarConfig(hidden: {AstellBarIds.plugins}))).first, AstellBarIds.speaker);
+      expect(keys(resolve(const ActionBarConfig(hidden: {AstellBarIds.captions}))).first, AstellBarIds.speaker);
     });
 
     test('あとから増えたボタン(挙手など)は、保存済みの並びでも既定の位置(直前の既定のボタンの後ろ)に入る', () {
-      // 「保留」「プラグイン」を知らない保存値(= あとから増えた種類の代わり)。保留はマイクの後ろ、プラグインは全画面の後ろ = 字幕の手前に入る。
-      final saved = ActionBarConfig(order: [AstellBarIds.captions, AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.fullscreen]);
-      expect(astellBarWithNewDefaults(saved).order, [AstellBarIds.captions, AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.hold, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins]);
+      // 「画面共有」を知らない保存値(= あとから増えた種類の代わり)。マイクの後ろに入る。
+      final saved = ActionBarConfig(order: [AstellBarIds.captions, AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.fullscreen]);
+      expect(astellBarWithNewDefaults(saved).order, [AstellBarIds.captions, AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.fullscreen]);
       // 非表示にしてあるものは足さない。一度も編集していなければそのまま(記述子の順)。
-      expect(astellBarWithNewDefaults(saved.copyWith(hidden: {AstellBarIds.plugins, AstellBarIds.hold})).order, isNot(contains(AstellBarIds.plugins)));
-      expect(astellBarWithNewDefaults(saved.copyWith(hidden: {AstellBarIds.plugins, AstellBarIds.hold})).order, isNot(contains(AstellBarIds.hold)));
+      expect(astellBarWithNewDefaults(saved.copyWith(hidden: {AstellBarIds.screen})).order, isNot(contains(AstellBarIds.screen)));
       expect(astellBarWithNewDefaults(const ActionBarConfig()).order, isEmpty);
     });
 
@@ -82,9 +81,9 @@ void main() {
       final items = resolve(const ActionBarConfig());
       final three = splitAstellBar(items, 3);
       expect(keys(three.shown), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.captions]);
-      expect(keys(three.overflow), [AstellBarIds.hold, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins]);
-      final all = splitAstellBar(items, 7);
-      expect(all.shown.length, 7);
+      expect(keys(three.overflow), [AstellBarIds.screen, AstellBarIds.fullscreen]);
+      final all = splitAstellBar(items, 5);
+      expect(all.shown.length, 5);
       expect(all.overflow, isEmpty);
       expect(keys(splitAstellBar(items, 1).shown), [AstellBarIds.captions]);
     });
@@ -94,10 +93,10 @@ void main() {
     SlotPlugin plugin(Map<String, Object?> manifest) => SlotPlugin(source: 'store:${manifest['id']}', manifest: SlotManifest.fromJson(manifest), runtime: FakeSlotRuntime(manifest: manifest, handler: (_, _, _) => null));
     Map<String, Object?> manifest(String id, {List<Map<String, Object?>> actions = const []}) => {'id': id, 'name': 'テスト $id', 'version': '0.1.0', 'kind': 'action', 'slots': ['astell.action'], 'permissions': ['fow.widget'], 'actions': actions};
 
-    test('宣言が無ければ手動配置(既定の並びは変えない)。並びに入れると出る。宣言の placement: auto なら最初から後ろに出る', () {
-      final bare = PluginAction(plugin: plugin(manifest('t.fx')), decl: astellActionDecl(SlotManifest.fromJson(manifest('t.fx'))));
+    test('宣言が無ければ手動配置(既定の並びは変えない)。並びに入れると出る。宣言(D-328)は 1 つ = 1 ボタンで、placement: auto なら最後の 1 つ(字幕)の手前に入る', () {
+      final bare = PluginAction(plugin: plugin(manifest('t.fx')), decl: astellActionDecls(SlotManifest.fromJson(manifest('t.fx'))).single);
       expect(bare.id, 'slot:t.fx:astell.action');
-      expect(isAstellPluginActionId(bare.id), isTrue);
+      expect(isAstellPluginAction(bare), isTrue);
       expect(bare.decl.label, 'テスト t.fx');
       expect(keys(resolve(const ActionBarConfig(), plugins: [bare])), isNot(contains(bare.id)));
       final placed = ActionBarConfig(order: [AstellBarIds.speaker, bare.id, for (final id in allBuiltin.skip(1)) id]);
@@ -107,10 +106,25 @@ void main() {
 
       final m = manifest('t.auto', actions: [
         {'id': 'x', 'slot': 'astell.action', 'label': '拍手', 'icon': 'celebration', 'placement': 'auto'},
+        {'id': 'y', 'slot': 'astell.action', 'label': '花火', 'icon': 'celebration'},
+        {'id': 'z', 'slot': 'astell.action', 'label': '手動', 'placement': 'manual'},
+        {'id': 'p', 'slot': 'post.action', 'label': '投稿のボタン', 'tags': ['Share']},
       ]);
-      final auto = PluginAction(plugin: plugin(m), decl: astellActionDecl(SlotManifest.fromJson(m)));
-      expect(auto.decl.label, '拍手');
-      expect(keys(resolve(const ActionBarConfig(), plugins: [auto])).last, auto.id);
+      final decls = astellActionDecls(SlotManifest.fromJson(m));
+      expect([for (final d in decls) d.id], ['x', 'y', 'z'], reason: 'astell.action の宣言だけ、宣言ごとに 1 つ');
+      final autos = [for (final d in decls) PluginAction(plugin: plugin(m), decl: d)];
+      expect(autos.first.id, 'slot:t.auto:x');
+      expect(autos.first.decl.label, '拍手');
+      // auto の 2 つは字幕の手前に(宣言の順)、manual は出ない。
+      final autoKeys = keys(resolve(const ActionBarConfig(), plugins: autos));
+      expect(autoKeys.sublist(autoKeys.length - 3), ['slot:t.auto:x', 'slot:t.auto:y', AstellBarIds.captions]);
+      expect(autoKeys, isNot(contains('slot:t.auto:z')));
+      // 並びを編集済みでも、構成にまだ無い auto のボタンは最後の 1 つの手前。構成に入れたものはその位置
+      // (並びに無い内蔵のボタンは既定の位置に入る: スピーカーが先頭に)。
+      final edited = ActionBarConfig(order: [AstellBarIds.captions, 'slot:t.auto:y', AstellBarIds.mic]);
+      final editedKeys = keys(resolve(edited, plugins: autos));
+      expect(editedKeys.sublist(0, 4), [AstellBarIds.speaker, AstellBarIds.captions, 'slot:t.auto:y', AstellBarIds.mic]);
+      expect(editedKeys[editedKeys.length - 2], 'slot:t.auto:x');
     });
   });
 
@@ -221,17 +235,17 @@ void main() {
     await openRoom(tester, c);
 
     final bar = find.byKey(astellFooterActionsKey);
-    // 360px は 3 つ: 先頭 2 つ(字幕 / 効果音)+ 並びの最後(後ろに足された プラグインアクション)。
+    // 360px は 3 つ: 先頭 2 つ(字幕 / 効果音)+ 並びの最後(並びに無い全画面が後ろに足されるので、共有枠に画面がある今は全画面)。
     expect(find.descendant(of: bar, matching: find.byTooltip('字幕オフ')), findsOneWidget);
     expect(find.descendant(of: bar, matching: find.byTooltip('効果音')), findsOneWidget);
-    expect(find.descendant(of: bar, matching: find.byTooltip('プラグインアクション')), findsOneWidget);
+    expect(find.descendant(of: bar, matching: find.byTooltip('全画面')), findsOneWidget);
     expect(find.byTooltip('スピーカーミュート'), findsNothing);
     expect(find.byTooltip('マイクオン'), findsNothing);
-    final xs = [for (final t in ['字幕オフ', '効果音', 'プラグインアクション']) tester.getCenter(find.descendant(of: bar, matching: find.byTooltip(t))).dx];
+    final xs = [for (final t in ['字幕オフ', '効果音', '全画面']) tester.getCenter(find.descendant(of: bar, matching: find.byTooltip(t))).dx];
     expect(xs, orderedEquals([...xs]..sort()));
     expect(find.byKey(astellOverflowDotKey), findsOneWidget);
 
-    // 歯車 → 入りきらないボタン(マイク / 画面共有 / 全画面)。押すとメニューを閉じてから動く。
+    // 歯車 → 入りきらないボタン(マイク / 画面共有)。押すとメニューを閉じてから動く。
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
     final overflow = find.byKey(astellOverflowKey);

@@ -4,12 +4,11 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// 保留音 (D-325): `assets/audio/hold_music.wav`(ユーザー提供、12.8 秒、ループで鳴らす)。
+/// 保留音 (D-325 → D-327): `assets/audio/hold_music.wav`(ユーザー提供、12.8 秒、ループで鳴らす)。
 ///
-/// AsTell の通話で、**通話の相手が全員「保留」にしたとき**に手元で鳴る(電話の保留音と同じ向き: 保留にした本人には
-/// 鳴らず、待たされている側に鳴る)。P2P の通話には音声ファイルをトラックとして流し込めない(flutter_webrtc に
-/// その口が無い)ので、相手の `state.onHold` を受けた側が自分の端末で鳴らす。鳴らす条件は
-/// `AstellSession._syncHoldMusic`。
+/// AsTell のルームで、**開催予約の開始を待っている間**と、**全員がマイクを下ろして(画面共有 / 配信も無く)チャットが
+/// 1 分以上流れていない間**に、参加者それぞれの端末で鳴る。鳴らす条件は `AstellSession._syncHoldMusic`(自分の端末の設定
+/// `astell.holdMusic` と、ルームの `holdMusic`(オーナー)の両方がオンのとき)。
 const holdMusicAsset = 'audio/hold_music.wav';
 
 /// 保留音の口。テストは [MemoryHoldMusic](鳴らさず回数だけ数える)。

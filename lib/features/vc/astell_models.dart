@@ -43,6 +43,7 @@ class AstellRoom {
     this.moderators = const [],
     this.tendencyFilter = false,
     this.locked = false,
+    this.holdMusic = true,
     this.scheduledAt,
     this.shareUrl,
   });
@@ -98,6 +99,10 @@ class AstellRoom {
   /// 運営(rasq-judge)による新規入室停止 (D-151)。
   final bool locked;
 
+  /// 保留音を許す (D-327、オーナーが決める): 開催予約の待ち時間と、全員がマイクを下ろして静かなときに参加者の端末で鳴らす。
+  /// 参加者は自分の端末でも切れる(設定 `astell` の `holdMusic`)。既定 true。
+  final bool holdMusic;
+
   /// 開催予約 (D-159/S-011)。null = 開催中。未来ならオーナー/モデレーター以外は入れず、
   /// オーナーが接続した時点で開催中になる(サーバーが null にする)。
   final DateTime? scheduledAt;
@@ -144,6 +149,7 @@ class AstellRoom {
         moderators: [for (final m in (j['moderators'] as List? ?? const [])) if (m is String) m],
         tendencyFilter: j['tendencyFilter'] == true,
         locked: j['locked'] == true,
+        holdMusic: j['holdMusic'] != false,
         scheduledAt: j['scheduledAt'] is String ? DateTime.tryParse(j['scheduledAt'] as String)?.toLocal() : null,
         shareUrl: (j['shareUrl'] as String?)?.isNotEmpty == true ? j['shareUrl'] as String : null,
       );
@@ -155,12 +161,12 @@ class AstellRoom {
         'title': title, 'description': description, 'genres': genres, 'visibility': visibility, 'welcomeMessage': welcomeMessage,
         'showSummary': showSummary, 'autoGenre': autoGenre, 'createdAt': createdAt.toIso8601String(), 'closedAt': closedAt?.toIso8601String(), 'peerCount': peerCount, 'live': live,
         'thumbnailUrl': thumbnailUrl?.toString(), 'hostStream': hostStream?.toJson(), 'ttsVoice': ttsVoice,
-        'joinPolicy': joinPolicy, 'sharePolicy': sharePolicy, 'moderators': moderators, 'tendencyFilter': tendencyFilter, 'locked': locked,
+        'joinPolicy': joinPolicy, 'sharePolicy': sharePolicy, 'moderators': moderators, 'tendencyFilter': tendencyFilter, 'locked': locked, 'holdMusic': holdMusic,
         'scheduledAt': scheduledAt?.toUtc().toIso8601String(),
         'shareUrl': shareUrl,
       };
 
-  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false, String? joinPolicy, String? sharePolicy, List<String>? moderators, bool? tendencyFilter, DateTime? scheduledAt, bool clearSchedule = false}) => AstellRoom(
+  AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false, String? joinPolicy, String? sharePolicy, List<String>? moderators, bool? tendencyFilter, bool? holdMusic, DateTime? scheduledAt, bool clearSchedule = false}) => AstellRoom(
         id: id,
         ownerId: ownerId,
         ownerHandle: ownerHandle,
@@ -185,6 +191,7 @@ class AstellRoom {
         moderators: moderators ?? this.moderators,
         tendencyFilter: tendencyFilter ?? this.tendencyFilter,
         locked: locked,
+        holdMusic: holdMusic ?? this.holdMusic,
         scheduledAt: clearSchedule ? null : (scheduledAt ?? this.scheduledAt),
         shareUrl: shareUrl,
       );
@@ -355,7 +362,7 @@ class AstellScreenShare {
 
 @immutable
 class AstellPeer {
-  const AstellPeer({required this.peerId, required this.accountId, required this.handle, required this.displayName, this.avatarUrl, this.micOn = false, this.speaking = false, this.screenShare, this.mutedByMod = false, this.onHold = false});
+  const AstellPeer({required this.peerId, required this.accountId, required this.handle, required this.displayName, this.avatarUrl, this.micOn = false, this.speaking = false, this.screenShare, this.mutedByMod = false});
   final String peerId;
   final String accountId;
   final String handle;
@@ -374,8 +381,6 @@ class AstellPeer {
   /// モデレーターに全員向けミュートされている (D-149、`state.mutedByMod`)。
   final bool mutedByMod;
 
-  /// 保留中 (D-325、`state.onHold`): マイクを下ろし、声も受けていない。通話の相手が全員保留中なら手元で保留音が鳴る。
-  final bool onHold;
 
   UserSummary get user => _rasqUser(id: accountId, handle: handle, displayName: displayName, avatarUrl: avatarUrl, presence: UserPresence.inVc);
 
@@ -390,11 +395,10 @@ class AstellPeer {
       micOn: j['micOn'] == true || st['micOn'] == true,
       screenShare: st['screenShare'] is Map ? AstellScreenShare.fromJson((st['screenShare'] as Map).cast<String, Object?>()) : null,
       mutedByMod: st['mutedByMod'] == true,
-      onHold: st['onHold'] == true,
     );
   }
 
-  AstellPeer copyWith({bool? micOn, bool? speaking, AstellScreenShare? screenShare, bool clearScreenShare = false, bool? mutedByMod, bool? onHold}) => AstellPeer(
+  AstellPeer copyWith({bool? micOn, bool? speaking, AstellScreenShare? screenShare, bool clearScreenShare = false, bool? mutedByMod}) => AstellPeer(
         peerId: peerId,
         accountId: accountId,
         handle: handle,
@@ -404,7 +408,6 @@ class AstellPeer {
         speaking: speaking ?? this.speaking,
         screenShare: clearScreenShare ? null : (screenShare ?? this.screenShare),
         mutedByMod: mutedByMod ?? this.mutedByMod,
-        onHold: onHold ?? this.onHold,
       );
 }
 

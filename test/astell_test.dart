@@ -18,6 +18,7 @@ import 'package:rasq_client/features/vc/astell_models.dart';
 import 'package:rasq_client/features/vc/astell_post_share.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/hold_music.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/features/vc/astell_tile.dart';
 import 'package:rasq_client/features/vc/vc_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -181,68 +182,82 @@ void main() {
       expect(container.read(astellSessionProvider), isNull);
     });
 
-    test('保留 (D-325): マイクを下ろして相手に伝える / 相手が全員保留中なら保留音が鳴り、戻れば止まる / 退出で止まる', () async {
+    test('保留音 (D-327): 開催予約の開始待ち / 全員が静か(マイク・画面共有・配信なし、チャット 1 分以上なし)で鳴る、話す・チャット・設定オフで止まる、退出で止まる', () async {
       final client = MockAstellClient();
+      final storage = MemorySessionStorage({});
       final container = ProviderContainer(overrides: [
-        sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
+        sessionStorageProvider.overrideWithValue(storage),
         astellClientProvider.overrideWithValue(client),
+        astellHoldMusicTickProvider.overrideWithValue(null),
       ]);
       addTearDown(container.dispose);
       final music = container.read(holdMusicProvider) as MemoryHoldMusic;
       final session = container.read(astellSessionProvider.notifier);
-      await session.join(MockAstellClient.seededRooms().first);
+      final room = MockAstellClient.seededRooms().first;
+      final soon = DateTime.now().add(const Duration(hours: 1));
+
+      // 開催予約の待ち: 接続した時点で鳴る(参加者は誰もマイクを立てていなくても関係なく)。開催が始まる(scheduledAt が消える)と止まる。
+      await session.join(room.copyWith(scheduledAt: soon));
       await Future<void>.delayed(Duration.zero);
-      List<Map<String, Object?>> states() => [for (final m in client.sent) if (m['type'] == 'state') (m['state'] as Map).cast<String, Object?>()];
+      expect(container.read(astellSessionProvider)!.connected, isTrue);
+      expect(music.playing, isTrue);
+      expect(container.read(astellSessionProvider)!.notice, astellHoldWaitingNotice);
+      client.emit(room.id, {'type': 'room', 'room': room.toJson()});
+      await Future<void>.delayed(Duration.zero);
+      expect(music.playing, isFalse, reason: '開催が始まった(ほかの人がマイクを立てている)');
+      expect(container.read(astellSessionProvider)!.notice, isNull);
 
-      // 保留: マイクが立っていれば下ろす。相手には state.onHold。解除でマイクは戻る。
-      await session.toggleMic();
-      expect(container.read(astellSessionProvider)!.micOn, isTrue);
-      await session.toggleHold();
-      var s = container.read(astellSessionProvider)!;
-      expect(s.onHold, isTrue);
-      expect(s.micOn, isFalse);
-      expect(states().last, containsPair('onHold', true));
-      expect(states().last, containsPair('micOn', false));
-      expect(music.playing, isFalse, reason: '保留にした本人には鳴らない');
-      await session.toggleHold();
-      s = container.read(astellSessionProvider)!;
-      expect(s.onHold, isFalse);
-      expect(s.micOn, isTrue, reason: '保留前に立っていたマイクは戻る');
-      expect(states().last, containsPair('onHold', false));
-
-      // 相手が全員保留中(1 対 1 にしてから): 手元で保留音 + 案内。戻ったら止まって案内も消える。
+      // 全員が静か: 1 対 1 にして、相手がマイクを下ろし、チャットが 1 分以上流れていない。
       for (final id in ['p1', 'p3', 'p4', 'p5']) {
-        client.emit('r-launch', {'type': 'peer-left', 'peerId': id});
+        client.emit(room.id, {'type': 'peer-left', 'peerId': id});
       }
+      client.emit(room.id, {'type': 'peer-state', 'peer': {'peerId': 'p2', 'accountId': 'tivard', 'handle': 'tivard', 'displayName': 'TiVard', 'state': {'micOn': false, 'screenShare': null}}});
       await Future<void>.delayed(Duration.zero);
-      expect(container.read(astellSessionProvider)!.peers.map((p) => p.peerId), ['p2']);
-      expect(music.playing, isFalse);
-      client.emit('r-launch', {'type': 'peer-state', 'peer': {'peerId': 'p2', 'accountId': 'tivard', 'handle': 'tivard', 'displayName': 'TiVard', 'state': {'micOn': false, 'onHold': true}}});
-      await Future<void>.delayed(Duration.zero);
-      s = container.read(astellSessionProvider)!;
-      expect(s.peers.single.onHold, isTrue);
+      expect(music.playing, isFalse, reason: 'まだ 1 分経っていない');
+      session.debugSetLastChatAt(DateTime.now().subtract(const Duration(seconds: 61)));
       expect(music.playing, isTrue);
-      expect(music.starts, 1);
-      expect(s.notice, astellHoldNotice);
-      // 自分も保留にしたら止まる(お互い保留)。解除で鳴り直す。
-      await session.toggleHold();
+      expect(container.read(astellSessionProvider)!.notice, astellHoldIdleNotice);
+      // 自分が話し始める → 止まる。下ろす → 鳴る。
+      await session.toggleMic();
       expect(music.playing, isFalse);
-      await session.toggleHold();
+      await session.toggleMic();
       expect(music.playing, isTrue);
-      expect(music.starts, 2);
-      // 相手が戻った。
-      client.emit('r-launch', {'type': 'peer-state', 'peer': {'peerId': 'p2', 'accountId': 'tivard', 'handle': 'tivard', 'displayName': 'TiVard', 'state': {'micOn': true, 'onHold': false}}});
+      // 相手が話し始める → 止まる。
+      client.emit(room.id, {'type': 'peer-state', 'peer': {'peerId': 'p2', 'accountId': 'tivard', 'handle': 'tivard', 'displayName': 'TiVard', 'state': {'micOn': true}}});
       await Future<void>.delayed(Duration.zero);
-      s = container.read(astellSessionProvider)!;
       expect(music.playing, isFalse);
-      expect(s.notice, isNull);
-      // もう一度鳴らして、退出で止まる。
-      client.emit('r-launch', {'type': 'peer-state', 'peer': {'peerId': 'p2', 'accountId': 'tivard', 'handle': 'tivard', 'displayName': 'TiVard', 'state': {'micOn': false, 'onHold': true}}});
+      client.emit(room.id, {'type': 'peer-state', 'peer': {'peerId': 'p2', 'accountId': 'tivard', 'handle': 'tivard', 'displayName': 'TiVard', 'state': {'micOn': false}}});
       await Future<void>.delayed(Duration.zero);
       expect(music.playing, isTrue);
+      // チャットが流れる → 止まる(静かな時間を仕切り直す)。
+      client.emit(room.id, {'type': 'share', 'share': {'id': 'x1', 'accountId': 'tivard', 'handle': 'tivard', 'displayName': 'TiVard', 'kind': 'text', 'payload': {'text': 'いる?'}, 'createdAt': DateTime.now().toIso8601String()}});
+      await Future<void>.delayed(Duration.zero);
+      expect(music.playing, isFalse);
+      session.debugSetLastChatAt(DateTime.now().subtract(const Duration(seconds: 90)));
+      expect(music.playing, isTrue);
+      // スピーカーミュート中は鳴らさない。
+      session.toggleSpeaker();
+      expect(music.playing, isFalse);
+      session.toggleSpeaker();
+      expect(music.playing, isTrue);
+      // ルームの設定(オーナー)でオフ → 止まる。オンで鳴る。
+      client.emit(room.id, {'type': 'room', 'room': room.copyWith(holdMusic: false).toJson()});
+      await Future<void>.delayed(Duration.zero);
+      expect(music.playing, isFalse);
+      client.emit(room.id, {'type': 'room', 'room': room.toJson()});
+      await Future<void>.delayed(Duration.zero);
+      expect(music.playing, isTrue);
+      // 自分の端末の設定でオフ → 止まる。
+      await container.read(settingsAreaProvider(astellSettingsArea).notifier).set('holdMusic', false);
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(astellHoldMusicProvider), isFalse);
+      expect(music.playing, isFalse);
+      await container.read(settingsAreaProvider(astellSettingsArea).notifier).set('holdMusic', true);
+      await Future<void>.delayed(Duration.zero);
+      expect(music.playing, isTrue);
+      // 退出で止まる。
       await session.leave();
       expect(music.playing, isFalse);
-      expect(music.stops, 3);
     });
 
     test('入力中の下書き (D-311): 1 秒ごとに送る / 強い言葉の回は送らない / 送ったら取り消す / 相手の下書きを受ける', () async {
@@ -407,11 +422,15 @@ void main() {
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
     final overflow = find.byKey(astellOverflowKey);
-    expect(find.descendant(of: overflow, matching: find.byTooltip('保留')), findsOneWidget); // D-325
     expect(find.descendant(of: overflow, matching: find.byTooltip('画面共有')), findsOneWidget);
     expect(find.descendant(of: overflow, matching: find.byTooltip('全画面')), findsOneWidget);
-    expect(find.descendant(of: overflow, matching: find.byTooltip('プラグインアクション(未登録)')), findsOneWidget);
+    expect(find.descendant(of: overflow, matching: find.byTooltip('プラグインアクション(未登録)')), findsNothing); // D-328: 選ぶシートは廃止
     expect(find.text('下段のボタンの並びを編集'), findsOneWidget);
+    // 保留音の設定 (D-327): 自分の端末のスイッチ(ルームのスイッチはオーナーだけ)。シートの下の方(スクロールして見る)。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('astell.holdMusic.mine')), 200, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('astell.holdMusic.mine')), findsOneWidget);
+    expect(find.byKey(const ValueKey('astell.holdMusic.room')), findsNothing);
     container.read(overlayManagerProvider).close('astell.room.settings');
     await tester.pumpAndSettle();
     expect(find.byTooltip('設定'), findsOneWidget);
@@ -612,6 +631,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('CosyVoice2-0.5B'), findsOneWidget);
     expect(find.text('女性 1(日本語)'), findsOneWidget);
+    // 自動表示の段は上(保留音の段 D-327 のぶん遠くなったので、戻ってから)。
+    await tester.scrollUntilVisible(find.widgetWithText(RasqSwitchListTile, 'テキスト'), -80, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(RasqSwitchListTile, 'テキスト'));
     await tester.pumpAndSettle();
     expect(container.read(astellAutoShareProvider)['text'], isTrue);

@@ -53,8 +53,21 @@ const astellAudioBlockedNotice = 'ブラウザが音声の再生を止めてい�
 /// 満員で通話に入れなかったときの案内 (D-317)。
 const astellCallFullNotice = '通話は満員です($astellMeshCap 人まで)。声は届きません — ホストが配信していれば、配信で聞けます';
 
-/// 通話の相手が全員保留中で、保留音が鳴っているときの案内 (D-325)。
-const astellHoldNotice = '相手は保留中です。戻るまで保留音を鳴らしています';
+/// 保留音 (D-327) の案内: 開催予約の開始待ち / 全員が静か。
+const astellHoldWaitingNotice = '開催までお待ちください。保留音を鳴らしています';
+const astellHoldIdleNotice = '全員がマイクを下ろして静かなので、保留音を鳴らしています(話し始めるかチャットが流れると止まります)';
+
+/// これだけチャット(共有 / 文字起こし)が流れず、全員がマイクを下ろしていれば「静か」(D-327)。
+const astellHoldIdleAfter = Duration(minutes: 1);
+
+/// 保留音の見直しの間隔 (D-327): 開催時刻を過ぎた / 静かな時間が満ちた を拾う。null なら見直さない(テスト)。
+final astellHoldMusicTickProvider = Provider<Duration?>((ref) => const Duration(seconds: 15));
+
+/// 保留音を鳴らすか(自分の端末、D-327)。KV `holdMusic`、既定オン。ルーム側(オーナー)の `room.holdMusic` と AND。
+final astellHoldMusicProvider = Provider<bool>((ref) {
+  final area = ref.watch(settingsAreaProvider(astellSettingsArea)).value ?? const <String, Object?>{};
+  return (area['holdMusic'] as bool?) ?? true;
+});
 
 /// 自分の RASQ アカウント id (D-164): 参加中なら welcome の値、無ければクライアント
 /// (モックは 'me')か RASQ アカウントの id(`rasq:` 接頭辞を外す)。
@@ -142,7 +155,6 @@ class AstellSessionState {
     this.viewingPeerId,
     this.mutedPeerIds = const {},
     this.speakerMuted = false,
-    this.onHold = false,
     this.forceMuted = false,
     this.callFull = false,
     this.streamConnected = false,
@@ -180,9 +192,6 @@ class AstellSessionState {
 
   /// スピーカーミュート (D-148): 受け取る音声を全部止める(D-317)。
   final bool speakerMuted;
-
-  /// 保留 (D-325): マイクを下ろし、受ける声も止める。相手には `state.onHold` で伝わる。解除でマイクは保留前の状態に戻る。
-  final bool onHold;
 
   /// モデレーターに全員向けミュートされている (D-149)。マイクは立てられない。
   final bool forceMuted;
@@ -224,7 +233,6 @@ class AstellSessionState {
     bool clearViewing = false,
     Set<String>? mutedPeerIds,
     bool? speakerMuted,
-    bool? onHold,
     bool? forceMuted,
     bool? callFull,
     bool? streamConnected,
@@ -250,7 +258,6 @@ class AstellSessionState {
         viewingPeerId: clearViewing ? null : (viewingPeerId ?? this.viewingPeerId),
         mutedPeerIds: mutedPeerIds ?? this.mutedPeerIds,
         speakerMuted: speakerMuted ?? this.speakerMuted,
-        onHold: onHold ?? this.onHold,
         forceMuted: forceMuted ?? this.forceMuted,
         callFull: callFull ?? this.callFull,
         streamConnected: streamConnected ?? this.streamConnected,
@@ -287,12 +294,16 @@ class AstellSession extends Notifier<AstellSessionState?> {
   @override
   AstellSessionState? build() {
     ref.onDispose(() => _teardown());
+    // 端末の保留音の設定が変わったら見直す (D-327)。派生の Provider ではなく元の設定領域を聞く(誰も watch していなくても届く)。
+    ref.listen(settingsAreaProvider(astellSettingsArea), (_, _) => _syncHoldMusic());
     return null;
   }
 
   Future<void> join(AstellRoom room) async {
     await leave();
     state = AstellSessionState(room: room);
+    _lastChatAt = DateTime.now();
+    if (ref.read(astellHoldMusicTickProvider) case final tick?) _holdTick = Timer.periodic(tick, (_) => _syncHoldMusic());
     _media = ref.read(astellMediaFactoryProvider)();
     _streamGaveUp = false;
     astellAudioAwaitingGesture.addListener(_onAudioAwaitingGesture);
@@ -334,6 +345,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
         _autoPlay(state!.peers.where((p) => p.peerId != state!.myPeerId && p.screenShare != null).firstOrNull);
         _startCall();
         _syncWatching();
+        _syncHoldMusic(); // 開催予約の待ち (D-327) は接続した時点から
       case 'peer-joined':
         final p = m['peer'];
         if (p is Map) state = s.copyWith(peers: [...s.peers, AstellPeer.fromJson(p.cast<String, Object?>())]);
@@ -379,7 +391,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
           // 画面共有が**始まった**ら自動再生 (D-147)。
           if (peer.screenShare != null && before?.screenShare == null) _autoPlay(peer);
           _syncWatching();
-          _applyPlayback(); // 保留 (D-325): 相手が全員保留中なら保留音
+          _syncHoldMusic(); // 誰かが話し始めた / 静かになった (D-327)
         }
       case 'share-removed':
         state = s.copyWith(shares: [for (final x in s.shares) if (x.id != m['shareId']) x]);
@@ -388,11 +400,13 @@ class AstellSession extends Notifier<AstellSessionState?> {
         if (x is Map) {
           final t = AstellTranscript.fromJson(x.cast<String, Object?>());
           state = s.copyWith(transcripts: s.transcripts.any((e) => e.id == t.id) ? [for (final e in s.transcripts) e.id == t.id ? t : e] : [...s.transcripts, t]);
+          _chatFlowed();
         }
       case 'room':
         final x = m['room'];
         if (x is Map) state = s.copyWith(room: AstellRoom.fromJson(x.cast<String, Object?>()));
         _syncWatching();
+        _syncHoldMusic(); // 開催が始まった / 保留音の可否が変わった (D-327)
       case 'closed':
         state = s.copyWith(connected: false, streamConnected: false, clearStreaming: true, screenShareOn: false, error: m['reason'] == 'moderation' ? '運営によりルームが閉鎖されました' : 'ホストがルームを終了しました');
         unawaited(_stopMedia());
@@ -425,6 +439,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
             shares: s.shares.any((e) => e.id == sh.id) ? [for (final e in s.shares) e.id == sh.id ? sh : e] : [...s.shares, sh],
             clearNotice: sh.accountId == s.myAccountId, // 保留が明けた
           );
+          _chatFlowed();
         }
       case 'error':
         state = s.copyWith(error: m['message'] as String?);
@@ -487,7 +502,6 @@ class AstellSession extends Notifier<AstellSessionState?> {
       'state': {
         'micOn': s.micOn,
         'screenShare': s.screenShareOn ? const AstellScreenShare(title: '自分の画面').toJson() : null,
-        'onHold': s.onHold,
       },
     });
   }
@@ -518,6 +532,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
     _sendState();
     unawaited(_streamer?.setMic(on));
     if (on && now.callFull && now.streaming == null) state = state!.copyWith(notice: astellCallFullNotice);
+    _syncHoldMusic(); // 話し始めたら保留音は止まる (D-327)
   }
 
   // ── 通話 (D-317) ──
@@ -562,61 +577,77 @@ class AstellSession extends Notifier<AstellSessionState?> {
   void _applyPlayback() {
     final s = state;
     if (s == null) return;
-    _mesh?.setPlayback(speakerMuted: s.speakerMuted || s.onHold, mutedPeerIds: s.mutedPeerIds);
+    _mesh?.setPlayback(speakerMuted: s.speakerMuted, mutedPeerIds: s.mutedPeerIds);
     _streamer?.setAudioPolicy(_playsOnStream);
     _syncHoldMusic();
   }
 
   bool _playsOnStream(String identity) {
     final s = state;
-    if (s == null || s.speakerMuted || s.onHold || identity == s.myAccountId) return false;
+    if (s == null || s.speakerMuted || identity == s.myAccountId) return false;
     final peers = [for (final p in s.peers) if (p.accountId == identity) p];
     if (peers.any((p) => s.mutedPeerIds.contains(p.peerId))) return false;
     final linked = _mesh?.peerIds ?? const <String>{};
     return !peers.any((p) => linked.contains(p.peerId));
   }
 
-  // ── 保留 (D-325) ──
+  // ── 保留音 (D-325 → D-327) ──
 
-  /// 保留にする前のマイクの状態(解除で戻す)。
-  bool _micBeforeHold = false;
+  /// チャット(共有 / 文字起こし)が最後に流れた時刻(参加した時刻から)。静かな時間の起点。
+  DateTime _lastChatAt = DateTime.now();
 
-  /// 保留 / 解除。保留 = マイクを下ろし(通話も配信も声を送らない)、受ける声も止め、相手に `state.onHold` で伝える。
-  /// 解除 = 受ける声を戻し、保留前にマイクが立っていれば立て直す。
-  Future<void> toggleHold() async {
-    final s = state;
-    if (s == null) return;
-    if (s.onHold) {
-      state = s.copyWith(onHold: false);
-      _sendState();
-      _applyPlayback();
-      if (_micBeforeHold && !s.forceMuted && !(state?.micOn ?? true)) await toggleMic();
-      return;
-    }
-    _micBeforeHold = s.micOn;
-    if (s.micOn) {
-      _media?.setMicEnabled(false);
-      unawaited(_streamer?.setMic(false));
-    }
-    state = s.copyWith(onHold: true, micOn: false, clearError: true);
-    _sendState();
-    _applyPlayback();
+  /// 保留音の見直し(時間で変わる条件 = 開催時刻 / 静かな時間 を拾う)。
+  Timer? _holdTick;
+
+  /// テスト用: 最後にチャットが流れた時刻を差し替える。
+  @visibleForTesting
+  void debugSetLastChatAt(DateTime at) {
+    _lastChatAt = at;
+    _syncHoldMusic();
   }
 
-  /// 保留音 (D-325): 通話の相手が **全員** 保留中(自分は保留でもスピーカーミュートでもない)なら鳴らし、そうでなくなれば止める。
-  /// 1 対 1 なら電話の保留音と同じ向き(待たされている側に鳴る)。鳴っている間は案内を出す。
+  /// チャットが流れた(共有 / 文字起こし)。静かな時間を仕切り直す。
+  void _chatFlowed() {
+    _lastChatAt = DateTime.now();
+    _syncHoldMusic();
+  }
+
+  /// 全員が静かか (D-327): 自分もほかの参加者もマイクを下ろし、画面共有 / 配信も無く、チャットが [astellHoldIdleAfter] 以上流れていない。
+  bool _roomIdle(AstellSessionState s) {
+    if (s.micOn || s.screenShareOn || s.streaming != null || s.room.hostStream != null) return false;
+    if (s.peers.any((p) => p.peerId != s.myPeerId && (p.micOn || p.screenShare != null))) return false;
+    return DateTime.now().difference(_lastChatAt) >= astellHoldIdleAfter;
+  }
+
+  /// 保留音 (D-327): **開催予約の開始を待っている間**と、**全員が静かなとき**([_roomIdle])に手元で鳴らす。
+  /// 自分の端末の設定([astellHoldMusicProvider])とルームの設定(`room.holdMusic`、オーナー)の両方がオンで、
+  /// スピーカーミュートでないとき。鳴っている間は理由を案内に出し、止まれば消す。
   void _syncHoldMusic() {
     final s = state;
-    final music = ref.read(holdMusicProvider);
-    final others = s == null ? const <AstellPeer>[] : [for (final p in s.peers) if (p.peerId != s.myPeerId) p];
-    final play = s != null && s.connected && !s.onHold && !s.speakerMuted && others.isNotEmpty && others.every((p) => p.onHold);
-    if (play == music.playing) return;
-    unawaited(play ? music.start() : music.stop());
+    final HoldMusic music;
+    try {
+      music = ref.read(holdMusicProvider);
+    } catch (_) {
+      return; // ref はもう使えない(アプリごと破棄)
+    }
+    // 端末の設定は元の領域から読む(派生の Provider は設定の変化の直後にはまだ古い値のことがある)。
+    final area = ref.read(settingsAreaProvider(astellSettingsArea)).value ?? const <String, Object?>{};
+    final mine = (area['holdMusic'] as bool?) ?? true;
+    String? reason;
+    if (s != null && s.connected && !s.speakerMuted && s.room.holdMusic && mine) {
+      if (s.room.isScheduled) {
+        reason = astellHoldWaitingNotice;
+      } else if (_roomIdle(s)) {
+        reason = astellHoldIdleNotice;
+      }
+    }
+    final play = reason != null;
+    if (play != music.playing) unawaited(play ? music.start() : music.stop());
     final now = state;
     if (now == null) return;
     if (play) {
-      state = now.copyWith(notice: astellHoldNotice);
-    } else if (now.notice == astellHoldNotice) {
+      if (now.notice != reason) state = now.copyWith(notice: reason);
+    } else if (now.notice == astellHoldWaitingNotice || now.notice == astellHoldIdleNotice) {
       state = now.copyWith(clearNotice: true);
     }
   }
@@ -708,6 +739,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
         'hostStream': {'kind': kind == 'screen' ? 'screen' : 'video', 'title': s.room.title, 'startedAt': DateTime.now().toUtc().toIso8601String()},
       });
       if (state != null) state = state!.copyWith(room: room, streaming: kind, clearError: true);
+      _syncHoldMusic();
     } catch (e) {
       await _streamer?.unpublish();
       if (state != null) state = state!.copyWith(error: '配信を始められません: ${astellStreamErrorText(e)}');
@@ -720,6 +752,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
     if (s == null) return;
     await _streamer?.unpublish();
     if (state != null) state = state!.copyWith(clearStreaming: true);
+    _syncHoldMusic();
     try {
       final room = await ref.read(astellClientProvider).updateRoom(s.room.id, {'hostStream': null});
       if (state != null) state = state!.copyWith(room: room);
@@ -830,6 +863,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
       if (s.streaming == 'screen') await _streamer?.unpublish();
       if (state == null) return;
       state = state!.copyWith(screenShareOn: false, clearStreaming: s.streaming == 'screen');
+      _syncHoldMusic();
       _sendState();
       _syncWatching();
       return;
@@ -847,6 +881,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
     }
     if (state == null) return;
     state = state!.copyWith(screenShareOn: true, streaming: 'screen', clearError: true);
+    _syncHoldMusic();
     _sendState();
   }
 
@@ -886,6 +921,8 @@ class AstellSession extends Notifier<AstellSessionState?> {
   /// 引きずられないため。購読は先に外すので、以後のメッセージは無視される。
   Future<void> _teardown() async {
     astellAudioAwaitingGesture.removeListener(_onAudioAwaitingGesture);
+    _holdTick?.cancel();
+    _holdTick = null;
     _draftTimer?.cancel();
     _draftTimer = null;
     _draftText = '';
@@ -897,7 +934,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
     unawaited(sub?.cancel());
     unawaited(conn?.close().catchError((Object e) => debugPrint('astell: close: $e')));
     unawaited(_stopMedia().catchError((Object e) => debugPrint('astell: media: $e')));
-    // 保留音 (D-325) は退出で止める(コンテナごと破棄されている途中なら何もしない)。
+    // 保留音 (D-327) は退出で止める(コンテナごと破棄されている途中なら何もしない)。
     try {
       unawaited(ref.read(holdMusicProvider).stop());
     } catch (_) {
