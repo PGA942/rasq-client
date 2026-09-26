@@ -355,7 +355,7 @@ class AstellScreenShare {
 
 @immutable
 class AstellPeer {
-  const AstellPeer({required this.peerId, required this.accountId, required this.handle, required this.displayName, this.avatarUrl, this.micOn = false, this.speaking = false, this.screenShare, this.mutedByMod = false});
+  const AstellPeer({required this.peerId, required this.accountId, required this.handle, required this.displayName, this.avatarUrl, this.micOn = false, this.speaking = false, this.screenShare, this.mutedByMod = false, this.onHold = false});
   final String peerId;
   final String accountId;
   final String handle;
@@ -374,6 +374,9 @@ class AstellPeer {
   /// モデレーターに全員向けミュートされている (D-149、`state.mutedByMod`)。
   final bool mutedByMod;
 
+  /// 保留中 (D-325、`state.onHold`): マイクを下ろし、声も受けていない。通話の相手が全員保留中なら手元で保留音が鳴る。
+  final bool onHold;
+
   UserSummary get user => _rasqUser(id: accountId, handle: handle, displayName: displayName, avatarUrl: avatarUrl, presence: UserPresence.inVc);
 
   factory AstellPeer.fromJson(Map<String, Object?> j) {
@@ -387,10 +390,11 @@ class AstellPeer {
       micOn: j['micOn'] == true || st['micOn'] == true,
       screenShare: st['screenShare'] is Map ? AstellScreenShare.fromJson((st['screenShare'] as Map).cast<String, Object?>()) : null,
       mutedByMod: st['mutedByMod'] == true,
+      onHold: st['onHold'] == true,
     );
   }
 
-  AstellPeer copyWith({bool? micOn, bool? speaking, AstellScreenShare? screenShare, bool clearScreenShare = false, bool? mutedByMod}) => AstellPeer(
+  AstellPeer copyWith({bool? micOn, bool? speaking, AstellScreenShare? screenShare, bool clearScreenShare = false, bool? mutedByMod, bool? onHold}) => AstellPeer(
         peerId: peerId,
         accountId: accountId,
         handle: handle,
@@ -400,6 +404,7 @@ class AstellPeer {
         speaking: speaking ?? this.speaking,
         screenShare: clearScreenShare ? null : (screenShare ?? this.screenShare),
         mutedByMod: mutedByMod ?? this.mutedByMod,
+        onHold: onHold ?? this.onHold,
       );
 }
 

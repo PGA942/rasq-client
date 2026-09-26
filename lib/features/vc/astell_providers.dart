@@ -18,6 +18,7 @@ import 'astell_models.dart';
 import 'astell_stream.dart';
 import 'astell_stream_livekit.dart';
 import 'astell_web_audio.dart' show astellAudioAwaitingGesture, astellPrimeAudioOnGesture;
+import 'hold_music.dart';
 
 /// AsTell クライアント (D-139)。Central に繋がっていれば HTTP、無ければモック。
 final astellClientProvider = Provider<AstellClient>((ref) {
@@ -51,6 +52,9 @@ const astellAudioBlockedNotice = 'ブラウザが音声の再生を止めてい�
 
 /// 満員で通話に入れなかったときの案内 (D-317)。
 const astellCallFullNotice = '通話は満員です($astellMeshCap 人まで)。声は届きません — ホストが配信していれば、配信で聞けます';
+
+/// 通話の相手が全員保留中で、保留音が鳴っているときの案内 (D-325)。
+const astellHoldNotice = '相手は保留中です。戻るまで保留音を鳴らしています';
 
 /// 自分の RASQ アカウント id (D-164): 参加中なら welcome の値、無ければクライアント
 /// (モックは 'me')か RASQ アカウントの id(`rasq:` 接頭辞を外す)。
@@ -138,6 +142,7 @@ class AstellSessionState {
     this.viewingPeerId,
     this.mutedPeerIds = const {},
     this.speakerMuted = false,
+    this.onHold = false,
     this.forceMuted = false,
     this.callFull = false,
     this.streamConnected = false,
@@ -175,6 +180,9 @@ class AstellSessionState {
 
   /// スピーカーミュート (D-148): 受け取る音声を全部止める(D-317)。
   final bool speakerMuted;
+
+  /// 保留 (D-325): マイクを下ろし、受ける声も止める。相手には `state.onHold` で伝わる。解除でマイクは保留前の状態に戻る。
+  final bool onHold;
 
   /// モデレーターに全員向けミュートされている (D-149)。マイクは立てられない。
   final bool forceMuted;
@@ -216,6 +224,7 @@ class AstellSessionState {
     bool clearViewing = false,
     Set<String>? mutedPeerIds,
     bool? speakerMuted,
+    bool? onHold,
     bool? forceMuted,
     bool? callFull,
     bool? streamConnected,
@@ -241,6 +250,7 @@ class AstellSessionState {
         viewingPeerId: clearViewing ? null : (viewingPeerId ?? this.viewingPeerId),
         mutedPeerIds: mutedPeerIds ?? this.mutedPeerIds,
         speakerMuted: speakerMuted ?? this.speakerMuted,
+        onHold: onHold ?? this.onHold,
         forceMuted: forceMuted ?? this.forceMuted,
         callFull: callFull ?? this.callFull,
         streamConnected: streamConnected ?? this.streamConnected,
@@ -369,6 +379,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
           // 画面共有が**始まった**ら自動再生 (D-147)。
           if (peer.screenShare != null && before?.screenShare == null) _autoPlay(peer);
           _syncWatching();
+          _applyPlayback(); // 保留 (D-325): 相手が全員保留中なら保留音
         }
       case 'share-removed':
         state = s.copyWith(shares: [for (final x in s.shares) if (x.id != m['shareId']) x]);
@@ -476,6 +487,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
       'state': {
         'micOn': s.micOn,
         'screenShare': s.screenShareOn ? const AstellScreenShare(title: '自分の画面').toJson() : null,
+        'onHold': s.onHold,
       },
     });
   }
@@ -545,22 +557,68 @@ class AstellSession extends Notifier<AstellSessionState?> {
     _applyPlayback();
   }
 
-  /// 鳴らす声: 通話はスピーカーミュート / 手元のミュートで止める。配信(LiveKit)の声は、通話で繋がっている人
+  /// 鳴らす声: 通話はスピーカーミュート / 保留 / 手元のミュートで止める。配信(LiveKit)の声は、通話で繋がっている人
   /// なら鳴らさない(二重にしない)— 満員で通話に入れなかった人は、ホストの声を配信で聞く。
   void _applyPlayback() {
     final s = state;
     if (s == null) return;
-    _mesh?.setPlayback(speakerMuted: s.speakerMuted, mutedPeerIds: s.mutedPeerIds);
+    _mesh?.setPlayback(speakerMuted: s.speakerMuted || s.onHold, mutedPeerIds: s.mutedPeerIds);
     _streamer?.setAudioPolicy(_playsOnStream);
+    _syncHoldMusic();
   }
 
   bool _playsOnStream(String identity) {
     final s = state;
-    if (s == null || s.speakerMuted || identity == s.myAccountId) return false;
+    if (s == null || s.speakerMuted || s.onHold || identity == s.myAccountId) return false;
     final peers = [for (final p in s.peers) if (p.accountId == identity) p];
     if (peers.any((p) => s.mutedPeerIds.contains(p.peerId))) return false;
     final linked = _mesh?.peerIds ?? const <String>{};
     return !peers.any((p) => linked.contains(p.peerId));
+  }
+
+  // ── 保留 (D-325) ──
+
+  /// 保留にする前のマイクの状態(解除で戻す)。
+  bool _micBeforeHold = false;
+
+  /// 保留 / 解除。保留 = マイクを下ろし(通話も配信も声を送らない)、受ける声も止め、相手に `state.onHold` で伝える。
+  /// 解除 = 受ける声を戻し、保留前にマイクが立っていれば立て直す。
+  Future<void> toggleHold() async {
+    final s = state;
+    if (s == null) return;
+    if (s.onHold) {
+      state = s.copyWith(onHold: false);
+      _sendState();
+      _applyPlayback();
+      if (_micBeforeHold && !s.forceMuted && !(state?.micOn ?? true)) await toggleMic();
+      return;
+    }
+    _micBeforeHold = s.micOn;
+    if (s.micOn) {
+      _media?.setMicEnabled(false);
+      unawaited(_streamer?.setMic(false));
+    }
+    state = s.copyWith(onHold: true, micOn: false, clearError: true);
+    _sendState();
+    _applyPlayback();
+  }
+
+  /// 保留音 (D-325): 通話の相手が **全員** 保留中(自分は保留でもスピーカーミュートでもない)なら鳴らし、そうでなくなれば止める。
+  /// 1 対 1 なら電話の保留音と同じ向き(待たされている側に鳴る)。鳴っている間は案内を出す。
+  void _syncHoldMusic() {
+    final s = state;
+    final music = ref.read(holdMusicProvider);
+    final others = s == null ? const <AstellPeer>[] : [for (final p in s.peers) if (p.peerId != s.myPeerId) p];
+    final play = s != null && s.connected && !s.onHold && !s.speakerMuted && others.isNotEmpty && others.every((p) => p.onHold);
+    if (play == music.playing) return;
+    unawaited(play ? music.start() : music.stop());
+    final now = state;
+    if (now == null) return;
+    if (play) {
+      state = now.copyWith(notice: astellHoldNotice);
+    } else if (now.notice == astellHoldNotice) {
+      state = now.copyWith(clearNotice: true);
+    }
   }
 
   /// Web の自動再生の制限 (D-323): 止められている間は「触ると鳴ります」を出し、鳴ったら消す。
@@ -839,6 +897,12 @@ class AstellSession extends Notifier<AstellSessionState?> {
     unawaited(sub?.cancel());
     unawaited(conn?.close().catchError((Object e) => debugPrint('astell: close: $e')));
     unawaited(_stopMedia().catchError((Object e) => debugPrint('astell: media: $e')));
+    // 保留音 (D-325) は退出で止める(コンテナごと破棄されている途中なら何もしない)。
+    try {
+      unawaited(ref.read(holdMusicProvider).stop());
+    } catch (_) {
+      // ref はもう使えない(アプリごと破棄)。
+    }
   }
 }
 

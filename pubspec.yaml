@@ -89,6 +89,7 @@ dependencies:
   flutter_background: ^1.3.1
   # AsTell の WS を Web 版でも(dart:io の WebSocket はブラウザで動かない、D-317)。
   web_socket_channel: ^3.0.3
+  audioplayers: ^6.8.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -103,6 +104,7 @@ flutter:
     - assets/web/zstd.wasm
     # RAi のアイコン (D-180: obsidian-vault/RAi 動作リファレンス/アイコン案1.jpeg、外側の黒を透明に)。
     - assets/images/rai_icon.png
+    - assets/audio/hold_music.wav
     # RAi の 3D モデル (D-181: Google Drive で受領した glb。リグ arm_1..4 L/R / ear / head / cone / koma、
     # アニメ idle / run_* / accident。描画は後段 — 今はアセットとして保持)。
     - assets/models/rai.glb

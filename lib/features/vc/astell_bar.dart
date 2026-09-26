@@ -21,6 +21,9 @@ const astellBarConfigKey = 'astell:room';
 abstract final class AstellBarIds {
   static const speaker = 'astell.speaker';
   static const mic = 'astell.mic';
+
+  /// 保留 (D-325): マイクを下ろして声も受けない。相手が全員保留中なら手元で保留音。
+  static const hold = 'astell.hold';
   static const screen = 'astell.screen';
 
   /// 共有枠にピアの画面があるときだけ出る。
@@ -31,11 +34,12 @@ abstract final class AstellBarIds {
   static const captions = 'astell.captions';
 }
 
-/// 既定の並び = これまでの下段の並び(スピーカー / マイク / 画面共有 / 全画面 / プラグイン / 字幕)。
+/// 既定の並び = これまでの下段の並び(スピーカー / マイク / 保留 / 画面共有 / 全画面 / プラグイン / 字幕)。
 /// アイコン名は編集画面のタイルと (+) の検索に出るもの(下段では状態に応じたアイコンを出す)。
 const astellBarBuiltinActions = <ActionDescriptor>[
   ActionDescriptor(id: AstellBarIds.speaker, genreTag: 'Speaker', label: 'スピーカー', icon: 'volume_up', doneIcon: 'volume_up', countSource: CountSource.none),
   ActionDescriptor(id: AstellBarIds.mic, genreTag: 'Mic', label: 'マイク', icon: 'mic', doneIcon: 'mic', countSource: CountSource.none),
+  ActionDescriptor(id: AstellBarIds.hold, genreTag: 'Hold', label: '保留', icon: 'phone_paused', doneIcon: 'phone_paused', countSource: CountSource.none),
   ActionDescriptor(id: AstellBarIds.screen, genreTag: 'Screen', label: '画面共有', icon: 'desktop_windows', doneIcon: 'desktop_windows', countSource: CountSource.none),
   ActionDescriptor(id: AstellBarIds.fullscreen, genreTag: 'Fullscreen', label: '全画面(共有枠に画面があるとき)', icon: 'fullscreen', doneIcon: 'fullscreen', countSource: CountSource.none),
   ActionDescriptor(id: AstellBarIds.plugins, genreTag: 'PluginPicker', label: 'プラグインアクション', icon: 'extension', doneIcon: 'extension', countSource: CountSource.none),
