@@ -8,7 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/rasq_account_page_api.dart';
-import '../../session/sns_share.dart' show snsShareWaitingProvider;
+import '../../session/sns_share.dart' show snsShareProvider, snsShareWaitingProvider;
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../rai/rai_overlay.dart';
 import '../rai/rai_providers.dart';
@@ -24,7 +24,11 @@ class LoginScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final hasSessions = ref.watch(sessionsProvider).value?.isLoggedIn ?? false;
-
+    // SNS のアクセストークンの端末間共有 (D-322): 元の端末の承認を待っていて、共有されたログインを取り込んだら TL へ
+    // (この画面がいちばん上のときだけ。個別の SNS のログイン画面を開いている途中では動かさない)。
+    ref.listen(snsShareProvider.select((v) => v.joins), (prev, next) {
+      if (next > (prev ?? 0) && context.mounted && (ModalRoute.of(context)?.isCurrent ?? true)) context.go(Routes.home);
+    });
 
     return Scaffold(
       appBar: AppBar(

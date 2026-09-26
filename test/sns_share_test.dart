@@ -1,13 +1,19 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/material.dart' show Size, ValueKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
+import 'package:rasq_client/notify/central_inbox.dart';
 import 'package:rasq_client/session/central_vault_storage.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/session/sns_share.dart';
@@ -154,12 +160,28 @@ void main() {
         if (path == '/me') return json({'id': 'acc-a', 'handle': 'alice', 'displayName': 'アリス'});
         if (path == '/me/sns-accounts' && req.method == 'GET') return json([{'accountKey': snsA.key}]);
         if (path == '/me/sns-share') return status();
+        // 受信箱と、開いている間の即時の知らせ(長いポーリング。D-322)。
+        if (path == '/me/notifications' && req.method == 'GET') return json(share.notices.reversed.toList());
+        if (path == '/me/notifications/wait') {
+          final since = DateTime.parse(req.url.queryParameters['since']!);
+          List<Map<String, Object?>> newer() => [for (final n in share.notices.reversed) if (DateTime.parse(n['createdAt'] as String).isAfter(since)) n];
+          if (newer().isEmpty) {
+            share.waiting++;
+            await Future.any([share.wake.future, Future<void>.delayed(const Duration(seconds: 2))]);
+            share.waiting--;
+          }
+          return json(newer());
+        }
         if (path == '/me/sns-share/device') {
           final b = body();
           final pub = b['publicKey'] as String;
           final d = share.devices[me];
           final same = d != null && d['publicKey'] == pub;
           final request = b['request'] as bool?;
+          // 新しく求めた: 答えられる端末がいれば、同じアカウントへ知らせる(rasq-central の `should_notify_request` と同じ)。
+          final newly = request == true && (!same || d['requested'] != true);
+          final otherHolders = share.devices.entries.where((e) => e.key != me && e.value['wrapped'] != null).length;
+          if (newly && (share.mode == 'off' || (share.mode == 'on' && otherHolders > 0))) share.notify(me, labels[me]);
           share.devices[me] = {
             'publicKey': pub,
             'requested': request ?? (same && d['requested'] == true),
@@ -228,9 +250,7 @@ void main() {
       return (client: client, share: share);
     }
 
-    /// 1 台の端末。[token] があれば、その Central のアカウントにログイン済み(台帳にも載せる)。
-    ({ProviderContainer c, List<SnsShareQuestion> asked, List<bool?> answers, MemorySessionStorage storage}) device(MockClient mock, {String? token, List<AccountSession> sessions = const []}) {
-      final storage = MemorySessionStorage({
+    MemorySessionStorage storageFor({String? token, List<AccountSession> sessions = const []}) => MemorySessionStorage({
         if (token != null) OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'local-$token', 'tokens': {'acc-a': token}, 'currentAccountId': 'acc-a'}),
         if (token != null)
           'rasq.accounts.v1': jsonEncode({
@@ -242,23 +262,41 @@ void main() {
           }),
         if (sessions.isNotEmpty) SessionsNotifier.storageKey: jsonEncode({'sessions': [for (final s in sessions) s.toJson()], 'current': sessions.first.account.key}),
       });
-      final asked = <SnsShareQuestion>[];
-      final answers = <bool?>[];
-      final c = ProviderContainer(overrides: [
+
+    List<Override> overridesFor(MockClient mock, MemorySessionStorage storage, List<SnsShareQuestion> asked, List<bool?> answers, {bool live = false, Duration whileWaiting = Duration.zero}) => [
         sessionStorageProvider.overrideWithValue(storage),
         pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: (_) => const []))),
         orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
         centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
         orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
         snsSharePollIntervalProvider.overrideWithValue(Duration.zero),
+        snsSharePollWhileWaitingProvider.overrideWithValue((every: whileWaiting, limit: const Duration(minutes: 1))),
+        centralInboxLiveProvider.overrideWithValue((enabled: live, retry: const Duration(milliseconds: 50))),
         snsShareAskProvider.overrideWithValue((q) async {
           asked.add(q);
           return answers.isEmpty ? null : answers.removeAt(0);
         }),
-      ]);
+      ];
+
+    /// 1 台の端末。[token] があれば、その Central のアカウントにログイン済み(台帳にも載せる)。[live] = 受信箱と即時の知らせを回す。
+    /// [whileWaiting] = 承認を待っている間の見回りの間隔(0 = 回さない)。
+    ({ProviderContainer c, List<SnsShareQuestion> asked, List<bool?> answers, MemorySessionStorage storage}) device(MockClient mock,
+        {String? token, List<AccountSession> sessions = const [], bool live = false, Duration whileWaiting = Duration.zero}) {
+      final storage = storageFor(token: token, sessions: sessions);
+      final asked = <SnsShareQuestion>[];
+      final answers = <bool?>[];
+      final c = ProviderContainer(overrides: overridesFor(mock, storage, asked, answers, live: live, whileWaiting: whileWaiting));
       addTearDown(c.dispose);
       c.listen(snsShareProvider, (_, _) {});
+      if (live) c.listen(centralInboxProvider, (_, _) {});
       return (c: c, asked: asked, answers: answers, storage: storage);
+    }
+
+    Future<void> until(bool Function() done, {String? reason}) async {
+      for (var i = 0; i < 300 && !done(); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      expect(done(), isTrue, reason: reason);
     }
 
     test('新しい端末でログイン → 元の端末に「共有して一斉ログインしますか?」→ はい → 新しい端末が SNS に一斉ログイン。ログアウトも伝わる', () async {
@@ -400,6 +438,96 @@ void main() {
       expect(neu.asked, isEmpty, reason: '共有していない端末には、承認の問いを出さない');
       expect(central.share.devices['dev-third']!['wrapped'], isNull);
     });
+
+    test('D-322: 新しい端末が求めると、元の端末へ知らせが届き、45 秒の見回りを待たずに問いが出る。はい → 新しい端末は数秒おきの見回りで取り込む', () async {
+      final central = fakeCentral();
+      // 元の端末: 受信箱と即時の知らせ(長いポーリング)を回す。45 秒の見回りは止めてある(知らせだけで問いが出ることを見る)。
+      final old = device(central.client, token: 'tok-old', sessions: [session(snsA)], live: true);
+      await old.c.read(sessionsProvider.future);
+      await settle(old.c);
+      await until(() => central.share.waiting > 0, reason: '元の端末が、知らせを待っている');
+      expect(old.asked, isEmpty);
+      old.answers.add(true);
+
+      // 新しい端末: RASQ アカウントにログインして共有を求める。承認を待つ間は短い間隔で見回る。
+      final neu = device(central.client, token: 'tok-new', whileWaiting: const Duration(milliseconds: 20));
+      await SnsShareStore(neu.storage).markRequest('acc-a');
+      await neu.c.read(snsShareProvider.notifier).check();
+      expect(neu.c.read(snsShareWaitingProvider), isTrue);
+      expect(central.share.notices, hasLength(1));
+      final notice = central.share.notices.single;
+      expect(notice['kind'], snsShareRequestKind);
+      expect(notice['body'], '新しい端末(tablet)が SNS アカウントの共有を求めています');
+      expect(notice['payload'], {'deviceId': 'dev-new', 'label': 'tablet'}, reason: '知らせにトークンや鍵は入れない');
+
+      // 元の端末: 知らせ → すぐに見回って問い → はい。
+      await until(() => old.asked.isNotEmpty, reason: '知らせを受けたら、すぐに承認の問い');
+      expect(old.asked.single.first, isTrue);
+      expect(old.asked.single.devices.single.name, 'tablet');
+      await until(() => central.share.devices['dev-new']!['wrapped'] != null);
+
+      // 新しい端末: 手で見回らなくても、承認を待つ間の見回りで取り込む → 待っていた端末が取り込んだ合図 (joins)。
+      await until(() => neu.c.read(sessionsProvider).value?.sessions.isNotEmpty ?? false, reason: '承認されたら、すぐ取り込む');
+      expect(neu.c.read(sessionsProvider).value!.sessions.single.token, 't-alice_sns');
+      await until(() => neu.c.read(snsShareProvider).joins == 1);
+      expect(neu.c.read(snsShareWaitingProvider), isFalse);
+
+      // 同じ端末が求め続けているだけでは、知らせを重ねない。K を作る端末が自分を求めた形にするときも知らせない。
+      expect(central.share.notices, hasLength(1));
+    });
+
+    test('D-322: 答えずに閉じた問いも、新しい知らせが来れば出し直す', () async {
+      final central = fakeCentral();
+      final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+      old.c.listen(centralInboxProvider, (_, _) {});
+      await settle(old.c);
+      await old.c.read(centralInboxProvider.notifier).poll(); // 受信箱の印を付ける(まだ何も無い)
+      final neu = device(central.client, token: 'tok-new');
+      await SnsShareStore(neu.storage).markRequest('acc-a');
+      await settle(neu.c);
+      await settle(old.c); // 答えずに閉じた(null)
+      expect(old.asked, hasLength(1));
+      await settle(old.c);
+      expect(old.asked, hasLength(1), reason: '見回りのたびには出し直さない');
+      // 受信箱の知らせ(アプリへ戻ったとき / 即時の知らせ / プッシュを開いたときの読み)→ 受け手 → 出し直す。
+      old.answers.add(true);
+      await old.c.read(centralInboxProvider.notifier).poll();
+      await settle(old.c);
+      expect(old.asked, hasLength(2));
+      expect(central.share.devices['dev-new']!['wrapped'], isNotNull);
+    });
+
+    testWidgets('D-322: SNS のログイン画面で承認を待っていて、取り込みが済んだら TL へ移る', (tester) async {
+      final central = fakeCentral();
+      final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+      await old.c.read(sessionsProvider.future);
+      await settle(old.c);
+
+      // 縦長の画面(ログイン画面に、バンドルの SNS アカウントと承認待ちの案内が並ぶ)。
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      // 新しい端末: RASQ アカウントに入っていて SNS はまだ → SNS のログイン画面。共有を求めて承認を待つ。
+      final storage = storageFor(token: 'tok-new');
+      await SnsShareStore(storage).markRequest('acc-a');
+      await tester.pumpWidget(ProviderScope(overrides: overridesFor(central.client, storage, [], []), child: const RasqApp()));
+      final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+      await tester.pumpAndSettle();
+      await settle(c);
+      await tester.pumpAndSettle();
+      expect(find.text('SNSにログイン'), findsOneWidget);
+      expect(find.byKey(const ValueKey('login.shareWaiting')), findsOneWidget);
+
+      // 元の端末で承認 → 新しい端末の見回りで取り込む → TL へ。
+      old.answers.add(true);
+      await settle(old.c);
+      await settle(c);
+      await tester.pumpAndSettle();
+      expect(c.read(sessionsProvider).value!.sessions.map((s) => s.account), [snsA]);
+      expect(c.read(snsShareProvider).joins, 1);
+      expect(c.read(routerProvider).routerDelegate.currentConfiguration.uri.toString(), startsWith(Routes.home));
+      expect(find.text('SNSにログイン'), findsNothing);
+    });
   });
 }
 
@@ -410,6 +538,28 @@ class _Share {
   Uint8List? body;
   int version = 0;
   int writes = 0;
+
+  /// 受信箱(古い順)と、即時の知らせを待っている数 / 起こす口。
+  final notices = <Map<String, Object?>>[];
+  int waiting = 0;
+  Completer<void> wake = Completer<void>();
+
+  void notify(String deviceId, String? label) {
+    notices.add({
+      'id': 'n${notices.length + 1}',
+      'kind': 'sns_share.request',
+      'title': 'SNS アカウントの共有の求め',
+      'body': '新しい端末(${label ?? ''})が SNS アカウントの共有を求めています',
+      'payload': {'deviceId': deviceId, 'label': label},
+      'status': 'dummy',
+      'devices': 0,
+      'createdAt': DateTime.utc(2026, 9, 25, 12).add(Duration(seconds: notices.length + 1)).toIso8601String(),
+      'deliveredAt': null,
+    });
+    final w = wake;
+    wake = Completer<void>();
+    w.complete();
+  }
 
   int get holders => devices.values.where((d) => d['wrapped'] != null).length;
 
