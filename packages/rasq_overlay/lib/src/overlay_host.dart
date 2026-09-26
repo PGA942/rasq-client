@@ -500,7 +500,13 @@ class _FowColumn extends StatelessWidget {
                       child: buildContent(e),
                     );
                     final theme = s.theme;
-                    return theme == null ? panel : Theme(data: theme(ctx), child: panel);
+                    // 着せ替え (D-337): FOW の面の上の文字色(ハンドル / 見出しも含めて)。FOW 自身のテーマの上に重ねる。
+                    final panelTheme = FowPanelSkin.of(ctx)?.theme;
+                    if (theme == null && panelTheme == null) return panel;
+                    return Builder(builder: (bctx) {
+                      final base = theme?.call(bctx) ?? Theme.of(bctx);
+                      return Theme(data: panelTheme?.call(bctx, base) ?? base, child: panel);
+                    });
                   }),
                 ),
               ),

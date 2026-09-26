@@ -336,7 +336,18 @@ void checkThemeManifest(Map<String, Object?> manifest) {
     for (final e in surfaces.entries) {
       if (!const {'app', 'postTile', 'fow', 'actionButton'}.contains(e.key)) throw RasqPackageException('theme.surfaces の ${e.key} は使えません(app / postTile / fow / actionButton)');
       for (final l in ((e.value as Map?)?['layers'] as List? ?? const [])) {
-        need(l is Map ? l['asset'] : null, 'surfaces.${e.key}.layers');
+        // レイヤーは画像(asset)かグラデーション(gradient、v0.17)のどちらか 1 つ。
+        final hasAsset = l is Map && l['asset'] != null;
+        final hasGradient = l is Map && l['gradient'] != null;
+        if (hasAsset == hasGradient) throw RasqPackageException('theme.surfaces.${e.key}.layers: asset か gradient のどちらか 1 つを書いてください');
+        if (hasAsset) need(l['asset'], 'surfaces.${e.key}.layers');
+        if (hasGradient) {
+          final g = l['gradient'];
+          final colors = g is Map ? g['colors'] : null;
+          final stops = g is Map ? g['stops'] : null;
+          if (colors is! List || colors.length < 2 || colors.length > 8) throw RasqPackageException('theme.surfaces.${e.key}.layers: gradient.colors は 2〜8 色です');
+          if (stops is List && stops.length != colors.length) throw RasqPackageException('theme.surfaces.${e.key}.layers: gradient.stops は colors と同じ数です');
+        }
       }
     }
   }

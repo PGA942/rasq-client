@@ -98,12 +98,33 @@ void main() {
       final count = tester.getRect(find.text('+2k'));
       final live = tester.getRect(find.text('LIVE'));
       // アイコンは左端、人数はその右、LIVE はワイヤー(アイコン中心から右)の中央下。
-      expect(avatar.left, closeTo(bundle.left, 3)); // 円形縁取り(size*0.06)の内側
+      expect(avatar.left, closeTo(bundle.left, 5)); // ワイヤーの内側(D-336: 1.5px)+ 円形縁取り(size*0.06)の内側
       expect(count.left, greaterThan(avatar.right - 1));
       expect(count.center.dy, closeTo(avatar.center.dy, 1));
       expect(live.center.dy, greaterThan(count.bottom));
       // LIVE はアイコンを除いた右側(アイコン中心〜右端)の中央。
       expect(live.center.dx, closeTo((bundle.left + 20 + bundle.right) / 2, 4));
+    });
+
+    testWidgets('D-336: 縁取りは黄色、ワイヤーは 3px 大きく。1 人 / 2 人はアイコンをワイヤーの太さいっぱいに、それより多いと内側', (tester) async {
+      const user = UserSummary(id: 'u', account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: 'h'), displayName: 'ダグラス');
+      Future<(Rect, Rect, BoxDecoration)> pump(int count) async {
+        await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: RasqAvatarBundle(key: ValueKey(count), user: user, count: count, size: 30)))));
+        final ring = tester.widget<Container>(find.byKey(const ValueKey('avatarBundle.avatar'))).decoration as BoxDecoration;
+        return (tester.getRect(find.byType(RasqAvatarBundle)), tester.getRect(find.byKey(const ValueKey('avatarBundle.avatar'))), ring);
+      }
+
+      for (final n in [1, 2]) {
+        final (bundle, avatar, ring) = await pump(n);
+        expect(bundle.height, 33, reason: '3px 大きいワイヤー');
+        expect(avatar.height, 33, reason: '$n 人: ワイヤーの太さいっぱい');
+        expect((ring.border as Border).top.color, RasqColors.yellow);
+      }
+      final (bundle, avatar, ring) = await pump(5);
+      expect(bundle.height, 33);
+      expect(avatar.height, 30, reason: '3 人以上はワイヤーの内側');
+      expect(avatar.top - bundle.top, 1.5);
+      expect((ring.border as Border).top.color, RasqColors.yellow);
     });
   });
 
@@ -1138,9 +1159,32 @@ void main() {
     expect(find.descendant(of: wideCard, matching: find.byTooltip('共有の操作')), findsOneWidget);
     expect(find.descendant(of: wideCard, matching: find.byIcon(Icons.play_circle_fill)), findsNothing);
     expect(find.descendant(of: clipCard, matching: find.byIcon(Icons.play_circle_fill)), findsOneWidget);
-    // テキスト = 投稿インラインビュー(発言者 + 本文)。
+    // テキスト = 投稿インラインビュー(発言者 + 本文)。ユーザー ID は出さず、サーバー(チャットは RASQ)。「…」は右端 (D-336)。
     expect(find.descendant(of: textCard, matching: find.textContaining('カードで読めるテキスト')), findsOneWidget);
-    expect(find.descendant(of: textCard, matching: find.text('テキスト')), findsOneWidget);
+    expect(find.descendant(of: textCard, matching: find.text('RASQ')), findsOneWidget);
+    expect(find.descendant(of: textCard, matching: find.textContaining('@')), findsNothing);
+    final textMore = tester.getRect(find.descendant(of: textCard, matching: find.byTooltip('共有の操作')));
+    expect(tester.getRect(textCard).right - textMore.right, lessThan(4));
+    // 表示タイルの「…」は左上の種類のアイコンと同じ大きさ・高さ (D-336)。
+    final tileIcon = tester.getRect(find.descendant(of: wideCard, matching: find.byIcon(Icons.image_outlined)));
+    final tileMore = tester.getRect(find.descendant(of: wideCard, matching: find.byIcon(Icons.more_horiz)));
+    expect(tileMore.center.dy, closeTo(tileIcon.center.dy, 0.5));
+    expect(tileMore.size, tileIcon.size);
+    // 投稿: 画像は左に、カードの高さの 9 割。名前やサーバー(misskey.example)は右にずれる。
+    session.share('post', {'url': 'https://misskey.example/notes/n1', 'sns': 'misskey', 'instance': 'misskey.example', 'postId': 'n1', 'author': '投稿者', 'handle': 'poster', 'body': '画像つきの投稿', 'media': [{'url': 'https://example.test/p.jpg', 'type': 'image'}], 'visibility': 'public'});
+    await tester.pumpAndSettle();
+    final shared = container.read(astellSessionProvider)!.shares.lastWhere((x) => x.kind == 'post');
+    await session.pinShare(shared.id, true);
+    await tester.pumpAndSettle();
+    final postCard = find.byKey(ValueKey('astell.card.${shared.id}'));
+    await tester.scrollUntilVisible(postCard, 300, scrollable: find.descendant(of: cards, matching: find.byType(Scrollable)));
+    await tester.pumpAndSettle();
+    final image = tester.getRect(find.descendant(of: postCard, matching: find.byKey(const ValueKey('astell.card.image'))));
+    expect(image.height, closeTo(astellShareCardHeight * 0.9, 0.5));
+    final author = tester.getRect(find.descendant(of: postCard, matching: find.text('投稿者', findRichText: true)));
+    expect(author.left, greaterThan(image.right));
+    expect(find.descendant(of: postCard, matching: find.text('misskey.example')), findsOneWidget);
+    expect(find.descendant(of: postCard, matching: find.textContaining('@poster')), findsNothing);
 
     // 右端の > → 全ての共有(レガシーの一覧、新しい順)。
     await tester.scrollUntilVisible(find.byKey(astellShareAllKey), 300, scrollable: find.descendant(of: cards, matching: find.byType(Scrollable)));

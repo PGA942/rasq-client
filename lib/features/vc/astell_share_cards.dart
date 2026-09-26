@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart';
 
 import '../../session/session_providers.dart' show emojiCacheProvider;
 import '../../text/inline_spans.dart';
@@ -196,22 +197,25 @@ class _TileFrame extends StatelessWidget {
                   ],
                 ),
               ),
+              // 「…」は左上の種類のアイコンと同じ大きさ・高さ・見た目で右上に (D-336)。
               if (onMore != null)
                 Positioned(
-                  right: 4,
-                  top: 4,
+                  right: 8,
+                  top: 8,
                   child: Builder(
-                    builder: (ctx) => DecoratedBox(
-                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), shape: BoxShape.circle),
-                      child: RasqIconButton(
-                        icon: Icons.more_horiz,
-                        size: 18,
-                        color: Colors.white,
-                        tooltip: '共有の操作',
-                        onPressed: () {
-                          final box = ctx.findRenderObject() as RenderBox;
-                          onMore!(box.localToGlobal(Offset.zero) & box.size);
-                        },
+                    builder: (ctx) => Tooltip(
+                      message: '共有の操作',
+                      child: Material(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        shape: const CircleBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () {
+                            final box = ctx.findRenderObject() as RenderBox;
+                            onMore!(box.localToGlobal(Offset.zero) & box.size);
+                          },
+                          child: const SizedBox(width: 28, height: 28, child: Icon(Icons.more_horiz, size: 16, color: Colors.white)),
+                        ),
                       ),
                     ),
                   ),
@@ -302,6 +306,10 @@ class _ShareTile extends StatelessWidget {
 }
 
 /// 投稿インラインビュー形式のカード(テキスト / 投稿 / リンク / 文字起こし)。
+///
+/// D-336: 画像があれば**左に、カードの高さの 9 割**で出す(アイコンや本文は右へずれる)。ユーザー ID(@handle)は出さず、
+/// **サーバーのアイコンとサーバー名**(投稿はその SNS のインスタンス、リンクはそのサイト、チャット / 文字起こしは RASQ)。
+/// 「…」は右端。
 class _InlineCard extends ConsumerWidget {
   const _InlineCard.share({required AstellShare this.share, required this.mine, required this.onOpen, required void Function(Rect) this.onMore}) : transcript = null, onUnpin = null;
   const _InlineCard.transcript({required AstellTranscript this.transcript, this.onUnpin}) : share = null, mine = false, onOpen = null, onMore = null;
@@ -312,6 +320,26 @@ class _InlineCard extends ConsumerWidget {
   final void Function(Rect anchor)? onMore;
   final VoidCallback? onUnpin;
 
+  /// サーバーの表示(アイコン + 名前)。
+  Widget _server(BuildContext context) {
+    final s = share;
+    final style = RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
+    if (s != null && s.kind == 'post') {
+      final kind = SnsKind.values.where((k) => k.name == s.payload['sns']).firstOrNull ?? SnsKind.other;
+      final instance = s.payload['instance'] as String? ?? s.url?.host ?? '';
+      if (instance.isNotEmpty) return DefaultTextStyle.merge(style: style, child: RasqSnsPill(account: AccountId(kind: kind, instance: instance, handle: ''), dotSize: 12));
+    }
+    if (s != null && s.kind == 'link' && (s.url?.host.isNotEmpty ?? false)) {
+      return DefaultTextStyle.merge(style: style, child: RasqSnsPill(account: AccountId(kind: SnsKind.other, instance: s.url!.host, handle: ''), dotSize: 12));
+    }
+    // チャット / 文字起こし: RASQ(AsTell)。
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      const RasqBrandIcon(size: 12),
+      const SizedBox(width: 3),
+      Flexible(child: Text(transcript != null ? 'RASQ ・ 文字起こし' : 'RASQ', style: style, maxLines: 1, overflow: TextOverflow.ellipsis)),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
@@ -321,7 +349,6 @@ class _InlineCard extends ConsumerWidget {
     // 投稿の共有はその投稿の作者(payload)、テキスト / 文字起こしは発言者。
     final isPost = s != null && s.kind == 'post';
     final name = isPost ? (s.payload['author'] as String? ?? s.displayName) : (s?.displayName ?? t!.displayName);
-    final handle = isPost ? (s.payload['handle'] as String? ?? s.handle) : (s?.handle ?? t!.handle);
     final avatar = isPost ? Uri.tryParse(s.payload['avatarUrl'] as String? ?? '') : null;
     final body = s != null ? s.headline : t!.text;
     final thumbs = <Uri>[
@@ -330,98 +357,82 @@ class _InlineCard extends ConsumerWidget {
           if (m is Map && (m['thumbnailUrl'] ?? m['url']) is String) ?Uri.tryParse((m['thumbnailUrl'] ?? m['url']) as String),
       if (s != null && s.kind == 'link' && s.thumbnailUrl != null) s.thumbnailUrl!,
     ];
-    final label = s != null ? s.kindLabel : '文字起こし';
-    return LayoutBuilder(
-      builder: (context, c) {
-        // 低いカード(ルーム FOW が低いとき)では添付のサムネイルを出さない。
-        final showThumbs = thumbs.isNotEmpty && c.maxHeight >= 150;
-        return Material(
-          color: scheme.surfaceContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(RasqSizes.radiusMd),
-            side: BorderSide(color: scheme.outline),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onOpen,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.xs, RasqSpacing.sm),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      RasqAvatar(imageUrl: avatar, size: 22, fallbackLabel: name),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: RasqRichText(
-                          InlineSpans.parse(mine ? 'あなた' : name, emojis: emojis),
-                          style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          '@$handle',
-                          style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const Spacer(),
-                      RasqPill(label: label),
-                      if (onMore != null)
-                        Builder(
-                          builder: (ctx) => RasqIconButton(
-                            icon: Icons.more_horiz,
-                            size: 18,
-                            tooltip: '共有の操作',
-                            onPressed: () {
-                              final box = ctx.findRenderObject() as RenderBox;
-                              onMore!(box.localToGlobal(Offset.zero) & box.size);
-                            },
+    Widget? trailing;
+    if (onMore != null) {
+      trailing = Builder(
+        builder: (ctx) => RasqIconButton(
+          icon: Icons.more_horiz,
+          size: 18,
+          tooltip: '共有の操作',
+          onPressed: () {
+            final box = ctx.findRenderObject() as RenderBox;
+            onMore!(box.localToGlobal(Offset.zero) & box.size);
+          },
+        ),
+      );
+    } else if (onUnpin != null && t != null && t.pinned) {
+      trailing = RasqIconButton(icon: Icons.push_pin, size: 16, color: RasqColors.link, tooltip: 'ピン留めを外す', onPressed: onUnpin);
+    }
+    return Material(
+      color: scheme.surfaceContainer,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RasqSizes.radiusMd), side: BorderSide(color: scheme.outline)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onOpen,
+        child: LayoutBuilder(builder: (context, c) {
+          // 画像: カードの高さの 9 割(上下に 5% ずつの余白)、幅は高さと同じまで(カードの 4 割を超えない)。
+          final imgH = c.maxHeight * 0.9;
+          final imgW = imgH.clamp(0.0, c.maxWidth * 0.4);
+          return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (thumbs.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.fromLTRB(c.maxHeight * 0.05, c.maxHeight * 0.05, 0, c.maxHeight * 0.05),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(RasqSizes.radiusSm),
+                  child: SizedBox(
+                    key: const ValueKey('astell.card.image'),
+                    width: imgW,
+                    height: imgH,
+                    child: Stack(fit: StackFit.expand, children: [
+                      _thumb(context, thumbs.first),
+                      if (thumbs.length > 1)
+                        Positioned(
+                          right: 4,
+                          bottom: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(8)),
+                            child: Text('+${thumbs.length - 1}', style: RasqTypography.caption.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                           ),
-                        )
-                      else if (onUnpin != null && t != null && t.pinned)
-                        RasqIconButton(icon: Icons.push_pin, size: 16, color: RasqColors.link, tooltip: 'ピン留めを外す', onPressed: onUnpin)
-                      else
-                        const SizedBox(height: 36),
-                    ],
+                        ),
+                    ]),
                   ),
-                  const SizedBox(height: 2),
-                  Expanded(
-                    child: ClipRect(
-                      child: RasqRichText(
-                        InlineSpans.parse(body, emojis: emojis),
-                        style: RasqTypography.bodySmall,
-                        maxLines: showThumbs ? 4 : 7,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                ),
+              ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, 0, RasqSpacing.sm),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    RasqAvatar(imageUrl: avatar, size: 28, fallbackLabel: name),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                        RasqRichText(InlineSpans.parse(mine && !isPost ? 'あなた' : name, emojis: emojis), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        _server(context),
+                      ]),
                     ),
-                  ),
-                  if (showThumbs)
-                    SizedBox(
-                      height: 56,
-                      child: Row(
-                        children: [
-                          for (final u in thumbs.take(4)) ...[
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: SizedBox(width: 56, height: 56, child: _thumb(context, u)),
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                        ],
-                      ),
-                    ),
-                ],
+                  ]),
+                  const SizedBox(height: 4),
+                  Expanded(child: ClipRect(child: RasqRichText(InlineSpans.parse(body, emojis: emojis), style: RasqTypography.bodySmall, maxLines: 8, overflow: TextOverflow.ellipsis))),
+                ]),
               ),
             ),
-          ),
-        );
-      },
+            // 「…」は右端(右上)。
+            if (trailing != null) trailing else const SizedBox(width: RasqSpacing.sm),
+          ]);
+        }),
+      ),
     );
   }
 }

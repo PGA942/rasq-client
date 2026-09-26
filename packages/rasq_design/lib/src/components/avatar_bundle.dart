@@ -15,6 +15,9 @@ import 'avatar.dart';
 ///    1 レイヤー上で左端に重なる。
 /// 3. **LIVE**: 角丸ワイヤーの**下辺中央**に重ねる(赤地・白文字)。
 ///
+/// D-336: アイコンの縁取りは**黄色**(ワイヤーと同じ色。以前は白)、角丸ワイヤーは [grow](3px)だけ大きく、アイコンはその内側。
+/// **1 人 / 2 人**(人数 2 以下)のときは、アイコンをワイヤーの太さいっぱいに広げる([fillBelow])。
+///
 /// **人数**は角丸ワイヤーの右端、上下中央、縁取りなし。
 /// - 1000 未満: `+4`
 /// - 1000 以上: `k` 表記で**小数点以下切り捨て**(`2560 → +2k`)
@@ -57,6 +60,12 @@ class RasqAvatarBundle extends StatelessWidget {
   /// 折り返し 1 行の文字数(100k 以上)。
   static const charsPerLine = 3;
 
+  /// 角丸ワイヤーをアイコンより大きくする量 (D-336)。
+  static const grow = 3.0;
+
+  /// この人数以下なら、アイコンをワイヤーの太さいっぱいに (D-336)。
+  static const fillBelow = 2;
+
   /// 表示文字列(改行は 2 行目)。
   static String formatCount(int n) {
     if (n < 1000) return '+$n';
@@ -75,31 +84,36 @@ class RasqAvatarBundle extends StatelessWidget {
     final tokens = RasqTokens.of(context);
     final wire = color ?? RasqColors.yellow;
     final fill = fillColor ?? wire.withValues(alpha: 0.6);
-    final ring = ringColor ?? scheme.surface;
+    final ring = ringColor ?? wire;
     final label = (count ?? 0) > 0 ? formatCount(count!) : null;
     final twoLines = label != null && label.contains('\n');
-    final wireHeight = size; // 縁取りつきのアイコンがそのまま収まる。
+    final wireHeight = size + grow; // 縁取りつきのアイコンが内側に収まる(D-336 で 3px 大きく)。
+    // 1 人 / 2 人は、アイコンをワイヤーの太さいっぱいに。それ以外はワイヤーの内側(上下左右 grow/2)。
+    final fill1 = (count ?? 0) <= fillBelow;
+    final avatarSize = fill1 ? wireHeight : size;
+    final inset = fill1 ? 0.0 : grow / 2;
     final countStyle = TextStyle(fontSize: size * (twoLines ? 0.26 : 0.3), fontWeight: FontWeight.w700, color: scheme.onSurface, height: 1.05);
     final liveHeight = size * 0.28;
 
     // 角丸ワイヤーの幅: 左端(アイコンの下)から右へ、人数の文字幅 + 余白。
     final countWidth = label == null ? 0.0 : _textWidth(label, countStyle) + size * 0.3;
     const wireLeft = 0.0;
-    final wireWidth = size + size * 0.15 + countWidth;
+    final wireWidth = size + grow + size * 0.15 + countWidth;
     final totalWidth = wireWidth;
 
-    // 縁取りは [size] の内側に収める(外にはみ出すと行の高さと中心がずれる)。
+    // 縁取りはアイコンの内側に収める(外にはみ出すと行の高さと中心がずれる)。
     final ringWidth = size * 0.06;
     final avatar = Container(
-      width: size,
-      height: size,
+      key: const ValueKey('avatarBundle.avatar'),
+      width: avatarSize,
+      height: avatarSize,
       decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ring, width: ringWidth)),
-      child: RasqAvatar(imageUrl: user.avatarUrl, size: size - ringWidth * 2, fallbackLabel: user.displayName),
+      child: RasqAvatar(imageUrl: user.avatarUrl, size: avatarSize - ringWidth * 2, fallbackLabel: user.displayName),
     );
 
     Widget bundle = SizedBox(
       width: totalWidth,
-      height: size + (live ? liveHeight / 2 : 0),
+      height: wireHeight + (live ? liveHeight / 2 : 0),
       child: Stack(clipBehavior: Clip.none, children: [
         // 1. 背面: 角丸四角のワイヤー(黄色の塗り + 同色の枠線、左端まで)。
         Positioned(
@@ -118,17 +132,17 @@ class RasqAvatarBundle extends StatelessWidget {
         // 人数: 右端、上下中央、縁取りなし(100k 以上は 2 行)。
         if (label != null)
           Positioned(
-            left: size,
+            left: size + grow,
             top: 0,
-            width: wireWidth - size - size * 0.15,
+            width: wireWidth - size - grow - size * 0.15,
             height: wireHeight,
             child: Align(
               alignment: Alignment.centerRight,
               child: Text(label, style: countStyle, maxLines: 2, softWrap: true, textAlign: TextAlign.right),
             ),
           ),
-        // 2. アイコン: 円形 + 円形縁取り、背面より上。
-        Positioned(left: 0, top: 0, child: avatar),
+        // 2. アイコン: 円形 + 円形縁取り(黄色)、背面より上。
+        Positioned(left: inset, top: inset, child: avatar),
         // 3. LIVE: 角丸ワイヤーの下辺中央(アイコンを除いた右側の中央)。
         if (live)
           Positioned(

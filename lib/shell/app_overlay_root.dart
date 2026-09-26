@@ -61,6 +61,8 @@ class AppOverlayRoot extends ConsumerWidget {
         : (
             color: (BuildContext ctx) => skin.surface(RasqSkinSurfaceId.fow, Theme.of(ctx).brightness)?.color,
             decorate: (BuildContext ctx, Widget panel) => RasqSkinned(surface: RasqSkinSurfaceId.fow, child: panel),
+            // 面の文字色 (D-337): ハンドル / 見出しも含めて。
+            theme: (BuildContext ctx, ThemeData base) => skin.surface(RasqSkinSurfaceId.fow, base.brightness)?.onColor == null ? base : RasqSkin.withOnColor(base, skin.surface(RasqSkinSurfaceId.fow, base.brightness)!.onColor!),
           );
     Widget host = OverlayHost(
       manager: manager,
@@ -75,7 +77,7 @@ class AppOverlayRoot extends ConsumerWidget {
       fowColumns: (ctx) => fowColumnSlotsOf(ctx, thirdColumnOccupied: ref.read(thirdColumnProvider) != null, layout: ref.read(columnLayoutProvider)),
       child: child,
     );
-    if (fowSkin != null) host = FowPanelSkin(color: fowSkin.color, decorate: fowSkin.decorate, child: host);
+    if (fowSkin != null) host = FowPanelSkin(color: fowSkin.color, decorate: fowSkin.decorate, theme: fowSkin.theme, child: host);
     return OverlayScope(
       manager: manager,
       child: CallbackShortcuts(

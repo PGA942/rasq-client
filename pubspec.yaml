@@ -146,6 +146,7 @@ flutter:
     - assets/plugins/post_action_plugin.wasm
     # 着せ替えのサンプル (D-335、plugin-sample/theme-plugin の rasq build)。
     - assets/plugins/theme_starry.rasqpkg
+    - assets/plugins/theme_rasq.rasqpkg
     # ML model manifests (model-manifest.schema.json — resolved by MlGateway).
     - assets/models/
     # 設定第二階層の静的 RRL ページ (D-031, rasq.settings-page/1).
