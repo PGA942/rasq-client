@@ -11,12 +11,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// `astell.holdMusic` と、ルームの `holdMusic`(オーナー)の両方がオンのとき)。
 const holdMusicAsset = 'audio/hold_music.wav';
 
+/// 開催のチャイム (D-331): ユーザー提供の目覚まし用の音源(`We：Astronomies on the Blue Planet.wav`、16 秒)。開催予約の開始を
+/// 保留音で待っていた人に、開催が始まった瞬間に 1 回鳴らす。Android の開始通知(`res/raw/alarm.wav`)/ iOS・macOS の
+/// 開始通知(`alarm.wav` を Runner に同梱したとき)にも同じ音。
+const alarmAsset = 'audio/alarm.wav';
+
 /// 保留音の口。テストは [MemoryHoldMusic](鳴らさず回数だけ数える)。
 abstract class HoldMusic {
   /// いま鳴らしている(始めた直後から true。読み込み中も含む)。
   bool get playing;
   Future<void> start();
   Future<void> stop();
+
+  /// 開催のチャイムを 1 回鳴らす (D-331)。保留音が鳴っていれば止めてから。
+  Future<void> alarm();
   Future<void> dispose();
 }
 
@@ -24,6 +32,7 @@ abstract class HoldMusic {
 class MemoryHoldMusic implements HoldMusic {
   int starts = 0;
   int stops = 0;
+  int alarms = 0;
   bool _playing = false;
   @override
   bool get playing => _playing;
@@ -39,6 +48,12 @@ class MemoryHoldMusic implements HoldMusic {
     if (!_playing) return;
     _playing = false;
     stops++;
+  }
+
+  @override
+  Future<void> alarm() async {
+    await stop();
+    alarms++;
   }
 
   @override
@@ -85,13 +100,31 @@ class AudioHoldMusic implements HoldMusic {
     }
   }
 
+  AudioPlayer? _chime;
+
+  @override
+  Future<void> alarm() async {
+    await stop();
+    try {
+      final p = _chime ??= AudioPlayer(playerId: 'rasq.alarm');
+      await p.setAudioContext(_context);
+      await p.setReleaseMode(ReleaseMode.stop);
+      await p.play(AssetSource(alarmAsset), volume: 1);
+    } catch (e) {
+      debugPrint('hold music: alarm: $e');
+    }
+  }
+
   @override
   Future<void> dispose() async {
     _playing = false;
     final p = _player;
+    final c = _chime;
     _player = null;
+    _chime = null;
     try {
       await p?.dispose();
+      await c?.dispose();
     } catch (e) {
       debugPrint('hold music: dispose: $e');
     }

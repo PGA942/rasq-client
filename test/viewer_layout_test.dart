@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,9 +18,9 @@ import 'support/fakes.dart';
 /// D-326: 全画面ビューワー — 下側 FOW(下側中央)の伸び縮みにメディアが逆サイドへ追従 / 下向きスワイプで閉じる /
 /// 音声の添付は音符の面 + 再生の操作(開くと自動再生)。
 void main() {
-  Future<(ProviderContainer, Post)> open(WidgetTester tester, {required List<MediaItem> media, int index = 0}) async {
-    tester.view.physicalSize = const Size(1080, 2340);
-    tester.view.devicePixelRatio = 3;
+  Future<(ProviderContainer, Post)> open(WidgetTester tester, {required List<MediaItem> media, int index = 0, Size? size}) async {
+    tester.view.physicalSize = size ?? const Size(1080, 2340);
+    tester.view.devicePixelRatio = size == null ? 3 : 1;
     addTearDown(tester.view.reset);
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
@@ -71,6 +72,30 @@ void main() {
     spec.heightFactor.value = spec.heightStops.first;
     await tester.pumpAndSettle();
     expect(insetOf(tester).bottom, closeTo(collapsed, 0.5));
+  });
+
+  testWidgets('幅の広い画面で FOW がカラム(縦に長い)に置かれたら、メディアは左右へ寄る(上下に潰さない、D-332)', (tester) async {
+    final (c, _) = await open(tester, media: [image], size: const Size(2000, 1390));
+    final manager = c.read(overlayManagerProvider);
+    final spec = manager.entries.firstWhere((e) => e.id == viewerFowId).fow!;
+    spec.heightFactor.value = spec.maxHeightFactor; // 実機のスクリーンショットと同じ: カラムいっぱいに伸ばした FOW
+    await tester.pumpAndSettle();
+    final r = spec.laidOut!;
+    final inset = insetOf(tester);
+    final screen = tester.getSize(find.byType(MediaViewerScreen));
+    if (r.width < screen.width / 2) {
+      // カラムに置かれた: 左右の逆サイドへ。上下には寄せない。
+      expect(inset.top, 0);
+      expect(inset.bottom, 0);
+      expect(inset.left + inset.right, greaterThan(0));
+      // FOW の左右のうち広いほうがメディアの場所(真ん中のカラムに置かれても)。
+      expect(screen.width - inset.left - inset.right, closeTo(math.max(r.left, screen.width - r.right), 1));
+    } else {
+      // 下側中央(幅の広い FOW): 上へ。
+      expect(inset.left, 0);
+      expect(inset.right, 0);
+      expect(inset.bottom, greaterThan(0));
+    }
   });
 
   testWidgets('下向きにスワイプすると閉じる(短ければ戻る)', (tester) async {

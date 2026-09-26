@@ -74,14 +74,19 @@ class WebRtcAstellMedia implements AstellMedia {
     }
     track.enabled = _micEnabled;
     for (final l in _links) {
-      await l.attachMic(track);
+      await l.attachMic(track, send: _micEnabled);
     }
   }
 
+  /// マイクの上げ下ろし (D-330): `enabled` を切り替えるだけでなく、下ろしたら送る側から**外す**(`replaceTrack(null)`)、
+  /// 立てたら差し直す。`enabled = false` だけでは端末によって相手に声が届き続けた(実機の指摘 2026-09-26)。
   @override
   void setMicEnabled(bool enabled) {
     _micEnabled = enabled;
     _micTrack?.enabled = enabled;
+    for (final l in _links) {
+      unawaited(l.setSending(enabled).catchError((Object e) => debugPrint('astell media: mic ${enabled ? 'on' : 'off'}: $e')));
+    }
   }
 
   @override
@@ -92,7 +97,7 @@ class WebRtcAstellMedia implements AstellMedia {
       'sdpSemantics': 'unified-plan',
     });
     final link = _WebRtcLink(peerId, pc, handlers, remoteAudio: _remoteAudio, onClosed: _links.remove);
-    await link.init(offerer: offerer, mic: _micTrack);
+    await link.init(offerer: offerer, mic: _micTrack, send: _micEnabled);
     _links.add(link);
     return link;
   }
@@ -155,9 +160,11 @@ class _WebRtcLink implements AstellPeerLink {
   bool _closed = false;
   MediaStreamTrack? _remoteAudio;
   AstellRemoteAudio? _out;
+  /// 持っているマイク。送る側に差すのは [_send](マイクが立っている)のときだけ (D-330)。
   MediaStreamTrack? _pendingMic;
+  bool _send = false;
 
-  Future<void> init({required bool offerer, MediaStreamTrack? mic}) async {
+  Future<void> init({required bool offerer, MediaStreamTrack? mic, bool send = false}) async {
     _pc.onSignalingState = (s) => _signaling = s;
     _pc.onIceCandidate = (c) {
       if (c.candidate == null || _closed) return;
@@ -195,7 +202,8 @@ class _WebRtcLink implements AstellPeerLink {
       );
     }
     _pendingMic = mic;
-    if (offerer && mic != null) await attachMic(mic);
+    _send = send;
+    if (offerer && mic != null && send) await _applyMic();
   }
 
   /// Web: 受けたトラックを `<audio>` に繋ぐ(`e.streams` は見ない — 送る側が `addTransceiver` + `replaceTrack` なので、
@@ -220,14 +228,27 @@ class _WebRtcLink implements AstellPeerLink {
     return null;
   }
 
-  /// マイクを送る側に差し込む(繋ぎ直しは要らない)。
-  Future<void> attachMic(MediaStreamTrack track) async {
+  /// マイクを持つ(繋ぎ直しは要らない)。[send] = 立っている(送る側に差す)。
+  Future<void> attachMic(MediaStreamTrack track, {required bool send}) async {
     _pendingMic = track;
+    _send = send;
+    await _applyMic();
+  }
+
+  /// マイクを立てる / 下ろす (D-330): 立てたら差す、下ろしたら `replaceTrack(null)` で外す。
+  Future<void> setSending(bool send) async {
+    _send = send;
+    await _applyMic();
+  }
+
+  Future<void> _applyMic() async {
     if (_closed) return;
     final t = await _audioTransceiver();
     if (t == null) return; // 受ける側で、まだ相手の offer が来ていない — setRemoteDescription のあとで差し込む
+    final track = _send ? _pendingMic : null;
+    if (track == null && !_micAttached) return; // 外すものが無い
     await t.sender.replaceTrack(track);
-    _micAttached = true;
+    _micAttached = track != null;
   }
 
   static void _tally(Map<String, int> into, String? candidate) {
@@ -283,15 +304,11 @@ class _WebRtcLink implements AstellPeerLink {
     _hasRemote = true;
     _signaling = type == 'offer' ? RTCSignalingState.RTCSignalingStateHaveRemoteOffer : RTCSignalingState.RTCSignalingStateStable;
     if (type == 'offer') {
-      // 相手の offer でできた音声の 1 本を送受信にして、マイクがあれば差し込む(answer に sendrecv が載る)。
+      // 相手の offer でできた音声の 1 本を送受信にして、マイクが立っていれば差し込む(answer に sendrecv が載る)。
       final t = await _audioTransceiver();
       if (t != null) {
         await t.setDirection(TransceiverDirection.SendRecv);
-        final mic = _pendingMic;
-        if (mic != null) {
-          await t.sender.replaceTrack(mic);
-          _micAttached = true;
-        }
+        await _applyMic();
       }
     }
   }

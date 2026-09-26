@@ -50,7 +50,10 @@ class FlutterLocalNotifier implements LocalNotifier {
         }
       }();
 
-  static const _channel = AndroidNotificationDetails('rasq.astell', 'AsTell の開始', channelDescription: 'ブックマークした VC の開始通知', importance: Importance.high, priority: Priority.high);
+  /// 開始通知の音 (D-331) = ユーザー提供の目覚まし用の音源。Android は `res/raw/alarm.wav`(チャンネルの音は作った後に変えられない
+  /// ので id を v2 に)、iOS / macOS は Runner に同梱した `alarm.wav`(Xcode で Runner に足す。無ければ既定の音)。
+  static const _channel = AndroidNotificationDetails('rasq.astell.v2', 'AsTell の開始', channelDescription: 'ブックマークした VC の開始通知', importance: Importance.high, priority: Priority.high, sound: RawResourceAndroidNotificationSound('alarm'));
+  static const _darwin = DarwinNotificationDetails(sound: 'alarm.wav');
 
   @override
   Future<bool> schedule({required int id, required String title, required String body, required DateTime at, String? payload}) async {
@@ -61,7 +64,7 @@ class FlutterLocalNotifier implements LocalNotifier {
         title: title,
         body: body,
         scheduledDate: tz.TZDateTime.from(at.toUtc(), tz.UTC),
-        notificationDetails: const NotificationDetails(android: _channel, iOS: DarwinNotificationDetails(), macOS: DarwinNotificationDetails(), linux: LinuxNotificationDetails()),
+        notificationDetails: const NotificationDetails(android: _channel, iOS: _darwin, macOS: _darwin, linux: LinuxNotificationDetails()),
         // 正確なアラーム権限を要求しない(数分のずれは許容)。
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: payload,

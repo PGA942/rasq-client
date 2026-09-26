@@ -53,8 +53,9 @@ const astellAudioBlockedNotice = 'ブラウザが音声の再生を止めてい�
 /// 満員で通話に入れなかったときの案内 (D-317)。
 const astellCallFullNotice = '通話は満員です($astellMeshCap 人まで)。声は届きません — ホストが配信していれば、配信で聞けます';
 
-/// 保留音 (D-327) の案内: 開催予約の開始待ち / 全員が静か。
+/// 保留音 (D-327) の案内: 開催予約の開始待ち / 全員が静か。開始 (D-331) はチャイムと一緒に。
 const astellHoldWaitingNotice = '開催までお待ちください。保留音を鳴らしています';
+const astellStartedNotice = '開催が始まりました';
 const astellHoldIdleNotice = '全員がマイクを下ろして静かなので、保留音を鳴らしています(話し始めるかチャットが流れると止まります)';
 
 /// これだけチャット(共有 / 文字起こし)が流れず、全員がマイクを下ろしていれば「静か」(D-327)。
@@ -303,6 +304,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
     await leave();
     state = AstellSessionState(room: room);
     _lastChatAt = DateTime.now();
+    _waitingForStart = false;
     if (ref.read(astellHoldMusicTickProvider) case final tick?) _holdTick = Timer.periodic(tick, (_) => _syncHoldMusic());
     _media = ref.read(astellMediaFactoryProvider)();
     _streamGaveUp = false;
@@ -599,6 +601,9 @@ class AstellSession extends Notifier<AstellSessionState?> {
   /// 保留音の見直し(時間で変わる条件 = 開催時刻 / 静かな時間 を拾う)。
   Timer? _holdTick;
 
+  /// 開催予約の開始を保留音で待っている (D-331: 待ちが明けた瞬間にチャイム)。
+  bool _waitingForStart = false;
+
   /// テスト用: 最後にチャットが流れた時刻を差し替える。
   @visibleForTesting
   void debugSetLastChatAt(DateTime at) {
@@ -642,12 +647,21 @@ class AstellSession extends Notifier<AstellSessionState?> {
       }
     }
     final play = reason != null;
-    if (play != music.playing) unawaited(play ? music.start() : music.stop());
+    // 開催の待ちが明けた (D-331): 保留音を止めてチャイムを 1 回。
+    final started = _waitingForStart && s != null && s.connected && !s.room.isScheduled;
+    _waitingForStart = reason == astellHoldWaitingNotice;
+    if (started) {
+      unawaited(music.alarm());
+    } else if (play != music.playing) {
+      unawaited(play ? music.start() : music.stop());
+    }
     final now = state;
     if (now == null) return;
-    if (play) {
+    if (started) {
+      state = now.copyWith(notice: astellStartedNotice);
+    } else if (play) {
       if (now.notice != reason) state = now.copyWith(notice: reason);
-    } else if (now.notice == astellHoldWaitingNotice || now.notice == astellHoldIdleNotice) {
+    } else if (now.notice == astellHoldWaitingNotice || now.notice == astellHoldIdleNotice || now.notice == astellStartedNotice) {
       state = now.copyWith(clearNotice: true);
     }
   }

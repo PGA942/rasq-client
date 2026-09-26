@@ -205,7 +205,13 @@ void main() {
       client.emit(room.id, {'type': 'room', 'room': room.toJson()});
       await Future<void>.delayed(Duration.zero);
       expect(music.playing, isFalse, reason: '開催が始まった(ほかの人がマイクを立てている)');
+      // 待ちが明けた瞬間にチャイム (D-331)。案内は「開催が始まりました」(次の見直しで消える)。
+      expect(music.alarms, 1);
+      expect(container.read(astellSessionProvider)!.notice, astellStartedNotice);
+      await session.toggleMic();
+      await session.toggleMic();
       expect(container.read(astellSessionProvider)!.notice, isNull);
+      expect(music.alarms, 1, reason: 'チャイムは 1 回だけ');
 
       // 全員が静か: 1 対 1 にして、相手がマイクを下ろし、チャットが 1 分以上流れていない。
       for (final id in ['p1', 'p3', 'p4', 'p5']) {
