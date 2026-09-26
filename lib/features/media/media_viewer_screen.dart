@@ -18,15 +18,16 @@ import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
 import '../post/post_menu.dart';
 import '../home/timeline_providers.dart';
-import '../plugins/slot_plugins.dart';
+import '../compose/post_video.dart' show isAudioMedia;
 import 'video_player.dart';
 import 'viewer_plugin_overlay.dart';
 
-/// 全画面表示(画像/動画): 黒背景、PageView、戻る/…。
-/// 下側はダークモードの FOW (D-202): 動画の操作(左にシークバー、右にボタン類)/ アクションバー /
-/// 投稿のインライン表示。AsTell のルーム FOW と同じ作法で動く: 折りたたみ(操作 + アクションバー)と
+/// 全画面表示(画像/動画/音声): 黒背景、PageView、戻る/…。
+/// 下側はダークモードの FOW (D-202、D-326 で下側**中央**・最大 600px): 動画の操作(左にシークバー、右にボタン類)/
+/// アクションバー / 投稿のインライン表示。AsTell のルーム FOW と同じ作法で動く: 折りたたみ(操作 + アクションバー)と
 /// 展開(投稿まで)の 2 段、外側タップで折りたたみ(閉じない)、折りたたみ中はバリア無しで背面を触れる。
-/// 動画は開くと自動再生、全画面表示プラグインが起動するときは止める。
+/// FOW が伸び縮みする / 動くたびに、メディアは FOW の**逆サイド**へ寄る (D-326)。
+/// 動画と音声は開くと自動再生(全画面表示プラグインが**オン**のときだけ止める)。**下向きスワイプで閉じる** (D-326)。
 /// `…` → 「オーバーレイに移動」(動画のみ、VC・動画オーバーレイへ昇格 = M5 以降).
 class MediaViewerScreen extends ConsumerStatefulWidget {
   const MediaViewerScreen({super.key, required this.post, this.initialIndex = 0});
@@ -40,6 +41,19 @@ const viewerFowId = 'fow.viewer';
 const viewerFowCollapsedFactor = 0.2;
 const viewerFowExpandedFactor = 0.7;
 const viewerPanelKey = ValueKey('viewer.panel');
+
+/// 下側の FOW の最大幅 (D-326): 幅の広い画面では下側**中央**に置く(狭い画面はカラムいっぱい)。
+const viewerFowMaxWidth = 600.0;
+
+/// FOW の逆サイドに必ず残すメディアの空き (D-326)。これを切るぶんは FOW と重なる(消えるよりまし)。
+const viewerMinFreeSpace = 120.0;
+
+/// メディアを寄せる余白の枠(テストが読む)。
+const viewerMediaInsetKey = ValueKey('viewer.media.inset');
+
+/// 下向きスワイプで閉じる (D-326): この距離を超えて離すか、この速さ以上で下へ払うと閉じる。
+const viewerSwipeCloseDistance = 120.0;
+const viewerSwipeCloseVelocity = 700.0;
 
 class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   late final PageController _ctrl = PageController(initialPage: widget.initialIndex);
@@ -58,6 +72,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     heightStops: const [viewerFowCollapsedFactor, viewerFowExpandedFactor],
     freeAboveStops: true,
     theme: (_) => RasqTheme.dark(),
+    maxWidth: viewerFowMaxWidth, // 下側中央 (D-326)
   );
   final _barrier = ValueNotifier<bool>(false);
   OverlayManager? _manager;
@@ -67,22 +82,27 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     if (mounted) setState(() {});
   });
 
-  /// FOW のぶんメディアを寄せる余白(FOW が出現 / 消失したときだけ測る。途中のサイズ変更は追わない)。
+  /// FOW のぶんメディアを寄せる余白 (D-207 → D-215 → D-326): FOW が出る / 消える / **伸び縮みする / 動く**たびに、
+  /// メディアを FOW の**逆サイド**へ寄せる。ホストが置いた矩形(`FowSpec.laidOut`)を次のフレームで読み、壁付けの
+  /// FOW は左右、それ以外(下付き / 上付き / アンカー付き)は上下の余白にする。逆サイドに [viewerMinFreeSpace] は
+  /// 必ず残す(足りないぶんは FOW と重なる)。
   EdgeInsets _fowInset = EdgeInsets.zero;
-  Set<String> _fowIds = const {};
+  bool _relayoutPending = false;
 
-  /// FOW が出る / 消えるたびにメディアを**空いているスペース**へ寄せる (D-207 → D-215)。ホストが置いた矩形
-  /// (`FowSpec.laidOut`)を次のフレームで読み、幅の広い FOW は上下、狭い FOW(壁付け / カラム)は左右の余白に
-  /// する。残りが小さすぎる側は寄せない(被さるほうがまし)。
-  void _onOverlays() {
-    final manager = _manager;
-    if (!mounted || manager == null) return;
-    final ids = {for (final e in manager.entries) if (e.fow != null) e.id};
-    if (ids.length == _fowIds.length && ids.containsAll(_fowIds)) return;
-    _fowIds = ids;
+  /// 自分の FOW の高さ / 移動 / 幾何が変わったら次のフレームで測り直す(1 フレームに 1 回にまとめる)。
+  void _scheduleRelayout() {
+    if (_relayoutPending || !mounted) return;
+    _relayoutPending = true;
     // 矩形はホストの build で決まるので 1 フレーム後に読む。
-    WidgetsBinding.instance.addPostFrameCallback((_) => _relayoutForFows());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _relayoutPending = false;
+      _relayoutForFows();
+    });
+    WidgetsBinding.instance.scheduleFrame();
   }
+
+  /// ほかの FOW(バンドルのメニューなど)の出入りも同じ扱い。
+  void _onOverlays() => _scheduleRelayout();
 
   void _relayoutForFows() {
     final manager = _manager;
@@ -90,31 +110,89 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     final screen = MediaQuery.sizeOf(context);
     var top = 0.0, bottom = 0.0, left = 0.0, right = 0.0;
     for (final e in manager.entries) {
-      final r = e.fow?.laidOut;
-      if (e.fow == null || r == null) continue;
-      if (r.width >= screen.width * 0.6) {
-        if (r.center.dy < screen.height / 2) {
-          top = math.max(top, r.bottom);
+      final f = e.fow;
+      final r = f?.laidOut;
+      if (f == null || r == null) continue;
+      if (f.pinnedWall != 0) {
+        // 壁付け: 左右の逆サイドへ。
+        if (r.center.dx < screen.width / 2) {
+          left = math.max(left, r.right);
         } else {
-          bottom = math.max(bottom, screen.height - r.top);
+          right = math.max(right, screen.width - r.left);
         }
-      } else if (r.center.dx < screen.width / 2) {
-        left = math.max(left, r.right);
+      } else if (r.center.dy < screen.height / 2) {
+        // 上付き / 上側のアンカー: 下へ。
+        top = math.max(top, r.bottom);
       } else {
-        right = math.max(right, screen.width - r.left);
+        // 下付き(既定の下側中央も): 上へ。
+        bottom = math.max(bottom, screen.height - r.top);
       }
     }
-    // 残りが 160px を切る軸は寄せない。
-    if (screen.height - top - bottom < 160) {
-      top = 0;
-      bottom = 0;
-    }
-    if (screen.width - left - right < 160) {
-      left = 0;
-      right = 0;
-    }
+    (top, bottom) = _keepFree(top, bottom, screen.height, viewerMinFreeSpace);
+    (left, right) = _keepFree(left, right, screen.width, viewerMinFreeSpace);
     final inset = EdgeInsets.fromLTRB(left, top, right, bottom);
     if (inset != _fowInset) setState(() => _fowInset = inset);
+  }
+
+  /// [total] のうち [a] / [b] を空けた残りが [min] を切らないように、大きいほうから削る。
+  static (double, double) _keepFree(double a, double b, double total, double min) {
+    var over = a + b - (total - min);
+    if (over <= 0) return (a, b);
+    if (a >= b) {
+      final d = math.min(over, a);
+      a -= d;
+      over -= d;
+      b = math.max(0, b - over);
+    } else {
+      final d = math.min(over, b);
+      b -= d;
+      over -= d;
+      a = math.max(0, a - over);
+    }
+    return (a, b);
+  }
+
+  // ── 下向きスワイプで閉じる (D-326) ──
+
+  /// 面を指に付けて下げ、離したときの距離 / 速さで閉じるか戻すか。拡大中は InteractiveViewer のパンに譲る
+  /// (縦ドラッグのジェスチャーを登録しない)。
+  double _swipeDy = 0;
+  bool _swiping = false;
+  bool _zoomed = false;
+  final _zoom = <int, TransformationController>{};
+
+  TransformationController _zoomOf(int i) => _zoom.putIfAbsent(i, () {
+        final c = TransformationController();
+        c.addListener(() => _syncZoomed(i));
+        return c;
+      });
+
+  void _syncZoomed(int i) {
+    if (i != _page.value || !mounted) return;
+    final z = _zoomOf(i).value.getMaxScaleOnAxis() > 1.01;
+    if (z != _zoomed) setState(() => _zoomed = z);
+  }
+
+  void _onSwipeUpdate(DragUpdateDetails d) => setState(() {
+        _swiping = true;
+        _swipeDy = math.max(0, _swipeDy + d.delta.dy);
+      });
+
+  void _onSwipeEnd(DragEndDetails d) {
+    final v = d.primaryVelocity ?? d.velocity.pixelsPerSecond.dy;
+    if (_swipeDy >= viewerSwipeCloseDistance || (_swipeDy > 0 && v >= viewerSwipeCloseVelocity)) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+    _resetSwipe();
+  }
+
+  void _resetSwipe() {
+    if (!mounted || (!_swiping && _swipeDy == 0)) return;
+    setState(() {
+      _swiping = false;
+      _swipeDy = 0;
+    });
   }
 
   /// 上に画面が積まれたら FOW を閉じ、戻ってきたら開き直す (D-205)。
@@ -146,6 +224,10 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     _router!.routerDelegate.addListener(_onRoute);
     _manager = ref.read(overlayManagerProvider);
     _manager!.addListener(_onOverlays);
+    // FOW の伸び縮み / 移動に追従 (D-326)。
+    for (final l in _geometry) {
+      l.addListener(_scheduleRelayout);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _askOverlay(_page.value);
@@ -153,10 +235,19 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     });
   }
 
+  /// 自分の FOW の幾何(高さ / 横縦の追従量 / カラムなど)。
+  List<Listenable> get _geometry => [_spec.heightFactor, _spec.moveDx, _spec.moveDy, _spec.geometryRev];
+
   @override
   void dispose() {
     _router?.routerDelegate.removeListener(_onRoute);
     _manager?.removeListener(_onOverlays);
+    for (final l in _geometry) {
+      l.removeListener(_scheduleRelayout);
+    }
+    for (final c in _zoom.values) {
+      c.dispose();
+    }
     _spec.heightFactor.removeListener(_syncBarrier);
     final manager = _manager;
     // 破棄中に他のウィジェットを更新しない: 次のフレームで FOW を閉じる(アプリごと破棄された後なら何もしない)。
@@ -299,9 +390,9 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     if (i >= widget.post.media.length) return;
     final m = widget.post.media[i];
     if (m.type == MediaType.video) {
-      // 全画面表示プラグインが登録されていれば再生を止め(D-202)、サムネイルを渡す
-      // (再生中のフレームの取り出しは後段)。
-      if (ref.read(slotPluginsForProvider(SlotIds.viewerOverlay)).isEmpty) return;
+      // 全画面表示プラグインが**オン**なら再生を止め(D-202 → D-326: 登録があるだけでは止めない = 自動再生)、
+      // サムネイルを渡す(再生中のフレームの取り出しは後段)。
+      if (!ref.read(viewerOverlayPluginsProvider).any((p) => _overlays.isOn(p.id))) return;
       _session(i).hold = true;
       final thumb = m.thumbnailUrl;
       if (thumb != null) _overlays.ask(i, thumb);
@@ -318,49 +409,69 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(children: [
+        // FOW の逆サイドへ寄せる余白 (D-326): 伸び縮みに追従するので短めのアニメ。
         AnimatedPadding(
-          duration: const Duration(milliseconds: 220),
+          key: viewerMediaInsetKey,
+          duration: const Duration(milliseconds: 150),
           curve: Curves.easeOutCubic,
           padding: _fowInset,
-          child: GestureDetector(
-          // タップ (D-203): 下側の FOW が消えていれば開き直す(開く手段が無くならないように)。出ていれば上のクロームの表示切替。
-          // 動画の面のタップでは再生を止めない。
-          onTap: () {
-            if (!manager.contains(viewerFowId)) {
-              _openPanel();
-              return;
-            }
-            setState(() => _chrome = !_chrome);
-          },
-          child: PageView.builder(
-            controller: _ctrl,
-            itemCount: post.media.length,
-            onPageChanged: (i) {
-              for (final e in _sessions.entries) {
-                if (e.key != i) e.value.pause();
-              }
-              _page.value = i;
-              setState(() {});
-              _askOverlay(i);
-              if (post.media[i].type == MediaType.video) _session(i).play();
-            },
-            itemBuilder: (_, i) {
-              final m = post.media[i];
-              return InteractiveViewer(
-                minScale: 1,
-                maxScale: 5,
-                child: Center(
-                  child: m.type == MediaType.file
-                      ? Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.insert_drive_file_outlined, color: Colors.white, size: 64), Text(m.fileName ?? '', style: const TextStyle(color: Colors.white))])
-                      : m.type == MediaType.video
-                          // 動画 (D-200 → D-201): 面はタップで再生 / 一時停止。操作は下側の FOW。
-                          ? RasqVideoView(key: ValueKey('viewer.video.${m.id}'), session: _session(i), tapToggles: false)
-                          : _overlays.wrap(i, Image.network(webHtmlElementStrategy: rasqWebImageStrategy, m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
-                ),
-              );
-            },
+          // 下向きスワイプ (D-326): 面を指に付けて下げ、離すと閉じる / 戻る。
+          child: AnimatedContainer(
+            duration: _swiping ? Duration.zero : const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(0, _swipeDy, 0),
+            transformAlignment: Alignment.center,
+            child: GestureDetector(
+              // タップ (D-203): 下側の FOW が消えていれば開き直す(開く手段が無くならないように)。出ていれば上のクロームの表示切替。
+              // 動画の面のタップでは再生を止めない。
+              onTap: () {
+                if (!manager.contains(viewerFowId)) {
+                  _openPanel();
+                  return;
+                }
+                setState(() => _chrome = !_chrome);
+              },
+              // 拡大中は InteractiveViewer のパンに譲る(登録しない)。
+              onVerticalDragUpdate: _zoomed ? null : _onSwipeUpdate,
+              onVerticalDragEnd: _zoomed ? null : _onSwipeEnd,
+              onVerticalDragCancel: _zoomed ? null : _resetSwipe,
+              child: PageView.builder(
+                controller: _ctrl,
+                itemCount: post.media.length,
+                onPageChanged: (i) {
+                  for (final e in _sessions.entries) {
+                    if (e.key != i) e.value.pause();
+                  }
+                  _page.value = i;
+                  setState(() {});
+                  _syncZoomed(i);
+                  _askOverlay(i);
+                  final m = post.media[i];
+                  // 動画と音声は開くと自動再生 (D-326)。
+                  if (m.type == MediaType.video || isAudioMedia(m)) _session(i).play();
+                },
+                itemBuilder: (_, i) {
+                  final m = post.media[i];
+                  return InteractiveViewer(
+                    transformationController: _zoomOf(i),
+                    minScale: 1,
+                    maxScale: 5,
+                    child: Center(
+                      child: isAudioMedia(m)
+                          // 音声 (D-326): 音符の面。再生は動画と同じセッション、操作は下側の FOW。
+                          ? _AudioFace(key: ValueKey('viewer.audio.${m.id}'), item: m, session: _session(i))
+                          : m.type == MediaType.file
+                              ? Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.insert_drive_file_outlined, color: Colors.white, size: 64), Text(m.fileName ?? '', style: const TextStyle(color: Colors.white))])
+                              : m.type == MediaType.video
+                                  // 動画 (D-200 → D-201): 面はタップで再生 / 一時停止。操作は下側の FOW。
+                                  ? RasqVideoView(key: ValueKey('viewer.video.${m.id}'), session: _session(i), tapToggles: false)
+                                  : _overlays.wrap(i, Image.network(webHtmlElementStrategy: rasqWebImageStrategy, m.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48))),
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
-        ),
         ),
         if (_chrome)
           SafeArea(
@@ -473,8 +584,8 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
         // 折りたたみの段の実測前 / 過渡期に上のブロックが枠より高くてもはみ出さない(スクロールに逃がす)。
         return ListView(padding: EdgeInsets.zero, children: [
           Column(key: _topKey, mainAxisSize: MainAxisSize.min, children: [
-            // 動画の操作 (D-201 → D-202): 左にシークバー、右にボタン類(小画面では下の行)。
-            if (m != null && m.type == MediaType.video) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), child: VideoControls(session: widget.sessionOf(i))),
+            // 動画 / 音声の操作 (D-201 → D-202、音声は D-326): 左にシークバー、右にボタン類(小画面では下の行)。
+            if (m != null && (m.type == MediaType.video || isAudioMedia(m))) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm), child: VideoControls(session: widget.sessionOf(i))),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
               for (final e in entries)
                 switch (e) {
@@ -516,4 +627,33 @@ class _Circle extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => DecoratedBox(decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle), child: child);
+}
+
+/// 音声の面 (D-326): 音符(再生中は波形)+ ファイル名。再生は動画と同じ [VideoSession](開くと自動再生)、操作は
+/// 下側の FOW の [VideoControls]。再生できない環境(テスト / 未対応形式)は案内。
+class _AudioFace extends StatelessWidget {
+  const _AudioFace({super.key, required this.item, required this.session});
+  final MediaItem item;
+  final VideoSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = item.fileName ?? (item.url.pathSegments.isEmpty ? '' : item.url.pathSegments.last);
+    return ListenableBuilder(
+      listenable: session,
+      builder: (context, _) => Padding(
+        padding: const EdgeInsets.all(RasqSpacing.page),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(session.playing ? Icons.graphic_eq : Icons.music_note, color: Colors.white70, size: 96),
+          const SizedBox(height: RasqSpacing.sm),
+          Text(name, style: const TextStyle(color: Colors.white), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+          if (session.error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: RasqSpacing.sm),
+              child: Text(session.error!, key: const ValueKey('viewer.audio.error'), style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+            ),
+        ]),
+      ),
+    );
+  }
 }
