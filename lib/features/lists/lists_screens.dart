@@ -16,9 +16,11 @@ import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../clips/clip_providers.dart';
 import '../clips/index_toc.dart';
 import '../clips/virtual_index.dart';
+import '../home/home_screen.dart' show TimelineSearchBanner;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../nodeprog/tl_components.dart';
+import '../nodeprog/timeline_temp_fow.dart';
 import '../nodeprog/tl_config_store.dart';
 import '../settings/settings_dsl.dart';
 import '../users/user_list.dart';
@@ -305,7 +307,9 @@ class ListDetailScreen extends ConsumerWidget {
     final notifier = ref.read(timelineProvider(kind).notifier);
     final actions = ref.watch(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[];
     final scheme = Theme.of(context).colorScheme;
-    final tabs = [const RasqTabItem('ユーザー'), const RasqTabItem('投稿')];
+    // 投稿タブの `↓` (D-338): もう一度押すと、このリスト TL の一時変更 FOW(探す + 一時的な構成)。
+    final query = ref.watch(timelineSearchProvider.select((m) => m[kind.id]));
+    final tabs = [const RasqTabItem('ユーザー', chevron: false), RasqTabItem('投稿', dot: query != null || ref.watch(tlTemporaryConfigsProvider.select((m) => m.containsKey('tl.${kind.id}'))))];
     // チャイルドセーフ (D-314): 止める例に近い中身のリストは開かない(一覧からも外している。リンクで来たとき)。
     final gate = ref.watch(childGateProvider);
     if (gate.hasDenyExamples) {
@@ -326,7 +330,7 @@ class ListDetailScreen extends ConsumerWidget {
           // リスト TL のカスタマイズ (D-124): TL 系は全部同 UI。デフォルトは
           // このリストの取得ノード(tl.list)から始まる。
           actions: [RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'リストTL設定', onPressed: () => context.push(Routes.tlConfig('tl.list:$listId')))],
-          bottom: RasqTabs(items: tabs),
+          bottom: RasqTabs(items: tabs, onSelectedTabTap: (i, _) => showTimelineTempFow(ref, tabs: [('tl.${kind.id}', info?.name ?? 'リスト')], scope: 'tl.${kind.id}')),
         ),
         body: TabBarView(children: [
           members.when(
@@ -354,9 +358,15 @@ class ListDetailScreen extends ConsumerWidget {
           tl.when(
             loading: () => const RasqLoading(),
             error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
-            data: (s) => s.posts.isEmpty
-                ? const RasqEmptyView(title: '投稿はありません')
-                : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier),
+            data: (s) {
+              if (s.posts.isEmpty) return const RasqEmptyView(title: '投稿はありません');
+              if (query == null) return _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier);
+              final hits = [for (final p in s.posts) if (timelinePostMatches(p, query)) p];
+              return Column(children: [
+                TimelineSearchBanner(query: query, count: hits.length, hasMore: s.hasMore, loadingMore: s.loadingMore, onMore: notifier.loadMore, onClear: () => ref.read(timelineSearchProvider.notifier).set(kind.id, '')),
+                Expanded(child: _ListTimelinePosts(posts: hits, actions: actions, notifier: notifier)),
+              ]);
+            },
           ),
         ]),
       ),

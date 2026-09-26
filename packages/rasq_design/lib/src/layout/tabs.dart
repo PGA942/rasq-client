@@ -14,10 +14,16 @@ enum RasqTabsMode {
 }
 
 class RasqTabItem {
-  const RasqTabItem(this.label, {this.id, this.icon});
+  const RasqTabItem(this.label, {this.id, this.icon, this.chevron = true, this.dot = false});
   final String label;
   final String? id;
   final IconData? icon;
+
+  /// 選んでいるときに `∨` を付けるか([RasqTabs.showChevron] が true のとき)。押しても何も開かないタブは false。
+  final bool chevron;
+
+  /// 名前の右肩の小さな点(一時的に変えている TL など、幅を取らない印)。
+  final bool dot;
 }
 
 /// Tab bar honouring the 4/5/10 thresholds. The selected tab gets a `v`
@@ -90,32 +96,43 @@ class _RasqTabsState extends State<RasqTabs> {
     final ctrl = controller ?? DefaultTabController.of(context);
     return AnimatedBuilder(
       animation: ctrl,
-      builder: (context, _) => TabBar(
-        controller: ctrl,
-        isScrollable: isScrollable,
-        tabAlignment: isScrollable ? TabAlignment.start : TabAlignment.fill,
-        onTap: (i) {
-          if (onSelectedTabTap != null && i == ctrl.previousIndex && i == ctrl.index) {
-            final key = _keys[i];
-            final box = key.currentContext?.findRenderObject() as RenderBox?;
-            if (box != null) onSelectedTabTap!(i, box.localToGlobal(Offset.zero) & box.size);
-          }
-          onTap?.call(i);
-        },
-        labelPadding: const EdgeInsets.symmetric(horizontal: 8),
-        tabs: [
-          for (var i = 0; i < items.length; i++)
-            Tab(
-              key: _keys[i],
-              height: RasqSizes.minTap,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (showChevron && ctrl.index == i) const Padding(padding: EdgeInsets.only(right: 2), child: Icon(Icons.keyboard_arrow_down, size: 18)),
-                if (items[i].icon != null) Padding(padding: const EdgeInsets.only(right: 4), child: Icon(items[i].icon, size: 18)),
-                Flexible(child: Text(items[i].label, style: RasqTypography.tab, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis)),
-              ]),
-            ),
-        ],
-      ),
+      builder: (context, _) {
+        // 押す前に選んでいたタブ(TabBar は onTap の前に index を進めるので、描いたときの値で比べる。
+        // previousIndex は同じタブを押し直しても更新されず、別のタブへ移ったあとは ∨ が開かなかった)。
+        final selectedAtBuild = ctrl.index;
+        return TabBar(
+          controller: ctrl,
+          isScrollable: isScrollable,
+          tabAlignment: isScrollable ? TabAlignment.start : TabAlignment.fill,
+          onTap: (i) {
+            if (onSelectedTabTap != null && i == selectedAtBuild && i == ctrl.index && items[i].chevron) {
+              final key = _keys[i];
+              final box = key.currentContext?.findRenderObject() as RenderBox?;
+              if (box != null) onSelectedTabTap!(i, box.localToGlobal(Offset.zero) & box.size);
+            }
+            onTap?.call(i);
+          },
+          labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+          tabs: [
+            for (var i = 0; i < items.length; i++)
+              Tab(
+                key: _keys[i],
+                height: RasqSizes.minTap,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (showChevron && items[i].chevron && ctrl.index == i) const Icon(Icons.keyboard_arrow_down, size: 16),
+                  if (items[i].icon != null) Padding(padding: const EdgeInsets.only(right: 4), child: Icon(items[i].icon, size: 18)),
+                  // 点は名前の右肩に重ねる(幅を取らない。等幅のタブで名前が詰まらないように)。
+                  Flexible(
+                    child: Stack(clipBehavior: Clip.none, children: [
+                      Text(items[i].label, style: RasqTypography.tab, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis),
+                      if (items[i].dot) Positioned(right: -6, top: -1, child: Container(key: const ValueKey('tab.dot'), width: 6, height: 6, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, shape: BoxShape.circle))),
+                    ]),
+                  ),
+                ]),
+              ),
+          ],
+        );
+      },
     );
   }
 }
