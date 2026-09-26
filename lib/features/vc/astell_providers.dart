@@ -17,6 +17,7 @@ import 'astell_media_webrtc.dart';
 import 'astell_models.dart';
 import 'astell_stream.dart';
 import 'astell_stream_livekit.dart';
+import 'astell_web_audio.dart' show astellAudioAwaitingGesture, astellPrimeAudioOnGesture;
 
 /// AsTell クライアント (D-139)。Central に繋がっていれば HTTP、無ければモック。
 final astellClientProvider = Provider<AstellClient>((ref) {
@@ -44,6 +45,9 @@ final astellStreamerFactoryProvider = Provider<AstellStreamer Function()>((ref) 
 
 /// 話している印のために声の大きさを見る間隔 (D-317)。null なら見ない(テスト)。
 final astellLevelIntervalProvider = Provider<Duration?>((ref) => const Duration(milliseconds: 400));
+
+/// Web: ブラウザが声の自動再生を止めているときの案内 (D-323)。次にページを触ると鳴らし直す。
+const astellAudioBlockedNotice = 'ブラウザが音声の再生を止めています。画面のどこかをクリック / タップすると鳴ります';
 
 /// 満員で通話に入れなかったときの案内 (D-317)。
 const astellCallFullNotice = '通話は満員です($astellMeshCap 人まで)。声は届きません — ホストが配信していれば、配信で聞けます';
@@ -281,6 +285,9 @@ class AstellSession extends Notifier<AstellSessionState?> {
     state = AstellSessionState(room: room);
     _media = ref.read(astellMediaFactoryProvider)();
     _streamGaveUp = false;
+    astellAudioAwaitingGesture.addListener(_onAudioAwaitingGesture);
+    // Web (Safari): 次の操作のときに、声を鳴らす <audio> を操作の中で鳴らしておく(D-323)。ネイティブは何もしない。
+    astellPrimeAudioOnGesture();
     try {
       final conn = await ref.read(astellClientProvider).connect(room.id);
       _conn = conn;
@@ -556,6 +563,45 @@ class AstellSession extends Notifier<AstellSessionState?> {
     return !peers.any((p) => linked.contains(p.peerId));
   }
 
+  /// Web の自動再生の制限 (D-323): 止められている間は「触ると鳴ります」を出し、鳴ったら消す。
+  void _onAudioAwaitingGesture() {
+    final s = state;
+    if (s == null) return;
+    if (astellAudioAwaitingGesture.value) {
+      if (s.notice == null) state = s.copyWith(notice: astellAudioBlockedNotice);
+    } else if (s.notice == astellAudioBlockedNotice) {
+      state = s.copyWith(clearNotice: true);
+    }
+  }
+
+  /// 通話 / 配信の接続の様子(開発者向け、D-323)。設定の「接続の状態」が 1 秒ごとに読む。実機でしか起きない
+  /// 「繋がったのに聞こえない / 映らない」を、ICE の状態・候補・送受信のバイト数・受けたトラックで切り分ける。
+  Future<List<String>> diagnostics() async {
+    final s = state;
+    if (s == null) return const ['ルームに入っていません'];
+    String short(String? id) => id == null ? '-' : (id.length > 8 ? id.substring(0, 8) : id);
+    final media = _media;
+    final mesh = _mesh;
+    final blocked = media?.micBlocked;
+    final lines = <String>[
+      '自分: peer ${short(s.myPeerId)} / ${kIsWeb ? 'Web' : defaultTargetPlatform.name}${kIsWeb ? (astellInsecureWebContext() ? '(安全でない場所 — マイク不可)' : '(https)') : ''}',
+      'マイク: ${s.micOn ? '立てている' : '下ろしている'} / ${media == null || !media.available ? '通話なし' : (media.micOpen ? '開いた' : 'まだ開いていない')}${blocked != null ? ' / ${AstellMediaException(blocked).message}' : ''}',
+      if (astellAudioAwaitingGesture.value) '声: ブラウザが自動再生を止めている(画面を触ると鳴らし直す)',
+      '通話: ${mesh == null ? 'なし' : (mesh.full ? '満員で入っていない' : '接続 ${mesh.peerIds.length} 本')} / ICE サーバー: ${mesh?.iceServerUrls?.join(', ') ?? '-'}',
+    ];
+    if (mesh != null) {
+      for (final d in await mesh.diagnostics()) {
+        final who = s.peers.where((p) => p.peerId == d.peerId).firstOrNull;
+        lines
+          ..add('— ${who?.displayName ?? '?'}(peer ${short(d.peerId)})')
+          ..addAll([for (final l in d.lines()) '  $l']);
+      }
+    }
+    final st = _streamer;
+    lines.addAll(st == null ? const ['配信: 繋いでいない'] : st.diagnostics().lines());
+    return lines;
+  }
+
   // ── 配信 (D-317) ──
 
   /// LiveKit に繋ぐ(繋いでいればそのまま。上げるのに見るだけのトークンなら取り直す)。
@@ -781,6 +827,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
   /// 切断は待たない — ソケットの close 完了(相手側の done 配送)に UI を
   /// 引きずられないため。購読は先に外すので、以後のメッセージは無視される。
   Future<void> _teardown() async {
+    astellAudioAwaitingGesture.removeListener(_onAudioAwaitingGesture);
     _draftTimer?.cancel();
     _draftTimer = null;
     _draftText = '';
