@@ -100,10 +100,10 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
     if (mounted) setState(() {});
   });
 
-  /// FOW のぶんメディアを寄せる余白 (D-207 → D-215 → D-326): FOW が出る / 消える / **伸び縮みする / 動く**たびに、
-  /// メディアを FOW の**逆サイド**へ寄せる。ホストが置いた矩形(`FowSpec.laidOut`)を次のフレームで読み、壁付けの
-  /// FOW は左右、それ以外(下付き / 上付き / アンカー付き)は上下の余白にする。逆サイドに [viewerMinFreeSpace] は
-  /// 必ず残す(足りないぶんは FOW と重なる)。
+  /// FOW のぶんメディアを寄せる余白 (D-207 → D-215 → D-326 → D-332): FOW が出る / 消える / **伸び縮みする / 動く**たびに、
+  /// メディアを FOW の**逆サイド**へ寄せる。ホストが置いた矩形(`FowSpec.laidOut`)を次のフレームで読み、上下に寄せるか
+  /// 左右に寄せるかは**空きが広くなるほう**(壁付けは左右固定): 幅の広い画面でカラムに置かれた FOW(縦に長い)は左右へ、
+  /// 下側中央の FOW は上へ。逆サイドに [viewerMinFreeSpace] は必ず残す(足りないぶんは FOW と重なる)。
   EdgeInsets _fowInset = EdgeInsets.zero;
   bool _relayoutPending = false;
 
@@ -131,19 +131,17 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
       final f = e.fow;
       final r = f?.laidOut;
       if (f == null || r == null) continue;
-      if (f.pinnedWall != 0) {
-        // 壁付け: 左右の逆サイドへ。
-        if (r.center.dx < screen.width / 2) {
-          left = math.max(left, r.right);
-        } else {
-          right = math.max(right, screen.width - r.left);
-        }
-      } else if (r.center.dy < screen.height / 2) {
-        // 上付き / 上側のアンカー: 下へ。
-        top = math.max(top, r.bottom);
+      // 上下に寄せたときの余白と、左右に寄せたときの余白(それぞれ FOW の広いほうの側へ)。空きが広くなるほうを選ぶ(壁付けは左右)。
+      final vertical = r.top >= screen.height - r.bottom ? (top: 0.0, bottom: screen.height - r.top) : (top: r.bottom, bottom: 0.0);
+      final horizontal = r.left >= screen.width - r.right ? (left: 0.0, right: screen.width - r.left) : (left: r.right, right: 0.0);
+      final freeV = (screen.height - vertical.top - vertical.bottom) * screen.width;
+      final freeH = (screen.width - horizontal.left - horizontal.right) * screen.height;
+      if (f.pinnedWall != 0 || freeH > freeV) {
+        left = math.max(left, horizontal.left);
+        right = math.max(right, horizontal.right);
       } else {
-        // 下付き(既定の下側中央も): 上へ。
-        bottom = math.max(bottom, screen.height - r.top);
+        top = math.max(top, vertical.top);
+        bottom = math.max(bottom, vertical.bottom);
       }
     }
     (top, bottom) = _keepFree(top, bottom, screen.height, viewerMinFreeSpace);

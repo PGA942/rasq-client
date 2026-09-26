@@ -70,7 +70,7 @@ void main() {
   });
 
   group('マイク (Web でも https ならネイティブと同じ)', () {
-    test('開いたマイクは、offer を出す側の送受信の 1 本に差し込む(はじめは送らない)', () async {
+    test('開いたマイクは、offer を出す側の送受信の 1 本に、立てたときだけ差し込む。下ろすと外す (D-330)', () async {
       final mic = _FakeTrack('audio', 'mic');
       final m = make(mic: mic);
       await m.media.openMic();
@@ -79,12 +79,22 @@ void main() {
       await m.media.createLink('p2', offerer: true, iceServers: ice, handlers: handlers);
       final t = m.pcs.single.made.single;
       expect(t.direction, TransceiverDirection.SendRecv);
-      expect(t.sender.replaced, [mic]);
+      expect(t.sender.replaced, isEmpty, reason: '立てるまでは送る側に差さない');
       m.media.setMicEnabled(true);
+      await Future<void>.delayed(Duration.zero);
       expect(mic.enabled, isTrue);
+      expect(t.sender.replaced, [mic]);
+      // 下ろす: enabled を切るだけでなく、送る側から外す(端末によって enabled=false だけでは声が止まらなかった)。
+      m.media.setMicEnabled(false);
+      await Future<void>.delayed(Duration.zero);
+      expect(mic.enabled, isFalse);
+      expect(t.sender.replaced, [mic, null]);
+      m.media.setMicEnabled(true);
+      await Future<void>.delayed(Duration.zero);
+      expect(t.sender.replaced, [mic, null, mic]);
     });
 
-    test('受ける側: 相手の offer でできた 1 本を sendrecv にしてマイクを差し込む / あとから開いたマイクも差し込む', () async {
+    test('受ける側: 相手の offer でできた 1 本を sendrecv にして、立っているマイクを差し込む / あとから開いて立てたマイクも差し込む', () async {
       final mic = _FakeTrack('audio', 'mic');
       final m = make(mic: mic);
       final link = await m.media.createLink('p2', offerer: false, iceServers: ice, handlers: handlers);
@@ -93,7 +103,14 @@ void main() {
       expect(t.direction, TransceiverDirection.SendRecv); // ブラウザは recvonly で作る
       expect(t.sender.replaced, isEmpty); // マイクはまだ開いていない
       await m.media.openMic();
+      expect(t.sender.replaced, isEmpty, reason: '開いただけ(下ろしたまま)では差さない');
+      m.media.setMicEnabled(true);
+      await Future<void>.delayed(Duration.zero);
       expect(t.sender.replaced, [mic]);
+      // 立てたまま繋いだ相手には、offer が来た時点で差す。
+      final mic2 = await m.media.createLink('p3', offerer: false, iceServers: ice, handlers: handlers);
+      await mic2.setRemoteDescription({'sdp': 'offer-sdp', 'type': 'offer'});
+      expect(m.pcs.last.made.single.sender.replaced, [mic]);
     });
 
     test('Web を http(localhost 以外)で開いていれば開かない。https(安全なコンテキスト)なら開ける', () async {
@@ -172,6 +189,8 @@ void main() {
       expect(pc.added.single.candidate, contains('100.96.57.10'));
 
       await m.media.openMic();
+      m.media.setMicEnabled(true); // 立てたときだけ送る側に差さる (D-330)
+      await Future<void>.delayed(Duration.zero);
       pc.onTrack!(RTCTrackEvent(track: _FakeTrack('audio', 'r1'), streams: const []));
       pc.onIceConnectionState!(RTCIceConnectionState.RTCIceConnectionStateConnected);
       pc.onConnectionState!(RTCPeerConnectionState.RTCPeerConnectionStateConnected);

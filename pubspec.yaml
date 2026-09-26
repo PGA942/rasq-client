@@ -105,6 +105,7 @@ flutter:
     # RAi のアイコン (D-180: obsidian-vault/RAi 動作リファレンス/アイコン案1.jpeg、外側の黒を透明に)。
     - assets/images/rai_icon.png
     - assets/audio/hold_music.wav
+    - assets/audio/alarm.wav
     # RAi の 3D モデル (D-181: Google Drive で受領した glb。リグ arm_1..4 L/R / ear / head / cone / koma、
     # アニメ idle / run_* / accident。描画は後段 — 今はアセットとして保持)。
     - assets/models/rai.glb
