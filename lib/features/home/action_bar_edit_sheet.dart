@@ -119,7 +119,7 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
                   id: p.id,
                   label: p.decl.label,
                   // 手動配置 (契約 v0.14 placement): 宣言だけでは置かれないので、ここで足す。
-                  subtitle: '${isViewerToggleActionId(p.id) ? '${p.plugin.manifest.name} · 全画面表示プラグイン(ON / OFF のボタン)' : isAstellPluginActionId(p.id) ? '${p.plugin.manifest.name} · AsTell プラグイン(押すとそのプラグインを開く)' : '${p.plugin.manifest.name} · タグ: ${p.decl.tags.join(' / ')}'}${p.isManual ? ' · 手動配置' : ''}',
+                  subtitle: '${isViewerToggleActionId(p.id) ? '${p.plugin.manifest.name} · 全画面表示プラグイン(ON / OFF のボタン)' : isAstellPluginAction(p) ? '${p.plugin.manifest.name} · AsTell プラグイン(押すとそのプラグインを開く)' : '${p.plugin.manifest.name} · タグ: ${p.decl.tags.join(' / ')}'}${p.isManual ? ' · 手動配置' : ''}',
                   genre: p.decl.tags.isEmpty ? 'Plugin' : p.decl.tags.first,
                   icon: PostRow.iconFor(p.decl.icon, Icons.extension_outlined),
                 ),

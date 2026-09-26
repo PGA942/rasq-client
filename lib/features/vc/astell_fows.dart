@@ -716,22 +716,23 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   /// **ボタンの種類を足すとき**は、`astell_bar.dart` の [astellBarBuiltinActions] と、ここに 1 つ。
   Map<String, AstellBarButton> _barButtons(BuildContext context, WidgetRef ref, AstellSessionState s) {
     final session = ref.read(astellSessionProvider.notifier);
-    final hasPlugins = ref.watch(slotPluginsForProvider(SlotIds.astellAction)).isNotEmpty;
+
     return {
       AstellBarIds.speaker: AstellBarButton(icon: s.speakerMuted ? Icons.volume_off : Icons.volume_up, tooltip: s.speakerMuted ? 'スピーカーミュート解除' : 'スピーカーミュート', filled: s.speakerMuted ? RasqColors.danger : null, onPressed: session.toggleSpeaker),
       AstellBarIds.mic: s.forceMuted
           ? const AstellBarButton(icon: Icons.mic_off, tooltip: 'モデレーターにミュートされています', filled: RasqColors.danger)
           : AstellBarButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン', filled: s.micOn ? RasqColors.accent : null, onPressed: session.toggleMic),
-      // 保留 (D-325): マイクを下ろして声も受けない。相手には保留中と伝わり、相手が全員保留中なら手元で保留音。
-      AstellBarIds.hold: AstellBarButton(icon: s.onHold ? Icons.phone_paused : Icons.pause_circle_outline, tooltip: s.onHold ? '保留を解除' : '保留', filled: s.onHold ? RasqColors.warning : null, onPressed: () => unawaited(session.toggleHold())),
       AstellBarIds.screen: AstellBarButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: () => _toggleScreen(context)),
       if (s.viewingPeer case final peer?) AstellBarIds.fullscreen: AstellBarButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: () => _openPeerScreen(context, peer)),
-      // プラグインアクション (D-167): スロット `astell.action` のプラグインを選んで開く。登録が無ければ無効表示。
-      AstellBarIds.plugins: AstellBarButton(icon: Icons.extension_outlined, tooltip: hasPlugins ? 'プラグインアクション' : 'プラグインアクション(未登録)', filled: hasPlugins ? RasqColors.sub : null, onPressed: hasPlugins ? () => _openPlugin(context, s) : null),
       AstellBarIds.captions: AstellBarButton(icon: Icons.subtitles_outlined, tooltip: s.captionsOn ? '字幕オフ' : '字幕オン', filled: s.captionsOn ? const Color(0xFF2EBF8F) : null, onPressed: session.toggleCaptions),
-      // プラグインのボタン (D-324): 押すとそのプラグインを開く(選ぶシートを挟まない)。
+      // プラグインのボタン (D-324 → D-328): プラグインが宣言したボタン 1 つ = 1 つ。押すとそのプラグインの `astell.open`
+      // (宣言の id を `action` に載せる。宣言の無い既定ボタンは載せない)。選ぶシートは挟まない。
       for (final p in ref.watch(astellPluginActionsProvider))
-        p.id: AstellBarButton(icon: PostRow.iconFor(p.decl.icon, Icons.extension_outlined), tooltip: p.decl.label, onPressed: () => ref.read(slotPluginsProvider.notifier).astellOpen(p.plugin, ref.read(astellSessionProvider) ?? s, fowOwner: astellRoomFowId, column: fowColumnOf(context))),
+        p.id: AstellBarButton(
+          icon: PostRow.iconFor(p.decl.icon, Icons.extension_outlined),
+          tooltip: p.decl.label,
+          onPressed: () => ref.read(slotPluginsProvider.notifier).astellOpen(p.plugin, ref.read(astellSessionProvider) ?? s, action: p.decl.id == astellPluginActionId ? null : p.decl.id, fowOwner: astellRoomFowId, column: fowColumnOf(context)),
+        ),
     };
   }
 
@@ -842,25 +843,6 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     }
   }
 
-  /// プラグインアクション (D-167): 1 つなら即開く、複数ならシートで選ぶ。
-  Future<void> _openPlugin(BuildContext context, AstellSessionState s) async {
-    final plugins = ref.read(slotPluginsForProvider(SlotIds.astellAction));
-    if (plugins.isEmpty) return;
-    var pick = plugins.length == 1 ? plugins.first : null;
-    if (pick == null) {
-      final manager = ref.read(overlayManagerProvider);
-      pick = await manager.showBottomSheet<SlotPlugin>(
-        id: 'astell.plugin.pick',
-        title: 'プラグインアクション',
-        builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
-          for (final p in plugins) RasqListTile(title: p.manifest.name, subtitle: p.manifest.description, onTap: () => manager.close('astell.plugin.pick', result: p)),
-        ]),
-      );
-    }
-    if (pick == null || !context.mounted) return;
-    // プラグインの FOW はルーム FOW の子として同じカラムに (D-169)。
-    await ref.read(slotPluginsProvider.notifier).astellOpen(pick, s, fowOwner: astellRoomFowId, column: fowColumnOf(context));
-  }
 
   /// 共有欄に出すもの (D-146): ピン留め(共有・文字起こし)+ 自動表示の種類に該当する共有。
   List<_SharedItem> _sharedItems(AstellSessionState s) {
@@ -1039,6 +1021,20 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
             title: '画面共有が始まったら共有枠に出す',
             value: ref.watch(astellAutoPlayProvider),
             onChanged: (v) => ref.read(settingsAreaProvider(astellSettingsArea).notifier).set('autoplay.screen', v),
+          ),
+          const Divider(height: RasqSpacing.md),
+          // 保留音 (D-327): 自分の端末(参加者)と、このルーム(オーナー)の両方がオンのときだけ鳴る。
+          _label(ctx, '保留音'),
+          RasqSwitchListTile(
+            key: const ValueKey('astell.holdMusic.mine'),
+            title: '保留音を鳴らす(この端末)',
+            value: ref.watch(astellHoldMusicProvider),
+            onChanged: (v) => ref.read(settingsAreaProvider(astellSettingsArea).notifier).set('holdMusic', v),
+          ),
+          if (isOwner) RasqSwitchListTile(key: const ValueKey('astell.holdMusic.room'), title: 'このルームで保留音を許す(オーナー)', value: room.holdMusic, onChanged: (v) => _patch({'holdMusic': v})),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+            child: Text('開催予約の開始を待っている間と、全員がマイクを下ろして(画面共有 / 配信も無く)チャットが ${astellHoldIdleAfter.inSeconds ~/ 60} 分以上流れていない間に鳴ります。誰かが話し始めるか、チャットが流れると止まります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
           const Divider(height: RasqSpacing.md),
           _label(ctx, '読み上げ(${voices.model}、プリセット音声)${voices.enabled ? '' : ' — サーバー未設定'}'),
@@ -1405,7 +1401,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
 /// 下段バー (D-148、ユーザー指定の構造 → D-324):
 /// `[入力欄の左の丸いボタン] [中央] [共有する/送信完了する] [設定]`
 /// - 左端: 設定の並び(既定 = スピーカーミュート / マイクミュート / 画面共有 / (全画面: 共有枠にピアの画面がある時) /
-///   プラグインアクション / 字幕、D-324)。**幅に収まる数だけ**並べ、はみ出したら先頭から入るだけと**並びの最後の 1 つ**
+///   プラグインが宣言したボタン / 字幕、D-324 → D-328)。**幅に収まる数だけ**並べ、はみ出したら先頭から入るだけと**並びの最後の 1 つ**
 ///   (入力欄の隣。既定では字幕)を出し、残りは歯車のメニューの先頭へ(歯車に点)。stick は 3 つまで。
 /// - stick で共有枠にピアの画面がある時は、左端(並びの最後の 1 つ以外)が**映像そのもの**に置き換わり、
 ///   タップでそのまま全画面。
@@ -1877,10 +1873,8 @@ class _MemberRow extends StatelessWidget {
           size: RasqSizes.avatarLg,
           fallbackLabel: p.displayName,
           // 全員向けミュート (D-149) は赤のマイクオフ。
-          // 話している間 (D-317) は緑の波形。保留中 (D-325) は橙の受話器。
-          badge: p.onHold
-              ? const _StateBadge(icon: Icons.phone_paused, color: RasqColors.warning)
-              : _StateBadge(icon: p.speaking && !p.mutedByMod ? Icons.graphic_eq : (p.micOn ? Icons.mic : Icons.mic_off), color: p.mutedByMod ? RasqColors.danger : (p.speaking ? astellSpeakingColor : (p.micOn ? RasqColors.accent : scheme.outline))),
+          // 話している間 (D-317) は緑の波形。
+          badge: _StateBadge(icon: p.speaking && !p.mutedByMod ? Icons.graphic_eq : (p.micOn ? Icons.mic : Icons.mic_off), color: p.mutedByMod ? RasqColors.danger : (p.speaking ? astellSpeakingColor : (p.micOn ? RasqColors.accent : scheme.outline))),
         ),
         const SizedBox(width: RasqSpacing.md),
         Expanded(
@@ -1889,7 +1883,6 @@ class _MemberRow extends StatelessWidget {
               Text(self ? '${p.displayName}(あなた)' : p.displayName, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
               if (role != null) RasqPill(label: role!, color: role == 'ホスト' ? RasqColors.accent : RasqColors.sub, textColor: Colors.white),
               if (p.mutedByMod) const RasqPill(label: '強制ミュート', color: RasqColors.danger, textColor: Colors.white),
-              if (p.onHold) const RasqPill(label: '保留中', color: RasqColors.warning, textColor: Colors.white),
             ]),
             Text('@${p.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
           ]),

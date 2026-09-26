@@ -120,10 +120,11 @@ void main() {
     expect(c.read(slotPluginsNoticeProvider), contains('登録できませんでした'));
   });
 
-  testWidgets('AsTell (§2.1): プラグインアクション → astell.open(room/peers/shares)→ FOW、astell.share/sound.play、共有の出来事は astell.event', (tester) async {
+  testWidgets('AsTell (§2.1): プラグインが宣言したボタン (D-328) → astell.open(room/peers/shares/action)→ FOW、astell.share/sound.play、共有の出来事は astell.event', (tester) async {
     late FakeSlotRuntime rt;
     fakes['astell'] = () => rt = FakeSlotRuntime(
-          manifest: manifest('t.astell', ['astell.action']),
+          // 宣言 1 つ = ボタン 1 つ(placement の既定 auto = 字幕の手前に自動で入る)。
+          manifest: {...manifest('t.astell', ['astell.action']), 'actions': [{'id': 'fx', 'slot': 'astell.action', 'label': '効果音パネル', 'icon': 'celebration'}]},
           handler: (self, fn, args) {
             if (fn == 'astell.open') {
               self.openFow('panel', {'t': 'Column', 'k': 'root', 'c': [{'t': 'Text', 'k': 'hello', 'p': {'text': 'プラグインのパネル ${(args['peers'] as List).length} 人'}}, {'t': 'Button', 'k': 'b', 'p': {'label': '効果音'}, 'on': {'tap': 'fx'}}]}, title: 'AsTell プラグイン');
@@ -147,12 +148,13 @@ void main() {
     await tester.tap(find.textContaining('参加中: '));
     await tester.pumpAndSettle();
     expect(find.byType(AstellRoomBody), findsOneWidget);
-    // 下段のプラグインアクション(狭幅では歯車のメニューの先頭、D-324)を押す。
+    // 下段の、プラグインが宣言したボタン(字幕の手前 = 狭幅では歯車のメニューの先頭、D-324 / D-328)を押す。
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(of: find.byKey(astellOverflowKey), matching: find.byTooltip('プラグインアクション')));
+    await tester.tap(find.descendant(of: find.byKey(astellOverflowKey), matching: find.byTooltip('効果音パネル')));
     await tester.pumpAndSettle();
     final open = rt.calls.where((x) => x.$1 == 'astell.open').single;
+    expect(open.$2['action'], 'fx', reason: '宣言の id が action に載る');
     expect(open.$2['room'], isA<Map>());
     expect((open.$2['peers'] as List).length, 5);
     expect((open.$2['shares'] as List), isA<List>());

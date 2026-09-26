@@ -742,7 +742,9 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   // ── スロット別の入口(アプリの各所から呼ぶ)──────────────────────
 
   /// AsTell (CONTRACT §2.1): プラグインアクションから選ばれた。
-  Future<void> astellOpen(SlotPlugin plugin, AstellSessionState s, {String? fowOwner, int column = 0}) async {
+  /// [action] = 押されたボタンの宣言 id(契約 v0.15: マニフェストの `actions` に `slot: "astell.action"` を書いたもの)。
+  /// 宣言の無いプラグインの既定ボタンなら null(payload に `action` を載せない)。
+  Future<void> astellOpen(SlotPlugin plugin, AstellSessionState s, {String? action, String? fowOwner, int column = 0}) async {
     _setFowContext(plugin, fowOwner, column);
     final token = 'astell-${DateTime.now().microsecondsSinceEpoch}';
     _astellTokens[plugin.id] = token;
@@ -750,6 +752,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     _seenPeers = {for (final x in s.peers) x.peerId};
     await plugin.value('astell.open', {
       'token': token,
+      'action': ?action,
       'room': s.room.toJson(),
       'me': {'accountId': s.myAccountId, 'peerId': s.myPeerId, 'handle': 'me', 'displayName': 'あなた'},
       'peers': [for (final p in s.peers) _peerJson(p)],

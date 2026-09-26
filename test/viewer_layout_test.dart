@@ -59,9 +59,13 @@ void main() {
     expect(insetOf(tester).bottom, inInclusiveRange(screenH * 0.4, screenH * 0.6));
 
     // いっぱいまで伸ばす → 逆サイドに 120px は残す(足りないぶんは FOW と重なる)。
-    spec.heightFactor.value = 0.92;
+    spec.heightFactor.value = spec.maxHeightFactor;
     await tester.pumpAndSettle();
     expect(screenH - insetOf(tester).bottom, closeTo(viewerMinFreeSpace, 0.5));
+    // 上側のボタン群には被さらない (D-329): 最大でも FOW の上辺は「戻る」の下辺より下。
+    final back = tester.getRect(find.byTooltip('戻る'));
+    expect(spec.laidOut!.top, greaterThanOrEqualTo(back.bottom));
+    expect(spec.maxHeightFactor, lessThan(0.92));
 
     // 縮める → 戻る。
     spec.heightFactor.value = spec.heightStops.first;

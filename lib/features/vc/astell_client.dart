@@ -285,6 +285,7 @@ class MockAstellClient implements AstellClient {
       joinPolicy: patch['joinPolicy'] as String?,
       sharePolicy: patch['sharePolicy'] as String?,
       tendencyFilter: patch['tendencyFilter'] as bool?,
+      holdMusic: patch['holdMusic'] as bool?,
       ttsVoice: patch['ttsVoice'] as String?,
       clearTtsVoice: patch.containsKey('ttsVoice') && patch['ttsVoice'] == null,
       scheduledAt: patch['scheduledAt'] is String ? DateTime.tryParse(patch['scheduledAt'] as String)?.toLocal() : null,
@@ -591,7 +592,7 @@ class _MockConnection implements AstellConnection {
   late final StreamController<Map<String, Object?>> _controller;
   var _n = 0;
 
-  static Map<String, Object?> _peerJson(AstellPeer p) => {'peerId': p.peerId, 'accountId': p.accountId, 'handle': p.handle, 'displayName': p.displayName, 'state': {'micOn': p.micOn, 'screenShare': p.screenShare?.toJson(), 'mutedByMod': p.mutedByMod, 'onHold': p.onHold}};
+  static Map<String, Object?> _peerJson(AstellPeer p) => {'peerId': p.peerId, 'accountId': p.accountId, 'handle': p.handle, 'displayName': p.displayName, 'state': {'micOn': p.micOn, 'screenShare': p.screenShare?.toJson(), 'mutedByMod': p.mutedByMod}};
   static Map<String, Object?> _shareJson(AstellShare s) => {'id': s.id, 'accountId': s.accountId, 'handle': s.handle, 'displayName': s.displayName, 'kind': s.kind, 'payload': s.payload, 'pinned': s.pinned, 'createdAt': s.createdAt.toIso8601String()};
   static Map<String, Object?> _transcriptJson(AstellTranscript t) => {'id': t.id, 'accountId': t.accountId, 'handle': t.handle, 'displayName': t.displayName, 'text': t.text, 'lang': t.lang, 'pinned': t.pinned, 'createdAt': t.createdAt.toIso8601String()};
 

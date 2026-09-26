@@ -64,16 +64,34 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   VideoSession _session(int i) => _sessions.putIfAbsent(i, () => VideoSession(widget.post.media[i], autoplay: true));
   bool _chrome = true;
 
-  /// 下側の FOW (D-202)。
-  late final FowSpec _spec = FowSpec(
-    initialHeightFactor: viewerFowCollapsedFactor,
-    minHeightFactor: 0.08,
-    maxHeightFactor: 0.92,
-    heightStops: const [viewerFowCollapsedFactor, viewerFowExpandedFactor],
-    freeAboveStops: true,
-    theme: (_) => RasqTheme.dark(),
-    maxWidth: viewerFowMaxWidth, // 下側中央 (D-326)
-  );
+  /// 下側の FOW (D-202)。最初に開くときに作る(上側のボタン群に**被さらない**最大の高さを画面から決める、D-329)。
+  FowSpec? _specOrNull;
+  FowSpec get _spec => _specOrNull!;
+
+  /// 上側のボタン群(戻る / 枚数 / アクションバー / PiP / …)の下辺(SafeArea + 余白 + 40px の丸ボタン + 余白)。
+  /// FOW はこれより上に伸びない(D-329: 投稿アクションバー付き FOW が上側のボタン群に被さらないように)。
+  static double viewerHeaderBottom(BuildContext context) => MediaQuery.paddingOf(context).top + RasqSpacing.sm * 2 + 40;
+
+  FowSpec _createSpec() {
+    final screenH = MediaQuery.sizeOf(context).height;
+    final max = screenH > 0 ? ((screenH - viewerHeaderBottom(context) - RasqSpacing.sm) / screenH).clamp(0.3, 0.92) : 0.92;
+    final expanded = math.min(viewerFowExpandedFactor, max);
+    final spec = FowSpec(
+      initialHeightFactor: viewerFowCollapsedFactor,
+      minHeightFactor: 0.08,
+      maxHeightFactor: max,
+      heightStops: [viewerFowCollapsedFactor, expanded],
+      freeAboveStops: true,
+      theme: (_) => RasqTheme.dark(),
+      maxWidth: viewerFowMaxWidth, // 下側中央 (D-326)
+    );
+    spec.heightFactor.addListener(_syncBarrier);
+    // FOW の伸び縮み / 移動に追従 (D-326)。
+    for (final l in _geometryOf(spec)) {
+      l.addListener(_scheduleRelayout);
+    }
+    return spec;
+  }
   final _barrier = ValueNotifier<bool>(false);
   OverlayManager? _manager;
 
@@ -219,15 +237,10 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   @override
   void initState() {
     super.initState();
-    _spec.heightFactor.addListener(_syncBarrier);
     _router = ref.read(routerProvider);
     _router!.routerDelegate.addListener(_onRoute);
     _manager = ref.read(overlayManagerProvider);
     _manager!.addListener(_onOverlays);
-    // FOW の伸び縮み / 移動に追従 (D-326)。
-    for (final l in _geometry) {
-      l.addListener(_scheduleRelayout);
-    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _askOverlay(_page.value);
@@ -236,19 +249,21 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   }
 
   /// 自分の FOW の幾何(高さ / 横縦の追従量 / カラムなど)。
-  List<Listenable> get _geometry => [_spec.heightFactor, _spec.moveDx, _spec.moveDy, _spec.geometryRev];
+  static List<Listenable> _geometryOf(FowSpec spec) => [spec.heightFactor, spec.moveDx, spec.moveDy, spec.geometryRev];
 
   @override
   void dispose() {
     _router?.routerDelegate.removeListener(_onRoute);
     _manager?.removeListener(_onOverlays);
-    for (final l in _geometry) {
-      l.removeListener(_scheduleRelayout);
+    if (_specOrNull case final spec?) {
+      for (final l in _geometryOf(spec)) {
+        l.removeListener(_scheduleRelayout);
+      }
+      spec.heightFactor.removeListener(_syncBarrier);
     }
     for (final c in _zoom.values) {
       c.dispose();
     }
-    _spec.heightFactor.removeListener(_syncBarrier);
     final manager = _manager;
     // 破棄中に他のウィジェットを更新しない: 次のフレームで FOW を閉じる(アプリごと破棄された後なら何もしない)。
     if (manager != null) {
@@ -273,6 +288,7 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   void _openPanel() {
     final manager = ref.read(overlayManagerProvider);
     _manager = manager;
+    _specOrNull ??= _createSpec();
     manager.showFow<void>(
       id: viewerFowId,
       spec: _spec,
@@ -550,10 +566,12 @@ class _ViewerPanelState extends ConsumerState<_ViewerPanel> {
       final box = _topKey.currentContext?.findRenderObject() as RenderBox?;
       final host = MediaQuery.sizeOf(context).height;
       if (box == null || !box.hasSize || host <= 0) return;
-      final fit = ((box.size.height + _chromeHeight) / host).clamp(spec.minHeightFactor, viewerFowExpandedFactor - 0.05);
+      // 展開の段は作ったときの値(上側のボタン群に被さらない範囲、D-329)。
+      final expanded = spec.heightStops.length >= 2 ? spec.heightStops.last : math.min(viewerFowExpandedFactor, spec.maxHeightFactor);
+      final fit = ((box.size.height + _chromeHeight) / host).clamp(spec.minHeightFactor, expanded - 0.05);
       final current = spec.heightStops.isEmpty ? viewerFowCollapsedFactor : spec.heightStops.first;
       if ((fit - current).abs() < 0.003) return;
-      spec.heightStops = [fit, viewerFowExpandedFactor];
+      spec.heightStops = [fit, expanded];
       if ((spec.heightFactor.value - current).abs() < 0.01) spec.heightFactor.value = fit;
     });
   }

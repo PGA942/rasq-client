@@ -10,7 +10,8 @@ import '../plugins/slot_plugins.dart';
 ///
 /// 構成は投稿のアクションバーと同じ仕組み([ActionBarConfig]、構成キー [astellBarConfigKey] = 端末ごと。アカウントに依らない)で、
 /// 編集も「アクションバーの編集」FOW の 1 面(`ActionBarSurface.astell`)。並べ替え / 非表示(`hidden`)/ (+) で追加 / バンドルができる。
-/// 選べるのは [astellBarBuiltinActions](今のボタン)と、スロット `astell.action` のプラグインのボタン([astellPluginActionsProvider])。
+/// 選べるのは [astellBarBuiltinActions](今のボタン)と、スロット `astell.action` のプラグインが**自分で宣言した**ボタン
+/// ([astellPluginActionsProvider]、D-328: ほかのアクションバーと同じくマニフェストの `actions` で定義 / スロット登録)。
 ///
 /// **ボタンの種類を足すとき**(挙手など): [AstellBarIds] に id、[astellBarBuiltinActions] の既定の位置に記述子を 1 行足し、
 /// ルームの画面(`astell_fows.dart` の `_barButtons`)で今の状態の見た目と動きを返す。保存済みの並びにも、既定の並びの位置に入る
@@ -21,55 +22,47 @@ const astellBarConfigKey = 'astell:room';
 abstract final class AstellBarIds {
   static const speaker = 'astell.speaker';
   static const mic = 'astell.mic';
-
-  /// 保留 (D-325): マイクを下ろして声も受けない。相手が全員保留中なら手元で保留音。
-  static const hold = 'astell.hold';
   static const screen = 'astell.screen';
 
   /// 共有枠にピアの画面があるときだけ出る。
   static const fullscreen = 'astell.fullscreen';
-
-  /// スロット `astell.action` のプラグインを選んで開く(1 つなら即開く)。
-  static const plugins = 'astell.plugins';
   static const captions = 'astell.captions';
 }
 
-/// 既定の並び = これまでの下段の並び(スピーカー / マイク / 保留 / 画面共有 / 全画面 / プラグイン / 字幕)。
+/// 既定の並び = これまでの下段の並び(スピーカー / マイク / 画面共有 / 全画面 / 字幕)。「プラグインアクション」(選ぶシート)は
+/// D-328 で廃止: プラグインのボタンは各プラグインが宣言し、並びの最後の 1 つ(字幕)の手前に自動で入る。
 /// アイコン名は編集画面のタイルと (+) の検索に出るもの(下段では状態に応じたアイコンを出す)。
 const astellBarBuiltinActions = <ActionDescriptor>[
   ActionDescriptor(id: AstellBarIds.speaker, genreTag: 'Speaker', label: 'スピーカー', icon: 'volume_up', doneIcon: 'volume_up', countSource: CountSource.none),
   ActionDescriptor(id: AstellBarIds.mic, genreTag: 'Mic', label: 'マイク', icon: 'mic', doneIcon: 'mic', countSource: CountSource.none),
-  ActionDescriptor(id: AstellBarIds.hold, genreTag: 'Hold', label: '保留', icon: 'phone_paused', doneIcon: 'phone_paused', countSource: CountSource.none),
   ActionDescriptor(id: AstellBarIds.screen, genreTag: 'Screen', label: '画面共有', icon: 'desktop_windows', doneIcon: 'desktop_windows', countSource: CountSource.none),
   ActionDescriptor(id: AstellBarIds.fullscreen, genreTag: 'Fullscreen', label: '全画面(共有枠に画面があるとき)', icon: 'fullscreen', doneIcon: 'fullscreen', countSource: CountSource.none),
-  ActionDescriptor(id: AstellBarIds.plugins, genreTag: 'PluginPicker', label: 'プラグインアクション', icon: 'extension', doneIcon: 'extension', countSource: CountSource.none),
   ActionDescriptor(id: AstellBarIds.captions, genreTag: 'Captions', label: '字幕(文字起こし)', icon: 'subtitles', doneIcon: 'subtitles', countSource: CountSource.none),
 ];
 
-// ── プラグインのボタン ──────────────────────────────────────────────
+// ── プラグインのボタン (D-324 → D-328) ──────────────────────────────────
 
-/// `astell.action` のプラグインのボタンの id は `slot:<pluginId>:astell.action`(宣言の `id` に依らない)。
+/// 宣言の無いプラグインの既定ボタンの宣言 id(ボタンの id は `slot:<pluginId>:astell.action`)。宣言があれば
+/// 宣言の `id` がそのまま(`slot:<pluginId>:<actionId>`)。
 const astellPluginActionId = SlotIds.astellAction;
 
-bool isAstellPluginActionId(String id) => isPluginActionId(id) && id.endsWith(':$astellPluginActionId');
+/// AsTell のプラグインのボタンか(宣言のスロットで見る。id の形では見ない)。
+bool isAstellPluginAction(PluginAction p) => p.decl.slot == SlotIds.astellAction;
 
-/// 見た目はマニフェストの `actions` の `slot: "astell.action"` の項目(label / icon / tags)、無ければプラグイン名 + パズルのアイコン。
-/// **宣言が無ければ手動配置**((+) で足すまで出ない。既定の並び = これまでの並びを変えない)。宣言があればその placement。
-SlotActionDecl astellActionDecl(SlotManifest m) {
-  final declared = m.actions.where((a) => a.slot == SlotIds.astellAction).firstOrNull;
-  return SlotActionDecl(
-    id: astellPluginActionId,
-    label: declared?.label ?? m.name,
-    icon: declared?.icon ?? 'extension',
-    tags: declared?.tags ?? const [],
-    slot: SlotIds.astellAction,
-    placement: declared?.placement ?? SlotActionDecl.placementManual,
-  );
+/// プラグインが**自分で定義した**ボタン(契約 v0.15 / D-328): マニフェストの `actions` の `slot: "astell.action"` の項目 1 つ = ボタン 1 つ
+/// (label / icon / tags / placement は宣言どおり。placement の既定 `auto` = 並びの最後の 1 つ(字幕)の手前に自動で入る、
+/// `manual` = (+) で足すまで出ない)。押すとそのプラグインの `astell.open {action: <id>}`。
+/// **宣言が無ければ** プラグイン名 + パズルの 1 ボタン(手動配置、`astell.open` に `action` は無し)= これまでどおり。
+List<SlotActionDecl> astellActionDecls(SlotManifest m) {
+  final declared = [for (final a in m.actions) if (a.slot == SlotIds.astellAction) a];
+  if (declared.isNotEmpty) return declared;
+  return [SlotActionDecl(id: astellPluginActionId, label: m.name, icon: 'extension', slot: SlotIds.astellAction, placement: SlotActionDecl.placementManual)];
 }
 
-/// スロット `astell.action` のプラグインのボタン(1 プラグイン = 1 ボタン。押すとそのプラグインの `astell.open`)。
+/// スロット `astell.action` のプラグインのボタン(宣言ごとに 1 つ。押すとそのプラグインの `astell.open`)。
 final astellPluginActionsProvider = Provider<List<PluginAction>>((ref) => [
-      for (final p in ref.watch(slotPluginsForProvider(SlotIds.astellAction))) PluginAction(plugin: p, decl: astellActionDecl(p.manifest)),
+      for (final p in ref.watch(slotPluginsForProvider(SlotIds.astellAction)))
+        for (final d in astellActionDecls(p.manifest)) PluginAction(plugin: p, decl: d),
     ]);
 
 // ── 下段の組み立て ──────────────────────────────────────────────────
@@ -139,6 +132,10 @@ ActionBarConfig astellBarWithNewDefaults(ActionBarConfig config) {
 }
 
 /// 構成 + プラグインのボタン + 今押せるボタン([buttons]、id → 今の見た目。無い id = 今は出さない)→ 下段の並び。
+///
+/// 宣言だけで自動配置されるプラグインのボタン(`placement: auto`、構成にまだ入っていないもの)は、ほかのバーと同じく
+/// タグが内蔵のボタンに似ていればそのバンドルへ、似ていなければ**並びの最後の 1 つ(入力欄の隣、既定では字幕)の手前**に入る
+/// (D-328。`apply` は末尾に足すので、ここで最後の 1 つの手前へ動かす)。
 List<AstellBarItem> resolveAstellBar({
   required ActionBarConfig config,
   required List<PluginAction> plugins,
@@ -147,19 +144,25 @@ List<AstellBarItem> resolveAstellBar({
   required Map<String, AstellBarButton> buttons,
 }) {
   final merged = mergePluginActions(config: astellBarWithNewDefaults(config), snsActions: astellBarBuiltinActions, plugins: plugins, settings: settings, prefs: prefs);
+  final saved = {...config.order, ...config.listedIds};
+  final autoIds = {for (final p in plugins) if (!p.isManual && !saved.contains(p.id)) p.id};
   final out = <AstellBarItem>[];
+  final auto = <AstellBarItem>[];
   for (final e in merged.config.apply(merged.actions)) {
     switch (e) {
       case SingleActionEntry(:final action):
         final b = buttons[action.id];
-        if (b != null) out.add(AstellBarSingle(action.id, b));
+        if (b == null) continue;
+        (autoIds.contains(action.id) ? auto : out).add(AstellBarSingle(action.id, b));
       case ActionListEntry(:final list, :final members):
         // 今押せるメンバーが無いバンドル(全画面だけ、など)は出さない。
         final ms = [for (final a in members) if (buttons[a.id] case final b?) (action: a, button: b)];
         if (ms.isNotEmpty) out.add(AstellBarBundle(list, ms));
     }
   }
-  return out;
+  if (auto.isEmpty) return out;
+  if (out.isEmpty) return auto;
+  return [...out.sublist(0, out.length - 1), ...auto, out.last];
 }
 
 /// 丸いボタンの幅と間隔(下段の `_RoundButton` と同じ)。
