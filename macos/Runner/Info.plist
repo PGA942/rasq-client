@@ -40,5 +40,7 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>保存した画像や動画を「写真」のアルバム「RASQ」に入れるために使います</string>
 </dict>
 </plist>

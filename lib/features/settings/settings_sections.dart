@@ -49,11 +49,12 @@ const settingsSections = <String, SettingsSection>{
   ], note: 'アカウント / タイムライン / セキュリティ / プライバシーは、選んでいる SNS のプラグインが提供する設定ページです(プラグインが持たないページは開けません)。'),
   'appearance': SettingsSection('アプリの外観', [
     SettingsRow('インターフェースの表示サイズ', route: '/settings/dsl/appearance.display'),
-    SettingsRow('フォントやカラースキーム'),
+    SettingsRow('フォントやカラースキーム', subtitle: '着せ替え(色・アイコン・背景の画像)', route: Routes.settingsTheme),
     SettingsRow('カラムの幅', subtitle: '幅の広い画面の小型 / 大型カラムの比(1:1 / 2:3 / 3:5 / 幅を固定)', route: Routes.settingsColumns),
     SettingsRow('モーションの抑制', route: '/settings/dsl/appearance.motion'),
     SettingsRow('タイムラインの表示', subtitle: 'TL の上下の「投稿を読み込む」', route: '/settings/dsl/appearance.timeline'),
     SettingsRow('ピクチャインピクチャ', route: '/settings/dsl/appearance.video'),
+    SettingsRow('画像・動画の保存先', subtitle: '写真(カメラロール)/ ファイル / 保存するたびに選ぶ', route: '/settings/dsl/media.save'),
     SettingsRow('通知の表示形式', route: '/settings/dsl/appearance.notifications'),
   ]),
   'astell': SettingsSection('ASTell', [

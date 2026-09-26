@@ -222,7 +222,7 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
         if (widget.media == null)
           _ShareChip(key: const ValueKey('post.share.copyContent'), icon: Icons.notes, label: '内容をコピー', onTap: () => _copy(postShareContent(post), '内容'))
         else
-          _ShareChip(key: const ValueKey('post.share.saveImage'), icon: Icons.download_outlined, label: '画像を保存', onTap: () => saveMediaImage(ref, widget.media!)),
+          _ShareChip(key: const ValueKey('post.share.saveImage'), icon: Icons.download_outlined, label: saveMediaLabel(widget.media!), onTap: () => saveMediaImage(ref, widget.media!)),
         const SizedBox(width: RasqSpacing.sm),
         _ShareChip(key: const ValueKey('post.share.copyLink'), icon: Icons.link, label: 'リンクをコピー', onTap: () => _copy(widget.link, 'リンク')),
         const SizedBox(width: RasqSpacing.sm),
