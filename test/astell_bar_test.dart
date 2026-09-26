@@ -31,28 +31,29 @@ void main() {
       resolveAstellBar(config: config, plugins: plugins, settings: settings, buttons: buttons([...available ?? allBuiltin, for (final p in plugins) p.id]));
 
   group('並び (D-324)', () {
-    test('既定の並び = これまでの下段(スピーカー / マイク / 画面共有 / 全画面 / プラグイン / 字幕)。全画面は共有枠に画面があるときだけ', () {
-      expect(keys(resolve(const ActionBarConfig())), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins, AstellBarIds.captions]);
-      expect(keys(resolve(const ActionBarConfig(), available: allBuiltin.where((id) => id != AstellBarIds.fullscreen))), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.plugins, AstellBarIds.captions]);
+    test('既定の並び = これまでの下段(スピーカー / マイク / 保留 / 画面共有 / 全画面 / プラグイン / 字幕)。全画面は共有枠に画面があるときだけ', () {
+      expect(keys(resolve(const ActionBarConfig())), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.hold, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins, AstellBarIds.captions]);
+      expect(keys(resolve(const ActionBarConfig(), available: allBuiltin.where((id) => id != AstellBarIds.fullscreen))), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.hold, AstellBarIds.screen, AstellBarIds.plugins, AstellBarIds.captions]);
     });
 
     test('並べ替え: 保存した順に。並びに無いボタンは後ろ', () {
-      final config = ActionBarConfig(order: [AstellBarIds.captions, AstellBarIds.mic, AstellBarIds.speaker, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins]);
-      expect(keys(resolve(config)), [AstellBarIds.captions, AstellBarIds.mic, AstellBarIds.speaker, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins]);
+      final config = ActionBarConfig(order: [AstellBarIds.captions, AstellBarIds.mic, AstellBarIds.speaker, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins, AstellBarIds.hold]);
+      expect(keys(resolve(config)), [AstellBarIds.captions, AstellBarIds.mic, AstellBarIds.speaker, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins, AstellBarIds.hold]);
     });
 
     test('非表示: hidden のボタンは出さない。外すと元の位置に戻る', () {
-      final hidden = resolve(const ActionBarConfig(hidden: {AstellBarIds.speaker, AstellBarIds.plugins}));
+      final hidden = resolve(const ActionBarConfig(hidden: {AstellBarIds.speaker, AstellBarIds.plugins, AstellBarIds.hold}));
       expect(keys(hidden), [AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.captions]);
       expect(keys(resolve(const ActionBarConfig(hidden: {AstellBarIds.plugins}))).first, AstellBarIds.speaker);
     });
 
     test('あとから増えたボタン(挙手など)は、保存済みの並びでも既定の位置(直前の既定のボタンの後ろ)に入る', () {
-      // 「プラグイン」を知らない保存値(= あとから増えた種類の代わり)。全画面の後ろ = 字幕の手前に入る。
+      // 「保留」「プラグイン」を知らない保存値(= あとから増えた種類の代わり)。保留はマイクの後ろ、プラグインは全画面の後ろ = 字幕の手前に入る。
       final saved = ActionBarConfig(order: [AstellBarIds.captions, AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.fullscreen]);
-      expect(astellBarWithNewDefaults(saved).order, [AstellBarIds.captions, AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins]);
+      expect(astellBarWithNewDefaults(saved).order, [AstellBarIds.captions, AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.hold, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins]);
       // 非表示にしてあるものは足さない。一度も編集していなければそのまま(記述子の順)。
-      expect(astellBarWithNewDefaults(saved.copyWith(hidden: {AstellBarIds.plugins})).order, isNot(contains(AstellBarIds.plugins)));
+      expect(astellBarWithNewDefaults(saved.copyWith(hidden: {AstellBarIds.plugins, AstellBarIds.hold})).order, isNot(contains(AstellBarIds.plugins)));
+      expect(astellBarWithNewDefaults(saved.copyWith(hidden: {AstellBarIds.plugins, AstellBarIds.hold})).order, isNot(contains(AstellBarIds.hold)));
       expect(astellBarWithNewDefaults(const ActionBarConfig()).order, isEmpty);
     });
 
@@ -81,9 +82,9 @@ void main() {
       final items = resolve(const ActionBarConfig());
       final three = splitAstellBar(items, 3);
       expect(keys(three.shown), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.captions]);
-      expect(keys(three.overflow), [AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins]);
-      final all = splitAstellBar(items, 6);
-      expect(all.shown.length, 6);
+      expect(keys(three.overflow), [AstellBarIds.hold, AstellBarIds.screen, AstellBarIds.fullscreen, AstellBarIds.plugins]);
+      final all = splitAstellBar(items, 7);
+      expect(all.shown.length, 7);
       expect(all.overflow, isEmpty);
       expect(keys(splitAstellBar(items, 1).shown), [AstellBarIds.captions]);
     });

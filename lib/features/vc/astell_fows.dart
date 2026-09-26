@@ -722,6 +722,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       AstellBarIds.mic: s.forceMuted
           ? const AstellBarButton(icon: Icons.mic_off, tooltip: 'モデレーターにミュートされています', filled: RasqColors.danger)
           : AstellBarButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン', filled: s.micOn ? RasqColors.accent : null, onPressed: session.toggleMic),
+      // 保留 (D-325): マイクを下ろして声も受けない。相手には保留中と伝わり、相手が全員保留中なら手元で保留音。
+      AstellBarIds.hold: AstellBarButton(icon: s.onHold ? Icons.phone_paused : Icons.pause_circle_outline, tooltip: s.onHold ? '保留を解除' : '保留', filled: s.onHold ? RasqColors.warning : null, onPressed: () => unawaited(session.toggleHold())),
       AstellBarIds.screen: AstellBarButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: () => _toggleScreen(context)),
       if (s.viewingPeer case final peer?) AstellBarIds.fullscreen: AstellBarButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: () => _openPeerScreen(context, peer)),
       // プラグインアクション (D-167): スロット `astell.action` のプラグインを選んで開く。登録が無ければ無効表示。
@@ -1875,8 +1877,10 @@ class _MemberRow extends StatelessWidget {
           size: RasqSizes.avatarLg,
           fallbackLabel: p.displayName,
           // 全員向けミュート (D-149) は赤のマイクオフ。
-          // 話している間 (D-317) は緑の波形。
-          badge: _StateBadge(icon: p.speaking && !p.mutedByMod ? Icons.graphic_eq : (p.micOn ? Icons.mic : Icons.mic_off), color: p.mutedByMod ? RasqColors.danger : (p.speaking ? astellSpeakingColor : (p.micOn ? RasqColors.accent : scheme.outline))),
+          // 話している間 (D-317) は緑の波形。保留中 (D-325) は橙の受話器。
+          badge: p.onHold
+              ? const _StateBadge(icon: Icons.phone_paused, color: RasqColors.warning)
+              : _StateBadge(icon: p.speaking && !p.mutedByMod ? Icons.graphic_eq : (p.micOn ? Icons.mic : Icons.mic_off), color: p.mutedByMod ? RasqColors.danger : (p.speaking ? astellSpeakingColor : (p.micOn ? RasqColors.accent : scheme.outline))),
         ),
         const SizedBox(width: RasqSpacing.md),
         Expanded(
@@ -1885,6 +1889,7 @@ class _MemberRow extends StatelessWidget {
               Text(self ? '${p.displayName}(あなた)' : p.displayName, style: RasqTypography.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
               if (role != null) RasqPill(label: role!, color: role == 'ホスト' ? RasqColors.accent : RasqColors.sub, textColor: Colors.white),
               if (p.mutedByMod) const RasqPill(label: '強制ミュート', color: RasqColors.danger, textColor: Colors.white),
+              if (p.onHold) const RasqPill(label: '保留中', color: RasqColors.warning, textColor: Colors.white),
             ]),
             Text('@${p.handle}', style: RasqTypography.handle.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
           ]),
