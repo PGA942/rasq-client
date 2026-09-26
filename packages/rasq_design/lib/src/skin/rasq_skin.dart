@@ -6,14 +6,18 @@ import 'package:flutter/material.dart';
 /// - `colors` = Material の ColorScheme の一部を上書き(明 / 暗ごと)
 /// - `icons` = 名前で指すアイコンの差し替え(別の Material アイコン、またはパックの画像)。[RasqSkinIcon] で描く
 /// - `surfaces` = 面(`app` / `postTile` / `fow` / `actionButton`)の背景色・角丸・画像のレイヤー。[RasqSkinned] で描く
-///   レイヤーは `below`(中身の下 = 背景)か `above`(中身の上に重ねる、触れない)
+///   レイヤーは `below`(中身の下 = 背景)か `above`(中身の上に重ねる、触れない)。画像か**グラデーション**(v0.17、D-337)、
+///   `height` を書くと `alignment` の辺に寄せた**帯**になる。面の `onColor` は、その面の上の文字とアイコンの色
 /// `brightness` が `dark` / `light` のときは、合わない明るさでは色と面を使わない(アイコンの差し替えは常に効く)。
 enum RasqSkinSurfaceId { app, postTile, fow, actionButton }
 
 @immutable
 class RasqSkinLayer {
-  const RasqSkinLayer({required this.image, this.above = false, this.fit = BoxFit.cover, this.alignment = Alignment.center, this.repeat = ImageRepeat.noRepeat, this.opacity = 1});
-  final ImageProvider image;
+  const RasqSkinLayer({this.image, this.gradient, this.above = false, this.fit = BoxFit.cover, this.alignment = Alignment.center, this.repeat = ImageRepeat.noRepeat, this.opacity = 1, this.height}) : assert((image == null) != (gradient == null));
+
+  /// 画像か、グラデーション(v0.17)のどちらか。
+  final ImageProvider? image;
+  final Gradient? gradient;
 
   /// true = 中身の上(上付き)、false = 中身の下(下付き)。
   final bool above;
@@ -22,22 +26,30 @@ class RasqSkinLayer {
   final ImageRepeat repeat;
   final double opacity;
 
-  Widget build() => Positioned.fill(
-        child: IgnorePointer(
-          child: Opacity(
-            opacity: opacity.clamp(0.0, 1.0),
-            child: Image(image: image, fit: fit, alignment: alignment, repeat: repeat, gaplessPlayback: true, errorBuilder: (_, _, _) => const SizedBox.shrink()),
-          ),
-        ),
-      );
+  /// 帯の高さ(v0.17)。null = 面いっぱい。書くと [alignment] の辺(上 / 真ん中 / 下)に寄せた帯。
+  final double? height;
+
+  Widget build() {
+    final Widget paint = gradient != null
+        ? DecoratedBox(decoration: BoxDecoration(gradient: gradient))
+        : Image(image: image!, fit: fit, alignment: alignment, repeat: repeat, gaplessPlayback: true, errorBuilder: (_, _, _) => const SizedBox.shrink());
+    final body = IgnorePointer(child: Opacity(opacity: opacity.clamp(0.0, 1.0), child: paint));
+    final h = height;
+    if (h == null) return Positioned.fill(child: body);
+    // 帯: 上辺 / 下辺 / 上下の真ん中に、幅いっぱい・高さ h。
+    return Positioned.fill(child: Align(alignment: Alignment(0, alignment.y.sign), child: SizedBox(height: h, width: double.infinity, child: body)));
+  }
 }
 
 @immutable
 class RasqSkinSurface {
-  const RasqSkinSurface({this.color, this.radius, this.layers = const []});
+  const RasqSkinSurface({this.color, this.radius, this.layers = const [], this.onColor});
   final Color? color;
   final double? radius;
   final List<RasqSkinLayer> layers;
+
+  /// この面の上の文字とアイコンの色(v0.17)。null = テーマのまま。
+  final Color? onColor;
 }
 
 /// アイコンの差し替え先: 別の Material アイコンか、パックの画像。
@@ -107,6 +119,16 @@ class RasqSkin {
     );
   }
 
+  /// 面の文字色 (v0.17) を当てたテーマ(onSurface / onSurfaceVariant / アイコン / 本文の色)。
+  static ThemeData withOnColor(ThemeData base, Color on) {
+    final variant = on.withValues(alpha: 0.75);
+    return base.copyWith(
+      colorScheme: base.colorScheme.copyWith(onSurface: on, onSurfaceVariant: variant),
+      iconTheme: base.iconTheme.copyWith(color: on),
+      textTheme: base.textTheme.apply(bodyColor: on, displayColor: on),
+    );
+  }
+
   static const colorKeys = {'primary', 'onPrimary', 'secondary', 'onSecondary', 'tertiary', 'error', 'surface', 'onSurface', 'onSurfaceVariant', 'surfaceContainer', 'surfaceContainerHigh', 'surfaceContainerHighest', 'outline', 'outlineVariant'};
 
   /// `#RRGGBB` / `#AARRGGBB`(Flutter の Color と同じ並び)。
@@ -126,6 +148,30 @@ class RasqSkin {
     'bottomLeft': Alignment.bottomLeft, 'bottomCenter': Alignment.bottomCenter, 'bottomRight': Alignment.bottomRight,
   };
   static const _repeats = {'none': ImageRepeat.noRepeat, 'repeat': ImageRepeat.repeat, 'repeatX': ImageRepeat.repeatX, 'repeatY': ImageRepeat.repeatY};
+
+  /// レイヤーの中身: `asset`(画像)か `gradient`(v0.17)。どちらも無い / 読めない / 両方ある = null(捨てる)。
+  static ({ImageProvider? image, Gradient? gradient})? _layerPaint(Map<Object?, Object?> l, ImageProvider? Function(String) image) {
+    final asset = l['asset'];
+    final g = l['gradient'];
+    if ((asset != null) == (g != null)) return null;
+    if (asset is String) {
+      final img = image(asset);
+      return img == null ? null : (image: img, gradient: null);
+    }
+    if (g is! Map) return null;
+    final colors = [for (final c in (g['colors'] as List? ?? const [])) ?parseColor(c)];
+    if (colors.length < 2 || colors.length > 8) return null;
+    final stops = [for (final s in (g['stops'] as List? ?? const [])) if (s is num) s.toDouble().clamp(0.0, 1.0)];
+    return (
+      image: null,
+      gradient: LinearGradient(
+        colors: colors,
+        stops: stops.length == colors.length ? stops : null,
+        begin: _alignments[g['begin']] ?? Alignment.topCenter,
+        end: _alignments[g['end']] ?? Alignment.bottomCenter,
+      ),
+    );
+  }
 
   /// マニフェストの `theme` を読む。[image] = パックの画像 id → ImageProvider(無い id は null で、その参照は捨てる)。
   /// [materialIcon] = Material のアイコン名 → IconData(アプリの名前表)。知らない名前・形の違う値は黙って捨てる(壊れた宣言で落とさない)。
@@ -159,19 +205,21 @@ class RasqSkin {
         if (raw is! Map) continue;
         final layers = <RasqSkinLayer>[
           for (final l in (raw['layers'] as List? ?? const []).take(8))
-            if (l is Map && l['asset'] is String)
-              if (image(l['asset'] as String) case final img?)
+            if (l is Map)
+              if (_layerPaint(l, image) case final paint?)
                 RasqSkinLayer(
-                  image: img,
+                  image: paint.image,
+                  gradient: paint.gradient,
                   above: l['position'] == 'above',
                   fit: _fits[l['fit']] ?? BoxFit.cover,
                   alignment: _alignments[l['alignment']] ?? Alignment.center,
                   repeat: _repeats[l['repeat']] ?? ImageRepeat.noRepeat,
                   opacity: (l['opacity'] as num?)?.toDouble().clamp(0.0, 1.0) ?? 1,
+                  height: (l['height'] as num?)?.toDouble().clamp(1.0, 400.0),
                 ),
         ];
         final r = (raw['radius'] as num?)?.toDouble();
-        surfaces[sid] = RasqSkinSurface(color: parseColor(raw['color']), radius: r?.clamp(0.0, 48.0), layers: layers);
+        surfaces[sid] = RasqSkinSurface(color: parseColor(raw['color']), radius: r?.clamp(0.0, 48.0), layers: layers, onColor: parseColor(raw['onColor']));
       }
     }
     return RasqSkin(id: id, name: name, only: only, colors: colors, icons: icons, surfaces: surfaces);
@@ -198,13 +246,22 @@ class RasqSkinned extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = RasqSkinScope.of(context)?.surface(surface, Theme.of(context).brightness);
-    if (s == null || (s.color == null && s.layers.isEmpty && s.radius == null)) return child;
+    final theme = Theme.of(context);
+    final s = RasqSkinScope.of(context)?.surface(surface, theme.brightness);
+    if (s == null || (s.color == null && s.layers.isEmpty && s.radius == null && s.onColor == null)) return child;
+    var content = child;
+    // 面の上の文字とアイコンの色 (v0.17)。
+    if (s.onColor case final on?) {
+      content = Theme(
+        data: RasqSkin.withOnColor(theme, on),
+        child: DefaultTextStyle.merge(style: TextStyle(color: on), child: IconTheme.merge(data: IconThemeData(color: on), child: content)),
+      );
+    }
     // passthrough: 中身には親の制約をそのまま渡す(着せ替えの有無で中身の大きさを変えない)。
     Widget out = Stack(fit: StackFit.passthrough, children: [
       if (s.color != null) Positioned.fill(child: IgnorePointer(child: ColoredBox(color: s.color!))),
       for (final l in s.layers) if (!l.above) l.build(),
-      child,
+      content,
       for (final l in s.layers) if (l.above) l.build(),
     ]);
     if (s.radius != null && s.radius! > 0) out = ClipRRect(borderRadius: BorderRadius.circular(s.radius!), child: out);

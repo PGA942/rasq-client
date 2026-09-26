@@ -66,6 +66,54 @@ void main() {
       expect(s.surfaces.keys, [RasqSkinSurfaceId.postTile], reason: '知らない面は捨てる');
     });
 
+    test('v0.17 (D-337): グラデーションのレイヤー、帯の高さ、面の文字色(onColor)。asset と gradient はどちらか 1 つ', () {
+      final s = parse({
+        'surfaces': {
+          'postTile': {
+            'layers': [
+              {'gradient': {'colors': ['#1F1E33', '#001F1E33']}, 'alignment': 'topCenter', 'height': 28},
+              {'gradient': {'colors': ['#FF0000']}}, // 1 色は捨てる
+              {'asset': 'bg', 'gradient': {'colors': ['#000000', '#FFFFFF']}}, // 両方は捨てる
+              {'gradient': {'colors': ['#000000', '#FFFFFF'], 'stops': [0, 0.3], 'begin': 'centerLeft', 'end': 'centerRight'}, 'height': 999},
+            ],
+          },
+          'fow': {'color': '#02775C', 'onColor': '#FFFFFF', 'layers': [{'gradient': {'colors': ['#02775C', '#178178']}}]},
+        },
+      });
+      final tile = s.surface(RasqSkinSurfaceId.postTile, Brightness.light)!;
+      expect(tile.layers, hasLength(2));
+      final band = tile.layers.first;
+      expect(band.image, isNull);
+      expect((band.gradient! as LinearGradient).colors, [const Color(0xFF1F1E33), const Color(0x001F1E33)]);
+      expect(((band.gradient! as LinearGradient).begin, (band.gradient! as LinearGradient).end), (Alignment.topCenter, Alignment.bottomCenter));
+      expect(band.height, 28);
+      expect(tile.layers.last.height, 400, reason: '帯の高さは 1〜400');
+      expect((tile.layers.last.gradient! as LinearGradient).stops, [0.0, 0.3]);
+      final fow = s.surface(RasqSkinSurfaceId.fow, Brightness.dark)!;
+      expect(fow.onColor, const Color(0xFFFFFFFF));
+      final themed = RasqSkin.withOnColor(RasqTheme.light(), fow.onColor!);
+      expect(themed.colorScheme.onSurface, const Color(0xFFFFFFFF));
+      expect(themed.iconTheme.color, const Color(0xFFFFFFFF));
+    });
+
+    testWidgets('帯は上辺に高さぶん、onColor は面の中の文字に効く', (tester) async {
+      final s = parse({
+        'surfaces': {
+          'postTile': {'onColor': '#FF00FF', 'layers': [{'gradient': {'colors': ['#1F1E33', '#001F1E33']}, 'alignment': 'topCenter', 'height': 28}]},
+        },
+      });
+      await tester.pumpWidget(MaterialApp(
+        theme: RasqTheme.light(),
+        home: RasqSkinScope(skin: s, child: const Scaffold(body: Center(child: SizedBox(width: 300, height: 120, child: RasqSkinned(surface: RasqSkinSurfaceId.postTile, child: Text('本文', key: ValueKey('body'))))))),
+      ));
+      final box = tester.getRect(find.byType(RasqSkinned));
+      final band = tester.getRect(find.byWidgetPredicate((w) => w is DecoratedBox && w.decoration is BoxDecoration && (w.decoration as BoxDecoration).gradient != null));
+      expect(band.top, box.top);
+      expect(band.height, 28);
+      expect(band.width, box.width);
+      expect(DefaultTextStyle.of(tester.element(find.byKey(const ValueKey('body')))).style.color, const Color(0xFFFF00FF));
+    });
+
     test('app の面に背景があれば Scaffold を透明に(アプリの一番下の面を見せる)', () {
       final s = parse({
         'surfaces': {
@@ -88,6 +136,20 @@ void main() {
       expect(p.themeImages.values.every((v) => isPackImage(v.bytes)), isTrue);
     });
 
+    test('サンプル「RASQ」(v0.17): グラデーションの帯 + 薄いマーク(画像 1 枚)、FOW のグラデーションと白い文字', () {
+      final p = RasqPackage.open(File('test/fixtures/rasqpkg/sample.theme-rasq-0.1.0.rasqpkg').readAsBytesSync());
+      expect((p.root.id, p.root.isTheme), ('sample.theme-rasq', true));
+      expect(p.themeImages.keys, ['mark']);
+      final s = RasqSkin.parse(id: p.root.id, name: 'RASQ', theme: (p.root.manifest['theme'] as Map).cast<String, Object?>(), image: (id) => id == 'mark' ? img : null, materialIcon: themeIconByName);
+      expect(s.only, isNull, reason: '明るい / 暗いどちらでも');
+      final tile = s.surface(RasqSkinSurfaceId.postTile, Brightness.light)!;
+      expect(tile.layers.map((l) => l.gradient != null), [false, true]);
+      expect(tile.layers.last.height, 28);
+      final fow = s.surface(RasqSkinSurfaceId.fow, Brightness.light)!;
+      expect(fow.onColor, const Color(0xFFFFFFFF));
+      expect((fow.layers.single.gradient! as LinearGradient).colors, [const Color(0xFF02775C), const Color(0xFF178178)]);
+    });
+
     test('宣言の整合: 画像の参照は assets(use: theme)に、面は 4 つだけ', () {
       Map<String, Object?> m(Map<String, Object?> theme) => {'assets': [{'id': 'a', 'path': 'a.png', 'use': 'theme'}], 'theme': theme};
       checkThemeManifest(m({'icons': {'reply': 'asset:a', 'repeat': 'material:autorenew'}, 'surfaces': {'fow': {'layers': [{'asset': 'a'}]}}}));
@@ -95,6 +157,12 @@ void main() {
       expect(() => checkThemeManifest(m({'icons': {'reply': 'asset:b'}})), throwsA(isA<RasqPackageException>()));
       expect(() => checkThemeManifest(m({'surfaces': {'fow': {'layers': [{'asset': 'b'}]}}})), throwsA(isA<RasqPackageException>()));
       expect(() => checkThemeManifest(m({'surfaces': {'sidebar': {}}})), throwsA(isA<RasqPackageException>()));
+      // v0.17: グラデーションのレイヤー(画像の参照は要らない)。asset と gradient は 1 つだけ、色は 2〜8、stops は同じ数。
+      checkThemeManifest(m({'surfaces': {'fow': {'layers': [{'gradient': {'colors': ['#000000', '#FFFFFF']}}]}}}));
+      expect(() => checkThemeManifest(m({'surfaces': {'fow': {'layers': [{'asset': 'a', 'gradient': {'colors': ['#000000', '#FFFFFF']}}]}}})), throwsA(isA<RasqPackageException>()));
+      expect(() => checkThemeManifest(m({'surfaces': {'fow': {'layers': [{'opacity': 1}]}}})), throwsA(isA<RasqPackageException>()));
+      expect(() => checkThemeManifest(m({'surfaces': {'fow': {'layers': [{'gradient': {'colors': ['#000000']}}]}}})), throwsA(isA<RasqPackageException>()));
+      expect(() => checkThemeManifest(m({'surfaces': {'fow': {'layers': [{'gradient': {'colors': ['#000000', '#FFFFFF'], 'stops': [0]}}]}}})), throwsA(isA<RasqPackageException>()));
     });
   });
 

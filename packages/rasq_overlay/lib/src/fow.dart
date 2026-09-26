@@ -6,14 +6,17 @@ import 'package:flutter/material.dart';
 /// FOW の背景の着せ替え (D-335): アプリが OverlayHost の上に置く。[decorate] はパネルの中身を受け取り、背景(色 / 画像の
 /// レイヤー)を足して返す。[color] はパネルの地の色(null = テーマの surface)。rasq_overlay は rasq_design に依らないので口だけ持つ。
 class FowPanelSkin extends InheritedWidget {
-  const FowPanelSkin({super.key, this.color, this.decorate, required super.child});
+  const FowPanelSkin({super.key, this.color, this.decorate, this.theme, required super.child});
   final Color? Function(BuildContext context)? color;
   final Widget Function(BuildContext context, Widget panel)? decorate;
+
+  /// パネル全体(ハンドル / 見出し / 中身)のテーマの上書き([base] = FOW 自身のテーマかアプリのテーマ)。面の文字色 (D-337) など。
+  final ThemeData Function(BuildContext context, ThemeData base)? theme;
 
   static FowPanelSkin? of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<FowPanelSkin>();
 
   @override
-  bool updateShouldNotify(FowPanelSkin oldWidget) => oldWidget.color != color || oldWidget.decorate != decorate;
+  bool updateShouldNotify(FowPanelSkin oldWidget) => oldWidget.color != color || oldWidget.decorate != decorate || oldWidget.theme != theme;
 }
 
 /// FOW type (原典: UI_Elements「FOWタイプ（3種）」).
