@@ -29,6 +29,7 @@ import 'astell_media_viewer.dart';
 import 'astell_models.dart';
 import 'astell_post_share.dart';
 import 'astell_providers.dart';
+import 'astell_share_cards.dart';
 import 'astell_stream.dart';
 import 'astell_stream_livekit.dart' show astellNeedsScreenPicker, pickAstellScreenSource;
 
@@ -560,7 +561,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
                 alignment: Alignment.bottomCenter,
                 minHeight: 0,
                 maxHeight: squeezed ? astellRoomTabsCoveredHeight : constraints.maxHeight,
-                child: _body(context, compact: false),
+                child: _body(context, compact: false, height: squeezed ? astellRoomTabsCoveredHeight : constraints.maxHeight),
               ),
             );
           }
@@ -579,7 +580,10 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     );
   }
 
-  Widget _body(BuildContext context, {required bool compact}) {
+  /// 共有のカードに回せる高さ (D-333): ルームの本体の高さから、ヘッダー / タブ / 下段と、タブの中身の最低限を引いた残り(最大 200px)。
+  static double shareCardHeightFor(double bodyHeight) => (bodyHeight - 420).clamp(0.0, astellShareCardHeight);
+
+  Widget _body(BuildContext context, {required bool compact, double height = double.infinity}) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     final s = ref.watch(astellSessionProvider);
@@ -648,7 +652,20 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               ),
             ]),
           ),
+        // ── 共有欄: カード型横スライド (D-333、既定) か、レガシー(共有枠 + 縦の一覧、D-146) ──
+        if (ref.watch(astellShareStyleProvider) == AstellShareStyle.cards)
+          AstellShareCards(
+            height: shareCardHeightFor(height),
+            lives: _liveCards(context, s),
+            entries: [for (final it in _sharedItems(ref, s).reversed) AstellShareCardEntry(share: it.share, transcript: it.transcript)],
+            myHandle: me.account.handle,
+            onOpen: (share) => _openShare(context, share),
+            onMore: (share, rect) => _shareMenu(context, share, rect, isOwner: isOwner, mine: share.handle == me.account.handle || share.accountId == 'me'),
+            onUnpin: (e) => e.share != null ? session.pinShare(e.share!.id, false) : session.pinTranscript(e.transcript!.id, false),
+            onShowAll: () => _openAllShares(context, me.account.handle, isOwner),
+          )
         // ── 共有枠 (D-146): ピン留め/クリックしたピアの画面共有 ──
+        else ...[
         if (s.viewingPeer != null)
           _ViewingScreenPanel(
             peer: s.viewingPeer!,
@@ -661,7 +678,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
           _HostStreamPanel(stream: room.hostStream!, ownerId: room.ownerId, onTap: () => _openStream(context, room)),
         // ── 共有 = チャットからピン留めしたもの + 自動表示の種類 (D-146) ──
         _SharesSection(
-          items: _sharedItems(s),
+          items: _sharedItems(ref, s),
           myHandle: me.account.handle,
           isOwner: isOwner,
           expanded: _sharesExpanded,
@@ -670,6 +687,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
           onUnpin: (item) => item.share != null ? session.pinShare(item.share!.id, false) : session.pinTranscript(item.transcript!.id, false),
           onMore: (share, rect) => _shareMenu(context, share, rect, isOwner: isOwner, mine: share.handle == me.account.handle || share.accountId == 'me'),
         ),
+        ],
         const Divider(height: RasqSpacing.sm),
         // ── タブ (D-141) ──
         Expanded(
@@ -695,7 +713,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         key: _footerKey,
         compact: compact,
         state: s,
-        pinned: _sharedItems(s),
+        pinned: _sharedItems(ref, s),
         input: _input,
         drafting: _drafting,
         // 入力欄の左の丸いボタン (D-324): 設定の並び(ASTell →「ルームのボタン」/ 歯車)で。
@@ -844,8 +862,57 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   }
 
 
+  /// 配信のカード (D-333): ホストの配信、画面共有中のピアの画面(共有枠に出しているピアが先)。自分の画面は出さない。
+  List<AstellLiveCardData> _liveCards(BuildContext context, AstellSessionState s) {
+    final room = s.room;
+    final st = room.hostStream;
+    final sharing = [for (final p in s.peers) if (p.screenShare != null && p.peerId != s.myPeerId) p]
+      ..sort((a, b) => (a.peerId == s.viewingPeerId ? 0 : 1) - (b.peerId == s.viewingPeerId ? 0 : 1));
+    return [
+      if (st != null)
+        AstellLiveCardData(id: 'host', identity: room.ownerId, screen: st.isScreen, title: '${st.isScreen ? '画面共有' : '配信'}: ${st.title.isEmpty ? room.ownerDisplayName : st.title}', thumbnailUrl: st.thumbnailUrl, onTap: () => _openStream(context, room)),
+      for (final p in sharing)
+        AstellLiveCardData(
+          id: p.peerId,
+          identity: p.accountId,
+          screen: true,
+          title: '${p.displayName} の画面${p.screenShare!.title.isEmpty ? '' : ' — ${p.screenShare!.title}'}',
+          thumbnailUrl: p.screenShare!.thumbnailUrl,
+          onTap: () => _openPeerScreen(context, p),
+          onMore: (rect) => _peerMenu(context, s, p, rect, pinned: s.viewingPeerId == p.peerId),
+        ),
+    ];
+  }
+
+  /// カードの右端「>」(D-333): 全てのピン留め + 自動表示を、レガシーの一覧(新しい順、全部)で。
+  Future<void> _openAllShares(BuildContext context, String myHandle, bool isOwner) {
+    final manager = ref.read(overlayManagerProvider);
+    final session = ref.read(astellSessionProvider.notifier);
+    return manager.showBottomSheet<void>(
+      id: 'astell.shares.all',
+      title: 'すべての共有',
+      builder: (ctx) => Consumer(builder: (ctx, ref, _) {
+        final s = ref.watch(astellSessionProvider);
+        if (s == null) return const SizedBox.shrink();
+        return SingleChildScrollView(
+          child: _SharesSection(
+            items: _sharedItems(ref, s),
+            myHandle: myHandle,
+            isOwner: isOwner,
+            expanded: true,
+            showToggle: false,
+            onToggle: () {},
+            onOpen: (share) => _openShare(context, share),
+            onUnpin: (item) => item.share != null ? session.pinShare(item.share!.id, false) : session.pinTranscript(item.transcript!.id, false),
+            onMore: (share, rect) => _shareMenu(context, share, rect, isOwner: isOwner, mine: share.handle == myHandle || share.accountId == 'me'),
+          ),
+        );
+      }),
+    );
+  }
+
   /// 共有欄に出すもの (D-146): ピン留め(共有・文字起こし)+ 自動表示の種類に該当する共有。
-  List<_SharedItem> _sharedItems(AstellSessionState s) {
+  List<_SharedItem> _sharedItems(WidgetRef ref, AstellSessionState s) {
     final auto = ref.watch(astellAutoShareProvider);
     final items = <_SharedItem>[
       for (final sh in s.shares)
@@ -1015,6 +1082,17 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               child: Text('映像とマイクを配信サーバー(LiveKit)に上げます。参加者は通話の声のまま映像を見られ、通話に入りきらない人($astellMeshCap 人目より後)は配信であなたの声を聞きます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ),
           ],
+          const Divider(height: RasqSpacing.md),
+          // 共有欄の表示 (D-333): カード型横スライド(既定)か、レガシー(共有枠 + 縦の一覧)。
+          _label(ctx, '共有欄の表示'),
+          for (final st in AstellShareStyle.values)
+            RasqRadioListTile<AstellShareStyle>(
+              key: ValueKey('astell.shareStyle.${st.name}'),
+              title: st.label,
+              value: st,
+              groupValue: ref.watch(astellShareStyleProvider),
+              onChanged: (v) => ref.read(settingsAreaProvider(astellSettingsArea).notifier).set('shares.style', v.name),
+            ),
           const Divider(height: RasqSpacing.md),
           _label(ctx, '自動再生'),
           RasqSwitchListTile(
@@ -1682,8 +1760,9 @@ class _Ticker extends StatelessWidget {
 /// 共有欄 (D-146): **チャットからピン留めしたもの**(文字起こし含む)と、設定で自動表示に
 /// した種類。見出し「共有 (N)」+ ↓/↑、畳んでいれば直近 1 件、各カードに … / ピン解除。
 class _SharesSection extends StatelessWidget {
-  const _SharesSection({required this.items, required this.myHandle, required this.isOwner, required this.expanded, required this.onToggle, required this.onMore, required this.onOpen, required this.onUnpin});
+  const _SharesSection({required this.items, required this.myHandle, required this.isOwner, required this.expanded, required this.onToggle, required this.onMore, required this.onOpen, required this.onUnpin, this.showToggle = true});
   final List<_SharedItem> items;
+  final bool showToggle;
   final String myHandle;
   final bool isOwner;
   final bool expanded;
@@ -1702,7 +1781,7 @@ class _SharesSection extends StatelessWidget {
         child: Row(children: [
           Text(items.isEmpty ? '共有' : '共有 (${items.length})', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           const Spacer(),
-          if (items.length > 1)
+          if (showToggle && items.length > 1)
             RasqIconButton(icon: expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 20, tooltip: expanded ? '共有を畳む' : '共有をすべて表示', onPressed: onToggle),
         ]),
       ),

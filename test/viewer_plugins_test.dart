@@ -61,9 +61,11 @@ void main() {
         pluginRegistryProvider.overrideWithValue(registry),
         slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes)),
         viewerImageFetcherProvider.overrideWithValue((url) async => null),
-        imageSaverProvider.overrideWithValue((item) async {
-          saved.add(item.id);
-          return '/tmp/${item.id}.jpg';
+        // 写真とファイルを選べる端末(iPad など)のつもり。
+        mediaSaveDestinationsHereProvider.overrideWithValue(const [MediaSaveDestination.photos, MediaSaveDestination.files]),
+        imageSaverProvider.overrideWithValue((item, dest) async {
+          saved.add('${item.id}:${dest.name}');
+          return '画像を保存しました(${dest.name})';
         }),
       ],
       child: const RasqApp(),
@@ -104,7 +106,11 @@ void main() {
     // 画像を保存 → 差し替えた保存先が呼ばれ、スナックバー。
     await tester.tap(find.text('画像を保存'));
     await tester.pumpAndSettle();
-    expect(saved, [post.media.first.id]);
+    // 保存先 (D-334): 写真とファイルを選べる端末なら既定の「保存するたびに選ぶ」でシート → ファイル。
+    expect(find.byKey(const ValueKey('media.save.files')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('media.save.files')));
+    await tester.pumpAndSettle();
+    expect(saved, ['${post.media.first.id}:files']);
     expect(find.textContaining('画像を保存しました'), findsOneWidget);
     // 「…」→ 共有 → 「内容をコピー」の代わりに「画像を保存」。
     await tester.tap(find.descendant(of: find.byType(MediaViewerScreen), matching: find.byTooltip('メニュー')));

@@ -90,6 +90,7 @@ dependencies:
   # AsTell の WS を Web 版でも(dart:io の WebSocket はブラウザで動かない、D-317)。
   web_socket_channel: ^3.0.3
   audioplayers: ^6.8.1
+  gal: ^2.3.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -143,6 +144,8 @@ flutter:
     - assets/plugins/media_process_plugin.wasm
     - assets/plugins/media_draw_plugin.wasm
     - assets/plugins/post_action_plugin.wasm
+    # 着せ替えのサンプル (D-335、plugin-sample/theme-plugin の rasq build)。
+    - assets/plugins/theme_starry.rasqpkg
     # ML model manifests (model-manifest.schema.json — resolved by MlGateway).
     - assets/models/
     # 設定第二階層の静的 RRL ページ (D-031, rasq.settings-page/1).

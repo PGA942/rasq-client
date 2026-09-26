@@ -19,6 +19,7 @@ import 'package:rasq_client/features/vc/astell_post_share.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/hold_music.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/features/vc/astell_share_cards.dart';
 import 'package:rasq_client/features/vc/astell_tile.dart';
 import 'package:rasq_client/features/vc/vc_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -382,6 +383,8 @@ void main() {
 
   testWidgets('見てみる → 参加 FOW(参加メンバー / ざっくり要約 / ジャンル / 参加)→ 参加 → ルーム FOW(共有 / 退出)', (tester) async {
     final container = await pump(tester);
+    // このテストはレガシーの共有欄(共有枠 + 縦の一覧、D-146)を見る。カード型 (D-333) は下の別テスト。
+    await container.read(settingsAreaProvider(astellSettingsArea).notifier).set('shares.style', AstellShareStyle.list.name);
     await openVc(tester);
 
     await tester.tap(find.text('見てみる').first);
@@ -1091,6 +1094,70 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('「自分の部屋」を終了しました'), findsOneWidget);
     expect(find.text('自分の部屋'), findsNothing);
+  });
+
+  testWidgets('共有欄のカード型横スライド (D-333): 配信は左端、テキスト / 投稿はインラインビュー、画像 / 動画は表示タイル(左上アイコン・右上 …・動画だけ再生ボタン)、> で全ての共有(レガシーの一覧)、設定でレガシーに戻せる', (tester) async {
+    final container = await pump(tester);
+    // iPad 横ぐらいの広さ(カードが 200px で出る)。
+    tester.view.physicalSize = const Size(1366, 1024);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpAndSettle();
+    await openVc(tester);
+    await tester.tap(find.text('見てみる').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('参加'));
+    await tester.pumpAndSettle();
+    final session = container.read(astellSessionProvider.notifier);
+    // 画像は自動表示(既定)、テキストはピン留めで共有欄へ。
+    session.share('media', {'title': 'wide.png', 'url': 'https://example.test/wide.png', 'mimeType': 'image/png', 'width': 800, 'height': 400});
+    session.share('media', {'title': 'clip.mp4', 'url': 'https://example.test/clip.mp4', 'mimeType': 'video/mp4', 'thumbnailUrl': 'https://example.test/clip.jpg', 'width': 100, 'height': 200});
+    session.share('text', {'text': 'カードで読めるテキスト'});
+    await tester.pumpAndSettle();
+    final text = container.read(astellSessionProvider)!.shares.lastWhere((x) => x.kind == 'text');
+    await session.pinShare(text.id, true);
+    await tester.pumpAndSettle();
+
+    final cards = find.byKey(astellShareCardsKey);
+    expect(cards, findsOneWidget);
+    expect(tester.getSize(cards).height, astellShareCardHeight);
+    // 配信(TiVard の画面共有)が左端。
+    final live = find.byKey(const ValueKey('astell.card.live.p2'));
+    expect(live, findsOneWidget);
+    final s = container.read(astellSessionProvider)!;
+    final wide = s.shares.firstWhere((x) => x.headline == 'wide.png');
+    final clip = s.shares.firstWhere((x) => x.headline == 'clip.mp4');
+    final wideCard = find.byKey(ValueKey('astell.card.${wide.id}'));
+    final clipCard = find.byKey(ValueKey('astell.card.${clip.id}'));
+    final textCard = find.byKey(ValueKey('astell.card.${text.id}'));
+    expect(tester.getTopLeft(live).dx, lessThan(tester.getTopLeft(textCard).dx));
+    // 幅: 横長の画像は 300px に揃え、縦長の動画は高さ 200 に合わせた幅(下限 140)。
+    expect(tester.getSize(wideCard).width, astellShareCardMaxWidth);
+    expect(tester.getSize(clipCard).width, astellShareCardMinWidth);
+    // 表示タイル: 左上のアイコン、右上の …、再生ボタンは動画だけ。
+    expect(find.descendant(of: wideCard, matching: find.byIcon(Icons.image_outlined)), findsOneWidget);
+    expect(find.descendant(of: wideCard, matching: find.byTooltip('共有の操作')), findsOneWidget);
+    expect(find.descendant(of: wideCard, matching: find.byIcon(Icons.play_circle_fill)), findsNothing);
+    expect(find.descendant(of: clipCard, matching: find.byIcon(Icons.play_circle_fill)), findsOneWidget);
+    // テキスト = 投稿インラインビュー(発言者 + 本文)。
+    expect(find.descendant(of: textCard, matching: find.textContaining('カードで読めるテキスト')), findsOneWidget);
+    expect(find.descendant(of: textCard, matching: find.text('テキスト')), findsOneWidget);
+
+    // 右端の > → 全ての共有(レガシーの一覧、新しい順)。
+    await tester.scrollUntilVisible(find.byKey(astellShareAllKey), 300, scrollable: find.descendant(of: cards, matching: find.byType(Scrollable)));
+    await tester.tap(find.byKey(astellShareAllKey));
+    await tester.pumpAndSettle();
+    expect(find.text('すべての共有'), findsOneWidget);
+    expect(find.text('カードで読めるテキスト'), findsWidgets);
+    container.read(overlayManagerProvider).close('astell.shares.all');
+    await tester.pumpAndSettle();
+
+    // 設定でレガシー(共有枠 + 縦の一覧)へ。
+    await container.read(settingsAreaProvider(astellSettingsArea).notifier).set('shares.style', AstellShareStyle.list.name);
+    await tester.pumpAndSettle();
+    expect(find.byKey(astellShareCardsKey), findsNothing);
+    expect(find.textContaining('TiVard の画面'), findsOneWidget); // 共有枠
+    await session.leave();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('FOW 本体を掴んで移動 (D-161): ルーム FOW の本体側ヘッダー(ListView でない所)を上へ → アプリヘッダー下付き、下へ → 戻る', (tester) async {

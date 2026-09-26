@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
@@ -13,6 +14,7 @@ import '../clips/clip_picker.dart';
 import '../home/action_bar_edit_sheet.dart';
 import '../home/timeline_providers.dart';
 import '../media/image_saver.dart';
+import '../settings/settings_dsl.dart';
 import '../plugins/slot_plugins.dart';
 import '../../shell/third_column.dart';
 import 'share_fow.dart';
@@ -27,7 +29,7 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   // RASQ の投稿 (D-276。全画面表示の … から来る): SNS の操作は効かないので、保存とリンクだけ。
   if (isRasqPost(post)) {
     final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
-      if (media != null && media.type == MediaType.image) const RasqDropdownItem('画像を保存', 'saveImage'),
+      if (media != null && isSavableMedia(media)) RasqDropdownItem(saveMediaLabel(media), 'saveImage'),
       const RasqDropdownItem('リンクをコピー', 'copy'),
     ]);
     if (pick == 'saveImage' && media != null) await saveMediaImage(ref, media);
@@ -44,7 +46,7 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   final fav = ref.read(actionStateProvider.notifier).of(post.key, 'favorite');
 
   final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
-    if (media == null) const RasqDropdownItem('詳細', 'detail') else const RasqDropdownItem('画像を保存', 'saveImage'),
+    if (media == null) const RasqDropdownItem('詳細', 'detail') else if (isSavableMedia(media)) RasqDropdownItem(saveMediaLabel(media), 'saveImage'),
     const RasqDropdownItem('リンクをコピー', 'copy'),
     const RasqDropdownItem('共有', 'share'),
     const RasqDropdownItem('アクションバーを編集', 'editActions'),
@@ -95,13 +97,50 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   }
 }
 
-/// 画像を保存して結果をスナックバーに出す (D-213)。
+/// 保存できる添付か(画像 / GIF / 動画)。
+bool isSavableMedia(MediaItem m) => m.type == MediaType.image || m.type == MediaType.gif || m.type == MediaType.video;
+
+/// メニューの文言(「画像を保存」/「動画を保存」)。
+String saveMediaLabel(MediaItem m) => m.type == MediaType.video ? '動画を保存' : '画像を保存';
+
+/// 保存先を選ぶシートの id (D-334)。
+const mediaSaveAskId = 'media.save.ask';
+
+/// 画像 / 動画を保存して結果をスナックバーに出す (D-213 → D-334)。保存先は設定(`media.save`)、「保存するたびに選ぶ」なら
+/// シートで選ぶ(「次からもこの保存先にする」で設定に残せる)。選べる先が 1 つだけの端末では聞かない。
 Future<void> saveMediaImage(WidgetRef ref, MediaItem media) async {
   final messenger = ref.read(rootMessengerKeyProvider).currentState;
+  final what = media.type == MediaType.video ? '動画' : '画像';
+  var dest = resolveMediaSaveDestination(ref.read(mediaSaveDestinationProvider), ref.read(mediaSaveDestinationsHereProvider));
+  if (dest == null) {
+    final manager = ref.read(overlayManagerProvider);
+    var remember = false;
+    dest = await manager.showBottomSheet<MediaSaveDestination>(
+      id: mediaSaveAskId,
+      title: '$whatの保存先',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => Column(mainAxisSize: MainAxisSize.min, children: [
+          for (final d in ref.read(mediaSaveDestinationsHereProvider))
+            RasqListTile(
+              key: ValueKey('media.save.${d.name}'),
+              title: d.label,
+              subtitle: d == MediaSaveDestination.photos ? 'アルバム「RASQ」に入ります' : (Theme.of(ctx).platform == TargetPlatform.iOS ? '「ファイル」App の このiPad(このiPhone)› RASQ › 保存' : '保存する場所を選びます'),
+              leading: Icon(d == MediaSaveDestination.photos ? Icons.photo_library_outlined : Icons.folder_outlined),
+              onTap: () async {
+                if (remember) await ref.read(settingsAreaProvider(mediaSaveSettingsArea).notifier).set('destination', d.name);
+                manager.close(mediaSaveAskId, result: d);
+              },
+            ),
+          RasqSwitchListTile(key: const ValueKey('media.save.remember'), title: '次からもこの保存先にする', subtitle: '設定 → アプリの外観 →「画像・動画の保存先」で変えられます', value: remember, onChanged: (v) => setState(() => remember = v)),
+        ]),
+      ),
+    );
+    if (dest == null) return;
+  }
   try {
-    final path = await ref.read(imageSaverProvider)(media);
-    messenger?.showSnackBar(SnackBar(content: Text('画像を保存しました: $path')));
+    final message = await ref.read(imageSaverProvider)(media, dest);
+    if (message != null) messenger?.showSnackBar(SnackBar(content: Text(message)));
   } catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text('画像を保存できませんでした: $e')));
+    messenger?.showSnackBar(SnackBar(content: Text('$whatを保存できませんでした: $e')));
   }
 }

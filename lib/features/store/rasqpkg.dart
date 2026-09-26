@@ -63,6 +63,12 @@ class RasqPackagePlugin {
 
   /// アセットパック(契約 v0.11 §2.10): wasm を持たない。[wasm] は空。
   bool get isAssets => kind == 'assets';
+
+  /// 着せ替えパック(契約 v0.16 §2.12、D-335): アセットパックと同じく wasm を持たない。宣言はマニフェストの `theme`。
+  bool get isTheme => kind == 'theme';
+
+  /// wasm を持たない配布物(アセットパック / 着せ替え)。
+  bool get isPack => isAssets || isTheme;
 }
 
 /// アセットパックの 1 枚(`manifest.assets[]` + 中身)。
@@ -121,7 +127,14 @@ class RasqPackage {
   final List<RasqPackageRequirement> requires;
 
   /// スロットに登録できるもの: root(sns 以外)と children。
-  List<RasqPackagePlugin> get slotPlugins => [if (!root.isSns && !root.isAssets) root, ...children];
+  List<RasqPackagePlugin> get slotPlugins => [if (!root.isSns && !root.isPack) root, ...children];
+
+  /// 着せ替えパックの画像(`use: "theme"`、id → 中身)。着せ替えでなければ空。
+  Map<String, ({String path, Uint8List bytes})> get themeImages => {
+        if (root.isTheme)
+          for (final a in (root.manifest['assets'] as List? ?? const []))
+            if (a is Map && a['use'] == 'theme' && a['id'] is String && assets[a['path']] != null) a['id'] as String: (path: a['path'] as String, bytes: assets[a['path']]!),
+      };
 
   /// アセットパックのステッカー(`use: "sticker"`)。アセットパックでなければ空。
   List<RasqPackSticker> get stickers => [
@@ -216,10 +229,10 @@ class RasqPackage {
       if (manifest['id'] != id || manifest['version'] != version || manifest['kind'] != kind) {
         throw RasqPackageException('$manifestPath: id / version / kind が目次($id $version $kind)と違います');
       }
-      // アセットパック(v0.11)は wasm を持たない(持っていたら入れ物として不正)。root だけがなれる。
-      if (kind == 'assets') {
-        if (what != 'root') throw RasqPackageException('bundle.json: 子 $id は kind = assets にできません');
-        if (spec['wasm'] != null) throw RasqPackageException('bundle.json: アセットパック $id が wasm を持っています');
+      // アセットパック(v0.11)/ 着せ替え(v0.16)は wasm を持たない(持っていたら入れ物として不正)。root だけがなれる。
+      if (kind == 'assets' || kind == 'theme') {
+        if (what != 'root') throw RasqPackageException('bundle.json: 子 $id は kind = $kind にできません');
+        if (spec['wasm'] != null) throw RasqPackageException('bundle.json: ${kind == 'theme' ? '着せ替え' : 'アセットパック'} $id が wasm を持っています');
         return RasqPackagePlugin(id: id, version: version, kind: kind, manifest: manifest, wasm: Uint8List(0), template: null);
       }
       return RasqPackagePlugin(id: id, version: version, kind: kind, manifest: manifest, wasm: fileOf(spec['wasm'], id, wasm: true), template: spec['template'] as String?);
@@ -251,11 +264,12 @@ class RasqPackage {
       if (a is! Map || a['path'] is! String) throw const RasqPackageException('bundle.json: assets の形が違います');
       assets[a['path'] as String] = fileOf(a, 'asset ${a['path']}');
     }
-    if (root.isAssets) {
-      // アセットパック: コードを一切含まない(wasm を入れ物に紛れ込ませない)、中身は画像だけ、上限つき。
-      if (children.isNotEmpty || libs.isNotEmpty || listOf('models').isNotEmpty) throw const RasqPackageException('bundle.json: アセットパックは children / libs / models を持てません');
-      if (files.values.any(isWasmModule)) throw const RasqPackageException('アセットパックに wasm が入っています');
-      if (assets.isEmpty || assets.length > rasqPackMaxImages) throw RasqPackageException('アセットパックの画像は 1〜$rasqPackMaxImages 枚です: ${assets.length}');
+    if (root.isPack) {
+      // アセットパック / 着せ替え: コードを一切含まない(wasm を入れ物に紛れ込ませない)、中身は画像だけ、上限つき。
+      // 着せ替えは画像 0 枚(色だけ)でもよい。
+      if (children.isNotEmpty || libs.isNotEmpty || listOf('models').isNotEmpty) throw const RasqPackageException('bundle.json: アセットパック / 着せ替えは children / libs / models を持てません');
+      if (files.values.any(isWasmModule)) throw const RasqPackageException('アセットパック / 着せ替えに wasm が入っています');
+      if ((root.isAssets && assets.isEmpty) || assets.length > rasqPackMaxImages) throw RasqPackageException('アセットパックの画像は 1〜$rasqPackMaxImages 枚です: ${assets.length}');
       for (final e in assets.entries) {
         if (!isPackImage(e.value)) throw RasqPackageException('${e.key}: 画像(PNG / JPEG / WebP / GIF)ではありません');
         if (e.value.length > rasqPackMaxImageBytes) throw RasqPackageException('${e.key}: 大きすぎます(1 枚 ${rasqPackMaxImageBytes ~/ 1024 ~/ 1024} MiB まで)');
@@ -263,6 +277,7 @@ class RasqPackage {
       for (final a in (root.manifest['assets'] as List? ?? const [])) {
         if (a is! Map || a['path'] is! String || !assets.containsKey(a['path'])) throw RasqPackageException('manifest.assets の ${a is Map ? a['path'] : a} が配布物の目次にありません');
       }
+      if (root.isTheme) checkThemeManifest(root.manifest);
     }
     for (final m in listOf('models')) {
       if (m is! Map || m['manifest'] is! String) throw const RasqPackageException('bundle.json: models の形が違います');
@@ -301,7 +316,31 @@ class RasqPackage {
 
 final _pluginId = RegExp(r'^[a-z0-9]+(\.[a-z0-9_-]+)+$');
 final _semver = RegExp(r'^\d+\.\d+\.\d+([-+][0-9A-Za-z.-]+)?$');
-const _kinds = {'sns', 'action', 'view', 'trend', 'mediaViewer', 'postProcessor', 'assets'};
+const _kinds = {'sns', 'action', 'view', 'trend', 'mediaViewer', 'postProcessor', 'assets', 'theme'};
+
+/// 着せ替えの宣言の整合 (契約 v0.16 §2.12): `theme` があり、レイヤーとアイコンの `asset:<id>` が `use: "theme"` の画像を指す。
+void checkThemeManifest(Map<String, Object?> manifest) {
+  final theme = manifest['theme'];
+  if (theme is! Map) throw const RasqPackageException('着せ替えのマニフェストに theme がありません');
+  final ids = {for (final a in (manifest['assets'] as List? ?? const [])) if (a is Map && a['use'] == 'theme' && a['id'] is String) a['id'] as String};
+  void need(Object? id, String where) {
+    if (id is! String || !ids.contains(id)) throw RasqPackageException('theme.$where の画像 $id が assets(use: theme)にありません');
+  }
+
+  if (theme['icons'] case final Map<Object?, Object?> icons) {
+    for (final e in icons.entries) {
+      if (e.value case final String v when v.startsWith('asset:')) need(v.substring(6), 'icons.${e.key}');
+    }
+  }
+  if (theme['surfaces'] case final Map<Object?, Object?> surfaces) {
+    for (final e in surfaces.entries) {
+      if (!const {'app', 'postTile', 'fow', 'actionButton'}.contains(e.key)) throw RasqPackageException('theme.surfaces の ${e.key} は使えません(app / postTile / fow / actionButton)');
+      for (final l in ((e.value as Map?)?['layers'] as List? ?? const [])) {
+        need(l is Map ? l['asset'] : null, 'surfaces.${e.key}.layers');
+      }
+    }
+  }
+}
 final _pathChars = RegExp(r'^[A-Za-z0-9_][A-Za-z0-9_./-]*$');
 
 /// 配布物内のパスの文法(`bundle.schema.json` の `path`): 相対、`..` なし、英数字と `_ . / -` だけ。

@@ -1,0 +1,184 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:rasq_client/app/app.dart';
+import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/home/post_row.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/features/store/rasqpkg.dart';
+import 'package:rasq_client/features/store/store_providers.dart';
+import 'package:rasq_client/features/theme/theme_packs.dart';
+import 'package:rasq_client/features/theme/theme_settings_screen.dart';
+import 'package:rasq_client/mock/mock_data.dart';
+import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+
+import 'support/fakes.dart';
+
+/// 着せ替え (D-335、契約 v0.16 §2.12 `kind: "theme"`): 宣言の読み取り、配布物の検証、ストアからのインストール、選択と適用。
+void main() {
+  final starry = File('test/fixtures/rasqpkg/sample.theme-starry-0.1.0.rasqpkg').readAsBytesSync();
+  final img = MemoryImage(base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+
+  group('宣言 (RasqSkin.parse)', () {
+    RasqSkin parse(Map<String, Object?> theme) => RasqSkin.parse(id: 't', name: 'T', theme: theme, image: (id) => id == 'bg' ? img : null, materialIcon: themeIconByName);
+
+    test('色(#RRGGBB / #AARRGGBB、書けるキーだけ)、明るさ、アイコン(画像 / 別の Material)、面(色・角丸・レイヤー)', () {
+      final s = parse({
+        'brightness': 'dark',
+        'colors': {
+          'dark': {'primary': '#8AB4FF', 'surface': '#CC0B1026', 'bogus': '#FFFFFF', 'onSurface': 'red'},
+        },
+        'icons': {'favorite_border': 'asset:bg', 'repeat': 'material:autorenew', 'no_such_icon_name': 'material:add', 'reply': 'asset:missing'},
+        'surfaces': {
+          'postTile': {
+            'color': '#0B1026',
+            'radius': 99,
+            'layers': [
+              {'asset': 'bg', 'position': 'above', 'fit': 'none', 'repeat': 'repeat', 'opacity': 2},
+              {'asset': 'missing'},
+            ],
+          },
+          'sidebar': {'color': '#000000'},
+        },
+      });
+      expect(s.only, Brightness.dark);
+      expect(s.appliesTo(Brightness.light), isFalse);
+      expect(s.colors[Brightness.dark], {'primary': const Color(0xFF8AB4FF), 'surface': const Color(0xCC0B1026)});
+      final dark = s.applyColors(RasqTheme.dark().colorScheme);
+      expect(dark.primary, const Color(0xFF8AB4FF));
+      // 合わない明るさには色を当てない。
+      expect(s.applyColors(RasqTheme.light().colorScheme).primary, RasqTheme.light().colorScheme.primary);
+      expect(s.iconFor(Icons.favorite_border)?.image, img);
+      expect(s.iconFor(Icons.repeat)?.icon, Icons.autorenew);
+      expect(s.iconFor(Icons.reply), isNull, reason: '無い画像を指すものは捨てる');
+      final tile = s.surface(RasqSkinSurfaceId.postTile, Brightness.dark)!;
+      expect(tile.color, const Color(0xFF0B1026));
+      expect(tile.radius, 48, reason: '角丸は 0〜48');
+      expect(tile.layers, hasLength(1));
+      expect((tile.layers.single.above, tile.layers.single.fit, tile.layers.single.repeat, tile.layers.single.opacity), (true, BoxFit.none, ImageRepeat.repeat, 1.0));
+      expect(s.surface(RasqSkinSurfaceId.postTile, Brightness.light), isNull);
+      expect(s.surfaces.keys, [RasqSkinSurfaceId.postTile], reason: '知らない面は捨てる');
+    });
+
+    test('app の面に背景があれば Scaffold を透明に(アプリの一番下の面を見せる)', () {
+      final s = parse({
+        'surfaces': {
+          'app': {'color': '#060914', 'layers': [{'asset': 'bg'}]},
+        },
+      });
+      expect(s.applyTo(RasqTheme.dark()).scaffoldBackgroundColor, Colors.transparent);
+      expect(parse({}).applyTo(RasqTheme.dark()).scaffoldBackgroundColor, RasqTheme.dark().scaffoldBackgroundColor);
+    });
+  });
+
+  group('配布物', () {
+    test('サンプル「星空」: kind theme、wasm 無し、画像 4 枚(use: theme)、スロットには出さない', () {
+      final p = RasqPackage.open(starry);
+      expect((p.root.id, p.root.kind, p.root.isTheme, p.root.isPack), ('sample.theme-starry', 'theme', true, true));
+      expect(p.root.wasm, isEmpty);
+      expect(p.slotPlugins, isEmpty);
+      expect(p.stickers, isEmpty);
+      expect(p.themeImages.keys, unorderedEquals(['sky', 'stars', 'button', 'heart']));
+      expect(p.themeImages.values.every((v) => isPackImage(v.bytes)), isTrue);
+    });
+
+    test('宣言の整合: 画像の参照は assets(use: theme)に、面は 4 つだけ', () {
+      Map<String, Object?> m(Map<String, Object?> theme) => {'assets': [{'id': 'a', 'path': 'a.png', 'use': 'theme'}], 'theme': theme};
+      checkThemeManifest(m({'icons': {'reply': 'asset:a', 'repeat': 'material:autorenew'}, 'surfaces': {'fow': {'layers': [{'asset': 'a'}]}}}));
+      expect(() => checkThemeManifest({'assets': []}), throwsA(isA<RasqPackageException>()));
+      expect(() => checkThemeManifest(m({'icons': {'reply': 'asset:b'}})), throwsA(isA<RasqPackageException>()));
+      expect(() => checkThemeManifest(m({'surfaces': {'fow': {'layers': [{'asset': 'b'}]}}})), throwsA(isA<RasqPackageException>()));
+      expect(() => checkThemeManifest(m({'surfaces': {'sidebar': {}}})), throwsA(isA<RasqPackageException>()));
+    });
+  });
+
+  testWidgets('ストアからインストール → 設定で選ぶ → 暗いモードで面 / アイコンが変わる → 削除で既定に戻る', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final dir = Directory.systemTemp.createTempSync('rasq-d335');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        themePackDirProvider.overrideWithValue(() async => dir),
+        themePackPickerProvider.overrideWithValue(() async => starry),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(themeModeProvider.notifier).set(ThemeModeSetting.dark);
+
+    // ストア(同梱のサンプル)からインストール。
+    final r = await tester.runAsync(() => c.read(installedPluginsProvider.notifier).install('sample.theme-starry'));
+    expect(r?.error, isNull);
+    await tester.pumpAndSettle();
+    final pack = c.read(themePacksProvider).single;
+    expect(pack.name, '星空');
+    expect(pack.images.keys, unorderedEquals(['sky', 'stars', 'button', 'heart']));
+    expect(pack.images.values.every((p) => File(p).existsSync()), isTrue);
+    expect(c.read(activeSkinProvider), isNull, reason: '入れただけでは効かない(選ぶまで)');
+
+    // 設定 → アプリの外観 → フォントやカラースキーム で選ぶ。
+    c.read(routerProvider).push(Routes.settingsTheme);
+    await tester.pumpAndSettle();
+    expect(find.text('着せ替えなし(既定)'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('theme.pack.sample.theme-starry')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pumpAndSettle();
+    expect(c.read(activeThemeIdProvider), 'sample.theme-starry');
+    final skin = c.read(activeSkinProvider)!;
+    expect(skin.only, Brightness.dark);
+    // 色が当たる(暗いモード)。
+    expect(Theme.of(tester.element(find.byType(ThemeSettingsScreen))).colorScheme.primary, const Color(0xFF8AB4FF));
+    // アイコンの差し替え: favorite_border は画像、repeat は別の Material アイコン。
+    expect(skin.iconFor(Icons.favorite_border)?.image, isA<FileImage>());
+    expect(skin.iconFor(Icons.repeat)?.icon, Icons.autorenew);
+
+    // ホームの投稿タイルに面(星の粒のレイヤー)とアイコン(画像のいいね)。
+    c.read(routerProvider).go(Routes.home);
+    await tester.pumpAndSettle();
+    expect(find.byType(PostRow), findsWidgets);
+    bool fileImage(Widget w, String name) => w is Image && w.image is FileImage && (w.image as FileImage).file.path.endsWith(name);
+    expect(find.byWidgetPredicate((w) => fileImage(w, 'stars.png')), findsWidgets);
+    expect(find.byWidgetPredicate((w) => fileImage(w, 'sky.png')), findsWidgets, reason: 'アプリの一番下の面');
+    expect(find.byWidgetPredicate((w) => fileImage(w, 'button.png')), findsWidgets, reason: 'アクションボタンの背景');
+
+    // 明るいモードでは面を使わない(この着せ替えは暗いモード用)。
+    c.read(themeModeProvider.notifier).set(ThemeModeSetting.light);
+    await tester.pumpAndSettle();
+    expect(find.byWidgetPredicate((w) => fileImage(w, 'stars.png')), findsNothing);
+
+    // 削除(ストアのインストールごと)→ 既定に戻る。
+    await tester.runAsync(() => c.read(installedPluginsProvider.notifier).uninstall('sample.theme-starry'));
+    await tester.pumpAndSettle();
+    expect(c.read(themePacksProvider), isEmpty);
+    expect(c.read(activeThemeIdProvider), isNull);
+    expect(c.read(activeSkinProvider), isNull);
+
+    // ファイルから読み込む(.rasqpkg、未審査の印)→ そのまま選ばれる。
+    c.read(routerProvider).push(Routes.settingsTheme);
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const ValueKey('theme.import')));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    expect(c.read(themePacksProvider).single.sideloaded, isTrue);
+    expect(c.read(activeThemeIdProvider), 'sample.theme-starry');
+    expect(find.textContaining('ファイルから読み込み(未審査)'), findsOneWidget);
+    await c.read(settingsAreaProvider(themeSettingsArea).notifier).set('id', null);
+  });
+}

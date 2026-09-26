@@ -8,6 +8,7 @@ import '../features/home/reaction_history.dart';
 import '../features/plugins/slot_plugins.dart';
 import '../features/media/video_player.dart' show VideoPrefs;
 import '../features/settings/settings_dsl.dart';
+import '../features/theme/theme_packs.dart';
 import '../notify/central_inbox.dart';
 import 'providers.dart';
 import 'router.dart';
@@ -21,6 +22,7 @@ class RasqApp extends ConsumerWidget {
     // Central の受信箱 (D-309): 起動 / アプリへ戻ったとき / ログインの変化で 1 回ずつ読み、`child_safe` などを受け手へ。
     ref.watch(centralInboxProvider);
     final mode = ref.watch(themeModeProvider);
+    final skin = ref.watch(activeSkinProvider);
     // DSL 設定の実適用 (D-031): 表示サイズ / モーション抑制。
     // reduceMotion は MediaQuery.disableAnimations に流す — MFM の
     // spin/rainbow 等は既にこれを見て静止画に縮退する。
@@ -42,8 +44,9 @@ class RasqApp extends ConsumerWidget {
       // iOS / macOS では閉じるときの確認が cupertino_ui のダイアログ(showAdaptiveDialog)になるので、その
       // CupertinoLocalizations も要る (D-253: 無いと × / 戻るで例外になり、閉じられなかった)。
       localizationsDelegates: const [mui.DefaultMaterialLocalizations.delegate, cui.DefaultCupertinoLocalizations.delegate],
-      theme: RasqTheme.light(),
-      darkTheme: RasqTheme.dark(),
+      // 着せ替え (D-335): 色の上書き(効く明るさだけ)。面とアイコンは RasqSkinScope 経由で各部品が描く。
+      theme: skin?.applyTo(RasqTheme.light()) ?? RasqTheme.light(),
+      darkTheme: skin?.applyTo(RasqTheme.dark()) ?? RasqTheme.dark(),
       themeMode: switch (mode) {
         ThemeModeSetting.system => ThemeMode.system,
         ThemeModeSetting.light => ThemeMode.light,
@@ -56,7 +59,8 @@ class RasqApp extends ConsumerWidget {
             textScaler: TextScaler.linear(mq.textScaler.scale(1.0) * textScale),
             disableAnimations: mq.disableAnimations || reduceMotion,
           ),
-          child: child!,
+          // 着せ替え (D-335): アプリの一番下に `app` の面(背景色 + 画像のレイヤー。Scaffold は透明になっている)。
+          child: RasqSkinScope(skin: skin, child: RasqSkinned(surface: RasqSkinSurfaceId.app, child: child!)),
         );
       },
       routerConfig: router,

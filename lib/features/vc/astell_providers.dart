@@ -116,6 +116,20 @@ final astellAutoShareProvider = Provider<Map<String, bool>>((ref) {
   return {for (final c in astellShareClasses) c.id: (area['auto.${c.id}'] as bool?) ?? (_astellAutoDefaults[c.id] ?? false)};
 });
 
+/// 共有欄の表示 (D-333): カード型横スライド(既定)か、レガシー(共有枠 + 縦の一覧、D-146)。KV `shares.style`。
+enum AstellShareStyle {
+  cards('カード(横スライド)'),
+  list('一覧(レガシー)');
+
+  const AstellShareStyle(this.label);
+  final String label;
+}
+
+final astellShareStyleProvider = Provider<AstellShareStyle>((ref) {
+  final area = ref.watch(settingsAreaProvider(astellSettingsArea)).value ?? const <String, Object?>{};
+  return area['shares.style'] == AstellShareStyle.list.name ? AstellShareStyle.list : AstellShareStyle.cards;
+});
+
 /// 自動再生 (D-147): ピアの画面共有が始まったら(参加時に既にあるものも)共有枠に自動で出す。
 /// KV `autoplay.screen`、既定オン。
 final astellAutoPlayProvider = Provider<bool>((ref) {

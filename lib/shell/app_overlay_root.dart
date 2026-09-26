@@ -54,6 +54,28 @@ class AppOverlayRoot extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final manager = ref.watch(overlayManagerProvider);
+    // 着せ替え (D-335): FOW の地の色と背景のレイヤー(FOW 自身の明るさで判定)。
+    final skin = RasqSkinScope.of(context);
+    final fowSkin = skin == null
+        ? null
+        : (
+            color: (BuildContext ctx) => skin.surface(RasqSkinSurfaceId.fow, Theme.of(ctx).brightness)?.color,
+            decorate: (BuildContext ctx, Widget panel) => RasqSkinned(surface: RasqSkinSurfaceId.fow, child: panel),
+          );
+    Widget host = OverlayHost(
+      manager: manager,
+      fowDockInset: (ctx) => fowDockInsetOf(ctx, ref.read(routerProvider)),
+      fowTopInset: fowTopInsetOf,
+      // FOW の上辺はステータスバー + 32px より下 (D-178): ハンドルがコントロールセンター等に吸われない。
+      fowTopClearance: (ctx) => MediaQuery.paddingOf(ctx).top + 32,
+      // 壁付けピン (D-063) は小型カラムの幅で壁側カラムに張り付く(幅は設定「カラムの幅」 D-320)。
+      fowPinnedWidth: _pinnedWidth(context, ref.watch(columnLayoutProvider)),
+      // FOW の列スロット (D-062): タブレット幅では第2/第3カラムの幾何を
+      // 供給し、FOW はカラム中心に揃いカラム幅に収まる。
+      fowColumns: (ctx) => fowColumnSlotsOf(ctx, thirdColumnOccupied: ref.read(thirdColumnProvider) != null, layout: ref.read(columnLayoutProvider)),
+      child: child,
+    );
+    if (fowSkin != null) host = FowPanelSkin(color: fowSkin.color, decorate: fowSkin.decorate, child: host);
     return OverlayScope(
       manager: manager,
       child: CallbackShortcuts(
@@ -61,19 +83,7 @@ class AppOverlayRoot extends ConsumerWidget {
         child: Focus(
           autofocus: true,
           skipTraversal: true,
-          child: OverlayHost(
-            manager: manager,
-            fowDockInset: (ctx) => fowDockInsetOf(ctx, ref.read(routerProvider)),
-            fowTopInset: fowTopInsetOf,
-            // FOW の上辺はステータスバー + 32px より下 (D-178): ハンドルがコントロールセンター等に吸われない。
-            fowTopClearance: (ctx) => MediaQuery.paddingOf(ctx).top + 32,
-            // 壁付けピン (D-063) は小型カラムの幅で壁側カラムに張り付く(幅は設定「カラムの幅」 D-320)。
-            fowPinnedWidth: _pinnedWidth(context, ref.watch(columnLayoutProvider)),
-            // FOW の列スロット (D-062): タブレット幅では第2/第3カラムの幾何を
-            // 供給し、FOW はカラム中心に揃いカラム幅に収まる。
-            fowColumns: (ctx) => fowColumnSlotsOf(ctx, thirdColumnOccupied: ref.read(thirdColumnProvider) != null, layout: ref.read(columnLayoutProvider)),
-            child: child,
-          ),
+          child: host,
         ),
       ),
     );
