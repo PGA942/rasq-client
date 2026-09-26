@@ -9,6 +9,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/providers.dart';
 import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
+import '../vc/astell_bar.dart';
 import 'action_bar_config.dart';
 
 /// 投稿のアクションボタンをプラグインが足す (D-176、契約 v0.7 §2.9)。
@@ -277,14 +278,18 @@ String? accountKeyOfConfigKey(String configKey) {
   return configKey.startsWith('viewer:') ? configKey.substring('viewer:'.length) : configKey;
 }
 
-/// 土台が SNS のアクションではなく、アプリ内蔵のもののバー(加工画面 / RASQ の投稿)。
-bool isBuiltinConfigKey(String configKey) => isEditorConfigKey(configKey) || configKey == rasqPostConfigKey;
-List<ActionDescriptor> builtinActionsFor(String configKey) => configKey == rasqPostConfigKey ? rasqPostBuiltinActions : editorBuiltinActionsFor(configKey);
+/// 土台が SNS のアクションではなく、アプリ内蔵のもののバー(加工画面 / RASQ の投稿 / AsTell のルームの下段 D-324)。
+bool isBuiltinConfigKey(String configKey) => isEditorConfigKey(configKey) || configKey == rasqPostConfigKey || configKey == astellBarConfigKey;
+List<ActionDescriptor> builtinActionsFor(String configKey) => switch (configKey) {
+      rasqPostConfigKey => rasqPostBuiltinActions,
+      astellBarConfigKey => astellBarBuiltinActions,
+      _ => editorBuiltinActionsFor(configKey),
+    };
 
 String editorConfigKeyFor(String mimeType) => mimeType.startsWith('image/') ? editorImageConfigKey : editorVideoConfigKey;
 
-/// プラグインボタンの有効 / 無効と閾値の置き場: 加工画面は `slots.editor`、ほかはアカウントごと。
-String slotSettingsKeyFor(String configKey, String accountKey) => isEditorConfigKey(configKey) ? 'editor' : (configKey == rasqPostConfigKey ? 'rasq' : accountKey);
+/// プラグインボタンの有効 / 無効と閾値の置き場: 加工画面は `slots.editor`、AsTell の下段は `slots.astell`、ほかはアカウントごと。
+String slotSettingsKeyFor(String configKey, String accountKey) => isEditorConfigKey(configKey) ? 'editor' : (configKey == rasqPostConfigKey ? 'rasq' : (configKey == astellBarConfigKey ? 'astell' : accountKey));
 
 /// 宣言が無い `composer.media` プラグインのボタン(プラグイン名 + パズルのアイコン、画像だけ)。
 const mediaEditDefaultActionId = 'composer.media';
@@ -324,7 +329,7 @@ final mediaPluginActionsProvider = Provider<List<PluginAction>>((ref) => [
     ]);
 
 /// 構成キーに応じたプラグインボタン: 全画面バー(`viewer:` の構成)には全画面表示プラグインのトグルも含む。
-/// 加工画面(`editor:` の構成)は `composer.media` の宣言だけ(その種類の添付に出るもの)。
+/// 加工画面(`editor:` の構成)は `composer.media` の宣言だけ(その種類の添付に出るもの)。AsTell の下段は `astell.action` だけ。
 /// switch(契約 v0.14)を切ったボタンは含めない(バーにも (+) の検索にも出ない。戻すのは設定画面)。
 final pluginActionsForProvider = Provider.family<List<PluginAction>, String>((ref, configKey) {
   final prefs = ref.watch(actionButtonPrefsProvider);
@@ -332,6 +337,9 @@ final pluginActionsForProvider = Provider.family<List<PluginAction>, String>((re
   if (isEditorConfigKey(configKey)) {
     final mime = configKey == editorImageConfigKey ? 'image/*' : 'video/*';
     all = [for (final a in ref.watch(mediaPluginActionsProvider)) if (mediaAcceptsKind(a.decl.accepts, mime)) a];
+  } else if (configKey == astellBarConfigKey) {
+    // AsTell のルームの下段 (D-324): `astell.action` のプラグイン(投稿のボタンは出さない)。
+    all = ref.watch(astellPluginActionsProvider);
   } else {
     all = [
       ...ref.watch(pluginActionsProvider),

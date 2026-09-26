@@ -33,12 +33,13 @@ void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
   Post post(String id, String body, {String visibility = 'public'}) => Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 8, 31), body: body, visibility: visibility);
 
-  /// 下段の左端ボタン群(横 ListView、狭幅は 2 つまで)を [tooltip] のボタンまでスクロール (D-148)。
-  Future<void> scrollActions(WidgetTester tester, String tooltip, {bool back = false}) => tester.scrollUntilVisible(
-        find.byTooltip(tooltip),
-        back ? -48 : 48,
-        scrollable: find.descendant(of: find.byKey(astellFooterActionsKey), matching: find.byType(Scrollable)),
-      );
+  /// 下段に入りきらないボタン(歯車のメニューの先頭、D-324)の [tooltip] を押す。押すとメニューは閉じる。
+  Future<void> tapOverflow(WidgetTester tester, String tooltip) async {
+    await tester.tap(find.byTooltip('設定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byKey(astellOverflowKey), matching: find.byTooltip(tooltip)));
+    await tester.pumpAndSettle();
+  }
 
   final notifier = MemoryLocalNotifier();
 
@@ -327,22 +328,25 @@ void main() {
     await tester.pumpAndSettle();
 
     // 自動再生 (D-147): TiVard が画面共有中なので、参加した時点で共有枠に出ている。
-    // 下段 (D-148): 左端 = スピーカー / マイク / 画面共有 / 全画面(共有枠にある間) / プラグイン、
+    // 下段 (D-148 → D-324): 左端 = スピーカー / マイク / 画面共有 / 全画面(共有枠にある間) / プラグイン / 字幕、
     // 右端 = 共有する + 設定。「…」→ ミュート → 「ミュート中」。
     expect(container.read(astellSessionProvider)!.viewingPeer?.displayName, 'TiVard');
     expect(find.textContaining('TiVard の画面'), findsOneWidget);
     expect(find.byKey(astellFooterActionsKey), findsOneWidget);
     expect(find.byTooltip('スピーカーミュート'), findsOneWidget);
     expect(find.byTooltip('マイクオン'), findsOneWidget);
-    expect(find.byTooltip('画面共有'), findsNothing); // 狭幅(360px)は 2 つまで → 横スクロールの先
-    await scrollActions(tester, '画面共有');
+    expect(find.byTooltip('字幕オフ'), findsOneWidget); // 並びの最後(入力欄の隣)は幅が足りなくても出す
+    // 狭幅(360px)は 3 つ: 先頭の 2 つ + 最後の字幕。残りは歯車のメニューの先頭へ(歯車に点、D-324)。
+    expect(find.byTooltip('画面共有'), findsNothing);
+    expect(find.byKey(astellOverflowDotKey), findsOneWidget);
+    await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('画面共有'), findsOneWidget);
-    await scrollActions(tester, 'プラグインアクション(未登録)');
-    await tester.pumpAndSettle();
-    expect(find.byTooltip('全画面'), findsWidgets); // 左端 + パネル右上
-    expect(find.byTooltip('プラグインアクション(未登録)'), findsOneWidget);
-    await scrollActions(tester, 'スピーカーミュート', back: true);
+    final overflow = find.byKey(astellOverflowKey);
+    expect(find.descendant(of: overflow, matching: find.byTooltip('画面共有')), findsOneWidget);
+    expect(find.descendant(of: overflow, matching: find.byTooltip('全画面')), findsOneWidget);
+    expect(find.descendant(of: overflow, matching: find.byTooltip('プラグインアクション(未登録)')), findsOneWidget);
+    expect(find.text('下段のボタンの並びを編集'), findsOneWidget);
+    container.read(overlayManagerProvider).close('astell.room.settings');
     await tester.pumpAndSettle();
     expect(find.byTooltip('設定'), findsOneWidget);
     await tester.tap(find.byTooltip('スピーカーミュート'));
@@ -483,7 +487,7 @@ void main() {
     expect(find.widgetWithText(TextField, 'input..'), findsNothing);
     expect(find.byTooltip('スピーカーミュート'), findsOneWidget);
     expect(find.byTooltip('マイクオン'), findsOneWidget);
-    expect(find.byTooltip('画面共有'), findsNothing); // 3 つ目は横スクロールの先
+    expect(find.byTooltip('画面共有'), findsNothing); // stick は 3 つまで(先頭の 2 つ + 最後の字幕、D-324)
     expect(find.byTooltip('退出'), findsOneWidget);
     expect(find.byTooltip('共有する'), findsNothing);
     expect(find.byKey(astellStickPagerKey), findsNothing); // 字幕オン = 文字起こし
@@ -529,7 +533,10 @@ void main() {
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
     expect(find.text('VC の設定'), findsOneWidget);
-    // 自動再生の設定 (D-147)。
+    // 先頭は下段に入りきらないボタンと「下段のボタンの並びを編集」(D-324)。自動再生の設定 (D-147) はその下。
+    expect(find.byKey(astellOverflowKey), findsOneWidget);
+    await tester.scrollUntilVisible(find.widgetWithText(RasqSwitchListTile, '画面共有が始まったら共有枠に出す'), 80, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
+    await tester.pumpAndSettle();
     expect(find.widgetWithText(RasqSwitchListTile, '画面共有が始まったら共有枠に出す'), findsOneWidget);
     await tester.tap(find.widgetWithText(RasqSwitchListTile, '画面共有が始まったら共有枠に出す'));
     await tester.pumpAndSettle();
@@ -545,15 +552,11 @@ void main() {
     await tester.tap(find.text('キャンセル'));
     await tester.pumpAndSettle();
 
-    // 自分の画面共有モード: 左端の 画面共有 が塗りつぶしに、展開の上部に印。
-    await scrollActions(tester, '画面共有');
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('画面共有'));
-    await tester.pumpAndSettle();
+    // 自分の画面共有モード: 画面共有(狭幅では歯車のメニューの先頭、D-324)が塗りつぶしに、展開の上部に印。
+    await tapOverflow(tester, '画面共有');
     expect(container.read(astellSessionProvider)!.screenShareOn, isTrue);
     expect(find.text('画面を共有しています'), findsOneWidget);
-    await tester.tap(find.byTooltip('画面共有オフ'));
-    await tester.pumpAndSettle();
+    await tapOverflow(tester, '画面共有オフ');
     expect(container.read(astellSessionProvider)!.screenShareOn, isFalse);
 
     // ルーム: 参加メンバー全員。
@@ -762,11 +765,16 @@ void main() {
     // 設定: 参加できる人 / 共有できる人 / モデレーター / BAN。
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
+    Finder sheet() => find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable));
+    // 先頭の下段のボタン(D-324)の下。
+    await tester.scrollUntilVisible(find.text('モデレーション(オーナー)'), 40, scrollable: sheet());
+    await tester.pumpAndSettle();
     expect(find.text('モデレーション(オーナー)'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('フォロワーだけ'), 40, scrollable: sheet());
+    await tester.pumpAndSettle();
     await tester.tap(find.text('フォロワーだけ'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.room.joinPolicy, 'followers');
-    Finder sheet() => find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable));
     await tester.scrollUntilVisible(find.text('モデレーターだけ'), 80, scrollable: sheet());
     await tester.pumpAndSettle();
     await tester.tap(find.text('モデレーターだけ'));
