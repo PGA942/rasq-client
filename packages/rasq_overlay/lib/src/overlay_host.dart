@@ -623,24 +623,27 @@ class _FowPanelState extends State<_FowPanel> {
     // なめらかに(展開時にヘッダー/返信先タイルが「割り込んでくる」動き)。
     // ドラッグリサイズ可能なパネルは追従遅延を避けて即時反映。
     // RepaintBoundary: FOW スイッチャーのプレビュー用キャプチャ点 (D-066)。
+    // 着せ替え (D-335): 地の色と背景のレイヤー(FOW 自身のテーマを持つもの = 全画面の暗い FOW などは、その明るさで判定される)。
+    final skin = FowPanelSkin.of(context);
+    final content = Column(children: [
+      if (spec.showHandle && !topSide) handle,
+      ?header,
+      // 本体も掴んで動かせる (D-161): ListView / 入力欄 / スライダーなど
+      // ジェスチャーを取る部品の上では負け(内側の認識器が勝つ)、それ以外の
+      // 余白や文字の上では横 = カラム間移動、縦 = ヘッダー/フッターの
+      // 付け先切り替え。クローム(ヘッダー行)が無い FOW でも移動できる。
+      Expanded(child: spec.bodyMove ? FowMoveGrip(spec: spec, child: child) : child),
+      if (spec.showHandle && topSide) handle,
+    ]);
     final panel = RepaintBoundary(
       key: spec.previewBoundaryKey,
       child: Material(
-        color: scheme.surface,
+        color: skin?.color?.call(context) ?? scheme.surface,
         // 最前面のパネルだけ影付き(枠線は全パネル共通のグレー、D-052)。
         elevation: widget.frontmost ? 8 : 0,
         shape: RoundedRectangleBorder(side: BorderSide(color: scheme.outlineVariant), borderRadius: radius),
         clipBehavior: Clip.antiAlias,
-        child: Column(children: [
-          if (spec.showHandle && !topSide) handle,
-          ?header,
-          // 本体も掴んで動かせる (D-161): ListView / 入力欄 / スライダーなど
-          // ジェスチャーを取る部品の上では負け(内側の認識器が勝つ)、それ以外の
-          // 余白や文字の上では横 = カラム間移動、縦 = ヘッダー/フッターの
-          // 付け先切り替え。クローム(ヘッダー行)が無い FOW でも移動できる。
-          Expanded(child: spec.bodyMove ? FowMoveGrip(spec: spec, child: child) : child),
-          if (spec.showHandle && topSide) handle,
-        ]),
+        child: skin?.decorate?.call(context, content) ?? content,
       ),
     );
     // ドラッグ中は即時反映(duration 0)、それ以外(スナップ着地・stick の

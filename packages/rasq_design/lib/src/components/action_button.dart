@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../skin/rasq_skin.dart';
 import '../tokens/sizes.dart';
 import '../tokens/typography.dart';
 
@@ -86,7 +87,8 @@ class RasqActionButton extends StatelessWidget {
 
     final children = <Widget>[];
     final shownIcon = done ? (doneIcon ?? icon) : icon;
-    if (shownIcon != null) children.add(Icon(shownIcon, size: 20, color: color));
+    // 着せ替え (D-335): アイコンの差し替え。
+    if (shownIcon != null) children.add(RasqSkinIcon(shownIcon, size: 20, color: color));
     if (count != null) {
       if (children.isNotEmpty) children.add(const SizedBox(width: 4));
       children.add(Text(_formatCount(count!), style: RasqTypography.count.copyWith(color: color)));
@@ -109,7 +111,8 @@ class RasqActionButton extends StatelessWidget {
       onLongPress: effectiveEnabled ? onLongPress : null,
       radius: 24,
       containedInkWell: false,
-      child: child,
+      // 着せ替え (D-335): ボタンの背景(パックの画像のレイヤー)。
+      child: RasqSkinned(surface: RasqSkinSurfaceId.actionButton, child: child),
     );
     if (tooltip != null) result = Tooltip(message: tooltip!, child: result);
     return Semantics(button: true, enabled: effectiveEnabled, selected: done, label: tooltip ?? label, child: result);

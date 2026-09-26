@@ -27,6 +27,7 @@ import '../features/login/bluesky_login_screen.dart';
 import '../features/login/mixi2_login_screen.dart';
 import '../features/plugins/pro_media_editor_screen.dart';
 import '../features/settings/column_layout_screen.dart';
+import '../features/theme/theme_settings_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
 import '../features/settings/learning_screen.dart';
 import '../features/settings/legal_screen.dart';
@@ -126,6 +127,9 @@ abstract final class Routes {
 
   /// カラムの幅 (D-320): 幅の広い画面の小型 / 大型カラムの比。
   static const settingsColumns = '/settings/columns';
+
+  /// アプリの外観 → フォントやカラースキーム = 着せ替え (D-335)。
+  static const settingsTheme = '/settings/theme';
 
   /// 持ち主の確認 (D-313): つないだ SNS アカウントごと / RASQ アカウントの Keybase。
   static String rasqSnsVerify(String accountKey) => '/settings/rasq-verify/${Uri.encodeComponent(accountKey)}';
@@ -300,6 +304,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'account-login', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountLoginScreen()),
             GoRoute(path: 'learning', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LearningScreen()),
             GoRoute(path: 'columns', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ColumnLayoutScreen()),
+            GoRoute(path: 'theme', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ThemeSettingsScreen()),
             // プラグインボタン (D-210): 宣言されたボタン / 束ねる閾値。
             GoRoute(path: 'actionbar-plugins', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ActionBarPluginsScreen()),
           ]),

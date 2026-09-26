@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tokens/colors.dart';
+import '../skin/rasq_skin.dart';
 import '../tokens/sizes.dart';
 import '../tokens/typography.dart';
 
@@ -95,7 +96,8 @@ class RasqIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget iconWidget = Icon(icon, size: size, color: color);
+    // 着せ替え (D-335): 名前で差し替えたアイコン / パックの画像。
+    Widget iconWidget = RasqSkinIcon(icon, size: size, color: color);
     if (badge != null) {
       iconWidget = Stack(clipBehavior: Clip.none, children: [iconWidget, Positioned(right: -6, top: -4, child: badge!)]);
     }

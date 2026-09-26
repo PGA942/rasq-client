@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rasq_models/rasq_models.dart';
 
+import '../skin/rasq_skin.dart';
 import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
@@ -210,13 +211,15 @@ class RasqPostTile extends StatelessWidget {
       tile = Padding(padding: pad, child: tile);
     }
 
+    final tappable = Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, borderRadius: embedded ? BorderRadius.circular(RasqSizes.radiusMd) : null, child: tile),
+    );
     return Semantics(
       container: true,
       label: '${author.displayName}の投稿',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(onTap: onTap, borderRadius: embedded ? BorderRadius.circular(RasqSizes.radiusMd) : null, child: tile),
-      ),
+      // 着せ替え (D-335): 投稿タイルの背景(埋め込みの引用には付けない)。
+      child: embedded ? tappable : RasqSkinned(surface: RasqSkinSurfaceId.postTile, child: tappable),
     );
   }
 }
