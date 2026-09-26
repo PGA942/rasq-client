@@ -60,6 +60,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('ASTell 4Uを購読', subtitle: '未購読(第二期)', route: '/settings/dsl/astell.subscription'),
     SettingsRow('Tellタイル', route: '/settings/dsl/astell.tiles'),
     SettingsRow('トレンドタイムラインへの配信', route: '/settings/dsl/astell.trend'),
+    SettingsRow('ルームのボタン', subtitle: 'ルームの下段、入力欄の左の丸いボタンの並び(並べ替え / 表示 / 非表示 / プラグインのボタンを追加)', route: settingsActionAstellBar),
     SettingsRow('プラグインの詳細設定', subtitle: 'AsTell のアクションプラグイン(ストア)', route: Routes.store),
     SettingsRow('画面オフ時の動作', route: '/settings/dsl/astell.background'),
   ]),
@@ -102,3 +103,6 @@ const settingsSections = <String, SettingsSection>{
 const settingsActionTrendGenres = 'action:trend.genres';
 const settingsActionTrendTendency = 'action:trend.tendency';
 const settingsActionRelationalTuning = 'action:relational.tuning';
+
+/// AsTell のルームの下段のボタンの編集 (D-324、アクションバーの編集 FOW の AsTell の面)。
+const settingsActionAstellBar = 'action:astell.bar';

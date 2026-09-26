@@ -7,6 +7,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_account_fow.dart';
+import '../home/action_bar_edit_sheet.dart';
 import '../notifications/notifications_screen.dart';
 import '../relational/relational_timeline_view.dart' show openRelationalTuning;
 import '../trend/tendency_fows.dart';
@@ -77,6 +78,8 @@ class SettingsSectionScreen extends ConsumerWidget {
         openTendencyFow(context, ref);
       case settingsActionRelationalTuning:
         openRelationalTuning(ref);
+      case settingsActionAstellBar:
+        showActionBarEditSheet(ref, surfaces: const [ActionBarSurface.astell]);
       case null:
         _placeholder(manager, r.title);
       default:

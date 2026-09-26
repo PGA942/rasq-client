@@ -10,10 +10,16 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/third_column.dart';
+import '../home/action_bar_config.dart';
+import '../home/action_bar_edit_sheet.dart';
+import '../home/action_bundle_fow.dart';
+import '../home/plugin_actions.dart';
+import '../home/post_row.dart' show PostRow, bundleIconOf;
 import '../plugins/slot_plugins.dart';
 import '../settings/settings_dsl.dart';
 import '../trend/tendency_profile.dart';
 import 'astell_actions.dart';
+import 'astell_bar.dart';
 import 'astell_bookmarks.dart';
 import 'astell_call.dart' show astellMeshCap;
 import 'astell_links.dart';
@@ -239,7 +245,7 @@ class AstellGenreChips extends StatelessWidget {
 
 /// 下段の丸ボタン(マイク / 字幕 / 画面 / 歯車)。
 class _RoundButton extends StatelessWidget {
-  const _RoundButton({required this.icon, required this.tooltip, this.onPressed, this.filled});
+  const _RoundButton({super.key, required this.icon, required this.tooltip, this.onPressed, this.filled});
   final IconData icon;
   final String tooltip;
   final VoidCallback? onPressed;
@@ -367,6 +373,12 @@ const astellRoomTabsCoveredHeight = 300.0;
 const astellRoomCompactKey = Key('astell.room.compact');
 const astellStickPagerKey = Key('astell.room.stick.pager');
 const astellFooterActionsKey = Key('astell.footer.actions');
+
+/// 歯車のメニューの先頭の「下段に入りきらないボタン」(D-324)。
+const astellOverflowKey = Key('astell.footer.overflow');
+
+/// はみ出したボタンがあるときの歯車の点 (D-324)。
+const astellOverflowDotKey = Key('astell.footer.overflow.dot');
 const astellStickScreenKey = Key('astell.stick.screen');
 const astellRoomHeaderKey = Key('astell.room.header');
 
@@ -684,15 +696,12 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         pinned: _sharedItems(s),
         input: _input,
         drafting: _drafting,
-        onSpeaker: session.toggleSpeaker,
-        onMic: session.toggleMic,
-        onScreen: () => _toggleScreen(context),
-        onCaptions: session.toggleCaptions,
+        // 入力欄の左の丸いボタン (D-324): 設定の並び(ASTell →「ルームのボタン」/ 歯車)で。
+        items: _barItems(context, ref, s),
+        itemBuilder: _barItemWidget,
         onSendText: _sendText,
         onPickFile: _pickAndShare,
-        onSettings: () => _openSettings(context, s, isOwner),
-        // プラグインアクション (D-167): スロット `astell.action` のプラグインを開く。
-        onPlugin: ref.watch(slotPluginsForProvider(SlotIds.astellAction)).isEmpty ? null : () => _openPlugin(context, s),
+        onSettings: (overflow) => _openSettings(context, s, isOwner, overflow: overflow),
         onExpand: _expand,
         onLeave: leave,
         onOpenShare: (share) => _openShare(context, share),
@@ -700,6 +709,60 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       ),
     ]);
   }
+
+  /// 下段のボタンの今の見た目と動き (D-324)。id → ボタン。今は出さないもの(全画面は共有枠が空のとき)は入れない。
+  /// **ボタンの種類を足すとき**は、`astell_bar.dart` の [astellBarBuiltinActions] と、ここに 1 つ。
+  Map<String, AstellBarButton> _barButtons(BuildContext context, WidgetRef ref, AstellSessionState s) {
+    final session = ref.read(astellSessionProvider.notifier);
+    final hasPlugins = ref.watch(slotPluginsForProvider(SlotIds.astellAction)).isNotEmpty;
+    return {
+      AstellBarIds.speaker: AstellBarButton(icon: s.speakerMuted ? Icons.volume_off : Icons.volume_up, tooltip: s.speakerMuted ? 'スピーカーミュート解除' : 'スピーカーミュート', filled: s.speakerMuted ? RasqColors.danger : null, onPressed: session.toggleSpeaker),
+      AstellBarIds.mic: s.forceMuted
+          ? const AstellBarButton(icon: Icons.mic_off, tooltip: 'モデレーターにミュートされています', filled: RasqColors.danger)
+          : AstellBarButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン', filled: s.micOn ? RasqColors.accent : null, onPressed: session.toggleMic),
+      AstellBarIds.screen: AstellBarButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: () => _toggleScreen(context)),
+      if (s.viewingPeer case final peer?) AstellBarIds.fullscreen: AstellBarButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: () => _openPeerScreen(context, peer)),
+      // プラグインアクション (D-167): スロット `astell.action` のプラグインを選んで開く。登録が無ければ無効表示。
+      AstellBarIds.plugins: AstellBarButton(icon: Icons.extension_outlined, tooltip: hasPlugins ? 'プラグインアクション' : 'プラグインアクション(未登録)', filled: hasPlugins ? RasqColors.sub : null, onPressed: hasPlugins ? () => _openPlugin(context, s) : null),
+      AstellBarIds.captions: AstellBarButton(icon: Icons.subtitles_outlined, tooltip: s.captionsOn ? '字幕オフ' : '字幕オン', filled: s.captionsOn ? const Color(0xFF2EBF8F) : null, onPressed: session.toggleCaptions),
+      // プラグインのボタン (D-324): 押すとそのプラグインを開く(選ぶシートを挟まない)。
+      for (final p in ref.watch(astellPluginActionsProvider))
+        p.id: AstellBarButton(icon: PostRow.iconFor(p.decl.icon, Icons.extension_outlined), tooltip: p.decl.label, onPressed: () => ref.read(slotPluginsProvider.notifier).astellOpen(p.plugin, ref.read(astellSessionProvider) ?? s, fowOwner: astellRoomFowId, column: fowColumnOf(context))),
+    };
+  }
+
+  /// 設定の並び(構成 `astell:room`)+ プラグインのボタン → 下段の並び (D-324)。
+  List<AstellBarItem> _barItems(BuildContext context, WidgetRef ref, AstellSessionState s) => resolveAstellBar(
+        config: ref.watch(actionBarConfigProvider(astellBarConfigKey)),
+        plugins: ref.watch(pluginActionsForProvider(astellBarConfigKey)),
+        settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(astellBarConfigKey, ''))),
+        prefs: ref.watch(actionButtonPrefsProvider),
+        buttons: _barButtons(context, ref, s),
+      );
+
+  /// 下段の 1 枠: 単体は丸いボタン、バンドルはバンドルのアイコンの丸いボタン(押すとバンドル FOW、D-210 と同じ)。
+  Widget _barItemWidget(AstellBarItem item) => switch (item) {
+        AstellBarSingle(:final id, :final button) => _RoundButton(key: ValueKey('astell.bar.$id'), icon: button.icon, tooltip: button.tooltip, filled: button.filled, onPressed: button.onPressed),
+        AstellBarBundle(:final list, :final members) => Builder(
+            builder: (ctx) => _RoundButton(
+              key: ValueKey('astell.bar.${item.key}'),
+              icon: bundleIconOf(list, [for (final m in members) m.action]),
+              tooltip: list.name,
+              onPressed: () async {
+                final box = ctx.findRenderObject() as RenderBox;
+                final picked = await showBundleMenuFow<String>(
+                  ref.read(overlayManagerProvider),
+                  id: actionBundleMenuFowId('astell.${list.id}'),
+                  title: list.name,
+                  anchor: box.localToGlobal(Offset.zero) & box.size,
+                  column: fowColumnOf(ctx),
+                  items: [for (final m in members) BundleMenuItem(value: m.action.id, label: m.button.tooltip, icon: m.button.icon)],
+                );
+                members.where((m) => m.action.id == picked).firstOrNull?.button.onPressed?.call();
+              },
+            ),
+          ),
+      };
 
   Future<void> _sendText() async {
     final text = _input.text.trim();
@@ -843,7 +906,9 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   }
 
   /// 歯車 (D-146): 共有欄の自動表示(メディアタイプ別)と読み上げ音声。
-  Future<void> _openSettings(BuildContext context, AstellSessionState s, bool isOwner) async {
+  /// 先頭に、下段の幅に入りきらないボタン([overflow] のキー、D-324)と「下段のボタンの並びを編集」。
+  Future<void> _openSettings(BuildContext context, AstellSessionState s, bool isOwner, {List<AstellBarItem> overflow = const []}) async {
+    final overflowKeys = {for (final i in overflow) i.key};
     final manager = ref.read(overlayManagerProvider);
     final voices = await ref.read(astellClientProvider).ttsVoices();
     if (!context.mounted) return;
@@ -854,7 +919,57 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         final auto = ref.watch(astellAutoShareProvider);
         final room = ref.watch(astellSessionProvider)?.room ?? s.room;
         final scheme = Theme.of(ctx).colorScheme;
+        // 下段に入りきらないボタン (D-324): バンドルは中身を並べる。押すとメニューを閉じてから動かす。
+        final hidden = [
+          // 動き(画面の選択 / プラグインの FOW)はルームの context で(このシートは押すと閉じる)。
+          for (final i in _barItems(context, ref, ref.watch(astellSessionProvider) ?? s))
+            if (overflowKeys.contains(i.key))
+              ...switch (i) {
+                AstellBarSingle(:final id, :final button) => [(id: id, button: button)],
+                AstellBarBundle(:final members) => [for (final m in members) (id: m.action.id, button: m.button)],
+              },
+        ];
         return ListView(shrinkWrap: true, children: [
+          if (hidden.isNotEmpty) ...[
+            _label(ctx, '下段に入りきらないボタン'),
+            Padding(
+              key: astellOverflowKey,
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
+              child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.sm, children: [
+                for (final h in hidden)
+                  SizedBox(
+                    width: 76,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      _RoundButton(
+                        key: ValueKey('astell.bar.overflow.${h.id}'),
+                        icon: h.button.icon,
+                        tooltip: h.button.tooltip,
+                        filled: h.button.filled,
+                        onPressed: h.button.onPressed == null
+                            ? null
+                            : () {
+                                ref.read(overlayManagerProvider).close('astell.room.settings');
+                                h.button.onPressed!();
+                              },
+                      ),
+                      const SizedBox(height: 2),
+                      Text(h.button.tooltip, style: RasqTypography.caption.copyWith(fontSize: 10, color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                    ]),
+                  ),
+              ]),
+            ),
+          ],
+          RasqListTile(
+            key: const ValueKey('astell.bar.edit'),
+            title: '下段のボタンの並びを編集',
+            subtitle: '並べ替え / 表示 / 非表示 / プラグインのボタンを追加',
+            leading: const Icon(Icons.dashboard_customize_outlined),
+            onTap: () {
+              ref.read(overlayManagerProvider).close('astell.room.settings');
+              showActionBarEditSheet(ref, surfaces: const [ActionBarSurface.astell], column: fowColumnOf(context));
+            },
+          ),
+          const Divider(height: RasqSpacing.md),
           _label(ctx, 'チャットの内容を自動で共有欄に出す(ピン留めしなくても)'),
           for (final c in astellShareClasses)
             RasqSwitchListTile(
@@ -1266,11 +1381,12 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   }
 }
 
-/// 下段バー (D-148、ユーザー指定の構造):
-/// `[左端ボタン群] [字幕] [中央] [共有する/送信完了する] [設定]`
-/// - 左端: スピーカーミュート / マイクミュート / 画面共有 / (全画面: 共有枠にピアの画面がある時) /
-///   (プラグインアクション: 今は無効)。横向き ListView で、**画面幅が狭い or stick は 2 つまで**表示。
-/// - stick で共有枠にピアの画面がある時は、左端(字幕ボタン以外)が**映像そのもの**に置き換わり、
+/// 下段バー (D-148、ユーザー指定の構造 → D-324):
+/// `[入力欄の左の丸いボタン] [中央] [共有する/送信完了する] [設定]`
+/// - 左端: 設定の並び(既定 = スピーカーミュート / マイクミュート / 画面共有 / (全画面: 共有枠にピアの画面がある時) /
+///   プラグインアクション / 字幕、D-324)。**幅に収まる数だけ**並べ、はみ出したら先頭から入るだけと**並びの最後の 1 つ**
+///   (入力欄の隣。既定では字幕)を出し、残りは歯車のメニューの先頭へ(歯車に点)。stick は 3 つまで。
+/// - stick で共有枠にピアの画面がある時は、左端(並びの最後の 1 つ以外)が**映像そのもの**に置き換わり、
 ///   タップでそのまま全画面。
 /// - 字幕: 有効時は右側(中央)に字幕、無効時は「共有する」(stick では画面共有以外のピン留めのタイル)。
 /// - 右端: 共有する(入力中は 送信完了する)+ 設定。stick では 設定 → 退出、共有するは消える。
@@ -1282,10 +1398,8 @@ class _Footer extends StatelessWidget {
     required this.pinned,
     required this.input,
     required this.drafting,
-    required this.onSpeaker,
-    required this.onMic,
-    required this.onScreen,
-    required this.onCaptions,
+    required this.items,
+    required this.itemBuilder,
     required this.onSendText,
     required this.onPickFile,
     required this.onSettings,
@@ -1293,7 +1407,6 @@ class _Footer extends StatelessWidget {
     required this.onLeave,
     required this.onOpenShare,
     this.onFullscreen,
-    this.onPlugin,
   });
   final bool compact;
   final AstellSessionState state;
@@ -1302,101 +1415,101 @@ class _Footer extends StatelessWidget {
   final List<_SharedItem> pinned;
   final TextEditingController input;
   final bool drafting;
-  final VoidCallback onSpeaker, onMic, onScreen, onCaptions, onSendText, onPickFile, onSettings, onExpand, onLeave;
+
+  /// 入力欄の左の丸いボタン(設定の並び、今押せるものだけ。D-324)。
+  final List<AstellBarItem> items;
+  final Widget Function(AstellBarItem item) itemBuilder;
+  final VoidCallback onSendText, onPickFile, onExpand, onLeave;
+
+  /// 歯車。はみ出したボタンを先頭に出す。
+  final void Function(List<AstellBarItem> overflow) onSettings;
 
   /// 共有枠のピアの画面を全画面に(共有枠が空なら null)。
   final VoidCallback? onFullscreen;
-
-  /// プラグインアクション (D-167)。登録が無ければ null(無効表示)。
-  final VoidCallback? onPlugin;
   final void Function(AstellShare share) onOpenShare;
 
-  /// 左端ボタン群を 2 つに絞る画面幅。
-  static const narrowWidth = 600.0;
-  static const _button = 44.0;
-  static const _gap = RasqSpacing.xs;
+  static const _button = astellBarButtonSize;
+  static const _gap = astellBarGap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final s = state;
     final viewing = s.viewingPeer;
-    final narrow = compact || MediaQuery.sizeOf(context).width < narrowWidth;
+    // 左右の余白 + 中央の前後の間隔 + 右端のボタン(stick は退出だけ)。
+    const pad = RasqSpacing.sm;
+    final reserved = pad * 2 + RasqSpacing.sm * 2 + (compact ? _button : _button * 2 + _gap);
 
-    // ── 左端 ──
-    final actions = <Widget>[
-      _RoundButton(icon: s.speakerMuted ? Icons.volume_off : Icons.volume_up, tooltip: s.speakerMuted ? 'スピーカーミュート解除' : 'スピーカーミュート', filled: s.speakerMuted ? RasqColors.danger : null, onPressed: onSpeaker),
-      s.forceMuted
-          ? const _RoundButton(icon: Icons.mic_off, tooltip: 'モデレーターにミュートされています', filled: RasqColors.danger, onPressed: null)
-          : _RoundButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン', filled: s.micOn ? RasqColors.accent : null, onPressed: onMic),
-      _RoundButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: onScreen),
-      if (viewing != null) _RoundButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: onFullscreen),
-      _RoundButton(icon: Icons.extension_outlined, tooltip: onPlugin == null ? 'プラグインアクション(未登録)' : 'プラグインアクション', filled: onPlugin == null ? null : RasqColors.sub, onPressed: onPlugin),
-    ];
-    final Widget left;
-    if (compact && viewing != null) {
-      // stick + 共有枠にピアの画面: ボタン群の代わりに映像。タップで全画面。
-      left = _StickScreen(key: astellStickScreenKey, peer: viewing, muted: s.isMuted(viewing.peerId) || s.speakerMuted, onTap: onFullscreen);
-    } else {
-      final visible = narrow ? 2 : actions.length;
-      left = SizedBox(
-        width: visible * _button + (visible - 1) * _gap,
-        height: _button,
-        child: ListView.separated(
-          key: astellFooterActionsKey,
-          scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.zero,
-          physics: const ClampingScrollPhysics(),
-          itemCount: actions.length,
-          separatorBuilder: (_, _) => const SizedBox(width: _gap),
-          itemBuilder: (_, i) => actions[i],
-        ),
-      );
-    }
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
+      final split = splitAstellBar(items, astellBarSlots(width, reserved: reserved, compact: compact));
 
-    // ── 中央 ──
-    final Widget middle;
-    if (compact) {
-      middle = GestureDetector(
-        key: astellRoomCompactKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onExpand,
-        // 字幕オン: 文字起こし(3 行)。オフ: 画面共有以外のピン留めを上下スワイプで。
-        child: s.captionsOn ? Align(alignment: Alignment.centerLeft, child: _Ticker(state: s, compact: true, lines: 3)) : _StickPager(state: s, items: pinned, onOpenShare: onOpenShare),
-      );
-    } else if (s.captionsOn) {
-      middle = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-        _Ticker(state: s),
-        RasqInput(controller: input, hintText: 'input..', onSubmitted: (_) => onSendText()),
-      ]);
-    } else {
-      middle = OutlinedButton.icon(
-        onPressed: onPickFile,
-        icon: const Icon(Icons.upload, size: 18),
-        label: const Text('共有する'),
-        style: OutlinedButton.styleFrom(shape: const StadiumBorder(), minimumSize: const Size.fromHeight(40)),
-      );
-    }
+      // ── 左端 ──
+      Widget row(List<Widget> children) => Row(mainAxisSize: MainAxisSize.min, children: [
+            for (final (i, w) in children.indexed) ...[if (i > 0) const SizedBox(width: _gap), w],
+          ]);
+      final Widget left;
+      if (compact && viewing != null) {
+        // stick + 共有枠にピアの画面: ボタン群の代わりに映像(タップで全画面)。並びの最後の 1 つ(入力欄の隣)は残す。
+        left = row([
+          _StickScreen(key: astellStickScreenKey, peer: viewing, muted: s.isMuted(viewing.peerId) || s.speakerMuted, onTap: onFullscreen),
+          if (items.isNotEmpty) itemBuilder(items.last),
+        ]);
+      } else {
+        left = SizedBox(key: astellFooterActionsKey, height: _button, child: row([for (final i in split.shown) itemBuilder(i)]));
+      }
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(RasqSpacing.sm, compact ? 2 : RasqSpacing.xs, RasqSpacing.sm, compact ? RasqSpacing.xs : RasqSpacing.sm),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        left,
-        const SizedBox(width: _gap),
-        _RoundButton(icon: Icons.subtitles_outlined, tooltip: s.captionsOn ? '字幕オフ' : '字幕オン', filled: s.captionsOn ? const Color(0xFF2EBF8F) : null, onPressed: onCaptions),
-        const SizedBox(width: RasqSpacing.sm),
-        Expanded(child: middle),
-        const SizedBox(width: RasqSpacing.sm),
-        // ── 右端 ──
-        if (compact)
-          _RoundButton(icon: Icons.close, tooltip: '退出', onPressed: onLeave)
-        else ...[
-          _RoundButton(icon: drafting ? Icons.send : Icons.upload, tooltip: drafting ? '送信完了する' : '共有する', filled: scheme.onSurface, onPressed: drafting ? onSendText : onPickFile),
-          const SizedBox(width: _gap),
-          _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: onSettings),
-        ],
-      ]),
-    );
+      // ── 中央 ──
+      final Widget middle;
+      if (compact) {
+        middle = GestureDetector(
+          key: astellRoomCompactKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: onExpand,
+          // 字幕オン: 文字起こし(3 行)。オフ: 画面共有以外のピン留めを上下スワイプで。
+          child: s.captionsOn ? Align(alignment: Alignment.centerLeft, child: _Ticker(state: s, compact: true, lines: 3)) : _StickPager(state: s, items: pinned, onOpenShare: onOpenShare),
+        );
+      } else if (s.captionsOn) {
+        middle = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+          _Ticker(state: s),
+          RasqInput(controller: input, hintText: 'input..', onSubmitted: (_) => onSendText()),
+        ]);
+      } else {
+        middle = OutlinedButton.icon(
+          onPressed: onPickFile,
+          icon: const Icon(Icons.upload, size: 18),
+          label: const Text('共有する'),
+          style: OutlinedButton.styleFrom(shape: const StadiumBorder(), minimumSize: const Size.fromHeight(40)),
+        );
+      }
+
+      return Padding(
+        padding: EdgeInsets.fromLTRB(pad, compact ? 2 : RasqSpacing.xs, pad, compact ? RasqSpacing.xs : RasqSpacing.sm),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          left,
+          const SizedBox(width: RasqSpacing.sm),
+          Expanded(child: middle),
+          const SizedBox(width: RasqSpacing.sm),
+          // ── 右端 ──
+          if (compact)
+            _RoundButton(icon: Icons.close, tooltip: '退出', onPressed: onLeave)
+          else ...[
+            _RoundButton(icon: drafting ? Icons.send : Icons.upload, tooltip: drafting ? '送信完了する' : '共有する', filled: scheme.onSurface, onPressed: drafting ? onSendText : onPickFile),
+            const SizedBox(width: _gap),
+            // はみ出したボタンがあれば歯車に点(押すと先頭に出る)。
+            Stack(clipBehavior: Clip.none, children: [
+              _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: () => onSettings(split.overflow)),
+              if (split.overflow.isNotEmpty)
+                Positioned(
+                  right: 2,
+                  top: 2,
+                  child: IgnorePointer(child: Container(key: astellOverflowDotKey, width: 9, height: 9, decoration: BoxDecoration(color: RasqColors.accent, shape: BoxShape.circle, border: Border.all(color: scheme.surface, width: 1.5)))),
+                ),
+            ]),
+          ],
+        ]),
+      );
+    });
   }
 }
 

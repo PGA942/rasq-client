@@ -147,12 +147,10 @@ void main() {
     await tester.tap(find.textContaining('参加中: '));
     await tester.pumpAndSettle();
     expect(find.byType(AstellRoomBody), findsOneWidget);
-    // 下段のプラグインアクション(横 ListView の末尾)へスクロールして押す。
-    await tester.scrollUntilVisible(find.byTooltip('プラグインアクション'), 48, scrollable: find.descendant(of: find.byKey(astellFooterActionsKey), matching: find.byType(Scrollable)));
+    // 下段のプラグインアクション(狭幅では歯車のメニューの先頭、D-324)を押す。
+    await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byTooltip('プラグインアクション'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('プラグインアクション'), warnIfMissed: false);
+    await tester.tap(find.descendant(of: find.byKey(astellOverflowKey), matching: find.byTooltip('プラグインアクション')));
     await tester.pumpAndSettle();
     final open = rt.calls.where((x) => x.$1 == 'astell.open').single;
     expect(open.$2['room'], isA<Map>());

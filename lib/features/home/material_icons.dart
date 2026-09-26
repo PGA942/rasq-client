@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Material Icon の名前 → アイコン (D-212、バンドルのアイコンとピッカー用)。よく使う 1089 個(`Icons` の基本形)。
+/// Material Icon の名前 → アイコン (D-212、バンドルのアイコンとピッカー用)。よく使う 1091 個(`Icons` の基本形。AsTell の下段のボタン用に desktop_windows / subtitles を足した、D-324)。
 /// 生成: flutter/lib/src/material/icons.dart をキーワードで絞り込み。
 const materialIconsByName = <String, IconData>{
   'access_alarm': Icons.access_alarm,
@@ -226,6 +226,7 @@ const materialIconsByName = <String, IconData>{
   'delete_forever': Icons.delete_forever,
   'delete_outline': Icons.delete_outline,
   'delete_sweep': Icons.delete_sweep,
+  'desktop_windows': Icons.desktop_windows,
   'diamond': Icons.diamond,
   'directions': Icons.directions,
   'directions_bike': Icons.directions_bike,
@@ -952,6 +953,7 @@ const materialIconsByName = <String, IconData>{
   'stop_screen_share': Icons.stop_screen_share,
   'storage': Icons.storage,
   'streetview': Icons.streetview,
+  'subtitles': Icons.subtitles,
   'sunny': Icons.sunny,
   'sunny_snowing': Icons.sunny_snowing,
   'switch_access_shortcut_add': Icons.switch_access_shortcut_add,
