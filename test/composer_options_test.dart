@@ -195,6 +195,11 @@ void main() {
     Material fowPanel() => tester.widgetList<Material>(find.byType(Material)).firstWhere((w) => w.elevation == 8);
     double panelHeight() => tester.getSize(find.byWidget(fowPanel())).height;
     final h0 = panelHeight(); // 折りたたみフィット
+    // ハンドルのタップで展開モードへ (D-340): 入力欄にフォーカスが入り、ヘッダーが割り込む。
+    await tester.tap(handle, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.hasAnyClients, isTrue);
+    expect(panelHeight(), greaterThan(h0));
     await tester.drag(handle, const Offset(0, -160));
     await tester.pumpAndSettle();
     final h1 = panelHeight();

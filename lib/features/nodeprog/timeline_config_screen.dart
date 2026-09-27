@@ -88,17 +88,16 @@ final tlBlueskyAccountsProvider = Provider<List<String>>((ref) => [
 /// 正準形ノードグラフへコンパイルする(実行系は従来のまま)。
 /// 自由形のノードキャンバスは TL スコープでは**一旦無効化**(D-121)。
 ///
-/// [temporary] (D-338) = タブの ↓ で開く**一時変更 FOW** の中身として使う: 画面の枠(ヘッダー)の代わりに、いちばん上に
-/// **タイムライン本体から探す**検索欄(ノード検索ではない)と閉じるボタンを置き、変更は保存せず
-/// [tlTemporaryConfigsProvider] に書く(「保存する」で初めて保存した構成になる)。[tabs] = 並べるタブ((スコープ, 名前)。
-/// 省略時は既定の並び)。[scopeSync] = 開いているタブを外(ホームのタブ)と揃える口。
+/// [temporary] (D-338) = タブの ↓ で開く**一時変更 FOW** の中身として使う: 画面の枠(ヘッダー)を出さず(検索欄と
+/// 決定 / キャンセルは FOW の側、D-341)、変更は保存せず [tlTemporaryConfigsProvider] に書く(「この内容で保存」で初めて
+/// 保存した構成になる)。[tabs] = 並べるタブ((スコープ, 名前)。省略時は既定の並び)。[scopeSync] = 開いているタブを外
+/// (ホームのタブ、FOW の検索欄)と揃える口。
 class TimelineConfigScreen extends ConsumerStatefulWidget {
-  const TimelineConfigScreen({super.key, required this.scope, this.temporary = false, this.tabs, this.scopeSync, this.onClose});
+  const TimelineConfigScreen({super.key, required this.scope, this.temporary = false, this.tabs, this.scopeSync});
   final String scope;
   final bool temporary;
   final List<(String, String)>? tabs;
   final ValueNotifier<String?>? scopeSync;
-  final VoidCallback? onClose;
   @override
   ConsumerState<TimelineConfigScreen> createState() => _TimelineConfigScreenState();
 }
@@ -134,25 +133,17 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   /// dispose 時に ref が使えないため、パレット FOW を閉じる用に保持。
   late final OverlayManager _manager;
 
-  /// 一時変更 FOW の検索欄 (D-338)。
-  final _search = TextEditingController();
-
-  /// 探す語のキー(TL の id)。
-  String get _timelineId => _scope.startsWith('tl.') ? _scope.substring(3) : _scope;
-
   @override
   void initState() {
     super.initState();
     _manager = ref.read(overlayManagerProvider);
     widget.scopeSync?.addListener(_onScopeSync);
-    _search.text = ref.read(timelineSearchProvider)[_timelineId] ?? '';
     _load();
   }
 
   @override
   void dispose() {
     widget.scopeSync?.removeListener(_onScopeSync);
-    _search.dispose();
     _manager.close(tlConfigPaletteFowId);
     _manager.close(tlConfigParamsFowId);
     super.dispose();
@@ -235,7 +226,6 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     if (next == _scope) return;
     setState(() => _scope = next);
     widget.scopeSync?.value = next;
-    _search.text = ref.read(timelineSearchProvider)[_timelineId] ?? '';
     _load();
   }
 
@@ -725,57 +715,14 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     );
   }
 
-  /// 一時変更 FOW の中身 (D-338): 探す欄 + 閉じる → タブ行 → 一時変更の案内 → 同じ部品の積み。
+  /// 一時変更 FOW の中身 (D-338/D-341): タブ行 → 一時変更の案内 → 同じ部品の積み(検索欄と決定 / キャンセルは FOW の側)。
   Widget _temporaryBody() {
-    final scheme = Theme.of(context).colorScheme;
     final changed = ref.watch(tlTemporaryConfigsProvider.select((m) => m.containsKey(_scope)));
     // プラグインが並べる TL(custom:)は構成を持たない: 探すだけ。
     final searchOnly = _scope.startsWith('tl.custom:');
     return Material(
       type: MaterialType.transparency,
       child: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.xs, 0),
-          child: Row(children: [
-            Expanded(
-              child: TextField(
-                key: const ValueKey('tl.temp.search'),
-                controller: _search,
-                style: RasqTypography.bodySmall,
-                textInputAction: TextInputAction.search,
-                onChanged: (q) {
-                  ref.read(timelineSearchProvider.notifier).set(_timelineId, q);
-                  setState(() {});
-                },
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: 'このタイムラインから探す',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                  suffixIcon: _search.text.isEmpty
-                      ? null
-                      : RasqIconButton(
-                          icon: Icons.close,
-                          size: 18,
-                          tooltip: '探す語を消す',
-                          onPressed: () {
-                            _search.clear();
-                            ref.read(timelineSearchProvider.notifier).set(_timelineId, '');
-                            setState(() {});
-                          },
-                        ),
-                  filled: true,
-                  fillColor: scheme.surfaceContainerHigh,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(RasqSizes.radiusSm), borderSide: BorderSide.none),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(RasqSizes.radiusSm), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(RasqSizes.radiusSm), borderSide: BorderSide.none),
-                ),
-              ),
-            ),
-            RasqIconButton(key: const ValueKey('tl.temp.close'), icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: widget.onClose),
-          ]),
-        ),
         _tabBar(),
         Expanded(
           child: !_loaded

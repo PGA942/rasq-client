@@ -27,6 +27,7 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'custom_tile_row.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
+import 'timeline_search.dart';
 
 /// タイムライン一時変更 FOW (D-338) を開いている間の、FOW のタブ(スコープ `tl.<id>`)。ホームのタブと揃える。
 final homeTimelineFowScope = ValueNotifier<String?>(null);
@@ -265,6 +266,9 @@ class _TimelineView extends ConsumerStatefulWidget {
 class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeepAliveClientMixin {
   final _scroll = ScrollController();
 
+  /// 探す語の ↑↓ で飛ぶ (D-341)。
+  final _jumper = TimelineJumpController();
+
   @override
   bool get wantKeepAlive => true;
 
@@ -279,6 +283,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
   @override
   void dispose() {
     _scroll.dispose();
+    _jumper.dispose();
     super.dispose();
   }
 
@@ -291,8 +296,12 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
     final actions = session?.actions ?? const <ActionDescriptor>[];
     // 上下の「投稿を読み込む」(D-298)。電話のアプリは既定で出さない(引っ張って更新 / スクロールで続きを読む。D-316)。
     final edgeTiles = ref.watch(timelineEdgeTilesProvider);
-    // タイムライン本体から探す (D-338): 一時変更 FOW の検索欄の語で、読み込んだ投稿を絞る。
-    final query = ref.watch(timelineSearchProvider.select((m) => m[widget.kind.id]));
+    // タイムライン本体から探す (D-341): TL は絞らず、一時変更 FOW の ↑↓ で合う投稿へ飛ぶ。
+    ref.listen(timelineSearchNavProvider, (prev, next) {
+      if (next == null || next.timelineId != widget.kind.id || next.seq == prev?.seq) return;
+      final posts = ref.read(timelineProvider(widget.kind)).value?.posts;
+      if (posts != null) handleTimelineSearchNav(ref, next, jumper: _jumper, scroll: _scroll, posts: posts);
+    });
 
     return state.when(
       loading: () => const RasqLoading(),
@@ -318,14 +327,15 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
             });
           }
         }
-        var newer = tl.posts.sublist(0, split);
-        var base = tl.posts.sublist(split);
-        if (query != null) {
-          newer = [for (final p in newer) if (timelinePostMatches(p, query)) p];
-          base = [for (final p in base) if (timelinePostMatches(p, query)) p];
-        }
-        Widget row(Post p) => Column(mainAxisSize: MainAxisSize.min, children: [_item(context, tl, p, notifier, session, actions), const Divider()]);
-        final list = RefreshIndicator(
+        final newer = tl.posts.sublist(0, split);
+        final base = tl.posts.sublist(split);
+        Widget row(Post p) => TimelineSearchRow(
+              key: ValueKey('tl.row.${p.key}'),
+              controller: _jumper,
+              postKey: p.key,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [_item(context, tl, p, notifier, session, actions), const Divider()]),
+            );
+        return RefreshIndicator(
           onRefresh: notifier.refresh,
           child: CustomScrollView(
             controller: _scroll,
@@ -367,11 +377,6 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
             ],
           ),
         );
-        if (query == null) return list;
-        return Column(children: [
-          TimelineSearchBanner(query: query, count: newer.length + base.length, hasMore: tl.hasMore, loadingMore: tl.loadingMore, onMore: notifier.loadMore, onClear: () => ref.read(timelineSearchProvider.notifier).set(widget.kind.id, '')),
-          Expanded(child: list),
-        ]);
       },
     );
   }
@@ -406,34 +411,6 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
       onTap: () => context.pushPost(p),
       bannerIcon: badge == null ? null : rrlIconFor(badge.icon, Icons.label_outline),
       bannerText: badge?.text,
-    );
-  }
-}
-
-/// 探している間の見出し (D-338): 語と、読み込んだ分で合った件数。続きを読み込んで探す / 探すのをやめる。
-class TimelineSearchBanner extends StatelessWidget {
-  const TimelineSearchBanner({super.key, required this.query, required this.count, required this.hasMore, required this.onMore, required this.onClear, this.loadingMore = false});
-  final String query;
-  final int count;
-  final bool hasMore;
-  final bool loadingMore;
-  final Future<void> Function() onMore;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      key: const ValueKey('tl.search.banner'),
-      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 2, RasqSpacing.xs, 2),
-      decoration: BoxDecoration(color: scheme.surfaceContainer, border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
-      child: Row(children: [
-        Icon(Icons.search, size: 16, color: scheme.onSurfaceVariant),
-        const SizedBox(width: 6),
-        Expanded(child: Text('「$query」 $count 件(読み込んだ投稿から)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
-        if (hasMore) TextButton(key: const ValueKey('tl.search.more'), onPressed: loadingMore ? null : onMore, child: Text(loadingMore ? '読み込んでいます…' : '続きも探す')),
-        RasqIconButton(icon: Icons.close, size: 18, tooltip: '探すのをやめる', onPressed: onClear),
-      ]),
     );
   }
 }

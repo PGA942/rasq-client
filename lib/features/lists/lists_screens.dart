@@ -16,9 +16,9 @@ import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../clips/clip_providers.dart';
 import '../clips/index_toc.dart';
 import '../clips/virtual_index.dart';
-import '../home/home_screen.dart' show TimelineSearchBanner;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../home/timeline_search.dart';
 import '../nodeprog/tl_components.dart';
 import '../nodeprog/timeline_temp_fow.dart';
 import '../nodeprog/tl_config_store.dart';
@@ -358,15 +358,9 @@ class ListDetailScreen extends ConsumerWidget {
           tl.when(
             loading: () => const RasqLoading(),
             error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
-            data: (s) {
-              if (s.posts.isEmpty) return const RasqEmptyView(title: '投稿はありません');
-              if (query == null) return _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier);
-              final hits = [for (final p in s.posts) if (timelinePostMatches(p, query)) p];
-              return Column(children: [
-                TimelineSearchBanner(query: query, count: hits.length, hasMore: s.hasMore, loadingMore: s.loadingMore, onMore: notifier.loadMore, onClear: () => ref.read(timelineSearchProvider.notifier).set(kind.id, '')),
-                Expanded(child: _ListTimelinePosts(posts: hits, actions: actions, notifier: notifier)),
-              ]);
-            },
+            data: (s) => s.posts.isEmpty
+                ? const RasqEmptyView(title: '投稿はありません')
+                : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, timelineId: kind.id),
           ),
         ]),
       ),
@@ -418,8 +412,11 @@ class FeedTimelineScreen extends ConsumerWidget {
 /// メンバーが複数話題を並行するので、会話イベントをそのまま章にする)。
 /// 章タップで絞り込みトグル。単発投稿は 1 つのバケツにまとまる。
 class _ListTimelinePosts extends ConsumerStatefulWidget {
-  const _ListTimelinePosts({required this.posts, required this.actions, required this.notifier});
+  const _ListTimelinePosts({required this.posts, required this.actions, required this.notifier, this.timelineId});
   final List<Post> posts;
+
+  /// 一時変更 FOW の ↑↓ を受ける TL の id (D-341)。null = 受けない(フィード)。
+  final String? timelineId;
   final List<ActionDescriptor> actions;
   final TimelineNotifier notifier;
 
@@ -429,20 +426,44 @@ class _ListTimelinePosts extends ConsumerStatefulWidget {
 
 class _ListTimelinePostsState extends ConsumerState<_ListTimelinePosts> {
   String? _selected;
+  final _scroll = ScrollController();
+  final _jumper = TimelineJumpController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    _jumper.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final entries = indexForListTimeline(widget.posts);
     final selected = findIndexEntry(entries, _selected);
     final visible = selected == null ? widget.posts : [for (final p in widget.posts) if (selected.postKeys.contains(p.key)) p];
+    // 探す語の ↑↓ (D-341): 目次で章を選んでいて、飛ぶ先が隠れていれば章の選択を外してから飛ぶ。
+    ref.listen(timelineSearchNavProvider, (prev, next) {
+      if (next == null || next.timelineId != widget.timelineId || next.seq == prev?.seq) return;
+      handleTimelineSearchNav(ref, next, jumper: _jumper, scroll: _scroll, posts: widget.posts, beforeJump: (key) async {
+        if (visible.any((p) => p.key == key)) return;
+        setState(() => _selected = null);
+        await WidgetsBinding.instance.endOfFrame;
+      });
+    });
     return RefreshIndicator(
       onRefresh: widget.notifier.refresh,
-      child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
+      child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
         VirtualIndexToc(entries: entries, selectedId: _selected, onSelect: (id) => setState(() => _selected = id), title: 'いま話されていること', showState: true),
-        for (final p in visible) ...[
-          PostRow(post: p, actions: widget.actions, onAction: (a, {args = const {}}) => widget.notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)),
-          const Divider(),
-        ],
+        for (final p in visible)
+          TimelineSearchRow(
+            key: ValueKey('list.row.${p.key}'),
+            controller: _jumper,
+            postKey: p.key,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              PostRow(post: p, actions: widget.actions, onAction: (a, {args = const {}}) => widget.notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)),
+              const Divider(),
+            ]),
+          ),
       ]),
     );
   }
