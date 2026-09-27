@@ -303,24 +303,28 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
         // 手動指定があればそれを優先する (D-053)。
         final onTop = _barOnTopOverride ?? !(constraints.maxHeight.isFinite && constraints.maxHeight < EmojiPanel.actionBarFlipHeight);
         final hasEdgeHandle = bar != null && widget.spec != null;
+        // ⚠ 子にはキーを付ける: キーボードで高さが縮むとバー / ハンドルの上下が入れ替わる。キーが無いと検索欄が作り直されて
+        // フォーカスが外れ、キーボードが閉じて元に戻る(大きいキーボードで検索欄が一瞬で閉じていた、D-351)。
         return Column(mainAxisSize: MainAxisSize.max, children: [
-          if (bar != null && onTop) _grabbableBar(context, bar, onTop: true),
-          if (hasEdgeHandle && !onTop) _edgeHandle(context), // バーが下 → ハンドルは上
+          if (bar != null && onTop) KeyedSubtree(key: const ValueKey('emoji.bar.top'), child: _grabbableBar(context, bar, onTop: true)),
+          if (hasEdgeHandle && !onTop) KeyedSubtree(key: const ValueKey('emoji.handle.top'), child: _edgeHandle(context)), // バーが下 → ハンドルは上
           Padding(
+            key: const ValueKey('emoji.search'),
             padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.md, 4),
             child: RasqSearchBar(controller: _q, hintText: '検索', onChanged: (_) => setState(() {})),
           ),
           // 意味検索の索引づくり (D-290): ピッカーを開いたら裏で始める(モデルを入れてあるときだけ)。進み具合を 1 行で出す。
-          if (stickers == null) _EmojiIndexProgressLine(accountKey: widget.accountKey),
+          if (stickers == null) _EmojiIndexProgressLine(key: const ValueKey('emoji.index'), accountKey: widget.accountKey),
           Expanded(
+            key: const ValueKey('emoji.list'),
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.md, 0, RasqSpacing.md, 12),
               itemCount: rows.length,
               itemBuilder: (_, i) => rows[i](),
             ),
           ),
-          if (hasEdgeHandle && onTop) _edgeHandle(context), // バーが上 → ハンドルは下
-          if (bar != null && !onTop) _grabbableBar(context, bar, onTop: false),
+          if (hasEdgeHandle && onTop) KeyedSubtree(key: const ValueKey('emoji.handle.bottom'), child: _edgeHandle(context)), // バーが上 → ハンドルは下
+          if (bar != null && !onTop) KeyedSubtree(key: const ValueKey('emoji.bar.bottom'), child: _grabbableBar(context, bar, onTop: false)),
         ]);
       }),
     );
@@ -478,7 +482,7 @@ class _EmojiCell extends StatelessWidget {
 
 /// 「意味検索を準備中 n / m」(D-290)。索引づくりを始める役も兼ねる(この行が、索引の provider を見ている)。
 class _EmojiIndexProgressLine extends ConsumerWidget {
-  const _EmojiIndexProgressLine({required this.accountKey});
+  const _EmojiIndexProgressLine({super.key, required this.accountKey});
   final String? accountKey;
   @override
   Widget build(BuildContext context, WidgetRef ref) {

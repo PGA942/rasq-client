@@ -22,6 +22,17 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<!-- AdMob (google_mobile_ads、書き出し中の広告枠): アプリ ID が無いと SDK が起動時に例外を出してアプリごと落ちる (D-352)。
+	     いまは Google 公式の**テスト用アプリ ID**。本番の AdMob アプリ ID が決まったら差し替える。 -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
