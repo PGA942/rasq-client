@@ -11,8 +11,10 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../backend/rasq_collections_api.dart' show RasqCollection;
 import '../../shell/app_overlay_root.dart';
 import '../../shell/headers.dart';
+import '../collections/rasq_list_picker.dart' show rasqListCandidatesProvider;
 import '../home/timeline_providers.dart';
 import '../settings/settings_dsl.dart';
 import '../store/store_client.dart' show storeSamplePluginId;
@@ -109,6 +111,8 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
   final functions = ref.watch(customFunctionsProvider);
   final listNames = ref.watch(_nodeListNamesProvider).value ?? const <String>[];
   final dmPeers = ref.watch(_nodeDmPeersProvider).value ?? const <String>[];
+  // RASQ リスト (D-346): 自分のリスト + フォロー中で、リスト内の人の情報を取れるもの(名前で選ぶ。実行側が名前 → id を引く)。
+  final rasqLists = [for (final c in ref.watch(rasqListCandidatesProvider('')).value ?? const <RasqCollection>[]) if (c.isOwner || c.canFetch == true) c.name];
   // アカウント選択 (D-106/D-109): ログイン済みアカウントを選択肢に。
   final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
   final accounts = [for (final s in sessions) '${s.account}'];
@@ -141,6 +145,7 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
       switch (e.type) {
         'tl.list' => withOptions(withOptions(e, 'リスト', listNames), 'アカウント', acctOptions),
         'tl.feed' => withOptions(e, 'アカウント', blueskyAccounts),
+        'tl.rasqlist' => withOptions(e, 'リスト', rasqLists),
         'tl.dm' => withOptions(withOptions(e, '相手', dmPeers), 'アカウント', acctOptions),
         'tl.source' => withOptions(withOptions(e, 'TL', timelineIds), 'アカウント', acctOptions),
         'tl.search' || 'tl.myreactions' || 'trend.posts' => withOptions(e, 'アカウント', acctOptions),

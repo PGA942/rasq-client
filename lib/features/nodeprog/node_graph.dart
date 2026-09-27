@@ -573,6 +573,16 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     ],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
+  // RASQ リスト (D-346): SNS を跨いだ人のリスト(Central)。リスト内の人の情報を取れるリストだけ選べる。
+  NodeCatalogEntry(
+    type: 'tl.rasqlist',
+    title: 'RASQ リスト取得',
+    icon: Icons.people_alt_outlined,
+    genre: '取得',
+    description: 'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取得します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。',
+    inputs: [NodePort(label: 'リスト', value: '', dataType: '設定')],
+    outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
+  ),
   NodeCatalogEntry(
     type: 'trend.posts',
     title: 'トレンド検索結果取得',

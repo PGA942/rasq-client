@@ -20,6 +20,7 @@ import '../home/timeline_providers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../servers/server_info_tile.dart';
 import 'rasq_collections.dart';
+import 'rasq_list_picker.dart';
 
 /// RASQ リスト / 公開した RASQ クリップのページ (D-343/D-344)。`/rasq-collections/:ref`(id か共有コード)。
 /// 開いたとき、見ている人に資格があれば(作った人 / 条件に合うフォロワー)Central がその人の AsTell のトークンで取り直してから返す。
@@ -33,7 +34,26 @@ class RasqCollectionScreen extends ConsumerWidget {
     final detail = ref.watch(rasqCollectionProvider(idOrCode));
     final title = detail.value?.collection.name ?? '';
     return Scaffold(
-      appBar: RasqPageHeader(title: title, onMore: detail.value == null ? null : () => _menu(context, ref, detail.value!)),
+      appBar: RasqPageHeader(
+        title: title,
+        actions: [
+          // タイムラインに取り込む (D-347): リスト内の人の情報を取れるリストだけ。
+          if (detail.value case final d? when d.collection.kind == RasqCollectionKind.list && d.canFetch)
+            RasqIconButton(
+              key: const ValueKey('rasqCollection.import'),
+              icon: Icons.playlist_add,
+              size: 20,
+              tooltip: 'タイムラインに取り込む',
+              onPressed: () async {
+                final manager = ref.read(overlayManagerProvider);
+                final msg = await importRasqListToHome(ref, d.summary);
+                ref.invalidate(rasqCollectionProvider(idOrCode));
+                manager.showAlert(id: 'rasqCollection.import', title: 'タイムラインに取り込む', message: msg, confirmText: 'OK');
+              },
+            ),
+        ],
+        onMore: detail.value == null ? null : () => _menu(context, ref, detail.value!),
+      ),
       body: detail.when(
         loading: () => const RasqLoading(),
         error: (e, _) {

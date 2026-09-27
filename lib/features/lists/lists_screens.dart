@@ -19,6 +19,8 @@ import '../clips/index_toc.dart';
 import '../clips/virtual_index.dart';
 import '../collections/rasq_collection_tile.dart';
 import '../collections/rasq_collections.dart';
+import '../collections/rasq_list_picker.dart';
+import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../home/timeline_search.dart';
@@ -530,18 +532,20 @@ class _ListImportScreenState extends ConsumerState<ListImportScreen> {
     final manager = ref.watch(overlayManagerProvider);
     final tokens = RasqTokens.of(context);
     final bluesky = ref.watch(currentSnsSessionProvider)?.account.kind == SnsKind.bluesky;
+    final hasRasq = ref.watch(hasRasqAccountProvider);
     final results = bluesky ? ref.watch(feedSearchProvider(_query)) : const AsyncValue<List<FeedInfo>>.data([]);
+    final hint = [if (bluesky) 'カスタムフィード', if (hasRasq) 'RASQ リスト'].join(' / ');
     return Scaffold(
       appBar: RasqPageHeader(title: 'リストのインポート', onMore: () {}),
       body: ListView(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 4),
-          child: bluesky
+          child: bluesky || hasRasq
               ? TextField(
                   key: const ValueKey('lists.import.search'),
                   controller: _ctrl,
                   style: RasqTypography.bodySmall,
-                  decoration: const InputDecoration(hintText: 'カスタムフィードを検索、または URL(at:// / bsky.app)を入力', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),
+                  decoration: InputDecoration(hintText: '$hintを検索、または共有リンク / URL を入力', isDense: true, prefixIcon: const Icon(Icons.search, size: 18)),
                   textInputAction: TextInputAction.search,
                   onSubmitted: (v) => setState(() => _query = v),
                   onChanged: (v) => setState(() => _query = v),
@@ -551,12 +555,19 @@ class _ListImportScreenState extends ConsumerState<ListImportScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(bluesky ? 'フィードを検索するか URL を貼ると、リストタイルで表示します。タップでそのフィードのタイムラインへ。' : 'リストを検索して一括操作を行うことができます。', style: RasqTypography.bodySmall),
+            Text(
+              [
+                if (bluesky) 'フィードを検索するか URL を貼ると、リストタイルで表示します。タップでそのフィードのタイムラインへ。',
+                if (hasRasq) 'RASQ リストは「取り込む」でホームのタイムラインへ(リストをフォローします)。取り込めるのは、リスト内の人の情報を取れるリストだけです。',
+                if (!bluesky && !hasRasq) 'リストを検索して一括操作を行うことができます。',
+              ].join('\n'),
+              style: RasqTypography.bodySmall,
+            ),
             if (!bluesky) TextButton(onPressed: () => manager.showAlert(id: 'lists.import', title: 'ローカルからインポート', message: 'CSV/JSON からのインポートはリスト機能(サーバー側: 第二期)と合わせて実装します。', confirmText: 'OK'), child: Text('ローカルからインポート', style: TextStyle(color: tokens.link))),
           ]),
         ),
         if (bluesky) ...[
-          RasqSectionHeader(title: _query.trim().isEmpty ? '人気のフィード' : '検索結果', topMargin: RasqSpacing.sm),
+          RasqSectionHeader(title: _query.trim().isEmpty ? '人気のフィード' : 'フィードの検索結果', topMargin: RasqSpacing.sm),
           results.when(
             loading: () => const RasqLoading(),
             error: (_, _) => const RasqEmptyView(title: '見つかりません'),
@@ -564,7 +575,30 @@ class _ListImportScreenState extends ConsumerState<ListImportScreen> {
                 ? RasqEmptyView(title: _query.trim().isEmpty ? '検索語か URL を入れてください' : '見つかりません')
                 : Column(children: [for (final f in items) ...[_feedRow(context, f), const Divider(height: 1)]]),
           ),
-        ] else ...[
+        ],
+        // RASQ リスト (D-347): 語が空 = 自分のリスト + フォロー中、語があれば公開リストの検索。行のタップでリストのページ、右の「取り込む」でホームの TL へ。
+        if (hasRasq) ...[
+          RasqSectionHeader(title: _query.trim().isEmpty ? 'RASQ リスト(自分 / フォロー中)' : 'RASQ リストの検索結果', topMargin: RasqSpacing.sm),
+          RasqListCandidates(
+            query: _query,
+            onPick: null,
+            trailing: (c) => TextButton(
+              key: ValueKey('lists.import.rasq.${c.id}'),
+              onPressed: c.canFetch == false && c.canFetchChecked
+                  ? null
+                  : () async {
+                      final msg = await importRasqListToHome(ref, c);
+                      if (!mounted) return;
+                      ref.read(rootMessengerKeyProvider).currentState
+                        ?..clearSnackBars()
+                        ..showSnackBar(SnackBar(content: Text(msg)));
+                    },
+              child: const Text('取り込む'),
+            ),
+            onOpen: (c) => context.push(Routes.rasqCollection(c.code ?? c.id)),
+          ),
+        ],
+        if (!bluesky && !hasRasq) ...[
           const RasqSectionHeader(title: '履歴', topMargin: 0),
           const RasqEmptyView(title: '履歴はありません'),
         ],
