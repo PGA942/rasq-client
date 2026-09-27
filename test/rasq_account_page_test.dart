@@ -106,6 +106,12 @@ void main() {
           return json({'id': 'r1', 'author': author, 'body': 'x', 'isReply': true}, 201);
         case 'GET /me/sns-accounts':
           return json(links);
+        case 'GET /accounts/taro/rasq-collections':
+          // 公開した RASQ リスト / クリップ (D-343/D-344)。リストだけ 1 つ。
+          return json([
+            if (req.url.queryParameters['kind'] == 'list')
+              {'id': 'rl1', 'code': 'ListCode111111111111', 'kind': 'list', 'name': 'タロのリスト', 'visibility': 'public', 'owner': author, 'itemCount': 3, 'instances': ['mk.example']},
+          ]);
         case 'PATCH /me/sns-accounts/misskey%3Amk.example%3Akagi':
         case 'PATCH /me/sns-accounts/misskey:mk.example:kagi':
           final v = (jsonDecode(req.body) as Map)['visibility'] as String;
@@ -240,7 +246,12 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(tab));
       await tester.pumpAndSettle();
-      expect(find.textContaining('今後ここに出ます'), findsOneWidget);
+      if (tab == 'リスト') {
+        expect(find.byKey(const ValueKey('rasqCollection.tile.rl1')), findsOneWidget);
+        expect(find.text('タロのリスト'), findsOneWidget);
+      } else {
+        expect(find.textContaining('公開した RASQ クリップがここに出ます'), findsOneWidget);
+      }
     }
 
     // 編集 → タイルの出し分け: 鍵アカウントは「自動(非表示)」→「表示」にすると出る。

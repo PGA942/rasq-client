@@ -16,6 +16,8 @@ import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../text/inline_spans.dart';
 import '../clips/clip_providers.dart';
+import '../collections/rasq_collections.dart';
+import '../servers/server_info_tile.dart';
 import '../profile/rasq_links_on_sns_profile.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
@@ -109,12 +111,19 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
     final anchor = box == null ? const Rect.fromLTWH(0, 80, 1, 1) : Rect.fromLTWH(box.size.width - 48, 56, 40, 40);
     final viewer = ref.read(currentAccountProvider);
     final st = viewer == null ? const FollowState() : ref.read(followStateProvider.notifier).of(viewer.key, '${viewer.kind.name}:${viewer.instance}:${u.id}');
+    // このページを開いているアカウント (D-155)。RASQ リストの項目の id は、このサーバーのもの。
+    final via = widget.initial?.account.key == null ? viewer : (ref.read(sessionForAccountProvider(widget.initial!.account.key))?.account ?? viewer);
     final pick = await manager.showDropdown<String>(id: 'user.menu', anchor: anchor, items: [
       const RasqDropdownItem('リンクをコピー', 'copy'),
+      if (via != null && ref.read(hasRasqAccountProvider)) const RasqDropdownItem('RASQ リストに追加', 'rasqList'),
+      if (u.account.kind != SnsKind.bluesky) const RasqDropdownItem('サーバー情報', 'server'),
       RasqDropdownItem(st.muted ? 'ミュート解除' : 'ミュート', 'mute', accent: true),
       RasqDropdownItem(st.blocked ? 'ブロック解除' : 'ブロック', 'block', destructive: true),
       const RasqDropdownItem('報告', 'report', destructive: true),
     ]);
+    // SNS の操作ではないもの (D-343 / D-345)。
+    if (pick == 'rasqList' && via != null) return showAddToRasqListSheet(ref, u, via: via);
+    if (pick == 'server') return showServerInfoFow(ref, u.account.instance);
     final s = ref.read(currentSnsSessionProvider);
     if (pick == null || s == null || viewer == null) return;
     final store = ref.read(followStateProvider.notifier);
