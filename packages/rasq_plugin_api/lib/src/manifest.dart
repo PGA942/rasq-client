@@ -29,6 +29,9 @@ abstract final class RasqPermissions {
   static const storageUnsafe = 'storage.unsafe';
   static const autoHook = 'auto_hook';
 
+  /// ページ型の共有セッション(サーバー変数 / サーバー関数、契約 v0.18 §2.13、D-357)。
+  static const sharedSession = 'shared.session';
+
   /// `storage.*` の `ns` に対応する権限名。未知の ns は未知の権限名になり、
   /// どの宣言にも一致しないので拒否される。
   static String storageFor(String ns) => 'storage.$ns';
@@ -39,7 +42,7 @@ abstract final class RasqPermissions {
   static const all = {
     render, replaceTile, transformContent, tagMedia, replaceMedia,
     registerAction, decorateAvatar, fowWidget, fowInterstitial, fowSystem,
-    network, gpuMl, storageSafe, storageUnsafe, autoHook,
+    network, gpuMl, storageSafe, storageUnsafe, autoHook, sharedSession,
   };
 }
 

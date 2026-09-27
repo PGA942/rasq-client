@@ -21,6 +21,7 @@ import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../collections/rasq_collection_tile.dart';
 import '../collections/rasq_collections.dart';
+import '../custom/custom_profile.dart';
 import 'rasq_post_tile.dart';
 
 /// RASQ アカウントページ (D-270 / S-021)。
@@ -78,14 +79,14 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
           child: Text(e is OrgateException && e.code.code == '404' ? '@${widget.handle} という RASQ アカウントはありません' : '読み込めませんでした: ${e is OrgateException ? e.message : e}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
         ),
         data: (d) => DefaultTabController(
-          length: 6,
+          length: 7,
           child: NestedScrollView(
             headerSliverBuilder: (_, _) => [
               SliverToBoxAdapter(child: _Header(profile: d.profile, onTile: _openTile)),
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _TabBarDelegate(
-                  TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: const [Tab(text: '投稿'), Tab(text: 'メディア'), Tab(text: 'リスト'), Tab(text: 'クリップ'), Tab(text: 'プラグイン'), Tab(text: 'レビュー')]),
+                  TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: const [Tab(text: '投稿'), Tab(text: 'メディア'), Tab(text: 'ページ'), Tab(text: 'リスト'), Tab(text: 'クリップ'), Tab(text: 'プラグイン'), Tab(text: 'レビュー')]),
                   scheme.surface,
                 ),
               ),
@@ -102,6 +103,8 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
                 },
               ),
               _MediaTab(posts: d.posts),
+              // カスタムプラグイン (D-357): 置いたページ。
+              CustomProfilePagesTab(handle: widget.handle, accountId: d.profile.id, isMine: isMine),
               _CollectionsTab(handle: widget.handle, kind: RasqCollectionKind.list, isMine: isMine),
               _CollectionsTab(handle: widget.handle, kind: RasqCollectionKind.clip, isMine: isMine),
               _PluginsTab(profile: d.profile, reviews: false),

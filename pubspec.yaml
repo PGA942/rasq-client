@@ -146,6 +146,8 @@ flutter:
     - assets/plugins/media_process_plugin.wasm
     - assets/plugins/media_draw_plugin.wasm
     - assets/plugins/post_action_plugin.wasm
+    # カスタムプラグイン(ページ型)のサンプル「みんなのボード」(D-357、plugin-sample/custom-page-plugin)。
+    - assets/plugins/custom_page_plugin.wasm
     # 着せ替えのサンプル (D-335、plugin-sample/theme-plugin の rasq build)。
     - assets/plugins/theme_starry.rasqpkg
     - assets/plugins/theme_rasq.rasqpkg

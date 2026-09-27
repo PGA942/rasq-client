@@ -459,6 +459,9 @@ class AstellSession extends Notifier<AstellSessionState?> {
         }
       case 'error':
         state = s.copyWith(error: m['message'] as String?);
+      // カスタムプラグイン (S-048、D-357): ルームにデプロイされた / 閉じられた。一覧を取り直す。
+      case 'custom':
+        ref.read(astellCustomRevProvider.notifier).bump();
       default:
         break;
     }
@@ -985,6 +988,15 @@ String astellStreamErrorText(Object e) {
 }
 
 final astellSessionProvider = NotifierProvider<AstellSession, AstellSessionState?>(AstellSession.new);
+
+/// ルームのカスタムプラグインの版(WS の `custom` と、手元でデプロイ / 閉じたときに進める、D-357)。
+final astellCustomRevProvider = NotifierProvider<AstellCustomRev, int>(AstellCustomRev.new);
+
+class AstellCustomRev extends Notifier<int> {
+  @override
+  int build() => 0;
+  void bump() => state++;
+}
 
 /// 下書きを送る間隔 (D-311)。
 const astellDraftInterval = Duration(seconds: 1);

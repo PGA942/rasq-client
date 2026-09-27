@@ -30,6 +30,7 @@ import 'astell_models.dart';
 import 'astell_post_share.dart';
 import 'astell_providers.dart';
 import 'astell_share_cards.dart';
+import '../custom/custom_astell.dart';
 import 'astell_stream.dart';
 import 'astell_stream_livekit.dart' show astellNeedsScreenPicker, pickAstellScreenSource;
 
@@ -1182,6 +1183,10 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         }
       case 'link':
         if (share.url != null) await launchUrl(share.url!, mode: LaunchMode.externalApplication);
+      // カスタムプラグインの提案 (D-357): デプロイ済みなら開く、ホストなら承認。
+      case 'plugin':
+        final s = ref.read(astellSessionProvider);
+        if (s != null) await openCustomPluginShare(context, ref, share, s);
       default:
         break;
     }
@@ -1460,7 +1465,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       if (s.peers.isEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('まだ誰もいません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
       const Divider(height: RasqSpacing.md),
       _label(context, 'カスタムプラグイン'),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('このルームで動くプラグインはまだありません(カスタムプラグインホストは M5 後段)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+      // カスタムプラグイン (D-357): デプロイされているもの + 足す(ホスト)/ 提案(ほか)。
+      AstellCustomPluginsSection(session: s),
       const SizedBox(height: RasqSpacing.xxl),
     ]);
   }

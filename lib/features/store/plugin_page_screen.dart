@@ -10,6 +10,9 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../shell/headers.dart';
+import '../custom/custom_page.dart' show registeredPagePlugin;
+import '../custom/custom_plugins_screen.dart' show installedPagePluginsProvider;
+import '../custom/custom_share.dart';
 import 'release_fow.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
@@ -154,11 +157,35 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
               style: FilledButton.styleFrom(shape: const StadiumBorder(), padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.lg)),
               child: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(d.price == 0 ? 'インストール' : '¥${d.price.toStringAsFixed(0)} で購入'),
             )
-          else
+          else ...[
+            // カスタムプラグイン (D-357): 入っていれば「開く」。
+            if (d.pluginType == StorePluginType.custom && registeredPagePlugin(ref.watch(installedPagePluginsProvider), d.id) != null) ...[
+              FilledButton(
+                key: const ValueKey('store.plugin.openCustom'),
+                onPressed: () => context.push(Routes.customPage(d.id)),
+                style: FilledButton.styleFrom(shape: const StadiumBorder()),
+                child: const Text('開く'),
+              ),
+              const SizedBox(width: RasqSpacing.xs),
+            ],
             OutlinedButton(
               onPressed: _busy ? null : () => ref.read(installedPluginsProvider.notifier).uninstall(d.id),
               style: OutlinedButton.styleFrom(shape: const StadiumBorder()),
               child: const Text('削除'),
+            ),
+          ],
+          // カスタムプラグインの「共有」(Obsidian: インストールボタンの横に共有ボタン)。
+          if (d.pluginType == StorePluginType.custom)
+            Builder(
+              builder: (bctx) => RasqIconButton(
+                key: const ValueKey('store.plugin.share'),
+                icon: Icons.ios_share,
+                tooltip: '共有',
+                onPressed: () {
+                  final box = bctx.findRenderObject() as RenderBox;
+                  showCustomPluginShareMenu(context, ref, d, box.localToGlobal(Offset.zero) & box.size);
+                },
+              ),
             ),
         ]),
       ),

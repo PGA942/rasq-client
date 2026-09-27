@@ -160,6 +160,8 @@ class RasqSidebar extends ConsumerWidget {
                 RasqListTile(title: 'リスト', leading: const Icon(Icons.list_alt_outlined), chevron: false, onTap: () => go(Routes.lists)),
                 // プラグインストア (M4 / D-120)。
                 RasqListTile(title: 'プラグイン', leading: const Icon(Icons.extension_outlined), chevron: false, onTap: () => go(Routes.store)),
+                // カスタムプラグイン (D-357): インストール済みのページ型を開く / 招待コードで参加。
+                RasqListTile(key: const ValueKey('sidebar.custom'), title: 'カスタムプラグイン', leading: const Icon(Icons.dashboard_customize_outlined), chevron: false, onTap: () => go(Routes.customPlugins)),
                 RasqListTile(title: '全ての設定', leading: const Icon(Icons.settings_outlined), chevron: false, onTap: () => go(Routes.settings)),
                 RasqListTile(title: 'ヘルプ', leading: const Icon(Icons.help_outline), chevron: false, onTap: () {}),
                 // RAi ホーム (D-179): サイドメニューの下部。

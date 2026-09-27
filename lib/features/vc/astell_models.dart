@@ -440,6 +440,7 @@ class AstellShare {
         'link' => payload['title'] as String? ?? payload['url'] as String? ?? '',
         'post' => payload['body'] as String? ?? payload['text'] as String? ?? '投稿',
         'media' => payload['title'] as String? ?? 'メディア',
+        'plugin' => '「${payload['name'] ?? payload['pluginId'] ?? 'プラグイン'}」を使いたい',
         _ => kind,
       };
 
@@ -449,6 +450,7 @@ class AstellShare {
         'media' => (payload['mimeType'] as String? ?? '').startsWith('video/') ? '動画' : 'メディア',
         'link' => 'リンク',
         'text' => 'テキスト',
+        'plugin' => 'プラグイン',
         _ => kind,
       };
 
