@@ -239,9 +239,13 @@ void main() {
     // ファイルから読み込む(.rasqpkg、未審査の印)→ そのまま選ばれる。
     c.read(routerProvider).push(Routes.settingsTheme);
     await tester.pumpAndSettle();
+    // 読み込み(展開 + 画像の書き出し)は本物の非同期。決まった時間ではなく、入って選ばれるまで待つ(混んだ CI では 200ms で
+    // 終わらず、くるくるが回り続けて pumpAndSettle が時間切れになっていた)。
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const ValueKey('theme.import')));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      for (var i = 0; i < 100 && !(c.read(themePacksProvider).any((p) => p.sideloaded) && c.read(activeThemeIdProvider) == 'sample.theme-starry'); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
     });
     await tester.pumpAndSettle();
     expect(c.read(themePacksProvider).single.sideloaded, isTrue);
