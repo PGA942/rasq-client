@@ -27,6 +27,11 @@
         android:label="rasq_client"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- AdMob (google_mobile_ads、書き出し中の広告枠): アプリ ID が無いと起動時に落ちる (D-352)。いまは Google 公式のテスト用アプリ ID。
+             本番の AdMob アプリ ID が決まったら差し替える。 -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
         <!-- 予約した通知の配信と再起動後の復元 (D-160) -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">

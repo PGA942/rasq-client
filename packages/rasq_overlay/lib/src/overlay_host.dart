@@ -636,18 +636,22 @@ class _FowPanelState extends State<_FowPanel> {
     // RepaintBoundary: FOW スイッチャーのプレビュー用キャプチャ点 (D-066)。
     // 着せ替え (D-335): 地の色と背景のレイヤー(FOW 自身のテーマを持つもの = 全画面の暗い FOW などは、その明るさで判定される)。
     final skin = FowPanelSkin.of(context);
+    // ⚠ 子にはキーを付ける: アンカー FOW はキーボードで空きが変わると下付き ⇄ 上付きが入れ替わり、ハンドルの位置(先頭 ⇄ 末尾)が
+    // 変わる。キーが無いと本体の Element が作り直され、**入力欄のフォーカスが外れてキーボードが閉じる → 元の付け方に戻る**
+    // (大きいキーボードで絵文字ピッカーの検索欄が一瞬で閉じていた、D-351)。
     final content = Column(children: [
-      if (spec.showHandle && !topSide) handle,
-      ?header,
+      if (spec.showHandle && !topSide) KeyedSubtree(key: const ValueKey('rasqOverlay.fow.handle.top'), child: handle),
+      if (header != null) KeyedSubtree(key: const ValueKey('rasqOverlay.fow.header'), child: header),
       // 本体も掴んで動かせる (D-161): ListView / 入力欄 / スライダーなど
       // ジェスチャーを取る部品の上では負け(内側の認識器が勝つ)、それ以外の
       // 余白や文字の上では横 = カラム間移動、縦 = ヘッダー/フッターの
       // 付け先切り替え。クローム(ヘッダー行)が無い FOW でも移動できる。
       // stick の空いたところ(ボタンや入力欄の無いところ)のタップで展開モードへ (D-340)。内側の部品が取るタップはそちらが勝つ。
       Expanded(
+        key: const ValueKey('rasqOverlay.fow.body'),
         child: _StickExpandTap(spec: spec, child: spec.bodyMove ? FowMoveGrip(spec: spec, child: child) : child),
       ),
-      if (spec.showHandle && topSide) handle,
+      if (spec.showHandle && topSide) KeyedSubtree(key: const ValueKey('rasqOverlay.fow.handle.bottom'), child: handle),
     ]);
     final panel = RepaintBoundary(
       key: spec.previewBoundaryKey,
