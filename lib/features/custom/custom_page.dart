@@ -84,6 +84,9 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   final participants = <CustomParticipant>[];
   CustomParticipant? me;
 
+  /// サーバーが決めた役割(welcome の `me.role`。ルームのオーナー / モデレーターも owner、S-048)。
+  String? role;
+
   /// セッションが閉じられた(ページは最後の表示のまま)。
   String? closedReason;
 
@@ -198,7 +201,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   Map<String, Object?> _sessionJson() => {
         'id': session!.id,
         'scope': session!.scope,
-        'role': session!.ownerAccountId != null && session!.ownerAccountId == me?.accountId ? 'owner' : 'member',
+        'role': role ?? (session!.ownerAccountId != null && session!.ownerAccountId == me?.accountId ? 'owner' : 'member'),
         'participants': [for (final x in participants) x.toJson()],
         'vars': {for (final e in vars.entries) e.key: e.value.toJson()},
       };
@@ -212,7 +215,10 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       if (m['type'] == 'welcome') {
         final s = m['session'];
         if (s is Map) session = CustomSession.fromJson(s.cast<String, Object?>());
-        if (m['me'] is Map) me = CustomParticipant.fromJson((m['me'] as Map).cast<String, Object?>());
+        if (m['me'] is Map) {
+          me = CustomParticipant.fromJson((m['me'] as Map).cast<String, Object?>());
+          role = (m['me'] as Map)['role'] as String?;
+        }
         participants
           ..clear()
           ..addAll([for (final x in (m['participants'] as List? ?? const [])) if (x is Map) CustomParticipant.fromJson(x.cast<String, Object?>())]);
@@ -369,7 +375,7 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
     final d = c.decl;
     final box = anchorCtx.findRenderObject() as RenderBox?;
     final anchor = box == null ? const Rect.fromLTWH(0, 0, 1, 1) : box.localToGlobal(Offset.zero) & box.size;
-    final isOwner = s != null && s.ownerAccountId != null && s.ownerAccountId == c.me?.accountId;
+    final isOwner = s != null && (c.role == 'owner' || (s.ownerAccountId != null && s.ownerAccountId == c.me?.accountId));
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'custom.page.menu', anchor: anchor, items: [
       if (s == null && d != null && d.isShared && d.allows(PluginPageDecl.surfacePage) && !c.temporary) const RasqDropdownItem('みんなで使う(招待コードを作る)', 'invite'),
       if (s?.inviteCode != null) const RasqDropdownItem('招待コードをコピー', 'copy'),
