@@ -11,6 +11,7 @@ import '../features/child_safe/child_safe_providers.dart' show childGateProvider
 import '../features/child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_dsl.dart';
+import 'pane_swipe_back.dart';
 
 /// 第3カラム (M5b/D-056/D-057): タブレット幅(≥840dp)の右カラム。
 ///
@@ -186,7 +187,11 @@ class ThirdColumnView extends ConsumerWidget {
       // ページ自身のヘッダーの < に統合される(RasqPageHeader が PaneScope を
       // 見て paneBackTo を呼ぶ。長押しで「どこまで戻るか」)。
       if (entry.location != null) {
-        return PaneScope(entry: entry, child: Builder(builder: entry.builder));
+        // スワイプで戻る (D-350): 競合する部品(隠れた TL など)が無い位置からの右スワイプは、< と同じ戻り。
+        return PaneScope(
+          entry: entry,
+          child: Builder(builder: (ctx) => PaneSwipeBack(key: ValueKey('pane.swipe.${entry.id}'), onBack: () => paneBack(ctx), child: Builder(builder: entry.builder))),
+        );
       }
       // 補助面(FOW 移動など)はタイトル + ✕ のカラムヘッダーを持つ。
       return PaneScope(
