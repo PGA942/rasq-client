@@ -56,21 +56,41 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('ストアホーム: サイドバーの「プラグイン」から開き、トレンド/最近の更新 + 検索で絞り込み', (tester) async {
+  testWidgets('ストアホーム (D-353): サイドバーの「プラグイン」から開き、今週のトレンド / 新着のタイルの横の列。検索欄 → 検索画面(グリッド + 絞り込み)', (tester) async {
     final container = await pump(tester);
     await openStore(tester, container);
 
     expect(find.text('プラグインストア'), findsOneWidget);
     expect(find.text('今週のトレンド'), findsOneWidget);
-    expect(find.text('最近の更新'), findsOneWidget);
-    expect(find.text('Misskey コネクタ'), findsOneWidget);
-    expect(find.text('広告フィルター'), findsOneWidget);
+    expect(find.text('新着'), findsOneWidget);
+    // タイル: 明るい色の角丸の中に名前 / 開発者 / 説明 / DL 数。
+    final misskey = find.byKey(const ValueKey('store.tile.$storeSamplePluginId'));
+    expect(misskey, findsOneWidget);
+    expect(find.descendant(of: misskey, matching: find.text('Misskey コネクタ')), findsOneWidget);
+    expect(find.descendant(of: misskey, matching: find.textContaining('RASQ Project')), findsOneWidget);
+    expect(find.descendant(of: misskey, matching: find.textContaining('1.3万 DL')), findsOneWidget);
+    // 新着は 7 個まで(モックの新着は 16 件)。
+    final recentList = tester.widget<ListView>(find.descendant(of: find.byKey(const ValueKey('store.home.recent')), matching: find.byType(ListView)));
+    expect(recentList.childrenDelegate.estimatedChildCount, 7 * 2 - 1); // タイル 7 + 間 6
 
-    // 検索: SigLIP → レコメンダーだけに絞られる。
+    // 検索欄 → 検索画面。SigLIP → レコメンダーだけ。
+    await tester.tap(find.byKey(const ValueKey('store.home.search')));
+    await tester.pumpAndSettle();
+    expect(find.text('プラグインを検索'), findsWidgets);
+    expect(find.byKey(const ValueKey('store.search.grid')), findsOneWidget);
     await tester.enterText(find.byType(TextField).first, 'SigLIP');
     await tester.pumpAndSettle();
-    expect(find.text('SigLIP レコメンダー'), findsOneWidget);
-    expect(find.text('Misskey コネクタ'), findsNothing);
+    expect(find.byKey(const ValueKey('store.tile.net.example.siglip-reco')), findsOneWidget);
+    expect(find.byKey(const ValueKey('store.tile.$storeSamplePluginId')), findsNothing);
+    // 絞り込み: 語を消して「広告なし」+「軽量」→ SigLIP(96MB)は外れる。
+    await tester.enterText(find.byType(TextField).first, '');
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('store.search.box')), matching: find.byIcon(Icons.keyboard_arrow_down)).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('軽量(5MB 未満)'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('store.tile.net.example.siglip-reco')), findsNothing);
+    expect(find.byKey(const ValueKey('store.tile.$storeSamplePluginId')), findsOneWidget);
   });
 
   testWidgets('プラグインページ: 安全性ブロック → インストール確認シート → SHA-512 検証 → 削除', (tester) async {

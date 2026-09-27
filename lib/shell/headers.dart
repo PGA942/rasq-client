@@ -84,12 +84,15 @@ class RasqSearchHeader extends StatelessWidget implements PreferredSizeWidget {
 
 /// ページヘッダー: 戻る＋タイトル＋`…`. Used by every sub screen.
 class RasqPageHeader extends StatelessWidget implements PreferredSizeWidget {
-  const RasqPageHeader({super.key, required this.title, this.onBack, this.onMore, this.actions = const [], this.leadingAvatar, this.leading, this.bottom});
+  const RasqPageHeader({super.key, required this.title, this.onBack, this.onMore, this.actions = const [], this.leadingAvatar, this.leading, this.bottom, this.showMore = true});
 
   final String title;
   final VoidCallback? onBack;
   final VoidCallback? onMore;
   final List<Widget> actions;
+
+  /// 右端の … を出すか(ストアホームは … の代わりに歯車、D-353)。
+  final bool showMore;
 
   /// Optional avatar between back and title (スレッド展開画面 / リアクション).
   final UserSummary? leadingAvatar;
@@ -147,7 +150,7 @@ class RasqPageHeader extends StatelessWidget implements PreferredSizeWidget {
       middle: Text(title, style: RasqTypography.title, overflow: TextOverflow.ellipsis),
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         ...actions,
-        RasqIconButton(icon: Icons.more_horiz, onPressed: onMore, tooltip: 'メニュー'),
+        if (showMore) RasqIconButton(icon: Icons.more_horiz, onPressed: onMore, tooltip: 'メニュー'),
       ]),
     );
     if (bottom == null) return bar;

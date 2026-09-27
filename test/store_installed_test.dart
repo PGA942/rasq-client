@@ -87,11 +87,16 @@ void main() {
       info: const InstalledInfo(summary: '便利なやつ', developerName: 'だれか', safety: SafetyBlock(permissions: [PermissionEntry('network', '外部 API へ')], externalHosts: ['api.example'])),
     );
     final c = await pump(tester, _EmptyCentral(), [gone, InstalledPlugin(id: 'old.one', name: '', version: '0.1.0', sha512: 'b' * 128, installedAt: DateTime.fromMillisecondsSinceEpoch(0))]);
-    // ストアホーム: 一覧が空でも「インストール済み」の入口は出る。
+    // ストアホーム: 一覧が空でも、歯車 →「プラグインを管理」(D-353)にインストール済みが並ぶ(手元の記録だけで描く)。
     c.read(routerProvider).push(Routes.store);
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('store.home.installed')), findsOneWidget);
-    expect(find.text('2 件 ・ バージョン / 権限の確認、削除'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('store.home.manage')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('store.manage.installed.net.example.gone')), findsOneWidget);
+    expect(find.byKey(const ValueKey('store.manage.installed.old.one')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('store.manage.installed.net.example.gone')), matching: find.text('だれか')), findsOneWidget);
+    expect(find.byKey(const ValueKey('store.manage.version.net.example.gone')), findsOneWidget);
+    expect(find.text('1.2.3'), findsOneWidget);
     // ストアのページ(掲載なし)→ 行き止まりにしない。
     c.read(routerProvider).push(Routes.storePlugin('net.example.gone'));
     await tester.pumpAndSettle();

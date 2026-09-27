@@ -25,7 +25,8 @@ typedef StoreHomeSections = ({
 /// **どちらでもインストール時の検証(SHA-512 + ed25519)は同じ経路を通る。**
 abstract class StoreClient {
   Future<StoreHomeSections> home();
-  Future<List<StorePluginCard>> search(String q);
+  /// 検索。[filters] = store.yaml `/plugins` の `filter`(free / no_ads / official / verified / recent / lightweight / offline)。
+  Future<List<StorePluginCard>> search(String q, {Set<StoreFilter> filters = const {}});
   Future<StorePluginDetail?> plugin(String id);
 
   /// 構成取得。[version] 省略時は stable 最新(store.yaml `?version=`)。
@@ -97,7 +98,7 @@ class BundledFallbackStoreClient implements StoreClient {
   @override
   Future<StoreHomeSections> home() => primary.home();
   @override
-  Future<List<StorePluginCard>> search(String q) => primary.search(q);
+  Future<List<StorePluginCard>> search(String q, {Set<StoreFilter> filters = const {}}) => primary.search(q, filters: filters);
   @override
   Future<StorePluginDetail?> plugin(String id) => _or(id, (c) => c.plugin(id), (v) => v == null);
   @override
@@ -300,12 +301,20 @@ class MockStoreClient implements StoreClient {
   Future<List<StorePluginCard>> bookmarks() async => [for (final c in _all) if (_bookmarked.contains(c.id)) c];
 
   @override
-  Future<List<StorePluginCard>> search(String q) async {
+  Future<List<StorePluginCard>> search(String q, {Set<StoreFilter> filters = const {}}) async {
     final query = q.trim().toLowerCase();
-    if (query.isEmpty) return List<StorePluginCard>.from(_all);
+    bool pass(StorePluginDetail c) => filters.every((f) => switch (f) {
+          StoreFilter.free => c.price == 0,
+          StoreFilter.noAds => !c.hasAds,
+          StoreFilter.official => c.origin == PluginOrigin.official,
+          StoreFilter.verified => c.origin == PluginOrigin.verified,
+          StoreFilter.recent => true, // モックは公開日を持たない
+          StoreFilter.lightweight => c.sizeMb < 5,
+          StoreFilter.offline => !c.safety.permissions.any((p) => p.permission.startsWith('net')),
+        });
     return [
       for (final c in _all)
-        if (c.name.toLowerCase().contains(query) || c.summary.toLowerCase().contains(query) || c.description.toLowerCase().contains(query)) c,
+        if (pass(c) && (query.isEmpty || c.name.toLowerCase().contains(query) || c.summary.toLowerCase().contains(query) || c.description.toLowerCase().contains(query))) c,
     ];
   }
 

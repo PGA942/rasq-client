@@ -35,6 +35,12 @@ final storeClientProvider = Provider<StoreClient>((ref) {
 
 final storeHomeProvider = FutureProvider((ref) => ref.watch(storeClientProvider).home());
 final storeSearchProvider = FutureProvider.family<List<StorePluginCard>, String>((ref, q) => ref.watch(storeClientProvider).search(q));
+
+/// 検索画面 (D-353): 語 + 絞り込み。フィルターは並びを決めて文字列キーにする(family のキーを安定させる)。
+final storeFilteredSearchProvider = FutureProvider.autoDispose.family<List<StorePluginCard>, ({String q, String filters})>((ref, k) {
+  final filters = {for (final w in k.filters.split(',')) ...StoreFilter.values.where((f) => f.wire == w)};
+  return ref.watch(storeClientProvider).search(k.q, filters: filters);
+});
 final storePluginProvider = FutureProvider.family<StorePluginDetail?, String>((ref, id) => ref.watch(storeClientProvider).plugin(id));
 final storeManifestProvider = FutureProvider.family<InstallManifest?, String>((ref, id) => ref.watch(storeClientProvider).manifest(id));
 final storeReviewsProvider = FutureProvider.family<List<StoreReview>, String>((ref, id) => ref.watch(storeClientProvider).reviews(id));

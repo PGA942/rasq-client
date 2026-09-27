@@ -26,8 +26,8 @@ class HttpStoreClient implements StoreClient {
   }
 
   @override
-  Future<List<StorePluginCard>> search(String q) async {
-    final j = await _client.getJson('/plugins', {'q': q.trim()});
+  Future<List<StorePluginCard>> search(String q, {Set<StoreFilter> filters = const {}}) async {
+    final j = await _client.getJson('/plugins', {'q': q.trim(), 'filter': filters.isEmpty ? null : [for (final f in filters) f.wire].join(',')});
     return _cards(j['items']);
   }
 
