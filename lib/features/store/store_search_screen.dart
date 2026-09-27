@@ -47,7 +47,7 @@ class _StoreSearchScreenState extends ConsumerState<StoreSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final installed = {for (final p in ref.watch(installedPluginsProvider)) p.id};
+    final installed = {for (final p in ref.watch(installedPluginsProvider)) p.id: p.version};
     final key = (q: _query, filters: [for (final f in StoreFilter.values) if (_filters.contains(f)) f.wire].join(','));
     final results = ref.watch(storeFilteredSearchProvider(key));
     return Scaffold(
@@ -91,7 +91,7 @@ class _StoreSearchScreenState extends ConsumerState<StoreSearchScreen> {
                     itemBuilder: (context, i) => LayoutBuilder(
                       builder: (context, box) => StorePluginTile(
                         card: items[i],
-                        installed: installed.contains(items[i].id),
+                        installedVersion: installed[items[i].id],
                         width: box.maxWidth,
                         height: box.maxHeight,
                         onTap: () => context.push(Routes.storePlugin(items[i].id)),

@@ -29,10 +29,10 @@ class StoreHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final home = ref.watch(storeHomeProvider);
-    final installed = {for (final p in ref.watch(installedPluginsProvider)) p.id};
+    final installed = {for (final p in ref.watch(installedPluginsProvider)) p.id: p.version};
     final showInstalled = ref.watch(storeHomeShowInstalledProvider);
 
-    List<StorePluginCard> pick(List<StorePluginCard> cards) => [for (final c in cards) if (showInstalled || !installed.contains(c.id)) c].take(storeHomeRowLength).toList();
+    List<StorePluginCard> pick(List<StorePluginCard> cards) => [for (final c in cards) if (showInstalled || !installed.containsKey(c.id)) c].take(storeHomeRowLength).toList();
 
     return Scaffold(
       appBar: RasqPageHeader(
@@ -87,7 +87,9 @@ class StoreTileRow extends StatelessWidget {
   const StoreTileRow({super.key, required this.title, required this.cards, required this.installed});
   final String title;
   final List<StorePluginCard> cards;
-  final Set<String> installed;
+
+  /// 入っているプラグインの id → 版(タイルのボタン: 開く / 更新)。
+  final Map<String, String> installed;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +114,7 @@ class StoreTileRow extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(width: RasqSpacing.sm),
             itemBuilder: (context, i) => StorePluginTile(
               card: cards[i],
-              installed: installed.contains(cards[i].id),
+              installedVersion: installed[cards[i].id],
               width: width,
               height: height,
               onTap: () => context.push(Routes.storePlugin(cards[i].id)),

@@ -53,7 +53,7 @@ class StoreManageScreen extends ConsumerWidget {
           value: showInstalled,
           onChanged: (v) => ref.read(settingsAreaProvider(storeHomeArea).notifier).set('showInstalled', v),
         ),
-        if (bookmarks.isNotEmpty) StoreTileRow(key: const ValueKey('store.manage.bookmarks'), title: 'ブックマーク', cards: bookmarks, installed: {for (final p in installed) p.id}),
+        if (bookmarks.isNotEmpty) StoreTileRow(key: const ValueKey('store.manage.bookmarks'), title: 'ブックマーク', cards: bookmarks, installed: {for (final p in installed) p.id: p.version}),
       ]),
     );
   }
@@ -73,6 +73,7 @@ class _InstalledBlock extends ConsumerWidget {
     final developer = detail?.developerName ?? info?.developerName ?? '';
     final summary = detail?.summary ?? info?.summary ?? '';
     final iconUrl = detail?.iconUrl ?? info?.iconUrl;
+    final tint = storeTileColor(detail?.pluginType ?? StorePluginType.other, scheme);
     final newer = detail != null && detail.version.isNotEmpty && detail.version != record.version ? detail.version : null;
     return InkWell(
       key: ValueKey('store.manage.installed.${record.id}'),
@@ -86,8 +87,8 @@ class _InstalledBlock extends ConsumerWidget {
               child: SizedBox.square(
                 dimension: 44,
                 child: iconUrl != null
-                    ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, '$iconUrl', fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: storeTileColor(record.id), child: const Icon(Icons.extension_outlined)))
-                    : ColoredBox(color: storeTileColor(record.id), child: const Icon(Icons.extension_outlined, color: Color(0xFF1B1B1F))),
+                    ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, '$iconUrl', fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: tint, child: const Icon(Icons.extension_outlined)))
+                    : ColoredBox(color: tint, child: const Icon(Icons.extension_outlined)),
               ),
             ),
             const SizedBox(width: RasqSpacing.sm),

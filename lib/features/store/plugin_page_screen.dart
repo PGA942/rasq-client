@@ -13,6 +13,7 @@ import '../../shell/headers.dart';
 import 'release_fow.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
+import 'store_install.dart';
 import 'store_widgets.dart';
 
 /// プラグインページ (M4 / D-120 → D-137 でワイヤーフレーム「全体像」の形に)。
@@ -41,77 +42,12 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// インストール(版指定つき, D-137)。確認シート → 検証 → 登録。
+  /// インストール(版指定つき, D-137)。確認シート → 検証 → 登録([confirmAndInstallPlugin]、ストアホームのタイルの「入手」と共通)。
   Future<void> _install(StorePluginDetail d, {String? version}) async {
-    final manager = ref.read(overlayManagerProvider);
-    final InstallManifest? manifest;
-    try {
-      manifest = await ref.read(storeClientProvider).manifest(widget.pluginId, version: version);
-    } on OrgateException catch (e) {
-      _toast(e.message);
-      return;
-    }
-    if (!mounted) return;
-    if (manifest == null) {
-      _toast(version == null ? '構成を取得できませんでした' : 'Ver.$version の構成が見つかりませんでした');
-      return;
-    }
-    final bundle = manifest.bundle;
-    final permissions = [
-      for (final id in (manifest.manifest['permissions'] as List? ?? const []))
-        if (id is String) d.safety.permissions.where((p) => p.permission == id).firstOrNull ?? PermissionEntry(id, ''),
-    ];
-    // インストール確認シート (D-033): 権限(種別ごと・用途理由つき)と配布物が根拠。
-    final ok = await manager.showBottomSheet<bool>(
-      id: 'store.install',
-      title: '${d.name} ${manifest.version} をインストール',
-      builder: (ctx) {
-        final scheme = Theme.of(ctx).colorScheme;
-        return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('このプラグインが使う権限', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-              const SizedBox(height: 4),
-              for (final g in PermissionKind.group(permissions)) ...[
-                Text(g.kind.label, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700)),
-                for (final p in g.entries)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4, left: RasqSpacing.sm),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Icon(Icons.key_outlined, size: 16),
-                      const SizedBox(width: 6),
-                      Expanded(child: Text(p.reason.isEmpty ? p.permission : '${p.permission} — ${p.reason}', style: RasqTypography.bodySmall)),
-                    ]),
-                  ),
-              ],
-              if (manifest!.permissionsAdded.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text('前のバージョンから増えた権限', style: RasqTypography.caption.copyWith(color: RasqTokens.of(ctx).danger)),
-                for (final p in manifest.permissionsAdded) Text('${p.permission} — ${p.reason}', style: RasqTypography.bodySmall),
-              ],
-              const SizedBox(height: RasqSpacing.sm),
-              if (bundle != null)
-                // 署名の有無は正直に出す。モックストアや署名前の掲載物は
-                // ハッシュ照合だけになる (D-034)。
-                Text('配布物: ${(bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB ・ SHA-512 ${bundle.sha512.substring(0, 16)}…'
-                    ' ・ ${bundle.signature.isNotEmpty && manifest.storePublicKey.isNotEmpty ? 'ストア署名つき (ed25519)' : 'ストア署名なし(ハッシュ照合のみ)'}',
-                    style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
-            child: FilledButton(onPressed: () => manager.close('store.install', result: true), child: const Text('インストールする')),
-          ),
-        ]);
-      },
-    );
-    if (ok != true || !mounted) return; // 余白/スワイプで閉じた = キャンセル
-    setState(() => _busy = true);
-    final outcome = await ref.read(installedPluginsProvider.notifier).install(widget.pluginId, version: version);
-    if (!mounted) return;
-    setState(() => _busy = false);
-    _toast(outcome.error ?? '${d.name} ${manifest.version} をインストールしました(${outcome.verification?.message ?? 'SHA-512 検証済み'})');
+    final message = await confirmAndInstallPlugin(ref, d, version: version, onBusy: (busy) {
+      if (mounted) setState(() => _busy = busy);
+    });
+    if (message != null) _toast(message);
   }
 
   /// ヘッダーの … メニュー(ワイヤーフレーム: レビューを投稿 / リンクをコピー /
