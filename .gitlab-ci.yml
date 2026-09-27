@@ -56,7 +56,7 @@ flutter:
     # マージしなくても検証できるようにするため。
     - |
       SDK_DIR="$CI_PROJECT_DIR/../rasq-sdk-sample"
-      SDK_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/orgate-question/rasq-sdk-sample.git"
+      SDK_URL="${CI_SERVER_PROTOCOL}://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/orgate-question/rasq-sdk-sample.git"
       rm -rf "$SDK_DIR"
       for b in "${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_REF_NAME}" "$SDK_SAMPLE_BRANCH"; do
         if git clone --depth 1 -b "$b" "$SDK_URL" "$SDK_DIR" 2>/dev/null; then echo "rasq-sdk-sample: branch $b"; break; fi
@@ -139,8 +139,8 @@ web:
     - |
       SDK_DIR="$CI_PROJECT_DIR/../rasq-sdk-sample"
       rm -rf "$SDK_DIR"
-      git clone --depth 1 -b "$SDK_SAMPLE_BRANCH" "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/orgate-question/rasq-sdk-sample.git" "$SDK_DIR" \
-        || git clone --depth 1 "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/orgate-question/rasq-sdk-sample.git" "$SDK_DIR"
+      git clone --depth 1 -b "$SDK_SAMPLE_BRANCH" "${CI_SERVER_PROTOCOL}://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/orgate-question/rasq-sdk-sample.git" "$SDK_DIR" \
+        || git clone --depth 1 "${CI_SERVER_PROTOCOL}://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}:${CI_SERVER_PORT}/orgate-question/rasq-sdk-sample.git" "$SDK_DIR"
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
     - export PATH="$CARGO_HOME/bin:$PATH"
     # Web のテストを走らせるブラウザ(イメージには入っていない)。
