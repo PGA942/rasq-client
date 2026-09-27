@@ -1,7 +1,8 @@
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
-import '../nodeprog/tl_components.dart' show rasqPostsKind;
+import '../nodeprog/tl_components.dart' show compileTlConfig, rasqPostsKind;
+import '../nodeprog/tl_config_store.dart' show tlTemporaryConfigsProvider;
 import 'account_affinity.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -161,6 +162,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     // チャイルドセーフ (D-307): 判定の強さ / 止める話題 / 見守りの時間が変われば取り直す。
     ref.watch(childGateProvider.select((g) => g.timelineSignature));
     if (kind == childSafeWindowKind) return TimelineState(posts: await _fetchChildWindow());
+    // 一時変更 (D-338): タブの ↓ の FOW で変えた構成が入れ替わったら取り直す。
+    ref.watch(tlTemporaryConfigsProvider.select((m) => m[_graphScope]));
     ref.onDispose(() {
       _clockTimer?.cancel();
       _clockTimer = null;
@@ -199,6 +202,15 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     return TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: deco.tiles, badges: deco.badges);
   }
 
+  /// この TL のノードグラフのスコープ。トレンド / タグ TL (D-102) と Today(featured, D-113)は共通の `trend`。
+  String get _graphScope => kind.id.startsWith('tag:') || kind.id == 'featured' ? 'trend' : 'tl.${kind.id}';
+
+  /// 一時変更 (D-338) の構成をコンパイルしたグラフ(raw JSON)。無ければ null。
+  String? get _temporaryGraphRaw {
+    final cfg = ref.read(tlTemporaryConfigsProvider)[_graphScope];
+    return cfg == null ? null : jsonEncode(compileTlConfig(cfg, scope: _graphScope).toJson());
+  }
+
   /// 総合スコープの自動構成 + 実行 (D-114)。グラフが無ければ全アカウント分を
   /// 自動生成(取得×N → マージ段 → タイムライン)。ユーザーが編集済み
   /// (auto フラグなし)なら、新アカウントはマージの空き口への差し込みだけ試す。
@@ -215,7 +227,11 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     final area = await ref.read(settingsAreaProvider('nodeprog.tl.bundle').future);
     final raw = area['graph'];
     NodeGraph graph;
-    if (more) {
+    final temporary = _temporaryGraphRaw;
+    if (temporary != null) {
+      // 一時変更 (D-338): 保存した構成と自動構成には触れない。
+      graph = NodeGraph.fromJson((jsonDecode(temporary) as Map).cast<String, Object?>());
+    } else if (more) {
       if (raw is! String) return null;
       graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
     } else if (raw is! String) {
@@ -417,7 +433,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     // トレンド/タグ TL (D-102) と Today(featured, D-113)は共通の `trend`
     // スコープ。
     if (!kind.id.startsWith('custom:')) {
-      final scope = kind.id.startsWith('tag:') || kind.id == 'featured' ? 'trend' : 'tl.${kind.id}';
+      final scope = _graphScope;
       Duration? clock;
       try {
         // アカウント分離 (D-108): グラフ/storage.safe は持ち主アカウントの
@@ -433,7 +449,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             if (s != null) graphSession = ref.read(pluginRegistryProvider).session(s);
           }
         }
-        var raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), graphAccKey, scope);
+        // 一時変更 (D-338) があれば、保存した構成の代わりに使う。
+        var raw = _temporaryGraphRaw ?? await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), graphAccKey, scope);
         // DM 共通設定 (D-127): ページ個別の設定が無ければ、メインページの
         // 設定(tl.dm)をカスタム未設定の全 DM ページに適用する。
         if (raw == null && (kind.id.startsWith('dm:') || kind.id.startsWith('chat:'))) {

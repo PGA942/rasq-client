@@ -17,6 +17,7 @@ import '../home/timeline_providers.dart' show customTimelinesProvider;
 import '../settings/settings_dsl.dart';
 import '../store/store_client.dart' show storeSamplePluginId;
 import 'node_tabs.dart';
+import 'tl_config_store.dart';
 import '../trend/tendency_fows.dart';
 import '../trend/tendency_profile.dart';
 import 'tl_components.dart';
@@ -86,9 +87,18 @@ final tlBlueskyAccountsProvider = Provider<List<String>>((ref) => [
 /// **アルゴリズム(上から順に適用)** のコンポーネント積みで組み、保存時に
 /// 正準形ノードグラフへコンパイルする(実行系は従来のまま)。
 /// 自由形のノードキャンバスは TL スコープでは**一旦無効化**(D-121)。
+///
+/// [temporary] (D-338) = タブの ↓ で開く**一時変更 FOW** の中身として使う: 画面の枠(ヘッダー)の代わりに、いちばん上に
+/// **タイムライン本体から探す**検索欄(ノード検索ではない)と閉じるボタンを置き、変更は保存せず
+/// [tlTemporaryConfigsProvider] に書く(「保存する」で初めて保存した構成になる)。[tabs] = 並べるタブ((スコープ, 名前)。
+/// 省略時は既定の並び)。[scopeSync] = 開いているタブを外(ホームのタブ)と揃える口。
 class TimelineConfigScreen extends ConsumerStatefulWidget {
-  const TimelineConfigScreen({super.key, required this.scope});
+  const TimelineConfigScreen({super.key, required this.scope, this.temporary = false, this.tabs, this.scopeSync, this.onClose});
   final String scope;
+  final bool temporary;
+  final List<(String, String)>? tabs;
+  final ValueNotifier<String?>? scopeSync;
+  final VoidCallback? onClose;
   @override
   ConsumerState<TimelineConfigScreen> createState() => _TimelineConfigScreenState();
 }
@@ -124,18 +134,34 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   /// dispose 時に ref が使えないため、パレット FOW を閉じる用に保持。
   late final OverlayManager _manager;
 
+  /// 一時変更 FOW の検索欄 (D-338)。
+  final _search = TextEditingController();
+
+  /// 探す語のキー(TL の id)。
+  String get _timelineId => _scope.startsWith('tl.') ? _scope.substring(3) : _scope;
+
   @override
   void initState() {
     super.initState();
     _manager = ref.read(overlayManagerProvider);
+    widget.scopeSync?.addListener(_onScopeSync);
+    _search.text = ref.read(timelineSearchProvider)[_timelineId] ?? '';
     _load();
   }
 
   @override
   void dispose() {
+    widget.scopeSync?.removeListener(_onScopeSync);
+    _search.dispose();
     _manager.close(tlConfigPaletteFowId);
     _manager.close(tlConfigParamsFowId);
     super.dispose();
+  }
+
+  /// 外(ホームのタブ)で TL が切り替わったら、こちらも合わせる。
+  void _onScopeSync() {
+    final next = widget.scopeSync?.value;
+    if (next != null && next != _scope && mounted) _switchScope(next);
   }
 
   Future<void> _load() async {
@@ -143,6 +169,16 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       _loaded = false;
       _handEdited = false;
     });
+    // 一時変更中 (D-338) ならその構成から。
+    if (widget.temporary) {
+      if (ref.read(tlTemporaryConfigsProvider)[_scope] case final temp?) {
+        setState(() {
+          _cfg = temp;
+          _loaded = true;
+        });
+        return;
+      }
+    }
     try {
       final area = await ref.read(settingsAreaProvider(_area).future);
       final raw = area['tlcfg'];
@@ -174,6 +210,15 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   /// 保存 = コンパイルしてノードグラフとして書く(実行系・クロック・
   /// 重複畳み込みは従来経路のまま)。
   Future<void> _save() async {
+    // 一時変更 (D-338): 保存せず、TL にだけ効かせる。
+    if (widget.temporary) {
+      ref.read(tlTemporaryConfigsProvider.notifier).set(_scope, _cfg);
+      return;
+    }
+    await _persist();
+  }
+
+  Future<void> _persist() async {
     final store = ref.read(settingsAreaProvider(_area).notifier);
     await store.set('tlcfg', jsonEncode(_cfg.toJson()));
     await store.set('graph', jsonEncode(compileTlConfig(_cfg, scope: _scope).toJson()));
@@ -189,7 +234,21 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   void _switchScope(String next) {
     if (next == _scope) return;
     setState(() => _scope = next);
+    widget.scopeSync?.value = next;
+    _search.text = ref.read(timelineSearchProvider)[_timelineId] ?? '';
     _load();
+  }
+
+  /// 一時変更を保存する (D-338): 保存した構成を置き換え、一時変更は外す。
+  Future<void> _saveTemporary() async {
+    await _persist();
+    ref.read(tlTemporaryConfigsProvider.notifier).clear(_scope);
+  }
+
+  /// 一時変更を外して、保存した構成に戻す (D-338)。
+  Future<void> _revertTemporary() async {
+    ref.read(tlTemporaryConfigsProvider.notifier).clear(_scope);
+    await _load();
   }
 
   // ---- タブ行(ノードエディタ D-101 と同じ作法)-----------------------------
@@ -201,7 +260,12 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     if (_scope.startsWith('trend')) {
       return const [('trend', 'ノート', false), ('trend.following', 'フォロー中', false), ('trend.users', 'ユーザー', false)];
     }
+    final order = ref.watch(tlTabOrderProvider);
     final nodeTabs = ref.watch(nodeTabsProvider);
+    if (widget.tabs case final given?) {
+      final own = {for (final t in nodeTabs) 'tl.${t.id}'};
+      return applyTlTabOrder([for (final (sc, label) in given) (sc, label, own.contains(sc))], (t) => t.$1, order);
+    }
     final tabs = <(String, String, bool)>[
       ('tl.bundle', '総合', false),
       ('tl.social', 'おすすめ', false),
@@ -215,7 +279,47 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       final base = _scope.startsWith('tl.') ? _scope.substring(3) : _scope;
       tabs.insert(0, (_scope, base.startsWith('list:') ? 'このリスト' : base, false));
     }
-    return tabs;
+    return applyTlTabOrder(tabs, (t) => t.$1, order);
+  }
+
+  /// タブを並べ替えられるか (D-339): TL のタブが 2 つ以上のとき(DM / トレンドのエディタは固定)。
+  bool _canReorderTabs(List<(String, String, bool)> tabs) => !_isDmScope && !_scope.startsWith('trend') && tabs.length > 1;
+
+  /// タブの並びを保存する (D-339)。ホームのタブもこの順になる。
+  Future<void> _reorderTabs(List<(String, String, bool)> tabs, int from, int to) async {
+    final list = [...tabs];
+    final moved = list.removeAt(from);
+    list.insert(to.clamp(0, list.length), moved);
+    // 既に保存した並びにあって、ここに無いスコープ(他の画面のタブ)は後ろに残す。
+    final shown = {for (final t in list) t.$1};
+    await saveTlTabOrder(ref, [for (final t in list) t.$1, for (final sc in ref.read(tlTabOrderProvider)) if (!shown.contains(sc)) sc]);
+  }
+
+  /// タブの並べ替えシート (D-339): アルゴリズムの並べ替えと同じ見た目(ドラッグで並べ替え、即時反映)。
+  void _openTabReorder() {
+    ref.read(overlayManagerProvider).showBottomSheet<void>(
+          id: 'tlconfig.tabs.reorder',
+          title: 'タブの並べ替え',
+          builder: (_) => Consumer(builder: (ctx, ref, _) {
+            final tabs = _tabs();
+            final scheme = Theme.of(ctx).colorScheme;
+            return ReorderableListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              onReorderItem: (from, to) => _reorderTabs(tabs, from, to),
+              children: [
+                for (final t in tabs)
+                  RasqListTile(
+                    key: ValueKey('tlconfig.tabs.row.${t.$1}'),
+                    title: t.$2,
+                    leading: Icon(t.$3 ? Icons.account_tree_outlined : Icons.view_stream_outlined, size: 22),
+                    chevron: false,
+                    trailing: Icon(Icons.drag_handle, size: 20, color: scheme.onSurfaceVariant),
+                  ),
+              ],
+            );
+          }),
+        );
   }
 
   PreferredSizeWidget _tabBar() {
@@ -228,30 +332,39 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         height: 40,
         decoration: BoxDecoration(border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
         child: Row(children: [
+          // タブは長押しでつかんで左右へ動かせる (D-339)。並びはホームのタブにも効く。
           Expanded(
-            child: SingleChildScrollView(
+            child: ReorderableListView.builder(
+              key: const ValueKey('tlconfig.tabs'),
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
-              child: Row(children: [
-                for (final t in tabs)
-                  InkWell(
-                    onTap: () {
-                      if (t.$1 != _scope) {
-                        _switchScope(t.$1);
-                      } else if (t.$3) {
-                        _renameTab(t.$1);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                      decoration: _scope == t.$1 ? BoxDecoration(border: Border(bottom: BorderSide(color: tokens.link, width: 2))) : null,
-                      child: Text(t.$2, style: RasqTypography.bodySmall.copyWith(fontWeight: _scope == t.$1 ? FontWeight.w700 : null, color: _scope == t.$1 ? tokens.link : scheme.onSurfaceVariant)),
-                    ),
+              buildDefaultDragHandles: false,
+              itemCount: tabs.length,
+              onReorderItem: (from, to) => _reorderTabs(tabs, from, to),
+              proxyDecorator: (child, _, _) => Material(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(RasqSizes.radiusSm), elevation: 2, child: child),
+              itemBuilder: (context, i) {
+                final t = tabs[i];
+                final tab = InkWell(
+                  key: ValueKey('tlconfig.tab.${t.$1}'),
+                  onTap: () {
+                    if (t.$1 != _scope) {
+                      _switchScope(t.$1);
+                    } else if (t.$3 && !widget.temporary) {
+                      _renameTab(t.$1);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    decoration: _scope == t.$1 ? BoxDecoration(border: Border(bottom: BorderSide(color: tokens.link, width: 2))) : null,
+                    child: Text(t.$2, style: RasqTypography.bodySmall.copyWith(fontWeight: _scope == t.$1 ? FontWeight.w700 : null, color: _scope == t.$1 ? tokens.link : scheme.onSurfaceVariant)),
                   ),
-              ]),
+                );
+                return _canReorderTabs(tabs) ? ReorderableDelayedDragStartListener(key: ValueKey('tlconfig.tabdrag.${t.$1}'), index: i, child: tab) : KeyedSubtree(key: ValueKey('tlconfig.tabdrag.${t.$1}'), child: tab);
+              },
             ),
           ),
-          if (_scope.startsWith('tl.') && !_isDmScope) RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
+          if (_canReorderTabs(tabs)) RasqIconButton(icon: Icons.swap_horiz, size: 20, tooltip: 'タブの並べ替え', onPressed: _openTabReorder),
+          if (_scope.startsWith('tl.') && !_isDmScope && !widget.temporary) RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
         ]),
       ),
     );
@@ -575,9 +688,8 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tokens = RasqTokens.of(context);
     ref.watch(sessionsProvider); // アカウント選択肢
+    if (widget.temporary) return _temporaryBody();
     return Scaffold(
       appBar: RasqPageHeader(
         title: 'タイムラインをカスタマイズ',
@@ -588,55 +700,146 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
           ? const RasqLoading()
           : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
               // 説明バナー(ワイヤーフレーム: アルゴリズムは上から順に適用)。
-              Container(
-                margin: const EdgeInsets.all(RasqSpacing.sm),
-                padding: const EdgeInsets.all(RasqSpacing.sm),
-                decoration: BoxDecoration(color: tokens.link.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
-                child: Text(
-                    _scope == 'tl.dm'
-                        ? 'DM のメイン設定です。個別設定のない全ての DM ページに適用されます。アルゴリズムは上から順に適用されます。'
-                        : _isDmScope
-                            ? 'この DM ページだけの設定です(保存すると DM 共通設定より優先されます)。アルゴリズムは上から順に適用されます。'
-                            : 'タイムラインのアルゴリズムや取り込み、表示するタイムラインなどを指定できます。アルゴリズムは上から順に適用されます。',
-                    style: RasqTypography.caption.copyWith(color: tokens.link)),
+              _banner(
+                _scope == 'tl.dm'
+                    ? 'DM のメイン設定です。個別設定のない全ての DM ページに適用されます。アルゴリズムは上から順に適用されます。'
+                    : _isDmScope
+                        ? 'この DM ページだけの設定です(保存すると DM 共通設定より優先されます)。アルゴリズムは上から順に適用されます。'
+                        : 'タイムラインのアルゴリズムや取り込み、表示するタイムラインなどを指定できます。アルゴリズムは上から順に適用されます。',
               ),
-              if (_handEdited)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
-                  child: Text('この TL はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。',
-                      style: RasqTypography.caption.copyWith(color: tokens.danger)),
-                ),
-              RasqSectionHeader(
-                title: 'アルゴリズム',
-                topMargin: 0,
-                trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: 'アルゴリズムの並べ替え', onPressed: () => _openReorder(algorithms: true)),
-              ),
-              for (var i = 0; i < _cfg.algorithms.length; i++) _componentTile(algorithm: true, i: i),
-              _addTile('アルゴリズムを追加', () => _openPalette(algorithms: true)),
-              RasqSectionHeader(
-                title: 'SNSタイムライン',
-                trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: 'タイムラインの並べ替え', onPressed: () => _openReorder(algorithms: false)),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-                child: Text('複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。',
-                    style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-              ),
-              for (var i = 0; i < _cfg.sources.length; i++) _componentTile(algorithm: false, i: i),
-              _addTile('タイムラインを追加', () => _openPalette(algorithms: false)),
-              const RasqSectionHeader(title: '自動更新'),
-              Builder(builder: (ctx) {
-                return RasqListTile(
-                  title: '間隔: ${_cfg.clock.isEmpty ? 'なし' : _cfg.clock}',
-                  leading: const Icon(Icons.schedule),
-                  onTap: () async {
-                    final pick = await _pickFrom(ctx, 'tlconfig.clock', ['なし', '15秒', '1分', '5分'], _cfg.clock.isEmpty ? 'なし' : _cfg.clock);
-                    if (pick != null) _update(_cfg.copyWith(clock: pick == 'なし' ? '' : pick));
-                  },
-                );
-              }),
+              ..._components(),
             ]),
     );
+  }
+
+  Widget _banner(String text, {List<Widget> actions = const []}) {
+    final tokens = RasqTokens.of(context);
+    return Container(
+      margin: const EdgeInsets.all(RasqSpacing.sm),
+      padding: const EdgeInsets.all(RasqSpacing.sm),
+      decoration: BoxDecoration(color: tokens.link.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(text, style: RasqTypography.caption.copyWith(color: tokens.link)),
+        if (actions.isNotEmpty) Align(alignment: Alignment.centerRight, child: Wrap(spacing: RasqSpacing.xs, children: actions)),
+      ]),
+    );
+  }
+
+  /// 一時変更 FOW の中身 (D-338): 探す欄 + 閉じる → タブ行 → 一時変更の案内 → 同じ部品の積み。
+  Widget _temporaryBody() {
+    final scheme = Theme.of(context).colorScheme;
+    final changed = ref.watch(tlTemporaryConfigsProvider.select((m) => m.containsKey(_scope)));
+    // プラグインが並べる TL(custom:)は構成を持たない: 探すだけ。
+    final searchOnly = _scope.startsWith('tl.custom:');
+    return Material(
+      type: MaterialType.transparency,
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.xs, 0),
+          child: Row(children: [
+            Expanded(
+              child: TextField(
+                key: const ValueKey('tl.temp.search'),
+                controller: _search,
+                style: RasqTypography.bodySmall,
+                textInputAction: TextInputAction.search,
+                onChanged: (q) {
+                  ref.read(timelineSearchProvider.notifier).set(_timelineId, q);
+                  setState(() {});
+                },
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: 'このタイムラインから探す',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  suffixIcon: _search.text.isEmpty
+                      ? null
+                      : RasqIconButton(
+                          icon: Icons.close,
+                          size: 18,
+                          tooltip: '探す語を消す',
+                          onPressed: () {
+                            _search.clear();
+                            ref.read(timelineSearchProvider.notifier).set(_timelineId, '');
+                            setState(() {});
+                          },
+                        ),
+                  filled: true,
+                  fillColor: scheme.surfaceContainerHigh,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(RasqSizes.radiusSm), borderSide: BorderSide.none),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(RasqSizes.radiusSm), borderSide: BorderSide.none),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(RasqSizes.radiusSm), borderSide: BorderSide.none),
+                ),
+              ),
+            ),
+            RasqIconButton(key: const ValueKey('tl.temp.close'), icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: widget.onClose),
+          ]),
+        ),
+        _tabBar(),
+        Expanded(
+          child: !_loaded
+              ? const RasqLoading()
+              : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
+                  if (searchOnly)
+                    _banner('このタイムラインはプラグインが並べています。ここでは探すことだけできます。')
+                  else if (changed)
+                    _banner(
+                      'このタイムラインを一時的に変えています(保存していません)。',
+                      actions: [
+                        TextButton(key: const ValueKey('tl.temp.revert'), onPressed: _revertTemporary, child: const Text('元に戻す')),
+                        TextButton(key: const ValueKey('tl.temp.save'), onPressed: _saveTemporary, child: const Text('この内容で保存')),
+                      ],
+                    )
+                  else
+                    _banner('ここでの変更はこのタイムラインに一時的に効きます。保存するまで、元の設定は変わりません。'),
+                  if (!searchOnly) ..._components(),
+                ]),
+        ),
+      ]),
+    );
+  }
+
+  /// アルゴリズム / SNS タイムライン / 自動更新の部品の積み(画面と一時変更 FOW で共用)。
+  List<Widget> _components() {
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = RasqTokens.of(context);
+    return [
+      if (_handEdited)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
+          child: Text('この TL はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。', style: RasqTypography.caption.copyWith(color: tokens.danger)),
+        ),
+      RasqSectionHeader(
+        title: 'アルゴリズム',
+        topMargin: 0,
+        trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: 'アルゴリズムの並べ替え', onPressed: () => _openReorder(algorithms: true)),
+      ),
+      for (var i = 0; i < _cfg.algorithms.length; i++) _componentTile(algorithm: true, i: i),
+      _addTile('アルゴリズムを追加', () => _openPalette(algorithms: true)),
+      RasqSectionHeader(
+        title: 'SNSタイムライン',
+        trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: 'タイムラインの並べ替え', onPressed: () => _openReorder(algorithms: false)),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+        child: Text('複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。',
+            style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      ),
+      for (var i = 0; i < _cfg.sources.length; i++) _componentTile(algorithm: false, i: i),
+      _addTile('タイムラインを追加', () => _openPalette(algorithms: false)),
+      const RasqSectionHeader(title: '自動更新'),
+      Builder(builder: (ctx) {
+        return RasqListTile(
+          title: '間隔: ${_cfg.clock.isEmpty ? 'なし' : _cfg.clock}',
+          leading: const Icon(Icons.schedule),
+          onTap: () async {
+            final pick = await _pickFrom(ctx, 'tlconfig.clock', ['なし', '15秒', '1分', '5分'], _cfg.clock.isEmpty ? 'なし' : _cfg.clock);
+            if (pick != null) _update(_cfg.copyWith(clock: pick == 'なし' ? '' : pick));
+          },
+        );
+      }),
+    ];
   }
 
   Widget _addTile(String label, VoidCallback onTap) {

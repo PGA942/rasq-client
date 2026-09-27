@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,12 +19,17 @@ import '../compose/compose_target.dart';
 import '../settings/settings_dsl.dart';
 import '../compose/composer_sheet.dart';
 import '../nodeprog/node_tabs.dart';
+import '../nodeprog/timeline_temp_fow.dart';
+import '../nodeprog/tl_config_store.dart';
 import '../relational/relational_timeline_view.dart';
 import '../vc/astell_actions.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'custom_tile_row.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
+
+/// タイムライン一時変更 FOW (D-338) を開いている間の、FOW のタブ(スコープ `tl.<id>`)。ホームのタブと揃える。
+final homeTimelineFowScope = ValueNotifier<String?>(null);
 
 /// ホームTL. Tabs = おすすめ(social) / フォロー中(home) + plugin timelines
 /// (ローカル/グローバル…) + 関連(リレーショナルTL, 保留 D-011).
@@ -46,17 +52,34 @@ class HomeScreen extends ConsumerWidget {
     // (フォロー中 / AsTell もここへ畳む)。AsTell を止めていればヘッダーの AsTell も出さない。
     final gate = ref.watch(childGateProvider);
     final window = gate.inTimeWindow;
+    // タブの並び (D-339): 「タイムラインをカスタマイズ」のタブ行で並べ替えた順。
+    final order = ref.watch(tlTabOrderProvider);
     final kinds = window
         ? const [childSafeWindowKind]
-        : bundle
-        ? [
-            TimelineKind.bundle,
-            TimelineKind.relational,
-            if (ref.watch(bundleNodeTabsVisibleProvider))
-              for (final (_, t) in ref.watch(allNodeTabsProvider)) TimelineKind(t.id, t.label),
-          ]
-        : _tabKinds(session, customs, nodeTabs);
-    final tabs = [for (final k in kinds) RasqTabItem(_label(k), id: k.id)];
+        : applyTlTabOrder(
+            bundle
+                ? [
+                    TimelineKind.bundle,
+                    TimelineKind.relational,
+                    if (ref.watch(bundleNodeTabsVisibleProvider))
+                      for (final (_, t) in ref.watch(allNodeTabsProvider)) TimelineKind(t.id, t.label),
+                  ]
+                : _tabKinds(session, customs, nodeTabs),
+            (k) => 'tl.${k.id}',
+            order);
+    // `↓{タイムライン名}` (D-338): 選んでいるタブをもう一度押すと、タイムライン一時変更 FOW。関連(ルールベースの別の画面)と
+    // 見守りの時間の TL は構成を持たないので出さない。一時変更中 / 探している TL はタブの名前の右肩に点。
+    final temporary = ref.watch(tlTemporaryConfigsProvider);
+    final searching = ref.watch(timelineSearchProvider);
+    final tabs = [
+      for (final k in kinds)
+        RasqTabItem(
+          _label(k),
+          id: k.id,
+          chevron: _hasTempFow(k),
+          dot: temporary.containsKey('tl.${k.id}') || searching.containsKey(k.id),
+        ),
+    ];
     final initial = kinds.indexOf(bundle ? TimelineKind.bundle : TimelineKind.home).clamp(0, kinds.length - 1);
 
     return DefaultTabController(
@@ -64,7 +87,8 @@ class HomeScreen extends ConsumerWidget {
       key: ValueKey('home.tabs.$window'),
       length: tabs.length,
       initialIndex: initial,
-      child: Scaffold(
+      // 開いているタブを並べ替え / 一時変更 FOW と揃える。
+      child: _TabFollower(ids: [for (final k in kinds) k.id], child: Scaffold(
         // フォロー中のホストの AsTell (D-163): ヘッダーの角丸四角形にバンドルを並べる。
         appBar: RasqHomeHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref), 
             // Tell タイル (D-238、設定 `astell.tiles`): 出す / 出さないと並べる数。
@@ -73,7 +97,17 @@ class HomeScreen extends ConsumerWidget {
           Container(
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
             child: Row(children: [
-              Expanded(child: RasqTabs(items: tabs, showChevron: false)),
+              Expanded(
+                child: RasqTabs(
+                  items: tabs,
+                  onSelectedTabTap: (i, _) => showTimelineTempFow(
+                    ref,
+                    tabs: [for (final k in kinds) if (_hasTempFow(k)) ('tl.${k.id}', _label(k))],
+                    scope: 'tl.${kinds[i].id}',
+                    scopeSync: homeTimelineFowScope,
+                  ),
+                ),
+              ),
               // RAi は TL のタブ行では隠す (D-103 でユーザーが指定 —
               // ノードエディタのパレット側にだけ置く)。
               // タイムライン設定 (D-090/D-121): 簡略版のカスタマイズ画面へ
@@ -96,9 +130,10 @@ class HomeScreen extends ConsumerWidget {
             child: TabBarView(children: [
               for (final k in kinds)
                 if (k == TimelineKind.relational)
-                  const RelationalTimelineView() // D-022 v0 (ルールベース段)
+                  const RelationalTimelineView(key: ValueKey('tl.view.relational')) // D-022 v0 (ルールベース段)
                 else
-                  _TimelineView(kind: k),
+                  // 並べ替え (D-339) で位置が変わっても、TL ごとの State(スクロール位置)を取り違えない。
+                  _TimelineView(key: ValueKey('tl.view.${k.id}'), kind: k),
             ]),
           ),
         ]),
@@ -111,9 +146,11 @@ class HomeScreen extends ConsumerWidget {
           shape: const CircleBorder(),
           child: const Icon(Icons.add),
         ),
-      ),
+      )),
     );
   }
+
+  static bool _hasTempFow(TimelineKind k) => k != TimelineKind.relational && k != childSafeWindowKind;
 
   static List<TimelineKind> _tabKinds(SnsSession? session, List<CustomTimelineSpec> customs, List<NodeTab> nodeTabs) {
     final supported = session?.timelines ?? const [TimelineKind.home];
@@ -139,8 +176,87 @@ class HomeScreen extends ConsumerWidget {
   static String _label(TimelineKind k) => k == TimelineKind.social ? 'おすすめ' : k.label;
 }
 
+/// 開いているタブを揃える: 並べ替え (D-339) のあとも同じ TL を開いたまま、一時変更 FOW (D-338) のタブとホームのタブを
+/// 行き来させる([homeTimelineFowScope])。タブが増減したとき(アカウントの読み込み、総合表示の出入り)は今までどおり
+/// 位置のまま(DefaultTabController に任せる)。
+class _TabFollower extends StatefulWidget {
+  const _TabFollower({required this.ids, required this.child});
+  final List<String> ids;
+  final Widget child;
+  @override
+  State<_TabFollower> createState() => _TabFollowerState();
+}
+
+class _TabFollowerState extends State<_TabFollower> {
+  TabController? _ctrl;
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    homeTimelineFowScope.addListener(_onFowScope);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final c = DefaultTabController.of(context);
+    if (c == _ctrl) return;
+    _ctrl?.removeListener(_onTab);
+    _ctrl = c..addListener(_onTab);
+    _selected = c.index < widget.ids.length ? widget.ids[c.index] : null;
+  }
+
+  @override
+  void didUpdateWidget(_TabFollower old) {
+    super.didUpdateWidget(old);
+    if (listEquals(old.ids, widget.ids)) return;
+    // 並べ替えだけ(同じタブの組)なら、開いていた TL の新しい位置へ。増減は位置のまま。
+    if (old.ids.length == widget.ids.length && old.ids.toSet().containsAll(widget.ids)) {
+      _follow();
+    } else {
+      final ctrl = _ctrl!;
+      _selected = ctrl.index < widget.ids.length ? widget.ids[ctrl.index] : null;
+    }
+  }
+
+  @override
+  void dispose() {
+    homeTimelineFowScope.removeListener(_onFowScope);
+    _ctrl?.removeListener(_onTab);
+    super.dispose();
+  }
+
+  /// 開いていた TL の新しい位置へ(描いている最中には動かせないので、描き終えてから)。
+  void _follow() {
+    final ctrl = _ctrl!;
+    final i = _selected == null ? -1 : widget.ids.indexOf(_selected!);
+    if (i < 0 || i == ctrl.index) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _ctrl == ctrl && i < ctrl.length) ctrl.index = i;
+    });
+  }
+
+  void _onTab() {
+    final ctrl = _ctrl!;
+    if (ctrl.indexIsChanging || ctrl.index >= widget.ids.length) return;
+    _selected = widget.ids[ctrl.index];
+    if (homeTimelineFowScope.value != null) homeTimelineFowScope.value = 'tl.$_selected';
+  }
+
+  void _onFowScope() {
+    final scope = homeTimelineFowScope.value;
+    if (scope == null || !scope.startsWith('tl.')) return;
+    final i = widget.ids.indexOf(scope.substring(3));
+    if (i >= 0 && i != _ctrl?.index) _ctrl?.animateTo(i);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 class _TimelineView extends ConsumerStatefulWidget {
-  const _TimelineView({required this.kind});
+  const _TimelineView({super.key, required this.kind});
   final TimelineKind kind;
   @override
   ConsumerState<_TimelineView> createState() => _TimelineViewState();
@@ -175,6 +291,8 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
     final actions = session?.actions ?? const <ActionDescriptor>[];
     // 上下の「投稿を読み込む」(D-298)。電話のアプリは既定で出さない(引っ張って更新 / スクロールで続きを読む。D-316)。
     final edgeTiles = ref.watch(timelineEdgeTilesProvider);
+    // タイムライン本体から探す (D-338): 一時変更 FOW の検索欄の語で、読み込んだ投稿を絞る。
+    final query = ref.watch(timelineSearchProvider.select((m) => m[widget.kind.id]));
 
     return state.when(
       loading: () => const RasqLoading(),
@@ -200,10 +318,14 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
             });
           }
         }
-        final newer = tl.posts.sublist(0, split);
-        final base = tl.posts.sublist(split);
+        var newer = tl.posts.sublist(0, split);
+        var base = tl.posts.sublist(split);
+        if (query != null) {
+          newer = [for (final p in newer) if (timelinePostMatches(p, query)) p];
+          base = [for (final p in base) if (timelinePostMatches(p, query)) p];
+        }
         Widget row(Post p) => Column(mainAxisSize: MainAxisSize.min, children: [_item(context, tl, p, notifier, session, actions), const Divider()]);
-        return RefreshIndicator(
+        final list = RefreshIndicator(
           onRefresh: notifier.refresh,
           child: CustomScrollView(
             controller: _scroll,
@@ -245,6 +367,11 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
             ],
           ),
         );
+        if (query == null) return list;
+        return Column(children: [
+          TimelineSearchBanner(query: query, count: newer.length + base.length, hasMore: tl.hasMore, loadingMore: tl.loadingMore, onMore: notifier.loadMore, onClear: () => ref.read(timelineSearchProvider.notifier).set(widget.kind.id, '')),
+          Expanded(child: list),
+        ]);
       },
     );
   }
@@ -279,6 +406,34 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
       onTap: () => context.pushPost(p),
       bannerIcon: badge == null ? null : rrlIconFor(badge.icon, Icons.label_outline),
       bannerText: badge?.text,
+    );
+  }
+}
+
+/// 探している間の見出し (D-338): 語と、読み込んだ分で合った件数。続きを読み込んで探す / 探すのをやめる。
+class TimelineSearchBanner extends StatelessWidget {
+  const TimelineSearchBanner({super.key, required this.query, required this.count, required this.hasMore, required this.onMore, required this.onClear, this.loadingMore = false});
+  final String query;
+  final int count;
+  final bool hasMore;
+  final bool loadingMore;
+  final Future<void> Function() onMore;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const ValueKey('tl.search.banner'),
+      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 2, RasqSpacing.xs, 2),
+      decoration: BoxDecoration(color: scheme.surfaceContainer, border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
+      child: Row(children: [
+        Icon(Icons.search, size: 16, color: scheme.onSurfaceVariant),
+        const SizedBox(width: 6),
+        Expanded(child: Text('「$query」 $count 件(読み込んだ投稿から)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
+        if (hasMore) TextButton(key: const ValueKey('tl.search.more'), onPressed: loadingMore ? null : onMore, child: Text(loadingMore ? '読み込んでいます…' : '続きも探す')),
+        RasqIconButton(icon: Icons.close, size: 18, tooltip: '探すのをやめる', onPressed: onClear),
+      ]),
     );
   }
 }
