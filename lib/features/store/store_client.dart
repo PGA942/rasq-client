@@ -37,6 +37,10 @@ abstract class StoreClient {
   Future<InstallManifest?> manifest(String id, {String? version});
   Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version});
 
+  /// カスタムプラグインの共有セッションの参加者が、インストールせずに一時的に動かす本体 (D-357、S-048)。
+  /// `?session=<id>` を付けて構成と配布物を取る(有料でも、そのセッションに入れる人なら通る)。SHA-512 を確かめてから返す。
+  Future<Uint8List> sessionPackage(String pluginId, String sessionId, {String? version});
+
   /// レビュー一覧。並びは [sort](サーバー側ソート。モックは端末側で並べる)。
   Future<List<StoreReview>> reviews(String id, {ReviewSort sort = ReviewSort.helpful});
   Future<List<ReleaseNote>> releases(String id);
@@ -79,6 +83,7 @@ const storeSlotSamples = <({String id, String asset, String name, String summary
   (id: 'sample.post-action', asset: 'post_action_plugin.wasm', name: '投稿ボタン', summary: '後で読む / 本文をコピー / 引用の下書き — タグで既存ボタンのバンドルに入ります。', description: 'スロット `post.action`。マニフェストのタグ(希望スロット)が既存のアクションボタンに近ければ、そのバンドルの最下層に自動で入ります。「アクションリストの編集」でアカウントごとに有効 / 無効と閾値を変えられます。', features: ['投稿のアクションボタン (post.action)', 'FOW'], permissions: [('fow.widget', '後で読む一覧(FOW)を出すため'), ('storage.safe', '後で読むの保存')], sizeMb: 0.13),
   (id: 'sample.theme-starry', asset: 'theme_starry.rasqpkg', name: '着せ替え「星空」', summary: '夜空の背景、星の粒を重ねた投稿タイル、星のいいね。', description: '着せ替え(`kind: "theme"`、契約 v0.16)。コードを持たない配布物で、色 / アイコンの差し替え / 画面・投稿タイル・FOW・ボタンの背景の画像のレイヤーを宣言します。インストール後に 設定 → アプリの外観 → フォントやカラースキーム で選びます(暗いモードのときに効きます)。', features: ['着せ替え'], permissions: [], sizeMb: 0.09),
   (id: 'sample.theme-rasq', asset: 'theme_rasq.rasqpkg', name: '着せ替え「RASQ」', summary: '投稿の上に紺のグラデーションの帯と薄い RASQ のマーク、FOW は緑のグラデーション。', description: '着せ替え(`kind: "theme"`、契約 v0.17)。投稿タイルの上辺に #1F1E33 から投稿の背景色へ溶けるグラデーションの帯、背景に薄い RASQ のマーク、FOW の背景は上から下へ #02775C → #178178 のグラデーション(文字は白)。明るい / 暗いモードのどちらでも効きます。', features: ['着せ替え'], permissions: [], sizeMb: 0.02),
+  (id: 'sample.board', asset: 'custom_page_plugin.wasm', name: 'みんなのボード', summary: 'カウンター・投票・寄せ書き・🎉。AsTell のルームやプロフィールで、みんなで同じボードを使えます。', description: 'カスタムプラグイン(スロット `page`、契約 v0.18)。ページを 1 枚足し、共有セッションではサーバー変数(カウンター / 投票 / 寄せ書き)とサーバー関数(🎉 を全員に)で同じ画面を共有します。セッションが無いときは端末の中だけで動きます。', features: ['カスタムプラグイン (page)', 'AsTell', 'プロフィール'], permissions: [('render', 'ページを描くため'), ('shared.session', 'みんなの値(カウンター / 投票 / 寄せ書き)を共有するため'), ('storage.safe', '1 人で使うときのボードの保存')], sizeMb: 0.16),
   (id: 'sample.trend', asset: 'trend_plugin.wasm', name: 'トレンドサジェスト', summary: '今のトレンド語から関連タグをローカル規則で提案します。', description: 'スロット `trend.suggest`。検索ホームのトレンド節にサジェストのチップを足します。サーバー無しの共起辞書 + 前方一致です。', features: ['トレンド (trend.suggest)'], permissions: [], sizeMb: 0.1),
 ];
 
@@ -114,6 +119,8 @@ class BundledFallbackStoreClient implements StoreClient {
   Future<InstallManifest?> manifest(String id, {String? version}) => _or(id, (c) => c.manifest(id, version: version), (v) => v == null);
   @override
   Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version}) => _or(pluginId, (c) => c.downloadArtifact(pluginId, artifactId, version: version), (v) => false);
+  @override
+  Future<Uint8List> sessionPackage(String pluginId, String sessionId, {String? version}) => _or(pluginId, (c) => c.sessionPackage(pluginId, sessionId, version: version), (v) => false);
   @override
   Future<List<StoreReview>> reviews(String id, {ReviewSort sort = ReviewSort.helpful}) => _or(id, (c) => c.reviews(id, sort: sort), (v) => v.isEmpty);
   @override
@@ -306,6 +313,7 @@ class MockStoreClient implements StoreClient {
         final a when a.startsWith('post_') => StorePluginType.post,
         final a when a.startsWith('timeline') => StorePluginType.timeline,
         final a when a.startsWith('trend') => StorePluginType.trend,
+        final a when a.startsWith('custom_page') => StorePluginType.custom,
         _ => StorePluginType.other,
       };
 
@@ -455,6 +463,13 @@ class MockStoreClient implements StoreClient {
 
   @override
   Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version}) => _bytesOf(pluginId);
+
+  /// モック: セッション経由は購入を問わない(Central はセッションに入れるかを確かめる)。
+  @override
+  Future<Uint8List> sessionPackage(String pluginId, String sessionId, {String? version}) async {
+    if (await plugin(pluginId) == null) throw OrgateException(ErrorCode.http(404), '掲載がありません');
+    return downloadArtifact(pluginId, 'bundle', version: version);
+  }
 
   @override
   Future<List<StoreReview>> reviews(String id, {ReviewSort sort = ReviewSort.helpful}) async =>

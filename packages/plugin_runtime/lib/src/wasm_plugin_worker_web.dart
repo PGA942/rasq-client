@@ -121,7 +121,7 @@ const _workerSource = r'''
 "use strict";
 let inst = null, storage = {}, cfg = {fowPermissions: [], appFns: [], knownAppFns: [], permissions: [], fetchHosts: [], instanceAllowed: false, instanceHost: null};
 const enc = new TextEncoder(), dec = new TextDecoder();
-const TOKEN_FNS = ["composer.media.replace","composer.media.preview","composer.text.replace","viewer.overlay.set","composer.open","composer.media.overlay"];
+const TOKEN_FNS = ["composer.media.replace","composer.media.preview","composer.text.replace","viewer.overlay.set","composer.open","composer.media.overlay","page.render","shared.set","shared.op","shared.call"];
 const send = (m) => self.postMessage(JSON.stringify(m));
 
 function bytesAt(ptr, len) { return new Uint8Array(inst.exports.memory.buffer, ptr >>> 0, len >>> 0); }

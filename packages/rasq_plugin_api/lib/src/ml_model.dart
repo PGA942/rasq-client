@@ -30,8 +30,14 @@ abstract final class RasqHostFns {
   static const composerOpen = 'composer.open';
   static const composerMediaOverlay = 'composer.media.overlay';
 
+  // ページ型(カスタムプラグイン、契約 v0.18 §2.13、D-357)。`token` 必須、fire-and-forget。
+  static const pageRender = 'page.render';
+  static const sharedSet = 'shared.set';
+  static const sharedOp = 'shared.op';
+  static const sharedCall = 'shared.call';
+
   /// アプリ側へ中継するホスト関数(権限はスロット登録時に決まる)。
-  static const appFns = {toast, soundPlay, clipboardSet, urlOpen, muteAdd, astellShare, composerMediaReplace, composerMediaPreview, composerTextReplace, viewerOverlaySet, composerOpen, composerMediaOverlay};
+  static const appFns = {toast, soundPlay, clipboardSet, urlOpen, muteAdd, astellShare, composerMediaReplace, composerMediaPreview, composerTextReplace, viewerOverlaySet, composerOpen, composerMediaOverlay, pageRender, sharedSet, sharedOp, sharedCall};
 }
 
 /// Where an `ml.infer` call actually ran (returned to the plugin).

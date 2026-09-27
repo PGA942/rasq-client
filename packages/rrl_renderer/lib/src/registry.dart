@@ -146,6 +146,19 @@ abstract final class RrlComponentRegistry {
     },
     'Timestamp': (ctx) => RasqTimestamp(rrlTime(ctx.props['time'])),
     'Button': (ctx) => FilledButton(onPressed: ctx.tapHandler('tap'), child: Text(rrlString(ctx.props['label']))),
+    // 入力欄(ページ型のカスタムプラグイン、rasq-client D-357)。`change {text}`(打つたび)/ `submit {text}`(送信)。
+    // 値は手元が持ち、`p.value` が変わったときだけ書き戻す(打っている途中の再描画で消えない)。
+    'Input': (ctx) => _RrlInput(
+          key: ValueKey('rrl.input.${ctx.node.k ?? ''}'),
+          hint: ctx.props['hint'] == null ? null : rrlString(ctx.props['hint']),
+          value: ctx.props['value'] == null ? '' : rrlString(ctx.props['value']),
+          multiline: rrlTruthy(ctx.props['multiline']),
+          maxLength: (ctx.props['maxLength'] as num?)?.toInt(),
+          submitLabel: ctx.props['submitLabel'] == null ? null : rrlString(ctx.props['submitLabel']),
+          clearOnSubmit: ctx.props['clearOnSubmit'] != false,
+          onChanged: ctx.node.on.containsKey('change') ? (t) => ctx.emit('change', {'text': t}) : null,
+          onSubmit: ctx.node.on.containsKey('submit') ? (t) => ctx.emit('submit', {'text': t}) : null,
+        ),
     'ActionButton': (ctx) => RasqActionButton.iconCount(
           icon: rrlIconFor(rrlString(ctx.props['icon'])),
           doneIcon: ctx.props['doneIcon'] == null ? null : rrlIconFor(rrlString(ctx.props['doneIcon'])),
@@ -309,6 +322,63 @@ abstract final class RrlComponentRegistry {
 /// スライダーの楽観更新 (D-171): プラグイン / 設定 DSL の `SliderListTile` は props 駆動
 /// なので、`change` を出しても相手が `value` を書き戻すまでつまみと数値が動かなかった。
 /// ローカルに「いま触っている値」を持ち、props の `value` が変わったらそちらに合わせる。
+class _RrlInput extends StatefulWidget {
+  const _RrlInput({super.key, this.hint, required this.value, this.multiline = false, this.maxLength, this.submitLabel, this.clearOnSubmit = true, this.onChanged, this.onSubmit});
+  final String? hint;
+  final String value;
+  final bool multiline;
+  final int? maxLength;
+  final String? submitLabel;
+  final bool clearOnSubmit;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmit;
+  @override
+  State<_RrlInput> createState() => _RrlInputState();
+}
+
+class _RrlInputState extends State<_RrlInput> {
+  late final _controller = TextEditingController(text: widget.value);
+
+  @override
+  void didUpdateWidget(_RrlInput old) {
+    super.didUpdateWidget(old);
+    if (old.value != widget.value && widget.value != _controller.text) _controller.text = widget.value;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final text = _controller.text;
+    if (text.trim().isEmpty || widget.onSubmit == null) return;
+    widget.onSubmit!(text);
+    if (widget.clearOnSubmit) _controller.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) => TextField(
+        controller: _controller,
+        minLines: 1,
+        maxLines: widget.multiline ? 5 : 1,
+        maxLength: widget.maxLength,
+        textInputAction: widget.multiline ? TextInputAction.newline : TextInputAction.send,
+        decoration: InputDecoration(
+          hintText: widget.hint,
+          isDense: true,
+          suffixIcon: widget.onSubmit == null
+              ? null
+              : (widget.submitLabel == null
+                  ? IconButton(icon: const Icon(Icons.send), tooltip: '送信', onPressed: _submit)
+                  : TextButton(onPressed: _submit, child: Text(widget.submitLabel!))),
+        ),
+        onChanged: widget.onChanged,
+        onSubmitted: widget.multiline ? null : (_) => _submit(),
+      );
+}
+
 class _OptimisticSlider extends StatefulWidget {
   const _OptimisticSlider({super.key, required this.title, this.subtitle, required this.value, required this.min, required this.max, this.divisions, this.unit, this.onChanged});
   final String title;

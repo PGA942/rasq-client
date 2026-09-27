@@ -117,6 +117,7 @@ enum StorePluginType {
   trend('trend', 'トレンド', 0),
   theme('theme', '着せ替え', 52),
   assets('assets', 'ステッカー / 素材', 95),
+  custom('custom', 'カスタム', 300),
   other('other', 'その他', -1);
 
   const StorePluginType(this.wire, this.label, this.hue);

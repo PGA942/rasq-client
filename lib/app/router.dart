@@ -36,6 +36,8 @@ import '../features/settings/notify_token_screen.dart';
 import '../features/settings/mute_block_screen.dart';
 import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
+import '../features/custom/custom_page.dart';
+import '../features/custom/custom_plugins_screen.dart';
 import '../features/profile/profile_edit_screen.dart';
 import '../features/profile/rasq_account_page_screen.dart';
 import '../features/profile/rasq_post_screen.dart';
@@ -162,6 +164,12 @@ abstract final class Routes {
   static const storeUpdateSettings = '/store/manage/updates';
   static const storeUpdateLog = '/store/manage/updates/log';
   static String storePluginVersions(String id) => '/store/manage/versions/${Uri.encodeComponent(id)}';
+
+  /// カスタムプラグイン (D-357): 一覧(インストール済みのページ型 + 招待コードで参加)/ ページ / 招待コード。
+  static const customPlugins = '/custom';
+  static String customPage(String pluginId, [Map<String, String> query = const {}]) =>
+      Uri(path: '/custom/page/${Uri.encodeComponent(pluginId)}', queryParameters: query.isEmpty ? null : query).toString();
+  static String customInvite(String code) => '/custom/invite/${Uri.encodeComponent(code)}';
 
   /// プラグインの検索画面 (D-353)。
   static String storeSearch([String q = '']) => q.isEmpty ? '/store/search' : '/store/search?q=${Uri.encodeQueryComponent(q)}';
@@ -395,6 +403,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: Routes.storeUpdateSettings, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const PluginUpdateSettingsScreen()),
           GoRoute(path: Routes.storeUpdateLog, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const PluginUpdateLogScreen()),
           GoRoute(path: '/store/manage/versions/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => PluginVersionsScreen(pluginId: s.pathParameters['id']!)),
+          GoRoute(path: Routes.customPlugins, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const CustomPluginsScreen()),
+          GoRoute(
+              path: '/custom/page/:id',
+              parentNavigatorKey: _appNavigatorKey,
+              builder: (_, s) => CustomPageScreen(key: ValueKey(s.uri.toString()), args: CustomPageArgs.fromState(Uri.decodeComponent(s.pathParameters['id']!), s.uri.queryParameters))),
+          GoRoute(path: '/custom/invite/:code', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => CustomInviteScreen(code: Uri.decodeComponent(s.pathParameters['code']!))),
           GoRoute(path: '/store/search', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => StoreSearchScreen(initialQuery: s.uri.queryParameters['q'] ?? '')),
           GoRoute(
               path: '/store/installed/:id',

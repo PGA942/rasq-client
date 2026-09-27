@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' show sha512;
+
 import '../../backend/orgate_client.dart';
 import 'store_client.dart';
 import 'store_models.dart';
@@ -55,6 +57,19 @@ class HttpStoreClient implements StoreClient {
   Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version}) =>
       // 版指定は API.md「?version= で版を選べる(既定は現在版)」。
       _client.getBytes('/plugins/${Uri.encodeComponent(pluginId)}/artifacts/${Uri.encodeComponent(artifactId)}', {'version': ?version});
+
+  @override
+  Future<Uint8List> sessionPackage(String pluginId, String sessionId, {String? version}) async {
+    final id = Uri.encodeComponent(pluginId);
+    final m = InstallManifest.fromJson(await _client.getJson('/plugins/$id/manifest', {'version': ?version, 'session': sessionId}));
+    final bundle = m.bundle;
+    if (bundle == null) throw StateError('配布物がありません');
+    final bytes = await _client.getBytes('/plugins/$id/artifacts/${Uri.encodeComponent(bundle.id)}', {'version': m.version, 'session': sessionId});
+    if (bundle.sha512.isNotEmpty && bundle.sha512 != '-' && sha512.convert(bytes).toString() != bundle.sha512) {
+      throw StateError('配布物が構成と違います(SHA-512 が一致しません)');
+    }
+    return bytes;
+  }
 
   @override
   Future<List<StoreReview>> reviews(String id, {ReviewSort sort = ReviewSort.helpful}) async {

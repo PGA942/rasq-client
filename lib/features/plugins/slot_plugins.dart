@@ -42,7 +42,7 @@ import 'sideload_trust.dart';
 /// `plugin.manifest` の答え。
 @immutable
 class SlotManifest {
-  const SlotManifest({required this.id, required this.name, this.version = '0.0.0', this.kind = 'action', this.description = '', this.slots = const [], this.permissions = const [], this.actions = const [], this.network});
+  const SlotManifest({required this.id, required this.name, this.version = '0.0.0', this.kind = 'action', this.description = '', this.slots = const [], this.permissions = const [], this.actions = const [], this.network, this.page});
   final String id;
   final String name;
   final String version;
@@ -58,6 +58,9 @@ class SlotManifest {
   /// スロットプラグインにはセッションが無いので `instance` は効かず、`hosts` だけ。
   final PluginNetwork? network;
 
+  /// ページ型(カスタムプラグイン、契約 v0.18 §2.13、D-357)の宣言。スロット `page` を持つときだけ。
+  final PluginPageDecl? page;
+
   /// ランタイムに渡す接続先の宣言。
   Set<String> get fetchHosts => (network ?? PluginNetwork.none).hosts.toSet();
 
@@ -70,6 +73,9 @@ class SlotManifest {
         slots: [for (final s in (j['slots'] as List? ?? const [])) if (s is String) s],
         permissions: [for (final s in (j['permissions'] as List? ?? const [])) if (s is String) s],
         network: j['network'] is Map ? PluginNetwork.fromJson((j['network'] as Map).cast<String, Object?>()) : null,
+        page: (j['slots'] as List? ?? const []).contains(SlotIds.page)
+            ? PluginPageDecl.fromJson((j['page'] as Map?)?.cast<String, Object?>() ?? const {}, fallbackTitle: j['name'] as String? ?? j['id'] as String? ?? '')
+            : null,
         actions: [
           for (final a in (j['actions'] as List? ?? const []))
             if (a is Map && a['id'] is String)
@@ -105,6 +111,9 @@ class SlotManifest {
         // 投稿共有 (§2.8) / 投稿のアクションボタン (§2.9): コンポーザーを開く + 参加中の AsTell へ。
         if (slots.contains(SlotIds.postShare) || slots.contains(SlotIds.postAction)) RasqHostFns.composerOpen,
         if (slots.contains(SlotIds.postShare) || slots.contains(SlotIds.postAction)) RasqHostFns.astellShare,
+        // ページ型 (§2.13): ページの描き替え。共有セッションは `shared.session` 権限の shared だけ。
+        if (slots.contains(SlotIds.page)) RasqHostFns.pageRender,
+        if (page?.isShared == true && permissions.contains(RasqPermissions.sharedSession)) ...{RasqHostFns.sharedSet, RasqHostFns.sharedOp, RasqHostFns.sharedCall},
       };
 
   Set<String> get fowPermissions => {
@@ -187,6 +196,51 @@ abstract final class SlotIds {
   static const trendSuggest = 'trend.suggest';
   static const postShare = 'post.share';
   static const postAction = 'post.action';
+  static const page = 'page';
+}
+
+/// ページ型の開いているページ 1 つ(ホスト側、D-357)。`page.render` と `shared.*` の受け口。
+abstract class PluginPageSink {
+  void render(RrlNode root, String? title);
+  bool get hasSession;
+  void shared(String fn, Map<String, Object?> args);
+}
+
+/// ページ型の宣言(マニフェストの `page`、契約 v0.18 §2.13、D-357)。
+@immutable
+class PluginPageDecl {
+  const PluginPageDecl({required this.title, this.icon, this.mode = PluginPageDecl.solo, this.surfaces = const [PluginPageDecl.surfacePage], this.maxParticipants = 50});
+  final String title;
+  final String? icon;
+
+  /// `solo`(1 人で完結)/ `shared`(複数人。サーバー変数 / 関数)。
+  final String mode;
+
+  /// 開ける場所: `page`(単独のページ)/ `astell`(ルームにデプロイ、shared のみ)/ `profile`(RASQ アカウントのページ)。
+  final List<String> surfaces;
+  final int maxParticipants;
+
+  static const solo = 'solo';
+  static const shared = 'shared';
+  static const surfacePage = 'page';
+  static const surfaceAstell = 'astell';
+  static const surfaceProfile = 'profile';
+
+  bool get isShared => mode == shared;
+  bool allows(String surface) => surfaces.contains(surface) && (surface != surfaceAstell || isShared);
+
+  factory PluginPageDecl.fromJson(Map<String, Object?> j, {String fallbackTitle = ''}) {
+    final surfaces = [for (final s in (j['surfaces'] as List? ?? const [])) if (s is String && const {surfacePage, surfaceAstell, surfaceProfile}.contains(s)) s];
+    return PluginPageDecl(
+      title: j['title'] as String? ?? fallbackTitle,
+      icon: j['icon'] as String?,
+      mode: j['mode'] == shared ? shared : solo,
+      surfaces: surfaces.isEmpty ? const [surfacePage] : surfaces,
+      maxParticipants: ((j['maxParticipants'] as num?)?.toInt() ?? 50).clamp(1, 200),
+    );
+  }
+
+  Map<String, Object?> toJson() => {'title': title, 'icon': ?icon, 'mode': mode, 'surfaces': surfaces, 'maxParticipants': maxParticipants};
 }
 
 /// 実行中のプラグイン 1 つ(ワーカー isolate 上の wasm、テストでは偽物)。
@@ -475,7 +529,10 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   ///
   /// 中身が `.rasqpkg`(zstd)なら展開・検証して、その中の 1 つを登録する: `source` の `#<pluginId>` が指す子、
   /// 無ければ root。登録するのは sns 以外(SNS プラグイン本体の差し替えはここではしない)。
-  Future<SlotPlugin?> register(String source, {Uint8List? bytes, bool persist = true}) async {
+  ///
+  /// [temporary] = 一時的に動かすだけ(カスタムプラグインの共有セッションの参加者、D-357): 登録簿(state)に入れず、保存もしない。
+  /// 使い終わったら [disposeTemporary]。
+  Future<SlotPlugin?> register(String source, {Uint8List? bytes, bool persist = true, bool temporary = false}) async {
     try {
       final (:container, :pluginId) = splitPackageSource(source);
       // `asset:` はアプリ同梱のアセット(次回起動の読み直しは bytes 無しで来る)。
@@ -532,6 +589,10 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       // 通信の形(同意した端末だけ、初めて見たものだけ)。版はプラグインの自己申告。
       final telemetry = ref.read(fetchShapeTelemetryProvider);
       runtime.fetchShapes.listen((s) => telemetry.report(manifest.id, manifest.version, s));
+      if (temporary) {
+        _temporary.add(plugin);
+        return plugin;
+      }
       // 同じ id は差し替え。ただしストアの**別の版**(D-355: `store:<id>@<版>`)は並べて持つ(アカウントごとに使う版を選ぶ)。
       final version = plugin.storeVersion;
       bool replaces(SlotPlugin p) => p.id == manifest.id && (version == null || p.storeVersion == null || p.storeVersion == version);
@@ -548,6 +609,13 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       if (!_disposed) ref.read(slotPluginsNoticeProvider.notifier).set('登録できませんでした: $e');
       return null;
     }
+  }
+
+  /// 一時的に動かしているプラグイン(登録簿の外、D-357)。
+  final _temporary = <SlotPlugin>{};
+
+  void disposeTemporary(SlotPlugin plugin) {
+    if (_temporary.remove(plugin)) plugin.runtime.dispose();
   }
 
   bool _reevaluating = false;
@@ -747,6 +815,17 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         final cb = _overlaySet['${args['token']}'];
         final root = args['root'];
         if (cb != null && root is Map) cb(RrlNode.fromJson(root.cast<String, Object?>()));
+      case RasqHostFns.pageRender:
+        final root = args['root'];
+        if (root is Map) _pages['${args['token']}']?.render(RrlNode.fromJson(root.cast<String, Object?>()), args['title'] as String?);
+      case RasqHostFns.sharedSet || RasqHostFns.sharedOp || RasqHostFns.sharedCall:
+        final page = _pages['${args['token']}'];
+        if (page == null) return;
+        if (!page.hasSession) {
+          _toast('${plugin.manifest.name}: 共有セッションに入っていないため、みんなの値は変えられません');
+          return;
+        }
+        page.shared(fn, args);
       case RasqHostFns.composerOpen:
         final cb = _composerOpen['${args['token']}'];
         if (cb == null) return;
@@ -1036,6 +1115,38 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   }
 
   void textDone(String token) => _textReplace.remove(token);
+
+  // ── ページ型(カスタムプラグイン、契約 v0.18 §2.13、D-357)──
+
+  final _pages = <String, PluginPageSink>{};
+
+  /// ページを開く: `page.open` を呼び、最初の RRL を返す。以後の `page.render` / `shared.*` は [sink] へ。
+  Future<({RrlNode? root, String? title, String? error})> pageOpen(SlotPlugin plugin, {required String token, required Map<String, Object?> args, required PluginPageSink sink}) async {
+    _pages[token] = sink;
+    try {
+      final r = await plugin.call('page.open', {'token': token, ...args});
+      if (r['ok'] != true) {
+        final e = r['error'];
+        return (root: null, title: null, error: e is Map ? '${e['code'] ?? ''} ${e['message'] ?? ''}'.trim() : 'プラグインがエラーを返しました');
+      }
+      final v = (r['value'] as Map?)?.cast<String, Object?>() ?? const {};
+      final root = v['root'];
+      return (root: root is Map ? RrlNode.fromJson(root.cast<String, Object?>()) : null, title: v['title'] as String?, error: null);
+    } catch (e) {
+      return (root: null, title: null, error: '$e');
+    }
+  }
+
+  /// `page.event`(値の変化 / 誰かの呼び出し / 参加 / 退出 / 閉じた)。
+  void pageEvent(SlotPlugin plugin, String token, Map<String, Object?> event) {
+    if (!_pages.containsKey(token)) return;
+    plugin.value('page.event', {'token': token, ...event});
+  }
+
+  void pageClose(SlotPlugin plugin, String token, {String reason = 'closed'}) {
+    if (_pages.remove(token) == null) return;
+    plugin.value('page.close', {'token': token, 'reason': reason});
+  }
 
   /// メディア全画面 (CONTRACT §2.4)。戻りは重ねる RRL(無ければ null)と、失敗の説明(成功なら null)。
   /// 契約では壊れた入力(`D01`)は「黙って重ねない」だが、ユーザーには理由を見せる (D-246: トグルに出す)。

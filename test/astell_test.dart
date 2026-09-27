@@ -729,6 +729,9 @@ void main() {
     await tester.scrollUntilVisible(find.text('@a4'), 80, scrollable: find.ancestor(of: find.text('@tivard'), matching: find.byType(Scrollable)).first);
     await tester.pumpAndSettle();
     final guestRow = find.ancestor(of: find.text('@a4'), matching: find.byType(Row)).last;
+    // 下にカスタムプラグインの節 (D-357) があるので、ボタンまで見える位置へ。
+    await tester.ensureVisible(find.descendant(of: guestRow, matching: find.byTooltip('メンバーの操作')));
+    await tester.pumpAndSettle();
     await tester.tap(find.descendant(of: guestRow, matching: find.byTooltip('メンバーの操作')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('キック'));
