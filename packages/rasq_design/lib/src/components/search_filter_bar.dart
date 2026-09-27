@@ -93,6 +93,7 @@ class RasqExpandableSearchBox extends StatelessWidget {
     this.genreChips = const [],
     this.onReset,
     this.trailing,
+    this.barTrailing,
   });
 
   final bool expanded;
@@ -117,6 +118,9 @@ class RasqExpandableSearchBox extends StatelessWidget {
 
   /// フィルタ行末尾の固定ウィジェット(⚙ など)。
   final Widget? trailing;
+
+  /// 入力欄の右端(既定は左の ∨ と釣り合う空き)。TL の検索の「i / N」と ↑↓ など (D-341)。
+  final Widget? barTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +158,7 @@ class RasqExpandableSearchBox extends StatelessWidget {
                 readOnly: readOnly,
                 onSubmitted: onSubmitted,
                 onTap: onTap,
-                textAlign: TextAlign.center,
+                textAlign: barTrailing == null ? TextAlign.center : TextAlign.start,
                 style: Theme.of(context).textTheme.bodySmall,
                 decoration: InputDecoration(
                   hintText: hintText,
@@ -165,7 +169,7 @@ class RasqExpandableSearchBox extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: RasqSizes.minTap),
+            barTrailing ?? const SizedBox(width: RasqSizes.minTap),
           ]),
         ),
         AnimatedSize(

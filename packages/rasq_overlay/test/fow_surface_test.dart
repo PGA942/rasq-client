@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 /// D-065: FOW の付け先(ヘッダー下付き / アンカー / 壁付き)と
-/// FOW スイッチャー(ハンドルクリック)。
+/// FOW スイッチャー(ハンドルをその場で長押し、D-340)。
 Widget host(OverlayManager m, {List<FowColumnSlot> Function(BuildContext)? columns, double Function(BuildContext)? topInset, double Function(BuildContext)? topClearance}) => MaterialApp(
       home: OverlayScope(
         manager: m,
@@ -14,7 +14,7 @@ Widget host(OverlayManager m, {List<FowColumnSlot> Function(BuildContext)? colum
 Finder fowPanel() => find.byWidgetPredicate((w) => w is Material && w.elevation == 8);
 
 void main() {
-  testWidgets('FOW スイッチャー: ハンドルクリック → リスト → 親選択で子が自動クローズ + 前面化', (tester) async {
+  testWidgets('FOW スイッチャー: ハンドル長押し → リスト → 親選択で子が自動クローズ + 前面化', (tester) async {
     final m = OverlayManager();
     m.showFow<void>(id: 'parent', spec: FowSpec(title: '親パネル', cancelText: '閉じる'), builder: (context, handle) => const SizedBox());
     m.showFow<void>(id: 'child', ownerId: 'parent', spec: FowSpec(title: '子ピッカー', cancelText: '閉じる'), builder: (context, handle) => const SizedBox());
@@ -25,8 +25,11 @@ void main() {
     expect(find.text('親パネル'), findsOneWidget);
     expect(find.text('子ピッカー'), findsOneWidget);
 
-    // ハンドルのクリック → ブラックアウト + リスト表示(パネルは Offstage)。
+    // タップではもう開かない (D-340)。その場で長押し → ブラックアウト + リスト表示(パネルは Offstage)。
     await tester.tap(find.bySemanticsLabel('サイズ変更ハンドル').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(m.fowSwitcherOpen, isFalse);
+    await tester.longPress(find.bySemanticsLabel('サイズ変更ハンドル').last, warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(m.fowSwitcherOpen, isTrue);
     expect(find.bySemanticsLabel('FOW切り替え'), findsOneWidget);
@@ -39,6 +42,46 @@ void main() {
     expect(m.fowSwitcherOpen, isFalse);
     expect(m.contains('child'), isFalse);
     expect(m.entries.last.id, 'parent');
+  });
+
+  testWidgets('D-340: stick FOW はハンドル / 空いたところのタップで展開モードへ(ボタンのタップは奪わない)', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final m = OverlayManager();
+    final spec = FowSpec(stickCollapse: true, initialHeightFactor: 0.15, minHeightFactor: 0.1, heightStops: const [0.15, 0.6]);
+    var pressed = 0;
+    m.showFow<void>(
+      id: 's',
+      spec: spec,
+      builder: (context, handle) => Align(alignment: Alignment.topLeft, child: TextButton(onPressed: () => pressed++, child: const Text('ボタン'))),
+    );
+    await tester.pumpWidget(host(m));
+    await tester.pumpAndSettle();
+    expect(spec.isStick, isTrue);
+
+    // ボタンのタップはボタンが取る(展開しない)。
+    await tester.tap(find.text('ボタン'));
+    await tester.pumpAndSettle();
+    expect(pressed, 1);
+    expect(spec.isStick, isTrue);
+
+    // 空いたところのタップ → 展開(最上段)。
+    await tester.tapAt(tester.getBottomRight(fowPanel()) - const Offset(20, 20));
+    await tester.pumpAndSettle();
+    expect(spec.heightFactor.value, closeTo(0.6, 0.001));
+    expect(spec.isStick, isFalse);
+
+    // 畳んで、ハンドルのタップでも展開。
+    spec.heightFactor.value = 0.15;
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('サイズ変更ハンドル').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(spec.heightFactor.value, closeTo(0.6, 0.001));
+
+    // 展開中のタップでは何もしない。stick にならない FOW は段が 2 つあっても対象外。
+    final plain = FowSpec(heightStops: const [0.2, 0.5], initialHeightFactor: 0.2);
+    expect(plain.isStick, isFalse);
   });
 
   testWidgets('付け先の切り替え: FOW 内ヘッダーを縦へ 1 割動かすとヘッダー下付き ⇄ 下側ドック', (tester) async {

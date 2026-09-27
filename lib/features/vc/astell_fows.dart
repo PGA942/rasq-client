@@ -398,6 +398,8 @@ Future<void> openAstellRoomFow(BuildContext context, WidgetRef ref) async {
     dockAboveFooter: true,
     heightStops: const [astellRoomCollapsedFactor, astellRoomExpandedFactor],
     freeAboveStops: true,
+    // ハンドル / 空いたところのタップで展開 (D-340)。
+    stickCollapse: true,
   );
   // 外側タップ → stick(閉じない)。stick 中はバリアを外して背面を触れるように。
   final barrierEnabled = ValueNotifier<bool>(true);

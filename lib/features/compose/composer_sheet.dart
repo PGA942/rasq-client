@@ -400,6 +400,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     super.initState();
     _drafts = ref.read(composeDraftsProvider.notifier);
     _focus.addListener(_onFocusChanged);
+    // ハンドル / 空いたところのタップで展開 (D-340): 常駐 stick はフォーカスで展開する(ヘッダーと返信先が割り込む)。
+    if (widget.spec case final spec?) {
+      spec.stickState = () => _collapsible && !_stickExpanded;
+      spec.onExpandStick = _focus.requestFocus;
+    }
     final t = widget.target;
     // ↓ で別アカウントのコピーから開いた返信/引用 (D-155): 対象の投稿が属する
     // アカウントを投稿先にする(現在と違い、ログイン中なら)。

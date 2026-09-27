@@ -528,7 +528,7 @@ class _FowPanel extends StatefulWidget {
   final VoidCallback onCancel;
   final VoidCallback onConfirm;
 
-  /// ドラッグハンドルの**クリック** = FOW スイッチャー (D-065)。
+  /// ドラッグハンドルの**その場での長押し** = FOW スイッチャー (D-065 → D-340)。
   final VoidCallback onShowSwitcher;
 
   /// 最前面(操作対象)のパネルか。FOW の枠はグレーの線で描き、**影の有無で
@@ -572,12 +572,17 @@ class _FowPanelState extends State<_FowPanel> {
             : spec.dockAboveFooter
                 ? BorderRadius.circular(16)
                 : const BorderRadius.vertical(top: Radius.circular(16));
-    // ハンドル: クリック = FOW スイッチャー (D-065)、縦ドラッグ = リサイズ
-    // (D-062 で横移動はヘッダー/フッターの FowMoveGrip に役割分担)。
+    // ハンドル: その場で長押し = FOW スイッチャー、タップ = stick なら展開モードへ (D-340。以前はタップでスイッチャー、D-065)、
+    // 縦ドラッグ = リサイズ(D-062 で横移動はヘッダー/フッターの FowMoveGrip に役割分担)。
     // 上側基準の配置ではハンドルは下端の外縁 → リサイズの向きも反転する。
     final handle = GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: widget.onShowSwitcher,
+      onLongPress: widget.onShowSwitcher,
+      onTap: spec.canStick
+          ? () {
+              if (spec.isStick) spec.expandStick();
+            }
+          : null,
       onVerticalDragStart: spec.resizable ? (_) => setState(() => _dragging = true) : null,
       onVerticalDragUpdate: spec.resizable ? (d) => spec.resizeBy((topSide ? -d.delta.dy : d.delta.dy) / hostHeight) : null,
       onVerticalDragEnd: spec.resizable
@@ -638,7 +643,10 @@ class _FowPanelState extends State<_FowPanel> {
       // ジェスチャーを取る部品の上では負け(内側の認識器が勝つ)、それ以外の
       // 余白や文字の上では横 = カラム間移動、縦 = ヘッダー/フッターの
       // 付け先切り替え。クローム(ヘッダー行)が無い FOW でも移動できる。
-      Expanded(child: spec.bodyMove ? FowMoveGrip(spec: spec, child: child) : child),
+      // stick の空いたところ(ボタンや入力欄の無いところ)のタップで展開モードへ (D-340)。内側の部品が取るタップはそちらが勝つ。
+      Expanded(
+        child: _StickExpandTap(spec: spec, child: spec.bodyMove ? FowMoveGrip(spec: spec, child: child) : child),
+      ),
       if (spec.showHandle && topSide) handle,
     ]);
     final panel = RepaintBoundary(
@@ -670,6 +678,25 @@ class _FowPanelState extends State<_FowPanel> {
         child: child,
       ),
       child: panel,
+    );
+  }
+}
+
+/// stick FOW の本体の空いたところをタップすると展開モードへ (D-340)。stick にならない FOW では何もしない(認識器を置かない)。
+class _StickExpandTap extends StatelessWidget {
+  const _StickExpandTap({required this.spec, required this.child});
+  final FowSpec spec;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!spec.canStick) return child;
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        if (spec.isStick) spec.expandStick();
+      },
+      child: child,
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rasq_models/rasq_models.dart';
 
 import '../../app/providers.dart';
 
@@ -59,40 +58,12 @@ class TlTemporaryConfigs extends Notifier<Map<String, TlConfig>> {
 
   void set(String scope, TlConfig cfg) => state = {...state, scope: cfg};
   void clear(String scope) => state = {...state}..remove(scope);
+
+  /// 一時変更 FOW のキャンセル (D-341): 展開したときの状態へ巻き戻す。
+  void restore(Map<String, TlConfig> snapshot) => state = snapshot;
 }
 
 final tlTemporaryConfigsProvider = NotifierProvider<TlTemporaryConfigs, Map<String, TlConfig>>(TlTemporaryConfigs.new);
-
-/// タイムライン本体から探す (D-338): TL の id(`home` / `node:…` / `list:…`)→ 探す語。読み込んだ投稿を本文・注意書き・
-/// 名前・ハンドル・引用の本文で絞る(保存しない。一時変更 FOW を閉じると消える)。
-class TimelineSearch extends Notifier<Map<String, String>> {
-  @override
-  Map<String, String> build() => const {};
-
-  void set(String timelineId, String query) {
-    final q = query.trim();
-    state = q.isEmpty ? ({...state}..remove(timelineId)) : {...state, timelineId: q};
-  }
-
-  void clearAll() => state = const {};
-}
-
-final timelineSearchProvider = NotifierProvider<TimelineSearch, Map<String, String>>(TimelineSearch.new);
-
-/// [query] に合う投稿か(大文字小文字を区別しない。空白区切りは全部を含むもの)。
-bool timelinePostMatches(Post p, String query) {
-  final words = query.toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
-  final hay = [
-    p.body,
-    p.contentWarning ?? '',
-    p.author.displayName,
-    p.author.handle,
-    p.repostedBy?.displayName ?? '',
-    p.quote?.body ?? '',
-    p.quote?.author.displayName ?? '',
-  ].join('\n').toLowerCase();
-  return words.every(hay.contains);
-}
 
 /// タイムラインのタブの並び (D-339): 「タイムラインをカスタマイズ」のタブ行で並べ替えたスコープ(`tl.home` など)の順。
 /// ホームのタブもこの順に並ぶ(並びに無いタブは元の位置のまま)。`nodeprog.prefs` の `tabOrder`(アカウント共通)。

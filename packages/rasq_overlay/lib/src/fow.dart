@@ -63,6 +63,7 @@ class FowSpec {
     this.aboveSidebar = false,
     this.dimBehind = false,
     this.spanColumnsBelow,
+    this.stickCollapse = false,
   })  : heightStops = [...heightStops]..sort(),
         heightFactor = ValueNotifier(initialHeightFactor.clamp(minHeightFactor, maxHeightFactor));
 
@@ -214,6 +215,30 @@ class FowSpec {
   /// ポップアップ」を出すための口(PROTOCOL `fow.open` の `onCancel` —
   /// プラグインは確認 FOW を開き、自分で `fow.close` する)。
   VoidCallback? interceptCancel;
+
+  // ---- stick の展開 (D-340) ----------------------------------------------
+
+  /// 最小段で stick に変形する FOW(AsTell のルーム FOW、TL の一時変更 FOW)。[confirmMode] が stick なら既定で stick 扱い。
+  final bool stickCollapse;
+
+  /// 本体が自分の状態で stick かどうかを答える口(常駐コンポーザーはフォーカスで展開する)。null = 最小段にいれば stick。
+  bool Function()? stickState;
+
+  /// stick → 展開モード(ハンドル / 空いたところのタップ)。null = 最上段へ。
+  VoidCallback? onExpandStick;
+
+  bool get canStick => stickCollapse || confirmMode == FowConfirmMode.stick;
+
+  /// いま stick(畳まれている)か。
+  bool get isStick => canStick && (stickState?.call() ?? (heightStops.length >= 2 && heightFactor.value <= heightStops.first + 0.01));
+
+  /// stick を展開モードへ(ハンドル / 空いたところのタップ、D-340)。
+  void expandStick() {
+    if (onExpandStick case final f?) return f();
+    if (heightStops.isEmpty) return;
+    userResized = false;
+    heightFactor.value = heightStops.last.clamp(minHeightFactor, maxHeightFactor);
+  }
 
   bool get hasHeader => title != null || cancelText != null || confirmText != null || headerLeading != null || headerTrailing != null;
 
