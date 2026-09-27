@@ -20,6 +20,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../ads/export_ad.dart';
 import '../compose/post_image_fow.dart';
 import '../compose/post_video.dart';
 import '../home/action_bar_config.dart';
@@ -190,6 +191,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   /// 音声 → 動画の変換の進み具合(0..1、変換中だけ)。
   double? _audioProgress;
+
+  /// 「完了」で動画を書き出している間の進み具合(0..1、書き出し中だけ。書き出し中の表示と広告の枠 D-327)。
+  final ValueNotifier<double?> _renderProgress = ValueNotifier(null);
 
   /// 音声 (D-251): 元の音声(一時ファイル)/ 標本 / Visualizer の設定。設定を変えたら動画を書き出し直す。
   File? _audioFile;
@@ -458,7 +462,19 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         outputFormat: pve.VideoOutputFormat.mp4,
         bitrate: m.bitrate,
       );
-      var bytes = await pve.ProVideoEditor.instance.renderVideo(data);
+      _renderProgress.value = 0;
+      StreamSubscription<pve.ProgressModel>? progress;
+      Uint8List bytes;
+      try {
+        try {
+          progress = data.progressStream.listen((e) => _renderProgress.value = e.progress.clamp(0.0, 1.0), onError: (Object _) {});
+        } catch (_) {
+          progress = null; // 進み具合が取れない端末でも書き出しは続ける
+        }
+        bytes = await pve.ProVideoEditor.instance.renderVideo(data);
+      } finally {
+        await progress?.cancel();
+      }
       if (!mounted) return;
       // 動くオブジェクト (D-262): 書き出した動画の上へ、置いた位置でもう一度重ねる(静止画は 1 回目で焼き込み済み)。
       final moving = [for (final l in p.layers) if (l is WidgetLayer && _motionPosts.containsKey(l.meta?['rasqPostVideo'])) l];
@@ -477,6 +493,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       // 失敗を黙って閉じない(変更が入らないまま戻ってしまう): 伝えて、加工画面に留まる。
       _renderFailed = true;
       _notify('動画を書き出せませんでした: $e');
+    } finally {
+      _renderProgress.value = null;
     }
   }
 
@@ -1190,10 +1208,10 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
           child: Stack(children: [
             Center(
               child: err == null
-                  ? Column(mainAxisSize: MainAxisSize.min, children: [
-                      CircularProgressIndicator(value: _audioProgress),
-                      if (_audioProgress != null) Padding(padding: const EdgeInsets.only(top: 16), child: Text('音声を動画に変換しています… ${(_audioProgress! * 100).round()}%', key: proMediaEditorAudioNoteKey, style: const TextStyle(color: Colors.white70))),
-                    ])
+                  // 変換の進み具合と、その間だけの広告の枠 (D-327)。
+                  ? (_audioProgress == null
+                      ? const CircularProgressIndicator()
+                      : SingleChildScrollView(child: MediaExportProgress(progress: _audioProgress, label: '音声を動画に変換しています…', onDark: true, labelKey: proMediaEditorAudioNoteKey)))
                   : Padding(padding: const EdgeInsets.all(24), child: Text(err, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center))),
             Positioned(left: 8, top: 8, child: RasqIconButton(icon: Icons.close, color: Colors.white, tooltip: 'キャンセル', onPressed: () => _finish(null))),
           ]),

@@ -11,6 +11,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../ads/export_ad.dart';
 import '../home/post_row.dart';
 import '../search/search_history.dart';
 import '../vc/astell_post_share.dart';
@@ -489,10 +490,11 @@ class _BodyState extends ConsumerState<_Body> {
       // 動く / 鳴る投稿を選んだとき (D-260): 動画にするか、その瞬間の静止画にするか。
       if (widget.allowVideo && widget.confirmVideo == null && _selected != null && postMotionOf(_selected!) != PostMotion.none)
         RasqSwitchListTile(key: const ValueKey('postImage.asVideo'), title: postMotionLabel(postMotionOf(_selected!)), subtitle: 'オフ = その瞬間の静止画', value: _asVideo, enabled: !_capturing, onChanged: (v) => setState(() => _asVideo = v)),
+      // 書き出しの進み具合と、その間だけの広告の枠 (D-327)。
       if (_videoProgress != null)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-          child: Row(children: [Expanded(child: LinearProgressIndicator(value: _videoProgress)), const SizedBox(width: RasqSpacing.sm), Text('動画にしています… ${(_videoProgress! * 100).round()}%', style: RasqTypography.caption)]),
+          child: MediaExportProgress(progress: _videoProgress, label: '動画にしています…'),
         ),
       if (_notice != null) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs), child: Text(_notice!, style: RasqTypography.caption.copyWith(color: scheme.error))),
       ]))),
