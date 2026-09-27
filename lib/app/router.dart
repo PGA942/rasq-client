@@ -61,6 +61,8 @@ import '../features/store/installed_plugins_screen.dart';
 import '../features/store/plugin_page_screen.dart';
 import '../features/store/review_timeline_screen.dart';
 import '../features/store/store_home_screen.dart';
+import '../features/store/store_manage_screen.dart';
+import '../features/store/store_search_screen.dart';
 import '../features/rai/rai_achievements_screen.dart';
 import '../features/rai/rai_home_screen.dart';
 import '../features/trend/trend_screen.dart';
@@ -150,6 +152,12 @@ abstract final class Routes {
 
   /// インストール済み (D-256): 一覧と 1 件のページ(ストアの掲載とは別。掲載が消えていても開ける)。
   static const storeInstalled = '/store/installed';
+
+  /// プラグインを管理 (D-353): ストアホームの歯車から。
+  static const storeManage = '/store/manage';
+
+  /// プラグインの検索画面 (D-353)。
+  static String storeSearch([String q = '']) => q.isEmpty ? '/store/search' : '/store/search?q=${Uri.encodeQueryComponent(q)}';
   static String storeInstalledPlugin(String id) => '/store/installed/${Uri.encodeComponent(id)}';
 
   /// チャイルドセーフ (D-307): 入口 / 保護者 / 子の設定 / コードでつなぐ / コードでログイン / 設定待ちの鍵。
@@ -376,6 +384,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           // プラグインストア (M4 / D-120)。
           GoRoute(path: Routes.store, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const StoreHomeScreen()),
           GoRoute(path: Routes.storeInstalled, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const InstalledPluginsScreen()),
+          GoRoute(path: Routes.storeManage, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const StoreManageScreen()),
+          GoRoute(path: '/store/search', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => StoreSearchScreen(initialQuery: s.uri.queryParameters['q'] ?? '')),
           GoRoute(
               path: '/store/installed/:id',
               parentNavigatorKey: _appNavigatorKey,

@@ -55,6 +55,8 @@ class StorePluginCard {
     this.hasAds = false,
     this.price = 0,
     this.iconUrl,
+    this.developerName = '',
+    this.previews = const [],
   });
 
   /// store.yaml の PluginCard を復元する。省略されたキーは既定値のまま
@@ -72,6 +74,8 @@ class StorePluginCard {
         hasAds: j['hasAds'] == true,
         price: _num(j['price']),
         iconUrl: _uri(j['iconUrl']),
+        developerName: j['developerName'] as String? ?? (((j['developer'] as Map?)?['name'] as String?) ?? ''),
+        previews: [for (final u in _strings(j['previews'])) ?_uri(u)],
       );
 
   final String id;
@@ -86,6 +90,30 @@ class StorePluginCard {
   final bool hasAds;
   final double price;
   final Uri? iconUrl;
+
+  /// 開発者の表示名(ストアホームのタイル、D-353。古いサーバーは空)。
+  final String developerName;
+
+  /// タイルの自動スライドのプレビュー画像(詳細の screenshots の先頭 4 枚、D-353)。
+  final List<Uri> previews;
+
+  /// タイルに出すプレビュー(詳細なら、カードに無くてもスクリーンショットから)。
+  List<Uri> get tilePreviews => previews;
+}
+
+/// 検索の絞り込み(store.yaml `/plugins` の `filter`、D-353 の検索画面のチップ)。
+enum StoreFilter {
+  free('free', '無料'),
+  noAds('no_ads', '広告なし'),
+  official('official', '公式'),
+  verified('verified', '認証済み'),
+  recent('recent', '30 日以内'),
+  lightweight('lightweight', '軽量(5MB 未満)'),
+  offline('offline', 'オフライン');
+
+  const StoreFilter(this.wire, this.label);
+  final String wire;
+  final String label;
 }
 
 /// JSON の数値は int でも double でも来る(サーバーの avg は double、
@@ -251,12 +279,13 @@ class StorePluginDetail extends StorePluginCard {
     super.hasAds,
     super.price,
     super.iconUrl,
+    super.developerName,
+    super.previews,
     this.description = '',
     this.channel = 'stable',
     this.updatedAt,
     this.safety = const SafetyBlock(),
     this.compatibility = const Compatibility(),
-    this.developerName = '',
     this.supportUrl,
     this.screenshots = const [],
     this.bannerUrl,
@@ -283,6 +312,7 @@ class StorePluginDetail extends StorePluginCard {
       hasAds: card.hasAds,
       price: card.price,
       iconUrl: card.iconUrl,
+      previews: card.previews,
       description: j['description'] as String? ?? '',
       channel: j['channel'] as String? ?? 'stable',
       updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? ''),
@@ -303,9 +333,11 @@ class StorePluginDetail extends StorePluginCard {
   final DateTime? updatedAt;
   final SafetyBlock safety;
   final Compatibility compatibility;
-  final String developerName;
   final Uri? supportUrl;
   final List<Uri> screenshots;
+
+  @override
+  List<Uri> get tilePreviews => previews.isNotEmpty ? previews : screenshots.take(4).toList();
 
   /// ストアページ上部のバナー画像(ワイヤーフレーム「全体像」)。無ければ
   /// アイコン色のプレースホルダー。
