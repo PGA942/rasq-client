@@ -147,6 +147,7 @@ class MockStoreClient implements StoreClient {
       ),
       compatibility: Compatibility(rasqVersion: '>=0.1.0', os: ['ios', 'android', 'macos', 'windows', 'linux']),
       developerName: 'RASQ Project',
+      pluginType: StorePluginType.sns,
       downloadsLastMonth: 1900,
       downloadHistory: [1500, 1620, 1780, 2340, 2410, 2760, 3600],
       ratingHistogram: [1, 2, 4, 9, 22],
@@ -174,6 +175,7 @@ class MockStoreClient implements StoreClient {
       ),
       compatibility: Compatibility(rasqVersion: '>=0.1.0', os: ['macos', 'windows', 'linux'], requiredRuntimes: ['onnx'], requiresPlugins: [storeSamplePluginId]),
       developerName: 'Example ML Labs',
+      pluginType: StorePluginType.timeline,
       downloadsLastMonth: 420,
       downloadHistory: [2400, 2500, 2610, 2700, 2820, 2990, 3120],
       ratingHistogram: [0, 1, 3, 6, 5],
@@ -200,6 +202,7 @@ class MockStoreClient implements StoreClient {
       ),
       compatibility: Compatibility(rasqVersion: '>=0.1.0', os: ['ios', 'android', 'macos', 'windows', 'linux']),
       developerName: 'dict-tools',
+      pluginType: StorePluginType.timeline,
       downloadsLastMonth: 130,
       downloadHistory: [600, 640, 690, 720, 760, 810, 880],
       ratingHistogram: [1, 1, 3, 2, 2],
@@ -223,6 +226,7 @@ class MockStoreClient implements StoreClient {
         backgroundExecution: true,
       ),
       developerName: 'adless',
+      pluginType: StorePluginType.post,
       downloadsLastMonth: 2300,
       downloadHistory: [9000, 10200, 11500, 12100, 13300, 14800, 15400],
       ratingHistogram: [12, 8, 6, 5, 4],
@@ -251,6 +255,7 @@ class MockStoreClient implements StoreClient {
         ),
         compatibility: const Compatibility(rasqVersion: '>=0.1.0', os: ['ios', 'android', 'macos', 'windows', 'linux']),
         developerName: 'RASQ Project',
+        pluginType: _sampleType(x.asset),
         downloadsLastMonth: 60 + i * 11,
         downloadHistory: const [10, 20, 35, 50, 70, 95, 120],
         ratingHistogram: const [0, 0, 1, 3, 6],
@@ -258,6 +263,18 @@ class MockStoreClient implements StoreClient {
   ];
 
   static List<StorePluginDetail> get _all => [..._cards, ..._sampleCards];
+
+  /// 同梱サンプルの種別 (D-354): 配布物の名前から(マニフェストのスロットに合わせたもの)。
+  static StorePluginType _sampleType(String asset) => switch (asset) {
+        final a when a.startsWith('theme_') => StorePluginType.theme,
+        final a when a.startsWith('astell') => StorePluginType.astell,
+        final a when a.startsWith('composer') || a.startsWith('media_transform') || a.startsWith('media_process') || a.startsWith('media_draw') => StorePluginType.composer,
+        final a when a.startsWith('media_fullscreen') => StorePluginType.viewer,
+        final a when a.startsWith('post_') => StorePluginType.post,
+        final a when a.startsWith('timeline') => StorePluginType.timeline,
+        final a when a.startsWith('trend') => StorePluginType.trend,
+        _ => StorePluginType.other,
+      };
 
   /// ブックマークはサーバー側の状態なので、モックでは端末内に持つ。
   final _bookmarked = <String>{};

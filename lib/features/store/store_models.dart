@@ -57,6 +57,7 @@ class StorePluginCard {
     this.iconUrl,
     this.developerName = '',
     this.previews = const [],
+    this.pluginType = StorePluginType.other,
   });
 
   /// store.yaml の PluginCard を復元する。省略されたキーは既定値のまま
@@ -76,6 +77,7 @@ class StorePluginCard {
         iconUrl: _uri(j['iconUrl']),
         developerName: j['developerName'] as String? ?? (((j['developer'] as Map?)?['name'] as String?) ?? ''),
         previews: [for (final u in _strings(j['previews'])) ?_uri(u)],
+        pluginType: StorePluginType.fromWire(j['pluginType']),
       );
 
   final String id;
@@ -97,8 +99,34 @@ class StorePluginCard {
   /// タイルの自動スライドのプレビュー画像(詳細の screenshots の先頭 4 枚、D-353)。
   final List<Uri> previews;
 
+  /// 種別(タイルの色と見出し、D-354)。古いサーバーは other。
+  final StorePluginType pluginType;
+
   /// タイルに出すプレビュー(詳細なら、カードに無くてもスクリーンショットから)。
   List<Uri> get tilePreviews => previews;
+}
+
+/// プラグインの種別 (D-354、store.yaml `PluginCard.pluginType`)。ストアのタイルの色(色相)と見出し。
+enum StorePluginType {
+  sns('sns', 'SNS', 212),
+  composer('composer', '投稿作成', 150),
+  post('post', '投稿', 32),
+  viewer('viewer', '全画面表示', 275),
+  timeline('timeline', 'タイムライン', 188),
+  astell('astell', 'AsTell', 330),
+  trend('trend', 'トレンド', 0),
+  theme('theme', '着せ替え', 52),
+  assets('assets', 'ステッカー / 素材', 95),
+  other('other', 'その他', -1);
+
+  const StorePluginType(this.wire, this.label, this.hue);
+  final String wire;
+  final String label;
+
+  /// 色相(-1 = 無彩色)。
+  final double hue;
+
+  static StorePluginType fromWire(Object? w) => values.where((t) => t.wire == w).firstOrNull ?? other;
 }
 
 /// 検索の絞り込み(store.yaml `/plugins` の `filter`、D-353 の検索画面のチップ)。
@@ -281,6 +309,7 @@ class StorePluginDetail extends StorePluginCard {
     super.iconUrl,
     super.developerName,
     super.previews,
+    super.pluginType,
     this.description = '',
     this.channel = 'stable',
     this.updatedAt,
@@ -313,6 +342,7 @@ class StorePluginDetail extends StorePluginCard {
       price: card.price,
       iconUrl: card.iconUrl,
       previews: card.previews,
+      pluginType: card.pluginType,
       description: j['description'] as String? ?? '',
       channel: j['channel'] as String? ?? 'stable',
       updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? ''),
