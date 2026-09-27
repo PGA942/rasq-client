@@ -276,7 +276,7 @@ class RaiController extends Notifier<RaiState> {
 
   /// 自動化が TL カスタマイズ(ホームのグラフ)を書いたか (D-234)。
   static String? raiGraphScopeOf(List<RaiAutoStep> trace) {
-    const writers = {'timeline.addFeed', 'timeline.filterWord', 'timeline.excludeWord'};
+    const writers = {'timeline.addFeed', 'timeline.addRasqList', 'timeline.filterWord', 'timeline.excludeWord'};
     return trace.any((s) => s.status == RaiAutoStatus.done && writers.contains(s.binding?.call)) ? 'tl.home' : null;
   }
 

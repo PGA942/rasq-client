@@ -6,6 +6,9 @@ import 'node_graph.dart';
 /// 取得の kind id: RASQ の投稿 (D-283)。`resolveNodeFetch` が Central のフィードに解決する。
 const rasqPostsKind = 'rasq:posts';
 
+/// 取得の kind id の接頭辞: RASQ リスト (D-346)。`rasqlist:<id>`。Central のリストのタイムライン(S-044)に解決する。
+const rasqListKindPrefix = 'rasqlist:';
+
 /// TL カスタマイズの簡略化 (D-121, 原典: ワイヤーフレーム「タイムラインの
 /// カスタマイズ」+ ユーザー検討案)。自由形のノードキャンバスは TL スコープ
 /// では**一旦無効化**し、TL は 2 種類のコンポーネントの積みで組む:
@@ -42,8 +45,12 @@ class TlSourceComponent {
   bool get isRasq => tl == rasqPostsKind;
   bool get isDm => tl.startsWith('dm:');
 
-  /// カスタムフィード (D-194): `feed:<at-uri>`(Bluesky。第二期以降は RASQ リストも)。
+  /// カスタムフィード (D-194): `feed:<at-uri>`(Bluesky)。
   bool get isFeed => tl.startsWith('feed:');
+
+  /// RASQ リスト (D-346): `rasqlist:<id>`。SNS のアカウントは関係しない(Central が取る)。
+  bool get isRasqList => tl.startsWith(rasqListKindPrefix);
+  String get rasqListId => isRasqList ? tl.substring(rasqListKindPrefix.length) : '';
   String get listName => isList ? tl.substring(5) : '';
   String get dmPeer => isDm ? tl.substring(3) : '';
   String get feedUri => isFeed ? tl.substring(5) : '';
@@ -190,7 +197,7 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
   }
   final base = scope.startsWith('tl.') ? scope.substring(3) : 'home';
   // リスト TL / カスタムフィード (D-195) はそのリスト / フィードの取得から。
-  if (base.startsWith('list:') || base.startsWith('feed:')) {
+  if (base.startsWith('list:') || base.startsWith('feed:') || base.startsWith(rasqListKindPrefix)) {
     return TlConfig(sources: [TlSourceComponent(tl: base)], algorithms: const [TlAlgorithmComponent(type: 'chrono')]);
   }
   // 基本 TL の id は SNS の宣言どおり(home / social / local / global / featured …、D-194)。
@@ -235,6 +242,9 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
       nodes.add(inst('tl.list', 's$i', at, values: {'リスト': s.listName, 'アカウント': s.account}));
     } else if (s.isFeed) {
       nodes.add(inst('tl.feed', 's$i', at, values: {'フィード': s.feedUri, 'アカウント': s.account}));
+    } else if (s.isRasqList) {
+      // RASQ リスト (D-346): アカウントは付けない(RASQ の投稿と同じく、SNS のセッションを探しに行かない)。
+      nodes.add(inst('tl.rasqlist', 's$i', at, values: {'リスト': s.rasqListId}));
     } else {
       nodes.add(inst('tl.source', 's$i', at, values: {'TL': s.tl, 'アカウント': s.account}));
     }

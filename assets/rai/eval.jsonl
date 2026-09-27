@@ -360,3 +360,10 @@
 {"q": "鳥のカスタムフィードからトレンドの指向性を設定できる?", "op": "feed-tendency"}
 {"q": "フィードの内容をトレンドの好きなジャンルに反映したい", "op": "feed-tendency"}
 {"q": "作品のフィードで指向性を育てる", "op": "feed-tendency"}
+{"q": "RASQリストをタイムラインに入れたい", "op": "tl-rasqlist"}
+{"q": "MisskeyとBlueskyの人をまとめたリストをTLに流したい", "op": "tl-rasqlist"}
+{"q": "SNSをまたいだリストをホームに足す", "op": "tl-rasqlist"}
+{"q": "RASQ リストを TL カスタマイズで選びたい", "op": "tl-rasqlist"}
+{"q": "公開されているRASQリストを探して取り込みたい", "op": "rasqlist-import"}
+{"q": "共有リンクのRASQリストをインポートしたい", "op": "rasqlist-import"}
+{"q": "人のRASQリストをホームに取り込む", "op": "rasqlist-import"}

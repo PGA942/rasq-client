@@ -72,7 +72,7 @@ void main() {
     expect(find.text('検索語か URL を入れてください'), findsOneWidget);
     await tester.enterText(find.byKey(const ValueKey('lists.import.search')), 'cat');
     await tester.pumpAndSettle();
-    expect(find.text('検索結果'), findsOneWidget);
+    expect(find.text('フィードの検索結果'), findsOneWidget);
     expect(find.text('Cats'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('lists.feed.at://did:plc:x/app.bsky.feed.generator/cats')));
     await tester.pumpAndSettle();

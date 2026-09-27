@@ -53,6 +53,10 @@ const raiAutoBindings = <String, RaiAutoBinding>{
   'feeds.save': RaiAutoBinding(call: 'feed.save', args: {'feed': r'$フィード'}),
   'timeline.addFeed': RaiAutoBinding(call: 'timeline.addFeed', args: {'feed': r'$フィード'}, destination: true),
   'timeline.importFeed': RaiAutoBinding(call: 'timeline.addFeed', args: {'feed': r'$フィード'}, destination: true),
+  // RASQ リスト (D-348): 探す → 取り込む(ホームの TL だけ。指向性には入れない)。
+  'rasqLists.search': RaiAutoBinding(call: 'rasqLists.search', args: {'keyword': r'$RASQ リスト'}, fetch: true, produces: 'RASQ リスト'),
+  'timeline.addRasqList': RaiAutoBinding(call: 'timeline.addRasqList', args: {'list': r'$RASQ リスト'}),
+  'timeline.importRasqList': RaiAutoBinding(call: 'timeline.addRasqList', args: {'list': r'$RASQ リスト'}),
   'timeline.excludeWord': RaiAutoBinding(call: 'timeline.excludeWord', args: {'word': r'$ワード'}),
   'timeline.queryFilter': RaiAutoBinding(call: 'timeline.filterWord', args: {'word': r'$ワード', 'mode': 'include'}),
   'trend.seed': RaiAutoBinding(call: 'tendency.seed', args: {'source': r'$フィード'}),

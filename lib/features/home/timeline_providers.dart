@@ -1,7 +1,8 @@
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
-import '../nodeprog/tl_components.dart' show compileTlConfig, rasqPostsKind;
+import '../../backend/rasq_collections_api.dart';
+import '../nodeprog/tl_components.dart' show compileTlConfig, rasqListKindPrefix, rasqPostsKind;
 import '../nodeprog/tl_config_store.dart' show tlTemporaryConfigsProvider;
 import 'account_affinity.dart';
 import 'dart:async';
@@ -101,7 +102,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       c = _nodeCursors[kid];
       if (c == null) return const []; // 読了
     }
-    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next, rasqFeed: (until) => fetchRasqFeed(ref, until), rasqMine: () => fetchRasqMine(ref), listHidden: ref.read(childGateProvider).collectionHidden);
+    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next, rasqFeed: (until) => fetchRasqFeed(ref, until), rasqList: (id, until) => fetchRasqList(ref, id, until), rasqMine: () => fetchRasqMine(ref), listHidden: ref.read(childGateProvider).collectionHidden);
   }
 
   /// カスタム関数の中身グラフ (D-118)。
@@ -653,12 +654,21 @@ const childSafeWindowKind = TimelineKind('childsafe.window', '見守りの時間
 /// [onCursor] (D-117) には取得ページの続きトークンを報告する(枝ごとの
 /// ページング用。null = 末尾まで読了)。
 Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
-    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor, Future<(List<Post>, String?)> Function(String? until)? rasqFeed, Future<List<Post>> Function()? rasqMine, bool Function(String meta, List<String> bodies)? listHidden}) async {
+    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor, Future<(List<Post>, String?)> Function(String? until)? rasqFeed, Future<(List<Post>, String?)> Function(String id, String? until)? rasqList, Future<List<Post>> Function()? rasqMine, bool Function(String meta, List<String> bodies)? listHidden}) async {
   // RASQ の投稿 (D-283): SNS のセッションではなく、Central のフィード(自分とフォロー中の RASQ アカウント)。
   // `acct:` で包まれていても拾う(包んだまま流すと、現在の SNS のセッションで取りに行ってしまう)。
   if ((kid.startsWith('acct:') ? kid.substring(kid.indexOf('|') + 1) : kid) == rasqPostsKind) {
     if (rasqFeed == null) return const [];
     final (posts, next) = await rasqFeed(cursor);
+    onCursor?.call(next);
+    return posts;
+  }
+  // RASQ リスト (D-346): Central のリストのタイムライン(S-044)。アカウント指定は見ない。
+  final bare = kid.startsWith('acct:') ? kid.substring(kid.indexOf('|') + 1) : kid;
+  if (bare.startsWith(rasqListKindPrefix)) {
+    final id = bare.substring(rasqListKindPrefix.length).trim();
+    if (rasqList == null || id.isEmpty) return const [];
+    final (posts, next) = await rasqList(id, cursor);
     onCursor?.call(next);
     return posts;
   }
@@ -676,7 +686,7 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
         return rasqMine();
       }
       final other = sessionFor?.call(kid.substring(5, sep));
-      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor, onCursor: onCursor, rasqFeed: rasqFeed, rasqMine: rasqMine, listHidden: listHidden);
+      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor, onCursor: onCursor, rasqFeed: rasqFeed, rasqList: rasqList, rasqMine: rasqMine, listHidden: listHidden);
     }
   }
   // `self` (D-124): この画面の基礎タイムライン(検索結果/リスト/欄の投稿)を
@@ -739,6 +749,39 @@ Future<(List<Post>, String?)> fetchRasqFeed(Ref ref, String? until) async {
     return ([for (final p in page.posts) p.toPost(central: central)], page.nextUntil);
   } catch (e) {
     debugPrint('rasq feed: $e');
+    return (const <Post>[], null);
+  }
+}
+
+final _rasqListRef = RegExp(r'^([0-9a-fA-F-]{36}|[1-9A-HJ-NP-Za-km-z]{16,22})$');
+
+/// RASQ リストのタイムライン (D-346、Central S-044)。取れない(ログインしていない / リスト内の人の情報を取れない = 403)なら空。
+/// 投稿は、見ている人が同じ種類・同じサーバーのアカウントを持っていれば、そのアカウントの投稿として(リアクションなどができる)。
+Future<(List<Post>, String?)> fetchRasqList(Ref ref, String id, String? until) async {
+  final api = ref.read(rasqCollectionsApiProvider);
+  if (api == null || ref.read(orgateAccountProvider).value == null) return (const <Post>[], null);
+  try {
+    // ノードの「リスト」は名前でも入る(ノードエディターの選択肢)。id / 共有コードでなければ、自分のリスト + フォロー中から名前で引く。
+    if (!_rasqListRef.hasMatch(id)) {
+      final mine = await api.mine(RasqCollectionKind.list);
+      final following = await api.following();
+      final hit = [...mine, ...following].where((c) => c.kind == RasqCollectionKind.list && c.name == id).firstOrNull;
+      if (hit != null) id = hit.id; // 名前で見つからなければ、そのまま id として引く
+
+    }
+    final page = await api.timeline(id, until: until);
+    final sessions = ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+    final posts = <Post>[];
+    for (final p in page.posts) {
+      final member = page.memberOf(p.memberKey);
+      final kind = member?.kind ?? p.memberKey.split(':').first;
+      final instance = member?.instance ?? (p.memberKey.split(':').length > 1 ? p.memberKey.split(':')[1] : '');
+      final mine = sessions.where((s) => s.account.kind.name == kind && s.account.instance == instance).firstOrNull;
+      posts.add(p.toPost(member, viewer: mine?.account));
+    }
+    return (posts, page.next);
+  } catch (e) {
+    debugPrint('rasq list $id: $e');
     return (const <Post>[], null);
   }
 }

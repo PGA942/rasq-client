@@ -50,6 +50,10 @@ class RasqCollection {
     this.refreshedAt,
     this.updatedAt,
     this.url,
+    this.canFetch,
+    this.canFetchChecked = true,
+    this.following = false,
+    this.isOwner = false,
   });
 
   final String id;
@@ -70,6 +74,35 @@ class RasqCollection {
   /// 共有 URL(`…/@handle/lists/<code>`)。投稿に貼るとタイルになる。
   final String? url;
 
+  /// 見ている人が、リスト内の人の情報を取れるか (S-044)。null = 分からない(未ログイン / 古いサーバー)。
+  /// タイムラインの取り込み元に選べるのは true のときだけ (D-346)。
+  final bool? canFetch;
+
+  /// 一覧では「入っている人をフォローしている」をネットワークで確かめない (S-044)。false = まだ確かめていない(詳細を開くと分かる)。
+  final bool canFetchChecked;
+  final bool following;
+  final bool isOwner;
+
+  /// 詳細で分かった、見ている人との関係を載せる。
+  RasqCollection withViewer({required bool canFetch, required bool following, required bool isOwner}) => RasqCollection(
+        id: id,
+        code: code,
+        kind: kind,
+        name: name,
+        description: description,
+        isPublic: isPublic,
+        owner: owner,
+        itemCount: itemCount,
+        followerCount: followerCount,
+        instances: instances,
+        refreshedAt: refreshedAt,
+        updatedAt: updatedAt,
+        url: url,
+        canFetch: canFetch,
+        following: following,
+        isOwner: isOwner,
+      );
+
   factory RasqCollection.fromJson(Map<String, Object?> j) => RasqCollection(
         id: '${j['id']}',
         code: j['code'] as String?,
@@ -84,6 +117,10 @@ class RasqCollection {
         refreshedAt: DateTime.tryParse('${j['refreshedAt']}'),
         updatedAt: DateTime.tryParse('${j['updatedAt']}'),
         url: _httpUri(j['url'])?.toString(),
+        canFetch: (j['viewer'] as Map?)?['canFetch'] as bool?,
+        canFetchChecked: (j['viewer'] as Map?)?['canFetchChecked'] != false,
+        following: (j['viewer'] as Map?)?['following'] == true,
+        isOwner: (j['viewer'] as Map?)?['isOwner'] == true,
       );
 }
 
@@ -172,7 +209,7 @@ class RasqCollectionPost {
 /// 詳細(`GET /rasq-collections/{idOrCode}`)。
 @immutable
 class RasqCollectionDetail {
-  const RasqCollectionDetail({required this.collection, this.items = const [], this.posts = const [], this.isOwner = false, this.following = false, this.eligible = false, this.refresh});
+  const RasqCollectionDetail({required this.collection, this.items = const [], this.posts = const [], this.isOwner = false, this.following = false, this.eligible = false, this.canFetch = false, this.refresh});
   final RasqCollection collection;
   final List<RasqCollectionItem> items;
   final List<RasqCollectionPost> posts;
@@ -182,10 +219,16 @@ class RasqCollectionDetail {
   /// 見たときに取り直せる人か(作った人 / 条件に合うフォロワー)。
   final bool eligible;
 
+  /// リスト内の人の情報を取れるか (S-044)。タイムラインに取り込めるのは true のときだけ。
+  final bool canFetch;
+
   /// `done` / `fresh` / `not_eligible` / `failed`。
   final String? refresh;
 
   RasqCollectionItem? memberOf(String key) => items.where((i) => i.key == key).firstOrNull;
+
+  /// 概要 + 見ている人との関係。
+  RasqCollection get summary => collection.withViewer(canFetch: canFetch, following: following, isOwner: isOwner);
 
   factory RasqCollectionDetail.fromJson(Map<String, Object?> j) {
     final viewer = (j['viewer'] as Map? ?? const {}).cast<String, Object?>();
@@ -196,6 +239,7 @@ class RasqCollectionDetail {
       isOwner: viewer['isOwner'] == true,
       following: viewer['following'] == true,
       eligible: viewer['eligible'] == true,
+      canFetch: viewer['canFetch'] == true || viewer['isOwner'] == true,
       refresh: j['refresh'] as String?,
     );
   }
@@ -239,6 +283,16 @@ class RasqCollectionsApi {
   Future<RasqCollectionDetail> get(String idOrCode, {bool refresh = true}) async =>
       RasqCollectionDetail.fromJson(await client.getJson('/rasq-collections/${Uri.encodeComponent(idOrCode)}', {'refresh': refresh ? null : 'false'}));
 
+  /// 公開コレクションを探す (S-044)。`q` は名前 / 説明 / `@handle` / 共有 URL・コード。空 = 人気。
+  Future<List<RasqCollection>> search(String q, {RasqCollectionKind kind = RasqCollectionKind.list, int limit = 20}) async => [
+        for (final e in await client.getList('/rasq-collections/search', {'q': q.trim(), 'kind': kind.wire, 'limit': '$limit'}))
+          RasqCollection.fromJson((e as Map).cast<String, Object?>()),
+      ];
+
+  /// タイムライン用の投稿の列 (S-044)。`until` = 前のページの `next`。
+  Future<RasqListTimelinePage> timeline(String idOrCode, {String? until, int limit = 40}) async =>
+      RasqListTimelinePage.fromJson(await client.getJson('/rasq-collections/${Uri.encodeComponent(idOrCode)}/timeline', {'until': until, 'limit': '$limit'}));
+
   Future<RasqCollectionDetail> refresh(String idOrCode) async => RasqCollectionDetail.fromJson(await client.postJson('/rasq-collections/${Uri.encodeComponent(idOrCode)}/refresh', const {}));
 
   Future<void> follow(String id, {required bool on}) async {
@@ -248,6 +302,23 @@ class RasqCollectionsApi {
       await client.delete('/rasq-collections/$id/follow');
     }
   }
+}
+
+/// リストのタイムラインの 1 ページ (S-044)。
+@immutable
+class RasqListTimelinePage {
+  const RasqListTimelinePage({this.posts = const [], this.members = const [], this.next});
+  final List<RasqCollectionPost> posts;
+  final List<RasqCollectionItem> members;
+  final String? next;
+
+  RasqCollectionItem? memberOf(String key) => members.where((i) => i.key == key).firstOrNull;
+
+  factory RasqListTimelinePage.fromJson(Map<String, Object?> j) => RasqListTimelinePage(
+        posts: [for (final p in j['posts'] as List? ?? const []) if (p is Map && p['post'] is Map) RasqCollectionPost.fromJson(p.cast<String, Object?>())],
+        members: [for (final i in j['members'] as List? ?? const []) if (i is Map) RasqCollectionItem.fromJson(i.cast<String, Object?>())],
+        next: j['next'] as String?,
+      );
 }
 
 final rasqCollectionsApiProvider = Provider<RasqCollectionsApi?>((ref) {

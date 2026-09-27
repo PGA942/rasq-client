@@ -9,6 +9,9 @@ import 'package:rrl_core/rrl_core.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../backend/rasq_account.dart' show orgateAccountProvider;
+import '../../backend/rasq_collections_api.dart';
+import '../collections/rasq_list_picker.dart' show importRasqListToHomeWith;
 import '../lists/lists_screens.dart' show listsProvider, savedFeedsProvider;
 import '../trend/genre_topics.dart';
 import '../trend/tendency_profile.dart';
@@ -197,11 +200,11 @@ Future<RaiFunctionResult> raiGuard(String name, Future<RaiFunctionResult> Functi
 const raiFunctionUsage = <String>[
   'posts.fetch(kind=home|search, keyword, sort=new|reactions, limit)・page.read(filter, tag): 投稿本文/いま開いている画面の表示データを取る',
   'reference.get(id=操作か関数の id): リファレンスの詳細を取る',
-  'post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる(投稿・返信・DM の送信は自動化不可 = ユーザーが押す)',
+  'post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる(送信は自動化不可 = ユーザーが押す)',
   'post.action(action=アクション id, post=投稿 id): 投稿にアクション(自動化が許可されたものだけ)',
   'astell.rooms(): AsTell のルーム一覧を取る',
   'astell.create(title=題名): AsTell のルームを作る',
-  'timeline.list(kind=home|social|local|global|featured|tag:語|list:id, limit)・post.get(id)・post.thread(post, limit): TL や投稿の本文を取る',
+  'timeline.list(kind=home|social|local|global|featured|tag:語|list:id, limit)・post.get(id)・post.thread(post, limit): TL/投稿の本文を取る',
   'post.reactions(post, limit)・post.reposters(post, limit)・post.quotes(post, limit): 投稿への反応を取る',
   'favorites.list(limit)・reacted.list(limit): お気に入り/リアクション済みの投稿を取る',
   'me.get()・user.get(id=|handle=@名前)・user.posts(user, filter=posts|replies|media|quotes, limit)・user.search(keyword, limit)・user.follows(user, direction=followers|following, limit)・user.relation(user): ユーザーの情報を取る',
@@ -209,15 +212,15 @@ const raiFunctionUsage = <String>[
   'notifications.list(kind=all|reaction|reply|follow|mention, limit)・notifications.read(): 通知を取る/既読にする',
   'trends.tags(limit): トレンドのタグを取る',
   'lists.list()・lists.members(list): リストとメンバーを取る',
-  'clips.list(user=)・clips.notes(clip, limit): クリップを取る(Misskey のみ)',
-  'feeds.list(keyword=)・feed.save(feed=uri|語, on): カスタムフィードを取る/保存する(Bluesky のみ、keyword 無しは保存済み)',
-  'timeline.addFeed(feed=uri|語)・timeline.filterWord(word, mode=include|exclude)・tendency.seed(source=feed:uri|語): ホーム TL にフィードを取り込む/ワードで通す・除外/取得元の特徴語を指向性に足す',
+  'clips.list(user=)・clips.notes(clip, limit): クリップを取る(Misskey)',
+  'feeds.list(keyword=)・feed.save(feed=uri|語, on)・rasqLists.search(keyword=): フィード(Bluesky、keyword 無し=保存済み)/RASQ リストを探す・フィードを保存',
+  'timeline.addFeed(feed=uri|語)・timeline.addRasqList(list=id|語)・timeline.filterWord(word, mode=include|exclude)・tendency.seed(source=feed:uri|語): ホーム TL へフィード/RASQ リストを取り込む・語で通す/除外・特徴語を指向性へ',
   'dm.rooms(): DM ルーム一覧を取る',
-  'emoji.find(keyword, limit): keyword を含むカスタム絵文字を探す',
+  'emoji.find(keyword, limit): カスタム絵文字を探す',
   'follow.set(user, on=true|false): フォローする/外す',
   'list.edit(list, user, add=true|false)・list.create(name): リストにユーザーを足す/外す・作る',
-  'clip.edit(clip, post, add=true|false)・clip.create(name): クリップに投稿を足す/外す・作る(Misskey のみ)',
-  'settings.get(area, key)・settings.set(area, key, value): 設定を読む/書く(設定ページのキーのみ。パスワード不要・操作禁止タグ無しだけ書ける)',
+  'clip.edit(clip, post, add=true|false)・clip.create(name): クリップに投稿を足す/外す・作る(Misskey)',
+  'settings.get(area, key)・settings.set(area, key, value): 設定を読む/書く(設定ページのキーのみ。書けるのはパスワード不要・操作禁止タグ無し)',
   'app.actions(): この SNS で自動化できる投稿アクション一覧を取る',
 ];
 
@@ -341,6 +344,10 @@ class RaiFunctionRunner {
           return await _webSearch(c);
         case 'timeline.addFeed':
           return await _timelineAddFeed(c);
+        case 'rasqLists.search':
+          return await _rasqListsSearch(c);
+        case 'timeline.addRasqList':
+          return await _timelineAddRasqList(c);
         case 'timeline.excludeWord':
         case 'timeline.filterWord':
           return await _timelineFilterWord(c);
@@ -947,6 +954,41 @@ class RaiFunctionRunner {
         if (!added) return RaiFunctionResult(name: c.name, text: '「${f.name}」はもうホームのタイムラインに入っています');
         ref.invalidate(timelineProvider(TimelineKind.home));
         return RaiFunctionResult(name: c.name, text: '「${f.name}」(${acc.account})をホームのタイムラインに取り込みました');
+      });
+
+  /// RASQ リストの候補 (D-348): keyword 無し = 自分のリスト + フォロー中、あれば公開リストの検索。
+  Future<List<RasqCollection>> _rasqListCandidates(String keyword) async {
+    final api = ref.read(rasqCollectionsApiProvider);
+    if (api == null || ref.read(orgateAccountProvider).value == null) throw StateError('RASQ アカウントにログインしていません');
+    if (keyword.isEmpty) {
+      final mine = await api.mine(RasqCollectionKind.list);
+      final following = [for (final c in await api.following()) if (c.kind == RasqCollectionKind.list && !mine.any((m) => m.id == c.id)) c];
+      return [...mine, ...following];
+    }
+    return api.search(keyword);
+  }
+
+  /// rasqLists.search(keyword=): RASQ リストを探す (D-348)。id を添える(timeline.addRasqList の list= に渡せるように)。
+  Future<RaiFunctionResult> _rasqListsSearch(RaiFunctionCall c) => raiGuard(c.name, () async {
+        final lists = await _rasqListCandidates(c.arg('keyword').trim());
+        String state(RasqCollection l) => l.isOwner ? '自分' : (l.canFetch == false && l.canFetchChecked ? '取り込めない' : (l.following ? 'フォロー中' : '@${l.owner.handle}'));
+        final lines = [for (final l in lists) '${l.name}(${l.itemCount}人・${state(l)})${l.description == null ? '' : ' — ${l.description}'} [${l.id}]'];
+        return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'RASQ リスト'), budget), fetched: true, items: [for (final l in lists) if (!(l.canFetch == false && l.canFetchChecked)) RaiFunctionItem(id: l.id, label: l.name)]);
+      });
+
+  /// timeline.addRasqList(list=id|語): RASQ リストをホームの TL に取り込む (D-348)。取り込めるのはリスト内の人の情報を取れるものだけ
+  /// (画面の「タイムラインに取り込む」D-347 と同じ。作った人でもフォロー中でもなければフォローもする)。
+  Future<RaiFunctionResult> _timelineAddRasqList(RaiFunctionCall c) => raiGuard(c.name, () async {
+        final q = c.arg('list').trim();
+        if (q.isEmpty) return RaiFunctionResult(name: c.name, text: 'リスト(list=)がありません', ok: false);
+        final own = await _rasqListCandidates('');
+        final hit = own.where((l) => l.id == q || l.code == q || l.name == q).firstOrNull ??
+            own.where((l) => l.name.contains(q)).firstOrNull ??
+            (await _rasqListCandidates(q)).firstOrNull;
+        if (hit == null) return RaiFunctionResult(name: c.name, text: 'RASQ リスト「$q」が見つかりません', ok: false);
+        final (msg, added) = await importRasqListToHomeWith(ref.container, hit);
+        final ok = added || msg.contains('もう');
+        return RaiFunctionResult(name: c.name, text: msg, ok: ok);
       });
 
   /// timeline.excludeWord(word, scope) / timeline.filterWord(word, mode=include|exclude, scope): 検索絞り込みを足す (D-227 / D-229)。

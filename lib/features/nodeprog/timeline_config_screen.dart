@@ -20,6 +20,8 @@ import 'node_tabs.dart';
 import 'tl_config_store.dart';
 import '../trend/tendency_fows.dart';
 import '../trend/tendency_profile.dart';
+import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
+import '../collections/rasq_list_picker.dart';
 import 'tl_components.dart';
 
 /// コンポーネント追加パレット (D-122): ノード検索と同じ FOW。
@@ -517,6 +519,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final kinds = ref.read(tlTimelinesProvider(s.account));
     final tlLabel = kinds.where((k) => k.id == s.tl).firstOrNull?.label ?? switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', 'home' => 'フォロー中 (home)', _ => s.tl };
     if (s.isRasq) return (Icons.hub_outlined, 'RASQ の投稿を取得', 'RASQ', 'TL: 自分とフォロー中の RASQ アカウントの投稿');
+    if (s.isRasqList) return (Icons.people_alt_outlined, 'RASQ リストを取得', 'RASQ', 'RASQ リスト: ${s.label.isNotEmpty ? s.label : (s.rasqListId.isEmpty ? '未選択' : s.rasqListId)}');
     return (
       s.isSelf
           ? Icons.sync_alt
@@ -1017,9 +1020,18 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             icon: Icons.rss_feed,
             title: 'カスタムフィード(Bluesky)',
             subtitle: 'リスト系',
-            description: 'Bluesky のカスタムフィードを検索して取り込みます(第二期以降は RASQ リストもここへ)。',
+            description: 'Bluesky のカスタムフィードを検索して取り込みます(SNS を跨いだリストは「RASQ リスト」)。',
             supported: [for (final p in ref.read(pluginRegistryProvider).plugins) if (p.kind == SnsKind.bluesky) p.manifest.name],
             add: () => widget.onAddSource(TlSourceComponent(tl: 'feed:', account: bluesky.first))),
+      // RASQ リスト (D-346): SNS を跨いだ人のリスト(Central)。リスト内の人の情報を取れるリストだけ選べる。
+      if (ref.read(hasRasqAccountProvider))
+        _PaletteItem(
+            icon: Icons.people_alt_outlined,
+            title: 'RASQ リスト',
+            subtitle: 'リスト系',
+            description: 'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取り込みます。自分のリスト・フォロー中のリストから選ぶか、公開リストを検索します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。',
+            supported: allSns,
+            add: () => widget.onAddSource(const TlSourceComponent(tl: rasqListKindPrefix))),
       _PaletteItem(
           icon: Icons.travel_explore,
           title: '現在のトレンドTL',
@@ -1176,11 +1188,13 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
   }
 
   final _feedQuery = TextEditingController();
+  final _rasqListQuery = TextEditingController();
 
   @override
   void dispose() {
     _query.dispose();
     _feedQuery.dispose();
+    _rasqListQuery.dispose();
     super.dispose();
   }
 
@@ -1236,6 +1250,14 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
         ]),
       );
     }
+    if (s.isRasqList) {
+      return (
+        const {},
+        const RrlNode(t: 'Column', c: [
+          RrlNode(t: 'Text', p: {'text': 'RASQ リストの投稿を取り込みます(Central が、見たときにリスト内の人の投稿を集めます)。下の欄で、自分のリスト・フォロー中のリストから選ぶか、公開リストを検索して選びます。選ぶと、そのリストをフォローします。'}),
+        ]),
+      );
+    }
     if (s.isSelf) {
       return (
         const {},
@@ -1287,7 +1309,7 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
       var updated = cur.copyWith(tl: key == 'tl' ? '$value' : null, account: key == 'account' ? '$value' : null, label: key == 'label' ? '$value' : null);
       if (key == 'account') {
         // アカウントを変えたら、その SNS に無い TL 種別 / 他アカウントのリストは選び直し (D-194)。
-        if (!cur.isTrend && !cur.isList && !cur.isDm && !cur.isFeed && !cur.isSelf) {
+        if (!cur.isTrend && !cur.isList && !cur.isDm && !cur.isFeed && !cur.isSelf && !cur.isRasqList) {
           final kinds = ref.read(tlTimelinesProvider('$value'));
           if (kinds.isNotEmpty && !kinds.any((k) => k.id == cur.tl)) updated = updated.copyWith(tl: kinds.first.id);
         } else if (cur.isList) {
@@ -1360,6 +1382,29 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
             RasqWarningListTile(title: 'トレンドの指向性/刺激性', onTap: () => widget.onTendencyAction!('tendency')),
             RasqListTile(title: '好きなジャンル/方向性', onTap: () => widget.onTendencyAction!('genres')),
             RasqListTile(title: 'アクションからジャンルを選択', subtitle: '類似した話題でまとめて、話題性の強いものから', onTap: () => widget.onTendencyAction!('pick')),
+          ],
+          // RASQ リストの検索 (D-346)。空 = 自分のリスト + フォロー中。取れないリストは選べない。
+          if (!widget.algorithm && widget.index < cfg.sources.length && cfg.sources[widget.index].isRasqList) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+              child: TextField(
+                key: const ValueKey('tlcfg.rasqlist.search'),
+                controller: _rasqListQuery,
+                style: RasqTypography.bodySmall,
+                decoration: const InputDecoration(labelText: 'RASQ リストを検索(名前 / @作った人 / 共有リンク)', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            RasqListCandidates(
+              query: _rasqListQuery.text,
+              selectedId: cfg.sources[widget.index].rasqListId,
+              onPick: (c) async {
+                final ok = await ensureRasqListFetchable(ref, c);
+                if (ok == null || !mounted) return;
+                _apply('tl', '$rasqListKindPrefix${c.id}');
+                _apply('label', c.name);
+              },
+            ),
           ],
           // カスタムフィードの検索 (D-194: Bluesky)。結果をタップで選ぶ。
           if (!widget.algorithm && widget.index < cfg.sources.length && cfg.sources[widget.index].isFeed) ...[

@@ -8,6 +8,7 @@ import '../home/post_duplicates.dart' show postDupKey;
 import '../relational/relational_engine.dart' show charNgramProfile, cosineOfProfiles, entityOverlap, extractFeatures, extractFeaturesText;
 import '../trend/tendency_profile.dart';
 import 'node_graph.dart';
+import 'tl_components.dart' show rasqListKindPrefix;
 
 /// ノードグラフの実行 (D-094/D-097)。
 ///
@@ -117,6 +118,7 @@ String? _sourceKindOf(GraphNode n) {
     'tl.source' => input('TL').isEmpty ? 'home' : input('TL'),
     'tl.list' => 'list:${input('リスト')}',
     'tl.feed' => 'feed:${input('フィード')}',
+    'tl.rasqlist' => '$rasqListKindPrefix${input('リスト')}',
     'tl.search' => 'search:${input('検索ワード')}',
     'tl.dm' => 'dm:${input('相手')}',
     'tl.myreactions' => 'myreactions',
