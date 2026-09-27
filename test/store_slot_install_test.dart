@@ -47,13 +47,15 @@ void main() {
 
   testWidgets('インストール → スロット登録(偽ランタイム)、アンインストールで解除、再起動でストアから取り直す', (tester) async {
     final fakes = {
-      'store:sample.timeline': () => FakeSlotRuntime(manifest: {'id': 'sample.timeline', 'name': 'Unicode 昇順 TL', 'version': '0.1.0', 'kind': 'view', 'slots': ['tl']}, handler: (_, fn, args) => fn == 'tl.timelines' ? {'timelines': []} : null),
+      // インストールは版つきの登録元 (D-355)、下の再起動は古い形(版なし)の控えから読み直す。
+      for (final src in ['store:sample.timeline@0.1.0', 'store:sample.timeline'])
+        src: () => FakeSlotRuntime(manifest: {'id': 'sample.timeline', 'name': 'Unicode 昇順 TL', 'version': '0.1.0', 'kind': 'view', 'slots': ['tl']}, handler: (_, fn, args) => fn == 'tl.timelines' ? {'timelines': []} : null),
     };
     final c = await pump(tester, loader: fakeSlotLoader(fakes));
     final outcome = await c.read(installedPluginsProvider.notifier).install('sample.timeline');
     expect(outcome.error, isNull);
     expect(c.read(installedPluginsProvider).map((p) => p.id), contains('sample.timeline'));
-    expect(c.read(slotPluginsForProvider(SlotIds.tl)).single.source, 'store:sample.timeline');
+    expect(c.read(slotPluginsForProvider(SlotIds.tl)).single.source, 'store:sample.timeline@0.1.0');
     await c.read(installedPluginsProvider.notifier).uninstall('sample.timeline');
     expect(c.read(slotPluginsProvider), isEmpty);
     // 再起動: 登録元 `store:` はストアの配布物を取り直して読み込む。
@@ -76,7 +78,7 @@ void main() {
     final outcome = await c.read(installedPluginsProvider.notifier).install('sample.post-process').timeout(const Duration(seconds: 60));
     expect(outcome.error, isNull, reason: c.read(slotPluginsNoticeProvider));
     final p = c.read(slotPluginsForProvider(SlotIds.postTransform)).single;
-    expect(p.source, 'store:sample.post-process');
+    expect(p.source, 'store:sample.post-process@0.1.0');
     expect(p.manifest.id, 'sample.post-process');
     final v = await p.value('post.transform', {'posts': [{'id': 'x', 'body': '今日', 'createdAt': '2026-09-10T00:00:00Z'}]});
     expect(((v!['posts'] as Map)['x'] as Map)['body'], '9/10(今日)');

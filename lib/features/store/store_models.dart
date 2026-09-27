@@ -310,6 +310,7 @@ class StorePluginDetail extends StorePluginCard {
     super.developerName,
     super.previews,
     super.pluginType,
+    this.purchased,
     this.description = '',
     this.channel = 'stable',
     this.updatedAt,
@@ -343,6 +344,7 @@ class StorePluginDetail extends StorePluginCard {
       iconUrl: card.iconUrl,
       previews: card.previews,
       pluginType: card.pluginType,
+      purchased: j['purchased'] as bool?,
       description: j['description'] as String? ?? '',
       channel: j['channel'] as String? ?? 'stable',
       updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? ''),
@@ -361,6 +363,43 @@ class StorePluginDetail extends StorePluginCard {
   final String description;
   final String channel;
   final DateTime? updatedAt;
+
+  /// 見ている RASQ アカウントが買っているか(有料でログイン中のときだけ、D-355)。null = 分からない / 無料。
+  final bool? purchased;
+
+  /// 買わないと入れられないか。
+  bool get needsPurchase => price > 0 && purchased != true;
+
+  /// 購入の状態だけ差し替えた写し(モックストア / 買った直後)。
+  StorePluginDetail withPurchased(bool? value) => StorePluginDetail(
+        id: id,
+        name: name,
+        summary: summary,
+        version: version,
+        status: status,
+        origin: origin,
+        rating: rating,
+        downloads: downloads,
+        sizeMb: sizeMb,
+        hasAds: hasAds,
+        price: price,
+        iconUrl: iconUrl,
+        developerName: developerName,
+        previews: previews,
+        pluginType: pluginType,
+        purchased: value,
+        description: description,
+        channel: channel,
+        updatedAt: updatedAt,
+        safety: safety,
+        compatibility: compatibility,
+        supportUrl: supportUrl,
+        screenshots: screenshots,
+        bannerUrl: bannerUrl,
+        downloadsLastMonth: downloadsLastMonth,
+        downloadHistory: downloadHistory,
+        ratingHistogram: ratingHistogram,
+      );
   final SafetyBlock safety;
   final Compatibility compatibility;
   final Uri? supportUrl;
@@ -618,22 +657,100 @@ class InstalledInfo {
       );
 }
 
+/// 入っている版 1 つ (D-355): 検証済みの SHA-512 とチャンネル。
+@immutable
+class InstalledVersion {
+  const InstalledVersion({required this.version, required this.sha512, required this.installedAt, this.channel = 'stable'});
+  final String version;
+  final String sha512;
+  final DateTime installedAt;
+  final String channel;
+
+  bool get isPreview => channel != 'stable';
+
+  Map<String, Object?> toJson() => {'version': version, 'sha512': sha512, 'installedAt': installedAt.toIso8601String(), 'channel': channel};
+  factory InstalledVersion.fromJson(Map<String, Object?> j) => InstalledVersion(
+        version: j['version'] as String? ?? '',
+        sha512: j['sha512'] as String? ?? '',
+        installedAt: DateTime.tryParse(j['installedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+        channel: j['channel'] as String? ?? 'stable',
+      );
+}
+
 /// インストール済みプラグイン(KV `store.installed.v1` に永続化)。
+///
+/// 版 (D-355): **いくつかの版を並べて入れておける**([versions])。[version] / [sha512] = **既定の版**(アカウントごとの指定が無い
+/// アカウントが使う)。[accountVersions] = SNS アカウント(キー)→ そのアカウントで使う版(「アカウントごとにバージョンを設定」)。
+/// 動かす(スロットに登録する)のは、既定と、どれかのアカウントが指定している版だけ([usedVersions])。
 @immutable
 class InstalledPlugin {
-  const InstalledPlugin({required this.id, required this.name, required this.version, required this.sha512, required this.installedAt, this.info});
+  const InstalledPlugin({
+    required this.id,
+    required this.name,
+    required this.version,
+    required this.sha512,
+    required this.installedAt,
+    this.info,
+    this.versions = const [],
+    this.accountVersions = const {},
+    this.pluginType = StorePluginType.other,
+  });
   final String id;
   final String name;
+
+  /// 既定の版。
   final String version;
 
-  /// 検証済み配布物の SHA-512(インストール時に照合した値)。
+  /// 既定の版の、検証済み配布物の SHA-512(インストール時に照合した値)。
   final String sha512;
   final DateTime installedAt;
 
   /// 掲載の写し (D-256)。それより前に入れたものは null。
   final InstalledInfo? info;
 
-  Map<String, Object?> toJson() => {'id': id, 'name': name, 'version': version, 'sha512': sha512, 'installedAt': installedAt.toIso8601String(), if (info != null) 'info': info!.toJson()};
+  /// 入っている版(新しく入れた順)。空 = 古い記録(既定の版だけ)。
+  final List<InstalledVersion> versions;
+
+  /// アカウントのキー → そのアカウントで使う版 (D-355)。
+  final Map<String, String> accountVersions;
+
+  /// 種別(アップデートの設定の区分、D-355)。
+  final StorePluginType pluginType;
+
+  /// 入っている版(古い記録でも既定の版を 1 つ返す)。
+  List<InstalledVersion> get allVersions => versions.isNotEmpty ? versions : [InstalledVersion(version: version, sha512: sha512, installedAt: installedAt)];
+
+  /// そのアカウントで使う版(指定が無ければ既定)。null = 既定。
+  String versionFor(String? accountKey) => (accountKey == null ? null : accountVersions[accountKey]) ?? version;
+
+  /// 動かす版 = 既定 + アカウントが指定している版。
+  Set<String> get usedVersions => {version, ...accountVersions.values};
+
+  InstalledVersion? versionInfo(String v) => allVersions.where((x) => x.version == v).firstOrNull;
+
+  InstalledPlugin copyWith({String? name, String? version, String? sha512, DateTime? installedAt, InstalledInfo? info, List<InstalledVersion>? versions, Map<String, String>? accountVersions, StorePluginType? pluginType}) => InstalledPlugin(
+        id: id,
+        name: name ?? this.name,
+        version: version ?? this.version,
+        sha512: sha512 ?? this.sha512,
+        installedAt: installedAt ?? this.installedAt,
+        info: info ?? this.info,
+        versions: versions ?? this.versions,
+        accountVersions: accountVersions ?? this.accountVersions,
+        pluginType: pluginType ?? this.pluginType,
+      );
+
+  Map<String, Object?> toJson() => {
+        'id': id,
+        'name': name,
+        'version': version,
+        'sha512': sha512,
+        'installedAt': installedAt.toIso8601String(),
+        if (info != null) 'info': info!.toJson(),
+        if (versions.isNotEmpty) 'versions': [for (final v in versions) v.toJson()],
+        if (accountVersions.isNotEmpty) 'accountVersions': accountVersions,
+        if (pluginType != StorePluginType.other) 'pluginType': pluginType.wire,
+      };
   factory InstalledPlugin.fromJson(Map<String, Object?> j) => InstalledPlugin(
         id: j['id'] as String,
         name: j['name'] as String? ?? '',
@@ -641,5 +758,53 @@ class InstalledPlugin {
         sha512: j['sha512'] as String? ?? '',
         installedAt: DateTime.tryParse(j['installedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
         info: j['info'] is Map ? InstalledInfo.fromJson((j['info'] as Map).cast<String, Object?>()) : null,
+        versions: [for (final v in j['versions'] as List? ?? const []) if (v is Map) InstalledVersion.fromJson(v.cast<String, Object?>())],
+        accountVersions: {for (final e in ((j['accountVersions'] as Map?) ?? const {}).entries) '${e.key}': '${e.value}'},
+        pluginType: StorePluginType.fromWire(j['pluginType']),
       );
 }
+
+/// ポイント (D-355、Central S-047): Web コンソールで Stripe から買う。付与ごとに 2 か月で失効。
+@immutable
+class StorePointGrant {
+  const StorePointGrant({required this.amount, required this.remaining, required this.expiresAt, this.createdAt, this.source = '', this.expired = false});
+  final int amount;
+  final int remaining;
+  final DateTime expiresAt;
+  final DateTime? createdAt;
+  final String source;
+  final bool expired;
+
+  factory StorePointGrant.fromJson(Map<String, Object?> j) => StorePointGrant(
+        amount: (j['amount'] as num?)?.toInt() ?? 0,
+        remaining: (j['remaining'] as num?)?.toInt() ?? 0,
+        expiresAt: DateTime.tryParse('${j['expiresAt']}') ?? DateTime.fromMillisecondsSinceEpoch(0),
+        createdAt: DateTime.tryParse('${j['createdAt']}'),
+        source: '${j['source'] ?? ''}',
+        expired: j['expired'] == true,
+      );
+}
+
+@immutable
+class StorePoints {
+  const StorePoints({this.balance = 0, this.grants = const []});
+  final int balance;
+  final List<StorePointGrant> grants;
+
+  /// いちばん早く失効する、残りのある付与(案内用)。
+  StorePointGrant? get nextExpiring {
+    final live = [for (final g in grants) if (!g.expired && g.remaining > 0) g]..sort((a, b) => a.expiresAt.compareTo(b.expiresAt));
+    return live.firstOrNull;
+  }
+
+  factory StorePoints.fromJson(Map<String, Object?> j) => StorePoints(
+        balance: (j['balance'] as num?)?.toInt() ?? 0,
+        grants: [for (final g in j['grants'] as List? ?? const []) if (g is Map) StorePointGrant.fromJson(g.cast<String, Object?>())],
+      );
+}
+
+/// 購入の結果(store.yaml `purchasePlugin`)。
+typedef StorePurchaseResult = ({bool purchased, int pointsSpent, int balance});
+
+/// 値段 → ポイント(1 ポイント = 1 円、切り上げ)。
+int storePricePoints(double price) => price.ceil();

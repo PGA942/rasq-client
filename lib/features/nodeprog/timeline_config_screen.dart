@@ -22,6 +22,7 @@ import '../trend/tendency_fows.dart';
 import '../trend/tendency_profile.dart';
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../collections/rasq_list_picker.dart';
+import 'plugin_node_badge.dart' show ownerSummaryOf;
 import 'tl_components.dart';
 
 /// コンポーネント追加パレット (D-122): ノード検索と同じ FOW。
@@ -502,11 +503,20 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         .whenComplete(() => router.routerDelegate.removeListener(onNavigate));
   }
 
+  /// プラグインのアルゴリズムの副題 (D-355): この構成の持ち主のアカウントで動く版。
+  String _pluginVersionLabel(TlAlgorithmComponent a) {
+    if (!a.type.startsWith('plugin:slot:')) return 'TLプラグイン';
+    final pluginId = a.type.substring('plugin:slot:'.length).split(':').first;
+    final p = ref.read(slotPluginsProvider.notifier).active(accountKey: _accountKey).where((x) => x.id == pluginId).firstOrNull;
+    final v = p?.storeVersion;
+    return v == null ? 'TLプラグイン' : 'TLプラグイン ・ v$v';
+  }
+
   /// コンポーネントの見た目情報(タイル/詳細/並べ替え行で共用)。
   (IconData, String, String, String) _algoInfo(TlAlgorithmComponent a) => (
         a.isPlugin ? Icons.extension_outlined : (a.isSuggest ? Icons.auto_awesome_outlined : a.isTendency ? Icons.tune : Icons.schedule),
         a.title,
-        a.isPlugin ? 'TLプラグイン' : 'RASQ',
+        a.isPlugin ? _pluginVersionLabel(a) : 'RASQ',
         switch (a.type) {
           'chrono' => '取得したままの時刻順に整えます。',
           'tendency' => 'トレンドプロファイル(指向性/刺激性・好きなジャンル)に合わない投稿を除外し、適合度順に並べます。',
@@ -686,6 +696,12 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     return Scaffold(
       appBar: RasqPageHeader(
         title: 'タイムラインをカスタマイズ',
+        // この構成の持ち主のアカウント (D-355): プラグインのアルゴリズムはこのアカウントの版で動く。
+        leadingAvatar: (() {
+          final key = _accountKey;
+          final s = key == null ? null : ref.read(sessionsProvider).value?.sessions.where((x) => x.account.key == key).firstOrNull;
+          return s == null ? null : ownerSummaryOf(s);
+        })(),
         actions: [Builder(builder: (ctx) => RasqIconButton(icon: Icons.more_horiz, tooltip: 'その他', onPressed: () => _moreMenu(ctx)))],
         bottom: _tabBar(),
       ),
@@ -1177,7 +1193,7 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
     if (widget.algorithm && widget.index < cfg.algorithms.length && cfg.algorithms[widget.index].type.startsWith('plugin:slot:')) {
       final id = cfg.algorithms[widget.index].type.substring('plugin:slot:'.length); // <pluginId>:<tlId>
       final parts = id.split(':');
-      final plugin = ref.read(slotPluginsProvider).where((p) => p.id == parts.first).firstOrNull;
+      final plugin = ref.read(activeSlotPluginsProvider).where((p) => p.id == parts.first).firstOrNull;
       if (plugin != null && parts.length >= 2) {
         _pluginParams = ref.read(slotPluginsProvider.notifier).tlParams(plugin, parts.sublist(1).join(':')).then((v) {
           if (mounted) setState(() => _loadedPluginParams = v);

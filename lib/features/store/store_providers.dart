@@ -42,6 +42,15 @@ final storeFilteredSearchProvider = FutureProvider.autoDispose.family<List<Store
   return ref.watch(storeClientProvider).search(k.q, filters: filters);
 });
 final storePluginProvider = FutureProvider.family<StorePluginDetail?, String>((ref, id) => ref.watch(storeClientProvider).plugin(id));
+
+/// ポイントの残高 (D-355)。取れない(未ログイン / つながらない)= null。
+final storePointsProvider = FutureProvider.autoDispose<StorePoints?>((ref) async {
+  try {
+    return await ref.watch(storeClientProvider).points();
+  } catch (_) {
+    return null;
+  }
+});
 final storeManifestProvider = FutureProvider.family<InstallManifest?, String>((ref, id) => ref.watch(storeClientProvider).manifest(id));
 final storeReviewsProvider = FutureProvider.family<List<StoreReview>, String>((ref, id) => ref.watch(storeClientProvider).reviews(id));
 
@@ -141,10 +150,12 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
   /// インストール実行。`error` が null なら成功で、`verification` に
   /// どこまで検証できたか(ハッシュのみ / 署名まで)が入る。
   ///
-  /// [version] を指定するとその版を入れる(リリースノート FOW の
-  /// 「Ver.〇〇をインストール」, D-137)。省略時は stable 最新。既に別の版が
-  /// 入っていれば置き換える(アカウントごとの版固定は M4 後段)。
-  Future<({String? error, ArtifactVerification? verification})> install(String pluginId, {String? version}) async {
+  /// [version] を指定するとその版を入れる(リリースノート FOW の「Ver.〇〇をインストール」, D-137)。省略時は stable 最新。
+  /// **版は並べて入れておける** (D-355): 別の版が入っていても消さない。[activate] = true(既定)ならこの版を**既定の版**にする
+  /// (アカウントごとの指定が無いアカウントがこの版を使う)。false(アップデートの設定「インストールだけおまかせ」)は入れて控えるだけで、
+  /// 既定は変えず、スロットにも登録しない(「アカウントごとにバージョンを設定」で選ぶと動く)。
+  /// 着せ替え / アセットパックは端末全体で 1 つなので、いつも既定を置き換える。
+  Future<({String? error, ArtifactVerification? verification})> install(String pluginId, {String? version, bool activate = true}) async {
     // チャイルドセーフ (D-307): 保護者のインストールの決め(none / listed / any)。
     final childBlocked = ref.read(childGateProvider).installBlockReason(pluginId);
     if (childBlocked != null) return (error: childBlocked, verification: null);
@@ -153,7 +164,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     try {
       m = await client.manifest(pluginId, version: version);
     } on OrgateException catch (e) {
-      // 停止・取り下げ中のプラグインはサーバーが 403 で断る (D-120 ③)。
+      // 停止・取り下げ中のプラグインはサーバーが 403 で断る (D-120 ③)。有料で未購入も 403 (D-355)。
       return (error: e.message, verification: null);
     }
     if (m == null) return (error: version == null ? '構成(マニフェスト)を取得できませんでした' : 'Ver.$version の構成が見つかりませんでした', verification: null);
@@ -170,7 +181,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
 
     final Uint8List bytes;
     try {
-      bytes = await client.downloadArtifact(pluginId, bundle.id, version: version);
+      bytes = await client.downloadArtifact(pluginId, bundle.id, version: m.version);
     } on OrgateException catch (e) {
       return (error: e.message, verification: null);
     }
@@ -198,23 +209,45 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     }
 
     final name = m.manifest['name'] as String? ?? pluginId;
-    final slots = ref.read(slotPluginsProvider.notifier);
     // 掲載の写し (D-256): 取れなくてもインストールは続ける(写しが無いだけ)。
     InstalledInfo? info;
+    StorePluginType? type;
     try {
       final d = await client.plugin(pluginId);
-      if (d != null) info = InstalledInfo.of(d);
+      if (d != null) {
+        info = InstalledInfo.of(d);
+        type = d.pluginType;
+      }
     } catch (_) {}
-    final record = InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: DateTime.now(), info: info);
+    final prev = state.where((p) => p.id == pluginId).firstOrNull;
+    final entry = InstalledVersion(version: m.version, sha512: bundle.sha512, installedAt: DateTime.now(), channel: m.channel);
+    final isPack = package != null && (package.root.isTheme || package.root.isAssets);
+    // 着せ替え / アセットパックと、初めてのインストールはいつも既定にする。
+    final makeDefault = activate || prev == null || isPack;
+    final versions = [entry, for (final v in prev?.allVersions ?? const <InstalledVersion>[]) if (v.version != m.version) v];
+    final record = (prev ??
+            InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: entry.installedAt))
+        .copyWith(
+      name: name,
+      info: info,
+      pluginType: type,
+      versions: isPack ? [entry] : versions,
+      version: makeDefault ? m.version : null,
+      sha512: makeDefault ? bundle.sha512 : null,
+      installedAt: makeDefault ? entry.installedAt : null,
+      // 着せ替え / アセットパックは版を並べない(アカウントごとの指定も無し)。
+      accountVersions: isPack ? const {} : null,
+    );
 
     if (package == null) {
       // 配布物が生の wasm(D-168)や中身の無いモック: 従来どおり、先にインストール済みにしてからスロット登録を試みる。
       // SNS プラグインの wasm は `plugin.manifest` を持たないので登録はできない — 掲載が kind = sns なら試みない、
       // 分からなければ試みて、だめでもインストール自体は残す(エラーは返す)。
       await _persist([...state.where((p) => p.id != pluginId), record]);
-      if (isWasmBytes(bytes) && m.manifest['kind'] != 'sns') {
-        final slot = await slots.register('store:$pluginId', bytes: bytes);
+      if (makeDefault && isWasmBytes(bytes) && m.manifest['kind'] != 'sns') {
+        final slot = await ref.read(slotPluginsProvider.notifier).register(storeSlotSource(pluginId, m.version), bytes: bytes);
         if (slot == null) return (error: ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした', verification: verified);
+        await _syncSlots(pluginId);
       }
       return (error: null, verification: verified);
     }
@@ -242,21 +275,118 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     }
 
     // .rasqpkg: 中のスロットプラグイン(root が sns 以外なら root、それと子)を全部登録できて初めてインストール済みにする。
-    // 登録元は `store:<id>`(子は `store:<id>#<childId>`)— 次回起動はストアから取り直して読み込む。
-    final registered = <String>[];
-    for (final p in package.slotPlugins) {
-      final slot = await slots.register(p.id == pluginId ? 'store:$pluginId' : 'store:$pluginId#${p.id}', bytes: bytes);
-      if (slot == null) {
-        // 途中で失敗したら、この配布物から入れたものを外して、入れなかったことにする。
-        for (final id in registered) {
-          await slots.unregister(id);
-        }
-        return (error: ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした', verification: verified);
-      }
-      registered.add(slot.id);
+    // 登録元は `store:<id>@<版>`(子は `…#<childId>`)— 次回起動はストアからその版を取り直して読み込む。
+    // 既定にしない(インストールだけ)なら登録しない。
+    if (makeDefault) {
+      final error = await _registerPackage(pluginId, m.version, bytes, package);
+      if (error != null) return (error: error, verification: verified);
     }
     await _persist([...state.where((p) => p.id != pluginId), record]);
+    await _syncSlots(pluginId);
     return (error: null, verification: verified);
+  }
+
+  /// .rasqpkg の中のスロットプラグインを、その版の登録元で全部登録する。途中で失敗したら、この版で入れたものを外す。
+  Future<String?> _registerPackage(String pluginId, String version, Uint8List bytes, RasqPackage package) async {
+    final slots = ref.read(slotPluginsProvider.notifier);
+    final registered = <String>[];
+    for (final p in package.slotPlugins) {
+      final source = storeSlotSource(pluginId, version, child: p.id == pluginId ? null : p.id);
+      final slot = await slots.register(source, bytes: bytes);
+      if (slot == null) {
+        for (final s in registered) {
+          await slots.unregisterSource(s);
+        }
+        return ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした';
+      }
+      registered.add(source);
+    }
+    return null;
+  }
+
+  /// 動かす版をそろえる (D-355): 既定 + アカウントが指定している版を登録し(登録が無ければストアからその版を取り直して、
+  /// インストール時の SHA-512 と同じか確かめる)、使わなくなった版の登録を外す。着せ替え / アセットパックは対象外。
+  Future<String?> _syncSlots(String pluginId) async {
+    final record = state.where((p) => p.id == pluginId).firstOrNull;
+    final slots = ref.read(slotPluginsProvider.notifier);
+    final mine = [for (final p in ref.read(slotPluginsProvider)) if (parseStoreSlotSource(p.source)?.pluginId == pluginId) p];
+    // スロットに何も登録していないプラグイン(SNS の wasm / 着せ替え / アセットパック)は対象外。
+    if (record == null || mine.isEmpty) return null;
+    final used = record.usedVersions;
+    // 使わなくなった版(と、版を持たない古い形の登録)を外す。
+    for (final p in mine) {
+      final v = parseStoreSlotSource(p.source)!.version;
+      if (v == null || !used.contains(v)) await slots.unregisterSource(p.source);
+    }
+    // 足りない版を登録する。
+    final have = {for (final p in ref.read(slotPluginsProvider)) if (parseStoreSlotSource(p.source)?.pluginId == pluginId) parseStoreSlotSource(p.source)!.version};
+    for (final v in used) {
+      if (have.contains(v)) continue;
+      try {
+        final bytes = await ref.read(storeClientProvider).downloadArtifact(pluginId, 'bundle', version: v);
+        final expected = record.versionInfo(v)?.sha512;
+        if (expected != null && expected.isNotEmpty && expected != '-' && sha512.convert(bytes).toString() != expected) {
+          return 'Ver.$v の配布物がインストール時と違うため読み込みません(入れ直してください)';
+        }
+        if (isRasqPackage(bytes)) {
+          final package = RasqPackage.open(bytes, decompress: ref.read(rasqpkgZstdProvider));
+          if (package.root.isTheme || package.root.isAssets) continue;
+          final error = await _registerPackage(pluginId, v, bytes, package);
+          if (error != null) return error;
+        } else if (isWasmBytes(bytes)) {
+          final slot = await slots.register(storeSlotSource(pluginId, v), bytes: bytes);
+          final String? notice = slot == null ? (ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした') : null;
+          if (notice != null) return notice;
+        }
+      } catch (e) {
+        return 'Ver.$v を読み込めませんでした: $e';
+      }
+    }
+    return null;
+  }
+
+  /// このプラグインをスロットに登録したことがあるか(= スロットプラグイン)。登録元の控えから見る。
+  bool _everRegistered(String pluginId) => ref.read(slotPluginsProvider).any((p) => parseStoreSlotSource(p.source)?.pluginId == pluginId);
+
+  /// 既定の版を変える (D-355)。入っている版だけ。
+  Future<String?> setDefaultVersion(String pluginId, String version) async {
+    final record = state.where((p) => p.id == pluginId).firstOrNull;
+    final v = record?.versionInfo(version);
+    if (record == null || v == null) return 'Ver.$version は入っていません';
+    final prevUsed = record.usedVersions;
+    await _persist([for (final p in state) if (p.id == pluginId) p.copyWith(version: v.version, sha512: v.sha512, installedAt: v.installedAt) else p]);
+    return _syncIfSlot(pluginId, prevUsed);
+  }
+
+  /// アカウントごとの版 (D-355)。[version] null = 既定に従う。
+  Future<String?> setAccountVersion(String pluginId, String accountKey, String? version) async {
+    final record = state.where((p) => p.id == pluginId).firstOrNull;
+    if (record == null) return 'インストールされていません';
+    if (version != null && record.versionInfo(version) == null) return 'Ver.$version は入っていません';
+    final prevUsed = record.usedVersions;
+    final map = {...record.accountVersions};
+    if (version == null || version == record.version) {
+      map.remove(accountKey);
+    } else {
+      map[accountKey] = version;
+    }
+    await _persist([for (final p in state) if (p.id == pluginId) p.copyWith(accountVersions: map) else p]);
+    return _syncIfSlot(pluginId, prevUsed);
+  }
+
+  /// 入っている版を 1 つ消す(既定 / どれかのアカウントが指定している版は消せない)。
+  Future<String?> removeVersion(String pluginId, String version) async {
+    final record = state.where((p) => p.id == pluginId).firstOrNull;
+    if (record == null) return 'インストールされていません';
+    if (record.usedVersions.contains(version)) return 'Ver.$version は使われています(既定 / アカウントの指定を外してから)';
+    await _persist([for (final p in state) if (p.id == pluginId) p.copyWith(versions: [for (final v in p.allVersions) if (v.version != version) v]) else p]);
+    return null;
+  }
+
+  /// スロットプラグインのときだけ、動かす版をそろえ直す(着せ替えなどは版を切り替えても何も読み込まない)。
+  Future<String?> _syncIfSlot(String pluginId, Set<String> prevUsed) async {
+    if (!_everRegistered(pluginId)) return null;
+    return _syncSlots(pluginId);
   }
 
   Future<void> uninstall(String pluginId) async {
@@ -264,10 +394,10 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     // アセットパック (D-252) / 着せ替え (D-335) なら保存した画像も消す。
     await ref.read(stickerPacksProvider.notifier).uninstall(pluginId);
     await ref.read(themePacksProvider.notifier).uninstall(pluginId);
-    // スロット登録 (D-168) も外す(登録元 `store:<id>` と、.rasqpkg の子 `store:<id>#<childId>`)。
+    // スロット登録 (D-168) も外す(どの版の登録元も、.rasqpkg の子も)。
     final slots = ref.read(slotPluginsProvider.notifier);
-    for (final p in ref.read(slotPluginsProvider).where((p) => p.source == 'store:$pluginId' || p.source.startsWith('store:$pluginId#'))) {
-      await slots.unregister(p.id);
+    for (final p in [for (final p in ref.read(slotPluginsProvider)) if (parseStoreSlotSource(p.source)?.pluginId == pluginId) p]) {
+      await slots.unregisterSource(p.source);
     }
   }
 }

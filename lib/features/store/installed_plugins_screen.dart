@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart';
+import 'rasqpkg.dart' show parseStoreSlotSource;
 import 'store_models.dart';
 import 'store_providers.dart';
 import 'store_widgets.dart';
@@ -64,7 +65,7 @@ class InstalledPluginScreen extends ConsumerWidget {
     final detail = live.value;
     final info = record.info;
     // スロットに登録されているもの(この配布物から入った root / 子)。写しが無い古いインストールでは、権限はここから。
-    final slots = [for (final p in ref.watch(slotPluginsProvider)) if (p.source == 'store:$pluginId' || p.source.startsWith('store:$pluginId#')) p];
+    final slots = [for (final p in ref.watch(slotPluginsProvider)) if (parseStoreSlotSource(p.source)?.pluginId == pluginId) p];
     final safety = detail?.safety ??
         info?.safety ??
         SafetyBlock(permissions: [for (final perm in {for (final p in slots) ...p.manifest.permissions}) PermissionEntry(perm, '')]);

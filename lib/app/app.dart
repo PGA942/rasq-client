@@ -8,6 +8,7 @@ import '../features/home/reaction_history.dart';
 import '../features/plugins/slot_plugins.dart';
 import '../features/media/video_player.dart' show VideoPrefs;
 import '../features/settings/settings_dsl.dart';
+import '../features/store/plugin_updates.dart' show pluginAutoUpdateProvider;
 import '../features/theme/theme_packs.dart';
 import '../notify/central_inbox.dart';
 import 'providers.dart';
@@ -21,6 +22,8 @@ class RasqApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     // Central の受信箱 (D-309): 起動 / アプリへ戻ったとき / ログインの変化で 1 回ずつ読み、`child_safe` などを受け手へ。
     ref.watch(centralInboxProvider);
+    // プラグインのアップデート (D-356): 起動後に 1 回、設定どおりに。
+    ref.watch(pluginAutoUpdateProvider);
     final mode = ref.watch(themeModeProvider);
     final skin = ref.watch(activeSkinProvider);
     // DSL 設定の実適用 (D-031): 表示サイズ / モーション抑制。

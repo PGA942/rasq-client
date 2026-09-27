@@ -2,22 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
-import '../../backend/orgate_client.dart' show OrgateException;
+import '../../backend/orgate_client.dart' show OrgateException, centralBaseUrlProvider;
+import 'store_client.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
 
 /// インストール(版指定つき, D-137): 確認シート(InstallManifest の権限・配布物が根拠)→ SHA-512 + ed25519 検証 → 登録。
 /// プラグインページの「インストール」とストアホームのタイルの「入手 / 更新」(D-354)で共通。
 /// 戻り値 = 伝える文(スナックバー)。確認シートを閉じた(キャンセル)ら null。[onBusy] は検証と登録の間 true。
-Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {String? version, void Function(bool busy)? onBusy}) async {
+/// [activate] = false: 入れて控えるだけ(既定の版は変えない、D-355 の「ほかの版を入れる」)。
+Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {String? version, bool activate = true, void Function(bool busy)? onBusy}) async {
   final manager = ref.read(overlayManagerProvider);
   // await のあとに ref(呼び出し元のウィジェット)を触らない: 先に取っておく。
   final installed = ref.read(installedPluginsProvider.notifier);
+  final client = ref.read(storeClientProvider);
+  final container = ProviderScope.containerOf(ref.context, listen: false);
+  // 有料で買っていなければ、先に購入 (D-355)。買わずに閉じたら何もしない。
+  if (d.needsPurchase) {
+    final bought = await showPurchaseSheet(manager, client, d, consoleUrl: ref.read(centralBaseUrlProvider)?.resolve('/console/points'));
+    if (bought == null) return null;
+    if (bought.isNotEmpty) return bought; // 買えなかった理由
+    // 買った: ページの「購入済み」と残高を読み直す。
+    container.invalidate(storePluginProvider(d.id));
+    container.invalidate(storePointsProvider);
+  }
   final InstallManifest? manifest;
   try {
-    manifest = await ref.read(storeClientProvider).manifest(d.id, version: version);
+    manifest = await client.manifest(d.id, version: version);
   } on OrgateException catch (e) {
     return e.message;
   }
@@ -74,7 +88,62 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   );
   if (ok != true) return null; // 余白/スワイプで閉じた = キャンセル
   onBusy?.call(true);
-  final outcome = await installed.install(d.id, version: version);
+  final outcome = await installed.install(d.id, version: version, activate: activate);
   onBusy?.call(false);
   return outcome.error ?? '${d.name} ${manifest.version} をインストールしました(${outcome.verification?.message ?? 'SHA-512 検証済み'})';
+}
+
+/// 購入シート (D-355): 値段(ポイント)、いまの残高、次に失効するポイント →「購入する」。足りなければ「Web コンソールでポイントを買う」
+/// (Stripe、付与から 2 か月で失効)。戻り値 = 閉じた(買わない)は null、買えたら ''、買えなかったら理由。
+Future<String?> showPurchaseSheet(OverlayManager manager, StoreClient client, StorePluginDetail d, {Uri? consoleUrl}) async {
+  StorePoints points;
+  try {
+    points = await client.points();
+  } catch (e) {
+    return 'ポイントを確かめられませんでした(RASQ アカウントにログインしていますか?): $e';
+  }
+  final price = storePricePoints(d.price);
+  final enough = points.balance >= price;
+  final next = points.nextExpiring;
+  String date(DateTime t) => '${t.year}/${t.month}/${t.day}';
+  final go = await manager.showBottomSheet<String>(
+    id: 'store.purchase',
+    title: '${d.name} を購入',
+    builder: (ctx) {
+      final scheme = Theme.of(ctx).colorScheme;
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('$price ポイント', key: const ValueKey('store.purchase.price'), style: RasqTypography.title),
+          const SizedBox(height: 4),
+          Text('残り ${points.balance} ポイント${next == null ? '' : ' ・ ${date(next.expiresAt)} に ${next.remaining} ポイントが失効'}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 4),
+          Text('買ったプラグインは、同じ RASQ アカウントならどの端末でも入れられます。ポイントは有効期限の近いものから使います。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: RasqSpacing.sm),
+          if (enough)
+            FilledButton(key: const ValueKey('store.purchase.buy'), onPressed: () => manager.close('store.purchase', result: 'buy'), child: Text('$price ポイントで購入する'))
+          else ...[
+            Text('ポイントが足りません(あと ${price - points.balance} ポイント)', style: RasqTypography.bodySmall.copyWith(color: scheme.error)),
+            const SizedBox(height: RasqSpacing.xs),
+            FilledButton.tonal(
+              key: const ValueKey('store.purchase.console'),
+              onPressed: consoleUrl == null ? null : () => manager.close('store.purchase', result: 'console'),
+              child: const Text('Web コンソールでポイントを買う'),
+            ),
+          ],
+        ]),
+      );
+    },
+  );
+  if (go == 'console' && consoleUrl != null) {
+    await launchUrl(consoleUrl, mode: LaunchMode.externalApplication);
+    return null;
+  }
+  if (go != 'buy') return null;
+  try {
+    final r = await client.purchase(d.id);
+    return r.purchased ? '' : '購入できませんでした';
+  } on OrgateException catch (e) {
+    return e.message;
+  }
 }

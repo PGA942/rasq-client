@@ -95,12 +95,13 @@ void main() {
     final tile = find.descendant(of: trending, matching: find.byKey(const ValueKey('store.tile.$storeSamplePluginId')));
     expect(tile, findsOneWidget);
     expect(find.descendant(of: find.byKey(const ValueKey('store.tile.action.$storeSamplePluginId')), matching: find.text('更新')), findsOneWidget);
-    // 更新チップ → ストアのページ。
+    // 更新チップ → その場で確認シート(D-355: ストアのページへは飛ばない)。
     c.read(routerProvider).push(Routes.storeManage);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('store.manage.update.$storeSamplePluginId')));
     await tester.pumpAndSettle();
-    expect(c.read(routerProvider).routerDelegate.currentConfiguration.last.matchedLocation, Routes.storePlugin(storeSamplePluginId));
+    expect(find.text('このプラグインが使う権限'), findsOneWidget);
+    expect(find.textContaining('0.5.0 をインストール'), findsOneWidget);
   });
 
   testWidgets('タイルの「入手」: 確認シート → 検証 → インストール。入ったら「開く」→ インストール済みのページ', (tester) async {

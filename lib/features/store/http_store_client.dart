@@ -97,4 +97,13 @@ class HttpStoreClient implements StoreClient {
 
   @override
   Future<List<StorePluginCard>> bookmarks() async => _cards(await _client.getList('/me/bookmarks'));
+
+  @override
+  Future<StorePurchaseResult> purchase(String pluginId) async {
+    final j = await _client.postJson('/plugins/${Uri.encodeComponent(pluginId)}/purchase', const {});
+    return (purchased: j['purchased'] == true, pointsSpent: (j['pointsSpent'] as num?)?.toInt() ?? 0, balance: (j['balance'] as num?)?.toInt() ?? 0);
+  }
+
+  @override
+  Future<StorePoints> points() async => StorePoints.fromJson(await _client.getJson('/me/points'));
 }

@@ -20,6 +20,7 @@ import '../home/plugin_actions.dart' show actionButtonPrefsProvider, migrateView
 import '../media/image_scale.dart';
 import '../settings/settings_dsl.dart';
 import '../store/rasqpkg.dart';
+import '../store/store_models.dart' show InstalledPlugin;
 import '../store/store_providers.dart';
 import '../trend/example_match.dart' show pluginExamplePieces;
 import '../vc/astell_models.dart';
@@ -267,6 +268,12 @@ class SlotPlugin {
   String get id => manifest.id;
   bool has(String slot) => manifest.slots.contains(slot);
 
+  /// ストアから入れた版 (D-355、登録元 `store:<id>@<version>`)。サイドロード / 古い形は null。
+  String? get storeVersion => parseStoreSlotSource(source)?.version;
+
+  /// ストアのプラグイン id(子なら入れ物の id)。サイドロードは null。
+  String? get storePluginId => parseStoreSlotSource(source)?.pluginId;
+
   /// 例との近さを測る中身(名前 + 説明 + スロット。チャイルドセーフの `allow.examples`、D-314)。
   List<String> get examplePieces => pluginExamplePieces(name: manifest.name, description: manifest.description, slots: manifest.slots);
 
@@ -308,13 +315,47 @@ const slotSettingsAreas = <String, String>{
   SlotIds.tl: 'plugins.timeline',
 };
 
-/// スロット別。設定で切ったスロットは空(プラグインは呼ばれない)。
+/// 同じプラグインのいくつかの版が登録されているとき (D-355)、[versionOf] が返す版(そのアカウントで使う版)を 1 つ選ぶ。
+/// 版を持たない登録(サイドロード / 古い形)はそのまま。選ぶ版が無ければ、最後に登録したもの。
+List<SlotPlugin> resolveSlotVersions(List<SlotPlugin> all, String? Function(String storePluginId) versionOf) {
+  final byKey = <String, List<SlotPlugin>>{};
+  for (final p in all) {
+    byKey.putIfAbsent(p.id, () => []).add(p);
+  }
+  final out = <SlotPlugin>[];
+  for (final p in all) {
+    final group = byKey[p.id]!;
+    if (group.length == 1) {
+      out.add(p);
+      continue;
+    }
+    if (!identical(group.first, p)) continue; // グループの先頭で 1 回だけ決める
+    final storeId = group.map((x) => x.storePluginId).whereType<String>().firstOrNull;
+    final want = storeId == null ? null : versionOf(storeId);
+    out.add(group.where((x) => want != null && x.storeVersion == want).firstOrNull ?? group.last);
+  }
+  return out;
+}
+
+/// そのアカウントで使う版を選ぶ関数 (D-355)。[accountKey] null = 既定の版。
+typedef SlotVersionPicker = String? Function(String storePluginId);
+SlotVersionPicker slotVersionPickerFor(List<InstalledPlugin> installed, String? accountKey) =>
+    (id) => installed.where((p) => p.id == id).firstOrNull?.versionFor(accountKey);
+
+/// **いまのアカウントで動く**スロットプラグイン (D-355): 同じプラグインの版が並んでいれば、そのアカウントの版だけ。
+final activeSlotPluginsProvider = Provider<List<SlotPlugin>>((ref) {
+  final all = ref.watch(slotPluginsProvider);
+  final installed = ref.watch(installedPluginsProvider);
+  return resolveSlotVersions(all, slotVersionPickerFor(installed, ref.watch(currentAccountProvider)?.key));
+});
+
+/// スロット別。設定で切ったスロットは空(プラグインは呼ばれない)。いまのアカウントの版だけ (D-355)。
 final slotPluginsForProvider = Provider.family<List<SlotPlugin>, String>((ref, slot) {
   final area = slotSettingsAreas[slot];
   if (area != null && ref.watch(settingsAreaProvider(area)).value?['enabled'] == false) return const [];
   // チャイルドセーフ (D-307): 保護者が許したプラグイン / スロットだけ。
   final gate = ref.watch(childGateProvider);
-  return [for (final p in ref.watch(slotPluginsProvider)) if (p.has(slot) && gate.pluginAllowed(p.id, slot, text: p.examplePieces)) p];
+  return [for (final p in ref.watch(activeSlotPluginsProvider)) if (p.has(slot) && gate.pluginAllowed(p.id, slot, text: p.examplePieces)) p];
 });
 
 /// 登録の失敗などの直近メッセージ(dev 画面が表示)。
@@ -396,17 +437,19 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       final raw = await ref.read(sessionStorageProvider).read(slotPluginsStorageKey);
       if (raw == null) return;
       // 同じ .rasqpkg から複数(root と子)を読むので、取り直しはプラグイン id ごとに 1 回。
-      final artifacts = <String, Uint8List>{};
+      final artifacts = <String, Uint8List>{}; // `<id>@<版>` → 配布物
       for (final p in (jsonDecode(raw) as List)) {
         if (p is! String) continue;
         // ストアからのインストール (D-168): 配布物を取り直す(モックは同梱アセット)。`store:<id>#<childId>` は
         // .rasqpkg の中の子。取り直したものは**インストール時に検証した SHA-512 と同じ**でなければ読み込まない
         // (ストア署名を確かめたのはインストール時だけなので、ここで別物にすり替わっていないことを見る)。
         if (p.startsWith('store:')) {
-          final pluginId = splitPackageSource(p).container.substring(6);
+          // 版つきの登録元 (D-355) はその版の配布物を取り直す(古い形 `store:<id>` は既定の版 = 現在版)。
+          final (:pluginId, :version, child: _) = parseStoreSlotSource(p)!;
           try {
-            final bytes = artifacts[pluginId] ??= await ref.read(storeClientProvider).downloadArtifact(pluginId, 'bundle');
-            final expected = ref.read(installedPluginsProvider).where((x) => x.id == pluginId).firstOrNull?.sha512;
+            final bytes = artifacts['$pluginId@${version ?? ''}'] ??= await ref.read(storeClientProvider).downloadArtifact(pluginId, 'bundle', version: version);
+            final record = ref.read(installedPluginsProvider).where((x) => x.id == pluginId).firstOrNull;
+            final expected = version == null ? record?.sha512 : record?.versionInfo(version)?.sha512;
             if (expected != null && expected.isNotEmpty && expected != '-' && sha512.convert(bytes).toString() != expected) {
               ref.read(slotPluginsNoticeProvider.notifier).set('$pluginId: 取り直した配布物がインストール時と違うため読み込みません(ストアで入れ直してください)');
               continue;
@@ -489,11 +532,13 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       // 通信の形(同意した端末だけ、初めて見たものだけ)。版はプラグインの自己申告。
       final telemetry = ref.read(fetchShapeTelemetryProvider);
       runtime.fetchShapes.listen((s) => telemetry.report(manifest.id, manifest.version, s));
-      // 同じ id は差し替え。
-      for (final old in state.where((p) => p.id == manifest.id)) {
+      // 同じ id は差し替え。ただしストアの**別の版**(D-355: `store:<id>@<版>`)は並べて持つ(アカウントごとに使う版を選ぶ)。
+      final version = plugin.storeVersion;
+      bool replaces(SlotPlugin p) => p.id == manifest.id && (version == null || p.storeVersion == null || p.storeVersion == version);
+      for (final old in state.where(replaces)) {
         old.runtime.dispose();
       }
-      _set([for (final p in state) if (p.id != manifest.id) p, plugin]);
+      _set([for (final p in state) if (!replaces(p)) p, plugin]);
       if (persist) await _persist();
       ref.read(slotPluginsNoticeProvider.notifier).set('${manifest.name} を登録しました(${manifest.slots.join(', ')})');
       // 登録している間に鍵の一覧が変わった(listen は、まだ state に無いこのプラグインを見られなかった)。
@@ -555,10 +600,32 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     await _persist();
   }
 
-  List<SlotPlugin> forSlot(String slot) {
+  /// 登録元 1 つだけ外す (D-355: 使わなくなった版)。
+  Future<void> unregisterSource(String source) async {
+    final gone = [for (final p in state) if (p.source == source) p];
+    if (gone.isEmpty) return;
+    for (final p in gone) {
+      p.runtime.dispose();
+    }
+    _set([for (final p in state) if (p.source != source) p]);
+    // 同じ id の版がもう無ければ、FOW と AsTell の口も閉じる。
+    for (final p in gone) {
+      if (!state.any((x) => x.id == p.id)) {
+        ref.read(overlayManagerProvider).closeOwnedBy('$_fowOwner.${p.id}');
+        _astellTokens.remove(p.id);
+      }
+    }
+    await _persist();
+  }
+
+  /// そのアカウント([accountKey]、省略 = いまのアカウント)で動く版だけ (D-355)。
+  List<SlotPlugin> active({String? accountKey}) =>
+      resolveSlotVersions(state, slotVersionPickerFor(ref.read(installedPluginsProvider), accountKey ?? ref.read(currentAccountProvider)?.key));
+
+  List<SlotPlugin> forSlot(String slot, {String? accountKey}) {
     // チャイルドセーフ (D-307): 保護者が許したプラグイン(`allow.plugins.ids`)とスロット(`allow.plugins.slots`)だけ。
     final gate = ref.read(childGateProvider);
-    return [for (final p in state) if (p.has(slot) && gate.pluginAllowed(p.id, slot, text: p.examplePieces)) p];
+    return [for (final p in active(accountKey: accountKey)) if (p.has(slot) && gate.pluginAllowed(p.id, slot, text: p.examplePieces)) p];
   }
 
   // ── FOW(プラグインの拡張面)────────────────────────────────────────
@@ -767,7 +834,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   void _onAstellChanged(AstellSessionState? prev, AstellSessionState? next) {
     if (_astellTokens.isEmpty) return;
     void send(Map<String, Object?> ev) {
-      for (final p in state) {
+      for (final p in active()) {
         final token = _astellTokens[p.id];
         if (token != null) p.value('astell.event', {'token': token, ...ev});
       }
@@ -1032,10 +1099,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   }
 
   /// `slot:<pluginId>:<tlId>` で引く(ノードグラフの `plugin:` ステップから)。
-  Future<List<Post>> sortById(String slotTlId, List<Post> posts, {Map<String, Object?> params = const {}}) async {
+  /// [accountKey] = このグラフの持ち主のアカウント(その版で並べる、D-355)。省略 = いまのアカウント。
+  Future<List<Post>> sortById(String slotTlId, List<Post> posts, {Map<String, Object?> params = const {}, String? accountKey}) async {
     final parts = slotTlId.startsWith('slot:') ? slotTlId.substring(5).split(':') : const <String>[];
     if (parts.length < 2) return posts;
-    final plugin = state.where((p) => p.id == parts.first).firstOrNull;
+    final plugin = active(accountKey: accountKey).where((p) => p.id == parts.first).firstOrNull;
     // チャイルドセーフ (D-307): 許していないプラグインの並べ替えは素通し。
     if (plugin == null || !ref.read(childGateProvider).pluginAllowed(plugin.id, SlotIds.tl, text: plugin.examplePieces)) return posts;
     return sort(plugin, parts.sublist(1).join(':'), posts, params: params);
