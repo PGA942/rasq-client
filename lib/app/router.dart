@@ -62,6 +62,8 @@ import '../features/store/plugin_page_screen.dart';
 import '../features/store/review_timeline_screen.dart';
 import '../features/store/store_home_screen.dart';
 import '../features/store/store_manage_screen.dart';
+import '../features/store/plugin_update_screens.dart';
+import '../features/store/plugin_versions_screen.dart';
 import '../features/store/store_search_screen.dart';
 import '../features/rai/rai_achievements_screen.dart';
 import '../features/rai/rai_home_screen.dart';
@@ -155,6 +157,11 @@ abstract final class Routes {
 
   /// プラグインを管理 (D-353): ストアホームの歯車から。
   static const storeManage = '/store/manage';
+
+  /// アップデートの設定 / 更新ログ (D-356)、アカウントごとにバージョンを設定 (D-355)。
+  static const storeUpdateSettings = '/store/manage/updates';
+  static const storeUpdateLog = '/store/manage/updates/log';
+  static String storePluginVersions(String id) => '/store/manage/versions/${Uri.encodeComponent(id)}';
 
   /// プラグインの検索画面 (D-353)。
   static String storeSearch([String q = '']) => q.isEmpty ? '/store/search' : '/store/search?q=${Uri.encodeQueryComponent(q)}';
@@ -385,6 +392,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: Routes.store, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const StoreHomeScreen()),
           GoRoute(path: Routes.storeInstalled, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const InstalledPluginsScreen()),
           GoRoute(path: Routes.storeManage, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const StoreManageScreen()),
+          GoRoute(path: Routes.storeUpdateSettings, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const PluginUpdateSettingsScreen()),
+          GoRoute(path: Routes.storeUpdateLog, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const PluginUpdateLogScreen()),
+          GoRoute(path: '/store/manage/versions/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => PluginVersionsScreen(pluginId: s.pathParameters['id']!)),
           GoRoute(path: '/store/search', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => StoreSearchScreen(initialQuery: s.uri.queryParameters['q'] ?? '')),
           GoRoute(
               path: '/store/installed/:id',

@@ -102,9 +102,13 @@ class NodeGraphCanvas extends StatelessWidget {
     this.drag,
     this.marquee,
     this.callbacks,
+    this.badgeOf,
   });
 
   final NodeGraph graph;
+
+  /// ノードのヘッダーの右に置く小さな印(プラグインのノードの「どのアカウントの、どの版で動くか」、D-355)。null = 無し。
+  final Widget? Function(GraphNode n)? badgeOf;
 
   /// 画面上のずらし(スケール後のピクセル)。
   final Offset pan;
@@ -138,6 +142,7 @@ class NodeGraphCanvas extends StatelessWidget {
             scale: scale,
             alignment: Alignment.topLeft,
             child: NodeCard(
+              badge: badgeOf?.call(n),
               node: n,
               icon: iconOf?.call(n) ?? Icons.extension_outlined,
               selected: selected.contains(n.id),
@@ -175,6 +180,7 @@ class NodeCard extends StatelessWidget {
     required this.condInConnected,
     required this.clockConnected,
     this.interactive = true,
+    this.badge,
     required this.onMenu,
     required this.onMove,
     required this.onMoveEnd,
@@ -201,6 +207,9 @@ class NodeCard extends StatelessWidget {
 
   /// false = 見るだけ(ジェスチャなし、D-234)。
   final bool interactive;
+
+  /// ヘッダーの右の小さな印(D-355: プラグインのノードのアカウント + 版)。
+  final Widget? badge;
 
   /// クリック/長押しのドロップダウン(グローバル座標)。
   final ValueChanged<Offset> onMenu;
@@ -248,6 +257,7 @@ class NodeCard extends StatelessWidget {
                     : Icon(icon, size: 15, color: scheme.onSurfaceVariant),
                 const SizedBox(width: 6),
                 Expanded(child: Text(node.title, style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
+                if (badge != null) ...[const SizedBox(width: 4), badge!],
               ]),
             ),
           ),

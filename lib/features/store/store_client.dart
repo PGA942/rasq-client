@@ -3,6 +3,9 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' show sha512;
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:rasq_models/rasq_models.dart' show ErrorCode;
+
+import '../../backend/orgate_client.dart' show OrgateException;
 
 import 'store_models.dart';
 
@@ -49,6 +52,12 @@ abstract class StoreClient {
 
   /// ブックマーク一覧(要認証)。
   Future<List<StorePluginCard>> bookmarks();
+
+  /// 有料プラグインをポイントで買う (D-355、store.yaml `purchasePlugin`)。足りなければ `409`。
+  Future<StorePurchaseResult> purchase(String pluginId);
+
+  /// ポイントの残高と付与(Central `GET /me/points`)。
+  Future<StorePoints> points();
 }
 
 /// 同梱 wasm サンプル(実プラグイン)のストア上の id。
@@ -117,6 +126,10 @@ class BundledFallbackStoreClient implements StoreClient {
   Future<void> setBookmark(String pluginId, bool bookmarked) => primary.setBookmark(pluginId, bookmarked);
   @override
   Future<List<StorePluginCard>> bookmarks() => primary.bookmarks();
+  @override
+  Future<StorePurchaseResult> purchase(String pluginId) => primary.purchase(pluginId);
+  @override
+  Future<StorePoints> points() => primary.points();
 }
 
 class MockStoreClient implements StoreClient {
@@ -231,6 +244,26 @@ class MockStoreClient implements StoreClient {
       downloadHistory: [9000, 10200, 11500, 12100, 13300, 14800, 15400],
       ratingHistogram: [12, 8, 6, 5, 4],
     ),
+    // 有料の掲載例 (D-355): ポイントで買ってから入れる。
+    StorePluginDetail(
+      id: 'net.example.pro-cards',
+      name: 'プロ向けカード表示',
+      summary: '投稿をカード型にまとめて表示します(有料)。',
+      version: '1.0.0',
+      status: PluginStatus.published,
+      origin: PluginOrigin.verified,
+      rating: 4.3,
+      downloads: 420,
+      sizeMb: 0.3,
+      price: 300,
+      description: 'ビューのプラグインの有料の例です。ポイントで買うと、同じ RASQ アカウントならどの端末でも入れられます。',
+      safety: SafetyBlock(rasqFeatures: ['投稿の表示'], permissions: [PermissionEntry('storage.safe', '表示の設定の保存')], dataHandling: '外部送信はありません。', crashFreeRate: 0.995),
+      developerName: 'Example Cards',
+      pluginType: StorePluginType.viewer,
+      downloadsLastMonth: 60,
+      downloadHistory: [100, 180, 250, 300, 340, 390, 420],
+      ratingHistogram: [0, 1, 1, 3, 4],
+    ),
   ];
 
   /// スロットプラグインのサンプル (D-168) の掲載カード。
@@ -278,6 +311,39 @@ class MockStoreClient implements StoreClient {
 
   /// ブックマークはサーバー側の状態なので、モックでは端末内に持つ。
   final _bookmarked = <String>{};
+
+  /// ポイント / 購入 (D-355): モックは端末内に。はじめから 1,000 ポイント(2 か月後に失効)。
+  final _purchased = <String>{};
+  late final List<({int amount, int remaining, DateTime expiresAt})> _grants = [(amount: 1000, remaining: 1000, expiresAt: DateTime.now().add(const Duration(days: 61)))];
+  int get _balance => _grants.where((g) => g.expiresAt.isAfter(DateTime.now())).fold(0, (a, g) => a + g.remaining);
+
+  @override
+  Future<StorePurchaseResult> purchase(String pluginId) async {
+    final d = _all.where((c) => c.id == pluginId).firstOrNull;
+    if (d == null) throw OrgateException(ErrorCode.http(404), 'プラグインがありません');
+    if (d.price <= 0) throw OrgateException(ErrorCode.http(400), '無料のプラグインです');
+    if (_purchased.contains(pluginId)) return (purchased: true, pointsSpent: 0, balance: _balance);
+    final price = storePricePoints(d.price);
+    if (_balance < price) throw OrgateException(ErrorCode.http(409), 'ポイントが足りません(残り $_balance / 必要 $price)');
+    // 有効期限の近い付与から減らす。
+    var need = price;
+    final order = [for (var i = 0; i < _grants.length; i++) i]..sort((a, b) => _grants[a].expiresAt.compareTo(_grants[b].expiresAt));
+    for (final i in order) {
+      if (need == 0) break;
+      final g = _grants[i];
+      if (!g.expiresAt.isAfter(DateTime.now())) continue;
+      final take = g.remaining < need ? g.remaining : need;
+      _grants[i] = (amount: g.amount, remaining: g.remaining - take, expiresAt: g.expiresAt);
+      need -= take;
+    }
+    _purchased.add(pluginId);
+    return (purchased: true, pointsSpent: price, balance: _balance);
+  }
+
+  @override
+  Future<StorePoints> points() async => StorePoints(balance: _balance, grants: [
+        for (final g in _grants) StorePointGrant(amount: g.amount, remaining: g.remaining, expiresAt: g.expiresAt, source: 'stripe_dummy', expired: !g.expiresAt.isAfter(DateTime.now())),
+      ]);
   final _reviews = <String, List<StoreReview>>{};
 
   @override
@@ -336,7 +402,10 @@ class MockStoreClient implements StoreClient {
   }
 
   @override
-  Future<StorePluginDetail?> plugin(String id) async => _all.where((c) => c.id == id).firstOrNull;
+  Future<StorePluginDetail?> plugin(String id) async {
+    final d = _all.where((c) => c.id == id).firstOrNull;
+    return d == null || d.price <= 0 ? d : d.withPurchased(_purchased.contains(id));
+  }
 
   /// 配布物の実体: 同梱 wasm サンプルはアプリ同梱のアセット、架空掲載は
   /// 決定的なダミーバイト(id から生成)。
@@ -359,6 +428,8 @@ class MockStoreClient implements StoreClient {
   Future<InstallManifest?> manifest(String id, {String? version}) async {
     final detail = await plugin(id);
     if (detail == null) return null;
+    // 有料で買っていなければ、構成も配布物も出さない(Central と同じ 403 purchase_required、D-355)。
+    if (detail.needsPurchase) throw OrgateException(ErrorCode.http(403), '購入が必要です');
     final bytes = await _bytesOf(id);
     // 版指定 (D-137): リリースノートに載っている版だけ受ける。権限の増分は
     // その版のリリースノートから(現在版は掲載メタと同じ)。

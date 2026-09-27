@@ -16,6 +16,7 @@ import '../../shell/app_overlay_root.dart';
 import '../../shell/headers.dart';
 import '../collections/rasq_list_picker.dart' show rasqListCandidatesProvider;
 import '../home/timeline_providers.dart';
+import '../plugins/slot_plugins.dart' show slotPluginsProvider;
 import '../settings/settings_dsl.dart';
 import '../store/store_client.dart' show storeSamplePluginId;
 import 'node_canvas.dart';
@@ -23,6 +24,7 @@ import 'node_executor.dart' show pluginParamsOf;
 import 'node_graph.dart';
 import 'node_tabs.dart';
 import 'plugin_params_panel.dart';
+import 'plugin_node_badge.dart';
 
 /// ノードプログラミング画面 (D-090/D-092): TL 選択行の設定ボタン/トレンド/
 /// コンポーザーの「投稿先のカスタマイズ」から開く。GUI ノードをキャンバスに
@@ -226,6 +228,21 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
   }
 
   String get _area => nodeprogAreaFor(_accountKey, _scope);
+
+  /// グラフの持ち主のアカウント(ヘッダーのアイコン、D-355)。総合 / 関数の中身は null。
+  AccountSession? get _ownerSession {
+    final key = _accountKey;
+    if (key == null) return null;
+    return ref.read(sessionsProvider).value?.sessions.where((s) => s.account.key == key).firstOrNull;
+  }
+
+  /// プラグインの並べ替えノード(`plugin:slot:<id>:<tl>`)の印: 持ち主のアカウントのアイコン + そのアカウントで動く版 (D-355)。
+  Widget? _pluginBadge(GraphNode n) {
+    if (!n.type.startsWith('plugin:slot:')) return null;
+    final pluginId = n.type.substring('plugin:slot:'.length).split(':').first;
+    final plugin = ref.read(slotPluginsProvider.notifier).active(accountKey: _accountKey).where((p) => p.id == pluginId).firstOrNull;
+    return PluginNodeBadge(key: ValueKey('nodes.pluginBadge.${n.id}'), owner: _ownerSession, version: plugin?.storeVersion ?? (plugin == null ? null : 'dev'));
+  }
   String get _title {
     // 関数の中身の編集 (D-118): タイトルに関数名を出す。
     if (_scope.startsWith('fn:')) {
@@ -1088,6 +1105,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
       // … メニュー (D-101): タブの削除/名前変更/グラフのクリア。
       appBar: RasqPageHeader(
         title: _title,
+        // このグラフの持ち主のアカウント (D-355): プラグインのノードはこのアカウントの版で動く。
+        leadingAvatar: _ownerSession == null ? null : ownerSummaryOf(_ownerSession!),
         actions: [
           Builder(builder: (ctx) {
             return RasqIconButton(icon: Icons.more_horiz, tooltip: 'その他', onPressed: () => _moreMenu(ctx));
@@ -1181,6 +1200,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
                   scale: _scale,
                   selected: {..._selectedIds, ?_selected},
                   iconOf: (n) => _catalogByType[n.type]?.icon ?? Icons.extension_outlined,
+                  // プラグインのノード (D-355): このグラフの持ち主のアカウントと、そのアカウントで動く版。
+                  badgeOf: _pluginBadge,
                   drag: _drag,
                   marquee: _marquee,
                   callbacks: NodeCanvasCallbacks(

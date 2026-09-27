@@ -41,7 +41,7 @@ class _PluginParamsPanelState extends ConsumerState<PluginParamsPanel> {
   void initState() {
     super.initState();
     final ref_ = slotSortNodeOf(widget.nodeType);
-    final plugin = ref_ == null ? null : ref.read(slotPluginsProvider).where((p) => p.id == ref_.$1).firstOrNull;
+    final plugin = ref_ == null ? null : ref.read(activeSlotPluginsProvider).where((p) => p.id == ref_.$1).firstOrNull;
     if (ref_ == null || plugin == null) {
       _missing = true;
       _loading = false;

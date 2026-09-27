@@ -38,7 +38,7 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 final customTimelinesProvider = FutureProvider<List<CustomTimelineSpec>>((ref) async {
   final session = ref.watch(currentSnsSessionProvider);
   // スロットプラグイン (D-167): `tl` スロットの宣言は `slot:<pluginId>:<id>` で並ぶ。
-  ref.watch(slotPluginsProvider);
+  ref.watch(activeSlotPluginsProvider); // アカウントを変えたら、そのアカウントの版の TL (D-355)
   final slots = [for (final (p, t) in await ref.read(slotPluginsProvider.notifier).timelines()) CustomTimelineSpec(id: 'slot:${p.id}:${t.id}', label: t.label, base: t.base)];
   if (session is! WasmSnsSession) return slots;
   return [...await session.timelinePlugin.timelines(), ...slots];
@@ -487,7 +487,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             fetchTrends: () async => [for (final t in await graphSession.trendingTags()) t.tag],
             embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
             // TL プラグインのソートノード (D-102): tl.sort/compose の実体。
-            pluginSort: (id, posts, params) => id.startsWith('slot:') ? ref.read(slotPluginsProvider.notifier).sortById(id, posts, params: params) : (graphSession is WasmSnsSession ? graphSession.timelinePlugin.compose(id, posts) : Future.value(posts)),
+            // プラグインの並べ替えは、このグラフの持ち主のアカウントで使う版で (D-355)。
+            pluginSort: (id, posts, params) => id.startsWith('slot:') ? ref.read(slotPluginsProvider.notifier).sortById(id, posts, params: params, accountKey: graphAccKey) : (graphSession is WasmSnsSession ? graphSession.timelinePlugin.compose(id, posts) : Future.value(posts)),
             // storage.safe (D-104/D-108): アカウント別領域(旧共有領域は読み取りフォールバック)。
             storageRead: (slot) async {
               final own = (await ref.read(settingsAreaProvider(storageArea).future))[slot];

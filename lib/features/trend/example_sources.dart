@@ -53,7 +53,7 @@ Future<List<ExampleCandidate>> recentActionCandidates(WidgetRef ref) async {
 
 /// 入れているプラグイン: スロットプラグイン(マニフェスト)+ ストアから入れた(スロットでない)もの。
 List<ExampleCandidate> installedPluginCandidates(WidgetRef ref) {
-  final slots = ref.read(slotPluginsProvider);
+  final slots = ref.read(activeSlotPluginsProvider);
   final seen = <String>{};
   return [
     for (final p in slots)

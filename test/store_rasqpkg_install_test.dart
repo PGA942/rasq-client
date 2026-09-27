@@ -77,10 +77,10 @@ void main() {
 
   test('SNS プラグイン + 子の配布物: 子だけが `store:<id>#<childId>` でスロットに入り、アンインストールで外れる', () async {
     final store = _PkgStore({'dev.test.mysns': ('0.1.0', sns)});
-    final c = container(store, loader: loaderFor({'store:dev.test.mysns#dev.test.mysns.hello': 'dev.test.mysns.hello'}));
+    final c = container(store, loader: loaderFor({'store:dev.test.mysns@0.1.0#dev.test.mysns.hello': 'dev.test.mysns.hello'}));
     final outcome = await c.read(installedPluginsProvider.notifier).install('dev.test.mysns');
     expect(outcome.error, isNull, reason: c.read(slotPluginsNoticeProvider));
-    expect(c.read(slotPluginsProvider).map((p) => (p.id, p.source)), [('dev.test.mysns.hello', 'store:dev.test.mysns#dev.test.mysns.hello')]);
+    expect(c.read(slotPluginsProvider).map((p) => (p.id, p.source)), [('dev.test.mysns.hello', 'store:dev.test.mysns@0.1.0#dev.test.mysns.hello')]);
     expect(c.read(installedPluginsProvider).single.sha512, sha512.convert(sns).toString());
     await c.read(installedPluginsProvider.notifier).uninstall('dev.test.mysns');
     expect(c.read(slotPluginsProvider), isEmpty);
@@ -89,7 +89,7 @@ void main() {
 
   test('他人の土台に足す子: 土台(requires)が無ければ入れない、あれば入る', () async {
     final store = _PkgStore({'dev.test.mysns': ('0.1.0', sns), 'net.example.later': ('0.1.0', later)});
-    final c = container(store, loader: loaderFor({'store:dev.test.mysns#dev.test.mysns.hello': 'dev.test.mysns.hello', 'store:net.example.later': 'net.example.later'}));
+    final c = container(store, loader: loaderFor({'store:dev.test.mysns@0.1.0#dev.test.mysns.hello': 'dev.test.mysns.hello', 'store:net.example.later@0.1.0': 'net.example.later'}));
     final refused = await c.read(installedPluginsProvider.notifier).install('net.example.later');
     expect(refused.error, contains('dev.test.mysns ^0.1.0 が必要'));
     expect(c.read(installedPluginsProvider), isEmpty);
@@ -98,7 +98,7 @@ void main() {
     expect((await c.read(installedPluginsProvider.notifier).install('dev.test.mysns')).error, isNull);
     final ok = await c.read(installedPluginsProvider.notifier).install('net.example.later');
     expect(ok.error, isNull, reason: c.read(slotPluginsNoticeProvider));
-    expect(c.read(slotPluginsProvider).map((p) => p.source), containsAll(['store:dev.test.mysns#dev.test.mysns.hello', 'store:net.example.later']));
+    expect(c.read(slotPluginsProvider).map((p) => p.source), containsAll(['store:dev.test.mysns@0.1.0#dev.test.mysns.hello', 'store:net.example.later@0.1.0']));
   });
 
   test('掲載と中身が食い違う配布物(別のプラグイン / 別の版)は入れない', () async {
@@ -117,7 +117,7 @@ void main() {
   });
 
   test('wasm が目次と違う id を名乗ったら登録しない(入れ物に別のプラグインを紛れ込ませない)', () async {
-    final c = container(_PkgStore({'dev.test.mysns': ('0.1.0', sns)}), loader: loaderFor({'store:dev.test.mysns#dev.test.mysns.hello': 'evil.plugin'}));
+    final c = container(_PkgStore({'dev.test.mysns': ('0.1.0', sns)}), loader: loaderFor({'store:dev.test.mysns@0.1.0#dev.test.mysns.hello': 'evil.plugin'}));
     final outcome = await c.read(installedPluginsProvider.notifier).install('dev.test.mysns');
     expect(outcome.error, contains('evil.plugin'));
     expect(c.read(slotPluginsProvider), isEmpty);
@@ -154,7 +154,7 @@ void main() {
     final outcome = await c.read(installedPluginsProvider.notifier).install('dev.test.mysns').timeout(const Duration(seconds: 90));
     expect(outcome.error, isNull, reason: c.read(slotPluginsNoticeProvider));
     final p = c.read(slotPluginsProvider).single;
-    expect((p.manifest.id, p.source), ('dev.test.mysns.hello', 'store:dev.test.mysns#dev.test.mysns.hello'));
+    expect((p.manifest.id, p.source), ('dev.test.mysns.hello', 'store:dev.test.mysns@0.1.0#dev.test.mysns.hello'));
     expect(p.manifest.actions.map((a) => a.id), ['hello']);
     final r = await p.runtime.invoke('post.action', {'token': 't', 'actionId': 'hello', 'post': {'body': 'abc'}, 'account': <String, Object?>{}});
     expect((r['value'] as Map)['result'], containsPair('done', true));

@@ -366,6 +366,18 @@ void _checkPath(String p) {
   return i < 0 ? (container: source, pluginId: null) : (container: source.substring(0, i), pluginId: source.substring(i + 1));
 }
 
+/// ストアから入れたプラグインの登録元 (D-168 → D-355): `store:<id>@<version>`(子は `#<childId>`)。版を持たない古い形 `store:<id>` も読む。
+String storeSlotSource(String pluginId, String version, {String? child}) => 'store:$pluginId@$version${child == null ? '' : '#$child'}';
+
+/// 登録元が `store:` なら (プラグイン id, 版(古い形は null), 子 id)。ほかは null。
+({String pluginId, String? version, String? child})? parseStoreSlotSource(String source) {
+  if (!source.startsWith('store:')) return null;
+  final (:container, pluginId: child) = splitPackageSource(source);
+  final body = container.substring(6);
+  final at = body.indexOf('@');
+  return at < 0 ? (pluginId: body, version: null, child: child) : (pluginId: body.substring(0, at), version: body.substring(at + 1), child: child);
+}
+
 /// 開発者鍵の署名(`<pkg>.sig.json`、`rasq build` が出す)を確かめる。署名対象は配布物バイト列の SHA-512 ダイジェスト
 /// (生 64 バイト)= ストア署名と同じ。戻りは公開鍵の指紋(SHA-512 の先頭 8 バイト、`rasq key show` と同じ)。
 /// サイドロード用: 鍵そのものの信頼はユーザーが指紋で判断する(常に警告つき)。
