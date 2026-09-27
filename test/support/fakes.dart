@@ -231,7 +231,13 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<void> addToList(String listId, String userId) async {}
   @override
-  Future<UserListInfo> createList(String name) async => UserListInfo(id: 'l-new', name: name);
+  Future<UserListInfo> createList(String name) async {
+    createdLists.add(name);
+    return UserListInfo(id: 'l-new', name: name);
+  }
+
+  /// createList に渡された名前 (D-349: どのアカウントで作ったか)。
+  final List<String> createdLists = [];
   @override
   Future<Page<Post>> favorites({String? cursor, int limit = 20}) async => Page(items: _posts.take(1).toList());
   @override
