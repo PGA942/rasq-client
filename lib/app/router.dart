@@ -43,6 +43,7 @@ import '../features/profile/rasq_reactions_screen.dart';
 import '../features/profile/rasq_ownership_screens.dart';
 import '../features/profile/rasq_profile_edit_screen.dart';
 import '../features/clips/clip_timeline_screen.dart';
+import '../features/collections/rasq_collection_screen.dart';
 import '../features/lists/lists_screens.dart';
 import '../features/relational/relational_engine.dart';
 import '../features/relational/relational_event_screen.dart';
@@ -142,6 +143,9 @@ abstract final class Routes {
   static String rasqPost(String id) => '/rasq-post/${Uri.encodeComponent(id)}';
   static String rasqPostReactions(String id) => '${rasqPost(id)}/reactions';
   static String rasqAccount(String handle) => '/rasq/${Uri.encodeComponent(handle)}';
+
+  /// RASQ リスト / 公開した RASQ クリップ (D-343/D-344)。id か共有コード。
+  static String rasqCollection(String idOrCode) => '/rasq-collections/${Uri.encodeComponent(idOrCode)}';
   static String storePlugin(String id) => '/store/plugin/${Uri.encodeComponent(id)}';
 
   /// インストール済み (D-256): 一覧と 1 件のページ(ストアの掲載とは別。掲載が消えていても開ける)。
@@ -311,6 +315,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/rasq-post/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqPostScreen(postId: s.pathParameters['id']!)),
           GoRoute(path: '/rasq-post/:id/reactions', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqReactionsScreen(postId: s.pathParameters['id']!)),
           GoRoute(path: '/rasq/:handle', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!)),
+          GoRoute(path: '/rasq-collections/:ref', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqCollectionScreen(idOrCode: s.pathParameters['ref']!)),
           GoRoute(path: Routes.profileEdit, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ProfileEditScreen()),
           GoRoute(path: Routes.rai, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiHomeScreen(), routes: [
             GoRoute(path: 'achievements', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RaiAchievementsScreen()),

@@ -4,7 +4,7 @@ import 'package:rasq_store/rasq_store.dart';
 
 /// Fake SNS plugin/session for widget tests — serves a fixed timeline.
 class FakeSnsPlugin extends SnsPlugin {
-  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const [], this.localEmojis, this.reactionActionId = 'reaction'});
+  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const [], this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false});
   final List<Post> Function(AccountId viewer) posts;
 
   /// 渡すと、Misskey のように**絵文字でリアクションする**セッションになる(`iconPerPost`。D-278)。中身 = 自サーバーにある絵文字の名前。
@@ -15,6 +15,9 @@ class FakeSnsPlugin extends SnsPlugin {
 
   /// 開いたセッション(テストから、送ったリアクションを見る)。
   final List<FakeSnsSession> opened = [];
+
+  /// SNS 側のブックマーク(Misskey のお気に入りと同じ `favorite` / genreTag `Bookmark`)を持つか (D-342)。
+  final bool bookmark;
   @override
   final SnsKind kind;
   final String id;
@@ -33,14 +36,18 @@ class FakeSnsPlugin extends SnsPlugin {
   Future<AuthFlow> beginAuth(String host, {Uri? callback}) => throw UnimplementedError();
   @override
   SnsSession open(AccountSession session) {
-    final s = FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind, localEmojis: localEmojis, reactionActionId: reactionActionId);
+    final s = FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind, localEmojis: localEmojis, reactionActionId: reactionActionId, bookmark: bookmark);
     opened.add(s);
     return s;
   }
 }
 
 class FakeSnsSession extends SnsSessionBase {
-  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey, this.localEmojis, this.reactionActionId = 'reaction'}) : _posts = [...posts];
+  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey, this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false}) : _posts = [...posts];
+  final bool bookmark;
+
+  /// addToClip の呼び出し(`clipId:postId`)。
+  final List<String> clipAdds = [];
   final Set<String>? localEmojis;
   final String reactionActionId;
 
@@ -69,6 +76,7 @@ class FakeSnsSession extends SnsSessionBase {
         const ActionDescriptor(id: 'reply', genreTag: 'Reply', label: '返信', icon: 'subdirectory_arrow_left', confirmMode: ConfirmMode.confirm, fow: FowType.interstitial),
         const ActionDescriptor(id: 'renote', genreTag: 'Repost', label: 'リノート', icon: 'repeat', doneIcon: 'repeat_on'),
         ActionDescriptor(id: reactionActionId, genreTag: 'Reaction', label: 'リアクション', icon: 'favorite_border', doneIcon: 'favorite', iconPerPost: localEmojis != null),
+        if (bookmark) const ActionDescriptor(id: 'favorite', genreTag: 'Bookmark', label: 'お気に入り', icon: 'star_border', doneIcon: 'star', countSource: CountSource.none),
       ];
   @override
   Future<UserSummary> me() async => UserSummary(id: 'me', account: account, displayName: 'テスター');
@@ -239,7 +247,7 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<ClipInfo> createClip(String name, {String? description, bool isPublic = false}) async => ClipInfo(id: 'c-new', name: name, description: description, isPublic: isPublic);
   @override
-  Future<void> addToClip(String clipId, String postId) async {}
+  Future<void> addToClip(String clipId, String postId) async => clipAdds.add('$clipId:$postId');
   @override
   Future<List<TrendTag>> trendingTags() async => const [TrendTag(tag: '打上会', usersCount: 117, chart: [1, 3, 2])];
   @override

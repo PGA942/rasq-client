@@ -9,6 +9,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../backend/rasq_collections_api.dart';
 import '../../shell/headers.dart';
 import '../child_safe/child_safe_collections.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -16,6 +17,8 @@ import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../clips/clip_providers.dart';
 import '../clips/index_toc.dart';
 import '../clips/virtual_index.dart';
+import '../collections/rasq_collection_tile.dart';
+import '../collections/rasq_collections.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../home/timeline_search.dart';
@@ -169,7 +172,29 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
               // 入口。詳細はクリップTL)。既定は公開ネイティブのみ — 非公開は
               // 入力欄のフィルタで表示切替、RASQ 横断はブックマーク欄へ。
               final clips = ref.watch(listsClipsProvider).where((c) => _q.isEmpty || c.name.toLowerCase().contains(_q)).toList();
-              if (list.isEmpty && clips.isEmpty) return const RasqEmptyView(title: 'リストはありません', hint: '＋でリストを作成できます');
+              // RASQ リスト (D-343): SNS を跨いだ人のリスト(Central)。自分のもの + フォロー中のリスト / クリップ。
+              final hasRasq = ref.watch(hasRasqAccountProvider);
+              bool hit(RasqCollection c) => _q.isEmpty || c.name.toLowerCase().contains(_q);
+              final rasqMine = (ref.watch(myRasqCollectionsProvider(RasqCollectionKind.list)).value ?? const <RasqCollection>[]).where(hit).toList();
+              final rasqFollowing = (ref.watch(followingRasqCollectionsProvider).value ?? const <RasqCollection>[]).where(hit).toList();
+              final rasqSection = [
+                if (hasRasq) ...[
+                  const RasqSectionHeader(title: 'RASQ リスト(SNS 横断)', topMargin: 0),
+                  for (final c in rasqMine) ...[RasqCollectionRow(collection: c), const Divider(height: 1)],
+                  for (final c in rasqFollowing) ...[RasqCollectionRow(collection: c, showOwner: true), const Divider(height: 1)],
+                  RasqListTile(
+                    key: const ValueKey('lists.rasq.create'),
+                    title: '新しい RASQ リスト',
+                    subtitle: 'Misskey / Mastodon / Bluesky の人を 1 つのリストに',
+                    leading: const Icon(Icons.add),
+                    onTap: () async {
+                      final c = await showCreateRasqListSheet(ref);
+                      if (c != null && context.mounted) context.push(Routes.rasqCollection(c.code ?? c.id));
+                    },
+                  ),
+                ],
+              ];
+              if (list.isEmpty && clips.isEmpty && rasqSection.isEmpty) return const RasqEmptyView(title: 'リストはありません', hint: '＋でリストを作成できます');
               Widget listRow(UserListInfo l) => InkWell(
                     onTap: () => context.push('/lists/${Uri.encodeComponent(l.id)}', extra: l),
                     child: Padding(
@@ -207,12 +232,13 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
                     ),
                   );
               return ListView(children: [
+                ...rasqSection,
                 if (clips.isNotEmpty) ...[
-                  const RasqSectionHeader(title: 'クリップ', topMargin: 0),
+                  RasqSectionHeader(title: 'クリップ', topMargin: rasqSection.isEmpty ? 0 : RasqSpacing.md),
                   for (final c in clips) ...[clipRow(c), const Divider(height: 1)],
                 ],
                 if (list.isNotEmpty) ...[
-                  if (clips.isNotEmpty) const RasqSectionHeader(title: 'リスト', topMargin: RasqSpacing.md),
+                  if (clips.isNotEmpty || rasqSection.isNotEmpty) const RasqSectionHeader(title: 'リスト', topMargin: RasqSpacing.md),
                   for (final l in list) ...[listRow(l), const Divider(height: 1)],
                 ],
               ]);

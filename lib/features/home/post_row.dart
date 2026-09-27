@@ -29,6 +29,11 @@ import 'plugin_actions.dart';
 import 'post_action_auto.dart';
 import '../vc/astell_actions.dart';
 import '../vc/astell_links.dart';
+import '../../backend/orgate_client.dart' show centralBaseUrlProvider;
+import '../../backend/rasq_collections_api.dart' show rasqCollectionLinkIn;
+import '../../backend/server_info_api.dart' show serverHostLinkIn;
+import '../collections/rasq_collection_tile.dart';
+import '../servers/server_info_tile.dart';
 import '../settings/safety.dart';
 import 'action_bar_config.dart';
 import 'account_affinity.dart';
@@ -234,6 +239,12 @@ class _PostRowState extends ConsumerState<PostRow> {
       // AsTell のリンクを含む投稿 (D-160): 本文の下にルームのタイル(ブックマーク/通知/見てみる)。
       final astellId = astellRoomIdIn(post.body);
       if (astellId != null) body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [body, AstellPostTile(roomId: astellId)]);
+      // RASQ リスト / クリップの共有リンク (D-345): 本文の下にそのタイル。無ければ、サーバーそのものへのリンクにサーバー情報タイル
+      // (インスタンスでなければ何も出ない)。タイルは 1 つだけ(AsTell → コレクション → サーバーの順)。
+      final collection = astellId == null ? rasqCollectionLinkIn(post.body) : null;
+      final serverHost = astellId == null && collection == null ? serverHostLinkIn(post.body, exclude: {?ref.watch(centralBaseUrlProvider)?.host}) : null;
+      if (collection != null) body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [body, RasqCollectionPostTile(idOrCode: collection.ref)]);
+      if (serverHost != null) body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [body, ServerInfoPostTile(host: serverHost)]);
       final cw = post.contentWarning;
       content = (cw != null && cw.isNotEmpty) ? RasqContentWarning(cw: cw, initiallyOpen: safety.openCw, child: _CwBody(post: post, body: body, showAllMedia: widget.showAllMedia)) : body;
     }

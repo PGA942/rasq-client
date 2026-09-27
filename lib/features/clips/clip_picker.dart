@@ -6,16 +6,20 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'host_clips.dart';
 
 /// 「クリップに追加」(D-032): 追加先の選択シート。ネイティブクリップ
 /// (SNS 対応時のみ)とホスト横断クリップ(常時)を一つのシートに並べ、
 /// 末尾に新規作成を置く。
-Future<void> showAddToClipSheet(WidgetRef ref, Post post) async {
+/// [session] = ネイティブクリップを引くセッション(投稿詳細のブックマークの長押し D-342 は、その投稿のアカウントのもの)。
+/// 省略時は現在のアカウント。すでに入っている RASQ クリップは「追加済み」で押せない。
+Future<void> showAddToClipSheet(WidgetRef ref, Post post, {SnsSession? session}) async {
   // await 後に ref を触らない: シートが閉じる頃には呼び出し元ウィジェットが
   // 破棄されていることがある(「Looking up a deactivated widget's ancestor」)。
   final manager = ref.read(overlayManagerProvider);
-  final session = ref.read(currentSnsSessionProvider);
+  session ??= ref.read(currentSnsSessionProvider);
+  final messenger = ref.read(rootMessengerKeyProvider).currentState;
   final hostStore = ref.read(hostClipsProvider.notifier);
   final hostClips = ref.read(hostClipsProvider).value ?? const <HostClip>[];
   List<ClipInfo> native = const [];
@@ -42,30 +46,47 @@ Future<void> showAddToClipSheet(WidgetRef ref, Post post) async {
           onTap: () => manager.close('clip.add', result: c),
         ),
       for (final c in host)
-        RasqListTile(
-          title: c.name,
-          subtitle: '${c.entries.length}件 ・ RASQ クリップ(SNS 横断)',
-          leading: const Icon(Icons.workspaces_outlined),
-          onTap: () => manager.close('clip.add', result: c),
-        ),
+        if (c.entries.any((e) => e.postKey == post.key))
+          RasqListTile(
+            key: ValueKey('clip.add.host.${c.id}'),
+            title: c.name,
+            subtitle: '追加済み ・ RASQ クリップ${c.isPublished ? '(公開中)' : ''}',
+            leading: const Icon(Icons.workspaces_outlined),
+            trailing: const Icon(Icons.check, size: 18),
+          )
+        else
+          RasqListTile(
+            key: ValueKey('clip.add.host.${c.id}'),
+            title: c.name,
+            subtitle: '${c.entries.length}件 ・ RASQ クリップ(SNS 横断)${c.isPublished ? ' ・ 公開中' : ''}',
+            leading: const Icon(Icons.workspaces_outlined),
+            onTap: () => manager.close('clip.add', result: c),
+          ),
       RasqListTile(title: '新しいクリップを作成', leading: const Icon(Icons.add), onTap: () => manager.close('clip.add', result: #create)),
       const SizedBox(height: RasqSpacing.md),
     ]),
   );
   if (picked == null) return;
 
-  if (picked == #create) {
-    await _createAndAdd(manager, session, hostStore, post);
-  } else if (picked is ClipInfo) {
-    await session?.addToClip(picked.id, post.id);
-  } else if (picked is HostClip) {
-    await hostStore.addPost(picked.id, post);
+  try {
+    if (picked == #create) {
+      final name = await _createAndAdd(manager, session, hostStore, post);
+      if (name != null) messenger?.showSnackBar(SnackBar(content: Text('「$name」に追加しました')));
+    } else if (picked is ClipInfo) {
+      await session?.addToClip(picked.id, post.id);
+      messenger?.showSnackBar(SnackBar(content: Text('「${picked.name}」に追加しました')));
+    } else if (picked is HostClip) {
+      await hostStore.addPost(picked.id, post);
+      messenger?.showSnackBar(SnackBar(content: Text('「${picked.name}」に追加しました')));
+    }
+  } catch (e) {
+    messenger?.showSnackBar(SnackBar(content: Text('クリップに追加できませんでした: $e')));
   }
 }
 
 /// 新規作成: 名前 + 説明文(任意)→ ネイティブ / RASQ(SNS 横断)の作成先を
 /// 選んで追加。説明文はクリップページのヘッダー(EventStyleHeader)に出る。
-Future<void> _createAndAdd(OverlayManager manager, SnsSession? session, HostClipsStore hostStore, Post post) async {
+Future<String?> _createAndAdd(OverlayManager manager, SnsSession? session, HostClipsStore hostStore, Post post) async {
   final controller = TextEditingController();
   final descController = TextEditingController();
   var toHost = session == null;
@@ -98,7 +119,7 @@ Future<void> _createAndAdd(OverlayManager manager, SnsSession? session, HostClip
   );
   final name = controller.text.trim();
   final description = descController.text.trim().isEmpty ? null : descController.text.trim();
-  if (ok != true || name.isEmpty) return;
+  if (ok != true || name.isEmpty) return null;
   if (toHost || session == null) {
     final clip = await hostStore.createClip(name, description: description);
     await hostStore.addPost(clip.id, post);
@@ -106,4 +127,5 @@ Future<void> _createAndAdd(OverlayManager manager, SnsSession? session, HostClip
     final clip = await session.createClip(name, description: description);
     await session.addToClip(clip.id, post.id);
   }
+  return name;
 }

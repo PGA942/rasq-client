@@ -17,6 +17,7 @@ import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../settings/settings_dsl.dart';
 import '../users/user_list.dart';
+import 'post_bookmark_button.dart';
 import 'reactions_screen.dart';
 import 'thread_section.dart';
 import 'thread_section_bar.dart';
@@ -153,7 +154,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         );
 
     return Scaffold(
-      appBar: RasqPageHeader(title: '投稿', leadingAvatar: me, actions: [RasqIconButton(icon: Icons.bookmark_border, onPressed: () {}, tooltip: 'ブックマーク')], onMore: () {}),
+      appBar: RasqPageHeader(title: '投稿', leadingAvatar: me, actions: [if (replyTarget != null) PostBookmarkButton(post: replyTarget, session: session)], onMore: () {}),
       body: thread.when(
         loading: () => initial == null ? const RasqLoading() : body(initial!, const [], const [], loading: true),
         error: (e, _) {

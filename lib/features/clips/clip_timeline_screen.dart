@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -6,13 +7,16 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../backend/rasq_collections_api.dart';
 import '../../session/session_providers.dart';
 import '../../shell/headers.dart';
 import '../child_safe/child_safe_collections.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
+import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../relational/relational_event_screen.dart';
 import 'host_clips.dart';
 import 'index_toc.dart';
@@ -122,6 +126,7 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
                           description: widget.clip.description,
                           chips: topSharedLabels(posts),
                         ),
+                        if (_isHost) HostClipPublishRow(clipId: widget.clip.id.substring(hostClipIdPrefix.length)),
                         VirtualIndexToc(entries: index, selectedId: _selectedEntry, onSelect: (id) => setState(() => _selectedEntry = id)),
                         for (final p in visible) ...[
                           PostRow(
@@ -139,5 +144,94 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
                       ]),
                     ),
     );
+  }
+}
+
+/// RASQ クリップの公開 (D-344)。公開すると Central に写り(S-042)、アカウントページの「クリップ」タブと共有リンクから
+/// 見られる。中身は、資格のある人(作った人 / 条件に合うフォロワー)が見たときに、その人の AsTell のトークンで取り直される。
+/// フォロワー限定 / 指名 / ローカルのみの投稿は、端末のクリップには残して公開する側には載せない。
+class HostClipPublishRow extends ConsumerStatefulWidget {
+  const HostClipPublishRow({super.key, required this.clipId});
+  final String clipId;
+
+  @override
+  ConsumerState<HostClipPublishRow> createState() => _HostClipPublishRowState();
+}
+
+class _HostClipPublishRowState extends ConsumerState<HostClipPublishRow> {
+  bool _busy = false;
+
+  Future<void> _run(Future<String> Function() job) async {
+    final messenger = ref.read(rootMessengerKeyProvider).currentState;
+    setState(() => _busy = true);
+    try {
+      final msg = await job();
+      messenger?.clearSnackBars();
+      messenger?.showSnackBar(SnackBar(content: Text(msg)));
+    } catch (e) {
+      messenger?.clearSnackBars();
+      messenger?.showSnackBar(SnackBar(content: Text('できませんでした: $e')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clip = ref.watch(hostClipsProvider).value?.where((c) => c.id == widget.clipId).firstOrNull;
+    if (clip == null) return const SizedBox.shrink();
+    final hasAccount = ref.watch(hasRasqAccountProvider);
+    final store = ref.read(hostClipsProvider.notifier);
+    final skipped = clip.entries.where((e) => !isPublishableEntry(e)).length;
+    final Widget body;
+    if (!clip.isPublished) {
+      body = Row(children: [
+        Expanded(
+          child: Text(
+            hasAccount ? '公開すると、アカウントページと共有リンクから見られます${skipped > 0 ? '(フォロワー限定などの $skipped 件は載せません)' : ''}' : '公開するには RASQ アカウントが必要です',
+            style: RasqTypography.caption,
+          ),
+        ),
+        const SizedBox(width: RasqSpacing.sm),
+        OutlinedButton.icon(
+          key: const ValueKey('clip.publish'),
+          icon: const Icon(Icons.public, size: 18),
+          label: const Text('公開する'),
+          onPressed: !hasAccount || _busy
+              ? null
+              : () => _run(() async {
+                    final d = await store.publish(clip.id);
+                    final pending = d.items.where((i) => i.state == RasqItemState.pending).length;
+                    return pending > 0 ? '公開しました(公開範囲を確かめている投稿が $pending 件あります)' : '公開しました';
+                  }),
+        ),
+      ]);
+    } else {
+      body = Row(children: [
+        const Icon(Icons.public, size: 18, color: RasqColors.accent),
+        const SizedBox(width: RasqSpacing.xs),
+        Expanded(child: Text(skipped > 0 ? '公開中(フォロワー限定などの $skipped 件は載せていません)' : '公開中', style: RasqTypography.caption)),
+        if (clip.remoteUrl != null)
+          TextButton(
+            key: const ValueKey('clip.publish.copy'),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: clip.remoteUrl!));
+              ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(const SnackBar(content: Text('リンクをコピーしました')));
+            },
+            child: const Text('リンクをコピー'),
+          ),
+        TextButton(
+          key: const ValueKey('clip.unpublish'),
+          onPressed: _busy
+              ? null
+              : () => _run(() async {
+                    await store.unpublish(clip.id);
+                    return '公開をやめました';
+                  }),
+          child: const Text('公開をやめる'),
+        ),
+      ]);
+    }
+    return Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs), child: body);
   }
 }

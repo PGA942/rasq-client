@@ -11,6 +11,7 @@ import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
+import '../../backend/rasq_collections_api.dart';
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart' show fowColumnOf;
 import '../../session/session_providers.dart';
@@ -18,6 +19,8 @@ import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../collections/rasq_collection_tile.dart';
+import '../collections/rasq_collections.dart';
 import 'rasq_post_tile.dart';
 
 /// RASQ アカウントページ (D-270 / S-021)。
@@ -99,8 +102,8 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
                 },
               ),
               _MediaTab(posts: d.posts),
-              _message(context, '作成したリストは、今後ここに出ます。'),
-              _message(context, '公開したクリップは、今後ここに出ます。'),
+              _CollectionsTab(handle: widget.handle, kind: RasqCollectionKind.list, isMine: isMine),
+              _CollectionsTab(handle: widget.handle, kind: RasqCollectionKind.clip, isMine: isMine),
               _PluginsTab(profile: d.profile, reviews: false),
               _PluginsTab(profile: d.profile, reviews: true),
             ]),
@@ -135,6 +138,40 @@ Future<void> openRasqSnsTile(BuildContext context, WidgetRef ref, RasqSnsTile t)
   final url = t.profileUrl;
   if (url == null) return toast('このアカウントの行き先が分かりません');
   if (!await launchUrl(url, mode: LaunchMode.externalApplication)) toast('開けませんでした: $url');
+}
+
+/// 公開した RASQ リスト / RASQ クリップ (D-343/D-344、S-042)。タイルを縦に並べて、「見てみる」でそのページへ。
+class _CollectionsTab extends ConsumerWidget {
+  const _CollectionsTab({required this.handle, required this.kind, required this.isMine});
+  final String handle;
+  final RasqCollectionKind kind;
+  final bool isMine;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final list = ref.watch(accountRasqCollectionsProvider((handle: handle, kind: kind)));
+    final isList = kind == RasqCollectionKind.list;
+    return list.when(
+      loading: () => const RasqLoading(),
+      error: (_, _) => _message(context, '読み込めませんでした。'),
+      data: (items) {
+        if (items.isEmpty) {
+          return _message(
+            context,
+            isMine
+                ? (isList ? '公開した RASQ リストがここに出ます(リストの画面の「RASQ リスト」から作れます)。' : '公開した RASQ クリップがここに出ます(クリップのページの「公開する」)。')
+                : (isList ? '公開しているリストはありません。' : '公開しているクリップはありません。'),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(RasqSpacing.page),
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const SizedBox(height: RasqSpacing.sm),
+          itemBuilder: (_, i) => RasqCollectionTile(collection: items[i], onOpen: () => context.push(Routes.rasqCollection(items[i].code ?? items[i].id))),
+        );
+      },
+    );
+  }
 }
 
 Widget _message(BuildContext context, String text) => ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [Text(text, style: RasqTypography.bodySmall.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))]);
