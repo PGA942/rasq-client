@@ -91,6 +91,8 @@ dependencies:
   web_socket_channel: ^3.0.3
   audioplayers: ^6.8.1
   gal: ^2.3.3
+  # 書き出し中の広告枠 (D-327): Android / iOS は AdMob(同意の UMP も同梱)。Web は AdSense をそのまま置く(依存は足さない)。
+  google_mobile_ads: ^9.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
