@@ -47,6 +47,21 @@ void main() {
     expect((p.snsAccounts.single.label, p.snsAccounts.single.serverLabel), ('taro', 'mk.example'));
   });
 
+  test('フィード: limit / until はパスでなくクエリで送る(パスに ? を入れると %3F になって 404)', () async {
+    final urls = <Uri>[];
+    final mock = MockClient((req) async {
+      urls.add(req.url);
+      if (req.url.path != '/api/v1/me/feed') return json({'error': {'code': 'not_found'}}, 404);
+      return json({'posts': <Object>[], 'nextUntil': null});
+    });
+    final api = RasqAccountPageApi(OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock));
+    await api.feed();
+    await api.feed(until: '2026-09-20T00:00:00+09:00', limit: 10);
+    expect(urls.map((u) => u.path), everyElement('/api/v1/me/feed'));
+    expect(urls[0].queryParameters, {'limit': '30'});
+    expect(urls[1].queryParameters, {'limit': '10', 'until': '2026-09-20T00:00:00+09:00'});
+  });
+
   testWidgets('ページ: プロフィール / SNS タイル / タブ。自分のページでは投稿の上限の案内と削除、編集画面でタイルの出し分けを変える', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
