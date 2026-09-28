@@ -182,7 +182,7 @@ enum PermissionKind {
   gpuMl('GPU / 機械学習', 'GPU 実行・モデル推論'),
   clipboard('クリップボード', 'コピー内容の読み書き'),
   background('バックグラウンド実行', '画面を閉じても動作'),
-  ui('画面と配置', 'FOW / タイムライン / ボタンの配置'),
+  ui('画面と配置', '画面の表示とボタンの配置'),
   other('その他', '');
 
   const PermissionKind(this.label, this.description);

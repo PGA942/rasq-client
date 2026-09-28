@@ -141,7 +141,7 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
                   Text(' のインストールが必要です。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 ]),
               if (installed != null)
-                Text('インストール済み v${installed.version}(SHA-512 検証済み)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
+                Text(rasqDetail(context, 'インストール済み v${installed.version}', 'インストール済み v${installed.version}(SHA-512 検証済み)'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
               else if (missingDeps.isEmpty)
                 Text(
                   '${d.price == 0 ? '無料' : '¥${d.price.toStringAsFixed(0)}'} ・ ${d.sizeMb.toStringAsFixed(1)}MB ・ v${d.version}${d.channel == 'beta' ? ' (β)' : ''}${d.hasAds ? ' ・ 広告あり' : ''}',

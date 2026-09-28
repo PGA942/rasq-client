@@ -855,7 +855,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
   Future<bool> _confirmToVideo(String note) => _overlay.showAlert(
         id: 'media.pro.postVideo.confirm',
         title: '動画に変換しますか?',
-        message: '$note\n「動画にする」を選ぶと、完了したときに、この画像を土台にした動画として書き出します(置いた場所で動きます)。「静止画で貼る」なら、その瞬間の画像だけを貼ります。',
+        message: '$note\n「動画にする」と、置いた場所で動く動画として書き出します。「静止画で貼る」は今の画像だけを貼ります。',
         confirmText: '動画にする',
         cancelText: '静止画で貼る',
       );
@@ -1002,7 +1002,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
         final frames = await pve.ProVideoEditor.instance.getThumbnails(pve.ThumbnailConfigs(video: pve.EditorVideo.file(tmp.path), outputSize: const Size(1280, 1280), timestamps: const [Duration.zero], boxFit: pve.ThumbnailBoxFit.contain, outputFormat: pve.ThumbnailFormat.png));
         if (frames.isNotEmpty) still = frames.first;
       } catch (e) {
-        if (mounted) _notify('動画(.$ext、${bytes.length} バイト)の最初のコマを取れませんでした: $e');
+        if (mounted) _notify(rasqDetail(context, '動画を読み込めませんでした', '動画(.$ext、${bytes.length} バイト)の最初のコマを取れませんでした: $e'));
         return;
       } finally {
         _deleteQuietly(tmp);

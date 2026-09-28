@@ -169,15 +169,17 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
     final area = ref.watch(settingsAreaProvider(storageSafeAreaFor(accKey))).value ?? const <String, Object?>{};
     final slot = area[composerLearnSlot(_tab)];
     if (slot is! Map) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-        child: Text('学習プロファイル: まだ確定投稿がありません(投稿すると自動で学習します)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      return const RasqCaption(
+        'まだ学習していません(投稿すると学習します)',
+        detail: '学習プロファイル: まだ確定投稿がありません(投稿すると自動で学習します)',
+        padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
       );
     }
     final count = (slot['count'] as num?)?.toInt() ?? 0;
-    return Padding(
+    return RasqCaption(
+      'これまでの投稿 $count 件から学習しています',
+      detail: '学習プロファイル: 確定投稿 $count 件(手動で切り替えた投稿は強く学習・半減期 90 日)',
       padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-      child: Text('学習プロファイル: 確定投稿 $count 件(手動で切り替えた投稿は強く学習・半減期 90 日)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
     );
   }
 
@@ -222,17 +224,16 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
           : _tab.isEmpty
               ? const RasqEmptyView(title: 'アカウントがありません', hint: 'ログインすると投稿先の条件を組めます')
               : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
-                  Container(
-                    margin: const EdgeInsets.all(RasqSpacing.sm),
-                    padding: const EdgeInsets.all(RasqSpacing.sm),
-                    decoration: BoxDecoration(color: tokens.link.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
-                    child: Text('アカウントごとに絞り込みを組むと、下書きの内容(と内部のフォーマット)が合うアカウントが投稿先の候補になります。',
-                        style: RasqTypography.caption.copyWith(color: tokens.link)),
+                  const RasqNotice(
+                    margin: EdgeInsets.all(RasqSpacing.sm),
+                    text: '下書きの内容に合うアカウントが、投稿先の候補になります',
+                    detail: 'アカウントごとに絞り込みを組むと、下書きの内容(と内部のフォーマット)が合うアカウントが投稿先の候補になります。',
                   ),
                   if (_handEdited)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
-                      child: Text('ポスト先はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。', style: RasqTypography.caption.copyWith(color: tokens.danger)),
+                    const RasqNotice.warning(
+                      margin: EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
+                      text: 'ポスト先はノードエディタで編集されています。ここで変えると上書きされます',
+                      detail: 'ポスト先はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。',
                     ),
                   // ---- ポスト先の絞り込み(ノード追加で複数 = かつ, D-131)----
                   const RasqSectionHeader(title: 'ポスト先の絞り込み', topMargin: 0),
@@ -242,10 +243,10 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
                   _addNodeButton('ノードを追加', () => _update(_tab, f.copyWith(extraFilters: [...f.extraFilters, const ComposerFilterSpec()]))),
                   // ---- フォーマット (D-131: FOW ではなくページ内)------------
                   const RasqSectionHeader(title: 'フォーマット'),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-                    child: Text('絞り込みに合わなかったとき、代わりのフォーマットで候補に残します(無くなる直前の比較からバイパス)。',
-                        style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  const RasqCaption(
+                    '絞り込みに合わなかったときも、別の形で候補に残せます',
+                    detail: '絞り込みに合わなかったとき、代わりのフォーマットで候補に残します(無くなる直前の比較からバイパス)。',
+                    padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
                   ),
                   _formatBlock(f),
                   // ---- 投稿加工(正規表現、ノード追加で複数, D-130/D-131)----
@@ -257,9 +258,10 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
                   if (_tab != _rasqLabel || (ref.watch(settingsAreaProvider('composer.prefs')).value ?? const {})['rasqLinked'] == true) ...[
                   // ---- 連動投稿の届け方 (D-129/D-131) ------------------------
                   const RasqSectionHeader(title: '連動投稿の届け方'),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-                    child: Text('複数選択モードの「ノード連動」でこのアカウントへ送るときの届け方と、連動できる連動元です。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  const RasqCaption(
+                    'ほかのアカウントと一緒に送るときの設定です',
+                    detail: '複数選択モードの「ノード連動」でこのアカウントへ送るときの届け方と、連動できる連動元です。',
+                    padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
                   ),
                   Builder(builder: (ctx) {
                     return RasqListTile(
@@ -286,9 +288,10 @@ class _ComposerConfigScreenState extends ConsumerState<ComposerConfigScreen> {
                   _linkSourcesTile(scheme, tokens, f),
                   _relationCaption(scheme),
                   // 連動の絞り込み (D-131: F_target — 連動投稿だけに掛かる)。
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-                    child: Text('連動の絞り込み(連動投稿だけに掛かる関門。ポスト先判定には影響しません)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  const RasqCaption(
+                    '連動の絞り込み(一緒に送るときだけ効きます)',
+                    detail: '連動の絞り込み(連動投稿だけに掛かる関門。ポスト先判定には影響しません)',
+                    padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
                   ),
                   for (var i = 0; i < f.linkFilters.length; i++) _extraFilterTile(scheme, f, i, linked: true),
                   _addNodeButton('ノードを追加', () => _update(_tab, f.copyWith(linkFilters: [...f.linkFilters, const ComposerFilterSpec()]))),
@@ -682,7 +685,7 @@ class _ComposerParamsPanelState extends State<_ComposerParamsPanel> {
         description: _isRegex
             ? '送信時に本文へ正規表現の置換をかけます。'
             : widget.mode == 'linkfilter'
-                ? '連動投稿だけに掛かる関門です(ポスト先判定には影響しません)。'
+                ? rasqDetail(context, '一緒に送るときだけ効く条件です。', '連動投稿だけに掛かる関門です(ポスト先判定には影響しません)。')
                 : '下書きがこの条件に合うとき、このアカウントが投稿先候補になります。',
         chevron: false,
       ),

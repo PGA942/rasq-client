@@ -33,7 +33,7 @@ class StickerPicker extends ConsumerWidget {
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(RasqSpacing.page),
-                child: Text('ステッカーがありません。ストアでアセットパック(カテゴリ「assets」)を入れると、ここに並びます。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
+                child: Text(rasqDetail(context, 'ステッカーがありません。ストアで入れると、ここに並びます', 'ステッカーがありません。ストアでアセットパック(カテゴリ「assets」)を入れると、ここに並びます。'), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
               ),
             )
           : ListView(controller: scrollController, padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [

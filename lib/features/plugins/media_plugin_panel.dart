@@ -155,7 +155,7 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
       _overlayRoot = null;
       _snapKeys.clear();
       _session = s;
-      _note = s == null && !_closing ? '${plugin.manifest.name} はエディター形ではありません(プラグインのパネルで操作してください)' : null;
+      _note = s == null && !_closing ? '${plugin.manifest.name} はここでは編集できません(プラグインのパネルで操作してください)' : null;
     });
     _suspendOthers();
     _onFows();

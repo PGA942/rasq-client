@@ -100,9 +100,10 @@ class PluginVersionsScreen extends ConsumerWidget {
         ],
         if (!isPack) ...[
           const RasqSectionHeader(title: 'アカウントごと'),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-            child: Text('そのアカウントを使っている間、スロットプラグインとノードの並べ替えは、ここで選んだ版で動きます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          const RasqCaption(
+            'アカウントごとに、使う版を選べます',
+            detail: 'そのアカウントを使っている間、スロットプラグインとノードの並べ替えは、ここで選んだ版で動きます。',
+            padding: EdgeInsets.symmetric(horizontal: RasqSpacing.page),
           ),
           for (final s in sessions)
             Builder(builder: (ctx) {

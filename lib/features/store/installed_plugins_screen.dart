@@ -131,7 +131,8 @@ class InstalledPluginScreen extends ConsumerWidget {
           key: const ValueKey('store.installed.version'),
           leading: const Icon(Icons.verified_outlined),
           title: 'v${record.version}',
-          subtitle: 'インストール: ${_date(record.installedAt)} ・ 検証済み SHA-512 ${record.sha512.length > 16 ? '${record.sha512.substring(0, 16)}…' : record.sha512}',
+          subtitle: 'インストール: ${_date(record.installedAt)}',
+          detail: 'インストール: ${_date(record.installedAt)} ・ 検証済み SHA-512 ${record.sha512.length > 16 ? '${record.sha512.substring(0, 16)}…' : record.sha512}',
           chevron: false,
         ),
         if (newer)
