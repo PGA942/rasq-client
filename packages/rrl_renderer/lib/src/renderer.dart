@@ -47,8 +47,22 @@ class _NodeWidget extends StatelessWidget {
 
   Object? _prop(String name) => scope.resolveProp(node.p[name]);
 
+  /// 開発者モード (D-362): `dev: true` のノードは開発者モードのときだけ出す。`detail` を持つノードは、開発者モードでは
+  /// `subtitle`(タイル)か `text`(Text / Notice)をそれで置き換える(Notice は本文の下に足す)。
+  static const _detailTarget = {'Text': 'text'};
+
   @override
   Widget build(BuildContext context) {
+    final p = node.p;
+    if (p['dev'] == true || p.containsKey('detail')) {
+      final dev = RasqDeveloperMode.of(context);
+      if (p['dev'] == true && !dev) return const SizedBox.shrink();
+      if (p.containsKey('detail') && node.t != 'Notice') {
+        final rest = {...p}..remove('detail')..remove('dev');
+        if (dev) rest[_detailTarget[node.t] ?? 'subtitle'] = p['detail'];
+        return _render(RrlNode(t: node.t, k: node.k, tag: node.tag, role: node.role, p: rest, on: node.on, c: node.c), scope);
+      }
+    }
     try {
       var built = _build(context);
       // tap / longPress wiring for nodes that declare events and are not L2

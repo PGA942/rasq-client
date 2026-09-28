@@ -1,0 +1,33 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "about.developer",
+  "title": "開発者モード",
+  "defaults": {
+    "enabled": false
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "SwitchListTile",
+        "k": "enabled",
+        "p": {
+          "title": "開発者モード",
+          "value": "$.settings.enabled",
+          "subtitle": "画面の説明を、仕組みや送るデータの形まで詳しく表示します",
+          "detail": "オンのあいだ、設定や同意の画面で短くしている説明の代わりに、元の詳しい説明(保存先の KV、送る JSON の形、決定番号など)を出します。表示が変わるだけで、動作は変わりません。"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "info",
+          "text": "表示だけが変わります。設定や送るデータは変わりません。"
+        }
+      }
+    ]
+  }
+}

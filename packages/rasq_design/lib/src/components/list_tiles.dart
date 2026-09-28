@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/rasq_tokens_extension.dart';
+import 'notice.dart';
 import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
@@ -19,10 +20,14 @@ class RasqListTile extends StatelessWidget {
     this.titleColor,
     this.enabled = true,
     this.divider = true,
+    this.detail,
   });
 
   final String title;
   final String? subtitle;
+
+  /// 開発者モード (D-362) のときに [subtitle] の代わりに出す細かい説明。
+  final String? detail;
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onTap;
@@ -37,6 +42,7 @@ class RasqListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final color = enabled ? (titleColor ?? scheme.onSurface) : scheme.onSurfaceVariant;
+    final subtitle = detail != null && RasqDeveloperMode.of(context) ? detail : this.subtitle;
     final row = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 52),
       child: Padding(
@@ -46,7 +52,7 @@ class RasqListTile extends StatelessWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               Text(title, style: RasqTypography.listTile.copyWith(color: color)),
-              if (subtitle != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(subtitle!, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
+              if (subtitle != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(subtitle, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
             ]),
           ),
           if (trailing != null) ...[const SizedBox(width: RasqSpacing.sm), trailing!],
@@ -63,10 +69,11 @@ class RasqListTile extends StatelessWidget {
 
 /// Title + toggle switch.
 class RasqSwitchListTile extends StatelessWidget {
-  const RasqSwitchListTile({super.key, required this.title, required this.value, this.onChanged, this.subtitle, this.leading, this.enabled = true});
+  const RasqSwitchListTile({super.key, required this.title, required this.value, this.onChanged, this.subtitle, this.leading, this.enabled = true, this.detail});
 
   final String title;
   final String? subtitle;
+  final String? detail;
   final Widget? leading;
   final bool value;
   final ValueChanged<bool>? onChanged;
@@ -76,6 +83,7 @@ class RasqSwitchListTile extends StatelessWidget {
   Widget build(BuildContext context) => RasqListTile(
         title: title,
         subtitle: subtitle,
+        detail: detail,
         leading: leading,
         chevron: false,
         enabled: enabled,
@@ -86,10 +94,11 @@ class RasqSwitchListTile extends StatelessWidget {
 
 /// Title + radio button.
 class RasqRadioListTile<T> extends StatelessWidget {
-  const RasqRadioListTile({super.key, required this.title, required this.value, required this.groupValue, this.onChanged, this.subtitle, this.enabled = true});
+  const RasqRadioListTile({super.key, required this.title, required this.value, required this.groupValue, this.onChanged, this.subtitle, this.enabled = true, this.detail});
 
   final String title;
   final String? subtitle;
+  final String? detail;
   final T value;
   final T? groupValue;
   final ValueChanged<T>? onChanged;
@@ -102,6 +111,7 @@ class RasqRadioListTile<T> extends StatelessWidget {
     return RasqListTile(
       title: title,
       subtitle: subtitle,
+      detail: detail,
       chevron: false,
       enabled: enabled,
       onTap: enabled && onChanged != null ? () => onChanged!(value) : null,
@@ -144,16 +154,18 @@ class RasqValueListTile extends StatelessWidget {
 
 /// Title prefixed by a warning icon + `>` (e.g.「⚠ トレンドの指向性/刺激性」).
 class RasqWarningListTile extends StatelessWidget {
-  const RasqWarningListTile({super.key, required this.title, this.onTap, this.subtitle});
+  const RasqWarningListTile({super.key, required this.title, this.onTap, this.subtitle, this.detail});
 
   final String title;
   final String? subtitle;
+  final String? detail;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => RasqListTile(
         title: title,
         subtitle: subtitle,
+        detail: detail,
         onTap: onTap,
         leading: Icon(Icons.warning_amber_rounded, color: RasqTokens.of(context).warning),
       );

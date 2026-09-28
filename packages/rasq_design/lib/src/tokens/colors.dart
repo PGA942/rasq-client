@@ -21,6 +21,9 @@ abstract final class RasqColors {
   static const Color inVc = Color(0xFF4CD964);
   static const Color warning = Color(0xFFF09937);
   static const Color danger = Color(0xFFE53935);
+
+  /// 水色の ℹ️ の注意書き (D-362、[RasqNotice])。
+  static const Color info = Color(0xFF0288D1);
   static const Color link = Color(0xFF1E88E5);
   static const Color muted = Color(0xFF8E8E93);
 

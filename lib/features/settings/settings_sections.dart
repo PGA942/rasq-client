@@ -97,6 +97,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('AsTell の利用について', route: '/settings/dsl/about.astell'),
     SettingsRow('リソースと広告', route: '/settings/dsl/resources'),
     SettingsRow('ヘルプ、法的表示', route: Routes.settingsLegal),
+    SettingsRow('開発者モード', subtitle: '画面の説明を詳しく表示する', route: '/settings/dsl/about.developer'),
   ]),
 };
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
+import 'notice.dart';
 
 /// スライダー設定行 (L2)。トレンドの指向性/刺激性、リレーショナルTLの
 /// 類似度しきい値(50〜100 正規化, D-022)などの数値設定に使う独立部品。
@@ -15,6 +16,7 @@ class RasqSliderListTile extends StatelessWidget {
     this.divisions,
     this.onChanged,
     this.subtitle,
+    this.detail,
     this.valueLabel,
   });
 
@@ -25,6 +27,9 @@ class RasqSliderListTile extends StatelessWidget {
   final int? divisions;
   final ValueChanged<double>? onChanged;
   final String? subtitle;
+
+  /// 開発者モード (D-362) のときに [subtitle] の代わりに出す説明。
+  final String? detail;
 
   /// 右側の現在値表示(省略時は整数丸め)。
   final String? valueLabel;
@@ -39,7 +44,7 @@ class RasqSliderListTile extends StatelessWidget {
           Expanded(child: Text(title, style: RasqTypography.listTile)),
           Text(valueLabel ?? '${value.round()}', style: RasqTypography.count.copyWith(color: scheme.onSurfaceVariant)),
         ]),
-        if (subtitle != null) Text(subtitle!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        if (subtitle != null) Text(rasqDetail(context, subtitle!, detail), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         Slider(value: value.clamp(min, max), min: min, max: max, divisions: divisions, onChanged: onChanged),
       ]),
     );
@@ -58,6 +63,7 @@ class RasqRangeSliderListTile extends StatelessWidget {
     this.divisions,
     this.onChanged,
     this.subtitle,
+    this.detail,
     this.valueLabel,
   });
 
@@ -68,6 +74,9 @@ class RasqRangeSliderListTile extends StatelessWidget {
   final int? divisions;
   final ValueChanged<RangeValues>? onChanged;
   final String? subtitle;
+
+  /// 開発者モード (D-362) のときに [subtitle] の代わりに出す説明。
+  final String? detail;
 
   /// 右側の現在値表示(省略時は「下限〜上限」の整数丸め)。
   final String? valueLabel;
@@ -82,7 +91,7 @@ class RasqRangeSliderListTile extends StatelessWidget {
           Expanded(child: Text(title, style: RasqTypography.listTile)),
           Text(valueLabel ?? '${values.start.round()}〜${values.end.round()}', style: RasqTypography.count.copyWith(color: scheme.onSurfaceVariant)),
         ]),
-        if (subtitle != null) Text(subtitle!, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        if (subtitle != null) Text(rasqDetail(context, subtitle!, detail), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         RangeSlider(
           values: RangeValues(values.start.clamp(min, max), values.end.clamp(min, max)),
           min: min,

@@ -3,6 +3,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import 'rai_automation.dart';
+import 'rai_layout.dart';
 
 /// 選択肢タイル (D-229): 自動化の途中で足りない入力(フィード / ワード / 本文 / 取り込み先)を、入力タイルの上の
 /// FOW で聞く。候補はチップ、自由入力があれば欄 + 「決定」。「やめる」= null。
@@ -14,7 +15,7 @@ Future<String?> showRaiAskFow(OverlayManager manager, RaiAutoAsk ask, {Rect? anc
     id: raiAskFowId,
     spec: FowSpec(title: ask.question, cancelText: 'やめる', initialHeightFactor: ask.allowFree ? 0.42 : 0.32, maxHeightFactor: 0.8, columnIndex: 0, maxWidth: maxWidth)
       ..anchor = anchor
-      ..anchorBelow = anchor == null ? null : false,
+      ..anchorBelow = raiAnchorBelow(anchor),
     builder: (_, handle) => RaiAskBody(ask: ask, onPick: (v) => handle.close(result: v)),
   );
 }

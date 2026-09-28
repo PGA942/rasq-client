@@ -8,6 +8,7 @@ import '../backend/test_endpoints.dart';
 import '../features/home/reaction_history.dart';
 import '../features/plugins/slot_plugins.dart';
 import '../features/media/video_player.dart' show VideoPrefs;
+import '../features/settings/developer_mode.dart';
 import '../features/settings/settings_dsl.dart';
 import '../features/store/plugin_updates.dart' show pluginAutoUpdateProvider;
 import '../features/theme/theme_packs.dart';
@@ -27,6 +28,7 @@ class RasqApp extends ConsumerWidget {
     ref.watch(pluginAutoUpdateProvider);
     // テスト用の接続先 (D-360): 設定を SNS の接続先の差し替えに反映。
     ref.watch(testEndpointsSyncProvider);
+    final developerMode = ref.watch(developerModeProvider);
     final mode = ref.watch(themeModeProvider);
     final skin = ref.watch(activeSkinProvider);
     // DSL 設定の実適用 (D-031): 表示サイズ / モーション抑制。
@@ -66,7 +68,8 @@ class RasqApp extends ConsumerWidget {
             disableAnimations: mq.disableAnimations || reduceMotion,
           ),
           // 着せ替え (D-335): アプリの一番下に `app` の面(背景色 + 画像のレイヤー。Scaffold は透明になっている)。
-          child: RasqSkinScope(skin: skin, child: RasqSkinned(surface: RasqSkinSurfaceId.app, child: child!)),
+          // 開発者モード (D-362): 部品が細かい説明を出すかを読む。
+          child: RasqDeveloperMode(enabled: developerMode, child: RasqSkinScope(skin: skin, child: RasqSkinned(surface: RasqSkinSurfaceId.app, child: child!))),
         );
       },
       routerConfig: router,

@@ -31,7 +31,7 @@ Future<void> showRaiModelsFow(WidgetRef ref, BuildContext context, {int? column}
     // 幅は入力ウィジェットに揃える (D-185)。
     spec: FowSpec(title: 'モデル', cancelText: '閉じる', initialHeightFactor: 0.7, maxHeightFactor: 0.92, columnIndex: column ?? 0, maxWidth: raiPanelWidth(context))
       ..anchor = anchor
-      ..anchorBelow = anchor == null ? null : false,
+      ..anchorBelow = raiAnchorBelow(anchor),
     builder: (_, _) => const RaiModelsBody(),
   );
 }

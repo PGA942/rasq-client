@@ -86,18 +86,8 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
     onConfirm: () => saveTendencyProfileFrom(ref, draft),
     builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
       final scheme = Theme.of(ctx).colorScheme;
-      final tokens = RasqTokens.of(ctx);
       return ListView(shrinkWrap: true, children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          padding: const EdgeInsets.all(RasqSpacing.sm),
-          decoration: BoxDecoration(color: tokens.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm), border: Border.all(color: tokens.danger.withValues(alpha: 0.4))),
-          child: Row(children: [
-            Icon(Icons.warning_amber_rounded, color: tokens.danger, size: 18),
-            const SizedBox(width: RasqSpacing.xs),
-            Expanded(child: Text('トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。', style: RasqTypography.caption.copyWith(color: tokens.danger))),
-          ]),
-        ),
+        const RasqNotice.warning(text: 'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。', margin: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0)),
         RasqSliderListTile(
           title: 'トレンドの指向性',
           subtitle: '好きなジャンル/方向性への近さのしきい値(狭い ⇄ 広い)。狭いほど外れた投稿を落とします。',
