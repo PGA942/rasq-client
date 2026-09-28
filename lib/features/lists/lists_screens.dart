@@ -32,10 +32,25 @@ import '../nodeprog/tl_config_store.dart';
 import '../settings/settings_dsl.dart';
 import '../users/user_list.dart';
 
+/// メンバーの id を返さないプラグイン(Mastodon / Bluesky の wasm は `memberIds: []`)のリストは、一覧の人数が
+/// 「0 ユーザー」になっていた(REC-06、2026-09-28 録画: 一覧 0 人・詳細 3 人)。空のものだけメンバーを取りに行って埋める。
+Future<List<UserListInfo>> withMemberIds(SnsSession s, List<UserListInfo> lists) async => [
+      for (final l in await Future.wait([
+        for (final l in lists)
+          l.memberIds.isNotEmpty
+              ? Future.value(l)
+              : s.listMembers(l.id).then(
+                    (m) => UserListInfo(id: l.id, name: l.name, memberIds: [for (final u in m) u.id], owner: l.owner, description: l.description, isPublic: l.isPublic),
+                    onError: (Object _) => l,
+                  ),
+      ]))
+        l,
+    ];
+
 final listsProvider = FutureProvider.autoDispose<List<UserListInfo>>((ref) async {
   final s = ref.watch(currentSnsSessionProvider);
   if (s == null) return const [];
-  final lists = await s.lists();
+  final lists = await withMemberIds(s, await s.lists());
   // チャイルドセーフ (D-314): 保護者の止める例に近い中身のリストは出さない(中身を確かめ終わってから出す)。
   final gate = ref.watch(childGateProvider);
   if (!gate.hasDenyExamples) return lists;
@@ -68,7 +83,7 @@ final listsForAccountProvider = FutureProvider.autoDispose.family<List<UserListI
   if (s == null) return const [];
   final List<UserListInfo> lists;
   try {
-    lists = await s.lists();
+    lists = await withMemberIds(s, await s.lists());
   } on UnsupportedError {
     return const [];
   }

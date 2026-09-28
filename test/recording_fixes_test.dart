@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/backend/redact.dart';
+import 'package:rasq_client/features/lists/lists_screens.dart' show withMemberIds;
 import 'package:rasq_client/features/store/store_models.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_models.dart';
 import 'package:rasq_client/features/vc/astell_post_share.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 /// 2026-09-28 の録画で見つかった課題 (REC-03 / 04 / 10、TERMS-10) の修正。
 void main() {
@@ -69,4 +71,25 @@ void main() {
     expect(await textOf(const AstellMembersRow(peers: [], totalCount: 0, hostOnly: true)), 'ホストのほかには、まだ誰もいません');
     expect(await textOf(const AstellMembersRow(peers: [])), 'まだ誰もいません');
   });
+
+  test('REC-06: メンバーの id を返さないリストは、メンバーを取って人数を埋める', () async {
+    final s = _ListSession();
+    final out = await withMemberIds(s, const [UserListInfo(id: 'a', name: 'A'), UserListInfo(id: 'b', name: 'B', memberIds: ['x']), UserListInfo(id: 'bad', name: 'Bad')]);
+    expect([for (final l in out) l.memberIds.length], [3, 1, 0]);
+    expect(s.asked, ['a', 'bad']);
+  });
+}
+
+class _ListSession extends SnsSessionBase {
+  @override
+  final AccountId account = const AccountId(kind: SnsKind.mastodon, instance: 'mstdn.rasq.test', handle: 'me');
+  @override
+  String get pluginId => 'test.lists';
+  final asked = <String>[];
+  @override
+  Future<List<UserSummary>> listMembers(String listId) async {
+    asked.add(listId);
+    if (listId == 'bad') throw StateError('x');
+    return [for (var i = 0; i < 3; i++) UserSummary(id: 'u$i', account: account, displayName: 'u$i')];
+  }
 }
