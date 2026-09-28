@@ -76,6 +76,15 @@ class WasmSnsPlugin extends SnsPlugin {
         return c;
       });
 
+  /// 開発 / デモ用の接続先の差し替え (D-359、`RASQ_DEV_SNS_BASE`): プラグインへ `baseUrl` を渡す。
+  static Map<String, Object?> _baseArgs(String host) {
+    final base = devSnsBaseFor(host);
+    return base == null ? const {} : {'baseUrl': base.toString().replaceAll(RegExp(r'/$'), '')};
+  }
+
+  /// ランタイムに許可するホスト: 差し替えがあればその基底 URL のホスト(ランタイムはポートを除いて比べる)。
+  static String _grantedHostFor(String host) => devSnsBaseFor(host)?.host ?? host;
+
   /// 認証前の呼び出し用に 1 つだけ持つ匿名コントローラ。アカウントごとの
   /// ものとは別に置く(まだ [AccountSession] が無いため)。
   static const _anonymousKey = '';
@@ -86,8 +95,9 @@ class WasmSnsPlugin extends SnsPlugin {
     final controller = await _controllerFor(_anonymousKey);
     // 匿名の呼び出しはまだセッションが無いので、ホストが渡す `args.host`
     // (ユーザーが選んだ先)をそのまま今回のインスタンスとして許可する。
-    await controller.grantHost(args['host'] is String ? args['host'] as String : null);
-    return controller.invoke(fn, args);
+    final host = args['host'] is String ? args['host'] as String : null;
+    await controller.grantHost(host == null ? null : _grantedHostFor(host));
+    return controller.invoke(fn, {...args, if (host != null) ..._baseArgs(host)});
   }
 
   @override
@@ -98,8 +108,8 @@ class WasmSnsPlugin extends SnsPlugin {
     // — サーバー検索画面が出せなくなるより、名前だけでも出す方がよい。
     try {
       final controller = await _controllerFor(_anonymousKey);
-      await controller.grantHost(h);
-      final result = await controller.invoke('sns.inspectServer', {'host': h});
+      await controller.grantHost(_grantedHostFor(h));
+      final result = await controller.invoke('sns.inspectServer', {'host': h, ..._baseArgs(h)});
       if (result['ok'] == true) {
         final s = ((result['value'] as Map?)?['server'] as Map?)?.cast<String, Object?>();
         if (s != null) {
@@ -148,12 +158,12 @@ class WasmSnsPlugin extends SnsPlugin {
       account: session.account,
       pluginId: manifest.id,
       // 接続先とトークンはホストが毎回供給する(v1 の規約、PROTOCOL §4.3)。
-      extraArgs: {'host': session.account.instance, 'token': session.token},
+      extraArgs: {'host': session.account.instance, 'token': session.token, ..._baseArgs(session.account.instance)},
       // `network.instance`: ランタイムに許可するのも同じホスト。ワーカーごとに
       // 1 アカウントなので、初回に一度渡せばよい(メッセージは順序を保つ)。
       invoke: (fn, args) async {
         final c = await _controllerFor(key);
-        if (_granted.add(key)) await c.grantHost(session.account.instance);
+        if (_granted.add(key)) await c.grantHost(_grantedHostFor(session.account.instance));
         return c.invoke(fn, args);
       },
       onClose: () async {

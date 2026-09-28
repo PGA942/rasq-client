@@ -1,4 +1,5 @@
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart' show snsUri;
 import 'package:rasq_store/rasq_store.dart' show FollowState;
 
 /// Misskey JSON → host models.
@@ -180,7 +181,7 @@ abstract final class MisskeyMappers {
         // 来ない → /emoji/<name>.webp を補完(ロング絵文字が
         // テキスト fallback になって消える問題の修正、D-041)。
         for (final k in reactions.keys)
-          if (k.startsWith(':') && k.endsWith('@.:')) k: Uri.https(host, '/emoji/${k.substring(1, k.length - 3)}.webp'),
+          if (k.startsWith(':') && k.endsWith('@.:')) k: snsUri(host, '/emoji/${k.substring(1, k.length - 3)}.webp'),
         for (final e in reactionEmojis.entries)
           if (e.value is String) ':${e.key}:': Uri.parse(e.value as String),
       },

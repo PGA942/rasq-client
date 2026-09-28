@@ -16,7 +16,8 @@ class MisskeyApi {
   final http.Client _client;
   final Duration timeout;
 
-  Uri endpoint(String path) => Uri.https(host, '/api/$path');
+  // 開発 / デモ用の差し替え (D-359) があればそちらへ。
+  Uri endpoint(String path) => snsUri(host, '/api/$path');
 
   Future<Object?> call(String path, [Map<String, Object?> body = const {}]) async {
     final payload = <String, Object?>{...body};

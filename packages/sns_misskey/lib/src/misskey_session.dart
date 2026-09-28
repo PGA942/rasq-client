@@ -259,7 +259,7 @@ class MisskeySession extends SnsSessionBase {
     if (reaction == null) return null;
     if (!reaction.startsWith(':')) return ActionIcon.text(reaction);
     final name = reaction.substring(1, reaction.length - 1).split('@').first;
-    return ActionIcon.url(Uri.https(host, '/emoji/$name.webp'));
+    return ActionIcon.url(snsUri(host, '/emoji/$name.webp'));
   }
 
   /// Per-note action states from raw note JSON (used by the timeline notifier).
