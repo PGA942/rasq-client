@@ -805,7 +805,7 @@ class RasqAccountPageApi {
 
   /// フィード (S-025): 自分とフォロー中の RASQ アカウントの投稿 + リブロード。[until] = 前のページの `nextUntil`。
   Future<({List<RasqAccountPost> posts, String? nextUntil})> feed({String? until, int limit = 30}) async {
-    final j = await _client.getJson('/me/feed?limit=$limit${until == null ? '' : '&until=${Uri.encodeQueryComponent(until)}'}');
+    final j = await _client.getJson('/me/feed', {'limit': '$limit', 'until': until});
     return (
       posts: [for (final p in j['posts'] as List? ?? const []) if (p is Map) RasqAccountPost.fromJson(p.cast<String, Object?>())],
       nextUntil: j['nextUntil'] as String?,
