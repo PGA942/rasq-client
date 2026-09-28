@@ -46,7 +46,7 @@ class RrlNode {
   static const _l3 = {'If', 'ForEach', 'Call', 'Bind', 'Slot', 'Stream'};
   static const _l2 = {
     'Input', 'Avatar', 'Badge', 'RichText', 'MediaGrid', 'ActionButton', 'Timestamp', 'Button', //
-    'ListTile', 'SwitchListTile', 'RadioListTile', 'ValueListTile', 'WarningListTile', 'DestructiveListTile', 'SectionHeader', //
+    'ListTile', 'SwitchListTile', 'RadioListTile', 'ValueListTile', 'WarningListTile', 'DestructiveListTile', 'SectionHeader', 'Notice', //
     'PostTile', 'ActionBar', 'TrendHeader', 'UserRow', 'UserTileLarge', 'PollWidget', 'NotificationTile', 'PluginTile', 'VCCard', //
     'CollapsedPost', 'HeaderedListView', 'SortableList', 'SegmentedControl', 'Tabs',
   };

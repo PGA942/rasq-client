@@ -123,7 +123,7 @@ void main() {
   testWidgets('既定は「提供しない」。年齢の申告 → 要点にチェックを入れるまで同意できない → 同意 → 撤回用のコード → 撤回', (tester) async {
     final central = fakeCentral();
     final (_, storage) = await pump(tester, central.client);
-    expect(statusOf(tester), '提供しない');
+    expect(statusOf(tester), '参加していません');
     // 登録の FOW より前に作ったアカウント: まず年齢の申告。16〜17 歳は保護者の同意も。
     expect(find.text('年齢の申告が必要です'), findsOneWidget);
     expect(find.byKey(const ValueKey('learning.grant')), findsNothing);
@@ -143,27 +143,28 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('learning.grant')));
     await tester.pumpAndSettle();
     expect(find.textContaining('DM、限定公開の投稿、AsTell の会話'), findsOneWidget);
-    await tester.tap(find.text('同意して提供する'));
+    await tester.tap(find.text('同意して参加する'));
     await tester.pumpAndSettle();
     expect(central.calls, isNot(contains('POST /me/learning/grant')));
     await tester.ensureVisible(find.byKey(const ValueKey('learning.agree')));
     await tester.tap(find.byKey(const ValueKey('learning.agree')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('同意して提供する'));
+    await tester.tap(find.text('同意して参加する'));
     await tester.pumpAndSettle();
     expect(central.calls, contains('POST /me/learning/grant'));
-    expect(statusOf(tester), '提供する');
+    expect(statusOf(tester), '参加中');
     // 撤回用のコードは画面に出て、端末にも控える(アカウントごと)。
     expect(find.text('code-abc-123'), findsOneWidget);
     expect(jsonDecode((await storage.read(learningCodeStorageKey))!), {'acc-1': 'code-abc-123'});
     // 撤回: 確認のあと。コードの控えも消える。
     await tester.ensureVisible(find.byKey(const ValueKey('learning.withdraw')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('learning.withdraw')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('30 日以内を目標に消します'), findsOneWidget);
-    await tester.tap(find.text('撤回する'));
+    expect(find.textContaining('送ったデータも消します'), findsOneWidget);
+    await tester.tap(find.text('やめる'));
     await tester.pumpAndSettle();
-    expect(statusOf(tester), '提供しない');
+    expect(statusOf(tester), '参加していません');
     expect(find.text('code-abc-123'), findsNothing);
     expect(jsonDecode((await storage.read(learningCodeStorageKey))!), isEmpty);
   });
@@ -180,7 +181,7 @@ void main() {
   testWidgets('13〜15 歳は提供できない / RASQ アカウントが無ければ作成の案内', (tester) async {
     final young = fakeCentral(age: '13-15');
     await pump(tester, young.client);
-    expect(find.text('学習へのデータ提供は 16 歳以上でできます'), findsOneWidget);
+    expect(find.text('16 歳以上から参加できます'), findsOneWidget);
     expect(find.byKey(const ValueKey('learning.declareAge')), findsNothing);
     expect(find.byKey(const ValueKey('learning.grant')), findsNothing);
   });

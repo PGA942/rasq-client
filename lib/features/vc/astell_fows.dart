@@ -278,7 +278,7 @@ class _RoundButton extends StatelessWidget {
 }
 
 Future<void> _notYet(BuildContext context, String what) async {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$what は今後の対応です')));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$what は準備中です')));
 }
 
 // ── 参加 FOW ──────────────────────────────────────────────────────
@@ -294,7 +294,6 @@ Future<void> showAstellDevicePreferences(BuildContext context) async {
         builder: (ctx) => Consumer(builder: (ctx, ref, _) {
           final auto = ref.watch(astellAutoShareProvider);
           final store = ref.read(settingsAreaProvider(astellSettingsArea).notifier);
-          final scheme = Theme.of(ctx).colorScheme;
           return ListView(key: const ValueKey('astell.device.settings'), shrinkWrap: true, children: [
             RasqListTile(
               title: '下段のボタンの並びを編集',
@@ -318,9 +317,10 @@ Future<void> showAstellDevicePreferences(BuildContext context) async {
             const Divider(height: RasqSpacing.md),
             _label(ctx, '保留音'),
             RasqSwitchListTile(title: '保留音を鳴らす(この端末)', value: ref.watch(astellHoldMusicProvider), onChanged: (v) => store.set('holdMusic', v)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
-              child: Text('ルームごとの設定(参加できる人・読み上げなど)は、参加してからルームの歯車で変えられます(オーナー)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            const RasqCaption(
+              'ルームの設定は、参加後にルームの歯車から変えられます(オーナー)。',
+              detail: 'ルームごとの設定(参加できる人・読み上げなど)は、参加してからルームの歯車で変えられます(オーナー)。',
+              padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
             ),
           ]);
         }),
@@ -377,7 +377,7 @@ class _PreviewBody extends ConsumerWidget {
           if (room.locked)
             Padding(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
-              child: Text('運営により新規入室が停止されています(D-151)。', style: RasqTypography.caption.copyWith(color: RasqColors.danger)),
+              child: Text(rasqDetail(context, '運営により新しい入室が止められています。', '運営により新規入室が停止されています(D-151)。'), style: RasqTypography.caption.copyWith(color: RasqColors.danger)),
             ),
           // 開催予定 (D-159): 時刻と開始通知の登録。
           if (room.isScheduled)
@@ -1096,7 +1096,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               RasqRadioListTile<String>(title: p.label, subtitle: p.hint, value: p.id, groupValue: room.joinPolicy, onChanged: (_) => _patch({'joinPolicy': p.id})),
             _label(ctx, '共有(チャットへの投稿)できる人'),
             for (final p in astellSharePolicies) RasqRadioListTile<String>(title: p.label, value: p.id, groupValue: room.sharePolicy, onChanged: (_) => _patch({'sharePolicy': p.id})),
-            _label(ctx, 'モデレーター(${room.moderators.length})— 付与はメンバー行の「…」から'),
+            _label(ctx, 'モデレーター(${room.moderators.length})— メンバーの「…」から追加'),
             for (final m in room.moderators)
               RasqListTile(
                 title: s.peers.where((p) => p.accountId == m).firstOrNull?.displayName ?? m,
@@ -1106,10 +1106,11 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
               ),
             _BanList(roomId: room.id),
             _label(ctx, '発信傾向'),
-            RasqSwitchListTile(title: '発信傾向で入室を絞る(ダミー判定)', value: room.tendencyFilter, onChanged: (v) => _patch({'tendencyFilter': v})),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-              child: Text('本命は rasq-judge の GoEmotion(発信の感情傾向)で、学習が要るので今はサーバーのダミー判定(表示名に hostile / 荒らし を含む人だけ敵対的)。オンにすると敵対的と判定された人は入室できません。メンバー行の「…」から判定結果を見られます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            RasqSwitchListTile(title: '荒らしの入室を断る(試験中)', value: room.tendencyFilter, onChanged: (v) => _patch({'tendencyFilter': v})),
+            const RasqCaption(
+              'オンにすると、敵対的と判定された人は入れません。判定はまだ仮のものです。',
+              detail: '本命は rasq-judge の GoEmotion(発信の感情傾向)で、学習が要るので今はサーバーのダミー判定(表示名に hostile / 荒らし を含む人だけ敵対的)。オンにすると敵対的と判定された人は入室できません。メンバー行の「…」から判定結果を見られます。',
+              padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
             ),
           ],
           if (isOwner) ...[
@@ -1135,9 +1136,10 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
                 onTap: () => _startHostStream(ctx, 'screen'),
               ),
             ],
-            Padding(
+            RasqCaption(
+              '映像と声を配信します。通話に入りきらない人も配信で聞けます。',
+              detail: '映像とマイクを配信サーバー(LiveKit)に上げます。参加者は通話の声のまま映像を見られ、通話に入りきらない人($astellMeshCap 人目より後)は配信であなたの声を聞きます。',
               padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-              child: Text('映像とマイクを配信サーバー(LiveKit)に上げます。参加者は通話の声のまま映像を見られ、通話に入りきらない人($astellMeshCap 人目より後)は配信であなたの声を聞きます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ),
           ],
           const Divider(height: RasqSpacing.md),
@@ -1168,27 +1170,31 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
             onChanged: (v) => ref.read(settingsAreaProvider(astellSettingsArea).notifier).set('holdMusic', v),
           ),
           if (isOwner) RasqSwitchListTile(key: const ValueKey('astell.holdMusic.room'), title: 'このルームで保留音を許す(オーナー)', value: room.holdMusic, onChanged: (v) => _patch({'holdMusic': v})),
-          Padding(
+          RasqCaption(
+            '開始を待つ間や、しばらく誰も話さないときに鳴ります。',
+            detail: '開催予約の開始を待っている間と、全員がマイクを下ろして(画面共有 / 配信も無く)チャットが ${astellHoldIdleAfter.inSeconds ~/ 60} 分以上流れていない間に鳴ります。誰かが話し始めるか、チャットが流れると止まります。',
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-            child: Text('開催予約の開始を待っている間と、全員がマイクを下ろして(画面共有 / 配信も無く)チャットが ${astellHoldIdleAfter.inSeconds ~/ 60} 分以上流れていない間に鳴ります。誰かが話し始めるか、チャットが流れると止まります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
           const Divider(height: RasqSpacing.md),
-          _label(ctx, '読み上げ(${voices.model}、プリセット音声)${voices.enabled ? '' : ' — サーバー未設定'}'),
+          _label(ctx, rasqDetail(ctx, '読み上げ${voices.enabled ? '' : '(使えません)'}', '読み上げ(${voices.model}、プリセット音声)${voices.enabled ? '' : ' — サーバー未設定'}')),
           RasqRadioListTile<String?>(title: '読み上げなし', value: null, groupValue: room.ttsVoice, onChanged: isOwner ? (_) => _patch({'ttsVoice': null}) : null),
           for (final v in voices.voices) RasqRadioListTile<String?>(title: v.label, value: v.id, groupValue: room.ttsVoice, onChanged: isOwner ? (_) => _patch({'ttsVoice': v.id}) : null),
-          Padding(
+          RasqCaption(
+            isOwner ? '読み上げの声はサーバーで作ります(アプリでの再生は準備中)。' : '読み上げ音声はホストが選びます。',
+            detail: isOwner ? 'チャットと共有の読み上げは Central 側で合成します(端末での再生は今後の対応)。' : null,
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
-            child: Text(isOwner ? 'チャットと共有の読み上げは Central 側で合成します(端末での再生は今後の対応)。' : '読み上げ音声はホストが選びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ),
-          const Divider(height: RasqSpacing.md),
-          // 実機で「聞こえない / 映らない」を切り分ける (D-323)。
-          _label(ctx, '接続の状態(開発者向け)'),
-          RasqListTile(
-            title: '通話 / 配信の接続を見る',
-            subtitle: 'ICE の状態・候補・送受信の量・受けているトラック',
-            leading: const Icon(Icons.network_check),
-            onTap: () => _openDiagnostics(),
-          ),
+          // 実機で「聞こえない / 映らない」を切り分ける (D-323)。公開テストでは開発者モードのときだけ出す (D-362)。
+          if (RasqDeveloperMode.of(ctx)) ...[
+            const Divider(height: RasqSpacing.md),
+            _label(ctx, '接続の状態(開発者向け)'),
+            RasqListTile(
+              title: '通話 / 配信の接続を見る',
+              subtitle: 'ICE の状態・候補・送受信の量・受けているトラック',
+              leading: const Icon(Icons.network_check),
+              onTap: () => _openDiagnostics(),
+            ),
+          ],
         ]);
       }),
     );
@@ -1294,7 +1300,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       if (canModerate) const RasqDropdownItem('キック', 'kick', destructive: true),
       if (s.isOwner && !isOwnerPeer) RasqDropdownItem(isModPeer ? 'モデレーターを外す' : 'モデレーターにする', 'moderator'),
       if (s.isOwner && !isOwnerPeer) const RasqDropdownItem('BAN', 'ban', destructive: true),
-      if (s.isModerator) const RasqDropdownItem('発信傾向を見る(ダミー判定)', 'tendency'),
+      if (s.isModerator) const RasqDropdownItem('発信傾向を見る(試験中)', 'tendency'),
       RasqDropdownItem(blocked ? 'ブロック解除' : 'ブロック', 'block', destructive: !blocked),
       const RasqDropdownItem('通報', 'report', destructive: true),
     ]);
@@ -1420,7 +1426,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     final entries = [for (final e in all) if (e.handle == null || !blockedHandles.contains(e.handle)) e];
     final hidden = all.length - entries.length;
     if (entries.isEmpty) {
-      return Center(child: Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('発話の文字起こしと、下の入力から送ったメッセージ・共有コンテンツがここに時刻順で並びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center)));
+      return Center(child: Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('話した内容の文字起こしと、チャット・共有がここに並びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), textAlign: TextAlign.center)));
     }
     return ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs), children: [
       if (hidden > 0) Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: Text('ブロック中のユーザーの発言 $hidden 件を隠しています', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
@@ -1486,7 +1492,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         if (i % 10 == 0) (t.createdAt, t.text, Icons.subtitles_outlined),
     ]..sort((a, b) => a.$1.compareTo(b.$1));
     return ListView(padding: EdgeInsets.zero, children: [
-      Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: Text('共有と文字起こしの区切り。ざっくり要約からの見出しは M5 後段で入ります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+      Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: Text('共有と文字起こしの区切りです。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
       for (final it in items)
         RasqListTile(
           title: it.$2,
@@ -1849,7 +1855,7 @@ class _SharesSection extends StatelessWidget {
         ]),
       ),
       if (items.isEmpty)
-        Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs), child: Text('チャットの 📌 でピン留めしたものがここに並びます(自動表示の種類は歯車で)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+        Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs), child: Text('チャットで 📌 したものがここに並びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
       for (final it in shown)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 2, RasqSpacing.page, 2),
@@ -2196,7 +2202,7 @@ Future<void> showAstellReportSheet(BuildContext context, WidgetRef ref, {String?
     builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
       final scheme = Theme.of(ctx).colorScheme;
       return ListView(shrinkWrap: true, children: [
-        Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: Text('$what を通報します。rasq-judge(審査)が確認します。', style: RasqTypography.bodySmall)),
+        Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: Text('$what を通報します。RASQ の審査で確認します。', style: RasqTypography.bodySmall)),
         for (final r in astellReportReasons) RasqRadioListTile<String>(title: r.label, value: r.id, groupValue: reason, onChanged: (v) => setSheet(() => reason = v)),
         Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: RasqInput(controller: note, hintText: '補足(任意)', maxLines: 3)),
         Padding(
@@ -2219,7 +2225,7 @@ Future<void> showAstellReportSheet(BuildContext context, WidgetRef ref, {String?
     }),
   );
   note.dispose();
-  if (sent && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('通報しました。rasq-judge が確認します')));
+  if (sent && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('通報しました。審査で確認します')));
 }
 
 /// 作成 FOW の招待チップ (D-150): アバター + 名前、選択中はチェックの縁取り。
@@ -2668,13 +2674,14 @@ class _CreateBodyState extends ConsumerState<_CreateBody> {
               ]),
             ),
           if (_scheduledAt != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-              child: Text('予約中はあなた(とモデレーター)が入るまで他の人は参加できません。近日開催の節と共有リンクから開始通知を登録できます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            const RasqCaption(
+              '予約中は、あなたが入るまで他の人は入れません。',
+              detail: '予約中はあなた(とモデレーター)が入るまで他の人は参加できません。近日開催の節と共有リンクから開始通知を登録できます。',
+              padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
-            child: RasqInput(controller: _description, hintText: 'ざっくり要約(任意。空なら端末側で自動生成)', maxLines: 2),
+            child: RasqInput(controller: _description, hintText: 'ざっくり要約(任意。空なら自動で作ります)', maxLines: 2),
           ),
         ]),
       ),

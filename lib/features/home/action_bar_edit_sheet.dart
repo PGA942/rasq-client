@@ -148,7 +148,14 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
               child: hits.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.all(RasqSpacing.page),
-                      child: Text(rows.isEmpty ? (isEditorConfigKey(configKey) ? 'composer.media を宣言したプラグインがありません(ストアから追加)' : configKey == astellBarConfigKey ? '非表示にしたボタン / AsTell のプラグイン(astell.action)がありません(プラグインはストアから追加)' : configKey.startsWith('viewer:') ? '全画面表示プラグイン / post.action を宣言したプラグインがありません(ストアから追加)' : 'post.action を宣言したプラグインがありません(ストアから追加)') : '見つかりません', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                      child: Text(
+                          rows.isEmpty
+                              ? rasqDetail(
+                                  ctx,
+                                  configKey == astellBarConfigKey ? '追加できるボタンがありません。プラグインはストアから追加できます' : 'ここに置けるプラグインがありません。ストアから追加できます',
+                                  isEditorConfigKey(configKey) ? 'composer.media を宣言したプラグインがありません(ストアから追加)' : configKey == astellBarConfigKey ? '非表示にしたボタン / AsTell のプラグイン(astell.action)がありません(プラグインはストアから追加)' : configKey.startsWith('viewer:') ? '全画面表示プラグイン / post.action を宣言したプラグインがありません(ストアから追加)' : 'post.action を宣言したプラグインがありません(ストアから追加)',
+                                )
+                              : '見つかりません', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
                     )
                   : ListView(children: [
                       for (final r in hits)
@@ -554,14 +561,12 @@ class _ActionBarEditBody extends ConsumerWidget {
           RasqSectionHeader(title: surface.title),
           _ActionBarTiles(key: ValueKey('actionbar.surface.${surface.name}'), surface: surface, accountKey: accountKey),
         ],
-        Padding(
+        RasqCaption(
+          _astellOnly(surfaces) ? '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。(+) でボタンを追加。' : '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。',
+          detail: _astellOnly(surfaces)
+              ? '(…) / shift + クリック / 右クリックでメニュー(非表示 / バンドル)。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。(+) で非表示にしたボタンや AsTell のプラグインを足す。幅に収まらないときは、先頭から入るだけと最後の 1 つ(入力欄の隣)を出し、残りはルームの歯車のメニューへ。'
+              : '(…) / shift + クリック / 右クリックでメニュー。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。宣言されたプラグインボタンと束ねる閾値は 設定 → SNSプラグイン →「プラグインボタン」。',
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.lg),
-          child: Text(
-            _astellOnly(surfaces)
-                ? '(…) / shift + クリック / 右クリックでメニュー(非表示 / バンドル)。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。(+) で非表示にしたボタンや AsTell のプラグインを足す。幅に収まらないときは、先頭から入るだけと最後の 1 つ(入力欄の隣)を出し、残りはルームの歯車のメニューへ。'
-                : '(…) / shift + クリック / 右クリックでメニュー。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。宣言されたプラグインボタンと束ねる閾値は 設定 → SNSプラグイン →「プラグインボタン」。',
-            style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
-          ),
         ),
       ]),
     );

@@ -20,7 +20,8 @@
         "p": {
           "title": "トレンドプラグインの候補を表示",
           "value": "$.settings.enabled",
-          "subtitle": "検索ホームのトレンド欄に、入れているトレンドプラグイン(trend.suggest)の候補チップを出します"
+          "subtitle": "検索ホームのトレンド欄に、プラグインの候補を出します",
+          "detail": "検索ホームのトレンド欄に、入れているトレンドプラグイン(trend.suggest)の候補チップを出します"
         },
         "on": {
           "change": "settings.set"

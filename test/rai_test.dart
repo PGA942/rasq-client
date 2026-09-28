@@ -413,13 +413,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('MiniLM-L12 多言語(paraphrase, int8)'), findsOneWidget);
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.embed.phase'))).data, '未ダウンロード');
-    expect(find.textContaining('n-gram 代替'), findsOneWidget);
+    expect(find.textContaining('いまは語の一致で探します'), findsOneWidget);
     await clearOfBar(tester, fowList, find.byKey(const ValueKey('rai.embed.download')));
     await tester.tap(find.byKey(const ValueKey('rai.embed.download')));
     await tester.pumpAndSettle();
     expect(embedding.installs, 1);
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.embed.phase'))).data, '準備完了');
-    expect(find.textContaining('検索: MiniLM-L12'), findsOneWidget);
+    expect(find.textContaining('意味の近さで探します'), findsOneWidget);
     // 索引は新しい埋め込み器で組み直される。
     await tester.runAsync(() => c.read(raiReferenceProvider.future));
     await tester.pumpAndSettle();

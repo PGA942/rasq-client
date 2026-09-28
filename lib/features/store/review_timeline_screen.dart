@@ -110,7 +110,7 @@ class _ReviewList extends ConsumerWidget {
                 if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('レビューのリンクをコピーしました')));
               case 'report':
                 // 通報 API は store.yaml 未定義(レビュー信頼性「通報」は M4 後段)。
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('レビューの報告はまだ受け付けていません(ストア側の実装待ち)')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('レビューの報告は準備中です')));
               default:
                 break;
             }

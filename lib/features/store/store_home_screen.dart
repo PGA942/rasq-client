@@ -81,7 +81,6 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final home = ref.watch(storeHomeProvider);
     final installed = {for (final p in ref.watch(installedPluginsProvider)) p.id: p.version};
     final showInstalled = ref.watch(storeHomeShowInstalledProvider);
@@ -125,10 +124,10 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
                 child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
                   StoreTileRow(key: const ValueKey('store.home.trending'), title: '今週のトレンド', cards: pick(_trending!), installed: installed, fresh: _fresh),
                   StoreTileRow(key: const ValueKey('store.home.recent'), title: '新着', cards: pick(_recent!), installed: installed, fresh: _fresh),
-                  Padding(
-                    padding: const EdgeInsets.all(RasqSpacing.page),
-                    child: Text('掲載されるのは審査済みのプラグインだけです。開発中のプラグインは、右上の歯車 → プラグインを管理 →「プラグインのインポート」から入れられます。',
-                        style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                  const RasqNotice(
+                    margin: EdgeInsets.all(RasqSpacing.page),
+                    text: '掲載されるのは審査済みのプラグインだけです',
+                    detail: '開発中のプラグインは、右上の歯車 → プラグインを管理 →「プラグインのインポート」から入れられます。',
                   ),
                 ]),
               );

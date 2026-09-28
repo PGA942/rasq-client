@@ -180,6 +180,10 @@ abstract class RaiLlm {
   /// 読み込んだモデルを解放する(フォールアップ時に呼ぶ想定)。
   Future<void> release();
 
+  /// インストール済みのモデルを先に読み込んでおく (D-363: 貢献の下見をバックグラウンドで)。未インストールなら何もしない
+  /// (勝手にダウンロードはしない)。
+  Future<void> warmUp();
+
   /// 1 問 1 答(トークンのストリーム)。[maxTokens] は生成の上限(D-220: 箇条書きの計画は短く)。
   Stream<String> chat(String prompt, {String? system, int? maxTokens});
 }
@@ -297,6 +301,8 @@ class UnavailableRaiLlm implements RaiLlm {
 
   @override
   Future<void> install({String? hfToken}) async => throw RaiLlmException(reason);
+  @override
+  Future<void> warmUp() async {}
   @override
   Future<void> uninstall() async {}
   @override

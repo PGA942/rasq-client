@@ -497,7 +497,7 @@ void main() {
 
     Finder inScreen(Finder f) => find.descendant(of: find.byType(TimelineConfigScreen), matching: f);
     expect(find.text('DM(共通)'), findsOneWidget);
-    expect(find.textContaining('個別設定のない全ての DM ページに適用'), findsOneWidget);
+    expect(find.textContaining('すべての DM ページに使う設定'), findsOneWidget);
     expect(inScreen(find.text('このタイムラインを取得')), findsOneWidget); // 既定 = self
 
     // 取得元パレットは DM 取得用のタイルだけ (D-127)。

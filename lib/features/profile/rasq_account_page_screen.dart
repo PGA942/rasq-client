@@ -162,7 +162,7 @@ class _CollectionsTab extends ConsumerWidget {
           return _message(
             context,
             isMine
-                ? (isList ? '公開した RASQ リストがここに出ます(リストの画面の「RASQ リスト」から作れます)。' : '公開した RASQ クリップがここに出ます(クリップのページの「公開する」)。')
+                ? (isList ? '公開した RASQ リストがここに出ます(リストの画面から作れます)。' : '公開した RASQ クリップがここに出ます(クリップのページの「公開する」)。')
                 : (isList ? '公開しているリストはありません。' : '公開しているクリップはありません。'),
           );
         }
@@ -382,7 +382,7 @@ class _PostsTab extends ConsumerWidget {
       if (isMine)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Text('RASQ アカウントとしての投稿は、いまは ${posts.limit} 件までです(${posts.posts.where((p) => p.rebroadedBy == null).length} / ${posts.limit})。SNS アカウントの投稿は、そのアカウントのアクセストークンを RASQ に預けると、ここに一緒に出ます。', key: const ValueKey('rasqPage.posts.note'), style: caption),
+          child: Text(rasqDetail(context, 'RASQ の投稿は ${posts.limit} 件までです(${posts.posts.where((p) => p.rebroadedBy == null).length} / ${posts.limit})。SNS の投稿は、ログインの鍵を預けると一緒に出ます。', 'RASQ アカウントとしての投稿は、いまは ${posts.limit} 件までです(${posts.posts.where((p) => p.rebroadedBy == null).length} / ${posts.limit})。SNS アカウントの投稿は、そのアカウントのアクセストークンを RASQ に預けると、ここに一緒に出ます。'), key: const ValueKey('rasqPage.posts.note'), style: caption),
         ),
       // 自分のページで、SNS アカウントはつないであるのに、その投稿が 1 件も出ていない (D-316): トークンを預けていない
       // (か、取れていない)。「投稿が出ない」と見えるので、預ける画面への入口を出す。ほかの人が見るときは出さない。
@@ -395,7 +395,7 @@ class _PostsTab extends ConsumerWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('つないだ SNS アカウントの投稿は、まだここに出ていません。', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 2),
-            Text('プロフィール編集の「アカウントページに出す SNS アカウント」で、アカウントごとに「投稿もアカウントページに出す」を入れると(その SNS のアクセストークンを RASQ に預けます)、公開 / ホームの投稿がここに出ます。', style: caption),
+            Text(rasqDetail(context, 'プロフィール編集で「投稿もアカウントページに出す」を入れると、ここに出ます。', 'プロフィール編集の「アカウントページに出す SNS アカウント」で、アカウントごとに「投稿もアカウントページに出す」を入れると(その SNS のアクセストークンを RASQ に預けます)、公開 / ホームの投稿がここに出ます。'), style: caption),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(

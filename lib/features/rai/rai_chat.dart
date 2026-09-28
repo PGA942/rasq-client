@@ -46,7 +46,7 @@ class RaiChatList extends ConsumerWidget {
             child: Row(children: [
               const Icon(Icons.pause_circle_outline, size: 20),
               const SizedBox(width: RasqSpacing.xs),
-              Expanded(child: Text('案内を一時停止中(${s.suspended!.stepIndex + 1} / ${s.suspended!.steps.length} 手順目)。前の画面に戻ると続きます。', style: RasqTypography.bodySmall)),
+              Expanded(child: Text('案内を一時停止中(${s.suspended!.stepIndex + 1} / ${s.suspended!.steps.length} 手順目)。戻ると続きます。', style: RasqTypography.bodySmall)),
               TextButton(key: const ValueKey('rai.chat.resume'), onPressed: () => Navigator.of(context).maybePop(), child: const Text('続きへ')),
             ]),
           );
@@ -55,7 +55,10 @@ class RaiChatList extends ConsumerWidget {
         ?suspended,
         Text('マクロとか、お任せください！', textAlign: TextAlign.center, style: RasqTypography.title),
         const SizedBox(height: RasqSpacing.xs),
-        Text('インストラクション: 操作を聞くと RAi がボタンまで移動して指差します。\nアシスタント: 端末内モデルで答えます。モデルはバーのチップから選べます(マクロは第二期)。', textAlign: TextAlign.center, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text(
+            rasqDetail(context, '操作を聞くと、RAi がボタンを指差して教えます。', 'インストラクション: 操作を聞くと RAi がボタンまで移動して指差します。\nアシスタント: 端末内モデルで答えます。モデルはバーのチップから選べます(マクロは第二期)。'),
+            textAlign: TextAlign.center,
+            style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         if (s.history.isNotEmpty) ...[
           const RasqSectionHeader(title: '最近の質問', topMargin: RasqSpacing.xl),
           for (final h in s.history)

@@ -28,6 +28,7 @@ export 'src/components/action_button.dart';
 export 'src/components/timestamp.dart';
 export 'src/components/buttons.dart';
 export 'src/components/list_tiles.dart';
+export 'src/components/notice.dart';
 export 'src/components/input.dart';
 export 'src/components/sns_pill.dart';
 export 'src/components/user_row.dart';

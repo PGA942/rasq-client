@@ -45,7 +45,7 @@ class _MuteBlockScreenState extends ConsumerState<MuteBlockScreen> {
           ),
         ),
         body: TabBarView(children: [
-          _blockKind == 'users' ? const _Users(blocked: true) : RasqEmptyView(title: _blockKind == 'words' ? 'ブロックしたワード' : 'ブロックしたリスト', hint: 'ワード/リストのブロックは M2 後半'),
+          _blockKind == 'users' ? const _Users(blocked: true) : RasqEmptyView(title: _blockKind == 'words' ? 'ブロックしたワード' : 'ブロックしたリスト', hint: rasqDetail(context, '準備中です', 'ワード/リストのブロックは M2 後半')),
           const _Users(blocked: false),
         ]),
       ),

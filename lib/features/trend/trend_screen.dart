@@ -9,9 +9,13 @@ import '../../app/providers.dart';
 import '../../shell/third_column.dart' show paneBack;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
+import '../relational/relational_engine.dart';
+import '../relational/relational_timeline_view.dart';
 import '../search/search_filter.dart';
 import '../search/search_filter_bar_view.dart';
 import '../users/user_list.dart';
+import '../vc/astell_actions.dart';
+import '../vc/astell_models.dart';
 import 'tendency_fows.dart';
 import 'trend_analysis.dart';
 import 'trend_providers.dart';
@@ -58,6 +62,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     final tl = ref.watch(timelineProvider(_kind));
     // ノードグラフ実配線 (D-113): trend.following / trend.users スコープ。
     final following = ref.watch(trendFollowingPostsProvider(widget.tag));
+    final activity = ref.watch(trendFollowingActivityProvider(widget.tag)).value;
     final rankedUsers = ref.watch(trendUsersProvider(widget.tag));
     final notifier = ref.read(timelineProvider(_kind).notifier);
     final manager = ref.watch(overlayManagerProvider);
@@ -130,17 +135,25 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                 onRefresh: () async {
                   ref.invalidate(trendAnalysisProvider(widget.tag));
                   ref.invalidate(trendFollowingPostsProvider(widget.tag));
+                  ref.invalidate(trendFollowingActivityProvider(widget.tag));
                   ref.invalidate(trendUsersProvider(widget.tag));
                   await notifier.refresh();
                 },
                 child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
                   const RasqSectionHeader(title: 'フォロー中の反応', topMargin: 0),
+                  // AsTell / リレーショナル TL にすでにあるこのワードの話題 (D-364) → フォロイーのタグ投稿。
+                  ...[
+                    for (final r in activity?.rooms ?? const <AstellRoom>[]) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs), child: AstellRoomTile(room: r)),
+                    for (final e in activity?.events ?? const <ConversationEvent>[]) RelationalEventCard(key: ValueKey('trend.following.event.${e.id}'), event: e),
+                  ],
                   following.when(
                     loading: () => const RasqLoading(),
                     error: (_, _) => const SizedBox(height: 48),
                     data: (fp) {
                       final posts = apply(fp).take(3).toList();
-                      return posts.isEmpty ? const SizedBox(height: 48) : rows(posts);
+                      if (posts.isNotEmpty) return rows(posts);
+                      final none = (activity?.rooms.isEmpty ?? true) && (activity?.events.isEmpty ?? true);
+                      return none ? const RasqCaption('フォロー中の人の反応はまだありません', key: ValueKey('trend.following.empty')) : const SizedBox.shrink();
                     },
                   ),
                   const RasqSectionHeader(title: 'トレンド', topMargin: 0),

@@ -136,7 +136,11 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
       body: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.xl), children: [
         // ── メール ──
         const RasqSectionHeader(title: 'メールアドレス'),
-        pad(Text('登録すると、パスワードを忘れたときの再設定、メールでのログイン、大事な操作の確認とお知らせに使えます。ほかの人には見えません。メールに届くのは 確認コードだけです(リンクは送りません)。', style: caption)),
+        const RasqCaption(
+          'パスワードを忘れたときや、メールでのログインに使います。ほかの人には見えません。',
+          detail: '登録すると、パスワードを忘れたときの再設定、メールでのログイン、大事な操作の確認とお知らせに使えます。ほかの人には見えません。メールに届くのは 確認コードだけです(リンクは送りません)。',
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
+        ),
         RasqValueListTile(key: const ValueKey('security.email'), title: 'いまのメール', value: account.emailVerified ? (account.email ?? '') : '未登録'),
         pad(Row(children: [
           Expanded(child: RasqInput(key: const ValueKey('security.email.input'), controller: _email, hintText: account.emailVerified ? '新しいメールアドレス' : 'メールアドレス', keyboardType: TextInputType.emailAddress)),
@@ -206,7 +210,10 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
           ],
         ])),
         if (account.hasPassword)
-          pad(Text('パスワードは、同期した設定の暗号化にも使います。「パスワードの再設定」(ログイン画面)をすると、前のパスワードで暗号化したデータは復号できなくなります。', style: caption)),
+          const RasqNotice.warning(
+            text: 'パスワードを「再設定」すると、同期した設定は読めなくなります。',
+            detail: 'パスワードは、同期した設定の暗号化にも使います。「パスワードの再設定」(ログイン画面)をすると、前のパスワードで暗号化したデータは復号できなくなります。',
+          ),
 
         // ── 端末 ──
         RasqSectionHeader(
@@ -388,7 +395,7 @@ class _AccountLoginScreenState extends ConsumerState<AccountLoginScreen> {
 
   Future<void> _run(Future<void> Function(AccountSecurityApi api) action) async {
     final api = ref.read(accountSecurityApiProvider);
-    if (api == null) return _toast('RASQ Central の接続先が未設定です');
+    if (api == null) return _toast('RASQ サーバーの接続先が未設定です');
     if (_busy) return;
     setState(() => _busy = true);
     try {
@@ -443,7 +450,8 @@ class _AccountLoginScreenState extends ConsumerState<AccountLoginScreen> {
           switch (_mode) {
             _LoginMode.password => 'ハンドル(@ は無くてもよい)か、確認済みのメールアドレスと、パスワードで入ります。',
             _LoginMode.code => '確認済みのメールアドレスへ確認コードを送ります。パスワードは要りません。',
-            _LoginMode.reset => '確認済みのメールアドレスへコードを送り、新しいパスワードを決めます。すべての端末がログアウトになり、前のパスワードで暗号化した同期データは復号できなくなります。',
+            _LoginMode.reset => rasqDetail(context, 'メールのコードで新しいパスワードを決めます。すべての端末がログアウトになり、同期したデータは読めなくなります。',
+                '確認済みのメールアドレスへコードを送り、新しいパスワードを決めます。すべての端末がログアウトになり、前のパスワードで暗号化した同期データは復号できなくなります。'),
           },
           style: caption,
         )),

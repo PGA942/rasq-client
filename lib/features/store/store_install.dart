@@ -74,8 +74,12 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
             if (bundle != null)
               // 署名の有無は正直に出す。モックストアや署名前の掲載物は
               // ハッシュ照合だけになる (D-034)。
-              Text('配布物: ${(bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB ・ SHA-512 ${bundle.sha512.substring(0, 16)}…'
-                  ' ・ ${bundle.signature.isNotEmpty && manifest.storePublicKey.isNotEmpty ? 'ストア署名つき (ed25519)' : 'ストア署名なし(ハッシュ照合のみ)'}',
+              Text(
+                  rasqDetail(
+                      ctx,
+                      '${(bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB ・ ${bundle.signature.isNotEmpty && manifest.storePublicKey.isNotEmpty ? 'ストアの署名あり' : 'ストアの署名なし'}',
+                      '配布物: ${(bundle.sizeBytes / (1024 * 1024)).toStringAsFixed(1)}MB ・ SHA-512 ${bundle.sha512.substring(0, 16)}…'
+                          ' ・ ${bundle.signature.isNotEmpty && manifest.storePublicKey.isNotEmpty ? 'ストア署名つき (ed25519)' : 'ストア署名なし(ハッシュ照合のみ)'}'),
                   style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ]),
         ),
@@ -90,7 +94,7 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   onBusy?.call(true);
   final outcome = await installed.install(d.id, version: version, activate: activate);
   onBusy?.call(false);
-  return outcome.error ?? '${d.name} ${manifest.version} をインストールしました(${outcome.verification?.message ?? 'SHA-512 検証済み'})';
+  return outcome.error ?? '${d.name} ${manifest.version} をインストールしました';
 }
 
 /// 購入シート (D-355): 値段(ポイント)、いまの残高、次に失効するポイント →「購入する」。足りなければ「Web コンソールでポイントを買う」
@@ -118,7 +122,8 @@ Future<String?> showPurchaseSheet(OverlayManager manager, StoreClient client, St
           const SizedBox(height: 4),
           Text('残り ${points.balance} ポイント${next == null ? '' : ' ・ ${date(next.expiresAt)} に ${next.remaining} ポイントが失効'}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: 4),
-          Text('買ったプラグインは、同じ RASQ アカウントならどの端末でも入れられます。ポイントは有効期限の近いものから使います。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(rasqDetail(ctx, '買ったプラグインは、同じアカウントならどの端末でも使えます', '買ったプラグインは、同じ RASQ アカウントならどの端末でも入れられます。ポイントは有効期限の近いものから使います。'),
+              style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: RasqSpacing.sm),
           if (enough)
             FilledButton(key: const ValueKey('store.purchase.buy'), onPressed: () => manager.close('store.purchase', result: 'buy'), child: Text('$price ポイントで購入する'))

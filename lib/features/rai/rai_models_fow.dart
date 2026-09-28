@@ -31,7 +31,7 @@ Future<void> showRaiModelsFow(WidgetRef ref, BuildContext context, {int? column}
     // 幅は入力ウィジェットに揃える (D-185)。
     spec: FowSpec(title: 'モデル', cancelText: '閉じる', initialHeightFactor: 0.7, maxHeightFactor: 0.92, columnIndex: column ?? 0, maxWidth: raiPanelWidth(context))
       ..anchor = anchor
-      ..anchorBelow = anchor == null ? null : false,
+      ..anchorBelow = raiAnchorBelow(anchor),
     builder: (_, _) => const RaiModelsBody(),
   );
 }
@@ -41,7 +41,6 @@ class RaiModelsBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final llm = ref.watch(raiLlmProvider);
     final st = ref.watch(raiLlmStatusProvider).value ?? llm.current;
     final ram = ref.watch(deviceRamProvider).value;
@@ -56,21 +55,21 @@ class RaiModelsBody extends ConsumerWidget {
 
     final ramText = ram?.totalMb == null ? 'RAM: 不明' : 'RAM: ${(ram!.totalMb! / 1024).toStringAsFixed(1)} GB${ram.availableMb == null ? '' : '(空き ${(ram.availableMb! / 1024).toStringAsFixed(1)} GB)'}';
     return ListView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xl), children: [
-      Text('${llm.spec.codename} = 端末内で動くモデル(${llm.spec.label})。$ramText', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      RasqCaption('${llm.spec.codename} = この端末で動くモデル。$ramText', detail: '${llm.spec.codename} = 端末内で動くモデル(${llm.spec.label})。$ramText', padding: EdgeInsets.zero),
       const RasqSectionHeader(title: 'ローカル', topMargin: RasqSpacing.sm),
       // 選択中を先頭に(操作ボタンがすぐ見える)。
       for (final m in [...raiModelSpecs.where((m) => m.id == llm.spec.id), ...raiModelSpecs.where((m) => m.id != llm.spec.id)]) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
-      const RasqSectionHeader(title: '検索(リファレンスの埋め込み)', topMargin: RasqSpacing.md),
+      const RasqSectionHeader(title: 'RAi の検索', topMargin: RasqSpacing.md),
       _EmbeddingTile(ram: ram),
       // 絵文字の画像検索 (D-293): 文と絵を同じ空間で比べるので、SigLIP2 の 2 つが揃って初めて効く。
       if (ref.watch(emojiVisionModelProvider) is! UnavailableRaiEmbeddingModel) const RasqSectionHeader(title: '絵文字の画像検索(2 つとも要ります)', topMargin: RasqSpacing.md),
-      _EmbeddingTile(ram: ram, model: emojiTextModelProvider, status: emojiTextStatusProvider, tag: 'emojiText', readyNote: '絵文字の検索で、打った文を SigLIP2 の空間に埋め込みます', idleNote: '絵文字の絵を、意味で探せるようになります(画像側も入れてください)'),
-      _EmbeddingTile(ram: ram, model: emojiVisionModelProvider, status: emojiVisionStatusProvider, tag: 'emojiVision', readyNote: '絵文字の絵を、裏で少しずつ埋め込みます(サーバーごとに 1 回)', idleNote: '名前が意味を持たない絵文字も、絵の中身で探せるようになります'),
-      const RasqSectionHeader(title: 'クラウド(フォールアップ先)', topMargin: RasqSpacing.md),
+      _EmbeddingTile(ram: ram, model: emojiTextModelProvider, status: emojiTextStatusProvider, tag: 'emojiText', readyNote: '打った文で、絵文字の絵を探せます', idleNote: '絵文字の絵を、意味で探せるようになります(画像側も入れてください)'),
+      _EmbeddingTile(ram: ram, model: emojiVisionModelProvider, status: emojiVisionStatusProvider, tag: 'emojiVision', readyNote: '絵文字の絵を、裏で少しずつ読み込みます(サーバーごとに 1 回)', idleNote: '名前が意味を持たない絵文字も、絵の中身で探せるようになります'),
+      const RasqSectionHeader(title: 'クラウド(端末で答えられないとき)', topMargin: RasqSpacing.md),
       const _ServerTile(),
       for (final m in raiCloudModelSpecs) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
       const SizedBox(height: RasqSpacing.sm),
-      Text('完遂率 = 操作の案内 / 返答が最後まで成立した割合の集計(35B 未満のモデルだけ集計、デモでは「-%」)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      const RasqCaption('完遂率 = 案内や返答が最後までうまくいった割合です。', detail: '完遂率 = 操作の案内 / 返答が最後まで成立した割合の集計(35B 未満のモデルだけ集計、デモでは「-%」)。', padding: EdgeInsets.zero),
     ]);
   }
 
@@ -110,7 +109,7 @@ class RaiModelsBody extends ConsumerWidget {
           if (selected) const Icon(Icons.check_circle, size: 18, color: RasqColors.link),
         ]),
         const SizedBox(height: RasqSpacing.xs),
-        Text(m.cloud ? '${m.label} · ${m.params.toStringAsFixed(0)}B · サーバー側' : '${m.label} · ${m.engine.label} · ${m.fileName} · ${m.sizeMb} MB', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
+        Text(m.cloud ? '${m.label} · ${m.params.toStringAsFixed(0)}B · クラウド' : '${m.label} · ${m.engine.label} · ${m.fileName} · ${m.sizeMb} MB', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), overflow: TextOverflow.ellipsis),
         const SizedBox(height: RasqSpacing.xs),
         Row(children: [
           // 完遂率。
@@ -209,7 +208,7 @@ class _EmbeddingTile extends ConsumerWidget {
         if (readyNote != null)
           Text(st.ready ? readyNote! : (idleNote ?? ''), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
         else
-          Text(st.ready ? '検索: ${spec.label}(意味で引く)' : '検索: n-gram 代替(語の一致で引く。ダウンロードすると言い換えにも強くなる)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text(st.ready ? rasqDetail(context, '意味の近さで探します', '検索: ${spec.label}(意味で引く)') : rasqDetail(context, 'いまは語の一致で探します。ダウンロードすると言い換えにも強くなります', '検索: n-gram 代替(語の一致で引く。ダウンロードすると言い換えにも強くなる)'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: RasqSpacing.sm),
         Wrap(spacing: RasqSpacing.sm, runSpacing: RasqSpacing.xs, children: [
           if (st.phase == RaiEmbeddingPhase.notInstalled || st.phase == RaiEmbeddingPhase.error)
@@ -264,7 +263,7 @@ class _ServerTileState extends ConsumerState<_ServerTile> {
           RasqPill(label: configured ? '接続先あり' : '未設定', color: configured ? RasqColors.link : scheme.surfaceContainerHighest, textColor: configured ? Colors.white : scheme.onSurface),
         ]),
         const SizedBox(height: RasqSpacing.xs),
-        Text('OpenAI 互換のチャット API(llama-server / vLLM など)。端末内モデルが失敗 / 無応答のとき、質問と近かったリファレンスを添えて渡します。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        const RasqCaption('端末のモデルが答えられないとき、ここに聞きます。', detail: 'OpenAI 互換のチャット API(llama-server / vLLM など)。端末内モデルが失敗 / 無応答のとき、質問と近かったリファレンスを添えて渡します。', padding: EdgeInsets.zero),
         const SizedBox(height: RasqSpacing.sm),
         RasqInput(key: const ValueKey('rai.server.url'), controller: _url, hintText: 'http://127.0.0.1:8000/v1', onChanged: (s) => setState(() => store.set('serverUrl', s.trim()))),
         const SizedBox(height: RasqSpacing.xs),

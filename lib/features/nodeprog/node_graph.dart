@@ -193,6 +193,7 @@ class NodeCatalogEntry {
     required this.genre,
     this.author,
     this.description,
+    this.detail,
     this.inputs = const [],
     this.outputs = const [],
     this.hasCondIn = false,
@@ -208,6 +209,9 @@ class NodeCatalogEntry {
   /// 提供元(プラグイン名)。組み込みノードは null。
   final String? author;
   final String? description;
+
+  /// 開発者モードで [description] の代わりに出す詳しい説明 (D-362)。
+  final String? detail;
   final List<NodePort> inputs;
   final List<NodePort> outputs;
   final bool hasCondIn;
@@ -284,7 +288,8 @@ class CustomFunctionDef {
           icon: Icons.auto_fix_high_outlined,
           genre: '関数',
           author: 'カスタム関数',
-          description: '条件タグ ${tags.join('・')} を受けるカスタム関数です(中身の配線はプラグイン/RAi で)。',
+          description: '条件 ${tags.join('・')} を受ける、自分で作った関数です。',
+          detail: '条件タグ ${tags.join('・')} を受けるカスタム関数です(中身の配線はプラグイン/RAi で)。',
           hasCondIn: true,
           hasCondOut: true,
           condBranches: tags.isEmpty ? const ['条件'] : tags,
@@ -295,7 +300,8 @@ class CustomFunctionDef {
           icon: Icons.auto_fix_high_outlined,
           genre: '関数',
           author: 'カスタム関数',
-          description: 'カスタム関数です(中身の配線はプラグイン/RAi で)。',
+          description: '自分で作った関数です。',
+          detail: 'カスタム関数です(中身の配線はプラグイン/RAi で)。',
           inputs: [for (final t in inputs) NodePort(label: t, dataType: t)],
           outputs: [for (final t in outputs) NodePort(label: t, dataType: t)],
         );
@@ -406,7 +412,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: 'タイムライン取得',
     icon: Icons.download_outlined,
     genre: 'タイムライン',
-    description: '選んだタイムラインを取得して、投稿リスト(RRLタグ付き)として渡します。',
+    description: '選んだタイムラインを取得して、投稿リストとして渡します。',
+    detail: '選んだタイムラインを取得して、投稿リスト(RRLタグ付き)として渡します。',
     inputs: [
       NodePort(label: 'TL', value: 'home', dataType: '設定', options: ['home', 'social', 'local', 'global']),
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
@@ -482,7 +489,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '検索絞り込み',
     icon: Icons.manage_search,
     genre: '加工',
-    description: '検索ワードに合う投稿だけ通します。ワードが空のときは、このページの検索ワード/タグを使います。「除外」を true にすると、合う投稿を落とします(ワードミュート)。',
+    description: '検索ワードに合う投稿だけ通します(「除外」で逆に落とします)。',
+    detail: '検索ワードに合う投稿だけ通します。ワードが空のときは、このページの検索ワード/タグを使います。「除外」を true にすると、合う投稿を落とします(ワードミュート)。',
     inputs: [
       NodePort(label: '投稿リスト', dataType: '投稿リスト'),
       NodePort(label: '検索ワード', value: '', dataType: '設定'),
@@ -496,7 +504,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: 'マージ',
     icon: Icons.merge_type,
     genre: '加工',
-    description: '繋いだ投稿リストを時刻順に 1 本へ合流します。別アカウントに流れてきた同じ投稿は 1 枚に畳み、タイルの ↓ でアカウントを選べます。',
+    description: '繋いだ投稿リストを時刻順に 1 本にまとめます。',
+    detail: '繋いだ投稿リストを時刻順に 1 本へ合流します。別アカウントに流れてきた同じ投稿は 1 枚に畳み、タイルの ↓ でアカウントを選べます。',
     inputs: [
       NodePort(label: '投稿リスト1', dataType: '投稿リスト'),
       NodePort(label: '投稿リスト2', dataType: '投稿リスト'),
@@ -512,7 +521,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '関連タイムライン',
     icon: Icons.hub_outlined,
     genre: 'タイムライン',
-    description: '関連TLの前段絞り込みの最終出力。繋いだ投稿リストが会話イベント構築の入力になります(処理系は変わりません)。',
+    description: '関連タイムラインの絞り込みの出口です。',
+    detail: '関連TLの前段絞り込みの最終出力。繋いだ投稿リストが会話イベント構築の入力になります(処理系は変わりません)。',
     inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
   // ---- 取得系 (D-097): リスト/検索/DM/トレンド。
@@ -566,7 +576,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: 'カスタムフィード取得',
     icon: Icons.rss_feed,
     genre: '取得',
-    description: 'Bluesky のカスタムフィード(フィードジェネレーター)のタイムラインを取得します(at:// の URI で指定。TL カスタマイズでは検索して選べます)。',
+    description: 'Bluesky のカスタムフィードを取得します。',
+    detail: 'Bluesky のカスタムフィード(フィードジェネレーター)のタイムラインを取得します(at:// の URI で指定。TL カスタマイズでは検索して選べます)。',
     inputs: [
       NodePort(label: 'フィード', value: '', dataType: '設定'),
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
@@ -579,7 +590,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: 'RASQ リスト取得',
     icon: Icons.people_alt_outlined,
     genre: '取得',
-    description: 'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取得します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。',
+    description: 'いくつもの SNS の人をまとめた RASQ リストの投稿を取得します。',
+    detail: 'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取得します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。',
     inputs: [NodePort(label: 'リスト', value: '', dataType: '設定')],
     outputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
   ),
@@ -602,7 +614,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: 'ポスト先',
     icon: Icons.send_outlined,
     genre: 'コンポーザー',
-    description: '投稿先アカウントの候補。下に条件をぶら下げると、投稿内容がその条件に合うときこのアカウントが投稿先になります(上に置いたものほど優先。手動で選び直せます)。',
+    description: '投稿先アカウントの候補です。下の条件に合うと投稿先になります。',
+    detail: '投稿先アカウントの候補。下に条件をぶら下げると、投稿内容がその条件に合うときこのアカウントが投稿先になります(上に置いたものほど優先。手動で選び直せます)。',
     inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
     hasCondOut: true,
   ),
@@ -614,7 +627,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '代わりのフォーマットで投稿',
     icon: Icons.alt_route,
     genre: 'コンポーザー',
-    description: '絞り込みで投稿先から外れた場合のバイパス。下の条件(通常は直前の比較の Not)が成立したとき、代わりのフォーマットでこのアカウントに投稿します。',
+    description: '絞り込みで外れたとき、別の形でこのアカウントに投稿します。',
+    detail: '絞り込みで投稿先から外れた場合のバイパス。下の条件(通常は直前の比較の Not)が成立したとき、代わりのフォーマットでこのアカウントに投稿します。',
     inputs: [
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
       NodePort(label: 'フォーマット', value: '注釈を付ける', dataType: '設定', options: ['注釈を付ける', 'フォロワー限定', '連合なし']),
@@ -630,7 +644,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '連動の絞り込み',
     icon: Icons.fork_right,
     genre: 'コンポーザー',
-    description: '連動投稿だけに掛かる絞り込みです。下の条件が成立しないと、このアカウントへの連動投稿は送られません(通常のポスト先判定には影響しません)。',
+    description: '一緒に送る投稿だけに効く絞り込みです。',
+    detail: '連動投稿だけに掛かる絞り込みです。下の条件が成立しないと、このアカウントへの連動投稿は送られません(通常のポスト先判定には影響しません)。',
     inputs: [NodePort(label: 'アカウント', value: '', dataType: '設定')],
     hasCondOut: true,
   ),
@@ -641,7 +656,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '投稿加工(正規表現)',
     icon: Icons.find_replace,
     genre: 'コンポーザー',
-    description: '送信時に本文へ正規表現の置換をかけます(パターンに一致した部分を置換)。アカウントが空のときは全ての投稿先に適用します。',
+    description: '送信するときに本文の一部を置き換えます。',
+    detail: '送信時に本文へ正規表現の置換をかけます(パターンに一致した部分を置換)。アカウントが空のときは全ての投稿先に適用します。',
     inputs: [
       NodePort(label: 'アカウント', value: '', dataType: '設定'),
       NodePort(label: 'パターン', value: '', dataType: '設定'),
@@ -673,7 +689,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '類似度 (SigLIP)',
     icon: Icons.auto_awesome_outlined,
     genre: 'ML',
-    description: '基準(テキスト/配列/ベクトル)と各投稿の類似度を、この TL 内での相対値 0〜1 で出します(0.8 ≒ 上位 2 割相当)。ML 不達時は n-gram 類似度に縮退します。',
+    description: '基準と各投稿の似ている度合いを 0〜1 で出します。',
+    detail: '基準(テキスト/配列/ベクトル)と各投稿の類似度を、この TL 内での相対値 0〜1 で出します(0.8 ≒ 上位 2 割相当)。ML 不達時は n-gram 類似度に縮退します。',
     inputs: [
       NodePort(label: '基準', value: '', dataType: 'テキスト'),
       NodePort(label: '基準リスト', dataType: 'テキスト配列'),
@@ -697,7 +714,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: 'SigLIP埋め込み',
     icon: Icons.grain,
     genre: 'ML',
-    description: '投稿リストの平均埋め込み(プロファイル)をベクトルで出します。ML 不達時は n-gram プロファイルに縮退します。',
+    description: '投稿リストの傾向をまとめて出します。',
+    detail: '投稿リストの平均埋め込み(プロファイル)をベクトルで出します。ML 不達時は n-gram プロファイルに縮退します。',
     inputs: [NodePort(label: '投稿リスト', dataType: '投稿リスト')],
     outputs: [NodePort(label: '埋め込み', dataType: 'ベクトル')],
   ),
@@ -706,7 +724,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '保存 (storage.safe)',
     icon: Icons.save_outlined,
     genre: '保存',
-    description: '繋いだデータをスロットに保存します。storage.safe は依存関係の子プラグインにも渡せる安全な置き場(プラグイン側の受け渡しは初回起動時に確認)。',
+    description: '繋いだデータを保存します。',
+    detail: '繋いだデータをスロットに保存します。storage.safe は依存関係の子プラグインにも渡せる安全な置き場(プラグイン側の受け渡しは初回起動時に確認)。',
     inputs: [
       NodePort(label: 'スロット', value: '', dataType: '設定'),
       NodePort(label: 'テキスト配列', dataType: 'テキスト配列'),
@@ -742,7 +761,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '指向性/刺激性 (プロファイル)',
     icon: Icons.tune,
     genre: 'ML',
-    description: 'storage.safe のトレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)への適合度(0〜1)を各投稿に出します。プロファイルは検索ホームのトレンド ⚙ で編集し、他のノードからも同じスロットを読めます。',
+    description: '好みの設定への合い具合(0〜1)を各投稿に出します。',
+    detail: 'storage.safe のトレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)への適合度(0〜1)を各投稿に出します。プロファイルは検索ホームのトレンド ⚙ で編集し、他のノードからも同じスロットを読めます。',
     inputs: [
       NodePort(label: '投稿リスト', dataType: '投稿リスト'),
       NodePort(label: 'プロファイル', value: 'trend.profile', dataType: '設定'),
@@ -754,7 +774,8 @@ const builtinNodeCatalog = <NodeCatalogEntry>[
     title: '比較',
     icon: Icons.functions,
     genre: '条件',
-    description: '数値(類似度・乱数など)としきい値を比べて True/False を返す演算子条件です。値元が未接続・値が取れないとき(スロットが空など)は False になります。',
+    description: '数値としきい値を比べて True/False を返します。',
+    detail: '数値(類似度・乱数など)としきい値を比べて True/False を返す演算子条件です。値元が未接続・値が取れないとき(スロットが空など)は False になります。',
     inputs: [
       NodePort(label: '値元', dataType: '数値'),
       NodePort(label: '演算', value: '以上', dataType: '設定', options: ['以上', '以下', '等しい']),

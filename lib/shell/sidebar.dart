@@ -175,8 +175,11 @@ class RasqSidebar extends ConsumerWidget {
                 ), chevron: false, onTap: () => go(Routes.rai)),
               ]),
             ),
-            RasqListTile(title: 'コンポーネントカタログ (dev)', leading: const Icon(Icons.widgets_outlined), chevron: false, divider: false, onTap: () => go(Routes.catalog)),
-            RasqListTile(title: 'WASMプラグイン試験 (dev)', leading: const Icon(Icons.extension_outlined), chevron: false, divider: false, onTap: () => go(Routes.wasmDev)),
+            // 開発者向けの画面は開発者モードのときだけ (D-362)。
+            if (RasqDeveloperMode.of(context)) ...[
+              RasqListTile(title: 'コンポーネントカタログ (dev)', leading: const Icon(Icons.widgets_outlined), chevron: false, divider: false, onTap: () => go(Routes.catalog)),
+              RasqListTile(title: 'WASMプラグイン試験 (dev)', leading: const Icon(Icons.extension_outlined), chevron: false, divider: false, onTap: () => go(Routes.wasmDev)),
+            ],
             RasqListTile(title: 'Webコンソール', leading: const Icon(Icons.language), chevron: false, divider: false, onTap: () {}),
           ]),
         ),

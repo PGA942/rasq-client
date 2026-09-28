@@ -145,7 +145,6 @@ class _BodyState extends State<_Body> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final pcm = widget.pcm;
     final total = pcm?.duration ?? Duration.zero;
     final progress = total == Duration.zero ? 0.0 : (widget.position.inMicroseconds / total.inMicroseconds).clamp(0.0, 1.0);
@@ -163,9 +162,9 @@ class _BodyState extends State<_Body> {
           ),
         ),
       ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-        child: Text('今の再生位置のフレーム。決定で動画を書き出し直します(${plan.frames} フレーム${plan.fps < _c.fps - 0.5 ? '、長いので ${plan.fps.toStringAsFixed(1)}fps に下げます' : ''})。ペイントやテキストなど、ここまでの編集は消えます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      RasqNotice.warning(
+        text: '決定すると動画を作り直します。ここまでの編集は消えます',
+        detail: '今の再生位置のフレーム。決定で動画を書き出し直します(${plan.frames} フレーム${plan.fps < _c.fps - 0.5 ? '、長いので ${plan.fps.toStringAsFixed(1)}fps に下げます' : ''})。ペイントやテキストなど、ここまでの編集は消えます。',
       ),
       const RasqSectionHeader(title: '波形'),
       Padding(
@@ -253,9 +252,10 @@ class _BodyState extends State<_Body> {
           for (final q in AudioVisualizerQuality.values) ChoiceChip(key: ValueKey('viz.quality.${q.name}'), label: Text(q.label, style: RasqTypography.caption), selected: _c.quality == q, onSelected: (_) => _set(_c.copyWith(quality: q))),
         ]),
       ),
-      Padding(
+      RasqCaption(
+        '細かくするほど、書き出しに時間がかかります',
+        detail: '${widget.host.lastTimings == null ? '' : '前回の書き出し: ${widget.host.lastTimings}。\n'}波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。',
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
-        child: Text('${widget.host.lastTimings == null ? '' : '前回の書き出し: ${widget.host.lastTimings}。\n'}波形を描く大きさ(出力はいつも 2560×1440)。左の絵と文字は別の 1 枚で、いつも細かく描きます。書き出しの時間はほぼ フレーム数 × 描く大きさ で決まります(fps を下げるのも効きます)。背景の動画を使うと遅くなります。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
       ),
     ]);
   }

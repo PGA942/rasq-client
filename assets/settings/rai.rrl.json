@@ -19,8 +19,9 @@
         "k": "traceGraphAuto",
         "p": {
           "title": "工程グラフを自動で表示",
-          "subtitle": "RAi に任せた自動化が 3 手順以上のとき、工程をノードのグラフで自動表示します。オフなら「グラフビューで表示」ボタンになります",
-          "value": "$.settings.traceGraphAuto"
+          "subtitle": "3 手順以上の自動化を、グラフで表示します",
+          "value": "$.settings.traceGraphAuto",
+          "detail": "RAi に任せた自動化が 3 手順以上のとき、工程をノードのグラフで自動表示します。オフなら「グラフビューで表示」ボタンになります"
         },
         "on": {
           "change": "settings.set"
@@ -29,9 +30,10 @@
       {
         "t": "Text",
         "p": {
-          "text": "推論サーバーや web 検索の鍵は RAi バーのモデルチップから設定します。",
+          "text": "AI のモデルや web 検索は、RAi バーのモデルのボタンから設定します。",
           "pad": 16,
-          "size": 13
+          "size": 13,
+          "detail": "推論サーバーや web 検索の鍵は RAi バーのモデルチップから設定します。"
         }
       }
     ]

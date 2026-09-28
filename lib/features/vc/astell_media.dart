@@ -122,7 +122,7 @@ class AstellMediaException implements Exception {
   /// 画面に出す 1 行。
   String get message => switch (issue) {
         AstellMediaIssue.insecureContext => 'Web 版の通話は https で開いたときだけ使えます',
-        AstellMediaIssue.permissionDenied => 'マイク(カメラ)を使う許可がありません。端末の設定で RASQ に許可してください',
+        AstellMediaIssue.permissionDenied => 'マイク(カメラ)の許可がありません。端末の設定で許可してください',
         AstellMediaIssue.noDevice => 'マイク(カメラ)が見つかりません',
         AstellMediaIssue.unsupported => 'この端末では使えません${detail == null ? '' : '($detail)'}',
       };

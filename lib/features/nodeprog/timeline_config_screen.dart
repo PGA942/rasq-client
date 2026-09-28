@@ -519,9 +519,9 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         a.isPlugin ? _pluginVersionLabel(a) : 'RASQ',
         switch (a.type) {
           'chrono' => '取得したままの時刻順に整えます。',
-          'tendency' => 'トレンドプロファイル(指向性/刺激性・好きなジャンル)に合わない投稿を除外し、適合度順に並べます。',
+          'tendency' => rasqDetail(context, '好みの設定に合わない投稿を除き、合う順に並べます。', 'トレンドプロファイル(指向性/刺激性・好きなジャンル)に合わない投稿を除外し、適合度順に並べます。'),
           'suggest' => '${a.from}(${suggestFromKind(a.from) == 'myposts' ? '自分の投稿' : suggestFromKind(a.from) == 'myreplies' ? '自分の返信' : 'リアクションした投稿'})を基準に、${a.what}で合う投稿を先頭へ並べ替えます。',
-          _ => '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
+          _ => rasqDetail(context, 'プラグインの並べ方で投稿を並べ替えます。', '投稿リストをプラグインのソート(tl.sort)で並べ替えます。'),
         },
       );
 
@@ -711,6 +711,11 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
               // 説明バナー(ワイヤーフレーム: アルゴリズムは上から順に適用)。
               _banner(
                 _scope == 'tl.dm'
+                    ? 'すべての DM ページに使う設定です'
+                    : _isDmScope
+                        ? 'この DM ページだけの設定です'
+                        : 'タイムラインの中身と並び方を決められます',
+                detail: _scope == 'tl.dm'
                     ? 'DM のメイン設定です。個別設定のない全ての DM ページに適用されます。アルゴリズムは上から順に適用されます。'
                     : _isDmScope
                         ? 'この DM ページだけの設定です(保存すると DM 共通設定より優先されます)。アルゴリズムは上から順に適用されます。'
@@ -721,18 +726,12 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     );
   }
 
-  Widget _banner(String text, {List<Widget> actions = const []}) {
-    final tokens = RasqTokens.of(context);
-    return Container(
-      margin: const EdgeInsets.all(RasqSpacing.sm),
-      padding: const EdgeInsets.all(RasqSpacing.sm),
-      decoration: BoxDecoration(color: tokens.link.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(text, style: RasqTypography.caption.copyWith(color: tokens.link)),
-        if (actions.isNotEmpty) Align(alignment: Alignment.centerRight, child: Wrap(spacing: RasqSpacing.xs, children: actions)),
-      ]),
-    );
-  }
+  Widget _banner(String text, {String? detail, List<Widget> actions = const []}) => RasqNotice(
+        text: text,
+        detail: detail,
+        margin: const EdgeInsets.all(RasqSpacing.sm),
+        action: actions.isEmpty ? null : Wrap(spacing: RasqSpacing.xs, children: actions),
+      );
 
   /// 一時変更 FOW の中身 (D-338/D-341): タブ行 → 一時変更の案内 → 同じ部品の積み(検索欄と決定 / キャンセルは FOW の側)。
   Widget _temporaryBody() {
@@ -748,7 +747,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
               ? const RasqLoading()
               : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
                   if (searchOnly)
-                    _banner('このタイムラインはプラグインが並べています。ここでは探すことだけできます。')
+                    _banner('プラグインが並べるタイムラインです。ここでは探すだけできます')
                   else if (changed)
                     _banner(
                       'このタイムラインを一時的に変えています(保存していません)。',
@@ -758,7 +757,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
                       ],
                     )
                   else
-                    _banner('ここでの変更はこのタイムラインに一時的に効きます。保存するまで、元の設定は変わりません。'),
+                    _banner('ここでの変更は一時的です。保存するまで元の設定は変わりません', detail: 'ここでの変更はこのタイムラインに一時的に効きます。保存するまで、元の設定は変わりません。'),
                   if (!searchOnly) ..._components(),
                 ]),
         ),
@@ -768,13 +767,12 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
 
   /// アルゴリズム / SNS タイムライン / 自動更新の部品の積み(画面と一時変更 FOW で共用)。
   List<Widget> _components() {
-    final scheme = Theme.of(context).colorScheme;
-    final tokens = RasqTokens.of(context);
     return [
       if (_handEdited)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
-          child: Text('この TL はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。', style: RasqTypography.caption.copyWith(color: tokens.danger)),
+        const RasqNotice.warning(
+          text: 'この TL はノードエディタで編集されています。ここで変えると上書きされます',
+          detail: 'この TL はノードエディタで編集されています。ここで変更すると簡易構成で置き換えます。',
+          margin: EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
         ),
       RasqSectionHeader(
         title: 'アルゴリズム',
@@ -787,10 +785,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         title: 'SNSタイムライン',
         trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: 'タイムラインの並べ替え', onPressed: () => _openReorder(algorithms: false)),
       ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-        child: Text('複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。',
-            style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      const RasqCaption(
+        '複数を重ねると 1 本にまとまり、同じ投稿は 1 つになります',
+        detail: '複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。',
+        padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
       ),
       for (var i = 0; i < _cfg.sources.length; i++) _componentTile(algorithm: false, i: i),
       _addTile('タイムラインを追加', () => _openPalette(algorithms: false)),
@@ -873,11 +871,14 @@ class _ComponentPalettePanel extends ConsumerStatefulWidget {
 }
 
 class _PaletteItem {
-  const _PaletteItem({required this.icon, required this.title, required this.subtitle, required this.description, required this.supported, required this.add});
+  const _PaletteItem({required this.icon, required this.title, required this.subtitle, required this.description, this.detail, required this.supported, required this.add});
   final IconData icon;
   final String title;
   final String subtitle;
   final String description;
+
+  /// 開発者モードで [description] の代わりに出す詳しい説明 (D-362)。
+  final String? detail;
 
   /// ネイティブ対応の SNS プラグイン名(詳細行に出す)。
   final List<String> supported;
@@ -924,14 +925,16 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             icon: Icons.auto_awesome_outlined,
             title: 'サジェスト',
             subtitle: 'RASQ',
-            description: '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合う投稿を先頭へ並べ替えます。',
+            description: 'あなたの投稿や反応に近い投稿を先頭に並べます。',
+            detail: '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合う投稿を先頭へ並べ替えます。',
             supported: allSns,
             add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'suggest'))),
         _PaletteItem(
             icon: Icons.filter_alt_outlined,
             title: '絞り込み',
             subtitle: 'RASQ',
-            description: '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合わない投稿を除外します(サジェストと同じパラメーター)。',
+            description: 'あなたの投稿や反応に合わない投稿を除きます。',
+            detail: '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合わない投稿を除外します(サジェストと同じパラメーター)。',
             supported: allSns,
             add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'filter'))),
         _PaletteItem(
@@ -945,7 +948,8 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             icon: Icons.tune,
             title: '指向性/刺激性',
             subtitle: 'RASQ',
-            description: 'トレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)に合わない投稿を除外し、適合度順に並べます。プロファイルは検索ホームのトレンド ⚙ で編集します。',
+            description: '好みの設定に合わない投稿を除き、合う順に並べます。',
+            detail: 'トレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)に合わない投稿を除外し、適合度順に並べます。プロファイルは検索ホームのトレンド ⚙ で編集します。',
             supported: allSns,
             add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'tendency'))),
         // アクションからジャンルを選択 (D-157): 部品ではなくプロファイルの編集。
@@ -955,7 +959,8 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               icon: Icons.thumbs_up_down_outlined,
               title: 'アクションからジャンルを選択',
               subtitle: 'RASQ',
-              description: 'リアクションした投稿を類似した話題でまとめ、話題性の強いものから「好き / 好きではない」で好きなジャンルを決めます(指向性/刺激性の部品がこのプロファイルを使います)。',
+              description: '反応した投稿の話題から、好きなジャンルを選びます。',
+              detail: 'リアクションした投稿を類似した話題でまとめ、話題性の強いものから「好き / 好きではない」で好きなジャンルを決めます(指向性/刺激性の部品がこのプロファイルを使います)。',
               supported: allSns,
               add: () => widget.onPickGenres!()),
         _PaletteItem(
@@ -970,7 +975,8 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               icon: Icons.extension_outlined,
               title: '${p.label}でソート',
               subtitle: 'TLプラグイン',
-              description: '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
+              description: 'プラグインの並べ方で投稿を並べ替えます。',
+              detail: '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
               supported: sessionSns,
               add: () => widget.onAddAlgorithm(TlAlgorithmComponent(type: 'plugin:${p.id}', pluginLabel: '${p.label}でソート'))),
       ];
@@ -983,7 +989,8 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             icon: Icons.sync_alt,
             title: 'このDM',
             subtitle: 'RASQ',
-            description: 'この DM ページのメッセージをそのまま取り込みます(共通設定ではそれぞれのページの DM)。',
+            description: 'この DM ページのメッセージをそのまま取り込みます。',
+            detail: 'この DM ページのメッセージをそのまま取り込みます(共通設定ではそれぞれのページの DM)。',
             supported: allSns,
             add: () => widget.onAddSource(const TlSourceComponent(tl: 'self'))),
         for (final peer in peers)
@@ -1006,7 +1013,8 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
           icon: Icons.sync_alt,
           title: 'このタイムライン',
           subtitle: 'RASQ',
-          description: 'この画面の基礎タイムライン(タブ/検索結果/リスト/欄の投稿)をそのまま取り込みます。',
+          description: 'この画面の投稿をそのまま取り込みます。',
+          detail: 'この画面の基礎タイムライン(タブ/検索結果/リスト/欄の投稿)をそのまま取り込みます。',
           supported: allSns,
           add: () => widget.onAddSource(const TlSourceComponent(tl: 'self'))),
       // RASQ の投稿 (D-283): SNS のアカウントではなく、RASQ アカウント(Central)のフィード。
@@ -1014,21 +1022,24 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
           icon: Icons.hub_outlined,
           title: 'RASQ の投稿',
           subtitle: 'RASQ',
-          description: '自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。SNS の投稿と同じタイムラインに混ぜられます。',
+          description: '自分とフォロー中の人の RASQ の投稿を取り込みます。',
+          detail: '自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。SNS の投稿と同じタイムラインに混ぜられます。',
           supported: allSns,
           add: () => widget.onAddSource(const TlSourceComponent(tl: rasqPostsKind))),
       _PaletteItem(
           icon: Icons.download_outlined,
           title: 'タイムライン',
           subtitle: 'SNSプラグイン',
-          description: 'アカウントの基本タイムラインを取り込みます。種類はその SNS が出せるもの(フォロー中 / ローカル / グローバル / Discover …)から、アカウントと合わせて追加後のタイルで選べます。',
+          description: 'アカウントのタイムラインを取り込みます。種類は追加後に選べます。',
+          detail: 'アカウントの基本タイムラインを取り込みます。種類はその SNS が出せるもの(フォロー中 / ローカル / グローバル / Discover …)から、アカウントと合わせて追加後のタイルで選べます。',
           supported: allSns,
           add: () => widget.onAddSource(TlSourceComponent(tl: firstTl, account: current))),
       _PaletteItem(
           icon: Icons.list_alt_outlined,
           title: 'リストTL',
           subtitle: 'リスト系',
-          description: 'アカウントと、そのアカウントに含まれるリストのタイムラインを取り込みます(追加後のタイルで選択)。',
+          description: 'アカウントのリストを取り込みます。リストは追加後に選べます。',
+          detail: 'アカウントと、そのアカウントに含まれるリストのタイムラインを取り込みます(追加後のタイルで選択)。',
           supported: sessionSns,
           add: () => widget.onAddSource(TlSourceComponent(tl: 'list:', account: current))),
       if (bluesky.isNotEmpty)
@@ -1036,7 +1047,8 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             icon: Icons.rss_feed,
             title: 'カスタムフィード(Bluesky)',
             subtitle: 'リスト系',
-            description: 'Bluesky のカスタムフィードを検索して取り込みます(SNS を跨いだリストは「RASQ リスト」)。',
+            description: 'Bluesky のカスタムフィードを探して取り込みます。',
+            detail: 'Bluesky のカスタムフィードを検索して取り込みます(SNS を跨いだリストは「RASQ リスト」)。',
             supported: [for (final p in ref.read(pluginRegistryProvider).plugins) if (p.kind == SnsKind.bluesky) p.manifest.name],
             add: () => widget.onAddSource(TlSourceComponent(tl: 'feed:', account: bluesky.first))),
       // RASQ リスト (D-346): SNS を跨いだ人のリスト(Central)。リスト内の人の情報を取れるリストだけ選べる。
@@ -1045,14 +1057,16 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             icon: Icons.people_alt_outlined,
             title: 'RASQ リスト',
             subtitle: 'リスト系',
-            description: 'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取り込みます。自分のリスト・フォロー中のリストから選ぶか、公開リストを検索します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。',
+            description: 'いくつもの SNS の人をまとめたリストの投稿を取り込みます。',
+            detail: 'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取り込みます。自分のリスト・フォロー中のリストから選ぶか、公開リストを検索します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。',
             supported: allSns,
             add: () => widget.onAddSource(const TlSourceComponent(tl: rasqListKindPrefix))),
       _PaletteItem(
           icon: Icons.travel_explore,
           title: '現在のトレンドTL',
           subtitle: 'RASQ',
-          description: 'いまのトレンド上位タグの検索結果を 1 本に合流して取り込みます。',
+          description: 'いま話題のタグの投稿を取り込みます。',
+          detail: 'いまのトレンド上位タグの検索結果を 1 本に合流して取り込みます。',
           supported: allSns,
           add: () => widget.onAddSource(const TlSourceComponent(tl: 'trend'))),
     ];
@@ -1127,7 +1141,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
                       icon: e.icon,
                       title: e.title,
                       subtitle: e.subtitle,
-                      description: e.description,
+                      description: rasqDetail(context, e.description, e.detail),
                       // 入出力の代わりにネイティブ対応の SNS プラグイン (D-122)。
                       detail: '対応: ${e.supported.isEmpty ? '—' : e.supported.join('・')}',
                       chevron: false,
@@ -1247,12 +1261,14 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
         RrlNode(t: 'Column', c: [
           RrlNode(t: 'Text', p: {
             'text': a.isPlugin
-                ? 'このプラグインのパラメーター(RRL 設定ページ)は、ノード定義の配布(ストア統合)でここに表示されます。'
+                ? 'このプラグインの設定は準備中です。'
                 : a.isQueryFilter
                     ? 'ワードが空のときは、このページの検索ワード/タグで絞り込みます。ワードは下の欄で指定できます。'
                     : a.isTendency
-                        ? 'storage.safe のトレンドプロファイルを使います。下のオプションから指向性/刺激性・好きなジャンル・アクションからのジャンル選択を編集できます(検索ホームのトレンド ⚙ と同じもの)。'
-                        : '時系列順にパラメーターはありません。'
+                        ? '好みの設定を使います。下から変えられます。'
+                        : '時系列順にパラメーターはありません。',
+            if (a.isPlugin) 'detail': 'このプラグインのパラメーター(RRL 設定ページ)は、ノード定義の配布(ストア統合)でここに表示されます。',
+            if (a.isTendency) 'detail': 'storage.safe のトレンドプロファイルを使います。下のオプションから指向性/刺激性・好きなジャンル・アクションからのジャンル選択を編集できます(検索ホームのトレンド ⚙ と同じもの)。',
           }),
         ]),
       );
@@ -1262,7 +1278,10 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
       return (
         const {},
         const RrlNode(t: 'Column', c: [
-          RrlNode(t: 'Text', p: {'text': '自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。RASQ アカウントにログインしているときだけ流れます。パラメーターはありません。'}),
+          RrlNode(t: 'Text', p: {
+            'text': '自分とフォロー中の人の RASQ の投稿を取り込みます。RASQ にログインしているときだけ流れます。',
+            'detail': '自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。RASQ アカウントにログインしているときだけ流れます。パラメーターはありません。',
+          }),
         ]),
       );
     }
@@ -1270,7 +1289,10 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
       return (
         const {},
         const RrlNode(t: 'Column', c: [
-          RrlNode(t: 'Text', p: {'text': 'RASQ リストの投稿を取り込みます(Central が、見たときにリスト内の人の投稿を集めます)。下の欄で、自分のリスト・フォロー中のリストから選ぶか、公開リストを検索して選びます。選ぶと、そのリストをフォローします。'}),
+          RrlNode(t: 'Text', p: {
+            'text': 'RASQ リストの投稿を取り込みます。下で選ぶと、そのリストをフォローします。',
+            'detail': 'RASQ リストの投稿を取り込みます(Central が、見たときにリスト内の人の投稿を集めます)。下の欄で、自分のリスト・フォロー中のリストから選ぶか、公開リストを検索して選びます。選ぶと、そのリストをフォローします。',
+          }),
         ]),
       );
     }
@@ -1278,7 +1300,7 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
       return (
         const {},
         const RrlNode(t: 'Column', c: [
-          RrlNode(t: 'Text', p: {'text': 'この画面の基礎タイムラインをそのまま取り込みます。パラメーターはありません。'}),
+          RrlNode(t: 'Text', p: {'text': 'この画面の投稿をそのまま取り込みます。', 'detail': 'この画面の基礎タイムラインをそのまま取り込みます。パラメーターはありません。'}),
         ]),
       );
     }

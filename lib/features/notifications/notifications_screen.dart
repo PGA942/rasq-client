@@ -105,7 +105,7 @@ Future<void> showNotificationPrefs(WidgetRef ref) {
               }
             },
           ),
-        RasqListTile(title: '通知専用のアクセストークン', onTap: () {
+        RasqListTile(title: 'プッシュ通知の受け取り', detail: '通知専用のアクセストークン', onTap: () {
             ref.read(overlayManagerProvider).close('notifications.prefs');
             ref.read(routerProvider).push(Routes.settingsNotifyToken);
           }),

@@ -166,7 +166,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       if (p.manifest.page?.isShared != true) {
         _set(() {
           phase = CustomPagePhase.failed;
-          error = '${p.manifest.name} は 1 人で使うプラグインです(共有セッションには入れません)';
+          error = '${p.manifest.name} は 1 人で使うプラグインです(みんなでは使えません)';
         });
         return;
       }
@@ -190,7 +190,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     _set(() {
       if (r.error != null || r.root == null) {
         phase = CustomPagePhase.failed;
-        error = r.error ?? 'ページが返ってきませんでした(page.open の root)';
+        error = r.error ?? 'プラグインがページを返しませんでした';
       } else {
         phase = CustomPagePhase.ready;
         root = r.root;

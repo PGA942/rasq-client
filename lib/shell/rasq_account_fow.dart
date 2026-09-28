@@ -70,7 +70,7 @@ Future<void> showSanctionAppealSheet(BuildContext context, WidgetRef ref, RasqSa
       return ListView(shrinkWrap: true, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Text('${entry.category} / ${entry.level}${entry.note == null ? '' : ' — ${entry.note}'}\n運営(rasq-judge)の担当者が読んで、受理なら処置が解除されます。自動判定は通りません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text('${entry.category} / ${entry.level}${entry.note == null ? '' : ' — ${entry.note}'}\n${rasqDetail(ctx, '運営の担当者が読んで、受理なら処置が解除されます。', '運営(rasq-judge)の担当者が読んで、受理なら処置が解除されます。自動判定は通りません。')}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
         ),
         Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: RasqInput(controller: text, hintText: '申請の理由(必須)', maxLines: 4, autofocus: true)),
         Padding(
@@ -205,7 +205,7 @@ class RasqAccountPanel extends ConsumerWidget {
           final ok = await manager.showAlert(
             id: 'rasq.account.logout',
             title: 'RASQ アカウントからログアウト',
-            message: 'この端末の RASQ Central との接続を切ります。SNS のログインは端末に残り、「この端末のみ」のアカウントに戻ります。',
+            message: rasqDetail(context, 'この端末から RASQ アカウントを外します。SNS のログインは端末に残ります。', 'この端末の RASQ Central との接続を切ります。SNS のログインは端末に残り、「この端末のみ」のアカウントに戻ります。'),
             confirmText: 'ログアウト',
             cancelText: 'キャンセル',
             destructive: true,
@@ -222,7 +222,7 @@ class RasqAccountPanel extends ConsumerWidget {
             id: 'rasq.account.delete',
             title: 'RASQ アカウントを削除',
             message: 'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、AsTell のルームと共有、通知トークン、同意の記録を削除します。'
-                '学習へのデータ提供に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n'
+                '「アルゴリズムとコミュニティへの貢献」に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n'
                 '元に戻せません。SNS のログインは端末に残り、「この端末のみ」のアカウントに戻ります。各 SNS 上のアカウントと投稿は消えません。',
             confirmText: '削除する',
             cancelText: 'キャンセル',
@@ -415,7 +415,7 @@ class RasqAccountPanel extends ConsumerWidget {
           ]),
           if (!centralOk)
             Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
-              Text('RASQ Central の接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              Text('RASQ サーバーの接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
               TextButton(
                 onPressed: () {
                   leave();
@@ -463,7 +463,7 @@ Future<void> openRasqProfileSheet(BuildContext context, WidgetRef ref, {required
           RasqInput(controller: handle, hintText: 'handle', enabled: record.isCentral),
           const SizedBox(height: RasqSpacing.xs),
           Text(
-            record.isCentral ? 'RASQ Central 上のプロフィールを更新します。' : 'この端末だけのアカウントです。ハンドルは RASQ アカウントを作成すると付きます。',
+            record.isCentral ? 'RASQ のサーバー上のプロフィールを更新します。' : 'この端末だけのアカウントです。ハンドルは RASQ アカウントを作成すると付きます。',
             style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
           ),
         ]),

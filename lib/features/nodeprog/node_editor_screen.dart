@@ -131,6 +131,7 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
       genre: e.genre,
       author: e.author,
       description: e.description,
+      detail: e.detail,
       inputs: [
         for (final p in e.inputs)
           p.label == label ? NodePort(label: p.label, value: p.value, dataType: p.dataType, format: p.format, options: options) : p,
@@ -161,7 +162,8 @@ final nodeCatalogProvider = Provider<List<NodeCatalogEntry>>((ref) {
         icon: Icons.extension_outlined,
         genre: 'ソート/辞書',
         author: 'TLプラグイン',
-        description: '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
+        description: 'プラグインの並べ方で投稿を並べ替えます。',
+        detail: '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
         inputs: [
           const NodePort(label: '投稿リスト', dataType: '投稿リスト'),
           // スロットの TL プラグイン (D-171): パラメーター(JSON)は「ノードを設定」FOW の RRL で編集。
@@ -949,7 +951,7 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
       builder: (ctx) => _NodeInfoBody(
         author: entry?.author,
         genre: entry?.genre,
-        description: entry?.description,
+        description: entry == null ? null : nodeDescription(ctx, entry),
         inputs: n.inputs,
         outputs: n.outputs,
         hasCondIn: n.hasCondIn,
@@ -1369,7 +1371,7 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
     final entries = [
       for (final e in catalog)
         if (scopeAllows(e))
-          if ((_genre == 'すべて' || e.genre == _genre) && (query.isEmpty || e.title.contains(query) || (e.description ?? '').contains(query))) e,
+          if ((_genre == 'すべて' || e.genre == _genre) && (query.isEmpty || e.title.contains(query) || (e.description ?? '').contains(query) || (e.detail ?? '').contains(query))) e,
     ];
 
     _scheduleFit();
@@ -1466,7 +1468,7 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
       icon: e.icon,
       title: e.title,
       subtitle: '${e.author ?? '組み込みノード'} · ${e.genre}',
-      description: e.description,
+      description: nodeDescription(context, e),
       detail: e.ioSummary,
       detailColorDots: e.typeDots,
       onTap: () => _showDetail(manager, e),
@@ -1495,7 +1497,7 @@ class _NodePalettePanelState extends ConsumerState<_NodePalettePanel> {
       title: e.title,
       ownerId: nodePaletteFowId,
       builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        _NodeInfoBody(author: e.author, genre: e.genre, description: e.description, inputs: e.inputs, outputs: e.outputs, hasCondIn: e.hasCondIn, hasCondOut: e.hasCondOut),
+        _NodeInfoBody(author: e.author, genre: e.genre, description: nodeDescription(ctx, e), inputs: e.inputs, outputs: e.outputs, hasCondIn: e.hasCondIn, hasCondOut: e.hasCondOut),
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
           child: FilledButton.icon(
@@ -1585,3 +1587,6 @@ class _NodeInfoBody extends StatelessWidget {
   }
 }
 
+
+/// ノードの説明。開発者モードでは詳しい説明 (D-362)。
+String? nodeDescription(BuildContext context, NodeCatalogEntry e) => e.detail != null && RasqDeveloperMode.of(context) ? e.detail : e.description;

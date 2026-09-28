@@ -297,7 +297,7 @@ void main() {
       await session.toggleMic();
       var s = container.read(astellSessionProvider)!;
       expect(s.micOn, isFalse);
-      expect(s.error, contains('マイク(カメラ)を使う許可がありません'));
+      expect(s.error, contains('マイク(カメラ)の許可がありません'));
       media.openError = null;
       media.blocked = AstellMediaIssue.insecureContext;
       await session.toggleMic();
@@ -488,7 +488,7 @@ void main() {
     });
 
     test('Central が配信を用意していない (501) / 断った (403) ときの言い換え', () {
-      expect(astellStreamErrorText(OrgateException(ErrorCode.tryParse('501')!, 'streaming is not configured')), '配信サーバー(LiveKit)が設定されていません');
+      expect(astellStreamErrorText(OrgateException(ErrorCode.tryParse('501')!, 'streaming is not configured')), '配信はまだ使えません(配信サーバーが未設定)');
       expect(astellStreamErrorText(OrgateException(ErrorCode.tryParse('403')!, 'streaming is limited to moderators in this room')), contains('許可されていません'));
       expect(astellStreamErrorText(const AstellMediaException(AstellMediaIssue.insecureContext)), 'Web 版の通話は https で開いたときだけ使えます');
     });

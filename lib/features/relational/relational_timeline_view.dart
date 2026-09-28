@@ -79,7 +79,7 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(left: RasqSpacing.sm),
-              child: Text('束ねやすさ ${settings.linkBias} / 会話のテンポに応じて最長${settings.maxTtlMinutes}分で沈む', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              child: Text(rasqDetail(context, '会話ごとにまとめて表示しています', '束ねやすさ ${settings.linkBias} / 会話のテンポに応じて最長${settings.maxTtlMinutes}分で沈む'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             ),
           ),
           RasqIconButton(icon: Icons.tune, size: 20, tooltip: 'リレーショナルTL調整', onPressed: _openTuning),
@@ -91,7 +91,7 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
           child: Row(children: [
             Icon(Icons.history, size: 16, color: scheme.onSurfaceVariant),
             const SizedBox(width: RasqSpacing.xs),
-            Expanded(child: Text('${_lookbackLabel(lookback)}前の会話まで表示中(引っ張るとさらに遡る)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+            Expanded(child: Text('${_lookbackLabel(lookback)}前の会話まで表示中', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
             TextButton(onPressed: () => ref.read(relationalLookbackProvider.notifier).reset(), child: const Text('戻す')),
           ]),
         ),
@@ -106,7 +106,7 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
                     onRefresh: _refresh,
                     child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [
                       SizedBox(height: 120),
-                      RasqEmptyView(title: 'いま進行中の会話はありません', hint: 'フォロイーの空リプや会話が始まると、ここに束ねて表示します。上方向へ引っ張ると過去の会話を遡ります'),
+                      RasqEmptyView(title: 'いま進行中の会話はありません', hint: 'フォロー中の人の会話が、ここにまとまって出ます。引っ張ると過去の会話も見られます'),
                     ]),
                   )
                 : RefreshIndicator(
@@ -115,7 +115,7 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
                       physics: const AlwaysScrollableScrollPhysics(),
                       itemCount: list.length,
                       separatorBuilder: (_, _) => const Divider(),
-                      itemBuilder: (_, i) => _EventCard(event: list[i]),
+                      itemBuilder: (_, i) => RelationalEventCard(event: list[i]),
                     ),
                   ),
           ),
@@ -320,8 +320,9 @@ class _TuningPanelState extends ConsumerState<_TuningPanel> {
 /// イベントタイル (D-037): GroupAvatar + 「◯◯+N人」+ **実在語の見出し** +
 /// 1 行要約(要約が無ければ ROOT 本文)。タップで**リレーショナルページ**へ
 /// 遷移する(以前のドロップダウン展開は廃止 — 1行/3行要約を分けるため)。
-class _EventCard extends ConsumerWidget {
-  const _EventCard({required this.event});
+/// 会話イベントの 1 カード(関連タブ、トレンドの「フォロー中の反応」D-364)。
+class RelationalEventCard extends ConsumerWidget {
+  const RelationalEventCard({super.key, required this.event});
   final ConversationEvent event;
 
   @override

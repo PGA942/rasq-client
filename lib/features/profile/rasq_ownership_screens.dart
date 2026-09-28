@@ -184,13 +184,13 @@ class _RasqSnsVerifyScreenState extends ConsumerState<RasqSnsVerifyScreen> {
                   const SizedBox(height: RasqSpacing.sm),
                   if (_justVerified) Text('確認できました。プロフィールに貼った文は、もう消してかまいません。', key: const ValueKey('snsVerify.removeHint'), style: RasqTypography.bodySmall),
                   const SizedBox(height: RasqSpacing.xs),
-                  Text('アカウントページと、SNS のプロフィールに出る RASQ アカウントの欄に、確認済みの印が付きます。この SNS アカウントを外すまで続きます。', style: caption),
+                  Text(rasqDetail(context, 'アカウントページと SNS のプロフィールに、確認済みの印が付きます。', 'アカウントページと、SNS のプロフィールに出る RASQ アカウントの欄に、確認済みの印が付きます。この SNS アカウントを外すまで続きます。'), style: caption),
                 ] else if (!rasqVerifiableKinds.contains(kind))
-                  Text('この SNS は、まだ持ち主の確認に対応していません(公開のプロフィールを読める Misskey / Mastodon / Bluesky だけ)。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
+                  Text('この SNS は、まだ本人確認に対応していません(Misskey / Mastodon / Bluesky のみ)。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
                 else ...[
-                  Text('この SNS アカウントが、あなたのものかを確かめます。確認の文をその SNS のプロフィールに一時的に貼ってもらい、RASQ がその公開のプロフィールを読んで確かめます。', style: RasqTypography.bodySmall),
+                  Text(rasqDetail(context, 'この SNS アカウントがあなたのものか確かめます。プロフィールに確認の文を一時的に貼ってください。', 'この SNS アカウントが、あなたのものかを確かめます。確認の文をその SNS のプロフィールに一時的に貼ってもらい、RASQ がその公開のプロフィールを読んで確かめます。'), style: RasqTypography.bodySmall),
                   const SizedBox(height: RasqSpacing.xs),
-                  Text('確かめると、アカウントページと SNS のプロフィールの RASQ アカウントの欄に、確認済みの印が付きます。同じ SNS アカウントをほかの人がつないでいても、確認した人が優先されます。', style: caption),
+                  Text(rasqDetail(context, '確かめると、確認済みの印が付きます。', '確かめると、アカウントページと SNS のプロフィールの RASQ アカウントの欄に、確認済みの印が付きます。同じ SNS アカウントをほかの人がつないでいても、確認した人が優先されます。'), style: caption),
                   const SizedBox(height: RasqSpacing.md),
                   if (_start == null)
                     FilledButton(key: const ValueKey('snsVerify.start'), onPressed: _busy ? null : _begin, child: const Text('確認の文を作る'))
@@ -332,14 +332,14 @@ class _RasqKeybaseScreenState extends ConsumerState<RasqKeybaseScreen> {
                 ]),
                 if (kb.verifiedAt != null) Text('${_date(kb.verifiedAt)} に確認', style: caption),
                 const SizedBox(height: RasqSpacing.sm),
-                Text('アカウントページに「Keybase: @${kb.username}」が出ます。Keybase で Mastodon などの証明を足したら、「証明を読み直す」で、つないでいる SNS アカウントも確認済みになります。', style: caption),
+                Text(rasqDetail(context, 'アカウントページに「Keybase: @${kb.username}」が出ます。', 'アカウントページに「Keybase: @${kb.username}」が出ます。Keybase で Mastodon などの証明を足したら、「証明を読み直す」で、つないでいる SNS アカウントも確認済みになります。'), style: caption),
                 const SizedBox(height: RasqSpacing.md),
                 Wrap(spacing: RasqSpacing.sm, runSpacing: RasqSpacing.xs, children: [
                   FilledButton.tonal(key: const ValueKey('keybase.refresh'), onPressed: _busy ? null : _refresh, child: const Text('証明を読み直す')),
                   TextButton(key: const ValueKey('keybase.unlink'), onPressed: _busy ? null : _unlink, child: Text('Keybase を外す', style: TextStyle(color: tokens.danger))),
                 ]),
               ] else ...[
-                Text('Keybase のアカウントで署名して、この RASQ アカウントとつなぎます。つないだ Keybase は、アカウントページに出ます(Keybase のプロフィールと同じく公開です)。', style: RasqTypography.bodySmall),
+                Text(rasqDetail(context, 'Keybase で署名して、この RASQ アカウントとつなぎます。つないだ Keybase は公開されます。', 'Keybase のアカウントで署名して、この RASQ アカウントとつなぎます。つないだ Keybase は、アカウントページに出ます(Keybase のプロフィールと同じく公開です)。'), style: RasqTypography.bodySmall),
                 const SizedBox(height: RasqSpacing.md),
                 Text('Keybase のユーザー名', style: caption),
                 const SizedBox(height: 4),

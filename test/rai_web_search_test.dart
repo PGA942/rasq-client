@@ -11,7 +11,7 @@ void main() {
     const ws = RaiWebSearch(token: 'k');
     expect(raiWebSearchEnabled, isFalse);
     expect(ws.available, isFalse);
-    await expectLater(ws.search('x'), throwsA(isA<RaiWebSearchException>().having((e) => e.message, 'message', contains('第一期では無効'))));
+    await expectLater(ws.search('x'), throwsA(isA<RaiWebSearchException>().having((e) => e.message, 'message', contains('web 検索はまだ使えません'))));
     await expectLater(const RaiWebSearch(enabled: true).search('x'), throwsA(isA<RaiWebSearchException>().having((e) => e.message, 'message', contains('鍵が設定されていません'))));
   });
 

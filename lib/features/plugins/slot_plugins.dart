@@ -975,7 +975,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     try {
       final fitted = await fitWithin(bytes, mediaEditMaxSide, mimeType: mimeType);
       if (fitted.scaled) {
-        _toast('${plugin.manifest.name}: 編集のため長辺 $mediaEditMaxSide px に縮小しました');
+        _toast('${plugin.manifest.name}: 編集のため画像を小さくしました');
       }
       return fitted;
     } catch (e) {

@@ -416,6 +416,24 @@ class DeviceRaiLlm implements RaiLlm {
   }
 
   @override
+  Future<void> warmUp() async {
+    if (_current.phase != RaiLlmPhase.ready) return;
+    try {
+      if (_spec.engine == RaiEngine.gguf) {
+        final f = await _ggufFile();
+        if (!await f.exists()) return;
+        await _llamaLoad(f.path);
+      } else {
+        await _lrLoad();
+      }
+      if (_current.phase == RaiLlmPhase.loading) _set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
+    } catch (e) {
+      debugPrint('rai llm warmUp: $e');
+      if (_current.phase == RaiLlmPhase.loading) _set(RaiLlmStatus(RaiLlmPhase.ready, modelId: _spec.id));
+    }
+  }
+
+  @override
   Stream<String> chat(String prompt, {String? system, int? maxTokens}) {
     if (!_current.ready && _current.phase != RaiLlmPhase.loading) {
       return Stream.error(RaiLlmException(_current.phase == RaiLlmPhase.notInstalled ? '端末内モデル(${_spec.codename})がまだダウンロードされていません' : (_current.message ?? '端末内モデルを使えません')));

@@ -237,7 +237,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
       }
     }
     rows.add(() => InkWell(
-          onLongPress: () => ref.read(overlayManagerProvider).showAlert(id: 'emoji.bundle', title: 'バンドル編集', message: 'デフォルト欄のバンドル編集(FOW)は M4 で実装します。', confirmText: 'OK'),
+          onLongPress: () => ref.read(overlayManagerProvider).showAlert(id: 'emoji.bundle', title: 'バンドル編集', message: 'バンドルの編集は準備中です。', confirmText: 'OK'),
           child: _label('デフォルト'),
         ));
     chunked([for (final e in EmojiPanel.unicode) _CellSpec(e, null)]);

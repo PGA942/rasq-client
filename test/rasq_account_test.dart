@@ -281,7 +281,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('RASQ アカウントを削除'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('学習へのデータ提供に同意していた場合は'), findsOneWidget);
+    expect(find.textContaining('「アルゴリズムとコミュニティへの貢献」に同意していた場合は'), findsOneWidget);
     await tester.tap(find.text('削除する'));
     await tester.pumpAndSettle();
     expect(central.calls, contains('DELETE /me?confirm=rasq_tester'));

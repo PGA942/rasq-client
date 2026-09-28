@@ -118,14 +118,16 @@ class _RegisterPanelState extends State<_RegisterPanel> {
             check(const ValueKey('register.guardian'), '保護者の同意を得ています', _guardian, (v) => setState(() => _guardian = v)),
           if (widget.snsCount > 0) ...[
             const RasqSectionHeader(title: 'アカウントバンドル'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-              child: Text('サーバーには「どの SNS アカウントを束ねているか」だけを送ります。SNS のアクセストークンは端末から出ません。', style: caption),
+            const RasqCaption(
+              'サーバーには、まとめている SNS アカウントの一覧だけを送ります。SNS のログインの鍵は端末から出ません。',
+              detail: 'サーバーには「どの SNS アカウントを束ねているか」だけを送ります。SNS のアクセストークンは端末から出ません。',
+              padding: EdgeInsets.symmetric(horizontal: RasqSpacing.page),
             ),
             RasqRadioListTile<bool>(
               key: const ValueKey('register.bundle.replace'),
               title: 'この端末の SNS アカウントで置き換える',
-              subtitle: 'ログイン中の ${widget.snsCount} 件を RASQ アカウントのバンドルにします。サーバーに前のバンドルが残っていれば、この内容に置き換わります',
+              subtitle: 'ログイン中の ${widget.snsCount} 件を、この RASQ アカウントにまとめます',
+              detail: 'ログイン中の ${widget.snsCount} 件を RASQ アカウントのバンドルにします。サーバーに前のバンドルが残っていれば、この内容に置き換わります',
               value: true,
               groupValue: _replace,
               onChanged: (v) => setState(() => _replace = v),
@@ -133,7 +135,8 @@ class _RegisterPanelState extends State<_RegisterPanel> {
             RasqRadioListTile<bool>(
               key: const ValueKey('register.bundle.keep'),
               title: '置き換えない',
-              subtitle: 'SNS アカウントは「この端末のみ」に残します。サーバーのバンドルは消しません',
+              subtitle: 'SNS アカウントはこの端末だけに残します',
+              detail: 'SNS アカウントは「この端末のみ」に残します。サーバーのバンドルは消しません',
               value: false,
               groupValue: _replace,
               onChanged: (v) => setState(() => _replace = v),
@@ -169,7 +172,7 @@ class _RegisterPanelState extends State<_RegisterPanel> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
-            child: Text('学習へのデータ提供は、この登録には含まれません(別の任意の同意で、既定は「提供しない」です)。RASQ アカウントはいつでも削除できます。', style: caption),
+            child: Text('「アルゴリズムとコミュニティへの貢献」は、この登録には含まれません(別の任意の同意で、既定は「提供しない」です)。RASQ アカウントはいつでも削除できます。', style: caption),
           ),
         ])),
       ),
@@ -190,7 +193,7 @@ class _RegisterPanelState extends State<_RegisterPanel> {
 /// キャンセルなら null。接続先が無ければ [onMessage] で知らせて null。失敗は [OrgateException] のまま投げる。
 Future<RasqAccountRecord?> registerRasqAccount(WidgetRef ref, {String? displayName, int column = 0, required ValueChanged<String> onMessage}) async {
   if (ref.read(centralClientProvider) == null) {
-    onMessage('RASQ Central の接続先が設定されていません');
+    onMessage('RASQ サーバーの接続先が設定されていません');
     return null;
   }
   final snsCount = ref.read(sessionsProvider).value?.sessions.length ?? 0;
@@ -199,7 +202,7 @@ Future<RasqAccountRecord?> registerRasqAccount(WidgetRef ref, {String? displayNa
   final notifier = ref.read(orgateAccountProvider.notifier);
   final account = await notifier.createAccount(displayName: displayName);
   if (account == null) {
-    onMessage('RASQ Central の接続先が設定されていません');
+    onMessage('RASQ サーバーの接続先が設定されていません');
     return null;
   }
   final client = ref.read(centralClientProvider);

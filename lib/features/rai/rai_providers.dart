@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../learning/contribution.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
@@ -272,6 +273,11 @@ class RaiController extends Notifier<RaiState> {
   void _record(String text, {bool error = false, String? proposal, List<({String id, String index})> choices = const [], List<String> candidates = const [], String? approval, List<RaiAutoStep> trace = const [], int? step, String? opId, String? graphScope}) {
     if (text.trim().isEmpty || text == '…') return;
     state = state.copyWith(log: [RaiUtterance(text: text, at: DateTime.now(), query: state.query, error: error, proposal: proposal, choices: choices, candidates: candidates, approval: approval, trace: trace, step: step, opId: opId, graphScope: graphScope), ...state.log].take(50).toList());
+    // アルゴリズムとコミュニティへの貢献 (D-363): 質問への答え(手順の途中の行は除く)。同意していなければ何もしない。
+    final q = state.query;
+    if (step == null && q != null) {
+      ref.read(contributionProvider.notifier).offerRai(query: q, answer: text, mode: state.mode.name, opId: opId ?? proposal ?? approval, error: error, steps: [for (final s in trace) s.binding?.call ?? s.text]);
+    }
   }
 
   /// 自動化が TL カスタマイズ(ホームのグラフ)を書いたか (D-234)。

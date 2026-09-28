@@ -11,7 +11,7 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "全画面表示の「…」/ 共有の「画像を保存」「動画を保存」"
+          "title": "「画像を保存」「動画を保存」の保存先"
         }
       },
       {
@@ -19,9 +19,10 @@
         "k": "destination",
         "p": {
           "title": "保存するたびに選ぶ",
-          "subtitle": "写真とファイルのどちらに保存するかを、そのたびに聞きます(選べる先が 1 つしかない端末では聞きません)",
+          "subtitle": "写真とファイルのどちらにするか、毎回聞きます",
           "value": "ask",
-          "group": "$.settings.destination"
+          "group": "$.settings.destination",
+          "detail": "写真とファイルのどちらに保存するかを、そのたびに聞きます(選べる先が 1 つしかない端末では聞きません)"
         },
         "on": {
           "change": "settings.set"
@@ -32,9 +33,10 @@
         "k": "destination",
         "p": {
           "title": "写真(カメラロール)",
-          "subtitle": "iPhone / iPad / Mac の「写真」、Android のギャラリーの、アルバム「RASQ」に入ります",
+          "subtitle": "アルバム「RASQ」に入ります",
           "value": "photos",
-          "group": "$.settings.destination"
+          "group": "$.settings.destination",
+          "detail": "iPhone / iPad / Mac の「写真」、Android のギャラリーの、アルバム「RASQ」に入ります"
         },
         "on": {
           "change": "settings.set"
@@ -45,9 +47,10 @@
         "k": "destination",
         "p": {
           "title": "ファイル",
-          "subtitle": "iPhone / iPad は「ファイル」App の このiPad(このiPhone)› RASQ › 保存。パソコンは保存する場所を選びます。Android はギャラリーに入ります",
+          "subtitle": "「ファイル」App や、選んだ場所に保存します",
           "value": "files",
-          "group": "$.settings.destination"
+          "group": "$.settings.destination",
+          "detail": "iPhone / iPad は「ファイル」App の このiPad(このiPhone)› RASQ › 保存。パソコンは保存する場所を選びます。Android はギャラリーに入ります"
         },
         "on": {
           "change": "settings.set"

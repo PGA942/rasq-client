@@ -54,15 +54,16 @@ class SettingsSectionScreen extends ConsumerWidget {
               },
             )
           else if (r.warning)
-            RasqWarningListTile(title: r.title, onTap: () => _open(context, ref, manager, r))
+            RasqWarningListTile(title: r.title, subtitle: r.subtitle, detail: r.detail, onTap: () => _open(context, ref, manager, r))
           else
             RasqListTile(
               title: r.title,
               subtitle: r.subtitle,
+              detail: r.detail,
               trailing: r.external ? const Icon(Icons.north_east, size: 18) : null,
               onTap: () => _open(context, ref, manager, r),
             ),
-        if (section.note != null) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(section.note!, style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))),
+        if (section.note != null) RasqCaption(section.note!, detail: section.noteDetail, padding: const EdgeInsets.all(RasqSpacing.page)),
       ]),
     );
   }
@@ -81,11 +82,12 @@ class SettingsSectionScreen extends ConsumerWidget {
       case settingsActionAstellBar:
         showActionBarEditSheet(ref, surfaces: const [ActionBarSurface.astell]);
       case null:
-        _placeholder(manager, r.title);
+        _placeholder(context, manager, r.title);
       default:
         context.push(r.route!);
     }
   }
 
-  Future<void> _placeholder(OverlayManager manager, String title) => manager.showAlert(id: 'settings.placeholder', title: title, message: 'この設定は第二階層以降の仕様確定後(M4: FOW/DSL 描画)に実装します。', confirmText: 'OK');
+  Future<void> _placeholder(BuildContext context, OverlayManager manager, String title) => manager.showAlert(
+      id: 'settings.placeholder', title: title, message: rasqDetail(context, 'この設定は準備中です。', 'この設定は第二階層以降の仕様確定後(M4: FOW/DSL 描画)に実装します。'), confirmText: 'OK');
 }

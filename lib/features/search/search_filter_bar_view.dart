@@ -100,5 +100,5 @@ class _SearchFilterBoxState extends ConsumerState<SearchFilterBox> {
   }
 
   Future<void> _placeholder(OverlayManager manager, String title) =>
-      manager.showAlert(id: 'search.settings.placeholder', title: title, message: 'トレンド設定(M5)/プラグイン設定(M4)の実装時にここへ繋ぎます。', confirmText: 'OK');
+      manager.showAlert(id: 'search.settings.placeholder', title: title, message: 'この設定は準備中です。', confirmText: 'OK');
 }

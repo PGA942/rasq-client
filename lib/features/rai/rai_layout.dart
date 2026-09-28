@@ -56,3 +56,14 @@ class RaiBarPlacementStore extends Notifier<RaiBarPlacement> {
 }
 
 final raiBarPlacementProvider = NotifierProvider<RaiBarPlacementStore, RaiBarPlacement>(RaiBarPlacementStore.new);
+
+/// バーにアンカーした FOW(モデル / 聞き返し)の向き (D-362): バーが画面の上半分にあれば下付き、下半分なら上付き。
+/// 以前は常に上付きで、バーを上へ動かしていると FOW が画面の外へはみ出していた。
+bool? raiAnchorBelow(Rect? anchor) {
+  if (anchor == null) return null;
+  final views = WidgetsBinding.instance.platformDispatcher.views;
+  if (views.isEmpty) return false;
+  final view = views.first;
+  final height = view.physicalSize.height / view.devicePixelRatio;
+  return anchor.center.dy < height / 2;
+}

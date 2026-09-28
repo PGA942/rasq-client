@@ -49,15 +49,15 @@ final astellStreamerFactoryProvider = Provider<AstellStreamer Function()>((ref) 
 final astellLevelIntervalProvider = Provider<Duration?>((ref) => const Duration(milliseconds: 400));
 
 /// Web: ブラウザが声の自動再生を止めているときの案内 (D-323)。次にページを触ると鳴らし直す。
-const astellAudioBlockedNotice = 'ブラウザが音声の再生を止めています。画面のどこかをクリック / タップすると鳴ります';
+const astellAudioBlockedNotice = '音が止まっています。画面をタップすると鳴ります';
 
 /// 満員で通話に入れなかったときの案内 (D-317)。
-const astellCallFullNotice = '通話は満員です($astellMeshCap 人まで)。声は届きません — ホストが配信していれば、配信で聞けます';
+const astellCallFullNotice = '通話は満員です($astellMeshCap 人まで)。配信があれば、配信で聞けます';
 
 /// 保留音 (D-327) の案内: 開催予約の開始待ち / 全員が静か。開始 (D-331) はチャイムと一緒に。
 const astellHoldWaitingNotice = '開催までお待ちください。保留音を鳴らしています';
 const astellStartedNotice = '開催が始まりました';
-const astellHoldIdleNotice = '全員がマイクを下ろして静かなので、保留音を鳴らしています(話し始めるかチャットが流れると止まります)';
+const astellHoldIdleNotice = '静かなので保留音を鳴らしています';
 
 /// これだけチャット(共有 / 文字起こし)が流れず、全員がマイクを下ろしていれば「静か」(D-327)。
 const astellHoldIdleAfter = Duration(minutes: 1);
@@ -983,7 +983,7 @@ String astellStreamErrorText(Object e) {
   if (e is AstellMediaException) return e.message;
   if (e is OrgateException) {
     return switch (e.code.code) {
-      '501' => '配信サーバー(LiveKit)が設定されていません',
+      '501' => '配信はまだ使えません(配信サーバーが未設定)',
       '403' => '許可されていません(${e.message})',
       _ => e.message,
     };

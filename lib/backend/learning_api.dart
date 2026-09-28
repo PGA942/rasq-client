@@ -6,14 +6,14 @@ import '../session/session_providers.dart';
 import 'orgate_client.dart';
 import 'rasq_account.dart';
 
-/// 学習へのデータ提供 (D-243 / Central S-018)。
+/// 学習へのデータ提供 (D-243 / Central S-018)。画面での呼び名は「アルゴリズムとコミュニティへの貢献」(D-362)、提供の実体は D-363 / S-049。
 ///
 /// 任意で、既定は「提供しない」。断っても RASQ の機能はそのまま使える。受付はサーバーの設定
 /// (`CENTRAL_LEARNING_OPEN`)で開く。撤回は受付が閉じていてもできる。同意のときに**撤回用のコード**が
 /// 1 度だけ返るので、端末の安全な領域に控える(RASQ アカウントに入れなくなっても撤回できるように)。
 
 /// 説明文書(`assets/settings/about.learning.rrl.json`)の版。文書を変えたら上げる。
-const rasqLearningVersion = '2026-09-17-draft';
+const rasqLearningVersion = '2026-09-28-draft';
 
 /// 撤回用のコードの控え(`{accountId: code}`)。
 const learningCodeStorageKey = 'rasq.learning.codes.v1';
@@ -30,6 +30,7 @@ class LearningStatus {
     this.posts = 0,
     this.labels = 0,
     this.models = const [],
+    this.contributions = const {},
     this.hasWithdrawCode = false,
     this.retentionYears = 5,
     this.withdrawDays = 30,
@@ -50,6 +51,9 @@ class LearningStatus {
   final int posts;
   final int labels;
   final List<String> models;
+
+  /// 提供の種類ごとの件数(`relational` / `rai`、D-363 / S-049)。
+  final Map<String, int> contributions;
   final bool hasWithdrawCode;
   final int retentionYears;
   final int withdrawDays;
@@ -65,6 +69,7 @@ class LearningStatus {
         posts: (j['posts'] as num?)?.toInt() ?? 0,
         labels: (j['labels'] as num?)?.toInt() ?? 0,
         models: [for (final m in (j['models'] as List? ?? const [])) if (m is String) m],
+        contributions: {for (final e in ((j['contributions'] as Map?) ?? const {}).entries) if (e.value is num) '${e.key}': (e.value as num).toInt()},
         hasWithdrawCode: j['hasWithdrawCode'] == true,
         retentionYears: (j['retentionYears'] as num?)?.toInt() ?? 5,
         withdrawDays: (j['withdrawDays'] as num?)?.toInt() ?? 30,
@@ -87,6 +92,39 @@ class LearningApi {
 
   /// 撤回用のコードで撤回する(RASQ アカウントのトークンは要らない)。
   Future<void> withdrawByCode(String code) => _client.postJson('/learning/withdraw', {'code': code.trim()});
+
+  /// 書き手ごとの学習可否の判定 (D-363 / S-049)。`[{host, id, verdict, reason, judgedBy}]`。
+  Future<List<Map<String, Object?>>> judge(List<Map<String, Object?>> authors) async {
+    final res = await _client.postJson('/me/learning/judge', {'authors': authors});
+    return [for (final v in (res['verdicts'] as List? ?? const [])) if (v is Map) v.cast<String, Object?>()];
+  }
+
+  /// 提供を送る (D-363 / S-049)。`kind` = relational | rai。
+  Future<({int accepted, int duplicate, int rejected})> contribute(String kind, List<PendingContributionLike> items) async {
+    final res = await _client.postJson('/me/learning/contributions', {
+      'kind': kind,
+      'items': [
+        for (final i in items)
+          {
+            'key': i.key,
+            'authors': [for (final a in i.authorRefs) {'host': a.host, 'id': a.id}],
+            'data': i.data,
+            'posts': i.posts,
+            'labels': i.labels,
+          },
+      ],
+    });
+    return (accepted: (res['accepted'] as num?)?.toInt() ?? 0, duplicate: (res['duplicate'] as num?)?.toInt() ?? 0, rejected: (res['rejected'] as List?)?.length ?? 0);
+  }
+}
+
+/// 送る 1 件の形([LearningApi.contribute] 用。実体は features/learning の PendingContribution)。
+abstract interface class PendingContributionLike {
+  String get key;
+  List<({String host, String id})> get authorRefs;
+  Map<String, Object?> get data;
+  int get posts;
+  int get labels;
 }
 
 /// いまの RASQ アカウントの状態。接続先か RASQ アカウントが無ければ null。

@@ -119,11 +119,12 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
     return Scaffold(
       appBar: const RasqPageHeader(title: 'RASQ サーバー'),
       body: ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [
-        Text(
-          'RASQ Central は RASQ アカウント・プラグインストア・プラグイン管理・ユーザーデータのサーバー、'
-          'エッジはカルクレーター / AsTell と Mastodon などのログイン(OAuth ブローカー)のサーバーです。'
-          'SNS の投稿やタイムラインはどちらも通らず、プラグインが各インスタンスへ直接接続します。',
-          style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
+        const RasqCaption(
+          'RASQ アカウントやストアのサーバーの接続先です。SNS の投稿やタイムラインは、ここを通りません。',
+          detail: 'RASQ Central は RASQ アカウント・プラグインストア・プラグイン管理・ユーザーデータのサーバー、'
+              'エッジはカルクレーター / AsTell と Mastodon などのログイン(OAuth ブローカー)のサーバーです。'
+              'SNS の投稿やタイムラインはどちらも通らず、プラグインが各インスタンスへ直接接続します。',
+          padding: EdgeInsets.zero,
         ),
         const SizedBox(height: RasqSpacing.md),
         Text('RASQ Central の接続先(空ならエッジを流用)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
@@ -146,7 +147,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
         const SizedBox(height: RasqSpacing.sm),
         Text(
           [
-            central == null ? 'Central: 未接続 — プラグインストアはモック、RASQ アカウントは作成できません(この端末のみ)。' : 'Central: $central',
+            central == null ? rasqDetail(context, 'Central: 未接続(RASQ アカウントは作れません)', 'Central: 未接続 — プラグインストアはモック、RASQ アカウントは作成できません(この端末のみ)。') : 'Central: $central',
             base == null ? 'エッジ: 未接続' : 'エッジ: $base',
           ].join('\n'),
           style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
@@ -159,7 +160,8 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
             RasqSwitchListTile(
               key: const ValueKey('backend.testEndpoints'),
               title: 'ダミーの SNS とデモの Central を使う',
-              subtitle: 'プレビュー録画用。Misskey / Mastodon / Bluesky の ${TestEndpoints.misskeyHost} / ${TestEndpoints.mastodonHost} / ${TestEndpoints.blueskyHost} をこのアドレスのダミーへ向け、Central も切り替えます',
+              subtitle: 'プレビューの録画用',
+              detail: 'プレビュー録画用。Misskey / Mastodon / Bluesky の ${TestEndpoints.misskeyHost} / ${TestEndpoints.mastodonHost} / ${TestEndpoints.blueskyHost} をこのアドレスのダミーへ向け、Central も切り替えます',
               value: on,
               onChanged: _busy
                   ? null
@@ -182,10 +184,11 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
               },
             ),
             const SizedBox(height: 4),
-            Text(
-              'SNS は各ログイン画面でサーバーに上のホスト名を入れます(許可ページは自動で通ります。Bluesky の ID / パスワードは何でも可)。'
-              'RASQ アカウントはアカウントのログインから。切り替えたら、すでにログインしている SNS は次の読み込みから新しい接続先になります。',
-              style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
+            RasqCaption(
+              'SNS のログイン画面で、サーバーに上のホスト名を入れてください。',
+              detail: 'SNS は各ログイン画面でサーバーに上のホスト名を入れます(許可ページは自動で通ります。Bluesky の ID / パスワードは何でも可)。'
+                  'RASQ アカウントはアカウントのログインから。切り替えたら、すでにログインしている SNS は次の読み込みから新しい接続先になります。',
+              padding: EdgeInsets.zero,
             ),
           ]);
         }),
@@ -208,9 +211,10 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
                 ]),
         ),
         const RasqSectionHeader(title: 'アカウントバンドル'),
-        Text(
-          'サーバーには「どの SNS アカウントを束ねているか」だけを送ります。アクセストークンは端末から出ません。',
-          style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
+        const RasqCaption(
+          'サーバーには、まとめている SNS アカウントの一覧だけを送ります。ログインの鍵は端末から出ません。',
+          detail: 'サーバーには「どの SNS アカウントを束ねているか」だけを送ります。アクセストークンは端末から出ません。',
+          padding: EdgeInsets.zero,
         ),
         const SizedBox(height: 4),
         if (sessions.isEmpty)

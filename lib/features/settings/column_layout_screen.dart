@@ -60,12 +60,10 @@ class _ColumnLayoutScreenState extends ConsumerState<ColumnLayoutScreen> {
     return Scaffold(
       appBar: const RasqPageHeader(title: 'カラムの幅'),
       body: ListView(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
-          child: Text(
-            '幅の広い画面(タブレット / デスクトップ / Web)で、小型カラム(検索や、ページを開いた側)と大型カラム(開いたページ)の幅の比を決めます。',
-            style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
-          ),
+        const RasqCaption(
+          'タブレットや PC など広い画面で、左右のカラムの幅を決めます。',
+          detail: '幅の広い画面(タブレット / デスクトップ / Web)で、小型カラム(検索や、ページを開いた側)と大型カラム(開いたページ)の幅の比を決めます。',
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
         ),
         const RasqSectionHeader(title: '小型 / 大型カラムの比'),
         for (final s in ColumnSplit.values)
@@ -98,12 +96,10 @@ class _ColumnLayoutScreenState extends ConsumerState<ColumnLayoutScreen> {
                   padding: const EdgeInsets.only(top: RasqSpacing.xs),
                   child: Text(_error!, key: const ValueKey('columns.px.error'), style: RasqTypography.caption.copyWith(color: scheme.error)),
                 ),
-              Padding(
+              RasqCaption(
+                '画面に入らないときは、自動で縮めます。',
+                detail: '画面が狭くて入らないときは、もう片方のカラムを $kMinColumnWidth px 以上残し、小型カラムが大型カラムより広くならないように縮めます。',
                 padding: const EdgeInsets.only(top: RasqSpacing.xs),
-                child: Text(
-                  '画面が狭くて入らないときは、もう片方のカラムを $kMinColumnWidth px 以上残し、小型カラムが大型カラムより広くならないように縮めます。',
-                  style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
-                ),
               ),
             ]),
           ),
@@ -116,9 +112,10 @@ class _ColumnLayoutScreenState extends ConsumerState<ColumnLayoutScreen> {
                   const SizedBox(height: RasqSpacing.xs),
                   Text('小型 ${split.small.round()} px / 大型 ${split.large.round()} px', key: const ValueKey('columns.preview'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 ])
-              : Text(
-                  'いまの画面は幅が狭いので、カラムを 1 つだけ出しています(${RasqSizes.tabletBreakpoint.round()} px 以上で小型 / 大型のカラムに分かれます)。',
-                  style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
+              : RasqCaption(
+                  'いまの画面は狭いので、カラムは 1 つです。',
+                  detail: 'いまの画面は幅が狭いので、カラムを 1 つだけ出しています(${RasqSizes.tabletBreakpoint.round()} px 以上で小型 / 大型のカラムに分かれます)。',
+                  padding: EdgeInsets.zero,
                 ),
         ),
       ]),

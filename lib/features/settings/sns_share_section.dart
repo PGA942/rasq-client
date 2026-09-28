@@ -50,8 +50,8 @@ class _SnsShareSectionState extends ConsumerState<SnsShareSection> {
     if (!on) {
       final ok = await ref.read(overlayManagerProvider).showAlert(
             id: 'snsShare.off.confirm',
-            title: 'SNS のアクセストークンの共有をやめますか?',
-            message: 'RASQ Central にある共有の中身(暗号化したもの)と、すべての端末の鍵を消します。それぞれの端末の SNS のログインはそのまま残ります。',
+            title: 'SNS のログインの共有をやめますか?',
+            message: rasqDetail(context, '共有のデータと、すべての端末の鍵を消します。各端末の SNS のログインはそのまま残ります。', 'RASQ Central にある共有の中身(暗号化したもの)と、すべての端末の鍵を消します。それぞれの端末の SNS のログインはそのまま残ります。'),
             confirmText: 'やめる',
             cancelText: 'キャンセル',
             destructive: true,
@@ -63,8 +63,6 @@ class _SnsShareSectionState extends ConsumerState<SnsShareSection> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
     Widget pad(Widget child) => Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs), child: child);
     final view = ref.watch(snsShareProvider);
     final s = view.status;
@@ -76,7 +74,7 @@ class _SnsShareSectionState extends ConsumerState<SnsShareSection> {
     } else if (s.deviceId == null) {
       subtitle = 'この端末のログインは共有に対応していません。ログインし直してください';
     } else if (!on) {
-      subtitle = s.mode == SnsShareMode.off ? 'オフ(別の端末で初めてログインしたとき、ここで共有するかを聞きます)' : 'オフ';
+      subtitle = s.mode == SnsShareMode.off ? 'オフ(別の端末でログインしたときに聞きます)' : 'オフ';
     } else if (s.holding) {
       subtitle = 'オン ・ この端末は共有しています';
     } else if (s.waiting) {
@@ -85,15 +83,16 @@ class _SnsShareSectionState extends ConsumerState<SnsShareSection> {
       subtitle = 'オン ・ この端末は、まだ共有していません';
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const RasqSectionHeader(title: 'SNS のアクセストークンの共有'),
-      pad(Text(
-        'SNS のアクセストークンを、この RASQ アカウントでログインしている端末のあいだで暗号化(E2E)して共有します。'
-        '新しい端末でログインすると、共有している端末で承認したあと、その端末も SNS アカウントに一斉ログインします。RASQ のサーバーは中身を読めません。',
-        style: caption,
-      )),
+      const RasqSectionHeader(title: 'SNS のログインを端末間で共有'),
+      const RasqCaption(
+        '新しい端末でも、SNS に自動でログインできます。中身は暗号化され、RASQ のサーバーは読めません。',
+        detail: 'SNS のアクセストークンを、この RASQ アカウントでログインしている端末のあいだで暗号化(E2E)して共有します。'
+            '新しい端末でログインすると、共有している端末で承認したあと、その端末も SNS アカウントに一斉ログインします。RASQ のサーバーは中身を読めません。',
+        padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
+      ),
       RasqSwitchListTile(
         key: const ValueKey('snsShare.switch'),
-        title: 'SNS のアクセストークンを端末間で共有(E2E)',
+        title: 'ほかの端末と SNS のログインを共有',
         subtitle: subtitle,
         value: on,
         enabled: !busy && s != null && s.deviceId != null,
@@ -126,7 +125,11 @@ class _SnsShareSectionState extends ConsumerState<SnsShareSection> {
                         ? TextButton(key: ValueKey('snsShare.remove.${d.deviceId}'), onPressed: busy ? null : () => _run((n) => n.removeDevice(d), done: '${d.name} を共有から外しました'), child: const Text('外す'))
                         : null,
           ),
-        pad(Text('「ログイン中の端末」でその端末をログアウトさせると、その端末の鍵も消えます。外した端末は、それまでに受け取ったアクセストークンを持っています(心当たりが無ければ、SNS 側でもログアウトしてください)。', style: caption)),
+        const RasqCaption(
+          '外した端末は、それまでのログインを持ったままです。心当たりが無ければ SNS 側でもログアウトしてください。',
+          detail: '「ログイン中の端末」でその端末をログアウトさせると、その端末の鍵も消えます。外した端末は、それまでに受け取ったアクセストークンを持っています(心当たりが無ければ、SNS 側でもログアウトしてください)。',
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
+        ),
       ],
     ]);
   }

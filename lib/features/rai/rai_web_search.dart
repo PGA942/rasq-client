@@ -45,7 +45,7 @@ class RaiWebSearch {
   bool get available => enabled && token.trim().isNotEmpty;
 
   void _check() {
-    if (!enabled) throw const RaiWebSearchException('web 検索は第一期では無効です(RASQ_WEB_SEARCH=true で有効化)');
+    if (!enabled) throw const RaiWebSearchException('web 検索はまだ使えません');
     if (token.trim().isEmpty) throw const RaiWebSearchException('Brave Search の鍵が設定されていません');
   }
 

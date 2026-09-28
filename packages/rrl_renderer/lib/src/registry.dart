@@ -212,6 +212,13 @@ abstract final class RrlComponentRegistry {
           subtitle: ctx.props['subtitle'] as String?,
           onTap: ctx.tapHandler('tap'),
         ),
+    // 水色(ℹ️)/ 赤(⚠️)の注意書き (D-362)。`kind` = info | warning、`detail` は開発者モードのときだけ。
+    'Notice': (ctx) => RasqNotice(
+          text: rrlString(ctx.props['text']),
+          title: ctx.props['title'] as String?,
+          detail: ctx.props['detail'] as String?,
+          kind: ctx.props['kind'] == 'warning' ? RasqNoticeKind.warning : RasqNoticeKind.info,
+        ),
     'DestructiveListTile': (ctx) => RasqDestructiveListTile(title: rrlString(ctx.props['title']), onTap: ctx.tapHandler('tap')),
     'SliderListTile': (ctx) => _OptimisticSlider(
           key: ValueKey('rrl.slider.${ctx.node.k ?? ctx.node.hashCode}'),

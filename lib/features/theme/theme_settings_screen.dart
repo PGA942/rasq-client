@@ -74,12 +74,10 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
     return Scaffold(
       appBar: const RasqPageHeader(title: 'フォントやカラースキーム'),
       body: ListView(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
-          child: Text(
-            '着せ替え(テーマ)は、色・アイコン・画面 / 投稿タイル / FOW / ボタンの背景を変えるパックです。コードは動きません。同時に使えるのは 1 つです。',
-            style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
-          ),
+        const RasqCaption(
+          '色やアイコン、背景を変えられます。使えるのは 1 つだけです',
+          detail: '着せ替え(テーマ)は、色・アイコン・画面 / 投稿タイル / FOW / ボタンの背景を変えるパックです。コードは動きません。同時に使えるのは 1 つです。',
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
         ),
         const RasqSectionHeader(title: '着せ替え'),
         RasqRadioListTile<String?>(key: const ValueKey('theme.none'), title: '着せ替えなし(既定)', value: null, groupValue: selected, onChanged: (_) => _select(null)),
@@ -121,7 +119,8 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
         RasqListTile(
           key: const ValueKey('theme.import'),
           title: 'ファイルから読み込む(.rasqpkg)',
-          subtitle: 'rasq build で作った着せ替えパック。コードを含まないので、未審査でもそのまま使えます',
+          subtitle: '自分で作った着せ替えを読み込みます',
+          detail: 'rasq build で作った着せ替えパック。コードを含まないので、未審査でもそのまま使えます',
           leading: _busy ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.file_open_outlined),
           onTap: _busy ? null : _importFile,
         ),
