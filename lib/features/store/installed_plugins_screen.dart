@@ -74,7 +74,7 @@ class InstalledPluginScreen extends ConsumerWidget {
     final summary = detail?.summary ?? info?.summary ?? '';
     final description = detail?.description ?? info?.description ?? (slots.isEmpty ? '' : slots.first.manifest.description);
     final iconUrl = detail?.iconUrl ?? info?.iconUrl;
-    final newer = detail != null && detail.version.isNotEmpty && detail.version != record.version;
+    final newer = detail != null && isNewerVersion(detail.version, record.version);
     final source = detail != null ? null : (info != null ? 'インストールしたときの掲載の写しです。' : (slots.isNotEmpty ? 'プラグイン自身の宣言(権限の id だけ)です。' : null));
 
     Future<void> remove() async {

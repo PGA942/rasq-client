@@ -27,16 +27,24 @@ import 'support/fakes.dart';
 
 /// ストア役: `sample.timeline` に 0.1.0 と 0.2.0(現在版)。配布物は版ごとに違う「wasm」(先頭がマジック)。
 class _TwoVersionStore extends MockStoreClient {
-  _TwoVersionStore({this.latestAddsPermission = false});
+  _TwoVersionStore({this.latestAddsPermission = false, this.releasesFail = false, this.current = '0.2.0'});
   final bool latestAddsPermission;
+
+  /// リリース情報が取れない(TERMS-09)。
+  final bool releasesFail;
+
+  /// ストアの現在版(REC-10: 入っているより古いこともある)。
+  final String current;
   static const id = 'sample.timeline';
   static Uint8List bytesOf(String v) => Uint8List.fromList([0x00, 0x61, 0x73, 0x6d, 1, 0, 0, 0, ...utf8.encode(v)]);
 
   @override
   Future<StorePluginDetail?> plugin(String pluginId) async =>
-      pluginId == id ? const StorePluginDetail(id: id, name: 'Unicode 昇順 TL', version: '0.2.0', pluginType: StorePluginType.timeline) : super.plugin(pluginId);
+      pluginId == id ? StorePluginDetail(id: id, name: 'Unicode 昇順 TL', version: current, pluginType: StorePluginType.timeline) : super.plugin(pluginId);
   @override
-  Future<List<ReleaseNote>> releases(String pluginId) async => pluginId == id
+  Future<List<ReleaseNote>> releases(String pluginId) async => releasesFail && pluginId == id
+      ? throw StateError('offline')
+      : pluginId == id
       ? [
           ReleaseNote(version: '0.2.0', notes: '並べ方を変えました', permissionsAdded: latestAddsPermission ? const [PermissionEntry('network', '外へ')] : const [], publishedAt: DateTime(2026, 9, 20)),
           ReleaseNote(version: '0.1.0', notes: '最初の版', publishedAt: DateTime(2026, 9, 1)),
@@ -177,6 +185,25 @@ void main() {
     // 全て手動: 何もしない。
     await c2.read(settingsAreaProvider(pluginUpdateArea).notifier).set('mode.action', 'manual');
     expect(await runPluginUpdates(c2), isEmpty);
+  });
+
+  test('TERMS-09 / REC-10: リリース情報が取れなければ入れない / ストアの版が古ければ更新しない(下げない)', () async {
+    final c = container(_TwoVersionStore(releasesFail: true), loader());
+    await c.read(settingsAreaProvider('store.installed').future);
+    await c.read(installedPluginsProvider.notifier).install('sample.timeline', version: '0.1.0');
+    await c.read(settingsAreaProvider(pluginUpdateArea).notifier).set('mode.action', 'auto');
+    final log = await runPluginUpdates(c);
+    expect(log.single.result, 'skipped');
+    expect(log.single.note, contains('リリース情報'));
+    expect(c.read(installedPluginsProvider).single.version, '0.1.0');
+
+    // 入っている 0.2.0 より、ストアの現在版 0.1.0 のほうが古い: 何もしない。
+    final c2 = container(_TwoVersionStore(current: '0.1.0'), loader());
+    await c2.read(settingsAreaProvider('store.installed').future);
+    await c2.read(installedPluginsProvider.notifier).install('sample.timeline', version: '0.2.0');
+    await c2.read(settingsAreaProvider(pluginUpdateArea).notifier).set('mode.action', 'auto');
+    expect(await runPluginUpdates(c2), isEmpty);
+    expect(c2.read(installedPluginsProvider).single.version, '0.2.0');
   });
 
   testWidgets('有料のプラグイン: タイルの金額 → 購入シート(残高 / 失効)→ 購入 → 確認シート → インストール。残高が減る', (tester) async {

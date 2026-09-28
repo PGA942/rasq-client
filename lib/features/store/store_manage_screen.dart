@@ -103,7 +103,7 @@ class _InstalledBlock extends ConsumerWidget {
     final summary = detail?.summary ?? info?.summary ?? '';
     final iconUrl = detail?.iconUrl ?? info?.iconUrl;
     final tint = storeTileColor(detail?.pluginType ?? StorePluginType.other, scheme);
-    final newer = detail != null && detail.version.isNotEmpty && detail.version != record.version ? detail.version : null;
+    final newer = detail != null && isNewerVersion(detail.version, record.version) ? detail.version : null;
     // 2 つ目のチップ: ストアの新しい版(入っていれば「切り替え」= 既定にする、無ければ「更新」= 確認シート → 入れて既定に)、
     // 無ければほかに入っている版、それも無ければ「最新です」。
     final others = [for (final v in record.allVersions) if (v.version != record.version) v];

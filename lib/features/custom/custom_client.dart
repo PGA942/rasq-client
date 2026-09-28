@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../backend/orgate_client.dart';
+import '../../backend/redact.dart';
 import '../../backend/rasq_account.dart';
 import 'custom_models.dart';
 
@@ -356,7 +357,13 @@ class HttpCustomSessionClient implements CustomSessionClient {
       path: '${baseUrl.path}/api/v1/custom/sessions/${Uri.encodeComponent(sessionId)}/ws',
       queryParameters: {'token': t},
     );
-    return _WsCustomConnection(WebSocketChannel.connect(url));
+    final ws = WebSocketChannel.connect(url);
+    try {
+      await ws.ready;
+    } catch (e) {
+      throw StateError(wsConnectErrorMessage(e)); // REC-03: URL の token を出さない
+    }
+    return _WsCustomConnection(ws);
   }
 }
 

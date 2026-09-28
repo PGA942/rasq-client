@@ -12,6 +12,7 @@ import 'package:rrl_renderer/rrl_renderer.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/rasq_account.dart';
+import '../../backend/redact.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart';
@@ -174,7 +175,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       } catch (e) {
         _set(() {
           phase = CustomPagePhase.failed;
-          error = 'セッションに入れませんでした: $e';
+          error = 'セッションに入れませんでした: ${redactSecrets('$e')}';
         });
         return;
       }
@@ -232,7 +233,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       _onMessage(m);
     }, onError: (Object e) {
       if (!welcome.isCompleted) welcome.completeError(e);
-      _set(() => notice = '接続が切れました: $e');
+      _set(() => notice = '接続が切れました: ${redactSecrets('$e')}');
     }, onDone: () {
       if (!welcome.isCompleted) welcome.completeError(StateError('接続が切れました'));
       if (closedReason == null) _set(() => notice = '接続が切れました');

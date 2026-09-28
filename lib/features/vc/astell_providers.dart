@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
+import '../../backend/redact.dart';
 import '../child_safe/child_gate.dart';
 import '../child_safe/child_safe_policy.dart';
 import '../settings/settings_dsl.dart';
@@ -150,7 +151,8 @@ final astellFollowersProvider = FutureProvider<List<AstellFollowEntry>>((ref) =>
 final astellHomeProvider = FutureProvider<AstellHome>((ref) => ref.watch(astellClientProvider).home());
 
 /// 参加 FOW の「参加メンバー」(接続前のプレビュー)。
-final astellPeersProvider = FutureProvider.family<List<AstellPeer>, String>((ref, id) => ref.watch(astellClientProvider).peers(id));
+// 参加前の一覧は開くたびに取り直す(REC-04: 最初に見たときの結果が残り、カードの人数と食い違っていた)。
+final astellPeersProvider = FutureProvider.autoDispose.family<List<AstellPeer>, String>((ref, id) => ref.watch(astellClientProvider).peers(id));
 
 /// 接続中のルームの状態。
 @immutable
@@ -328,15 +330,17 @@ class AstellSession extends Notifier<AstellSessionState?> {
     try {
       final conn = await ref.read(astellClientProvider).connect(room.id);
       _conn = conn;
-      _sub = conn.messages.listen(_onMessage, onError: (Object e) => _fail('$e'), onDone: () {
+      _sub = conn.messages.listen(_onMessage, onError: (Object e) => _fail(redactSecrets('$e')), onDone: () {
         if (state != null) state = state!.copyWith(connected: false);
       });
     } catch (e) {
-      _fail('接続に失敗しました: $e');
+      // REC-03: 接続エラーは接続先の URL(`?token=`)を含むので、そのまま出さない。
+      _fail(wsConnectErrorMessage(e));
     }
   }
 
   void _fail(String message) {
+    message = redactSecrets(message);
     debugPrint('astell: $message');
     if (state != null) state = state!.copyWith(connected: false, error: message);
   }

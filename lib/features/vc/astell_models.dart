@@ -438,7 +438,8 @@ class AstellShare {
   String get headline => switch (kind) {
         'text' => payload['text'] as String? ?? '',
         'link' => payload['title'] as String? ?? payload['url'] as String? ?? '',
-        'post' => payload['body'] as String? ?? payload['text'] as String? ?? '投稿',
+        // CW 付きの投稿は本文を出さず注意書きだけ (TERMS-10)。
+        'post' => contentWarning != null ? '⚠ $contentWarning(閲覧注意)' : payload['body'] as String? ?? payload['text'] as String? ?? '投稿',
         'media' => payload['title'] as String? ?? 'メディア',
         'plugin' => '「${payload['name'] ?? payload['pluginId'] ?? 'プラグイン'}」を使いたい',
         _ => kind,
@@ -466,7 +467,15 @@ class AstellShare {
   bool get isImage => (payload['mimeType'] as String? ?? '').startsWith('image/');
 
   /// サムネイル(メディア / 投稿の添付 / リンクの OGP)。
-  Uri? get thumbnailUrl => _uri(payload['thumbnailUrl']) ?? (kind == 'media' ? _uri(payload['url']) : null);
+  // 閲覧注意の投稿はサムネイルを出さない(開いてから見る、TERMS-10)。
+  Uri? get thumbnailUrl => isSensitive ? null : _uri(payload['thumbnailUrl']) ?? (kind == 'media' ? _uri(payload['url']) : null);
+
+  /// 共有された投稿の CW(TERMS-10)。
+  String? get contentWarning => kind == 'post' && payload['cw'] is String && (payload['cw'] as String).isNotEmpty ? payload['cw'] as String : null;
+
+  /// 閲覧注意(投稿の印、またはメディアのどれかの印、TERMS-10)。
+  bool get isSensitive =>
+      payload['sensitive'] == true || (payload['media'] is List && (payload['media'] as List).any((m) => m is Map && m['sensitive'] == true));
   bool get isVideo => (payload['mimeType'] as String? ?? '').startsWith('video/');
 
   factory AstellShare.fromJson(Map<String, Object?> j) => AstellShare(

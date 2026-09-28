@@ -367,3 +367,5 @@
 {"q": "公開されているRASQリストを探して取り込みたい", "op": "rasqlist-import"}
 {"q": "共有リンクのRASQリストをインポートしたい", "op": "rasqlist-import"}
 {"q": "人のRASQリストをホームに取り込む", "op": "rasqlist-import"}
+{"q": "Where can I find my drafts?", "op": "draft"}
+{"q": "how do I save a draft", "op": "draft"}

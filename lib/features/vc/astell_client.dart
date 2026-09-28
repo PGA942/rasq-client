@@ -5,6 +5,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../backend/orgate_client.dart';
+import '../../backend/redact.dart';
 import 'astell_models.dart';
 
 /// AsTell の境界 (D-139)。RASQ Central の `/astell/*`(`rasq-central/docs/API.md`
@@ -787,7 +788,12 @@ class HttpAstellClient implements AstellClient {
     );
     // Web 版でも繋げるように web_socket_channel(dart:io の WebSocket はブラウザで動かない、D-317)。
     final ws = WebSocketChannel.connect(url);
-    await ws.ready;
+    try {
+      await ws.ready;
+    } catch (e) {
+      // REC-03: 例外の文は接続先の URL(`?token=`)を含む。秘密を外した説明に置き換える。
+      throw AstellConnectException(wsConnectErrorMessage(e));
+    }
     return _WsConnection(ws);
   }
 
@@ -798,6 +804,14 @@ class HttpAstellClient implements AstellClient {
   @override
   Future<AstellStreamToken> streamToken(String roomId, {required bool publish}) async =>
       AstellStreamToken.fromJson(await _client.postJson('${_room(roomId)}/stream-token', {'role': publish ? 'publish' : 'subscribe'}));
+}
+
+/// ルームの WebSocket に繋げなかった(秘密を外した説明つき、REC-03)。
+class AstellConnectException implements Exception {
+  AstellConnectException(this.message);
+  final String message;
+  @override
+  String toString() => message;
 }
 
 class _WsConnection implements AstellConnection {
