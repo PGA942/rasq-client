@@ -55,7 +55,7 @@ class WasmSnsPlugin extends SnsPlugin {
   final Map<String, Future<AsyncWasmPluginController>> _controllers = {};
 
   /// インスタンスのホストを渡し済みのアカウント(controller の生存と同じ寿命)。
-  final Set<String> _granted = {};
+  final Map<String, String> _granted = {};
 
   Future<AsyncWasmPluginController> _controllerFor(String accountKey) => _controllers.putIfAbsent(accountKey, () async {
         // 権限はマニフェスト宣言がそのまま実行時のゲートになる (D-004)。
@@ -158,13 +158,18 @@ class WasmSnsPlugin extends SnsPlugin {
       account: session.account,
       pluginId: manifest.id,
       // 接続先とトークンはホストが毎回供給する(v1 の規約、PROTOCOL §4.3)。
-      extraArgs: {'host': session.account.instance, 'token': session.token, ..._baseArgs(session.account.instance)},
+      extraArgs: {'host': session.account.instance, 'token': session.token},
       // `network.instance`: ランタイムに許可するのも同じホスト。ワーカーごとに
       // 1 アカウントなので、初回に一度渡せばよい(メッセージは順序を保つ)。
       invoke: (fn, args) async {
         final c = await _controllerFor(key);
-        if (_granted.add(key)) await c.grantHost(_grantedHostFor(session.account.instance));
-        return c.invoke(fn, args);
+        // 差し替え (D-359 / 実行時の「テスト用の接続先」) は呼び出しのたびに読む: 途中で切り替えても次の呼び出しから効く。
+        final grant = _grantedHostFor(session.account.instance);
+        if (_granted[key] != grant) {
+          _granted[key] = grant;
+          await c.grantHost(grant);
+        }
+        return c.invoke(fn, {...args, ..._baseArgs(session.account.instance)});
       },
       onClose: () async {
         _granted.remove(key);

@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:cupertino_ui/cupertino_ui.dart' as cui;
 import 'package:material_ui/material_ui.dart' as mui;
 
+import '../backend/test_endpoints.dart';
 import '../features/home/reaction_history.dart';
 import '../features/plugins/slot_plugins.dart';
 import '../features/media/video_player.dart' show VideoPrefs;
@@ -24,6 +25,8 @@ class RasqApp extends ConsumerWidget {
     ref.watch(centralInboxProvider);
     // プラグインのアップデート (D-356): 起動後に 1 回、設定どおりに。
     ref.watch(pluginAutoUpdateProvider);
+    // テスト用の接続先 (D-360): 設定を SNS の接続先の差し替えに反映。
+    ref.watch(testEndpointsSyncProvider);
     final mode = ref.watch(themeModeProvider);
     final skin = ref.watch(activeSkinProvider);
     // DSL 設定の実適用 (D-031): 表示サイズ / モーション抑制。
