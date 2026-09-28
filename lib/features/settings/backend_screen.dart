@@ -5,6 +5,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
+import '../../backend/test_endpoints.dart';
 import '../../backend/rasq_account.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_account_fow.dart';
@@ -32,6 +33,7 @@ class BackendSettingsScreen extends ConsumerStatefulWidget {
 class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
   final _url = TextEditingController();
   final _central = TextEditingController();
+  final _testAddress = TextEditingController();
   bool _loaded = false;
   bool _busy = false;
   String? _probe;
@@ -40,6 +42,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
   void dispose() {
     _url.dispose();
     _central.dispose();
+    _testAddress.dispose();
     super.dispose();
   }
 
@@ -105,6 +108,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
     if (!_loaded && area != null) {
       _url.text = area['baseUrl'] is String ? area['baseUrl'] as String : '';
       _central.text = area['centralUrl'] is String ? area['centralUrl'] as String : '';
+      _testAddress.text = area[TestEndpoints.keyAddress] is String ? area[TestEndpoints.keyAddress] as String : TestEndpoints.defaultAddress;
       _loaded = true;
     }
     final base = ref.watch(orgateBaseUrlProvider);
@@ -147,6 +151,44 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
           ].join('\n'),
           style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
         ),
+        // テスト用の接続先 (D-360): プレビュー録画用のダミー環境(rasq-preview-assets の dummy/run_all.sh)。
+        const RasqSectionHeader(title: 'テスト用の接続先'),
+        Builder(builder: (context) {
+          final on = area?[TestEndpoints.keyEnabled] == true;
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            RasqSwitchListTile(
+              key: const ValueKey('backend.testEndpoints'),
+              title: 'ダミーの SNS とデモの Central を使う',
+              subtitle: 'プレビュー録画用。Misskey / Mastodon / Bluesky の ${TestEndpoints.misskeyHost} / ${TestEndpoints.mastodonHost} / ${TestEndpoints.blueskyHost} をこのアドレスのダミーへ向け、Central も切り替えます',
+              value: on,
+              onChanged: _busy
+                  ? null
+                  : (v) async {
+                      await setTestEndpoints(ref, enabled: v, address: _testAddress.text);
+                      ref.invalidate(orgateAccountProvider);
+                      if (mounted) setState(() => _central.text = ref.read(settingsAreaProvider(backendSettingsArea)).value?['centralUrl'] as String? ?? '');
+                    },
+            ),
+            const SizedBox(height: 4),
+            Text('ダミー環境のアドレス(同じ機械なら 127.0.0.1、ほかの機械なら その IP)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 4),
+            RasqInput(
+              key: const ValueKey('backend.testAddress'),
+              controller: _testAddress,
+              hintText: TestEndpoints.defaultAddress,
+              keyboardType: TextInputType.url,
+              onSubmitted: (_) async {
+                if (on) await setTestEndpoints(ref, enabled: true, address: _testAddress.text);
+              },
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'SNS は各ログイン画面でサーバーに上のホスト名を入れます(許可ページは自動で通ります。Bluesky の ID / パスワードは何でも可)。'
+              'RASQ アカウントはアカウントのログインから。切り替えたら、すでにログインしている SNS は次の読み込みから新しい接続先になります。',
+              style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ]);
+        }),
         const RasqSectionHeader(title: 'RASQ アカウント'),
         account.when(
           loading: () => const RasqLoading(),

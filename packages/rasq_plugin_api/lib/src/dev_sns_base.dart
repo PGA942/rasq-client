@@ -8,8 +8,14 @@ library;
 
 const _raw = String.fromEnvironment('RASQ_DEV_SNS_BASE');
 
-/// インスタンスのホスト(小文字)→ 基底 URL。
-final Map<String, Uri> devSnsBaseUrls = parseDevSnsBase(_raw);
+final Map<String, Uri> _fromDefine = parseDevSnsBase(_raw);
+Map<String, Uri> _runtime = const {};
+
+/// インスタンスのホスト(小文字)→ 基底 URL。dart-define の上に、アプリの設定「テスト用の接続先」(実行時)を重ねる。
+Map<String, Uri> get devSnsBaseUrls => {..._fromDefine, ..._runtime};
+
+/// 実行時の差し替え(設定 → RASQ サーバー →「テスト用の接続先」)。空文字で外す。
+void setRuntimeDevSnsBase(String raw) => _runtime = parseDevSnsBase(raw);
 
 Map<String, Uri> parseDevSnsBase(String raw) {
   final out = <String, Uri>{};

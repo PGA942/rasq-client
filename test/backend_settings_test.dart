@@ -98,12 +98,44 @@ void main() {
     expect(probe, contains('未作成'));
     expect(probe, isNot(contains('接続できませんでした')));
     // 未作成のときは、この画面から RASQ アカウントを開ける。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('backend.account')), 200, scrollable: find.byType(Scrollable).first);
     expect(find.byKey(const ValueKey('backend.account')), findsOneWidget);
     // 公開の口が落ちているときだけ「接続できませんでした」。
     storeKeyOk = false;
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('backend.test')), -200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const ValueKey('backend.test')));
     await tester.pumpAndSettle();
     probe = tester.widget<Text>(find.byKey(const ValueKey('backend.probe'))).data!;
     expect(probe, contains('接続できませんでした'));
+  });
+
+  testWidgets('テスト用の接続先 (D-360): 入れると SNS の差し替えと Central が変わり、外すと Central が元に戻る', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    addTearDown(() => setRuntimeDevSnsBase(''));
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+      'backend.v1': jsonEncode({'centralUrl': 'https://central.example'}),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline));
+    await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)], child: const RasqApp()));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(routerProvider).push('/settings/server');
+    await tester.pumpAndSettle();
+    expect(devSnsBaseFor('misskey.rasq.test'), isNull);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('backend.testAddress')), 200, scrollable: find.byType(Scrollable).first);
+    await tester.enterText(find.byKey(const ValueKey('backend.testAddress')), '100.64.1.2');
+    await tester.tap(find.byKey(const ValueKey('backend.testEndpoints')));
+    await tester.pumpAndSettle();
+    expect(devSnsBaseFor('misskey.rasq.test').toString(), 'http://100.64.1.2:9101');
+    expect(devSnsBaseFor('bsky.rasq.test').toString(), 'http://100.64.1.2:9103');
+    expect(snsUri('mstdn.rasq.test', '/api/v1/instance').toString(), 'http://100.64.1.2:9102/api/v1/instance');
+    expect(c.read(centralBaseUrlProvider).toString(), 'http://100.64.1.2:8080');
+    await tester.tap(find.byKey(const ValueKey('backend.testEndpoints')));
+    await tester.pumpAndSettle();
+    expect(devSnsBaseFor('misskey.rasq.test'), isNull);
+    expect(c.read(centralBaseUrlProvider).toString(), 'https://central.example');
   });
 }
