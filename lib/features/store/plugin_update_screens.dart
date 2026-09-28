@@ -86,8 +86,11 @@ class _PluginUpdateSettingsScreenState extends ConsumerState<PluginUpdateSetting
                 label: const Text('いま確かめる'),
               ),
               const SizedBox(height: RasqSpacing.xs),
-              Text('権限が増える版(増えないことを確かめられない版も)と、買っていない有料の版は、どのモードでも自動では入れません(更新ログに理由が残ります)。起動するたびに 1 回確かめます。',
-                  style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              const RasqCaption(
+                '権限が増える版と有料の版は、自動では入りません',
+                detail: '権限が増える版(増えないことを確かめられない版も)と、買っていない有料の版は、どのモードでも自動では入れません(更新ログに理由が残ります)。起動するたびに 1 回確かめます。',
+                padding: EdgeInsets.zero,
+              ),
             ]),
           ),
         ]),

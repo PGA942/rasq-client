@@ -106,7 +106,7 @@ class _PluginParamsPanelState extends ConsumerState<PluginParamsPanel> {
           ),
         ]),
       ),
-      RasqPluginTile(icon: Icons.extension_outlined, title: widget.title, subtitle: 'TLプラグイン', description: '投稿リストをプラグインのソート(tl.sort)で並べ替えます。パラメーターはノードの「パラメーター」ポートに入ります。', chevron: false),
+      RasqPluginTile(icon: Icons.extension_outlined, title: widget.title, subtitle: 'TLプラグイン', description: rasqDetail(context, 'プラグインの並べ方で投稿を並べ替えます。', '投稿リストをプラグインのソート(tl.sort)で並べ替えます。パラメーターはノードの「パラメーター」ポートに入ります。'), chevron: false),
       const Divider(height: 1),
       Expanded(child: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), children: [RrlRenderer(node: root, host: host)])),
     ]);
