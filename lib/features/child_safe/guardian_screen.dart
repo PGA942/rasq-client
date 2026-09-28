@@ -25,7 +25,7 @@ import 'child_safe_screens.dart' show childSafeSummaryLines;
 
 final childSafeGuardianProvider = FutureProvider.autoDispose<ChildSafeGuardianInfo>((ref) async {
   final api = ref.watch(childSafeApiProvider);
-  if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+  if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
   return api.guardian();
 });
 
@@ -43,7 +43,7 @@ final childSafeCatalogProvider = FutureProvider.autoDispose<ChildSafeCatalog>((r
 
 final childSafeChildDetailProvider = FutureProvider.autoDispose.family<ChildSafeChildDetail, String>((ref, handle) async {
   final api = ref.watch(childSafeApiProvider);
-  if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+  if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
   return api.child(handle);
 });
 
@@ -146,7 +146,7 @@ class _GuardianScreenState extends ConsumerState<GuardianScreen> {
               value: verified ? '${g.status.methodLabel}${g.status.country == null ? '' : '・${g.status.country}'}${g.status.verifiedAt == null ? '' : '・${_fmt(g.status.verifiedAt)}'}' : '',
             ),
             if (!verified) ...[
-              _pad(Text('子のアカウントを作る / つなぐ前に、保護者の確認をします(日本はマイナンバーカード (JPKI)、ほかの国は Web コンソールでの自己申告)。', style: caption)),
+              _pad(Text(rasqDetail(context, '子のアカウントを作る / つなぐ前に、保護者の確認をします(日本はマイナンバーカード)。', '子のアカウントを作る / つなぐ前に、保護者の確認をします(日本はマイナンバーカード (JPKI)、ほかの国は Web コンソールでの自己申告)。'), style: caption)),
               if (g.jpkiAvailable)
                 RasqListTile(
                   key: const ValueKey('guardian.verify.jpki'),
@@ -463,7 +463,7 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> with 
             key: const ValueKey('guardian.confirm'),
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.md),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text('@${widget.handle} の端末には、Central が署名した設定が届きます(端末で確かめてから当てはめます)。', style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              Text(rasqDetail(context, '@${{widget.handle}} の端末に、この設定が届きます。', '@${widget.handle} の端末には、Central が署名した設定が届きます(端末で確かめてから当てはめます)。'), style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               const SizedBox(height: RasqSpacing.sm),
               for (final l in lines) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('・$l', style: RasqTypography.bodySmall)),
             ]),
@@ -566,7 +566,7 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> with 
     final ok = await ref.read(overlayManagerProvider).showAlert(
           id: 'childSafe.end.confirm',
           title: '見守りを終える',
-          message: '@${widget.handle} の制限をすべて外します。子の端末は、次に Central に届いたときに外れます。元に戻すには、もう一度つなぎます。',
+          message: rasqDetail(context, '@${{widget.handle}} の制限をすべて外します。子の端末は、次につながったときに外れます。元に戻すには、もう一度つなぎます。', '@${widget.handle} の制限をすべて外します。子の端末は、次に Central に届いたときに外れます。元に戻すには、もう一度つなぎます。'),
           confirmText: '終える',
           cancelText: 'キャンセル',
           destructive: true,
@@ -928,7 +928,8 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> with 
         RasqSwitchListTile(
           key: ValueKey('guardian.rai.${g.id}'),
           title: g.label,
-          subtitle: g.phase > 1 ? '第二期(いまは効きません)' : g.id,
+          subtitle: g.phase > 1 ? '準備中(いまは効きません)' : null,
+          detail: g.phase > 1 ? '第二期(いまは効きません)' : g.id,
           value: rai.groups.contains(g.id),
           onChanged: (v) => _setAllow((x) => x.copyWith(rai: rai.copyWith(groups: toggle(rai.groups, g.id, v)))),
         ),

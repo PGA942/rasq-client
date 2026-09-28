@@ -289,10 +289,9 @@ class SettingsDslScreen extends ConsumerWidget {
         // (RASQ アカウント行なし)。選んだアカウントのセッションに読み書き。
         if (area.startsWith('sns.')) _accountTile(context, ref),
         if (childLocked)
-          Padding(
-            key: const ValueKey('childSafe.safetyReadOnly'),
-            padding: const EdgeInsets.all(RasqSpacing.page),
-            child: Text('見守り中のため、ここは変えられません(閲覧注意のメディアは必ず隠します)。', style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          const RasqNotice(
+            key: ValueKey('childSafe.safetyReadOnly'),
+            text: '見守り中のため、ここは変えられません(閲覧注意のメディアは必ず隠します)。',
           ),
         IgnorePointer(ignoring: childLocked, child: RrlRenderer(node: s.root, host: host)),
       ]),

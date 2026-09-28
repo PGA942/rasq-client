@@ -2,20 +2,30 @@
   "schema": "rasq.settings-page/1",
   "area": "appearance.motion",
   "title": "モーションの抑制",
-  "defaults": { "reduceMotion": false },
+  "defaults": {
+    "reduceMotion": false
+  },
   "root": {
     "t": "Column",
     "c": [
-      { "t": "SectionHeader", "p": { "title": "アニメーション" } },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "アニメーション"
+        }
+      },
       {
         "t": "SwitchListTile",
         "k": "reduceMotion",
         "p": {
           "title": "モーションを抑制する",
-          "subtitle": "MFM の spin / rainbow などのアニメーションを静止画にし、画面遷移の動きを減らします",
-          "value": "$.settings.reduceMotion"
+          "subtitle": "動く装飾を止め、画面の動きを減らします",
+          "value": "$.settings.reduceMotion",
+          "detail": "MFM の spin / rainbow などのアニメーションを静止画にし、画面遷移の動きを減らします"
         },
-        "on": { "change": "settings.set" }
+        "on": {
+          "change": "settings.set"
+        }
       }
     ]
   }

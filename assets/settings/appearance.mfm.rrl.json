@@ -21,7 +21,8 @@
         "p": {
           "title": "動く装飾を再生する",
           "value": "$.settings.animations",
-          "subtitle": "spin / jump / rainbow などの MFM を動かします。オフにすると静止画になります(「モーションの抑制」がオンのときは常に静止)"
+          "subtitle": "回転や虹色などの動く装飾を再生します",
+          "detail": "spin / jump / rainbow などの MFM を動かします。オフにすると静止画になります(「モーションの抑制」がオンのときは常に静止)"
         },
         "on": {
           "change": "settings.set"

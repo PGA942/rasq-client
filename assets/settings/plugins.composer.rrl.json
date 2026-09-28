@@ -20,7 +20,8 @@
         "p": {
           "title": "投稿プラグインを使う",
           "value": "$.settings.enabled",
-          "subtitle": "コンポーザーのテキスト変換(composer.text)とメディア編集(composer.media)のプラグインを有効にします"
+          "subtitle": "投稿の文字や画像を加工するプラグインを使います",
+          "detail": "コンポーザーのテキスト変換(composer.text)とメディア編集(composer.media)のプラグインを有効にします"
         },
         "on": {
           "change": "settings.set"

@@ -21,7 +21,8 @@
         "p": {
           "title": "フォロー中のホストの AsTell をヘッダーに出す",
           "value": "$.settings.headerStrip",
-          "subtitle": "開催中のルームを、ホームのヘッダーの角丸の枠に並べます"
+          "subtitle": "開催中のルームを、ホームの上に並べます",
+          "detail": "開催中のルームを、ホームのヘッダーの角丸の枠に並べます"
         },
         "on": {
           "change": "settings.set"

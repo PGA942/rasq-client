@@ -887,7 +887,7 @@ final currentBundleLinksProvider = FutureProvider.autoDispose<List<RasqSnsLink>>
 /// ページ 1 枚ぶん(プロフィール + 投稿)。
 final rasqAccountPageProvider = FutureProvider.autoDispose.family<({RasqPublicProfile profile, RasqPostList posts}), String>((ref, handle) async {
   final api = ref.watch(rasqAccountPageApiProvider);
-  if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+  if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
   final (profile, posts) = await (api.profile(handle), api.posts(handle)).wait;
   return (profile: profile, posts: posts);
 });
@@ -936,12 +936,12 @@ final rasqFeedPostsProvider = NotifierProvider<RasqFeedPosts, Map<String, RasqAc
 
 final rasqThreadProvider = FutureProvider.autoDispose.family<RasqThread, String>((ref, id) async {
   final api = ref.watch(rasqAccountPageApiProvider);
-  if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+  if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
   return api.thread(id);
 });
 
 final rasqPostReactionsProvider = FutureProvider.autoDispose.family<RasqPostReactions, String>((ref, id) async {
   final api = ref.watch(rasqAccountPageApiProvider);
-  if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+  if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
   return api.reactions(id);
 });

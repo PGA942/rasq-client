@@ -44,26 +44,22 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final configured = ref.watch(centralConfiguredProvider);
     final account = ref.watch(orgateAccountProvider);
     final noAccount = account.hasValue && account.value == null;
     final state = ref.watch(notifyStoreProvider);
     final store = ref.read(notifyStoreProvider.notifier);
-    final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
     return Scaffold(
       appBar: const RasqPageHeader(title: '通知専用のアクセストークン'),
       body: ListView(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
-          child: Text(
-            '通知トークンは、RASQ サーバーからの通知を受け取るためだけのトークンです(読めるのは自分宛ての通知の受信箱だけ。投稿やアカウントの操作はできません)。'
-            'マクロ / AsTell 用の配下トークンもここから発行します。',
-            style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
-          ),
+        const RasqCaption(
+          '通知を受け取るためだけの鍵です。投稿やアカウントの操作はできません。',
+          detail: '通知トークンは、RASQ サーバーからの通知を受け取るためだけのトークンです(読めるのは自分宛ての通知の受信箱だけ。投稿やアカウントの操作はできません)。'
+              'マクロ / AsTell 用の配下トークンもここから発行します。',
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
         ),
         const RasqSectionHeader(title: '状態'),
-        const RasqValueListTile(title: 'プッシュ配信', value: 'ダミー(APNs / FCM は未接続)'),
+        RasqValueListTile(title: 'プッシュ配信', value: rasqDetail(context, '準備中', 'ダミー(APNs / FCM は未接続)')),
         if (!configured)
           RasqListTile(title: 'RASQ サーバーの接続先が未設定です', subtitle: '接続先を入れると発行できます', onTap: () => context.push('/settings/server'))
         else if (noAccount)
@@ -155,9 +151,10 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
                 ),
             ]),
           ),
-        Padding(
-          padding: const EdgeInsets.all(RasqSpacing.page),
-          child: Text('生のトークンは発行時にだけ受け取り、端末内の安全な領域に保存します。サーバーに残るのはハッシュだけです。親のトークンを失効すると配下のトークンも失効します。', style: caption),
+        const RasqCaption(
+          '鍵はこの端末の中に安全に保存します。',
+          detail: '生のトークンは発行時にだけ受け取り、端末内の安全な領域に保存します。サーバーに残るのはハッシュだけです。親のトークンを失効すると配下のトークンも失効します。',
+          padding: EdgeInsets.all(RasqSpacing.page),
         ),
       ]),
     );
