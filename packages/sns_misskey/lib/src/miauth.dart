@@ -64,7 +64,7 @@ class MiAuthFlow extends BrowserAuthFlow {
   ];
 
   @override
-  Uri get url => Uri.https(host, '/miauth/$sessionId', {
+  Uri get url => snsUri(host, '/miauth/$sessionId', {
         'name': appName,
         if (iconUrl != null) 'icon': iconUrl.toString(),
         if (callback != null) 'callback': callback.toString(),

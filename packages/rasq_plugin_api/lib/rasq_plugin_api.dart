@@ -8,6 +8,7 @@ library;
 
 export 'src/action.dart';
 export 'src/auth.dart';
+export 'src/dev_sns_base.dart';
 export 'src/manifest.dart';
 export 'src/ml_model.dart';
 export 'src/plugin_registry.dart';

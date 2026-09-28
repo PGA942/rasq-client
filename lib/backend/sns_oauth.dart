@@ -104,7 +104,9 @@ Future<AuthFlow> Function(String host, {Uri? callback}) brokeredAuthFactory(
   return (String host, {Uri? callback}) async {
     // 接続先は認証を始める時点のものを読む(構成変更に追随させるため、
     // プラグイン登録時には束縛しない)。
-    final client = ref.read(orgateClientProvider);
+    // 開発 / デモ用の差し替え (D-359): そのインスタンスが差し替えられていれば、ブローカーもダミーのサーバーに聞く。
+    final devBase = devSnsBaseFor(host);
+    final client = devBase != null ? OrgateClient(baseUrl: devBase) : ref.read(orgateClientProvider);
     if (client == null) {
       throw SnsApiException(ErrorCode.app(ErrorFamily.affectedSettings, '10',
           title: 'Server Not Configured',
