@@ -46,7 +46,8 @@
         "p": {
           "title": "AsTell の開始通知の予定を上に出す",
           "value": "$.settings.showReminders",
-          "subtitle": "登録した開始通知(端末のローカル通知)の一覧を通知ページの上に表示します"
+          "subtitle": "登録した開始通知を、通知ページの上に出します",
+          "detail": "登録した開始通知(端末のローカル通知)の一覧を通知ページの上に表示します"
         },
         "on": {
           "change": "settings.set"

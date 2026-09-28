@@ -44,7 +44,8 @@ class SettingsScreen extends ConsumerWidget {
         RasqListTile(title: '投稿コンポーザー', onTap: () => context.push('/settings/composer')),
         RasqListTile(
           title: 'アカウントの重要設定',
-          subtitle: 'パスワードの再設定やアカウント削除など、パスワードがいる処理は web 版で行います',
+          subtitle: 'パスワードの変更やアカウント削除は web 版で',
+          detail: 'パスワードの再設定やアカウント削除など、パスワードがいる処理は web 版で行います',
           trailing: const Icon(Icons.north_east, size: 18),
           chevron: false,
           onTap: () => launchUrl(Uri.https(me.account.instance, '/settings'), mode: LaunchMode.externalApplication),

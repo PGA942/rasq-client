@@ -243,7 +243,7 @@ class ThirdColumnView extends ConsumerWidget {
         ),
         Expanded(
           child: switch (empty) {
-            'none' => const RasqEmptyView(title: '第3カラム', hint: 'FOW をここへ移動できます(M5c)'),
+            'none' => RasqEmptyView(title: '第3カラム', hint: rasqDetail(context, '開いている画面をここへ移動できます', 'FOW をここへ移動できます(M5c)')),
             _ => blockedSearch != null ? ChildSafeBlockedView(message: blockedSearch) : const SearchScreen(),
           },
         ),

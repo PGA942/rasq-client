@@ -747,7 +747,7 @@ class _ListImportScreenState extends ConsumerState<ListImportScreen> {
               ].join('\n'),
               style: RasqTypography.bodySmall,
             ),
-            if (!bluesky) TextButton(onPressed: () => manager.showAlert(id: 'lists.import', title: 'ローカルからインポート', message: 'CSV/JSON からのインポートはリスト機能(サーバー側: 第二期)と合わせて実装します。', confirmText: 'OK'), child: Text('ローカルからインポート', style: TextStyle(color: tokens.link))),
+            if (!bluesky) TextButton(onPressed: () => manager.showAlert(id: 'lists.import', title: 'ローカルからインポート', message: rasqDetail(context, 'ファイルからのインポートは準備中です。', 'CSV/JSON からのインポートはリスト機能(サーバー側: 第二期)と合わせて実装します。'), confirmText: 'OK'), child: Text('ローカルからインポート', style: TextStyle(color: tokens.link))),
           ]),
         ),
         if (bluesky) ...[

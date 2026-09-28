@@ -231,7 +231,7 @@ class ChildSafeController extends AsyncNotifier<ChildSafeState> {
   /// 既にある子のアカウントを、保護者のコードでつなぐ(`POST /me/child-safe/pair`)。
   Future<void> pair(String code) async {
     final api = ref.read(childSafeApiProvider);
-    if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+    if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
     await api.pair(code.trim().toUpperCase());
     await refresh();
   }

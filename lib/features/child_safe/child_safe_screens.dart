@@ -114,12 +114,12 @@ class ChildSafeHubScreen extends ConsumerWidget {
     return Scaffold(
       appBar: const RasqPageHeader(title: 'チャイルドセーフ'),
       body: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.xl), children: [
-        _pad(Text('保護者の RASQ アカウントが、子の RASQ アカウントの使い方を決めます。投稿の判定はこの端末の中で行い、保護者に届くのは、送った数と止めた数と話題の見出しだけです(投稿の本文は送りません)。', style: caption)),
+        _pad(Text(rasqDetail(context, '保護者が、子のアカウントの使い方を決めます。保護者に届くのは数と話題の見出しだけで、投稿の本文は送りません。', '保護者の RASQ アカウントが、子の RASQ アカウントの使い方を決めます。投稿の判定はこの端末の中で行い、保護者に届くのは、送った数と止めた数と話題の見出しだけです(投稿の本文は送りません)。'), style: caption)),
         if (cs.managed) ...[
           const RasqSectionHeader(title: '見守られています'),
           RasqValueListTile(key: const ValueKey('childSafe.hub.parent'), title: '保護者', value: cs.parentDisplayName?.isNotEmpty == true ? '${cs.parentDisplayName} (@${cs.parentHandle})' : '@${cs.parentHandle ?? '—'}'),
           RasqValueListTile(title: '状態', value: cs.locked ? '設定待ち' : '見守り中(設定 ${cs.revision})'),
-          if (cs.offline) _pad(Text('いまは Central に届きません。前の設定のまま見守ります。', style: caption)),
+          if (cs.offline) _pad(Text('いまはサーバーに届きません。前の設定のまま見守ります。', style: caption)),
           if (cs.error != null) _pad(Text(cs.error!, style: caption.copyWith(color: scheme.error))),
           if (!cs.locked) ...[for (final l in childSafeSummaryLines(gate)) _pad(Text('・$l', style: RasqTypography.bodySmall))],
           RasqListTile(key: const ValueKey('childSafe.hub.refresh'), title: '保護者の設定を取り直す', chevron: false, onTap: () => ref.read(childSafeProvider.notifier).refresh()),
@@ -254,7 +254,7 @@ class _ChildPairScreenState extends ConsumerState<ChildPairScreen> {
           RasqListTile(title: '保護者からのコードでログイン', onTap: () => context.push('/child-safe/login')),
           RasqListTile(title: '既存の RASQ アカウントにログイン', onTap: () => context.push('/settings/account-login')),
         ] else ...[
-          _pad(Text('@${account.handle} を、保護者の見守りにつなぎます。保護者の画面(アプリか Web コンソール)に出ているコード(8 字、例 ABCD-EFGH)を入れてください。つないだら、保護者が設定を決めるまでアプリは使えません。', style: caption)),
+          _pad(Text(rasqDetail(context, '@${{account.handle}} を保護者の見守りにつなぎます。保護者の画面に出ているコード(8 字)を入れてください。つないだら、保護者が設定を決めるまで使えません。', '@${account.handle} を、保護者の見守りにつなぎます。保護者の画面(アプリか Web コンソール)に出ているコード(8 字、例 ABCD-EFGH)を入れてください。つないだら、保護者が設定を決めるまでアプリは使えません。'), style: caption)),
           if (widget.initialCode?.isNotEmpty == true) _fromLinkNote(context, 'つなぐ'),
           _pad(TextField(
             key: const ValueKey('childSafe.pair.code'),
@@ -272,8 +272,8 @@ class _ChildPairScreenState extends ConsumerState<ChildPairScreen> {
           // 読むと `rasq://child-safe/pair?code=…` でこの画面が開く。ほかの面はコードの入力と、リンクの貼り付け。
           _pad(Text(
             childSafeLinksOpenApp
-                ? '保護者の画面の QR は、この端末のカメラアプリで読むと、コードが入った状態でこの画面が開きます。リンク(rasq://child-safe/pair?code=…)を貼り付けても、つなげます。'
-                : 'この端末では QR を読めません。コードを入れるか、リンク(rasq://child-safe/pair?code=…)を貼り付けてください。',
+                ? rasqDetail(context, '保護者の画面の QR を、この端末のカメラアプリで読んでもつなげます。', '保護者の画面の QR は、この端末のカメラアプリで読むと、コードが入った状態でこの画面が開きます。リンク(rasq://child-safe/pair?code=…)を貼り付けても、つなげます。')
+                : rasqDetail(context, 'この端末では QR を読めません。コードを入れてください。', 'この端末では QR を読めません。コードを入れるか、リンク(rasq://child-safe/pair?code=…)を貼り付けてください。'),
             key: const ValueKey('childSafe.pair.qrHint'),
             style: caption,
           )),
@@ -314,7 +314,7 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
   Future<void> _login() async {
     final api = ref.read(childSafeApiProvider);
     final code = childSafeCodeFromInput(_code.text);
-    if (api == null) return setState(() => _error = 'RASQ Central の接続先が未設定です');
+    if (api == null) return setState(() => _error = 'RASQ サーバーの接続先が未設定です');
     if (code.isEmpty || _busy) return;
     setState(() {
       _busy = true;
@@ -393,7 +393,7 @@ class ChildSafePendingScreen extends ConsumerWidget {
                     style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant),
                     textAlign: TextAlign.center,
                   ),
-                  if (cs.offline) Text('いまは Central に届きません。', style: RasqTypography.caption.copyWith(color: scheme.error), textAlign: TextAlign.center),
+                  if (cs.offline) Text('いまはサーバーに届きません。', style: RasqTypography.caption.copyWith(color: scheme.error), textAlign: TextAlign.center),
                   const SizedBox(height: RasqSpacing.lg),
                   if (account != null) ...[
                     FilledButton(key: const ValueKey('childSafe.pending.refresh'), onPressed: () => ref.read(childSafeProvider.notifier).refresh(), child: const Text('更新')),
