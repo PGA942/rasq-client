@@ -115,7 +115,7 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
                       physics: const AlwaysScrollableScrollPhysics(),
                       itemCount: list.length,
                       separatorBuilder: (_, _) => const Divider(),
-                      itemBuilder: (_, i) => _EventCard(event: list[i]),
+                      itemBuilder: (_, i) => RelationalEventCard(event: list[i]),
                     ),
                   ),
           ),
@@ -320,8 +320,9 @@ class _TuningPanelState extends ConsumerState<_TuningPanel> {
 /// イベントタイル (D-037): GroupAvatar + 「◯◯+N人」+ **実在語の見出し** +
 /// 1 行要約(要約が無ければ ROOT 本文)。タップで**リレーショナルページ**へ
 /// 遷移する(以前のドロップダウン展開は廃止 — 1行/3行要約を分けるため)。
-class _EventCard extends ConsumerWidget {
-  const _EventCard({required this.event});
+/// 会話イベントの 1 カード(関連タブ、トレンドの「フォロー中の反応」D-364)。
+class RelationalEventCard extends ConsumerWidget {
+  const RelationalEventCard({super.key, required this.event});
   final ConversationEvent event;
 
   @override

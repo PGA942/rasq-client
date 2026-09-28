@@ -10,7 +10,11 @@ import '../home/timeline_providers.dart';
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
+import '../relational/relational_engine.dart';
+import '../relational/relational_providers.dart';
 import '../settings/settings_dsl.dart';
+import '../vc/astell_models.dart';
+import '../vc/astell_providers.dart';
 import 'tendency_profile.dart';
 import 'trend_analysis.dart';
 
@@ -115,4 +119,42 @@ final trendFrameTagsProvider = FutureProvider.autoDispose<List<TrendTag>>((ref) 
     debugPrint('nodeprog(trend.frame): $e');
     return tags;
   }
+});
+
+/// 「フォロー中の反応」(D-364): AsTell とリレーショナルタイムラインに**すでにある**もののうち、このワードの話題。
+/// - AsTell: フォロー中の人のルーム(タイトル / 要約 / ジャンルにワード)。
+/// - リレーショナル TL: ホームの会話イベント(タグ / 特徴語 / 本文にワード)を新しい順に 3 件。
+/// どちらも取れなければ空(フォロイーのタグ投稿は [trendFollowingPostsProvider] がそのまま出す)。
+typedef TrendFollowingActivity = ({List<AstellRoom> rooms, List<ConversationEvent> events});
+
+String _normTag(String tag) => tag.trim().replaceFirst(RegExp(r'^[#＃]'), '').toLowerCase();
+
+bool astellRoomMatchesTag(AstellRoom r, String tag) {
+  final t = _normTag(tag);
+  if (t.isEmpty) return false;
+  return r.title.toLowerCase().contains(t) || r.description.toLowerCase().contains(t) || r.genres.any((g) => _normTag(g) == t || g.toLowerCase().contains(t));
+}
+
+bool conversationMatchesTag(ConversationEvent e, String tag) {
+  final t = _normTag(tag);
+  if (t.isEmpty) return false;
+  return e.anchors.contains('#$t') || e.entities.contains(t) || e.posts.any((p) => p.body.toLowerCase().contains(t));
+}
+
+final trendFollowingActivityProvider = FutureProvider.autoDispose.family<TrendFollowingActivity, String>((ref, tag) async {
+  final events = [for (final e in ref.watch(conversationEventsProvider).value ?? const <ConversationEvent>[]) if (conversationMatchesTag(e, tag)) e]
+    ..sort((a, b) => b.lastActivityAt.compareTo(a.lastActivityAt));
+  var rooms = const <AstellRoom>[];
+  try {
+    final home = await ref.watch(astellHomeProvider.future);
+    final following = await ref.watch(astellFollowingProvider.future).catchError((_) => <String>{});
+    final seen = <String>{};
+    rooms = [
+      for (final r in [...home.following, ...home.trending, ...home.recommended])
+        if ((home.following.contains(r) || following.contains(r.ownerId)) && r.closedAt == null && astellRoomMatchesTag(r, tag) && seen.add(r.id)) r,
+    ];
+  } catch (_) {
+    // AsTell に繋がらない(未設定 / 未ログイン)なら出さない。
+  }
+  return (rooms: rooms.take(3).toList(), events: events.take(3).toList());
 });
