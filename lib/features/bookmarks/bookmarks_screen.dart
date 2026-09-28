@@ -20,6 +20,8 @@ import '../vc/astell_tile.dart';
 final favoritesProvider = FutureProvider.autoDispose<List<Post>>((ref) async {
   final s = ref.watch(currentSnsSessionProvider);
   if (s == null) return const [];
+  // ブックマークを持たない SNS(Bluesky など)は読まない (D-369): RASQ クリップだけを出す。
+  if (bookmarkActionOf(s) == null) return const [];
   final items = (await s.favorites(limit: 40)).items;
   // 一覧の投稿はブックマーク済み (D-365): 🔖 / アクションが「外す」になるように状態を入れておく
   // (Misskey の投稿はお気に入り済みかを返さない)。
@@ -86,7 +88,9 @@ class BookmarksScreen extends ConsumerWidget {
           final rooms = ref.watch(astellBookmarksProvider).value ?? const [];
           final scheme = Theme.of(context).colorScheme;
           if (posts.isEmpty && clips.isEmpty && rooms.isEmpty) {
-            return const RasqEmptyView(title: 'ブックマークはありません', hint: '投稿メニューの「お気に入り」「クリップに追加」、VC タイルのしおりで集められます');
+            return canRemove
+                ? const RasqEmptyView(title: 'ブックマークはありません', hint: '投稿の 🔖、クリップに追加、AsTell のしおりで集められます')
+                : const RasqEmptyView(key: ValueKey('bookmarks.noSns'), title: 'ブックマークはありません', hint: 'このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます');
           }
           return RefreshIndicator(
             onRefresh: () async {

@@ -7,6 +7,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'list_member_picker.dart';
+import 'topic_toc.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
@@ -522,7 +523,15 @@ class ListDetailScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     // 投稿タブの `↓` (D-338): もう一度押すと、このリスト TL の一時変更 FOW(探す + 一時的な構成)。
     final query = ref.watch(timelineSearchProvider.select((m) => m[kind.id]));
-    final tabs = [const RasqTabItem('ユーザー', chevron: false), RasqTabItem('投稿', dot: query != null || ref.watch(tlTemporaryConfigsProvider.select((m) => m.containsKey('tl.${kind.id}'))))];
+    final tabs = [
+      const RasqTabItem('ユーザー', chevron: false),
+      RasqTabItem('投稿', dot: query != null || ref.watch(tlTemporaryConfigsProvider.select((m) => m.containsKey('tl.${kind.id}')))),
+      // 話題の目次 (D-368): AsTell の目次と同じ形。
+      const RasqTabItem('話題の目次', chevron: false),
+    ];
+    final topicScope = 'list:$listId';
+    final loaded = tl.value?.posts ?? const <Post>[];
+    final topics = indexForListTimeline(loaded);
     // チャイルドセーフ (D-314): 止める例に近い中身のリストは開かない(一覧からも外している。リンクで来たとき)。
     final gate = ref.watch(childGateProvider);
     if (gate.hasDenyExamples) {
@@ -535,7 +544,7 @@ class ListDetailScreen extends ConsumerWidget {
       }
     }
     return DefaultTabController(
-      length: 2,
+      length: tabs.length,
       child: Scaffold(
         appBar: RasqPageHeader(
           title: info?.name ?? 'リスト',
@@ -543,7 +552,7 @@ class ListDetailScreen extends ConsumerWidget {
           // リスト TL のカスタマイズ (D-124): TL 系は全部同 UI。デフォルトは
           // このリストの取得ノード(tl.list)から始まる。
           actions: [RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'リストTL設定', onPressed: () => context.push(Routes.tlConfig('tl.list:$listId')))],
-          bottom: RasqTabs(items: tabs, onSelectedTabTap: (i, _) => showTimelineTempFow(ref, tabs: [('tl.${kind.id}', info?.name ?? 'リスト')], scope: 'tl.${kind.id}')),
+          bottom: RasqTabs(items: tabs, onSelectedTabTap: (i, _) => i == 1 ? showTimelineTempFow(ref, tabs: [('tl.${kind.id}', info?.name ?? 'リスト')], scope: 'tl.${kind.id}') : null),
         ),
         body: TabBarView(children: [
           members.when(
@@ -596,8 +605,9 @@ class ListDetailScreen extends ConsumerWidget {
             error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
             data: (s) => s.posts.isEmpty
                 ? const RasqEmptyView(title: '投稿はありません')
-                : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, timelineId: kind.id),
+                : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, timelineId: kind.id, scope: topicScope, entries: topics),
           ),
+          ListTopicsTab(scope: topicScope, entries: topics, posts: {for (final p in loaded) p.key: p}, postsTabIndex: 1),
         ]),
       ),
     );
@@ -616,9 +626,14 @@ class FeedTimelineScreen extends ConsumerWidget {
     final tl = ref.watch(timelineProvider(kind));
     final notifier = ref.read(timelineProvider(kind).notifier);
     final actions = ref.watch(currentSnsSessionProvider)?.actions ?? const <ActionDescriptor>[];
-    return Scaffold(
+    // 話題の目次 (D-368)。
+    final topicScope = 'feed:$uri';
+    final loaded = tl.value?.posts ?? const <Post>[];
+    final topics = indexForListTimeline(loaded);
+    return DefaultTabController(length: 2, child: Scaffold(
       appBar: RasqPageHeader(
         title: info?.name ?? 'フィード',
+        bottom: RasqTabs(items: const [RasqTabItem('投稿', chevron: false), RasqTabItem('話題の目次', chevron: false)]),
         onMore: () {},
         actions: [
           FeedSaveButton(uri: uri, size: 20),
@@ -635,21 +650,27 @@ class FeedTimelineScreen extends ConsumerWidget {
           RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'フィードTL設定', onPressed: () => context.push(Routes.tlConfig('tl.feed:$uri'))),
         ],
       ),
-      body: tl.when(
-        loading: () => const RasqLoading(),
-        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
-        data: (s) => s.posts.isEmpty ? const RasqEmptyView(title: '投稿はありません') : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier),
-      ),
-    );
+      body: TabBarView(children: [
+        tl.when(
+          loading: () => const RasqLoading(),
+          error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
+          data: (s) => s.posts.isEmpty ? const RasqEmptyView(title: '投稿はありません') : _ListTimelinePosts(posts: s.posts, actions: actions, notifier: notifier, scope: topicScope, entries: topics),
+        ),
+        ListTopicsTab(scope: topicScope, entries: topics, posts: {for (final p in loaded) p.key: p}, postsTabIndex: 0),
+      ]),
+    ));
   }
 }
 
-/// リストTL の投稿列 + 目次「いま話されていること」(D-036: リストは同じ
-/// メンバーが複数話題を並行するので、会話イベントをそのまま章にする)。
-/// 章タップで絞り込みトグル。単発投稿は 1 つのバケツにまとまる。
+/// リストTL の投稿列 (D-036 → D-368): 目次(会話イベントを章にしたもの)は「話題の目次」タブへ移し、
+/// ここは選んだ話題での絞り込みだけ([ListTopicFilterBar] で解除)。
 class _ListTimelinePosts extends ConsumerStatefulWidget {
-  const _ListTimelinePosts({required this.posts, required this.actions, required this.notifier, this.timelineId});
+  const _ListTimelinePosts({required this.posts, required this.actions, required this.notifier, this.timelineId, required this.scope, required this.entries});
   final List<Post> posts;
+
+  /// 話題の目次 (D-368): 選んだ話題の置き場の scope と、目次。
+  final String scope;
+  final List<IndexEntry> entries;
 
   /// 一時変更 FOW の ↑↓ を受ける TL の id (D-341)。null = 受けない(フィード)。
   final String? timelineId;
@@ -661,7 +682,6 @@ class _ListTimelinePosts extends ConsumerStatefulWidget {
 }
 
 class _ListTimelinePostsState extends ConsumerState<_ListTimelinePosts> {
-  String? _selected;
   final _scroll = ScrollController();
   final _jumper = TimelineJumpController();
 
@@ -674,22 +694,22 @@ class _ListTimelinePostsState extends ConsumerState<_ListTimelinePosts> {
 
   @override
   Widget build(BuildContext context) {
-    final entries = indexForListTimeline(widget.posts);
-    final selected = findIndexEntry(entries, _selected);
+    final selected = findIndexEntry(widget.entries, ref.watch(listTopicSelectionProvider(widget.scope)));
     final visible = selected == null ? widget.posts : [for (final p in widget.posts) if (selected.postKeys.contains(p.key)) p];
     // 探す語の ↑↓ (D-341): 目次で章を選んでいて、飛ぶ先が隠れていれば章の選択を外してから飛ぶ。
     ref.listen(timelineSearchNavProvider, (prev, next) {
       if (next == null || next.timelineId != widget.timelineId || next.seq == prev?.seq) return;
       handleTimelineSearchNav(ref, next, jumper: _jumper, scroll: _scroll, posts: widget.posts, beforeJump: (key) async {
         if (visible.any((p) => p.key == key)) return;
-        setState(() => _selected = null);
+        ref.read(listTopicSelectionProvider(widget.scope).notifier).select(null);
         await WidgetsBinding.instance.endOfFrame;
       });
     });
     return RefreshIndicator(
       onRefresh: widget.notifier.refresh,
       child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
-        VirtualIndexToc(entries: entries, selectedId: _selected, onSelect: (id) => setState(() => _selected = id), title: 'いま話されていること', showState: true),
+        // 話題の目次で選んだ話題だけにしているとき (D-368)。目次そのものは「話題の目次」タブ。
+        ListTopicFilterBar(scope: widget.scope, entry: selected),
         for (final p in visible)
           TimelineSearchRow(
             key: ValueKey('list.row.${p.key}'),

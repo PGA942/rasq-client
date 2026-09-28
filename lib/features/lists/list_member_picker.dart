@@ -87,7 +87,7 @@ class MemberCandidate {
 
   String get displayName => user?.displayName ?? rasq!.displayName;
   Uri? get avatarUrl => user != null ? user!.avatarUrl : rasq!.avatarUrl;
-  String get subtitle => user != null ? '@${user!.account.handle}' : 'RASQ @${rasq!.handle}';
+  String get subtitle => user != null ? '@${user!.account.handle} ・ ${user!.account.instance}' : 'RASQ @${rasq!.handle}';
 }
 
 /// RASQ アカウント → そのセッションの SNS で見えるユーザー。同じ SNS のアカウントを公開していなければ null と理由。
@@ -353,16 +353,21 @@ class _MemberChip extends StatelessWidget {
               if (busy) const Positioned.fill(child: Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2))),
               if (selected)
                 const Positioned(right: -2, bottom: -2, child: CircleAvatar(radius: 9, backgroundColor: RasqColors.link, child: Icon(Icons.check, size: 12, color: Colors.white))),
-              if (c.rasq != null && !selected)
-                Positioned(
-                  right: -2,
-                  bottom: -2,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                    decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(6)),
-                    child: Text('RASQ', style: RasqTypography.caption.copyWith(fontSize: 8, fontWeight: FontWeight.w700)),
+              // 左下にサービス / インスタンスのアイコン (D-369): SNS のユーザーはそのサーバーのアイコン、RASQ のユーザーは RASQ。
+              Positioned(
+                left: -3,
+                bottom: -3,
+                child: Container(
+                  key: ValueKey('lists.members.badge.${c.key}'),
+                  padding: const EdgeInsets.all(1.5),
+                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, shape: BoxShape.circle),
+                  child: ClipOval(
+                    child: c.user != null
+                        ? RasqSnsPill(account: c.user!.account, showLabel: false, dotSize: 16)
+                        : const RasqBrandIcon(size: 16, semanticsLabel: 'RASQ のユーザー'),
                   ),
                 ),
+              ),
             ]),
             const SizedBox(height: 2),
             SizedBox(width: RasqSizes.avatarXl + 8, child: Text(c.displayName, style: RasqTypography.caption, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center)),
