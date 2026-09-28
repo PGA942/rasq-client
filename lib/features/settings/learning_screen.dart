@@ -16,6 +16,7 @@ import '../../backend/rasq_consent.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_account_fow.dart';
 import '../learning/contribution.dart';
+import '../learning/relational_cloud.dart';
 import '../rai/rai_llm.dart';
 import 'settings_dsl.dart';
 
@@ -216,6 +217,7 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
                 RasqValueListTile(title: '受付', value: s.open ? '受付中' : 'まだ始まっていません'),
                 RasqValueListTile(title: '年齢の申告', value: s.ageBand == null ? '未申告' : RasqAgeBand.values.firstWhere((a) => a.wire == s.ageBand, orElse: () => RasqAgeBand.adult).label),
                 RasqValueListTile(title: '送ったデータ', value: '会話 ${s.contributions['relational'] ?? 0} 件 ・ RAi ${s.contributions['rai'] ?? 0} 件'),
+                if ((s.contributions['examples'] ?? 0) > 0) RasqValueListTile(key: const ValueKey('learning.examples'), title: 'クラウドの判定の例', value: '${s.contributions['examples']} 件(怪しいけど違う ${s.contributions['hardNegative'] ?? 0} 件)'),
                 if (RasqDeveloperMode.of(context)) RasqValueListTile(title: '投稿 / ラベル', value: '${s.posts} / ${s.labels}'),
                 RasqValueListTile(title: 'このデータを使ったモデル', value: s.models.isEmpty ? 'なし' : s.models.join('、')),
                 Padding(
@@ -316,6 +318,15 @@ class _ContributionKinds extends ConsumerWidget {
         onChanged: (v) => store.set('relational', v),
       ),
       RasqSwitchListTile(
+        key: const ValueKey('learning.kind.cloudRelational'),
+        title: 'クラウドでまとめる',
+        subtitle: '迷う会話のまとまりを、クラウドの RAi が判断します',
+        detail: 'D-367 / S-050。端末のエンジンがしきい値の近くで決めた結び付き(投稿 → 会話)を POST /me/relational/judge に送り、クラウドの LLM の判定で組み直す。'
+            '書き手が許可済みの組だけ。判定の例(怪しいけど違う = hard_negative、分けたけど同じ = hard_positive)は学習用に残り、やめると消える。',
+        value: ref.watch(settingsAreaProvider(contributionArea)).value?['cloudRelational'] != false,
+        onChanged: (v) => store.set('cloudRelational', v),
+      ),
+      RasqSwitchListTile(
         key: const ValueKey('learning.kind.rai'),
         title: 'RAi',
         subtitle: 'RAi への質問と答え',
@@ -350,6 +361,14 @@ class _ContributionDebug extends ConsumerWidget {
       RasqValueListTile(title: '集めているか', value: c.active ? 'はい' : 'いいえ(同意・受付・見守りを確認)'),
       RasqValueListTile(title: '送信待ち', value: '会話 ${c.pendingRelational} ・ RAi ${c.pendingRai}'),
       RasqValueListTile(title: 'この起動で送った', value: '会話 ${c.sentRelational} ・ RAi ${c.sentRai} ・ 見送り ${c.skipped}'),
+      Builder(builder: (_) {
+        final cloud = ref.watch(relationalCloudProvider);
+        return RasqValueListTile(
+          key: const ValueKey('learning.debug.cloud'),
+          title: 'クラウドでまとめる',
+          value: cloud.active ? '判定 ${cloud.decisions.length}(怪しいけど違う ${cloud.hardNegative} ・ 分けたけど同じ ${cloud.hardPositive} ・ 一致 ${cloud.agree})・ 待ち ${cloud.pending} ・ 見送り ${cloud.skipped}' : 'オフ',
+        );
+      }),
       RasqValueListTile(title: '端末のモデル', value: '${ref.read(raiLlmProvider).spec.codename} ・ ${llm.phase.name}'),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),

@@ -118,6 +118,19 @@ class LearningApi {
   }
 }
 
+extension RelationalCloudApi on LearningApi {
+  /// クラウド版のリレーショナル TL (D-367 / S-050): しきい値の近くの結び付きを判定し直す。
+  Future<({List<Map<String, Object?>> decisions, List<String> skipped})> relationalJudge(Map<String, Object?> body) async {
+    final res = await _clientOf(this).postJson('/me/relational/judge', body);
+    return (
+      decisions: [for (final d in (res['decisions'] as List? ?? const [])) if (d is Map) d.cast<String, Object?>()],
+      skipped: [for (final k in (res['skipped'] as List? ?? const [])) '$k'],
+    );
+  }
+}
+
+OrgateClient _clientOf(LearningApi api) => api._client;
+
 /// 送る 1 件の形([LearningApi.contribute] 用。実体は features/learning の PendingContribution)。
 abstract interface class PendingContributionLike {
   String get key;

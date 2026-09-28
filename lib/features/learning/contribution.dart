@@ -166,6 +166,16 @@ bool _isPublic(Post p) => !p.isDirect && (p.visibility == null || p.visibility =
 
 bool _isSelf(Post p) => p.author.account.instance == p.account.instance && (p.author.account.handle == p.account.handle);
 
+/// 投稿の書き手(判定に渡す形)。
+ContributionAuthor contributionAuthorOf(Post p) =>
+    ContributionAuthor(host: p.author.account.instance, id: p.author.id, handle: p.author.account.handle, bio: p.author.bio ?? '', viewer: p.account.key);
+
+/// 自分の投稿か(書き手の判定に回さない)。
+bool isOwnPost(Post p) => _isSelf(p);
+
+/// 公開の投稿か(ダイレクト / フォロワー限定は送らない)。
+bool isPublicPost(Post p) => _isPublic(p);
+
 /// 提供 1 件(送る前)。
 @immutable
 class PendingContribution implements PendingContributionLike {
@@ -446,47 +456,55 @@ class ContributionController extends Notifier<ContributionState> {
     }
   }
 
-  Future<void> _flushRelational(LearningApi api) async {
-    // 1. 判定がまだの書き手を集める。
+  /// 書き手の判定を揃える (D-363 / D-367): 判定がまだの人だけ、端末の下見 → Central の判定。判定の一覧を返す。
+  /// クラウド版のリレーショナル TL ([relationalCloudProvider]) からも使う。
+  Future<Map<String, AuthorVerdict>> ensureVerdicts(Iterable<ContributionAuthor> authors) async {
+    final api = _api;
+    if (api == null || !state.active) return state.verdicts;
     final unjudged = <String, ContributionAuthor>{};
-    for (final e in _relational.values) {
-      for (final p in e.posts) {
-        if (!_isPublic(p) || _isSelf(p)) continue;
-        final a = ContributionAuthor(host: p.author.account.instance, id: p.author.id, handle: p.author.account.handle, bio: p.author.bio ?? '', viewer: p.account.key);
-        if (state.verdicts[a.key]?.verdict case 'allow' || 'deny') continue;
-        unjudged.putIfAbsent(a.key, () => a);
-      }
+    for (final a in authors) {
+      if (state.verdicts[a.key]?.verdict case 'allow' || 'deny') continue;
+      unjudged.putIfAbsent(a.key, () => a);
     }
     final targets = unjudged.values.take(maxAuthorsPerRun).toList();
-    if (targets.isNotEmpty) {
-      // 自己紹介が TL に無い書き手はプロフィールを読む(数を絞る)。
-      final enriched = <ContributionAuthor>[];
-      for (final a in targets) {
-        enriched.add(await _enrich(a));
-      }
-      // 2. 端末の下見。
-      final pre = LearnabilityPrescreen(ref.read(raiLlmProvider));
-      final hints = <String, DeviceHint>{};
-      var checks = 0;
-      for (final a in enriched) {
-        final r = LearnabilityPrescreen.rule(a);
-        if (r != null) {
-          hints[a.key] = r;
-        } else if (checks++ < maxDeviceChecksPerRun) {
-          hints[a.key] = await pre.judge(a);
-        }
-      }
-      // 3. クラウドの判定。
-      final verdicts = await api.judge([for (final a in enriched) a.toJson(device: hints[a.key])]);
-      final next = {...state.verdicts};
-      for (final v in verdicts) {
-        next['${v['host']}|${v['id']}'] = AuthorVerdict.fromJson(v);
-      }
-      state = state.copyWith(verdicts: next);
-      final allow = verdicts.where((v) => v['verdict'] == 'allow').length;
-      final deny = verdicts.where((v) => v['verdict'] == 'deny').length;
-      _log('書き手 ${verdicts.length} 人を判定: 許可 $allow / 拒否 $deny / 保留 ${verdicts.length - allow - deny}(端末の下見 ${hints.length} 人)');
+    if (targets.isEmpty) return state.verdicts;
+    // 自己紹介が TL に無い書き手はプロフィールを読む(数を絞る)。
+    final enriched = <ContributionAuthor>[];
+    for (final a in targets) {
+      enriched.add(await _enrich(a));
     }
+    // 端末の下見。
+    final pre = LearnabilityPrescreen(ref.read(raiLlmProvider));
+    final hints = <String, DeviceHint>{};
+    var checks = 0;
+    for (final a in enriched) {
+      final r = LearnabilityPrescreen.rule(a);
+      if (r != null) {
+        hints[a.key] = r;
+      } else if (checks++ < maxDeviceChecksPerRun) {
+        hints[a.key] = await pre.judge(a);
+      }
+    }
+    // クラウドの判定。
+    final verdicts = await api.judge([for (final a in enriched) a.toJson(device: hints[a.key])]);
+    final next = {...state.verdicts};
+    for (final v in verdicts) {
+      next['${v['host']}|${v['id']}'] = AuthorVerdict.fromJson(v);
+    }
+    state = state.copyWith(verdicts: next);
+    final allow = verdicts.where((v) => v['verdict'] == 'allow').length;
+    final deny = verdicts.where((v) => v['verdict'] == 'deny').length;
+    _log('書き手 ${verdicts.length} 人を判定: 許可 $allow / 拒否 $deny / 保留 ${verdicts.length - allow - deny}(端末の下見 ${hints.length} 人)');
+    return next;
+  }
+
+  Future<void> _flushRelational(LearningApi api) async {
+    // 1〜3. 判定がまだの書き手を判定する。
+    await ensureVerdicts([
+      for (final e in _relational.values)
+        for (final p in e.posts)
+          if (_isPublic(p) && !_isSelf(p)) contributionAuthorOf(p),
+    ]);
     // 4. 許可の書き手だけで組み直して送る。判定待ちの書き手が残る束は次へ回す。
     final allowed = {for (final e in state.verdicts.entries) if (e.value.allowed) e.key};
     final items = <PendingContribution>[];

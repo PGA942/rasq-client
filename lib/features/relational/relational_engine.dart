@@ -464,8 +464,29 @@ class ConversationEvent {
 
 /// 会話イベントエンジン (D-027)。投稿を時系列に処理し、投稿ごとに
 /// 「どの会話への暗黙応答か / 新話題の開始か」を判定する。
+/// しきい値の近くで決まった結び付き (D-367): クラウドの判定に回す候補。
+@immutable
+class BorderlinePair {
+  const BorderlinePair({required this.post, required this.event, required this.score, required this.threshold, required this.joined});
+
+  final Post post;
+
+  /// 判定したときのイベントの中身(ROOT と直近の投稿)。
+  final List<Post> event;
+  final double score;
+  final double threshold;
+
+  /// 端末のエンジンが結び付けたか。
+  final bool joined;
+
+  /// [post] と、そのときのイベントの ROOT の組の鍵(判定の控えの鍵)。
+  String get key => relationalPairKey(post.key, event.first.key);
+}
+
+String relationalPairKey(String postKey, String rootKey) => '$postKey|$rootKey';
+
 class ConversationEngine {
-  ConversationEngine({this.settings = const RelationalSettings(), this.semantic, this.communityOf});
+  ConversationEngine({this.settings = const RelationalSettings(), this.semantic, this.communityOf, this.decisions = const {}, this.borderlineMargin = 0.12});
 
   final RelationalSettings settings;
 
@@ -475,6 +496,15 @@ class ConversationEngine {
   /// SigLIP EMA → Louvain の著者コミュニティ(D-024)。**事前分布**として
   /// ±の加点にだけ使い、束ねの可否を決めるフィルタにはしない。
   final Map<String, int>? communityOf;
+
+  /// クラウドの判定 (D-367): [relationalPairKey] → 同じ会話か。端末のしきい値より優先する。
+  final Map<String, bool> decisions;
+
+  /// しきい値 ± これ以内で決まった結び付きを [borderline] に控える。
+  final double borderlineMargin;
+
+  /// 直近の [buildAll] で、しきい値の近くで決まった結び付き(クラウドの判定がまだのものだけ)。
+  final List<BorderlinePair> borderline = [];
 
   final Map<String, Map<String, double>> _profiles = {};
 
@@ -563,6 +593,7 @@ class ConversationEngine {
   /// - 引用されたタイミングより**前**の投稿でも、話題が繋がれば時系列位置に
   ///   遡って挿入される
   List<ConversationEvent> buildAll({required List<Post> followeePosts, List<Post> guestPosts = const [], DateTime? now}) {
+    borderline.clear();
     final posts = [...followeePosts]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     final events = <ConversationEvent>[];
     final affinity = UserPairAffinity();
@@ -598,8 +629,19 @@ class ConversationEngine {
         }
       }
       final community = communityOf?[p.author.key];
-      if (best != null && bestScore >= thresholdFor(community)) {
-        best.add(p);
+      final threshold = thresholdFor(community);
+      var join = best != null && bestScore >= threshold;
+      if (best != null) {
+        // クラウドの判定があればそれに従う。無くてしきい値の近くなら控える (D-367)。
+        final decided = decisions[relationalPairKey(p.key, best.root.key)];
+        if (decided != null) {
+          join = decided;
+        } else if ((bestScore - threshold).abs() <= borderlineMargin) {
+          borderline.add(BorderlinePair(post: p, event: [best.root, ...best.posts.skip(1).toList().reversed.take(3).toList().reversed], score: bestScore, threshold: threshold, joined: join));
+        }
+      }
+      if (join) {
+        best!.add(p);
       } else {
         if (sawCandidate) (_rootScoreSamples[community] ??= []).add(bestScore);
         events.add(ConversationEvent.root(p));

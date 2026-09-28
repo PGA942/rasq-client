@@ -228,8 +228,10 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<void> removeFromList(String listId, String userId) async {}
   /// リストへの追加 / 新規作成 (D-223: RAi の list.edit / list.create)。
+  /// addToList の呼び出し(`listId:userId`、D-366)。
+  final List<String> listAdds = [];
   @override
-  Future<void> addToList(String listId, String userId) async {}
+  Future<void> addToList(String listId, String userId) async => listAdds.add('$listId:$userId');
   @override
   Future<UserListInfo> createList(String name) async {
     createdLists.add(name);

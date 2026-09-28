@@ -13,6 +13,18 @@ import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 /// 持たない SNS(Bluesky など)は null。
 ActionDescriptor? bookmarkActionOf(SnsSession? session) => session?.actions.where((a) => a.genreTag == 'Bookmark').firstOrNull;
 
+/// ブックマーク済みと分かっている投稿を、状態の取り直しで「未」に戻さない (D-365)。Misskey の投稿は
+/// お気に入り済みかを返さない(`notes/state` が別)ので、ブックマーク一覧で分かった「済み」を詳細で消していた
+/// (🔖 が外せず、押すと「もう入っています」になる)。外したときは [TimelineNotifier.perform] が直接書き換える。
+Map<ActionKey, ActionState> keepKnownBookmarks(ActionStateStore store, SnsSession session, Map<ActionKey, ActionState> batch) {
+  final ids = {for (final a in session.actions) if (a.genreTag == 'Bookmark') a.id};
+  if (ids.isEmpty) return batch;
+  return {
+    for (final e in batch.entries)
+      e.key: ids.contains(e.key.actionId) && !e.value.done && store.of(e.key.postKey, e.key.actionId).done ? e.value.copyWith(done: true) : e.value,
+  };
+}
+
 /// 投稿詳細のヘッダーのブックマーク (D-342)。
 /// **短押し** = その SNS 自身のブックマーク(クリップに入れない、単独のブックマーク)/ 解除。
 /// **長押し** = 追加先を選ぶ: その SNS のクリップ(Misskey のクリップなど、持つ SNS だけ)/ RASQ クリップ(SNS 横断)。

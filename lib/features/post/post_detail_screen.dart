@@ -37,11 +37,11 @@ final threadProvider = FutureProvider.autoDispose.family<Thread, ThreadKey>((ref
   final store = ref.read(actionStateProvider.notifier);
   // 投稿ごとのアイコン(リアクション済みの絵文字)も渡す (D-281)。宣言した (`iconPerPost`) アクションだけ。
   final perPost = {for (final a in s.actions) if (a.iconPerPost) a.id};
-  store.applyAll({
+  store.applyAll(keepKnownBookmarks(store, s, {
     for (final p in all)
       for (final e in (states[p.id] ?? const <String, ActionResult>{}).entries)
         (postKey: p.key, actionId: e.key): ActionState(done: e.value.done, count: e.value.count, iconUrl: perPost.contains(e.key) ? e.value.icon?.url : null, iconText: perPost.contains(e.key) ? e.value.icon?.text : null),
-  });
+  }));
   return t;
 });
 

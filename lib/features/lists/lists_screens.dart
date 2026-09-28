@@ -6,6 +6,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'list_member_picker.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
@@ -548,12 +549,33 @@ class ListDetailScreen extends ConsumerWidget {
           members.when(
             loading: () => const RasqLoading(),
             error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
-            data: (m) => m.isEmpty
-                ? const RasqEmptyView(title: 'ユーザーはいません')
-                : ListView.separated(
-                    itemCount: m.length,
-                    separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (context, i) => RasqUserRow(
+            data: (m) {
+              // メンバーを追加 (D-366): SNS / RASQ のフォロー中と検索から選ぶ。
+              final add = Padding(
+                padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xs),
+                child: OutlinedButton.icon(
+                  key: const ValueKey('lists.members.add'),
+                  icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+                  label: const Text('メンバーを追加'),
+                  onPressed: () async {
+                    final session = ref.read(currentSnsSessionProvider);
+                    if (session == null) return;
+                    final n = await showListMemberPicker(ref, session: session, target: SnsListMemberTarget(session, listId, {for (final u in m) u.id}));
+                    if (n == null) return;
+                    ref.invalidate(listMembersProvider(listId));
+                    ref.invalidate(listsProvider);
+                    ref.read(rootMessengerKeyProvider).currentState?..clearSnackBars()..showSnackBar(SnackBar(content: Text('$n 人を追加しました')));
+                  },
+                ),
+              );
+              if (m.isEmpty) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [add, const Expanded(child: RasqEmptyView(title: 'ユーザーはいません'))]);
+              return ListView.separated(
+                    itemCount: m.length + 1,
+                    separatorBuilder: (_, i) => i == 0 ? const SizedBox.shrink() : const Divider(),
+                    itemBuilder: (context, j) {
+                      if (j == 0) return add;
+                      final i = j - 1;
+                      return RasqUserRow(
                       user: m[i],
                       onTap: () => context.pushUser(m[i]),
                       trailing: TextButton(
@@ -564,8 +586,10 @@ class ListDetailScreen extends ConsumerWidget {
                         child: Text('外す', style: TextStyle(color: scheme.error)),
                       ),
                       onMore: () {},
-                    ),
-                  ),
+                    );
+                    },
+                  );
+            },
           ),
           tl.when(
             loading: () => const RasqLoading(),
