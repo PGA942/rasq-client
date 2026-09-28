@@ -121,7 +121,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             loading: () => const [RasqLoading()],
             error: (e, _) => [RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), compact: true, onRetry: () => ref.invalidate(trendFrameTagsProvider), retryLabel: '再読み込み')],
             data: (list) => list.isEmpty
-                ? const [RasqEmptyView(title: 'トレンドはありません', hint: 'サーバーサイドのトレンドプロバイダーは準備中')]
+                ? const [RasqEmptyView(title: 'トレンドはありません', hint: 'トレンドの取得は準備中です')]
                 : [for (final t in list.take(8)) _TrendTile(trend: t, onTap: () => context.pushTrend(t.tag))],
           ),
           // トレンドプラグインのサジェスト (D-167、スロット `trend.suggest`)。
@@ -216,7 +216,7 @@ class _TrendSuggestions extends ConsumerWidget {
         return Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('サジェスト(${items.first.plugin.manifest.name})', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text('検索の候補(${items.first.plugin.manifest.name})', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: RasqSpacing.xs),
             Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
               for (final it in items) ActionChip(label: Text('#${it.text}'), tooltip: it.reason, onPressed: () => context.pushTrend(it.text)),

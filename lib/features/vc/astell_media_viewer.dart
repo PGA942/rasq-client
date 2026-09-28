@@ -56,12 +56,12 @@ class AstellMediaViewer extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs),
             child: Row(children: [
-              RasqIconButton(icon: Icons.extension_outlined, color: Colors.white54, tooltip: '全画面表示プラグイン(ストア統合後)', onPressed: null),
+              RasqIconButton(icon: Icons.extension_outlined, color: Colors.white54, tooltip: '全画面表示プラグイン(準備中)', onPressed: null),
               const Spacer(),
               Text('${share.authorName} が共有', style: RasqTypography.caption.copyWith(color: Colors.white70)),
               const Spacer(),
-              RasqIconButton(icon: Icons.download_outlined, color: Colors.white, tooltip: '保存', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存は M5 後段で入ります')))),
-              RasqIconButton(icon: Icons.ios_share, color: Colors.white, tooltip: '共有', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('共有は M5 後段で入ります')))),
+              RasqIconButton(icon: Icons.download_outlined, color: Colors.white, tooltip: '保存', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存は準備中です')))),
+              RasqIconButton(icon: Icons.ios_share, color: Colors.white, tooltip: '共有', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('共有は準備中です')))),
             ]),
           ),
         ),

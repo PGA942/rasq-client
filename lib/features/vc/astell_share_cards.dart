@@ -105,7 +105,7 @@ class AstellShareCards extends StatelessWidget {
         if (count == 0)
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-            child: Text('チャットの 📌 でピン留めしたものがここに並びます(自動表示の種類は歯車で)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            child: Text('チャットで 📌 したものがここに並びます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           )
         else if (!cramped)
           SizedBox(

@@ -122,7 +122,7 @@ class AstellRoom {
   UserSummary get owner => _rasqUser(id: ownerId, handle: ownerHandle, displayName: ownerDisplayName, avatarUrl: ownerAvatarUrl);
 
   /// タイル/プレビューに出す要約文(ワイヤーフレームの空表示つき)。
-  String get summaryText => description.isEmpty ? 'デスクリプションが提供されていません。' : description;
+  String get summaryText => description.isEmpty ? '説明はありません。' : description;
 
   factory AstellRoom.fromJson(Map<String, Object?> j) => AstellRoom(
         id: j['id'] as String? ?? '',

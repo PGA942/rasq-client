@@ -846,7 +846,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(llm.systems.last, isNot(contains('web.search(')));
       expect(llm.released, 0);
-      expect(c.read(raiProvider).bubble, contains('web 検索は第一期では無効です'));
+      expect(c.read(raiProvider).bubble, contains('web 検索はまだ使えません'));
     });
 
     testWidgets('web.search (D-228): 有効(鍵つき)なら一覧に出て、検索して注入 → 答え直す', (tester) async {
