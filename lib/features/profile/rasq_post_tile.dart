@@ -278,7 +278,7 @@ class RasqPostTileView extends ConsumerWidget {
     if (!context.mounted) return;
     final packs = ref.read(stickerPacksProvider);
     if (packs.isEmpty) {
-      final go = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.noPacks', title: 'アセットパックがありません', message: 'キューは、ストアでインストール(購入)したアセットパックの絵でのリアクションです。', confirmText: 'ストアで探す', cancelText: '閉じる');
+      final go = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.noPacks', title: 'アセットパックがありません', message: 'キューは、ストアで入れたアセットパックの絵でするリアクションです。', confirmText: 'ストアで探す', cancelText: '閉じる');
       if (go && context.mounted) context.push(Routes.store);
       return;
     }

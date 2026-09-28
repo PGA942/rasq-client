@@ -485,7 +485,7 @@ class _BodyState extends ConsumerState<_Body> {
       if (_excluded > 0)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
-          child: Text('公開範囲が フォロワーのみ / 指名 の投稿 $_excluded 件は出していません。', key: const ValueKey('postImage.excluded'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text('公開範囲を限った投稿 $_excluded 件は出していません。', key: const ValueKey('postImage.excluded'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ),
       // 動く / 鳴る投稿を選んだとき (D-260): 動画にするか、その瞬間の静止画にするか。
       if (widget.allowVideo && widget.confirmVideo == null && _selected != null && postMotionOf(_selected!) != PostMotion.none)
@@ -544,7 +544,7 @@ class _BodyState extends ConsumerState<_Body> {
 
   Widget _list(ColorScheme scheme, List<Post> shown) {
     if (_error != null) return _message(scheme, _error!);
-    if (shown.isEmpty) return _loading ? const RasqLoading() : _message(scheme, _posts.isEmpty ? '投稿はありません' : '当てはまる投稿はありません(絞り込みを変えるか、「もっと読む」で続きを読み込めます)');
+    if (shown.isEmpty) return _loading ? const RasqLoading() : _message(scheme, _posts.isEmpty ? '投稿はありません' : '当てはまる投稿はありません(「もっと読む」で続きも探せます)');
     return ListView.separated(
       padding: const EdgeInsets.only(bottom: RasqSpacing.lg),
       itemCount: shown.length + 1,

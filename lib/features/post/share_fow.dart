@@ -242,7 +242,7 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
       if (plugins.isEmpty && astell == null)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: RasqSpacing.sm),
-          child: Text('post.share を宣言したプラグイン(と参加中の AsTell)がここに並びます', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text(rasqDetail(context, '共有に対応したプラグインがここに並びます', 'post.share を宣言したプラグイン(と参加中の AsTell)がここに並びます'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ),
       for (final p in plugins)
         RasqListTile(

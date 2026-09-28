@@ -11,7 +11,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
-import '../../backend/rasq_account_page_api.dart';
+import '../../backend/rasq_account_page_api.dart' hide RasqNotice;
 import 'rasq_account_page_screen.dart' show RasqSnsTileChip;
 import 'rasq_ownership_screens.dart' show rasqVerifiableKinds;
 import '../../shell/headers.dart';
@@ -284,7 +284,9 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                 _Labeled(
                   'アカウントページに出す SNS アカウント',
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('「自動」は、鍵アカウントと、直近の投稿の公開範囲がフォロワーのみに寄っているアカウントを出しません。薄いタイルは、いまは出ていないものです。変更はすぐ反映されます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+                    Text(
+                        rasqDetail(context, '「自動」では、鍵アカウントなどは出しません。薄いタイルは、いま出ていないものです。', '「自動」は、鍵アカウントと、直近の投稿の公開範囲がフォロワーのみに寄っているアカウントを出しません。薄いタイルは、いまは出ていないものです。変更はすぐ反映されます。'),
+                        style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                     const SizedBox(height: RasqSpacing.sm),
                     for (final l in _snsLinks!)
                       Padding(
@@ -328,7 +330,8 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                 RasqSwitchListTile(
                   key: const ValueKey('rasqProfile.showOnSns'),
                   title: 'SNS のプロフィールにも、つないだアカウントを出す',
-                  subtitle: 'アプリで誰かがあなたの SNS のプロフィールを見たとき、この RASQ アカウントと、アカウントページに出しているほかのアカウントを出します。自己紹介に書いてあるものは重ねて出しません。変更はすぐ反映されます。',
+                  subtitle: 'RASQ で誰かがあなたの SNS のプロフィールを見たとき、つないだアカウントを出します。',
+                  detail: 'アプリで誰かがあなたの SNS のプロフィールを見たとき、この RASQ アカウントと、アカウントページに出しているほかのアカウントを出します。自己紹介に書いてあるものは重ねて出しません。変更はすぐ反映されます。',
                   value: (account ?? a).showLinksOnSnsProfiles,
                   onChanged: _setShowOnSns,
                 ),
@@ -339,7 +342,7 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                 RasqListTile(
                   key: const ValueKey('rasqProfile.keybase'),
                   title: (account ?? a).keybase == null ? 'Keybase をつなぐ' : 'Keybase: @${(account ?? a).keybase!.username}',
-                  subtitle: (account ?? a).keybase == null ? 'Keybase のアカウントで署名して、この RASQ アカウントとつなぎます。アカウントページに出ます' : '確認済み。アカウントページに出ます',
+                  subtitle: (account ?? a).keybase == null ? 'Keybase で本人確認して、アカウントページに出します' : '確認済み。アカウントページに出ます',
                   leading: Icon((account ?? a).keybase == null ? Icons.key_outlined : Icons.verified, color: (account ?? a).keybase == null ? null : scheme.primary),
                   divider: false,
                   onTap: () async {
@@ -348,9 +351,9 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                   },
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
-                child: Text('プロフィールは、RASQ の公開ページとストアのレビューに出ます。画像はサーバーで縮めて保存し直します(位置情報などは残りません)。メールアドレスとパスワードは「セキュリティ」から。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              const RasqNotice(
+                text: 'プロフィールは、公開ページとストアのレビューに出ます。メールとパスワードは「セキュリティ」から。',
+                detail: 'プロフィールは、RASQ の公開ページとストアのレビューに出ます。画像はサーバーで縮めて保存し直します(位置情報などは残りません)。メールアドレスとパスワードは「セキュリティ」から。',
               ),
               if (_busy) const RasqLoading(),
             ]),
@@ -449,7 +452,7 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
       try {
         await api.withdrawToken(widget.accountKey);
         if (mounted) setState(() => _status = const RasqVaultStatus(hasToken: false));
-        widget.onMessage('預けたトークンと、取ってきた投稿を消しました');
+        widget.onMessage('預けた鍵と、取ってきた投稿を消しました');
       } on OrgateException catch (e) {
         widget.onMessage('消せませんでした: ${e.message}');
       } finally {
@@ -462,13 +465,13 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
     if (session == null || session.token.isEmpty) return widget.onMessage('この端末に、そのアカウントのログインがありません');
     final ok = await ref.read(overlayManagerProvider).showAlert(
           id: 'rasqProfile.snsPosts.consent',
-          title: 'アクセストークンを RASQ に預けます',
-          message: '${session.account} の投稿をアカウントページに出すために、この SNS の**アクセストークンを RASQ Central に預けます**。\n\n'
-              '・Central は、あなたの**公開 / ホームの投稿を読む**ためだけに使います(投稿・フォローなどの操作はしません)。\n'
+          title: 'ログインの鍵を RASQ に預けます',
+          message: '${session.account} の投稿をアカウントページに出すために、この SNS の**ログインの鍵(アクセストークン)を RASQ のサーバーに預けます**。\n\n'
+              '・RASQ は、あなたの**公開 / ホームの投稿を読む**ためだけに使います(投稿・フォローなどの操作はしません)。\n'
               '・フォロワー限定 / 指名 / ローカルのみの投稿は、保存しません。\n'
-              '・トークンは暗号化して保存し、アプリにも他の人にも返しません。\n'
-              '・このスイッチを切ると、預けたトークンと取ってきた投稿は、すぐに消えます。\n\n'
-              'トークンは、そのアカウントを操作できる鍵です。心配なときは、預けたあとでも SNS 側の設定からそのトークンを無効にできます。',
+              '・鍵は暗号化して保存し、アプリにも他の人にも返しません。\n'
+              '・このスイッチを切ると、預けた鍵と取ってきた投稿は、すぐに消えます。\n\n'
+              'この鍵があれば、そのアカウントを操作できます。心配なときは、預けたあとでも SNS 側の設定からこの鍵(トークン)を無効にできます。',
           confirmText: '同意して預ける',
           cancelText: 'やめる',
         );
@@ -494,7 +497,7 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
       title: '投稿もアカウントページに出す',
       subtitle: st.hasToken
           ? (st.lastError != null ? '取得に失敗しています: ${st.lastError}' : '${st.postCount} 件(公開 / ホームの投稿。30 分ごとに更新)')
-          : 'SNS のアクセストークンを RASQ に預けます(入れるときに確認が出ます)',
+          : 'SNS のログインの鍵を RASQ に預けます(入れるときに確認が出ます)',
       value: st.hasToken,
       onChanged: _busy ? null : _set,
     );

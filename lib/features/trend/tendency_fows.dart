@@ -24,7 +24,6 @@ Future<void> showTrendProfileSheet(BuildContext context, WidgetRef ref) async {
     cancelText: '閉じる',
     builder: (ctx) => Consumer(builder: (ctx, ref, _) {
       final profile = ref.watch(tendencyProfileProvider).value ?? const TendencyProfile();
-      final scheme = Theme.of(ctx).colorScheme;
       return ListView(shrinkWrap: true, children: [
         _label(ctx, '好きなジャンル/方向性${profile.snsDefault ? '(SNS 側の設定に任せる)' : profile.autoGenre ? '(アクションから自動抽出)' : ''}'),
         Padding(
@@ -37,25 +36,27 @@ Future<void> showTrendProfileSheet(BuildContext context, WidgetRef ref) async {
         const SizedBox(height: RasqSpacing.xs),
         RasqWarningListTile(title: 'トレンドの指向性/刺激性', subtitle: '指向性 ${_dirLabel(profile.directionality)} ・ 刺激性 ${_stimLabel(profile)}', onTap: () => openTendencyFow(ctx, ref)),
         // 設定ページへ (D-238): トレンドプラグインの有効 / 無効、キャッシュネットワークの状態。
-        RasqListTile(title: 'トレンドプラグインの設定', subtitle: '検索ホームの候補チップ(trend.suggest)', onTap: () {
+        RasqListTile(title: 'トレンドプラグインの設定', subtitle: '検索の候補チップ', detail: '検索ホームの候補チップ(trend.suggest)', onTap: () {
           manager.close('trend.profile');
           ref.read(routerProvider).push('/settings/dsl/plugins.trend');
         }),
-        RasqListTile(title: 'キャッシュネットワークの設定', subtitle: '未提供(第二期)', onTap: () {
+        RasqListTile(title: 'キャッシュネットワークの設定', subtitle: '準備中', detail: '未提供(第二期)', onTap: () {
           manager.close('trend.profile');
           ref.read(routerProvider).push('/settings/dsl/trend.cdn');
         }),
         RasqListTile(
           title: 'アルゴリズム(ノード)を編集',
-          subtitle: 'トレンドの取得・並べ替えの鎖(ml.tendency ノードでこのプロファイルを使えます)',
+          subtitle: 'トレンドの集め方・並べ方を編集します',
+          detail: 'トレンドの取得・並べ替えの鎖(ml.tendency ノードでこのプロファイルを使えます)',
           onTap: () {
             manager.close('trend.profile');
             context.push(Routes.tlConfig('trend'));
           },
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
-          child: Text('このプロファイルは storage.safe(trend.profile)に保存され、おすすめ / トレンド / 関連 TL の既定と、ノードエディタの「指向性/刺激性」ノードが共通で読みます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        const RasqCaption(
+          'この設定は、おすすめ / トレンド / 関連 TL で共通です。',
+          detail: 'このプロファイルは storage.safe(trend.profile)に保存され、おすすめ / トレンド / 関連 TL の既定と、ノードエディタの「指向性/刺激性」ノードが共通で読みます。',
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
         ),
       ]);
     }),
@@ -90,7 +91,8 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
         const RasqNotice.warning(text: 'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。', margin: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0)),
         RasqSliderListTile(
           title: 'トレンドの指向性',
-          subtitle: '好きなジャンル/方向性への近さのしきい値(狭い ⇄ 広い)。狭いほど外れた投稿を落とします。',
+          subtitle: '狭いほど、好きなジャンルから外れた投稿を出しません。',
+          detail: '好きなジャンル/方向性への近さのしきい値(狭い ⇄ 広い)。狭いほど外れた投稿を落とします。',
           value: draft.directionality,
           min: 0,
           max: 1,
@@ -116,10 +118,11 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
           ]),
         ),
         Align(alignment: Alignment.centerRight, child: Padding(padding: const EdgeInsets.only(right: RasqSpacing.sm), child: TextButton(onPressed: () => setSheet(() => draft = draft.copyWith(stimulus: const {})), child: const Text('刺激性をリセット')))),
-        RasqSwitchListTile(title: '端末側で適用する', subtitle: 'オフにすると TL の既定適用を止めます(ノードで明示した分は効きます)', value: draft.enabled, onChanged: (v) => setSheet(() => draft = draft.copyWith(enabled: v))),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page),
-          child: Text('刺激性は語彙ルールで推定しています(emotion8 / GRU の端末推論は ml.infer 配線後に差し替え)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        RasqSwitchListTile(title: '端末側で適用する', subtitle: 'オフにすると、タイムラインへの自動の適用を止めます', detail: 'オフにすると TL の既定適用を止めます(ノードで明示した分は効きます)', value: draft.enabled, onChanged: (v) => setSheet(() => draft = draft.copyWith(enabled: v))),
+        const RasqCaption(
+          '刺激性は、いまは言葉の傾向から推定しています。',
+          detail: '刺激性は語彙ルールで推定しています(emotion8 / GRU の端末推論は ml.infer 配線後に差し替え)。',
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page),
         ),
       ]);
     }),
@@ -268,7 +271,11 @@ Future<TendencyProfile?> openGenrePickFow(BuildContext context, WidgetRef ref, {
     sources: sources,
     initial: base.examples,
     perPage: perPage,
-    intro: '最近のアクションを類似した話題でまとめ、話題性の強いものから $perPage 件ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。',
+    intro: rasqDetail(
+      context,
+      '最近のアクションを話題ごとに出しています。カードを選んで「好き」/「好きではない」へ(右/左スワイプでも)。',
+      '最近のアクションを類似した話題でまとめ、話題性の強いものから $perPage 件ずつ出しています(上のチップでプラグイン / クリップ / リストからも)。カードをタップして選び、候補のジャンルを選んで下の「好き」/「好きではない」(右/左スワイプでも)。',
+    ),
   );
   return decisions == null ? null : applyTrendDecisions(base, decisions);
 }

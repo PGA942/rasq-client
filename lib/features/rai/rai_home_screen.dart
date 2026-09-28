@@ -309,7 +309,7 @@ class RaiSidebar extends ConsumerWidget {
             RasqListTile(
               key: const ValueKey('rai.sidebar.macros'),
               title: 'マクロ',
-              subtitle: '第二期(まだ開けません)',
+              subtitle: '準備中',
               leading: Icon(Icons.auto_awesome_outlined, size: 20, color: scheme.onSurfaceVariant),
               chevron: false,
               enabled: false,

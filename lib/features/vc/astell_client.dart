@@ -779,7 +779,7 @@ class HttpAstellClient implements AstellClient {
   @override
   Future<AstellConnection> connect(String roomId) async {
     final t = token();
-    if (t == null) throw StateError('RASQ アカウントのトークンがありません');
+    if (t == null) throw StateError('RASQ アカウントにログインしてください');
     // Bearer はクエリで渡す(API.md §3)。http → ws。
     final url = baseUrl.replace(
       scheme: baseUrl.scheme == 'https' ? 'wss' : 'ws',

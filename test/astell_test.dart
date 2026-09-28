@@ -137,7 +137,7 @@ void main() {
       });
       expect(r.owner.account.handle, 'douglas');
       expect(r.owner.presence, UserPresence.none, reason: 'LIVE はバンドル側が描く(アバターの LIVE 帯と二重にしない)');
-      expect(r.summaryText, 'デスクリプションが提供されていません。');
+      expect(r.summaryText, '説明はありません。');
       expect(r.autoGenre, isFalse);
       expect(r.isOpen, isTrue);
       final p = AstellPeer.fromJson({'peerId': 'p', 'accountId': 'a', 'handle': 'h', 'displayName': 'H'});
@@ -380,7 +380,7 @@ void main() {
     expect(find.textContaining('#打上会'), findsWidgets);
     expect(find.text('見てみる'), findsWidgets);
     // 要約なしのタイルは空表示、LIVE のタイルにはバッジ。
-    expect(find.text('デスクリプションが提供されていません。'), findsWidgets);
+    expect(find.text('説明はありません。'), findsWidgets);
     expect(find.text('LIVE'), findsWidgets);
     await tester.scrollUntilVisible(find.text('フォロー中のユーザーの VC はありません'), 200, scrollable: find.descendant(of: find.byType(VcScreen), matching: find.byType(Scrollable)).first);
     await tester.pumpAndSettle();
@@ -666,7 +666,7 @@ void main() {
     // 読み上げの段はシートの下(遅延 ListView)なのでスクロールして見る。
     await tester.scrollUntilVisible(find.text('女性 1(日本語)'), 80, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
     await tester.pumpAndSettle();
-    expect(find.textContaining('CosyVoice2-0.5B'), findsOneWidget);
+    expect(find.textContaining('CosyVoice2-0.5B'), findsNothing); // モデル名は開発者モードのときだけ (D-362)。
     expect(find.text('女性 1(日本語)'), findsOneWidget);
     // 自動表示の段は上(保留音の段 D-327 のぶん遠くなったので、戻ってから)。
     await tester.scrollUntilVisible(find.widgetWithText(RasqSwitchListTile, 'テキスト'), -80, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
@@ -779,7 +779,7 @@ void main() {
     await tester.tap(find.descendant(of: douglasRow, matching: find.byTooltip('メンバーの操作')));
     await tester.pumpAndSettle();
     expect(find.text('ブロック解除'), findsOneWidget);
-    expect(find.text('発信傾向を見る(ダミー判定)'), findsOneWidget);
+    expect(find.text('発信傾向を見る(試験中)'), findsOneWidget);
     await tester.tap(find.text('ブロック解除'));
     await tester.pumpAndSettle();
     expect(container.read(astellBlocksProvider).value, isEmpty);
@@ -908,18 +908,18 @@ void main() {
     await tester.tap(find.text('モデレーターだけ'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.room.sharePolicy, 'moderators');
-    await tester.scrollUntilVisible(find.text('モデレーター(1)— 付与はメンバー行の「…」から'), 80, scrollable: sheet());
+    await tester.scrollUntilVisible(find.text('モデレーター(1)— メンバーの「…」から追加'), 80, scrollable: sheet());
     await tester.pumpAndSettle();
-    expect(find.text('モデレーター(1)— 付与はメンバー行の「…」から'), findsOneWidget);
+    expect(find.text('モデレーター(1)— メンバーの「…」から追加'), findsOneWidget);
     await tester.scrollUntilVisible(find.byTooltip('モデレーターを外す'), 80, scrollable: sheet());
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('モデレーターを外す'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.room.moderators, isEmpty);
     // 発信傾向フィルター(ダミー判定)。
-    await tester.scrollUntilVisible(find.widgetWithText(RasqSwitchListTile, '発信傾向で入室を絞る(ダミー判定)'), 80, scrollable: sheet());
+    await tester.scrollUntilVisible(find.widgetWithText(RasqSwitchListTile, '荒らしの入室を断る(試験中)'), 80, scrollable: sheet());
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(RasqSwitchListTile, '発信傾向で入室を絞る(ダミー判定)'));
+    await tester.tap(find.widgetWithText(RasqSwitchListTile, '荒らしの入室を断る(試験中)'));
     await tester.pumpAndSettle();
     expect(container.read(astellSessionProvider)!.room.tendencyFilter, isTrue);
     // ホストの配信 (D-317): カメラで配信 → hostStream が立ち「配信を止める」に → 止めると消える。

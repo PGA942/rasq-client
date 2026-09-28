@@ -1149,7 +1149,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       if (s.pluginId == rasqLinkPluginId) {
         try {
           final api = ref.read(rasqAccountPageApiProvider);
-          if (api == null) throw StateError('RASQ Central の接続先が未設定です');
+          if (api == null) throw StateError('RASQ のサーバーが設定されていません');
           if (text.length > rasqPostMaxChars || _files.length > rasqPostMaxImages || (base.poll?.choices.length ?? 0) > rasqPostMaxPollChoices) throw StateError('RASQ の上限を超えています');
           await api.createPost(
             text,
@@ -1396,7 +1396,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         widget.onClose?.call();
       }
     } on OrgateException catch (e) {
-      if (mounted) setState(() => _error = e.code.code == '409' && _rasqReply ? 'RASQ の返信は 100 件までです。古い返信を消してください' : e.code.code == '409' ? 'RASQ への投稿は 3 件までです。アカウントページで古い投稿を消してから投稿してください' : 'RASQ に投稿できませんでした: ${e.message}');
+      if (mounted) setState(() => _error = e.code.code == '409' && _rasqReply ? 'RASQ の返信は 100 件までです。古い返信を消してください' : e.code.code == '409' ? 'RASQ への投稿は 3 件までです。古い投稿を消してください' : 'RASQ に投稿できませんでした: ${e.message}');
     } finally {
       if (mounted) {
         setState(() {
