@@ -17,6 +17,7 @@ class FakeRaiLlm implements RaiLlm {
   final List<int?> maxTokensLog = [];
   int released = 0;
   int installs = 0;
+  int warmUps = 0;
 
   @override
   RaiLlmStatus get current => _current;
@@ -33,6 +34,8 @@ class FakeRaiLlm implements RaiLlm {
 
   @override
   Future<void> refresh() async {}
+  @override
+  Future<void> warmUp() async => warmUps++;
   @override
   Future<void> select(RaiModelSpec spec) async {
     _spec = spec;
