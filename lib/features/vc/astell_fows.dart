@@ -119,7 +119,10 @@ class AstellHostRow extends StatelessWidget {
 /// 参加メンバー行: アバター(マイク/スピーカーのバッジ)+ 名前、3 人まで + 「他N人」。
 /// 画面共有中のピアは**マイク表示の左に画面共有枠**(D-146)。タップで共有枠に表示。
 class AstellMembersRow extends StatelessWidget {
-  const AstellMembersRow({super.key, required this.peers, this.totalCount, this.viewingPeerId, this.onViewScreen});
+  const AstellMembersRow({super.key, required this.peers, this.totalCount, this.viewingPeerId, this.onViewScreen, this.hostOnly = false});
+
+  /// ホストはいる(参加メンバー = ホスト以外が 0 人のとき「ホストだけ」と出す、REC-04)。
+  final bool hostOnly;
   final List<AstellPeer> peers;
   final int? totalCount;
   final String? viewingPeerId;
@@ -132,7 +135,9 @@ class AstellMembersRow extends StatelessWidget {
     final total = totalCount ?? peers.length;
     final rest = total - shown.length;
     if (peers.isEmpty) {
-      return Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('まだ誰もいません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)));
+      // 顔ぶれが取れていなくても人数が分かれば出す(カードの人数と食い違わないように、REC-04)。
+      final text = total > 0 ? '$total 人が参加しています' : (hostOnly ? 'ホストのほかには、まだ誰もいません' : 'まだ誰もいません');
+      return Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text(text, key: const ValueKey('astell.members.empty'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)));
     }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs),
@@ -278,6 +283,50 @@ Future<void> _notYet(BuildContext context, String what) async {
 
 // ── 参加 FOW ──────────────────────────────────────────────────────
 
+/// 参加前 / 作成前の歯車 (REC-05、2026-09-28 録画: 「VC の設定 は今後の対応です」): ルームに入らなくても変えられる、
+/// この端末の設定(共有欄の自動表示・表示の形・自動再生・保留音・下段のボタンの並び)。ルームの中の歯車の端末側の節と同じもの。
+Future<void> showAstellDevicePreferences(BuildContext context) async {
+  final container = ProviderScope.containerOf(context);
+  final column = fowColumnOf(context);
+  await container.read(overlayManagerProvider).showBottomSheet<void>(
+        id: 'astell.device.settings',
+        title: 'AsTell の設定(この端末)',
+        builder: (ctx) => Consumer(builder: (ctx, ref, _) {
+          final auto = ref.watch(astellAutoShareProvider);
+          final store = ref.read(settingsAreaProvider(astellSettingsArea).notifier);
+          final scheme = Theme.of(ctx).colorScheme;
+          return ListView(key: const ValueKey('astell.device.settings'), shrinkWrap: true, children: [
+            RasqListTile(
+              title: '下段のボタンの並びを編集',
+              subtitle: '並べ替え / 表示 / 非表示 / プラグインのボタンを追加',
+              leading: const Icon(Icons.dashboard_customize_outlined),
+              onTap: () {
+                ref.read(overlayManagerProvider).close('astell.device.settings');
+                showActionBarEditSheet(ref, surfaces: const [ActionBarSurface.astell], column: column);
+              },
+            ),
+            const Divider(height: RasqSpacing.md),
+            _label(ctx, 'チャットの内容を自動で共有欄に出す(ピン留めしなくても)'),
+            for (final c in astellShareClasses) RasqSwitchListTile(title: c.label, value: auto[c.id] ?? false, onChanged: (v) => store.set('auto.${c.id}', v)),
+            const Divider(height: RasqSpacing.md),
+            _label(ctx, '共有欄の表示'),
+            for (final st in AstellShareStyle.values)
+              RasqRadioListTile<AstellShareStyle>(title: st.label, value: st, groupValue: ref.watch(astellShareStyleProvider), onChanged: (v) => store.set('shares.style', v.name)),
+            const Divider(height: RasqSpacing.md),
+            _label(ctx, '自動再生'),
+            RasqSwitchListTile(title: '画面共有が始まったら共有枠に出す', value: ref.watch(astellAutoPlayProvider), onChanged: (v) => store.set('autoplay.screen', v)),
+            const Divider(height: RasqSpacing.md),
+            _label(ctx, '保留音'),
+            RasqSwitchListTile(title: '保留音を鳴らす(この端末)', value: ref.watch(astellHoldMusicProvider), onChanged: (v) => store.set('holdMusic', v)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
+              child: Text('ルームごとの設定(参加できる人・読み上げなど)は、参加してからルームの歯車で変えられます(オーナー)。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            ),
+          ]);
+        }),
+      );
+}
+
 Future<void> openAstellPreviewFow(BuildContext context, WidgetRef ref, AstellRoom room) async {
   final manager = ref.read(overlayManagerProvider);
   await manager.showFow<void>(
@@ -308,7 +357,8 @@ class _PreviewBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final peers = ref.watch(astellPeersProvider(room.id)).value ?? const <AstellPeer>[];
+    final peersAsync = ref.watch(astellPeersProvider(room.id));
+    final peers = peersAsync.value ?? const <AstellPeer>[];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
         child: ListView(padding: EdgeInsets.zero, children: [
@@ -316,8 +366,13 @@ class _PreviewBody extends ConsumerWidget {
           AstellHostRow(room: room, peers: peers),
           _label(context, '参加メンバー'),
           Builder(builder: (context) {
+            if (peersAsync.isLoading && !peersAsync.hasValue) {
+              return const Padding(padding: EdgeInsets.all(RasqSpacing.sm), child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))));
+            }
             final (guests, total) = _guests(room, peers, peerCount: room.peerCount);
-            return AstellMembersRow(peers: guests, totalCount: total);
+            // 一覧が取れない / 間に合わないときも、カードと同じ人数(ホストを除く)は出す (REC-04)。
+            final hostHere = peers.any((p) => p.accountId == room.ownerId) || (peersAsync.hasError && room.peerCount > 0);
+            return AstellMembersRow(peers: guests, totalCount: total ?? (guests.isEmpty ? room.peerCount - (hostHere ? 1 : 0) : null), hostOnly: hostHere);
           }),
           if (room.locked)
             Padding(
@@ -357,7 +412,7 @@ class _PreviewBody extends ConsumerWidget {
           const SizedBox(width: RasqSpacing.sm),
           Expanded(child: RasqGradientButton(label: '参加', onPressed: onJoin)),
           const SizedBox(width: RasqSpacing.sm),
-          _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: () => _notYet(context, 'VC の設定')),
+          _RoundButton(key: const ValueKey('astell.prejoin.settings'), icon: Icons.settings, tooltip: '設定', onPressed: () => showAstellDevicePreferences(context)),
         ]),
       ),
     ]);
@@ -2633,7 +2688,7 @@ class _CreateBodyState extends ConsumerState<_CreateBody> {
           const SizedBox(width: RasqSpacing.sm),
           Expanded(child: RasqGradientButton(label: _scheduledAt != null ? '予約' : '作成', onPressed: _busy ? null : _create, enabled: !_busy)),
           const SizedBox(width: RasqSpacing.sm),
-          _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: () => _notYet(context, 'VC の設定')),
+          _RoundButton(key: const ValueKey('astell.prejoin.settings'), icon: Icons.settings, tooltip: '設定', onPressed: () => showAstellDevicePreferences(context)),
         ]),
       ),
     ]);

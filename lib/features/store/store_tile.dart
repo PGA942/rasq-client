@@ -38,7 +38,7 @@ enum StoreTileAction { get, buy, update, open, unavailable }
 /// 入っている版 / 掲載から、ボタンの種類を決める。
 StoreTileAction storeTileActionOf(StorePluginCard card, String? installedVersion) {
   if (installedVersion != null) {
-    return card.version.isNotEmpty && card.version != installedVersion ? StoreTileAction.update : StoreTileAction.open;
+    return isNewerVersion(card.version, installedVersion) ? StoreTileAction.update : StoreTileAction.open;
   }
   if (card.status.isCaution && card.status != PluginStatus.warning) return StoreTileAction.unavailable;
   return card.price == 0 ? StoreTileAction.get : StoreTileAction.buy;

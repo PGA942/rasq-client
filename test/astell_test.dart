@@ -423,6 +423,13 @@ void main() {
     expect(find.text('他1人'), findsOneWidget); // ホストを除く 4 人中 3 人表示
     expect(find.byType(AstellGenreChips), findsOneWidget);
     expect(find.text('参加'), findsOneWidget);
+    // 参加前の歯車 (REC-05): 「今後の対応」ではなく、この端末の AsTell の設定。
+    await tester.tap(find.byKey(const ValueKey('astell.prejoin.settings')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('astell.device.settings')), findsOneWidget);
+    expect(find.text('共有欄の表示'), findsOneWidget);
+    container.read(overlayManagerProvider).close('astell.device.settings');
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('参加'));
     await tester.pumpAndSettle();

@@ -809,3 +809,33 @@ typedef StorePurchaseResult = ({bool purchased, int pointsSpent, int balance});
 
 /// 値段 → ポイント(1 ポイント = 1 円、切り上げ)。
 int storePricePoints(double price) => price.ceil();
+
+/// 版の比較(REC-10、2026-09-28 録画: 入っている 0.1.1 に「0.1.0 に更新」、自動更新で 0.3.0 → 0.1.0 に下がった)。
+/// `1.2.10` > `1.2.9`、数字の部分を順に比べる。`-beta` などの付いた版は同じ数字の正式版より前。読めない部分は文字列で比べる。
+/// 戻り: a が新しければ正、同じなら 0、古ければ負。
+int compareVersions(String a, String b) {
+  (List<String>, String?) split(String v) {
+    final t = v.trim().replaceFirst(RegExp(r'^[vV]'), '').split('+').first;
+    final i = t.indexOf('-');
+    return ((i < 0 ? t : t.substring(0, i)).split('.'), i < 0 ? null : t.substring(i + 1));
+  }
+
+  final (pa, ra) = split(a);
+  final (pb, rb) = split(b);
+  for (var i = 0; i < (pa.length > pb.length ? pa.length : pb.length); i++) {
+    final x = i < pa.length ? pa[i] : '0';
+    final y = i < pb.length ? pb[i] : '0';
+    final nx = int.tryParse(x);
+    final ny = int.tryParse(y);
+    final c = nx != null && ny != null ? nx.compareTo(ny) : x.compareTo(y);
+    if (c != 0) return c;
+  }
+  if (ra == rb) return 0;
+  if (ra == null) return 1; // 正式版 > プレリリース
+  if (rb == null) return -1;
+  return ra.compareTo(rb);
+}
+
+/// [candidate] が [current] より新しいか(空はどちらも「新しくない」)。
+bool isNewerVersion(String candidate, String? current) =>
+    candidate.isNotEmpty && (current == null || current.isEmpty || compareVersions(candidate, current) > 0);

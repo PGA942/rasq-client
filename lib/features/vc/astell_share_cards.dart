@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -394,7 +396,19 @@ class _InlineCard extends ConsumerWidget {
                     width: imgW,
                     height: imgH,
                     child: Stack(fit: StackFit.expand, children: [
-                      _thumb(context, thumbs.first),
+                      // 閲覧注意 / CW 付きはぼかして印を出す(開いてから見る、TERMS-10)。
+                      if (s != null && (s.isSensitive || s.contentWarning != null))
+                        Stack(fit: StackFit.expand, children: [
+                          ImageFiltered(imageFilter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: _thumb(context, thumbs.first)),
+                          Container(
+                            key: const ValueKey('astell.card.sensitive'),
+                            color: Colors.black.withValues(alpha: 0.35),
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.visibility_off_outlined, color: Colors.white, size: 22),
+                          ),
+                        ])
+                      else
+                        _thumb(context, thumbs.first),
                       if (thumbs.length > 1)
                         Positioned(
                           right: 4,

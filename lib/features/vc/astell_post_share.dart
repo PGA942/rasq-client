@@ -60,7 +60,8 @@ String? astellShareBlockReason(Post p) {
 /// 手元の投稿 → 共有 payload。
 Map<String, Object?> astellPostPayloadOf(Post p) {
   final media = [
-    for (final m in p.media) {'url': m.url.toString(), if (m.thumbnailUrl != null) 'thumbnailUrl': m.thumbnailUrl.toString(), 'type': _mediaType(m.type)},
+    for (final m in p.media)
+      {'url': m.url.toString(), if (m.thumbnailUrl != null) 'thumbnailUrl': m.thumbnailUrl.toString(), 'type': _mediaType(m.type), if (m.sensitive) 'sensitive': true},
   ];
   final thumb = p.media.where((m) => m.type != MediaType.file).firstOrNull;
   return {
@@ -79,6 +80,8 @@ Map<String, Object?> astellPostPayloadOf(Post p) {
     if (p.visibility != null) 'visibility': p.visibility,
     'localOnly': p.localOnly,
     if (p.contentWarning != null && p.contentWarning!.isNotEmpty) 'cw': p.contentWarning,
+    // 閲覧注意 (TERMS-10): メディアごとの印に加えて、投稿としての印も持つ(カードはこれを見て画像をぼかす)。
+    if (p.media.any((m) => m.sensitive)) 'sensitive': true,
   };
 }
 
@@ -89,16 +92,28 @@ Post? postFromSharePayload(Map<String, Object?> payload, AccountId account) {
   final handle = payload['handle'] as String? ?? '';
   final authorAccount = AccountId(kind: account.kind, instance: payload['instance'] as String? ?? account.instance, handle: handle);
   var n = 0;
+  final cw = payload['cw'] is String && (payload['cw'] as String).isNotEmpty ? payload['cw'] as String : null;
+  var body = payload['body'] as String? ?? payload['text'] as String? ?? '';
+  // 本文の先頭の「[CW] 」は、CW を別に持っているので外す (TERMS-10)。
+  if (cw != null && body.startsWith('[$cw] ')) body = body.substring(cw.length + 3);
+  final allSensitive = payload['sensitive'] == true;
   return Post(
     id: id,
     account: account,
     author: UserSummary(id: 'share:$handle', account: authorAccount, displayName: payload['author'] as String? ?? handle, avatarUrl: Uri.tryParse(payload['avatarUrl'] as String? ?? '')),
     createdAt: DateTime.tryParse(payload['createdAt'] as String? ?? '') ?? DateTime.now(),
-    body: payload['body'] as String? ?? payload['text'] as String? ?? '',
+    body: body,
+    contentWarning: cw,
     media: [
       for (final m in (payload['media'] as List? ?? const []))
         if (m is Map && m['url'] is String && Uri.tryParse(m['url'] as String) != null)
-          MediaItem(id: 'm${n++}', type: _mediaTypeOf(m['type'] as String?), url: Uri.parse(m['url'] as String), thumbnailUrl: m['thumbnailUrl'] is String ? Uri.tryParse(m['thumbnailUrl'] as String) : null),
+          MediaItem(
+            id: 'm${n++}',
+            type: _mediaTypeOf(m['type'] as String?),
+            url: Uri.parse(m['url'] as String),
+            thumbnailUrl: m['thumbnailUrl'] is String ? Uri.tryParse(m['thumbnailUrl'] as String) : null,
+            sensitive: m['sensitive'] == true || allSensitive,
+          ),
     ],
     url: Uri.tryParse(payload['url'] as String? ?? ''),
   );

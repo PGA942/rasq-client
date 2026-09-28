@@ -129,7 +129,8 @@ Future<List<PluginUpdateLogEntry>> runPluginUpdates(ProviderContainer ref) async
     }
     if (detail == null || detail.version.isEmpty) continue;
     final latest = detail.version;
-    if (latest == p.version) continue;
+    // 新しい版のときだけ(ストアの現在版が古い / 同じなら何もしない、REC-10)。
+    if (!isNewerVersion(latest, p.version)) continue;
     final group = PluginUpdateGroup.of(detail.pluginType != StorePluginType.other ? detail.pluginType : p.pluginType);
     final mode = ref.read(pluginUpdateModeProvider(group));
     if (mode == PluginUpdateMode.manual) continue;
@@ -147,13 +148,23 @@ Future<List<PluginUpdateLogEntry>> runPluginUpdates(ProviderContainer ref) async
       continue;
     }
     // 権限が増える版は自動では入れない(ユーザーが確認シートで見てから)。
+    // TERMS-09: 権限が増えないことを確かめられないとき(リリース情報が取れない / その版が載っていない)も入れない
+    // (画面の「権限が増える版は、どのモードでも自動では入れません」を守る側に倒す)。
+    ReleaseNote? rel;
     try {
-      final rel = (await client.releases(p.id)).where((r) => r.version == latest).firstOrNull;
-      if (rel != null && rel.permissionsAdded.isNotEmpty) {
-        out.add(log('skipped', '権限が増えるため(${rel.permissionsAdded.map((x) => x.permission).join('、')})'));
-        continue;
-      }
-    } catch (_) {}
+      rel = (await client.releases(p.id)).where((r) => r.version == latest).firstOrNull;
+    } catch (_) {
+      out.add(log('skipped', 'リリース情報を確認できないため(権限の増減が分かりません)'));
+      continue;
+    }
+    if (rel == null) {
+      out.add(log('skipped', 'この版のリリース情報が見つからないため(権限の増減が分かりません)'));
+      continue;
+    }
+    if (rel.permissionsAdded.isNotEmpty) {
+      out.add(log('skipped', '権限が増えるため(${rel.permissionsAdded.map((x) => x.permission).join('、')})'));
+      continue;
+    }
     final outcome = await notifier.install(p.id, version: latest, activate: mode == PluginUpdateMode.auto);
     out.add(outcome.error == null ? log(mode == PluginUpdateMode.auto ? 'activated' : 'installed') : log('failed', outcome.error));
   }
