@@ -15,6 +15,7 @@ import 'package:rasq_client/backend/server_info_api.dart';
 import 'package:rasq_client/features/clips/host_clips.dart';
 import 'package:rasq_client/features/collections/rasq_collection_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart' show RasqBrandIcon, RasqSnsPill;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
@@ -204,6 +205,9 @@ void main() {
     // SNS のフォロー中(フェイクは投稿の書き手)と RASQ のフォロー中。
     final snsChip = find.byKey(ValueKey('lists.members.chip.sns:${other.id}'));
     expect(snsChip, findsOneWidget);
+    // 左下のサービス / インスタンスのアイコン (D-369)。
+    expect(find.descendant(of: find.byKey(ValueKey('lists.members.badge.sns:${other.id}')), matching: find.byType(RasqSnsPill)), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('lists.members.badge.rasq:r1')), matching: find.byType(RasqBrandIcon)), findsOneWidget);
     final rasqChip = find.byKey(const ValueKey('lists.members.chip.rasq:r1'));
     expect(rasqChip, findsOneWidget);
     // この SNS のアカウントを公開していない RASQ ユーザーは選べない(理由が出る)。
@@ -220,6 +224,53 @@ void main() {
     final session = (c.read(pluginRegistryProvider).plugins.whereType<FakeSnsPlugin>().single).opened.last;
     expect(session.listAdds, ['l1:u-kai']);
     expect(find.text('1 人を追加しました'), findsOneWidget);
+  });
+
+  testWidgets('ブックマークを持たない SNS のブックマーク一覧 (D-369): SNS からは読まず、RASQ クリップだけ', (tester) async {
+    final c = await pumpApp(tester, centralWith((_, _) async => null), posts: [post('p1')], bookmark: false);
+    c.read(routerProvider).push(Routes.bookmarks);
+    await tester.pumpAndSettle();
+    expect(find.text('ブックマークの確認'), findsNothing, reason: 'favorites を読んでいない');
+    expect(find.byKey(const ValueKey('bookmarks.remove.p1')), findsNothing);
+    // RASQ クリップはブックマークに並ぶ。
+    await tester.runAsync(() => c.read(hostClipsProvider.future));
+    await c.read(hostClipsProvider.notifier).createClip('横断まとめ');
+    await tester.pumpAndSettle();
+    expect(find.text('横断まとめ'), findsOneWidget);
+  });
+
+  testWidgets('リストの「話題の目次」 (D-368): 話題を時刻順に並べ、タップで投稿タブをその話題に絞る', (tester) async {
+    Post p(String id, int min, String body, String who) => Post(
+          id: id,
+          account: viewer,
+          author: UserSummary(id: who, account: AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: who), displayName: who),
+          createdAt: DateTime(2026, 9, 27, 10, min),
+          body: body,
+          visibility: 'public',
+        );
+    final posts = [
+      p('r1', 0, 'ロケットの打ち上げを見てる #rocket', 'alice'),
+      p('r2', 2, 'ロケット打ち上げ成功!すごい #rocket', 'bob'),
+      p('x1', 30, '今日のお昼はカレーにした', 'carol'),
+    ];
+    final c = await pumpApp(tester, centralWith((_, _) async => null), posts: posts);
+    c.read(routerProvider).push('/lists/l1');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('話題の目次'));
+    await tester.pumpAndSettle();
+    final entry = find.byKey(const ValueKey('topics.entry.singles'));
+    expect(entry, findsOneWidget, reason: '単発投稿のまとまり');
+    final topic = find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('topics.entry.') && (w.key! as ValueKey<String>).value != 'topics.entry.singles');
+    expect(topic, findsOneWidget, reason: 'ロケットの会話');
+    await tester.tap(topic);
+    await tester.pumpAndSettle();
+    // 投稿タブへ移り、その話題だけ + 「話題: …」の解除チップ。
+    expect(find.byKey(const ValueKey('topics.filter')), findsOneWidget);
+    expect(find.textContaining('今日のお昼はカレー'), findsNothing);
+    expect(find.textContaining('ロケット打ち上げ成功'), findsOneWidget);
+    await tester.tap(find.byTooltip('絞り込みをやめる'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('今日のお昼はカレー'), findsOneWidget);
   });
 
   testWidgets('ブックマークを持たない SNS: 短押しは案内だけ、長押しでクリップへ', (tester) async {

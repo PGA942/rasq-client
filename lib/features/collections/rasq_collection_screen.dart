@@ -8,7 +8,10 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../clips/index_toc.dart' show findIndexEntry;
+import '../clips/virtual_index.dart';
 import '../lists/list_member_picker.dart';
+import '../lists/topic_toc.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart' show Routes;
@@ -150,7 +153,21 @@ class _Body extends ConsumerWidget {
     final isList = c.kind == RasqCollectionKind.list;
     final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
     final hosts = [for (final h in c.instances) if (h != 'bsky.social' && h != 'bsky.app') h];
-    final tabs = [const Tab(text: '投稿'), if (isList) const Tab(text: 'メンバー'), if (hosts.isNotEmpty) const Tab(text: 'サーバー')];
+    final tabs = [const Tab(text: '投稿'), if (isList) const Tab(text: '話題の目次'), if (isList) const Tab(text: 'メンバー'), if (hosts.isNotEmpty) const Tab(text: 'サーバー')];
+    // 話題の目次 (D-368): 投稿を話題ごとに区切る。投稿は RASQ 側の key で引く(見るアカウントで key が変わるため)。
+    final topicScope = 'rasq:${c.id}';
+    final byKey = <String, Post>{};
+    final rasqKeyOf = <String, String>{};
+    if (isList) {
+      for (final p in detail.posts) {
+        final post = p.toPost(detail.memberOf(p.memberKey));
+        byKey[post.key] = post;
+        rasqKeyOf[post.key] = p.key;
+      }
+    }
+    final topics = isList ? indexForListTimeline(byKey.values.toList()) : const <IndexEntry>[];
+    final selected = findIndexEntry(topics, ref.watch(listTopicSelectionProvider(topicScope)));
+    final visibleKeys = selected == null ? null : {for (final k in selected.postKeys) ?rasqKeyOf[k]};
     return DefaultTabController(
       length: tabs.length,
       child: NestedScrollView(
@@ -161,8 +178,14 @@ class _Body extends ConsumerWidget {
         body: TabBarView(children: [
           RefreshIndicator(
             onRefresh: () => ref.refresh(rasqCollectionProvider(idOrCode).future),
-            child: isList ? _ListPosts(detail: detail, sessions: sessions) : _ClipPosts(detail: detail, sessions: sessions),
+            child: isList
+                ? Column(children: [
+                    ListTopicFilterBar(scope: topicScope, entry: selected),
+                    Expanded(child: _ListPosts(detail: detail, sessions: sessions, only: visibleKeys)),
+                  ])
+                : _ClipPosts(detail: detail, sessions: sessions),
           ),
+          if (isList) ListTopicsTab(scope: topicScope, entries: topics, posts: byKey, postsTabIndex: 0),
           if (isList) _Members(detail: detail, idOrCode: idOrCode, sessions: sessions),
           if (hosts.isNotEmpty)
             ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [
@@ -272,9 +295,12 @@ AccountSession? _viewerFor(List<AccountSession> sessions, String kind, String in
     sessions.where((s) => s.account.kind.name == kind && s.account.instance == instance).firstOrNull;
 
 class _ListPosts extends StatelessWidget {
-  const _ListPosts({required this.detail, required this.sessions});
+  const _ListPosts({required this.detail, required this.sessions, this.only});
   final RasqCollectionDetail detail;
   final List<AccountSession> sessions;
+
+  /// 話題の目次で選んだ話題の投稿(RASQ 側の key)。null = すべて。
+  final Set<String>? only;
 
   @override
   Widget build(BuildContext context) {
@@ -283,12 +309,13 @@ class _ListPosts extends StatelessWidget {
         RasqEmptyView(title: 'まだ投稿がありません', hint: detail.items.isEmpty ? 'ユーザーページの … →「RASQ リストに追加」で人を入れられます' : '見られる人が開いたときに集まります'),
       ]);
     }
+    final posts = only == null ? detail.posts : [for (final p in detail.posts) if (only!.contains(p.key)) p];
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: detail.posts.length,
+      itemCount: posts.length,
       separatorBuilder: (_, _) => const Divider(),
       itemBuilder: (_, i) {
-        final p = detail.posts[i];
+        final p = posts[i];
         final member = detail.memberOf(p.memberKey);
         return _SnsPostRow(key: ValueKey('rasqCollection.post.${p.key}'), kind: member?.kind ?? p.memberKey.split(':').first, instance: member?.instance ?? '', postFor: (viewer) => p.toPost(member, viewer: viewer), sessions: sessions);
       },

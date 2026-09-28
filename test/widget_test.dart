@@ -16,7 +16,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
 
-Widget app({bool loggedIn = true}) {
+Widget app({bool loggedIn = true, bool bookmark = false}) {
   final storage = MemorySessionStorage(loggedIn
       ? {
           SessionsNotifier.storageKey: jsonEncode({
@@ -25,7 +25,7 @@ Widget app({bool loggedIn = true}) {
           }),
         }
       : null);
-  final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline));
+  final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline, bookmark: bookmark));
   return ProviderScope(
     overrides: [
       sessionStorageProvider.overrideWithValue(storage),
@@ -209,7 +209,8 @@ void main() {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(app());
+    // ブックマーク一覧は、ブックマークのある SNS だけ SNS から読む (D-369)。
+    await tester.pumpWidget(app(bookmark: true));
     await tester.pumpAndSettle();
 
     // Author name → user page (UserTileLarge) → フォロー中 count → follows screen.
