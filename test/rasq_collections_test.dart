@@ -174,6 +174,54 @@ void main() {
     expect(find.textContaining('追加済み'), findsOneWidget);
   });
 
+  testWidgets('ブックマーク一覧 (D-365): 一覧の投稿は「済み」で、詳細の 🔖 でも外せる。一覧の「ブックマークを外す」で外れて消える', (tester) async {
+    final p = post('p1');
+    final c = await pumpApp(tester, centralWith((_, _) async => null), posts: [p]);
+    c.read(routerProvider).push(Routes.bookmarks);
+    await tester.pumpAndSettle();
+    expect(c.read(actionStateProvider.notifier).of(p.key, 'favorite').done, isTrue, reason: '一覧の投稿はブックマーク済み');
+    await tester.tap(find.byKey(const ValueKey('bookmarks.remove.p1')));
+    await tester.pumpAndSettle();
+    final session = (c.read(pluginRegistryProvider).plugins.whereType<FakeSnsPlugin>().single).opened.last;
+    expect(session.performed.last, 'favorite:p1:true', reason: '外す(undo)');
+    expect(find.byKey(const ValueKey('bookmarks.remove.p1')), findsNothing);
+    expect(find.text('ブックマークを外しました'), findsOneWidget);
+  });
+
+  testWidgets('リストのメンバーを追加 (D-366): SNS のフォロー中と RASQ のフォロー中がチップで並び、選んで追加', (tester) async {
+    final other = UserSummary(id: 'u-kai', account: const AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'kai'), displayName: 'カイ');
+    final a = Post(id: 'p0', account: viewer, author: other, createdAt: DateTime(2026, 9, 27, 9), body: 'フォロー中の人', visibility: 'public');
+    final member = post('p1');
+    final c = await pumpApp(tester, centralWith((route, _) async {
+      if (route == 'GET /me/following') return json([{'id': 'r1', 'handle': 'hana', 'displayName': 'はな'}]);
+      if (route == 'GET /accounts/hana') return json({'id': 'r1', 'handle': 'hana', 'displayName': 'はな', 'snsAccounts': [{'kind': 'bluesky', 'instance': 'bsky.test', 'handle': 'hana.bsky'}]});
+      return null;
+    }), posts: [a, member]);
+    c.read(routerProvider).push('/lists/l1');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('lists.members.add')));
+    await tester.pumpAndSettle();
+    // SNS のフォロー中(フェイクは投稿の書き手)と RASQ のフォロー中。
+    final snsChip = find.byKey(ValueKey('lists.members.chip.sns:${other.id}'));
+    expect(snsChip, findsOneWidget);
+    final rasqChip = find.byKey(const ValueKey('lists.members.chip.rasq:r1'));
+    expect(rasqChip, findsOneWidget);
+    // この SNS のアカウントを公開していない RASQ ユーザーは選べない(理由が出る)。
+    await tester.tap(rasqChip);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('この SNS のアカウントを公開していません'), findsOneWidget);
+    expect(find.byKey(const ValueKey('lists.members.count')), findsNothing);
+    // SNS のユーザーを選んで追加。
+    await tester.tap(snsChip);
+    await tester.pumpAndSettle();
+    expect(find.text('1 人を選んでいます'), findsOneWidget);
+    await tester.tap(find.text('追加'));
+    await tester.pumpAndSettle();
+    final session = (c.read(pluginRegistryProvider).plugins.whereType<FakeSnsPlugin>().single).opened.last;
+    expect(session.listAdds, ['l1:u-kai']);
+    expect(find.text('1 人を追加しました'), findsOneWidget);
+  });
+
   testWidgets('ブックマークを持たない SNS: 短押しは案内だけ、長押しでクリップへ', (tester) async {
     final p = post('p1');
     final c = await pumpApp(tester, centralWith((_, _) async => null), posts: [p], bookmark: false);

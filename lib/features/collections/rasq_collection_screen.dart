@@ -8,6 +8,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../lists/list_member_picker.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart' show Routes;
@@ -371,8 +372,39 @@ class _Members extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (detail.items.isEmpty) return const RasqEmptyView(title: 'メンバーはいません', hint: 'ユーザーページの … →「RASQ リストに追加」');
+    // メンバーを追加 (D-366): SNS / RASQ のフォロー中と検索から(作った人だけ)。いまの SNS アカウントから見た人で入れる。
+    final add = detail.isOwner
+        ? Padding(
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xs),
+            child: OutlinedButton.icon(
+              key: const ValueKey('rasqCollection.members.add'),
+              icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+              label: const Text('メンバーを追加'),
+              onPressed: () async {
+                final api = ref.read(rasqCollectionsApiProvider);
+                final session = ref.read(currentSnsSessionProvider);
+                if (api == null || session == null) return;
+                try {
+                  final n = await showListMemberPicker(ref, session: session, target: RasqListMemberTarget(api, detail.collection.id, session, detail.items));
+                  if (n == null) return;
+                  ref.invalidate(rasqCollectionProvider(idOrCode));
+                  ref.invalidate(myRasqCollectionsProvider(RasqCollectionKind.list));
+                  ref.read(rootMessengerKeyProvider).currentState?..clearSnackBars()..showSnackBar(SnackBar(content: Text('$n 人を追加しました')));
+                } catch (e) {
+                  ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text('追加できませんでした: $e')));
+                }
+              },
+            ),
+          )
+        : null;
+    if (detail.items.isEmpty) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        ?add,
+        Expanded(child: RasqEmptyView(title: 'メンバーはいません', hint: detail.isOwner ? '「メンバーを追加」か、ユーザーページの … →「RASQ リストに追加」' : null)),
+      ]);
+    }
     return ListView(children: [
+      ?add,
       for (final m in detail.items)
         RasqListTile(
           key: ValueKey('rasqCollection.member.${m.key}'),

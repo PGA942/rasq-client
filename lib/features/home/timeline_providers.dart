@@ -1,3 +1,4 @@
+import '../post/post_bookmark_button.dart' show keepKnownBookmarks;
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
@@ -546,7 +547,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         batch[(postKey: p.key, actionId: e.key)] = ActionState(done: e.value.done, count: e.value.count, iconUrl: allowIcon ? e.value.icon?.url : null, iconText: allowIcon ? e.value.icon?.text : null);
       }
     }
-    store.applyAll(batch);
+    final session = _session;
+    store.applyAll(session == null ? batch : keepKnownBookmarks(store, session, batch));
   }
 
   Future<void> refresh() async {

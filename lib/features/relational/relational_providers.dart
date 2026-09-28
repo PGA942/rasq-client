@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show debugPrint;
@@ -10,6 +11,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'package:plugin_runtime/plugin_runtime.dart' show WasmSnsSession;
 
+import '../learning/relational_cloud.dart';
 import '../../app/providers.dart';
 import '../plugins/slot_plugins.dart';
 import '../../session/session_providers.dart';
@@ -342,7 +344,17 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
   return home.whenData((h) {
     // 前段絞り込み (D-102) > バンドル供給 (D-086) > 現在分、の順で使う。
     final followees = ref.watch(relationalInputPostsProvider).value ?? h.posts;
-    final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf);
-    return engine.build(followeePosts: followees, guestPosts: guests, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
+    // クラウド版 (D-367): 貢献に同意した人は、しきい値の近くの結び付きをクラウドの判定で決め直す。
+    final decisions = ref.watch(relationalCloudDecisionsProvider);
+    final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf, decisions: decisions);
+    final events = engine.build(followeePosts: followees, guestPosts: guests, lookback: lookbackMinutes > 0 ? Duration(minutes: lookbackMinutes) : null);
+    final borderline = [...engine.borderline];
+    if (borderline.isNotEmpty) {
+      // provider の中から状態を変えないよう、次のマイクロタスクで渡す。
+      scheduleMicrotask(() {
+        if (ref.mounted) ref.read(relationalCloudProvider.notifier).offer(borderline);
+      });
+    }
+    return events;
   });
 });
