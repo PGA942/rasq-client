@@ -259,9 +259,16 @@ void main() {
     expect(c.read(activeThemeIdProvider), 'sample.theme-starry');
     expect(c.read(activeSkinProvider), isNotNull);
 
-    // 設定 → アプリの外観 → フォントやカラースキーム で外す → 選び直す。
-    c.read(routerProvider).push(Routes.settingsTheme);
+    // 設定 → アプリの外観 → フォントやカラースキーム(D-375: 以前はライト / ダークのシートしか開かず、ここへ来られなかった)。
+    c.read(routerProvider).push('/settings/section/appearance');
     await tester.pumpAndSettle();
+    expect(find.text('ダーク ・ 星空'), findsOneWidget, reason: '行にカラースキームと着せ替え');
+    await tester.tap(find.byKey(const ValueKey('settings.appearance.theme')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ThemeSettingsScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('theme.pack.sample.theme-starry')), findsOneWidget);
+    expect(find.byKey(const ValueKey('theme.mode.dark')), findsOneWidget);
+    // 外す → 選び直す。
     await tester.tap(find.text('着せ替えなし(既定)'));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
     await tester.pumpAndSettle();

@@ -279,8 +279,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('ファイルから(動画 / 音声)'));
     await tester.pumpAndSettle(); // ドロップダウンが閉じて選択が返る → ファイルの読み込み(本物の I/O)
-    // 読み込みは何段かの本物の I/O(段ごとに 本物の待ち → フレーム を回す)。
-    for (var i = 0; i < 10 && find.byIcon(Icons.graphic_eq).evaluate().isEmpty; i++) {
+    // 読み込みは何段かの本物の I/O(段ごとに 本物の待ち → フレーム を回す)。混んだ CI では 200ms で足りなかった: 最大 5 秒、出たら抜ける。
+    for (var i = 0; i < 250 && find.byIcon(Icons.graphic_eq).evaluate().isEmpty; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
       await tester.pump();
     }

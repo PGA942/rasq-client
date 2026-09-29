@@ -31,11 +31,10 @@ import 'support/fakes.dart';
 void main() {
   const actions = {settingsActionTrendGenres, settingsActionTrendTendency, settingsActionRelationalTuning, settingsActionAstellBar, 'notificationPrefs'};
 
-  test('すべての行に行き先がある(「フォントやカラースキーム」は画面内のシート)、ホストの DSL ページは全部パースできる', () {
+  test('すべての行に行き先がある、ホストの DSL ページは全部パースできる', () {
     final hostAreas = <String>{};
     for (final e in settingsSections.entries) {
       for (final r in e.value.rows) {
-        if (e.key == 'appearance' && r.title == 'フォントやカラースキーム') continue;
         expect(r.route, isNotNull, reason: '${e.value.title} / ${r.title}');
         final route = r.route!;
         expect(route.startsWith('/') || actions.contains(route), isTrue, reason: route);

@@ -5,11 +5,13 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../app/router.dart' show Routes;
 import '../../shell/headers.dart';
 import '../../shell/rasq_account_fow.dart';
 import '../home/action_bar_edit_sheet.dart';
 import '../notifications/notifications_screen.dart';
 import '../relational/relational_timeline_view.dart' show openRelationalTuning;
+import '../theme/theme_packs.dart';
 import '../trend/tendency_fows.dart';
 import 'settings_sections.dart';
 
@@ -33,25 +35,16 @@ class SettingsSectionScreen extends ConsumerWidget {
         if (sectionId == 'about') const RasqAccountTile(key: ValueKey('settings.about.account')),
         for (final r in section.rows)
           if (sectionId == 'appearance' && r.title == 'フォントやカラースキーム')
+            // 着せ替えの画面へ (D-375): 以前はここでライト / ダークのシートだけを開き、入れた着せ替えを選ぶ画面に行けなかった。
+            // ライト / ダークは着せ替えの画面の上に置いた。
             RasqValueListTile(
+              key: const ValueKey('settings.appearance.theme'),
               title: r.title,
-              value: switch (mode) { ThemeModeSetting.system => 'システム', ThemeModeSetting.light => 'ライト', ThemeModeSetting.dark => 'ダーク' },
-              onTap: () async {
-                final picked = await manager.showBottomSheet<ThemeModeSetting>(
-                  id: 'settings.appearance',
-                  title: 'カラースキーム',
-                  builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
-                    for (final m in ThemeModeSetting.values)
-                      RasqRadioListTile<ThemeModeSetting>(
-                        title: switch (m) { ThemeModeSetting.system => 'システムに合わせる', ThemeModeSetting.light => 'ライト', ThemeModeSetting.dark => 'ダーク' },
-                        value: m,
-                        groupValue: mode,
-                        onChanged: (v) => ref.read(overlayManagerProvider).close('settings.appearance', result: v),
-                      ),
-                  ]),
-                );
-                if (picked != null) ref.read(themeModeProvider.notifier).set(picked);
-              },
+              value: [
+                switch (mode) { ThemeModeSetting.system => 'システム', ThemeModeSetting.light => 'ライト', ThemeModeSetting.dark => 'ダーク' },
+                ?ref.watch(themePacksProvider).where((p) => p.id == ref.watch(activeThemeIdProvider)).firstOrNull?.name,
+              ].join(' ・ '),
+              onTap: () => context.push(Routes.settingsTheme),
             )
           else if (r.warning)
             RasqWarningListTile(title: r.title, subtitle: r.subtitle, detail: r.detail, onTap: () => _open(context, ref, manager, r))
