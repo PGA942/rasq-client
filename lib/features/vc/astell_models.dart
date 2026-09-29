@@ -46,6 +46,7 @@ class AstellRoom {
     this.holdMusic = true,
     this.scheduledAt,
     this.shareUrl,
+    this.peerFaces = const [],
   });
 
   final String id;
@@ -111,6 +112,16 @@ class AstellRoom {
   /// 付ける。無ければ(モック)`rasq://astell/<id>`。
   final String? shareUrl;
 
+  /// 接続中の人の顔 (D-376 / Central S-055): 公開ルームで 3 人以下のときだけサーバーが返す(オーナーも含む、接続順)。
+  /// タイルのバンドルが人数の代わりにアイコンを半分重ねて並べる。古いサーバーは返さない(空)。
+  final List<UserSummary> peerFaces;
+
+  /// バンドルに並べる顔: オーナー → 接続中のほかの人(3 人まで)。顔が分からなければ空(人数の表記に戻す)。
+  List<UserSummary> get bundleFaces {
+    if (peerFaces.isEmpty || peerCount > 3) return const [];
+    return [owner, ...peerFaces.where((f) => f.id != owner.id)].take(3).toList();
+  }
+
   bool get isOpen => closedAt == null;
 
   /// 予約中(まだ開催時刻が来ていない)か。
@@ -152,6 +163,11 @@ class AstellRoom {
         holdMusic: j['holdMusic'] != false,
         scheduledAt: j['scheduledAt'] is String ? DateTime.tryParse(j['scheduledAt'] as String)?.toLocal() : null,
         shareUrl: (j['shareUrl'] as String?)?.isNotEmpty == true ? j['shareUrl'] as String : null,
+        peerFaces: [
+          for (final f in (j['peerFaces'] as List? ?? const []))
+            if (f is Map && f['accountId'] is String)
+              _rasqUser(id: f['accountId'] as String, handle: f['handle'] as String? ?? '', displayName: f['displayName'] as String? ?? '', avatarUrl: _uri(f['avatarUrl'])),
+        ],
       );
 
   /// ワイヤ形(サーバーの `Room` と同じ)。ブックマークのスナップショット (D-160) と
@@ -164,6 +180,7 @@ class AstellRoom {
         'joinPolicy': joinPolicy, 'sharePolicy': sharePolicy, 'moderators': moderators, 'tendencyFilter': tendencyFilter, 'locked': locked, 'holdMusic': holdMusic,
         'scheduledAt': scheduledAt?.toUtc().toIso8601String(),
         'shareUrl': shareUrl,
+        'peerFaces': [for (final f in peerFaces) {'accountId': f.id.replaceFirst('rasq:', ''), 'handle': f.account.handle, 'displayName': f.displayName, 'avatarUrl': f.avatarUrl?.toString()}],
       };
 
   AstellRoom copyWith({String? title, String? description, List<String>? genres, bool? showSummary, bool? autoGenre, int? peerCount, bool? live, AstellHostStream? hostStream, bool clearHostStream = false, String? ttsVoice, bool clearTtsVoice = false, String? joinPolicy, String? sharePolicy, List<String>? moderators, bool? tendencyFilter, bool? holdMusic, DateTime? scheduledAt, bool clearSchedule = false}) => AstellRoom(
@@ -194,6 +211,7 @@ class AstellRoom {
         holdMusic: holdMusic ?? this.holdMusic,
         scheduledAt: clearSchedule ? null : (scheduledAt ?? this.scheduledAt),
         shareUrl: shareUrl,
+        peerFaces: peerFaces,
       );
 }
 

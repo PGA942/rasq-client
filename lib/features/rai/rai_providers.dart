@@ -709,6 +709,17 @@ class RaiController extends Notifier<RaiState> {
   }
 
   /// 入力欄の薄い補完 (D-194): 直前の操作から分岐する操作を優先し、見出し / タグが入力で始まるものを返す。
+  /// 空の入力欄の予測 (D-376): 直前の操作の続き(索引で base がその操作)→ 無ければ最近の質問。
+  String? predict() {
+    final last = state.lastOperation;
+    final index = ref.read(raiReferenceProvider).value;
+    if (last != null && index != null) {
+      final next = index.operations.where((o) => o.base == last).firstOrNull;
+      if (next != null) return next.index;
+    }
+    return state.history.firstOrNull;
+  }
+
   String? suggest(String typed) {
     final q = typed.trim();
     if (q.isEmpty) return null;

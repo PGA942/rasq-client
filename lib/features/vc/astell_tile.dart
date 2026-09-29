@@ -29,6 +29,14 @@ class AstellTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
+    // 高さの決まらない所(縦のリストに直など)に置かれても壊れないように (D-376): 中は Expanded で詰めるので、既定の高さを与える。
+    return LayoutBuilder(builder: (context, c) => c.hasBoundedHeight ? _tile(scheme, tokens) : SizedBox(height: defaultHeight, child: _tile(scheme, tokens)));
+  }
+
+  /// 高さが決まらない所での既定(TL の投稿内のタイルと同じ)。
+  static const defaultHeight = 216.0;
+
+  Widget _tile(ColorScheme scheme, RasqTokens tokens) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(RasqSizes.radiusLg),
@@ -48,7 +56,7 @@ class AstellTile extends StatelessWidget {
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.topLeft,
-              child: RasqAvatarBundle(user: room.owner, count: room.peerCount, live: room.live, size: 30),
+              child: RasqAvatarBundle(user: room.owner, count: room.peerCount, faces: room.bundleFaces, live: room.live, size: 30),
             ),
             const SizedBox(width: RasqSpacing.xs),
             Expanded(

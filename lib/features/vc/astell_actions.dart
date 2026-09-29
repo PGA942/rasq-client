@@ -211,7 +211,7 @@ class AstellHeaderStrip extends ConsumerWidget {
         for (final r in rooms.take(max)) ...[
           Tooltip(
             message: '${r.ownerDisplayName}: ${r.title}',
-            child: RasqAvatarBundle(user: r.owner, count: r.peerCount, live: r.live, size: 28, onTap: () => openAstellRoomTile(context, ref, r)),
+            child: RasqAvatarBundle(user: r.owner, count: r.peerCount, faces: r.bundleFaces, live: r.live, size: 28, onTap: () => openAstellRoomTile(context, ref, r)),
           ),
           const SizedBox(width: 6),
         ],

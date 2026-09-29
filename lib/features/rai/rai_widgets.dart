@@ -248,7 +248,7 @@ class RaiStatusRing extends StatelessWidget {
 BuildContext? raiBarContext;
 
 class RaiBar extends StatefulWidget {
-  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320, this.onSuggest, this.modelLabel, this.onAskMore, this.onDragUpdate, this.onDragEnd});
+  const RaiBar({super.key, required this.state, required this.onToggleExpanded, required this.onMode, required this.onSubmit, required this.onClose, this.llmNote, this.onModelTap, this.onHistoryToggle, this.historyMaxHeight = 320, this.onSuggest, this.onPredict, this.modelLabel, this.onAskMore, this.onDragUpdate, this.onDragEnd});
   final RaiState state;
 
   /// 掴んで移動 (D-233): 左上の掴み手をドラッグ。大きさは変えない。null なら掴み手を出さない。
@@ -260,6 +260,9 @@ class RaiBar extends StatefulWidget {
 
   /// 薄い補完 (D-194): 入力から候補の見出しを返す(null = 無し)。半角 / 全角スペースで確定。
   final String? Function(String typed)? onSuggest;
+
+  /// 空の入力欄に薄く出す予測 (D-376): 履歴 / 直前の操作から。スペースで入る。null なら既定のヒント。
+  final String? Function()? onPredict;
 
   /// 履歴ボタン (D-187): ウィジェットが上に広がって発言の履歴(コピー付き)が出る。
   final VoidCallback? onHistoryToggle;
@@ -307,8 +310,18 @@ class _RaiBarState extends State<RaiBar> {
 
   String? _ghost;
 
+  /// 空の入力欄の予測(build で引く)。
+  String? _predicted;
+
   /// 入力のたびに候補を引く。末尾に半角 / 全角スペースが入ったら候補で確定する。
+  /// 空の入力欄でスペースを打つと、予測([RaiBar.onPredict])で埋める (D-376)。
   void _onChanged(String text) {
+    if ((text == ' ' || text == '　') && _predicted != null) {
+      final p = _predicted!;
+      _input.value = TextEditingValue(text: p, selection: TextSelection.collapsed(offset: p.length));
+      setState(() => _ghost = null);
+      return;
+    }
     if (_ghost != null && (text.endsWith(' ') || text.endsWith('　')) && _ghost!.startsWith(text.substring(0, text.length - 1))) {
       final g = _ghost!;
       _input.value = TextEditingValue(text: g, selection: TextSelection.collapsed(offset: g.length));
@@ -336,7 +349,9 @@ class _RaiBarState extends State<RaiBar> {
     raiBarContext = context;
     final scheme = Theme.of(context).colorScheme;
     final s = widget.state;
-    final hint = s.query ?? '困ったとき、お手伝いします！';
+    // 入力欄は前の質問で埋めない (D-376): 空のときは予測を薄く出し、スペースで入れる。予測が無ければ既定のヒント。
+    _predicted = _input.text.isEmpty ? widget.onPredict?.call() : null;
+    final hint = _predicted != null ? '$_predicted(スペースで入力)' : '困ったとき、お手伝いします！';
     // 掴んで移動 (D-233 → D-236): FOW と同じく**タイル全体**が移動判定(掴み手は無し)。入力欄やボタンは
     // 自分のジェスチャを優先する。
     return GestureDetector(
@@ -385,7 +400,8 @@ class _RaiBarState extends State<RaiBar> {
                     style: RasqTypography.bodySmall,
                     decoration: InputDecoration(
                       hintText: hint,
-                      hintStyle: RasqTypography.bodySmall.copyWith(color: scheme.onSurface),
+                      hintStyle: RasqTypography.bodySmall.copyWith(color: _predicted != null ? scheme.onSurfaceVariant.withValues(alpha: 0.55) : scheme.onSurface),
+                      hintMaxLines: 1,
                       isDense: true,
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xs, vertical: 10),

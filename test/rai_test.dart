@@ -189,6 +189,14 @@ void main() {
     expect(find.byKey(const ValueKey('rai.chat.live')), findsNothing); // 記録済みなので生成中の行は無い
     expect(find.byKey(const ValueKey('rai.ring.error')), findsOneWidget);
     expect(llm.released, 1);
+    // 入力欄は前の質問で埋めない (D-376): 空のまま、予測を薄いヒントで出す → スペースで入る。
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('rai.input'))).controller!.text, isEmpty);
+    expect(find.text('何かできる？(スペースで入力)'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), ' ');
+    await tester.pump();
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('rai.input'))).controller!.text, '何かできる？');
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), '');
+    await tester.pump();
     // 履歴ボタン (D-187): 入力ウィジェットが上に広がって発言の履歴(全文 + コピー)が出る。
     String? copied;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
