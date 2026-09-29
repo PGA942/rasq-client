@@ -111,7 +111,8 @@ class RelationalCloudController extends Notifier<RelationalCloudState> {
     final learning = ref.watch(learningProvider).value;
     final settings = ref.watch(settingsAreaProvider(contributionArea)).value ?? const {};
     final supervised = ref.watch(childGateProvider).supervised;
-    final active = learning != null && learning.granted && learning.open && !supervised && settings['cloudRelational'] != false;
+    // 他人の投稿をクラウドで処理し例として残すので、検証用の範囲 (extended) だけ (D-370 / S-051)。
+    final active = learning != null && learning.granted && learning.open && learning.extended && !supervised && settings['cloudRelational'] != false;
     if (!active) _pending.clear();
     final prev = _last ?? const RelationalCloudState();
     // 止めたら判定も使わない(端末のエンジンだけに戻る)。

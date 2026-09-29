@@ -13,7 +13,7 @@ import 'rasq_account.dart';
 /// 1 度だけ返るので、端末の安全な領域に控える(RASQ アカウントに入れなくなっても撤回できるように)。
 
 /// 説明文書(`assets/settings/about.learning.rrl.json`)の版。文書を変えたら上げる。
-const rasqLearningVersion = '2026-09-28-draft';
+const rasqLearningVersion = '2026-09-29-draft';
 
 /// 撤回用のコードの控え(`{accountId: code}`)。
 const learningCodeStorageKey = 'rasq.learning.codes.v1';
@@ -31,6 +31,7 @@ class LearningStatus {
     this.labels = 0,
     this.models = const [],
     this.contributions = const {},
+    this.scope = 'own',
     this.hasWithdrawCode = false,
     this.retentionYears = 5,
     this.withdrawDays = 30,
@@ -54,6 +55,11 @@ class LearningStatus {
 
   /// 提供の種類ごとの件数(`relational` / `rai`、D-363 / S-049)。
   final Map<String, int> contributions;
+
+  /// 受け付ける範囲 (D-370 / S-051): `own` = 本人が書いた公開投稿だけ(既定、規約案 02 第 10 項)/ `extended` = 検証用
+  /// (他人の投稿の判定・RAi のやりとり・クラウド版の関連 TL)。
+  final String scope;
+  bool get extended => scope == 'extended';
   final bool hasWithdrawCode;
   final int retentionYears;
   final int withdrawDays;
@@ -69,6 +75,7 @@ class LearningStatus {
         posts: (j['posts'] as num?)?.toInt() ?? 0,
         labels: (j['labels'] as num?)?.toInt() ?? 0,
         models: [for (final m in (j['models'] as List? ?? const [])) if (m is String) m],
+        scope: j['scope'] == 'extended' ? 'extended' : 'own',
         contributions: {for (final e in ((j['contributions'] as Map?) ?? const {}).entries) if (e.value is num) '${e.key}': (e.value as num).toInt()},
         hasWithdrawCode: j['hasWithdrawCode'] == true,
         retentionYears: (j['retentionYears'] as num?)?.toInt() ?? 5,
@@ -100,7 +107,7 @@ class LearningApi {
   }
 
   /// 提供を送る (D-363 / S-049)。`kind` = relational | rai。
-  Future<({int accepted, int duplicate, int rejected})> contribute(String kind, List<PendingContributionLike> items) async {
+  Future<({int accepted, int duplicate, List<String> rejected})> contribute(String kind, List<PendingContributionLike> items) async {
     final res = await _client.postJson('/me/learning/contributions', {
       'kind': kind,
       'items': [
@@ -114,7 +121,11 @@ class LearningApi {
           },
       ],
     });
-    return (accepted: (res['accepted'] as num?)?.toInt() ?? 0, duplicate: (res['duplicate'] as num?)?.toInt() ?? 0, rejected: (res['rejected'] as List?)?.length ?? 0);
+    return (
+      accepted: (res['accepted'] as num?)?.toInt() ?? 0,
+      duplicate: (res['duplicate'] as num?)?.toInt() ?? 0,
+      rejected: [for (final r in (res['rejected'] as List? ?? const [])) if (r is Map) '${r['reason']}'],
+    );
   }
 }
 

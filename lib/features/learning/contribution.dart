@@ -236,6 +236,46 @@ PendingContribution? relationalContributionOf(ConversationEvent e, {Set<String>?
   );
 }
 
+/// 公開範囲が「公開」と分かる投稿か (D-370)。範囲の分からないものは送らない。Bluesky は投稿に範囲が無く、すべて公開。
+bool isKnownPublic(Post p) => p.visibility == 'public' || (p.visibility == null && p.account.kind == SnsKind.bluesky && !p.isDirect);
+
+/// 本人の範囲 (D-370 / S-051): 会話イベント → **自分が書いた公開投稿だけ**の提供 1 件(自分の投稿が無ければ null)。
+/// 特徴語もイベント全体ではなく自分の投稿からだけ取る。ほかの人の投稿は数(参加者・間隔)にしか使わない。
+PendingContribution? ownContributionOf(ConversationEvent e) {
+  final own = [for (final p in e.posts) if (_isSelf(p) && isKnownPublic(p)) p];
+  if (own.isEmpty) return null;
+  final me = own.first.account;
+  final byId = <String, int>{};
+  final posts = <Map<String, Object?>>[];
+  for (final p in own) {
+    byId[p.id] = posts.length;
+    final text = [if (p.contentWarning != null) '[cw] ${p.contentWarning}', p.body].join('\n');
+    posts.add({
+      'a': -1,
+      'vis': 'public',
+      't': redactContributionText(text.length > 500 ? text.substring(0, 500) : text),
+      'at': p.createdAt.toUtc().toIso8601String(),
+      if (p.replyToId != null && byId.containsKey(p.replyToId)) 'reply': byId[p.replyToId],
+      if (p.media.isNotEmpty) 'media': p.media.length,
+    });
+  }
+  return PendingContribution(
+    key: _hash('own|${e.id}'),
+    authors: const [],
+    posts: posts.length,
+    // 自分の投稿どうしが同じ会話 = 関連判定のラベル。
+    labels: posts.length >= 2 ? 1 : 0,
+    data: {
+      'v': 2,
+      'self': {'kind': me.kind.name, 'instance': me.instance, 'handle': me.handle},
+      'entities': {for (final p in own) ...extractFeatures(p)}.take(20).toList(),
+      'participants': e.participants.length,
+      'eventPosts': e.posts.length,
+      'posts': posts,
+    },
+  );
+}
+
 /// RAi の 1 やりとり → 提供 1 件。
 PendingContribution raiContributionOf({required String query, required String answer, required String mode, required String model, String? opId, bool error = false, List<String> steps = const []}) {
   final at = DateTime.now().toUtc();
@@ -273,7 +313,15 @@ class ContributionState {
     this.log = const [],
     this.busy = false,
     this.lastSentAt,
+    this.extended = false,
+    this.unverified = 0,
   });
+
+  /// 受け付ける範囲が検証用の `extended` か (D-370)。既定の `own` では自分の公開投稿だけを送る。
+  final bool extended;
+
+  /// 持ち主の確認が済んでいない SNS アカウントの投稿で、受け付けられなかった数 (D-370)。
+  final int unverified;
 
   /// 同意済み・受付中・見守りでない(= 集めて送る)。
   final bool active;
@@ -312,6 +360,8 @@ class ContributionState {
     List<String>? log,
     bool? busy,
     DateTime? lastSentAt,
+    bool? extended,
+    int? unverified,
   }) =>
       ContributionState(
         active: active ?? this.active,
@@ -327,6 +377,8 @@ class ContributionState {
         log: log ?? this.log,
         busy: busy ?? this.busy,
         lastSentAt: lastSentAt ?? this.lastSentAt,
+        extended: extended ?? this.extended,
+        unverified: unverified ?? this.unverified,
       );
 }
 
@@ -365,9 +417,11 @@ class ContributionController extends Notifier<ContributionState> {
     final settings = ref.watch(settingsAreaProvider(contributionArea)).value ?? const {};
     final supervised = ref.watch(childGateProvider).supervised;
     final active = learning != null && learning.granted && learning.open && !supervised;
+    final extended = learning?.extended ?? false;
     final relational = settings['relational'] != false;
-    final rai = settings['rai'] != false;
-    final preload = settings['preload'] != false;
+    // RAi のやりとりと端末のモデルの下見は、検証用の範囲 (extended) だけ (D-370)。
+    final rai = extended && settings['rai'] != false;
+    final preload = extended && settings['preload'] != false;
     if (active && relational) {
       ref.listen(conversationEventsProvider, (_, next) => _offerEvents(next.value ?? const []));
       // いまある束も(build の中では state を触れないので、次のマイクロタスクで)。
@@ -381,7 +435,7 @@ class ContributionController extends Notifier<ContributionState> {
       _rai.clear();
     }
     final prev = _last ?? const ContributionState();
-    return _last = prev.copyWith(active: active, relational: relational, rai: rai, preload: preload, pendingRelational: _relational.length, pendingRai: _rai.length, busy: false);
+    return _last = prev.copyWith(active: active, extended: extended, relational: relational, rai: rai, preload: preload, pendingRelational: _relational.length, pendingRai: _rai.length, busy: false);
   }
 
   void _log(String line) {
@@ -408,7 +462,7 @@ class ContributionController extends Notifier<ContributionState> {
     if (!state.active || !state.relational) return;
     var added = 0;
     for (final e in events) {
-      final c = relationalContributionOf(e);
+      final c = state.extended ? relationalContributionOf(e) : ownContributionOf(e);
       if (c == null || _sent.contains(c.key)) continue;
       if (!_relational.containsKey(c.key)) added++;
       _relational[c.key] = e;
@@ -499,6 +553,7 @@ class ContributionController extends Notifier<ContributionState> {
   }
 
   Future<void> _flushRelational(LearningApi api) async {
+    if (!state.extended) return _flushOwn(api);
     // 1〜3. 判定がまだの書き手を判定する。
     await ensureVerdicts([
       for (final e in _relational.values)
@@ -529,7 +584,19 @@ class ContributionController extends Notifier<ContributionState> {
     if (items.isEmpty) return;
     final res = await api.contribute('relational', items);
     state = state.copyWith(sentRelational: state.sentRelational + res.accepted, lastSentAt: DateTime.now());
-    _log('リレーショナル: ${items.length} 件を送信(受付 ${res.accepted} / 重複 ${res.duplicate} / 不可 ${res.rejected})、許可が無く送らなかった束 $skipped');
+    _log('リレーショナル: ${items.length} 件を送信(受付 ${res.accepted} / 重複 ${res.duplicate} / 不可 ${res.rejected.length})、許可が無く送らなかった束 $skipped');
+  }
+
+  /// 本人の範囲 (D-370): 自分の公開投稿だけ。書き手の判定は要らない。
+  Future<void> _flushOwn(LearningApi api) async {
+    final items = [for (final e in _relational.values) ?ownContributionOf(e)];
+    _sent.addAll(_relational.keys);
+    _relational.clear();
+    if (items.isEmpty) return;
+    final res = await api.contribute('relational', items);
+    final unverified = res.rejected.where((r) => r == 'self-unverified').length;
+    state = state.copyWith(sentRelational: state.sentRelational + res.accepted, unverified: state.unverified + unverified, lastSentAt: DateTime.now());
+    _log('自分の公開投稿: ${items.length} 件を送信(受付 ${res.accepted} / 重複 ${res.duplicate} / 不可 ${res.rejected.length}${unverified > 0 ? '、うち持ち主の確認が未完了 $unverified' : ''})');
   }
 
   Future<ContributionAuthor> _enrich(ContributionAuthor a) async {
