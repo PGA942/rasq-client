@@ -70,6 +70,8 @@ class _ReviewTimelineScreenState extends ConsumerState<ReviewTimelineScreen> {
         floatingActionButton: detail == null
             ? null
             : FloatingActionButton(
+        // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
+        heroTag: 'fab.store.review',
                 tooltip: 'レビューを書く',
                 onPressed: () => openReviewComposer(context, ref, detail: detail),
                 child: const Icon(Icons.add),

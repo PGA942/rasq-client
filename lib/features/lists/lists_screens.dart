@@ -226,6 +226,8 @@ class _ListsScreenState extends ConsumerState<ListsScreen> {
           ),
         ]),
         floatingActionButton: FloatingActionButton(
+        // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
+        heroTag: 'fab.lists',
           key: _fabKey,
           onPressed: () => _create(sessions, hasRasq),
           tooltip: 'リストを作成',

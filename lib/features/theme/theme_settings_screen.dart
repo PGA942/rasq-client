@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../settings/settings_dsl.dart';
@@ -103,6 +104,18 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
               Container(width: 14, height: 14, margin: const EdgeInsets.only(right: 3), decoration: BoxDecoration(color: c, shape: BoxShape.circle, border: Border.all(color: scheme.outline))),
             RasqIconButton(key: ValueKey('theme.remove.${p.id}'), icon: Icons.delete_outline, size: 20, tooltip: '削除', onPressed: () => _remove(p)),
           ]),
+        // 選んだ着せ替えが、いまの明るさでは効かないとき (D-374): 「入れたのに FOW の背景が変わらない」にならないように。
+        if (packs.where((p) => p.id == selected).firstOrNull case final p?)
+          if (switch (p.theme['brightness']) { 'dark' => Theme.of(context).brightness != Brightness.dark, 'light' => Theme.of(context).brightness != Brightness.light, _ => false })
+            RasqNotice(
+              key: const ValueKey('theme.brightnessHint'),
+              text: p.theme['brightness'] == 'dark' ? '「${p.name}」は暗いモードのときに効きます。いまは明るいモードです。' : '「${p.name}」は明るいモードのときに効きます。いまは暗いモードです。',
+              action: TextButton(
+                key: const ValueKey('theme.brightnessHint.switch'),
+                onPressed: () => ref.read(themeModeProvider.notifier).set(p.theme['brightness'] == 'dark' ? ThemeModeSetting.dark : ThemeModeSetting.light),
+                child: Text(p.theme['brightness'] == 'dark' ? '暗いモードにする' : '明るいモードにする'),
+              ),
+            ),
         if (packs.isEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),

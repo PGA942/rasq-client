@@ -45,6 +45,8 @@ class DmScreen extends ConsumerWidget {
         // 新規メッセージ (D-045/D-046): 投稿と同じ + ボタン。ユーザーを選んで
         // コンポーザー付きのルームを開く(既存ルームが無くても始められる)。
         floatingActionButton: FloatingActionButton(
+        // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
+        heroTag: 'fab.dm',
           onPressed: () => _startNewDm(context, ref),
           tooltip: '新規メッセージ',
           shape: const CircleBorder(),

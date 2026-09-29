@@ -16,6 +16,7 @@ import 'package:rasq_client/features/theme/theme_settings_screen.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
@@ -165,6 +166,63 @@ void main() {
       expect(() => checkThemeManifest(m({'surfaces': {'fow': {'layers': [{'gradient': {'colors': ['#000000', '#FFFFFF'], 'stops': [0]}}]}}})), throwsA(isA<RasqPackageException>()));
     });
   });
+
+  for (final wide in [false, true]) {
+  testWidgets('使っている途中で着せ替えを選んでも作り直さない(Hero のタグが重ならない)、FOW の背景も変わる (D-374${wide ? '、デスクトップ幅' : ''})', (tester) async {
+    tester.view.physicalSize = wide ? const Size(1600, 1000) : const Size(1080, 2340);
+    tester.view.devicePixelRatio = wide ? 1 : 3;
+    addTearDown(tester.view.reset);
+    final dir = Directory.systemTemp.createTempSync('rasq-d374');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+        themePackDirProvider.overrideWithValue(() async => dir),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(themeModeProvider.notifier).set(ThemeModeSetting.light);
+    // FAB のある画面を 2 つ開いておく(ホームと AsTell。タブは同じルームに並ぶ)。
+    c.read(routerProvider).go(Routes.vc);
+    await tester.pumpAndSettle();
+    c.read(routerProvider).go(Routes.home);
+    await tester.pumpAndSettle();
+    final homeState = tester.state(find.byType(Navigator).first);
+    final r = await tester.runAsync(() => c.read(installedPluginsProvider.notifier).install('sample.theme-starry'));
+    expect(r?.error, isNull);
+    await tester.pumpAndSettle();
+    // 使っている途中で選ぶ。
+    await c.read(settingsAreaProvider(themeSettingsArea).notifier).set('id', 'sample.theme-starry');
+    await tester.pumpAndSettle();
+    expect(c.read(activeSkinProvider), isNotNull);
+    expect(tester.takeException(), isNull);
+    expect(identical(tester.state(find.byType(Navigator).first), homeState), isTrue, reason: 'ナビゲーターを作り直していない');
+    // 画面を移る(Hero の遷移が走る)。明るいモードでは効かない着せ替えなので、案内から暗いモードへ。
+    c.read(routerProvider).push(Routes.settingsTheme);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('theme.brightnessHint')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('theme.brightnessHint.switch')));
+    await tester.pumpAndSettle();
+    expect(c.read(themeModeProvider), ThemeModeSetting.dark);
+    expect(find.byKey(const ValueKey('theme.brightnessHint')), findsNothing);
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    c.read(overlayManagerProvider).showFow<void>(id: 'test.fow', spec: FowSpec(title: 'テスト'), builder: (_, _) => const Text('FOW の中身'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    bool sky(Widget w) => w is Image && w.image is FileImage && (w.image as FileImage).file.path.endsWith('sky.png');
+    final panel = find.ancestor(of: find.text('FOW の中身'), matching: find.byType(RasqSkinned));
+    expect(panel, findsWidgets);
+    expect(find.descendant(of: panel.first, matching: find.byWidgetPredicate(sky)), findsWidgets, reason: 'FOW の背景(夜空)');
+  });
+  }
 
   testWidgets('ストアからインストール → 設定で選ぶ → 暗いモードで面 / アイコンが変わる → 削除で既定に戻る', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);

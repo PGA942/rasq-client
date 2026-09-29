@@ -55,15 +55,15 @@ class AppOverlayRoot extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final manager = ref.watch(overlayManagerProvider);
     // 着せ替え (D-335): FOW の地の色と背景のレイヤー(FOW 自身の明るさで判定)。
+    // 着せ替えが無いときも同じ形で包む (D-374): 着せ替えを入れた / 外したときに OverlayHost とアプリの中身(ナビゲーター)が
+    // 作り直されないように。作り直すと、画面の FAB の Hero のタグが重なって落ち、FOW の背景も変わらなかった。
     final skin = RasqSkinScope.of(context);
-    final fowSkin = skin == null
-        ? null
-        : (
-            color: (BuildContext ctx) => skin.surface(RasqSkinSurfaceId.fow, Theme.of(ctx).brightness)?.color,
-            decorate: (BuildContext ctx, Widget panel) => RasqSkinned(surface: RasqSkinSurfaceId.fow, child: panel),
-            // 面の文字色 (D-337): ハンドル / 見出しも含めて。
-            theme: (BuildContext ctx, ThemeData base) => skin.surface(RasqSkinSurfaceId.fow, base.brightness)?.onColor == null ? base : RasqSkin.withOnColor(base, skin.surface(RasqSkinSurfaceId.fow, base.brightness)!.onColor!),
-          );
+    final fowSkin = (
+      color: (BuildContext ctx) => skin?.surface(RasqSkinSurfaceId.fow, Theme.of(ctx).brightness)?.color,
+      decorate: (BuildContext ctx, Widget panel) => RasqSkinned(surface: RasqSkinSurfaceId.fow, stable: true, child: panel),
+      // 面の文字色 (D-337): ハンドル / 見出しも含めて。
+      theme: (BuildContext ctx, ThemeData base) => skin?.surface(RasqSkinSurfaceId.fow, base.brightness)?.onColor == null ? base : RasqSkin.withOnColor(base, skin!.surface(RasqSkinSurfaceId.fow, base.brightness)!.onColor!),
+    );
     Widget host = OverlayHost(
       manager: manager,
       fowDockInset: (ctx) => fowDockInsetOf(ctx, ref.read(routerProvider)),
@@ -77,7 +77,7 @@ class AppOverlayRoot extends ConsumerWidget {
       fowColumns: (ctx) => fowColumnSlotsOf(ctx, thirdColumnOccupied: ref.read(thirdColumnProvider) != null, layout: ref.read(columnLayoutProvider)),
       child: child,
     );
-    if (fowSkin != null) host = FowPanelSkin(color: fowSkin.color, decorate: fowSkin.decorate, theme: fowSkin.theme, child: host);
+    host = FowPanelSkin(color: fowSkin.color, decorate: fowSkin.decorate, theme: fowSkin.theme, child: host);
     return OverlayScope(
       manager: manager,
       child: CallbackShortcuts(
