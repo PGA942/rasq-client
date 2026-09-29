@@ -16,6 +16,8 @@ import '../custom/custom_share.dart';
 import 'release_fow.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
+import '../settings/settings_dsl.dart';
+import '../theme/theme_packs.dart';
 import 'store_install.dart';
 import 'store_widgets.dart';
 
@@ -166,6 +168,19 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
                 style: FilledButton.styleFrom(shape: const StadiumBorder()),
                 child: const Text('開く'),
               ),
+              const SizedBox(width: RasqSpacing.xs),
+            ],
+            // 着せ替え (D-375): 入っていれば「使う」/ 使用中。
+            if (ref.watch(themePacksProvider).any((p) => p.id == d.id)) ...[
+              if (ref.watch(activeThemeIdProvider) == d.id)
+                const OutlinedButton(key: ValueKey('store.theme.inUse'), onPressed: null, style: ButtonStyle(shape: WidgetStatePropertyAll(StadiumBorder())), child: Text('使用中'))
+              else
+                FilledButton(
+                  key: const ValueKey('store.theme.use'),
+                  onPressed: () => ref.read(settingsAreaProvider(themeSettingsArea).notifier).set('id', d.id),
+                  style: FilledButton.styleFrom(shape: const StadiumBorder()),
+                  child: const Text('使う'),
+                ),
               const SizedBox(width: RasqSpacing.xs),
             ],
             OutlinedButton(

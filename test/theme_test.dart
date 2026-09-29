@@ -255,12 +255,17 @@ void main() {
     expect(pack.name, '星空');
     expect(pack.images.keys, unorderedEquals(['sky', 'stars', 'button', 'heart']));
     expect(pack.images.values.every((p) => File(p).existsSync()), isTrue);
-    expect(c.read(activeSkinProvider), isNull, reason: '入れただけでは効かない(選ぶまで)');
+    // 入れたらそのまま使う (D-375: 以前は選ぶまで効かず「入れたのに変わらない」になっていた)。
+    expect(c.read(activeThemeIdProvider), 'sample.theme-starry');
+    expect(c.read(activeSkinProvider), isNotNull);
 
-    // 設定 → アプリの外観 → フォントやカラースキーム で選ぶ。
+    // 設定 → アプリの外観 → フォントやカラースキーム で外す → 選び直す。
     c.read(routerProvider).push(Routes.settingsTheme);
     await tester.pumpAndSettle();
-    expect(find.text('着せ替えなし(既定)'), findsOneWidget);
+    await tester.tap(find.text('着せ替えなし(既定)'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pumpAndSettle();
+    expect(c.read(activeSkinProvider), isNull);
     await tester.tap(find.byKey(const ValueKey('theme.pack.sample.theme-starry')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
     await tester.pumpAndSettle();
