@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart' show orgateAccountProvider;
@@ -12,7 +14,8 @@ import 'swing_models.dart';
 ///
 /// - RASQ アカウントがあって Central に繋がっているときだけ。**見守られている端末では出さない**(見守りの設定に Swing の
 ///   項目がまだ無いので、止めておく)。
-/// - フィードは起動時と [SwingFeed.interval] ごとに読み直す。見終えたもの([SwingFeed.markSeen])は手元からもすぐ消す。
+/// - フィードは起動時と [SwingFeed.interval] ごとに読み直す。
+/// - D-379: 見終えたものも期限までは残す(ヘッダーのリングが青 → 白になる。もう一度見られる)。
 
 final swingApiProvider = Provider<SwingApi?>((ref) {
   final client = ref.watch(centralClientProvider);
@@ -40,8 +43,7 @@ class SwingFeed extends AsyncNotifier<List<Swing>> {
   }
 
   Future<List<Swing>> _load(SwingApi api) async => [
-        for (final s in await api.feed())
-          if (!_seen.contains(s.id)) s,
+        for (final s in await api.feed(all: true)) _seen.contains(s.id) ? s.copyWith(seen: true) : s,
       ];
 
   Future<void> refresh() async {
@@ -55,11 +57,11 @@ class SwingFeed extends AsyncNotifier<List<Swing>> {
     }
   }
 
-  /// 見終えた: 手元から消して Central へ。
+  /// 見終えた: 手元で見終えた印を付けて Central へ。
   Future<void> markSeen(String id) async {
     if (!_seen.add(id)) return;
     final cur = state.value;
-    if (cur != null) state = AsyncData([for (final s in cur) if (s.id != id) s]);
+    if (cur != null) state = AsyncData([for (final s in cur) s.id == id ? s.copyWith(seen: true) : s]);
     try {
       await ref.read(swingApiProvider)?.seen(id);
     } catch (_) {
@@ -67,6 +69,13 @@ class SwingFeed extends AsyncNotifier<List<Swing>> {
     }
   }
 }
+
+/// 未審査のプラグインの入れ物を取る (D-379)。URL は Central の署名つき(テストで差し替える)。
+final swingPackageFetcherProvider = Provider<Future<Uint8List> Function(Uri url)>((ref) => (url) async {
+      final r = await http.get(url).timeout(const Duration(seconds: 60));
+      if (r.statusCode != 200) throw StateError('プラグインを取れませんでした(HTTP ${r.statusCode})');
+      return r.bodyBytes;
+    });
 
 final swingFeedProvider = AsyncNotifierProvider<SwingFeed, List<Swing>>(SwingFeed.new);
 
@@ -77,16 +86,32 @@ final mySwingsProvider = FutureProvider.autoDispose<List<Swing>>((ref) async {
   return api.mine();
 });
 
-/// ヘッダーに並べる、Swing を出している人(新しい順)と、その人の見ていない数。
-typedef SwingAuthorEntry = ({Swing first, int count});
+/// Swing を出している人(見ていないものがある人が先、その中は新しい順)と、見ていない数。
+typedef SwingAuthorEntry = ({Swing first, int unseen, int total});
 
 final swingAuthorsProvider = Provider<List<SwingAuthorEntry>>((ref) {
   final feed = ref.watch(swingFeedProvider).value ?? const <Swing>[];
-  final ordered = orderForViewer(feed);
-  final out = <String, SwingAuthorEntry>{};
-  for (final s in ordered) {
-    final cur = out[s.authorAccountId];
-    out[s.authorAccountId] = cur == null ? (first: s, count: 1) : (first: cur.first, count: cur.count + 1);
+  final byAuthor = <String, List<Swing>>{};
+  for (final s in feed) {
+    byAuthor.putIfAbsent(s.authorAccountId, () => []).add(s);
   }
-  return out.values.toList();
+  final out = [
+    for (final g in byAuthor.values)
+      (first: (g..sort((a, b) => b.createdAt.compareTo(a.createdAt))).first, unseen: g.where((s) => !s.seen).length, total: g.length),
+  ]..sort((a, b) {
+      final u = (b.unseen > 0 ? 1 : 0) - (a.unseen > 0 ? 1 : 0);
+      return u != 0 ? u : b.first.createdAt.compareTo(a.first.createdAt);
+    });
+  return out;
 });
+
+/// ビューワーの並び (D-379): [startAuthor] の Swing(見ていないものがあればそれ、無ければ全部)→ ほかの人の見ていないもの。
+/// 誰も指定しなければ、見ていないもの全部(無ければ全部)。
+List<Swing> swingViewerQueue(List<Swing> feed, {String? startAuthor}) {
+  final unseen = [for (final s in feed) if (!s.seen) s];
+  if (startAuthor == null) return orderForViewer(unseen.isEmpty ? feed : unseen);
+  final mine = [for (final s in feed) if (s.authorAccountId == startAuthor) s];
+  final first = mine.any((s) => !s.seen) ? [for (final s in mine) if (!s.seen) s] : mine;
+  final rest = [for (final s in unseen) if (s.authorAccountId != startAuthor) s];
+  return [...orderForViewer(first), ...orderForViewer(rest)];
+}

@@ -60,7 +60,16 @@ void main() {
       expect(identical(SideloadTrust.bundled.capabilities, SideloadCapabilities.full), isTrue);
       expect(SideloadTrust.bundled.isFull, isTrue);
       expect(SideloadTrust.restricted.isFull, isFalse);
-      expect([for (final t in SideloadTrust.values) t.label], ['フル', 'フル(同梱)', '制限']);
+      expect([for (final t in SideloadTrust.values) t.label], ['フル', 'フル(同梱)', '制限', '制限(Swing)']);
+      // 未審査の Swing (D-379): 制限モードと同じに閉じ、GPU だけ開ける。
+      final sw = SideloadTrust.swing.capabilities;
+      final r0 = SideloadTrust.restricted.capabilities;
+      expect(SideloadTrust.swing.isFull, isFalse);
+      expect(sw.networkEnabled, isFalse);
+      expect(sw.storageUnsafeEnabled, isFalse);
+      expect(sw.allowedFowKinds, r0.allowedFowKinds);
+      expect(sw.blockedHostFns, r0.blockedHostFns);
+      expect(sw.gpuEnabled, isTrue);
       final full = SideloadTrust.full.capabilities;
       expect(full.networkEnabled, isTrue);
       expect(full.storageUnsafeEnabled, isTrue);

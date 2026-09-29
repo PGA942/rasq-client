@@ -1134,6 +1134,8 @@ void main() {
     final bundle = find.descendant(of: find.byKey(const ValueKey('astell.header.strip')), matching: find.byType(RasqAvatarBundle));
     expect(bundle, findsOneWidget);
     expect(find.byTooltip('よもぎもち: サプライズ'), findsOneWidget);
+    // D-379: ヘッダーを畳んでいなければ、アイコンの下にルーム名。
+    expect(find.descendant(of: find.byKey(const ValueKey('astell.header.strip')), matching: find.text('サプライズ')), findsOneWidget);
     await tester.tap(bundle);
     await tester.pumpAndSettle();
     expect(find.text('参加'), findsOneWidget); // 参加 FOW

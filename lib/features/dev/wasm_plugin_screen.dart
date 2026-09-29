@@ -416,7 +416,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
               Text(
                 _grant!.isDebugAll
                     ? '${_grant!.label}(release ビルドでは段で絞ります: $sideloadTrustHint)'
-                    : 'この画面: ${switch (_grant!.trust!) { SideloadTrust.full => 'フル機能', SideloadTrust.bundled => 'フル機能(アプリ同梱)', SideloadTrust.restricted => '制限モード' }} — $sideloadTrustHint',
+                    : 'この画面: ${switch (_grant!.trust!) { SideloadTrust.full => 'フル機能', SideloadTrust.bundled => 'フル機能(アプリ同梱)', SideloadTrust.restricted => '制限モード', SideloadTrust.swing => '制限モード(Swing)' }} — $sideloadTrustHint',
                 key: const ValueKey('wasm.dev.mode'),
                 style: RasqTypography.caption.copyWith(color: _grant!.isDebugAll || _grant!.trust!.isFull ? scheme.onSurfaceVariant : RasqTokens.of(context).danger),
               ),

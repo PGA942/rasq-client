@@ -200,6 +200,21 @@ abstract final class SlotIds {
   static const page = 'page';
 }
 
+/// 未審査の Swing のプラグイン (D-379) の登録元: `swing:<swingId>`。段は [SideloadTrust.swing](制限モード + GPU)。
+const swingSlotSourcePrefix = 'swing:';
+
+/// 未審査の Swing で配る入れ物の決まり (D-379): **子プラグイン(土台に足す子 / 同じ入れ物の 2 つめ)を持たない**、1 つだけ。
+/// 素の `.wasm` はそのまま(1 つ)。外れたら [StateError]。
+void checkSwingPackage(Uint8List data, {required ZstdDecompress decompress}) {
+  if (!isRasqPackage(data)) {
+    if (!isWasmBytes(data)) throw StateError('Swing のプラグインは .rasqpkg か .wasm です');
+    return;
+  }
+  final pkg = RasqPackage.open(data, decompress: decompress);
+  if (pkg.requires.isNotEmpty) throw StateError('Swing では、ほかのプラグインを土台にする子プラグインは配れません');
+  if (pkg.slotPlugins.length != 1 || pkg.root.isTheme || pkg.root.isAssets) throw StateError('Swing で配れるのは、プラグイン 1 つだけの入れ物です');
+}
+
 /// ページ型の開いているページ 1 つ(ホスト側、D-357)。`page.render` と `shared.*` の受け口。
 abstract class PluginPageSink {
   void render(RrlNode root, String? title);
@@ -547,10 +562,15 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       // 次回起動の読み直しでも毎回ここを通る(登録時の結果を覚えておかない)。
       // 一覧が届く前 / 変わる途中に読んだ段は、登録のあとで [_reevaluateSideloadTrust] が確かめ直す。
       final ownFingerprints = ref.read(ownDevKeyFingerprintsProvider);
+      final swing = source.startsWith(swingSlotSourcePrefix);
       final sideloadTrust = isReviewedSlotSource(source)
           ? SideloadTrust.restricted
-          : await sideloadTrustOfContainer(container, data, ownFingerprints: ownFingerprints);
+          : swing
+              ? SideloadTrust.swing
+              : await sideloadTrustOfContainer(container, data, ownFingerprints: ownFingerprints);
       String? expectedId;
+      // 未審査の Swing (D-379): 子プラグインを持たない 1 つだけ、Swing の面のページ型だけ。
+      if (swing) checkSwingPackage(data, decompress: ref.read(rasqpkgZstdProvider));
       if (isRasqPackage(data)) {
         final entry = RasqPackage.open(data, decompress: ref.read(rasqpkgZstdProvider)).plugin(pluginId);
         if (entry.isSns) throw StateError('${entry.id} は SNS プラグインです(スロットには登録できません)');
@@ -572,6 +592,10 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       if (manifest.id.isEmpty) {
         runtime.dispose();
         throw StateError('plugin.manifest.id が空です');
+      }
+      if (swing && (manifest.slots.length != 1 || manifest.page == null || !manifest.page!.allows(PluginPageDecl.surfaceSwing))) {
+        runtime.dispose();
+        throw StateError('Swing で配れるのは、Swing の面(surfaces: swing、solo)のページ型だけです');
       }
       // 配布物の目次が言う id と、wasm 自身が名乗る id が同じこと(別のプラグインを入れ物に紛れ込ませない)。
       if (expectedId != null && manifest.id != expectedId) {

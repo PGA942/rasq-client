@@ -56,6 +56,11 @@ class FakeSnsSession extends SnsSessionBase {
   /// TL の先頭に投稿を足す(取り直すと出る)。
   void prepend(Post p) => _posts.insert(0, p);
 
+  /// 次に取る TL を丸ごと差し替える(最新のページに、手元の投稿が入っていない = 間が空いた、など)。
+  void replaceAll(List<Post> ps) => _posts
+    ..clear()
+    ..addAll(ps);
+
   /// 送ったリアクション(`args['reaction']`。無ければ null)。
   final List<String?> reactionsSent = [];
   @override
@@ -92,7 +97,8 @@ class FakeSnsSession extends SnsSessionBase {
     if (kind.id.startsWith('tag:')) return Page(items: _posts.where((p) => p.id == 'p1').toList());
     if (kind.id.startsWith('dm:')) return Page(items: [_posts.last]);
     if (kind == DynamicTimelines.featured) return Page(items: _posts.take(2).toList());
-    return Page(items: _posts);
+    // 写しを返す(手元の一覧を書き換えても、読み込み済みの TL が変わらないように)。
+    return Page(items: [..._posts]);
   }
   /// thread() を呼ばれた投稿 id(D-155: どのアカウントのセッションで開いたか)。
   final List<String> threadRequests = [];

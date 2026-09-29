@@ -121,31 +121,46 @@ class HeaderArrivals extends Notifier<List<HeaderArrival>> {
 
 final headerArrivalsProvider = NotifierProvider<HeaderArrivals, List<HeaderArrival>>(HeaderArrivals.new);
 
-/// Swing を出している人のバンドル(青い枠、見ていない数)。タップでビューワー(その人から)。
+/// Swing を出している人 (D-379): アカウントのアイコンの外側にリング。**見ていないものがあれば青、見終えたら白**。
+/// タップでビューワー(その人から)。
 class SwingAuthorBundle extends StatelessWidget {
-  const SwingAuthorBundle({super.key, required this.swing, this.others = 0, this.size = 34});
+  const SwingAuthorBundle({super.key, required this.swing, this.unseen = true, this.size = 34});
   final Swing swing;
-
-  /// ほかに Swing を出している人の数(「+N」)。
-  final int others;
+  final bool unseen;
   final double size;
 
+  /// 見終えたあとのリングの色。暗い背景でも見えるよう、明るいモードでは薄い灰色の縁を足す。
+  static const seenRing = Colors.white;
+
   @override
-  Widget build(BuildContext context) => Tooltip(
-        message: others > 0 ? '${swing.author.displayName} ほか $others 人の Swing' : '${swing.author.displayName} の Swing',
-        child: RasqAvatarBundle(
-          key: ValueKey('swing.bundle.${swing.authorAccountId}'),
-          user: swing.author,
-          count: others > 0 ? others : null,
-          color: swingBundleColor,
-          size: size,
-          onTap: () => context.push(Routes.swing(swing.authorAccountId)),
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    const ring = 3.0;
+    return Tooltip(
+      message: unseen ? '${swing.author.displayName} の Swing' : '${swing.author.displayName} の Swing(見終えました)',
+      child: InkResponse(
+        key: ValueKey('swing.bundle.${swing.authorAccountId}'),
+        onTap: () => context.push(Routes.swing(swing.authorAccountId)),
+        radius: size / 2 + ring + 2,
+        child: Container(
+          key: ValueKey('swing.ring.${unseen ? 'unseen' : 'seen'}'),
+          width: size + ring * 2 + 2,
+          height: size + ring * 2 + 2,
+          padding: const EdgeInsets.all(1),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: unseen ? swingBundleColor : scheme.outlineVariant),
+          child: Container(
+            padding: const EdgeInsets.all(ring - 1),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: unseen ? swingBundleColor : seenRing),
+            child: ClipOval(child: RasqAvatar(imageUrl: swing.author.avatarUrl, size: size, fallbackLabel: swing.author.displayName)),
+          ),
         ),
-      );
+      ),
+    );
+  }
 }
 
-/// 出しているヘッダーの真ん中: AsTell + Swing(**1 人だけ**、D-378)。Swing はいちばん新しく出した人の顔で、ほかに出している人が
-/// いればその人数を「+N」。押すとビューワー(その人から、続けて全員)。作るのは ＋ の FOW から。
+/// 出しているヘッダーの真ん中: AsTell(下にルーム名)+ Swing(**1 人だけ**、D-378)。Swing は見ていないものがある人のうち
+/// いちばん新しく出した人(誰も無ければ、見終えた人のうちいちばん新しい人)の、リング付きの顔。押すとビューワー。
 class HomeHeaderStrip extends ConsumerWidget {
   const HomeHeaderStrip({super.key, this.astell = true, this.max = 4});
 
@@ -156,8 +171,8 @@ class HomeHeaderStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authors = ref.watch(swingApiProvider) != null ? ref.watch(swingAuthorsProvider) : const <SwingAuthorEntry>[];
-    final trailing = [if (authors.isNotEmpty) SwingAuthorBundle(swing: authors.first.first, others: authors.length - 1)];
-    if (astell) return AstellHeaderStrip(max: max, trailing: trailing);
+    final trailing = [if (authors.isNotEmpty) SwingAuthorBundle(swing: authors.first.first, unseen: authors.first.unseen > 0)];
+    if (astell) return AstellHeaderStrip(max: max, trailing: trailing, showTitles: true);
     if (trailing.isEmpty) return const SizedBox.shrink();
     return trailing.single;
   }
@@ -187,7 +202,7 @@ class HomeHeaderArrivals extends ConsumerWidget {
               padding: const EdgeInsets.all(3),
               child: a.room != null
                   ? RasqAvatarBundle(user: a.room!.owner, count: a.room!.peerCount, faces: a.room!.bundleFaces, live: a.room!.live, size: 34, onTap: () => openAstellRoomTile(context, ref, a.room!))
-                  : SwingAuthorBundle(swing: a.swing!),
+                  : SwingAuthorBundle(swing: a.swing!, unseen: !a.swing!.seen),
             ),
           ),
           const SizedBox(width: 8),

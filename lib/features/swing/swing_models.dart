@@ -18,12 +18,19 @@ enum SwingKind {
 
 @immutable
 class SwingPlugin {
-  const SwingPlugin({required this.id, this.version, this.data});
+  const SwingPlugin({required this.id, this.version, this.data, this.packageId, this.packageUrl, this.unreviewed = false});
   final String id;
   final String? version;
   final Object? data;
 
-  Map<String, Object?> toJson() => {'id': id, 'version': ?version, 'data': ?data};
+  /// 未審査 (D-379 / S-057): 作るときに上げた入れ物の id。
+  final String? packageId;
+
+  /// 未審査: 見る側が取る入れ物の URL(署名つき)。
+  final Uri? packageUrl;
+  final bool unreviewed;
+
+  Map<String, Object?> toJson() => {'id': id, 'version': ?version, 'data': ?data, 'packageId': ?packageId};
 }
 
 @immutable
@@ -73,6 +80,8 @@ class Swing {
 
   String get authorAccountId => author.id.replaceFirst('rasq:', '');
 
+  Swing copyWith({bool? seen}) => Swing(id: id, author: author, kind: kind, text: text, mediaUrl: mediaUrl, mediaType: mediaType, plugin: plugin, createdAt: createdAt, expiresAt: expiresAt, seen: seen ?? this.seen, audience: audience, viewCount: viewCount);
+
   Duration remaining(DateTime now) {
     final d = expiresAt.difference(now);
     return d.isNegative ? Duration.zero : d;
@@ -99,7 +108,15 @@ class Swing {
       text: j['text'] as String? ?? '',
       mediaUrl: media is Map && media['url'] is String ? Uri.tryParse(media['url'] as String) : null,
       mediaType: media is Map ? media['contentType'] as String? : null,
-      plugin: plugin is Map && plugin['id'] is String ? SwingPlugin(id: plugin['id'] as String, version: plugin['version'] as String?, data: plugin['data']) : null,
+      plugin: plugin is Map && plugin['id'] is String
+          ? SwingPlugin(
+              id: plugin['id'] as String,
+              version: plugin['version'] as String?,
+              data: plugin['data'],
+              packageUrl: plugin['packageUrl'] is String ? Uri.tryParse(plugin['packageUrl'] as String) : null,
+              unreviewed: plugin['unreviewed'] == true,
+            )
+          : null,
       createdAt: DateTime.tryParse('${j['createdAt']}') ?? DateTime.fromMillisecondsSinceEpoch(0),
       expiresAt: DateTime.tryParse('${j['expiresAt']}') ?? DateTime.fromMillisecondsSinceEpoch(0),
       seen: j['seen'] == true,

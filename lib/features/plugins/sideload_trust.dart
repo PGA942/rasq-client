@@ -35,10 +35,14 @@ import '../store/rasqpkg.dart';
 enum SideloadTrust {
   full,
   bundled,
-  restricted;
+  restricted,
+
+  /// 未審査のまま Swing で配られたプラグイン (D-379): 制限モードと同じに閉じ、**GPU(WebGPU / gpu.compute)だけ開ける**。
+  /// 入れ物は子プラグインを持たない 1 つだけ([checkSwingPackage])。
+  swing;
 
   /// フル機能か(自分の署名 [full] / アプリ同梱 [bundled])。
-  bool get isFull => this != SideloadTrust.restricted;
+  bool get isFull => this == SideloadTrust.full || this == SideloadTrust.bundled;
 
   /// この段で開けてよい能力(表 [sideloadCapabilityTable] の行)。
   SideloadCapabilities get capabilities => sideloadCapabilityTable[this]!;
@@ -48,6 +52,7 @@ enum SideloadTrust {
         SideloadTrust.full => 'フル',
         SideloadTrust.bundled => 'フル(同梱)',
         SideloadTrust.restricted => '制限',
+        SideloadTrust.swing => '制限(Swing)',
       };
 }
 
@@ -109,6 +114,16 @@ class SideloadCapabilities {
     gpuEnabled: false,
   );
 
+  /// 未審査の Swing (D-379): 制限モード + GPU。
+  static const swing = SideloadCapabilities(
+    networkEnabled: false,
+    storageUnsafeEnabled: false,
+    allowedFowKinds: {'widget'},
+    blockedHostFns: {RasqHostFns.composerOpen, RasqHostFns.astellShare, RasqHostFns.muteAdd, RasqHostFns.urlOpen},
+    fuelFactor: 0.5,
+    gpuEnabled: true,
+  );
+
   /// 実効の権限から外す名前。
   Set<String> get deniedPermissions => {
         if (!networkEnabled) RasqPermissions.network,
@@ -143,6 +158,7 @@ const sideloadCapabilityTable = <SideloadTrust, SideloadCapabilities>{
   // アプリ同梱のアセット = アプリと同じ信頼(同梱の SNS サンプルは net.fetch で TL を取る)。
   SideloadTrust.bundled: SideloadCapabilities.full,
   SideloadTrust.restricted: SideloadCapabilities.restricted,
+  SideloadTrust.swing: SideloadCapabilities.swing,
 };
 
 /// このアカウントが Central に登録した開発者の署名鍵の指紋(失効していないもの。SHA-512 の先頭 8 バイトの hex、
