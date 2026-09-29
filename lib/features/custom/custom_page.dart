@@ -24,7 +24,7 @@ import 'custom_models.dart';
 /// カスタムプラグイン(ページ型、契約 v0.18 §2.13、D-357)を開く引数。ルート `/custom/<pluginId>?surface=&session=&room=&profile=`。
 @immutable
 class CustomPageArgs {
-  const CustomPageArgs({required this.pluginId, this.version, this.surface = PluginPageDecl.surfacePage, this.sessionId, this.roomId, this.profileHandle, this.profileAccountId});
+  const CustomPageArgs({required this.pluginId, this.version, this.surface = PluginPageDecl.surfacePage, this.sessionId, this.roomId, this.profileHandle, this.profileAccountId, this.context = const {}});
   final String pluginId;
   final String? version;
   final String surface;
@@ -32,6 +32,9 @@ class CustomPageArgs {
   final String? roomId;
   final String? profileHandle;
   final String? profileAccountId;
+
+  /// `page.open` の `context` に足すもの(ルートには載せない)。Swing (D-377) は `{swingId, data, author}`。
+  final Map<String, Object?> context;
 
   Map<String, String> get query => {
         'version': ?version,
@@ -182,7 +185,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     }
     final r = await _slots.pageOpen(p, token: token, sink: this, args: {
       'surface': args.surface,
-      'context': {'roomId': ?args.roomId, 'profileHandle': ?args.profileHandle, 'profileAccountId': ?args.profileAccountId},
+      'context': {'roomId': ?args.roomId, 'profileHandle': ?args.profileHandle, 'profileAccountId': ?args.profileAccountId, ...args.context},
       'me': me!.toJson(),
       if (session != null) 'session': _sessionJson(),
       'size': {'width': size.width.round(), 'height': size.height.round()},
@@ -288,6 +291,16 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   }
 
   // ── PluginPageSink ──
+
+  /// `page.end` の受け手(Swing の画面が次へ進む、D-377)。
+  VoidCallback? onEnd;
+
+  @override
+  void end() => onEnd?.call();
+
+  /// Swing の「全画面から縮小」(v0.19): ページを止める / 戻す。
+  void pause() => _event({'type': 'paused'});
+  void resume() => _event({'type': 'resumed'});
 
   @override
   void render(RrlNode root, String? title) => _set(() {

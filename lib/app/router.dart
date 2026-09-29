@@ -38,6 +38,8 @@ import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
 import '../features/custom/custom_page.dart';
 import '../features/custom/custom_plugins_screen.dart';
+import '../features/swing/swing_composer.dart';
+import '../features/swing/swing_viewer.dart';
 import '../features/profile/profile_edit_screen.dart';
 import '../features/profile/rasq_account_page_screen.dart';
 import '../features/profile/rasq_post_screen.dart';
@@ -170,6 +172,10 @@ abstract final class Routes {
   static String customPage(String pluginId, [Map<String, String> query = const {}]) =>
       Uri(path: '/custom/page/${Uri.encodeComponent(pluginId)}', queryParameters: query.isEmpty ? null : query).toString();
   static String customInvite(String code) => '/custom/invite/${Uri.encodeComponent(code)}';
+
+  /// Swing (D-377): 見る(全画面、作った人から)/ 作る。
+  static String swing([String? author]) => author == null ? '/swing' : '/swing?author=${Uri.encodeQueryComponent(author)}';
+  static const swingNew = '/swing/new';
 
   /// プラグインの検索画面 (D-353)。
   static String storeSearch([String q = '']) => q.isEmpty ? '/store/search' : '/store/search?q=${Uri.encodeQueryComponent(q)}';
@@ -408,6 +414,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: '/custom/page/:id',
               parentNavigatorKey: _appNavigatorKey,
               builder: (_, s) => CustomPageScreen(key: ValueKey(s.uri.toString()), args: CustomPageArgs.fromState(Uri.decodeComponent(s.pathParameters['id']!), s.uri.queryParameters))),
+          GoRoute(path: '/swing', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SwingViewerScreen(startAuthor: s.uri.queryParameters['author'])),
+          GoRoute(path: Routes.swingNew, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const SwingComposerScreen()),
           GoRoute(path: '/custom/invite/:code', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => CustomInviteScreen(code: Uri.decodeComponent(s.pathParameters['code']!))),
           GoRoute(path: '/store/search', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => StoreSearchScreen(initialQuery: s.uri.queryParameters['q'] ?? '')),
           GoRoute(

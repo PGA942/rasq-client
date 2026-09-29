@@ -178,12 +178,16 @@ class AstellPostTile extends ConsumerWidget {
   }
 }
 
-/// ホームヘッダーの AsTell 帯 (D-163、ワイヤーフレームの角丸四角形): 参加中 /
-/// フォロー中のホストのルーム / 招待されているルームのバンドルを横に並べ、
-/// タップで参加 FOW(参加中ならルーム FOW)。無ければ何も出さない。
+/// ホームヘッダーの AsTell 帯 (D-163): 参加中 / フォロー中のホストのルーム / 招待されているルームのバンドルを横に並べ、
+/// タップで参加 FOW(参加中ならルーム FOW)。何も無ければ何も出さない。
+/// D-377: 帯を囲んでいた大きな角丸四角形は無くし、バンドルを少し大きく(28 → [size] 34)。前後に [leading] / [trailing]
+/// (Swing を作るボタン / Swing を出している人)を並べられる。
 class AstellHeaderStrip extends ConsumerWidget {
-  const AstellHeaderStrip({super.key, this.max = 4});
+  const AstellHeaderStrip({super.key, this.max = 4, this.size = 34, this.leading = const [], this.trailing = const []});
   final int max;
+  final double size;
+  final List<Widget> leading;
+  final List<Widget> trailing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -201,21 +205,21 @@ class AstellHeaderStrip extends ConsumerWidget {
     for (final r in home?.invited ?? const <AstellRoom>[]) {
       add(r);
     }
-    if (rooms.isEmpty) return const SizedBox.shrink();
-    return Container(
+    if (rooms.isEmpty && leading.isEmpty && trailing.isEmpty) return const SizedBox.shrink();
+    return SingleChildScrollView(
       key: const ValueKey('astell.header.strip'),
-      height: 40,
-      decoration: BoxDecoration(color: RasqColors.yellow.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(20)),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      scrollDirection: Axis.horizontal,
       child: Row(mainAxisSize: MainAxisSize.min, children: [
+        for (final w in leading) ...[w, const SizedBox(width: 8)],
         for (final r in rooms.take(max)) ...[
           Tooltip(
             message: '${r.ownerDisplayName}: ${r.title}',
-            child: RasqAvatarBundle(user: r.owner, count: r.peerCount, faces: r.bundleFaces, live: r.live, size: 28, onTap: () => openAstellRoomTile(context, ref, r)),
+            child: RasqAvatarBundle(user: r.owner, count: r.peerCount, faces: r.bundleFaces, live: r.live, size: size, onTap: () => openAstellRoomTile(context, ref, r)),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
         ],
-        if (rooms.length > max) Padding(padding: const EdgeInsets.only(right: 4), child: Text('+${rooms.length - max}', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
+        if (rooms.length > max) Padding(padding: const EdgeInsets.only(right: 8), child: Text('+${rooms.length - max}', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
+        for (final w in trailing) ...[w, const SizedBox(width: 8)],
       ]),
     );
   }

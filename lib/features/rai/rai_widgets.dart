@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../ads/export_ad.dart';
+
 import 'rai_mascot_3d.dart';
 import 'rai_providers.dart';
 
@@ -462,6 +464,8 @@ class _RaiBarState extends State<RaiBar> {
                 ),
               ]),
             ),
+          // クラウドで推論している間だけ、広告の枠 (D-377)。出せない端末 / 見守りのアカウント / 狭いバーでは何も出さない。
+          if (s.cloudBusy) const Center(key: ValueKey('rai.ad'), child: ExportAdSlot()),
         ]),
       ),
       ),

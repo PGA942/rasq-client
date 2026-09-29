@@ -329,6 +329,7 @@ class RasqHostEnvironment {
             RasqHostFns.composerOpen ||
             RasqHostFns.composerMediaOverlay ||
             RasqHostFns.pageRender ||
+            RasqHostFns.pageEnd ||
             RasqHostFns.sharedSet ||
             RasqHostFns.sharedOp ||
             RasqHostFns.sharedCall:
@@ -341,7 +342,7 @@ class RasqHostEnvironment {
           if (u == null || !(u.isScheme('https') || u.isScheme('http'))) throw _HostFnError('B03', 'url.open: http(s) only');
         }
         if ((fn == RasqHostFns.composerMediaReplace || fn == RasqHostFns.composerMediaPreview || fn == RasqHostFns.composerTextReplace || fn == RasqHostFns.viewerOverlaySet || fn == RasqHostFns.composerOpen || fn == RasqHostFns.composerMediaOverlay ||
-                fn == RasqHostFns.pageRender || fn == RasqHostFns.sharedSet || fn == RasqHostFns.sharedOp || fn == RasqHostFns.sharedCall) &&
+                fn == RasqHostFns.pageRender || fn == RasqHostFns.pageEnd || fn == RasqHostFns.sharedSet || fn == RasqHostFns.sharedOp || fn == RasqHostFns.sharedCall) &&
             args['token'] is! String) {
           throw _HostFnError('D01', '$fn: token required');
         }

@@ -22,9 +22,9 @@ import '../nodeprog/node_tabs.dart';
 import '../nodeprog/timeline_temp_fow.dart';
 import '../nodeprog/tl_config_store.dart';
 import '../relational/relational_timeline_view.dart';
-import '../vc/astell_actions.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'custom_tile_row.dart';
+import 'home_header.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
 import 'timeline_search.dart';
@@ -82,6 +82,10 @@ class HomeScreen extends ConsumerWidget {
         ),
     ];
     final initial = kinds.indexOf(bundle ? TimelineKind.bundle : TimelineKind.home).clamp(0, kinds.length - 1);
+    // ヘッダー (D-377): 右上の ↑ でしまう(バーとタブ行を無くし、アイコン・新着・↓ だけを浮かべる)。
+    final collapsed = ref.watch(homeHeaderCollapsedProvider);
+    final astellInHeader = !(settingValue(ref, 'astell.tiles', 'headerStrip', true) == false || window || !gate.featureAllowed('astell.join'));
+    void openSidebar() => RasqShell.openSidebar(context, ref);
 
     return DefaultTabController(
       // タブの数が変わる(見守りの時間の出入り)と作り直す。
@@ -90,12 +94,22 @@ class HomeScreen extends ConsumerWidget {
       initialIndex: initial,
       // 開いているタブを並べ替え / 一時変更 FOW と揃える。
       child: _TabFollower(ids: [for (final k in kinds) k.id], child: Scaffold(
-        // フォロー中のホストの AsTell (D-163): ヘッダーの角丸四角形にバンドルを並べる。
-        appBar: RasqHomeHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref), 
-            // Tell タイル (D-238、設定 `astell.tiles`): 出す / 出さないと並べる数。
-            vcWidget: settingValue(ref, 'astell.tiles', 'headerStrip', true) == false || window || !gate.featureAllowed('astell.join') ? null : AstellHeaderStrip(max: ((settingValue(ref, 'astell.tiles', 'headerMax', 4) as num).round()).clamp(1, 8))),
-        body: Column(children: [
-          Container(
+        // フォロー中のホストの AsTell (D-163) と Swing (D-377) のバンドルをヘッダーに並べる。しまっていればバーは無し。
+        appBar: collapsed
+            ? null
+            : RasqHomeHeader(
+                me: me,
+                onAvatarTap: openSidebar,
+                // Tell タイル (D-238、設定 `astell.tiles`): 出す / 出さないと並べる数。
+                vcWidget: HomeHeaderStrip(astell: astellInHeader, max: ((settingValue(ref, 'astell.tiles', 'headerMax', 4) as num).round()).clamp(1, 8)),
+                trailingIcon: Icons.keyboard_arrow_up,
+                trailingTooltip: 'ヘッダーをしまう',
+                trailingKey: const ValueKey('home.header.collapse'),
+                onTrailingTap: () => setHomeHeaderCollapsed(ref, true),
+              ),
+        body: Stack(children: [
+          Column(children: [
+          if (!collapsed) Container(
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant))),
             child: Row(children: [
               Expanded(
@@ -137,6 +151,21 @@ class HomeScreen extends ConsumerWidget {
                   _TimelineView(key: ValueKey('tl.view.${k.id}'), kind: k),
             ]),
           ),
+          ]),
+          // しまったヘッダー: TL の上に浮かべる。
+          if (collapsed)
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: RasqFloatingHomeHeader(
+                key: const ValueKey('home.header.floating'),
+                me: me,
+                onAvatarTap: openSidebar,
+                arrivals: HomeHeaderArrivals(astell: astellInHeader),
+                onExpand: () => setHomeHeaderCollapsed(ref, false),
+              ),
+            ),
         ]),
         floatingActionButton: FloatingActionButton(
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。

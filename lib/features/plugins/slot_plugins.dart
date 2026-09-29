@@ -113,6 +113,7 @@ class SlotManifest {
         if (slots.contains(SlotIds.postShare) || slots.contains(SlotIds.postAction)) RasqHostFns.astellShare,
         // ページ型 (§2.13): ページの描き替え。共有セッションは `shared.session` 権限の shared だけ。
         if (slots.contains(SlotIds.page)) RasqHostFns.pageRender,
+        if (slots.contains(SlotIds.page)) RasqHostFns.pageEnd,
         if (page?.isShared == true && permissions.contains(RasqPermissions.sharedSession)) ...{RasqHostFns.sharedSet, RasqHostFns.sharedOp, RasqHostFns.sharedCall},
       };
 
@@ -202,6 +203,9 @@ abstract final class SlotIds {
 /// ページ型の開いているページ 1 つ(ホスト側、D-357)。`page.render` と `shared.*` の受け口。
 abstract class PluginPageSink {
   void render(RrlNode root, String? title);
+
+  /// `page.end`(v0.19、D-377): プラグインが自分で終わった。Swing では見終えたことにして次へ。
+  void end() {}
   bool get hasSession;
   void shared(String fn, Map<String, Object?> args);
 }
@@ -216,7 +220,8 @@ class PluginPageDecl {
   /// `solo`(1 人で完結)/ `shared`(複数人。サーバー変数 / 関数)。
   final String mode;
 
-  /// 開ける場所: `page`(単独のページ)/ `astell`(ルームにデプロイ、shared のみ)/ `profile`(RASQ アカウントのページ)。
+  /// 開ける場所: `page`(単独のページ)/ `astell`(ルームにデプロイ、shared のみ)/ `profile`(RASQ アカウントのページ)/
+  /// `swing`(RASQ の Swing として配る、solo のみ、v0.19 / D-377)。
   final List<String> surfaces;
   final int maxParticipants;
 
@@ -225,12 +230,13 @@ class PluginPageDecl {
   static const surfacePage = 'page';
   static const surfaceAstell = 'astell';
   static const surfaceProfile = 'profile';
+  static const surfaceSwing = 'swing';
 
   bool get isShared => mode == shared;
-  bool allows(String surface) => surfaces.contains(surface) && (surface != surfaceAstell || isShared);
+  bool allows(String surface) => surfaces.contains(surface) && (surface != surfaceAstell || isShared) && (surface != surfaceSwing || !isShared);
 
   factory PluginPageDecl.fromJson(Map<String, Object?> j, {String fallbackTitle = ''}) {
-    final surfaces = [for (final s in (j['surfaces'] as List? ?? const [])) if (s is String && const {surfacePage, surfaceAstell, surfaceProfile}.contains(s)) s];
+    final surfaces = [for (final s in (j['surfaces'] as List? ?? const [])) if (s is String && const {surfacePage, surfaceAstell, surfaceProfile, surfaceSwing}.contains(s)) s];
     return PluginPageDecl(
       title: j['title'] as String? ?? fallbackTitle,
       icon: j['icon'] as String?,
@@ -818,6 +824,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       case RasqHostFns.pageRender:
         final root = args['root'];
         if (root is Map) _pages['${args['token']}']?.render(RrlNode.fromJson(root.cast<String, Object?>()), args['title'] as String?);
+      case RasqHostFns.pageEnd:
+        _pages['${args['token']}']?.end();
       case RasqHostFns.sharedSet || RasqHostFns.sharedOp || RasqHostFns.sharedCall:
         final page = _pages['${args['token']}'];
         if (page == null) return;
