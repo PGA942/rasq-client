@@ -173,7 +173,7 @@ void main() {
 
 class _Granted extends LearningNotifier {
   @override
-  Future<LearningStatus?> build() async => const LearningStatus(open: true, granted: true, eligible: true);
+  Future<LearningStatus?> build() async => const LearningStatus(open: true, granted: true, eligible: true, scope: 'extended');
 }
 
 class _Session extends SnsSessionBase {

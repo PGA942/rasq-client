@@ -16,6 +16,7 @@ import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/sanctions.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_client/shell/rasq_terms_gate.dart';
 import 'package:rasq_client/shell/rasq_account_fow.dart';
 import 'package:rasq_client/shell/rasq_register_fow.dart';
 import 'package:rasq_client/shell/sidebar.dart';
@@ -136,8 +137,9 @@ void main() {
   });
 
   /// Central のまね (D-241 / S-015): 端末登録 / me / 同意 / バンドル / 削除。
-  ({MockClient client, List<String> calls, List<Map<String, Object?>> consents, Set<String> bundle}) fakeCentral({bool restored = false, Set<String>? serverBundle}) {
+  ({MockClient client, List<String> calls, List<Map<String, Object?>> consents, Set<String> bundle}) fakeCentral({bool restored = false, Set<String>? serverBundle, bool rejectVersion = false, bool pending = false}) {
     final calls = <String>[];
+    var accepted = !pending;
     final consents = <Map<String, Object?>>[];
     final bundle = serverBundle ?? <String>{};
     var deleted = false;
@@ -145,10 +147,29 @@ void main() {
     final client = MockClient((req) async {
       final path = req.url.path.replaceFirst('/api/v1', '');
       calls.add('${req.method} $path${req.url.hasQuery ? '?${req.url.query}' : ''}');
-      if (req.method == 'POST' && path == '/auth/device') return json({'accountId': 'acc-1', 'handle': 'rasq_tester', 'displayName': 'テスター', 'token': 'device-token', 'restored': restored});
+      if (req.method == 'POST' && path == '/auth/device') {
+        // 登録と承諾は一緒に (D-371 / S-053): 承諾は登録の本文で届く。
+        final c = (jsonDecode(req.body) as Map)['consents'];
+        if (c is Map && rejectVersion) return json({'error': {'code': 'terms_version', 'message': 'terms must be accepted at the current version 2099'}}, 409);
+        if (c is Map) {
+          consents.add({'kind': 'terms', 'version': c['termsVersion'], 'granted': true, 'via': 'device'});
+          consents.add({'kind': 'privacy', 'version': c['privacyVersion'], 'granted': true, 'via': 'device'});
+          consents.add({'kind': 'age', 'version': c['termsVersion'], 'granted': true, 'detail': c['age'], 'via': 'device'});
+          if (c['guardian'] == true) consents.add({'kind': 'guardian', 'version': c['termsVersion'], 'granted': true, 'via': 'device'});
+        }
+        return json({'accountId': 'acc-1', 'handle': 'rasq_tester', 'displayName': 'テスター', 'token': 'device-token', 'restored': restored});
+      }
       if (req.headers['authorization'] != 'Bearer device-token' || deleted) return json({'error': {'code': '401', 'message': 'valid bearer token required'}}, 401);
       if (req.method == 'POST' && path == '/auth/password') return http.Response('', 204);
-      if (req.method == 'GET' && path == '/me') return json({'id': 'acc-1', 'handle': 'rasq_tester', 'displayName': 'テスター', 'createdAt': '2026-09-17T00:00:00Z'});
+      if (req.method == 'GET' && path == '/me') {
+        return json({
+          'id': 'acc-1',
+          'handle': 'rasq_tester',
+          'displayName': 'テスター',
+          'createdAt': '2026-09-17T00:00:00Z',
+          if (pending) 'terms': {'accepted': accepted, 'missing': accepted ? [] : ['terms', 'privacy']},
+        });
+      }
       if (req.method == 'DELETE' && path == '/me') {
         if (req.url.queryParameters['confirm'] != 'rasq_tester') return json({'error': {'code': '400', 'message': 'confirm'}}, 400);
         deleted = true;
@@ -157,6 +178,7 @@ void main() {
       if (req.method == 'PUT' && path.startsWith('/me/consents/')) {
         final b = (jsonDecode(req.body) as Map).cast<String, Object?>();
         consents.add({'kind': path.split('/').last, ...b});
+        if (consents.any((x) => x['kind'] == 'terms') && consents.any((x) => x['kind'] == 'privacy')) accepted = true;
         return json({'kind': path.split('/').last, ...b, 'createdAt': '2026-09-17T00:00:00Z'});
       }
       if (req.method == 'GET' && path == '/me/sns-accounts') return json([for (final k in bundle) {'accountKey': k}]);
@@ -252,6 +274,7 @@ void main() {
     expect(central.consents.map((c) => '${c['kind']}:${c['granted']}:${c['detail'] ?? ''}'), ['terms:true:', 'privacy:true:', 'age:true:16-17', 'guardian:true:']);
     expect(central.consents.first['version'], rasqTermsVersion);
     expect(central.consents.any((c) => c['kind'] == 'learning'), isFalse);
+    expect(central.consents.every((c) => c['via'] == 'device'), isTrue, reason: '承諾は登録と同じ要求で(後から別に書かない)');
     // プロフィールの編集画面が続く (D-269: SNS のプロフィール編集と同じ作り。FOW は閉じる)→ 戻る。
     expect(find.byType(RasqProfileEditScreen), findsOneWidget);
     expect(find.text('プロフィールの更新'), findsOneWidget);
@@ -433,6 +456,67 @@ void main() {
     expect(container.read(rasqAccountProvider).displayName, 'わたし');
     // 顔(表示名)が変わる。操作の折りたたみで一覧が送られているので、画面の外も含めて探す。
     expect(find.text('わたし', skipOffstage: false), findsWidgets);
+  });
+
+  testWidgets('登録と承諾は一緒に (D-371 / CONS-02): サーバーが規約の版を断ったら、アカウントは作られず案内が出る', (tester) async {
+    final central = fakeCentral(rejectVersion: true);
+    final container = await pumpWithCentral(tester, central.client);
+    await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('新しく作成'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('register.agree')));
+    await tester.ensureVisible(find.byKey(const ValueKey('register.age.18+')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('register.age.18+')));
+    await tester.ensureVisible(find.byKey(const ValueKey('register.password')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('register.password')), 'correct horse');
+    await tester.enterText(find.byKey(const ValueKey('register.passwordConfirm')), 'correct horse');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('register.submit')));
+    await tester.pumpAndSettle();
+    expect(central.calls.where((c) => c == 'POST /auth/device').length, 1);
+    expect(central.calls.where((c) => c.startsWith('GET /me')), isEmpty, reason: 'トークンを受け取っていない');
+    expect(central.consents, isEmpty);
+    expect(container.read(orgateAccountProvider).value, isNull);
+    expect(find.textContaining('利用規約が新しくなっています'), findsOneWidget);
+  });
+
+  testWidgets('同意待ちのアカウント (D-371): 起動後に承諾のシート、サイドバーに帯。同意すると記録して帯が消える', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final central = fakeCentral(pending: true);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [session(acc1).toJson()], 'current': acc1.key}),
+      OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'device-abc', 'token': 'device-token', 'accountId': 'acc-1'}),
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p-${v.handle}', v, 'x')]))),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: central.client, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    expect(container.read(rasqTermsPendingProvider), isTrue);
+    // 起動後に 1 度だけ承諾のシート。
+    expect(find.text('利用規約への同意'), findsOneWidget);
+    expect(find.byKey(const ValueKey('terms.age.18+')), findsNothing, reason: '年齢は申告済み');
+    await tester.tap(find.byKey(const ValueKey('terms.agree')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('同意する'));
+    await tester.pumpAndSettle();
+    expect(central.consents.map((c) => '${c['kind']}:${c['version']}'), ['terms:$rasqTermsVersion', 'privacy:$rasqPrivacyVersion']);
+    expect(container.read(rasqTermsPendingProvider), isFalse);
+    RasqSidebar.open(container.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('terms.banner')), findsNothing);
   });
 
   testWidgets('初回オンボーディング: 新規端末は案内 → スキップで「この端末のみ」→ SNS ログインへ', (tester) async {

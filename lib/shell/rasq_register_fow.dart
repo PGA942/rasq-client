@@ -200,19 +200,27 @@ Future<RasqAccountRecord?> registerRasqAccount(WidgetRef ref, {String? displayNa
   final choice = await showRasqRegisterFow(ref.read(overlayManagerProvider), snsCount: snsCount, column: column, onOpenDoc: (route) => ref.read(routerProvider).push(route));
   if (choice == null) return null;
   final notifier = ref.read(orgateAccountProvider.notifier);
-  final account = await notifier.createAccount(displayName: displayName);
+  // 登録と承諾は一緒に (D-371 / S-053、規約案 06 CONS-02): サーバーが同じ処理で残す。承諾を残せなければアカウントも作られない
+  // (以前は作ったあとで同意を書き、失敗しても登録を続けていた)。
+  final RasqAccount? account;
+  try {
+    account = await notifier.createAccount(displayName: displayName, consents: choice.toConsentsJson());
+  } on OrgateException catch (e) {
+    if (isTermsVersionError(e)) {
+      onMessage('利用規約が新しくなっています。アプリを更新してから、もう一度登録してください');
+      return null;
+    }
+    rethrow;
+  }
   if (account == null) {
     onMessage('RASQ サーバーの接続先が設定されていません');
     return null;
   }
+  // 端末ですでに作っていたアカウントへ戻ったときは、承諾がまだなら承諾を送る(戻ったアカウントは作成の処理を通らない)。
   final client = ref.read(centralClientProvider);
-  if (client != null) {
-    try {
-      await RasqConsentApi(client).recordRegistration(choice);
-    } on OrgateException catch (e) {
-      // 古いサーバー(S-015 より前)には同意の口が無い。登録は続ける。
-      debugPrint('rasq register: consent was not recorded: $e');
-    }
+  if (client != null && account.termsAccepted == false) {
+    await RasqConsentApi(client).acceptCurrent(age: account.termsMissing.contains('age') ? choice.age : null);
+    await notifier.refresh();
   }
   // パスワード (D-299)。すでに設定済みのアカウントへ戻ったとき(この端末の前のアカウント)は、変えない。
   final security = ref.read(accountSecurityApiProvider);

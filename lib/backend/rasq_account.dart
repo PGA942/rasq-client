@@ -30,12 +30,19 @@ import 'rasq_account_page_api.dart';
 
 @immutable
 class RasqAccount {
-  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt, this.email, this.emailVerified = false, this.emailPending, this.hasPassword = false, this.roles = const [], this.bio = '', this.bannerUrl, this.location = '', this.birthday = '', this.links = const [], this.showLinksOnSnsProfiles = true, this.keybase});
+  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt, this.email, this.emailVerified = false, this.emailPending, this.hasPassword = false, this.roles = const [], this.bio = '', this.bannerUrl, this.location = '', this.birthday = '', this.links = const [], this.showLinksOnSnsProfiles = true, this.keybase, this.termsAccepted, this.termsMissing = const []});
 
   final String id;
   final String handle;
   final String displayName;
   final Uri? avatarUrl;
+
+  /// いまの版の利用規約を承諾しているか (D-371 / S-053)。null = サーバーが返さない(古いサーバー)。false = 同意待ち
+  /// (AsTell・購入・預託・学習への提供が使えない)。
+  final bool? termsAccepted;
+
+  /// 足りないもの: `terms` / `privacy` / `age` / `guardian`。
+  final List<String> termsMissing;
   final DateTime? createdAt;
 
   /// メールアドレス (S-019)。自分にだけ見える。[emailPending] = 確認待ちの新しいメール。
@@ -81,6 +88,8 @@ class RasqAccount {
         links: [for (final l in j['links'] as List? ?? const []) if (l is Map) (label: '${l['label'] ?? ''}', url: '${l['url'] ?? ''}')],
         showLinksOnSnsProfiles: j['showLinksOnSnsProfiles'] != false,
         keybase: RasqKeybase.fromJson(j['keybase']),
+        termsAccepted: j['terms'] is Map ? (j['terms'] as Map)['accepted'] == true : null,
+        termsMissing: [if (j['terms'] is Map) for (final m in ((j['terms'] as Map)['missing'] as List? ?? const [])) '$m'],
       );
 
   /// サイドバーのバンドルタイルが使う形。ハンドルはインスタンスなしの素の
@@ -305,7 +314,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     return creds;
   }
 
-  Future<Map<String, Object?>> _postDevice(OrgateClient client, {String? displayName, bool restoreOnly = false}) {
+  Future<Map<String, Object?>> _postDevice(OrgateClient client, {String? displayName, bool restoreOnly = false, Map<String, Object?>? consents}) {
     // 表示名の初期値は、指定が無ければ既にログインしている SNS アカウントから借りる。
     final first = ref.read(sessionsProvider).value?.sessions.firstOrNull;
     final name = displayName ?? first?.displayName;
@@ -313,6 +322,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
       'deviceId': _creds!.deviceId,
       if (name != null && name.isNotEmpty) 'displayName': name,
       if (restoreOnly) 'restoreOnly': true,
+      'consents': ?consents,
     });
   }
 
@@ -347,13 +357,15 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// RASQ アカウントを作る(端末登録 → `GET /me`)。いま使っているアカウントがあればそれを返す。
   /// 接続先が無ければ null(呼び出し側が案内する)。作ったアカウントのトークンは、すぐに使い始める
   /// (登録の同意の記録 / パスワードの設定は、台帳へ載せる前にこのトークンで送る)。
-  Future<RasqAccount?> createAccount({String? displayName}) async {
+  /// [consents] = 登録の承諾 (D-371 / S-053)。サーバーはアカウントの作成と同じ処理で残し、版が違えば作成ごと失敗する
+  /// (`409 terms_version`、トークンは受け取らない)。
+  Future<RasqAccount?> createAccount({String? displayName, Map<String, Object?>? consents}) async {
     final client = ref.read(centralClientProvider);
     if (client == null) return null;
     final storage = ref.read(sessionStorageProvider);
     _creds ??= await _loadOrCreateCredentials(storage);
     if (token == null) {
-      final res = await _postDevice(client, displayName: displayName);
+      final res = await _postDevice(client, displayName: displayName, consents: consents);
       final t = res['token'] as String?;
       if (t == null || t.isEmpty) throw OrgateException(ErrorCode.http(502), 'RASQ Central がトークンを返しませんでした');
       final id = res['accountId'] as String? ?? '';

@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:rasq_client/backend/learning_api.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/features/learning/contribution.dart';
+import 'package:rasq_client/features/learning/relational_cloud.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
 import 'package:rasq_client/features/relational/relational_engine.dart';
 import 'package:rasq_client/features/relational/relational_providers.dart';
@@ -167,12 +168,88 @@ void main() {
     container.read(contributionProvider.notifier).offerRai(query: 'q', answer: 'a', mode: 'assistant');
     expect(container.read(contributionProvider).pendingRai, 0);
   });
+
+  group('本人の範囲 (D-370 / S-051、既定)', () {
+    final alice = user('alice');
+    final me = UserSummary(id: 'me-id', account: viewer, displayName: 'me');
+
+    test('会話の中の自分の公開投稿だけ。公開と分からない投稿は入れない。特徴語も自分の投稿から', () {
+      final e = ConversationEvent.root(post('a1', alice, 0, 'ロケット #rocket 見てる'))
+        ..posts.add(post('m1', me, 1, '打ち上げ最高 @alice https://x.example', visibility: 'public'))
+        ..posts.add(post('m2', me, 2, '限定の感想', visibility: 'followers'))
+        ..posts.add(post('m3', me, 3, '範囲が分からない'))
+        ..posts.add(post('m4', me, 4, 'もう一度見たい', visibility: 'public', replyToId: 'm1'));
+      final c = ownContributionOf(e)!;
+      final posts = (c.data['posts']! as List).cast<Map<String, Object?>>();
+      expect([for (final p in posts) p['t']], ['打ち上げ最高 @user <url>', 'もう一度見たい']);
+      expect(posts.every((p) => p['a'] == -1 && p['vis'] == 'public'), isTrue);
+      expect(posts[1]['reply'], 0);
+      expect(c.authors, isEmpty);
+      expect(c.data['self'], {'kind': 'misskey', 'instance': 'misskey.rasq.test', 'handle': 'me'});
+      expect(c.data['entities'] as List, isNot(contains('rocket')), reason: 'ほかの人の投稿の語は入れない');
+      expect(c.data['eventPosts'], 5);
+      expect(c.labels, 1);
+      // 自分の投稿が無い会話は送らない。
+      expect(ownContributionOf(ConversationEvent.root(post('a2', alice, 0, 'x'))..posts.add(post('a3', alice, 1, 'y'))), isNull);
+    });
+
+    test('Bluesky の投稿は範囲が無くても公開。ほかの SNS で範囲が無いものは送らない', () {
+      const bsky = AccountId(kind: SnsKind.bluesky, instance: 'bsky.rasq.test', handle: 'me.bsky');
+      final mine = Post(id: 'b1', account: bsky, author: const UserSummary(id: 'did:me', account: bsky, displayName: 'me'), createdAt: t0, body: 'hi');
+      expect(isKnownPublic(mine), isTrue);
+      expect(isKnownPublic(post('m', me, 0, 'x')), isFalse);
+    });
+
+    test('判定は使わず自分の公開投稿だけを送る。RAi・クラウド版は動かない。持ち主の確認が無ければ数える', () async {
+      final calls = <String>[];
+      final bodies = <String, Object?>{};
+      http.Response json(Object body) => http.Response.bytes(utf8.encode(jsonEncode(body)), 200, headers: {'content-type': 'application/json'});
+      final client = MockClient((req) async {
+        final path = req.url.path.replaceFirst('/api/v1', '');
+        calls.add('${req.method} $path');
+        if (path == '/me/learning/contributions') {
+          final body = jsonDecode(req.body) as Map;
+          bodies['items'] = body['items'];
+          return json({'accepted': 0, 'duplicate': 0, 'rejected': [for (final i in body['items'] as List) {'key': (i as Map)['key'], 'reason': 'self-unverified'}]});
+        }
+        return json(<String, Object?>{});
+      });
+      final e = ConversationEvent.root(post('a1', alice, 0, 'ロケット'))..posts.add(post('m1', me, 1, '見た!', visibility: 'public'));
+      final container = ProviderContainer(overrides: [
+        centralClientProvider.overrideWithValue(OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: client, tokenProvider: () => 't')),
+        learningProvider.overrideWith(() => _FixedLearning(() => true, scope: 'own')),
+        conversationEventsProvider.overrideWithValue(AsyncData([e])),
+        raiLlmProvider.overrideWithValue(FakeRaiLlm(phase: RaiLlmPhase.ready)),
+      ]);
+      addTearDown(container.dispose);
+      ContributionController.debounce = const Duration(days: 1);
+      container.listen(contributionProvider, (_, _) {});
+      container.listen(relationalCloudProvider, (_, _) {});
+      await container.read(learningProvider.future);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      final s0 = container.read(contributionProvider);
+      expect(s0.active, isTrue);
+      expect(s0.extended, isFalse);
+      expect(s0.rai, isFalse);
+      expect(container.read(relationalCloudProvider).active, isFalse);
+      container.read(contributionProvider.notifier).offerRai(query: 'q', answer: 'a', mode: 'assistant');
+      expect(container.read(contributionProvider).pendingRai, 0);
+      await container.read(contributionProvider.notifier).flush();
+      expect(calls.where((c) => c.contains('/judge')), isEmpty, reason: 'ほかの人の判定はしない');
+      final items = (bodies['items']! as List).cast<Map<String, Object?>>();
+      expect(items.single['authors'], isEmpty);
+      expect(((items.single['data']! as Map)['posts'] as List).single, containsPair('t', '見た!'));
+      expect(container.read(contributionProvider).unverified, 1);
+    });
+  });
 }
 
 class _FixedLearning extends LearningNotifier {
-  _FixedLearning(this.granted);
+  _FixedLearning(this.granted, {this.scope = 'extended'});
   final bool Function() granted;
+  final String scope;
 
   @override
-  Future<LearningStatus?> build() async => LearningStatus(open: true, granted: granted(), eligible: true);
+  Future<LearningStatus?> build() async => LearningStatus(open: true, granted: granted(), eligible: true, scope: scope);
 }

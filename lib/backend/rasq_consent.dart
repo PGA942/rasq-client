@@ -24,6 +24,12 @@ enum RasqAgeBand {
   bool get needsGuardian => this != adult;
 }
 
+/// サーバーが規約の版を断った (`409 terms_version`、D-371 / S-053): アプリに入っている規約が古い。
+bool isTermsVersionError(Object e) => e is OrgateException && '$e'.contains('409') && '$e'.contains('current version');
+
+/// 利用規約の承諾が先 (`403 terms_required`)。
+bool isTermsRequiredError(Object e) => e is OrgateException && '$e'.contains('accept the current terms');
+
 /// 登録の FOW で選んだ内容。
 class RasqRegisterChoice {
   const RasqRegisterChoice({required this.age, required this.replaceBundle, this.password = ''});
@@ -35,6 +41,14 @@ class RasqRegisterChoice {
   /// この端末の SNS アカウントを RASQ アカウントのバンドルにする(サーバーの前のバンドルは置き換わる)。
   /// false = 置き換えない(SNS アカウントは「この端末のみ」に残り、サーバーのバンドルも消さない)。
   final bool replaceBundle;
+
+  /// 登録と一緒に送る承諾 (D-371 / S-053): アカウントの作成と同じ処理で残り、版が違えば作成ごと失敗する。
+  Map<String, Object?> toConsentsJson() => {
+        'termsVersion': rasqTermsVersion,
+        'privacyVersion': rasqPrivacyVersion,
+        'age': age.wire,
+        'guardian': age.needsGuardian,
+      };
 }
 
 class RasqConsent {
@@ -66,7 +80,17 @@ class RasqConsentApi {
   Future<void> put(String kind, {required String version, required bool granted, String? detail}) =>
       _client.putJson('/me/consents/$kind', {'version': version, 'granted': granted, 'detail': ?detail});
 
-  /// 登録のときの同意をまとめて記録する。
+  /// いまの版の利用規約を承諾する(同意待ちのアカウント、D-371)。年齢の申告が無ければ [age] も。
+  Future<void> acceptCurrent({RasqAgeBand? age}) async {
+    await put('terms', version: rasqTermsVersion, granted: true);
+    await put('privacy', version: rasqPrivacyVersion, granted: true);
+    if (age != null) {
+      await put('age', version: rasqTermsVersion, granted: true, detail: age.wire);
+      if (age.needsGuardian) await put('guardian', version: rasqTermsVersion, granted: true);
+    }
+  }
+
+  /// 登録のときの同意をまとめて記録する(古いサーバー向け。いまは登録と一緒に送る)。
   Future<void> recordRegistration(RasqRegisterChoice c) async {
     await put('terms', version: rasqTermsVersion, granted: true);
     await put('privacy', version: rasqPrivacyVersion, granted: true);
