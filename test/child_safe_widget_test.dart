@@ -124,7 +124,7 @@ void main() {
     expect(find.text('お前バカだな'), findsNothing);
 
     // コンポーザー: 強い言葉は送らず、当たった語を選んで印を付ける。通る本文は送れて、1 日の数が増える。
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'あいつバカすぎ');
     await tester.pumpAndSettle();

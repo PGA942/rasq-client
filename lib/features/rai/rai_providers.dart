@@ -1119,7 +1119,7 @@ class RaiController extends Notifier<RaiState> {
     if (i >= state.steps.length) return false;
     final step = state.steps[i];
     if (!step.hasTarget) return false;
-    return locateWidgetRects(tooltip: step.tooltip, text: step.label).any((r) => r.inflate(4).contains(point));
+    return locateTapRects(tooltip: step.tooltip, text: step.label).any((r) => r.inflate(4).contains(point));
   }
 }
 

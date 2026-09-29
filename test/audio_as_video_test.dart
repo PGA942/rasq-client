@@ -273,7 +273,7 @@ void main() {
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('動画 / 音声'));
     await tester.pumpAndSettle();

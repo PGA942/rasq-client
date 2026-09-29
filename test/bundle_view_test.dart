@@ -98,7 +98,7 @@ void main() {
     final container = await pump(tester);
     final registry = container.read(pluginRegistryProvider);
 
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
 
     // アバターをタップするとバンドルタイル(投稿先リスト)が出てくる (D-091)。

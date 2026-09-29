@@ -54,7 +54,7 @@ void main() {
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('composer.pill.sns')), findsOneWidget);
     // ピル → バンドルタイル → RASQ アカウントの行を長押し。
@@ -100,7 +100,7 @@ void main() {
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('composer.pill.sns')));
     await tester.pumpAndSettle();

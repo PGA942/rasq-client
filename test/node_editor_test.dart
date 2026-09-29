@@ -361,7 +361,7 @@ void main() {
 
   testWidgets('コンポーザーの「投稿先のカスタマイズ」→ アカウントごとタブの絞り込み画面 (D-125)', (tester) async {
     await pump(tester);
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('投稿先を選ぶ')); // アバタータップでタイル (D-091)
     await tester.pumpAndSettle();

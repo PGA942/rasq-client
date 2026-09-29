@@ -1,3 +1,5 @@
+import 'package:flutter_test/flutter_test.dart' show WidgetTester, find;
+import 'package:flutter/widgets.dart' show ValueKey;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rasq_store/rasq_store.dart';
@@ -297,3 +299,11 @@ AccountSession fakeSession() => AccountSession(
       createdAt: DateTime(2026, 8, 22),
       displayName: 'テスター',
     );
+
+/// ホームの ＋ → 「投稿」(D-378: ＋ は作るものを選ぶ FOW。選べるものが投稿だけなら、そのままコンポーザー)。
+Future<void> openHomeComposer(WidgetTester tester) async {
+  await tester.tap(find.byTooltip('作成'));
+  await tester.pumpAndSettle();
+  final post = find.byKey(const ValueKey('create.post'));
+  if (post.evaluate().isNotEmpty) await tester.tap(post);
+}

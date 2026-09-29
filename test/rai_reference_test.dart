@@ -57,7 +57,7 @@ void main() {
     expect(steps.first.presets, {'PDS': 'bsky.social'});
     expect(steps.last.label, 'ログイン'); // 手順側の target
     final post = index.expand(index.operation('post')!, presets: RaiPresets(now: DateTime.utc(2026, 9, 12)));
-    expect(post.first.tooltip, '投稿'); // composer.open の target
+    expect(post.first.tooltip, '作成'); // composer.open の target(D-378: ホームの ＋ → 「投稿」)
     expect(post.first.route, '/home');
     expect(post.last.presets['作成時刻'], 1789171200);
     // 提案文: 1 行目が見出し、以降は 関数〔id〕入力 / 固定。
@@ -122,10 +122,10 @@ void main() {
     ];
     final idx = await RaiReferenceIndex.build(functions: index.functions, operations: ops, embedder: const NgramRaiEmbedder());
     final poll = idx.expand(idx.operation('test-poll')!);
-    expect([for (final s in poll) s.text], ['右下の「投稿」でコンポーザーが開きます', '投票を足します']);
-    expect(poll.first.tooltip, '投稿'); // 共有した手順は関数の部品も引き継ぐ
+    expect([for (final s in poll) s.text], ['右下の「＋」を押します', '投票を足します']);
+    expect(poll.first.tooltip, '作成'); // 共有した手順は関数の部品も引き継ぐ
     final multi = idx.expand(idx.operation('test-poll-multi')!);
-    expect([for (final s in multi) s.text], ['右下の「投稿」でコンポーザーが開きます', '投票を足します', '複数選択にします']);
+    expect([for (final s in multi) s.text], ['右下の「＋」を押します', '投票を足します', '複数選択にします']);
     expect([for (final s in idx.expand(idx.operation('loop-a')!)) s.text], ['b', 'a']); // 循環は 1 周で切れる
     expect([for (final s in idx.expand(idx.operation('orphan')!)) s.text], ['o']);
   });

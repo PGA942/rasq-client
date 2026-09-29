@@ -32,7 +32,7 @@ void main() {
   }
 
   Future<void> openComposer(WidgetTester tester) async {
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
   }
 
