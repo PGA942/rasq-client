@@ -129,17 +129,17 @@ void main() {
     return c;
   }
 
-  testWidgets('ヘッダー: Swing を作るボタンと、出している人のバンドル → ビューワー。スワイプで次へ(見終えたものは Central へ)、閉じると最後のも', (tester) async {
+  testWidgets('ヘッダー: Swing は 1 人だけ(いちばん新しく出した人 + ほかの人数)→ ビューワー。スワイプで次へ(見終えたものは Central へ)、閉じると最後のも', (tester) async {
     final (mock, seen, _, _) = central([
       swing('a1', 'alice', text: 'アリスの 1 つめ', age: const Duration(minutes: 40)),
       swing('a2', 'alice', text: 'アリスの 2 つめ', age: const Duration(minutes: 10)),
       swing('b1', 'bob', text: 'ボブの', age: const Duration(minutes: 20)),
     ]);
     final c = await pumpApp(tester, mock);
-    expect(find.byKey(const ValueKey('swing.create')), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.create')), findsNothing, reason: '作るのは ＋ の FOW から');
     expect(find.byKey(const ValueKey('swing.bundle.alice')), findsOneWidget);
-    expect(find.byKey(const ValueKey('swing.bundle.bob')), findsOneWidget);
-    expect(find.descendant(of: find.byKey(const ValueKey('swing.bundle.alice')), matching: find.text('+2')), findsOneWidget, reason: '見ていない数');
+    expect(find.byKey(const ValueKey('swing.bundle.bob')), findsNothing, reason: '1 人だけ');
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.bundle.alice')), matching: find.text('+1')), findsOneWidget, reason: 'ほかに出している人の数');
 
     await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
     await tester.pumpAndSettle();
@@ -160,7 +160,8 @@ void main() {
     expect(find.byType(SwingViewerScreen), findsNothing);
     // 見終えたものはヘッダーから消える(アリスはもう無い)。
     expect(find.byKey(const ValueKey('swing.bundle.alice')), findsNothing);
-    expect(find.byKey(const ValueKey('swing.bundle.bob')), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.bundle.bob')), findsOneWidget, reason: '次の人に替わる');
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.bundle.bob')), matching: find.textContaining('+')), findsNothing);
     expect(c.read(swingFeedProvider).value!.map((s) => s.id), ['b1']);
   });
 
@@ -310,7 +311,13 @@ void main() {
     final c = await pumpApp(tester, mock, extra: [
       swingMediaPickerProvider.overrideWithValue(({required bool video}) async => XFile.fromData(png, name: 'photo.png', path: 'photo.png', mimeType: 'image/png')),
     ]);
-    await tester.tap(find.byKey(const ValueKey('swing.create')));
+    // ＋ → 作るものを選ぶ FOW(投稿 / RASQ に投稿 / AsTell / Swing)→ Swing。
+    await tester.tap(find.byTooltip('作成'));
+    await tester.pumpAndSettle();
+    for (final k in ['post', 'rasq', 'astell', 'swing']) {
+      expect(find.byKey(ValueKey('create.$k')), findsOneWidget, reason: k);
+    }
+    await tester.tap(find.byKey(const ValueKey('create.swing')));
     await tester.pumpAndSettle();
     expect(find.byType(SwingComposerScreen), findsOneWidget);
     await tester.enterText(find.byKey(const ValueKey('swing.text')), '今日の Swing');
@@ -367,7 +374,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('home.header.floating')), findsOneWidget);
     expect(find.byTooltip('タイムライン設定'), findsNothing, reason: 'タブ行もしまう');
-    expect(find.byKey(const ValueKey('swing.create')), findsNothing);
     expect(find.byKey(const ValueKey('home.header.arrivals')), findsNothing, reason: '前からあったものは新着ではない');
 
     // 新しい Swing が届く → 1 分だけ浮かべる。

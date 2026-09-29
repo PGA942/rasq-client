@@ -34,6 +34,27 @@ Rect? locateWidgetRect({String? tooltip, String? text, Key? key, Rect? within, R
 /// どれも当たらなければ最初のもの。
 List<Rect> locateWidgetRects({String? tooltip, String? text, Key? key, Rect? within}) => [for (final c in _locate(tooltip: tooltip, text: text, key: key, within: within)) c.rect];
 
+/// 押したかを見る範囲 (D-378): 文字で探した部品は、その文字を囲む押せるもの(InkWell / GestureDetector、数段まで)の矩形。
+/// メニューの行の文字の外を押しても「押した」と分かるように(指す矩形は文字のまま)。
+List<Rect> locateTapRects({String? tooltip, String? text, Key? key}) => [
+      for (final c in _locate(tooltip: tooltip, text: text, key: key)) _tapAreaOf(c.element) ?? c.rect,
+    ];
+
+Rect? _tapAreaOf(Element e) {
+  Rect? out;
+  var depth = 0;
+  e.visitAncestorElements((a) {
+    final w = a.widget;
+    if ((w is InkWell && w.onTap != null) || (w is InkResponse && w.onTap != null) || (w is GestureDetector && w.onTap != null)) {
+      final ro = a.findRenderObject();
+      if (ro is RenderBox && ro.attached && ro.hasSize) out = ro.localToGlobal(Offset.zero) & ro.size;
+      return false;
+    }
+    return ++depth < 12;
+  });
+  return out;
+}
+
 List<({Rect rect, Element element})> _locate({String? tooltip, String? text, Key? key, Rect? within}) {
   final root = WidgetsBinding.instance.rootElement;
   if (root == null) return const [];

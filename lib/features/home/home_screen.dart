@@ -15,15 +15,14 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
-import '../compose/compose_target.dart';
 import '../settings/settings_dsl.dart';
-import '../compose/composer_sheet.dart';
 import '../nodeprog/node_tabs.dart';
 import '../nodeprog/timeline_temp_fow.dart';
 import '../nodeprog/tl_config_store.dart';
 import '../relational/relational_timeline_view.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'custom_tile_row.dart';
+import 'create_fow.dart';
 import 'home_header.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
@@ -170,11 +169,9 @@ class HomeScreen extends ConsumerWidget {
         floatingActionButton: FloatingActionButton(
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
         heroTag: 'fab.home',
-          onPressed: () async {
-            final created = await showComposer(ref, const ComposeNormal());
-            if (created != null) await ref.read(timelineProvider(TimelineKind.home).notifier).refresh();
-          },
-          tooltip: '投稿',
+          // 作るものを選ぶ FOW (D-378): 投稿 / RASQ に投稿 / AsTell / Swing。
+          onPressed: () => openCreateFow(context, ref, onPosted: () => ref.read(timelineProvider(TimelineKind.home).notifier).refresh()),
+          tooltip: '作成',
           shape: const CircleBorder(),
           child: const Icon(Icons.add),
         ),

@@ -256,7 +256,7 @@ void main() {
     expect(st.busy, isFalse);
     expect(st.bubble, contains('「投稿する」を関数で進めました'));
     final trace = st.log.first.trace;
-    expect(trace.length, 2);
+    expect(trace.length, 3); // D-378: ＋ → 「投稿」の 2 手順(「投稿」を選ぶ手順は関数が無いので飛ばす)
     expect(trace.first.status, RaiAutoStatus.skipped);
     expect(trace.last.status, RaiAutoStatus.done);
     expect(find.byKey(const ValueKey('rai.chat.trace.0')), findsNothing); // 工程タイルは RAi ページ(閉じている)で出る
@@ -282,7 +282,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(visibleLocationOf(router.routerDelegate.currentConfiguration), Routes.home);
     expect(c.read(raiProvider).stepIndex, 0);
-    expect(c.read(raiProvider).bubble, contains('右下の「投稿」'));
+    expect(c.read(raiProvider).bubble, contains('右下の「＋」'));
   });
 
   testWidgets('入力タイルの移動 (D-233 → D-236): タイル全体を掴んで上へ → ヘッダーの下に付く、下へ → フッターの上、広い画面ではカラムの幅に合わせてスナップ', (tester) async {
@@ -536,7 +536,7 @@ void main() {
     expect(st.steps.length, greaterThan(1));
     expect(st.stepIndex, 0);
     expect(st.hasNext, isFalse); // 1 手順目で打ち切り
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('右下の「投稿」'));
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('右下の「＋」'));
     await tester.tap(find.byKey(const ValueKey('rai.next')));
     await tester.pumpAndSettle();
     expect(c.read(raiProvider).steps, isEmpty);
@@ -577,7 +577,7 @@ void main() {
     expect(st.steps.length, steps.length);
     expect(st.stepIndex, 0);
     expect(st.target, isNotNull);
-    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('右下の「投稿」'));
+    expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('右下の「＋」'));
   });
 
   test('箇条書きの計画 (D-220): 「- 」「・」「1.」を拾い、最大 4 個 / 40 文字で打ち切る', () {

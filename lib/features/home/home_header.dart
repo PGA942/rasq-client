@@ -123,18 +123,20 @@ final headerArrivalsProvider = NotifierProvider<HeaderArrivals, List<HeaderArriv
 
 /// Swing を出している人のバンドル(青い枠、見ていない数)。タップでビューワー(その人から)。
 class SwingAuthorBundle extends StatelessWidget {
-  const SwingAuthorBundle({super.key, required this.swing, this.count = 1, this.size = 34});
+  const SwingAuthorBundle({super.key, required this.swing, this.others = 0, this.size = 34});
   final Swing swing;
-  final int count;
+
+  /// ほかに Swing を出している人の数(「+N」)。
+  final int others;
   final double size;
 
   @override
   Widget build(BuildContext context) => Tooltip(
-        message: '${swing.author.displayName} の Swing',
+        message: others > 0 ? '${swing.author.displayName} ほか $others 人の Swing' : '${swing.author.displayName} の Swing',
         child: RasqAvatarBundle(
           key: ValueKey('swing.bundle.${swing.authorAccountId}'),
           user: swing.author,
-          count: count > 1 ? count : null,
+          count: others > 0 ? others : null,
           color: swingBundleColor,
           size: size,
           onTap: () => context.push(Routes.swing(swing.authorAccountId)),
@@ -142,32 +144,8 @@ class SwingAuthorBundle extends StatelessWidget {
       );
 }
 
-/// Swing を作るボタン(RASQ アカウントがあるときだけ)。
-class SwingCreateButton extends StatelessWidget {
-  const SwingCreateButton({super.key, this.size = 34});
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: 'Swing を作る',
-      child: InkResponse(
-        key: const ValueKey('swing.create'),
-        onTap: () => context.push(Routes.swingNew),
-        radius: size / 2 + 4,
-        child: Container(
-          width: size + 3,
-          height: size + 3,
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: swingBundleColor, width: 1.5), color: swingBundleColor.withValues(alpha: 0.12)),
-          child: Icon(Icons.add, size: size * 0.6, color: scheme.onSurface),
-        ),
-      ),
-    );
-  }
-}
-
-/// 出しているヘッダーの真ん中: Swing を作る + AsTell + Swing を出している人。
+/// 出しているヘッダーの真ん中: AsTell + Swing(**1 人だけ**、D-378)。Swing はいちばん新しく出した人の顔で、ほかに出している人が
+/// いればその人数を「+N」。押すとビューワー(その人から、続けて全員)。作るのは ＋ の FOW から。
 class HomeHeaderStrip extends ConsumerWidget {
   const HomeHeaderStrip({super.key, this.astell = true, this.max = 4});
 
@@ -177,16 +155,11 @@ class HomeHeaderStrip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canSwing = ref.watch(swingApiProvider) != null;
-    final authors = canSwing ? ref.watch(swingAuthorsProvider) : const <SwingAuthorEntry>[];
-    final leading = [if (canSwing) const SwingCreateButton()];
-    final trailing = [for (final a in authors) SwingAuthorBundle(swing: a.first, count: a.count)];
-    if (astell) return AstellHeaderStrip(max: max, leading: leading, trailing: trailing);
-    if (leading.isEmpty && trailing.isEmpty) return const SizedBox.shrink();
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(mainAxisSize: MainAxisSize.min, children: [for (final w in [...leading, ...trailing]) ...[w, const SizedBox(width: 8)]]),
-    );
+    final authors = ref.watch(swingApiProvider) != null ? ref.watch(swingAuthorsProvider) : const <SwingAuthorEntry>[];
+    final trailing = [if (authors.isNotEmpty) SwingAuthorBundle(swing: authors.first.first, others: authors.length - 1)];
+    if (astell) return AstellHeaderStrip(max: max, trailing: trailing);
+    if (trailing.isEmpty) return const SizedBox.shrink();
+    return trailing.single;
   }
 }
 

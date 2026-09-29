@@ -42,7 +42,7 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     expect(find.text('投稿'), findsOneWidget); // ヘッダー中央タイトル (D-052)
 
@@ -87,7 +87,7 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('MFM')); // ツールバーは横スクロール(D-174 で「動画」が増えた)
     await tester.pumpAndSettle();
@@ -315,7 +315,7 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     // ヘッダー (D-052): キャンセル(左)/ 投稿(太字・中央)/ 下書き(右)。
     expect(find.text('キャンセル'), findsOneWidget);
@@ -332,7 +332,7 @@ void main() {
 
     // もう一度開いても自動では入らない (D-177)。「下書き」ボタン(青文字・右揃え)→ 下書き FOW (D-176)
     // → 行をタップで開く。
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     expect(find.text('書きかけのノート'), findsNothing);
     await tester.tap(find.text('下書き'));
@@ -346,7 +346,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('drafts.save')));
     await tester.pumpAndSettle();
     expect(find.text('キャンセル'), findsNothing);
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.tap(find.text('下書き'));
     await tester.pumpAndSettle();

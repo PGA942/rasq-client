@@ -163,7 +163,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // FAB → composer (normal) with CW + poll + emoji panel toggles.
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     expect(find.text('投稿'), findsOneWidget); // ヘッダー中央タイトル (D-052)
     expect(find.text('下書き'), findsOneWidget); // 右揃えの下書きボタン

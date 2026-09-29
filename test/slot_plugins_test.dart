@@ -207,7 +207,7 @@ void main() {
     await register(c, 'text');
     await c.read(slotPluginsProvider.notifier).register('store:t.off', bytes: Uint8List.fromList('off'.codeUnits));
     // コンポーザーを開く(ホーム右下の +)。
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     // 入力欄の上の ON / OFF チップ: 宣言が無い t.text は名前 + 既定 ON、t.off は宣言の label で OFF。
     final textChip = find.byKey(const ValueKey('composer.textPlugin.t.text'));

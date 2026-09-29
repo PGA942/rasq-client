@@ -67,7 +67,7 @@ void main() {
 
     // コンポーザーを開いて、まず通常モードで投稿先を tester に固定する
     // (素のポスト先ノードが second をサジェストするため)。
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('投稿先を選ぶ'));
     await tester.pumpAndSettle();
@@ -141,7 +141,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('投稿先を選ぶ'));
     await tester.pumpAndSettle();
@@ -166,7 +166,7 @@ void main() {
     expect(s2.lastDraft, isNull);
 
     // 新しいコンポーザーで second を投稿先に選ぶと下書きが復元される。
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('投稿先を選ぶ'));
     await tester.pumpAndSettle();
@@ -214,7 +214,7 @@ void main() {
     final graph = NodeGraph(nodes: [target.copyWith(inputs: [target.inputs.first.copyWith(value: label)])]);
     await c.read(settingsAreaProvider('nodeprog.${acc1.key}.composer').future);
     await c.read(settingsAreaProvider('nodeprog.${acc1.key}.composer').notifier).set('graph', jsonEncode(graph.toJson()));
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     // 主投稿先を tester に固定(RASQ のノードが常に成立するので、放っておくと RASQ 指定になる)。
     await tester.tap(find.byTooltip('投稿先を選ぶ'));

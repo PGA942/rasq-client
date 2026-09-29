@@ -61,7 +61,7 @@ void main() {
   testWidgets('pro_image_editor が開き、プラグイン無しなら下段バーは内蔵の編集だけ、✕ で null', (tester) async {
     final c = await pump(tester);
     // コンポーザー FOW を開いたまま加工へ → FOW は退避(エディターの前に出ない)、閉じると戻る (D-174)。
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     final manager = c.read(overlayManagerProvider);
     final composer = manager.entries.where((e) => e.id == 'fow.composer').single;
@@ -288,7 +288,7 @@ void main() {
 
   testWidgets('加工画面で「ノート」を置いて × →「やめる」: 退避中のコンポーザーは書きかけのまま戻る。Escape でも閉じない', (tester) async {
     final c = await pump(tester);
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, '書きかけの投稿');
     await tester.pump();

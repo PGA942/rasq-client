@@ -172,7 +172,7 @@ void main() {
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
     expect(find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage), findsNothing);
-    await tester.tap(find.byTooltip('投稿'));
+    await openHomeComposer(tester);
     await tester.pumpAndSettle();
     await tester.tap(find.text('下書き'));
     await tester.pumpAndSettle();
