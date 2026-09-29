@@ -495,13 +495,54 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
     // サーバーがこの機能を閉じている / まだ分からない間は、出さない。
     if (!_loaded || _status == null) return const SizedBox.shrink();
     final st = _status!;
-    return RasqSwitchListTile(
-      title: '投稿もアカウントページに出す',
-      subtitle: st.hasToken
-          ? (st.lastError != null ? '取得に失敗しています: ${st.lastError}' : '${st.postCount} 件(公開 / ホームの投稿。30 分ごとに更新)')
-          : 'SNS のログインの鍵を RASQ に預けます(入れるときに確認が出ます)',
-      value: st.hasToken,
-      onChanged: _busy ? null : _set,
-    );
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      RasqSwitchListTile(
+        title: '投稿もアカウントページに出す',
+        subtitle: st.hasToken
+            ? (st.lastError != null ? '取得に失敗しています: ${st.lastError}' : '${st.postCount} 件(公開 / ホームの投稿。30 分ごとに更新)')
+            : 'SNS のログインの鍵を RASQ に預けます(入れるときに確認が出ます)',
+        value: st.hasToken,
+        onChanged: _busy ? null : _set,
+      ),
+      // 別の目的は別に選ぶ (D-373 / S-054、規約案 02 第 4 項 / PRIV-02)。預けているときだけ、既定はオフ。
+      if (st.hasToken)
+        RasqSwitchListTile(
+          key: ValueKey('rasqProfile.snsPosts.collections.${widget.accountKey}'),
+          title: 'この鍵を RASQ リストにも使う',
+          subtitle: '開いた RASQ リストの取得と、見られるかの確認に使います',
+          detail: 'S-054。RASQ リスト・クリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせ、中の人の公開の投稿を取りに行く。'
+              '投稿の表示のために預けた鍵とは別の目的なので、別に選ぶ(既定はオフ、選ぶ / やめるは同意の記録に残る)。',
+          value: st.collectionsAllowed,
+          onChanged: _busy ? null : _setCollections,
+        ),
+    ]);
+  }
+
+  Future<void> _setCollections(bool on) async {
+    final api = ref.read(rasqAccountPageApiProvider);
+    if (api == null) return;
+    if (on) {
+      final ok = await ref.read(overlayManagerProvider).showAlert(
+            id: 'rasqProfile.snsPosts.collections.consent',
+            title: '預けた鍵を RASQ リストにも使います',
+            message: '投稿の表示のために預けた鍵を、別の目的にも使います。\n\n'
+                '・RASQ リストやクリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせます(見られるかの確認)。\n'
+                '・リストの人の公開 / ホームの投稿を、この鍵で取りに行きます。\n'
+                '・投稿・フォローなどの操作には使いません。\n'
+                '・このスイッチを切ると、すぐに使わなくなります。',
+            confirmText: '同意して使う',
+            cancelText: 'やめる',
+          );
+      if (!ok || !mounted) return;
+    }
+    setState(() => _busy = true);
+    try {
+      final st = await api.setCollectionsAllowed(widget.accountKey, on);
+      if (mounted) setState(() => _status = st);
+    } on OrgateException catch (e) {
+      widget.onMessage('変えられませんでした: ${e.message}');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }

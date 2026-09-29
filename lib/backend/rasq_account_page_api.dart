@@ -293,16 +293,20 @@ class RasqSnsPost {
 /// SNS のトークンを預けている状態 (S-027)。
 @immutable
 class RasqVaultStatus {
-  const RasqVaultStatus({required this.hasToken, this.postCount = 0, this.lastFetchAt, this.lastError});
+  const RasqVaultStatus({required this.hasToken, this.postCount = 0, this.lastFetchAt, this.lastError, this.collectionsAllowed = false});
   final bool hasToken;
   final int postCount;
   final DateTime? lastFetchAt;
   final String? lastError;
+
+  /// 預けた鍵を RASQ リスト・クリップ(閲覧の確認と中の人の投稿の取得)にも使うか (D-373 / S-054)。投稿の表示とは別の選択。
+  final bool collectionsAllowed;
   factory RasqVaultStatus.fromJson(Map<String, Object?> j) => RasqVaultStatus(
         hasToken: j['hasToken'] == true,
         postCount: (j['postCount'] as num?)?.toInt() ?? 0,
         lastFetchAt: DateTime.tryParse(j['lastFetchAt'] as String? ?? ''),
         lastError: j['lastError'] as String?,
+        collectionsAllowed: j['collectionsAllowed'] == true,
       );
 }
 
@@ -751,6 +755,10 @@ class RasqAccountPageApi {
   /// SNS のアクセストークンを Central に預ける。**本人の明示の同意のあとにだけ**呼ぶ。
   Future<RasqVaultStatus> depositToken(String accountKey, String token) async =>
       RasqVaultStatus.fromJson(await _client.putJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token', {'token': token}));
+
+  /// 預けた鍵を RASQ リスト・クリップにも使うか (D-373 / S-054)。**本人の明示の選択のあとにだけ**呼ぶ。
+  Future<RasqVaultStatus> setCollectionsAllowed(String accountKey, bool allowed) async =>
+      RasqVaultStatus.fromJson(await _client.putJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token/collections', {'allowed': allowed}));
 
   /// 預けたトークンと、取ってきた投稿を消す。
   Future<void> withdrawToken(String accountKey) => _client.delete('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token');
