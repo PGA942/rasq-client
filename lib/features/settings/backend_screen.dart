@@ -212,8 +212,10 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
         ),
         const RasqSectionHeader(title: 'アカウントバンドル'),
         const RasqCaption(
-          'サーバーには、まとめている SNS アカウントの一覧だけを送ります。ログインの鍵は端末から出ません。',
-          detail: 'サーバーには「どの SNS アカウントを束ねているか」だけを送ります。アクセストークンは端末から出ません。',
+          // 規約案 02 第 4 項 (D-372): 鍵(アクセストークン)が端末の外へ出る経路を正しく。
+          'まとめるときに送るのは、SNS アカウントの一覧だけです。ログインの鍵は、端末間の共有・Web 版・アカウントページへの投稿の表示を選んだときだけ送ります。',
+          detail: '束ねるときにサーバーへ送るのは、SNS の種類・サーバー・アカウント・表示名だけ。アクセストークンは、端末間の共有(E2E、サーバーは読めない)、'
+              'Web 版の保管庫(サーバーの鍵で暗号化、サーバーは復号できる)、アカウントページへの投稿の表示(同上)を選んだときだけ送る(プライバシーポリシー第 4 項)。',
           padding: EdgeInsets.zero,
         ),
         const SizedBox(height: 4),

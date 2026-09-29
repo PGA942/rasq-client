@@ -1,3 +1,4 @@
+import 'legal_docs.g.dart';
 import 'orgate_client.dart';
 
 /// 同意の記録 (D-241 / S-015 `GET /me/consents`, `PUT /me/consents/{kind}`)。
@@ -7,8 +8,9 @@ import 'orgate_client.dart';
 /// (`learning`)はこれとは別の任意の同意で、既定は「なし」(登録の同意には含めない)。
 
 /// 文書の版。文書(`assets/settings/about.terms.rrl.json` など)を変えたら上げる。
-const rasqTermsVersion = '2026-09-17-draft';
-const rasqPrivacyVersion = '2026-09-17-draft2';
+/// 承諾を求める版 (D-372): 規約・ポリシーの文書の版(`legal_docs.g.dart`、Central の CENTRAL_TERMS_VERSION / CENTRAL_PRIVACY_VERSION と同じ)。
+const rasqTermsVersion = rasqLegalVersion;
+const rasqPrivacyVersion = rasqLegalVersion;
 
 /// 年齢の申告。RASQ の利用は 13 歳以上。
 enum RasqAgeBand {

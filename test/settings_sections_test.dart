@@ -133,6 +133,8 @@ void main() {
     expect(find.textContaining('クッキーを使いません'), findsOneWidget);
     c.read(routerProvider).pop();
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('legal.licenses')), 200, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('legal.licenses')));
     await tester.pumpAndSettle();
     expect(find.byType(LicensePage), findsOneWidget);

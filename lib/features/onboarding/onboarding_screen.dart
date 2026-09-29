@@ -159,7 +159,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               returning
                   // Web 版 (D-300) は、SNS のログインも RASQ アカウントに預けてある。
                   ? (kIsWeb
-                      ? 'SNS のログインは RASQ アカウントに預けてあります。SNS だけで使うこともできますが、そのときはこのタブを閉じるとログインが消えます。'
+                      // 規約案 02 第 4 項 (D-372): Web 版の保管庫はサーバーが復号できる方式。
+                      ? 'Web 版では、SNS のログイン情報を RASQ のサーバーの保管庫に預けます(サーバーの鍵で暗号化し、RASQ のサーバーは復号できます)。SNS だけで使うこともできますが、そのときはこのタブを閉じるとログインが消えます。'
                       : 'SNS アカウントだけで使うこともできます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます。')
                   : 'スキップしても RASQ は使えます。その場合、導入したプラグインや設定はこの端末の中にだけ保存されます(あとからサイドバーの … で作成できます)。',
               style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),

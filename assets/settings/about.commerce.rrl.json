@@ -1,0 +1,495 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "about.commerce",
+  "title": "特定商取引法に基づく表記",
+  "doc": {
+    "id": "rasq.commerce",
+    "version": "1.0.0-draft.20260929",
+    "bodySha256": "9aa7b0ef4919f110d5540db07297126a02c17ab042cf1ec410a01f93cdfcba02"
+  },
+  "defaults": {},
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "warning",
+          "text": "公開前の草案です。【要確定】や［　］の箇所は、正式版の公開までに決まります。",
+          "detail": "rasq.commerce / 版 1.0.0-draft.20260929。草案の利用者向け本文だけを切り出したもの(tool/legal/build_legal.py)。"
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "各"
+            },
+            {
+              "s": "text",
+              "text": "【要確定】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "を埋め、商品ページ・ポイント購入・注文の最終確認画面から常に参照できるようにする。"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "販売事業者",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "【正式氏名／法人名。ブランド名だけにしない】",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "運営責任者",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "【氏名。該当する事業形態に合わせ確定】",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "所在地",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "【郵便番号・住所】",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "電話番号",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "【電話番号・受付時間】",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "問い合わせ",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "【メールアドレス・問い合わせURL・受付時間】",
+              "bold": true,
+              "code": true
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "販売価格",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "各ポイントパックは円建て支払総額と確定した税の取扱い、各機能は必要ポイント数と税込円相当額を表示。無償分は区別"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "追加費用",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "通信料、利用者が別契約する外部SNS・推論サーバー等の料金。商品に不可欠なプロキシ契約は名称と料金も表示"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "支払方法",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "ポイント購入: Stripeで提供する"
+            },
+            {
+              "s": "text",
+              "text": "【実際に採用する支払手段】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "。機能購入・更新: RASQポイント"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "支払時期",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "ポイント購入は決済確定時。機能購入は利用権付与と同時、定期契約は表示した各期間開始時"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "提供時期",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "決済・付与確認後"
+            },
+            {
+              "s": "text",
+              "text": "【通常の所要時間】",
+              "bold": true,
+              "code": true
+            },
+            {
+              "s": "text",
+              "text": "。遅延時の確認・問い合わせ方法も表示"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "契約期間・更新",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "商品ごとの開始日時、終了日時、周期、必要ポイント数、自動更新有無、更新停止期限・操作手順"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "販売数量・期間",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "申込期間、利用数・端末数・容量等に制限がある場合、その具体値"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "動作環境",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "OS・RASQ最低版・ネット接続・対応SNS・必要な追加契約。購入前に確認可能な一覧"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "返品・解約・返金",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "上記第5条・第6条。自己都合／不具合／未提供の扱いと操作窓口を分ける"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "・",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "ポイント",
+              "bold": true
+            },
+            {
+              "s": "text",
+              "text": "\n掲載内容案: "
+            },
+            {
+              "s": "text",
+              "text": "有償・無償、換算、期限、使用順、失効、退会時・制度廃止時の扱い"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "RichText",
+        "p": {
+          "source": [
+            {
+              "s": "text",
+              "text": "住所や電話番号の省略制度を利用する場合は、利用可能な条件・請求時の遅滞ない開示・Stripeの要求事項を確認してから表示方式を決める。本案では自動的に省略しない。"
+            }
+          ],
+          "pad": 16
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "文書 ID: rasq.commerce ・ 版: 1.0.0-draft.20260929",
+          "pad": 16,
+          "size": 11
+        }
+      },
+      {
+        "t": "Text",
+        "p": {
+          "text": "本文の SHA-256: 9aa7b0ef4919f110d5540db07297126a02c17ab042cf1ec410a01f93cdfcba02",
+          "pad": 16,
+          "size": 11,
+          "dev": true
+        }
+      }
+    ]
+  }
+}
