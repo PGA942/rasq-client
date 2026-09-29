@@ -75,7 +75,8 @@ void main() {
       final path = req.url.path.replaceFirst('/api/v1', '');
       final route = '${req.method} $path';
       if (route == 'GET /me') return json({'id': 'acc-1', 'handle': 'tester', 'displayName': 'テスター'});
-      if (route == 'GET /swings/feed') return json([for (final s in feed) if (!seen.contains(s['id'])) s]);
+      // D-379: 見終えたものも期限までは返す(all=true)。
+      if (route == 'GET /swings/feed') return json([for (final s in feed) {...s, 'seen': seen.contains(s['id'])}]);
       if (route == 'GET /me/swings') return json(const []);
       if (route == 'GET /me/rasq-collections') {
         return json([
@@ -107,6 +108,9 @@ void main() {
     addTearDown(tester.view.reset);
     SwingFeed.interval = null;
     addTearDown(() => SwingFeed.interval = const Duration(seconds: 60));
+    // 時間では進ませない(時間で進むテストだけ入れる)。
+    SwingViewerScreen.displayDuration = null;
+    addTearDown(() => SwingViewerScreen.displayDuration = const Duration(seconds: 6));
     final store = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
       OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'device-abc', 'token': 'device-token', 'accountId': 'acc-1'}),
@@ -129,7 +133,7 @@ void main() {
     return c;
   }
 
-  testWidgets('ヘッダー: Swing は 1 人だけ(いちばん新しく出した人 + ほかの人数)→ ビューワー。スワイプで次へ(見終えたものは Central へ)、閉じると最後のも', (tester) async {
+  testWidgets('ヘッダー: Swing は 1 人だけ、青いリング → ビューワー。左右のスワイプで次へ(見終えたものは Central へ)、閉じると最後のも。見終えた人は白いリング', (tester) async {
     final (mock, seen, _, _) = central([
       swing('a1', 'alice', text: 'アリスの 1 つめ', age: const Duration(minutes: 40)),
       swing('a2', 'alice', text: 'アリスの 2 つめ', age: const Duration(minutes: 10)),
@@ -139,7 +143,7 @@ void main() {
     expect(find.byKey(const ValueKey('swing.create')), findsNothing, reason: '作るのは ＋ の FOW から');
     expect(find.byKey(const ValueKey('swing.bundle.alice')), findsOneWidget);
     expect(find.byKey(const ValueKey('swing.bundle.bob')), findsNothing, reason: '1 人だけ');
-    expect(find.descendant(of: find.byKey(const ValueKey('swing.bundle.alice')), matching: find.text('+1')), findsOneWidget, reason: 'ほかに出している人の数');
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.bundle.alice')), matching: find.byKey(const ValueKey('swing.ring.unseen'))), findsOneWidget, reason: '見ていない = 青');
 
     await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
     await tester.pumpAndSettle();
@@ -147,7 +151,7 @@ void main() {
     expect(find.text('アリスの 1 つめ'), findsOneWidget);
     expect(find.textContaining('あと 4 時間'), findsOneWidget);
 
-    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(0, -600), 2000);
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
     await tester.pumpAndSettle();
     expect(find.text('アリスの 2 つめ'), findsOneWidget);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
@@ -160,9 +164,20 @@ void main() {
     expect(find.byType(SwingViewerScreen), findsNothing);
     // 見終えたものはヘッダーから消える(アリスはもう無い)。
     expect(find.byKey(const ValueKey('swing.bundle.alice')), findsNothing);
-    expect(find.byKey(const ValueKey('swing.bundle.bob')), findsOneWidget, reason: '次の人に替わる');
-    expect(find.descendant(of: find.byKey(const ValueKey('swing.bundle.bob')), matching: find.textContaining('+')), findsNothing);
-    expect(c.read(swingFeedProvider).value!.map((s) => s.id), ['b1']);
+    expect(find.byKey(const ValueKey('swing.bundle.bob')), findsOneWidget, reason: '見ていない人が先');
+    expect(c.read(swingFeedProvider).value!.where((s) => s.seen).map((s) => s.id), unorderedEquals(['a1', 'a2']), reason: '見終えたものも期限までは残る');
+    // bob も見終える → 見ていない人がいなくなると、いちばん新しい人(alice)が白いリングで出る。
+    await tester.tap(find.byKey(const ValueKey('swing.bundle.bob')));
+    await tester.pumpAndSettle();
+    expect(find.text('ボブの'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('swing.close')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.bundle.alice')), matching: find.byKey(const ValueKey('swing.ring.seen'))), findsOneWidget, reason: '見終えた = 白');
+    // 白いリングからもう一度見られる。
+    await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
+    await tester.pumpAndSettle();
+    expect(find.text('アリスの 1 つめ'), findsOneWidget);
   });
 
   testWidgets('広告: 広告を出せる端末では Swing 5 個ごとに 1 枚(見終えの記録は無し)', (tester) async {
@@ -176,12 +191,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Swing 5'), findsOneWidget, reason: 'いちばん新しい人から');
     for (var i = 0; i < 5; i++) {
-      await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(0, -600), 2000);
+      await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
       await tester.pumpAndSettle();
     }
     expect(find.byKey(const ValueKey('fake.ad')), findsOneWidget);
     expect(find.text('広告'), findsOneWidget);
-    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(0, -600), 2000);
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
     await tester.pumpAndSettle();
     expect(find.text('Swing 0'), findsOneWidget);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
@@ -247,7 +262,7 @@ void main() {
     expect(((opened.single['context'] as Map)['author'] as Map)['accountId'], 'alice');
 
     // 全画面の間はスワイプで移れない。
-    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(0, -600), 2000);
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
     await tester.pumpAndSettle();
     expect(find.text('レベル 3'), findsOneWidget);
     expect(seen, isEmpty);
@@ -264,7 +279,7 @@ void main() {
     expect(find.byKey(const ValueKey('swing.plugin.shrink')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('swing.plugin.shrink')));
     await tester.pumpAndSettle();
-    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(0, -600), 2000);
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
     for (var i = 0; i < 12; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -272,7 +287,7 @@ void main() {
     expect(find.text('レベル 4'), findsOneWidget);
     expect(events, contains('close'), reason: '離れたページは閉じる');
     // 2 つめも全画面の間は移れない。
-    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(0, -600), 2000);
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
     await tester.pumpAndSettle();
     expect(find.text('レベル 4'), findsOneWidget);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
@@ -300,9 +315,102 @@ void main() {
     }
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('swing.plugin.needsInstall')), findsOneWidget);
-    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(0, -600), 2000);
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
     await tester.pumpAndSettle();
     expect(find.text('つぎ'), findsOneWidget);
+  });
+
+  testWidgets('時間で次へ (D-379): テキスト / 画像は決まった時間で進む。中央のタップで一時停止 / 再開、左端 / 右端のタップで前 / 次', (tester) async {
+    final (mock, seen, _, _) = central([
+      swing('t1', 'alice', text: 'いち', age: const Duration(minutes: 30)),
+      swing('t2', 'alice', text: 'に', age: const Duration(minutes: 20)),
+      swing('t3', 'alice', text: 'さん', age: const Duration(minutes: 10)),
+    ]);
+    final c = await pumpApp(tester, mock);
+    SwingViewerScreen.displayDuration = const Duration(seconds: 3);
+    c.read(routerProvider).push(Routes.swing('alice'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('いち'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.progress')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('に'), findsOneWidget, reason: '3 秒で次へ');
+    // 中央をタップ → 止まる(時間がたっても進まない)→ もう一度で再開。
+    final size = tester.getSize(find.byKey(const ValueKey('swing.viewer.pages')));
+    await tester.tapAt(Offset(size.width / 2, size.height / 2));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('swing.paused')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    expect(find.text('に'), findsOneWidget);
+    await tester.tapAt(Offset(size.width / 2, size.height / 2));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('swing.paused')), findsNothing);
+    // 左端 = 前、右端 = 次。
+    await tester.tapAt(Offset(size.width * 0.1, size.height / 2));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('いち'), findsOneWidget);
+    await tester.tapAt(Offset(size.width * 0.9, size.height / 2));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tapAt(Offset(size.width * 0.9, size.height / 2));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('さん'), findsOneWidget);
+    SwingViewerScreen.displayDuration = null;
+    await tester.tap(find.byKey(const ValueKey('swing.close')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    expect(seen.toSet(), {'t1', 't2', 't3'});
+  });
+
+  testWidgets('未審査のプラグイン (D-379): 同意してから、入れ物を制限モード(通信なし、GPU は可)で動かす。子プラグインの入れ物は断る', (tester) async {
+    final (mock, _, _, _) = central([
+      swing('u1', 'alice', kind: 'plugin', text: '', plugin: {'id': 'my.game', 'version': '0.1.0', 'packageUrl': 'https://central.test/api/v1/swings/media/pk1?exp=1&sig=x', 'unreviewed': true}),
+    ]);
+    final wasm = Uint8List.fromList([0, 0x61, 0x73, 0x6d, 1, 0, 0, 0]);
+    final loaded = <({String source, Set<String> permissions, bool gpu, Set<String> hosts})>[];
+    FakeSlotRuntime game() => FakeSlotRuntime(
+          manifest: const {
+            'id': 'my.game',
+            'name': 'ゲーム',
+            'version': '0.1.0',
+            'kind': 'view',
+            'slots': ['page'],
+            'permissions': ['render', 'network', 'gpu_ml'],
+            'network': {'hosts': ['example.com']},
+            'page': {'title': 'ゲーム', 'mode': 'solo', 'surfaces': ['swing']},
+          },
+          handler: (rt, fn, args) => fn == 'page.open' ? {'root': {'t': 'Text', 'k': 'hi', 'p': {'text': '未審査のゲーム'}}} : {},
+        );
+    final c = await pumpApp(tester, mock, extra: [
+      swingPackageFetcherProvider.overrideWithValue((url) async => wasm),
+      slotRuntimeLoaderProvider.overrideWithValue((Uint8List bytes, {required String source, required Set<String> fowPermissions, required Set<String> appFns, required Set<String> permissions, required int? fuelPerCall, required Set<String> fetchHosts, required bool gpuCompute}) async {
+        loaded.add((source: source, permissions: permissions, gpu: gpuCompute, hosts: fetchHosts));
+        return game();
+      }),
+    ]);
+    c.read(routerProvider).push(Routes.swing());
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.byKey(const ValueKey('swing.plugin.consent')), findsOneWidget);
+    expect(loaded, isEmpty, reason: '同意するまで動かさない');
+    await tester.tap(find.byKey(const ValueKey('swing.plugin.run')));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.text('未審査のゲーム'), findsOneWidget);
+    final run = loaded.last;
+    expect(run.source, 'swing:u1');
+    expect(run.permissions.contains('network'), isFalse, reason: '通信は閉じる');
+    expect(run.hosts, isEmpty);
+    expect(run.gpu, isTrue, reason: 'GPU は使える');
+
+    // 入れ物の決まり: 素の wasm は 1 つ、wasm でも rasqpkg でもないものは断る。
+    expect(() => checkSwingPackage(wasm, decompress: (b, {int maxOutput = 0}) => b), returnsNormally);
+    expect(() => checkSwingPackage(Uint8List.fromList([1, 2, 3]), decompress: (b, {int maxOutput = 0}) => b), throwsStateError);
   });
 
   testWidgets('作る: テキスト(フォロワー + RASQ リスト、6 時間)/ 画像(上げてから作る)。届け先が無ければ出せない', (tester) async {

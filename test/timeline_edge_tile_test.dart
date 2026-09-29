@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/home/home_screen.dart' show TimelineEdgeTile;
 import 'package:rasq_client/features/home/timeline_providers.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/app/router.dart';
@@ -45,7 +46,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(plugin.opened.fold<int>(0, (n, s) => n + s.timelineFetches) > fetchesAtStart, isTrue);
     final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
-    expect(c.read(timelineProvider(TimelineKind.home)).value?.posts.map((p) => p.id).toList() ?? c.read(timelineProvider(TimelineKind.social)).value?.posts.map((p) => p.id).toList(), containsAll(['new', 'old']));
+    final shown = [TimelineKind.home, TimelineKind.social].where((k) => c.exists(timelineProvider(k))).map((k) => c.read(timelineProvider(k)).value?.posts.map((p) => p.id).toList() ?? const <String>[]);
+    expect(shown.any((ids) => ids.contains('new') && ids.contains('old')), isTrue);
     // 見ていた投稿は、同じ場所のまま(新しい投稿は、その上に足される)。
     final before = tester.getTopLeft(find.text('もとの投稿').first).dy;
     await tester.pumpAndSettle();
@@ -53,6 +55,50 @@ void main() {
     // さらに上へスクロールすると、新しい投稿が出てくる。
     await tester.drag(find.byType(CustomScrollView).first, const Offset(0, 300));
     await tester.pumpAndSettle();
+    expect(find.text('あとから来た投稿'), findsWidgets);
+  });
+
+  testWidgets('自動更新 (D-379): 手元の投稿はそのまま、新しいものだけを上に足す(最新のページに入っていない投稿も残す)。見ている位置は動かない。「新しい投稿を読み込む」は全体を取り直す', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+    });
+    Post make(AccountId viewer, String id, String body) => Post(id: id, account: viewer, author: MockData.douglas, createdAt: DateTime.now(), body: body);
+    final plugin = FakeSnsPlugin(localEmojis: const {}, posts: (viewer) => [for (var i = 0; i < 12; i++) make(viewer, 'p$i', 'もとの投稿 $i')]);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(plugin)), mobileAppProvider.overrideWithValue(false)],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    // 出ている TL(画面にある方)。
+    final kind = [TimelineKind.home, TimelineKind.social].firstWhere((k) => find.byKey(ValueKey('tl.view.${k.id}')).evaluate().isNotEmpty);
+    expect(c.read(timelineProvider(kind)).value!.posts.length, 12);
+    final list = find.descendant(of: find.byKey(ValueKey('tl.view.${kind.id}')), matching: find.byType(CustomScrollView));
+    // 下のほうを読んでいる。
+    await tester.drag(list, const Offset(0, -900));
+    await tester.pumpAndSettle();
+    final reading = find.text('もとの投稿 6').first;
+    final y = tester.getTopLeft(reading).dy;
+    // 最新のページには新しい 1 件しか無い(手元の投稿と間が空いた)。
+    for (final session in plugin.opened) {
+      session.replaceAll([make(session.account, 'n1', 'あとから来た投稿')]);
+    }
+    await c.read(timelineProvider(kind).notifier).prependNewer();
+    await tester.pumpAndSettle();
+    expect(c.read(timelineProvider(kind)).value!.posts.map((p) => p.id).toList(), ['n1', for (var i = 0; i < 12; i++) 'p$i']);
+    expect(tester.getTopLeft(find.text('もとの投稿 6').first).dy, y, reason: '見ている位置は動かない');
+    // 「新しい投稿を読み込む」を押す = 全体を取り直して先頭へ(見えただけなら上に足すだけ)。
+    await tester.drag(list, const Offset(0, 1200));
+    await tester.pumpAndSettle();
+    expect(c.read(timelineProvider(kind)).value!.posts.length, 13, reason: '見えただけでは取り直さない');
+    final tile = tester.widget<TimelineEdgeTile>(find.descendant(of: find.byKey(ValueKey('tl.view.${kind.id}')), matching: find.byKey(const ValueKey('tl.edge.top'))));
+    expect(tile.onAutoLoad, isNotNull, reason: '見えただけなら上に足すだけ');
+    await tile.onLoad();
+    await tester.pumpAndSettle();
+    expect(c.read(timelineProvider(kind)).value!.posts.map((p) => p.id).toList(), ['n1']);
     expect(find.text('あとから来た投稿'), findsWidgets);
   });
 

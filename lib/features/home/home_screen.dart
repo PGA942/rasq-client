@@ -166,15 +166,19 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
         ]),
-        floatingActionButton: FloatingActionButton(
+        floatingActionButton: Builder(builder: (fabContext) => FloatingActionButton(
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
         heroTag: 'fab.home',
           // 作るものを選ぶ FOW (D-378): 投稿 / RASQ に投稿 / AsTell / Swing。
-          onPressed: () => openCreateFow(context, ref, onPosted: () => ref.read(timelineProvider(TimelineKind.home).notifier).refresh()),
+          onPressed: () {
+            final box = fabContext.findRenderObject() as RenderBox?;
+            final anchor = box == null || !box.hasSize ? null : box.localToGlobal(Offset.zero) & box.size;
+            openCreateFow(context, ref, anchor: anchor, onPosted: () => ref.read(timelineProvider(TimelineKind.home).notifier).prependNewer());
+          },
           tooltip: '作成',
           shape: const CircleBorder(),
           child: const Icon(Icons.add),
-        ),
+        )),
       )),
     );
   }
@@ -374,7 +378,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, j) => j == newer.length
-                      ? TimelineEdgeTile(key: const ValueKey('tl.edge.top'), scroll: _scroll, label: '新しい投稿を読み込む', busyLabel: '更新しています…', onLoad: notifier.refreshNewer)
+                      ? TimelineEdgeTile(key: const ValueKey('tl.edge.top'), scroll: _scroll, label: '新しい投稿を読み込む', busyLabel: '更新しています…', onLoad: () => _reloadAll(notifier), onAutoLoad: notifier.prependNewer)
                       : row(newer[newer.length - 1 - j]),
                   childCount: newer.length + (edgeTiles ? 1 : 0),
                 ),
@@ -411,6 +415,16 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
 
   final _centerKey = GlobalKey();
   String? _baseKey;
+
+  /// 「新しい投稿を読み込む」(D-379): 全体を取り直して先頭へ(自動更新は上に足すだけ)。
+  Future<void> _reloadAll(TimelineNotifier notifier) async {
+    await notifier.refresh();
+    if (!mounted) return;
+    setState(() => _baseKey = null);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) _scroll.jumpTo(0);
+    });
+  }
 
   Widget _item(BuildContext context, TimelineState tl, Post p, TimelineNotifier notifier, SnsSession? session, List<ActionDescriptor> actions) {
     // RASQ の投稿 (D-283。TL のソース「RASQ の投稿」): SNS のアクションは効かないので、RASQ のタイルで描く。
@@ -460,12 +474,15 @@ class _ErrorList extends StatelessWidget {
 /// TL のいちばん上 / いちばん下の更新タイル (D-298)。**見えたら自分で読み込む**(引っ張れない PC / Web でも更新できる)。押しても読み込む。
 /// 同じタイルが出たままのあいだは、繰り返さない(いちど隠れて、また見えたら読む)。出てすぐの連打を避けるため、前回から [minInterval] は空ける。
 class TimelineEdgeTile extends StatefulWidget {
-  const TimelineEdgeTile({super.key, required this.scroll, required this.label, required this.busyLabel, required this.onLoad, this.busy = false, this.minInterval = const Duration(seconds: 8)});
+  const TimelineEdgeTile({super.key, required this.scroll, required this.label, required this.busyLabel, required this.onLoad, this.onAutoLoad, this.busy = false, this.minInterval = const Duration(seconds: 8)});
   /// 一覧のスクロール(見えたかどうかを、動くたびに確かめる)。
   final Listenable scroll;
   final String label;
   final String busyLabel;
   final Future<void> Function() onLoad;
+
+  /// 見えたときに自分で読むとき(D-379: 上のタイルは、見えただけなら上に足すだけ。押したら全体を取り直す)。null = [onLoad]。
+  final Future<void> Function()? onAutoLoad;
   final bool busy;
   final Duration minInterval;
 
@@ -525,7 +542,7 @@ class _TimelineEdgeTileState extends State<TimelineEdgeTile> {
     if (key != null) TimelineEdgeTile._last[key] = DateTime.now();
     setState(() => _busy = true);
     try {
-      await widget.onLoad();
+      await (auto ? (widget.onAutoLoad ?? widget.onLoad) : widget.onLoad)();
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -536,7 +553,7 @@ class _TimelineEdgeTileState extends State<TimelineEdgeTile> {
     final scheme = Theme.of(context).colorScheme;
     final busy = _busy || widget.busy;
     return InkWell(
-      onTap: busy ? null : _load,
+      onTap: busy ? null : () => _load(),
       child: Container(
         height: RasqSizes.minTap,
         alignment: Alignment.center,

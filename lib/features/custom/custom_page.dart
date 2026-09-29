@@ -24,7 +24,7 @@ import 'custom_models.dart';
 /// カスタムプラグイン(ページ型、契約 v0.18 §2.13、D-357)を開く引数。ルート `/custom/<pluginId>?surface=&session=&room=&profile=`。
 @immutable
 class CustomPageArgs {
-  const CustomPageArgs({required this.pluginId, this.version, this.surface = PluginPageDecl.surfacePage, this.sessionId, this.roomId, this.profileHandle, this.profileAccountId, this.context = const {}});
+  const CustomPageArgs({required this.pluginId, this.version, this.surface = PluginPageDecl.surfacePage, this.sessionId, this.roomId, this.profileHandle, this.profileAccountId, this.context = const {}, this.package, this.packageSource});
   final String pluginId;
   final String? version;
   final String surface;
@@ -35,6 +35,12 @@ class CustomPageArgs {
 
   /// `page.open` の `context` に足すもの(ルートには載せない)。Swing (D-377) は `{swingId, data, author}`。
   final Map<String, Object?> context;
+
+  /// 未審査のプラグインを入れ物から動かす (D-379: Swing)。あれば、入っているかに関係なく同意のうえ一時的に動かす。
+  final Future<Uint8List> Function()? package;
+
+  /// そのときの登録元(`swing:<swingId>` = 制限モード + GPU)。
+  final String? packageSource;
 
   Map<String, String> get query => {
         'version': ?version,
@@ -124,6 +130,11 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       }
     }
     if (_disposed) return;
+    // 未審査の入れ物 (D-379): 入っているものは使わず、同意のうえ入れ物のものを一時的に動かす。
+    if (args.package != null) {
+      _set(() => phase = CustomPagePhase.needsConsent);
+      return;
+    }
     if (p != null) {
       plugin = p;
       return _open();
@@ -138,11 +149,13 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   /// 同意 → ストアから(セッション経由で)取り、登録簿に入れずに動かす。
   Future<void> acceptTemporary() async {
     final sessionId = args.sessionId;
-    if (sessionId == null) return;
+    final package = args.package;
+    if (sessionId == null && package == null) return;
     _set(() => phase = CustomPagePhase.loading);
     try {
-      final bytes = await container.read(storeClientProvider).sessionPackage(args.pluginId, sessionId, version: args.version);
-      final p = await _slots.register(storeSlotSource(args.pluginId, args.version ?? detail?.version ?? '0.0.0'), bytes: bytes, persist: false, temporary: true);
+      final bytes = package != null ? await package() : await container.read(storeClientProvider).sessionPackage(args.pluginId, sessionId!, version: args.version);
+      final source = package != null ? (args.packageSource ?? 'swing:${args.pluginId}') : storeSlotSource(args.pluginId, args.version ?? detail?.version ?? '0.0.0');
+      final p = await _slots.register(source, bytes: bytes, persist: false, temporary: true);
       if (p == null) throw StateError(container.read(slotPluginsNoticeProvider) ?? '読み込めませんでした');
       if (!p.has(SlotIds.page)) {
         _slots.disposeTemporary(p);

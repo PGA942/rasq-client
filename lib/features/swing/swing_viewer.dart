@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,12 +18,13 @@ import '../plugins/slot_plugins.dart';
 import 'swing_models.dart';
 import 'swing_providers.dart';
 
-/// Swing のビューワー (D-377)。全画面、縦のスワイプで次の Swing(と広告)へ。
+/// Swing のビューワー (D-377 / D-379)。全画面、**左右のスワイプ**で次 / 前の Swing(と広告)へ。マウス / トラックパッドの
+/// ドラッグでも動く(Mac 版で縦のスワイプが効かなかった)。
 ///
-/// - 並びは作った人ごと([orderForViewer])。[startAuthor] があればその人の最初の Swing から。開いた時点のフィードで並べる
-///   (見終えて手元から消えても、並びは変えない)。
-/// - **見終えた** = スワイプでその Swing を離れた / 閉じた / プラグインが `page.end` を呼んだ。Central へ送り、その人には
-///   二度と出ない。
+/// - 並びは [swingViewerQueue](押した人の Swing → ほかの人の見ていないもの)。開いた時点のフィードで並べる。
+/// - **時間で次へ**: テキスト / 画像は [displayDuration]、動画は終わったら。プラグインと広告は自分では進まない。
+///   **中央をタップで一時停止 / 再開**、左端 / 右端のタップで前 / 次。
+/// - **見終えた** = その Swing を離れた / 閉じた / プラグインが `page.end` を呼んだ。Central へ送る(ヘッダーのリングが白になる)。
 /// - **広告**: Swing [adEvery] 個ごとに 1 枚(広告を出せる端末とアカウントだけ。出せなければ挟まない)。広告は見終えの記録なし。
 /// - **プラグイン**(ページ型、surface `swing`、契約 v0.19): 全画面で動かし、その間は**スワイプで移れない**。
 ///   「全画面から縮小」を押すと、ぼかして止め(`page.event paused`)、スワイプで移れるようにする。縮小したものを押すと
@@ -34,6 +36,9 @@ class SwingViewerScreen extends ConsumerStatefulWidget {
   final String? startAuthor;
 
   static const adEvery = 5;
+
+  /// テキスト / 画像を出しておく時間(テストで null = 時間では進まない)。
+  static Duration? displayDuration = const Duration(seconds: 6);
 
   @override
   ConsumerState<SwingViewerScreen> createState() => _SwingViewerScreenState();
@@ -58,29 +63,59 @@ List<SwingViewerItem> interleaveAds(List<Swing> swings, {required bool ads, int 
       ],
     ];
 
-class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> {
+class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with SingleTickerProviderStateMixin {
   late final List<SwingViewerItem> _items;
   late final PageController _pages;
+  late final AnimationController _clock = AnimationController(vsync: this)..addStatusListener(_onClock);
   int _index = 0;
 
   /// いまのプラグインが全画面で動いている(スワイプで移れない)。
   bool _locked = false;
 
+  /// 中央のタップで止めている。
+  bool _paused = false;
+
   @override
   void initState() {
     super.initState();
-    final feed = orderForViewer(ref.read(swingFeedProvider).value ?? const []);
+    final feed = swingViewerQueue(ref.read(swingFeedProvider).value ?? const [], startAuthor: widget.startAuthor);
     final ads = ref.read(exportAdNetworkProvider) != null && ref.read(exportAdAllowedProvider);
     _items = interleaveAds(feed, ads: ads);
-    final start = widget.startAuthor == null ? 0 : _items.indexWhere((x) => x.swing?.authorAccountId == widget.startAuthor);
-    _index = start < 0 ? 0 : start;
     _pages = PageController(initialPage: _index);
+    _startClock();
   }
 
   @override
   void dispose() {
+    _clock.dispose();
     _pages.dispose();
     super.dispose();
+  }
+
+  /// 時間で進むもの(テキスト / 画像)だけ、時計を回す。
+  void _startClock() {
+    _clock.stop();
+    _clock.value = 0;
+    final s = _index < _items.length ? _items[_index].swing : null;
+    final d = SwingViewerScreen.displayDuration;
+    if (s == null || d == null || !(s.kind == SwingKind.text || s.kind == SwingKind.image)) return;
+    _clock.duration = d;
+    if (!_paused) _clock.forward();
+  }
+
+  void _onClock(AnimationStatus st) {
+    if (st == AnimationStatus.completed && mounted) _next();
+  }
+
+  void _togglePause() {
+    setState(() => _paused = !_paused);
+    if (_paused) {
+      _clock.stop();
+    } else if (_clock.duration != null && _clock.value > 0 && _clock.value < 1) {
+      _clock.forward();
+    } else {
+      _startClock();
+    }
   }
 
   /// スワイプを止める / 戻す。ページが止まりきる前に物理を変えると、ページの途中で止まるので、止まってから。
@@ -110,16 +145,22 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> {
     setState(() {
       _index = i;
       _locked = false;
+      _paused = false;
     });
+    _startClock();
   }
 
-  /// 見終えて次へ(最後なら閉じる)。
+  /// 次へ(最後なら閉じる)。
   void _next() {
     if (_index + 1 < _items.length) {
       _pages.nextPage(duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
     } else {
       _close();
     }
+  }
+
+  void _prev() {
+    if (_index > 0) _pages.previousPage(duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
   }
 
   void _close() {
@@ -143,10 +184,12 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> {
                 const RasqEmptyView(key: ValueKey('swing.viewer.empty'), title: 'Swing はありません', hint: 'フォローしている人や、RASQ リストに入れてくれた人の Swing がここに流れます'),
                 Positioned(top: 8, right: 8, child: SafeArea(child: RasqIconButton(icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: _close))),
               ])
-            : PageView.builder(
+            : ScrollConfiguration(
+                // マウス / トラックパッドのドラッグでもめくれる(既定はタッチだけ)。
+                behavior: ScrollConfiguration.of(context).copyWith(dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad, PointerDeviceKind.stylus}),
+                child: PageView.builder(
                 key: const ValueKey('swing.viewer.pages'),
                 controller: _pages,
-                scrollDirection: Axis.vertical,
                 physics: _locked ? const NeverScrollableScrollPhysics() : const PageScrollPhysics(),
                 onPageChanged: _onPage,
                 itemCount: _items.length,
@@ -158,8 +201,11 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> {
                     key: ValueKey('swing.page.${s.id}'),
                     swing: s,
                     active: i == _index,
+                    paused: i == _index && _paused,
+                    clock: _clock,
                     position: '${i + 1} / ${_items.length}',
                     onClose: _close,
+                    onTapZone: (zone) => switch (zone) { -1 => _prev(), 1 => _next(), _ => _togglePause() },
                     onLockChanged: (locked) {
                       if (i == _index) _setLocked(locked);
                     },
@@ -168,6 +214,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> {
                     },
                   );
                 },
+              ),
               ),
       ),
     );
@@ -181,10 +228,15 @@ String swingRemainingLabel(Duration d) {
 }
 
 class _SwingPage extends StatelessWidget {
-  const _SwingPage({super.key, required this.swing, required this.active, required this.position, required this.onClose, required this.onLockChanged, required this.onEnd});
+  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd});
   final Swing swing;
   final bool active;
+  final bool paused;
+  final Animation<double> clock;
   final String position;
+
+  /// -1 = 左端(前へ)、0 = 中央(一時停止)、1 = 右端(次へ)。
+  final ValueChanged<int> onTapZone;
   final VoidCallback onClose;
   final ValueChanged<bool> onLockChanged;
   final VoidCallback onEnd;
@@ -194,12 +246,29 @@ class _SwingPage extends StatelessWidget {
     final body = switch (swing.kind) {
       SwingKind.text => _TextBody(text: swing.text),
       SwingKind.image => _ImageBody(swing: swing),
-      SwingKind.video => _VideoBody(swing: swing, active: active),
+      SwingKind.video => _VideoBody(swing: swing, active: active, paused: paused, onDone: onEnd),
       SwingKind.plugin => _PluginBody(swing: swing, active: active, onLockChanged: onLockChanged, onEnd: onEnd),
     };
+    final timed = swing.kind != SwingKind.plugin;
     return Stack(fit: StackFit.expand, children: [
       body,
-      // 上: 作った人と残り時間、閉じる。
+      // タップ: 左端 / 中央 / 右端(プラグインはページ自身がタップを使う)。
+      if (timed)
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (_, box) => GestureDetector(
+              key: const ValueKey('swing.tap'),
+              behavior: HitTestBehavior.translucent,
+              onTapUp: (d) {
+                final x = d.localPosition.dx / box.maxWidth;
+                onTapZone(x < 0.25 ? -1 : (x > 0.75 ? 1 : 0));
+              },
+            ),
+          ),
+        ),
+      if (timed && paused)
+        const Center(child: IgnorePointer(child: Icon(Icons.pause_circle_outline, key: ValueKey('swing.paused'), color: Colors.white70, size: 64))),
+      // 上: 時間の進み、作った人と残り時間、閉じる。
       Positioned(
         left: 0,
         right: 0,
@@ -210,7 +279,16 @@ class _SwingPage extends StatelessWidget {
               bottom: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.lg),
-                child: Row(children: [
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  if (swing.kind == SwingKind.text || swing.kind == SwingKind.image)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: RasqSpacing.xs, right: RasqSpacing.sm),
+                      child: AnimatedBuilder(
+                        animation: clock,
+                        builder: (_, _) => LinearProgressIndicator(key: const ValueKey('swing.progress'), value: active ? clock.value : 0, minHeight: 2, color: Colors.white, backgroundColor: Colors.white24),
+                      ),
+                    ),
+                  Row(children: [
                   RasqAvatar(imageUrl: swing.author.avatarUrl, size: 32, fallbackLabel: swing.author.displayName),
                   const SizedBox(width: RasqSpacing.sm),
                   Expanded(
@@ -220,6 +298,7 @@ class _SwingPage extends StatelessWidget {
                     ]),
                   ),
                   RasqIconButton(key: const ValueKey('swing.close'), icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: onClose),
+                ]),
                 ]),
               ),
             ),
@@ -278,9 +357,13 @@ class _Missing extends StatelessWidget {
 }
 
 class _VideoBody extends StatefulWidget {
-  const _VideoBody({required this.swing, required this.active});
+  const _VideoBody({required this.swing, required this.active, this.paused = false, this.onDone});
   final Swing swing;
   final bool active;
+  final bool paused;
+
+  /// 終わりまで再生した(次へ)。
+  final VoidCallback? onDone;
 
   @override
   State<_VideoBody> createState() => _VideoBodyState();
@@ -293,7 +376,10 @@ class _VideoBodyState extends State<_VideoBody> {
   void initState() {
     super.initState();
     final url = widget.swing.mediaUrl;
-    if (url != null) _session = VideoSession(MediaItem(id: widget.swing.id, type: MediaType.video, url: url), autoplay: widget.active);
+    if (url != null) {
+      _session = VideoSession(MediaItem(id: widget.swing.id, type: MediaType.video, url: url), autoplay: widget.active)
+        ..addListener(_hook);
+    }
   }
 
   @override
@@ -301,8 +387,29 @@ class _VideoBodyState extends State<_VideoBody> {
     super.didUpdateWidget(old);
     // 別のページへ移ったら止める。
     final c = _session?.controller;
-    if (c != null && old.active && !widget.active) c.pause();
-    if (c != null && !old.active && widget.active) c.play();
+    if (c != null && (old.active && !widget.active || !old.paused && widget.paused)) c.pause();
+    if (c != null && widget.active && !widget.paused && (!old.active || old.paused)) c.play();
+  }
+
+  bool _done = false;
+  bool _hooked = false;
+
+  /// 再生器ができたら、終わりを見張る(1 回だけ)。
+  void _hook() {
+    final c = _session?.controller;
+    if (c == null || _hooked) return;
+    _hooked = true;
+    c.addListener(_watchEnd);
+  }
+
+  void _watchEnd() {
+    final c = _session?.controller;
+    if (c == null || _done || !widget.active) return;
+    final v = c.value;
+    if (v.isInitialized && v.duration > Duration.zero && v.position >= v.duration && !v.isPlaying) {
+      _done = true;
+      widget.onDone?.call();
+    }
   }
 
   @override
@@ -365,6 +472,9 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
         pluginId: p.id,
         version: p.version,
         surface: PluginPageDecl.surfaceSwing,
+        // 未審査 (D-379): 作った人が上げた入れ物を、同意のうえ制限モード(通信なし、GPU だけ可)で一時的に動かす。
+        package: p.unreviewed && p.packageUrl != null ? () => ref.read(swingPackageFetcherProvider)(p.packageUrl!) : null,
+        packageSource: p.unreviewed ? '$swingSlotSourcePrefix${widget.swing.id}' : null,
         context: {
           'swingId': widget.swing.id,
           'data': ?p.data,
@@ -417,7 +527,27 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
       return const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5)));
     }
     switch (c.phase) {
-      case CustomPagePhase.needsInstall || CustomPagePhase.needsConsent:
+      case CustomPagePhase.needsConsent:
+        // 未審査のプラグイン (D-379)。
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(RasqSpacing.page),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.extension_outlined, color: Colors.white70, size: 40),
+              const SizedBox(height: RasqSpacing.sm),
+              Text(widget.swing.plugin!.id, style: RasqTypography.title.copyWith(color: Colors.white)),
+              const SizedBox(height: RasqSpacing.sm),
+              const RasqNotice.warning(
+                key: ValueKey('swing.plugin.consent'),
+                text: '審査されていないプラグインです。通信はできない状態で、この Swing を見ている間だけ動かします。',
+                detail: 'D-379 / S-057。制限モード(network / storage.unsafe / interstitial・system の FOW / URL を開くなどは閉、GPU は可)。子プラグインを持たない 1 つだけ。',
+              ),
+              const SizedBox(height: RasqSpacing.md),
+              FilledButton(key: const ValueKey('swing.plugin.run'), onPressed: c.acceptTemporary, child: const Text('動かす')),
+            ]),
+          ),
+        );
+      case CustomPagePhase.needsInstall:
         return RasqEmptyView(
           key: const ValueKey('swing.plugin.needsInstall'),
           title: '${c.detail?.name ?? widget.swing.plugin!.id} を入れると見られます',

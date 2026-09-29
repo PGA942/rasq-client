@@ -183,8 +183,11 @@ class AstellPostTile extends ConsumerWidget {
 /// D-377: 帯を囲んでいた大きな角丸四角形は無くし、バンドルを少し大きく(28 → [size] 34)。前後に [leading] / [trailing]
 /// (Swing を作るボタン / Swing を出している人)を並べられる。
 class AstellHeaderStrip extends ConsumerWidget {
-  const AstellHeaderStrip({super.key, this.max = 4, this.size = 34, this.leading = const [], this.trailing = const []});
+  const AstellHeaderStrip({super.key, this.max = 4, this.size = 34, this.leading = const [], this.trailing = const [], this.showTitles = false});
   final int max;
+
+  /// バンドルの下にルーム名(D-379: ヘッダーを畳んでいないとき)。
+  final bool showTitles;
   final double size;
   final List<Widget> leading;
   final List<Widget> trailing;
@@ -211,14 +214,29 @@ class AstellHeaderStrip extends ConsumerWidget {
       scrollDirection: Axis.horizontal,
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         for (final w in leading) ...[w, const SizedBox(width: 8)],
+        // D-379: 並べきれない数の「+N」は出さない(横にスクロールすると続きがある)。
         for (final r in rooms.take(max)) ...[
           Tooltip(
             message: '${r.ownerDisplayName}: ${r.title}',
-            child: RasqAvatarBundle(user: r.owner, count: r.peerCount, faces: r.bundleFaces, live: r.live, size: size, onTap: () => openAstellRoomTile(context, ref, r)),
+            child: showTitles
+                ? Column(mainAxisSize: MainAxisSize.min, children: [
+                    RasqAvatarBundle(user: r.owner, count: r.peerCount, faces: r.bundleFaces, size: size - 4, onTap: () => openAstellRoomTile(context, ref, r)),
+                    SizedBox(
+                      width: 72,
+                      child: Text(
+                        r.live ? 'LIVE ・ ${r.title}' : r.title,
+                        key: ValueKey('astell.header.title.${r.id}'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: RasqTypography.caption.copyWith(fontSize: 10, height: 1.1, color: r.live ? RasqColors.danger : null),
+                      ),
+                    ),
+                  ])
+                : RasqAvatarBundle(user: r.owner, count: r.peerCount, faces: r.bundleFaces, live: r.live, size: size, onTap: () => openAstellRoomTile(context, ref, r)),
           ),
           const SizedBox(width: 8),
         ],
-        if (rooms.length > max) Padding(padding: const EdgeInsets.only(right: 8), child: Text('+${rooms.length - max}', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
         for (final w in trailing) ...[w, const SizedBox(width: 8)],
       ]),
     );

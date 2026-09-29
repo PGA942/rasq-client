@@ -13,6 +13,7 @@ import '../collections/rasq_collections.dart';
 import '../compose/media_file_pick.dart' show mediaVideoExtensions, mediaMimeFor;
 import '../custom/custom_plugins_screen.dart' show installedPagePluginsProvider;
 import '../plugins/slot_plugins.dart';
+import '../store/rasqpkg.dart' show isRasqPackage, rasqpkgZstdProvider;
 import 'swing_models.dart';
 import 'swing_providers.dart';
 
@@ -37,6 +38,11 @@ final swingMediaPickerProvider = Provider<Future<XFile?> Function({required bool
           : const XTypeGroup(label: '画像', extensions: swingImageExtensions, mimeTypes: ['image/*'], uniformTypeIdentifiers: ['public.image']),
     ]));
 
+/// 未審査のプラグインの入れ物を選ぶ(テストで差し替える)。
+final swingPackagePickerProvider = Provider<Future<XFile?> Function()>((ref) => () => openFile(acceptedTypeGroups: const [
+      XTypeGroup(label: 'プラグイン', extensions: ['rasqpkg', 'wasm']),
+    ]));
+
 /// Swing に使えるプラグイン: 入っているページ型で、surface `swing` を宣言しているもの(solo)。
 final swingPluginsProvider = Provider<List<SlotPlugin>>((ref) => [
       for (final p in ref.watch(installedPagePluginsProvider))
@@ -57,6 +63,9 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
   SwingKind _kind = SwingKind.text;
   ({String name, Uint8List bytes, String mime})? _media;
   String? _pluginId;
+
+  /// 未審査のプラグイン (D-379): ファイルから読んだ入れ物(確かめ済み)。
+  ({String name, Uint8List bytes, String id, String version, String title})? _package;
   bool _followers = true;
   final _lists = <String>{};
   int _ttl = 24;
@@ -74,7 +83,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
     return switch (_kind) {
       SwingKind.text => _text.text.trim().isNotEmpty,
       SwingKind.image || SwingKind.video => _media != null,
-      SwingKind.plugin => _pluginId != null,
+      SwingKind.plugin => _pluginId != null || _package != null,
     };
   }
 
@@ -94,6 +103,29 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
     });
   }
 
+  /// 入れ物を選んで、Swing で配れるか確かめる(子プラグイン無しの 1 つ、Swing の面のページ型)。一度動かして宣言を読む。
+  Future<void> _pickPackage() async {
+    final f = await ref.read(swingPackagePickerProvider)();
+    if (f == null) return;
+    final bytes = await f.readAsBytes();
+    final slots = ref.read(slotPluginsProvider.notifier);
+    SlotPlugin? p;
+    try {
+      checkSwingPackage(bytes, decompress: ref.read(rasqpkgZstdProvider));
+      p = await slots.register('${swingSlotSourcePrefix}preview', bytes: bytes, persist: false, temporary: true);
+      if (p == null) throw StateError(ref.read(slotPluginsNoticeProvider) ?? '読み込めませんでした');
+      setState(() {
+        _package = (name: f.name, bytes: bytes, id: p!.manifest.id, version: p.manifest.version, title: p.manifest.page?.title ?? p.manifest.name);
+        _pluginId = null;
+        _error = null;
+      });
+    } catch (e) {
+      setState(() => _error = e is StateError ? e.message : '$e');
+    } finally {
+      if (p != null) slots.disposeTemporary(p);
+    }
+  }
+
   Future<void> _send() async {
     final api = ref.read(swingApiProvider);
     if (api == null || !_ready) return;
@@ -106,11 +138,17 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       final m = _media;
       if ((_kind == SwingKind.image || _kind == SwingKind.video) && m != null) mediaId = await api.uploadMedia(m.bytes, contentType: m.mime);
       final plugin = _pluginId == null ? null : ref.read(swingPluginsProvider).where((p) => (p.storePluginId ?? p.id) == _pluginId).firstOrNull;
+      final pkg = _kind == SwingKind.plugin ? _package : null;
+      final packageId = pkg == null ? null : await api.uploadMedia(pkg.bytes, contentType: isRasqPackage(pkg.bytes) ? 'application/vnd.rasq.pkg' : 'application/wasm');
       await api.create(NewSwing(
         kind: _kind,
         text: _kind == SwingKind.plugin ? '' : _text.text,
         mediaId: mediaId,
-        plugin: _kind == SwingKind.plugin && _pluginId != null ? SwingPlugin(id: _pluginId!, version: plugin?.storeVersion) : null,
+        plugin: pkg != null
+            ? SwingPlugin(id: pkg.id, version: pkg.version, packageId: packageId)
+            : _kind == SwingKind.plugin && _pluginId != null
+                ? SwingPlugin(id: _pluginId!, version: plugin?.storeVersion)
+                : null,
         audience: SwingAudience(followers: _followers, lists: _lists.toList()),
         ttlHours: _ttl,
       ));
@@ -183,7 +221,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
                 ),
               if (_kind == SwingKind.plugin) ...[
                 if (plugins.isEmpty)
-                  const RasqNotice(key: ValueKey('swing.plugin.none'), text: 'Swing に使えるプラグインが入っていません。ストアで「Swing に対応」と書かれたカスタムプラグインを入れてください。', detail: 'ページ型(カスタムプラグイン)のうち、manifest.page.surfaces に swing を書いた solo のもの(契約 v0.19)。'),
+                  const RasqNotice(key: ValueKey('swing.plugin.none'), text: 'Swing に対応したプラグインが入っていません。ストアで入れるか、下の「ファイルから」で自分のプラグインを配れます。', detail: 'ページ型(カスタムプラグイン)のうち、manifest.page.surfaces に swing を書いた solo のもの(契約 v0.19)。'),
                 for (final p in plugins)
                   RasqRadioListTile<String>(
                     key: ValueKey('swing.plugin.${p.storePluginId ?? p.id}'),
@@ -191,8 +229,20 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
                     subtitle: '見る人の端末で全画面で動きます',
                     value: p.storePluginId ?? p.id,
                     groupValue: _pluginId,
-                    onChanged: (v) => setState(() => _pluginId = v),
+                    onChanged: (v) => setState(() {
+                      _pluginId = v;
+                      _package = null;
+                    }),
                   ),
+                // 未審査のまま配る (D-379)。見る人の端末では制限モード(通信なし、GPU は可)。
+                RasqListTile(
+                  key: const ValueKey('swing.plugin.file'),
+                  title: _package == null ? 'ファイルから(未審査)' : '${_package!.title}(未審査)',
+                  subtitle: _package == null ? '自分で作った .rasqpkg / .wasm を配ります' : _package!.name,
+                  detail: '審査していないプラグインは、見る人の端末で通信できない状態で動きます(GPU は使えます)。ほかのプラグインを土台にする子プラグインは配れません。',
+                  leading: Icon(_package == null ? Icons.file_open_outlined : Icons.check_circle_outline),
+                  onTap: _busy ? null : _pickPackage,
+                ),
               ],
               const RasqSectionHeader(title: '届け先'),
               SwitchListTile(

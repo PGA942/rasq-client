@@ -124,7 +124,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     if (_clockTimer != null && _clockInterval == interval) return; // 周期そのまま — 位相を保つ
     _clockTimer?.cancel();
     _clockInterval = interval;
-    _clockTimer = Timer.periodic(interval, (_) => refresh());
+    // 自動更新は上に足すだけ (D-379): 置き換えると、下のほうを読んでいる人が上へ戻される。
+    _clockTimer = Timer.periodic(interval, (_) => prependNewer());
   }
 
   /// 投稿の所属アカウントのセッション (D-088): 総合TLでは投稿ごとに取得元
@@ -554,33 +555,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   Future<void> refresh() async {
     final session = _session;
     if (session == null) return;
-    if (kind == childSafeWindowKind) {
-      state = AsyncData(TimelineState(posts: await _fetchChildWindow()));
-      return;
-    }
     try {
-      if (kind == TimelineKind.bundle) {
-        _bundleCursors = {};
-        _nodeCursors = {};
-        // リフレッシュ(プル更新/クロック)もグラフ経由 (D-117): 以前はここが
-        // 旧合流へ直行していて、更新のたびに総合グラフの加工が消えていた。
-        try {
-          final result = await _runBundleGraph();
-          if (result != null) {
-            _bundleGraphActive = true;
-            state = AsyncData(TimelineState(posts: result, cursor: _nodeHasMore ? 'node' : null));
-            return;
-          }
-        } catch (e) {
-          debugPrint('bundle graph: $e');
-        }
-        _bundleGraphActive = false;
-        final (page, _, _) = await _fetchBundle(first: true);
-        state = AsyncData(TimelineState(posts: page.items, cursor: page.nextCursor));
-        return;
-      }
-      final (page, _, deco) = await _fetch(session, null);
-      state = AsyncData(TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: deco.tiles, badges: deco.badges));
+      state = AsyncData(await _latest(session));
     } catch (e, st) {
       if (state.value == null || state.value!.posts.isEmpty) {
         state = AsyncError(e, st);
@@ -588,6 +564,31 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         state = AsyncData(state.value!.copyWith(error: e));
       }
     }
+  }
+
+  /// 最新の 1 ページ(state には書かない)。総合 TL はカーソルを作り直す。
+  Future<TimelineState> _latest(SnsSession session) async {
+    if (kind == childSafeWindowKind) return TimelineState(posts: await _fetchChildWindow());
+    if (kind == TimelineKind.bundle) {
+      _bundleCursors = {};
+      _nodeCursors = {};
+      // リフレッシュ(プル更新/クロック)もグラフ経由 (D-117): 以前はここが
+      // 旧合流へ直行していて、更新のたびに総合グラフの加工が消えていた。
+      try {
+        final result = await _runBundleGraph();
+        if (result != null) {
+          _bundleGraphActive = true;
+          return TimelineState(posts: result, cursor: _nodeHasMore ? 'node' : null);
+        }
+      } catch (e) {
+        debugPrint('bundle graph: $e');
+      }
+      _bundleGraphActive = false;
+      final (page, _, _) = await _fetchBundle(first: true);
+      return TimelineState(posts: page.items, cursor: page.nextCursor);
+    }
+    final (page, _, deco) = await _fetch(session, null);
+    return TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: deco.tiles, badges: deco.badges);
   }
 
   /// 上の更新タイル (D-298) からの更新: **読み込んである投稿は残したまま、新しいぶんを上に足す**(引っ張って更新 = [refresh] は、最新の 1 ページに置き換える)。
@@ -602,6 +603,42 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     final tail = [for (final p in before.posts) if (!fresh.contains(p.id)) p];
     if (tail.isEmpty) return;
     state = AsyncData(after.copyWith(posts: [...after.posts, ...tail], cursor: before.cursor, clearCursor: before.cursor == null, customTiles: {...before.customTiles, ...after.customTiles}, badges: {...before.badges, ...after.badges}));
+  }
+
+  /// 自動更新 (D-379): **手元の投稿はそのまま、新しいものだけを上に足す**(間が空いていても足す)。続きのカーソルも変えない。
+  /// 見ている位置は動かない(TL は中心より上に足す)。全体を取り直すのは「新しい投稿を読み込む」/ 引っ張って更新 = [refresh]。
+  Future<void> prependNewer() async {
+    final before = state.value;
+    final session = _session;
+    if (session == null) return;
+    if (before == null || before.posts.isEmpty) return refresh();
+    final bundleCursors = {..._bundleCursors};
+    final nodeCursors = {..._nodeCursors};
+    final graphActive = _bundleGraphActive;
+    TimelineState latest;
+    try {
+      latest = await _latest(session);
+    } catch (e) {
+      final cur = state.value;
+      if (cur != null) state = AsyncData(cur.copyWith(error: e));
+      return;
+    } finally {
+      // 総合 TL はカーソルを作り直すので、続きを読む位置を戻す。
+      _bundleCursors = bundleCursors;
+      _nodeCursors = nodeCursors;
+      _bundleGraphActive = graphActive;
+    }
+    // 待っている間に続きを読んだ / 更新したかもしれないので、いまの state に足す。
+    final cur = state.value ?? before;
+    final have = {for (final p in cur.posts) p.key};
+    final fresh = [for (final p in latest.posts) if (!have.contains(p.key)) p];
+    if (fresh.isEmpty) return;
+    state = AsyncData(cur.copyWith(
+      posts: [...fresh, ...cur.posts],
+      clearError: true,
+      customTiles: {...cur.customTiles, ...latest.customTiles},
+      badges: {...cur.badges, ...latest.badges},
+    ));
   }
 
   Future<void> loadMore() async {
