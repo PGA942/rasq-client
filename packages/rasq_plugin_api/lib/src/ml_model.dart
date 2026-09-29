@@ -32,12 +32,15 @@ abstract final class RasqHostFns {
 
   // ページ型(カスタムプラグイン、契約 v0.18 §2.13、D-357)。`token` 必須、fire-and-forget。
   static const pageRender = 'page.render';
+
+  /// v0.19 (D-377): プラグインが自分で終わる。surface `swing` では、その Swing を見終えたことにする。
+  static const pageEnd = 'page.end';
   static const sharedSet = 'shared.set';
   static const sharedOp = 'shared.op';
   static const sharedCall = 'shared.call';
 
   /// アプリ側へ中継するホスト関数(権限はスロット登録時に決まる)。
-  static const appFns = {toast, soundPlay, clipboardSet, urlOpen, muteAdd, astellShare, composerMediaReplace, composerMediaPreview, composerTextReplace, viewerOverlaySet, composerOpen, composerMediaOverlay, pageRender, sharedSet, sharedOp, sharedCall};
+  static const appFns = {toast, soundPlay, clipboardSet, urlOpen, muteAdd, astellShare, composerMediaReplace, composerMediaPreview, composerTextReplace, viewerOverlaySet, composerOpen, composerMediaOverlay, pageRender, pageEnd, sharedSet, sharedOp, sharedCall};
 }
 
 /// Where an `ml.infer` call actually ran (returned to the plugin).

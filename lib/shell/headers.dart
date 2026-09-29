@@ -13,7 +13,7 @@ import 'third_column.dart';
 
 /// ホームヘッダー: avatar (opens sidebar) + VC widget + trailing chevron.
 class RasqHomeHeader extends StatelessWidget implements PreferredSizeWidget {
-  const RasqHomeHeader({super.key, required this.me, this.onAvatarTap, this.vcWidget, this.onTrailingTap, this.trailingIcon = Icons.keyboard_arrow_down});
+  const RasqHomeHeader({super.key, required this.me, this.onAvatarTap, this.vcWidget, this.onTrailingTap, this.trailingIcon = Icons.keyboard_arrow_down, this.trailingTooltip = 'タイムライン切り替え', this.trailingKey});
 
   final UserSummary me;
   final VoidCallback? onAvatarTap;
@@ -22,6 +22,8 @@ class RasqHomeHeader extends StatelessWidget implements PreferredSizeWidget {
   final Widget? vcWidget;
   final VoidCallback? onTrailingTap;
   final IconData trailingIcon;
+  final String trailingTooltip;
+  final Key? trailingKey;
 
   @override
   Size get preferredSize => const Size.fromHeight(RasqSizes.headerHeight);
@@ -31,8 +33,39 @@ class RasqHomeHeader extends StatelessWidget implements PreferredSizeWidget {
         leading: _AvatarButton(me: me, onTap: onAvatarTap),
         middle: vcWidget ?? const SizedBox.shrink(),
         middleAlignment: Alignment.centerLeft,
-        trailing: RasqIconButton(icon: trailingIcon, onPressed: onTrailingTap, tooltip: 'タイムライン切り替え'),
+        trailing: RasqIconButton(key: trailingKey, icon: trailingIcon, onPressed: onTrailingTap, tooltip: trailingTooltip),
       );
+}
+
+/// しまったホームヘッダー (D-377): バーもタブ行も無く、TL の上に**浮かべて**左のアイコン・新着(AsTell / Swing、1 分だけ)・
+/// 右端の ↓(ヘッダーを出す)だけ。
+class RasqFloatingHomeHeader extends StatelessWidget {
+  const RasqFloatingHomeHeader({super.key, required this.me, this.onAvatarTap, this.arrivals, required this.onExpand});
+  final UserSummary me;
+  final VoidCallback? onAvatarTap;
+  final Widget? arrivals;
+  final VoidCallback onExpand;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget float(Widget child) => Material(color: scheme.surface, elevation: 3, shape: const CircleBorder(), clipBehavior: Clip.antiAlias, child: child);
+    return SafeArea(
+      bottom: false,
+      child: SizedBox(
+        height: RasqSizes.headerHeight,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
+          child: Row(children: [
+            float(_AvatarButton(me: me, onTap: onAvatarTap)),
+            const SizedBox(width: RasqSpacing.sm),
+            Expanded(child: Align(alignment: Alignment.centerLeft, child: arrivals ?? const SizedBox.shrink())),
+            float(RasqIconButton(key: const ValueKey('home.header.expand'), icon: Icons.keyboard_arrow_down, onPressed: onExpand, tooltip: 'ヘッダーを出す')),
+          ]),
+        ),
+      ),
+    );
+  }
 }
 
 /// 通知ヘッダー: like home but no VC widget, explicit title.

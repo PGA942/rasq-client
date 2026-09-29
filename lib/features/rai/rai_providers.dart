@@ -65,6 +65,7 @@ class RaiState {
     this.proposal,
     this.choices = const [],
     this.lastOperation,
+    this.cloudBusy = false,
   });
 
   final RaiMode mode;
@@ -129,6 +130,9 @@ class RaiState {
   /// 直前に手順を出した操作 id(入力欄の補完は、ここから分岐する操作を優先する)。
   final String? lastOperation;
 
+  /// クラウドで推論している間 (D-377): 入力欄の下に広告の枠を出す(端末内の推論では出さない)。
+  final bool cloudBusy;
+
   List<String> get lines => bubble == null ? const [] : splitSpeechLines(bubble!);
   String? get currentLine => lines.isEmpty ? (bubble == null ? null : '…') : lines[lineIndex.clamp(0, lines.length - 1)];
   bool get hasMoreLines => lineIndex + 1 < lines.length;
@@ -160,6 +164,7 @@ class RaiState {
     Object? proposal = _keep,
     List<({String id, String index})>? choices,
     Object? lastOperation = _keep,
+    bool? cloudBusy,
   }) =>
       RaiState(
         mode: mode ?? this.mode,
@@ -186,6 +191,8 @@ class RaiState {
         proposal: identical(proposal, _keep) ? this.proposal : proposal as String?,
         choices: choices ?? this.choices,
         lastOperation: identical(lastOperation, _keep) ? this.lastOperation : lastOperation as String?,
+        // 推論が終われば(busy が下りれば)広告の枠も閉じる。
+        cloudBusy: (busy ?? this.busy) ? (cloudBusy ?? this.cloudBusy) : false,
       );
 
   static const _keep = Object();
@@ -854,7 +861,8 @@ class RaiController extends Notifier<RaiState> {
   Future<void> _answerWithLlm(String q, {required String system, String? fallbackText}) async {
     final llm = ref.read(raiLlmProvider);
     final seq = ++_answerSeq;
-    state = state.copyWith(busy: true, bubble: '…', target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: null, choices: const []);
+    // クラウドのモデルを選んでいれば、はじめからクラウドの推論 (D-377: 広告の枠)。
+    state = state.copyWith(busy: true, cloudBusy: llm.spec.cloud, bubble: '…', target: null, steps: const [], stepIndex: 0, lineIndex: 0, proposal: null, choices: const []);
     var text = '';
     RaiLlmException? failure;
     try {
@@ -876,6 +884,8 @@ class RaiController extends Notifier<RaiState> {
     final e = failure;
     await llm.release(); // フォールアップ時は端末内モデルのメモリを解放する(仕様)
     if (seq != _answerSeq) return;
+    // フォールアップ = クラウドの推論 (D-377)。
+    if (ref.read(raiFallUpProvider).configured) state = state.copyWith(cloudBusy: true);
     try {
       final reply = await ref.read(raiFallUpProvider).chat(q, system: system, context: referenceContext());
       if (seq != _answerSeq) return;
