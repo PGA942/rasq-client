@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/providers.dart';
+import '../../backend/legal_docs.g.dart';
 import '../../shell/headers.dart';
 import '../login/terms_sheet.dart';
 
@@ -25,10 +26,9 @@ class LegalScreen extends ConsumerWidget {
         const RasqSectionHeader(title: 'RASQ'),
         const RasqValueListTile(title: 'バージョン', value: rasqAppVersion),
         RasqListTile(title: 'ヘルプ', onTap: () => context.push('/settings/dsl/about.help')),
-        RasqListTile(title: '利用規約', onTap: () => context.push('/settings/dsl/about.terms')),
-        RasqListTile(title: 'プライバシーポリシー', onTap: () => context.push('/settings/dsl/about.privacy')),
-        RasqListTile(title: 'アルゴリズムとコミュニティへの貢献について', onTap: () => context.push('/settings/dsl/about.learning')),
-        RasqListTile(title: 'AsTell の利用について', onTap: () => context.push('/settings/dsl/about.astell')),
+        // 規約・ポリシー (D-372): 草案の利用者向け本文から作った文書ページ(tool/legal/build_legal.py)。
+        for (final d in rasqLegalDocs.values)
+          RasqListTile(key: ValueKey('legal.doc.${d.area}'), title: d.title, onTap: () => context.push('/settings/dsl/${d.area}')),
         RasqListTile(title: 'クッキーについて', onTap: () => context.push('/settings/dsl/about.cookies')),
         const RasqSectionHeader(title: 'SNS プラグインの規約'),
         for (final p in plugins)

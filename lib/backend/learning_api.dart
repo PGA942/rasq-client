@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../session/session_providers.dart';
+import 'legal_docs.g.dart';
 import 'orgate_client.dart';
 import 'rasq_account.dart';
 
@@ -13,7 +14,7 @@ import 'rasq_account.dart';
 /// 1 度だけ返るので、端末の安全な領域に控える(RASQ アカウントに入れなくなっても撤回できるように)。
 
 /// 説明文書(`assets/settings/about.learning.rrl.json`)の版。文書を変えたら上げる。
-const rasqLearningVersion = '2026-09-29-draft';
+const rasqLearningVersion = rasqLegalVersion;
 
 /// 撤回用のコードの控え(`{accountId: code}`)。
 const learningCodeStorageKey = 'rasq.learning.codes.v1';

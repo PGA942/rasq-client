@@ -142,7 +142,10 @@ abstract final class RrlComponentRegistry {
     'RichText': (ctx) {
       final source = ctx.props['source'];
       final spans = source is List ? rslSpansFromJson(source) : ctx.host.parseRsl(rrlString(source));
-      return RasqRichText(spans, style: RasqTypography.body);
+      final text = RasqRichText(spans, style: RasqTypography.body);
+      // 余白 (D-372): 文書ページの段落。`pad` = 左右の余白(上下はその 1/4)。
+      final pad = (ctx.props['pad'] as num?)?.toDouble();
+      return pad == null ? text : Padding(padding: EdgeInsets.symmetric(horizontal: pad, vertical: pad / 4), child: text);
     },
     'Timestamp': (ctx) => RasqTimestamp(rrlTime(ctx.props['time'])),
     'Button': (ctx) => FilledButton(onPressed: ctx.tapHandler('tap'), child: Text(rrlString(ctx.props['label']))),
