@@ -334,6 +334,11 @@ class AstellSession extends Notifier<AstellSessionState?> {
         if (state != null) state = state!.copyWith(connected: false);
       });
     } catch (e) {
+      // 同意待ちのアカウントはサーバーが入室を断る (D-371 / S-053)。WS の失敗には理由が載らないので、ここで言い換える。
+      if (ref.read(orgateAccountProvider).value?.termsAccepted == false) {
+        _fail('利用規約への同意が必要です(AsTell のいちばん上の案内から同意できます)');
+        return;
+      }
       // REC-03: 接続エラーは接続先の URL(`?token=`)を含むので、そのまま出さない。
       _fail(wsConnectErrorMessage(e));
     }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../../shell/rasq_terms_gate.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
@@ -42,6 +43,8 @@ class VcScreen extends ConsumerWidget {
         data: (h) => RefreshIndicator(
           onRefresh: () => ref.refresh(astellHomeProvider.future),
           child: ListView(children: [
+            // 同意待ちなら AsTell は使えない (D-371)。
+            const RasqTermsBanner(),
             // 参加中のルームがあれば先頭に戻り口(FOW を閉じても接続は続く)。
             if (session != null)
               RasqListTile(

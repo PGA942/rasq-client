@@ -12,6 +12,7 @@ import '../backend/rasq_account.dart';
 import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
 import '../features/child_safe/child_safe_screens.dart' show ChildSafeBadge;
 import 'rasq_account_fow.dart';
+import 'rasq_terms_gate.dart';
 
 /// アカウントリストの開閉 (D-087: バンドルタイルの ^ ボタン)。アプリ起動中は
 /// サイドバーを閉じても保持する。
@@ -139,6 +140,8 @@ class RasqSidebar extends ConsumerWidget {
                 ]),
               ),
             ),
+            // 同意待ちの RASQ アカウント (D-371)。
+            const RasqTermsBanner(),
             const SizedBox(height: RasqSpacing.sm),
             // 低いウィンドウ(macOS 等)でも溢れないよう、中央部はスクロール領域。
             Expanded(

@@ -4,6 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:cupertino_ui/cupertino_ui.dart' as cui;
 import 'package:material_ui/material_ui.dart' as mui;
 
+import '../backend/rasq_account.dart';
 import '../backend/test_endpoints.dart';
 import '../features/home/reaction_history.dart';
 import '../features/learning/contribution.dart';
@@ -14,8 +15,12 @@ import '../features/settings/settings_dsl.dart';
 import '../features/store/plugin_updates.dart' show pluginAutoUpdateProvider;
 import '../features/theme/theme_packs.dart';
 import '../notify/central_inbox.dart';
+import '../shell/rasq_terms_gate.dart';
 import 'providers.dart';
 import 'router.dart';
+
+/// 同意待ちの案内を起動後に 1 度だけ (D-371)。
+final _termsPrompt = RasqTermsAutoPrompt();
 
 class RasqApp extends ConsumerWidget {
   const RasqApp({super.key});
@@ -31,6 +36,8 @@ class RasqApp extends ConsumerWidget {
     ref.watch(testEndpointsSyncProvider);
     // アルゴリズムとコミュニティへの貢献 (D-363): 同意しているあいだ束 / RAi のやりとりを集めて送る(状態の変化でアプリは建て直さない)。
     ref.listen(contributionProvider, (_, _) {});
+    // 同意待ちの RASQ アカウント (D-371 / S-053): いまの版の利用規約を承諾していなければ、1 度だけ承諾のシート。
+    ref.listen(orgateAccountProvider, (_, next) => _termsPrompt.onAccount(ref, next.value));
     final developerMode = ref.watch(developerModeProvider);
     final mode = ref.watch(themeModeProvider);
     final skin = ref.watch(activeSkinProvider);
