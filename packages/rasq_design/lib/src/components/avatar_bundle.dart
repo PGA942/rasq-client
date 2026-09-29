@@ -34,9 +34,14 @@ class RasqAvatarBundle extends StatelessWidget {
     this.fillColor,
     this.ringColor,
     this.onTap,
+    this.faces = const [],
   });
 
   final UserSummary user;
+
+  /// 1〜3 人のときの顔 (D-376): 先頭が [user](オーナー)。空でなければ人数を書かず、アイコンを半分ずつ重ねて並べ、
+  /// 角丸ワイヤーをその幅(最大 [maxWireWidth])まで伸ばす。
+  final List<UserSummary> faces;
 
   /// 追加情報 = 参加人数(ホスト以外)。null / 0 なら出さない。
   final int? count;
@@ -66,6 +71,9 @@ class RasqAvatarBundle extends StatelessWidget {
   /// この人数以下なら、アイコンをワイヤーの太さいっぱいに (D-336)。
   static const fillBelow = 2;
 
+  /// 角丸ワイヤーの最大幅(人数の表記が一番長い `+999` のとき)。顔を並べるときもこれを超えない。
+  static double maxWireWidth(double size) => size + grow + size * 0.15 + _textWidth('+999', TextStyle(fontSize: size * 0.3, fontWeight: FontWeight.w700, height: 1.05)) + size * 0.3;
+
   /// 表示文字列(改行は 2 行目)。
   static String formatCount(int n) {
     if (n < 1000) return '+$n';
@@ -85,11 +93,12 @@ class RasqAvatarBundle extends StatelessWidget {
     final wire = color ?? RasqColors.yellow;
     final fill = fillColor ?? wire.withValues(alpha: 0.6);
     final ring = ringColor ?? wire;
-    final label = (count ?? 0) > 0 ? formatCount(count!) : null;
+    final stacked = faces.isNotEmpty;
+    final label = !stacked && (count ?? 0) > 0 ? formatCount(count!) : null;
     final twoLines = label != null && label.contains('\n');
     final wireHeight = size + grow; // 縁取りつきのアイコンが内側に収まる(D-336 で 3px 大きく)。
     // 1 人 / 2 人は、アイコンをワイヤーの太さいっぱいに。それ以外はワイヤーの内側(上下左右 grow/2)。
-    final fill1 = (count ?? 0) <= fillBelow;
+    final fill1 = stacked || (count ?? 0) <= fillBelow;
     final avatarSize = fill1 ? wireHeight : size;
     final inset = fill1 ? 0.0 : grow / 2;
     final countStyle = TextStyle(fontSize: size * (twoLines ? 0.26 : 0.3), fontWeight: FontWeight.w700, color: scheme.onSurface, height: 1.05);
@@ -98,18 +107,22 @@ class RasqAvatarBundle extends StatelessWidget {
     // 角丸ワイヤーの幅: 左端(アイコンの下)から右へ、人数の文字幅 + 余白。
     final countWidth = label == null ? 0.0 : _textWidth(label, countStyle) + size * 0.3;
     const wireLeft = 0.0;
-    final wireWidth = size + grow + size * 0.15 + countWidth;
+    // 顔を並べる (D-376): 1 つずつ半分重ねる。最大幅に収まらなければ重ねを深くする。
+    final maxWidth = maxWireWidth(size);
+    final step = faces.length < 2 ? 0.0 : ((maxWidth - avatarSize) / (faces.length - 1)).clamp(0.0, avatarSize / 2);
+    final wireWidth = stacked ? (faces.length < 2 ? avatarSize : avatarSize + step * (faces.length - 1)) : size + grow + size * 0.15 + countWidth;
     final totalWidth = wireWidth;
 
     // 縁取りはアイコンの内側に収める(外にはみ出すと行の高さと中心がずれる)。
     final ringWidth = size * 0.06;
-    final avatar = Container(
-      key: const ValueKey('avatarBundle.avatar'),
-      width: avatarSize,
-      height: avatarSize,
-      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ring, width: ringWidth)),
-      child: RasqAvatar(imageUrl: user.avatarUrl, size: avatarSize - ringWidth * 2, fallbackLabel: user.displayName),
-    );
+    Widget face(UserSummary u, Key key) => Container(
+          key: key,
+          width: avatarSize,
+          height: avatarSize,
+          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ring, width: ringWidth)),
+          child: RasqAvatar(imageUrl: u.avatarUrl, size: avatarSize - ringWidth * 2, fallbackLabel: u.displayName),
+        );
+    final avatar = face(stacked ? faces.first : user, const ValueKey('avatarBundle.avatar'));
 
     Widget bundle = SizedBox(
       width: totalWidth,
@@ -141,7 +154,8 @@ class RasqAvatarBundle extends StatelessWidget {
               child: Text(label, style: countStyle, maxLines: 2, softWrap: true, textAlign: TextAlign.right),
             ),
           ),
-        // 2. アイコン: 円形 + 円形縁取り(黄色)、背面より上。
+        // 2. アイコン: 円形 + 円形縁取り(黄色)、背面より上。顔を並べるときは右から描き、左(オーナー)を一番上に。
+        for (var i = faces.length - 1; i >= 1; i--) Positioned(left: step * i, top: 0, child: face(faces[i], ValueKey('avatarBundle.face.$i'))),
         Positioned(left: inset, top: inset, child: avatar),
         // 3. LIVE: 角丸ワイヤーの下辺中央(アイコンを除いた右側の中央)。
         if (live)
@@ -163,7 +177,7 @@ class RasqAvatarBundle extends StatelessWidget {
       ]),
     );
     if (onTap != null) bundle = GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: bundle);
-    return Semantics(label: label == null ? user.displayName : '${user.displayName} ${label.replaceAll('\n', '')}', child: bundle);
+    return Semantics(label: stacked ? faces.map((f) => f.displayName).join('、') : label == null ? user.displayName : '${user.displayName} ${label.replaceAll('\n', '')}', child: bundle);
   }
 
   static double _textWidth(String text, TextStyle style) {

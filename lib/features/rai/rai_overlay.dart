@@ -159,6 +159,7 @@ class _RaiBarHostState extends ConsumerState<_RaiBarHost> {
         onHistoryToggle: n.toggleHistory,
         onAskMore: n.cancelInstruction,
         onSuggest: n.suggest,
+        onPredict: n.predict,
         onDragUpdate: (d) => setState(() => _drag += d),
         onDragEnd: () => _onDragEnd(context, slots, top, bottom),
         modelLabel: ref.watch(raiLlmProvider).spec.codename,

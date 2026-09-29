@@ -126,6 +126,41 @@ void main() {
       expect(avatar.top - bundle.top, 1.5);
       expect((ring.border as Border).top.color, RasqColors.yellow);
     });
+
+    testWidgets('D-376: 1〜3 人は人数を書かず、顔を半分ずつ重ねて並べる(ワイヤーは最大幅まで)', (tester) async {
+      UserSummary u(String id) => UserSummary(id: id, account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: id), displayName: id);
+      for (final n in [1, 2, 3]) {
+        final faces = [for (var i = 0; i < n; i++) u('u$i')];
+        await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: RasqAvatarBundle(key: ValueKey(n), user: faces.first, count: n, faces: faces, size: 30)))));
+        expect(find.text('+$n'), findsNothing, reason: '$n 人: 人数は書かない');
+        expect(find.byType(RasqAvatar), findsNWidgets(n));
+        final bundle = tester.getRect(find.byType(RasqAvatarBundle));
+        final first = tester.getRect(find.byKey(const ValueKey('avatarBundle.avatar')));
+        expect(first.height, 33, reason: '顔はワイヤーの太さいっぱい');
+        expect(bundle.width, lessThanOrEqualTo(RasqAvatarBundle.maxWireWidth(30) + 0.01));
+        if (n > 1) {
+          final second = tester.getRect(find.byKey(const ValueKey('avatarBundle.face.1')));
+          expect(second.left - first.left, closeTo(33 / 2, 0.5), reason: '半分重ね');
+          expect(bundle.right, closeTo(tester.getRect(find.byKey(ValueKey('avatarBundle.face.${n - 1}'))).right, 0.5), reason: 'ワイヤーは顔の幅まで伸びる');
+        }
+      }
+      // 顔が無い(古いサーバー / 4 人以上)は従来どおり人数。
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: RasqAvatarBundle(user: u('o'), count: 3, size: 30)))));
+      expect(find.text('+3'), findsOneWidget);
+    });
+
+    test('D-376: ルームの顔(peerFaces)はオーナーを先頭に 3 人まで、4 人以上 / 無ければ空', () {
+      Map<String, Object?> room(int peers, List<String> ids) => {
+            'id': 'x', 'ownerId': 'o', 'ownerHandle': 'douglas', 'ownerDisplayName': 'ダグラス', 'title': 'T', 'createdAt': '2026-09-06T10:00:00Z', 'peerCount': peers,
+            'peerFaces': [for (final id in ids) {'accountId': id, 'handle': id, 'displayName': id}],
+          };
+      expect(AstellRoom.fromJson(room(2, ['a', 'o'])).bundleFaces.map((f) => f.displayName), ['ダグラス', 'a']);
+      expect(AstellRoom.fromJson(room(3, ['a', 'b', 'c'])).bundleFaces.length, 3);
+      expect(AstellRoom.fromJson(room(4, ['a', 'b', 'c'])).bundleFaces, isEmpty);
+      expect(AstellRoom.fromJson(room(2, [])).bundleFaces, isEmpty);
+      final r = AstellRoom.fromJson(room(2, ['a']));
+      expect(AstellRoom.fromJson(r.toJson()).peerFaces.single.displayName, 'a');
+    });
   });
 
   group('モデル', () {

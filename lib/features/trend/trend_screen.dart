@@ -15,7 +15,7 @@ import '../search/search_filter.dart';
 import '../search/search_filter_bar_view.dart';
 import '../users/user_list.dart';
 import '../vc/astell_actions.dart';
-import '../vc/astell_models.dart';
+import '../vc/astell_tile.dart' show AstellTileStrip;
 import 'tendency_fows.dart';
 import 'trend_analysis.dart';
 import 'trend_providers.dart';
@@ -143,7 +143,9 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   const RasqSectionHeader(title: 'フォロー中の反応', topMargin: 0),
                   // AsTell / リレーショナル TL にすでにあるこのワードの話題 (D-364) → フォロイーのタグ投稿。
                   ...[
-                    for (final r in activity?.rooms ?? const <AstellRoom>[]) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm, vertical: RasqSpacing.xs), child: AstellRoomTile(room: r)),
+                    // タイルは高さの決まった帯に並べる (D-376): 縦のリストに直に置くと高さが決まらず、スクロールで戻ったときに
+                    // レイアウトが壊れて戻るボタンが効かなくなっていた。
+                    if (activity?.rooms.isNotEmpty ?? false) AstellTileStrip(key: const ValueKey('trend.following.rooms'), rooms: activity!.rooms, tileBuilder: (r) => AstellRoomTile(room: r)),
                     for (final e in activity?.events ?? const <ConversationEvent>[]) RelationalEventCard(key: ValueKey('trend.following.event.${e.id}'), event: e),
                   ],
                   following.when(
