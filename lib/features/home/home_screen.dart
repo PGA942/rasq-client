@@ -139,6 +139,8 @@ class HomeScreen extends ConsumerWidget {
           ),
         ]),
         floatingActionButton: FloatingActionButton(
+        // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
+        heroTag: 'fab.home',
           onPressed: () async {
             final created = await showComposer(ref, const ComposeNormal());
             if (created != null) await ref.read(timelineProvider(TimelineKind.home).notifier).refresh();

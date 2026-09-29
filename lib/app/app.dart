@@ -79,7 +79,7 @@ class RasqApp extends ConsumerWidget {
           ),
           // 着せ替え (D-335): アプリの一番下に `app` の面(背景色 + 画像のレイヤー。Scaffold は透明になっている)。
           // 開発者モード (D-362): 部品が細かい説明を出すかを読む。
-          child: RasqDeveloperMode(enabled: developerMode, child: RasqSkinScope(skin: skin, child: RasqSkinned(surface: RasqSkinSurfaceId.app, child: child!))),
+          child: RasqDeveloperMode(enabled: developerMode, child: RasqSkinScope(skin: skin, child: RasqSkinned(surface: RasqSkinSurfaceId.app, stable: true, child: child!))),
         );
       },
       routerConfig: router,

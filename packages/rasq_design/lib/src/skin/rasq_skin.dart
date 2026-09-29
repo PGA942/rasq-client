@@ -240,14 +240,21 @@ class RasqSkinScope extends InheritedWidget {
 /// 面を着せ替えで描く: 背景色 + 下付きのレイヤー → 中身 → 上付きのレイヤー(触れない)。角丸があれば切り抜く。
 /// 着せ替えが無い / その面の宣言が無い / 明るさが合わないときは中身だけ。
 class RasqSkinned extends StatelessWidget {
-  const RasqSkinned({super.key, required this.surface, required this.child});
+  const RasqSkinned({super.key, required this.surface, required this.child, this.stable = false});
   final RasqSkinSurfaceId surface;
   final Widget child;
+
+  /// 着せ替えの有無で**木の形を変えない** (D-374)。アプリ全体(`app`)と FOW のように中身が大きい面で使う。形が変わると
+  /// 中身(ナビゲーターごと)が作り直され、着せ替えを入れた直後に Hero のタグの重複(FAB の既定のタグ)で落ちていた。
+  final bool stable;
+
+  static const _contentKey = ValueKey('rasq.skin.content');
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final s = RasqSkinScope.of(context)?.surface(surface, theme.brightness);
+    if (stable) return _stable(context, theme, s);
     if (s == null || (s.color == null && s.layers.isEmpty && s.radius == null && s.onColor == null)) return child;
     var content = child;
     // 面の上の文字とアイコンの色 (v0.17)。
@@ -266,6 +273,31 @@ class RasqSkinned extends StatelessWidget {
     ]);
     if (s.radius != null && s.radius! > 0) out = ClipRRect(borderRadius: BorderRadius.circular(s.radius!), child: out);
     return out;
+  }
+
+  /// いつも同じ形: Theme → 文字 / アイコンの色 → ClipRRect → Stack(中身は鍵つきで、前後の層が増減しても作り直さない)。
+  Widget _stable(BuildContext context, ThemeData theme, RasqSkinSurface? s) {
+    final on = s?.onColor;
+    final radius = s?.radius ?? 0;
+    return Theme(
+      data: on == null ? theme : RasqSkin.withOnColor(theme, on),
+      child: DefaultTextStyle.merge(
+        style: TextStyle(color: on),
+        child: IconTheme.merge(
+          data: IconThemeData(color: on),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(radius),
+            clipBehavior: radius > 0 ? Clip.antiAlias : Clip.none,
+            child: Stack(fit: StackFit.passthrough, children: [
+              if (s?.color != null) Positioned.fill(key: const ValueKey('rasq.skin.color'), child: IgnorePointer(child: ColoredBox(color: s!.color!))),
+              for (final (i, l) in (s?.layers ?? const <RasqSkinLayer>[]).indexed) if (!l.above) KeyedSubtree(key: ValueKey('rasq.skin.below.$i'), child: l.build()),
+              KeyedSubtree(key: _contentKey, child: child),
+              for (final (i, l) in (s?.layers ?? const <RasqSkinLayer>[]).indexed) if (l.above) KeyedSubtree(key: ValueKey('rasq.skin.above.$i'), child: l.build()),
+            ]),
+          ),
+        ),
+      ),
+    );
   }
 }
 

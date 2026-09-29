@@ -257,12 +257,8 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
         ),
       // ── プレビュー(横スライド) ──────────────────────────────────────
       const StoreFrameSectionHeader(title: 'プレビュー'),
-      StoreFrameStrip(
-        height: 200,
-        children: d.screenshots.isEmpty
-            ? [_PreviewPlaceholder(name: d.name)]
-            : [for (final u in d.screenshots) _Screenshot(url: u)],
-      ),
+      // 高さは見ている画像の縦横比に合わせる (D-374)。
+      StorePreviewStrip(images: d.screenshots, placeholder: _PreviewPlaceholder(name: d.name)),
       // ── 先月のダウンロード数 / 評価 ──────────────────────────────────
       if (d.downloadsLastMonth != null)
         _StatBlock(
@@ -461,20 +457,6 @@ class _Banner extends StatelessWidget {
           gradient: LinearGradient(colors: [scheme.primaryContainer, scheme.surfaceContainerHighest], begin: Alignment.topLeft, end: Alignment.bottomRight),
         ),
       );
-}
-
-class _Screenshot extends StatelessWidget {
-  const _Screenshot({required this.url});
-  final Uri url;
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(border: Border.all(color: scheme.outline), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-      clipBehavior: Clip.antiAlias,
-      child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => const Center(child: Icon(Icons.broken_image_outlined))),
-    );
-  }
 }
 
 class _PreviewPlaceholder extends StatelessWidget {

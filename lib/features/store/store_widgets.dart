@@ -58,6 +58,126 @@ class _StoreFrameStripState extends State<StoreFrameStrip> {
       );
 }
 
+/// プラグインページの「プレビュー」(D-374): 横スライドで、**帯の高さを見ている画像の縦横比に合わせる**(切り抜かない)。
+/// 画像の大きさが分かるまでは [initialHeight]。高さは [minHeight]〜[maxHeight] に収め、ページを変えると滑らかに変わる。
+class StorePreviewStrip extends StatefulWidget {
+  const StorePreviewStrip({
+    super.key,
+    required this.images,
+    this.placeholder,
+    this.initialHeight = 200,
+    this.minHeight = 140,
+    this.maxHeight = 480,
+    this.viewportFraction = 0.86,
+    this.imageProvider,
+  });
+  final List<Uri> images;
+  final Widget? placeholder;
+  final double initialHeight;
+  final double minHeight;
+  final double maxHeight;
+  final double viewportFraction;
+
+  /// 画像の読み込み(テストで差し替える)。既定は [NetworkImage]。
+  final ImageProvider Function(Uri url)? imageProvider;
+
+  /// 1 枚の幅 → その画像の縦横比での高さ(範囲に収める)。
+  static double heightFor(double itemWidth, double? aspect, {double initial = 200, double min = 140, double max = 480}) =>
+      aspect == null || aspect <= 0 ? initial : (itemWidth / aspect).clamp(min, max);
+
+  @override
+  State<StorePreviewStrip> createState() => _StorePreviewStripState();
+}
+
+class _StorePreviewStripState extends State<StorePreviewStrip> {
+  late final PageController _controller = PageController(viewportFraction: widget.viewportFraction);
+  final _aspects = <int, double>{};
+  final _streams = <(ImageStream, ImageStreamListener)>[];
+  int _page = 0;
+
+  ImageProvider _provider(Uri u) => widget.imageProvider?.call(u) ?? NetworkImage(u.toString(), webHtmlElementStrategy: rasqWebImageStrategy);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      final p = (_controller.page ?? 0).round();
+      if (p != _page) setState(() => _page = p);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_streams.isNotEmpty) return;
+    // 画像の縦横比を先に知る(表示と同じ provider なので、読み込みは 1 回で済む)。
+    for (final (i, u) in widget.images.indexed) {
+      final stream = _provider(u).resolve(createLocalImageConfiguration(context));
+      final listener = ImageStreamListener((info, _) {
+        try {
+          final w = info.image.width;
+          final h = info.image.height;
+          if (mounted && h > 0) setState(() => _aspects[i] = w / h);
+        } catch (_) {
+          // Web の <img> で描いたときは大きさを取れないことがある → 既定の高さのまま。
+        }
+      }, onError: (_, _) {});
+      stream.addListener(listener);
+      _streams.add((stream, listener));
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final (s, l) in _streams) {
+      s.removeListener(l);
+    }
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (widget.images.isEmpty) {
+      return SizedBox(
+        height: widget.initialHeight,
+        child: Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: widget.placeholder ?? const SizedBox.shrink()),
+      );
+    }
+    return LayoutBuilder(builder: (context, c) {
+      // 1 枚の幅 = 見える幅 × viewportFraction − 左右の余白。
+      final itemWidth = c.maxWidth * widget.viewportFraction - RasqSpacing.page - RasqSpacing.xs;
+      final height = StorePreviewStrip.heightFor(itemWidth, _aspects[_page], initial: widget.initialHeight, min: widget.minHeight, max: widget.maxHeight);
+      return AnimatedContainer(
+        key: const ValueKey('store.preview.strip'),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        height: height,
+        child: PageView.builder(
+          controller: _controller,
+          padEnds: false,
+          itemCount: widget.images.length,
+          itemBuilder: (_, i) => Padding(
+            padding: const EdgeInsets.only(left: RasqSpacing.page, right: RasqSpacing.xs),
+            child: Container(
+              key: ValueKey('store.preview.$i'),
+              decoration: BoxDecoration(border: Border.all(color: scheme.outline), borderRadius: BorderRadius.circular(RasqSizes.radiusMd), color: scheme.surfaceContainerHighest),
+              clipBehavior: Clip.antiAlias,
+              // 切り抜かない: 帯の高さは見ている画像に合わせてあり、ほかの画像は収まる大きさで出す。
+              child: Image(
+                image: _provider(widget.images[i]),
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const Center(child: Icon(Icons.broken_image_outlined)),
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
+
 /// 角丸枠のフレーム: ヘッダー行(見出し + 右端の …)/ 区切り / 本文 / 任意の
 /// フッター。右側の `>` はタップで詳細へ(ワイヤーフレームの各フレーム)。
 class StoreFrameCard extends StatelessWidget {

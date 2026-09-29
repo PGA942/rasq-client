@@ -70,7 +70,7 @@ class _RasqAccountPageScreenState extends ConsumerState<RasqAccountPageScreen> {
         }, child: const Text('編集'))],
       ),
       floatingActionButton: isMine && page.hasValue
-          ? FloatingActionButton.extended(key: const ValueKey('rasqPage.compose'), onPressed: () => _compose(page.value!.posts), icon: const Icon(Icons.edit_outlined), label: const Text('RASQ に投稿'))
+          ? FloatingActionButton.extended(key: const ValueKey('rasqPage.compose'), heroTag: 'fab.rasqPage', onPressed: () => _compose(page.value!.posts), icon: const Icon(Icons.edit_outlined), label: const Text('RASQ に投稿'))
           : null,
       body: page.when(
         loading: () => const RasqLoading(),

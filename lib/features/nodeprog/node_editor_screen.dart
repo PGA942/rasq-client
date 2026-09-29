@@ -1119,6 +1119,8 @@ class _NodeEditorScreenState extends ConsumerState<NodeEditorScreen> {
       // ノード検索の再呼び出し (D-096/D-101): FAB — パレット FOW が開いて
       // いる間はその下に隠れる位置。
       floatingActionButton: FloatingActionButton(
+        // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
+        heroTag: 'fab.nodeEditor',
         onPressed: _openPalette,
         tooltip: 'ノードを検索',
         shape: const CircleBorder(),
