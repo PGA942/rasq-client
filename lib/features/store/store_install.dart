@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart' show OrgateException, centralBaseUrlProvider;
+import '../theme/theme_packs.dart';
 import 'store_client.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
@@ -20,6 +21,7 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   final installed = ref.read(installedPluginsProvider.notifier);
   final client = ref.read(storeClientProvider);
   final container = ProviderScope.containerOf(ref.context, listen: false);
+  final brightness = Theme.of(ref.context).brightness;
   // 有料で買っていなければ、先に購入 (D-355)。買わずに閉じたら何もしない。
   if (d.needsPurchase) {
     final bought = await showPurchaseSheet(manager, client, d, consoleUrl: ref.read(centralBaseUrlProvider)?.resolve('/console/points'));
@@ -94,7 +96,17 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   onBusy?.call(true);
   final outcome = await installed.install(d.id, version: version, activate: activate);
   onBusy?.call(false);
-  return outcome.error ?? '${d.name} ${manifest.version} をインストールしました';
+  if (outcome.error != null) return outcome.error;
+  // 着せ替え (D-375): 入れたらそのまま使う。暗い / 明るいモード専用なら、いまのモードで効くかも添える。
+  final pack = activate ? container.read(themePacksProvider).where((p) => p.id == d.id).firstOrNull : null;
+  if (pack != null) {
+    return switch (pack.theme['brightness']) {
+      'dark' when brightness != Brightness.dark => '${d.name} を使います。暗いモードのときに効きます',
+      'light' when brightness != Brightness.light => '${d.name} を使います。明るいモードのときに効きます',
+      _ => '${d.name} を使います',
+    };
+  }
+  return '${d.name} ${manifest.version} をインストールしました';
 }
 
 /// 購入シート (D-355): 値段(ポイント)、いまの残高、次に失効するポイント →「購入する」。足りなければ「Web コンソールでポイントを買う」

@@ -80,6 +80,16 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
           detail: '着せ替え(テーマ)は、色・アイコン・画面 / 投稿タイル / FOW / ボタンの背景を変えるパックです。コードは動きません。同時に使えるのは 1 つです。',
           padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
         ),
+        // ライト / ダーク (D-375): 設定の「フォントやカラースキーム」から、ここへ来る。
+        const RasqSectionHeader(title: 'カラースキーム'),
+        for (final m in ThemeModeSetting.values)
+          RasqRadioListTile<ThemeModeSetting>(
+            key: ValueKey('theme.mode.${m.name}'),
+            title: switch (m) { ThemeModeSetting.system => 'システムに合わせる', ThemeModeSetting.light => 'ライト', ThemeModeSetting.dark => 'ダーク' },
+            value: m,
+            groupValue: ref.watch(themeModeProvider),
+            onChanged: (v) => ref.read(themeModeProvider.notifier).set(v),
+          ),
         const RasqSectionHeader(title: '着せ替え'),
         RasqRadioListTile<String?>(key: const ValueKey('theme.none'), title: '着せ替えなし(既定)', value: null, groupValue: selected, onChanged: (_) => _select(null)),
         for (final p in packs)

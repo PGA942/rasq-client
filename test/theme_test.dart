@@ -255,12 +255,24 @@ void main() {
     expect(pack.name, '星空');
     expect(pack.images.keys, unorderedEquals(['sky', 'stars', 'button', 'heart']));
     expect(pack.images.values.every((p) => File(p).existsSync()), isTrue);
-    expect(c.read(activeSkinProvider), isNull, reason: '入れただけでは効かない(選ぶまで)');
+    // 入れたらそのまま使う (D-375: 以前は選ぶまで効かず「入れたのに変わらない」になっていた)。
+    expect(c.read(activeThemeIdProvider), 'sample.theme-starry');
+    expect(c.read(activeSkinProvider), isNotNull);
 
-    // 設定 → アプリの外観 → フォントやカラースキーム で選ぶ。
-    c.read(routerProvider).push(Routes.settingsTheme);
+    // 設定 → アプリの外観 → フォントやカラースキーム(D-375: 以前はライト / ダークのシートしか開かず、ここへ来られなかった)。
+    c.read(routerProvider).push('/settings/section/appearance');
     await tester.pumpAndSettle();
-    expect(find.text('着せ替えなし(既定)'), findsOneWidget);
+    expect(find.text('ダーク ・ 星空'), findsOneWidget, reason: '行にカラースキームと着せ替え');
+    await tester.tap(find.byKey(const ValueKey('settings.appearance.theme')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ThemeSettingsScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('theme.pack.sample.theme-starry')), findsOneWidget);
+    expect(find.byKey(const ValueKey('theme.mode.dark')), findsOneWidget);
+    // 外す → 選び直す。
+    await tester.tap(find.text('着せ替えなし(既定)'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pumpAndSettle();
+    expect(c.read(activeSkinProvider), isNull);
     await tester.tap(find.byKey(const ValueKey('theme.pack.sample.theme-starry')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
     await tester.pumpAndSettle();

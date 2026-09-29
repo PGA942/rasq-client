@@ -260,6 +260,8 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
         return (error: '着せ替えを保存できませんでした: $e', verification: verified);
       }
       await _persist([...state.where((p) => p.id != pluginId), record]);
+      // 入れたらすぐ使う (D-375): 入れただけで選ばれず「入れたのに変わらない」になっていた(ファイルからの読み込みと同じにする)。
+      if (makeDefault) await ref.read(settingsAreaProvider(themeSettingsArea).notifier).set('id', package.root.id);
       return (error: null, verification: verified);
     }
 
