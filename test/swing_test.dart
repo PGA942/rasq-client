@@ -16,6 +16,7 @@ import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/ads/export_ad.dart';
 import 'package:rasq_client/features/home/home_header.dart';
+import 'package:rasq_client/features/plugins/media_plugin_panel.dart' show MediaEditResult;
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/swing/swing_composer.dart';
 import 'package:rasq_client/features/swing/swing_models.dart';
@@ -63,6 +64,15 @@ void main() {
       expect(swingRemainingLabel(const Duration(hours: 3, minutes: 5)), 'あと 3 時間');
       expect(swingRemainingLabel(const Duration(minutes: 7)), 'あと 7 分');
     });
+  });
+
+  testWidgets('背景とテキストの無地の背景は、縦長の PNG', (tester) async {
+    final c = ProviderContainer();
+    addTearDown(c.dispose);
+    final png = (await tester.runAsync(() => c.read(swingBackgroundProvider)()))!;
+    expect(png.sublist(0, 4), [0x89, 0x50, 0x4E, 0x47]);
+    final img = (await tester.runAsync(() => decodeImageFromList(png)))!;
+    expect(img.height > img.width, isTrue);
   });
 
   /// Central のまね。[feed] を返し、見終えた / 作ったものを控える。
@@ -413,13 +423,20 @@ void main() {
     expect(() => checkSwingPackage(Uint8List.fromList([1, 2, 3]), decompress: (b, {int maxOutput = 0}) => b), throwsStateError);
   });
 
-  testWidgets('作る: テキスト(フォロワー + RASQ リスト、6 時間)/ 画像(上げてから作る)。届け先が無ければ出せない', (tester) async {
+  testWidgets('作る (D-380): ＋ → Swing → 画像 = 選んだ絵をそのまま編集画面へ → 送る画面(届け先と時間)。背景とテキスト = 無地の背景を編集画面へ。届け先が無ければ出せない', (tester) async {
     final (mock, _, created, uploads) = central(const []);
     final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
-    final c = await pumpApp(tester, mock, extra: [
+    final edited = Uint8List.fromList([...png, 0]);
+    final opened = <String>[];
+    await pumpApp(tester, mock, extra: [
       swingMediaPickerProvider.overrideWithValue(({required bool video}) async => XFile.fromData(png, name: 'photo.png', path: 'photo.png', mimeType: 'image/png')),
+      swingBackgroundProvider.overrideWithValue(() async => png),
+      swingEditorProvider.overrideWithValue((context, {required bytes, required name, required mime}) async {
+        opened.add('$name ${bytes.length}');
+        return MediaEditResult(bytes: edited, mimeType: 'image/png', name: 'edited.png');
+      }),
     ]);
-    // ＋ → 作るものを選ぶ FOW(投稿 / RASQ に投稿 / AsTell / Swing)→ Swing。
+    // ＋ → 作るものを選ぶ FOW → Swing → 2 段目(画像 / 動画 / プラグイン / 背景とテキスト)。
     await tester.tap(find.byTooltip('作成'));
     await tester.pumpAndSettle();
     for (final k in ['post', 'rasq', 'astell', 'swing']) {
@@ -427,8 +444,16 @@ void main() {
     }
     await tester.tap(find.byKey(const ValueKey('create.swing')));
     await tester.pumpAndSettle();
+    for (final s in SwingStart.values) {
+      expect(find.byKey(ValueKey('swing.start.${s.name}')), findsOneWidget, reason: s.name);
+    }
+    await tester.tap(find.byKey(const ValueKey('swing.start.image')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
+    expect(opened, ['photo.png ${png.length}'], reason: '選んだ絵をそのまま編集画面へ');
     expect(find.byType(SwingComposerScreen), findsOneWidget);
-    await tester.enterText(find.byKey(const ValueKey('swing.text')), '今日の Swing');
+    expect(find.byKey(const ValueKey('swing.preview')), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.text')), findsNothing, reason: '文字だけの Swing は無い');
     await tester.tap(find.byKey(const ValueKey('swing.audience.list.rl1')));
     await tester.tap(find.byKey(const ValueKey('swing.ttl.6')));
     await tester.pump();
@@ -445,28 +470,38 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('swing.send')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
     await tester.pumpAndSettle();
-    expect(created.single, {'kind': 'text', 'text': '今日の Swing', 'audience': {'followers': true, 'lists': ['rl1']}, 'ttlHours': 6});
+    expect(uploads, ['image/png']);
+    expect(created.single, {'kind': 'image', 'mediaId': 'm1', 'audience': {'followers': true, 'lists': ['rl1']}, 'ttlHours': 6});
     expect(find.byType(SwingComposerScreen), findsNothing);
     tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger).first).clearSnackBars();
     await tester.pumpAndSettle();
 
-    // 画像。
-    c.read(routerProvider).push(Routes.swingNew);
+    // 背景とテキスト: 無地の背景を編集画面へ(文字は編集画面で書く)→ 画像の Swing。
+    await tester.tap(find.byTooltip('作成'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('swing.kind.image')));
-    await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('swing.media')));
+    await tester.tap(find.byKey(const ValueKey('create.swing')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('swing.start.background')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
     await tester.pumpAndSettle();
-    expect(find.text('photo.png'), findsOneWidget);
+    expect(opened.last, 'swing.png ${png.length}');
     await tester.ensureVisible(find.byKey(const ValueKey('swing.send')));
     await tester.tap(find.byKey(const ValueKey('swing.send')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('swing.error')), findsNothing, reason: tester.widgetList<Padding>(find.byKey(const ValueKey('swing.error'))).map((p) => (p.child as Text).data).join());
-    expect(uploads, ['image/png']);
     expect(created.last['kind'], 'image');
-    expect(created.last['mediaId'], 'm1');
+    tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger).first).clearSnackBars();
+    await tester.pumpAndSettle();
+
+    // プラグイン: 送る画面で選ぶ。
+    await tester.tap(find.byTooltip('作成'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('create.swing')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('swing.start.plugin')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.plugin.file')), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull, reason: 'プラグインを選ぶまで出せない');
   });
 
   testWidgets('ヘッダーをしまう(↑)→ バーとタブ行が消え、アイコンと ↓ だけ浮かぶ。新着の Swing は 1 分だけ → ↓ で戻る', (tester) async {

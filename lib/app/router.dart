@@ -415,7 +415,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               parentNavigatorKey: _appNavigatorKey,
               builder: (_, s) => CustomPageScreen(key: ValueKey(s.uri.toString()), args: CustomPageArgs.fromState(Uri.decodeComponent(s.pathParameters['id']!), s.uri.queryParameters))),
           GoRoute(path: '/swing', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SwingViewerScreen(startAuthor: s.uri.queryParameters['author'])),
-          GoRoute(path: Routes.swingNew, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const SwingComposerScreen()),
+          GoRoute(path: Routes.swingNew, parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SwingComposerScreen(draft: s.extra is SwingDraft ? s.extra as SwingDraft : null)),
           GoRoute(path: '/custom/invite/:code', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => CustomInviteScreen(code: Uri.decodeComponent(s.pathParameters['code']!))),
           GoRoute(path: '/store/search', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => StoreSearchScreen(initialQuery: s.uri.queryParameters['q'] ?? '')),
           GoRoute(
