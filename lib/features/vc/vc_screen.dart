@@ -13,14 +13,19 @@ import 'astell_fows.dart';
 import 'astell_models.dart';
 import 'astell_providers.dart';
 import 'astell_tile.dart';
+import '../swing/swing_banner.dart';
+import '../swing/swing_providers.dart';
 
 /// グローバル VC ホーム (D-139、ワイヤーフレーム p.3): おすすめ / トレンド /
 /// フォロー中 の 3 節に VC タイルを横並び。「見てみる」→ 参加 FOW → 参加 →
 /// ルーム FOW。右下の + で作成 FOW。データは RASQ Central `/astell/home`
 /// (未接続ならモック)。
 ///
-/// 上の検索欄 (D-385): トレンドの検索と同じ形(アイコン + 角丸の欄 [RasqExpandableSearchBox])。入れるとホームに載っている
-/// ルームから、名前 / 要約 / ジャンル / ホストで探す([searchAstellRooms])。欄を押すと下に伸び、節のチップで絞れる。
+/// 上の検索欄 (D-385 → D-386): トレンドの検索と同じ形(アイコン + 角丸の欄 [RasqExpandableSearchBox])。
+/// - **AsTell と Swing をまとめて探す**: ルームは名前 / 要約 / ジャンル / ホスト([searchAstellRooms])、Swing は作った人 /
+///   文字 / 種類([searchSwingAuthors])。結果は **Swing の角丸バナー**([SwingBanner])→ **AsTell のタイル**の順に重ねる。
+/// - **条件を重ねる**: Enter で入れた語を「語のチップ」にして残し、続けて入れた語と全部を満たすものだけにする(チップを押すと外す)。
+///   欄を押すと下に伸び、節のチップ(Swing / 招待 / おすすめ …、複数可)でも絞れる。
 class VcScreen extends ConsumerStatefulWidget {
   const VcScreen({super.key});
 
@@ -29,7 +34,7 @@ class VcScreen extends ConsumerStatefulWidget {
 }
 
 /// 検索の節(チップ)。
-const astellSearchSections = {'invited': '招待', 'recommended': 'おすすめ', 'upcoming': '近日開催', 'trending': 'トレンド', 'following': 'フォロー中'};
+const astellSearchSections = {'swing': 'Swing', 'invited': '招待', 'recommended': 'おすすめ', 'upcoming': '近日開催', 'trending': 'トレンド', 'following': 'フォロー中'};
 
 /// ホームに載っているルームから探す (D-385)。[sections] を渡すとその節だけ。同じルームは 1 つに。語が無ければ節のルームを全部。
 List<AstellRoom> searchAstellRooms(AstellHome h, String query, {Set<String> sections = const {}}) {
@@ -54,6 +59,22 @@ class _VcScreenState extends ConsumerState<VcScreen> {
   bool _toggled = false;
   final Set<String> _sections = {};
 
+  /// 重ねた語 (D-386)。
+  final List<String> _terms = [];
+
+  /// いまの条件(重ねた語 + 入れている語)。
+  String get _q => [..._terms, _query.text.trim()].where((t) => t.isNotEmpty).join(' ');
+
+  void _stack(String v) {
+    final t = v.trim();
+    if (t.isEmpty) return;
+    setState(() {
+      if (!_terms.contains(t)) _terms.add(t);
+      _query.clear();
+    });
+    _focus.requestFocus();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -70,7 +91,7 @@ class _VcScreenState extends ConsumerState<VcScreen> {
     super.dispose();
   }
 
-  bool get _searching => _query.text.trim().isNotEmpty || _sections.isNotEmpty;
+  bool get _searching => _q.isNotEmpty || _sections.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -102,12 +123,22 @@ class _VcScreenState extends ConsumerState<VcScreen> {
               Expanded(
                 child: RasqExpandableSearchBox(
                   key: const ValueKey('astell.search'),
-                  expanded: _toggled || _focus.hasFocus || _sections.isNotEmpty,
+                  expanded: _toggled || _focus.hasFocus || _sections.isNotEmpty || _terms.isNotEmpty,
                   controller: _query,
                   focusNode: _focus,
-                  hintText: 'AsTell を検索',
+                  hintText: _terms.isEmpty ? 'AsTell / Swing を検索' : 'さらに絞る',
+                  onSubmitted: _stack,
                   onDropdownTap: () => setState(() => _toggled = !_toggled),
-                  onReset: _sections.isEmpty ? null : () => setState(_sections.clear),
+                  onReset: _sections.isEmpty && _terms.isEmpty
+                      ? null
+                      : () => setState(() {
+                            _sections.clear();
+                            _terms.clear();
+                          }),
+                  // 重ねた語(押すと外す)。
+                  filterChips: [
+                    for (final t in _terms) RasqFilterChipItem(label: '「$t」 ×', selected: true, onTap: () => setState(() => _terms.remove(t))),
+                  ],
                   genreChips: [
                     for (final MapEntry(key: id, value: label) in astellSearchSections.entries)
                       RasqFilterChipItem(label: label, selected: _sections.contains(id), onTap: () => setState(() => _sections.contains(id) ? _sections.remove(id) : _sections.add(id))),
@@ -126,10 +157,12 @@ class _VcScreenState extends ConsumerState<VcScreen> {
   }
 
   Widget _body(BuildContext context, AsyncValue<AstellHome> home, AstellSessionState? session, Widget Function(String, List<AstellRoom>, {String? emptyHint, VoidCallback? onSettings}) section, void Function(AstellRoom) open) {
+    // 検索は、ルームを読めていなくても Swing を探せる(読めたルームだけ)。
+    if (_searching) return _results(home.value ?? const AstellHome());
     return home.when(
         loading: () => const RasqLoading(),
         error: (e, _) => RasqEmptyView(title: 'VC を取得できませんでした', hint: '$e'),
-        data: (h) => _searching ? _results(h, open) : RefreshIndicator(
+        data: (h) => RefreshIndicator(
           onRefresh: () => ref.refresh(astellHomeProvider.future),
           child: ListView(key: const ValueKey('astell.home.list'), children: [
             // 同意待ちなら AsTell は使えない (D-371)。
@@ -173,25 +206,28 @@ class _VcScreenState extends ConsumerState<VcScreen> {
       );
   }
 
-  Widget _results(AstellHome h, void Function(AstellRoom) open) {
-    final rooms = searchAstellRooms(h, _query.text, sections: _sections);
-    if (rooms.isEmpty) return RasqEmptyView(title: '見つかりませんでした', hint: _query.text.trim().isEmpty ? 'この節にルームはありません' : '「${_query.text.trim()}」に当たるルームはありません');
+  Widget _results(AstellHome h) {
+    final q = _q;
+    final wantSwing = _sections.isEmpty || _sections.contains('swing');
+    final roomSections = {..._sections}..remove('swing');
+    final wantRooms = _sections.isEmpty || roomSections.isNotEmpty;
+    final swings = !wantSwing ? const <SwingAuthorEntry>[] : searchSwingAuthors(ref.watch(swingFeedProvider).value ?? const [], q);
+    final rooms = !wantRooms ? const <AstellRoom>[] : searchAstellRooms(h, q, sections: roomSections);
+    if (rooms.isEmpty && swings.isEmpty) return RasqEmptyView(title: '見つかりませんでした', hint: q.isEmpty ? 'この節にはありません' : '「$q」に当たる AsTell / Swing はありません');
     return ListView(key: const ValueKey('astell.search.results'), children: [
-      for (final r in rooms)
-        RasqListTile(
-          key: ValueKey('astell.search.hit.${r.id}'),
-          title: r.title,
-          subtitle: [
-            r.ownerDisplayName,
-            if (r.scheduledAt != null) '開催予約' else '${r.peerCount}人',
-            if (r.genres.isNotEmpty) r.genres.take(3).join(' / '),
-          ].join(' ・ '),
-          leading: RasqAvatar(imageUrl: r.ownerAvatarUrl, size: RasqSizes.avatarMd, fallbackLabel: r.ownerDisplayName),
-          onTap: () {
-            _focus.unfocus();
-            open(r);
-          },
+      if (swings.isNotEmpty) ...[
+        RasqSectionHeader(title: 'Swing(${swings.length})', topMargin: 0),
+        for (final e in swings)
+          Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.xs), child: SwingBanner(entry: e)),
+      ],
+      if (rooms.isNotEmpty) ...[
+        RasqSectionHeader(title: 'AsTell(${rooms.length})', topMargin: 0),
+        AstellTileStrip(
+          key: const ValueKey('astell.search.rooms'),
+          rooms: rooms,
+          tileBuilder: (r) => KeyedSubtree(key: ValueKey('astell.search.hit.${r.id}'), child: AstellRoomTile(room: r)),
         ),
+      ],
       const SizedBox(height: 80),
     ]);
   }

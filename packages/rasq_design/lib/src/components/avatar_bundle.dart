@@ -65,6 +65,9 @@ class RasqAvatarBundle extends StatelessWidget {
   /// 折り返し 1 行の文字数(100k 以上)。
   static const charsPerLine = 3;
 
+  /// アイコンの縁取りの太さ(直径に対する比、D-386 で 2 割増し)。
+  static const ringRatio = 0.072;
+
   /// 角丸ワイヤーをアイコンより大きくする量 (D-336)。
   static const grow = 3.0;
 
@@ -113,8 +116,8 @@ class RasqAvatarBundle extends StatelessWidget {
     final wireWidth = stacked ? (faces.length < 2 ? avatarSize : avatarSize + step * (faces.length - 1)) : size + grow + size * 0.15 + countWidth;
     final totalWidth = wireWidth;
 
-    // 縁取りはアイコンの内側に収める(外にはみ出すと行の高さと中心がずれる)。
-    final ringWidth = size * 0.06;
+    // 縁取りはアイコンの内側に収める(外にはみ出すと行の高さと中心がずれる)。D-386: 太さを 2 割増し(0.06 → 0.072)。
+    final ringWidth = size * ringRatio;
     Widget face(UserSummary u, Key key) => Container(
           key: key,
           width: avatarSize,

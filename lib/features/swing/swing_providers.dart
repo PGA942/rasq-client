@@ -89,8 +89,10 @@ final mySwingsProvider = FutureProvider.autoDispose<List<Swing>>((ref) async {
 /// Swing を出している人(見ていないものがある人が先、その中は新しい順)と、見ていない数。
 typedef SwingAuthorEntry = ({Swing first, int unseen, int total});
 
-final swingAuthorsProvider = Provider<List<SwingAuthorEntry>>((ref) {
-  final feed = ref.watch(swingFeedProvider).value ?? const <Swing>[];
+final swingAuthorsProvider = Provider<List<SwingAuthorEntry>>((ref) => swingAuthorsOf(ref.watch(swingFeedProvider).value ?? const <Swing>[]));
+
+/// 作った人ごとにまとめる(見ていないものがある人が先、その中は新しい順)。
+List<SwingAuthorEntry> swingAuthorsOf(List<Swing> feed) {
   final byAuthor = <String, List<Swing>>{};
   for (final s in feed) {
     byAuthor.putIfAbsent(s.authorAccountId, () => []).add(s);
@@ -103,7 +105,15 @@ final swingAuthorsProvider = Provider<List<SwingAuthorEntry>>((ref) {
       return u != 0 ? u : b.first.createdAt.compareTo(a.first.createdAt);
     });
   return out;
-});
+}
+
+/// Swing の検索 (D-386): 作った人の名前 / @ハンドル / 文字 / 種類(画像 / 動画 / プラグイン)で探す。語は空白で区切り、
+/// **全部を含むもの**(語を重ねて絞る)。当たった Swing を作った人ごとにまとめる。
+List<SwingAuthorEntry> searchSwingAuthors(List<Swing> feed, String query) {
+  final terms = query.trim().toLowerCase().split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+  String hay(Swing s) => [s.author.displayName, s.author.account.handle, '@${s.author.account.handle}', s.text, s.kind.label, 'swing'].join(' ').toLowerCase();
+  return swingAuthorsOf([for (final s in feed) if (terms.every(hay(s).contains)) s]);
+}
 
 /// ビューワーの並び (D-379): [startAuthor] の Swing(見ていないものがあればそれ、無ければ全部)→ ほかの人の見ていないもの。
 /// 誰も指定しなければ、見ていないもの全部(無ければ全部)。

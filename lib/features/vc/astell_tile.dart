@@ -30,13 +30,27 @@ class AstellTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     // 高さの決まらない所(縦のリストに直など)に置かれても壊れないように (D-376): 中は Expanded で詰めるので、既定の高さを与える。
-    return LayoutBuilder(builder: (context, c) => c.hasBoundedHeight ? _tile(scheme, tokens) : SizedBox(height: defaultHeight, child: _tile(scheme, tokens)));
+    return LayoutBuilder(builder: (context, c) {
+      final wide = !c.hasBoundedWidth || c.maxWidth >= roomyWidth;
+      return c.hasBoundedHeight ? _tile(scheme, tokens, wide) : SizedBox(height: defaultHeight, child: _tile(scheme, tokens, wide));
+    });
   }
 
   /// 高さが決まらない所での既定(TL の投稿内のタイルと同じ)。
   static const defaultHeight = 216.0;
 
-  Widget _tile(ColorScheme scheme, RasqTokens tokens) {
+  /// タイルの最小幅 (D-386)。横並び([AstellTileStrip])はこれより細くしない。
+  static const minWidth = 220.0;
+
+  /// この幅から、ブックマークのボタンと 3 人目の顔を出す (D-386)。細いタイルでは見出しが詰まるので出さない。
+  static const roomyWidth = 300.0;
+
+  /// アイコン(バンドル)の大きさ (D-386: 30 → 36、2 割大きく)。
+  static const bundleSize = 36.0;
+
+  Widget _tile(ColorScheme scheme, RasqTokens tokens, bool wide) {
+    final onBookmark = wide ? this.onBookmark : null;
+    final faces = wide || room.bundleFaces.length <= 2 ? room.bundleFaces : room.bundleFaces.take(2).toList();
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(RasqSizes.radiusLg),
@@ -48,15 +62,15 @@ class AstellTile extends StatelessWidget {
       ),
       padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // 見出し行: バンドル(小)+ ホスト名/タイトル、… は右上に重ねる(行幅を
-        // 食わない)。2 列タイルは 1 枚 ≈ 170px なので、バンドルは 30px 基準。
+        // 見出し行: バンドル + ホスト名/タイトル、… は右上に重ねる(行幅を食わない)。
+        // タイルは最小 220px (D-386)、バンドルは 36px 基準。
         Stack(clipBehavior: Clip.none, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // アイコン&追加情報バンドル (D-140): 角丸ワイヤー + 円形アイコン + 人数 + LIVE。
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.topLeft,
-              child: RasqAvatarBundle(user: room.owner, count: room.peerCount, faces: room.bundleFaces, live: room.live, size: 30),
+              child: RasqAvatarBundle(user: room.owner, count: room.peerCount, faces: faces, live: room.live, size: bundleSize),
             ),
             const SizedBox(width: RasqSpacing.xs),
             Expanded(
@@ -173,7 +187,9 @@ class _AstellTileStripState extends State<AstellTileStrip> {
   double _fraction = 0.54;
 
   PageController _controllerFor(double width) {
-    final fraction = (maxTileWidth / width).clamp(0.2, 0.54);
+    // 1 枚 = 幅の 54%(次が覗く)。ただし最小 [AstellTile.minWidth](D-386)/ 最大 [maxTileWidth]。狭い画面でも右端に次が少し覗くように 0.92 まで。
+    final tile = (width * 0.54).clamp(AstellTile.minWidth, maxTileWidth);
+    final fraction = width <= 0 ? 0.54 : (tile / width).clamp(0.2, 0.92);
     if (_controller == null || (fraction - _fraction).abs() > 0.001) {
       _controller?.dispose();
       _fraction = fraction;
