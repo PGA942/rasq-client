@@ -114,6 +114,8 @@ class HomeScreen extends ConsumerWidget {
               Expanded(
                 child: RasqTabs(
                   items: tabs,
+                  // RAi の案内が指す名前 (D-384): 選んでいるタブの ∨ = タイムラインを一時変更。
+                  chevronTooltip: 'タイムラインを一時変更',
                   onSelectedTabTap: (i, _) => showTimelineTempFow(
                     ref,
                     tabs: [for (final k in kinds) if (_hasTempFow(k)) ('tl.${k.id}', _label(k))],

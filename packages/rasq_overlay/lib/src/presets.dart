@@ -105,7 +105,8 @@ extension OverlayPresets on OverlayManager {
                 Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
                 if (message != null) ...[const SizedBox(height: 8), Text(message, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center)],
                 const SizedBox(height: 12),
-                Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                // 入りきらない長さの文言は縦に積む(横に並べると、はみ出す)。
+                OverflowBar(alignment: MainAxisAlignment.end, overflowAlignment: OverflowBarAlignment.end, children: [
                   if (cancelText != null) TextButton(onPressed: () => handle.close(result: false), child: Text(cancelText)),
                   TextButton(
                     onPressed: () => handle.close(result: true),

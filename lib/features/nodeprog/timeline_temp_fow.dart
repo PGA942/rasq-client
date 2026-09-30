@@ -24,8 +24,8 @@ const timelineTempHeaderKey = Key('tl.temp.header');
 /// AsTell のルーム FOW と同じく、**外側をタップすると閉じずに stick へ変形**する(stick の間は後ろの TL を触れる)。
 /// - stick = 検索欄と ✕ だけ(✕ で閉じる。検索欄の右端の ↑↓ でそのまま飛べる)。ハンドル / 空いたところのタップで展開
 /// - 展開 = ヘッダー(キャンセル / 決定)+ 検索欄(検索画面と同じ作り + 「近似検索」チップ)+「タイムラインをカスタマイズ」
-///   の使い回し([TimelineConfigScreen] の `temporary`)。キャンセル = 展開してからの構成の変更を巻き戻して stick、
-///   決定 = そのまま stick。構成の変更は保存せず、その TL にだけ一時的に効く(「この内容で保存」で保存した構成になる)
+///   の使い回し([TimelineConfigScreen] の `temporary`)。キャンセル = 展開してからの構成の変更を巻き戻して**閉じる**
+///   (D-384。以前は stick)、決定 = そのまま stick。構成の変更は保存せず、その TL にだけ一時的に効く(「この内容で保存」で保存した構成になる)
 /// - 探す: TL は絞らない。↑↓ で上下の合う投稿へ飛び、飛んだ先を一瞬ホバーの見た目にする(続きは TL の「投稿を読み込む」)
 ///
 /// [tabs] = FOW のタブ行に並べる TL((スコープ, 名前))、[scope] = 開いたときのタブ。[scopeSync] = ホームのタブと開いている
@@ -182,9 +182,10 @@ class _TimelineTempFowBodyState extends ConsumerState<TimelineTempFowBody> {
 
   void _confirm() => collapseTimelineTempFow(widget.spec);
 
+  /// キャンセル (D-384): 展開してからの変更を巻き戻して**閉じる**(stick にはしない)。
   void _cancel() {
     ref.read(tlTemporaryConfigsProvider.notifier).restore(_snapshot);
-    collapseTimelineTempFow(widget.spec);
+    widget.onClose();
   }
 
   /// 入力欄の右端: 「i / N」(飛ぶ前は「N 件」)+ ↑↓。

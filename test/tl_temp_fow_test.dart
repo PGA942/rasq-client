@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
+import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/nodeprog/node_tabs.dart';
+import 'package:rasq_client/features/nodeprog/timeline_create_fow.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/home/home_screen.dart';
 import 'package:rasq_client/features/home/timeline_providers.dart';
@@ -54,13 +57,15 @@ void main() {
     expect(approxContains('abcdef', 'xyz', 1), isFalse);
   });
 
-  Future<ProviderContainer> pumpHome(WidgetTester tester, {List<Post> Function(AccountId viewer)? posts}) async {
+  final second = AccountSession(account: const AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'second'), pluginId: 'test.fake', token: 't2', createdAt: DateTime(2026, 8, 23), displayName: '二つ目');
+
+  Future<ProviderContainer> pumpHome(WidgetTester tester, {List<Post> Function(AccountId viewer)? posts, bool twoAccounts = false}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({
-        'sessions': [fakeSession().toJson()],
+        'sessions': [fakeSession().toJson(), if (twoAccounts) second.toJson()],
         'current': fakeSession().account.key,
       }),
     });
@@ -104,14 +109,13 @@ void main() {
     await tester.tap(tab('フォロー中'));
     await tester.pumpAndSettle();
     expect(manager.contains(timelineTempFowId), isTrue);
-    final spec = fowSpec(manager);
+    expect(fowSpec(manager).isStick, isFalse);
     Finder inFow(Finder f) => find.descendant(of: find.byType(TimelineTempFowBody), matching: f);
     // 展開: ヘッダー(キャンセル / 決定)+ 検索欄 + 「タイムラインをカスタマイズ」の使い回し。
     expect(inFow(find.byKey(timelineTempHeaderKey)), findsOneWidget);
     expect(inFow(find.text('キャンセル')), findsOneWidget);
     expect(inFow(find.text('決定')), findsOneWidget);
     expect(inFow(find.text('アルゴリズム')), findsOneWidget);
-    expect(inFow(find.text('タブを追加')), findsNothing); // タブの追加は保存する画面で
     expect(inFow(find.text('関連')), findsNothing); // 関連(ルールベースの別画面)は FOW のタブに無い
     // 検索欄は検索画面と同じ作り: ∨ でチップの列、「近似検索」がある。
     expect(inFow(find.text('近似検索')), findsNothing);
@@ -127,7 +131,7 @@ void main() {
     expect(find.textContaining('Take off'), findsOneWidget);
     expect(find.descendant(of: find.byType(RasqTabs), matching: find.byKey(const ValueKey('tab.dot'))), findsOneWidget);
 
-    // 構成を変える(時系列順を一時的に無効化)→ キャンセルで巻き戻して stick へ。
+    // 構成を変える(時系列順を一時的に無効化)→ キャンセルで巻き戻して**閉じる**(D-384: stick にはしない)。
     await tester.tap(inFow(find.byTooltip('アルゴリズムの操作')).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('一時的な無効化'));
@@ -136,7 +140,16 @@ void main() {
     await tester.tap(inFow(find.byKey(const ValueKey('tl.temp.cancel'))));
     await tester.pumpAndSettle();
     expect(container.read(tlTemporaryConfigsProvider), isEmpty);
-    expect(spec.isStick, isTrue);
+    expect(manager.contains(timelineTempFowId), isFalse);
+    // 開き直して探す語を入れ、stick へ畳む。
+    await tester.tap(tab('フォロー中'));
+    await tester.pumpAndSettle();
+    final spec2 = fowSpec(manager);
+    await tester.enterText(searchField(), '猫派');
+    await tester.pumpAndSettle();
+    collapseTimelineTempFow(spec2);
+    await tester.pumpAndSettle();
+    expect(spec2.isStick, isTrue);
     // stick = 検索欄と ✕ だけ(探す語は残る)。
     expect(inFow(find.byKey(timelineTempStickKey)), findsOneWidget);
     expect(inFow(find.byKey(timelineTempHeaderKey)), findsNothing);
@@ -146,19 +159,19 @@ void main() {
     // ハンドルのタップで展開 → 変えて決定 → stick(一時変更は残る、保存はしない)。
     await tester.tap(find.bySemanticsLabel('サイズ変更ハンドル').last, warnIfMissed: false);
     await tester.pumpAndSettle();
-    expect(spec.isStick, isFalse);
+    expect(spec2.isStick, isFalse);
     await tester.tap(inFow(find.byTooltip('アルゴリズムの操作')).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('一時的な無効化'));
     await tester.pumpAndSettle();
     await tester.tap(inFow(find.byKey(const ValueKey('tl.temp.confirm'))));
     await tester.pumpAndSettle();
-    expect(spec.isStick, isTrue);
+    expect(spec2.isStick, isTrue);
     expect(container.read(tlTemporaryConfigsProvider)['tl.home']?.algorithms.first.enabled, isFalse);
     expect((await container.read(settingsAreaProvider(homeArea).future))['tlcfg'], isNull);
 
     // 空いたところのタップでも展開。「この内容で保存」で保存した構成になる。
-    spec.expandStick();
+    spec2.expandStick();
     await tester.pumpAndSettle();
     await tester.tap(inFow(find.byKey(const ValueKey('tl.temp.save'))));
     await tester.pumpAndSettle();
@@ -176,7 +189,7 @@ void main() {
     await tester.tapAt(const Offset(200, 140));
     await tester.pumpAndSettle();
     expect(manager.contains(timelineTempFowId), isTrue);
-    expect(spec.isStick, isTrue);
+    expect(spec2.isStick, isTrue);
 
     // ✕ で閉じると探す語は消える。
     await tester.tap(inFow(find.byKey(const ValueKey('tl.temp.close'))));
@@ -184,6 +197,83 @@ void main() {
     expect(manager.contains(timelineTempFowId), isFalse);
     expect(container.read(timelineSearchProvider), isEmpty);
     expect(homeTimelineFowScope.value, isNull);
+  });
+
+  testWidgets('D-384: タイムラインは作る FOW(一時変更と同じ作り、探す欄は無し)で作る。決定で「他のアカウントにも適用しますか」→ 共有 / このアカウントだけ。あとから … で共有を切り替え', (tester) async {
+    final container = await pumpHome(tester, twoAccounts: true);
+    final manager = container.read(overlayManagerProvider);
+    // 一時変更 FOW のタブ行の ＋ → 一時変更は閉じて、作る FOW。
+    await tester.tap(tab('フォロー中'));
+    await tester.pumpAndSettle();
+    await tester.tap(tab('フォロー中'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(TimelineTempFowBody), matching: find.byTooltip('タブを追加')));
+    await tester.pumpAndSettle();
+    expect(manager.contains(timelineTempFowId), isFalse);
+    expect(manager.contains(timelineCreateFowId), isTrue);
+    expect(find.byKey(timelineCreateHeaderKey), findsOneWidget);
+    expect(find.byKey(const ValueKey('tl.temp.search')), findsNothing, reason: '探す欄は無い');
+    expect(find.text('アルゴリズム'), findsOneWidget);
+    // キャンセルは何も作らずに閉じる。
+    await tester.tap(find.byKey(const ValueKey('tl.create.cancel')));
+    await tester.pumpAndSettle();
+    expect(manager.contains(timelineCreateFowId), isFalse);
+    expect(container.read(nodeTabsProvider), isEmpty);
+
+    // 作る → 決定 → すべてのアカウントに適用 = 共有のタブ。
+    await tester.tap(tab('フォロー中'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(TimelineTempFowBody), matching: find.byTooltip('タブを追加')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('tl.create.name')), '写真');
+    await tester.tap(find.byKey(const ValueKey('tl.create.confirm')));
+    await tester.pumpAndSettle();
+    expect(find.text('他のアカウントにも適用しますか'), findsOneWidget);
+    await tester.tap(find.text('すべてのアカウントに適用'));
+    await tester.pumpAndSettle();
+    expect(manager.contains(timelineCreateFowId), isFalse);
+    final photo = container.read(nodeTabsProvider).single;
+    expect((photo.label, photo.shared), ('写真', true));
+    expect(container.read(sharedNodeTabsProvider).single.id, photo.id);
+    expect((await container.read(settingsAreaProvider('nodeprog.tl.${photo.id}').future))['tlcfg'], isA<String>(), reason: '構成はアカウントに依らない置き場');
+    expect(tab('写真'), findsOneWidget);
+    // 別のアカウントでも並ぶ。
+    await container.read(sessionsProvider.notifier).setCurrent(second.account);
+    await tester.pumpAndSettle();
+    expect(container.read(nodeTabsProvider).map((t) => t.label), ['写真']);
+    await container.read(sessionsProvider.notifier).setCurrent(fakeSession().account);
+    await tester.pumpAndSettle();
+
+    // このアカウントだけ。(アカウントを替えたのでタブは作り直されている: 開くまで押す)
+    for (var i = 0; i < 2 && !manager.contains(timelineTempFowId); i++) {
+      await tester.tap(tab('フォロー中'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.descendant(of: find.byType(TimelineTempFowBody), matching: find.byTooltip('タブを追加')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('tl.create.name')), '自分だけ');
+    await tester.tap(find.byKey(const ValueKey('tl.create.confirm')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('このアカウントだけ'));
+    await tester.pumpAndSettle();
+    final mine = container.read(nodeTabsProvider).firstWhere((t) => t.label == '自分だけ');
+    expect(mine.shared, isFalse);
+    expect(container.read(ownNodeTabsProvider).map((t) => t.label), ['自分だけ']);
+    await container.read(sessionsProvider.notifier).setCurrent(second.account);
+    await tester.pumpAndSettle();
+    expect(container.read(nodeTabsProvider).map((t) => t.label), ['写真'], reason: 'ほかのアカウントには無い');
+    await container.read(sessionsProvider.notifier).setCurrent(fakeSession().account);
+    await tester.pumpAndSettle();
+
+    // … →「すべてのアカウントで共有」で共有に(構成も置き場を移す)。
+    container.read(routerProvider).push(Routes.tlConfig('tl.${mine.id}'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('その他'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('すべてのアカウントで共有'));
+    await tester.pumpAndSettle();
+    expect(container.read(sharedNodeTabsProvider).map((t) => t.label), containsAll(['写真', '自分だけ']));
+    expect((await container.read(settingsAreaProvider('nodeprog.tl.${mine.id}').future))['tlcfg'], isA<String>());
   });
 
   testWidgets('D-341: ↑↓ で上下の合う投稿へ飛ぶ(まだ作られていない行へも)。飛んだ先は一瞬ホバーの見た目。近似検索でかなの違いも拾う', (tester) async {
