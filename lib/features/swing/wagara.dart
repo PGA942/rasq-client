@@ -152,10 +152,18 @@ void _waku(Canvas canvas, Rect r, double u, Paint stroke) {
 }
 
 /// 立涌の波線の対のうち片側([side] = -1 左 / 1 右)だけを敷く(分銅繋ぎ用)。
-void _wakuSide(Canvas canvas, Rect r, double u, double side, double phase, Paint stroke) {
+/// 分銅繋ぎの 2 組(倒す角度 / 向き / 山谷のずれ / 1 本おきの反転 / 列のずれ(u 単位))。1 本おきの反転 = 0: しない、1: 山谷を入れ替える、2: 左右を入れ替える。
+/// D-390: 12 通りの候補の 3 番(+45° の組だけ 1 本おきに山谷を入れ替え)を元に、交点が節(波の傾きが 0 の所)に
+/// いちばん近くなるよう、−45° の組の山谷のずれと列のずれを数値で合わせた(ずれの平均が 3 番のほぼ半分)。
+const fundoFamilies = [(math.pi / 4, 1.0, 0.0, 1, 0.0), (-math.pi / 4, -1.0, 1.8646 * math.pi, 0, 0.1458)];
+
+void _wakuSide(Canvas canvas, Rect r, double u, double side0, double phase0, int alt, double shift, Paint stroke) {
   final i0 = (r.left / u).floor() - 1;
   final i1 = (r.right / u).ceil() + 1;
   for (var i = i0; i < i1; i++) {
+    final odd = i.isOdd;
+    final side = alt == 2 && odd ? -side0 : side0;
+    final phase = alt == 1 && odd ? phase0 + math.pi : phase0;
     final x = i * u + u / 2;
     final path = Path()..moveTo(x + side * u * 0.1, r.top - u);
     for (var y = r.top - u; y < r.bottom + u; y += 4) {
@@ -235,14 +243,15 @@ void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, requ
       }
     case Wagara.fundo:
       // 分銅繋ぎ (D-388): 立涌の波線の対(重なっている 2 本)を、**片方は +45°、もう片方は −45° に倒して**重ねる。
-      // 左上向きに倒した組は、波の山と谷を入れ替える(半周期ずらす、D-389)。2 組の波線が交わり、その間が分銅の形になる。
+      // 左上向きに倒した組は、波の山と谷を入れ替える(半周期ずらす、D-389)。さらにどちらの組も 1 本おきに左右を入れ替え、
+      // 交わる所がすべて十字に見えるようにする(D-390、12 通りの候補から)。2 組の波線が交わり、その間が分銅の形になる。
       final d = math.sqrt(size.width * size.width + size.height * size.height);
       final half = (d / 2 / u).ceil() * u + u;
-      for (final (angle, side, phase) in const [(math.pi / 4, 1.0, 0.0), (-math.pi / 4, -1.0, math.pi)]) {
+      for (final (angle, side, phase, alt, shift) in fundoFamilies) {
         canvas.save();
         canvas.translate(size.width / 2, size.height / 2);
         canvas.rotate(angle);
-        _wakuSide(canvas, Rect.fromLTRB(-half, -half, half, half), u, side, phase, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
+        _wakuSide(canvas, Rect.fromLTRB(-half, -half, half, half), u, side, phase, alt, shift, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
         canvas.restore();
       }
     case Wagara.sayagata:
