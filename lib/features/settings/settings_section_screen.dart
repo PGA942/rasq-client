@@ -24,7 +24,6 @@ class SettingsSectionScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final section = settingsSections[sectionId];
-    final manager = ref.watch(overlayManagerProvider);
     if (section == null) return Scaffold(appBar: const RasqPageHeader(title: '設定'), body: const RasqEmptyView(title: '不明な設定セクション'));
     final mode = ref.watch(themeModeProvider);
     return Scaffold(
@@ -47,40 +46,39 @@ class SettingsSectionScreen extends ConsumerWidget {
               onTap: () => context.push(Routes.settingsTheme),
             )
           else if (r.warning)
-            RasqWarningListTile(title: r.title, subtitle: r.subtitle, detail: r.detail, onTap: () => _open(context, ref, manager, r))
+            RasqWarningListTile(title: r.title, subtitle: r.subtitle, detail: r.detail, onTap: () => openSettingsRow(context, ref, r))
           else
             RasqListTile(
               title: r.title,
               subtitle: r.subtitle,
               detail: r.detail,
               trailing: r.external ? const Icon(Icons.north_east, size: 18) : null,
-              onTap: () => _open(context, ref, manager, r),
+              onTap: () => openSettingsRow(context, ref, r),
             ),
         if (section.note != null) RasqCaption(section.note!, detail: section.noteDetail, padding: const EdgeInsets.all(RasqSpacing.page)),
       ]),
     );
   }
 
-  /// 行の行き先 (D-238): 画面(route)/ FOW やシートを開く印(`action:` …)/ まだ無ければ従来の案内。
-  void _open(BuildContext context, WidgetRef ref, OverlayManager manager, SettingsRow r) {
-    switch (r.route) {
-      case 'notificationPrefs':
-        showNotificationPrefs(ref);
-      case settingsActionTrendGenres:
-        openGenreFow(context, ref);
-      case settingsActionTrendTendency:
-        openTendencyFow(context, ref);
-      case settingsActionRelationalTuning:
-        openRelationalTuning(ref);
-      case settingsActionAstellBar:
-        showActionBarEditSheet(ref, surfaces: const [ActionBarSurface.astell]);
-      case null:
-        _placeholder(context, manager, r.title);
-      default:
-        context.push(r.route!);
-    }
-  }
+}
 
-  Future<void> _placeholder(BuildContext context, OverlayManager manager, String title) => manager.showAlert(
-      id: 'settings.placeholder', title: title, message: rasqDetail(context, 'この設定は準備中です。', 'この設定は第二階層以降の仕様確定後(M4: FOW/DSL 描画)に実装します。'), confirmText: 'OK');
+/// 行の行き先 (D-238): 画面(route)/ FOW やシートを開く印(`action:` …)/ まだ無ければ従来の案内。設定の検索 (D-385) からも使う。
+void openSettingsRow(BuildContext context, WidgetRef ref, SettingsRow r) {
+  switch (r.route) {
+    case 'notificationPrefs':
+      showNotificationPrefs(ref);
+    case settingsActionTrendGenres:
+      openGenreFow(context, ref);
+    case settingsActionTrendTendency:
+      openTendencyFow(context, ref);
+    case settingsActionRelationalTuning:
+      openRelationalTuning(ref);
+    case settingsActionAstellBar:
+      showActionBarEditSheet(ref, surfaces: const [ActionBarSurface.astell]);
+    case null:
+      ref.read(overlayManagerProvider).showAlert(
+          id: 'settings.placeholder', title: r.title, message: rasqDetail(context, 'この設定は準備中です。', 'この設定は第二階層以降の仕様確定後(M4: FOW/DSL 描画)に実装します。'), confirmText: 'OK');
+    default:
+      context.push(r.route!);
+  }
 }

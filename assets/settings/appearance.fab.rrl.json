@@ -14,8 +14,8 @@
         "t": "Notice",
         "p": {
           "kind": "info",
-          "text": "＋ を押したときに始めるものを選べます。上 / 左 / 左上のボタンは、＋ を長押し(マウスは乗せる)して歯車から並べ替えます。",
-          "detail": "D-383。領域 appearance.fab(<scope>Tap / <scope>Slots)。"
+          "text": "＋ を押したときに始めるものを選べます。まわりのボタン(内側に 3 つ、外側に 4 つまで)は、＋ を長押し(マウスは乗せる)して歯車から並べ替えます。",
+          "detail": "D-383 / D-385。領域 appearance.fab(<scope>Tap / <scope>Slots = 置いた順、最大 7)。"
         }
       },
       {
