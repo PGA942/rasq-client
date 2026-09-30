@@ -152,18 +152,20 @@ void _waku(Canvas canvas, Rect r, double u, Paint stroke) {
 }
 
 /// 立涌の波線の対のうち片側([side] = -1 左 / 1 右)だけを敷く(分銅繋ぎ用)。
-/// 分銅繋ぎの 2 組(倒す角度 / 向き / 山谷のずれ / 1 本おきの反転 / 列のずれ(u 単位))。1 本おきの反転 = 0: しない、1: 山谷を入れ替える、2: 左右を入れ替える。
+/// 分銅繋ぎの 2 組(倒す角度 / 向き / 山谷のずれ / 1 本おきの反転 / 列のずれ(u 単位)/ 1 本おきに線の向きへずらす量(u 単位))。1 本おきの反転 = 0: しない、1: 山谷を入れ替える、2: 左右を入れ替える。
 /// D-390: 12 通りの候補の 3 番(+45° の組だけ 1 本おきに山谷を入れ替え)を元に、交点が節(波の傾きが 0 の所)に
 /// いちばん近くなるよう、−45° の組の山谷のずれと列のずれを数値で合わせた(ずれの平均が 3 番のほぼ半分)。
-const fundoFamilies = [(math.pi / 4, 1.0, 0.0, 1, 0.0), (-math.pi / 4, -1.0, 1.8646 * math.pi, 0, 0.1458)];
+/// D-391: −45° の組(左上 → 右下の線)は、奇数番目を右下へ、偶数番目を左上へ 0.12u ずつずらす(ユーザー指定)。
+const fundoFamilies = [(math.pi / 4, 1.0, 0.0, 1, 0.0, 0.0), (-math.pi / 4, -1.0, 1.8646 * math.pi, 0, 0.1458, 0.12)];
 
-void _wakuSide(Canvas canvas, Rect r, double u, double side0, double phase0, int alt, double shift, Paint stroke) {
+void _wakuSide(Canvas canvas, Rect r, double u, double side0, double phase0, int alt, double shift, double stagger, Paint stroke) {
   final i0 = (r.left / u).floor() - 1;
   final i1 = (r.right / u).ceil() + 1;
   for (var i = i0; i < i1; i++) {
     final odd = i.isOdd;
     final side = alt == 2 && odd ? -side0 : side0;
-    final phase = alt == 1 && odd ? phase0 + math.pi : phase0;
+    // 1 本おきに線の向きへずらす (D-391): 奇数番目は +y(−45° の組なら右下)、偶数番目は −y へ [stagger]·u。
+    final phase = (alt == 1 && odd ? phase0 + math.pi : phase0) - (odd ? stagger : -stagger) * math.pi;
     final x = i * u + u / 2;
     final path = Path()..moveTo(x + side * u * 0.1, r.top - u);
     for (var y = r.top - u; y < r.bottom + u; y += 4) {
@@ -247,11 +249,11 @@ void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, requ
       // 交わる所がすべて十字に見えるようにする(D-390、12 通りの候補から)。2 組の波線が交わり、その間が分銅の形になる。
       final d = math.sqrt(size.width * size.width + size.height * size.height);
       final half = (d / 2 / u).ceil() * u + u;
-      for (final (angle, side, phase, alt, shift) in fundoFamilies) {
+      for (final (angle, side, phase, alt, shift, stagger) in fundoFamilies) {
         canvas.save();
         canvas.translate(size.width / 2, size.height / 2);
         canvas.rotate(angle);
-        _wakuSide(canvas, Rect.fromLTRB(-half, -half, half, half), u, side, phase, alt, shift, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
+        _wakuSide(canvas, Rect.fromLTRB(-half, -half, half, half), u, side, phase, alt, shift, stagger, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
         canvas.restore();
       }
     case Wagara.sayagata:
