@@ -186,7 +186,7 @@ class AstellHeaderStrip extends ConsumerWidget {
   const AstellHeaderStrip({super.key, this.max = 4, this.size = 34, this.leading = const [], this.trailing = const [], this.showTitles = false});
   final int max;
 
-  /// バンドルの下にルーム名(D-379: ヘッダーを畳んでいないとき)。
+  /// バンドルの下辺にルーム名(D-379: ヘッダーを畳んでいないとき。D-388: 下に並べるのをやめ、アイコンの下辺に地の色の角丸で載せる)。
   final bool showTitles;
   final double size;
   final List<Widget> leading;
@@ -218,22 +218,17 @@ class AstellHeaderStrip extends ConsumerWidget {
         for (final r in rooms.take(max)) ...[
           Tooltip(
             message: '${r.ownerDisplayName}: ${r.title}',
-            child: showTitles
-                ? Column(mainAxisSize: MainAxisSize.min, children: [
-                    RasqAvatarBundle(user: r.owner, count: r.peerCount, faces: r.bundleFaces, size: size - 4, onTap: () => openAstellRoomTile(context, ref, r)),
-                    SizedBox(
-                      width: 72,
-                      child: Text(
-                        r.live ? 'LIVE ・ ${r.title}' : r.title,
-                        key: ValueKey('astell.header.title.${r.id}'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: RasqTypography.caption.copyWith(fontSize: 10, height: 1.1, color: r.live ? RasqColors.danger : null),
-                      ),
-                    ),
-                  ])
-                : RasqAvatarBundle(user: r.owner, count: r.peerCount, faces: r.bundleFaces, live: r.live, size: size, onTap: () => openAstellRoomTile(context, ref, r)),
+            child: RasqAvatarBundle(
+              user: r.owner,
+              count: r.peerCount,
+              faces: r.bundleFaces,
+              live: r.live,
+              size: size,
+              onTap: () => openAstellRoomTile(context, ref, r),
+              // D-388: ヘッダーを畳んでいないときは、アイコンの下辺に名前を載せる(LIVE は赤地)。
+              caption: showTitles ? r.title : null,
+              captionKey: ValueKey('astell.header.title.${r.id}'),
+            ),
           ),
           const SizedBox(width: 8),
         ],

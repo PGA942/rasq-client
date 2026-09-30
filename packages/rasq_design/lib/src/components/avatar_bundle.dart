@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:rasq_models/rasq_models.dart';
 
@@ -16,6 +18,8 @@ import 'avatar.dart';
 /// 3. **LIVE**: 角丸ワイヤーの**下辺中央**に重ねる(赤地・白文字)。
 ///
 /// D-336: アイコンの縁取りは**黄色**(ワイヤーと同じ色。以前は白)、角丸ワイヤーは [grow](3px)だけ大きく、アイコンはその内側。
+/// D-388: ワイヤーと縁取りは**下ほど濃いグラデーション**([wireTop] → [wireBottom])、縁取りをもう少し太く([ringRatio])。
+/// [caption] を渡すと、LIVE の印の代わりに**下辺に地の色の角丸で名前を載せる**(ワイヤーを切り抜いたように見える。LIVE なら赤地)。
 /// **1 人 / 2 人**(人数 2 以下)のときは、アイコンをワイヤーの太さいっぱいに広げる([fillBelow])。
 ///
 /// **人数**は角丸ワイヤーの右端、上下中央、縁取りなし。
@@ -35,7 +39,17 @@ class RasqAvatarBundle extends StatelessWidget {
     this.ringColor,
     this.onTap,
     this.faces = const [],
+    this.caption,
+    this.captionKey,
   });
+
+  /// 下辺に載せる名前(ヘッダーのチップのルーム名、D-388)。あれば LIVE の印は出さず、LIVE なら名前の地を赤にする。
+  final String? caption;
+  final Key? captionKey;
+
+  /// ワイヤーのグラデーション(上 → 下、D-388)。
+  static const wireTop = Color(0xFFF6E359);
+  static const wireBottom = Color(0xFFF09937);
 
   final UserSummary user;
 
@@ -65,8 +79,8 @@ class RasqAvatarBundle extends StatelessWidget {
   /// 折り返し 1 行の文字数(100k 以上)。
   static const charsPerLine = 3;
 
-  /// アイコンの縁取りの太さ(直径に対する比、D-386 で 2 割増し)。
-  static const ringRatio = 0.072;
+  /// アイコンの縁取りの太さ(直径に対する比、D-386 で 2 割増し、D-388 でもう少し)。
+  static const ringRatio = 0.085;
 
   /// 角丸ワイヤーをアイコンより大きくする量 (D-336)。
   static const grow = 3.0;
@@ -94,8 +108,11 @@ class RasqAvatarBundle extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     final wire = color ?? RasqColors.yellow;
+    // 色を渡さなければ、下ほど濃いグラデーション (D-388)。
+    final gradient = color == null && fillColor == null ? const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [wireTop, wireBottom]) : null;
     final fill = fillColor ?? wire.withValues(alpha: 0.6);
     final ring = ringColor ?? wire;
+    final ringGradient = ringColor == null ? gradient : null;
     final stacked = faces.isNotEmpty;
     final label = !stacked && (count ?? 0) > 0 ? formatCount(count!) : null;
     final twoLines = label != null && label.contains('\n');
@@ -106,15 +123,17 @@ class RasqAvatarBundle extends StatelessWidget {
     final inset = fill1 ? 0.0 : grow / 2;
     final countStyle = TextStyle(fontSize: size * (twoLines ? 0.26 : 0.3), fontWeight: FontWeight.w700, color: scheme.onSurface, height: 1.05);
     final liveHeight = size * 0.28;
+    final captionHeight = size * 0.36;
 
     // 角丸ワイヤーの幅: 左端(アイコンの下)から右へ、人数の文字幅 + 余白。
     final countWidth = label == null ? 0.0 : _textWidth(label, countStyle) + size * 0.3;
-    const wireLeft = 0.0;
     // 顔を並べる (D-376): 1 つずつ半分重ねる。最大幅に収まらなければ重ねを深くする。
     final maxWidth = maxWireWidth(size);
     final step = faces.length < 2 ? 0.0 : ((maxWidth - avatarSize) / (faces.length - 1)).clamp(0.0, avatarSize / 2);
     final wireWidth = stacked ? (faces.length < 2 ? avatarSize : avatarSize + step * (faces.length - 1)) : size + grow + size * 0.15 + countWidth;
-    final totalWidth = wireWidth;
+    // 名前を載せるときは、名前が読める幅(直径の 1.9 倍)まで広げ、ワイヤーはその真ん中に置く (D-388)。
+    final totalWidth = caption != null ? math.max(wireWidth, size * 1.9) : wireWidth;
+    final wireLeft = (totalWidth - wireWidth) / 2;
 
     // 縁取りはアイコンの内側に収める(外にはみ出すと行の高さと中心がずれる)。D-386: 太さを 2 割増し(0.06 → 0.072)。
     final ringWidth = size * ringRatio;
@@ -122,14 +141,19 @@ class RasqAvatarBundle extends StatelessWidget {
           key: key,
           width: avatarSize,
           height: avatarSize,
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ring, width: ringWidth)),
-          child: RasqAvatar(imageUrl: u.avatarUrl, size: avatarSize - ringWidth * 2, fallbackLabel: u.displayName),
+          padding: ringGradient == null ? null : EdgeInsets.all(ringWidth),
+          decoration: ringGradient == null
+              ? BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ring, width: ringWidth))
+              : BoxDecoration(shape: BoxShape.circle, gradient: ringGradient),
+          child: ringGradient == null
+              ? RasqAvatar(imageUrl: u.avatarUrl, size: avatarSize - ringWidth * 2, fallbackLabel: u.displayName)
+              : ClipOval(child: RasqAvatar(imageUrl: u.avatarUrl, size: avatarSize - ringWidth * 2, fallbackLabel: u.displayName)),
         );
     final avatar = face(stacked ? faces.first : user, const ValueKey('avatarBundle.avatar'));
 
     Widget bundle = SizedBox(
       width: totalWidth,
-      height: wireHeight + (live ? liveHeight / 2 : 0),
+      height: wireHeight + (caption != null ? captionHeight * 0.3 : live ? liveHeight / 2 : 0),
       child: Stack(clipBehavior: Clip.none, children: [
         // 1. 背面: 角丸四角のワイヤー(黄色の塗り + 同色の枠線、左端まで)。
         Positioned(
@@ -138,17 +162,19 @@ class RasqAvatarBundle extends StatelessWidget {
           width: wireWidth,
           height: wireHeight,
           child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: fill,
-              border: Border.all(color: wire, width: 1.5),
-              borderRadius: BorderRadius.circular(wireHeight / 2),
-            ),
+            decoration: gradient != null
+                ? BoxDecoration(gradient: gradient, borderRadius: BorderRadius.circular(wireHeight / 2))
+                : BoxDecoration(
+                    color: fill,
+                    border: Border.all(color: wire, width: 1.5),
+                    borderRadius: BorderRadius.circular(wireHeight / 2),
+                  ),
           ),
         ),
         // 人数: 右端、上下中央、縁取りなし(100k 以上は 2 行)。
         if (label != null)
           Positioned(
-            left: size + grow,
+            left: wireLeft + size + grow,
             top: 0,
             width: wireWidth - size - grow - size * 0.15,
             height: wireHeight,
@@ -158,12 +184,35 @@ class RasqAvatarBundle extends StatelessWidget {
             ),
           ),
         // 2. アイコン: 円形 + 円形縁取り(黄色)、背面より上。顔を並べるときは右から描き、左(オーナー)を一番上に。
-        for (var i = faces.length - 1; i >= 1; i--) Positioned(left: step * i, top: 0, child: face(faces[i], ValueKey('avatarBundle.face.$i'))),
-        Positioned(left: inset, top: inset, child: avatar),
-        // 3. LIVE: 角丸ワイヤーの下辺中央(アイコンを除いた右側の中央)。
-        if (live)
+        for (var i = faces.length - 1; i >= 1; i--) Positioned(left: wireLeft + step * i, top: 0, child: face(faces[i], ValueKey('avatarBundle.face.$i'))),
+        Positioned(left: wireLeft + inset, top: inset, child: avatar),
+        // 3'. 名前 (D-388): 下辺に地の色の角丸で載せる(LIVE なら赤地)。
+        if (caption != null)
           Positioned(
-            left: size / 2,
+            left: 0,
+            width: totalWidth,
+            top: wireHeight - captionHeight * 0.7,
+            height: captionHeight,
+            child: Center(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: size * 0.1),
+                height: captionHeight,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: live ? tokens.live : scheme.surface, borderRadius: BorderRadius.circular(captionHeight / 2)),
+                child: Text(
+                  caption!,
+                  key: captionKey,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: live ? RasqColors.white : scheme.onSurface, fontSize: size * 0.24, fontWeight: FontWeight.w700, height: 1.0),
+                ),
+              ),
+            ),
+          ),
+        // 3. LIVE: 角丸ワイヤーの下辺中央(アイコンを除いた右側の中央)。
+        if (live && caption == null)
+          Positioned(
+            left: wireLeft + size / 2,
             width: wireWidth - size / 2,
             top: wireHeight - liveHeight / 2,
             height: liveHeight,

@@ -151,27 +151,17 @@ void _waku(Canvas canvas, Rect r, double u, Paint stroke) {
   }
 }
 
-/// 膨らみの鎖(分銅繋ぎ用): 列 x = u/2 + i·u ごとに 2 本の波線。節(y = u/2 + k·u)で 2 本が交わり、腹(y = k·u)で ±0.4u まで膨らむ。
-void _lensChain(Canvas canvas, Rect r, double u, Paint stroke) {
+/// 立涌の波線の対のうち片側([side] = -1 左 / 1 右)だけを敷く(分銅繋ぎ用)。
+void _wakuSide(Canvas canvas, Rect r, double u, double side, Paint stroke) {
   final i0 = (r.left / u).floor() - 1;
   final i1 = (r.right / u).ceil() + 1;
   for (var i = i0; i < i1; i++) {
     final x = i * u + u / 2;
-    for (final side in [-1.0, 1.0]) {
-      final path = Path();
-      var first = true;
-      for (var y = r.top - u; y < r.bottom + u; y += 3) {
-        final s = math.sin(math.pi * (y - u / 2) / u);
-        final p = Offset(x + side * u * 0.4 * s * s, y);
-        if (first) {
-          path.moveTo(p.dx, p.dy);
-          first = false;
-        } else {
-          path.lineTo(p.dx, p.dy);
-        }
-      }
-      canvas.drawPath(path, stroke);
+    final path = Path()..moveTo(x + side * u * 0.1, r.top - u);
+    for (var y = r.top - u; y < r.bottom + u; y += 4) {
+      path.lineTo(x + side * (u * 0.1 + u * 0.28 * (0.5 + 0.5 * math.sin(y / u * math.pi))), y);
     }
+    canvas.drawPath(path, stroke);
   }
 }
 
@@ -244,15 +234,15 @@ void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, requ
         }
       }
     case Wagara.fundo:
-      // 分銅繋ぎ (D-387): 立涌の波線の対を「節で 2 本が交わる」形(膨らみの鎖)にし、±45° に倒して 2 組重ねる。
-      // 節は (u/2 + i·u, u/2 + k·u) の格子で、90° 回しても同じ格子なので、**2 組の節がすべて同じ点で交わる**。その間が分銅の形。
+      // 分銅繋ぎ (D-388): 立涌の波線の対(重なっている 2 本)を、**片方は +45°、もう片方は −45° に倒して**重ねる。
+      // 2 組の波線が交わり、その間が分銅の形になる。
       final d = math.sqrt(size.width * size.width + size.height * size.height);
       final half = (d / 2 / u).ceil() * u + u;
-      for (final a in [math.pi / 4, -math.pi / 4]) {
+      for (final (angle, side) in [(math.pi / 4, 1.0), (-math.pi / 4, -1.0)]) {
         canvas.save();
         canvas.translate(size.width / 2, size.height / 2);
-        canvas.rotate(a);
-        _lensChain(canvas, Rect.fromLTRB(-half, -half, half, half), u, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
+        canvas.rotate(angle);
+        _wakuSide(canvas, Rect.fromLTRB(-half, -half, half, half), u, side, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
         canvas.restore();
       }
     case Wagara.sayagata:

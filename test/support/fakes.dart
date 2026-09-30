@@ -6,7 +6,10 @@ import 'package:rasq_store/rasq_store.dart';
 
 /// Fake SNS plugin/session for widget tests — serves a fixed timeline.
 class FakeSnsPlugin extends SnsPlugin {
-  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const [], this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false});
+  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const [], this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false, this.trends});
+
+  /// トレンド(null = 既定の「打上会」)。
+  final List<TrendTag>? trends;
   final List<Post> Function(AccountId viewer) posts;
 
   /// 渡すと、Misskey のように**絵文字でリアクションする**セッションになる(`iconPerPost`。D-278)。中身 = 自サーバーにある絵文字の名前。
@@ -38,14 +41,15 @@ class FakeSnsPlugin extends SnsPlugin {
   Future<AuthFlow> beginAuth(String host, {Uri? callback}) => throw UnimplementedError();
   @override
   SnsSession open(AccountSession session) {
-    final s = FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind, localEmojis: localEmojis, reactionActionId: reactionActionId, bookmark: bookmark);
+    final s = FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind, localEmojis: localEmojis, reactionActionId: reactionActionId, bookmark: bookmark, trends: trends);
     opened.add(s);
     return s;
   }
 }
 
 class FakeSnsSession extends SnsSessionBase {
-  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey, this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false}) : _posts = [...posts];
+  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey, this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false, this.trends}) : _posts = [...posts];
+  final List<TrendTag>? trends;
   final bool bookmark;
 
   /// addToClip の呼び出し(`clipId:postId`)。
@@ -265,7 +269,7 @@ class FakeSnsSession extends SnsSessionBase {
   @override
   Future<void> addToClip(String clipId, String postId) async => clipAdds.add('$clipId:$postId');
   @override
-  Future<List<TrendTag>> trendingTags() async => const [TrendTag(tag: '打上会', usersCount: 117, chart: [1, 3, 2])];
+  Future<List<TrendTag>> trendingTags() async => trends ?? const [TrendTag(tag: '打上会', usersCount: 117, chart: [1, 3, 2])];
   @override
   Future<List<DmRoom>> dmRooms() async => [DmRoom(id: _posts.last.author.id, peer: _posts.last.author, lastPost: _posts.last)];
   @override

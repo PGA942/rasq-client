@@ -14,6 +14,7 @@ import '../home/timeline_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView, ChildSafeGreyed;
 import '../trend/tendency_fows.dart';
+import '../servers/server_badge.dart';
 import '../trend/trend_providers.dart';
 import 'search_filter.dart';
 import 'search_history.dart';
@@ -51,7 +52,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final me = ref.watch(currentUserProvider);
+    final me = ref.watch(rasqAccountProvider);
     final scheme = Theme.of(context).colorScheme;
     final trends = ref.watch(trendFrameTagsProvider); // トレンド枠ノード対応 (D-113)
     final today = ref.watch(timelineProvider(DynamicTimelines.featured));
@@ -68,7 +69,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: RasqAvatar(imageUrl: me.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: me.displayName, onTap: () => RasqShell.openSidebar(context, ref)),
+                // 検索は RASQ アカウントでまとめる (D-388): トレンドは中の SNS アカウント全部から集めるので、アイコンも RASQ アカウント。
+                child: RasqAvatar(key: const ValueKey('search.account'), imageUrl: me.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: me.displayName, onTap: () => RasqShell.openSidebar(context, ref)),
               ),
               const SizedBox(width: RasqSpacing.sm),
               Expanded(
@@ -145,15 +147,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 }
 
-class _TrendTile extends StatelessWidget {
+class _TrendTile extends ConsumerWidget {
   const _TrendTile({required this.trend, required this.onTap});
   final TrendTag trend;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     final count = trend.postsCount ?? trend.usersCount;
+    // どのサーバーのトレンドか (D-388): 以前の波形の代わりに「{サーバーのアイコン} サーバー名」(全部の SNS で)。
+    final sources = ref.watch(sourcedTrendsProvider).value?.sources[trendKey(trend.tag)] ?? [?ref.watch(currentAccountProvider)];
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -165,13 +169,14 @@ class _TrendTile extends StatelessWidget {
               Text(trend.tag, style: RasqTypography.title.copyWith(fontSize: 16)),
               const SizedBox(height: 2),
               Row(children: [
-                if (count != null) Text('$count ${trend.postsCount != null ? 'Post' : 'Users'}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+                if (count != null) Flexible(child: Text('$count ${trend.postsCount != null ? 'Post' : 'Users'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
                 const SizedBox(width: 12),
-                for (final r in trend.related.take(3)) Padding(padding: const EdgeInsets.only(right: 8), child: Text(r, style: RasqTypography.bodySmall.copyWith(color: tokens.link))),
+                // サーバーの印に場所を譲るので、関連ワードは入るだけ(はみ出したら …)。
+                if (trend.related.isNotEmpty) Flexible(child: Text(trend.related.take(3).join('   '), maxLines: 1, overflow: TextOverflow.ellipsis, style: RasqTypography.bodySmall.copyWith(color: tokens.link))),
               ]),
             ]),
           ),
-          if (trend.chart.isNotEmpty) SizedBox(width: 56, height: 20, child: CustomPaint(painter: _Sparkline(trend.chart, tokens.link))),
+          if (sources.isNotEmpty) Flexible(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: ServerBadge(key: ValueKey('trend.server.${trend.tag}'), account: sources.first, more: sources.length - 1))),
           RasqIconButton(icon: Icons.more_horiz, size: 18, onPressed: () {}, tooltip: 'メニュー'),
         ]),
       ),
@@ -179,27 +184,6 @@ class _TrendTile extends StatelessWidget {
   }
 }
 
-class _Sparkline extends CustomPainter {
-  _Sparkline(this.values, this.color);
-  final List<int> values;
-  final Color color;
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (values.length < 2) return;
-    final maxV = values.reduce((a, b) => a > b ? a : b).clamp(1, 1 << 30);
-    final path = Path();
-    for (var i = 0; i < values.length; i++) {
-      final x = size.width * i / (values.length - 1);
-      final y = size.height - size.height * values[i] / maxV;
-      i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
-    }
-    canvas.drawPath(path, Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.5);
-  }
-  @override
-  bool shouldRepaint(covariant _Sparkline old) => old.values != values || old.color != color;
-}
-
-/// トレンドプラグイン (D-167): `trend.suggest` のチップ。登録が無ければ何も出さない。
 class _TrendSuggestions extends ConsumerWidget {
   const _TrendSuggestions({required this.recent});
   final List<String> recent;

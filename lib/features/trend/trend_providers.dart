@@ -20,11 +20,53 @@ import 'trend_analysis.dart';
 
 /// トレンドワード. Phase-1 sample: `hashtags/trend` of the current SNS
 /// (server-side trend provider lands later).
-final trendingTagsProvider = FutureProvider.autoDispose<List<TrendTag>>((ref) async {
+final trendingTagsProvider = FutureProvider.autoDispose<List<TrendTag>>((ref) async => (await ref.watch(sourcedTrendsProvider.future)).tags);
+
+/// トレンドとその出どころ (D-388)。
+typedef SourcedTrends = ({List<TrendTag> tags, Map<String, List<AccountId>> sources});
+
+/// トレンドのワードの比べ方(`#` と大文字小文字を無視)。
+String trendKey(String tag) => tag.replaceFirst(RegExp(r'^#'), '').toLowerCase();
+
+/// **RASQ アカウントでまとめたトレンド** (D-388): いまの RASQ アカウントに入っている SNS アカウント**全部**
+/// (Misskey / Mastodon / Bluesky / mixi2 …)のトレンドを集め、同じワードは 1 つにまとめる。並びは各アカウントの順位を
+/// 交互に(1 位どうし → 2 位どうし …)。どのサーバーのトレンドか([SourcedTrends.sources])は、検索のトレンドの行に
+/// 「サーバーのアイコン + サーバー名」で出す。読めなかったアカウントは飛ばす。
+final sourcedTrendsProvider = FutureProvider.autoDispose<SourcedTrends>((ref) async {
   ref.watch(currentAccountProvider);
-  final s = ref.watch(currentSnsSessionProvider);
-  if (s == null) return const [];
-  return s.trendingTags();
+  final registry = ref.watch(pluginRegistryProvider);
+  final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+  final current = ref.watch(currentAccountSessionProvider);
+  final all = [?current, for (final x in sessions) if (x.account.key != current?.account.key) x];
+  final lists = await Future.wait([
+    for (final a in all)
+      () async {
+        try {
+          return (account: a.account, tags: await registry.session(a).trendingTags());
+        } catch (e) {
+          debugPrint('trend(${a.account}): $e');
+          return (account: a.account, tags: const <TrendTag>[]);
+        }
+      }(),
+  ]);
+  final tags = <TrendTag>[];
+  final sources = <String, List<AccountId>>{};
+  final longest = lists.fold(0, (m, l) => l.tags.length > m ? l.tags.length : m);
+  for (var i = 0; i < longest; i++) {
+    for (final l in lists) {
+      if (i >= l.tags.length) continue;
+      final t = l.tags[i];
+      final k = trendKey(t.tag);
+      final src = sources[k];
+      if (src == null) {
+        sources[k] = [l.account];
+        tags.add(t);
+      } else if (!src.contains(l.account)) {
+        src.add(l.account);
+      }
+    }
+  }
+  return (tags: tags, sources: sources);
 });
 
 /// トレンドスコープのグラフを [posts] に適用する共通口 (D-113)。

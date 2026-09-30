@@ -7,6 +7,8 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/navigation.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/dm/dm_room_screen.dart';
+import 'package:rasq_client/features/dm/dm_screen.dart';
 import 'package:rasq_client/features/post/post_detail_screen.dart';
 import 'package:rasq_client/features/search/search_screen.dart';
 import 'package:rasq_client/features/trend/trend_screen.dart';
@@ -121,6 +123,26 @@ void main() {
 
   final col3 = find.byType(ThirdColumnView);
   Finder inCol3(Finder f) => find.descendant(of: col3, matching: f);
+
+  testWidgets('左カラムのスワイプで戻る (D-388): タブの中のページを右へスワイプすると前のページへ。戻れないときは動かない', (tester) async {
+    final c = await pumpWide(tester);
+    final router = c.read(routerProvider);
+    router.go(Routes.dm);
+    await tester.pumpAndSettle();
+    final left = find.byKey(const ValueKey('pane.swipe.left'));
+    expect(left, findsOneWidget);
+    // タブの一番上: 右へ引いても何も起きない。
+    await tester.dragFrom(tester.getTopLeft(left) + const Offset(40, 300), const Offset(200, 0));
+    await tester.pumpAndSettle();
+    expect(find.byType(DmScreen), findsOneWidget);
+    router.push('${Routes.dm}/room/u1');
+    await tester.pumpAndSettle();
+    expect(find.byType(DmRoomScreen), findsOneWidget);
+    await tester.dragFrom(tester.getTopLeft(left) + const Offset(40, 300), const Offset(200, 0));
+    await tester.pumpAndSettle();
+    expect(find.byType(DmRoomScreen), findsNothing);
+    expect(find.byType(DmScreen), findsOneWidget);
+  });
 
   testWidgets('サイドの検索欄から開いた検索結果 (D-320): 第3カラムの < で閉じて検索(小型)へ戻れる', (tester) async {
     await pumpWide(tester);
