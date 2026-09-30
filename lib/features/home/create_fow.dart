@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
-import '../../app/router.dart';
 import '../../backend/rasq_account.dart' show orgateAccountProvider;
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
+import '../swing/swing_composer.dart';
 import '../swing/swing_providers.dart';
 import '../vc/astell_fows.dart' show openAstellCreateFow;
 
@@ -51,39 +50,24 @@ Future<void> openCreateFow(BuildContext context, WidgetRef ref, {Rect? anchor, V
   if (choices.length == 1) {
     pick = choices.single;
   } else {
-    pick = await ref.read(overlayManagerProvider).showFow<CreateChoice>(
-          id: createFowId,
-          spec: () {
-            final screen = MediaQuery.sizeOf(context).height;
-            final f = ((choices.length * _rowHeight + RasqSpacing.md) / screen).clamp(0.1, 0.9);
-            return FowSpec(
-              type: FowPanelType.widget,
-              initialHeightFactor: f,
-              minHeightFactor: f,
-              maxHeightFactor: f,
-              resizable: false,
-              showHandle: false,
-              maxWidth: createFowWidth,
-              hAlign: FowHAlign.end,
-              anchor: anchor,
-              anchorBelow: anchor == null ? null : false,
-            );
-          }(),
-          semanticsLabel: '作成',
-          barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
-          builder: (ctx, handle) => ListView(padding: EdgeInsets.zero, children: [
-            for (final c in choices)
-              RasqListTile(
-                key: ValueKey('create.${c.name}'),
-                leading: Icon(createChoiceLabel(c).icon),
-                title: createChoiceLabel(c).title,
-                chevron: false,
-                onTap: () => handle.close(result: c),
-              ),
-          ]),
-        );
+    pick = await _showFow<CreateChoice>(ref, context, anchor: anchor, rows: choices.length, builder: (close) => Column(mainAxisSize: MainAxisSize.min, children: [
+          for (final c in choices)
+            RasqListTile(
+              key: ValueKey('create.${c.name}'),
+              leading: Icon(createChoiceLabel(c).icon),
+              title: createChoiceLabel(c).title,
+              chevron: false,
+              onTap: () => close(c),
+            ),
+        ]));
   }
   if (pick == null || !context.mounted) return;
+  // Swing (D-380): 同じ所に 2 段目(画像 / 動画 / プラグイン / 背景とテキスト)。
+  if (pick == CreateChoice.swing) {
+    final start = await _showFow<SwingStart>(ref, context, anchor: anchor, rows: SwingStart.values.length, builder: (close) => SwingStartList(onPick: close));
+    if (start != null && context.mounted) await startSwing(context, ref, start);
+    return;
+  }
   switch (pick) {
     case CreateChoice.post:
       final created = await showComposer(ref, const ComposeNormal());
@@ -93,6 +77,30 @@ Future<void> openCreateFow(BuildContext context, WidgetRef ref, {Rect? anchor, V
     case CreateChoice.astell:
       await openAstellCreateFow(context, ref);
     case CreateChoice.swing:
-      await context.push(Routes.swingNew);
+      break;
   }
+}
+
+/// ＋ の上に付く小さい FOW(見出しなし、幅 [createFowWidth]、高さは行の数から)。
+Future<T?> _showFow<T>(WidgetRef ref, BuildContext context, {required Rect? anchor, required int rows, required Widget Function(void Function(T value) close) builder}) {
+  final screen = MediaQuery.sizeOf(context).height;
+  final f = ((rows * _rowHeight + RasqSpacing.md) / screen).clamp(0.1, 0.9);
+  return ref.read(overlayManagerProvider).showFow<T>(
+        id: createFowId,
+        spec: FowSpec(
+          type: FowPanelType.widget,
+          initialHeightFactor: f,
+          minHeightFactor: f,
+          maxHeightFactor: f,
+          resizable: false,
+          showHandle: false,
+          maxWidth: createFowWidth,
+          hAlign: FowHAlign.end,
+          anchor: anchor,
+          anchorBelow: anchor == null ? null : false,
+        ),
+        semanticsLabel: '作成',
+        barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
+        builder: (ctx, handle) => SingleChildScrollView(child: builder((v) => handle.close(result: v))),
+      );
 }
