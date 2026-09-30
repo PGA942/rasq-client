@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
+import '../home/create_fow.dart' show AstellCreateFab;
 import '../../shell/rasq_terms_gate.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/providers.dart';
@@ -82,13 +83,8 @@ class VcScreen extends ConsumerWidget {
           ]),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        // 全画面ビューワー(ルートナビゲータへ push)の Hero と衝突しないよう固有タグ (D-145)。
-        heroTag: 'astell.create',
-        tooltip: 'VC を作成',
-        onPressed: () => openAstellCreateFow(context, ref),
-        child: const Icon(Icons.add),
-      ),
+      // ＋ (D-381): Swing / AsTell / RASQ に投稿(設定で出すものを選べる)。
+      floatingActionButton: const AstellCreateFab(),
     );
   }
 }

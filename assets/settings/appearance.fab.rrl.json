@@ -1,0 +1,467 @@
+{
+  "schema": "rasq.settings-page/1",
+  "area": "appearance.fab",
+  "title": "＋ ボタンの割り当て",
+  "defaults": {
+    "homeTap": "post",
+    "homeUp": "swing",
+    "homeDown": "astell",
+    "trendTap": "post",
+    "trendUp": "swing",
+    "trendDown": "astell",
+    "astellSwing": true,
+    "astellAstell": true,
+    "astellRasq": true
+  },
+  "root": {
+    "t": "Column",
+    "c": [
+      {
+        "t": "Notice",
+        "p": {
+          "kind": "info",
+          "text": "ホームとトレンドの ＋ は、タップ・上へスワイプ・下へスワイプで始めるものを変えられます。長押しで 3 つを並べて選べます。",
+          "detail": "D-381。領域 appearance.fab。使えないもの(RASQ アカウントが無いときの RASQ に投稿 / Swing など)を選んでいると、押したときに理由を出します。"
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "ホームの ＋: タップ"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeTap",
+        "p": {
+          "title": "投稿",
+          "value": "post",
+          "group": "$.settings.homeTap"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeTap",
+        "p": {
+          "title": "RASQ に投稿",
+          "value": "rasq",
+          "group": "$.settings.homeTap"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeTap",
+        "p": {
+          "title": "Swing を作る",
+          "value": "swing",
+          "group": "$.settings.homeTap"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeTap",
+        "p": {
+          "title": "AsTell を作る",
+          "value": "astell",
+          "group": "$.settings.homeTap"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeTap",
+        "p": {
+          "title": "なし",
+          "value": "none",
+          "group": "$.settings.homeTap"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "ホームの ＋: 上へスワイプ"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeUp",
+        "p": {
+          "title": "投稿",
+          "value": "post",
+          "group": "$.settings.homeUp"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeUp",
+        "p": {
+          "title": "RASQ に投稿",
+          "value": "rasq",
+          "group": "$.settings.homeUp"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeUp",
+        "p": {
+          "title": "Swing を作る",
+          "value": "swing",
+          "group": "$.settings.homeUp"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeUp",
+        "p": {
+          "title": "AsTell を作る",
+          "value": "astell",
+          "group": "$.settings.homeUp"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeUp",
+        "p": {
+          "title": "なし",
+          "value": "none",
+          "group": "$.settings.homeUp"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "ホームの ＋: 下へスワイプ"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeDown",
+        "p": {
+          "title": "投稿",
+          "value": "post",
+          "group": "$.settings.homeDown"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeDown",
+        "p": {
+          "title": "RASQ に投稿",
+          "value": "rasq",
+          "group": "$.settings.homeDown"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeDown",
+        "p": {
+          "title": "Swing を作る",
+          "value": "swing",
+          "group": "$.settings.homeDown"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeDown",
+        "p": {
+          "title": "AsTell を作る",
+          "value": "astell",
+          "group": "$.settings.homeDown"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "homeDown",
+        "p": {
+          "title": "なし",
+          "value": "none",
+          "group": "$.settings.homeDown"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "トレンドの ＋: タップ"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendTap",
+        "p": {
+          "title": "投稿",
+          "value": "post",
+          "group": "$.settings.trendTap"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendTap",
+        "p": {
+          "title": "RASQ に投稿",
+          "value": "rasq",
+          "group": "$.settings.trendTap"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendTap",
+        "p": {
+          "title": "Swing を作る",
+          "value": "swing",
+          "group": "$.settings.trendTap"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendTap",
+        "p": {
+          "title": "AsTell を作る",
+          "value": "astell",
+          "group": "$.settings.trendTap"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendTap",
+        "p": {
+          "title": "なし",
+          "value": "none",
+          "group": "$.settings.trendTap"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "トレンドの ＋: 上へスワイプ"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendUp",
+        "p": {
+          "title": "投稿",
+          "value": "post",
+          "group": "$.settings.trendUp"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendUp",
+        "p": {
+          "title": "RASQ に投稿",
+          "value": "rasq",
+          "group": "$.settings.trendUp"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendUp",
+        "p": {
+          "title": "Swing を作る",
+          "value": "swing",
+          "group": "$.settings.trendUp"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendUp",
+        "p": {
+          "title": "AsTell を作る",
+          "value": "astell",
+          "group": "$.settings.trendUp"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendUp",
+        "p": {
+          "title": "なし",
+          "value": "none",
+          "group": "$.settings.trendUp"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "トレンドの ＋: 下へスワイプ"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendDown",
+        "p": {
+          "title": "投稿",
+          "value": "post",
+          "group": "$.settings.trendDown"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendDown",
+        "p": {
+          "title": "RASQ に投稿",
+          "value": "rasq",
+          "group": "$.settings.trendDown"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendDown",
+        "p": {
+          "title": "Swing を作る",
+          "value": "swing",
+          "group": "$.settings.trendDown"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendDown",
+        "p": {
+          "title": "AsTell を作る",
+          "value": "astell",
+          "group": "$.settings.trendDown"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "RadioListTile",
+        "k": "trendDown",
+        "p": {
+          "title": "なし",
+          "value": "none",
+          "group": "$.settings.trendDown"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SectionHeader",
+        "p": {
+          "title": "AsTell の ＋ に出すもの"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "astellSwing",
+        "p": {
+          "title": "Swing を作る",
+          "value": "$.settings.astellSwing",
+          "subtitle": "画像 / 動画 / プラグイン / 背景とテキスト"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "astellAstell",
+        "p": {
+          "title": "AsTell を作る",
+          "value": "$.settings.astellAstell",
+          "subtitle": "声で話せる部屋を開きます"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      },
+      {
+        "t": "SwitchListTile",
+        "k": "astellRasq",
+        "p": {
+          "title": "RASQ に投稿",
+          "value": "$.settings.astellRasq",
+          "subtitle": "RASQ アカウントのページに投稿します"
+        },
+        "on": {
+          "change": "settings.set"
+        }
+      }
+    ]
+  }
+}

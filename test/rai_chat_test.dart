@@ -256,7 +256,7 @@ void main() {
     expect(st.busy, isFalse);
     expect(st.bubble, contains('「投稿する」を関数で進めました'));
     final trace = st.log.first.trace;
-    expect(trace.length, 3); // D-378: ＋ → 「投稿」の 2 手順(「投稿」を選ぶ手順は関数が無いので飛ばす)
+    expect(trace.length, 2);
     expect(trace.first.status, RaiAutoStatus.skipped);
     expect(trace.last.status, RaiAutoStatus.done);
     expect(find.byKey(const ValueKey('rai.chat.trace.0')), findsNothing); // 工程タイルは RAi ページ(閉じている)で出る
