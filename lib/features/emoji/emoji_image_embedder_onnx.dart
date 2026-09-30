@@ -11,6 +11,7 @@ import 'emoji_image_embedder.dart';
 
 /// 端末の onnxruntime で回す SigLIP2 の画像側: `pixel_values`[n,3,224,224] → `pooler_output`[n,768]。
 /// **同じ SigLIP2 のテキスト側**(`siglip2-onnx`)で作った文のベクトルと、内積で比べられる。
+/// 投稿の画像 (D-390) にも使う: RASQ MobileNet(出力 `embedding`、RASQ MiniLM と同じ空間)。
 class OnnxEmojiImageEmbedder implements EmojiImageEmbedder {
   OnnxEmojiImageEmbedder._(this._session, this._output);
   final OrtSession _session;
@@ -20,7 +21,7 @@ class OnnxEmojiImageEmbedder implements EmojiImageEmbedder {
   static bool _envReady = false;
 
   @override
-  String get name => 'siglip2-vision-onnx';
+  String get name => _output == 'embedding' ? 'rasq-mobilenet-onnx' : 'siglip2-vision-onnx';
 
   static Future<OnnxEmojiImageEmbedder> load({required File model, int threads = 2}) async {
     if (!_envReady) {
@@ -38,7 +39,7 @@ class OnnxEmojiImageEmbedder implements EmojiImageEmbedder {
       throw StateError('image model: input "pixel_values" not found ($names)');
     }
     // 出力の名前は、書き出し方で違う(pooler_output / image_embeds)。どちらも無ければ、読み込みを断る。
-    final out = ['pooler_output', 'image_embeds'].where(session.outputNames.contains).firstOrNull;
+    final out = ['pooler_output', 'image_embeds', 'embedding'].where(session.outputNames.contains).firstOrNull;
     if (out == null) {
       final names = session.outputNames;
       session.release();

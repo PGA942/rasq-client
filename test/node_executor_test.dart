@@ -721,4 +721,30 @@ void main() {
     expect(await composerTargetAccounts(g, post('d1', 'ネタバレ注意です')), ['@sub@other.test', '@main@example.test']);
     expect(await composerTargetAccounts(g, post('d2', 'ただのあいさつ')), ['@main@example.test']);
   });
+
+  test('端末の埋め込み (D-390): 類似度ノードは投稿側を embedPosts(本文 + 画像)で比べる。参照文は embedTexts', () async {
+    // 本文はどれも関係なく、m3 だけ「画像」がラーメン。
+    final posts = [post('m1', 'きょうの天気'), post('m2', '猫がかわいい'), post('m3', 'おいしかった'), post('m4', 'ねむい')];
+    List<double> vec(bool ramen) => ramen ? [1.0, 0.0] : [0.0, 1.0];
+    final simBase = step('ml.similar', 's1');
+    final sim = simBase.copyWith(inputs: [simBase.inputs[0].copyWith(value: 'ラーメン'), ...simBase.inputs.skip(1)]);
+    final cmpBase = step('compare', 'x2');
+    final cmp = cmpBase.copyWith(inputs: [cmpBase.inputs[0], cmpBase.inputs[1], cmpBase.inputs[2].copyWith(value: '0.5')]);
+    final g = NodeGraph(
+      nodes: [source('n1'), step('remove', 'n2'), timelineNode('n3'), cmp, sim],
+      edges: [data('n1', 'n2'), data('n2', 'n3'), condEdge('n2', 'x2'), const GraphEdge(from: 's1', fromPort: 0, to: 'x2', toPort: 0)],
+    );
+    final seen = <String>[];
+    final out = await runNodeGraph(
+      g,
+      fetch: (_) async => posts,
+      embedTexts: (texts) async => [for (final t in texts) vec(t.contains('ラーメン'))],
+      embedPosts: (ps) async {
+        seen.addAll([for (final p in ps) p.id]);
+        return [for (final p in ps) vec(p.id == 'm3')];
+      },
+    );
+    expect(seen, containsAll(['m1', 'm2', 'm3', 'm4']), reason: '投稿側は embedPosts');
+    expect([for (final p in out!) p.id], ['m1', 'm2', 'm4'], reason: '画像がラーメンの m3 が、似ているとして消える');
+  });
 }

@@ -419,7 +419,7 @@ void main() {
     final fowList = find.descendant(of: find.byType(RaiModelsBody), matching: find.byType(Scrollable)).first;
     await tester.scrollUntilVisible(find.byKey(const ValueKey('rai.embed.tile')), 120, scrollable: fowList);
     await tester.pumpAndSettle();
-    expect(find.text('MiniLM-L12 多言語(paraphrase, int8)'), findsOneWidget);
+    expect(find.text('RASQ MiniLM(文)'), findsOneWidget, reason: 'D-390: 既定は RASQ MiniLM');
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.embed.phase'))).data, '未ダウンロード');
     expect(find.textContaining('いまは語の一致で探します'), findsOneWidget);
     await clearOfBar(tester, fowList, find.byKey(const ValueKey('rai.embed.download')));
