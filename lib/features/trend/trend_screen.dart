@@ -4,7 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
-import '../home/create_fow.dart' show CreateGestureFab;
+import '../home/create_fow.dart' show RadialCreateFab;
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../shell/third_column.dart' show paneBack;
@@ -87,7 +87,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
       length: tabs.length,
       child: Scaffold(
         // ＋ (D-381): ホームと同じ動き。投稿はこのワードのハッシュタグを入れて開く。
-        floatingActionButton: CreateGestureFab(scope: 'trend', heroTag: 'fab.trend', postText: '#${widget.tag.replaceFirst(RegExp(r'^#'), '')} '),
+        floatingActionButton: RadialCreateFab(scope: 'trend', heroTag: 'fab.trend', postText: '#${widget.tag.replaceFirst(RegExp(r'^#'), '')} '),
         body: SafeArea(
           bottom: false,
           child: Column(children: [

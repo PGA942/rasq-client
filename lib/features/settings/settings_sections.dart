@@ -62,7 +62,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('モーションの抑制', route: '/settings/dsl/appearance.motion'),
     SettingsRow('タイムラインの表示', subtitle: 'タイムラインの「投稿を読み込む」', detail: 'TL の上下の「投稿を読み込む」', route: '/settings/dsl/appearance.timeline'),
     SettingsRow('ピクチャインピクチャ', route: '/settings/dsl/appearance.video'),
-    SettingsRow('＋ ボタンの割り当て', subtitle: 'タップ / 上下のスワイプで始めるもの', route: '/settings/dsl/appearance.fab'),
+    SettingsRow('＋ ボタンの割り当て', subtitle: '押したときに始めるもの', route: '/settings/dsl/appearance.fab'),
     SettingsRow('画像・動画の保存先', subtitle: '写真(カメラロール)/ ファイル / 保存するたびに選ぶ', route: '/settings/dsl/media.save'),
     SettingsRow('通知の表示形式', route: '/settings/dsl/appearance.notifications'),
   ]),

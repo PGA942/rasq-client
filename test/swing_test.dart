@@ -29,12 +29,20 @@ import 'package:rasq_client/features/swing/swing_providers.dart';
 import 'package:rasq_client/features/swing/swing_viewer.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart' show RasqActionCircle;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fake_slot_runtime.dart';
 import 'support/fakes.dart';
 
 /// Swing (D-377 / Central S-056)。
+/// いまの割り当て(テスト用: WidgetRef なしで読む)。
+({String tap, List<String> slots}) fabAssignmentOf(ProviderContainer c, String scope) {
+  final m = c.read(settingsAreaProvider(fabSettingsArea)).value ?? const <String, Object?>{};
+  final raw = m['${scope}Slots'];
+  return (tap: '${m['${scope}Tap'] ?? 'post'}', slots: raw is List ? [for (final x in raw) '$x'] : const ['swing', 'astell', 'rasq']);
+}
+
 void main() {
   final now = DateTime.now().toUtc();
   Map<String, Object?> swing(String id, String author, {String kind = 'text', String text = 'やっほー', Map<String, Object?>? media, Map<String, Object?>? plugin, Duration age = const Duration(minutes: 30)}) => {
@@ -500,7 +508,7 @@ void main() {
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull, reason: 'プラグインを選ぶまで出せない');
   });
 
-  testWidgets('＋ (D-382): タップ = 投稿。スライドを始めるとレール → 端で離すと作成ページ(途中なら何もしない)。素早く払っても長押しにならない。長押し / ホバーで横にチップ。割り当ては設定で。トレンドはハッシュタグ、AsTell の ＋ はチップ', (tester) async {
+  testWidgets('＋ (D-383): タップ = 投稿。スライドの向き(上 / 左 / 左上)で始める。素早く払っても長押しにならない。長押し / ホバーで暗くして丸ボタンを展開、歯車で並べ替え(ドラッグで入れる / 外す)。トレンドはハッシュタグ、AsTell の ＋', (tester) async {
     final (mock, _, _, _) = central(const []);
     final c = await pumpApp(tester, mock);
     final fab = find.byKey(const ValueKey('fab.home.gesture'));
@@ -510,59 +518,101 @@ void main() {
     expect(c.read(overlayManagerProvider).contains(composerFowId), isTrue);
     c.read(overlayManagerProvider).close(composerFowId);
     await tester.pumpAndSettle();
-    // スライドを始めるとレール(上 = Swing、下 = AsTell)。途中で離すと何もしない。
+    // スライドを始めると 3 つの丸ボタンが出る(向かっている方が強く)。少しだけで離すと何もしない。
     var g = await tester.startGesture(tester.getCenter(fab));
     await g.moveBy(const Offset(0, -20));
-    await g.moveBy(const Offset(0, -30));
+    await g.moveBy(const Offset(0, -20));
     await tester.pump(const Duration(milliseconds: 200));
-    expect(find.byKey(const ValueKey('fab.home.track')), findsOneWidget);
-    expect(find.descendant(of: find.byKey(const ValueKey('fab.home.track.up')), matching: find.text('Swing')), findsOneWidget);
+    for (final k in ['up', 'left', 'upLeft']) {
+      expect(find.byKey(ValueKey('fab.home.action.$k')), findsOneWidget, reason: k);
+    }
+    expect(find.descendant(of: find.byKey(const ValueKey('fab.home.action.up')), matching: find.text('Swing')), findsOneWidget);
     await g.up();
     await tester.pumpAndSettle();
-    expect(find.byType(SwingComposerScreen), findsNothing, reason: '端まで行かなければ何もしない');
+    expect(find.byType(SwingComposerScreen), findsNothing, reason: '十分動かさなければ何もしない');
     expect(c.read(overlayManagerProvider).contains(composerFowId), isFalse, reason: '動かしたあとの離すは押したことにしない');
-    // 下の端まで → AsTell を作る。
+    // 左へ = AsTell を作る(既定)。
     g = await tester.startGesture(tester.getCenter(fab));
-    await g.moveBy(const Offset(0, 20));
-    await g.moveBy(const Offset(0, 120));
+    await g.moveBy(const Offset(-20, 0));
+    await g.moveBy(const Offset(-80, 0));
+    await tester.pump();
+    expect(tester.widget<RasqActionCircle>(find.byKey(const ValueKey('fab.home.action.left'))).selected, isTrue);
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(c.read(overlayManagerProvider).contains(astellCreateFowId), isTrue, reason: '左 = AsTell');
+    c.read(overlayManagerProvider).close(astellCreateFowId);
+    await tester.pumpAndSettle();
+    // 左上へ = RASQ に投稿(既定)。
+    g = await tester.startGesture(tester.getCenter(fab));
+    await g.moveBy(const Offset(-15, -15));
+    await g.moveBy(const Offset(-60, -60));
     await tester.pump();
     await g.up();
     await tester.pumpAndSettle();
-    expect(c.read(overlayManagerProvider).contains(astellCreateFowId), isTrue, reason: '下の端 = AsTell');
-    c.read(overlayManagerProvider).close(astellCreateFowId);
+    expect(find.byKey(const ValueKey('composer.pill.rasq')), findsOneWidget, reason: '左上 = RASQ に投稿');
+    c.read(overlayManagerProvider).close(composerFowId);
     await tester.pumpAndSettle();
-    // 素早く上へ払う → 長押しにはならず、Swing の作成ページへ。
+    // 素早く上へ払う → 長押しにならず、Swing の作成ページへ。
     await tester.fling(fab, const Offset(0, -160), 3000);
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('fab.home.chips')), findsNothing, reason: '長押しにならない');
+    expect(find.byKey(const ValueKey('fab.home.settings')), findsNothing, reason: '展開(長押し)にならない');
     expect(find.byType(SwingComposerScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('swing.start.image')), findsOneWidget, reason: '始め方の一覧');
     c.read(routerProvider).pop();
     await tester.pumpAndSettle();
-    // 長押し = 横にチップ(上 / タップ / 下の 3 つ)。外を押すと隠れる。
+    // 長押し = 暗くして展開、＋ は歯車に。背景を押すと閉じる。
     await tester.longPress(fab);
     await tester.pumpAndSettle();
-    for (final k in ['swing', 'post', 'astell']) {
-      expect(find.byKey(ValueKey('fab.home.chip.$k')), findsOneWidget, reason: k);
-    }
+    expect(find.byKey(const ValueKey('fab.home.scrim')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('fab.home.settings')), matching: find.byIcon(Icons.settings)), findsOneWidget);
     expect(c.read(overlayManagerProvider).contains(composerFowId), isFalse, reason: '長押しのあとの離すは押したことにしない');
-    expect(tester.getCenter(find.byKey(const ValueKey('fab.home.chips'))).dx, lessThan(tester.getCenter(fab).dx), reason: '右に置けなければ左');
-    await tester.tap(find.byKey(const ValueKey('fab.home.chip.astell')));
+    await tester.tapAt(const Offset(20, 300));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('fab.home.settings')), findsNothing);
+    // 長押し → 丸ボタンを押す。
+    await tester.longPress(fab);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('fab.home.action.left')));
     await tester.pumpAndSettle();
     expect(c.read(overlayManagerProvider).contains(astellCreateFowId), isTrue);
-    expect(find.byKey(const ValueKey('fab.home.chips')), findsNothing);
     c.read(overlayManagerProvider).close(astellCreateFowId);
     await tester.pumpAndSettle();
-    // ホバー(マウス)でもチップ。
+    // ホバー(マウス)でも展開、離れると閉じる。
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
     await mouse.moveTo(tester.getCenter(fab));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('fab.home.chips')), findsOneWidget);
+    expect(find.byKey(const ValueKey('fab.home.action.up')), findsOneWidget);
     await mouse.moveTo(Offset.zero);
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('fab.home.chips')), findsNothing);
+    expect(find.byKey(const ValueKey('fab.home.settings')), findsNothing);
     await mouse.removePointer();
+    // 歯車 → 並べ替えの FOW: 下の列から枠へ入れる / 枠から列へ外す。
+    await tester.longPress(fab);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('fab.home.settings')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('fab.editor.close')), findsOneWidget);
+    expect(find.byKey(const ValueKey('fab.editor.palette.post')), findsOneWidget);
+    expect(find.byKey(ValueKey('fab.editor.palette.post:${fakeSession().account.key}')), findsOneWidget, reason: 'アカウントごとの投稿');
+    Future<void> dragTo(Finder from, Finder to) async {
+      final gg = await tester.startGesture(tester.getCenter(from));
+      await tester.pump(const Duration(milliseconds: 50));
+      await gg.moveBy(const Offset(0, -10));
+      await tester.pump();
+      await gg.moveTo(tester.getCenter(to));
+      await tester.pump();
+      await gg.up();
+      await tester.pumpAndSettle();
+    }
+
+    await dragTo(find.byKey(const ValueKey('fab.editor.palette.post')), find.byKey(const ValueKey('fab.editor.slot.upLeft')));
+    expect(fabAssignmentOf(c, 'home').slots, ['swing', 'astell', 'post']);
+    await dragTo(find.byKey(const ValueKey('fab.editor.slot.up')), find.byKey(const ValueKey('fab.editor.palette')));
+    expect(fabAssignmentOf(c, 'home').slots, ['none', 'astell', 'post']);
+    await tester.tap(find.byKey(const ValueKey('fab.editor.close')));
+    await tester.pumpAndSettle();
+    expect(c.read(overlayManagerProvider).contains(fabEditorFowId), isFalse);
     // 設定で タップ = RASQ に投稿 に。
     await c.read(settingsAreaProvider(fabSettingsArea).notifier).set('homeTap', 'rasq');
     await tester.pumpAndSettle();
@@ -583,15 +633,18 @@ void main() {
     c.read(routerProvider).pop();
     await tester.pumpAndSettle();
 
-    // AsTell の ＋: 横にチップ(Swing / AsTell / RASQ に投稿)。
+    // AsTell の ＋: タップ = AsTell を作る、長押しで Swing / RASQ / 投稿。
     c.read(routerProvider).go(Routes.vc);
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('VC を作成'));
+    await tester.tap(find.byKey(const ValueKey('fab.astell.gesture')));
     await tester.pumpAndSettle();
-    for (final k in ['swing', 'astell', 'rasq']) {
-      expect(find.byKey(ValueKey('fab.astell.chip.$k')), findsOneWidget, reason: k);
-    }
-    await tester.tap(find.byKey(const ValueKey('fab.astell.chip.swing')));
+    expect(c.read(overlayManagerProvider).contains(astellCreateFowId), isTrue);
+    c.read(overlayManagerProvider).close(astellCreateFowId);
+    await tester.pumpAndSettle();
+    await tester.longPress(find.byKey(const ValueKey('fab.astell.gesture')));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byKey(const ValueKey('fab.astell.action.up')), matching: find.text('Swing')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('fab.astell.action.up')));
     await tester.pumpAndSettle();
     expect(find.byType(SwingComposerScreen), findsOneWidget);
   });
