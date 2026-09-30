@@ -43,7 +43,35 @@ import 'support/fakes.dart';
   return (tap: '${m['${scope}Tap'] ?? 'post'}', slots: raw is List ? [for (final x in raw) '$x'] : const ['swing', 'astell', 'rasq']);
 }
 
+Future<void> setFabSlotsOf(ProviderContainer c, String scope, List<String> slots) => c.read(settingsAreaProvider(fabSettingsArea).notifier).set('${scope}Slots', slots);
+
 void main() {
+  test('＋ の枠 (D-385): 置いた数で並びが変わる(内側 3 + 外側 4)、スライドの距離で輪を選ぶ、保存は詰めて 7 つまで', () {
+    Offset p(int n, int i) => fabSlotPositions(n)[i];
+    expect(fabSlotPositions(1).length, 1);
+    expect(p(1, 0).dx, closeTo(0, 0.01), reason: '1 つなら上');
+    expect(p(2, 1).dy, closeTo(0, 0.01), reason: '2 つ目は左');
+    expect(fabSlotPositions(3).every((o) => (o.distance - fabInnerRadius).abs() < 0.01), isTrue);
+    expect(fabSlotPositions(4)[3].distance, closeTo(fabOuterRadius, 0.01), reason: '4 つ目から外側');
+    expect(fabSlotPositions(7).length, 7);
+    expect(fabSlotPositions(9).length, 7);
+    // 外側が 4 つなら上から 90 / 60 / 30 / 0°。
+    expect(p(7, 3).dx, closeTo(0, 0.01));
+    expect(p(7, 6).dy, closeTo(0, 0.01));
+    expect(fabSlotFor(const Offset(0, -80), 3), 0);
+    expect(fabSlotFor(const Offset(-80, 0), 3), 1);
+    expect(fabSlotFor(const Offset(-60, -60), 3), 2);
+    expect(fabSlotFor(const Offset(-20, -20), 3), isNull, reason: '動かし足りない');
+    expect(fabSlotFor(const Offset(80, 0), 3), isNull, reason: '右へ');
+    expect(fabSlotFor(const Offset(0, -170), 3), 0, reason: '外側が無ければ遠くても内側');
+    expect(fabSlotFor(const Offset(0, -170), 7), 3);
+    expect(fabSlotFor(const Offset(-170, 0), 7), 6);
+    expect(fabSlotFor(const Offset(-80, -140), 7), 4, reason: '60°');
+    expect(fabSlotFor(const Offset(0, -80), 7), 0, reason: '近ければ内側');
+    expect(normalizeFabSlots(['none', 'astell', 'post', 'astell', 'none']), ['astell', 'post'], reason: 'D-383 の保存(空き付き)も読める');
+    expect(normalizeFabSlots([for (var i = 0; i < 9; i++) 'a$i']).length, fabMaxSlots);
+  });
+
   final now = DateTime.now().toUtc();
   Map<String, Object?> swing(String id, String author, {String kind = 'text', String text = 'やっほー', Map<String, Object?>? media, Map<String, Object?>? plugin, Duration age = const Duration(minutes: 30)}) => {
         'id': id,
@@ -523,10 +551,11 @@ void main() {
     await g.moveBy(const Offset(0, -20));
     await g.moveBy(const Offset(0, -20));
     await tester.pump(const Duration(milliseconds: 200));
-    for (final k in ['up', 'left', 'upLeft']) {
-      expect(find.byKey(ValueKey('fab.home.action.$k')), findsOneWidget, reason: k);
+    for (var i = 0; i < 3; i++) {
+      expect(find.byKey(ValueKey('fab.home.action.$i')), findsOneWidget, reason: '$i');
     }
-    expect(find.descendant(of: find.byKey(const ValueKey('fab.home.action.up')), matching: find.text('Swing')), findsOneWidget);
+    expect(find.byKey(const ValueKey('fab.home.action.3')), findsNothing, reason: '3 つなら外側の輪は無い');
+    expect(find.descendant(of: find.byKey(const ValueKey('fab.home.action.0')), matching: find.text('Swing')), findsOneWidget);
     await g.up();
     await tester.pumpAndSettle();
     expect(find.byType(SwingComposerScreen), findsNothing, reason: '十分動かさなければ何もしない');
@@ -536,7 +565,7 @@ void main() {
     await g.moveBy(const Offset(-20, 0));
     await g.moveBy(const Offset(-80, 0));
     await tester.pump();
-    expect(tester.widget<RasqActionCircle>(find.byKey(const ValueKey('fab.home.action.left'))).selected, isTrue);
+    expect(tester.widget<RasqActionCircle>(find.byKey(const ValueKey('fab.home.action.1'))).selected, isTrue);
     await g.up();
     await tester.pumpAndSettle();
     expect(c.read(overlayManagerProvider).contains(astellCreateFowId), isTrue, reason: '左 = AsTell');
@@ -571,7 +600,7 @@ void main() {
     // 長押し → 丸ボタンを押す。
     await tester.longPress(fab);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('fab.home.action.left')));
+    await tester.tap(find.byKey(const ValueKey('fab.home.action.1')));
     await tester.pumpAndSettle();
     expect(c.read(overlayManagerProvider).contains(astellCreateFowId), isTrue);
     c.read(overlayManagerProvider).close(astellCreateFowId);
@@ -581,7 +610,7 @@ void main() {
     await mouse.addPointer(location: Offset.zero);
     await mouse.moveTo(tester.getCenter(fab));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('fab.home.action.up')), findsOneWidget);
+    expect(find.byKey(const ValueKey('fab.home.action.0')), findsOneWidget);
     await mouse.moveTo(Offset.zero);
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
@@ -606,13 +635,35 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    await dragTo(find.byKey(const ValueKey('fab.editor.palette.post')), find.byKey(const ValueKey('fab.editor.slot.upLeft')));
+    await dragTo(find.byKey(const ValueKey('fab.editor.palette.post')), find.byKey(const ValueKey('fab.editor.slot.2')));
     expect(fabAssignmentOf(c, 'home').slots, ['swing', 'astell', 'post']);
-    await dragTo(find.byKey(const ValueKey('fab.editor.slot.up')), find.byKey(const ValueKey('fab.editor.palette')));
-    expect(fabAssignmentOf(c, 'home').slots, ['none', 'astell', 'post']);
+    // 空き枠(4 つ目 = 外側の輪)へ足す。
+    await dragTo(find.byKey(const ValueKey('fab.editor.palette.rasq')), find.byKey(const ValueKey('fab.editor.slot.add')));
+    expect(fabAssignmentOf(c, 'home').slots, ['swing', 'astell', 'post', 'rasq']);
+    expect(find.byKey(const ValueKey('fab.editor.slot.3')), findsOneWidget);
+    // 枠どうしで入れ替える。
+    await dragTo(find.byKey(const ValueKey('fab.editor.slot.3')), find.byKey(const ValueKey('fab.editor.slot.0')));
+    expect(fabAssignmentOf(c, 'home').slots, ['rasq', 'astell', 'post', 'swing']);
+    // 列へ戻すと外れて詰まる。
+    await dragTo(find.byKey(const ValueKey('fab.editor.slot.0')), find.byKey(const ValueKey('fab.editor.palette')));
+    expect(fabAssignmentOf(c, 'home').slots, ['astell', 'post', 'swing']);
     await tester.tap(find.byKey(const ValueKey('fab.editor.close')));
     await tester.pumpAndSettle();
     expect(c.read(overlayManagerProvider).contains(fabEditorFowId), isFalse);
+    // 5 つ置く → 外側の輪に 2 つ。遠くまで動かすと外側、近くなら内側。
+    await setFabSlotsOf(c, 'home', ['swing', 'astell', 'rasq', 'post', 'post:${fakeSession().account.key}']);
+    await tester.pumpAndSettle();
+    g = await tester.startGesture(tester.getCenter(fab));
+    await g.moveBy(const Offset(-20, -5));
+    await g.moveBy(const Offset(-140, -52));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('fab.home.action.4')), findsOneWidget);
+    expect(tester.widget<RasqActionCircle>(find.byKey(const ValueKey('fab.home.action.4'))).selected, isTrue, reason: '外側の左寄り');
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isTrue, reason: 'アカウントの投稿');
+    c.read(overlayManagerProvider).close(composerFowId);
+    await tester.pumpAndSettle();
     // 設定で タップ = RASQ に投稿 に。
     await c.read(settingsAreaProvider(fabSettingsArea).notifier).set('homeTap', 'rasq');
     await tester.pumpAndSettle();
@@ -643,8 +694,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.longPress(find.byKey(const ValueKey('fab.astell.gesture')));
     await tester.pumpAndSettle();
-    expect(find.descendant(of: find.byKey(const ValueKey('fab.astell.action.up')), matching: find.text('Swing')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('fab.astell.action.up')));
+    expect(find.descendant(of: find.byKey(const ValueKey('fab.astell.action.0')), matching: find.text('Swing')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('fab.astell.action.0')));
     await tester.pumpAndSettle();
     expect(find.byType(SwingComposerScreen), findsOneWidget);
   });

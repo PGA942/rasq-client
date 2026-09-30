@@ -381,6 +381,35 @@ void main() {
     });
   });
 
+  testWidgets('VC ホームの検索 (D-385): トレンドと同じ角丸の欄。名前 / ジャンル / ホストで探し、押すと下に伸びて節で絞れる', (tester) async {
+    await pump(tester);
+    await openVc(tester);
+    final box = find.byKey(const ValueKey('astell.search'));
+    expect(tester.widget<RasqExpandableSearchBox>(box).expanded, isFalse);
+    await tester.enterText(find.descendant(of: box, matching: find.byType(TextField)), 'ゲーム制作');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('astell.search.results')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('astell.search.results')), matching: find.text('Create Game')), findsOneWidget, reason: 'ジャンルで当たる');
+    expect(tester.widget<RasqExpandableSearchBox>(box).expanded, isTrue, reason: '入力中は伸びる');
+    await tester.enterText(find.descendant(of: box, matching: find.byType(TextField)), 'よもぎもち');
+    await tester.pumpAndSettle();
+    final results = find.byKey(const ValueKey('astell.search.results'));
+    expect(find.descendant(of: results, matching: find.text('サプライズ')), findsOneWidget, reason: 'ホストで当たる(招待も)');
+    expect(find.descendant(of: results, matching: find.text('打ち上げ反省会')), findsOneWidget);
+    // 節で絞る: 招待だけ。
+    await tester.tap(find.descendant(of: box, matching: find.text('招待')));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: results, matching: find.text('サプライズ')), findsOneWidget);
+    expect(find.descendant(of: results, matching: find.text('打ち上げ反省会')), findsNothing);
+    // 消すと元の一覧(節の絞り込みは残る → リセット)。
+    await tester.tap(find.byKey(const ValueKey('astell.search.clear')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: box, matching: find.text('リセット')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('astell.search.results')), findsNothing);
+    expect(find.byType(AstellTile), findsWidgets, reason: '元の一覧');
+  });
+
   testWidgets('VC ホーム: おすすめ / トレンド / フォロー中 にタイル(ホスト / タイトル / 要約 / ジャンル / LIVE / 見てみる)', (tester) async {
     await pump(tester);
     await openVc(tester);
@@ -391,7 +420,7 @@ void main() {
     expect(find.textContaining('よもぎもち から招待'), findsOneWidget);
     expect(find.text('おすすめ'), findsOneWidget);
     expect(find.byType(AstellTile), findsWidgets);
-    final vcList = find.descendant(of: find.byType(VcScreen), matching: find.byType(Scrollable)).first;
+    final vcList = find.descendant(of: find.byKey(const ValueKey('astell.home.list')), matching: find.byType(Scrollable)).first;
     // 近日開催 (D-159): 予約中のルームの節がおすすめの次に入る。
     await tester.scrollUntilVisible(find.text('近日開催'), 200, scrollable: vcList);
     await tester.pumpAndSettle();
@@ -417,7 +446,7 @@ void main() {
     // 要約なしのタイルは空表示、LIVE のタイルにはバッジ。
     expect(find.text('説明はありません。'), findsWidgets);
     expect(find.text('LIVE'), findsWidgets);
-    await tester.scrollUntilVisible(find.text('フォロー中のユーザーの VC はありません'), 200, scrollable: find.descendant(of: find.byType(VcScreen), matching: find.byType(Scrollable)).first);
+    await tester.scrollUntilVisible(find.text('フォロー中のユーザーの VC はありません'), 200, scrollable: find.descendant(of: find.byKey(const ValueKey('astell.home.list')), matching: find.byType(Scrollable)).first);
     await tester.pumpAndSettle();
     expect(find.text('フォロー中のユーザーの VC はありません'), findsOneWidget);
     // タイルの「…」→ 報告 → 通報シート → 送信 (D-150)。
@@ -1056,7 +1085,7 @@ void main() {
     expect(created.autoGenre, isFalse);
     await tester.pumpAndSettle();
     expect(find.text('近日開催'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('近日開催'), 200, scrollable: find.descendant(of: find.byType(VcScreen), matching: find.byType(Scrollable)).first);
+    await tester.scrollUntilVisible(find.text('近日開催'), 200, scrollable: find.descendant(of: find.byKey(const ValueKey('astell.home.list')), matching: find.byType(Scrollable)).first);
     await tester.pumpAndSettle();
     expect(find.textContaining('開催予定 '), findsWidgets);
   });
