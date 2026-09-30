@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
-import '../home/create_fow.dart' show AstellCreateFab;
+import '../home/create_fow.dart' show RadialCreateFab;
 import '../../shell/rasq_terms_gate.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/providers.dart';
@@ -84,7 +84,7 @@ class VcScreen extends ConsumerWidget {
         ),
       ),
       // ＋ (D-381): Swing / AsTell / RASQ に投稿(設定で出すものを選べる)。
-      floatingActionButton: const AstellCreateFab(),
+      floatingActionButton: const RadialCreateFab(scope: 'astell', heroTag: 'astell.create', tooltip: 'VC を作成'),
     );
   }
 }

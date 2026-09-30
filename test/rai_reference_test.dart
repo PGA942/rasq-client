@@ -122,10 +122,10 @@ void main() {
     ];
     final idx = await RaiReferenceIndex.build(functions: index.functions, operations: ops, embedder: const NgramRaiEmbedder());
     final poll = idx.expand(idx.operation('test-poll')!);
-    expect([for (final s in poll) s.text], ['右下の「＋」を押すと、コンポーザーが開きます(上下にスワイプすると Swing / AsTell)', '投票を足します']);
+    expect([for (final s in poll) s.text], ['右下の「＋」を押すと、コンポーザーが開きます(長押しで Swing / AsTell など)', '投票を足します']);
     expect(poll.first.tooltip, '作成'); // 共有した手順は関数の部品も引き継ぐ
     final multi = idx.expand(idx.operation('test-poll-multi')!);
-    expect([for (final s in multi) s.text], ['右下の「＋」を押すと、コンポーザーが開きます(上下にスワイプすると Swing / AsTell)', '投票を足します', '複数選択にします']);
+    expect([for (final s in multi) s.text], ['右下の「＋」を押すと、コンポーザーが開きます(長押しで Swing / AsTell など)', '投票を足します', '複数選択にします']);
     expect([for (final s in idx.expand(idx.operation('loop-a')!)) s.text], ['b', 'a']); // 循環は 1 周で切れる
     expect([for (final s in idx.expand(idx.operation('orphan')!)) s.text], ['o']);
   });

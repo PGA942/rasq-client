@@ -168,7 +168,7 @@ class HomeScreen extends ConsumerWidget {
         ]),
         // ＋ (D-381): タップ = 投稿、上へスワイプ = Swing、下へスワイプ = AsTell(設定で変えられる)。
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
-        floatingActionButton: CreateGestureFab(scope: 'home', heroTag: 'fab.home', onPosted: () => ref.read(timelineProvider(TimelineKind.home).notifier).prependNewer()),
+        floatingActionButton: RadialCreateFab(scope: 'home', heroTag: 'fab.home', onPosted: () => ref.read(timelineProvider(TimelineKind.home).notifier).prependNewer()),
       )),
     );
   }
