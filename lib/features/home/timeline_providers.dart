@@ -28,6 +28,7 @@ import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
 import '../trend/tendency_profile.dart';
 import 'post_duplicates.dart';
+import '../relational/post_embeddings.dart';
 import '../relational/relational_providers.dart' show mlGatewayProvider;
 import '../settings/settings_dsl.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -461,11 +462,13 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         }
         if (raw is String) {
           final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
-          // SigLIP ゲートウェイ (D-097): あれば類似度ノードが実埋め込みを使う
-          // (無ければ executor が n-gram 類似度へ縮退)。
+          // SigLIP ゲートウェイ (D-097): あれば類似度ノードが実埋め込みを使う。無ければ端末の埋め込み (D-390)、
+          // それも無ければ executor が n-gram 類似度へ縮退。
           MlGateway? gateway;
+          PostEmbedder? device;
           try {
             gateway = await ref.read(mlGatewayProvider.future);
+            if (gateway == null) device = await ref.read(postEmbedderProvider.future);
           } catch (_) {}
           final storageArea = storageSafeAreaFor(graphAccKey);
           // アカウント指定 (D-109) の解決: 表記(@handle@instance)かキーで探す。
@@ -487,7 +490,9 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
             // 検索絞り込み (D-125): タグ TL ではタグが既定の検索ワード。
             selfQuery: kind.id.startsWith('tag:') ? kind.id.substring(4) : null,
             fetchTrends: () async => [for (final t in await graphSession.trendingTags()) t.tag],
-            embedTexts: gateway == null ? null : (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()],
+            // サーバーの SigLIP が無ければ、端末の埋め込み(本文 + 画像、D-390)。
+            embedTexts: gateway != null ? (texts) async => [for (final e in await gateway!.embedTexts(texts)) e.toList()] : device?.embedTexts,
+            embedPosts: gateway == null ? device?.embedPosts : null,
             // TL プラグインのソートノード (D-102): tl.sort/compose の実体。
             // プラグインの並べ替えは、このグラフの持ち主のアカウントで使う版で (D-355)。
             pluginSort: (id, posts, params) => id.startsWith('slot:') ? ref.read(slotPluginsProvider.notifier).sortById(id, posts, params: params, accountKey: graphAccKey) : (graphSession is WasmSnsSession ? graphSession.timelinePlugin.compose(id, posts) : Future.value(posts)),

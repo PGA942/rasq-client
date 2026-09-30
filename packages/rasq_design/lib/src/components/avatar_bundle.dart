@@ -123,7 +123,7 @@ class RasqAvatarBundle extends StatelessWidget {
     final inset = fill1 ? 0.0 : grow / 2;
     final countStyle = TextStyle(fontSize: size * (twoLines ? 0.26 : 0.3), fontWeight: FontWeight.w700, color: scheme.onSurface, height: 1.05);
     final liveHeight = size * 0.28;
-    final captionHeight = size * 0.36;
+    final captionHeight = size * 0.3;
 
     // 角丸ワイヤーの幅: 左端(アイコンの下)から右へ、人数の文字幅 + 余白。
     final countWidth = label == null ? 0.0 : _textWidth(label, countStyle) + size * 0.3;
@@ -131,9 +131,14 @@ class RasqAvatarBundle extends StatelessWidget {
     final maxWidth = maxWireWidth(size);
     final step = faces.length < 2 ? 0.0 : ((maxWidth - avatarSize) / (faces.length - 1)).clamp(0.0, avatarSize / 2);
     final wireWidth = stacked ? (faces.length < 2 ? avatarSize : avatarSize + step * (faces.length - 1)) : size + grow + size * 0.15 + countWidth;
-    // 名前を載せるときは、名前が読める幅(直径の 1.9 倍)まで広げ、ワイヤーはその真ん中に置く (D-388)。
-    final totalWidth = caption != null ? math.max(wireWidth, size * 1.9) : wireWidth;
-    final wireLeft = (totalWidth - wireWidth) / 2;
+    final totalWidth = wireWidth;
+    const wireLeft = 0.0;
+    // 名前の角丸 (D-389): 平らな所がワイヤーの平らな所(幅 − 高さ)に収まる幅まで(丸いだけのワイヤーでも直径までは使う)。
+    // 名前がそれより短ければ名前の幅。真ん中に置く。
+    final captionStyle = TextStyle(fontSize: size * 0.21, fontWeight: FontWeight.w700, height: 1.0);
+    final captionPad = size * 0.08;
+    final captionMax = math.max(wireWidth - wireHeight + captionHeight, size);
+    final captionWidth = caption == null ? 0.0 : math.min(captionMax, _textWidth(caption!, captionStyle) + captionPad * 2 + 1);
 
     // 縁取りはアイコンの内側に収める(外にはみ出すと行の高さと中心がずれる)。D-386: 太さを 2 割増し(0.06 → 0.072)。
     final ringWidth = size * ringRatio;
@@ -186,26 +191,25 @@ class RasqAvatarBundle extends StatelessWidget {
         // 2. アイコン: 円形 + 円形縁取り(黄色)、背面より上。顔を並べるときは右から描き、左(オーナー)を一番上に。
         for (var i = faces.length - 1; i >= 1; i--) Positioned(left: wireLeft + step * i, top: 0, child: face(faces[i], ValueKey('avatarBundle.face.$i'))),
         Positioned(left: wireLeft + inset, top: inset, child: avatar),
-        // 3'. 名前 (D-388): 下辺に地の色の角丸で載せる(LIVE なら赤地)。
+        // 3'. 名前 (D-388 / D-389): 下辺に地の色の角丸で載せる(LIVE なら赤地)。
         if (caption != null)
           Positioned(
-            left: 0,
-            width: totalWidth,
+            left: (wireWidth - captionWidth) / 2,
+            width: captionWidth,
             top: wireHeight - captionHeight * 0.7,
             height: captionHeight,
-            child: Center(
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: size * 0.1),
-                height: captionHeight,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(color: live ? tokens.live : scheme.surface, borderRadius: BorderRadius.circular(captionHeight / 2)),
-                child: Text(
-                  caption!,
-                  key: captionKey,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: live ? RasqColors.white : scheme.onSurface, fontSize: size * 0.24, fontWeight: FontWeight.w700, height: 1.0),
-                ),
+            child: Container(
+              key: const ValueKey('avatarBundle.caption'),
+              padding: EdgeInsets.symmetric(horizontal: captionPad),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: live ? tokens.live : scheme.surface, borderRadius: BorderRadius.circular(captionHeight / 2)),
+              child: Text(
+                caption!,
+                key: captionKey,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: captionStyle.copyWith(color: live ? RasqColors.white : scheme.onSurface),
               ),
             ),
           ),

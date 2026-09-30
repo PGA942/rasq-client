@@ -22,10 +22,13 @@ class RelationalMlResult {
 }
 
 class RelationalMlPipeline {
-  RelationalMlPipeline({required this.gateway, FolloweeEmbeddingStore? store, this.communityEdgeMinSimilarity = 0.6})
-      : store = store ?? FolloweeEmbeddingStore();
+  /// [gateway] = サーバーの SigLIP(本文だけ)。[embedPosts] = 端末の埋め込み(本文 + 画像、D-390)。どちらか。
+  RelationalMlPipeline({this.gateway, this.embedPosts, FolloweeEmbeddingStore? store, this.communityEdgeMinSimilarity = 0.6})
+      : assert(gateway != null || embedPosts != null),
+        store = store ?? FolloweeEmbeddingStore();
 
-  final MlGateway gateway;
+  final MlGateway? gateway;
+  final Future<List<List<double>>> Function(List<Post> posts)? embedPosts;
 
   /// EMA はセッションを通して持ち回る(直近の話題に追従する状態)。
   final FolloweeEmbeddingStore store;
@@ -35,8 +38,8 @@ class RelationalMlPipeline {
   /// (LTL 候補など)は埋め込みだけ取り、EMA には入れない。
   Future<RelationalMlResult> analyze(List<Post> followeePosts, {List<Post> extraPosts = const []}) async {
     final all = [...followeePosts, ...extraPosts];
-    final texts = [for (final p in all) p.body];
-    final embeddings = await gateway.embedTexts(texts);
+    final g = gateway;
+    final List<List<double>> embeddings = g != null ? await g.embedTexts([for (final p in all) p.body]) : await embedPosts!(all);
 
     final byPostKey = <String, List<double>>{};
     for (var i = 0; i < all.length; i++) {

@@ -19,11 +19,31 @@ enum RaiEmbeddingKind {
   /// SigLIP2 の**画像側** (D-293): pixel_values[n,3,224,224] → pooler_output。文の埋め込み器にはならない(`embedder()` は null)。
   /// 絵文字の絵を埋め込むのに使う。ダウンロード / 削除の管理だけを、文のモデルと共用する。
   siglip2Vision,
+
+  /// RASQ の MiniLM(文、D-390): paraphrase-multilingual-MiniLM-L12-v2 の空間へ蒸留した小さな文の塔。
+  /// input_ids(int64)/ attention_mask(**float32**、詰め物は 0)→ `embedding`[n,384](正規化済み)。トークナイザーは MiniLM と同じ。
+  rasqText,
+
+  /// RASQ の MobileNet(画像、D-390): 同じ 384 次元の空間へ蒸留した画像の塔。pixel_values[n,3,224,224]([-1,1]、SigLIP と同じ前処理)
+  /// → `embedding`。**文の塔と同じ空間**なので、投稿の本文と画像をそのまま比べられる。文の埋め込み器にはならない。
+  rasqVision,
 }
 
 @immutable
 class RaiEmbeddingSpec {
-  const RaiEmbeddingSpec({required this.id, required this.label, required this.fileName, required this.url, required this.sizeMb, required this.tokenizerAsset, required this.dims, this.kind = RaiEmbeddingKind.minilm, this.maxLen = 128});
+  const RaiEmbeddingSpec({required this.id, required this.label, required this.fileName, required this.url, required this.sizeMb, required this.tokenizerAsset, required this.dims, this.kind = RaiEmbeddingKind.minilm, this.maxLen = 128, this.centralPath});
+
+  /// RASQ Central が配るモデル (D-390): `<Central>/api/v1/models/<centralPath>` から取る(このときは [url] を使わない)。
+  final String? centralPath;
+
+  /// 取りに行く URL。Central が配るものは [central](Central の API の根)から作る。Central が無ければ null。
+  Uri? downloadUrl(Uri? central) {
+    final path = centralPath;
+    if (path == null) return Uri.parse(url);
+    if (central == null) return null;
+    final base = central.toString().replaceFirst(RegExp(r'/+$'), '');
+    return Uri.parse('$base/api/v1/models/$path');
+  }
   final String id;
   final RaiEmbeddingKind kind;
   final int maxLen;
@@ -35,9 +55,26 @@ class RaiEmbeddingSpec {
   final int dims;
 }
 
-/// 既定 (D-193): paraphrase-multilingual-MiniLM-L12-v2(多言語の文埋め込み、int8 118 MB)。
-/// 投稿の埋め込みにも使う想定で、fastText 蒸留版などに差し替えられるよう `kind` で形を分ける。
+/// 既定 (D-390): RASQ の MiniLM(文の塔、35 MB)。paraphrase-multilingual-MiniLM-L12-v2 の空間へ蒸留したもの。
+/// RAi の評価 395 問(ベクトルだけ)で、1 位正解 40.5% / 上位 3 件 57.0%(元の MiniLM-L12 int8 118 MB は 41.3% / 59.7%)= ほぼ同じで 1/3 の大きさ。
+/// 配られた int8 版は畳み込みが ConvInteger(int8 の重み)で、端末の onnxruntime 1.15 に実装が無く読めないので、
+/// **重みを uint8 で量子化し直した版**(`*_uint8.onnx`、精度は同じ)を配る。
+/// 投稿の画像の塔([postVisionEmbeddingSpec])と同じ空間なので、投稿の本文と画像を比べられる。RASQ Central が配る。
 const raiEmbeddingSpec = RaiEmbeddingSpec(
+  id: 'rasq-minilm-text-int8',
+  label: 'RASQ MiniLM(文)',
+  fileName: 'text_tower_uint8.onnx',
+  url: '',
+  centralPath: 'minilm-mobilenet/onnx/text_tower_uint8.onnx',
+  sizeMb: 35,
+  tokenizerAsset: 'assets/models/minilm_unigram.tsv',
+  dims: 384,
+  kind: RaiEmbeddingKind.rasqText,
+  maxLen: 128,
+);
+
+/// 以前の既定 (D-193): paraphrase-multilingual-MiniLM-L12-v2(多言語の文埋め込み、int8 118 MB)。差し替え用に残す。
+const raiMiniLmL12EmbeddingSpec = RaiEmbeddingSpec(
   id: 'minilm-l12-multilingual-int8',
   label: 'MiniLM-L12 多言語(paraphrase, int8)',
   fileName: 'model_quantized.onnx',
@@ -47,6 +84,21 @@ const raiEmbeddingSpec = RaiEmbeddingSpec(
   dims: 384,
   kind: RaiEmbeddingKind.minilm,
   maxLen: 128,
+);
+
+/// 投稿の画像 (D-390): RASQ の MobileNet(画像の塔、int8 32 MB)。[raiEmbeddingSpec] と同じ 384 次元の空間。
+/// 関連 TL / TL のアルゴリズム(似ている投稿)で、投稿の画像も本文と一緒に比べる。RASQ Central が配る。
+const postVisionEmbeddingSpec = RaiEmbeddingSpec(
+  id: 'rasq-mobilenet-vision-int8',
+  label: 'RASQ MobileNet(投稿の画像)',
+  fileName: 'image_tower_uint8.onnx',
+  url: '',
+  centralPath: 'minilm-mobilenet/onnx/image_tower_uint8.onnx',
+  sizeMb: 32,
+  tokenizerAsset: '',
+  dims: 384,
+  kind: RaiEmbeddingKind.rasqVision,
+  maxLen: 0,
 );
 
 /// SigLIP2 テキスト塔 (D-190)。計測では言い換えに弱かったので既定から外した(差し替え可)。
@@ -155,6 +207,10 @@ StreamProvider<RaiEmbeddingStatus> _statusOf(Provider<RaiEmbeddingModel> p) => S
 
 final emojiTextStatusProvider = _statusOf(emojiTextModelProvider);
 final emojiVisionStatusProvider = _statusOf(emojiVisionModelProvider);
+
+/// 投稿の画像の塔 (D-390)。文は RAi の埋め込み([raiEmbeddingModelProvider])と共用(同じ空間)。実機では main が差し替える。
+final postVisionModelProvider = Provider<RaiEmbeddingModel>((_) => const UnavailableRaiEmbeddingModel());
+final postVisionStatusProvider = _statusOf(postVisionModelProvider);
 
 final raiEmbeddingStatusProvider = StreamProvider<RaiEmbeddingStatus>((ref) async* {
   final m = ref.watch(raiEmbeddingModelProvider);

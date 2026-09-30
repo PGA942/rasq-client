@@ -59,8 +59,10 @@ class RaiModelsBody extends ConsumerWidget {
       const RasqSectionHeader(title: 'ローカル', topMargin: RasqSpacing.sm),
       // 選択中を先頭に(操作ボタンがすぐ見える)。
       for (final m in [...raiModelSpecs.where((m) => m.id == llm.spec.id), ...raiModelSpecs.where((m) => m.id != llm.spec.id)]) _tile(context, ref, m, llm: llm, st: st, ram: ram, guard: guard, manager: manager),
-      const RasqSectionHeader(title: 'RAi の検索', topMargin: RasqSpacing.md),
+      const RasqSectionHeader(title: 'RAi の検索と投稿の埋め込み', topMargin: RasqSpacing.md),
       _EmbeddingTile(ram: ram),
+      // 投稿の画像 (D-390): 文の塔と同じ空間。関連 TL / TL のアルゴリズムで、画像も本文と一緒に比べる。
+      _EmbeddingTile(ram: ram, model: postVisionModelProvider, status: postVisionStatusProvider, tag: 'postVision', readyNote: '関連 TL と TL のアルゴリズムで、投稿の画像も比べます', idleNote: '関連 TL と TL のアルゴリズムで、投稿の本文に加えて画像も比べられるようになります(文のモデルも入れてください)'),
       // 絵文字の画像検索 (D-293): 文と絵を同じ空間で比べるので、SigLIP2 の 2 つが揃って初めて効く。
       if (ref.watch(emojiVisionModelProvider) is! UnavailableRaiEmbeddingModel) const RasqSectionHeader(title: '絵文字の画像検索(2 つとも要ります)', topMargin: RasqSpacing.md),
       _EmbeddingTile(ram: ram, model: emojiTextModelProvider, status: emojiTextStatusProvider, tag: 'emojiText', readyNote: '打った文で、絵文字の絵を探せます', idleNote: '絵文字の絵を、意味で探せるようになります(画像側も入れてください)'),

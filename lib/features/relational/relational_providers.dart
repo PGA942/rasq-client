@@ -22,6 +22,7 @@ import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
 import '../settings/settings_dsl.dart';
 import 'relational_engine.dart';
+import 'post_embeddings.dart';
 import 'relational_ml.dart';
 import 'relational_wasm.dart';
 import '../trend/tendency_profile.dart';
@@ -126,17 +127,23 @@ final relationalEmaStoreProvider = FutureProvider<FolloweeEmbeddingStore>((ref) 
 /// SigLIP EMA + Louvain の解析結果(ゲートウェイ無し/失敗時は null)。
 /// 解析のたびに EMA を保存する。
 final relationalMlProvider = FutureProvider<RelationalMlResult?>((ref) async {
+  // サーバーの ML ゲートウェイが先。無ければ端末の埋め込み(本文 + 画像、D-390)。どちらも無ければルールベース。
   final gateway = await ref.watch(mlGatewayProvider.future);
-  if (gateway == null) return null;
+  final device = gateway == null ? await ref.watch(postEmbedderProvider.future) : null;
+  if (gateway == null && device == null) return null;
   final home = await ref.watch(timelineProvider(TimelineKind.home).future);
   try {
     final store = await ref.watch(relationalEmaStoreProvider.future);
-    final pipeline = RelationalMlPipeline(gateway: gateway, store: store);
+    final pipeline = RelationalMlPipeline(gateway: gateway, embedPosts: device?.embedPosts, store: store);
     final result = await pipeline.analyze(home.posts);
     await ref.read(sessionStorageProvider).write(relationalEmaStorageKey, jsonEncode(store.toJson()));
     return result;
   } on MlUnavailableException {
     return null; // サーバー不達 → ルールベースに縮退
+  } catch (e) {
+    if (gateway != null) rethrow;
+    debugPrint('relational: 端末の埋め込みに失敗: $e');
+    return null; // 端末のモデルが回らない → ルールベースに縮退
   }
 });
 

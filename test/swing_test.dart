@@ -28,7 +28,9 @@ import 'package:rasq_client/features/plugins/pro_media_editor_screen.dart' show 
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/swing/swing_composer.dart';
 import 'package:rasq_client/features/swing/swing_models.dart';
+import 'package:rasq_client/features/profile/rasq_post_screen.dart';
 import 'package:rasq_client/features/swing/swing_providers.dart';
+import 'package:rasq_client/features/swing/swing_reply.dart';
 import 'package:rasq_client/features/swing/swing_viewer.dart';
 import 'package:rasq_client/features/swing/wagara.dart';
 import 'package:rasq_client/mock/mock_data.dart';
@@ -46,6 +48,11 @@ import 'support/fakes.dart';
   final raw = m['${scope}Slots'];
   return (tap: '${m['${scope}Tap'] ?? 'post'}', slots: raw is List ? [for (final x in raw) '$x'] : const ['swing', 'astell', 'rasq']);
 }
+
+/// Swing のスレッドのまね (D-389)。
+final swingThreadLog = <String>[];
+final swingQueued = <String>{};
+final swingReplies = <String>[];
 
 Future<void> setFabSlotsOf(ProviderContainer c, String scope, List<String> slots) => c.read(settingsAreaProvider(fabSettingsArea).notifier).set('${scope}Slots', slots);
 
@@ -77,8 +84,10 @@ void main() {
   });
 
   final now = DateTime.now().toUtc();
-  Map<String, Object?> swing(String id, String author, {String kind = 'text', String text = 'やっほー', Map<String, Object?>? media, Map<String, Object?>? plugin, Duration age = const Duration(minutes: 30)}) => {
+  Map<String, Object?> swing(String id, String author, {String kind = 'text', String text = 'やっほー', Map<String, Object?>? media, Map<String, Object?>? plugin, Duration age = const Duration(minutes: 30), String? postId, int replyCount = 0}) => {
         'id': id,
+        'postId': ?postId,
+        'replyCount': replyCount,
         'author': {'accountId': author, 'handle': author, 'displayName': '$author さん'},
         'kind': kind,
         'text': text,
@@ -146,6 +155,34 @@ void main() {
         final body = (jsonDecode(req.body) as Map).cast<String, Object?>();
         created.add(body);
         return json({...swing('new', 'acc-1', kind: body['kind'] as String, text: '${body['text'] ?? ''}'), 'audience': body['audience'], 'viewCount': 0}, 201);
+      }
+      // Swing のスレッド (D-389 / S-058)。
+      Map<String, Object?> post(String id, {String body = '', String? replyTo}) => {
+            'id': id,
+            'body': body,
+            'author': {'id': 'acc-9', 'handle': 'alice', 'displayName': 'alice さん'},
+            'visibility': 'swing',
+            'replyTo': ?replyTo,
+            'isReply': replyTo != null,
+            'queues': [if (swingQueued.contains(id)) {'like': true, 'stickerId': 'like', 'count': 1, 'mine': true}],
+          };
+      final t = RegExp(r'^(GET|PUT|DELETE) /posts/([^/]+)(/queue)?$').firstMatch(route);
+      if (t != null) {
+        final id = t.group(2)!;
+        swingThreadLog.add('${t.group(1)} ${t.group(3) ?? ''} $id'.replaceAll('  ', ' '));
+        if (t.group(1) == 'PUT') swingQueued.add(id);
+        if (t.group(1) == 'DELETE') {
+          swingQueued.remove(id);
+          return http.Response('', 204);
+        }
+        if (t.group(1) == 'GET') return json({'post': post(id, body: '花火'), 'replies': [for (final r in swingReplies) post('r${swingReplies.indexOf(r)}', body: r, replyTo: id)]});
+        return json(post(id));
+      }
+      if (route == 'POST /me/posts') {
+        final body = (jsonDecode(req.body) as Map).cast<String, Object?>();
+        swingReplies.add('${body['body']}');
+        swingThreadLog.add('reply ${body['replyTo']} ${body['body']}');
+        return json(post('r-new', body: '${body['body']}', replyTo: body['replyTo'] as String?), 201);
       }
       final m = RegExp(r'^POST /swings/([^/]+)/seen$').firstMatch(route);
       if (m != null) {
@@ -669,6 +706,52 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('swing.banner.bob')));
     await tester.pumpAndSettle();
     expect(find.byType(SwingViewerScreen), findsOneWidget);
+  });
+
+  testWidgets('返信とキュー (D-389): 左下に stick の入力欄 + Que。Que で いいね / 外す、入力欄で返信のコンポーザー、ハンドルを上に引くとスレッドの FOW。開いている間は止める', (tester) async {
+    swingThreadLog.clear();
+    swingQueued.clear();
+    swingReplies
+      ..clear()
+      ..add('いいね！');
+    final (mock, _, _, _) = central([swing('s1', 'alice', text: '花火', postId: 'p1', replyCount: 1), swing('s2', 'bob', text: '古い Central')]);
+    final c = await pumpApp(tester, mock);
+    c.read(routerProvider).push(Routes.swing('alice'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.reply.stick')), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.reply.count')), findsOneWidget, reason: '返信の数');
+    expect(swingThreadLog, contains('GET p1'));
+    // Que: 押すと いいね、もう一度で外す。
+    await tester.tap(find.byKey(const ValueKey('swing.reply.que')));
+    await tester.pumpAndSettle();
+    expect(swingThreadLog, contains('PUT /queue p1'));
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.reply.que')), matching: find.byIcon(Icons.favorite)), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('swing.reply.que')));
+    await tester.pumpAndSettle();
+    expect(swingThreadLog, contains('DELETE /queue p1'));
+    // stick の入力欄 → 返信のコンポーザー(その間は止まる)。
+    await tester.tap(find.byKey(const ValueKey('swing.reply.stick')));
+    await tester.pumpAndSettle();
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isTrue);
+    c.read(overlayManagerProvider).close(composerFowId);
+    await tester.pumpAndSettle();
+    // ハンドルを上に引く → スレッド(RASQ の投稿の詳細)の FOW。< で閉じる(ビューワーは閉じない)。
+    await tester.drag(find.byKey(const ValueKey('swing.reply.handle')), const Offset(0, -120));
+    await tester.pumpAndSettle();
+    expect(c.read(overlayManagerProvider).contains(SwingReplyBar.threadFowId), isTrue);
+    expect(find.byType(RasqPostScreen), findsOneWidget);
+    expect(find.text('いいね！'), findsOneWidget, reason: '返信が見える');
+    await tester.tap(find.descendant(of: find.byType(RasqPostScreen), matching: find.byTooltip('戻る')));
+    await tester.pumpAndSettle();
+    expect(c.read(overlayManagerProvider).contains(SwingReplyBar.threadFowId), isFalse);
+    expect(find.byType(SwingViewerScreen), findsOneWidget);
+    // 根の投稿が無い Swing(古い Central)には出さない。
+    await tester.tap(find.byKey(const ValueKey('swing.tap')), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getTopRight(find.byType(SwingViewerScreen)) + const Offset(-10, 400));
+    await tester.pumpAndSettle();
+    expect(find.text('古い Central'), findsWidgets);
+    expect(find.byKey(const ValueKey('swing.reply.stick')), findsNothing);
   });
 
   testWidgets('＋ (D-383): タップ = 投稿。スライドの向き(上 / 左 / 左上)で始める。素早く払っても長押しにならない。長押し / ホバーで暗くして丸ボタンを展開、歯車で並べ替え(ドラッグで入れる / 外す)。トレンドはハッシュタグ、AsTell の ＋', (tester) async {

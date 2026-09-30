@@ -14,9 +14,12 @@ import 'rai_siglip_tokenizer.dart';
 /// 端末側の埋め込みモデル (D-190): `ApplicationSupport/rai_models/siglip2/` に ONNX を流し込み、
 /// 同梱のトークナイザーと合わせて [OnnxRaiEmbedder] を作る。
 class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
-  DeviceRaiEmbeddingModel({this.spec = raiEmbeddingSpec});
+  DeviceRaiEmbeddingModel({this.spec = raiEmbeddingSpec, this.central});
   @override
   final RaiEmbeddingSpec spec;
+
+  /// RASQ Central の根(Central が配るモデル、D-390)。
+  final Uri? Function()? central;
   final _ctrl = StreamController<RaiEmbeddingStatus>.broadcast();
   RaiEmbeddingStatus _current = RaiEmbeddingStatus.initial;
   OnnxRaiEmbedder? _embedder;
@@ -64,8 +67,10 @@ class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
     final client = http.Client();
     try {
       _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.downloading, progress: 0));
-      final req = http.Request('GET', Uri.parse(spec.url));
-      if (hfToken != null && hfToken.isNotEmpty) req.headers['Authorization'] = 'Bearer $hfToken';
+      final url = spec.downloadUrl(central?.call());
+      if (url == null) throw const RaiEmbeddingException('RASQ サーバーの接続先が未設定です');
+      final req = http.Request('GET', url);
+      if (spec.centralPath == null && hfToken != null && hfToken.isNotEmpty) req.headers['Authorization'] = 'Bearer $hfToken';
       final res = await client.send(req).timeout(const Duration(seconds: 60));
       if (res.statusCode != 200) throw RaiEmbeddingException('HTTP ${res.statusCode}');
       final total = res.contentLength ?? spec.sizeMb * 1000 * 1000;
@@ -125,8 +130,11 @@ class DeviceRaiEmbeddingModel implements RaiEmbeddingModel {
           case RaiEmbeddingKind.minilm:
             final tok = UnigramTokenizer.fromTsv(await rootBundle.loadString(spec.tokenizerAsset));
             _embedder = await OnnxRaiEmbedder.loadMiniLm(model: f, tokenizer: tok, maxLen: spec.maxLen);
-          case RaiEmbeddingKind.siglip2Vision:
-            // 画像側は、文の埋め込み器にはならない(絵文字の索引が [installedFile] から読む)。
+          case RaiEmbeddingKind.rasqText:
+            final tok = UnigramTokenizer.fromTsv(await rootBundle.loadString(spec.tokenizerAsset));
+            _embedder = await OnnxRaiEmbedder.loadRasqText(model: f, tokenizer: tok, maxLen: spec.maxLen);
+          case RaiEmbeddingKind.siglip2Vision || RaiEmbeddingKind.rasqVision:
+            // 画像側は、文の埋め込み器にはならない(絵文字 / 投稿の画像の埋め込み器が [installedFile] から読む)。
             _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.ready));
             return null;
         }

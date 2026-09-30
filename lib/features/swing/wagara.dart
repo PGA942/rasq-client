@@ -152,18 +152,8 @@ void _waku(Canvas canvas, Rect r, double u, Paint stroke) {
 }
 
 /// 立涌の波線の対のうち片側([side] = -1 左 / 1 右)だけを敷く(分銅繋ぎ用)。
-void _wakuSide(Canvas canvas, Rect r, double u, double side, Paint stroke) {
-  final i0 = (r.left / u).floor() - 1;
-  final i1 = (r.right / u).ceil() + 1;
-  for (var i = i0; i < i1; i++) {
-    final x = i * u + u / 2;
-    final path = Path()..moveTo(x + side * u * 0.1, r.top - u);
-    for (var y = r.top - u; y < r.bottom + u; y += 4) {
-      path.lineTo(x + side * (u * 0.1 + u * 0.28 * (0.5 + 0.5 * math.sin(y / u * math.pi))), y);
-    }
-    canvas.drawPath(path, stroke);
-  }
-}
+/// 分銅繋ぎの弧の高さ(マスの幅に対する比、D-392)。p5.js 版(1/4)の 1/2(ユーザー指定)。
+const fundoWaveHeight = 1 / 8;
 
 /// 柄を 1 つ敷き詰める。[mask] = マスク用(線の柄も太く / 塗りで描く)。[ground] = 重なりを消すための地の色(透明なら消さない)。
 void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, required Color ground, required double unit, bool mask = false}) {
@@ -234,17 +224,35 @@ void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, requ
         }
       }
     case Wagara.fundo:
-      // 分銅繋ぎ (D-388): 立涌の波線の対(重なっている 2 本)を、**片方は +45°、もう片方は −45° に倒して**重ねる。
-      // 2 組の波線が交わり、その間が分銅の形になる。
-      final d = math.sqrt(size.width * size.width + size.height * size.height);
-      final half = (d / 2 / u).ceil() * u + u;
-      for (final (angle, side) in [(math.pi / 4, 1.0), (-math.pi / 4, -1.0)]) {
-        canvas.save();
-        canvas.translate(size.width / 2, size.height / 2);
-        canvas.rotate(angle);
-        _wakuSide(canvas, Rect.fromLTRB(-half, -half, half, half), u, side, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
-        canvas.restore();
+      // 分銅繋ぎ (D-392、gin_graphic さんの p5.js 版「分銅繋ぎを描く」の作り方): 全体を 45° 回した格子の、
+      // **縦横の辺を 1 マスごとに半周期の正弦の弧**にする。弧の向きはマスの縦横の番号の偶奇で市松に反転し、
+      // 縦の辺は横の辺と逆向き。格子点では高さ 0 なので、線はすべて格子点で交わる。弧の高さ = [fundoWaveHeight] × マス。
+      final d = u;
+      final a = d * fundoWaveHeight;
+      final diag = math.sqrt(size.width * size.width + size.height * size.height);
+      final n = (diag / d / 2).ceil() + 2;
+      const steps = 24;
+      final path = Path();
+      canvas.save();
+      canvas.translate(size.width / 2, size.height / 2);
+      canvas.rotate(math.pi / 4);
+      for (var i = -n; i <= n; i++) {
+        for (var j = -n; j <= n; j++) {
+          final x = i * d;
+          final y = j * d;
+          final ph = (i.isEven ? math.pi : 0) + (j.isEven ? math.pi : 0);
+          path.moveTo(x, y + a * math.sin(ph));
+          for (var k = 1; k <= steps; k++) {
+            path.lineTo(x + d * k / steps, y + a * math.sin(math.pi * k / steps + ph));
+          }
+          path.moveTo(x + a * math.sin(ph + math.pi), y);
+          for (var k = 1; k <= steps; k++) {
+            path.lineTo(x + a * math.sin(math.pi * k / steps + ph + math.pi), y + d * k / steps);
+          }
+        }
       }
+      canvas.drawPath(path, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
+      canvas.restore();
     case Wagara.sayagata:
       // 卍を斜めの格子((3,1) / (-1,3))に並べ、腕の先を隣の卍へつなぐ(紗綾形)。
       final c = u / 3.2;

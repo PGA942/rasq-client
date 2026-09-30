@@ -16,9 +16,12 @@ import 'ort_web.dart';
 /// Web 版の埋め込みモデル (D-302): 端末の [DeviceRaiEmbeddingModel] と同じ契約を、onnxruntime-web + IndexedDB で満たす。
 /// トークナイザーと前処理は、端末と同じ Dart のコード。
 class WebRaiEmbeddingModel implements RaiEmbeddingModel {
-  WebRaiEmbeddingModel({this.spec = raiEmbeddingSpec});
+  WebRaiEmbeddingModel({this.spec = raiEmbeddingSpec, this.central});
   @override
   final RaiEmbeddingSpec spec;
+
+  /// RASQ Central の根(Central が配るモデル、D-390)。
+  final Uri? Function()? central;
   static const _store = WebModelStore();
   final _ctrl = StreamController<RaiEmbeddingStatus>.broadcast();
   RaiEmbeddingStatus _current = RaiEmbeddingStatus.initial;
@@ -49,8 +52,10 @@ class WebRaiEmbeddingModel implements RaiEmbeddingModel {
   Future<void> install({String? hfToken}) async {
     try {
       _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.downloading, progress: 0));
-      await _store.download(spec.id, Uri.parse(spec.url),
-          token: hfToken == null || hfToken.isEmpty ? null : hfToken, fallbackTotal: spec.sizeMb * 1000 * 1000, onProgress: (p) => _set(RaiEmbeddingStatus(RaiEmbeddingPhase.downloading, progress: p)));
+      final url = spec.downloadUrl(central?.call());
+      if (url == null) throw const RaiEmbeddingException('RASQ サーバーの接続先が未設定です');
+      await _store.download(spec.id, url,
+          token: spec.centralPath != null || hfToken == null || hfToken.isEmpty ? null : hfToken, fallbackTotal: spec.sizeMb * 1000 * 1000, onProgress: (p) => _set(RaiEmbeddingStatus(RaiEmbeddingPhase.downloading, progress: p)));
       _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.ready));
     } catch (e) {
       _set(RaiEmbeddingStatus(RaiEmbeddingPhase.notInstalled, message: 'ダウンロードに失敗しました: $e'));
@@ -74,7 +79,7 @@ class WebRaiEmbeddingModel implements RaiEmbeddingModel {
   @override
   Future<RaiEmbedder?> embedder() async {
     if (_embedder != null) return _embedder;
-    if (spec.kind == RaiEmbeddingKind.siglip2Vision) return null; // 画像側は、文の埋め込み器にはならない
+    if (spec.kind == RaiEmbeddingKind.siglip2Vision || spec.kind == RaiEmbeddingKind.rasqVision) return null; // 画像側は、文の埋め込み器にはならない
     return _loading ??= () async {
       try {
         if (!await _store.has(spec.id)) return null;
@@ -92,7 +97,10 @@ class WebRaiEmbeddingModel implements RaiEmbeddingModel {
           case RaiEmbeddingKind.minilm:
             final tok = UnigramTokenizer.fromTsv(await rootBundle.loadString(spec.tokenizerAsset));
             _embedder = _WebTextEmbedder(session, (t) => tok.encode(t, maxLen: spec.maxLen), 'minilm-onnx', spec.maxLen, meanPool: true);
-          case RaiEmbeddingKind.siglip2Vision:
+          case RaiEmbeddingKind.rasqText:
+            final tok = UnigramTokenizer.fromTsv(await rootBundle.loadString(spec.tokenizerAsset));
+            _embedder = _WebTextEmbedder(session, (t) => tok.encode(t, maxLen: spec.maxLen), 'rasq-minilm-onnx', spec.maxLen, meanPool: true, pooled: true);
+          case RaiEmbeddingKind.siglip2Vision || RaiEmbeddingKind.rasqVision:
             return null;
         }
         _set(const RaiEmbeddingStatus(RaiEmbeddingPhase.ready));
@@ -115,7 +123,10 @@ class WebRaiEmbeddingModel implements RaiEmbeddingModel {
 
 /// 文の埋め込み。形は端末の `OnnxRaiEmbedder` と同じ(SigLIP2 = 固定長 + pooler_output、MiniLM = 可変長 + mean pooling)。名前も同じにして、索引を共用できる形にする。
 class _WebTextEmbedder implements RaiEmbedder {
-  _WebTextEmbedder(this._session, this._encode, this.name, this._maxLen, {required this.meanPool});
+  _WebTextEmbedder(this._session, this._encode, this.name, this._maxLen, {required this.meanPool, this.pooled = false});
+
+  /// RASQ MiniLM (D-390): attention_mask は float、出力は平均済みの `embedding`。
+  final bool pooled;
   final WebOrtSession _session;
   final List<int> Function(String text) _encode;
   @override
@@ -146,6 +157,11 @@ class _WebTextEmbedder implements RaiEmbedder {
       }
     }
     final ints = <String, (Int32List, List<int>)>{'input_ids': (ids, [n, len])};
+    if (pooled) {
+      final (data, dims) = await _session.run(ints: ints, floats: {'attention_mask': (Float32List.fromList([for (final m in mask) m.toDouble()]), [n, len])}, output: 'embedding');
+      final d = dims.last;
+      return [for (var b = 0; b < n; b++) NgramRaiEmbedder.normalize([for (var k = 0; k < d; k++) data[b * d + k]])];
+    }
     if (meanPool) {
       if (_session.inputNames.contains('attention_mask')) ints['attention_mask'] = (mask, [n, len]);
       if (_session.inputNames.contains('token_type_ids')) ints['token_type_ids'] = (Int32List(n * len), [n, len]);
@@ -173,24 +189,25 @@ class _WebTextEmbedder implements RaiEmbedder {
 
 /// 絵の埋め込み (D-293) の Web 版。前処理は端末と同じ。
 class WebEmojiImageEmbedder implements EmojiImageEmbedder {
-  WebEmojiImageEmbedder._(this._session, this._output);
+  WebEmojiImageEmbedder._(this._session, this._output, this.name);
   final WebOrtSession _session;
   final String _output;
   static const size = 224;
   static const batch = 4;
 
+  /// 絵文字 = SigLIP2 の画像側、投稿の画像 (D-390) = RASQ MobileNet。
   @override
-  String get name => 'siglip2-vision-onnx';
+  final String name;
 
   static Future<WebEmojiImageEmbedder?> load(WebRaiEmbeddingModel model) async {
     final session = await model.openSession();
     if (session == null) return null;
-    final out = ['pooler_output', 'image_embeds'].where(session.outputNames.contains).firstOrNull;
+    final out = ['pooler_output', 'image_embeds', 'embedding'].where(session.outputNames.contains).firstOrNull;
     if (!session.inputNames.contains('pixel_values') || out == null) {
       await session.release();
       throw StateError('image model: unexpected inputs / outputs (${session.inputNames} → ${session.outputNames})');
     }
-    return WebEmojiImageEmbedder._(session, out);
+    return WebEmojiImageEmbedder._(session, out, out == 'embedding' ? 'rasq-mobilenet-onnx' : 'siglip2-vision-onnx');
   }
 
   @override

@@ -20,8 +20,9 @@ import 'tl_components.dart' show rasqListKindPrefix;
 /// - [fetch]: 投稿リストの取得。`home` などの TL id のほか、リスト
 ///   `list:<名前>`・検索 `search:<ワード>`・DM `dm:<相手>` はアプリ側で解決。
 /// - [fetchTrends]: トレンド取得ノード(タグの文字列配列)。
-/// - [embedTexts]: SigLIP 埋め込み(ML ゲートウェイ)。null/失敗時は
+/// - [embedTexts]: 文の埋め込み(ML ゲートウェイの SigLIP か、端末の RASQ MiniLM)。null/失敗時は
 ///   n-gram 類似度に縮退する。
+/// - [embedPosts]: 投稿の埋め込み(端末の本文 + 画像、D-390)。あれば投稿側はこちら([embedTexts] と同じ空間)。
 /// - [pluginSort]: TL プラグインのソートノード(`plugin:<id>`)の実体
 ///   (tl.sort/compose)。null なら素通し。
 /// - [storageRead]/[storageWrite]: storage.safe (D-104) の読み書き。保存
@@ -37,6 +38,7 @@ Future<List<Post>?> runNodeGraph(
   required Future<List<Post>> Function(String kindId) fetch,
   Future<List<String>> Function()? fetchTrends,
   Future<List<List<double>>> Function(List<String> texts)? embedTexts,
+  Future<List<List<double>>> Function(List<Post> posts)? embedPosts,
   Future<List<Post>> Function(String pluginTlId, List<Post> posts, Map<String, Object?> params)? pluginSort,
   Future<Object?> Function(String slot)? storageRead,
   Future<void> Function(String slot, Object? value)? storageWrite,
@@ -46,7 +48,7 @@ Future<List<Post>?> runNodeGraph(
   String terminal = 'timeline',
 }) async {
   final env = _ExecEnv(
-      fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite, onDuplicate: onDuplicate, loadFunction: loadFunction, selfQuery: selfQuery);
+      fetch: fetch, fetchTrends: fetchTrends, embedTexts: embedTexts, embedPosts: embedPosts, pluginSort: pluginSort, storageRead: storageRead, storageWrite: storageWrite, onDuplicate: onDuplicate, loadFunction: loadFunction, selfQuery: selfQuery);
   // 何か → 設定 (D-236): 設定ポートに繋がれたテキスト / テキスト配列を先に評価して値ボックスへ入れる。
   g = await _materializeSettings(g, env);
   final byId = {for (final n in g.nodes) n.id: n};
@@ -77,10 +79,11 @@ Future<List<Post>?> runNodeGraph(
 /// 実行環境(コールバック束)。
 class _ExecEnv {
   const _ExecEnv(
-      {required this.fetch, this.fetchTrends, this.embedTexts, this.pluginSort, this.storageRead, this.storageWrite, this.onDuplicate, this.loadFunction, this.selfQuery, this.fnInput, this.fnStack = const {}});
+      {required this.fetch, this.fetchTrends, this.embedTexts, this.embedPosts, this.pluginSort, this.storageRead, this.storageWrite, this.onDuplicate, this.loadFunction, this.selfQuery, this.fnInput, this.fnStack = const {}});
   final Future<List<Post>> Function(String kindId) fetch;
   final Future<List<String>> Function()? fetchTrends;
   final Future<List<List<double>>> Function(List<String> texts)? embedTexts;
+  final Future<List<List<double>>> Function(List<Post> posts)? embedPosts;
   final Future<List<Post>> Function(String pluginTlId, List<Post> posts, Map<String, Object?> params)? pluginSort;
   final Future<Object?> Function(String slot)? storageRead;
   final Future<void> Function(String slot, Object? value)? storageWrite;
@@ -99,6 +102,7 @@ class _ExecEnv {
       fetch: fetch,
       fetchTrends: fetchTrends,
       embedTexts: embedTexts,
+      embedPosts: embedPosts,
       pluginSort: pluginSort,
       storageRead: storageRead,
       storageWrite: storageWrite,
@@ -405,7 +409,7 @@ Future<Map<String, Object?>?> _vectorOutOf(NodeGraph g, Map<String, GraphNode> b
     case 'ml.siglip':
       final posts = await _upstreamPosts(g, byId, n, env);
       if (posts == null || posts.isEmpty) return null;
-      return profileVectorOf(posts, env.embedTexts);
+      return profileVectorOf(posts, env.embedTexts, embedPosts: env.embedPosts);
     case 'storage.load':
       final payload = await _loadSlot(g, n, env);
       final v = payload?['vector'];
@@ -459,11 +463,11 @@ List<String> topFeaturesOf(List<Post> posts, {int max = 24}) {
 
 /// SigLIP埋め込み (D-104): 投稿群の平均埋め込み。ゲートウェイ不達時は
 /// n-gram プロファイル(合算)に縮退する。
-Future<Map<String, Object?>> profileVectorOf(List<Post> posts, Future<List<List<double>>> Function(List<String>)? embedTexts) async {
+Future<Map<String, Object?>> profileVectorOf(List<Post> posts, Future<List<List<double>>> Function(List<String>)? embedTexts, {Future<List<List<double>>> Function(List<Post>)? embedPosts}) async {
   final bodies = [for (final p in posts.take(40)) p.body];
-  if (embedTexts != null) {
+  if (embedTexts != null || embedPosts != null) {
     try {
-      final embs = await embedTexts(bodies);
+      final embs = embedPosts != null ? await embedPosts(posts.take(40).toList()) : await embedTexts!(bodies);
       if (embs.isNotEmpty) {
         final mean = List<double>.filled(embs.first.length, 0);
         for (final e in embs) {
@@ -640,7 +644,7 @@ class _CondContext {
         if (src != null) vecRef = await _vectorOutOf(g, byId, src, env);
       }
       if (refs.isEmpty && vecRef == null) continue; // 基準なし → スコアなし(比較は不成立に落ちる)
-      scores[ml.id] = ml.type == 'ml.similar' ? await _similarScores(refs, vecRef, posts, env.embedTexts, normalize: normalizeSimilar) : _keywordScores(refs, posts);
+      scores[ml.id] = ml.type == 'ml.similar' ? await _similarScores(refs, vecRef, posts, env.embedTexts, normalize: normalizeSimilar, embedPosts: env.embedPosts) : _keywordScores(refs, posts);
     }
     return _CondContext(scores);
   }
@@ -686,7 +690,9 @@ double _cosVec(List<double> a, List<double> b) {
 /// 生 cos は縮退時 0.1〜0.3 程度と小さく「以上 0.8」等のしきい値が実質
 /// 効かないため、比較で使いやすい相対スコアに揃える(0.8 ≒ 上位 2 割相当)。
 Future<Map<String, double>> _similarScores(
-    List<String> refs, Map<String, Object?>? vecRef, List<Post> posts, Future<List<List<double>>> Function(List<String>)? embedTexts, {bool normalize = true}) async {
+    List<String> refs, Map<String, Object?>? vecRef, List<Post> posts, Future<List<List<double>>> Function(List<String>)? embedTexts, {bool normalize = true, Future<List<List<double>>> Function(List<Post>)? embedPosts}) async {
+  // 投稿側のベクトル: 端末の投稿の埋め込み(本文 + 画像、D-390)があればそれ、無ければ本文だけ。
+  Future<List<List<double>>> postVectors() => embedPosts != null ? embedPosts(posts) : embedTexts!([for (final p in posts) p.body]);
   final out = <String, double>{for (final p in posts) p.key: 0.0};
   void merge(Map<String, double> m) => m.forEach((k, v) => out[k] = math.max(out[k] ?? 0, v));
 
@@ -694,10 +700,11 @@ Future<Map<String, double>> _similarScores(
     var done = false;
     if (embedTexts != null) {
       try {
-        final embs = await embedTexts([...refs, for (final p in posts) p.body]);
+        final refVecs = await embedTexts(refs);
+        final postVecs = await postVectors();
         merge({
           for (var i = 0; i < posts.length; i++)
-            posts[i].key: [for (var r = 0; r < refs.length; r++) _cosVec(embs[r], embs[refs.length + i])].reduce(math.max),
+            posts[i].key: [for (var r = 0; r < refs.length; r++) _cosVec(refVecs[r], postVecs[i])].reduce(math.max),
         });
         done = true;
       } catch (_) {
@@ -713,10 +720,10 @@ Future<Map<String, double>> _similarScores(
   }
 
   if (vecRef != null) {
-    if (vecRef['kind'] == 'siglip' && vecRef['v'] is List && embedTexts != null) {
+    if (vecRef['kind'] == 'siglip' && vecRef['v'] is List && (embedTexts != null || embedPosts != null)) {
       try {
         final v = [for (final x in vecRef['v'] as List) (x as num).toDouble()];
-        final embs = await embedTexts([for (final p in posts) p.body]);
+        final embs = await postVectors();
         merge({for (var i = 0; i < posts.length; i++) posts[i].key: _cosVec(v, embs[i])});
       } catch (_) {}
     } else if (vecRef['kind'] == 'ngram' && vecRef['p'] is Map) {

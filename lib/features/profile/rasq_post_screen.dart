@@ -36,8 +36,14 @@ enum RasqSectionMode {
 /// 下には、SNS の返信と同じ**常駐の返信コンポーザー**(縮小状態で貼り付き、触ると開く。✕ で消えたら、返信ボタンで呼び戻す)。
 /// 返信は RASQ アカウントとして送る(文字だけ、500 文字まで)。
 class RasqPostScreen extends ConsumerStatefulWidget {
-  const RasqPostScreen({super.key, required this.postId});
+  const RasqPostScreen({super.key, required this.postId, this.onClose, this.residentComposer = true});
   final String postId;
+
+  /// FOW の中で開いたとき (D-389: Swing の返信欄から): ヘッダーの < でこれを呼ぶ(画面を戻さない)。
+  final VoidCallback? onClose;
+
+  /// 常駐の返信コンポーザーを置くか(FOW の中では、呼んだ側が返信欄を持つので置かない)。
+  final bool residentComposer;
   @override
   ConsumerState<RasqPostScreen> createState() => _RasqPostScreenState();
 }
@@ -61,6 +67,7 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
 
   /// 常駐の返信コンポーザー (D-050 と同じ流儀): このページが最前面のときだけ置く。ページを移ると自動で消える。
   void _ensureReplyComposer(RasqAccountPost target) {
+    if (!widget.residentComposer) return;
     if (ref.read(orgateAccountProvider).value == null) return; // ログインしていなければ、返信できない
     if (_composerDismissed || _composerScheduled || ref.read(overlayManagerProvider).contains(composerFowId)) return;
     if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
@@ -98,7 +105,7 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
     void reply() => setState(() => _composerDismissed = false);
 
     return Scaffold(
-      appBar: const RasqPageHeader(title: '投稿'),
+      appBar: RasqPageHeader(title: '投稿', onBack: widget.onClose),
       body: thread.when(
         loading: () => const RasqLoading(),
         error: (e, _) => Padding(
