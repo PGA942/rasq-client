@@ -9,7 +9,7 @@ import 'store_models.dart';
 /// `orgate-server` の `/api/v1` に対する [StoreClient]。
 /// 経路とペイロードは rasq-sdk-sample/openapi/store.yaml (D-033) の通り。
 ///
-/// モック([MockStoreClient])との違いは**接続先だけ**で、インストールの
+/// 同梱のストア([BundledStoreClient])との違いは**接続先だけ**で、インストールの
 /// 検証パイプライン(SHA-512 照合と ed25519 署名検証)は両方とも同じ
 /// `store_providers.dart` 側で動く。
 class HttpStoreClient implements StoreClient {

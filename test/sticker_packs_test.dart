@@ -9,15 +9,15 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/store/rasqpkg.dart';
 import 'package:rasq_client/features/store/sticker_packs.dart';
-import 'package:rasq_client/features/store/store_client.dart';
 import 'package:rasq_client/features/store/store_models.dart';
 import 'package:rasq_client/features/store/store_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
 
+import 'support/fake_store_client.dart';
 import 'support/fakes.dart';
 
 /// アセットパック (D-252、契約 v0.11 §2.10): wasm 無しの `.rasqpkg`。検証 → 画像を端末に保存 → ステッカーに出る → アンインストールで消える。
-class _Store extends MockStoreClient {
+class _Store extends FakeStoreClient {
   _Store(this.id, this.version, this.bytes);
   final String id;
   final String version;

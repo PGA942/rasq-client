@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:rasq_client/app/app.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/features/settings/developer_mode.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
@@ -122,6 +124,8 @@ void main() {
     await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)], child: const RasqApp()));
     await tester.pumpAndSettle();
     final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    // テスト用の接続先は開発者モードのときだけ出す (D-393)。
+    await c.read(settingsAreaProvider(developerModeArea).notifier).set('enabled', true);
     c.read(routerProvider).push('/settings/server');
     await tester.pumpAndSettle();
     expect(devSnsBaseFor('misskey.rasq.test'), isNull);

@@ -147,12 +147,13 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
         const SizedBox(height: RasqSpacing.sm),
         Text(
           [
-            central == null ? rasqDetail(context, 'Central: 未接続(RASQ アカウントは作れません)', 'Central: 未接続 — プラグインストアはモック、RASQ アカウントは作成できません(この端末のみ)。') : 'Central: $central',
+            central == null ? rasqDetail(context, 'Central: 未接続(RASQ アカウントは作れません)', 'Central: 未接続 — プラグインストアは同梱のものだけ、RASQ アカウントは作成できません(この端末のみ)。') : 'Central: $central',
             base == null ? 'エッジ: 未接続' : 'エッジ: $base',
           ].join('\n'),
           style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
         ),
-        // テスト用の接続先 (D-360): プレビュー録画用のダミー環境(rasq-preview-assets の dummy/run_all.sh)。
+        // テスト用の接続先 (D-360): プレビュー録画用のダミー環境(rasq-preview-assets の dummy/run_all.sh)。開発者モードのときだけ (D-393)。
+        if (RasqDeveloperMode.of(context) || area?[TestEndpoints.keyEnabled] == true) ...[
         const RasqSectionHeader(title: 'テスト用の接続先'),
         Builder(builder: (context) {
           final on = area?[TestEndpoints.keyEnabled] == true;
@@ -192,6 +193,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
             ),
           ]);
         }),
+        ],
         const RasqSectionHeader(title: 'RASQ アカウント'),
         account.when(
           loading: () => const RasqLoading(),

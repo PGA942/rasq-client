@@ -88,10 +88,13 @@ class _Mixi2LoginScreenState extends ConsumerState<Mixi2LoginScreen> {
           Text('mixi2 の公式 API は申請制で、ログインは OAuth(RASQ サーバーのブローカー経由)です。申請とサーバーの設定が済むまで「ブラウザで認証」は使えません。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           const SizedBox(height: RasqSpacing.xl),
           FilledButton(key: mixi2LoginBrowserKey, onPressed: _busy ? null : () => _login(dummy: false), child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('ブラウザで認証')),
+          // ダミーアカウント(プラグインの中の投稿だけで動く)は、開発者モードのときだけ (D-393)。
+          if (RasqDeveloperMode.of(context)) ...[
           const SizedBox(height: RasqSpacing.md),
           OutlinedButton.icon(key: mixi2LoginDummyKey, onPressed: _busy ? null : () => _login(dummy: true), icon: const Icon(Icons.science_outlined), label: const Text('ダミーアカウントで試す')),
           const SizedBox(height: RasqSpacing.sm),
           Text('ダミーはネットワークを使わず、プラグインの中の投稿で TL / いいね / リポスト / 投稿 / 通知の流れを確かめられます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          ],
           if (_error != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.md), child: Text(_error!, key: const ValueKey('login.mixi2.error'), style: RasqTypography.bodySmall.copyWith(color: tokens.danger))),
         ]),
       ),

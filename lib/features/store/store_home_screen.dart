@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart';
+import '../../backend/orgate_client.dart' show centralClientProvider;
 import '../../shell/headers.dart';
 import '../settings/settings_dsl.dart';
 import 'store_client.dart' show StoreHomeSections;
@@ -122,12 +123,20 @@ class _StoreHomeScreenState extends ConsumerState<StoreHomeScreen> {
               return RefreshIndicator(
                 onRefresh: _refresh,
                 child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
-                  StoreTileRow(key: const ValueKey('store.home.trending'), title: '今週のトレンド', cards: pick(_trending!), installed: installed, fresh: _fresh),
+                  // RASQ サーバーにつないでいない (D-393): アプリ同梱のプラグインだけを出していると伝える(作り物の掲載は出さない)。
+                  if (ref.watch(centralClientProvider) == null)
+                    const RasqNotice(
+                      key: ValueKey('store.home.offline'),
+                      margin: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+                      text: 'RASQ サーバーにつながっていません。アプリに入っているプラグインだけを表示しています',
+                      detail: 'Central 未接続: 同梱の実物(Misskey コネクタとスロットのサンプル)だけ。評価 / ダウンロード数 / レビュー / 購入はサーバーにつなぐと出ます。',
+                    ),
+                  if (_trending!.isNotEmpty) StoreTileRow(key: const ValueKey('store.home.trending'), title: '今週のトレンド', cards: pick(_trending!), installed: installed, fresh: _fresh),
                   StoreTileRow(key: const ValueKey('store.home.recent'), title: '新着', cards: pick(_recent!), installed: installed, fresh: _fresh),
                   const RasqNotice(
                     margin: EdgeInsets.all(RasqSpacing.page),
                     text: '掲載されるのは審査済みのプラグインだけです',
-                    detail: '開発中のプラグインは、右上の歯車 → プラグインを管理 →「プラグインのインポート」から入れられます。',
+                    detail: '開発中のプラグインは、開発者モードで右上の歯車 → プラグインを管理 →「プラグインのインポート」から入れられます。',
                   ),
                 ]),
               );

@@ -9,18 +9,18 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/features/store/rasqpkg.dart';
-import 'package:rasq_client/features/store/store_client.dart';
 import 'package:rasq_client/features/store/store_models.dart';
 import 'package:rasq_client/features/store/store_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
 
+import 'support/fake_store_client.dart';
 import 'support/fake_slot_runtime.dart';
 import 'support/fakes.dart';
 
 /// ストアの配布物が `.rasqpkg`(rasq build、D-034 / D-244)のときのインストール:
 /// 署名 / ハッシュの検証 → 展開して中身を目次と突き合わせ → root(sns 以外)と子をスロットに登録 →
 /// アンインストールで全部外す → 再起動はストアから取り直して、インストール時のハッシュと同じものだけ読む。
-class _PkgStore extends MockStoreClient {
+class _PkgStore extends FakeStoreClient {
   _PkgStore(this.packages);
 
   /// pluginId → (版, 配布物)。

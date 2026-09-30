@@ -12,6 +12,7 @@ import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'support/fake_store_client.dart';
 import 'support/fake_slot_runtime.dart';
 import 'support/fakes.dart';
 
@@ -39,7 +40,7 @@ void main() {
   }
 
   test('ダミー掲載: サンプル 7 本が新着に載り、配布物は wasm', () async {
-    final client = MockStoreClient();
+    final client = FakeStoreClient();
     final home = await client.home();
     expect(home.recent.map((c) => c.id), containsAll(storeSlotSamples.map((x) => x.id)));
     expect((await client.plugin('sample.astell'))?.safety.permissions.map((p) => p.permission), contains('fow.widget'));
@@ -48,14 +49,14 @@ void main() {
   testWidgets('インストール → スロット登録(偽ランタイム)、アンインストールで解除、再起動でストアから取り直す', (tester) async {
     final fakes = {
       // インストールは版つきの登録元 (D-355)、下の再起動は古い形(版なし)の控えから読み直す。
-      for (final src in ['store:sample.timeline@0.1.0', 'store:sample.timeline'])
+      for (final src in ['store:sample.timeline@0.2.0', 'store:sample.timeline'])
         src: () => FakeSlotRuntime(manifest: {'id': 'sample.timeline', 'name': 'Unicode 昇順 TL', 'version': '0.1.0', 'kind': 'view', 'slots': ['tl']}, handler: (_, fn, args) => fn == 'tl.timelines' ? {'timelines': []} : null),
     };
     final c = await pump(tester, loader: fakeSlotLoader(fakes));
     final outcome = await c.read(installedPluginsProvider.notifier).install('sample.timeline');
     expect(outcome.error, isNull);
     expect(c.read(installedPluginsProvider).map((p) => p.id), contains('sample.timeline'));
-    expect(c.read(slotPluginsForProvider(SlotIds.tl)).single.source, 'store:sample.timeline@0.1.0');
+    expect(c.read(slotPluginsForProvider(SlotIds.tl)).single.source, 'store:sample.timeline@0.2.0');
     await c.read(installedPluginsProvider.notifier).uninstall('sample.timeline');
     expect(c.read(slotPluginsProvider), isEmpty);
     // 再起動: 登録元 `store:` はストアの配布物を取り直して読み込む。

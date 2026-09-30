@@ -20,13 +20,14 @@ import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'support/fake_store_client.dart';
 import 'support/fake_slot_runtime.dart';
 import 'support/fakes.dart';
 
 /// アカウントごとのバージョン (D-355)、アップデートの設定 / 更新ログ (D-356)、ポイントで購入 (D-355)。
 
 /// ストア役: `sample.timeline` に 0.1.0 と 0.2.0(現在版)。配布物は版ごとに違う「wasm」(先頭がマジック)。
-class _TwoVersionStore extends MockStoreClient {
+class _TwoVersionStore extends FakeStoreClient {
   _TwoVersionStore({this.latestAddsPermission = false, this.releasesFail = false, this.current = '0.2.0'});
   final bool latestAddsPermission;
 
@@ -210,7 +211,7 @@ void main() {
     tester.view.physicalSize = const Size(1600, 2400);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
-    final store = MockStoreClient();
+    final store = FakeStoreClient();
     final storage = MemorySessionStorage({SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key})});
     await tester.pumpWidget(ProviderScope(overrides: [
       sessionStorageProvider.overrideWithValue(storage),

@@ -13,6 +13,7 @@ import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'support/fake_store_client.dart';
 import 'support/fakes.dart';
 
 /// M4 / D-120: プラグインストア — ホーム(トレンド/最近の更新/検索)、
@@ -34,6 +35,8 @@ void main() {
       overrides: [
         sessionStorageProvider.overrideWithValue(storage),
         pluginRegistryProvider.overrideWithValue(registry),
+        // ストアの画面(トレンド / 評価 / レビュー / 有料)を見るので、作り物を持つテスト用のストア(D-393: アプリの同梱のストアには無い)。
+        storeClientProvider.overrideWithValue(FakeStoreClient()),
       ],
       child: const RasqApp(),
     ));
@@ -147,7 +150,7 @@ void main() {
 }
 
 /// マニフェストは正規、配布物だけ差し替えられた(改ざん)モック。
-class _TamperedStoreClient extends MockStoreClient {
+class _TamperedStoreClient extends FakeStoreClient {
   @override
   Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version}) async => Uint8List.fromList(utf8.encode('tampered!'));
 }

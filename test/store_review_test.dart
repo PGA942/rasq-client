@@ -17,6 +17,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'support/fake_store_client.dart';
 import 'support/fakes.dart';
 
 /// D-137: ストアページ「全体像」— レビュー TL(↪️/👍/👎)と上位 10 件の
@@ -32,7 +33,8 @@ void main() {
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p1', 'ふつうの投稿')]));
     await tester.pumpWidget(ProviderScope(
-      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)],
+      // レビュー / リリースノートの画面を見るので、作り物を持つテスト用のストア(アプリの同梱のストアには無い、D-393)。
+      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry), storeClientProvider.overrideWithValue(FakeStoreClient())],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
@@ -85,7 +87,7 @@ void main() {
     test('ストアページのレビューフレーム = ダミー TL の関連性上位 10 件', () async {
       final container = ProviderContainer(overrides: [
         sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
-        storeClientProvider.overrideWithValue(MockStoreClient()),
+        storeClientProvider.overrideWithValue(FakeStoreClient()),
       ]);
       addTearDown(container.dispose);
       final all = await container.read(storeReviewsProvider(storeSamplePluginId).future);
@@ -97,7 +99,7 @@ void main() {
     });
 
     test('版指定の manifest: リリースノートに載る版だけ受け、その版の権限増分を返す', () async {
-      final client = MockStoreClient();
+      final client = FakeStoreClient();
       final m = await client.manifest(storeSamplePluginId, version: '0.6.0-pre.1');
       expect(m!.version, '0.6.0-pre.1');
       expect(m.channel, 'beta');

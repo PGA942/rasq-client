@@ -1,0 +1,132 @@
+{
+  "schema": "rasq.bundled-plugins/1",
+  "generatedBy": "tool/build_bundled_plugins.sh",
+  "assets": {
+    "astell_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/astell-plugin.git",
+      "commit": "b91e667f111033b011816a9756fd534737028f25",
+      "version": "0.2.0",
+      "sha256": "ebbb01a78f2a245ba653244873d4e35e6b92ca943ad7aae8ea4adee00be4454c"
+    },
+    "bluesky_wasm.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
+      "commit": "9bfc48852dd6d7aff7cd122752570b3260fca834",
+      "version": "0.1.0",
+      "sha256": "9613f7a0d94f40be09e5565dd8be9cfa5abe529ff6746c13f9c02b8d0086b84a"
+    },
+    "composer_media_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/composer-media-plugin.git",
+      "commit": "28c00256b95bb0677c242ee3fc51211602a20577",
+      "version": "0.3.0",
+      "sha256": "bb8f47e786ae6e14486c8f46702359ecb6a256f3485bbda1ba4d53dd30272eb3"
+    },
+    "composer_text_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/composer-text-plugin.git",
+      "commit": "4ccd8550a186f6b2ddae64f626f48e0d308340ab",
+      "version": "0.1.0",
+      "sha256": "61a9040857b95edfbfa5914a52363cd4ed5d73c3d7175c458d3c30d8a71bb816"
+    },
+    "custom_page_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/custom-page-plugin.git",
+      "commit": "9c125ae1a81c36abd93b9365878b526102ac0cad",
+      "version": "0.1.0",
+      "sha256": "956a8be8791a517ef8418325ef854ee6633286e73aaac03988e5b080f2339316"
+    },
+    "hello_rasq_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
+      "commit": "9bfc48852dd6d7aff7cd122752570b3260fca834",
+      "version": "0.1.0",
+      "sha256": "f3dd12aa8ba3420f3867c8947a5070e153c105aa15d2c981e6a1d52591f540df"
+    },
+    "mastodon_wasm.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
+      "commit": "9bfc48852dd6d7aff7cd122752570b3260fca834",
+      "version": "0.1.0",
+      "sha256": "a80da0470095d0b2a37c8b4796160a88ceaa132b7656b7f1e58fe1aff8015da2"
+    },
+    "media_draw_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/media-draw-plugin.git",
+      "commit": "5f6320f9b86fd33314be5402724175cfd9ffac66",
+      "version": "0.1.0",
+      "sha256": "b1a0103f41a62b2936dc4c58d6cb1cd0a459ecb27196267826f031531b070d80"
+    },
+    "media_fullscreen_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/media-fullscreen-plugin.git",
+      "commit": "9edb02daa901d9047bad5f2c4603d434ac46367f",
+      "version": "0.2.1",
+      "sha256": "10c0549b556ca4ca2fbe7039d843b78f35be5b1864eaf38d25e0aca65c24060f"
+    },
+    "media_process_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/media-process-plugin.git",
+      "commit": "bb34cf031c0d9e0909384134d242633a8409adf5",
+      "version": "0.1.0",
+      "sha256": "5df70cd4bbe975a03a06c110a70d5b1b1abb5ae8e48b8a29ab824a9750172b89"
+    },
+    "media_transform_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/media-transform-plugin.git",
+      "commit": "e7af91d614f9c9a462748b8c02ce6549fa5d35c3",
+      "version": "0.1.0",
+      "sha256": "aeb7ac7915b485cf10a049ae10940de5eec80a479c1833a8c90780cc200a8847"
+    },
+    "misskey_wasm_sample.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
+      "commit": "9bfc48852dd6d7aff7cd122752570b3260fca834",
+      "version": "0.1.0",
+      "sha256": "a1db7eeef2fca362697c09c76b6f7e89526e85d57b8f653c35d2c1b75be517c7"
+    },
+    "mixi2_wasm.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
+      "commit": "9bfc48852dd6d7aff7cd122752570b3260fca834",
+      "version": "0.1.0",
+      "sha256": "58a3f9c715f828ff047f8602d586adba4b11b93c00a141843df081af7ea9b998"
+    },
+    "post_action_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/post-action-plugin.git",
+      "commit": "29f9536f5a999e62dd1b11e7b3ec2b51615375ef",
+      "version": "0.1.1",
+      "sha256": "89b0728236613efcb44d0148e9118d3543b8afc778ab30e239b1345396561947"
+    },
+    "post_process_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/post-process-plugin.git",
+      "commit": "93f08929d56d098ba357063392d4b5a56cb95f86",
+      "version": "0.1.0",
+      "sha256": "a3fef5da9ced8a8b2fd7d43e2607ef48f712981a07eb9805ce81b2f39e33a714"
+    },
+    "post_share_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/post-share-plugin.git",
+      "commit": "3ab8e97ed4bd2e84b548f7ba0a9e5ec84287a09a",
+      "version": "0.1.0",
+      "sha256": "42634727648b7a6e9ccfdf691c1087e098456ab34beb7cb87e07c0bef9312751"
+    },
+    "relational_wasm.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",
+      "commit": "9bfc48852dd6d7aff7cd122752570b3260fca834",
+      "version": "0.1.0",
+      "sha256": "03c7e733789151fcd500b0bcf100d93b4a12772646389d384e62ad72832291c1"
+    },
+    "theme_rasq.rasqpkg": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/theme-plugin.git",
+      "commit": "cad910b7414514b22fbf12ca9728f710a23485b6",
+      "version": "0.1.0",
+      "sha256": "f355a79c29b6aa34eb055bbdb0765f5063492acb8343dcd0633cc68af40afb76"
+    },
+    "theme_starry.rasqpkg": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/theme-plugin.git",
+      "commit": "cad910b7414514b22fbf12ca9728f710a23485b6",
+      "version": "0.1.0",
+      "sha256": "652d8710aa43509201f13253d79712785cf403b5c3e65f34096fb6e8c6a53d2c"
+    },
+    "timeline_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/timeline-plugin.git",
+      "commit": "41533d9b4434ee00225a201a59f1d8d835372cde",
+      "version": "0.2.0",
+      "sha256": "3764c3d641025eaa1ea9ca8d02809ae7a5941dad08884cc4561da3008d8d66e5"
+    },
+    "trend_plugin.wasm": {
+      "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/trend-plugin.git",
+      "commit": "82bc7829468c217f45d82e47d5147d4b279dd058",
+      "version": "0.1.0",
+      "sha256": "ece0ad84c5c0484db5c613bac2015a5147c24ac84d11f27019434265262aee14"
+    }
+  }
+}

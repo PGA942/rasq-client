@@ -68,6 +68,8 @@ class StoreManageScreen extends ConsumerWidget {
           )
         else
           for (final p in installed) ...[_InstalledBlock(record: p), const Divider(height: 1)],
+        // 審査前のプラグインを入れる口は、開発者モードのときだけ (D-393)。
+        if (RasqDeveloperMode.of(context))
         RasqListTile(
           key: const ValueKey('store.manage.import'),
           leading: const Icon(Icons.warning_amber_rounded, color: RasqColors.warning),
