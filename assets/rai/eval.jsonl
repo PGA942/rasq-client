@@ -388,3 +388,6 @@
 {"q": "タイムラインを他のアカウントでも使いたい", "op": "tl-share"}
 {"q": "新しい投稿を読み込みたい", "op": "tl-load-new"}
 {"q": "RAiの広告を消したい", "op": "rai-cloud-ad"}
+{"q": "Swingでプラグインを配りたい", "op": "swing-plugin-share"}
+{"q": "Swingの背景の柄を変えたい", "op": "swing-background"}
+{"q": "Swingを検索したい", "op": "astell-search"}

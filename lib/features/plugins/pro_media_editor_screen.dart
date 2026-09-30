@@ -53,10 +53,24 @@ import 'sticker_picker.dart';
 /// `pro_video_editor`(端末ネイティブ、mp4)。動画を受ける(`accepts`)プラグインのボタンは、元のファイルをそのまま
 /// プラグインへ渡し、結果で添付を差し替えて閉じる(焼き込みはしない)。
 class ProMediaEditorArgs {
-  const ProMediaEditorArgs({required this.bytes, required this.name, required this.mimeType});
+  const ProMediaEditorArgs({required this.bytes, required this.name, required this.mimeType, this.extraActions = const []});
   final Uint8List bytes;
   final String name;
   final String mimeType;
+
+  /// 下段バーの先頭に足すボタン(呼んだ画面が決める。Swing の「プラグイン」「背景を変える」、D-386)。
+  final List<ProEditorExtraAction> extraActions;
+}
+
+/// 下段バーに足すボタン。キーは `media.pro.bar.extra:<id>`。
+class ProEditorExtraAction {
+  const ProEditorExtraAction({required this.id, required this.label, required this.icon, required this.onTap});
+  final String id;
+  final String label;
+  final IconData icon;
+
+  /// [context] = エディター画面(閉じるときは `Navigator.pop(context)`)。
+  final void Function(ProImageEditorState editor, BuildContext context) onTap;
 }
 
 /// 動画編集の一時ファイル (D-248)。
@@ -1101,6 +1115,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
+                for (final x in widget.args.extraActions) item('extra:${x.id}', x.label, Icon(x.icon, size: 22, color: RasqColors.accent), (_) => x.onTap(editor, context), color: RasqColors.accent),
                 for (final e in entries)
                   switch (e) {
                     SingleActionEntry() => item(

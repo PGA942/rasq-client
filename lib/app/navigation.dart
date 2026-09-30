@@ -93,8 +93,8 @@ extension RasqNavigation on BuildContext {
   void openImage(Uri url, {String? title}) => push(Routes.imageViewer, extra: (url: url, title: title));
 
   /// 添付の加工 (D-173): 基本 = pro_image_editor、プラグインはそこからバイパス。
-  Future<MediaEditResult?> pushProMediaEditor({required Uint8List bytes, required String name, required String mimeType}) =>
-      push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: bytes, name: name, mimeType: mimeType));
+  Future<MediaEditResult?> pushProMediaEditor({required Uint8List bytes, required String name, required String mimeType, List<ProEditorExtraAction> extraActions = const []}) =>
+      push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: bytes, name: name, mimeType: mimeType, extraActions: extraActions));
 
   void pushTrend(String tag) {
     final loc = '${_inTab ? '${Routes.search}/trend' : '/trend'}/${Uri.encodeComponent(tag)}';

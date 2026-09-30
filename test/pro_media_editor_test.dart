@@ -94,6 +94,28 @@ void main() {
     expect(manager.isFowSuspended(composer), isFalse);
   });
 
+  testWidgets('呼んだ画面が足すボタン (D-386): 下段バーの先頭に出て、押すとエディターの状態を受け取る。閉じれば null', (tester) async {
+    final c = await pump(tester);
+    final taps = <String>[];
+    final future = c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro,
+        extra: ProMediaEditorArgs(bytes: png, name: 'swing.png', mimeType: 'image/png', extraActions: [
+          ProEditorExtraAction(id: 'a', label: '背景を変える', icon: Icons.shuffle, onTap: (editor, _) => taps.add('a ${editor.mounted}')),
+          ProEditorExtraAction(id: 'b', label: 'プラグイン', icon: Icons.extension_outlined, onTap: (_, ctx) => Navigator.of(ctx).pop()),
+        ]));
+    await settle(tester);
+    final a = find.byKey(proMediaEditorBarKey('extra:a'));
+    final b = find.byKey(proMediaEditorBarKey('extra:b'));
+    expect(a, findsOneWidget);
+    expect(tester.getCenter(a).dx, lessThan(tester.getCenter(find.byKey(proMediaEditorBarKey('editor:paint'))).dx), reason: '先頭');
+    await tester.tap(a);
+    await settle(tester);
+    expect(taps, ['a true']);
+    await tester.tap(b);
+    await settle(tester);
+    expect(find.byType(ProImageEditor), findsNothing);
+    expect(await future, isNull);
+  });
+
   testWidgets('宣言の無いプラグインのボタン → 焼き込んだ画像で編集パネル → 適用 → 結果が pro_image_editor の背景になる', (tester) async {
     late FakeSlotRuntime rt;
     fakes['m'] = () => rt = FakeSlotRuntime(

@@ -381,33 +381,73 @@ void main() {
     });
   });
 
-  testWidgets('VC ホームの検索 (D-385): トレンドと同じ角丸の欄。名前 / ジャンル / ホストで探し、押すと下に伸びて節で絞れる', (tester) async {
+  testWidgets('VC ホームの検索 (D-385 / D-386): トレンドと同じ角丸の欄。結果はタイル、Enter で語を重ねて絞る、節のチップ(複数)でも絞れる', (tester) async {
     await pump(tester);
     await openVc(tester);
     final box = find.byKey(const ValueKey('astell.search'));
-    expect(tester.widget<RasqExpandableSearchBox>(box).expanded, isFalse);
-    await tester.enterText(find.descendant(of: box, matching: find.byType(TextField)), 'ゲーム制作');
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('astell.search.results')), findsOneWidget);
-    expect(find.descendant(of: find.byKey(const ValueKey('astell.search.results')), matching: find.text('Create Game')), findsOneWidget, reason: 'ジャンルで当たる');
-    expect(tester.widget<RasqExpandableSearchBox>(box).expanded, isTrue, reason: '入力中は伸びる');
-    await tester.enterText(find.descendant(of: box, matching: find.byType(TextField)), 'よもぎもち');
-    await tester.pumpAndSettle();
+    final field = find.descendant(of: box, matching: find.byType(TextField));
     final results = find.byKey(const ValueKey('astell.search.results'));
-    expect(find.descendant(of: results, matching: find.text('サプライズ')), findsOneWidget, reason: 'ホストで当たる(招待も)');
+    expect(tester.widget<RasqExpandableSearchBox>(box).expanded, isFalse);
+    await tester.enterText(field, 'ゲーム制作');
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: results, matching: find.byKey(const ValueKey('astell.search.rooms'))), findsOneWidget, reason: 'ルームはタイルで');
+    expect(find.descendant(of: results, matching: find.text('Create Game')), findsOneWidget, reason: 'ジャンルで当たる');
+    expect(find.descendant(of: results, matching: find.byType(AstellTile)), findsOneWidget);
+    expect(tester.widget<RasqExpandableSearchBox>(box).expanded, isTrue, reason: '入力中は伸びる');
+    // ホストで探して Enter → 語のチップとして残し、さらに絞る。
+    await tester.enterText(field, 'よもぎもち');
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: results, matching: find.byType(AstellTile)), findsNWidgets(2), reason: '招待(サプライズ)と 打ち上げ反省会');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: box, matching: find.text('「よもぎもち」 ×')), findsOneWidget);
+    expect(tester.widget<TextField>(field).controller!.text, isEmpty);
+    await tester.enterText(field, '反省');
+    await tester.pumpAndSettle();
     expect(find.descendant(of: results, matching: find.text('打ち上げ反省会')), findsOneWidget);
-    // 節で絞る: 招待だけ。
+    expect(find.descendant(of: results, matching: find.text('サプライズ')), findsNothing, reason: '重ねた語を全部満たすものだけ');
+    // 語を消して、節で絞る: 招待だけ。
+    await tester.enterText(field, '');
     await tester.tap(find.descendant(of: box, matching: find.text('招待')));
     await tester.pumpAndSettle();
     expect(find.descendant(of: results, matching: find.text('サプライズ')), findsOneWidget);
     expect(find.descendant(of: results, matching: find.text('打ち上げ反省会')), findsNothing);
-    // 消すと元の一覧(節の絞り込みは残る → リセット)。
-    await tester.tap(find.byKey(const ValueKey('astell.search.clear')));
-    await tester.pumpAndSettle();
+    // リセットで語のチップも節も外れ、元の一覧。
     await tester.tap(find.descendant(of: box, matching: find.text('リセット')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('astell.search.results')), findsNothing);
+    expect(results, findsNothing);
     expect(find.byType(AstellTile), findsWidgets, reason: '元の一覧');
+  });
+
+  testWidgets('タイル (D-386): 横並びは最小 220px。300px 未満ではブックマークのボタンと 3 人目の顔を出さない。アイコンは 36px', (tester) async {
+    final room = AstellRoom.fromJson({
+      'id': 'r1', 'ownerId': 'o', 'ownerHandle': 'o', 'ownerDisplayName': 'オーナー', 'title': 'ルーム', 'description': '', 'genres': <String>[],
+      'visibility': 'public', 'createdAt': '2026-09-30T00:00:00Z', 'peerCount': 2,
+      'peerFaces': [for (final n in ['a', 'b']) {'accountId': n, 'handle': n, 'displayName': n}],
+    });
+    expect(room.bundleFaces.length, 3, reason: 'オーナー + 2 人');
+    Future<void> at(double width) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(extensions: [RasqTokens.light]),
+        home: Scaffold(body: Center(child: SizedBox(width: width, height: 230, child: AstellTile(room: room, onBookmark: () {}, onMore: (_) {})))),
+      ));
+    }
+
+    await at(260);
+    expect(find.byKey(const ValueKey('astell.tile.bookmark')), findsNothing);
+    expect(find.byKey(const ValueKey('avatarBundle.face.2')), findsNothing);
+    expect(find.byKey(const ValueKey('avatarBundle.face.1')), findsOneWidget);
+    expect(tester.widget<RasqAvatarBundle>(find.byType(RasqAvatarBundle)).size, AstellTile.bundleSize);
+    await at(320);
+    expect(find.byKey(const ValueKey('astell.tile.bookmark')), findsOneWidget);
+    expect(find.byKey(const ValueKey('avatarBundle.face.2')), findsOneWidget);
+
+    // 横並び: 狭い画面でも 1 枚は 220px 以上。
+    tester.view.physicalSize = const Size(330, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(theme: ThemeData(extensions: [RasqTokens.light]), home: Scaffold(body: AstellTileStrip(rooms: [room, room, room]))));
+    expect(tester.getSize(find.byType(AstellTile).first).width, greaterThanOrEqualTo(AstellTile.minWidth - 12), reason: '余白を除いて 220px');
   });
 
   testWidgets('VC ホーム: おすすめ / トレンド / フォロー中 にタイル(ホスト / タイトル / 要約 / ジャンル / LIVE / 見てみる)', (tester) async {
@@ -1095,11 +1135,14 @@ void main() {
     // 開催中のルーム(打ち上げの打ち上げ)のタイルが本文の下に出る。
     expect(find.byKey(const ValueKey('astell.post.tile.r-launch')), findsOneWidget);
     expect(find.text('打ち上げの打ち上げ'), findsOneWidget);
-    final live = find.descendant(of: find.byKey(const ValueKey('astell.post.tile.r-launch')), matching: find.byKey(const ValueKey('astell.tile.bookmark')));
-    expect(live, findsOneWidget);
-    expect(find.descendant(of: find.byKey(const ValueKey('astell.post.tile.r-launch')), matching: find.byKey(const ValueKey('astell.tile.remind'))), findsNothing, reason: '開催中には通知ボタンなし');
+    final liveTile = find.byKey(const ValueKey('astell.post.tile.r-launch'));
+    // 投稿の中のタイルは 300px より細いので、ブックマークのボタンは出さず … から (D-386)。
+    expect(find.descendant(of: liveTile, matching: find.byKey(const ValueKey('astell.tile.bookmark'))), findsNothing);
+    expect(find.descendant(of: liveTile, matching: find.byKey(const ValueKey('astell.tile.remind'))), findsNothing, reason: '開催中には通知ボタンなし');
     // ブックマーク保存 → ブックマーク画面に AsTell の帯。
-    await tester.tap(live);
+    await tester.tap(find.descendant(of: liveTile, matching: find.byTooltip('メニュー')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ブックマークに保存'));
     await tester.pumpAndSettle();
     expect(find.text('ブックマークに保存しました'), findsOneWidget);
     expect(container.read(astellBookmarkedProvider('r-launch')), isTrue);
@@ -1137,7 +1180,10 @@ void main() {
     // 前のスナックバー(通知登録 / 解除)を流してから。
     ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first)).clearSnackBars();
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('astell.tile.bookmark')).first);
+    // 帯のタイルも 300px より細い(スマホ幅)ので … から (D-386)。
+    await tester.tap(find.descendant(of: find.byType(AstellTileStrip), matching: find.byTooltip('メニュー')).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ブックマークから削除'));
     await tester.pumpAndSettle();
     expect(find.text('ブックマークから削除しました'), findsOneWidget);
     expect(container.read(astellBookmarkedProvider('r-launch')), isFalse);

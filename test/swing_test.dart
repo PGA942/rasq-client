@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,6 +28,7 @@ import 'package:rasq_client/features/swing/swing_composer.dart';
 import 'package:rasq_client/features/swing/swing_models.dart';
 import 'package:rasq_client/features/swing/swing_providers.dart';
 import 'package:rasq_client/features/swing/swing_viewer.dart';
+import 'package:rasq_client/features/swing/wagara.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart' show RasqActionCircle;
@@ -107,7 +109,7 @@ void main() {
     });
   });
 
-  testWidgets('背景とテキストの無地の背景は、縦長の PNG', (tester) async {
+  testWidgets('Swing の背景 (D-386): 和柄 2 つの縦長の PNG', (tester) async {
     final c = ProviderContainer();
     addTearDown(c.dispose);
     final png = (await tester.runAsync(() => c.read(swingBackgroundProvider)()))!;
@@ -153,7 +155,8 @@ void main() {
     return (mock, seen, created, uploads);
   }
 
-  Future<ProviderContainer> pumpApp(WidgetTester tester, MockClient mock, {List<Override> extra = const []}) async {
+  /// [fakeSwingEditor] = Swing の編集画面を開いたままにする(＋ から Swing を開くテストで、本物の編集画面を出さない)。
+  Future<ProviderContainer> pumpApp(WidgetTester tester, MockClient mock, {List<Override> extra = const [], bool fakeSwingEditor = true}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -173,6 +176,10 @@ void main() {
         orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
         centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
         orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        if (fakeSwingEditor) ...[
+          swingBackgroundProvider.overrideWithValue(() async => Uint8List.fromList(const [0x89, 0x50, 0x4E, 0x47])),
+          swingEditorProvider.overrideWithValue((context, {required bytes, required name, required mime, actions = const []}) => Completer<MediaEditResult?>().future),
+        ],
         ...extra,
       ],
       child: const RasqApp(),
@@ -464,32 +471,30 @@ void main() {
     expect(() => checkSwingPackage(Uint8List.fromList([1, 2, 3]), decompress: (b, {int maxOutput = 0}) => b), throwsStateError);
   });
 
-  testWidgets('作る (D-380 / D-381): ＋ を上へスワイプ → Swing → 画像 = 選んだ絵をそのまま編集画面へ → 送る画面(届け先と時間)。背景とテキスト = 無地の背景を編集画面へ。届け先が無ければ出せない', (tester) async {
+  testWidgets('作る (D-386): ＋ を上へスワイプ → すぐ和柄の背景で編集画面(バーの先頭に「プラグイン」「背景を変える」)→ 送る画面(届け先と時間)。閉じたら戻る。プラグインは送る画面で選ぶ', (tester) async {
     final (mock, _, created, uploads) = central(const []);
     final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
     final edited = Uint8List.fromList([...png, 0]);
     final opened = <String>[];
-    await pumpApp(tester, mock, extra: [
-      swingMediaPickerProvider.overrideWithValue(({required bool video}) async => XFile.fromData(png, name: 'photo.png', path: 'photo.png', mimeType: 'image/png')),
+    var bars = <List<String>>[];
+    var cancel = false;
+    final c = await pumpApp(tester, mock, fakeSwingEditor: false, extra: [
       swingBackgroundProvider.overrideWithValue(() async => png),
-      swingEditorProvider.overrideWithValue((context, {required bytes, required name, required mime}) async {
+      swingEditorProvider.overrideWithValue((context, {required bytes, required name, required mime, actions = const []}) async {
         opened.add('$name ${bytes.length}');
-        return MediaEditResult(bytes: edited, mimeType: 'image/png', name: 'edited.png');
+        bars = [...bars, [for (final a in actions) '${a.id}:${a.label}']];
+        return cancel ? null : MediaEditResult(bytes: edited, mimeType: 'image/png', name: 'edited.png');
       }),
     ]);
-    // ＋ を上へスワイプ (D-381) → Swing の始め方(画像 / 動画 / プラグイン / 背景とテキスト)。
+    // ＋ を上へスワイプ (D-381) → 始め方の一覧は無く、すぐ背景つきの編集画面。
     await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -160));
-    await tester.pumpAndSettle();
-    for (final s in SwingStart.values) {
-      expect(find.byKey(ValueKey('swing.start.${s.name}')), findsOneWidget, reason: s.name);
-    }
-    await tester.tap(find.byKey(const ValueKey('swing.start.image')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
     await tester.pumpAndSettle();
-    expect(opened, ['photo.png ${png.length}'], reason: '選んだ絵をそのまま編集画面へ');
+    expect(find.byKey(const ValueKey('swing.start.image')), findsNothing);
+    expect(opened, ['swing.png ${png.length}'], reason: '和柄の背景をそのまま編集画面へ');
+    expect(bars.single, ['swing.plugin:プラグイン', 'swing.background:背景を変える'], reason: 'バーの先頭に自動で足す');
     expect(find.byType(SwingComposerScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('swing.preview')), findsOneWidget);
-    expect(find.byKey(const ValueKey('swing.text')), findsNothing, reason: '文字だけの Swing は無い');
     await tester.tap(find.byKey(const ValueKey('swing.audience.list.rl1')));
     await tester.tap(find.byKey(const ValueKey('swing.ttl.6')));
     await tester.pump();
@@ -512,28 +517,74 @@ void main() {
     tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger).first).clearSnackBars();
     await tester.pumpAndSettle();
 
-    // 背景とテキスト: 無地の背景を編集画面へ(文字は編集画面で書く)→ 画像の Swing。
+    // 編集画面を閉じたら、何も出さずに戻る。
+    cancel = true;
     await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -160));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('swing.start.background')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
     await tester.pumpAndSettle();
-    expect(opened.last, 'swing.png ${png.length}');
-    await tester.ensureVisible(find.byKey(const ValueKey('swing.send')));
-    await tester.tap(find.byKey(const ValueKey('swing.send')));
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
-    await tester.pumpAndSettle();
-    expect(created.last['kind'], 'image');
-    tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger).first).clearSnackBars();
-    await tester.pumpAndSettle();
+    expect(opened.length, 2);
+    expect(find.byType(SwingComposerScreen), findsNothing);
+    expect(created.length, 1);
 
-    // プラグイン: 送る画面で選ぶ。
-    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -160));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('swing.start.plugin')));
+    // プラグイン(編集画面の「プラグイン」から): 送る画面で選ぶ。
+    c.read(routerProvider).push(Routes.swingNew, extra: const SwingDraft.plugin());
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('swing.plugin.file')), findsOneWidget);
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull, reason: 'プラグインを選ぶまで出せない');
+  });
+
+  test('和柄 (D-386): 19 種すべて描け、2 つは別の柄、乱数の種が同じなら同じ', () async {
+    expect(Wagara.values.length, 19);
+    expect(Wagara.values.map((w) => w.label), isNot(contains('千鳥')));
+    for (var i = 0; i < 40; i++) {
+      final spec = SwingBackgroundSpec.random(math.Random(i));
+      expect(spec.first, isNot(spec.second));
+    }
+    expect(SwingBackgroundSpec.random(math.Random(3)).label, SwingBackgroundSpec.random(math.Random(3)).label);
+    for (final w in Wagara.values) {
+      for (final mask in [false, true]) {
+        final rec = ui.PictureRecorder();
+        paintWagara(Canvas(rec), const Size(200, 300), w, color: const Color(0xFF123456), ground: const Color(0xFFFFFFFF), unit: 50, mask: mask);
+        rec.endRecording().dispose();
+      }
+    }
+  });
+
+  test('Swing の検索 (D-386): 名前 / @ハンドル / 文字 / 種類。語は全部を満たすもの、作った人ごと', () {
+    final feed = [
+      Swing.tryParse(swing('a1', 'alice', text: '花火を見に来た'))!,
+      Swing.tryParse(swing('a2', 'alice', text: 'かき氷', age: const Duration(minutes: 5)))!,
+      Swing.tryParse(swing('b1', 'bob', text: '花火大会'))!,
+    ];
+    expect(searchSwingAuthors(feed, '花火').map((e) => e.first.authorAccountId), unorderedEquals(['alice', 'bob']));
+    expect(searchSwingAuthors(feed, '花火 @bob').single.first.id, 'b1', reason: '語を重ねる');
+    expect(searchSwingAuthors(feed, 'alice').single.total, 2);
+    expect(searchSwingAuthors(feed, 'テキスト').length, 2, reason: '種類');
+    expect(searchSwingAuthors(feed, 'ない言葉'), isEmpty);
+  });
+
+  testWidgets('AsTell の検索に Swing (D-386): 角丸バナー(アイコン + 名前)が先、押すとその人のビューワー。節のチップ「Swing」で Swing だけ', (tester) async {
+    final (mock, _, _, _) = central([swing('s1', 'alice', text: '花火を見に来た'), swing('s2', 'bob', text: 'ランチ')]);
+    final c = await pumpApp(tester, mock);
+    c.read(routerProvider).go(Routes.vc);
+    await tester.pumpAndSettle();
+    final box = find.byKey(const ValueKey('astell.search'));
+    await tester.enterText(find.descendant(of: box, matching: find.byType(TextField)), '花火');
+    await tester.pumpAndSettle();
+    final banner = find.byKey(const ValueKey('swing.banner.alice'));
+    expect(banner, findsOneWidget);
+    expect(find.descendant(of: banner, matching: find.text('alice さん')), findsOneWidget);
+    expect(find.descendant(of: banner, matching: find.byKey(const ValueKey('swing.ring.unseen'))), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.banner.bob')), findsNothing);
+    // 節: Swing だけ(語なし)→ 2 人。
+    await tester.enterText(find.descendant(of: box, matching: find.byType(TextField)), '');
+    await tester.tap(find.descendant(of: box, matching: find.text('Swing')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.banner.bob')), findsOneWidget);
+    expect(find.byKey(const ValueKey('astell.search.rooms')), findsNothing, reason: 'Swing だけ');
+    await tester.tap(find.byKey(const ValueKey('swing.banner.bob')));
+    await tester.pumpAndSettle();
+    expect(find.byType(SwingViewerScreen), findsOneWidget);
   });
 
   testWidgets('＋ (D-383): タップ = 投稿。スライドの向き(上 / 左 / 左上)で始める。素早く払っても長押しにならない。長押し / ホバーで暗くして丸ボタンを展開、歯車で並べ替え(ドラッグで入れる / 外す)。トレンドはハッシュタグ、AsTell の ＋', (tester) async {
@@ -583,7 +634,9 @@ void main() {
     await tester.pumpAndSettle();
     // 素早く上へ払う → 長押しにならず、Swing の作成ページへ。
     await tester.fling(fab, const Offset(0, -160), 3000);
-    await tester.pumpAndSettle();
+    // 作成ページは開くとすぐ編集画面を待つ(読み込みの表示が回り続けるので settle しない)。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
     expect(find.byKey(const ValueKey('fab.home.settings')), findsNothing, reason: '展開(長押し)にならない');
     expect(find.byType(SwingComposerScreen), findsOneWidget);
     c.read(routerProvider).pop();
@@ -696,7 +749,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.descendant(of: find.byKey(const ValueKey('fab.astell.action.0')), matching: find.text('Swing')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('fab.astell.action.0')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
     expect(find.byType(SwingComposerScreen), findsOneWidget);
   });
 

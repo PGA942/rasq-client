@@ -1,10 +1,11 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pro_image_editor/pro_image_editor.dart' show EditorImage;
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../backend/orgate_client.dart' show OrgateException;
@@ -16,17 +17,20 @@ import '../collections/rasq_collections.dart';
 import '../compose/media_file_pick.dart' show mediaVideoExtensions, mediaMimeFor;
 import '../custom/custom_plugins_screen.dart' show installedPagePluginsProvider;
 import '../plugins/media_plugin_panel.dart' show MediaEditResult;
+import '../plugins/pro_media_editor_screen.dart' show ProEditorExtraAction;
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart' show isRasqPackage, rasqpkgZstdProvider;
 import 'swing_models.dart';
 import 'swing_providers.dart';
+import 'wagara.dart';
 
-/// Swing を作る (D-377 / D-380)。
+/// Swing を作る (D-377 / D-380 → D-386)。
 ///
-/// D-380: 始め方は **画像 / 動画 / プラグイン / 背景とテキスト** の 4 つ([SwingStart])。文字だけの Swing は無くし、
-/// 画像 / 動画 / 背景とテキストは**そのまま全画面の編集画面**(投稿の添付と同じ pro_image_editor)に入り、できあがったものを
-/// 送る画面([SwingComposerScreen]: 届け先と時間)へ。背景とテキスト = 無地のグラデーションの絵を編集画面で開く(文字は編集画面で書く)。
-/// プラグインは、入っている Swing 対応のもの / ファイルから(未審査)を選ぶ。ホームの ＋ の FOW から入る。
+/// D-386: 始め方を選ぶ一覧は無くし、**開くとすぐ和柄の背景**([wagara.dart]: 柄 2 つを乱数で選び、1 枚目 + 柄 A でマスクした
+/// 2 枚目の紋様)で**全画面の編集画面**(投稿の添付と同じ pro_image_editor)に入る。画像 / 動画 / テキストは編集画面の
+/// 「メディア」「テキスト」で**あとから足す**。下のバーの先頭には「**プラグイン**」(配るプラグインを選ぶ画面へ)と
+/// 「背景を変える」(別の柄で描き直す)を自動で足す。できあがったものを送る画面([SwingComposerScreen]: 届け先と時間)へ。
+/// プラグインは、入っている Swing 対応のもの / ファイルから(未審査)を選ぶ。ホームの ＋ から入る。
 
 const swingImageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic'];
 const _imageMime = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif', 'webp': 'image/webp', 'heic': 'image/heic'};
@@ -58,18 +62,6 @@ final swingPluginsProvider = Provider<List<SlotPlugin>>((ref) => [
         if (p.manifest.page?.allows(PluginPageDecl.surfaceSwing) ?? false) p,
     ]);
 
-/// 始め方 (D-380)。
-enum SwingStart {
-  image(Icons.image_outlined, '画像'),
-  video(Icons.movie_outlined, '動画'),
-  plugin(Icons.extension_outlined, 'プラグイン'),
-  background(Icons.format_color_fill, '背景とテキスト');
-
-  const SwingStart(this.icon, this.label);
-  final IconData icon;
-  final String label;
-}
-
 /// 送る画面に渡す下書き: 編集し終えた画像 / 動画、またはプラグインを選ぶところから。
 @immutable
 class SwingDraft {
@@ -88,75 +80,57 @@ class SwingDraft {
   SwingKind get kind => plugin ? SwingKind.plugin : (mime!.startsWith('video/') ? SwingKind.video : SwingKind.image);
 }
 
-/// 全画面の編集画面(テストで差し替える)。閉じたら null。
-final swingEditorProvider = Provider<Future<MediaEditResult?> Function(BuildContext context, {required Uint8List bytes, required String name, required String mime})>(
-    (ref) => (context, {required bytes, required name, required mime}) => context.pushProMediaEditor(bytes: bytes, name: name, mimeType: mime));
+/// 全画面の編集画面(テストで差し替える)。閉じたら null。[actions] = 下のバーの先頭に足すボタン。
+typedef SwingEditor = Future<MediaEditResult?> Function(BuildContext context, {required Uint8List bytes, required String name, required String mime, List<ProEditorExtraAction> actions});
 
-/// 「背景とテキスト」の無地の背景(縦長のグラデーション、PNG)。テストで差し替える。
-final swingBackgroundProvider = Provider<Future<Uint8List> Function()>((ref) => () async {
-      const w = 1080.0, h = 1920.0;
-      final rec = ui.PictureRecorder();
-      final canvas = Canvas(rec);
-      canvas.drawRect(
-        const Rect.fromLTWH(0, 0, w, h),
-        Paint()..shader = ui.Gradient.linear(Offset.zero, const Offset(w, h), const [RasqColors.main, RasqColors.link]),
-      );
-      final img = await rec.endRecording().toImage(w.toInt(), h.toInt());
-      final data = await img.toByteData(format: ui.ImageByteFormat.png);
-      img.dispose();
-      return data!.buffer.asUint8List();
-    });
+final swingEditorProvider = Provider<SwingEditor>(
+    (ref) => (context, {required bytes, required name, required mime, actions = const []}) => context.pushProMediaEditor(bytes: bytes, name: name, mimeType: mime, extraActions: actions));
 
-/// 始める: 画像 / 動画はファイルを選び、背景とテキストは無地の背景で、どちらも編集画面へ → 送る画面。プラグインは送る画面で選ぶ。
-/// [replace] = いまの画面(始め方の一覧)を送る画面で置き換える。
-Future<void> startSwing(BuildContext context, WidgetRef ref, SwingStart start, {bool replace = false}) async {
+/// 背景 (D-386): 和柄 2 つを乱数で選んで描いた縦長の PNG。テストで差し替える。
+final swingBackgroundProvider = Provider<Future<Uint8List> Function()>((ref) => () => renderSwingBackground(SwingBackgroundSpec.random(math.Random())));
+
+/// 編集画面の下のバーに足すボタンの id(キーは `media.pro.bar.extra:<id>`)。
+const swingPluginActionId = 'swing.plugin';
+const swingBackgroundActionId = 'swing.background';
+
+/// 始める: 和柄の背景で編集画面へ → 送る画面。「プラグイン」を押したら、配るプラグインを選ぶ送る画面へ。
+/// [replace] = いまの画面(開いたばかりの送る画面)を置き換える。編集画面を閉じたら、その画面も閉じる。
+Future<void> startSwing(BuildContext context, WidgetRef ref, {bool replace = false}) async {
   void open(SwingDraft d) => replace ? context.pushReplacement(Routes.swingNew, extra: d) : context.push(Routes.swingNew, extra: d);
-  if (start == SwingStart.plugin) {
-    open(const SwingDraft.plugin());
+  final background = ref.read(swingBackgroundProvider);
+  final bytes = await background();
+  if (!context.mounted) return;
+  var plugin = false;
+  final edited = await ref.read(swingEditorProvider)(context, bytes: bytes, name: 'swing.png', mime: 'image/png', actions: [
+    ProEditorExtraAction(
+      id: swingPluginActionId,
+      label: 'プラグイン',
+      icon: Icons.extension_outlined,
+      onTap: (_, ctx) {
+        plugin = true;
+        Navigator.of(ctx).pop();
+      },
+    ),
+    ProEditorExtraAction(
+      id: swingBackgroundActionId,
+      label: '背景を変える',
+      icon: Icons.shuffle,
+      onTap: (editor, _) async => editor.updateBackgroundImage(EditorImage(byteArray: await background())),
+    ),
+  ]);
+  if (!context.mounted) return;
+  if (plugin) return open(const SwingDraft.plugin());
+  if (edited == null) {
+    if (replace) context.pop();
     return;
   }
-  final messenger = ScaffoldMessenger.maybeOf(context);
-  Uint8List bytes;
-  String name;
-  String mime;
-  if (start == SwingStart.background) {
-    bytes = await ref.read(swingBackgroundProvider)();
-    name = 'swing.png';
-    mime = 'image/png';
-  } else {
-    final f = await ref.read(swingMediaPickerProvider)(video: start == SwingStart.video);
-    if (f == null) return;
-    final m = swingMediaMimeFor(f.name, reported: f.mimeType);
-    if (m == null || !m.startsWith(start == SwingStart.video ? 'video/' : 'image/')) {
-      messenger?.showSnackBar(SnackBar(content: Text('${start.label}のファイルを選んでください')));
-      return;
-    }
-    bytes = await f.readAsBytes();
-    name = f.name;
-    mime = m;
-  }
-  if (!context.mounted) return;
-  final edited = await ref.read(swingEditorProvider)(context, bytes: bytes, name: name, mime: mime);
-  if (edited == null || !context.mounted) return;
-  open(SwingDraft.media(bytes: edited.bytes, mime: edited.mimeType, name: edited.name ?? name));
-}
-
-/// 始め方の一覧(＋ の FOW の 2 段目と、下書きなしで開いた送る画面で共通)。
-class SwingStartList extends ConsumerWidget {
-  const SwingStartList({super.key, required this.onPick});
-  final ValueChanged<SwingStart> onPick;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        for (final s in SwingStart.values)
-          RasqListTile(key: ValueKey('swing.start.${s.name}'), leading: Icon(s.icon), title: s.label, chevron: false, onTap: () => onPick(s)),
-      ]);
+  open(SwingDraft.media(bytes: edited.bytes, mime: edited.mimeType, name: edited.name ?? 'swing.png'));
 }
 
 class SwingComposerScreen extends ConsumerStatefulWidget {
   const SwingComposerScreen({super.key, this.draft});
 
-  /// null = 始め方の一覧から。
+  /// null = 開いたらすぐ和柄の背景で編集画面へ([startSwing])。
   final SwingDraft? draft;
 
   static const ttlChoices = [1, 6, 12, 24];
@@ -168,6 +142,16 @@ class SwingComposerScreen extends ConsumerStatefulWidget {
 class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
   late SwingDraft? _draft = widget.draft;
   String? _pluginId;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.draft == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && ref.read(swingApiProvider) != null) startSwing(context, ref, replace: true);
+      });
+    }
+  }
 
   /// 未審査のプラグイン (D-379): ファイルから読んだ入れ物(確かめ済み)。
   ({String name, Uint8List bytes, String id, String version, String title})? _package;
@@ -262,7 +246,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       body: !hasApi
           ? const RasqEmptyView(key: ValueKey('swing.composer.noAccount'), title: 'RASQ アカウントが要ります', hint: 'Swing は RASQ アカウントから出します。サイドバーからログインしてください')
           : d == null
-              ? ListView(children: [SwingStartList(onPick: (s) => startSwing(context, ref, s, replace: true))])
+              ? const RasqLoading(key: ValueKey('swing.composer.starting'))
               : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.xxl), children: [
                   if (d.plugin) ..._pluginSection() else _preview(d),
                   ..._audienceSection(),
