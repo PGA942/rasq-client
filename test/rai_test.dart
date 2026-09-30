@@ -247,7 +247,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     expect(find.byType(RaiHomeScreen), findsNothing); // ディープリンクでホームへ
-    expect(find.text('右下の「＋」を押します'), findsOneWidget);
+    expect(find.text('右下の「＋」を押すと、コンポーザーが開きます(上下にスワイプすると Swing / AsTell)'), findsOneWidget);
     final target = c.read(raiProvider).target!;
     final fab = tester.getRect(find.byTooltip('作成'));
     expect(target.overlaps(fab), isTrue);
@@ -255,10 +255,7 @@ void main() {
     expect((mascotRect.center - fab.center).distance, lessThan(raiPointSize * 1.6)); // ボタンの脇(大きさ 180 なので中心はその分離れる)
     expect(tester.getRect(find.byKey(const ValueKey('rai.toggle'))).top, lessThan(screen.height / 2)); // バーはボタンを隠さないよう上へ
     expect(mascotRect.deflate(raiPointSize * raiBodyInset).overlaps(fab), isFalse); // 体は被らない(箱の余白ぶんは部品の端に付く、D-196)
-    // ▶ → 2 手順目(D-378: ＋ の FOW の「投稿」。部品が無ければ中央)→ 3 手順目、✕ → RAi は消えるがバーは残る。
-    await tester.tap(find.byKey(const ValueKey('rai.next')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('「投稿」を選ぶと'), findsOneWidget);
+    // ▶ → 2 手順目(部品が無ければ中央)、✕ → RAi は消えるがバーは残る。
     await tester.tap(find.byKey(const ValueKey('rai.next')));
     await tester.pumpAndSettle();
     expect(find.textContaining('本文を書いて'), findsOneWidget);
@@ -382,14 +379,14 @@ void main() {
     expect(find.byType(RaiHomeScreen), findsOneWidget); // 画面は動かない
     // チャット (D-218): 提案は行に全文、行の下に操作タイル(見出し · 手順数 + 「この手順で案内」)。
     final msg0 = raiRowText(tester, 0);
-    expect(msg0, startsWith('「画像を付けて投稿」なら、この順で進めます(4 手順)'));
-    expect(msg0, contains('1. 右下の「＋」を押します〔composer.open〕'));
+    expect(msg0, startsWith('「画像を付けて投稿」なら、この順で進めます(3 手順)'));
+    expect(msg0, contains('1. 右下の「＋」を押すと、コンポーザーが開きます(上下にスワイプすると Swing / AsTell)〔composer.open〕'));
     expect(msg0, contains('〔post.attach〕 入力: ファイル 固定: 閲覧注意=false'));
     expect(msg0, contains('〔post.create〕 入力: 本文 固定: 公開範囲=public CW=false 返信制限=0 作成時刻='));
     expect(find.byKey(const ValueKey('rai.chat.proposal.attach')), findsOneWidget);
-    expect(find.text('画像を付けて投稿 · 4 手順'), findsOneWidget);
+    expect(find.text('画像を付けて投稿 · 3 手順'), findsOneWidget);
     // 提案は履歴(ログ)に全文で残る(タイルの元 = proposal)。
-    expect(c.read(raiProvider).log.first.text, contains('4 手順'));
+    expect(c.read(raiProvider).log.first.text, contains('3 手順'));
     expect(c.read(raiProvider).log.first.proposal, 'attach');
     // リファレンスに無い発言(シチュエーションでも引けない)→ LLM の返事。
     llm.reply = 'はい、RASQ の RAi です。';
@@ -404,7 +401,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.read(raiProvider).mode, RaiMode.instruction);
     expect(find.byType(RaiHomeScreen), findsNothing);
-    expect(c.read(raiProvider).steps.length, 4);
+    expect(c.read(raiProvider).steps.length, 3);
     expect(c.read(raiProvider).lastOperation, 'attach');
     expect(tester.widget<Text>(find.byKey(const ValueKey('rai.bubble'))).data, contains('右下の「＋」'));
     expect(c.read(raiProvider).target, isNotNull);
@@ -456,16 +453,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     expect(c.read(raiProvider).stepIndex, 0);
-    expect(find.text('右下の「＋」を押します'), findsOneWidget);
-    // ＋ を押す → 「投稿」を指す(FOW の中)→ 押す → コンポーザーが開いて次へ。
+    expect(find.text('右下の「＋」を押すと、コンポーザーが開きます(上下にスワイプすると Swing / AsTell)'), findsOneWidget);
+    // ＋ をタップ → コンポーザーが開いて次へ (D-381)。
     await tester.tap(find.byTooltip('作成'));
     await tester.pumpAndSettle();
     expect(c.read(raiProvider).stepIndex, 1);
-    expect(find.textContaining('「投稿」を選ぶと'), findsOneWidget);
-    expect(c.read(raiProvider).target, isNotNull, reason: 'FOW の「投稿」を指す');
-    await tester.tap(find.byKey(const ValueKey('create.post')));
-    await tester.pumpAndSettle();
-    expect(c.read(raiProvider).stepIndex, 2);
     expect(find.textContaining('本文を書いて'), findsOneWidget);
     expect(c.read(raiProvider).target, isNotNull); // コンポーザーの「画像」を指す
     await tester.tap(find.byKey(const ValueKey('rai.speech.close')));

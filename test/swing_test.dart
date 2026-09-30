@@ -16,6 +16,10 @@ import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/ads/export_ad.dart';
 import 'package:rasq_client/features/home/home_header.dart';
+import 'package:rasq_client/features/vc/astell_fows.dart' show astellCreateFowId;
+import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId;
+import 'package:rasq_client/features/home/create_fow.dart';
 import 'package:rasq_client/features/plugins/media_plugin_panel.dart' show MediaEditResult;
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/swing/swing_composer.dart';
@@ -423,7 +427,7 @@ void main() {
     expect(() => checkSwingPackage(Uint8List.fromList([1, 2, 3]), decompress: (b, {int maxOutput = 0}) => b), throwsStateError);
   });
 
-  testWidgets('作る (D-380): ＋ → Swing → 画像 = 選んだ絵をそのまま編集画面へ → 送る画面(届け先と時間)。背景とテキスト = 無地の背景を編集画面へ。届け先が無ければ出せない', (tester) async {
+  testWidgets('作る (D-380 / D-381): ＋ を上へスワイプ → Swing → 画像 = 選んだ絵をそのまま編集画面へ → 送る画面(届け先と時間)。背景とテキスト = 無地の背景を編集画面へ。届け先が無ければ出せない', (tester) async {
     final (mock, _, created, uploads) = central(const []);
     final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
     final edited = Uint8List.fromList([...png, 0]);
@@ -436,13 +440,8 @@ void main() {
         return MediaEditResult(bytes: edited, mimeType: 'image/png', name: 'edited.png');
       }),
     ]);
-    // ＋ → 作るものを選ぶ FOW → Swing → 2 段目(画像 / 動画 / プラグイン / 背景とテキスト)。
-    await tester.tap(find.byTooltip('作成'));
-    await tester.pumpAndSettle();
-    for (final k in ['post', 'rasq', 'astell', 'swing']) {
-      expect(find.byKey(ValueKey('create.$k')), findsOneWidget, reason: k);
-    }
-    await tester.tap(find.byKey(const ValueKey('create.swing')));
+    // ＋ を上へスワイプ (D-381) → Swing の始め方(画像 / 動画 / プラグイン / 背景とテキスト)。
+    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -80));
     await tester.pumpAndSettle();
     for (final s in SwingStart.values) {
       expect(find.byKey(ValueKey('swing.start.${s.name}')), findsOneWidget, reason: s.name);
@@ -477,9 +476,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 背景とテキスト: 無地の背景を編集画面へ(文字は編集画面で書く)→ 画像の Swing。
-    await tester.tap(find.byTooltip('作成'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('create.swing')));
+    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -80));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('swing.start.background')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
@@ -494,14 +491,72 @@ void main() {
     await tester.pumpAndSettle();
 
     // プラグイン: 送る画面で選ぶ。
-    await tester.tap(find.byTooltip('作成'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('create.swing')));
+    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -80));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('swing.start.plugin')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('swing.plugin.file')), findsOneWidget);
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull, reason: 'プラグインを選ぶまで出せない');
+  });
+
+  testWidgets('＋ (D-381): タップ = 投稿、下へスワイプ = AsTell、長押し = 3 つの FOW。割り当ては設定で変えられる。トレンドの ＋ は投稿にハッシュタグ、AsTell の ＋ は Swing / AsTell / RASQ', (tester) async {
+    final (mock, _, _, _) = central(const []);
+    final c = await pumpApp(tester, mock);
+    // タップ = 投稿(コンポーザー)。
+    await tester.tap(find.byTooltip('作成'));
+    await tester.pumpAndSettle();
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isTrue);
+    c.read(overlayManagerProvider).close(composerFowId);
+    await tester.pumpAndSettle();
+    // 動かしている間は、離すと始まるものを出す。
+    final g = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('fab.home.gesture'))));
+    await g.moveBy(const Offset(0, 20));
+    await g.moveBy(const Offset(0, 40));
+    await tester.pump();
+    expect(find.descendant(of: find.byKey(const ValueKey('fab.home.hint.down')), matching: find.text('AsTell を作る')), findsOneWidget);
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(c.read(overlayManagerProvider).contains(astellCreateFowId), isTrue, reason: '下へスワイプ = AsTell');
+    c.read(overlayManagerProvider).close(astellCreateFowId);
+    await tester.pumpAndSettle();
+    // 長押し = 割り当ての 3 つ。
+    await tester.longPress(find.byKey(const ValueKey('fab.home.gesture')));
+    await tester.pumpAndSettle();
+    for (final k in ['post', 'swing', 'astell']) {
+      expect(find.byKey(ValueKey('create.$k')), findsOneWidget, reason: k);
+    }
+    c.read(overlayManagerProvider).close(createFowId);
+    await tester.pumpAndSettle();
+    // 設定で タップ = RASQ に投稿 に。
+    await c.read(settingsAreaProvider(fabSettingsArea).notifier).set('homeTap', 'rasq');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('作成'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('composer.pill.rasq')), findsOneWidget, reason: 'RASQ に投稿で開く');
+    c.read(overlayManagerProvider).close(composerFowId);
+    await tester.pumpAndSettle();
+
+    // トレンドの ＋: 投稿はハッシュタグ入り。
+    c.read(routerProvider).push('/trend/${Uri.encodeComponent('打上会')}');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('fab.trend.gesture')), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('fab.trend.gesture')), matching: find.byType(FloatingActionButton)));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('#打上会'), findsWidgets);
+    c.read(overlayManagerProvider).close(composerFowId);
+    await tester.pumpAndSettle();
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+
+    // AsTell の ＋: Swing / AsTell / RASQ に投稿。
+    c.read(routerProvider).go(Routes.vc);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('VC を作成'));
+    await tester.pumpAndSettle();
+    for (final k in ['swing', 'astell', 'rasq']) {
+      expect(find.byKey(ValueKey('create.$k')), findsOneWidget, reason: k);
+    }
+    expect(find.byKey(const ValueKey('create.post')), findsNothing);
   });
 
   testWidgets('ヘッダーをしまう(↑)→ バーとタブ行が消え、アイコンと ↓ だけ浮かぶ。新着の Swing は 1 分だけ → ↓ で戻る', (tester) async {

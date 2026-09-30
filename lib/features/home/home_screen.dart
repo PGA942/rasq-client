@@ -166,19 +166,9 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
         ]),
-        floatingActionButton: Builder(builder: (fabContext) => FloatingActionButton(
+        // ＋ (D-381): タップ = 投稿、上へスワイプ = Swing、下へスワイプ = AsTell(設定で変えられる)。
         // 画面ごとに違う Hero のタグ (D-374): 既定のタグは、タブの画面が同じルームに並ぶと重なる。
-        heroTag: 'fab.home',
-          // 作るものを選ぶ FOW (D-378): 投稿 / RASQ に投稿 / AsTell / Swing。
-          onPressed: () {
-            final box = fabContext.findRenderObject() as RenderBox?;
-            final anchor = box == null || !box.hasSize ? null : box.localToGlobal(Offset.zero) & box.size;
-            openCreateFow(context, ref, anchor: anchor, onPosted: () => ref.read(timelineProvider(TimelineKind.home).notifier).prependNewer());
-          },
-          tooltip: '作成',
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add),
-        )),
+        floatingActionButton: CreateGestureFab(scope: 'home', heroTag: 'fab.home', onPosted: () => ref.read(timelineProvider(TimelineKind.home).notifier).prependNewer()),
       )),
     );
   }
