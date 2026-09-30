@@ -64,13 +64,42 @@ class ProMediaEditorArgs {
 
 /// 下段バーに足すボタン。キーは `media.pro.bar.extra:<id>`。
 class ProEditorExtraAction {
-  const ProEditorExtraAction({required this.id, required this.label, required this.icon, required this.onTap});
+  const ProEditorExtraAction({required this.id, required this.label, required this.icon, required this.onTap, this.onLongPress});
   final String id;
   final String label;
   final IconData icon;
+  final void Function(ProEditorHandle editor) onTap;
 
-  /// [context] = エディター画面(閉じるときは `Navigator.pop(context)`)。
-  final void Function(ProImageEditorState editor, BuildContext context) onTap;
+  /// 長押し(無ければ長押しでは何もしない)。
+  final void Function(ProEditorHandle editor)? onLongPress;
+}
+
+/// 足したボタンから使えるエディターの操作。
+abstract class ProEditorHandle {
+  /// エディター画面(シートを出す / 閉じる)。
+  BuildContext get context;
+
+  /// 動画(または音声)を開いているか。動画では背景を差し替えられない。
+  bool get isVideo;
+
+  /// 背景の絵を差し替える(「ひとつ戻す」で戻せる)。
+  Future<void> setBackground(Uint8List bytes);
+
+  /// 何も返さずに閉じる。
+  void close();
+}
+
+class _ProEditorHandle implements ProEditorHandle {
+  _ProEditorHandle(this.editor, this.context, this.isVideo);
+  final ProImageEditorState editor;
+  @override
+  final BuildContext context;
+  @override
+  final bool isVideo;
+  @override
+  Future<void> setBackground(Uint8List bytes) => editor.updateBackgroundImage(EditorImage(byteArray: bytes));
+  @override
+  void close() => Navigator.of(context).pop();
 }
 
 /// 動画編集の一時ファイル (D-248)。
@@ -1115,7 +1144,9 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                for (final x in widget.args.extraActions) item('extra:${x.id}', x.label, Icon(x.icon, size: 22, color: RasqColors.accent), (_) => x.onTap(editor, context), color: RasqColors.accent),
+                for (final x in widget.args.extraActions)
+                  item('extra:${x.id}', x.label, Icon(x.icon, size: 22, color: RasqColors.accent), (_) => x.onTap(_ProEditorHandle(editor, context, _isVideo)),
+                      color: RasqColors.accent, onLongPress: x.onLongPress == null ? null : (_) => x.onLongPress!(_ProEditorHandle(editor, context, _isVideo))),
                 for (final e in entries)
                   switch (e) {
                     SingleActionEntry() => item(

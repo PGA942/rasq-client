@@ -5,7 +5,6 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pro_image_editor/pro_image_editor.dart' show EditorImage;
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../backend/orgate_client.dart' show OrgateException;
@@ -17,7 +16,7 @@ import '../collections/rasq_collections.dart';
 import '../compose/media_file_pick.dart' show mediaVideoExtensions, mediaMimeFor;
 import '../custom/custom_plugins_screen.dart' show installedPagePluginsProvider;
 import '../plugins/media_plugin_panel.dart' show MediaEditResult;
-import '../plugins/pro_media_editor_screen.dart' show ProEditorExtraAction;
+import '../plugins/pro_media_editor_screen.dart' show ProEditorExtraAction, ProEditorHandle;
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart' show isRasqPackage, rasqpkgZstdProvider;
 import 'swing_models.dart';
@@ -29,7 +28,7 @@ import 'wagara.dart';
 /// D-386: 始め方を選ぶ一覧は無くし、**開くとすぐ和柄の背景**([wagara.dart]: 柄 2 つを乱数で選び、1 枚目 + 柄 A でマスクした
 /// 2 枚目の紋様)で**全画面の編集画面**(投稿の添付と同じ pro_image_editor)に入る。画像 / 動画 / テキストは編集画面の
 /// 「メディア」「テキスト」で**あとから足す**。下のバーの先頭には「**プラグイン**」(配るプラグインを選ぶ画面へ)と
-/// 「背景を変える」(別の柄で描き直す)を自動で足す。できあがったものを送る画面([SwingComposerScreen]: 届け先と時間)へ。
+/// 「背景を変える」(押すと別の柄、長押しで画像 / 動画を背景に、D-387)を自動で足す。できあがったものを送る画面([SwingComposerScreen]: 届け先と時間)へ。
 /// プラグインは、入っている Swing 対応のもの / ファイルから(未審査)を選ぶ。ホームの ＋ から入る。
 
 const swingImageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic'];
@@ -93,38 +92,85 @@ final swingBackgroundProvider = Provider<Future<Uint8List> Function()>((ref) => 
 const swingPluginActionId = 'swing.plugin';
 const swingBackgroundActionId = 'swing.background';
 
+/// 長押しで選ぶ背景の画像 / 動画のシートの key。
+const swingPickImageKey = ValueKey('swing.background.image');
+const swingPickVideoKey = ValueKey('swing.background.video');
+
 /// 始める: 和柄の背景で編集画面へ → 送る画面。「プラグイン」を押したら、配るプラグインを選ぶ送る画面へ。
+/// 「背景を変える」(D-387): 押すと別の和柄、**長押しで画像 / 動画を選んで背景に**。画像は編集画面のまま差し替え、動画
+/// (や、動画を開いているときの和柄)は編集画面を開き直す(それまでの編集は捨てる)。
 /// [replace] = いまの画面(開いたばかりの送る画面)を置き換える。編集画面を閉じたら、その画面も閉じる。
 Future<void> startSwing(BuildContext context, WidgetRef ref, {bool replace = false}) async {
   void open(SwingDraft d) => replace ? context.pushReplacement(Routes.swingNew, extra: d) : context.push(Routes.swingNew, extra: d);
   final background = ref.read(swingBackgroundProvider);
-  final bytes = await background();
-  if (!context.mounted) return;
-  var plugin = false;
-  final edited = await ref.read(swingEditorProvider)(context, bytes: bytes, name: 'swing.png', mime: 'image/png', actions: [
-    ProEditorExtraAction(
-      id: swingPluginActionId,
-      label: 'プラグイン',
-      icon: Icons.extension_outlined,
-      onTap: (_, ctx) {
-        plugin = true;
-        Navigator.of(ctx).pop();
-      },
-    ),
-    ProEditorExtraAction(
-      id: swingBackgroundActionId,
-      label: '背景を変える',
-      icon: Icons.shuffle,
-      onTap: (editor, _) async => editor.updateBackgroundImage(EditorImage(byteArray: await background())),
-    ),
-  ]);
-  if (!context.mounted) return;
-  if (plugin) return open(const SwingDraft.plugin());
-  if (edited == null) {
-    if (replace) context.pop();
-    return;
+  final picker = ref.read(swingMediaPickerProvider);
+  var base = (bytes: await background(), name: 'swing.png', mime: 'image/png');
+  while (true) {
+    if (!context.mounted) return;
+    var plugin = false;
+    ({Uint8List bytes, String name, String mime})? next;
+
+    /// 選んだ画像 / 動画を背景に。
+    Future<void> pickBase(ProEditorHandle h) async {
+      final video = await showModalBottomSheet<bool>(
+        context: h.context,
+        builder: (ctx) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(key: swingPickImageKey, leading: const Icon(Icons.image_outlined), title: const Text('画像を背景にする'), onTap: () => Navigator.of(ctx).pop(false)),
+            ListTile(key: swingPickVideoKey, leading: const Icon(Icons.movie_outlined), title: const Text('動画を背景にする'), onTap: () => Navigator.of(ctx).pop(true)),
+          ]),
+        ),
+      );
+      if (video == null) return;
+      final f = await picker(video: video);
+      if (f == null) return;
+      final mime = swingMediaMimeFor(f.name, reported: f.mimeType);
+      if (mime == null || !mime.startsWith(video ? 'video/' : 'image/')) {
+        if (h.context.mounted) ScaffoldMessenger.maybeOf(h.context)?.showSnackBar(SnackBar(content: Text(video ? '動画のファイルを選んでください' : '画像のファイルを選んでください')));
+        return;
+      }
+      final bytes = await f.readAsBytes();
+      if (!video && !h.isVideo) return h.setBackground(bytes);
+      next = (bytes: bytes, name: f.name, mime: mime);
+      h.close();
+    }
+
+    final edited = await ref.read(swingEditorProvider)(context, bytes: base.bytes, name: base.name, mime: base.mime, actions: [
+      ProEditorExtraAction(
+        id: swingPluginActionId,
+        label: 'プラグイン',
+        icon: Icons.extension_outlined,
+        onTap: (h) {
+          plugin = true;
+          h.close();
+        },
+      ),
+      ProEditorExtraAction(
+        id: swingBackgroundActionId,
+        label: '背景を変える',
+        icon: Icons.shuffle,
+        onTap: (h) async {
+          final bytes = await background();
+          if (!h.isVideo) return h.setBackground(bytes);
+          next = (bytes: bytes, name: 'swing.png', mime: 'image/png');
+          h.close();
+        },
+        onLongPress: pickBase,
+      ),
+    ]);
+    if (!context.mounted) return;
+    if (plugin) return open(const SwingDraft.plugin());
+    final n = next;
+    if (n != null) {
+      base = n;
+      continue;
+    }
+    if (edited == null) {
+      if (replace) context.pop();
+      return;
+    }
+    return open(SwingDraft.media(bytes: edited.bytes, mime: edited.mimeType, name: edited.name ?? base.name));
   }
-  open(SwingDraft.media(bytes: edited.bytes, mime: edited.mimeType, name: edited.name ?? 'swing.png'));
 }
 
 class SwingComposerScreen extends ConsumerStatefulWidget {

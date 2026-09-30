@@ -7,8 +7,8 @@ import 'package:flutter/painting.dart';
 /// Swing の背景の紋様 (D-386)。和柄を手続きで描く。
 ///
 /// - 柄は 19 種([Wagara])。籠目 / 千鳥 / 松葉散らし / 笠松 / 梅 / 桐 / 杜若 / 秋草 / 菊 は入れない(ユーザー指定)。
-/// - 背景 = 地の色 + **1 枚目の紋様**(柄 A)+ **2 枚目の紋様**(柄 B を、柄 A を大きく描いたものでマスクしたもの)。
-///   どの 2 つを使い、どの色 / 大きさにするかは乱数で決める([SwingBackgroundSpec.random])。
+/// - 背景 = **1 枚目の紋様**(地の色 + 柄 A)+ **2 枚目の紋様**(地の色 + 柄 B を、柄 A を大きく描いたものでマスクしたもの)。
+///   どちらの層も「ランダムな色 + HSV の補色」の 2 色(D-387)。どの 2 つ([swingWagara] から)/ 色 / 大きさかは乱数で決める。
 enum Wagara {
   seigaiha('青海波'),
   asanoha('麻の葉'),
@@ -34,25 +34,27 @@ enum Wagara {
   final String label;
 }
 
-/// 和の配色(地 / 柄 A / 柄 B)。
-const wagaraPalettes = <(Color, Color, Color)>[
-  (Color(0xFF1B3A5C), Color(0xFF5B8DB8), Color(0xFFE8D9B0)), // 藍 / 縹 / 生成
-  (Color(0xFFF4EEDC), Color(0xFFC8A04A), Color(0xFF7A5CA8)), // 生成 / 金 / 江戸紫
-  (Color(0xFF2E2A33), Color(0xFF8D6FB5), Color(0xFFD4AF37)), // 墨 / 藤 / 金
-  (Color(0xFFE9F1EC), Color(0xFF4F8F7A), Color(0xFF1F4E5F)), // 白練 / 青竹 / 鉄紺
-  (Color(0xFFFBEFEF), Color(0xFFD05A6E), Color(0xFF6B4C3B)), // 桜 / 韓紅 / 焦茶
-  (Color(0xFF223A2E), Color(0xFF6E9C6A), Color(0xFFE6C98A)), // 深緑 / 若竹 / 砥粉
-  (Color(0xFFEDE6F2), Color(0xFF9B7CB6), Color(0xFF3F6E9C)), // 藤鼠 / 紫苑 / 縹
-  (Color(0xFF3A2B22), Color(0xFFB4764F), Color(0xFFF0DCC0)), // 焦茶 / 丁子 / 練色
-  (Color(0xFFE7EEF4), Color(0xFF7BA3C4), Color(0xFF888888)), // 白藍 / 空 / 鈍
-];
+/// Swing の背景に使う柄 (D-387): 七宝 / 檜垣 / 石畳 / 立涌 / 亀甲 / 鱗 / 菱 はそのまま、松皮菱(中を塗る・真ん中を大きく)と
+/// 分銅繋ぎ(立涌の波線を ±45° に倒して重ねる)は描き直して使う。ほかの柄は描けるが、背景には選ばない。
+const swingWagara = [Wagara.shippo, Wagara.higaki, Wagara.ishidatami, Wagara.tatewaku, Wagara.kikko, Wagara.uroko, Wagara.hishi, Wagara.matsukawabishi, Wagara.fundo];
+
+/// HSV で色相を 180° 回した色(補色)。彩度と明るさはそのまま。
+Color complementOf(Color c) {
+  final h = HSVColor.fromColor(c);
+  return h.withHue((h.hue + 180) % 360).toColor();
+}
 
 /// 1 枚の背景の決め方。
 class SwingBackgroundSpec {
-  const SwingBackgroundSpec({required this.first, required this.second, required this.palette, required this.unit, required this.secondUnit, required this.maskScale});
+  const SwingBackgroundSpec({required this.first, required this.second, required this.base, required this.secondBase, required this.unit, required this.secondUnit, required this.maskScale});
   final Wagara first;
   final Wagara second;
-  final (Color, Color, Color) palette;
+
+  /// 1 枚目の地の色(柄 A はその補色)。
+  final Color base;
+
+  /// 2 枚目の地の色(柄 B はその補色)。
+  final Color secondBase;
 
   /// 柄 A / 柄 B の 1 つ分の大きさ(px、1080 幅基準)。
   final double unit;
@@ -61,14 +63,17 @@ class SwingBackgroundSpec {
   /// マスクに使う柄 A の拡大率。
   final double maskScale;
 
-  factory SwingBackgroundSpec.random(math.Random rng) {
-    final first = Wagara.values[rng.nextInt(Wagara.values.length)];
-    var second = Wagara.values[rng.nextInt(Wagara.values.length - 1)];
-    if (second.index >= first.index) second = Wagara.values[second.index + 1];
+  /// どちらの層も「ランダムな色 + その補色」の 2 色で埋める (D-387: 透けた所をなくして見やすく)。
+  factory SwingBackgroundSpec.random(math.Random rng, {List<Wagara> from = swingWagara}) {
+    final first = from[rng.nextInt(from.length)];
+    var second = from[rng.nextInt(from.length - 1)];
+    if (from.indexOf(second) >= from.indexOf(first)) second = from[from.indexOf(second) + 1];
+    Color pick() => HSVColor.fromAHSV(1, rng.nextDouble() * 360, 0.35 + rng.nextDouble() * 0.4, 0.55 + rng.nextDouble() * 0.4).toColor();
     return SwingBackgroundSpec(
       first: first,
       second: second,
-      palette: wagaraPalettes[rng.nextInt(wagaraPalettes.length)],
+      base: pick(),
+      secondBase: pick(),
       unit: 90 + rng.nextDouble() * 80,
       secondUnit: 60 + rng.nextDouble() * 50,
       maskScale: 1.8 + rng.nextDouble() * 0.9,
@@ -78,16 +83,14 @@ class SwingBackgroundSpec {
   String get label => '${first.label} × ${second.label}';
 }
 
-/// 背景を描く: 地 → 柄 A(薄く)→ 柄 B を柄 A(大)でマスクしたもの。
+/// 背景を描く: 1 枚目 = 地の色 + 柄 A(補色)。2 枚目 = 地の色 + 柄 B(補色)を、柄 A(大)でマスクしたもの。
 void paintSwingBackground(Canvas canvas, Size size, SwingBackgroundSpec spec) {
-  final (ground, a, b) = spec.palette;
   final rect = Offset.zero & size;
-  canvas.drawRect(rect, Paint()..color = ground);
-  // 1 枚目の紋様。
-  paintWagara(canvas, size, spec.first, color: a.withValues(alpha: 0.55), ground: ground, unit: spec.unit);
-  // 2 枚目の紋様: 柄 B を描き、柄 A を大きく(塗りで)描いたもので切り抜く。
+  canvas.drawRect(rect, Paint()..color = spec.base);
+  paintWagara(canvas, size, spec.first, color: complementOf(spec.base), ground: spec.base, unit: spec.unit);
   canvas.saveLayer(rect, Paint());
-  paintWagara(canvas, size, spec.second, color: b, ground: const Color(0x00000000), unit: spec.secondUnit);
+  canvas.drawRect(rect, Paint()..color = spec.secondBase);
+  paintWagara(canvas, size, spec.second, color: complementOf(spec.secondBase), ground: spec.secondBase, unit: spec.secondUnit);
   canvas.saveLayer(rect, Paint()..blendMode = BlendMode.dstIn);
   paintWagara(canvas, size, spec.first, color: const Color(0xFF000000), ground: const Color(0x00000000), unit: spec.unit * spec.maskScale, mask: true);
   canvas.restore();
@@ -102,6 +105,23 @@ Future<Uint8List> renderSwingBackground(SwingBackgroundSpec spec, {int width = 1
   final data = await img.toByteData(format: ui.ImageByteFormat.png);
   img.dispose();
   return data!.buffer.asUint8List();
+}
+
+/// 立涌の波線の対を [r] いっぱいに敷く(列は u ごと、腹は y = u/2 + 2k·u、節は y = u/2 + (2k+1)·u)。
+void _waku(Canvas canvas, Rect r, double u, Paint stroke) {
+  final i0 = (r.left / u).floor() - 1;
+  final i1 = (r.right / u).ceil() + 1;
+  for (var i = i0; i < i1; i++) {
+    final x = i * u;
+    for (final side in [-1.0, 1.0]) {
+      final path = Path()..moveTo(x + u / 2 + side * u * 0.1, r.top - u);
+      for (var y = r.top - u; y < r.bottom + u; y += 4) {
+        final dx = side * (u * 0.1 + u * 0.28 * (0.5 + 0.5 * math.sin(y / u * math.pi)));
+        path.lineTo(x + u / 2 + dx, y);
+      }
+      canvas.drawPath(path, stroke);
+    }
+  }
 }
 
 /// 柄を 1 つ敷き詰める。[mask] = マスク用(線の柄も太く / 塗りで描く)。[ground] = 重なりを消すための地の色(透明なら消さない)。
@@ -173,12 +193,17 @@ void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, requ
         }
       }
     case Wagara.fundo:
-      final r = u / 2;
-      for (var j = -1; j < rows; j++) {
-        for (var i = -1; i < cols; i++) {
-          canvas.drawCircle(Offset(i * u, j * u), r, mask ? fill : stroke);
-          if (!mask) canvas.drawCircle(Offset(i * u + r, j * u + r), r * 0.5, stroke);
-        }
+      // 分銅繋ぎ (D-387): 立涌の波線を、腹と節(傾きが 0 の所)の位置をそろえたまま ±45° に倒して 2 組重ねる。
+      // 2 組の腹と節が同じ所で出会い、その間が分銅の形になる。
+      final d = math.sqrt(size.width * size.width + size.height * size.height);
+      for (final a in [math.pi / 4, -math.pi / 4]) {
+        canvas.save();
+        canvas.translate(size.width / 2, size.height / 2);
+        canvas.rotate(a);
+        // 腹 / 節の位置(y = u/2 + k·u)が 2 組でそろうよう、原点を格子にのせる。
+        final half = (d / 2 / u).ceil() * u + u;
+        _waku(canvas, Rect.fromLTRB(-half, -half, half, half), u, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
+        canvas.restore();
       }
     case Wagara.sayagata:
       // 卍を斜めの格子((3,1) / (-1,3))に並べ、腕の先を隣の卍へつなぐ(紗綾形)。
@@ -270,18 +295,8 @@ void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, requ
         }
       }
     case Wagara.tatewaku:
-      // 向かい合う波線の対(膨らみ / すぼまりが交互)。
-      for (var i = -1; i < cols; i++) {
-        final x = i * u;
-        for (final side in [-1.0, 1.0]) {
-          final path = Path()..moveTo(x + u / 2 + side * u * 0.1, -u);
-          for (var y = -u; y < size.height + u; y += 4) {
-            final dx = side * (u * 0.1 + u * 0.28 * (0.5 + 0.5 * math.sin(y / u * math.pi)));
-            path.lineTo(x + u / 2 + dx, y);
-          }
-          canvas.drawPath(path, stroke);
-        }
-      }
+      // 向かい合う波線の対(膨らみ = 腹 / すぼまり = 節が交互)。
+      _waku(canvas, Rect.fromLTWH(0, 0, size.width, size.height), u, stroke);
     case Wagara.kikko:
       final r = u / 2;
       final h = r * math.sqrt(3);
@@ -307,10 +322,12 @@ void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, requ
         }
       }
     case Wagara.hishi:
-      for (var j = -1; j < rows * 2; j++) {
+      for (var j = -1; j < (size.height / (u * 0.35)).ceil() + 2; j++) {
         for (var i = -1; i < cols; i++) {
           final c = Offset(i * u + (j.isOdd ? u / 2 : 0), j * u * 0.35);
-          final path = Path()..addPolygon([c + Offset(0, -u * 0.35), c + Offset(u / 2, 0), c + Offset(0, u * 0.35), c + Offset(-u / 2, 0)], true);
+          // マスクでは外の菱で埋め尽くさないよう、中の菱だけ(少し大きく)。
+          final k = mask ? 0.6 : 1.0;
+          final path = Path()..addPolygon([c + Offset(0, -u * 0.35 * k), c + Offset(u / 2 * k, 0), c + Offset(0, u * 0.35 * k), c + Offset(-u / 2 * k, 0)], true);
           canvas.drawPath(path, mask ? fill : stroke);
           if (!mask) canvas.drawPath(Path()..addPolygon([c + Offset(0, -u * 0.15), c + Offset(u * 0.21, 0), c + Offset(0, u * 0.15), c + Offset(-u * 0.21, 0)], true), fill);
         }
@@ -321,9 +338,9 @@ void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, requ
         for (var i = -1; i < cols; i++) {
           final c = Offset(i * u + (j.isOdd ? u / 2 : 0), j * u * 0.8);
           Path dia(Offset cc, double hw, double hh) => Path()..addPolygon([cc + Offset(0, -hh), cc + Offset(hw, 0), cc + Offset(0, hh), cc + Offset(-hw, 0)], true);
-          for (final (o, hw, hh) in [(Offset.zero, u * 0.32, u * 0.2), (Offset(0, -u * 0.26), u * 0.18, u * 0.11), (Offset(0, u * 0.26), u * 0.18, u * 0.11)]) {
-            if (eraseOn) canvas.drawPath(dia(c + o, hw, hh), erase);
-            canvas.drawPath(dia(c + o, hw, hh), mask ? fill : stroke);
+          // D-387: 中を塗り、真ん中の菱を 2 割大きく(0.32 × 0.2 → 0.384 × 0.24)。
+          for (final (o, hw, hh) in [(Offset.zero, u * 0.384, u * 0.24), (Offset(0, -u * 0.28), u * 0.18, u * 0.11), (Offset(0, u * 0.28), u * 0.18, u * 0.11)]) {
+            canvas.drawPath(dia(c + o, hw, hh), fill);
           }
         }
       }
