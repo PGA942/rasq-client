@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,7 @@ import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId;
 import 'package:rasq_client/features/home/create_fow.dart';
 import 'package:rasq_client/features/plugins/media_plugin_panel.dart' show MediaEditResult;
+import 'package:rasq_client/features/plugins/pro_media_editor_screen.dart' show ProEditorExtraAction, ProEditorHandle;
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/swing/swing_composer.dart';
 import 'package:rasq_client/features/swing/swing_models.dart';
@@ -533,8 +535,90 @@ void main() {
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull, reason: 'プラグインを選ぶまで出せない');
   });
 
+  testWidgets('背景を変える (D-387): 押すと別の和柄(画像のまま差し替え)、長押しで画像 / 動画を選ぶ(動画は編集画面を開き直す、動画から和柄も開き直す)', (tester) async {
+    final (mock, _, created, _) = central(const []);
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    final opened = <String>[];
+    var backgrounds = 0;
+    late BuildContext editorContext;
+    Completer<MediaEditResult?>? current;
+    await pumpApp(tester, mock, fakeSwingEditor: false, extra: [
+      swingBackgroundProvider.overrideWithValue(() async {
+        backgrounds++;
+        return png;
+      }),
+      swingMediaPickerProvider.overrideWithValue(({required bool video}) async => video ? XFile.fromData(video_(), name: 'clip.mp4', path: 'clip.mp4', mimeType: 'video/mp4') : XFile.fromData(png, name: 'photo.png', path: 'photo.png', mimeType: 'image/png')),
+      swingEditorProvider.overrideWithValue((context, {required bytes, required name, required mime, actions = const []}) {
+        opened.add('$name $mime');
+        editorContext = context;
+        _actions = actions;
+        return (current = Completer<MediaEditResult?>()).future;
+      }),
+    ]);
+    ProEditorExtraAction act(String id) => _actions.firstWhere((a) => a.id == id);
+    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -160));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pump();
+    expect(opened, ['swing.png image/png']);
+    // 押す: 画像のまま、別の和柄に差し替え(開き直さない)。
+    final h = _FakeHandle(editorContext, video: false, onClose: () => current!.complete(null));
+    await tester.runAsync(() async => act(swingBackgroundActionId).onTap(h));
+    expect(h.backgrounds.length, 1);
+    expect(backgrounds, 2);
+    expect(opened.length, 1);
+    // 長押し → 画像: 差し替え。
+    act(swingBackgroundActionId).onLongPress!(h);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(swingPickImageKey));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(h.backgrounds.length, 2);
+    expect(h.closed, isFalse);
+    // 長押し → 動画: 動画で開き直す。
+    act(swingBackgroundActionId).onLongPress!(h);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(swingPickVideoKey));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(h.closed, isTrue);
+    expect(opened, ['swing.png image/png', 'clip.mp4 video/mp4']);
+    // 動画のときに押す: 和柄で開き直す。
+    final hv = _FakeHandle(editorContext, video: true, onClose: () => current!.complete(null));
+    await tester.runAsync(() async => act(swingBackgroundActionId).onTap(hv));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pump();
+    expect(hv.backgrounds, isEmpty);
+    expect(opened.last, 'swing.png image/png');
+    // 仕上げ → 送る画面。
+    current!.complete(MediaEditResult(bytes: png, mimeType: 'image/png', name: 'edited.png'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.preview')), findsOneWidget);
+    expect(created, isEmpty);
+  });
+
   test('和柄 (D-386): 19 種すべて描け、2 つは別の柄、乱数の種が同じなら同じ', () async {
     expect(Wagara.values.length, 19);
+    expect(swingWagara.map((w) => w.label), ['七宝', '檜垣', '石畳', '立涌', '亀甲', '鱗', '菱', '松皮菱', '分銅繋ぎ'], reason: 'D-387 で背景に使う柄');
+    expect(complementOf(const Color(0xFFFF0000)), const Color(0xFF00FFFF));
+    // 配色: 明るい側は彩度 20% まで、2 枚目は類似色(±20〜40°)で濃淡が逆。
+    for (var i = 0; i < 50; i++) {
+      final (a, b) = pickWagaraColors(math.Random(i));
+      HSVColor hsv(Color c) => HSVColor.fromColor(c);
+      Color lighter(WagaraColors x) => hsv(x.ground).value > hsv(x.pattern).value ? x.ground : x.pattern;
+      for (final x in [a, b]) {
+        expect(hsv(lighter(x)).saturation, lessThanOrEqualTo(swingPaleMaxSaturation + 0.01));
+        final d = (hsv(x.ground).hue - hsv(x.pattern).hue).abs();
+        expect((d - 180).abs(), lessThan(6), reason: '補色(淡い色は 8 bit で色相が少しずれる)');
+      }
+      expect(lighter(a) == a.ground, lighter(b) != b.ground, reason: '濃淡が逆');
+      final strongA = lighter(a) == a.ground ? a.pattern : a.ground;
+      final strongB = lighter(b) == b.ground ? b.pattern : b.ground;
+      final dh = ((hsv(strongA).hue - hsv(strongB).hue).abs() + 360) % 360;
+      expect(math.min(dh, 360 - dh), inInclusiveRange(19, 41), reason: '類似色');
+    }
     expect(Wagara.values.map((w) => w.label), isNot(contains('千鳥')));
     for (var i = 0; i < 40; i++) {
       final spec = SwingBackgroundSpec.random(math.Random(i));
@@ -795,5 +879,27 @@ class _FakeAdSdk implements ExportAdSdk {
   Widget buildAd({required ExportAdNetwork network, required ExportAdConfig config, required double width, required VoidCallback onLoaded, required VoidCallback onFailed}) {
     Future.microtask(onLoaded);
     return SizedBox(key: const ValueKey('fake.ad'), width: width, height: 250, child: const ColoredBox(color: Colors.grey));
+  }
+}
+
+List<ProEditorExtraAction> _actions = const [];
+Uint8List video_() => Uint8List.fromList([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70]);
+
+class _FakeHandle implements ProEditorHandle {
+  _FakeHandle(this.context, {required this.video, required this.onClose});
+  @override
+  final BuildContext context;
+  final bool video;
+  final void Function() onClose;
+  final backgrounds = <Uint8List>[];
+  bool closed = false;
+  @override
+  bool get isVideo => video;
+  @override
+  Future<void> setBackground(Uint8List bytes) async => backgrounds.add(bytes);
+  @override
+  void close() {
+    closed = true;
+    onClose();
   }
 }

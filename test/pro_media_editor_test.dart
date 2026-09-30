@@ -94,13 +94,13 @@ void main() {
     expect(manager.isFowSuspended(composer), isFalse);
   });
 
-  testWidgets('呼んだ画面が足すボタン (D-386): 下段バーの先頭に出て、押すとエディターの状態を受け取る。閉じれば null', (tester) async {
+  testWidgets('呼んだ画面が足すボタン (D-386 / D-387): 下段バーの先頭に出て、押す / 長押しでエディターの窓口を受け取る。閉じれば null', (tester) async {
     final c = await pump(tester);
     final taps = <String>[];
     final future = c.read(routerProvider).push<MediaEditResult>(Routes.mediaEditorPro,
         extra: ProMediaEditorArgs(bytes: png, name: 'swing.png', mimeType: 'image/png', extraActions: [
-          ProEditorExtraAction(id: 'a', label: '背景を変える', icon: Icons.shuffle, onTap: (editor, _) => taps.add('a ${editor.mounted}')),
-          ProEditorExtraAction(id: 'b', label: 'プラグイン', icon: Icons.extension_outlined, onTap: (_, ctx) => Navigator.of(ctx).pop()),
+          ProEditorExtraAction(id: 'a', label: '背景を変える', icon: Icons.shuffle, onTap: (h) => taps.add('a video=${h.isVideo}'), onLongPress: (h) => taps.add('a long')),
+          ProEditorExtraAction(id: 'b', label: 'プラグイン', icon: Icons.extension_outlined, onTap: (h) => h.close()),
         ]));
     await settle(tester);
     final a = find.byKey(proMediaEditorBarKey('extra:a'));
@@ -109,7 +109,10 @@ void main() {
     expect(tester.getCenter(a).dx, lessThan(tester.getCenter(find.byKey(proMediaEditorBarKey('editor:paint'))).dx), reason: '先頭');
     await tester.tap(a);
     await settle(tester);
-    expect(taps, ['a true']);
+    expect(taps, ['a video=false']);
+    await tester.longPress(a);
+    await settle(tester);
+    expect(taps, ['a video=false', 'a long'], reason: '長押しは別(押したことにはしない)');
     await tester.tap(b);
     await settle(tester);
     expect(find.byType(ProImageEditor), findsNothing);
