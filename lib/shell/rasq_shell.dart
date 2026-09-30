@@ -13,6 +13,7 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'column_layout.dart';
 import 'nav.dart';
+import 'pane_swipe_back.dart';
 import 'sidebar.dart';
 import 'third_column.dart';
 
@@ -158,7 +159,24 @@ class _TabletLayout extends ConsumerWidget {
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
             width: col2Width,
-            child: ClipRect(child: Column(children: [const ChildSafeWindowBanner(), Expanded(child: shell)])),
+            // 左カラムも右へスワイプで戻る (D-388): タブの中のページは router のルートだが、幅の広い画面では端末の
+            // 「スワイプで戻る」が効かなかった(デスクトップ / タブレットの横)。戻れるページがあるときだけ。
+            child: ClipRect(
+              child: Column(children: [
+                const ChildSafeWindowBanner(),
+                Expanded(
+                  child: PaneSwipeBack(
+                    key: const ValueKey('pane.swipe.left'),
+                    canBack: () => GoRouter.of(context).canPop(),
+                    onBack: () {
+                      final router = GoRouter.of(context);
+                      if (router.canPop()) router.pop();
+                    },
+                    child: shell,
+                  ),
+                ),
+              ]),
+            ),
           ),
           // 第3カラム (D-056/D-057): 空のときは検索(設定で変更可)。ページが
           // 開くと広がり、M5c 以降は FOW の移動先になる。

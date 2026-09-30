@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart' show CupertinoSlider;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-/// 第3カラムのページのスワイプで戻る (D-350)。第3カラムのページは Navigator のルートではないので、端末の「スワイプで戻る」が
+/// 第3カラムのページ(D-350)と、2 カラムの左カラム(D-388)のスワイプで戻る。第3カラムのページは Navigator のルートではないので、端末の「スワイプで戻る」が
 /// 効かなかった。ページの上で**右へスワイプ**したら、ヘッダーの < と同じ戻り([onBack])をする。
 ///
 /// **競合するときは戻らない**: スワイプを始めた位置に
@@ -11,8 +11,11 @@ import 'package:flutter/material.dart';
 /// があれば、その部品に任せる。ジェスチャーの取り合い(アリーナ)には入らず、[Listener] で見ているだけなので、
 /// 中の部品の動きは変わらない。
 class PaneSwipeBack extends StatefulWidget {
-  const PaneSwipeBack({super.key, required this.onBack, required this.child});
+  const PaneSwipeBack({super.key, required this.onBack, required this.child, this.canBack});
   final VoidCallback onBack;
+
+  /// 戻れるか(スワイプを始めるときに聞く。戻れなければ引いてもページを動かさない)。null = いつでも。
+  final bool Function()? canBack;
   final Widget child;
 
   /// 戻るのに要る右への移動量(論理 px)。
@@ -42,7 +45,7 @@ class _PaneSwipeBackState extends State<PaneSwipeBack> {
     _start = e.position;
     _dx = 0;
     _horizontal = null;
-    _blocked = _conflictsAt(e.position);
+    _blocked = !(widget.canBack?.call() ?? true) || _conflictsAt(e.position);
   }
 
   void _move(PointerMoveEvent e) {

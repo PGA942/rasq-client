@@ -172,7 +172,8 @@ class HomeHeaderStrip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authors = ref.watch(swingApiProvider) != null ? ref.watch(swingAuthorsProvider) : const <SwingAuthorEntry>[];
     final trailing = [if (authors.isNotEmpty) SwingAuthorBundle(swing: authors.first.first, unseen: authors.first.unseen > 0)];
-    if (astell) return AstellHeaderStrip(max: max, trailing: trailing, showTitles: true);
+    // D-388: チップを大きく(30 → 40)、名前はアイコンの下辺に載せる。
+    if (astell) return AstellHeaderStrip(max: max, size: 40, trailing: trailing, showTitles: true);
     if (trailing.isEmpty) return const SizedBox.shrink();
     return trailing.single;
   }

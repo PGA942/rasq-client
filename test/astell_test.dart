@@ -106,7 +106,7 @@ void main() {
       expect(live.center.dx, closeTo((bundle.left + 20 + bundle.right) / 2, 4));
     });
 
-    testWidgets('D-336: 縁取りは黄色、ワイヤーは 3px 大きく。1 人 / 2 人はアイコンをワイヤーの太さいっぱいに、それより多いと内側', (tester) async {
+    testWidgets('D-336 / D-388: 縁取りとワイヤーは下ほど濃いグラデーション(F6E359 → F09937)、ワイヤーは 3px 大きく。1 人 / 2 人はアイコンをワイヤーの太さいっぱいに、それより多いと内側', (tester) async {
       const user = UserSummary(id: 'u', account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: 'h'), displayName: 'ダグラス');
       Future<(Rect, Rect, BoxDecoration)> pump(int count) async {
         await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: RasqAvatarBundle(key: ValueKey(count), user: user, count: count, size: 30)))));
@@ -118,13 +118,13 @@ void main() {
         final (bundle, avatar, ring) = await pump(n);
         expect(bundle.height, 33, reason: '3px 大きいワイヤー');
         expect(avatar.height, 33, reason: '$n 人: ワイヤーの太さいっぱい');
-        expect((ring.border as Border).top.color, RasqColors.yellow);
+        expect((ring.gradient! as LinearGradient).colors, [RasqAvatarBundle.wireTop, RasqAvatarBundle.wireBottom], reason: '縁取りはグラデーション');
       }
       final (bundle, avatar, ring) = await pump(5);
       expect(bundle.height, 33);
       expect(avatar.height, 30, reason: '3 人以上はワイヤーの内側');
       expect(avatar.top - bundle.top, 1.5);
-      expect((ring.border as Border).top.color, RasqColors.yellow);
+      expect((ring.gradient! as LinearGradient).begin, Alignment.topCenter, reason: '下ほど濃い');
     });
 
     testWidgets('D-376: 1〜3 人は人数を書かず、顔を半分ずつ重ねて並べる(ワイヤーは最大幅まで)', (tester) async {
