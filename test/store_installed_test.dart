@@ -17,13 +17,14 @@ import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'support/fake_store_client.dart';
 import 'support/fakes.dart';
 
 /// インストール済みのページ (D-256): ストアの掲載とは別。掲載が消えていても開けて、削除できる。
 /// Central につないでいても、同梱のサンプルのページは同梱のカタログで開ける。
 
 /// Central 役: 何も掲載していない(どの id も 404 = null、一覧は空)。
-class _EmptyCentral extends MockStoreClient {
+class _EmptyCentral extends FakeStoreClient {
   @override
   Future<StoreHomeSections> home() async => (trending: const <StorePluginCard>[], recent: const <StorePluginCard>[], bookmarks: const <StorePluginCard>[]);
   @override
@@ -69,7 +70,7 @@ void main() {
   });
 
   test('Central + 同梱カタログ: 同梱のサンプルは Central に無くてもページ / 配布物が取れる。ほかの id は Central の答えのまま', () async {
-    final client = BundledFallbackStoreClient(_EmptyCentral(), MockStoreClient());
+    final client = BundledFallbackStoreClient(_EmptyCentral(), FakeStoreClient());
     final sample = storeSlotSamples.first.id;
     expect((await client.plugin(sample))?.id, sample);
     expect((await client.manifest(sample))?.pluginId, sample);
@@ -133,7 +134,7 @@ void main() {
 
   testWidgets('掲載が生きているプラグイン: いまの掲載で描き、新しい版の案内とストアのページへの口が出る。一覧からも開ける', (tester) async {
     final sampleId = storeSamplePluginId;
-    final c = await pump(tester, MockStoreClient(), [InstalledPlugin(id: sampleId, name: 'Misskey コネクタ', version: '0.0.1', sha512: 'c' * 128, installedAt: DateTime(2026, 8, 1))]);
+    final c = await pump(tester, FakeStoreClient(), [InstalledPlugin(id: sampleId, name: 'Misskey コネクタ', version: '0.0.1', sha512: 'c' * 128, installedAt: DateTime(2026, 8, 1))]);
     c.read(routerProvider).push(Routes.storeInstalled);
     await tester.pumpAndSettle();
     expect(find.byType(InstalledPluginsScreen), findsOneWidget);

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/features/settings/developer_mode.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/login/mixi2_login_screen.dart';
@@ -56,6 +58,9 @@ void main() {
       overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)],
       child: const RasqApp(),
     ));
+    await tester.pumpAndSettle();
+    // ダミーアカウントは開発者モードのときだけ (D-393)。
+    await ProviderScope.containerOf(tester.element(find.byType(RasqApp))).read(settingsAreaProvider(developerModeArea).notifier).set('enabled', true);
     await tester.pumpAndSettle();
     if (find.text('スキップしてこの端末だけで使う').evaluate().isNotEmpty) {
       await tester.tap(find.text('スキップしてこの端末だけで使う'));

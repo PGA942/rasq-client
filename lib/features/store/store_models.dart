@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 /// プラグインストアのクライアント側モデル (M4 / D-120)。
 /// 正本は rasq-sdk-sample/openapi/store.yaml (D-033)。ワイヤ(JSON)からの
 /// 復元は各型の `fromJson` にあり、orgate-server の `/api/v1` 応答と
-/// MockStoreClient の両方がこの形に落ちる。
+/// BundledStoreClient の両方がこの形に落ちる。
 
 /// 状態表記の統一 (D-033: rasq_design のステータス表示と 1:1)。
 enum PluginStatus {

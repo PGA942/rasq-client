@@ -15,6 +15,7 @@ import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'support/fake_store_client.dart';
 import 'support/fakes.dart';
 
 /// ストアの非同期更新と「最近の投稿内容から選出」(D-358)。
@@ -22,7 +23,7 @@ import 'support/fakes.dart';
 const _newcomer = StorePluginCard(id: 'net.example.fresh', name: '天気タイムライン', summary: '天気の投稿だけを集めるタイムライン', version: '1.0.0', pluginType: StorePluginType.timeline);
 
 /// 公開 → 次の読み込みから新しいプラグインが見える。
-class _PublishingStore extends MockStoreClient {
+class _PublishingStore extends FakeStoreClient {
   bool published = false;
   int homeCalls = 0;
 

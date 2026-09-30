@@ -125,6 +125,9 @@ flutter:
     - assets/rai_models/
     # misskey-wasm-sample plugin binary (built in rasq-sdk-sample; loaded by
     # the WASMプラグイン試験 dev screen).
+    # 同梱のプラグインは tool/build_bundled_plugins.sh でソース(rasq-sdk-sample / plugin-sample の各リポジトリ)から作り、
+    # 出どころ(リポジトリ / コミット / 版 / sha256)を SOURCES.json に書く (D-393)。ストアの同梱の掲載は版をここから読む。
+    - assets/plugins/SOURCES.json
     - assets/plugins/misskey_wasm_sample.wasm
     # Mastodon SNS プラグイン (D-135)。sns.* 境界だけを実装した wasm。
     - assets/plugins/mastodon_wasm.wasm
@@ -132,7 +135,7 @@ flutter:
     - assets/plugins/mixi2_wasm.wasm
     - assets/plugins/hello_rasq_plugin.wasm
     - assets/plugins/relational_wasm.wasm
-    # スロットプラグインのサンプル (D-168: plugin-sample の dist/。ストアのダミー掲載から
+    # スロットプラグインのサンプル (D-168: plugin-sample の各リポジトリ。ストアの同梱の掲載から
     # 「インストール」→ スロット登録される)。
     - assets/plugins/astell_plugin.wasm
     - assets/plugins/composer_media_plugin.wasm

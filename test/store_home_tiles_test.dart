@@ -16,6 +16,7 @@ import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import 'support/fake_store_client.dart';
 import 'support/fakes.dart';
 
 /// ストアホームのタイル / 除外 / プラグインを管理 (D-353)。
@@ -58,7 +59,7 @@ void main() {
       overrides: [
         sessionStorageProvider.overrideWithValue(storage),
         pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
-        storeClientProvider.overrideWithValue(MockStoreClient()),
+        storeClientProvider.overrideWithValue(FakeStoreClient()),
       ],
       child: const RasqApp(),
     ));
@@ -86,7 +87,7 @@ void main() {
     expect(find.byKey(const ValueKey('store.manage.installed.$storeSamplePluginId')), findsOneWidget);
     expect(find.text('0.4.0'), findsOneWidget); // デプロイしたバージョン(いま入っている版)
     expect(find.text('0.5.0 に更新'), findsOneWidget); // ストアに新しい版
-    expect(find.byKey(const ValueKey('store.manage.import')), findsOneWidget);
+    expect(find.byKey(const ValueKey('store.manage.import')), findsNothing, reason: '審査前のプラグインを入れる口は開発者モードのときだけ (D-393)');
     await tester.tap(find.byKey(const ValueKey('store.manage.showInstalled')));
     await tester.pumpAndSettle();
     // 戻ると、ホームの列にも出る(ストアに新しい版があるので「更新」)。

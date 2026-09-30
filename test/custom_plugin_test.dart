@@ -21,6 +21,7 @@ import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rrl_core/rrl_core.dart';
 
+import 'support/fake_store_client.dart';
 import 'support/fake_slot_runtime.dart';
 import 'support/fakes.dart';
 
@@ -75,7 +76,7 @@ FakeSlotRuntime _board({String mode = 'shared', List<(String, Map<String, Object
   );
 }
 
-class _Store extends MockStoreClient {
+class _Store extends FakeStoreClient {
   @override
   Future<StorePluginDetail?> plugin(String id) async => id == _boardId
       ? const StorePluginDetail(id: _boardId, name: 'みんなのボード', version: '1.0.0', pluginType: StorePluginType.custom, safety: SafetyBlock(permissions: [PermissionEntry('shared.session', 'みんなの値')]))

@@ -30,7 +30,8 @@ final storeClientProvider = Provider<StoreClient>((ref) {
   // RASQ アカウントを切り替えたら作り直す(D-316: ブックマークなどは、アカウントごと)。
   ref.watch(currentCentralAccountIdProvider);
   // Central につないでいても、アプリに同梱しているサンプル(Central に掲載の無いもの)のページ / 配布物は同梱のカタログで答える (D-256)。
-  return client == null ? MockStoreClient() : BundledFallbackStoreClient(HttpStoreClient(client), MockStoreClient());
+  // D-393: つないでいなければ、同梱の実物だけ(架空の掲載・数字・レビューは出さない)。
+  return client == null ? BundledStoreClient() : BundledFallbackStoreClient(HttpStoreClient(client), BundledStoreClient());
 });
 
 final storeHomeProvider = FutureProvider((ref) => ref.watch(storeClientProvider).home());
