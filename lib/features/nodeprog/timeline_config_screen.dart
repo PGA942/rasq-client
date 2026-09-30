@@ -17,6 +17,8 @@ import '../home/timeline_providers.dart' show customTimelinesProvider;
 import '../settings/settings_dsl.dart';
 import '../store/store_client.dart' show storeSamplePluginId;
 import 'node_tabs.dart';
+import 'timeline_create_fow.dart';
+import 'timeline_temp_fow.dart' show timelineTempFowId;
 import 'tl_config_store.dart';
 import '../trend/tendency_fows.dart';
 import '../trend/tendency_profile.dart';
@@ -96,9 +98,13 @@ final tlBlueskyAccountsProvider = Provider<List<String>>((ref) => [
 /// 保存した構成になる)。[tabs] = 並べるタブ((スコープ, 名前)。省略時は既定の並び)。[scopeSync] = 開いているタブを外
 /// (ホームのタブ、FOW の検索欄)と揃える口。
 class TimelineConfigScreen extends ConsumerStatefulWidget {
-  const TimelineConfigScreen({super.key, required this.scope, this.temporary = false, this.tabs, this.scopeSync});
+  const TimelineConfigScreen({super.key, required this.scope, this.temporary = false, this.tabs, this.scopeSync, this.nameController});
   final String scope;
   final bool temporary;
+
+  /// 作る FOW (D-384) の中身: タブ行の代わりに名前の欄。構成は [temporary] と同じく [tlTemporaryConfigsProvider] に書く。
+  final TextEditingController? nameController;
+  bool get creating => nameController != null;
   final List<(String, String)>? tabs;
   final ValueNotifier<String?>? scopeSync;
   @override
@@ -129,7 +135,8 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     return ref.read(currentAccountProvider)?.key;
   }
 
-  String get _area => nodeprogAreaFor(_accountKey, _scope);
+  /// 共有のタブ (D-384) はアカウントに依らない置き場。
+  String get _area => _scope.startsWith('tl.node:') ? nodeTabAreaFor(ref, _scope, accountKey: _accountKey) : nodeprogAreaFor(_accountKey, _scope);
 
   List<String> get _accounts => [for (final s in ref.read(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${s.account}'];
 
@@ -357,7 +364,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
             ),
           ),
           if (_canReorderTabs(tabs)) RasqIconButton(icon: Icons.swap_horiz, size: 20, tooltip: 'タブの並べ替え', onPressed: _openTabReorder),
-          if (_scope.startsWith('tl.') && !_isDmScope && !widget.temporary) RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
+          if (_scope.startsWith('tl.') && !_isDmScope) RasqIconButton(icon: Icons.add, size: 20, tooltip: 'タブを追加', onPressed: _addTab),
         ]),
       ),
     );
@@ -379,12 +386,12 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     return ok == true ? controller.text.trim() : null;
   }
 
+  /// タブを足す (D-384): 作る FOW(一時変更と同じ作り)で名前と中身を決め、「決定」で作る。
   Future<void> _addTab() async {
-    final name = await _promptText('新しいタブ', hint: 'タブ名');
-    if (name == null || name.isEmpty || !mounted) return;
-    final tab = NodeTab(id: 'node:${DateTime.now().millisecondsSinceEpoch}', label: name);
-    await saveNodeTabs(ref, [...ref.read(nodeTabsProvider), tab]);
-    _switchScope('tl.${tab.id}');
+    // 一時変更 FOW の中から: 先に閉じる(FOW を重ねない)。
+    if (widget.temporary) ref.read(overlayManagerProvider).close(timelineTempFowId);
+    final scope = await showTimelineCreateFow(ref);
+    if (scope != null && mounted && !widget.temporary) _switchScope(scope);
   }
 
   Future<void> _renameTab(String scope) async {
@@ -418,6 +425,8 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final pick = await manager.showDropdown<String>(id: 'tlconfig.more', anchor: anchor, dense: true, items: [
       RasqDropdownItem('タブ名を変更', 'rename', enabled: ownTab),
       RasqDropdownItem('タブを削除', 'deleteTab', enabled: ownTab, destructive: true),
+      // 共有 (D-384): ユーザーが作ったタブだけ(SNS の既定の TL と関連 TL は対象外)。
+      RasqDropdownItem('すべてのアカウントで共有', 'share', enabled: ownTab, checked: ownTab && ref.read(nodeTabsProvider).any((t) => 'tl.${t.id}' == _scope && t.shared)),
       const RasqDropdownItem('このTLの構成をリセット', 'reset'),
       // グラフカスタマイズ (D-124): ノードの調節はグラフ形式の編集に。
       // グラフで手を入れた TL はプラグインの自動構成の対象外(簡易側は
@@ -431,6 +440,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         await _renameTab(_scope);
       case 'deleteTab':
         await _deleteTab(_scope);
+      case 'share':
+        final tab = ref.read(nodeTabsProvider).where((t) => 'tl.${t.id}' == _scope).firstOrNull;
+        if (tab != null) await setNodeTabShared(ref, tab.id, !tab.shared);
+        if (mounted) await _load();
       case 'nodes':
         await ref.read(routerProvider).push(Routes.nodes(_scope));
         if (mounted) await _load(); // グラフ編集から戻ったら手組み状態を反映
@@ -741,12 +754,22 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     return Material(
       type: MaterialType.transparency,
       child: Column(children: [
-        _tabBar(),
+        if (!widget.creating) _tabBar(),
         Expanded(
           child: !_loaded
               ? const RasqLoading()
               : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.page), children: [
-                  if (searchOnly)
+                  if (widget.creating)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.xs),
+                      child: TextField(
+                        key: const ValueKey('tl.create.name'),
+                        controller: widget.nameController,
+                        autofocus: true,
+                        decoration: const InputDecoration(labelText: 'タイムラインの名前', hintText: '例: 友だち / 写真', border: OutlineInputBorder(), isDense: true),
+                      ),
+                    )
+                  else if (searchOnly)
                     _banner('プラグインが並べるタイムラインです。ここでは探すだけできます')
                   else if (changed)
                     _banner(
@@ -758,6 +781,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
                     )
                   else
                     _banner('ここでの変更は一時的です。保存するまで元の設定は変わりません', detail: 'ここでの変更はこのタイムラインに一時的に効きます。保存するまで、元の設定は変わりません。'),
+                  if (widget.creating) const RasqCaption('取り込むタイムラインとアルゴリズムを選んで「決定」', padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs)),
                   if (!searchOnly) ..._components(),
                 ]),
         ),

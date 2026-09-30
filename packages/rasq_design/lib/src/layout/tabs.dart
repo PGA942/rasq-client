@@ -42,6 +42,7 @@ class RasqTabs extends StatefulWidget implements PreferredSizeWidget {
     this.onTap,
     this.showChevron = true,
     this.onSelectedTabTap,
+    this.chevronTooltip,
   }) : items = mode == RasqTabsMode.extensible ? items.take(maxExtensible).toList() : items;
 
   static const int maxExtensible = 10;
@@ -56,6 +57,9 @@ class RasqTabs extends StatefulWidget implements PreferredSizeWidget {
   /// Tap on the already-selected tab (the one with the `∨`): opens the
   /// sort/filter dropdown. Receives the tab's global rect as anchor.
   final void Function(int index, Rect anchor)? onSelectedTabTap;
+
+  /// 選んでいるタブの `∨` の名前(RAi の案内が指す、D-384)。
+  final String? chevronTooltip;
 
   bool get isScrollable => mode == RasqTabsMode.extensible && items.length >= scrollThreshold;
 
@@ -119,7 +123,10 @@ class _RasqTabsState extends State<RasqTabs> {
                 key: _keys[i],
                 height: RasqSizes.minTap,
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  if (showChevron && items[i].chevron && ctrl.index == i) const Icon(Icons.keyboard_arrow_down, size: 16),
+                  if (showChevron && items[i].chevron && ctrl.index == i)
+                    widget.chevronTooltip == null
+                        ? const Icon(Icons.keyboard_arrow_down, size: 16)
+                        : Tooltip(message: widget.chevronTooltip!, triggerMode: TooltipTriggerMode.manual, child: const Icon(Icons.keyboard_arrow_down, size: 16)),
                   if (items[i].icon != null) Padding(padding: const EdgeInsets.only(right: 4), child: Icon(items[i].icon, size: 18)),
                   // 点は名前の右肩に重ねる(幅を取らない。等幅のタブで名前が詰まらないように)。
                   Flexible(
