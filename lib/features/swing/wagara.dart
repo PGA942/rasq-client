@@ -152,8 +152,8 @@ void _waku(Canvas canvas, Rect r, double u, Paint stroke) {
 }
 
 /// 立涌の波線の対のうち片側([side] = -1 左 / 1 右)だけを敷く(分銅繋ぎ用)。
-/// 分銅繋ぎの弧の高さ(マスの幅に対する比、D-392)。p5.js 版(1/4)の 1/3 ほど(ユーザー指定)。
-const fundoWaveHeight = 1 / 12;
+/// 分銅繋ぎの弧の高さ(マスの幅に対する比、D-392)。p5.js 版(1/4)の 1/2(ユーザー指定)。
+const fundoWaveHeight = 1 / 8;
 
 /// 柄を 1 つ敷き詰める。[mask] = マスク用(線の柄も太く / 塗りで描く)。[ground] = 重なりを消すための地の色(透明なら消さない)。
 void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, required Color ground, required double unit, bool mask = false}) {
