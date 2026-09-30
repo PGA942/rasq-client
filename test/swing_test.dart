@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -441,7 +442,7 @@ void main() {
       }),
     ]);
     // ＋ を上へスワイプ (D-381) → Swing の始め方(画像 / 動画 / プラグイン / 背景とテキスト)。
-    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -80));
+    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -160));
     await tester.pumpAndSettle();
     for (final s in SwingStart.values) {
       expect(find.byKey(ValueKey('swing.start.${s.name}')), findsOneWidget, reason: s.name);
@@ -476,7 +477,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 背景とテキスト: 無地の背景を編集画面へ(文字は編集画面で書く)→ 画像の Swing。
-    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -80));
+    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -160));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('swing.start.background')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
@@ -491,7 +492,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // プラグイン: 送る画面で選ぶ。
-    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -80));
+    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -160));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('swing.start.plugin')));
     await tester.pumpAndSettle();
@@ -499,38 +500,73 @@ void main() {
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull, reason: 'プラグインを選ぶまで出せない');
   });
 
-  testWidgets('＋ (D-381): タップ = 投稿、下へスワイプ = AsTell、長押し = 3 つの FOW。割り当ては設定で変えられる。トレンドの ＋ は投稿にハッシュタグ、AsTell の ＋ は Swing / AsTell / RASQ', (tester) async {
+  testWidgets('＋ (D-382): タップ = 投稿。スライドを始めるとレール → 端で離すと作成ページ(途中なら何もしない)。素早く払っても長押しにならない。長押し / ホバーで横にチップ。割り当ては設定で。トレンドはハッシュタグ、AsTell の ＋ はチップ', (tester) async {
     final (mock, _, _, _) = central(const []);
     final c = await pumpApp(tester, mock);
+    final fab = find.byKey(const ValueKey('fab.home.gesture'));
     // タップ = 投稿(コンポーザー)。
-    await tester.tap(find.byTooltip('作成'));
+    await tester.tap(fab);
     await tester.pumpAndSettle();
     expect(c.read(overlayManagerProvider).contains(composerFowId), isTrue);
     c.read(overlayManagerProvider).close(composerFowId);
     await tester.pumpAndSettle();
-    // 動かしている間は、離すと始まるものを出す。
-    final g = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('fab.home.gesture'))));
-    await g.moveBy(const Offset(0, 20));
-    await g.moveBy(const Offset(0, 40));
-    await tester.pump();
-    expect(find.descendant(of: find.byKey(const ValueKey('fab.home.hint.down')), matching: find.text('AsTell を作る')), findsOneWidget);
+    // スライドを始めるとレール(上 = Swing、下 = AsTell)。途中で離すと何もしない。
+    var g = await tester.startGesture(tester.getCenter(fab));
+    await g.moveBy(const Offset(0, -20));
+    await g.moveBy(const Offset(0, -30));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byKey(const ValueKey('fab.home.track')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('fab.home.track.up')), matching: find.text('Swing')), findsOneWidget);
     await g.up();
     await tester.pumpAndSettle();
-    expect(c.read(overlayManagerProvider).contains(astellCreateFowId), isTrue, reason: '下へスワイプ = AsTell');
+    expect(find.byType(SwingComposerScreen), findsNothing, reason: '端まで行かなければ何もしない');
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isFalse, reason: '動かしたあとの離すは押したことにしない');
+    // 下の端まで → AsTell を作る。
+    g = await tester.startGesture(tester.getCenter(fab));
+    await g.moveBy(const Offset(0, 20));
+    await g.moveBy(const Offset(0, 120));
+    await tester.pump();
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(c.read(overlayManagerProvider).contains(astellCreateFowId), isTrue, reason: '下の端 = AsTell');
     c.read(overlayManagerProvider).close(astellCreateFowId);
     await tester.pumpAndSettle();
-    // 長押し = 割り当ての 3 つ。
-    await tester.longPress(find.byKey(const ValueKey('fab.home.gesture')));
+    // 素早く上へ払う → 長押しにはならず、Swing の作成ページへ。
+    await tester.fling(fab, const Offset(0, -160), 3000);
     await tester.pumpAndSettle();
-    for (final k in ['post', 'swing', 'astell']) {
-      expect(find.byKey(ValueKey('create.$k')), findsOneWidget, reason: k);
+    expect(find.byKey(const ValueKey('fab.home.chips')), findsNothing, reason: '長押しにならない');
+    expect(find.byType(SwingComposerScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.start.image')), findsOneWidget, reason: '始め方の一覧');
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    // 長押し = 横にチップ(上 / タップ / 下の 3 つ)。外を押すと隠れる。
+    await tester.longPress(fab);
+    await tester.pumpAndSettle();
+    for (final k in ['swing', 'post', 'astell']) {
+      expect(find.byKey(ValueKey('fab.home.chip.$k')), findsOneWidget, reason: k);
     }
-    c.read(overlayManagerProvider).close(createFowId);
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isFalse, reason: '長押しのあとの離すは押したことにしない');
+    expect(tester.getCenter(find.byKey(const ValueKey('fab.home.chips'))).dx, lessThan(tester.getCenter(fab).dx), reason: '右に置けなければ左');
+    await tester.tap(find.byKey(const ValueKey('fab.home.chip.astell')));
     await tester.pumpAndSettle();
+    expect(c.read(overlayManagerProvider).contains(astellCreateFowId), isTrue);
+    expect(find.byKey(const ValueKey('fab.home.chips')), findsNothing);
+    c.read(overlayManagerProvider).close(astellCreateFowId);
+    await tester.pumpAndSettle();
+    // ホバー(マウス)でもチップ。
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(fab));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('fab.home.chips')), findsOneWidget);
+    await mouse.moveTo(Offset.zero);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('fab.home.chips')), findsNothing);
+    await mouse.removePointer();
     // 設定で タップ = RASQ に投稿 に。
     await c.read(settingsAreaProvider(fabSettingsArea).notifier).set('homeTap', 'rasq');
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('作成'));
+    await tester.tap(fab);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('composer.pill.rasq')), findsOneWidget, reason: 'RASQ に投稿で開く');
     c.read(overlayManagerProvider).close(composerFowId);
@@ -539,8 +575,7 @@ void main() {
     // トレンドの ＋: 投稿はハッシュタグ入り。
     c.read(routerProvider).push('/trend/${Uri.encodeComponent('打上会')}');
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('fab.trend.gesture')), findsOneWidget);
-    await tester.tap(find.descendant(of: find.byKey(const ValueKey('fab.trend.gesture')), matching: find.byType(FloatingActionButton)));
+    await tester.tap(find.byKey(const ValueKey('fab.trend.gesture')));
     await tester.pumpAndSettle();
     expect(find.textContaining('#打上会'), findsWidgets);
     c.read(overlayManagerProvider).close(composerFowId);
@@ -548,15 +583,17 @@ void main() {
     c.read(routerProvider).pop();
     await tester.pumpAndSettle();
 
-    // AsTell の ＋: Swing / AsTell / RASQ に投稿。
+    // AsTell の ＋: 横にチップ(Swing / AsTell / RASQ に投稿)。
     c.read(routerProvider).go(Routes.vc);
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('VC を作成'));
     await tester.pumpAndSettle();
     for (final k in ['swing', 'astell', 'rasq']) {
-      expect(find.byKey(ValueKey('create.$k')), findsOneWidget, reason: k);
+      expect(find.byKey(ValueKey('fab.astell.chip.$k')), findsOneWidget, reason: k);
     }
-    expect(find.byKey(const ValueKey('create.post')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('fab.astell.chip.swing')));
+    await tester.pumpAndSettle();
+    expect(find.byType(SwingComposerScreen), findsOneWidget);
   });
 
   testWidgets('ヘッダーをしまう(↑)→ バーとタブ行が消え、アイコンと ↓ だけ浮かぶ。新着の Swing は 1 分だけ → ↓ で戻る', (tester) async {
