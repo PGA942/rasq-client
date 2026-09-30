@@ -8,7 +8,8 @@ import 'package:flutter/painting.dart';
 ///
 /// - 柄は 19 種([Wagara])。籠目 / 千鳥 / 松葉散らし / 笠松 / 梅 / 桐 / 杜若 / 秋草 / 菊 は入れない(ユーザー指定)。
 /// - 背景 = **1 枚目の紋様**(地の色 + 柄 A)+ **2 枚目の紋様**(地の色 + 柄 B を、柄 A を大きく描いたものでマスクしたもの)。
-///   どちらの層も「ランダムな色 + HSV の補色」の 2 色(D-387)。どの 2 つ([swingWagara] から)/ 色 / 大きさかは乱数で決める。
+///   どちらの層も「濃い色 + 補色の淡い色」の 2 色で、2 枚目は 1 枚目と類似色・濃淡を逆に([pickWagaraColors]、D-387)。
+///   どの 2 つ([swingWagara] から)/ 色 / 大きさかは乱数で決める。
 enum Wagara {
   seigaiha('青海波'),
   asanoha('麻の葉'),
@@ -44,17 +45,44 @@ Color complementOf(Color c) {
   return h.withHue((h.hue + 180) % 360).toColor();
 }
 
+/// 明るい側の色の彩度の上限 (D-387: 色が濃すぎたので、明るい側は淡く)。
+const swingPaleMaxSaturation = 0.2;
+
+/// 1 つの層の 2 色(地の色 / 柄の色)。
+typedef WagaraColors = ({Color ground, Color pattern});
+
+/// 配色 (D-387)。
+///
+/// - **層の 2 色 = 濃い色 + その補色の淡い色**: 濃い色は HSV(h, 彩度 0.4〜0.65, 明度 0.5〜0.72)、淡い色は色相 h+180°、
+///   彩度 ≤ [swingPaleMaxSaturation]、明度 0.9〜0.97。
+/// - **マスクの層との色味合わせ**: 2 枚目の色相は 1 枚目から ±20〜40° だけずらす(類似色 = 色の系統はそろえる)。
+///   そのうえで**地と柄の濃淡を 1 枚目と逆にする**(1 枚目の地が淡ければ 2 枚目の地は濃い)ので、マスクの形は明るさの差で読める。
+///   濃い色どうしの明度も 0.12 以上離す。
+(WagaraColors, WagaraColors) pickWagaraColors(math.Random rng) {
+  final h1 = rng.nextDouble() * 360;
+  final h2 = (h1 + (rng.nextBool() ? 1 : -1) * (20 + rng.nextDouble() * 20)) % 360;
+  final v1 = 0.5 + rng.nextDouble() * 0.22;
+  var v2 = 0.5 + rng.nextDouble() * 0.22;
+  if ((v2 - v1).abs() < 0.12) v2 = v1 > 0.61 ? v1 - 0.12 : v1 + 0.12;
+  Color strong(double h, double v) => HSVColor.fromAHSV(1, h, 0.4 + rng.nextDouble() * 0.25, v).toColor();
+  Color pale(double h) => HSVColor.fromAHSV(1, (h + 180) % 360, 0.08 + rng.nextDouble() * (swingPaleMaxSaturation - 0.08), 0.9 + rng.nextDouble() * 0.07).toColor();
+  final paleGround = rng.nextBool();
+  final s1 = strong(h1, v1), p1 = pale(h1), s2 = strong(h2, v2), p2 = pale(h2);
+  return (
+    paleGround ? (ground: p1, pattern: s1) : (ground: s1, pattern: p1),
+    paleGround ? (ground: s2, pattern: p2) : (ground: p2, pattern: s2),
+  );
+}
+
 /// 1 枚の背景の決め方。
 class SwingBackgroundSpec {
-  const SwingBackgroundSpec({required this.first, required this.second, required this.base, required this.secondBase, required this.unit, required this.secondUnit, required this.maskScale});
+  const SwingBackgroundSpec({required this.first, required this.second, required this.colors, required this.secondColors, required this.unit, required this.secondUnit, required this.maskScale});
   final Wagara first;
   final Wagara second;
 
-  /// 1 枚目の地の色(柄 A はその補色)。
-  final Color base;
-
-  /// 2 枚目の地の色(柄 B はその補色)。
-  final Color secondBase;
+  /// 1 枚目(地の色 + 柄 A)/ 2 枚目(地の色 + 柄 B、マスクの中)の色([pickWagaraColors])。
+  final WagaraColors colors;
+  final WagaraColors secondColors;
 
   /// 柄 A / 柄 B の 1 つ分の大きさ(px、1080 幅基準)。
   final double unit;
@@ -63,17 +91,16 @@ class SwingBackgroundSpec {
   /// マスクに使う柄 A の拡大率。
   final double maskScale;
 
-  /// どちらの層も「ランダムな色 + その補色」の 2 色で埋める (D-387: 透けた所をなくして見やすく)。
   factory SwingBackgroundSpec.random(math.Random rng, {List<Wagara> from = swingWagara}) {
     final first = from[rng.nextInt(from.length)];
     var second = from[rng.nextInt(from.length - 1)];
     if (from.indexOf(second) >= from.indexOf(first)) second = from[from.indexOf(second) + 1];
-    Color pick() => HSVColor.fromAHSV(1, rng.nextDouble() * 360, 0.35 + rng.nextDouble() * 0.4, 0.55 + rng.nextDouble() * 0.4).toColor();
+    final (c1, c2) = pickWagaraColors(rng);
     return SwingBackgroundSpec(
       first: first,
       second: second,
-      base: pick(),
-      secondBase: pick(),
+      colors: c1,
+      secondColors: c2,
       unit: 90 + rng.nextDouble() * 80,
       secondUnit: 60 + rng.nextDouble() * 50,
       maskScale: 1.8 + rng.nextDouble() * 0.9,
@@ -83,14 +110,14 @@ class SwingBackgroundSpec {
   String get label => '${first.label} × ${second.label}';
 }
 
-/// 背景を描く: 1 枚目 = 地の色 + 柄 A(補色)。2 枚目 = 地の色 + 柄 B(補色)を、柄 A(大)でマスクしたもの。
+/// 背景を描く: 1 枚目 = 地の色 + 柄 A。2 枚目 = 地の色 + 柄 B を、柄 A(大)でマスクしたもの。どちらの層も 2 色で埋める。
 void paintSwingBackground(Canvas canvas, Size size, SwingBackgroundSpec spec) {
   final rect = Offset.zero & size;
-  canvas.drawRect(rect, Paint()..color = spec.base);
-  paintWagara(canvas, size, spec.first, color: complementOf(spec.base), ground: spec.base, unit: spec.unit);
+  canvas.drawRect(rect, Paint()..color = spec.colors.ground);
+  paintWagara(canvas, size, spec.first, color: spec.colors.pattern, ground: spec.colors.ground, unit: spec.unit);
   canvas.saveLayer(rect, Paint());
-  canvas.drawRect(rect, Paint()..color = spec.secondBase);
-  paintWagara(canvas, size, spec.second, color: complementOf(spec.secondBase), ground: spec.secondBase, unit: spec.secondUnit);
+  canvas.drawRect(rect, Paint()..color = spec.secondColors.ground);
+  paintWagara(canvas, size, spec.second, color: spec.secondColors.pattern, ground: spec.secondColors.ground, unit: spec.secondUnit);
   canvas.saveLayer(rect, Paint()..blendMode = BlendMode.dstIn);
   paintWagara(canvas, size, spec.first, color: const Color(0xFF000000), ground: const Color(0x00000000), unit: spec.unit * spec.maskScale, mask: true);
   canvas.restore();
@@ -118,6 +145,30 @@ void _waku(Canvas canvas, Rect r, double u, Paint stroke) {
       for (var y = r.top - u; y < r.bottom + u; y += 4) {
         final dx = side * (u * 0.1 + u * 0.28 * (0.5 + 0.5 * math.sin(y / u * math.pi)));
         path.lineTo(x + u / 2 + dx, y);
+      }
+      canvas.drawPath(path, stroke);
+    }
+  }
+}
+
+/// 膨らみの鎖(分銅繋ぎ用): 列 x = u/2 + i·u ごとに 2 本の波線。節(y = u/2 + k·u)で 2 本が交わり、腹(y = k·u)で ±0.4u まで膨らむ。
+void _lensChain(Canvas canvas, Rect r, double u, Paint stroke) {
+  final i0 = (r.left / u).floor() - 1;
+  final i1 = (r.right / u).ceil() + 1;
+  for (var i = i0; i < i1; i++) {
+    final x = i * u + u / 2;
+    for (final side in [-1.0, 1.0]) {
+      final path = Path();
+      var first = true;
+      for (var y = r.top - u; y < r.bottom + u; y += 3) {
+        final s = math.sin(math.pi * (y - u / 2) / u);
+        final p = Offset(x + side * u * 0.4 * s * s, y);
+        if (first) {
+          path.moveTo(p.dx, p.dy);
+          first = false;
+        } else {
+          path.lineTo(p.dx, p.dy);
+        }
       }
       canvas.drawPath(path, stroke);
     }
@@ -193,16 +244,15 @@ void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, requ
         }
       }
     case Wagara.fundo:
-      // 分銅繋ぎ (D-387): 立涌の波線を、腹と節(傾きが 0 の所)の位置をそろえたまま ±45° に倒して 2 組重ねる。
-      // 2 組の腹と節が同じ所で出会い、その間が分銅の形になる。
+      // 分銅繋ぎ (D-387): 立涌の波線の対を「節で 2 本が交わる」形(膨らみの鎖)にし、±45° に倒して 2 組重ねる。
+      // 節は (u/2 + i·u, u/2 + k·u) の格子で、90° 回しても同じ格子なので、**2 組の節がすべて同じ点で交わる**。その間が分銅の形。
       final d = math.sqrt(size.width * size.width + size.height * size.height);
+      final half = (d / 2 / u).ceil() * u + u;
       for (final a in [math.pi / 4, -math.pi / 4]) {
         canvas.save();
         canvas.translate(size.width / 2, size.height / 2);
         canvas.rotate(a);
-        // 腹 / 節の位置(y = u/2 + k·u)が 2 組でそろうよう、原点を格子にのせる。
-        final half = (d / 2 / u).ceil() * u + u;
-        _waku(canvas, Rect.fromLTRB(-half, -half, half, half), u, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
+        _lensChain(canvas, Rect.fromLTRB(-half, -half, half, half), u, mask ? (stroke..strokeWidth = u * 0.16) : stroke);
         canvas.restore();
       }
     case Wagara.sayagata:
@@ -338,8 +388,8 @@ void paintWagara(Canvas canvas, Size size, Wagara w, {required Color color, requ
         for (var i = -1; i < cols; i++) {
           final c = Offset(i * u + (j.isOdd ? u / 2 : 0), j * u * 0.8);
           Path dia(Offset cc, double hw, double hh) => Path()..addPolygon([cc + Offset(0, -hh), cc + Offset(hw, 0), cc + Offset(0, hh), cc + Offset(-hw, 0)], true);
-          // D-387: 中を塗り、真ん中の菱を 2 割大きく(0.32 × 0.2 → 0.384 × 0.24)。
-          for (final (o, hw, hh) in [(Offset.zero, u * 0.384, u * 0.24), (Offset(0, -u * 0.28), u * 0.18, u * 0.11), (Offset(0, u * 0.28), u * 0.18, u * 0.11)]) {
+          // D-387: 中を塗り、真ん中の菱を大きく: 上下の角が、上 / 下の小さな菱の真ん中の横線(三角形の底辺)に来る(0.448 × 0.28)。
+          for (final (o, hw, hh) in [(Offset.zero, u * 0.448, u * 0.28), (Offset(0, -u * 0.28), u * 0.18, u * 0.11), (Offset(0, u * 0.28), u * 0.18, u * 0.11)]) {
             canvas.drawPath(dia(c + o, hw, hh), fill);
           }
         }

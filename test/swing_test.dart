@@ -603,6 +603,22 @@ void main() {
     expect(Wagara.values.length, 19);
     expect(swingWagara.map((w) => w.label), ['七宝', '檜垣', '石畳', '立涌', '亀甲', '鱗', '菱', '松皮菱', '分銅繋ぎ'], reason: 'D-387 で背景に使う柄');
     expect(complementOf(const Color(0xFFFF0000)), const Color(0xFF00FFFF));
+    // 配色: 明るい側は彩度 20% まで、2 枚目は類似色(±20〜40°)で濃淡が逆。
+    for (var i = 0; i < 50; i++) {
+      final (a, b) = pickWagaraColors(math.Random(i));
+      HSVColor hsv(Color c) => HSVColor.fromColor(c);
+      Color lighter(WagaraColors x) => hsv(x.ground).value > hsv(x.pattern).value ? x.ground : x.pattern;
+      for (final x in [a, b]) {
+        expect(hsv(lighter(x)).saturation, lessThanOrEqualTo(swingPaleMaxSaturation + 0.01));
+        final d = (hsv(x.ground).hue - hsv(x.pattern).hue).abs();
+        expect((d - 180).abs(), lessThan(6), reason: '補色(淡い色は 8 bit で色相が少しずれる)');
+      }
+      expect(lighter(a) == a.ground, lighter(b) != b.ground, reason: '濃淡が逆');
+      final strongA = lighter(a) == a.ground ? a.pattern : a.ground;
+      final strongB = lighter(b) == b.ground ? b.pattern : b.ground;
+      final dh = ((hsv(strongA).hue - hsv(strongB).hue).abs() + 360) % 360;
+      expect(math.min(dh, 360 - dh), inInclusiveRange(19, 41), reason: '類似色');
+    }
     expect(Wagara.values.map((w) => w.label), isNot(contains('千鳥')));
     for (var i = 0; i < 40; i++) {
       final spec = SwingBackgroundSpec.random(math.Random(i));
