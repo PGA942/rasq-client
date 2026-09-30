@@ -17,6 +17,8 @@ import '../media/video_player.dart';
 import '../plugins/slot_plugins.dart';
 import 'swing_models.dart';
 import 'swing_providers.dart';
+import 'swing_reply.dart';
+import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvider;
 
 /// Swing のビューワー (D-377 / D-379)。全画面、**左右のスワイプ**で次 / 前の Swing(と広告)へ。マウス / トラックパッドの
 /// ドラッグでも動く(Mac 版で縦のスワイプが効かなかった)。
@@ -75,6 +77,19 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   /// 中央のタップで止めている。
   bool _paused = false;
 
+  /// 返信のコンポーザー / キューのピッカー / スレッドの FOW を開いていて止めている (D-389)。
+  bool _held = false;
+
+  void _hold(bool v) {
+    if (v == _held || !mounted) return;
+    setState(() => _held = v);
+    if (v) {
+      _clock.stop();
+    } else if (!_paused && _clock.duration != null && _clock.value > 0 && _clock.value < 1) {
+      _clock.forward();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -100,7 +115,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     final d = SwingViewerScreen.displayDuration;
     if (s == null || d == null || !(s.kind == SwingKind.text || s.kind == SwingKind.image)) return;
     _clock.duration = d;
-    if (!_paused) _clock.forward();
+    if (!_paused && !_held) _clock.forward();
   }
 
   void _onClock(AnimationStatus st) {
@@ -184,7 +199,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                 const RasqEmptyView(key: ValueKey('swing.viewer.empty'), title: 'Swing はありません', hint: 'フォローしている人や、RASQ リストに入れてくれた人の Swing がここに流れます'),
                 Positioned(top: 8, right: 8, child: SafeArea(child: RasqIconButton(icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: _close))),
               ])
-            : ScrollConfiguration(
+            : Stack(children: [
+                Positioned.fill(child: ScrollConfiguration(
                 // マウス / トラックパッドのドラッグでもめくれる(既定はタッチだけ)。
                 behavior: ScrollConfiguration.of(context).copyWith(dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad, PointerDeviceKind.stylus}),
                 child: PageView.builder(
@@ -201,7 +217,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                     key: ValueKey('swing.page.${s.id}'),
                     swing: s,
                     active: i == _index,
-                    paused: i == _index && _paused,
+                    paused: i == _index && (_paused || _held),
+                    replyBar: _replyBarShown(s),
                     clock: _clock,
                     position: '${i + 1} / ${_items.length}',
                     onClose: _close,
@@ -215,10 +232,28 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                   );
                 },
               ),
-              ),
+              )),
+                // 左下: 返信とキュー (D-389)。全画面で動いているプラグインの上には出さない。
+                if (_current case final cur? when _replyBarShown(cur))
+                  Positioned(
+                    left: RasqSpacing.page,
+                    bottom: 0,
+                    child: SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: cur.kind == SwingKind.video ? 64 : RasqSpacing.md),
+                        child: SwingReplyBar(key: ValueKey('swing.reply.${cur.id}'), swing: cur, onHold: _hold),
+                      ),
+                    ),
+                  ),
+              ]),
       ),
     );
   }
+
+  Swing? get _current => _index < _items.length ? _items[_index].swing : null;
+
+  bool _replyBarShown(Swing s) => s.postId != null && !_locked && ref.watch(rasqAccountPageApiProvider) != null;
 }
 
 String swingRemainingLabel(Duration d) {
@@ -228,7 +263,10 @@ String swingRemainingLabel(Duration d) {
 }
 
 class _SwingPage extends StatelessWidget {
-  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd});
+  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.replyBar = false});
+
+  /// 左下に返信の欄が出ている(添えた文をその上へ)。
+  final bool replyBar;
   final Swing swing;
   final bool active;
   final bool paused;
@@ -309,7 +347,7 @@ class _SwingPage extends StatelessWidget {
         Positioned(
           left: RasqSpacing.page,
           right: RasqSpacing.page,
-          bottom: RasqSpacing.xxl,
+          bottom: RasqSpacing.xxl + (replyBar ? 88 : 0),
           child: Text(swing.text, key: const ValueKey('swing.caption'), style: RasqTypography.body.copyWith(color: Colors.white, shadows: const [Shadow(blurRadius: 6)])),
         ),
     ]);

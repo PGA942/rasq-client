@@ -270,36 +270,7 @@ class RasqPostTileView extends ConsumerWidget {
   }
 
   /// キュー: **絵文字ピッカーの使い回し**(履歴 / 予測 / パックごとの省略表示 / 検索。D-273)。リアクションと同じく、ボタンに張り付いて出る。
-  Future<void> _queue(BuildContext context, WidgetRef ref, Rect? anchor) async {
-    if (ref.read(orgateAccountProvider).value == null) return _toast(context, 'RASQ アカウントにログインするとキューできます');
-    // いいねのみ (S-023): ピッカーは出さず、いいねを付ける。
-    if (post.likeOnly) return _run(context, ref, (api) => api.like(post.id));
-    await ref.read(stickerPacksProvider.notifier).ready;
-    if (!context.mounted) return;
-    final packs = ref.read(stickerPacksProvider);
-    if (packs.isEmpty) {
-      final go = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.noPacks', title: 'アセットパックがありません', message: 'キューは、ストアで入れたアセットパックの絵でするリアクションです。', confirmText: 'ストアで探す', cancelText: '閉じる');
-      if (go && context.mounted) context.push(Routes.store);
-      return;
-    }
-    await openEmojiPicker(
-      ref,
-      title: 'キュー',
-      closeOnPick: true,
-      anchor: anchor,
-      predictionContext: post.body,
-      existingReactions: {for (final q in post.queues) if (!q.like) '${q.packId}|${q.stickerId}': q.count},
-      stickers: [
-        for (final pack in packs)
-          for (final s in pack.stickers) EmojiPanelSticker(key: '${pack.id}|${s.id}', group: pack.name, label: s.label, tags: s.tags, file: s.file),
-      ],
-      onPick: (key) {
-        final parts = key.split('|');
-        if (parts.length != 2 || !context.mounted) return;
-        _run(context, ref, (api) => api.setQueue(post.id, (packId: parts[0], stickerId: parts[1])));
-      },
-    );
-  }
+  Future<void> _queue(BuildContext context, WidgetRef ref, Rect? anchor) => pickRasqQueue(context, ref, post, anchor: anchor, onRun: (f) => _run(context, ref, f));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -528,4 +499,38 @@ class _RasqBodyTextState extends State<_RasqBodyText> {
       ]),
     );
   }
+}
+
+/// RASQ の投稿へのキュー(ピッカーから絵を選ぶ、D-273)。投稿のタイルと Swing の返信の欄 (D-389) で共通。
+/// [onRun] = API を呼んで結果を反映する(呼ぶ側の再読み込みつき)。
+Future<void> pickRasqQueue(BuildContext context, WidgetRef ref, RasqAccountPost post, {Rect? anchor, required Future<void> Function(Future<RasqAccountPost> Function(RasqAccountPageApi api)) onRun}) async {
+  void toast(String m) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(m)));
+  if (ref.read(orgateAccountProvider).value == null) return toast('RASQ アカウントにログインするとキューできます');
+  // いいねのみ (S-023): ピッカーは出さず、いいねを付ける。
+  if (post.likeOnly) return onRun((api) => api.like(post.id));
+  await ref.read(stickerPacksProvider.notifier).ready;
+  if (!context.mounted) return;
+  final packs = ref.read(stickerPacksProvider);
+  if (packs.isEmpty) {
+    final go = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.noPacks', title: 'アセットパックがありません', message: 'キューは、ストアで入れたアセットパックの絵でするリアクションです。', confirmText: 'ストアで探す', cancelText: '閉じる');
+    if (go && context.mounted) context.push(Routes.store);
+    return;
+  }
+  await openEmojiPicker(
+    ref,
+    title: 'キュー',
+    closeOnPick: true,
+    anchor: anchor,
+    predictionContext: post.body,
+    existingReactions: {for (final q in post.queues) if (!q.like) '${q.packId}|${q.stickerId}': q.count},
+    stickers: [
+      for (final pack in packs)
+        for (final s in pack.stickers) EmojiPanelSticker(key: '${pack.id}|${s.id}', group: pack.name, label: s.label, tags: s.tags, file: s.file),
+    ],
+    onPick: (key) {
+      final parts = key.split('|');
+      if (parts.length != 2 || !context.mounted) return;
+      onRun((api) => api.setQueue(post.id, (packId: parts[0], stickerId: parts[1])));
+    },
+  );
 }

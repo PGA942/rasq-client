@@ -59,6 +59,8 @@ class Swing {
     this.seen = false,
     this.audience,
     this.viewCount,
+    this.postId,
+    this.replyCount = 0,
   });
 
   final String id;
@@ -78,9 +80,13 @@ class Swing {
   final SwingAudience? audience;
   final int? viewCount;
 
+  /// 返信とキューの根の RASQ 投稿 (D-389 / Central S-058)。見られる人にだけ見える。古い Central では null。
+  final String? postId;
+  final int replyCount;
+
   String get authorAccountId => author.id.replaceFirst('rasq:', '');
 
-  Swing copyWith({bool? seen}) => Swing(id: id, author: author, kind: kind, text: text, mediaUrl: mediaUrl, mediaType: mediaType, plugin: plugin, createdAt: createdAt, expiresAt: expiresAt, seen: seen ?? this.seen, audience: audience, viewCount: viewCount);
+  Swing copyWith({bool? seen}) => Swing(id: id, author: author, kind: kind, text: text, mediaUrl: mediaUrl, mediaType: mediaType, plugin: plugin, createdAt: createdAt, expiresAt: expiresAt, seen: seen ?? this.seen, audience: audience, viewCount: viewCount, postId: postId, replyCount: replyCount);
 
   Duration remaining(DateTime now) {
     final d = expiresAt.difference(now);
@@ -124,6 +130,8 @@ class Swing {
           ? SwingAudience(followers: audience['followers'] == true, lists: [for (final l in (audience['lists'] as List? ?? const [])) '$l'])
           : null,
       viewCount: (j['viewCount'] as num?)?.toInt(),
+      postId: j['postId'] is String ? j['postId'] as String : null,
+      replyCount: (j['replyCount'] as num?)?.toInt() ?? 0,
     );
   }
 }
