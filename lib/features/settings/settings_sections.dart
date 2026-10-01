@@ -84,6 +84,7 @@ const settingsSections = <String, SettingsSection>{
   'trend': SettingsSection('トレンド', [
     SettingsRow('ジャンル', route: settingsActionTrendGenres),
     SettingsRow('トレンドの指向性/刺激性', warning: true, route: settingsActionTrendTendency),
+    SettingsRow('EmoM の閾値', subtitle: '運営が制限したトレンドの隠し方 / 閾値の公開', detail: 'EmoM の閾値(0〜100、既定 50)と「閾値を公開する」(既定オフ)。運営の制限の点数がこの値より大きいトレンドを一覧に出さない (D-404)', route: Routes.settingsEmom),
     SettingsRow('プラグインの詳細設定', route: '/settings/dsl/plugins.trend'),
     SettingsRow('キャッシュネットワークの設定', subtitle: '準備中', detail: '未提供(第二期)', route: '/settings/dsl/trend.cdn'),
   ]),
