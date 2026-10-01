@@ -10,10 +10,12 @@ import 'dart:ui' show PictureRecorder, Canvas, ImageByteFormat;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/testing.dart';
+import 'package:http/http.dart' as http;
 import 'package:rasq_client/app/app.dart';
-import 'package:rasq_client/shell/rasq_register_fow.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/features/plugins/media_plugin_panel.dart';
 import 'package:rasq_client/features/plugins/pro_media_editor_screen.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
@@ -590,11 +592,35 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('settings_legal.png'));
   });
 
-  testWidgets('RASQ account register FOW (D-241)', (tester) async {
-    final c = await pump(tester);
-    unawaited(showRasqRegisterFow(c.read(overlayManagerProvider), snsCount: 2, onOpenDoc: (_) {}));
+  testWidgets('onboarding wide 2 columns (D-405)', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
+    final central = MockClient((req) async => switch (req.url.path) {
+          '/api/v1/servers/misskey.io/info' => json({'host': 'misskey.io', 'software': 'misskey', 'version': '2025.4.1', 'name': 'Misskey.io', 'description': 'Misskey.io は、地球で生まれた分散マイクロブログ SNS です。', 'themeColor': '#86b300', 'users': 520000, 'posts': 210000000, 'registrationOpen': true}),
+          '/api/v1/servers/mastodon.social/info' => json({'host': 'mastodon.social', 'software': 'mastodon', 'version': '4.8.0', 'name': 'Mastodon', 'description': 'The original server of Mastodon.', 'themeColor': '#6364ff', 'users': 3100000, 'registrationOpen': true}),
+          _ => json({'error': {'code': '404', 'message': 'not found'}}, 404),
+        });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: (_) => const []))),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: central)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('register_fow.png'));
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('onboarding_wide.png'));
+  });
+
+  testWidgets('RASQ account register page (D-241 / D-405)', (tester) async {
+    final c = await pump(tester);
+    unawaited(c.read(routerProvider).push(Routes.rasqRegister, extra: 2));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('register_page.png'));
     await tester.tap(find.byKey(const ValueKey('register.agree')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('register.age.16-17')));
@@ -602,8 +628,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('register.bundle.keep')));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('register_fow_bundle.png'));
-    c.read(overlayManagerProvider).close(rasqRegisterFowId);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('register_page_bundle.png'));
+    // 規約はページの上に積む (D-405)。
+    await tester.ensureVisible(find.byKey(const ValueKey('register.terms')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('register.terms')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('register_page_terms.png'));
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+    c.read(routerProvider).pop();
     await tester.pumpAndSettle();
     rootBundle.clear();
     c.read(routerProvider).push('/settings/dsl/about.learning');

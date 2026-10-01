@@ -12,6 +12,7 @@ import '../../app/providers.dart';
 import '../../mock/mock_data.dart';
 import '../../shell/headers.dart';
 import '../../text/inline_spans.dart';
+import '../onboarding/onboarding_previews.dart' show postTileSampleRrl;
 
 /// Component catalog (Widgetbook-lite). Dev-only; lists every L2 atomic
 /// component with its variants plus Overlay Manager presets.
@@ -108,9 +109,10 @@ class CatalogScreen extends ConsumerWidget {
             RasqActionBarItem(id: 'cw', label: '注釈', icon: Icons.visibility_off_outlined, showCount: false, onTap: () {}),
           ]),
         ),
+        // post-tile.rrl.json = WASM の SNS プラグインが出す snapshot (PROTOCOL.md §3.1)。オンボーディングの見本 (D-405) と同じもの。
         const RasqSectionHeader(title: 'RRL レンダラー (M3: post-tile.rrl.json → L1/L2/L3)'),
         RrlRenderer(
-          node: RrlDocument.fromSnapshot((jsonDecode(_postTileRrl) as Map).cast<String, Object?>()).root,
+          node: RrlDocument.fromSnapshot((jsonDecode(postTileSampleRrl) as Map).cast<String, Object?>()).root,
           host: RrlHost(
             instanceScope: 'rasq.official.misskey:misskey:misskey.io:yamada:0.1.0:catalog',
             scope: RrlScope({
@@ -301,38 +303,6 @@ class CatalogScreen extends ConsumerWidget {
         child: Wrap(spacing: 12, runSpacing: 12, crossAxisAlignment: WrapCrossAlignment.center, children: children),
       );
 }
-
-/// `rasq-sdk-sample/examples/post-tile.rrl.json` — the wire-format snapshot a
-/// WASM SNS plugin emits (PROTOCOL.md §3.1), rendered live above.
-const _postTileRrl = '''
-{
-  "schema": "rasq.boundary/1",
-  "scope": "rasq.official.misskey:misskey:misskey.io:yamada:0.1.0:tl-home",
-  "type": "snapshot",
-  "rev": 1,
-  "root": {
-    "t": "PostTile", "k": "post-{{post.id}}", "role": "contentBody",
-    "p": { "post": "\$.post", "variant": "normal" },
-    "c": [
-      { "t": "Avatar", "k": "avatar", "p": { "user": "\$.post.author" }, "on": { "tap": "openUser" } },
-      { "t": "Row", "k": "header", "c": [
-        { "t": "RichText", "k": "name", "tag": "user_name", "p": { "source": "\$.post.author.displayName" } },
-        { "t": "Text", "k": "handle", "tag": "user_handle", "p": { "text": "\$.post.author.handle" } },
-        { "t": "Timestamp", "k": "time", "tag": "time", "p": { "time": "\$.post.createdAt" } }
-      ]},
-      { "t": "If", "k": "cw?", "p": { "cond": "\$.post.contentWarning" }, "c": [
-        { "t": "Text", "k": "cw", "tag": "cw", "p": { "text": "\$.post.contentWarning" } }
-      ]},
-      { "t": "RichText", "k": "body", "tag": "main_text", "p": { "source": "\$.post.bodyRSL" } },
-      { "t": "MediaGrid", "k": "media", "p": { "items": "\$.post.media" }, "on": { "tap": "openViewer" } },
-      { "t": "If", "k": "poll?", "p": { "cond": "\$.post.poll" }, "c": [
-        { "t": "PollWidget", "k": "poll", "tag": "vote", "p": { "poll": "\$.post.poll" }, "on": { "confirm": "vote" } }
-      ]},
-      { "t": "ActionBar", "k": "actions", "role": "actionBar", "p": { "actions": "\$.actions", "states": "\$.actionStates[post.key]" }, "on": { "tap": "performAction", "longPress": "pickReaction" } }
-    ]
-  }
-}
-''';
 
 class _SwitchDemo extends StatefulWidget {
   const _SwitchDemo();

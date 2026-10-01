@@ -12,13 +12,14 @@ import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/profile/rasq_profile_edit_screen.dart';
 import 'package:rasq_client/backend/rasq_consent.dart';
+import 'package:rasq_client/features/onboarding/onboarding_previews.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
+import 'package:rasq_client/features/onboarding/rasq_register_screen.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/sanctions.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/rasq_terms_gate.dart';
 import 'package:rasq_client/shell/rasq_account_fow.dart';
-import 'package:rasq_client/shell/rasq_register_fow.dart';
 import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -220,7 +221,7 @@ void main() {
     return container;
   }
 
-  testWidgets('RASQ アカウントの登録 FOW (D-241): 規約と年齢に同意するまで登録できない → 登録 → 同意を記録 → バンドルを置き換える → 削除', (tester) async {
+  testWidgets('RASQ アカウントの登録ページ (D-241 / D-405): 規約と年齢に同意するまで登録できない → 登録 → 同意を記録 → バンドルを置き換える → 削除', (tester) async {
     final central = fakeCentral(serverBundle: {'misskey:old.example:gone'});
     final container = await pumpWithCentral(tester, central.client);
     // 下のボタン (D-272): 「RASQ アカウントを追加」→「新しく作成」。
@@ -228,8 +229,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('新しく作成'));
     await tester.pumpAndSettle();
-    // 登録の前に FOW。まだサーバーへは何も送っていない。
-    expect(find.text('RASQ アカウントの登録'), findsOneWidget);
+    // 登録の前にページ (D-405、前は FOW)。まだサーバーへは何も送っていない。下の RASQ アカウント FOW は退避している。
+    expect(find.byType(RasqRegisterScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('rasq.account.add')), findsNothing);
     expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
     FilledButton submit() => tester.widget<FilledButton>(find.byKey(const ValueKey('register.submit')));
     expect(submit().onPressed, isNull);
@@ -280,8 +282,8 @@ void main() {
     expect(find.text('プロフィールの更新'), findsOneWidget);
     container.read(routerProvider).pop();
     await tester.pumpAndSettle();
-    // FOW は閉じているので、もう一度開く(以降の確認のため)。
-    expect(find.text('RASQ アカウントの登録'), findsNothing);
+    // 登録ページも RASQ アカウント FOW も閉じているので、もう一度開く(以降の確認のため)。
+    expect(find.byType(RasqRegisterScreen), findsNothing);
     RasqSidebar.open(container.read(overlayManagerProvider));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('RASQ アカウント'));
@@ -313,7 +315,7 @@ void main() {
     expect(container.read(currentRasqAccountProvider)!.sessionKeys.toSet(), {acc1.key, acc2.key});
   });
 
-  testWidgets('登録 FOW で「置き換えない」(D-241): SNS アカウントは「この端末のみ」に残り、サーバーのバンドルは消さない。キャンセルなら登録しない', (tester) async {
+  testWidgets('登録ページで「置き換えない」(D-241): SNS アカウントは「この端末のみ」に残り、サーバーのバンドルは消さない。キャンセルなら登録しない', (tester) async {
     final central = fakeCentral(restored: true, serverBundle: {'misskey:old.example:kept'});
     final container = await pumpWithCentral(tester, central.client);
     // キャンセル → 何も送らない。
@@ -322,8 +324,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('新しく作成'));
     await tester.pumpAndSettle();
-    container.read(overlayManagerProvider).close(rasqRegisterFowId);
+    // 戻る = キャンセル。退避していた RASQ アカウント FOW が戻る。
+    await tester.tap(find.descendant(of: find.byType(RasqRegisterScreen), matching: find.byTooltip('戻る')));
     await tester.pumpAndSettle();
+    expect(find.byType(RasqRegisterScreen), findsNothing);
+    expect(find.byKey(const ValueKey('rasq.account.add')), findsOneWidget);
     expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
     expect(container.read(currentRasqAccountProvider)?.isCentral ?? false, isFalse);
 
@@ -529,6 +534,92 @@ void main() {
     final ledger = container.read(rasqAccountsProvider).value!;
     expect(ledger.onboardingDone, isTrue);
     expect(ledger.current!.kind, RasqAccountKind.local);
+  });
+
+  /// 新規の端末(台帳が空)で、Central につながる構成のオンボーディング。[size] = 画面の論理サイズ。
+  Future<ProviderContainer> pumpOnboarding(WidgetTester tester, MockClient client, {Size size = const Size(360, 780)}) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: (_) => const []))),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: client, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+  }
+
+  testWidgets('オンボーディングの登録ページ (D-405): 利用規約 / プライバシーポリシーを開いて読め、戻ると入力が残る', (tester) async {
+    final central = fakeCentral();
+    await pumpOnboarding(tester, central.client);
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('onboarding.create')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RasqRegisterScreen), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('register.agree')));
+    await tester.pumpAndSettle();
+    // 前は入口の振り分けでオンボーディングへ戻され、文書が開けなかった。
+    for (final (key, area) in [('register.terms', 'about.terms'), ('register.privacy', 'about.privacy')]) {
+      await tester.tap(find.byKey(ValueKey(key)));
+      await tester.pumpAndSettle();
+      expect(tester.widget<SettingsDslScreen>(find.byType(SettingsDslScreen)).area, area);
+      expect(find.byType(RasqRegisterScreen), findsNothing, reason: '文書は登録ページの上に積む');
+      await tester.tap(find.descendant(of: find.byType(SettingsDslScreen), matching: find.byTooltip('戻る')));
+      await tester.pumpAndSettle();
+      expect(find.byType(RasqRegisterScreen), findsOneWidget);
+    }
+    final agree = find.descendant(of: find.byKey(const ValueKey('register.agree')), matching: find.byType(Checkbox));
+    expect(tester.widget<Checkbox>(agree).value, isTrue);
+    expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
+  });
+
+  group('オンボーディングの 2 カラム (D-405)', () {
+    MockClient serversCentral(Set<String> known) => MockClient((req) async {
+          final m = RegExp(r'/api/v1/servers/([^/]+)/info$').firstMatch(req.url.path);
+          if (m != null && known.contains(m.group(1))) {
+            return http.Response.bytes(utf8.encode(jsonEncode({'host': m.group(1), 'software': 'misskey', 'name': 'Example ${m.group(1)}', 'users': 1200})), 200, headers: {'content-type': 'application/json'});
+          }
+          return http.Response.bytes(utf8.encode(jsonEncode({'error': {'code': '404', 'message': 'not an instance'}})), 404, headers: {'content-type': 'application/json'});
+        });
+
+    testWidgets('狭い画面は 1 カラムのまま(見本を出さない)', (tester) async {
+      await pumpOnboarding(tester, serversCentral({'misskey.io'}));
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+      expect(find.byType(OnboardingPreviewColumn), findsNothing);
+    });
+
+    testWidgets('広い画面: 左の小カラムに、おすすめの SNS(投稿タイルの RRL)とサーバー情報タイルを横に流す', (tester) async {
+      await pumpOnboarding(tester, serversCentral({'misskey.io', 'mastodon.social'}), size: const Size(1280, 800));
+      final column = find.byType(OnboardingPreviewColumn);
+      expect(column, findsOneWidget);
+      expect(tester.getSize(column).width, 320, reason: '小型カラムの既定の幅 (D-320)');
+      expect(tester.getTopLeft(column).dx, 0, reason: '左に置く');
+      // SNS: 角丸のカードに RRL の投稿タイル。横に流す(画面外のカードは送ると出る)。
+      final sns = find.byKey(const ValueKey('onboarding.previews.sns'));
+      expect(tester.widget<ListView>(sns).scrollDirection, Axis.horizontal);
+      expect(find.byKey(const ValueKey('onboarding.previews.sns.misskey')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('onboarding.previews.sns.misskey')), matching: find.byType(RasqPostTile)), findsOneWidget);
+      await tester.scrollUntilVisible(find.byKey(const ValueKey('onboarding.previews.sns.mixi2')), 200, scrollable: find.descendant(of: sns, matching: find.byType(Scrollable)).first);
+      expect(find.byKey(const ValueKey('onboarding.previews.sns.mixi2')), findsOneWidget);
+      // サーバー: 情報の取れたものだけ。
+      expect(find.byKey(const ValueKey('onboarding.previews.servers')), findsOneWidget);
+      expect(find.byKey(const ValueKey('server.tile.misskey.io')), findsOneWidget);
+      // 入口のボタンは右の大型カラムに残る。
+      expect(tester.getTopLeft(find.byKey(const ValueKey('onboarding.create'))).dx, greaterThan(320));
+    });
+
+    testWidgets('サーバーの情報が 1 つも取れなければ、サーバーの欄ごと出さない', (tester) async {
+      await pumpOnboarding(tester, serversCentral(const {}), size: const Size(1280, 800));
+      expect(find.byType(OnboardingPreviewColumn), findsOneWidget);
+      expect(find.byKey(const ValueKey('onboarding.previews.sns.misskey')), findsOneWidget);
+      expect(find.byKey(const ValueKey('onboarding.previews.servers')), findsNothing);
+    });
   });
 }
 

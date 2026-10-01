@@ -73,6 +73,7 @@ void main() {
     final mock = MockClient((req) async {
       final path = req.url.path.replaceFirst('/api/v1', '');
       if (path == '/store-key') return storeKeyOk ? json({'algorithm': 'ed25519', 'publicKey': 'AAAABBBBCCCCDDDDEEEE'}) : json({'error': {'code': '500', 'message': 'boom'}}, 500);
+      if (path == '/auth/keys') return json({'keys': [{'kty': 'OKP', 'crv': 'Ed25519', 'x': 'AAAA'}]});
       return json({'error': {'code': '401', 'message': 'valid bearer token required'}}, 401);
     });
     final storage = MemorySessionStorage({
@@ -98,6 +99,7 @@ void main() {
     var probe = tester.widget<Text>(find.byKey(const ValueKey('backend.probe'))).data!;
     expect(probe, contains('接続 OK'));
     expect(probe, contains('未作成'));
+    expect(probe, contains('ORGATE: 接続 OK — トークンの公開鍵 1 個'), reason: 'ORGATE も確かめる (D-405)');
     expect(probe, isNot(contains('接続できませんでした')));
     // 未作成のときは、この画面から RASQ アカウントを開ける。
     await tester.scrollUntilVisible(find.byKey(const ValueKey('backend.account')), 200, scrollable: find.byType(Scrollable).first);
@@ -109,6 +111,42 @@ void main() {
     await tester.pumpAndSettle();
     probe = tester.widget<Text>(find.byKey(const ValueKey('backend.probe'))).data!;
     expect(probe, contains('接続できませんでした'));
+  });
+
+  testWidgets('接続テストは ORGATE も確かめる (D-405): Central と ORGATE を取り違えると、どちらが違うかと直し方が出る', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
+    // Central の欄 → ORGATE のサーバー(ストアの口が無い)、ORGATE の欄 → Central のサーバー(公開鍵の口が無い)。
+    final orgateServer = MockClient((req) async => req.url.path == '/api/v1/auth/keys' ? json({'keys': [{'kty': 'OKP'}]}) : json({'error': {'code': '404', 'message': 'not found'}}, 404));
+    final centralServer = MockClient((req) async => req.url.path == '/api/v1/store-key' ? json({'algorithm': 'ed25519', 'publicKey': 'AAAABBBBCCCCDDDDEEEE'}) : json({'error': {'code': '404', 'message': 'not found'}}, 404));
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        centralClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://orgate.test'), httpClient: orgateServer)),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: centralServer)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://orgate.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(routerProvider).push('/settings/server');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('backend.test')));
+    await tester.pumpAndSettle();
+    final probe = tester.widget<Text>(find.byKey(const ValueKey('backend.probe'))).data!;
+    expect(probe, contains('接続できませんでした(https://orgate.test)'));
+    expect(probe, contains('Central の欄に、ORGATE ではなく RASQ Central の接続先を入れてください'));
+    expect(probe, contains('ORGATE に接続できませんでした(https://central.test)'));
+    expect(probe, isNot(contains('接続 OK')));
   });
 
   testWidgets('テスト用の接続先 (D-360 / D-398): 入れると SNS の差し替えと Central / ORGATE が変わり、外すと元に戻る', (tester) async {

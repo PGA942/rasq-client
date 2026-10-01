@@ -70,7 +70,8 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
   }
 
   /// 接続テスト (D-239): **いま入力してある接続先**で試す(先に保存する。以前は保存前の値で試して
-  /// 「接続先が設定されていません」になった)。
+  /// 「接続先が設定されていません」になった)。D-405: Central に加えて ORGATE も確かめる(前は Central だけを見ていて、
+  /// ORGATE の接続先を間違えても「接続 OK」になり、逆に ORGATE の URL を Central の欄に入れると訳の分からない 404 だった)。
   Future<void> _test() async {
     if (!await _save(quiet: true)) return;
     setState(() { _busy = true; _probe = null; });
@@ -79,14 +80,21 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
       setState(() { _busy = false; _probe = '接続先を入力してください(例: http://192.168.3.14:8080)'; });
       return;
     }
-    // 接続の成否は公開の口 `/store-key` だけで決める。`/me` は RASQ アカウントが要るので、未作成の
-    // 端末では 401 になる — それは「接続できない」ではない (D-240)。
+    final lines = [await _probeCentral(client), await _probeOrgate()];
+    if (mounted) setState(() { _busy = false; _probe = lines.join('\n'); });
+  }
+
+  /// Central: 接続の成否は公開の口 `/store-key` だけで決める。`/me` は RASQ アカウントが要るので、未作成の
+  /// 端末では 401 になる — それは「接続できない」ではない (D-240)。
+  Future<String> _probeCentral(OrgateClient client) async {
+    final centralUrl = ref.read(centralBaseUrlProvider);
     final Map<String, Object?> key;
     try {
       key = await client.getJson('/store-key');
     } on OrgateException catch (e) {
-      if (mounted) setState(() { _busy = false; _probe = '接続できませんでした(${ref.read(centralBaseUrlProvider)})— $e'; });
-      return;
+      // ストアの口が無い = Central ではないサーバー(ORGATE の URL を Central の欄に入れた / Central の欄が空で ORGATE を流用した)。
+      final hint = e.code.code == '404' ? '\nCentral の欄に、ORGATE ではなく RASQ Central の接続先を入れてください' : '';
+      return '接続できませんでした($centralUrl)— $e$hint';
     }
     final ok = '接続 OK — 署名鍵 ${key['algorithm']} ${_head(key['publicKey'] as String? ?? '')}…';
     String accountLine;
@@ -96,7 +104,21 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
     } on OrgateException catch (e) {
       accountLine = e.code.code == '401' ? 'RASQ アカウント: 未作成(下の「RASQ アカウントを開く」から作成できます)' : 'RASQ アカウントを取得できませんでした — $e';
     }
-    if (mounted) setState(() { _busy = false; _probe = '$ok\n$accountLine'; });
+    return '$ok\n$accountLine';
+  }
+
+  /// ORGATE: アクセストークンの公開鍵の口 `/auth/keys`(認証なし、Central もここから鍵を読む)。
+  Future<String> _probeOrgate() async {
+    final orgate = ref.read(orgateClientProvider);
+    if (orgate == null) return 'ORGATE: 未設定(RASQ アカウントにログインできません)';
+    final base = ref.read(orgateBaseUrlProvider);
+    try {
+      final keys = await orgate.getJson('/auth/keys');
+      final n = keys['keys'] is List ? (keys['keys'] as List).length : 0;
+      return n > 0 ? 'ORGATE: 接続 OK — トークンの公開鍵 $n 個' : 'ORGATE: 応答にトークンの公開鍵がありません($base)';
+    } on OrgateException catch (e) {
+      return 'ORGATE に接続できませんでした($base)— $e';
+    }
   }
 
   static String _head(String s) => s.length <= 12 ? s : s.substring(0, 12);
