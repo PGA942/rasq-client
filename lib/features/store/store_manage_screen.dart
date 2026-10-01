@@ -56,7 +56,7 @@ class StoreManageScreen extends ConsumerWidget {
             subtitle: points == null
                 ? 'RASQ アカウントにログインすると使えます'
                 : next == null
-                    ? 'Web コンソールで買えます(付与から 2 か月で失効)'
+                    ? 'Web コンソールで買えます(付与から 1 か月で失効)'
                     : '${next.expiresAt.month}/${next.expiresAt.day} に ${next.remaining} ポイントが失効 ・ Web コンソールで買う',
             onTap: console == null ? null : () => launchUrl(console, mode: LaunchMode.externalApplication),
           );

@@ -110,7 +110,7 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
 }
 
 /// 購入シート (D-355): 値段(ポイント)、いまの残高、次に失効するポイント →「購入する」。足りなければ「Web コンソールでポイントを買う」
-/// (Stripe、付与から 2 か月で失効)。戻り値 = 閉じた(買わない)は null、買えたら ''、買えなかったら理由。
+/// (Stripe、付与から 1 か月で失効)。戻り値 = 閉じた(買わない)は null、買えたら ''、買えなかったら理由。
 Future<String?> showPurchaseSheet(OverlayManager manager, StoreClient client, StorePluginDetail d, {Uri? consoleUrl}) async {
   StorePoints points;
   try {

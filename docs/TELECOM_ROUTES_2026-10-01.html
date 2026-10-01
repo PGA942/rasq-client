@@ -1,0 +1,282 @@
+<title>RASQ 通信経路図</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDPMincho:wght@700&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* 役所に出す相談資料: 1 段組みの文書。図 → 経路の一覧 → 確認したいこと。色は経路の 4 分類だけに使う */
+:root {
+  --paper: #fbfbf9;
+  --ink: #1f2a33;
+  --muted: #5b6770;
+  --rule: #d9dee2;
+  --panel: #f1f4f5;
+  --relay: #b4532a;     /* 利用者の中身を運営の設備が中継・保存 */
+  --signal: #2f62a8;    /* 信号だけ(SDP / ICE) */
+  --own: #5d6b2c;       /* 運営者側の処理 */
+  --direct: #7a8389;    /* 端末と SNS が直接 */
+  --plan: #8a5a9e;      /* 未設置・予定 */
+  --display: "BIZ UDPMincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --body: "BIZ UDPGothic", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #151a1e; --ink: #e3e8eb; --muted: #9aa6ae; --rule: #2e373e; --panel: #1d2429;
+    --relay: #e08a62; --signal: #79a6e6; --own: #a9bb6a; --direct: #9aa3a9; --plan: #c49ad6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #151a1e; --ink: #e3e8eb; --muted: #9aa6ae; --rule: #2e373e; --panel: #1d2429;
+  --relay: #e08a62; --signal: #79a6e6; --own: #a9bb6a; --direct: #9aa3a9; --plan: #c49ad6;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.75; }
+.page { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 64px; display: grid; gap: 36px; }
+header { display: grid; gap: 8px; border-bottom: 2px solid var(--ink); padding-bottom: 18px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--muted); }
+h1 { font-family: var(--display); font-size: clamp(26px, 4vw, 34px); line-height: 1.3; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-size: 21px; margin: 0 0 12px; text-wrap: balance; }
+h3 { font-size: 15px; margin: 0 0 4px; }
+p { margin: 0; max-width: 68ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13px; color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 700; }
+.note { background: var(--panel); border-left: 3px solid var(--muted); padding: 12px 16px; font-size: 13.5px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; margin-top: 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 26px; height: 0; border-top: 3px solid; display: inline-block; }
+.sw.relay { border-color: var(--relay); }
+.sw.signal { border-color: var(--signal); border-top-style: dashed; }
+.sw.own { border-color: var(--own); }
+.sw.direct { border-color: var(--direct); border-top-style: dotted; }
+.sw.plan { border-color: var(--plan); border-top-style: dashed; }
+.figure { overflow-x: auto; border: 1px solid var(--rule); background: var(--paper); padding: 12px; }
+.figure svg { display: block; min-width: 860px; width: 100%; height: auto; }
+svg text { font-family: var(--body); fill: var(--ink); }
+svg .small { font-size: 12px; fill: var(--muted); }
+svg .lbl { font-size: 12.5px; }
+svg .box { fill: var(--panel); stroke: var(--ink); stroke-width: 1.4; }
+svg .box.ext { fill: var(--paper); stroke: var(--muted); }
+svg .box.planned { fill: var(--paper); stroke: var(--plan); stroke-dasharray: 6 4; }
+svg .ttl { font-weight: 700; font-size: 14.5px; }
+svg .relay { stroke: var(--relay); stroke-width: 3; fill: none; }
+svg .signal { stroke: var(--signal); stroke-width: 2.2; stroke-dasharray: 7 5; fill: none; }
+svg .own { stroke: var(--own); stroke-width: 2.4; fill: none; }
+svg .direct { stroke: var(--direct); stroke-width: 2.2; stroke-dasharray: 2 5; fill: none; }
+svg .plan { stroke: var(--plan); stroke-width: 2.2; stroke-dasharray: 6 4; fill: none; }
+svg .t-relay { fill: var(--relay); } svg .t-signal { fill: var(--signal); } svg .t-own { fill: var(--own); }
+svg .t-direct { fill: var(--direct); } svg .t-plan { fill: var(--plan); }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 860px; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--rule); }
+th { font-size: 12px; letter-spacing: .06em; color: var(--muted); font-weight: 700; border-bottom: 2px solid var(--ink); white-space: nowrap; }
+td:first-child { font-weight: 700; white-space: nowrap; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 3px; border: 1.5px solid; white-space: nowrap; }
+.tag.relay { color: var(--relay); border-color: var(--relay); }
+.tag.signal { color: var(--signal); border-color: var(--signal); }
+.tag.own { color: var(--own); border-color: var(--own); }
+.tag.direct { color: var(--direct); border-color: var(--direct); }
+.tag.plan { color: var(--plan); border-color: var(--plan); }
+.qs { display: grid; gap: 14px; counter-reset: q; padding: 0; margin: 0; list-style: none; }
+.qs li { display: grid; grid-template-columns: 2.4em 1fr; gap: 4px 10px; }
+.qs li::before { counter-increment: q; content: "問" counter(q); font-weight: 700; color: var(--muted); font-size: 13px; padding-top: 2px; }
+.qs li > div { min-width: 0; display: grid; gap: 4px; }
+.todo { display: grid; gap: 8px; padding-left: 1.2em; margin: 0; }
+code { font-family: var(--mono); font-size: 12.5px; }
+footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">電気通信事業の届出の要否の相談用 ・ 草案</div>
+    <h1>RASQ 通信経路図</h1>
+    <div class="meta">
+      <span><b>作成</b> 2026年10月1日(コードを読んで作成した現状)</span>
+      <span><b>運営</b> 個人(予定)</span>
+      <span><b>相談先</b> 近畿総合通信局</span>
+      <span><b>収益</b> 広告(モバイル: AdMob)、プラグイン開発者からの審査料</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>この資料について</h2>
+    <p>RASQ は、Misskey・Mastodon・Bluesky など既存の SNS を 1 つのアプリで使うためのクライアントです。あわせて、運営者のサーバー(以下「Central」、さくらのクラウドで運用予定)が、音声ルーム「AsTell」、短時間で消える配信「Swing」、RASQ アカウントの投稿などを提供します。</p>
+    <p style="margin-top:10px">この資料では、運営者の設備が利用者どうしの通信の中身を中継・保存する経路と、そうでない経路を分けて示します。届出が必要かどうかの判断をお願いしたい点は、末尾の「確認したいこと」にまとめました。</p>
+    <div class="legend" aria-label="線の種類">
+      <span><i class="sw relay"></i>利用者の中身を運営の設備が中継・保存</span>
+      <span><i class="sw signal"></i>接続のための信号だけを中継</span>
+      <span><i class="sw own"></i>運営者側の処理(利用者どうしの通信ではない)</span>
+      <span><i class="sw direct"></i>端末と SNS が直接(運営の設備を通らない)</span>
+      <span><i class="sw plan"></i>未設置・予定</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>構成図</h2>
+    <div class="figure">
+      <svg viewBox="0 0 1000 640" role="img" aria-labelledby="figt">
+        <title id="figt">RASQ の利用者端末、Central、LiveKit、SNS の間の通信経路</title>
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker>
+        </defs>
+
+        <!-- 利用者端末 -->
+        <rect class="box" x="30" y="70" width="190" height="78" rx="6"/>
+        <text class="ttl" x="46" y="100">利用者の端末 A</text>
+        <text class="small" x="46" y="124">iOS / Android / PC アプリ</text>
+
+        <rect class="box" x="30" y="330" width="190" height="78" rx="6"/>
+        <text class="ttl" x="46" y="360">利用者の端末 B</text>
+        <text class="small" x="46" y="384">同じルームの参加者など</text>
+
+        <rect class="box" x="30" y="520" width="190" height="70" rx="6"/>
+        <text class="ttl" x="46" y="548">Web 版(ブラウザ)</text>
+        <text class="small" x="46" y="571">聞くだけの参加も可</text>
+
+        <!-- LiveKit -->
+        <rect class="box" x="370" y="22" width="260" height="76" rx="6"/>
+        <text class="ttl" x="386" y="50">LiveKit(配信用 SFU)</text>
+        <text class="small" x="386" y="74">運営者が自前で運用・設置場所は未定</text>
+
+        <!-- Central -->
+        <rect class="box" x="370" y="168" width="260" height="262" rx="6"/>
+        <text class="ttl" x="386" y="196">Central(運営者のサーバー)</text>
+        <text class="small" x="386" y="216">さくらのクラウド ・ PostgreSQL</text>
+        <text class="lbl" x="386" y="248">・AsTell の部屋(信号・チャット・共有)</text>
+        <text class="lbl" x="386" y="272">・ルームのファイル・文字起こし</text>
+        <text class="lbl" x="386" y="296">・Swing(1〜24 時間で消える)</text>
+        <text class="lbl" x="386" y="320">・RASQ アカウントの投稿・通知</text>
+        <text class="lbl" x="386" y="344">・プラグインの共有セッション</text>
+        <text class="lbl" x="386" y="368">・SNS トークンの預け入れ(暗号化)</text>
+        <text class="lbl" x="386" y="392">・ストア・モデルの配布・通報の受付</text>
+
+        <!-- TURN(予定) -->
+        <rect class="box planned" x="370" y="480" width="260" height="64" rx="6"/>
+        <text class="ttl t-plan" x="386" y="506">TURN(未設置・導入を検討)</text>
+        <text class="small" x="386" y="528">NAT を越えられない通話の音声を中継</text>
+
+        <!-- 右側 -->
+        <rect class="box ext" x="740" y="22" width="230" height="104" rx="6"/>
+        <text class="ttl" x="756" y="50">外部のサービス</text>
+        <text class="small" x="756" y="72">Google の STUN(接続先の確認)</text>
+        <text class="small" x="756" y="92">AdMob(広告)・Stripe(審査料)</text>
+        <text class="small" x="756" y="112">Cloudflare(配信)</text>
+
+        <rect class="box" x="740" y="190" width="230" height="70" rx="6"/>
+        <text class="ttl" x="756" y="218">文字起こし・読み上げ</text>
+        <text class="small" x="756" y="241">運営者のコンテナ(whisper 等)</text>
+
+        <rect class="box" x="740" y="300" width="230" height="78" rx="6"/>
+        <text class="ttl" x="756" y="328">judge(運営者の PC)</text>
+        <text class="small" x="756" y="352">通報の審査。Central から</text>
+        <text class="small" x="756" y="370">管理 API でデータを取る</text>
+
+        <rect class="box ext" x="740" y="500" width="230" height="90" rx="6"/>
+        <text class="ttl" x="756" y="528">各 SNS のサーバー</text>
+        <text class="small" x="756" y="550">Misskey / Mastodon / Bluesky など</text>
+        <text class="small" x="756" y="570">(他社・他者が運営)</text>
+
+        <!-- A ⇄ B 通話の音声 P2P -->
+        <path class="signal" d="M95 148 L95 330" style="stroke:var(--signal);stroke-dasharray:none;stroke-width:2.4"/>
+        <text class="lbl t-signal" x="104" y="232">① 通話の音声</text>
+        <text class="lbl t-signal" x="104" y="250">端末どうし(P2P)</text>
+        <text class="small" x="104" y="268">最大 8 人のメッシュ</text>
+
+        <!-- A,B → Central: 信号 -->
+        <path class="signal" d="M220 96 L370 220" marker-end="url(#ar)"/>
+        <path class="signal" d="M220 356 L370 250" marker-end="url(#ar)"/>
+        <text class="lbl t-signal" x="300" y="150">① 信号</text>
+        <text class="lbl t-signal" x="300" y="292">① 信号</text>
+
+        <!-- A,B,Web → Central: 中身 -->
+        <path class="relay" d="M220 128 L370 300" marker-end="url(#ar)"/>
+        <path class="relay" d="M220 392 L370 330" marker-end="url(#ar)"/>
+        <path class="relay" d="M220 548 L370 404" marker-end="url(#ar)"/>
+        <text class="lbl t-relay" x="300" y="236">③〜⑧</text>
+        <text class="lbl t-relay" x="290" y="384">③〜⑧</text>
+        <text class="lbl t-relay" x="300" y="500">③⑥</text>
+
+        <!-- 配信: A → LiveKit → B/Web -->
+        <path class="relay" d="M220 80 L370 60" marker-end="url(#ar)"/>
+        <text class="lbl t-relay" x="236" y="58">② 配信・画面共有</text>
+
+        <!-- Central → 文字起こし -->
+        <path class="own" d="M630 230 L740 226" marker-end="url(#ar)"/>
+        <text class="small" x="640" y="214">④ 音声片 → 文字</text>
+
+        <!-- judge → Central -->
+        <path class="own" d="M740 340 L630 340" marker-end="url(#ar)"/>
+        <text class="small" x="642" y="330">⑫ judge から接続</text>
+
+        <!-- Central → SNS -->
+        <path class="own" d="M630 410 L760 500" marker-end="url(#ar)"/>
+        <text class="small" x="690" y="426">⑨ 預けたトークンで</text>
+        <text class="small" x="690" y="442">本人の公開投稿を読む</text>
+
+        <!-- 端末 → SNS 直接 -->
+        <path class="direct" d="M220 600 L700 612 L740 570" marker-end="url(#ar)"/>
+        <path class="direct" d="M125 408 L125 470 L700 470 L742 515" marker-end="url(#ar)"/>
+        <text class="lbl t-direct" x="250" y="625">⑪ DM・投稿・タイムライン(端末から SNS へ直接)</text>
+
+        <!-- TURN 予定 -->
+        <path class="plan" d="M220 392 L370 500"/>
+
+      </svg>
+    </div>
+    <p class="small" style="margin-top:8px;font-size:12.5px;color:var(--muted)">線の番号は下の一覧の番号です。LiveKit から端末 B・Web 版への配信は省略しています(②)。紫の点線は TURN を導入した場合の経路です(⑭)。</p>
+  </section>
+
+  <section>
+    <h2>経路の一覧</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>経路</th><th>分類</th><th>通る設備</th><th>中身</th><th>相手の範囲</th><th>保存</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>① AsTell の通話</td><td><span class="tag signal">信号だけ</span></td><td>音声は端末どうし。Central は接続の信号(SDP / ICE)を相手に渡すだけ</td><td>音声</td><td>同じルームの話し手(最大 8 人)</td><td>音声は保存しない。参加者の一覧はメモリだけ</td></tr>
+          <tr><td>② AsTell の配信・画面共有</td><td><span class="tag relay">中継</span></td><td>LiveKit(運営者が運用)。Central は入室の鍵(6 時間)を出す</td><td>映像・画面・音声</td><td>ルームの参加者(1 対多)</td><td>録画しない</td></tr>
+          <tr><td>③ AsTell のチャット・共有・ファイル</td><td><span class="tag relay">中継・保存</span></td><td>Central(WebSocket)が部屋の全員へ配る</td><td>文字、投稿の共有、画像などのファイル</td><td>公開ルーム(一覧に出る)と限定ルーム(リンクを知る人)。入室は誰でも / フォロワー / 相互などで絞れる</td><td>参加者に見えるのは 10 日、内部の控えは 30 日で削除</td></tr>
+          <tr><td>④ 文字起こし・読み上げ</td><td><span class="tag relay">中継・保存</span></td><td>Central → 運営者の変換コンテナ → 文字を部屋へ</td><td>音声の断片(保存しない)と、その文字</td><td>③ と同じ</td><td>文字は ③ と同じ期間</td></tr>
+          <tr><td>⑤ Swing</td><td><span class="tag relay">中継・保存</span></td><td>Central</td><td>文字・画像・動画・プラグイン、その返信</td><td>投稿者のフォロワーと、投稿者が選んだリストの人</td><td>1〜24 時間で削除</td></tr>
+          <tr><td>⑥ RASQ アカウントの投稿</td><td><span class="tag relay">中継・保存</span></td><td>Central(Web でも公開ページを表示)</td><td>文字・画像・動画・投票</td><td>公開 / ホーム / フォロワー限定</td><td>本人が消すまで</td></tr>
+          <tr><td>⑦ 通知</td><td><span class="tag relay">保存</span></td><td>Central(端末が取りに来る)</td><td>誰が何をしたか、投稿の抜粋</td><td>通知を受ける本人</td><td><b>削除の期限は未定</b></td></tr>
+          <tr><td>⑧ プラグインの共有セッション</td><td><span class="tag relay">中継・保存</span></td><td>Central(WebSocket)</td><td>共有の変数の書き込み、関数の呼び出し</td><td>ルーム・プロフィール・招待リンクの参加者</td><td><b>保存期間は未確認</b></td></tr>
+          <tr><td>⑨ SNS トークンの預け入れ</td><td><span class="tag own">運営者の処理</span></td><td>Central がサーバーの鍵で暗号化して保管し、本人の公開投稿を読む</td><td>本人の公開・ホームの投稿</td><td>本人のアカウントページ(誰でも見られる)</td><td>本人が止めるまで</td></tr>
+          <tr><td>⑩ 端末間のトークン共有・データ同期</td><td><span class="tag own">本人どうし</span></td><td>Central は暗号文を預かるだけ(端末間で暗号化、運営者は読めない)</td><td>SNS のログインの鍵、設定</td><td>同じ本人の端末</td><td>本人が消すまで</td></tr>
+          <tr><td>⑪ DM・SNS への投稿・タイムライン</td><td><span class="tag direct">直接</span></td><td>端末(Web 版はブラウザ)から各 SNS へ直接。運営の設備を通らない</td><td>—</td><td>—</td><td>RASQ では保存しない</td></tr>
+          <tr><td>⑫ 通報の審査</td><td><span class="tag own">運営者の処理</span></td><td>Central に保存し、運営者の PC(judge)が取りに行く</td><td>通報と、その前後の発言</td><td>運営者だけ</td><td>③ の内部の控えと同じ</td></tr>
+          <tr><td>⑬ ストア・モデル・RAi など</td><td><span class="tag own">運営者の処理</span></td><td>Central からの配布、Central での推論</td><td>プラグイン、モデルのファイル、公開タイムラインの要約</td><td>利用者と運営者の 1 対 1</td><td>RAi の結果は 24 時間</td></tr>
+          <tr><td>⑭ TURN による中継</td><td><span class="tag plan">予定</span></td><td>導入すれば、NAT を越えられない通話の音声が運営の設備を通る</td><td>音声</td><td>① と同じ</td><td>保存しない予定</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>確認したいこと</h2>
+    <ol class="qs">
+      <li><div><h3>ルームのチャット・共有(③④)</h3><p>Central がルームの参加者へ文字やファイルを配り、一定期間保存します。限定ルームと、誰でも入れる公開ルームで扱いが変わるかを確認したいです。</p></div></li>
+      <li><div><h3>通話の信号だけを渡す構成(①)</h3><p>音声そのものは端末どうしで流れ、運営の設備は接続の信号だけを渡します。この形が「他人の通信の媒介」に当たるか、また将来 TURN(⑭)を置いて音声を中継する場合に扱いが変わるかを確認したいです。</p></div></li>
+      <li><div><h3>配信の SFU(②)</h3><p>参加者の映像・音声が運営者の LiveKit を通って、ほかの参加者に届きます。録画はしません。</p></div></li>
+      <li><div><h3>相手を絞った配信(⑤⑥⑧)</h3><p>Swing はフォロワーや選んだリストの人だけに届きます。投稿の「フォロワー限定」、プラグインの共有セッションも同じく相手が限られます。誰でも見られる公開の投稿との違いを確認したいです。</p></div></li>
+      <li><div><h3>収益とのかかわり</h3><p>広告(モバイルの AdMob)とプラグイン開発者からの審査料で運営費をまかないます。AsTell や Swing 自体には料金をかけません。</p></div></li>
+      <li><div><h3>届出が必要な場合</h3><p>個人として届け出る場合に必要な書類と、利用者の通信の秘密を守るための運用(運営者が内部の控えを見る条件など)で求められることを確認したいです。</p></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>この資料を出す前に埋めること</h2>
+    <ul class="todo">
+      <li>LiveKit を置く場所(さくらのクラウドか別の場所か)と、運用する回線。</li>
+      <li>TURN を置くかどうか。置かない場合、NAT を越えられない利用者は通話できないことの扱い。</li>
+      <li>通知(⑦)とプラグインの共有セッション(⑧)の保存期間。</li>
+      <li>運用ログに残す項目の一覧(会話の本文・音声・認証トークンは入れない方針)。</li>
+      <li>Central から judge へは接続しない方針と、設定があれば Central が judge の判定を呼ぶ実装の関係をそろえる。</li>
+    </ul>
+  </section>
+
+  <footer>
+    出どころ: rasq-central(<code>src/astell</code>, <code>src/swing</code>, <code>src/notify.rs</code>, <code>src/custom</code>, <code>src/account</code>)、rasq-client <code>docs/LEGAL_DESIGN_2026-09-17.md</code> と <code>docs/PHASE1_PLAN.md</code>。2026年10月1日時点のコードによる。法的な判断ではなく、相談のための現状の整理です。
+  </footer>
+</div>
