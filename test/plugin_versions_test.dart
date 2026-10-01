@@ -8,15 +8,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/backend/orgate_client.dart' show OrgateException;
+import 'package:rasq_client/backend/payments_api.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/features/store/plugin_updates.dart';
 import 'package:rasq_client/features/store/rasqpkg.dart';
 import 'package:rasq_client/features/store/store_client.dart';
+import 'package:rasq_client/features/store/store_install.dart' show showPurchaseSheet;
 import 'package:rasq_client/features/store/store_models.dart';
 import 'package:rasq_client/features/store/store_providers.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart' show RasqListTile;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -217,6 +221,8 @@ void main() {
       sessionStorageProvider.overrideWithValue(storage),
       pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
       storeClientProvider.overrideWithValue(store),
+      // 有料の機能が使える構成(ORGATE_PAID_FEATURES=on、D-401)。
+      paymentsConfigProvider.overrideWith((ref) async => const PaymentsConfig(paidFeatures: true, stripeMode: 'dummy', pointsAvailable: true)),
     ], child: const RasqApp()));
     await tester.pumpAndSettle();
     final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
@@ -240,6 +246,81 @@ void main() {
     expect((await store.points()).balance, 700);
     // もう一度買っても減らない。
     expect((await store.purchase(id)).pointsSpent, 0);
+  });
+
+  testWidgets('公開テスト(有料の機能が止まっている、D-401): タイルの金額は押せない、購入シートは「使えません」、プラグインを管理のポイントは灰色', (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final store = FakeStoreClient();
+    final storage = MemorySessionStorage({SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key})});
+    // ORGATE につながない構成 = 有料の機能は止まっている扱い(paymentsConfigProvider は上書きしない)。
+    await tester.pumpWidget(ProviderScope(overrides: [
+      sessionStorageProvider.overrideWithValue(storage),
+      pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+      storeClientProvider.overrideWithValue(store),
+    ], child: const RasqApp()));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    expect(c.read(paidFeaturesProvider), isFalse);
+    c.read(routerProvider).push(Routes.storeSearch('プロ向け'));
+    await tester.pumpAndSettle();
+    const id = 'net.example.pro-cards';
+    final action = find.byKey(const ValueKey('store.tile.action.$id'));
+    expect(find.descendant(of: action, matching: find.text('¥300')), findsOneWidget, reason: '金額は出す');
+    expect(tester.widget<FilledButton>(find.descendant(of: action, matching: find.byType(FilledButton))).onPressed, isNull, reason: '押せない');
+
+    // プラグインのページ: 購入ボタンは押せず、「公開テストでは購入できません」。
+    c.read(routerProvider).push(Routes.storePlugin(id));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('公開テストでは購入できません'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, '¥300 で購入')).onPressed, isNull);
+    c.read(routerProvider).pop();
+    await tester.pumpAndSettle();
+
+    // 購入シート(古い設定のまま入ってきたときの保険): 「使えません」だけで、買えない / コンソールへも誘わない。
+    final detail = (await store.plugin(id))!;
+    final sheet = showPurchaseSheet(c.read(overlayManagerProvider), store, detail, consoleUrl: Uri.parse('https://central.test/console/points'), paidFeatures: false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('store.purchase.disabled')), findsOneWidget);
+    expect(find.text('公開テストでは有料プラグインは使えません'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('store.purchase.buy'))).onPressed, isNull);
+    expect(find.byKey(const ValueKey('store.purchase.console')), findsNothing);
+    c.read(overlayManagerProvider).close('store.purchase');
+    await tester.pumpAndSettle();
+    expect(await sheet, isNull);
+    expect((await store.points()).balance, 1000, reason: '減っていない');
+
+    // プラグインを管理: ポイントの行は灰色(押せない)。
+    c.read(routerProvider).push(Routes.storeManage);
+    await tester.pumpAndSettle();
+    final row = tester.widget<RasqListTile>(find.byKey(const ValueKey('store.manage.points')));
+    expect(row.enabled, isFalse);
+    expect(row.subtitle, '公開テストでは使えません');
+    expect(c.read(storePointsProvider).value, isNull);
+  });
+
+  testWidgets('サーバーが paid_features_disabled で断った: 購入シートは同じ「使えません」', (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final store = _PaidOffStore();
+    final storage = MemorySessionStorage({SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key})});
+    await tester.pumpWidget(ProviderScope(overrides: [
+      sessionStorageProvider.overrideWithValue(storage),
+      pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+      storeClientProvider.overrideWithValue(store),
+    ], child: const RasqApp()));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    final detail = (await store.plugin('net.example.pro-cards'))!;
+    final sheet = showPurchaseSheet(c.read(overlayManagerProvider), store, detail);
+    await tester.pumpAndSettle();
+    expect(find.text('公開テストでは有料プラグインは使えません'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('store.purchase.buy'))).onPressed, isNull);
+    c.read(overlayManagerProvider).close('store.purchase');
+    await tester.pumpAndSettle();
+    expect(await sheet, isNull);
   });
 
   testWidgets('画面: プラグインを管理 → アップデートの設定(区分ごとのモード / ポップアップ / 更新ログ)、アカウントごとにバージョンを設定', (tester) async {
@@ -304,4 +385,13 @@ void main() {
     expect(c.read(installedPluginsProvider).single.versionFor(second.account.key), '0.2.0');
     expect(c.read(installedPluginsProvider).single.versionFor(fakeSession().account.key), '0.1.0');
   });
+}
+
+/// ORGATE が有料の機能を止めているストア (`403 paid_features_disabled`)。
+class _PaidOffStore extends FakeStoreClient {
+  static OrgateException get _off => OrgateException(ErrorCode.http(403), paidFeaturesDisabledMessage, serverCode: paidFeaturesDisabledCode);
+  @override
+  Future<StorePoints> points() async => throw _off;
+  @override
+  Future<StorePurchaseResult> purchase(String pluginId) async => throw _off;
 }

@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
+import '../../backend/payments_api.dart' show paidFeaturesProvider;
 import '../../shell/headers.dart';
 import '../custom/custom_page.dart' show registeredPagePlugin;
 import '../custom/custom_plugins_screen.dart' show installedPagePluginsProvider;
@@ -119,7 +120,9 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
     final releases = ref.watch(storeReleasesProvider(d.id)).value ?? const <ReleaseNote>[];
     final missingDeps = [for (final id in d.compatibility.requiresPlugins) if (!installedList.any((p) => p.id == id)) id];
     final histogram = d.ratingHistogram.length == 5 ? d.ratingHistogram : StoreReview.histogram(allReviews);
-    final canInstall = !_busy && !(d.status.isCaution && d.status != PluginStatus.warning);
+    // 公開テストでは有料の機能が止まっている (D-401): 買っていない有料のものは、金額を出して押せない。
+    final buyBlocked = d.needsPurchase && !ref.watch(paidFeaturesProvider);
+    final canInstall = !_busy && !buyBlocked && !(d.status.isCaution && d.status != PluginStatus.warning);
 
     return ListView(children: [
       // ── 依存の注意 + インストール(ピル) ─────────────────────────────
@@ -146,7 +149,8 @@ class _PluginPageScreenState extends ConsumerState<PluginPageScreen> {
                 Text(rasqDetail(context, 'インストール済み v${installed.version}', 'インストール済み v${installed.version}(SHA-512 検証済み)'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
               else if (missingDeps.isEmpty)
                 Text(
-                  '${d.price == 0 ? '無料' : '¥${d.price.toStringAsFixed(0)}'} ・ ${d.sizeMb.toStringAsFixed(1)}MB ・ v${d.version}${d.channel == 'beta' ? ' (β)' : ''}${d.hasAds ? ' ・ 広告あり' : ''}',
+                  '${d.price == 0 ? '無料' : '¥${d.price.toStringAsFixed(0)}'} ・ ${d.sizeMb.toStringAsFixed(1)}MB ・ v${d.version}${d.channel == 'beta' ? ' (β)' : ''}${d.hasAds ? ' ・ 広告あり' : ''}${buyBlocked ? ' ・ 公開テストでは購入できません' : ''}',
+                  key: const ValueKey('store.plugin.priceLine'),
                   style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
                 ),
             ]),

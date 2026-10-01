@@ -2,7 +2,10 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' show sha512;
 
+import 'package:rasq_models/rasq_models.dart' show ErrorCode;
+
 import '../../backend/orgate_client.dart';
+import '../../backend/payments_api.dart';
 import 'store_client.dart';
 import 'store_models.dart';
 
@@ -12,9 +15,30 @@ import 'store_models.dart';
 /// 同梱のストア([BundledStoreClient])との違いは**接続先だけ**で、インストールの
 /// 検証パイプライン(SHA-512 照合と ed25519 署名検証)は両方とも同じ
 /// `store_providers.dart` 側で動く。
+///
+/// 第 4 段階 (D-401 / ORGATE O-004): お金は ORGATE が持つので、**ポイント (`GET /me/points`) と購入
+/// (`POST /plugins/{id}/purchase`) だけは [payments](ORGATE の口)**へ送る。掲載 / 構成 / 配布物などはこれまでどおり
+/// [_client](RASQ Central)。ORGATE につながない構成では、ポイント / 購入は使えない(はっきりしたエラー)。
+/// `403 paid_features_disabled`(公開テストで有料の機能が止まっている)は [paidFeaturesDisabledMessage] にそろえる。
 class HttpStoreClient implements StoreClient {
-  HttpStoreClient(this._client);
+  HttpStoreClient(this._client, {this.payments});
   final OrgateClient _client;
+
+  /// ORGATE-Server の口(ポイント / 購入)。null = ORGATE につながない構成。
+  final OrgateClient? payments;
+
+  /// `paid_features_disabled` を、アプリの文にそろえて投げ直す。
+  static Future<T> _paid<T>(Future<T> Function() call) async {
+    try {
+      return await call();
+    } on OrgateException catch (e) {
+      if (e.serverCode == paidFeaturesDisabledCode) throw OrgateException(e.code, paidFeaturesDisabledMessage, serverCode: e.serverCode);
+      rethrow;
+    }
+  }
+
+  OrgateClient _orgate(String what) =>
+      payments ?? (throw OrgateException(ErrorCode.http(503), '$whatは ORGATE-Server につなぐと使えます(接続先が設定されていません)'));
 
   static List<StorePluginCard> _cards(Object? v) => [
         for (final c in (v as List? ?? const []))
@@ -46,7 +70,7 @@ class HttpStoreClient implements StoreClient {
   @override
   Future<InstallManifest?> manifest(String id, {String? version}) async {
     try {
-      return InstallManifest.fromJson(await _client.getJson('/plugins/${Uri.encodeComponent(id)}/manifest', {'version': ?version}));
+      return await _paid(() async => InstallManifest.fromJson(await _client.getJson('/plugins/${Uri.encodeComponent(id)}/manifest', {'version': ?version})));
     } on OrgateException catch (e) {
       if (e.code.code == '404') return null;
       rethrow;
@@ -56,7 +80,7 @@ class HttpStoreClient implements StoreClient {
   @override
   Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version}) =>
       // 版指定は API.md「?version= で版を選べる(既定は現在版)」。
-      _client.getBytes('/plugins/${Uri.encodeComponent(pluginId)}/artifacts/${Uri.encodeComponent(artifactId)}', {'version': ?version});
+      _paid(() => _client.getBytes('/plugins/${Uri.encodeComponent(pluginId)}/artifacts/${Uri.encodeComponent(artifactId)}', {'version': ?version}));
 
   @override
   Future<Uint8List> sessionPackage(String pluginId, String sessionId, {String? version}) async {
@@ -113,12 +137,14 @@ class HttpStoreClient implements StoreClient {
   @override
   Future<List<StorePluginCard>> bookmarks() async => _cards(await _client.getList('/me/bookmarks'));
 
+  /// 購入は ORGATE (D-401)。
   @override
-  Future<StorePurchaseResult> purchase(String pluginId) async {
-    final j = await _client.postJson('/plugins/${Uri.encodeComponent(pluginId)}/purchase', const {});
-    return (purchased: j['purchased'] == true, pointsSpent: (j['pointsSpent'] as num?)?.toInt() ?? 0, balance: (j['balance'] as num?)?.toInt() ?? 0);
-  }
+  Future<StorePurchaseResult> purchase(String pluginId) => _paid(() async {
+        final j = await _orgate('購入').postJson('/plugins/${Uri.encodeComponent(pluginId)}/purchase', const {});
+        return (purchased: j['purchased'] == true, pointsSpent: (j['pointsSpent'] as num?)?.toInt() ?? 0, balance: (j['balance'] as num?)?.toInt() ?? 0);
+      });
 
+  /// ポイントの残高は ORGATE (D-401)。
   @override
-  Future<StorePoints> points() async => StorePoints.fromJson(await _client.getJson('/me/points'));
+  Future<StorePoints> points() => _paid(() async => StorePoints.fromJson(await _orgate('ポイント').getJson('/me/points')));
 }

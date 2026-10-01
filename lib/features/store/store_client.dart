@@ -57,9 +57,10 @@ abstract class StoreClient {
   Future<List<StorePluginCard>> bookmarks();
 
   /// 有料プラグインをポイントで買う (D-355、store.yaml `purchasePlugin`)。足りなければ `409`。
+  /// 口は ORGATE-Server (D-401)。公開テストでは `403 paid_features_disabled`。
   Future<StorePurchaseResult> purchase(String pluginId);
 
-  /// ポイントの残高と付与(Central `GET /me/points`)。
+  /// ポイントの残高と付与(ORGATE `GET /me/points`、D-401。前は Central)。公開テストでは `403 paid_features_disabled`。
   Future<StorePoints> points();
 }
 

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart' show OrgateException, centralBaseUrlProvider;
+import '../../backend/payments_api.dart';
 import '../theme/theme_packs.dart';
 import 'store_client.dart';
 import 'store_models.dart';
@@ -24,7 +25,10 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   final brightness = Theme.of(ref.context).brightness;
   // 有料で買っていなければ、先に購入 (D-355)。買わずに閉じたら何もしない。
   if (d.needsPurchase) {
-    final bought = await showPurchaseSheet(manager, client, d, consoleUrl: ref.read(centralBaseUrlProvider)?.resolve('/console/points'));
+    final consoleUrl = ref.read(centralBaseUrlProvider)?.resolve('/console/points');
+    // 公開テストでは有料の機能が止まっている (D-401): シートは「使えません」だけ(買えない、コンソールへも誘わない)。
+    final paid = (await container.read(paymentsConfigProvider.future)).paidFeatures;
+    final bought = await showPurchaseSheet(manager, client, d, consoleUrl: consoleUrl, paidFeatures: paid);
     if (bought == null) return null;
     if (bought.isNotEmpty) return bought; // 買えなかった理由
     // 買った: ページの「購入済み」と残高を読み直す。
@@ -111,14 +115,18 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
 
 /// 購入シート (D-355): 値段(ポイント)、いまの残高、次に失効するポイント →「購入する」。足りなければ「Web コンソールでポイントを買う」
 /// (Stripe、付与から 1 か月で失効)。戻り値 = 閉じた(買わない)は null、買えたら ''、買えなかったら理由。
-Future<String?> showPurchaseSheet(OverlayManager manager, StoreClient client, StorePluginDetail d, {Uri? consoleUrl}) async {
+/// [paidFeatures] = false(公開テスト、D-401)/ サーバーが `paid_features_disabled` で断った: 値段と
+/// 「公開テストでは有料プラグインは使えません」だけを出し、購入のボタンは押せない(コンソールへの案内も出さない)。
+Future<String?> showPurchaseSheet(OverlayManager manager, StoreClient client, StorePluginDetail d, {Uri? consoleUrl, bool paidFeatures = true}) async {
+  final price = storePricePoints(d.price);
+  if (!paidFeatures) return _showPaidDisabledSheet(manager, d, price);
   StorePoints points;
   try {
     points = await client.points();
   } catch (e) {
+    if (isPaidFeaturesDisabled(e)) return _showPaidDisabledSheet(manager, d, price);
     return 'ポイントを確かめられませんでした(RASQ アカウントにログインしていますか?): $e';
   }
-  final price = storePricePoints(d.price);
   final enough = points.balance >= price;
   final next = points.nextExpiring;
   String date(DateTime t) => '${t.year}/${t.month}/${t.day}';
@@ -161,6 +169,28 @@ Future<String?> showPurchaseSheet(OverlayManager manager, StoreClient client, St
     final r = await client.purchase(d.id);
     return r.purchased ? '' : '購入できませんでした';
   } on OrgateException catch (e) {
-    return e.message;
+    return isPaidFeaturesDisabled(e) ? paidFeaturesDisabledMessage : e.message;
   }
+}
+
+/// 有料の機能が止まっているときの購入シート (D-401)。閉じるだけ(戻り値は null = 買わない)。
+Future<String?> _showPaidDisabledSheet(OverlayManager manager, StorePluginDetail d, int price) async {
+  await manager.showBottomSheet<String>(
+    id: 'store.purchase',
+    title: '${d.name} を購入',
+    builder: (ctx) {
+      final scheme = Theme.of(ctx).colorScheme;
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('$price ポイント', key: const ValueKey('store.purchase.price'), style: RasqTypography.title.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 4),
+          Text(paidFeaturesDisabledMessage, key: const ValueKey('store.purchase.disabled'), style: RasqTypography.bodySmall.copyWith(color: scheme.error)),
+          const SizedBox(height: RasqSpacing.sm),
+          FilledButton(key: const ValueKey('store.purchase.buy'), onPressed: null, child: Text('$price ポイントで購入する')),
+        ]),
+      );
+    },
+  );
+  return null;
 }

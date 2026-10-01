@@ -83,9 +83,12 @@ final centralConfiguredProvider = Provider<bool>((ref) => ref.watch(centralBaseU
 /// サーバーが返す `{"error": {"code", "message"}}`。code は CONTRACT §9 の
 /// 体系なので、そのまま [ErrorCode] に落ちる。
 class OrgateException implements Exception {
-  OrgateException(this.code, this.message);
+  OrgateException(this.code, this.message, {this.serverCode});
   final ErrorCode code;
   final String message;
+
+  /// サーバーが返した `error.code` の文字列そのもの(`paid_features_disabled` など、[ErrorCode] に無い語)。無ければ null。
+  final String? serverCode;
 
   /// ユーザーに見せる 1 行。
   @override
@@ -126,17 +129,19 @@ class OrgateClient {
   Never _fail(http.Response r) {
     String message = 'サーバーエラー (${r.statusCode})';
     ErrorCode code = ErrorCode.http(r.statusCode);
+    String? serverCode;
     try {
       final body = jsonDecode(utf8.decode(r.bodyBytes));
       if (body is Map && body['error'] is Map) {
         final err = (body['error'] as Map).cast<String, Object?>();
         message = err['message'] as String? ?? message;
-        code = ErrorCode.tryParse(err['code'] as String? ?? '') ?? code;
+        serverCode = err['code'] as String?;
+        code = ErrorCode.tryParse(serverCode ?? '') ?? code;
       }
     } catch (_) {
       // JSON でない応答(プロキシのエラーページ等)は HTTP コードのまま扱う。
     }
-    throw OrgateException(code, message);
+    throw OrgateException(code, message, serverCode: serverCode);
   }
 
   Future<Object?> _send(http.BaseRequest req) async {
