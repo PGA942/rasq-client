@@ -62,6 +62,35 @@ void main() {
     expect(urls[1].queryParameters, {'limit': '10', 'until': '2026-09-20T00:00:00+09:00'});
   });
 
+  test('SNS のトークンを預ける口は ORGATE、投稿の一覧は Central (D-399)', () async {
+    final hits = <String>[];
+    MockClient server(String name) => MockClient((req) async {
+          hits.add('$name ${req.method} ${req.url.path}');
+          if (req.url.path.startsWith('/api/v1/me/sns-accounts/')) {
+            if (req.method == 'DELETE') return http.Response('', 204);
+            return json({'accountKey': 'misskey:mk.example:taro', 'hasToken': true, 'postCount': 3, 'lastFetchAt': null, 'lastError': null, 'collectionsAllowed': req.url.path.endsWith('/collections')});
+          }
+          return json({'posts': <Object>[], 'limit': 3, 'source': 'rasq', 'snsPosts': <Object>[], 'pins': <Object>[]});
+        });
+    final api = RasqAccountPageApi(
+      OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: server('central')),
+      edge: OrgateClient(baseUrl: Uri.parse('https://orgate.test'), httpClient: server('orgate')),
+    );
+    const key = 'misskey:mk.example:taro';
+    expect((await api.depositToken(key, 'secret')).postCount, 3);
+    expect((await api.vaultStatus(key))?.hasToken, isTrue);
+    expect((await api.setCollectionsAllowed(key, true)).collectionsAllowed, isTrue);
+    await api.withdrawToken(key);
+    await api.posts('taro');
+    expect(hits, [
+      'orgate PUT /api/v1/me/sns-accounts/misskey%3Amk.example%3Ataro/token',
+      'orgate GET /api/v1/me/sns-accounts/misskey%3Amk.example%3Ataro/token',
+      'orgate PUT /api/v1/me/sns-accounts/misskey%3Amk.example%3Ataro/token/collections',
+      'orgate DELETE /api/v1/me/sns-accounts/misskey%3Amk.example%3Ataro/token',
+      'central GET /api/v1/accounts/taro/posts',
+    ]);
+  });
+
   testWidgets('ページ: プロフィール / SNS タイル / タブ。自分のページでは投稿の上限の案内と削除、編集画面でタイルの出し分けを変える', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
