@@ -21,16 +21,16 @@ import 'session_providers.dart';
 import 'session_storage.dart';
 import 'sns_share_crypto.dart';
 
-/// SNS のアクセストークンの端末間共有 (D-319、Central `GET|PUT /me/sns-share*`)。**E2E**。
+/// SNS のアクセストークンの端末間共有 (D-319、ORGATE `GET|PUT /me/sns-share*`。D-399 で Central から移った)。**E2E**。
 ///
 /// 別の端末で RASQ アカウントにログインすると、SNS のアカウントはログインボタンが出るだけだった (D-316)。
 /// 元の端末で承認すると、新しい端末もそのトークンで SNS アカウントに一斉ログインする。
 ///
 /// - 端末の鍵: Central のアカウントごとに X25519 の鍵ペア。秘密鍵(種)は端末の安全な保存先 ([sessionStorageProvider]) に置き、
-///   公開鍵だけを Central に置く。Web 版もブラウザ側の保存先(保管庫へ預けるのは SNS のセッション一覧だけ。D-300)。
-/// - 共有の本体: アカウントの共有鍵 K で AES-GCM した [SessionOps](ログイン / ログアウトの台帳)。Central の `/me/data/sns.share.v1`。
-///   K は端末ごとに、その端末の公開鍵で包んで Central に置く。**Central は K も平文も見ない** ([SnsShareCrypto])。
-/// - 状態(Central): `off`(アカウントを作ったとき)/ `on` / `declined`。
+///   公開鍵だけを ORGATE に置く。Web 版もブラウザ側の保存先(保管庫へ預けるのは SNS のセッション一覧だけ。D-300)。
+/// - 共有の本体: アカウントの共有鍵 K で AES-GCM した [SessionOps](ログイン / ログアウトの台帳)。ORGATE の `/me/data/sns.share.v1`。
+///   K は端末ごとに、その端末の公開鍵で包んで ORGATE に置く。**ORGATE は K も平文も見ない** ([SnsShareCrypto])。
+/// - 状態(ORGATE): `off`(アカウントを作ったとき)/ `on` / `declined`。
 /// - 見回り([check]): 起動 / アプリへ戻ったとき / アカウントの切り替え / [snsSharePollIntervalProvider] ごと(保管庫の見回りと同じ 45 秒)。
 ///   いま使っている Central のアカウントについて行う(共有はアカウントごと。切り替えると、そのアカウントの分を確かめる)。
 ///   - 共有を求めている端末(新しくログインした端末)があって、状態が `off` なら、この端末で「アクセストークンを共有して、SNS アカウントに
@@ -40,7 +40,7 @@ import 'sns_share_crypto.dart';
 ///   - K を持っていれば、本体と、この端末の SNS のログイン / ログアウトを混ぜる([mergeSnsShare])。
 /// - ログアウトは、ログアウトの記録(時刻つき)として本体に残し、ほかの端末でもログアウトにする(古い一覧を持った端末が、
 ///   次に本体を書くときに蘇らせない。30 日で捨てる。捨てたあとも、同期したことのあるアカウントが本体から消えていれば外す)。
-/// - **承認の問いを早く** (D-322): 新しい端末が共有を求めると、Central が同じアカウントの端末へ知らせる(受信箱の
+/// - **承認の問いを早く** (D-322): 新しい端末が共有を求めると、ORGATE が Central の受信箱に積んで同じアカウントの端末へ知らせる(受信箱の
 ///   `sns_share.request`)。開いているアプリには即時の知らせ([CentralInbox] の長いポーリング)ですぐ届き、[handleSnsShareNotices] が
 ///   すぐ見回って問いを出す(45 秒の見回りを待たない)。求めている端末の側も、承認を待っている間は [snsSharePollWhileWaitingProvider] おきに
 ///   見回って(上限つき)、承認されたらすぐ取り込む。取り込んだら [SnsShareView.joins] を進め、SNS のログイン画面は TL へ移る。
@@ -92,7 +92,7 @@ class SnsShareStatus {
   /// 今の K の世代(K を持つ端末が無ければ null)。
   final String? keyId;
 
-  /// この端末の deviceId(Central が、呼んだトークンから答える)。
+  /// この端末の deviceId(ORGATE が、呼んだトークンから答える)。
   final String? deviceId;
 
   /// この端末あての包んだ K。
@@ -119,7 +119,7 @@ class SnsShareStatus {
       );
 }
 
-/// Central の口(そのアカウントのトークンに縛った [OrgateClient] で作る)。
+/// ORGATE の口(そのアカウントのトークンに縛った [OrgateClient] で作る、D-399)。
 class SnsShareApi {
   SnsShareApi(this._client);
   final OrgateClient _client;
@@ -362,7 +362,8 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
 
   /// いまの Central のアカウントと、そのトークンに縛った口。
   Future<_Ctx?> _ctx() async {
-    final client = ref.read(centralClientProvider);
+    // 端末間の共有は ORGATE (D-399)。端末 = ORGATE のセッションの端末。
+    final client = ref.read(orgateClientProvider);
     if (client == null) return null;
     final RasqAccount? me;
     try {

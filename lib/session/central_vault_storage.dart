@@ -12,7 +12,7 @@ import 'rasq_accounts.dart';
 import 'session_providers.dart';
 import 'session_storage.dart';
 
-/// Web 版の保存先 (D-300 / S-033): **SNS のログイン情報(アクセストークン入り)はブラウザに置かず、RASQ アカウントの保管庫 (Central) に預ける**。
+/// Web 版の保存先 (D-300 / S-033): **SNS のログイン情報(アクセストークン入り)はブラウザに置かず、RASQ アカウントの保管庫 (ORGATE、D-399) に預ける**。
 ///
 /// - 預けるのは [vaulted] のキーだけ(SNS のセッション一覧)。RASQ 自身のトークンなど、ほかのキーは [local](ブラウザ)に置く —
 ///   保管庫を開くのに RASQ のトークンが要るので。
@@ -78,7 +78,8 @@ class CentralVaultSessionStorage implements SessionStorage {
     }
     if (accountId == null) return null;
     final token = _ref.read(orgateAccountProvider.notifier).tokenFor(accountId);
-    final base = _ref.read(centralClientProvider);
+    // 保管庫は ORGATE (D-399、本人だけが見る情報)。
+    final base = _ref.read(orgateClientProvider);
     if (base == null || token == null) return null;
     return (client: base.withToken(() => token), accountId: accountId);
   }
