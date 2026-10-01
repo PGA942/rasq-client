@@ -713,7 +713,7 @@ Uri? _http(Object? v) {
 }
 
 class RasqAccountPageApi {
-  /// [edge] = ORGATE-Server の口(SNS のトークンを預ける口、D-399)。省けば [_client] と同じ(1 つの URL で兼ねる構成 / テスト)。
+  /// [edge] = ORGATE-Server の口(SNS のトークンを預ける口 D-399、通知の受信箱 D-400)。省けば [_client] と同じ(1 つの URL で兼ねる構成 / テスト)。
   RasqAccountPageApi(this._client, {OrgateClient? edge}) : _edge = edge ?? _client;
   final OrgateClient _client;
 
@@ -810,9 +810,9 @@ class RasqAccountPageApi {
           if (RasqPostAuthor.fromJson(a) != null) RasqPostAuthor.fromJson(a)!,
       ];
 
-  /// 自分宛ての通知 (S-026): メンション / 返信 / 引用 / AsTell での引用。
+  /// 自分宛ての通知 (S-026): メンション / 返信 / 引用 / AsTell での引用。受信箱は ORGATE ([_edge]、D-400)。
   Future<List<RasqNotice>> notifications({int limit = 50}) async => [
-        for (final n in await _client.getList('/me/notifications', {'limit': '$limit'}))
+        for (final n in await _edge.getList('/me/notifications', {'limit': '$limit'}))
           if (n is Map && RasqNotice.kinds.contains(n['kind'])) RasqNotice.fromJson(n.cast<String, Object?>()),
       ];
 
