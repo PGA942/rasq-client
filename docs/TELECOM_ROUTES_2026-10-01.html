@@ -91,7 +91,7 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
     <div class="eyebrow">電気通信事業の届出の要否の相談用 ・ 草案</div>
     <h1>RASQ 通信経路図</h1>
     <div class="meta">
-      <span><b>作成</b> 2026年10月1日(コードを読んで作成した現状)</span>
+      <span><b>作成</b> 2026年10月1日(コードの現状 + 決まった移行予定)</span>
       <span><b>運営</b> 個人(予定)</span>
       <span><b>相談先</b> 近畿総合通信局</span>
       <span><b>収益</b> 広告(モバイル: AdMob)、プラグイン開発者からの審査料</span>
@@ -136,7 +136,7 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
         <!-- LiveKit -->
         <rect class="box" x="370" y="22" width="260" height="76" rx="6"/>
         <text class="ttl" x="386" y="50">LiveKit(配信用 SFU)</text>
-        <text class="small" x="386" y="74">運営者が自前で運用・設置場所は未定</text>
+        <text class="small" x="386" y="74">Central と同じ機械に置く予定(さくらのクラウド)</text>
 
         <!-- Central -->
         <rect class="box" x="370" y="168" width="260" height="262" rx="6"/>
@@ -163,8 +163,8 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
         <text class="small" x="756" y="112">Cloudflare(配信)</text>
 
         <rect class="box" x="740" y="190" width="230" height="70" rx="6"/>
-        <text class="ttl" x="756" y="218">文字起こし・読み上げ</text>
-        <text class="small" x="756" y="241">運営者のコンテナ(whisper 等)</text>
+        <text class="ttl" x="756" y="218">文字起こし</text>
+        <text class="small" x="756" y="241">いまは運営のコンテナ。端末へ移植を検討</text>
 
         <rect class="box" x="740" y="300" width="230" height="78" rx="6"/>
         <text class="ttl" x="756" y="328">judge(運営者の PC)</text>
@@ -209,9 +209,13 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
         <text class="small" x="642" y="330">⑫ judge から接続</text>
 
         <!-- Central → SNS -->
-        <path class="own" d="M630 410 L760 500" marker-end="url(#ar)"/>
-        <text class="small" x="690" y="426">⑨ 預けたトークンで</text>
-        <text class="small" x="690" y="442">本人の公開投稿を読む</text>
+        <rect class="box planned" x="740" y="392" width="230" height="84" rx="6"/>
+        <text class="ttl t-plan" x="756" y="418">ORGATE-Server(移行予定)</text>
+        <text class="small" x="756" y="440">SNS トークン・決済・通知など</text>
+        <text class="small" x="756" y="458">本人にしか見えない情報</text>
+        <path class="plan" d="M630 410 L740 430"/>
+        <path class="own" d="M855 476 L855 500" marker-end="url(#ar)"/>
+        <text class="small" x="862" y="494">⑨</text>
 
         <!-- 端末 → SNS 直接 -->
         <path class="direct" d="M220 600 L700 612 L740 570" marker-end="url(#ar)"/>
@@ -235,15 +239,15 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
         </thead>
         <tbody>
           <tr><td>① AsTell の通話</td><td><span class="tag signal">信号だけ</span></td><td>音声は端末どうし。Central は接続の信号(SDP / ICE)を相手に渡すだけ</td><td>音声</td><td>同じルームの話し手(最大 8 人)</td><td>音声は保存しない。参加者の一覧はメモリだけ</td></tr>
-          <tr><td>② AsTell の配信・画面共有</td><td><span class="tag relay">中継</span></td><td>LiveKit(運営者が運用)。Central は入室の鍵(6 時間)を出す</td><td>映像・画面・音声</td><td>ルームの参加者(1 対多)</td><td>録画しない</td></tr>
+          <tr><td>② AsTell の配信・画面共有</td><td><span class="tag relay">中継</span></td><td>LiveKit(運営者が運用、Central と同じ機械に置く予定)。Central は入室の鍵(6 時間)を出す</td><td>映像・画面・音声</td><td>ルームの参加者(1 対多)</td><td>録画しない</td></tr>
           <tr><td>③ AsTell のチャット・共有・ファイル</td><td><span class="tag relay">中継・保存</span></td><td>Central(WebSocket)が部屋の全員へ配る</td><td>文字、投稿の共有、画像などのファイル</td><td>公開ルーム(一覧に出る)と限定ルーム(リンクを知る人)。入室は誰でも / フォロワー / 相互などで絞れる</td><td>参加者に見えるのは 10 日、内部の控えは 30 日で削除</td></tr>
-          <tr><td>④ 文字起こし・読み上げ</td><td><span class="tag relay">中継・保存</span></td><td>Central → 運営者の変換コンテナ → 文字を部屋へ</td><td>音声の断片(保存しない)と、その文字</td><td>③ と同じ</td><td>文字は ③ と同じ期間</td></tr>
+          <tr><td>④ 文字起こし</td><td><span class="tag relay">中継・保存</span></td><td>いま: Central → 運営者の変換コンテナ → 文字を部屋へ。予定: 話す人の端末で文字にし、文字だけを部屋へ。読み上げは端末のモデルへ移す</td><td>音声の断片(保存しない)と、その文字</td><td>③ と同じ</td><td>文字は ③ と同じ期間</td></tr>
           <tr><td>⑤ Swing</td><td><span class="tag relay">中継・保存</span></td><td>Central</td><td>文字・画像・動画・プラグイン、その返信</td><td>投稿者のフォロワーと、投稿者が選んだリストの人</td><td>1〜24 時間で削除</td></tr>
           <tr><td>⑥ RASQ アカウントの投稿</td><td><span class="tag relay">中継・保存</span></td><td>Central(Web でも公開ページを表示)</td><td>文字・画像・動画・投票</td><td>公開 / ホーム / フォロワー限定</td><td>本人が消すまで</td></tr>
-          <tr><td>⑦ 通知</td><td><span class="tag relay">保存</span></td><td>Central(端末が取りに来る)</td><td>誰が何をしたか、投稿の抜粋</td><td>通知を受ける本人</td><td><b>削除の期限は未定</b></td></tr>
+          <tr><td>⑦ 通知</td><td><span class="tag relay">保存</span></td><td>Central(端末が取りに来る)。ORGATE-Server へ移す予定</td><td>誰が何をしたか、投稿の抜粋</td><td>通知を受ける本人</td><td><b>削除の期限は未定</b></td></tr>
           <tr><td>⑧ プラグインの共有セッション</td><td><span class="tag relay">中継・保存</span></td><td>Central(WebSocket)</td><td>共有の変数の書き込み、関数の呼び出し</td><td>ルーム・プロフィール・招待リンクの参加者</td><td><b>保存期間は未確認</b></td></tr>
-          <tr><td>⑨ SNS トークンの預け入れ</td><td><span class="tag own">運営者の処理</span></td><td>Central がサーバーの鍵で暗号化して保管し、本人の公開投稿を読む</td><td>本人の公開・ホームの投稿</td><td>本人のアカウントページ(誰でも見られる)</td><td>本人が止めるまで</td></tr>
-          <tr><td>⑩ 端末間のトークン共有・データ同期</td><td><span class="tag own">本人どうし</span></td><td>Central は暗号文を預かるだけ(端末間で暗号化、運営者は読めない)</td><td>SNS のログインの鍵、設定</td><td>同じ本人の端末</td><td>本人が消すまで</td></tr>
+          <tr><td>⑨ SNS トークンの預け入れ</td><td><span class="tag own">運営者の処理</span></td><td>Central がサーバーの鍵で暗号化して保管し、本人の公開投稿を読む。トークンと読み取りは ORGATE-Server へ移す予定</td><td>本人の公開・ホームの投稿</td><td>本人のアカウントページ(誰でも見られる)</td><td>本人が止めるまで</td></tr>
+          <tr><td>⑩ 端末間のトークン共有・データ同期</td><td><span class="tag own">本人どうし</span></td><td>Central は暗号文を預かるだけ(端末間で暗号化、運営者は読めない)。ORGATE-Server へ移す予定</td><td>SNS のログインの鍵、設定</td><td>同じ本人の端末</td><td>本人が消すまで</td></tr>
           <tr><td>⑪ DM・SNS への投稿・タイムライン</td><td><span class="tag direct">直接</span></td><td>端末(Web 版はブラウザ)から各 SNS へ直接。運営の設備を通らない</td><td>—</td><td>—</td><td>RASQ では保存しない</td></tr>
           <tr><td>⑫ 通報の審査</td><td><span class="tag own">運営者の処理</span></td><td>Central に保存し、運営者の PC(judge)が取りに行く</td><td>通報と、その前後の発言</td><td>運営者だけ</td><td>③ の内部の控えと同じ</td></tr>
           <tr><td>⑬ ストア・モデル・RAi など</td><td><span class="tag own">運営者の処理</span></td><td>Central からの配布、Central での推論</td><td>プラグイン、モデルのファイル、公開タイムラインの要約</td><td>利用者と運営者の 1 対 1</td><td>RAi の結果は 24 時間</td></tr>
@@ -261,6 +265,7 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
       <li><div><h3>配信の SFU(②)</h3><p>参加者の映像・音声が運営者の LiveKit を通って、ほかの参加者に届きます。録画はしません。</p></div></li>
       <li><div><h3>相手を絞った配信(⑤⑥⑧)</h3><p>Swing はフォロワーや選んだリストの人だけに届きます。投稿の「フォロワー限定」、プラグインの共有セッションも同じく相手が限られます。誰でも見られる公開の投稿との違いを確認したいです。</p></div></li>
       <li><div><h3>収益とのかかわり</h3><p>広告(モバイルの AdMob)とプラグイン開発者からの審査料で運営費をまかないます。AsTell や Swing 自体には料金をかけません。</p></div></li>
+      <li><div><h3>音声を保存する場合</h3><p>通報の確認のために、ルームの音声を一定期間保存することを検討しています。保存の範囲(通報されたときの直前の数分だけか、常時か)によって、届出や通信の秘密の扱いで変わる点があるかを確認したいです。</p></div></li>
       <li><div><h3>届出が必要な場合</h3><p>個人として届け出る場合に必要な書類と、利用者の通信の秘密を守るための運用(運営者が内部の控えを見る条件など)で求められることを確認したいです。</p></div></li>
     </ol>
   </section>
@@ -268,7 +273,9 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
   <section>
     <h2>この資料を出す前に埋めること</h2>
     <ul class="todo">
-      <li>LiveKit を置く場所(さくらのクラウドか別の場所か)と、運用する回線。</li>
+      <li>LiveKit を Central に同居させたときの回線の上限(共有回線の送信 100Mbps)と、1 つの配信の視聴者数の上限。</li>
+      <li>ORGATE-Server を置く場所(商用で使える回線)と、Central との間でやり取りする情報。</li>
+      <li>文字起こしを端末へ移した場合に、通報の確認のため音声を保存するかどうか。保存するなら、誰の音声を、いつから、何日残すか。</li>
       <li>TURN を置くかどうか。置かない場合、NAT を越えられない利用者は通話できないことの扱い。</li>
       <li>通知(⑦)とプラグインの共有セッション(⑧)の保存期間。</li>
       <li>運用ログに残す項目の一覧(会話の本文・音声・認証トークンは入れない方針)。</li>
