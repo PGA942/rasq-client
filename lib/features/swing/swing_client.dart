@@ -33,4 +33,7 @@ class SwingApi {
   Future<void> seen(String id) => _c.postJson('/swings/$id/seen', const {});
 
   Future<void> delete(String id) => _c.delete('/swings/$id');
+
+  /// 通報する (D-395 / S-060)。[reason] = spam / harassment / illegal / other。届いていない Swing は 404。
+  Future<void> report(String id, {required String reason}) => _c.postJson('/reports', {'swingId': id, 'reason': reason});
 }

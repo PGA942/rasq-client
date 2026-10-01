@@ -11,7 +11,9 @@ import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/router.dart';
+import '../ads/ad_placement.dart';
 import '../ads/export_ad.dart';
+import '../vc/astell_models.dart' show astellReportReasons;
 import '../custom/custom_page.dart';
 import '../media/video_player.dart';
 import '../plugins/slot_plugins.dart';
@@ -28,6 +30,12 @@ import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvide
 ///   **中央をタップで一時停止 / 再開**、左端 / 右端のタップで前 / 次。
 /// - **見終えた** = その Swing を離れた / 閉じた / プラグインが `page.end` を呼んだ。Central へ送る(ヘッダーのリングが白になる)。
 /// - **広告**: Swing [adEvery] 個ごとに 1 枚(広告を出せる端末とアカウントだけ。出せなければ挟まない)。広告は見終えの記録なし。
+///   D-395: **`adSafe` でない Swing(通報された / CW / センシティブ / 未審査のプラグイン / 運営が止めた)の前後には置かない**
+///   ([adGaps]。予定の所が危なければ次の安全な所へずらす)。
+/// - **CW / センシティブ** (D-395): ぼかして覆い、「表示する」を押すまで中身を出さない。覆っている間は時計を回さず、
+///   動画 / プラグインも動かさない。
+/// - **通報** (D-395): ヘッダーの旗から理由を選んで `POST /reports {swingId}`。通報した Swing はこの回の間、広告の隣に置かない
+///   扱いにする(並びは開いた時点で決めているので、記録するだけ)。
 /// - **プラグイン**(ページ型、surface `swing`、契約 v0.19): 全画面で動かし、その間は**スワイプで移れない**。
 ///   「全画面から縮小」を押すと、ぼかして止め(`page.event paused`)、スワイプで移れるようにする。縮小したものを押すと
 ///   全画面に戻る(`resumed`)。
@@ -57,13 +65,16 @@ class SwingViewerItem {
   final bool ad;
 }
 
-/// Swing の並びに広告を挟む([every] 個ごと、最後には付けない)。
-List<SwingViewerItem> interleaveAds(List<Swing> swings, {required bool ads, int every = SwingViewerScreen.adEvery}) => [
-      for (var i = 0; i < swings.length; i++) ...[
-        SwingViewerItem.swing(swings[i]),
-        if (ads && (i + 1) % every == 0 && i + 1 < swings.length) const SwingViewerItem.ad(),
-      ],
-    ];
+/// Swing の並びに広告を挟む([every] 個ごと、最後には付けない)。`adSafe` でない Swing の前後には置かない ([adGaps]、D-395)。
+List<SwingViewerItem> interleaveAds(List<Swing> swings, {required bool ads, int every = SwingViewerScreen.adEvery}) {
+  final gaps = ads ? adGaps(swings.length, (i) => swings[i].adSafe, every: every).toSet() : const <int>{};
+  return [
+    for (var i = 0; i < swings.length; i++) ...[
+      if (gaps.contains(i)) const SwingViewerItem.ad(),
+      SwingViewerItem.swing(swings[i]),
+    ],
+  ];
+}
 
 class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with SingleTickerProviderStateMixin {
   late final List<SwingViewerItem> _items;
@@ -79,6 +90,47 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   /// 返信のコンポーザー / キューのピッカー / スレッドの FOW を開いていて止めている (D-389)。
   bool _held = false;
+
+  /// 「表示する」を押した CW / センシティブの Swing (D-395)。
+  final _revealed = <String>{};
+
+  /// この回で通報した Swing (D-395)。広告の隣に置かない扱い(並びは開いた時点のままなので、記録だけ)。
+  final _reported = <String>{};
+
+  bool _coveredNow(Swing s) => s.covered && !_revealed.contains(s.id);
+
+  void _reveal(Swing s) {
+    setState(() => _revealed.add(s.id));
+    if (_current?.id == s.id) _startClock();
+  }
+
+  /// 通報 (D-395): 理由を選んで `POST /reports {swingId}`。選んでいる間は止める。
+  Future<void> _report(Swing s) async {
+    final api = ref.read(swingApiProvider);
+    if (api == null) return;
+    _hold(true);
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(title: Text('${s.author.displayName} の Swing を通報します。RASQ の審査で確認します。', style: RasqTypography.bodySmall)),
+          for (final r in astellReportReasons)
+            ListTile(key: ValueKey('swing.report.${r.id}'), title: Text(r.label), onTap: () => Navigator.of(ctx).pop(r.id)),
+        ]),
+      ),
+    );
+    if (!mounted) return;
+    _hold(false);
+    if (reason == null) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    try {
+      await api.report(s.id, reason: reason);
+      _reported.add(s.id);
+      messenger?.showSnackBar(const SnackBar(content: Text('通報しました。審査で確認します')));
+    } catch (e) {
+      messenger?.showSnackBar(SnackBar(content: Text('通報できませんでした: $e')));
+    }
+  }
 
   void _hold(bool v) {
     if (v == _held || !mounted) return;
@@ -113,7 +165,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     _clock.value = 0;
     final s = _index < _items.length ? _items[_index].swing : null;
     final d = SwingViewerScreen.displayDuration;
-    if (s == null || d == null || !(s.kind == SwingKind.text || s.kind == SwingKind.image)) return;
+    if (s == null || d == null || !(s.kind == SwingKind.text || s.kind == SwingKind.image) || _coveredNow(s)) return;
     _clock.duration = d;
     if (!_paused && !_held) _clock.forward();
   }
@@ -219,6 +271,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                     active: i == _index,
                     paused: i == _index && (_paused || _held),
                     replyBar: _replyBarShown(s),
+                    covered: _coveredNow(s),
+                    onReveal: () => _reveal(s),
+                    onReport: ref.watch(swingApiProvider) == null ? null : () => _report(s),
                     clock: _clock,
                     position: '${i + 1} / ${_items.length}',
                     onClose: _close,
@@ -253,7 +308,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   Swing? get _current => _index < _items.length ? _items[_index].swing : null;
 
-  bool _replyBarShown(Swing s) => s.postId != null && !_locked && ref.watch(rasqAccountPageApiProvider) != null;
+  bool _replyBarShown(Swing s) => s.postId != null && !_locked && !_coveredNow(s) && ref.watch(rasqAccountPageApiProvider) != null;
 }
 
 String swingRemainingLabel(Duration d) {
@@ -263,7 +318,14 @@ String swingRemainingLabel(Duration d) {
 }
 
 class _SwingPage extends StatelessWidget {
-  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.replyBar = false});
+  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.replyBar = false, this.covered = false, this.onReveal, this.onReport});
+
+  /// CW / センシティブで覆っている (D-395)。
+  final bool covered;
+  final VoidCallback? onReveal;
+
+  /// 通報 (D-395)。null = 出さない(RASQ アカウントが無い)。
+  final VoidCallback? onReport;
 
   /// 左下に返信の欄が出ている(添えた文をその上へ)。
   final bool replyBar;
@@ -281,11 +343,13 @@ class _SwingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 覆っている間は動画 / プラグインを動かさない。
+    final live = active && !covered;
     final body = switch (swing.kind) {
       SwingKind.text => _TextBody(text: swing.text),
       SwingKind.image => _ImageBody(swing: swing),
-      SwingKind.video => _VideoBody(swing: swing, active: active, paused: paused, onDone: onEnd),
-      SwingKind.plugin => _PluginBody(swing: swing, active: active, onLockChanged: onLockChanged, onEnd: onEnd),
+      SwingKind.video => _VideoBody(swing: swing, active: live, paused: paused, onDone: onEnd),
+      SwingKind.plugin => _PluginBody(swing: swing, active: live, onLockChanged: onLockChanged, onEnd: onEnd),
     };
     final timed = swing.kind != SwingKind.plugin;
     return Stack(fit: StackFit.expand, children: [
@@ -304,8 +368,9 @@ class _SwingPage extends StatelessWidget {
             ),
           ),
         ),
-      if (timed && paused)
+      if (timed && paused && !covered)
         const Center(child: IgnorePointer(child: Icon(Icons.pause_circle_outline, key: ValueKey('swing.paused'), color: Colors.white70, size: 64))),
+      if (covered) Positioned.fill(child: _Cover(swing: swing, onReveal: onReveal)),
       // 上: 時間の進み、作った人と残り時間、閉じる。
       Positioned(
         left: 0,
@@ -335,6 +400,7 @@ class _SwingPage extends StatelessWidget {
                       Text('${swingRemainingLabel(swing.remaining(DateTime.now()))} ・ $position', style: RasqTypography.caption.copyWith(color: Colors.white70)),
                     ]),
                   ),
+                  if (onReport != null) RasqIconButton(key: const ValueKey('swing.report'), icon: Icons.flag_outlined, tooltip: '通報', color: Colors.white, onPressed: onReport),
                   RasqIconButton(key: const ValueKey('swing.close'), icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: onClose),
                 ]),
                 ]),
@@ -343,7 +409,7 @@ class _SwingPage extends StatelessWidget {
           ),
       ),
       // 画像 / 動画に添えた文。
-      if (swing.kind != SwingKind.text && swing.kind != SwingKind.plugin && swing.text.isNotEmpty)
+      if (swing.kind != SwingKind.text && swing.kind != SwingKind.plugin && swing.text.isNotEmpty && !covered)
         Positioned(
           left: RasqSpacing.page,
           right: RasqSpacing.page,
@@ -352,6 +418,37 @@ class _SwingPage extends StatelessWidget {
         ),
     ]);
   }
+}
+
+/// CW / センシティブの覆い (D-395): ぼかして暗くし、CW の文か「センシティブな内容」と「表示する」。スワイプでは移れる。
+class _Cover extends StatelessWidget {
+  const _Cover({required this.swing, this.onReveal});
+  final Swing swing;
+  final VoidCallback? onReveal;
+
+  @override
+  Widget build(BuildContext context) => ClipRect(
+        key: const ValueKey('swing.cover'),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+          child: ColoredBox(
+            color: Colors.black.withValues(alpha: 0.7),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(RasqSpacing.xxl),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.visibility_off_outlined, color: Colors.white70, size: 40),
+                  const SizedBox(height: RasqSpacing.sm),
+                  Text(swing.cw ?? 'センシティブな内容', key: const ValueKey('swing.cover.text'), textAlign: TextAlign.center, style: RasqTypography.title.copyWith(color: Colors.white)),
+                  if (swing.cw != null && swing.sensitive) Text('センシティブな内容', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+                  const SizedBox(height: RasqSpacing.md),
+                  FilledButton.tonal(key: const ValueKey('swing.cover.reveal'), onPressed: onReveal, child: const Text('表示する')),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class _TextBody extends StatelessWidget {

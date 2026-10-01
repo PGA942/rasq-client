@@ -61,6 +61,9 @@ class Swing {
     this.viewCount,
     this.postId,
     this.replyCount = 0,
+    this.cw,
+    this.sensitive = false,
+    this._adSafe,
   });
 
   final String id;
@@ -84,9 +87,24 @@ class Swing {
   final String? postId;
   final int replyCount;
 
+  /// CW(注意書き、D-395 / Central S-060)。あればビューワーで覆ってから出す。
+  final String? cw;
+
+  /// センシティブな内容 (D-395)。
+  final bool sensitive;
+
+  final bool? _adSafe;
+
+  /// 広告の隣に置いてよいか (D-395)。Central の `adSafe`(通報 / 運営の止め / 作った人の処置も入る)。
+  /// 古い Central で無ければ手元で: センシティブでなく、CW が無く、未審査のプラグインでない。
+  bool get adSafe => _adSafe ?? (!sensitive && cw == null && !(plugin?.unreviewed ?? false));
+
+  /// 覆ってから出すか(CW かセンシティブ)。
+  bool get covered => cw != null || sensitive;
+
   String get authorAccountId => author.id.replaceFirst('rasq:', '');
 
-  Swing copyWith({bool? seen}) => Swing(id: id, author: author, kind: kind, text: text, mediaUrl: mediaUrl, mediaType: mediaType, plugin: plugin, createdAt: createdAt, expiresAt: expiresAt, seen: seen ?? this.seen, audience: audience, viewCount: viewCount, postId: postId, replyCount: replyCount);
+  Swing copyWith({bool? seen, bool? adSafe}) => Swing(id: id, author: author, kind: kind, text: text, mediaUrl: mediaUrl, mediaType: mediaType, plugin: plugin, createdAt: createdAt, expiresAt: expiresAt, seen: seen ?? this.seen, audience: audience, viewCount: viewCount, postId: postId, replyCount: replyCount, cw: cw, sensitive: sensitive, adSafe: adSafe ?? _adSafe);
 
   Duration remaining(DateTime now) {
     final d = expiresAt.difference(now);
@@ -132,6 +150,9 @@ class Swing {
       viewCount: (j['viewCount'] as num?)?.toInt(),
       postId: j['postId'] is String ? j['postId'] as String : null,
       replyCount: (j['replyCount'] as num?)?.toInt() ?? 0,
+      cw: j['cw'] is String && (j['cw'] as String).trim().isNotEmpty ? (j['cw'] as String).trim() : null,
+      sensitive: j['sensitive'] == true,
+      adSafe: j['adSafe'] is bool ? j['adSafe'] as bool : null,
     );
   }
 }
@@ -139,13 +160,17 @@ class Swing {
 /// 作るときの中身。
 @immutable
 class NewSwing {
-  const NewSwing({required this.kind, this.text = '', this.mediaId, this.plugin, this.audience = const SwingAudience(), this.ttlHours = 24});
+  const NewSwing({required this.kind, this.text = '', this.mediaId, this.plugin, this.audience = const SwingAudience(), this.ttlHours = 24, this.cw, this.sensitive = false});
   final SwingKind kind;
   final String text;
   final String? mediaId;
   final SwingPlugin? plugin;
   final SwingAudience audience;
   final int ttlHours;
+
+  /// CW (D-395)。空なら送らない。
+  final String? cw;
+  final bool sensitive;
 
   Map<String, Object?> toJson() => {
         'kind': kind.wire,
@@ -154,6 +179,8 @@ class NewSwing {
         if (plugin != null) 'plugin': plugin!.toJson(),
         'audience': audience.toJson(),
         'ttlHours': ttlHours,
+        if (cw != null && cw!.trim().isNotEmpty) 'cw': cw!.trim(),
+        if (sensitive) 'sensitive': true,
       };
 }
 
