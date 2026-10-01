@@ -62,6 +62,7 @@ import '../features/settings/action_bar_plugins_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/backend_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
+import '../features/onboarding/rasq_register_screen.dart';
 import '../features/store/installed_plugins_screen.dart';
 import '../features/store/plugin_page_screen.dart';
 import '../features/store/review_timeline_screen.dart';
@@ -95,6 +96,13 @@ abstract final class Routes {
 
   /// 初回オンボーディング (D-138): RASQ アカウント作成の案内。
   static const onboarding = '/onboarding';
+
+  /// RASQ アカウントの登録ページ (D-405、前は FOW)。`extra` = この端末でログイン中の SNS アカウントの数。
+  static const rasqRegister = '/rasq-register';
+
+  /// 登録の前に読む文書(設定の「ヘルプ、法的表示」と同じページ)。オンボーディング中も開ける (D-405)。
+  static const termsDoc = '/settings/dsl/about.terms';
+  static const privacyDoc = '/settings/dsl/about.privacy';
   static const viewer = '/viewer';
 
   /// プロフィールのアイコン / バナーの全画面表示 (D-177)。
@@ -238,7 +246,18 @@ String? entryRedirect({required String loc, required bool loggedIn, required Ras
   // 未ログインでも開ける画面: カタログ/開発用、オンボーディング、接続先設定
   // (オンボーディングから Central の接続先を入れるため)。
   // RASQ アカウントへのログイン (D-296) も、オンボーディングから開く。
-  const open = {Routes.catalog, Routes.wasmDev, Routes.onboarding, '${Routes.settings}/server', '${Routes.settings}/account-login', Routes.childSafeLogin};
+  // 登録ページと、そこから開く利用規約 / プライバシーポリシー (D-405) も(前は文書がオンボーディングへ戻されて読めなかった)。
+  const open = {
+    Routes.catalog,
+    Routes.wasmDev,
+    Routes.onboarding,
+    Routes.rasqRegister,
+    Routes.termsDoc,
+    Routes.privacyDoc,
+    '${Routes.settings}/server',
+    '${Routes.settings}/account-login',
+    Routes.childSafeLogin,
+  };
   if (loggedIn) return loc == Routes.onboarding ? Routes.home : null;
   if (loc.startsWith(Routes.login) || open.contains(loc)) return null;
   final central = ledger?.currentCentral;
@@ -437,6 +456,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, s) => ReviewTimelineScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
           GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const WasmPluginScreen()),
           GoRoute(path: Routes.onboarding, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingScreen()),
+          // オンボーディングからも、サイドバーの RASQ アカウント FOW からも開く (D-405)。
+          GoRoute(path: Routes.rasqRegister, parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqRegisterScreen(snsCount: s.extra is int ? s.extra as int : 0)),
           // チャイルドセーフ (D-307)。
           GoRoute(path: Routes.childSafe, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ChildSafeHubScreen(), routes: [
             GoRoute(path: 'guardian', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const GuardianScreen(), routes: [

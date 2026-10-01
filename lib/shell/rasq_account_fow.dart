@@ -12,8 +12,7 @@ import '../backend/notify_api.dart';
 import '../backend/orgate_client.dart';
 import '../backend/rasq_account.dart';
 import '../session/sanctions.dart';
-import 'rasq_register_fow.dart';
-import 'third_column.dart';
+import '../features/onboarding/rasq_register_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 
@@ -258,8 +257,10 @@ class RasqAccountPanel extends ConsumerWidget {
     Future<void> create() async {
       final name = ref.read(rasqAccountProvider).displayName;
       try {
-        // 登録の FOW (D-241): 利用規約 / 年齢 / バンドルを置き換えるか → 登録 → 同意の記録。
-        final rec = await registerRasqAccount(ref, displayName: name, column: fowColumnOf(context), onMessage: toast);
+        // 登録のページ (D-241 → D-405): 利用規約 / 年齢 / バンドルを置き換えるか → 登録 → 同意の記録。
+        // ページはサイドバーの下に開くので、サイドバーは閉じる(この FOW はページを開いている間だけ退避して、戻ると出る)。
+        onNavigate?.call();
+        final rec = await registerRasqAccount(ref, displayName: name, onMessage: toast);
         if (rec == null || !context.mounted) return;
         await openRasqProfileSheet(context, ref, record: rec, beforeNavigate: leave);
       } on OrgateException catch (e) {

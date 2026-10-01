@@ -58,6 +58,11 @@ void main() {
       expect(go(Routes.home, l: l, signedIn: null), isNull);
     });
 
+    test('オンボーディング中に開けるのは、規約とプライバシーポリシーの文書だけ(ほかの設定の文書へは行かない、D-405)', () {
+      expect(go('${Routes.settings}/dsl/about.store', l: const RasqAccountsState()), Routes.onboarding);
+      expect(go(Routes.settings, l: const RasqAccountsState()), Routes.onboarding);
+    });
+
     test('SNS にログインしていれば(「この端末のみ」でも)そのまま。オンボーディングにいればホームへ', () {
       final l = ledger([local(keys: [snsA.key])], RasqAccountsNotifier.localId);
       expect(go(Routes.home, loggedIn: true, l: l), isNull);
@@ -65,7 +70,7 @@ void main() {
     });
 
     test('未ログインでも開ける画面 / SNS のログイン(「SNS アカウントだけで使う」を選んだ)には留まる', () {
-      for (final loc in [Routes.onboarding, Routes.login, Routes.loginMisskey, '${Routes.settings}/server', '${Routes.settings}/account-login', Routes.catalog]) {
+      for (final loc in [Routes.onboarding, Routes.rasqRegister, Routes.termsDoc, Routes.privacyDoc, Routes.login, Routes.loginMisskey, '${Routes.settings}/server', '${Routes.settings}/account-login', Routes.catalog]) {
         expect(go(loc, l: const RasqAccountsState()), isNull, reason: loc);
       }
     });

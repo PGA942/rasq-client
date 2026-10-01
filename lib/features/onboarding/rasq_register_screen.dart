@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
-import '../app/providers.dart';
-import '../app/router.dart';
-import '../backend/account_security_api.dart';
-import '../backend/orgate_client.dart';
-import '../backend/rasq_account.dart';
-import '../backend/rasq_consent.dart';
+import '../../app/providers.dart';
+import '../../app/router.dart';
+import '../../backend/account_security_api.dart';
+import '../../backend/orgate_client.dart';
+import '../../backend/rasq_account.dart';
+import '../../backend/rasq_consent.dart';
+import '../../shell/headers.dart';
 
-/// RASQ アカウントの登録 FOW (D-241)。
+/// RASQ アカウントの登録ページ (D-241 → D-405)。
 ///
 /// 「作成」を押したあと、サーバーへ登録する**前**に出す:
 /// 1. 利用規約 / プライバシーポリシーへの同意(文書は設定の「ヘルプ、法的表示」と同じページ)。
@@ -18,32 +20,61 @@ import '../backend/rasq_consent.dart';
 /// 3. アカウントバンドルを置き換えるか(この端末に SNS アカウントがあるときだけ)。
 ///
 /// 学習へのデータ提供はここでは聞かない(別の任意の同意、既定は「なし」)。
-const rasqRegisterFowId = 'fow.rasq.register';
+///
+/// D-405: 前は FOW だった。FOW はページより上に重なるので、規約 / プライバシーポリシーのページを開いても FOW の下に
+/// 隠れていた(オンボーディング中は入口の振り分けで、文書のページへも行けなかった)。ページにして、文書はこの上に積む。
+/// 開いている間は、下の FOW(サイドバーの RASQ アカウント FOW など)を退避する(State は生きたまま、閉じたら戻る)。
+class RasqRegisterScreen extends ConsumerStatefulWidget {
+  const RasqRegisterScreen({super.key, required this.snsCount});
+
+  /// この端末でログイン中の SNS アカウントの数(1 以上なら、バンドルを置き換えるかを聞く)。
+  final int snsCount;
+
+  @override
+  ConsumerState<RasqRegisterScreen> createState() => _RasqRegisterScreenState();
+}
+
+class _RasqRegisterScreenState extends ConsumerState<RasqRegisterScreen> {
+  late final OverlayManager _overlay = ref.read(overlayManagerProvider);
+
+  @override
+  void initState() {
+    super.initState();
+    _overlay.setFowSuspend(_suspendAll);
+  }
+
+  @override
+  void dispose() {
+    _overlay.setFowSuspend(null);
+    super.dispose();
+  }
+
+  static bool _suspendAll(RasqOverlayEntry _) => true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      // 戻る = キャンセル(何も送らない)。
+      appBar: const RasqPageHeader(title: 'RASQ アカウントの登録', showMore: false),
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: _RegisterPanel(
+              snsCount: widget.snsCount,
+              onOpenDoc: (route) => context.push(route),
+              onDone: (c) => context.pop(c),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// パスワードの最短 (S-019)。
 const rasqPasswordMinChars = 8;
-
-Future<RasqRegisterChoice?> showRasqRegisterFow(OverlayManager manager, {required int snsCount, required ValueChanged<String> onOpenDoc, int column = 0}) {
-  return manager.showFow<RasqRegisterChoice>(
-    id: rasqRegisterFowId,
-    spec: FowSpec(
-      type: FowPanelType.widget,
-      initialHeightFactor: 0.78,
-      minHeightFactor: 0.4,
-      maxHeightFactor: 0.92,
-      title: 'RASQ アカウントの登録',
-      cancelText: 'キャンセル',
-      columnIndex: column,
-    ),
-    semanticsLabel: 'RASQ アカウントの登録',
-    barrierBehavior: OverlayBarrierBehavior.dismissDiscard,
-    builder: (ctx, handle) => _RegisterPanel(
-      snsCount: snsCount,
-      onOpenDoc: onOpenDoc,
-      onDone: (c) => handle.close(result: c),
-    ),
-  );
-}
 
 class _RegisterPanel extends StatefulWidget {
   const _RegisterPanel({required this.snsCount, required this.onOpenDoc, required this.onDone});
@@ -104,8 +135,8 @@ class _RegisterPanelState extends State<_RegisterPanel> {
           key: const ValueKey('register.list'),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const RasqSectionHeader(title: '利用規約とプライバシーポリシー'),
-          RasqListTile(key: const ValueKey('register.terms'), title: '利用規約を読む', onTap: () => widget.onOpenDoc('/settings/dsl/about.terms')),
-          RasqListTile(key: const ValueKey('register.privacy'), title: 'プライバシーポリシーを読む', onTap: () => widget.onOpenDoc('/settings/dsl/about.privacy')),
+          RasqListTile(key: const ValueKey('register.terms'), title: '利用規約を読む', onTap: () => widget.onOpenDoc(Routes.termsDoc)),
+          RasqListTile(key: const ValueKey('register.privacy'), title: 'プライバシーポリシーを読む', onTap: () => widget.onOpenDoc(Routes.privacyDoc)),
           check(const ValueKey('register.agree'), '利用規約とプライバシーポリシーに同意する', _agree, (v) => setState(() => _agree = v)),
           const RasqSectionHeader(title: '年齢'),
           Padding(
@@ -189,16 +220,16 @@ class _RegisterPanelState extends State<_RegisterPanel> {
   }
 }
 
-/// 登録の一連 (D-241): FOW → `POST /auth/device` → 同意の記録 → 台帳へ載せる。
+/// 登録の一連 (D-241): 登録ページ → `POST /auth/device` → 同意の記録 → 台帳へ載せる。
 ///
 /// キャンセルなら null。接続先が無ければ [onMessage] で知らせて null。失敗は [OrgateException] のまま投げる。
-Future<RasqAccountRecord?> registerRasqAccount(WidgetRef ref, {String? displayName, int column = 0, required ValueChanged<String> onMessage}) async {
+Future<RasqAccountRecord?> registerRasqAccount(WidgetRef ref, {String? displayName, required ValueChanged<String> onMessage}) async {
   if (ref.read(centralClientProvider) == null) {
     onMessage('RASQ サーバーの接続先が設定されていません');
     return null;
   }
   final snsCount = ref.read(sessionsProvider).value?.sessions.length ?? 0;
-  final choice = await showRasqRegisterFow(ref.read(overlayManagerProvider), snsCount: snsCount, column: column, onOpenDoc: (route) => ref.read(routerProvider).push(route));
+  final choice = await ref.read(routerProvider).push<RasqRegisterChoice>(Routes.rasqRegister, extra: snsCount);
   if (choice == null) return null;
   final notifier = ref.read(orgateAccountProvider.notifier);
   // 登録と承諾は一緒に (D-371 / S-053、規約案 06 CONS-02): サーバーが同じ処理で残す。承諾を残せなければアカウントも作られない
