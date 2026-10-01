@@ -11,6 +11,7 @@ const rasqLegalDocs = <String, ({String area, String title, String version, Stri
   'rasq.astell': (area: 'about.astell', title: 'AsTell の利用条件', version: rasqLegalVersion, sha256: '9670d0527effe5b8ace0ec487756eb3ee11fe217aee8127833b81416066b4e55'),
   'rasq.rai': (area: 'about.rai', title: 'RAi の利用条件', version: rasqLegalVersion, sha256: 'c95668ba4837bd511d0438b78742301ccded8c74c07a8100aa7c0f5238d04e3c'),
   'rasq.store': (area: 'about.store', title: 'プラグインストアの利用条件', version: rasqLegalVersion, sha256: '5cab6346d0f2037710fa2d960639c2bec2c285c6af90be0fd61f3cd86fe6e94d'),
-  'rasq.billing': (area: 'about.billing', title: '料金・ポイントの条件', version: rasqLegalVersion, sha256: '9160ea4042b42af7aed7dbc156ac8b0ab8c289455b28cb4c993ec13a66012761'),
-  'rasq.commerce': (area: 'about.commerce', title: '特定商取引法に基づく表記', version: rasqLegalVersion, sha256: '9aa7b0ef4919f110d5540db07297126a02c17ab042cf1ec410a01f93cdfcba02'),
+  'rasq.developer': (area: 'about.devterms', title: 'プラグイン開発者の掲載・審査条件', version: rasqLegalVersion, sha256: '0c54c37c63c47ad5386652846cd0a253e54137d22ed3dc7b2852aebbec179c58'),
+  'rasq.billing': (area: 'about.billing', title: '料金・ポイントの条件', version: rasqLegalVersion, sha256: 'db26dcfa23ac8ee527d13bf11cc4e2fdc7f88608fce8b16e26db035f5fa4695f'),
+  'rasq.commerce': (area: 'about.commerce', title: '特定商取引法に基づく表記', version: rasqLegalVersion, sha256: '5a8c3ac14ba1e441b2322d3b6bd37b22f31cb8999a00b8297fe72a85b5df46e9'),
 };

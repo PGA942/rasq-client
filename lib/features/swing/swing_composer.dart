@@ -30,6 +30,8 @@ import 'wagara.dart';
 /// 「メディア」「テキスト」で**あとから足す**。下のバーの先頭には「**プラグイン**」(配るプラグインを選ぶ画面へ)と
 /// 「背景を変える」(押すと別の柄、長押しで画像 / 動画を背景に、D-387)を自動で足す。できあがったものを送る画面([SwingComposerScreen]: 届け先と時間)へ。
 /// プラグインは、入っている Swing 対応のもの / ファイルから(未審査)を選ぶ。ホームの ＋ から入る。
+/// D-395: 送る画面で **CW(注意書き)** と「**センシティブな内容**」を付けられる(見る人の端末では覆ってから出し、
+/// 隣に広告を置かない)。
 
 const swingImageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic'];
 const _imageMime = {'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'gif': 'image/gif', 'webp': 'image/webp', 'heic': 'image/heic'};
@@ -181,6 +183,9 @@ class SwingComposerScreen extends ConsumerStatefulWidget {
 
   static const ttlChoices = [1, 6, 12, 24];
 
+  /// CW の上限(文字、Central S-060 と同じ)。
+  static const maxCwChars = 100;
+
   @override
   ConsumerState<SwingComposerScreen> createState() => _SwingComposerScreenState();
 }
@@ -207,9 +212,21 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
   bool _busy = false;
   String? _error;
 
+  /// CW とセンシティブ (D-395)。
+  final _cw = TextEditingController();
+  bool _sensitive = false;
+
+  bool get _cwTooLong => _cw.text.trim().characters.length > SwingComposerScreen.maxCwChars;
+
+  @override
+  void dispose() {
+    _cw.dispose();
+    super.dispose();
+  }
+
   bool get _ready {
     final d = _draft;
-    if (d == null || (!_followers && _lists.isEmpty)) return false;
+    if (d == null || (!_followers && _lists.isEmpty) || _cwTooLong) return false;
     return d.plugin ? (_pluginId != null || _package != null) : d.bytes != null;
   }
 
@@ -268,6 +285,8 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
                 : null,
         audience: SwingAudience(followers: _followers, lists: _lists.toList()),
         ttlHours: _ttl,
+        cw: _cw.text.trim().isEmpty ? null : _cw.text.trim(),
+        sensitive: _sensitive,
       ));
       ref.invalidate(mySwingsProvider);
       if (!mounted) return;
@@ -296,6 +315,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
               : ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.xxl), children: [
                   if (d.plugin) ..._pluginSection() else _preview(d),
                   ..._audienceSection(),
+                  ..._cautionSection(),
                   if (_error != null)
                     Padding(
                       key: const ValueKey('swing.error'),
@@ -372,6 +392,23 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       ),
     ];
   }
+
+  /// 注意書き (D-395): CW とセンシティブ。どちらかがあると、見る人の端末では覆ってから出し、隣に広告を置かない。
+  List<Widget> _cautionSection() => [
+        const RasqSectionHeader(title: '注意書き'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+          child: RasqInput(key: const ValueKey('swing.cw'), controller: _cw, hintText: 'CW(任意。例: ネタバレ)', onChanged: (_) => setState(() {})),
+        ),
+        if (_cwTooLong) RasqNotice.warning(key: const ValueKey('swing.cw.tooLong'), text: 'CW は ${SwingComposerScreen.maxCwChars} 文字までです'),
+        SwitchListTile(
+          key: const ValueKey('swing.sensitive'),
+          title: const Text('センシティブな内容'),
+          subtitle: const Text('見る人の画面では覆ってから出します'),
+          value: _sensitive,
+          onChanged: (v) => setState(() => _sensitive = v),
+        ),
+      ];
 
   List<Widget> _audienceSection() {
     final lists = ref.watch(myRasqCollectionsProvider(RasqCollectionKind.list)).value ?? const <RasqCollection>[];

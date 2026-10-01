@@ -106,6 +106,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('AsTell の利用条件', route: '/settings/dsl/about.astell'),
     SettingsRow('RAi の利用条件', route: '/settings/dsl/about.rai'),
     SettingsRow('プラグインストアの利用条件', route: '/settings/dsl/about.store'),
+    SettingsRow('プラグイン開発者の掲載・審査条件', subtitle: '審査料を含む', route: '/settings/dsl/about.devterms'),
     SettingsRow('料金・ポイントの条件', route: '/settings/dsl/about.billing'),
     SettingsRow('特定商取引法に基づく表記', route: '/settings/dsl/about.commerce'),
     SettingsRow('リソースと広告', route: '/settings/dsl/resources'),

@@ -765,7 +765,7 @@ class InstalledPlugin {
       );
 }
 
-/// ポイント (D-355、Central S-047): Web コンソールで Stripe から買う。付与ごとに 2 か月で失効。
+/// ポイント (D-355、Central S-047): Web コンソールで Stripe から買う。付与ごとに 1 か月で失効(2026-10-01 に 2 か月から短縮)。
 @immutable
 class StorePointGrant {
   const StorePointGrant({required this.amount, required this.remaining, required this.expiresAt, this.createdAt, this.source = '', this.expired = false});

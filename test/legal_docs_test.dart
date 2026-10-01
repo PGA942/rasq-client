@@ -15,7 +15,7 @@ import 'package:rasq_client/features/settings/settings_dsl.dart';
 /// 生成した定数が、同じ版・同じ本文のハッシュか。利用者向けの本文に内部の参照が混ざっていないか。
 void main() {
   test('正本・表示・定数の版と本文のハッシュがそろっている', () {
-    expect(rasqLegalDocs.keys, containsAll(['rasq.terms', 'rasq.privacy', 'rasq.learning', 'rasq.astell', 'rasq.rai', 'rasq.store', 'rasq.billing', 'rasq.commerce']));
+    expect(rasqLegalDocs.keys, containsAll(['rasq.terms', 'rasq.privacy', 'rasq.learning', 'rasq.astell', 'rasq.rai', 'rasq.store', 'rasq.developer', 'rasq.billing', 'rasq.commerce']));
     for (final e in rasqLegalDocs.entries) {
       final md = File('assets/legal/${e.key}.md').readAsStringSync();
       final sha = sha256.convert(utf8.encode(md)).toString();

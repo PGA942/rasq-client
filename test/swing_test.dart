@@ -54,6 +54,9 @@ final swingThreadLog = <String>[];
 final swingQueued = <String>{};
 final swingReplies = <String>[];
 
+/// 通報の控え (D-395)。
+final swingReports = <Map<String, Object?>>[];
+
 Future<void> setFabSlotsOf(ProviderContainer c, String scope, List<String> slots) => c.read(settingsAreaProvider(fabSettingsArea).notifier).set('${scope}Slots', slots);
 
 void main() {
@@ -84,8 +87,11 @@ void main() {
   });
 
   final now = DateTime.now().toUtc();
-  Map<String, Object?> swing(String id, String author, {String kind = 'text', String text = 'やっほー', Map<String, Object?>? media, Map<String, Object?>? plugin, Duration age = const Duration(minutes: 30), String? postId, int replyCount = 0}) => {
+  Map<String, Object?> swing(String id, String author, {String kind = 'text', String text = 'やっほー', Map<String, Object?>? media, Map<String, Object?>? plugin, Duration age = const Duration(minutes: 30), String? postId, int replyCount = 0, String? cw, bool sensitive = false, bool? adSafe}) => {
         'id': id,
+        'cw': ?cw,
+        if (sensitive) 'sensitive': true,
+        'adSafe': ?adSafe,
         'postId': ?postId,
         'replyCount': replyCount,
         'author': {'accountId': author, 'handle': author, 'displayName': '$author さん'},
@@ -112,11 +118,32 @@ void main() {
       expect([for (final x in interleaveAds(six, ads: true)) x.ad ? 'ad' : x.swing!.id], ['s0', 's1', 's2', 's3', 's4', 'ad', 's5']);
       expect(interleaveAds(six.take(5).toList(), ads: true).any((x) => x.ad), isFalse, reason: '最後には付けない');
       expect(interleaveAds(six, ads: false).any((x) => x.ad), isFalse);
+      // D-395: adSafe でない Swing の前後には置かない(次の安全な所へずらす)。
+      final mixed = [for (var i = 0; i < 8; i++) Swing.tryParse(swing('s$i', 'u$i', adSafe: i != 5))!];
+      expect([for (final x in interleaveAds(mixed, ads: true)) x.ad ? 'ad' : x.swing!.id], ['s0', 's1', 's2', 's3', 's4', 's5', 's6', 'ad', 's7']);
       expect(swingMediaMimeFor('a.PNG'), 'image/png');
       expect(swingMediaMimeFor('a.mov'), 'video/quicktime');
       expect(swingMediaMimeFor('a.mp3'), isNull);
       expect(swingRemainingLabel(const Duration(hours: 3, minutes: 5)), 'あと 3 時間');
       expect(swingRemainingLabel(const Duration(minutes: 7)), 'あと 7 分');
+    });
+
+    test('CW / センシティブ / adSafe (D-395): Central の adSafe を使い、無ければ手元で決める', () {
+      final plain = Swing.tryParse(swing('p', 'u'))!;
+      expect((plain.cw, plain.sensitive, plain.adSafe, plain.covered), (null, false, true, false));
+      final cw = Swing.tryParse(swing('c', 'u', cw: '  ネタバレ '))!;
+      expect((cw.cw, cw.adSafe, cw.covered), ('ネタバレ', false, true));
+      expect(Swing.tryParse(swing('b', 'u', cw: '  '))!.cw, isNull, reason: '空の CW は無し');
+      final sens = Swing.tryParse(swing('s', 'u', sensitive: true))!;
+      expect((sens.sensitive, sens.adSafe, sens.covered), (true, false, true));
+      final unreviewed = Swing.tryParse(swing('x', 'u', kind: 'plugin', plugin: {'id': 'p', 'unreviewed': true}))!;
+      expect(unreviewed.adSafe, isFalse);
+      expect(Swing.tryParse(swing('h', 'u', adSafe: false))!.adSafe, isFalse, reason: '通報 / 運営の止めは Central が決める');
+      expect(Swing.tryParse(swing('k', 'u', cw: 'x', adSafe: true))!.adSafe, isTrue, reason: 'Central の値が先');
+      expect(plain.copyWith(seen: true).adSafe, isTrue);
+      expect(sens.copyWith(seen: true).covered, isTrue);
+      expect(const NewSwing(kind: SwingKind.text, text: 'a', cw: ' ネタバレ ', sensitive: true).toJson(), {'kind': 'text', 'text': 'a', 'audience': {'followers': true, 'lists': []}, 'ttlHours': 24, 'cw': 'ネタバレ', 'sensitive': true});
+      expect(const NewSwing(kind: SwingKind.text, text: 'a', cw: '  ').toJson().containsKey('cw'), isFalse);
     });
   });
 
@@ -183,6 +210,11 @@ void main() {
         swingReplies.add('${body['body']}');
         swingThreadLog.add('reply ${body['replyTo']} ${body['body']}');
         return json(post('r-new', body: '${body['body']}', replyTo: body['replyTo'] as String?), 201);
+      }
+      if (route == 'POST /reports') {
+        final body = (jsonDecode(req.body) as Map).cast<String, Object?>();
+        swingReports.add(body);
+        return json({'id': 'r1', 'swingId': body['swingId'], 'reason': body['reason'], 'status': 'open'}, 201);
       }
       final m = RegExp(r'^POST /swings/([^/]+)/seen$').firstMatch(route);
       if (m != null) {
@@ -298,6 +330,65 @@ void main() {
     expect(find.text('Swing 0'), findsOneWidget);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
     expect(seen, ['s5', 's4', 's3', 's2', 's1'], reason: '広告のページは記録しない');
+  });
+
+  testWidgets('広告の隣の安全 (D-395): adSafe でない Swing の前後には広告を置かず、次の安全な所へずらす', (tester) async {
+    // 並びは新しい人から: s8, s7, …, s0。5 番目(s4)が危ない → 5 番目の後ろに置けず、6 番目(s3)の後ろへずらす。
+    final (mock, _, _, _) = central([for (var i = 0; i < 9; i++) swing('s$i', 'u$i', text: 'Swing $i', age: Duration(minutes: 60 - i), adSafe: i != 4)]);
+    final c = await pumpApp(tester, mock, extra: [
+      exportAdNetworkProvider.overrideWithValue(ExportAdNetwork.admob),
+      exportAdAllowedProvider.overrideWithValue(true),
+      exportAdSdkProvider.overrideWithValue(_FakeAdSdk()),
+    ]);
+    c.read(routerProvider).push(Routes.swing());
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 6; i++) {
+      expect(find.byKey(const ValueKey('fake.ad')), findsNothing, reason: '${i + 1} 枚目');
+      await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
+      await tester.pumpAndSettle();
+    }
+    expect(find.byKey(const ValueKey('fake.ad')), findsOneWidget, reason: 's3 と s2 の間');
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('Swing 2'), findsOneWidget);
+  });
+
+  testWidgets('CW / センシティブ (D-395): ぼかして覆い、「表示する」まで中身を出さず時計も回さない。通報は理由を選んで POST /reports {swingId}', (tester) async {
+    swingReports.clear();
+    final (mock, _, _, _) = central([
+      swing('c1', 'alice', text: 'ネタバレの中身', cw: '映画のネタバレ', age: const Duration(minutes: 40)),
+      swing('c2', 'alice', text: 'センシティブな中身', sensitive: true, age: const Duration(minutes: 20)),
+    ]);
+    final c = await pumpApp(tester, mock);
+    SwingViewerScreen.displayDuration = const Duration(seconds: 2);
+    c.read(routerProvider).push(Routes.swing('alice'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.cover')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.cover')), matching: find.text('映画のネタバレ')), findsOneWidget);
+    // 覆っている間は時計が回らない(時間が過ぎても進まない)。
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.cover')), matching: find.text('映画のネタバレ')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('swing.cover.reveal')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('swing.cover')), findsNothing);
+    expect(find.text('ネタバレの中身'), findsOneWidget);
+    // 表示したら時計が回り、次の Swing(センシティブ)へ。
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.cover')), matching: find.text('センシティブな内容')), findsOneWidget);
+    SwingViewerScreen.displayDuration = null;
+
+    // 通報: 旗 → 理由 → POST /reports {swingId, reason}。
+    await tester.tap(find.byKey(const ValueKey('swing.report')).hitTestable());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('swing.report.harassment')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
+    expect(swingReports, [
+      {'swingId': 'c2', 'reason': 'harassment'},
+    ]);
+    expect(find.text('通報しました。審査で確認します'), findsOneWidget);
   });
 
   testWidgets('プラグインの Swing: 全画面の間はスワイプで移れない → 「全画面から縮小」でぼかして止め(paused)、移れる / page.end で次へ', (tester) async {
@@ -542,16 +633,31 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('swing.audience.list.rl1')));
     await tester.pump();
     expect(find.byKey(const ValueKey('swing.audience.empty')), findsOneWidget);
+    // 送るボタンは注意書き (D-395) の下。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('swing.send')), 200, scrollable: find.descendant(of: find.byType(SwingComposerScreen), matching: find.byType(Scrollable)).first);
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('swing.audience.followers')), -200, scrollable: find.descendant(of: find.byType(SwingComposerScreen), matching: find.byType(Scrollable)).first);
     await tester.tap(find.byKey(const ValueKey('swing.audience.followers')));
+    await tester.ensureVisible(find.byKey(const ValueKey('swing.audience.list.rl1')));
     await tester.tap(find.byKey(const ValueKey('swing.audience.list.rl1')));
     await tester.pump();
+    // 注意書き (D-395): CW は 100 文字まで。センシティブのスイッチ。
+    await tester.ensureVisible(find.byKey(const ValueKey('swing.cw')));
+    await tester.enterText(find.descendant(of: find.byKey(const ValueKey('swing.cw')), matching: find.byType(TextField)), 'あ' * 101);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('swing.cw.tooLong')), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull);
+    await tester.enterText(find.descendant(of: find.byKey(const ValueKey('swing.cw')), matching: find.byType(TextField)), ' ネタバレ ');
+    await tester.ensureVisible(find.byKey(const ValueKey('swing.sensitive')));
+    await tester.tap(find.byKey(const ValueKey('swing.sensitive')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('swing.cw.tooLong')), findsNothing);
     await tester.ensureVisible(find.byKey(const ValueKey('swing.send')));
     await tester.tap(find.byKey(const ValueKey('swing.send')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
     await tester.pumpAndSettle();
     expect(uploads, ['image/png']);
-    expect(created.single, {'kind': 'image', 'mediaId': 'm1', 'audience': {'followers': true, 'lists': ['rl1']}, 'ttlHours': 6});
+    expect(created.single, {'kind': 'image', 'mediaId': 'm1', 'audience': {'followers': true, 'lists': ['rl1']}, 'ttlHours': 6, 'cw': 'ネタバレ', 'sensitive': true});
     expect(find.byType(SwingComposerScreen), findsNothing);
     tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger).first).clearSnackBars();
     await tester.pumpAndSettle();
@@ -569,6 +675,7 @@ void main() {
     c.read(routerProvider).push(Routes.swingNew, extra: const SwingDraft.plugin());
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('swing.plugin.file')), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('swing.send')), 200, scrollable: find.descendant(of: find.byType(SwingComposerScreen), matching: find.byType(Scrollable)).first);
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull, reason: 'プラグインを選ぶまで出せない');
   });
 
