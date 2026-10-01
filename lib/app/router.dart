@@ -30,6 +30,7 @@ import '../features/settings/column_layout_screen.dart';
 import '../features/theme/theme_settings_screen.dart';
 import '../features/settings/composer_settings_screen.dart';
 import '../features/settings/learning_screen.dart';
+import '../features/settings/emom_threshold_screen.dart';
 import '../features/settings/legal_screen.dart';
 import '../features/settings/account_security_screen.dart';
 import '../features/settings/notify_token_screen.dart';
@@ -133,6 +134,9 @@ abstract final class Routes {
   /// 通知専用のアクセストークン (D-239)。
   static const settingsNotifyToken = '/settings/notify-token';
   static const settingsLearning = '/settings/learning';
+
+  /// EmoM の閾値 (D-404): トレンドの制限の目安と、その公開。
+  static const settingsEmom = '/settings/emom';
 
   /// カラムの幅 (D-320): 幅の広い画面の小型 / 大型カラムの比。
   static const settingsColumns = '/settings/columns';
@@ -336,6 +340,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'security', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountSecurityScreen()),
             GoRoute(path: 'account-login', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountLoginScreen()),
             GoRoute(path: 'learning', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LearningScreen()),
+            GoRoute(path: 'emom', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const EmomThresholdScreen()),
             GoRoute(path: 'columns', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ColumnLayoutScreen()),
             GoRoute(path: 'theme', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ThemeSettingsScreen()),
             // プラグインボタン (D-210): 宣言されたボタン / 束ねる閾値。

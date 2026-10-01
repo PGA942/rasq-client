@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
@@ -17,6 +19,7 @@ import '../trend/tendency_fows.dart';
 import '../servers/server_badge.dart';
 import '../trend/trend_menu.dart';
 import '../trend/trend_reports.dart' show hiddenTrendKeysProvider;
+import '../trend/trend_restrictions.dart' show trendRestrictionFilterProvider, trendRestrictionsProvider;
 import '../trend/trend_providers.dart';
 import 'search_filter.dart';
 import 'search_history.dart';
@@ -46,14 +49,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
 
+  /// 運営の制限 (D-404) を 10 分おきに読み直す。
+  Timer? _restrictionsTimer;
+
   @override
   void initState() {
     super.initState();
     _focus.addListener(() => setState(() {}));
+    _restrictionsTimer = Timer.periodic(const Duration(minutes: 10), (_) => ref.invalidate(trendRestrictionsProvider));
   }
 
   @override
   void dispose() {
+    _restrictionsTimer?.cancel();
     _controller.dispose();
     _focus.dispose();
     super.dispose();
@@ -75,6 +83,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     // 通報したトレンドは出さない (D-402)。通報の直後のスナックバーで戻せる。
     final hidden = ref.watch(hiddenTrendKeysProvider);
     if (hidden.isNotEmpty) trends = trends.whenData((list) => [for (final t in list) if (!hidden.contains(trendKey(t.tag))) t]);
+    // 運営が制限したトレンド (D-404): 点数がこの端末の EmoM の閾値より大きい(オーバーフローは常に)ものは並べない。
+    // 出どころのサーバー(D-388)ごとの制限と、サーバーを限らない制限を見る。印は出さない。
+    final restricted = ref.watch(trendRestrictionFilterProvider);
+    final allSources = ref.watch(sourcedTrendsProvider).value?.sources;
+    final here = ref.watch(currentAccountProvider);
+    trends = trends.whenData((list) => [
+          for (final t in list)
+            if (!restricted(t.tag, [for (final a in allSources?[trendKey(t.tag)] ?? [?here]) a.instance])) t,
+        ]);
     final today = ref.watch(timelineProvider(DynamicTimelines.featured));
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const [];
@@ -128,6 +145,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         onRefresh: () async {
           ref.invalidate(trendingTagsProvider);
           ref.invalidate(trendFrameTagsProvider);
+          ref.invalidate(trendRestrictionsProvider);
           await ref.read(timelineProvider(DynamicTimelines.featured).notifier).refresh();
         },
         child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
