@@ -16,6 +16,7 @@ import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView, ChildS
 import '../trend/tendency_fows.dart';
 import '../servers/server_badge.dart';
 import '../trend/trend_menu.dart';
+import '../trend/trend_reports.dart' show hiddenTrendKeysProvider;
 import '../trend/trend_providers.dart';
 import 'search_filter.dart';
 import 'search_history.dart';
@@ -71,6 +72,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       final sources = ref.watch(sourcedTrendsProvider).value?.sources;
       if (sources != null) trends = trends.whenData((list) => [for (final t in list) if (sources[trendKey(t.tag)]?.contains(current) ?? true) t]);
     }
+    // 通報したトレンドは出さない (D-402)。通報の直後のスナックバーで戻せる。
+    final hidden = ref.watch(hiddenTrendKeysProvider);
+    if (hidden.isNotEmpty) trends = trends.whenData((list) => [for (final t in list) if (!hidden.contains(trendKey(t.tag))) t]);
     final today = ref.watch(timelineProvider(DynamicTimelines.featured));
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const [];

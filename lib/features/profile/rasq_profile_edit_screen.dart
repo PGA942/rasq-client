@@ -318,7 +318,7 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                               icon: const Icon(Icons.verified_outlined, size: 16),
                               label: const Text('持ち主を確認'),
                             ),
-                          // 投稿もアカウントページに出す (S-027): SNS のアクセストークンを Central に預ける。同意してから。
+                          // 投稿もアカウントページに出す (S-027): SNS のアクセストークンを ORGATE に預ける (D-399)。同意してから。
                           _SnsPostsSwitch(key: ValueKey('rasqProfile.snsPosts.${l.accountKey}'), accountKey: l.accountKey, onMessage: (m) => ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(SnackBar(content: Text(m)))),
                         ]),
                       ),
@@ -409,8 +409,9 @@ class _RoundButton extends StatelessWidget {
 
 /// 「この SNS アカウントの投稿も、アカウントページに出す」(S-027)。
 ///
-/// 入れると、**その SNS のアクセストークンを RASQ Central に預ける**ことになる(Central が、本人の公開の投稿を取りに行くため)。
-/// 重い同意なので、何が起きるかを書いた確認を必ず挟む。切ると、預けたトークンと取ってきた投稿を Central から消す。
+/// 入れると、**その SNS のアクセストークンを ORGATE-Server に預ける**ことになる(D-399。ORGATE が本人の公開の投稿を読み、
+/// 投稿だけを Central のアカウントページへ渡す。トークンは ORGATE から出ない)。
+/// 重い同意なので、何が起きるかを書いた確認を必ず挟む。切ると、預けたトークンと取ってきた投稿を消す。
 class _SnsPostsSwitch extends ConsumerStatefulWidget {
   const _SnsPostsSwitch({super.key, required this.accountKey, required this.onMessage});
   final String accountKey;

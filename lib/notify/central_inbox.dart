@@ -11,7 +11,9 @@ import '../session/session_providers.dart';
 import '../session/session_storage.dart';
 import '../session/sns_share.dart' show handleSnsShareNotices, snsShareRequestKind;
 
-/// Central の受信箱の軽い見回り (D-309)。
+/// 受信箱の軽い見回り (D-309)。受信箱は第 3 段階 (D-400) から **ORGATE-Server** にある([orgateClientProvider]。
+/// アクセストークンが切れていれば 1 回だけ取り直して送り直す)。Central で起きたこと(メンションなど)も、Central から ORGATE へ届いた時点で
+/// 受信箱に入る。名前の `Central` は前の置き場の名残。
 ///
 /// プッシュはまだダミー(S-014: 受信箱に積むだけで APNs / FCM へは送らない)なので、アプリが自分で
 /// `GET /me/notifications`(端末トークン、新しい順)を読む。読むのは **起動 / アプリへ戻ったとき / ログインの変化** の
@@ -24,8 +26,8 @@ import '../session/sns_share.dart' show handleSnsShareNotices, snsShareRequestKi
 /// [handleSnsShareNotices]、D-322)。どちらも通知の画面には出さない(メンションなどの通知欄 (S-026) は、これまでどおり通知の画面が読む)。
 ///
 /// **開いている間の即時の知らせ** (D-322): 読んだあと、`GET /me/notifications/wait`(長いポーリング。新しい項目が積まれるまで
-/// Central が [liveWait] 待って返す)を回し、何か届いたらすぐ読む。アプリが裏へ回ったら止め、戻ったら読み直してまた回す。
-/// 口の無い Central(404)/ ログアウト(401)では止める(次のログインの変化 / 復帰でまた始める)。失敗は間を空けて(上限つき)やり直す。
+/// ORGATE が [liveWait] 待って返す)を回し、何か届いたらすぐ読む。アプリが裏へ回ったら止め、戻ったら読み直してまた回す。
+/// 口の無いサーバー(404)/ ログアウト(401)/ 凍結(403)では止める(次のログインの変化 / 復帰でまた始める)。失敗は間を空けて(上限つき)やり直す。
 /// プッシュ(本物になったら)をタップして開いたときも、起動 / 復帰の読みで同じ受け手へ渡る。
 
 /// 受信箱の 1 件(`notify_outbox` の形: `{id, kind, title, body, payload, status, devices, createdAt, deliveredAt}`)。
@@ -62,10 +64,10 @@ class CentralInbox extends Notifier<int> {
   /// 見た印(セキュアストレージ): `{<accountId>: {"at": RFC3339, "ids": [その時刻の id]}}`。
   static const storageKey = 'notify.inbox.seen.v1';
 
-  /// 1 回に読む数(Central の既定と同じ 30)。
+  /// 1 回に読む数(サーバーの既定と同じ 30)。
   static const limit = 30;
 
-  /// Central が待つ長さ(`wait` 秒)。[OrgateClient] の期限 (20 秒) より短く。
+  /// ORGATE が待つ長さ(`wait` 秒)。[OrgateClient] の期限 (20 秒) より短く。
   static const liveWait = Duration(seconds: 15);
 
   AppLifecycleListener? _lifecycle;
@@ -77,7 +79,7 @@ class CentralInbox extends Notifier<int> {
   Timer? _livePause;
   Completer<void>? _livePauseDone;
 
-  /// アカウントごとの、即時の知らせで最後に受け取った項目の時刻(Central の文字列のまま。Web の DateTime はミリ秒までなので)。
+  /// アカウントごとの、即時の知らせで最後に受け取った項目の時刻(サーバーの文字列のまま。Web の DateTime はミリ秒までなので)。
   final Map<String, String> _liveSince = {};
 
   /// 渡した件数(起動してからの合計。画面では使わない)。
@@ -139,7 +141,7 @@ class CentralInbox extends Notifier<int> {
     var failures = 0;
     bool stopped() => !ref.mounted || gen != _liveGen;
     while (!stopped()) {
-      final client = ref.read(centralClientProvider);
+      final client = ref.read(orgateClientProvider);
       if (client == null) return;
       final RasqAccount? me;
       try {
@@ -168,7 +170,7 @@ class CentralInbox extends Notifier<int> {
           continue;
         }
       } on OrgateException catch (e) {
-        // 口の無い Central / ログアウトした / 権限が無い: 止める(ログインの変化 / 復帰でまた始める)。
+        // 口の無いサーバー / ログアウトした / 権限が無い(凍結): 止める(ログインの変化 / 復帰でまた始める)。
         if (const {'401', '403', '404'}.contains(e.code.code)) return;
         failures++;
       } catch (_) {
@@ -176,13 +178,13 @@ class CentralInbox extends Notifier<int> {
       }
       if (stopped()) return;
       final retry = ref.read(centralInboxLiveProvider).retry;
-      // 失敗は間を空けて(上限 8 倍)。早すぎる空の答え(待たない Central)も詰めて回さない。
+      // 失敗は間を空けて(上限 8 倍)。早すぎる空の答え(待たないサーバー)も詰めて回さない。
       final wait = failures > 0 ? retry * (failures < 8 ? failures : 8) : (DateTime.now().difference(started) < const Duration(seconds: 1) ? retry : Duration.zero);
       if (wait > Duration.zero) await _pause(wait);
     }
   }
 
-  /// 待つ起点: 見た印と、即時の知らせで受け取った最後の時刻の、新しいほう(同じなら Central の文字列のほう)。
+  /// 待つ起点: 見た印と、即時の知らせで受け取った最後の時刻の、新しいほう(同じなら サーバーの文字列のほう)。
   Future<String> _since(String accountId) async {
     final mark = (await _readSeen(ref.read(sessionStorageProvider)))[accountId];
     final seen = mark == null ? null : '${mark['at'] ?? ''}';
@@ -196,7 +198,7 @@ class CentralInbox extends Notifier<int> {
 
   Future<void> _poll() async {
     if (!ref.mounted) return;
-    final client = ref.read(centralClientProvider);
+    final client = ref.read(orgateClientProvider);
     if (client == null) return;
     final RasqAccount? me;
     try {

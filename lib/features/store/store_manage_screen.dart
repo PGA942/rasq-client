@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart' show centralBaseUrlProvider;
+import '../../backend/payments_api.dart' show paidFeaturesProvider;
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../settings/settings_dsl.dart';
@@ -45,7 +46,18 @@ class StoreManageScreen extends ConsumerWidget {
           onTap: () => context.push(Routes.storeUpdateSettings),
         ),
         // ポイント (D-355): 有料プラグインを買う。買うのは Web コンソール(Stripe)。
+        // 公開テスト(ORGATE で有料の機能が止まっている、D-401)は灰色で押せない(コンソールへも誘わない)。
         Builder(builder: (context) {
+          if (!ref.watch(paidFeaturesProvider)) {
+            return const RasqListTile(
+              key: ValueKey('store.manage.points'),
+              leading: Icon(Icons.toll_outlined),
+              title: 'ポイント',
+              subtitle: '公開テストでは使えません',
+              enabled: false,
+              chevron: false,
+            );
+          }
           final points = ref.watch(storePointsProvider).value;
           final next = points?.nextExpiring;
           final console = ref.watch(centralBaseUrlProvider)?.resolve('/console/points');

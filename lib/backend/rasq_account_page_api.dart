@@ -554,7 +554,7 @@ class RasqPostList {
   const RasqPostList({required this.posts, required this.limit, required this.source, this.snsPosts = const [], this.pins = const []});
   final List<RasqAccountPost> posts;
 
-  /// SNS アカウントの投稿 (S-027)。本人が SNS のトークンを Central に預けているぶんだけ(公開 / ホームの投稿、100 件まで)。
+  /// SNS アカウントの投稿 (S-027)。本人が SNS のトークンを ORGATE に預けているぶんだけ(ORGATE が読んで Central へ渡した公開 / ホームの投稿、100 件まで。D-399)。
   final List<RasqSnsPost> snsPosts;
 
   /// 固定投稿 (S-027)。固定した順。
@@ -713,8 +713,12 @@ Uri? _http(Object? v) {
 }
 
 class RasqAccountPageApi {
-  RasqAccountPageApi(this._client);
+  /// [edge] = ORGATE-Server の口(SNS のトークンを預ける口 D-399、通知の受信箱 D-400)。省けば [_client] と同じ(1 つの URL で兼ねる構成 / テスト)。
+  RasqAccountPageApi(this._client, {OrgateClient? edge}) : _edge = edge ?? _client;
   final OrgateClient _client;
+
+  /// ORGATE-Server(D-399: SNS のトークンの保管庫は ORGATE。トークンは ORGATE から出ず、読んだ公開の投稿だけが Central に来る)。
+  final OrgateClient _edge;
 
   Future<RasqPublicProfile> profile(String handle) async => RasqPublicProfile.fromJson(await _client.getJson('/accounts/${Uri.encodeComponent(handle)}'));
 
@@ -742,26 +746,27 @@ class RasqAccountPageApi {
   }
 
   // ── SNS の投稿をまとめて出す / 固定投稿 (S-027) ──
+  // トークンを預ける / 状態 / 取り直しは ORGATE (D-399)。ORGATE が読んだ公開の投稿は Central の `GET /accounts/{handle}/posts` に出る。
   /// 預けているか / 何件持っているか。トークンそのものは返ってこない。サーバーがこの機能を閉じていれば null。
   Future<RasqVaultStatus?> vaultStatus(String accountKey) async {
     try {
-      return RasqVaultStatus.fromJson(await _client.getJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token'));
+      return RasqVaultStatus.fromJson(await _edge.getJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token'));
     } on OrgateException catch (e) {
       if (e.code.code == '501' || e.code.code == '404') return null;
       rethrow;
     }
   }
 
-  /// SNS のアクセストークンを Central に預ける。**本人の明示の同意のあとにだけ**呼ぶ。
+  /// SNS のアクセストークンを ORGATE に預ける (D-399)。**本人の明示の同意のあとにだけ**呼ぶ。
   Future<RasqVaultStatus> depositToken(String accountKey, String token) async =>
-      RasqVaultStatus.fromJson(await _client.putJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token', {'token': token}));
+      RasqVaultStatus.fromJson(await _edge.putJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token', {'token': token}));
 
   /// 預けた鍵を RASQ リスト・クリップにも使うか (D-373 / S-054)。**本人の明示の選択のあとにだけ**呼ぶ。
   Future<RasqVaultStatus> setCollectionsAllowed(String accountKey, bool allowed) async =>
-      RasqVaultStatus.fromJson(await _client.putJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token/collections', {'allowed': allowed}));
+      RasqVaultStatus.fromJson(await _edge.putJson('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token/collections', {'allowed': allowed}));
 
-  /// 預けたトークンと、取ってきた投稿を消す。
-  Future<void> withdrawToken(String accountKey) => _client.delete('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token');
+  /// 預けたトークンと、取ってきた投稿を消す(ORGATE が Central の投稿も消してもらう)。
+  Future<void> withdrawToken(String accountKey) => _edge.delete('/me/sns-accounts/${Uri.encodeComponent(accountKey)}/token');
 
   /// 固定投稿を、この並びに置き換える(5 件まで)。
   Future<void> setPins(List<RasqPin> pins) => _client.putJson('/me/pins', {
@@ -805,9 +810,9 @@ class RasqAccountPageApi {
           if (RasqPostAuthor.fromJson(a) != null) RasqPostAuthor.fromJson(a)!,
       ];
 
-  /// 自分宛ての通知 (S-026): メンション / 返信 / 引用 / AsTell での引用。
+  /// 自分宛ての通知 (S-026): メンション / 返信 / 引用 / AsTell での引用。受信箱は ORGATE ([_edge]、D-400)。
   Future<List<RasqNotice>> notifications({int limit = 50}) async => [
-        for (final n in await _client.getList('/me/notifications', {'limit': '$limit'}))
+        for (final n in await _edge.getList('/me/notifications', {'limit': '$limit'}))
           if (n is Map && RasqNotice.kinds.contains(n['kind'])) RasqNotice.fromJson(n.cast<String, Object?>()),
       ];
 
@@ -879,9 +884,11 @@ class RasqAccountPageApi {
 
 final rasqAccountPageApiProvider = Provider<RasqAccountPageApi?>((ref) {
   final client = ref.watch(centralClientProvider);
+  // SNS のトークンを預ける口は ORGATE (D-399)。
+  final edge = ref.watch(orgateClientProvider);
   // RASQ アカウントを切り替えたら作り直す(D-316: 自分のページ / フィード / 通知 / 預けたトークンの状態は、アカウントごと)。
   ref.watch(currentCentralAccountIdProvider);
-  return client == null ? null : RasqAccountPageApi(client);
+  return client == null ? null : RasqAccountPageApi(client, edge: edge);
 });
 
 /// いまの RASQ アカウントのバンドル(Central にある SNS アカウントの一覧)(D-316)。既存のアカウントへログインした端末で、

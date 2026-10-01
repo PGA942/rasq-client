@@ -10,9 +10,11 @@ import 'rasq_account.dart' show OrgateTokenHolder, orgateTokenHolderProvider;
 
 /// ORGATE-Server(`orgate-server`)への接続 — **本人だけが見る情報**の置き場 (D-398)。
 ///
-/// いま(第 1 段階)受け持つのは、ログイン(端末の発行 / パスワード / メールのコード)・セッションとトークンの取り直し・
+/// 受け持つのは、ログイン(端末の発行 / パスワード / メールのコード)・セッションとトークンの取り直し・
 /// メールアドレス・操作の確認コード・アカウント削除の入口と、Mastodon などアクセストークン発行に `client_secret` が
-/// 要る SNS の OAuth ブローカー (CONTRACT §3)。公開・共有のもの(ストア / AsTell / 投稿 / リスト…)は RASQ Central。
+/// 要る SNS の OAuth ブローカー (CONTRACT §3)(第 1 段階、D-398)。第 2 段階 (D-399) で、SNS のトークンの預け入れ
+/// (`/me/sns-accounts/{key}/token*`。トークンは ORGATE から出ず、読んだ公開の投稿だけが Central に来る)・Web 版の保管庫
+/// (`/me/vault`)・データ同期 (`/me/data`)・端末間の SNS トークン共有 (`/me/sns-share`) も。公開・共有のもの(ストア / AsTell / 投稿 / リスト…)は RASQ Central。
 /// ORGATE が出すアクセストークン(JWT)を、Central にもそのまま Bearer で渡す。
 ///
 /// 接続先は `--dart-define=ORGATE_BASE_URL=...` を既定にし、KV
@@ -81,9 +83,12 @@ final centralConfiguredProvider = Provider<bool>((ref) => ref.watch(centralBaseU
 /// サーバーが返す `{"error": {"code", "message"}}`。code は CONTRACT §9 の
 /// 体系なので、そのまま [ErrorCode] に落ちる。
 class OrgateException implements Exception {
-  OrgateException(this.code, this.message);
+  OrgateException(this.code, this.message, {this.serverCode});
   final ErrorCode code;
   final String message;
+
+  /// サーバーが返した `error.code` の文字列そのもの(`paid_features_disabled` など、[ErrorCode] に無い語)。無ければ null。
+  final String? serverCode;
 
   /// ユーザーに見せる 1 行。
   @override
@@ -124,17 +129,19 @@ class OrgateClient {
   Never _fail(http.Response r) {
     String message = 'サーバーエラー (${r.statusCode})';
     ErrorCode code = ErrorCode.http(r.statusCode);
+    String? serverCode;
     try {
       final body = jsonDecode(utf8.decode(r.bodyBytes));
       if (body is Map && body['error'] is Map) {
         final err = (body['error'] as Map).cast<String, Object?>();
         message = err['message'] as String? ?? message;
-        code = ErrorCode.tryParse(err['code'] as String? ?? '') ?? code;
+        serverCode = err['code'] as String?;
+        code = ErrorCode.tryParse(serverCode ?? '') ?? code;
       }
     } catch (_) {
       // JSON でない応答(プロキシのエラーページ等)は HTTP コードのまま扱う。
     }
-    throw OrgateException(code, message);
+    throw OrgateException(code, message, serverCode: serverCode);
   }
 
   Future<Object?> _send(http.BaseRequest req) async {

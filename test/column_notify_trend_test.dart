@@ -190,12 +190,13 @@ void main() {
     await tester.tap(find.byTooltip('トレンドホームへ戻る'));
     await tester.pumpAndSettle();
 
-    // 「…」→ 通報 → 理由を選んで通報する。受け口が無いので端末に控える(送らない)。
+    // 「…」→ 通報 → 理由を選んで通報する (D-402)。RASQ アカウントが無い(Central に繋がらない)ので端末に控え、あとで送る。
     await tester.tap(find.byKey(const ValueKey('trend.more.月見')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('通報'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('送信はされません'), findsOneWidget);
+    expect(find.textContaining('送信はされません'), findsNothing);
+    expect(find.textContaining('RASQ の審査で確認します'), findsOneWidget);
     await tester.tap(find.text('嫌がらせ・暴言'));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('trend.report.send')));
@@ -203,7 +204,14 @@ void main() {
     final saved = jsonDecode((await storage.read('$trendReportsArea.v1'))!) as Map;
     expect(saved['月見'], containsPair('reason', 'harassment'));
     expect(saved['月見'], containsPair('account', bsky.account.key));
+    expect(saved['月見'], containsPair('sent', false));
     expect(find.textContaining('端末に控えました'), findsOneWidget);
+    // 通報したトレンドは一覧に出ない。スナックバーの「表示に戻す」で戻る(控えは残る)。
+    expect(find.byKey(const ValueKey('trend.tile.月見')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('trend.report.unhide')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('trend.tile.月見')), findsWidgets);
+    expect((jsonDecode((await storage.read('$trendReportsArea.v1'))!) as Map)['月見'], containsPair('hidden', false));
   });
 
   testWidgets('stick FOW がカラムにある間は、そのカラムの中身を縮める(第3カラム)', (tester) async {
