@@ -355,7 +355,7 @@ void main() {
         if (req.url.path.endsWith('/auth/refresh')) {
           expect(req.headers['authorization'], isNull, reason: 'リフレッシュは Bearer なしで、本文のリフレッシュトークンだけ');
           expect((jsonDecode(req.body) as Map)['refreshToken'], 'refresh-1');
-          return http.Response('{"accountId":"a","handle":"rasq_x","accessToken":"access-2","refreshToken":"refresh-2","expiresIn":900}', 200,
+          return http.Response('{"accountId":"a","handle":"rasq_x","accessToken":"access-2","refreshToken":"refresh-2","expiresIn":600}', 200,
               headers: {'content-type': 'application/json'});
         }
         if (req.headers['authorization'] == 'Bearer access-1') {
