@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
 import '../../app/router.dart';
+import '../../backend/payments_api.dart' show paidFeaturesProvider;
 import 'store_install.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
@@ -85,6 +86,8 @@ class _StorePluginTileState extends ConsumerState<StorePluginTile> {
     final muted = scheme.onSurfaceVariant;
     final statusNote = card.status == PluginStatus.published ? null : card.status.label;
     final action = storeTileActionOf(card, widget.installedVersion);
+    // 公開テストでは有料の機能が止まっている (D-401): 金額は出すが押せない。
+    final buyBlocked = action == StoreTileAction.buy && !ref.watch(paidFeaturesProvider);
     final meta = [
       if (card.sizeMb > 0) '${card.sizeMb.toStringAsFixed(card.sizeMb < 1 ? 2 : 1)}MB',
       if (card.version.isNotEmpty) 'v${card.version}',
@@ -124,7 +127,13 @@ class _StorePluginTileState extends ConsumerState<StorePluginTile> {
                   Text('${formatStoreDownloads(card.downloads)} DL', style: RasqTypography.caption.copyWith(color: muted)),
                 ]),
                 const SizedBox(width: 8),
-                _ActionButton(key: ValueKey('store.tile.action.${card.id}'), action: action, price: card.price, busy: _busy, onPressed: action == StoreTileAction.unavailable ? null : () => _act(action)),
+                _ActionButton(
+                    key: ValueKey('store.tile.action.${card.id}'),
+                    action: action,
+                    price: card.price,
+                    busy: _busy,
+                    tooltip: buyBlocked ? '公開テストでは購入できません' : null,
+                    onPressed: action == StoreTileAction.unavailable || buyBlocked ? null : () => _act(action)),
               ]),
               const SizedBox(height: 10),
               Expanded(
@@ -162,8 +171,9 @@ class _StorePluginTileState extends ConsumerState<StorePluginTile> {
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({super.key, required this.action, required this.price, required this.busy, required this.onPressed});
+  const _ActionButton({super.key, required this.action, required this.price, required this.busy, required this.onPressed, this.tooltip});
   final StoreTileAction action;
+  final String? tooltip;
   final double price;
   final bool busy;
   final VoidCallback? onPressed;
@@ -185,9 +195,10 @@ class _ActionButton extends StatelessWidget {
       shape: WidgetStatePropertyAll(StadiumBorder()),
     );
     // 入っていて最新(開く)は控えめに、それ以外は塗りつぶし。
-    return action == StoreTileAction.open
+    final button = action == StoreTileAction.open
         ? OutlinedButton(style: style, onPressed: busy ? null : onPressed, child: child)
         : FilledButton(style: style, onPressed: busy ? null : onPressed, child: child);
+    return tooltip == null ? button : Tooltip(message: tooltip, child: button);
   }
 }
 

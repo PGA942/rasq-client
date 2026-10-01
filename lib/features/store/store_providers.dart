@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../backend/orgate_client.dart';
+import '../../backend/payments_api.dart' show paidFeaturesProvider;
 import '../../backend/rasq_account.dart' show currentCentralAccountIdProvider;
 import '../settings/settings_dsl.dart';
 import '../trend/example_match.dart' show pluginExamplePieces;
@@ -24,14 +25,16 @@ import 'store_models.dart';
 /// ストアクライアント (M4)。接続先が設定されていれば **RASQ Central**
 /// (`rasq-central`, D-138。未設定ならエッジ = `orgate-server` へ縮退)の
 /// `/api/v1`、どちらも無ければモックへ縮退する(サーバー無しでもアプリは動く)。
+/// ポイント / 購入だけは ORGATE-Server の口 ([orgateClientProvider]、トークンの取り直しつき。D-401)。
 /// テストは override して差し替える。
 final storeClientProvider = Provider<StoreClient>((ref) {
   final client = ref.watch(centralClientProvider);
+  final payments = ref.watch(orgateClientProvider);
   // RASQ アカウントを切り替えたら作り直す(D-316: ブックマークなどは、アカウントごと)。
   ref.watch(currentCentralAccountIdProvider);
   // Central につないでいても、アプリに同梱しているサンプル(Central に掲載の無いもの)のページ / 配布物は同梱のカタログで答える (D-256)。
   // D-393: つないでいなければ、同梱の実物だけ(架空の掲載・数字・レビューは出さない)。
-  return client == null ? BundledStoreClient() : BundledFallbackStoreClient(HttpStoreClient(client), BundledStoreClient());
+  return client == null ? BundledStoreClient() : BundledFallbackStoreClient(HttpStoreClient(client, payments: payments), BundledStoreClient());
 });
 
 final storeHomeProvider = FutureProvider((ref) => ref.watch(storeClientProvider).home());
@@ -44,8 +47,9 @@ final storeFilteredSearchProvider = FutureProvider.autoDispose.family<List<Store
 });
 final storePluginProvider = FutureProvider.family<StorePluginDetail?, String>((ref, id) => ref.watch(storeClientProvider).plugin(id));
 
-/// ポイントの残高 (D-355)。取れない(未ログイン / つながらない)= null。
+/// ポイントの残高 (D-355 → ORGATE、D-401)。取れない(未ログイン / つながらない / 公開テストで有料の機能が止まっている)= null。
 final storePointsProvider = FutureProvider.autoDispose<StorePoints?>((ref) async {
+  if (!ref.watch(paidFeaturesProvider)) return null;
   try {
     return await ref.watch(storeClientProvider).points();
   } catch (_) {
