@@ -105,9 +105,10 @@ Future<List<Post>?> _applyTrendScopeGraph(Ref ref, SnsSession session, String sc
 
 /// フォロー中タブ (D-113): `trend.following` スコープのグラフを通した
 /// フォロイー投稿(鎖が無ければそのまま)。
-final trendFollowingPostsProvider = FutureProvider.autoDispose.family<List<Post>, String>((ref, tag) async {
-  final a = await ref.watch(trendAnalysisProvider(tag).future);
-  final s = ref.watch(currentSnsSessionProvider);
+final trendFollowingPostsProvider = FutureProvider.autoDispose.family<List<Post>, TrendQuery>((ref, q) async {
+  final tag = q.tag;
+  final a = await ref.watch(trendAnalysisProvider(q).future);
+  final s = ref.watch(sessionForAccountProvider(q.account));
   if (s == null) return a.followingPosts;
   final posts = await _applyTrendScopeGraph(ref, s, 'trend.following', 'home', a.followingPosts, selfQuery: tag) ?? a.followingPosts;
   // 指向性/刺激性の既定適用 (D-153)。
@@ -117,9 +118,10 @@ final trendFollowingPostsProvider = FutureProvider.autoDispose.family<List<Post>
 
 /// ユーザータブ (D-113): `trend.users` スコープのグラフでタグ投稿を絞って
 /// からユーザーランキングを作り直す(鎖が無ければ従来のランキング)。
-final trendUsersProvider = FutureProvider.autoDispose.family<List<(UserProfile, int)>, String>((ref, tag) async {
-  final a = await ref.watch(trendAnalysisProvider(tag).future);
-  final s = ref.watch(currentSnsSessionProvider);
+final trendUsersProvider = FutureProvider.autoDispose.family<List<(UserProfile, int)>, TrendQuery>((ref, q) async {
+  final tag = q.tag;
+  final a = await ref.watch(trendAnalysisProvider(q).future);
+  final s = ref.watch(sessionForAccountProvider(q.account));
   if (s == null) return a.users;
   final filtered = await _applyTrendScopeGraph(ref, s, 'trend.users', 'search:', a.posts, selfQuery: tag);
   if (filtered == null) return a.users;

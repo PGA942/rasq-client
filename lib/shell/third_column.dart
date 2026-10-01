@@ -9,6 +9,7 @@ import '../app/router.dart';
 import '../features/compose/composer_sheet.dart' show composerFowId;
 import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
 import '../features/child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
+import '../features/notifications/notifications_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_dsl.dart';
 import 'pane_swipe_back.dart';
@@ -172,11 +173,39 @@ bool replacePageInPane(
   return true;
 }
 
+/// 第3カラムが空のときに出すもの (D-056 / D-397)。KV `thirdColumn.v1` の `empty`。
+const thirdColumnEmptyChoices = <(String, String)>[('search', '検索'), ('notifications', '通知'), ('none', '表示しない')];
+
+/// 第3カラムの設定ボタン (D-397): 空のときに何を出すか(検索 / 通知 / 表示しない)を選ぶ。
+/// 検索なら検索欄の横、通知なら通知ヘッダーの右端(以前の押せない ↑ の場所)、表示しないなら右上に置く。
+class ThirdColumnSettingsButton extends ConsumerWidget {
+  const ThirdColumnSettingsButton({super.key, this.size = 18});
+  final double size;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final empty = settingValue(ref, 'thirdColumn', 'empty', 'search') as String? ?? 'search';
+    return RasqIconButton(
+      key: const ValueKey('thirdColumn.settings'),
+      icon: Icons.settings,
+      size: size,
+      tooltip: '第3カラムの設定',
+      onPressed: () async {
+        final box = context.findRenderObject() as RenderBox;
+        final anchor = box.localToGlobal(Offset.zero) & box.size;
+        final manager = ref.read(overlayManagerProvider);
+        final picked = await manager.showDropdown<String>(id: 'thirdColumn.empty', anchor: anchor, dense: true, items: [
+          for (final (v, label) in thirdColumnEmptyChoices) RasqDropdownItem(label, v, checked: v == empty),
+        ]);
+        if (picked != null) await ref.read(settingsAreaProvider('thirdColumn').notifier).set('empty', picked);
+      },
+    );
+  }
+}
+
 /// 第3カラムの中身。empty 設定は設定 DSL と同じ KV 規約(`thirdColumn.v1`)。
 class ThirdColumnView extends ConsumerWidget {
   const ThirdColumnView({super.key});
-
-  static const _emptyChoices = <(String, String)>[('search', '検索'), ('none', '表示しない')];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -213,41 +242,32 @@ class ThirdColumnView extends ConsumerWidget {
     }
 
     final empty = settingValue(ref, 'thirdColumn', 'empty', 'search') as String? ?? 'search';
-    // チャイルドセーフ (D-307): 検索を止めていれば出さない。
-    final blockedSearch = ref.watch(childGateProvider).routeBlockReason('/search');
+    // チャイルドセーフ (D-307): 検索 / 通知を止めていれば出さない。
+    final gate = ref.watch(childGateProvider);
+    // RASQ アカウント / SNS アカウントを切り替えたら、検索 / 通知を作り直す (D-397): 入力中の語やタブの位置も含めて、
+    // 前のアカウントのものを残さない(左カラムと同じアカウントで開く)。
+    final accountKey = '${ref.watch(currentRasqAccountProvider)?.id}|${ref.watch(currentAccountProvider)?.key}|${ref.watch(bundleViewProvider)}';
+    final blocked = switch (empty) {
+      'search' => gate.routeBlockReason('/search'),
+      'notifications' => gate.routeBlockReason('/notifications'),
+      _ => null,
+    };
+    // 設定ボタン (D-397): 検索は検索欄の横、通知は通知ヘッダーの右端。表示しない / 止められているときは右上に置く。
+    Widget withCornerButton(Widget body) => Column(children: [
+          const SizedBox(height: 32, child: Row(children: [Spacer(), ThirdColumnSettingsButton(), SizedBox(width: 4)])),
+          Expanded(child: body),
+        ]);
     return PaneScope(
       entry: null,
-      child: Column(children: [
-        SizedBox(
-          height: 32,
-          child: Row(children: [
-            const Spacer(),
-            Builder(builder: (ctx) {
-              return RasqIconButton(
-                icon: Icons.settings,
-                size: 18,
-                tooltip: '第3カラムの設定',
-                onPressed: () async {
-                  final box = ctx.findRenderObject() as RenderBox;
-                  final anchor = box.localToGlobal(Offset.zero) & box.size;
-                  final manager = ref.read(overlayManagerProvider);
-                  final picked = await manager.showDropdown<String>(id: 'thirdColumn.empty', anchor: anchor, dense: true, items: [
-                    for (final (v, label) in _emptyChoices) RasqDropdownItem(label, v, checked: v == empty),
-                  ]);
-                  if (picked != null) await ref.read(settingsAreaProvider('thirdColumn').notifier).set('empty', picked);
-                },
-              );
-            }),
-            const SizedBox(width: 4),
-          ]),
-        ),
-        Expanded(
-          child: switch (empty) {
-            'none' => RasqEmptyView(title: '第3カラム', hint: rasqDetail(context, '開いている画面をここへ移動できます', 'FOW をここへ移動できます(M5c)')),
-            _ => blockedSearch != null ? ChildSafeBlockedView(message: blockedSearch) : const SearchScreen(),
-          },
-        ),
-      ]),
+      child: KeyedSubtree(
+        key: ValueKey('thirdColumn.empty.$empty.$accountKey'),
+        child: switch (empty) {
+          _ when blocked != null => withCornerButton(ChildSafeBlockedView(message: blocked)),
+          'none' => withCornerButton(RasqEmptyView(title: '第3カラム', hint: rasqDetail(context, '開いている画面をここへ移動できます', 'FOW をここへ移動できます(M5c)'))),
+          'notifications' => const NotificationsScreen(headerTrailing: ThirdColumnSettingsButton(size: 20)),
+          _ => const SearchScreen(inThirdColumn: true, searchTrailing: ThirdColumnSettingsButton()),
+        },
+      ),
     );
   }
 }

@@ -21,9 +21,15 @@ class TrendAnalysis {
 
 /// Fetches up to ~60 tag posts, checks which authors are followed
 /// (`users/relation`), and ranks authors by reactions (`users/show` for tiles).
-final trendAnalysisProvider = FutureProvider.autoDispose.family<TrendAnalysis, String>((ref, tag) async {
+///
+/// [TrendQuery.account] (D-397) = そのアカウント(`AccountId.key`)のセッションで読む(トレンドを出したアカウント /
+/// 「別のアカウントで開く」で選んだアカウント)。null = 現在のアカウント。
+typedef TrendQuery = ({String tag, String? account});
+
+final trendAnalysisProvider = FutureProvider.autoDispose.family<TrendAnalysis, TrendQuery>((ref, q) async {
+  final tag = q.tag;
   ref.watch(currentAccountProvider);
-  final s = ref.watch(currentSnsSessionProvider);
+  final s = ref.watch(sessionForAccountProvider(q.account));
   if (s == null) return const TrendAnalysis(posts: [], followingPosts: [], users: []);
   final posts = <Post>[];
   String? cursor;

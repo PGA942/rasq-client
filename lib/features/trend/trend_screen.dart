@@ -18,6 +18,7 @@ import '../users/user_list.dart';
 import '../vc/astell_actions.dart';
 import '../vc/astell_tile.dart' show AstellTileStrip;
 import 'tendency_fows.dart';
+import '../servers/server_badge.dart';
 import 'trend_analysis.dart';
 import 'trend_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -30,8 +31,12 @@ import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 /// 常時表示。関連順は SearchRanker(ルールベース実働 + GLiNER/SigLIP は
 /// ml.infer 配線後に有効, D-022)。選択中タブの再タップでも並び替えメニュー。
 class TrendScreen extends ConsumerStatefulWidget {
-  const TrendScreen({super.key, required this.tag});
+  const TrendScreen({super.key, required this.tag, this.account});
   final String tag;
+
+  /// このアカウント(`AccountId.key`)で開く (D-397): トレンドを出したアカウント / 「別のアカウントで開く」で選んだもの。
+  /// null = 現在のアカウント(アカウントを切り替えるとついてくる)。
+  final String? account;
   @override
   ConsumerState<TrendScreen> createState() => _TrendScreenState();
 }
@@ -40,12 +45,14 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
   final _scroll = ScrollController();
   late final _searchController = TextEditingController(text: widget.tag);
   TimelineKind get _kind => DynamicTimelines.tag(widget.tag);
+  TrendQuery get _q => (tag: widget.tag, account: widget.account);
+  AsyncNotifierProvider<TimelineNotifier, TimelineState> get _tl => timelineFor(_kind, account: widget.account);
 
   @override
   void initState() {
     super.initState();
     _scroll.addListener(() {
-      if (_scroll.position.extentAfter < 600) ref.read(timelineProvider(_kind).notifier).loadMore();
+      if (_scroll.position.extentAfter < 600) ref.read(_tl.notifier).loadMore();
     });
   }
 
@@ -58,14 +65,14 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(currentSnsSessionProvider);
+    final session = ref.watch(sessionForAccountProvider(widget.account));
     final actions = session?.actions ?? const [];
-    final tl = ref.watch(timelineProvider(_kind));
+    final tl = ref.watch(_tl);
     // ノードグラフ実配線 (D-113): trend.following / trend.users スコープ。
-    final following = ref.watch(trendFollowingPostsProvider(widget.tag));
+    final following = ref.watch(trendFollowingPostsProvider(_q));
     final activity = ref.watch(trendFollowingActivityProvider(widget.tag)).value;
-    final rankedUsers = ref.watch(trendUsersProvider(widget.tag));
-    final notifier = ref.read(timelineProvider(_kind).notifier);
+    final rankedUsers = ref.watch(trendUsersProvider(_q));
+    final notifier = ref.read(_tl.notifier);
     final manager = ref.watch(overlayManagerProvider);
     final filter = ref.watch(searchFilterProvider);
     final trends = ref.watch(trendingTagsProvider);
@@ -73,6 +80,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
       for (final t in trends.value ?? const <TrendTag>[])
         if (t.tag != widget.tag) t.tag,
     ].take(maxGenreChips).toList();
+    final opened = widget.account == null ? null : ref.watch(sessionsProvider).value?.allSessions.where((x) => x.account.key == widget.account).firstOrNull?.account;
     final tabs = [const RasqTabItem('ノート'), const RasqTabItem('フォロー中'), const RasqTabItem('ユーザー')];
 
     // チャイルドセーフ (D-307): 検索結果も TL と同じ絞り込み。
@@ -111,7 +119,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   genreCandidates: genreCandidates,
                   onSubmitted: (q) {
                     final tag = q.trim().replaceFirst(RegExp(r'^#'), '');
-                    if (tag.isNotEmpty && tag != widget.tag) context.replaceTrend(tag);
+                    if (tag.isNotEmpty && tag != widget.tag) context.replaceTrend(tag, account: widget.account);
                   },
                 ),
               ),
@@ -127,6 +135,8 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                 },
               ),
             ),
+            // どのアカウントで開いているか (D-397): アカウントを決めて開いたときだけ、サーバーの印を出す。
+            if (opened != null) Padding(padding: const EdgeInsets.only(left: RasqSpacing.xs), child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: ServerBadge(key: const ValueKey('trend.openedAs'), account: opened))),
             // トレンドもタイムラインと同じ (D-090/D-103): RAi は TL のタブ行
             // では隠し、ノード設定だけ置く。
             // TL 系は全部同 UI (D-124): 簡略版カスタマイズ画面へ。
@@ -136,10 +146,10 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
             child: TabBarView(children: [
               RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(trendAnalysisProvider(widget.tag));
-                  ref.invalidate(trendFollowingPostsProvider(widget.tag));
+                  ref.invalidate(trendAnalysisProvider(_q));
+                  ref.invalidate(trendFollowingPostsProvider(_q));
                   ref.invalidate(trendFollowingActivityProvider(widget.tag));
-                  ref.invalidate(trendUsersProvider(widget.tag));
+                  ref.invalidate(trendUsersProvider(_q));
                   await notifier.refresh();
                 },
                 child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
