@@ -70,12 +70,15 @@ class RasqFloatingHomeHeader extends StatelessWidget {
 
 /// 通知ヘッダー: like home but no VC widget, explicit title.
 class RasqNotificationHeader extends StatelessWidget implements PreferredSizeWidget {
-  const RasqNotificationHeader({super.key, required this.me, this.onAvatarTap, this.onTrailingTap, this.title});
+  const RasqNotificationHeader({super.key, required this.me, this.onAvatarTap, this.onTrailingTap, this.title, this.trailing});
 
   final UserSummary me;
   final VoidCallback? onAvatarTap;
   final VoidCallback? onTrailingTap;
   final String? title;
+
+  /// 右端の ↑ の代わりに置く部品(第3カラムの通知では第3カラムの設定ボタン、D-397)。
+  final Widget? trailing;
 
   @override
   Size get preferredSize => const Size.fromHeight(RasqSizes.headerHeight);
@@ -84,7 +87,7 @@ class RasqNotificationHeader extends StatelessWidget implements PreferredSizeWid
   Widget build(BuildContext context) => _HeaderBar(
         leading: _AvatarButton(me: me, onTap: onAvatarTap),
         middle: title == null ? const SizedBox.shrink() : Text(title!, style: RasqTypography.title),
-        trailing: RasqIconButton(icon: Icons.keyboard_arrow_up, onPressed: onTrailingTap, tooltip: '先頭へ'),
+        trailing: trailing ?? RasqIconButton(icon: Icons.keyboard_arrow_up, onPressed: onTrailingTap, tooltip: '先頭へ'),
       );
 }
 

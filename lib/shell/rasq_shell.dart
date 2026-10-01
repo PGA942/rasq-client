@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_overlay/rasq_overlay.dart' show FowStickPadding;
 
 import '../app/providers.dart';
 import '../backend/rasq_account.dart';
@@ -77,7 +78,8 @@ class _MobileLayout extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       // 見守りの時間の帯 (D-307)。
-      body: Column(children: [const ChildSafeWindowBanner(), Expanded(child: shell)]),
+      // 畳まれた stick FOW があれば、そのぶん中身を縮める (D-397)。
+      body: Column(children: [const ChildSafeWindowBanner(), Expanded(child: FowStickPadding(manager: ref.watch(overlayManagerProvider), child: shell))]),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.onSurface, width: 1.2))),
         child: NavigationBar(
@@ -165,14 +167,18 @@ class _TabletLayout extends ConsumerWidget {
               child: Column(children: [
                 const ChildSafeWindowBanner(),
                 Expanded(
-                  child: PaneSwipeBack(
-                    key: const ValueKey('pane.swipe.left'),
-                    canBack: () => GoRouter.of(context).canPop(),
-                    onBack: () {
-                      final router = GoRouter.of(context);
-                      if (router.canPop()) router.pop();
-                    },
-                    child: shell,
+                  // 畳まれた stick FOW がこのカラムにあれば、そのぶん中身を縮める (D-397)。
+                  child: FowStickPadding(
+                    manager: ref.watch(overlayManagerProvider),
+                    child: PaneSwipeBack(
+                      key: const ValueKey('pane.swipe.left'),
+                      canBack: () => GoRouter.of(context).canPop(),
+                      onBack: () {
+                        final router = GoRouter.of(context);
+                        if (router.canPop()) router.pop();
+                      },
+                      child: shell,
+                    ),
                   ),
                 ),
               ]),
@@ -184,7 +190,7 @@ class _TabletLayout extends ConsumerWidget {
             child: Container(
               decoration: BoxDecoration(border: Border(left: BorderSide(color: scheme.outlineVariant))),
               // VC ミニプレイヤーのスタブは撤去 (D-178): AsTell は FOW で動く。
-              child: const SafeArea(child: ThirdColumnView()),
+              child: SafeArea(child: FowStickPadding(manager: ref.watch(overlayManagerProvider), column: 1, child: const ThirdColumnView())),
             ),
           ),
         ]);

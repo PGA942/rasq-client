@@ -64,6 +64,8 @@ class OverlayHost extends StatelessWidget {
     final lift = fows.any((e) => e.fow?.aboveSidebar ?? false) && entries.any((e) => e.layer == OverlayLayer.sidebar);
     final out = <Widget>[child];
     var placed = fows.isEmpty;
+    // FOW が無ければ、カラムを縮める量 (D-397) も無し。
+    if (fows.isEmpty) manager.setFowStickReserve(const {});
     for (final e in entries) {
       if (e.layer == OverlayLayer.fow) {
         if (!placed && !lift) {
@@ -156,6 +158,7 @@ class OverlayHost extends StatelessWidget {
           pinnedWidth: fowPinnedWidth,
           entries: fows,
           suspended: manager.isFowSuspended,
+          onStickReserve: manager.setFowStickReserve,
           buildContent: (e) {
             final handle = manager.handleFor(e);
             Widget content = Builder(builder: (ctx) => e.builder(ctx, handle));
@@ -254,8 +257,11 @@ class _FowSwitcher extends StatelessWidget {
 /// 複数の FOW は**重ねて**表示され(最前面のみ影)、切り替えはハンドル
 /// クリックの FOW スイッチャーで行う。
 class _FowColumn extends StatelessWidget {
-  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.dockInset, this.topInset, this.topClearance, this.columns, this.pinnedWidth = 320, this.suspended});
+  const _FowColumn({required this.entries, required this.buildContent, required this.onCancel, required this.onConfirm, required this.onShowSwitcher, this.dockInset, this.topInset, this.topClearance, this.columns, this.pinnedWidth = 320, this.suspended, this.onStickReserve});
   final List<RasqOverlayEntry> entries;
+
+  /// stick の FOW がカラムの下端に占めている高さ(列スロットの index → 高さ)を知らせる口 (D-397)。
+  final void Function(Map<int, double> reserve)? onStickReserve;
 
   /// 退避中 (D-169): Offstage で生かす(レイアウトからは外す)。
   final bool Function(RasqOverlayEntry e)? suspended;
@@ -397,6 +403,8 @@ class _FowColumn extends StatelessWidget {
           }
 
           final children = <Widget>[];
+          // stick のぶんカラムを縮める (D-397): 畳まれた stick FOW が下端に置かれていれば、重なるカラムにその高さを知らせる。
+          final reserve = <int, double>{};
           for (final e in entries) {
             final s = e.fow ?? FowSpec();
             s.settleMove = (dx, dy) => settle(s, dx, dy);
@@ -470,6 +478,14 @@ class _FowColumn extends StatelessWidget {
             }
             // 置いた矩形を記録 (D-215): 上側基準なら padTop から、下側基準なら padBottom の上に h。
             s.laidOut = (suspended?.call(e) ?? false) ? null : Rect.fromLTWH(left, topSide ? padTop : hostH - padBottom - h, panelW, h);
+            // 下端に置いた stick(壁付け / アンカー / 上付きは除く)。横に重なるカラムぜんぶ(またがって出ていれば両方)。
+            if (!(suspended?.call(e) ?? false) && !pinned && anchor == null && !topSide && s.isStick) {
+              for (var i = 0; i < effSlots.length; i++) {
+                final sl = effSlots[i];
+                final overlap = (left + panelW < sl.x + sl.width ? left + panelW : sl.x + sl.width) - (left > sl.x ? left : sl.x);
+                if (overlap > 1 && h > (reserve[i] ?? 0)) reserve[i] = h;
+              }
+            }
             children.add(Positioned(
               left: left,
               width: panelW,
@@ -513,6 +529,7 @@ class _FowColumn extends StatelessWidget {
               ),
             ));
           }
+          onStickReserve?.call(reserve);
           return Stack(children: children);
         },
       );
@@ -746,4 +763,27 @@ class _DropdownLayout extends SingleChildLayoutDelegate {
 
   @override
   bool shouldRelayout(_DropdownLayout oldDelegate) => oldDelegate.anchor != anchor;
+}
+
+/// stick の FOW のぶんカラムの中身を縮める (D-397)。畳まれた stick FOW がこのカラム([column] = 列スロットの index)の
+/// 下端にある間は、中身をその高さだけ上に詰めて残りの場所に並べる(FOW に隠れない)。高さはホストが
+/// [OverlayManager.fowStickReserve] に書く。stick を展開したとき / 閉じたときは元に戻る。
+class FowStickPadding extends StatelessWidget {
+  const FowStickPadding({super.key, required this.manager, this.column = 0, required this.child});
+  final OverlayManager manager;
+  final int column;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<Map<int, double>>(
+        valueListenable: manager.fowStickReserve,
+        // 部品の形は変えない(中身の State を作り直さない)。高さは FOW の高さのアニメーションと同じ速さで動かす。
+        builder: (context, reserve, child) => AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.only(bottom: reserve[column] ?? 0),
+          child: child,
+        ),
+        child: child,
+      );
 }

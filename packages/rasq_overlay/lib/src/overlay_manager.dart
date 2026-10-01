@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 
 import 'overlay_entry.dart';
 import 'overlay_layer.dart';
@@ -114,7 +115,23 @@ class OverlayManager extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    fowStickReserve.dispose();
     super.dispose();
+  }
+
+  // ---- stick FOW のぶんカラムを縮める (D-397) ---------------------------
+
+  /// stick(畳まれている)FOW がカラムの下端に占めている高さ。キー = 列スロットの index(単一スロットは 0)。
+  /// ホストのレイアウトが書き、アプリのカラムは中身をこのぶん縮めて残りに並べる([FowStickPadding])。
+  final ValueNotifier<Map<int, double>> fowStickReserve = ValueNotifier(const {});
+
+  /// [fowStickReserve] を書き換える(変わったときだけ)。ホストはレイアウト中に呼ぶので、書くのはフレームの後。
+  void setFowStickReserve(Map<int, double> next) {
+    if (_disposed || mapEquals(fowStickReserve.value, next)) return;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (_disposed || mapEquals(fowStickReserve.value, next)) return;
+      fowStickReserve.value = next;
+    });
   }
 
   void setFowSwitcher(bool open) {

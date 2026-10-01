@@ -15,6 +15,7 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView, ChildSafeGreyed;
 import '../trend/tendency_fows.dart';
 import '../servers/server_badge.dart';
+import '../trend/trend_menu.dart';
 import '../trend/trend_providers.dart';
 import 'search_filter.dart';
 import 'search_history.dart';
@@ -27,7 +28,14 @@ import 'search_filter_bar_view.dart';
 /// 検索欄にフォーカスが当たると下方向に拡幅して検索フィルタ行が現れる
 /// (D-021。設定後は常時表示、結果画面のトレンドTLへ引き継がれる)。
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.inThirdColumn = false, this.searchTrailing});
+
+  /// 第3カラムの検索 (D-397): 左カラムと同じアカウントで動く。個別の SNS アカウントを選んでいる間は、アイコンも
+  /// トレンドもその SNS アカウントのもの(総合表示 = RASQ アカウントのときは D-388 のとおり全部から集める)。
+  final bool inThirdColumn;
+
+  /// 検索欄の横に置く部品(第3カラムの設定ボタン、D-397)。
+  final Widget? searchTrailing;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -52,9 +60,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final me = ref.watch(rasqAccountProvider);
+    // 第3カラムでは左カラム(ホームのヘッダー)と同じ: 総合表示なら RASQ アカウント、個別なら SNS アカウント (D-397)。
+    final single = widget.inThirdColumn && !ref.watch(bundleViewProvider);
+    final me = single ? ref.watch(currentUserProvider) : ref.watch(rasqAccountProvider);
     final scheme = Theme.of(context).colorScheme;
-    final trends = ref.watch(trendFrameTagsProvider); // トレンド枠ノード対応 (D-113)
+    var trends = ref.watch(trendFrameTagsProvider); // トレンド枠ノード対応 (D-113)
+    if (single) {
+      // 個別の SNS アカウントのときは、そのアカウントが出したトレンドだけ(出どころの分からない枠の語は残す)。
+      final current = ref.watch(currentAccountProvider);
+      final sources = ref.watch(sourcedTrendsProvider).value?.sources;
+      if (sources != null) trends = trends.whenData((list) => [for (final t in list) if (sources[trendKey(t.tag)]?.contains(current) ?? true) t]);
+    }
     final today = ref.watch(timelineProvider(DynamicTimelines.featured));
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const [];
@@ -91,6 +107,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
                 ),
               ),
+              // 第3カラムの設定 (D-397): 検索欄の横。
+              if (widget.searchTrailing case final trailing?) Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: trailing),
             ]),
           ),
           Expanded(child: _home(context, scheme, trends, today, actions)),
@@ -124,7 +142,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             error: (e, _) => [RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), compact: true, onRetry: () => ref.invalidate(trendFrameTagsProvider), retryLabel: '再読み込み')],
             data: (list) => list.isEmpty
                 ? const [RasqEmptyView(title: 'トレンドはありません', hint: 'トレンドの取得は準備中です')]
-                : [for (final t in list.take(8)) _TrendTile(trend: t, onTap: () => context.pushTrend(t.tag))],
+                : [for (final t in list.take(8)) TrendTile(trend: t)],
           ),
           // トレンドプラグインのサジェスト (D-167、スロット `trend.suggest`)。
           _TrendSuggestions(recent: [for (final t in trends.value ?? const <TrendTag>[]) t.tag]),
@@ -147,19 +165,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 }
 
-class _TrendTile extends ConsumerWidget {
-  const _TrendTile({required this.trend, required this.onTap});
+/// 検索ホームのトレンドの行。タップ = **そのトレンドを出したアカウント**で開く (D-397)。「…」= 別のアカウントで開く / 通報。
+class TrendTile extends ConsumerWidget {
+  const TrendTile({super.key, required this.trend});
   final TrendTag trend;
-  final VoidCallback onTap;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     final count = trend.postsCount ?? trend.usersCount;
     // どのサーバーのトレンドか (D-388): 以前の波形の代わりに「{サーバーのアイコン} サーバー名」(全部の SNS で)。
-    final sources = ref.watch(sourcedTrendsProvider).value?.sources[trendKey(trend.tag)] ?? [?ref.watch(currentAccountProvider)];
+    final current = ref.watch(currentAccountProvider);
+    final found = ref.watch(sourcedTrendsProvider).value?.sources[trendKey(trend.tag)];
+    final sources = found ?? [?current];
+    // 開くアカウント (D-397)。印もそのアカウントを先に出す。
+    final openAs = trendOpenAccount(sources, current);
+    final shown = [?openAs, for (final a in sources) if (a != openAs) a];
     return InkWell(
-      onTap: onTap,
+      key: ValueKey('trend.tile.${trend.tag}'),
+      onTap: () => openTrendAs(context, ref, trend.tag, found == null ? null : openAs),
       child: Container(
         decoration: BoxDecoration(border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
         padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
@@ -176,8 +200,19 @@ class _TrendTile extends ConsumerWidget {
               ]),
             ]),
           ),
-          if (sources.isNotEmpty) Flexible(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: ServerBadge(key: ValueKey('trend.server.${trend.tag}'), account: sources.first, more: sources.length - 1))),
-          RasqIconButton(icon: Icons.more_horiz, size: 18, onPressed: () {}, tooltip: 'メニュー'),
+          if (shown.isNotEmpty) Flexible(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: ServerBadge(key: ValueKey('trend.server.${trend.tag}'), account: shown.first, more: shown.length - 1))),
+          Builder(builder: (bctx) {
+            return RasqIconButton(
+              key: ValueKey('trend.more.${trend.tag}'),
+              icon: Icons.more_horiz,
+              size: 18,
+              tooltip: 'メニュー',
+              onPressed: () {
+                final box = bctx.findRenderObject() as RenderBox;
+                showTrendMenu(context, ref, trend: trend, sources: sources, anchor: box.localToGlobal(Offset.zero) & box.size);
+              },
+            );
+          }),
         ]),
       ),
     );

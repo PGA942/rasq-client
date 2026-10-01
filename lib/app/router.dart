@@ -303,7 +303,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               StatefulShellBranch(routes: [GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen(), routes: [_postRoute, _userRoute])]),
               StatefulShellBranch(routes: [
                 GoRoute(path: Routes.search, builder: (_, _) => const SearchScreen(), routes: [
-                  GoRoute(path: 'trend/:tag', builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!)),
+                  GoRoute(path: 'trend/:tag', builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!, account: s.uri.queryParameters['account'])),
                   _postRoute,
                   _userRoute,
                 ]),
@@ -364,7 +364,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, s) => FollowsScreen(userId: s.pathParameters['id']!, initialFollowers: s.uri.queryParameters['tab'] == 'followers', user: s.extra is UserSummary ? s.extra as UserSummary : null),
             ),
           ]),
-          GoRoute(path: '/trend/:tag', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!)),
+          GoRoute(path: '/trend/:tag', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!, account: s.uri.queryParameters['account'])),
           // ノードプログラミング (D-090): TL/トレンド/投稿先のカスタマイズ。
           GoRoute(path: '/nodes/:scope', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => NodeEditorScreen(scope: Uri.decodeComponent(s.pathParameters['scope']!))),
           // TL カスタマイズの簡略版 (D-121): コンポーネント積み → グラフに

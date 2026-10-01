@@ -40,7 +40,10 @@ final unreadNotificationCountProvider = Provider<int>((ref) => ref.watch(notific
 /// 通知 (すべて / フォロー中). 4 tile types (アクション系 / フォロー系 / 投稿タイル系 / タイマー系),
 /// 長押しドロップダウン(一括既読・通知オフ)は下ナビ側、⚙ = 通知プロファイル設定.
 class NotificationsScreen extends ConsumerWidget {
-  const NotificationsScreen({super.key});
+  const NotificationsScreen({super.key, this.headerTrailing});
+
+  /// ヘッダー右端の ↑(まだ押せない)の代わりに置く部品。第3カラムに出すときは第3カラムの設定ボタン (D-397)。
+  final Widget? headerTrailing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -61,7 +64,7 @@ class NotificationsScreen extends ConsumerWidget {
       length: tabs.length,
       initialIndex: startFollowing && tabs.length > 1 ? 1 : 0,
       child: Scaffold(
-        appBar: RasqNotificationHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref)),
+        appBar: RasqNotificationHeader(me: me, onAvatarTap: () => RasqShell.openSidebar(context, ref), trailing: headerTrailing),
         body: Column(children: [
           Row(children: [
             Expanded(child: RasqTabs(items: tabs, showChevron: false)),

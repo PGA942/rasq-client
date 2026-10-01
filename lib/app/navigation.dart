@@ -96,19 +96,21 @@ extension RasqNavigation on BuildContext {
   Future<MediaEditResult?> pushProMediaEditor({required Uint8List bytes, required String name, required String mimeType, List<ProEditorExtraAction> extraActions = const []}) =>
       push<MediaEditResult>(Routes.mediaEditorPro, extra: ProMediaEditorArgs(bytes: bytes, name: name, mimeType: mimeType, extraActions: extraActions));
 
-  void pushTrend(String tag) {
-    final loc = '${_inTab ? '${Routes.search}/trend' : '/trend'}/${Uri.encodeComponent(tag)}';
-    if (_inTab && openPageInPanes(this, id: 'trend:$tag', title: '#$tag', location: loc, builder: (_) => TrendScreen(tag: tag))) return;
+  /// トレンドTL。[account] (D-397) = そのアカウント(`AccountId.key`)で開く(トレンドを出したアカウント /
+  /// 「別のアカウントで開く」)。null = 現在のアカウント。
+  void pushTrend(String tag, {String? account}) {
+    final loc = '${_inTab ? '${Routes.search}/trend' : '/trend'}/${Uri.encodeComponent(tag)}${_trendQuery(account)}';
+    if (_inTab && openPageInPanes(this, id: 'trend:$tag${account == null ? '' : '@$account'}', title: '#$tag', location: loc, builder: (_) => TrendScreen(tag: tag, account: account))) return;
     push(loc);
   }
 
-  /// トレンドTL上で検索を続ける(現在の結果画面を置き換える)。
-  void replaceTrend(String tag) {
+  /// トレンドTL上で検索を続ける(現在の結果画面を置き換える)。開いているアカウント [account] はそのまま。
+  void replaceTrend(String tag, {String? account}) {
     // 第3カラム内 (D-061): entry を差し替える(第2カラムへは移さない)。
-    if (replacePageInPane(this, id: 'trend:$tag', title: '#$tag', location: '${Routes.search}/trend/${Uri.encodeComponent(tag)}', builder: (_) => TrendScreen(tag: tag))) return;
+    if (replacePageInPane(this, id: 'trend:$tag${account == null ? '' : '@$account'}', title: '#$tag', location: '${Routes.search}/trend/${Uri.encodeComponent(tag)}${_trendQuery(account)}', builder: (_) => TrendScreen(tag: tag, account: account))) return;
     final loc = GoRouterState.of(this).matchedLocation;
     final base = loc.startsWith('/trend') ? '/trend' : '${Routes.search}/trend';
-    pushReplacement('$base/${Uri.encodeComponent(tag)}');
+    pushReplacement('$base/${Uri.encodeComponent(tag)}${_trendQuery(account)}');
   }
 
   void pushDmRoom(DmRoom room) => push('${Routes.dm}/room/${Uri.encodeComponent(room.peer.id)}', extra: room);
@@ -141,3 +143,6 @@ bool routeInHistory(RouteMatchList config, String route) {
   }
   return config.matches.any(walk);
 }
+
+/// トレンドTL のアカウント指定 (D-397): `?account=<AccountId.key>`。
+String _trendQuery(String? account) => account == null ? '' : '?account=${Uri.encodeQueryComponent(account)}';

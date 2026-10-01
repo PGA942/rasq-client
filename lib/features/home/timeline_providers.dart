@@ -75,10 +75,13 @@ class TimelineState {
 /// One timeline of the current account. Pages flow: plugin → posts + action
 /// states → Store (状態はDSLの外) → rows receive props.
 class TimelineNotifier extends AsyncNotifier<TimelineState> {
-  TimelineNotifier(this.kind);
+  TimelineNotifier(this.kind, [this.accountKey]);
   final TimelineKind kind;
 
-  SnsSession? get _session => ref.read(currentSnsSessionProvider);
+  /// このアカウント(`AccountId.key`)のセッションで読む (D-397: トレンドを出したアカウントで開く)。null = 現在のアカウント。
+  final String? accountKey;
+
+  SnsSession? get _session => accountKey == null ? ref.read(currentSnsSessionProvider) : ref.read(sessionForAccountProvider(accountKey));
 
   /// 総合TL (D-088) のアカウント別カーソル。build で作り直す。
   Map<String, String> _bundleCursors = {};
@@ -162,7 +165,12 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
 
   @override
   Future<TimelineState> build() async {
-    ref.watch(currentAccountProvider); // rebuild per account
+    // rebuild per account(アカウント指定ならそのアカウントのセッションが変わったとき)
+    if (accountKey == null) {
+      ref.watch(currentAccountProvider);
+    } else {
+      ref.watch(sessionForAccountProvider(accountKey));
+    }
     // チャイルドセーフ (D-307): 判定の強さ / 止める話題 / 見守りの時間が変われば取り直す。
     ref.watch(childGateProvider.select((g) => g.timelineSignature));
     if (kind == childSafeWindowKind) return TimelineState(posts: await _fetchChildWindow());
@@ -443,7 +451,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
         // アカウント分離 (D-108): グラフ/storage.safe は持ち主アカウントの
         // 領域。ノード TL タブは作ったアカウントのグラフ + セッションで動く
         // (バンドルの集合表示でも中身が持ち主のまま)。
-        var graphAccKey = ref.read(currentAccountProvider)?.key;
+        var graphAccKey = accountKey ?? ref.read(currentAccountProvider)?.key;
         var graphSession = session;
         if (kind.id.startsWith('node:')) {
           final owner = ref.read(allNodeTabsProvider).where((t) => t.$2.id == kind.id).firstOrNull;
@@ -689,6 +697,14 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
 }
 
 final timelineProvider = AsyncNotifierProvider.family<TimelineNotifier, TimelineState, TimelineKind>(TimelineNotifier.new);
+
+/// アカウントを決めた TL (D-397): トレンドを出したアカウント / 選んだアカウントでトレンドを開くとき。
+/// [account] が null なら [timelineProvider] と同じく現在のアカウント。
+typedef AccountTimeline = ({String? account, TimelineKind kind});
+final accountTimelineProvider = AsyncNotifierProvider.family<TimelineNotifier, TimelineState, AccountTimeline>((a) => TimelineNotifier(a.kind, a.account));
+
+/// [account] の TL。null なら現在のアカウントの TL([timelineProvider])をそのまま使う。
+AsyncNotifierProvider<TimelineNotifier, TimelineState> timelineFor(TimelineKind kind, {String? account}) => account == null ? timelineProvider(kind) : accountTimelineProvider((account: account, kind: kind));
 
 /// 見守りの時間の 1 本の TL (D-307)。ホームのタブはこれだけになる(フォロー中 / AsTell もここへ畳む)。
 const childSafeWindowKind = TimelineKind('childsafe.window', '見守りの時間', extensible: false);
