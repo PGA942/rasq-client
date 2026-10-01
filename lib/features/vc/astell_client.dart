@@ -637,7 +637,10 @@ class _MockConnection implements AstellConnection {
 // ── RASQ Central ──────────────────────────────────────────────────
 
 class HttpAstellClient implements AstellClient {
-  HttpAstellClient(this._client, {required this.baseUrl, required this.token});
+  HttpAstellClient(this._client, {required this.baseUrl, required this.token, this.ensureFresh});
+
+  /// 繋ぐ前に、アクセストークンの期限が近ければ取り直す (D-398。WebSocket の `?token=` は 401 で取り直せない)。
+  final Future<void> Function()? ensureFresh;
 
   @override
   String? get selfAccountId => null;
@@ -778,6 +781,7 @@ class HttpAstellClient implements AstellClient {
 
   @override
   Future<AstellConnection> connect(String roomId) async {
+    await ensureFresh?.call();
     final t = token();
     if (t == null) throw StateError('RASQ アカウントにログインしてください');
     // Bearer はクエリで渡す(API.md §3)。http → ws。

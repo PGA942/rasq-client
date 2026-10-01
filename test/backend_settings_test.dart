@@ -111,14 +111,14 @@ void main() {
     expect(probe, contains('接続できませんでした'));
   });
 
-  testWidgets('テスト用の接続先 (D-360): 入れると SNS の差し替えと Central が変わり、外すと Central が元に戻る', (tester) async {
+  testWidgets('テスト用の接続先 (D-360 / D-398): 入れると SNS の差し替えと Central / ORGATE が変わり、外すと元に戻る', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     addTearDown(() => setRuntimeDevSnsBase(''));
     final storage = MemorySessionStorage({
       SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
-      'backend.v1': jsonEncode({'centralUrl': 'https://central.example'}),
+      'backend.v1': jsonEncode({'centralUrl': 'https://central.example', 'baseUrl': 'https://orgate.example'}),
     });
     final registry = PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline));
     await tester.pumpWidget(ProviderScope(overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(registry)], child: const RasqApp()));
@@ -137,9 +137,12 @@ void main() {
     expect(devSnsBaseFor('bsky.rasq.test').toString(), 'http://100.64.1.2:9103');
     expect(snsUri('mstdn.rasq.test', '/api/v1/instance').toString(), 'http://100.64.1.2:9102/api/v1/instance');
     expect(c.read(centralBaseUrlProvider).toString(), 'http://100.64.1.2:8080');
+    // ログインは ORGATE (D-398): デモの ORGATE は 8081。
+    expect(c.read(orgateBaseUrlProvider).toString(), 'http://100.64.1.2:8081');
     await tester.tap(find.byKey(const ValueKey('backend.testEndpoints')));
     await tester.pumpAndSettle();
     expect(devSnsBaseFor('misskey.rasq.test'), isNull);
     expect(c.read(centralBaseUrlProvider).toString(), 'https://central.example');
+    expect(c.read(orgateBaseUrlProvider).toString(), 'https://orgate.example');
   });
 }

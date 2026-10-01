@@ -43,7 +43,7 @@ final customSessionClientProvider = Provider<CustomSessionClient>((ref) {
   ref.watch(currentCentralAccountIdProvider);
   if (client == null || base == null) return MockCustomSessionClient();
   final holder = ref.read(orgateTokenHolderProvider);
-  return HttpCustomSessionClient(client, baseUrl: base, token: () => holder.token);
+  return HttpCustomSessionClient(client, baseUrl: base, token: () => holder.token, ensureFresh: holder.ensureFresh);
 });
 
 // ── 規則(Central と同じ。モックと、送る前の手元の確かめに使う)──────────────
@@ -303,7 +303,10 @@ class _MockCustomConnection implements CustomConnection {
 // ── RASQ Central ──────────────────────────────────────────────────
 
 class HttpCustomSessionClient implements CustomSessionClient {
-  HttpCustomSessionClient(this._client, {required this.baseUrl, required this.token});
+  HttpCustomSessionClient(this._client, {required this.baseUrl, required this.token, this.ensureFresh});
+
+  /// 繋ぐ前に、アクセストークンの期限が近ければ取り直す (D-398。WebSocket の `?token=` は 401 で取り直せない)。
+  final Future<void> Function()? ensureFresh;
   final OrgateClient _client;
   final Uri baseUrl;
   final String? Function() token;
@@ -349,6 +352,7 @@ class HttpCustomSessionClient implements CustomSessionClient {
 
   @override
   Future<CustomConnection> connect(String sessionId) async {
+    await ensureFresh?.call();
     final t = token();
     if (t == null) throw StateError('RASQ アカウントのトークンがありません');
     // AsTell の WS と同じく Bearer はクエリで(Web 版でも繋がる web_socket_channel)。

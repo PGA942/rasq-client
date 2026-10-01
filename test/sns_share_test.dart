@@ -310,7 +310,7 @@ void main() {
 
       // 新しい端末: RASQ アカウントにログインすると、共有を求める(D-316 ではログインボタンが出るだけだった)。
       final neu = device(central.client);
-      final account = await neu.c.read(orgateAccountProvider.notifier).adoptLogin({'accountId': 'acc-a', 'token': 'tok-new'});
+      final account = await neu.c.read(orgateAccountProvider.notifier).adoptLogin({'accountId': 'acc-a', 'accessToken': 'tok-new'});
       expect(account!.id, 'acc-a');
       expect((await SnsShareStore(neu.storage).entry('acc-a'))['request'], isTrue);
       await settle(neu.c);

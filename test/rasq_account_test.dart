@@ -77,7 +77,7 @@ void main() {
     test('Central アカウントの作成 → 台帳に載り現在の SNS を引き継ぐ / ログアウトでローカルへ戻る', () async {
       final http_ = MockClient((req) async {
         if (req.url.path.endsWith('/auth/device')) {
-          return http.Response('{"accountId":"c1","handle":"rasq_c1","displayName":"RASQ ユーザー","token":"tok"}', 200, headers: {'content-type': 'application/json'});
+          return http.Response('{"accountId":"c1","handle":"rasq_c1","displayName":"RASQ ユーザー","accessToken":"tok","refreshToken":"tok-refresh"}', 200, headers: {'content-type': 'application/json'});
         }
         if (req.url.path.endsWith('/me')) {
           return http.Response('{"id":"c1","handle":"rasq_c1","displayName":"RASQ ユーザー","avatarUrl":null,"createdAt":"2026-09-05T00:00:00Z"}', 200, headers: {'content-type': 'application/json'});
@@ -157,7 +157,7 @@ void main() {
           consents.add({'kind': 'age', 'version': c['termsVersion'], 'granted': true, 'detail': c['age'], 'via': 'device'});
           if (c['guardian'] == true) consents.add({'kind': 'guardian', 'version': c['termsVersion'], 'granted': true, 'via': 'device'});
         }
-        return json({'accountId': 'acc-1', 'handle': 'rasq_tester', 'displayName': 'テスター', 'token': 'device-token', 'restored': restored});
+        return json({'accountId': 'acc-1', 'handle': 'rasq_tester', 'displayName': 'テスター', 'accessToken': 'device-token', 'refreshToken': 'refresh', 'restored': restored});
       }
       if (req.headers['authorization'] != 'Bearer device-token' || deleted) return json({'error': {'code': '401', 'message': 'valid bearer token required'}}, 401);
       if (req.method == 'POST' && path == '/auth/password') return http.Response('', 204);

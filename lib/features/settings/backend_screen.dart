@@ -121,17 +121,18 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
       body: ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [
         const RasqCaption(
           'RASQ アカウントやストアのサーバーの接続先です。SNS の投稿やタイムラインは、ここを通りません。',
-          detail: 'RASQ Central は RASQ アカウント・プラグインストア・プラグイン管理・ユーザーデータのサーバー、'
-              'エッジはカルクレーター / AsTell と Mastodon などのログイン(OAuth ブローカー)のサーバーです。'
+          detail: 'RASQ Central は公開・共有のもの(プロフィール・ストア・AsTell・投稿・リストなど)のサーバー、'
+              'ORGATE は本人だけの情報(ログイン・パスワード・メールアドレス)と Mastodon などのログイン(OAuth ブローカー)の'
+              'サーバーです。RASQ アカウントへのログインは ORGATE で行い、そのトークンを Central にも使います。'
               'SNS の投稿やタイムラインはどちらも通らず、プラグインが各インスタンスへ直接接続します。',
           padding: EdgeInsets.zero,
         ),
         const SizedBox(height: RasqSpacing.md),
-        Text('RASQ Central の接続先(空ならエッジを流用)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text('RASQ Central の接続先(空なら ORGATE を流用)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 4),
         RasqInput(key: const ValueKey('backend.central'), controller: _central, hintText: 'https://central.rasq.example', keyboardType: TextInputType.url),
         const SizedBox(height: RasqSpacing.sm),
-        Text('エッジ(orgate-server)の接続先', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text('ORGATE(ログイン・本人だけの情報)の接続先', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 4),
         RasqInput(key: const ValueKey('backend.edge'), controller: _url, hintText: 'https://orgate.example', keyboardType: TextInputType.url),
         const SizedBox(height: RasqSpacing.sm),
@@ -148,7 +149,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
         Text(
           [
             central == null ? rasqDetail(context, 'Central: 未接続(RASQ アカウントは作れません)', 'Central: 未接続 — プラグインストアは同梱のものだけ、RASQ アカウントは作成できません(この端末のみ)。') : 'Central: $central',
-            base == null ? 'エッジ: 未接続' : 'エッジ: $base',
+            base == null ? 'ORGATE: 未接続(RASQ アカウントにログインできません)' : 'ORGATE: $base',
           ].join('\n'),
           style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
         ),
@@ -160,9 +161,9 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             RasqSwitchListTile(
               key: const ValueKey('backend.testEndpoints'),
-              title: 'ダミーの SNS とデモの Central を使う',
+              title: 'ダミーの SNS とデモの Central / ORGATE を使う',
               subtitle: 'プレビューの録画用',
-              detail: 'プレビュー録画用。Misskey / Mastodon / Bluesky の ${TestEndpoints.misskeyHost} / ${TestEndpoints.mastodonHost} / ${TestEndpoints.blueskyHost} をこのアドレスのダミーへ向け、Central も切り替えます',
+              detail: 'プレビュー録画用。Misskey / Mastodon / Bluesky の ${TestEndpoints.misskeyHost} / ${TestEndpoints.mastodonHost} / ${TestEndpoints.blueskyHost} をこのアドレスのダミーへ向け、Central(:${TestEndpoints.centralPort})と ORGATE(:${TestEndpoints.orgatePort})も切り替えます',
               value: on,
               onChanged: _busy
                   ? null

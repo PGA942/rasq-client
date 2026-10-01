@@ -76,8 +76,9 @@ class AccountSecurityApi {
   Future<int> revokeOtherSessions() async => ((await _client.postJson('/me/sessions/revoke-others', const {}))['revoked'] as num?)?.toInt() ?? 0;
 }
 
+/// ログイン / パスワード / メール / セッションは ORGATE-Server (D-398)。
 final accountSecurityApiProvider = Provider<AccountSecurityApi?>((ref) {
-  final client = ref.watch(centralClientProvider);
+  final client = ref.watch(orgateClientProvider);
   return client == null ? null : AccountSecurityApi(client);
 });
 

@@ -162,11 +162,11 @@ void main() {
           bearer = req.headers['authorization'];
           return bearer == 'Bearer login-token' ? json({'id': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'hasPassword': true, 'email': 'hanako@example.com', 'emailVerified': true}) : err(401, 'valid bearer token required');
         case 'POST /auth/login':
-          return body['password'] == 'correct horse battery' ? json({'accountId': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'token': 'login-token', 'restored': true}) : err(401, 'invalid handle or password');
+          return body['password'] == 'correct horse battery' ? json({'accountId': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'accessToken': 'login-token', 'refreshToken': 'refresh', 'restored': true}) : err(401, 'invalid handle or password');
         case 'POST /auth/login/email/request':
           return http.Response('', 204);
         case 'POST /auth/login/email/confirm':
-          return body['code'] == '9zYx8-WvUt7' ? json({'accountId': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'token': 'login-token', 'restored': true}) : err(400, 'invalid or expired code');
+          return body['code'] == '9zYx8-WvUt7' ? json({'accountId': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'accessToken': 'login-token', 'refreshToken': 'refresh', 'restored': true}) : err(400, 'invalid or expired code');
         case 'GET /me/sns-accounts':
           return json(<Object>[]);
       }
