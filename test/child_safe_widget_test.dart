@@ -166,7 +166,7 @@ void main() {
           loginBody = (jsonDecode(req.body) as Map).cast<String, Object?>();
           loginAuth = req.headers['authorization'];
           if (loginBody!['code'] != 'KIDCODE1') return err(410, 'gone');
-          return json({'token': 'kid-token', 'accountId': 'kid-1', 'restored': false});
+          return json({'accessToken': 'kid-token', 'refreshToken': 'refresh', 'accountId': 'kid-1', 'restored': false});
         case 'GET /me':
           return req.headers['authorization'] == 'Bearer kid-token' ? json({'id': 'kid-1', 'handle': 'kid', 'displayName': 'キッド'}) : err(401, 'unauthorized');
         case 'GET /me/child-safe':

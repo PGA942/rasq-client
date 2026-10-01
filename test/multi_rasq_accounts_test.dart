@@ -104,7 +104,7 @@ void main() {
       final accounts = c.read(orgateAccountProvider.notifier);
 
       // A にログイン: A のバンドルにあって、この端末にもログインがある SNS は、そのまま A に入る。
-      final a = await accounts.adoptLogin({'accountId': 'acc-a', 'token': 'tok-a'});
+      final a = await accounts.adoptLogin({'accountId': 'acc-a', 'accessToken': 'tok-a'});
       expect(a!.handle, 'alice');
       await settle();
       expect(c.read(rasqAccountsProvider).value!.current!.id, 'central-acc-a');
@@ -112,7 +112,7 @@ void main() {
       expect(c.read(rasqAccountProvider).displayName, 'アリス');
 
       // B にログイン: A の SNS は持ち込まない(前はここで A のセッションを引き継ぎ、名前だけ B になっていた)。
-      final b = await accounts.adoptLogin({'accountId': 'acc-b', 'token': 'tok-b'});
+      final b = await accounts.adoptLogin({'accountId': 'acc-b', 'accessToken': 'tok-b'});
       expect(b!.handle, 'bob');
       await settle();
       final ledger = c.read(rasqAccountsProvider).value!;
@@ -168,7 +168,7 @@ void main() {
       final c = containerWith(central.client, storage);
       c.listen(orgateBundleSyncProvider, (_, _) {});
       await c.read(sessionsProvider.future);
-      await c.read(orgateAccountProvider.notifier).adoptLogin({'accountId': 'acc-a', 'token': 'tok-a'});
+      await c.read(orgateAccountProvider.notifier).adoptLogin({'accountId': 'acc-a', 'accessToken': 'tok-a'});
       await settle();
       await c.read(rasqAccountsProvider.notifier).select(RasqAccountsNotifier.localId);
       expect(await c.read(orgateAccountProvider.future), isNull);
@@ -183,8 +183,8 @@ void main() {
       final storage = MemorySessionStorage();
       final c = containerWith(central.client, storage);
       final accounts = c.read(orgateAccountProvider.notifier);
-      await accounts.adoptLogin({'accountId': 'acc-a', 'token': 'tok-a'});
-      await accounts.adoptLogin({'accountId': 'acc-b', 'token': 'tok-b'});
+      await accounts.adoptLogin({'accountId': 'acc-a', 'accessToken': 'tok-a'});
+      await accounts.adoptLogin({'accountId': 'acc-b', 'accessToken': 'tok-b'});
       await settle();
       // いまは B。B からログアウトして台帳から外す → 「この端末のみ」へ。A は残る。
       await accounts.signOut(accountId: 'acc-b');
@@ -197,7 +197,7 @@ void main() {
       expect(c.read(orgateTokenHolderProvider).token, 'tok-a');
 
       // 使っていないアカウントからのログアウト: いまのアカウントはそのまま。
-      await accounts.adoptLogin({'accountId': 'acc-b', 'token': 'tok-b'});
+      await accounts.adoptLogin({'accountId': 'acc-b', 'accessToken': 'tok-b'});
       await c.read(rasqAccountsProvider.notifier).select('central-acc-a');
       expect((await c.read(orgateAccountProvider.future))!.id, 'acc-a');
       await accounts.signOut(accountId: 'acc-b');
@@ -217,7 +217,7 @@ void main() {
       expect((await c.read(orgateAccountProvider.future))!.handle, 'alice');
       expect(central.seen.last.auth, 'Bearer tok-a');
       // 次のログインで、新しい形で残る(前のトークンも残る)。
-      await c.read(orgateAccountProvider.notifier).adoptLogin({'accountId': 'acc-b', 'token': 'tok-b'});
+      await c.read(orgateAccountProvider.notifier).adoptLogin({'accountId': 'acc-b', 'accessToken': 'tok-b'});
       final s = await stored(storage);
       expect(s['deviceId'], 'dev-1');
       expect(s['tokens'], {'acc-a': 'tok-a', 'acc-b': 'tok-b'});
@@ -268,13 +268,13 @@ void main() {
     final accounts = c.read(orgateAccountProvider.notifier);
     AuthResult login(AccountId a) => AuthResult(session: session(a), me: UserSummary(id: 'u', account: a, displayName: a.handle));
 
-    await accounts.adoptLogin({'accountId': 'acc-a', 'token': 'tok-a'});
+    await accounts.adoptLogin({'accountId': 'acc-a', 'accessToken': 'tok-a'});
     await settle();
     await c.read(sessionsProvider.future);
     await c.read(sessionsProvider.notifier).add(login(snsA));
     await settle();
 
-    await accounts.adoptLogin({'accountId': 'acc-b', 'token': 'tok-b'});
+    await accounts.adoptLogin({'accountId': 'acc-b', 'accessToken': 'tok-b'});
     await settle();
     expect((await c.read(sessionsProvider.future)).sessions, isEmpty, reason: 'B の保管庫は空');
     await c.read(sessionsProvider.notifier).add(login(snsB));

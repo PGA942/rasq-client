@@ -6,26 +6,24 @@ import 'package:http/http.dart' as http;
 import 'package:rasq_models/rasq_models.dart';
 
 import '../features/settings/settings_dsl.dart' show settingsAreaProvider;
-import 'rasq_account.dart' show orgateTokenHolderProvider;
+import 'rasq_account.dart' show OrgateTokenHolder, orgateTokenHolderProvider;
 
-/// ORGATE サーバー(`orgate-server`)への接続。
+/// ORGATE-Server(`orgate-server`)への接続 — **本人だけが見る情報**の置き場 (D-398)。
 ///
-/// サーバーが受け持つのは**クライアント単体では成立しない仕事**だけ:
-/// プラグインストア (D-033)、RASQ アカウント (D-087)、そして Mastodon など
-/// アクセストークン発行に `client_secret` が要る SNS の OAuth ブローカー
-/// (CONTRACT §3)。SNS のデータ経路(CONTRACT §5)はここを通らない —
-/// TL 取得も投稿もプラグインがインスタンスへ直接出す。
+/// いま(第 1 段階)受け持つのは、ログイン(端末の発行 / パスワード / メールのコード)・セッションとトークンの取り直し・
+/// メールアドレス・操作の確認コード・アカウント削除の入口と、Mastodon などアクセストークン発行に `client_secret` が
+/// 要る SNS の OAuth ブローカー (CONTRACT §3)。公開・共有のもの(ストア / AsTell / 投稿 / リスト…)は RASQ Central。
+/// ORGATE が出すアクセストークン(JWT)を、Central にもそのまま Bearer で渡す。
 ///
 /// 接続先は `--dart-define=ORGATE_BASE_URL=...` を既定にし、KV
 /// `backend.v1` の `baseUrl` で上書きできる(開発中に手元のサーバーへ
 /// 向けるため)。**未設定なら null** — 呼び出し側はモックへ縮退する。
 
-/// ビルド時に焼き込む既定の接続先(**エッジ**: カルクレーター / AsTell /
-/// OAuth ブローカー = `orgate-server`)。
+/// ビルド時に焼き込む既定の接続先(**ORGATE-Server**: ログイン / 本人だけの情報 / OAuth ブローカー、D-398)。
 const _defaultBaseUrl = String.fromEnvironment('ORGATE_BASE_URL');
 
 /// **RASQ Central** (`rasq-central`, D-138) — RASQ アカウント / ストア /
-/// プラグイン管理 / ユーザーデータ。未設定なら [_defaultBaseUrl](エッジ)へ
+/// プラグイン管理 / ユーザーデータ。未設定なら [_defaultBaseUrl](ORGATE)へ
 /// 縮退する(1 台で両方を兼ねる開発構成をそのまま動かすため)。
 const _defaultCentralUrl = String.fromEnvironment('RASQ_CENTRAL_URL');
 
@@ -69,7 +67,7 @@ Uri? normalizeServerUrl(String raw) {
 }
 
 /// RASQ Central の接続先 (D-138)。KV `backend.v1` の `centralUrl` →
-/// `--dart-define=RASQ_CENTRAL_URL` → 無ければ**エッジの接続先を流用**。
+/// `--dart-define=RASQ_CENTRAL_URL` → 無ければ**ORGATE の接続先を流用**(1 つの URL で両方を兼ねるテスト / 開発の構成)。
 final centralBaseUrlProvider = Provider<Uri?>((ref) {
   final override = ref.watch(settingsAreaProvider(backendSettingsArea)).value?['centralUrl'];
   final raw = (override is String && override.trim().isNotEmpty) ? override.trim() : _defaultCentralUrl;
@@ -266,28 +264,58 @@ class OrgateClient {
   void close() => _http.close();
 }
 
-/// RASQ Central への口 (D-138)。Central 専用の接続先が無い(= エッジと同じ)
+/// アクセストークンの取り直し (D-398): 応答が 401 で、送ったトークンが**いまのアクセストークン**なら、1 回だけ
+/// [OrgateTokenHolder.refresh](ORGATE の `POST /auth/refresh`)で取り直して、同じ要求を新しいトークンで送り直す。
+/// 通知専用のトークンなど、ほかのトークンで送った要求には何もしない。
+class TokenRefreshingClient extends http.BaseClient {
+  TokenRefreshingClient(this._inner, this._holder);
+  final http.Client _inner;
+  final OrgateTokenHolder _holder;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final res = await _inner.send(request);
+    if (res.statusCode != 401 || request is! http.Request) return res;
+    final current = _holder.token;
+    if (current == null || current.isEmpty || request.headers['authorization'] != 'Bearer $current') return res;
+    final fresh = await _holder.refresh();
+    if (fresh == null || fresh == current) return res;
+    await res.stream.drain<void>();
+    final retry = http.Request(request.method, request.url)
+      ..headers.addAll(request.headers)
+      ..followRedirects = request.followRedirects
+      ..bodyBytes = request.bodyBytes;
+    retry.headers['authorization'] = 'Bearer $fresh';
+    return _inner.send(retry);
+  }
+
+  @override
+  void close() => _inner.close();
+}
+
+/// RASQ Central への口 (D-138)。Central 専用の接続先が無い(= ORGATE と同じ)
 /// ときは [orgateClientProvider] のインスタンスをそのまま使う — テストの
 /// 差し替えも 1 箇所で効く。
 final centralClientProvider = Provider<OrgateClient?>((ref) {
   final central = ref.watch(centralBaseUrlProvider);
   final edge = ref.watch(orgateBaseUrlProvider);
-  // Central 専用の接続先が無い(未設定 or エッジと同じ)→ エッジの口を共有。
+  // Central 専用の接続先が無い(未設定 or ORGATE と同じ)→ ORGATE の口を共有(1 つの URL で兼ねるテスト / 開発)。
   if (central == null || central == edge) return ref.watch(orgateClientProvider);
   final holder = ref.read(orgateTokenHolderProvider);
-  final client = OrgateClient(baseUrl: central, tokenProvider: () => holder.token);
+  final client = OrgateClient(baseUrl: central, httpClient: TokenRefreshingClient(http.Client(), holder), tokenProvider: () => holder.token);
   ref.onDispose(client.close);
   debugPrint('rasq-central: using $central');
   return client;
 });
 
+/// ORGATE-Server への口 (D-398: ログイン / トークンの取り直し / パスワード / メール / 削除 / OAuth ブローカー)。
 /// Overridable in tests. 接続先が未設定なら null。
 final orgateClientProvider = Provider<OrgateClient?>((ref) {
   final base = ref.watch(orgateBaseUrlProvider);
   if (base == null) return null;
   // トークンは毎回読み直す(端末登録の完了で後から入る)。
   final holder = ref.read(orgateTokenHolderProvider);
-  final client = OrgateClient(baseUrl: base, tokenProvider: () => holder.token);
+  final client = OrgateClient(baseUrl: base, httpClient: TokenRefreshingClient(http.Client(), holder), tokenProvider: () => holder.token);
   ref.onDispose(client.close);
   debugPrint('orgate: using $base');
   return client;

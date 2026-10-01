@@ -29,7 +29,7 @@ final astellClientProvider = Provider<AstellClient>((ref) {
   ref.watch(currentCentralAccountIdProvider);
   if (client == null || base == null) return MockAstellClient();
   final holder = ref.read(orgateTokenHolderProvider);
-  return HttpAstellClient(client, baseUrl: base, token: () => holder.token);
+  return HttpAstellClient(client, baseUrl: base, token: () => holder.token, ensureFresh: holder.ensureFresh);
 });
 
 /// 通話の音声の口 (D-317)。ルームに入るたびに 1 つ作る。Central に繋がっていれば flutter_webrtc、

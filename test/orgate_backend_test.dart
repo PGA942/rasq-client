@@ -322,7 +322,7 @@ void main() {
 
     test('作成 (D-138) = 端末登録 → /me。トークンはセキュアストレージに残る。作るまでは null', () async {
       final server = fakeServer({
-        'POST /api/v1/auth/device': '{"accountId":"c3446e59-b937-4a1b-9050-335da9dc346b","handle":"rasq_c3446e59b937","displayName":"RASQ ユーザー","token":"secret-token"}',
+        'POST /api/v1/auth/device': '{"accountId":"c3446e59-b937-4a1b-9050-335da9dc346b","handle":"rasq_c3446e59b937","displayName":"RASQ ユーザー","accessToken":"secret-token","refreshToken":"secret-refresh"}',
         'GET /api/v1/me': meJson,
       });
       final container = containerWith(server.client);
@@ -347,13 +347,98 @@ void main() {
       expect(stored['deviceId'], isNotEmpty);
     });
 
+    test('アクセストークンが 401 なら、まずリフレッシュトークンで取り直す (D-398)。端末の登録はし直さない。回った組を保存する', () async {
+      final seen = <String>[];
+      final client = MockClient((req) async {
+        seen.add('${req.method} ${req.url.path} ${req.headers['authorization'] ?? '-'}');
+        if (req.url.path.endsWith('/auth/device')) fail('device registration must not be repeated');
+        if (req.url.path.endsWith('/auth/refresh')) {
+          expect(req.headers['authorization'], isNull, reason: 'リフレッシュは Bearer なしで、本文のリフレッシュトークンだけ');
+          expect((jsonDecode(req.body) as Map)['refreshToken'], 'refresh-1');
+          return http.Response('{"accountId":"a","handle":"rasq_x","accessToken":"access-2","refreshToken":"refresh-2","expiresIn":900}', 200,
+              headers: {'content-type': 'application/json'});
+        }
+        if (req.headers['authorization'] == 'Bearer access-1') {
+          return http.Response(jsonEncode({'error': {'code': '401', 'message': 'expired'}}), 401, headers: {'content-type': 'application/json'});
+        }
+        return http.Response(meJson, 200, headers: {'content-type': 'application/json; charset=utf-8'});
+      });
+      final container = containerWith(client, seed: {
+        OrgateAccountNotifier.storageKey: jsonEncode({
+          'deviceId': 'dev-1',
+          'tokens': {'a': 'access-1'},
+          'refresh': {'a': 'refresh-1'},
+          'currentAccountId': 'a',
+        }),
+      });
+      final account = await container.read(orgateAccountProvider.future);
+      expect(account, isNotNull);
+      expect(seen.where((s) => s.startsWith('POST /api/v1/auth/refresh')).length, 1);
+      expect(container.read(orgateTokenHolderProvider).token, 'access-2');
+      final stored = jsonDecode((await container.read(sessionStorageProvider).read(OrgateAccountNotifier.storageKey))!) as Map;
+      // (保存していた id と /me の id が違えば、分かった id に付け直す — 組ごと移る。)
+      expect((stored['tokens'] as Map).values, ['access-2']);
+      expect((stored['refresh'] as Map).values, ['refresh-2']);
+      expect((stored['tokens'] as Map).keys, (stored['refresh'] as Map).keys);
+    });
+
+    test('リフレッシュトークンも断られたら(セッションが消された)、そのアカウントのトークンを捨てる (D-398)', () async {
+      final client = MockClient((req) async {
+        if (req.url.path.endsWith('/auth/refresh')) {
+          return http.Response(jsonEncode({'error': {'code': 'session_revoked', 'message': 'revoked'}}), 401, headers: {'content-type': 'application/json'});
+        }
+        if (req.url.path.endsWith('/auth/device')) {
+          return http.Response(jsonEncode({'error': {'code': '404', 'message': 'no account for this device'}}), 404, headers: {'content-type': 'application/json'});
+        }
+        return http.Response(jsonEncode({'error': {'code': '401', 'message': 'expired'}}), 401, headers: {'content-type': 'application/json'});
+      });
+      final container = containerWith(client, seed: {
+        OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'dev-1', 'tokens': {'a': 'access-1'}, 'refresh': {'a': 'refresh-1'}, 'currentAccountId': 'a'}),
+      });
+      expect(await container.read(orgateAccountProvider.future), isNull);
+      final stored = jsonDecode((await container.read(sessionStorageProvider).read(OrgateAccountNotifier.storageKey))!) as Map;
+      expect(stored['tokens'], isEmpty);
+      expect(stored['refresh'], isEmpty);
+    });
+
+    test('TokenRefreshingClient: いまのトークンで 401 → 1 回だけ取り直して送り直す。ほかのトークンの 401 はそのまま (D-398)', () async {
+      final holder = OrgateTokenHolder()..token = 'old';
+      var refreshes = 0;
+      holder.refresher = () async {
+        refreshes++;
+        holder.token = 'new';
+        return 'new';
+      };
+      final sent = <String>[];
+      final inner = MockClient((req) async {
+        sent.add('${req.headers['authorization']} ${req.body}');
+        return req.headers['authorization'] == 'Bearer new' ? http.Response('{"ok":true}', 200) : http.Response('{}', 401);
+      });
+      final c = OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: TokenRefreshingClient(inner, holder), tokenProvider: () => holder.token);
+      expect(await c.postJson('/x', {'a': 1}), {'ok': true});
+      expect(sent, ['Bearer old {"a":1}', 'Bearer new {"a":1}']);
+      expect(refreshes, 1);
+      // 通知専用のトークンなど、いまのアクセストークンでない 401 は取り直さない。
+      await expectLater(c.withToken(() => 'notify-token').getJson('/y'), throwsA(isA<OrgateException>()));
+      expect(refreshes, 1);
+    });
+
+    test('アクセストークンの期限は JWT の exp から読む(署名は見ない)', () {
+      final exp = DateTime.utc(2030, 1, 1);
+      String b64(Object o) => base64Url.encode(utf8.encode(jsonEncode(o))).replaceAll('=', '');
+      final jwt = '${b64({'alg': 'EdDSA'})}.${b64({'sub': 'a', 'exp': exp.millisecondsSinceEpoch ~/ 1000})}.sig';
+      expect(accessTokenExpiry(jwt)!.toUtc(), exp);
+      expect(accessTokenExpiry('opaque-token'), isNull);
+      expect(accessTokenExpiry(null), isNull);
+    });
+
     test('保存済みトークンが 401 なら 1 回だけ端末を登録し直す', () async {
       var meCalls = 0;
       final client = MockClient((req) async {
         if (req.url.path.endsWith('/auth/device')) {
           // 取り直しは「既存のアカウントへ戻るだけ」(D-241: 同意なしに新規アカウントを作らない)。
           expect((jsonDecode(req.body) as Map)['restoreOnly'], isTrue);
-          return http.Response('{"accountId":"a","handle":"rasq_x","displayName":"X","token":"fresh"}', 200,
+          return http.Response('{"accountId":"a","handle":"rasq_x","displayName":"X","accessToken":"fresh","refreshToken":"fresh-refresh"}', 200,
               headers: {'content-type': 'application/json'});
         }
         meCalls++;
@@ -369,7 +454,8 @@ void main() {
 
       final account = await container.read(orgateAccountProvider.future);
       expect(account, isNotNull);
-      expect(meCalls, 2);
+      // 401 → (リフレッシュトークンの無い前の形なので)端末の取り直し → Central の /me → ORGATE の /me (D-398、同じモック)。
+      expect(meCalls, 3);
     });
 
     test('取り直しでサーバーにアカウントが無ければ(削除 / 作り直し)、新規に作らず未作成へ戻る (D-241)', () async {
@@ -406,7 +492,7 @@ void main() {
 
     test('バンドル同期は SNS アカウントの識別だけを送り、トークンは送らない', () async {
       final server = fakeServer({
-        'POST /api/v1/auth/device': '{"accountId":"a","handle":"rasq_x","displayName":"X","token":"tok"}',
+        'POST /api/v1/auth/device': '{"accountId":"a","handle":"rasq_x","displayName":"X","accessToken":"tok","refreshToken":"tok-refresh"}',
         'GET /api/v1/me': meJson,
         'GET /api/v1/me/sns-accounts': '[]',
         'PUT /api/v1/me/sns-accounts':

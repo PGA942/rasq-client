@@ -8,28 +8,30 @@ import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/features/store/http_store_client.dart';
 import 'package:rasq_client/features/store/store_providers.dart';
 
-/// 実際に動いている orgate-server に対する疎通テスト。
+/// 実際に動いている ORGATE-Server(ログイン)と RASQ Central(ストア)に対する疎通テスト (D-398)。
 ///
 /// 既定では**丸ごとスキップ**する。走らせるときは接続先を渡す:
 ///
 /// ```sh
 /// flutter test test/orgate_live_test.dart \
-///   --dart-define=ORGATE_LIVE_URL=http://127.0.0.1:8080
+///   --dart-define=ORGATE_LIVE_URL=http://127.0.0.1:8081 \
+///   --dart-define=CENTRAL_LIVE_URL=http://127.0.0.1:8080
 /// ```
 ///
-/// 掲載物は `orgate-server/scripts/smoke.sh` が投入したものを前提にする。
+/// 掲載物は `rasq-central/scripts/smoke.sh` が投入したものを前提にする。
 void main() {
   const baseUrl = String.fromEnvironment('ORGATE_LIVE_URL');
+  const centralUrl = String.fromEnvironment('CENTRAL_LIVE_URL');
   const pluginId = 'jp.rasq.misskey-wasm-sample';
 
   test('ストア一巡 + 配布物の SHA-512 / ed25519 検証', () async {
     final client = OrgateClient(baseUrl: Uri.parse(baseUrl));
     addTearDown(client.close);
 
-    // 端末登録 → 以後はその Bearer で叩く。
+    // 端末登録(ORGATE)→ 以後はそのアクセストークンを Central へ Bearer で渡す。
     final device = await client.postJson('/auth/device', {'deviceId': 'flutter-live-test'});
-    final token = device['token'] as String;
-    final authed = OrgateClient(baseUrl: Uri.parse(baseUrl), tokenProvider: () => token);
+    final token = device['accessToken'] as String;
+    final authed = OrgateClient(baseUrl: Uri.parse(centralUrl.isEmpty ? baseUrl : centralUrl), tokenProvider: () => token);
     addTearDown(authed.close);
 
     final store = HttpStoreClient(authed);
