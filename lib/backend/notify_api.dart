@@ -8,7 +8,8 @@ import '../app/providers.dart';
 import 'orgate_client.dart';
 import 'rasq_account.dart';
 
-/// 通知専用のアクセストークンと端末のプッシュ登録 (D-239 / Central S-014)。
+/// 通知専用のアクセストークンと端末のプッシュ登録 (D-239 / Central S-014)。第 3 段階 (D-400) から口は **ORGATE-Server**
+/// ([orgateClientProvider]、トークンの取り直しつき)。サーバー側のデータは移していないので、前の通知トークンは無効(作り直し)。
 ///
 /// - 通知トークンは RASQ アカウントの端末トークン(フル権限)とは別物で、読めるのは自分宛ての通知の受信箱だけ。
 ///   発行 / 一覧 / 失効 / 端末登録は端末トークンで行い、受信箱は通知トークンで読む。
@@ -106,7 +107,8 @@ class NotifyApi {
 }
 
 final notifyApiProvider = Provider<NotifyApi?>((ref) {
-  final client = ref.watch(centralClientProvider);
+  // 通知は ORGATE (D-400 / Central S-064 / ORGATE O-003)。
+  final client = ref.watch(orgateClientProvider);
   return client == null ? null : NotifyApi(client);
 });
 
