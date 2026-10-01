@@ -91,7 +91,7 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
     <div class="eyebrow">電気通信事業の届出の要否の相談用 ・ 草案</div>
     <h1>RASQ 通信経路図</h1>
     <div class="meta">
-      <span><b>作成</b> 2026年10月1日(コードの現状 + 決まった移行予定)</span>
+      <span><b>作成</b> 2026年10月1日(Central / ORGATE-Server の 2 台構成への移行後)</span>
       <span><b>運営</b> 個人(予定)</span>
       <span><b>相談先</b> 近畿総合通信局</span>
       <span><b>収益</b> 広告(モバイル: AdMob)、プラグイン開発者からの審査料</span>
@@ -159,7 +159,7 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
         <rect class="box ext" x="740" y="22" width="230" height="104" rx="6"/>
         <text class="ttl" x="756" y="50">外部のサービス</text>
         <text class="small" x="756" y="72">Google の STUN(接続先の確認)</text>
-        <text class="small" x="756" y="92">AdMob(広告)・Stripe(審査料)</text>
+        <text class="small" x="756" y="92">AdMob(広告)・Stripe(審査料、ORGATE から)</text>
         <text class="small" x="756" y="112">Cloudflare(配信)</text>
 
         <rect class="box" x="740" y="190" width="230" height="70" rx="6"/>
@@ -189,16 +189,16 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
         <text class="lbl t-signal" x="300" y="292">① 信号</text>
 
         <!-- A,B,Web → Central: 中身 -->
-        <path class="relay" d="M220 128 L370 300" marker-end="url(#ar)"/>
-        <path class="relay" d="M220 392 L370 330" marker-end="url(#ar)"/>
-        <path class="relay" d="M220 548 L370 404" marker-end="url(#ar)"/>
+        <path class="relay" d="M220 128 L370 300" marker-start="url(#ar)" marker-end="url(#ar)"/>
+        <path class="relay" d="M220 392 L370 330" marker-start="url(#ar)" marker-end="url(#ar)"/>
+        <path class="relay" d="M220 548 L370 404" marker-start="url(#ar)" marker-end="url(#ar)"/>
         <text class="lbl t-relay" x="300" y="236">③〜⑧</text>
         <text class="lbl t-relay" x="290" y="384">③〜⑧</text>
         <text class="lbl t-relay" x="300" y="500">③⑥</text>
 
         <!-- 配信: A → LiveKit → B/Web -->
         <path class="relay" d="M220 80 L370 60" marker-end="url(#ar)"/>
-        <text class="lbl t-relay" x="236" y="58">② 配信・画面共有</text>
+        <text class="lbl t-relay" x="236" y="58">② 配信・画面共有(送る人 → LiveKit → 見る人)</text>
 
         <!-- Central → 文字起こし -->
         <path class="own" d="M630 230 L740 226" marker-end="url(#ar)"/>
@@ -209,11 +209,17 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
         <text class="small" x="642" y="330">⑫ judge から接続</text>
 
         <!-- Central → SNS -->
-        <rect class="box planned" x="740" y="392" width="230" height="84" rx="6"/>
-        <text class="ttl t-plan" x="756" y="418">ORGATE-Server(移行予定)</text>
-        <text class="small" x="756" y="440">SNS トークン・決済・通知など</text>
-        <text class="small" x="756" y="458">本人にしか見えない情報</text>
-        <path class="plan" d="M630 410 L740 430"/>
+        <rect class="box" x="740" y="392" width="230" height="84" rx="6"/>
+        <text class="ttl" x="756" y="418">ORGATE-Server(さくら・2 台目)</text>
+        <text class="small" x="756" y="440">ログイン・SNS トークン・通知・</text>
+        <text class="small" x="756" y="458">同期・支払い(本人だけの情報)</text>
+        <path class="own" d="M630 410 L740 430" marker-start="url(#ar)" marker-end="url(#ar)"/>
+        <text class="small" x="636" y="452">⑮ 内部 API(署名付き)</text>
+        <!-- 端末 ⇄ ORGATE -->
+        <path class="own" d="M125 70 L125 12 L988 12 L988 434 L970 434" marker-start="url(#ar)" marker-end="url(#ar)"/>
+        <text class="lbl t-own" x="134" y="30">⑦⑨⑩ 端末 ⇄ ORGATE</text>
+        <!-- LiveKit → 視聴者 -->
+        <path class="relay" d="M370 92 L232 336" marker-end="url(#ar)"/>
         <path class="own" d="M855 476 L855 500" marker-end="url(#ar)"/>
         <text class="small" x="862" y="494">⑨</text>
 
@@ -244,14 +250,15 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
           <tr><td>④ 文字起こし</td><td><span class="tag relay">中継・保存</span></td><td>いま: Central → 運営者の変換コンテナ → 文字を部屋へ。予定: 話す人の端末で文字にし、文字だけを部屋へ。読み上げは端末のモデルへ移す</td><td>音声の断片(保存しない)と、その文字</td><td>③ と同じ</td><td>文字は ③ と同じ期間</td></tr>
           <tr><td>⑤ Swing</td><td><span class="tag relay">中継・保存</span></td><td>Central</td><td>文字・画像・動画・プラグイン、その返信</td><td>投稿者のフォロワーと、投稿者が選んだリストの人</td><td>1〜24 時間で削除</td></tr>
           <tr><td>⑥ RASQ アカウントの投稿</td><td><span class="tag relay">中継・保存</span></td><td>Central(Web でも公開ページを表示)</td><td>文字・画像・動画・投票</td><td>公開 / ホーム / フォロワー限定</td><td>本人が消すまで</td></tr>
-          <tr><td>⑦ 通知</td><td><span class="tag relay">保存</span></td><td>Central(端末が取りに来る)。ORGATE-Server へ移す予定</td><td>誰が何をしたか、投稿の抜粋</td><td>通知を受ける本人</td><td><b>削除の期限は未定</b></td></tr>
+          <tr><td>⑦ 通知</td><td><span class="tag relay">保存</span></td><td>出来事は Central で起き、Central が ORGATE-Server へ送る(届くまで送り直す)。端末は ORGATE から受け取る</td><td>誰が何をしたか、投稿の抜粋</td><td>通知を受ける本人</td><td>作成から 30 日で削除</td></tr>
           <tr><td>⑧ プラグインの共有セッション</td><td><span class="tag relay">中継・保存</span></td><td>Central(WebSocket)</td><td>共有の変数の書き込み、関数の呼び出し</td><td>ルーム・プロフィール・招待リンクの参加者</td><td><b>保存期間は未確認</b></td></tr>
-          <tr><td>⑨ SNS トークンの預け入れ</td><td><span class="tag own">運営者の処理</span></td><td>Central がサーバーの鍵で暗号化して保管し、本人の公開投稿を読む。トークンと読み取りは ORGATE-Server へ移す予定</td><td>本人の公開・ホームの投稿</td><td>本人のアカウントページ(誰でも見られる)</td><td>本人が止めるまで</td></tr>
-          <tr><td>⑩ 端末間のトークン共有・データ同期</td><td><span class="tag own">本人どうし</span></td><td>Central は暗号文を預かるだけ(端末間で暗号化、運営者は読めない)。ORGATE-Server へ移す予定</td><td>SNS のログインの鍵、設定</td><td>同じ本人の端末</td><td>本人が消すまで</td></tr>
+          <tr><td>⑨ SNS トークンの預け入れ</td><td><span class="tag own">運営者の処理</span></td><td>トークンは ORGATE-Server だけが暗号化して保管し、ORGATE が SNS を読む。Central には読んだ公開・ホームの投稿だけを渡す(トークンは渡さない)。預けるときに「公開・ホームの投稿が誰でも見られるページに出る」ことを確認する画面を出す</td><td>本人の公開・ホームの投稿</td><td>本人のアカウントページ(誰でも見られる)</td><td>本人が止めるまで</td></tr>
+          <tr><td>⑩ 端末間のトークン共有・データ同期</td><td><span class="tag own">本人どうし</span></td><td>ORGATE-Server が暗号文を預かるだけ(端末間で暗号化、運営者は読めない)</td><td>SNS のログインの鍵、設定</td><td>同じ本人の端末</td><td>本人が消すまで</td></tr>
           <tr><td>⑪ DM・SNS への投稿・タイムライン</td><td><span class="tag direct">直接</span></td><td>端末(Web 版はブラウザ)から各 SNS へ直接。運営の設備を通らない</td><td>—</td><td>—</td><td>RASQ では保存しない</td></tr>
           <tr><td>⑫ 通報の審査</td><td><span class="tag own">運営者の処理</span></td><td>Central に保存し、運営者の PC(judge)が取りに行く</td><td>通報と、その前後の発言</td><td>運営者だけ</td><td>③ の内部の控えと同じ</td></tr>
           <tr><td>⑬ ストア・モデル・RAi など</td><td><span class="tag own">運営者の処理</span></td><td>Central からの配布、Central での推論</td><td>プラグイン、モデルのファイル、公開タイムラインの要約</td><td>利用者と運営者の 1 対 1</td><td>RAi の結果は 24 時間</td></tr>
           <tr><td>⑭ TURN による中継</td><td><span class="tag plan">予定</span></td><td>導入すれば、NAT を越えられない通話の音声が運営の設備を通る</td><td>音声</td><td>① と同じ</td><td>保存しない予定</td></tr>
+          <tr><td>⑮ Central ⇄ ORGATE-Server</td><td><span class="tag own">運営者の処理</span></td><td>運営者の 2 台の間の内部 API(共有の秘密で署名、外からは閉じる)。届かなければ控えから送り直す</td><td>渡すもの: アカウントの作成・削除、凍結の状態、通知(⑦)、⑨で読んだ公開・ホームの投稿、RASQ リストのために読んだ公開の投稿、同意の記録、メール確認済みかどうか、審査料の支払い・返金の状態。<b>渡さないもの: SNS トークン、パスワード、メールアドレス、カード情報</b></td><td>—</td><td>それぞれの保存期間に従う</td></tr>
         </tbody>
       </table>
     </div>
@@ -274,10 +281,9 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rul
     <h2>この資料を出す前に埋めること</h2>
     <ul class="todo">
       <li>LiveKit を Central に同居させたときの回線の上限(共有回線の送信 100Mbps)と、1 つの配信の視聴者数の上限。</li>
-      <li>ORGATE-Server を置く場所(商用で使える回線)と、Central との間でやり取りする情報。</li>
-      <li>文字起こしを端末へ移した場合に、通報の確認のため音声を保存するかどうか。保存するなら、誰の音声を、いつから、何日残すか。</li>
+            <li>文字起こしを端末へ移した場合に、通報の確認のため音声を保存するかどうか。保存するなら、誰の音声を、いつから、何日残すか。</li>
       <li>TURN を置くかどうか。置かない場合、NAT を越えられない利用者は通話できないことの扱い。</li>
-      <li>通知(⑦)とプラグインの共有セッション(⑧)の保存期間。</li>
+      <li>プラグインの共有セッション(⑧)の保存期間。</li>
       <li>運用ログに残す項目の一覧(会話の本文・音声・認証トークンは入れない方針)。</li>
       <li>Central から judge へは接続しない方針と、設定があれば Central が judge の判定を呼ぶ実装の関係をそろえる。</li>
     </ul>

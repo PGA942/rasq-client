@@ -126,7 +126,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(LegalScreen), findsOneWidget);
     expect(find.text(rasqAppVersion), findsOneWidget);
+    // 文書が増えてプラグインの行が画面の外に出ることがある(ListView は見える分だけ作る)。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('legal.plugin.test.fake')), 200, scrollable: find.byType(Scrollable).first);
     expect(find.byKey(const ValueKey('legal.plugin.test.fake')), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('クッキーについて'), -200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.text('クッキーについて'));
     await tester.pumpAndSettle();
     expect(find.textContaining('クッキーを使いません'), findsOneWidget);
