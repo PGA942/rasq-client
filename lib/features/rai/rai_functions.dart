@@ -63,6 +63,33 @@ List<RaiFunctionCall> raiFunctionCallsIn(String text) => [
 
 String raiStripFunctionCalls(String text) => text.replaceAll(_callRe, '').replaceAll(RegExp(r'[ \t]+\n'), '\n').trim();
 
+/// アカウント / 端末の状態を変える関数 (D-407、セキュリティ指摘 #23)。取得した投稿などを注入して答え直した返事
+/// (= 他人の書いた文が混ざった返事)に出てきたら、**すぐには実行せず**ユーザーの「実行する」を待つ。
+/// 下書きを入れるだけ(post.compose など。送信はユーザーが押す)と、読むだけの関数は含めない。
+const raiMutatingFunctions = <String>{
+  'post.action',
+  'astell.create',
+  'notifications.read',
+  'follow.set',
+  'list.edit',
+  'list.create',
+  'clip.edit',
+  'clip.create',
+  'settings.set',
+  'feed.save',
+  'timeline.addFeed',
+  'timeline.addRasqList',
+  'timeline.excludeWord',
+  'timeline.filterWord',
+  'tendency.seed',
+};
+
+bool raiIsMutating(String name) => raiMutatingFunctions.contains(name);
+
+/// 取得した文(投稿の本文など)を、モデルに渡す前に**データとして**無害にする (指摘 #23): 中の
+/// `[[call:…]]` / `[[…]]` の書式を崩し、モデルがそのまま写しても呼び出しにならないようにする。
+String raiNeutralizeFetched(String text) => text.replaceAll('[[', '[ [').replaceAll(']]', '] ]');
+
 /// 取得結果の候補 1 件 (D-229: 自動化の選択肢に使う。id は次の関数に渡す値、label は表示)。
 @immutable
 class RaiFunctionItem {

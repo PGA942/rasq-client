@@ -395,7 +395,7 @@ class _ApprovalTile extends StatelessWidget {
       child: Row(children: [
         const Icon(Icons.auto_awesome, size: 20),
         const SizedBox(width: RasqSpacing.xs),
-        Expanded(child: Text('RAi に任せますか？', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurface))),
+        Expanded(child: Text(opId.startsWith(raiHeldCallsPrefix) ? 'この操作を実行しますか？(取得した情報から出た操作です)' : 'RAi に任せますか？', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, color: scheme.onSurface))),
         TextButton(key: ValueKey('rai.chat.decline.$opId'), onPressed: enabled ? onDecline : null, style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)), child: const Text('やめる')),
         FilledButton(key: ValueKey('rai.chat.approve.$opId'), onPressed: enabled ? onApprove : null, style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 12)), child: const Text('実行する')),
       ]),
