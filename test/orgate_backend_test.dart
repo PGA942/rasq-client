@@ -432,13 +432,17 @@ void main() {
       expect(accessTokenExpiry(null), isNull);
     });
 
-    test('保存済みトークンが 401 なら 1 回だけ端末を登録し直す', () async {
+    test('保存済みトークンが 401 なら 1 回だけ端末を登録し直す(復帰の秘密を添える。秘密は回る、ORGATE O-009 / D-408)', () async {
       var meCalls = 0;
       final client = MockClient((req) async {
         if (req.url.path.endsWith('/auth/device')) {
-          // 取り直しは「既存のアカウントへ戻るだけ」(D-241: 同意なしに新規アカウントを作らない)。
-          expect((jsonDecode(req.body) as Map)['restoreOnly'], isTrue);
-          return http.Response('{"accountId":"a","handle":"rasq_x","displayName":"X","accessToken":"fresh","refreshToken":"fresh-refresh"}', 200,
+          // 取り直しは「既存のアカウントへ戻るだけ」(D-241: 同意なしに新規アカウントを作らない)。端末 id だけでは戻れないので、
+          // 保存していた復帰の秘密を添える。
+          final body = jsonDecode(req.body) as Map;
+          expect(body['restoreOnly'], isTrue);
+          expect(body['deviceId'], 'dev-1');
+          expect(body['restoreSecret'], 'restore-1');
+          return http.Response('{"accountId":"a","handle":"rasq_x","displayName":"X","accessToken":"fresh","refreshToken":"fresh-refresh","restoreSecret":"restore-2"}', 200,
               headers: {'content-type': 'application/json'});
         }
         meCalls++;
@@ -449,13 +453,54 @@ void main() {
         return http.Response(meJson, 200, headers: {'content-type': 'application/json; charset=utf-8'});
       });
       final container = containerWith(client, seed: {
-        OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'dev-1', 'token': 'stale', 'accountId': 'a'}),
+        // リフレッシュトークンは無い(取り直せない)が、復帰の秘密はある。
+        OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'dev-1', 'tokens': {'a': 'stale'}, 'restore': {'a': 'restore-1'}, 'currentAccountId': 'a'}),
       });
 
       final account = await container.read(orgateAccountProvider.future);
       expect(account, isNotNull);
-      // 401 → (リフレッシュトークンの無い前の形なので)端末の取り直し → Central の /me → ORGATE の /me (D-398、同じモック)。
+      // 401 → 端末の取り直し → Central の /me → ORGATE の /me (D-398、同じモック)。
       expect(meCalls, 3);
+      final stored = jsonDecode((await container.read(sessionStorageProvider).read(OrgateAccountNotifier.storageKey))!) as Map;
+      expect((stored['restore'] as Map).values, ['restore-2'], reason: '使った秘密は回る(新しいものを保存する)');
+      expect((stored['refresh'] as Map).values, ['fresh-refresh']);
+    });
+
+    test('復帰の秘密を持たない前の版の端末は、端末 id だけで戻ろうとしない(ログインし直し。新しいアカウントも作らない、D-408)', () async {
+      final seen = <String>[];
+      final client = MockClient((req) async {
+        seen.add('${req.method} ${req.url.path}');
+        if (req.url.path.endsWith('/auth/device')) fail('a device id alone must not be used to restore');
+        return http.Response(jsonEncode({'error': {'code': '401', 'message': 'expired'}}), 401, headers: {'content-type': 'application/json'});
+      });
+      final container = containerWith(client, seed: {
+        OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'dev-1', 'token': 'stale', 'accountId': 'a'}),
+      });
+      expect(await container.read(orgateAccountProvider.future), isNull);
+      expect(seen.where((s) => s.endsWith('/auth/device')), isEmpty);
+      final stored = jsonDecode((await container.read(sessionStorageProvider).read(OrgateAccountNotifier.storageKey))!) as Map;
+      expect(stored['deviceId'], 'dev-1', reason: '端末 id は残す(SNS 共有の鍵の AAD などに使う)');
+      expect(stored['tokens'], isEmpty);
+    });
+
+    test('ログイン / 作成の応答の復帰の秘密はアカウントごとに保存し、ログアウトで捨てる (D-408)', () async {
+      final server = fakeServer({
+        'POST /api/v1/auth/device': '{"accountId":"a","handle":"rasq_x","displayName":"X","accessToken":"tok","refreshToken":"tok-refresh","restoreSecret":"restore-a"}',
+        'GET /api/v1/me': meJson,
+        'POST /api/v1/auth/logout': '{}',
+      });
+      final container = containerWith(server.client);
+      expect(await container.read(orgateAccountProvider.future), isNull);
+      await container.read(orgateAccountProvider.notifier).createAccount();
+      final create = server.seen.firstWhere((r) => r.url.path.endsWith('/auth/device'));
+      expect((jsonDecode((create as http.Request).body) as Map).containsKey('restoreSecret'), isFalse, reason: '作成には秘密を送らない');
+      var stored = jsonDecode((await container.read(sessionStorageProvider).read(OrgateAccountNotifier.storageKey))!) as Map;
+      // /me で分かった id に、トークンと一緒に付け直る。
+      expect(stored['restore'], {(stored['currentAccountId'] as String): 'restore-a'});
+      expect((stored['restore'] as Map).keys, (stored['tokens'] as Map).keys);
+      await container.read(orgateAccountProvider.notifier).signOut();
+      stored = jsonDecode((await container.read(sessionStorageProvider).read(OrgateAccountNotifier.storageKey))!) as Map;
+      expect(stored['restore'], isEmpty);
     });
 
     test('取り直しでサーバーにアカウントが無ければ(削除 / 作り直し)、新規に作らず未作成へ戻る (D-241)', () async {

@@ -52,7 +52,7 @@ class AccountSecurityApi {
 
   /// メールを登録(または変更)して、確認のコードを送る。**確認済みのメールを付け替える**ときは、いまのパスワード
   /// [currentPassword] か、いまのメールに届いた `email.change` の確認コード [code] が要る(無いと 403、ORGATE O-008)。
-  /// 初めて付けるときは要らない。
+  /// 初めて付けるときは、パスワードを設定したアカウントだけ [currentPassword] が要る(ORGATE O-009。無いアカウントは要らない)。
   Future<void> setEmail(String email, {String? currentPassword, String? code}) =>
       _client.putJson('/me/email', {'email': email, 'currentPassword': ?currentPassword, 'code': ?code});
   Future<void> verifyEmail(String code) => _client.postJson('/me/email/verify', {'code': code});
@@ -99,6 +99,7 @@ String accountSecurityMessage(OrgateException e) => switch (e.code.code) {
       '400' when e.message.contains('8-256') => 'パスワードは 8 文字以上にしてください',
       '400' when e.message.contains('email') => 'メールアドレスの形が正しくありません',
       '403' when e.message.contains('current password') => 'いまのパスワードが違います',
+      // ORGATE O-009 から 403 の文面は日本語(そのまま出す)。上は前の版の英語の文面。
       '403' when e.message.contains('has no password') => 'このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください',
       '403' when e.message.contains('confirmation required') => 'この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります',
       _ => e.message,

@@ -14,8 +14,8 @@ export 'wasm_worker_config.dart';
 /// **Web Worker + ブラウザ自身の WebAssembly** で同じ ABI(PROTOCOL §4.1: `alloc` / `dealloc` / `snapshot` / `patch` / `call`、
 /// import `rasq.host_fn`)を動かす。公開している形は端末版 ([WasmPluginWorker]) と同じ。
 ///
-/// v1 の host_fn は同期なので、`net.fetch` は Worker の中の**同期 XHR**で出す(Worker の中なら UI は止まらない)。
-/// ブラウザの通信なので、相手のサーバーが CORS を許していること(Mastodon / Bluesky の API は許している)。
+/// v1 の host_fn は同期なので、`net.fetch` は JSPI(下)で host_fn を非同期にして Worker の中の `fetch` で出す
+/// (Worker の中なら UI は止まらない)。ブラウザの通信なので、相手のサーバーが CORS を許していること(Mastodon / Bluesky の API は許している)。
 /// `storage.*` / `fow.*` / アプリ向けホスト関数は、端末版のワーカーと同じ振る舞い(storage はワーカーの中、fow / アプリ向けはメインへ中継)。
 ///
 /// サイドロードの制限モード (D-308) は、埋込側が [WasmWorkerConfig] を絞って渡す(`permissions` から `network` /
@@ -26,10 +26,12 @@ export 'wasm_worker_config.dart';
 /// ([webWasmInitTimeout] / [webWasmCallTimeout]) を過ぎたらワーカーを止めて失敗にし、宣言したメモリと実行後のメモリを
 /// 端末版と同じ上限 ([webWasmMaxMemoryBytes]) で見る (D-407、指摘 #10)。
 ///
-/// `net.fetch` のリダイレクト (D-407、指摘 #7): 同期 XHR はリダイレクトを勝手に追い、宣言外のホストへ**送ってから**しか
-/// 気づけない。ブラウザが JSPI (`WebAssembly.Suspending` / `promising`) を持つなら、`host_fn` を非同期にして
-/// `fetch(..., {redirect: "manual"})` で出し、リダイレクトは追わない(端末版と同じ)。JSPI の無いブラウザは
-/// 同期 XHR に戻る(送った後の検査だけ。応答はプラグインに渡さない)。
+/// `net.fetch` のリダイレクト (D-407 / D-408、指摘 #7): ブラウザが JSPI (`WebAssembly.Suspending` / `promising`) を持つなら、
+/// `host_fn` を非同期にして `fetch(..., {redirect: "manual"})` で出し、リダイレクトは追わない(端末版と同じ)。
+/// **JSPI の無いブラウザでは `net.fetch` を出さない**(`E01`「このブラウザでは通信できるプラグインを動かせません」)。
+/// 前は同期 XHR に戻していたが、同期 XHR はリダイレクトを勝手に追い、宣言外のホストへ**送ってから**しか気づけない
+/// (応答を渡さなくても、送った中身は届いてしまう)。同期のまま非同期の通信を待つ安全な口(メインスレッドへの中継など)は
+/// Worker に無いので、断る方を選んだ(D-408)。通信しないプラグイン(storage / fow / アプリ向けだけ)はそのまま動く。
 class WasmPluginWorker {
   WasmPluginWorker._(this._worker, this._url) {
     _tracker = WasmRequestTracker(onFatal: (_) => _close());
@@ -129,7 +131,8 @@ class WasmPluginWorker {
 const _workerSource = r'''
 "use strict";
 let inst = null, ex = null, storage = {}, maxMemoryBytes = 256 * 1024 * 1024, cfg = {fowPermissions: [], appFns: [], knownAppFns: [], permissions: [], fetchHosts: [], instanceAllowed: false, instanceHost: null};
-// JSPI (D-407、指摘 #7): host_fn を非同期にでき、net.fetch を fetch(redirect: "manual") で出せる。無ければ同期 XHR。
+// JSPI (D-407、指摘 #7): host_fn を非同期にでき、net.fetch を fetch(redirect: "manual") で出せる。
+// 無ければ net.fetch は断る(同期 XHR はリダイレクトを追って宣言外へ送ってしまう。D-408)。
 const JSPI = typeof WebAssembly.Suspending === "function" && typeof WebAssembly.promising === "function";
 const enc = new TextEncoder(), dec = new TextDecoder();
 const TOKEN_FNS = ["composer.media.replace","composer.media.preview","composer.text.replace","viewer.overlay.set","composer.open","composer.media.overlay","page.render","page.end","shared.set","shared.op","shared.call"];
@@ -267,26 +270,12 @@ async function netFetchAsync(args) {
   return fetchResult(res.status, out, new Uint8Array(await res.arrayBuffer()));
 }
 
-// JSPI の無いブラウザ: 同期 XHR(リダイレクトを勝手に追う)。送った後で飛んだ先を見て、宣言外なら応答を渡さない。
+// JSPI の無いブラウザ: 通信は出さない(D-408、指摘 #7 の残り)。同期 XHR はリダイレクトを勝手に追い、宣言外のホストへ
+// 送ってからしか気づけないので使わない。門(権限・宣言した接続先)の答えは JSPI のときと同じ順に返す(宣言外は宣言外の E01)。
+const NO_JSPI_FETCH = "このブラウザでは通信できるプラグインを動かせません";
 function netFetch(args) {
-  const url = checkFetch(args);
-  const xhr = new XMLHttpRequest();
-  xhr.open(String(args.method || "GET").toUpperCase(), url, false);
-  xhr.responseType = "arraybuffer";
-  for (const [k, v] of Object.entries(args.headers || {})) {
-    // ブラウザが触らせないヘッダ(User-Agent など)は、付けられないだけで通信は続ける。
-    try { if (typeof v === "string") xhr.setRequestHeader(k, v); } catch (_) {}
-  }
-  const body = fetchBody(args);
-  try { xhr.send(body); } catch (e) { throw new HostFnError("B01", "fetch failed (network / CORS): " + e); }
-  // 同期 XHR はリダイレクトを勝手に追う(端末版は追わない)。飛んだ先が宣言外なら、応答をプラグインに渡さない。
-  if (xhr.responseURL && !hostPermitted(hostOf(xhr.responseURL))) throw new HostFnError("E01", "redirected to a host that is not permitted: " + hostOf(xhr.responseURL));
-  const headers = {};
-  for (const line of (xhr.getAllResponseHeaders() || "").trim().split(/[\r\n]+/)) {
-    const i = line.indexOf(":");
-    if (i > 0) headers[line.slice(0, i).trim().toLowerCase()] = line.slice(i + 1).trim();
-  }
-  return fetchResult(xhr.status, headers, new Uint8Array(xhr.response || new ArrayBuffer(0)));
+  checkFetch(args);
+  throw new HostFnError("E01", NO_JSPI_FETCH);
 }
 
 function invoke(fn, args) {
@@ -382,6 +371,8 @@ async function handle(ev) {
         if (typeof m.maxMemoryBytes === "number") maxMemoryBytes = m.maxMemoryBytes;
         cfg = {fowPermissions: m.fowPermissions || [], appFns: m.appFns || [], knownAppFns: m.knownAppFns || [],
                permissions: m.permissions || [], fetchHosts: m.fetchHosts || [], instanceAllowed: !!m.instanceAllowed, instanceHost: null};
+        // JSPI の無いブラウザでは、通信を宣言したプラグインの net.fetch は E01 になる(D-408)。開発者に見えるように記録だけ残す。
+        if (!JSPI && cfg.permissions.includes("network")) send({log: "net.fetch: " + NO_JSPI_FETCH});
         const hostImport = JSPI ? new WebAssembly.Suspending(hostFnAsync) : hostFn;
         const {instance} = await WebAssembly.instantiate(b64ToBytes(m.wasm), {rasq: {host_fn: hostImport}});
         for (const name of ["memory", "alloc", "dealloc", "snapshot", "patch", "call"]) {
