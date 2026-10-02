@@ -5,6 +5,7 @@ import 'dart:js_interop';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:web/web.dart' as web;
 
+import 'wasm_web_guard.dart';
 import 'wasm_worker_config.dart';
 
 export 'wasm_worker_config.dart';
@@ -21,15 +22,24 @@ export 'wasm_worker_config.dart';
 /// `storage.unsafe` / `gpu_ml` / `fow.interstitial` / `fow.system` を外す、`fetchHosts` を空に、閉じる関数を `appFns` から外す)。
 /// Worker の JS はその値で端末版と同じ門(`E01`)を掛ける: `net.fetch` = `permissions` の `network` と `hostPermitted`、
 /// `storage.*` = `storage.<ns>`、`fow.open` = `fowPermissions`、アプリ向け = `appFns`。**fuel の予算は Web には無い**
-/// (ブラウザの WebAssembly は fuel を数えない。`fuelPerCall` はここでは効かない)。
+/// (ブラウザの WebAssembly は fuel を数えない。`fuelPerCall` はここでは効かない)。代わりに要求ごとの期限
+/// ([webWasmInitTimeout] / [webWasmCallTimeout]) を過ぎたらワーカーを止めて失敗にし、宣言したメモリと実行後のメモリを
+/// 端末版と同じ上限 ([webWasmMaxMemoryBytes]) で見る (D-407、指摘 #10)。
+///
+/// `net.fetch` のリダイレクト (D-407、指摘 #7): 同期 XHR はリダイレクトを勝手に追い、宣言外のホストへ**送ってから**しか
+/// 気づけない。ブラウザが JSPI (`WebAssembly.Suspending` / `promising`) を持つなら、`host_fn` を非同期にして
+/// `fetch(..., {redirect: "manual"})` で出し、リダイレクトは追わない(端末版と同じ)。JSPI の無いブラウザは
+/// 同期 XHR に戻る(送った後の検査だけ。応答はプラグインに渡さない)。
 class WasmPluginWorker {
-  WasmPluginWorker._(this._worker, this._url);
+  WasmPluginWorker._(this._worker, this._url) {
+    _tracker = WasmRequestTracker(onFatal: (_) => _close());
+  }
 
   final web.Worker _worker;
   final String _url;
 
-  final Map<int, Completer<String>> _pending = {};
-  int _seq = 0;
+  late final WasmRequestTracker _tracker;
+  bool _closed = false;
   final _logs = StreamController<String>.broadcast();
   final _fows = StreamController<Map<String, Object?>>.broadcast();
   final _apps = StreamController<Map<String, Object?>>.broadcast();
@@ -43,20 +53,20 @@ class WasmPluginWorker {
   Stream<Map<String, Object?>> get fowRequests => _fows.stream;
 
   static Future<WasmPluginWorker> spawn(WasmWorkerConfig config) async {
+    // 起動する前に、宣言したメモリの大きさを断る(指摘 #10)。
+    checkWasmMemoryDeclaration(config.wasmBytes);
     final blob = web.Blob([_workerSource.toJS].toJS, web.BlobPropertyBag(type: 'text/javascript'));
     final url = web.URL.createObjectURL(blob);
     final worker = WasmPluginWorker._(web.Worker(url.toJS), url);
     worker._worker.onmessage = ((web.MessageEvent e) => worker._onMessage((e.data as JSString).toDart)).toJS;
     worker._worker.onerror = ((web.Event e) {
-      final err = StateError('wasm worker failed: ${e.isA<web.ErrorEvent>() ? (e as web.ErrorEvent).message : e.type}');
-      for (final c in worker._pending.values) {
-        if (!c.isCompleted) c.completeError(err);
-      }
-      worker._pending.clear();
+      worker._tracker.fail(StateError('wasm worker failed: ${e.isA<web.ErrorEvent>() ? (e as web.ErrorEvent).message : e.type}'));
     }).toJS;
     try {
       // 起動確認(instantiate の失敗は、ここで例外になる)。メッセージは JSON の文字列でやり取りする。
-      await worker._request('init', {
+      // 終わらない start でも期限 (webWasmInitTimeout) でワーカーごと止まる。
+      await worker._request('init', timeout: webWasmInitTimeout, args: {
+        'maxMemoryBytes': webWasmMaxMemoryBytes,
         'wasm': base64Encode(config.wasmBytes),
         'storage': config.seedStorage,
         'fowPermissions': config.fowPermissions.toList(),
@@ -80,31 +90,30 @@ class WasmPluginWorker {
     if (map['fow'] != null) return _fows.add((map['fow'] as Map).cast<String, Object?>());
     if (map['app'] != null) return _apps.add((map['app'] as Map).cast<String, Object?>());
     if (map['shape'] != null) return _shapes.add((map['shape'] as Map).cast<String, Object?>());
-    final completer = _pending.remove(map['id']);
-    if (completer == null) return;
     if (map['ok'] == true) {
-      completer.complete('${map['result']}');
+      _tracker.complete(map['id'], '${map['result']}');
+    } else if (map['fatal'] == true) {
+      // メモリの上限を超えた等: インスタンスはもう使えない。ワーカーごと止める。
+      _tracker.fail(StateError('${map['error']}'));
     } else {
-      completer.completeError(StateError('${map['error']}'));
+      _tracker.completeError(map['id'], StateError('${map['error']}'));
     }
   }
 
-  Future<String> _request(String op, [Map<String, Object?> args = const {}]) {
-    final id = _seq++;
-    final completer = Completer<String>();
-    _pending[id] = completer;
-    _worker.postMessage(jsonEncode({'id': id, 'op': op, ...args}).toJS);
-    return completer.future;
-  }
+  Future<String> _request(String op, {Map<String, Object?> args = const {}, Duration timeout = webWasmCallTimeout}) =>
+      _tracker.start(op, (id) => _worker.postMessage(jsonEncode({'id': id, 'op': op, ...args}).toJS), timeout: timeout);
 
   Future<String> snapshot() => _request('snapshot');
   Future<String> patch() => _request('patch');
-  Future<String> call({required String fn, required String argsJson, required String callId}) => _request('call', {'fn': fn, 'args': argsJson, 'callId': callId});
+  Future<String> call({required String fn, required String argsJson, required String callId}) => _request('call', args: {'fn': fn, 'args': argsJson, 'callId': callId});
 
   /// セッションのインスタンスのホストを `net.fetch` に許可する(マニフェストが `network.instance` を宣言している場合だけ効く)。
-  Future<String> grantHost(String? host) => _request('grantHost', {'host': host});
+  Future<String> grantHost(String? host) => _request('grantHost', args: {'host': host});
 
   void _close() {
+    if (_closed) return;
+    _closed = true;
+    _tracker.fail(StateError('wasm worker closed'));
     _worker.terminate();
     web.URL.revokeObjectURL(_url);
     _logs.close();
@@ -119,7 +128,9 @@ class WasmPluginWorker {
 /// Worker の中身(JS)。Blob から起こすので、配るファイルは増えない。
 const _workerSource = r'''
 "use strict";
-let inst = null, storage = {}, cfg = {fowPermissions: [], appFns: [], knownAppFns: [], permissions: [], fetchHosts: [], instanceAllowed: false, instanceHost: null};
+let inst = null, ex = null, storage = {}, maxMemoryBytes = 256 * 1024 * 1024, cfg = {fowPermissions: [], appFns: [], knownAppFns: [], permissions: [], fetchHosts: [], instanceAllowed: false, instanceHost: null};
+// JSPI (D-407、指摘 #7): host_fn を非同期にでき、net.fetch を fetch(redirect: "manual") で出せる。無ければ同期 XHR。
+const JSPI = typeof WebAssembly.Suspending === "function" && typeof WebAssembly.promising === "function";
 const enc = new TextEncoder(), dec = new TextDecoder();
 const TOKEN_FNS = ["composer.media.replace","composer.media.preview","composer.text.replace","viewer.overlay.set","composer.open","composer.media.overlay","page.render","page.end","shared.set","shared.op","shared.call"];
 const send = (m) => self.postMessage(JSON.stringify(m));
@@ -213,13 +224,52 @@ function recordShape(args) {
   send({shape: s});
 }
 
-function netFetch(args) {
+// net.fetch の門(送る前): 権限・スキーム・宣言した接続先。通れば URL を返す。
+function checkFetch(args) {
   recordShape(args); // 通信の形は、通る通らないに関わらず控える(端末版のランタイムと同じ)
   if (!cfg.permissions.includes("network")) throw new HostFnError("E01", "network not permitted");
   const url = String(args.url || "");
   if (!(url.startsWith("https://") || url.startsWith("http://"))) throw new HostFnError("B03", "bad url: " + url);
   // 宣言した先だけ (schema v0.12)。
   if (!hostPermitted(hostOf(url))) throw new HostFnError("E01", "host not permitted: " + hostOf(url));
+  return url;
+}
+function fetchBody(args) {
+  if (args.body && typeof args.body === "object" && typeof args.body.b64 === "string") {
+    try { return b64ToBytes(args.body.b64); } catch (e) { throw new HostFnError("D01", "bad body base64: " + e); }
+  }
+  return typeof args.body === "string" ? args.body : null;
+}
+function fetchResult(status, headers, bytes) {
+  // 応答は UTF-8 なら bodyText、そうでなければ bodyB64(端末のランタイムと同じ)。
+  try { return {status, headers, bodyText: new TextDecoder("utf-8", {fatal: true}).decode(bytes)}; }
+  catch (_) { return {status, headers, bodyB64: bytesToB64(bytes)}; }
+}
+
+// JSPI のとき: fetch をリダイレクトを追わずに出す (D-407、指摘 #7)。3xx は宣言外へ一切送らずに断る(端末版も追わない)。
+async function netFetchAsync(args) {
+  const url = checkFetch(args);
+  const headers = new Headers();
+  for (const [k, v] of Object.entries(args.headers || {})) {
+    // ブラウザが触らせないヘッダ(User-Agent など)は、付けられないだけで通信は続ける。
+    try { if (typeof v === "string") headers.set(k, v); } catch (_) {}
+  }
+  const method = String(args.method || "GET").toUpperCase();
+  const body = method === "GET" || method === "HEAD" ? null : fetchBody(args);
+  let res;
+  try { res = await fetch(url, {method, headers, body, redirect: "manual"}); }
+  catch (e) { throw new HostFnError("B01", "fetch failed (network / CORS): " + e); }
+  if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
+    throw new HostFnError("E01", "redirect is not followed (" + hostOf(url) + ")");
+  }
+  const out = {};
+  res.headers.forEach((v, k) => { out[k.toLowerCase()] = v; });
+  return fetchResult(res.status, out, new Uint8Array(await res.arrayBuffer()));
+}
+
+// JSPI の無いブラウザ: 同期 XHR(リダイレクトを勝手に追う)。送った後で飛んだ先を見て、宣言外なら応答を渡さない。
+function netFetch(args) {
+  const url = checkFetch(args);
   const xhr = new XMLHttpRequest();
   xhr.open(String(args.method || "GET").toUpperCase(), url, false);
   xhr.responseType = "arraybuffer";
@@ -227,12 +277,7 @@ function netFetch(args) {
     // ブラウザが触らせないヘッダ(User-Agent など)は、付けられないだけで通信は続ける。
     try { if (typeof v === "string") xhr.setRequestHeader(k, v); } catch (_) {}
   }
-  let body = null;
-  if (args.body && typeof args.body === "object" && typeof args.body.b64 === "string") {
-    try { body = b64ToBytes(args.body.b64); } catch (e) { throw new HostFnError("D01", "bad body base64: " + e); }
-  } else if (typeof args.body === "string") {
-    body = args.body;
-  }
+  const body = fetchBody(args);
   try { xhr.send(body); } catch (e) { throw new HostFnError("B01", "fetch failed (network / CORS): " + e); }
   // 同期 XHR はリダイレクトを勝手に追う(端末版は追わない)。飛んだ先が宣言外なら、応答をプラグインに渡さない。
   if (xhr.responseURL && !hostPermitted(hostOf(xhr.responseURL))) throw new HostFnError("E01", "redirected to a host that is not permitted: " + hostOf(xhr.responseURL));
@@ -241,10 +286,7 @@ function netFetch(args) {
     const i = line.indexOf(":");
     if (i > 0) headers[line.slice(0, i).trim().toLowerCase()] = line.slice(i + 1).trim();
   }
-  const bytes = new Uint8Array(xhr.response || new ArrayBuffer(0));
-  // 応答は UTF-8 なら bodyText、そうでなければ bodyB64(端末のランタイムと同じ)。
-  try { return {status: xhr.status, headers, bodyText: new TextDecoder("utf-8", {fatal: true}).decode(bytes)}; }
-  catch (_) { return {status: xhr.status, headers, bodyB64: bytesToB64(bytes)}; }
+  return fetchResult(xhr.status, headers, new Uint8Array(xhr.response || new ArrayBuffer(0)));
 }
 
 function invoke(fn, args) {
@@ -256,7 +298,7 @@ function invoke(fn, args) {
     case "storage.get": { requireStorage(); const v = storage[key()]; return {value: v === undefined ? null : v}; }
     case "storage.set": requireStorage(); storage[key()] = args.value === undefined ? null : args.value; return {};
     case "storage.delete": requireStorage(); delete storage[key()]; return {};
-    case "net.fetch": return netFetch(args);
+    case "net.fetch": return JSPI ? netFetchAsync(args) : netFetch(args);
     case "alert": return {confirmed: true};
     case "ml.infer": throw new HostFnError("E01", "ml.infer backend not wired yet (model: " + args.model + ")");
     case "fow.open": {
@@ -289,34 +331,68 @@ function invoke(fn, args) {
   }
 }
 
+function dispatchError(callId, e) { return JSON.stringify({callId, ok: false, error: {code: e instanceof HostFnError ? e.code : "F00", message: String(e.message || e)}}); }
+function parseRequest(requestJson) {
+  try { return JSON.parse(requestJson); } catch (e) { return {bad: "bad hostfn request: " + e}; }
+}
+
 function dispatch(requestJson) {
-  let req;
-  try { req = JSON.parse(requestJson); } catch (e) { return JSON.stringify({ok: false, error: {code: "D01", message: "bad hostfn request: " + e}}); }
+  const req = parseRequest(requestJson);
+  if (req.bad) return JSON.stringify({ok: false, error: {code: "D01", message: req.bad}});
   const callId = req.callId === undefined ? null : req.callId;
   send({log: "hostFn: " + req.fn});
   try { return JSON.stringify({callId, ok: true, value: invoke(String(req.fn || ""), req.args || {})}); }
-  catch (e) { return JSON.stringify({callId, ok: false, error: {code: e instanceof HostFnError ? e.code : "F00", message: String(e.message || e)}}); }
+  catch (e) { return dispatchError(callId, e); }
 }
 
-function hostFn(ptr, len) {
-  const res = enc.encode(dispatch(readStr(ptr, len)));
+// JSPI のとき: invoke が Promise(net.fetch)を返したら待つ。wasm 側の呼び出しはその間止まっている。
+async function dispatchAsync(requestJson) {
+  const req = parseRequest(requestJson);
+  if (req.bad) return JSON.stringify({ok: false, error: {code: "D01", message: req.bad}});
+  const callId = req.callId === undefined ? null : req.callId;
+  send({log: "hostFn: " + req.fn});
+  try { return JSON.stringify({callId, ok: true, value: await invoke(String(req.fn || ""), req.args || {})}); }
+  catch (e) { return dispatchError(callId, e); }
+}
+
+function packResult(json) {
+  const res = enc.encode(json);
   const out = writeBytes(res);
   return (BigInt(out) << 32n) | BigInt(res.length);
 }
+function hostFn(ptr, len) { return packResult(dispatch(readStr(ptr, len))); }
+async function hostFnAsync(ptr, len) {
+  const req = readStr(ptr, len); // 待つ前に読む(待つ間にメモリが伸びても困らない)
+  return packResult(await dispatchAsync(req));
+}
 
-self.onmessage = async (ev) => {
+// メモリの上限 (D-407、指摘 #10): 端末版と同じ。超えたらインスタンスごと捨てる(fatal でワーカーを止めてもらう)。
+class FatalError extends Error {}
+function checkMemory() {
+  const n = inst.exports.memory.buffer.byteLength;
+  if (n > maxMemoryBytes) throw new FatalError("plugin exceeded its memory limit (" + maxMemoryBytes + " bytes)");
+}
+
+async function handle(ev) {
   const m = JSON.parse(ev.data);
   try {
     switch (m.op) {
       case "init": {
         storage = Object.assign({}, m.storage || {});
+        if (typeof m.maxMemoryBytes === "number") maxMemoryBytes = m.maxMemoryBytes;
         cfg = {fowPermissions: m.fowPermissions || [], appFns: m.appFns || [], knownAppFns: m.knownAppFns || [],
                permissions: m.permissions || [], fetchHosts: m.fetchHosts || [], instanceAllowed: !!m.instanceAllowed, instanceHost: null};
-        const {instance} = await WebAssembly.instantiate(b64ToBytes(m.wasm), {rasq: {host_fn: hostFn}});
+        const hostImport = JSPI ? new WebAssembly.Suspending(hostFnAsync) : hostFn;
+        const {instance} = await WebAssembly.instantiate(b64ToBytes(m.wasm), {rasq: {host_fn: hostImport}});
         for (const name of ["memory", "alloc", "dealloc", "snapshot", "patch", "call"]) {
           if (!instance.exports[name]) throw new Error("missing export: " + name);
         }
         inst = instance;
+        // JSPI のとき、host_fn を呼びうる入口は promising で包む(呼ぶ側は await)。
+        ex = JSPI
+          ? {snapshot: WebAssembly.promising(instance.exports.snapshot), patch: WebAssembly.promising(instance.exports.patch), call: WebAssembly.promising(instance.exports.call)}
+          : {snapshot: instance.exports.snapshot, patch: instance.exports.patch, call: instance.exports.call};
+        checkMemory();
         return send({id: m.id, ok: true, result: "pong"});
       }
       case "grantHost": {
@@ -324,19 +400,24 @@ self.onmessage = async (ev) => {
         if (cfg.instanceAllowed) { const h = String(m.host || "").trim().toLowerCase(); cfg.instanceHost = h || null; }
         return send({id: m.id, ok: true, result: cfg.instanceHost || ""});
       }
-      case "snapshot": return send({id: m.id, ok: true, result: readPacked(inst.exports.snapshot())});
-      case "patch": return send({id: m.id, ok: true, result: readPacked(inst.exports.patch())});
+      case "snapshot": { const r = readPacked(await ex.snapshot()); checkMemory(); return send({id: m.id, ok: true, result: r}); }
+      case "patch": { const r = readPacked(await ex.patch()); checkMemory(); return send({id: m.id, ok: true, result: r}); }
       case "call": {
         const parts = [m.fn, m.args, m.callId].map((s) => enc.encode(String(s)));
         const ptrs = parts.map(writeBytes);
-        const packed = inst.exports.call(ptrs[0], parts[0].length, ptrs[1], parts[1].length, ptrs[2], parts[2].length);
+        const packed = await ex.call(ptrs[0], parts[0].length, ptrs[1], parts[1].length, ptrs[2], parts[2].length);
         ptrs.forEach((p, i) => inst.exports.dealloc(p, parts[i].length));
-        return send({id: m.id, ok: true, result: readPacked(packed)});
+        const r = readPacked(packed);
+        checkMemory();
+        return send({id: m.id, ok: true, result: r});
       }
       default: return send({id: m.id, ok: false, error: "unknown op: " + m.op});
     }
   } catch (e) {
-    send({id: m.id, ok: false, error: String(e && e.message || e)});
+    send({id: m.id, ok: false, fatal: e instanceof FatalError, error: String(e && e.message || e)});
   }
-};
+}
+// 1 つずつ順に(JSPI で net.fetch を待っている間に、次の呼び出しが同じインスタンスへ入り込まないように)。
+let queue = Promise.resolve();
+self.onmessage = (ev) => { queue = queue.then(() => handle(ev)); };
 ''';
