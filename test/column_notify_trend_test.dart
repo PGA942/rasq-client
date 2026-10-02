@@ -13,7 +13,6 @@ import 'package:rasq_client/features/trend/trend_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/headers.dart';
 import 'package:rasq_client/shell/third_column.dart';
-import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -104,11 +103,11 @@ void main() {
     expect(inCol3(find.byType(NotificationsScreen)), findsOneWidget);
   });
 
-  testWidgets('第3カラムの検索は左カラムと同じアカウント: 個別の SNS アカウントならそのアカウントのトレンドとアイコン、切り替えるとついてくる', (tester) async {
+  testWidgets('第3カラムの検索は左カラムと同じアカウント: 個別の SNS アカウントならそのアカウントのトレンド、切り替えるとついてくる(アイコンは出さない)', (tester) async {
     final c = await pump(tester);
-    String avatarLabel() => tester.widget<RasqAvatar>(inCol3(find.byKey(const ValueKey('search.account')))).fallbackLabel ?? '';
+    // 第3カラムの検索欄にはアカウントのアイコンを出さない (D-411、左カラムのヘッダーにある)。
+    expect(inCol3(find.byKey(const ValueKey('search.account'))), findsNothing);
     // Misskey(example.test)を選んでいる: そのアカウントが出したトレンドだけ。
-    expect(avatarLabel(), 'テスター');
     expect(inCol3(find.byKey(const ValueKey('trend.tile.打上会'))), findsOneWidget);
     expect(inCol3(find.byKey(const ValueKey('trend.tile.#花火'))), findsOneWidget);
     expect(inCol3(find.byKey(const ValueKey('trend.tile.月見'))), findsNothing);
@@ -118,12 +117,11 @@ void main() {
     await tester.enterText(inCol3(find.byType(TextField)).first, '書きかけ');
     await tester.pump();
 
-    // Bluesky に切り替える → アイコンもトレンドもついてくる。
+    // Bluesky に切り替える → トレンドもついてくる。アイコンは切り替えた後も出さない。
     await c.read(sessionsProvider.notifier).setCurrent(bsky.account);
     await tester.pumpAndSettle();
-    // アイコンは左カラム(ホームのヘッダー)と同じ、いまの SNS アカウントのプロフィール。
     expect(c.read(currentUserProvider).account, bsky.account);
-    expect(avatarLabel(), c.read(currentUserProvider).displayName);
+    expect(inCol3(find.byKey(const ValueKey('search.account'))), findsNothing);
     expect(inCol3(find.byKey(const ValueKey('trend.tile.月見'))), findsOneWidget);
     expect(inCol3(find.byKey(const ValueKey('trend.tile.#花火'))), findsOneWidget);
     expect(inCol3(find.byKey(const ValueKey('trend.tile.打上会'))), findsNothing);
@@ -155,7 +153,8 @@ void main() {
     expect(tester.widget<TrendScreen>(find.byType(TrendScreen)).account, bsky.account.key);
     expect(find.text('タグの投稿 bsky.social'), findsWidgets);
     expect(find.text('タグの投稿 example.test'), findsNothing);
-    expect(find.descendant(of: find.byKey(const ValueKey('trend.openedAs')), matching: find.text('bsky.social')), findsOneWidget);
+    // 読んでいるアカウントは浮かべたタイル (D-411、D-397 のサーバーの印をまとめた)。
+    expect(find.descendant(of: find.byKey(const ValueKey('trend.accountTile')), matching: find.text('bsky.social')), findsOneWidget);
     // 続けて検索しても、同じアカウントのまま。
     await tester.enterText(find.byType(TextField).first, '月');
     await tester.testTextInput.receiveAction(TextInputAction.search);
@@ -170,7 +169,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<TrendScreen>(find.byType(TrendScreen)).account, isNull);
     expect(find.text('タグの投稿 example.test'), findsWidgets);
-    expect(find.byKey(const ValueKey('trend.openedAs')), findsNothing);
+    // アカウントを決めずに開いても、タイルは既定で出す(いまのアカウント)。
+    expect(find.descendant(of: find.byKey(const ValueKey('trend.accountTile')), matching: find.text('example.test')), findsOneWidget);
     await tester.tap(find.byTooltip('トレンドホームへ戻る'));
     await tester.pumpAndSettle();
 

@@ -18,7 +18,7 @@ import '../users/user_list.dart';
 import '../vc/astell_actions.dart';
 import '../vc/astell_tile.dart' show AstellTileStrip;
 import 'tendency_fows.dart';
-import '../servers/server_badge.dart';
+import '../../shell/floating_account_tile.dart';
 import 'trend_analysis.dart';
 import 'trend_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -35,7 +35,7 @@ class TrendScreen extends ConsumerStatefulWidget {
   final String tag;
 
   /// このアカウント(`AccountId.key`)で開く (D-397): トレンドを出したアカウント / 「別のアカウントで開く」で選んだもの。
-  /// null = 現在のアカウント(アカウントを切り替えるとついてくる)。
+  /// null = 現在のアカウント(アカウントを切り替えるとついてくる)。画面の上に浮かべたアカウントのタイル (D-411) で選び直せる。
   final String? account;
   @override
   ConsumerState<TrendScreen> createState() => _TrendScreenState();
@@ -44,9 +44,25 @@ class TrendScreen extends ConsumerStatefulWidget {
 class _TrendScreenState extends ConsumerState<TrendScreen> {
   final _scroll = ScrollController();
   late final _searchController = TextEditingController(text: widget.tag);
+
+  /// この画面で読んでいるアカウント (D-397 の `account:`)。浮かべたアカウントのタイル (D-411) で選び直すと、タグの TL・分析・
+  /// フォロー中・ユーザーをそのアカウントのセッションで読み直す(どれもアカウントごとのプロバイダなので、キーが変わるだけ)。
+  late String? _account = widget.account;
   TimelineKind get _kind => DynamicTimelines.tag(widget.tag);
-  TrendQuery get _q => (tag: widget.tag, account: widget.account);
-  AsyncNotifierProvider<TimelineNotifier, TimelineState> get _tl => timelineFor(_kind, account: widget.account);
+  TrendQuery get _q => (tag: widget.tag, account: _account);
+  AsyncNotifierProvider<TimelineNotifier, TimelineState> get _tl => timelineFor(_kind, account: _account);
+
+  @override
+  void didUpdateWidget(TrendScreen old) {
+    super.didUpdateWidget(old);
+    if (old.account != widget.account || old.tag != widget.tag) _account = widget.account;
+  }
+
+  /// タイルでアカウントを選んだ。いまのアカウントを選んだら指定を外す(アカウントの切り替えについてくる、D-397 と同じ)。
+  void _switchAccount(AccountId account) {
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+    setState(() => _account = account == ref.read(currentAccountProvider) ? null : account.key);
+  }
 
   @override
   void initState() {
@@ -65,7 +81,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(sessionForAccountProvider(widget.account));
+    final session = ref.watch(sessionForAccountProvider(_account));
     final actions = session?.actions ?? const [];
     final tl = ref.watch(_tl);
     // ノードグラフ実配線 (D-113): trend.following / trend.users スコープ。
@@ -80,7 +96,9 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
       for (final t in trends.value ?? const <TrendTag>[])
         if (t.tag != widget.tag) t.tag,
     ].take(maxGenreChips).toList();
-    final opened = widget.account == null ? null : ref.watch(sessionsProvider).value?.allSessions.where((x) => x.account.key == widget.account).firstOrNull?.account;
+    final opened = _account == null ? null : ref.watch(sessionsProvider).value?.allSessions.where((x) => x.account.key == _account).firstOrNull?.account;
+    // 選ぶ一覧の印: このトレンドを出したアカウント (D-388)。
+    final sources = ref.watch(sourcedTrendsProvider).value?.sources[trendKey(widget.tag)] ?? const <AccountId>[];
     final tabs = [const RasqTabItem('ノート'), const RasqTabItem('フォロー中'), const RasqTabItem('ユーザー')];
 
     // チャイルドセーフ (D-307): 検索結果も TL と同じ絞り込み。
@@ -119,7 +137,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   genreCandidates: genreCandidates,
                   onSubmitted: (q) {
                     final tag = q.trim().replaceFirst(RegExp(r'^#'), '');
-                    if (tag.isNotEmpty && tag != widget.tag) context.replaceTrend(tag, account: widget.account);
+                    if (tag.isNotEmpty && tag != widget.tag) context.replaceTrend(tag, account: _account);
                   },
                 ),
               ),
@@ -135,15 +153,14 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                 },
               ),
             ),
-            // どのアカウントで開いているか (D-397): アカウントを決めて開いたときだけ、サーバーの印を出す。
-            if (opened != null) Padding(padding: const EdgeInsets.only(left: RasqSpacing.xs), child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: ServerBadge(key: const ValueKey('trend.openedAs'), account: opened))),
             // トレンドもタイムラインと同じ (D-090/D-103): RAi は TL のタブ行
             // では隠し、ノード設定だけ置く。
             // TL 系は全部同 UI (D-124): 簡略版カスタマイズ画面へ。
             RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'トレンド設定', onPressed: () => showTrendProfileSheet(context, ref)),
           ]),
           Expanded(
-            child: TabBarView(children: [
+            child: Stack(children: [
+            Positioned.fill(child: TabBarView(children: [
               RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(trendAnalysisProvider(_q));
@@ -208,6 +225,14 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                       : UserList(users: [for (final e in ranked) e.$1.summary], subtitles: {for (final e in ranked) e.$1.summary.id: 'リアクション ${e.$2}'});
                 },
               ),
+            ])),
+            // どのアカウントで読んでいるか (D-411、D-397 のサーバーの印をまとめた): 既定で出す。タップで別のアカウントに切り替える。
+            // 左下(右下の ＋ と反対側)。上に置くと投稿の右上の「…」に重なる。
+            Positioned(
+              left: RasqSpacing.sm,
+              bottom: RasqSpacing.md,
+              child: FloatingAccountTile(key: const ValueKey('trend.accountTile'), id: 'trend.accountTile', account: opened, marked: sources, markLabel: 'トレンドに出したアカウント', onPick: _switchAccount),
+            ),
             ]),
           ),
         ]),

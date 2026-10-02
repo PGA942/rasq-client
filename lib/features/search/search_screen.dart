@@ -32,7 +32,7 @@ import 'search_filter_bar_view.dart';
 /// 検索欄にフォーカスが当たると下方向に拡幅して検索フィルタ行が現れる
 /// (D-021。設定後は常時表示、結果画面のトレンドTLへ引き継がれる)。
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key, this.inThirdColumn = false, this.searchTrailing});
+  const SearchScreen({super.key, this.inThirdColumn = false, this.searchTrailing, this.showAccountIcon = true});
 
   /// 第3カラムの検索 (D-397): 左カラムと同じアカウントで動く。個別の SNS アカウントを選んでいる間は、アイコンも
   /// トレンドもその SNS アカウントのもの(総合表示 = RASQ アカウントのときは D-388 のとおり全部から集める)。
@@ -40,6 +40,9 @@ class SearchScreen extends ConsumerStatefulWidget {
 
   /// 検索欄の横に置く部品(第3カラムの設定ボタン、D-397)。
   final Widget? searchTrailing;
+
+  /// 検索欄の左にアカウントのアイコンを出すか (D-411)。第3カラムの検索では出さない(左カラムのヘッダーに同じアイコンがある)。
+  final bool showAccountIcon;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -104,12 +107,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.sm, RasqSpacing.xs),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                // 検索は RASQ アカウントでまとめる (D-388): トレンドは中の SNS アカウント全部から集めるので、アイコンも RASQ アカウント。
-                child: RasqAvatar(key: const ValueKey('search.account'), imageUrl: me.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: me.displayName, onTap: () => RasqShell.openSidebar(context, ref)),
-              ),
-              const SizedBox(width: RasqSpacing.sm),
+              if (widget.showAccountIcon) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  // 検索は RASQ アカウントでまとめる (D-388): トレンドは中の SNS アカウント全部から集めるので、アイコンも RASQ アカウント。
+                  child: RasqAvatar(key: const ValueKey('search.account'), imageUrl: me.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: me.displayName, onTap: () => RasqShell.openSidebar(context, ref)),
+                ),
+                const SizedBox(width: RasqSpacing.sm),
+              ],
               Expanded(
                 // チャイルドセーフ (D-307): 保護者が投稿の検索を止めていれば、入力欄を薄くして理由を出す。
                 child: ChildSafeGreyed(

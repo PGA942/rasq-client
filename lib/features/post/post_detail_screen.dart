@@ -17,7 +17,9 @@ import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../settings/settings_dsl.dart';
 import '../users/user_list.dart';
+import '../../shell/floating_account_tile.dart';
 import 'post_bookmark_button.dart';
+import 'post_resolve.dart';
 import 'reactions_screen.dart';
 import 'thread_section.dart';
 import 'thread_section_bar.dart';
@@ -60,11 +62,42 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   /// 返信欄の並び順/表示種類 (D-070)。**キャッシュに残す** — KV
   /// `threadReplies.v1`(設定 DSL と同じ規約)に保存し、全スレッドで共有。
   static const _kvArea = threadRepliesKvArea;
-  String get postId => widget.postId;
-  Post? get initial => widget.initial;
+  /// 浮かべたアカウントのタイル (D-411) で別のアカウントに切り替えたときの、そのアカウントでの投稿(null = 開いたまま)。
+  Post? _as;
+  bool _resolving = false;
+  String get postId => _as?.id ?? widget.postId;
+  Post? get initial => _as ?? widget.initial;
 
-  /// この画面を展開するアカウント (D-155): 開いた投稿が属するアカウント。
+  /// この画面を展開するアカウント (D-155): 開いた投稿が属するアカウント(タイルで切り替えたらそのアカウント、D-411)。
   String? get acct => initial?.account.key;
+
+  /// タイルでアカウントを選んだ (D-411): そのアカウントで同じ投稿を引き直し([resolvePostOn])、スレッドを読み直す。
+  /// 見つからなければメッセージを出して、いまのアカウントのまま。
+  Future<void> _switchAccount(Post shown, AccountId target) async {
+    final original = widget.initial ?? shown;
+    if (original.account == target) {
+      _applySwitch(null);
+      return;
+    }
+    setState(() => _resolving = true);
+    final found = await ref.read(postResolverProvider)(original, target);
+    if (!mounted) return;
+    setState(() => _resolving = false);
+    if (found == null) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('$target ではこの投稿を見つけられませんでした')));
+      return;
+    }
+    _applySwitch(found);
+  }
+
+  void _applySwitch(Post? post) {
+    // 常駐の返信コンポーザーは前のアカウントの投稿に向いているので閉じて、新しいアカウントの投稿で置き直す。
+    ref.read(overlayManagerProvider).close(composerFowId);
+    setState(() {
+      _as = post;
+      _composerDismissed = false;
+    });
+  }
   ThreadKey get threadKey => (id: postId, account: acct);
 
   /// 常駐返信 stick (D-050): 元の返信タイルの代わりに、ページを開いたら
@@ -153,9 +186,21 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           onActAs: (alt) => context.pushPost(alt),
         );
 
-    return Scaffold(
-      appBar: RasqPageHeader(title: '投稿', leadingAvatar: me, actions: [if (replyTarget != null) PostBookmarkButton(post: replyTarget, session: session)], onMore: () {}),
-      body: thread.when(
+    // どのアカウントで読んでいるか (D-411): 左下に浮かべたタイル(上だと投稿の「…」に重なる。常駐の返信 stick は FOW の予約 D-397 で
+    // 中身の下に来る)。タップで別のアカウントに切り替える(投稿を引き直す)。
+    final viewing = initial?.account ?? ref.watch(currentAccountProvider);
+    final tile = replyTarget == null
+        ? null
+        : FloatingAccountTile(
+            key: const ValueKey('post.accountTile'),
+            id: 'post.accountTile',
+            account: viewing,
+            busy: _resolving,
+            marked: [?widget.initial?.account],
+            markLabel: '開いたアカウント',
+            onPick: (a) => _switchAccount(replyTarget, a),
+          );
+    final content = thread.when(
         loading: () => initial == null ? const RasqLoading() : body(initial!, const [], const [], loading: true),
         error: (e, _) {
           final code = e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e');
@@ -165,7 +210,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           return RasqErrorView(code: code, onRetry: () => ref.invalidate(threadProvider(threadKey)), retryLabel: '再読み込み');
         },
         data: (t) => body(t.post, gate.filterPosts(t.ancestors), gate.filterPosts(t.descendants)),
-      ),
+      );
+    return Scaffold(
+      appBar: RasqPageHeader(title: '投稿', leadingAvatar: me, actions: [if (replyTarget != null) PostBookmarkButton(post: replyTarget, session: session)], onMore: () {}),
+      body: tile == null ? content : Stack(children: [Positioned.fill(child: content), Positioned(left: RasqSpacing.sm, bottom: RasqSpacing.md, child: tile)]),
     );
   }
 

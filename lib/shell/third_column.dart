@@ -252,6 +252,7 @@ class ThirdColumnView extends ConsumerWidget {
       'notifications' => gate.routeBlockReason('/notifications'),
       _ => null,
     };
+    // アカウントのアイコンは出さない (D-411、左カラムのヘッダーにある)。
     // 設定ボタン (D-397): 検索は検索欄の横、通知は通知ヘッダーの右端。表示しない / 止められているときは右上に置く。
     Widget withCornerButton(Widget body) => Column(children: [
           const SizedBox(height: 32, child: Row(children: [Spacer(), ThirdColumnSettingsButton(), SizedBox(width: 4)])),
@@ -265,7 +266,7 @@ class ThirdColumnView extends ConsumerWidget {
           _ when blocked != null => withCornerButton(ChildSafeBlockedView(message: blocked)),
           'none' => withCornerButton(RasqEmptyView(title: '第3カラム', hint: rasqDetail(context, '開いている画面をここへ移動できます', 'FOW をここへ移動できます(M5c)'))),
           'notifications' => const NotificationsScreen(headerTrailing: ThirdColumnSettingsButton(size: 20)),
-          _ => const SearchScreen(inThirdColumn: true, searchTrailing: ThirdColumnSettingsButton()),
+          _ => const SearchScreen(inThirdColumn: true, showAccountIcon: false, searchTrailing: ThirdColumnSettingsButton()),
         },
       ),
     );
