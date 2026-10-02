@@ -520,6 +520,7 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
               instanceScope: controller.document?.scope ?? p.id,
               scope: RrlScope({}),
               geometry: controller.geometry,
+              mediaPolicy: p.mediaPolicy,
               onEvent: c.onRrlEvent,
             ),
           ),

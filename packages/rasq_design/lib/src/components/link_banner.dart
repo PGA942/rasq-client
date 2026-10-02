@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
+import '../platform/media_policy.dart';
 import '../platform/web_image.dart';
 
 /// リンク先バナー (RRL tag `link`): OGP-style card under the post body.
@@ -32,7 +33,7 @@ class RasqLinkBanner extends StatelessWidget {
             decoration: BoxDecoration(border: Border.all(color: scheme.outline), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
             clipBehavior: Clip.antiAlias,
             child: Row(children: [
-              if (imageUrl != null)
+              if (imageUrl != null && rasqMediaAllowed(context, imageUrl))
                 SizedBox(
                   width: 88,
                   height: 88,

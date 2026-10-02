@@ -114,6 +114,8 @@ class CatalogScreen extends ConsumerWidget {
         RrlRenderer(
           node: RrlDocument.fromSnapshot((jsonDecode(postTileSampleRrl) as Map).cast<String, Object?>()).root,
           host: RrlHost(
+            // ホストが同梱した見本の木 (D-407)。
+            mediaPolicy: RasqMediaPolicy.unrestricted,
             instanceScope: 'rasq.official.misskey:misskey:misskey.io:yamada:0.1.0:catalog',
             scope: RrlScope({
               'post': {

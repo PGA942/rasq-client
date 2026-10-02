@@ -49,7 +49,14 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
   Future<void> load() async {
     if (_worker != null) return;
     try {
-      _worker = await WasmPluginWorker.spawn(_config);
+      final worker = await WasmPluginWorker.spawn(_config);
+      // 起動を待つ間に捨てられたら、ワーカーも止める(持ち主の無いワーカーを残さない、D-407 指摘 #10)。
+      // Web 版は起動 / 呼び出しに期限があり、過ぎるとワーカーごと止まって失敗になる([WasmRequestTracker])。
+      if (_disposed) {
+        await worker.dispose();
+        return;
+      }
+      _worker = worker;
       // ワーカーから中継されてきた fow.open/close (D-064)。wasm 側は既に
       // 受理済み({opened:true})なので、ここの失敗は lastError に留める。
       _worker!.fowRequests.listen((m) {

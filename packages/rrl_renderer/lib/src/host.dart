@@ -21,6 +21,7 @@ class RrlHost {
     this.slots = const {},
     this.components = const {},
     this.geometry,
+    this.mediaPolicy = RasqMediaPolicy.localOnly,
   });
 
   /// `pluginId:accountKey:pluginVersion:instanceId` — prefixed to explicit
@@ -48,6 +49,13 @@ class RrlHost {
   /// インスタンス(コントローラ等の持ち物)を渡すこと — RrlHost 自体は
   /// ビルド毎に作り直されてよい。
   final RrlGeometryRegistry? geometry;
+
+  /// 画像 / メディアの URL をどこまで読むか (D-407、セキュリティ指摘 #9)。RRL はデータなので、既定は**端末内だけ**
+  /// ([RasqMediaPolicy.localOnly]、`data:` のみ)。プラグインの面は、そのプラグインの実効権限(`network` + 宣言した
+  /// 接続先)とホストが渡した URL から作った方針を渡す。ホストが自分で組んだ木(見本など)だけ
+  /// [RasqMediaPolicy.unrestricted] を渡してよい。`Image` / `Avatar` / `MediaGrid` / `ActionBar` のアイコンなど、
+  /// 木の下で URL を読む部品はすべて [RasqMediaPolicyScope] 経由でこれに従う。
+  final RasqMediaPolicy mediaPolicy;
 
   String nodeId(RrlNode node, RrlScope scope) => '$instanceScope:${scope.resolveTemplate(node.k ?? '#${node.t}')}';
 

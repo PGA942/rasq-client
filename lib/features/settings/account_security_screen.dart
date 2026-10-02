@@ -49,6 +49,8 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
   final _currentPassword = TextEditingController();
   final _passwordCode = TextEditingController();
   final _confirmCode = TextEditingController();
+  final _emailCurrentPassword = TextEditingController();
+  final _emailChangeCode = TextEditingController();
   bool _busy = false;
 
   /// コードを送った操作(入力欄を出す)。送り先の目安つき。
@@ -64,7 +66,7 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
 
   @override
   void dispose() {
-    for (final c in [_email, _emailCode, _password, _currentPassword, _passwordCode, _confirmCode]) {
+    for (final c in [_email, _emailCode, _password, _currentPassword, _passwordCode, _confirmCode, _emailCurrentPassword, _emailChangeCode]) {
       c.dispose();
     }
     super.dispose();
@@ -147,14 +149,29 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
           const SizedBox(width: RasqSpacing.sm),
           FilledButton(
             key: const ValueKey('security.email.send'),
-            onPressed: _busy ? null : () => _run((api) async {
-                  await api.setEmail(_email.text.trim());
-                  _emailCode.clear();
-                  return '確認コードを送りました';
-                }),
+            onPressed: _busy ? null : () => _sendEmail(account),
             child: const Text('コードを送る'),
           ),
         ])),
+        // 確認済みのメールの付け替え (ORGATE O-008): いまのパスワードか、いまのメールに届くコードで本人か確かめる。
+        if (account.emailVerified) ...[
+          pad(Text(
+            account.hasPassword ? '付け替えるには、いまのパスワードか、いまのメールに届く確認コードが要ります。' : '付け替えるには、いまのメールに届く確認コードが要ります。',
+            style: caption,
+          )),
+          if (account.hasPassword) pad(RasqInput(key: const ValueKey('security.email.currentPassword'), controller: _emailCurrentPassword, hintText: 'いまのパスワード', obscureText: true)),
+          if (_pending == ConfirmAction.emailChange)
+            pad(_CodeInput(key: const ValueKey('security.email.changeCode'), controller: _emailChangeCode))
+          else
+            pad(Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton(
+                key: const ValueKey('security.email.byCode'),
+                onPressed: _busy ? null : () => _sendConfirm(ConfirmAction.emailChange),
+                child: const Text('いまのメールにコードを送る'),
+              ),
+            )),
+        ],
         if (pendingMail != null) ...[
           pad(Text('$pendingMail に届いたコードを入れてください(15 分で無効になります)。', key: const ValueKey('security.email.pending'), style: caption)),
           pad(Row(children: [
@@ -285,6 +302,27 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
         ],
       ]),
     );
+  }
+
+  /// メールの登録 / 付け替え。確認済みのメールを別のアドレスへ付け替えるときは、いまのパスワードか `email.change` の
+  /// 確認コードを添える(どちらも無ければ送らずに伝える。サーバーも 403 で断る、ORGATE O-008)。
+  Future<void> _sendEmail(RasqAccount account) async {
+    final email = _email.text.trim();
+    final current = _emailCurrentPassword.text;
+    final code = _pending == ConfirmAction.emailChange ? _emailChangeCode.text.trim() : '';
+    final replacing = account.emailVerified && email.toLowerCase() != (account.email ?? '').toLowerCase();
+    if (replacing && current.isEmpty && code.isEmpty) {
+      _toast(account.hasPassword ? 'いまのパスワードを入れるか、いまのメールに届く確認コードで確かめてください' : 'いまのメールに届く確認コードで確かめてください');
+      return;
+    }
+    await _run((api) async {
+      await api.setEmail(email, currentPassword: replacing && current.isNotEmpty ? current : null, code: replacing && code.isNotEmpty ? code : null);
+      _emailCode.clear();
+      _emailCurrentPassword.clear();
+      _emailChangeCode.clear();
+      if (_pending == ConfirmAction.emailChange) _pending = null;
+      return '確認コードを送りました';
+    });
   }
 
   Future<void> _delete() async {

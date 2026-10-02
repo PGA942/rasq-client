@@ -3,6 +3,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import 'user_list.dart';
 
 /// キーの `account` は表示するユーザーが属するアカウント (D-155: ↓ で選んだ
@@ -20,7 +21,10 @@ final userProfileProvider = FutureProvider.autoDispose.family<UserProfile, UserK
 final userPostsProvider = FutureProvider.autoDispose.family<Page<Post>, ({String id, UserPostsFilter filter, String? account})>((ref, k) async {
   final s = ref.watch(sessionForAccountProvider(k.account));
   if (s == null) return Page.empty();
-  return s.userPosts(k.id, filter: k.filter, limit: 30);
+  // チャイルドセーフ (D-407、指摘 #26): プロフィールの投稿一覧にも、ホームと同じ保護者の表示制限を掛ける。
+  final gate = ref.watch(childGateProvider);
+  final page = await s.userPosts(k.id, filter: k.filter, limit: 30);
+  return gate.supervised ? Page(items: gate.filterPosts(page.items), nextCursor: page.nextCursor) : page;
 });
 
 final followsProvider = FutureProvider.autoDispose.family<Page<UserSummary>, ({String id, bool followers, String? account})>((ref, k) async {

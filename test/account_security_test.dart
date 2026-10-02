@@ -80,6 +80,7 @@ void main() {
         case 'GET /me':
           return json(me);
         case 'PUT /me/email':
+          expect(body.keys, ['email'], reason: '初めて付けるときは、パスワードもコードも要らない');
           if (!'${body['email']}'.contains('@')) return err(400, 'invalid email address');
           me['emailPending'] = body['email'];
           return json({'email': body['email'], 'expiresInSeconds': 900}, 202);
@@ -148,6 +149,77 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('security.session.bbbbbbbbbbbbbbbb')), findsNothing);
     expect(calls, contains('POST /me/sessions/revoke-others'));
+  });
+
+  testWidgets('確認済みのメールの付け替え (ORGATE O-008、D-407): いまのパスワードか、いまのメールに届く email.change のコードを添える。無ければ送らない', (tester) async {
+    final me = <String, Object?>{'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ', 'hasPassword': true, 'email': 'old@example.com', 'emailVerified': true, 'roles': <String>[]};
+    final emailPuts = <Map<String, Object?>>[];
+    final confirms = <String>[];
+    final mock = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      final body = req.body.isEmpty ? const <String, Object?>{} : (jsonDecode(req.body) as Map).cast<String, Object?>();
+      switch ('${req.method} $path') {
+        case 'GET /me':
+          return json(me);
+        case 'GET /me/sessions':
+          return json(const []);
+        case 'POST /me/confirm':
+          confirms.add('${body['action']}');
+          return json({'email': 'o***@example.com'}, 202);
+        case 'PUT /me/email':
+          emailPuts.add(body);
+          // ORGATE O-008 と同じ: 確認済みのメールの付け替えには currentPassword か code が要る。
+          if (body['currentPassword'] == null && body['code'] == null) {
+            return err(403, 'confirmation required: request a code with POST /me/confirm {"action":"email.change"} and pass it as code');
+          }
+          if (body['currentPassword'] != null && body['currentPassword'] != 'right password') return err(403, 'current password is wrong');
+          if (body['code'] != null && body['code'] != '3mJr7AoUXx') return err(400, 'invalid or expired code');
+          me['emailPending'] = body['email'];
+          return json({'email': body['email'], 'expiresInSeconds': 900}, 202);
+      }
+      return err(404, 'not found');
+    });
+    final c = await pump(tester, mock);
+    c.read(routerProvider).push('${Routes.settings}/security');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('security.email.currentPassword')), findsOneWidget);
+
+    // 何も添えない → 送らずに伝える。
+    await tester.enterText(find.byKey(const ValueKey('security.email.input')), 'new@example.com');
+    await tester.tap(find.byKey(const ValueKey('security.email.send')));
+    await tester.pumpAndSettle();
+    expect(emailPuts, isEmpty);
+    expect(find.textContaining('いまのパスワードを入れるか'), findsOneWidget);
+
+    // 違うパスワード → サーバーの 403 を言い換える。
+    await tester.enterText(find.byKey(const ValueKey('security.email.currentPassword')), 'wrong');
+    await tester.tap(find.byKey(const ValueKey('security.email.send')));
+    await tester.pumpAndSettle();
+    expect(emailPuts.last['currentPassword'], 'wrong');
+    expect(find.text('いまのパスワードが違います'), findsOneWidget);
+
+    // 正しいパスワード → 付け替えのコードが新しいアドレスへ。
+    await tester.enterText(find.byKey(const ValueKey('security.email.currentPassword')), 'right password');
+    await tester.tap(find.byKey(const ValueKey('security.email.send')));
+    await tester.pumpAndSettle();
+    expect(emailPuts.last, {'email': 'new@example.com', 'currentPassword': 'right password'});
+    expect(find.byKey(const ValueKey('security.email.pending')), findsOneWidget);
+
+    // コードで: いまのメールへ email.change のコードを送る → 入れて付け替える。
+    me.remove('emailPending');
+    await tester.tap(find.byKey(const ValueKey('security.email.byCode')));
+    await tester.pumpAndSettle();
+    expect(confirms, ['email.change']);
+    await tester.enterText(find.byKey(const ValueKey('security.email.input')), 'other@example.com');
+    await tester.enterText(find.byKey(const ValueKey('security.email.changeCode')), '3mJr7AoUXx');
+    await tester.tap(find.byKey(const ValueKey('security.email.send')));
+    await tester.pumpAndSettle();
+    expect(emailPuts.last, {'email': 'other@example.com', 'code': '3mJr7AoUXx'});
+
+    // サーバーの 403(確認が要る)も、日本語で伝える。
+    OrgateException e(String m) => OrgateException(ErrorCode.tryParse('403')!, m);
+    expect(accountSecurityMessage(e('confirmation required: request a code with POST /me/confirm {"action":"email.change"} and pass it as code')), contains('確認コードが要ります'));
+    expect(accountSecurityMessage(e('this account has no password: confirm with the mailed code instead')), contains('パスワードがありません'));
   });
 
   testWidgets('既存のアカウントにログイン: パスワード → トークンをこの端末のものにする。メールのコードでも入れる', (tester) async {

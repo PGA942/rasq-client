@@ -18,6 +18,10 @@ import '../../app/router.dart' show Routes;
 import '../../backend/orgate_client.dart' show OrgateException;
 import '../../backend/rasq_collections_api.dart';
 import '../../shell/headers.dart';
+import '../child_safe/child_gate.dart';
+import '../child_safe/child_safe_collections.dart' show childSafeCollectionMeta;
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
+import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../clips/host_clips.dart';
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
@@ -64,7 +68,15 @@ class RasqCollectionScreen extends ConsumerWidget {
           if (e is OrgateException && e.code.code == '404') return const RasqEmptyView(title: '見つかりません', hint: '消されたか、非公開になっています');
           return RasqErrorView(code: ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(rasqCollectionProvider(idOrCode)), retryLabel: '再読み込み');
         },
-        data: (d) => _Body(detail: d, idOrCode: idOrCode),
+        data: (d) {
+          // チャイルドセーフ (D-407、指摘 #26): 端末のクリップ / リストと同じく、止める例に近い中身(名前 + 説明 / 投稿)なら
+          // 開かない(見出し / 話題の目次も出さない)。開くときも、見せない投稿は外す。
+          final guarded = childSafeRasqCollection(ref.watch(childGateProvider), d);
+          if (guarded == null) {
+            return ChildSafeBlockedView(message: d.collection.kind == RasqCollectionKind.list ? '保護者がこのリストを止めています' : '保護者がこのクリップを止めています');
+          }
+          return _Body(detail: guarded, idOrCode: idOrCode);
+        },
       ),
     );
   }
@@ -477,4 +489,34 @@ String _ago(DateTime t) {
   if (d.inHours < 1) return '${d.inMinutes}分前';
   if (d.inDays < 1) return '${d.inHours}時間前';
   return '${d.inDays}日前';
+}
+
+/// RASQ リスト / クリップの詳細を、いまの保護者の表示制限に合わせる (D-407、指摘 #26)。中身(名前 + 説明 + 投稿の本文)が
+/// 止める例に近ければ null(開かない)。そうでなければ、見せない投稿 / 項目を外した詳細。見守り中でなければそのまま。
+RasqCollectionDetail? childSafeRasqCollection(ChildGate gate, RasqCollectionDetail d) {
+  if (!gate.supervised) return d;
+  final c = d.collection;
+  final postOf = {for (final p in d.posts) p.key: p.toPost(null)};
+  // クリップの項目は投稿のスナップショット(リストの項目は人なので、投稿としては読まない)。
+  final itemPostOf = c.kind == RasqCollectionKind.list ? const <String, Post>{} : {for (final i in d.items) i.key: ?_itemPost(i)};
+  final bodies = [for (final p in [...postOf.values, ...itemPostOf.values]) '${p.body} ${p.quote?.body ?? ''}'];
+  if (gate.collectionHidden(childSafeCollectionMeta(c.name, c.description), bodies)) return null;
+  return RasqCollectionDetail(
+    collection: c,
+    items: [for (final i in d.items) if (itemPostOf[i.key] == null || !gate.postHidden(itemPostOf[i.key]!)) i],
+    posts: [for (final p in d.posts) if (!gate.postHidden(postOf[p.key]!)) p],
+    isOwner: d.isOwner,
+    following: d.following,
+    eligible: d.eligible,
+    canFetch: d.canFetch,
+    refresh: d.refresh,
+  );
+}
+
+Post? _itemPost(RasqCollectionItem i) {
+  try {
+    return i.post();
+  } catch (_) {
+    return null;
+  }
 }

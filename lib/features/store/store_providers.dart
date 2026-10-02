@@ -97,21 +97,24 @@ class ArtifactVerification {
 ///
 /// 署名が無い(モック / 署名前のストア)ときはハッシュ照合だけで通す。
 /// ただし鍵をピン留めしてある構成では、署名の欠落は失敗として扱う。
+///
+/// [pinnedKey] はテストで差し替えるためのもの(既定 = ビルドに焼き込んだ鍵)。
 Future<ArtifactVerification> verifyArtifact({
   required Uint8List bytes,
   required StoreArtifact artifact,
   required String storePublicKey,
+  String pinnedKey = pinnedStorePublicKey,
 }) async {
   final digest = sha512.convert(bytes);
   if (digest.toString() != artifact.sha512) {
     return ArtifactVerification.failure('整合性検証に失敗しました(SHA-512 不一致)。時間をおいて再取得してください');
   }
 
-  if (pinnedStorePublicKey.isNotEmpty && storePublicKey != pinnedStorePublicKey) {
+  if (pinnedKey.isNotEmpty && storePublicKey != pinnedKey) {
     return ArtifactVerification.failure('ストアの署名鍵がアプリに焼き込んだ鍵と一致しません。接続先を確認してください');
   }
   if (storePublicKey.isEmpty || artifact.signature.isEmpty) {
-    if (pinnedStorePublicKey.isNotEmpty) {
+    if (pinnedKey.isNotEmpty) {
       return ArtifactVerification.failure('配布物に署名がありません(このビルドは署名済みストアのみを許可します)');
     }
     return ArtifactVerification._hashOnly;

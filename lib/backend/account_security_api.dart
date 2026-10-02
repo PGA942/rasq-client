@@ -37,7 +37,10 @@ class RasqLoginSession {
 enum ConfirmAction {
   accountDelete('account.delete'),
   passwordChange('password.change'),
-  emailRemove('email.remove');
+  emailRemove('email.remove'),
+
+  /// 確認済みのメールを別のアドレスへ付け替える (ORGATE O-008、D-407): いまのメールへコードを送る。
+  emailChange('email.change');
 
   const ConfirmAction(this.id);
   final String id;
@@ -47,8 +50,11 @@ class AccountSecurityApi {
   AccountSecurityApi(this._client);
   final OrgateClient _client;
 
-  /// メールを登録(または変更)して、確認のコードを送る。
-  Future<void> setEmail(String email) => _client.putJson('/me/email', {'email': email});
+  /// メールを登録(または変更)して、確認のコードを送る。**確認済みのメールを付け替える**ときは、いまのパスワード
+  /// [currentPassword] か、いまのメールに届いた `email.change` の確認コード [code] が要る(無いと 403、ORGATE O-008)。
+  /// 初めて付けるときは要らない。
+  Future<void> setEmail(String email, {String? currentPassword, String? code}) =>
+      _client.putJson('/me/email', {'email': email, 'currentPassword': ?currentPassword, 'code': ?code});
   Future<void> verifyEmail(String code) => _client.postJson('/me/email/verify', {'code': code});
   Future<void> removeEmail({String? code}) => _client.delete('/me/email', {'code': ?code});
 
@@ -93,5 +99,7 @@ String accountSecurityMessage(OrgateException e) => switch (e.code.code) {
       '400' when e.message.contains('8-256') => 'パスワードは 8 文字以上にしてください',
       '400' when e.message.contains('email') => 'メールアドレスの形が正しくありません',
       '403' when e.message.contains('current password') => 'いまのパスワードが違います',
+      '403' when e.message.contains('has no password') => 'このアカウントにはパスワードがありません。いまのメールに届く確認コードで確かめてください',
+      '403' when e.message.contains('confirmation required') => 'この操作には、いまのパスワードか、いまのメールに届く確認コードが要ります',
       _ => e.message,
     };

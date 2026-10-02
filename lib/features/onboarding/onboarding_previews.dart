@@ -128,6 +128,8 @@ class _SnsPreviewCard extends StatelessWidget {
               child: RrlRenderer(
                 node: _root,
                 host: RrlHost(
+                  // ホストが同梱した見本の木 (D-407): ホストの画面と同じく読む。
+                  mediaPolicy: RasqMediaPolicy.unrestricted,
                   instanceScope: 'rasq.onboarding:${s.kind.name}:${s.instance}:${s.handle}:preview',
                   scope: RrlScope({
                     'post': {

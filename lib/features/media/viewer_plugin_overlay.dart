@@ -230,6 +230,7 @@ class ViewerPluginOverlays {
                   instanceScope: controller.document?.scope ?? ov.plugin.id,
                   scope: RrlScope({}),
                   geometry: controller.geometry,
+                  mediaPolicy: ov.plugin.mediaPolicy,
                   onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
                 ),
               );

@@ -54,11 +54,68 @@ MediaSaveDestination? resolveMediaSaveDestination(MediaSaveDestination setting, 
 /// 保存する。戻りはスナックバーの文。保存先を選ぶダイアログでやめたら null。
 typedef MediaSaver = Future<String?> Function(MediaItem item, MediaSaveDestination destination);
 
+/// 保存するファイル名。SNS が付けた名前 ([MediaItem.fileName]) は**相手のサーバーが決めた文字列**なので、
+/// そのままパスにしない (D-407、セキュリティ指摘 #25): [sanitizeMediaFileName] で 1 つのファイル名に直す。
 String mediaSaveFileName(MediaItem item) {
-  if (item.fileName?.isNotEmpty == true) return item.fileName!;
+  final ext = _extOf(item);
+  final given = item.fileName == null ? null : sanitizeMediaFileName(item.fileName!, fallbackExt: ext);
+  if (given != null) return given;
+  return 'rasq_${_safeId(item.id)}.$ext';
+}
+
+String _safeId(String id) {
+  final s = id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+  return s.isEmpty ? 'media' : (s.length > 64 ? s.substring(0, 64) : s);
+}
+
+String _extOf(MediaItem item) {
   final last = item.url.pathSegments.isNotEmpty ? item.url.pathSegments.last : '';
-  final ext = last.contains('.') ? last.split('.').last.toLowerCase() : (item.type == MediaType.video ? 'mp4' : 'jpg');
-  return 'rasq_${item.id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_')}.$ext';
+  final ext = last.contains('.') ? last.split('.').last.toLowerCase() : '';
+  return RegExp(r'^[a-z0-9]{1,8}$').hasMatch(ext) ? ext : (item.type == MediaType.video ? 'mp4' : 'jpg');
+}
+
+/// 相手が付けたファイル名を、保存先のフォルダーの中の 1 つの名前に直す (指摘 #25)。パス区切り(`/` `\`)の前は捨てて
+/// 最後の部分だけ、制御文字 / Windows で使えない字は `_`、先頭の `.` は落とす(`..` / 隠しファイルにしない)、長さは 120 字まで。
+/// 拡張子は英数字 8 字までのものだけ残し、無ければ [fallbackExt]。名前が残らなければ null(アプリが名前を作る)。
+@visibleForTesting
+String? sanitizeMediaFileName(String raw, {required String fallbackExt}) {
+  var name = raw.split(RegExp(r'[/\\]')).last;
+  name = name.replaceAll(RegExp(r'[\x00-\x1f\x7f<>:"|?*]'), '_').trim();
+  name = name.replaceFirst(RegExp(r'^\.+'), '');
+  if (name.isEmpty || name == '.' || name == '..') return null;
+  final dot = name.lastIndexOf('.');
+  var base = dot > 0 ? name.substring(0, dot) : name;
+  var ext = dot > 0 ? name.substring(dot + 1).toLowerCase() : '';
+  if (!RegExp(r'^[a-z0-9]{1,8}$').hasMatch(ext)) {
+    base = name;
+    ext = fallbackExt;
+  }
+  base = base.replaceAll(RegExp(r'\.+$'), '').trim();
+  if (base.isEmpty) return null;
+  if (base.length > 120) base = base.substring(0, 120);
+  return '$base.$ext';
+}
+
+/// [dir] の中に [name] で新しく書く (指摘 #25): 名前は 1 つのファイル名であること、書く先が [dir] の直下であることを確かめ、
+/// 既にあれば ` (2)` などを付けて**上書きしない**(排他的に作る)。戻りは書いたファイル。
+@visibleForTesting
+Future<File> writeMediaFileExclusive(Directory dir, String name, List<int> bytes) async {
+  if (name.isEmpty || name == '.' || name == '..' || name.contains('/') || name.contains('\\')) throw ArgumentError.value(name, 'name', '保存するファイル名が正しくありません');
+  final dot = name.lastIndexOf('.');
+  final base = dot > 0 ? name.substring(0, dot) : name, ext = dot > 0 ? name.substring(dot) : '';
+  final root = dir.absolute.path;
+  for (var i = 1; i < 1000; i++) {
+    final file = File('$root${Platform.pathSeparator}${i == 1 ? name : '$base ($i)$ext'}');
+    if (file.parent.absolute.path != root) throw StateError('保存先のフォルダーの外には書きません');
+    try {
+      await file.create(exclusive: true);
+    } on FileSystemException {
+      continue; // もうある(上書きしない)
+    }
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  }
+  throw StateError('同じ名前のファイルが多すぎます');
 }
 
 /// 画像 / 動画を保存する(D-334)。テストでは差し替える。
@@ -69,11 +126,13 @@ final imageSaverProvider = Provider<MediaSaver>((ref) => (item, destination) asy
       if (destination == MediaSaveDestination.photos || (!kIsWeb && Platform.isAndroid)) {
         if (!await Gal.hasAccess(toAlbum: true) && !await Gal.requestAccess(toAlbum: true)) throw StateError('写真への保存が許可されていません(設定 App で許可してください)');
         if (item.type == MediaType.video) {
-          // 動画はファイルから入れる。
-          final tmp = File('${(await getTemporaryDirectory()).path}/$name');
-          await tmp.writeAsBytes(res.bodyBytes, flush: true);
-          await Gal.putVideo(tmp.path, album: 'RASQ');
-          unawaited(tmp.delete().then((_) {}, onError: (_) {}));
+          // 動画はファイルから入れる。一時ファイルの名前はアプリが作る(相手の付けた名前を使わない、指摘 #25)。
+          final tmp = await writeMediaFileExclusive(await getTemporaryDirectory(), 'rasq_${DateTime.now().microsecondsSinceEpoch}_${_safeId(item.id)}.${_extOf(item)}', res.bodyBytes);
+          try {
+            await Gal.putVideo(tmp.path, album: 'RASQ');
+          } finally {
+            unawaited(tmp.delete().then((_) {}, onError: (_) {}));
+          }
         } else {
           await Gal.putImageBytes(res.bodyBytes, album: 'RASQ', name: name.contains('.') ? name.substring(0, name.lastIndexOf('.')) : name);
         }
@@ -83,8 +142,8 @@ final imageSaverProvider = Provider<MediaSaver>((ref) => (item, destination) asy
         // 「ファイル」App の このiPad(このiPhone)› RASQ › 保存(書類フォルダ。Info.plist の UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace)。
         final dir = Directory('${(await getApplicationDocumentsDirectory()).path}/保存');
         await dir.create(recursive: true);
-        await File('${dir.path}/$name').writeAsBytes(res.bodyBytes, flush: true);
-        return '「ファイル」App の RASQ › 保存 に保存しました($name)';
+        final saved = await writeMediaFileExclusive(dir, name, res.bodyBytes);
+        return '「ファイル」App の RASQ › 保存 に保存しました(${saved.uri.pathSegments.last})';
       }
       // デスクトップ: 保存先を選ぶダイアログ(最初はダウンロード)。
       final downloads = await getDownloadsDirectory();

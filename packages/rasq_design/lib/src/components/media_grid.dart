@@ -7,6 +7,7 @@ import '../theme/rasq_tokens_extension.dart';
 import '../tokens/colors.dart';
 import '../tokens/sizes.dart';
 import '../tokens/spacing.dart';
+import '../platform/media_policy.dart';
 import '../platform/web_image.dart';
 
 /// MediaGrid — layout auto-adjusts by count (1枚フル幅 / 2枚横並び / 3枚以上グリッド、
@@ -117,7 +118,11 @@ class _MediaTile extends StatelessWidget {
     final tokens = RasqTokens.of(context);
     final hidden = item.sensitive && !revealed;
 
+    // プラグインの面では、その権限で読めない URL は読まない (D-407)。
+    final thumb = item.thumbnailUrl ?? item.url;
     Widget content = switch (item.type) {
+      MediaType.image || MediaType.gif || MediaType.video when !rasqMediaAllowed(context, thumb) =>
+        ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.broken_image_outlined, color: scheme.onSurfaceVariant)),
       MediaType.image || MediaType.gif || MediaType.video => Image.network(webHtmlElementStrategy: rasqWebImageStrategy, 
           (item.thumbnailUrl ?? item.url).toString(),
           fit: BoxFit.cover,

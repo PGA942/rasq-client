@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../tokens/sizes.dart';
 import '../tokens/typography.dart';
 import 'action_button.dart';
+import '../platform/media_policy.dart';
 import '../platform/web_image.dart';
 
 /// One registered button of an [RasqActionBar] (L2 composite `ActionBar`).
@@ -237,9 +238,13 @@ class _ActionBarButton extends StatelessWidget {
 }
 
 /// アイコン画像 (D-210): `file:` は端末の写真、それ以外はネットワーク。読めなければ [fallback]。
-Widget rasqIconImage(Uri url, {required double size, required IconData fallback}) {
-  if (url.scheme == 'file') {
-    return ClipRRect(borderRadius: BorderRadius.circular(size / 4), child: Image.file(File(url.toFilePath()), width: size, height: size, fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(fallback, size: size)));
-  }
-  return Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), width: size, height: size, errorBuilder: (_, _, _) => Icon(fallback, size: size));
-}
+/// プラグインの面 ([RasqMediaPolicyScope]) では、その権限で読めない URL(`file:` を含む)は読まずに [fallback] (D-407)。
+Widget rasqIconImage(Uri url, {required double size, required IconData fallback}) => Builder(builder: (context) {
+      final policy = RasqMediaPolicyScope.of(context);
+      if (url.scheme == 'file') {
+        if (!policy.isUnrestricted) return Icon(fallback, size: size);
+        return ClipRRect(borderRadius: BorderRadius.circular(size / 4), child: Image.file(File(url.toFilePath()), width: size, height: size, fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(fallback, size: size)));
+      }
+      if (!policy.allows(url)) return Icon(fallback, size: size);
+      return Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), width: size, height: size, errorBuilder: (_, _, _) => Icon(fallback, size: size));
+    });

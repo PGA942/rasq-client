@@ -20,7 +20,8 @@ class RrlRenderer extends StatelessWidget {
   final RrlHost host;
 
   @override
-  Widget build(BuildContext context) => _NodeWidget(node: node, host: host, scope: host.scope);
+  // 木の下の画像 / メディアの読み込みは、すべて host.mediaPolicy に従う (D-407)。
+  Widget build(BuildContext context) => RasqMediaPolicyScope(policy: host.mediaPolicy, child: _NodeWidget(node: node, host: host, scope: host.scope));
 }
 
 /// `#RRGGBB` / `#RRGGBBAA` / `#AARRGGBB`(8 桁は RRGGBBAA と解釈)を Color に。
@@ -157,6 +158,8 @@ class _NodeWidget extends StatelessWidget {
         }
         final src = rrlUri(raw);
         if (src == null) return const _ErrorBox('Image without src');
+        // プラグインの権限で読めない URL は、通信せずに箱だけ (D-407: 制限モードの下書き持ち出しを塞ぐ)。
+        if (!rasqMediaAllowed(context, src)) return const _ErrorBox('image blocked');
         return Image.network(webHtmlElementStrategy: rasqWebImageStrategy, src.toString(), width: width, height: height, fit: width == null && height == null ? BoxFit.cover : BoxFit.contain, errorBuilder: (_, _, _) => const _ErrorBox('image'));
       case 'Row':
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: _children(scope));

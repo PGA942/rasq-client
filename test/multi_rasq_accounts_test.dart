@@ -29,7 +29,7 @@ void main() {
   http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
 
   /// 2 つのアカウントを持つ偽の Central。トークンでアカウントを見分け、リクエストごとに Authorization を記録する。
-  ({MockClient client, List<({String method, String path, String? auth})> seen, Map<String, Set<String>> bundles, Map<String, Map<String, String>> vaults}) fakeCentral({Map<String, Set<String>>? bundles}) {
+  ({MockClient client, List<({String method, String path, String? auth})> seen, Map<String, Set<String>> bundles, Map<String, Map<String, String>> vaults}) fakeCentral({Map<String, Set<String>>? bundles, http.Response? Function(http.Request req)? intercept}) {
     const accounts = {
       'tok-a': {'id': 'acc-a', 'handle': 'alice', 'displayName': 'アリス'},
       'tok-b': {'id': 'acc-b', 'handle': 'bob', 'displayName': 'ボブ'},
@@ -41,6 +41,8 @@ void main() {
       final path = req.url.path.replaceFirst('/api/v1', '');
       final auth = req.headers['authorization'];
       seen.add((method: req.method, path: path, auth: auth));
+      final intercepted = intercept?.call(req);
+      if (intercepted != null) return intercepted;
       final me = accounts[auth?.replaceFirst('Bearer ', '')];
       if (me == null) return json({'error': {'code': '401', 'message': 'no token'}}, 401);
       final id = me['id']!;
@@ -294,6 +296,59 @@ void main() {
     expect(vaultReads, isNotEmpty);
     expect(vaultReads.map((r) => r.auth).toSet(), {'Bearer tok-a'});
     expect(loggedIn(central.vaults['acc-b']![SessionsNotifier.storageKey]), [snsB.key], reason: 'B の保管庫に A の SNS は入らない');
+  });
+
+  test('D-407 (指摘 #20): A の保管庫へ預け損ねた SNS のセッションは、B に切り替えても B の保管庫へ移らない。A に戻ったら A へ預け直す', () async {
+    var failA = false;
+    final puts = <({String? auth, String body})>[];
+    final central = fakeCentral(intercept: (req) {
+      if (req.method == 'PUT' && req.url.path.contains('/me/vault/')) {
+        puts.add((auth: req.headers['authorization'], body: req.body));
+        if (failA && req.headers['authorization'] == 'Bearer tok-a') return json({'error': {'code': '500', 'message': 'down'}}, 500);
+      }
+      return null;
+    });
+    final mock = central.client;
+    final local = MemorySessionStorage();
+    final c = containerWith(mock, local, storageFor: (ref) => CentralVaultSessionStorage(ref, local, pollInterval: Duration.zero));
+    c.listen(orgateAccountProvider, (_, _) {});
+    await c.read(sessionsProvider.future);
+    final accounts = c.read(orgateAccountProvider.notifier);
+    AuthResult login(AccountId a) => AuthResult(session: session(a), me: UserSummary(id: 'u', account: a, displayName: a.handle));
+    const snsC = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'carol_sns');
+    List<String> loggedIn(String? raw) => raw == null ? const [] : SessionOps.parse(raw).loggedInKeys;
+
+    await accounts.adoptLogin({'accountId': 'acc-a', 'accessToken': 'tok-a'});
+    await settle();
+    await c.read(sessionsProvider.future);
+    await c.read(sessionsProvider.notifier).add(login(snsA));
+    await settle();
+    expect(loggedIn(central.vaults['acc-a']![SessionsNotifier.storageKey]), [snsA.key]);
+
+    // A の保管庫への書き込みが失敗する(A の SNS のトークン入りのぶんがメモリに残る)。
+    failA = true;
+    await c.read(sessionsProvider.notifier).add(login(snsC));
+    await settle();
+    expect(loggedIn(central.vaults['acc-a']![SessionsNotifier.storageKey]), [snsA.key]);
+
+    // そのまま B へ。
+    await accounts.adoptLogin({'accountId': 'acc-b', 'accessToken': 'tok-b'});
+    await settle();
+    expect((await c.read(sessionsProvider.future)).sessions, isEmpty, reason: 'B には A の SNS が見えない');
+    await settle();
+    expect(loggedIn(central.vaults['acc-b']![SessionsNotifier.storageKey]), isNot(contains(snsC.key)));
+    expect(loggedIn(central.vaults['acc-b']![SessionsNotifier.storageKey]), isNot(contains(snsA.key)));
+    final bPuts = puts.where((p) => p.auth == 'Bearer tok-b');
+    expect(bPuts.where((p) => p.body.contains('t-carol_sns') || p.body.contains('t-alice_sns')), isEmpty, reason: 'A の SNS の資格情報を B のトークンで送らない');
+
+    // A に戻る → A の保管庫へだけ預け直す。
+    failA = false;
+    await c.read(rasqAccountsProvider.notifier).select('central-acc-a');
+    await settle();
+    await c.read(sessionsProvider.future);
+    await settle();
+    expect(loggedIn(central.vaults['acc-a']![SessionsNotifier.storageKey]), containsAll([snsA.key, snsC.key]));
+    expect(loggedIn(central.vaults['acc-b']![SessionsNotifier.storageKey]), isNot(contains(snsC.key)));
   });
 
   testWidgets('アカウントの FOW / サイドバーは、アカウントごとの名前を出す。行を押すと、そのアカウントに切り替わる (D-316)', (tester) async {

@@ -1,13 +1,12 @@
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart' show sha512;
-
 import 'package:rasq_models/rasq_models.dart' show ErrorCode;
 
 import '../../backend/orgate_client.dart';
 import '../../backend/payments_api.dart';
 import 'store_client.dart';
 import 'store_models.dart';
+import 'store_providers.dart' show verifyArtifact;
 
 /// `orgate-server` の `/api/v1` に対する [StoreClient]。
 /// 経路とペイロードは rasq-sdk-sample/openapi/store.yaml (D-033) の通り。
@@ -89,10 +88,7 @@ class HttpStoreClient implements StoreClient {
     final bundle = m.bundle;
     if (bundle == null) throw StateError('配布物がありません');
     final bytes = await _client.getBytes('/plugins/$id/artifacts/${Uri.encodeComponent(bundle.id)}', {'version': m.version, 'session': sessionId});
-    if (bundle.sha512.isNotEmpty && bundle.sha512 != '-' && sha512.convert(bytes).toString() != bundle.sha512) {
-      throw StateError('配布物が構成と違います(SHA-512 が一致しません)');
-    }
-    return bytes;
+    return verifySessionPackage(pluginId: pluginId, version: version, manifest: m, bytes: bytes);
   }
 
   @override
@@ -147,4 +143,25 @@ class HttpStoreClient implements StoreClient {
   /// ポイントの残高は ORGATE (D-401)。
   @override
   Future<StorePoints> points() => _paid(() async => StorePoints.fromJson(await _orgate('ポイント').getJson('/me/points')));
+}
+
+/// 共有セッションの一時実行で受け取った配布物の検証 (D-407、セキュリティ指摘 #11)。登録元は `store:`(審査済み = フル機能)
+/// になるので、**通常のインストールと同じ** [verifyArtifact](SHA-512 照合 + ed25519 署名 + 焼き込んだ鍵のピン留め、
+/// 鍵をピン留めしたビルドでは署名の欠落も失敗)を通す。構成が名乗るプラグイン / 版も、頼んだものと一致すること
+/// (別のプラグイン / 版の署名済み配布物にすり替えさせない)。通らなければ例外(実行しない)。
+/// [pinnedKey] はテストで差し替えるためのもの。
+Future<Uint8List> verifySessionPackage({
+  required String pluginId,
+  String? version,
+  required InstallManifest manifest,
+  required Uint8List bytes,
+  String pinnedKey = pinnedStorePublicKey,
+}) async {
+  if (manifest.pluginId != pluginId) throw StateError('構成のプラグイン (${manifest.pluginId}) が頼んだもの ($pluginId) と違います');
+  if (version != null && manifest.version != version) throw StateError('構成の版 (${manifest.version}) が頼んだ版 ($version) と違います');
+  final bundle = manifest.bundle;
+  if (bundle == null) throw StateError('配布物がありません');
+  final verified = await verifyArtifact(bytes: bytes, artifact: bundle, storePublicKey: manifest.storePublicKey, pinnedKey: pinnedKey);
+  if (!verified.ok) throw StateError(verified.message);
+  return bytes;
 }

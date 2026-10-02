@@ -218,6 +218,7 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
                 instanceScope: controller.document?.scope ?? _plugin.id,
                 scope: RrlScope({}),
                 geometry: controller.geometry,
+                mediaPolicy: _plugin.mediaPolicy,
                 onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: _withSnap(boxes, nodeId, kind, payload)),
               ),
             ),
@@ -234,9 +235,10 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
     final out = <_OvBox>[];
     for (final c in root.c) {
       if (c.t != 'Box') continue;
-      final l = (c.p['left'] as num?)?.toDouble(), t = (c.p['top'] as num?)?.toDouble(), w = (c.p['width'] as num?)?.toDouble(), h = (c.p['height'] as num?)?.toDouble();
-      if (l == null || t == null || w == null || h == null) continue;
-      out.add(_OvBox(key: c.k ?? '#${out.length}', label: c.p['label'] as String?, rect: Rect.fromLTWH(l, t, w, h), angle: (c.p['angle'] as num?)?.toDouble() ?? 0));
+      final rect = overlayBoxRect(c.p['left'], c.p['top'], c.p['width'], c.p['height']);
+      if (rect == null) continue;
+      final angle = (c.p['angle'] as num?)?.toDouble() ?? 0;
+      out.add(_OvBox(key: c.k ?? '#${out.length}', label: c.p['label'] as String?, rect: rect, angle: angle.isFinite ? angle % 360 : 0));
     }
     return out;
   }
@@ -493,6 +495,58 @@ class _Circle extends StatelessWidget {
   Widget build(BuildContext context) => DecoratedBox(decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle), child: child);
 }
 
+/// 重ねの Box の座標の上限(画素)。プラグインが渡す値なので、これより外は切り詰める (D-407、指摘 #24)。
+const overlayBoxMaxExtent = 16384.0;
+
+/// 重ねの Box の矩形 (D-407、指摘 #24): 数でない / 無限 / NaN / 負の大きさは捨て、座標は ±[overlayBoxMaxExtent] に切り詰める
+/// (巨大な枠で、ホストの描画(点線)を長く占有させない)。
+@visibleForTesting
+Rect? overlayBoxRect(Object? left, Object? top, Object? width, Object? height) {
+  if (left is! num || top is! num || width is! num || height is! num) return null;
+  final v = [left.toDouble(), top.toDouble(), width.toDouble(), height.toDouble()];
+  if (v.any((x) => !x.isFinite) || v[2] < 0 || v[3] < 0) return null;
+  double c(double x) => x.clamp(-overlayBoxMaxExtent, overlayBoxMaxExtent);
+  final l = c(v[0]), t = c(v[1]);
+  return Rect.fromLTRB(l, t, c(l + v[2]), c(t + v[3]));
+}
+
+/// 1 辺あたりの点線の数の上限 (指摘 #24)。辺が長ければ、点線の間隔を広げる(仕事の量はプラグインの座標に依らない)。
+const snapMaxDashesPerEdge = 256;
+
+/// 合わせる先として点線を描く枠の数の上限 (指摘 #24)。
+const snapMaxTargets = 32;
+
+/// 点線 1 辺ぶんの線分。[bounds] があれば、その外(画面外)の部分は描かない。数は [snapMaxDashesPerEdge] まで。
+@visibleForTesting
+List<(Offset, Offset)> snapDashSegments(Offset a, Offset b, {double dash = 6, Rect? bounds}) {
+  if (!a.isFinite || !b.isFinite) return const [];
+  if (bounds != null) {
+    // 軸に平行な辺(回転なし)は、見える範囲に切り詰める。
+    if (a.dy == b.dy) {
+      if (a.dy < bounds.top || a.dy > bounds.bottom) return const [];
+      final lo = math.max(math.min(a.dx, b.dx), bounds.left), hi = math.min(math.max(a.dx, b.dx), bounds.right);
+      if (lo > hi) return const [];
+      (a, b) = (Offset(lo, a.dy), Offset(hi, a.dy));
+    } else if (a.dx == b.dx) {
+      if (a.dx < bounds.left || a.dx > bounds.right) return const [];
+      final lo = math.max(math.min(a.dy, b.dy), bounds.top), hi = math.min(math.max(a.dy, b.dy), bounds.bottom);
+      if (lo > hi) return const [];
+      (a, b) = (Offset(a.dx, lo), Offset(a.dx, hi));
+    }
+  }
+  final len = (b - a).distance;
+  if (len == 0) return const [];
+  // 点線の周期(線 + 隙間)。長い辺では広げて、数を上限までに抑える。
+  final period = math.max(dash * 2, len / snapMaxDashesPerEdge);
+  final on = period / 2;
+  final out = <(Offset, Offset)>[];
+  for (var d = 0.0; d < len && out.length < snapMaxDashesPerEdge; d += period) {
+    final e = math.min(d + on, len);
+    out.add((Offset.lerp(a, b, d / len)!, Offset.lerp(a, b, e / len)!));
+  }
+  return out;
+}
+
 /// 重ねの Box(合わせる先の候補 / ドラッグ対象)。
 class _OvBox {
   const _OvBox({required this.key, this.label, required this.rect, this.angle = 0});
@@ -524,7 +578,9 @@ class _SnapPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..color = RasqColors.accent;
-    for (final t in targets) {
+    // 見える範囲(少し外まで)。回転なしの辺はここに切り詰める (指摘 #24)。
+    final bounds = (Offset.zero & size).inflate(8);
+    for (final t in targets.take(snapMaxTargets)) {
       canvas.save();
       if (t.angle != 0) {
         canvas.translate(t.rect.center.dx, t.rect.center.dy);
@@ -532,14 +588,9 @@ class _SnapPainter extends CustomPainter {
         canvas.translate(-t.rect.center.dx, -t.rect.center.dy);
       }
       final r = t.rect.inflate(3);
-      const dash = 6.0;
       void seg(Offset a, Offset b) {
-        final len = (b - a).distance;
-        var d = 0.0;
-        while (d < len) {
-          final e = math.min(d + dash, len);
-          canvas.drawLine(Offset.lerp(a, b, d / len)!, Offset.lerp(a, b, e / len)!, paint);
-          d += dash * 2;
+        for (final (p, q) in snapDashSegments(a, b, bounds: t.angle == 0 ? bounds : null)) {
+          canvas.drawLine(p, q, paint);
         }
       }
       seg(r.topLeft, r.topRight);

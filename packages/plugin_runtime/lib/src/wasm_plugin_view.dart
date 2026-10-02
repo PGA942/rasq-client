@@ -11,7 +11,7 @@ import 'wasm_plugin_controller.dart';
 /// routes events back into the plugin. This is the "画面コンストラクタは隔離
 /// WASM、描画は Dart レンダラー" seam of D-001 made concrete.
 class WasmPluginView extends StatelessWidget {
-  const WasmPluginView({super.key, required this.controller, this.rslParser, this.slots = const {}});
+  const WasmPluginView({super.key, required this.controller, this.rslParser, this.slots = const {}, this.mediaPolicy = RasqMediaPolicy.localOnly});
 
   /// 同期([WasmPluginController])/非同期(AsyncWasmPluginController)どちらでも。
   final WasmPluginViewModel controller;
@@ -19,6 +19,9 @@ class WasmPluginView extends StatelessWidget {
   /// RSL/MFM parser for RichText sources (the app passes `InlineSpans.parse`).
   final List<RasqSpan> Function(String source)? rslParser;
   final Map<String, Widget> slots;
+
+  /// 画像 / メディアの URL をどこまで読むか (D-407)。既定は端末内だけ。埋込側がプラグインの実効権限から作って渡す。
+  final RasqMediaPolicy mediaPolicy;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +46,7 @@ class WasmPluginView extends StatelessWidget {
             // 実物ジオメトリ (D-072): role 付きノードの矩形を登録 → FOW の
             // 実物アンカー(fow.open anchor)が引く。
             geometry: controller.geometry,
+            mediaPolicy: mediaPolicy,
             onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
           ),
         );
@@ -56,11 +60,14 @@ class WasmPluginView extends StatelessWidget {
 /// プラグインの関数 `call` に戻る。中身の更新は同一 id での `fow.open`
 /// 再要求 = リクエスト差し替え(このウィジェットごと作り直される)。
 class WasmFowView extends StatelessWidget {
-  const WasmFowView({super.key, required this.controller, required this.request, this.rslParser});
+  const WasmFowView({super.key, required this.controller, required this.request, this.rslParser, this.mediaPolicy = RasqMediaPolicy.localOnly});
 
   final WasmPluginViewModel controller;
   final WasmFowRequest request;
   final List<RasqSpan> Function(String source)? rslParser;
+
+  /// 画像 / メディアの URL をどこまで読むか (D-407)。既定は端末内だけ。
+  final RasqMediaPolicy mediaPolicy;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -77,6 +84,7 @@ class WasmFowView extends StatelessWidget {
                 instanceScope: doc.scope,
                 scope: RrlScope({}),
                 rslParser: rslParser,
+                mediaPolicy: mediaPolicy,
                 onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: payload),
               ),
             ),

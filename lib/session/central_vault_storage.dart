@@ -49,9 +49,11 @@ class CentralVaultSessionStorage implements SessionStorage {
     _known = SessionOps();
     _knownFor = null;
     if (next != null) {
-      // ログインした: メモリにだけ持っていたぶんを預ける。
-      for (final e in Map.of(_memory).entries) {
-        if (await _put(e.key, e.value)) _memory.remove(e.key);
+      // ログインした: ログイン前(持ち主なし)にメモリにだけ持っていたぶんを預ける(ログインしたら預ける、という約束どおり)。
+      // 別のアカウントが預け損ねたぶん(SNS のトークン入り)は、このアカウントの保管庫へ持ち込まない (D-407、指摘 #20)。
+      // そのアカウントに戻るまでメモリに残し(ログアウトで消える)、戻ったら read が保管庫の台帳に重ねて預け直す。
+      for (final e in [for (final e in _memory.entries) if (e.key.owner == null) e]) {
+        if (await _put(e.key.key, e.value, owner: next) && identical(_memory[e.key], e.value)) _memory.remove(e.key);
       }
     } else {
       _memory.clear();
@@ -64,7 +66,27 @@ class CentralVaultSessionStorage implements SessionStorage {
 
   /// ほかの端末の操作を見に行く間隔(0 = 見に行かない。テスト用)。
   final Duration pollInterval;
-  final Map<String, String> _memory = {};
+  /// 保管庫へ預けられなかった / まだ預けられないぶん。[owner] = 預けるはずだった Central のアカウント
+  /// (null = RASQ アカウントにログインする前に持ったもの)。持ち主の違う保管庫へは預けない (D-407、指摘 #20)。
+  final Map<({String key, String? owner}), String> _memory = {};
+
+  /// [owner] の保管庫へ預けてよい(= そのアカウントのもの、無ければログイン前の)メモリのぶんの置き場所。
+  ({String key, String? owner})? _memorySlotFor(String key, String? owner) {
+    if (owner != null && _memory.containsKey((key: key, owner: owner))) return (key: key, owner: owner);
+    if (_memory.containsKey((key: key, owner: null))) return (key: key, owner: null);
+    return null;
+  }
+
+  String? _memoryFor(String key, String? owner) => _memory[_memorySlotFor(key, owner)];
+
+  /// [owner] のぶんとログイン前のぶんを消す(保管庫へ預け終えた)。ほかのアカウントのぶんは残す。
+  void _forgetMemory(String key, String? owner) {
+    _memory.remove((key: key, owner: owner));
+    _memory.remove((key: key, owner: null));
+  }
+
+  /// いまのアカウント(トークンの箱が知らせるもの)。保管庫の口が作れないときに、メモリのぶんの持ち主として使う。
+  String? get _holderAccountId => _ref.read(orgateTokenHolderProvider).accountId;
 
   static const vaulted = {SessionsNotifier.storageKey};
 
@@ -84,9 +106,11 @@ class CentralVaultSessionStorage implements SessionStorage {
     return (client: base.withToken(() => token), accountId: accountId);
   }
 
-  Future<bool> _put(String key, String value) async {
+  /// [owner] の保管庫へ預ける。いまのアカウントが [owner] でなければ預けない(切り替わった後に前のアカウントのぶんを
+  /// 次のアカウントへ書かない)。
+  Future<bool> _put(String key, String value, {required String owner}) async {
     final c = await _client();
-    if (c == null) return false;
+    if (c == null || c.accountId != owner) return false;
     return _putWith(c.client, key, value);
   }
 
@@ -130,17 +154,20 @@ class CentralVaultSessionStorage implements SessionStorage {
   Future<String?> read(String key) async {
     if (!vaulted.contains(key)) return local.read(key);
     final c = await _client();
-    if (c == null) return _memory[key];
+    if (c == null) return _memoryFor(key, _holderAccountId);
     final client = c.client;
     _forAccount(c.accountId);
     final remote = await _fetch(client, key);
-    if (remote == null) return _memory[key] ?? _known.toSessionsJson();
+    if (remote == null) return _memoryFor(key, c.accountId) ?? _known.toSessionsJson();
     // 前の版がブラウザ / メモリに置いていたぶんがあれば、操作として足してから、ブラウザのぶんを消す。
-    final old = _memory[key] ?? await local.read(key);
+    // メモリのぶんは、このアカウントのもの / ログイン前のものだけ(別のアカウントのぶんは混ぜない、指摘 #20)。
+    final slot = _memorySlotFor(key, c.accountId);
+    final memOld = _memory[slot];
+    final old = memOld ?? await local.read(key);
     if (old != null) {
       final merged = remote.merged(SessionOps().applying(old, at: DateTime.fromMillisecondsSinceEpoch(0)));
       if (await _putWith(client, key, merged.encode())) {
-        _memory.remove(key);
+        if (slot != null && identical(_memory[slot], memOld)) _memory.remove(slot);
         await local.delete(key);
       }
       _known = merged;
@@ -157,7 +184,7 @@ class CentralVaultSessionStorage implements SessionStorage {
     if (!vaulted.contains(key)) return local.write(key, value);
     final c = await _client();
     if (c == null) {
-      _memory[key] = value;
+      _memory[(key: key, owner: _holderAccountId)] = value;
       return;
     }
     final client = c.client;
@@ -167,9 +194,10 @@ class CentralVaultSessionStorage implements SessionStorage {
     final remote = await _fetch(client, key);
     final merged = (remote ?? SessionOps()).merged(mine).pruned(DateTime.now());
     if (await _putWith(client, key, merged.encode())) {
-      _memory.remove(key);
+      _forgetMemory(key, c.accountId);
     } else {
-      _memory[key] = value;
+      // 預け直しは、このアカウントの保管庫へだけ(別のアカウントへ切り替わったら持ち込まない、指摘 #20)。
+      _memory[(key: key, owner: c.accountId)] = value;
     }
     final changedElsewhere = !merged.sameLoginsAs(mine);
     _known = merged;
@@ -181,7 +209,7 @@ class CentralVaultSessionStorage implements SessionStorage {
   @override
   Future<void> delete(String key) async {
     if (!vaulted.contains(key)) return local.delete(key);
-    _memory.remove(key);
+    _forgetMemory(key, _holderAccountId);
     // 全部ログアウトした、という操作として残す(保管庫ごと消すと、ほかの端末の古い状態が生き返る)。
     await write(key, '{"sessions":[]}');
   }

@@ -698,7 +698,7 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
     final controller = p.runtime.view;
     final page = RrlRenderer(
       node: c.root ?? RrlNode.fromJson(const {'t': 'Column'}),
-      host: RrlHost(instanceScope: controller.document?.scope ?? p.id, scope: RrlScope({}), geometry: controller.geometry, onEvent: c.onRrlEvent),
+      host: RrlHost(instanceScope: controller.document?.scope ?? p.id, scope: RrlScope({}), geometry: controller.geometry, mediaPolicy: p.mediaPolicy, onEvent: c.onRrlEvent),
     );
     final full = Container(
       key: const ValueKey('swing.plugin.page'),

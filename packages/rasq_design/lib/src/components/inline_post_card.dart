@@ -6,6 +6,7 @@ import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
 import 'avatar.dart';
 import 'rich_text.dart';
+import '../platform/media_policy.dart';
 import '../platform/web_image.dart';
 
 /// インラインフレームの小表示 (D-156、ワイヤーフレーム p.1 右端 / p.5 右端):
@@ -88,7 +89,9 @@ class _Thumbnails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    Widget img(Uri u) => Image.network(webHtmlElementStrategy: rasqWebImageStrategy, u.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.image_outlined, size: 14, color: scheme.onSurfaceVariant)));
+    Widget broken() => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.image_outlined, size: 14, color: scheme.onSurfaceVariant));
+    // プラグインの面では、その権限で読めない URL は読まない (D-407)。
+    Widget img(Uri u) => !rasqMediaAllowed(context, u) ? broken() : Image.network(webHtmlElementStrategy: rasqWebImageStrategy, u.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => broken());
     Widget cell(int i) => Expanded(
           child: Stack(fit: StackFit.expand, children: [
             img(urls[i]),

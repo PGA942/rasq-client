@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../../app/providers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../relational/relational_engine.dart';
 
 /// 返信欄の並び順 (D-070、短押しドロップダウン)。
@@ -61,7 +62,9 @@ List<UserSummary> sortThreadUsers(List<UserSummary> users, ThreadSortOrder order
 final threadQuotesProvider = FutureProvider.autoDispose.family<List<Post>, ({String id, String? account})>((ref, k) async {
   final s = ref.watch(sessionForAccountProvider(k.account)); // 属するアカウントで (D-155)
   if (s == null) return const [];
-  return (await s.quotes(k.id, limit: 30)).items;
+  // チャイルドセーフ (D-407、指摘 #26): 引用ノートにも、ホームと同じ保護者の表示制限を掛ける(共有の口で掛ける)。
+  final gate = ref.watch(childGateProvider);
+  return gate.filterPosts((await s.quotes(k.id, limit: 30)).items);
 });
 
 /// 返信欄の設定の置き場(`threadReplies.v1`。全スレッドで共有。SNS / RASQ 共通)。

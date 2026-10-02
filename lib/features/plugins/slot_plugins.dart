@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
+import 'package:rasq_design/rasq_design.dart' show RasqMediaPolicy;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -358,6 +359,17 @@ class SlotPlugin {
 
   /// 開けてよい能力 (D-308)。ストアは宣言どおり、サイドロードは [sideloadTrust] の表の行。
   SideloadCapabilities get capabilities => slotCapabilitiesFor(source, sideloadTrust);
+
+  /// このプラグインの面(ページ / FOW / 重ね / Swing)で、ホストが代わりに読む画像 / メディアの URL の範囲 (D-407、
+  /// セキュリティ指摘 #9)。ランタイムに渡したのと同じ実効権限で決める: `network` を持たない / 制限モード
+  /// (`networkEnabled: false`)なら端末内 (`data:`) だけ、持っていれば宣言した接続先 (`network.hosts`) だけ。
+  /// これが無いと、`network` を持たないプラグインでも `Image` の `src` に下書きを入れてホストに送らせられる。
+  RasqMediaPolicy get mediaPolicy {
+    final caps = capabilities;
+    final hosts = caps.fetchHosts(manifest.fetchHosts);
+    if (!caps.permissions(manifest.permissions).contains(RasqPermissions.network) || hosts.isEmpty) return RasqMediaPolicy.localOnly;
+    return RasqMediaPolicy.plugin(hostAllowed: (h) => fetchHostPermitted(h, hosts));
+  }
   Future<Map<String, dynamic>> call(String fn, Map<String, Object?> args) => runtime.invoke(fn, args);
 
   /// `call` の `value`(失敗は null)。
@@ -784,7 +796,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         openFows.value = {...openFows.value}..remove(entryId);
         (controller as WasmFowSurfaceHost).notifyFowClosed(req.id, reason: reason.name, result: result);
       },
-      builder: (ctx, handle) => WasmFowView(controller: controller, request: req, rslParser: InlineSpans.parse),
+      builder: (ctx, handle) => WasmFowView(controller: controller, request: req, rslParser: InlineSpans.parse, mediaPolicy: plugin.mediaPolicy),
     ));
   }
 
