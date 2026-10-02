@@ -674,19 +674,14 @@ void main() {
       expect(find.byType(OnboardingPreviewColumn), findsNothing);
     });
 
-    testWidgets('広い画面: 左の小カラムに、おすすめの SNS(投稿タイルの RRL)とサーバー情報タイルを横に流す', (tester) async {
+    testWidgets('広い画面: 左の小カラムにサーバーのタイルを横に流す(「おすすめの SNS」は D-412 で外した)', (tester) async {
       await pumpOnboarding(tester, serversCentral({'misskey.io', 'mastodon.social'}), size: const Size(1280, 800));
       final column = find.byType(OnboardingPreviewColumn);
       expect(column, findsOneWidget);
       expect(tester.getSize(column).width, 320, reason: '小型カラムの既定の幅 (D-320)');
       expect(tester.getTopLeft(column).dx, 0, reason: '左に置く');
-      // SNS: 角丸のカードに RRL の投稿タイル。横に流す(画面外のカードは送ると出る)。
-      final sns = find.byKey(const ValueKey('onboarding.previews.sns'));
-      expect(tester.widget<ListView>(sns).scrollDirection, Axis.horizontal);
-      expect(find.byKey(const ValueKey('onboarding.previews.sns.misskey')), findsOneWidget);
-      expect(find.descendant(of: find.byKey(const ValueKey('onboarding.previews.sns.misskey')), matching: find.byType(RasqPostTile)), findsOneWidget);
-      await tester.scrollUntilVisible(find.byKey(const ValueKey('onboarding.previews.sns.mixi2')), 200, scrollable: find.descendant(of: sns, matching: find.byType(Scrollable)).first);
-      expect(find.byKey(const ValueKey('onboarding.previews.sns.mixi2')), findsOneWidget);
+      expect(find.byKey(const ValueKey('onboarding.previews.sns')), findsNothing);
+      expect(find.byKey(const ValueKey('onboarding.showcase')), findsNothing, reason: '狭い画面の入口は出さない(左カラムにある)');
       // サーバー: 情報の取れたものだけ。
       expect(find.byKey(const ValueKey('onboarding.previews.servers')), findsOneWidget);
       expect(find.byKey(const ValueKey('server.tile.misskey.io')), findsOneWidget);
@@ -697,7 +692,6 @@ void main() {
     testWidgets('サーバーの情報が 1 つも取れなければ、サーバーの欄ごと出さない', (tester) async {
       await pumpOnboarding(tester, serversCentral(const {}), size: const Size(1280, 800));
       expect(find.byType(OnboardingPreviewColumn), findsOneWidget);
-      expect(find.byKey(const ValueKey('onboarding.previews.sns.misskey')), findsOneWidget);
       expect(find.byKey(const ValueKey('onboarding.previews.servers')), findsNothing);
     });
   });

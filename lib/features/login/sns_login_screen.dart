@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,7 @@ import 'package:sns_misskey/sns_misskey.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../onboarding/server_signup.dart';
 import 'terms_sheet.dart';
 
 /// SNS ログインの共通画面: インスタンスURL入力 → サーバー確認 → 利用規約 →
@@ -52,6 +55,13 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
   String? _error;
 
   SnsPlugin get _plugin => ref.read(pluginRegistryProvider).plugin(widget.pluginId)!;
+
+  @override
+  void initState() {
+    super.initState();
+    // サーバーのタイルから登録してきた (D-412): サーバーは決まっているので、すぐ確かめる。
+    if (ref.read(serverSignupTargetProvider)?.host == widget.defaultHost) WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? _inspect() : null);
+  }
 
   @override
   void dispose() {
@@ -113,7 +123,10 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
       final result = await flow.complete();
       await ref.read(sessionsProvider.notifier).add(result);
       if (!mounted) return;
+      final container = ProviderScope.containerOf(context);
       context.go(Routes.home);
+      // サーバーのタイルから登録してきたなら (D-412)、タップした投稿 / RASQ リストを開く。
+      unawaited(followSignupTarget(container, result.session.account));
     } on SnsApiException catch (e) {
       setState(() => _error = e.code.message ?? e.code.display);
     } catch (e) {

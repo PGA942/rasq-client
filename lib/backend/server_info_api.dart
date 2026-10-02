@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rasq_models/rasq_models.dart';
 
 import 'orgate_client.dart';
 
@@ -95,6 +96,51 @@ class RaiServerProfile {
       );
 }
 
+/// サーバーの見本の投稿 (D-412、Central S-072): オンボーディングのサーバータイルの下に出す候補。Central がトークン無しで取れる
+/// 公開の投稿(Misskey の注目 / ローカル TL、Mastodon のトレンド / ローカル TL)から、返信 / CW / センシティブ / ボットなどを落とし、
+/// 強い順に 12 件まで。ジャンルの判定は端末 ([selectShowcasePosts])。
+@immutable
+class ServerShowcase {
+  const ServerShowcase({required this.host, this.software, this.posts = const [], this.stale = false});
+  final String host;
+  final String? software;
+  final List<ShowcaseCandidate> posts;
+  final bool stale;
+
+  factory ServerShowcase.fromJson(Map<String, Object?> j) {
+    final host = '${j['host']}';
+    final kind = SnsKind.values.asNameMap()['${j['software']}'] ?? SnsKind.other;
+    return ServerShowcase(
+      host: host,
+      software: j['software'] as String?,
+      stale: j['stale'] == true,
+      posts: [
+        for (final p in j['posts'] as List? ?? const [])
+          if (p is Map && p['post'] is Map)
+            ShowcaseCandidate(
+              // 見本はどのアカウントのものでもない: 投稿の SNS / サーバーを仮の「見ているアカウント」にする(登録したら [resolvePostOn] で引き直す)。
+              post: SnsWire.postFrom((p['post'] as Map).cast<String, Object?>(), account: AccountId(kind: _kindOf(p['post'] as Map, kind), instance: host, handle: '-')),
+              score: (p['score'] as num?)?.toDouble() ?? 0,
+              source: '${p['source'] ?? 'local'}',
+            ),
+      ],
+    );
+  }
+
+  static SnsKind _kindOf(Map post, SnsKind fallback) => SnsKind.values.asNameMap()['${(post['author'] as Map?)?['kind']}'] ?? fallback;
+}
+
+/// 見本の投稿の候補 1 件(強さ = Central の [score])。
+@immutable
+class ShowcaseCandidate {
+  const ShowcaseCandidate({required this.post, this.score = 0, this.source = 'local'});
+  final Post post;
+  final double score;
+
+  /// `featured` / `trend` / `local`(RASQ リストのスナップショットは `list`)。
+  final String source;
+}
+
 class ServerInfoApi {
   ServerInfoApi(this.client);
   final OrgateClient client;
@@ -103,6 +149,16 @@ class ServerInfoApi {
   Future<RasqServerInfo?> info(String host) async {
     try {
       return RasqServerInfo.fromJson(await client.getJson('/servers/${Uri.encodeComponent(host)}/info'));
+    } on OrgateException catch (e) {
+      if (e.code.code == '404') return null;
+      rethrow;
+    }
+  }
+
+  /// 見本の投稿(D-412)。null = インスタンスではない / 分からない(`404`)。
+  Future<ServerShowcase?> showcase(String host) async {
+    try {
+      return ServerShowcase.fromJson(await client.getJson('/servers/${Uri.encodeComponent(host)}/showcase'));
     } on OrgateException catch (e) {
       if (e.code.code == '404') return null;
       rethrow;
@@ -133,6 +189,18 @@ final serverInfoProvider = FutureProvider.family<RasqServerInfo?, String>((ref, 
     return await api.info(host.toLowerCase());
   } catch (e) {
     debugPrint('server info $host: $e');
+    return null;
+  }
+});
+
+/// 見本の投稿の候補(失敗 / インスタンスでない = null)。
+final serverShowcaseProvider = FutureProvider.family<ServerShowcase?, String>((ref, host) async {
+  final api = ref.watch(serverInfoApiProvider);
+  if (api == null || host.isEmpty) return null;
+  try {
+    return await api.showcase(host.toLowerCase());
+  } catch (e) {
+    debugPrint('server showcase $host: $e');
     return null;
   }
 });

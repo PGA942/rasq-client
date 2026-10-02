@@ -141,7 +141,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           primary: primary,
         );
 
-    final content = Padding(
+    Widget content({required bool narrow}) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Padding(padding: EdgeInsets.only(top: RasqSpacing.xxl, bottom: RasqSpacing.md), child: Center(child: RasqLogo(height: 44))),
@@ -166,6 +166,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
             ),
             const Spacer(),
+            // 狭い画面 (D-412): 左カラムの見本(サーバー / RASQ リスト)はページで。タップでそのサーバーに登録できる。
+            if (narrow && centralOk)
+              TextButton.icon(
+                key: const ValueKey('onboarding.showcase'),
+                onPressed: _busy ? null : () => context.push(Routes.onboardingShowcase),
+                icon: const Icon(Icons.travel_explore, size: 18),
+                label: const Text('サーバーとリストを見てみる(そのまま登録もできます)'),
+              ),
             returning ? login(primary: true) : create(primary: true),
             if (!centralOk)
               Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
@@ -196,15 +204,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         );
     return Scaffold(
       body: SafeArea(
-        // 幅の広い画面 (D-405): シェルと同じく 2 カラム。左の小カラムに SNS / サーバーの見本、右の大型カラムに入口。
+        // 幅の広い画面 (D-405): シェルと同じく 2 カラム。左の小カラムにサーバー / RASQ リストの見本 (D-412)、右の大型カラムに入口。
         // 小カラムの幅は「カラムの幅」の設定 (D-320) に従う。
         child: LayoutBuilder(builder: (context, c) {
-          if (c.maxWidth < RasqSizes.tabletBreakpoint) return content;
+          if (c.maxWidth < RasqSizes.tabletBreakpoint) return content(narrow: true);
           final split = splitColumns(c.maxWidth, ref.watch(columnLayoutProvider));
           return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             SizedBox(width: split.small, child: const OnboardingPreviewColumn()),
             const VerticalDivider(width: 1),
-            Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: content))),
+            Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: content(narrow: false)))),
           ]);
         }),
       ),

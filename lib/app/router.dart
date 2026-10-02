@@ -49,6 +49,8 @@ import '../features/profile/rasq_ownership_screens.dart';
 import '../features/profile/rasq_profile_edit_screen.dart';
 import '../features/clips/clip_timeline_screen.dart';
 import '../features/collections/rasq_collection_screen.dart';
+import '../features/onboarding/onboarding_previews.dart' show OnboardingShowcaseScreen;
+import '../features/onboarding/server_signup.dart';
 import '../features/lists/lists_screens.dart';
 import '../features/relational/relational_engine.dart';
 import '../features/relational/relational_event_screen.dart';
@@ -99,6 +101,12 @@ abstract final class Routes {
 
   /// RASQ アカウントの登録ページ (D-405、前は FOW)。`extra` = この端末でログイン中の SNS アカウントの数。
   static const rasqRegister = '/rasq-register';
+
+  /// サーバーのタイルから始める登録 (D-412): 登録ページ(WebView / 外部のブラウザ)+ RAi の案内。オンボーディング中も開ける。
+  static const serverSignup = '/server-signup';
+
+  /// 狭い画面のオンボーディングから開く、サーバー / RASQ リストの見本のページ (D-412)。
+  static const onboardingShowcase = '/onboarding-showcase';
 
   /// 登録の前に読む文書(設定の「ヘルプ、法的表示」と同じページ)。オンボーディング中も開ける (D-405)。
   static const termsDoc = '/settings/dsl/about.terms';
@@ -250,11 +258,14 @@ String? entryRedirect({required String loc, required bool loggedIn, required Ras
   // (オンボーディングから Central の接続先を入れるため)。
   // RASQ アカウントへのログイン (D-296) も、オンボーディングから開く。
   // 登録ページと、そこから開く利用規約 / プライバシーポリシー (D-405) も(前は文書がオンボーディングへ戻されて読めなかった)。
+  // サーバーのタイルから始める登録のページ (D-412) も。
   const open = {
     Routes.catalog,
     Routes.wasmDev,
     Routes.onboarding,
     Routes.rasqRegister,
+    Routes.serverSignup,
+    Routes.onboardingShowcase,
     Routes.termsDoc,
     Routes.privacyDoc,
     '${Routes.settings}/server',
@@ -460,6 +471,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const WasmPluginScreen()),
           GoRoute(path: Routes.onboarding, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingScreen()),
           // オンボーディングからも、サイドバーの RASQ アカウント FOW からも開く (D-405)。
+          GoRoute(path: Routes.onboardingShowcase, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingShowcaseScreen()),
+          GoRoute(path: Routes.serverSignup, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ServerSignupScreen()),
           GoRoute(path: Routes.rasqRegister, parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqRegisterScreen(snsCount: s.extra is int ? s.extra as int : 0)),
           // チャイルドセーフ (D-307)。
           GoRoute(path: Routes.childSafe, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ChildSafeHubScreen(), routes: [
