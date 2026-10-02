@@ -4,6 +4,7 @@ import 'package:rasq_models/rasq_models.dart';
 import '../theme/rasq_tokens_extension.dart';
 import '../tokens/colors.dart';
 import '../tokens/sizes.dart';
+import '../platform/media_policy.dart';
 import '../platform/web_image.dart';
 
 /// Single avatar with optional presence ring/badge (LIVE / VC中).
@@ -50,7 +51,8 @@ class RasqAvatar extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: imageUrl == null
+        // プラグインの面では、その権限で読めない URL は読まずに頭文字 (D-407)。
+        child: imageUrl == null || !rasqMediaAllowed(context, imageUrl)
             ? ColoredBox(
                 color: RasqColors.accent,
                 child: ExcludeSemantics(

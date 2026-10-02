@@ -10,6 +10,7 @@ import 'badge.dart';
 import 'brand.dart';
 import 'buttons.dart';
 import 'sns_pill.dart';
+import '../platform/media_policy.dart';
 import '../platform/web_image.dart';
 
 /// ユーザータイル（大）— ユーザーページ上部専用の独立コンポーネント
@@ -72,7 +73,7 @@ class RasqUserTileLarge extends StatelessWidget {
         SizedBox(
           height: bannerH,
           width: double.infinity,
-          child: profile.bannerUrl == null
+          child: profile.bannerUrl == null || !rasqMediaAllowed(context, profile.bannerUrl)
               ? ColoredBox(color: scheme.surfaceContainerHighest)
               : GestureDetector(
                   onTap: onBannerTap,

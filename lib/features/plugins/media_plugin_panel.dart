@@ -218,6 +218,7 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
                 instanceScope: controller.document?.scope ?? _plugin.id,
                 scope: RrlScope({}),
                 geometry: controller.geometry,
+                mediaPolicy: _plugin.mediaPolicy,
                 onEvent: (nodeId, kind, {fn, payload = const {}}) => controller.handleEvent(nodeId, kind, fn: fn, payload: _withSnap(boxes, nodeId, kind, payload)),
               ),
             ),

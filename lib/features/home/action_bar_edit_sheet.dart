@@ -200,7 +200,7 @@ Future<void> showActionDetailFow(WidgetRef ref, {required ActionDescriptor actio
         final node = actionDetailRrl(action: action, pluginId: pluginId, pluginName: store?.name ?? pluginName, developer: store == null ? null : (store.developerName.isEmpty ? '提供元不明' : store.developerName), iconUrl: store?.iconUrl, rating: store?.rating, downloads: store?.downloads, summary: store?.summary ?? description, tags: tags);
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.lg),
-          child: RrlRenderer(key: const ValueKey('actionbar.detail.rrl'), node: node, host: RrlHost(instanceScope: 'host:actionbar:detail', scope: RrlScope({}))),
+          child: RrlRenderer(key: const ValueKey('actionbar.detail.rrl'), node: node, host: RrlHost(instanceScope: 'host:actionbar:detail', scope: RrlScope({}), mediaPolicy: RasqMediaPolicy.unrestricted)),
         );
       },
     ),

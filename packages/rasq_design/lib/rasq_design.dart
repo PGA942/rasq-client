@@ -7,6 +7,7 @@
 library;
 
 export 'src/platform/web_image.dart';
+export 'src/platform/media_policy.dart';
 export 'src/tokens/colors.dart';
 export 'src/tokens/spacing.dart';
 export 'src/tokens/sizes.dart';

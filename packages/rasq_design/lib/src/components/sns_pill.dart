@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../tokens/colors.dart';
+import '../platform/media_policy.dart';
 import '../platform/web_image.dart';
 
 /// Server icon + label shown after `@username` in every user row
@@ -45,7 +46,7 @@ class RasqSnsPill extends StatelessWidget {
           child: SizedBox(
             width: dotSize,
             height: dotSize,
-            child: url == null
+            child: url == null || !rasqMediaAllowed(context, url)
                 ? dot
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(dotSize * 0.25),

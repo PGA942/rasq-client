@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
+import '../platform/media_policy.dart';
 import '../platform/web_image.dart';
 
 /// カスタム絵文字の共通表示 (D-040)。
@@ -42,20 +43,32 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
   ImageStream? _stream;
   ImageStreamListener? _listener;
 
+  /// この面で [RasqCustomEmoji.url] を読んでよいか (D-407、[RasqMediaPolicyScope])。だめなら通信せず [fallbackText]。
+  bool _allowed = false;
+  Uri? _syncedUrl;
+  bool _synced = false;
+
   @override
-  void initState() {
-    super.initState();
-    _resolve();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
   }
 
   @override
   void didUpdateWidget(RasqCustomEmoji old) {
     super.didUpdateWidget(old);
-    if (old.url != widget.url) {
-      _aspect = null;
-      _unlisten();
-      _resolve();
-    }
+    if (old.url != widget.url) _sync();
+  }
+
+  void _sync() {
+    final allowed = rasqMediaAllowed(context, widget.url);
+    if (_synced && allowed == _allowed && _syncedUrl == widget.url) return;
+    _synced = true;
+    _allowed = allowed;
+    _syncedUrl = widget.url;
+    _aspect = null;
+    _unlisten();
+    if (allowed) _resolve();
   }
 
   void _resolve() {
@@ -88,7 +101,7 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
 
   @override
   Widget build(BuildContext context) {
-    final url = widget.url;
+    final url = _allowed ? widget.url : null;
     final Widget emoji;
     if (url == null) {
       emoji = Text(widget.fallbackText, style: TextStyle(fontSize: widget.height * 0.85), semanticsLabel: widget.semanticLabel);
@@ -147,7 +160,7 @@ class _EmojiChip extends StatelessWidget {
     final w = target.widget;
     final wide = (target._aspect ?? 1.0) > 1.5;
     const chipEmojiHeight = 28.0;
-    final emoji = w.url == null
+    final emoji = w.url == null || !target._allowed
         ? Text(w.fallbackText, style: const TextStyle(fontSize: 24))
         : SizedBox(
             width: RasqCustomEmoji.displayWidth(target._aspect ?? 1.0, chipEmojiHeight),
