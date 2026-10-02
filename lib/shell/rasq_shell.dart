@@ -11,8 +11,10 @@ import '../features/child_safe/child_safe_screens.dart' show ChildSafeWindowBann
 import '../features/plugins/sideload_trust.dart' show ownDevKeyFingerprintsProvider;
 import '../session/sns_share.dart' show snsShareProvider;
 import '../features/notifications/notifications_screen.dart';
+import '../features/onboarding/rasq_account_nudge.dart' show RasqAccountNudgeListener;
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'column_layout.dart';
+import 'column_takeover.dart';
 import 'nav.dart';
 import 'pane_swipe_back.dart';
 import 'sidebar.dart';
@@ -39,10 +41,13 @@ class RasqShell extends ConsumerWidget {
     ref.listen(ownDevKeyFingerprintsProvider, (_, _) {});
     // SNS のアクセストークンの端末間共有 (D-319): 起動から見回りを続ける(新しい端末の承認の問い / 本体との同期)。
     ref.listen(snsShareProvider, (_, _) {});
-    return LayoutBuilder(builder: (context, constraints) {
-      final tablet = constraints.maxWidth >= RasqSizes.tabletBreakpoint;
-      return tablet ? _TabletLayout(shell: navigationShell) : _MobileLayout(shell: navigationShell);
-    });
+    // タイルから登録した人に、最初のオンボーディングのあとで RASQ アカウントを聞く (D-413)。
+    return RasqAccountNudgeListener(
+      child: LayoutBuilder(builder: (context, constraints) {
+        final tablet = constraints.maxWidth >= RasqSizes.tabletBreakpoint;
+        return tablet ? _TabletLayout(shell: navigationShell) : _MobileLayout(shell: navigationShell);
+      }),
+    );
   }
 
   static void openSidebar(BuildContext context, WidgetRef ref) {
@@ -170,14 +175,18 @@ class _TabletLayout extends ConsumerWidget {
                   // 畳まれた stick FOW がこのカラムにあれば、そのぶん中身を縮める (D-397)。
                   child: FowStickPadding(
                     manager: ref.watch(overlayManagerProvider),
-                    child: PaneSwipeBack(
-                      key: const ValueKey('pane.swipe.left'),
-                      canBack: () => GoRouter.of(context).canPop(),
-                      onBack: () {
-                        final router = GoRouter.of(context);
-                        if (router.canPop()) router.pop();
-                      },
-                      child: shell,
+                    // カラムを置き換えて開く画面 (D-413: Swing を作る画面) は、このカラムの上に重ねる。
+                    child: ColumnTakeoverHost(
+                      column: 0,
+                      child: PaneSwipeBack(
+                        key: const ValueKey('pane.swipe.left'),
+                        canBack: () => GoRouter.of(context).canPop(),
+                        onBack: () {
+                          final router = GoRouter.of(context);
+                          if (router.canPop()) router.pop();
+                        },
+                        child: shell,
+                      ),
                     ),
                   ),
                 ),
@@ -190,7 +199,7 @@ class _TabletLayout extends ConsumerWidget {
             child: Container(
               decoration: BoxDecoration(border: Border(left: BorderSide(color: scheme.outlineVariant))),
               // VC ミニプレイヤーのスタブは撤去 (D-178): AsTell は FOW で動く。
-              child: SafeArea(child: FowStickPadding(manager: ref.watch(overlayManagerProvider), column: 1, child: const ThirdColumnView())),
+              child: SafeArea(child: FowStickPadding(manager: ref.watch(overlayManagerProvider), column: 1, child: const ColumnTakeoverHost(column: 1, child: ThirdColumnView()))),
             ),
           ),
         ]);

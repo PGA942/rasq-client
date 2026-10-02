@@ -14,6 +14,7 @@ import '../../app/router.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../home/action_bar_config.dart';
 import '../home/action_bundle_fow.dart';
+import 'fow_avoid.dart';
 import '../home/plugin_actions.dart';
 import '../home/post_row.dart';
 import '../post/post_menu.dart';
@@ -125,47 +126,9 @@ class _MediaViewerScreenState extends ConsumerState<MediaViewerScreen> {
   void _relayoutForFows() {
     final manager = _manager;
     if (!mounted || manager == null) return;
-    final screen = MediaQuery.sizeOf(context);
-    var top = 0.0, bottom = 0.0, left = 0.0, right = 0.0;
-    for (final e in manager.entries) {
-      final f = e.fow;
-      final r = f?.laidOut;
-      if (f == null || r == null) continue;
-      // 上下に寄せたときの余白と、左右に寄せたときの余白(それぞれ FOW の広いほうの側へ)。空きが広くなるほうを選ぶ(壁付けは左右)。
-      final vertical = r.top >= screen.height - r.bottom ? (top: 0.0, bottom: screen.height - r.top) : (top: r.bottom, bottom: 0.0);
-      final horizontal = r.left >= screen.width - r.right ? (left: 0.0, right: screen.width - r.left) : (left: r.right, right: 0.0);
-      final freeV = (screen.height - vertical.top - vertical.bottom) * screen.width;
-      final freeH = (screen.width - horizontal.left - horizontal.right) * screen.height;
-      if (f.pinnedWall != 0 || freeH > freeV) {
-        left = math.max(left, horizontal.left);
-        right = math.max(right, horizontal.right);
-      } else {
-        top = math.max(top, vertical.top);
-        bottom = math.max(bottom, vertical.bottom);
-      }
-    }
-    (top, bottom) = _keepFree(top, bottom, screen.height, viewerMinFreeSpace);
-    (left, right) = _keepFree(left, right, screen.width, viewerMinFreeSpace);
-    final inset = EdgeInsets.fromLTRB(left, top, right, bottom);
+    // 計算は Swing を作る画面 (D-413) と共通 ([fowAvoidInset])。全画面なので、場所は画面ぜんぶ。
+    final inset = fowAvoidInset(Offset.zero & MediaQuery.sizeOf(context), laidOutFows(manager), minFree: viewerMinFreeSpace);
     if (inset != _fowInset) setState(() => _fowInset = inset);
-  }
-
-  /// [total] のうち [a] / [b] を空けた残りが [min] を切らないように、大きいほうから削る。
-  static (double, double) _keepFree(double a, double b, double total, double min) {
-    var over = a + b - (total - min);
-    if (over <= 0) return (a, b);
-    if (a >= b) {
-      final d = math.min(over, a);
-      a -= d;
-      over -= d;
-      b = math.max(0, b - over);
-    } else {
-      final d = math.min(over, b);
-      b -= d;
-      over -= d;
-      a = math.max(0, a - over);
-    }
-    return (a, b);
   }
 
   // ── 下向きスワイプで閉じる (D-326) ──

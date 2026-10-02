@@ -4,18 +4,17 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
-import '../../app/router.dart';
 import '../../backend/rasq_account.dart' show orgateAccountProvider;
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../settings/settings_dsl.dart';
+import '../swing/swing_composer.dart' show openSwingComposer;
 import '../swing/swing_providers.dart';
 import '../vc/astell_fows.dart' show openAstellCreateFow;
 
@@ -167,8 +166,8 @@ Future<void> runCreateAction(BuildContext context, WidgetRef ref, String id, {St
     case 'astell':
       await openAstellCreateFow(context, ref);
     case 'swing':
-      // 作成ページ(始め方の一覧、D-380)へ。
-      await context.push(Routes.swingNew);
+      // 作る画面 (D-410)。幅の広い画面では、押したカラム(ホーム / 第3カラム)を置き換えて開く (D-413)。
+      await openSwingComposer(context);
   }
 }
 

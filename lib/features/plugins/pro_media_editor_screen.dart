@@ -20,6 +20,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../media/fow_avoid.dart';
 import '../../app/providers.dart';
 import '../ads/export_ad.dart';
 import '../compose/post_image_fow.dart';
@@ -54,8 +55,11 @@ import 'sticker_picker.dart';
 /// `pro_video_editor`(端末ネイティブ、mp4)。動画を受ける(`accepts`)プラグインのボタンは、元のファイルをそのまま
 /// プラグインへ渡し、結果で添付を差し替えて閉じる(焼き込みはしない)。
 class ProMediaEditorArgs {
-  const ProMediaEditorArgs({required this.bytes, required this.name, required this.mimeType, this.extraActions = const []});
+  const ProMediaEditorArgs({required this.bytes, required this.name, required this.mimeType, this.extraActions = const [], this.avoidFows = false});
   final Uint8List bytes;
+
+  /// 全画面のメディア表示と同じく、出ている FOW(編集の FOW など)の逆サイドへ面を寄せる (D-413: Swing の編集の段)。
+  final bool avoidFows;
   final String name;
   final String mimeType;
 
@@ -127,6 +131,9 @@ final visualizerDirProvider = Provider<Future<Directory> Function()>((ref) => ()
 /// 下段バーのボタンのキー: `media.pro.bar.<id>`(id = `editor:<tool>` / `slot:<pluginId>:<actionId>` / `list:<listId>`)。
 Key proMediaEditorBarKey(String id) => ValueKey('media.pro.bar.$id');
 const proMediaEditorBarEditKey = Key('media.pro.bar.edit');
+
+/// FOW を避けるときのエディターの面 ([ProMediaEditorArgs.avoidFows])。
+const proMediaEditorAreaKey = Key('media.pro.area');
 const proMediaEditorAudioNoteKey = Key('media.pro.audio.note');
 
 /// pro_image_editor の日本語。
@@ -1207,6 +1214,13 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final body = _buildEditor(context);
+    if (!widget.args.avoidFows) return body;
+    // D-413: FOW の大きさと位置に合わせて、エディターの面を FOW の逆サイドへ寄せる(全画面のメディア表示と同じ)。
+    return ColoredBox(color: Colors.black, child: FowAvoidingBox(manager: _overlay, areaKey: proMediaEditorAreaKey, minFree: 200, child: body));
+  }
+
+  Widget _buildEditor(BuildContext context) {
     if (_isVideo) return _buildVideo(context);
     // バーの中身(プラグイン / 構成)の変化で作り直す。
     ref.watch(pluginActionsForProvider(_configKey));
