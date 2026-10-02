@@ -172,6 +172,12 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
               ),
             )),
         ],
+        // パスワードを設定したアカウントが初めてメールを付ける (ORGATE O-009、D-408): いまのパスワードが要る
+        // (トークンだけでメールを付けて、パスワードの再設定に使わせない)。パスワードの無いアカウントは何も要らない。
+        if (!account.emailVerified && account.hasPassword) ...[
+          pad(Text('パスワードを設定したアカウントでは、メールアドレスを付けるのにいまのパスワードが要ります。', key: const ValueKey('security.email.needsPassword'), style: caption)),
+          pad(RasqInput(key: const ValueKey('security.email.currentPassword'), controller: _emailCurrentPassword, hintText: 'いまのパスワード', obscureText: true)),
+        ],
         if (pendingMail != null) ...[
           pad(Text('$pendingMail に届いたコードを入れてください(15 分で無効になります)。', key: const ValueKey('security.email.pending'), style: caption)),
           pad(Row(children: [
@@ -306,17 +312,23 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
 
   /// メールの登録 / 付け替え。確認済みのメールを別のアドレスへ付け替えるときは、いまのパスワードか `email.change` の
   /// 確認コードを添える(どちらも無ければ送らずに伝える。サーバーも 403 で断る、ORGATE O-008)。
+  /// パスワードを設定したアカウントが初めて付けるときは、いまのパスワードを添える(無ければ送らない。ORGATE O-009)。
   Future<void> _sendEmail(RasqAccount account) async {
     final email = _email.text.trim();
     final current = _emailCurrentPassword.text;
     final code = _pending == ConfirmAction.emailChange ? _emailChangeCode.text.trim() : '';
     final replacing = account.emailVerified && email.toLowerCase() != (account.email ?? '').toLowerCase();
+    final firstWithPassword = !account.emailVerified && account.hasPassword;
     if (replacing && current.isEmpty && code.isEmpty) {
       _toast(account.hasPassword ? 'いまのパスワードを入れるか、いまのメールに届く確認コードで確かめてください' : 'いまのメールに届く確認コードで確かめてください');
       return;
     }
+    if (firstWithPassword && current.isEmpty) {
+      _toast('いまのパスワードを入れてください');
+      return;
+    }
     await _run((api) async {
-      await api.setEmail(email, currentPassword: replacing && current.isNotEmpty ? current : null, code: replacing && code.isNotEmpty ? code : null);
+      await api.setEmail(email, currentPassword: (replacing || firstWithPassword) && current.isNotEmpty ? current : null, code: replacing && code.isNotEmpty ? code : null);
       _emailCode.clear();
       _emailCurrentPassword.clear();
       _emailChangeCode.clear();

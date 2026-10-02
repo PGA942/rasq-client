@@ -222,6 +222,86 @@ void main() {
     expect(accountSecurityMessage(e('this account has no password: confirm with the mailed code instead')), contains('パスワードがありません'));
   });
 
+  testWidgets('パスワードのあるアカウントの初めてのメール (ORGATE O-009、D-408): いまのパスワードの欄が出て、添えて送る。無ければ送らない', (tester) async {
+    final me = <String, Object?>{'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ', 'hasPassword': true, 'emailVerified': false, 'roles': <String>[]};
+    final emailPuts = <Map<String, Object?>>[];
+    final mock = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      final body = req.body.isEmpty ? const <String, Object?>{} : (jsonDecode(req.body) as Map).cast<String, Object?>();
+      switch ('${req.method} $path') {
+        case 'GET /me':
+          return json(me);
+        case 'GET /me/sessions':
+          return json(const []);
+        case 'PUT /me/email':
+          emailPuts.add(body);
+          // ORGATE O-009 と同じ: パスワードがあれば、初めてのメールにもいまのパスワードが要る(403 の文面は日本語)。
+          if (body['currentPassword'] == null) return err(403, 'パスワードを設定したアカウントでは、メールアドレスを付けるときにいまのパスワードが要ります');
+          if (body['currentPassword'] != 'right password') return err(403, 'いまのパスワードが違います');
+          me['emailPending'] = body['email'];
+          return json({'email': body['email'], 'expiresInSeconds': 900}, 202);
+      }
+      return err(404, 'not found');
+    });
+    final c = await pump(tester, mock);
+    c.read(routerProvider).push('${Routes.settings}/security');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('security.email.needsPassword')), findsOneWidget);
+    expect(find.byKey(const ValueKey('security.email.currentPassword')), findsOneWidget);
+    expect(find.byKey(const ValueKey('security.email.byCode')), findsNothing, reason: '確認済みのメールが無いので、コードの宛先も無い');
+
+    // いまのパスワードが無い → 送らずに伝える。
+    await tester.enterText(find.byKey(const ValueKey('security.email.input')), 'taro@example.com');
+    await tester.tap(find.byKey(const ValueKey('security.email.send')));
+    await tester.pumpAndSettle();
+    expect(emailPuts, isEmpty);
+    expect(find.text('いまのパスワードを入れてください'), findsOneWidget);
+
+    // 違うパスワード → サーバーの 403(日本語)をそのまま出す。
+    await tester.enterText(find.byKey(const ValueKey('security.email.currentPassword')), 'wrong');
+    await tester.tap(find.byKey(const ValueKey('security.email.send')));
+    await tester.pumpAndSettle();
+    expect(emailPuts.last, {'email': 'taro@example.com', 'currentPassword': 'wrong'});
+    expect(find.text('いまのパスワードが違います'), findsOneWidget);
+
+    // 正しいパスワード → コードが届く。
+    await tester.enterText(find.byKey(const ValueKey('security.email.currentPassword')), 'right password');
+    await tester.tap(find.byKey(const ValueKey('security.email.send')));
+    await tester.pumpAndSettle();
+    expect(emailPuts.last, {'email': 'taro@example.com', 'currentPassword': 'right password'});
+    expect(find.byKey(const ValueKey('security.email.pending')), findsOneWidget);
+  });
+
+  testWidgets('パスワードの無いアカウントの初めてのメールは、これまで通り何も要らない (ORGATE O-009)', (tester) async {
+    final me = <String, Object?>{'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ', 'hasPassword': false, 'emailVerified': false, 'roles': <String>[]};
+    final emailPuts = <Map<String, Object?>>[];
+    final mock = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      final body = req.body.isEmpty ? const <String, Object?>{} : (jsonDecode(req.body) as Map).cast<String, Object?>();
+      switch ('${req.method} $path') {
+        case 'GET /me':
+          return json(me);
+        case 'GET /me/sessions':
+          return json(const []);
+        case 'PUT /me/email':
+          emailPuts.add(body);
+          me['emailPending'] = body['email'];
+          return json({'email': body['email'], 'expiresInSeconds': 900}, 202);
+      }
+      return err(404, 'not found');
+    });
+    final c = await pump(tester, mock);
+    c.read(routerProvider).push('${Routes.settings}/security');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('security.email.currentPassword')), findsNothing);
+    await tester.enterText(find.byKey(const ValueKey('security.email.input')), 'taro@example.com');
+    await tester.tap(find.byKey(const ValueKey('security.email.send')));
+    await tester.pumpAndSettle();
+    expect(emailPuts, [
+      {'email': 'taro@example.com'},
+    ]);
+  });
+
   testWidgets('既存のアカウントにログイン: パスワード → トークンをこの端末のものにする。メールのコードでも入れる', (tester) async {
     String? bearer;
     final bodies = <String, Map<String, Object?>>{};

@@ -106,14 +106,16 @@ class RasqAccount {
 
 /// セキュアストレージに置く端末資格情報 (D-316)。
 ///
-/// 保存の形は `{"deviceId", "tokens": {"<accountId>": "<access>"}, "refresh": {"<accountId>": "<refresh>"}, "currentAccountId"}`。
+/// 保存の形は `{"deviceId", "tokens": {"<accountId>": "<access>"}, "refresh": {"<accountId>": "<refresh>"}, "restore": {"<accountId>": "<restoreSecret>"}, "currentAccountId"}`。
+/// `restore` = 端末の復帰の秘密(ORGATE O-009 / D-408)。`POST /auth/device` の復帰にだけ渡す。端末 id だけでは戻れない。
+/// 秘密を持たない前の版の資格情報は、復帰を試さず、普通のログイン / 作成の流れへ戻る(新しいアカウントを黙って作らない)。
 /// **RASQ アカウントごとに 1 組のトークン**を持つ(ORGATE の `/auth/login` はアカウントと端末の組ごとに 1 つのセッションを
 /// 出すので、ぶつからない。D-398)。
 /// 前の形 `{"deviceId", "token", "accountId"}`(端末に 1 本だけ)は、読むときにそのまま移す。アカウント id が
 /// 無かった古いトークンは、いったん空の id で持ち、`GET /me` で分かった id に付け直す。
 @immutable
 class _DeviceCredentials {
-  const _DeviceCredentials({required this.deviceId, this.tokens = const {}, this.refresh = const {}, this.currentAccountId});
+  const _DeviceCredentials({required this.deviceId, this.tokens = const {}, this.refresh = const {}, this.restore = const {}, this.currentAccountId});
   final String deviceId;
 
   /// RASQ アカウント id → そのアカウントのアクセストークン。
@@ -122,6 +124,9 @@ class _DeviceCredentials {
   /// RASQ アカウント id → そのアカウントのリフレッシュトークン(ORGATE にだけ渡す)。
   final Map<String, String> refresh;
 
+  /// RASQ アカウント id → そのアカウントの端末の復帰の秘密(ORGATE にだけ渡す。使うと回る。ORGATE O-009)。
+  final Map<String, String> restore;
+
   /// 最後に使っていた Central のアカウント(台帳に Central のアカウントが 1 つも無い端末は、これを使う)。
   final String? currentAccountId;
 
@@ -129,24 +134,30 @@ class _DeviceCredentials {
 
   String? refreshOf(String? accountId) => accountId == null ? null : refresh[accountId];
 
-  /// そのアカウントのトークンを足す / 替える(最後に使ったアカウントにもする)。[refreshToken] が無ければ前のものを残す。
-  _DeviceCredentials withToken(String accountId, String token, {String? refreshToken}) => _DeviceCredentials(
+  String? restoreOf(String? accountId) => accountId == null ? null : restore[accountId];
+
+  /// そのアカウントのトークンを足す / 替える(最後に使ったアカウントにもする)。[refreshToken] / [restoreSecret] が無ければ
+  /// 前のものを残す(`/auth/refresh` の応答には復帰の秘密が無い)。
+  _DeviceCredentials withToken(String accountId, String token, {String? refreshToken, String? restoreSecret}) => _DeviceCredentials(
         deviceId: deviceId,
         tokens: {...tokens, accountId: token},
         refresh: {...refresh, if (refreshToken != null && refreshToken.isNotEmpty) accountId: refreshToken},
+        restore: {...restore, if (restoreSecret != null && restoreSecret.isNotEmpty) accountId: restoreSecret},
         currentAccountId: accountId,
       );
 
+  /// そのアカウントのトークンを捨てる(リフレッシュトークンと復帰の秘密も。ログアウトでセッションごと消えるので)。
   _DeviceCredentials withoutToken(String accountId) => _DeviceCredentials(
         deviceId: deviceId,
         tokens: {for (final e in tokens.entries) if (e.key != accountId) e.key: e.value},
         refresh: {for (final e in refresh.entries) if (e.key != accountId) e.key: e.value},
+        restore: {for (final e in restore.entries) if (e.key != accountId) e.key: e.value},
         currentAccountId: currentAccountId == accountId ? null : currentAccountId,
       );
 
-  _DeviceCredentials withCurrent(String? accountId) => _DeviceCredentials(deviceId: deviceId, tokens: tokens, refresh: refresh, currentAccountId: accountId);
+  _DeviceCredentials withCurrent(String? accountId) => _DeviceCredentials(deviceId: deviceId, tokens: tokens, refresh: refresh, restore: restore, currentAccountId: accountId);
 
-  Map<String, Object?> toJson() => {'deviceId': deviceId, 'tokens': tokens, 'refresh': refresh, 'currentAccountId': currentAccountId};
+  Map<String, Object?> toJson() => {'deviceId': deviceId, 'tokens': tokens, 'refresh': refresh, 'restore': restore, 'currentAccountId': currentAccountId};
 
   factory _DeviceCredentials.fromJson(Map<String, Object?> j) {
     final deviceId = j['deviceId'] as String;
@@ -155,6 +166,7 @@ class _DeviceCredentials {
         deviceId: deviceId,
         tokens: {for (final e in (j['tokens'] as Map).entries) if (e.value is String && (e.value as String).isNotEmpty) '${e.key}': e.value as String},
         refresh: {for (final e in (j['refresh'] as Map? ?? const {}).entries) if (e.value is String && (e.value as String).isNotEmpty) '${e.key}': e.value as String},
+        restore: {for (final e in (j['restore'] as Map? ?? const {}).entries) if (e.value is String && (e.value as String).isNotEmpty) '${e.key}': e.value as String},
         currentAccountId: j['currentAccountId'] as String?,
       );
     }
@@ -264,11 +276,13 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// Central の `/me`(や `PATCH /me` の応答)に、ORGATE の本人だけの情報を重ねて読む。
   RasqAccount _account(Map<String, Object?> central) => RasqAccount.fromJson({...central, ..._credentials});
 
-  /// ログインの応答(ORGATE の `TokenResponse`、D-398)から、アクセストークンとリフレッシュトークン。
-  static ({String access, String? refresh})? _tokensOf(Map<String, Object?> res) {
+  /// ログインの応答(ORGATE の `TokenResponse`、D-398)から、アクセストークンとリフレッシュトークンと復帰の秘密
+  /// (端末のセッションを作ったときだけ。ORGATE O-009)。
+  static ({String access, String? refresh, String? restore})? _tokensOf(Map<String, Object?> res) {
     final access = res['accessToken'] as String?;
     if (access == null || access.isEmpty) return null;
-    return (access: access, refresh: res['refreshToken'] as String?);
+    final restore = res['restoreSecret'];
+    return (access: access, refresh: res['refreshToken'] as String?, restore: restore is String ? restore : null);
   }
 
   /// 現在のトークン(build 完了前は null)。
@@ -380,7 +394,8 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     final account = _account(central);
     if (legacy && _activeId != account.id && account.id.isNotEmpty) {
       final refresh = _creds!.refreshOf(_activeId ?? '');
-      _creds = _creds!.withoutToken(_activeId ?? '').withToken(account.id, token, refreshToken: refresh);
+      final restore = _creds!.restoreOf(_activeId ?? '');
+      _creds = _creds!.withoutToken(_activeId ?? '').withToken(account.id, token, refreshToken: refresh, restoreSecret: restore);
       _activeId = account.id;
       await _save(storage);
     }
@@ -423,7 +438,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     return creds;
   }
 
-  Future<Map<String, Object?>> _postDevice(OrgateClient client, {String? displayName, bool restoreOnly = false, Map<String, Object?>? consents}) {
+  Future<Map<String, Object?>> _postDevice(OrgateClient client, {String? displayName, bool restoreOnly = false, String? restoreSecret, Map<String, Object?>? consents}) {
     // 表示名の初期値は、指定が無ければ既にログインしている SNS アカウントから借りる。
     final first = ref.read(sessionsProvider).value?.sessions.firstOrNull;
     final name = displayName ?? first?.displayName;
@@ -431,6 +446,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
       'deviceId': _creds!.deviceId,
       if (name != null && name.isNotEmpty) 'displayName': name,
       if (restoreOnly) 'restoreOnly': true,
+      'restoreSecret': ?restoreSecret,
       'consents': ?consents,
     });
   }
@@ -439,16 +455,20 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// (削除した / サーバーを作り直した)なら新規には作らない — 新規の発行は同意の FOW のあとだけ。
   /// 戻れるのは**この端末で作ったアカウント**なので、戻った先が使っていたアカウントと違えば(パスワードでログインした
   /// アカウントのトークンが切れた)、それは使わない。どちらの場合も、切れたトークンは捨てて false(ログインし直してもらう)。
+  /// 戻るには、そのアカウントの**復帰の秘密**を添える(端末 id だけでは戻れない。ORGATE O-009 / D-408)。秘密を持たない
+  /// (前の版で入った)なら、サーバーに聞かずに同じく false(ログインし直し / 作成の流れへ。黙って新しいアカウントを作らない)。
   Future<bool> _restoreDevice(SessionStorage storage) async {
     final stale = _activeId;
     final identity = _identity;
+    final secret = _creds!.restoreOf(stale ?? _creds!.currentAccountId);
     try {
       if (identity == null) throw OrgateException(ErrorCode.http(404), 'ORGATE is not configured');
-      final res = await _postDevice(identity, restoreOnly: true);
+      if (secret == null) throw OrgateException(ErrorCode.http(404), 'no restore secret on this device');
+      final res = await _postDevice(identity, restoreOnly: true, restoreSecret: secret);
       final t = _tokensOf(res);
       final accountId = res['accountId'] as String? ?? '';
       if (t != null && (stale == null || stale.isEmpty || stale == accountId)) {
-        _creds = (stale == null ? _creds! : _creds!.withoutToken(stale)).withToken(accountId, t.access, refreshToken: t.refresh);
+        _creds = (stale == null ? _creds! : _creds!.withoutToken(stale)).withToken(accountId, t.access, refreshToken: t.refresh, restoreSecret: t.restore);
         _activeId = accountId;
         _lastRestored = res['restored'] == true;
         await _save(storage);
@@ -456,7 +476,8 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
         return true;
       }
     } on OrgateException catch (e) {
-      if (e.code.code != '404') rethrow;
+      // 404 = 戻れない(秘密が無い / 違う / セッションが消えた)。401 も同じに扱う(サーバーの版による)。
+      if (e.code.code != '404' && e.code.code != '401') rethrow;
     }
     if (stale != null) _creds = _creds!.withoutToken(stale);
     await _save(storage);
@@ -482,7 +503,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
       final t = _tokensOf(res);
       if (t == null) throw OrgateException(ErrorCode.http(502), 'ORGATE がトークンを返しませんでした');
       final id = res['accountId'] as String? ?? '';
-      _creds = _creds!.withToken(id, t.access, refreshToken: t.refresh);
+      _creds = _creds!.withToken(id, t.access, refreshToken: t.refresh, restoreSecret: t.restore);
       _activeId = id;
       _lastRestored = res['restored'] == true;
       await _save(storage);
@@ -566,7 +587,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     final central = await bound.getJson('/me');
     await _loadCredentials(token);
     final account = _account(central);
-    _creds = _creds!.withToken(account.id, token, refreshToken: t.refresh);
+    _creds = _creds!.withToken(account.id, token, refreshToken: t.refresh, restoreSecret: t.restore);
     _lastRestored = true;
     await _save(storage);
     // SNS のアクセストークンの端末間共有 (D-319): 新しくログインした端末は、次の見回りで共有を求める(元の端末に問いが出る)。
