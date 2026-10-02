@@ -16,8 +16,10 @@ import '../vc/astell_providers.dart';
 /// ホームのヘッダー (D-377)。
 ///
 /// - 出しているとき: 左のアイコン / AsTell とSwing のバンドル(大きな角丸四角形は無し)/ 右上の **↑**(しまう)。
-/// - しまったとき: バーもタブ行も無くし、TL の上に左のアイコン・**新着**(AsTell / Swing、どちらも届いてから 1 分だけ)・
-///   右端の **↓**(出す)だけを浮かべる。しまったかは設定 `home.header` の `collapsed`(端末に残る)。
+/// - しまったとき: バーもタブ行も無くし、TL の上に左のアイコンと**新着**(AsTell / Swing、どちらも届いてから 1 分だけ)だけを
+///   浮かべる。D-410: 右端の ↓ は無くし、**浮かべたアイコンを押すとヘッダーを戻す**。しまったかは設定 `home.header` の
+///   `collapsed`(端末に残る)。
+/// - D-410: Swing の並びの先頭に**自分の Swing**(自分の顔 + 印、押すと自分の Swing のビューワー、見た人の数つき)。
 
 const homeHeaderArea = 'home.header';
 
@@ -31,13 +33,18 @@ const swingBundleColor = RasqColors.link;
 /// 新着 1 つ。
 @immutable
 class HeaderArrival {
-  const HeaderArrival.astell(AstellRoom this.room, this.at) : swing = null;
-  const HeaderArrival.swing(Swing this.swing, this.at) : room = null;
+  const HeaderArrival.astell(AstellRoom this.room, this.at)
+      : swing = null,
+        mine = false;
+  const HeaderArrival.swing(Swing this.swing, this.at, {this.mine = false}) : room = null;
   final AstellRoom? room;
   final Swing? swing;
   final DateTime at;
 
-  String get key => room != null ? 'astell:${room!.id}' : 'swing:${swing!.authorAccountId}';
+  /// 自分の Swing (D-410)。作ってから 1 分だけ、ほかの人の新着と同じに浮かべる。
+  final bool mine;
+
+  String get key => room != null ? 'astell:${room!.id}' : (mine ? 'swing:me' : 'swing:${swing!.authorAccountId}');
 }
 
 /// 新着の AsTell(フォロー中のホスト / 招待)と Swing(作った人ごと)。届いてから [window] だけ。
@@ -51,6 +58,7 @@ class HeaderArrivals extends Notifier<List<HeaderArrival>> {
   final _known = <String>{};
   bool _astellBase = false;
   bool _swingBase = false;
+  bool _mineBase = false;
   Timer? _prune;
 
   /// いまの新着(build の中の listen からも触るので、state とは別に持つ)。
@@ -73,6 +81,10 @@ class HeaderArrivals extends Notifier<List<HeaderArrival>> {
     ref.listen(swingFeedProvider, (_, next) {
       final feed = next.value;
       if (feed != null) _swings(feed);
+    }, fireImmediately: true);
+    ref.listen(mySwingsProvider, (_, next) {
+      final mine = next.value;
+      if (mine != null) _mine(mine);
     }, fireImmediately: true);
     _built = true;
     return _cur;
@@ -99,6 +111,18 @@ class HeaderArrivals extends Notifier<List<HeaderArrival>> {
     }
     _swingBase = true;
     _add(add);
+  }
+
+  /// 自分の Swing (D-410): 新しく出したもの(いちばん新しい 1 つ)を 1 分だけ。
+  void _mine(List<Swing> mine) {
+    HeaderArrival? add;
+    for (final s in mine) {
+      if (_known.add('swing:${s.id}') && (_mineBase || _fresh(s.createdAt)) && (add == null || s.createdAt.isAfter(add.swing!.createdAt))) {
+        add = HeaderArrival.swing(s, now(), mine: true);
+      }
+    }
+    _mineBase = true;
+    _add([?add]);
   }
 
   void _add(List<HeaderArrival> add) {
@@ -159,7 +183,70 @@ class SwingAuthorBundle extends StatelessWidget {
   }
 }
 
-/// 出しているヘッダーの真ん中: AsTell(下にルーム名)+ Swing(**1 人だけ**、D-378)。Swing は見ていないものがある人のうち
+/// 自分の Swing (D-410): 自分の顔のまわりに**緑のリング**と、右下に出している数の印。押すと自分の Swing のビューワー
+/// (見た人の数つき)。
+class MySwingBundle extends StatelessWidget {
+  const MySwingBundle({super.key, required this.swings, this.size = 34});
+
+  /// 出している Swing(1 つ以上)。
+  final List<Swing> swings;
+  final double size;
+
+  static const ringColor = RasqColors.inVc;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final me = swings.first.author;
+    const ring = 3.0;
+    final outer = size + ring * 2 + 2;
+    return Tooltip(
+      message: '自分の Swing(${swings.length} 個)',
+      child: Semantics(
+        button: true,
+        label: '自分の Swing',
+        child: InkResponse(
+          key: const ValueKey('swing.bundle.me'),
+          onTap: () => context.push(Routes.mySwings),
+          radius: size / 2 + ring + 2,
+          child: SizedBox(
+            width: outer,
+            height: outer,
+            child: Stack(clipBehavior: Clip.none, children: [
+              Container(
+                key: const ValueKey('swing.ring.me'),
+                width: outer,
+                height: outer,
+                padding: const EdgeInsets.all(ring),
+                decoration: const BoxDecoration(shape: BoxShape.circle, color: ringColor),
+                child: Container(
+                  padding: const EdgeInsets.all(1),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.surface),
+                  child: ClipOval(child: RasqAvatar(imageUrl: me.avatarUrl, size: size - 2, fallbackLabel: me.displayName)),
+                ),
+              ),
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                  key: const ValueKey('swing.me.count'),
+                  constraints: const BoxConstraints(minWidth: 16),
+                  height: 16,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: ringColor, borderRadius: BorderRadius.circular(8), border: Border.all(color: scheme.surface, width: 1.5)),
+                  child: Text('${swings.length}', style: RasqTypography.caption.copyWith(color: Colors.white, fontSize: 10, height: 1, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 出しているヘッダーの真ん中: AsTell(下にルーム名)+ Swing(自分 → ほかの人は **1 人だけ**、D-378)。Swing は見ていないものがある人のうち
 /// いちばん新しく出した人(誰も無ければ、見終えた人のうちいちばん新しい人)の、リング付きの顔。押すとビューワー。
 class HomeHeaderStrip extends ConsumerWidget {
   const HomeHeaderStrip({super.key, this.astell = true, this.max = 4});
@@ -170,12 +257,20 @@ class HomeHeaderStrip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authors = ref.watch(swingApiProvider) != null ? ref.watch(swingAuthorsProvider) : const <SwingAuthorEntry>[];
-    final trailing = [if (authors.isNotEmpty) SwingAuthorBundle(swing: authors.first.first, unseen: authors.first.unseen > 0)];
+    final api = ref.watch(swingApiProvider) != null;
+    final authors = api ? ref.watch(swingAuthorsProvider) : const <SwingAuthorEntry>[];
+    // D-410: 自分の Swing を先頭に。
+    final mine = api ? (ref.watch(mySwingsProvider).value ?? const <Swing>[]) : const <Swing>[];
+    final trailing = [
+      if (mine.isNotEmpty) MySwingBundle(swings: mine),
+      if (authors.isNotEmpty) SwingAuthorBundle(swing: authors.first.first, unseen: authors.first.unseen > 0),
+    ];
     // D-388: チップを大きく(30 → 40)、名前はアイコンの下辺に載せる。
     if (astell) return AstellHeaderStrip(max: max, size: 40, trailing: trailing, showTitles: true);
     if (trailing.isEmpty) return const SizedBox.shrink();
-    return trailing.single;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      for (final (i, w) in trailing.indexed) ...[if (i > 0) const SizedBox(width: 8), w],
+    ]);
   }
 }
 
@@ -203,7 +298,9 @@ class HomeHeaderArrivals extends ConsumerWidget {
               padding: const EdgeInsets.all(3),
               child: a.room != null
                   ? RasqAvatarBundle(user: a.room!.owner, count: a.room!.peerCount, faces: a.room!.bundleFaces, live: a.room!.live, size: 34, onTap: () => openAstellRoomTile(context, ref, a.room!))
-                  : SwingAuthorBundle(swing: a.swing!, unseen: !a.swing!.seen),
+                  : a.mine
+                      ? MySwingBundle(swings: [...?ref.watch(mySwingsProvider).value].isEmpty ? [a.swing!] : ref.watch(mySwingsProvider).value!)
+                      : SwingAuthorBundle(swing: a.swing!, unseen: !a.swing!.seen),
             ),
           ),
           const SizedBox(width: 8),

@@ -35,6 +35,7 @@ import 'package:rasq_client/features/swing/swing_viewer.dart';
 import 'package:rasq_client/features/swing/wagara.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_client/shell/sidebar.dart' show RasqSidebar;
 import 'package:rasq_design/rasq_design.dart' show RasqActionCircle;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -157,7 +158,7 @@ void main() {
   });
 
   /// Central のまね。[feed] を返し、見終えた / 作ったものを控える。
-  (MockClient, List<String> seen, List<Map<String, Object?>> created, List<String> uploads) central(List<Map<String, Object?>> feed) {
+  (MockClient, List<String> seen, List<Map<String, Object?>> created, List<String> uploads) central(List<Map<String, Object?>> feed, {List<Map<String, Object?>> mine = const []}) {
     final seen = <String>[];
     final created = <Map<String, Object?>>[];
     final uploads = <String>[];
@@ -168,7 +169,7 @@ void main() {
       if (route == 'GET /me') return json({'id': 'acc-1', 'handle': 'tester', 'displayName': 'テスター'});
       // D-379: 見終えたものも期限までは返す(all=true)。
       if (route == 'GET /swings/feed') return json([for (final s in feed) {...s, 'seen': seen.contains(s['id'])}]);
-      if (route == 'GET /me/swings') return json(const []);
+      if (route == 'GET /me/swings') return json(mine);
       if (route == 'GET /me/rasq-collections') {
         return json([
           {'id': 'rl1', 'kind': 'list', 'name': '友だち', 'owner': {'id': 'acc-1', 'handle': 'tester', 'displayName': 'テスター'}, 'visibility': 'private', 'itemCount': 1},
@@ -307,6 +308,64 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
     await tester.pumpAndSettle();
     expect(find.text('アリスの 1 つめ'), findsOneWidget);
+  });
+
+  testWidgets('自分の Swing (D-410): ヘッダーの Swing の先頭に自分の顔(緑のリング + 数)。押すと自分の Swing のビューワー(見た人の数、広告・通報・見終えの記録なし)。しまったヘッダーでは出したものを 1 分だけ', (tester) async {
+    var clock = DateTime.now();
+    HeaderArrivals.now = () => clock;
+    addTearDown(() => HeaderArrivals.now = DateTime.now);
+    final mine = [
+      {...swing('m1', 'acc-1', text: '自分の 1 つめ', age: const Duration(minutes: 30)), 'viewCount': 3, 'audience': {'followers': true, 'lists': []}},
+      {...swing('m2', 'acc-1', text: '自分の 2 つめ', age: const Duration(minutes: 10)), 'viewCount': 0, 'audience': {'followers': true, 'lists': []}},
+      // 期限の過ぎたものは出さない。
+      {...swing('m0', 'acc-1', text: '消えたもの'), 'expiresAt': now.subtract(const Duration(minutes: 1)).toIso8601String()},
+    ];
+    final (mock, seen, _, _) = central([swing('b1', 'bob', text: 'ボブの')], mine: mine);
+    final c = await pumpApp(tester, mock);
+    await tester.runAsync(() => c.read(mySwingsProvider.future));
+    await tester.pumpAndSettle();
+    expect(c.read(mySwingsProvider).value!.map((s) => s.id), ['m1', 'm2']);
+    final me = find.byKey(const ValueKey('swing.bundle.me'));
+    final bob = find.byKey(const ValueKey('swing.bundle.bob'));
+    expect(me, findsOneWidget);
+    expect(bob, findsOneWidget);
+    expect(tester.getCenter(me).dx, lessThan(tester.getCenter(bob).dx), reason: '自分が先');
+    expect(find.descendant(of: me, matching: find.byKey(const ValueKey('swing.ring.me'))), findsOneWidget);
+    expect(find.descendant(of: me, matching: find.text('2')), findsOneWidget, reason: '出している数');
+    expect(find.byTooltip('自分の Swing(2 個)'), findsOneWidget);
+
+    await tester.tap(me);
+    await tester.pumpAndSettle();
+    expect(find.byType(SwingViewerScreen), findsOneWidget);
+    expect(find.text('自分の 1 つめ'), findsOneWidget, reason: '古い順');
+    expect(find.text('見た人 3 人'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.report')), findsNothing, reason: '自分のものは通報しない');
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('自分の 2 つめ'), findsOneWidget);
+    expect(find.text('見た人 0 人'), findsOneWidget);
+    expect(find.text('ボブの'), findsNothing, reason: '自分の Swing だけ');
+    await tester.tap(find.byKey(const ValueKey('swing.close')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    expect(seen, isEmpty, reason: '自分のものは見終えを送らない');
+
+    // しまったヘッダー: 前からあった自分の Swing は新着ではない。新しく出したら 1 分だけ自分の顔で浮かぶ。
+    await tester.tap(find.byKey(const ValueKey('home.header.collapse')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('home.header.arrival.swing:me')), findsNothing);
+    mine.add({...swing('m3', 'acc-1', text: 'いま出した', age: const Duration(seconds: 2)), 'viewCount': 0});
+    unawaited(c.read(mySwingsProvider.notifier).refresh());
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    final arrival = find.byKey(const ValueKey('home.header.arrival.swing:me'));
+    expect(arrival, findsOneWidget);
+    expect(find.descendant(of: arrival, matching: find.byKey(const ValueKey('swing.bundle.me'))), findsOneWidget);
+    clock = clock.add(HeaderArrivals.window + const Duration(seconds: 1));
+    await tester.pump(HeaderArrivals.window + const Duration(seconds: 1));
+    await tester.pump();
+    expect(arrival, findsNothing);
   });
 
   testWidgets('広告: 広告を出せる端末では Swing 5 個ごとに 1 枚(見終えの記録は無し)', (tester) async {
@@ -601,64 +660,97 @@ void main() {
     expect(() => checkSwingPackage(Uint8List.fromList([1, 2, 3]), decompress: (b, {int maxOutput = 0}) => b), throwsStateError);
   });
 
-  testWidgets('作る (D-386): ＋ を上へスワイプ → すぐ和柄の背景で編集画面(バーの先頭に「プラグイン」「背景を変える」)→ 送る画面(届け先と時間)。閉じたら戻る。プラグインは送る画面で選ぶ', (tester) async {
+  testWidgets('作る (D-386 / D-410): ＋ を上へスワイプ → すぐ和柄の背景で編集画面(バーに「プラグイン」「背景を変える」「N 時間で消える」)→ 送る前の段(枠の右下に CW、下に届け先の FOW、ヘッダーに送る)。閉じたら戻る。プラグインは選ぶ段 → 次へ', (tester) async {
     final (mock, _, created, uploads) = central(const []);
     final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
     final edited = Uint8List.fromList([...png, 0]);
     final opened = <String>[];
     var bars = <List<String>>[];
     var cancel = false;
+    late BuildContext editorContext;
+    Completer<MediaEditResult?>? current;
     final c = await pumpApp(tester, mock, fakeSwingEditor: false, extra: [
       swingBackgroundProvider.overrideWithValue(() async => png),
-      swingEditorProvider.overrideWithValue((context, {required bytes, required name, required mime, actions = const []}) async {
+      swingEditorProvider.overrideWithValue((context, {required bytes, required name, required mime, actions = const []}) {
         opened.add('$name ${bytes.length}');
+        editorContext = context;
+        _actions = actions;
         bars = [...bars, [for (final a in actions) '${a.id}:${a.label}']];
-        return cancel ? null : MediaEditResult(bytes: edited, mimeType: 'image/png', name: 'edited.png');
+        if (cancel) return Future.value(null);
+        return (current = Completer<MediaEditResult?>()).future;
       }),
     ]);
     // ＋ を上へスワイプ (D-381) → 始め方の一覧は無く、すぐ背景つきの編集画面。
     await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -160));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(find.byKey(const ValueKey('swing.start.image')), findsNothing);
     expect(opened, ['swing.png ${png.length}'], reason: '和柄の背景をそのまま編集画面へ');
-    expect(bars.single, ['swing.plugin:プラグイン', 'swing.background:背景を変える'], reason: 'バーの先頭に自動で足す');
+    expect(bars.single, ['swing.plugin:プラグイン', 'swing.background:背景を変える', 'swing.ttl:24 時間で消える'], reason: 'バーの先頭に自動で足す。消えるまでは編集の段 (D-410)');
+    // 編集の段で消えるまでを選ぶ (D-410)。
+    final ttl = _actions.firstWhere((a) => a.id == swingTtlActionId);
+    ttl.onTap(_FakeHandle(editorContext, video: false, onClose: () {}));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(const ValueKey('swing.ttl.6')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(ttl.liveLabel!.value, '6 時間で消える');
+    current!.complete(MediaEditResult(bytes: edited, mimeType: 'image/png', name: 'edited.png'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
     expect(find.byType(SwingComposerScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('swing.preview')), findsOneWidget);
+    expect(find.text('6 時間で消えます'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.ttl.1')), findsNothing, reason: '送る前の段には時間の選びは無い');
+    // 送るボタンはヘッダーの右(タイトルと同じ高さ)。
+    final header = tester.getRect(find.text('Swing を作る'));
+    final send = tester.getRect(find.byKey(const ValueKey('swing.send')));
+    expect(send.left, greaterThan(header.right));
+    expect((send.center.dy - header.center.dy).abs(), lessThan(24));
+    // 届け先の FOW: 枠の下に付く。フォロワーと RASQ リストのタイル。
+    final frame = tester.getRect(find.byKey(const ValueKey('swing.preview')));
+    expect(find.byKey(const ValueKey('swing.audience')), findsOneWidget);
+    expect(tester.getRect(find.byKey(const ValueKey('swing.audience.followers'))).top, greaterThanOrEqualTo(frame.bottom - 1));
+    expect(find.byKey(const ValueKey('swing.audience.list.rl1')), findsOneWidget);
+    // CW: 枠の右下にスイッチ、その左に文(既定「センシティブな内容」)。既定はオフ。
+    final toggle = tester.getRect(find.byKey(const ValueKey('swing.cw.toggle')));
+    final field = tester.getRect(find.byKey(const ValueKey('swing.cw')));
+    expect(toggle.right, closeTo(frame.right, 24));
+    expect(toggle.bottom, closeTo(frame.bottom, 24));
+    expect(field.right, lessThanOrEqualTo(toggle.left));
+    expect(tester.widget<TextField>(find.descendant(of: find.byKey(const ValueKey('swing.cw')), matching: find.byType(TextField))).controller!.text, 'センシティブな内容');
+    expect(tester.widget<Switch>(find.byKey(const ValueKey('swing.cw.toggle'))).value, isFalse);
+
     await tester.tap(find.byKey(const ValueKey('swing.audience.list.rl1')));
-    await tester.tap(find.byKey(const ValueKey('swing.ttl.6')));
     await tester.pump();
     // フォロワーを外してリストも外すと出せない。
     await tester.tap(find.byKey(const ValueKey('swing.audience.followers')));
     await tester.tap(find.byKey(const ValueKey('swing.audience.list.rl1')));
     await tester.pump();
     expect(find.byKey(const ValueKey('swing.audience.empty')), findsOneWidget);
-    // 送るボタンは注意書き (D-395) の下。
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('swing.send')), 200, scrollable: find.descendant(of: find.byType(SwingComposerScreen), matching: find.byType(Scrollable)).first);
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull);
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('swing.audience.followers')), -200, scrollable: find.descendant(of: find.byType(SwingComposerScreen), matching: find.byType(Scrollable)).first);
     await tester.tap(find.byKey(const ValueKey('swing.audience.followers')));
-    await tester.ensureVisible(find.byKey(const ValueKey('swing.audience.list.rl1')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('swing.audience.list.rl1')));
     await tester.pump();
-    // 注意書き (D-395): CW は 100 文字まで。センシティブのスイッチ。
-    await tester.ensureVisible(find.byKey(const ValueKey('swing.cw')));
+    expect(find.byKey(const ValueKey('swing.audience.empty')), findsNothing);
+    // CW をオン: 100 文字まで。
+    await tester.tap(find.byKey(const ValueKey('swing.cw.toggle')));
     await tester.enterText(find.descendant(of: find.byKey(const ValueKey('swing.cw')), matching: find.byType(TextField)), 'あ' * 101);
     await tester.pump();
     expect(find.byKey(const ValueKey('swing.cw.tooLong')), findsOneWidget);
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull);
     await tester.enterText(find.descendant(of: find.byKey(const ValueKey('swing.cw')), matching: find.byType(TextField)), ' ネタバレ ');
-    await tester.ensureVisible(find.byKey(const ValueKey('swing.sensitive')));
-    await tester.tap(find.byKey(const ValueKey('swing.sensitive')));
     await tester.pump();
     expect(find.byKey(const ValueKey('swing.cw.tooLong')), findsNothing);
-    await tester.ensureVisible(find.byKey(const ValueKey('swing.send')));
     await tester.tap(find.byKey(const ValueKey('swing.send')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
     await tester.pumpAndSettle();
     expect(uploads, ['image/png']);
     expect(created.single, {'kind': 'image', 'mediaId': 'm1', 'audience': {'followers': true, 'lists': ['rl1']}, 'ttlHours': 6, 'cw': 'ネタバレ', 'sensitive': true});
     expect(find.byType(SwingComposerScreen), findsNothing);
+    expect(find.byKey(const ValueKey('swing.audience')), findsNothing, reason: '閉じたら届け先の FOW も閉じる');
     tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger).first).clearSnackBars();
     await tester.pumpAndSettle();
 
@@ -671,12 +763,25 @@ void main() {
     expect(find.byType(SwingComposerScreen), findsNothing);
     expect(created.length, 1);
 
-    // プラグイン(編集画面の「プラグイン」から): 送る画面で選ぶ。
-    c.read(routerProvider).push(Routes.swingNew, extra: const SwingDraft.plugin());
+    // CW オフ(既定)なら cw も sensitive も送らない。既定の時間は 24 時間。
+    c.read(routerProvider).push(Routes.swingNew, extra: SwingDraft.media(bytes: png, mime: 'image/png', name: 'a.png'));
+    await tester.pumpAndSettle();
+    expect(find.text('24 時間で消えます'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('swing.send')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
+    expect(created.last, {'kind': 'image', 'mediaId': 'm1', 'audience': {'followers': true, 'lists': []}, 'ttlHours': 24});
+    tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger).first).clearSnackBars();
+    await tester.pumpAndSettle();
+
+    // プラグイン(編集画面の「プラグイン」から): 選ぶ段(と消えるまで)→ 次へ → 送る前の段。
+    c.read(routerProvider).push(Routes.swingNew, extra: const SwingDraft.plugin(ttlHours: 12));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('swing.plugin.file')), findsOneWidget);
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('swing.send')), 200, scrollable: find.descendant(of: find.byType(SwingComposerScreen), matching: find.byType(Scrollable)).first);
-    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.send'))).onPressed, isNull, reason: 'プラグインを選ぶまで出せない');
+    expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('swing.ttl.12'))).selected, isTrue, reason: '編集画面で選んだ時間を引き継ぐ');
+    expect(find.byKey(const ValueKey('swing.send')), findsNothing);
+    expect(find.byKey(const ValueKey('swing.audience')), findsNothing, reason: '選ぶ段では届け先の FOW は出さない');
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('swing.next'))).onPressed, isNull, reason: 'プラグインを選ぶまで進めない');
   });
 
   testWidgets('背景を変える (D-387): 押すと別の和柄(画像のまま差し替え)、長押しで画像 / 動画を選ぶ(動画は編集画面を開き直す、動画から和柄も開き直す)', (tester) async {
@@ -1028,7 +1133,7 @@ void main() {
     expect(find.byType(SwingComposerScreen), findsOneWidget);
   });
 
-  testWidgets('ヘッダーをしまう(↑)→ バーとタブ行が消え、アイコンと ↓ だけ浮かぶ。新着の Swing は 1 分だけ → ↓ で戻る', (tester) async {
+  testWidgets('ヘッダーをしまう(↑)→ バーとタブ行が消え、アイコンだけ浮かぶ(↓ は無い、D-410)。新着の Swing は 1 分だけ → アイコンを押すと戻る', (tester) async {
     var clock = DateTime.now();
     HeaderArrivals.now = () => clock;
     addTearDown(() => HeaderArrivals.now = DateTime.now);
@@ -1042,6 +1147,11 @@ void main() {
     expect(find.byKey(const ValueKey('home.header.floating')), findsOneWidget);
     expect(find.byTooltip('タイムライン設定'), findsNothing, reason: 'タブ行もしまう');
     expect(find.byKey(const ValueKey('home.header.arrivals')), findsNothing, reason: '前からあったものは新着ではない');
+    // D-410: ↓ は無くし、浮かべたアイコンが「ヘッダーを戻す」。
+    expect(find.descendant(of: find.byKey(const ValueKey('home.header.floating')), matching: find.byIcon(Icons.keyboard_arrow_down)), findsNothing);
+    expect(find.byTooltip('ヘッダーを出す'), findsNothing);
+    expect(find.byTooltip('ヘッダーを戻す'), findsOneWidget);
+    expect(find.bySemanticsLabel('ヘッダーを戻す'), findsOneWidget);
 
     // 新しい Swing が届く → 1 分だけ浮かべる。
     feed.add(swing('new', 'carol', text: '届いた', age: const Duration(seconds: 5)));
@@ -1056,9 +1166,10 @@ void main() {
     await tester.pump();
     expect(find.byKey(const ValueKey('home.header.arrival.swing:carol')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('home.header.expand')));
+    await tester.tap(find.byTooltip('ヘッダーを戻す'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('home.header.floating')), findsNothing);
+    expect(c.read(overlayManagerProvider).contains(RasqSidebar.overlayId), isFalse, reason: 'しまっている間のアイコンはサイドバーを開かない');
     expect(find.byKey(const ValueKey('home.header.collapse')), findsOneWidget);
     expect(find.byTooltip('タイムライン設定'), findsOneWidget);
   });
