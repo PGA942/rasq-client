@@ -26,6 +26,8 @@ dependencies:
   go_router: ^17.0.0
   flutter_secure_storage: ^10.0.0
   url_launcher: ^6.3.0
+  # サーバーの登録ページをアプリの中で開く (D-412)。Android / iOS / macOS だけ(Linux / Windows / Web は外部のブラウザ)。
+  webview_flutter: ^4.14.1
   crypto: ^3.0.3
   # ストア配布物の ed25519 署名検証 (D-034)。純 Dart 実装で全プラットフォーム同一。
   cryptography: ^2.9.0

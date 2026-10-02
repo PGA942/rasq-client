@@ -10,9 +10,12 @@ import 'rasq_collections.dart';
 /// RASQ リスト / RASQ クリップのタイル (D-345)。AsTell のタイルと同じ角丸 + グラデーションの面に、
 /// 種類のアイコン + 種類名 / 名前 / 作った人 / 説明(2 行)/ 人数(件数)・フォロワー / 入っているサーバー(3 つまで)/「見てみる」。
 class RasqCollectionTile extends StatelessWidget {
-  const RasqCollectionTile({super.key, required this.collection, this.onOpen});
+  const RasqCollectionTile({super.key, required this.collection, this.onOpen, this.openLabel = '見てみる'});
   final RasqCollection collection;
   final VoidCallback? onOpen;
+
+  /// [onOpen] のボタンの文言(オンボーディングでは「登録する」、D-412)。
+  final String openLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +66,7 @@ class RasqCollectionTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (onOpen != null) TextButton(key: ValueKey('rasqCollection.tile.open.${c.id}'), onPressed: onOpen, child: const Text('見てみる')),
+          if (onOpen != null) TextButton(key: ValueKey('rasqCollection.tile.open.${c.id}'), onPressed: onOpen, child: Text(openLabel)),
         ]),
       ]),
     );

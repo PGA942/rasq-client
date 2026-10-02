@@ -12,7 +12,7 @@ import '../../backend/server_info_api.dart';
 /// 人数 / 投稿数 / 登録の受付 → 説明(3 行)→ **クラウド版 RAi によるユーザーの特性の解説**(コミュニティの話が出てきている
 /// サーバーだけ。それ以外は欄ごと出さない)→「サーバーを開く」。
 class ServerInfoTile extends ConsumerWidget {
-  const ServerInfoTile({super.key, required this.host, this.withRai = true, this.onOpen});
+  const ServerInfoTile({super.key, required this.host, this.withRai = true, this.onOpen, this.openLabel = 'サーバーを開く'});
   final String host;
 
   /// RAi の解説を引くか(一覧に並べるときは切る)。
@@ -21,22 +21,26 @@ class ServerInfoTile extends ConsumerWidget {
   /// 「サーバーを開く」の差し替え(既定 = ブラウザ)。
   final VoidCallback? onOpen;
 
+  /// そのボタンの文言(オンボーディングでは「このサーバーに登録」、D-412)。
+  final String openLabel;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final info = ref.watch(serverInfoProvider(host));
     return info.when(
       loading: () => const SizedBox(height: 48, child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))),
       error: (_, _) => const SizedBox.shrink(),
-      data: (i) => i == null ? const SizedBox.shrink() : _ServerInfoCard(info: i, withRai: withRai, onOpen: onOpen),
+      data: (i) => i == null ? const SizedBox.shrink() : _ServerInfoCard(info: i, withRai: withRai, onOpen: onOpen, openLabel: openLabel),
     );
   }
 }
 
 class _ServerInfoCard extends ConsumerWidget {
-  const _ServerInfoCard({required this.info, required this.withRai, this.onOpen});
+  const _ServerInfoCard({required this.info, required this.withRai, this.onOpen, required this.openLabel});
   final RasqServerInfo info;
   final bool withRai;
   final VoidCallback? onOpen;
+  final String openLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -93,7 +97,7 @@ class _ServerInfoCard extends ConsumerWidget {
               child: TextButton(
                 key: ValueKey('server.tile.open.${info.host}'),
                 onPressed: onOpen ?? () => launchUrl(Uri.https(info.host, '/'), mode: LaunchMode.externalApplication),
-                child: const Text('サーバーを開く'),
+                child: Text(openLabel),
               ),
             ),
           ]),
