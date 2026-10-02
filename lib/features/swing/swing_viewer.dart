@@ -11,6 +11,7 @@ import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/router.dart';
+import '../../shell/third_column.dart' show openPageInPanes, paneBack;
 import '../ads/ad_placement.dart';
 import '../ads/export_ad.dart';
 import '../vc/astell_models.dart' show astellReportReasons;
@@ -40,6 +41,9 @@ import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvide
 ///   「全画面から縮小」を押すと、ぼかして止め(`page.event paused`)、スワイプで移れるようにする。縮小したものを押すと
 ///   全画面に戻る(`resumed`)。
 ///
+/// D-413: **幅の広い画面では第3カラム**に開く([openSwingViewer]。狭い画面は前のとおり全画面)。**Swing の下に返信が続く**
+/// (D-389 のスレッド = 返信の一覧と返信の欄。下へスクロールすると出る。左下の欄のハンドル / 入力欄もそこへ送る)。
+///
 /// D-410: [mine] = **自分の Swing**(ヘッダーの自分の顔から)。`GET /me/swings` の並び(古い順)で、広告・見終えの記録・
 /// 通報は無し、作った人だけが見られる**見た人の数**(`viewCount`)を出す。
 class SwingViewerScreen extends ConsumerStatefulWidget {
@@ -58,6 +62,25 @@ class SwingViewerScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<SwingViewerScreen> createState() => _SwingViewerScreenState();
+}
+
+/// 第3カラムに開いた回数(同じ人を開き直したら、並びを作り直す)。
+int _paneSerial = 0;
+
+/// Swing のビューワーを開く (D-413): 幅の広い画面では**第3カラム**(第3カラムのページは第2カラムへ移る、D-057)、
+/// 狭い画面は前のとおり全画面のルート。[mine] = 自分の Swing (D-410)。
+void openSwingViewer(BuildContext context, {String? author, bool mine = false}) {
+  final id = 'swing:${mine ? 'me' : author ?? ''}#${++_paneSerial}';
+  if (openPageInPanes(
+    context,
+    id: id,
+    title: 'Swing',
+    location: Routes.swingInHome(author: author, mine: mine),
+    builder: (_) => SwingViewerScreen(key: ValueKey(id), startAuthor: author, mine: mine),
+  )) {
+    return;
+  }
+  context.push(mine ? Routes.mySwings : Routes.swing(author));
 }
 
 /// 1 ページ = Swing か広告。
@@ -94,8 +117,14 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   /// 中央のタップで止めている。
   bool _paused = false;
 
-  /// 返信のコンポーザー / キューのピッカー / スレッドの FOW を開いていて止めている (D-389)。
-  bool _held = false;
+  /// 止めている理由 (D-389 / D-413): 返信のコンポーザー / キューのピッカー(`reply`)、下の返信を読んでいる(`thread`)、通報の理由を
+  /// 選んでいる(`report`)。どれかがあれば止める。
+  final _holds = <String>{};
+  bool get _held => _holds.isNotEmpty;
+
+  /// 閉じる / 移るで見終えを送ったか(カラムから外されたときに送る、D-413)。
+  bool _closed = false;
+  late final SwingFeed _feed;
 
   /// 「表示する」を押した CW / センシティブの Swing (D-395)。
   final _revealed = <String>{};
@@ -114,7 +143,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   Future<void> _report(Swing s) async {
     final api = ref.read(swingApiProvider);
     if (api == null) return;
-    _hold(true);
+    _hold('report', true);
     final reason = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -126,7 +155,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
       ),
     );
     if (!mounted) return;
-    _hold(false);
+    _hold('report', false);
     if (reason == null) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
     try {
@@ -138,10 +167,12 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     }
   }
 
-  void _hold(bool v) {
-    if (v == _held || !mounted) return;
-    setState(() => _held = v);
-    if (v) {
+  void _hold(String reason, bool v) {
+    if (!mounted || _holds.contains(reason) == v) return;
+    final was = _held;
+    setState(() => v ? _holds.add(reason) : _holds.remove(reason));
+    if (was == _held) return;
+    if (_held) {
       _clock.stop();
     } else if (!_paused && _clock.duration != null && _clock.value > 0 && _clock.value < 1) {
       _clock.forward();
@@ -151,6 +182,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   @override
   void initState() {
     super.initState();
+    _feed = ref.read(swingFeedProvider.notifier);
     final feed = widget.mine
         ? ([...?ref.read(mySwingsProvider).value]..sort((a, b) => a.createdAt.compareTo(b.createdAt)))
         : swingViewerQueue(ref.read(swingFeedProvider).value ?? const [], startAuthor: widget.startAuthor);
@@ -162,6 +194,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   @override
   void dispose() {
+    // カラムから外された(第3カラムに別のページを開いた など)ときも、見ていたものは見終えにする (D-413)。
+    final s = _closed || _index >= _items.length ? null : _items[_index].swing;
+    if (s != null && !widget.mine) unawaited(_feed.markSeen(s.id));
     _clock.dispose();
     _pages.dispose();
     super.dispose();
@@ -212,7 +247,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   void _seen(int i) {
     final s = (i >= 0 && i < _items.length) ? _items[i].swing : null;
-    if (s != null && !widget.mine) unawaited(ref.read(swingFeedProvider.notifier).markSeen(s.id));
+    if (s != null && !widget.mine) unawaited(_feed.markSeen(s.id));
   }
 
   void _onPage(int i) {
@@ -221,6 +256,10 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
       _index = i;
       _locked = false;
       _paused = false;
+      // 下の返信を読んでいた / 書いていたのは前の Swing。
+      _holds
+        ..remove('thread')
+        ..remove('replyInput');
     });
     _startClock();
   }
@@ -240,6 +279,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   void _close() {
     _seen(_index);
+    _closed = true;
+    // 第3カラム (D-413): < と同じ戻り(1 つ前のページへ / 無ければ閉じる)。
+    if (paneBack(context)) return;
     if (context.canPop()) {
       context.pop();
     } else {
@@ -280,7 +322,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                     swing: s,
                     active: i == _index,
                     paused: i == _index && (_paused || _held),
-                    replyBar: _replyBarShown(s),
+                    replyBar: i == _index && _replyBarShown(s),
+                    onHold: _hold,
                     covered: _coveredNow(s),
                     onReveal: () => _reveal(s),
                     onReport: widget.mine || ref.watch(swingApiProvider) == null ? null : () => _report(s),
@@ -299,19 +342,6 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                 },
               ),
               )),
-                // 左下: 返信とキュー (D-389)。全画面で動いているプラグインの上には出さない。
-                if (_current case final cur? when _replyBarShown(cur))
-                  Positioned(
-                    left: RasqSpacing.page,
-                    bottom: 0,
-                    child: SafeArea(
-                      top: false,
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: cur.kind == SwingKind.video ? 64 : RasqSpacing.md),
-                        child: SwingReplyBar(key: ValueKey('swing.reply.${cur.id}'), swing: cur, onHold: _hold),
-                      ),
-                    ),
-                  ),
               ]),
       ),
     );
@@ -319,6 +349,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   Swing? get _current => _index < _items.length ? _items[_index].swing : null;
 
+  /// 返信(左下の欄と、下に続くスレッド)を出すか。全画面で動いているプラグイン・覆っている Swing・根の無い Swing には出さない。
   bool _replyBarShown(Swing s) => s.postId != null && !_locked && !_coveredNow(s) && ref.watch(rasqAccountPageApiProvider) != null;
 }
 
@@ -328,8 +359,8 @@ String swingRemainingLabel(Duration d) {
   return 'まもなく消えます';
 }
 
-class _SwingPage extends StatelessWidget {
-  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.replyBar = false, this.covered = false, this.onReveal, this.onReport, this.viewCount});
+class _SwingPage extends StatefulWidget {
+  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, required this.onHold, this.replyBar = false, this.covered = false, this.onReveal, this.onReport, this.viewCount});
 
   /// 自分の Swing の見た人の数 (D-410)。null = 出さない(ほかの人の Swing / 古い Central)。
   final int? viewCount;
@@ -341,7 +372,7 @@ class _SwingPage extends StatelessWidget {
   /// 通報 (D-395)。null = 出さない(RASQ アカウントが無い)。
   final VoidCallback? onReport;
 
-  /// 左下に返信の欄が出ている(添えた文をその上へ)。
+  /// 返信を出す: 左下の欄と、**下に続くスレッド** (D-389 / D-413)。
   final bool replyBar;
   final Swing swing;
   final bool active;
@@ -355,15 +386,102 @@ class _SwingPage extends StatelessWidget {
   final ValueChanged<bool> onLockChanged;
   final VoidCallback onEnd;
 
+  /// 止める / 戻す(理由ごと)。
+  final void Function(String reason, bool hold) onHold;
+
+  @override
+  State<_SwingPage> createState() => _SwingPageState();
+}
+
+/// 1 つの Swing のページ (D-413): 縦にスクロールでき、Swing(ページの高さいっぱい)の下に返信のスレッドが続く。
+/// 返信を出さないとき(プラグインが全画面 / 覆っている / 根が無い)はスクロールしない。木の形は変えない(プラグインを作り直さない)。
+class _SwingPageState extends State<_SwingPage> {
+  final _scroll = ScrollController();
+  final _threadKey = GlobalKey();
+  final _reply = FocusNode();
+  bool _reading = false;
+
+  Swing get swing => widget.swing;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_onScroll);
+    _reply.addListener(() => widget.onHold('replyInput', _reply.hasFocus));
+  }
+
+  @override
+  void didUpdateWidget(_SwingPage old) {
+    super.didUpdateWidget(old);
+    // 返信を出さなくなった(プラグインが全画面に戻った など)ら、Swing の位置へ戻す。
+    if (old.replyBar && !widget.replyBar && _scroll.hasClients && _scroll.offset > 0) _scroll.jumpTo(0);
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    _reply.dispose();
+    super.dispose();
+  }
+
+  /// 下の返信を読んでいる間は、Swing を止める。
+  void _onScroll() {
+    final reading = _scroll.offset > 24;
+    if (reading == _reading) return;
+    _reading = reading;
+    if (widget.active) widget.onHold('thread', reading);
+  }
+
+  /// 下のスレッドへ送る([focus] = 返信の欄に入る)。
+  Future<void> _toThread({bool focus = false}) async {
+    final ctx = _threadKey.currentContext;
+    if (ctx == null) return;
+    await Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
+    if (focus && mounted) _reply.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final thread = widget.replyBar;
+    return LayoutBuilder(
+      builder: (context, box) => SingleChildScrollView(
+        key: const ValueKey('swing.page.scroll'),
+        controller: _scroll,
+        physics: thread ? const ClampingScrollPhysics() : const NeverScrollableScrollPhysics(),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          SizedBox(height: box.maxHeight, child: _body(context)),
+          if (thread)
+            SwingThreadSection(
+              key: _threadKey,
+              swing: swing,
+              focusNode: _reply,
+              minHeight: box.maxHeight * 0.6,
+              onHold: (v) => widget.onHold('reply', v),
+            ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    final active = widget.active;
+    final paused = widget.paused;
+    final covered = widget.covered;
+    final replyBar = widget.replyBar;
+    final clock = widget.clock;
+    final onEnd = widget.onEnd;
+    final onTapZone = widget.onTapZone;
+    final onReport = widget.onReport;
+    final onClose = widget.onClose;
+    final viewCount = widget.viewCount;
+    final position = widget.position;
     // 覆っている間は動画 / プラグインを動かさない。
     final live = active && !covered;
     final body = switch (swing.kind) {
       SwingKind.text => _TextBody(text: swing.text),
       SwingKind.image => _ImageBody(swing: swing),
       SwingKind.video => _VideoBody(swing: swing, active: live, paused: paused, onDone: onEnd),
-      SwingKind.plugin => _PluginBody(swing: swing, active: live, onLockChanged: onLockChanged, onEnd: onEnd),
+      SwingKind.plugin => _PluginBody(swing: swing, active: live, onLockChanged: widget.onLockChanged, onEnd: onEnd),
     };
     final timed = swing.kind != SwingKind.plugin;
     return Stack(fit: StackFit.expand, children: [
@@ -384,7 +502,7 @@ class _SwingPage extends StatelessWidget {
         ),
       if (timed && paused && !covered)
         const Center(child: IgnorePointer(child: Icon(Icons.pause_circle_outline, key: ValueKey('swing.paused'), color: Colors.white70, size: 64))),
-      if (covered) Positioned.fill(child: _Cover(swing: swing, onReveal: onReveal)),
+      if (covered) Positioned.fill(child: _Cover(swing: swing, onReveal: widget.onReveal)),
       // 上: 時間の進み、作った人と残り時間、閉じる。
       Positioned(
         left: 0,
@@ -435,6 +553,25 @@ class _SwingPage extends StatelessWidget {
           right: RasqSpacing.page,
           bottom: RasqSpacing.xxl + (replyBar ? 88 : 0),
           child: Text(swing.text, key: const ValueKey('swing.caption'), style: RasqTypography.body.copyWith(color: Colors.white, shadows: const [Shadow(blurRadius: 6)])),
+        ),
+      // 左下: 返信とキュー (D-389)。ハンドル / 入力欄は、下に続くスレッドへ送る (D-413)。
+      if (replyBar)
+        Positioned(
+          left: RasqSpacing.page,
+          bottom: 0,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: swing.kind == SwingKind.video ? 64 : RasqSpacing.md),
+              child: SwingReplyBar(
+                key: ValueKey('swing.reply.${swing.id}'),
+                swing: swing,
+                onHold: (v) => widget.onHold('reply', v),
+                onOpenThread: _toThread,
+                onReply: () => _toThread(focus: true),
+              ),
+            ),
+          ),
         ),
     ]);
   }
@@ -636,7 +773,8 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
           'author': {'accountId': widget.swing.authorAccountId, 'handle': widget.swing.author.account.handle, 'displayName': widget.swing.author.displayName},
         },
       ),
-      size: MediaQuery.sizeOf(context),
+      // 第3カラムに開いたときは、カラムの大きさ (D-413)。
+      size: switch (context.findRenderObject()) { final RenderBox b when b.hasSize => b.size, _ => MediaQuery.sizeOf(context) },
     );
     c.onEnd = widget.onEnd;
     c.addListener(_changed);

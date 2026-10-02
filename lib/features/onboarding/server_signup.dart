@@ -17,6 +17,7 @@ import '../collections/rasq_list_picker.dart' show importRasqListToHomeWith;
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../post/post_resolve.dart';
+import 'rasq_account_nudge.dart' show requestRasqAccountNudge;
 import '../rai/rai_widgets.dart' show RaiIcon;
 
 /// サーバーのタイルから始める登録 (D-412): タップ → **アプリの中でサーバーの登録ページ**(WebView。開けない端末は外部のブラウザ)+
@@ -299,10 +300,21 @@ class _ExternalSignupPanel extends StatelessWidget {
 /// SNS のログインが済んだ (D-412): 進めていた登録と同じサーバーなら、タップした投稿 / RASQ リストを開く。
 /// 投稿は新しいアカウントで引き直す(D-411 の [resolvePostOn]: 同じサーバーなので同じ id で読める)。見つからなければホームのまま伝える。
 /// RASQ リストはページを開き、RASQ アカウントがあればホームの TL に取り込む(D-347、取れないリストは理由を伝える)。
+///
+/// D-413: タイルから登録した人は RASQ アカウントの問いを通っていないので、ここまで済んだら(最初のオンボーディングの終わり)
+/// RASQ アカウントのポップアップを 1 回だけ頼む([requestRasqAccountNudge]。持っている人には出さない)。
 Future<void> followSignupTarget(ProviderContainer c, AccountId account) async {
   final t = c.read(serverSignupTargetProvider);
   if (t == null || t.host != account.instance) return;
   c.read(serverSignupTargetProvider.notifier).set(null);
+  try {
+    await _openSignupTarget(c, t, account);
+  } finally {
+    await requestRasqAccountNudge(c);
+  }
+}
+
+Future<void> _openSignupTarget(ProviderContainer c, ServerSignupTarget t, AccountId account) async {
   final router = c.read(routerProvider);
   void toast(String m) => c.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(m)));
   final post = t.post;

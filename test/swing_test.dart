@@ -22,13 +22,18 @@ import 'package:rasq_client/features/home/home_header.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart' show astellCreateFowId;
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId;
+import 'package:rasq_client/app/navigation.dart' show visibleLocationOf;
+import 'package:rasq_client/features/home/home_screen.dart' show HomeScreen;
+import 'package:rasq_client/features/media/fow_avoid.dart';
+import 'package:rasq_client/features/search/search_screen.dart' show SearchScreen;
+import 'package:rasq_client/shell/column_takeover.dart';
+import 'package:rasq_client/shell/third_column.dart' show ThirdColumnView, thirdColumnProvider;
 import 'package:rasq_client/features/home/create_fow.dart';
 import 'package:rasq_client/features/plugins/media_plugin_panel.dart' show MediaEditResult;
 import 'package:rasq_client/features/plugins/pro_media_editor_screen.dart' show ProEditorExtraAction, ProEditorHandle;
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/swing/swing_composer.dart';
 import 'package:rasq_client/features/swing/swing_models.dart';
-import 'package:rasq_client/features/profile/rasq_post_screen.dart';
 import 'package:rasq_client/features/swing/swing_providers.dart';
 import 'package:rasq_client/features/swing/swing_reply.dart';
 import 'package:rasq_client/features/swing/swing_viewer.dart';
@@ -228,9 +233,9 @@ void main() {
   }
 
   /// [fakeSwingEditor] = Swing の編集画面を開いたままにする(＋ から Swing を開くテストで、本物の編集画面を出さない)。
-  Future<ProviderContainer> pumpApp(WidgetTester tester, MockClient mock, {List<Override> extra = const [], bool fakeSwingEditor = true}) async {
-    tester.view.physicalSize = const Size(1080, 2340);
-    tester.view.devicePixelRatio = 3;
+  Future<ProviderContainer> pumpApp(WidgetTester tester, MockClient mock, {List<Override> extra = const [], bool fakeSwingEditor = true, Size size = const Size(1080, 2340), double dpr = 3}) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = dpr;
     addTearDown(tester.view.reset);
     SwingFeed.interval = null;
     addTearDown(() => SwingFeed.interval = const Duration(seconds: 60));
@@ -920,7 +925,7 @@ void main() {
     expect(find.byType(SwingViewerScreen), findsOneWidget);
   });
 
-  testWidgets('返信とキュー (D-389): 左下に stick の入力欄 + Que。Que で いいね / 外す、入力欄で返信のコンポーザー、ハンドルを上に引くとスレッドの FOW。開いている間は止める', (tester) async {
+  testWidgets('返信とキュー (D-389 → D-413): 左下に stick の入力欄 + Que。Que で いいね / 外す。Swing の下に返信が続く(ハンドル / 入力欄はそこへ送る)。読んでいる / 書いている間は止める', (tester) async {
     swingThreadLog.clear();
     swingQueued.clear();
     swingReplies
@@ -928,42 +933,219 @@ void main() {
       ..add('いいね！');
     final (mock, _, _, _) = central([swing('s1', 'alice', text: '花火', postId: 'p1', replyCount: 1), swing('s2', 'bob', text: '古い Central')]);
     final c = await pumpApp(tester, mock);
+    // 時計が回っている(止まるのを確かめる)ので、pumpAndSettle は使わずに少しずつ進める。
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    SwingViewerScreen.displayDuration = const Duration(seconds: 30);
     c.read(routerProvider).push(Routes.swing('alice'));
-    await tester.pumpAndSettle();
+    await settle();
     expect(find.byKey(const ValueKey('swing.reply.stick')), findsOneWidget);
     expect(find.byKey(const ValueKey('swing.reply.count')), findsOneWidget, reason: '返信の数');
     expect(swingThreadLog, contains('GET p1'));
     // Que: 押すと いいね、もう一度で外す。
     await tester.tap(find.byKey(const ValueKey('swing.reply.que')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
     expect(swingThreadLog, contains('PUT /queue p1'));
     expect(find.descendant(of: find.byKey(const ValueKey('swing.reply.que')), matching: find.byIcon(Icons.favorite)), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('swing.reply.que')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
     expect(swingThreadLog, contains('DELETE /queue p1'));
-    // stick の入力欄 → 返信のコンポーザー(その間は止まる)。
-    await tester.tap(find.byKey(const ValueKey('swing.reply.stick')));
-    await tester.pumpAndSettle();
-    expect(c.read(overlayManagerProvider).contains(composerFowId), isTrue);
-    c.read(overlayManagerProvider).close(composerFowId);
-    await tester.pumpAndSettle();
-    // ハンドルを上に引く → スレッド(RASQ の投稿の詳細)の FOW。< で閉じる(ビューワーは閉じない)。
+    // Swing の下に返信が続く: 返信の帯・返信・返信の欄。はじめは Swing がページいっぱい(下は見えない)。
+    final viewer = tester.getRect(find.byType(SwingViewerScreen));
+    expect(find.byKey(const ValueKey('swing.thread')), findsOneWidget);
+    expect(tester.getRect(find.byKey(const ValueKey('swing.thread'))).top, greaterThanOrEqualTo(viewer.bottom - 1), reason: 'Swing の下に続く');
+    final clock = tester.widget<LinearProgressIndicator>(find.byKey(const ValueKey('swing.progress')));
+    expect(clock.value, greaterThan(0), reason: '時計は回っている');
+    // ハンドルを上に引く → 下に続くスレッドへ(FOW は開かない)。読んでいる間は止まる。
     await tester.drag(find.byKey(const ValueKey('swing.reply.handle')), const Offset(0, -120));
-    await tester.pumpAndSettle();
-    expect(c.read(overlayManagerProvider).contains(SwingReplyBar.threadFowId), isTrue);
-    expect(find.byType(RasqPostScreen), findsOneWidget);
-    expect(find.text('いいね！'), findsOneWidget, reason: '返信が見える');
-    await tester.tap(find.descendant(of: find.byType(RasqPostScreen), matching: find.byTooltip('戻る')));
-    await tester.pumpAndSettle();
+    await settle();
     expect(c.read(overlayManagerProvider).contains(SwingReplyBar.threadFowId), isFalse);
-    expect(find.byType(SwingViewerScreen), findsOneWidget);
-    // 根の投稿が無い Swing(古い Central)には出さない。
-    await tester.tap(find.byKey(const ValueKey('swing.tap')), warnIfMissed: false);
-    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byKey(const ValueKey('swing.thread'))).top, lessThan(viewer.bottom), reason: 'スクロールして見える');
+    expect(find.text('いいね！'), findsOneWidget, reason: '返信が見える');
+    final held = tester.widget<LinearProgressIndicator>(find.byKey(const ValueKey('swing.progress'))).value;
+    await tester.pump(const Duration(seconds: 2));
+    expect(tester.widget<LinearProgressIndicator>(find.byKey(const ValueKey('swing.progress'))).value, held, reason: '読んでいる間は止まる');
+    // 返信の欄から送る → Swing のスレッドへ(POST /me/posts replyTo)。
+    await tester.enterText(find.byKey(const ValueKey('swing.thread.input')), 'きれい');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('swing.thread.send')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(swingThreadLog, contains('reply p1 きれい'));
+    expect(find.text('きれい'), findsWidgets, reason: '取り直した返信に出る');
+    // Swing へ戻して、stick の入力欄 → 下の返信の欄へ(入る)。
+    await tester.drag(find.byKey(const ValueKey('swing.page.scroll')).first, const Offset(0, 2000));
+    await settle();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('swing.reply.stick')));
+    await settle();
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isFalse, reason: 'コンポーザーの FOW ではなく、下の欄');
+    final input = tester.widget<TextField>(find.byKey(const ValueKey('swing.thread.input')));
+    expect(input.focusNode?.hasFocus, isTrue);
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.drag(find.byKey(const ValueKey('swing.page.scroll')).first, const Offset(0, 2000));
+    await settle();
+    // 根の投稿が無い Swing(古い Central)には出さない(下にも続かない)。
+    SwingViewerScreen.displayDuration = null;
     await tester.tapAt(tester.getTopRight(find.byType(SwingViewerScreen)) + const Offset(-10, 400));
-    await tester.pumpAndSettle();
+    await settle();
     expect(find.text('古い Central'), findsWidgets);
     expect(find.byKey(const ValueKey('swing.reply.stick')), findsNothing);
+    expect(find.byKey(const ValueKey('swing.thread')), findsNothing);
+  });
+
+  test('FOW のぶんメディアを寄せる余白 (D-413 で共通化): 重なる FOW の逆サイドへ。ほかのカラムの FOW は見ない。壁付けは左右', () {
+    const area = Rect.fromLTWH(100, 0, 400, 800);
+    // 下に付いた FOW(カラムいっぱい)→ 上へ寄せる。
+    expect(fowAvoidInset(area, [(rect: const Rect.fromLTWH(100, 500, 400, 300), wall: false)]), const EdgeInsets.only(bottom: 300));
+    // FOW が大きくなれば余白も大きく(逆サイドに minFree は残す)。
+    expect(fowAvoidInset(area, [(rect: const Rect.fromLTWH(100, 100, 400, 700), wall: false)], minFree: 160), const EdgeInsets.only(bottom: 640));
+    // ほかのカラムの FOW は見ない。
+    expect(fowAvoidInset(area, [(rect: const Rect.fromLTWH(600, 500, 300, 300), wall: false)]), EdgeInsets.zero);
+    // 壁付けは左右(右の壁 → 左へ寄せる)。
+    expect(fowAvoidInset(area, [(rect: const Rect.fromLTWH(400, 0, 100, 800), wall: true)]), const EdgeInsets.only(right: 100));
+  });
+
+  testWidgets('ビューワーのカラム (D-413): 幅の広い画面では第3カラムに開き(ホームはそのまま)、Swing の下に返信が続く。閉じると第3カラムは元へ。狭い画面は全画面', (tester) async {
+    swingReplies
+      ..clear()
+      ..add('すてき');
+    final (mock, seen, _, _) = central([swing('a1', 'alice', text: 'アリスの', postId: 'p1', replyCount: 1)]);
+    final c = await pumpApp(tester, mock, size: const Size(1400, 900), dpr: 1);
+    await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
+    await tester.pumpAndSettle();
+    expect(find.byType(SwingViewerScreen), findsOneWidget);
+    expect(c.read(thirdColumnProvider)?.id, startsWith('swing:alice'), reason: '第3カラムに開く');
+    final viewer = tester.getRect(find.byType(SwingViewerScreen));
+    expect(viewer.right, 1400);
+    expect(viewer.left, greaterThan(72 + 200), reason: '全画面ではない(左にホームのカラム)');
+    expect(find.byKey(const ValueKey('swing.bundle.alice')), findsOneWidget, reason: 'ホームのヘッダーは見えたまま');
+    expect(tester.getRect(find.byKey(const ValueKey('swing.bundle.alice'))).right, lessThan(viewer.left));
+    // Swing の下に返信が続く(スクロールで出る)。
+    expect(tester.getRect(find.byKey(const ValueKey('swing.thread'))).top, greaterThanOrEqualTo(viewer.bottom - 1));
+    await tester.drag(find.byKey(const ValueKey('swing.page.scroll')), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    expect(find.text('すてき'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.thread.input')), findsOneWidget);
+    expect(tester.getRect(find.byKey(const ValueKey('swing.thread'))).left, greaterThanOrEqualTo(viewer.left), reason: '返信もカラムの中');
+    await tester.drag(find.byKey(const ValueKey('swing.page.scroll')), const Offset(0, 2000));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('swing.close')));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    expect(c.read(thirdColumnProvider), isNull, reason: '閉じると第3カラムは元(検索)へ');
+    expect(find.byType(SwingViewerScreen), findsNothing);
+    expect(seen, ['a1']);
+  });
+
+  testWidgets('ビューワーのカラム (D-413): 狭い画面は前のとおり全画面(第3カラムは使わない)、Swing の下に返信が続く', (tester) async {
+    swingReplies
+      ..clear()
+      ..add('すてき');
+    final (mock, _, _, _) = central([swing('a1', 'alice', text: 'アリスの', postId: 'p1', replyCount: 1)]);
+    final c = await pumpApp(tester, mock);
+    await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
+    await tester.pumpAndSettle();
+    expect(c.read(thirdColumnProvider), isNull);
+    expect(tester.getRect(find.byType(SwingViewerScreen)), const Rect.fromLTWH(0, 0, 360, 780), reason: '全画面');
+    await tester.drag(find.byKey(const ValueKey('swing.page.scroll')), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.text('すてき'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.thread.input')), findsOneWidget);
+  });
+
+  testWidgets('作る画面のカラム (D-413): 幅の広い画面では押したカラム(ホーム / 第3カラム)を置き換えて開く。送る前の段の枠は届け先の FOW の大きさに合わせて動く', (tester) async {
+    final (mock, _, _, _) = central(const []);
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    BuildContext? editorContext;
+    Completer<MediaEditResult?>? current;
+    final c = await pumpApp(tester, mock, fakeSwingEditor: false, size: const Size(1400, 900), dpr: 1, extra: [
+      swingBackgroundProvider.overrideWithValue(() async => png),
+      swingEditorProvider.overrideWithValue((context, {required bytes, required name, required mime, actions = const []}) {
+        editorContext = context;
+        return (current = Completer<MediaEditResult?>()).future;
+      }),
+    ]);
+    final home = tester.getRect(find.byType(HomeScreen));
+    // ホームのカラムの ＋ から → ホームのカラムを置き換える(第3カラムはそのまま)。
+    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -160));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pump();
+    await tester.pump();
+    expect(c.read(columnTakeoverProvider)[0]?.id, swingComposerTakeoverId);
+    expect(c.read(routerProvider).canPop(), isFalse, reason: '全画面のルートは積まない');
+    expect(ColumnTakeoverScope.maybeOf(editorContext!)?.column, 0, reason: '編集の段もそのカラムの中で開く');
+    current!.complete(MediaEditResult(bytes: png, mimeType: 'image/png', name: 'a.png'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
+    final composer = tester.getRect(find.byType(SwingComposerScreen));
+    expect(composer.left, closeTo(home.left, 1));
+    expect(composer.right, closeTo(home.right, 1), reason: 'ホームのカラムの幅');
+    expect(find.byType(HomeScreen, skipOffstage: true), findsNothing, reason: 'ホームは隠れる(残っている)');
+    expect(find.byType(ThirdColumnView), findsOneWidget);
+    // 届け先の FOW はそのカラムの下。枠(メディアの面)はその上に寄る。
+    final fow = tester.getRect(find.byKey(const ValueKey('swing.audience')));
+    expect(fow.left, greaterThanOrEqualTo(home.left - 1));
+    expect(fow.right, lessThanOrEqualTo(home.right + 1));
+    final area1 = tester.getRect(find.byKey(swingMediaAreaKey));
+    final frame1 = tester.getRect(find.byKey(const ValueKey('swing.preview')));
+    expect(frame1.bottom, lessThanOrEqualTo(fow.top + 1), reason: '枠は FOW の上');
+    // FOW を伸ばす → 枠は縮んで上へ。縮める → 枠は広がる。
+    final spec = c.read(overlayManagerProvider).byId(swingAudienceFowId)!.fow!;
+    spec.heightFactor.value = 0.55;
+    await tester.pumpAndSettle();
+    final frame2 = tester.getRect(find.byKey(const ValueKey('swing.preview')));
+    expect(frame2.height, lessThan(frame1.height - 50), reason: 'FOW の大きさに合わせて縮む');
+    expect(frame2.bottom, lessThanOrEqualTo(tester.getRect(find.byKey(const ValueKey('swing.audience'))).top + 1));
+    spec.heightFactor.value = 0.15;
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byKey(const ValueKey('swing.preview'))).height, greaterThan(frame1.height + 50));
+    expect(tester.getRect(find.byKey(swingMediaAreaKey)).size, area1.size, reason: '面の大きさはそのまま(中の余白で寄せる)');
+    // 閉じる → ホームのカラムに戻る。
+    await tester.tap(find.descendant(of: find.byType(SwingComposerScreen), matching: find.byTooltip('戻る')));
+    await tester.pumpAndSettle();
+    expect(c.read(columnTakeoverProvider), isEmpty);
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(c.read(overlayManagerProvider).contains(swingAudienceFowId), isFalse);
+
+    // 第3カラムの中から → 第3カラムを置き換える(ホームはそのまま)。
+    final third = tester.getRect(find.byType(ThirdColumnView));
+    final inThird = tester.element(find.descendant(of: find.byType(ThirdColumnView), matching: find.byType(SearchScreen)).first);
+    unawaited(openSwingComposer(inThird));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pump();
+    await tester.pump();
+    expect(c.read(columnTakeoverProvider)[1]?.id, swingComposerTakeoverId);
+    expect(ColumnTakeoverScope.maybeOf(editorContext!)?.column, 1);
+    current!.complete(MediaEditResult(bytes: png, mimeType: 'image/png', name: 'a.png'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
+    final composer2 = tester.getRect(find.byType(SwingComposerScreen));
+    expect(composer2.left, greaterThanOrEqualTo(third.left - 1));
+    expect(composer2.right, closeTo(third.right, 1));
+    expect(find.byType(HomeScreen), findsOneWidget, reason: 'ホームのカラムはそのまま');
+    final fow2 = tester.getRect(find.byKey(const ValueKey('swing.audience')));
+    expect(fow2.left, greaterThanOrEqualTo(third.left - 1), reason: '届け先の FOW も第3カラム');
+    expect(tester.getRect(find.byKey(const ValueKey('swing.preview'))).bottom, lessThanOrEqualTo(fow2.top + 1));
+  });
+
+  testWidgets('作る画面のカラム (D-413): 狭い画面は前のとおり全画面のルート', (tester) async {
+    final (mock, _, _, _) = central(const []);
+    final c = await pumpApp(tester, mock);
+    await tester.drag(find.byKey(const ValueKey('fab.home.gesture')), const Offset(0, -160));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pump();
+    await tester.pump();
+    expect(c.read(columnTakeoverProvider), isEmpty);
+    expect(visibleLocationOf(c.read(routerProvider).routerDelegate.currentConfiguration), Routes.swingNew);
   });
 
   testWidgets('＋ (D-383): タップ = 投稿。スライドの向き(上 / 左 / 左上)で始める。素早く払っても長押しにならない。長押し / ホバーで暗くして丸ボタンを展開、歯車で並べ替え(ドラッグで入れる / 外す)。トレンドはハッシュタグ、AsTell の ＋', (tester) async {

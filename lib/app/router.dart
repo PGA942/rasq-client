@@ -200,6 +200,10 @@ abstract final class Routes {
   /// 自分の Swing のビューワー (D-410)。
   static const mySwings = '/swing?mine=1';
 
+  /// ホームのタブの中のビューワー (D-413): 幅の広い画面で第3カラムに開いたビューワーが、第2カラムへ移るときの場所。
+  static String swingInHome({String? author, bool mine = false}) =>
+      mine ? '$home/swing?mine=1' : (author == null ? '$home/swing' : '$home/swing?author=${Uri.encodeQueryComponent(author)}');
+
   /// プラグインの検索画面 (D-353)。
   static String storeSearch([String q = '']) => q.isEmpty ? '/store/search' : '/store/search?q=${Uri.encodeQueryComponent(q)}';
   static String storeInstalledPlugin(String id) => '/store/installed/${Uri.encodeComponent(id)}';
@@ -337,7 +341,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellRoute.indexedStack(
             builder: (context, state, navigationShell) => RasqShell(navigationShell: navigationShell),
             branches: [
-              StatefulShellBranch(routes: [GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen(), routes: [_postRoute, _userRoute])]),
+              StatefulShellBranch(routes: [
+                GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen(), routes: [
+                  _postRoute,
+                  _userRoute,
+                  // 第3カラムのビューワーが第2カラムへ移るとき (D-413)。
+                  GoRoute(path: 'swing', builder: (_, s) => SwingViewerScreen(startAuthor: s.uri.queryParameters['author'], mine: s.uri.queryParameters['mine'] == '1')),
+                ]),
+              ]),
               StatefulShellBranch(routes: [
                 GoRoute(path: Routes.search, builder: (_, _) => const SearchScreen(), routes: [
                   GoRoute(path: 'trend/:tag', builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!, account: s.uri.queryParameters['account'])),

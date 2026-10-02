@@ -2,13 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
-import '../../app/router.dart';
 import '../settings/settings_dsl.dart';
 import '../swing/swing_models.dart';
 import '../swing/swing_providers.dart';
+import '../swing/swing_viewer.dart' show openSwingViewer;
 import '../vc/astell_actions.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
@@ -164,7 +163,7 @@ class SwingAuthorBundle extends StatelessWidget {
       message: unseen ? '${swing.author.displayName} の Swing' : '${swing.author.displayName} の Swing(見終えました)',
       child: InkResponse(
         key: ValueKey('swing.bundle.${swing.authorAccountId}'),
-        onTap: () => context.push(Routes.swing(swing.authorAccountId)),
+        onTap: () => openSwingViewer(context, author: swing.authorAccountId),
         radius: size / 2 + ring + 2,
         child: Container(
           key: ValueKey('swing.ring.${unseen ? 'unseen' : 'seen'}'),
@@ -207,7 +206,7 @@ class MySwingBundle extends StatelessWidget {
         label: '自分の Swing',
         child: InkResponse(
           key: const ValueKey('swing.bundle.me'),
-          onTap: () => context.push(Routes.mySwings),
+          onTap: () => openSwingViewer(context, mine: true),
           radius: size / 2 + ring + 2,
           child: SizedBox(
             width: outer,

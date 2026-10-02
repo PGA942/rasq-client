@@ -16,6 +16,8 @@ import 'package:rasq_client/features/collections/rasq_collection_screen.dart';
 import 'package:rasq_client/features/login/sns_login_screen.dart';
 import 'package:rasq_client/features/onboarding/onboarding_previews.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
+import 'package:rasq_client/features/onboarding/rasq_account_nudge.dart';
+import 'package:rasq_client/features/onboarding/rasq_register_screen.dart' show RasqRegisterScreen;
 import 'package:rasq_client/features/onboarding/server_signup.dart';
 import 'package:rasq_client/features/onboarding/showcase_genres.dart';
 import 'package:rasq_client/features/post/post_detail_screen.dart';
@@ -188,6 +190,78 @@ void main() {
       expect(container.read(serverSignupTargetProvider), isNull);
     });
 
+    testWidgets('RASQ アカウントのポップアップ (D-413): タイルから登録した最初のオンボーディングが終わったら 1 回だけ(作る / ログイン / あとで)。もう出さない', (tester) async {
+      final storage = MemorySessionStorage({});
+      final container = await _pumpWide(tester, _central(), plugin: _SignupPlugin(), storage: storage);
+      final tile = find.byKey(const ValueKey('onboarding.list.list-1'));
+      await tester.scrollUntilVisible(tile, 200, scrollable: find.descendant(of: find.byKey(const ValueKey('onboarding.previews')), matching: find.byType(Scrollable)).first);
+      await tester.tap(find.descendant(of: tile, matching: find.text('登録する')));
+      await tester.pumpAndSettle();
+      expect(find.text('RASQ アカウントを作りますか?'), findsNothing, reason: '登録の途中では聞かない');
+      // ログインできた → ホーム(SNS のログインと同じ流れ)→ タップしたものを開く → ポップアップ。
+      await container.read(sessionsProvider.notifier).add(await _Flow().complete());
+      container.read(routerProvider).go(Routes.home);
+      await followSignupTarget(container, _SignupPlugin.me);
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.byType(RasqCollectionScreen), findsOneWidget, reason: 'タップしたリストは開く');
+      expect(find.text('RASQ アカウントを作りますか?'), findsOneWidget);
+      expect(find.byKey(const ValueKey('rasqNudge.create')), findsOneWidget);
+      expect(find.byKey(const ValueKey('rasqNudge.login')), findsOneWidget);
+      expect(await storage.read(rasqAccountNudgeKey), isNotNull, reason: '出したことを残す');
+      await tester.tap(find.byKey(const ValueKey('rasqNudge.later')));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('RASQ アカウントを作りますか?'), findsNothing);
+      // 2 回目(もう一度タイルから登録した)は出さない。
+      await requestRasqAccountNudge(container);
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('RASQ アカウントを作りますか?'), findsNothing);
+      expect(container.read(rasqAccountNudgeProvider), isFalse);
+    });
+
+    testWidgets('RASQ アカウントのポップアップ (D-413): 「作る」は登録のページ (/rasq-register) へ', (tester) async {
+      final container = await _pumpWide(tester, _central(), plugin: _SignupPlugin());
+      await container.read(sessionsProvider.notifier).add(await _Flow().complete());
+      container.read(routerProvider).go(Routes.home);
+      await requestRasqAccountNudge(container);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await tester.tap(find.byKey(const ValueKey('rasqNudge.create')));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.byType(RasqRegisterScreen), findsOneWidget);
+    });
+
+    testWidgets('RASQ アカウントのポップアップ (D-413): Central の RASQ アカウントをもう持っている人には出さない', (tester) async {
+      final storage = MemorySessionStorage({
+        RasqAccountsNotifier.storageKey: jsonEncode({
+          'accounts': [
+            {'id': 'central-c1', 'kind': 'central', 'handle': 'me', 'displayName': 'me', 'centralAccountId': 'c1', 'sessionKeys': <String>[], 'createdAt': '2026-10-01T00:00:00Z'},
+          ],
+          'current': 'central-c1',
+          'onboardingDone': true,
+        }),
+      });
+      final container = await _pumpWide(tester, _central(), plugin: _SignupPlugin(), storage: storage);
+      await tester.runAsync(() => container.read(rasqAccountsProvider.future));
+      container.read(serverSignupTargetProvider.notifier).set(const ServerSignupTarget(host: 'misskey.io', kind: SnsKind.misskey));
+      await container.read(sessionsProvider.notifier).add(await _Flow().complete());
+      container.read(routerProvider).go(Routes.home);
+      await followSignupTarget(container, _SignupPlugin.me);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('RASQ アカウントを作りますか?'), findsNothing);
+      expect(await storage.read(rasqAccountNudgeKey), isNull);
+    });
+
     testWidgets('Mastodon: 登録ページは /auth/sign_up、メールの確認のページへ移ると案内も進む', (tester) async {
       Uri? changed;
       await _pumpWide(tester, _central(), onWeb: (u, cb) => changed = u);
@@ -319,13 +393,13 @@ MockClient _central() => MockClient((req) async {
     });
 
 /// 新規の端末(台帳が空)のオンボーディング。既定は幅の広い画面(2 カラム)。
-Future<ProviderContainer> _pumpWide(WidgetTester tester, MockClient client, {Size size = const Size(1280, 900), SnsPlugin? plugin, void Function(Uri url, ValueChanged<Uri> cb)? onWeb}) async {
+Future<ProviderContainer> _pumpWide(WidgetTester tester, MockClient client, {Size size = const Size(1280, 900), SnsPlugin? plugin, void Function(Uri url, ValueChanged<Uri> cb)? onWeb, MemorySessionStorage? storage}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(ProviderScope(
     overrides: [
-      sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
+      sessionStorageProvider.overrideWithValue(storage ?? MemorySessionStorage({})),
       pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(plugin ?? FakeSnsPlugin(posts: (_) => const []))),
       orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: client, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
       centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),

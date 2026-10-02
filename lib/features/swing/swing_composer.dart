@@ -10,16 +10,17 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../backend/orgate_client.dart' show OrgateException;
-import '../../app/navigation.dart';
 import '../../app/providers.dart' show overlayManagerProvider;
 import '../../app/router.dart';
 import '../../backend/rasq_collections_api.dart';
+import '../../shell/column_takeover.dart';
 import '../../shell/headers.dart';
 import '../collections/rasq_collections.dart';
 import '../compose/media_file_pick.dart' show mediaVideoExtensions, mediaMimeFor;
 import '../custom/custom_plugins_screen.dart' show installedPagePluginsProvider;
 import '../plugins/media_plugin_panel.dart' show MediaEditResult;
-import '../plugins/pro_media_editor_screen.dart' show ProEditorExtraAction, ProEditorHandle;
+import '../media/fow_avoid.dart';
+import '../plugins/pro_media_editor_screen.dart' show ProEditorExtraAction, ProEditorHandle, ProMediaEditorArgs, ProMediaEditorScreen;
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart' show isRasqPackage, rasqpkgZstdProvider;
 import 'swing_models.dart';
@@ -97,8 +98,32 @@ class SwingDraft {
 /// 全画面の編集画面(テストで差し替える)。閉じたら null。[actions] = 下のバーの先頭に足すボタン。
 typedef SwingEditor = Future<MediaEditResult?> Function(BuildContext context, {required Uint8List bytes, required String name, required String mime, List<ProEditorExtraAction> actions});
 
-final swingEditorProvider = Provider<SwingEditor>(
-    (ref) => (context, {required bytes, required name, required mime, actions = const []}) => context.pushProMediaEditor(bytes: bytes, name: name, mimeType: mime, extraActions: actions));
+///
+/// D-413: 編集の段も全画面のメディア表示と同じ作り(FOW の大きさと位置に合わせて面を寄せる、[ProMediaEditorArgs.avoidFows])。
+/// カラムを置き換えて開いた作る画面 ([ColumnTakeoverScope]) からは、そのカラムの中に開く(全画面にしない)。
+final swingEditorProvider = Provider<SwingEditor>((ref) => (context, {required bytes, required name, required mime, actions = const []}) {
+      final args = ProMediaEditorArgs(bytes: bytes, name: name, mimeType: mime, extraActions: actions, avoidFows: true);
+      if (ColumnTakeoverScope.maybeOf(context) == null) return context.push<MediaEditResult>(Routes.mediaEditorPro, extra: args);
+      return Navigator.of(context).push<MediaEditResult>(PageRouteBuilder(
+        settings: const RouteSettings(name: Routes.mediaEditorPro),
+        pageBuilder: (_, _, _) => ProMediaEditorScreen(args: args),
+        transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
+      ));
+    });
+
+/// Swing を作る画面を開く (D-413)。幅の広い画面では、ボタンを押したカラム(ホームのカラム / 第3カラム)を置き換えて開く
+/// ([ColumnTakeoverStore])。狭い画面は全画面のルート `/swing/new`(前と同じ)。
+Future<void> openSwingComposer(BuildContext context) async {
+  if (MediaQuery.sizeOf(context).width < RasqSizes.tabletBreakpoint) {
+    await context.push(Routes.swingNew);
+    return;
+  }
+  final store = ProviderScope.containerOf(context, listen: false).read(columnTakeoverProvider.notifier);
+  await store.open<void>(takeoverColumnOf(context), id: swingComposerTakeoverId, builder: (_) => const SwingComposerScreen());
+}
+
+/// カラムに重ねた作る画面の id。
+const swingComposerTakeoverId = 'swing.composer';
 
 /// 背景 (D-386): 和柄 2 つを乱数で選んで描いた縦長の PNG。テストで差し替える。
 final swingBackgroundProvider = Provider<Future<Uint8List> Function()>((ref) => () => renderSwingBackground(SwingBackgroundSpec.random(math.Random())));
@@ -154,16 +179,15 @@ const swingPickVideoKey = ValueKey('swing.background.video');
 /// 始める: 和柄の背景で編集画面へ → 送る画面。「プラグイン」を押したら、配るプラグインを選ぶ送る画面へ。
 /// 「背景を変える」(D-387): 押すと別の和柄、**長押しで画像 / 動画を選んで背景に**。画像は編集画面のまま差し替え、動画
 /// (や、動画を開いているときの和柄)は編集画面を開き直す(それまでの編集は捨てる)。
-/// [replace] = いまの画面(開いたばかりの送る画面)を置き換える。編集画面を閉じたら、その画面も閉じる。
-Future<void> startSwing(BuildContext context, WidgetRef ref, {bool replace = false}) async {
+/// できあがった下書きを返す(編集画面を閉じたら null)。D-413: 送る前の段は同じ画面のまま進む(前は送る画面を置き換えていた)。
+Future<SwingDraft?> editSwing(BuildContext context, WidgetRef ref) async {
   // 消えるまで (D-410): 編集画面のバーで選ぶ。開き直しても引き継ぐ。
   final ttl = ValueNotifier(24);
-  void open(SwingDraft d) => replace ? context.pushReplacement(Routes.swingNew, extra: d) : context.push(Routes.swingNew, extra: d);
   final background = ref.read(swingBackgroundProvider);
   final picker = ref.read(swingMediaPickerProvider);
   var base = (bytes: await background(), name: 'swing.png', mime: 'image/png');
   while (true) {
-    if (!context.mounted) return;
+    if (!context.mounted) return null;
     var plugin = false;
     ({Uint8List bytes, String name, String mime})? next;
 
@@ -216,23 +240,26 @@ Future<void> startSwing(BuildContext context, WidgetRef ref, {bool replace = fal
       ),
       swingTtlAction(ttl),
     ]);
-    if (!context.mounted) return;
-    if (plugin) return open(SwingDraft.plugin(ttlHours: ttl.value));
+    if (!context.mounted) return null;
+    if (plugin) return SwingDraft.plugin(ttlHours: ttl.value);
     final n = next;
     if (n != null) {
       base = n;
       continue;
     }
-    if (edited == null) {
-      if (replace) context.pop();
-      return;
-    }
-    return open(SwingDraft.media(bytes: edited.bytes, mime: edited.mimeType, name: edited.name ?? base.name, ttlHours: ttl.value));
+    if (edited == null) return null;
+    return SwingDraft.media(bytes: edited.bytes, mime: edited.mimeType, name: edited.name ?? base.name, ttlHours: ttl.value);
   }
 }
 
 /// 届け先の FOW の id (D-410)。
 const swingAudienceFowId = 'swing.audience';
+
+/// 届け先の FOW の初めの高さ(カラムの高さに対して)。
+const swingAudienceFowHeight = 0.34;
+
+/// 作る画面のメディアの面(FOW の逆サイドへ寄せる。テストで矩形を測る、D-413)。
+const swingMediaAreaKey = ValueKey('swing.media.area');
 
 /// CW の文の既定 (D-410)。
 const swingDefaultCw = 'センシティブな内容';
@@ -292,8 +319,8 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
   final _cw = TextEditingController(text: swingDefaultCw);
   bool _cwOn = false;
 
-  /// プレビューの枠(届け先の FOW をこの下に付ける)。
-  final _frameKey = GlobalKey();
+  /// D-413: 届け先の FOW はカラム(作る画面を開いたカラム)の下に付け、プレビューの枠は FOW の逆サイドへ寄せる
+  /// (全画面のメディア表示と同じ作り、[FowAvoidingBox])。
   OverlayManager? _manager;
   FowSpec? _fowSpec;
 
@@ -306,11 +333,37 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
     _audience.addListener(_onAudience);
     _ttl.addListener(_onAudience);
     if (widget.draft == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && ref.read(swingApiProvider) != null) startSwing(context, ref, replace: true);
-      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _start());
     }
   }
+
+  /// 開いたらすぐ編集の段(和柄の背景で編集画面)。閉じたら作る画面も閉じる。
+  Future<void> _start() async {
+    if (!mounted || ref.read(swingApiProvider) == null) return;
+    final d = await editSwing(context, ref);
+    if (!mounted) return;
+    if (d == null) return _close();
+    setState(() {
+      _draft = d;
+      _ttl.value = d.ttlHours;
+      _editing = d.plugin;
+    });
+  }
+
+  /// 閉じる: カラムに重ねていればそれを閉じ(元のカラムに戻る)、全画面ならルートを戻す。
+  void _close() {
+    _leaving = true;
+    _closeAudienceFow();
+    if (ColumnTakeoverScope.closeOf(context)) return;
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(Routes.home);
+    }
+  }
+
+  /// 届け先の FOW を置くカラム(カラムに重ねた作る画面ならそのカラム)。
+  int get _column => ColumnTakeoverScope.maybeOf(context)?.column ?? 0;
 
   void _onAudience() {
     if (mounted) setState(() {});
@@ -341,35 +394,22 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
 
   bool get _ready => _hasContent && !_editing && !_audience.isEmpty && !_cwTooLong;
 
-  /// 届け先の FOW (D-410): プレビューの枠の**下**に付ける(widget の FOW なので、後ろの枠も触れる)。
+  /// 届け先の FOW (D-410 → D-413): 作る画面のカラムの**下**に付ける(プレビューの枠はその上に寄る。FOW を伸ばす / 縮める /
+  /// 動かすと、枠もそれに合わせて動く)。widget の FOW なので、後ろの枠も触れる。
   void _syncAudienceFow() {
     if (!mounted) return;
     final show = !_leaving && !_editing && _draft != null && ref.read(swingApiProvider) != null;
     if (!show) return _closeAudienceFow();
-    final box = _frameKey.currentContext?.findRenderObject();
-    if (box is! RenderBox || !box.attached || !box.hasSize) return;
-    final rect = box.localToGlobal(Offset.zero) & box.size;
     final manager = ref.read(overlayManagerProvider);
     _manager = manager;
-    final spec = _fowSpec;
-    if (spec != null && manager.contains(swingAudienceFowId)) {
-      if (spec.anchor != rect) {
-        spec.anchor = rect;
-        manager.requestRebuild();
-      }
-      return;
-    }
+    if (_fowSpec != null && manager.contains(swingAudienceFowId)) return;
     final next = _fowSpec = FowSpec(
       type: FowPanelType.widget,
       title: '届け先',
-      anchor: rect,
-      anchorBelow: true,
-      maxWidth: rect.width,
-      resizable: false,
-      showHandle: false,
-      initialHeightFactor: 0.9,
-      minHeightFactor: 0.05,
-      maxHeightFactor: 0.9,
+      columnIndex: _column,
+      initialHeightFactor: swingAudienceFowHeight,
+      minHeightFactor: 0.12,
+      maxHeightFactor: 0.6,
     );
     unawaited(manager.showFow<void>(
       id: swingAudienceFowId,
@@ -458,10 +498,8 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       ));
       ref.invalidate(mySwingsProvider);
       if (!mounted) return;
-      _leaving = true;
-      _closeAudienceFow();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Swing を出しました($ttl 時間で消えます)')));
-      context.pop();
+      _close();
     } on OrgateException catch (e) {
       setState(() => _error = e.message.contains('swing_limit') || e.toString().contains('429') ? '同時に出しておける Swing は 20 個までです' : '出せませんでした: ${e.message}');
     } catch (e) {
@@ -490,8 +528,8 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       appBar: RasqPageHeader(
         title: 'Swing を作る',
         showMore: false,
-        // プラグインの送る前の段から戻る = 選ぶ段へ。
-        onBack: ready && d.plugin && !_editing ? () => _setEditing(true) : null,
+        // プラグインの送る前の段から戻る = 選ぶ段へ。ほかは閉じる(カラムに重ねていれば元のカラムへ)。
+        onBack: ready && d.plugin && !_editing ? () => _setEditing(true) : _close,
         actions: [
           if (ready)
             Padding(
@@ -516,16 +554,18 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
                       ..._ttlSection(),
                       ?error,
                     ])
-                  : LayoutBuilder(
-                      builder: (_, box) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                        ?error,
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
-                          // 下に届け先の FOW を付けるので、枠は高さの半分ほど。
-                          child: SizedBox(height: (box.maxHeight * 0.52).clamp(200.0, 460.0), child: _previewFrame(d)),
+                  : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      ?error,
+                      // 全画面のメディア表示と同じ作り (D-413): 枠は届け先の FOW(と、ほかの FOW)の逆サイドへ寄って縮む。
+                      Expanded(
+                        child: FowAvoidingBox(
+                          manager: ref.watch(overlayManagerProvider),
+                          areaKey: swingMediaAreaKey,
+                          minFree: 160,
+                          child: Padding(padding: const EdgeInsets.all(RasqSpacing.md), child: _previewFrame(d)),
                         ),
-                      ]),
-                    ),
+                      ),
+                    ]),
     );
   }
 
@@ -551,7 +591,6 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       content = Image.memory(d.bytes!, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.image_outlined, color: Colors.white70, size: 40));
     }
     return ClipRRect(
-      key: _frameKey,
       borderRadius: BorderRadius.circular(RasqSizes.radiusLg),
       child: ColoredBox(
         key: const ValueKey('swing.preview'),

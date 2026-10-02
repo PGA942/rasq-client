@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 
-import '../../app/router.dart';
 import '../home/home_header.dart' show SwingAuthorBundle, swingBundleColor;
 import 'swing_providers.dart';
-import 'swing_viewer.dart' show swingRemainingLabel;
+import 'swing_viewer.dart' show openSwingViewer, swingRemainingLabel;
 
 /// Swing の角丸バナー (D-386、検索の結果): リング付きのアイコン + 名前 + @ハンドル、右に件数 / 残り時間、下に文字。
 /// 押すとその人の Swing のビューワー。
@@ -24,7 +22,7 @@ class SwingBanner extends StatelessWidget {
       child: InkWell(
         key: ValueKey('swing.banner.${s.authorAccountId}'),
         borderRadius: BorderRadius.circular(RasqSizes.radiusLg),
-        onTap: () => context.push(Routes.swing(s.authorAccountId)),
+        onTap: () => openSwingViewer(context, author: s.authorAccountId),
         child: Ink(
           padding: const EdgeInsets.all(RasqSpacing.sm),
           decoration: BoxDecoration(
