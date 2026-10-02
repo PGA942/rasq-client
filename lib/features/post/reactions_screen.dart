@@ -6,6 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../app/sort_menu.dart';
 import '../../shell/headers.dart';
 import '../home/post_row.dart';
@@ -100,7 +101,9 @@ class _Replies extends ConsumerWidget {
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
       data: (t) {
         // 返信タブもリプライだけ (D-071: 引用リノートは共有タブへ)。
-        final list = sortByReactions([for (final d in t.descendants) if (d.replyToId != null || d.replyTo != null) d], order, (p) => p.reactionTotal);
+        // チャイルドセーフ (D-407、指摘 #26): 返信にも、ホームと同じ保護者の表示制限を掛ける。
+        final gate = ref.watch(childGateProvider);
+        final list = sortByReactions(gate.filterPosts([for (final d in t.descendants) if (d.replyToId != null || d.replyTo != null) d]), order, (p) => p.reactionTotal);
         if (list.isEmpty) return const RasqEmptyView(title: '返信はありません');
         return ListView.separated(
           itemCount: list.length,

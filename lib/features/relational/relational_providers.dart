@@ -11,6 +11,8 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'package:plugin_runtime/plugin_runtime.dart' show WasmSnsSession;
 
+import '../child_safe/child_gate.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../learning/relational_cloud.dart';
 import '../../app/providers.dart';
 import '../plugins/slot_plugins.dart';
@@ -178,6 +180,8 @@ final eventSummaryProvider = FutureProvider.family<String?, String>((ref, eventI
 /// 紹介が古いゲストはそもそも取得しない = 追跡が自然に終わる(脱退)。
 final relationalGuestPostsProvider = FutureProvider<List<Post>>((ref) async {
   const maxGuests = 8;
+  // チャイルドセーフ (D-407、指摘 #26 / #27): ゲストの過去投稿も、ホームと同じ保護者の表示制限を通す。
+  final gate = ref.watch(childGateProvider);
   final session = ref.watch(currentSnsSessionProvider);
   final home = ref.watch(timelineProvider(TimelineKind.home)).value;
   if (session == null || home == null || home.posts.isEmpty) return const [];
@@ -212,7 +216,7 @@ final relationalGuestPostsProvider = FutureProvider<List<Post>>((ref) async {
         return [for (final q in page.items) if (q.createdAt.isAfter(since)) q];
       }).catchError((_) => const <Post>[]),
   ]);
-  return [for (final list in fetched) ...list];
+  return gate.filterPosts([for (final list in fetched) ...list]);
 });
 
 /// アカウントバンドル供給 (M5f / D-086): 関連TL は「バンドルに含まれる
@@ -221,6 +225,8 @@ final relationalGuestPostsProvider = FutureProvider<List<Post>>((ref) async {
 /// 同一投稿の重複は 著者キー+投稿id で除外(同一インスタンスの複数
 /// アカウントが同じ会話を見ているケース)。
 final bundleFolloweePostsProvider = FutureProvider<List<Post>>((ref) async {
+  // チャイルドセーフ (D-407、指摘 #26 / #27): ほかのアカウントのホームも、同じ保護者の表示制限を通す。
+  final gate = ref.watch(childGateProvider);
   final home = ref.watch(timelineProvider(TimelineKind.home)).value?.posts ?? const <Post>[];
   final sessions = ref.watch(sessionsProvider).value;
   final current = sessions?.current;
@@ -254,7 +260,7 @@ final bundleFolloweePostsProvider = FutureProvider<List<Post>>((ref) async {
   if (dropped.isNotEmpty) {
     Future.microtask(() => alternates.recordAll(dropped));
   }
-  return out;
+  return gate.filterPosts(out);
 });
 
 /// wasm エンジン (M5f / D-084) での構築。ML(SigLIP/Louvain)が効いている
@@ -269,8 +275,11 @@ final wasmConversationEventsProvider = FutureProvider<List<ConversationEvent>?>(
   final home = ref.watch(timelineProvider(TimelineKind.home)).value;
   if (home == null) return null;
   // 前段絞り込み (D-102) > バンドル供給 (D-086) > 現在分、の順で使う。
-  final followees = ref.watch(relationalInputPostsProvider).value ?? home.posts;
-  final guests = ref.watch(relationalGuestPostsProvider).value ?? const <Post>[];
+  // 入口でもう一度、保護者の表示制限 (D-407、指摘 #26 / #27): 前段絞り込み(ノードの取得)を含むどの供給源からも、
+  // 見せない投稿を会話イベントへ入れない。方針が変われば作り直す。
+  final gate = ref.watch(childGateProvider);
+  final followees = gate.filterPosts(ref.watch(relationalInputPostsProvider).value ?? home.posts);
+  final guests = gate.filterPosts(ref.watch(relationalGuestPostsProvider).value ?? const <Post>[]);
   try {
     return await buildEventsViaWasm(
       controller,
@@ -342,7 +351,9 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
   final home = ref.watch(timelineProvider(TimelineKind.home));
   final ml = ref.watch(relationalMlProvider).value;
   // 取得が終わるまではゲスト無しで組み、届いたら再構築(表示を待たせない)。
-  final guests = ref.watch(relationalGuestPostsProvider).value ?? const <Post>[];
+  // 入口でもう一度、保護者の表示制限 (D-407、指摘 #26 / #27)。方針が変われば作り直す。
+  final gate = ref.watch(childGateProvider);
+  final guests = gate.filterPosts(ref.watch(relationalGuestPostsProvider).value ?? const <Post>[]);
 
   // wasm エンジンの結果があればそれを使う (M5f / D-084 特別枠)。
   final wasmEvents = ref.watch(wasmConversationEventsProvider).value;
@@ -350,7 +361,7 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
 
   return home.whenData((h) {
     // 前段絞り込み (D-102) > バンドル供給 (D-086) > 現在分、の順で使う。
-    final followees = ref.watch(relationalInputPostsProvider).value ?? h.posts;
+    final followees = gate.filterPosts(ref.watch(relationalInputPostsProvider).value ?? h.posts);
     // クラウド版 (D-367): 貢献に同意した人は、しきい値の近くの結び付きをクラウドの判定で決め直す。
     final decisions = ref.watch(relationalCloudDecisionsProvider);
     final engine = ConversationEngine(settings: settings, semantic: ml?.postSimilarity, communityOf: ml?.communityOf, decisions: decisions);
@@ -365,3 +376,23 @@ final conversationEventsProvider = Provider<AsyncValue<List<ConversationEvent>>>
     return events;
   });
 });
+
+/// 会話イベントのうち、いまの保護者の表示制限で見せてよい投稿 (D-407、指摘 #26 / #27)。イベントは制限を通した投稿から
+/// 組むが、方針が変わった直後 / 古いイベント(画面遷移で渡したもの)にも、表示の直前でもう一度掛ける。
+/// ROOT(題・本文の元)が見せないものなら、イベントごと出さない(null)。
+List<Post>? childSafeEventPosts(ChildGate gate, ConversationEvent e) {
+  if (e.posts.isEmpty || gate.postHidden(e.root)) return null;
+  final visible = gate.filterPosts(e.posts);
+  return visible.isEmpty ? null : visible;
+}
+
+/// [posts] の参加メンバー(著者 + リノート主、[ConversationEvent.members] と同じ順)。
+List<UserSummary> eventMembersOf(List<Post> posts) {
+  final seen = <String>{};
+  return [
+    for (final p in posts) ...[
+      if (seen.add(p.author.key)) p.author,
+      if (p.repostedBy != null && seen.add(p.repostedBy!.key)) p.repostedBy!,
+    ],
+  ];
+}

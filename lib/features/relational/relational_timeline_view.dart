@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../text/inline_spans.dart';
 import '../clips/virtual_index.dart';
 import '../home/timeline_providers.dart';
@@ -329,17 +330,21 @@ class RelationalEventCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final e = event;
-    final members = e.members;
+    // チャイルドセーフ (D-407、指摘 #26 / #27): 見せない投稿は見出し / チップ / メンバー / 要約にも使わない。
+    final shown = childSafeEventPosts(ref.watch(childGateProvider), e);
+    if (shown == null) return const SizedBox.shrink();
+    final filtered = shown.length != e.posts.length;
+    final members = eventMembersOf(shown);
     final emojis = ref.watch(emojiCacheProvider);
     // 自分も会話に含まれるが、アイコンはタイルに出さない(全員自分なら残す)。
     final selfKey = ref.watch(currentUserProvider).key;
     final avatarUsers = [for (final u in members) if (u.key != selfKey) u];
     final shownUsers = avatarUsers.isEmpty ? members : avatarUsers;
     final others = members.length - 1;
-    final headline = sharedHeadline(e.posts);
-    final tags = topSharedLabels(e.posts);
-    // ASTell 要約(1 行。実行手段が無ければ ROOT 本文)。
-    final summary = ref.watch(eventSummaryProvider(e.id)).value;
+    final headline = sharedHeadline(shown);
+    final tags = topSharedLabels(shown);
+    // ASTell 要約(1 行。実行手段が無ければ ROOT 本文)。見せない投稿を含むイベントの要約は出さない。
+    final summary = filtered ? null : ref.watch(eventSummaryProvider(e.id)).value;
 
     return InkWell(
       onTap: () => context.push('/relational/event', extra: e),
@@ -365,7 +370,7 @@ class RelationalEventCard extends ConsumerWidget {
           ),
           Column(children: [
             Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-            Text('${e.posts.length}件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text('${shown.length}件', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ]),
         ]),
       ),

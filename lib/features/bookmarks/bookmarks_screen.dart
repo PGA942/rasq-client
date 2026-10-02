@@ -7,6 +7,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../shell/headers.dart';
 import '../clips/clip_providers.dart';
 import '../home/post_row.dart';
@@ -22,7 +23,9 @@ final favoritesProvider = FutureProvider.autoDispose<List<Post>>((ref) async {
   if (s == null) return const [];
   // ブックマークを持たない SNS(Bluesky など)は読まない (D-369): RASQ クリップだけを出す。
   if (bookmarkActionOf(s) == null) return const [];
-  final items = (await s.favorites(limit: 40)).items;
+  // チャイルドセーフ (D-407、指摘 #26): ブックマークにも、ホームと同じ保護者の表示制限を掛ける。
+  final gate = ref.watch(childGateProvider);
+  final items = gate.filterPosts((await s.favorites(limit: 40)).items);
   // 一覧の投稿はブックマーク済み (D-365): 🔖 / アクションが「外す」になるように状態を入れておく
   // (Misskey の投稿はお気に入り済みかを返さない)。
   final action = bookmarkActionOf(s);

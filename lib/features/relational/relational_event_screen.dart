@@ -6,6 +6,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../session/session_providers.dart';
 import '../../shell/headers.dart';
 import '../clips/virtual_index.dart';
@@ -80,12 +81,22 @@ class RelationalEventScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // 最新のエンジン結果に同じイベントがあればそちらを表示(浮上を反映)。
     final live = ref.watch(conversationEventsProvider).value?.where((e) => e.id == event.id).firstOrNull ?? event;
+    // チャイルドセーフ (D-407、指摘 #26 / #27): 開いている間に保護者の方針が変わっても、表示の直前で掛け直す。
+    // ROOT が見せないものならページごと出さない。見せない投稿は見出し / チップ / メンバー / 要約にも使わない。
+    final posts = childSafeEventPosts(ref.watch(childGateProvider), live);
+    if (posts == null) {
+      return const Scaffold(
+        appBar: RasqPageHeader(title: '投稿'),
+        body: RasqEmptyView(key: ValueKey('childSafe.eventHidden'), title: 'この投稿は表示できません', hint: '見守りの設定は保護者が決めています'),
+      );
+    }
+    final filtered = posts.length != live.posts.length;
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
     final selfKey = ref.watch(currentUserProvider).key;
-    final members = live.members;
+    final members = eventMembersOf(posts);
     final avatars = [for (final u in members) if (u.key != selfKey) u];
-    final summary = ref.watch(eventSummaryProvider(live.id)).value;
+    final summary = filtered ? null : ref.watch(eventSummaryProvider(live.id)).value;
     final others = members.length - 1;
 
     return Scaffold(
@@ -94,13 +105,13 @@ class RelationalEventScreen extends ConsumerWidget {
         EventStyleHeader(
           members: avatars.isEmpty ? members : avatars,
           title: others > 0 ? '${live.root.author.displayName}+$others人' : live.root.author.displayName,
-          caption: '${live.posts.length}件 ・ ${members.length}人',
-          headline: sharedHeadline(live.posts) ?? live.root.body.split('\n').first,
+          caption: '${posts.length}件 ・ ${members.length}人',
+          headline: sharedHeadline(posts) ?? live.root.body.split('\n').first,
           summary: summary,
-          chips: topSharedLabels(live.posts),
+          chips: topSharedLabels(posts),
         ),
         const Divider(),
-        for (final p in live.posts) ...[
+        for (final p in posts) ...[
           PostRow(
             post: p,
             actions: actions,
