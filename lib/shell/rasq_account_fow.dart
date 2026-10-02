@@ -11,6 +11,7 @@ import '../app/router.dart';
 import '../backend/notify_api.dart';
 import '../backend/orgate_client.dart';
 import '../backend/rasq_account.dart';
+import '../session/rasq_account_logout.dart';
 import '../session/sanctions.dart';
 import '../features/onboarding/rasq_register_screen.dart';
 import '../features/notifications/notifications_screen.dart';
@@ -201,33 +202,24 @@ class RasqAccountPanel extends ConsumerWidget {
           leave();
           context.push('${Routes.settings}/security');
         case 'logout':
-          final ok = await manager.showAlert(
+          // SNS アカウントをどうするか (D-409)。既定は「SNS アカウントもログアウトする」。ほかの RASQ アカウントへは移さない。
+          final sns = await askRasqLogoutSns(
+            ref.read,
             id: 'rasq.account.logout',
             title: 'RASQ アカウントからログアウト',
-            message: rasqDetail(context, 'この端末から RASQ アカウントを外します。SNS のログインは端末に残ります。', 'この端末の RASQ Central との接続を切ります。SNS のログインは端末に残り、「この端末のみ」のアカウントに戻ります。'),
+            message: 'この端末から RASQ アカウントを外します。',
             confirmText: 'ログアウト',
-            cancelText: 'キャンセル',
-            destructive: true,
           );
-          if (!ok) return;
-          // そのアカウントのトークンだけを捨てる(ほかの RASQ アカウントのログインは残る。D-316)。
+          if (sns == null || !context.mounted) return;
+          // 台帳が変わると、この FOW が作り直されることがある: コンテナから読む。
+          final read = ProviderScope.containerOf(context, listen: false).read;
+          // そのアカウントのトークンだけを捨てる(ほかの RASQ アカウントのログインは残る。D-316)。SNS はトークンを捨ててから。
           await ref.read(orgateAccountProvider.notifier).signOut(accountId: r.centralAccountId);
-          await ref.read(rasqAccountsProvider.notifier).detachCentral(r.id);
-          toast('RASQ アカウントからログアウトしました');
+          await releaseRasqAccount(read, r.id, sns: sns);
+          toast(sns == RasqLogoutSns.logout ? 'RASQ アカウントと、その SNS アカウントからログアウトしました' : 'RASQ アカウントからログアウトしました。SNS アカウントは「この端末のみ」に移しました');
         case 'delete':
           // アカウント削除 (D-241 / S-015)。学習へのデータ提供の撤回と、提供済みデータの削除も一緒に始まる
           // (「別に撤回しない限り残る」にはしない = ストアのアカウント削除要件)。
-          final ok = await manager.showAlert(
-            id: 'rasq.account.delete',
-            title: 'RASQ アカウントを削除',
-            message: 'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、AsTell のルームと共有、通知トークン、同意の記録を削除します。'
-                '「アルゴリズムとコミュニティへの貢献」に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n'
-                '元に戻せません。SNS のログインは端末に残り、「この端末のみ」のアカウントに戻ります。各 SNS 上のアカウントと投稿は消えません。',
-            confirmText: '削除する',
-            cancelText: 'キャンセル',
-            destructive: true,
-          );
-          if (!ok) return;
           // 切り替えたはずのアカウントと違う(ログインが切れている)なら、消さない。
           if (ref.read(orgateAccountProvider).value?.id != r.centralAccountId) {
             toast('このアカウントに、もう一度ログインしてから削除してください');
@@ -241,9 +233,21 @@ class RasqAccountPanel extends ConsumerWidget {
             toast('削除には、メールの確認コードが要ります。「アカウントの削除」から進めてください');
             return;
           }
+          // SNS アカウントをどうするか (D-409)。確認コードが要るアカウントは、セキュリティの画面で選ぶ(ここで 2 度聞かない)。
+          final sns = await askRasqLogoutSns(
+            ref.read,
+            id: 'rasq.account.delete',
+            title: 'RASQ アカウントを削除',
+            message: 'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、AsTell のルームと共有、通知トークン、同意の記録を削除します。'
+                '「アルゴリズムとコミュニティへの貢献」に同意していた場合は、提供の停止と提供済みデータの削除も同時に始まります。\n'
+                '元に戻せません。各 SNS 上のアカウントと投稿は消えません。',
+            confirmText: '削除する',
+          );
+          if (sns == null || !context.mounted) return;
+          final read = ProviderScope.containerOf(context, listen: false).read;
           try {
             await ref.read(orgateAccountProvider.notifier).deleteAccount();
-            await ref.read(rasqAccountsProvider.notifier).detachCentral(r.id);
+            await releaseRasqAccount(read, r.id, sns: sns);
             ref.invalidate(notifyStoreProvider);
             toast('RASQ アカウントを削除しました');
           } on OrgateException catch (e) {

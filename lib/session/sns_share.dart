@@ -182,6 +182,16 @@ class SnsShareStore {
     return fresh;
   }
 
+  /// [keys] をこの端末の「揃えた記録」から外す (D-409)。RASQ アカウントからのログアウトで、その SNS がこの端末の
+  /// そのアカウントから離れたとき。残すと、次にそのアカウントへログインしたとき「この端末でログアウトした」と数えて、
+  /// ほかの端末の SNS までログアウトさせてしまう。
+  Future<void> forgetKnown(String accountId, Iterable<String> keys) async {
+    final drop = keys.toSet();
+    final known = (await entry(accountId))['known'];
+    if (drop.isEmpty || known is! Map || !known.keys.any(drop.contains)) return;
+    await update(accountId, (e) => {...e, 'known': {for (final k in known.entries) if (!drop.contains(k.key)) k.key: k.value}});
+  }
+
   /// 新しくログインした: 次の見回りで、共有を求める。
   Future<void> markRequest(String accountId) => update(accountId, (e) => {...e, 'request': true});
 }

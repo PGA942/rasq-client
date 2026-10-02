@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
-import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../backend/account_security_api.dart';
@@ -12,6 +11,7 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
+import '../../session/rasq_account_logout.dart';
 import '../../session/sns_share.dart' show snsShareProvider;
 import 'sns_share_section.dart';
 
@@ -337,33 +337,38 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
     });
   }
 
+  /// 削除のときに SNS アカウントをどうするか (D-409)。確認コードを待つあいだも覚えておく。
+  RasqLogoutSns _deleteSns = RasqLogoutSns.logout;
+
   Future<void> _delete() async {
     final account = ref.read(orgateAccountProvider).value;
     if (account == null) return;
-    final ok = await ref.read(overlayManagerProvider).showAlert(
-          id: 'security.delete.confirm',
-          title: 'RASQ アカウントを削除',
-          message: 'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、AsTell のルームと共有、通知トークン、同意の記録を削除します。元に戻せません。',
-          confirmText: account.emailVerified ? '確認コードを送る' : '削除する',
-          cancelText: 'キャンセル',
-          destructive: true,
-        );
-    if (!ok || !mounted) return;
+    final sns = await askRasqLogoutSns(
+      ref.read,
+      id: 'security.delete.confirm',
+      title: 'RASQ アカウントを削除',
+      message: 'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、AsTell のルームと共有、通知トークン、同意の記録を削除します。元に戻せません。',
+      confirmText: account.emailVerified ? '確認コードを送る' : '削除する',
+    );
+    if (sns == null || !mounted) return;
+    _deleteSns = sns;
     if (account.emailVerified) return _sendConfirm(ConfirmAction.accountDelete);
     await _deleteWith(null);
   }
 
   Future<void> _deleteWith(String? code) async {
     setState(() => _busy = true);
+    // 閉じたあとは ref が使えないので、台帳はコンテナから読む。
+    final read = ProviderScope.containerOf(context, listen: false).read;
     try {
       // 消すのは、いま使っている Central のアカウント(D-316: 台帳の「最初の」Central のアカウントではない)。
       final central = ref.read(rasqAccountsProvider).value?.centralRecord(ref.read(orgateAccountProvider).value?.id);
       await ref.read(orgateAccountProvider.notifier).deleteAccount(code: code);
       _toast('RASQ アカウントを削除しました');
       // 先に閉じてから台帳を直す(ログインと同じ理由: ルーターの作り直しと重ねない)。
-      final ledger = ref.read(rasqAccountsProvider.notifier);
+      final sns = _deleteSns;
       if (mounted) context.pop();
-      if (central != null) await ledger.detachCentral(central.id);
+      if (central != null) await releaseRasqAccount(read, central.id, sns: sns);
     } on OrgateException catch (e) {
       _toast(accountSecurityMessage(e));
     } finally {

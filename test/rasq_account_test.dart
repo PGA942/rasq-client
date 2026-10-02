@@ -307,12 +307,92 @@ void main() {
     await tester.tap(find.text('RASQ アカウントを削除'));
     await tester.pumpAndSettle();
     expect(find.textContaining('「アルゴリズムとコミュニティへの貢献」に同意していた場合は'), findsOneWidget);
+    // SNS アカウントをどうするか (D-409): 既定は「SNS もログアウト」。ここでは「この端末のみ に移す」を選ぶ。
+    await tester.tap(find.byKey(const ValueKey('rasq.account.delete.sns.moveToLocal')));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('削除する'));
     await tester.pumpAndSettle();
     expect(central.calls, contains('DELETE /me?confirm=rasq_tester'));
     expect(container.read(orgateAccountProvider).value, isNull);
     expect(container.read(currentRasqAccountProvider)!.isCentral, isFalse);
     expect(container.read(currentRasqAccountProvider)!.sessionKeys.toSet(), {acc1.key, acc2.key});
+  });
+
+  /// D-409: … → ログアウト で、SNS アカウントをどうするかを選ぶ。どちらでも、ほかの Central の RASQ アカウントへは入らない。
+  Future<({ProviderContainer container, MemorySessionStorage storage})> pumpSignedIn(WidgetTester tester) async {
+    final central = fakeCentral();
+    final storage = seededStorage();
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p-${v.handle}', v, '${v.handle} の投稿')]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: central.client, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    final ledger = container.read(rasqAccountsProvider.notifier);
+    // ほかの Central のアカウント(SNS なし)と、いま使うアカウント(この端末の SNS を引き継いで作成)。
+    await ledger.attachCentral(centralAccountId: 'other', handle: 'other', displayName: 'ほかの人', inheritSessions: false);
+    await ledger.select(RasqAccountsNotifier.localId);
+    final account = (await container.read(orgateAccountProvider.notifier).createAccount())!;
+    await ledger.attachCentral(centralAccountId: account.id, handle: account.handle, displayName: account.displayName);
+    await tester.pumpAndSettle();
+    RasqSidebar.open(container.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('RASQ アカウント'));
+    await tester.pumpAndSettle();
+    final centralRow = find.ancestor(of: find.textContaining('rasq_tester'), matching: find.byType(RasqUserRow)).first;
+    await tester.ensureVisible(centralRow);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: centralRow, matching: find.byTooltip('アカウントの操作')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('ログアウト'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ログアウト'));
+    await tester.pumpAndSettle();
+    expect(find.text('SNS アカウントもログアウトする'), findsOneWidget);
+    expect(find.text('この端末のみ に移す'), findsOneWidget);
+    return (container: container, storage: storage);
+  }
+
+  Future<Set<String>> storedSessionKeys(SessionStorage storage) async =>
+      {for (final s in (jsonDecode((await storage.read(SessionsNotifier.storageKey))!) as Map)['sessions'] as List) AccountSession.fromJson((s as Map).cast()).account.key};
+
+  testWidgets('RASQ アカウントからログアウト (D-409): 既定は SNS アカウントもログアウト。端末から消え、ほかの RASQ アカウントにも入らない', (tester) async {
+    final (:container, :storage) = await pumpSignedIn(tester);
+    await tester.tap(find.byKey(const ValueKey('rasq.account.logout.confirm')));
+    await tester.pumpAndSettle();
+    expect(container.read(orgateAccountProvider).value, isNull);
+    final ledger = container.read(rasqAccountsProvider).value!;
+    expect(ledger.accounts.any((a) => a.centralAccountId == 'acc-1'), isFalse);
+    expect(ledger.accounts.firstWhere((a) => a.id == 'central-other').sessionKeys, isEmpty);
+    expect(ledger.accounts.expand((a) => a.sessionKeys), isEmpty);
+    expect(await storedSessionKeys(storage), isEmpty);
+    // 「この端末のみ」に SNS が無く、ほかのアカウントにもトークンが無い → 入口へ。
+    expect(ledger.current!.id, RasqAccountsNotifier.localId);
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+  });
+
+  testWidgets('RASQ アカウントからログアウト (D-409): 「この端末のみ に移す」なら SNS は「この端末のみ」へ。ほかの RASQ アカウントには入らない', (tester) async {
+    final (:container, :storage) = await pumpSignedIn(tester);
+    await tester.tap(find.byKey(const ValueKey('rasq.account.logout.sns.moveToLocal')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rasq.account.logout.confirm')));
+    await tester.pumpAndSettle();
+    final ledger = container.read(rasqAccountsProvider).value!;
+    expect(ledger.current!.id, RasqAccountsNotifier.localId);
+    expect(ledger.current!.sessionKeys.toSet(), {acc1.key, acc2.key});
+    expect(ledger.accounts.firstWhere((a) => a.id == 'central-other').sessionKeys, isEmpty);
+    expect(await storedSessionKeys(storage), {acc1.key, acc2.key});
+    expect((await container.read(sessionsProvider.future)).sessions.length, 2);
   });
 
   testWidgets('登録ページで「置き換えない」(D-241): SNS アカウントは「この端末のみ」に残り、サーバーのバンドルは消さない。キャンセルなら登録しない', (tester) async {
