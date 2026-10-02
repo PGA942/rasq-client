@@ -37,13 +37,14 @@ class RasqHomeHeader extends StatelessWidget implements PreferredSizeWidget {
       );
 }
 
-/// しまったホームヘッダー (D-377): バーもタブ行も無く、TL の上に**浮かべて**左のアイコン・新着(AsTell / Swing、1 分だけ)・
-/// 右端の ↓(ヘッダーを出す)だけ。
+/// しまったホームヘッダー (D-377): バーもタブ行も無く、TL の上に**浮かべて**左のアイコンと新着(AsTell / Swing、1 分だけ)だけ。
+/// D-410: 右端の ↓ は無くし、**浮かべたアイコンを押すとヘッダーを戻す**(しまっている間、アイコンはサイドバーを開かない)。
 class RasqFloatingHomeHeader extends StatelessWidget {
-  const RasqFloatingHomeHeader({super.key, required this.me, this.onAvatarTap, this.arrivals, required this.onExpand});
+  const RasqFloatingHomeHeader({super.key, required this.me, this.arrivals, required this.onExpand});
   final UserSummary me;
-  final VoidCallback? onAvatarTap;
   final Widget? arrivals;
+
+  /// アイコンを押したとき(ヘッダーを戻す)。
   final VoidCallback onExpand;
 
   @override
@@ -57,10 +58,9 @@ class RasqFloatingHomeHeader extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
           child: Row(children: [
-            float(_AvatarButton(me: me, onTap: onAvatarTap)),
+            float(Tooltip(message: 'ヘッダーを戻す', child: _AvatarButton(key: const ValueKey('home.header.expand'), me: me, onTap: onExpand, semanticsLabel: 'ヘッダーを戻す'))),
             const SizedBox(width: RasqSpacing.sm),
             Expanded(child: Align(alignment: Alignment.centerLeft, child: arrivals ?? const SizedBox.shrink())),
-            float(RasqIconButton(key: const ValueKey('home.header.expand'), icon: Icons.keyboard_arrow_down, onPressed: onExpand, tooltip: 'ヘッダーを出す')),
           ]),
         ),
       ),
@@ -195,14 +195,15 @@ class RasqPageHeader extends StatelessWidget implements PreferredSizeWidget {
 }
 
 class _AvatarButton extends StatelessWidget {
-  const _AvatarButton({required this.me, this.onTap});
+  const _AvatarButton({super.key, required this.me, this.onTap, this.semanticsLabel = 'サイドバーを開く'});
   final UserSummary me;
   final VoidCallback? onTap;
+  final String semanticsLabel;
 
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'サイドバーを開く',
+        label: semanticsLabel,
         child: InkResponse(
           onTap: onTap,
           radius: 24,

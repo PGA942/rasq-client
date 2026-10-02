@@ -81,7 +81,7 @@ class HomeScreen extends ConsumerWidget {
         ),
     ];
     final initial = kinds.indexOf(bundle ? TimelineKind.bundle : TimelineKind.home).clamp(0, kinds.length - 1);
-    // ヘッダー (D-377): 右上の ↑ でしまう(バーとタブ行を無くし、アイコン・新着・↓ だけを浮かべる)。
+    // ヘッダー (D-377): 右上の ↑ でしまう(バーとタブ行を無くし、アイコン・新着だけを浮かべる。D-410: アイコンで戻す)。
     final collapsed = ref.watch(homeHeaderCollapsedProvider);
     final astellInHeader = !(settingValue(ref, 'astell.tiles', 'headerStrip', true) == false || window || !gate.featureAllowed('astell.join'));
     void openSidebar() => RasqShell.openSidebar(context, ref);
@@ -162,7 +162,7 @@ class HomeScreen extends ConsumerWidget {
               child: RasqFloatingHomeHeader(
                 key: const ValueKey('home.header.floating'),
                 me: me,
-                onAvatarTap: openSidebar,
+                // D-410: しまっている間は、アイコンを押すとヘッダーを戻す(↓ は無くした)。
                 arrivals: HomeHeaderArrivals(astell: astellInHeader),
                 onExpand: () => setHomeHeaderCollapsed(ref, false),
               ),

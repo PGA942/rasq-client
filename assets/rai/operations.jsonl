@@ -182,7 +182,7 @@
 {"id": "swing-view", "index": "Swing を見る", "tags": ["Swing", "Swing を見る", "青いリング", "白いリング", "ストーリーを見る"], "steps": [{"fn": "swing.view", "say": "ホームのヘッダーで、青いリングの付いたアイコンを押すと見られます(見終えると白いリングになります)"}]}
 {"id": "swing-control", "index": "Swing を止める / 次へ進む", "tags": ["Swing", "Swing を一時停止", "次の Swing", "前の Swing", "Swing をスキップ"], "steps": [{"fn": "swing.control", "say": "真ん中を押すと一時停止、左右を押すかスライドすると前 / 次の Swing へ進みます"}]}
 {"id": "swing-plugin", "index": "プラグインの Swing から次へ進む", "tags": ["Swing", "プラグインの Swing", "全画面から縮小"], "steps": [{"fn": "swing.pluginShrink", "say": "プラグインの Swing は「全画面から縮小」を押すと止まり、スワイプで次へ進めます"}]}
-{"id": "header-collapse", "index": "ホームのヘッダーをしまう", "tags": ["ヘッダーをしまう", "ヘッダーを隠す", "ヘッダーを畳む", "画面を広く"], "steps": [{"fn": "home.headerCollapse", "say": "右上の「↑」を押すとヘッダーがしまわれます"}, {"fn": "home.headerExpand", "say": "戻すときは右上の「↓」を押します"}]}
+{"id": "header-collapse", "index": "ホームのヘッダーをしまう", "tags": ["ヘッダーをしまう", "ヘッダーを隠す", "ヘッダーを畳む", "画面を広く"], "steps": [{"fn": "home.headerCollapse", "say": "右上の「↑」を押すとヘッダーがしまわれます"}, {"fn": "home.headerExpand", "say": "戻すときは左上に浮かんでいるアイコンを押します"}]}
 {"id": "settings-search", "index": "設定を検索する", "tags": ["設定を探す", "設定の場所", "どこで設定", "設定の検索"], "base": "settings", "branchAt": 1, "steps": [{"fn": "settings.search", "say": "「全ての設定」の上の検索欄に言葉を入れると、当たった設定が出ます。欄を押すと節で絞れます", "route": "/settings"}]}
 {"id": "astell-search", "index": "AsTell や Swing を検索する", "tags": ["AsTell", "ルームを探す", "VC を探す", "Swing を探す", "ルームの検索", "重ねて絞る"], "steps": [{"fn": "astell.search", "say": "AsTell のページの上の検索欄に言葉を入れます。Enter で語を残して、さらに言葉を足すと重ねて絞れます", "route": "/vc"}]}
 {"id": "tl-share", "index": "タイムラインを他のアカウントでも使う", "tags": ["タイムラインを共有", "全アカウント", "他のアカウントでも", "タブを共有"], "steps": [{"fn": "timeline.share", "say": "タイムライン設定の「…」から「すべてのアカウントで共有」を選びます(作ったタブだけ)"}]}

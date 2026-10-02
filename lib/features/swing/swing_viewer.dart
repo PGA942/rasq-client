@@ -39,11 +39,17 @@ import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvide
 /// - **プラグイン**(ページ型、surface `swing`、契約 v0.19): 全画面で動かし、その間は**スワイプで移れない**。
 ///   「全画面から縮小」を押すと、ぼかして止め(`page.event paused`)、スワイプで移れるようにする。縮小したものを押すと
 ///   全画面に戻る(`resumed`)。
+///
+/// D-410: [mine] = **自分の Swing**(ヘッダーの自分の顔から)。`GET /me/swings` の並び(古い順)で、広告・見終えの記録・
+/// 通報は無し、作った人だけが見られる**見た人の数**(`viewCount`)を出す。
 class SwingViewerScreen extends ConsumerStatefulWidget {
-  const SwingViewerScreen({super.key, this.startAuthor});
+  const SwingViewerScreen({super.key, this.startAuthor, this.mine = false});
 
   /// 作った人の accountId。
   final String? startAuthor;
+
+  /// 自分の Swing を見る (D-410)。
+  final bool mine;
 
   static const adEvery = 5;
 
@@ -145,8 +151,10 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   @override
   void initState() {
     super.initState();
-    final feed = swingViewerQueue(ref.read(swingFeedProvider).value ?? const [], startAuthor: widget.startAuthor);
-    final ads = ref.read(exportAdNetworkProvider) != null && ref.read(exportAdAllowedProvider);
+    final feed = widget.mine
+        ? ([...?ref.read(mySwingsProvider).value]..sort((a, b) => a.createdAt.compareTo(b.createdAt)))
+        : swingViewerQueue(ref.read(swingFeedProvider).value ?? const [], startAuthor: widget.startAuthor);
+    final ads = !widget.mine && ref.read(exportAdNetworkProvider) != null && ref.read(exportAdAllowedProvider);
     _items = interleaveAds(feed, ads: ads);
     _pages = PageController(initialPage: _index);
     _startClock();
@@ -204,7 +212,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   void _seen(int i) {
     final s = (i >= 0 && i < _items.length) ? _items[i].swing : null;
-    if (s != null) unawaited(ref.read(swingFeedProvider.notifier).markSeen(s.id));
+    if (s != null && !widget.mine) unawaited(ref.read(swingFeedProvider.notifier).markSeen(s.id));
   }
 
   void _onPage(int i) {
@@ -248,7 +256,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
         backgroundColor: Colors.black,
         body: _items.isEmpty
             ? Stack(children: [
-                const RasqEmptyView(key: ValueKey('swing.viewer.empty'), title: 'Swing はありません', hint: 'フォローしている人や、RASQ リストに入れてくれた人の Swing がここに流れます'),
+                widget.mine
+                    ? const RasqEmptyView(key: ValueKey('swing.viewer.empty'), title: '出している Swing はありません', hint: '＋ を上へスワイプすると Swing を作れます')
+                    : const RasqEmptyView(key: ValueKey('swing.viewer.empty'), title: 'Swing はありません', hint: 'フォローしている人や、RASQ リストに入れてくれた人の Swing がここに流れます'),
                 Positioned(top: 8, right: 8, child: SafeArea(child: RasqIconButton(icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: _close))),
               ])
             : Stack(children: [
@@ -273,7 +283,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                     replyBar: _replyBarShown(s),
                     covered: _coveredNow(s),
                     onReveal: () => _reveal(s),
-                    onReport: ref.watch(swingApiProvider) == null ? null : () => _report(s),
+                    onReport: widget.mine || ref.watch(swingApiProvider) == null ? null : () => _report(s),
+                    viewCount: widget.mine ? s.viewCount : null,
                     clock: _clock,
                     position: '${i + 1} / ${_items.length}',
                     onClose: _close,
@@ -318,7 +329,10 @@ String swingRemainingLabel(Duration d) {
 }
 
 class _SwingPage extends StatelessWidget {
-  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.replyBar = false, this.covered = false, this.onReveal, this.onReport});
+  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.replyBar = false, this.covered = false, this.onReveal, this.onReport, this.viewCount});
+
+  /// 自分の Swing の見た人の数 (D-410)。null = 出さない(ほかの人の Swing / 古い Central)。
+  final int? viewCount;
 
   /// CW / センシティブで覆っている (D-395)。
   final bool covered;
@@ -398,6 +412,12 @@ class _SwingPage extends StatelessWidget {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                       Text(swing.author.displayName, key: const ValueKey('swing.author'), style: RasqTypography.bodySmall.copyWith(color: Colors.white, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
                       Text('${swingRemainingLabel(swing.remaining(DateTime.now()))} ・ $position', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+                      if (viewCount != null)
+                        Row(key: const ValueKey('swing.viewCount'), mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Icons.visibility_outlined, size: 14, color: Colors.white70),
+                          const SizedBox(width: 4),
+                          Text('見た人 $viewCount 人', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+                        ]),
                     ]),
                   ),
                   if (onReport != null) RasqIconButton(key: const ValueKey('swing.report'), icon: Icons.flag_outlined, tooltip: '通報', color: Colors.white, onPressed: onReport),

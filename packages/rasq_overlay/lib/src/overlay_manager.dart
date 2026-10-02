@@ -112,6 +112,9 @@ class OverlayManager extends ChangeNotifier {
 
   bool _disposed = false;
 
+  /// 捨てたあとか(画面の dispose のあとで閉じる呼び出しが、アプリごと捨てたあとに来ることがある)。
+  bool get disposed => _disposed;
+
   @override
   void dispose() {
     _disposed = true;

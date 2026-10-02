@@ -189,6 +189,9 @@ abstract final class Routes {
   static String swing([String? author]) => author == null ? '/swing' : '/swing?author=${Uri.encodeQueryComponent(author)}';
   static const swingNew = '/swing/new';
 
+  /// 自分の Swing のビューワー (D-410)。
+  static const mySwings = '/swing?mine=1';
+
   /// プラグインの検索画面 (D-353)。
   static String storeSearch([String q = '']) => q.isEmpty ? '/store/search' : '/store/search?q=${Uri.encodeQueryComponent(q)}';
   static String storeInstalledPlugin(String id) => '/store/installed/${Uri.encodeComponent(id)}';
@@ -438,7 +441,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: '/custom/page/:id',
               parentNavigatorKey: _appNavigatorKey,
               builder: (_, s) => CustomPageScreen(key: ValueKey(s.uri.toString()), args: CustomPageArgs.fromState(Uri.decodeComponent(s.pathParameters['id']!), s.uri.queryParameters))),
-          GoRoute(path: '/swing', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SwingViewerScreen(startAuthor: s.uri.queryParameters['author'])),
+          GoRoute(path: '/swing', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SwingViewerScreen(startAuthor: s.uri.queryParameters['author'], mine: s.uri.queryParameters['mine'] == '1')),
           GoRoute(path: Routes.swingNew, parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SwingComposerScreen(draft: s.extra is SwingDraft ? s.extra as SwingDraft : null)),
           GoRoute(path: '/custom/invite/:code', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => CustomInviteScreen(code: Uri.decodeComponent(s.pathParameters['code']!))),
           GoRoute(path: '/store/search', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => StoreSearchScreen(initialQuery: s.uri.queryParameters['q'] ?? '')),

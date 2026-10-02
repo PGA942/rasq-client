@@ -79,12 +79,39 @@ final swingPackageFetcherProvider = Provider<Future<Uint8List> Function(Uri url)
 
 final swingFeedProvider = AsyncNotifierProvider<SwingFeed, List<Swing>>(SwingFeed.new);
 
-/// 自分が出している Swing(作る画面の下に出す)。
-final mySwingsProvider = FutureProvider.autoDispose<List<Swing>>((ref) async {
-  final api = ref.watch(swingApiProvider);
-  if (api == null) return const [];
-  return api.mine();
-});
+/// 自分が出している Swing (D-410): ヘッダーの Swing の並びの先頭に自分の顔で出す(`GET /me/swings`、届け先と見た人の数つき)。
+/// フィードと同じ間隔で読み直し、期限の過ぎたものは手元でも外す。作ったら読み直す(`ref.invalidate`)。
+class MySwings extends AsyncNotifier<List<Swing>> {
+  /// 期限を比べる時計(テストで差し替える)。
+  static DateTime Function() now = DateTime.now;
+
+  Timer? _timer;
+
+  @override
+  Future<List<Swing>> build() async {
+    final api = ref.watch(swingApiProvider);
+    _timer?.cancel();
+    ref.onDispose(() => _timer?.cancel());
+    if (api == null) return const [];
+    final every = SwingFeed.interval;
+    if (every != null) _timer = Timer.periodic(every, (_) => unawaited(refresh()));
+    return _live(await api.mine());
+  }
+
+  List<Swing> _live(List<Swing> all) => [for (final s in all) if (s.expiresAt.isAfter(now())) s];
+
+  Future<void> refresh() async {
+    final api = ref.read(swingApiProvider);
+    if (api == null) return;
+    try {
+      state = AsyncData(_live(await api.mine()));
+    } catch (_) {
+      // 読めないときは前のまま。
+    }
+  }
+}
+
+final mySwingsProvider = AsyncNotifierProvider<MySwings, List<Swing>>(MySwings.new);
 
 /// Swing を出している人(見ていないものがある人が先、その中は新しい順)と、見ていない数。
 typedef SwingAuthorEntry = ({Swing first, int unseen, int total});

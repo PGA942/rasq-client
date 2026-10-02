@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -64,9 +65,12 @@ class ProMediaEditorArgs {
 
 /// 下段バーに足すボタン。キーは `media.pro.bar.extra:<id>`。
 class ProEditorExtraAction {
-  const ProEditorExtraAction({required this.id, required this.label, required this.icon, required this.onTap, this.onLongPress});
+  const ProEditorExtraAction({required this.id, required this.label, required this.icon, required this.onTap, this.onLongPress, this.liveLabel});
   final String id;
   final String label;
+
+  /// 変わる名前(Swing の「24 時間で消える」など、D-410)。あれば [label] の代わりに出し、変わったら描き直す。
+  final ValueListenable<String>? liveLabel;
   final IconData icon;
   final void Function(ProEditorHandle editor) onTap;
 
@@ -1118,6 +1122,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
             return onLongPress == null ? button : GestureDetector(onLongPress: () => onLongPress(ctx), child: button);
           },
         );
+    Widget extra(ProEditorExtraAction x, String label) => item('extra:${x.id}', label, Icon(x.icon, size: 22, color: RasqColors.accent), (_) => x.onTap(_ProEditorHandle(editor, context, _isVideo)),
+        color: RasqColors.accent, onLongPress: x.onLongPress == null ? null : (_) => x.onLongPress!(_ProEditorHandle(editor, context, _isVideo)));
     final plugins = _pluginActions;
     _applyAutoFilters(editor, plugins);
     final merged = mergePluginActions(
@@ -1145,8 +1151,7 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 for (final x in widget.args.extraActions)
-                  item('extra:${x.id}', x.label, Icon(x.icon, size: 22, color: RasqColors.accent), (_) => x.onTap(_ProEditorHandle(editor, context, _isVideo)),
-                      color: RasqColors.accent, onLongPress: x.onLongPress == null ? null : (_) => x.onLongPress!(_ProEditorHandle(editor, context, _isVideo))),
+                  if (x.liveLabel case final live?) ValueListenableBuilder<String>(valueListenable: live, builder: (_, label, _) => extra(x, label)) else extra(x, x.label),
                 for (final e in entries)
                   switch (e) {
                     SingleActionEntry() => item(
