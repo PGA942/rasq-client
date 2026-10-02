@@ -213,6 +213,25 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
     await _persist(_view(rest, currentKey: cur.currentKey == account.key ? null : cur.currentKey, bundleView: cur.bundleView, ledger: ref.read(rasqAccountsProvider).value));
   }
 
+  /// RASQ アカウントからのログアウトで、その SNS アカウントもログアウトする (D-409): [keys](`AccountId.key`)の
+  /// セッションを閉じ、台帳と端末の保存から消す。[remove] をまとめて行うもの(保存は 1 回)。
+  Future<void> removeKeys(Iterable<String> keys) async {
+    final drop = keys.toSet();
+    if (drop.isEmpty) return;
+    final cur = state.value ?? await future;
+    final registry = ref.read(pluginRegistryProvider);
+    final ledger = ref.read(rasqAccountsProvider.notifier);
+    for (final s in cur.allSessions) {
+      if (drop.contains(s.account.key)) await registry.closeSession(s.account);
+    }
+    for (final k in drop) {
+      await ledger.removeSessionKey(k);
+    }
+    final rest = [for (final s in cur.allSessions) if (!drop.contains(s.account.key)) s];
+    if (rest.length == cur.allSessions.length) return;
+    await _persist(_view(rest, currentKey: drop.contains(cur.currentKey) ? null : cur.currentKey, bundleView: cur.bundleView, ledger: ref.read(rasqAccountsProvider).value));
+  }
+
   /// SNS のアクセストークンの端末間共有 (D-319): ほかの端末のログイン [logins] を取り込み(同じアカウントは置き換え)、
   /// ほかの端末でのログアウト [logouts](`AccountId.key`)を反映する。取り込んだものは、その Central のアカウント
   /// ([centralAccountId]) の台帳の行に所属させる。開いているセッションは閉じる(新しいトークンで開き直す)。

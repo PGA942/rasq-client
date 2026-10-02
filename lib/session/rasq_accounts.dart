@@ -253,17 +253,40 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
     return rec;
   }
 
-  /// Central からログアウト: 台帳から外し、その SNS セッションは「この端末のみ」
-  /// へ戻す(端末から SNS ログインは消えない)。
-  Future<void> detachCentral(String id) async {
+  /// Central からログアウト / 削除: 台帳から外す。
+  ///
+  /// [keepSessions] = true(「この端末のみ に移す」)なら、その SNS セッションは「この端末のみ」の行へ移す。false
+  /// (「SNS アカウントもログアウトする」、D-409)なら移さない(セッションそのものは呼ぶ側が先に端末から消す —
+  /// [releaseRasqAccount])。どちらでも、**ほかの Central のアカウントの行へは入れない**。
+  ///
+  /// 外したのがいまのアカウントなら、次は (1)「この端末のみ」に SNS があればそこ、(2) 無ければ、この端末がトークンを
+  /// 持っている([signedInCentral])ほかの Central のアカウント(その行の SNS だけが見える)、(3) どちらも無ければ
+  /// 「この端末のみ」(SNS が無いので入口 = オンボーディングへ)。
+  Future<void> detachCentral(String id, {bool keepSessions = true, Set<String> signedInCentral = const {}}) async {
     final cur = _cur;
     final gone = cur.accounts.where((a) => a.id == id).firstOrNull;
     if (gone == null) return;
-    var rest = [for (final a in cur.accounts) if (a.id != id) a];
-    final local = rest.where((a) => a.id == localId).firstOrNull ?? RasqAccountRecord(id: localId, kind: RasqAccountKind.local, createdAt: DateTime.now());
-    final merged = local.copyWith(sessionKeys: {...local.sessionKeys, ...gone.sessionKeys}.toList());
-    rest = [for (final a in rest) if (a.id != localId) a, merged];
-    await _persist(cur.copyWith(accounts: rest, currentId: cur.currentId == id ? localId : cur.currentId));
+    final wasCurrent = cur.current?.id == id;
+    final rest = [for (final a in cur.accounts) if (a.id != id) a];
+    var local = rest.where((a) => a.id == localId).firstOrNull;
+    if (keepSessions && gone.sessionKeys.isNotEmpty) {
+      local = (local ?? RasqAccountRecord(id: localId, kind: RasqAccountKind.local, createdAt: DateTime.now()))
+          .copyWith(sessionKeys: {...?local?.sessionKeys, ...gone.sessionKeys}.toList());
+    }
+    var next = cur.currentId;
+    if (wasCurrent) {
+      final other = rest.where((a) => a.isCentral && signedInCentral.contains(a.centralAccountId)).firstOrNull;
+      if (local != null && local.sessionKeys.isNotEmpty) {
+        next = localId;
+      } else if (other != null) {
+        next = other.id;
+      } else {
+        local ??= RasqAccountRecord(id: localId, kind: RasqAccountKind.local, createdAt: DateTime.now());
+        next = localId;
+      }
+    }
+    final accounts = [for (final a in rest) if (a.id != localId) a, ?local];
+    await _persist(cur.copyWith(accounts: accounts, currentId: next));
   }
 
   Future<void> select(String id) async {

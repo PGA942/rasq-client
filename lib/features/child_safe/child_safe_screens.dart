@@ -9,6 +9,7 @@ import '../../backend/rasq_account.dart';
 import '../../shell/headers.dart';
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../settings/account_security_screen.dart' show accountDeviceLabel;
+import '../../session/rasq_account_logout.dart';
 import 'child_gate.dart';
 import 'child_safe_api.dart';
 import 'child_safe_links.dart';
@@ -415,13 +416,15 @@ class ChildSafePendingScreen extends ConsumerWidget {
 }
 
 /// 設定待ちの画面の「ログアウト」: RASQ アカウントからログアウトして台帳から外す。まだ守る制限が無ければ控えも消える。
+/// SNS アカウントは既定(D-409: 「SNS アカウントもログアウトする」)で — 見守りの設定待ちの端末に、ほかのアカウントの
+/// SNS を残さない。
 Future<void> childSafeSignOut(WidgetRef ref) async {
-  final ledger = ref.read(rasqAccountsProvider.notifier);
   // いま使っている Central のアカウントからだけ出る(D-316: ほかの Central のアカウントのトークンは残す)。
   final me = ref.read(orgateAccountProvider).value;
   final central = ref.read(rasqAccountsProvider).value?.centralRecord(me?.id);
   final childSafe = ref.read(childSafeProvider.notifier);
+  final read = ProviderScope.containerOf(ref.context, listen: false).read;
   await ref.read(orgateAccountProvider.notifier).signOut(accountId: me?.id);
-  if (central != null) await ledger.detachCentral(central.id);
+  if (central != null) await releaseRasqAccount(read, central.id, sns: RasqLogoutSns.logout);
   await childSafe.refresh();
 }
