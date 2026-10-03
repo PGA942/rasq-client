@@ -191,12 +191,19 @@ class OrgateClient {
     return (body as Map?)?.cast<String, Object?>() ?? const {};
   }
 
-  /// multipart/form-data の POST(オンボーディングの「好きな画像から探す」など)。[files] = 欄の名前 → (バイト列, MIME, ファイル名)。応答は JSON。
-  Future<Map<String, Object?>> postMultipart(String path, {Map<String, String> fields = const {}, Map<String, ({List<int> bytes, String contentType, String filename})> files = const {}}) async {
+  /// multipart/form-data の POST(オンボーディングの「好きな画像から探す」など)。[files] = 欄の名前 → (バイト列, MIME, ファイル名)。
+  /// 同じ名前の欄を何枚も送るとき(画面の読み取りの `frames`、D-416)は [repeated](この順に送る)。応答は JSON。
+  Future<Map<String, Object?>> postMultipart(String path,
+      {Map<String, String> fields = const {},
+      Map<String, ({List<int> bytes, String contentType, String filename})> files = const {},
+      List<({String field, List<int> bytes, String contentType, String filename})> repeated = const []}) async {
     final req = http.MultipartRequest('POST', _url(path))..headers.addAll(_headers());
     req.fields.addAll(fields);
     for (final e in files.entries) {
       req.files.add(http.MultipartFile.fromBytes(e.key, e.value.bytes, filename: e.value.filename, contentType: http_parser.MediaType.parse(e.value.contentType)));
+    }
+    for (final f in repeated) {
+      req.files.add(http.MultipartFile.fromBytes(f.field, f.bytes, filename: f.filename, contentType: http_parser.MediaType.parse(f.contentType)));
     }
     return ((await _send(req)) as Map?)?.cast<String, Object?>() ?? const {};
   }
