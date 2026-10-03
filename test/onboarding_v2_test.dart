@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,14 +9,19 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:image/image.dart' as img;
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/backend/onboarding_discover_api.dart' show discoverFramesMax, discoverFramesMaxTotalBytes;
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart' show orgateTokenHolderProvider;
 import 'package:rasq_client/features/child_safe/child_safe_screens.dart' show ChildLoginScreen;
 import 'package:rasq_client/features/collections/rasq_collection_screen.dart';
 import 'package:rasq_client/features/login/sns_login_screen.dart';
+import 'package:rasq_client/features/settings/developer_mode.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart' show settingsAreaProvider;
+import 'package:rasq_client/features/onboarding/discover_image_crop.dart';
 import 'package:rasq_client/features/onboarding/onboarding_feed.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
 import 'package:rasq_client/features/onboarding/onboarding_steps.dart';
@@ -210,17 +216,26 @@ void main() {
       expect(find.byType(DiscoverContentScreen), findsOneWidget);
     });
 
-    testWidgets('画像から探す: 選んだ画像を multipart で送り、探す言葉・切り抜き・リスト・サーバーを出す', (tester) async {
+    testWidgets('画像から探す: 選んだ画像を(囲まずに決定 = 全体)multipart の frames で送り、探す言葉・切り抜き・リスト・サーバーを出す', (tester) async {
       final central = _FakeCentral();
       await openDiscover(tester, central, sub: Routes.snsDiscoverContent, overrides: [
-        discoverImagePickerProvider.overrideWithValue(({required bool camera}) async => _png),
+        discoverImagePickerProvider.overrideWithValue(({required bool camera, required int limit}) async => [_png]),
+        discoverImageToolsProvider.overrideWithValue(const DiscoverImageTools.inline()),
       ]);
       await tester.tap(find.byKey(const ValueKey('discover.content.pick')));
       await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('discover.editor')), findsOneWidget, reason: '追加した画像は「囲って検索」を開く');
+      await tester.tap(find.byKey(const ValueKey('discover.editor.done')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('discover.content.search')));
+      await tester.pumpAndSettle();
       final sent = central.lastContent!;
       expect(sent.contentType, startsWith('multipart/form-data'));
-      expect(sent.body, contains('name="image"'));
-      expect(sent.body, contains('content-type: image/png'));
+      expect(sent.body, isNot(contains('name="image"')));
+      expect('name="frames"'.allMatches(sent.body).length, 1);
+      expect(sent.body, contains('content-type: image/jpeg'), reason: '端末で JPEG にしてから送る');
+      expect(sent.body, contains('picker'));
+      await tester.scrollUntilVisible(find.byKey(const ValueKey('discover.serverHit.misskey.io')), 200, scrollable: find.descendant(of: find.byKey(const ValueKey('discover.content.list')), matching: find.byType(Scrollable)).first);
       expect(find.byKey(const ValueKey('discover.content.image')), findsOneWidget);
       expect(find.byKey(const ValueKey('discover.content.query')), findsOneWidget);
       expect(find.byKey(const ValueKey('discover.keyword.猫')), findsOneWidget);
@@ -550,6 +565,220 @@ void main() {
     });
   });
 
+  group('囲って検索 (D-418)', () {
+    Future<_PickHarness> openPicker(WidgetTester tester, List<Uint8List> images, {List<Override> overrides = const []}) async {
+      final h = _PickHarness(images);
+      final central = _FakeCentral();
+      final c = await _pump(tester, central, overrides: [
+        discoverImagePickerProvider.overrideWithValue(({required bool camera, required int limit}) async {
+          h.limits.add(limit);
+          return images;
+        }),
+        discoverImageToolsProvider.overrideWithValue(h),
+        ...overrides,
+      ]);
+      c.read(routerProvider).push(Routes.snsDiscoverContent);
+      await tester.pumpAndSettle();
+      h.central = central;
+      return h;
+    }
+
+    Future<void> done(WidgetTester tester) async {
+      await tester.tap(find.byKey(const ValueKey('discover.editor.done')));
+      await tester.pumpAndSettle();
+    }
+
+    /// 画像の画素の座標 → 編集画面の上の座標(拡大していないとき)。
+    Offset onCanvas(WidgetTester tester, Size image, Offset p) {
+      final box = tester.getRect(find.byKey(const ValueKey('discover.editor.canvas')));
+      final fitted = applyBoxFit(BoxFit.contain, image, box.size).destination;
+      final fit = Alignment.center.inscribe(fitted, Offset.zero & box.size);
+      return box.topLeft + fit.topLeft + p * (fit.width / image.width);
+    }
+
+    List<String> order(String body) {
+      final found = [for (final m in RegExp(r'pick-(\w)').allMatches(body)) m.group(1)!];
+      return found;
+    }
+
+    testWidgets('複数の画像を追加 → 順に囲って検索(決定で全体)→ 外す・並べ替え → その順で frames(source: picker)を送り、1 枚ずつ切り抜きのチップで見られる', (tester) async {
+      final imgs = [_synth(40, 30), _synth(50, 30), _synth(60, 30)];
+      final h = await openPicker(tester, imgs);
+      await tester.tap(find.byKey(const ValueKey('discover.content.pick')));
+      await tester.pumpAndSettle();
+      expect(h.limits, [6], reason: '残りの枚数まで選べる');
+      expect(find.text('囲って検索(1 / 3)'), findsOneWidget);
+      await done(tester);
+      expect(find.text('囲って検索(2 / 3)'), findsOneWidget);
+      await done(tester);
+      await done(tester);
+      expect(find.byKey(const ValueKey('discover.editor')), findsNothing);
+      for (final id in [0, 1, 2]) {
+        expect(find.byKey(ValueKey('discover.pick.$id')), findsOneWidget);
+        expect(tester.widget<Text>(find.byKey(ValueKey('discover.pick.$id.badge'))).data, '全体');
+      }
+      expect(find.text('この 3 枚で探す'), findsOneWidget);
+      expect(h.selections, [null, null, null], reason: '囲まずに決定 = 画像全体');
+
+      // 外す
+      await tester.tap(find.byKey(const ValueKey('discover.pick.1.remove')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('discover.pick.1')), findsNothing);
+      expect(find.text('この 2 枚で探す'), findsOneWidget);
+
+      // 並べ替え(長押しして右へ)
+      final g = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('discover.pick.0'))));
+      await tester.pump(const Duration(milliseconds: 600));
+      for (var i = 0; i < 6; i++) {
+        await g.moveBy(const Offset(30, 0));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await g.up();
+      await tester.pumpAndSettle();
+      expect(tester.getCenter(find.byKey(const ValueKey('discover.pick.2'))).dx, lessThan(tester.getCenter(find.byKey(const ValueKey('discover.pick.0'))).dx));
+
+      await tester.tap(find.byKey(const ValueKey('discover.content.search')));
+      await tester.pumpAndSettle();
+      final body = h.central.lastContent!.body;
+      expect('name="frames"'.allMatches(body).length, 2);
+      expect(body, contains('name="source"'));
+      expect(body, contains('\r\n\r\npicker\r\n'));
+      expect(order(body), ['c', 'a'], reason: '並べた順に送る');
+      expect(find.byKey(const ValueKey('discover.content.frame.0')), findsOneWidget);
+      expect(find.text('2 枚目'), findsOneWidget);
+    });
+
+    testWidgets('四角で囲む → その外接の四角で切り抜く(長辺 1600 以内の JPEG)。タップで囲み直し、なぞった輪にも替えられる', (tester) async {
+      const size = Size(400, 200);
+      final h = await openPicker(tester, [_synth(400, 200)], overrides: []);
+      h.real = true;
+      await tester.tap(find.byKey(const ValueKey('discover.content.pick')));
+      await tester.pumpAndSettle();
+      expect(find.text('決定(画像全体)'), findsOneWidget);
+      final g = await tester.startGesture(onCanvas(tester, size, const Offset(100, 50)));
+      await g.moveTo(onCanvas(tester, size, const Offset(200, 100)));
+      await tester.pump();
+      await g.moveTo(onCanvas(tester, size, const Offset(300, 150)));
+      await g.up();
+      await tester.pumpAndSettle();
+      expect(find.text('決定'), findsOneWidget);
+      await done(tester);
+      final sel = h.selections.single!;
+      expect(sel.kind, DiscoverSelectionKind.rect);
+      final b = discoverSelectionBounds(sel, size)!;
+      expect(b.left, closeTo(100, 1));
+      expect(b.top, closeTo(50, 1));
+      expect(b.right, closeTo(300, 1));
+      expect(b.bottom, closeTo(150, 1));
+      final out = img.decodeJpg(h.prepared.last!)!;
+      expect(out.width, closeTo(200, 2));
+      expect(out.height, closeTo(100, 2));
+      expect(tester.widget<Text>(find.byKey(const ValueKey('discover.pick.0.badge'))).data, '四角');
+
+      // タップで開き直して、なぞった輪に替える(ひし形)。
+      await tester.tap(find.byKey(const ValueKey('discover.pick.0.edit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('discover.editor.tool.lasso')));
+      await tester.pumpAndSettle();
+      final lasso = [const Offset(200, 20), const Offset(260, 60), const Offset(300, 100), const Offset(250, 140), const Offset(200, 180), const Offset(150, 140), const Offset(100, 100), const Offset(150, 60)];
+      final g2 = await tester.startGesture(onCanvas(tester, size, lasso.first));
+      for (final p in lasso.skip(1)) {
+        await g2.moveTo(onCanvas(tester, size, p));
+        await tester.pump();
+      }
+      await g2.up();
+      await tester.pumpAndSettle();
+      await done(tester);
+      final sel2 = h.selections.last!;
+      expect(sel2.kind, DiscoverSelectionKind.lasso);
+      final b2 = discoverSelectionBounds(sel2, size)!;
+      expect(b2.left, closeTo(100, 1));
+      expect(b2.top, closeTo(20, 1));
+      expect(b2.right, closeTo(300, 1));
+      expect(b2.bottom, closeTo(180, 1));
+      final out2 = img.decodeJpg(h.prepared.last!)!;
+      expect(out2.width, closeTo(200, 2));
+      expect(out2.height, closeTo(160, 2));
+      final corner = out2.getPixel(2, 2);
+      expect(corner.r, closeTo(discoverMaskGray, 12), reason: '輪の外は灰色');
+      expect(tester.widget<Text>(find.byKey(const ValueKey('discover.pick.0.badge'))).data, 'なぞり');
+
+      // 消して決定 → 画像全体に戻る。
+      await tester.tap(find.byKey(const ValueKey('discover.pick.0.edit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('discover.editor.clear')));
+      await tester.pumpAndSettle();
+      await done(tester);
+      expect(h.selections.last, isNull);
+      final whole = img.decodeJpg(h.prepared.last!)!;
+      expect((whole.width, whole.height), (400, 200), reason: '囲まなければ画像全体');
+    });
+
+    testWidgets('6 枚まで: 多く返ったら 6 枚だけ追加してそう出す。編集を閉じたら残りは全体のまま。送るのは 6 コマ', (tester) async {
+      final h = await openPicker(tester, [for (var i = 0; i < 8; i++) _synth(20 + i, 20)]);
+      await tester.tap(find.byKey(const ValueKey('discover.content.pick')));
+      await tester.pumpAndSettle();
+      expect(find.text('囲って検索(1 / 6)'), findsOneWidget);
+      Navigator.of(tester.element(find.byKey(const ValueKey('discover.editor')))).pop();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('discover.editor')), findsNothing, reason: '閉じたら残りは開かない');
+      expect(find.byKey(const ValueKey('discover.content.picks.notice')), findsOneWidget);
+      expect(find.textContaining('2 枚は追加しませんでした'), findsOneWidget);
+      expect(find.text('この 6 枚で探す'), findsOneWidget);
+      expect(tester.widget<OutlinedButton>(find.byKey(const ValueKey('discover.content.pick'))).onPressed, isNull, reason: '6 枚で満杯');
+      await tester.tap(find.byKey(const ValueKey('discover.content.search')));
+      await tester.pumpAndSettle();
+      final body = h.central.lastContent!.body;
+      expect('name="frames"'.allMatches(body).length, 6);
+      expect(body, contains('\r\n\r\npicker\r\n'));
+      expect(h.selections, everyElement(isNull));
+    });
+
+    test('合計 24 MiB・1 枚 10 MiB・6 枚を超える分は後ろから外す(順番は保つ)', () {
+      Uint8List jpeg(int mib) => Uint8List(mib * 1024 * 1024)..setAll(0, [0xFF, 0xD8, 0xFF]);
+      final r = fitDiscoverPickerFrames([jpeg(6), jpeg(11), jpeg(6), jpeg(6), jpeg(6), jpeg(6)]);
+      expect(r.frames.length, 4);
+      expect(r.dropped, 2);
+      expect(r.frames.fold<int>(0, (n, f) => n + f.length), lessThanOrEqualTo(discoverFramesMaxTotalBytes));
+      final many = fitDiscoverPickerFrames([for (var i = 0; i < 8; i++) Uint8List.fromList([0xFF, 0xD8, 0xFF, i])]);
+      expect(many.frames.length, discoverFramesMax);
+      expect([for (final f in many.frames) f[3]], [0, 1, 2, 3, 4, 5]);
+      expect(fitDiscoverPickerFrames([Uint8List.fromList([1, 2, 3])]).frames, isEmpty, reason: '形式の分からないものは送らない');
+    });
+
+    testWidgets('いつものブラウザで見て探す: iOS は既定で出さず、開発者モードの「画面の読み取りを試す(iOS)」で出す。Android は出す。画像の追加が主', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        final c = await _pump(tester, _FakeCentral());
+        c.read(routerProvider).push(Routes.snsDiscoverContent);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('discover.content.glimpse')), findsNothing);
+        expect(find.byKey(const ValueKey('discover.content.browse')), findsOneWidget);
+        expect(find.widgetWithText(FilledButton, '画像を選ぶ'), findsOneWidget, reason: '主の操作は画像');
+        await c.read(settingsAreaProvider(developerModeArea).notifier).set('iosScreenGlimpse', true);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('discover.content.glimpse')), findsNothing, reason: '開発者モードがオフ');
+        await c.read(settingsAreaProvider(developerModeArea).notifier).set('enabled', true);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('discover.content.glimpse')), findsOneWidget);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('Android はいつものブラウザで見て探すを出す', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        final c = await _pump(tester, _FakeCentral());
+        c.read(routerProvider).push(Routes.snsDiscoverContent);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('discover.content.glimpse')), findsOneWidget);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+  });
+
   group('Android の画面の読み取り (D-416、ネイティブの口は偽物)', () {
     late Directory root;
     setUp(() => root = Directory.systemTemp.createTempSync('rasq_glimpse_test'));
@@ -773,6 +1002,44 @@ void main() {
 
 /// 1×1 の PNG。
 final _png = Uint8List.fromList(base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+
+/// 単色の左右 2 色の PNG(左 = 赤、右 = 青)。
+Uint8List _synth(int w, int h) {
+  final im = img.Image(width: w, height: h);
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      if (x < w ~/ 2) {
+        im.setPixelRgb(x, y, 220, 30, 30);
+      } else {
+        im.setPixelRgb(x, y, 30, 30, 220);
+      }
+    }
+  }
+  return img.encodePng(im);
+}
+
+/// 画像の道具の記録つき。既定は送る画像を目印(`pick-a` …、選んだ順の画像ごと)の小さな JPEG にする。[real] なら本当に切り抜く。
+class _PickHarness extends DiscoverImageTools {
+  _PickHarness(this.images);
+  final List<Uint8List> images;
+  late _FakeCentral central;
+  bool real = false;
+  final limits = <int>[];
+  final selections = <DiscoverSelection?>[];
+  final prepared = <Uint8List?>[];
+
+  @override
+  Future<Size?> measure(Uint8List bytes) async => discoverImageSizeOf(bytes);
+
+  @override
+  Future<Uint8List?> prepare(Uint8List bytes, DiscoverSelection? selection) async {
+    selections.add(selection);
+    final i = images.indexWhere((b) => identical(b, bytes));
+    final out = real ? prepareDiscoverImage(bytes, selection) : Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, ...utf8.encode('pick-${String.fromCharCode(97 + i)}')]);
+    prepared.add(out);
+    return out;
+  }
+}
 
 class _FakeGlimpse extends DummyScreenGlimpse {
   _FakeGlimpse();
