@@ -497,6 +497,124 @@ void main() {
       expect(central.share.devices['dev-new']!['wrapped'], isNotNull);
     });
 
+    test('D-422: どの端末もログインで入った(元の端末も求めている)ときも、SNS にログインしている端末に問いが出る', () async {
+      // 前は、求めている端末は最初の問いを一律に飛ばしていた → 作った端末で入り直した / 全部の端末がログインで入ったアカウントでは、
+      // 2 台目以降が共有を求めても、誰にも問いが出なかった。
+      final central = fakeCentral();
+      final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+      await SnsShareStore(old.storage).markRequest('acc-a');
+      await old.c.read(sessionsProvider.future);
+      await settle(old.c);
+      expect(central.share.devices['dev-old']!['requested'], isTrue);
+      final neu = device(central.client, token: 'tok-new');
+      await SnsShareStore(neu.storage).markRequest('acc-a');
+      await settle(neu.c);
+      old.answers.add(true);
+      await settle(old.c);
+      expect(old.asked.single.first, isTrue);
+      expect(neu.asked, isEmpty, reason: 'SNS にログインしていない端末(共有するものが無い)には聞かない');
+      await settle(neu.c);
+      expect((await neu.c.read(sessionsProvider.future)).sessions.map((s) => s.account), [snsA]);
+    });
+
+    test('D-422: K を持つ端末がいなくなった(on のまま。ログアウト / パスワードの再設定)→ SNS にログインしている端末が K を作り直し、メールで承認された端末へは問わずに包む', () async {
+      final central = fakeCentral();
+      final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+      await old.c.read(sessionsProvider.future);
+      await settle(old.c);
+      // 2 台が求めている。tablet はメールのリンクで「承認して共有する」(ORGATE O-012): 共有が on になる(K を持つ端末は 0 台。
+      // 前の持ち主がログアウトした / パスワードの再設定でほかを消したときも同じ形)。phone はまだ承認されていない。
+      final neu = device(central.client, token: 'tok-new');
+      await SnsShareStore(neu.storage).markRequest('acc-a');
+      await settle(neu.c);
+      final third = device(central.client, token: 'tok-third');
+      await SnsShareStore(third.storage).markRequest('acc-a');
+      await settle(third.c);
+      expect(neu.c.read(snsShareWaitingProvider), isTrue);
+      central.share.mode = 'on';
+      central.share.devices['dev-new']!['emailApproved'] = true;
+      central.share.devices['dev-new']!['emailDecision'] = 'share';
+      await settle(old.c);
+      expect(central.share.devices['dev-old']!['wrapped'], isNotNull, reason: 'SNS にログインしている端末が K を作り直す');
+      expect(central.share.devices['dev-new']!['wrapped'], isNotNull, reason: 'メールで承認された端末には問わずに包む');
+      expect(central.share.devices['dev-third']!['wrapped'], isNull, reason: '承認されていない端末には、問いを出してから');
+      expect([for (final q in old.asked) if (!q.first) q.devices.single.name], ['phone']);
+      await settle(neu.c);
+      expect((await neu.c.read(sessionsProvider.future)).sessions.map((s) => s.account), [snsA]);
+      expect(neu.c.read(snsShareWaitingProvider), isFalse);
+    });
+
+    test('D-422: K を持つ端末は、メールで承認された端末に問いを出さずに包む。「SNS はこの端末でログインし直す」は待つのをやめる', () async {
+      final central = fakeCentral();
+      final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+      await old.c.read(sessionsProvider.future);
+      await settle(old.c);
+      await old.c.read(snsShareProvider.notifier).setEnabled(true);
+      final neu = device(central.client, token: 'tok-new');
+      await SnsShareStore(neu.storage).markRequest('acc-a');
+      await settle(neu.c);
+      central.share.devices['dev-new']!['emailApproved'] = true;
+      await settle(old.c);
+      expect(old.asked, isEmpty);
+      expect(central.share.devices['dev-new']!['wrapped'], isNotNull);
+      await settle(neu.c);
+      expect((await neu.c.read(sessionsProvider.future)).sessions.single.token, 't-alice_sns');
+
+      // 3 台目は「承認する(SNS はこの端末でログインし直す)」: 求めが下り、案内が替わる。トークンは渡らない。
+      final third = device(central.client, token: 'tok-third');
+      await SnsShareStore(third.storage).markRequest('acc-a');
+      await settle(third.c);
+      central.share.devices['dev-third']!
+        ..['requested'] = false
+        ..['emailDecision'] = 'device_only';
+      await settle(third.c);
+      await settle(old.c);
+      expect(third.c.read(snsShareWaitingProvider), isFalse);
+      expect(third.c.read(snsShareProvider).status!.approvedWithoutSharing, isTrue);
+      expect(central.share.devices['dev-third']!['wrapped'], isNull);
+      expect(old.asked, isEmpty);
+    });
+
+    test('D-422: プラグインが取り直したトークン(Bluesky の新しい組)は端末に保存し、共有中ならほかの端末も新しい組に替わる', () async {
+      // 前は取り直した組がワーカーのメモリにしか無く、再起動 / 共有で使い終わった refreshJwt に戻ってログインし直しになっていた。
+      final central = fakeCentral();
+      final old = device(central.client, token: 'tok-old', sessions: [session(snsA, token: '{"did":"d","accessJwt":"a1","refreshJwt":"r1"}')]);
+      await old.c.read(sessionsProvider.future);
+      await settle(old.c);
+      await old.c.read(snsShareProvider.notifier).setEnabled(true);
+      final neu = device(central.client, token: 'tok-new');
+      await SnsShareStore(neu.storage).markRequest('acc-a');
+      await settle(neu.c);
+      old.answers.add(true);
+      await settle(old.c);
+      await settle(neu.c);
+      expect((await neu.c.read(sessionsProvider.future)).sessions.single.token, contains('r1'));
+
+      await old.c.read(sessionsProvider.notifier).updateToken(snsA, '{"did":"d","accessJwt":"a2","refreshJwt":"r2"}');
+      final saved = jsonDecode((await old.storage.read(SessionsNotifier.storageKey))!) as Map;
+      expect(jsonEncode(saved['sessions']), contains('r2'), reason: '再起動しても新しい組');
+      await settle(old.c);
+      await settle(neu.c);
+      expect((await neu.c.read(sessionsProvider.future)).sessions.single.token, contains('r2'), reason: 'ほかの端末も新しい組に替わる');
+    });
+
+    test('D-422: 承認を待つ端末から、メールでの承認のリンクを送り直せる', () async {
+      final central = fakeCentral();
+      final calls = <String>[];
+      final mock = MockClient((req) async {
+        if (req.url.path.endsWith('/me/sns-share/email-approval')) {
+          calls.add(req.method);
+          return json({'email': 'a***@example.test', 'expiresInSeconds': 1800});
+        }
+        return central.client.send(http.Request(req.method, req.url)..headers.addAll(req.headers)..bodyBytes = req.bodyBytes).then(http.Response.fromStream);
+      });
+      final neu = device(mock, token: 'tok-new');
+      await SnsShareStore(neu.storage).markRequest('acc-a');
+      await settle(neu.c);
+      expect(await neu.c.read(snsShareProvider.notifier).requestEmailApproval(), 'a***@example.test');
+      expect(calls, ['POST']);
+    });
+
     testWidgets('D-322: SNS のログイン画面で承認を待っていて、取り込みが済んだら TL へ移る', (tester) async {
       final central = fakeCentral();
       final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
@@ -517,6 +635,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('SNSにログイン'), findsOneWidget);
       expect(find.byKey(const ValueKey('login.shareWaiting')), findsOneWidget);
+      // D-422: 承認を待つ間も、メールのリンクで承認できる(偽の Central には口が無い → 送れなかったと出す)。戻るもある。
+      expect(find.byKey(const ValueKey('login.back')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('login.shareEmail')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('login.shareEmailNote')), findsOneWidget);
 
       // 元の端末で承認 → 新しい端末の見回りで取り込む → TL へ。
       old.answers.add(true);
@@ -526,6 +649,22 @@ void main() {
       expect(c.read(sessionsProvider).value!.sessions.map((s) => s.account), [snsA]);
       expect(c.read(snsShareProvider).joins, 1);
       expect(c.read(routerProvider).routerDelegate.currentConfiguration.uri.toString(), startsWith(Routes.home));
+      expect(find.text('SNSにログイン'), findsNothing);
+    });
+
+    testWidgets('D-422: SNS にまだ入っていなくても、SNS のログイン画面に戻るがある(RASQ アカウントの入口へ)', (tester) async {
+      final central = fakeCentral();
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final storage = storageFor(token: 'tok-new');
+      await tester.pumpWidget(ProviderScope(overrides: overridesFor(central.client, storage, [], []), child: const RasqApp()));
+      final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+      await tester.pumpAndSettle();
+      expect(find.text('SNSにログイン'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('login.back')));
+      await tester.pumpAndSettle();
+      expect(c.read(routerProvider).routerDelegate.currentConfiguration.uri.path, Routes.onboarding);
       expect(find.text('SNSにログイン'), findsNothing);
     });
   });
@@ -578,6 +717,8 @@ class _Share {
               'approved': e.value['wrapped'] != null,
               'current': e.key == me,
               'approvedBy': e.value['by'],
+              'emailApproved': e.value['emailApproved'] == true,
+              'emailDecision': e.value['emailDecision'],
             },
         ],
       };

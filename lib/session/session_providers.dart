@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -57,6 +58,9 @@ final pluginRegistryProvider = Provider<PluginRegistry>((ref) {
     loadBytes: () async => (await rootBundle.load('assets/plugins/bluesky_wasm.wasm')).buffer.asUint8List(),
     authFlowFactory: (host, {callback}) async => BlueskyCredentialFlow(plugin: bluesky, host: host),
     onFetchShape: onFetchShape,
+    // accessJwt(~2 時間)を取り直すと refreshJwt も回る (D-422)。取り直した組を端末のセッションへ戻す(戻さないと、再起動や
+    // 端末間の共有で使い終わった refreshJwt に戻り、ログインし直しになる)。
+    onSessionToken: (account, token) => unawaited(ref.read(sessionsProvider.notifier).updateToken(account, token)),
   );
   // mixi2 (D-206、サンプル): 公式 API 申請前なのでダミーモード(ホスト `dummy`)で流れを確かめる。
   late final WasmSnsPlugin mixi2;
@@ -249,6 +253,16 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
     await ledger.addCentralSessionKeys([for (final s in logins) s.account.key], centralAccountId: centralAccountId);
     final keep = [for (final s in cur.allSessions) if (!logouts.contains(s.account.key) && !logins.any((l) => l.account == s.account)) s];
     await _persist(_view([...keep, ...logins], currentKey: cur.currentKey, bundleView: cur.bundleView, ledger: ref.read(rasqAccountsProvider).value));
+  }
+
+  /// プラグインが取り直したトークンを保存する (D-422)。開いているセッションは閉じない(ワーカーはもう新しい組を持っている)。
+  /// 共有中なら、端末間の共有 (D-319) が見回りで本体へ上げる(ほかの端末も新しい組に替わる)。
+  Future<void> updateToken(AccountId account, String token) async {
+    final cur = state.value ?? await future;
+    final i = cur.allSessions.indexWhere((s) => s.account == account);
+    if (i < 0 || cur.allSessions[i].token == token) return;
+    final all = [...cur.allSessions]..[i] = cur.allSessions[i].copyWith(token: token);
+    await _persist(_view(all, currentKey: cur.currentKey, bundleView: cur.bundleView, ledger: ref.read(rasqAccountsProvider).value));
   }
 
   Future<void> setCurrent(AccountId account) async {

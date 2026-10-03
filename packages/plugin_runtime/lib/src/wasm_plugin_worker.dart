@@ -25,6 +25,10 @@ class WasmPluginWorker {
   final _fows = StreamController<Map<String, Object?>>.broadcast();
   final _apps = StreamController<Map<String, Object?>>.broadcast();
   final _shapes = StreamController<Map<String, Object?>>.broadcast();
+  final _storage = StreamController<Map<String, Object?>>.broadcast();
+
+  /// ワーカーの中の `storage.set` / `storage.delete` の写し (D-422)。要素は `{ns, key, value}`。
+  Stream<Map<String, Object?>> get storageWrites => _storage.stream;
 
   /// このワーカーが初めて見た `net.fetch` の**形**(値は無い: host / method / パスの
   /// テンプレート / query のキー / ヘッダ名 / 本文のキー構造)。要素は `{hash, shape}`、
@@ -75,6 +79,10 @@ class WasmPluginWorker {
       _apps.add((map['app'] as Map).cast<String, Object?>());
       return;
     }
+    if (map['storage'] != null) {
+      _storage.add((map['storage'] as Map).cast<String, Object?>());
+      return;
+    }
     if (map['shapes'] != null) {
       for (final s in map['shapes'] as List) {
         _shapes.add((s as Map).cast<String, Object?>());
@@ -116,6 +124,7 @@ class WasmPluginWorker {
     _fows.close();
     _apps.close();
     _shapes.close();
+    _storage.close();
     _isolate.kill(priority: Isolate.beforeNextEvent);
   }
 }
@@ -163,6 +172,7 @@ Future<void> _workerMain(List<Object?> init) async {
             // アプリ向けホスト関数 (D-167) も同じく fire-and-forget で中継。
             appFns: config.appFns,
             onAppFn: (fn, args) => respond.send({'app': {'fn': fn, 'args': args}}),
+            onStorageWrite: (ns, key, value) => respond.send({'storage': {'ns': ns, 'key': key, 'value': value}}),
             permissions: config.permissions,
             fetchHosts: config.fetchHosts,
             instanceAllowed: config.instanceAllowed,

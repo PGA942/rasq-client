@@ -23,6 +23,10 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
   AppFnRelay? onAppFn;
 
   final _shapes = StreamController<Map<String, Object?>>.broadcast();
+  final _storage = StreamController<Map<String, Object?>>.broadcast();
+
+  /// ワーカーの中の `storage.set` / `storage.delete` の写し `{ns, key, value}` (D-422)。
+  Stream<Map<String, Object?>> get storageWrites => _storage.stream;
 
   /// 初めて見た `net.fetch` の形 (`{hash, shape}` / `{overflow: true}`)。値は無い。
   /// アプリはユーザーの同意があればストアに報告する。
@@ -77,6 +81,9 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
       });
       _worker!.fetchShapes.listen((s) {
         if (!_disposed) _shapes.add(s);
+      });
+      _worker!.storageWrites.listen((w) {
+        if (!_disposed) _storage.add(w);
       });
       await pullSnapshot();
     } catch (e) {
@@ -183,6 +190,7 @@ class AsyncWasmPluginController extends ChangeNotifier with WasmFowSurfaceMixin 
     _worker?.dispose();
     _worker = null;
     _shapes.close();
+    _storage.close();
     super.dispose();
   }
 }

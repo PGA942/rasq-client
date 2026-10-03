@@ -22,6 +22,9 @@ import 'rasq_account_page_api.dart';
 ///   パスワードもメールも要らない。端末が持つ安定 ID を送ると、再インストール後も同じアカウントへ戻る。
 ///   応答は**アクセストークン**(短命の JWT。Central と ORGATE の両方へ Bearer で渡す)と**リフレッシュトークン**
 ///   (ORGATE の `POST /auth/refresh` にだけ渡す)。アクセストークンが切れたら([OrgateTokenHolder.refresh])取り直す。
+///   寿命 (D-422 / ORGATE O-012): アクセストークン 10 分(期限の 60 秒前から、送る前に黙って取り直す。`401` でも 1 回取り直す)、
+///   リフレッシュトークンは使うたびに回り(新しいものをセキュアストレージへ)、使わないまま 180 日 / ログインから 365 日で切れる。
+///   古い世代を出すとセッションごと消える(`401 session_revoked` → このアカウントのトークンを捨てる)。
 /// - **プロフィール** — Central の `GET/PATCH /me`。パスワードの有無 / メールアドレスは ORGATE の `GET /me` から足す。
 /// - **バンドル** — `PUT /me/sns-accounts`。ログイン済み SNS アカウントの
 ///   一覧をサーバーへ写す。**トークンは送らない**(CONTRACT §3: トークンは
@@ -240,10 +243,15 @@ class OrgateTokenHolder extends ChangeNotifier {
     return _refreshing ??= r().whenComplete(() => _refreshing = null);
   }
 
+  /// 期限まで 60 秒を切っている(JWT でなければ false)。
+  bool get expiresSoon {
+    final exp = accessTokenExpiry(token);
+    return exp != null && exp.difference(DateTime.now()) < const Duration(seconds: 60);
+  }
+
   /// WebSocket など、401 で取り直せない口の前に: 期限まで 60 秒を切っていれば先に取り直す。
   Future<void> ensureFresh() async {
-    final exp = accessTokenExpiry(token);
-    if (exp != null && exp.difference(DateTime.now()) < const Duration(seconds: 60)) await refresh();
+    if (expiresSoon) await refresh();
   }
 
   String? get accountId => _accountId;

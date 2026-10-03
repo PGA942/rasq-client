@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../session/mixi2_auth.dart';
+import 'login_screen.dart' show popOr;
 import 'terms_sheet.dart';
 
 /// mixi2 のログイン (D-206、サンプル): 公式 API は申請制 + OAuth(RASQ サーバーのブローカー)なので、
@@ -76,7 +77,7 @@ class _Mixi2LoginScreenState extends ConsumerState<Mixi2LoginScreen> {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('mixi2でログイン'), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => context.pop())),
+      appBar: AppBar(title: const Text('mixi2でログイン'), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => popOr(context, Routes.login))),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), children: [
           Row(children: [

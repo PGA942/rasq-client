@@ -423,6 +423,46 @@ void main() {
       expect(refreshes, 1);
     });
 
+    test('TokenRefreshingClient: 期限まで 60 秒を切ったいまのトークンは、送る前に黙って取り直す(401 を待たない、D-422)', () async {
+      String b64(Object o) => base64Url.encode(utf8.encode(jsonEncode(o))).replaceAll('=', '');
+      String jwt(DateTime exp) => '${b64({'alg': 'EdDSA'})}.${b64({'sub': 'a', 'exp': exp.millisecondsSinceEpoch ~/ 1000})}.sig';
+      final soon = jwt(DateTime.now().add(const Duration(seconds: 30)));
+      final later = jwt(DateTime.now().add(const Duration(minutes: 10)));
+      final holder = OrgateTokenHolder()..token = soon;
+      var refreshes = 0;
+      holder.refresher = () async {
+        refreshes++;
+        holder.token = later;
+        return later;
+      };
+      final sent = <String?>[];
+      final inner = MockClient((req) async {
+        sent.add(req.headers['authorization']);
+        return http.Response('{"ok":true}', 200);
+      });
+      final c = OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: TokenRefreshingClient(inner, holder), tokenProvider: () => holder.token);
+      expect(await c.getJson('/x'), {'ok': true});
+      expect(sent, ['Bearer $later'], reason: '古いトークンでは送らない');
+      expect(refreshes, 1);
+      // 期限に余裕があれば取り直さない。
+      expect(await c.getJson('/y'), {'ok': true});
+      expect(refreshes, 1);
+      // 取り直しに失敗しても(ネットワーク)、そのまま送る(401 なら、そこでもう一度取り直す)。
+      holder
+        ..token = soon
+        ..refresher = () async => throw Exception('offline');
+      expect(await c.getJson('/z'), {'ok': true});
+      expect(sent.last, 'Bearer $soon');
+      // 通知専用のトークンなど、いまのアクセストークンでない要求は触らない。
+      holder.refresher = () async {
+        refreshes++;
+        return later;
+      };
+      await c.withToken(() => 'notify-token').getJson('/n');
+      expect(refreshes, 1);
+      expect(sent.last, 'Bearer notify-token');
+    });
+
     test('アクセストークンの期限は JWT の exp から読む(署名は見ない)', () {
       final exp = DateTime.utc(2030, 1, 1);
       String b64(Object o) => base64Url.encode(utf8.encode(jsonEncode(o))).replaceAll('=', '');

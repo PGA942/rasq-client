@@ -296,7 +296,7 @@ class OrgateClient {
 
 /// アクセストークンの取り直し (D-398): 応答が 401 で、送ったトークンが**いまのアクセストークン**なら、1 回だけ
 /// [OrgateTokenHolder.refresh](ORGATE の `POST /auth/refresh`)で取り直して、同じ要求を新しいトークンで送り直す。
-/// 通知専用のトークンなど、ほかのトークンで送った要求には何もしない。
+/// 通知専用のトークンなど、ほかのトークンで送った要求には何もしない。期限の 60 秒前からは、送る前に取り直す (D-422)。
 class TokenRefreshingClient extends http.BaseClient {
   TokenRefreshingClient(this._inner, this._holder);
   final http.Client _inner;
@@ -304,6 +304,17 @@ class TokenRefreshingClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    // 期限の前に黙って取り直す (D-422): いまのアクセストークンで送る要求で、期限まで 60 秒を切っていれば、先に取り直して
+    // 新しいトークンで送る(401 を待たない。取り直せなければ、そのまま送って 401 の取り直しに任せる)。
+    final before = _holder.token;
+    if (before != null && before.isNotEmpty && request.headers['authorization'] == 'Bearer $before' && _holder.expiresSoon) {
+      try {
+        final fresh = await _holder.refresh();
+        if (fresh != null && fresh.isNotEmpty) request.headers['authorization'] = 'Bearer $fresh';
+      } catch (e) {
+        debugPrint('orgate: proactive refresh failed ($e)');
+      }
+    }
     final res = await _inner.send(request);
     if (res.statusCode != 401 || request is! http.Request) return res;
     final current = _holder.token;

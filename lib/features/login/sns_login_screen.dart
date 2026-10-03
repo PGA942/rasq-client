@@ -13,6 +13,7 @@ import 'package:sns_misskey/sns_misskey.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../onboarding/server_signup.dart';
+import 'login_screen.dart' show popOr;
 import 'terms_sheet.dart';
 
 /// SNS ログインの共通画面: インスタンスURL入力 → サーバー確認 → 利用規約 →
@@ -141,7 +142,7 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('PDSを変更'), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => context.pop())),
+      appBar: AppBar(title: const Text('PDSを変更'), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => popOr(context, Routes.login))),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), children: [
           Text('PDSを変更すると、アプリ外でのURL表示が変わります。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),

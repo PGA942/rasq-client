@@ -46,6 +46,10 @@ class WasmPluginWorker {
   final _fows = StreamController<Map<String, Object?>>.broadcast();
   final _apps = StreamController<Map<String, Object?>>.broadcast();
   final _shapes = StreamController<Map<String, Object?>>.broadcast();
+  final _storage = StreamController<Map<String, Object?>>.broadcast();
+
+  /// Worker の中の `storage.set` / `storage.delete` の写し (D-422)。要素は `{ns, key, value}`。
+  Stream<Map<String, Object?>> get storageWrites => _storage.stream;
 
   Stream<String> get logs => _logs.stream;
 
@@ -92,6 +96,7 @@ class WasmPluginWorker {
     if (map['fow'] != null) return _fows.add((map['fow'] as Map).cast<String, Object?>());
     if (map['app'] != null) return _apps.add((map['app'] as Map).cast<String, Object?>());
     if (map['shape'] != null) return _shapes.add((map['shape'] as Map).cast<String, Object?>());
+    if (map['storage'] != null) return _storage.add((map['storage'] as Map).cast<String, Object?>());
     if (map['ok'] == true) {
       _tracker.complete(map['id'], '${map['result']}');
     } else if (map['fatal'] == true) {
@@ -122,6 +127,7 @@ class WasmPluginWorker {
     _fows.close();
     _apps.close();
     _shapes.close();
+    _storage.close();
   }
 
   Future<void> dispose() async => _close();
@@ -285,8 +291,8 @@ function invoke(fn, args) {
   const requireStorage = () => { if (!cfg.permissions.includes("storage." + ns())) throw new HostFnError("E01", "storage." + ns() + " not permitted"); };
   switch (fn) {
     case "storage.get": { requireStorage(); const v = storage[key()]; return {value: v === undefined ? null : v}; }
-    case "storage.set": requireStorage(); storage[key()] = args.value === undefined ? null : args.value; return {};
-    case "storage.delete": requireStorage(); delete storage[key()]; return {};
+    case "storage.set": requireStorage(); storage[key()] = args.value === undefined ? null : args.value; send({storage: {ns: ns(), key: String(args.key), value: storage[key()]}}); return {};
+    case "storage.delete": requireStorage(); delete storage[key()]; send({storage: {ns: ns(), key: String(args.key), value: null}}); return {};
     case "net.fetch": return JSPI ? netFetchAsync(args) : netFetch(args);
     case "alert": return {confirmed: true};
     case "ml.infer": throw new HostFnError("E01", "ml.infer backend not wired yet (model: " + args.model + ")");
