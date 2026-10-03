@@ -35,7 +35,7 @@ import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/swing/swing_composer.dart';
 import 'package:rasq_client/features/swing/swing_models.dart';
 import 'package:rasq_client/features/swing/swing_providers.dart';
-import 'package:rasq_client/features/swing/swing_reply.dart';
+import 'package:rasq_client/features/swing/swing_bar.dart';
 import 'package:rasq_client/features/swing/swing_viewer.dart';
 import 'package:rasq_client/features/swing/wagara.dart';
 import 'package:rasq_client/mock/mock_data.dart';
@@ -925,7 +925,10 @@ void main() {
     expect(find.byType(SwingViewerScreen), findsOneWidget);
   });
 
-  testWidgets('返信とキュー (D-389 → D-413): 左下に stick の入力欄 + Que。Que で いいね / 外す。Swing の下に返信が続く(ハンドル / 入力欄はそこへ送る)。読んでいる / 書いている間は止める', (tester) async {
+  /// 下の stick FOW (D-420) の矩形。
+  Rect barRect(ProviderContainer c) => c.read(overlayManagerProvider).entries.firstWhere((e) => e.id == SwingBar.fowId).fow!.laidOut!;
+
+  testWidgets('下の stick FOW (D-420, 狭い画面): シークバー(時間の進み)+ 返信の欄 + 返信 N + キュー。返信の欄 → 返信先のタイル付きのコンポーザーに変わり Swing の面が縮む → 送ると戻る。返信 N でスレッド。広げている間は止める', (tester) async {
     swingThreadLog.clear();
     swingQueued.clear();
     swingReplies
@@ -940,13 +943,28 @@ void main() {
       }
     }
 
+    double progress() => tester.widget<LinearProgressIndicator>(find.byKey(const ValueKey('swing.progress'))).value!;
+
     SwingViewerScreen.displayDuration = const Duration(seconds: 30);
     c.read(routerProvider).push(Routes.swing('alice'));
     await settle();
+    final manager = c.read(overlayManagerProvider);
+    expect(manager.contains(SwingBar.fowId), isTrue, reason: '下に stick FOW');
+    expect(find.byKey(const ValueKey('swing.bar.compact')), findsOneWidget);
     expect(find.byKey(const ValueKey('swing.reply.stick')), findsOneWidget);
-    expect(find.byKey(const ValueKey('swing.reply.count')), findsOneWidget, reason: '返信の数');
+    expect(find.text('返信 1'), findsOneWidget, reason: '返信 N');
+    expect(find.byKey(const ValueKey('swing.page.scroll')), findsNothing, reason: 'Swing の下に続くスレッド (D-413) は FOW に移した');
     expect(swingThreadLog, contains('GET p1'));
-    // Que: 押すと いいね、もう一度で外す。
+    // 畳んだ形: Swing の面は FOW の上で終わる(全画面のビューワーは FowAvoidingBox が寄せる)。
+    final viewer = tester.getRect(find.byType(SwingViewerScreen));
+    final compactBar = barRect(c);
+    expect(compactBar.bottom, closeTo(viewer.bottom, 1));
+    expect(compactBar.height, lessThan(160), reason: 'stick = 低い');
+    final compactMedia = tester.getRect(find.byKey(swingViewerMediaKey));
+    expect(compactMedia.bottom, lessThanOrEqualTo(compactBar.top + 1));
+    expect(compactMedia.bottom, greaterThan(compactBar.top - 4), reason: '空いたところいっぱい');
+    expect(progress(), greaterThan(0), reason: '時計は回っている');
+    // キュー: 押すと いいね、もう一度で外す。
     await tester.tap(find.byKey(const ValueKey('swing.reply.que')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
@@ -956,50 +974,75 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     expect(swingThreadLog, contains('DELETE /queue p1'));
-    // Swing の下に返信が続く: 返信の帯・返信・返信の欄。はじめは Swing がページいっぱい(下は見えない)。
-    final viewer = tester.getRect(find.byType(SwingViewerScreen));
-    expect(find.byKey(const ValueKey('swing.thread')), findsOneWidget);
-    expect(tester.getRect(find.byKey(const ValueKey('swing.thread'))).top, greaterThanOrEqualTo(viewer.bottom - 1), reason: 'Swing の下に続く');
-    final clock = tester.widget<LinearProgressIndicator>(find.byKey(const ValueKey('swing.progress')));
-    expect(clock.value, greaterThan(0), reason: '時計は回っている');
-    // ハンドルを上に引く → 下に続くスレッドへ(FOW は開かない)。読んでいる間は止まる。
-    await tester.drag(find.byKey(const ValueKey('swing.reply.handle')), const Offset(0, -120));
-    await settle();
-    expect(c.read(overlayManagerProvider).contains(SwingReplyBar.threadFowId), isFalse);
-    expect(tester.getRect(find.byKey(const ValueKey('swing.thread'))).top, lessThan(viewer.bottom), reason: 'スクロールして見える');
-    expect(find.text('いいね！'), findsOneWidget, reason: '返信が見える');
-    final held = tester.widget<LinearProgressIndicator>(find.byKey(const ValueKey('swing.progress'))).value;
-    await tester.pump(const Duration(seconds: 2));
-    expect(tester.widget<LinearProgressIndicator>(find.byKey(const ValueKey('swing.progress'))).value, held, reason: '読んでいる間は止まる');
-    // 返信の欄から送る → Swing のスレッドへ(POST /me/posts replyTo)。
-    await tester.enterText(find.byKey(const ValueKey('swing.thread.input')), 'きれい');
-    await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('swing.thread.send')));
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-    expect(swingThreadLog, contains('reply p1 きれい'));
-    expect(find.text('きれい'), findsWidgets, reason: '取り直した返信に出る');
-    // Swing へ戻して、stick の入力欄 → 下の返信の欄へ(入る)。
-    await tester.drag(find.byKey(const ValueKey('swing.page.scroll')).first, const Offset(0, 2000));
-    await settle();
-    FocusManager.instance.primaryFocus?.unfocus();
-    await tester.pump();
+
+    // 返信の欄 → コンポーザー(返信先のタイル + 入力欄)。FOW が伸び、Swing の面は残りへ縮む。止まる。
+    final before = progress();
     await tester.tap(find.byKey(const ValueKey('swing.reply.stick')));
     await settle();
-    expect(c.read(overlayManagerProvider).contains(composerFowId), isFalse, reason: 'コンポーザーの FOW ではなく、下の欄');
-    final input = tester.widget<TextField>(find.byKey(const ValueKey('swing.thread.input')));
-    expect(input.focusNode?.hasFocus, isTrue);
-    FocusManager.instance.primaryFocus?.unfocus();
-    await tester.drag(find.byKey(const ValueKey('swing.page.scroll')).first, const Offset(0, 2000));
+    expect(find.byKey(const ValueKey('swing.bar.composer')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.bar.replyTile')), matching: find.text('alice さん の Swing')), findsOneWidget, reason: '返信先のタイル');
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.bar.replyTile')), matching: find.text('花火')), findsOneWidget);
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('swing.bar.input'))).focusNode?.hasFocus, isTrue, reason: '入力欄に入る');
+    final composeBar = barRect(c);
+    expect(composeBar.height, greaterThan(compactBar.height + 60), reason: 'FOW が伸びる');
+    final composeMedia = tester.getRect(find.byKey(swingViewerMediaKey));
+    expect(composeMedia.height, lessThan(compactMedia.height - 60), reason: 'Swing の面が縮む');
+    expect(composeMedia.bottom, lessThanOrEqualTo(composeBar.top + 1));
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isFalse, reason: 'コンポーザーの FOW は使わない(この FOW が変わる)');
+    await tester.pump(const Duration(seconds: 2));
+    // 送る → Swing のスレッドへ(POST /me/posts replyTo)。畳んだ形と面の大きさへ戻る。
+    await tester.enterText(find.byKey(const ValueKey('swing.bar.input')), 'きれい');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('swing.bar.send')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
     await settle();
-    // 根の投稿が無い Swing(古い Central)には出さない(下にも続かない)。
+    expect(swingThreadLog, contains('reply p1 きれい'));
+    expect(find.byKey(const ValueKey('swing.bar.compact')), findsOneWidget, reason: '送ったら戻る');
+    expect(barRect(c).height, closeTo(compactBar.height, 1));
+    expect(tester.getRect(find.byKey(swingViewerMediaKey)).height, closeTo(compactMedia.height, 1), reason: '面も戻る');
+    expect(progress(), lessThan(before + 0.05), reason: '書いている間は止まっていた(回っていれば +2 秒 = +0.067)');
+    expect(find.text('返信 2'), findsOneWidget, reason: '取り直した数');
+
+    // 返信 N → スレッド(返信の一覧 + 返信の欄)。面はさらに縮む。しまうと戻る。
+    final reading = progress();
+    await tester.tap(find.byKey(const ValueKey('swing.reply.count')));
+    await settle();
+    expect(find.byKey(const ValueKey('swing.thread')), findsOneWidget);
+    expect(find.text('いいね！'), findsOneWidget);
+    expect(find.text('きれい'), findsOneWidget);
+    expect(barRect(c).height, greaterThan(composeBar.height));
+    expect(tester.getRect(find.byKey(swingViewerMediaKey)).height, lessThan(composeMedia.height));
+    expect(find.byKey(const ValueKey('swing.progress')), findsNothing, reason: 'スレッドの間はシークバーを出さない');
+    await tester.pump(const Duration(seconds: 2));
+    // スレッドの返信の欄 → コンポーザー → やめる → 畳む。
+    await tester.tap(find.byKey(const ValueKey('swing.reply.stick')));
+    await settle();
+    expect(find.byKey(const ValueKey('swing.bar.composer')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('swing.bar.composeClose')));
+    await settle();
+    expect(find.byKey(const ValueKey('swing.bar.compact')), findsOneWidget);
+    expect(progress(), lessThan(reading + 0.04), reason: '読んでいる間も止まる(回っていれば +2 秒 = +0.067 以上)');
+    // ハンドルを上へ引いてもスレッド、下へ引くと畳む(stick FOW の段)。
+    await tester.drag(find.byKey(const ValueKey('rasqOverlay.fow.handle.top')), const Offset(0, -500));
+    await settle();
+    expect(find.byKey(const ValueKey('swing.thread')), findsOneWidget);
+    await tester.drag(find.byKey(const ValueKey('rasqOverlay.fow.handle.top')), const Offset(0, 600));
+    await settle();
+    expect(find.byKey(const ValueKey('swing.bar.compact')), findsOneWidget);
+
+    // 根の投稿が無い Swing(古い Central): シークバーだけ(返信の欄・キューは無い)。
     SwingViewerScreen.displayDuration = null;
-    await tester.tapAt(tester.getTopRight(find.byType(SwingViewerScreen)) + const Offset(-10, 400));
+    await tester.tapAt(tester.getTopRight(find.byType(SwingViewerScreen)) + const Offset(-10, 300));
     await settle();
     expect(find.text('古い Central'), findsWidgets);
+    expect(manager.contains(SwingBar.fowId), isTrue);
+    expect(find.byKey(const ValueKey('swing.progress')), findsOneWidget);
     expect(find.byKey(const ValueKey('swing.reply.stick')), findsNothing);
-    expect(find.byKey(const ValueKey('swing.thread')), findsNothing);
+    expect(find.byKey(const ValueKey('swing.reply.que')), findsNothing);
+    // 閉じると FOW も閉じる。
+    await tester.tap(find.byKey(const ValueKey('swing.close')));
+    await tester.pumpAndSettle();
+    expect(manager.contains(SwingBar.fowId), isFalse);
   });
 
   test('FOW のぶんメディアを寄せる余白 (D-413 で共通化): 重なる FOW の逆サイドへ。ほかのカラムの FOW は見ない。壁付けは左右', () {
@@ -1014,53 +1057,66 @@ void main() {
     expect(fowAvoidInset(area, [(rect: const Rect.fromLTWH(400, 0, 100, 800), wall: true)]), const EdgeInsets.only(right: 100));
   });
 
-  testWidgets('ビューワーのカラム (D-413): 幅の広い画面では第3カラムに開き(ホームはそのまま)、Swing の下に返信が続く。閉じると第3カラムは元へ。狭い画面は全画面', (tester) async {
-    swingReplies
-      ..clear()
-      ..add('すてき');
-    final (mock, seen, _, _) = central([swing('a1', 'alice', text: 'アリスの', postId: 'p1', replyCount: 1)]);
-    final c = await pumpApp(tester, mock, size: const Size(1400, 900), dpr: 1);
-    await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
-    await tester.pumpAndSettle();
-    expect(find.byType(SwingViewerScreen), findsOneWidget);
-    expect(c.read(thirdColumnProvider)?.id, startsWith('swing:alice'), reason: '第3カラムに開く');
-    final viewer = tester.getRect(find.byType(SwingViewerScreen));
-    expect(viewer.right, 1400);
-    expect(viewer.left, greaterThan(72 + 200), reason: '全画面ではない(左にホームのカラム)');
-    expect(find.byKey(const ValueKey('swing.bundle.alice')), findsOneWidget, reason: 'ホームのヘッダーは見えたまま');
-    expect(tester.getRect(find.byKey(const ValueKey('swing.bundle.alice'))).right, lessThan(viewer.left));
-    // Swing の下に返信が続く(スクロールで出る)。
-    expect(tester.getRect(find.byKey(const ValueKey('swing.thread'))).top, greaterThanOrEqualTo(viewer.bottom - 1));
-    await tester.drag(find.byKey(const ValueKey('swing.page.scroll')), const Offset(0, -600));
-    await tester.pumpAndSettle();
-    expect(find.text('すてき'), findsOneWidget);
-    expect(find.byKey(const ValueKey('swing.thread.input')), findsOneWidget);
-    expect(tester.getRect(find.byKey(const ValueKey('swing.thread'))).left, greaterThanOrEqualTo(viewer.left), reason: '返信もカラムの中');
-    await tester.drag(find.byKey(const ValueKey('swing.page.scroll')), const Offset(0, 2000));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('swing.close')));
-    await tester.pumpAndSettle();
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
-    expect(c.read(thirdColumnProvider), isNull, reason: '閉じると第3カラムは元(検索)へ');
-    expect(find.byType(SwingViewerScreen), findsNothing);
-    expect(seen, ['a1']);
-  });
-
-  testWidgets('ビューワーのカラム (D-413): 狭い画面は前のとおり全画面(第3カラムは使わない)、Swing の下に返信が続く', (tester) async {
-    swingReplies
-      ..clear()
-      ..add('すてき');
-    final (mock, _, _, _) = central([swing('a1', 'alice', text: 'アリスの', postId: 'p1', replyCount: 1)]);
-    final c = await pumpApp(tester, mock);
-    await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
-    await tester.pumpAndSettle();
-    expect(c.read(thirdColumnProvider), isNull);
-    expect(tester.getRect(find.byType(SwingViewerScreen)), const Rect.fromLTWH(0, 0, 360, 780), reason: '全画面');
-    await tester.drag(find.byKey(const ValueKey('swing.page.scroll')), const Offset(0, -500));
-    await tester.pumpAndSettle();
-    expect(find.text('すてき'), findsOneWidget);
-    expect(find.byKey(const ValueKey('swing.thread.input')), findsOneWidget);
-  });
+  for (final wide in [true, false]) {
+    testWidgets('下の stick FOW (D-420, ${wide ? '第3カラム' : '狭い画面'}): 動画はシークバーが再生位置を出し、引くと移る。返信の欄 → コンポーザーで面が縮み、閉じると戻る', (tester) async {
+      swingReplies.clear();
+      final fake = _FakeSeek(const Duration(seconds: 10));
+      final (mock, seen, _, _) = central([swing('v1', 'alice', kind: 'video', text: '', media: {'url': 'https://central.test/api/v1/swings/media/v.mp4', 'contentType': 'video/mp4'}, postId: 'p1')]);
+      final c = await pumpApp(tester, mock, size: wide ? const Size(1400, 900) : const Size(1080, 2340), dpr: wide ? 1 : 3, extra: [swingVideoSeekOverrideProvider.overrideWithValue((_) => fake)]);
+      await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
+      await tester.pumpAndSettle();
+      final viewer = tester.getRect(find.byType(SwingViewerScreen));
+      if (wide) {
+        expect(c.read(thirdColumnProvider)?.id, startsWith('swing:alice'), reason: '第3カラムに開く');
+        expect(viewer.left, greaterThan(72 + 200));
+      } else {
+        expect(c.read(thirdColumnProvider), isNull);
+      }
+      final bar = barRect(c);
+      expect(bar.left, closeTo(viewer.left, 1), reason: 'ビューワーのカラムの下に付く');
+      expect(bar.right, closeTo(viewer.right, 1));
+      // 畳んだ形の間: 第3カラムはカラムごと縮み(D-397 の FowStickPadding)、全画面は面が寄る。どちらも面は FOW の上。
+      final media = tester.getRect(find.byKey(swingViewerMediaKey));
+      expect(media.bottom, lessThanOrEqualTo(bar.top + 1));
+      if (wide) expect(viewer.bottom, lessThanOrEqualTo(bar.top + 1), reason: 'stick のぶんカラムが縮む');
+      // シークバー = 再生位置。
+      Slider slider() => tester.widget<Slider>(find.byKey(const ValueKey('swing.seek')));
+      expect(slider().value, 0);
+      fake.at(const Duration(seconds: 5));
+      await tester.pump();
+      expect(slider().value, closeTo(0.5, 0.001));
+      expect(find.text('0:05 / 0:10'), findsOneWidget);
+      // 引くと移る(右へ = 先へ)。
+      final track = tester.getRect(find.byKey(const ValueKey('swing.seek')));
+      await tester.dragFrom(Offset(track.left + track.width * 0.5, track.center.dy), Offset(track.width * 0.3, 0));
+      await tester.pumpAndSettle();
+      expect(fake.seeks, isNotEmpty);
+      expect(fake.seeks.last, greaterThan(const Duration(seconds: 6)));
+      expect(slider().value, greaterThan(0.6));
+      // 返信の欄 → コンポーザー: 面が縮む。キューは畳んだ形にある。
+      expect(find.byKey(const ValueKey('swing.reply.que')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('swing.reply.stick')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('swing.bar.replyTile')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('swing.bar.replyTile')), matching: find.text('動画の Swing')), findsOneWidget);
+      final open = barRect(c);
+      final shrunk = tester.getRect(find.byKey(swingViewerMediaKey));
+      expect(open.height, greaterThan(bar.height + 60));
+      expect(shrunk.bottom, lessThanOrEqualTo(open.top + 1));
+      expect(shrunk.height, lessThan(media.height - 40), reason: 'Swing の面が縮む');
+      if (wide) expect(open.left, closeTo(viewer.left, 1), reason: 'コンポーザーもカラムの中');
+      await tester.tap(find.byKey(const ValueKey('swing.bar.composeClose')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('swing.bar.compact')), findsOneWidget);
+      expect(tester.getRect(find.byKey(swingViewerMediaKey)), media, reason: '閉じると面も戻る');
+      await tester.tap(find.byKey(const ValueKey('swing.close')));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      expect(c.read(overlayManagerProvider).contains(SwingBar.fowId), isFalse);
+      expect(seen, ['v1']);
+      if (wide) expect(c.read(thirdColumnProvider), isNull, reason: '閉じると第3カラムは元へ');
+    });
+  }
 
   testWidgets('作る画面のカラム (D-413): 幅の広い画面では押したカラム(ホーム / 第3カラム)を置き換えて開く。送る前の段の枠は届け先の FOW の大きさに合わせて動く', (tester) async {
     final (mock, _, _, _) = central(const []);
@@ -1384,5 +1440,29 @@ class _FakeHandle implements ProEditorHandle {
   void close() {
     closed = true;
     onClose();
+  }
+}
+
+/// 動画の再生のまね (D-420): シークバーの位置と、引いて移った先を控える。
+class _FakeSeek extends ChangeNotifier implements SwingSeekable {
+  _FakeSeek(this.duration);
+  @override
+  final Duration duration;
+  @override
+  Duration position = Duration.zero;
+  final seeks = <Duration>[];
+
+  void at(Duration d) {
+    position = d;
+    notifyListeners();
+  }
+
+  @override
+  bool get seekable => true;
+
+  @override
+  Future<void> seekTo(Duration d) async {
+    seeks.add(d);
+    at(d);
   }
 }

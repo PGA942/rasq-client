@@ -7,20 +7,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
+import '../../app/providers.dart' show overlayManagerProvider;
 import '../../app/router.dart';
+import '../../shell/column_takeover.dart' show takeoverColumnOf;
 import '../../shell/third_column.dart' show openPageInPanes, paneBack;
 import '../ads/ad_placement.dart';
 import '../ads/export_ad.dart';
 import '../vc/astell_models.dart' show astellReportReasons;
 import '../custom/custom_page.dart';
+import '../media/fow_avoid.dart';
 import '../media/video_player.dart';
 import '../plugins/slot_plugins.dart';
 import 'swing_models.dart';
 import 'swing_providers.dart';
-import 'swing_reply.dart';
+import 'swing_bar.dart';
 import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvider;
 
 /// Swing のビューワー (D-377 / D-379)。全画面、**左右のスワイプ**で次 / 前の Swing(と広告)へ。マウス / トラックパッドの
@@ -44,6 +48,10 @@ import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvide
 /// D-413: **幅の広い画面では第3カラム**に開く([openSwingViewer]。狭い画面は前のとおり全画面)。**Swing の下に返信が続く**
 /// (D-389 のスレッド = 返信の一覧と返信の欄。下へスクロールすると出る。左下の欄のハンドル / 入力欄もそこへ送る)。
 ///
+/// D-420: 下の UI を **stick FOW** ([SwingBar]) にまとめた。カラムの下端に付き、シークバー・返信の欄・返信 N・キュー。
+/// 返信の欄を押すと FOW が返信のコンポーザー(返信先のタイル付き)に、返信 N でスレッドに広がり、Swing の面は残りへ縮む
+/// ([FowAvoidingBox])。D-413 の「Swing の下に続くスレッド」(縦スクロール)はこの FOW のスレッドに置き換えた。
+///
 /// D-410: [mine] = **自分の Swing**(ヘッダーの自分の顔から)。`GET /me/swings` の並び(古い順)で、広告・見終えの記録・
 /// 通報は無し、作った人だけが見られる**見た人の数**(`viewCount`)を出す。
 class SwingViewerScreen extends ConsumerStatefulWidget {
@@ -63,6 +71,9 @@ class SwingViewerScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<SwingViewerScreen> createState() => _SwingViewerScreenState();
 }
+
+/// ビューワーの Swing の面(下の FOW のぶん縮む。テストで矩形を測る、D-420)。
+const swingViewerMediaKey = ValueKey('swing.viewer.media');
 
 /// 第3カラムに開いた回数(同じ人を開き直したら、並びを作り直す)。
 int _paneSerial = 0;
@@ -117,8 +128,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   /// 中央のタップで止めている。
   bool _paused = false;
 
-  /// 止めている理由 (D-389 / D-413): 返信のコンポーザー / キューのピッカー(`reply`)、下の返信を読んでいる(`thread`)、通報の理由を
-  /// 選んでいる(`report`)。どれかがあれば止める。
+  /// 止めている理由 (D-389 / D-420): 下の FOW を広げている(`reply` = コンポーザー / スレッド)、キューのピッカー(`queue`)、
+  /// シークバーを引いている(`seek`)、通報の理由を選んでいる(`report`)。どれかがあれば止める。
   final _holds = <String>{};
   bool get _held => _holds.isNotEmpty;
 
@@ -134,9 +145,148 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   bool _coveredNow(Swing s) => s.covered && !_revealed.contains(s.id);
 
+  // ── 下の stick FOW (D-420) ──
+  late final SwingBarController _bar = SwingBarController()
+    ..onHold = _hold
+    ..addListener(_onBarMode);
+  OverlayManager? _manager;
+  FowSpec? _barSpec;
+
+  /// 動画の Swing の再生(ページが作る。id → 再生)。
+  final _seekables = <String, SwingSeekable>{};
+  bool _barSyncQueued = false;
+  SwingBarMode _barMode = SwingBarMode.compact;
+
+  /// FOW を置く高さ(ウィンドウからキーボードを引いた高さ。FOW の高さの比はこれに対して)。
+  double _avail = 0;
+
+  double _bottomPad = 0;
+
+  /// このビューワーの画面がいちばん上にある(上にほかの画面が載っていれば FOW を出さない)。
+  bool _routeCurrent = true;
+
+  /// 高さを書いているところ(FOW のハンドルで動かしたのと区別する)。
+  bool _settingHeight = false;
+
+  void _registerSeekable(String id, SwingSeekable v, bool alive) {
+    if (alive) {
+      _seekables[id] = v;
+    } else if (identical(_seekables[id], v)) {
+      _seekables.remove(id);
+    }
+    _queueBarSync();
+  }
+
+  void _queueBarSync() {
+    if (_barSyncQueued || !mounted) return;
+    _barSyncQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _barSyncQueued = false;
+      _syncBar();
+    });
+  }
+
+  /// 下の FOW を出す / 閉じる / 中身を書き換える。全画面で動いているプラグイン・広告・ほかの画面が上にあるときは出さない。
+  void _syncBar() {
+    if (!mounted) return;
+    final s = _current;
+    final timed = s != null && (s.kind == SwingKind.text || s.kind == SwingKind.image);
+    _bar.show(
+      swing: s == null || _locked ? null : s,
+      reply: s != null && _replyShown(s),
+      video: s == null ? null : _seekables[s.id],
+      clock: timed ? _clock : null,
+    );
+    final show = _routeCurrent && _bar.hasContent;
+    final manager = ref.read(overlayManagerProvider);
+    _manager = manager;
+    if (!show) return _closeBar();
+    _applyBarHeight();
+    if (_barSpec != null && manager.contains(SwingBar.fowId)) return;
+    final stops = _barStops();
+    final spec = _barSpec = FowSpec(
+      type: FowPanelType.widget,
+      columnIndex: takeoverColumnOf(context),
+      initialHeightFactor: stops.first,
+      minHeightFactor: 0.04,
+      maxHeightFactor: 0.9,
+      heightStops: stops,
+      stickCollapse: true,
+      bodyMove: false,
+      avoidKeyboard: true,
+    );
+    // stick は自分の形で答える(畳んだ形 = stick。カラムを縮める D-397 もこれを見る)。ハンドル / 空いたところ = スレッドへ。
+    spec.stickState = () => _bar.mode == SwingBarMode.compact;
+    spec.onExpandStick = () => _bar.setMode(SwingBarMode.thread);
+    spec.heightFactor.addListener(_onBarDrag);
+    unawaited(manager.showFow<void>(
+      id: SwingBar.fowId,
+      spec: spec,
+      semanticsLabel: 'Swing の返信とシークバー',
+      builder: (ctx, handle) => SwingViewerBar(controller: _bar),
+    ).whenComplete(() {
+      spec.heightFactor.removeListener(_onBarDrag);
+      if (identical(_barSpec, spec)) _barSpec = null;
+    }));
+  }
+
+  void _closeBar() {
+    final manager = _manager;
+    _barSpec = null;
+    if (manager != null && !manager.disposed && manager.contains(SwingBar.fowId)) manager.close(SwingBar.fowId);
+  }
+
+  /// 高さの段: [畳んだ形, スレッド]。
+  List<double> _barStops() {
+    final avail = _avail > 0 ? _avail : 800.0;
+    final compact = SwingBar.compactHeight(seek: _bar.hasSeek, reply: _bar.reply) + _bottomPad;
+    final c = (compact / avail).clamp(0.04, 0.5);
+    return [c, SwingBar.threadFactor < c ? c : SwingBar.threadFactor];
+  }
+
+  /// いまの形の高さにする。
+  void _applyBarHeight() {
+    final spec = _barSpec;
+    if (spec == null) return;
+    final stops = _barStops();
+    final avail = _avail > 0 ? _avail : 800.0;
+    spec.heightStops = stops;
+    final target = switch (_bar.mode) {
+      SwingBarMode.compact => stops.first,
+      SwingBarMode.compose => ((SwingBar.composeHeight + _bottomPad) / avail).clamp(stops.first, 0.9),
+      SwingBarMode.thread => stops.last,
+    };
+    if ((spec.heightFactor.value - target).abs() < 0.001) return;
+    _settingHeight = true;
+    spec.userResized = false;
+    spec.heightFactor.value = target;
+    _settingHeight = false;
+  }
+
+  /// 形が替わった: 広げている間は止め、高さを合わせる。
+  void _onBarMode() {
+    if (!mounted || _bar.mode == _barMode) return;
+    _barMode = _bar.mode;
+    _hold('reply', _barMode != SwingBarMode.compact);
+    _applyBarHeight();
+  }
+
+  /// ハンドルで動かした(離して段に着いた): 下の段 = 畳む、上の段 = スレッド。
+  void _onBarDrag() {
+    final spec = _barSpec;
+    if (_settingHeight || spec == null || spec.heightStops.length < 2) return;
+    final v = spec.heightFactor.value;
+    if ((v - spec.heightStops.first).abs() < 0.005 && _bar.mode != SwingBarMode.compact) {
+      _bar.setMode(SwingBarMode.compact);
+    } else if ((v - spec.heightStops.last).abs() < 0.005 && _bar.mode == SwingBarMode.compact) {
+      _bar.setMode(SwingBarMode.thread);
+    }
+  }
+
   void _reveal(Swing s) {
     setState(() => _revealed.add(s.id));
     if (_current?.id == s.id) _startClock();
+    _queueBarSync();
   }
 
   /// 通報 (D-395): 理由を選んで `POST /reports {swingId}`。選んでいる間は止める。
@@ -190,6 +340,17 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     _items = interleaveAds(feed, ads: ads);
     _pages = PageController(initialPage: _index);
     _startClock();
+    _queueBarSync();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 上にほかの画面が載った / 外れた、キーボードの出入り: FOW を出し直す / 高さを合わせる。
+    _avail = MediaQuery.sizeOf(context).height - MediaQuery.viewInsetsOf(context).bottom;
+    _bottomPad = MediaQuery.paddingOf(context).bottom;
+    _routeCurrent = ModalRoute.of(context)?.isCurrent ?? true;
+    _queueBarSync();
   }
 
   @override
@@ -197,6 +358,16 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     // カラムから外された(第3カラムに別のページを開いた など)ときも、見ていたものは見終えにする (D-413)。
     final s = _closed || _index >= _items.length ? null : _items[_index].swing;
     if (s != null && !widget.mine) unawaited(_feed.markSeen(s.id));
+    // 下の FOW は木を組み直している最中には閉じられないので、このフレームのあと(中身の状態もそのあとで捨てる)。
+    final manager = _manager;
+    final bar = _bar;
+    _barSpec = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (manager != null && !manager.disposed && manager.contains(SwingBar.fowId)) manager.close(SwingBar.fowId);
+      bar.dispose();
+    });
+    bar.onHold = null;
+    bar.removeListener(_onBarMode);
     _clock.dispose();
     _pages.dispose();
     super.dispose();
@@ -243,6 +414,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
       return;
     }
     setState(() => _locked = v);
+    _queueBarSync();
   }
 
   void _seen(int i) {
@@ -256,12 +428,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
       _index = i;
       _locked = false;
       _paused = false;
-      // 下の返信を読んでいた / 書いていたのは前の Swing。
-      _holds
-        ..remove('thread')
-        ..remove('replyInput');
     });
     _startClock();
+    _queueBarSync();
   }
 
   /// 次へ(最後なら閉じる)。
@@ -291,6 +460,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   @override
   Widget build(BuildContext context) {
+    // RASQ アカウントの読み口が変わったら、返信の欄を出し直す。
+    ref.listen(rasqAccountPageApiProvider, (_, _) => _queueBarSync());
     return Theme(
       data: RasqTheme.dark(),
       child: Scaffold(
@@ -304,7 +475,11 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                 Positioned(top: 8, right: 8, child: SafeArea(child: RasqIconButton(icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: _close))),
               ])
             : Stack(children: [
-                Positioned.fill(child: ScrollConfiguration(
+                // Swing の面は、下の FOW(畳んだ形 / コンポーザー / スレッド)の残りへ縮む (D-420)。
+                Positioned.fill(child: FowAvoidingBox(
+                manager: ref.watch(overlayManagerProvider),
+                minFree: 160,
+                child: KeyedSubtree(key: swingViewerMediaKey, child: ScrollConfiguration(
                 // マウス / トラックパッドのドラッグでもめくれる(既定はタッチだけ)。
                 behavior: ScrollConfiguration.of(context).copyWith(dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad, PointerDeviceKind.stylus}),
                 child: PageView.builder(
@@ -322,9 +497,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                     swing: s,
                     active: i == _index,
                     paused: i == _index && (_paused || _held),
-                    replyBar: i == _index && _replyBarShown(s),
-                    onHold: _hold,
                     covered: _coveredNow(s),
+                    onSeekable: (v, alive) => _registerSeekable(s.id, v, alive),
                     onReveal: () => _reveal(s),
                     onReport: widget.mine || ref.watch(swingApiProvider) == null ? null : () => _report(s),
                     viewCount: widget.mine ? s.viewCount : null,
@@ -341,7 +515,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                   );
                 },
               ),
-              )),
+              )))),
               ]),
       ),
     );
@@ -349,8 +523,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   Swing? get _current => _index < _items.length ? _items[_index].swing : null;
 
-  /// 返信(左下の欄と、下に続くスレッド)を出すか。全画面で動いているプラグイン・覆っている Swing・根の無い Swing には出さない。
-  bool _replyBarShown(Swing s) => s.postId != null && !_locked && !_coveredNow(s) && ref.watch(rasqAccountPageApiProvider) != null;
+  /// 返信(下の FOW の返信の欄・返信 N・キュー)を出すか。全画面で動いているプラグイン・覆っている Swing・根の無い Swing には出さない。
+  bool _replyShown(Swing s) => s.postId != null && !_locked && !_coveredNow(s) && ref.read(rasqAccountPageApiProvider) != null;
 }
 
 String swingRemainingLabel(Duration d) {
@@ -359,8 +533,11 @@ String swingRemainingLabel(Duration d) {
   return 'まもなく消えます';
 }
 
-class _SwingPage extends StatefulWidget {
-  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, required this.onHold, this.replyBar = false, this.covered = false, this.onReveal, this.onReport, this.viewCount});
+/// 動画の再生ができた([alive] = true)/ 無くなった。
+typedef SwingSeekableCallback = void Function(SwingSeekable seek, bool alive);
+
+class _SwingPage extends StatelessWidget {
+  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.onSeekable, this.covered = false, this.onReveal, this.onReport, this.viewCount});
 
   /// 自分の Swing の見た人の数 (D-410)。null = 出さない(ほかの人の Swing / 古い Central)。
   final int? viewCount;
@@ -372,8 +549,8 @@ class _SwingPage extends StatefulWidget {
   /// 通報 (D-395)。null = 出さない(RASQ アカウントが無い)。
   final VoidCallback? onReport;
 
-  /// 返信を出す: 左下の欄と、**下に続くスレッド** (D-389 / D-413)。
-  final bool replyBar;
+  /// 動画の再生ができた / 無くなった(下の FOW のシークバーへ、D-420)。
+  final SwingSeekableCallback? onSeekable;
   final Swing swing;
   final bool active;
   final bool paused;
@@ -386,102 +563,16 @@ class _SwingPage extends StatefulWidget {
   final ValueChanged<bool> onLockChanged;
   final VoidCallback onEnd;
 
-  /// 止める / 戻す(理由ごと)。
-  final void Function(String reason, bool hold) onHold;
-
-  @override
-  State<_SwingPage> createState() => _SwingPageState();
-}
-
-/// 1 つの Swing のページ (D-413): 縦にスクロールでき、Swing(ページの高さいっぱい)の下に返信のスレッドが続く。
-/// 返信を出さないとき(プラグインが全画面 / 覆っている / 根が無い)はスクロールしない。木の形は変えない(プラグインを作り直さない)。
-class _SwingPageState extends State<_SwingPage> {
-  final _scroll = ScrollController();
-  final _threadKey = GlobalKey();
-  final _reply = FocusNode();
-  bool _reading = false;
-
-  Swing get swing => widget.swing;
-
-  @override
-  void initState() {
-    super.initState();
-    _scroll.addListener(_onScroll);
-    _reply.addListener(() => widget.onHold('replyInput', _reply.hasFocus));
-  }
-
-  @override
-  void didUpdateWidget(_SwingPage old) {
-    super.didUpdateWidget(old);
-    // 返信を出さなくなった(プラグインが全画面に戻った など)ら、Swing の位置へ戻す。
-    if (old.replyBar && !widget.replyBar && _scroll.hasClients && _scroll.offset > 0) _scroll.jumpTo(0);
-  }
-
-  @override
-  void dispose() {
-    _scroll.dispose();
-    _reply.dispose();
-    super.dispose();
-  }
-
-  /// 下の返信を読んでいる間は、Swing を止める。
-  void _onScroll() {
-    final reading = _scroll.offset > 24;
-    if (reading == _reading) return;
-    _reading = reading;
-    if (widget.active) widget.onHold('thread', reading);
-  }
-
-  /// 下のスレッドへ送る([focus] = 返信の欄に入る)。
-  Future<void> _toThread({bool focus = false}) async {
-    final ctx = _threadKey.currentContext;
-    if (ctx == null) return;
-    await Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic);
-    if (focus && mounted) _reply.requestFocus();
-  }
-
+  /// 1 つの Swing のページ。返信・シークバーは下の FOW (D-420)。
   @override
   Widget build(BuildContext context) {
-    final thread = widget.replyBar;
-    return LayoutBuilder(
-      builder: (context, box) => SingleChildScrollView(
-        key: const ValueKey('swing.page.scroll'),
-        controller: _scroll,
-        physics: thread ? const ClampingScrollPhysics() : const NeverScrollableScrollPhysics(),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SizedBox(height: box.maxHeight, child: _body(context)),
-          if (thread)
-            SwingThreadSection(
-              key: _threadKey,
-              swing: swing,
-              focusNode: _reply,
-              minHeight: box.maxHeight * 0.6,
-              onHold: (v) => widget.onHold('reply', v),
-            ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _body(BuildContext context) {
-    final active = widget.active;
-    final paused = widget.paused;
-    final covered = widget.covered;
-    final replyBar = widget.replyBar;
-    final clock = widget.clock;
-    final onEnd = widget.onEnd;
-    final onTapZone = widget.onTapZone;
-    final onReport = widget.onReport;
-    final onClose = widget.onClose;
-    final viewCount = widget.viewCount;
-    final position = widget.position;
     // 覆っている間は動画 / プラグインを動かさない。
     final live = active && !covered;
     final body = switch (swing.kind) {
       SwingKind.text => _TextBody(text: swing.text),
       SwingKind.image => _ImageBody(swing: swing),
-      SwingKind.video => _VideoBody(swing: swing, active: live, paused: paused, onDone: onEnd),
-      SwingKind.plugin => _PluginBody(swing: swing, active: live, onLockChanged: widget.onLockChanged, onEnd: onEnd),
+      SwingKind.video => _VideoBody(swing: swing, active: live, paused: paused, onDone: onEnd, onSeekable: onSeekable),
+      SwingKind.plugin => _PluginBody(swing: swing, active: live, onLockChanged: onLockChanged, onEnd: onEnd),
     };
     final timed = swing.kind != SwingKind.plugin;
     return Stack(fit: StackFit.expand, children: [
@@ -502,76 +593,47 @@ class _SwingPageState extends State<_SwingPage> {
         ),
       if (timed && paused && !covered)
         const Center(child: IgnorePointer(child: Icon(Icons.pause_circle_outline, key: ValueKey('swing.paused'), color: Colors.white70, size: 64))),
-      if (covered) Positioned.fill(child: _Cover(swing: swing, onReveal: widget.onReveal)),
-      // 上: 時間の進み、作った人と残り時間、閉じる。
+      if (covered) Positioned.fill(child: _Cover(swing: swing, onReveal: onReveal)),
+      // 上: 作った人と残り時間、通報、閉じる(進みは下の FOW のシークバー、D-420)。
       Positioned(
         left: 0,
         right: 0,
         top: 0,
         child: DecoratedBox(
-            decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black54, Colors.transparent])),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.lg),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  if (swing.kind == SwingKind.text || swing.kind == SwingKind.image)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: RasqSpacing.xs, right: RasqSpacing.sm),
-                      child: AnimatedBuilder(
-                        animation: clock,
-                        builder: (_, _) => LinearProgressIndicator(key: const ValueKey('swing.progress'), value: active ? clock.value : 0, minHeight: 2, color: Colors.white, backgroundColor: Colors.white24),
-                      ),
-                    ),
-                  Row(children: [
-                  RasqAvatar(imageUrl: swing.author.avatarUrl, size: 32, fallbackLabel: swing.author.displayName),
-                  const SizedBox(width: RasqSpacing.sm),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                      Text(swing.author.displayName, key: const ValueKey('swing.author'), style: RasqTypography.bodySmall.copyWith(color: Colors.white, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text('${swingRemainingLabel(swing.remaining(DateTime.now()))} ・ $position', style: RasqTypography.caption.copyWith(color: Colors.white70)),
-                      if (viewCount != null)
-                        Row(key: const ValueKey('swing.viewCount'), mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.visibility_outlined, size: 14, color: Colors.white70),
-                          const SizedBox(width: 4),
-                          Text('見た人 $viewCount 人', style: RasqTypography.caption.copyWith(color: Colors.white70)),
-                        ]),
-                    ]),
-                  ),
-                  if (onReport != null) RasqIconButton(key: const ValueKey('swing.report'), icon: Icons.flag_outlined, tooltip: '通報', color: Colors.white, onPressed: onReport),
-                  RasqIconButton(key: const ValueKey('swing.close'), icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: onClose),
-                ]),
-                ]),
-              ),
+          decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black54, Colors.transparent])),
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.lg),
+              child: Row(children: [
+                RasqAvatar(imageUrl: swing.author.avatarUrl, size: 32, fallbackLabel: swing.author.displayName),
+                const SizedBox(width: RasqSpacing.sm),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                    Text(swing.author.displayName, key: const ValueKey('swing.author'), style: RasqTypography.bodySmall.copyWith(color: Colors.white, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text('${swingRemainingLabel(swing.remaining(DateTime.now()))} ・ $position', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+                    if (viewCount != null)
+                      Row(key: const ValueKey('swing.viewCount'), mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.visibility_outlined, size: 14, color: Colors.white70),
+                        const SizedBox(width: 4),
+                        Text('見た人 $viewCount 人', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+                      ]),
+                  ]),
+                ),
+                if (onReport != null) RasqIconButton(key: const ValueKey('swing.report'), icon: Icons.flag_outlined, tooltip: '通報', color: Colors.white, onPressed: onReport),
+                RasqIconButton(key: const ValueKey('swing.close'), icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: onClose),
+              ]),
             ),
           ),
+        ),
       ),
       // 画像 / 動画に添えた文。
       if (swing.kind != SwingKind.text && swing.kind != SwingKind.plugin && swing.text.isNotEmpty && !covered)
         Positioned(
           left: RasqSpacing.page,
           right: RasqSpacing.page,
-          bottom: RasqSpacing.xxl + (replyBar ? 88 : 0),
+          bottom: RasqSpacing.lg,
           child: Text(swing.text, key: const ValueKey('swing.caption'), style: RasqTypography.body.copyWith(color: Colors.white, shadows: const [Shadow(blurRadius: 6)])),
-        ),
-      // 左下: 返信とキュー (D-389)。ハンドル / 入力欄は、下に続くスレッドへ送る (D-413)。
-      if (replyBar)
-        Positioned(
-          left: RasqSpacing.page,
-          bottom: 0,
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: swing.kind == SwingKind.video ? 64 : RasqSpacing.md),
-              child: SwingReplyBar(
-                key: ValueKey('swing.reply.${swing.id}'),
-                swing: swing,
-                onHold: (v) => widget.onHold('reply', v),
-                onOpenThread: _toThread,
-                onReply: () => _toThread(focus: true),
-              ),
-            ),
-          ),
         ),
     ]);
   }
@@ -648,8 +710,8 @@ class _Missing extends StatelessWidget {
   Widget build(BuildContext context) => const Center(child: Icon(Icons.broken_image_outlined, color: Colors.white38, size: 48));
 }
 
-class _VideoBody extends StatefulWidget {
-  const _VideoBody({required this.swing, required this.active, this.paused = false, this.onDone});
+class _VideoBody extends ConsumerStatefulWidget {
+  const _VideoBody({required this.swing, required this.active, this.paused = false, this.onDone, this.onSeekable});
   final Swing swing;
   final bool active;
   final bool paused;
@@ -657,21 +719,30 @@ class _VideoBody extends StatefulWidget {
   /// 終わりまで再生した(次へ)。
   final VoidCallback? onDone;
 
+  /// 再生ができた / 無くなった(下の FOW のシークバー、D-420)。
+  final SwingSeekableCallback? onSeekable;
+
   @override
-  State<_VideoBody> createState() => _VideoBodyState();
+  ConsumerState<_VideoBody> createState() => _VideoBodyState();
 }
 
-class _VideoBodyState extends State<_VideoBody> {
+class _VideoBodyState extends ConsumerState<_VideoBody> {
   VideoSession? _session;
+  SwingSeekable? _seek;
 
   @override
   void initState() {
     super.initState();
+    final fake = ref.read(swingVideoSeekOverrideProvider);
     final url = widget.swing.mediaUrl;
-    if (url != null) {
-      _session = VideoSession(MediaItem(id: widget.swing.id, type: MediaType.video, url: url), autoplay: widget.active)
-        ..addListener(_hook);
+    if (fake != null) {
+      _seek = fake(widget.swing);
+    } else if (url != null) {
+      final s = _session = VideoSession(MediaItem(id: widget.swing.id, type: MediaType.video, url: url), autoplay: widget.active)..addListener(_hook);
+      _seek = VideoSessionSeekable(s);
     }
+    final seek = _seek;
+    if (seek != null) WidgetsBinding.instance.addPostFrameCallback((_) => widget.onSeekable?.call(seek, true));
   }
 
   @override
@@ -706,6 +777,9 @@ class _VideoBodyState extends State<_VideoBody> {
 
   @override
   void dispose() {
+    final cb = widget.onSeekable;
+    final seek = _seek;
+    if (seek != null && cb != null) WidgetsBinding.instance.addPostFrameCallback((_) => cb(seek, false));
     _session?.dispose();
     super.dispose();
   }
@@ -713,11 +787,9 @@ class _VideoBodyState extends State<_VideoBody> {
   @override
   Widget build(BuildContext context) {
     final s = _session;
-    if (s == null) return const _Missing();
-    return Stack(fit: StackFit.expand, children: [
-      RasqVideoView(key: const ValueKey('swing.video'), session: s),
-      Positioned(left: 0, right: 0, bottom: 0, child: SafeArea(top: false, child: VideoControls(session: s, light: true))),
-    ]);
+    if (s == null) return _seek != null ? const ColoredBox(key: ValueKey('swing.video'), color: Colors.black) : const _Missing();
+    // 再生 / 一時停止は中央のタップ(ビューワー)、位置は下の FOW のシークバー (D-420)。
+    return RasqVideoView(key: const ValueKey('swing.video'), session: s, tapToggles: false);
   }
 }
 

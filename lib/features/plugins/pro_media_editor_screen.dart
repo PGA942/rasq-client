@@ -36,6 +36,7 @@ import 'media_filter.dart';
 import 'media_filter_fow.dart';
 import 'media_object_fow.dart';
 import 'media_plugin_panel.dart';
+import 'pro_video_export.dart';
 import 'slot_plugins.dart';
 import 'sticker_picker.dart';
 
@@ -502,16 +503,21 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
     final f = _videoFile;
     final m = _meta;
     if (f == null || m == null) return;
+    // D-420: 何も変えていなければ書き出し直さず、元のファイルを返す(向きの印 = tkhd の行列をそのまま残す)。
+    if (!_isAudio && !proVideoNeedsRender(p, mimeType: widget.args.mimeType, duration: m.duration, audioEnabled: _video?.isAudioEnabled ?? true)) {
+      _finish(MediaEditResult(bytes: widget.args.bytes, mimeType: widget.args.mimeType, name: widget.args.name));
+      return;
+    }
     try {
       final data = pve.VideoRenderData(
         id: 'rasq-${DateTime.now().microsecondsSinceEpoch}',
         videoSegments: [pve.VideoSegment(video: pve.EditorVideo.file(f.path))],
         imageLayers: [if (p.layers.isNotEmpty) pve.ImageLayer(image: pve.EditorLayerImage.memory(p.image))],
         blur: p.blur,
-        colorFilters: [pve.ColorFilter(matrix: p.colorFiltersCombined)],
+        colorFilters: proVideoColorFilters(p),
         startTime: p.startTime,
         endTime: p.endTime,
-        transform: p.isTransformed ? pve.ExportTransform(width: p.cropWidth, height: p.cropHeight, rotateTurns: 4 - p.rotateTurns, x: p.cropX, y: p.cropY, flipX: p.flipX, flipY: p.flipY) : null,
+        transform: proVideoExportTransform(p),
         enableAudio: _video?.isAudioEnabled ?? true,
         outputFormat: pve.VideoOutputFormat.mp4,
         bitrate: m.bitrate,
@@ -563,8 +569,8 @@ class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
       await base.writeAsBytes(rendered);
       files.add(base);
       final meta = await pve.ProVideoEditor.instance.getMetadata(pve.EditorVideo.file(base.path));
-      final turned = meta.rotation == 90 || meta.rotation == 270;
-      final size = turned ? ui.Size(meta.resolution.height, meta.resolution.width) : meta.resolution;
+      // `resolution` は向きを当てたあとの大きさ (pro_video_editor 1.6.0〜)。もう一度入れ替えない (D-420)。
+      final size = meta.resolution;
       final out = await videoEditTempFile(dir, 'overlay-out.mp4');
       files.add(out);
       await overlayVideosOnVideo(base: base, canvas: size, length: meta.duration, posts: await _motionFiles(editor, layers, size, files), out: out);
