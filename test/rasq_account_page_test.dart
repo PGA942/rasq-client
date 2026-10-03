@@ -225,6 +225,13 @@ void main() {
     await tester.pumpAndSettle();
     // 返信は、SNS の返信と同じコンポーザーで(投稿先は RASQ に固定。D-292)。
     expect(find.byKey(const ValueKey('composer.pill.rasq')), findsOneWidget);
+    // RASQ の返信は文字だけ: 添付 / 投票は押せず、理由を出す (D-421。Swing のスレッドへの返信だけは付けられる)。
+    for (final k in ['composer.tool.image', 'composer.tool.video', 'composer.tool.poll']) {
+      final b = tester.widget<RasqActionButton>(find.byKey(ValueKey(k)));
+      expect(b.onTap, isNull, reason: k);
+      expect(b.tooltip, 'RASQ の返信は文字だけです');
+    }
+    expect(tester.widget<RasqActionButton>(find.byKey(const ValueKey('composer.tool.cw'))).onTap, isNotNull, reason: '注釈は付けられる');
     await tester.enterText(find.byType(TextField).last, 'いいですね');
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, '返信'));

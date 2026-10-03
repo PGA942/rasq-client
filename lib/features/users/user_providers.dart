@@ -14,7 +14,7 @@ final userProfileProvider = FutureProvider.autoDispose.family<UserProfile, UserK
   final s = ref.watch(sessionForAccountProvider(k.account));
   if (s == null) throw StateError('not logged in');
   final p = await s.user(k.id);
-  await ref.read(userListHelperProvider).primeRelationships([k.id]);
+  await ref.read(userListHelperProvider).primeRelationships([k.id], account: k.account);
   return p;
 });
 
@@ -31,7 +31,7 @@ final followsProvider = FutureProvider.autoDispose.family<Page<UserSummary>, ({S
   final s = ref.watch(sessionForAccountProvider(k.account));
   if (s == null) return Page.empty();
   final page = k.followers ? await s.followers(k.id, limit: 50) : await s.following(k.id, limit: 50);
-  await ref.read(userListHelperProvider).primeRelationships(page.items.map((u) => u.id));
+  await ref.read(userListHelperProvider).primeRelationships(page.items.map((u) => u.id), account: k.account);
   return page;
 });
 

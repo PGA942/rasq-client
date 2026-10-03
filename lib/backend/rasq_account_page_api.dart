@@ -775,6 +775,7 @@ class RasqAccountPageApi {
 
   /// 画像を先に上げて、id を付けて投稿する。
   /// SNS の投稿と同じ項目 (S-023): 注釈 / 公開範囲 / いいねのみ / センシティブな画像 / 投票。連合に関わるものは無い。
+  /// [replyTo] = 返信 (S-022)。添付 / 投票を付けられるのは Swing のスレッドへの返信だけ (S-076 / D-421。ほかは Central が 400)。
   Future<RasqAccountPost> createPost(
     String body, {
     List<({List<int> bytes, String contentType, bool sensitive})> images = const [],
@@ -783,6 +784,7 @@ class RasqAccountPageApi {
     bool likeOnly = false,
     ({List<String> choices, bool multiple, Duration? expiresAfter})? poll,
     String? quoteOf,
+    String? replyTo,
   }) async {
     final ids = <String>[];
     final sensitive = <String>[];
@@ -800,6 +802,7 @@ class RasqAccountPageApi {
       if (visibility != 'public') 'visibility': visibility,
       if (likeOnly) 'reactionAcceptance': 'likeOnly',
       'quoteOf': ?quoteOf,
+      'replyTo': ?replyTo,
       if (poll != null) 'poll': {'choices': poll.choices, 'multiple': poll.multiple, if (poll.expiresAfter != null) 'expiresInSeconds': poll.expiresAfter!.inSeconds},
     }));
   }
@@ -841,9 +844,6 @@ class RasqAccountPageApi {
 
   /// 誰がキュー / リブロード / 引用したか (S-030)。
   Future<RasqPostReactions> reactions(String id) async => RasqPostReactions.fromJson(await _client.getJson('/posts/$id/reactions'));
-
-  /// 返信(文字だけ、500 文字まで)。
-  Future<RasqAccountPost> reply(String postId, String body) async => RasqAccountPost.fromJson(await _client.postJson('/me/posts', {'body': body, 'replyTo': postId}));
 
   /// リブロード (S-024): 押すたびに 1 回増える(同じ投稿を何度でも)。戻り = 更新後の投稿。
   Future<RasqAccountPost> rebroad(String postId) async => RasqAccountPost.fromJson(await _client.postJson('/posts/$postId/rebroad', const {}));

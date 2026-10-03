@@ -22,6 +22,8 @@ import 'package:rasq_client/features/home/home_header.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart' show astellCreateFowId;
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId;
+import 'package:rasq_client/features/compose/media_file_pick.dart' show mediaFilePickerProvider;
+import 'package:rasq_client/features/compose/poll_editor.dart' show PollEditor;
 import 'package:rasq_client/app/navigation.dart' show visibleLocationOf;
 import 'package:rasq_client/features/home/home_screen.dart' show HomeScreen;
 import 'package:rasq_client/features/media/fow_avoid.dart';
@@ -41,7 +43,7 @@ import 'package:rasq_client/features/swing/wagara.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart' show RasqSidebar;
-import 'package:rasq_design/rasq_design.dart' show RasqActionCircle;
+import 'package:rasq_design/rasq_design.dart' show RasqActionButton, RasqActionCircle;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fake_slot_runtime.dart';
@@ -59,6 +61,9 @@ import 'support/fakes.dart';
 final swingThreadLog = <String>[];
 final swingQueued = <String>{};
 final swingReplies = <String>[];
+
+/// 返信で送った中身 (D-421: 添付 / 投票 / 注釈も)。
+final swingReplyBodies = <Map<String, Object?>>[];
 
 /// 通報の控え (D-395)。
 final swingReports = <Map<String, Object?>>[];
@@ -211,8 +216,13 @@ void main() {
         if (t.group(1) == 'GET') return json({'post': post(id, body: '花火'), 'replies': [for (final r in swingReplies) post('r${swingReplies.indexOf(r)}', body: r, replyTo: id)]});
         return json(post(id));
       }
+      if (route == 'POST /me/posts/media') {
+        uploads.add('post:${req.headers['content-type'] ?? ''}');
+        return json({'id': 'pm${uploads.length}', 'kind': 'image', 'contentType': 'image/png', 'url': 'https://central.test/api/v1/post-images/pm${uploads.length}', 'width': 1, 'height': 1}, 201);
+      }
       if (route == 'POST /me/posts') {
         final body = (jsonDecode(req.body) as Map).cast<String, Object?>();
+        swingReplyBodies.add(body);
         swingReplies.add('${body['body']}');
         swingThreadLog.add('reply ${body['replyTo']} ${body['body']}');
         return json(post('r-new', body: '${body['body']}', replyTo: body['replyTo'] as String?), 201);
@@ -982,7 +992,12 @@ void main() {
     expect(find.byKey(const ValueKey('swing.bar.composer')), findsOneWidget);
     expect(find.descendant(of: find.byKey(const ValueKey('swing.bar.replyTile')), matching: find.text('alice さん の Swing')), findsOneWidget, reason: '返信先のタイル');
     expect(find.descendant(of: find.byKey(const ValueKey('swing.bar.replyTile')), matching: find.text('花火')), findsOneWidget);
-    expect(tester.widget<TextField>(find.byKey(const ValueKey('swing.bar.input'))).focusNode?.hasFocus, isTrue, reason: '入力欄に入る');
+    final input = find.descendant(of: find.byKey(const ValueKey('swing.bar.composer')), matching: find.byKey(const ValueKey('composer.input')));
+    expect(tester.widget<TextField>(input).focusNode?.hasFocus, isTrue, reason: '入力欄に入る');
+    // 中身は投稿の返信のコンポーザーと同じ (D-421): アクションバー(画像 / 動画 / 投票 / 注釈)が使える。
+    for (final k in ['composer.tool.image', 'composer.tool.video', 'composer.tool.poll', 'composer.tool.cw']) {
+      expect(tester.widget<RasqActionButton>(find.byKey(ValueKey(k))).onTap, isNotNull, reason: k);
+    }
     final composeBar = barRect(c);
     expect(composeBar.height, greaterThan(compactBar.height + 60), reason: 'FOW が伸びる');
     final composeMedia = tester.getRect(find.byKey(swingViewerMediaKey));
@@ -991,9 +1006,9 @@ void main() {
     expect(c.read(overlayManagerProvider).contains(composerFowId), isFalse, reason: 'コンポーザーの FOW は使わない(この FOW が変わる)');
     await tester.pump(const Duration(seconds: 2));
     // 送る → Swing のスレッドへ(POST /me/posts replyTo)。畳んだ形と面の大きさへ戻る。
-    await tester.enterText(find.byKey(const ValueKey('swing.bar.input')), 'きれい');
+    await tester.enterText(input, 'きれい');
     await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('swing.bar.send')));
+    await tester.tap(find.byKey(const ValueKey('composer.send')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
     await settle();
     expect(swingThreadLog, contains('reply p1 きれい'));
@@ -1018,7 +1033,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('swing.reply.stick')));
     await settle();
     expect(find.byKey(const ValueKey('swing.bar.composer')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('swing.bar.composeClose')));
+    await tester.tap(find.byKey(const ValueKey('composer.cancel')));
     await settle();
     expect(find.byKey(const ValueKey('swing.bar.compact')), findsOneWidget);
     expect(progress(), lessThan(reading + 0.04), reason: '読んでいる間も止まる(回っていれば +2 秒 = +0.067 以上)');
@@ -1043,6 +1058,62 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('swing.close')));
     await tester.pumpAndSettle();
     expect(manager.contains(SwingBar.fowId), isFalse);
+  });
+
+  testWidgets('Swing の返信 = 投稿の返信のコンポーザー (D-421): 動画 / 音声の添付・投票・注釈を付けて送ると、POST /me/posts に replyTo と一緒に載る', (tester) async {
+    swingReplies.clear();
+    swingReplyBodies.clear();
+    final (mock, _, _, uploads) = central([swing('s1', 'alice', text: '花火', postId: 'p1', cw: 'ネタバレ')]);
+    final c = await pumpApp(tester, mock, extra: [
+      mediaFilePickerProvider.overrideWithValue(() async => XFile.fromData(Uint8List.fromList(List.filled(64, 7)), name: 'clip.mp4', mimeType: 'video/mp4')),
+    ]);
+    SwingViewerScreen.displayDuration = null;
+    c.read(routerProvider).push(Routes.swing('alice'));
+    await tester.pumpAndSettle();
+    // CW の Swing は覆って出る: 表示してから返信の欄。
+    if (find.byKey(const ValueKey('swing.cover.reveal')).evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const ValueKey('swing.cover.reveal')));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byKey(const ValueKey('swing.reply.stick')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.bar.replyTile')), findsOneWidget, reason: '返信先は Swing のタイル');
+    final small = barRect(c).height;
+    // 動画 / 音声 → ファイルから。
+    await tester.tap(find.byKey(const ValueKey('composer.tool.video')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ファイルから(動画 / 音声)'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
+    expect(find.text('video.mp4'), findsOneWidget, reason: '添付のタイル(名前の無いファイルは video.mp4)');
+    // 投票。
+    await tester.tap(find.byKey(const ValueKey('composer.tool.poll')));
+    await tester.pumpAndSettle();
+    final choices = find.descendant(of: find.byType(PollEditor), matching: find.byType(TextField));
+    await tester.enterText(choices.at(0), 'はい');
+    await tester.enterText(choices.at(1), 'いいえ');
+    await tester.pumpAndSettle();
+    expect(barRect(c).height, greaterThan(small + 40), reason: '中身に合わせて FOW が伸びる');
+    // 注釈は Swing の注釈を引き継いでいる(投稿の返信と同じ)。
+    expect(find.widgetWithText(TextField, 'ネタバレ'), findsOneWidget);
+    final input = find.descendant(of: find.byKey(const ValueKey('swing.bar.composer')), matching: find.byKey(const ValueKey('composer.input')));
+    await tester.enterText(input, 'どっち？');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('composer.send')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
+    expect(uploads, contains('post:video/mp4'), reason: '添付は先に上げる');
+    final body = swingReplyBodies.single;
+    expect(body['replyTo'], 'p1');
+    expect(body['body'], 'どっち？');
+    expect(body['imageIds'], hasLength(1));
+    expect(body['cw'], 'ネタバレ');
+    expect((body['poll'] as Map)['choices'], ['はい', 'いいえ']);
+    expect(body.containsKey('visibility'), isFalse, reason: '公開範囲は送らない(Central が swing にする)');
+    expect(find.byKey(const ValueKey('swing.bar.compact')), findsOneWidget, reason: '送ったら戻る');
+    await tester.tap(find.byKey(const ValueKey('swing.close')));
+    await tester.pumpAndSettle();
   });
 
   test('FOW のぶんメディアを寄せる余白 (D-413 で共通化): 重なる FOW の逆サイドへ。ほかのカラムの FOW は見ない。壁付けは左右', () {
@@ -1105,7 +1176,7 @@ void main() {
       expect(shrunk.bottom, lessThanOrEqualTo(open.top + 1));
       expect(shrunk.height, lessThan(media.height - 40), reason: 'Swing の面が縮む');
       if (wide) expect(open.left, closeTo(viewer.left, 1), reason: 'コンポーザーもカラムの中');
-      await tester.tap(find.byKey(const ValueKey('swing.bar.composeClose')));
+      await tester.tap(find.byKey(const ValueKey('composer.cancel')));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('swing.bar.compact')), findsOneWidget);
       expect(tester.getRect(find.byKey(swingViewerMediaKey)), media, reason: '閉じると面も戻る');

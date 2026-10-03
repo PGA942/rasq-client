@@ -223,7 +223,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
       id: SwingBar.fowId,
       spec: spec,
       semanticsLabel: 'Swing の返信とシークバー',
-      builder: (ctx, handle) => SwingViewerBar(controller: _bar),
+      builder: (ctx, handle) => SwingViewerBar(controller: _bar, spec: spec),
     ).whenComplete(() {
       spec.heightFactor.removeListener(_onBarDrag);
       if (identical(_barSpec, spec)) _barSpec = null;
@@ -253,7 +253,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     spec.heightStops = stops;
     final target = switch (_bar.mode) {
       SwingBarMode.compact => stops.first,
-      SwingBarMode.compose => ((SwingBar.composeHeight + _bottomPad) / avail).clamp(stops.first, 0.9),
+      // コンポーザーが測った高さ (D-421: 添付 / 投票で伸びる)。
+      SwingBarMode.compose => ((_bar.composeHeight + _bottomPad) / avail).clamp(stops.first, 0.9),
       SwingBarMode.thread => stops.last,
     };
     if ((spec.heightFactor.value - target).abs() < 0.001) return;
@@ -265,7 +266,12 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   /// 形が替わった: 広げている間は止め、高さを合わせる。
   void _onBarMode() {
-    if (!mounted || _bar.mode == _barMode) return;
+    if (!mounted) return;
+    if (_bar.mode == _barMode) {
+      // コンポーザーの中身の高さが変わった (D-421)。
+      if (_barMode == SwingBarMode.compose) _applyBarHeight();
+      return;
+    }
     _barMode = _bar.mode;
     _hold('reply', _barMode != SwingBarMode.compact);
     _applyBarHeight();

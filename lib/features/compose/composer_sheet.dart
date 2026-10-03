@@ -195,9 +195,78 @@ class _Attachment {
   MediaItem? uploaded;
 }
 
-class _ComposerBody extends ConsumerStatefulWidget {
-  const _ComposerBody({required this.target, required this.onSent, this.spec, this.onClose, this.resident = false, this.initialText, this.initialPostAs, this.initialFiles, this.initialRasqTarget = false});
+/// FOW の外に置くコンポーザー (D-421)。中身は投稿 / 返信のコンポーザー([showComposer])と同じもの
+/// (アクションバー・添付と加工・投票・注釈・絵文字 / MFM・メンションの補完・テキスト加工プラグイン・下書き)。
+/// Swing の返信(`SwingBar` のコンポーザーの形)が使う。
+///
+/// - [targetPreview] = 上に出す返信先のタイル(無ければ投稿の返信と同じタイル)。
+/// - [rasqReplyAttachments] = RASQ の返信にも添付と投票を付けられる(Swing のスレッドへの返信、Central S-076)。
+/// - [ownerId] / [column] / [hostSpec] = 子 FOW(絵文字 / MFM ピッカー・下書き)の持ち主・カラム・避ける余白を付ける FOW。
+/// - [onFitHeight] = 全部をピッタリ出せる高さ(px、ハンドルは含まない)。置き場所の高さを合わせるのに使う。
+class EmbeddedComposer extends StatelessWidget {
+  const EmbeddedComposer({
+    super.key,
+    required this.target,
+    required this.onSent,
+    this.onClose,
+    this.targetPreview,
+    this.rasqReplyAttachments = false,
+    this.ownerId,
+    this.column = 0,
+    this.hostSpec,
+    this.onFitHeight,
+  });
   final ComposeTarget target;
+  final ValueChanged<Post> onSent;
+  final VoidCallback? onClose;
+  final Widget? targetPreview;
+  final bool rasqReplyAttachments;
+  final String? ownerId;
+  final int column;
+  final FowSpec? hostSpec;
+  final ValueChanged<double>? onFitHeight;
+
+  @override
+  Widget build(BuildContext context) => _ComposerBody(
+        target: target,
+        onSent: onSent,
+        onClose: onClose,
+        targetPreview: targetPreview,
+        rasqReplyAttachments: rasqReplyAttachments,
+        ownerId: ownerId,
+        column: column,
+        hostSpec: hostSpec,
+        onFitHeight: onFitHeight,
+      );
+}
+
+class _ComposerBody extends ConsumerStatefulWidget {
+  const _ComposerBody({
+    required this.target,
+    required this.onSent,
+    this.spec,
+    this.onClose,
+    this.resident = false,
+    this.initialText,
+    this.initialPostAs,
+    this.initialFiles,
+    this.initialRasqTarget = false,
+    this.targetPreview,
+    this.rasqReplyAttachments = false,
+    this.ownerId,
+    this.column = 0,
+    this.hostSpec,
+    this.onFitHeight,
+  });
+  final ComposeTarget target;
+
+  /// [EmbeddedComposer] の項目 (D-421)。FOW として開くときは既定のまま。
+  final Widget? targetPreview;
+  final bool rasqReplyAttachments;
+  final String? ownerId;
+  final int column;
+  final FowSpec? hostSpec;
+  final ValueChanged<double>? onFitHeight;
 
   /// 本文の初期値(下書きが無いときだけ)。
   final String? initialText;
@@ -248,7 +317,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               builder: (ctx) => GestureDetector(
                 onLongPress: () {
                   final box = ctx.findRenderObject() as RenderBox;
-                  showActionTempMenu(ref, anchor: box.localToGlobal(Offset.zero) & box.size, action: a, ownerId: composerFowId);
+                  showActionTempMenu(ref, anchor: box.localToGlobal(Offset.zero) & box.size, action: a, ownerId: _ownerId);
                 },
                 child: FilterChip(
                   key: ValueKey('composer.textPlugin.${a.plugin.id}'),
@@ -285,6 +354,12 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// RASQ の投稿への返信 (D-292): SNS の返信と同じコンポーザー(スレッド画面の常駐コンポーザーも)で、投稿先は RASQ に固定。
   /// 返信は文字だけ(500 文字まで)。
   bool get _rasqReply => _replyTo != null && isRasqPost(_replyTo!);
+
+  /// RASQ の返信で、添付と投票を付けられないもの(Swing のスレッドへの返信は付けられる、D-421 / S-076)。
+  bool get _rasqTextOnlyReply => _rasqReply && !widget.rasqReplyAttachments;
+
+  /// 子 FOW の持ち主 (D-421: 埋め込みでは置き場所の FOW)。
+  String get _ownerId => widget.ownerId ?? composerFowId;
 
   /// ダイレクト投稿への返信 = 公開範囲をダイレクト(specified)に固定 (D-047)。
   bool get _directReply => _replyTo?.isDirect ?? false;
@@ -332,18 +407,36 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   Widget _grip(Widget child) => widget.spec == null ? child : FowMoveGrip(spec: widget.spec!, child: child);
 
   /// 子 FOW(絵文字/MFM ピッカー)はコンポーザーと同じカラムに開く。
-  int get _column => widget.spec?.columnIndex ?? 0;
+  int get _column => widget.spec?.columnIndex ?? widget.hostSpec?.columnIndex ?? widget.column;
 
   /// build 毎に呼ぶ(冪等)。レイアウト後に「全部をピッタリ表示できる」
   /// 高さを実測し、高さ段階(heightStops)と現在高さへ反映する。
   void _scheduleStickFit() {
     final spec = widget.spec;
-    if (spec == null) return;
+    if (spec == null) {
+      if (widget.onFitHeight != null) WidgetsBinding.instance.addPostFrameCallback((_) => _reportFit());
+      return;
+    }
     if (_wasExpanded != _expandedView) {
       _wasExpanded = _expandedView;
       spec.userResized = false; // 段階が変わったら自動フィットを再開
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureStickFit());
+  }
+
+  /// 埋め込み (D-421): 全部をピッタリ出せる高さを置き場所へ知らせる(変わったときだけ)。
+  double? _lastFit;
+  void _reportFit() {
+    if (!mounted) return;
+    final content = _stickContentKey.currentContext?.size?.height;
+    final toolbar = _stickToolbarKey.currentContext?.size?.height;
+    if (content == null || toolbar == null) return;
+    final headerAnim = _stickHeaderAnimKey.currentContext?.size?.height ?? 0;
+    final headerInner = _stickHeaderInnerKey.currentContext?.size?.height ?? 0;
+    final px = (content - headerAnim + headerInner) + toolbar + (_mentionHits.isEmpty ? 0 : 44) + RasqSpacing.sm + 2;
+    if (_lastFit != null && (px - _lastFit!).abs() < 0.5) return;
+    _lastFit = px;
+    widget.onFitHeight?.call(px);
   }
 
   void _measureStickFit() {
@@ -440,6 +533,12 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       _files.add(_Attachment(bytes: f.bytes, name: f.name, mimeType: f.mimeType)..sensitive = f.sensitive);
     }
     // 下書きは自動では入れない (D-177): 開くときは空で、下書き FOW(「下書き」)から選んで開く。
+    // 埋め込み (D-421): 置き場所の FOW がほかのものにフォーカスを持っていても、開いたら入力欄に入る。
+    if (widget.spec == null && !widget.resident) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focus.requestFocus();
+      });
+    }
     _scheduleTargetEval(); // ポスト先ノード (D-116): 開いた時点の内容で初回評価
   }
 
@@ -479,7 +578,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   /// 「下書き」(D-176): 下書き FOW — 保存して閉じる / 別の下書きを開く / 消す。
   Future<void> _openDrafts() async {
-    final r = await showDraftsFow(ref, currentDraftId: _draftId, hasContent: _canDraft, column: _column, ownerId: composerFowId);
+    final r = await showDraftsFow(ref, currentDraftId: _draftId, hasContent: _canDraft, column: _column, ownerId: _ownerId);
     if (!mounted || r == null) return;
     switch (r) {
       case DraftsSaveAndClose(asNew: final asNew):
@@ -574,7 +673,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
           selectionStart: sel.isValid ? sel.start : _text.text.length,
           selectionEnd: sel.isValid ? sel.end : _text.text.length,
           // インライン FOW (D-169): MFM ピッカーと同じく、コンポーザーの子として同じカラムに。
-          fowOwner: composerFowId,
+          fowOwner: _ownerId,
           column: _column,
           onReplace: (start, end, text) {
             if (!mounted) return;
@@ -1212,7 +1311,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   bool get _isDm => widget.target is ComposeDm;
-  int get _max => _session?.maxPostLength ?? 500;
+
+  static const _rasqTextOnlyTip = 'RASQ の返信は文字だけです';
+  int get _max => _rasqTarget ? (_rasqReply ? rasqReplyMaxChars : rasqPostMaxChars) : (_session?.maxPostLength ?? 500);
 
   // ── @ 補完 (D-285) ──
   List<({String insert, String name, Uri? avatarUrl})> _mentionHits = const [];
@@ -1305,7 +1406,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// 動画 (D-174 → D-250): ライブラリから動画 1 本、またはファイルから動画 / **音声** 1 本。
   /// 音声はそのまま添付になる(加工を開くと Visualizer の動画へ変換される)。
   Future<void> _pickVideo(Rect anchor) async {
-    final from = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'composer.video.source', ownerId: composerFowId, anchor: anchor, dense: true, items: const [
+    final from = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'composer.video.source', ownerId: _ownerId, anchor: anchor, dense: true, items: const [
       RasqDropdownItem('ライブラリの動画', 'library'),
       RasqDropdownItem('ファイルから(動画 / 音声)', 'file'),
     ]);
@@ -1327,7 +1428,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   bool get _canSend {
-    if (_busy || _session == null) return false;
+    // RASQ に投稿する / 返すときは SNS のセッションが無くてもよい (D-421)。
+    if (_busy || (_session == null && !_rasqTarget)) return false;
     final hasText = _text.text.trim().isNotEmpty;
     final hasMedia = _files.isNotEmpty;
     final pollOk = _poll == null || _poll!.isValid;
@@ -1344,7 +1446,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final me = ref.read(orgateAccountProvider).value;
     if (api == null || me == null) return setState(() => _error = 'RASQ アカウントにログインしていません');
     if (_files.any((f) => f.bytes.length > rasqPostMaxMediaBytes)) return setState(() => _error = 'RASQ への投稿では、動画 / 音声は 1 つ ${rasqPostMaxMediaBytes ~/ (1024 * 1024)} MB までです');
-    if (_rasqReply && (_files.isNotEmpty || _poll != null)) return setState(() => _error = 'RASQ の返信は、文字だけです(添付 / 投票は付けられません)');
+    if (_rasqTextOnlyReply && (_files.isNotEmpty || _poll != null)) return setState(() => _error = 'RASQ の返信は、文字だけです(添付 / 投票は付けられません)');
     if (_rasqReply && _text.text.trim().length > rasqReplyMaxChars) return setState(() => _error = 'RASQ の返信は $rasqReplyMaxChars 文字までです');
     if (_files.length > rasqPostMaxImages) return setState(() => _error = 'RASQ への投稿は、添付 $rasqPostMaxImages つまでです');
     if (_text.text.trim().length > rasqPostMaxChars) return setState(() => _error = 'RASQ への投稿は $rasqPostMaxChars 文字までです');
@@ -1363,8 +1465,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       _progress = '送信中…';
     });
     try {
+      // 返信 (D-292): 公開範囲 / リアクションの受け入れは送らない(Swing のスレッドへの返信は Central が `swing` にする)。
+      // 注釈は返信にも付く。添付 / 投票は Swing のスレッドへの返信だけ (D-421 / S-076)。
       final created = _rasqReply
-          ? await api.reply(_replyTo!.id, _text.text.trim())
+          ? await api.createPost(
+              _text.text.trim(),
+              replyTo: _replyTo!.id,
+              images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
+              cw: _cwOn ? _cw.text.trim() : '',
+              poll: poll == null ? null : (choices: poll.texts, multiple: poll.multiple, expiresAfter: poll.expiresAfter),
+            )
           : await api.createPost(
         _text.text.trim(),
         images: [for (final f in _files) (bytes: f.bytes as List<int>, contentType: f.mimeType ?? 'image/jpeg', sensitive: f.sensitive)],
@@ -1593,6 +1703,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: TextButton(
+                              key: const ValueKey('composer.cancel'),
                               onPressed: _busy ? null : _handleClose,
                               style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32), alignment: Alignment.centerLeft),
                               child: Text('キャンセル', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
@@ -1613,7 +1724,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                         ),
                       ])),
                       if (_directReply) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('ダイレクト投稿への返信(相手にだけ届きます)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-                      if (_replyTo != null || _quoteOf != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: _TargetPreview(post: (_replyTo ?? _quoteOf)!, emojis: emojis)),
+                      if (_replyTo != null || _quoteOf != null) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: widget.targetPreview ?? _TargetPreview(post: (_replyTo ?? _quoteOf)!, emojis: emojis)),
                     ]),
             ),
             // アカウントバンドルタイル (D-089/D-091): **アバターをタップすると
@@ -1649,6 +1760,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                       RasqIconButton(icon: Icons.cancel, size: 20, tooltip: '注釈を外す', onPressed: () => setState(() => _cwOn = false)),
                     ]),
                   TextField(
+                    key: const ValueKey('composer.input'),
                     controller: _text,
                     focusNode: _focus,
                     // 常駐 stick は縮小状態で置かれる(タップで展開)。
@@ -1698,7 +1810,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       // 子 FOW の回避伸縮 (D-068): アクションバーの**前後**に高さ可変
       // padding を置く。子ピッカーが付いている側の padding が子の高さに
       // 伸びて(いなければ 0px)、入力部・バーが子に被らない。
-      if (widget.spec != null) FowChildGap(spec: widget.spec!, top: true),
+      if ((widget.spec ?? widget.hostSpec) case final gap?) FowChildGap(spec: gap, top: true),
       // @ 補完の候補 (D-285): 本文で `@…` を打っている間だけ、ツールバーの上に並ぶ。押すと、その場のメンションに置き換わる。
       if (_mentionHits.isNotEmpty)
         SizedBox(
@@ -1728,19 +1840,20 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                RasqActionButton.icon(icon: Icons.photo_camera_outlined, tooltip: 'カメラ', onTap: _busy ? null : () => _pick(camera: true)),
-                RasqActionButton.icon(icon: Icons.image_outlined, tooltip: '画像', onTap: _busy || _files.length >= _maxFiles ? null : () => _pick()),
-                Builder(builder: (ctx) => RasqActionButton.icon(icon: Icons.videocam_outlined, tooltip: '動画 / 音声', onTap: _busy || _files.length >= _maxFiles ? null : () {
+                // RASQ の返信は文字だけ (D-292)。Swing のスレッドへの返信は付けられる (D-421)。付けられないときは押せない理由を出す。
+                RasqActionButton.icon(key: const ValueKey('composer.tool.camera'), icon: Icons.photo_camera_outlined, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : 'カメラ', onTap: _busy || _rasqTextOnlyReply ? null : () => _pick(camera: true)),
+                RasqActionButton.icon(key: const ValueKey('composer.tool.image'), icon: Icons.image_outlined, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : '画像', onTap: _busy || _rasqTextOnlyReply || _files.length >= _maxFiles ? null : () => _pick()),
+                Builder(builder: (ctx) => RasqActionButton.icon(key: const ValueKey('composer.tool.video'), icon: Icons.videocam_outlined, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : '動画 / 音声', onTap: _busy || _rasqTextOnlyReply || _files.length >= _maxFiles ? null : () {
                   final box = ctx.findRenderObject() as RenderBox;
                   _pickVideo(box.localToGlobal(Offset.zero) & box.size);
                 })),
-                RasqActionButton.icon(icon: Icons.visibility_outlined, doneIcon: Icons.visibility, done: _cwOn, tooltip: '隠す(注釈)', onTap: () => setState(() => _cwOn = !_cwOn)),
-                if (!_isDm) RasqActionButton.icon(icon: Icons.poll_outlined, doneIcon: Icons.poll, done: _poll != null, tooltip: '投票', onTap: () => setState(() => _poll = _poll == null ? PollDraft() : null)),
+                RasqActionButton.icon(key: const ValueKey('composer.tool.cw'), icon: Icons.visibility_outlined, doneIcon: Icons.visibility, done: _cwOn, tooltip: '隠す(注釈)', onTap: () => setState(() => _cwOn = !_cwOn)),
+                if (!_isDm) RasqActionButton.icon(key: const ValueKey('composer.tool.poll'), icon: Icons.poll_outlined, doneIcon: Icons.poll, done: _poll != null, tooltip: _rasqTextOnlyReply ? _rasqTextOnlyTip : '投票', onTap: _rasqTextOnlyReply && _poll == null ? null : () => setState(() => _poll = _poll == null ? PollDraft() : null)),
                 RasqActionButton.icon(
                   icon: Icons.emoji_emotions_outlined,
                   tooltip: '絵文字',
                   // 絵文字は、**投稿するアカウント**のサーバーのもの (D-278。切り替えに追従する)。
-                  onTap: () => openEmojiPicker(ref, ownerId: composerFowId, column: _column, predictionContext: _text.text, accountKey: _effectivePostAs?.account.key, onPick: (e) {
+                  onTap: () => openEmojiPicker(ref, ownerId: _ownerId, column: _column, predictionContext: _text.text, accountKey: _effectivePostAs?.account.key, onPick: (e) {
                     _insert(e);
                     _focus.requestFocus();
                   }),
@@ -1752,14 +1865,15 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                   return RasqActionButton.icon(
                     icon: Icons.code,
                     tooltip: mfm ? 'MFM' : 'Markdown',
-                    onTap: () => openMfmPicker(ref, ownerId: composerFowId, mfm: mfm, column: _column, onApply: (p, s) {
+                    onTap: () => openMfmPicker(ref, ownerId: _ownerId, mfm: mfm, column: _column, onApply: (p, s) {
                       _wrapSelection(p, s);
                       _focus.requestFocus();
                     }),
                   );
                 }),
-                // 投稿オプション (D-052: ヘッダーからツールバーへ移動)。
-                if (!_isDm && !_directReply) const ComposerHeaderControls(),
+                // 投稿オプション (D-052: ヘッダーからツールバーへ移動)。RASQ の返信は公開範囲 / 受け入れを送らないので出さない
+                // (D-421。Swing のスレッドへの返信は、Swing を見られる人だけに決まっている)。
+                if (!_isDm && !_directReply && !_rasqReply) const ComposerHeaderControls(),
               ]),
             ),
           ),
@@ -1772,6 +1886,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
           ),
           const SizedBox(width: 8),
           FilledButton(
+            key: const ValueKey('composer.send'),
             onPressed: _canSend ? _send : null,
             style: FilledButton.styleFrom(minimumSize: const Size(0, 34), padding: const EdgeInsets.symmetric(horizontal: 16)),
             child: _busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(switch (target) { ComposeReply() => '返信', ComposeDm() => '送信', _ => '送信' }),
@@ -1780,7 +1895,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       )),
       // 子 FOW の回避伸縮 (D-068): バー後ろ側の可変 padding(下ドック時は
       // こちらが伸びて、バーが子ピッカーの上辺に載る)。
-      if (widget.spec != null) FowChildGap(spec: widget.spec!),
+      if ((widget.spec ?? widget.hostSpec) case final gap?) FowChildGap(spec: gap),
     ]);
   }
 }
