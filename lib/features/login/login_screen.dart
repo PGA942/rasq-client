@@ -68,15 +68,16 @@ class LoginScreen extends ConsumerWidget {
                 ]),
               ),
             const SizedBox(height: RasqSpacing.lg),
-            _ServiceButton(kind: SnsKind.bluesky, label: 'Blueskyでログイン', onTap: () => context.push(Routes.loginBluesky)),
-            _ServiceButton(kind: SnsKind.misskey, label: 'Misskeyでログイン', onTap: () => context.push(Routes.loginMisskey)),
+            SnsServiceButton(kind: SnsKind.bluesky, label: 'Blueskyでログイン', onTap: () => context.push(Routes.loginBluesky)),
+            SnsServiceButton(kind: SnsKind.misskey, label: 'Misskeyでログイン', onTap: () => context.push(Routes.loginMisskey)),
             // mixi2 (D-206): サンプルプラグイン(API 申請前はダミーモード)。
-            _ServiceButton(kind: SnsKind.mixi2, label: 'mixi2でログイン', external: true, onTap: () => context.push(Routes.loginMixi2)),
-            _ServiceButton(kind: SnsKind.mastodon, label: 'Mastodonでログイン', onTap: () => context.push(Routes.loginMastodon)),
+            SnsServiceButton(kind: SnsKind.mixi2, label: 'mixi2でログイン', external: true, onTap: () => context.push(Routes.loginMixi2)),
+            SnsServiceButton(kind: SnsKind.mastodon, label: 'Mastodonでログイン', onTap: () => context.push(Routes.loginMastodon)),
             const SizedBox(height: RasqSpacing.sm),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: scheme.onSurface, foregroundColor: scheme.surface, minimumSize: const Size.fromHeight(44)),
-              onPressed: () => context.push(Routes.loginMisskey),
+              // 探す画面 (D-414): 画像 / 人 / RAi から、合うサーバーと RASQ リストを探す。
+              onPressed: () => context.push(Routes.snsDiscover),
               child: const Text('サービスを探してログイン'),
             ),
             const Spacer(),
@@ -155,8 +156,9 @@ class _BundleAccounts extends ConsumerWidget {
   }
 }
 
-class _ServiceButton extends StatelessWidget {
-  const _ServiceButton({required this.kind, required this.label, required this.onTap, this.external = false});
+/// SNS ごとのログインのボタン(オンボーディング v2 の ③ でも使う)。
+class SnsServiceButton extends StatelessWidget {
+  const SnsServiceButton({super.key, required this.kind, required this.label, required this.onTap, this.external = false});
   final SnsKind kind;
   final String label;
   final VoidCallback onTap;

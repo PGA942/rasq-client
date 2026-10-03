@@ -170,11 +170,12 @@ class RasqListShowcaseTile extends ConsumerWidget {
 }
 
 /// RASQ リストから登録: リストの人がいるサーバーのうち、アプリから登録できるもの。1 つならそこ、複数なら選ぶ。
-Future<void> signupFromList(BuildContext context, WidgetRef ref, RasqCollection list) async {
+/// 探す画面 (D-414) からも使う(そのときは [nudgeRasqAccount] = false)。
+Future<void> signupFromList(BuildContext context, WidgetRef ref, RasqCollection list, {bool nudgeRasqAccount = true}) async {
   final targets = <ServerSignupTarget>[];
   for (final host in list.instances) {
     final info = await ref.read(serverInfoProvider(host).future);
-    final t = info == null ? null : signupTargetFor(info, list: list);
+    final t = info == null ? null : signupTargetFor(info, list: list, nudgeRasqAccount: nudgeRasqAccount);
     if (t != null) targets.add(t);
   }
   if (!context.mounted) return;

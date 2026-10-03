@@ -1,0 +1,440 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
+
+import '../../app/providers.dart';
+import '../../app/router.dart';
+import '../../backend/orgate_client.dart';
+import '../../backend/rasq_consent.dart';
+import '../../shell/column_layout.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
+import '../login/login_screen.dart' show SnsServiceButton;
+import 'onboarding_feed.dart';
+import 'rasq_register_screen.dart';
+
+/// 初回オンボーディング v2 (D-414)。**ページごとに 1 つ**:
+/// ① ユーザー名・パスワード・年齢([OnboardingAccountStep]。初回は `/onboarding` そのもの、ほかからは `/onboarding/account`)
+/// ② 利用規約・プライバシーポリシー・チャイルドセーフ(`/onboarding/terms`、18 歳未満は保護者の同意 / 保護者からのコードの案内。
+///    この端末に SNS アカウントがあればバンドルも)→「同意して登録する」で RASQ アカウントを作る(ORGATE の登録 D-398、承諾は一緒に D-371)
+/// ③ 既存の SNS アカウントでログイン(`/onboarding/sns`、「SNS サービスを探す」→ 探す画面 `/sns-discover`)
+/// RASQ アカウントは最初からあるので、D-413 の「RASQ アカウントを作りますか?」はこの流れでは出さない。
+/// 幅の広い画面 (≥840dp) は D-405 と同じ 2 カラム: 左の小カラムに公開 RASQ リストの投稿 ([OnboardingFeedColumn])。
+
+/// ① で入れた内容(② へ渡す。パスワードは画面の中だけ、保存しない)。
+@immutable
+class OnboardingDraft {
+  const OnboardingDraft({required this.handle, required this.password, required this.age});
+  final String handle;
+  final String password;
+  final RasqAgeBand age;
+}
+
+/// オンボーディングの枠: 幅の広い画面は左に流れ、右に [child](幅 560px まで)。狭い画面は [child] だけ。
+class OnboardingFrame extends ConsumerWidget {
+  const OnboardingFrame({super.key, required this.builder});
+  final Widget Function(BuildContext context, bool narrow) builder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
+        body: SafeArea(
+          child: LayoutBuilder(builder: (context, c) {
+            if (c.maxWidth < RasqSizes.tabletBreakpoint) return builder(context, true);
+            final split = splitColumns(c.maxWidth, ref.watch(columnLayoutProvider));
+            return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              SizedBox(width: split.small, child: const OnboardingFeedColumn()),
+              const VerticalDivider(width: 1),
+              Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: builder(context, false)))),
+            ]);
+          }),
+        ),
+      );
+}
+
+/// ページの上: 戻る(あれば)・「n / 3」・見出し・説明。
+class OnboardingStepHeader extends StatelessWidget {
+  const OnboardingStepHeader({super.key, required this.step, required this.title, this.description, this.onBack});
+  final int step;
+  final String title;
+  final String? description;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, RasqSpacing.sm),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          if (onBack != null) IconButton(key: const ValueKey('onb.back'), icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: onBack) else const RasqLogo(height: 28),
+          const Spacer(),
+          Text('$step / 3', key: const ValueKey('onb.stepCount'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        ]),
+        const SizedBox(height: RasqSpacing.sm),
+        Row(children: [
+          for (var i = 1; i <= 3; i++)
+            Expanded(
+              child: Container(
+                height: 4,
+                margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
+                decoration: BoxDecoration(color: i <= step ? scheme.primary : scheme.outlineVariant, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+        ]),
+        const SizedBox(height: RasqSpacing.md),
+        Text(title, style: RasqTypography.title),
+        if (description != null) ...[
+          const SizedBox(height: RasqSpacing.xs),
+          Text(description!, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+        ],
+      ]),
+    );
+  }
+}
+
+/// ① ユーザー名・パスワード・年齢。[alternatives] = 下に出すほかの入口(ログイン / スキップなど)。
+class OnboardingAccountStep extends ConsumerStatefulWidget {
+  const OnboardingAccountStep({super.key, this.alternatives = const [], this.onBack, this.narrow = false});
+  final List<Widget> alternatives;
+  final VoidCallback? onBack;
+  final bool narrow;
+
+  @override
+  ConsumerState<OnboardingAccountStep> createState() => _OnboardingAccountStepState();
+}
+
+class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
+  final _handle = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  RasqAgeBand? _age;
+  bool _show = false;
+
+  /// ② から戻ってきた理由(ユーザー名が使われていた など)。
+  String? _handleRejected;
+
+  @override
+  void dispose() {
+    _handle.dispose();
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  String? get _handleError {
+    if (_handleRejected != null) return _handleRejected;
+    final h = _handle.text;
+    if (h.isEmpty) return null;
+    if (h.length < 3) return '3 文字以上にしてください';
+    if (h.length > 32) return '32 文字までです';
+    if (!rasqHandlePattern.hasMatch(h)) return '半角の英小文字・数字・_ だけ使えます';
+    return null;
+  }
+
+  bool get _ready =>
+      rasqHandlePattern.hasMatch(_handle.text) &&
+      _handleRejected == null &&
+      _password.text.isNotEmpty &&
+      rasqPasswordProblem(_password.text) == null &&
+      _confirm.text == _password.text &&
+      _age != null;
+
+  Future<void> _next() async {
+    final draft = OnboardingDraft(handle: _handle.text, password: _password.text, age: _age!);
+    final rejected = await context.push<String>(Routes.onboardingTerms, extra: draft);
+    if (rejected != null && mounted) setState(() => _handleRejected = rejected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    final centralOk = ref.watch(centralConfiguredProvider);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      OnboardingStepHeader(
+        step: 1,
+        title: 'RASQ アカウントを作る',
+        description: 'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。入れたプラグイン・設定・アカウントのまとまりを、ほかの端末でも使えます。',
+        onBack: widget.onBack,
+      ),
+      Expanded(
+        child: SingleChildScrollView(
+          key: const ValueKey('onb.account.list'),
+          padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            TextField(
+              key: const ValueKey('onb.handle'),
+              controller: _handle,
+              autofillHints: const [AutofillHints.newUsername],
+              inputFormatters: [
+                TextInputFormatter.withFunction((_, v) => v.copyWith(text: v.text.toLowerCase())),
+                LengthLimitingTextInputFormatter(32),
+              ],
+              onChanged: (_) => setState(() => _handleRejected = null),
+              decoration: InputDecoration(labelText: 'ユーザー名(@ のあとの名前)', prefixText: '@', errorText: _handleError, helperText: '半角の英小文字・数字・_ で 3〜32 文字'),
+            ),
+            const SizedBox(height: RasqSpacing.sm),
+            TextField(
+              key: const ValueKey('onb.password'),
+              controller: _password,
+              obscureText: !_show,
+              autofillHints: const [AutofillHints.newPassword],
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: 'パスワード($rasqPasswordMinChars 文字以上)',
+                errorText: rasqPasswordProblem(_password.text),
+                suffixIcon: IconButton(icon: Icon(_show ? Icons.visibility_off : Icons.visibility), tooltip: _show ? '隠す' : '表示', onPressed: () => setState(() => _show = !_show)),
+              ),
+            ),
+            TextField(
+              key: const ValueKey('onb.passwordConfirm'),
+              controller: _confirm,
+              obscureText: !_show,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(labelText: 'パスワード(確認)', errorText: _confirm.text.isNotEmpty && _confirm.text != _password.text ? '一致しません' : null),
+            ),
+            const SizedBox(height: RasqSpacing.xs),
+            Text('ほかの端末や Web 版から、このアカウントにログインするときに使います。', style: caption),
+            const RasqSectionHeader(title: '年齢', topMargin: RasqSpacing.md),
+            Text('RASQ は 13 歳以上で使えます。18 歳未満の人は、次のページで保護者の同意を確かめます。', style: caption),
+            for (final a in RasqAgeBand.values)
+              RasqRadioListTile<RasqAgeBand>(key: ValueKey('onb.age.${a.wire}'), title: a.label, value: a, groupValue: _age, onChanged: (v) => setState(() => _age = v)),
+            const SizedBox(height: RasqSpacing.md),
+          ]),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.md),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+          if (!centralOk)
+            Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              Text('RASQ Central の接続先が未設定です', style: caption),
+              TextButton(onPressed: () => context.push('${Routes.settings}/server'), child: const Text('接続先を設定')),
+            ]),
+          FilledButton(
+            key: const ValueKey('onb.next'),
+            onPressed: _ready && centralOk ? _next : null,
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+            child: const Text('次へ'),
+          ),
+          ...widget.alternatives,
+        ]),
+      ),
+    ]);
+  }
+}
+
+/// `/onboarding/account`: ①だけのページ(ログアウトしたあとの「新しく RASQ アカウントを作成」から)。
+class OnboardingAccountScreen extends StatelessWidget {
+  const OnboardingAccountScreen({super.key});
+  @override
+  Widget build(BuildContext context) => OnboardingFrame(builder: (context, narrow) => OnboardingAccountStep(narrow: narrow, onBack: () => context.pop()));
+}
+
+/// ② 利用規約・プライバシーポリシー・チャイルドセーフ → 登録。
+class OnboardingTermsScreen extends ConsumerStatefulWidget {
+  const OnboardingTermsScreen({super.key, required this.draft});
+
+  /// null = ① を通らずに開いた(戻ってもらう)。
+  final OnboardingDraft? draft;
+
+  @override
+  ConsumerState<OnboardingTermsScreen> createState() => _OnboardingTermsScreenState();
+}
+
+class _OnboardingTermsScreenState extends ConsumerState<OnboardingTermsScreen> {
+  late final OverlayManager _overlay = ref.read(overlayManagerProvider);
+  bool _agree = false;
+  bool _guardian = false;
+  bool _replace = true;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 登録のページ (D-405) と同じ: 開いている間は下の FOW を退避する。
+    _overlay.setFowSuspend(_suspendAll);
+  }
+
+  @override
+  void dispose() {
+    _overlay.setFowSuspend(null);
+    super.dispose();
+  }
+
+  static bool _suspendAll(RasqOverlayEntry _) => true;
+
+  void _toast(String m) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  }
+
+  int get _snsCount => ref.read(sessionsProvider).value?.sessions.length ?? 0;
+
+  bool get _ready {
+    final d = widget.draft;
+    return d != null && _agree && (!d.age.needsGuardian || _guardian) && !_busy;
+  }
+
+  Future<void> _submit() async {
+    final d = widget.draft!;
+    setState(() => _busy = true);
+    try {
+      final choice = RasqRegisterChoice(age: d.age, replaceBundle: _snsCount > 0 ? _replace : true, password: d.password);
+      final rec = await completeRasqRegistration(ref, choice, handle: d.handle, onMessage: _toast);
+      if (rec == null || !mounted) return;
+      await ref.read(rasqAccountsProvider.notifier).completeOnboarding();
+      if (mounted) context.go(Routes.onboardingSns);
+    } on RasqHandleRejected catch (e) {
+      // アカウントはできている。ユーザー名を変えて、もう一度(① へ戻る)。
+      if (mounted) context.pop(e.message);
+    } on OrgateException catch (e) {
+      _toast('RASQ アカウントを作成できませんでした: ${e.message}');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    final d = widget.draft;
+    final minor = d?.age.needsGuardian ?? false;
+    final snsCount = _snsCount;
+    Widget check(Key key, String title, bool value, ValueChanged<bool> onChanged, {String? subtitle}) => RasqListTile(
+          key: key,
+          title: title,
+          subtitle: subtitle,
+          chevron: false,
+          onTap: () => onChanged(!value),
+          trailing: Checkbox(value: value, onChanged: (v) => onChanged(v ?? false)),
+        );
+    return OnboardingFrame(
+      builder: (context, narrow) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        OnboardingStepHeader(step: 2, title: '利用規約とプライバシーポリシー', onBack: _busy ? null : () => context.pop()),
+        if (d == null)
+          Expanded(child: Center(child: Text('先に ① のページでユーザー名などを入れてください', style: caption)))
+        else
+          Expanded(
+            child: SingleChildScrollView(
+              key: const ValueKey('onb.terms.list'),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                RasqListTile(key: const ValueKey('onb.terms.read'), title: '利用規約を読む', onTap: () => context.push(Routes.termsDoc)),
+                RasqListTile(key: const ValueKey('onb.privacy.read'), title: 'プライバシーポリシーを読む', onTap: () => context.push(Routes.privacyDoc)),
+                check(const ValueKey('onb.agree'), '利用規約とプライバシーポリシーに同意する', _agree, (v) => setState(() => _agree = v)),
+                // チャイルドセーフ (D-241 / D-307): 18 歳未満は保護者の同意。保護者が子のアカウントを作ったなら、ここで作らずにコードで入る。
+                if (minor) ...[
+                  const RasqSectionHeader(title: 'チャイルドセーフ(18 歳未満)'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+                    child: Text(
+                      '${d.age.label}の人は、保護者の同意が必要です。保護者の RASQ アカウントとつなぐと、保護者が使い方(見られる投稿の強さ・時間・使える機能)を決められます'
+                      '(設定 → チャイルドセーフ → チャイルドモード)。',
+                      key: const ValueKey('onb.childSafe.note'),
+                      style: caption,
+                    ),
+                  ),
+                  check(const ValueKey('onb.guardian'), '保護者の同意を得ています', _guardian, (v) => setState(() => _guardian = v)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('onb.childLogin'),
+                      onPressed: () => context.push(Routes.childSafeLogin),
+                      icon: const Icon(Icons.family_restroom, size: 18),
+                      label: const Text('保護者からのコードでログインする'),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
+                    child: Text('保護者があなたのアカウントを作ってくれた場合は、ここで登録せず、受け取ったコードでログインしてください。', style: caption),
+                  ),
+                ],
+                if (snsCount > 0) ...[
+                  const RasqSectionHeader(title: 'アカウントバンドル'),
+                  RasqRadioListTile<bool>(
+                    key: const ValueKey('onb.bundle.replace'),
+                    title: 'この端末の SNS アカウントで置き換える',
+                    subtitle: 'ログイン中の $snsCount 件を、この RASQ アカウントにまとめます',
+                    value: true,
+                    groupValue: _replace,
+                    onChanged: (v) => setState(() => _replace = v),
+                  ),
+                  RasqRadioListTile<bool>(
+                    key: const ValueKey('onb.bundle.keep'),
+                    title: '置き換えない',
+                    subtitle: 'SNS アカウントはこの端末だけに残します',
+                    value: false,
+                    groupValue: _replace,
+                    onChanged: (v) => setState(() => _replace = v),
+                  ),
+                ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.sm),
+                  child: Text('「アルゴリズムとコミュニティへの貢献」は、この登録には含まれません(別の任意の同意で、既定は「提供しない」です)。RASQ アカウントはいつでも削除できます。', style: caption),
+                ),
+              ]),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.md),
+          child: FilledButton(
+            key: const ValueKey('onb.register'),
+            onPressed: _ready ? _submit : null,
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+            child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('同意して登録する'),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+/// ③ 既存の SNS アカウントでログイン。「SNS サービスを探す」→ 探す画面。
+class OnboardingSnsScreen extends ConsumerWidget {
+  const OnboardingSnsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final canAdd = ref.watch(childGateProvider).canAddAccounts;
+    return OnboardingFrame(
+      builder: (context, narrow) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const OnboardingStepHeader(
+          step: 3,
+          title: 'SNS アカウントでログイン',
+          description: 'RASQ アカウントができました。使っている SNS のアカウントでログインしてください。まだ SNS を使っていなければ、「SNS サービスを探す」から合うサーバーやリストを探せます。',
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (!canAdd)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: RasqSpacing.sm),
+                  child: Text('保護者が SNS アカウントの追加を止めています', key: const ValueKey('onb.sns.blocked'), style: RasqTypography.bodySmall.copyWith(color: scheme.error)),
+                ),
+              SnsServiceButton(kind: SnsKind.bluesky, label: 'Blueskyでログイン', onTap: () => context.push(Routes.loginBluesky)),
+              SnsServiceButton(kind: SnsKind.misskey, label: 'Misskeyでログイン', onTap: () => context.push(Routes.loginMisskey)),
+              SnsServiceButton(kind: SnsKind.mixi2, label: 'mixi2でログイン', external: true, onTap: () => context.push(Routes.loginMixi2)),
+              SnsServiceButton(kind: SnsKind.mastodon, label: 'Mastodonでログイン', onTap: () => context.push(Routes.loginMastodon)),
+              Text('初回ログイン前に、プラグインのロードが行われます。ネット環境の良い場所で行ってください。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            ]),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.md),
+          child: FilledButton.icon(
+            key: const ValueKey('onb.discover'),
+            onPressed: () => context.push(Routes.snsDiscover),
+            icon: const Icon(Icons.travel_explore, size: 18),
+            label: const Text('SNS サービスを探す'),
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+          ),
+        ),
+      ]),
+    );
+  }
+}

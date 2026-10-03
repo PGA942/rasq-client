@@ -8,10 +8,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart' show centralSignedInAccountIdsProvider, orgateAccountProvider;
-import '../../shell/column_layout.dart';
-import '../../shell/rasq_account_fow.dart';
-import 'onboarding_previews.dart';
-import 'rasq_register_screen.dart';
+import 'onboarding_steps.dart';
 
 /// RASQ アカウントの入口 (D-138 → D-301): SNS のログインより先に出る。
 ///
@@ -41,26 +38,8 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _busy = false;
 
-  void _toast(String m) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
-  }
-
-  Future<void> _create() async {
-    setState(() => _busy = true);
-    try {
-      // 登録のページ (D-241 → D-405): 利用規約 / 年齢 / バンドルを置き換えるか → 登録 → 同意の記録。
-      final rec = await registerRasqAccount(ref, onMessage: _toast);
-      if (rec == null) return;
-      await ref.read(rasqAccountsProvider.notifier).completeOnboarding();
-      if (!mounted) return;
-      await openRasqProfileSheet(context, ref, record: rec);
-      if (mounted) context.go(Routes.login);
-    } on OrgateException catch (e) {
-      _toast('RASQ アカウントを作成できませんでした: ${e.message}');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
+  /// 新しく作る (D-414): ① のページ(ユーザー名・パスワード・年齢)→ ② 規約・チャイルドセーフ → 登録 → ③ SNS のログイン。
+  void _create() => context.push(Routes.onboardingAccount);
 
   /// いまの RASQ アカウントが Central のもので、この端末がそのトークンを持っているか(ログインで台帳に載り、いまのアカウントに
   /// なる)。D-318: 台帳にほかの Central のアカウント / トークンの無い行が残っていても、それだけではログインできたことにしない。
@@ -141,6 +120,59 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           primary: primary,
         );
 
+    // 狭い画面 (D-412 → D-414): 左カラムが無いので、探す画面への入口を出す(前はサーバー / リストの見本のページ)。
+    final discover = TextButton.icon(
+      key: const ValueKey('onboarding.discover'),
+      onPressed: _busy ? null : () => context.push(Routes.snsDiscover),
+      icon: const Icon(Icons.travel_explore, size: 18),
+      label: const Text('SNS サービスを探す(画像・人・RAi から)'),
+    );
+    final resumeButtons = [
+      for (final r in resumable) ...[
+        const SizedBox(height: RasqSpacing.sm),
+        OutlinedButton.icon(
+          key: ValueKey('onboarding.resume.${r.id}'),
+          onPressed: _busy ? null : () => _resume(r),
+          icon: const Icon(Icons.swap_horiz, size: 18),
+          label: Text('${r.displayName ?? r.handle ?? 'RASQ アカウント'}${r.handle == null ? '' : '(@${r.handle})'}で続ける', overflow: TextOverflow.ellipsis),
+          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+        ),
+      ],
+    ];
+    Widget skip() => OutlinedButton(
+          key: const ValueKey('onboarding.skip'),
+          onPressed: _busy ? null : _skip,
+          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+          child: Text(returning ? 'SNS アカウントだけで使う' : 'スキップしてこの端末だけで使う'),
+        );
+
+    // 初回 (D-414): ① のページ(ユーザー名・パスワード・年齢)そのもの。下に、持っている人のログイン / スキップ。
+    if (!returning) {
+      return OnboardingFrame(
+        builder: (context, narrow) => OnboardingAccountStep(narrow: narrow, alternatives: [
+          ...resumeButtons,
+          const SizedBox(height: RasqSpacing.sm),
+          Row(children: [
+            Expanded(
+              child: TextButton(
+                key: const ValueKey('onboarding.login'),
+                onPressed: _busy || !centralOk ? null : _login,
+                child: const Text('RASQ アカウントを持っている', textAlign: TextAlign.center),
+              ),
+            ),
+            Expanded(
+              child: TextButton(
+                key: const ValueKey('onboarding.skip'),
+                onPressed: _busy ? null : _skip,
+                child: const Text('スキップしてこの端末だけで使う', textAlign: TextAlign.center),
+              ),
+            ),
+          ]),
+          if (narrow && centralOk) discover,
+        ]),
+      );
+    }
+
     Widget content({required bool narrow}) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -166,56 +198,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant),
             ),
             const Spacer(),
-            // 狭い画面 (D-412): 左カラムの見本(サーバー / RASQ リスト)はページで。タップでそのサーバーに登録できる。
-            if (narrow && centralOk)
-              TextButton.icon(
-                key: const ValueKey('onboarding.showcase'),
-                onPressed: _busy ? null : () => context.push(Routes.onboardingShowcase),
-                icon: const Icon(Icons.travel_explore, size: 18),
-                label: const Text('サーバーとリストを見てみる(そのまま登録もできます)'),
-              ),
-            returning ? login(primary: true) : create(primary: true),
+            if (narrow && centralOk) discover,
+            login(primary: true),
             if (!centralOk)
               Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
                 Text('RASQ Central の接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 TextButton(onPressed: () => context.push('${Routes.settings}/server'), child: const Text('接続先を設定')),
               ]),
-            for (final r in resumable) ...[
-              const SizedBox(height: RasqSpacing.sm),
-              OutlinedButton.icon(
-                key: ValueKey('onboarding.resume.${r.id}'),
-                onPressed: _busy ? null : () => _resume(r),
-                icon: const Icon(Icons.swap_horiz, size: 18),
-                label: Text('${r.displayName ?? r.handle ?? 'RASQ アカウント'}${r.handle == null ? '' : '(@${r.handle})'}で続ける', overflow: TextOverflow.ellipsis),
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-              ),
-            ],
+            ...resumeButtons,
             const SizedBox(height: RasqSpacing.sm),
-            returning ? create(primary: false) : login(primary: false),
+            create(primary: false),
             const SizedBox(height: RasqSpacing.sm),
-            OutlinedButton(
-              key: const ValueKey('onboarding.skip'),
-              onPressed: _busy ? null : _skip,
-              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-              child: Text(returning ? 'SNS アカウントだけで使う' : 'スキップしてこの端末だけで使う'),
-            ),
+            skip(),
             const SizedBox(height: RasqSpacing.xl),
           ]),
         );
-    return Scaffold(
-      body: SafeArea(
-        // 幅の広い画面 (D-405): シェルと同じく 2 カラム。左の小カラムにサーバー / RASQ リストの見本 (D-412)、右の大型カラムに入口。
-        // 小カラムの幅は「カラムの幅」の設定 (D-320) に従う。
-        child: LayoutBuilder(builder: (context, c) {
-          if (c.maxWidth < RasqSizes.tabletBreakpoint) return content(narrow: true);
-          final split = splitColumns(c.maxWidth, ref.watch(columnLayoutProvider));
-          return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            SizedBox(width: split.small, child: const OnboardingPreviewColumn()),
-            const VerticalDivider(width: 1),
-            Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: content(narrow: false)))),
-          ]);
-        }),
-      ),
-    );
+    // 幅の広い画面 (D-405 → D-414): 2 カラム。左の小カラムに公開 RASQ リストの投稿、右の大型カラムに入口。
+    return OnboardingFrame(builder: (context, narrow) => content(narrow: narrow));
   }
 }

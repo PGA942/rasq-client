@@ -12,7 +12,9 @@ import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/profile/rasq_profile_edit_screen.dart';
 import 'package:rasq_client/backend/rasq_consent.dart';
+import 'package:rasq_client/features/onboarding/onboarding_feed.dart';
 import 'package:rasq_client/features/onboarding/onboarding_previews.dart';
+import 'package:rasq_client/features/onboarding/onboarding_steps.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
 import 'package:rasq_client/features/onboarding/rasq_register_screen.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
@@ -607,7 +609,7 @@ void main() {
   testWidgets('初回オンボーディング: 新規端末は案内 → スキップで「この端末のみ」→ SNS ログインへ', (tester) async {
     final container = await pump(tester, storage: MemorySessionStorage({}));
     expect(find.byType(OnboardingScreen), findsOneWidget);
-    expect(find.text('RASQ アカウントを作成しますか?'), findsOneWidget);
+    expect(find.text('RASQ アカウントを作る'), findsOneWidget, reason: 'D-414: 初回は ① のページ');
     await tester.tap(find.text('スキップしてこの端末だけで使う'));
     await tester.pumpAndSettle();
     expect(find.text('SNSにログイン'), findsOneWidget);
@@ -635,64 +637,82 @@ void main() {
     return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
   }
 
-  testWidgets('オンボーディングの登録ページ (D-405): 利用規約 / プライバシーポリシーを開いて読め、戻ると入力が残る', (tester) async {
+  testWidgets('オンボーディングの ② (D-405 → D-414): 利用規約 / プライバシーポリシーを開いて読め、戻ると入力が残る', (tester) async {
     final central = fakeCentral();
     await pumpOnboarding(tester, central.client);
     expect(find.byType(OnboardingScreen), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('onboarding.create')));
+    await tester.enterText(find.byKey(const ValueKey('onb.handle')), 'neko_taro');
+    await tester.enterText(find.byKey(const ValueKey('onb.password')), 'correct horse');
+    await tester.enterText(find.byKey(const ValueKey('onb.passwordConfirm')), 'correct horse');
+    await tester.ensureVisible(find.byKey(const ValueKey('onb.age.18+')));
+    await tester.tap(find.byKey(const ValueKey('onb.age.18+')));
     await tester.pumpAndSettle();
-    expect(find.byType(RasqRegisterScreen), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('register.agree')));
+    await tester.tap(find.byKey(const ValueKey('onb.next')));
+    await tester.pumpAndSettle();
+    expect(find.byType(OnboardingTermsScreen), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('onb.agree')));
     await tester.pumpAndSettle();
     // 前は入口の振り分けでオンボーディングへ戻され、文書が開けなかった。
-    for (final (key, area) in [('register.terms', 'about.terms'), ('register.privacy', 'about.privacy')]) {
+    for (final (key, area) in [('onb.terms.read', 'about.terms'), ('onb.privacy.read', 'about.privacy')]) {
       await tester.tap(find.byKey(ValueKey(key)));
       await tester.pumpAndSettle();
       expect(tester.widget<SettingsDslScreen>(find.byType(SettingsDslScreen)).area, area);
-      expect(find.byType(RasqRegisterScreen), findsNothing, reason: '文書は登録ページの上に積む');
+      expect(find.byType(OnboardingTermsScreen), findsNothing, reason: '文書は ② の上に積む');
       await tester.tap(find.descendant(of: find.byType(SettingsDslScreen), matching: find.byTooltip('戻る')));
       await tester.pumpAndSettle();
-      expect(find.byType(RasqRegisterScreen), findsOneWidget);
+      expect(find.byType(OnboardingTermsScreen), findsOneWidget);
     }
-    final agree = find.descendant(of: find.byKey(const ValueKey('register.agree')), matching: find.byType(Checkbox));
+    final agree = find.descendant(of: find.byKey(const ValueKey('onb.agree')), matching: find.byType(Checkbox));
     expect(tester.widget<Checkbox>(agree).value, isTrue);
     expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
   });
 
-  group('オンボーディングの 2 カラム (D-405)', () {
-    MockClient serversCentral(Set<String> known) => MockClient((req) async {
-          final m = RegExp(r'/api/v1/servers/([^/]+)/info$').firstMatch(req.url.path);
-          if (m != null && known.contains(m.group(1))) {
-            return http.Response.bytes(utf8.encode(jsonEncode({'host': m.group(1), 'software': 'misskey', 'name': 'Example ${m.group(1)}', 'users': 1200})), 200, headers: {'content-type': 'application/json'});
+  group('オンボーディングの 2 カラム (D-405 → D-414)', () {
+    MockClient feedCentral({bool empty = false}) => MockClient((req) async {
+          if (req.url.path.endsWith('/onboarding/feed')) {
+            return http.Response.bytes(
+                utf8.encode(jsonEncode({
+                  'posts': [
+                    if (!empty)
+                      {
+                        'post': {'id': 'f1', 'author': {'id': 'u1', 'kind': 'misskey', 'instance': 'misskey.io', 'handle': 'hana', 'displayName': 'はな'}, 'createdAt': '2026-10-01T00:00:00Z', 'body': 'うちの猫が箱から出てこない、ずっと寝てる', 'visibility': 'public'},
+                        'list': {'id': 'l1', 'name': 'ねこ好き', 'ownerHandle': 'neko'},
+                        'score': 3,
+                      },
+                  ],
+                  'stale': false,
+                })),
+                200,
+                headers: {'content-type': 'application/json'});
           }
-          return http.Response.bytes(utf8.encode(jsonEncode({'error': {'code': '404', 'message': 'not an instance'}})), 404, headers: {'content-type': 'application/json'});
+          return http.Response.bytes(utf8.encode(jsonEncode({'error': {'code': '404', 'message': 'not found'}})), 404, headers: {'content-type': 'application/json'});
         });
 
-    testWidgets('狭い画面は 1 カラムのまま(見本を出さない)', (tester) async {
-      await pumpOnboarding(tester, serversCentral({'misskey.io'}));
+    testWidgets('狭い画面は 1 カラムのまま(流れは出さず、探す画面への入口)', (tester) async {
+      await pumpOnboarding(tester, feedCentral());
       expect(find.byType(OnboardingScreen), findsOneWidget);
-      expect(find.byType(OnboardingPreviewColumn), findsNothing);
+      expect(find.byType(OnboardingFeedColumn), findsNothing);
+      expect(find.byKey(const ValueKey('onboarding.showcase')), findsNothing, reason: 'D-414: サーバーとリストの見本の入口は外した');
+      expect(find.byKey(const ValueKey('onboarding.discover')), findsOneWidget);
     });
 
-    testWidgets('広い画面: 左の小カラムにサーバーのタイルを横に流す(「おすすめの SNS」は D-412 で外した)', (tester) async {
-      await pumpOnboarding(tester, serversCentral({'misskey.io', 'mastodon.social'}), size: const Size(1280, 800));
-      final column = find.byType(OnboardingPreviewColumn);
+    testWidgets('広い画面: 左の小カラムに公開 RASQ リストの投稿だけ(サーバーのタイルは出さない)', (tester) async {
+      await pumpOnboarding(tester, feedCentral(), size: const Size(1280, 800));
+      final column = find.byType(OnboardingFeedColumn);
       expect(column, findsOneWidget);
       expect(tester.getSize(column).width, 320, reason: '小型カラムの既定の幅 (D-320)');
       expect(tester.getTopLeft(column).dx, 0, reason: '左に置く');
-      expect(find.byKey(const ValueKey('onboarding.previews.sns')), findsNothing);
-      expect(find.byKey(const ValueKey('onboarding.showcase')), findsNothing, reason: '狭い画面の入口は出さない(左カラムにある)');
-      // サーバー: 情報の取れたものだけ。
-      expect(find.byKey(const ValueKey('onboarding.previews.servers')), findsOneWidget);
-      expect(find.byKey(const ValueKey('server.tile.misskey.io')), findsOneWidget);
-      // 入口のボタンは右の大型カラムに残る。
-      expect(tester.getTopLeft(find.byKey(const ValueKey('onboarding.create'))).dx, greaterThan(320));
+      expect(find.byType(OnboardingPreviewColumn), findsNothing);
+      expect(find.byKey(const ValueKey('onboarding.previews.servers')), findsNothing);
+      expect(find.textContaining('リスト「ねこ好き」'), findsOneWidget);
+      expect(find.byKey(const ValueKey('onboarding.discover')), findsNothing, reason: '狭い画面の入口は出さない');
+      // ① のボタンは右の大型カラム。
+      expect(tester.getTopLeft(find.byKey(const ValueKey('onb.next'))).dx, greaterThan(320));
     });
 
-    testWidgets('サーバーの情報が 1 つも取れなければ、サーバーの欄ごと出さない', (tester) async {
-      await pumpOnboarding(tester, serversCentral(const {}), size: const Size(1280, 800));
-      expect(find.byType(OnboardingPreviewColumn), findsOneWidget);
-      expect(find.byKey(const ValueKey('onboarding.previews.servers')), findsNothing);
+    testWidgets('流れが空なら、そう出す', (tester) async {
+      await pumpOnboarding(tester, feedCentral(empty: true), size: const Size(1280, 800));
+      expect(find.byKey(const ValueKey('onboarding.feed.empty')), findsOneWidget);
     });
   });
 }

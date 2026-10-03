@@ -19,6 +19,7 @@ import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../post/post_resolve.dart';
 import 'rasq_account_nudge.dart' show requestRasqAccountNudge;
+import 'signup_pointer.dart';
 import '../rai/rai_widgets.dart' show RaiIcon;
 
 /// サーバーのタイルから始める登録 (D-412): タップ → **アプリの中でサーバーの登録ページ**(WebView。開けない端末は外部のブラウザ)+
@@ -26,7 +27,7 @@ import '../rai/rai_widgets.dart' show RaiIcon;
 /// RASQ リストを開く。
 @immutable
 class ServerSignupTarget {
-  const ServerSignupTarget({required this.host, required this.kind, this.software, this.name, this.registrationOpen, this.post, this.list});
+  const ServerSignupTarget({required this.host, required this.kind, this.software, this.name, this.registrationOpen, this.post, this.list, this.nudgeRasqAccount = true});
   final String host;
 
   /// ログインに使う SNS(Misskey 系 / Mastodon 系)。
@@ -42,6 +43,10 @@ class ServerSignupTarget {
 
   /// タップした RASQ リスト(ログインしたら開いて、取り込む)。
   final RasqCollection? list;
+
+  /// 終わったら RASQ アカウントのポップアップ (D-413) を頼むか。オンボーディング v2 (D-414) の探す画面からの登録は、
+  /// RASQ アカウントを先に作っているので頼まない。
+  final bool nudgeRasqAccount;
 
   String get displayName => (name?.trim().isNotEmpty ?? false) ? name!.trim() : host;
 
@@ -60,10 +65,11 @@ SnsKind? signupKindOf(String? software) => switch (software?.toLowerCase()) {
     };
 
 /// サーバー情報 → 登録の行き先(登録の入口を出せないサーバーは null)。
-ServerSignupTarget? signupTargetFor(RasqServerInfo info, {Post? post, RasqCollection? list}) {
+ServerSignupTarget? signupTargetFor(RasqServerInfo info, {Post? post, RasqCollection? list, bool nudgeRasqAccount = true}) {
   final kind = signupKindOf(info.software);
   if (kind == null) return null;
-  return ServerSignupTarget(host: info.host, kind: kind, software: info.software, name: info.name, registrationOpen: info.registrationOpen, post: post, list: list);
+  return ServerSignupTarget(
+      host: info.host, kind: kind, software: info.software, name: info.name, registrationOpen: info.registrationOpen, post: post, list: list, nudgeRasqAccount: nudgeRasqAccount);
 }
 
 /// 進めている登録(1 つだけ)。ログインできたら [followSignupTarget] が使って消す。
@@ -85,7 +91,7 @@ void startServerSignup(BuildContext context, WidgetRef ref, ServerSignupTarget t
   context.push(Routes.serverSignup);
 }
 
-/// RAi の案内の手順(文字だけ。ページの中の位置は指さない)。
+/// RAi の案内の手順(文字)。アプリの中の WebView では、手順ごとにページの中の入力欄 / ボタンを指す(`signup_pointer.dart`、D-414)。
 List<String> signupGuideSteps(ServerSignupTarget t, {bool hasRasqAccount = true}) {
   final mastodon = t.software?.toLowerCase() == 'mastodon';
   return [
@@ -117,15 +123,30 @@ int? signupStepForUrl(ServerSignupTarget t, Uri url, int stepCount) {
   return null;
 }
 
-/// 登録ページの WebView の部分(テストで差し替える)。[onUrlChanged] = ページを移ったとき。
-typedef SignupWebAreaBuilder = Widget Function(BuildContext context, Uri url, ValueChanged<Uri> onUrlChanged);
+/// WebView から画面への知らせ (D-414)。
+@immutable
+class SignupWebHooks {
+  const SignupWebHooks({required this.onUrlChanged, required this.onPageLoaded, required this.attach});
+
+  /// ページを移った。
+  final ValueChanged<Uri> onUrlChanged;
+
+  /// ページを読み終えた(指差しを差し直す)。
+  final ValueChanged<Uri> onPageLoaded;
+
+  /// ページに JavaScript を流す口(アプリの中の WebView のときだけ)。
+  final ValueChanged<WebJsRunner> attach;
+}
+
+/// 登録ページの WebView の部分(テストで差し替える)。
+typedef SignupWebAreaBuilder = Widget Function(BuildContext context, Uri url, SignupWebHooks hooks);
 
 /// アプリの中で WebView を開ける端末か(webview_flutter: Android / iOS / macOS)。Linux / Windows / Web は外部のブラウザ。
 bool get inAppSignupWebViewSupported =>
     !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS);
 
 final signupWebAreaProvider = Provider<SignupWebAreaBuilder>(
-  (ref) => (context, url, onUrlChanged) => inAppSignupWebViewSupported ? _InAppSignupWebView(url: url, onUrlChanged: onUrlChanged) : _ExternalSignupPanel(url: url),
+  (ref) => (context, url, hooks) => inAppSignupWebViewSupported ? _InAppSignupWebView(url: url, hooks: hooks) : _ExternalSignupPanel(url: url),
 );
 
 /// 登録のページ (D-412)。広い画面は左に登録ページ・右に RAi の案内、狭い画面は上に案内・下に登録ページ。
@@ -138,9 +159,45 @@ class ServerSignupScreen extends ConsumerStatefulWidget {
 class _ServerSignupScreenState extends ConsumerState<ServerSignupScreen> {
   int _step = 0;
 
+  /// ページに JavaScript を流す口(アプリの中の WebView のときだけ)と、いまのページ。指差し (D-414) に使う。
+  WebJsRunner? _runner;
+  Uri? _url;
+  int _stepCount = 1;
+  late final SignupWebHooks _hooks = SignupWebHooks(
+    onUrlChanged: (u) {
+      _url = u;
+      final t = ref.read(serverSignupTargetProvider);
+      if (t != null) _onUrl(t, u, _stepCount);
+    },
+    onPageLoaded: (u) {
+      _url = u;
+      _point();
+    },
+    attach: (r) {
+      _runner = r;
+      _point();
+    },
+  );
+
   void _onUrl(ServerSignupTarget t, Uri url, int count) {
     final s = signupStepForUrl(t, url, count);
-    if (s != null && s > _step && mounted) setState(() => _step = s);
+    if (s != null && s > _step && mounted) {
+      setState(() => _step = s);
+      _point();
+    }
+  }
+
+  /// いまの手順で触るところを、ページの中で指す(見つからなければ何もしない)。
+  void _point() {
+    final r = _runner;
+    final t = ref.read(serverSignupTargetProvider);
+    if (r == null || t == null) return;
+    unawaited(pointSignupPage(r, t, _step.clamp(0, _stepCount - 1), _stepCount, url: _url));
+  }
+
+  void _go(int step) {
+    setState(() => _step = step);
+    _point();
   }
 
   @override
@@ -150,13 +207,14 @@ class _ServerSignupScreenState extends ConsumerState<ServerSignupScreen> {
       return Scaffold(appBar: AppBar(title: const Text('サーバーに登録')), body: const Center(child: Text('登録するサーバーが選ばれていません')));
     }
     final steps = signupGuideSteps(t, hasRasqAccount: ref.watch(hasRasqAccountProvider));
+    _stepCount = steps.length;
     final step = _step.clamp(0, steps.length - 1);
-    final web = ref.watch(signupWebAreaProvider)(context, t.signupUrl, (u) => _onUrl(t, u, steps.length));
+    final web = ref.watch(signupWebAreaProvider)(context, t.signupUrl, _hooks);
     final guide = SignupRaiGuide(
       steps: steps,
       index: step,
-      onPrev: step == 0 ? null : () => setState(() => _step = step - 1),
-      onNext: step >= steps.length - 1 ? null : () => setState(() => _step = step + 1),
+      onPrev: step == 0 ? null : () => _go(step - 1),
+      onNext: step >= steps.length - 1 ? null : () => _go(step + 1),
     );
     final done = Padding(
       padding: const EdgeInsets.all(RasqSpacing.sm),
@@ -240,9 +298,9 @@ class SignupRaiGuide extends StatelessWidget {
 
 /// アプリの中の WebView(Android / iOS / macOS)。そのサーバーの中だけ開き、ほかのサイトへのリンクは外部のブラウザへ。
 class _InAppSignupWebView extends StatefulWidget {
-  const _InAppSignupWebView({required this.url, required this.onUrlChanged});
+  const _InAppSignupWebView({required this.url, required this.hooks});
   final Uri url;
-  final ValueChanged<Uri> onUrlChanged;
+  final SignupWebHooks hooks;
   @override
   State<_InAppSignupWebView> createState() => _InAppSignupWebViewState();
 }
@@ -253,7 +311,11 @@ class _InAppSignupWebViewState extends State<_InAppSignupWebView> {
     ..setNavigationDelegate(NavigationDelegate(
       onUrlChange: (c) {
         final u = c.url == null ? null : Uri.tryParse(c.url!);
-        if (u != null) widget.onUrlChanged(u);
+        if (u != null) widget.hooks.onUrlChanged(u);
+      },
+      onPageFinished: (url) {
+        final u = Uri.tryParse(url);
+        if (u != null) widget.hooks.onPageLoaded(u);
       },
       onNavigationRequest: (r) {
         final u = Uri.tryParse(r.url);
@@ -266,7 +328,23 @@ class _InAppSignupWebViewState extends State<_InAppSignupWebView> {
     ..loadRequest(widget.url);
 
   @override
+  void initState() {
+    super.initState();
+    widget.hooks.attach(WebViewJsRunner(_controller));
+  }
+
+  @override
   Widget build(BuildContext context) => WebViewWidget(key: const ValueKey('signup.webview'), controller: _controller);
+}
+
+/// webview_flutter の [WebViewController] を [WebJsRunner] に。
+class WebViewJsRunner implements WebJsRunner {
+  WebViewJsRunner(this.controller);
+  final WebViewController controller;
+  @override
+  Future<void> runJavaScript(String javaScript) => controller.runJavaScript(javaScript);
+  @override
+  Future<Object> runJavaScriptReturningResult(String javaScript) => controller.runJavaScriptReturningResult(javaScript);
 }
 
 /// アプリの中で開けない端末(Linux / Windows / Web): 外部のブラウザで開く。案内と「登録できた」はそのまま使う。
@@ -312,7 +390,7 @@ Future<void> followSignupTarget(ProviderContainer c, AccountId account) async {
   try {
     await _openSignupTarget(c, t, account);
   } finally {
-    await requestRasqAccountNudge(c);
+    if (t.nudgeRasqAccount) await requestRasqAccountNudge(c);
   }
 }
 

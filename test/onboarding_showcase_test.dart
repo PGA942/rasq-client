@@ -118,10 +118,12 @@ void main() {
       expect(find.textContaining('フォロワー限定の'), findsNothing, reason: '公開の投稿だけ');
     });
 
-    testWidgets('狭い画面: 入口から見本のページを開ける(2 カラムにはしない)', (tester) async {
-      await _pumpWide(tester, _central(), size: const Size(360, 640));
+    testWidgets('D-414: オンボーディングには出さない(見本のページは残す)', (tester) async {
+      await _pumpWide(tester, _central(), size: const Size(360, 640), showcase: false);
       expect(find.byType(OnboardingPreviewColumn), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('onboarding.showcase')));
+      expect(find.byKey(const ValueKey('onboarding.showcase')), findsNothing);
+      final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+      c.read(routerProvider).push(Routes.onboardingShowcase);
       await tester.pumpAndSettle();
       expect(find.byType(OnboardingShowcaseScreen), findsOneWidget);
       expect(find.byKey(const ValueKey('onboarding.server.$host')), findsOneWidget);
@@ -264,7 +266,7 @@ void main() {
 
     testWidgets('Mastodon: 登録ページは /auth/sign_up、メールの確認のページへ移ると案内も進む', (tester) async {
       Uri? changed;
-      await _pumpWide(tester, _central(), onWeb: (u, cb) => changed = u);
+      await _pumpWide(tester, _central(), onWeb: (u, cb) => changed = u, showcase: false);
       final c = ProviderScope.containerOf(tester.element(find.byType(OnboardingScreen)));
       const target = ServerSignupTarget(host: 'mastodon.social', kind: SnsKind.mastodon, software: 'mastodon', name: 'Mastodon');
       c.read(serverSignupTargetProvider.notifier).set(target);
@@ -393,7 +395,7 @@ MockClient _central() => MockClient((req) async {
     });
 
 /// 新規の端末(台帳が空)のオンボーディング。既定は幅の広い画面(2 カラム)。
-Future<ProviderContainer> _pumpWide(WidgetTester tester, MockClient client, {Size size = const Size(1280, 900), SnsPlugin? plugin, void Function(Uri url, ValueChanged<Uri> cb)? onWeb, MemorySessionStorage? storage}) async {
+Future<ProviderContainer> _pumpWide(WidgetTester tester, MockClient client, {Size size = const Size(1280, 900), SnsPlugin? plugin, void Function(Uri url, ValueChanged<Uri> cb)? onWeb, MemorySessionStorage? storage, bool showcase = true}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -404,14 +406,20 @@ Future<ProviderContainer> _pumpWide(WidgetTester tester, MockClient client, {Siz
       orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: client, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
       centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
       orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
-      signupWebAreaProvider.overrideWithValue((context, url, onUrlChanged) {
-        _FakeWeb.last = onUrlChanged;
-        onWeb?.call(url, onUrlChanged);
+      signupWebAreaProvider.overrideWithValue((context, url, hooks) {
+        _FakeWeb.last = hooks.onUrlChanged;
+        onWeb?.call(url, hooks.onUrlChanged);
         return _FakeWeb(url);
       }),
     ],
     child: const RasqApp(),
   ));
   await tester.pumpAndSettle();
-  return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+  final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+  // D-414: オンボーディングの流れからは外した。見本のページ(/onboarding-showcase)はそのまま開ける。
+  if (showcase) {
+    c.read(routerProvider).push(Routes.onboardingShowcase);
+    await tester.pumpAndSettle();
+  }
+  return c;
 }

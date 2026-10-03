@@ -76,6 +76,15 @@ class _RasqRegisterScreenState extends ConsumerState<RasqRegisterScreen> {
 /// パスワードの最短 (S-019)。
 const rasqPasswordMinChars = 8;
 
+/// パスワードの手前の確かめ(サーバーの決まり S-019 と同じ: 8〜256 文字、1 種類の字だけは不可)。空なら null(まだ入れていない)。
+String? rasqPasswordProblem(String p) {
+  if (p.isEmpty) return null;
+  if (p.characters.length < rasqPasswordMinChars) return '$rasqPasswordMinChars 文字以上にしてください';
+  if (p.characters.length > 256) return '256 文字までです';
+  if (p.characters.toSet().length == 1) return '同じ字の繰り返しは使えません';
+  return null;
+}
+
 class _RegisterPanel extends StatefulWidget {
   const _RegisterPanel({required this.snsCount, required this.onOpenDoc, required this.onDone});
   final int snsCount;
@@ -103,14 +112,7 @@ class _RegisterPanelState extends State<_RegisterPanel> {
   }
 
   /// パスワードの手前の確かめ(サーバーの決まり S-019 と同じ: 8〜256 文字、1 種類の字だけは不可)。よくあるもの / ハンドルと同じ、はサーバーが断る。
-  String? get _passwordError {
-    final p = _password.text;
-    if (p.isEmpty) return null;
-    if (p.characters.length < rasqPasswordMinChars) return '$rasqPasswordMinChars 文字以上にしてください';
-    if (p.characters.length > 256) return '256 文字までです';
-    if (p.characters.toSet().length == 1) return '同じ字の繰り返しは使えません';
-    return null;
-  }
+  String? get _passwordError => rasqPasswordProblem(_password.text);
 
   bool get _passwordOk => _password.text.isNotEmpty && _passwordError == null && _confirm.text == _password.text;
 
@@ -231,10 +233,28 @@ Future<RasqAccountRecord?> registerRasqAccount(WidgetRef ref, {String? displayNa
   final snsCount = ref.read(sessionsProvider).value?.sessions.length ?? 0;
   final choice = await ref.read(routerProvider).push<RasqRegisterChoice>(Routes.rasqRegister, extra: snsCount);
   if (choice == null) return null;
+  return completeRasqRegistration(ref, choice, displayName: displayName, onMessage: onMessage);
+}
+
+/// ユーザー名(ハンドル)が使われている / 使えない (D-414)。アカウントはもう作ってあるので、名前を変えてやり直せる
+/// ([completeRasqRegistration] はやり直しに強い: 作成済みならそのアカウントで続ける)。
+class RasqHandleRejected implements Exception {
+  const RasqHandleRejected(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+/// ハンドルの決まり (Central `PATCH /me`): 3〜32 文字の `[a-z0-9_]`。
+final rasqHandlePattern = RegExp(r'^[a-z0-9_]{3,32}$');
+
+/// 選んだ内容で登録する(登録のページ / オンボーディング v2 の ①② から)。`POST /auth/device`(承諾と一緒)→ 承諾の補い →
+/// [handle] があればハンドル(`PATCH /me`、使われていれば [RasqHandleRejected]。パスワードより前に確かめる)→ パスワード → 台帳へ。
+Future<RasqAccountRecord?> completeRasqRegistration(WidgetRef ref, RasqRegisterChoice choice, {String? displayName, String? handle, required ValueChanged<String> onMessage}) async {
   final notifier = ref.read(orgateAccountProvider.notifier);
   // 登録と承諾は一緒に (D-371 / S-053、規約案 06 CONS-02): サーバーが同じ処理で残す。承諾を残せなければアカウントも作られない
   // (以前は作ったあとで同意を書き、失敗しても登録を続けていた)。
-  final RasqAccount? account;
+  RasqAccount? account;
   try {
     account = await notifier.createAccount(displayName: displayName, consents: choice.toConsentsJson());
   } on OrgateException catch (e) {
@@ -253,6 +273,18 @@ Future<RasqAccountRecord?> registerRasqAccount(WidgetRef ref, {String? displayNa
   if (client != null && account.termsAccepted == false) {
     await RasqConsentApi(client).acceptCurrent(age: account.termsMissing.contains('age') ? choice.age : null);
     await notifier.refresh();
+  }
+  // ユーザー名 (D-414)。作成のあとで変える(ORGATE の発行は名前を取らない)。使われていれば、パスワードより前に止める。
+  if (handle != null && handle.isNotEmpty && account.handle != handle) {
+    try {
+      await notifier.updateProfile(handle: handle);
+      account = ref.read(orgateAccountProvider).value ?? account;
+    } on OrgateException catch (e) {
+      final code = e.code.code;
+      if (code == '409') throw const RasqHandleRejected('このユーザー名はもう使われています');
+      if (code == '400' || code == '422') throw RasqHandleRejected('このユーザー名は使えません(${e.message})');
+      rethrow;
+    }
   }
   // パスワード (D-299)。すでに設定済みのアカウントへ戻ったとき(この端末の前のアカウント)は、変えない。
   final security = ref.read(accountSecurityApiProvider);

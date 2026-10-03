@@ -75,10 +75,10 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(app(loggedIn: false));
     await tester.pumpAndSettle();
-    // 初回オンボーディング (D-138): 新規端末はまず RASQ アカウント作成の案内。
-    // サーバー未設定なので作成は無効、スキップで従来のシステムへ。
-    expect(find.text('RASQ アカウントを作成しますか?'), findsOneWidget);
-    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'RASQ アカウントを作成')).onPressed, isNull);
+    // 初回オンボーディング (D-138 → D-414): 新規端末はまず ① のページ(ユーザー名・パスワード・年齢)。
+    // サーバー未設定なので「次へ」は無効、スキップで従来のシステムへ。
+    expect(find.text('RASQ アカウントを作る'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('onb.next'))).onPressed, isNull);
     await tester.tap(find.text('スキップしてこの端末だけで使う'));
     await tester.pumpAndSettle();
     expect(find.text('SNSにログイン'), findsOneWidget);
