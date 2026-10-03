@@ -8,6 +8,7 @@ import '../backend/rasq_account.dart';
 import '../backend/test_endpoints.dart';
 import '../features/home/reaction_history.dart';
 import '../features/learning/contribution.dart';
+import '../features/onboarding/screen_glimpse.dart' show notificationTapRouterProvider;
 import '../features/plugins/slot_plugins.dart';
 import '../features/media/video_player.dart' show VideoPrefs;
 import '../features/settings/developer_mode.dart';
@@ -34,6 +35,8 @@ class RasqApp extends ConsumerWidget {
     ref.watch(pluginAutoUpdateProvider);
     // テスト用の接続先 (D-360): 設定を SNS の接続先の差し替えに反映。
     ref.watch(testEndpointsSyncProvider);
+    // 端末の通知のタップ (D-415): 画面の読み取りの通知 → 探す画面で 3 秒読み取る。
+    ref.watch(notificationTapRouterProvider);
     // アルゴリズムとコミュニティへの貢献 (D-363): 同意しているあいだ束 / RAi のやりとりを集めて送る(状態の変化でアプリは建て直さない)。
     ref.listen(contributionProvider, (_, _) {});
     // 同意待ちの RASQ アカウント (D-371 / S-053): いまの版の利用規約を承諾していなければ、1 度だけ承諾のシート。

@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,18 +15,21 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/onboarding_discover_api.dart';
 import '../../backend/server_info_api.dart';
+import '../../notify/local_notifier.dart';
 import '../../shell/headers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../collections/rasq_list_picker.dart' show importRasqListToHomeWith;
 import '../rai/rai_widgets.dart' show RaiIcon;
 import 'onboarding_previews.dart' show signupFromList;
+import 'screen_glimpse.dart';
 import 'server_signup.dart';
 
 /// SNS サービスを探す画面 (D-414)。オンボーディングの ③ と、SNS のログインの「サービスを探してログイン」から開く。
 ///
 /// 入口は 4 つ(Central の口は CONTRACT §2〜§6、どれも匿名で呼べる):
-/// - **好きな画像やコンテンツから探す** — 画像を選ぶ / アプリの中のブラウザで見て「この画面から探す」→ §2
+/// - **好きな画像やコンテンツから探す** — 画像を選ぶ(端末の画像の選択だけ)/ いつものブラウザで見て、通知のタップで画面を 3 秒だけ読み取る
+///   (D-415、[ScreenGlimpse])/ アプリの中のブラウザで見て「この画面から探す」(本文 + URL)→ §2
 /// - **有力なユーザー / インフルエンサーから探す** — 名前や分野 → §3(まず RASQ リストの中、Brave は最終手段で既定は無効)
 /// - **外部 SNS のエクスポートデータから探す** — 準備中(押せない)
 /// - **RAi に聞く** — クラウドの RAi との会話 → §5(端末に RAi のデータが無くてよい)
@@ -51,6 +53,16 @@ bool get discoverCameraSupported => !kIsWeb && (defaultTargetPlatform == TargetP
 final discoverImagePickerProvider = Provider<Future<Uint8List?> Function({required bool camera})>((ref) => ({required bool camera}) async {
       final x = await ImagePicker().pickImage(source: camera ? ImageSource.camera : ImageSource.gallery, maxWidth: 2048, maxHeight: 2048, imageQuality: 85);
       return x?.readAsBytes();
+    });
+
+/// 端末のブラウザでページを開く口(テストで差し替える)。
+final discoverExternalBrowserProvider = Provider<Future<bool> Function(Uri)>((ref) => (url) async {
+      try {
+        return await launchUrl(url, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('discover external browser: $e');
+        return false;
+      }
     });
 
 /// 探す画面の入口。
@@ -262,8 +274,11 @@ String _errorText(Object e) => e is ArgumentError ? '${e.message}' : 'うまく�
 // a. 好きな画像やコンテンツから探す
 
 class DiscoverContentScreen extends ConsumerStatefulWidget {
-  const DiscoverContentScreen({super.key, this.initial});
+  const DiscoverContentScreen({super.key, this.initial, this.startGlimpse = false});
   final DiscoverCapture? initial;
+
+  /// 画面の読み取りの通知をタップして開いた (D-415、`?glimpse=1`): 開いたらすぐ読み取る。
+  final bool startGlimpse;
   @override
   ConsumerState<DiscoverContentScreen> createState() => _DiscoverContentScreenState();
 }
@@ -275,22 +290,100 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
   String? _error;
   ContentDiscoverResult? _result;
 
+  /// 画面の読み取り (D-415): 通知を出して待っている / 読み取っている(経過)/ 送ったコマの数。
+  bool _glimpseArmed = false;
+  Duration? _glimpseElapsed;
+  int? _glimpseFrames;
+  late final DiscoverGlimpseRequests _glimpseRequests = ref.read(discoverGlimpseRequestsProvider);
+
   @override
   void initState() {
     super.initState();
+    _glimpseRequests.addListener(_onGlimpseTap);
     final i = widget.initial;
-    if (i != null && !i.isEmpty) WidgetsBinding.instance.addPostFrameCallback((_) => _search(i));
+    if (widget.startGlimpse) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _glimpse());
+    } else if (i != null && !i.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _search(i));
+    }
+  }
+
+  @override
+  void dispose() {
+    _glimpseRequests.removeListener(_onGlimpseTap);
+    super.dispose();
+  }
+
+  /// 通知をタップした(この画面を開いたまま)。
+  void _onGlimpseTap() {
+    if (mounted) unawaited(_glimpse());
+  }
+
+  /// 「いつものブラウザで見て探す」: 通知を出してから、端末のブラウザを開く。
+  Future<void> _armGlimpse() async {
+    final ok = await showDiscoverGlimpseNotification(ref.read(localNotifierProvider));
+    if (!mounted) return;
+    if (!ok) {
+      setState(() => _error = '通知を出せませんでした。端末の設定で RASQ の通知を許可してください');
+      return;
+    }
+    setState(() {
+      _glimpseArmed = true;
+      _error = null;
+    });
+    await ref.read(discoverExternalBrowserProvider)(discoverBrowserHome);
+  }
+
+  Future<void> _disarmGlimpse() async {
+    await ref.read(localNotifierProvider).cancel(discoverGlimpseNotificationId);
+    if (mounted) setState(() => _glimpseArmed = false);
+  }
+
+  /// 画面を 3 秒だけ読み取って送る。
+  Future<void> _glimpse() async {
+    if (_glimpseElapsed != null || _busy) return;
+    setState(() {
+      _glimpseArmed = false;
+      _glimpseElapsed = Duration.zero;
+      _glimpseFrames = null;
+      _error = null;
+      _result = null;
+    });
+    GlimpseFrames? frames;
+    try {
+      frames = await ref.read(screenGlimpseProvider).capture(
+            duration: discoverGlimpseDuration,
+            onProgress: (d) {
+              if (mounted) setState(() => _glimpseElapsed = d);
+            },
+          );
+    } catch (e) {
+      debugPrint('discover glimpse: $e');
+    }
+    unawaited(ref.read(localNotifierProvider).cancel(discoverGlimpseNotificationId));
+    if (!mounted) return;
+    setState(() => _glimpseElapsed = null);
+    if (frames == null || frames.isEmpty) {
+      setState(() => _error = '画面を読み取れませんでした');
+      return;
+    }
+    _glimpseFrames = frames.frames.length;
+    await _search(DiscoverCapture(image: frames.representative, text: frames.text, url: frames.url));
   }
 
   Future<void> _pick({required bool camera}) async {
     final bytes = await ref.read(discoverImagePickerProvider)(camera: camera);
     if (bytes == null || !mounted) return;
+    _glimpseFrames = null;
     await _search(DiscoverCapture(image: bytes));
   }
 
   Future<void> _browse() async {
     final cap = await context.push<DiscoverCapture>(Routes.snsDiscoverBrowse);
-    if (cap != null && !cap.isEmpty && mounted) await _search(cap);
+    if (cap != null && !cap.isEmpty && mounted) {
+      _glimpseFrames = null;
+      await _search(cap);
+    }
   }
 
   Future<void> _search(DiscoverCapture cap) async {
@@ -342,6 +435,9 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
     final cap = _capture;
     final r = _result;
+    final elapsed = _glimpseElapsed;
+    final idle = !_busy && elapsed == null;
+    final glimpseDummy = ref.watch(screenGlimpseProvider).isDummy;
     return Scaffold(
       appBar: const RasqPageHeader(title: '好きな画像やコンテンツから探す', showMore: false),
       body: SafeArea(
@@ -353,11 +449,33 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
               Text('好きな画像や、見ていたページから、探す言葉を RAi が作ります。画像はサーバーに保存しません(探し終えたら捨てます)。', style: caption),
               const SizedBox(height: RasqSpacing.sm),
               Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-                FilledButton.icon(key: const ValueKey('discover.content.pick'), onPressed: _busy ? null : () => _pick(camera: false), icon: const Icon(Icons.photo_library_outlined, size: 18), label: const Text('画像を選ぶ')),
+                FilledButton.icon(key: const ValueKey('discover.content.pick'), onPressed: idle ? () => _pick(camera: false) : null, icon: const Icon(Icons.photo_library_outlined, size: 18), label: const Text('画像を選ぶ')),
                 if (discoverCameraSupported)
-                  OutlinedButton.icon(key: const ValueKey('discover.content.camera'), onPressed: _busy ? null : () => _pick(camera: true), icon: const Icon(Icons.photo_camera_outlined, size: 18), label: const Text('写真を撮る')),
-                OutlinedButton.icon(key: const ValueKey('discover.content.browse'), onPressed: _busy ? null : _browse, icon: const Icon(Icons.public, size: 18), label: const Text('ブラウザで見て探す')),
+                  OutlinedButton.icon(key: const ValueKey('discover.content.camera'), onPressed: idle ? () => _pick(camera: true) : null, icon: const Icon(Icons.photo_camera_outlined, size: 18), label: const Text('写真を撮る')),
+                OutlinedButton.icon(key: const ValueKey('discover.content.glimpse'), onPressed: idle ? _armGlimpse : null, icon: const Icon(Icons.open_in_browser, size: 18), label: const Text('いつものブラウザで見て探す')),
+                TextButton.icon(key: const ValueKey('discover.content.browse'), onPressed: idle ? _browse : null, icon: const Icon(Icons.public, size: 18), label: const Text('アプリの中のブラウザで探す')),
               ]),
+              if (_glimpseArmed)
+                _GlimpseCard(
+                  key: const ValueKey('discover.content.glimpse.armed'),
+                  icon: Icons.notifications_active_outlined,
+                  text: '通知を出しました。ブラウザで探したい画面を開いてから、通知をタップしてください。タップすると、その画面を 3 秒だけ読み取ります。',
+                  dummy: glimpseDummy,
+                  action: TextButton(key: const ValueKey('discover.content.glimpse.cancel'), onPressed: _disarmGlimpse, child: const Text('やめる')),
+                ),
+              if (elapsed != null)
+                _GlimpseCard(
+                  key: const ValueKey('discover.content.glimpse.capturing'),
+                  icon: Icons.center_focus_strong,
+                  text: '画面を読み取っています(${elapsed.inSeconds} / ${discoverGlimpseDuration.inSeconds} 秒)',
+                  dummy: glimpseDummy,
+                  progress: elapsed.inMilliseconds / discoverGlimpseDuration.inMilliseconds,
+                ),
+              if (_glimpseFrames != null && elapsed == null)
+                Padding(
+                  padding: const EdgeInsets.only(top: RasqSpacing.sm),
+                  child: Text('画面を ${discoverGlimpseDuration.inSeconds} 秒読み取りました(${_glimpseFrames!} コマ)${glimpseDummy ? '。いまは試作のため、ダミーの写しです' : ''}', key: const ValueKey('discover.content.glimpse.done'), style: caption),
+                ),
               if (cap != null) ...[
                 const SizedBox(height: RasqSpacing.md),
                 if (cap.image != null) _CropPreview(image: cap.image!, crops: r?.query.crops ?? const [], imageSize: _imageSize),
@@ -380,6 +498,47 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
               ],
             ]),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 画面の読み取りの案内 (D-415): 通知を待っている / 読み取っている。
+class _GlimpseCard extends StatelessWidget {
+  const _GlimpseCard({super.key, required this.icon, required this.text, this.dummy = false, this.action, this.progress});
+  final IconData icon;
+  final String text;
+  final bool dummy;
+  final Widget? action;
+  final double? progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: RasqSpacing.sm),
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: scheme.surfaceContainerHighest.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(RasqSizes.radiusLg), border: Border.all(color: scheme.outlineVariant)),
+        child: Padding(
+          padding: const EdgeInsets.all(RasqSpacing.sm),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(icon, size: 20, color: scheme.primary),
+              const SizedBox(width: RasqSpacing.sm),
+              Expanded(child: Text(text, style: RasqTypography.bodySmall)),
+              ?action,
+            ]),
+            if (progress != null) ...[
+              const SizedBox(height: RasqSpacing.xs),
+              LinearProgressIndicator(value: progress!.clamp(0.0, 1.0)),
+            ],
+            if (dummy)
+              Padding(
+                padding: const EdgeInsets.only(top: RasqSpacing.xs),
+                child: Text('いまは試作のため、画面は読まずにダミーの写しを送ります', key: const ValueKey('discover.content.glimpse.dummy'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              ),
+          ]),
         ),
       ),
     );
@@ -509,7 +668,7 @@ class _DiscoverBrowseScreenState extends ConsumerState<DiscoverBrowseScreen> {
       if (!identical(_capturer, c)) WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? setState(() => _capturer = c) : null);
     });
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'ブラウザで見て探す', showMore: false),
+      appBar: const RasqPageHeader(title: 'アプリの中のブラウザで探す', showMore: false),
       body: SafeArea(
         top: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -545,12 +704,8 @@ class _DiscoverBrowseScreenState extends ConsumerState<DiscoverBrowseScreen> {
   }
 }
 
-/// アプリの中のブラウザ(Android / iOS / macOS)。「この画面から探す」= 本文 + URL、Android は画面の写しも。
-///
-/// 画面の写し: WebView はプラットフォームのビューなので、Flutter の `RepaintBoundary.toImage` で写せるのは Android の
-/// テクスチャの合成のときだけ(iOS / macOS は空になる)。写せない端末は本文 + URL だけを送る(CONTRACT §2 の text / url)。
-// TODO(D-414): 端末のブラウザ + LiveKit の画面共有で、クラウドの RAi に流して切り抜き / OCR をさせる道(ユーザーの案)。
-// ここに `DiscoverPageCapturer` の別の実装(LiveKit のトラックを開いて、RAi が返した探す言葉を受ける)を差す。未実装。
+/// アプリの中のブラウザ(Android / iOS / macOS)。「この画面から探す」= **本文 + URL だけ**(CONTRACT §2 の text / url)。
+/// 画面の写しは送らない (D-415): 画像は端末の画像の選択だけ、画面は「いつものブラウザで見て探す」の通知から読み取る([ScreenGlimpse])。
 class _InAppDiscoverBrowser extends StatefulWidget {
   const _InAppDiscoverBrowser({required this.initial, required this.attach});
   final Uri initial;
@@ -560,7 +715,6 @@ class _InAppDiscoverBrowser extends StatefulWidget {
 }
 
 class _InAppDiscoverBrowserState extends State<_InAppDiscoverBrowser> implements DiscoverPageCapturer {
-  final _boundary = GlobalKey();
   late final WebViewController _controller = WebViewController()
     ..setJavaScriptMode(JavaScriptMode.unrestricted)
     ..setNavigationDelegate(NavigationDelegate(
@@ -588,23 +742,11 @@ class _InAppDiscoverBrowserState extends State<_InAppDiscoverBrowser> implements
     try {
       text = webJsString(await _controller.runJavaScriptReturningResult(discoverPageTextScript)).trim();
     } catch (_) {}
-    Uint8List? image;
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      try {
-        final ro = _boundary.currentContext?.findRenderObject();
-        if (ro is RenderRepaintBoundary) {
-          final img = await ro.toImage(pixelRatio: 1.5);
-          final data = await img.toByteData(format: ui.ImageByteFormat.png);
-          img.dispose();
-          if (data != null && data.lengthInBytes <= discoverImageMaxBytes) image = data.buffer.asUint8List();
-        }
-      } catch (_) {}
-    }
-    return DiscoverCapture(image: image, text: text, url: url);
+    return DiscoverCapture(text: text, url: url);
   }
 
   @override
-  Widget build(BuildContext context) => RepaintBoundary(key: _boundary, child: WebViewWidget(key: const ValueKey('discover.webview'), controller: _controller));
+  Widget build(BuildContext context) => WebViewWidget(key: const ValueKey('discover.webview'), controller: _controller);
 }
 
 /// アプリの中でブラウザを開けない端末(Linux / Windows / Web): 外のブラウザで見て、URL と気になった文を貼ってもらう。

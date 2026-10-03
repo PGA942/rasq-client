@@ -18,10 +18,12 @@ import 'package:rasq_client/features/login/sns_login_screen.dart';
 import 'package:rasq_client/features/onboarding/onboarding_feed.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
 import 'package:rasq_client/features/onboarding/onboarding_steps.dart';
+import 'package:rasq_client/features/onboarding/screen_glimpse.dart';
 import 'package:rasq_client/features/onboarding/rasq_account_nudge.dart';
 import 'package:rasq_client/features/onboarding/server_signup.dart';
 import 'package:rasq_client/features/onboarding/signup_pointer.dart';
 import 'package:rasq_client/features/onboarding/sns_discover_screen.dart';
+import 'package:rasq_client/notify/local_notifier.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -228,7 +230,7 @@ void main() {
       expect(find.byKey(const ValueKey('discover.dummy')), findsOneWidget);
     });
 
-    testWidgets('ブラウザで見て「この画面から探す」: 読み取った本文と URL(と写し)を送る', (tester) async {
+    testWidgets('アプリの中のブラウザで「この画面から探す」: 読み取った本文と URL だけを送る(画面の写しは送らない)', (tester) async {
       final central = _FakeCentral();
       final capturer = _FakeCapturer();
       await openDiscover(tester, central, sub: Routes.snsDiscoverContent, overrides: [
@@ -251,9 +253,126 @@ void main() {
       expect(sent.body, contains('name="text"'));
       expect(sent.body, contains('name="url"'));
       expect(sent.body, contains('https://example.com/cats'));
-      expect(sent.body, isNot(contains('name="image"')), reason: '写しが取れない端末は本文 + URL だけ');
+      expect(sent.body, isNot(contains('name="image"')), reason: '画像は端末の画像の選択だけ (D-415)');
       expect(find.byKey(const ValueKey('discover.content.url')), findsOneWidget);
       expect(find.byKey(const ValueKey('discover.listHit.list-1')), findsOneWidget);
+    });
+
+    testWidgets('いつものブラウザで見て探す: 通知を出してブラウザを開く → 通知をタップ → 3 秒読み取って(ダミー)送り、結果を出す', (tester) async {
+      final central = _FakeCentral();
+      final notifier = MemoryLocalNotifier();
+      final opened = <Uri>[];
+      await openDiscover(tester, central, sub: Routes.snsDiscoverContent, overrides: [
+        localNotifierProvider.overrideWithValue(notifier),
+        discoverExternalBrowserProvider.overrideWithValue((u) async {
+          opened.add(u);
+          return true;
+        }),
+      ]);
+      expect(find.byKey(const ValueKey('discover.content.glimpse')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse')));
+      await tester.pumpAndSettle();
+      // 端末の通知(タップで探す画面へ戻る payload)を出し、端末のブラウザを開く。
+      final shown = notifier.shown[discoverGlimpseNotificationId]!;
+      expect(shown.body, 'タップすると、いま見ている画面を 3 秒だけ読み取ります');
+      expect(shown.payload, discoverGlimpsePayload);
+      expect(opened, [discoverBrowserHome]);
+      expect(find.byKey(const ValueKey('discover.content.glimpse.armed')), findsOneWidget);
+      expect(find.byKey(const ValueKey('discover.content.glimpse.dummy')), findsOneWidget, reason: '既定の読み取りはダミー');
+      expect(central.lastContent, isNull);
+
+      // 通知をタップ → 3 秒だけ読み取る(1 秒ごとに 1 コマ)。
+      notifier.tap(discoverGlimpseNotificationId);
+      await tester.pump();
+      await tester.pump();
+      expect(find.byKey(const ValueKey('discover.content.glimpse.capturing')), findsOneWidget);
+      expect(find.text('画面を読み取っています(0 / 3 秒)'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('画面を読み取っています(1 / 3 秒)'), findsOneWidget);
+      expect(central.lastContent, isNull, reason: '3 秒たつまで送らない');
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      // 写し(画像)を content の口へ送り、結果を出す。通知は消す。
+      final sent = central.lastContent!;
+      expect(sent.body, contains('name="image"'));
+      expect(sent.body, contains('content-type: image/png'));
+      expect(find.byKey(const ValueKey('discover.content.glimpse.capturing')), findsNothing);
+      expect(find.byKey(const ValueKey('discover.content.glimpse.done')), findsOneWidget);
+      expect(find.textContaining('3 コマ'), findsOneWidget);
+      expect(find.byKey(const ValueKey('discover.listHit.list-1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('discover.serverHit.misskey.io')), findsOneWidget);
+      expect(notifier.shown, isEmpty);
+    });
+
+    testWidgets('画面の読み取りの通知: 探す画面を閉じていても、タップで探す画面を開いて読み取る。やめると通知を消す', (tester) async {
+      final central = _FakeCentral();
+      final notifier = MemoryLocalNotifier();
+      final c = await openDiscover(tester, central, sub: Routes.snsDiscoverContent, overrides: [
+        localNotifierProvider.overrideWithValue(notifier),
+        discoverExternalBrowserProvider.overrideWithValue((u) async => true),
+      ]);
+      // やめる → 通知を消す。
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse')));
+      await tester.pumpAndSettle();
+      expect(notifier.shown, isNotEmpty);
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse.cancel')));
+      await tester.pumpAndSettle();
+      expect(notifier.shown, isEmpty);
+      expect(find.byKey(const ValueKey('discover.content.glimpse.armed')), findsNothing);
+
+      // 通知を出したまま探す画面を閉じて、ほかの画面にいるときにタップ。
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse')));
+      await tester.pumpAndSettle();
+      c.read(routerProvider).pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(DiscoverContentScreen), findsNothing);
+      expect(c.read(discoverGlimpseRequestsProvider).listening, isFalse);
+      notifier.tap(discoverGlimpseNotificationId);
+      // 開く画面の切り替え(読み取りは 1 秒ごとのタイマーなので、ここではまだ終わらない)。
+      await tester.pumpAndSettle();
+      expect(find.byType(DiscoverContentScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('discover.content.glimpse.capturing')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(central.lastContent!.body, contains('name="image"'));
+      expect(find.byKey(const ValueKey('discover.listHit.list-1')), findsOneWidget);
+    });
+
+    testWidgets('画面の読み取りの口は差し替えられる(読めた文字と URL も送る)', (tester) async {
+      final central = _FakeCentral();
+      final notifier = MemoryLocalNotifier();
+      final glimpse = _FakeGlimpse();
+      await openDiscover(tester, central, sub: Routes.snsDiscoverContent, overrides: [
+        localNotifierProvider.overrideWithValue(notifier),
+        discoverExternalBrowserProvider.overrideWithValue((u) async => true),
+        screenGlimpseProvider.overrideWithValue(glimpse),
+      ]);
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('discover.content.glimpse.dummy')), findsNothing);
+      notifier.tap(discoverGlimpseNotificationId);
+      await tester.pumpAndSettle();
+      expect(glimpse.durations, [discoverGlimpseDuration]);
+      final sent = central.lastContent!;
+      expect(sent.body, contains('name="image"'));
+      expect(sent.body, contains('name="text"'));
+      expect(sent.body, contains('https://example.com/cats'));
+    });
+
+    testWidgets('通知を出せなければ、そう出す(ブラウザは開かない)', (tester) async {
+      final opened = <Uri>[];
+      await openDiscover(tester, _FakeCentral(), sub: Routes.snsDiscoverContent, overrides: [
+        localNotifierProvider.overrideWithValue(_DeniedNotifier()),
+        discoverExternalBrowserProvider.overrideWithValue((u) async {
+          opened.add(u);
+          return true;
+        }),
+      ]);
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse')));
+      await tester.pumpAndSettle();
+      expect(find.text('通知を出せませんでした。端末の設定で RASQ の通知を許可してください'), findsOneWidget);
+      expect(opened, isEmpty);
     });
 
     testWidgets('人から探す: 人のカード(名前・handle@host・説明・入っているリスト)とサーバー', (tester) async {
@@ -432,6 +551,22 @@ void main() {
 
 /// 1×1 の PNG。
 final _png = Uint8List.fromList(base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+
+class _FakeGlimpse implements ScreenGlimpse {
+  final durations = <Duration>[];
+  @override
+  bool get isDummy => false;
+  @override
+  Future<GlimpseFrames> capture({required Duration duration, ValueChanged<Duration>? onProgress}) async {
+    durations.add(duration);
+    return GlimpseFrames(frames: [_png, _png], text: '茶トラの子猫', url: Uri.parse('https://example.com/cats'));
+  }
+}
+
+class _DeniedNotifier extends MemoryLocalNotifier {
+  @override
+  Future<bool> show({required int id, required String title, required String body, String? payload}) async => false;
+}
 
 class _FakeCapturer implements DiscoverPageCapturer {
   final loaded = <Uri>[];
