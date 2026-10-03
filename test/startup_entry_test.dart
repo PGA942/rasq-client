@@ -70,7 +70,7 @@ void main() {
     });
 
     test('未ログインでも開ける画面 / SNS のログイン(「SNS アカウントだけで使う」を選んだ)には留まる', () {
-      for (final loc in [Routes.onboarding, Routes.rasqRegister, Routes.termsDoc, Routes.privacyDoc, Routes.login, Routes.loginMisskey, '${Routes.settings}/server', '${Routes.settings}/account-login', Routes.catalog]) {
+      for (final loc in [Routes.onboarding, Routes.rasqRegister, Routes.termsDoc, Routes.privacyDoc, Routes.login, Routes.loginMisskey, '${Routes.settings}/server', '${Routes.settings}/account-login', '${Routes.settings}/account-reset', Routes.catalog]) {
         expect(go(loc, l: const RasqAccountsState()), isNull, reason: loc);
       }
     });

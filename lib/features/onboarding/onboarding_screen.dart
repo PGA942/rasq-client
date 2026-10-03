@@ -48,7 +48,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return id != null && ref.read(orgateAccountProvider.notifier).signedInAccountIds.contains(id);
   }
 
-  /// すでに RASQ アカウントを持っている人 (D-296): ログイン(パスワード / メールのコード)→ できていたら、オンボーディングを済みにする。
+  /// すでに RASQ アカウントを持っている人 (D-296): ログイン(パスワード、必要なら 2 段階目のメールのコード)→ できていたら、オンボーディングを済みにする。
   Future<void> _login() async {
     await context.push('${Routes.settings}/account-login');
     // ログインできていれば、台帳に Central のアカウントが付いている(閉じたあとに付くので、少し待つ)。

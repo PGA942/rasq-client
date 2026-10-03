@@ -17,7 +17,7 @@ import 'package:rasq_client/features/login/sns_login_screen.dart';
 import 'package:rasq_client/features/onboarding/onboarding_previews.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
 import 'package:rasq_client/features/onboarding/rasq_account_nudge.dart';
-import 'package:rasq_client/features/onboarding/rasq_register_screen.dart' show RasqRegisterScreen;
+import 'package:rasq_client/features/onboarding/onboarding_steps.dart' show OnboardingAccountScreen, OnboardingAccountStep;
 import 'package:rasq_client/features/onboarding/server_signup.dart';
 import 'package:rasq_client/features/onboarding/showcase_genres.dart';
 import 'package:rasq_client/features/post/post_detail_screen.dart';
@@ -226,7 +226,7 @@ void main() {
       expect(container.read(rasqAccountNudgeProvider), isFalse);
     });
 
-    testWidgets('RASQ アカウントのポップアップ (D-413): 「作る」は登録のページ (/rasq-register) へ', (tester) async {
+    testWidgets('RASQ アカウントのポップアップ (D-413 → D-419): 「作る」は ① のページ(元へ戻る形)へ', (tester) async {
       final container = await _pumpWide(tester, _central(), plugin: _SignupPlugin());
       await container.read(sessionsProvider.notifier).add(await _Flow().complete());
       container.read(routerProvider).go(Routes.home);
@@ -238,7 +238,8 @@ void main() {
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
-      expect(find.byType(RasqRegisterScreen), findsOneWidget);
+      expect(find.byType(OnboardingAccountScreen), findsOneWidget);
+      expect(tester.widget<OnboardingAccountStep>(find.byType(OnboardingAccountStep)).standalone, isTrue);
     });
 
     testWidgets('RASQ アカウントのポップアップ (D-413): Central の RASQ アカウントをもう持っている人には出さない', (tester) async {

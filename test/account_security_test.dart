@@ -133,10 +133,14 @@ void main() {
     // パスワード: 弱いものは断られる → 設定。
     await tester.ensureVisible(find.byKey(const ValueKey('security.password.save')));
     await tester.enterText(find.byKey(const ValueKey('security.password.new')), 'Password123');
+    await tester.ensureVisible(find.byKey(const ValueKey('security.password.save')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('security.password.save')));
     await tester.pumpAndSettle();
     expect(find.textContaining('弱すぎます'), findsOneWidget);
     await tester.enterText(find.byKey(const ValueKey('security.password.new')), 'correct horse battery');
+    await tester.ensureVisible(find.byKey(const ValueKey('security.password.save')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('security.password.save')));
     await tester.pumpAndSettle();
     expect(c.read(orgateAccountProvider).value!.hasPassword, isTrue);
@@ -302,51 +306,223 @@ void main() {
     ]);
   });
 
-  testWidgets('既存のアカウントにログイン: パスワード → トークンをこの端末のものにする。メールのコードでも入れる', (tester) async {
-    String? bearer;
+  test('ログインの 2 段階目の応答を読む / 廃止したメールのコードだけのログインの言い換え (D-419)', () {
+    final e = OrgateException(ErrorCode.http(401), 'メールに確認コードを送りました', serverCode: 'second_factor_required', details: {'challengeId': 'ch-1', 'email': 'h***@example.com', 'expiresInSeconds': 600});
+    final ch = RasqLoginChallenge.of(e)!;
+    expect([ch.challengeId, ch.email, ch.expiresInSeconds], ['ch-1', 'h***@example.com', 600]);
+    expect(RasqLoginChallenge.of(OrgateException(ErrorCode.http(401), 'invalid handle or password', serverCode: '401')), isNull);
+    expect(accountSecurityMessage(OrgateException(ErrorCode.http(410), '…', serverCode: 'passwordless_login_removed')), contains('パスワードでログインしてください'));
+  });
+
+  /// ORGATE の口をまねる: パスワード(+ 確認済みのメールがあれば 2 段階目)/ 再設定。
+  ({MockClient mock, List<String> calls, Map<String, Map<String, Object?>> bodies, Map<String, String?> auth}) fakeLogin({bool secondFactor = true}) {
+    final calls = <String>[];
     final bodies = <String, Map<String, Object?>>{};
+    final auth = <String, String?>{};
+    var challenges = 0;
+    final tokens = {'accountId': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'accessToken': 'login-token', 'refreshToken': 'refresh', 'restoreSecret': 'restore-9', 'restored': true};
     final mock = MockClient((req) async {
       final path = req.url.path.replaceFirst('/api/v1', '');
       final body = req.body.isEmpty ? const <String, Object?>{} : (jsonDecode(req.body) as Map).cast<String, Object?>();
-      bodies['${req.method} $path'] = body;
-      switch ('${req.method} $path') {
+      final key = '${req.method} $path';
+      calls.add(key);
+      bodies[key] = body;
+      auth[key] = req.headers['authorization'];
+      switch (key) {
         case 'GET /me':
-          bearer = req.headers['authorization'];
-          return bearer == 'Bearer login-token' ? json({'id': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'hasPassword': true, 'email': 'hanako@example.com', 'emailVerified': true}) : err(401, 'valid bearer token required');
+          final bearer = req.headers['authorization'];
+          if (bearer == 'Bearer login-token') return json({'id': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'hasPassword': true, 'email': 'hanako@example.com', 'emailVerified': true});
+          if (bearer == 'Bearer device-token') return json({'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ', 'hasPassword': true, 'email': 'taro@example.com', 'emailVerified': true});
+          return err(401, 'valid bearer token required');
         case 'POST /auth/login':
-          return body['password'] == 'correct horse battery' ? json({'accountId': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'accessToken': 'login-token', 'refreshToken': 'refresh', 'restored': true}) : err(401, 'invalid handle or password');
-        case 'POST /auth/login/email/request':
+          if (body['password'] != 'correct horse battery') return err(401, 'invalid handle or password');
+          if (!secondFactor) return json(tokens);
+          challenges++;
+          return json({
+            'error': {'code': 'second_factor_required', 'message': 'メールに確認コードを送りました', 'challengeId': 'ch-$challenges', 'email': 'h***@example.com', 'expiresInSeconds': 600},
+          }, 401);
+        case 'POST /auth/login/confirm':
+          return body['challengeId'] == 'ch-$challenges' && body['code'] == '9zYx8-WvUt7' ? json(tokens) : err(400, 'invalid or expired code');
+        case 'POST /auth/password/reset/request':
           return http.Response('', 204);
-        case 'POST /auth/login/email/confirm':
-          return body['code'] == '9zYx8-WvUt7' ? json({'accountId': 'acc-9', 'handle': 'hanako', 'displayName': 'ハナコ', 'accessToken': 'login-token', 'refreshToken': 'refresh', 'restored': true}) : err(400, 'invalid or expired code');
+        case 'POST /auth/password/reset/confirm':
+          if (body['code'] != '4kPq2-RsTu5') return err(400, 'invalid or expired code');
+          final keep = body['keepCurrentSession'] == true && req.headers['authorization'] == 'Bearer device-token';
+          return json({'accountId': 'acc-1', 'revokedSessions': 2, 'keptSession': keep, if (keep) 'restoreSecret': 'restore-rotated'});
         case 'GET /me/sns-accounts':
+          return json(<Object>[]);
+        case 'GET /me/sessions':
           return json(<Object>[]);
       }
       return err(404, 'not found');
     });
-    final c = await pump(tester, mock, loggedIn: false);
+    return (mock: mock, calls: calls, bodies: bodies, auth: auth);
+  }
+
+  Future<void> typeLogin(WidgetTester tester, String id, String password) async {
+    await tester.enterText(find.byKey(const ValueKey('login.identifier')), id);
+    await tester.enterText(find.byKey(const ValueKey('login.password')), password);
+    await tester.tap(find.byKey(const ValueKey('login.submit')));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('ログインはパスワード (D-419): 違えば「パスワードの無いアカウントは元の端末で設定」まで案内する。メールのコードだけの入口は無い', (tester) async {
+    final f = fakeLogin(secondFactor: false);
+    final c = await pump(tester, f.mock, loggedIn: false);
     c.read(routerProvider).push('${Routes.settings}/account-login');
     await tester.pumpAndSettle();
     expect(find.byType(AccountLoginScreen), findsOneWidget);
-    // 違うパスワード → 言い換えたエラー。
-    await tester.enterText(find.byKey(const ValueKey('login.identifier')), 'hanako@example.com');
-    await tester.enterText(find.byKey(const ValueKey('login.password')), 'nope nope nope');
-    await tester.tap(find.byKey(const ValueKey('login.submit')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('パスワードが違います'), findsOneWidget);
-    // メールのコードで入る。
-    await tester.tap(find.text('メールのコード'));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('login.password')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('login.sendCode')));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const ValueKey('login.code')), '9zYx8-WvUt7');
-    await tester.tap(find.byKey(const ValueKey('login.submit')));
-    await tester.pumpAndSettle();
-    expect(bodies['POST /auth/login/email/confirm'], containsPair('deviceId', 'device-abc'));
-    expect(bodies['POST /auth/login/email/confirm']!['label'], startsWith('RASQ ('));
-    expect(bearer, 'Bearer login-token');
+    expect(find.text('メールのコード'), findsNothing, reason: 'メールのコードだけのログインは無くなった');
+    expect(find.byKey(const ValueKey('login.sendCode')), findsNothing);
+    expect(find.byKey(const ValueKey('login.noPasswordHint')), findsOneWidget);
+    await typeLogin(tester, 'hanako', 'nope nope nope');
+    expect(find.byKey(const ValueKey('login.problem')), findsOneWidget);
+    expect(find.textContaining('パスワードを設定していない RASQ アカウントには、ほかの端末からはログインできません'), findsOneWidget);
+    // 2 段階目の無いアカウント: パスワードだけで入る。トークンは添えない(401 の取り直しで送り直さない)。
+    await typeLogin(tester, 'hanako', 'correct horse battery');
+    expect(f.bodies['POST /auth/login'], containsPair('deviceId', 'device-abc'));
+    expect(f.bodies['POST /auth/login']!['label'], startsWith('RASQ ('));
+    expect(f.auth['POST /auth/login'], isNull);
+    expect(f.calls.where((k) => k.contains('/auth/login/email')), isEmpty);
     expect(c.read(orgateAccountProvider).value?.handle, 'hanako');
     expect(find.byType(AccountLoginScreen), findsNothing);
+  });
+
+  testWidgets('2 段階目 (D-419 / ORGATE O-010): 正しいパスワード → メールのコードの画面 → 違うコード → 送り直し → 正しいコードで入る', (tester) async {
+    final f = fakeLogin();
+    final c = await pump(tester, f.mock, loggedIn: false);
+    c.read(routerProvider).push('${Routes.settings}/account-login');
+    await tester.pumpAndSettle();
+    await typeLogin(tester, 'hanako@example.com', 'correct horse battery');
+    // コードの画面: 伏せた宛先と期限。まだトークンは無い。
+    expect(find.byKey(const ValueKey('login.challenge')), findsOneWidget);
+    expect(find.textContaining('h***@example.com'), findsWidgets);
+    expect(find.textContaining('10 分有効'), findsOneWidget);
+    expect(find.byKey(const ValueKey('login.password')), findsNothing);
+    expect(c.read(orgateAccountProvider).value, isNull);
+    // 違うコード → 言い換え。画面はそのまま。
+    await tester.enterText(find.byKey(const ValueKey('login.code')), '11111-11111');
+    await tester.tap(find.byKey(const ValueKey('login.confirm')));
+    await tester.pumpAndSettle();
+    expect(find.text('コードが違うか、期限が切れています'), findsOneWidget);
+    expect(find.byType(AccountLoginScreen), findsOneWidget);
+    // 送り直す = パスワードの段をもう一度(新しいチャレンジ)。
+    await tester.tap(find.byKey(const ValueKey('login.resend')));
+    await tester.pumpAndSettle();
+    expect(f.calls.where((k) => k == 'POST /auth/login').length, 2);
+    await tester.enterText(find.byKey(const ValueKey('login.code')), '9zYx8-WvUt7');
+    await tester.tap(find.byKey(const ValueKey('login.confirm')));
+    await tester.pumpAndSettle();
+    expect(f.bodies['POST /auth/login/confirm'], {'challengeId': 'ch-2', 'code': '9zYx8-WvUt7'});
+    expect(f.auth['POST /auth/login/confirm'], isNull);
+    expect(c.read(orgateAccountProvider).value?.handle, 'hanako');
+    expect(find.byType(AccountLoginScreen), findsNothing);
+  });
+
+  testWidgets('パスワードの再設定 (D-419): ログインの「パスワードを忘れた」→ メール → コード + 新しいパスワード → ログインの画面へ戻る', (tester) async {
+    final f = fakeLogin();
+    final c = await pump(tester, f.mock, loggedIn: false);
+    c.read(routerProvider).push('${Routes.settings}/account-login');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('login.identifier')), 'hanako@example.com');
+    await tester.tap(find.byKey(const ValueKey('login.forgot')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AccountResetScreen), findsOneWidget);
+    // 確認済みのメールが無いアカウントは再設定できない、の案内。メールは入っている。
+    expect(find.byKey(const ValueKey('reset.noEmail')), findsOneWidget);
+    expect(find.text('hanako@example.com'), findsOneWidget);
+    expect(find.byKey(const ValueKey('reset.code')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('reset.send')));
+    await tester.pumpAndSettle();
+    // アカウントがあるかどうかは言わない。
+    expect(find.textContaining('確認済みのアカウントがあれば'), findsOneWidget);
+    expect(f.auth['POST /auth/password/reset/request'], isNull);
+    FilledButton submit() => tester.widget<FilledButton>(find.byKey(const ValueKey('reset.submit')));
+    await tester.enterText(find.byKey(const ValueKey('reset.code')), '4kPq2-RsTu5');
+    await tester.enterText(find.byKey(const ValueKey('reset.password')), 'fresh horse battery');
+    await tester.pumpAndSettle();
+    expect(submit().onPressed, isNull, reason: '確認の欄がまだ');
+    await tester.enterText(find.byKey(const ValueKey('reset.passwordConfirm')), 'fresh horse battery');
+    await tester.pumpAndSettle();
+    // ログインしていない端末: 「この端末を残す」は出さない。
+    expect(find.byKey(const ValueKey('reset.keep')), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('reset.submit')));
+    await tester.tap(find.byKey(const ValueKey('reset.submit')));
+    await tester.pumpAndSettle();
+    expect(f.bodies['POST /auth/password/reset/confirm'], {'email': 'hanako@example.com', 'code': '4kPq2-RsTu5', 'password': 'fresh horse battery'});
+    expect(f.auth['POST /auth/password/reset/confirm'], isNull);
+    expect(find.byType(AccountResetScreen), findsNothing);
+    expect(find.byType(AccountLoginScreen), findsOneWidget);
+    expect(find.textContaining('新しいパスワードでログインしてください'), findsOneWidget);
+    expect(tester.widget<TextField>(find.descendant(of: find.byKey(const ValueKey('login.identifier')), matching: find.byType(TextField))).controller!.text, 'hanako@example.com');
+  });
+
+  testWidgets('パスワードの再設定: ログイン中の端末は「この端末のログインは残す」→ 回った復帰の秘密を持ち直す', (tester) async {
+    final f = fakeLogin();
+    final c = await pump(tester, f.mock);
+    c.read(routerProvider).push(Uri(path: '${Routes.settings}/account-reset', queryParameters: {'email': 'taro@example.com'}).toString());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reset.send')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('reset.code')), '4kPq2-RsTu5');
+    await tester.enterText(find.byKey(const ValueKey('reset.password')), 'fresh horse battery');
+    await tester.enterText(find.byKey(const ValueKey('reset.passwordConfirm')), 'fresh horse battery');
+    await tester.pumpAndSettle();
+    expect(tester.widget<CheckboxListTile>(find.byKey(const ValueKey('reset.keep'))).value, isTrue);
+    await tester.ensureVisible(find.byKey(const ValueKey('reset.submit')));
+    await tester.tap(find.byKey(const ValueKey('reset.submit')));
+    await tester.pumpAndSettle();
+    expect(f.bodies['POST /auth/password/reset/confirm'], containsPair('keepCurrentSession', true));
+    expect(f.auth['POST /auth/password/reset/confirm'], 'Bearer device-token');
+    expect(find.textContaining('ほかの 2 台の端末をログアウトしました'), findsOneWidget);
+    final saved = jsonDecode((await c.read(sessionStorageProvider).read(OrgateAccountNotifier.storageKey))!) as Map;
+    expect((saved['restore'] as Map)['acc-1'], 'restore-rotated');
+  });
+
+  testWidgets('セキュリティ画面の 2 段階目 (D-419): 既定で ON。切るにはいまのパスワード(かメールのコード)、入れるのは何も要らない', (tester) async {
+    final me = <String, Object?>{'id': 'acc-1', 'handle': 'taro', 'displayName': 'タロ', 'hasPassword': true, 'email': 'taro@example.com', 'emailVerified': true, 'secondFactor': true, 'secondFactorActive': true, 'roles': <String>[]};
+    final puts = <Map<String, Object?>>[];
+    final mock = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      final body = req.body.isEmpty ? const <String, Object?>{} : (jsonDecode(req.body) as Map).cast<String, Object?>();
+      switch ('${req.method} $path') {
+        case 'GET /me':
+          return json(me);
+        case 'GET /me/sessions':
+          return json(<Object>[]);
+        case 'PUT /me/second-factor':
+          puts.add(body);
+          if (body['enabled'] == false && body['currentPassword'] != 'correct horse battery' && body['code'] == null) return err(403, 'いまのパスワードが違います');
+          me['secondFactor'] = body['enabled'];
+          me['secondFactorActive'] = body['enabled'];
+          return json({'enabled': body['enabled'], 'active': body['enabled']});
+      }
+      return err(404, 'not found');
+    });
+    final c = await pump(tester, mock);
+    c.read(routerProvider).push('${Routes.settings}/security');
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('security.2fa.switch')), 200, scrollable: find.byType(Scrollable).first);
+    Switch sw() => tester.widget<Switch>(find.byKey(const ValueKey('security.2fa.switch')));
+    expect(sw().value, isTrue);
+    expect(find.textContaining('パスワードのあとに、メールに届く確認コード'), findsOneWidget);
+    // 切る: すぐには送らず、いまのパスワードの欄が出る。
+    await tester.tap(find.byKey(const ValueKey('security.2fa.switch')));
+    await tester.pumpAndSettle();
+    expect(puts, isEmpty);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('security.2fa.off')), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.byKey(const ValueKey('security.2fa.byCode')), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('security.2fa.password')), 'correct horse battery');
+    await tester.tap(find.byKey(const ValueKey('security.2fa.off')));
+    await tester.pumpAndSettle();
+    expect(puts.single, {'enabled': false, 'currentPassword': 'correct horse battery'});
+    expect(c.read(orgateAccountProvider).value!.secondFactor, isFalse);
+    expect(find.textContaining('切っています'), findsOneWidget);
+    // 入れ直す: 何も要らない。
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('security.2fa.switch')), -200, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.byKey(const ValueKey('security.2fa.switch')));
+    await tester.pumpAndSettle();
+    expect(puts.last, {'enabled': true});
+    expect(sw().value, isTrue);
   });
 }
