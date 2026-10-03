@@ -326,7 +326,7 @@ class _ModeSectionState extends ConsumerState<_ModeSection> {
           error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
           data: (p) => p.items.isEmpty
               ? const RasqEmptyView(title: 'リノートはありません')
-              : UserList(users: sortThreadUsers(p.items, widget.order, post), shrinkWrap: true),
+              : UserList(users: sortThreadUsers(p.items, widget.order, post), shrinkWrap: true, account: post.account.key),
         );
       case ThreadSectionMode.reactions:
         return ReactionSections(

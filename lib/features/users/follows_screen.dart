@@ -41,7 +41,7 @@ class _List extends ConsumerWidget {
     return page.when(
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(followsProvider(k)), retryLabel: '再読み込み'),
-      data: (p) => p.items.isEmpty ? RasqEmptyView(title: k.followers ? 'フォロワーはいません' : 'フォロー中のユーザーはいません') : UserList(users: p.items),
+      data: (p) => p.items.isEmpty ? RasqEmptyView(title: k.followers ? 'フォロワーはいません' : 'フォロー中のユーザーはいません') : UserList(users: p.items, account: k.account),
     );
   }
 }

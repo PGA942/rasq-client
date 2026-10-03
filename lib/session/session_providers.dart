@@ -292,7 +292,54 @@ final sessionForAccountProvider = Provider.family<SnsSession?, String?>((ref, ke
   return ref.watch(pluginRegistryProvider).session(s);
 });
 
-/// [sessionForAccountProvider] のアカウント id 版。
+/// [sessionForAccountProvider] のアカウント id 版 (D-421): [key] のアカウントがログイン中ならそれ、無ければ現在。
+/// 「誰として見ているか」(フォローの状態の鍵・自分の投稿 / 自分のページの判定)は、操作に使うセッションと同じアカウントで決める。
+/// 総合表示(RASQ アカウントを選んでいる間)は TL に全アカウントの投稿が流れるので、現在のアカウントで決めると
+/// ほかのアカウントの自分の投稿が「他人」になり、フォロー中の一覧も別のアカウントの関係を見て「未フォロー」になっていた。
+final viewerForAccountProvider = Provider.family<AccountId?, String?>((ref, key) {
+  if (key != null) {
+    final state = ref.watch(sessionsProvider).value;
+    final s = state?.sessions.where((x) => x.account.key == key).firstOrNull ?? state?.allSessions.where((x) => x.account.key == key).firstOrNull;
+    if (s != null) return s.account;
+  }
+  return ref.watch(currentAccountProvider);
+});
+
+/// 同じ人か (D-421): ハンドルの大文字小文字・先頭の `@`・`handle@host` の形、サーバーの `https://`・末尾の `/`・大文字小文字の
+/// 違いは見ない(SNS の種類は見ない: 投稿の作者は種類を持たないことがある)。
+bool sameAccountIdentity(AccountId a, AccountId b) {
+  (String, String) norm(AccountId x) {
+    var h = x.handle.trim().toLowerCase();
+    if (h.startsWith('@')) h = h.substring(1);
+    var host = x.instance.trim().toLowerCase();
+    final at = h.indexOf('@');
+    if (at >= 0) {
+      if (at + 1 < h.length) host = h.substring(at + 1);
+      h = h.substring(0, at);
+    }
+    host = host.replaceFirst(RegExp(r'^[a-z]+://'), '');
+    while (host.endsWith('/')) {
+      host = host.substring(0, host.length - 1);
+    }
+    return (h, host);
+  }
+
+  final x = norm(a);
+  return x.$1.isNotEmpty && x == norm(b);
+}
+
+/// [user] が [viewer](見ているアカウント)自身か (D-421)。名前で比べ、[me] が同じアカウントのプロフィールなら id でも比べる
+/// (`me()` を取れていないあいだの [currentUserProvider] は id が `-`)。
+bool isViewerSelf(UserSummary user, AccountId? viewer, {UserSummary? me}) {
+  if (viewer != null && sameAccountIdentity(user.account, viewer)) return true;
+  if (me == null || me.id == '-' || me.id.isEmpty) return false;
+  // id はそのサーバーの中でだけ通じる。
+  if (viewer != null && !sameAccountIdentity(me.account, viewer)) return false;
+  return user.id == me.id || sameAccountIdentity(user.account, me.account);
+}
+
+/// フォローの状態の鍵 (`viewerKind:viewerInstance:userId`)。関係はそのアカウントのサーバーの id で返るので、見ているアカウントで作る。
+String followUserKey(AccountId viewer, String userId) => '${viewer.kind.name}:${viewer.instance}:$userId';
 
 /// 総合表示中か (D-087)。
 final bundleViewProvider = Provider<bool>((ref) => ref.watch(sessionsProvider).value?.bundleView ?? false);

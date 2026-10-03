@@ -21,7 +21,7 @@ final reactionUsersProvider = FutureProvider.autoDispose.family<Page<ReactionEnt
   final s = ref.watch(sessionForAccountProvider(k.account)); // 属するアカウントで (D-155)
   if (s == null) return Page.empty();
   final page = await s.reactions(k.postId, type: k.type, limit: 50);
-  await ref.read(userListHelperProvider).primeRelationships(page.items.map((e) => e.user.id));
+  await ref.read(userListHelperProvider).primeRelationships(page.items.map((e) => e.user.id), account: k.account);
   return page;
 });
 
@@ -29,7 +29,7 @@ final repostersProvider = FutureProvider.autoDispose.family<Page<UserSummary>, (
   final s = ref.watch(sessionForAccountProvider(k.account));
   if (s == null) return Page.empty();
   final page = await s.reposters(k.id, limit: 50);
-  await ref.read(userListHelperProvider).primeRelationships(page.items.map((e) => e.id));
+  await ref.read(userListHelperProvider).primeRelationships(page.items.map((e) => e.id), account: k.account);
   return page;
 });
 
@@ -148,7 +148,7 @@ class _Reposters extends ConsumerWidget {
     return page.when(
       loading: () => const RasqLoading(),
       error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e')),
-      data: (p) => p.items.isEmpty ? const RasqEmptyView(title: 'リノート・引用はありません') : UserList(users: p.items),
+      data: (p) => p.items.isEmpty ? const RasqEmptyView(title: 'リノート・引用はありません') : UserList(users: p.items, account: account),
     );
   }
 }
@@ -207,7 +207,7 @@ class _ReactionUsers extends ConsumerWidget {
     return page.when(
       loading: () => const RasqLoading(),
       error: (e, _) => Padding(padding: const EdgeInsets.all(12), child: Text('$e', style: RasqTypography.caption)),
-      data: (p) => UserList(users: [for (final r in p.items) r.user], subtitles: {for (final r in p.items) r.user.id: RasqTimestamp.format(r.createdAt)}, shrinkWrap: true),
+      data: (p) => UserList(users: [for (final r in p.items) r.user], subtitles: {for (final r in p.items) r.user.id: RasqTimestamp.format(r.createdAt)}, shrinkWrap: true, account: account),
     );
   }
 }

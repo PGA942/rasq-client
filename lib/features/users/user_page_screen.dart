@@ -41,7 +41,8 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
     final acct = widget.initial?.account.key; // 属するアカウントで展開 (D-155)
     final profile = ref.watch(userProfileProvider((id: widget.userId, account: acct)));
     final me = ref.watch(currentUserProvider);
-    final viewer = ref.watch(currentAccountProvider);
+    // 見ているアカウント = このページを引いたセッションのアカウント (D-421。総合表示でも、そのアカウントの自分のページは「自分」)。
+    final viewer = ref.watch(viewerForAccountProvider(acct));
     final manager = ref.watch(overlayManagerProvider);
     final title = profile.value?.summary.displayName ?? widget.initial?.displayName ?? (profile.hasError ? '@${widget.initial?.handle ?? ''}' : '');
 
@@ -58,8 +59,8 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
           return RasqErrorView(code: code, onRetry: () => ref.invalidate(userProfileProvider((id: widget.userId, account: acct))), retryLabel: '再読み込み');
         },
         data: (p) {
-          final isSelf = p.summary.id == me.id || (p.summary.handle == me.handle && p.summary.account.instance == me.account.instance);
-          final keyUser = viewer == null ? p.summary.key : '${viewer.kind.name}:${viewer.instance}:${p.summary.id}';
+          final isSelf = isViewerSelf(p.summary, viewer, me: me);
+          final keyUser = viewer == null ? p.summary.key : followUserKey(viewer, p.summary.id);
           final st = viewer == null ? const FollowState() : ref.watch(followStateOfProvider((viewer: viewer.key, user: keyUser)));
           final restricted = (p.isSuspended || st.blocked || st.blockedBy) && !_showRestricted;
           // 返信TL / 引用TL (D-069): 返信と引用はそれぞれのタブに振り分ける
@@ -79,7 +80,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
                 onAvatarTap: p.summary.avatarUrl == null ? null : () => context.openImage(p.summary.avatarUrl!, title: p.summary.displayName),
                 onBannerTap: p.bannerUrl == null ? null : () => context.openImage(p.bannerUrl!, title: p.summary.displayName),
                 bio: p.description == null ? null : RasqRichText(InlineSpans.parse(p.description!, emojis: ref.watch(emojiCacheProvider), onLink: (u) => launchUrl(u, mode: LaunchMode.externalApplication), onHashtag: (t) => context.pushTrend(t)), style: RasqTypography.body),
-                onFollowTap: () => ref.read(userListHelperProvider).toggleFollow(p.summary),
+                onFollowTap: () => ref.read(userListHelperProvider).toggleFollow(p.summary, account: acct),
                 onEditTap: () => context.push(Routes.profileEdit),
                 onNotifyTap: () {},
                 onFollowingTap: () => context.pushFollows(p.summary, followers: false),
@@ -109,10 +110,11 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
     if (u == null) return;
     final box = context.findRenderObject() as RenderBox?;
     final anchor = box == null ? const Rect.fromLTWH(0, 80, 1, 1) : Rect.fromLTWH(box.size.width - 48, 56, 40, 40);
-    final viewer = ref.read(currentAccountProvider);
-    final st = viewer == null ? const FollowState() : ref.read(followStateProvider.notifier).of(viewer.key, '${viewer.kind.name}:${viewer.instance}:${u.id}');
-    // このページを開いているアカウント (D-155)。RASQ リストの項目の id は、このサーバーのもの。
-    final via = widget.initial?.account.key == null ? viewer : (ref.read(sessionForAccountProvider(widget.initial!.account.key))?.account ?? viewer);
+    final acct = widget.initial?.account.key;
+    // このページを開いているアカウント (D-155 / D-421)。RASQ リストの項目の id も、ミュート / ブロック / 報告も、このサーバーのもの。
+    final viewer = ref.read(viewerForAccountProvider(acct));
+    final st = viewer == null ? const FollowState() : ref.read(followStateProvider.notifier).of(viewer.key, followUserKey(viewer, u.id));
+    final via = viewer;
     final pick = await manager.showDropdown<String>(id: 'user.menu', anchor: anchor, items: [
       const RasqDropdownItem('リンクをコピー', 'copy'),
       if (via != null && ref.read(hasRasqAccountProvider)) const RasqDropdownItem('RASQ リストに追加', 'rasqList'),
@@ -124,10 +126,10 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
     // SNS の操作ではないもの (D-343 / D-345)。
     if (pick == 'rasqList' && via != null) return showAddToRasqListSheet(ref, u, via: via);
     if (pick == 'server') return showServerInfoFow(ref, u.account.instance);
-    final s = ref.read(currentSnsSessionProvider);
+    final s = ref.read(sessionForAccountProvider(acct));
     if (pick == null || s == null || viewer == null) return;
     final store = ref.read(followStateProvider.notifier);
-    final key = '${viewer.kind.name}:${viewer.instance}:${u.id}';
+    final key = followUserKey(viewer, u.id);
     switch (pick) {
       case 'copy':
         await Clipboard.setData(ClipboardData(text: (p?.profileUrl ?? Uri.https(u.account.instance, '/@${u.handle}')).toString()));

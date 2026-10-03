@@ -309,7 +309,7 @@ class _PostRowState extends ConsumerState<PostRow> {
                   // チップにリアクションしたユーザー(アイコン+名前)を表示
                   // (D-042)。チップを開いたときだけ SNS API を叩く。
                   usersLoader: (r) async {
-                    final s = ref.read(currentSnsSessionProvider);
+                    final s = ref.read(sessionForAccountProvider(post.account.key));
                     if (s == null) return const [];
                     try {
                       return [for (final e in (await s.reactions(post.id, type: r, limit: 10)).items) e.user];
@@ -501,7 +501,8 @@ class _PostRowState extends ConsumerState<PostRow> {
     final by = post.repostedBy;
     if (by == null || _repostAction == null) return false;
     final sessions = ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[];
-    return sessions.any((s) => s.account.key == by.account.key);
+    // 名前の形(大文字小文字・@host)の違いは見ない (D-421)。
+    return sessions.any((s) => sameAccountIdentity(s.account, by.account));
   }
 
   /// リノート / 引用に使うコピー (D-280)。いまのコピーのままなら null(↓ で選んでいる / 見えているのが 1 アカウントだけ /

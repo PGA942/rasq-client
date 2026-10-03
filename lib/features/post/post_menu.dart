@@ -36,12 +36,15 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
     if (pick == 'copy') await Clipboard.setData(ClipboardData(text: '${post.url ?? media?.url ?? ''}'));
     return;
   }
-  final s = ref.read(currentSnsSessionProvider);
-  final viewer = ref.read(currentAccountProvider);
+  // 投稿が流れてきたアカウントで決める (D-155 / D-421)。総合表示(RASQ アカウントを選んでいる間)やアカウントページでは、
+  // 現在のアカウントと違うアカウントの投稿が並ぶ。現在のアカウントで比べていたので、ほかのアカウントの自分の投稿に
+  // 「フォロー / ミュート / ブロック / 報告」が出て、削除が出なかった(削除やフォローも現在のアカウントのセッションに飛んでいた)。
+  final s = ref.read(sessionForAccountProvider(post.account.key));
+  final viewer = ref.read(viewerForAccountProvider(post.account.key));
   final me = ref.read(currentUserProvider);
   if (s == null || viewer == null) return;
-  final isMine = post.author.id == me.id || (post.author.handle == me.handle && post.author.account.instance == me.account.instance);
-  final userKey = '${viewer.kind.name}:${viewer.instance}:${post.author.id}';
+  final isMine = isViewerSelf(post.author, viewer, me: me);
+  final userKey = followUserKey(viewer, post.author.id);
   final st = ref.read(followStateProvider.notifier).of(viewer.key, userKey);
   final fav = ref.read(actionStateProvider.notifier).of(post.key, 'favorite');
 
