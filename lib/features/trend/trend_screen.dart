@@ -18,7 +18,7 @@ import '../users/user_list.dart';
 import '../vc/astell_actions.dart';
 import '../vc/astell_tile.dart' show AstellTileStrip;
 import 'tendency_fows.dart';
-import '../../shell/floating_account_tile.dart';
+import '../../shell/header_account_button.dart';
 import 'trend_analysis.dart';
 import 'trend_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -35,7 +35,7 @@ class TrendScreen extends ConsumerStatefulWidget {
   final String tag;
 
   /// このアカウント(`AccountId.key`)で開く (D-397): トレンドを出したアカウント / 「別のアカウントで開く」で選んだもの。
-  /// null = 現在のアカウント(アカウントを切り替えるとついてくる)。画面の上に浮かべたアカウントのタイル (D-411) で選び直せる。
+  /// null = 現在のアカウント(アカウントを切り替えるとついてくる)。ヘッダーのアカウントのボタン (D-411 → D-415) で選び直せる。
   final String? account;
   @override
   ConsumerState<TrendScreen> createState() => _TrendScreenState();
@@ -45,7 +45,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
   final _scroll = ScrollController();
   late final _searchController = TextEditingController(text: widget.tag);
 
-  /// この画面で読んでいるアカウント (D-397 の `account:`)。浮かべたアカウントのタイル (D-411) で選び直すと、タグの TL・分析・
+  /// この画面で読んでいるアカウント (D-397 の `account:`)。ヘッダーのアカウントのボタン (D-411 → D-415) で選び直すと、タグの TL・分析・
   /// フォロー中・ユーザーをそのアカウントのセッションで読み直す(どれもアカウントごとのプロバイダなので、キーが変わるだけ)。
   late String? _account = widget.account;
   TimelineKind get _kind => DynamicTimelines.tag(widget.tag);
@@ -58,7 +58,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     if (old.account != widget.account || old.tag != widget.tag) _account = widget.account;
   }
 
-  /// タイルでアカウントを選んだ。いまのアカウントを選んだら指定を外す(アカウントの切り替えについてくる、D-397 と同じ)。
+  /// ヘッダーのボタンでアカウントを選んだ。いまのアカウントを選んだら指定を外す(アカウントの切り替えについてくる、D-397 と同じ)。
   void _switchAccount(AccountId account) {
     if (_scroll.hasClients) _scroll.jumpTo(0);
     setState(() => _account = account == ref.read(currentAccountProvider) ? null : account.key);
@@ -131,6 +131,13 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   if (!paneBack(context)) Navigator.of(context).maybePop();
                 },
               ),
+              // どのアカウントで読んでいるか (D-415、D-411 の左下に浮かべたタイルをヘッダーへ移した): 丸いアイコン。
+              // タップでその場にアカウントの選択(RASQ アカウント + その SNS アカウント、トレンドに出したアカウントに印)。
+              Transform.translate(
+                offset: const Offset(0, (RasqSizes.searchBarHeight - RasqSizes.minTap) / 2),
+                child: HeaderAccountButton(key: const ValueKey('trend.accountButton'), id: 'trend.account', account: opened, marked: sources, markLabel: 'トレンドに出したアカウント', onPick: _switchAccount),
+              ),
+              const SizedBox(width: RasqSpacing.xs),
               Expanded(
                 child: SearchFilterBox(
                   controller: _searchController,
@@ -159,8 +166,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
             RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'トレンド設定', onPressed: () => showTrendProfileSheet(context, ref)),
           ]),
           Expanded(
-            child: Stack(children: [
-            Positioned.fill(child: TabBarView(children: [
+            child: TabBarView(children: [
               RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(trendAnalysisProvider(_q));
@@ -225,14 +231,6 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                       : UserList(users: [for (final e in ranked) e.$1.summary], subtitles: {for (final e in ranked) e.$1.summary.id: 'リアクション ${e.$2}'});
                 },
               ),
-            ])),
-            // どのアカウントで読んでいるか (D-411、D-397 のサーバーの印をまとめた): 既定で出す。タップで別のアカウントに切り替える。
-            // 左下(右下の ＋ と反対側)。上に置くと投稿の右上の「…」に重なる。
-            Positioned(
-              left: RasqSpacing.sm,
-              bottom: RasqSpacing.md,
-              child: FloatingAccountTile(key: const ValueKey('trend.accountTile'), id: 'trend.accountTile', account: opened, marked: sources, markLabel: 'トレンドに出したアカウント', onPick: _switchAccount),
-            ),
             ]),
           ),
         ]),

@@ -153,8 +153,9 @@ void main() {
     expect(tester.widget<TrendScreen>(find.byType(TrendScreen)).account, bsky.account.key);
     expect(find.text('タグの投稿 bsky.social'), findsWidgets);
     expect(find.text('タグの投稿 example.test'), findsNothing);
-    // 読んでいるアカウントは浮かべたタイル (D-411、D-397 のサーバーの印をまとめた)。
-    expect(find.descendant(of: find.byKey(const ValueKey('trend.accountTile')), matching: find.text('bsky.social')), findsOneWidget);
+    // 読んでいるアカウントはヘッダーのアカウントのボタン (D-411 → D-415)。
+    expect(find.byKey(const ValueKey('trend.accountButton')), findsOneWidget);
+    expect(find.byTooltip('${bsky.account} で読んでいます'), findsOneWidget);
     // 続けて検索しても、同じアカウントのまま。
     await tester.enterText(find.byType(TextField).first, '月');
     await tester.testTextInput.receiveAction(TextInputAction.search);
@@ -169,8 +170,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<TrendScreen>(find.byType(TrendScreen)).account, isNull);
     expect(find.text('タグの投稿 example.test'), findsWidgets);
-    // アカウントを決めずに開いても、タイルは既定で出す(いまのアカウント)。
-    expect(find.descendant(of: find.byKey(const ValueKey('trend.accountTile')), matching: find.text('example.test')), findsOneWidget);
+    // アカウントを決めずに開いても、ヘッダーのボタンは出す(いまのアカウント)。
+    expect(find.byTooltip('${fakeSession().account} で読んでいます'), findsOneWidget);
     await tester.tap(find.byTooltip('トレンドホームへ戻る'));
     await tester.pumpAndSettle();
 

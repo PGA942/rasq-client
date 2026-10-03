@@ -502,7 +502,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'sns', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingSnsScreen()),
           ]),
           GoRoute(path: Routes.snsDiscover, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const SnsDiscoverScreen(), routes: [
-            GoRoute(path: 'content', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => DiscoverContentScreen(initial: s.extra is DiscoverCapture ? s.extra as DiscoverCapture : null)),
+            // `?glimpse=1` = 画面の読み取りの通知をタップして開いた (D-415): 開いたらすぐ 3 秒読み取る。
+            GoRoute(path: 'content', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => DiscoverContentScreen(initial: s.extra is DiscoverCapture ? s.extra as DiscoverCapture : null, startGlimpse: s.uri.queryParameters['glimpse'] == '1')),
             GoRoute(path: 'browse', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverBrowseScreen()),
             GoRoute(path: 'people', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverPeopleScreen()),
             GoRoute(path: 'ask', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverAskScreen()),
