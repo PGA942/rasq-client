@@ -108,9 +108,12 @@ class ServerHit {
 /// 画像の中の切り抜くべき部分。値は Central が返したまま(0〜1 の割合なら割合、それより大きければ画素)。
 @immutable
 class DiscoverCrop {
-  const DiscoverCrop({required this.x, required this.y, required this.w, required this.h, this.label = ''});
+  const DiscoverCrop({required this.x, required this.y, required this.w, required this.h, this.label = '', this.frame});
   final double x, y, w, h;
   final String label;
+
+  /// どのコマの切り抜きか(`frames` で送ったときの 0 始まりの番号、CONTRACT §2 の追記)。単一の `image` なら 0 か null。
+  final int? frame;
 
   /// 割合で表しているか(すべて 0〜1)。
   bool get fractional => x <= 1 && y <= 1 && w <= 1 && h <= 1;
@@ -121,6 +124,7 @@ class DiscoverCrop {
         w: (j['w'] as num?)?.toDouble() ?? 0,
         h: (j['h'] as num?)?.toDouble() ?? 0,
         label: _s(j['label']) ?? '',
+        frame: (j['frame'] as num?)?.toInt(),
       );
 }
 
@@ -246,6 +250,10 @@ class DiscoverChatMessage {
 
 /// 画像の上限 (§2: 10 MiB)・本文の上限 (4000 字)・人の検索の上限 (200 字)・会話 (最新 10 件、各 2000 字)。
 const discoverImageMaxBytes = 10 * 1024 * 1024;
+
+/// 画面の読み取りのコマ (§2 の追記、D-416): 6 枚まで、合計 24 MiB まで。
+const discoverFramesMax = 6;
+const discoverFramesMaxTotalBytes = 24 * 1024 * 1024;
 const discoverTextMaxChars = 4000;
 const discoverPeopleMaxChars = 200;
 const discoverAskMaxMessages = 10;
@@ -268,22 +276,35 @@ class OnboardingDiscoverApi {
   /// §1 `GET /onboarding/feed`。
   Future<OnboardingFeed> feed({int limit = 30}) async => OnboardingFeed.fromJson(await client.getJson('/onboarding/feed', {'limit': '$limit'}));
 
-  /// §2 `POST /onboarding/discover/content`(multipart)。画像 / 本文 / URL の少なくとも 1 つ。
-  Future<ContentDiscoverResult> content({List<int>? image, String? text, Uri? url}) async {
+  /// §2 `POST /onboarding/discover/content`(multipart)。画像 / コマ / 本文 / URL の少なくとも 1 つ。
+  /// [frames] は画面の読み取りのコマ(時刻順、§2 の追記: 6 枚・合計 24 MiB まで。[image] とは併用しない)。
+  /// [source] は `screen` / `picker` / `browser`、[capturedAt] は読み取った時刻。
+  Future<ContentDiscoverResult> content({List<int>? image, List<List<int>> frames = const [], String? source, DateTime? capturedAt, String? text, Uri? url}) async {
     final mime = image == null ? null : discoverImageMime(image);
     if (image != null && mime == null) throw ArgumentError('jpeg / png / webp の画像だけ送れます');
     if (image != null && image.length > discoverImageMaxBytes) throw ArgumentError('画像は 10 MiB までです');
+    if (image != null && frames.isNotEmpty) throw ArgumentError('画像とコマは一緒に送れません');
+    if (frames.length > discoverFramesMax) throw ArgumentError('コマは $discoverFramesMax 枚までです');
+    final frameMimes = [for (final f in frames) discoverImageMime(f)];
+    if (frameMimes.any((m) => m == null)) throw ArgumentError('jpeg / png / webp のコマだけ送れます');
+    if (frames.any((f) => f.length > discoverImageMaxBytes)) throw ArgumentError('コマは 1 枚 10 MiB までです');
+    if (frames.fold<int>(0, (n, f) => n + f.length) > discoverFramesMaxTotalBytes) throw ArgumentError('コマは合計 24 MiB までです');
     final t = text?.trim() ?? '';
-    if (image == null && t.isEmpty && url == null) throw ArgumentError('画像・本文・URL のどれかが要ります');
+    if (image == null && frames.isEmpty && t.isEmpty && url == null) throw ArgumentError('画像・本文・URL のどれかが要ります');
     return ContentDiscoverResult.fromJson(await client.postMultipart(
       '/onboarding/discover/content',
       fields: {
         if (t.isNotEmpty) 'text': _clip(t, discoverTextMaxChars),
         if (url != null) 'url': url.toString(),
+        'source': ?source,
+        if (capturedAt != null) 'capturedAt': capturedAt.toUtc().toIso8601String(),
       },
       files: {
         if (image != null) 'image': (bytes: image, contentType: mime!, filename: 'image.${mime.split('/').last}'),
       },
+      repeated: [
+        for (var i = 0; i < frames.length; i++) (field: 'frames', bytes: frames[i], contentType: frameMimes[i]!, filename: 'frame_$i.${frameMimes[i]!.split('/').last}'),
+      ],
     ));
   }
 

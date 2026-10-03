@@ -36,14 +36,50 @@ import 'server_signup.dart';
 /// 結果のサーバー → D-412 の登録(WebView + RAi の案内 → ログイン)/ ログイン、RASQ リスト → SNS アカウントがあれば開いて取り込む
 /// (D-347)、無ければリストの人がいるサーバーへ登録してから。RASQ アカウントは ①② で作ってあるので、D-413 のポップアップは頼まない。
 
-/// 画面で読み取ったもの(画像 / 本文 / URL のどれか)。
+/// 画面で読み取ったもの(画像 / 画面のコマ / 本文 / URL のどれか)。
 @immutable
 class DiscoverCapture {
-  const DiscoverCapture({this.image, this.text, this.url});
+  const DiscoverCapture({this.image, this.frames = const [], this.source, this.capturedAt, this.text, this.url});
   final Uint8List? image;
+
+  /// 画面の読み取りのコマ(時刻順、D-416。CONTRACT §2 の追記の `frames`)。[image] とは併用しない。
+  final List<Uint8List> frames;
+
+  /// `screen` / `picker` / `browser`(CONTRACT §2 の追記、任意)。
+  final String? source;
+
+  /// 読み取った時刻(コマのとき)。
+  final DateTime? capturedAt;
   final String? text;
   final Uri? url;
-  bool get isEmpty => image == null && (text?.trim().isEmpty ?? true) && url == null;
+  bool get isEmpty => image == null && frames.isEmpty && (text?.trim().isEmpty ?? true) && url == null;
+
+  /// 画面に出す画像の数(単一の画像なら 1)。
+  int get pictureCount => image != null ? 1 : frames.length;
+
+  /// [i] 番目の画像(単一の画像なら 0 番だけ)。
+  Uint8List? picture(int i) => image ?? (i >= 0 && i < frames.length ? frames[i] : null);
+}
+
+/// 切り抜きがどのコマのものか (S-074: `frame` は送ったコマの番号)。無い / 範囲の外なら最後のコマに付ける。
+int discoverCropFrame(DiscoverCrop crop, int pictureCount) {
+  final last = pictureCount <= 0 ? 0 : pictureCount - 1;
+  final f = crop.frame;
+  return f == null || f < 0 || f > last ? last : f;
+}
+
+/// 最初に見せるコマ: 切り抜きのいちばん多いコマ(同数なら後ろ、切り抜きが無ければ最後)。
+int discoverInitialFrame(List<DiscoverCrop> crops, int pictureCount) {
+  if (pictureCount <= 1) return 0;
+  final counts = List<int>.filled(pictureCount, 0);
+  for (final c in crops) {
+    counts[discoverCropFrame(c, pictureCount)]++;
+  }
+  var best = pictureCount - 1;
+  for (var i = pictureCount - 1; i >= 0; i--) {
+    if (counts[i] > counts[best]) best = i;
+  }
+  return best;
 }
 
 /// カメラで撮れる端末か。
@@ -274,11 +310,14 @@ String _errorText(Object e) => e is ArgumentError ? '${e.message}' : 'うまく�
 // a. 好きな画像やコンテンツから探す
 
 class DiscoverContentScreen extends ConsumerStatefulWidget {
-  const DiscoverContentScreen({super.key, this.initial, this.startGlimpse = false});
+  const DiscoverContentScreen({super.key, this.initial, this.startGlimpse = false, this.glimpseResultId});
   final DiscoverCapture? initial;
 
   /// 画面の読み取りの通知をタップして開いた (D-415、`?glimpse=1`): 開いたらすぐ読み取る。
   final bool startGlimpse;
+
+  /// Android で読み取り終えた結果の id (D-416、`?glimpse=done&id=…`): 開いたらコマを送る。
+  final String? glimpseResultId;
   @override
   ConsumerState<DiscoverContentScreen> createState() => _DiscoverContentScreenState();
 }
@@ -286,6 +325,9 @@ class DiscoverContentScreen extends ConsumerStatefulWidget {
 class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
   DiscoverCapture? _capture;
   ui.Size? _imageSize;
+
+  /// いま見せているコマ(画面の読み取りで何枚もあるとき)。
+  int _frame = 0;
   bool _busy = false;
   String? _error;
   ContentDiscoverResult? _result;
@@ -296,12 +338,21 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
   int? _glimpseFrames;
   late final DiscoverGlimpseRequests _glimpseRequests = ref.read(discoverGlimpseRequestsProvider);
 
+  /// Android の読み取り (D-416): 端末からの知らせと、扱った読み取りの id(done と通知のタップの両方で来るので 1 度だけ)。
+  late final ScreenGlimpse _glimpser = ref.read(screenGlimpseProvider);
+  StreamSubscription<GlimpseEvent>? _glimpseEvents;
+  static final _handledGlimpses = <String>{};
+
   @override
   void initState() {
     super.initState();
     _glimpseRequests.addListener(_onGlimpseTap);
+    if (_glimpser.native) _glimpseEvents = _glimpser.events.listen(_onGlimpseEvent);
     final i = widget.initial;
-    if (widget.startGlimpse) {
+    final resultId = widget.glimpseResultId;
+    if (resultId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _sendGlimpseResult(resultId));
+    } else if (widget.startGlimpse) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _glimpse());
     } else if (i != null && !i.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _search(i));
@@ -311,16 +362,62 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
   @override
   void dispose() {
     _glimpseRequests.removeListener(_onGlimpseTap);
+    unawaited(_glimpseEvents?.cancel());
     super.dispose();
   }
 
-  /// 通知をタップした(この画面を開いたまま)。
+  /// 通知をタップした(この画面を開いたまま)。id つきなら Android で読み取り終えた結果。
   void _onGlimpseTap() {
-    if (mounted) unawaited(_glimpse());
+    if (!mounted) return;
+    final id = _glimpseRequests.takeId();
+    unawaited(id == null ? _glimpse() : _sendGlimpseResult(id));
   }
 
-  /// 「いつものブラウザで見て探す」: 通知を出してから、端末のブラウザを開く。
+  /// 端末からの知らせ (D-416)。
+  void _onGlimpseEvent(GlimpseEvent e) {
+    if (!mounted) return;
+    switch (e.type) {
+      case 'done':
+        // この画面を開いたまま読み取り終えた(RASQ は後ろにいる): すぐ送っておく。通知のタップで戻ると結果が出ている。
+        if (e.id != null) unawaited(_sendGlimpseResult(e.id!));
+      case 'stopped':
+        final why = switch (e.reason) {
+          'cancel' => null,
+          'system' => '画面の読み取りが止められました(端末の「共有を停止」や画面のロック)。もう一度「いつものブラウザで見て探す」から始めてください',
+          'timeout' => '10 分たったので、画面の読み取りの準備を止めました',
+          'killed' => '画面の読み取りが端末に止められました。もう一度始めてください',
+          'empty' => '画面を読み取れませんでした(写しが取れませんでした)',
+          _ => '画面を読み取れませんでした',
+        };
+        setState(() {
+          _glimpseArmed = false;
+          if (why != null) _error = why;
+        });
+    }
+  }
+
+  /// 「いつものブラウザで見て探す」: Android は同意 → 端末の通知(読み取りのボタン)、ほかは RASQ の通知。そのあと端末のブラウザを開く。
   Future<void> _armGlimpse() async {
+    if (_glimpser.native) {
+      final status = await _glimpser.start();
+      if (!mounted) return;
+      final error = switch (status) {
+        GlimpseStartStatus.started || GlimpseStartStatus.busy => null,
+        GlimpseStartStatus.denied => '画面の読み取りが許可されませんでした。読み取るには、もう一度押して「開始」を選んでください(読み取るのはボタンを押したあとの 3 秒だけです)',
+        GlimpseStartStatus.notificationsDenied => '通知を出せませんでした。読み取りのボタンは通知に出るので、端末の設定で RASQ の通知を許可してください',
+        GlimpseStartStatus.unavailable => 'この端末では画面を読み取れません。画像を選ぶか、アプリの中のブラウザで探してください',
+      };
+      if (error != null) {
+        setState(() => _error = error);
+        return;
+      }
+      setState(() {
+        _glimpseArmed = true;
+        _error = null;
+      });
+      await ref.read(discoverExternalBrowserProvider)(discoverBrowserHome);
+      return;
+    }
     final ok = await showDiscoverGlimpseNotification(ref.read(localNotifierProvider));
     if (!mounted) return;
     if (!ok) {
@@ -335,7 +432,11 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
   }
 
   Future<void> _disarmGlimpse() async {
-    await ref.read(localNotifierProvider).cancel(discoverGlimpseNotificationId);
+    if (_glimpser.native) {
+      await _glimpser.cancel();
+    } else {
+      await ref.read(localNotifierProvider).cancel(discoverGlimpseNotificationId);
+    }
     if (mounted) setState(() => _glimpseArmed = false);
   }
 
@@ -368,7 +469,33 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
       return;
     }
     _glimpseFrames = frames.frames.length;
-    await _search(DiscoverCapture(image: frames.representative, text: frames.text, url: frames.url));
+    await _search(DiscoverCapture(frames: frames.frames, source: 'screen', capturedAt: frames.capturedAt, text: frames.text, url: frames.url));
+  }
+
+  /// Android で読み取り終えたコマを送る (D-416)。送ったら(うまくいかなくても)コマを消す。
+  Future<void> _sendGlimpseResult(String id) async {
+    if (!_handledGlimpses.add(id)) return;
+    if (_handledGlimpses.length > 32) _handledGlimpses.remove(_handledGlimpses.first);
+    setState(() {
+      _glimpseArmed = false;
+      _error = null;
+    });
+    final frames = await _glimpser.takeResult(id);
+    if (!mounted) {
+      await _glimpser.discard(id);
+      return;
+    }
+    if (frames == null || frames.frames.isEmpty) {
+      await _glimpser.discard(id);
+      if (mounted) setState(() => _error = '読み取った画面が見つかりませんでした(時間がたって消えたか、もう送りました)');
+      return;
+    }
+    _glimpseFrames = frames.frames.length;
+    try {
+      await _search(DiscoverCapture(frames: frames.frames.take(discoverFramesMax).toList(), source: 'screen', capturedAt: frames.capturedAt));
+    } finally {
+      await _glimpser.discard(id);
+    }
   }
 
   Future<void> _pick({required bool camera}) async {
@@ -389,6 +516,22 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
   Future<void> _search(DiscoverCapture cap) async {
     final api = ref.read(onboardingDiscoverApiProvider);
     var c = cap;
+    if (c.frames.isNotEmpty) {
+      // 送れないコマ(形式 / 大きさ)は外し、合計 24 MiB に収まるよう新しい方を残す。
+      final ok = [for (final f in c.frames) if (discoverImageMime(f) != null && f.length <= discoverImageMaxBytes) f];
+      final kept = <Uint8List>[];
+      var total = 0;
+      for (final f in ok.reversed) {
+        if (kept.length >= discoverFramesMax || total + f.length > discoverFramesMaxTotalBytes) break;
+        kept.insert(0, f);
+        total += f.length;
+      }
+      c = DiscoverCapture(frames: kept, source: c.source, capturedAt: c.capturedAt, text: c.text, url: c.url);
+      if (c.isEmpty) {
+        setState(() => _error = '画面を読み取れませんでした');
+        return;
+      }
+    }
     final img = c.image;
     if (img != null && (discoverImageMime(img) == null || img.length > discoverImageMaxBytes)) {
       // 送れない画像(形式 / 大きさ)。本文 / URL があればそれだけで探す。
@@ -401,15 +544,20 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
     setState(() {
       _capture = c;
       _imageSize = null;
+      _frame = c.pictureCount > 0 ? c.pictureCount - 1 : 0;
       _busy = true;
       _error = null;
       _result = null;
     });
-    if (c.image != null) unawaited(_measure(c.image!));
+    final shown = c.picture(_frame);
+    if (shown != null) unawaited(_measure(shown));
     try {
       if (api == null) throw ArgumentError('RASQ Central の接続先が未設定です');
-      final r = await api.content(image: c.image, text: c.text, url: c.url);
-      if (mounted) setState(() => _result = r);
+      final r = await api.content(image: c.image, frames: c.frames, source: c.source, capturedAt: c.capturedAt, text: c.text, url: c.url);
+      if (mounted) {
+        setState(() => _result = r);
+        if (c.pictureCount > 1) _showFrame(discoverInitialFrame(r.query.crops, c.pictureCount));
+      }
     } catch (e) {
       debugPrint('discover content: $e');
       if (mounted) setState(() => _error = _errorText(e));
@@ -425,8 +573,19 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
       final frame = await codec.getNextFrame();
       final size = ui.Size(frame.image.width.toDouble(), frame.image.height.toDouble());
       frame.image.dispose();
-      if (mounted && identical(_capture?.image, bytes)) setState(() => _imageSize = size);
+      if (mounted && identical(_capture?.picture(_frame), bytes)) setState(() => _imageSize = size);
     } catch (_) {}
+  }
+
+  /// コマを切り替える(切り抜きはそのコマの分だけ重ねる)。
+  void _showFrame(int i) {
+    final bytes = _capture?.picture(i);
+    if (bytes == null || i == _frame) return;
+    setState(() {
+      _frame = i;
+      _imageSize = null;
+    });
+    unawaited(_measure(bytes));
   }
 
   @override
@@ -478,7 +637,26 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
                 ),
               if (cap != null) ...[
                 const SizedBox(height: RasqSpacing.md),
-                if (cap.image != null) _CropPreview(image: cap.image!, crops: r?.query.crops ?? const [], imageSize: _imageSize),
+                if (cap.picture(_frame) != null)
+                  _CropPreview(
+                    image: cap.picture(_frame)!,
+                    crops: [for (final c in r?.query.crops ?? const <DiscoverCrop>[]) if (discoverCropFrame(c, cap.pictureCount) == _frame) c],
+                    imageSize: _imageSize,
+                  ),
+                if (cap.pictureCount > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: RasqSpacing.xs),
+                    child: Wrap(spacing: RasqSpacing.xs, children: [
+                      for (var i = 0; i < cap.pictureCount; i++)
+                        ChoiceChip(
+                          key: ValueKey('discover.content.frame.$i'),
+                          label: Text('${i + 1} コマ目'),
+                          selected: i == _frame,
+                          visualDensity: VisualDensity.compact,
+                          onSelected: (_) => _showFrame(i),
+                        ),
+                    ]),
+                  ),
                 if (cap.url != null) Text(cap.url.toString(), key: const ValueKey('discover.content.url'), style: caption, maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
               if (_busy) const Padding(padding: EdgeInsets.all(RasqSpacing.md), child: Center(child: CircularProgressIndicator(strokeWidth: 2))),

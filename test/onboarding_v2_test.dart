@@ -1,7 +1,8 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -293,13 +294,16 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
-      // 写し(画像)を content の口へ送り、結果を出す。通知は消す。
+      // 写し(コマ)を content の口へ `frames` で送り(CONTRACT §2 の追記、D-416)、結果を出す。通知は消す。
       final sent = central.lastContent!;
-      expect(sent.body, contains('name="image"'));
+      expect('name="frames"'.allMatches(sent.body).length, 3);
+      expect(sent.body, isNot(contains('name="image"')));
+      expect(sent.body, contains('name="source"\r\n\r\nscreen'));
+      expect(sent.body, contains('name="capturedat"'));
       expect(sent.body, contains('content-type: image/png'));
       expect(find.byKey(const ValueKey('discover.content.glimpse.capturing')), findsNothing);
       expect(find.byKey(const ValueKey('discover.content.glimpse.done')), findsOneWidget);
-      expect(find.textContaining('3 コマ'), findsOneWidget);
+      expect(find.textContaining('(3 コマ)'), findsOneWidget);
       expect(find.byKey(const ValueKey('discover.listHit.list-1')), findsOneWidget);
       expect(find.byKey(const ValueKey('discover.serverHit.misskey.io')), findsOneWidget);
       expect(notifier.shown, isEmpty);
@@ -335,7 +339,7 @@ void main() {
       expect(find.byKey(const ValueKey('discover.content.glimpse.capturing')), findsOneWidget);
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
-      expect(central.lastContent!.body, contains('name="image"'));
+      expect(central.lastContent!.body, contains('name="frames"'));
       expect(find.byKey(const ValueKey('discover.listHit.list-1')), findsOneWidget);
     });
 
@@ -355,7 +359,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(glimpse.durations, [discoverGlimpseDuration]);
       final sent = central.lastContent!;
-      expect(sent.body, contains('name="image"'));
+      expect('name="frames"'.allMatches(sent.body).length, 2);
       expect(sent.body, contains('name="text"'));
       expect(sent.body, contains('https://example.com/cats'));
     });
@@ -545,6 +549,210 @@ void main() {
       expect(runner.scripts.last, contains('user[password]'));
     });
   });
+
+  group('Android の画面の読み取り (D-416、ネイティブの口は偽物)', () {
+    late Directory root;
+    setUp(() => root = Directory.systemTemp.createTempSync('rasq_glimpse_test'));
+    tearDown(() {
+      if (root.existsSync()) root.deleteSync(recursive: true);
+    });
+
+    /// ネイティブが書くのと同じ形で、読み取ったコマを置く。
+    Directory writeCapture(String id, {int frames = 3}) {
+      final dir = Directory('${root.path}/$id')..createSync(recursive: true);
+      final names = <String>[];
+      for (var i = 0; i < frames; i++) {
+        File('${dir.path}/frame_$i.jpg').writeAsBytesSync([0xFF, 0xD8, 0xFF, 0xE0, i, 1, 2, 3]);
+        names.add('frame_$i.jpg');
+      }
+      File('${dir.path}/meta.json').writeAsStringSync(jsonEncode({'id': id, 'capturedAt': '2026-10-03T08:00:00.400Z', 'width': 498, 'height': 1080, 'frames': names}));
+      return dir;
+    }
+
+    Future<void> nativeEvent(WidgetTester tester, Map<String, Object?> event) async {
+      await tester.binding.defaultBinaryMessenger.handlePlatformMessage(screenGlimpseChannelName, const StandardMethodCodec().encodeMethodCall(MethodCall('event', event)), (_) {});
+      await tester.pumpAndSettle();
+    }
+
+    Future<({ProviderContainer c, _FakeCentral central, List<String> calls, List<Uri> opened, MemoryLocalNotifier notifier})> open(
+      WidgetTester tester, {
+      String startStatus = 'started',
+      String? launchId,
+      String? sub = Routes.snsDiscoverContent,
+      DateTime Function()? clock,
+    }) async {
+      final calls = <String>[];
+      const channel = MethodChannel(screenGlimpseChannelName);
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call.method);
+        return switch (call.method) {
+          'start' => {'status': startStatus},
+          'dir' => root.path,
+          'takeLaunchOpen' => launchId,
+          _ => null,
+        };
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
+      final glimpse = AndroidScreenGlimpse(channel: channel, clock: clock);
+      addTearDown(glimpse.dispose);
+      final central = _FakeCentral();
+      final notifier = MemoryLocalNotifier();
+      final opened = <Uri>[];
+      final c = await _pump(tester, central, overrides: [
+        screenGlimpseProvider.overrideWithValue(glimpse),
+        localNotifierProvider.overrideWithValue(notifier),
+        discoverExternalBrowserProvider.overrideWithValue((u) async {
+          opened.add(u);
+          return true;
+        }),
+      ]);
+      if (sub != null) {
+        c.read(routerProvider).push(sub);
+        await tester.pumpAndSettle();
+      }
+      return (c: c, central: central, calls: calls, opened: opened, notifier: notifier);
+    }
+
+    testWidgets('押す → 同意 → 端末の通知(RASQ の通知は出さない)とブラウザ → 読み取り終えたら全部のコマを frames で送り、コマを消す。切り抜きは合うコマに重ねる', (tester) async {
+      final t = await open(tester);
+      t.central.contentCrops = [
+        {'x': 0.1, 'y': 0.1, 'w': 0.3, 'h': 0.3, 'label': '最初', 'frame': 0},
+        {'x': 0.2, 'y': 0.2, 'w': 0.3, 'h': 0.3, 'label': '最後', 'frame': 2},
+        {'x': 0.3, 'y': 0.3, 'w': 0.3, 'h': 0.3, 'label': '範囲の外', 'frame': 99},
+      ];
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse')));
+      await tester.pumpAndSettle();
+      expect(t.calls, contains('start'));
+      expect(t.opened, [discoverBrowserHome]);
+      expect(t.notifier.shown, isEmpty, reason: '読み取りのボタンつきの通知は端末(前面サービス)が出す');
+      expect(find.byKey(const ValueKey('discover.content.glimpse.armed')), findsOneWidget);
+      expect(find.byKey(const ValueKey('discover.content.glimpse.dummy')), findsNothing, reason: '本物');
+
+      const id = 'g1759478400000-0a1b2c3d4e5f';
+      final dir = writeCapture(id);
+      await nativeEvent(tester, {'type': 'capturing', 'id': id});
+      await nativeEvent(tester, {'type': 'done', 'id': id, 'frames': 3});
+      final sent = t.central.lastContent!;
+      expect('name="frames"'.allMatches(sent.body).length, 3);
+      expect(sent.body, isNot(contains('name="image"')));
+      expect(sent.body, contains('content-type: image/jpeg'));
+      expect(sent.body, contains('name="source"\r\n\r\nscreen'));
+      expect(sent.body, contains('name="capturedat"\r\n\r\n2026-10-03t08:00:00.400z'));
+      expect(dir.existsSync(), isFalse, reason: '送ったらコマを消す');
+      expect(t.calls, contains('dismissDone'));
+      expect(find.byKey(const ValueKey('discover.content.glimpse.armed')), findsNothing);
+      expect(find.textContaining('(3 コマ)'), findsOneWidget);
+      // 切り抜きのいちばん多いコマ(最後 + 範囲の外 = 3 コマ目)を出し、そのコマの分だけ重ねる。
+      expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('discover.content.frame.2'))).selected, isTrue);
+      expect(find.byKey(const ValueKey('discover.crop.0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('discover.crop.1')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('discover.content.frame.0')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('discover.crop.0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('discover.crop.1')), findsNothing);
+
+      // あとから「読み取りました」の通知をタップしても、2 度は送らない。
+      t.central.lastContent = null;
+      await nativeEvent(tester, {'type': 'open', 'id': id});
+      expect(t.central.lastContent, isNull);
+      expect(find.byKey(const ValueKey('discover.content.error')), findsNothing);
+    });
+
+    testWidgets('探す画面を閉じていても「読み取りました」のタップで結果の画面を開いて送る / 通知から起動したときも', (tester) async {
+      const id = 'g1759478400001-aaaaaaaaaaaa';
+      final t = await open(tester, sub: null);
+      expect(find.byType(DiscoverContentScreen), findsNothing);
+      writeCapture(id, frames: 2);
+      await nativeEvent(tester, {'type': 'open', 'id': id});
+      expect(find.byType(DiscoverContentScreen), findsOneWidget);
+      expect('name="frames"'.allMatches(t.central.lastContent!.body).length, 2);
+      expect(Directory('${root.path}/$id').existsSync(), isFalse);
+    });
+
+    testWidgets('通知から起動: 起動時に 10 分より古いコマを先に消すので、古い結果は送らず「見つかりませんでした」', (tester) async {
+      const id = 'g1759478400002-bbbbbbbbbbbb';
+      final stale = writeCapture('g1759478000000-cccccccccccc');
+      writeCapture(id);
+      // 時計を 11 分進める → 置いたままのコマは全部古い。結果の id は消す前に開くので、起動時の掃除の対象から外れるよう、先に読む。
+      final t = await open(tester, sub: null, launchId: id, clock: () => DateTime.now().add(const Duration(minutes: 11)));
+      await tester.pumpAndSettle();
+      expect(t.calls, containsAllInOrder(['dir', 'takeLaunchOpen']));
+      expect(stale.existsSync(), isFalse, reason: '置いたままのコマは起動時に消す');
+      // 起動時の掃除が先に走るので、10 分より古い結果は「見つかりませんでした」になる(古いコマは送らない)。
+      expect(find.byType(DiscoverContentScreen), findsOneWidget);
+      expect(t.central.lastContent, isNull);
+      expect(find.textContaining('読み取った画面が見つかりませんでした'), findsOneWidget);
+    });
+
+    testWidgets('起動時の掃除は新しいコマを残し、通知から起動したらそのコマを送る', (tester) async {
+      const id = 'g1759478400003-dddddddddddd';
+      writeCapture(id);
+      final t = await open(tester, sub: null, launchId: id);
+      await tester.pumpAndSettle();
+      expect(find.byType(DiscoverContentScreen), findsOneWidget);
+      expect('name="frames"'.allMatches(t.central.lastContent!.body).length, 3);
+    });
+
+    testWidgets('同意しなかった / 通知を許可しなかった: そう出し、ブラウザは開かない', (tester) async {
+      var t = await open(tester, startStatus: 'denied');
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('画面の読み取りが許可されませんでした'), findsOneWidget);
+      expect(find.byKey(const ValueKey('discover.content.glimpse.armed')), findsNothing);
+      expect(t.opened, isEmpty);
+
+      await tester.pumpWidget(const SizedBox());
+      t = await open(tester, startStatus: 'notifications_denied');
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('端末の設定で RASQ の通知を許可してください'), findsOneWidget);
+      expect(t.opened, isEmpty);
+    });
+
+    testWidgets('やめる → ネイティブの cancel。端末が止めた(onStop)ら待ちを外してそう出す', (tester) async {
+      final t = await open(tester);
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse.cancel')));
+      await tester.pumpAndSettle();
+      expect(t.calls, contains('cancel'));
+      expect(find.byKey(const ValueKey('discover.content.glimpse.armed')), findsNothing);
+      await nativeEvent(tester, {'type': 'stopped', 'reason': 'cancel'});
+      expect(find.byKey(const ValueKey('discover.content.error')), findsNothing, reason: '自分でやめたときは何も出さない');
+
+      await tester.tap(find.byKey(const ValueKey('discover.content.glimpse')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('discover.content.glimpse.armed')), findsOneWidget);
+      await nativeEvent(tester, {'type': 'stopped', 'reason': 'system'});
+      expect(find.byKey(const ValueKey('discover.content.glimpse.armed')), findsNothing);
+      expect(find.textContaining('画面の読み取りが止められました'), findsOneWidget);
+      expect(t.central.lastContent, isNull);
+    });
+
+    test('AndroidScreenGlimpse: 変な id は読まない・消さない、古いコマだけ消す', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      const channel = MethodChannel('rasq/screen_glimpse_unit');
+      final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(channel, (call) async => call.method == 'dir' ? root.path : null);
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      var now = DateTime.now();
+      final g = AndroidScreenGlimpse(channel: channel, clock: () => now);
+      addTearDown(g.dispose);
+      final outside = Directory('${root.path}/../rasq_glimpse_outside_${root.path.hashCode}')..createSync();
+      addTearDown(() => outside.existsSync() ? outside.deleteSync(recursive: true) : null);
+      expect(await g.takeResult('../${outside.path.split('/').last}'), isNull);
+      await g.discard('../${outside.path.split('/').last}');
+      expect(outside.existsSync(), isTrue);
+      writeCapture('g1759478400004-eeeeeeeeeeee', frames: 2);
+      final r = await g.takeResult('g1759478400004-eeeeeeeeeeee');
+      expect(r!.frames, hasLength(2));
+      expect(r.capturedAt, DateTime.utc(2026, 10, 3, 8, 0, 0, 400));
+      expect(await g.cleanupStale(), 0, reason: '新しいコマは残す');
+      now = now.add(const Duration(minutes: 11));
+      expect(await g.cleanupStale(), 1);
+      expect(root.listSync(), isEmpty);
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -552,7 +760,8 @@ void main() {
 /// 1×1 の PNG。
 final _png = Uint8List.fromList(base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
 
-class _FakeGlimpse implements ScreenGlimpse {
+class _FakeGlimpse extends DummyScreenGlimpse {
+  _FakeGlimpse();
   final durations = <Duration>[];
   @override
   bool get isDummy => false;
@@ -638,6 +847,11 @@ class _FakeCentral {
   String handle = 'rasq_new';
   bool hasPassword = false;
   ({String contentType, String body})? lastContent;
+
+  /// §2 の応答の切り抜き(S-074: コマを送ると `frame` つき)。
+  List<Map<String, Object?>> contentCrops = [
+    {'x': 0.1, 'y': 0.1, 'w': 0.5, 'h': 0.5, 'label': 'ねこ'},
+  ];
   final peopleQueries = <String>[];
   final askMessages = <List<Map<String, Object?>>>[];
 
@@ -664,9 +878,7 @@ class _FakeCentral {
         'query': {
           'text': '茶トラの子猫の写真',
           'keywords': ['猫', '写真'],
-          'crops': [
-            {'x': 0.1, 'y': 0.1, 'w': 0.5, 'h': 0.5, 'label': 'ねこ'},
-          ],
+          'crops': contentCrops,
         },
         'lists': [_listHit],
         'servers': [_serverHit],

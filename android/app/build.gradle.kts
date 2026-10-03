@@ -52,4 +52,6 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // 画面の読み取りの小さな計算 (D-416、GlimpseFrameMath) の JVM の単体テスト。
+    testImplementation("junit:junit:4.13.2")
 }

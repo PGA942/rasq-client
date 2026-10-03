@@ -79,6 +79,22 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
+        <!-- いつものブラウザで見ている画面を 3 秒だけ読み取る (D-416)。同意を得てから前面サービス(種類 mediaProjection)で
+             取り込みを持ち、通知のボタンで読み取ったらすぐ止める。権限 FOREGROUND_SERVICE_MEDIA_PROJECTION は上で宣言済み (D-317)。 -->
+        <service
+            android:name=".ScreenGlimpseService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+        <!-- 通知の「この画面を読み取る」の受け口: 透明ですぐ閉じる(シェードを閉じるためだけ)。RASQ とは別のタスクで開き、履歴に出さない。 -->
+        <activity
+            android:name=".ScreenGlimpseTriggerActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.example.rasq_client.glimpse"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|density|uiMode" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

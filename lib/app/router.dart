@@ -66,6 +66,7 @@ import '../features/settings/backend_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/onboarding/onboarding_steps.dart';
 import '../features/onboarding/sns_discover_screen.dart';
+import '../features/onboarding/screen_glimpse.dart' show isValidGlimpseId;
 import '../features/onboarding/rasq_register_screen.dart';
 import '../features/store/installed_plugins_screen.dart';
 import '../features/store/plugin_page_screen.dart';
@@ -502,8 +503,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'sns', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingSnsScreen()),
           ]),
           GoRoute(path: Routes.snsDiscover, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const SnsDiscoverScreen(), routes: [
-            // `?glimpse=1` = 画面の読み取りの通知をタップして開いた (D-415): 開いたらすぐ 3 秒読み取る。
-            GoRoute(path: 'content', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => DiscoverContentScreen(initial: s.extra is DiscoverCapture ? s.extra as DiscoverCapture : null, startGlimpse: s.uri.queryParameters['glimpse'] == '1')),
+            // `?glimpse=1` = 画面の読み取りの通知をタップして開いた (D-415): 開いたらすぐ 3 秒読み取る(ダミー)。
+            // `?glimpse=done&id=…` = Android で読み取り終えた (D-416): そのコマを送る。
+            GoRoute(
+                path: 'content',
+                parentNavigatorKey: _appNavigatorKey,
+                builder: (_, s) => DiscoverContentScreen(
+                    initial: s.extra is DiscoverCapture ? s.extra as DiscoverCapture : null,
+                    startGlimpse: s.uri.queryParameters['glimpse'] == '1',
+                    glimpseResultId: s.uri.queryParameters['glimpse'] == 'done' && isValidGlimpseId(s.uri.queryParameters['id']) ? s.uri.queryParameters['id'] : null)),
             GoRoute(path: 'browse', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverBrowseScreen()),
             GoRoute(path: 'people', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverPeopleScreen()),
             GoRoute(path: 'ask', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverAskScreen()),
