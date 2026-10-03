@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:plugin_runtime/plugin_runtime.dart' show fetchHostPermitted;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -256,7 +257,8 @@ class _InAppSignupWebViewState extends State<_InAppSignupWebView> {
       },
       onNavigationRequest: (r) {
         final u = Uri.tryParse(r.url);
-        if (!r.isMainFrame || u == null || u.host == widget.url.host || u.host.endsWith('.${widget.url.host}')) return NavigationDecision.navigate;
+        // 登録するサーバー(とそのサブドメイン)の中だけアプリで開く。判定は net.fetch と同じ fetchHostPermitted に寄せる。
+        if (!r.isMainFrame || u == null || fetchHostPermitted(u.host, {widget.url.host, '*.${widget.url.host}'})) return NavigationDecision.navigate;
         if (u.scheme == 'https' || u.scheme == 'http' || u.scheme == 'mailto') unawaited(launchUrl(u, mode: LaunchMode.externalApplication));
         return NavigationDecision.prevent;
       },
