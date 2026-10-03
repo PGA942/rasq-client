@@ -384,6 +384,7 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
         final why = switch (e.reason) {
           'cancel' => null,
           'system' => '画面の読み取りが止められました(端末の「共有を停止」や画面のロック)。もう一度「いつものブラウザで見て探す」から始めてください',
+          'short' => '配信がすぐに止まったので、読み取れませんでした。ブラウザで探したい画面を開いてから止めてください',
           'timeout' => '10 分たったので、画面の読み取りの準備を止めました',
           'killed' => '画面の読み取りが端末に止められました。もう一度始めてください',
           'empty' => '画面を読み取れませんでした(写しが取れませんでした)',
@@ -396,13 +397,15 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
     }
   }
 
-  /// 「いつものブラウザで見て探す」: Android は同意 → 端末の通知(読み取りのボタン)、ほかは RASQ の通知。そのあと端末のブラウザを開く。
+  /// 「いつものブラウザで見て探す」: Android は同意 → 端末の通知(読み取りのボタン)、iOS は画面の配信の開始、ほかは RASQ の通知。
+  /// そのあと端末のブラウザを開く。
   Future<void> _armGlimpse() async {
     if (_glimpser.native) {
       final status = await _glimpser.start();
       if (!mounted) return;
       final error = switch (status) {
         GlimpseStartStatus.started || GlimpseStartStatus.busy => null,
+        GlimpseStartStatus.denied when isBroadcastGlimpse(_glimpser) => '画面の配信が始まりませんでした。読み取るには、もう一度押して「ブロードキャストを開始」を選んでください(読み取るのは配信を止める直前の 3 秒だけです)',
         GlimpseStartStatus.denied => '画面の読み取りが許可されませんでした。読み取るには、もう一度押して「開始」を選んでください(読み取るのはボタンを押したあとの 3 秒だけです)',
         GlimpseStartStatus.notificationsDenied => '通知を出せませんでした。読み取りのボタンは通知に出るので、端末の設定で RASQ の通知を許可してください',
         GlimpseStartStatus.unavailable => 'この端末では画面を読み取れません。画像を選ぶか、アプリの中のブラウザで探してください',
@@ -618,7 +621,7 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
                 _GlimpseCard(
                   key: const ValueKey('discover.content.glimpse.armed'),
                   icon: Icons.notifications_active_outlined,
-                  text: '通知を出しました。ブラウザで探したい画面を開いてから、通知をタップしてください。タップすると、その画面を 3 秒だけ読み取ります。',
+                  text: glimpseArmedHint(_glimpser),
                   dummy: glimpseDummy,
                   action: TextButton(key: const ValueKey('discover.content.glimpse.cancel'), onPressed: _disarmGlimpse, child: const Text('やめる')),
                 ),
