@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rasq_design/rasq_design.dart';
+import 'package:rasq_models/rasq_models.dart' show SnsKind;
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
@@ -15,6 +17,7 @@ import '../../backend/rasq_account_page_api.dart' hide RasqNotice;
 import 'rasq_account_page_screen.dart' show RasqSnsTileChip;
 import 'rasq_ownership_screens.dart' show rasqVerifiableKinds;
 import '../../shell/headers.dart';
+import '../../session/bluesky_auth.dart' show blueskyDidOf;
 
 /// 選んだ画像の content-type(名前か、ピッカーの申告から)。サーバーは中身で判定し直すので、目安でよい。
 String profileImageContentType(String name, String? reported) {
@@ -464,7 +467,24 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
     // このアプリが持っている、その SNS アカウントのセッション(トークン)。
     final session = ref.read(sessionsProvider).value?.allSessions.where((s) => s.account.key == widget.accountKey).firstOrNull;
     if (session == null || session.token.isEmpty) return widget.onMessage('この端末に、そのアカウントのログインがありません');
-    final ok = await ref.read(overlayManagerProvider).showAlert(
+    // Bluesky (D-423): 投稿はすべて公開で、ORGATE は Bluesky の公開の API(AppView)から読める。ログインの鍵(アプリパスワードで
+    // 作ったセッション)は預けず、どのアカウントかを示す DID とハンドルだけを渡す。
+    final bluesky = session.account.kind == SnsKind.bluesky;
+    final did = blueskyDidOf(session);
+    if (bluesky && did == null) return widget.onMessage('このアカウントの DID が分かりません。ログインし直してください');
+    final ok = bluesky
+        ? await ref.read(overlayManagerProvider).showAlert(
+            id: 'rasqProfile.snsPosts.consent',
+            title: 'Bluesky の投稿をアカウントページに出します',
+            message: '${session.account} の投稿を、RASQ のサーバーが Bluesky の公開の API から読み、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n'
+                '・Bluesky の投稿は、もともと誰でも読めます。返信とリポストは取り込みません。\n'
+                '・**ログインの鍵(アプリパスワード / セッション)は預けません**。サーバーに渡すのは、このアカウントの DID とハンドルだけです。\n'
+                '・使えるのは、持ち主の確認が済んだアカウントだけです(他人のアカウントの投稿を出せないように)。\n'
+                '・このスイッチを切ると、取ってきた投稿は、すぐに消えます。',
+            confirmText: '同意して出す',
+            cancelText: 'やめる',
+          )
+        : await ref.read(overlayManagerProvider).showAlert(
           id: 'rasqProfile.snsPosts.consent',
           title: 'ログインの鍵を RASQ に預けます',
           // 規約案 02 第 4 項 (D-372): 誰でも見られる状態になること、サーバーが復号できる方式であることを先に。
@@ -481,11 +501,16 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
     if (!ok || !mounted) return;
     setState(() => _busy = true);
     try {
-      final st = await api.depositToken(widget.accountKey, session.token);
+      final st = await api.depositToken(widget.accountKey, bluesky ? jsonEncode({'did': did, 'handle': session.account.handle}) : session.token);
       if (mounted) setState(() => _status = st);
       widget.onMessage(st.lastError == null ? '${st.postCount} 件の投稿を取ってきました' : '預けましたが、投稿を取れませんでした(${st.lastError})');
     } on OrgateException catch (e) {
-      widget.onMessage(e.code.code == '501' ? 'このサーバーでは、まだ使えません' : '預けられませんでした: ${e.message}');
+      widget.onMessage(switch (e.code.code) {
+        '501' => 'このサーバーでは、まだ使えません',
+        // Bluesky は持ち主の確認が済んだアカウントだけ (D-423 / ORGATE O-011)。
+        '403' when bluesky => '先に、このアカウントの「持ち主の確認」を済ませてください',
+        _ => '預けられませんでした: ${e.message}',
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -501,12 +526,13 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
         title: '投稿もアカウントページに出す',
         subtitle: st.hasToken
             ? (st.lastError != null ? '取得に失敗しています: ${st.lastError}' : '${st.postCount} 件(公開 / ホームの投稿。30 分ごとに更新)')
-            : 'SNS のログインの鍵を RASQ に預けます(入れるときに確認が出ます)',
+            : (widget.accountKey.startsWith('bluesky:') ? 'RASQ のサーバーが Bluesky の公開の投稿を読みます(鍵は預けません)' : 'SNS のログインの鍵を RASQ に預けます(入れるときに確認が出ます)'),
         value: st.hasToken,
         onChanged: _busy ? null : _set,
       ),
       // 別の目的は別に選ぶ (D-373 / S-054、規約案 02 第 4 項 / PRIV-02)。預けているときだけ、既定はオフ。
-      if (st.hasToken)
+      // Bluesky は鍵を預からないので、RASQ リストに使う鍵も無い(RASQ リストは鍵なしで読む。D-423)。
+      if (st.hasToken && !widget.accountKey.startsWith('bluesky:'))
         RasqSwitchListTile(
           key: ValueKey('rasqProfile.snsPosts.collections.${widget.accountKey}'),
           title: 'この鍵を RASQ リストにも使う',

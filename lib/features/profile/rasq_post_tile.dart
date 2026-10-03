@@ -43,7 +43,7 @@ import '../store/sticker_packs.dart';
 /// キュー = ストアでインストール(購入)した署名済みアセットパックの絵でのリアクション。付いているキューは、絵 + 件数のチップで出る
 /// (絵はサーバーが配るので、そのパックを入れていなくても見える。チップを押すと、同じ絵を自分も付ける / 外す)。
 class RasqPostTileView extends ConsumerWidget {
-  const RasqPostTileView({super.key, required this.post, required this.onChanged, this.onOpen, this.focused = false, this.onReply});
+  const RasqPostTileView({super.key, required this.post, required this.onChanged, this.onOpen, this.focused = false, this.onReply, this.pinned = false, this.onTogglePin});
   final RasqAccountPost post;
 
   /// 投稿が変わった / 消えた(呼び出し側が取り直す)。
@@ -57,6 +57,12 @@ class RasqPostTileView extends ConsumerWidget {
 
   /// 返信ボタンを、呼び出し側で受ける(投稿の詳細: 常駐の返信コンポーザーを呼び戻す。D-292)。null なら、返信のコンポーザーを開く。
   final VoidCallback? onReply;
+
+  /// アカウントページで固定しているか (S-027)。
+  final bool pinned;
+
+  /// … のメニューの「固定する / 固定を外す」(D-423。自分のページの、固定できる投稿だけ)。null なら出さない。
+  final Future<void> Function()? onTogglePin;
 
   void _toast(BuildContext context, String m) {
     ScaffoldMessenger.of(context)
@@ -98,6 +104,7 @@ class RasqPostTileView extends ConsumerWidget {
       const RasqDropdownItem('リンクをコピー', 'copy'),
       const RasqDropdownItem('ブラウザで開く', 'open'),
       const RasqDropdownItem('アクションバーを編集', 'editActions'),
+      if (onTogglePin != null) RasqDropdownItem(pinned ? '固定を外す' : '固定する', 'pin'),
       if (isMine) const RasqDropdownItem('削除', 'delete', destructive: true),
     ]);
     if (!context.mounted || pick == null) return;
@@ -113,6 +120,8 @@ class RasqPostTileView extends ConsumerWidget {
         await showActionBarEditSheet(ref, column: fowColumnOf(context), surfaces: const [ActionBarSurface.rasqPost]);
       case 'open':
         if (link != null) await launchUrl(link, mode: LaunchMode.externalApplication);
+      case 'pin':
+        await onTogglePin?.call();
       case 'delete':
         final ok = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.delete', title: '投稿を削除', message: 'この投稿と、付いている画像を削除します。元に戻せません。', confirmText: '削除する', cancelText: 'キャンセル', destructive: true);
         if (!ok || !context.mounted) return;
