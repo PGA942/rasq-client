@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:rasq_models/rasq_models.dart';
 
 import '../features/settings/settings_dsl.dart' show settingsAreaProvider;
@@ -188,6 +189,16 @@ class OrgateClient {
     if (r.statusCode >= 400) _fail(r);
     final body = r.bodyBytes.isEmpty ? const {} : jsonDecode(utf8.decode(r.bodyBytes));
     return (body as Map?)?.cast<String, Object?>() ?? const {};
+  }
+
+  /// multipart/form-data の POST(オンボーディングの「好きな画像から探す」など)。[files] = 欄の名前 → (バイト列, MIME, ファイル名)。応答は JSON。
+  Future<Map<String, Object?>> postMultipart(String path, {Map<String, String> fields = const {}, Map<String, ({List<int> bytes, String contentType, String filename})> files = const {}}) async {
+    final req = http.MultipartRequest('POST', _url(path))..headers.addAll(_headers());
+    req.fields.addAll(fields);
+    for (final e in files.entries) {
+      req.files.add(http.MultipartFile.fromBytes(e.key, e.value.bytes, filename: e.value.filename, contentType: http_parser.MediaType.parse(e.value.contentType)));
+    }
+    return ((await _send(req)) as Map?)?.cast<String, Object?>() ?? const {};
   }
 
   /// 生バイト列の PUT(プロフィールの画像など)。応答は JSON。

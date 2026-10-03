@@ -32,6 +32,7 @@ dependencies:
   # ストア配布物の ed25519 署名検証 (D-034)。純 Dart 実装で全プラットフォーム同一。
   cryptography: ^2.9.0
   http: ^1.2.0
+  http_parser: ^4.0.2
   # Web 版 (D-295): 安全でないコンテキスト(開発用の http)での保存先に localStorage を使う。
   web: ^1.1.1
   image_picker: ^1.1.2

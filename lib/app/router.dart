@@ -64,6 +64,8 @@ import '../features/settings/action_bar_plugins_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/settings/backend_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
+import '../features/onboarding/onboarding_steps.dart';
+import '../features/onboarding/sns_discover_screen.dart';
 import '../features/onboarding/rasq_register_screen.dart';
 import '../features/store/installed_plugins_screen.dart';
 import '../features/store/plugin_page_screen.dart';
@@ -105,8 +107,21 @@ abstract final class Routes {
   /// サーバーのタイルから始める登録 (D-412): 登録ページ(WebView / 外部のブラウザ)+ RAi の案内。オンボーディング中も開ける。
   static const serverSignup = '/server-signup';
 
-  /// 狭い画面のオンボーディングから開く、サーバー / RASQ リストの見本のページ (D-412)。
+  /// サーバー / RASQ リストの見本のページ (D-412)。D-414 でオンボーディングの流れからは外した(ページは残す)。
   static const onboardingShowcase = '/onboarding-showcase';
+
+  /// 初回オンボーディング v2 (D-414): ① ユーザー名・パスワード・年齢(初回は [onboarding] そのもの)/ ② 規約・チャイルドセーフ
+  /// (`extra` = ① の内容)/ ③ SNS アカウントでログイン。
+  static const onboardingAccount = '/onboarding/account';
+  static const onboardingTerms = '/onboarding/terms';
+  static const onboardingSns = '/onboarding/sns';
+
+  /// SNS サービスを探す画面 (D-414): 画像・コンテンツ / 人 / エクスポート(準備中)/ RAi に聞く。オンボーディング中も開ける。
+  static const snsDiscover = '/sns-discover';
+  static const snsDiscoverContent = '/sns-discover/content';
+  static const snsDiscoverBrowse = '/sns-discover/browse';
+  static const snsDiscoverPeople = '/sns-discover/people';
+  static const snsDiscoverAsk = '/sns-discover/ask';
 
   /// 登録の前に読む文書(設定の「ヘルプ、法的表示」と同じページ)。オンボーディング中も開ける (D-405)。
   static const termsDoc = '/settings/dsl/about.terms';
@@ -277,7 +292,8 @@ String? entryRedirect({required String loc, required bool loggedIn, required Ras
     Routes.childSafeLogin,
   };
   if (loggedIn) return loc == Routes.onboarding ? Routes.home : null;
-  if (loc.startsWith(Routes.login) || open.contains(loc)) return null;
+  // オンボーディング v2 のページと探す画面 (D-414) も。
+  if (loc.startsWith(Routes.login) || open.contains(loc) || loc.startsWith('${Routes.onboarding}/') || loc == Routes.snsDiscover || loc.startsWith('${Routes.snsDiscover}/')) return null;
   final central = ledger?.currentCentral;
   if (central == null) return Routes.onboarding;
   if (signedInCentral == null) return null;
@@ -480,7 +496,17 @@ final routerProvider = Provider<GoRouter>((ref) {
               parentNavigatorKey: _appNavigatorKey,
               builder: (_, s) => ReviewTimelineScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
           GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const WasmPluginScreen()),
-          GoRoute(path: Routes.onboarding, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingScreen()),
+          GoRoute(path: Routes.onboarding, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingScreen(), routes: [
+            GoRoute(path: 'account', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingAccountScreen()),
+            GoRoute(path: 'terms', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => OnboardingTermsScreen(draft: s.extra is OnboardingDraft ? s.extra as OnboardingDraft : null)),
+            GoRoute(path: 'sns', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingSnsScreen()),
+          ]),
+          GoRoute(path: Routes.snsDiscover, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const SnsDiscoverScreen(), routes: [
+            GoRoute(path: 'content', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => DiscoverContentScreen(initial: s.extra is DiscoverCapture ? s.extra as DiscoverCapture : null)),
+            GoRoute(path: 'browse', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverBrowseScreen()),
+            GoRoute(path: 'people', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverPeopleScreen()),
+            GoRoute(path: 'ask', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverAskScreen()),
+          ]),
           // オンボーディングからも、サイドバーの RASQ アカウント FOW からも開く (D-405)。
           GoRoute(path: Routes.onboardingShowcase, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingShowcaseScreen()),
           GoRoute(path: Routes.serverSignup, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ServerSignupScreen()),
