@@ -11,19 +11,23 @@ import '../../notify/local_notifier.dart';
 
 /// **いま見ている画面を少しだけ読み取る** (D-415、Android の本物は D-416)。
 ///
-/// 流れ(Android、[AndroidScreenGlimpse]): 探す画面(好きな画像やコンテンツから探す)で「いつものブラウザで見て探す」→
+/// 流れ(Android、[NativeScreenGlimpse]): 探す画面(好きな画像やコンテンツから探す)で「いつものブラウザで見て探す」→
 /// 端末の「画面の読み取り」の同意 → RASQ の前面サービスが取り込みを持ち、ボタンつきの通知(「この画面を読み取る(3 秒)」)を出す →
 /// 端末のブラウザで好きなページを見る → 通知のボタン → **RASQ を前に出さずに** 3 秒だけ読み取り(1 秒ごと、同じコマは飛ばす)、
 /// すぐ取り込みを止める →「読み取りました — タップで結果を見る」→ タップで RASQ が開き(`/sns-discover/content?glimpse=done&id=…`)、
 /// コマを `frames`(`source: screen`、`capturedAt`)で `POST /onboarding/discover/content` に送って結果を出す。送ったらコマは消す。
 ///
+/// iOS(D-417、[NativeScreenGlimpse.broadcast]): 「いつものブラウザで見て探す」→ 端末の「画面の配信」のシート(RASQ の
+/// Broadcast Upload Extension `ScreenGlimpseBroadcast`)→ ブラウザで好きなページを見る → 画面上部の赤い表示 / コントロールセンターから
+/// 配信を止める → 止める直前の約 3 秒(最大 4 コマ)を拡張機能が残す → RASQ に戻ると、Android と同じく `done` / `open` で結果を開く。
+/// iOS には「通知のボタンで読み取る」が無いので、**止めたことが合図**。
+///
 /// ほかの端末([DummyScreenGlimpse]): D-415 のまま、RASQ の通知のタップで開いて「3 秒読み取る」(ダミーの写し、画面にそう出す)。
-/// iOS はほかのアプリの画面を読むのに Broadcast Upload Extension(ReplayKit、Xcode で作る)が要るので、まだダミー。
 abstract interface class ScreenGlimpse {
   /// 読み取りがダミーか(画面にそう出す)。
   bool get isDummy;
 
-  /// 端末が自分で通知を出して読み取るか(Android)。false なら RASQ の通知 + [capture](ダミー)。
+  /// 端末が自分で読み取るか(Android / iOS)。false なら RASQ の通知 + [capture](ダミー)。
   bool get native;
 
   /// 同意を得て、読み取りの準備をする(native だけ)。ブラウザは呼んだ側が開く。
@@ -162,11 +166,12 @@ class DummyScreenGlimpse implements ScreenGlimpse {
 
 const screenGlimpseChannelName = 'rasq/screen_glimpse';
 
-/// Android の本物 (D-416): ネイティブ(`ScreenGlimpseBridge` / `ScreenGlimpseService`)と `rasq/screen_glimpse` で話す。
+/// 本物 (Android は D-416、iOS は D-417): ネイティブ(Android は `ScreenGlimpseBridge` / `ScreenGlimpseService`、
+/// iOS は `ScreenGlimpseBridge.swift` + 拡張機能 `ScreenGlimpseBroadcast`)と `rasq/screen_glimpse` で話す。
 /// コマは端末のキャッシュ(`dir`)に置かれ、ここで読んで、送ったら消す。ファイルは小さく(JPEG 数枚)、数も少ないので
 /// 同期の読み書きにしている(テストの偽の時計の中でも動く)。
-class AndroidScreenGlimpse implements ScreenGlimpse {
-  AndroidScreenGlimpse({MethodChannel? channel, DateTime Function()? clock})
+class NativeScreenGlimpse implements ScreenGlimpse {
+  NativeScreenGlimpse({MethodChannel? channel, DateTime Function()? clock, this.broadcast = false})
       : _channel = channel ?? const MethodChannel(screenGlimpseChannelName),
         _clock = clock ?? DateTime.now {
     _channel.setMethodCallHandler(_onCall);
@@ -174,6 +179,9 @@ class AndroidScreenGlimpse implements ScreenGlimpse {
 
   final MethodChannel _channel;
   final DateTime Function() _clock;
+
+  /// iOS の流れ(画面の配信を止めたら読み取る)。false なら Android の流れ(通知のボタンで読み取る)。
+  final bool broadcast;
   final _events = StreamController<GlimpseEvent>.broadcast();
   Future<String?>? _root;
 
@@ -315,18 +323,26 @@ class AndroidScreenGlimpse implements ScreenGlimpse {
 
   @override
   Future<GlimpseFrames> capture({required Duration duration, ValueChanged<Duration>? onProgress}) =>
-      throw UnsupportedError('Android の読み取りは通知のボタンから(start)');
+      throw UnsupportedError('端末の読み取りは start から(Android は通知のボタン、iOS は配信を止めたとき)');
 }
 
-/// 画面の読み取りの口(テストで差し替える)。Android は本物、ほか(iOS / デスクトップ / Web / テスト)はダミー。
+/// 画面の読み取りの口(テストで差し替える)。Android / iOS は本物、ほか(デスクトップ / Web / テスト)はダミー。
 final screenGlimpseProvider = Provider<ScreenGlimpse>((ref) {
-  if (!kIsWeb && Platform.isAndroid) {
-    final g = AndroidScreenGlimpse();
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    final g = NativeScreenGlimpse(broadcast: Platform.isIOS);
     ref.onDispose(g.dispose);
     return g;
   }
   return const DummyScreenGlimpse();
 });
+
+/// iOS の流れ(配信を止めたら読み取る)か。
+bool isBroadcastGlimpse(ScreenGlimpse g) => g is NativeScreenGlimpse && g.broadcast;
+
+/// 準備できたときに出す案内。
+String glimpseArmedHint(ScreenGlimpse g) => isBroadcastGlimpse(g)
+    ? '画面の配信を始めました。ブラウザで探したい画面を開いたら、画面上部の赤い表示(またはコントロールセンター)から配信を止めてください。止める直前の 3 秒だけを読み取り、RASQ に戻ると結果が出ます。'
+    : '通知を出しました。ブラウザで探したい画面を開いてから、通知をタップしてください。タップすると、その画面を 3 秒だけ読み取ります。';
 
 /// 読み取る長さ。
 const discoverGlimpseDuration = Duration(seconds: 3);

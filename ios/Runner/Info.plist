@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>RASQKeychainGroup</key>
+	<string>$(AppIdentifierPrefix)com.example.rasqClient.shared</string>
 	<!-- RAi 端末内モデル (D-181, flutter_gemma): モデルファイルの共有と開発時のローカル通信 -->
 	<key>UIFileSharingEnabled</key>
 	<true/>

@@ -593,7 +593,7 @@ void main() {
         };
       });
       addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
-      final glimpse = AndroidScreenGlimpse(channel: channel, clock: clock);
+      final glimpse = NativeScreenGlimpse(channel: channel, clock: clock);
       addTearDown(glimpse.dispose);
       final central = _FakeCentral();
       final notifier = MemoryLocalNotifier();
@@ -729,14 +729,14 @@ void main() {
       expect(t.central.lastContent, isNull);
     });
 
-    test('AndroidScreenGlimpse: 変な id は読まない・消さない、古いコマだけ消す', () async {
+    test('NativeScreenGlimpse: 変な id は読まない・消さない、古いコマだけ消す', () async {
       TestWidgetsFlutterBinding.ensureInitialized();
       const channel = MethodChannel('rasq/screen_glimpse_unit');
       final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
       messenger.setMockMethodCallHandler(channel, (call) async => call.method == 'dir' ? root.path : null);
       addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
       var now = DateTime.now();
-      final g = AndroidScreenGlimpse(channel: channel, clock: () => now);
+      final g = NativeScreenGlimpse(channel: channel, clock: () => now);
       addTearDown(g.dispose);
       final outside = Directory('${root.path}/../rasq_glimpse_outside_${root.path.hashCode}')..createSync();
       addTearDown(() => outside.existsSync() ? outside.deleteSync(recursive: true) : null);
@@ -751,6 +751,20 @@ void main() {
       now = now.add(const Duration(minutes: 11));
       expect(await g.cleanupStale(), 1);
       expect(root.listSync(), isEmpty);
+    });
+
+    test('iOS (D-417): 配信を止めたら読み取る案内。拡張機能の id(小文字の UUID)を受け付ける', () {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final ios = NativeScreenGlimpse(channel: const MethodChannel('rasq/screen_glimpse_ios'), broadcast: true);
+      final android = NativeScreenGlimpse(channel: const MethodChannel('rasq/screen_glimpse_android'));
+      addTearDown(ios.dispose);
+      addTearDown(android.dispose);
+      expect(isBroadcastGlimpse(ios), isTrue);
+      expect(isBroadcastGlimpse(android), isFalse);
+      expect(isBroadcastGlimpse(const DummyScreenGlimpse()), isFalse);
+      expect(glimpseArmedHint(ios), contains('配信を止めて'));
+      expect(glimpseArmedHint(android), contains('通知をタップ'));
+      expect(isValidGlimpseId('3f2a9c1e-7b4d-4e8a-9f00-1a2b3c4d5e6f'), isTrue);
     });
   });
 }
