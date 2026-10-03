@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -21,6 +22,10 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../collections/rasq_list_picker.dart' show importRasqListToHomeWith;
 import '../rai/rai_widgets.dart' show RaiIcon;
+import '../settings/developer_mode.dart';
+import '../settings/settings_dsl.dart' show settingsAreaProvider;
+import 'discover_circle_editor.dart';
+import 'discover_image_crop.dart';
 import 'onboarding_previews.dart' show signupFromList;
 import 'screen_glimpse.dart';
 import 'server_signup.dart';
@@ -28,8 +33,9 @@ import 'server_signup.dart';
 /// SNS サービスを探す画面 (D-414)。オンボーディングの ③ と、SNS のログインの「サービスを探してログイン」から開く。
 ///
 /// 入口は 4 つ(Central の口は CONTRACT §2〜§6、どれも匿名で呼べる):
-/// - **好きな画像やコンテンツから探す** — 画像を選ぶ(端末の画像の選択だけ)/ いつものブラウザで見て、通知のタップで画面を 3 秒だけ読み取る
-///   (D-415、[ScreenGlimpse])/ アプリの中のブラウザで見て「この画面から探す」(本文 + URL)→ §2
+/// - **好きな画像やコンテンツから探す** — 画像を選ぶ(端末の画像の選択、6 枚まで。1 枚ずつ「囲って検索」で探したい部分を囲み、
+///   端末で切り抜いて `frames` + `source: picker` で送る、D-418)/ いつものブラウザで見て、通知のタップで画面を 3 秒だけ読み取る
+///   (D-415、[ScreenGlimpse]。iOS は開発者モードの「画面の読み取りを試す(iOS)」のときだけ)/ アプリの中のブラウザで見て「この画面から探す」(本文 + URL)→ §2
 /// - **有力なユーザー / インフルエンサーから探す** — 名前や分野 → §3(まず RASQ リストの中、Brave は最終手段で既定は無効)
 /// - **外部 SNS のエクスポートデータから探す** — 準備中(押せない)
 /// - **RAi に聞く** — クラウドの RAi との会話 → §5(端末に RAi のデータが無くてよい)
@@ -69,11 +75,19 @@ int discoverCropFrame(DiscoverCrop crop, int pictureCount) {
 }
 
 /// 最初に見せるコマ: 切り抜きのいちばん多いコマ(同数なら後ろ、切り抜きが無ければ最後)。
-int discoverInitialFrame(List<DiscoverCrop> crops, int pictureCount) {
+/// [preferFirst](選んだ画像)なら同数は前、切り抜きが無ければ最初。
+int discoverInitialFrame(List<DiscoverCrop> crops, int pictureCount, {bool preferFirst = false}) {
   if (pictureCount <= 1) return 0;
   final counts = List<int>.filled(pictureCount, 0);
   for (final c in crops) {
     counts[discoverCropFrame(c, pictureCount)]++;
+  }
+  if (preferFirst) {
+    var best = 0;
+    for (var i = 0; i < pictureCount; i++) {
+      if (counts[i] > counts[best]) best = i;
+    }
+    return best;
   }
   var best = pictureCount - 1;
   for (var i = pictureCount - 1; i >= 0; i--) {
@@ -82,13 +96,55 @@ int discoverInitialFrame(List<DiscoverCrop> crops, int pictureCount) {
   return best;
 }
 
+/// 選んだ画像 1 枚 (D-418)。[selection] は「囲って検索」の囲み(null = 画像全体)、[prepared] はその囲みで切り抜いた送る画像。
+@immutable
+class DiscoverPick {
+  const DiscoverPick({required this.id, required this.original, required this.size, this.selection, this.prepared});
+  final int id;
+  final Uint8List original;
+  final ui.Size size;
+  final DiscoverSelection? selection;
+  final Uint8List? prepared;
+
+  DiscoverPick withSelection(DiscoverSelection? s) => DiscoverPick(id: id, original: original, size: size, selection: s);
+  DiscoverPick withPrepared(Uint8List? b) => DiscoverPick(id: id, original: original, size: size, selection: selection, prepared: b);
+}
+
+/// 選んだ画像のコマを契約(§2 の追記)に収める。順番は保ち、送れないもの(形式 / 10 MiB 超)を外し、
+/// 6 枚・合計 24 MiB を超える分は後ろから外す。[dropped] = 外した枚数。
+({List<Uint8List> frames, int dropped}) fitDiscoverPickerFrames(List<Uint8List> frames) {
+  final kept = <Uint8List>[];
+  var total = 0;
+  for (final f in frames) {
+    if (discoverImageMime(f) == null || f.length > discoverImageMaxBytes) continue;
+    if (kept.length >= discoverFramesMax || total + f.length > discoverFramesMaxTotalBytes) continue;
+    kept.add(f);
+    total += f.length;
+  }
+  return (frames: kept, dropped: frames.length - kept.length);
+}
+
+/// 「いつものブラウザで見て探す」を出すか (D-418)。iOS は Broadcast Upload Extension が画面収録の選択に出ない端末があり(未解決)、
+/// 開発者モードの「画面の読み取りを試す(iOS)」がオンのときだけ出す(仕組みは D-417 のまま残す)。Android ほかは出す。
+final discoverScreenGlimpseEntryProvider = Provider<bool>((ref) {
+  if (defaultTargetPlatform != TargetPlatform.iOS) return true;
+  return ref.watch(developerModeProvider) && ref.watch(settingsAreaProvider(developerModeArea)).value?['iosScreenGlimpse'] == true;
+});
+
 /// カメラで撮れる端末か。
 bool get discoverCameraSupported => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
-/// 画像を選ぶ口(テストで差し替える)。長辺 2048px・JPEG 品質 85 に縮めて、10 MiB に収める。
-final discoverImagePickerProvider = Provider<Future<Uint8List?> Function({required bool camera})>((ref) => ({required bool camera}) async {
-      final x = await ImagePicker().pickImage(source: camera ? ImageSource.camera : ImageSource.gallery, maxWidth: 2048, maxHeight: 2048, imageQuality: 85);
-      return x?.readAsBytes();
+/// 画像を選ぶ口(テストで差し替える)。ギャラリーは複数選べる([limit] 枚まで)、カメラは 1 枚。長辺 2048px・JPEG 品質 85 に縮めて、10 MiB に収める。
+typedef DiscoverImagePicker = Future<List<Uint8List>> Function({required bool camera, required int limit});
+
+final discoverImagePickerProvider = Provider<DiscoverImagePicker>((ref) => ({required bool camera, required int limit}) async {
+      final picker = ImagePicker();
+      if (camera) {
+        final x = await picker.pickImage(source: ImageSource.camera, maxWidth: 2048, maxHeight: 2048, imageQuality: 85);
+        return x == null ? const [] : [await x.readAsBytes()];
+      }
+      final xs = await picker.pickMultiImage(maxWidth: 2048, maxHeight: 2048, imageQuality: 85, limit: limit);
+      return [for (final x in xs) await x.readAsBytes()];
     });
 
 /// 端末のブラウザでページを開く口(テストで差し替える)。
@@ -125,7 +181,7 @@ class SnsDiscoverScreen extends ConsumerWidget {
                 key: const ValueKey('discover.content'),
                 leading: const Icon(Icons.image_search),
                 title: '好きな画像やコンテンツから探す',
-                subtitle: '画像を選ぶか、ブラウザで見ているページから',
+                subtitle: '画像を選んで、探したい部分を囲んで',
                 onTap: () => context.push(Routes.snsDiscoverContent),
               ),
               RasqListTile(
@@ -343,6 +399,13 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
   StreamSubscription<GlimpseEvent>? _glimpseEvents;
   static final _handledGlimpses = <String>{};
 
+  /// 選んだ画像 (D-418): 6 枚まで、並べ替え / 外せる。それぞれ「囲って検索」の囲みを持つ。
+  final _picks = <DiscoverPick>[];
+  int _pickSeq = 0;
+
+  /// 画像の追加・切り抜きについての知らせ(上限で追加しなかった など)。
+  String? _pickNotice;
+
   @override
   void initState() {
     super.initState();
@@ -501,11 +564,113 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
     }
   }
 
-  Future<void> _pick({required bool camera}) async {
-    final bytes = await ref.read(discoverImagePickerProvider)(camera: camera);
-    if (bytes == null || !mounted) return;
-    _glimpseFrames = null;
-    await _search(DiscoverCapture(image: bytes));
+  /// 画像を追加する(ギャラリーは複数、残りの枚数まで)。追加した画像は順に「囲って検索」を開く。
+  Future<void> _addImages({required bool camera}) async {
+    final room = discoverFramesMax - _picks.length;
+    if (room <= 0) {
+      setState(() => _pickNotice = '画像は $discoverFramesMax 枚までです。外してから追加してください');
+      return;
+    }
+    List<Uint8List> got;
+    try {
+      got = await ref.read(discoverImagePickerProvider)(camera: camera, limit: room);
+    } catch (e) {
+      debugPrint('discover pick: $e');
+      if (mounted) setState(() => _pickNotice = '画像を読み込めませんでした');
+      return;
+    }
+    if (got.isEmpty || !mounted) return;
+    final tools = ref.read(discoverImageToolsProvider);
+    final added = <DiscoverPick>[];
+    var unreadable = 0;
+    for (final b in got.take(room)) {
+      final size = await tools.measure(b);
+      if (size == null || size.isEmpty) {
+        unreadable++;
+        continue;
+      }
+      added.add(DiscoverPick(id: _pickSeq++, original: b, size: size));
+    }
+    if (!mounted) return;
+    final over = got.length - math.min(got.length, room);
+    setState(() {
+      _picks.addAll(added);
+      final notes = [
+        if (over > 0) '画像は $discoverFramesMax 枚までです。$over 枚は追加しませんでした',
+        if (unreadable > 0) '読み込めない画像が $unreadable 枚ありました',
+      ];
+      _pickNotice = notes.isEmpty ? null : notes.join('。');
+    });
+    for (var i = 0; i < added.length; i++) {
+      if (!mounted) return;
+      final ok = await _edit(added[i].id, step: added.length > 1 ? '${i + 1} / ${added.length}' : null);
+      if (!ok) break; // 閉じた: 残りは画像全体のまま(あとでタップして囲える)。
+    }
+  }
+
+  /// 「囲って検索」を開く。決定したら囲みを入れ替えて、切り抜きを作り始める。閉じたら false。
+  Future<bool> _edit(int id, {String? step}) async {
+    final pick = _picks.where((p) => p.id == id).firstOrNull;
+    if (pick == null) return true;
+    final r = await openDiscoverCircleEditor(context, image: pick.original, imageSize: pick.size, initial: pick.selection, step: step);
+    if (r == null || !mounted) return false;
+    final i = _picks.indexWhere((p) => p.id == id);
+    if (i < 0) return true;
+    final next = _picks[i].withSelection(r.selection);
+    setState(() => _picks[i] = next);
+    unawaited(_prepare(next));
+    return true;
+  }
+
+  /// 送る画像を作って、まだ同じ囲みなら持たせる。
+  Future<Uint8List?> _prepare(DiscoverPick pick) async {
+    Uint8List? out;
+    try {
+      out = await ref.read(discoverImageToolsProvider).prepare(pick.original, pick.selection);
+    } catch (e) {
+      debugPrint('discover prepare: $e');
+    }
+    if (!mounted || out == null) return out;
+    final i = _picks.indexWhere((p) => p.id == pick.id);
+    if (i >= 0 && identical(_picks[i].selection, pick.selection) && _picks[i].prepared == null) setState(() => _picks[i] = _picks[i].withPrepared(out));
+    return out;
+  }
+
+  void _removePick(int id) => setState(() {
+        _picks.removeWhere((p) => p.id == id);
+        _pickNotice = null;
+      });
+
+  /// [to] は [from] を外したあとの位置。
+  void _reorderPicks(int from, int to) => setState(() => _picks.insert(to.clamp(0, _picks.length - 1), _picks.removeAt(from)));
+
+  /// 選んだ画像を(囲みで切り抜いて)まとめて送る: `frames` + `source: picker`。
+  Future<void> _searchPicks() async {
+    if (_picks.isEmpty || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final out = <Uint8List>[];
+    for (final p in List.of(_picks)) {
+      var b = p.prepared ?? await _prepare(p);
+      // 端末で作れなければ、そのまま送れる形式ならそのまま。
+      b ??= discoverImageMime(p.original) != null ? p.original : null;
+      if (b != null) out.add(b);
+    }
+    if (!mounted) return;
+    final fit = fitDiscoverPickerFrames(out);
+    final skipped = _picks.length - fit.frames.length;
+    setState(() {
+      _busy = false;
+      _glimpseFrames = null;
+      _pickNotice = skipped > 0 ? '送れる大きさ(1 枚 10 MiB・合計 24 MiB・$discoverFramesMax 枚まで)に収まらない画像を $skipped 枚外しました' : null;
+    });
+    if (fit.frames.isEmpty) {
+      setState(() => _error = 'JPEG / PNG / WebP の画像を選んでください');
+      return;
+    }
+    await _search(DiscoverCapture(frames: fit.frames, source: 'picker'));
   }
 
   Future<void> _browse() async {
@@ -547,7 +712,7 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
     setState(() {
       _capture = c;
       _imageSize = null;
-      _frame = c.pictureCount > 0 ? c.pictureCount - 1 : 0;
+      _frame = c.source == 'picker' || c.pictureCount == 0 ? 0 : c.pictureCount - 1;
       _busy = true;
       _error = null;
       _result = null;
@@ -559,7 +724,7 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
       final r = await api.content(image: c.image, frames: c.frames, source: c.source, capturedAt: c.capturedAt, text: c.text, url: c.url);
       if (mounted) {
         setState(() => _result = r);
-        if (c.pictureCount > 1) _showFrame(discoverInitialFrame(r.query.crops, c.pictureCount));
+        if (c.pictureCount > 1) _showFrame(discoverInitialFrame(r.query.crops, c.pictureCount, preferFirst: c.source == 'picker'));
       }
     } catch (e) {
       debugPrint('discover content: $e');
@@ -600,6 +765,9 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
     final elapsed = _glimpseElapsed;
     final idle = !_busy && elapsed == null;
     final glimpseDummy = ref.watch(screenGlimpseProvider).isDummy;
+    final glimpseEntry = ref.watch(discoverScreenGlimpseEntryProvider);
+    final picks = _picks;
+    final full = picks.length >= discoverFramesMax;
     return Scaffold(
       appBar: const RasqPageHeader(title: '好きな画像やコンテンツから探す', showMore: false),
       body: SafeArea(
@@ -608,13 +776,42 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: ListView(key: const ValueKey('discover.content.list'), padding: const EdgeInsets.all(RasqSpacing.page), children: [
-              Text('好きな画像や、見ていたページから、探す言葉を RAi が作ります。画像はサーバーに保存しません(探し終えたら捨てます)。', style: caption),
+              Text('好きな画像を選んで、探したい部分を囲むと、探す言葉を RAi が作ります。画像はサーバーに保存しません(探し終えたら捨てます)。', style: caption),
               const SizedBox(height: RasqSpacing.sm),
+              if (picks.isNotEmpty) ...[
+                _PickStrip(picks: picks, enabled: idle, onEdit: (id) => _edit(id), onRemove: _removePick, onReorder: _reorderPicks),
+                Padding(
+                  padding: const EdgeInsets.only(top: RasqSpacing.xs),
+                  child: Text('${picks.length} / $discoverFramesMax 枚。タップで囲み直し、長押しで並べ替えます', key: const ValueKey('discover.content.picks.count'), style: caption),
+                ),
+                const SizedBox(height: RasqSpacing.xs),
+              ],
               Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-                FilledButton.icon(key: const ValueKey('discover.content.pick'), onPressed: idle ? () => _pick(camera: false) : null, icon: const Icon(Icons.photo_library_outlined, size: 18), label: const Text('画像を選ぶ')),
+                if (picks.isEmpty)
+                  FilledButton.icon(key: const ValueKey('discover.content.pick'), onPressed: idle ? () => _addImages(camera: false) : null, icon: const Icon(Icons.photo_library_outlined, size: 18), label: const Text('画像を選ぶ'))
+                else
+                  OutlinedButton.icon(key: const ValueKey('discover.content.pick'), onPressed: idle && !full ? () => _addImages(camera: false) : null, icon: const Icon(Icons.add_photo_alternate_outlined, size: 18), label: const Text('画像を追加')),
                 if (discoverCameraSupported)
-                  OutlinedButton.icon(key: const ValueKey('discover.content.camera'), onPressed: idle ? () => _pick(camera: true) : null, icon: const Icon(Icons.photo_camera_outlined, size: 18), label: const Text('写真を撮る')),
-                OutlinedButton.icon(key: const ValueKey('discover.content.glimpse'), onPressed: idle ? _armGlimpse : null, icon: const Icon(Icons.open_in_browser, size: 18), label: const Text('いつものブラウザで見て探す')),
+                  OutlinedButton.icon(key: const ValueKey('discover.content.camera'), onPressed: idle && !full ? () => _addImages(camera: true) : null, icon: const Icon(Icons.photo_camera_outlined, size: 18), label: const Text('写真を撮る')),
+              ]),
+              if (picks.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: RasqSpacing.sm),
+                  child: FilledButton.icon(
+                    key: const ValueKey('discover.content.search'),
+                    onPressed: idle ? _searchPicks : null,
+                    icon: const Icon(Icons.image_search, size: 18),
+                    label: Text(picks.length == 1 ? 'この画像で探す' : 'この ${picks.length} 枚で探す'),
+                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                  ),
+                ),
+              if (_pickNotice != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.xs), child: Text(_pickNotice!, key: const ValueKey('discover.content.picks.notice'), style: caption)),
+              const SizedBox(height: RasqSpacing.md),
+              Text('ほかの方法', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: RasqSpacing.xs),
+              Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
+                if (glimpseEntry)
+                  OutlinedButton.icon(key: const ValueKey('discover.content.glimpse'), onPressed: idle ? _armGlimpse : null, icon: const Icon(Icons.open_in_browser, size: 18), label: const Text('いつものブラウザで見て探す')),
                 TextButton.icon(key: const ValueKey('discover.content.browse'), onPressed: idle ? _browse : null, icon: const Icon(Icons.public, size: 18), label: const Text('アプリの中のブラウザで探す')),
               ]),
               if (_glimpseArmed)
@@ -653,7 +850,7 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
                       for (var i = 0; i < cap.pictureCount; i++)
                         ChoiceChip(
                           key: ValueKey('discover.content.frame.$i'),
-                          label: Text('${i + 1} コマ目'),
+                          label: Text(cap.source == 'picker' ? '${i + 1} 枚目' : '${i + 1} コマ目'),
                           selected: i == _frame,
                           visualDensity: VisualDensity.compact,
                           onSelected: (_) => _showFrame(i),
@@ -680,6 +877,97 @@ class _DiscoverContentScreenState extends ConsumerState<DiscoverContentScreen> {
             ]),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 選んだ画像の帯 (D-418): 並べ替え(長押し / ドラッグ)・外す・タップで囲み直す。
+class _PickStrip extends StatelessWidget {
+  const _PickStrip({required this.picks, required this.enabled, required this.onEdit, required this.onRemove, required this.onReorder});
+  final List<DiscoverPick> picks;
+  final bool enabled;
+  final ValueChanged<int> onEdit;
+  final ValueChanged<int> onRemove;
+  /// (元の位置, 外したあとの新しい位置)。
+  final void Function(int from, int to) onReorder;
+
+  static const _size = 104.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final caption = RasqTypography.caption.copyWith(color: scheme.onSurface);
+    return SizedBox(
+      height: _size + RasqSpacing.xs,
+      child: ReorderableListView.builder(
+        key: const ValueKey('discover.content.picks'),
+        scrollDirection: Axis.horizontal,
+        buildDefaultDragHandles: false,
+        itemCount: picks.length,
+        onReorderItem: enabled ? onReorder : (_, _) {},
+        itemBuilder: (context, i) {
+          final p = picks[i];
+          final sel = p.selection;
+          final badge = sel == null ? '全体' : (sel.kind == DiscoverSelectionKind.rect ? '四角' : 'なぞり');
+          return Padding(
+            key: ValueKey('discover.pick.${p.id}'),
+            padding: const EdgeInsets.only(right: RasqSpacing.xs),
+            child: ReorderableDelayedDragStartListener(
+              index: i,
+              enabled: enabled,
+              child: SizedBox.square(
+                dimension: _size,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(RasqSizes.radiusMd),
+                  child: Stack(fit: StackFit.expand, children: [
+                    ColoredBox(color: scheme.surfaceContainerHighest),
+                    Image.memory(p.prepared ?? p.original, fit: BoxFit.cover, gaplessPlayback: true, errorBuilder: (_, _, _) => Icon(Icons.image_outlined, color: scheme.onSurfaceVariant)),
+                    Material(
+                      type: MaterialType.transparency,
+                      child: InkWell(key: ValueKey('discover.pick.${p.id}.edit'), onTap: enabled ? () => onEdit(p.id) : null),
+                    ),
+                    Positioned(
+                      left: 4,
+                      top: 4,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(color: scheme.surface.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
+                        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), child: Text('${i + 1}', style: caption.copyWith(fontWeight: FontWeight.w700))),
+                      ),
+                    ),
+                    Positioned(
+                      left: 4,
+                      bottom: 4,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(color: scheme.surface.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(sel == null ? Icons.crop_free : Icons.crop, size: 12, color: scheme.onSurface),
+                            const SizedBox(width: 2),
+                            Text(badge, key: ValueKey('discover.pick.${p.id}.badge'), style: caption),
+                          ]),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: IconButton(
+                        key: ValueKey('discover.pick.${p.id}.remove'),
+                        tooltip: '外す',
+                        visualDensity: VisualDensity.compact,
+                        style: IconButton.styleFrom(backgroundColor: scheme.surface.withValues(alpha: 0.85)),
+                        icon: const Icon(Icons.close, size: 16),
+                        onPressed: enabled ? () => onRemove(p.id) : null,
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

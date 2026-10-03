@@ -36,6 +36,8 @@ dependencies:
   # Web 版 (D-295): 安全でないコンテキスト(開発用の http)での保存先に localStorage を使う。
   web: ^1.1.1
   image_picker: ^1.1.2
+  # 「囲って検索」の切り抜き・縮小・JPEG (D-418、pro_image_editor 経由で既に入っている版)。
+  image: ^4.5.0
   # 動画 / 音声のファイル選択 (D-250: image_picker のギャラリーは音声を出せない)。
   file_selector: ^1.0.3
   rasq_models:
