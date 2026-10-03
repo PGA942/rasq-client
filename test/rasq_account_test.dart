@@ -8,15 +8,13 @@ import 'package:http/testing.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
-import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
-import 'package:rasq_client/features/profile/rasq_profile_edit_screen.dart';
 import 'package:rasq_client/backend/rasq_consent.dart';
 import 'package:rasq_client/features/onboarding/onboarding_feed.dart';
 import 'package:rasq_client/features/onboarding/onboarding_previews.dart';
 import 'package:rasq_client/features/onboarding/onboarding_steps.dart';
 import 'package:rasq_client/features/onboarding/onboarding_screen.dart';
-import 'package:rasq_client/features/onboarding/rasq_register_screen.dart';
+import 'package:rasq_client/features/settings/account_security_screen.dart' show AccountLoginScreen;
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/session/sanctions.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -140,12 +138,17 @@ void main() {
   });
 
   /// Central のまね (D-241 / S-015): 端末登録 / me / 同意 / バンドル / 削除。
-  ({MockClient client, List<String> calls, List<Map<String, Object?>> consents, Set<String> bundle}) fakeCentral({bool restored = false, Set<String>? serverBundle, bool rejectVersion = false, bool pending = false}) {
+  /// [multi] = 2 回目からの `POST /auth/device` は別のアカウント(`acc-2` / `device-token-2` …)を作る (D-419)。
+  ({MockClient client, List<String> calls, List<Map<String, Object?>> consents, Set<String> bundle}) fakeCentral({bool restored = false, Set<String>? serverBundle, bool rejectVersion = false, bool pending = false, bool multi = false}) {
     final calls = <String>[];
     var accepted = !pending;
     final consents = <Map<String, Object?>>[];
     final bundle = serverBundle ?? <String>{};
-    var deleted = false;
+    // トークン → アカウント(ユーザー名は PATCH /me で変わる)。消したアカウントは外す。
+    final accounts = <String, Map<String, String>>{
+      'device-token': {'id': 'acc-1', 'handle': 'rasq_tester'},
+    };
+    var registered = 0;
     http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
     final client = MockClient((req) async {
       final path = req.url.path.replaceFirst('/api/v1', '');
@@ -160,22 +163,32 @@ void main() {
           consents.add({'kind': 'age', 'version': c['termsVersion'], 'granted': true, 'detail': c['age'], 'via': 'device'});
           if (c['guardian'] == true) consents.add({'kind': 'guardian', 'version': c['termsVersion'], 'granted': true, 'via': 'device'});
         }
-        return json({'accountId': 'acc-1', 'handle': 'rasq_tester', 'displayName': 'テスター', 'accessToken': 'device-token', 'refreshToken': 'refresh', 'restored': restored});
+        registered++;
+        final n = multi ? registered : 1;
+        final token = n == 1 ? 'device-token' : 'device-token-$n';
+        accounts[token] = {'id': 'acc-$n', 'handle': n == 1 ? 'rasq_tester' : 'rasq_tester$n'};
+        return json({'accountId': 'acc-$n', 'handle': accounts[token]!['handle'], 'displayName': 'テスター', 'accessToken': token, 'refreshToken': 'refresh', 'restored': restored});
       }
-      if (req.headers['authorization'] != 'Bearer device-token' || deleted) return json({'error': {'code': '401', 'message': 'valid bearer token required'}}, 401);
+      final me = accounts[(req.headers['authorization'] ?? '').replaceFirst('Bearer ', '')];
+      if (me == null) return json({'error': {'code': '401', 'message': 'valid bearer token required'}}, 401);
       if (req.method == 'POST' && path == '/auth/password') return http.Response('', 204);
+      if (req.method == 'PATCH' && path == '/me') {
+        final b = (jsonDecode(req.body) as Map).cast<String, Object?>();
+        if (b['handle'] is String) me['handle'] = b['handle'] as String;
+        return json({'id': me['id'], 'handle': me['handle'], 'displayName': 'テスター', 'createdAt': '2026-09-17T00:00:00Z'});
+      }
       if (req.method == 'GET' && path == '/me') {
         return json({
-          'id': 'acc-1',
-          'handle': 'rasq_tester',
+          'id': me['id'],
+          'handle': me['handle'],
           'displayName': 'テスター',
           'createdAt': '2026-09-17T00:00:00Z',
           if (pending) 'terms': {'accepted': accepted, 'missing': accepted ? [] : ['terms', 'privacy']},
         });
       }
       if (req.method == 'DELETE' && path == '/me') {
-        if (req.url.queryParameters['confirm'] != 'rasq_tester') return json({'error': {'code': '400', 'message': 'confirm'}}, 400);
-        deleted = true;
+        if (req.url.queryParameters['confirm'] != me['handle']) return json({'error': {'code': '400', 'message': 'confirm'}}, 400);
+        accounts.removeWhere((_, a) => a == me);
         return http.Response('', 204);
       }
       if (req.method == 'PUT' && path.startsWith('/me/consents/')) {
@@ -223,82 +236,96 @@ void main() {
     return container;
   }
 
-  testWidgets('RASQ アカウントの登録ページ (D-241 / D-405): 規約と年齢に同意するまで登録できない → 登録 → 同意を記録 → バンドルを置き換える → 削除', (tester) async {
-    final central = fakeCentral(serverBundle: {'misskey:old.example:gone'});
-    final container = await pumpWithCentral(tester, central.client);
-    // 下のボタン (D-272): 「RASQ アカウントを追加」→「新しく作成」。
+  /// ① のページ(ユーザー名・パスワード・年齢)を埋める (D-414)。
+  Future<void> fillAccountStep(WidgetTester tester, {String handle = 'neko_taro', String age = '18+'}) async {
+    await tester.enterText(find.byKey(const ValueKey('onb.handle')), handle);
+    await tester.enterText(find.byKey(const ValueKey('onb.password')), 'correct horse');
+    await tester.enterText(find.byKey(const ValueKey('onb.passwordConfirm')), 'correct horse');
+    await tester.ensureVisible(find.byKey(ValueKey('onb.age.$age')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('onb.age.$age')));
+    await tester.pumpAndSettle();
+  }
+
+  /// サイドバーの RASQ アカウントの選択 →「アカウントを新規作成 / ログイン」→「新規作成」(D-419)。
+  Future<void> openCreateFromPicker(WidgetTester tester) async {
     await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('新しく作成'));
+    await tester.tap(find.byKey(const ValueKey('rasq.account.entry.create')));
     await tester.pumpAndSettle();
-    // 登録の前にページ (D-405、前は FOW)。まだサーバーへは何も送っていない。下の RASQ アカウント FOW は退避している。
-    expect(find.byType(RasqRegisterScreen), findsOneWidget);
+  }
+
+  testWidgets('アカウントの選択のボタン (D-419): 「アカウントを新規作成 / ログイン」1 つ → 新規作成 / ログイン を選ぶ。ログインはログインの画面へ', (tester) async {
+    final central = fakeCentral();
+    await pumpWithCentral(tester, central.client);
+    expect(find.text('アカウントを新規作成 / ログイン'), findsOneWidget);
+    expect(find.text('RASQ アカウントを追加'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rasq.account.entry.create')), findsOneWidget);
+    expect(find.byKey(const ValueKey('rasq.account.entry.login')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rasq.account.entry.login')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AccountLoginScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('rasq.account.add')), findsNothing, reason: 'FOW は閉じる');
+    expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
+  });
+
+  testWidgets('オンボーディングの外から作る (D-419): ① ユーザー名・パスワード・年齢 → ② 規約(同意するまで登録できない)→ 登録 → 元の画面へ戻る → 削除', (tester) async {
+    final central = fakeCentral(serverBundle: {'misskey:old.example:gone'});
+    final container = await pumpWithCentral(tester, central.client);
+    await openCreateFromPicker(tester);
+    // ① のページ(元へ戻る形: ページは 2 つ)。FOW は閉じた。まだサーバーへは何も送っていない。
+    expect(find.byType(OnboardingAccountScreen), findsOneWidget);
+    expect(find.text('1 / 2'), findsOneWidget);
     expect(find.byKey(const ValueKey('rasq.account.add')), findsNothing);
     expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
-    FilledButton submit() => tester.widget<FilledButton>(find.byKey(const ValueKey('register.submit')));
+    await fillAccountStep(tester, age: '16-17');
+    await tester.tap(find.byKey(const ValueKey('onb.next')));
+    await tester.pumpAndSettle();
+    expect(find.byType(OnboardingTermsScreen), findsOneWidget);
+    expect(find.text('2 / 2'), findsOneWidget);
+    FilledButton submit() => tester.widget<FilledButton>(find.byKey(const ValueKey('onb.register')));
     expect(submit().onPressed, isNull);
-    await tester.tap(find.byKey(const ValueKey('register.agree')));
+    await tester.tap(find.byKey(const ValueKey('onb.agree')));
     await tester.pumpAndSettle();
-    expect(submit().onPressed, isNull); // 年齢がまだ
-    // 16〜17 歳は保護者の同意も要る。
-    await tester.ensureVisible(find.byKey(const ValueKey('register.age.16-17')));
+    expect(submit().onPressed, isNull, reason: '16〜17 歳は保護者の同意も要る');
+    await tester.ensureVisible(find.byKey(const ValueKey('onb.guardian')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register.age.16-17')));
+    await tester.tap(find.byKey(const ValueKey('onb.guardian')));
     await tester.pumpAndSettle();
-    expect(submit().onPressed, isNull);
-    await tester.ensureVisible(find.byKey(const ValueKey('register.guardian')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register.guardian')));
-    await tester.pumpAndSettle();
-    expect(submit().onPressed, isNull); // パスワードがまだ
-    // パスワード (D-299): 必須。
-    Future<void> typePassword(String pw, [String? confirm]) async {
-      await tester.ensureVisible(find.byKey(const ValueKey('register.password')));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const ValueKey('register.password')), pw);
-      await tester.enterText(find.byKey(const ValueKey('register.passwordConfirm')), confirm ?? pw);
-      await tester.pumpAndSettle();
-    }
-
-    await typePassword('short');
-    expect(submit().onPressed, isNull);
-    await typePassword('correct horse', 'correct hors');
-    expect(submit().onPressed, isNull); // 確認が違う
-    await typePassword('correct horse');
     expect(submit().onPressed, isNotNull);
-    // バンドルは「置き換える」が既定(この端末に SNS アカウントが 2 件ある)。
-    await tester.ensureVisible(find.byKey(const ValueKey('register.bundle.keep')));
+    // バンドルは「置き換える」が既定(いまは「この端末のみ」で、SNS アカウントが 2 件ある)。
+    await tester.ensureVisible(find.byKey(const ValueKey('onb.bundle.keep')));
     await tester.pumpAndSettle();
     expect(find.textContaining('ログイン中の 2 件'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('register.submit')));
+    await tester.ensureVisible(find.byKey(const ValueKey('onb.register')));
+    await tester.tap(find.byKey(const ValueKey('onb.register')));
     await tester.pumpAndSettle();
-    // 登録 → 同意の記録(学習は含めない)。
+    // 登録(承諾は一緒に)→ ユーザー名 → パスワード。
     expect(central.calls.where((c) => c == 'POST /auth/device').length, 1);
+    expect(central.calls.where((c) => c == 'PATCH /me').length, 1);
     expect(central.calls.where((c) => c == 'POST /auth/password').length, 1, reason: '登録と同時にパスワードを設定する (D-299)');
     expect(central.consents.map((c) => '${c['kind']}:${c['granted']}:${c['detail'] ?? ''}'), ['terms:true:', 'privacy:true:', 'age:true:16-17', 'guardian:true:']);
     expect(central.consents.first['version'], rasqTermsVersion);
     expect(central.consents.any((c) => c['kind'] == 'learning'), isFalse);
-    expect(central.consents.every((c) => c['via'] == 'device'), isTrue, reason: '承諾は登録と同じ要求で(後から別に書かない)');
-    // プロフィールの編集画面が続く (D-269: SNS のプロフィール編集と同じ作り。FOW は閉じる)→ 戻る。
-    expect(find.byType(RasqProfileEditScreen), findsOneWidget);
-    expect(find.text('プロフィールの更新'), findsOneWidget);
-    container.read(routerProvider).pop();
-    await tester.pumpAndSettle();
-    // 登録ページも RASQ アカウント FOW も閉じているので、もう一度開く(以降の確認のため)。
-    expect(find.byType(RasqRegisterScreen), findsNothing);
+    // 元の画面へ戻る(③ の SNS のログインへは進まない)。
+    expect(find.byType(OnboardingTermsScreen), findsNothing);
+    expect(find.byType(OnboardingAccountScreen), findsNothing);
+    expect(find.byType(OnboardingSnsScreen), findsNothing);
+    expect(find.text('RASQ アカウント @neko_taro を作成しました'), findsOneWidget);
+    final rec = container.read(currentRasqAccountProvider)!;
+    expect([rec.isCentral, rec.handle], [true, 'neko_taro']);
+    expect(rec.sessionKeys, [acc1.key, acc2.key]);
+    expect(rec.pruneBundle, isTrue);
+    expect(central.bundle, {acc1.key, acc2.key});
     RasqSidebar.open(container.read(overlayManagerProvider));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('RASQ アカウント'));
     await tester.pumpAndSettle();
-    // 台帳に載り、SNS アカウントを引き継ぐ。サーバーの前のバンドルは置き換わる。
-    final rec = container.read(currentRasqAccountProvider)!;
-    expect(rec.isCentral, isTrue);
-    expect(rec.sessionKeys, [acc1.key, acc2.key]);
-    expect(rec.pruneBundle, isTrue);
-    expect(central.bundle, {acc1.key, acc2.key});
 
     // 削除: … → RASQ アカウントを削除 → 確認 → DELETE /me?confirm=<handle> → 「この端末のみ」へ戻る。
-    final centralRow = find.ancestor(of: find.textContaining('rasq_tester'), matching: find.byType(RasqUserRow)).first;
+    final centralRow = find.ancestor(of: find.textContaining('neko_taro'), matching: find.byType(RasqUserRow)).first;
     await tester.ensureVisible(centralRow);
     await tester.pumpAndSettle();
     await tester.tap(find.descendant(of: centralRow, matching: find.byTooltip('アカウントの操作')));
@@ -314,7 +341,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除する'));
     await tester.pumpAndSettle();
-    expect(central.calls, contains('DELETE /me?confirm=rasq_tester'));
+    expect(central.calls, contains('DELETE /me?confirm=neko_taro'));
     expect(container.read(orgateAccountProvider).value, isNull);
     expect(container.read(currentRasqAccountProvider)!.isCentral, isFalse);
     expect(container.read(currentRasqAccountProvider)!.sessionKeys.toSet(), {acc1.key, acc2.key});
@@ -397,48 +424,34 @@ void main() {
     expect((await container.read(sessionsProvider.future)).sessions.length, 2);
   });
 
-  testWidgets('登録ページで「置き換えない」(D-241): SNS アカウントは「この端末のみ」に残り、サーバーのバンドルは消さない。キャンセルなら登録しない', (tester) async {
+  testWidgets('② で「置き換えない」(D-241 → D-419): SNS アカウントは「この端末のみ」に残り、サーバーのバンドルは消さない。① で戻れば登録しない', (tester) async {
     final central = fakeCentral(restored: true, serverBundle: {'misskey:old.example:kept'});
     final container = await pumpWithCentral(tester, central.client);
-    // キャンセル → 何も送らない。
-    // 下のボタン (D-272): 「RASQ アカウントを追加」→「新しく作成」。
-    await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
+    // キャンセル(① の戻る)→ 何も送らない。
+    await openCreateFromPicker(tester);
+    await tester.tap(find.byKey(const ValueKey('onb.back')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('新しく作成'));
-    await tester.pumpAndSettle();
-    // 戻る = キャンセル。退避していた RASQ アカウント FOW が戻る。
-    await tester.tap(find.descendant(of: find.byType(RasqRegisterScreen), matching: find.byTooltip('戻る')));
-    await tester.pumpAndSettle();
-    expect(find.byType(RasqRegisterScreen), findsNothing);
-    expect(find.byKey(const ValueKey('rasq.account.add')), findsOneWidget);
+    expect(find.byType(OnboardingAccountScreen), findsNothing);
     expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
     expect(container.read(currentRasqAccountProvider)?.isCentral ?? false, isFalse);
 
-    // 下のボタン (D-272): 「RASQ アカウントを追加」→「新しく作成」。
-    await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
+    RasqSidebar.open(container.read(overlayManagerProvider));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('新しく作成'));
+    await tester.tap(find.byTooltip('RASQ アカウント'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register.agree')));
+    await openCreateFromPicker(tester);
+    await fillAccountStep(tester);
+    await tester.tap(find.byKey(const ValueKey('onb.next')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey('register.age.18+')));
+    await tester.tap(find.byKey(const ValueKey('onb.agree')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register.age.18+')));
+    expect(find.byKey(const ValueKey('onb.guardian')), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('onb.bundle.keep')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('register.guardian')), findsNothing);
-    await tester.ensureVisible(find.byKey(const ValueKey('register.bundle.keep')));
+    await tester.tap(find.byKey(const ValueKey('onb.bundle.keep')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register.bundle.keep')));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey('register.password')));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const ValueKey('register.password')), 'correct horse');
-    await tester.enterText(find.byKey(const ValueKey('register.passwordConfirm')), 'correct horse');
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register.submit')));
-    await tester.pumpAndSettle();
-    expect(find.text('この端末の RASQ アカウントへ戻りました'), findsOneWidget); // restored
-    container.read(overlayManagerProvider).close('rasq.profile.edit');
+    await tester.ensureVisible(find.byKey(const ValueKey('onb.register')));
+    await tester.tap(find.byKey(const ValueKey('onb.register')));
     await tester.pumpAndSettle();
     final rec = container.read(currentRasqAccountProvider)!;
     expect(rec.isCentral, isTrue);
@@ -446,6 +459,57 @@ void main() {
     expect(rec.pruneBundle, isFalse);
     expect(central.bundle, {'misskey:old.example:kept'});
     expect(central.consents.map((c) => c['kind']), ['terms', 'privacy', 'age']);
+  });
+
+  testWidgets('ほかの RASQ アカウントに入っていても新しく作れる (D-419): 前は「新しく作成」が押せず、作ってもいまのアカウントが返っていた', (tester) async {
+    final central = fakeCentral(multi: true);
+    final storage = seededStorage();
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [post('p-${v.handle}', v, '${v.handle} の投稿')]));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: central.client, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+        centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    // いま入っている Central のアカウント(この端末の SNS を引き継いで作成)。
+    final first = (await container.read(orgateAccountProvider.notifier).createAccount())!;
+    await container.read(rasqAccountsProvider.notifier).attachCentral(centralAccountId: first.id, handle: first.handle, displayName: first.displayName);
+    await tester.pumpAndSettle();
+    RasqSidebar.open(container.read(overlayManagerProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('RASQ アカウント'));
+    await tester.pumpAndSettle();
+    await openCreateFromPicker(tester);
+    expect(find.byType(OnboardingAccountScreen), findsOneWidget);
+    await fillAccountStep(tester, handle: 'second_one');
+    await tester.tap(find.byKey(const ValueKey('onb.next')));
+    await tester.pumpAndSettle();
+    // いまのアカウントが Central のものなら、その SNS を新しいアカウントへ持ち込まない(バンドルは聞かない)。
+    expect(find.byKey(const ValueKey('onb.bundle.replace')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('onb.agree')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('onb.register')));
+    await tester.tap(find.byKey(const ValueKey('onb.register')));
+    await tester.pumpAndSettle();
+    expect(central.calls.where((c) => c == 'POST /auth/device').length, 2, reason: '2 つ目のアカウントを作る');
+    final ledger = container.read(rasqAccountsProvider).value!;
+    final centrals = ledger.accounts.where((a) => a.isCentral).toList();
+    expect(centrals.map((a) => a.centralAccountId), ['acc-1', 'acc-2']);
+    expect(ledger.current!.centralAccountId, 'acc-2');
+    expect(ledger.current!.handle, 'second_one');
+    expect(ledger.current!.sessionKeys, isEmpty);
+    expect(centrals.first.sessionKeys, [acc1.key, acc2.key], reason: '前のアカウントの SNS はそのまま');
+    expect(container.read(centralSignedInAccountIdsProvider), containsAll(['acc-1', 'acc-2']), reason: '前のアカウントのログインも残る');
+    expect(find.text('RASQ アカウント @second_one を作成しました'), findsOneWidget);
   });
 
   testWidgets('アカウント処置の案内と解除申請 (D-151/D-152): 案内が出て、申請シートから POST /me/sanctions/{id}/appeal', (tester) async {
@@ -518,7 +582,7 @@ void main() {
     expect(find.descendant(of: row, matching: find.text('tester')), findsOneWidget);
     expect(find.descendant(of: row, matching: find.text('@tester')), findsOneWidget);
     expect(find.textContaining('この端末のみ ・ SNS 2件 ・ 使用中'), findsOneWidget);
-    expect(find.text('RASQ アカウントを追加'), findsOneWidget); // Central 未設定なので無効
+    expect(find.text('アカウントを新規作成 / ログイン'), findsOneWidget); // Central 未設定なので無効
     expect(tester.widget<FilledButton>(find.byKey(const ValueKey('rasq.account.add'))).onPressed, isNull);
     expect(find.byKey(const ValueKey('rasq.account.childSafe')), findsOneWidget);
     // 「SNS アカウントを追加」は、各アカウントの ↓ のメニューへ (D-272)。
@@ -548,26 +612,21 @@ void main() {
   testWidgets('登録と承諾は一緒に (D-371 / CONS-02): サーバーが規約の版を断ったら、アカウントは作られず案内が出る', (tester) async {
     final central = fakeCentral(rejectVersion: true);
     final container = await pumpWithCentral(tester, central.client);
-    await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
+    await openCreateFromPicker(tester);
+    await fillAccountStep(tester);
+    await tester.tap(find.byKey(const ValueKey('onb.next')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('新しく作成'));
+    await tester.tap(find.byKey(const ValueKey('onb.agree')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register.agree')));
-    await tester.ensureVisible(find.byKey(const ValueKey('register.age.18+')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register.age.18+')));
-    await tester.ensureVisible(find.byKey(const ValueKey('register.password')));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const ValueKey('register.password')), 'correct horse');
-    await tester.enterText(find.byKey(const ValueKey('register.passwordConfirm')), 'correct horse');
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register.submit')));
+    await tester.ensureVisible(find.byKey(const ValueKey('onb.register')));
+    await tester.tap(find.byKey(const ValueKey('onb.register')));
     await tester.pumpAndSettle();
     expect(central.calls.where((c) => c == 'POST /auth/device').length, 1);
     expect(central.calls.where((c) => c.startsWith('GET /me')), isEmpty, reason: 'トークンを受け取っていない');
     expect(central.consents, isEmpty);
     expect(container.read(orgateAccountProvider).value, isNull);
     expect(find.textContaining('利用規約が新しくなっています'), findsOneWidget);
+    expect(find.byType(OnboardingTermsScreen), findsNothing, reason: '登録はページを閉じてから(D-419)');
   });
 
   testWidgets('同意待ちのアカウント (D-371): 起動後に承諾のシート、サイドバーに帯。同意すると記録して帯が消える', (tester) async {

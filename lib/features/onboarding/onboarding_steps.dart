@@ -22,15 +22,23 @@ import 'rasq_register_screen.dart';
 ///    この端末に SNS アカウントがあればバンドルも)→「同意して登録する」で RASQ アカウントを作る(ORGATE の登録 D-398、承諾は一緒に D-371)
 /// ③ 既存の SNS アカウントでログイン(`/onboarding/sns`、「SNS サービスを探す」→ 探す画面 `/sns-discover`)
 /// RASQ アカウントは最初からあるので、D-413 の「RASQ アカウントを作りますか?」はこの流れでは出さない。
+/// D-419: ①② は**オンボーディングの外でも**使う(`/onboarding/account?return=1`、サイドバーの RASQ アカウントの選択の「新規作成」)。
+/// そのときは ③ へ進まず、作れたら元の画面へ戻る([OnboardingDraft.standalone])。
 /// 幅の広い画面 (≥840dp) は D-405 と同じ 2 カラム: 左の小カラムに公開 RASQ リストの投稿 ([OnboardingFeedColumn])。
 
 /// ① で入れた内容(② へ渡す。パスワードは画面の中だけ、保存しない)。
 @immutable
 class OnboardingDraft {
-  const OnboardingDraft({required this.handle, required this.password, required this.age});
+  const OnboardingDraft({required this.handle, required this.password, required this.age, this.standalone = false, this.attempt});
   final String handle;
   final String password;
   final RasqAgeBand age;
+
+  /// オンボーディングの外から(作れたら ② は台帳の行を返して閉じる。ほかの RASQ アカウントに入っていても新しく作る)。
+  final bool standalone;
+
+  /// 同じ流れで先に作ったアカウント(ユーザー名をやり直すとき、それで続ける)。
+  final RasqCreateAttempt? attempt;
 }
 
 /// オンボーディングの枠: 幅の広い画面は左に流れ、右に [child](幅 560px まで)。狭い画面は [child] だけ。
@@ -56,8 +64,11 @@ class OnboardingFrame extends ConsumerWidget {
 
 /// ページの上: 戻る(あれば)・「n / 3」・見出し・説明。
 class OnboardingStepHeader extends StatelessWidget {
-  const OnboardingStepHeader({super.key, required this.step, required this.title, this.description, this.onBack});
+  const OnboardingStepHeader({super.key, required this.step, required this.title, this.description, this.onBack, this.total = 3});
   final int step;
+
+  /// ページの数(オンボーディングの外から作るときは ①② の 2 つ、D-419)。
+  final int total;
   final String title;
   final String? description;
   final VoidCallback? onBack;
@@ -71,15 +82,15 @@ class OnboardingStepHeader extends StatelessWidget {
         Row(children: [
           if (onBack != null) IconButton(key: const ValueKey('onb.back'), icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: onBack) else const RasqLogo(height: 28),
           const Spacer(),
-          Text('$step / 3', key: const ValueKey('onb.stepCount'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          Text('$step / $total', key: const ValueKey('onb.stepCount'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ]),
         const SizedBox(height: RasqSpacing.sm),
         Row(children: [
-          for (var i = 1; i <= 3; i++)
+          for (var i = 1; i <= total; i++)
             Expanded(
               child: Container(
                 height: 4,
-                margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
+                margin: EdgeInsets.only(right: i < total ? 4 : 0),
                 decoration: BoxDecoration(color: i <= step ? scheme.primary : scheme.outlineVariant, borderRadius: BorderRadius.circular(2)),
               ),
             ),
@@ -97,10 +108,14 @@ class OnboardingStepHeader extends StatelessWidget {
 
 /// ① ユーザー名・パスワード・年齢。[alternatives] = 下に出すほかの入口(ログイン / スキップなど)。
 class OnboardingAccountStep extends ConsumerStatefulWidget {
-  const OnboardingAccountStep({super.key, this.alternatives = const [], this.onBack, this.narrow = false});
+  const OnboardingAccountStep({super.key, this.alternatives = const [], this.onBack, this.narrow = false, this.standalone = false, this.onCreated});
   final List<Widget> alternatives;
   final VoidCallback? onBack;
   final bool narrow;
+
+  /// オンボーディングの外から作る (D-419): ② で「同意して登録する」を押したら [onCreated](登録はページを閉じてから。③ へは進まない)。
+  final bool standalone;
+  final ValueChanged<RasqCreateRequest>? onCreated;
 
   @override
   ConsumerState<OnboardingAccountStep> createState() => _OnboardingAccountStepState();
@@ -115,6 +130,9 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
 
   /// ② から戻ってきた理由(ユーザー名が使われていた など)。
   String? _handleRejected;
+
+  /// この流れで先に作ったアカウント(② でユーザー名を断られて戻ってきたとき、作り直さない)。
+  final _attempt = RasqCreateAttempt();
 
   @override
   void dispose() {
@@ -143,9 +161,12 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
       _age != null;
 
   Future<void> _next() async {
-    final draft = OnboardingDraft(handle: _handle.text, password: _password.text, age: _age!);
-    final rejected = await context.push<String>(Routes.onboardingTerms, extra: draft);
-    if (rejected != null && mounted) setState(() => _handleRejected = rejected);
+    final draft = OnboardingDraft(handle: _handle.text, password: _password.text, age: _age!, standalone: widget.standalone, attempt: _attempt);
+    final result = await context.push<Object>(Routes.onboardingTerms, extra: draft);
+    if (!mounted) return;
+    // 文字列 = ユーザー名を断られた(① でやり直す)。[RasqCreateRequest] = オンボーディングの外から (D-419): 閉じてから登録する。
+    if (result is String) setState(() => _handleRejected = result);
+    if (result is RasqCreateRequest) widget.onCreated?.call(result);
   }
 
   @override
@@ -156,7 +177,8 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       OnboardingStepHeader(
         step: 1,
-        title: 'RASQ アカウントを作る',
+        total: widget.standalone ? 2 : 3,
+        title: widget.standalone ? '新しい RASQ アカウントを作る' : 'RASQ アカウントを作る',
         description: 'RASQ アカウントは、ログインした SNS アカウントをひとつに束ねる「あなた」の入れ物です。入れたプラグイン・設定・アカウントのまとまりを、ほかの端末でも使えます。',
         onBack: widget.onBack,
       ),
@@ -228,10 +250,43 @@ class _OnboardingAccountStepState extends ConsumerState<OnboardingAccountStep> {
 }
 
 /// `/onboarding/account`: ①だけのページ(ログアウトしたあとの「新しく RASQ アカウントを作成」から)。
-class OnboardingAccountScreen extends StatelessWidget {
-  const OnboardingAccountScreen({super.key});
+/// `?return=1`([standalone]、D-419): オンボーディングの外から(サイドバーの RASQ アカウントの選択の「新規作成」など)。
+/// ② で「同意して登録する」を押したら、選んだ内容 ([RasqCreateRequest]) を返して元の画面へ戻る(登録は戻ってから、
+/// [openRasqAccountCreation])。開いている間は下の FOW を退避する(② と同じ)。
+class OnboardingAccountScreen extends ConsumerStatefulWidget {
+  const OnboardingAccountScreen({super.key, this.standalone = false});
+  final bool standalone;
+
   @override
-  Widget build(BuildContext context) => OnboardingFrame(builder: (context, narrow) => OnboardingAccountStep(narrow: narrow, onBack: () => context.pop()));
+  ConsumerState<OnboardingAccountScreen> createState() => _OnboardingAccountScreenState();
+}
+
+class _OnboardingAccountScreenState extends ConsumerState<OnboardingAccountScreen> {
+  late final OverlayManager _overlay = ref.read(overlayManagerProvider);
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.standalone) _overlay.setFowSuspend(_suspendAll);
+  }
+
+  @override
+  void dispose() {
+    if (widget.standalone) _overlay.setFowSuspend(null);
+    super.dispose();
+  }
+
+  static bool _suspendAll(RasqOverlayEntry _) => true;
+
+  @override
+  Widget build(BuildContext context) => OnboardingFrame(
+        builder: (context, narrow) => OnboardingAccountStep(
+          narrow: narrow,
+          standalone: widget.standalone,
+          onBack: () => context.pop(),
+          onCreated: widget.standalone ? (rec) => context.pop(rec) : null,
+        ),
+      );
 }
 
 /// ② 利用規約・プライバシーポリシー・チャイルドセーフ → 登録。
@@ -261,7 +316,8 @@ class _OnboardingTermsScreenState extends ConsumerState<OnboardingTermsScreen> {
 
   @override
   void dispose() {
-    _overlay.setFowSuspend(null);
+    // オンボーディングの外から (D-419): 下の ① も FOW を退避しているので、戻しはそちらに任せる。
+    if (!(widget.draft?.standalone ?? false)) _overlay.setFowSuspend(null);
     super.dispose();
   }
 
@@ -271,7 +327,11 @@ class _OnboardingTermsScreenState extends ConsumerState<OnboardingTermsScreen> {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
   }
 
-  int get _snsCount => ref.read(sessionsProvider).value?.sessions.length ?? 0;
+  /// バンドルを聞く SNS アカウントの数。オンボーディングの外から作るとき (D-419)、いまのアカウントが Central のものなら
+  /// 聞かない(0)・持ち込まない(そのアカウントの SNS を、新しいアカウントへ写さない。D-409 と同じ考え)。
+  int get _snsCount => _keepsCurrentBundle ? 0 : ref.read(sessionsProvider).value?.sessions.length ?? 0;
+
+  bool get _keepsCurrentBundle => (widget.draft?.standalone ?? false) && (ref.read(currentRasqAccountProvider)?.isCentral ?? false);
 
   bool get _ready {
     final d = widget.draft;
@@ -282,8 +342,10 @@ class _OnboardingTermsScreenState extends ConsumerState<OnboardingTermsScreen> {
     final d = widget.draft!;
     setState(() => _busy = true);
     try {
-      final choice = RasqRegisterChoice(age: d.age, replaceBundle: _snsCount > 0 ? _replace : true, password: d.password);
-      final rec = await completeRasqRegistration(ref, choice, handle: d.handle, onMessage: _toast);
+      final choice = RasqRegisterChoice(age: d.age, replaceBundle: _keepsCurrentBundle ? false : (_snsCount > 0 ? _replace : true), password: d.password);
+      // オンボーディングの外から (D-419): ここでは送らず、選んだ内容を ① へ返す(① も閉じ、元の画面へ戻ってから登録する)。
+      if (d.standalone) return context.pop(RasqCreateRequest(handle: d.handle, choice: choice));
+      final rec = await completeRasqRegistration(ref.read, choice, handle: d.handle, attempt: d.attempt, onMessage: _toast);
       if (rec == null || !mounted) return;
       await ref.read(rasqAccountsProvider.notifier).completeOnboarding();
       if (mounted) context.go(Routes.onboardingSns);
@@ -314,7 +376,7 @@ class _OnboardingTermsScreenState extends ConsumerState<OnboardingTermsScreen> {
         );
     return OnboardingFrame(
       builder: (context, narrow) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        OnboardingStepHeader(step: 2, title: '利用規約とプライバシーポリシー', onBack: _busy ? null : () => context.pop()),
+        OnboardingStepHeader(step: 2, total: (d?.standalone ?? false) ? 2 : 3, title: '利用規約とプライバシーポリシー', onBack: _busy ? null : () => context.pop()),
         if (d == null)
           Expanded(child: Center(child: Text('先に ① のページでユーザー名などを入れてください', style: caption)))
         else

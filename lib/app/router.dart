@@ -290,6 +290,8 @@ String? entryRedirect({required String loc, required bool loggedIn, required Ras
     Routes.privacyDoc,
     '${Routes.settings}/server',
     '${Routes.settings}/account-login',
+    // パスワードの再設定 (D-419): ログインの画面から。
+    '${Routes.settings}/account-reset',
     Routes.childSafeLogin,
   };
   if (loggedIn) return loc == Routes.onboarding ? Routes.home : null;
@@ -332,7 +334,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ログインし直すための画面(RASQ アカウント / 保護者のコード / 接続先)は開ける。
       final gate = ref.read(childGateProvider);
       if (gate.locked) {
-        const whileLocked = {Routes.childSafePending, '${Routes.settings}/account-login', '${Routes.settings}/server', Routes.childSafeLogin};
+        const whileLocked = {Routes.childSafePending, '${Routes.settings}/account-login', '${Routes.settings}/account-reset', '${Routes.settings}/server', Routes.childSafeLogin};
         return whileLocked.contains(loc) ? null : Routes.childSafePending;
       }
       if (loc == Routes.childSafePending) return Routes.home;
@@ -400,6 +402,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'rasq-keybase', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const RasqKeybaseScreen()),
             GoRoute(path: 'security', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountSecurityScreen()),
             GoRoute(path: 'account-login', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const AccountLoginScreen()),
+            // パスワードの再設定 (D-419)。`?email=` = ログインの画面で入れていたメール。閉じるとメールを返す。
+            GoRoute(path: 'account-reset', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => AccountResetScreen(initialEmail: s.uri.queryParameters['email'])),
             GoRoute(path: 'learning', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const LearningScreen()),
             GoRoute(path: 'emom', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const EmomThresholdScreen()),
             GoRoute(path: 'columns', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ColumnLayoutScreen()),
@@ -498,7 +502,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, s) => ReviewTimelineScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
           GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const WasmPluginScreen()),
           GoRoute(path: Routes.onboarding, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingScreen(), routes: [
-            GoRoute(path: 'account', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingAccountScreen()),
+            // `?return=1` = オンボーディングの外から作る (D-419): 作れたら台帳の行を返して元の画面へ。
+            GoRoute(path: 'account', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => OnboardingAccountScreen(standalone: s.uri.queryParameters['return'] == '1')),
             GoRoute(path: 'terms', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => OnboardingTermsScreen(draft: s.extra is OnboardingDraft ? s.extra as OnboardingDraft : null)),
             GoRoute(path: 'sns', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingSnsScreen()),
           ]),
@@ -519,7 +524,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           // オンボーディングからも、サイドバーの RASQ アカウント FOW からも開く (D-405)。
           GoRoute(path: Routes.onboardingShowcase, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingShowcaseScreen()),
           GoRoute(path: Routes.serverSignup, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ServerSignupScreen()),
-          GoRoute(path: Routes.rasqRegister, parentNavigatorKey: _appNavigatorKey, builder: (_, s) => RasqRegisterScreen(snsCount: s.extra is int ? s.extra as int : 0)),
+          // 前の登録ページ (D-405) は D-419 で外した: オンボーディング v2 の ① のページ(元へ戻る形)へ回す。
+          GoRoute(path: Routes.rasqRegister, parentNavigatorKey: _appNavigatorKey, redirect: (_, _) => rasqCreateAccountLocation),
           // チャイルドセーフ (D-307)。
           GoRoute(path: Routes.childSafe, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ChildSafeHubScreen(), routes: [
             GoRoute(path: 'guardian', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const GuardianScreen(), routes: [

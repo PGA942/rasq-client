@@ -32,7 +32,7 @@ import 'rasq_account_page_api.dart';
 
 @immutable
 class RasqAccount {
-  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt, this.email, this.emailVerified = false, this.emailPending, this.hasPassword = false, this.roles = const [], this.bio = '', this.bannerUrl, this.location = '', this.birthday = '', this.links = const [], this.showLinksOnSnsProfiles = true, this.keybase, this.termsAccepted, this.termsMissing = const []});
+  const RasqAccount({required this.id, required this.handle, required this.displayName, this.avatarUrl, this.createdAt, this.email, this.emailVerified = false, this.emailPending, this.hasPassword = false, this.secondFactor = true, this.secondFactorActive = false, this.roles = const [], this.bio = '', this.bannerUrl, this.location = '', this.birthday = '', this.links = const [], this.showLinksOnSnsProfiles = true, this.keybase, this.termsAccepted, this.termsMissing = const []});
 
   final String id;
   final String handle;
@@ -54,6 +54,11 @@ class RasqAccount {
 
   /// パスワードが設定済みか(別の端末からログインできるか)。
   final bool hasPassword;
+
+  /// ログインの 2 段階目(パスワードのあとにメールの確認コード、ORGATE O-010 / D-419)の設定。既定 ON。
+  /// [secondFactorActive] = いま効いているか(設定 ON かつ確認済みのメールがある)。
+  final bool secondFactor;
+  final bool secondFactorActive;
 
   /// 役割(`developer` / `reviewer`)。
   final List<String> roles;
@@ -82,6 +87,8 @@ class RasqAccount {
         emailVerified: j['emailVerified'] == true,
         emailPending: j['emailPending'] as String?,
         hasPassword: j['hasPassword'] == true,
+        secondFactor: j['secondFactor'] != false,
+        secondFactorActive: j['secondFactorActive'] == true,
         roles: [for (final r in j['roles'] as List? ?? const []) '$r'],
         bio: j['bio'] as String? ?? '',
         bannerUrl: switch (j['bannerUrl']) { final String u when u.isNotEmpty => Uri.tryParse(u), _ => null },
@@ -145,6 +152,10 @@ class _DeviceCredentials {
         restore: {...restore, if (restoreSecret != null && restoreSecret.isNotEmpty) accountId: restoreSecret},
         currentAccountId: accountId,
       );
+
+  /// そのアカウントの復帰の秘密だけを替える(いまのアカウントは変えない)。
+  _DeviceCredentials withRestore(String accountId, String secret) =>
+      _DeviceCredentials(deviceId: deviceId, tokens: tokens, refresh: refresh, restore: {...restore, accountId: secret}, currentAccountId: currentAccountId);
 
   /// そのアカウントのトークンを捨てる(リフレッシュトークンと復帰の秘密も。ログアウトでセッションごと消えるので)。
   _DeviceCredentials withoutToken(String accountId) => _DeviceCredentials(
@@ -413,7 +424,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     if (identity == null) return;
     try {
       final me = await identity.withToken(() => token).getJson('/me');
-      _credentials = {for (final k in const ['hasPassword', 'email', 'emailVerified', 'emailPending']) if (me.containsKey(k)) k: me[k]};
+      _credentials = {for (final k in const ['hasPassword', 'email', 'emailVerified', 'emailPending', 'secondFactor', 'secondFactorActive']) if (me.containsKey(k)) k: me[k]};
     } catch (e) {
       debugPrint('rasq account: ORGATE /me unavailable: $e');
     }
@@ -491,13 +502,20 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// (登録の同意の記録 / パスワードの設定は、台帳へ載せる前にこのトークンで送る)。
   /// [consents] = 登録の承諾 (D-371 / S-053)。サーバーはアカウントの作成と同じ処理で残し、版が違えば作成ごと失敗する
   /// (`409 terms_version`、トークンは受け取らない)。
-  Future<RasqAccount?> createAccount({String? displayName, Map<String, Object?>? consents}) async {
+  ///
+  /// [another] = **ほかのアカウントに入っていても新しく作る**(アカウントの選択の「新規作成」、D-419)。前は、いま使っている
+  /// アカウントのトークンがあると、作らずにそのアカウントを返していた(2 つ目の RASQ アカウントを作れなかった原因の 1 つ)。
+  /// [resume] = 同じ作成の流れで先に作ったアカウント(ユーザー名が使われていて ① へ戻ったとき)。トークンがあればそれで続ける。
+  Future<RasqAccount?> createAccount({String? displayName, Map<String, Object?>? consents, bool another = false, String? resume}) async {
     final client = ref.read(centralClientProvider);
     final identity = _identity;
     if (client == null || identity == null) return null;
     final storage = ref.read(sessionStorageProvider);
     _creds ??= await _loadOrCreateCredentials(storage);
-    if (token == null) {
+    if (resume != null && _creds!.tokenOf(resume) != null) {
+      _activeId = resume;
+      _publishToken();
+    } else if (token == null || another) {
       // 発行は ORGATE。ORGATE が Central に公開プロフィールの行を作り、登録の承諾も Central が確かめて残す (D-398)。
       final res = await _postDevice(identity, displayName: displayName, consents: consents);
       final t = _tokensOf(res);
@@ -556,6 +574,15 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     await signOut(accountId: account.id);
   }
 
+  /// パスワードの再設定でこの端末のセッションを残したとき (ORGATE O-010): 回った復帰の秘密を、そのアカウントの分として持ち直す。
+  Future<void> storeRestoreSecret(String accountId, String secret) async {
+    final storage = ref.read(sessionStorageProvider);
+    _creds ??= await _loadOrCreateCredentials(storage);
+    if (_creds!.tokenOf(accountId) == null || secret.isEmpty) return;
+    _creds = _creds!.withRestore(accountId, secret);
+    await _save(storage);
+  }
+
   /// この端末の安定 ID(ログインのとき、端末ごとに 1 本のトークンにするために渡す)。
   Future<String> ensureDeviceId() async => (_creds ??= await _loadOrCreateCredentials(ref.read(sessionStorageProvider))).deviceId;
 
@@ -568,7 +595,7 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     return account;
   }
 
-  /// 既存のアカウントへのログイン (S-019 / D-316): `/auth/login` / `/auth/login/email/confirm` / チャイルドセーフの
+  /// 既存のアカウントへのログイン (S-019 / D-316): `/auth/login` / `/auth/login/confirm`(2 段階目、D-419)/ チャイルドセーフの
   /// ログインの応答のトークンを、**そのアカウントのトークンとして**足し(ほかのアカウントのトークンは残す)、台帳に載せて
   /// いまのアカウントにする。
   ///

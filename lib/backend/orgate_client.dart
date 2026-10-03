@@ -11,7 +11,7 @@ import 'rasq_account.dart' show OrgateTokenHolder, orgateTokenHolderProvider;
 
 /// ORGATE-Server(`orgate-server`)への接続 — **本人だけが見る情報**の置き場 (D-398)。
 ///
-/// 受け持つのは、ログイン(端末の発行 / パスワード / メールのコード)・セッションとトークンの取り直し・
+/// 受け持つのは、ログイン(端末の発行 / パスワード + メールのコードの 2 段階目)・セッションとトークンの取り直し・
 /// メールアドレス・操作の確認コード・アカウント削除の入口と、Mastodon などアクセストークン発行に `client_secret` が
 /// 要る SNS の OAuth ブローカー (CONTRACT §3)(第 1 段階、D-398)。第 2 段階 (D-399) で、SNS のトークンの預け入れ
 /// (`/me/sns-accounts/{key}/token*`。トークンは ORGATE から出ず、読んだ公開の投稿だけが Central に来る)・Web 版の保管庫
@@ -84,12 +84,15 @@ final centralConfiguredProvider = Provider<bool>((ref) => ref.watch(centralBaseU
 /// サーバーが返す `{"error": {"code", "message"}}`。code は CONTRACT §9 の
 /// 体系なので、そのまま [ErrorCode] に落ちる。
 class OrgateException implements Exception {
-  OrgateException(this.code, this.message, {this.serverCode});
+  OrgateException(this.code, this.message, {this.serverCode, this.details = const {}});
   final ErrorCode code;
   final String message;
 
   /// サーバーが返した `error.code` の文字列そのもの(`paid_features_disabled` など、[ErrorCode] に無い語)。無ければ null。
   final String? serverCode;
+
+  /// `error` の中のほかの項目(`401 second_factor_required` の `challengeId` / `email` など、ORGATE O-010)。
+  final Map<String, Object?> details;
 
   /// ユーザーに見せる 1 行。
   @override
@@ -131,6 +134,7 @@ class OrgateClient {
     String message = 'サーバーエラー (${r.statusCode})';
     ErrorCode code = ErrorCode.http(r.statusCode);
     String? serverCode;
+    var details = const <String, Object?>{};
     try {
       final body = jsonDecode(utf8.decode(r.bodyBytes));
       if (body is Map && body['error'] is Map) {
@@ -138,11 +142,12 @@ class OrgateClient {
         message = err['message'] as String? ?? message;
         serverCode = err['code'] as String?;
         code = ErrorCode.tryParse(serverCode ?? '') ?? code;
+        details = {for (final e in err.entries) if (e.key != 'code' && e.key != 'message') e.key: e.value};
       }
     } catch (_) {
       // JSON でない応答(プロキシのエラーページ等)は HTTP コードのまま扱う。
     }
-    throw OrgateException(code, message, serverCode: serverCode);
+    throw OrgateException(code, message, serverCode: serverCode, details: details);
   }
 
   Future<Object?> _send(http.BaseRequest req) async {

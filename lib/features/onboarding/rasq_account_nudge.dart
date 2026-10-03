@@ -6,16 +6,14 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
-import '../../backend/orgate_client.dart' show OrgateException;
-import '../../shell/rasq_account_fow.dart' show openRasqProfileSheet;
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
-import 'rasq_register_screen.dart' show registerRasqAccount;
+import 'rasq_register_screen.dart' show openRasqAccountCreation;
 
 /// タイルから登録した人に、あとで RASQ アカウントを聞く (D-413)。
 ///
 /// サーバー / RASQ リストのタイルから登録した人 (D-412) は、RASQ アカウントの問い(オンボーディングの入口)を通らない。
 /// **最初のオンボーディング(タイル → サーバーに登録 → SNS のログイン → タップしたものを開く)が終わったら**、
-/// 「RASQ アカウントを作りますか?」のポップアップを 1 回だけ出す: **作る**(登録のページ `/rasq-register`、D-405)/
+/// 「RASQ アカウントを作りますか?」のポップアップを 1 回だけ出す: **作る**(① ② のページ、D-414 / D-419。前は登録のページ `/rasq-register`)/
 /// **ログイン**(すでに持っている人)/ **あとで**(サイドバーの … からいつでも作れる)。
 /// 出したことは端末に残す(KV [rasqAccountNudgeKey])。Central の RASQ アカウントをもう持っている人には出さない。
 
@@ -98,12 +96,9 @@ class _RasqAccountNudgeListenerState extends ConsumerState<RasqAccountNudgeListe
       if (!mounted) return;
       switch (picked) {
         case RasqAccountNudgeChoice.create:
-          try {
-            final rec = await registerRasqAccount(ref, onMessage: _toast);
-            if (rec != null && mounted) await openRasqProfileSheet(context, ref, record: rec);
-          } on OrgateException catch (e) {
-            _toast('RASQ アカウントを作成できませんでした: ${e.message}');
-          }
+          // 作る流れ (D-419): オンボーディング v2 の ①② のページ(ユーザー名・パスワード・年齢 → 規約)。作れたら元の画面へ戻る。
+          final rec = await openRasqAccountCreation(ref.read(routerProvider), ProviderScope.containerOf(context, listen: false).read, onMessage: _toast);
+          if (rec != null) _toast('RASQ アカウント @${rec.handle ?? ''} を作成しました');
         case RasqAccountNudgeChoice.login:
           unawaited(ref.read(routerProvider).push('${Routes.settings}/account-login'));
         case RasqAccountNudgeChoice.later || null:

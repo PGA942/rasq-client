@@ -13,7 +13,7 @@ import '../backend/orgate_client.dart';
 import '../backend/rasq_account.dart';
 import '../session/rasq_account_logout.dart';
 import '../session/sanctions.dart';
-import '../features/onboarding/rasq_register_screen.dart';
+import '../features/onboarding/rasq_register_screen.dart' show openRasqAccountCreation;
 import '../features/notifications/notifications_screen.dart';
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 
@@ -23,8 +23,8 @@ import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 ///   ([RasqUserRow] = アバター + 表示名 + `@handle ● rasq`)。左端に通知数の
 ///   バッジ、右端の … でドロップダウン(ログアウト / アカウント設定 /
 ///   プロフィール編集 / 通知設定)。タップで切り替え。
-/// - 下部: 「RASQ アカウントを作成」(Central に繋がる構成のとき)と
-///   「SNS アカウントを追加」。
+/// - 下部: 「アカウントを新規作成 / ログイン」(Central に繋がる構成のとき。押すと 新規作成 / ログイン を選ぶ小さな
+///   選択肢、D-419)と「チャイルドセーフ」。
 const rasqAccountFowId = 'fow.rasq.accounts';
 
 /// [onNavigate] = FOW から別の画面へ移るときに呼ぶ(サイドバーを開いたまま FOW を出しているとき、サイドバーも閉じる。D-272)。
@@ -258,17 +258,40 @@ class RasqAccountPanel extends ConsumerWidget {
       }
     }
 
+    // 新規作成 (D-419): オンボーディング v2 の ①(ユーザー名・パスワード・年齢)→ ②(規約・チャイルドセーフ)→ 登録 のページ。
+    // 前は D-405 の登録ページを開き、しかも**台帳に Central のアカウントがあると「新しく作成」を押せなかった**(D-316 からは
+    // ログアウトしても行が残るので、一度でも作った端末では作れなかった)。いまのアカウントのトークンがあると作らずにそれを返す
+    // 作り(`createAccount`)も直した。FOW とサイドバーは閉じ、作れたら元の画面へ戻ってお知らせを出す。
     Future<void> create() async {
-      final name = ref.read(rasqAccountProvider).displayName;
-      try {
-        // 登録のページ (D-241 → D-405): 利用規約 / 年齢 / バンドルを置き換えるか → 登録 → 同意の記録。
-        // ページはサイドバーの下に開くので、サイドバーは閉じる(この FOW はページを開いている間だけ退避して、戻ると出る)。
-        onNavigate?.call();
-        final rec = await registerRasqAccount(ref, displayName: name, onMessage: toast);
-        if (rec == null || !context.mounted) return;
-        await openRasqProfileSheet(context, ref, record: rec, beforeNavigate: leave);
-      } on OrgateException catch (e) {
-        toast('RASQ アカウントを作成できませんでした: ${e.message}');
+      final router = ref.read(routerProvider);
+      final messenger = ref.read(rootMessengerKeyProvider);
+      // FOW を閉じると ref は使えなくなるので、コンテナから読む。
+      final read = ProviderScope.containerOf(context, listen: false).read;
+      leave();
+      void say(String m) => messenger.currentState
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(m)));
+      final rec = await openRasqAccountCreation(router, read, onMessage: say);
+      if (rec != null) say('RASQ アカウント @${rec.handle ?? ''} を作成しました');
+    }
+
+    // 「アカウントを新規作成 / ログイン」(D-419): どちらにするかを小さな選択肢で聞く。
+    Future<void> entry() async {
+      final pick = await manager.showChoiceAlert<String>(
+        id: 'rasq.account.entry',
+        title: 'RASQ アカウント',
+        message: '新しい RASQ アカウントを作るか、持っているアカウントにログインします。',
+        choices: const [
+          RasqAlertChoice('新規作成', 'create', primary: true, key: ValueKey('rasq.account.entry.create')),
+          RasqAlertChoice('ログイン', 'login', key: ValueKey('rasq.account.entry.login')),
+        ],
+      );
+      if (!context.mounted) return;
+      if (pick == 'create') return create();
+      if (pick == 'login') {
+        final router = ref.read(routerProvider);
+        leave();
+        router.push('${Routes.settings}/account-login');
       }
     }
 
@@ -376,32 +399,16 @@ class RasqAccountPanel extends ConsumerWidget {
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.md),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          // 下のボタン (D-272): 「RASQ アカウントを追加」(作成 / 既存のアカウントにログイン)と「チャイルドセーフ」(セーフモードの設定)。
+          // 下のボタン (D-272 → D-419): 「アカウントを新規作成 / ログイン」(押すと選択肢)と「チャイルドセーフ」(セーフモードの設定)。
           // 「SNS アカウントを追加」は、各アカウントの ↓ のメニューへ移した。2 つは 1 行に並べる(縦に積むと一覧が狭くなり、
           // 電話の幅では処置の案内が隠れる)。
           Row(children: [
             Expanded(
-              child: Builder(
-                builder: (b) => FilledButton.icon(
-                  key: const ValueKey('rasq.account.add'),
-                  onPressed: !centralOk
-                      ? null
-                      : () async {
-                          final box = b.findRenderObject() as RenderBox;
-                          final pick = await manager.showDropdown<String>(id: 'rasq.account.add', anchor: box.localToGlobal(Offset.zero) & box.size, dense: true, items: [
-                            RasqDropdownItem('新しく作成', 'create', enabled: !ledger.hasCentral),
-                            const RasqDropdownItem('既存のアカウントにログイン', 'login'),
-                          ]);
-                          if (!context.mounted) return;
-                          if (pick == 'create') return create();
-                          if (pick == 'login') {
-                            leave();
-                            context.push('${Routes.settings}/account-login');
-                          }
-                        },
-                  icon: const RasqBrandIcon(size: 18),
-                  label: const Text('RASQ アカウントを追加', overflow: TextOverflow.ellipsis),
-                ),
+              child: FilledButton.icon(
+                key: const ValueKey('rasq.account.add'),
+                onPressed: !centralOk ? null : entry,
+                icon: const RasqBrandIcon(size: 18),
+                label: const Text('アカウントを新規作成 / ログイン', overflow: TextOverflow.ellipsis),
               ),
             ),
             const SizedBox(width: RasqSpacing.xs),
