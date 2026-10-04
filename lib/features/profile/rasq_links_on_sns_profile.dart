@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 
-import '../../app/router.dart';
+import '../../app/navigation.dart';
 import '../../backend/rasq_account_page_api.dart';
 import 'rasq_account_page_screen.dart' show RasqSnsTileChip, openRasqSnsTile;
 
@@ -46,7 +45,7 @@ class RasqLinksOnSnsProfile extends ConsumerWidget {
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             key: const ValueKey('snsProfile.rasq.open'),
-            onTap: () => context.push(Routes.rasqAccount(a.handle)),
+            onTap: () => context.pushRasqAccount(a.handle),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Row(children: [

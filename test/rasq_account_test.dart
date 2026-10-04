@@ -247,27 +247,38 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// サイドバーの RASQ アカウントの選択 →「アカウントを新規作成 / ログイン」→「新規作成」(D-419)。
+  /// サイドバーの RASQ アカウントの選択 →「アカウントを新規作成」(D-419 → D-425: 選択肢を挟まず、そのまま ① のページへ)。
   Future<void> openCreateFromPicker(WidgetTester tester) async {
-    await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('rasq.account.entry.create')));
+    await tester.tap(find.byKey(const ValueKey('rasq.account.create')));
     await tester.pumpAndSettle();
   }
 
-  testWidgets('アカウントの選択のボタン (D-419): 「アカウントを新規作成 / ログイン」1 つ → 新規作成 / ログイン を選ぶ。ログインはログインの画面へ', (tester) async {
+  testWidgets('アカウントの選択のボタン (D-425): 「アカウントを新規作成」「ログイン」の 2 つ。選択肢は出さず、ログインはそのままログインの画面へ', (tester) async {
     final central = fakeCentral();
     await pumpWithCentral(tester, central.client);
-    expect(find.text('アカウントを新規作成 / ログイン'), findsOneWidget);
+    expect(find.text('アカウントを新規作成'), findsOneWidget);
+    expect(find.text('ログイン'), findsOneWidget);
+    expect(find.text('アカウントを新規作成 / ログイン'), findsNothing);
     expect(find.text('RASQ アカウントを追加'), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('rasq.account.add')));
+    expect(find.byKey(const ValueKey('rasq.account.add')), findsNothing);
+    // 電話の幅でも 3 つのボタンが 1 行に収まる(チャイルドセーフはアイコンだけ)。
+    expect(tester.takeException(), isNull);
+    expect(find.byTooltip('チャイルドセーフ'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rasq.account.login')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('rasq.account.entry.create')), findsOneWidget);
-    expect(find.byKey(const ValueKey('rasq.account.entry.login')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('rasq.account.entry.login')));
-    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('rasq.account.entry.create')), findsNothing, reason: '選択肢は出さない');
     expect(find.byType(AccountLoginScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('rasq.account.add')), findsNothing, reason: 'FOW は閉じる');
+    expect(find.byKey(const ValueKey('rasq.account.login')), findsNothing, reason: 'FOW は閉じる');
+    expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
+  });
+
+  testWidgets('「アカウントを新規作成」(D-425): 選択肢を挟まず ① のページへ。FOW は閉じる', (tester) async {
+    final central = fakeCentral();
+    await pumpWithCentral(tester, central.client);
+    await openCreateFromPicker(tester);
+    expect(find.byKey(const ValueKey('rasq.account.entry.login')), findsNothing, reason: '選択肢は出さない');
+    expect(find.byType(OnboardingAccountScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('rasq.account.create')), findsNothing);
     expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
   });
 
@@ -278,7 +289,7 @@ void main() {
     // ① のページ(元へ戻る形: ページは 2 つ)。FOW は閉じた。まだサーバーへは何も送っていない。
     expect(find.byType(OnboardingAccountScreen), findsOneWidget);
     expect(find.text('1 / 2'), findsOneWidget);
-    expect(find.byKey(const ValueKey('rasq.account.add')), findsNothing);
+    expect(find.byKey(const ValueKey('rasq.account.create')), findsNothing);
     expect(central.calls.where((c) => c.startsWith('POST /auth/device')), isEmpty);
     await fillAccountStep(tester, age: '16-17');
     await tester.tap(find.byKey(const ValueKey('onb.next')));
@@ -582,8 +593,9 @@ void main() {
     expect(find.descendant(of: row, matching: find.text('tester')), findsOneWidget);
     expect(find.descendant(of: row, matching: find.text('@tester')), findsOneWidget);
     expect(find.textContaining('この端末のみ ・ SNS 2件 ・ 使用中'), findsOneWidget);
-    expect(find.text('アカウントを新規作成 / ログイン'), findsOneWidget); // Central 未設定なので無効
-    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('rasq.account.add'))).onPressed, isNull);
+    expect(find.text('アカウントを新規作成'), findsOneWidget); // Central 未設定なので無効
+    expect(tester.widget<FilledButton>(find.byKey(const ValueKey('rasq.account.create'))).onPressed, isNull);
+    expect(tester.widget<OutlinedButton>(find.byKey(const ValueKey('rasq.account.login'))).onPressed, isNull);
     expect(find.byKey(const ValueKey('rasq.account.childSafe')), findsOneWidget);
     // 「SNS アカウントを追加」は、各アカウントの ↓ のメニューへ (D-272)。
     expect(find.text('SNS アカウントを追加'), findsNothing);

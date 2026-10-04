@@ -14,7 +14,6 @@ import '../lists/list_member_picker.dart';
 import '../lists/topic_toc.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
-import '../../app/router.dart' show Routes;
 import '../../backend/orgate_client.dart' show OrgateException;
 import '../../backend/rasq_collections_api.dart';
 import '../../shell/headers.dart';
@@ -241,7 +240,7 @@ class _Header extends ConsumerWidget {
         Text(c.name, style: RasqTypography.title),
         const SizedBox(height: RasqSpacing.xs),
         InkWell(
-          onTap: () => context.push(Routes.rasqAccount(c.owner.handle)),
+          onTap: () => context.pushRasqAccount(c.owner.handle),
           child: Row(children: [
             RasqAvatar(imageUrl: c.owner.avatarUrl, size: 22, fallbackLabel: c.owner.displayName),
             const SizedBox(width: RasqSpacing.xs),

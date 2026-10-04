@@ -6,6 +6,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
+import '../app/navigation.dart';
 import '../app/providers.dart';
 import '../app/router.dart';
 import '../backend/notify_api.dart';
@@ -23,8 +24,8 @@ import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 ///   ([RasqUserRow] = アバター + 表示名 + `@handle ● rasq`)。左端に通知数の
 ///   バッジ、右端の … でドロップダウン(ログアウト / アカウント設定 /
 ///   プロフィール編集 / 通知設定)。タップで切り替え。
-/// - 下部: 「アカウントを新規作成 / ログイン」(Central に繋がる構成のとき。押すと 新規作成 / ログイン を選ぶ小さな
-///   選択肢、D-419)と「チャイルドセーフ」。
+/// - 下部: 「アカウントを新規作成」「ログイン」(Central に繋がる構成のとき。それぞれの画面へそのまま、D-419 → D-425)と
+///   「チャイルドセーフ」。
 const rasqAccountFowId = 'fow.rasq.accounts';
 
 /// [onNavigate] = FOW から別の画面へ移るときに呼ぶ(サイドバーを開いたまま FOW を出しているとき、サイドバーも閉じる。D-272)。
@@ -133,7 +134,6 @@ class RasqAccountPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
-    final manager = ref.watch(overlayManagerProvider);
     final ledger = ref.watch(rasqAccountsProvider).value ?? const RasqAccountsState();
     final current = ledger.current;
     final expandedId = ref.watch(rasqAccountFowExpandedProvider);
@@ -189,8 +189,9 @@ class RasqAccountPanel extends ConsumerWidget {
         case 'page':
           final handle = ref.read(currentCentralHandleProvider) ?? r.handle;
           if (handle == null || handle.isEmpty) return;
+          // 幅の広い画面では第3カラムに開く (D-425)。FOW を閉じる前に開く(閉じると context が使えなくなる)。
+          context.pushRasqAccount(handle);
           leave();
-          context.push(Routes.rasqAccount(handle));
         case 'profile':
           await openRasqProfileSheet(context, ref, record: r, beforeNavigate: leave);
         case 'settings':
@@ -275,24 +276,11 @@ class RasqAccountPanel extends ConsumerWidget {
       if (rec != null) say('RASQ アカウント @${rec.handle ?? ''} を作成しました');
     }
 
-    // 「アカウントを新規作成 / ログイン」(D-419): どちらにするかを小さな選択肢で聞く。
-    Future<void> entry() async {
-      final pick = await manager.showChoiceAlert<String>(
-        id: 'rasq.account.entry',
-        title: 'RASQ アカウント',
-        message: '新しい RASQ アカウントを作るか、持っているアカウントにログインします。',
-        choices: const [
-          RasqAlertChoice('新規作成', 'create', primary: true, key: ValueKey('rasq.account.entry.create')),
-          RasqAlertChoice('ログイン', 'login', key: ValueKey('rasq.account.entry.login')),
-        ],
-      );
-      if (!context.mounted) return;
-      if (pick == 'create') return create();
-      if (pick == 'login') {
-        final router = ref.read(routerProvider);
-        leave();
-        router.push('${Routes.settings}/account-login');
-      }
+    // ログイン (D-419 → D-425): パスワード + メールのコード(2 段階)の画面へ、そのまま。FOW とサイドバーは閉じる。
+    void login() {
+      final router = ref.read(routerProvider);
+      leave();
+      router.push('${Routes.settings}/account-login');
     }
 
     final sanctions = ref.watch(rasqSanctionsProvider).value ?? RasqSanctions.none;
@@ -399,21 +387,15 @@ class RasqAccountPanel extends ConsumerWidget {
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.md),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          // 下のボタン (D-272 → D-419): 「アカウントを新規作成 / ログイン」(押すと選択肢)と「チャイルドセーフ」(セーフモードの設定)。
-          // 「SNS アカウントを追加」は、各アカウントの ↓ のメニューへ移した。2 つは 1 行に並べる(縦に積むと一覧が狭くなり、
-          // 電話の幅では処置の案内が隠れる)。
-          Row(children: [
-            Expanded(
-              child: FilledButton.icon(
-                key: const ValueKey('rasq.account.add'),
-                onPressed: !centralOk ? null : entry,
-                icon: const RasqBrandIcon(size: 18),
-                label: const Text('アカウントを新規作成 / ログイン', overflow: TextOverflow.ellipsis),
-              ),
-            ),
-            const SizedBox(width: RasqSpacing.xs),
-            OutlinedButton.icon(
+          // 下のボタン (D-272 → D-419 → D-425): 「アカウントを新規作成」「ログイン」(選択肢を挟まず、それぞれの画面へ)と
+          // 「チャイルドセーフ」(セーフモードの設定)。「SNS アカウントを追加」は、各アカウントの ↓ のメニューへ移した。
+          // 3 つは 1 行に並べる(縦に積むと一覧が狭くなり、電話の幅では処置の案内が隠れる)。狭い幅では
+          // 「チャイルドセーフ」はアイコンだけ(長押し / 読み上げで名前)。
+          LayoutBuilder(builder: (context, box) {
+            final compact = box.maxWidth < 440;
+            final childSafe = OutlinedButton.icon(
               key: const ValueKey('rasq.account.childSafe'),
+              style: compact ? OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12), minimumSize: const Size(44, 40)) : null,
               onPressed: () {
                 leave();
                 // チャイルドセーフ (D-307): 保護者(`GET /me` の roles に guardian)は見守りの画面へ、ほかは入口へ
@@ -422,9 +404,33 @@ class RasqAccountPanel extends ConsumerWidget {
                 context.push(guardian ? Routes.childSafeGuardian : Routes.childSafe);
               },
               icon: const Icon(Icons.child_care_outlined, size: 18),
-              label: const Text('チャイルドセーフ'),
-            ),
-          ]),
+              label: compact ? const SizedBox.shrink() : const Text('チャイルドセーフ'),
+            );
+            return Row(children: [
+              Expanded(
+                flex: 3,
+                child: FilledButton.icon(
+                  key: const ValueKey('rasq.account.create'),
+                  style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
+                  onPressed: !centralOk ? null : create,
+                  icon: const RasqBrandIcon(size: 18),
+                  label: const Text('アカウントを新規作成', overflow: TextOverflow.ellipsis),
+                ),
+              ),
+              const SizedBox(width: RasqSpacing.xs),
+              Expanded(
+                flex: 2,
+                child: OutlinedButton(
+                  key: const ValueKey('rasq.account.login'),
+                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
+                  onPressed: !centralOk ? null : login,
+                  child: const Text('ログイン', overflow: TextOverflow.ellipsis),
+                ),
+              ),
+              const SizedBox(width: RasqSpacing.xs),
+              compact ? Tooltip(message: 'チャイルドセーフ', child: Semantics(label: 'チャイルドセーフ', child: childSafe)) : childSafe,
+            ]);
+          }),
           if (!centralOk)
             Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
               Text('RASQ サーバーの接続先が未設定です', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
