@@ -12,7 +12,7 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_consent.dart';
 import '../../shell/column_layout.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
-import '../login/login_screen.dart' show SnsServiceButton;
+import '../login/login_screen.dart' show SnsServiceButton, popOr;
 import 'onboarding_feed.dart';
 import 'rasq_register_screen.dart';
 
@@ -464,8 +464,11 @@ class OnboardingSnsScreen extends ConsumerWidget {
     final canAdd = ref.watch(childGateProvider).canAddAccounts;
     return OnboardingFrame(
       builder: (context, narrow) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const OnboardingStepHeader(
+        OnboardingStepHeader(
           step: 3,
+          // 戻る (D-422): ③ は ② の登録のあと `go` で来るので、戻る先が無ければ RASQ アカウントの入口へ(作ったアカウントは台帳に
+          // 残り、「〜で続ける」で戻れる。別のアカウントでログイン / 新しく作る、もそこから)。
+          onBack: () => popOr(context, Routes.onboarding),
           title: 'SNS アカウントでログイン',
           description: 'RASQ アカウントができました。使っている SNS のアカウントでログインしてください。まだ SNS を使っていなければ、「SNS サービスを探す」から合うサーバーやリストを探せます。',
         ),

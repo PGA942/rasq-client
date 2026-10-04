@@ -42,7 +42,11 @@ import 'sns_share_crypto.dart';
 ///   次に本体を書くときに蘇らせない。30 日で捨てる。捨てたあとも、同期したことのあるアカウントが本体から消えていれば外す)。
 /// - **承認の問いを早く** (D-322): 新しい端末が共有を求めると、ORGATE が Central の受信箱に積んで同じアカウントの端末へ知らせる(受信箱の
 ///   `sns_share.request`)。開いているアプリには即時の知らせ([CentralInbox] の長いポーリング)ですぐ届き、[handleSnsShareNotices] が
-///   すぐ見回って問いを出す(45 秒の見回りを待たない)。求めている端末の側も、承認を待っている間は [snsSharePollWhileWaitingProvider] おきに
+///   すぐ見回って問いを出す(45 秒の見回りを待たない)。
+/// - **メールでの承認** (D-422 / ORGATE O-012 / Central S-078): 求めると確認済みのメールへ 1 回きりのリンクが届き、ブラウザで
+///   RASQ アカウントにログインして「承認して共有する / 承認する(SNS はこの端末でログインし直す)/ 心当たりが無い」を選べる。
+///   サーバーは K もトークンも見ない(印を付けるだけ)。K を持つ端末は印のある端末に問いを出さずに包む。K を持つ端末が 1 台も
+///   無ければ、SNS にログインしている端末が K を作り直す。どの端末も開かれていなければ、新しい端末は待つか、自分で SNS にログインする。求めている端末の側も、承認を待っている間は [snsSharePollWhileWaitingProvider] おきに
 ///   見回って(上限つき)、承認されたらすぐ取り込む。取り込んだら [SnsShareView.joins] を進め、SNS のログイン画面は TL へ移る。
 
 /// Central のアカウントの共有の状態。
@@ -56,7 +60,7 @@ enum SnsShareMode {
 
 @immutable
 class SnsShareDevice {
-  const SnsShareDevice({required this.deviceId, this.label, required this.publicKey, this.requested = false, this.approved = false, this.current = false, this.approvedBy, this.lastUsedAt});
+  const SnsShareDevice({required this.deviceId, this.label, required this.publicKey, this.requested = false, this.approved = false, this.current = false, this.approvedBy, this.lastUsedAt, this.emailApproved = false, this.emailDecision});
   final String deviceId;
   final String? label;
   final Uint8List publicKey;
@@ -70,6 +74,12 @@ class SnsShareDevice {
   final String? approvedBy;
   final DateTime? lastUsedAt;
 
+  /// メールのリンクで「承認して共有する」が選ばれた (D-422 / ORGATE O-012)。K を持つ端末は問いを出さずに包む。
+  final bool emailApproved;
+
+  /// メールのリンクでの決定(`share` / `device_only`)。`device_only` = 求めを下ろした(SNS はその端末でログインし直す)。
+  final String? emailDecision;
+
   String get name => (label == null || label!.isEmpty) ? '名前のない端末' : label!;
 
   factory SnsShareDevice.fromJson(Map<String, Object?> j) => SnsShareDevice(
@@ -81,6 +91,8 @@ class SnsShareDevice {
         current: j['current'] == true,
         approvedBy: j['approvedBy'] as String?,
         lastUsedAt: DateTime.tryParse(j['lastUsedAt'] as String? ?? ''),
+        emailApproved: j['emailApproved'] == true,
+        emailDecision: j['emailDecision'] as String?,
       );
 }
 
@@ -106,6 +118,9 @@ class SnsShareStatus {
 
   /// この端末が共有を求めていて、まだ承認されていない(SNS のログイン画面に案内を出す)。
   bool get waiting => mode != SnsShareMode.declined && (me?.requested ?? false) && !(me?.approved ?? false);
+
+  /// この端末の求めが、メールのリンクで「承認する(SNS はこの端末でログインし直す)」になった (D-422)。
+  bool get approvedWithoutSharing => me?.emailDecision == 'device_only' && !(me?.approved ?? false);
 
   /// 共有を求めている、ほかの端末。
   List<SnsShareDevice> get asking => [for (final d in devices) if (!d.current && d.requested && !d.approved) d];
@@ -142,6 +157,9 @@ class SnsShareApi {
     await _client.delete('/me/sns-share/devices/${Uri.encodeComponent(deviceId)}');
     return status();
   }
+
+  /// メールでの承認のリンクを、確認済みのメールへ送り直す (D-422 / ORGATE O-012)。戻り = 送った先(伏せ字)。
+  Future<String> requestEmailApproval() async => '${(await _client.postJson('/me/sns-share/email-approval', const {}))['email'] ?? ''}';
 
   Future<({Uint8List bytes, int version})?> body() => _client.getData(bodyArea);
   Future<int?> putBody(List<int> bytes, {int? ifMatch}) => _client.putData(bodyArea, bytes, encrypted: true, ifMatch: ifMatch);
@@ -448,7 +466,10 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
         case SnsShareMode.off:
           final asking = s.asking;
           final me = s.me;
-          if (asking.isEmpty || me == null || me.requested || _dismissed.contains('${c.accountId}:first')) return;
+          if (asking.isEmpty || me == null || _dismissed.contains('${c.accountId}:first')) return;
+          // D-422: 自分も求めている端末(ログインで入った端末)でも、SNS にログインしていれば答える。前は求めている端末は
+          // 一律に飛ばしていたので、どの端末もログインで入った(作った端末が無い / 作った端末で入り直した)ときに、誰も問われなかった。
+          if (me.requested && (await _localSessions(c)).isEmpty) return;
           final yes = await ref.read(snsShareAskProvider)(SnsShareQuestion(first: true, devices: asking, accountHandle: c.handle));
           if (!ref.mounted) return;
           if (yes == null) {
@@ -459,10 +480,26 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
             _publish(c, await c.api.setMode(SnsShareMode.declined, from: SnsShareMode.off));
           }
         case SnsShareMode.on:
-          if (!s.holding) return;
+          if (!s.holding) {
+            // D-422: K を持つ端末が 1 台も残っていない(全部ログアウトした / パスワードの再設定でほかを消した / メールで承認して
+            // `on` になったばかり)。前は誰も K を作り直さず、求めている端末はずっと待っていた。SNS にログインしているこの端末が
+            // K を作り直す(自分と、メールで承認された端末に包む。ほかの求めには、次の見回りで問いを出す)。
+            if (s.keyId == null && (await _localSessions(c)).isNotEmpty && ref.mounted) {
+              await _enable(c, from: SnsShareMode.on, approve: [for (final d in s.asking) if (d.emailApproved) d]);
+              _again = true;
+            }
+            return;
+          }
           final key = await _unwrap(c, s);
           if (key == null) return;
           for (final d in s.asking) {
+            // メールのリンクで承認された端末 (D-422): 問いを出さずに包む(承認したのは本人。ここで知らせる)。
+            if (d.emailApproved) {
+              s = await _wrapFor(c, d, key, s.keyId!);
+              _publish(c, s);
+              ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text('メールで承認された端末(${d.name})に、SNS のアクセストークンを共有しました')));
+              continue;
+            }
             if (_dismissed.contains('${c.accountId}:${d.deviceId}')) continue;
             final yes = await ref.read(snsShareAskProvider)(SnsShareQuestion(first: false, devices: [d], accountHandle: c.handle));
             if (!ref.mounted) return;
@@ -483,6 +520,21 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
       // 409 = ほかの端末が先に答えた / 書いた。次の見回りで揃う。
       debugPrint('snsShare: ${e.code.code} ${e.message}');
     }
+  }
+
+  /// この端末の、このアカウントの SNS セッション(共有できるもの)。
+  Future<List<AccountSession>> _localSessions(_Ctx c) async {
+    final record = ref.read(rasqAccountsProvider).value?.centralRecord(c.accountId);
+    if (record == null) return const [];
+    final sessions = await ref.read(sessionsProvider.future);
+    return [for (final s in sessions.allSessions) if (record.sessionKeys.contains(s.account.key)) s];
+  }
+
+  /// メールでの承認のリンクを送り直す (D-422)。戻り = 送った先(伏せ字)。送れなければ [OrgateException]。
+  Future<String?> requestEmailApproval() async {
+    final c = await _ctx();
+    if (c == null) return null;
+    return c.api.requestEmailApproval();
   }
 
   /// この端末の公開鍵を Central に置く(無い / 変わった / 共有を求めるとき)。

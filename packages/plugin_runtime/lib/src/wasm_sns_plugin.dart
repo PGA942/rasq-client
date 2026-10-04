@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -30,7 +32,46 @@ class WasmSnsPlugin extends SnsPlugin {
     this.nativeFetch = true,
     this.authFlowFactory,
     this.onFetchShape,
+    this.onSessionToken,
   }) : _loadBytes = loadBytes; // ignore: prefer_initializing_formals
+
+  /// プラグインがトークンを取り直した (D-422): 新しいトークン(ホストが [AccountSession.token] として持つ形)。
+  /// アプリは端末のセッションの保存を書き換える(再起動しても、ほかの端末へ共有しても、取り直した組が使われるように)。
+  /// 前は取り直した組がワーカーのメモリ(`storage.safe`)にしか無く、再起動すると使い終わった古い組に戻っていた。
+  final void Function(AccountId account, String token)? onSessionToken;
+
+  /// 開いているセッション(アカウントのキーごと)。取り直しの写しを、どのセッションのものか見分ける。
+  final Map<String, AccountSession> _open = {};
+
+  /// `storage.set` の写し [write] (`{ns, key, value}`) が、[token] の取り直し(`safe` の `session:<id>` に
+  /// `{accessJwt, refreshJwt}`。Bluesky の規約、D-175)なら、組を差し替えたトークン。違えば / 変わらなければ null。
+  @visibleForTesting
+  static String? refreshedToken(String token, Map<String, Object?> write) {
+    if (write['ns'] != 'safe') return null;
+    final key = '${write['key']}';
+    if (!key.startsWith('session:')) return null;
+    final value = write['value'];
+    if (value is! Map) return null;
+    final Object? current;
+    try {
+      current = jsonDecode(token);
+    } catch (_) {
+      return null;
+    }
+    if (current is! Map) return null;
+    final id = key.substring('session:'.length);
+    if (current['did'] != null && '${current['did']}' != id) return null;
+    final merged = <String, Object?>{...current.cast<String, Object?>()};
+    var changed = false;
+    for (final k in const ['accessJwt', 'refreshJwt']) {
+      final v = value[k];
+      if (v is String && v.isNotEmpty && merged[k] != v) {
+        merged[k] = v;
+        changed = true;
+      }
+    }
+    return changed ? jsonEncode(merged) : null;
+  }
 
   /// 初めて見た `net.fetch` の形(値は無い)の受け口。アプリが同意を見て
   /// ストアへ報告する。null なら捨てる。
@@ -73,6 +114,18 @@ class WasmSnsPlugin extends SnsPlugin {
         await c.load();
         final hook = onFetchShape;
         if (hook != null) c.fetchShapes.listen((s) => hook(manifest.id, manifest.version, s));
+        // 取り直したトークンをホストへ戻す (D-422)。匿名ワーカー(ログイン前)には無い。
+        if (accountKey != _anonymousKey) {
+          c.storageWrites.listen((w) {
+            final session = _open[accountKey];
+            final cb = onSessionToken;
+            if (session == null || cb == null) return;
+            final next = refreshedToken(session.token, w);
+            if (next == null) return;
+            _open[accountKey] = session.copyWith(token: next);
+            cb(session.account, next);
+          });
+        }
         return c;
       });
 
@@ -154,6 +207,7 @@ class WasmSnsPlugin extends SnsPlugin {
   @override
   SnsSession open(AccountSession session) {
     final key = session.account.key;
+    _open[key] = session;
     return WasmSnsSession(
       account: session.account,
       pluginId: manifest.id,
@@ -173,6 +227,7 @@ class WasmSnsPlugin extends SnsPlugin {
       },
       onClose: () async {
         _granted.remove(key);
+        _open.remove(key);
         final pending = _controllers.remove(key);
         if (pending != null) (await pending).dispose();
       },

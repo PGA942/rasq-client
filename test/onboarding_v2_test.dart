@@ -107,10 +107,26 @@ void main() {
       expect(ledger.current?.isCentral, isTrue);
       expect(ledger.current?.handle, 'neko_taro');
       expect(c.read(rasqAccountNudgeProvider), isFalse);
-      // 「SNS サービスを探す」→ 探す画面。
+      // 「SNS サービスを探す」→ 探す画面 → 戻る(D-422)→ ③。
       await tester.tap(find.byKey(const ValueKey('onb.discover')));
       await tester.pumpAndSettle();
       expect(find.byType(SnsDiscoverScreen), findsOneWidget);
+      await tester.tap(find.byTooltip('戻る').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(OnboardingSnsScreen), findsOneWidget);
+      // SNS のログイン(Misskey)→ 戻る → ③。
+      await tester.tap(find.text('Misskeyでログイン'));
+      await tester.pumpAndSettle();
+      expect(find.byType(OnboardingSnsScreen), findsNothing);
+      await tester.tap(find.byTooltip('戻る').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(OnboardingSnsScreen), findsOneWidget);
+      // ③ にも戻るがある(D-422)。戻る先が無い(② の登録のあと `go` で来た)ので、RASQ アカウントの入口へ。作ったアカウントは残る。
+      await tester.tap(find.byKey(const ValueKey('onb.back')));
+      await tester.pumpAndSettle();
+      expect(find.byType(OnboardingSnsScreen), findsNothing);
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+      expect(c.read(rasqAccountsProvider).value!.current?.handle, 'neko_taro');
     });
 
     testWidgets('② ユーザー名が使われていたら ① に戻って直す → もう一度で登録(アカウントは作り直さない)', (tester) async {

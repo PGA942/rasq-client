@@ -21,6 +21,7 @@ import '../../shell/headers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../collections/rasq_list_picker.dart' show importRasqListToHomeWith;
+import '../login/login_screen.dart' show popOr;
 import '../rai/rai_widgets.dart' show RaiIcon;
 import '../settings/developer_mode.dart';
 import '../settings/settings_dsl.dart' show settingsAreaProvider;
@@ -166,7 +167,8 @@ class SnsDiscoverScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final raiOk = ref.watch(childGateProvider).raiEnabled;
     return Scaffold(
-      appBar: const RasqPageHeader(title: 'SNS サービスを探す', showMore: false),
+      // 戻る (D-422): 戻る先が無ければ(リンクから開いた)入口へ(ログイン済みならルーターがホームへ回す)。
+      appBar: RasqPageHeader(title: 'SNS サービスを探す', showMore: false, onBack: () => popOr(context, Routes.onboarding)),
       body: SafeArea(
         top: false,
         child: Center(

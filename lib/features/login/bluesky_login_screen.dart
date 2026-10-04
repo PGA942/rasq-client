@@ -8,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../session/bluesky_auth.dart';
+import 'login_screen.dart' show popOr;
 import 'terms_sheet.dart';
 
 /// Bluesky のログイン (D-175): PDS / ハンドル(かメール)/ アプリパスワード。
@@ -76,7 +77,7 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
     final tokens = RasqTokens.of(context);
     final canSubmit = !_busy && _id.text.trim().isNotEmpty && _password.text.isNotEmpty;
     return Scaffold(
-      appBar: AppBar(title: const Text('Blueskyでログイン'), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => context.pop())),
+      appBar: AppBar(title: const Text('Blueskyでログイン'), centerTitle: false, leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => popOr(context, Routes.login))),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xl, vertical: RasqSpacing.md), children: [
           Row(children: [

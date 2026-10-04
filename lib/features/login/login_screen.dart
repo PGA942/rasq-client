@@ -7,6 +7,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
+import '../../backend/orgate_client.dart' show OrgateException;
 import '../../backend/rasq_account_page_api.dart';
 import '../../session/sns_share.dart' show snsShareProvider, snsShareWaitingProvider;
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
@@ -32,7 +33,9 @@ class LoginScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: hasSessions ? IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => context.pop()) : null,
+        // 戻る (D-422): SNS にまだ入っていなくても出す。戻る先が無ければ(RASQ アカウントのログインから `go` で来た)RASQ アカウントの入口へ
+        // (別の RASQ アカウントで入り直す / 新しく作る / SNS アカウントだけで使う)。
+        leading: IconButton(key: const ValueKey('login.back'), icon: const Icon(Icons.arrow_back_ios_new, size: 18), tooltip: '戻る', onPressed: () => popOr(context, hasSessions ? Routes.home : Routes.onboarding)),
         automaticallyImplyLeading: false,
         title: const Text('SNSにログイン'),
         centerTitle: false,
@@ -53,18 +56,18 @@ class LoginScreen extends ConsumerWidget {
             // 既存の RASQ アカウントへログインした端末 (D-316): そのアカウントの SNS アカウントのうち、まだこの端末で入っていないもの。
             const _BundleAccounts(),
             // SNS のアクセストークンの端末間共有 (D-319): 元の端末の承認を待っている間の案内(ログインボタンはそのまま使える)。
-            if (ref.watch(snsShareWaitingProvider))
+            if (ref.watch(snsShareWaitingProvider)) const _ShareWaiting(),
+            // メールのリンクで「承認する(SNS はこの端末でログインし直す)」になった (D-422)。
+            if (ref.watch(snsShareProvider.select((v) => v.status?.approvedWithoutSharing ?? false)))
               Container(
-                key: const ValueKey('login.shareWaiting'),
+                key: const ValueKey('login.shareDeviceOnly'),
                 margin: const EdgeInsets.only(top: RasqSpacing.sm),
                 padding: const EdgeInsets.all(RasqSpacing.sm),
                 decoration: BoxDecoration(color: scheme.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
                 child: Row(children: [
-                  Icon(Icons.devices_outlined, color: scheme.primary),
+                  Icon(Icons.verified_user_outlined, color: scheme.primary),
                   const SizedBox(width: RasqSpacing.sm),
-                  Expanded(
-                    child: Text('元の端末で共有を承認すると、SNS アカウントに一斉ログインします', style: RasqTypography.bodySmall),
-                  ),
+                  Expanded(child: Text('メールでこの端末を承認しました。SNS アカウントには、下のボタンからこの端末でログインしてください', style: RasqTypography.bodySmall)),
                 ]),
               ),
             const SizedBox(height: RasqSpacing.lg),
@@ -91,6 +94,78 @@ class LoginScreen extends ConsumerWidget {
           ]),
         ),
       ),
+    );
+  }
+}
+
+/// 戻る (D-422): 戻れる画面があれば戻り、無ければ(`go` で来た / 通知・リンクから開いた)[fallback] へ。
+void popOr(BuildContext context, String fallback) {
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    context.go(fallback);
+  }
+}
+
+/// 元の端末の承認を待っている間の案内 (D-319 → D-422): 開いている端末が無くても、確認済みのメールのリンクから承認できる。
+class _ShareWaiting extends ConsumerStatefulWidget {
+  const _ShareWaiting();
+
+  @override
+  ConsumerState<_ShareWaiting> createState() => _ShareWaitingState();
+}
+
+class _ShareWaitingState extends ConsumerState<_ShareWaiting> {
+  bool _busy = false;
+  String? _note;
+
+  Future<void> _sendMail() async {
+    setState(() => _busy = true);
+    String note;
+    try {
+      final to = await ref.read(snsShareProvider.notifier).requestEmailApproval();
+      note = to == null ? 'いまは送れません' : '${to.isEmpty ? '確認済みのメールアドレス' : to} に承認のリンクを送りました(30 分有効)。ブラウザで開いて、RASQ アカウントでログインしてから承認してください';
+    } on OrgateException catch (e) {
+      note = switch (e.serverCode == 'no_verified_email' ? 'no_verified_email' : e.code.code) {
+        'no_verified_email' => '確認済みのメールアドレスがありません。元の端末で承認するか、SNS アカウントにこの端末でログインしてください',
+        '429' => '送りすぎです。しばらく待ってから、もう一度送ってください',
+        '501' => 'このサーバーでは、メールでの承認を使えません',
+        _ => '送れませんでした(${e.code.code})',
+      };
+    }
+    if (mounted) {
+      setState(() {
+        _busy = false;
+        _note = note;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const ValueKey('login.shareWaiting'),
+      margin: const EdgeInsets.only(top: RasqSpacing.sm),
+      padding: const EdgeInsets.all(RasqSpacing.sm),
+      decoration: BoxDecoration(color: scheme.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(Icons.devices_outlined, color: scheme.primary),
+          const SizedBox(width: RasqSpacing.sm),
+          Expanded(child: Text('元の端末で共有を承認すると、SNS アカウントに一斉ログインします。確認済みのメールに届いたリンクからも承認できます', style: RasqTypography.bodySmall)),
+        ]),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            key: const ValueKey('login.shareEmail'),
+            onPressed: _busy ? null : _sendMail,
+            icon: const Icon(Icons.mail_outline, size: 18),
+            label: const Text('メールで承認する(リンクを送る)'),
+          ),
+        ),
+        if (_note != null) Text(_note!, key: const ValueKey('login.shareEmailNote'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+      ]),
     );
   }
 }

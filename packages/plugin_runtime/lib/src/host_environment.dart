@@ -115,12 +115,17 @@ class RasqHostEnvironment {
     this.fetchHosts = const {},
     this.instanceAllowed = false,
     this.gpuCompute = false,
+    this.onStorageWrite,
     String? instanceHost,
   })  : storage = storage ?? {},
         _instanceHost = instanceHost?.trim().toLowerCase();
 
   /// アプリ向けホスト関数の中継 (D-167)。null → E01。
   AppFnRelay? onAppFn;
+
+  /// `storage.set` / `storage.delete` の写しをホストへ (D-422)。`(ns, key, value)`(delete は value = null)。
+  /// Bluesky の取り直した `{accessJwt, refreshJwt}`(`safe` の `session:<did>`)を、ホストが持つセッションのトークンへ戻すのに使う。
+  final void Function(String ns, String key, Object? value)? onStorageWrite;
 
   /// 許可されたアプリ向けホスト関数名(スロット登録時にマニフェストの
   /// permissions / slots から決める)。範囲外は E01。
@@ -234,10 +239,12 @@ class RasqHostEnvironment {
       case RasqHostFns.storageSet:
         _requireStorage(args);
         storage[_storageKey(args)] = args['value'];
+        onStorageWrite?.call(_storageNs(args), '${args['key']}', args['value']);
         return const <String, Object?>{};
       case RasqHostFns.storageDelete:
         _requireStorage(args);
         storage.remove(_storageKey(args));
+        onStorageWrite?.call(_storageNs(args), '${args['key']}', null);
         return const <String, Object?>{};
       case RasqHostFns.netFetch:
         if (!permissions.contains(RasqPermissions.network)) {
