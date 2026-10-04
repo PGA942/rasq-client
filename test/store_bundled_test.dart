@@ -20,6 +20,14 @@ class _EmptyCentral extends FakeStoreClient {
   Future<List<ReleaseNote>> releases(String id) async => const [];
 }
 
+/// 承認済みの版が無い掲載: 詳細は版が空、構成は無い(S-080 の前の Central)。
+class _PendingCentral extends _EmptyCentral {
+  @override
+  Future<StorePluginDetail?> plugin(String id) async => StorePluginDetail.fromJson({'id': id, 'name': 'みんなのボード', 'summary': '', 'version': '', 'status': 'published', 'origin': 'community'});
+  @override
+  Future<InstallManifest?> manifest(String id, {String? version}) async => null;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -66,5 +74,12 @@ void main() {
     final d = await client.plugin(storeSamplePluginId);
     expect(d?.id, storeSamplePluginId);
     expect((d!.rating, d.downloads), (0, 0), reason: '補うときも数字は無い');
+  });
+
+  test('Central に掲載はあるが承認済みの版が無い(版の空の詳細)同梱のサンプルは、同梱のページで答える(みんなのボード)', () async {
+    final client = BundledFallbackStoreClient(_PendingCentral(), BundledStoreClient());
+    final d = await client.plugin('sample.board');
+    expect(d?.version, isNotEmpty, reason: '同梱の版(SOURCES.json)');
+    expect(await client.manifest('sample.board'), isNotNull);
   });
 }

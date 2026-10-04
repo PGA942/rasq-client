@@ -114,7 +114,9 @@ class BundledFallbackStoreClient implements StoreClient {
   @override
   Future<List<StorePluginCard>> search(String q, {Set<StoreFilter> filters = const {}}) => primary.search(q, filters: filters);
   @override
-  Future<StorePluginDetail?> plugin(String id) => _or(id, (c) => c.plugin(id), (v) => v == null);
+  // 版の空の詳細 = Central に掲載はあるが、承認済みの版がまだ無い(審査中)。同梱があればそちらで答える(rasq-central S-080 の前の
+  // サーバーは、この詳細を 404 にせず返していた。みんなのボードが空のページになっていた)。
+  Future<StorePluginDetail?> plugin(String id) => _or(id, (c) => c.plugin(id), (v) => v == null || v.version.isEmpty);
   @override
   Future<InstallManifest?> manifest(String id, {String? version}) => _or(id, (c) => c.manifest(id, version: version), (v) => v == null);
   @override
