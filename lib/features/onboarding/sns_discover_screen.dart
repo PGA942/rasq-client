@@ -281,6 +281,13 @@ class DiscoverResultsView extends ConsumerWidget {
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
       if (result.mode == 'dummy') Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.xs), child: Text('見本の結果です(サーバーの外部サービスが未設定)', key: const ValueKey('discover.dummy'), style: caption)),
+      // RAi に聞くで、リストに当たらず Brave で見つけた人 (D-432)。人から探すの画面は人を自分で並べるので、ここでは RAi のときだけ。
+      if (result is AskDiscoverResult && result.people.isNotEmpty) ...[
+        Text('SNS の人(Web 検索)', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: RasqSpacing.xs),
+        for (final p in result.people) Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.xs), child: _PersonCard(person: p)),
+        const SizedBox(height: RasqSpacing.xs),
+      ],
       if (result.lists.isNotEmpty) ...[
         Text('RASQ リスト', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: RasqSpacing.xs),

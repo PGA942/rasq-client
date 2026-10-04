@@ -356,6 +356,8 @@ class RaiPromptBar extends StatelessWidget {
             const SizedBox(width: RasqSpacing.sm),
             RaiAskButton(key: sendKey, onPressed: canSend ? onSubmit : null),
           ]),
+          // クラウドの RAi が考えている間だけ、広告の枠 (D-377 → D-433: RAi バーと同じ)。出せない端末 / 子のアカウントでは何も出さない。
+          if (busy) const Center(key: ValueKey('rai.prompt.ad'), child: ExportAdSlot()),
         ]),
       ),
     );

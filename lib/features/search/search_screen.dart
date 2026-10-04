@@ -7,6 +7,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../ads/export_ad.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
@@ -157,13 +158,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           await ref.read(timelineProvider(DynamicTimelines.featured).notifier).refresh();
         },
         child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
-          // AdSlot — renderer-owned insertion point (検索ホーム固定位置). 設定「リソースと広告」(D-238) で隠せる。
-          if (settingValue(ref, 'resources', 'showAds', true) != false)
-          Container(
-            height: 200,
-            alignment: Alignment.center,
-            child: Container(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8), color: scheme.surfaceContainerHighest, child: Text('広告', style: TextStyle(fontSize: 28, color: scheme.onSurfaceVariant))),
-          ),
+          // 広告の枠 (検索ホームの固定の位置、D-433: 前は灰色の「広告」の箱だけだった)。AdMob のバナー(テストの ID)。設定「リソースと広告」(D-238)
+          // で消せる。子のアカウントと、出せない端末(デスクトップ / AdSense の ID の無い Web)では何も出さない。
+          if (settingValue(ref, 'resources', 'showAds', true) != false) const Center(key: ValueKey('search.ad'), child: ExportAdSlot()),
           // トレンドプロファイル設定 (D-153、傾向 FOW): ジャンル / 指向性・刺激性 / プラグイン / キャッシュ / ノード編集。
           // 歯車 = トレンドタイルのカスタマイズ (D-431、TL のカスタマイズと同じ画面。傾向は一番最後に固定で掛かる)。
           RasqSectionHeader(
