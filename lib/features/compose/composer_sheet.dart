@@ -356,7 +356,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   bool get _rasqReply => _replyTo != null && isRasqPost(_replyTo!);
 
   /// RASQ の返信で、添付と投票を付けられないもの(Swing のスレッドへの返信は付けられる、D-421 / S-076)。
-  bool get _rasqTextOnlyReply => _rasqReply && !widget.rasqReplyAttachments;
+  /// D-424: 返信先が Swing のスレッドの投稿(`visibility = swing`、返信への返信も)なら、どこから開いても付けられる
+  /// (通知 / 投稿の詳細から開いた返信のコンポーザーでも。Central は返信先が Swing のスレッドなら受ける)。
+  bool get _rasqTextOnlyReply => _rasqReply && !widget.rasqReplyAttachments && _replyTo!.visibility != 'swing';
 
   /// 子 FOW の持ち主 (D-421: 埋め込みでは置き場所の FOW)。
   String get _ownerId => widget.ownerId ?? composerFowId;

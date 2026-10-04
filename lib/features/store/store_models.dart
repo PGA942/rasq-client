@@ -695,9 +695,13 @@ class InstalledPlugin {
     this.versions = const [],
     this.accountVersions = const {},
     this.pluginType = StorePluginType.other,
+    this.requires = const [],
   });
   final String id;
   final String name;
+
+  /// 土台にするほかのプラグインの id(配布物の `root.requires`、D-244c)。親子関係のあるものは Swing で配れない (D-424)。
+  final List<String> requires;
 
   /// 既定の版。
   final String version;
@@ -729,7 +733,7 @@ class InstalledPlugin {
 
   InstalledVersion? versionInfo(String v) => allVersions.where((x) => x.version == v).firstOrNull;
 
-  InstalledPlugin copyWith({String? name, String? version, String? sha512, DateTime? installedAt, InstalledInfo? info, List<InstalledVersion>? versions, Map<String, String>? accountVersions, StorePluginType? pluginType}) => InstalledPlugin(
+  InstalledPlugin copyWith({String? name, String? version, String? sha512, DateTime? installedAt, InstalledInfo? info, List<InstalledVersion>? versions, Map<String, String>? accountVersions, StorePluginType? pluginType, List<String>? requires}) => InstalledPlugin(
         id: id,
         name: name ?? this.name,
         version: version ?? this.version,
@@ -739,6 +743,7 @@ class InstalledPlugin {
         versions: versions ?? this.versions,
         accountVersions: accountVersions ?? this.accountVersions,
         pluginType: pluginType ?? this.pluginType,
+        requires: requires ?? this.requires,
       );
 
   Map<String, Object?> toJson() => {
@@ -751,6 +756,7 @@ class InstalledPlugin {
         if (versions.isNotEmpty) 'versions': [for (final v in versions) v.toJson()],
         if (accountVersions.isNotEmpty) 'accountVersions': accountVersions,
         if (pluginType != StorePluginType.other) 'pluginType': pluginType.wire,
+        if (requires.isNotEmpty) 'requires': requires,
       };
   factory InstalledPlugin.fromJson(Map<String, Object?> j) => InstalledPlugin(
         id: j['id'] as String,
@@ -762,6 +768,7 @@ class InstalledPlugin {
         versions: [for (final v in j['versions'] as List? ?? const []) if (v is Map) InstalledVersion.fromJson(v.cast<String, Object?>())],
         accountVersions: {for (final e in ((j['accountVersions'] as Map?) ?? const {}).entries) '${e.key}': '${e.value}'},
         pluginType: StorePluginType.fromWire(j['pluginType']),
+        requires: [for (final r in j['requires'] as List? ?? const []) if (r is String) r],
       );
 }
 

@@ -4,7 +4,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
-import '../../backend/orgate_client.dart' show OrgateException;
+import '../../backend/orgate_client.dart' show OrgateException, centralBaseUrlProvider;
 import '../../backend/rasq_account_page_api.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart' show EmbeddedComposer;
@@ -26,6 +26,11 @@ import 'swing_models.dart';
 ///   畳んだ形の間は、カラムに付いていれば D-397 の `FowStickPadding` がカラムごと縮め、全画面ならビューワーの面が寄る。
 ///
 /// スレッド = Central S-058 の Swing の根の投稿(`visibility = swing`、Swing を見られる人だけが読める / 返信 / キューできる)。
+///
+/// D-424: **返信への返信**もこの FOW の中で。スレッドの返信のタイルの「返信 N 件を見る」/ タイルを押すと、その返信のスレッド
+/// (上に返信そのもの、下にその返信への返信)へ**入り**、ヘッダーの ← で 1 つ戻る(何段でも)。タイルの「返信」ボタン / 下の返信の欄は、
+/// いま開いている返信への返信のコンポーザー(返信先のタイル = その返信)。返信への返信も Swing のスレッドの中なので、添付 / 投票 / 注釈を
+/// 付けられる(Central S-076 / S-079)。スレッドから書き始めたら、送る / やめるでスレッドへ戻る。
 class SwingBar {
   SwingBar._();
 
@@ -91,6 +96,24 @@ class SwingBarController extends ChangeNotifier {
   bool _disposed = false;
   double? _composeHeight;
 
+  /// 開いている返信のスレッド(根 → 深い順、D-424)。空 = Swing のスレッド。
+  final List<RasqAccountPost> _trail = [];
+
+  /// コンポーザーの返信先(null = Swing の根の投稿、D-424)。
+  RasqAccountPost? _replyTo;
+
+  /// コンポーザーを閉じたら戻る形(スレッドから書き始めたらスレッド、D-424)。
+  SwingBarMode _composeReturn = SwingBarMode.compact;
+
+  /// 開いている返信(null = Swing のスレッド)。
+  RasqAccountPost? get openReply => _trail.isEmpty ? null : _trail.last;
+
+  /// 入った深さ(0 = Swing のスレッド)。
+  int get depth => _trail.length;
+
+  /// コンポーザーの返信先(null = Swing の根の投稿)。
+  RasqAccountPost? get replyTo => _replyTo;
+
   /// コンポーザーの形の高さ(px、ハンドル込み)。コンポーザーが測るまでは [SwingBar.composeHeight] (D-421)。
   double get composeHeight => _composeHeight ?? SwingBar.composeHeight;
 
@@ -132,7 +155,12 @@ class SwingBarController extends ChangeNotifier {
     _video = video;
     _clock = clock;
     if (changed || !reply) _mode = SwingBarMode.compact;
-    if (changed) _composeHeight = null;
+    if (changed) {
+      _composeHeight = null;
+      _trail.clear();
+      _replyTo = null;
+      _composeReturn = SwingBarMode.compact;
+    }
     _notify();
   }
 
@@ -140,7 +168,52 @@ class SwingBarController extends ChangeNotifier {
     if (m == _mode) return;
     if (m != SwingBarMode.compact && !_reply) return;
     _mode = m;
+    // 畳んだら、入っていた返信のスレッドからも出る(次に広げると Swing のスレッド)。
+    if (m == SwingBarMode.compact) {
+      _trail.clear();
+      _replyTo = null;
+    }
+    if (m != SwingBarMode.compose) _replyTo = null;
     _notify();
+  }
+
+  /// 返信のスレッドへ入る (D-424)。スレッドの形にする。
+  void openReplies(RasqAccountPost post) {
+    if (!_reply) return;
+    if (openReply?.id == post.id) return;
+    _trail.add(post);
+    if (_mode != SwingBarMode.thread) _mode = SwingBarMode.thread;
+    _notify();
+  }
+
+  /// 1 つ戻る (D-424)。
+  void back() {
+    if (_trail.isEmpty) return;
+    _trail.removeLast();
+    _notify();
+  }
+
+  /// コンポーザーにする。[to] = 返信先の返信(null = Swing の根の投稿、D-424)。閉じたら、いまの形(スレッド / 畳んだ形)へ戻る。
+  void compose({RasqAccountPost? to}) {
+    if (!_reply) return;
+    if (_mode != SwingBarMode.compose) _composeReturn = _mode;
+    final changed = _replyTo?.id != to?.id;
+    _replyTo = to;
+    if (changed) _composeHeight = null;
+    if (_mode == SwingBarMode.compose) {
+      if (changed) _notify();
+      return;
+    }
+    _mode = SwingBarMode.compose;
+    _notify();
+  }
+
+  /// コンポーザーを閉じる(送った / やめた)。書き始めた形へ戻る。
+  void endCompose() {
+    final back = _composeReturn;
+    _composeReturn = SwingBarMode.compact;
+    setMode(back);
+    _replyTo = null;
   }
 
   void hold(String reason, bool v) => onHold?.call(reason, v);
@@ -200,9 +273,11 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
 
   String? get _postId => _c.swing?.postId;
 
+  /// Swing のスレッドと、開いている / 返信先の返信のスレッドを取り直す。
   void _refresh() {
-    final id = _postId;
-    if (id != null) ref.invalidate(rasqThreadProvider(id));
+    for (final id in {_postId, _c.openReply?.id, _c.replyTo?.id, for (final r in _c._trail) r.id}) {
+      if (id != null) ref.invalidate(rasqThreadProvider(id));
+    }
   }
 
   Future<void> _run(Future<RasqAccountPost> Function(RasqAccountPageApi api) f) async {
@@ -236,8 +311,8 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
     }
   }
 
-  /// コンポーザーの形へ(入力欄はコンポーザーが自分でフォーカスする)。
-  void _compose() => _c.setMode(SwingBarMode.compose);
+  /// コンポーザーの形へ(入力欄はコンポーザーが自分でフォーカスする)。スレッドで返信に入っていれば、その返信への返信。
+  void _compose() => _c.compose(to: _c.mode == SwingBarMode.thread ? _c.openReply : null);
 
   @override
   Widget build(BuildContext context) {
@@ -330,6 +405,9 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
     final post = thread?.post;
     final mine = post?.queues.where((q) => q.mine).firstOrNull;
     final replies = thread?.replies.length ?? s.replyCount;
+    // 返信のスレッドに入っていれば、その返信への返信 (D-424)。
+    final open = showCount ? null : _c.openReply;
+    final hint = open == null ? '返信を送る…' : '@${open.author?.handle ?? ''} に返信…';
     return Row(children: [
       Expanded(
         child: Material(
@@ -343,7 +421,7 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
               height: 40,
               alignment: Alignment.centerLeft,
               padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md),
-              child: Text('返信を送る…', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: Text(hint, key: const ValueKey('swing.reply.hint'), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
           ),
         ),
@@ -391,21 +469,23 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
 
   // ── 返信のコンポーザー ──
 
-  /// 投稿の返信のコンポーザーと同じ中身 (D-421)。返信先 = この Swing のスレッドの根の投稿。添付 / 投票も付けられる(Central S-076)。
+  /// 投稿の返信のコンポーザーと同じ中身 (D-421)。返信先 = この Swing のスレッドの根の投稿、または返信 (D-424)。
+  /// 添付 / 投票も付けられる(Central S-076: 返信先が Swing のスレッドの投稿なら、返信への返信も)。
   Widget _composer(Swing s) {
+    final to = _c.replyTo;
     final composer = EmbeddedComposer(
-      key: ValueKey('swing.bar.composer.${s.id}'),
-      target: ComposeReply(swingRootPost(s)),
-      targetPreview: SwingReplyTargetTile(key: const ValueKey('swing.bar.replyTile'), swing: s),
+      key: ValueKey('swing.bar.composer.${s.id}.${to?.id ?? 'root'}'),
+      target: ComposeReply(to == null ? swingRootPost(s) : to.toPost(central: ref.read(centralBaseUrlProvider))),
+      targetPreview: to == null ? SwingReplyTargetTile(key: const ValueKey('swing.bar.replyTile'), swing: s) : SwingReplyTargetPostTile(key: const ValueKey('swing.bar.replyTile'), post: to),
       rasqReplyAttachments: true,
       ownerId: SwingBar.fowId,
       hostSpec: widget.spec,
       onFitHeight: _c.setComposeContentHeight,
-      onClose: () => _c.setMode(SwingBarMode.compact),
+      onClose: _c.endCompose,
       onSent: (_) {
         _refresh();
-        // 送ったら畳んだ形へ戻る(Swing の大きさも戻る)。
-        _c.setMode(SwingBarMode.compact);
+        // 送ったら書き始めた形へ戻る(畳んだ形からなら Swing の大きさも戻る。スレッドからならスレッドで自分の返信が見える)。
+        _c.endCompose();
       },
     );
     // 高さのアニメーション(畳んだ形 → コンポーザー)の途中で低くても崩さない。木の形は変えない(コンポーザーを作り直さない)。
@@ -422,7 +502,8 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
 
   Widget _thread(Swing s) {
     final scheme = Theme.of(context).colorScheme;
-    final id = s.postId!;
+    // 返信のスレッドに入っていればその返信 (D-424)、いなければ Swing の根の投稿。
+    final id = _c.openReply?.id ?? s.postId!;
     final thread = ref.watch(rasqThreadProvider(id));
     final replies = thread.value?.replies ?? const <RasqAccountPost>[];
     final muted = RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant);
@@ -436,13 +517,28 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
 
   Widget _threadColumn(Swing s, AsyncValue<RasqThread> thread, List<RasqAccountPost> replies, TextStyle muted) {
     final scheme = Theme.of(context).colorScheme;
+    final open = _c.openReply;
+    final count = thread.value?.replies.length ?? open?.replyCount ?? s.replyCount;
+    // 入っている返信(取り直したものがあればそれ)。
+    final focus = open == null ? null : (thread.value?.post ?? open);
     return Column(key: const ValueKey('swing.thread'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.sm, 0),
+        padding: EdgeInsets.fromLTRB(open == null ? RasqSpacing.page : RasqSpacing.xs, 0, RasqSpacing.sm, 0),
         child: Row(children: [
-          Icon(Icons.forum_outlined, size: 18, color: scheme.onSurfaceVariant),
+          if (open == null)
+            Icon(Icons.forum_outlined, size: 18, color: scheme.onSurfaceVariant)
+          else
+            RasqIconButton(key: const ValueKey('swing.thread.back'), icon: Icons.arrow_back, tooltip: _c.depth > 1 ? '前の返信へ戻る' : 'Swing の返信へ戻る', onPressed: _c.back),
           const SizedBox(width: RasqSpacing.xs),
-          Text('返信 ${thread.value?.replies.length ?? s.replyCount}', key: const ValueKey('swing.thread.count'), style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+          Flexible(
+            child: Text(
+              open == null ? '返信 $count' : '@${open.author?.handle ?? ''} への返信 $count',
+              key: const ValueKey('swing.thread.count'),
+              style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           const Spacer(),
           RasqIconButton(key: const ValueKey('swing.thread.close'), icon: Icons.expand_more, tooltip: '返信をしまう', onPressed: () => _c.setMode(SwingBarMode.compact)),
         ]),
@@ -456,9 +552,29 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
             loading: () => const [Padding(padding: EdgeInsets.all(RasqSpacing.page), child: RasqLoading())],
             error: (e, _) => [Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('読み込めませんでした: ${e is OrgateException ? e.message : e}', style: muted))],
             data: (_) => [
+              // 入っている返信そのもの(主役)。その下に、その返信への返信 (D-424)。
+              if (focus != null) ...[
+                RasqPostTileView(key: ValueKey('swing.thread.focus.${focus.id}'), post: focus, focused: true, onChanged: _refresh, onReply: () => _c.compose(to: focus)),
+                Divider(height: 1, color: scheme.outlineVariant),
+              ],
               if (replies.isEmpty) Padding(key: const ValueKey('swing.thread.empty'), padding: const EdgeInsets.all(RasqSpacing.page), child: Text('返信はまだありません。', style: muted)),
               for (final r in replies) ...[
-                RasqPostTileView(key: ValueKey('swing.thread.reply.${r.id}'), post: r, onChanged: _refresh),
+                // タイルを押す / 「返信 N 件を見る」= その返信のスレッドへ。「返信」ボタン = その返信への返信(この FOW のコンポーザー)。
+                RasqPostTileView(key: ValueKey('swing.thread.reply.${r.id}'), post: r, onChanged: _refresh, onOpen: () => _c.openReplies(r), onReply: () => _c.compose(to: r)),
+                if (r.replyCount > 0)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: RasqSpacing.page + 36, bottom: RasqSpacing.xs),
+                      child: TextButton.icon(
+                        key: ValueKey('swing.thread.open.${r.id}'),
+                        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                        onPressed: () => _c.openReplies(r),
+                        icon: const Icon(Icons.subdirectory_arrow_right, size: 16),
+                        label: Text('返信 ${r.replyCount} 件を見る'),
+                      ),
+                    ),
+                  ),
                 Divider(height: 1, color: scheme.outlineVariant),
               ],
             ],
@@ -485,6 +601,43 @@ Post swingRootPost(Swing s) => Post(
       contentWarning: s.cw,
       visibility: 'swing',
     );
+
+/// 返信先のタイル (D-424): Swing のスレッドの返信へ返信するとき。返信した人と本文(添付 / 投票があればそのしるし)。
+class SwingReplyTargetPostTile extends StatelessWidget {
+  const SwingReplyTargetPostTile({super.key, required this.post});
+  final RasqAccountPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final p = post;
+    final who = p.author?.label ?? '';
+    final summary = p.body.trim().isNotEmpty ? p.body.trim() : (p.images.isNotEmpty ? '添付 ${p.images.length} 件' : (p.poll != null ? '投票' : ''));
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.all(RasqSpacing.sm),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(RasqSizes.radiusMd),
+        border: Border(left: BorderSide(color: RasqColors.link, width: 3)),
+      ),
+      child: Row(children: [
+        RasqAvatar(imageUrl: p.author?.avatarUrl, size: 32, fallbackLabel: who),
+        const SizedBox(width: RasqSpacing.sm),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text('$who の返信', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Row(children: [
+              Icon(Icons.reply, size: 14, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 4),
+              Expanded(child: Text(summary, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ]),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
 
 /// 返信先のタイル: 返信する Swing(作った人・中身の種類・添えた文 / 画像)。投稿の返信の「返信先」と同じ位置づけ。
 class SwingReplyTargetTile extends StatelessWidget {
