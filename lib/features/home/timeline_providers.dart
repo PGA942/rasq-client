@@ -3,7 +3,7 @@ import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../../backend/rasq_collections_api.dart';
-import '../nodeprog/tl_components.dart' show compileTlConfig, rasqListKindPrefix, rasqPostsKind;
+import '../nodeprog/tl_components.dart' show compileTlConfig, rasqListKindPrefix, rasqPostsKind, trendTodayScope;
 import '../nodeprog/tl_config_store.dart' show tlTemporaryConfigsProvider;
 import 'account_affinity.dart';
 import 'dart:async';
@@ -214,8 +214,9 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     return TimelineState(posts: page.items, cursor: page.nextCursor, customTiles: deco.tiles, badges: deco.badges);
   }
 
-  /// この TL のノードグラフのスコープ。トレンド / タグ TL (D-102) と Today(featured, D-113)は共通の `trend`。
-  String get _graphScope => kind.id.startsWith('tag:') || kind.id == 'featured' ? 'trend' : 'tl.${kind.id}';
+  /// この TL のノードグラフのスコープ。トレンド / タグ TL (D-102) は `trend`、Today(featured)は `trend.today`
+  /// (D-431。前は Today もトレンド TL と共通の `trend` だった)。
+  String get _graphScope => kind.id.startsWith('tag:') ? 'trend' : kind.id == 'featured' ? trendTodayScope : 'tl.${kind.id}';
 
   /// 一時変更 (D-338) の構成をコンパイルしたグラフ(raw JSON)。無ければ null。
   String? get _temporaryGraphRaw {
@@ -442,8 +443,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
     // ノードグラフ実行 (D-094): この TL のスコープ(tl.<id>)に
     // 「タイムライン取得 → 加工 → タイムライン」の完成した鎖があれば通す。
-    // トレンド/タグ TL (D-102) と Today(featured, D-113)は共通の `trend`
-    // スコープ。
+    // トレンド/タグ TL (D-102) は `trend`、Today(featured)は `trend.today`(D-431)。
     if (!kind.id.startsWith('custom:')) {
       final scope = _graphScope;
       Duration? clock;
@@ -530,9 +530,10 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       }
       _armClock(clock);
     }
-    // 指向性/刺激性の既定適用 (D-153): おすすめ(social)とトレンド(tag:)に、
-    // カスタム鎖の後でプロファイルを掛ける(プロファイルが効かなければ素通し)。
-    if (kind == TimelineKind.social || kind.id.startsWith('tag:')) {
+    // 指向性/刺激性の既定適用 (D-153): おすすめ(social)とトレンド(tag:)と Today(featured、D-431)に、
+    // カスタム鎖の後でプロファイルを掛ける(プロファイルが効かなければ素通し)。トレンド系のカスタマイズの画面では、
+    // アルゴリズムの一番最後の固定の項目として見せる([tendencyPinnedScopes])。
+    if (kind == TimelineKind.social || kind.id.startsWith('tag:') || kind.id == 'featured') {
       try {
         final profile = await ref.read(tendencyProfileProvider.future);
         if (profile.active) page = Page(items: applyTendencyProfile(page.items, profile), nextCursor: page.nextCursor);

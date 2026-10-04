@@ -62,7 +62,7 @@ void main() {
     expect(g.nodes.where((n) => n.type == 'timeline.relational'), hasLength(1));
   });
 
-  test('D-124: self/リスト/トレンドの既定構成とコンパイル(トレンド枠チェーン付き)', () {
+  test('D-124: self/リスト/トレンドの既定構成とコンパイル(トレンド枠の鎖は D-431 でトレンドタイルへ)', () {
     expect(defaultTlConfig('trend').sources.single.tl, 'self');
     expect(defaultTlConfig('trend.users').sources.single.tl, 'self');
     expect(defaultTlConfig('trend.following').sources.single.tl, 'home');
@@ -71,7 +71,7 @@ void main() {
     final g = compileTlConfig(defaultTlConfig('trend'), scope: 'trend');
     final src = g.nodes.firstWhere((n) => n.type == 'tl.source');
     expect(src.inputs.first.value, 'self'); // 基礎TLの自己参照
-    expect({for (final n in g.nodes) n.type}, containsAll(['trend.tags', 'trend.frame'])); // トレンド枠の既定チェーンも添える
+    expect({for (final n in g.nodes) n.type}, isNot(contains('trend.frame'))); // トレンド枠の鎖はトレンドタイル(trend.tiles)へ分けた (D-431)
   });
 
   test('コンパイル: リスト系 → tl.list、現在のトレンドTL → trend.posts (D-122)', () {

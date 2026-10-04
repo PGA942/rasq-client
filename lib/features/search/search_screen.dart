@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -9,6 +10,8 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../app/router.dart';
+import '../nodeprog/tl_components.dart' show trendTilesScope, trendTodayScope;
 import '../plugins/slot_plugins.dart';
 import '../../shell/rasq_shell.dart';
 import '../home/post_row.dart';
@@ -161,9 +164,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             alignment: Alignment.center,
             child: Container(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8), color: scheme.surfaceContainerHighest, child: Text('広告', style: TextStyle(fontSize: 28, color: scheme.onSurfaceVariant))),
           ),
-          // TL 系は全部同 UI (D-124): トレンドのカスタマイズ画面へ。
-          // トレンドプロファイル設定 (D-153): ジャンル / 指向性・刺激性 / プラグイン / キャッシュ / ノード編集。
-          RasqSectionHeader(title: 'トレンド', trailing: RasqIconButton(icon: Icons.settings, size: 20, onPressed: () => showTrendProfileSheet(context, ref), tooltip: 'トレンド設定')),
+          // トレンドプロファイル設定 (D-153、傾向 FOW): ジャンル / 指向性・刺激性 / プラグイン / キャッシュ / ノード編集。
+          // 歯車 = トレンドタイルのカスタマイズ (D-431、TL のカスタマイズと同じ画面。傾向は一番最後に固定で掛かる)。
+          RasqSectionHeader(
+            title: 'トレンド',
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              RasqIconButton(key: const ValueKey('trend.tendency'), icon: Icons.tune, size: 20, onPressed: () => showTrendProfileSheet(context, ref), tooltip: 'トレンド設定'),
+              RasqIconButton(key: const ValueKey('trend.customize'), icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig(trendTilesScope)), tooltip: 'トレンドタイルをカスタマイズ'),
+            ]),
+          ),
           ...trends.when(
             loading: () => const [RasqLoading()],
             error: (e, _) => [RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), compact: true, onRetry: () => ref.invalidate(trendFrameTagsProvider), retryLabel: '再読み込み')],
@@ -173,7 +182,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
           // トレンドプラグインのサジェスト (D-167、スロット `trend.suggest`)。
           _TrendSuggestions(recent: [for (final t in trends.value ?? const <TrendTag>[]) t.tag]),
-          const RasqSectionHeader(title: 'Today'),
+          // 歯車 = Today のカスタマイズ (D-431、前はトレンド TL と共通の構成だった)。
+          RasqSectionHeader(
+            title: 'Today',
+            trailing: RasqIconButton(key: const ValueKey('today.customize'), icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig(trendTodayScope)), tooltip: 'Today をカスタマイズ'),
+          ),
           ...today.when(
             loading: () => const [RasqLoading()],
             error: (e, _) => [RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), compact: true)],

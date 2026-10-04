@@ -182,8 +182,12 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
   if (scope == 'tl.bundle') {
     return TlConfig(sources: [for (final a in bundleAccounts) TlSourceComponent(tl: 'home', account: a)], algorithms: const [TlAlgorithmComponent(type: 'chrono')]);
   }
-  if (scope == 'trend' || scope == 'trend.users') {
+  if (scope == 'trend' || scope == 'trend.users' || scope == trendTodayScope) {
     return const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
+  }
+  // トレンドタイル (D-431): 取得元は RASQ アカウントのトレンド(固定)。並びは取得の順。自動更新は無い。
+  if (scope == trendTilesScope) {
+    return const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'chrono')], clock: '');
   }
   if (scope == 'tl.dm' || scope.startsWith('tl.dm:') || scope.startsWith('tl.chat:')) {
     // DM (D-127): メイン(tl.dm)= カスタム未設定の全 DM ページの共通設定、
@@ -381,13 +385,7 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
     nodes.add(inst('clock', 'c0', const Offset(24, -120), values: {'間隔': cfg.clock}));
     edges.add(const GraphEdge(from: 'c0', fromPort: 0, to: 's0', toPort: 0, toIcon: true));
   }
-  // トレンドスコープ (D-113/D-124): トレンド枠の既定チェーンも添える —
-  // グラフ編集(「グラフで編集」)でタグ一覧を置き換えられる口を残す。
-  if (scope == 'trend') {
-    nodes.add(inst('trend.tags', 'f0', const Offset(24, 640)));
-    nodes.add(inst('trend.frame', 'f1', const Offset(300, 660)));
-    edges.add(const GraphEdge(from: 'f0', fromPort: 0, to: 'f1', toPort: 0));
-  }
+  // トレンド枠(タグの一覧)の鎖は、トレンドタイルのスコープ([trendTilesScope])へ分けた (D-431)。前はここ(`trend`)に添えていた。
   return NodeGraph(nodes: nodes, edges: edges);
 }
 
@@ -697,4 +695,38 @@ NodeGraph compileComposerConfig(Map<String, ComposerAccountFilter> byAccount, Li
     }
   }
   return NodeGraph(nodes: nodes, edges: edges);
+}
+
+// ── トレンドの 3 つの構成 (D-431) ─────────────────────────────────
+
+/// トレンドタイル(検索ホームのトレンドのタグの並び)の構成のスコープ。前はトレンド TL と同じ `trend` のグラフに同居していた。
+const trendTilesScope = 'trend.tiles';
+
+/// Today(検索ホームのハイライト、featured)の構成のスコープ。前はトレンド TL と共通の `trend` だった。
+const trendTodayScope = 'trend.today';
+
+/// 傾向 FOW のプロファイル(指向性 / 刺激性)を**アルゴリズムの一番最後**に掛けるスコープ。カスタマイズの画面では
+/// 末尾に固定の項目(緑の枠と ℹ️)として見せ、外したり並べ替えたりはできない(傾向 FOW で変える)。
+const tendencyPinnedScopes = {'trend', 'trend.following', trendTodayScope, trendTilesScope};
+
+/// トレンドタイルで使えないアルゴリズムの理由(使えるなら null)。タイルは並ぶトレンドごとに掛け続けるので、ML モデル
+/// (GLiNER / SigLIP)や GPU を使いうる重いもの(サジェスト / 絞り込み / TL プラグイン)は使えない。
+String? trendTilesUnavailableReason(String type) => switch (type) {
+      'suggest' || 'filter' => 'ML モデルを使うので、トレンドタイルでは使えません',
+      _ when type.startsWith('plugin:') => '投稿の並べ替え(GPU を使うことも)なので、トレンドタイルでは使えません',
+      _ => null,
+    };
+
+/// トレンドタイルの構成をタグの並びに掛ける (D-431)。上から順に: 検索絞り込み = 語を含むタグだけ通す / 除外する
+/// (`#` と大文字小文字は無視。語が空なら何もしない)。時系列順 = 取得の順のまま。使えない(重い)アルゴリズムは飛ばす。
+List<T> applyTrendTilesConfig<T>(List<T> items, TlConfig cfg, String Function(T item) tagOf) {
+  String norm(String s) => s.trim().replaceFirst(RegExp(r'^[#＃]'), '').toLowerCase();
+  var out = items;
+  for (final a in cfg.algorithms) {
+    if (!a.enabled || trendTilesUnavailableReason(a.type) != null || !a.isQueryFilter) continue;
+    final q = norm(a.query);
+    if (q.isEmpty) continue;
+    out = [for (final t in out) if (norm(tagOf(t)).contains(q) != a.exclude) t];
+  }
+  return out;
 }

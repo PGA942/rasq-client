@@ -10,6 +10,7 @@ import '../home/timeline_providers.dart';
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
+import '../nodeprog/tl_components.dart';
 import '../relational/relational_engine.dart';
 import '../relational/relational_providers.dart';
 import '../settings/settings_dsl.dart';
@@ -134,16 +135,42 @@ final trendUsersProvider = FutureProvider.autoDispose.family<List<(UserProfile, 
   return ranked;
 });
 
-/// トレンド枠 (D-113): `trend` スコープに「→ トレンド枠」の鎖があれば、
-/// その出力(タグの配列)を一覧にする。無ければ SNS のトレンドのまま。
+/// トレンドタイルの並び (D-113 → D-431)。上から:
+/// 1. トレンドタイルの構成([trendTilesScope]、カスタマイズの画面で保存したもの)があれば、それをタグの並びに掛ける
+///    (軽いアルゴリズムだけ、[applyTrendTilesConfig])。無ければ、前の置き場(トレンド TL と同じ `trend` のグラフ)に
+///    「→ トレンド枠」の鎖があればその出力(ノードエディタで組んだもの)。どちらも無ければ SNS のトレンドのまま。
+/// 2. 傾向 FOW のプロファイル(指向性 / 刺激性)を**一番最後**に([applyTendencyToTags])。
 final trendFrameTagsProvider = FutureProvider.autoDispose<List<TrendTag>>((ref) async {
   final tags = await ref.watch(trendingTagsProvider.future);
-  final s = ref.watch(currentSnsSessionProvider);
-  if (s == null) return tags;
+  final accKey = ref.watch(currentAccountProvider)?.key;
+  var out = tags;
   try {
-    final accKey = ref.watch(currentAccountProvider)?.key;
+    final area = await ref.watch(settingsAreaProvider(nodeprogAreaFor(accKey, trendTilesScope)).future);
+    final raw = area['tlcfg'];
+    if (raw is String) {
+      out = applyTrendTilesConfig(tags, TlConfig.fromJson((jsonDecode(raw) as Map).cast<String, Object?>()), (t) => t.tag);
+    } else {
+      out = await _legacyTrendFrame(ref, accKey, tags) ?? tags;
+    }
+  } catch (e) {
+    debugPrint('trend tiles: $e');
+  }
+  try {
+    final profile = await ref.watch(tendencyProfileProvider.future);
+    out = applyTendencyToTags(out, (t) => t.tag, profile);
+  } catch (e) {
+    debugPrint('trend tiles tendency: $e');
+  }
+  return out;
+});
+
+/// 前の置き場(`trend` のグラフの「→ トレンド枠」の鎖)の出力。鎖が無ければ null。
+Future<List<TrendTag>?> _legacyTrendFrame(Ref ref, String? accKey, List<TrendTag> tags) async {
+  final s = ref.read(currentSnsSessionProvider);
+  if (s == null) return null;
+  try {
     final raw = await readNodeGraphRaw((a) => ref.read(settingsAreaProvider(a).future), accKey, 'trend');
-    if (raw is! String) return tags;
+    if (raw is! String) return null;
     final graph = NodeGraph.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
     final custom = await runNodeGraphTexts(
       graph,
@@ -156,14 +183,14 @@ final trendFrameTagsProvider = FutureProvider.autoDispose<List<TrendTag>>((ref) 
         return (await ref.read(settingsAreaProvider('storage.safe').future))[slot];
       },
     );
-    if (custom == null) return tags;
+    if (custom == null) return null;
     final byTag = {for (final t in tags) t.tag: t};
     return [for (final t in custom) byTag[t] ?? TrendTag(tag: t)];
   } catch (e) {
     debugPrint('nodeprog(trend.frame): $e');
-    return tags;
+    return null;
   }
-});
+}
 
 /// 「フォロー中の反応」(D-364): AsTell とリレーショナルタイムラインに**すでにある**もののうち、このワードの話題。
 /// - AsTell: フォロー中の人のルーム(タイトル / 要約 / ジャンルにワード)。
