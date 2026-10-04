@@ -38,8 +38,9 @@ void main() {
     await tester.pumpWidget(app(extraStorage: {hostClipsStorageKey: jsonEncode([host.toJson()])}));
     await tester.pumpAndSettle();
 
-    // サイドバー → リスト。公開クリップだけが出る(非公開は既定非表示)。
-    await tester.tap(find.bySemanticsLabel('サイドバーを開く'));
+    // サイドバー → リスト。公開クリップだけが出る(非公開は既定非表示)。幅の広い画面ではレールの下端のアイコン (D-429)。
+    final rail = find.byKey(const ValueKey('rail.avatar'));
+    await tester.tap(rail.evaluate().isNotEmpty ? rail : find.bySemanticsLabel('サイドバーを開く'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('リスト'));
     await tester.pumpAndSettle();
