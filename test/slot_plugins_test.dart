@@ -149,10 +149,11 @@ void main() {
     await tester.tap(find.textContaining('参加中: '));
     await tester.pumpAndSettle();
     expect(find.byType(AstellRoomBody), findsOneWidget);
-    // 下段の、プラグインが宣言したボタン(字幕の手前 = 狭幅では歯車のメニューの先頭、D-324 / D-328)を押す。
-    await tester.tap(find.byTooltip('設定'));
+    // 下段の、プラグインが宣言したボタン(字幕の手前 = 狭幅では横にスライドする列の奥、D-324 / D-328 → D-428)を押す。
+    final button = find.descendant(of: find.byKey(astellFooterScrollKey), matching: find.byTooltip('効果音パネル'));
+    await tester.scrollUntilVisible(button, 48, scrollable: find.descendant(of: find.byKey(astellFooterScrollKey), matching: find.byType(Scrollable)));
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(of: find.byKey(astellOverflowKey), matching: find.byTooltip('効果音パネル')));
+    await tester.tap(button);
     await tester.pumpAndSettle();
     final open = rt.calls.where((x) => x.$1 == 'astell.open').single;
     expect(open.$2['action'], 'fx', reason: '宣言の id が action に載る');

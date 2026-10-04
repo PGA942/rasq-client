@@ -68,7 +68,7 @@ void main() {
     });
   });
 
-  group('幅に収まらないとき (D-324)', () {
+  group('幅に収まらないとき (D-324 → D-428)', () {
     test('入る数: 360px は 3 つ(これまでの「2 つ + 字幕」)、広い画面は全部、stick は 3 つまで', () {
       const reserved = 8 * 2 + 8 * 2 + 44 * 2 + 4.0;
       expect(astellBarSlots(360, reserved: reserved, compact: false), 3);
@@ -77,15 +77,16 @@ void main() {
       expect(astellBarSlots(120, reserved: reserved, compact: false), 1);
     });
 
-    test('先頭から入るだけ + 並びの最後の 1 つ(入力欄の隣)を出し、残りは歯車のメニューへ', () {
+    test('入りきらなければ並びの最後の 1 つ(入力欄の隣)を固定し、残りは横にスライドする列へ (D-428)', () {
       final items = resolve(const ActionBarConfig());
-      final three = splitAstellBar(items, 3);
-      expect(keys(three.shown), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.captions]);
-      expect(keys(three.overflow), [AstellBarIds.screen, AstellBarIds.fullscreen]);
-      final all = splitAstellBar(items, 5);
-      expect(all.shown.length, 5);
-      expect(all.overflow, isEmpty);
-      expect(keys(splitAstellBar(items, 1).shown), [AstellBarIds.captions]);
+      final three = layoutAstellBar(items, 3);
+      expect(keys(three.scroll), [AstellBarIds.speaker, AstellBarIds.mic, AstellBarIds.screen, AstellBarIds.fullscreen]);
+      expect(keys(three.fixed), [AstellBarIds.captions]);
+      expect(three.scrollWidth, 44 * 2 + 4, reason: '列の幅は 2 個分(残りはスライド)');
+      final all = layoutAstellBar(items, 5);
+      expect(all.fixed.length, 5);
+      expect(all.scroll, isEmpty);
+      expect(layoutAstellBar(items, 1).scrollWidth, 44, reason: '入る数が 1 つでも、列は 1 個分');
     });
   });
 
@@ -235,27 +236,25 @@ void main() {
     await openRoom(tester, c);
 
     final bar = find.byKey(astellFooterActionsKey);
-    // 360px は 3 つ: 先頭 2 つ(字幕 / 効果音)+ 並びの最後(並びに無い全画面が後ろに足されるので、共有枠に画面がある今は全画面)。
-    expect(find.descendant(of: bar, matching: find.byTooltip('字幕オフ')), findsOneWidget);
-    expect(find.descendant(of: bar, matching: find.byTooltip('効果音')), findsOneWidget);
+    // 360px は 3 つ分の幅: 並びの最後(並びに無い全画面が後ろに足されるので、共有枠に画面がある今は全画面)は入力欄の隣に固定、
+    // 残り(字幕 / 効果音 / マイク / 画面共有)は横にスライドする列 (D-428)。
+    final scroll = find.byKey(astellFooterScrollKey);
     expect(find.descendant(of: bar, matching: find.byTooltip('全画面')), findsOneWidget);
+    expect(find.descendant(of: scroll, matching: find.byTooltip('全画面')), findsNothing, reason: '最後の 1 つは固定');
+    expect(find.descendant(of: scroll, matching: find.byTooltip('字幕オフ')), findsOneWidget);
+    expect(find.descendant(of: scroll, matching: find.byTooltip('効果音')), findsOneWidget);
     expect(find.byTooltip('スピーカーミュート'), findsNothing);
-    expect(find.byTooltip('マイクオン'), findsNothing);
-    final xs = [for (final t in ['字幕オフ', '効果音', '全画面']) tester.getCenter(find.descendant(of: bar, matching: find.byTooltip(t))).dx];
+    final xs = [for (final t in ['字幕オフ', '効果音']) tester.getCenter(find.descendant(of: scroll, matching: find.byTooltip(t))).dx];
     expect(xs, orderedEquals([...xs]..sort()));
-    expect(find.byKey(astellOverflowDotKey), findsOneWidget);
-
-    // 歯車 → 入りきらないボタン(マイク / 画面共有)。押すとメニューを閉じてから動く。
-    await tester.tap(find.byTooltip('設定'));
+    expect(tester.getCenter(find.descendant(of: bar, matching: find.byTooltip('全画面'))).dx, greaterThan(xs.last));
+    // 列の外のボタン(マイク / 画面共有)は、スライドすると出てきて押せる。
+    await tester.scrollUntilVisible(find.byTooltip('マイクオン'), 48, scrollable: find.descendant(of: scroll, matching: find.byType(Scrollable)));
     await tester.pumpAndSettle();
-    final overflow = find.byKey(astellOverflowKey);
-    expect(find.descendant(of: overflow, matching: find.byTooltip('マイクオン')), findsOneWidget);
-    expect(find.descendant(of: overflow, matching: find.byTooltip('画面共有')), findsOneWidget);
-    expect(find.descendant(of: overflow, matching: find.byTooltip('スピーカーミュート')), findsNothing);
-    await tester.tap(find.descendant(of: overflow, matching: find.byTooltip('マイクオン')));
+    await tester.tap(find.descendant(of: scroll, matching: find.byTooltip('マイクオン')));
     await tester.pumpAndSettle();
     expect(c.read(astellSessionProvider)!.micOn, isTrue);
-    expect(find.text('VC の設定'), findsNothing);
+    await tester.drag(find.descendant(of: scroll, matching: find.byType(Scrollable)), const Offset(400, 0));
+    await tester.pumpAndSettle();
 
     // プラグインのボタン → 選ぶシートを挟まずにそのプラグインの astell.open。
     await tester.tap(find.descendant(of: bar, matching: find.byTooltip('効果音')));

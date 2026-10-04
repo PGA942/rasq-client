@@ -11,6 +11,21 @@ import 'third_column.dart';
 /// ヘッダー4種 (原典: UI_Elements「ヘッダー（4種）」). All expose the same
 /// 56dp height so content offsets are stable across tabs.
 
+/// 幅の広い画面(左にナビゲーションのレールがある)か (D-429)。レールがあれば、ホーム / 通知(DM)/ 検索のヘッダーの左のアイコン
+/// (アカウント、押すとサイドバー)はレールの下端へ移る(スマホのフッターメニューに当たる所)。
+class RasqRailScope extends InheritedWidget {
+  const RasqRailScope({super.key, required super.child});
+
+  static bool of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<RasqRailScope>() != null;
+
+  @override
+  bool updateShouldNotify(RasqRailScope oldWidget) => false;
+}
+
+/// ヘッダーの左のアイコン。レールの中では [RasqHeaderAvatarButton] をそのまま使う。
+Widget _leadingAvatar(BuildContext context, UserSummary me, VoidCallback? onTap) =>
+    RasqRailScope.of(context) ? const SizedBox(width: RasqSpacing.xs) : RasqHeaderAvatarButton(me: me, onTap: onTap);
+
 /// ホームヘッダー: avatar (opens sidebar) + VC widget + trailing chevron.
 class RasqHomeHeader extends StatelessWidget implements PreferredSizeWidget {
   const RasqHomeHeader({super.key, required this.me, this.onAvatarTap, this.vcWidget, this.onTrailingTap, this.trailingIcon = Icons.keyboard_arrow_down, this.trailingTooltip = 'タイムライン切り替え', this.trailingKey});
@@ -30,7 +45,7 @@ class RasqHomeHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) => _HeaderBar(
-        leading: _AvatarButton(me: me, onTap: onAvatarTap),
+        leading: _leadingAvatar(context, me, onAvatarTap),
         middle: vcWidget ?? const SizedBox.shrink(),
         middleAlignment: Alignment.centerLeft,
         trailing: RasqIconButton(key: trailingKey, icon: trailingIcon, onPressed: onTrailingTap, tooltip: trailingTooltip),
@@ -58,7 +73,7 @@ class RasqFloatingHomeHeader extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
           child: Row(children: [
-            float(Tooltip(message: 'ヘッダーを戻す', child: _AvatarButton(key: const ValueKey('home.header.expand'), me: me, onTap: onExpand, semanticsLabel: 'ヘッダーを戻す'))),
+            float(Tooltip(message: 'ヘッダーを戻す', child: RasqHeaderAvatarButton(key: const ValueKey('home.header.expand'), me: me, onTap: onExpand, semanticsLabel: 'ヘッダーを戻す'))),
             const SizedBox(width: RasqSpacing.sm),
             Expanded(child: Align(alignment: Alignment.centerLeft, child: arrivals ?? const SizedBox.shrink())),
           ]),
@@ -85,7 +100,7 @@ class RasqNotificationHeader extends StatelessWidget implements PreferredSizeWid
 
   @override
   Widget build(BuildContext context) => _HeaderBar(
-        leading: _AvatarButton(me: me, onTap: onAvatarTap),
+        leading: _leadingAvatar(context, me, onAvatarTap),
         middle: title == null ? const SizedBox.shrink() : Text(title!, style: RasqTypography.title),
         trailing: trailing ?? RasqIconButton(icon: Icons.keyboard_arrow_up, onPressed: onTrailingTap, tooltip: '先頭へ'),
       );
@@ -111,7 +126,7 @@ class RasqSearchHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) => _HeaderBar(
-        leading: _AvatarButton(me: me, onTap: onAvatarTap),
+        leading: _leadingAvatar(context, me, onAvatarTap),
         middle: RasqSearchBar(controller: controller, focusNode: focusNode, hintText: hintText, onSubmitted: onSubmitted, onDropdownTap: onDropdownTap, onTap: onSearchTap, readOnly: readOnly),
         middlePadding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
         trailing: trailing ?? const SizedBox(width: RasqSpacing.sm),
@@ -194,8 +209,9 @@ class RasqPageHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-class _AvatarButton extends StatelessWidget {
-  const _AvatarButton({super.key, required this.me, this.onTap, this.semanticsLabel = 'サイドバーを開く'});
+/// ヘッダーの左のアカウントのアイコン(押すとサイドバー)。幅の広い画面ではナビゲーションのレールの下端にも (D-429)。
+class RasqHeaderAvatarButton extends StatelessWidget {
+  const RasqHeaderAvatarButton({super.key, required this.me, this.onTap, this.semanticsLabel = 'サイドバーを開く'});
   final UserSummary me;
   final VoidCallback? onTap;
   final String semanticsLabel;

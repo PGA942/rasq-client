@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -7,6 +8,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../home/create_fow.dart' show RadialCreateFab;
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../../shell/third_column.dart' show paneBack;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
@@ -160,10 +162,10 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                 },
               ),
             ),
-            // トレンドもタイムラインと同じ (D-090/D-103): RAi は TL のタブ行
-            // では隠し、ノード設定だけ置く。
-            // TL 系は全部同 UI (D-124): 簡略版カスタマイズ画面へ。
-            RasqIconButton(icon: Icons.settings, size: 20, tooltip: 'トレンド設定', onPressed: () => showTrendProfileSheet(context, ref)),
+            // トレンドもタイムラインと同じ (D-090/D-103): RAi は TL のタブ行では隠し、設定だけ置く。
+            // 傾向 FOW(指向性 / 刺激性、D-153)と、歯車 = トレンド TL のカスタマイズ (D-124 → D-431、TL と同じ画面)。
+            RasqIconButton(key: const ValueKey('trend.tendency'), icon: Icons.tune, size: 20, tooltip: 'トレンド設定', onPressed: () => showTrendProfileSheet(context, ref)),
+            RasqIconButton(key: const ValueKey('trend.customize'), icon: Icons.settings, size: 20, tooltip: 'トレンド TL をカスタマイズ', onPressed: () => context.push(Routes.tlConfig('trend'))),
           ]),
           Expanded(
             child: TabBarView(children: [

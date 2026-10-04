@@ -72,11 +72,8 @@ void main() {
 
   testWidgets('簡略カスタマイズ UI (D-157): 「アクションからジャンルを選択」の部品オプションと、指向性/刺激性の部品のオプション', (tester) async {
     await pump(tester);
-    await tester.tap(find.byTooltip('検索'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('トレンド設定'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('アルゴリズム(ノード)を編集'));
+    // トレンド系のスコープでは傾向は一番最後に固定で掛かり、パレットからは足さない (D-431)。部品はホームなどの TL で使う。
+    await tester.tap(find.byTooltip('タイムライン設定'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('アルゴリズムを追加'));
     await tester.pumpAndSettle();

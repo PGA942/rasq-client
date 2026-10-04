@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
@@ -113,6 +114,12 @@ void main() {
     expect(inCol3(find.byKey(const ValueKey('trend.tile.月見'))), findsNothing);
     // 両方のアカウントのトレンドなら、いまのアカウントの印が先。
     expect(find.descendant(of: inCol3(find.byKey(const ValueKey('trend.server.#花火'))), matching: find.text('example.test')), findsOneWidget);
+    // サーバーの印と「…」は右に詰める (D-430): 「…」はタイルの右端(余白だけ内側)、印はそのすぐ左。
+    final tile = tester.getRect(inCol3(find.byKey(const ValueKey('trend.tile.#花火'))));
+    final more = tester.getRect(inCol3(find.byKey(const ValueKey('trend.more.#花火'))));
+    final badge = tester.getRect(inCol3(find.byKey(const ValueKey('trend.server.#花火'))));
+    expect(tile.right - more.right, lessThanOrEqualTo(RasqSpacing.page + 1));
+    expect(more.left - badge.right, lessThan(12));
     // 入力中の語は、アカウントを切り替えると残らない。
     await tester.enterText(inCol3(find.byType(TextField)).first, '書きかけ');
     await tester.pump();

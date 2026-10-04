@@ -433,11 +433,8 @@ const astellRoomCompactKey = Key('astell.room.compact');
 const astellStickPagerKey = Key('astell.room.stick.pager');
 const astellFooterActionsKey = Key('astell.footer.actions');
 
-/// 歯車のメニューの先頭の「下段に入りきらないボタン」(D-324)。
-const astellOverflowKey = Key('astell.footer.overflow');
-
-/// はみ出したボタンがあるときの歯車の点 (D-324)。
-const astellOverflowDotKey = Key('astell.footer.overflow.dot');
+/// 下段の左端の、横にスライドするボタンの列(幅に入りきらないとき、D-428)。
+const astellFooterScrollKey = Key('astell.footer.scroll');
 const astellStickScreenKey = Key('astell.stick.screen');
 const astellRoomHeaderKey = Key('astell.room.header');
 
@@ -779,7 +776,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
         itemBuilder: _barItemWidget,
         onSendText: _sendText,
         onPickFile: _pickAndShare,
-        onSettings: (overflow) => _openSettings(context, s, isOwner, overflow: overflow),
+        onSettings: () => _openSettings(context, s, isOwner),
         onExpand: _expand,
         onLeave: leave,
         onOpenShare: (share) => _openShare(context, share),
@@ -1017,9 +1014,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   }
 
   /// 歯車 (D-146): 共有欄の自動表示(メディアタイプ別)と読み上げ音声。
-  /// 先頭に、下段の幅に入りきらないボタン([overflow] のキー、D-324)と「下段のボタンの並びを編集」。
-  Future<void> _openSettings(BuildContext context, AstellSessionState s, bool isOwner, {List<AstellBarItem> overflow = const []}) async {
-    final overflowKeys = {for (final i in overflow) i.key};
+  /// 先頭に「下段のボタンの並びを編集」(入りきらないボタンは下段で横にスライドする、D-428)。
+  Future<void> _openSettings(BuildContext context, AstellSessionState s, bool isOwner) async {
     final manager = ref.read(overlayManagerProvider);
     final voices = await ref.read(astellClientProvider).ttsVoices();
     if (!context.mounted) return;
@@ -1029,47 +1025,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       builder: (ctx) => Consumer(builder: (ctx, ref, _) {
         final auto = ref.watch(astellAutoShareProvider);
         final room = ref.watch(astellSessionProvider)?.room ?? s.room;
-        final scheme = Theme.of(ctx).colorScheme;
-        // 下段に入りきらないボタン (D-324): バンドルは中身を並べる。押すとメニューを閉じてから動かす。
-        final hidden = [
-          // 動き(画面の選択 / プラグインの FOW)はルームの context で(このシートは押すと閉じる)。
-          for (final i in _barItems(context, ref, ref.watch(astellSessionProvider) ?? s))
-            if (overflowKeys.contains(i.key))
-              ...switch (i) {
-                AstellBarSingle(:final id, :final button) => [(id: id, button: button)],
-                AstellBarBundle(:final members) => [for (final m in members) (id: m.action.id, button: m.button)],
-              },
-        ];
         return ListView(shrinkWrap: true, children: [
-          if (hidden.isNotEmpty) ...[
-            _label(ctx, '下段に入りきらないボタン'),
-            Padding(
-              key: astellOverflowKey,
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
-              child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.sm, children: [
-                for (final h in hidden)
-                  SizedBox(
-                    width: 76,
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      _RoundButton(
-                        key: ValueKey('astell.bar.overflow.${h.id}'),
-                        icon: h.button.icon,
-                        tooltip: h.button.tooltip,
-                        filled: h.button.filled,
-                        onPressed: h.button.onPressed == null
-                            ? null
-                            : () {
-                                ref.read(overlayManagerProvider).close('astell.room.settings');
-                                h.button.onPressed!();
-                              },
-                      ),
-                      const SizedBox(height: 2),
-                      Text(h.button.tooltip, style: RasqTypography.caption.copyWith(fontSize: 10, color: scheme.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
-                    ]),
-                  ),
-              ]),
-            ),
-          ],
           RasqListTile(
             key: const ValueKey('astell.bar.edit'),
             title: '下段のボタンの並びを編集',
@@ -1548,8 +1504,8 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
 /// 下段バー (D-148、ユーザー指定の構造 → D-324):
 /// `[入力欄の左の丸いボタン] [中央] [共有する/送信完了する] [設定]`
 /// - 左端: 設定の並び(既定 = スピーカーミュート / マイクミュート / 画面共有 / (全画面: 共有枠にピアの画面がある時) /
-///   プラグインが宣言したボタン / 字幕、D-324 → D-328)。**幅に収まる数だけ**並べ、はみ出したら先頭から入るだけと**並びの最後の 1 つ**
-///   (入力欄の隣。既定では字幕)を出し、残りは歯車のメニューの先頭へ(歯車に点)。stick は 3 つまで。
+///   プラグインが宣言したボタン / 字幕、D-324 → D-328)。**幅に収まらなければ横にスライドする列**に入れ、**並びの最後の 1 つ**
+///   (入力欄の隣。既定では字幕)は固定で出す(D-428。前は歯車のメニューへ逃がしていた)。stick は 3 つ分の幅。
 /// - stick で共有枠にピアの画面がある時は、左端(並びの最後の 1 つ以外)が**映像そのもの**に置き換わり、
 ///   タップでそのまま全画面。
 /// - 字幕: 有効時は右側(中央)に字幕、無効時は「共有する」(stick では画面共有以外のピン留めのタイル)。
@@ -1585,8 +1541,8 @@ class _Footer extends StatelessWidget {
   final Widget Function(AstellBarItem item) itemBuilder;
   final VoidCallback onSendText, onPickFile, onExpand, onLeave;
 
-  /// 歯車。はみ出したボタンを先頭に出す。
-  final void Function(List<AstellBarItem> overflow) onSettings;
+  /// 歯車。
+  final VoidCallback onSettings;
 
   /// 共有枠のピアの画面を全画面に(共有枠が空なら null)。
   final VoidCallback? onFullscreen;
@@ -1606,7 +1562,7 @@ class _Footer extends StatelessWidget {
 
     return LayoutBuilder(builder: (context, constraints) {
       final width = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
-      final split = splitAstellBar(items, astellBarSlots(width, reserved: reserved, compact: compact));
+      final bar = layoutAstellBar(items, astellBarSlots(width, reserved: reserved, compact: compact));
 
       // ── 左端 ──
       Widget row(List<Widget> children) => Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1620,7 +1576,25 @@ class _Footer extends StatelessWidget {
           if (items.isNotEmpty) itemBuilder(items.last),
         ]);
       } else {
-        left = SizedBox(key: astellFooterActionsKey, height: _button, child: row([for (final i in split.shown) itemBuilder(i)]));
+        // 入りきらなければ、並びの最後の 1 つ以外を横にスライドする列に (D-428)。
+        left = SizedBox(
+          key: astellFooterActionsKey,
+          height: _button,
+          child: row([
+            if (bar.scroll.isNotEmpty)
+              SizedBox(
+                width: bar.scrollWidth,
+                child: ListView.separated(
+                  key: astellFooterScrollKey,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: bar.scroll.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: _gap),
+                  itemBuilder: (_, i) => itemBuilder(bar.scroll[i]),
+                ),
+              ),
+            for (final i in bar.fixed) itemBuilder(i),
+          ]),
+        );
       }
 
       // ── 中央 ──
@@ -1660,16 +1634,7 @@ class _Footer extends StatelessWidget {
           else ...[
             _RoundButton(icon: drafting ? Icons.send : Icons.upload, tooltip: drafting ? '送信完了する' : '共有する', filled: scheme.onSurface, onPressed: drafting ? onSendText : onPickFile),
             const SizedBox(width: _gap),
-            // はみ出したボタンがあれば歯車に点(押すと先頭に出る)。
-            Stack(clipBehavior: Clip.none, children: [
-              _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: () => onSettings(split.overflow)),
-              if (split.overflow.isNotEmpty)
-                Positioned(
-                  right: 2,
-                  top: 2,
-                  child: IgnorePointer(child: Container(key: astellOverflowDotKey, width: 9, height: 9, decoration: BoxDecoration(color: RasqColors.accent, shape: BoxShape.circle, border: Border.all(color: scheme.surface, width: 1.5)))),
-                ),
-            ]),
+            _RoundButton(icon: Icons.settings, tooltip: '設定', onPressed: onSettings),
           ],
         ]),
       );

@@ -15,6 +15,7 @@ import '../features/onboarding/rasq_account_nudge.dart' show RasqAccountNudgeLis
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'column_layout.dart';
 import 'column_takeover.dart';
+import 'headers.dart';
 import 'nav.dart';
 import 'pane_swipe_back.dart';
 import 'sidebar.dart';
@@ -143,7 +144,7 @@ class _TabletLayout extends ConsumerWidget {
       body: LayoutBuilder(builder: (context, constraints) {
         final split = splitColumns(constraints.maxWidth - 72, layout);
         final col2Width = occupied ? split.small : split.large;
-        return Row(children: [
+        return RasqRailScope(child: Row(children: [
           // Sidebar rail (何も開いてない時はサイドバー).
           Container(
             width: 72,
@@ -159,6 +160,14 @@ class _TabletLayout extends ConsumerWidget {
                     icon: _greyed(_tabBlocked(ref, t) != null, _navIcon(t, selected: false)),
                     selectedIcon: _navIcon(t, selected: true),
                   ),
+                // ホーム / 通知のヘッダーの左のアイコンは、幅の広い画面ではここ(フッターメニューに当たる所)へ (D-429)。
+                const Spacer(),
+                RasqHeaderAvatarButton(
+                  key: const ValueKey('rail.avatar'),
+                  me: ref.watch(bundleViewProvider) ? ref.watch(rasqAccountProvider) : ref.watch(currentUserProvider),
+                  onTap: () => RasqShell.openSidebar(context, ref),
+                ),
+                const SizedBox(height: RasqSpacing.md),
               ]),
             ),
           ),
@@ -202,7 +211,7 @@ class _TabletLayout extends ConsumerWidget {
               child: SafeArea(child: FowStickPadding(manager: ref.watch(overlayManagerProvider), column: 1, child: const ColumnTakeoverHost(column: 1, child: ThirdColumnView()))),
             ),
           ),
-        ]);
+        ]));
       }),
     );
   }

@@ -311,6 +311,22 @@ Future<void> saveTendencyProfileFrom(WidgetRef ref, TendencyProfile profile) asy
   ref.invalidate(tendencyProfileProvider);
 }
 
+/// トレンドタイル(タグの並び)への適用 (D-431): 好きではないジャンルに当たるタグを除き、残りは指向性の高い順(安定)。
+/// タグは短い語なので、指向性のしきい値では落とさない(落とすと、好きなジャンルの語そのもの以外が全部消える)。
+List<T> applyTendencyToTags<T>(List<T> items, String Function(T item) tagOf, TendencyProfile? profile) {
+  if (profile == null || !profile.active) return items;
+  const nobody = AccountId(kind: SnsKind.other, instance: '', handle: '');
+  Post asPost(String tag) => Post(id: tag, account: nobody, author: const UserSummary(id: '', account: nobody, displayName: ''), createdAt: DateTime(2000), body: tag);
+  final scored = <(int, T, double)>[];
+  for (final (i, t) in items.indexed) {
+    final p = asPost(tagOf(t));
+    if (tendencyScorer.isDisliked(p, profile)) continue;
+    scored.add((i, t, tendencyScorer.directionOf(p, profile)));
+  }
+  scored.sort((a, b) => b.$3 != a.$3 ? b.$3.compareTo(a.$3) : a.$1.compareTo(b.$1));
+  return [for (final s in scored) s.$2];
+}
+
 /// TL への既定適用 (D-153): おすすめ(social)/ トレンド(tag:)/ 関連の入力に掛ける。
 /// プロファイルが効かない設定なら素通し。
 List<Post> applyTendencyProfile(List<Post> posts, TendencyProfile? profile) => profile == null ? posts : tendencyScorer.apply(posts, profile);

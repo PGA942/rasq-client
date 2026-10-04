@@ -256,9 +256,15 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   List<(String, String, bool)> _tabs() {
     // DM (D-127): 共通(tl.dm)と各ページ(tl.dm:<peer>)は単独タブ。
     if (_isDmScope) return [(_scope, _scope == 'tl.dm' ? 'DM(共通)' : 'このDM', false)];
-    // トレンドのエディタは ノート/フォロー中/ユーザー (D-107/D-124)。
+    // トレンドのエディタ (D-107/D-124 → D-431): トレンドタイル / トレンド TL(ノート)/ フォロー中 / ユーザー / Today。
     if (_scope.startsWith('trend')) {
-      return const [('trend', 'ノート', false), ('trend.following', 'フォロー中', false), ('trend.users', 'ユーザー', false)];
+      return const [
+        (trendTilesScope, 'トレンドタイル', false),
+        ('trend', 'トレンド TL', false),
+        ('trend.following', 'フォロー中', false),
+        ('trend.users', 'ユーザー', false),
+        (trendTodayScope, 'Today', false),
+      ];
     }
     final order = ref.watch(tlTabOrderProvider);
     final nodeTabs = ref.watch(nodeTabsProvider);
@@ -498,11 +504,15 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
             spec: spec,
             algorithms: algorithms,
             dmOnly: _isDmScope,
+            // トレンドタイル (D-431): 重い(ML モデル / GPU)アルゴリズムは灰色にして理由を出す。
+            unavailable: _scope == trendTilesScope ? trendTilesUnavailableReason : null,
+            // 傾向が一番最後に固定で掛かるスコープ (D-431) では、指向性/刺激性は足さない(傾向 FOW で変える)。
+            hideTendency: tendencyPinnedScopes.contains(_scope),
             onAddAlgorithm: (a) {
               manager.close(tlConfigPaletteFowId);
               _update(_cfg.copyWith(algorithms: [..._cfg.algorithms, a]));
             },
-            onPickGenres: () {
+            onPickGenres: tendencyPinnedScopes.contains(_scope) ? null : () {
               manager.close(tlConfigPaletteFowId);
               if (!_cfg.algorithms.any((a) => a.isTendency)) _update(_cfg.copyWith(algorithms: [..._cfg.algorithms, const TlAlgorithmComponent(type: 'tendency')]));
               _tendencyAction('pick');
@@ -804,7 +814,27 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: 'アルゴリズムの並べ替え', onPressed: () => _openReorder(algorithms: true)),
       ),
       for (var i = 0; i < _cfg.algorithms.length; i++) _componentTile(algorithm: true, i: i),
+      // 傾向 FOW の指向性/刺激性 (D-431): いつも一番最後(並べ替え / 削除はできない)。
+      if (tendencyPinnedScopes.contains(_scope)) _PinnedTendencyTile(onOpen: () => _tendencyAction('tendency')),
       _addTile('アルゴリズムを追加', () => _openPalette(algorithms: true)),
+      // トレンドタイル (D-431): 取得元は RASQ アカウントのトレンドで固定。自動更新は無い(検索ホームを開く / 引き下げで読む)。
+      if (_scope == trendTilesScope) ...[
+        const RasqSectionHeader(title: '取得元'),
+        const RasqPluginTile(
+          key: ValueKey('tlconfig.tiles.source'),
+          icon: Icons.trending_up,
+          title: 'RASQ アカウントのトレンド',
+          subtitle: '固定',
+          description: 'RASQ アカウントにまとめた SNS アカウントのトレンドを集めた並びです',
+          chevron: false,
+        ),
+      ] else ..._sourceComponents(),
+    ];
+  }
+
+  /// SNS タイムライン(取得元)と自動更新の部品(トレンドタイル以外)。
+  List<Widget> _sourceComponents() {
+    return [
       RasqSectionHeader(
         title: 'SNSタイムライン',
         trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: 'タイムラインの並べ替え', onPressed: () => _openReorder(algorithms: false)),
@@ -870,12 +900,60 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   }
 }
 
+/// 傾向 FOW の指向性/刺激性 (D-431): トレンド系のアルゴリズムの**一番最後**に固定で掛かる項目。緑の枠と ℹ️ で、ほかの部品と
+/// 見分ける。並べ替え / 削除はできず、押すと傾向 FOW(プロファイルの編集)。プロファイルが何も効かない設定なら出さない。
+class _PinnedTendencyTile extends ConsumerWidget {
+  const _PinnedTendencyTile({required this.onOpen});
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(tendencyProfileProvider).value;
+    if (profile == null || !profile.active) return const SizedBox.shrink();
+    final parts = [
+      if (profile.genres.isNotEmpty) '好きなジャンル ${profile.genres.length}',
+      if (profile.disliked.isNotEmpty) '好きではない ${profile.disliked.length}',
+      if (profile.examples.allow.isNotEmpty || profile.examples.deny.isNotEmpty) '例 ${profile.examples.allow.length + profile.examples.deny.length}',
+      if (profile.stimulus.values.any((v) => v < 1.0)) '刺激性の上限 ${profile.stimulus.values.where((v) => v < 1.0).length}',
+    ];
+    return Container(
+      key: const ValueKey('tlconfig.tendency.pinned'),
+      margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, 2, RasqSpacing.sm, 2),
+      decoration: BoxDecoration(border: Border.all(color: RasqColors.inVc, width: 1.5), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+      child: Row(children: [
+        Expanded(
+          child: RasqPluginTile(
+            icon: Icons.tune,
+            title: '指向性/刺激性(傾向)',
+            subtitle: 'いつも最後',
+            description: parts.isEmpty ? '傾向 FOW の設定' : parts.join(' ・ '),
+            chevron: true,
+            onTap: onOpen,
+          ),
+        ),
+        const Tooltip(
+          key: ValueKey('tlconfig.tendency.info'),
+          message: '傾向 FOW で設定した指向性/刺激性を、アルゴリズムの一番最後に掛けます。ここでは外せません(変える / 止めるときは傾向 FOW で)',
+          triggerMode: TooltipTriggerMode.tap,
+          child: Padding(padding: EdgeInsets.all(RasqSpacing.sm), child: Icon(Icons.info_outline, size: 20, color: RasqColors.inVc)),
+        ),
+      ]),
+    );
+  }
+}
+
 /// コンポーネント追加パレット (D-122): ノード検索と同じ FOW + 検索欄。
 /// タイルは**プラグインタイルデザイン**(ワイヤーフレームと同じ内部配置 —
 /// アイコン/名前/提供元/説明/詳細行)で、ホバー中もこの表示のまま。
 /// 詳細行は入出力ではなく**ネイティブ対応の SNS プラグイン**。
 class _ComponentPalettePanel extends ConsumerStatefulWidget {
-  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false, this.onPickGenres});
+  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false, this.onPickGenres, this.unavailable, this.hideTendency = false});
+
+  /// アルゴリズムの種類 → 使えない理由(使えるなら null)。理由があれば灰色で押せない (D-431: トレンドタイルの重いもの)。
+  final String? Function(String type)? unavailable;
+
+  /// 指向性/刺激性を出さない (D-431: 傾向が一番最後に固定で掛かるスコープ)。
+  final bool hideTendency;
 
   /// アクションからジャンルを選択 (D-157)。null なら出さない。
   final VoidCallback? onPickGenres;
@@ -895,7 +973,10 @@ class _ComponentPalettePanel extends ConsumerStatefulWidget {
 }
 
 class _PaletteItem {
-  const _PaletteItem({required this.icon, required this.title, required this.subtitle, required this.description, this.detail, required this.supported, required this.add});
+  const _PaletteItem({required this.icon, required this.title, required this.subtitle, required this.description, this.detail, required this.supported, required this.add, this.type});
+
+  /// アルゴリズムの種類(使えるかの判定に使う。取得元は null)。
+  final String? type;
   final IconData icon;
   final String title;
   final String subtitle;
@@ -952,7 +1033,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             description: 'あなたの投稿や反応に近い投稿を先頭に並べます。',
             detail: '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合う投稿を先頭へ並べ替えます。',
             supported: allSns,
-            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'suggest'))),
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'suggest')), type: 'suggest'),
         _PaletteItem(
             icon: Icons.filter_alt_outlined,
             title: '絞り込み',
@@ -960,14 +1041,15 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             description: 'あなたの投稿や反応に合わない投稿を除きます。',
             detail: '[キーワード/類似性] を [投稿内容/リアクション/会話内容] から読み取り、合わない投稿を除外します(サジェストと同じパラメーター)。',
             supported: allSns,
-            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'filter'))),
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'filter')), type: 'filter'),
         _PaletteItem(
             icon: Icons.manage_search,
             title: '検索絞り込み',
             subtitle: 'RASQ',
             description: 'このページの検索ワード/タグ(または指定ワード)に合う投稿だけ通します。',
             supported: allSns,
-            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'queryfilter'))),
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'queryfilter')), type: 'queryfilter'),
+        if (!widget.hideTendency)
         _PaletteItem(
             icon: Icons.tune,
             title: '指向性/刺激性',
@@ -975,7 +1057,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             description: '好みの設定に合わない投稿を除き、合う順に並べます。',
             detail: 'トレンドプロファイル(好きなジャンル/方向性・指向性のしきい値・刺激性の上限)に合わない投稿を除外し、適合度順に並べます。プロファイルは検索ホームのトレンド ⚙ で編集します。',
             supported: allSns,
-            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'tendency'))),
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'tendency')), type: 'tendency'),
         // アクションからジャンルを選択 (D-157): 部品ではなくプロファイルの編集。
         // 指向性/刺激性の部品が無ければ足してから開く。
         if (widget.onPickGenres != null)
@@ -993,7 +1075,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             subtitle: 'RASQ',
             description: '取得したままの時刻順に整えます。',
             supported: allSns,
-            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'chrono'))),
+            add: () => widget.onAddAlgorithm(const TlAlgorithmComponent(type: 'chrono')), type: 'chrono'),
         for (final p in plugins)
           _PaletteItem(
               icon: Icons.extension_outlined,
@@ -1002,7 +1084,8 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               description: 'プラグインの並べ方で投稿を並べ替えます。',
               detail: '投稿リストをプラグインのソート(tl.sort)で並べ替えます。',
               supported: sessionSns,
-              add: () => widget.onAddAlgorithm(TlAlgorithmComponent(type: 'plugin:${p.id}', pluginLabel: '${p.label}でソート'))),
+              add: () => widget.onAddAlgorithm(TlAlgorithmComponent(type: 'plugin:${p.id}', pluginLabel: '${p.label}でソート')),
+              type: 'plugin:${p.id}'),
       ];
     }
     // DM スコープ (D-127): DM 取得用のタイルだけ。
@@ -1161,16 +1244,20 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
                   separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, i) {
                     final e = items[i];
-                    return RasqPluginTile(
+                    // 使えないもの (D-431): 灰色で押せず、対応の行の代わりに理由。
+                    final reason = e.type == null ? null : widget.unavailable?.call(e.type!);
+                    final tile = RasqPluginTile(
+                      key: ValueKey('tlconfig.palette.${e.type ?? e.title}'),
                       icon: e.icon,
                       title: e.title,
                       subtitle: e.subtitle,
                       description: rasqDetail(context, e.description, e.detail),
                       // 入出力の代わりにネイティブ対応の SNS プラグイン (D-122)。
-                      detail: '対応: ${e.supported.isEmpty ? '—' : e.supported.join('・')}',
+                      detail: reason ?? '対応: ${e.supported.isEmpty ? '—' : e.supported.join('・')}',
                       chevron: false,
-                      onTap: e.add,
+                      onTap: reason == null ? e.add : null,
                     );
+                    return reason == null ? tile : Opacity(opacity: 0.45, child: tile);
                   },
                 ),
         ),
