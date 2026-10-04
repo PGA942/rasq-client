@@ -227,7 +227,8 @@ class TrendTile extends ConsumerWidget {
               ]),
             ]),
           ),
-          if (shown.isNotEmpty) Flexible(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: ServerBadge(key: ValueKey('trend.server.${trend.tag}'), account: shown.first, more: shown.length - 1))),
+          // サーバーの印と「…」は右に詰める (D-430)。前は Flexible で、余った幅を左の列と半分ずつ分け、「…」の右に空きが残っていた。
+          if (shown.isNotEmpty) ConstrainedBox(constraints: const BoxConstraints(maxWidth: 120), child: ServerBadge(key: ValueKey('trend.server.${trend.tag}'), account: shown.first, more: shown.length - 1)),
           Builder(builder: (bctx) {
             return RasqIconButton(
               key: ValueKey('trend.more.${trend.tag}'),
