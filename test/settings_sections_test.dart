@@ -152,13 +152,14 @@ void main() {
     await c.read(settingsAreaProvider('astell.tiles').notifier).set('headerMax', 2);
     await tester.pumpAndSettle();
     expect(tester.widget<AstellHeaderStrip>(find.byType(AstellHeaderStrip)).max, 2);
-    // 広告枠(検索ホーム)。
+    // 広告枠(検索ホーム、D-433 から本物の AdMob の枠。テスト中は広告そのものは出ないので、枠の置き場で見る)。
     c.read(routerProvider).go(Routes.search);
     await tester.pumpAndSettle();
-    expect(find.text('広告'), findsOneWidget);
+    // テスト中は広告そのものが出ず枠の高さが 0 で、見える範囲の外の扱いになるので、置き場は skipOffstage: false で探す。
+    expect(find.byKey(const ValueKey('search.ad'), skipOffstage: false), findsOneWidget);
     await c.read(settingsAreaProvider('resources').notifier).set('showAds', false);
     await tester.pumpAndSettle();
-    expect(find.text('広告'), findsNothing);
+    expect(find.byKey(const ValueKey('search.ad'), skipOffstage: false), findsNothing);
     // 通知プロファイルは設定エリアに保存され、読み直しても残る。
     c.read(notificationPrefsProvider.notifier).setKind(NotificationKind.reaction, false);
     await tester.pumpAndSettle();

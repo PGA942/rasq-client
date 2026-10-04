@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -70,7 +71,12 @@ abstract interface class ExportAdSdk {
 
 final exportAdConfigProvider = Provider<ExportAdConfig>((ref) => ExportAdConfig.fromEnvironment);
 
-final exportAdNetworkProvider = Provider<ExportAdNetwork?>((ref) => exportAdNetworkFor(web: kIsWeb, platform: defaultTargetPlatform, config: ref.watch(exportAdConfigProvider)));
+/// テスト中(`FLUTTER_TEST`)は出さない(AdMob の同意の確かめがタイマーを残す。D-433 で TL / 検索ホームにも枠を置いたので)。
+/// 広告を確かめるテストは、このプロバイダーと [exportAdSdkProvider] を差し替える。
+final exportAdNetworkProvider = Provider<ExportAdNetwork?>((ref) {
+  if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) return null;
+  return exportAdNetworkFor(web: kIsWeb, platform: defaultTargetPlatform, config: ref.watch(exportAdConfigProvider));
+});
 
 /// 本物は Android / iOS = AdMob、Web = AdSense(`export_ad_sdk_io.dart` / `export_ad_sdk_web.dart`)。
 final exportAdSdkProvider = Provider<ExportAdSdk>((ref) => createExportAdSdk());
