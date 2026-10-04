@@ -463,6 +463,20 @@ void main() {
     });
   });
 
+  testWidgets('RAi に聞く: リストに当たらず Brave で見つけた人は、答えの下に人のカードで出す (D-432)', (tester) async {
+    final central = _FakeCentral();
+    final c = await _pump(tester, central);
+    c.read(routerProvider).push(Routes.snsDiscoverAsk);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('discover.ask.input')), 'カゲロウデイズについての議論が活発なサーバー');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('discover.ask.send')));
+    await tester.pumpAndSettle();
+    expect(find.text('SNS の人(Web 検索)'), findsOneWidget);
+    expect(find.byKey(const ValueKey('discover.personCard.@jin@misskey.io')), findsOneWidget);
+    expect(find.text('RASQ リスト'), findsNothing);
+  });
+
   group('結果から', () {
     Future<ProviderContainer> askAndGetResults(WidgetTester tester, _FakeCentral central, {SnsPlugin? plugin}) async {
       final c = await _pump(tester, central, plugin: plugin);
@@ -1198,6 +1212,18 @@ class _FakeCentral {
     }
     if (path == '/onboarding/discover/ask') {
       askMessages.add([for (final m in (jsonDecode(req.body) as Map)['messages'] as List) (m as Map).cast<String, Object?>()]);
+      // リストに当たらず、Brave で人を見つけた答え (Central S-082)。
+      if (askMessages.last.last['text'].toString().contains('カゲロウ')) {
+        return json({
+          'answer': 'リストは見つかりませんでしたが、「じん」(@jin@misskey.io)さんが合いそうです。',
+          'lists': [],
+          'people': [
+            {'name': 'じん', 'kind': 'misskey', 'handle': 'jin', 'host': 'misskey.io', 'profileUrl': 'https://misskey.io/@jin', 'snippet': 'カゲロウデイズの話をしています', 'lists': []},
+          ],
+          'servers': [],
+          'mode': 'rai',
+        });
+      }
       return json({'answer': '猫の写真なら、このリストとサーバーが合いそうです。', 'lists': [_listHit], 'servers': [_serverHit], 'mode': 'dummy'});
     }
     final info = RegExp(r'^/servers/([^/]+)/info$').firstMatch(path);

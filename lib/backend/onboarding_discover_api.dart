@@ -154,7 +154,10 @@ class DiscoverResult {
   static List<ListHit> listsOf(Object? v) => [for (final m in _maps(v)) ListHit.fromJson(m)];
   static List<ServerHit> serversOf(Object? v) => [for (final m in _maps(v)) ServerHit.fromJson(m)];
 
-  bool get isEmpty => lists.isEmpty && servers.isEmpty;
+  /// 見つかった人(人から探す、RAi に聞くでリストに当たらなかったときの Brave、Central S-082)。
+  List<PersonHit> get people => const [];
+
+  bool get isEmpty => lists.isEmpty && servers.isEmpty && people.isEmpty;
 }
 
 /// §2 の結果。
@@ -210,6 +213,7 @@ class PersonHit {
 @immutable
 class PeopleDiscoverResult extends DiscoverResult {
   const PeopleDiscoverResult({this.people = const [], this.source = 'lists', super.lists, super.servers, super.mode});
+  @override
   final List<PersonHit> people;
   final String source;
 
@@ -228,11 +232,16 @@ class PeopleDiscoverResult extends DiscoverResult {
 /// §5 の結果。
 @immutable
 class AskDiscoverResult extends DiscoverResult {
-  const AskDiscoverResult({required this.answer, super.lists, super.servers, super.mode});
+  const AskDiscoverResult({required this.answer, this.people = const [], super.lists, super.servers, super.mode});
   final String answer;
+
+  /// リストに当たらなかったとき、Brave で見つけた SNS の人 (D-432、Central S-082)。
+  @override
+  final List<PersonHit> people;
 
   factory AskDiscoverResult.fromJson(Map<String, Object?> j) => AskDiscoverResult(
         answer: _s(j['answer']) ?? '',
+        people: [for (final m in _maps(j['people'])) PersonHit.fromJson(m)],
         lists: DiscoverResult.listsOf(j['lists']),
         servers: DiscoverResult.serversOf(j['servers']),
         mode: _s(j['mode']) ?? '',
