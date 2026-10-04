@@ -5,8 +5,8 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
-import 'package:go_router/go_router.dart';
 
+import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../text/inline_spans.dart';
@@ -347,7 +347,7 @@ class RelationalEventCard extends ConsumerWidget {
     final summary = filtered ? null : ref.watch(eventSummaryProvider(e.id)).value;
 
     return InkWell(
-      onTap: () => context.push('/relational/event', extra: e),
+      onTap: () => context.pushRelationalEvent(e),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.sm, RasqSpacing.sm),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

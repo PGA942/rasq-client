@@ -148,27 +148,36 @@ class _TabletLayout extends ConsumerWidget {
           // Sidebar rail (何も開いてない時はサイドバー).
           Container(
             width: 72,
+            // 中身(送れるレール)の背が低くても、レールは上から下まで(枠線)、中身は上に寄せる。
+            alignment: Alignment.topCenter,
             decoration: BoxDecoration(border: Border(right: BorderSide(color: scheme.outlineVariant))),
             child: SafeArea(
-              child: Column(children: [
-                const SizedBox(height: RasqSpacing.lg),
-                for (final t in RasqNavTab.values)
-                  IconButton(
-                    tooltip: _tabBlocked(ref, t) ?? t.label,
-                    isSelected: shell.currentIndex == t.index,
-                    onPressed: () => _goTab(ref, shell, t.index),
-                    icon: _greyed(_tabBlocked(ref, t) != null, _navIcon(t, selected: false)),
-                    selectedIcon: _navIcon(t, selected: true),
+              // 背の低い画面(横向きのスマホなど)では、レールの中を送る。
+              child: SingleChildScrollView(
+                child: Column(children: [
+                  // ホーム / 通知のヘッダーの左のアイコンは、幅の広い画面ではレールの一番上へ (D-429 → D-435)。
+                  // 下端だと誤って押しにくいが、狭い画面(ヘッダーの左上)から急に離れた所へ移って見失うので、左上のまま。
+                  const SizedBox(height: RasqSpacing.md),
+                  RasqHeaderAvatarButton(
+                    key: const ValueKey('rail.avatar'),
+                    me: ref.watch(bundleViewProvider) ? ref.watch(rasqAccountProvider) : ref.watch(currentUserProvider),
+                    onTap: () => RasqShell.openSidebar(context, ref),
                   ),
-                // ホーム / 通知のヘッダーの左のアイコンは、幅の広い画面ではここ(フッターメニューに当たる所)へ (D-429)。
-                const Spacer(),
-                RasqHeaderAvatarButton(
-                  key: const ValueKey('rail.avatar'),
-                  me: ref.watch(bundleViewProvider) ? ref.watch(rasqAccountProvider) : ref.watch(currentUserProvider),
-                  onTap: () => RasqShell.openSidebar(context, ref),
-                ),
-                const SizedBox(height: RasqSpacing.md),
-              ]),
+                  // アイコンとタブの間、タブどうしの間を広く取って、押し間違えにくくする。
+                  const SizedBox(height: RasqSpacing.xl),
+                  for (final t in RasqNavTab.values)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: RasqSpacing.sm),
+                      child: IconButton(
+                        tooltip: _tabBlocked(ref, t) ?? t.label,
+                        isSelected: shell.currentIndex == t.index,
+                        onPressed: () => _goTab(ref, shell, t.index),
+                        icon: _greyed(_tabBlocked(ref, t) != null, _navIcon(t, selected: false)),
+                        selectedIcon: _navIcon(t, selected: true),
+                      ),
+                    ),
+                ]),
+              ),
             ),
           ),
           AnimatedContainer(
