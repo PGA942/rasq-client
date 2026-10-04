@@ -374,7 +374,7 @@ class RasqPostTileView extends ConsumerWidget {
         bannerIcon: post.rebroadedBy != null ? Icons.repeat : (post.isReply && !focused ? Icons.reply : null),
         bannerText: post.rebroadedBy != null ? '${post.rebroadedBy!.label} がリブロード' : (post.isReply && !focused ? (post.replyTo == null ? '削除された投稿への返信' : '返信') : null),
         onTap: onOpen,
-        onAuthorTap: author == null ? null : () => context.push(Routes.rasqAccount(author.handle)),
+        onAuthorTap: author == null ? null : () => context.pushRasqAccount(author.handle),
         // … = ほかの SNS の投稿と同じドロップダウン(削除はこの中)。
         onMore: (anchor) => _more(context, ref, anchor, isMine),
         content: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -501,7 +501,7 @@ class _RasqBodyTextState extends State<_RasqBodyText> {
             TextSpan(text: text)
           else
             TextSpan(text: text, style: TextStyle(color: link), recognizer: (() {
-              final t = TapGestureRecognizer()..onTap = () => context.push(Routes.rasqAccount(handle));
+              final t = TapGestureRecognizer()..onTap = () => context.pushRasqAccount(handle);
               _taps.add(t);
               return t;
             })()),

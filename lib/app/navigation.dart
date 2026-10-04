@@ -4,6 +4,7 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
+import '../features/profile/rasq_account_page_screen.dart';
 import '../features/trend/trend_screen.dart';
 import '../features/users/follows_screen.dart';
 import '../features/users/user_page_screen.dart';
@@ -80,6 +81,16 @@ extension RasqNavigation on BuildContext {
     if (_inTab && openPageInPanes(this, id: 'user:${user.key}', title: user.displayName, location: loc, extra: user, builder: (_) => UserPageScreen(userId: user.id, initial: user))) return;
     push(loc, extra: user);
   }
+  /// RASQ アカウントページ (D-425): ユーザーページと同じく、幅の広い画面(≥840dp)では**第3カラム**に開く
+  /// (第3カラムのページから開けば、居たページは第2カラムへ移る、D-057)。狭い画面とタブの外は、これまでどおり全画面のルート。
+  void pushRasqAccount(String handle) {
+    if (handle.isEmpty) return;
+    final inTab = _inTab;
+    final loc = inTab ? Routes.rasqAccountIn(_tabBase, handle) : Routes.rasqAccount(handle);
+    if (inTab && openPageInPanes(this, id: 'rasq:${handle.toLowerCase()}', title: '@$handle', location: loc, builder: (_) => RasqAccountPageScreen(key: ValueKey('rasqPage.$handle'), handle: handle))) return;
+    push(loc);
+  }
+
   void pushFollows(UserSummary user, {required bool followers}) {
     final loc = '${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}/follows${followers ? '?tab=followers' : ''}';
     if (_inTab && openPageInPanes(this, id: 'follows:${user.key}:$followers', title: followers ? 'フォロワー' : 'フォロー中', location: loc, extra: user, builder: (_) => FollowsScreen(userId: user.id, initialFollowers: followers, user: user))) return;

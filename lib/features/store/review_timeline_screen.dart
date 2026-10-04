@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 
-import '../../app/router.dart';
+import '../../app/navigation.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
@@ -99,7 +98,7 @@ class _ReviewList extends ConsumerWidget {
           pluginId: pluginId,
           review: r,
           // 著者 → RASQ アカウントページ (D-270)。ハンドルの無いレビュー(匿名 / 同梱のサンプル)は行き先が無い。
-          onAuthorTap: r.authorHandle.isEmpty ? null : () => context.push(Routes.rasqAccount(r.authorHandle)),
+          onAuthorTap: r.authorHandle.isEmpty ? null : () => context.pushRasqAccount(r.authorHandle),
           onMore: (rect) async {
             final pick = await manager.showDropdown<String>(id: 'store.review.more', anchor: rect, items: const [
               RasqDropdownItem('リンクをコピー', 'copy'),

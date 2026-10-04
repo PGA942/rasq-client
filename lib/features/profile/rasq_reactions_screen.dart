@@ -124,7 +124,7 @@ class RasqActorList extends StatelessWidget {
         final a = actors[i];
         return InkWell(
           key: ValueKey('rasqRx.actor.${a.account.handle}.$i'),
-          onTap: () => context.push(Routes.rasqAccount(a.account.handle)),
+          onTap: () => context.pushRasqAccount(a.account.handle),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
             child: Row(children: [

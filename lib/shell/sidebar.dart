@@ -113,7 +113,12 @@ class RasqSidebar extends ConsumerWidget {
                 // もう総合表示なら、もう一度押すと RASQ アカウントページへ (D-272)。
                 // 行き先は、いまの RASQ アカウントのページ(切り替えの直後でも、前のアカウントのページを開かない。D-316)。
                 final page = ref.read(currentCentralHandleProvider);
-                if (bundle && page != null && page.isNotEmpty) return go(Routes.rasqAccount(page));
+                // 幅の広い画面では第3カラムに開く (D-425)。
+                if (bundle && page != null && page.isNotEmpty) {
+                  context.pushRasqAccount(page);
+                  handle.close();
+                  return;
+                }
                 await ref.read(sessionsProvider.notifier).setBundleView(true);
                 handle.close();
               },

@@ -188,6 +188,10 @@ abstract final class Routes {
   static String rasqPostReactions(String id) => '${rasqPost(id)}/reactions';
   static String rasqAccount(String handle) => '/rasq/${Uri.encodeComponent(handle)}';
 
+  /// タブの中の RASQ アカウントページ (D-425): 幅の広い画面で第3カラムに開いたページが第2カラムへ移るときの場所
+  /// (`/home/rasq/<handle>` など。[tabBase] = タブの根)。
+  static String rasqAccountIn(String tabBase, String handle) => '$tabBase${rasqAccount(handle)}';
+
   /// RASQ リスト / 公開した RASQ クリップ (D-343/D-344)。id か共有コード。
   static String rasqCollection(String idOrCode) => '/rasq-collections/${Uri.encodeComponent(idOrCode)}';
   static String storePlugin(String id) => '/store/plugin/${Uri.encodeComponent(id)}';
@@ -261,6 +265,10 @@ GoRoute get _userRoute => GoRoute(
         ),
       ],
     );
+
+/// `rasq/:handle` — RASQ アカウントページ (D-425)。ユーザーページと同じく各タブの下にも置き、幅の広い画面で
+/// 第3カラムに開いたページが第2カラムへ移る(タブの中に積む)ときに使う。タブの外からはアプリ直下の `/rasq/:handle`。
+GoRoute get _rasqAccountRoute => GoRoute(path: 'rasq/:handle', builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!));
 
 /// 入口の振り分け (D-138 → D-301 → D-318)。null = その場所のまま。
 ///
@@ -364,6 +372,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen(), routes: [
                   _postRoute,
                   _userRoute,
+                  _rasqAccountRoute,
                   // 第3カラムのビューワーが第2カラムへ移るとき (D-413)。
                   GoRoute(path: 'swing', builder: (_, s) => SwingViewerScreen(startAuthor: s.uri.queryParameters['author'], mine: s.uri.queryParameters['mine'] == '1')),
                 ]),
@@ -373,15 +382,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(path: 'trend/:tag', builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!, account: s.uri.queryParameters['account'])),
                   _postRoute,
                   _userRoute,
+                  _rasqAccountRoute,
                 ]),
               ]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const VcScreen(), routes: [_postRoute, _userRoute])]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen(), routes: [_postRoute, _userRoute, GoRoute(path: 'requests', builder: (_, _) => const FollowRequestsScreen())])]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const VcScreen(), routes: [_postRoute, _userRoute, _rasqAccountRoute])]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen(), routes: [_postRoute, _userRoute, _rasqAccountRoute, GoRoute(path: 'requests', builder: (_, _) => const FollowRequestsScreen())])]),
               StatefulShellBranch(routes: [
                 GoRoute(path: Routes.dm, builder: (_, _) => const DmScreen(), routes: [
                   GoRoute(path: 'room/:peerId', builder: (_, s) => DmRoomScreen(peerId: s.pathParameters['peerId']!, room: s.extra is DmRoom ? s.extra as DmRoom : null)),
                   _postRoute,
                   _userRoute,
+                  _rasqAccountRoute,
                 ]),
               ]),
             ],

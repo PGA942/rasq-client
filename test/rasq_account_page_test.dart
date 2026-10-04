@@ -6,16 +6,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:rasq_client/app/app.dart';
+import 'package:rasq_client/app/navigation.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/backend/rasq_account_page_api.dart';
+import 'package:rasq_client/features/home/home_screen.dart';
 import 'package:rasq_client/features/media/media_viewer_screen.dart';
 import 'package:rasq_client/features/profile/rasq_account_page_screen.dart';
 import 'package:rasq_client/features/profile/rasq_profile_edit_screen.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_client/shell/rasq_account_fow.dart';
+import 'package:rasq_client/shell/sidebar.dart';
+import 'package:rasq_client/shell/third_column.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -338,5 +343,120 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rasqPage.media.v2')));
     await tester.pumpAndSettle();
     expect(find.byType(MediaViewerScreen), findsOneWidget);
+  });
+
+  /// カラム表示 (D-425): ユーザーページと同じく、幅の広い画面では第3カラムに開く。狭い画面とディープリンクは全画面のルート。
+  group('カラム表示 (D-425)', () {
+    Map<String, Object?> profile(String handle, String name) => {'id': 'acc-$handle', 'handle': handle, 'displayName': name, 'snsAccounts': <Object>[], 'links': <Object>[]};
+    final mock = MockClient((req) async {
+      final path = req.url.path.replaceFirst('/api/v1', '');
+      if (req.method == 'GET' && path == '/me') return json({'id': 'acc-taro', 'handle': 'taro', 'displayName': 'タロ'});
+      final m = RegExp(r'^/accounts/(\w+)(/posts)?$').firstMatch(path);
+      if (m != null && m.group(2) == null) return json(profile(m.group(1)!, m.group(1) == 'taro' ? 'タロ' : 'ハナコ'));
+      if (m != null) return json({'source': 'rasq', 'limit': 3, 'posts': <Object>[]});
+      if (path.endsWith('/rasq-collections')) return json(<Object>[]);
+      return json({'error': {'code': '404', 'message': 'not found'}}, 404);
+    });
+
+    Future<ProviderContainer> pumpAt(WidgetTester tester, Size logical) async {
+      tester.view.physicalSize = logical * 2;
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sessionStorageProvider.overrideWithValue(MemorySessionStorage({
+            SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+            OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'device-abc', 'token': 'device-token', 'accountId': 'acc-taro'}),
+          })),
+          pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+          orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
+          centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+          orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+        ],
+        child: const RasqApp(),
+      ));
+      await tester.pumpAndSettle();
+      return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    }
+
+    Finder inCol3(Finder f) => find.descendant(of: find.byType(ThirdColumnView), matching: f);
+    Finder pageOf(String handle) => find.byWidgetPredicate((w) => w is RasqAccountPageScreen && w.handle == handle);
+
+    testWidgets('広い画面: 第2カラムから開くと第3カラムへ。第3カラムから開くと居たページが第2カラム(タブの中)へ移り、< で取り戻せる', (tester) async {
+      final c = await pumpAt(tester, const Size(1200, 800));
+      tester.element(find.byType(HomeScreen)).pushRasqAccount('taro');
+      await tester.pumpAndSettle();
+      expect(inCol3(pageOf('taro')), findsOneWidget);
+      expect(pageOf('taro'), findsOneWidget, reason: '全画面のルートには積まない');
+      expect(find.byType(HomeScreen), findsOneWidget, reason: '第2カラムはホームのまま');
+      expect(c.read(thirdColumnProvider)!.location, '/home/rasq/taro');
+      expect(inCol3(find.text('@taro')), findsWidgets);
+
+      // 第3カラムのページから別のアカウントページを開く → taro は第2カラム(/home/rasq/taro)へ、hanako が第3カラムに。
+      tester.element(inCol3(pageOf('taro'))).pushRasqAccount('hanako');
+      await tester.pumpAndSettle();
+      expect(inCol3(pageOf('hanako')), findsOneWidget);
+      expect(inCol3(pageOf('taro')), findsNothing);
+      expect(pageOf('taro'), findsOneWidget, reason: '第2カラム(タブの中のルート)へ移った');
+      expect(visibleLocationOf(c.read(routerProvider).routerDelegate.currentConfiguration), '/home/rasq/taro');
+
+      // < で taro を第3カラムへ取り戻す(第2カラムの複製は消える)→ もう一度 < で閉じる。
+      await tester.tap(inCol3(find.byTooltip('戻る')).first);
+      await tester.pumpAndSettle();
+      expect(inCol3(pageOf('taro')), findsOneWidget);
+      expect(pageOf('taro'), findsOneWidget);
+      expect(pageOf('hanako'), findsNothing);
+      await tester.tap(inCol3(find.byTooltip('戻る')).first);
+      await tester.pumpAndSettle();
+      expect(find.byType(RasqAccountPageScreen), findsNothing);
+      expect(c.read(thirdColumnProvider), isNull);
+    });
+
+    testWidgets('広い画面: RASQ アカウントの FOW の「アカウントページ」も第3カラムへ(FOW とサイドバーは閉じる)', (tester) async {
+      final c = await pumpAt(tester, const Size(1200, 800));
+      await c.read(rasqAccountsProvider.notifier).attachCentral(centralAccountId: 'acc-taro', handle: 'taro', displayName: 'タロ');
+      await tester.pumpAndSettle();
+      RasqSidebar.open(c.read(overlayManagerProvider));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('RASQ アカウント'));
+      await tester.pumpAndSettle();
+      final row = find.ancestor(of: find.textContaining('taro'), matching: find.byType(RasqUserRow)).first;
+      await tester.tap(find.descendant(of: row, matching: find.byTooltip('アカウントの操作')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('アカウントページ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('アカウントページ'));
+      await tester.pumpAndSettle();
+      expect(inCol3(pageOf('taro')), findsOneWidget);
+      expect(c.read(overlayManagerProvider).contains(rasqAccountFowId), isFalse);
+      expect(c.read(overlayManagerProvider).contains(RasqSidebar.overlayId), isFalse);
+    });
+
+    testWidgets('狭い画面: これまでどおり全画面のルート(タブの中)。戻るで元へ', (tester) async {
+      final c = await pumpAt(tester, const Size(400, 800));
+      tester.element(find.byType(HomeScreen)).pushRasqAccount('taro');
+      await tester.pumpAndSettle();
+      expect(c.read(thirdColumnProvider), isNull);
+      expect(find.byType(ThirdColumnView), findsNothing);
+      expect(pageOf('taro'), findsOneWidget);
+      expect(visibleLocationOf(c.read(routerProvider).routerDelegate.currentConfiguration), '/home/rasq/taro');
+      c.read(routerProvider).pop();
+      await tester.pumpAndSettle();
+      expect(pageOf('taro'), findsNothing);
+    });
+
+    testWidgets('ディープリンク: /rasq/<handle>(アプリ直下)も /home/rasq/<handle>(タブの中)も開ける', (tester) async {
+      final c = await pumpAt(tester, const Size(1200, 800));
+      c.read(routerProvider).push(Routes.rasqAccount('taro'));
+      await tester.pumpAndSettle();
+      expect(pageOf('taro'), findsOneWidget);
+      expect(inCol3(pageOf('taro')), findsNothing, reason: 'ルートで開いたものは全画面');
+      c.read(routerProvider).pop();
+      await tester.pumpAndSettle();
+      c.read(routerProvider).go(Routes.rasqAccountIn(Routes.home, 'hanako'));
+      await tester.pumpAndSettle();
+      expect(pageOf('hanako'), findsOneWidget);
+      expect(find.text('@hanako'), findsWidgets);
+    });
   });
 }
