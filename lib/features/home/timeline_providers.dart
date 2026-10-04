@@ -837,7 +837,7 @@ Future<(List<Post>, String?)> fetchRasqList(Ref ref, String id, String? until) a
       final member = page.memberOf(p.memberKey);
       final kind = member?.kind ?? p.memberKey.split(':').first;
       final instance = member?.instance ?? (p.memberKey.split(':').length > 1 ? p.memberKey.split(':')[1] : '');
-      final mine = sessions.where((s) => s.account.kind.name == kind && s.account.instance == instance).firstOrNull;
+      final mine = sessionServing(sessions, kind, instance); // Bluesky はサーバーを問わない (D-423)
       posts.add(p.toPost(member, viewer: mine?.account));
     }
     return (posts, page.next);

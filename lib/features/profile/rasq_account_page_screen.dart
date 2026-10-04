@@ -18,6 +18,7 @@ import '../../session/session_providers.dart';
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../home/post_row.dart';
+import '../post/post_menu.dart' show PostMenuPin;
 import '../home/timeline_providers.dart';
 import '../collections/rasq_collection_tile.dart';
 import '../collections/rasq_collections.dart';
@@ -128,7 +129,8 @@ Future<void> openRasqSnsTile(BuildContext context, WidgetRef ref, RasqSnsTile t)
   }
 
   final sessions = ref.read(sessionsProvider).value?.allSessions ?? const [];
-  final mine = sessions.where((s) => s.account.instance == t.instance && s.account.kind.name == t.kind).firstOrNull;
+  // Bluesky はサーバー(PDS)に関係なく、どの Bluesky のアカウントからでも引ける (D-423)。
+  final mine = sessionServing(sessions, t.kind, t.instance, preferKey: t.key);
   if (mine != null) {
     try {
       final session = ref.read(pluginRegistryProvider).session(mine);
@@ -339,12 +341,13 @@ class _PostsTab extends ConsumerWidget {
   /// 投稿が変わった / 消えた(ページを取り直す)。
   final VoidCallback onChanged;
 
-  /// 固定の入り切り (S-027)。5 件まで。
+  /// 固定の入り切り (S-027)。5 件まで。投稿の … のメニューから (D-423)。
   Future<void> _togglePin(BuildContext context, WidgetRef ref, RasqPin pin) async {
     final api = ref.read(rasqAccountPageApiProvider);
     if (api == null) return;
     final has = posts.pins.contains(pin);
-    final messenger = ScaffoldMessenger.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
     if (!has && posts.pins.length >= rasqMaxPins) {
       messenger.showSnackBar(const SnackBar(content: Text('固定できるのは $rasqMaxPins 件までです')));
       return;
@@ -364,20 +367,13 @@ class _PostsTab extends ConsumerWidget {
     final items = orderAccountPosts(posts);
     // 見ている人が、同じサーバーにアカウントを持っていれば、そのアカウントで SNS の投稿にリアクションなどができる (S-027)。
     final sessions = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
-    Widget pinBar(RasqPin pin, bool pinned) => Padding(
+    // 固定された投稿の印。固定する / 外すは、投稿の … のメニュー (D-423。前は投稿の上の行のボタンだった)。
+    Widget pinnedMark(RasqPin pin) => Padding(
+          key: ValueKey('rasqPage.pinned.${pin.source}.${pin.ref}'),
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 6, RasqSpacing.page, 0),
-          child: Row(children: [
-            if (pinned) ...[Icon(Icons.push_pin, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text('固定された投稿', style: caption)],
-            const Spacer(),
-            if (isMine)
-              TextButton(
-                key: ValueKey('rasqPage.pin.${pin.source}.${pin.ref}'),
-                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 24), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                onPressed: () => _togglePin(context, ref, pin),
-                child: Text(pinned ? '固定を外す' : '固定する', style: RasqTypography.caption),
-              ),
-          ]),
+          child: Row(children: [Icon(Icons.push_pin, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text('固定された投稿', style: caption)]),
         );
+    Future<void> Function() toggle(RasqPin pin) => () => _togglePin(context, ref, pin);
     return ListView(padding: const EdgeInsets.only(bottom: 96), children: [
       if (isMine)
         Padding(
@@ -410,12 +406,18 @@ class _PostsTab extends ConsumerWidget {
       if (items.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('投稿はまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
       for (final e in items)
         if (e.rasq != null) ...[
-          // 固定できるのは、自分の投稿そのもの(リブロードとして出ている行は固定しない)。
-          if (e.pinned || (isMine && e.rasq!.rebroadedBy == null && !e.rasq!.isReply)) pinBar((source: 'rasq', ref: e.rasq!.id), e.pinned),
-          RasqPostTileView(post: e.rasq!, onChanged: onChanged, onOpen: () => context.push(Routes.rasqPost(e.rasq!.id))),
+          if (e.pinned) pinnedMark((source: 'rasq', ref: e.rasq!.id)),
+          RasqPostTileView(
+            post: e.rasq!,
+            onChanged: onChanged,
+            onOpen: () => context.push(Routes.rasqPost(e.rasq!.id)),
+            pinned: e.pinned,
+            // 固定できるのは、自分の投稿そのもの(リブロードとして出ている行は固定しない)。
+            onTogglePin: isMine && (e.pinned || (e.rasq!.rebroadedBy == null && !e.rasq!.isReply)) ? toggle((source: 'rasq', ref: e.rasq!.id)) : null,
+          ),
         ] else ...[
-          if (e.pinned || isMine) pinBar(e.sns!.pin, e.pinned),
-          _SnsPostRow(key: ValueKey('rasqPage.sns.${e.sns!.pin.ref}'), post: e.sns!, sessions: sessions),
+          if (e.pinned) pinnedMark(e.sns!.pin),
+          _SnsPostRow(key: ValueKey('rasqPage.sns.${e.sns!.pin.ref}'), post: e.sns!, sessions: sessions, menuPin: isMine ? (pinned: e.pinned, toggle: toggle(e.sns!.pin)) : null),
           const Divider(),
         ],
     ]);
@@ -426,17 +428,22 @@ class _PostsTab extends ConsumerWidget {
 /// **見ている人が、同じ種類・同じサーバーのアカウントを持っていれば**、そのアカウントのセッションでリアクション / リノートなどができる
 /// (投稿の id が、そのサーバーの中でそのまま通じるため)。持っていなければ、読むだけ(タップで、その SNS のページを開く)。
 class _SnsPostRow extends ConsumerWidget {
-  const _SnsPostRow({super.key, required this.post, required this.sessions});
+  const _SnsPostRow({super.key, required this.post, required this.sessions, this.menuPin});
   final RasqSnsPost post;
   final List<AccountSession> sessions;
 
+  /// … のメニューの「固定する / 固定を外す」(D-423。自分のページだけ)。
+  final PostMenuPin? menuPin;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mine = sessions.where((s) => s.account.kind.name == post.kind && s.account.instance == post.instance).firstOrNull;
+    // 投稿した本人のアカウントがこの端末にあればそれ(自分の投稿 = 自分のメニュー)。Bluesky はサーバーを問わない (D-423)。
+    final mine = sessionServing(sessions, post.kind, post.instance, preferKey: post.accountKey);
     final p = post.toPost(viewer: mine?.account);
     final session = mine == null ? null : ref.watch(sessionForAccountProvider(mine.account.key));
     return PostRow(
       post: p,
+      menuPin: menuPin,
       actions: session?.actions ?? const [],
       onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args),
       onTap: mine != null

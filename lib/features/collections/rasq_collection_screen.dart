@@ -302,9 +302,8 @@ class _FollowButtonState extends ConsumerState<_FollowButton> {
   }
 }
 
-/// 見ている人の、同じ種類・同じサーバーのアカウント(あれば、そのセッションでリアクションなどができる)。
-AccountSession? _viewerFor(List<AccountSession> sessions, String kind, String instance) =>
-    sessions.where((s) => s.account.kind.name == kind && s.account.instance == instance).firstOrNull;
+/// 見ている人の、同じ種類・同じサーバーのアカウント(あれば、そのセッションでリアクションなどができる)。Bluesky は種類だけ (D-423)。
+AccountSession? _viewerFor(List<AccountSession> sessions, String kind, String instance) => sessionServing(sessions, kind, instance);
 
 class _ListPosts extends StatelessWidget {
   const _ListPosts({required this.detail, required this.sessions, this.only});

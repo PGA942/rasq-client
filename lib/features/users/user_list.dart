@@ -63,6 +63,7 @@ class UserList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final viewer = ref.watch(viewerForAccountProvider(account));
     final me = ref.watch(currentUserProvider);
+    final viewerId = ref.watch(viewerUserIdProvider(account));
     return ListView.separated(
       shrinkWrap: shrinkWrap,
       physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
@@ -72,7 +73,7 @@ class UserList extends ConsumerWidget {
         final u = users[i];
         final keyUser = viewer == null ? u.key : followUserKey(viewer, u.id);
         final st = viewer == null ? const FollowState() : ref.watch(followStateOfProvider((viewer: viewer.key, user: keyUser)));
-        final isMe = isViewerSelf(u, viewer, me: me);
+        final isMe = isViewerSelf(u, viewer, me: me, viewerId: viewerId);
         return RasqUserRow(
           user: u,
           following: isMe ? null : st.following,

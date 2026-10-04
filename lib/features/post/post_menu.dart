@@ -24,7 +24,8 @@ import 'share_fow.dart';
 /// お気に入り / フォロー(解除) / ミュート / ブロック / 報告. (プラグイン別項目は M3 で登録制に)
 /// 全画面表示 (D-213): [media] を渡すと投稿のメニューに準拠しつつ「詳細」を消して「画像を保存」を足す。
 /// 「リンクをコピー」は画像のリンク、「共有」の FOW は「内容をコピー」が「画像を保存」になる。
-Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect anchor, {MediaItem? media}) async {
+/// [pin] (D-423) = アカウントページの固定 (S-027)。自分のページの、固定できる投稿にだけ渡す(「固定する / 固定を外す」が出る)。
+Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect anchor, {MediaItem? media, PostMenuPin? pin}) async {
   final manager = ref.read(overlayManagerProvider);
   // RASQ の投稿 (D-276。全画面表示の … から来る): SNS の操作は効かないので、保存とリンクだけ。
   if (isRasqPost(post)) {
@@ -42,8 +43,20 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
   final s = ref.read(sessionForAccountProvider(post.account.key));
   final viewer = ref.read(viewerForAccountProvider(post.account.key));
   final me = ref.read(currentUserProvider);
+  // アカウントページの、この端末にログインの無い SNS の投稿 (D-423): SNS の操作は効かない(ほかのアカウントのセッションに
+  // 縮退してしまう)ので、リンクと固定だけ。
+  final loggedIn = (ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[]).any((x) => accountServes(x.account, post.account.kind.name, post.account.instance));
+  if (pin != null && (s == null || viewer == null || !loggedIn)) {
+    final pick = await manager.showDropdown<String>(id: 'post.menu', anchor: anchor, items: [
+      const RasqDropdownItem('リンクをコピー', 'copy'),
+      RasqDropdownItem(pin.pinned ? '固定を外す' : '固定する', 'pin'),
+    ]);
+    if (pick == 'copy' && post.url != null) await Clipboard.setData(ClipboardData(text: '${post.url}'));
+    if (pick == 'pin') await pin.toggle();
+    return;
+  }
   if (s == null || viewer == null) return;
-  final isMine = isViewerSelf(post.author, viewer, me: me);
+  final isMine = isViewerSelf(post.author, viewer, me: me, viewerId: ref.read(viewerUserIdProvider(post.account.key)));
   final userKey = followUserKey(viewer, post.author.id);
   final st = ref.read(followStateProvider.notifier).of(viewer.key, userKey);
   final fav = ref.read(actionStateProvider.notifier).of(post.key, 'favorite');
@@ -55,6 +68,7 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
     const RasqDropdownItem('アクションバーを編集', 'editActions'),
     RasqDropdownItem(fav.done ? 'お気に入り解除' : 'お気に入り', 'favorite'),
     const RasqDropdownItem('クリップに追加', 'clip'),
+    if (pin != null) RasqDropdownItem(pin.pinned ? '固定を外す' : '固定する', 'pin'),
     if (!isMine) RasqDropdownItem(st.following ? 'フォロー解除' : 'フォロー', 'follow'),
     if (!isMine) RasqDropdownItem(st.muted ? 'ミュート解除' : 'ミュート', 'mute', accent: true),
     if (!isMine) RasqDropdownItem(st.blocked ? 'ブロック解除' : 'ブロック', 'block', destructive: true),
@@ -81,6 +95,8 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
       if (fa != null) await ref.read(timelineProvider(TimelineKind.home).notifier).perform(post, fa);
     case 'clip':
       await showAddToClipSheet(ref, post);
+    case 'pin':
+      await pin?.toggle();
     case 'follow':
       store.apply(viewer.key, userKey, await s.setFollowing(post.author.id, !st.following));
     case 'mute':
@@ -99,6 +115,9 @@ Future<void> showPostMenu(BuildContext context, WidgetRef ref, Post post, Rect a
       }
   }
 }
+
+/// 投稿のメニューの「固定する / 固定を外す」(D-423。アカウントページの固定、S-027)。[pinned] = いま固定しているか。
+typedef PostMenuPin = ({bool pinned, Future<void> Function() toggle});
 
 /// 保存できる添付か(画像 / GIF / 動画)。
 bool isSavableMedia(MediaItem m) => m.type == MediaType.image || m.type == MediaType.gif || m.type == MediaType.video;

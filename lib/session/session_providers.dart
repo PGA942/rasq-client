@@ -287,10 +287,35 @@ final currentAccountProvider = Provider<AccountId?>((ref) => ref.watch(currentAc
 final sessionForAccountProvider = Provider.family<SnsSession?, String?>((ref, key) {
   if (key == null) return ref.watch(currentSnsSessionProvider);
   final state = ref.watch(sessionsProvider).value;
-  final s = state?.sessions.where((x) => x.account.key == key).firstOrNull ?? state?.allSessions.where((x) => x.account.key == key).firstOrNull;
+  final s = _sessionForKey(state, key);
   if (s == null) return ref.watch(currentSnsSessionProvider);
   return ref.watch(pluginRegistryProvider).session(s);
 });
+
+/// [key](`AccountId.key`)のセッション。ログイン中のアカウントそのものが無ければ、**Bluesky だけは**ほかの Bluesky のアカウント
+/// (現在のアカウントが Bluesky ならそれ)で代える (D-423): 人の id(DID)と投稿の id(`at://` の URI)は、どのサーバー(PDS)の
+/// アカウントからでも同じものを指す。ユーザーページは作者の `AccountId.key`(Bluesky では `bluesky:<見ているサーバー>:<handle>`)で
+/// 開くので、総合表示で現在のアカウントが Misskey などのとき、Bluesky の人のページが Misskey のセッションで DID を引いて
+/// 「見つからない」になっていた。Misskey / Mastodon の id はサーバーの中でだけ通じるので、代えない(従来どおり現在へ縮退)。
+AccountSession? _sessionForKey(SessionsState? state, String key) {
+  if (state == null) return null;
+  final exact = state.sessions.where((x) => x.account.key == key).firstOrNull ?? state.allSessions.where((x) => x.account.key == key).firstOrNull;
+  if (exact != null || !key.startsWith('${SnsKind.bluesky.name}:')) return exact;
+  final cur = state.current;
+  if (cur != null && cur.account.kind == SnsKind.bluesky) return cur;
+  return state.sessions.where((x) => x.account.kind == SnsKind.bluesky).firstOrNull;
+}
+
+/// [kind] / [instance] の SNS の投稿・人の id がそのまま通じるアカウントか (D-423)。同じ種類で同じサーバー。
+/// Bluesky は DID / `at://` の URI がサーバー(PDS)に関係なく通じるので、種類だけを見る。
+bool accountServes(AccountId a, String kind, String instance) => a.kind.name == kind && (a.kind == SnsKind.bluesky || a.instance.toLowerCase() == instance.toLowerCase());
+
+/// [sessions] のうち、[kind] / [instance] の投稿にそのまま操作できるもの (D-423、[accountServes])。[preferKey] のアカウント
+/// (投稿した本人のアカウントなど)を先に、次に同じサーバーのもの。
+AccountSession? sessionServing(Iterable<AccountSession> sessions, String kind, String instance, {String? preferKey}) {
+  final ok = [for (final s in sessions) if (accountServes(s.account, kind, instance)) s];
+  return ok.where((s) => s.account.key == preferKey).firstOrNull ?? ok.where((s) => s.account.instance.toLowerCase() == instance.toLowerCase()).firstOrNull ?? ok.firstOrNull;
+}
 
 /// [sessionForAccountProvider] のアカウント id 版 (D-421): [key] のアカウントがログイン中ならそれ、無ければ現在。
 /// 「誰として見ているか」(フォローの状態の鍵・自分の投稿 / 自分のページの判定)は、操作に使うセッションと同じアカウントで決める。
@@ -298,16 +323,39 @@ final sessionForAccountProvider = Provider.family<SnsSession?, String?>((ref, ke
 /// ほかのアカウントの自分の投稿が「他人」になり、フォロー中の一覧も別のアカウントの関係を見て「未フォロー」になっていた。
 final viewerForAccountProvider = Provider.family<AccountId?, String?>((ref, key) {
   if (key != null) {
-    final state = ref.watch(sessionsProvider).value;
-    final s = state?.sessions.where((x) => x.account.key == key).firstOrNull ?? state?.allSessions.where((x) => x.account.key == key).firstOrNull;
+    final s = _sessionForKey(ref.watch(sessionsProvider).value, key);
     if (s != null) return s.account;
   }
   return ref.watch(currentAccountProvider);
 });
 
+/// 見ているアカウント([viewerForAccountProvider] と同じ選び方)の、SNS の中での自分の id。分かるときだけ (D-423):
+/// Bluesky はログインで受け取った DID(トークンの JSON の `did`)。ハンドルは変えられるので、ハンドルで比べると、
+/// ハンドルを変えたあとの自分の投稿が「他人」になる。Misskey / Mastodon は持っていない(null。名前と `me()` で比べる)。
+final viewerUserIdProvider = Provider.family<String?, String?>((ref, key) {
+  final state = ref.watch(sessionsProvider).value;
+  final s = (key == null ? null : _sessionForKey(state, key)) ?? state?.current;
+  return s == null ? null : blueskyDidOf(s);
+});
+
+/// 端末にあるアカウントのうち、Bluesky の DID が [userId] のもの (D-423)。
+bool isOwnBlueskyId(Iterable<AccountSession> sessions, String userId) => userId.startsWith('did:') && sessions.any((s) => blueskyDidOf(s) == userId);
+
 /// 同じ人か (D-421): ハンドルの大文字小文字・先頭の `@`・`handle@host` の形、サーバーの `https://`・末尾の `/`・大文字小文字の
 /// 違いは見ない(SNS の種類は見ない: 投稿の作者は種類を持たないことがある)。
+///
+/// Bluesky どうし (D-423) はハンドル(`alice.bsky.social` のようなドメインそのもの)だけで比べる。サーバーの欄は、プラグインが
+/// 「見ているアカウントのサーバー(PDS)」を入れるので、同じ人でも見ているアカウントによって `bsky.social` と自前の PDS に分かれる。
 bool sameAccountIdentity(AccountId a, AccountId b) {
+  if (a.kind == SnsKind.bluesky && b.kind == SnsKind.bluesky) {
+    String h(AccountId x) {
+      var v = x.handle.trim().toLowerCase();
+      if (v.startsWith('@')) v = v.substring(1);
+      return v;
+    }
+
+    return h(a).isNotEmpty && h(a) == h(b);
+  }
   (String, String) norm(AccountId x) {
     var h = x.handle.trim().toLowerCase();
     if (h.startsWith('@')) h = h.substring(1);
@@ -330,8 +378,11 @@ bool sameAccountIdentity(AccountId a, AccountId b) {
 
 /// [user] が [viewer](見ているアカウント)自身か (D-421)。名前で比べ、[me] が同じアカウントのプロフィールなら id でも比べる
 /// (`me()` を取れていないあいだの [currentUserProvider] は id が `-`)。
-bool isViewerSelf(UserSummary user, AccountId? viewer, {UserSummary? me}) {
+///
+/// [viewerId] (D-423) = 見ているアカウントの SNS の中での id が分かっていれば([viewerUserIdProvider]、Bluesky の DID)、それでも比べる。
+bool isViewerSelf(UserSummary user, AccountId? viewer, {UserSummary? me, String? viewerId}) {
   if (viewer != null && sameAccountIdentity(user.account, viewer)) return true;
+  if (viewerId != null && viewerId.isNotEmpty && user.id == viewerId) return true;
   if (me == null || me.id == '-' || me.id.isEmpty) return false;
   // id はそのサーバーの中でだけ通じる。
   if (viewer != null && !sameAccountIdentity(me.account, viewer)) return false;

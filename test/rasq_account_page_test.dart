@@ -208,6 +208,9 @@ void main() {
     final p2 = find.byKey(const ValueKey('rasqPost.p2'));
     expect(find.descendant(of: p2, matching: find.byType(RasqPostTile)), findsOneWidget);
     // リブロードのボタン = バンドル(リブロード / 引用。D-276)。ふつうのタイルでは、何度でもリブロードできる。
+    // (固定のボタンの行が無くなったぶん詰まるので、右下の「RASQ に投稿」に隠れない位置へ。D-423)
+    await Scrollable.ensureVisible(tester.element(find.descendant(of: p2, matching: find.byTooltip('リブロード'))), alignment: 0.5);
+    await tester.pumpAndSettle();
     for (var n = 1; n <= 2; n++) {
       await tester.tap(find.descendant(of: p2, matching: find.byTooltip('リブロード')));
       await tester.pumpAndSettle();

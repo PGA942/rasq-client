@@ -50,7 +50,7 @@ class SnsListMemberTarget implements ListMemberTarget {
 /// RASQ リスト(Central の項目)。[session] のアカウントから見た id で入れる。
 class RasqListMemberTarget implements ListMemberTarget {
   RasqListMemberTarget(this.api, this.collectionId, this.session, List<RasqCollectionItem> items)
-      : existing = {for (final i in items) if (i.kind == session.account.kind.name && i.instance == session.account.instance) i.refId};
+      : existing = {for (final i in items) if (accountServes(session.account, i.kind, i.instance)) i.refId};
   final RasqCollectionsApi api;
   final String collectionId;
   final SnsSession session;

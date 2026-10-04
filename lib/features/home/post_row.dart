@@ -52,7 +52,7 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText, this.onActAs, this.compactQuote = false, this.showAllMedia = false, this.hideMedia = false});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText, this.onActAs, this.compactQuote = false, this.showAllMedia = false, this.hideMedia = false, this.menuPin});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -87,6 +87,9 @@ class PostRow extends ConsumerStatefulWidget {
 
   /// 添付を出さない (D-202): ビューワーの FOW に投稿をインライン表示するとき(添付はビューワー本体)。
   final bool hideMedia;
+
+  /// … のメニューの「固定する / 固定を外す」(D-423。アカウントページの自分の投稿だけ)。
+  final PostMenuPin? menuPin;
 
   /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
   static String? attachmentSummaryOf(Post p) {
@@ -333,7 +336,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       // ↓ で別アカウントを選んでいる間は、そのコピーで以降の画面を開く (D-155)。
       onTap: _actAs != null && widget.onActAs == null ? () => context.pushPost(_actAs!) : widget.onTap,
       onAuthorTap: () => context.pushUser(post.author),
-      onMore: (anchor) => showPostMenu(context, ref, post, anchor),
+      onMore: (anchor) => showPostMenu(context, ref, post, anchor, pin: widget.menuPin),
       // アカウント選択 (D-110/D-111): 複数アカウントに流れてきた同一投稿は
       // 1 枚に畳まれる — ヘッダー右上(… の左)の ↓ でどのアカウントとして
       // 見る/反応するかを選ぶ(アクションバーはずらさない)。
@@ -502,7 +505,8 @@ class _PostRowState extends ConsumerState<PostRow> {
     if (by == null || _repostAction == null) return false;
     final sessions = ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[];
     // 名前の形(大文字小文字・@host)の違いは見ない (D-421)。
-    return sessions.any((s) => sameAccountIdentity(s.account, by.account));
+    // Bluesky は DID でも (D-423。ハンドルを変えたあとでも自分)。
+    return sessions.any((s) => sameAccountIdentity(s.account, by.account)) || isOwnBlueskyId(sessions, by.id);
   }
 
   /// リノート / 引用に使うコピー (D-280)。いまのコピーのままなら null(↓ で選んでいる / 見えているのが 1 アカウントだけ /

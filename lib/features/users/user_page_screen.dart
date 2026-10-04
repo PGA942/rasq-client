@@ -59,7 +59,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
           return RasqErrorView(code: code, onRetry: () => ref.invalidate(userProfileProvider((id: widget.userId, account: acct))), retryLabel: '再読み込み');
         },
         data: (p) {
-          final isSelf = isViewerSelf(p.summary, viewer, me: me);
+          final isSelf = isViewerSelf(p.summary, viewer, me: me, viewerId: ref.watch(viewerUserIdProvider(acct)));
           final keyUser = viewer == null ? p.summary.key : followUserKey(viewer, p.summary.id);
           final st = viewer == null ? const FollowState() : ref.watch(followStateOfProvider((viewer: viewer.key, user: keyUser)));
           final restricted = (p.isSuspended || st.blocked || st.blockedBy) && !_showRestricted;

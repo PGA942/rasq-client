@@ -508,9 +508,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
     if (t is ComposeReply) {
       final a = t.to.author;
-      final me = ref.read(currentAccountProvider);
-      // RASQ の投稿への返信 (D-292) は、RASQ のハンドルだけ(`@handle`)。
-      final mention = isRasqPost(t.to) || a.account.instance == me?.instance ? '@${a.handle}' : '@${a.handle}@${a.account.instance}';
+      // 返信するアカウント(投稿が流れてきたアカウント。総合表示では現在のアカウントと違うことがある、D-423)。
+      final me = _postAs?.account ?? ref.read(currentAccountProvider);
+      // RASQ の投稿への返信 (D-292) は、RASQ のハンドルだけ(`@handle`)。Bluesky のハンドルはドメインそのものなので、
+      // `@handle@サーバー` にしない (D-423)。
+      final mention = isRasqPost(t.to) || a.account.kind == SnsKind.bluesky || a.account.instance == me?.instance ? '@${a.handle}' : '@${a.handle}@${a.account.instance}';
       // 自分の RASQ の投稿への返信には、自分へのメンションを入れない。
       final selfRasq = isRasqPost(t.to) && a.handle.toLowerCase() == ref.read(orgateAccountProvider).value?.handle.toLowerCase();
       _mentionPrefill = selfRasq ? null : '$mention ';

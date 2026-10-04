@@ -47,3 +47,15 @@ class BlueskyCredentialFlow extends CredentialAuthFlow {
     );
   }
 }
+
+/// Bluesky のセッションの DID (D-423)。トークン([AccountSession.token] の `{did, handle, …}` の JSON)から読む。Bluesky でない / 読めなければ null。
+String? blueskyDidOf(AccountSession s) {
+  if (s.account.kind != SnsKind.bluesky) return null;
+  try {
+    final j = jsonDecode(s.token);
+    final did = j is Map ? j['did'] : null;
+    return did is String && did.startsWith('did:') ? did : null;
+  } catch (_) {
+    return null;
+  }
+}

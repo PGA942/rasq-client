@@ -22,7 +22,8 @@ Future<Post?> resolvePostOn(Ref ref, Post post, AccountId target) async {
   if (s == null) return null;
   final session = ref.read(pluginRegistryProvider).session(s);
   try {
-    if (post.account.kind == target.kind && post.account.instance == target.instance) return await session.post(post.id);
+    // Bluesky の `at://` の URI は、どの Bluesky のアカウントからでも同じ投稿 (D-423)。
+    if (accountServes(target, post.account.kind.name, post.account.instance)) return await session.post(post.id);
   } catch (e) {
     debugPrint('resolvePostOn(id ${post.id} on $target): $e');
   }
