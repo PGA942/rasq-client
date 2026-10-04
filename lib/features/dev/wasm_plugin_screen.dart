@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -12,6 +13,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../app/router.dart' show Routes;
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
@@ -19,6 +21,8 @@ import '../home/post_row.dart';
 import '../plugins/sideload_trust.dart';
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart';
+import '../store/store_providers.dart' show bundledSnsPluginIds, installedPluginsProvider;
+import 'review_import.dart';
 
 /// WASM プラグイン試験画面 (dev)。misskey-wasm-sample(rasq-sdk-sample で
 /// ビルドした .wasm)をインポートし、plugin_runtime 経由で描画する:
@@ -35,7 +39,10 @@ import '../store/rasqpkg.dart';
 /// 読み込んだものに与える権限は [devScreenGrantFor] (D-308): debug ビルドだけ全権限、release では
 /// スロット登録と同じ [SideloadTrust](自分の鍵で署名した `.rasqpkg` = フル、ほか = 制限モード)。
 class WasmPluginScreen extends ConsumerStatefulWidget {
-  const WasmPluginScreen({super.key, this.wasmBytesOverride, this.envOverride});
+  const WasmPluginScreen({super.key, this.wasmBytesOverride, this.envOverride, this.initialUrl});
+
+  /// 審査中の版の仮インポート (D-436): judge の QR(`rasq://dev-import?url=…`)から開いたときの URL。入れるだけで、読み込みは押してから。
+  final String? initialUrl;
 
   /// Tests inject the bytes / a hermetic environment (同期実行になる).
   final Uint8List? wasmBytesOverride;
@@ -97,7 +104,29 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
   String? _pkgNote;
   final _hostField = TextEditingController(text: 'misskey.io');
   final _pathField = TextEditingController();
+  late final _urlField = TextEditingController(text: widget.initialUrl ?? '');
   bool _busy = false;
+
+  /// 読み込んだ .rasqpkg の親(土台)のプラグイン (D-436)。入っていないものは「ストアで開く」。
+  List<({String id, String version, bool installed})> _parents = const [];
+
+  /// URL(judge の仮インポート用のリンク)から落として、ファイルから読むのと同じ道で読み込む (D-436)。
+  Future<void> _loadFromUrl() async {
+    final url = _urlField.text.trim();
+    if (!isReviewImportUrl(url)) {
+      setState(() => _loadError = 'http(s) の URL を入れてください');
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final path = await downloadReviewImport(url, client: ref.read(reviewImportHttpProvider), dir: ref.read(reviewImportDirProvider));
+      await _loadFromPath(path);
+    } catch (e) {
+      if (mounted) setState(() => _loadError = 'URL から読めませんでした: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   /// FOW surface (D-064) 用に捕まえた OverlayManager(dispose 時の
   /// closeOwnedBy にも使うので context 経由にしない)。
@@ -206,6 +235,10 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
             '${signed != null ? '開発者鍵の署名 OK(指紋 $signed)。ストアの審査は通っていません' : '署名なし(.sig.json がありません)。出どころを確かめられません'}。'
             'スロットに登録すると${trust.isFull ? 'フル機能(自分の鍵の署名)' : '制限モード(自分の鍵の署名ではないため、通信 / GPU / storage.unsafe / interstitial・system の FOW / 共有・コンポーザー・ミュート・URL を開く関数は閉)'}';
         bytes = target.wasm;
+        final have = {...bundledSnsPluginIds, for (final p in ref.read(installedPluginsProvider)) p.id};
+        _parents = [for (final r in pkg.requires) (id: r.id, version: r.version, installed: have.contains(r.id))];
+      } else {
+        _parents = const [];
       }
       await _start(bytes, trust: trust);
       if (mounted) setState(() => _pkgNote = note);
@@ -361,6 +394,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
     _disposeController();
     _hostField.dispose();
     _pathField.dispose();
+    _urlField.dispose();
     super.dispose();
   }
 
@@ -410,6 +444,24 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
                 child: const Text('実登録'),
               ),
             ]),
+            const SizedBox(height: RasqSpacing.xs),
+            // 審査中の版の仮インポート (D-436): judge の期限つきのリンク(QR から開けば入っている)。
+            Row(children: [
+              Expanded(child: RasqInput(key: const ValueKey('wasm.url.field'), controller: _urlField, hintText: 'URL から読む(審査の仮インポート用のリンク)')),
+              const SizedBox(width: RasqSpacing.sm),
+              OutlinedButton(key: const ValueKey('wasm.url.load'), onPressed: _busy ? null : _loadFromUrl, child: const Text('URL から読む')),
+            ]),
+            if (widget.initialUrl != null)
+              Text('リンクから開きました。出どころを確かめてから「URL から読む」を押してください(審査中の版は制限モードで動きます)。',
+                  key: const ValueKey('wasm.url.fromLink'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            for (final p in _parents)
+              Row(key: ValueKey('wasm.parent.${p.id}'), children: [
+                Expanded(
+                  child: Text('親(土台)のプラグイン: ${p.id} ${p.version}${p.installed ? '(入っています)' : '— 先に入れてください'}',
+                      style: RasqTypography.caption.copyWith(color: p.installed ? scheme.onSurfaceVariant : RasqTokens.of(context).danger)),
+                ),
+                if (!p.installed) TextButton(key: ValueKey('wasm.parent.store.${p.id}'), onPressed: () => context.push(Routes.storePlugin(p.id)), child: const Text('ストアで開く')),
+              ]),
             const SizedBox(height: RasqSpacing.xs),
             // 段 (D-308): この画面で読み込んだものの権限と、スロットに登録したときの段の説明。
             if (_grant != null)

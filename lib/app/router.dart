@@ -10,6 +10,7 @@ import '../features/child_safe/child_safe_providers.dart';
 import '../features/child_safe/child_safe_screens.dart';
 import '../features/child_safe/guardian_screen.dart';
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
+import '../features/dev/review_import.dart';
 import '../features/dev/wasm_plugin_screen.dart';
 import '../features/dm/dm_room_screen.dart';
 import '../features/dm/dm_screen.dart';
@@ -340,6 +341,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       // 外から来たリンク (D-309): Android / iOS はリンクの全体(`rasq://child-safe/pair?code=…`)を場所として渡してくる。
       // チャイルドセーフのリンクはアプリの中の画面へ(コードは入れるだけで送らない)。ほかの `rasq://` は開かずホームへ。
+      // 審査中の版の仮インポート (D-436): `rasq://dev-import?url=…` → インポートの画面に URL を入れるだけ(読み込みは押してから)。
+      if (state.uri.scheme == reviewImportLinkScheme && state.uri.host == reviewImportLinkHost) return reviewImportDeepLinkLocation(state.uri);
       if (state.uri.scheme == childSafeLinkScheme) return childSafeDeepLinkLocation(state.uri) ?? Routes.home;
       final sessions = ref.read(sessionsProvider);
       final ledger = ref.read(rasqAccountsProvider);
@@ -521,7 +524,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: '/store/plugin/:id/reviews',
               parentNavigatorKey: _appNavigatorKey,
               builder: (_, s) => ReviewTimelineScreen(pluginId: Uri.decodeComponent(s.pathParameters['id']!))),
-          GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const WasmPluginScreen()),
+          GoRoute(path: Routes.wasmDev, parentNavigatorKey: _appNavigatorKey, builder: (_, s) => WasmPluginScreen(initialUrl: s.uri.queryParameters['url'])),
           GoRoute(path: Routes.onboarding, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingScreen(), routes: [
             // `?return=1` = オンボーディングの外から作る (D-419): 作れたら台帳の行を返して元の画面へ。
             GoRoute(path: 'account', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => OnboardingAccountScreen(standalone: s.uri.queryParameters['return'] == '1')),

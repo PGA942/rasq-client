@@ -72,6 +72,14 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="rasq" android:host="child-safe"/>
             </intent-filter>
+            <!-- 審査中の版の仮インポート (D-436): judge の審査の画面の QR(rasq://dev-import?url=…)を端末のカメラで読むと、
+                 プラグインのインポートの画面が URL 入りで開く。読み込みは画面で押すまでしない。 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="rasq" android:host="dev-import"/>
+            </intent-filter>
         </activity>
         <!-- 画面共有の前面サービス (D-317, flutter_background)。種類は mediaProjection。 -->
         <service
