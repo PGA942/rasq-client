@@ -388,7 +388,7 @@ class _RasqNotices extends ConsumerWidget {
         loading: () => const RasqLoading(),
         error: (e, _) => ListView(children: [const SizedBox(height: 120), RasqEmptyView(title: '読み込めませんでした', hint: '$e')]),
         data: (list) => list.isEmpty
-            ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: 'RASQ の通知はありません', hint: 'メンション / 返信 / 引用が届くと、ここに出ます')])
+            ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: 'RASQ の通知はありません', hint: 'メンション / 返信 / 引用 / Swing の招待が届くと、ここに出ます')])
             : ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
                 itemCount: list.length,
@@ -405,13 +405,18 @@ class _RasqNotices extends ConsumerWidget {
                         child: CircleAvatar(
                           radius: 9,
                           backgroundColor: scheme.surface,
-                          child: Icon(switch (n.kind) { 'post.mention' => Icons.alternate_email, 'post.reply' => Icons.reply, 'astell.quote' => Icons.graphic_eq, _ => Icons.format_quote }, size: 12, color: scheme.primary),
+                          child: Icon(switch (n.kind) { 'post.mention' => Icons.alternate_email, 'post.reply' => Icons.reply, 'astell.quote' => Icons.graphic_eq, 'swing.invite' => Icons.groups, 'swing.notify' => Icons.waves, _ => Icons.format_quote }, size: 12, color: scheme.primary),
                         ),
                       ),
                     ]),
                     title: n.title,
                     subtitle: n.body,
-                    onTap: n.postId == null ? null : () => context.push(Routes.rasqPost(n.postId!)),
+                    // Swing の通知 (D-424): その人の Swing のビューワーへ(招待ならプラグインのページから一緒に入る)。
+                    onTap: n.isSwing && n.actor != null
+                        ? () => context.push(Routes.swing(n.actor!.handle))
+                        : n.postId == null
+                            ? null
+                            : () => context.push(Routes.rasqPost(n.postId!)),
                   );
                 },
               ),

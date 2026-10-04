@@ -245,6 +245,8 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       installedAt: makeDefault ? entry.installedAt : null,
       // 着せ替え / アセットパックは版を並べない(アカウントごとの指定も無し)。
       accountVersions: isPack ? const {} : null,
+      // 土台にするプラグイン(親子関係、D-424: Swing で配れるかに使う)。
+      requires: package == null ? null : [for (final r in package.requires) r.id],
     );
 
     if (package == null) {

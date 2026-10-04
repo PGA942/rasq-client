@@ -216,6 +216,23 @@ void checkSwingPackage(Uint8List data, {required ZstdDecompress decompress}) {
   if (pkg.slotPlugins.length != 1 || pkg.root.isTheme || pkg.root.isAssets) throw StateError('Swing で配れるのは、プラグイン 1 つだけの入れ物です');
 }
 
+/// ページ型プラグインを Swing で配れないわけ(配れれば null)。契約 v0.20 / D-424: **親子関係の無い**ページ型は、`swing` を
+/// 宣言していなくても、shared でも配れる。親子関係 =
+/// - 入れ物の中の**子**(ストアの登録元が `store:<id>@<版>#<子の id>` = SNS プラグインなどの入れ物に一緒に入っている 1 つ)、
+/// - **子を持つ**入れ物の root(同じ入れ物から、ほかのプラグインも登録されている)、
+/// - ほかのプラグインを**土台にする**もの(配布物の `root.requires`、[requires] = インストールの記録)。
+/// ページ型が自分の FOW を子として開くこと(`fow.open`)は数えない。
+String? pageSwingBlockReason(SlotPlugin p, Iterable<SlotPlugin> all, {List<String> requires = const []}) {
+  if (!p.has(SlotIds.page)) return 'ページ型のプラグインではありません';
+  if (requires.isNotEmpty) return 'ほかのプラグイン(${requires.join(' / ')})を土台にしているため、Swing では配れません';
+  final store = parseStoreSlotSource(p.source);
+  if (store?.child != null) return 'ほかのプラグインの入れ物に入っている子プラグインのため、Swing では配れません';
+  final container = splitPackageSource(p.source).container;
+  final siblings = [for (final x in all) if (!identical(x, p) && x.source != p.source && splitPackageSource(x.source).container == container) x];
+  if (siblings.isNotEmpty) return '子プラグイン(${siblings.map((x) => x.manifest.name).join(' / ')})と一緒の入れ物のため、Swing では配れません';
+  return null;
+}
+
 /// ページ型の開いているページ 1 つ(ホスト側、D-357)。`page.render` と `shared.*` の受け口。
 abstract class PluginPageSink {
   void render(RrlNode root, String? title);
@@ -237,7 +254,8 @@ class PluginPageDecl {
   final String mode;
 
   /// 開ける場所: `page`(単独のページ)/ `astell`(ルームにデプロイ、shared のみ)/ `profile`(RASQ アカウントのページ)/
-  /// `swing`(RASQ の Swing として配る、solo のみ、v0.19 / D-377)。
+  /// `swing`(RASQ の Swing 向け、v0.19 / D-377。v0.20 / D-424 から shared も書け、書いていなくても親子関係が無ければ Swing で配れる
+  /// = [pageSwingBlockReason])。
   final List<String> surfaces;
   final int maxParticipants;
 
@@ -249,7 +267,8 @@ class PluginPageDecl {
   static const surfaceSwing = 'swing';
 
   bool get isShared => mode == shared;
-  bool allows(String surface) => surfaces.contains(surface) && (surface != surfaceAstell || isShared) && (surface != surfaceSwing || !isShared);
+  /// その面を宣言しているか(astell は shared だけ)。`swing` は「Swing 向けに作った」の宣言で、配れるかどうかは [pageSwingBlockReason]。
+  bool allows(String surface) => surfaces.contains(surface) && (surface != surfaceAstell || isShared);
 
   factory PluginPageDecl.fromJson(Map<String, Object?> j, {String fallbackTitle = ''}) {
     final surfaces = [for (final s in (j['surfaces'] as List? ?? const [])) if (s is String && const {surfacePage, surfaceAstell, surfaceProfile, surfaceSwing}.contains(s)) s];

@@ -41,7 +41,7 @@ import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvide
 ///   動画 / プラグインも動かさない。
 /// - **通報** (D-395): ヘッダーの旗から理由を選んで `POST /reports {swingId}`。通報した Swing はこの回の間、広告の隣に置かない
 ///   扱いにする(並びは開いた時点で決めているので、記録するだけ)。
-/// - **プラグイン**(ページ型、surface `swing`、契約 v0.19): 全画面で動かし、その間は**スワイプで移れない**。
+/// - **プラグイン**(ページ型、契約 v0.19。v0.20 / D-424 から親子関係の無いものは swing の宣言なし・shared も。shared は作った人のセッションに入る): 全画面で動かし、その間は**スワイプで移れない**。
 ///   「全画面から縮小」を押すと、ぼかして止め(`page.event paused`)、スワイプで移れるようにする。縮小したものを押すと
 ///   全画面に戻る(`resumed`)。
 ///
@@ -842,6 +842,8 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
         pluginId: p.id,
         version: p.version,
         surface: PluginPageDecl.surfaceSwing,
+        // shared のカスタムプラグイン (D-424 / Central S-079): 作った人のセッションに入る(入れていなければ同意のうえ一時的に)。
+        sessionId: p.unreviewed ? null : p.sessionId,
         // 未審査 (D-379): 作った人が上げた入れ物を、同意のうえ制限モード(通信なし、GPU だけ可)で一時的に動かす。
         package: p.unreviewed && p.packageUrl != null ? () => ref.read(swingPackageFetcherProvider)(p.packageUrl!) : null,
         packageSource: p.unreviewed ? '$swingSlotSourcePrefix${widget.swing.id}' : null,
@@ -898,6 +900,23 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
       return const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5)));
     }
     switch (c.phase) {
+      case CustomPagePhase.needsConsent when !widget.swing.plugin!.unreviewed:
+        // 入れていない shared のプラグインの Swing (D-424): 審査済みのストアの版を、同意のうえこの Swing の間だけ動かす(作った人のセッションに入る)。
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(RasqSpacing.page),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.groups_outlined, color: Colors.white70, size: 40),
+              const SizedBox(height: RasqSpacing.sm),
+              Text(c.detail?.name ?? widget.swing.plugin!.id, style: RasqTypography.title.copyWith(color: Colors.white)),
+              const SizedBox(height: RasqSpacing.sm),
+              Text('${widget.swing.author.displayName} さんのページにみんなで入ります。インストールせずに、この Swing を見ている間だけ動かします。',
+                  key: const ValueKey('swing.plugin.join.note'), textAlign: TextAlign.center, style: RasqTypography.bodySmall.copyWith(color: Colors.white70)),
+              const SizedBox(height: RasqSpacing.md),
+              FilledButton(key: const ValueKey('swing.plugin.join'), onPressed: c.acceptTemporary, child: const Text('参加する')),
+            ]),
+          ),
+        );
       case CustomPagePhase.needsConsent:
         // 未審査のプラグイン (D-379)。
         return Center(

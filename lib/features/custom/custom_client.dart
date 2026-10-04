@@ -311,9 +311,18 @@ class HttpCustomSessionClient implements CustomSessionClient {
   final Uri baseUrl;
   final String? Function() token;
 
+  /// 端末の版がそのサーバーで配られていなければ(`404 version_not_available`: アプリ同梱のサンプルの版を持っている / 審査待ち、
+  /// D-424 / Central S-079)、版を付けずに作り直す(サーバーの現在の版。現在の版も無ければそのまま失敗)。
   @override
-  Future<CustomSession> create({required String pluginId, String? version, required String scope}) async =>
-      CustomSession.fromJson(await _client.postJson('/custom/sessions', {'pluginId': pluginId, 'version': ?version, 'scope': scope}));
+  Future<CustomSession> create({required String pluginId, String? version, required String scope}) async {
+    Future<CustomSession> post(String? v) async => CustomSession.fromJson(await _client.postJson('/custom/sessions', {'pluginId': pluginId, 'version': ?v, 'scope': scope}));
+    try {
+      return await post(version);
+    } on OrgateException catch (e) {
+      if (version == null || e.serverCode != 'version_not_available') rethrow;
+      return post(null);
+    }
+  }
 
   @override
   Future<List<CustomSession>> list(String scope) async => [for (final e in await _client.getList('/custom/sessions', {'scope': scope})) if (e is Map) CustomSession.fromJson(e.cast<String, Object?>())];

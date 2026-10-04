@@ -340,8 +340,9 @@ List<({RasqAccountPost? rasq, RasqSnsPost? sns, bool pinned})> orderAccountPosts
 /// RASQ の通知 1 件 (S-026)。
 @immutable
 class RasqNotice {
-  const RasqNotice({required this.id, required this.kind, required this.title, required this.body, this.postId, this.actor, this.createdAt});
-  static const kinds = {'post.mention', 'post.reply', 'post.quote', 'astell.quote'};
+  const RasqNotice({required this.id, required this.kind, required this.title, required this.body, this.postId, this.actor, this.createdAt, this.swingId});
+  /// D-424 / Central S-079: `swing.invite`(カスタムプラグインの Swing の招待)と `swing.notify`(Swing を通知でも知らせた)。
+  static const kinds = {'post.mention', 'post.reply', 'post.quote', 'astell.quote', 'swing.invite', 'swing.notify'};
   final String id;
   final String kind;
   final String title;
@@ -349,6 +350,11 @@ class RasqNotice {
   final String? postId;
   final RasqPostAuthor? actor;
   final DateTime? createdAt;
+
+  /// Swing の通知 (D-424): どの Swing か(押すと、その人の Swing のビューワー)。
+  final String? swingId;
+
+  bool get isSwing => kind.startsWith('swing.');
 
   factory RasqNotice.fromJson(Map<String, Object?> j) {
     final payload = j['payload'] is Map ? (j['payload'] as Map).cast<String, Object?>() : const <String, Object?>{};
@@ -358,6 +364,7 @@ class RasqNotice {
       title: j['title'] as String? ?? '',
       body: j['body'] as String? ?? '',
       postId: payload['postId'] as String?,
+      swingId: payload['swingId'] as String?,
       actor: RasqPostAuthor.fromJson(payload['actor']),
       createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
     );

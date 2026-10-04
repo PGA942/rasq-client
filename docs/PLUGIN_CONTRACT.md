@@ -4,7 +4,7 @@
 以前はこのファイルと SDK 側の 2 か所にあり、ずれていました(こちらにだけサイドロードの節 D-306 / D-308、あちらにだけスロット / ActionRef / スキーマの版)。いまは SDK 側に一本化しています。
 
 - ホスト ⇄ プラグインの振る舞い(マニフェスト、`SnsSession`、TL ID、DM、操作語彙と権限、サイドロードの段と制限モード、エラーコード): `CONTRACT.md`
-- スロット一覧と各スロットの契約: `schema/slots.json` / `docs/slots.md`(v0.19)
+- スロット一覧と各スロットの契約: `schema/slots.json` / `docs/slots.md`(v0.20)
 - 境界プロトコル(通信形式 `rasq.boundary/1`)とホスト関数: `PROTOCOL.md` / `docs/host-functions.md` / `schema/*.schema.json`
 - マニフェストの JSON Schema: `schema/manifest.schema.json`(v0.5)
 

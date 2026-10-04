@@ -23,6 +23,7 @@ import '../media/fow_avoid.dart';
 import '../plugins/pro_media_editor_screen.dart' show ProEditorExtraAction, ProEditorHandle, ProMediaEditorArgs, ProMediaEditorScreen;
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart' show isRasqPackage, rasqpkgZstdProvider;
+import '../store/store_providers.dart' show installedPluginsProvider;
 import 'swing_models.dart';
 import 'swing_providers.dart';
 import 'wagara.dart';
@@ -68,11 +69,37 @@ final swingPackagePickerProvider = Provider<Future<XFile?> Function()>((ref) => 
       XTypeGroup(label: 'プラグイン', extensions: ['rasqpkg', 'wasm']),
     ]));
 
-/// Swing に使えるプラグイン: 入っているページ型で、surface `swing` を宣言しているもの(solo)。
-final swingPluginsProvider = Provider<List<SlotPlugin>>((ref) => [
-      for (final p in ref.watch(installedPagePluginsProvider))
-        if (p.manifest.page?.allows(PluginPageDecl.surfaceSwing) ?? false) p,
-    ]);
+/// Swing に使えるプラグイン (D-424、契約 v0.20): 入っているページ型(カスタムプラグイン)のうち、**親子関係の無い**もの
+/// ([pageSwingBlockReason])。solo も shared も(shared は見る人が作った人のセッションに入る)。surface `swing` を宣言した
+/// もの(Swing 向けに作ったもの)を先に並べる。前 (v0.19) は `swing` を宣言した solo だけだった(「みんなのボード」が出なかった)。
+final swingPluginsProvider = Provider<List<SlotPlugin>>((ref) {
+  final all = ref.watch(slotPluginsProvider);
+  final installed = {for (final r in ref.watch(installedPluginsProvider)) r.id: r};
+  final ok = [
+    for (final p in ref.watch(installedPagePluginsProvider))
+      if (pageSwingBlockReason(p, all, requires: installed[p.storePluginId ?? p.id]?.requires ?? const []) == null) p,
+  ];
+  bool forSwing(SlotPlugin p) => p.manifest.page?.allows(PluginPageDecl.surfaceSwing) ?? false;
+  return [...ok.where(forSwing), ...ok.where((p) => !forSwing(p))];
+});
+
+/// 入っているが Swing では配れないページ型と、そのわけ(親子関係、D-424)。作る画面で薄く出す。
+final swingBlockedPluginsProvider = Provider<List<({SlotPlugin plugin, String reason})>>((ref) {
+  final all = ref.watch(slotPluginsProvider);
+  final installed = {for (final r in ref.watch(installedPluginsProvider)) r.id: r};
+  return [
+    for (final p in ref.watch(installedPagePluginsProvider))
+      if (pageSwingBlockReason(p, all, requires: installed[p.storePluginId ?? p.id]?.requires ?? const []) case final String reason) (plugin: p, reason: reason),
+  ];
+});
+
+/// Swing で配るときの説明(作る画面の行の下の文、D-424)。
+String swingPluginSubtitle(SlotPlugin p) {
+  final page = p.manifest.page;
+  if (page?.isShared ?? false) return 'みんなで使う: 見た人は、あなたが作る同じページに入ります';
+  if (page?.allows(PluginPageDecl.surfaceSwing) ?? false) return '見る人の端末で全画面で動きます';
+  return '見る人の端末でページとして動きます';
+}
 
 /// 送る画面に渡す下書き: 編集し終えた画像 / 動画、またはプラグインを選ぶところから。
 @immutable
@@ -482,13 +509,16 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       final packageId = pkg == null ? null : await api.uploadMedia(pkg.bytes, contentType: isRasqPackage(pkg.bytes) ? 'application/vnd.rasq.pkg' : 'application/wasm');
       final cw = _cw.text.trim();
       final ttl = _ttl.value;
-      await api.create(NewSwing(
+      // shared のカスタムプラグイン (D-424): この Swing のセッションを Central に作らせ、見る人はそこに入る。
+      final shared = plugin?.manifest.page?.isShared ?? false;
+      // 端末の版がそのサーバーで配られていなければ(同梱のサンプルなど)、サーバーの現在の版で作り直す(createServed)。
+      await api.createServed(NewSwing(
         kind: d.kind,
         mediaId: mediaId,
         plugin: pkg != null
             ? SwingPlugin(id: pkg.id, version: pkg.version, packageId: packageId)
             : d.plugin && _pluginId != null
-                ? SwingPlugin(id: _pluginId!, version: plugin?.storeVersion)
+                ? SwingPlugin(id: _pluginId!, version: plugin?.storeVersion, session: shared ? SwingPlugin.newSession : null)
                 : null,
         audience: _audience.toAudience(),
         ttlHours: ttl,
@@ -580,7 +610,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
         const Icon(Icons.extension_outlined, color: Colors.white70, size: 40),
         const SizedBox(height: RasqSpacing.xs),
         Text(title, key: const ValueKey('swing.preview.plugin'), style: RasqTypography.body.copyWith(color: Colors.white)),
-        Text('見る人の端末で全画面で動きます', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+        Text(plugin == null ? '見る人の端末で全画面で動きます' : swingPluginSubtitle(plugin), style: RasqTypography.caption.copyWith(color: Colors.white70)),
       ]);
     } else if (video) {
       content = Column(mainAxisSize: MainAxisSize.min, children: [
@@ -663,21 +693,33 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
 
   List<Widget> _pluginSection() {
     final plugins = ref.watch(swingPluginsProvider);
+    final blocked = ref.watch(swingBlockedPluginsProvider);
+    final scheme = Theme.of(context).colorScheme;
     return [
       const RasqSectionHeader(title: '配るプラグイン'),
       if (plugins.isEmpty)
-        const RasqNotice(key: ValueKey('swing.plugin.none'), text: 'Swing に対応したプラグインが入っていません。ストアで入れるか、下の「ファイルから」で自分のプラグインを配れます。', detail: 'ページ型(カスタムプラグイン)のうち、manifest.page.surfaces に swing を書いた solo のもの(契約 v0.19)。'),
+        const RasqNotice(key: ValueKey('swing.plugin.none'), text: 'Swing で配れるカスタムプラグインが入っていません。ストアで入れるか、下の「ファイルから」で自分のプラグインを配れます。', detail: 'ページ型(カスタムプラグイン)のうち、ほかのプラグインと親子関係の無いもの(契約 v0.20。solo / shared どちらも)。'),
       for (final p in plugins)
         RasqRadioListTile<String>(
           key: ValueKey('swing.plugin.${p.storePluginId ?? p.id}'),
           title: p.manifest.page?.title ?? p.manifest.name,
-          subtitle: '見る人の端末で全画面で動きます',
+          subtitle: swingPluginSubtitle(p),
           value: p.storePluginId ?? p.id,
           groupValue: _pluginId,
           onChanged: (v) => setState(() {
             _pluginId = v;
             _package = null;
           }),
+        ),
+      // 親子関係のあるもの (D-424): 選べない。わけを出す。
+      for (final b in blocked)
+        RasqListTile(
+          key: ValueKey('swing.plugin.blocked.${b.plugin.storePluginId ?? b.plugin.id}'),
+          leading: Icon(Icons.block, color: scheme.onSurfaceVariant),
+          title: b.plugin.manifest.page?.title ?? b.plugin.manifest.name,
+          subtitle: b.reason,
+          enabled: false,
+          chevron: false,
         ),
       // 未審査のまま配る (D-379)。見る人の端末では制限モード(通信なし、GPU は可)。
       RasqListTile(

@@ -18,10 +18,20 @@ enum SwingKind {
 
 @immutable
 class SwingPlugin {
-  const SwingPlugin({required this.id, this.version, this.data, this.packageId, this.packageUrl, this.unreviewed = false});
+  const SwingPlugin({required this.id, this.version, this.data, this.packageId, this.packageUrl, this.unreviewed = false, this.session, this.sessionId});
   final String id;
   final String? version;
   final Object? data;
+
+  /// 作るとき (D-424 / Central S-079): shared のカスタムプラグインのセッション。[newSession] = この Swing のセッションを作る、
+  /// ほか = いま入っている `link:` / `profile:` のセッションの id(カスタムプラグインのページの「招待」)。
+  final String? session;
+
+  /// 見る側: 入る shared のセッション(Central S-079)。無ければ 1 人で開く。
+  final String? sessionId;
+
+  /// [session] の「この Swing のセッションを作る」。
+  static const newSession = 'new';
 
   /// 未審査 (D-379 / S-057): 作るときに上げた入れ物の id。
   final String? packageId;
@@ -30,7 +40,10 @@ class SwingPlugin {
   final Uri? packageUrl;
   final bool unreviewed;
 
-  Map<String, Object?> toJson() => {'id': id, 'version': ?version, 'data': ?data, 'packageId': ?packageId};
+  Map<String, Object?> toJson() => {'id': id, 'version': ?version, 'data': ?data, 'packageId': ?packageId, 'session': ?session};
+
+  /// 版を付けない(Central の現在の版、D-424: 端末の版がそのサーバーで配られていないとき)。
+  SwingPlugin withoutVersion() => SwingPlugin(id: id, data: data, packageId: packageId, packageUrl: packageUrl, unreviewed: unreviewed, session: session, sessionId: sessionId);
 }
 
 @immutable
@@ -64,6 +77,7 @@ class Swing {
     this.cw,
     this.sensitive = false,
     this._adSafe,
+    this.notified,
   });
 
   final String id;
@@ -94,6 +108,9 @@ class Swing {
   final bool sensitive;
 
   final bool? _adSafe;
+
+  /// 作ったときの応答にだけ: RASQ の通知を積んだ人数(Central S-079)。
+  final int? notified;
 
   /// 広告の隣に置いてよいか (D-395)。Central の `adSafe`(通報 / 運営の止め / 作った人の処置も入る)。
   /// 古い Central で無ければ手元で: センシティブでなく、CW が無く、未審査のプラグインでない。
@@ -139,6 +156,7 @@ class Swing {
               data: plugin['data'],
               packageUrl: plugin['packageUrl'] is String ? Uri.tryParse(plugin['packageUrl'] as String) : null,
               unreviewed: plugin['unreviewed'] == true,
+              sessionId: plugin['sessionId'] is String && (plugin['sessionId'] as String).isNotEmpty ? plugin['sessionId'] as String : null,
             )
           : null,
       createdAt: DateTime.tryParse('${j['createdAt']}') ?? DateTime.fromMillisecondsSinceEpoch(0),
@@ -153,6 +171,7 @@ class Swing {
       cw: j['cw'] is String && (j['cw'] as String).trim().isNotEmpty ? (j['cw'] as String).trim() : null,
       sensitive: j['sensitive'] == true,
       adSafe: j['adSafe'] is bool ? j['adSafe'] as bool : null,
+      notified: (j['notified'] as num?)?.toInt(),
     );
   }
 }
@@ -160,13 +179,18 @@ class Swing {
 /// 作るときの中身。
 @immutable
 class NewSwing {
-  const NewSwing({required this.kind, this.text = '', this.mediaId, this.plugin, this.audience = const SwingAudience(), this.ttlHours = 24, this.cw, this.sensitive = false});
+  const NewSwing({required this.kind, this.text = '', this.mediaId, this.plugin, this.audience = const SwingAudience(), this.ttlHours = 24, this.cw, this.sensitive = false, this.notify});
   final SwingKind kind;
   final String text;
   final String? mediaId;
   final SwingPlugin? plugin;
   final SwingAudience audience;
   final int ttlHours;
+
+  /// 届け先のうち、RASQ の通知でも知らせる先(D-424 / Central S-079)。[audience] の中だけ。null / 空 = 送らない。
+  final SwingAudience? notify;
+
+  NewSwing withPlugin(SwingPlugin? p) => NewSwing(kind: kind, text: text, mediaId: mediaId, plugin: p, audience: audience, ttlHours: ttlHours, cw: cw, sensitive: sensitive, notify: notify);
 
   /// CW (D-395)。空なら送らない。
   final String? cw;
@@ -181,6 +205,7 @@ class NewSwing {
         'ttlHours': ttlHours,
         if (cw != null && cw!.trim().isNotEmpty) 'cw': cw!.trim(),
         if (sensitive) 'sensitive': true,
+        if (notify != null && !notify!.isEmpty) 'notify': notify!.toJson(),
       };
 }
 

@@ -14,11 +14,13 @@ import '../../app/router.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/redact.dart';
 import '../../shell/headers.dart';
+import '../../shell/third_column.dart' show fowColumnOf;
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart';
 import '../store/store_models.dart';
 import '../store/store_providers.dart';
 import 'custom_client.dart';
+import 'custom_invite.dart';
 import 'custom_models.dart';
 
 /// カスタムプラグイン(ページ型、契約 v0.18 §2.13、D-357)を開く引数。ルート `/custom/<pluginId>?surface=&session=&room=&profile=`。
@@ -403,8 +405,11 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
     final box = anchorCtx.findRenderObject() as RenderBox?;
     final anchor = box == null ? const Rect.fromLTWH(0, 0, 1, 1) : box.localToGlobal(Offset.zero) & box.size;
     final isOwner = s != null && (c.role == 'owner' || (s.ownerAccountId != null && s.ownerAccountId == c.me?.accountId));
+    // 招待 (D-424): Swing で送る。セッションが無ければ Swing のセッションを作り、link / profile のセッションならそこへ招く
+    // (ルーム / Swing のセッションはそこにいる人だけのもの)。
+    final invitable = d != null && d.isShared && !c.temporary && c.plugin?.storePluginId != null && (s == null || s.scopeKind == 'link' || s.scopeKind == 'profile');
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'custom.page.menu', anchor: anchor, items: [
-      if (s == null && d != null && d.isShared && d.allows(PluginPageDecl.surfacePage) && !c.temporary) const RasqDropdownItem('みんなで使う(招待コードを作る)', 'invite'),
+      if (invitable) const RasqDropdownItem('招待(Swing で送る)', 'invite'),
       if (s?.inviteCode != null) const RasqDropdownItem('招待コードをコピー', 'copy'),
       if (s != null) RasqDropdownItem('参加者(${c.participants.length})', 'people'),
       if (isOwner) const RasqDropdownItem('セッションを閉じる', 'close', destructive: true),
@@ -414,13 +419,14 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     switch (pick) {
       case 'invite':
-        try {
-          final created = await ref.read(customSessionClientProvider).create(pluginId: widget.args.pluginId, version: c.plugin?.storeVersion, scope: 'link');
-          if (!mounted) return;
-          context.pushReplacement(Routes.customPage(widget.args.pluginId, widget.args.withSession(created.id).query));
-        } catch (e) {
-          messenger?.showSnackBar(SnackBar(content: Text('招待を作れませんでした: $e')));
-        }
+        final name = c.title ?? d?.title ?? c.plugin?.manifest.name ?? widget.args.pluginId;
+        final swing = await showCustomSwingInvite(ref, pluginId: widget.args.pluginId, title: name, version: c.plugin?.storeVersion, sessionId: s?.id, column: fowColumnOf(context));
+        if (swing == null || !mounted) return;
+        final n = swing.notified ?? 0;
+        messenger?.showSnackBar(SnackBar(content: Text(n > 0 ? 'Swing で招待しました(RASQ の通知 $n 人)' : 'Swing で招待しました')));
+        // Swing のセッションを作ったら、自分もそこに入り直す(見た人と同じページ)。
+        final joined = swing.plugin?.sessionId;
+        if (s == null && joined != null) context.pushReplacement(Routes.customPage(widget.args.pluginId, widget.args.withSession(joined).query));
       case 'copy':
         await Clipboard.setData(ClipboardData(text: s!.inviteCode!));
         messenger?.showSnackBar(SnackBar(content: Text('招待コード ${s.inviteCode} をコピーしました')));

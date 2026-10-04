@@ -30,6 +30,21 @@ class SwingApi {
     return swing;
   }
 
+  /// [create] と同じ。ただしプラグインの版がそのサーバーで配られていなければ(`404 version_not_available`: アプリ同梱のサンプルの版を
+  /// 持っている / 審査待ちの版など、D-424 / Central S-079)、版を付けずに作り直す(サーバーの現在の版)。
+  Future<Swing> createServed(NewSwing s) async {
+    try {
+      return await create(s);
+    } on OrgateException catch (e) {
+      final p = s.plugin;
+      if (e.serverCode != versionNotAvailable || p == null || p.version == null || p.packageId != null) rethrow;
+      return create(s.withPlugin(p.withoutVersion()));
+    }
+  }
+
+  /// Central の `error.code`: 版がそのサーバーで配られていない (S-079)。
+  static const versionNotAvailable = 'version_not_available';
+
   Future<void> seen(String id) => _c.postJson('/swings/$id/seen', const {});
 
   Future<void> delete(String id) => _c.delete('/swings/$id');

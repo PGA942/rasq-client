@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../backend/orgate_client.dart';
 import '../backend/rasq_account.dart';
 import '../features/child_safe/child_safe_notices.dart';
+import '../features/swing/swing_providers.dart' show swingFeedProvider;
 import '../session/session_providers.dart';
 import '../session/session_storage.dart';
 import '../session/sns_share.dart' show handleSnsShareNotices, snsShareRequestKind;
@@ -55,7 +56,16 @@ class CentralNotice {
 typedef CentralNoticeHandler = Future<void> Function(Ref ref, List<CentralNotice> notices);
 
 /// 種類 → 受け手(テストで差し替える)。
-final centralNoticeHandlersProvider = Provider<Map<String, CentralNoticeHandler>>((ref) => const {'child_safe': handleChildSafeNotices, snsShareRequestKind: handleSnsShareNotices});
+final centralNoticeHandlersProvider = Provider<Map<String, CentralNoticeHandler>>((ref) => const {
+      'child_safe': handleChildSafeNotices,
+      snsShareRequestKind: handleSnsShareNotices,
+      // Swing の招待 / 通知 (D-424 / Central S-079): Swing のフィードをすぐ読み直す(ホームのヘッダーに出す。次の読み直しを待たない)。
+      'swing.invite': handleSwingNotices,
+      'swing.notify': handleSwingNotices,
+    });
+
+/// Swing の通知が来たら、フィードを読み直す (D-424)。
+Future<void> handleSwingNotices(Ref ref, List<CentralNotice> notices) => ref.read(swingFeedProvider.notifier).refresh();
 
 /// 即時の知らせ(長いポーリング)を回すか(テストで止める / 間隔を縮める)。
 final centralInboxLiveProvider = Provider<({bool enabled, Duration retry})>((ref) => (enabled: true, retry: const Duration(seconds: 15)));

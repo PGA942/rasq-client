@@ -21,7 +21,12 @@ import 'package:rasq_client/features/ads/export_ad.dart';
 import 'package:rasq_client/features/home/home_header.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart' show astellCreateFowId;
 import 'package:rasq_client/features/settings/settings_dsl.dart';
-import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId;
+import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId, showComposerWith;
+import 'package:rasq_client/features/compose/compose_target.dart' show ComposeReply;
+import 'package:rasq_client/backend/rasq_account_page_api.dart' show RasqAccountPost, RasqPostAuthor, RasqNotice;
+import 'package:rasq_client/features/custom/custom_client.dart' show MockCustomSessionClient, customSessionClientProvider;
+import 'package:rasq_client/features/custom/custom_invite.dart';
+import 'package:rasq_client/features/custom/custom_models.dart' show CustomSession;
 import 'package:rasq_client/features/compose/media_file_pick.dart' show mediaFilePickerProvider;
 import 'package:rasq_client/features/compose/poll_editor.dart' show PollEditor;
 import 'package:rasq_client/app/navigation.dart' show visibleLocationOf;
@@ -45,6 +50,7 @@ import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart' show RasqSidebar;
 import 'package:rasq_design/rasq_design.dart' show RasqActionButton, RasqActionCircle;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rasq_models/rasq_models.dart' as rasq_models;
 
 import 'support/fake_slot_runtime.dart';
 import 'support/fakes.dart';
@@ -67,6 +73,9 @@ final swingReplyBodies = <Map<String, Object?>>[];
 
 /// 通報の控え (D-395)。
 final swingReports = <Map<String, Object?>>[];
+
+/// 返信への返信 (D-424): 返信の id → その返信への返信の本文。返信の id は `r<番号>`、その下は `<親>.<番号>`。
+final swingNested = <String, List<String>>{};
 
 Future<void> setFabSlotsOf(ProviderContainer c, String scope, List<String> slots) => c.read(settingsAreaProvider(fabSettingsArea).notifier).set('${scope}Slots', slots);
 
@@ -192,7 +201,18 @@ void main() {
       if (route == 'POST /swings') {
         final body = (jsonDecode(req.body) as Map).cast<String, Object?>();
         created.add(body);
-        return json({...swing('new', 'acc-1', kind: body['kind'] as String, text: '${body['text'] ?? ''}'), 'audience': body['audience'], 'viewCount': 0}, 201);
+        // D-424 / S-079: 配られていない版は 404 version_not_available(版を付けずに作り直すと現在の版)。
+        final plugin = body['plugin'] as Map?;
+        if (plugin != null && plugin['version'] == '9.9.9') return json({'error': {'code': 'version_not_available', 'message': 'sample.board has no version 9.9.9 on this server (current: 0.1.0)'}}, 404);
+        final session = plugin?['session'];
+        final notify = body['notify'] as Map?;
+        return json({
+          ...swing('new', 'acc-1', kind: body['kind'] as String, text: '${body['text'] ?? ''}'),
+          if (plugin != null) 'plugin': {'id': plugin['id'], 'version': plugin['version'] ?? '0.1.0', if (session != null) 'sessionId': session == 'new' ? 'cs-swing' : session},
+          'audience': body['audience'],
+          'viewCount': 0,
+          if (notify != null) 'notified': (notify['followers'] == true ? 3 : 0) + (notify['lists'] as List).length,
+        }, 201);
       }
       // Swing のスレッド (D-389 / S-058)。
       Map<String, Object?> post(String id, {String body = '', String? replyTo}) => {
@@ -202,6 +222,7 @@ void main() {
             'visibility': 'swing',
             'replyTo': ?replyTo,
             'isReply': replyTo != null,
+            'replyCount': swingNested[id]?.length ?? 0,
             'queues': [if (swingQueued.contains(id)) {'like': true, 'stickerId': 'like', 'count': 1, 'mine': true}],
           };
       final t = RegExp(r'^(GET|PUT|DELETE) /posts/([^/]+)(/queue)?$').firstMatch(route);
@@ -213,6 +234,10 @@ void main() {
           swingQueued.remove(id);
           return http.Response('', 204);
         }
+        final kids = swingNested[id];
+        if (t.group(1) == 'GET' && kids != null) {
+          return json({'post': post(id, body: id.startsWith('r') && !id.contains('.') ? swingReplies[int.parse(id.substring(1))] : id, replyTo: 'p1'), 'replies': [for (var i = 0; i < kids.length; i++) post('$id.$i', body: kids[i], replyTo: id)]});
+        }
         if (t.group(1) == 'GET') return json({'post': post(id, body: '花火'), 'replies': [for (final r in swingReplies) post('r${swingReplies.indexOf(r)}', body: r, replyTo: id)]});
         return json(post(id));
       }
@@ -223,7 +248,9 @@ void main() {
       if (route == 'POST /me/posts') {
         final body = (jsonDecode(req.body) as Map).cast<String, Object?>();
         swingReplyBodies.add(body);
-        swingReplies.add('${body['body']}');
+        // 返信への返信 (D-424) は、その返信の下へ。
+        final nested = swingNested[body['replyTo']];
+        nested != null ? nested.add('${body['body']}') : swingReplies.add('${body['body']}');
         swingThreadLog.add('reply ${body['replyTo']} ${body['body']}');
         return json(post('r-new', body: '${body['body']}', replyTo: body['replyTo'] as String?), 201);
       }
@@ -1029,11 +1056,14 @@ void main() {
     expect(tester.getRect(find.byKey(swingViewerMediaKey)).height, lessThan(composeMedia.height));
     expect(find.byKey(const ValueKey('swing.progress')), findsNothing, reason: 'スレッドの間はシークバーを出さない');
     await tester.pump(const Duration(seconds: 2));
-    // スレッドの返信の欄 → コンポーザー → やめる → 畳む。
+    // スレッドの返信の欄 → コンポーザー → やめる → スレッドへ戻る (D-424: 書き始めた形へ)→ しまうと畳む。
     await tester.tap(find.byKey(const ValueKey('swing.reply.stick')));
     await settle();
     expect(find.byKey(const ValueKey('swing.bar.composer')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('composer.cancel')));
+    await settle();
+    expect(find.byKey(const ValueKey('swing.thread')), findsOneWidget, reason: 'スレッドから書き始めたらスレッドへ戻る');
+    await tester.tap(find.byKey(const ValueKey('swing.thread.close')));
     await settle();
     expect(find.byKey(const ValueKey('swing.bar.compact')), findsOneWidget);
     expect(progress(), lessThan(reading + 0.04), reason: '読んでいる間も止まる(回っていれば +2 秒 = +0.067 以上)');
@@ -1482,6 +1512,302 @@ void main() {
     expect(find.byKey(const ValueKey('home.header.collapse')), findsOneWidget);
     expect(find.byTooltip('タイムライン設定'), findsOneWidget);
   });
+
+  testWidgets('返信への返信 (D-424): スレッドの返信の「返信 N 件を見る」でその返信のスレッドへ入り(上に返信、下にその返信への返信)、← で戻る。下の欄 / タイルの返信はその返信への返信(添付も付けられる)。書いたらスレッドへ戻る', (tester) async {
+    swingThreadLog.clear();
+    swingReplyBodies.clear();
+    swingReplies
+      ..clear()
+      ..addAll(['いいね！', 'すごい']);
+    swingNested
+      ..clear()
+      ..['r0'] = ['そうだね'];
+    addTearDown(swingNested.clear);
+    final (mock, _, _, _) = central([swing('s1', 'alice', text: '花火', postId: 'p1', replyCount: 3)]);
+    final c = await pumpApp(tester, mock);
+    SwingViewerScreen.displayDuration = null;
+    c.read(routerProvider).push(Routes.swing('alice'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('swing.reply.count')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.thread')), findsOneWidget);
+    expect(find.text('返信 2'), findsOneWidget, reason: '直下の返信の数');
+    expect(find.byKey(const ValueKey('swing.thread.back')), findsNothing);
+    // 返信のある返信にだけ「返信 N 件を見る」。
+    expect(find.byKey(const ValueKey('swing.thread.open.r0')), findsOneWidget);
+    expect(find.text('返信 1 件を見る'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.thread.open.r1')), findsNothing);
+    expect(find.text('そうだね'), findsNothing, reason: '返信への返信は、入ってから');
+
+    // 入る: 上に返信そのもの、下にその返信への返信。ヘッダーは ← と「@alice への返信 N」。
+    await tester.tap(find.byKey(const ValueKey('swing.thread.open.r0')));
+    await tester.pumpAndSettle();
+    expect(swingThreadLog, contains('GET r0'));
+    expect(find.byKey(const ValueKey('swing.thread.back')), findsOneWidget);
+    expect(find.text('@alice への返信 1'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.thread.focus.r0')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.thread.focus.r0')), matching: find.text('いいね！')), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.thread.reply.r0.0')), findsOneWidget);
+    expect(find.text('そうだね'), findsOneWidget);
+    expect(find.text('すごい'), findsNothing, reason: 'ほかの返信は出さない');
+    // 下の欄 = その返信への返信。
+    expect(find.text('@alice に返信…'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('swing.reply.stick')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.bar.composer')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('swing.bar.replyTile')), matching: find.text('alice さん の返信')), findsOneWidget, reason: '返信先のタイル = その返信');
+    // 返信への返信も Swing のスレッドの中: 添付 / 投票を付けられる(S-076 / S-079)。
+    for (final k in ['composer.tool.image', 'composer.tool.video', 'composer.tool.poll']) {
+      expect(tester.widget<RasqActionButton>(find.byKey(ValueKey(k))).onTap, isNotNull, reason: k);
+    }
+    final input = find.descendant(of: find.byKey(const ValueKey('swing.bar.composer')), matching: find.byKey(const ValueKey('composer.input')));
+    await tester.enterText(input, 'わかる');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('composer.send')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
+    expect(swingReplyBodies.last['replyTo'], 'r0');
+    expect(swingReplyBodies.last['body'], contains('わかる'));
+    // 書いたら、入っていたスレッドへ戻る(自分の返信が見える)。
+    expect(find.byKey(const ValueKey('swing.thread')), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.thread.back')), findsOneWidget);
+    expect(find.text('@alice への返信 2'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.thread.reply.r0.1')), findsOneWidget);
+
+    // さらに深く: 返信への返信のタイルの「返信」ボタン → その返信への返信のコンポーザー(この FOW の中)。
+    swingNested['r0.0'] = [];
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('swing.thread.reply.r0.0')), matching: find.byTooltip('返信')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.bar.composer')), findsOneWidget);
+    expect(c.read(overlayManagerProvider).contains(composerFowId), isFalse, reason: 'ほかの FOW を開かない');
+    await tester.enterText(find.descendant(of: find.byKey(const ValueKey('swing.bar.composer')), matching: find.byKey(const ValueKey('composer.input'))), 'ね');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('composer.send')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+    await tester.pumpAndSettle();
+    expect(swingReplyBodies.last['replyTo'], 'r0.0');
+    expect(find.text('@alice への返信 2'), findsOneWidget, reason: 'r0 のスレッドのまま');
+    // タイルを押しても入れる。← で 1 つずつ戻る。
+    await tester.tap(find.text('そうだね'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.thread.focus.r0.0')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('swing.thread.back')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.thread.focus.r0')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('swing.thread.back')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.thread.back')), findsNothing);
+    expect(find.text('返信 2'), findsOneWidget);
+    // 入ったまま畳むと、次に広げたときは Swing のスレッドから。
+    await tester.tap(find.byKey(const ValueKey('swing.thread.open.r0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('swing.thread.close')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('swing.reply.count')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.thread.back')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('swing.close')));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Swing のスレッドの投稿への返信は、どこから開いた返信のコンポーザーでも添付 / 投票を付けられる (D-424)。ふつうの RASQ の返信は文字だけのまま', (tester) async {
+    final (mock, _, _, _) = central(const []);
+    final c = await pumpApp(tester, mock);
+    rasq_models.Post rasq(String id, String visibility) => RasqAccountPost(id: id, body: 'もと', visibility: visibility, author: const RasqPostAuthor(id: 'acc-9', handle: 'alice', displayName: 'alice さん')).toPost();
+    for (final (visibility, attach) in [('swing', true), ('public', false)]) {
+      unawaited(showComposerWith(ComposeReply(rasq('x-$visibility', visibility)), manager: c.read(overlayManagerProvider), router: c.read(routerProvider)));
+      await tester.pumpAndSettle();
+      for (final k in ['composer.tool.image', 'composer.tool.poll']) {
+        expect(tester.widget<RasqActionButton>(find.byKey(ValueKey(k))).onTap != null, attach, reason: '$visibility $k');
+      }
+      c.read(overlayManagerProvider).close(composerFowId);
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('カスタムプラグインを Swing で配る (D-424、契約 v0.20): swing を宣言していない shared(みんなのボード)も選べ、session = new で送る。配られていない版は版なしで送り直す。親子関係のあるものは選べない', (tester) async {
+    final (mock, _, created, _) = central(const []);
+    FakeSlotRuntime board() => FakeSlotRuntime(manifest: const {
+          'id': 'sample.board', 'name': 'みんなのボード', 'version': '9.9.9', 'kind': 'view', 'slots': ['page'], 'permissions': ['render', 'shared.session'],
+          'page': {'title': 'みんなのボード', 'mode': 'shared', 'surfaces': ['page', 'astell', 'profile']},
+        }, handler: (rt, fn, args) => {});
+    FakeSlotRuntime solo() => FakeSlotRuntime(manifest: const {
+          'id': 'sample.solo', 'name': 'ひとり', 'version': '1.0.0', 'kind': 'view', 'slots': ['page'], 'permissions': ['render'],
+          'page': {'title': 'ひとり', 'mode': 'solo', 'surfaces': ['swing']},
+        }, handler: (rt, fn, args) => {});
+    FakeSlotRuntime child() => FakeSlotRuntime(manifest: const {
+          'id': 'sample.child-page', 'name': '子のページ', 'version': '1.0.0', 'kind': 'view', 'slots': ['page'], 'permissions': ['render'],
+          'page': {'title': '子のページ', 'mode': 'solo', 'surfaces': ['swing']},
+        }, handler: (rt, fn, args) => {});
+    final c = await pumpApp(tester, mock, extra: [
+      slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader({
+        'store:sample.board@9.9.9': board,
+        'store:sample.solo@1.0.0': solo,
+        'store:sample.sns@1.0.0#sample.child-page': child,
+      })),
+    ]);
+    final slots = c.read(slotPluginsProvider.notifier);
+    for (final src in ['store:sample.board@9.9.9', 'store:sample.solo@1.0.0', 'store:sample.sns@1.0.0#sample.child-page']) {
+      await tester.runAsync(() => slots.register(src, bytes: Uint8List.fromList(utf8.encode(src)), persist: false));
+    }
+    await tester.pumpAndSettle();
+    // Swing 向け(swing を宣言)を先に、shared も並ぶ。入れ物の子は親子関係で外す。
+    expect([for (final p in c.read(swingPluginsProvider)) p.id], ['sample.solo', 'sample.board']);
+    expect(c.read(swingBlockedPluginsProvider).single.plugin.id, 'sample.child-page');
+    expect(c.read(swingBlockedPluginsProvider).single.reason, contains('子プラグイン'));
+
+    c.read(routerProvider).push(Routes.swingNew, extra: const SwingDraft.plugin());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.plugin.sample.board')), findsOneWidget);
+    expect(find.text('みんなで使う: 見た人は、あなたが作る同じページに入ります'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.plugin.blocked.sample.sns')), findsOneWidget, reason: '選べない行に、わけを出す');
+    await tester.tap(find.byKey(const ValueKey('swing.plugin.sample.board')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('swing.next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('swing.send')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pumpAndSettle();
+    // 端末の版(9.9.9)はサーバーで配られていない → 版なしで作り直す。どちらも session = new。
+    expect([for (final b in created) (b['plugin'] as Map)['version']], ['9.9.9', null]);
+    expect([for (final b in created) (b['plugin'] as Map)['session']], ['new', 'new']);
+    expect(find.byType(SwingComposerScreen), findsNothing);
+  });
+
+  testWidgets('shared のプラグインの Swing (D-424 / S-079): plugin.sessionId があれば、作った人のセッションに入る(入れていなければ「参加する」で一時的に)', (tester) async {
+    final custom = MockCustomSessionClient();
+    final session = await custom.create(pluginId: 'sample.board', version: '0.1.0', scope: 'link');
+    final (mock, _, _, _) = central([
+      swing('b1', 'alice', kind: 'plugin', text: '', plugin: {'id': 'sample.board', 'version': '0.1.0', 'sessionId': session.id}),
+    ]);
+    final opened = <Map<String, Object?>>[];
+    FakeSlotRuntime board() => FakeSlotRuntime(
+          manifest: const {
+            'id': 'sample.board', 'name': 'みんなのボード', 'version': '0.1.0', 'kind': 'view', 'slots': ['page'], 'permissions': ['render', 'shared.session'],
+            'page': {'title': 'みんなのボード', 'mode': 'shared', 'surfaces': ['page']},
+          },
+          handler: (rt, fn, args) {
+            if (fn == 'page.open') {
+              opened.add(args);
+              return {'root': {'t': 'Text', 'k': 'b', 'p': {'text': 'ボード'}}};
+            }
+            return {};
+          },
+        );
+    final c = await pumpApp(tester, mock, extra: [
+      customSessionClientProvider.overrideWithValue(custom),
+      slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader({'store:sample.board@0.1.0': board})),
+    ]);
+    await tester.runAsync(() => c.read(slotPluginsProvider.notifier).register('store:sample.board@0.1.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false));
+    await tester.pumpAndSettle();
+    c.read(routerProvider).push(Routes.swing('alice'));
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.text('ボード'), findsOneWidget);
+    expect(opened.single['surface'], 'swing');
+    expect((opened.single['session'] as Map)['id'], session.id, reason: 'セッションに入って開く');
+    await tester.tap(find.byKey(const ValueKey('swing.close')));
+    await tester.pumpAndSettle();
+  });
+
+  group('招待 = Swing (D-424)', () {
+    test('届け先の印: 押す = 選ぶ / 外す、ダブルタップ = 通知つき / 通知だけ外す', () {
+      final s = SwingInviteSelection();
+      expect(s.isEmpty, isTrue);
+      s.tap(SwingInviteSelection.followersKey);
+      expect(s.markOf('followers'), InviteMark.swing);
+      s.doubleTap(SwingInviteSelection.listKey('rl1'));
+      expect(s.markOf('list:rl1'), InviteMark.notify);
+      expect(s.toAudience().toJson(), {'followers': true, 'lists': ['rl1']});
+      expect(s.toNotify().toJson(), {'followers': false, 'lists': ['rl1']});
+      s.doubleTap(SwingInviteSelection.listKey('rl1'));
+      expect(s.markOf('list:rl1'), InviteMark.swing, reason: '通知だけ外す');
+      s.doubleTap('followers');
+      s.tap('followers');
+      expect(s.markOf('followers'), InviteMark.off, reason: '通知つきを 1 回押すと外す');
+      expect(s.toNotify().isEmpty, isTrue);
+    });
+
+    testWidgets('カスタムプラグインのページの「招待」: 届け先を複数選び(ダブルタップは通知も)、Swing で送る。セッションが無ければ Swing のセッションに入り直す', (tester) async {
+      final custom = MockCustomSessionClient();
+      final (mock, _, created, _) = central(const []);
+      FakeSlotRuntime board() => FakeSlotRuntime(
+            manifest: const {
+              'id': 'sample.board', 'name': 'みんなのボード', 'version': '0.1.0', 'kind': 'view', 'slots': ['page'], 'permissions': ['render', 'shared.session'],
+              'page': {'title': 'みんなのボード', 'mode': 'shared', 'surfaces': ['page', 'astell', 'profile']},
+            },
+            handler: (rt, fn, args) => fn == 'page.open' ? {'root': {'t': 'Text', 'k': 'b', 'p': {'text': args['session'] == null ? 'ひとりのボード' : 'みんなのボード ${(args['session'] as Map)['id']}'}}} : {},
+          );
+      final c = await pumpApp(tester, mock, extra: [
+        customSessionClientProvider.overrideWithValue(custom),
+        slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader({'store:sample.board@0.1.0': board})),
+      ]);
+      await tester.runAsync(() => c.read(slotPluginsProvider.notifier).register('store:sample.board@0.1.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false));
+      // Swing のセッション(mock の Central が返す id)を、手元のセッションのまねにも作っておく。
+      custom.sessions['cs-swing'] = CustomSession(id: 'cs-swing', pluginId: 'sample.board', version: '0.1.0', scope: 'swing:new', title: 'みんなのボード', ownerAccountId: 'me', createdAt: DateTime(2026));
+      await tester.pumpAndSettle();
+      c.read(routerProvider).push(Routes.customPage('sample.board'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+      expect(find.text('ひとりのボード'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('custom.page.more')));
+      await tester.pumpAndSettle();
+      expect(find.text('みんなで使う(招待コードを作る)'), findsNothing, reason: '招待コードを作る口は Swing に置き換えた');
+      await tester.tap(find.text('招待(Swing で送る)'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('custom.invite')), findsOneWidget);
+      expect(tester.widget<FilledButton>(find.byKey(const ValueKey('custom.invite.send'))).onPressed, isNull, reason: '届け先を選ぶまで送れない');
+      // フォロワー = 1 回(Swing だけ)、リスト = 2 回続けて(通知も)。
+      await tester.tap(find.byKey(const ValueKey('custom.invite.target.followers')));
+      await tester.pump(const Duration(milliseconds: 400));
+      final list = find.byKey(const ValueKey('custom.invite.target.list.rl1'));
+      await tester.tap(list);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(list);
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: list, matching: find.byKey(const ValueKey('custom.invite.bell'))), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('custom.invite.target.followers')), matching: find.byKey(const ValueKey('custom.invite.bell'))), findsNothing);
+      expect(find.text('Swing で招待(通知も送る)'), findsOneWidget);
+      await tester.enterText(find.byKey(const ValueKey('custom.invite.text')), 'あそぼう');
+      await tester.tap(find.byKey(const ValueKey('custom.invite.ttl.6')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('custom.invite.send')));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+      expect(created.single, {
+        'kind': 'plugin',
+        'text': 'あそぼう',
+        'plugin': {'id': 'sample.board', 'version': '0.1.0', 'session': 'new'},
+        'audience': {'followers': true, 'lists': ['rl1']},
+        'ttlHours': 6,
+        'notify': {'followers': false, 'lists': ['rl1']},
+      });
+      expect(find.byKey(const ValueKey('custom.invite')), findsNothing);
+      expect(find.text('Swing で招待しました(RASQ の通知 1 人)'), findsOneWidget);
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+      expect(find.text('みんなのボード cs-swing'), findsOneWidget, reason: '自分も Swing のセッションに入り直す');
+    });
+  });
+
+  test('RASQ の通知 (D-424): swing.invite / swing.notify を読む(Swing の id と送った人)', () {
+    final n = RasqNotice.fromJson({
+      'id': 'n1',
+      'kind': 'swing.invite',
+      'title': 'Swing で招待されました',
+      'body': 'ミオ (@mio) から、カスタムプラグインに招待されました',
+      'payload': {'swingId': 'sw1', 'actor': {'id': 'a1', 'handle': 'mio', 'displayName': 'ミオ'}, 'pluginId': 'sample.board', 'sessionId': 'cs1'},
+    });
+    expect(RasqNotice.kinds, containsAll(['swing.invite', 'swing.notify']));
+    expect((n.isSwing, n.swingId, n.actor!.handle), (true, 'sw1', 'mio'));
+  });
+
 }
 
 class _FakeAdSdk implements ExportAdSdk {
