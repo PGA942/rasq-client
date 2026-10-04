@@ -5,6 +5,8 @@ import 'package:rasq_models/rasq_models.dart';
 import '../features/post/post_detail_screen.dart';
 import '../features/post/reactions_screen.dart';
 import '../features/profile/rasq_account_page_screen.dart';
+import '../features/relational/relational_engine.dart';
+import '../features/relational/relational_event_screen.dart';
 import '../features/trend/trend_screen.dart';
 import '../features/users/follows_screen.dart';
 import '../features/users/user_page_screen.dart';
@@ -89,6 +91,16 @@ extension RasqNavigation on BuildContext {
     final loc = inTab ? Routes.rasqAccountIn(_tabBase, handle) : Routes.rasqAccount(handle);
     if (inTab && openPageInPanes(this, id: 'rasq:${handle.toLowerCase()}', title: '@$handle', location: loc, builder: (_) => RasqAccountPageScreen(key: ValueKey('rasqPage.$handle'), handle: handle))) return;
     push(loc);
+  }
+
+  /// 関連TL のイベントのページ (D-434): アカウントページ (D-425) と同じく、幅の広い画面では**第3カラム**に開く
+  /// (第3カラムのページから開けば、居たページは第2カラムへ移る)。狭い画面とタブの外は、これまでどおり全画面のルート。
+  /// イベントは端末の中で組んだもの(ディープリンクは無い)なので、ルートには extra で渡す。
+  void pushRelationalEvent(ConversationEvent event) {
+    final inTab = _inTab;
+    final loc = inTab ? '$_tabBase${Routes.relationalEvent}' : Routes.relationalEvent;
+    if (inTab && openPageInPanes(this, id: 'relational:${event.id}', title: '投稿', location: loc, extra: event, builder: (_) => RelationalEventScreen(event: event))) return;
+    push(loc, extra: event);
   }
 
   void pushFollows(UserSummary user, {required bool followers}) {

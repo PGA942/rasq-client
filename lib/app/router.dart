@@ -192,6 +192,9 @@ abstract final class Routes {
   /// (`/home/rasq/<handle>` など。[tabBase] = タブの根)。
   static String rasqAccountIn(String tabBase, String handle) => '$tabBase${rasqAccount(handle)}';
 
+  /// 関連TL のイベントのページ (D-037)。各タブの下にも置く (D-434)。
+  static const relationalEvent = '/relational/event';
+
   /// RASQ リスト / 公開した RASQ クリップ (D-343/D-344)。id か共有コード。
   static String rasqCollection(String idOrCode) => '/rasq-collections/${Uri.encodeComponent(idOrCode)}';
   static String storePlugin(String id) => '/store/plugin/${Uri.encodeComponent(id)}';
@@ -269,6 +272,10 @@ GoRoute get _userRoute => GoRoute(
 /// `rasq/:handle` — RASQ アカウントページ (D-425)。ユーザーページと同じく各タブの下にも置き、幅の広い画面で
 /// 第3カラムに開いたページが第2カラムへ移る(タブの中に積む)ときに使う。タブの外からはアプリ直下の `/rasq/:handle`。
 GoRoute get _rasqAccountRoute => GoRoute(path: 'rasq/:handle', builder: (_, s) => RasqAccountPageScreen(handle: s.pathParameters['handle']!));
+
+/// `relational/event` — 関連TL のイベントのページ (D-434)。アカウントページ (D-425) と同じく各タブの下にも置き、
+/// 第3カラムに開いたページが第2カラムへ移るときに使う。タブの外からはアプリ直下の `/relational/event`。
+GoRoute get _relationalEventRoute => GoRoute(path: 'relational/event', builder: (_, s) => RelationalEventScreen(event: s.extra! as ConversationEvent));
 
 /// 入口の振り分け (D-138 → D-301 → D-318)。null = その場所のまま。
 ///
@@ -373,6 +380,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   _postRoute,
                   _userRoute,
                   _rasqAccountRoute,
+                  _relationalEventRoute,
                   // 第3カラムのビューワーが第2カラムへ移るとき (D-413)。
                   GoRoute(path: 'swing', builder: (_, s) => SwingViewerScreen(startAuthor: s.uri.queryParameters['author'], mine: s.uri.queryParameters['mine'] == '1')),
                 ]),
@@ -383,16 +391,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                   _postRoute,
                   _userRoute,
                   _rasqAccountRoute,
+                  _relationalEventRoute,
                 ]),
               ]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const VcScreen(), routes: [_postRoute, _userRoute, _rasqAccountRoute])]),
-              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen(), routes: [_postRoute, _userRoute, _rasqAccountRoute, GoRoute(path: 'requests', builder: (_, _) => const FollowRequestsScreen())])]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.vc, builder: (_, _) => const VcScreen(), routes: [_postRoute, _userRoute, _rasqAccountRoute, _relationalEventRoute])]),
+              StatefulShellBranch(routes: [GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen(), routes: [_postRoute, _userRoute, _rasqAccountRoute, _relationalEventRoute, GoRoute(path: 'requests', builder: (_, _) => const FollowRequestsScreen())])]),
               StatefulShellBranch(routes: [
                 GoRoute(path: Routes.dm, builder: (_, _) => const DmScreen(), routes: [
                   GoRoute(path: 'room/:peerId', builder: (_, s) => DmRoomScreen(peerId: s.pathParameters['peerId']!, room: s.extra is DmRoom ? s.extra as DmRoom : null)),
                   _postRoute,
                   _userRoute,
                   _rasqAccountRoute,
+                  _relationalEventRoute,
                 ]),
               ]),
             ],
@@ -454,7 +464,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           // 投稿先のカスタマイズ (D-126): 完全に別ページ(戻るで 1 つ前へ)。
           GoRoute(path: Routes.composerConfig, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ComposerConfigScreen()),
           GoRoute(path: '/clips/detail', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => ClipTimelineScreen(clip: state.extra! as ClipInfo)),
-          GoRoute(path: '/relational/event', parentNavigatorKey: _appNavigatorKey, builder: (_, state) => RelationalEventScreen(event: state.extra! as ConversationEvent)),
+          GoRoute(path: Routes.relationalEvent, parentNavigatorKey: _appNavigatorKey, builder: (_, state) => RelationalEventScreen(event: state.extra! as ConversationEvent)),
           GoRoute(path: '/feeds/:uri', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => FeedTimelineScreen(uri: Uri.decodeComponent(s.pathParameters['uri']!), info: s.extra is FeedInfo ? s.extra as FeedInfo : null)),
           GoRoute(path: Routes.lists, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListsScreen(), routes: [
             GoRoute(path: 'import', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ListImportScreen()),
