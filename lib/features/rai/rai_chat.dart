@@ -77,7 +77,7 @@ class RaiChatList extends ConsumerWidget {
       final u = log[i];
       if (u.query != null && u.query != lastQuery) {
         lastQuery = u.query;
-        rows.add(_UserRow(key: ValueKey('rai.chat.user.$i'), text: u.query!));
+        rows.add(RaiChatUserRow(key: ValueKey('rai.chat.user.$i'), text: u.query!));
       }
       // 案内の手順 (D-232): 連続する同じ操作の手順は 1 つの角丸タイルに(丸数字 + 交互の背景)。
       if (u.step != null) {
@@ -107,7 +107,7 @@ class RaiChatList extends ConsumerWidget {
       ));
     }
     if (live) {
-      if (s.query != null && s.query != lastQuery) rows.add(_UserRow(key: const ValueKey('rai.chat.user.live'), text: s.query!));
+      if (s.query != null && s.query != lastQuery) rows.add(RaiChatUserRow(key: const ValueKey('rai.chat.user.live'), text: s.query!));
       rows.add(_RaiRow(key: const ValueKey('rai.chat.live'), text: s.bubble!, at: null, error: s.error, latest: true, streaming: s.busy, links: const [], choices: s.busy ? const [] : s.choices, rowIndex: -1));
     }
     if (suspended != null) rows.add(suspended);
@@ -121,8 +121,9 @@ class RaiChatList extends ConsumerWidget {
   }
 }
 
-class _UserRow extends StatelessWidget {
-  const _UserRow({super.key, required this.text});
+/// 質問の行(右寄せの吹き出し)。RAi ホームのチャットとオンボーディングの「RAi に聞く」(D-427)で同じもの。
+class RaiChatUserRow extends StatelessWidget {
+  const RaiChatUserRow({super.key, required this.text});
   final String text;
   @override
   Widget build(BuildContext context) {
@@ -166,10 +167,65 @@ class _RaiRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final n = ref.read(raiProvider.notifier);
     final op = proposal;
     final thinking = streaming && (text == '…' || text.trim().isEmpty);
+    return RaiReplyRow(text: text, at: at, error: error, thinking: thinking, richKey: ValueKey('rai.chat.rich.$rowIndex'), below: [
+      // 行の下のタイル (D-218)。
+      for (final (k, u) in links.indexed) RaiLinkCard(key: ValueKey('rai.chat.link.$rowIndex.$k'), url: u),
+      if (op != null) _ProposalTile(op: op, steps: proposalSteps, onGuide: () => n.guide(op.id), onSkip: () => n.skip(op.id)),
+      // 承認タイル (D-226): 「スキップ」の説明の下。最新の行だけ押せる。
+      if (approval != null) _ApprovalTile(opId: approval!, enabled: latest, onApprove: () => n.approve(approval!), onDecline: () => n.decline(approval!)),
+      // 工程タイル (D-229): 自動化の各手順の状態(関数で済 / 畳んだ / 案内へ / 失敗)。視覚的なデバッグ用。
+      if (trace.isNotEmpty) _TraceTile(key: ValueKey('rai.chat.trace.$rowIndex'), steps: trace),
+      // インラインのノード表示 (D-234): 自動化が書いたグラフを 80% で。拡大で全画面のエディタへ。
+      if (graphScope != null)
+        Padding(
+          padding: const EdgeInsets.only(top: RasqSpacing.xs),
+          child: InlineNodeGraph(key: ValueKey('rai.chat.graph.$rowIndex'), scope: graphScope!, accountKey: ref.read(currentAccountProvider)?.key),
+        ),
+      // 候補 (D-222): 返事の下に並べ、右の × で「これじゃない」→ 除外して答え直す。
+      if (candidates.isNotEmpty)
+        Row(key: ValueKey('rai.chat.candidates.$rowIndex'), crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              for (final (c, steps) in candidates) _ProposalTile(key: ValueKey('rai.chat.candidate.${c.id}'), op: c, steps: steps, onGuide: () => n.guide(c.id), onSkip: () => n.skip(c.id)),
+            ]),
+          ),
+          if (latest)
+            Padding(
+              padding: const EdgeInsets.only(top: RasqSpacing.xs),
+              child: RasqIconButton(key: ValueKey('rai.chat.reject.$rowIndex'), icon: Icons.close, size: 18, tooltip: 'これじゃない(候補を外して答え直す)', onPressed: () => n.rejectCandidates([for (final (c, _) in candidates) c.id])),
+            ),
+        ]),
+      if (choices.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: RasqSpacing.xs),
+          child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
+            for (final c in choices)
+              ActionChip(key: ValueKey('rai.chat.choice.${c.id}'), label: Text(c.index, style: RasqTypography.bodySmall), onPressed: latest ? () => n.pick(c.id) : null),
+          ]),
+        ),
+    ]);
+  }
+}
+
+/// RAi の返事の行(左に RAi のアイコン、枠なしのリッチテキスト、時刻、その下にタイル)。RAi ホームのチャットと
+/// オンボーディングの「RAi に聞く」(D-427)で同じもの。[thinking] なら「…」、[error] なら赤の文字。
+class RaiReplyRow extends StatelessWidget {
+  const RaiReplyRow({super.key, required this.text, this.at, this.error = false, this.thinking = false, this.richKey, this.below = const []});
+  final String text;
+  final DateTime? at;
+  final bool error;
+  final bool thinking;
+  final Key? richKey;
+
+  /// 行の下に並べるもの(リンク / 提案 / 候補のタイルなど)。
+  final List<Widget> below;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: RasqSpacing.sm, right: 32),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -181,47 +237,13 @@ class _RaiRow extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.xs, vertical: RasqSpacing.xs),
               child: thinking
-                  ? const _ThinkingDots()
+                  ? const RaiThinkingDots()
                   : error
                       ? Text(text, style: RasqTypography.body.copyWith(color: RasqColors.danger))
-                      : RaiRichText(text, key: ValueKey('rai.chat.rich.$rowIndex')),
+                      : RaiRichText(text, key: richKey),
             ),
             if (at != null) Padding(padding: const EdgeInsets.only(top: 2, left: 4), child: Text(RasqTimestamp.format(at!), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
-            // 行の下のタイル (D-218)。
-            for (final (k, u) in links.indexed) RaiLinkCard(key: ValueKey('rai.chat.link.$rowIndex.$k'), url: u),
-            if (op != null) _ProposalTile(op: op, steps: proposalSteps, onGuide: () => n.guide(op.id), onSkip: () => n.skip(op.id)),
-            // 承認タイル (D-226): 「スキップ」の説明の下。最新の行だけ押せる。
-            if (approval != null) _ApprovalTile(opId: approval!, enabled: latest, onApprove: () => n.approve(approval!), onDecline: () => n.decline(approval!)),
-            // 工程タイル (D-229): 自動化の各手順の状態(関数で済 / 畳んだ / 案内へ / 失敗)。視覚的なデバッグ用。
-            if (trace.isNotEmpty) _TraceTile(key: ValueKey('rai.chat.trace.$rowIndex'), steps: trace),
-            // インラインのノード表示 (D-234): 自動化が書いたグラフを 80% で。拡大で全画面のエディタへ。
-            if (graphScope != null)
-              Padding(
-                padding: const EdgeInsets.only(top: RasqSpacing.xs),
-                child: InlineNodeGraph(key: ValueKey('rai.chat.graph.$rowIndex'), scope: graphScope!, accountKey: ref.read(currentAccountProvider)?.key),
-              ),
-            // 候補 (D-222): 返事の下に並べ、右の × で「これじゃない」→ 除外して答え直す。
-            if (candidates.isNotEmpty)
-              Row(key: ValueKey('rai.chat.candidates.$rowIndex'), crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    for (final (c, steps) in candidates) _ProposalTile(key: ValueKey('rai.chat.candidate.${c.id}'), op: c, steps: steps, onGuide: () => n.guide(c.id), onSkip: () => n.skip(c.id)),
-                  ]),
-                ),
-                if (latest)
-                  Padding(
-                    padding: const EdgeInsets.only(top: RasqSpacing.xs),
-                    child: RasqIconButton(key: ValueKey('rai.chat.reject.$rowIndex'), icon: Icons.close, size: 18, tooltip: 'これじゃない(候補を外して答え直す)', onPressed: () => n.rejectCandidates([for (final (c, _) in candidates) c.id])),
-                  ),
-              ]),
-            if (choices.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: RasqSpacing.xs),
-                child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-                  for (final c in choices)
-                    ActionChip(key: ValueKey('rai.chat.choice.${c.id}'), label: Text(c.index, style: RasqTypography.bodySmall), onPressed: latest ? () => n.pick(c.id) : null),
-                ]),
-              ),
+            ...below,
           ]),
         ),
       ]),
@@ -440,8 +462,9 @@ class RaiLinkCard extends StatelessWidget {
 }
 
 /// 考え中の「…」(D-218)。アニメーションは使わない(テストの pumpAndSettle を止めない)。
-class _ThinkingDots extends StatelessWidget {
-  const _ThinkingDots();
+/// 考え中の「…」(返事の行の中)。
+class RaiThinkingDots extends StatelessWidget {
+  const RaiThinkingDots({super.key});
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;

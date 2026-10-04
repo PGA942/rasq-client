@@ -22,7 +22,8 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../collections/rasq_list_picker.dart' show importRasqListToHomeWith;
 import '../login/login_screen.dart' show popOr;
-import '../rai/rai_widgets.dart' show RaiIcon;
+import '../rai/rai_chat.dart' show RaiChatUserRow, RaiReplyRow;
+import '../rai/rai_widgets.dart' show RaiIcon, RaiPromptBar;
 import '../settings/developer_mode.dart';
 import '../settings/settings_dsl.dart' show settingsAreaProvider;
 import 'discover_circle_editor.dart';
@@ -1425,13 +1426,14 @@ class _PersonCard extends StatelessWidget {
 
 @immutable
 class _AskTurn {
-  const _AskTurn.user(this.text) : fromUser = true, result = null, failed = false;
-  const _AskTurn.rai(AskDiscoverResult this.result) : fromUser = false, text = '', failed = false;
-  const _AskTurn.failed() : fromUser = false, text = '', result = null, failed = true;
+  _AskTurn.user(this.text) : fromUser = true, result = null, failed = false, at = DateTime.now();
+  _AskTurn.rai(AskDiscoverResult this.result) : fromUser = false, text = '', failed = false, at = DateTime.now();
+  _AskTurn.failed() : fromUser = false, text = '', result = null, failed = true, at = DateTime.now();
   final bool fromUser;
   final String text;
   final AskDiscoverResult? result;
   final bool failed;
+  final DateTime at;
   String get body => fromUser ? text : (result?.answer ?? '');
 }
 
@@ -1468,7 +1470,7 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
       if (mounted) setState(() => _turns.add(_AskTurn.rai(r)));
     } catch (e) {
       debugPrint('discover ask: $e');
-      if (mounted) setState(() => _turns.add(const _AskTurn.failed()));
+      if (mounted) setState(() => _turns.add(_AskTurn.failed()));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1478,6 +1480,23 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    // 見た目は RAi ホームのチャットと同じ (D-427): 質問は右の吹き出し、返事は RAi のアイコン + 枠なしの文 + 時刻、
+    // 候補のタイルは返事の下。新しいものが下。入力は RAi バーと同じ形(案内やモードの切り替えは無い)。
+    final rows = <Widget>[
+      for (final (i, t) in _turns.indexed)
+        if (t.fromUser)
+          RaiChatUserRow(key: ValueKey('discover.ask.turn.$i'), text: t.text)
+        else if (t.failed)
+          RaiReplyRow(key: ValueKey('discover.ask.turn.$i'), text: 'うまく答えられませんでした。時間をおいて、もう一度聞いてください', at: t.at, error: true)
+        else
+          RaiReplyRow(
+            key: ValueKey('discover.ask.turn.$i'),
+            text: t.result!.answer,
+            at: t.at,
+            below: [if (!t.result!.isEmpty) Padding(padding: const EdgeInsets.only(top: RasqSpacing.xs), child: DiscoverResultsView(result: t.result!))],
+          ),
+      if (_busy) const RaiReplyRow(key: ValueKey('discover.ask.thinking'), text: '', thinking: true),
+    ];
     return Scaffold(
       appBar: const RasqPageHeader(title: 'RAi に聞く', showMore: false),
       body: SafeArea(
@@ -1487,68 +1506,38 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
             constraints: const BoxConstraints(maxWidth: 640),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Expanded(
-                child: ListView(key: const ValueKey('discover.ask.list'), padding: const EdgeInsets.all(RasqSpacing.page), children: [
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const RaiIcon(size: 28),
-                    const SizedBox(width: RasqSpacing.xs),
-                    Expanded(child: Text('好きなこと・見たいもの・どんな人とつながりたいかを教えてください。合いそうな SNS のサーバーと RASQ リストを探します。', style: RasqTypography.bodySmall)),
-                  ]),
-                  const SizedBox(height: RasqSpacing.xs),
-                  Text('会話は RASQ のサーバーの RAi(クラウド)に送ります。', style: caption),
-                  for (final (i, t) in _turns.indexed) ...[
-                    const SizedBox(height: RasqSpacing.sm),
-                    if (t.fromUser)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          key: ValueKey('discover.ask.turn.$i'),
-                          constraints: const BoxConstraints(maxWidth: 440),
-                          padding: const EdgeInsets.all(RasqSpacing.sm),
-                          decoration: BoxDecoration(color: scheme.primary.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-                          child: Text(t.text, style: RasqTypography.bodySmall),
-                        ),
-                      )
-                    else
-                      Container(
-                        key: ValueKey('discover.ask.turn.$i'),
-                        padding: const EdgeInsets.all(RasqSpacing.sm),
-                        decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                          Row(children: [const RaiIcon(size: 20), const SizedBox(width: RasqSpacing.xs), Text('RAi', style: caption)]),
-                          const SizedBox(height: RasqSpacing.xs),
-                          if (t.failed)
-                            Text('うまく答えられませんでした。時間をおいて、もう一度聞いてください', style: RasqTypography.bodySmall.copyWith(color: scheme.error))
-                          else ...[
-                            Text(t.result!.answer, style: RasqTypography.bodySmall),
-                            if (!t.result!.isEmpty) ...[const SizedBox(height: RasqSpacing.sm), DiscoverResultsView(result: t.result!)],
-                          ],
-                        ]),
+                child: rows.isEmpty
+                    // 空のとき (RAi ホームの「マクロとか、お任せください！」と同じ形)。
+                    ? ListView(key: const ValueKey('discover.ask.list'), padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xl, RasqSpacing.page, RasqSpacing.md), children: [
+                        const Center(child: RaiIcon(size: 48)),
+                        const SizedBox(height: RasqSpacing.sm),
+                        Text('合う SNS、一緒に探します！', textAlign: TextAlign.center, style: RasqTypography.title),
+                        const SizedBox(height: RasqSpacing.xs),
+                        Text('好きなこと・見たいもの・どんな人とつながりたいかを教えてください。合いそうな SNS のサーバーと RASQ リストを探します。', textAlign: TextAlign.center, style: caption),
+                        const SizedBox(height: RasqSpacing.xs),
+                        Text('会話は RASQ のサーバーの RAi(クラウド)に送ります。', textAlign: TextAlign.center, style: caption),
+                      ])
+                    : ListView(
+                        key: const ValueKey('discover.ask.list'),
+                        reverse: true,
+                        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, RasqSpacing.md),
+                        children: rows.reversed.toList(),
                       ),
-                  ],
-                  if (_busy) const Padding(padding: EdgeInsets.all(RasqSpacing.md), child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-                ]),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
-                child: Row(children: [
-                  Expanded(
-                    child: TextField(
-                      key: const ValueKey('discover.ask.input'),
-                      controller: _input,
-                      minLines: 1,
-                      maxLines: 4,
-                      maxLength: discoverAskMaxChars,
-                      onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(hintText: 'RAi に聞く', counterText: ''),
-                    ),
-                  ),
-                  IconButton(
-                    key: const ValueKey('discover.ask.send'),
-                    tooltip: '送る',
-                    icon: const Icon(Icons.send),
-                    onPressed: _busy || _input.text.trim().isEmpty ? null : _send,
-                  ),
-                ]),
+                child: RaiPromptBar(
+                  controller: _input,
+                  inputKey: const ValueKey('discover.ask.input'),
+                  sendKey: const ValueKey('discover.ask.send'),
+                  modelLabel: 'クラウド版 RAi',
+                  hint: 'どんなことが好きですか?',
+                  busy: _busy,
+                  error: _turns.isNotEmpty && _turns.last.failed,
+                  maxLength: discoverAskMaxChars,
+                  onChanged: (_) => setState(() {}),
+                  onSubmit: _send,
+                ),
               ),
             ]),
           ),
