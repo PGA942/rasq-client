@@ -36,11 +36,15 @@ void main() {
   const acc = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'tester');
   Post post(String id, String body, {String visibility = 'public'}) => Post(id: id, account: acc, author: const UserSummary(id: 'u1', account: acc, displayName: 'テスター'), createdAt: DateTime(2026, 8, 31), body: body, visibility: visibility);
 
-  /// 下段に入りきらないボタン(歯車のメニューの先頭、D-324)の [tooltip] を押す。押すとメニューは閉じる。
+  /// 下段の左端のボタン [tooltip] を、横にスライドする列(幅に入りきらないとき、D-428)を送って押す。
   Future<void> tapOverflow(WidgetTester tester, String tooltip) async {
-    await tester.tap(find.byTooltip('設定'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.descendant(of: find.byKey(astellOverflowKey), matching: find.byTooltip(tooltip)));
+    final button = find.descendant(of: find.byKey(astellFooterActionsKey), matching: find.byTooltip(tooltip));
+    final scroll = find.descendant(of: find.byKey(astellFooterScrollKey), matching: find.byType(Scrollable));
+    if (scroll.evaluate().isNotEmpty) {
+      await tester.scrollUntilVisible(button, 48, scrollable: scroll);
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(button);
     await tester.pumpAndSettle();
   }
 
@@ -557,15 +561,16 @@ void main() {
     expect(find.byTooltip('スピーカーミュート'), findsOneWidget);
     expect(find.byTooltip('マイクオン'), findsOneWidget);
     expect(find.byTooltip('字幕オフ'), findsOneWidget); // 並びの最後(入力欄の隣)は幅が足りなくても出す
-    // 狭幅(360px)は 3 つ: 先頭の 2 つ + 最後の字幕。残りは歯車のメニューの先頭へ(歯車に点、D-324)。
-    expect(find.byTooltip('画面共有'), findsNothing);
-    expect(find.byKey(astellOverflowDotKey), findsOneWidget);
+    // 狭幅(360px)は 3 つ分の幅: 最後の字幕は固定、残りは横にスライドする列(D-428。前は歯車のメニューへ逃がしていた)。
+    final scroll = find.byKey(astellFooterScrollKey);
+    expect(find.descendant(of: scroll, matching: find.byTooltip('スピーカーミュート')), findsOneWidget);
+    await tester.scrollUntilVisible(find.byTooltip('画面共有'), 48, scrollable: find.descendant(of: scroll, matching: find.byType(Scrollable)));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: scroll, matching: find.byTooltip('画面共有')), findsOneWidget);
+    await tester.drag(find.descendant(of: scroll, matching: find.byType(Scrollable)), const Offset(400, 0));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
-    final overflow = find.byKey(astellOverflowKey);
-    expect(find.descendant(of: overflow, matching: find.byTooltip('画面共有')), findsOneWidget);
-    expect(find.descendant(of: overflow, matching: find.byTooltip('全画面')), findsOneWidget);
-    expect(find.descendant(of: overflow, matching: find.byTooltip('プラグインアクション(未登録)')), findsNothing); // D-328: 選ぶシートは廃止
     expect(find.text('下段のボタンの並びを編集'), findsOneWidget);
     // 保留音の設定 (D-327): 自分の端末のスイッチ(ルームのスイッチはオーナーだけ)。シートの下の方(スクロールして見る)。
     await tester.scrollUntilVisible(find.byKey(const ValueKey('astell.holdMusic.mine')), 200, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
@@ -759,8 +764,8 @@ void main() {
     await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
     expect(find.text('VC の設定'), findsOneWidget);
-    // 先頭は下段に入りきらないボタンと「下段のボタンの並びを編集」(D-324)。自動再生の設定 (D-147) はその下。
-    expect(find.byKey(astellOverflowKey), findsOneWidget);
+    // 先頭は「下段のボタンの並びを編集」(入りきらないボタンは下段でスライド、D-428)。自動再生の設定 (D-147) はその下。
+    expect(find.byKey(const ValueKey('astell.bar.edit')), findsOneWidget);
     await tester.scrollUntilVisible(find.widgetWithText(RasqSwitchListTile, '画面共有が始まったら共有枠に出す'), 80, scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(RasqSwitchListTile, '画面共有が始まったら共有枠に出す'), findsOneWidget);

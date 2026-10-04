@@ -180,10 +180,11 @@ int astellBarSlots(double width, {required double reserved, required bool compac
   return n.clamp(1, compact ? 3 : 99);
 }
 
-/// 幅に収まらないときの扱い: 先頭から [slots] - 1 個と、**並びの最後の 1 つ**(入力欄の隣。既定では字幕)を出し、
-/// 残り(はみ出した分)は歯車のメニュー(VC の設定の先頭)へ。収まれば全部出す。
-({List<AstellBarItem> shown, List<AstellBarItem> overflow}) splitAstellBar(List<AstellBarItem> items, int slots) {
-  if (items.length <= slots) return (shown: items, overflow: const []);
-  if (slots <= 1) return (shown: [items.last], overflow: items.sublist(0, items.length - 1));
-  return (shown: [...items.take(slots - 1), items.last], overflow: items.sublist(slots - 1, items.length - 1));
+/// 幅 [slots] 個に収まらないときの下段の左端 (D-428): **並びの最後の 1 つ**(入力欄の隣。既定では字幕)は固定で出し、
+/// 残りは横にスライドする列に入れる(前は入りきらない分を歯車のメニューへ逃がしていて、下段の上では触れなかった)。
+/// 列の幅は [slots] - 1 個分(少なくとも 1 個分)。収まれば [scroll] は空で、全部 [fixed] に並ぶ。
+({List<AstellBarItem> scroll, List<AstellBarItem> fixed, double scrollWidth}) layoutAstellBar(List<AstellBarItem> items, int slots) {
+  if (items.length <= slots) return (scroll: const [], fixed: items, scrollWidth: 0);
+  final n = (slots - 1).clamp(1, items.length - 1);
+  return (scroll: items.sublist(0, items.length - 1), fixed: [items.last], scrollWidth: n * astellBarButtonSize + (n - 1) * astellBarGap);
 }
