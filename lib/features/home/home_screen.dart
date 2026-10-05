@@ -28,6 +28,8 @@ import 'home_header.dart';
 import 'post_row.dart';
 import 'timeline_providers.dart';
 import 'timeline_search.dart';
+import '../nodeprog/tl_components.dart' show TlDisplayMode;
+import '../nodeprog/tl_sections_view.dart';
 
 /// タイムライン一時変更 FOW (D-338) を開いている間の、FOW のタブ(スコープ `tl.<id>`)。ホームのタブと揃える。
 final homeTimelineFowScope = ValueNotifier<String?>(null);
@@ -328,14 +330,33 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
       if (posts != null) handleTimelineSearchNav(ref, next, jumper: _jumper, scroll: _scroll, posts: posts);
     });
 
+    // 表示モードとセクション (D-439): この TL の構成で、上に包んだ TL の枠を並べ、本体を通常 TL / 関連 TL / ユーザーで見せる。
+    final scope = 'tl.${widget.kind.id}';
+    final view = ref.watch(tlViewConfigProvider(scope));
+    final sections = TlSectionsBlock(key: ValueKey('tl.sections.block.$scope'), scope: scope);
+    // 引き下げは、包んだ枠も読み直す。
+    Future<void> refresh() async {
+      ref.read(tlSectionsRefreshProvider.notifier).bump();
+      await notifier.refresh();
+    }
+
     return state.when(
       loading: () => const RasqLoading(),
       error: (e, _) => _ErrorList(error: e, onRetry: notifier.refresh),
       data: (tl) {
         if (tl.posts.isEmpty) {
           return RefreshIndicator(
-            onRefresh: notifier.refresh,
-            child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 120), RasqEmptyView(title: '投稿はありません', hint: '下に引っ張って更新')]),
+            onRefresh: refresh,
+            child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [sections, const SizedBox(height: 120), const RasqEmptyView(title: '投稿はありません', hint: '下に引っ張って更新')]),
+          );
+        }
+        if (view != null && view.display != TlDisplayMode.timeline) {
+          return RefreshIndicator(
+            onRefresh: refresh,
+            child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.only(bottom: 80), children: [
+              sections,
+              TlPostsDisplay(key: ValueKey('tl.display.${view.display.name}'), posts: tl.posts, mode: view.display, scrollable: false, kind: widget.kind),
+            ]),
           );
         }
         // 並びは 2 つの sliver (D-298): **中心 (center) より上に、あとから足された新しい投稿**、中心から下に、もとの投稿。
@@ -366,7 +387,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
               child: Column(mainAxisSize: MainAxisSize.min, children: [_item(context, tl, p, notifier, session, actions), const Divider()]),
             );
         return RefreshIndicator(
-          onRefresh: notifier.refresh,
+          onRefresh: refresh,
           child: CustomScrollView(
             controller: _scroll,
             center: _centerKey,
@@ -381,8 +402,9 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                   childCount: newer.length + (edgeTiles ? 1 : 0),
                 ),
               ),
+              // 包んだ TL の枠 (D-439): 中心(開いたときの先頭)に置き、もとの投稿はその下。中心より上の新しい投稿は枠の上に出る。
+              SliverToBoxAdapter(key: _centerKey, child: sections),
               SliverList(
-                key: _centerKey,
                 delegate: SliverChildBuilderDelegate(
                   (context, i) {
                     if (i == base.length) {

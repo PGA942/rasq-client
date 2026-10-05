@@ -92,3 +92,26 @@ List<T> applyTlTabOrder<T>(List<T> items, String Function(T) scopeOf, List<Strin
   }
   return out;
 }
+
+/// 画面に出すための構成 (D-439: 表示モード / セクション)。一時変更 (D-338) があればそれ。保存が無ければ null(= 通常 TL・枠なし)。
+/// 置き場は TimelineConfigScreen と同じ(ノード TL は持ち主 / 共有の領域)。
+final tlViewConfigProvider = Provider.family<TlConfig?, String>((ref, scope) {
+  final temp = ref.watch(tlTemporaryConfigsProvider)[scope];
+  if (temp != null) return temp;
+  String? account = ref.watch(currentAccountProvider)?.key;
+  if (scope == 'tl.bundle') account = null;
+  if (scope.startsWith('tl.node:')) {
+    if (ref.watch(sharedNodeTabsProvider).any((t) => 'tl.${t.id}' == scope)) {
+      account = null;
+    } else {
+      account = ref.watch(allNodeTabsProvider).where((t) => 'tl.${t.$2.id}' == scope).firstOrNull?.$1 ?? account;
+    }
+  }
+  final raw = ref.watch(settingsAreaProvider(nodeprogAreaFor(account, scope))).value?['tlcfg'];
+  if (raw is! String) return null;
+  try {
+    return TlConfig.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+  } catch (_) {
+    return null;
+  }
+});
