@@ -6,7 +6,10 @@ import 'package:rasq_store/rasq_store.dart';
 
 /// Fake SNS plugin/session for widget tests — serves a fixed timeline.
 class FakeSnsPlugin extends SnsPlugin {
-  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const [], this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false, this.trends});
+  FakeSnsPlugin({required this.posts, this.kind = SnsKind.misskey, this.id = 'test.fake', this.feeds = const [], this.settingsPages = const [], this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false, this.trends, this.ads = const []});
+
+  /// サーバーの広告 (D-438、Misskey の meta.ads 役)。
+  final List<ServerAd> ads;
 
   /// トレンド(null = 既定の「打上会」)。
   final List<TrendTag>? trends;
@@ -41,15 +44,18 @@ class FakeSnsPlugin extends SnsPlugin {
   Future<AuthFlow> beginAuth(String host, {Uri? callback}) => throw UnimplementedError();
   @override
   SnsSession open(AccountSession session) {
-    final s = FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind, localEmojis: localEmojis, reactionActionId: reactionActionId, bookmark: bookmark, trends: trends);
+    final s = FakeSnsSession(session, posts(session.account), feeds: feeds, kind: kind, localEmojis: localEmojis, reactionActionId: reactionActionId, bookmark: bookmark, trends: trends, ads: ads);
     opened.add(s);
     return s;
   }
 }
 
 class FakeSnsSession extends SnsSessionBase {
-  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey, this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false, this.trends}) : _posts = [...posts];
+  FakeSnsSession(this.session, List<Post> posts, {this.feeds = const [], this.kind = SnsKind.misskey, this.localEmojis, this.reactionActionId = 'reaction', this.bookmark = false, this.trends, this.ads = const []}) : _posts = [...posts];
   final List<TrendTag>? trends;
+  final List<ServerAd> ads;
+  @override
+  Future<List<ServerAd>> serverAds() async => ads;
   final bool bookmark;
 
   /// addToClip の呼び出し(`clipId:postId`)。

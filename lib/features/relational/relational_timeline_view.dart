@@ -14,6 +14,7 @@ import '../clips/virtual_index.dart';
 import '../home/timeline_providers.dart';
 import 'relational_engine.dart';
 import 'relational_providers.dart';
+import '../ads/timeline_ads.dart';
 
 /// 「関連」タブ = リレーショナルTL v1 (D-027、会話イベント方式)。
 /// フォロイーの投稿を「どの直前投稿への暗黙応答か」で会話イベントに束ね、
@@ -112,12 +113,19 @@ class _RelationalTimelineViewState extends ConsumerState<RelationalTimelineView>
                   )
                 : RefreshIndicator(
                     onRefresh: _refresh,
-                    child: ListView.separated(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: list.length,
-                      separatorBuilder: (_, _) => const Divider(),
-                      itemBuilder: (_, i) => RelationalEventCard(event: list[i]),
-                    ),
+                    child: Builder(builder: (context) {
+                      // 会話の間の広告 (D-438): 会話の最初の投稿が危なくないところにだけ。
+                      final ads = timelineAdGaps(ref, [for (final e in list) e.root]);
+                      final adOrdinal = {for (final (n, g) in (ads.toList()..sort()).indexed) g: n};
+                      return ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: list.length,
+                        separatorBuilder: (_, _) => const Divider(),
+                        itemBuilder: (_, i) => ads.contains(i)
+                            ? Column(mainAxisSize: MainAxisSize.min, children: [TimelineAdSlot(key: ValueKey('relational.ad.$i'), ordinal: adOrdinal[i]!), const Divider(), RelationalEventCard(event: list[i])])
+                            : RelationalEventCard(event: list[i]),
+                      );
+                    }),
                   ),
           ),
         ),

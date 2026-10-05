@@ -23,6 +23,7 @@ import 'post_resolve.dart';
 import 'reactions_screen.dart';
 import 'thread_section.dart';
 import 'thread_section_bar.dart';
+import '../ads/timeline_ads.dart';
 
 /// スレッド展開画面: ancestors → 対象投稿 → 「∨ 返信 / リアクションを表示 >」→
 /// replies (thread line) → さらに表示 → 返信バー(コンポーザーは次段階).
@@ -246,7 +247,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 }
 
-class _ThreadBody extends StatelessWidget {
+class _ThreadBody extends ConsumerWidget {
   const _ThreadBody({required this.post, required this.ancestors, required this.descendants, required this.actions, required this.onAction, this.loading = false, this.order = ThreadSortOrder.none, this.mode = ThreadSectionMode.replies, this.onSortTap, this.onModeTap, this.onShowReactions, this.onActAs});
   final Post post;
   final List<Post> ancestors;
@@ -264,7 +265,7 @@ class _ThreadBody extends StatelessWidget {
   final ValueChanged<Post>? onActAs;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // 返信欄は**リプライだけ** (D-071、Twitter 寄せ): Misskey の
     // notes/children は引用リノートも混ざって返る — 引用は「共有(引用
     // ノート)」欄で見るので、ここでは replyTo を持つものに絞る。
@@ -286,12 +287,16 @@ class _ThreadBody extends StatelessWidget {
       ),
       if (loading) const RasqLoading(),
       if (mode == ThreadSectionMode.replies) ...[
-        for (final d in replies) ...[
-          // 直接の返信は親(表示中の投稿)が見えているので省略タイルは出さない
-          // (孫返信など別の親のものだけ出す、D-069)。
-          _Threaded(child: PostRow(post: d, actions: actions, onAction: (x, {args = const {}}) => onAction(d, x, args: args), onTap: () => context.pushPost(d), showReplyParent: (d.replyToId ?? d.replyTo?.id) != post.id, compactQuote: true)),
-          const Divider(),
-        ],
+        // 返信の間の広告 (D-438)。
+        ...withTimelineAds(ref, replies, scope: 'thread', [
+          for (final d in replies)
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              // 直接の返信は親(表示中の投稿)が見えているので省略タイルは出さない
+              // (孫返信など別の親のものだけ出す、D-069)。
+              _Threaded(child: PostRow(post: d, actions: actions, onAction: (x, {args = const {}}) => onAction(d, x, args: args), onTap: () => context.pushPost(d), showReplyParent: (d.replyToId ?? d.replyTo?.id) != post.id, compactQuote: true)),
+              const Divider(),
+            ]),
+        ]),
         if (replies.isNotEmpty) Center(child: TextButton(onPressed: () {}, child: const Text('さらに表示'))),
       ] else
         _ModeSection(mode: mode, post: post, order: order, actions: actions),

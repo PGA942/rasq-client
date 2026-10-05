@@ -8,8 +8,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
-import '../ads/ad_placement.dart';
-import '../ads/export_ad.dart';
+import '../ads/timeline_ads.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../profile/rasq_post_tile.dart';
 import '../../app/navigation.dart';
@@ -357,9 +356,9 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
         final base = tl.posts.sublist(split);
         // 投稿の間の広告 (D-433、AdMob): もとの投稿の並びに [timelineAdEvery] 件ごと。危ない投稿(CW / センシティブ)の隣には置かない
         // ([adGaps] / [postAdSafe]、Swing と同じ決まり)。設定「リソースと広告」で消せる。子のアカウントと、出せない端末では出ない。
-        final adGapsSet = settingValue(ref, 'resources', 'showAds', true) != false && ref.watch(exportAdAllowedProvider)
-            ? adGaps(base.length, (i) => postAdSafe(base[i]), every: timelineAdEvery).toSet()
-            : const <int>{};
+        // D-438: 置き場所と中身(Misskey のサーバーの広告と交互)は TL 系で共通 ([timelineAdGaps] / [TimelineAdSlot])。
+        final adGapsSet = timelineAdGaps(ref, base);
+        final adOrdinal = {for (final (n, g) in (adGapsSet.toList()..sort()).indexed) g: n};
         Widget row(Post p) => TimelineSearchRow(
               key: ValueKey('tl.row.${p.key}'),
               controller: _jumper,
@@ -401,7 +400,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                       return Padding(padding: const EdgeInsets.only(bottom: 80), child: TimelineEdgeTile(key: const ValueKey('tl.edge.bottom'), scroll: _scroll, label: '続きを読み込む', busyLabel: '読み込んでいます…', busy: tl.loadingMore, onLoad: notifier.loadMore));
                     }
                     if (adGapsSet.contains(i)) {
-                      return Column(mainAxisSize: MainAxisSize.min, children: [Center(key: ValueKey('tl.ad.$i'), child: const ExportAdSlot()), row(base[i])]);
+                      return Column(mainAxisSize: MainAxisSize.min, children: [TimelineAdSlot(key: ValueKey('tl.ad.$i'), ordinal: adOrdinal[i]!), row(base[i])]);
                     }
                     return row(base[i]);
                   },
@@ -458,9 +457,6 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
     );
   }
 }
-
-/// TL の投稿の間の広告の間隔(件、D-433)。
-const timelineAdEvery = 10;
 
 class _ErrorList extends StatelessWidget {
   const _ErrorList({required this.error, required this.onRetry});
