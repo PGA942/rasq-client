@@ -26,6 +26,9 @@ import 'trend_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../ads/timeline_ads.dart';
+import '../nodeprog/tl_components.dart' show TlDisplayMode;
+import '../nodeprog/tl_config_store.dart' show tlViewConfigProvider;
+import '../nodeprog/tl_sections_view.dart';
 
 /// トレンドTL(検索結果): ∨ノート / フォロー中 / ユーザー.
 /// ノート = 「フォロー中の反応」 + 「トレンド」(タグTL)。
@@ -175,6 +178,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
             child: TabBarView(children: [
               RefreshIndicator(
                 onRefresh: () async {
+                  ref.read(tlSectionsRefreshProvider.notifier).bump(); // 包んだ枠も (D-439)
                   ref.invalidate(trendAnalysisProvider(_q));
                   ref.invalidate(trendFollowingPostsProvider(_q));
                   ref.invalidate(trendFollowingActivityProvider(widget.tag));
@@ -182,6 +186,8 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   await notifier.refresh();
                 },
                 child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
+                  // トレンド TL のカスタマイズで足したセクション(ほかの TL を包んだ枠、D-439)。
+                  const TlSectionsBlock(scope: 'trend'),
                   const RasqSectionHeader(title: 'フォロー中の反応', topMargin: 0),
                   // AsTell / リレーショナル TL にすでにあるこのワードの話題 (D-364) → フォロイーのタグ投稿。
                   ...[
@@ -206,9 +212,13 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                     error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
                     data: (s) {
                       final posts = apply(s.posts);
+                      // 表示モード (D-439): トレンド TL のカスタマイズで関連 TL / ユーザーを選んでいれば、その形で。
+                      final display = ref.watch(tlViewConfigProvider('trend'))?.display ?? TlDisplayMode.timeline;
                       return posts.isEmpty
                           ? const RasqEmptyView(title: 'なんにもないようです', hint: 'ワードやフィルタを変えると見つかるかもしれません')
-                          : Column(children: [rows(posts), if (s.loadingMore) const RasqLoading()]);
+                          : display != TlDisplayMode.timeline
+                              ? TlPostsDisplay(key: ValueKey('trend.display.${display.name}'), posts: posts, mode: display, scrollable: false, kind: _kind)
+                              : Column(children: [rows(posts), if (s.loadingMore) const RasqLoading()]);
                     },
                   ),
                 ]),

@@ -149,9 +149,55 @@ class TlAlgorithmComponent {
       params: (j['params'] as Map?)?.cast<String, Object?>() ?? const {});
 }
 
+/// タイムラインの表示モード (D-439)。同じ投稿の並びを、通常の TL / 会話のまとまり(関連 TL の形)/ 投稿した人の並びで見せる。
+enum TlDisplayMode {
+  timeline('通常 TL', Icons.view_stream_outlined),
+  relational('関連 TL', Icons.forum_outlined),
+  users('ユーザー', Icons.people_outline);
+
+  const TlDisplayMode(this.label, this.icon);
+  final String label;
+  final IconData icon;
+
+  static TlDisplayMode byName(Object? name) => values.where((m) => m.name == name).firstOrNull ?? timeline;
+}
+
+/// 包むノード = セクション (D-439)。ほかの TL([tl] = タイムライン id: `home` / `local` / `list:…` / `node:<n>` …)を、
+/// 見出し([title])つきの枠に包んで、この TL の上に並べる(トレンド TL の「フォロー中の反応」「トレンド」のような枠)。
+/// **包んだ TL は新しい投稿を読み込まない**(開いたとき / 引き下げ / 枠の ↻ で読み直す)。[limit] 件まで。
+@immutable
+class TlSection {
+  const TlSection({required this.id, required this.title, required this.tl, this.display = TlDisplayMode.timeline, this.limit = 5, this.enabled = true});
+
+  final String id;
+  final String title;
+  final String tl;
+  final TlDisplayMode display;
+  final int limit;
+
+  /// 一時的に隠す(外さずに)。
+  final bool enabled;
+
+  /// 件数の選択肢。
+  static const limits = [3, 5, 10, 20];
+
+  TlSection copyWith({String? title, String? tl, TlDisplayMode? display, int? limit, bool? enabled}) =>
+      TlSection(id: id, title: title ?? this.title, tl: tl ?? this.tl, display: display ?? this.display, limit: limit ?? this.limit, enabled: enabled ?? this.enabled);
+
+  Map<String, Object?> toJson() => {'id': id, 'title': title, 'tl': tl, 'display': display.name, 'limit': limit, if (!enabled) 'enabled': false};
+  factory TlSection.fromJson(Map<String, Object?> j) => TlSection(
+        id: j['id'] as String? ?? '',
+        title: j['title'] as String? ?? '',
+        tl: j['tl'] as String? ?? 'home',
+        display: TlDisplayMode.byName(j['display']),
+        limit: (j['limit'] as num?)?.toInt().clamp(1, 50) ?? 5,
+        enabled: j['enabled'] != false,
+      );
+}
+
 @immutable
 class TlConfig {
-  const TlConfig({this.sources = const [], this.algorithms = const [], this.clock = '15秒'});
+  const TlConfig({this.sources = const [], this.algorithms = const [], this.clock = '15秒', this.display = TlDisplayMode.timeline, this.sections = const []});
 
   final List<TlSourceComponent> sources;
   final List<TlAlgorithmComponent> algorithms;
@@ -159,18 +205,32 @@ class TlConfig {
   /// 自動更新の間隔('' = なし。クロックノードにコンパイルされる)。
   final String clock;
 
-  TlConfig copyWith({List<TlSourceComponent>? sources, List<TlAlgorithmComponent>? algorithms, String? clock}) =>
-      TlConfig(sources: sources ?? this.sources, algorithms: algorithms ?? this.algorithms, clock: clock ?? this.clock);
+  /// この TL の表示モード (D-439)。
+  final TlDisplayMode display;
+
+  /// この TL の上に並べる、ほかの TL を包んだ枠 (D-439)。
+  final List<TlSection> sections;
+
+  TlConfig copyWith({List<TlSourceComponent>? sources, List<TlAlgorithmComponent>? algorithms, String? clock, TlDisplayMode? display, List<TlSection>? sections}) => TlConfig(
+      sources: sources ?? this.sources,
+      algorithms: algorithms ?? this.algorithms,
+      clock: clock ?? this.clock,
+      display: display ?? this.display,
+      sections: sections ?? this.sections);
 
   Map<String, Object?> toJson() => {
         'sources': [for (final s in sources) s.toJson()],
         'algorithms': [for (final a in algorithms) a.toJson()],
         'clock': clock,
+        if (display != TlDisplayMode.timeline) 'display': display.name,
+        if (sections.isNotEmpty) 'sections': [for (final s in sections) s.toJson()],
       };
   factory TlConfig.fromJson(Map<String, Object?> j) => TlConfig(
         sources: [for (final s in (j['sources'] as List? ?? const [])) TlSourceComponent.fromJson((s as Map).cast<String, Object?>())],
         algorithms: [for (final a in (j['algorithms'] as List? ?? const [])) TlAlgorithmComponent.fromJson((a as Map).cast<String, Object?>())],
         clock: j['clock'] as String? ?? '15秒',
+        display: TlDisplayMode.byName(j['display']),
+        sections: [for (final s in (j['sections'] as List? ?? const [])) if (s is Map) TlSection.fromJson(s.cast<String, Object?>())],
       );
 }
 

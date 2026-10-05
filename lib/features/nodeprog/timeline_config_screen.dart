@@ -829,6 +829,115 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
           chevron: false,
         ),
       ] else ..._sourceComponents(),
+      if (_supportsLayout) ..._layoutComponents(),
+    ];
+  }
+
+  // ---- 表示モードとセクション(包むノード)D-439 ---------------------------------
+
+  /// 表示モード / セクションを持てるスコープ: ホームの TL のタブ(DM と関連 TL は除く)とトレンド TL。
+  bool get _supportsLayout => (_scope.startsWith('tl.') && !_isDmScope && _scope != 'tl.relational') || _scope == 'trend';
+
+  /// セクションに包める TL(この TL 自身と関連 TL は除く): SNS の基本 TL + 作ったノード TL。
+  List<(String, String)> _sectionChoices() {
+    final own = _scope.startsWith('tl.') ? _scope.substring(3) : '';
+    return [
+      for (final k in ref.read(tlTimelinesProvider('')))
+        if (k.id != own && k != TimelineKind.relational) (k.id, k.label),
+      for (final t in ref.read(nodeTabsProvider))
+        if (t.id != own) (t.id, t.label),
+    ];
+  }
+
+  Future<String?> _dropdown(BuildContext anchorContext, String id, List<(String, String)> items, {String? current}) {
+    final box = anchorContext.findRenderObject() as RenderBox;
+    final anchor = box.localToGlobal(Offset.zero) & box.size;
+    return ref.read(overlayManagerProvider).showDropdown<String>(id: id, anchor: anchor, dense: true, items: [for (final (v, l) in items) RasqDropdownItem(l, v, checked: v == current)]);
+  }
+
+  void _updateSection(int i, TlSection next) => _update(_cfg.copyWith(sections: [for (var k = 0; k < _cfg.sections.length; k++) k == i ? next : _cfg.sections[k]]));
+
+  Future<void> _addSection(BuildContext anchorContext) async {
+    final choices = _sectionChoices();
+    final tl = await _dropdown(anchorContext, 'tlconfig.section.pick', choices);
+    if (tl == null || !mounted) return;
+    final label = choices.firstWhere((c) => c.$1 == tl).$2;
+    final title = await _promptText('セクションの見出し', initial: label);
+    if (title == null || !mounted) return;
+    _update(_cfg.copyWith(sections: [..._cfg.sections, TlSection(id: 's${DateTime.now().microsecondsSinceEpoch}', title: title.isEmpty ? label : title, tl: tl)]));
+  }
+
+  Future<void> _sectionMenu(BuildContext anchorContext, int i) async {
+    final s = _cfg.sections[i];
+    final pick = await _dropdown(anchorContext, 'tlconfig.section.menu', [
+      ('rename', '見出しを変更'),
+      ('display', '表示モード: ${s.display.label}'),
+      ('limit', '件数: ${s.limit}'),
+      if (i > 0) ('up', '上へ'),
+      ('toggle', s.enabled ? '一時的な無効化' : '無効化の解除'),
+      ('delete', '削除'),
+    ]);
+    if (pick == null || !mounted || !anchorContext.mounted) return;
+    switch (pick) {
+      case 'rename':
+        final title = await _promptText('セクションの見出し', initial: s.title);
+        if (title != null && title.isNotEmpty && mounted) _updateSection(i, s.copyWith(title: title));
+      case 'display':
+        final m = await _dropdown(anchorContext, 'tlconfig.section.display', [for (final m in TlDisplayMode.values) (m.name, m.label)], current: s.display.name);
+        if (m != null && mounted) _updateSection(i, s.copyWith(display: TlDisplayMode.byName(m)));
+      case 'limit':
+        final n = await _dropdown(anchorContext, 'tlconfig.section.limit', [for (final n in TlSection.limits) ('$n', '$n 件')], current: '${s.limit}');
+        if (n != null && mounted) _updateSection(i, s.copyWith(limit: int.parse(n)));
+      case 'up':
+        final list = [..._cfg.sections]..removeAt(i);
+        _update(_cfg.copyWith(sections: list..insert(i - 1, s)));
+      case 'toggle':
+        _updateSection(i, s.copyWith(enabled: !s.enabled));
+      case 'delete':
+        _update(_cfg.copyWith(sections: [for (var k = 0; k < _cfg.sections.length; k++) if (k != i) _cfg.sections[k]]));
+    }
+  }
+
+  List<Widget> _layoutComponents() {
+    final scheme = Theme.of(context).colorScheme;
+    final labels = {for (final (v, l) in _sectionChoices()) v: l};
+    return [
+      const RasqSectionHeader(title: '表示モード'),
+      Builder(builder: (ctx) {
+        return RasqListTile(
+          key: const ValueKey('tlconfig.display'),
+          title: '表示: ${_cfg.display.label}',
+          subtitle: '同じ投稿を、通常の TL / 会話のまとまり(関連 TL)/ 投稿した人の並びで見せます',
+          leading: Icon(_cfg.display.icon),
+          onTap: () async {
+            final m = await _dropdown(ctx, 'tlconfig.display.pick', [for (final m in TlDisplayMode.values) (m.name, m.label)], current: _cfg.display.name);
+            if (m != null && mounted) _update(_cfg.copyWith(display: TlDisplayMode.byName(m)));
+          },
+        );
+      }),
+      const RasqSectionHeader(title: 'セクション(ほかの TL を包む)'),
+      const RasqCaption(
+        'ほかの TL を見出しつきの枠に包んで、この TL の上に並べます。包んだ TL は新しい投稿を読み込みません',
+        detail: 'ほかのタイムライン(基本の TL / 作ったノード TL)を見出しつきの枠に包み、この TL の上に並べます。包んだ TL は開いたときの分だけを出し、新しい投稿は読み込みません(引き下げ / 枠の ↻ で読み直します)。',
+        padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+      ),
+      for (var i = 0; i < _cfg.sections.length; i++)
+        Builder(builder: (ctx) {
+          final s = _cfg.sections[i];
+          return Opacity(
+            opacity: s.enabled ? 1 : 0.5,
+            child: RasqListTile(
+              key: ValueKey('tlconfig.section.${s.id}'),
+              title: s.title,
+              subtitle: '${labels[s.tl] ?? s.tl} ・ ${s.display.label} ・ ${s.limit} 件${s.enabled ? '' : '(無効)'}',
+              leading: Icon(Icons.crop_square, color: scheme.onSurfaceVariant),
+              chevron: false,
+              trailing: RasqIconButton(key: ValueKey('tlconfig.section.${s.id}.more'), icon: Icons.more_horiz, size: 18, tooltip: 'セクションのメニュー', onPressed: () => _sectionMenu(ctx, i)),
+              onTap: () => _sectionMenu(ctx, i),
+            ),
+          );
+        }),
+      Builder(builder: (ctx) => _addTile('セクションを追加', () => _addSection(ctx))),
     ];
   }
 
