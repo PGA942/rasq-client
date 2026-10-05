@@ -114,3 +114,7 @@ final columnLayoutProvider = Provider<ColumnLayout>((ref) {
 
 /// カラムの比の設定の保存先 (D-320)。
 const columnLayoutArea = 'appearance.columns';
+
+/// Swing のビューワーを幅の広い画面で第3カラムに開くか (D-437、キー `swingInColumn`)。既定 = 開かない = 全画面
+/// (D-413 で第3カラムにしていたが、iPad で全画面にならないのが分かりにくかった)。
+final swingInColumnProvider = Provider<bool>((ref) => ref.watch(settingsAreaProvider(columnLayoutArea)).value?['swingInColumn'] == true);

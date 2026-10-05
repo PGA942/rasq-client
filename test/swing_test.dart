@@ -21,6 +21,7 @@ import 'package:rasq_client/features/ads/export_ad.dart';
 import 'package:rasq_client/features/home/home_header.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart' show astellCreateFowId;
 import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/shell/column_layout.dart' show columnLayoutArea;
 import 'package:rasq_client/features/compose/composer_sheet.dart' show composerFowId, showComposerWith;
 import 'package:rasq_client/features/compose/compose_target.dart' show ComposeReply;
 import 'package:rasq_client/backend/rasq_account_page_api.dart' show RasqAccountPost, RasqPostAuthor, RasqNotice;
@@ -1158,12 +1159,25 @@ void main() {
     expect(fowAvoidInset(area, [(rect: const Rect.fromLTWH(400, 0, 100, 800), wall: true)]), const EdgeInsets.only(right: 100));
   });
 
+  testWidgets('幅の広い画面でも既定は全画面 (D-437)。「カラムの幅」で選ぶと第3カラム', (tester) async {
+    final (mock, _, _, _) = central([swing('t1', 'alice', text: 'こんにちは')]);
+    final c = await pumpApp(tester, mock, size: const Size(1400, 900), dpr: 1);
+    await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
+    await tester.pumpAndSettle();
+    expect(c.read(thirdColumnProvider), isNull, reason: '第3カラムには開かない');
+    final viewer = tester.getRect(find.byType(SwingViewerScreen));
+    expect(viewer.left, 0, reason: '全画面(レールも覆う)');
+    expect(viewer.width, 1400);
+  });
+
   for (final wide in [true, false]) {
     testWidgets('下の stick FOW (D-420, ${wide ? '第3カラム' : '狭い画面'}): 動画はシークバーが再生位置を出し、引くと移る。返信の欄 → コンポーザーで面が縮み、閉じると戻る', (tester) async {
       swingReplies.clear();
       final fake = _FakeSeek(const Duration(seconds: 10));
       final (mock, seen, _, _) = central([swing('v1', 'alice', kind: 'video', text: '', media: {'url': 'https://central.test/api/v1/swings/media/v.mp4', 'contentType': 'video/mp4'}, postId: 'p1')]);
       final c = await pumpApp(tester, mock, size: wide ? const Size(1400, 900) : const Size(1080, 2340), dpr: wide ? 1 : 3, extra: [swingVideoSeekOverrideProvider.overrideWithValue((_) => fake)]);
+      // 第3カラムに開くのは設定で選んだときだけ (D-437)。
+      if (wide) await c.read(settingsAreaProvider(columnLayoutArea).notifier).set('swingInColumn', true);
       await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
       await tester.pumpAndSettle();
       final viewer = tester.getRect(find.byType(SwingViewerScreen));

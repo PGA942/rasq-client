@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_client/features/home/home_header.dart';
+import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/shell/headers.dart';
 import 'package:rasq_client/shell/nav.dart';
 import 'package:rasq_client/shell/sidebar.dart';
@@ -51,5 +53,31 @@ void main() {
     expect(find.byKey(const ValueKey('rail.avatar')), findsNothing);
     expect(find.byType(RasqHeaderAvatarButton), findsOneWidget);
     expect(tester.getCenter(find.byType(RasqHeaderAvatarButton)).dy, lessThan(100), reason: 'ヘッダーの左');
+  });
+
+  testWidgets('広い画面でホームのヘッダーをしまったとき: アイコンはレールの 1 つだけ。押すとヘッダーを戻す (D-437)', (tester) async {
+    await pump(tester, const Size(1280, 800));
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    await c.read(settingsAreaProvider(homeHeaderArea).notifier).set('collapsed', true);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('home.header.floating')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home.header.expand')), findsNothing, reason: '浮かべたアイコンは出さない');
+    expect(find.byType(RasqHeaderAvatarButton), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('rail.avatar')));
+    await tester.pumpAndSettle();
+    expect(c.read(homeHeaderCollapsedProvider), isFalse, reason: 'ヘッダーを戻す');
+    expect(find.byType(RasqSidebar), findsNothing, reason: 'サイドバーは開かない');
+    // 戻したあとは、これまでどおりサイドバー。
+    await tester.tap(find.byKey(const ValueKey('rail.avatar')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RasqSidebar), findsOneWidget);
+  });
+
+  testWidgets('狭い画面でしまったとき: これまでどおり浮かべたアイコン', (tester) async {
+    await pump(tester, const Size(400, 800));
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    await c.read(settingsAreaProvider(homeHeaderArea).notifier).set('collapsed', true);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('home.header.expand')), findsOneWidget);
   });
 }

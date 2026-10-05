@@ -54,6 +54,8 @@ class RasqHomeHeader extends StatelessWidget implements PreferredSizeWidget {
 
 /// しまったホームヘッダー (D-377): バーもタブ行も無く、TL の上に**浮かべて**左のアイコンと新着(AsTell / Swing、1 分だけ)だけ。
 /// D-410: 右端の ↓ は無くし、**浮かべたアイコンを押すとヘッダーを戻す**(しまっている間、アイコンはサイドバーを開かない)。
+/// D-437: レールのある幅の広い画面では、アイコンを浮かべない(レールの一番上のアイコンと 2 つになっていた)。
+/// そのときはレールのアイコンを押すとヘッダーを戻す(`RasqShell` の `_TabletLayout`)。
 class RasqFloatingHomeHeader extends StatelessWidget {
   const RasqFloatingHomeHeader({super.key, required this.me, this.arrivals, required this.onExpand});
   final UserSummary me;
@@ -73,8 +75,10 @@ class RasqFloatingHomeHeader extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.sm),
           child: Row(children: [
-            float(Tooltip(message: 'ヘッダーを戻す', child: RasqHeaderAvatarButton(key: const ValueKey('home.header.expand'), me: me, onTap: onExpand, semanticsLabel: 'ヘッダーを戻す'))),
-            const SizedBox(width: RasqSpacing.sm),
+            if (!RasqRailScope.of(context)) ...[
+              float(Tooltip(message: 'ヘッダーを戻す', child: RasqHeaderAvatarButton(key: const ValueKey('home.header.expand'), me: me, onTap: onExpand, semanticsLabel: 'ヘッダーを戻す'))),
+              const SizedBox(width: RasqSpacing.sm),
+            ],
             Expanded(child: Align(alignment: Alignment.centerLeft, child: arrivals ?? const SizedBox.shrink())),
           ]),
         ),

@@ -103,6 +103,14 @@ class _ColumnLayoutScreenState extends ConsumerState<ColumnLayoutScreen> {
               ),
             ]),
           ),
+        const RasqSectionHeader(title: 'Swing'),
+        RasqSwitchListTile(
+          key: const ValueKey('columns.swingInColumn'),
+          title: 'Swing を第3カラムで開く',
+          subtitle: 'オフのときは全画面で開きます(はじめはオフ)',
+          value: ref.watch(swingInColumnProvider),
+          onChanged: (v) => _store.set('swingInColumn', v),
+        ),
         const RasqSectionHeader(title: 'いまの画面での幅'),
         Padding(
           padding: const EdgeInsets.all(RasqSpacing.page),
