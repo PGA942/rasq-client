@@ -6,6 +6,12 @@ import 'node_graph.dart';
 /// 取得の kind id: RASQ の投稿 (D-283)。`resolveNodeFetch` が Central のフィードに解決する。
 const rasqPostsKind = 'rasq:posts';
 
+/// 取得元: SNS アカウントのトレンドのワード (D-440、トレンドタイル)。
+const trendTagsKind = 'trend.tags';
+
+/// 取得元: このページの検索ワード / タグの検索結果 (D-440、トレンド TL)。
+const pageSearchKind = 'search:';
+
 /// 取得の kind id の接頭辞: RASQ リスト (D-346)。`rasqlist:<id>`。Central のリストのタイムライン(S-044)に解決する。
 const rasqListKindPrefix = 'rasqlist:';
 
@@ -38,6 +44,13 @@ class TlSourceComponent {
   final bool enabled;
 
   bool get isTrend => tl == 'trend';
+
+  /// SNS アカウントのトレンドのワード (D-440): トレンドタイルの取得元。`account` のアカウント(空 = 現在)の `trendingTags`。
+  bool get isTrendTags => tl == trendTagsKind;
+
+  /// 検索結果 (D-440): `search:<ワード>`。ワードが空なら、このページの検索ワード / タグ(トレンド TL の取得元)。
+  bool get isSearch => tl.startsWith('search:');
+  String get searchWord => isSearch ? tl.substring(7) : '';
   bool get isList => tl.startsWith('list:');
   bool get isSelf => tl == 'self';
 
@@ -242,12 +255,24 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
   if (scope == 'tl.bundle') {
     return TlConfig(sources: [for (final a in bundleAccounts) TlSourceComponent(tl: 'home', account: a)], algorithms: const [TlAlgorithmComponent(type: 'chrono')]);
   }
-  if (scope == 'trend' || scope == 'trend.users' || scope == trendTodayScope) {
+  // 取得元は SNS ごとのノード (D-440): トレンド TL = いまのアカウントの検索結果、Today = いまのアカウントの featured。
+  // (前は「このタイムライン」= self。保存した構成の self はそのまま動く。)
+  if (scope == 'trend') {
+    return const TlConfig(sources: [TlSourceComponent(tl: pageSearchKind)], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
+  }
+  if (scope == trendTodayScope) {
+    return const TlConfig(sources: [TlSourceComponent(tl: 'featured')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
+  }
+  if (scope == 'trend.users') {
     return const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
   }
-  // トレンドタイル (D-431): 取得元は RASQ アカウントのトレンド(固定)。並びは取得の順。自動更新は無い。
+  // トレンドタイル (D-431 → D-440): 取得元は RASQ アカウントに入っている SNS アカウントごとのトレンド。並びは取得の順。自動更新は無い。
   if (scope == trendTilesScope) {
-    return const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'chrono')], clock: '');
+    return TlConfig(
+      sources: [for (final a in bundleAccounts.isEmpty ? const [''] : bundleAccounts) TlSourceComponent(tl: trendTagsKind, account: a)],
+      algorithms: const [TlAlgorithmComponent(type: 'chrono')],
+      clock: '',
+    );
   }
   if (scope == 'tl.dm' || scope.startsWith('tl.dm:') || scope.startsWith('tl.chat:')) {
     // DM (D-127): メイン(tl.dm)= カスタム未設定の全 DM ページの共通設定、

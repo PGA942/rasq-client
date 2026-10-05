@@ -141,14 +141,19 @@ final trendUsersProvider = FutureProvider.autoDispose.family<List<(UserProfile, 
 ///    「→ トレンド枠」の鎖があればその出力(ノードエディタで組んだもの)。どちらも無ければ SNS のトレンドのまま。
 /// 2. 傾向 FOW のプロファイル(指向性 / 刺激性)を**一番最後**に([applyTendencyToTags])。
 final trendFrameTagsProvider = FutureProvider.autoDispose<List<TrendTag>>((ref) async {
-  final tags = await ref.watch(trendingTagsProvider.future);
+  final sourced = await ref.watch(sourcedTrendsProvider.future);
+  final tags = sourced.tags;
   final accKey = ref.watch(currentAccountProvider)?.key;
   var out = tags;
   try {
     final area = await ref.watch(settingsAreaProvider(nodeprogAreaFor(accKey, trendTilesScope)).future);
     final raw = area['tlcfg'];
     if (raw is String) {
-      out = applyTrendTilesConfig(tags, TlConfig.fromJson((jsonDecode(raw) as Map).cast<String, Object?>()), (t) => t.tag);
+      final cfg = TlConfig.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+      // 取得元 (D-440): SNS アカウントごとのトレンド(`trend.tags`)があれば、有効なアカウントのトレンドに出ているワードだけ。
+      // 無ければ(前の構成の self)全部。アカウントの表記が空なら、いまのアカウント。
+      final from = filterTrendsBySources(sourced, cfg, current: ref.watch(currentAccountProvider));
+      out = applyTrendTilesConfig(from, cfg, (t) => t.tag);
     } else {
       out = await _legacyTrendFrame(ref, accKey, tags) ?? tags;
     }
@@ -163,6 +168,14 @@ final trendFrameTagsProvider = FutureProvider.autoDispose<List<TrendTag>>((ref) 
   }
   return out;
 });
+
+/// トレンドタイルの取得元 (D-440) で絞る: 構成に `trend.tags` があれば、有効なアカウントのトレンドに出ているワードだけ。
+List<TrendTag> filterTrendsBySources(SourcedTrends sourced, TlConfig cfg, {AccountId? current}) {
+  if (!cfg.sources.any((x) => x.isTrendTags)) return sourced.tags;
+  final picked = {for (final x in cfg.sources) if (x.isTrendTags && x.enabled) x.account.isEmpty ? '$current' : x.account};
+  bool from(AccountId a) => picked.contains('$a') || picked.contains(a.key);
+  return [for (final t in sourced.tags) if ((sourced.sources[trendKey(t.tag)] ?? const <AccountId>[]).any(from)) t];
+}
 
 /// 前の置き場(`trend` のグラフの「→ トレンド枠」の鎖)の出力。鎖が無ければ null。
 Future<List<TrendTag>?> _legacyTrendFrame(Ref ref, String? accKey, List<TrendTag> tags) async {
