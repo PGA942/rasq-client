@@ -11,6 +11,13 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../relational/relational_engine.dart';
+import '../swing/swing_banner.dart';
+import '../swing/swing_models.dart';
+import '../swing/swing_providers.dart';
+import '../vc/astell_actions.dart' show AstellRoomTile;
+import '../vc/astell_providers.dart' show astellHomeProvider;
+import '../vc/astell_tile.dart' show AstellTileStrip;
+import '../vc/vc_screen.dart' show searchAstellRooms;
 import '../relational/relational_providers.dart' show relationalSettingsProvider;
 import '../relational/relational_timeline_view.dart' show RelationalEventCard;
 import '../users/user_list.dart';
@@ -36,6 +43,8 @@ final tlSectionsRefreshProvider = NotifierProvider<TlSectionsRefresh, int>(TlSec
 
 /// 包める TL の名前([TlSection.tl] → 見出しに出す名前)。
 String tlSectionSourceLabel(WidgetRef ref, String tl) {
+  if (tl == astellSectionKind) return 'AsTell のタイル';
+  if (tl == swingSectionKind) return 'Swing';
   if (tl.startsWith('node:')) return ref.watch(nodeTabsProvider).where((t) => t.id == tl).firstOrNull?.label ?? 'ノード TL';
   final kinds = ref.watch(currentSnsSessionProvider)?.timelines ?? const <TimelineKind>[];
   return kinds.where((k) => k.id == tl).firstOrNull?.label ?? switch (tl) {
@@ -49,15 +58,19 @@ String tlSectionSourceLabel(WidgetRef ref, String tl) {
 
 /// [scope] の構成のセクション。無ければ何も出さない。
 class TlSectionsBlock extends ConsumerWidget {
-  const TlSectionsBlock({super.key, required this.scope});
+  const TlSectionsBlock({super.key, required this.scope, this.query});
   final String scope;
+
+  /// このページの検索ワード / タグ (D-441: トレンド TL)。AsTell / Swing の枠はこれに当たるものだけ出す。
+  final String? query;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sections = [for (final s in ref.watch(tlViewConfigProvider(scope))?.sections ?? const <TlSection>[]) if (s.enabled) s];
     if (sections.isEmpty) return const SizedBox.shrink();
     return Column(key: ValueKey('tl.sections.$scope'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      for (final s in sections) TlSectionView(key: ValueKey('tl.section.${s.id}'), section: s),
+      for (final s in sections)
+        if (s.isAstell || s.isSwing) _LiveSectionView(key: ValueKey('tl.section.${s.id}'), section: s, query: query) else TlSectionView(key: ValueKey('tl.section.${s.id}'), section: s),
     ]);
   }
 }
@@ -178,5 +191,43 @@ class TlPostsDisplay extends ConsumerWidget {
     final picked = [for (final k in limit == null ? order : order.take(limit!)) users[k]!];
     if (picked.isEmpty) return const [RasqCaption('まだいません')];
     return [UserList(key: const ValueKey('tl.display.users.list'), users: picked, shrinkWrap: true, subtitles: {for (final u in picked) u.id: '${count[u.key]} 件の投稿'})];
+  }
+}
+
+/// AsTell のタイル / Swing の並びの枠 (D-441)。どちらも「いま」のものなので、写しは持たずにいまの状態を出す。[query] があれば当たるものだけ。
+class _LiveSectionView extends ConsumerWidget {
+  const _LiveSectionView({super.key, required this.section, this.query});
+  final TlSection section;
+  final String? query;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = section;
+    final q = (query ?? '').replaceFirst(RegExp(r'^#'), '');
+    final Widget body;
+    if (s.isAstell) {
+      // チャイルドセーフ: AsTell に入れないアカウントには出さない。
+      if (!ref.watch(childGateProvider).featureAllowed('astell.join')) return const SizedBox.shrink();
+      final home = ref.watch(astellHomeProvider);
+      final rooms = home.value == null ? null : searchAstellRooms(home.value!, q).take(s.limit).toList();
+      body = rooms == null
+          ? (home.hasError ? const RasqCaption('読み込めませんでした') : const Padding(padding: EdgeInsets.all(RasqSpacing.md), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))))
+          : rooms.isEmpty
+              ? RasqCaption(q.isEmpty ? 'いま開いている AsTell はありません' : '「$q」の AsTell はありません')
+              : AstellTileStrip(key: ValueKey('tl.section.${s.id}.rooms'), rooms: rooms, tileBuilder: (r) => AstellRoomTile(room: r));
+    } else {
+      final feed = ref.watch(swingFeedProvider).value ?? const <Swing>[];
+      final entries = (q.isEmpty ? swingAuthorsOf(feed) : searchSwingAuthors(feed, q)).take(s.limit).toList();
+      body = entries.isEmpty
+          ? RasqCaption(q.isEmpty ? 'いま Swing はありません' : '「$q」の Swing はありません')
+          : Column(key: ValueKey('tl.section.${s.id}.swings'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              for (final e in entries) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.xs), child: SwingBanner(entry: e)),
+            ]);
+    }
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      RasqSectionHeader(title: s.title.isEmpty ? tlSectionSourceLabel(ref, s.tl) : s.title, topMargin: 0),
+      body,
+      const Divider(height: 1),
+    ]);
   }
 }

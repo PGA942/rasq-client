@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
@@ -11,6 +12,10 @@ import 'package:rasq_client/features/nodeprog/node_tabs.dart';
 import 'package:rasq_client/features/nodeprog/tl_components.dart';
 import 'package:rasq_client/session/session_providers.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/features/vc/astell_actions.dart' show AstellRoomTile;
+import 'package:rasq_client/features/vc/astell_models.dart';
+import 'package:rasq_client/features/vc/astell_providers.dart' show astellHomeProvider;
+import 'package:rasq_client/features/vc/vc_screen.dart' show searchAstellRooms;
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -43,7 +48,7 @@ void main() {
   late FakeSnsPlugin plugin;
 
   /// 開いたときに見えるタブ(テストの SNS はソーシャル)の構成を [cfg] にする。
-  Future<ProviderContainer> pump(WidgetTester tester, TlConfig cfg, {String scope = 'tl.social'}) async {
+  Future<ProviderContainer> pump(WidgetTester tester, TlConfig cfg, {String scope = 'tl.social', List<Override> extra = const []}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -54,7 +59,7 @@ void main() {
     posts = [for (var i = 0; i < 12; i++) post(i, author: i < 8 ? 'a' : 'b')];
     plugin = FakeSnsPlugin(posts: (_) => posts);
     await tester.pumpWidget(ProviderScope(
-      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(plugin))],
+      overrides: [sessionStorageProvider.overrideWithValue(storage), pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(plugin)), ...extra],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
@@ -118,5 +123,28 @@ void main() {
     c.read(routerProvider).pushReplacement(Routes.tlConfig('tl.dm'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('tlconfig.display')), findsNothing);
+  });
+
+  testWidgets('D-441: AsTell のタイル / Swing の枠。AsTell はいま開いているルーム(件数まで)、Swing が無ければ案内', (tester) async {
+    AstellRoom room(String id, String title) => AstellRoom(id: id, ownerId: 'o', ownerHandle: 'o', ownerDisplayName: 'オーナー', title: title, createdAt: DateTime(2026, 10, 5));
+    final home = AstellHome(trending: [room('r1', '花火の話'), room('r2', '月見の話'), room('r3', '花火大会')]);
+    await pump(
+      tester,
+      const TlConfig(sources: [TlSourceComponent()], sections: [
+        TlSection(id: 'a', title: 'いまの AsTell', tl: astellSectionKind, limit: 2),
+        TlSection(id: 'w', title: 'Swing', tl: swingSectionKind),
+      ]),
+      extra: [astellHomeProvider.overrideWith((ref) async => home)],
+    );
+    final astell = find.byKey(const ValueKey('tl.section.a'));
+    expect(find.descendant(of: astell, matching: find.text('いまの AsTell')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('tl.section.a.rooms')), matching: find.byType(AstellRoomTile)), findsNWidgets(2), reason: '件数まで');
+    expect(find.descendant(of: find.byKey(const ValueKey('tl.section.w')), matching: find.text('いま Swing はありません')), findsOneWidget);
+  });
+
+  test('D-441: AsTell の枠は、ページのワードに当たるルームだけ(トレンド TL)', () {
+    AstellRoom room(String id, String title) => AstellRoom(id: id, ownerId: 'o', ownerHandle: 'o', ownerDisplayName: 'オーナー', title: title, createdAt: DateTime(2026, 10, 5));
+    final home = AstellHome(trending: [room('r1', '花火の話'), room('r2', '月見の話')]);
+    expect(searchAstellRooms(home, '花火').map((r) => r.id), ['r1']);
   });
 }

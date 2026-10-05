@@ -851,6 +851,9 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         if (k.id != own && k != TimelineKind.relational) (k.id, k.label),
       for (final t in ref.read(nodeTabsProvider))
         if (t.id != own) (t.id, t.label),
+      // AsTell のタイル / Swing の並び (D-441)。
+      (astellSectionKind, 'AsTell のタイル'),
+      (swingSectionKind, 'Swing'),
     ];
   }
 
@@ -876,7 +879,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final s = _cfg.sections[i];
     final pick = await _dropdown(anchorContext, 'tlconfig.section.menu', [
       ('rename', '見出しを変更'),
-      ('display', '表示モード: ${s.display.label}'),
+      if (!s.isAstell && !s.isSwing) ('display', '表示モード: ${s.display.label}'),
       ('limit', '件数: ${s.limit}'),
       if (i > 0) ('up', '上へ'),
       ('toggle', s.enabled ? '一時的な無効化' : '無効化の解除'),
@@ -934,7 +937,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
             child: RasqListTile(
               key: ValueKey('tlconfig.section.${s.id}'),
               title: s.title,
-              subtitle: '${labels[s.tl] ?? s.tl} ・ ${s.display.label} ・ ${s.limit} 件${s.enabled ? '' : '(無効)'}',
+              subtitle: '${labels[s.tl] ?? s.tl}${s.isAstell || s.isSwing ? '' : ' ・ ${s.display.label}'} ・ ${s.limit} 件${s.enabled ? '' : '(無効)'}',
               leading: Icon(Icons.crop_square, color: scheme.onSurfaceVariant),
               chevron: false,
               trailing: RasqIconButton(key: ValueKey('tlconfig.section.${s.id}.more'), icon: Icons.more_horiz, size: 18, tooltip: 'セクションのメニュー', onPressed: () => _sectionMenu(ctx, i)),
