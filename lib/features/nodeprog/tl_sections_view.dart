@@ -28,7 +28,7 @@ import 'tl_components.dart';
 import 'tl_config_store.dart';
 
 /// 画面の並び (D-442): TL のカスタマイズの「SNSタイムライン」の並びの順に、
-/// - **セクション**(見出し + 中のノードを入れた順に角丸の枠で)、
+/// - **セクション**(見出し + 中のノードを入れた順に続けて。枠は無し、D-444)、
 /// - **ブロック**(AsTell のタイル / Swing / トレンドのタイル。並びにそのまま置いたもの)、
 /// - **本体の TL**(セクションの外の TL ノードを 1 本にまとめたもの。最初の TL ノードの位置。続きを読む / 新しい投稿も読む)
 /// を出す。TL ノードが 1 つも無ければ本体は出さない。構成が無ければ本体だけ(これまでどおり)。
@@ -125,7 +125,7 @@ class TlScopeBlocks extends ConsumerWidget {
   }
 }
 
-/// 並びの 1 つ: セクションなら見出し + 中のノード(角丸の枠)、ほかは見出し + 中身。
+/// 並びの 1 つ: セクションなら見出し + 中のノード(入れた順に続けて)、ほかは見出し + 中身。
 class TlNodeBlock extends ConsumerWidget {
   const TlNodeBlock({super.key, required this.node, this.query, this.trends, this.trailing});
   final TlSourceComponent node;
@@ -137,7 +137,6 @@ class TlNodeBlock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     if (!node.isSection) {
       final content = TlNodeContent(node: node, query: query, trends: trends);
       return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -156,14 +155,11 @@ class TlNodeBlock extends ConsumerWidget {
           RasqIconButton(icon: Icons.refresh, size: 18, tooltip: '読み直す', onPressed: () => ref.read(tlSectionsRefreshProvider.notifier).bump()),
         ]),
       ),
-      for (var i = 0; i < children.length; i++)
-        Container(
-          key: ValueKey('tl.section.${node.label}.$i'),
-          margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.sm),
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-          child: TlNodeContent(node: children[i], query: query, trends: trends),
-        ),
+      // 中のノードは入れた順に、枠なしで続けて出す (D-444。D-442 では 1 つずつ角丸の枠に入れていた)。
+      for (var i = 0; i < children.length; i++) ...[
+        if (i > 0) const Divider(height: 1),
+        KeyedSubtree(key: ValueKey('tl.section.${node.label}.$i'), child: TlNodeContent(node: children[i], query: query, trends: trends)),
+      ],
       const Divider(height: 1),
     ]);
   }
