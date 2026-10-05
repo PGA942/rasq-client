@@ -114,6 +114,12 @@ class TimelineConfigScreen extends ConsumerStatefulWidget {
 class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   late String _scope = widget.scope;
   TlConfig _cfg = const TlConfig();
+
+  /// 「SNSタイムライン」のタイルをその場で動かしている (D-442: 並べ替えのボタン)。
+  bool _reordering = false;
+
+  /// パレットで長押しして、置く場所を選んでいるノード (D-442)。
+  TlSourceComponent? _placing;
   bool _loaded = false;
 
 
@@ -476,7 +482,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   /// コンポーネント追加 (D-122): ノード検索と同じ FOW パレットを開く。
   /// タイルはプラグインタイルデザインで、アルゴリズム側は入出力ではなく
   /// **ネイティブ対応の SNS プラグイン**を表示する。選択で追加して閉じる。
-  void _openPalette({required bool algorithms}) {
+  void _openPalette({required bool algorithms, int? intoSection}) {
     final manager = ref.read(overlayManagerProvider);
     if (manager.contains(tlConfigPaletteFowId)) manager.close(tlConfigPaletteFowId);
     // インタースティシャル (D-124): FOW 外(スクリム)タップでキャンセル。
@@ -505,6 +511,8 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
             algorithms: algorithms,
             dmOnly: _isDmScope,
             scope: _scope,
+            // セクションの中にはセクションを入れない (D-442)。
+            allowSection: intoSection == null,
             // トレンドタイル (D-431): 重い(ML モデル / GPU)アルゴリズムは灰色にして理由を出す。
             unavailable: _scope == trendTilesScope ? trendTilesUnavailableReason : null,
             // 傾向が一番最後に固定で掛かるスコープ (D-431) では、指向性/刺激性は足さない(傾向 FOW で変える)。
@@ -520,8 +528,23 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
             },
             onAddSource: (s) {
               manager.close(tlConfigPaletteFowId);
-              _update(_cfg.copyWith(sources: [..._cfg.sources, s]));
+              final sec = intoSection;
+              if (sec != null && sec < _cfg.sources.length && _canPlace(s, (section: sec, index: _cfg.sources[sec].children.length))) {
+                _update(_cfg.copyWith(sources: _insertNode(_cfg.sources, (section: sec, index: _cfg.sources[sec].children.length), s)));
+              } else {
+                _update(_cfg.copyWith(sources: [..._cfg.sources, s]));
+              }
             },
+            // 長押し (D-442): パレットを閉じて、置く場所を選ぶ(並びとセクションの中に「ここに置く」)。
+            onPlaceSource: _scope == trendTilesScope || _isDmScope
+                ? null
+                : (s) {
+                    manager.close(tlConfigPaletteFowId);
+                    setState(() {
+                      _placing = s;
+                      _reordering = false;
+                    });
+                  },
           ),
         )
         .whenComplete(() => router.routerDelegate.removeListener(onNavigate));
@@ -554,9 +577,14 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final tlLabel = kinds.where((k) => k.id == s.tl).firstOrNull?.label ?? switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', 'home' => 'フォロー中 (home)', _ => s.tl };
     if (s.isRasq) return (Icons.hub_outlined, 'RASQ の投稿を取得', 'RASQ', 'TL: 自分とフォロー中の RASQ アカウントの投稿');
     if (s.isRasqList) return (Icons.people_alt_outlined, 'RASQ リストを取得', 'RASQ', 'RASQ リスト: ${s.label.isNotEmpty ? s.label : (s.rasqListId.isEmpty ? '未選択' : s.rasqListId)}');
-    // SNS アカウントごとの取得元 (D-440)。
+    // セクション / ブロック (D-442)。
+    if (s.isSection) return (Icons.crop_square, s.label.isEmpty ? 'セクション' : s.label, 'セクション', 'ノードを $maxSectionChildren つまで包む枠(画面では入れた順に角丸の枠で出す)');
+    if (s.isAstell) return (Icons.settings_input_antenna, 'AsTell のタイル', 'RASQ', 'いま開いている AsTell のルーム(${s.limit} 件まで)');
+    if (s.isSwing) return (Icons.motion_photos_on_outlined, 'Swing', 'RASQ', 'Swing を出している人(${s.limit} 件まで)');
+    if (s.isTrendFollowing) return (Icons.people_outline, 'フォロー中の反応', 'RASQ', 'フォロー中の人の、このページのワード / タグの投稿');
+    // SNS アカウントごとの取得元 (D-440)。トレンドは「トレンドを取得」ノードで、種別を切り替える (D-442)。
     final who = s.account.isEmpty ? '(現在のアカウント)' : s.account;
-    if (s.isTrendTags) return (Icons.trending_up, 'トレンドを取得', who, 'このアカウントのサーバーのトレンドのワード');
+    if (s.isTrendTags) return (Icons.trending_up, 'トレンドを取得', who, '種別: トレンドタイル(このアカウントのサーバーのトレンドのワード)');
     if (s.isSearch) return (Icons.manage_search, '検索結果を取得', who, s.searchWord.isEmpty ? '検索: このページの検索ワード / タグ' : '検索: ${s.searchWord}');
     if (s.tl == 'featured') return (Icons.wb_sunny_outlined, 'Today を取得', who, 'TL: Today(注目の投稿)');
     return (
@@ -567,9 +595,9 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
               : s.isFeed
                   ? Icons.rss_feed
                   : (s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined)),
-      s.isSelf ? 'このタイムラインを取得' : (s.isDm ? 'DM取得' : (s.isTrend ? '現在のトレンドTLを取得' : (s.isFeed ? 'カスタムフィードを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得')))),
+      s.isSelf ? 'このタイムラインを取得' : (s.isDm ? 'DM取得' : (s.isTrend ? 'トレンドを取得' : (s.isFeed ? 'カスタムフィードを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得')))),
       s.isSelf ? 'RASQ' : (s.account.isEmpty ? '(現在のアカウント)' : s.account),
-      'TL: ${s.isSelf ? 'この画面の基礎タイムライン(検索結果/欄の投稿)' : s.isDm ? 'DM: @${s.dmPeer}' : s.isTrend ? 'トレンド上位タグの検索結果' : s.isFeed ? 'フィード: ${s.label.isNotEmpty ? s.label : (s.feedUri.isEmpty ? '未選択' : s.feedUri)}' : s.isList ? 'リスト: ${s.listName.isEmpty ? '未選択' : s.listName}' : tlLabel}',
+      'TL: ${s.isSelf ? 'この画面の基礎タイムライン(検索結果/欄の投稿)' : s.isDm ? 'DM: @${s.dmPeer}' : s.isTrend ? '種別: トレンド TL(トレンド上位タグの検索結果)' : s.isFeed ? 'フィード: ${s.label.isNotEmpty ? s.label : (s.feedUri.isEmpty ? '未選択' : s.feedUri)}' : s.isList ? 'リスト: ${s.listName.isEmpty ? '未選択' : s.listName}' : tlLabel}',
     );
   }
 
@@ -587,10 +615,18 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       RasqDropdownItem(enabled ? '一時的な無効化' : '無効化の解除', 'toggle'),
       // v1: TL プラグインは同梱 wasm サンプルの掲載ページへ (D-120 と同じ対応)。
       RasqDropdownItem('プラグインのストアページへ移動', 'store', enabled: isPlugin),
+      // トレンドを取得 (D-442): 種別(トレンドタイル / トレンド TL)を切り替える。ブロック(AsTell / Swing / タイル)は件数。
+      if (!algorithm && (_cfg.sources[i].isTrend || _cfg.sources[i].isTrendTags)) RasqDropdownItem(_cfg.sources[i].isTrend ? '種別をトレンドタイルに' : '種別をトレンド TL に', 'kind'),
+      if (!algorithm && _cfg.sources[i].isBlock && !_cfg.sources[i].isSection) RasqDropdownItem('件数: ${_cfg.sources[i].limit}', 'limit'),
       const RasqDropdownItem('削除', 'delete', destructive: true),
     ]);
-    if (pick == null || !mounted) return;
+    if (pick == null || !mounted || !anchorContext.mounted) return;
     switch (pick) {
+      case 'kind':
+        _replaceNode((section: null, index: i), _switchTrendKind(_cfg.sources[i]));
+      case 'limit':
+        final n = await _dropdown(anchorContext, 'tlconfig.limit', [for (final n in TlSourceComponent.limits) ('$n', '$n 件')], current: '${_cfg.sources[i].limit}');
+        if (n != null && mounted) _replaceNode((section: null, index: i), _cfg.sources[i].copyWith(limit: int.parse(n)));
       case 'info':
         _showComponentInfo(algorithm: algorithm, i: i);
       case 'params':
@@ -843,72 +879,293 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   /// 表示モード / セクションを持てるスコープ: ホームの TL のタブ(DM と関連 TL は除く)とトレンド TL。
   bool get _supportsLayout => (_scope.startsWith('tl.') && !_isDmScope && _scope != 'tl.relational') || _scope == 'trend';
 
-  /// セクションに包める TL(この TL 自身と関連 TL は除く): SNS の基本 TL + 作ったノード TL。
-  List<(String, String)> _sectionChoices() {
-    final own = _scope.startsWith('tl.') ? _scope.substring(3) : '';
-    return [
-      for (final k in ref.read(tlTimelinesProvider('')))
-        if (k.id != own && k != TimelineKind.relational) (k.id, k.label),
-      for (final t in ref.read(nodeTabsProvider))
-        if (t.id != own) (t.id, t.label),
-      // AsTell のタイル / Swing の並び (D-441)。
-      (astellSectionKind, 'AsTell のタイル'),
-      (swingSectionKind, 'Swing'),
-    ];
-  }
-
   Future<String?> _dropdown(BuildContext anchorContext, String id, List<(String, String)> items, {String? current}) {
     final box = anchorContext.findRenderObject() as RenderBox;
     final anchor = box.localToGlobal(Offset.zero) & box.size;
     return ref.read(overlayManagerProvider).showDropdown<String>(id: id, anchor: anchor, dense: true, items: [for (final (v, l) in items) RasqDropdownItem(l, v, checked: v == current)]);
   }
 
-  void _updateSection(int i, TlSection next) => _update(_cfg.copyWith(sections: [for (var k = 0; k < _cfg.sections.length; k++) k == i ? next : _cfg.sections[k]]));
+  // ---- 並びのノード(セクション / 並べ替え / 置く場所)D-442 ------------------------
 
-  Future<void> _addSection(BuildContext anchorContext) async {
-    final choices = _sectionChoices();
-    final tl = await _dropdown(anchorContext, 'tlconfig.section.pick', choices);
-    if (tl == null || !mounted) return;
-    final label = choices.firstWhere((c) => c.$1 == tl).$2;
-    final title = await _promptText('セクションの見出し', initial: label);
-    if (title == null || !mounted) return;
-    _update(_cfg.copyWith(sections: [..._cfg.sections, TlSection(id: 's${DateTime.now().microsecondsSinceEpoch}', title: title.isEmpty ? label : title, tl: tl)]));
+  TlSourceComponent _nodeAt(_NodePath p) => p.section == null ? _cfg.sources[p.index] : _cfg.sources[p.section!].children[p.index];
+
+  /// [node] を [to] に置けるか: セクションの中はセクション以外を 3 つまで。
+  bool _canPlace(TlSourceComponent node, _NodePath to) {
+    if (to.section == null) return true;
+    if (node.isSection) return false;
+    return _cfg.sources[to.section!].children.length < maxSectionChildren;
+  }
+
+  bool _canMove(_NodePath from, _NodePath to) {
+    final node = _nodeAt(from);
+    if (to.section == null) return true;
+    if (node.isSection) return false;
+    return from.section == to.section || _cfg.sources[to.section!].children.length < maxSectionChildren;
+  }
+
+  static List<TlSourceComponent> _insertNode(List<TlSourceComponent> top, _NodePath to, TlSourceComponent node) {
+    final list = [...top];
+    if (to.section == null) {
+      list.insert(to.index.clamp(0, list.length), node);
+      return list;
+    }
+    final sec = list[to.section!];
+    list[to.section!] = sec.copyWith(children: [...sec.children]..insert(to.index.clamp(0, sec.children.length), node));
+    return list;
+  }
+
+  void _replaceNode(_NodePath at, TlSourceComponent node) {
+    final list = [..._cfg.sources];
+    if (at.section == null) {
+      list[at.index] = node;
+    } else {
+      final sec = list[at.section!];
+      list[at.section!] = sec.copyWith(children: [for (var k = 0; k < sec.children.length; k++) k == at.index ? node : sec.children[k]]);
+    }
+    _update(_cfg.copyWith(sources: list));
+  }
+
+  void _removeNode(_NodePath at) {
+    final list = [..._cfg.sources];
+    if (at.section == null) {
+      list.removeAt(at.index);
+    } else {
+      final sec = list[at.section!];
+      list[at.section!] = sec.copyWith(children: [...sec.children]..removeAt(at.index));
+    }
+    _update(_cfg.copyWith(sources: list));
+  }
+
+  void _move(_NodePath from, _NodePath to) {
+    final node = _nodeAt(from);
+    final list = [..._cfg.sources];
+    if (from.section == null) {
+      list.removeAt(from.index);
+    } else {
+      final sec = list[from.section!];
+      list[from.section!] = sec.copyWith(children: [...sec.children]..removeAt(from.index));
+    }
+    var target = to;
+    if (from.section == null && to.section == null && from.index < to.index) target = (section: null, index: to.index - 1);
+    if (from.section != null && from.section == to.section && from.index < to.index) target = (section: to.section, index: to.index - 1);
+    // 並びから取り出すと、後ろのセクションの番号が 1 つずれる。
+    if (from.section == null && to.section != null && from.index < to.section!) target = (section: to.section! - 1, index: target.index);
+    _update(_cfg.copyWith(sources: _insertNode(list, target, node)));
+  }
+
+  /// トレンドを取得 (D-442) の種別を切り替える(トレンドタイル ⇄ トレンド TL)。
+  static TlSourceComponent _switchTrendKind(TlSourceComponent s) => s.copyWith(tl: s.isTrend ? trendTagsKind : 'trend');
+
+  List<Widget> _nodeList() {
+    final slots = _reordering || _placing != null;
+    return [
+      for (var i = 0; i < _cfg.sources.length; i++) ...[
+        if (slots) _slot((section: null, index: i)),
+        if (_cfg.sources[i].isSection)
+          _maybeDraggable((section: null, index: i), _sectionTile(i))
+        else
+          _maybeDraggable((section: null, index: i), _componentTile(algorithm: false, i: i)),
+      ],
+      if (slots) _slot((section: null, index: _cfg.sources.length)),
+    ];
+  }
+
+  Widget _maybeDraggable(_NodePath p, Widget child) {
+    if (!_reordering) return child;
+    final node = _nodeAt(p);
+    final (icon, title, _, _) = _sourceInfo(node);
+    return LongPressDraggable<_NodePath>(
+      key: ValueKey('tlconfig.drag.${p.section ?? 'top'}.${p.index}'),
+      data: p,
+      feedback: Material(
+        elevation: 4,
+        borderRadius: BorderRadius.circular(RasqSizes.radiusMd),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Padding(
+            padding: const EdgeInsets.all(RasqSpacing.md),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 20), const SizedBox(width: RasqSpacing.sm), Flexible(child: Text(title, style: RasqTypography.bodySmall, overflow: TextOverflow.ellipsis))]),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(opacity: 0.3, child: child),
+      child: child,
+    );
+  }
+
+  /// 置く場所 / 落とす場所。置くときは「ここに置く」、動かすときはドラッグの受け口。
+  Widget _slot(_NodePath p) {
+    final key = ValueKey('tlconfig.slot.${p.section ?? 'top'}.${p.index}');
+    final placing = _placing;
+    if (placing != null) {
+      if (!_canPlace(placing, p)) return const SizedBox.shrink();
+      return Padding(
+        key: key,
+        padding: EdgeInsets.fromLTRB(p.section == null ? RasqSpacing.md : RasqSpacing.xl, 2, RasqSpacing.md, 2),
+        child: OutlinedButton.icon(
+          onPressed: () {
+            setState(() => _placing = null);
+            _update(_cfg.copyWith(sources: _insertNode(_cfg.sources, p, placing)));
+          },
+          icon: const Icon(Icons.south, size: 16),
+          label: const Text('ここに置く'),
+        ),
+      );
+    }
+    final tokens = RasqTokens.of(context);
+    return DragTarget<_NodePath>(
+      key: key,
+      onWillAcceptWithDetails: (d) => _canMove(d.data, p),
+      onAcceptWithDetails: (d) => _move(d.data, p),
+      builder: (ctx, cand, _) => AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        height: cand.isEmpty ? 10 : 36,
+        margin: EdgeInsets.fromLTRB(p.section == null ? RasqSpacing.md : RasqSpacing.xl, 2, RasqSpacing.md, 2),
+        decoration: cand.isEmpty ? null : BoxDecoration(color: tokens.link.withValues(alpha: 0.12), border: Border.all(color: tokens.link), borderRadius: BorderRadius.circular(RasqSizes.radiusSm)),
+      ),
+    );
+  }
+
+  Widget _placingBanner() {
+    final scheme = Theme.of(context).colorScheme;
+    final (icon, title, _, _) = _sourceInfo(_placing!);
+    return Container(
+      key: const ValueKey('tlconfig.placing'),
+      margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.xs),
+      padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.md, vertical: RasqSpacing.xs),
+      decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+      child: Row(children: [
+        Icon(icon, size: 20),
+        const SizedBox(width: RasqSpacing.sm),
+        Expanded(child: Text('「$title」を置く場所を選んでください', style: RasqTypography.bodySmall)),
+        TextButton(key: const ValueKey('tlconfig.placing.cancel'), onPressed: () => setState(() => _placing = null), child: const Text('やめる')),
+      ]),
+    );
+  }
+
+  /// セクションのタイル: 見出し + 中のノード(少し小さく)。
+  Widget _sectionTile(int i) {
+    final sec = _cfg.sources[i];
+    final scheme = Theme.of(context).colorScheme;
+    final slots = _reordering || _placing != null;
+    final kids = sec.children;
+    return Container(
+      key: ValueKey('tlconfig.section.$i'),
+      margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.xs),
+      decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+      child: Opacity(
+        opacity: sec.enabled ? 1 : 0.5,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            const Padding(padding: EdgeInsets.all(RasqSpacing.md), child: Icon(Icons.crop_square, size: 22)),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(sec.label.isEmpty ? 'セクション' : sec.label, style: RasqTypography.listTile),
+                Text('セクション ・ ${kids.length} / $maxSectionChildren${sec.enabled ? '' : ' ・ 無効化中'}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+              ]),
+            ),
+            Builder(builder: (ctx) => RasqIconButton(key: ValueKey('tlconfig.section.$i.more'), icon: Icons.more_horiz, size: 18, tooltip: 'セクションの操作', onPressed: () => _sectionMenu(ctx, i))),
+            const SizedBox(width: RasqSpacing.sm),
+          ]),
+          for (var k = 0; k < kids.length; k++) ...[
+            if (slots) _slot((section: i, index: k)),
+            _maybeDraggable((section: i, index: k), _childTile(i, k)),
+          ],
+          if (slots && kids.length < maxSectionChildren) _slot((section: i, index: kids.length)),
+          if (!slots && kids.length < maxSectionChildren)
+            Padding(
+              padding: const EdgeInsets.only(left: RasqSpacing.xl),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: ValueKey('tlconfig.section.$i.add'),
+                  onPressed: () => _openPalette(algorithms: false, intoSection: i),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: Text('ノードを追加', style: RasqTypography.caption),
+                ),
+              ),
+            ),
+        ]),
+      ),
+    );
+  }
+
+  /// セクションの中のノード(少し小さく、字下げ)。
+  Widget _childTile(int i, int k) {
+    final c = _cfg.sources[i].children[k];
+    final scheme = Theme.of(context).colorScheme;
+    final (icon, title, subtitle, description) = _sourceInfo(c);
+    final showsPosts = !c.isBlock;
+    final meta = [subtitle, if (showsPosts || c.isTrendFollowing) c.display.label, '${c.limit} 件', if (!c.enabled) '無効化中'].join(' ・ ');
+    return Padding(
+      key: ValueKey('tlconfig.section.$i.child.$k'),
+      padding: const EdgeInsets.only(left: RasqSpacing.lg),
+      child: Row(children: [
+        Expanded(
+          child: Opacity(
+            opacity: c.enabled ? 1 : 0.5,
+            child: RasqPluginTile(leading: Icon(icon, size: 18, color: scheme.onSurfaceVariant), title: title, subtitle: meta, description: description, chevron: false),
+          ),
+        ),
+        Builder(builder: (ctx) => RasqIconButton(key: ValueKey('tlconfig.section.$i.child.$k.more'), icon: Icons.more_horiz, size: 18, tooltip: 'ノードの操作', onPressed: () => _childMenu(ctx, i, k))),
+        const SizedBox(width: RasqSpacing.sm),
+      ]),
+    );
   }
 
   Future<void> _sectionMenu(BuildContext anchorContext, int i) async {
-    final s = _cfg.sections[i];
+    final sec = _cfg.sources[i];
     final pick = await _dropdown(anchorContext, 'tlconfig.section.menu', [
       ('rename', '見出しを変更'),
-      if (!s.isAstell && !s.isSwing) ('display', '表示モード: ${s.display.label}'),
-      ('limit', '件数: ${s.limit}'),
-      if (i > 0) ('up', '上へ'),
-      ('toggle', s.enabled ? '一時的な無効化' : '無効化の解除'),
+      if (sec.children.length < maxSectionChildren) ('add', 'ノードを追加'),
+      ('toggle', sec.enabled ? '一時的な無効化' : '無効化の解除'),
+      ('delete', '削除'),
+    ]);
+    if (pick == null || !mounted) return;
+    switch (pick) {
+      case 'rename':
+        final title = await _promptText('セクションの見出し', initial: sec.label);
+        if (title != null && title.isNotEmpty && mounted) _replaceNode((section: null, index: i), sec.copyWith(label: title));
+      case 'add':
+        _openPalette(algorithms: false, intoSection: i);
+      case 'toggle':
+        _replaceNode((section: null, index: i), sec.copyWith(enabled: !sec.enabled));
+      case 'delete':
+        if (_cfg.sources.length > 1) _removeNode((section: null, index: i));
+    }
+  }
+
+  Future<void> _childMenu(BuildContext anchorContext, int i, int k) async {
+    final c = _cfg.sources[i].children[k];
+    final pick = await _dropdown(anchorContext, 'tlconfig.child.menu', [
+      if (!c.isBlock || c.isTrendFollowing) ('display', '表示モード: ${c.display.label}'),
+      ('limit', '件数: ${c.limit}'),
+      if (c.isTrend || c.isTrendTags) ('kind', c.isTrend ? '種別をトレンドタイルに' : '種別をトレンド TL に'),
+      ('toggle', c.enabled ? '一時的な無効化' : '無効化の解除'),
+      ('out', 'セクションから出す'),
       ('delete', '削除'),
     ]);
     if (pick == null || !mounted || !anchorContext.mounted) return;
+    final at = (section: i, index: k);
     switch (pick) {
-      case 'rename':
-        final title = await _promptText('セクションの見出し', initial: s.title);
-        if (title != null && title.isNotEmpty && mounted) _updateSection(i, s.copyWith(title: title));
       case 'display':
-        final m = await _dropdown(anchorContext, 'tlconfig.section.display', [for (final m in TlDisplayMode.values) (m.name, m.label)], current: s.display.name);
-        if (m != null && mounted) _updateSection(i, s.copyWith(display: TlDisplayMode.byName(m)));
+        final m = await _dropdown(anchorContext, 'tlconfig.child.display', [for (final m in TlDisplayMode.values) (m.name, m.label)], current: c.display.name);
+        if (m != null && mounted) _replaceNode(at, c.copyWith(display: TlDisplayMode.byName(m)));
       case 'limit':
-        final n = await _dropdown(anchorContext, 'tlconfig.section.limit', [for (final n in TlSection.limits) ('$n', '$n 件')], current: '${s.limit}');
-        if (n != null && mounted) _updateSection(i, s.copyWith(limit: int.parse(n)));
-      case 'up':
-        final list = [..._cfg.sections]..removeAt(i);
-        _update(_cfg.copyWith(sections: list..insert(i - 1, s)));
+        final n = await _dropdown(anchorContext, 'tlconfig.child.limit', [for (final n in TlSourceComponent.limits) ('$n', '$n 件')], current: '${c.limit}');
+        if (n != null && mounted) _replaceNode(at, c.copyWith(limit: int.parse(n)));
+      case 'kind':
+        _replaceNode(at, _switchTrendKind(c));
       case 'toggle':
-        _updateSection(i, s.copyWith(enabled: !s.enabled));
+        _replaceNode(at, c.copyWith(enabled: !c.enabled));
+      case 'out':
+        _move(at, (section: null, index: i + 1));
       case 'delete':
-        _update(_cfg.copyWith(sections: [for (var k = 0; k < _cfg.sections.length; k++) if (k != i) _cfg.sections[k]]));
+        _removeNode(at);
     }
   }
 
   List<Widget> _layoutComponents() {
-    final scheme = Theme.of(context).colorScheme;
-    final labels = {for (final (v, l) in _sectionChoices()) v: l};
     return [
       const RasqSectionHeader(title: '表示モード'),
       Builder(builder: (ctx) {
@@ -923,29 +1180,6 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
           },
         );
       }),
-      const RasqSectionHeader(title: 'セクション(ほかの TL を包む)'),
-      const RasqCaption(
-        'ほかの TL を見出しつきの枠に包んで、この TL の上に並べます。包んだ TL は新しい投稿を読み込みません',
-        detail: 'ほかのタイムライン(基本の TL / 作ったノード TL)を見出しつきの枠に包み、この TL の上に並べます。包んだ TL は開いたときの分だけを出し、新しい投稿は読み込みません(引き下げ / 枠の ↻ で読み直します)。',
-        padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-      ),
-      for (var i = 0; i < _cfg.sections.length; i++)
-        Builder(builder: (ctx) {
-          final s = _cfg.sections[i];
-          return Opacity(
-            opacity: s.enabled ? 1 : 0.5,
-            child: RasqListTile(
-              key: ValueKey('tlconfig.section.${s.id}'),
-              title: s.title,
-              subtitle: '${labels[s.tl] ?? s.tl}${s.isAstell || s.isSwing ? '' : ' ・ ${s.display.label}'} ・ ${s.limit} 件${s.enabled ? '' : '(無効)'}',
-              leading: Icon(Icons.crop_square, color: scheme.onSurfaceVariant),
-              chevron: false,
-              trailing: RasqIconButton(key: ValueKey('tlconfig.section.${s.id}.more'), icon: Icons.more_horiz, size: 18, tooltip: 'セクションのメニュー', onPressed: () => _sectionMenu(ctx, i)),
-              onTap: () => _sectionMenu(ctx, i),
-            ),
-          );
-        }),
-      Builder(builder: (ctx) => _addTile('セクションを追加', () => _addSection(ctx))),
     ];
   }
 
@@ -954,14 +1188,27 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     return [
       RasqSectionHeader(
         title: 'SNSタイムライン',
-        trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: 'タイムラインの並べ替え', onPressed: () => _openReorder(algorithms: false)),
+        // 並べ替え (D-442): シートではなく、タイルそのものを動かす。もう一度押すと終える。
+        trailing: RasqIconButton(
+          key: const ValueKey('tlconfig.sources.reorder'),
+          icon: _reordering ? Icons.check : Icons.swap_vert,
+          size: 18,
+          tooltip: _reordering ? '並べ替えを終える' : 'タイムラインの並べ替え',
+          onPressed: () => setState(() {
+            _reordering = !_reordering;
+            _placing = null;
+          }),
+        ),
       ),
       const RasqCaption(
         '複数を重ねると 1 本にまとまり、同じ投稿は 1 つになります',
         detail: '複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。',
         padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
       ),
-      for (var i = 0; i < _cfg.sources.length; i++) _componentTile(algorithm: false, i: i),
+      if (_reordering)
+        const RasqCaption('長押しでつかんで動かします。セクションの中(3 つまで)へも出し入れできます', key: ValueKey('tlconfig.reorder.hint'), padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs)),
+      if (_placing != null) _placingBanner(),
+      ..._nodeList(),
       _addTile('タイムラインを追加', () => _openPalette(algorithms: false)),
       const RasqSectionHeader(title: '自動更新'),
       Builder(builder: (ctx) {
@@ -1064,7 +1311,13 @@ class _PinnedTendencyTile extends ConsumerWidget {
 /// アイコン/名前/提供元/説明/詳細行)で、ホバー中もこの表示のまま。
 /// 詳細行は入出力ではなく**ネイティブ対応の SNS プラグイン**。
 class _ComponentPalettePanel extends ConsumerStatefulWidget {
-  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false, this.onPickGenres, this.unavailable, this.hideTendency = false, this.scope = ''});
+  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false, this.onPickGenres, this.unavailable, this.hideTendency = false, this.scope = '', this.allowSection = true, this.onPlaceSource});
+
+  /// セクションを出すか(セクションの中へ足すときは出さない、D-442)。
+  final bool allowSection;
+
+  /// 長押し (D-442): 置く場所を選ぶ。null なら長押しは無し。
+  final ValueChanged<TlSourceComponent>? onPlaceSource;
 
   /// 編集しているスコープ (D-440: トレンドタイル / トレンド TL / Today は、SNS アカウントごとの取得元を出す)。
   final String scope;
@@ -1093,7 +1346,10 @@ class _ComponentPalettePanel extends ConsumerStatefulWidget {
 }
 
 class _PaletteItem {
-  const _PaletteItem({required this.icon, required this.title, required this.subtitle, required this.description, this.detail, required this.supported, required this.add, this.type});
+  const _PaletteItem({required this.icon, required this.title, required this.subtitle, required this.description, this.detail, required this.supported, required this.add, this.type, this.place});
+
+  /// 長押しで置く場所を選ぶ (D-442)。null なら長押しは無し。
+  final VoidCallback? place;
 
   /// アルゴリズムの種類(使えるかの判定に使う。取得元は null)。
   final String? type;
@@ -1219,7 +1475,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             description: 'この DM ページのメッセージをそのまま取り込みます。',
             detail: 'この DM ページのメッセージをそのまま取り込みます(共通設定ではそれぞれのページの DM)。',
             supported: allSns,
-            add: () => widget.onAddSource(const TlSourceComponent(tl: 'self'))),
+            add: () => widget.onAddSource(const TlSourceComponent(tl: 'self')), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: 'self'))),
         for (final peer in peers)
           _PaletteItem(
               icon: Icons.mail_outline,
@@ -1227,7 +1483,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               subtitle: 'DM取得',
               description: '@$peer との DM を取り込みます。',
               supported: sessionSns,
-              add: () => widget.onAddSource(TlSourceComponent(tl: 'dm:$peer'))),
+              add: () => widget.onAddSource(TlSourceComponent(tl: 'dm:$peer')), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: 'dm:$peer'))),
       ];
     }
     // SNS アカウントごとの取得元 (D-440)。
@@ -1242,10 +1498,10 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               subtitle: 'SNSプラグイン',
               description: 'このアカウントのサーバーのトレンドのワードを取り込みます。',
               supported: allSns,
-              add: () => widget.onAddSource(TlSourceComponent(tl: trendTagsKind, account: a))),
+              add: () => widget.onAddSource(TlSourceComponent(tl: trendTagsKind, account: a)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: trendTagsKind, account: a))),
       ];
     }
-    // タイムライン側 (D-122 → D-194): [タイムライン, リストTL, カスタムフィード(Bluesky), 現在のトレンドTL]
+    // タイムライン側 (D-122 → D-194 → D-442): [タイムライン, リストTL, カスタムフィード(Bluesky), トレンドを取得, セクション / ブロック]
     // (+ このタイムライン = 基礎 TL の自己参照, D-124)。種類 / アカウント / リストは追加後のタイルで選ぶ。
     final current = '${ref.watch(currentAccountProvider) ?? ''}';
     final firstTl = ref.watch(tlTimelinesProvider(current)).firstOrNull?.id ?? 'home';
@@ -1260,7 +1516,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               subtitle: 'SNSプラグイン',
               description: 'このアカウントで、このページの検索ワード / タグを検索した結果を取り込みます。',
               supported: allSns,
-              add: () => widget.onAddSource(TlSourceComponent(tl: pageSearchKind, account: a))),
+              add: () => widget.onAddSource(TlSourceComponent(tl: pageSearchKind, account: a)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: pageSearchKind, account: a))),
       // Today (D-440): アカウントごとの featured(Today / 注目)。出せる SNS だけ。
       if (widget.scope == trendTodayScope)
         for (final a in accounts)
@@ -1271,7 +1527,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
                 subtitle: 'SNSプラグイン',
                 description: 'このアカウントの Today(注目の投稿)を取り込みます。',
                 supported: allSns,
-                add: () => widget.onAddSource(TlSourceComponent(tl: 'featured', account: a))),
+                add: () => widget.onAddSource(TlSourceComponent(tl: 'featured', account: a)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: 'featured', account: a))),
       _PaletteItem(
           icon: Icons.sync_alt,
           title: 'このタイムライン',
@@ -1279,7 +1535,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
           description: 'この画面の投稿をそのまま取り込みます。',
           detail: 'この画面の基礎タイムライン(タブ/検索結果/リスト/欄の投稿)をそのまま取り込みます。',
           supported: allSns,
-          add: () => widget.onAddSource(const TlSourceComponent(tl: 'self'))),
+          add: () => widget.onAddSource(const TlSourceComponent(tl: 'self')), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: 'self'))),
       // RASQ の投稿 (D-283): SNS のアカウントではなく、RASQ アカウント(Central)のフィード。
       _PaletteItem(
           icon: Icons.hub_outlined,
@@ -1288,7 +1544,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
           description: '自分とフォロー中の人の RASQ の投稿を取り込みます。',
           detail: '自分とフォロー中の RASQ アカウントの投稿 / リブロードを取り込みます。SNS の投稿と同じタイムラインに混ぜられます。',
           supported: allSns,
-          add: () => widget.onAddSource(const TlSourceComponent(tl: rasqPostsKind))),
+          add: () => widget.onAddSource(const TlSourceComponent(tl: rasqPostsKind)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: rasqPostsKind))),
       _PaletteItem(
           icon: Icons.download_outlined,
           title: 'タイムライン',
@@ -1296,7 +1552,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
           description: 'アカウントのタイムラインを取り込みます。種類は追加後に選べます。',
           detail: 'アカウントの基本タイムラインを取り込みます。種類はその SNS が出せるもの(フォロー中 / ローカル / グローバル / Discover …)から、アカウントと合わせて追加後のタイルで選べます。',
           supported: allSns,
-          add: () => widget.onAddSource(TlSourceComponent(tl: firstTl, account: current))),
+          add: () => widget.onAddSource(TlSourceComponent(tl: firstTl, account: current)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: firstTl, account: current))),
       _PaletteItem(
           icon: Icons.list_alt_outlined,
           title: 'リストTL',
@@ -1304,7 +1560,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
           description: 'アカウントのリストを取り込みます。リストは追加後に選べます。',
           detail: 'アカウントと、そのアカウントに含まれるリストのタイムラインを取り込みます(追加後のタイルで選択)。',
           supported: sessionSns,
-          add: () => widget.onAddSource(TlSourceComponent(tl: 'list:', account: current))),
+          add: () => widget.onAddSource(TlSourceComponent(tl: 'list:', account: current)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: 'list:', account: current))),
       if (bluesky.isNotEmpty)
         _PaletteItem(
             icon: Icons.rss_feed,
@@ -1313,7 +1569,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             description: 'Bluesky のカスタムフィードを探して取り込みます。',
             detail: 'Bluesky のカスタムフィードを検索して取り込みます(SNS を跨いだリストは「RASQ リスト」)。',
             supported: [for (final p in ref.read(pluginRegistryProvider).plugins) if (p.kind == SnsKind.bluesky) p.manifest.name],
-            add: () => widget.onAddSource(TlSourceComponent(tl: 'feed:', account: bluesky.first))),
+            add: () => widget.onAddSource(TlSourceComponent(tl: 'feed:', account: bluesky.first)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: 'feed:', account: bluesky.first))),
       // RASQ リスト (D-346): SNS を跨いだ人のリスト(Central)。リスト内の人の情報を取れるリストだけ選べる。
       if (ref.read(hasRasqAccountProvider))
         _PaletteItem(
@@ -1323,16 +1579,49 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             description: 'いくつもの SNS の人をまとめたリストの投稿を取り込みます。',
             detail: 'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取り込みます。自分のリスト・フォロー中のリストから選ぶか、公開リストを検索します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。',
             supported: allSns,
-            add: () => widget.onAddSource(const TlSourceComponent(tl: rasqListKindPrefix))),
+            add: () => widget.onAddSource(const TlSourceComponent(tl: rasqListKindPrefix)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: rasqListKindPrefix))),
+      // トレンドを取得 (D-442): 種別はトレンドタイル(既定)/ トレンド TL(上位タグの検索結果)。… で切り替える。
       _PaletteItem(
-          icon: Icons.travel_explore,
-          title: '現在のトレンドTL',
+          icon: Icons.trending_up,
+          title: 'トレンドを取得',
           subtitle: 'RASQ',
-          description: 'いま話題のタグの投稿を取り込みます。',
-          detail: 'いまのトレンド上位タグの検索結果を 1 本に合流して取り込みます。',
+          description: 'いまのトレンドを取り込みます。種別(トレンドタイル / トレンド TL)は追加後に切り替えます。',
+          detail: 'トレンドタイル = サーバーのトレンドのワードのタイル、トレンド TL = いまのトレンド上位タグの検索結果を 1 本に合流した投稿。',
           supported: allSns,
-          add: () => widget.onAddSource(const TlSourceComponent(tl: 'trend'))),
+          add: () => widget.onAddSource(TlSourceComponent(tl: trendTagsKind, account: current)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: trendTagsKind, account: current))),
+      // セクション / ブロック (D-442)。
+      if (widget.allowSection)
+        _PaletteItem(
+            icon: Icons.crop_square,
+            title: 'セクション',
+            subtitle: 'RASQ',
+            description: 'ノードを 3 つまで包む枠です。画面では見出しの下に、入れた順で出します。',
+            supported: allSns,
+            add: () => widget.onAddSource(const TlSourceComponent(tl: sectionKind, label: 'セクション')), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: sectionKind, label: 'セクション'))),
+      _PaletteItem(
+          icon: Icons.settings_input_antenna,
+          title: 'AsTell のタイル',
+          subtitle: 'RASQ',
+          description: 'いま開いている AsTell のルームをタイルで出します。',
+          supported: allSns,
+          add: () => widget.onAddSource(const TlSourceComponent(tl: astellSectionKind)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: astellSectionKind))),
+      _PaletteItem(
+          icon: Icons.motion_photos_on_outlined,
+          title: 'Swing',
+          subtitle: 'RASQ',
+          description: 'Swing を出している人を並べます。',
+          supported: allSns,
+          add: () => widget.onAddSource(const TlSourceComponent(tl: swingSectionKind)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: swingSectionKind))),
+      if (widget.scope == 'trend')
+        _PaletteItem(
+            icon: Icons.people_outline,
+            title: 'フォロー中の反応',
+            subtitle: 'RASQ',
+            description: 'フォロー中の人の、このページのワード / タグの投稿を出します。',
+            supported: allSns,
+            add: () => widget.onAddSource(const TlSourceComponent(tl: trendFollowingKind, limit: 3)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: trendFollowingKind, limit: 3))),
     ];
+
   }
 
   @override
@@ -1413,7 +1702,8 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
                       chevron: false,
                       onTap: reason == null ? e.add : null,
                     );
-                    return reason == null ? tile : Opacity(opacity: 0.45, child: tile);
+                    if (reason != null) return Opacity(opacity: 0.45, child: tile);
+                    return e.place == null ? tile : GestureDetector(onLongPress: e.place, child: tile);
                   },
                 ),
         ),
@@ -1857,3 +2147,5 @@ class _ReorderSheetBodyState extends State<_ReorderSheetBody> {
   }
 }
 
+/// 並びの中のノードの場所 (D-442): [section] = セクションの番号(null = 並び)、[index] = その中の番号。
+typedef _NodePath = ({int? section, int index});

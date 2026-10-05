@@ -194,7 +194,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('フォロー中の反応'), findsOneWidget);
     expect(find.text('トレンド'), findsWidgets);
-    expect(find.text('ダグラス'), findsOneWidget); // tag timeline row
+    expect(find.text('ダグラス'), findsWidgets); // tag timeline row(フォロー中の反応のセクションにも出る、D-442)
 
     // DM tab → room list → room timeline.
     await tester.tap(find.byTooltip('DM'));

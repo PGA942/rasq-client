@@ -32,7 +32,30 @@ const rasqListKindPrefix = 'rasqlist:';
 /// そのまま使われ、オート構成を壊す自由形はこの UI からは作れない。
 @immutable
 class TlSourceComponent {
-  const TlSourceComponent({this.tl = 'home', this.account = '', this.enabled = true, this.label = ''});
+  const TlSourceComponent({this.tl = 'home', this.account = '', this.enabled = true, this.label = '', this.children = const [], this.limit = 5, this.display = TlDisplayMode.timeline});
+
+  /// セクション (D-442、`tl: section`) に入れたノード(最大 [maxSectionChildren] 個)。画面では入れた順に、角丸の枠で出す。
+  final List<TlSourceComponent> children;
+
+  /// セクションの中 / 並びの中のブロック(AsTell / Swing / トレンドのタイル)で出す数 (D-442)。本体の TL には使わない。
+  final int limit;
+
+  /// セクションの中の TL ノードの表示モード (D-442)。本体の TL は [TlConfig.display]。
+  final TlDisplayMode display;
+
+  /// セクション (D-442): ほかのノードを最大 3 つ包む枠。見出しは [label]。
+  bool get isSection => tl == sectionKind;
+  bool get isAstell => tl == astellSectionKind;
+  bool get isSwing => tl == swingSectionKind;
+
+  /// フォロー中の反応 (D-442、トレンド TL): フォロー中の人の、このページのワード / タグの投稿。
+  bool get isTrendFollowing => tl == trendFollowingKind;
+
+  /// 投稿の並びではなく、枠 / タイルで出すノード(本体の TL にはまとめない)。
+  bool get isBlock => isSection || isAstell || isSwing || isTrendTags;
+
+  /// 件数の選択肢。
+  static const limits = [3, 5, 10, 20];
 
   /// TL 種別: home/social/local/global(基本 TL)、`list:<名前 or id>`
   /// (リスト系)、`trend`(現在のトレンド TL = 上位タグの検索結果合流)、
@@ -74,11 +97,32 @@ class TlSourceComponent {
   /// アカウント表記(空 = 現在のアカウント)。
   final String account;
 
-  TlSourceComponent copyWith({String? tl, String? account, bool? enabled, String? label}) =>
-      TlSourceComponent(tl: tl ?? this.tl, account: account ?? this.account, enabled: enabled ?? this.enabled, label: label ?? this.label);
-  Map<String, Object?> toJson() => {'tl': tl, 'account': account, 'enabled': enabled, if (label.isNotEmpty) 'label': label};
-  factory TlSourceComponent.fromJson(Map<String, Object?> j) =>
-      TlSourceComponent(tl: j['tl'] as String? ?? 'home', account: j['account'] as String? ?? '', enabled: j['enabled'] != false, label: j['label'] as String? ?? '');
+  TlSourceComponent copyWith({String? tl, String? account, bool? enabled, String? label, List<TlSourceComponent>? children, int? limit, TlDisplayMode? display}) => TlSourceComponent(
+      tl: tl ?? this.tl,
+      account: account ?? this.account,
+      enabled: enabled ?? this.enabled,
+      label: label ?? this.label,
+      children: children ?? this.children,
+      limit: limit ?? this.limit,
+      display: display ?? this.display);
+  Map<String, Object?> toJson() => {
+        'tl': tl,
+        'account': account,
+        'enabled': enabled,
+        if (label.isNotEmpty) 'label': label,
+        if (children.isNotEmpty) 'children': [for (final c in children) c.toJson()],
+        if (limit != 5) 'limit': limit,
+        if (display != TlDisplayMode.timeline) 'display': display.name,
+      };
+  factory TlSourceComponent.fromJson(Map<String, Object?> j) => TlSourceComponent(
+        tl: j['tl'] as String? ?? 'home',
+        account: j['account'] as String? ?? '',
+        enabled: j['enabled'] != false,
+        label: j['label'] as String? ?? '',
+        children: [for (final c in (j['children'] as List? ?? const [])) if (c is Map) TlSourceComponent.fromJson(c.cast<String, Object?>())].take(maxSectionChildren).toList(),
+        limit: (j['limit'] as num?)?.toInt().clamp(1, 50) ?? 5,
+        display: TlDisplayMode.byName(j['display']),
+      );
 }
 
 /// サジェストの基準の選択肢 → 取得 kind(D-121 の対応):
@@ -175,50 +219,39 @@ enum TlDisplayMode {
   static TlDisplayMode byName(Object? name) => values.where((m) => m.name == name).firstOrNull ?? timeline;
 }
 
-/// 包むノード = セクション (D-439)。ほかの TL([tl] = タイムライン id: `home` / `local` / `list:…` / `node:<n>` …)を、
-/// 見出し([title])つきの枠に包んで、この TL の上に並べる(トレンド TL の「フォロー中の反応」「トレンド」のような枠)。
-/// **包んだ TL は新しい投稿を読み込まない**(開いたとき / 引き下げ / 枠の ↻ で読み直す)。[limit] 件まで。
-/// セクションに包めるもの (D-441): TL のほかに、AsTell のルームのタイルと Swing の並び。
+/// セクション (D-442、D-439 の「包むノード」を作り直し): 「SNSタイムライン」の並びの中に置くノード。ほかのノードを
+/// 最大 [maxSectionChildren] 個包み、画面では見出しの下に入れた順で角丸の枠に出す。
+const sectionKind = 'section';
+const maxSectionChildren = 3;
+
+/// セクションに入れられる / 並びに置けるブロック (D-441): AsTell のルームのタイル / Swing の並び。
 const astellSectionKind = 'astell';
 const swingSectionKind = 'swing';
 
-@immutable
-class TlSection {
-  const TlSection({required this.id, required this.title, required this.tl, this.display = TlDisplayMode.timeline, this.limit = 5, this.enabled = true});
+/// フォロー中の反応 (D-442): トレンド TL の「フォロー中の人の、このページのワード / タグの投稿」。
+const trendFollowingKind = 'trend.following';
 
-  final String id;
-  final String title;
-  final String tl;
-  final TlDisplayMode display;
-  final int limit;
-
-  /// 一時的に隠す(外さずに)。
-  final bool enabled;
-
-  /// 件数の選択肢。
-  static const limits = [3, 5, 10, 20];
-
-  /// AsTell のタイル / Swing の並び (D-441)。表示モードは使わない(タイル / バナーで出す)。
-  bool get isAstell => tl == astellSectionKind;
-  bool get isSwing => tl == swingSectionKind;
-
-  TlSection copyWith({String? title, String? tl, TlDisplayMode? display, int? limit, bool? enabled}) =>
-      TlSection(id: id, title: title ?? this.title, tl: tl ?? this.tl, display: display ?? this.display, limit: limit ?? this.limit, enabled: enabled ?? this.enabled);
-
-  Map<String, Object?> toJson() => {'id': id, 'title': title, 'tl': tl, 'display': display.name, 'limit': limit, if (!enabled) 'enabled': false};
-  factory TlSection.fromJson(Map<String, Object?> j) => TlSection(
-        id: j['id'] as String? ?? '',
-        title: j['title'] as String? ?? '',
-        tl: j['tl'] as String? ?? 'home',
-        display: TlDisplayMode.byName(j['display']),
-        limit: (j['limit'] as num?)?.toInt().clamp(1, 50) ?? 5,
-        enabled: j['enabled'] != false,
-      );
-}
+/// D-439 の `sections`(並びの外にあった枠)を、並びの先頭のセクションに写す。
+List<TlSourceComponent> _migrateSections(Object? raw) => [
+      for (final s in (raw as List? ?? const []))
+        if (s is Map)
+          TlSourceComponent(
+            tl: sectionKind,
+            label: s['title'] as String? ?? '',
+            enabled: s['enabled'] != false,
+            children: [
+              TlSourceComponent(tl: s['tl'] as String? ?? 'home', limit: (s['limit'] as num?)?.toInt().clamp(1, 50) ?? 5, display: TlDisplayMode.byName(s['display'])),
+            ],
+          ),
+    ];
 
 @immutable
 class TlConfig {
-  const TlConfig({this.sources = const [], this.algorithms = const [], this.clock = '15秒', this.display = TlDisplayMode.timeline, this.sections = const []});
+  const TlConfig({this.sources = const [], this.algorithms = const [], this.clock = '15秒', this.display = TlDisplayMode.timeline, this.layout = currentLayout});
+
+  /// 並びの版 (D-442)。2 = セクションを並びの中に置く形。1 = それより前に保存した構成(トレンド TL は「フォロー中の反応」を前に足して出す)。
+  final int layout;
+  static const currentLayout = 2;
 
   final List<TlSourceComponent> sources;
   final List<TlAlgorithmComponent> algorithms;
@@ -229,29 +262,29 @@ class TlConfig {
   /// この TL の表示モード (D-439)。
   final TlDisplayMode display;
 
-  /// この TL の上に並べる、ほかの TL を包んだ枠 (D-439)。
-  final List<TlSection> sections;
+  /// 本体の TL にまとめる取得元(並びの、セクション / ブロックでない有効なノード、D-442)。
+  List<TlSourceComponent> get postSources => [for (final s in sources) if (s.enabled && !s.isBlock) s];
 
-  TlConfig copyWith({List<TlSourceComponent>? sources, List<TlAlgorithmComponent>? algorithms, String? clock, TlDisplayMode? display, List<TlSection>? sections}) => TlConfig(
-      sources: sources ?? this.sources,
-      algorithms: algorithms ?? this.algorithms,
-      clock: clock ?? this.clock,
-      display: display ?? this.display,
-      sections: sections ?? this.sections);
+  /// 編集すると、いまの並びの版になる。
+  TlConfig copyWith({List<TlSourceComponent>? sources, List<TlAlgorithmComponent>? algorithms, String? clock, TlDisplayMode? display}) =>
+      TlConfig(sources: sources ?? this.sources, algorithms: algorithms ?? this.algorithms, clock: clock ?? this.clock, display: display ?? this.display);
 
   Map<String, Object?> toJson() => {
         'sources': [for (final s in sources) s.toJson()],
         'algorithms': [for (final a in algorithms) a.toJson()],
         'clock': clock,
         if (display != TlDisplayMode.timeline) 'display': display.name,
-        if (sections.isNotEmpty) 'sections': [for (final s in sections) s.toJson()],
+        'layout': layout,
       };
   factory TlConfig.fromJson(Map<String, Object?> j) => TlConfig(
-        sources: [for (final s in (j['sources'] as List? ?? const [])) TlSourceComponent.fromJson((s as Map).cast<String, Object?>())],
+        sources: [
+          ..._migrateSections(j['sections']),
+          for (final s in (j['sources'] as List? ?? const [])) TlSourceComponent.fromJson((s as Map).cast<String, Object?>()),
+        ],
         algorithms: [for (final a in (j['algorithms'] as List? ?? const [])) TlAlgorithmComponent.fromJson((a as Map).cast<String, Object?>())],
         clock: j['clock'] as String? ?? '15秒',
         display: TlDisplayMode.byName(j['display']),
-        sections: [for (final s in (j['sections'] as List? ?? const [])) if (s is Map) TlSection.fromJson(s.cast<String, Object?>())],
+        layout: (j['layout'] as num?)?.toInt() ?? (j['sections'] is List ? currentLayout : 1),
       );
 }
 
@@ -265,8 +298,16 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
   }
   // 取得元は SNS ごとのノード (D-440): トレンド TL = いまのアカウントの検索結果、Today = いまのアカウントの featured。
   // (前は「このタイムライン」= self。保存した構成の self はそのまま動く。)
+  // トレンド TL (D-442): 「フォロー中の反応」のセクション(AsTell / 会話のまとまり / 投稿 3 件)→ 本体 = このページの検索結果。
   if (scope == 'trend') {
-    return const TlConfig(sources: [TlSourceComponent(tl: pageSearchKind)], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
+    return const TlConfig(sources: [
+      TlSourceComponent(tl: sectionKind, label: 'フォロー中の反応', children: [
+        TlSourceComponent(tl: astellSectionKind),
+        TlSourceComponent(tl: trendFollowingKind, display: TlDisplayMode.relational, limit: 3),
+        TlSourceComponent(tl: trendFollowingKind, limit: 3),
+      ]),
+      TlSourceComponent(tl: pageSearchKind),
+    ], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
   }
   if (scope == trendTodayScope) {
     return const TlConfig(sources: [TlSourceComponent(tl: 'featured')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
@@ -315,7 +356,8 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
   final edges = <GraphEdge>[];
 
   // 一時的な無効化 (D-123): 無効のコンポーネントはコンパイルから除外。
-  final sources = [for (final s in cfg.sources) if (s.enabled) s];
+  // セクション / ブロック (D-442) は本体の TL に入れない(画面が別に出す)。
+  final sources = cfg.postSources;
   final algorithms = [for (final a in cfg.algorithms) if (a.enabled) a];
 
   // 取得段。基準(サジェスト)には myposts / myreactions / myreplies も

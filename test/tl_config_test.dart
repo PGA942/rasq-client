@@ -63,7 +63,7 @@ void main() {
   });
 
   test('D-124: self/リスト/トレンドの既定構成とコンパイル(トレンド枠の鎖は D-431 でトレンドタイルへ。トレンド TL の取得元は D-440 で「このページの検索結果」)', () {
-    expect(defaultTlConfig('trend').sources.single.tl, pageSearchKind);
+    expect(defaultTlConfig('trend').postSources.single.tl, pageSearchKind);
     expect(defaultTlConfig('trend.users').sources.single.tl, 'self');
     expect(defaultTlConfig('trend.following').sources.single.tl, 'home');
     expect(defaultTlConfig('tl.list:abc123').sources.single.tl, 'list:abc123');
@@ -347,17 +347,24 @@ void main() {
     expect(find.text('プラグインノードを検索'), findsNothing); // 追加で閉じる
     expect(inScreen(find.text('キーワードを投稿内容からサジェスト')), findsOneWidget);
 
-    // タイムラインを追加 → FOW の選択肢は [タイムライン, リスト系,
-    // 現在のトレンドTL] に絞られている (D-122)。
+    // タイムラインを追加 → FOW の選択肢は [タイムライン, リスト系, トレンドを取得, セクション / ブロック] (D-122 → D-442)。
     await tester.tap(inScreen(find.text('タイムラインを追加')));
     await tester.pumpAndSettle();
     expect(find.text('タイムライン'), findsOneWidget);
     expect(find.text('リストTL'), findsOneWidget); // D-194: リストは追加後にアカウント → リストで選ぶ
     expect(find.text('カスタムフィード(Bluesky)'), findsNothing); // Bluesky アカウントが無い
-    expect(find.text('現在のトレンドTL'), findsOneWidget);
-    await tester.tap(find.text('現在のトレンドTL'));
+    expect(find.text('セクション'), findsOneWidget);
+    expect(find.text('トレンドを取得'), findsOneWidget);
+    await tester.tap(find.text('トレンドを取得'));
     await tester.pumpAndSettle();
-    expect(inScreen(find.text('現在のトレンドTLを取得')), findsOneWidget);
+    expect(inScreen(find.text('トレンドを取得')), findsOneWidget);
+    expect(inScreen(find.textContaining('種別: トレンドタイル')), findsOneWidget, reason: '既定の種別はトレンドタイル');
+    // … → 種別をトレンド TL に(投稿の取得 = trend.posts)。
+    await tester.tap(inScreen(find.byTooltip('タイムラインの操作')).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('種別をトレンド TL に'));
+    await tester.pumpAndSettle();
+    expect(inScreen(find.textContaining('種別: トレンド TL')), findsOneWidget);
 
     // KV: tlcfg(コンポーネント)+ graph(正準形コンパイル、トレンドは
     // trend.posts、2 本目でマージ段)。
