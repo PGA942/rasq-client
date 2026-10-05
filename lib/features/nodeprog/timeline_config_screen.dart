@@ -191,8 +191,10 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       final raw = area['tlcfg'];
       if (!mounted) return;
       if (raw is String) {
+        final saved = TlConfig.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
         setState(() {
-          _cfg = TlConfig.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
+          // トレンドページ (D-443): 前の版のトレンドタイルの構成は、「トレンド」「Today」のセクションに組み直して見せる。
+          _cfg = _scope == trendTilesScope ? trendPageConfig(saved) : saved;
           _loaded = true;
         });
         return;
@@ -262,14 +264,16 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   List<(String, String, bool)> _tabs() {
     // DM (D-127): 共通(tl.dm)と各ページ(tl.dm:<peer>)は単独タブ。
     if (_isDmScope) return [(_scope, _scope == 'tl.dm' ? 'DM(共通)' : 'このDM', false)];
-    // トレンドのエディタ (D-107/D-124 → D-431): トレンドタイル / トレンド TL(ノート)/ フォロー中 / ユーザー / Today。
+    // トレンドのエディタ (D-107/D-124 → D-431 → D-443): トレンドページ(検索ホーム = トレンドのタイル + Today のセクション)/
+    // トレンド TL(ノート)/ フォロー中 / ユーザー。前の「トレンドタイル」と「Today」のタブはトレンドページにまとめた
+    // (Today の構成 `trend.today` は保存したものがそのまま Today の TL に効く)。
     if (_scope.startsWith('trend')) {
-      return const [
-        (trendTilesScope, 'トレンドタイル', false),
+      return [
+        (trendTilesScope, 'トレンドページ', false),
         ('trend', 'トレンド TL', false),
         ('trend.following', 'フォロー中', false),
         ('trend.users', 'ユーザー', false),
-        (trendTodayScope, 'Today', false),
+        if (_scope == trendTodayScope) (trendTodayScope, 'Today', false),
       ];
     }
     final order = ref.watch(tlTabOrderProvider);
@@ -536,7 +540,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
               }
             },
             // 長押し (D-442): パレットを閉じて、置く場所を選ぶ(並びとセクションの中に「ここに置く」)。
-            onPlaceSource: _scope == trendTilesScope || _isDmScope
+            onPlaceSource: _isDmScope
                 ? null
                 : (s) {
                     manager.close(tlConfigPaletteFowId);
@@ -584,7 +588,11 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     if (s.isTrendFollowing) return (Icons.people_outline, 'フォロー中の反応', 'RASQ', 'フォロー中の人の、このページのワード / タグの投稿');
     // SNS アカウントごとの取得元 (D-440)。トレンドは「トレンドを取得」ノードで、種別を切り替える (D-442)。
     final who = s.account.isEmpty ? '(現在のアカウント)' : s.account;
-    if (s.isTrendTags) return (Icons.trending_up, 'トレンドを取得', who, '種別: トレンドタイル(このアカウントのサーバーのトレンドのワード)');
+    if (s.isTrendTags) {
+      // アカウントの表記が空 = 全部のアカウントのトレンド(トレンドページの既定、D-443)。
+      if (s.account.isEmpty) return (Icons.trending_up, 'トレンドを取得', '全部のアカウント', '種別: トレンドタイル(RASQ アカウントの SNS アカウント全部のトレンドのワード)');
+      return (Icons.trending_up, 'トレンドを取得', who, '種別: トレンドタイル(このアカウントのサーバーのトレンドのワード)');
+    }
     if (s.isSearch) return (Icons.manage_search, '検索結果を取得', who, s.searchWord.isEmpty ? '検索: このページの検索ワード / タグ' : '検索: ${s.searchWord}');
     if (s.tl == 'featured') return (Icons.wb_sunny_outlined, 'Today を取得', who, 'TL: Today(注目の投稿)');
     return (
@@ -595,9 +603,9 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
               : s.isFeed
                   ? Icons.rss_feed
                   : (s.isTrend ? Icons.travel_explore : (s.isList ? Icons.list_alt_outlined : Icons.download_outlined)),
-      s.isSelf ? 'このタイムラインを取得' : (s.isDm ? 'DM取得' : (s.isTrend ? 'トレンドを取得' : (s.isFeed ? 'カスタムフィードを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得')))),
+      s.isSelf ? '${tlSelfLabel(_scope)}を取得' : (s.isDm ? 'DM取得' : (s.isTrend ? 'トレンドを取得' : (s.isFeed ? 'カスタムフィードを取得' : (s.isList ? 'リストTLを取得' : 'タイムラインを取得')))),
       s.isSelf ? 'RASQ' : (s.account.isEmpty ? '(現在のアカウント)' : s.account),
-      'TL: ${s.isSelf ? 'この画面の基礎タイムライン(検索結果/欄の投稿)' : s.isDm ? 'DM: @${s.dmPeer}' : s.isTrend ? '種別: トレンド TL(トレンド上位タグの検索結果)' : s.isFeed ? 'フィード: ${s.label.isNotEmpty ? s.label : (s.feedUri.isEmpty ? '未選択' : s.feedUri)}' : s.isList ? 'リスト: ${s.listName.isEmpty ? '未選択' : s.listName}' : tlLabel}',
+      'TL: ${s.isSelf ? tlSelfLabel(_scope) : s.isDm ? 'DM: @${s.dmPeer}' : s.isTrend ? '種別: トレンド TL(トレンド上位タグの検索結果)' : s.isFeed ? 'フィード: ${s.label.isNotEmpty ? s.label : (s.feedUri.isEmpty ? '未選択' : s.feedUri)}' : s.isList ? 'リスト: ${s.listName.isEmpty ? '未選択' : s.listName}' : tlLabel}',
     );
   }
 
@@ -616,7 +624,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       // v1: TL プラグインは同梱 wasm サンプルの掲載ページへ (D-120 と同じ対応)。
       RasqDropdownItem('プラグインのストアページへ移動', 'store', enabled: isPlugin),
       // トレンドを取得 (D-442): 種別(トレンドタイル / トレンド TL)を切り替える。ブロック(AsTell / Swing / タイル)は件数。
-      if (!algorithm && (_cfg.sources[i].isTrend || _cfg.sources[i].isTrendTags)) RasqDropdownItem(_cfg.sources[i].isTrend ? '種別をトレンドタイルに' : '種別をトレンド TL に', 'kind'),
+      if (!algorithm && _scope != trendTilesScope && (_cfg.sources[i].isTrend || _cfg.sources[i].isTrendTags)) RasqDropdownItem(_cfg.sources[i].isTrend ? '種別をトレンドタイルに' : '種別をトレンド TL に', 'kind'),
       if (!algorithm && _cfg.sources[i].isBlock && !_cfg.sources[i].isSection) RasqDropdownItem('件数: ${_cfg.sources[i].limit}', 'limit'),
       const RasqDropdownItem('削除', 'delete', destructive: true),
     ]);
@@ -859,17 +867,8 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       // 傾向 FOW の指向性/刺激性 (D-431): いつも一番最後(並べ替え / 削除はできない)。
       if (tendencyPinnedScopes.contains(_scope)) _PinnedTendencyTile(onOpen: () => _tendencyAction('tendency')),
       _addTile('アルゴリズムを追加', () => _openPalette(algorithms: true)),
-      // トレンドタイル (D-431 → D-440): 取得元は SNS アカウントごとのトレンド(足す / 外す / 一時的に無効にできる)。
-      // 自動更新は無い(検索ホームを開く / 引き下げで読む)。
-      if (_scope == trendTilesScope) ...[
-        RasqSectionHeader(
-          key: const ValueKey('tlconfig.tiles.source'),
-          title: '取得元(SNS アカウントのトレンド)',
-          trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: '取得元の並べ替え', onPressed: () => _openReorder(algorithms: false)),
-        ),
-        for (var i = 0; i < _cfg.sources.length; i++) _componentTile(algorithm: false, i: i),
-        _addTile('取得元を追加', () => _openPalette(algorithms: false)),
-      ] else ..._sourceComponents(),
+      // トレンドページ (D-443) もほかと同じ並び(セクション「トレンド」「Today」)。前はトレンドタイルの取得元だけの欄だった。
+      ..._sourceComponents(),
       if (_supportsLayout) ..._layoutComponents(),
     ];
   }
@@ -970,27 +969,26 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     ];
   }
 
+  /// 並べ替え中 (D-442 → D-443): 長押しでつかむ。つかんだタイルは**そのままの見た目**で指について動き、元の場所は詰める
+  /// (薄い写しは残さない)。
   Widget _maybeDraggable(_NodePath p, Widget child) {
     if (!_reordering) return child;
-    final node = _nodeAt(p);
-    final (icon, title, _, _) = _sourceInfo(node);
-    return LongPressDraggable<_NodePath>(
-      key: ValueKey('tlconfig.drag.${p.section ?? 'top'}.${p.index}'),
-      data: p,
-      feedback: Material(
-        elevation: 4,
-        borderRadius: BorderRadius.circular(RasqSizes.radiusMd),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 320),
-          child: Padding(
-            padding: const EdgeInsets.all(RasqSpacing.md),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 20), const SizedBox(width: RasqSpacing.sm), Flexible(child: Text(title, style: RasqTypography.bodySmall, overflow: TextOverflow.ellipsis))]),
-          ),
+    return LayoutBuilder(builder: (context, c) {
+      return LongPressDraggable<_NodePath>(
+        key: ValueKey('tlconfig.drag.${p.section ?? 'top'}.${p.index}'),
+        data: p,
+        feedback: Material(
+          key: const ValueKey('tlconfig.drag.feedback'),
+          elevation: 4,
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(RasqSizes.radiusMd),
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(width: c.maxWidth, child: IgnorePointer(child: child)),
         ),
-      ),
-      childWhenDragging: Opacity(opacity: 0.3, child: child),
-      child: child,
-    );
+        childWhenDragging: const SizedBox.shrink(),
+        child: child,
+      );
+    });
   }
 
   /// 置く場所 / 落とす場所。置くときは「ここに置く」、動かすときはドラッグの受け口。
@@ -1044,29 +1042,30 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
   }
 
   /// セクションのタイル: 見出し + 中のノード(少し小さく)。
+  /// セクション (D-442 → D-443): 見出しの行はほかのノードと同じ形。中のノードはその下に、字下げした角丸の枠で 1 つずつ
+  /// (画面と同じ。セクション全体は枠で囲まない)。
   Widget _sectionTile(int i) {
     final sec = _cfg.sources[i];
     final scheme = Theme.of(context).colorScheme;
     final slots = _reordering || _placing != null;
     final kids = sec.children;
-    return Container(
-      key: ValueKey('tlconfig.section.$i'),
-      margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.xs),
-      decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-      child: Opacity(
+    return Column(key: ValueKey('tlconfig.section.$i'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        Expanded(
+          child: RasqPluginTile(
+            leading: Icon(Icons.crop_square, size: 22, color: sec.enabled ? null : scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+            title: sec.label.isEmpty ? 'セクション' : sec.label,
+            subtitle: 'セクション ・ ${kids.length} / $maxSectionChildren${sec.enabled ? '' : ' ・ 無効化中'}',
+            description: 'ノードを $maxSectionChildren つまで包む枠(画面では見出しの下に、入れた順で角丸の枠に出す)',
+            chevron: false,
+          ),
+        ),
+        Builder(builder: (ctx) => RasqIconButton(key: ValueKey('tlconfig.section.$i.more'), icon: Icons.more_horiz, size: 18, tooltip: 'セクションの操作', onPressed: () => _sectionMenu(ctx, i))),
+        const SizedBox(width: RasqSpacing.sm),
+      ]),
+      Opacity(
         opacity: sec.enabled ? 1 : 0.5,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            const Padding(padding: EdgeInsets.all(RasqSpacing.md), child: Icon(Icons.crop_square, size: 22)),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(sec.label.isEmpty ? 'セクション' : sec.label, style: RasqTypography.listTile),
-                Text('セクション ・ ${kids.length} / $maxSectionChildren${sec.enabled ? '' : ' ・ 無効化中'}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-              ]),
-            ),
-            Builder(builder: (ctx) => RasqIconButton(key: ValueKey('tlconfig.section.$i.more'), icon: Icons.more_horiz, size: 18, tooltip: 'セクションの操作', onPressed: () => _sectionMenu(ctx, i))),
-            const SizedBox(width: RasqSpacing.sm),
-          ]),
           for (var k = 0; k < kids.length; k++) ...[
             if (slots) _slot((section: i, index: k)),
             _maybeDraggable((section: i, index: k), _childTile(i, k)),
@@ -1087,19 +1086,21 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
             ),
         ]),
       ),
-    );
+    ]);
   }
 
-  /// セクションの中のノード(少し小さく、字下げ)。
+  /// セクションの中のノード(少し小さく、字下げした角丸の枠)。
   Widget _childTile(int i, int k) {
     final c = _cfg.sources[i].children[k];
     final scheme = Theme.of(context).colorScheme;
     final (icon, title, subtitle, description) = _sourceInfo(c);
     final showsPosts = !c.isBlock;
     final meta = [subtitle, if (showsPosts || c.isTrendFollowing) c.display.label, '${c.limit} 件', if (!c.enabled) '無効化中'].join(' ・ ');
-    return Padding(
+    return Container(
       key: ValueKey('tlconfig.section.$i.child.$k'),
-      padding: const EdgeInsets.only(left: RasqSpacing.lg),
+      margin: const EdgeInsets.fromLTRB(RasqSpacing.xl, 2, RasqSpacing.md, 2),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(color: scheme.surface, border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
       child: Row(children: [
         Expanded(
           child: Opacity(
@@ -1108,7 +1109,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
           ),
         ),
         Builder(builder: (ctx) => RasqIconButton(key: ValueKey('tlconfig.section.$i.child.$k.more'), icon: Icons.more_horiz, size: 18, tooltip: 'ノードの操作', onPressed: () => _childMenu(ctx, i, k))),
-        const SizedBox(width: RasqSpacing.sm),
+        const SizedBox(width: RasqSpacing.xs),
       ]),
     );
   }
@@ -1140,7 +1141,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final pick = await _dropdown(anchorContext, 'tlconfig.child.menu', [
       if (!c.isBlock || c.isTrendFollowing) ('display', '表示モード: ${c.display.label}'),
       ('limit', '件数: ${c.limit}'),
-      if (c.isTrend || c.isTrendTags) ('kind', c.isTrend ? '種別をトレンドタイルに' : '種別をトレンド TL に'),
+      if (_scope != trendTilesScope && (c.isTrend || c.isTrendTags)) ('kind', c.isTrend ? '種別をトレンドタイルに' : '種別をトレンド TL に'),
       ('toggle', c.enabled ? '一時的な無効化' : '無効化の解除'),
       ('out', 'セクションから出す'),
       ('delete', '削除'),
@@ -1200,18 +1201,26 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
           }),
         ),
       ),
-      const RasqCaption(
-        '複数を重ねると 1 本にまとまり、同じ投稿は 1 つになります',
-        detail: '複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。',
-        padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-      ),
+      if (_scope == trendTilesScope)
+        const RasqCaption(
+          '検索ホームに上から順に出します。セクションでトレンドと Today の区間を分けます',
+          detail: '検索ホームに上から順に出します。既定は「トレンド」(全部のアカウントのトレンドのタイル)と「Today」のセクションです。アルゴリズムはトレンドのタイルに掛かります(重いものは使えません)。',
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+        )
+      else
+        const RasqCaption(
+          '複数を重ねると 1 本にまとまり、同じ投稿は 1 つになります',
+          detail: '複数を重ねると 1 本に合流し、同じ投稿は 1 枚に畳まれます(タイルの ↓ でアカウント切替)。投稿加工プラグインは各タイムライン提供元(SNSプラグイン)側で適用されます。',
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
+        ),
       if (_reordering)
         const RasqCaption('長押しでつかんで動かします。セクションの中(3 つまで)へも出し入れできます', key: ValueKey('tlconfig.reorder.hint'), padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs)),
       if (_placing != null) _placingBanner(),
       ..._nodeList(),
       _addTile('タイムラインを追加', () => _openPalette(algorithms: false)),
-      const RasqSectionHeader(title: '自動更新'),
-      Builder(builder: (ctx) {
+      // トレンドページ (D-443) は自動更新しない(開く / 引き下げで読む)。
+      if (_scope != trendTilesScope) const RasqSectionHeader(title: '自動更新'),
+      if (_scope != trendTilesScope) Builder(builder: (ctx) {
         return RasqListTile(
           title: '間隔: ${_cfg.clock.isEmpty ? 'なし' : _cfg.clock}',
           leading: const Icon(Icons.schedule),
@@ -1488,24 +1497,43 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
     }
     // SNS アカウントごとの取得元 (D-440)。
     final accounts = [for (final x in ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${x.account}'];
-    // トレンドタイル: SNS アカウントのトレンドのワードだけ。
-    if (widget.scope == trendTilesScope) {
-      return [
-        for (final a in accounts)
-          _PaletteItem(
-              icon: Icons.trending_up,
-              title: 'トレンド: $a',
-              subtitle: 'SNSプラグイン',
-              description: 'このアカウントのサーバーのトレンドのワードを取り込みます。',
-              supported: allSns,
-              add: () => widget.onAddSource(TlSourceComponent(tl: trendTagsKind, account: a)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: trendTagsKind, account: a))),
-      ];
-    }
     // タイムライン側 (D-122 → D-194 → D-442): [タイムライン, リストTL, カスタムフィード(Bluesky), トレンドを取得, セクション / ブロック]
     // (+ このタイムライン = 基礎 TL の自己参照, D-124)。種類 / アカウント / リストは追加後のタイルで選ぶ。
     final current = '${ref.watch(currentAccountProvider) ?? ''}';
     final firstTl = ref.watch(tlTimelinesProvider(current)).firstOrNull?.id ?? 'home';
     final bluesky = ref.watch(tlBlueskyAccountsProvider);
+    _PaletteItem source(TlSourceComponent node, {required IconData icon, required String title, required String subtitle, required String description, String? detail, List<String>? supported}) => _PaletteItem(
+        icon: icon,
+        title: title,
+        subtitle: subtitle,
+        description: description,
+        detail: detail,
+        supported: supported ?? allSns,
+        add: () => widget.onAddSource(node),
+        place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(node));
+    // セクション / ブロック (D-442)。
+    final blocks = [
+      if (widget.allowSection)
+        source(const TlSourceComponent(tl: sectionKind, label: 'セクション'), icon: Icons.crop_square, title: 'セクション', subtitle: 'RASQ', description: 'ノードを 3 つまで包む枠です。画面では見出しの下に、入れた順で出します。'),
+      source(const TlSourceComponent(tl: astellSectionKind), icon: Icons.settings_input_antenna, title: 'AsTell のタイル', subtitle: 'RASQ', description: 'いま開いている AsTell のルームをタイルで出します。'),
+      source(const TlSourceComponent(tl: swingSectionKind), icon: Icons.motion_photos_on_outlined, title: 'Swing', subtitle: 'RASQ', description: 'Swing を出している人を並べます。'),
+    ];
+    // Today (D-440): アカウントごとの featured(Today / 注目)。出せる SNS だけ。
+    final todays = [
+      for (final a in accounts)
+        if (ref.watch(tlTimelinesProvider(a)).any((k) => k.id == 'featured'))
+          source(TlSourceComponent(tl: 'featured', account: a), icon: Icons.wb_sunny_outlined, title: 'Today: $a', subtitle: 'SNSプラグイン', description: 'このアカウントの Today(注目の投稿)を取り込みます。'),
+    ];
+    // トレンドページ (D-443): トレンドのタイル(全部のアカウント / アカウントごと)、Today、セクション / ブロック。
+    if (widget.scope == trendTilesScope) {
+      return [
+        source(const TlSourceComponent(tl: trendTagsKind, limit: 10), icon: Icons.trending_up, title: 'トレンド: 全部のアカウント', subtitle: 'SNSプラグイン', description: 'RASQ アカウントの SNS アカウント全部のトレンドのワードを、タイルで出します。'),
+        for (final a in accounts)
+          source(TlSourceComponent(tl: trendTagsKind, account: a, limit: 10), icon: Icons.trending_up, title: 'トレンド: $a', subtitle: 'SNSプラグイン', description: 'このアカウントのサーバーのトレンドのワードを、タイルで出します。'),
+        ...todays,
+        ...blocks,
+      ];
+    }
     return [
       // トレンド TL (D-440): アカウントごとの、このページの検索ワード / タグの検索結果。
       if (widget.scope == 'trend')
@@ -1517,25 +1545,9 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               description: 'このアカウントで、このページの検索ワード / タグを検索した結果を取り込みます。',
               supported: allSns,
               add: () => widget.onAddSource(TlSourceComponent(tl: pageSearchKind, account: a)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: pageSearchKind, account: a))),
-      // Today (D-440): アカウントごとの featured(Today / 注目)。出せる SNS だけ。
-      if (widget.scope == trendTodayScope)
-        for (final a in accounts)
-          if (ref.watch(tlTimelinesProvider(a)).any((k) => k.id == 'featured'))
-            _PaletteItem(
-                icon: Icons.wb_sunny_outlined,
-                title: 'Today: $a',
-                subtitle: 'SNSプラグイン',
-                description: 'このアカウントの Today(注目の投稿)を取り込みます。',
-                supported: allSns,
-                add: () => widget.onAddSource(TlSourceComponent(tl: 'featured', account: a)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: 'featured', account: a))),
-      _PaletteItem(
-          icon: Icons.sync_alt,
-          title: 'このタイムライン',
-          subtitle: 'RASQ',
-          description: 'この画面の投稿をそのまま取り込みます。',
-          detail: 'この画面の基礎タイムライン(タブ/検索結果/リスト/欄の投稿)をそのまま取り込みます。',
-          supported: allSns,
-          add: () => widget.onAddSource(const TlSourceComponent(tl: 'self')), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: 'self'))),
+      if (widget.scope == trendTodayScope) ...todays,
+      // 画面の投稿 (D-124 → D-443): 名前は何を取り込むか(このリストの投稿 / このワードの検索結果 …)。
+      source(const TlSourceComponent(tl: 'self'), icon: Icons.sync_alt, title: tlSelfLabel(widget.scope), subtitle: 'RASQ', description: '${tlSelfLabel(widget.scope)}をそのまま取り込みます。'),
       // RASQ の投稿 (D-283): SNS のアカウントではなく、RASQ アカウント(Central)のフィード。
       _PaletteItem(
           icon: Icons.hub_outlined,
@@ -1589,29 +1601,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
           detail: 'トレンドタイル = サーバーのトレンドのワードのタイル、トレンド TL = いまのトレンド上位タグの検索結果を 1 本に合流した投稿。',
           supported: allSns,
           add: () => widget.onAddSource(TlSourceComponent(tl: trendTagsKind, account: current)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(TlSourceComponent(tl: trendTagsKind, account: current))),
-      // セクション / ブロック (D-442)。
-      if (widget.allowSection)
-        _PaletteItem(
-            icon: Icons.crop_square,
-            title: 'セクション',
-            subtitle: 'RASQ',
-            description: 'ノードを 3 つまで包む枠です。画面では見出しの下に、入れた順で出します。',
-            supported: allSns,
-            add: () => widget.onAddSource(const TlSourceComponent(tl: sectionKind, label: 'セクション')), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: sectionKind, label: 'セクション'))),
-      _PaletteItem(
-          icon: Icons.settings_input_antenna,
-          title: 'AsTell のタイル',
-          subtitle: 'RASQ',
-          description: 'いま開いている AsTell のルームをタイルで出します。',
-          supported: allSns,
-          add: () => widget.onAddSource(const TlSourceComponent(tl: astellSectionKind)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: astellSectionKind))),
-      _PaletteItem(
-          icon: Icons.motion_photos_on_outlined,
-          title: 'Swing',
-          subtitle: 'RASQ',
-          description: 'Swing を出している人を並べます。',
-          supported: allSns,
-          add: () => widget.onAddSource(const TlSourceComponent(tl: swingSectionKind)), place: widget.onPlaceSource == null ? null : () => widget.onPlaceSource!(const TlSourceComponent(tl: swingSectionKind))),
+      ...blocks,
       if (widget.scope == 'trend')
         _PaletteItem(
             icon: Icons.people_outline,
@@ -1856,8 +1846,8 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
     if (s.isSelf) {
       return (
         const {},
-        const RrlNode(t: 'Column', c: [
-          RrlNode(t: 'Text', p: {'text': 'この画面の投稿をそのまま取り込みます。', 'detail': 'この画面の基礎タイムラインをそのまま取り込みます。パラメーターはありません。'}),
+        RrlNode(t: 'Column', c: [
+          RrlNode(t: 'Text', p: {'text': '${tlSelfLabel(widget.scope)}をそのまま取り込みます。', 'detail': '${tlSelfLabel(widget.scope)}をそのまま取り込みます。パラメーターはありません。'}),
         ]),
       );
     }

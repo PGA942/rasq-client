@@ -169,10 +169,14 @@ final trendFrameTagsProvider = FutureProvider.autoDispose<List<TrendTag>>((ref) 
   return out;
 });
 
-/// トレンドタイルの取得元 (D-440) で絞る: 構成に `trend.tags` があれば、有効なアカウントのトレンドに出ているワードだけ。
+/// トレンドタイルの取得元 (D-440) で絞る: 構成に `trend.tags` があれば(トレンドページのセクションの中も、D-443)、有効なアカウントの
+/// トレンドに出ているワードだけ。アカウントの表記が空のものがあれば全部のアカウント(D-443。前は「いまのアカウント」)。
 List<TrendTag> filterTrendsBySources(SourcedTrends sourced, TlConfig cfg, {AccountId? current}) {
-  if (!cfg.sources.any((x) => x.isTrendTags)) return sourced.tags;
-  final picked = {for (final x in cfg.sources) if (x.isTrendTags && x.enabled) x.account.isEmpty ? '$current' : x.account};
+  final nodes = trendTagsNodesOf(cfg).toList();
+  if (nodes.isEmpty) return sourced.tags;
+  final enabled = [for (final x in nodes) if (x.enabled) x];
+  if (enabled.any((x) => x.account.isEmpty)) return sourced.tags;
+  final picked = {for (final x in enabled) x.account};
   bool from(AccountId a) => picked.contains('$a') || picked.contains(a.key);
   return [for (final t in sourced.tags) if ((sourced.sources[trendKey(t.tag)] ?? const <AccountId>[]).any(from)) t];
 }

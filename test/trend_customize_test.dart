@@ -23,16 +23,44 @@ import 'support/fakes.dart';
 
 /// D-431: トレンド TL / トレンドタイル / Today の 3 つの構成。それぞれの画面の歯車から TL のカスタマイズと同じ画面で編集し、
 /// トレンドタイルでは重い(ML モデル / GPU)アルゴリズムを使えない。傾向 FOW の指向性/刺激性はアルゴリズムの一番最後に固定。
+/// D-443: トレンドタイルと Today は「トレンドページ」(検索ホームの並び)にまとめた。セクションで「トレンド」と「Today」の区間を分ける。
 void main() {
   group('構成', () {
-    test('Today / トレンドタイル / トレンド TL の既定の取得元は SNS ごとのノード (D-440)。タイルは自動更新なし。トレンド TL にトレンド枠の鎖はもう付かない', () {
+    test('Today / トレンド TL の既定の取得元は SNS ごとのノード (D-440)。トレンドページは「トレンド」「Today」のセクションで自動更新なし (D-443)。トレンド TL にトレンド枠の鎖はもう付かない', () {
       expect(defaultTlConfig(trendTodayScope).sources.single.tl, 'featured');
       expect(defaultTlConfig('trend').postSources.single.tl, pageSearchKind);
-      expect(defaultTlConfig(trendTilesScope).sources.single.tl, trendTagsKind);
-      expect([for (final s in defaultTlConfig(trendTilesScope, bundleAccounts: ['@a@m.example', '@b@bsky.social']).sources) (s.tl, s.account)], [(trendTagsKind, '@a@m.example'), (trendTagsKind, '@b@bsky.social')]);
-      expect(defaultTlConfig(trendTilesScope).clock, '');
+      final page = defaultTlConfig(trendTilesScope);
+      expect([for (final s in page.sources) '${s.label}: ${[for (final c in s.children) c.tl].join(', ')}'], ['トレンド: $trendTagsKind', 'Today: featured']);
+      expect(page.sources.first.children.single.account, '', reason: '全部のアカウントのトレンド');
+      expect(page.clock, '');
       final g = compileTlConfig(defaultTlConfig('trend'), scope: 'trend');
       expect({for (final n in g.nodes) n.type}, isNot(contains('trend.frame')), reason: 'タイルの並びは trend.tiles へ分けた');
+    });
+
+    test('前の版のトレンドタイルの構成は、トレンドページのセクションに組み直す (D-443): アカウントが 1 つならそのアカウント、ほかは全部。アルゴリズムはそのまま', () {
+      TlConfig legacy(List<String> accounts) => TlConfig.fromJson({
+            ...TlConfig(sources: [for (final a in accounts) TlSourceComponent(tl: trendTagsKind, account: a)], algorithms: const [TlAlgorithmComponent(type: 'queryfilter', query: '月見')], clock: '').toJson(),
+            'layout': TlConfig.sectionsLayout,
+          });
+      final one = trendPageConfig(legacy(['@a@m.example']));
+      expect([for (final s in one.sources) s.label], ['トレンド', 'Today']);
+      expect(one.sources.first.children.single.account, '@a@m.example');
+      expect(one.algorithms.single.query, '月見');
+      expect(trendPageConfig(legacy(['@a@m.example', '@b@bsky.social'])).sources.first.children.single.account, '');
+      const mine = TlConfig(sources: [TlSourceComponent(tl: trendTagsKind, account: '@a@m.example')], clock: '');
+      expect(trendPageConfig(mine).sources.single.tl, trendTagsKind, reason: 'いまの版で保存したものはそのまま');
+      expect(trendPageConfig(null).sources.length, 2);
+    });
+
+    test('「画面の投稿」(self)の名前はスコープごとに厳密に (D-443、前は「この画面の基礎タイムライン」)', () {
+      expect(tlSelfLabel('trend'), 'このワードの検索結果');
+      expect(tlSelfLabel('tl.list:abc'), 'このリストの投稿');
+      expect(tlSelfLabel('tl.${rasqListKindPrefix}x'), 'このリストの投稿');
+      expect(tlSelfLabel('tl.feed:at://x'), 'このフィードの投稿');
+      expect(tlSelfLabel('tl.dm'), 'この DM のメッセージ');
+      expect(tlSelfLabel('tl.home'), 'フォロー中タブの投稿');
+      expect(tlSelfLabel(trendTodayScope), 'Today の投稿');
+      expect(tlSelfLabel('tl.node:x'), 'このタブの投稿');
     });
 
     test('ワードの無い検索の取得元は、このページのワード / タグで引く (D-440)。トレンド TL の基礎(タグの検索)と同じなら取り直さない', () {
@@ -95,25 +123,32 @@ void main() {
 
   Finder inScreen(Finder f) => find.descendant(of: find.byType(TimelineConfigScreen), matching: f);
 
-  testWidgets('検索ホームの歯車 → トレンドタイルのカスタマイズ: 5 つのタブ、取得元は SNS アカウントごとのトレンド (D-440)、重いものは灰色で押せない、検索絞り込みで並びが変わる', (tester) async {
+  testWidgets('検索ホーム = トレンドページ (D-443): 「トレンド」「Today」のセクション。歯車 → 4 つのタブ、並びはセクション、重いものは灰色で押せない、検索絞り込みで並びが変わる', (tester) async {
     final c = await pump(tester);
     expect(find.byKey(const ValueKey('trend.tile.月見')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tl.section.トレンド')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('tl.section.トレンド')), matching: find.byKey(const ValueKey('trend.customize'))), findsOneWidget, reason: '設定のボタンは先頭の見出し');
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('tl.section.Today')), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.byKey(const ValueKey('tl.section.Today')), findsOneWidget);
+    expect(find.byKey(const ValueKey('today.customize')), findsNothing, reason: 'Today の歯車はトレンドページにまとめた');
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('trend.customize')), -200, scrollable: find.byType(Scrollable).last);
     await tester.tap(find.byKey(const ValueKey('trend.customize')));
     await tester.pumpAndSettle();
     expect(find.byType(TimelineConfigScreen), findsOneWidget);
-    // タブ行(横に送る並び)に 5 つ。
+    // タブ行(横に送る並び)に 4 つ。
     final tabsRow = find.descendant(of: find.byKey(const ValueKey('tlconfig.tabs')), matching: find.byType(Scrollable)).first;
-    for (final t in ['トレンドタイル', 'トレンド TL', 'フォロー中', 'ユーザー', 'Today']) {
+    for (final t in ['トレンドページ', 'トレンド TL', 'フォロー中', 'ユーザー']) {
       final tab = find.descendant(of: find.byKey(const ValueKey('tlconfig.tabs')), matching: find.text(t));
       await tester.scrollUntilVisible(tab, 80, scrollable: tabsRow);
       expect(tab, findsOneWidget, reason: t);
     }
+    expect(find.descendant(of: find.byKey(const ValueKey('tlconfig.tabs')), matching: find.text('Today')), findsNothing);
     await tester.drag(tabsRow, const Offset(600, 0));
     await tester.pumpAndSettle();
-    expect(inScreen(find.byKey(const ValueKey('tlconfig.tiles.source'))), findsOneWidget);
-    expect(inScreen(find.text('トレンドを取得')), findsOneWidget, reason: 'いまのアカウントのトレンド');
-    expect(inScreen(find.text('取得元を追加')), findsOneWidget);
-    expect(inScreen(find.text('タイムラインを追加')), findsNothing);
+    expect(inScreen(find.byKey(const ValueKey('tlconfig.section.0'))), findsOneWidget);
+    expect(inScreen(find.byKey(const ValueKey('tlconfig.section.1'))), findsOneWidget);
+    expect(inScreen(find.text('トレンドを取得')), findsOneWidget);
+    expect(inScreen(find.text('Today を取得')), findsOneWidget);
     expect(inScreen(find.text('自動更新')), findsNothing);
 
     await tester.tap(inScreen(find.text('アルゴリズムを追加')));
@@ -147,13 +182,12 @@ void main() {
     expect([for (final t in await c.read(trendFrameTagsProvider.future)) t.tag], containsAll(['打上会', '花火', '月見']));
   });
 
-  testWidgets('Today / トレンド TL の歯車はそれぞれのタブで開く。傾向を設定していれば、アルゴリズムの最後に緑の枠の固定の項目', (tester) async {
+  testWidgets('トレンドページの歯車: 傾向を設定していれば、アルゴリズムの最後に緑の枠の固定の項目', (tester) async {
     final c = await pump(tester);
-    await tester.tap(find.byKey(const ValueKey('today.customize')));
+    await tester.tap(find.byKey(const ValueKey('trend.customize')));
     await tester.pumpAndSettle();
     expect(find.byType(TimelineConfigScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('tlconfig.tendency.pinned')), findsNothing, reason: '傾向が何も効かない設定なら出さない');
-    expect(inScreen(find.text('タイムラインを追加')), findsOneWidget, reason: 'Today は取得元を選べる');
 
     // 傾向 FOW で好きなジャンルを決めた → 一番最後に固定の項目。
     await c.read(settingsAreaProvider('storage.safe').notifier).set(TendencyProfile.slot, const TendencyProfile(genres: ['花火']).toJson());

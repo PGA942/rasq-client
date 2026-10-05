@@ -5,18 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
-import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../ads/export_ad.dart';
 import '../settings/settings_dsl.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
-import '../nodeprog/tl_components.dart' show trendTilesScope, trendTodayScope;
+import '../nodeprog/tl_components.dart' show trendPageConfig, trendTilesScope;
+import '../nodeprog/tl_config_store.dart' show tlViewConfigProvider;
+import '../nodeprog/tl_sections_view.dart' show TlBlocks, tlSectionsRefreshProvider;
 import '../plugins/slot_plugins.dart';
 import '../../shell/rasq_shell.dart';
-import '../home/post_row.dart';
-import '../home/timeline_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView, ChildSafeGreyed;
 import '../trend/tendency_fows.dart';
@@ -29,7 +28,8 @@ import 'search_filter.dart';
 import 'search_history.dart';
 import 'search_filter_bar_view.dart';
 
-/// 検索ホーム / トレンドホーム: 広告枠(AdSlot) → トレンド(ワード一覧) → Today.
+/// 検索ホーム / トレンドホーム = トレンドページ (D-443): 広告枠(AdSlot) → トレンドページの構成の並び(既定は「トレンド」
+/// (ワード一覧)と「Today」のセクション)→ トレンドプラグインのサジェスト。
 /// Phase-1 sample sources trends from the SNS (`hashtags/trend`) and Today
 /// from `notes/featured` until the trend provider / server exists.
 ///
@@ -79,7 +79,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     // 第3カラムでは左カラム(ホームのヘッダー)と同じ: 総合表示なら RASQ アカウント、個別なら SNS アカウント (D-397)。
     final single = widget.inThirdColumn && !ref.watch(bundleViewProvider);
     final me = single ? ref.watch(currentUserProvider) : ref.watch(rasqAccountProvider);
-    final scheme = Theme.of(context).colorScheme;
     var trends = ref.watch(trendFrameTagsProvider); // トレンド枠ノード対応 (D-113)
     if (single) {
       // 個別の SNS アカウントのときは、そのアカウントが出したトレンドだけ(出どころの分からない枠の語は残す)。
@@ -99,9 +98,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           for (final t in list)
             if (!restricted(t.tag, [for (final a in allSources?[trendKey(t.tag)] ?? [?here]) a.instance])) t,
         ]);
-    final today = ref.watch(timelineProvider(DynamicTimelines.featured));
-    final session = ref.watch(currentSnsSessionProvider);
-    final actions = session?.actions ?? const [];
     final genreCandidates = trends.value?.map((t) => t.tag).take(maxGenreChips).toList() ?? const <String>[];
     return Scaffold(
       body: SafeArea(
@@ -141,61 +137,39 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               if (widget.searchTrailing case final trailing?) Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: trailing),
             ]),
           ),
-          Expanded(child: _home(context, scheme, trends, today, actions)),
+          Expanded(child: _home(context, trends)),
         ]),
       ),
     );
   }
 
-  Widget _home(BuildContext context, ColorScheme scheme, AsyncValue<List<TrendTag>> trends, AsyncValue<TimelineState> today, List<ActionDescriptor> actions) {
+  Widget _home(BuildContext context, AsyncValue<List<TrendTag>> trends) {
     // チャイルドセーフ (D-307): トレンドを止めていれば、トレンドと Today を出さない。
     if (!ref.watch(childGateProvider).searchAllowed('trend')) return const ChildSafeBlockedView(message: '保護者がトレンドを止めています');
+    // トレンドページの並び (D-443): トレンドページのカスタマイズの「SNSタイムライン」の順。
+    final page = trendPageConfig(ref.watch(tlViewConfigProvider(trendTilesScope)));
+    final nodes = [for (final s in page.sources) if (s.enabled) s];
+    // トレンドプロファイル設定 (D-153、傾向 FOW): ジャンル / 指向性・刺激性 / プラグイン / キャッシュ / ノード編集。
+    // 歯車 = トレンドページのカスタマイズ (D-431 → D-443、TL のカスタマイズと同じ画面。傾向はトレンドのタイルの一番最後に固定で掛かる)。
+    final settings = Row(mainAxisSize: MainAxisSize.min, children: [
+      RasqIconButton(key: const ValueKey('trend.tendency'), icon: Icons.tune, size: 20, onPressed: () => showTrendProfileSheet(context, ref), tooltip: 'トレンド設定'),
+      RasqIconButton(key: const ValueKey('trend.customize'), icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig(trendTilesScope)), tooltip: 'トレンドページをカスタマイズ'),
+    ]);
     return RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(trendingTagsProvider);
           ref.invalidate(trendFrameTagsProvider);
           ref.invalidate(trendRestrictionsProvider);
-          await ref.read(timelineProvider(DynamicTimelines.featured).notifier).refresh();
+          ref.read(tlSectionsRefreshProvider.notifier).bump(); // Today などのセクションの TL も
         },
         child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
           // 広告の枠 (検索ホームの固定の位置、D-433: 前は灰色の「広告」の箱だけだった)。AdMob のバナー(テストの ID)。設定「リソースと広告」(D-238)
           // で消せる。子のアカウントと、出せない端末(デスクトップ / AdSense の ID の無い Web)では何も出さない。
           if (settingValue(ref, 'resources', 'showAds', true) != false) const Center(key: ValueKey('search.ad'), child: ExportAdSlot()),
-          // トレンドプロファイル設定 (D-153、傾向 FOW): ジャンル / 指向性・刺激性 / プラグイン / キャッシュ / ノード編集。
-          // 歯車 = トレンドタイルのカスタマイズ (D-431、TL のカスタマイズと同じ画面。傾向は一番最後に固定で掛かる)。
-          RasqSectionHeader(
-            title: 'トレンド',
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              RasqIconButton(key: const ValueKey('trend.tendency'), icon: Icons.tune, size: 20, onPressed: () => showTrendProfileSheet(context, ref), tooltip: 'トレンド設定'),
-              RasqIconButton(key: const ValueKey('trend.customize'), icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig(trendTilesScope)), tooltip: 'トレンドタイルをカスタマイズ'),
-            ]),
-          ),
-          ...trends.when(
-            loading: () => const [RasqLoading()],
-            error: (e, _) => [RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), compact: true, onRetry: () => ref.invalidate(trendFrameTagsProvider), retryLabel: '再読み込み')],
-            data: (list) => list.isEmpty
-                ? const [RasqEmptyView(title: 'トレンドはありません', hint: 'トレンドの取得は準備中です')]
-                : [for (final t in list.take(8)) TrendTile(trend: t)],
-          ),
+          if (nodes.isEmpty) RasqSectionHeader(title: 'トレンドページ', trailing: settings),
+          TlBlocks(key: const ValueKey('search.blocks'), nodes: nodes, trends: trends, headerTrailing: (i) => i == 0 ? settings : null),
           // トレンドプラグインのサジェスト (D-167、スロット `trend.suggest`)。
           _TrendSuggestions(recent: [for (final t in trends.value ?? const <TrendTag>[]) t.tag]),
-          // 歯車 = Today のカスタマイズ (D-431、前はトレンド TL と共通の構成だった)。
-          RasqSectionHeader(
-            title: 'Today',
-            trailing: RasqIconButton(key: const ValueKey('today.customize'), icon: Icons.settings, size: 20, onPressed: () => context.push(Routes.tlConfig(trendTodayScope)), tooltip: 'Today をカスタマイズ'),
-          ),
-          ...today.when(
-            loading: () => const [RasqLoading()],
-            error: (e, _) => [RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), compact: true)],
-            data: (s) => s.posts.isEmpty
-                ? const [RasqEmptyView(title: 'Today', hint: 'ハイライトはまだありません')]
-                : [
-                    for (final p in s.posts.take(10)) ...[
-                      PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => ref.read(timelineProvider(DynamicTimelines.featured).notifier).perform(p, a, args: args), onTap: () => context.pushPost(p)),
-                      const Divider(),
-                    ],
-                  ],
-          ),
           const SizedBox(height: 80),
         ]),
       );

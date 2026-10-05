@@ -75,7 +75,8 @@ void main() {
     expect((await client.plugin(sample))?.id, sample);
     expect((await client.manifest(sample))?.pluginId, sample);
     expect(await client.plugin('net.example.unknown'), isNull);
-    expect((await client.home()).recent, isEmpty); // 一覧は Central のまま
+    // 一覧に足すのは、Central に掲載の無い同梱のサンプルだけ (D-443)。
+    expect([for (final c in (await client.home()).recent) c.id].every(BundledFallbackStoreClient.bundledIds.contains), isTrue);
   });
 
   testWidgets('掲載が消えたプラグイン: ストアのページは「見つかりません」→ インストール済みのページへ → 写しの権限が見えて、削除できる', (tester) async {
