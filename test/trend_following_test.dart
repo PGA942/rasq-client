@@ -6,10 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
-import 'package:rasq_client/features/relational/relational_engine.dart' show ConversationEvent;
-import 'package:rasq_client/features/trend/trend_providers.dart';
 import 'package:rasq_client/features/trend/trend_screen.dart';
 import 'package:rasq_client/features/vc/astell_models.dart';
+import 'package:rasq_client/features/vc/astell_providers.dart' show astellHomeProvider;
 import 'package:rasq_client/features/vc/astell_tile.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -37,7 +36,8 @@ void main() {
       overrides: [
         sessionStorageProvider.overrideWithValue(storage),
         pluginRegistryProvider.overrideWithValue(registry),
-        trendFollowingActivityProvider.overrideWith((ref, tag) async => (rooms: [room('r1', 2), room('r2', 3)], events: const <ConversationEvent>[])),
+        // フォロー中の反応のセクションの AsTell のタイル (D-442): いま開いているルームから、このページのワードに当たるもの。
+        astellHomeProvider.overrideWith((ref) async => AstellHome(trending: [room('r1', 2), room('r2', 3)])),
       ],
       child: const RasqApp(),
     ));
@@ -46,7 +46,7 @@ void main() {
     c.read(routerProvider).push('/trend/${Uri.encodeComponent('打上会')}');
     await tester.pumpAndSettle();
     expect(find.byType(TrendScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('trend.following.rooms')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tl.node.astell')), findsOneWidget);
     expect(find.byType(AstellTile), findsWidgets);
     expect(tester.takeException(), isNull);
 

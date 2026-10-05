@@ -12,13 +12,9 @@ import '../../app/router.dart';
 import '../../shell/third_column.dart' show paneBack;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
-import '../relational/relational_engine.dart';
-import '../relational/relational_timeline_view.dart';
 import '../search/search_filter.dart';
 import '../search/search_filter_bar_view.dart';
 import '../users/user_list.dart';
-import '../vc/astell_actions.dart';
-import '../vc/astell_tile.dart' show AstellTileStrip;
 import 'tendency_fows.dart';
 import '../../shell/header_account_button.dart';
 import 'trend_analysis.dart';
@@ -26,7 +22,7 @@ import 'trend_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../ads/timeline_ads.dart';
-import '../nodeprog/tl_components.dart' show TlDisplayMode;
+import '../nodeprog/tl_components.dart' show TlConfig, TlDisplayMode, defaultTlConfig;
 import '../nodeprog/tl_config_store.dart' show tlViewConfigProvider;
 import '../nodeprog/tl_sections_view.dart';
 
@@ -92,7 +88,6 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     final tl = ref.watch(_tl);
     // ノードグラフ実配線 (D-113): trend.following / trend.users スコープ。
     final following = ref.watch(trendFollowingPostsProvider(_q));
-    final activity = ref.watch(trendFollowingActivityProvider(widget.tag)).value;
     final rankedUsers = ref.watch(trendUsersProvider(_q));
     final notifier = ref.read(_tl.notifier);
     final manager = ref.watch(overlayManagerProvider);
@@ -110,6 +105,12 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     // チャイルドセーフ (D-307): 検索結果も TL と同じ絞り込み。
     final gate = ref.watch(childGateProvider);
     List<Post> apply(List<Post> posts) => gate.filterPosts(applySearchFilter(posts, filter, query: widget.tag));
+
+    // 並び (D-442)。前の版の構成(セクションを並びに持てなかった)には、既定の「フォロー中の反応」を前に足す。
+    final saved = ref.watch(tlViewConfigProvider('trend'));
+    final def = defaultTlConfig('trend');
+    final view = saved == null ? def : saved.layout < TlConfig.currentLayout ? saved.copyWith(sources: [...def.sources.where((s) => s.isSection), ...saved.sources]) : saved;
+    final layout = tlPageLayout(view);
 
     // 投稿の間の広告 (D-438)。
     Widget rows(List<Post> posts) => Column(
@@ -186,34 +187,18 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   await notifier.refresh();
                 },
                 child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
-                  // トレンド TL のカスタマイズで足したセクション(ほかの TL を包んだ枠、D-439)。
-                  TlSectionsBlock(scope: 'trend', query: widget.tag),
-                  const RasqSectionHeader(title: 'フォロー中の反応', topMargin: 0),
-                  // AsTell / リレーショナル TL にすでにあるこのワードの話題 (D-364) → フォロイーのタグ投稿。
-                  ...[
-                    // タイルは高さの決まった帯に並べる (D-376): 縦のリストに直に置くと高さが決まらず、スクロールで戻ったときに
-                    // レイアウトが壊れて戻るボタンが効かなくなっていた。
-                    if (activity?.rooms.isNotEmpty ?? false) AstellTileStrip(key: const ValueKey('trend.following.rooms'), rooms: activity!.rooms, tileBuilder: (r) => AstellRoomTile(room: r)),
-                    for (final e in activity?.events ?? const <ConversationEvent>[]) RelationalEventCard(key: ValueKey('trend.following.event.${e.id}'), event: e),
-                  ],
-                  following.when(
-                    loading: () => const RasqLoading(),
-                    error: (_, _) => const SizedBox(height: 48),
-                    data: (fp) {
-                      final posts = apply(fp).take(3).toList();
-                      if (posts.isNotEmpty) return rows(posts);
-                      final none = (activity?.rooms.isEmpty ?? true) && (activity?.events.isEmpty ?? true);
-                      return none ? const RasqCaption('フォロー中の人の反応はまだありません', key: ValueKey('trend.following.empty')) : const SizedBox.shrink();
-                    },
-                  ),
-                  const RasqSectionHeader(title: 'トレンド', topMargin: 0),
-                  tl.when(
+                  // 並び (D-442): トレンド TL のカスタマイズの「SNSタイムライン」の順。既定は「フォロー中の反応」のセクション
+                  // (AsTell / 会話のまとまり / 投稿 3 件)→ 本体(このページの検索結果)。
+                  TlBlocks(key: const ValueKey('trend.blocks.before'), nodes: layout.before, query: widget.tag),
+                  if (layout.main) const RasqSectionHeader(title: 'トレンド', topMargin: 0),
+                  if (layout.main)
+                    tl.when(
                     loading: () => const RasqLoading(),
                     error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: notifier.refresh, retryLabel: '再読み込み'),
                     data: (s) {
                       final posts = apply(s.posts);
                       // 表示モード (D-439): トレンド TL のカスタマイズで関連 TL / ユーザーを選んでいれば、その形で。
-                      final display = ref.watch(tlViewConfigProvider('trend'))?.display ?? TlDisplayMode.timeline;
+                      final display = view.display;
                       return posts.isEmpty
                           ? const RasqEmptyView(title: 'なんにもないようです', hint: 'ワードやフィルタを変えると見つかるかもしれません')
                           : display != TlDisplayMode.timeline
@@ -221,6 +206,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                               : Column(children: [rows(posts), if (s.loadingMore) const RasqLoading()]);
                     },
                   ),
+                  TlBlocks(key: const ValueKey('trend.blocks.after'), nodes: layout.after, query: widget.tag),
                 ]),
               ),
               following.when(

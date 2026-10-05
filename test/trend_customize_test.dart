@@ -27,7 +27,7 @@ void main() {
   group('構成', () {
     test('Today / トレンドタイル / トレンド TL の既定の取得元は SNS ごとのノード (D-440)。タイルは自動更新なし。トレンド TL にトレンド枠の鎖はもう付かない', () {
       expect(defaultTlConfig(trendTodayScope).sources.single.tl, 'featured');
-      expect(defaultTlConfig('trend').sources.single.tl, pageSearchKind);
+      expect(defaultTlConfig('trend').postSources.single.tl, pageSearchKind);
       expect(defaultTlConfig(trendTilesScope).sources.single.tl, trendTagsKind);
       expect([for (final s in defaultTlConfig(trendTilesScope, bundleAccounts: ['@a@m.example', '@b@bsky.social']).sources) (s.tl, s.account)], [(trendTagsKind, '@a@m.example'), (trendTagsKind, '@b@bsky.social')]);
       expect(defaultTlConfig(trendTilesScope).clock, '');

@@ -11,26 +11,49 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../relational/relational_engine.dart';
+import '../relational/relational_providers.dart' show relationalSettingsProvider;
+import '../relational/relational_timeline_view.dart' show RelationalEventCard;
+import '../search/search_screen.dart' show TrendTile;
 import '../swing/swing_banner.dart';
 import '../swing/swing_models.dart';
 import '../swing/swing_providers.dart';
+import '../trend/trend_providers.dart' show sourcedTrendsProvider, trendFollowingPostsProvider, trendKey;
+import '../users/user_list.dart';
 import '../vc/astell_actions.dart' show AstellRoomTile;
 import '../vc/astell_providers.dart' show astellHomeProvider;
 import '../vc/astell_tile.dart' show AstellTileStrip;
 import '../vc/vc_screen.dart' show searchAstellRooms;
-import '../relational/relational_providers.dart' show relationalSettingsProvider;
-import '../relational/relational_timeline_view.dart' show RelationalEventCard;
-import '../users/user_list.dart';
 import 'node_tabs.dart';
 import 'tl_components.dart';
 import 'tl_config_store.dart';
 
-/// セクション(包むノード)と表示モード (D-439) の画面側。
+/// 画面の並び (D-442): TL のカスタマイズの「SNSタイムライン」の並びの順に、
+/// - **セクション**(見出し + 中のノードを入れた順に角丸の枠で)、
+/// - **ブロック**(AsTell のタイル / Swing / トレンドのタイル。並びにそのまま置いたもの)、
+/// - **本体の TL**(セクションの外の TL ノードを 1 本にまとめたもの。最初の TL ノードの位置。続きを読む / 新しい投稿も読む)
+/// を出す。TL ノードが 1 つも無ければ本体は出さない。構成が無ければ本体だけ(これまでどおり)。
 ///
-/// - [TlSectionsBlock]: TL の上に、構成の [TlConfig.sections] を枠ごとに並べる。
-/// - [TlSectionView]: 1 つの枠。包んだ TL の投稿を**開いたときの分だけ**写して([limit] 件まで)出し、新しい投稿は読み込まない。
-///   引き下げ([tlSectionsRefreshProvider] を進める)/ 枠の ↻ で読み直す。
-/// - [TlPostsDisplay]: 投稿の並びを表示モード(通常 TL / 関連 TL / ユーザー)で描く。TL 本体の表示モードにも使う。
+/// セクションの中の TL ノードは**新しい投稿を読み込まない**(開いたときの投稿を写して件数まで。引き下げ / 枠の ↻ で読み直す)。
+/// AsTell / Swing / トレンドは「いま」のもの。トレンド TL では、AsTell / Swing / フォロー中の反応はページのワード / タグに当たるものだけ。
+
+/// 本体の TL の前 / 後ろに出すもの。
+typedef TlPageLayout = ({List<TlSourceComponent> before, bool main, List<TlSourceComponent> after});
+
+TlPageLayout tlPageLayout(TlConfig? cfg) {
+  if (cfg == null) return (before: const [], main: true, after: const []);
+  final before = <TlSourceComponent>[];
+  final after = <TlSourceComponent>[];
+  var seenMain = false;
+  for (final s in cfg.sources) {
+    if (!s.enabled) continue;
+    if (!s.isBlock) {
+      seenMain = true;
+    } else {
+      (seenMain ? after : before).add(s);
+    }
+  }
+  return (before: before, main: seenMain, after: after);
+}
 
 /// セクションを読み直す合図(引き下げで進める)。
 class TlSectionsRefresh extends Notifier<int> {
@@ -41,64 +64,170 @@ class TlSectionsRefresh extends Notifier<int> {
 
 final tlSectionsRefreshProvider = NotifierProvider<TlSectionsRefresh, int>(TlSectionsRefresh.new);
 
-/// 包める TL の名前([TlSection.tl] → 見出しに出す名前)。
-String tlSectionSourceLabel(WidgetRef ref, String tl) {
-  if (tl == astellSectionKind) return 'AsTell のタイル';
-  if (tl == swingSectionKind) return 'Swing';
-  if (tl.startsWith('node:')) return ref.watch(nodeTabsProvider).where((t) => t.id == tl).firstOrNull?.label ?? 'ノード TL';
+/// ノードの名前(セクションの見出しが無いとき / 編集画面)。
+String tlNodeLabel(WidgetRef ref, TlSourceComponent s) {
+  if (s.isSection) return s.label.isEmpty ? 'セクション' : s.label;
+  if (s.isAstell) return 'AsTell のタイル';
+  if (s.isSwing) return 'Swing';
+  if (s.isTrendTags) return 'トレンド';
+  if (s.isTrendFollowing) return 'フォロー中の反応';
+  if (s.tl.startsWith('node:')) return ref.watch(nodeTabsProvider).where((t) => t.id == s.tl).firstOrNull?.label ?? 'ノード TL';
   final kinds = ref.watch(currentSnsSessionProvider)?.timelines ?? const <TimelineKind>[];
-  return kinds.where((k) => k.id == tl).firstOrNull?.label ?? switch (tl) {
+  return kinds.where((k) => k.id == s.tl).firstOrNull?.label ?? switch (s.tl) {
         'home' => TimelineKind.home.label,
         'local' => TimelineKind.local.label,
         'social' => TimelineKind.social.label,
         'global' => TimelineKind.global.label,
-        _ => tl,
+        'featured' => 'Today',
+        _ => s.tl,
       };
 }
 
-/// [scope] の構成のセクション。無ければ何も出さない。
-class TlSectionsBlock extends ConsumerWidget {
-  const TlSectionsBlock({super.key, required this.scope, this.query});
-  final String scope;
+/// 並びのセクション / ブロックを順に。
+class TlBlocks extends StatelessWidget {
+  const TlBlocks({super.key, required this.nodes, this.query});
+  final List<TlSourceComponent> nodes;
 
-  /// このページの検索ワード / タグ (D-441: トレンド TL)。AsTell / Swing の枠はこれに当たるものだけ出す。
+  /// このページの検索ワード / タグ(トレンド TL)。
   final String? query;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sections = [for (final s in ref.watch(tlViewConfigProvider(scope))?.sections ?? const <TlSection>[]) if (s.enabled) s];
-    if (sections.isEmpty) return const SizedBox.shrink();
-    return Column(key: ValueKey('tl.sections.$scope'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      for (final s in sections)
-        if (s.isAstell || s.isSwing) _LiveSectionView(key: ValueKey('tl.section.${s.id}'), section: s, query: query) else TlSectionView(key: ValueKey('tl.section.${s.id}'), section: s),
+  Widget build(BuildContext context) {
+    if (nodes.isEmpty) return const SizedBox.shrink();
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (var i = 0; i < nodes.length; i++) TlNodeBlock(key: ValueKey('tl.block.$i.${nodes[i].tl}'), node: nodes[i], query: query),
     ]);
   }
 }
 
-class TlSectionView extends ConsumerStatefulWidget {
-  const TlSectionView({super.key, required this.section});
-  final TlSection section;
+/// [scope] の構成の、本体の TL の前([after] なら後ろ)のセクション / ブロック。
+class TlScopeBlocks extends ConsumerWidget {
+  const TlScopeBlocks({super.key, required this.scope, this.after = false, this.query, this.fallback});
+  final String scope;
+  final bool after;
+  final String? query;
+
+  /// 構成が無いときに使う既定(トレンド TL は既定にセクションがある)。
+  final TlConfig? fallback;
 
   @override
-  ConsumerState<TlSectionView> createState() => _TlSectionViewState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final layout = tlPageLayout(ref.watch(tlViewConfigProvider(scope)) ?? fallback);
+    return TlBlocks(key: ValueKey('tl.blocks.$scope.${after ? 'after' : 'before'}'), nodes: after ? layout.after : layout.before, query: query);
+  }
 }
 
-class _TlSectionViewState extends ConsumerState<TlSectionView> {
-  /// 開いたときに写した投稿(包んだ TL が新しい投稿を読んでも、ここは変えない)。
+/// 並びの 1 つ: セクションなら見出し + 中のノード(角丸の枠)、ほかは見出し + 中身。
+class TlNodeBlock extends ConsumerWidget {
+  const TlNodeBlock({super.key, required this.node, this.query});
+  final TlSourceComponent node;
+  final String? query;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    if (!node.isSection) {
+      final content = TlNodeContent(node: node, query: query);
+      return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        RasqSectionHeader(title: tlNodeLabel(ref, node), topMargin: 0),
+        content,
+        const Divider(height: 1),
+      ]);
+    }
+    final children = [for (final c in node.children) if (c.enabled) c];
+    return Column(key: ValueKey('tl.section.${node.label}'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      RasqSectionHeader(
+        title: tlNodeLabel(ref, node),
+        topMargin: 0,
+        trailing: RasqIconButton(icon: Icons.refresh, size: 18, tooltip: '読み直す', onPressed: () => ref.read(tlSectionsRefreshProvider.notifier).bump()),
+      ),
+      for (var i = 0; i < children.length; i++)
+        Container(
+          key: ValueKey('tl.section.${node.label}.$i'),
+          margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.sm),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+          child: TlNodeContent(node: children[i], query: query),
+        ),
+      const Divider(height: 1),
+    ]);
+  }
+}
+
+/// ノードの中身(種類ごと)。
+class TlNodeContent extends ConsumerWidget {
+  const TlNodeContent({super.key, required this.node, this.query});
+  final TlSourceComponent node;
+  final String? query;
+
+  String get _q => (query ?? '').replaceFirst(RegExp(r'^#'), '');
+
+  static Widget _loading() => const Padding(padding: EdgeInsets.all(RasqSpacing.md), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))));
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = node;
+    final q = _q;
+    if (s.isAstell) {
+      // チャイルドセーフ: AsTell に入れないアカウントには出さない。
+      if (!ref.watch(childGateProvider).featureAllowed('astell.join')) return const SizedBox.shrink();
+      final home = ref.watch(astellHomeProvider);
+      if (home.value == null) return home.hasError ? const RasqCaption('読み込めませんでした') : _loading();
+      final rooms = searchAstellRooms(home.value!, q).take(s.limit).toList();
+      if (rooms.isEmpty) return RasqCaption(q.isEmpty ? 'いま開いている AsTell はありません' : '「$q」の AsTell はありません');
+      return AstellTileStrip(key: const ValueKey('tl.node.astell'), rooms: rooms, tileBuilder: (r) => AstellRoomTile(room: r));
+    }
+    if (s.isSwing) {
+      final feed = ref.watch(swingFeedProvider).value ?? const <Swing>[];
+      final entries = (q.isEmpty ? swingAuthorsOf(feed) : searchSwingAuthors(feed, q)).take(s.limit).toList();
+      if (entries.isEmpty) return RasqCaption(q.isEmpty ? 'いま Swing はありません' : '「$q」の Swing はありません');
+      return Column(key: const ValueKey('tl.node.swing'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        for (final e in entries) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.sm, 0), child: SwingBanner(entry: e)),
+      ]);
+    }
+    if (s.isTrendTags) {
+      final sourced = ref.watch(sourcedTrendsProvider);
+      final v = sourced.value;
+      if (v == null) return sourced.hasError ? const RasqCaption('読み込めませんでした') : _loading();
+      final who = s.account.isEmpty ? null : s.account;
+      final tags = [
+        for (final t in v.tags)
+          if (who == null || (v.sources[trendKey(t.tag)] ?? const <AccountId>[]).any((a) => '$a' == who || a.key == who)) t,
+      ].take(s.limit).toList();
+      if (tags.isEmpty) return const RasqCaption('トレンドはまだありません');
+      return Column(key: const ValueKey('tl.node.trend'), mainAxisSize: MainAxisSize.min, children: [for (final t in tags) TrendTile(trend: t)]);
+    }
+    if (s.isTrendFollowing) {
+      if (q.isEmpty) return const RasqCaption('トレンド TL で出ます');
+      final posts = ref.watch(trendFollowingPostsProvider((tag: query!, account: null)));
+      final v = posts.value;
+      if (v == null) return posts.hasError ? const RasqCaption('読み込めませんでした') : _loading();
+      if (v.isEmpty) return const RasqCaption('フォロー中の人の反応はまだありません', key: ValueKey('trend.following.empty'));
+      return TlPostsDisplay(posts: v, mode: s.display, limit: s.limit, scrollable: false, kind: TimelineKind.home);
+    }
+    return _TlSnapshot(key: ValueKey('tl.node.tl.${s.tl}'), node: s);
+  }
+}
+
+/// セクションの中の TL ノード: 開いたときの投稿を写し、新しい投稿は読み込まない(引き下げ / 枠の ↻ で読み直す)。
+class _TlSnapshot extends ConsumerStatefulWidget {
+  const _TlSnapshot({super.key, required this.node});
+  final TlSourceComponent node;
+
+  @override
+  ConsumerState<_TlSnapshot> createState() => _TlSnapshotState();
+}
+
+class _TlSnapshotState extends ConsumerState<_TlSnapshot> {
   List<Post>? _snapshot;
   int _tick = 0;
 
-  TimelineKind get _kind => TimelineKind(widget.section.tl, widget.section.title);
+  TimelineKind get _kind => TimelineKind(widget.node.tl, widget.node.tl);
 
   @override
-  void didUpdateWidget(TlSectionView old) {
+  void didUpdateWidget(_TlSnapshot old) {
     super.didUpdateWidget(old);
-    if (old.section.tl != widget.section.tl) _snapshot = null;
-  }
-
-  Future<void> _reload() async {
-    setState(() => _snapshot = null);
-    await ref.read(timelineProvider(_kind).notifier).refresh();
+    if (old.node.tl != widget.node.tl) _snapshot = null;
   }
 
   @override
@@ -114,25 +243,9 @@ class _TlSectionViewState extends ConsumerState<TlSectionView> {
     final tl = ref.watch(timelineProvider(_kind));
     if (_snapshot == null && tl.hasValue && !tl.isLoading) _snapshot = tl.requireValue.posts;
     final posts = _snapshot;
-    final s = widget.section;
-    final scheme = Theme.of(context).colorScheme;
-    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      RasqSectionHeader(
-        title: s.title.isEmpty ? tlSectionSourceLabel(ref, s.tl) : s.title,
-        topMargin: 0,
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          Tooltip(message: s.display.label, child: Icon(s.display.icon, size: 16, color: scheme.onSurfaceVariant)),
-          RasqIconButton(key: ValueKey('tl.section.${s.id}.reload'), icon: Icons.refresh, size: 18, tooltip: '読み直す', onPressed: _reload),
-        ]),
-      ),
-      if (posts == null)
-        tl.hasError ? const RasqCaption('読み込めませんでした') : const Padding(padding: EdgeInsets.all(RasqSpacing.md), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))))
-      else if (posts.isEmpty)
-        const RasqCaption('まだありません')
-      else
-        TlPostsDisplay(posts: posts, mode: s.display, limit: s.limit, scrollable: false, kind: _kind),
-      const Divider(height: 1),
-    ]);
+    if (posts == null) return tl.hasError ? const RasqCaption('読み込めませんでした') : TlNodeContent._loading();
+    if (posts.isEmpty) return const RasqCaption('まだありません');
+    return TlPostsDisplay(posts: posts, mode: widget.node.display, limit: widget.node.limit, scrollable: false, kind: _kind);
   }
 }
 
@@ -194,40 +307,3 @@ class TlPostsDisplay extends ConsumerWidget {
   }
 }
 
-/// AsTell のタイル / Swing の並びの枠 (D-441)。どちらも「いま」のものなので、写しは持たずにいまの状態を出す。[query] があれば当たるものだけ。
-class _LiveSectionView extends ConsumerWidget {
-  const _LiveSectionView({super.key, required this.section, this.query});
-  final TlSection section;
-  final String? query;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final s = section;
-    final q = (query ?? '').replaceFirst(RegExp(r'^#'), '');
-    final Widget body;
-    if (s.isAstell) {
-      // チャイルドセーフ: AsTell に入れないアカウントには出さない。
-      if (!ref.watch(childGateProvider).featureAllowed('astell.join')) return const SizedBox.shrink();
-      final home = ref.watch(astellHomeProvider);
-      final rooms = home.value == null ? null : searchAstellRooms(home.value!, q).take(s.limit).toList();
-      body = rooms == null
-          ? (home.hasError ? const RasqCaption('読み込めませんでした') : const Padding(padding: EdgeInsets.all(RasqSpacing.md), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))))
-          : rooms.isEmpty
-              ? RasqCaption(q.isEmpty ? 'いま開いている AsTell はありません' : '「$q」の AsTell はありません')
-              : AstellTileStrip(key: ValueKey('tl.section.${s.id}.rooms'), rooms: rooms, tileBuilder: (r) => AstellRoomTile(room: r));
-    } else {
-      final feed = ref.watch(swingFeedProvider).value ?? const <Swing>[];
-      final entries = (q.isEmpty ? swingAuthorsOf(feed) : searchSwingAuthors(feed, q)).take(s.limit).toList();
-      body = entries.isEmpty
-          ? RasqCaption(q.isEmpty ? 'いま Swing はありません' : '「$q」の Swing はありません')
-          : Column(key: ValueKey('tl.section.${s.id}.swings'), mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              for (final e in entries) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.xs), child: SwingBanner(entry: e)),
-            ]);
-    }
-    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      RasqSectionHeader(title: s.title.isEmpty ? tlSectionSourceLabel(ref, s.tl) : s.title, topMargin: 0),
-      body,
-      const Divider(height: 1),
-    ]);
-  }
-}

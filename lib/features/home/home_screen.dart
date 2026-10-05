@@ -330,10 +330,12 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
       if (posts != null) handleTimelineSearchNav(ref, next, jumper: _jumper, scroll: _scroll, posts: posts);
     });
 
-    // 表示モードとセクション (D-439): この TL の構成で、上に包んだ TL の枠を並べ、本体を通常 TL / 関連 TL / ユーザーで見せる。
+    // 画面の並び (D-442): 構成の「SNSタイムライン」の順に、セクション / ブロックと本体の TL(表示モード D-439)。
     final scope = 'tl.${widget.kind.id}';
     final view = ref.watch(tlViewConfigProvider(scope));
-    final sections = TlSectionsBlock(key: ValueKey('tl.sections.block.$scope'), scope: scope);
+    final layout = tlPageLayout(view);
+    final sections = TlBlocks(key: ValueKey('tl.blocks.before.$scope'), nodes: layout.before);
+    final after = TlBlocks(key: ValueKey('tl.blocks.after.$scope'), nodes: layout.after);
     // 引き下げは、包んだ枠も読み直す。
     Future<void> refresh() async {
       ref.read(tlSectionsRefreshProvider.notifier).bump();
@@ -344,10 +346,17 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
       loading: () => const RasqLoading(),
       error: (e, _) => _ErrorList(error: e, onRetry: notifier.refresh),
       data: (tl) {
+        // TL ノードが 1 つも無い並び (D-442): セクション / ブロックだけ。
+        if (!layout.main) {
+          return RefreshIndicator(
+            onRefresh: refresh,
+            child: ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.only(bottom: 80), children: [sections]),
+          );
+        }
         if (tl.posts.isEmpty) {
           return RefreshIndicator(
             onRefresh: refresh,
-            child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [sections, const SizedBox(height: 120), const RasqEmptyView(title: '投稿はありません', hint: '下に引っ張って更新')]),
+            child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [sections, const SizedBox(height: 120), const RasqEmptyView(title: '投稿はありません', hint: '下に引っ張って更新'), after]),
           );
         }
         if (view != null && view.display != TlDisplayMode.timeline) {
@@ -356,6 +365,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
             child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.only(bottom: 80), children: [
               sections,
               TlPostsDisplay(key: ValueKey('tl.display.${view.display.name}'), posts: tl.posts, mode: view.display, scrollable: false, kind: widget.kind),
+              after,
             ]),
           );
         }
@@ -410,7 +420,8 @@ class _TimelineViewState extends ConsumerState<_TimelineView> with AutomaticKeep
                     if (i == base.length) {
                       // いちばん下の更新タイル: 見えたら続きを読む(スクロールでも読むが、届かなかった / 失敗したときの手がかり)。
                       if (tl.error != null) return Padding(padding: const EdgeInsets.all(16), child: Center(child: TextButton(onPressed: notifier.loadMore, child: const Text('読み込みに失敗しました。再試行'))));
-                      if (!tl.hasMore) return const SizedBox(height: 80);
+                      // 本体の TL の後ろに置いたセクション / ブロック (D-442) は、最後まで読んだところに。
+                      if (!tl.hasMore) return Column(mainAxisSize: MainAxisSize.min, children: [after, const SizedBox(height: 80)]);
                       // タイルを出さないとき: 続きはスクロールで読む。読んでいるあいだだけ、くるくるを出す。
                       if (!edgeTiles) {
                         return SizedBox(
