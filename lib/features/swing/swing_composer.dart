@@ -66,7 +66,7 @@ final swingMediaPickerProvider = Provider<Future<XFile?> Function({required bool
 
 /// 未審査のプラグインの入れ物を選ぶ(テストで差し替える)。
 final swingPackagePickerProvider = Provider<Future<XFile?> Function()>((ref) => () => openFile(acceptedTypeGroups: const [
-      XTypeGroup(label: 'プラグイン', extensions: ['rasqpkg', 'wasm']),
+      XTypeGroup(label: 'プラグイン', extensions: ['rspkg', 'rasqpkg', 'wasm']), // .rspkg = SDK の既定の拡張子(中身は .rasqpkg と同じ)
     ]));
 
 /// Swing に使えるプラグイン (D-424、契約 v0.20): 入っているページ型(カスタムプラグイン)のうち、**親子関係の無い**もの
@@ -725,7 +725,7 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       RasqListTile(
         key: const ValueKey('swing.plugin.file'),
         title: _package == null ? 'ファイルから(未審査)' : '${_package!.title}(未審査)',
-        subtitle: _package == null ? '自分で作った .rasqpkg / .wasm を配ります' : _package!.name,
+        subtitle: _package == null ? '自分で作った .rspkg / .rasqpkg / .wasm を配ります' : _package!.name,
         detail: '審査していないプラグインは、見る人の端末で通信できない状態で動きます(GPU は使えます)。ほかのプラグインを土台にする子プラグインは配れません。',
         leading: Icon(_package == null ? Icons.file_open_outlined : Icons.check_circle_outline),
         onTap: _busy ? null : _pickPackage,

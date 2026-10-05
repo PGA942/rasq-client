@@ -16,7 +16,7 @@ import 'theme_packs.dart';
 
 /// 着せ替えの .rasqpkg を選ぶ口(テストで差し替える)。null = やめた。
 final themePackPickerProvider = Provider<Future<Uint8List?> Function()>((ref) => () async {
-      final f = await fs.openFile(acceptedTypeGroups: const [fs.XTypeGroup(label: '着せ替え(.rasqpkg)', extensions: ['rasqpkg'])]);
+      final f = await fs.openFile(acceptedTypeGroups: const [fs.XTypeGroup(label: '着せ替え(.rspkg / .rasqpkg)', extensions: ['rspkg', 'rasqpkg'])]);
       return f == null ? null : await f.readAsBytes();
     });
 
@@ -141,7 +141,7 @@ class _ThemeSettingsScreenState extends ConsumerState<ThemeSettingsScreen> {
         RasqListTile(key: const ValueKey('theme.store'), title: 'ストアで着せ替えを探す', leading: const Icon(Icons.storefront_outlined), onTap: () => context.push(Routes.store)),
         RasqListTile(
           key: const ValueKey('theme.import'),
-          title: 'ファイルから読み込む(.rasqpkg)',
+          title: 'ファイルから読み込む(.rspkg / .rasqpkg)',
           subtitle: '自分で作った着せ替えを読み込みます',
           detail: 'rasq build で作った着せ替えパック。コードを含まないので、未審査でもそのまま使えます',
           leading: _busy ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.file_open_outlined),

@@ -107,7 +107,7 @@ void main() {
     return c;
   }
 
-  testWidgets('セクションの中のノードは入れた順に角丸の枠で。中の TL は新しい投稿を読み込まず、↻ で読み直す', (tester) async {
+  testWidgets('セクションの中のノードは入れた順に続けて(枠は無し、D-444)。中の TL は新しい投稿を読み込まず、↻ で読み直す', (tester) async {
     final c = await pump(
       tester,
       const TlConfig(sources: [
@@ -124,6 +124,7 @@ void main() {
     expect(find.descendant(of: first, matching: find.textContaining('投稿 ')), findsNWidgets(3), reason: '件数まで');
     expect(find.descendant(of: second, matching: find.byType(AstellRoomTile)), findsNWidgets(2));
     expect(tester.getTopLeft(first).dy, lessThan(tester.getTopLeft(second).dy), reason: '入れた順');
+    expect(find.ancestor(of: first, matching: find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration! as BoxDecoration).border != null)), findsNothing, reason: '角丸の枠は無し');
     plugin.opened.last.prepend(post(99));
     await c.read(timelineProvider(TimelineKind.home).notifier).prependNewer();
     await tester.pumpAndSettle();
@@ -161,21 +162,57 @@ void main() {
       await tester.scrollUntilVisible(f, 200, scrollable: list);
     }
 
-    testWidgets('パレットで長押し → 置く場所を選ぶ(セクションの中にも)', (tester) async {
+    testWidgets('パレットで長押し → そのまま並べ替えのモードでつかんで、セクションの中へ落とす (D-444)', (tester) async {
       final c = await open(tester, const TlConfig(sources: [TlSourceComponent(tl: sectionKind, label: '枠'), TlSourceComponent(tl: 'home')]));
-      await scrollTo(tester, find.text('タイムラインを追加'));
-      await tester.tap(find.text('タイムラインを追加'));
+      await scrollTo(tester, find.byKey(const ValueKey('tlconfig.section.0.add')));
+      await tester.tap(find.byKey(const ValueKey('tlconfig.section.0.add')));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('Swing'), 200, scrollable: find.byType(Scrollable).last);
-      await tester.longPress(find.text('Swing'));
+      final g = await tester.startGesture(tester.getCenter(find.text('Swing')));
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));
+      // つかんだ: パレットのタイルの見た目のまま指について、パレットは閉じて並べ替えのモードに。
+      expect(find.byKey(const ValueKey('tlconfig.palette.drag.feedback')), findsOneWidget);
+      for (var k = 0; k < 10; k++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text('プラグインノードを検索'), findsNothing);
+      expect(find.byKey(const ValueKey('tlconfig.reorder.hint')), findsOneWidget);
+      final to = find.byKey(const ValueKey('tlconfig.slot.0.0'));
+      await g.moveTo(tester.getCenter(to));
+      await tester.pump();
+      await g.moveTo(tester.getCenter(to) + const Offset(0, 1));
+      await tester.pump();
+      await g.up();
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('tlconfig.placing')), findsOneWidget);
-      await scrollTo(tester, find.byKey(const ValueKey('tlconfig.slot.0.0')));
-      await tester.tap(find.byKey(const ValueKey('tlconfig.slot.0.0')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('tlconfig.placing')), findsNothing);
       final cfg = await saved(c);
       expect(cfg.sources.first.children.single.tl, swingSectionKind, reason: 'セクションの中へ置いた');
+      expect(cfg.sources.length, 2);
+    });
+
+    testWidgets('セクション (D-444): 見出しは説明なし、中のノードと「ノードを追加」は 1 つの角丸の枠。中のノードはタップで詳細の FOW、… に件数', (tester) async {
+      final c = await open(tester, const TlConfig(sources: [
+        TlSourceComponent(tl: sectionKind, label: '枠', children: [TlSourceComponent(tl: 'home', limit: 5)]),
+        TlSourceComponent(tl: 'local'),
+      ]));
+      final box = find.byKey(const ValueKey('tlconfig.section.0.box'));
+      await scrollTo(tester, box);
+      expect(find.descendant(of: box, matching: find.byKey(const ValueKey('tlconfig.section.0.child.0'))), findsOneWidget);
+      expect(find.descendant(of: box, matching: find.byKey(const ValueKey('tlconfig.section.0.add'))), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('tlconfig.section.0')), matching: find.textContaining('包む枠')), findsNothing, reason: '説明は無し');
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('tlconfig.section.0.child.0')), matching: find.text('タイムラインを取得')));
+      await tester.pumpAndSettle();
+      expect(find.text('ノードを設定'), findsOneWidget);
+      await tester.tap(find.text('決定'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('tlconfig.section.0.child.0.more')));
+      await tester.pumpAndSettle();
+      expect(find.text('詳細'), findsOneWidget);
+      expect(find.text('パラメーターを編集'), findsOneWidget);
+      await tester.tap(find.text('件数: 5'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('10 件'));
+      await tester.pumpAndSettle();
+      expect((await saved(c)).sources.first.children.single.limit, 10);
     });
 
     testWidgets('並べ替え: タイルをつかんでセクションの中へ動かす(3 つまで)/ セクションから出す', (tester) async {

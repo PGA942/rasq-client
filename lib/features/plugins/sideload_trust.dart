@@ -57,7 +57,7 @@ enum SideloadTrust {
 }
 
 /// 段の説明の 1 行(dev 試験画面 / スロット登録の UI)。
-const sideloadTrustHint = '自分の開発者鍵で署名した .rasqpkg はフル機能。rasq build が署名します';
+const sideloadTrustHint = '自分の開発者鍵で署名した .rspkg / .rasqpkg はフル機能。rasq build が署名します';
 
 /// FOW の種類(`fow.open` の `spec.type`、権限は `fow.<種類>`)。
 const sideloadFowKinds = {'widget', 'interstitial', 'system'};
