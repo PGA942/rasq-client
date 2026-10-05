@@ -187,7 +187,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                 },
                 child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
                   // トレンド TL のカスタマイズで足したセクション(ほかの TL を包んだ枠、D-439)。
-                  const TlSectionsBlock(scope: 'trend'),
+                  TlSectionsBlock(scope: 'trend', query: widget.tag),
                   const RasqSectionHeader(title: 'フォロー中の反応', topMargin: 0),
                   // AsTell / リレーショナル TL にすでにあるこのワードの話題 (D-364) → フォロイーのタグ投稿。
                   ...[

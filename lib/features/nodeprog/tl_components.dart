@@ -178,6 +178,10 @@ enum TlDisplayMode {
 /// 包むノード = セクション (D-439)。ほかの TL([tl] = タイムライン id: `home` / `local` / `list:…` / `node:<n>` …)を、
 /// 見出し([title])つきの枠に包んで、この TL の上に並べる(トレンド TL の「フォロー中の反応」「トレンド」のような枠)。
 /// **包んだ TL は新しい投稿を読み込まない**(開いたとき / 引き下げ / 枠の ↻ で読み直す)。[limit] 件まで。
+/// セクションに包めるもの (D-441): TL のほかに、AsTell のルームのタイルと Swing の並び。
+const astellSectionKind = 'astell';
+const swingSectionKind = 'swing';
+
 @immutable
 class TlSection {
   const TlSection({required this.id, required this.title, required this.tl, this.display = TlDisplayMode.timeline, this.limit = 5, this.enabled = true});
@@ -193,6 +197,10 @@ class TlSection {
 
   /// 件数の選択肢。
   static const limits = [3, 5, 10, 20];
+
+  /// AsTell のタイル / Swing の並び (D-441)。表示モードは使わない(タイル / バナーで出す)。
+  bool get isAstell => tl == astellSectionKind;
+  bool get isSwing => tl == swingSectionKind;
 
   TlSection copyWith({String? title, String? tl, TlDisplayMode? display, int? limit, bool? enabled}) =>
       TlSection(id: id, title: title ?? this.title, tl: tl ?? this.tl, display: display ?? this.display, limit: limit ?? this.limit, enabled: enabled ?? this.enabled);
