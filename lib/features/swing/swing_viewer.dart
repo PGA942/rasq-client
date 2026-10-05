@@ -13,6 +13,7 @@ import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/providers.dart' show overlayManagerProvider;
 import '../../app/router.dart';
+import '../../shell/column_layout.dart' show swingInColumnProvider;
 import '../../shell/column_takeover.dart' show takeoverColumnOf;
 import '../../shell/third_column.dart' show openPageInPanes, paneBack;
 import '../ads/ad_placement.dart';
@@ -78,11 +79,13 @@ const swingViewerMediaKey = ValueKey('swing.viewer.media');
 /// 第3カラムに開いた回数(同じ人を開き直したら、並びを作り直す)。
 int _paneSerial = 0;
 
-/// Swing のビューワーを開く (D-413): 幅の広い画面では**第3カラム**(第3カラムのページは第2カラムへ移る、D-057)、
-/// 狭い画面は前のとおり全画面のルート。[mine] = 自分の Swing (D-410)。
+/// Swing のビューワーを開く: 既定は**全画面**のルート (D-437)。「カラムの幅」で「Swing を第3カラムで開く」を選んでいれば、
+/// 幅の広い画面では**第3カラム**(D-413。第3カラムのページは第2カラムへ移る、D-057)。[mine] = 自分の Swing (D-410)。
 void openSwingViewer(BuildContext context, {String? author, bool mine = false}) {
   final id = 'swing:${mine ? 'me' : author ?? ''}#${++_paneSerial}';
-  if (openPageInPanes(
+  // 既定は全画面 (D-437)。第3カラムに開くのは「カラムの幅」で選んだときだけ。
+  final inColumn = ProviderScope.containerOf(context, listen: false).read(swingInColumnProvider);
+  if (inColumn && openPageInPanes(
     context,
     id: id,
     title: 'Swing',

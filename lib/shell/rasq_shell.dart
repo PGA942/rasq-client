@@ -8,6 +8,7 @@ import '../app/providers.dart';
 import '../backend/rasq_account.dart';
 import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
 import '../features/child_safe/child_safe_screens.dart' show ChildSafeWindowBanner;
+import '../features/home/home_header.dart' show homeHeaderCollapsedProvider, setHomeHeaderCollapsed;
 import '../features/plugins/sideload_trust.dart' show ownDevKeyFingerprintsProvider;
 import '../session/sns_share.dart' show snsShareProvider;
 import '../features/notifications/notifications_screen.dart';
@@ -161,7 +162,10 @@ class _TabletLayout extends ConsumerWidget {
                   RasqHeaderAvatarButton(
                     key: const ValueKey('rail.avatar'),
                     me: ref.watch(bundleViewProvider) ? ref.watch(rasqAccountProvider) : ref.watch(currentUserProvider),
-                    onTap: () => RasqShell.openSidebar(context, ref),
+                    // ホームのヘッダーをしまっている間(ホームを見ているとき)は、押すとヘッダーを戻す (D-437。浮かべたアイコンの代わり)。
+                    onTap: () => shell.currentIndex == RasqNavTab.home.index && ref.read(homeHeaderCollapsedProvider)
+                        ? setHomeHeaderCollapsed(ref, false)
+                        : RasqShell.openSidebar(context, ref),
                   ),
                   // アイコンとタブの間、タブどうしの間を広く取って、押し間違えにくくする。
                   const SizedBox(height: RasqSpacing.xl),
