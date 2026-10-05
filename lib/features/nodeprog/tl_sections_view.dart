@@ -85,17 +85,25 @@ String tlNodeLabel(WidgetRef ref, TlSourceComponent s) {
 
 /// 並びのセクション / ブロックを順に。
 class TlBlocks extends StatelessWidget {
-  const TlBlocks({super.key, required this.nodes, this.query});
+  const TlBlocks({super.key, required this.nodes, this.query, this.trends, this.headerTrailing});
   final List<TlSourceComponent> nodes;
 
   /// このページの検索ワード / タグ(トレンド TL)。
   final String? query;
 
+  /// トレンドのタイルに出すワード(トレンドページ、D-443: 通報 / 運営の制限 / 構成のアルゴリズム / 傾向を掛けたもの)。
+  /// null なら SNS のトレンドのまま。
+  final AsyncValue<List<TrendTag>>? trends;
+
+  /// 見出しの右に足す部品(並びの番号ごと。トレンドページの先頭に設定のボタン)。
+  final Widget? Function(int index)? headerTrailing;
+
   @override
   Widget build(BuildContext context) {
     if (nodes.isEmpty) return const SizedBox.shrink();
     return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      for (var i = 0; i < nodes.length; i++) TlNodeBlock(key: ValueKey('tl.block.$i.${nodes[i].tl}'), node: nodes[i], query: query),
+      for (var i = 0; i < nodes.length; i++)
+        TlNodeBlock(key: ValueKey('tl.block.$i.${nodes[i].tl}'), node: nodes[i], query: query, trends: trends, trailing: headerTrailing?.call(i)),
     ]);
   }
 }
@@ -119,17 +127,21 @@ class TlScopeBlocks extends ConsumerWidget {
 
 /// 並びの 1 つ: セクションなら見出し + 中のノード(角丸の枠)、ほかは見出し + 中身。
 class TlNodeBlock extends ConsumerWidget {
-  const TlNodeBlock({super.key, required this.node, this.query});
+  const TlNodeBlock({super.key, required this.node, this.query, this.trends, this.trailing});
   final TlSourceComponent node;
   final String? query;
+  final AsyncValue<List<TrendTag>>? trends;
+
+  /// 見出しの右に足す部品。
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     if (!node.isSection) {
-      final content = TlNodeContent(node: node, query: query);
+      final content = TlNodeContent(node: node, query: query, trends: trends);
       return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        RasqSectionHeader(title: tlNodeLabel(ref, node), topMargin: 0),
+        RasqSectionHeader(title: tlNodeLabel(ref, node), topMargin: 0, trailing: trailing),
         content,
         const Divider(height: 1),
       ]);
@@ -139,7 +151,10 @@ class TlNodeBlock extends ConsumerWidget {
       RasqSectionHeader(
         title: tlNodeLabel(ref, node),
         topMargin: 0,
-        trailing: RasqIconButton(icon: Icons.refresh, size: 18, tooltip: '読み直す', onPressed: () => ref.read(tlSectionsRefreshProvider.notifier).bump()),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          ?trailing,
+          RasqIconButton(icon: Icons.refresh, size: 18, tooltip: '読み直す', onPressed: () => ref.read(tlSectionsRefreshProvider.notifier).bump()),
+        ]),
       ),
       for (var i = 0; i < children.length; i++)
         Container(
@@ -147,7 +162,7 @@ class TlNodeBlock extends ConsumerWidget {
           margin: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.sm),
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
-          child: TlNodeContent(node: children[i], query: query),
+          child: TlNodeContent(node: children[i], query: query, trends: trends),
         ),
       const Divider(height: 1),
     ]);
@@ -156,9 +171,12 @@ class TlNodeBlock extends ConsumerWidget {
 
 /// ノードの中身(種類ごと)。
 class TlNodeContent extends ConsumerWidget {
-  const TlNodeContent({super.key, required this.node, this.query});
+  const TlNodeContent({super.key, required this.node, this.query, this.trends});
   final TlSourceComponent node;
   final String? query;
+
+  /// トレンドのタイルに出すワード([TlBlocks.trends])。null なら SNS のトレンドのまま。
+  final AsyncValue<List<TrendTag>>? trends;
 
   String get _q => (query ?? '').replaceFirst(RegExp(r'^#'), '');
 
@@ -189,9 +207,12 @@ class TlNodeContent extends ConsumerWidget {
       final sourced = ref.watch(sourcedTrendsProvider);
       final v = sourced.value;
       if (v == null) return sourced.hasError ? const RasqCaption('読み込めませんでした') : _loading();
+      final given = trends;
+      if (given != null && !given.hasValue) return given.hasError ? const RasqCaption('読み込めませんでした') : _loading();
+      // アカウントの表記が空 = 全部のアカウントのトレンド。
       final who = s.account.isEmpty ? null : s.account;
       final tags = [
-        for (final t in v.tags)
+        for (final t in given?.value ?? v.tags)
           if (who == null || (v.sources[trendKey(t.tag)] ?? const <AccountId>[]).any((a) => '$a' == who || a.key == who)) t,
       ].take(s.limit).toList();
       if (tags.isEmpty) return const RasqCaption('トレンドはまだありません');

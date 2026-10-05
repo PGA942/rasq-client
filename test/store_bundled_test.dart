@@ -28,8 +28,36 @@ class _PendingCentral extends _EmptyCentral {
   Future<InstallManifest?> manifest(String id, {String? version}) async => null;
 }
 
+/// 一覧は空。[known] の id だけ掲載がある(一覧に出ない: 非掲載 / 審査中など)。
+class _QuietCentral extends _EmptyCentral {
+  _QuietCentral(this.known);
+  final Set<String> known;
+  int lookups = 0;
+  @override
+  Future<StoreHomeSections> home() async => (trending: const <StorePluginCard>[], recent: const <StorePluginCard>[], bookmarks: const <StorePluginCard>[]);
+  @override
+  Future<List<StorePluginCard>> search(String q, {Set<StoreFilter> filters = const {}}) async => const [];
+  @override
+  Future<StorePluginDetail?> plugin(String id) async {
+    lookups++;
+    return known.contains(id) ? StorePluginDetail(id: id, name: id, version: '1.0.0') : null;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('一覧 / 検索 (D-443): Central に掲載の無い同梱のサンプル(着せ替え)は同梱から足す。Central に掲載のあるもの(一覧に出ない非掲載など)は足さない', () async {
+    final central = _QuietCentral({storeSamplePluginId});
+    final client = BundledFallbackStoreClient(central, BundledStoreClient());
+    final home = {for (final c in (await client.home()).recent) c.id};
+    expect(home, containsAll(['sample.theme-starry', 'sample.theme-rasq']));
+    expect(home.contains(storeSamplePluginId), isFalse, reason: 'Central が非掲載にしたものはそのまま');
+    expect({for (final c in await client.search('着せ替え')) c.id}, {'sample.theme-starry', 'sample.theme-rasq'});
+    final looked = central.lookups;
+    await client.home();
+    expect(central.lookups, looked, reason: '掲載の有無は一度だけ調べる');
+  });
 
   test('掲載は同梱の実物だけ(架空の net.example.* は無い)。評価 / ダウンロード数 / 推移は 0 / 空、版は SOURCES.json から', () async {
     final store = BundledStoreClient();

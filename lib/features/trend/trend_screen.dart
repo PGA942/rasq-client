@@ -109,7 +109,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     // 並び (D-442)。前の版の構成(セクションを並びに持てなかった)には、既定の「フォロー中の反応」を前に足す。
     final saved = ref.watch(tlViewConfigProvider('trend'));
     final def = defaultTlConfig('trend');
-    final view = saved == null ? def : saved.layout < TlConfig.currentLayout ? saved.copyWith(sources: [...def.sources.where((s) => s.isSection), ...saved.sources]) : saved;
+    final view = saved == null ? def : saved.layout < TlConfig.sectionsLayout ? saved.copyWith(sources: [...def.sources.where((s) => s.isSection), ...saved.sources]) : saved;
     final layout = tlPageLayout(view);
 
     // 投稿の間の広告 (D-438)。

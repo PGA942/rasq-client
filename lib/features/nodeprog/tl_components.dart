@@ -59,8 +59,7 @@ class TlSourceComponent {
 
   /// TL 種別: home/social/local/global(基本 TL)、`list:<名前 or id>`
   /// (リスト系)、`trend`(現在のトレンド TL = 上位タグの検索結果合流)、
-  /// `self`(この画面の基礎タイムライン — 検索結果/リスト/欄の投稿を
-  /// そのまま取り込む, D-124)。
+  /// `self`(画面の投稿 — 検索結果/リスト/DM をそのまま取り込む, D-124。名前はスコープごとに [tlSelfLabel])。
   final String tl;
 
   /// 一時的な無効化 (D-123): 外さずに実行だけ止める(コンパイルから除外)。
@@ -249,9 +248,13 @@ List<TlSourceComponent> _migrateSections(Object? raw) => [
 class TlConfig {
   const TlConfig({this.sources = const [], this.algorithms = const [], this.clock = '15秒', this.display = TlDisplayMode.timeline, this.layout = currentLayout});
 
-  /// 並びの版 (D-442)。2 = セクションを並びの中に置く形。1 = それより前に保存した構成(トレンド TL は「フォロー中の反応」を前に足して出す)。
+  /// 並びの版。1 = D-442 より前に保存した構成(トレンド TL は「フォロー中の反応」を前に足して出す)。
+  /// 2 = セクションを並びの中に置く形 (D-442)。3 = トレンドページ (D-443、それより前のトレンドタイルの構成は [trendPageConfig] で組み直す)。
   final int layout;
-  static const currentLayout = 2;
+  static const currentLayout = 3;
+
+  /// セクションを並びの中に置く形になった版 (D-442)。
+  static const sectionsLayout = 2;
 
   final List<TlSourceComponent> sources;
   final List<TlAlgorithmComponent> algorithms;
@@ -284,7 +287,7 @@ class TlConfig {
         algorithms: [for (final a in (j['algorithms'] as List? ?? const [])) TlAlgorithmComponent.fromJson((a as Map).cast<String, Object?>())],
         clock: j['clock'] as String? ?? '15秒',
         display: TlDisplayMode.byName(j['display']),
-        layout: (j['layout'] as num?)?.toInt() ?? (j['sections'] is List ? currentLayout : 1),
+        layout: (j['layout'] as num?)?.toInt() ?? (j['sections'] is List ? sectionsLayout : 1),
       );
 }
 
@@ -312,16 +315,16 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
   if (scope == trendTodayScope) {
     return const TlConfig(sources: [TlSourceComponent(tl: 'featured')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
   }
+  // トレンドページ (D-431 → D-440 → D-443): 検索ホームの並び。「トレンド」のセクション(全部のアカウントのトレンドのタイル)と
+  // 「Today」のセクション(Today)。アルゴリズムはトレンドのタイルに掛かる(軽いものだけ)。自動更新は無い。
+  if (scope == trendTilesScope) {
+    return const TlConfig(sources: [
+      TlSourceComponent(tl: sectionKind, label: 'トレンド', children: [TlSourceComponent(tl: trendTagsKind, limit: 10)]),
+      TlSourceComponent(tl: sectionKind, label: 'Today', children: [TlSourceComponent(tl: 'featured', limit: 10)]),
+    ], algorithms: [TlAlgorithmComponent(type: 'chrono')], clock: '');
+  }
   if (scope == 'trend.users') {
     return const TlConfig(sources: [TlSourceComponent(tl: 'self')], algorithms: [TlAlgorithmComponent(type: 'chrono')]);
-  }
-  // トレンドタイル (D-431 → D-440): 取得元は RASQ アカウントに入っている SNS アカウントごとのトレンド。並びは取得の順。自動更新は無い。
-  if (scope == trendTilesScope) {
-    return TlConfig(
-      sources: [for (final a in bundleAccounts.isEmpty ? const [''] : bundleAccounts) TlSourceComponent(tl: trendTagsKind, account: a)],
-      algorithms: const [TlAlgorithmComponent(type: 'chrono')],
-      clock: '',
-    );
   }
   if (scope == 'tl.dm' || scope.startsWith('tl.dm:') || scope.startsWith('tl.chat:')) {
     // DM (D-127): メイン(tl.dm)= カスタム未設定の全 DM ページの共通設定、
@@ -372,7 +375,7 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
       // RASQ の投稿 (D-283): アカウントは付けない(`acct:` で包むと、SNS のセッションを探しに行ってしまう)。
       nodes.add(inst('tl.source', 's$i', at, values: {'TL': rasqPostsKind}));
     } else if (s.isSelf) {
-      // この画面の基礎 TL (D-124): 実行側の resolveNodeFetch が selfItems を返す。
+      // 画面の投稿 (D-124): 実行側の resolveNodeFetch が selfItems を返す。
       nodes.add(inst('tl.source', 's$i', at, values: {'TL': 'self'}));
     } else if (s.isDm) {
       // DM 取得 (D-127): 相手指定の DM ルーム。
@@ -834,8 +837,53 @@ NodeGraph compileComposerConfig(Map<String, ComposerAccountFilter> byAccount, Li
 
 // ── トレンドの 3 つの構成 (D-431) ─────────────────────────────────
 
-/// トレンドタイル(検索ホームのトレンドのタグの並び)の構成のスコープ。前はトレンド TL と同じ `trend` のグラフに同居していた。
+/// トレンドページ(検索ホームの並び = トレンドのタイル + Today、D-443)の構成のスコープ。D-431 ではトレンドタイルだけの構成で、
+/// その前はトレンド TL と同じ `trend` のグラフに同居していた。アルゴリズムはトレンドのタイルに掛かる。
 const trendTilesScope = 'trend.tiles';
+
+/// トレンドページ (D-443) の並び。保存が無ければ既定(「トレンド」「Today」のセクション)。前の版のトレンドタイルの構成
+/// (取得元 = アカウントごとのトレンドだけ)は、既定のセクションに組み直す: 有効なアカウントが 1 つならそのアカウントのトレンド、
+/// ほかは全部のアカウントのトレンド。アルゴリズムはそのまま。
+TlConfig trendPageConfig(TlConfig? saved) {
+  final def = defaultTlConfig(trendTilesScope);
+  if (saved == null) return def;
+  if (saved.layout >= TlConfig.currentLayout) return saved;
+  final picked = [for (final s in saved.sources) if (s.isTrendTags && s.enabled) s];
+  final tags = picked.length == 1 ? picked.first.copyWith(limit: 10) : const TlSourceComponent(tl: trendTagsKind, limit: 10);
+  return TlConfig(
+    sources: [def.sources.first.copyWith(children: [tags]), ...def.sources.skip(1)],
+    algorithms: saved.algorithms,
+    clock: '',
+  );
+}
+
+/// 構成のトレンドのタイル(`trend.tags`)。セクションの中も見る。
+Iterable<TlSourceComponent> trendTagsNodesOf(TlConfig cfg) sync* {
+  for (final s in cfg.sources) {
+    if (s.isTrendTags) yield s;
+    if (s.enabled) yield* s.children.where((c) => c.isTrendTags);
+  }
+}
+
+/// 「画面の投稿」(`self`)ノードの名前 (D-443): スコープごとに何を取り込むかを書く(前は「この画面の基礎タイムライン」)。
+String tlSelfLabel(String scope) {
+  if (scope == 'tl.dm' || scope.startsWith('tl.dm:') || scope.startsWith('tl.chat:')) return 'この DM のメッセージ';
+  if (scope == 'trend' || scope == 'trend.following' || scope == 'trend.users') return 'このワードの検索結果';
+  if (scope == trendTodayScope) return 'Today の投稿';
+  if (scope == trendTilesScope) return 'トレンドのワード';
+  final base = scope.startsWith('tl.') ? scope.substring(3) : scope;
+  if (base.startsWith('list:') || base.startsWith(rasqListKindPrefix)) return 'このリストの投稿';
+  if (base.startsWith('feed:')) return 'このフィードの投稿';
+  return switch (base) {
+    'bundle' => '総合タブの投稿',
+    'home' => 'フォロー中タブの投稿',
+    'social' => 'おすすめタブの投稿',
+    'local' => 'ローカルタブの投稿',
+    'global' => 'グローバルタブの投稿',
+    'relational' => '関連タブの投稿',
+    _ => 'このタブの投稿',
+  };
+}
 
 /// Today(検索ホームのハイライト、featured)の構成のスコープ。前はトレンド TL と共通の `trend` だった。
 const trendTodayScope = 'trend.today';

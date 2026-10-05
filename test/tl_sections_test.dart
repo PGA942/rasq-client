@@ -18,6 +18,7 @@ import 'package:rasq_client/features/vc/astell_actions.dart' show AstellRoomTile
 import 'package:rasq_client/features/vc/astell_models.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart' show astellHomeProvider;
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_design/rasq_design.dart' show RasqPluginTile;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -193,6 +194,11 @@ void main() {
       await scrollTo(tester, from);
       final g = await tester.startGesture(tester.getCenter(from));
       await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));
+      // つかんだタイルはそのままの見た目で指について動き、元の場所には薄い写しを残さない (D-443)。
+      final feedback = find.byKey(const ValueKey('tlconfig.drag.feedback'));
+      expect(feedback, findsOneWidget);
+      expect(find.descendant(of: feedback, matching: find.byType(RasqPluginTile)), findsOneWidget);
+      expect(find.descendant(of: from, matching: find.byType(RasqPluginTile)), findsNothing);
       await g.moveTo(tester.getCenter(to));
       await tester.pump();
       await g.moveTo(tester.getCenter(to) + const Offset(0, 1));

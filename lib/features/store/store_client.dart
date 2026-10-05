@@ -109,10 +109,45 @@ class BundledFallbackStoreClient implements StoreClient {
     return call(bundled);
   }
 
+  /// Central に掲載の無い(404)同梱のサンプルの id。一度調べたら、このクライアントの間は覚えておく。
+  Set<String>? _unlisted;
+
+  /// 一覧 / 検索に足す同梱のもの (D-443): Central の答えに無く、Central に**掲載そのものが無い**(詳細が 404)サンプルだけ。
+  /// 着せ替え(星空 / RASQ)は Central に出したことが無く、ストアの一覧から消えていた(ページは開けた)。Central に掲載があって
+  /// 一覧に出ないもの(審査中 / 非掲載 / 止めたもの)は足さない(Central の判断のまま)。
+  Future<List<StorePluginCard>> _missing(Iterable<StorePluginCard> shown, Future<List<StorePluginCard>> Function() fromBundled) async {
+    final ids = {for (final c in shown) c.id};
+    var unlisted = _unlisted;
+    if (unlisted == null) {
+      unlisted = <String>{};
+      for (final id in bundledIds) {
+        if (ids.contains(id)) continue;
+        try {
+          if (await primary.plugin(id) == null) unlisted.add(id);
+        } catch (_) {
+          // つながらないなど: 足さない(次に一覧を開いたときにもう一度調べる)。
+          return const [];
+        }
+      }
+      _unlisted = unlisted;
+    }
+    if (unlisted.isEmpty) return const [];
+    return [for (final c in await fromBundled()) if (unlisted.contains(c.id) && !ids.contains(c.id)) c];
+  }
+
   @override
-  Future<StoreHomeSections> home() => primary.home();
+  Future<StoreHomeSections> home() async {
+    final h = await primary.home();
+    final extra = await _missing([...h.trending, ...h.bookmarks, ...h.recent], () async => (await bundled.home()).recent);
+    if (extra.isEmpty) return h;
+    return (trending: h.trending, bookmarks: h.bookmarks, recent: [...h.recent, ...extra]);
+  }
+
   @override
-  Future<List<StorePluginCard>> search(String q, {Set<StoreFilter> filters = const {}}) => primary.search(q, filters: filters);
+  Future<List<StorePluginCard>> search(String q, {Set<StoreFilter> filters = const {}}) async {
+    final found = await primary.search(q, filters: filters);
+    return [...found, ...await _missing(found, () => bundled.search(q, filters: filters))];
+  }
   @override
   // 版の空の詳細 = Central に掲載はあるが、承認済みの版がまだ無い(審査中)。同梱があればそちらで答える(rasq-central S-080 の前の
   // サーバーは、この詳細を 404 にせず返していた。みんなのボードが空のページになっていた)。
