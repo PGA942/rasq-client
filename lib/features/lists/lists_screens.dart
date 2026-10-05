@@ -33,6 +33,7 @@ import '../nodeprog/timeline_temp_fow.dart';
 import '../nodeprog/tl_config_store.dart';
 import '../settings/settings_dsl.dart';
 import '../users/user_list.dart';
+import '../ads/timeline_ads.dart';
 
 /// メンバーの id を返さないプラグイン(Mastodon / Bluesky の wasm は `memberIds: []`)のリストは、一覧の人数が
 /// 「0 ユーザー」になっていた(REC-06、2026-09-28 録画: 一覧 0 人・詳細 3 人)。空のものだけメンバーを取りに行って埋める。
@@ -712,16 +713,19 @@ class _ListTimelinePostsState extends ConsumerState<_ListTimelinePosts> {
       child: ListView(controller: _scroll, physics: const AlwaysScrollableScrollPhysics(), children: [
         // 話題の目次で選んだ話題だけにしているとき (D-368)。目次そのものは「話題の目次」タブ。
         ListTopicFilterBar(scope: widget.scope, entry: selected),
-        for (final p in visible)
-          TimelineSearchRow(
-            key: ValueKey('list.row.${p.key}'),
-            controller: _jumper,
-            postKey: p.key,
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              PostRow(post: p, actions: widget.actions, onAction: (a, {args = const {}}) => widget.notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)),
-              const Divider(),
-            ]),
-          ),
+        // 投稿の間の広告 (D-438)。
+        ...withTimelineAds(ref, visible, scope: 'list', [
+          for (final p in visible)
+            TimelineSearchRow(
+              key: ValueKey('list.row.${p.key}'),
+              controller: _jumper,
+              postKey: p.key,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                PostRow(post: p, actions: widget.actions, onAction: (a, {args = const {}}) => widget.notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)),
+                const Divider(),
+              ]),
+            ),
+        ]),
       ]),
     );
   }

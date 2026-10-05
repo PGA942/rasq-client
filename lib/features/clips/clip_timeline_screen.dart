@@ -21,6 +21,7 @@ import '../relational/relational_event_screen.dart';
 import 'host_clips.dart';
 import 'index_toc.dart';
 import 'virtual_index.dart';
+import '../ads/timeline_ads.dart';
 
 /// クリップTL (D-032/D-036)。ネイティブクリップとホスト横断クリップの
 /// 詳細画面 — 中身の投稿列の**最上位に仮想目次**を重ねる。目次の項目を
@@ -128,15 +129,19 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
                         ),
                         if (_isHost) HostClipPublishRow(clipId: widget.clip.id.substring(hostClipIdPrefix.length)),
                         VirtualIndexToc(entries: index, selectedId: _selectedEntry, onSelect: (id) => setState(() => _selectedEntry = id)),
-                        for (final p in visible) ...[
-                          PostRow(
-                            post: p,
-                            actions: _isHost ? const [] : actions,
-                            onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args),
-                            onTap: _isHost ? null : () => context.pushPost(p),
-                          ),
-                          const Divider(),
-                        ],
+                        // 投稿の間の広告 (D-438)。
+                        ...withTimelineAds(ref, visible, scope: 'clip', [
+                          for (final p in visible)
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                              PostRow(
+                                post: p,
+                                actions: _isHost ? const [] : actions,
+                                onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args),
+                                onTap: _isHost ? null : () => context.pushPost(p),
+                              ),
+                              const Divider(),
+                            ]),
+                        ]),
                         if (!_isHost && _cursor != null)
                           Center(
                             child: TextButton(onPressed: _loading ? null : () => _load(more: true), child: Text(_loading ? '読み込み中…' : 'さらに読み込む')),

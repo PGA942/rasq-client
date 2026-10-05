@@ -42,6 +42,20 @@ class MisskeySession extends SnsSessionBase {
   List<ActionDescriptor> get actions => _actions;
 
   @override
+  /// サーバーの広告 (D-438): `meta` の `ads`。1 つのセッションで 1 回だけ読む(読めなければ空)。
+  @override
+  Future<List<ServerAd>> serverAds() => _ads ??= () async {
+        try {
+          final meta = await api.callMap('meta', {'detail': false});
+          final ads = meta['ads'];
+          return [if (ads is List) for (final a in ads) ?ServerAd.fromMisskey(a)];
+        } catch (_) {
+          return const <ServerAd>[];
+        }
+      }();
+  Future<List<ServerAd>>? _ads;
+
+  @override
   Future<UserSummary> me() async => MisskeyMappers.user(await api.callMap('i'), account: account, host: host);
 
   static String _timelinePath(TimelineKind k) => switch (k.id) {

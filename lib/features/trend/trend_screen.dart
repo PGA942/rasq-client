@@ -25,6 +25,7 @@ import 'trend_analysis.dart';
 import 'trend_providers.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
+import '../ads/timeline_ads.dart';
 
 /// トレンドTL(検索結果): ∨ノート / フォロー中 / ユーザー.
 /// ノート = 「フォロー中の反応」 + 「トレンド」(タグTL)。
@@ -107,9 +108,12 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
     final gate = ref.watch(childGateProvider);
     List<Post> apply(List<Post> posts) => gate.filterPosts(applySearchFilter(posts, filter, query: widget.tag));
 
-    Widget rows(List<Post> posts) => Column(children: [
-          for (final p in posts) ...[PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)), const Divider()],
-        ]);
+    // 投稿の間の広告 (D-438)。
+    Widget rows(List<Post> posts) => Column(
+          children: withTimelineAds(ref, posts, scope: 'trend', [
+            for (final p in posts) Column(mainAxisSize: MainAxisSize.min, children: [PostRow(post: p, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(p, a, args: args), onTap: () => context.pushPost(p)), const Divider()]),
+          ]),
+        );
 
     return DefaultTabController(
       length: tabs.length,

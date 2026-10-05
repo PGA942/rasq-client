@@ -18,6 +18,7 @@ import '../../shell/column_takeover.dart' show takeoverColumnOf;
 import '../../shell/third_column.dart' show openPageInPanes, paneBack;
 import '../ads/ad_placement.dart';
 import '../ads/export_ad.dart';
+import '../ads/timeline_ads.dart' show timelineAdsOn;
 import '../vc/astell_models.dart' show astellReportReasons;
 import '../custom/custom_page.dart';
 import '../media/fow_avoid.dart';
@@ -900,7 +901,13 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
     final c = _c;
     final scheme = Theme.of(context).colorScheme;
     if (c == null || c.phase == CustomPagePhase.resolving || c.phase == CustomPagePhase.loading) {
-      return const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5)));
+      // プラグインの Swing を読み込んでいる間(遷移中)は広告も (D-438)。
+      return Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5)),
+          if (timelineAdsOn(ref)) const Padding(key: ValueKey('swing.loading.ad'), padding: EdgeInsets.only(top: RasqSpacing.md), child: ExportAdSlot(onDark: true)),
+        ]),
+      );
     }
     switch (c.phase) {
       case CustomPagePhase.needsConsent when !widget.swing.plugin!.unreviewed:

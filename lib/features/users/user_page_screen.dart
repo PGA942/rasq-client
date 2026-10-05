@@ -23,6 +23,7 @@ import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import 'user_list.dart';
 import 'user_providers.dart';
+import '../ads/timeline_ads.dart';
 
 /// ユーザーページ(通常 / 自分 / 制限 / ノーヒット). タブ: ノート / 引用 / メディア / クリップ.
 class UserPageScreen extends ConsumerStatefulWidget {
@@ -163,6 +164,9 @@ class _UserPosts extends ConsumerWidget {
       data: (p) {
         final items = [...pinned, ...p.items.where((x) => !pinned.any((pin) => pin.id == x.id))];
         if (items.isEmpty) return const RasqEmptyView(title: '投稿はありません');
+        // 投稿の間の広告 (D-438)。ピン留めの間には置かない。
+        final ads = {for (final g in timelineAdGaps(ref, items)) if (g > pinned.length) g};
+        final adOrdinal = {for (final (n, g) in (ads.toList()..sort()).indexed) g: n};
         return ListView.separated(
           padding: const EdgeInsets.only(bottom: 80),
           itemCount: items.length,
@@ -171,6 +175,7 @@ class _UserPosts extends ConsumerWidget {
             final post = items[i];
             final isPinned = i < pinned.length;
             return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (ads.contains(i)) ...[TimelineAdSlot(key: ValueKey('user.ad.$i'), ordinal: adOrdinal[i]!), const Divider()],
               if (isPinned) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page + RasqSizes.avatarLg + RasqSpacing.md, 6, 0, 0), child: Row(children: [Icon(Icons.push_pin, size: 14, color: scheme.onSurfaceVariant), const SizedBox(width: 4), Text('ピン留め', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))])),
               PostRow(post: post, actions: actions, onAction: (a, {args = const {}}) => notifier.perform(post, a, args: args), onTap: () => context.pushPost(post)),
             ]);

@@ -4,6 +4,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_store/rasq_store.dart' show FollowState;
 
 import 'action.dart';
+import 'server_info.dart' show ServerAd;
 import 'timeline.dart';
 
 /// Authenticated API surface for one account.
@@ -37,6 +38,9 @@ abstract class SnsSession {
 
   Future<Page<NotificationItem>> notifications({String? cursor, int limit = 20});
   Future<void> markNotificationsRead();
+
+  /// サーバーの管理者が出している広告 (D-438、Misskey の `meta.ads`)。持たない SNS は空。
+  Future<List<ServerAd>> serverAds();
 
   Future<UserProfile> user(String id);
   Future<UserProfile?> userByHandle(String handle, {String? host});
@@ -187,6 +191,8 @@ abstract class SnsSessionBase implements SnsSession {
   Future<Page<NotificationItem>> notifications({String? cursor, int limit = 20}) => _unsupported('notifications');
   @override
   Future<void> markNotificationsRead() => _unsupported('markNotificationsRead');
+  @override
+  Future<List<ServerAd>> serverAds() async => const [];
   @override
   Future<UserProfile> user(String id) => _unsupported('user');
   @override

@@ -124,6 +124,35 @@ void main() {
       expect(result.me.displayName, '名前me');
     });
 
+    test('サーバーの広告 (D-438): meta.ads を読み、形の違うもの / https でない画像は捨てる。1 セッション 1 回', () async {
+      var calls = 0;
+      final c = client({
+        'meta': (_) {
+          calls++;
+          return {
+            'ads': [
+              {'id': 'a1', 'url': 'https://shop.example/', 'imageUrl': 'https://misskey.test/ad1.png', 'place': 'horizontal', 'ratio': 3, 'dayOfWeek': 0},
+              {'id': 'a2', 'url': 'https://x.example/', 'imageUrl': 'http://misskey.test/insecure.png'},
+              {'id': 'a3', 'url': 'javascript:alert(1)', 'imageUrl': 'https://misskey.test/ad3.png'},
+              'broken',
+            ],
+          };
+        },
+      });
+      final s = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: c);
+      final ads = await s.serverAds();
+      expect(ads.map((a) => (a.id, a.ratio, a.place)), [('a1', 3, 'horizontal')]);
+      await s.serverAds();
+      expect(calls, 1);
+      // 曜日のビット(日曜 = 1 … 土曜 = 64)。
+      final sunOnly = ServerAd(id: 'x', url: Uri.parse('https://a/'), imageUrl: Uri.parse('https://a/i.png'), dayOfWeek: 1);
+      expect(sunOnly.showsOn(DateTime.sunday), isTrue);
+      expect(sunOnly.showsOn(DateTime.monday), isFalse);
+      // 読めなければ空(TL は止めない)。
+      final broken = MisskeySession(AccountSession(account: viewer, pluginId: 'p', token: 'T', createdAt: DateTime(2026)), client: client({}));
+      expect(await broken.serverAds(), isEmpty);
+    });
+
     test('MiAuth not yet approved → 401 SnsApiException', () async {
       final c = client({'miauth/abc/check': (_) => {'ok': false}});
       final flow = MiAuthFlow(host: 'misskey.test', pluginId: 'p', permissions: const [], sessionId: 'abc', client: c);
