@@ -504,6 +504,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
             spec: spec,
             algorithms: algorithms,
             dmOnly: _isDmScope,
+            scope: _scope,
             // トレンドタイル (D-431): 重い(ML モデル / GPU)アルゴリズムは灰色にして理由を出す。
             unavailable: _scope == trendTilesScope ? trendTilesUnavailableReason : null,
             // 傾向が一番最後に固定で掛かるスコープ (D-431) では、指向性/刺激性は足さない(傾向 FOW で変える)。
@@ -553,6 +554,11 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final tlLabel = kinds.where((k) => k.id == s.tl).firstOrNull?.label ?? switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', 'home' => 'フォロー中 (home)', _ => s.tl };
     if (s.isRasq) return (Icons.hub_outlined, 'RASQ の投稿を取得', 'RASQ', 'TL: 自分とフォロー中の RASQ アカウントの投稿');
     if (s.isRasqList) return (Icons.people_alt_outlined, 'RASQ リストを取得', 'RASQ', 'RASQ リスト: ${s.label.isNotEmpty ? s.label : (s.rasqListId.isEmpty ? '未選択' : s.rasqListId)}');
+    // SNS アカウントごとの取得元 (D-440)。
+    final who = s.account.isEmpty ? '(現在のアカウント)' : s.account;
+    if (s.isTrendTags) return (Icons.trending_up, 'トレンドを取得', who, 'このアカウントのサーバーのトレンドのワード');
+    if (s.isSearch) return (Icons.manage_search, '検索結果を取得', who, s.searchWord.isEmpty ? '検索: このページの検索ワード / タグ' : '検索: ${s.searchWord}');
+    if (s.tl == 'featured') return (Icons.wb_sunny_outlined, 'Today を取得', who, 'TL: Today(注目の投稿)');
     return (
       s.isSelf
           ? Icons.sync_alt
@@ -817,17 +823,16 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       // 傾向 FOW の指向性/刺激性 (D-431): いつも一番最後(並べ替え / 削除はできない)。
       if (tendencyPinnedScopes.contains(_scope)) _PinnedTendencyTile(onOpen: () => _tendencyAction('tendency')),
       _addTile('アルゴリズムを追加', () => _openPalette(algorithms: true)),
-      // トレンドタイル (D-431): 取得元は RASQ アカウントのトレンドで固定。自動更新は無い(検索ホームを開く / 引き下げで読む)。
+      // トレンドタイル (D-431 → D-440): 取得元は SNS アカウントごとのトレンド(足す / 外す / 一時的に無効にできる)。
+      // 自動更新は無い(検索ホームを開く / 引き下げで読む)。
       if (_scope == trendTilesScope) ...[
-        const RasqSectionHeader(title: '取得元'),
-        const RasqPluginTile(
-          key: ValueKey('tlconfig.tiles.source'),
-          icon: Icons.trending_up,
-          title: 'RASQ アカウントのトレンド',
-          subtitle: '固定',
-          description: 'RASQ アカウントにまとめた SNS アカウントのトレンドを集めた並びです',
-          chevron: false,
+        RasqSectionHeader(
+          key: const ValueKey('tlconfig.tiles.source'),
+          title: '取得元(SNS アカウントのトレンド)',
+          trailing: RasqIconButton(icon: Icons.swap_vert, size: 18, tooltip: '取得元の並べ替え', onPressed: () => _openReorder(algorithms: false)),
         ),
+        for (var i = 0; i < _cfg.sources.length; i++) _componentTile(algorithm: false, i: i),
+        _addTile('取得元を追加', () => _openPalette(algorithms: false)),
       ] else ..._sourceComponents(),
       if (_supportsLayout) ..._layoutComponents(),
     ];
@@ -1056,7 +1061,10 @@ class _PinnedTendencyTile extends ConsumerWidget {
 /// アイコン/名前/提供元/説明/詳細行)で、ホバー中もこの表示のまま。
 /// 詳細行は入出力ではなく**ネイティブ対応の SNS プラグイン**。
 class _ComponentPalettePanel extends ConsumerStatefulWidget {
-  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false, this.onPickGenres, this.unavailable, this.hideTendency = false});
+  const _ComponentPalettePanel({required this.spec, required this.algorithms, required this.onAddAlgorithm, required this.onAddSource, this.dmOnly = false, this.onPickGenres, this.unavailable, this.hideTendency = false, this.scope = ''});
+
+  /// 編集しているスコープ (D-440: トレンドタイル / トレンド TL / Today は、SNS アカウントごとの取得元を出す)。
+  final String scope;
 
   /// アルゴリズムの種類 → 使えない理由(使えるなら null)。理由があれば灰色で押せない (D-431: トレンドタイルの重いもの)。
   final String? Function(String type)? unavailable;
@@ -1219,12 +1227,48 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               add: () => widget.onAddSource(TlSourceComponent(tl: 'dm:$peer'))),
       ];
     }
+    // SNS アカウントごとの取得元 (D-440)。
+    final accounts = [for (final x in ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[]) '${x.account}'];
+    // トレンドタイル: SNS アカウントのトレンドのワードだけ。
+    if (widget.scope == trendTilesScope) {
+      return [
+        for (final a in accounts)
+          _PaletteItem(
+              icon: Icons.trending_up,
+              title: 'トレンド: $a',
+              subtitle: 'SNSプラグイン',
+              description: 'このアカウントのサーバーのトレンドのワードを取り込みます。',
+              supported: allSns,
+              add: () => widget.onAddSource(TlSourceComponent(tl: trendTagsKind, account: a))),
+      ];
+    }
     // タイムライン側 (D-122 → D-194): [タイムライン, リストTL, カスタムフィード(Bluesky), 現在のトレンドTL]
     // (+ このタイムライン = 基礎 TL の自己参照, D-124)。種類 / アカウント / リストは追加後のタイルで選ぶ。
     final current = '${ref.watch(currentAccountProvider) ?? ''}';
     final firstTl = ref.watch(tlTimelinesProvider(current)).firstOrNull?.id ?? 'home';
     final bluesky = ref.watch(tlBlueskyAccountsProvider);
     return [
+      // トレンド TL (D-440): アカウントごとの、このページの検索ワード / タグの検索結果。
+      if (widget.scope == 'trend')
+        for (final a in accounts)
+          _PaletteItem(
+              icon: Icons.manage_search,
+              title: '検索結果: $a',
+              subtitle: 'SNSプラグイン',
+              description: 'このアカウントで、このページの検索ワード / タグを検索した結果を取り込みます。',
+              supported: allSns,
+              add: () => widget.onAddSource(TlSourceComponent(tl: pageSearchKind, account: a))),
+      // Today (D-440): アカウントごとの featured(Today / 注目)。出せる SNS だけ。
+      if (widget.scope == trendTodayScope)
+        for (final a in accounts)
+          if (ref.watch(tlTimelinesProvider(a)).any((k) => k.id == 'featured'))
+            _PaletteItem(
+                icon: Icons.wb_sunny_outlined,
+                title: 'Today: $a',
+                subtitle: 'SNSプラグイン',
+                description: 'このアカウントの Today(注目の投稿)を取り込みます。',
+                supported: allSns,
+                add: () => widget.onAddSource(TlSourceComponent(tl: 'featured', account: a))),
       _PaletteItem(
           icon: Icons.sync_alt,
           title: 'このタイムライン',

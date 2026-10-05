@@ -62,15 +62,15 @@ void main() {
     expect(g.nodes.where((n) => n.type == 'timeline.relational'), hasLength(1));
   });
 
-  test('D-124: self/リスト/トレンドの既定構成とコンパイル(トレンド枠の鎖は D-431 でトレンドタイルへ)', () {
-    expect(defaultTlConfig('trend').sources.single.tl, 'self');
+  test('D-124: self/リスト/トレンドの既定構成とコンパイル(トレンド枠の鎖は D-431 でトレンドタイルへ。トレンド TL の取得元は D-440 で「このページの検索結果」)', () {
+    expect(defaultTlConfig('trend').sources.single.tl, pageSearchKind);
     expect(defaultTlConfig('trend.users').sources.single.tl, 'self');
     expect(defaultTlConfig('trend.following').sources.single.tl, 'home');
     expect(defaultTlConfig('tl.list:abc123').sources.single.tl, 'list:abc123');
 
     final g = compileTlConfig(defaultTlConfig('trend'), scope: 'trend');
     final src = g.nodes.firstWhere((n) => n.type == 'tl.source');
-    expect(src.inputs.first.value, 'self'); // 基礎TLの自己参照
+    expect(src.inputs.first.value, pageSearchKind); // このページの検索ワード / タグの検索(基礎 TL と同じなら取り直さない)
     expect({for (final n in g.nodes) n.type}, isNot(contains('trend.frame'))); // トレンド枠の鎖はトレンドタイル(trend.tiles)へ分けた (D-431)
   });
 

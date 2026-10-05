@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
+import 'package:rasq_client/features/home/timeline_providers.dart' show isSelfFetch;
+import 'package:rasq_client/features/nodeprog/node_executor.dart' show withPageQuery;
 import 'package:rasq_client/features/nodeprog/node_tabs.dart';
 import 'package:rasq_client/features/nodeprog/timeline_config_screen.dart';
 import 'package:rasq_client/features/nodeprog/tl_components.dart';
@@ -23,12 +25,24 @@ import 'support/fakes.dart';
 /// トレンドタイルでは重い(ML モデル / GPU)アルゴリズムを使えない。傾向 FOW の指向性/刺激性はアルゴリズムの一番最後に固定。
 void main() {
   group('構成', () {
-    test('Today とトレンドタイルの既定: 取得元は self + 時系列順(タイルは自動更新なし)。トレンド TL にトレンド枠の鎖はもう付かない', () {
-      expect(defaultTlConfig(trendTodayScope).sources.single.tl, 'self');
-      expect(defaultTlConfig(trendTilesScope).sources.single.tl, 'self');
+    test('Today / トレンドタイル / トレンド TL の既定の取得元は SNS ごとのノード (D-440)。タイルは自動更新なし。トレンド TL にトレンド枠の鎖はもう付かない', () {
+      expect(defaultTlConfig(trendTodayScope).sources.single.tl, 'featured');
+      expect(defaultTlConfig('trend').sources.single.tl, pageSearchKind);
+      expect(defaultTlConfig(trendTilesScope).sources.single.tl, trendTagsKind);
+      expect([for (final s in defaultTlConfig(trendTilesScope, bundleAccounts: ['@a@m.example', '@b@bsky.social']).sources) (s.tl, s.account)], [(trendTagsKind, '@a@m.example'), (trendTagsKind, '@b@bsky.social')]);
       expect(defaultTlConfig(trendTilesScope).clock, '');
       final g = compileTlConfig(defaultTlConfig('trend'), scope: 'trend');
       expect({for (final n in g.nodes) n.type}, isNot(contains('trend.frame')), reason: 'タイルの並びは trend.tiles へ分けた');
+    });
+
+    test('ワードの無い検索の取得元は、このページのワード / タグで引く (D-440)。トレンド TL の基礎(タグの検索)と同じなら取り直さない', () {
+      expect(withPageQuery('search:', '花火'), 'search:花火');
+      expect(withPageQuery('acct:@a@m.example|search:', '花火'), 'acct:@a@m.example|search:花火');
+      expect(withPageQuery('search:月見', '花火'), 'search:月見', reason: 'ワードを決めた検索はそのまま');
+      expect(withPageQuery('search:', null), 'search:');
+      expect(isSelfFetch('search:花火', 'tag:花火'), isTrue);
+      expect(isSelfFetch('acct:@b@x|search:花火', 'tag:花火'), isFalse, reason: 'ほかのアカウントの検索は取りに行く');
+      expect(isSelfFetch('featured', 'featured'), isTrue);
     });
 
     test('トレンドタイルで使えないのは重いもの(サジェスト / 絞り込み / TL プラグイン)だけ', () {
@@ -81,7 +95,7 @@ void main() {
 
   Finder inScreen(Finder f) => find.descendant(of: find.byType(TimelineConfigScreen), matching: f);
 
-  testWidgets('検索ホームの歯車 → トレンドタイルのカスタマイズ: 5 つのタブ、取得元は固定、重いものは灰色で押せない、検索絞り込みで並びが変わる', (tester) async {
+  testWidgets('検索ホームの歯車 → トレンドタイルのカスタマイズ: 5 つのタブ、取得元は SNS アカウントごとのトレンド (D-440)、重いものは灰色で押せない、検索絞り込みで並びが変わる', (tester) async {
     final c = await pump(tester);
     expect(find.byKey(const ValueKey('trend.tile.月見')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('trend.customize')));
@@ -97,6 +111,8 @@ void main() {
     await tester.drag(tabsRow, const Offset(600, 0));
     await tester.pumpAndSettle();
     expect(inScreen(find.byKey(const ValueKey('tlconfig.tiles.source'))), findsOneWidget);
+    expect(inScreen(find.text('トレンドを取得')), findsOneWidget, reason: 'いまのアカウントのトレンド');
+    expect(inScreen(find.text('取得元を追加')), findsOneWidget);
     expect(inScreen(find.text('タイムラインを追加')), findsNothing);
     expect(inScreen(find.text('自動更新')), findsNothing);
 
@@ -122,6 +138,13 @@ void main() {
     await c.read(settingsAreaProvider(nodeprogAreaFor(key, trendTilesScope)).notifier).set('tlcfg', jsonEncode(next.toJson()));
     final tags = await c.read(trendFrameTagsProvider.future);
     expect([for (final t in tags) t.tag], ['打上会', '花火']);
+
+    // 取得元 (D-440): 入っていないアカウントのトレンドだけにすると、タイルは空。いまのアカウントに戻すと出る。
+    final tilesArea = c.read(settingsAreaProvider(nodeprogAreaFor(key, trendTilesScope)).notifier);
+    await tilesArea.set('tlcfg', jsonEncode(const TlConfig(sources: [TlSourceComponent(tl: trendTagsKind, account: '@nobody@else.example')], clock: '').toJson()));
+    expect(await c.read(trendFrameTagsProvider.future), isEmpty);
+    await tilesArea.set('tlcfg', jsonEncode(TlConfig(sources: [TlSourceComponent(tl: trendTagsKind, account: '${fakeSession().account}')], clock: '').toJson()));
+    expect([for (final t in await c.read(trendFrameTagsProvider.future)) t.tag], containsAll(['打上会', '花火', '月見']));
   });
 
   testWidgets('Today / トレンド TL の歯車はそれぞれのタブで開く。傾向を設定していれば、アルゴリズムの最後に緑の枠の固定の項目', (tester) async {

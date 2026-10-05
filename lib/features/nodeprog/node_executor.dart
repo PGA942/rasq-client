@@ -132,6 +132,15 @@ String? _sourceKindOf(GraphNode n) {
   return _withAccount(n, base);
 }
 
+/// ワードの無い検索 (`search:`、D-440) を、このページの検索ワード / タグの検索にする(`acct:` で包まれていても)。
+/// ページのワードが無ければそのまま(空の検索 = 何も取らない)。
+String withPageQuery(String kind, String? pageQuery) {
+  final q = pageQuery?.trim() ?? '';
+  if (q.isEmpty || !kind.endsWith('search:')) return kind;
+  final bare = kind.startsWith('acct:') ? kind.substring(kind.indexOf('|') + 1) : kind;
+  return bare == 'search:' ? '$kind$q' : kind;
+}
+
 /// 「アカウント」入力 (D-109) を kind id に包む。空/「現在のアカウント」は
 /// そのまま(現在 or 持ち主のセッション)。
 String _withAccount(GraphNode n, String kind) {
@@ -144,7 +153,7 @@ String _withAccount(GraphNode n, String kind) {
 Future<List<Post>?> _postsOutOf(NodeGraph g, Map<String, GraphNode> byId, GraphNode n, _ExecEnv env, int depth) async {
   if (depth > 16) return null;
   final sourceKind = _sourceKindOf(n);
-  if (sourceKind != null) return env.fetch(sourceKind);
+  if (sourceKind != null) return env.fetch(withPageQuery(sourceKind, env.selfQuery));
   // 関数入力 (D-118): 関数の中身の実行中は束縛された投稿リストを出す。
   if (n.type == 'fn.input') return env.fnInput;
   // マージ (D-106): 全入力の投稿リストを時刻順に 1 本へ(重複除外)。

@@ -101,7 +101,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   /// 続きを読む(読了済みの枝は空)。自分の基礎 TL([selfKindId])は基礎側の
   /// カーソルで進むのでここでは扱わない。
   Future<List<Post>> _pagedNodeFetch(SnsSession session, String kid, {required bool more, String? selfKindId, List<Post> selfItems = const [], SnsSession? Function(String)? sessionFor}) async {
-    if (kid == 'self' || (selfKindId != null && kid == selfKindId)) return selfItems; // 基礎TLのカーソルで進む (D-124)
+    if (isSelfFetch(kid, selfKindId)) return selfItems; // 基礎TLのカーソルで進む (D-124)
     String? c;
     if (more && _nodeCursors.containsKey(kid)) {
       c = _nodeCursors[kid];
@@ -712,6 +712,10 @@ const childSafeWindowKind = TimelineKind('childsafe.window', '見守りの時間
 
 /// 取得ノード (D-097) の kind 解決(TL/関連/トレンドで共用): リストは
 /// 名前 → id、DM は相手ハンドル → ルームの peer id をアプリ側で引く。
+/// 自分の基礎 TL の取得か: `self`、[selfKindId] そのもの、トレンド TL(`tag:<ワード>`)なら同じワードの検索結果 (D-440)。
+bool isSelfFetch(String kid, String? selfKindId) =>
+    kid == 'self' || (selfKindId != null && (kid == selfKindId || (selfKindId.startsWith('tag:') && kid == 'search:${selfKindId.substring(4)}')));
+
 /// [selfKindId] と一致する取得は [selfItems] を返す(自分の TL の再取得回避)。
 /// [onCursor] (D-117) には取得ページの続きトークンを報告する(枝ごとの
 /// ページング用。null = 末尾まで読了)。
@@ -753,7 +757,7 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
   }
   // `self` (D-124): この画面の基礎タイムライン(検索結果/リスト/欄の投稿)を
   // そのまま返す — kind id が動的なスコープ(トレンド等)の自己参照。
-  if (kid == 'self' || (selfKindId != null && kid == selfKindId)) return selfItems;
+  if (isSelfFetch(kid, selfKindId)) return selfItems;
   // 投稿加工プラグイン (D-083/D-118): ノード定義を持たないプラグインの加工は
   // **取得ノードに渡す直前**に済ませる(wasm セッションの post.transform)。
   Future<List<Post>> finish(Page<Post> page) async {
