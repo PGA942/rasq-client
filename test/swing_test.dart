@@ -66,6 +66,9 @@ import 'support/fakes.dart';
 
 /// Swing のスレッドのまね (D-389)。
 final swingThreadLog = <String>[];
+
+/// 消した Swing (D-446)。
+final swingDeleted = <String>[];
 final swingQueued = <String>{};
 final swingReplies = <String>[];
 
@@ -217,13 +220,19 @@ void main() {
       Map<String, Object?> post(String id, {String body = '', String? replyTo}) => {
             'id': id,
             'body': body,
-            'author': {'id': 'acc-9', 'handle': 'alice', 'displayName': 'alice さん'},
+            // `pmine` = 自分の Swing のスレッドの根 (D-446)。
+            'author': id == 'pmine' ? {'id': 'acc-1', 'handle': 'tester', 'displayName': 'テスター'} : {'id': 'acc-9', 'handle': 'alice', 'displayName': 'alice さん'},
             'visibility': 'swing',
             'replyTo': ?replyTo,
             'isReply': replyTo != null,
             'replyCount': swingNested[id]?.length ?? 0,
             'queues': [if (swingQueued.contains(id)) {'like': true, 'stickerId': 'like', 'count': 1, 'mine': true}],
           };
+      final del = RegExp(r'^DELETE /swings/([^/]+)$').firstMatch(route);
+      if (del != null) {
+        swingDeleted.add(del.group(1)!);
+        return http.Response('', 204);
+      }
       final t = RegExp(r'^(GET|PUT|DELETE) /posts/([^/]+)(/queue)?$').firstMatch(route);
       if (t != null) {
         final id = t.group(2)!;
@@ -1004,6 +1013,38 @@ void main() {
   /// 下の stick FOW (D-420) の矩形。
   Rect barRect(ProviderContainer c) => c.read(overlayManagerProvider).entries.firstWhere((e) => e.id == SwingBar.fowId).fow!.laidOut!;
 
+  testWidgets('自分の Swing を … の「削除」で消す (D-446): Swing ごと消し(DELETE /swings/{id})、ビューワーと自分の Swing から外す', (tester) async {
+    swingDeleted.clear();
+    swingThreadLog.clear();
+    final (mock, _, _, _) = central(const [], mine: [
+      {...swing('m1', 'acc-1', text: '消すもの', postId: 'pmine', age: const Duration(minutes: 30)), 'viewCount': 0, 'audience': {'followers': true, 'lists': []}},
+      {...swing('m2', 'acc-1', text: '残るもの', age: const Duration(minutes: 10)), 'viewCount': 0, 'audience': {'followers': true, 'lists': []}},
+    ]);
+    final c = await pumpApp(tester, mock);
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    SwingViewerScreen.displayDuration = const Duration(seconds: 30);
+    await c.read(mySwingsProvider.future);
+    c.read(routerProvider).push(Routes.mySwings);
+    await settle();
+    expect(find.text('消すもの'), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byKey(const ValueKey('swing.actions.m1')), matching: find.byKey(const ValueKey('overlay.action.more'))));
+    await settle();
+    await tester.tap(find.text('削除'));
+    await settle();
+    expect(find.text('Swing を削除'), findsOneWidget);
+    await tester.tap(find.text('削除する'));
+    await settle();
+    expect(swingDeleted, ['m1']);
+    expect(swingThreadLog.where((l) => l.startsWith('DELETE') && l.contains('pmine')), isEmpty, reason: '根の投稿だけを消すのではない');
+    expect(find.text('残るもの'), findsOneWidget, reason: '次の Swing へ');
+    expect([for (final s in c.read(mySwingsProvider).value!) s.id], ['m2']);
+  });
+
   testWidgets('上のアクション (D-445): 全画面表示のアクションバーと同じ丸いボタン(返信 / リブロード / キュー + …)。返信は下のコンポーザー、… に共有 / 保存は無し', (tester) async {
     swingThreadLog.clear();
     swingQueued.clear();
@@ -1039,6 +1080,15 @@ void main() {
     await tester.tap(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.rasq.reply'))));
     await settle();
     expect(find.byKey(const ValueKey('swing.bar.composer')), findsOneWidget, reason: '返信は下の FOW のコンポーザー');
+    // D-446: … →「アクションバーを編集」は RASQ アカウントのバー(全画面 = Swing / 投稿)。SNS のバーや加工画面のバーは出さない。
+    await tester.tap(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.more'))));
+    await settle();
+    await tester.tap(find.text('アクションバーを編集'));
+    await settle();
+    expect(find.byKey(const ValueKey('actionbar.account.rasq')), findsOneWidget);
+    expect(find.text('全画面アクションバー(Swing)'), findsOneWidget);
+    expect(find.text('投稿アクションバー'), findsOneWidget);
+    expect(find.text('加工画面のバー(画像)'), findsNothing);
   });
 
   testWidgets('下の stick FOW (D-420, 狭い画面): シークバー(時間の進み)+ 返信の欄 + 返信 N + キュー。返信の欄 → 返信先のタイル付きのコンポーザーに変わり Swing の面が縮む → 送ると戻る。返信 N でスレッド。広げている間は止める', (tester) async {

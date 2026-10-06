@@ -204,6 +204,9 @@ abstract final class SlotIds {
 /// 未審査の Swing のプラグイン (D-379) の登録元: `swing:<swingId>`。段は [SideloadTrust.swing](制限モード + GPU)。
 const swingSlotSourcePrefix = 'swing:';
 
+/// RASQ のページの自作プラグインの入れ物 (D-446): `rasqpage:<ページの id>`。
+const rasqPageSourcePrefix = 'rasqpage:';
+
 /// 未審査の Swing で配る入れ物の決まり (D-379): **子プラグイン(土台に足す子 / 同じ入れ物の 2 つめ)を持たない**、1 つだけ。
 /// 素の `.wasm` はそのまま(1 つ)。外れたら [StateError]。
 void checkSwingPackage(Uint8List data, {required ZstdDecompress decompress}) {
@@ -266,12 +269,15 @@ class PluginPageDecl {
   static const surfaceProfile = 'profile';
   static const surfaceSwing = 'swing';
 
+  /// ホスト用ページ (D-446): RASQ アカウントのページに置いた本人にだけ出るページ(管理 / 設定)。`profile` と一緒に宣言する。
+  static const surfaceProfileHost = 'profile.host';
+
   bool get isShared => mode == shared;
   /// その面を宣言しているか(astell は shared だけ)。`swing` は「Swing 向けに作った」の宣言で、配れるかどうかは [pageSwingBlockReason]。
   bool allows(String surface) => surfaces.contains(surface) && (surface != surfaceAstell || isShared);
 
   factory PluginPageDecl.fromJson(Map<String, Object?> j, {String fallbackTitle = ''}) {
-    final surfaces = [for (final s in (j['surfaces'] as List? ?? const [])) if (s is String && const {surfacePage, surfaceAstell, surfaceProfile, surfaceSwing}.contains(s)) s];
+    final surfaces = [for (final s in (j['surfaces'] as List? ?? const [])) if (s is String && const {surfacePage, surfaceAstell, surfaceProfile, surfaceSwing, surfaceProfileHost}.contains(s)) s];
     return PluginPageDecl(
       title: j['title'] as String? ?? fallbackTitle,
       icon: j['icon'] as String?,
@@ -594,6 +600,8 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       // 一覧が届く前 / 変わる途中に読んだ段は、登録のあとで [_reevaluateSideloadTrust] が確かめ直す。
       final ownFingerprints = ref.read(ownDevKeyFingerprintsProvider);
       final swing = source.startsWith(swingSlotSourcePrefix);
+      // RASQ のページの自作プラグイン (D-446): 持ち主が Central に上げたもの。持ち主の鍵の署名が無ければ制限モード。
+      final rasqPage = source.startsWith(rasqPageSourcePrefix);
       final sideloadTrust = isReviewedSlotSource(source)
           ? SideloadTrust.restricted
           : swing
@@ -627,6 +635,10 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
       if (swing && (manifest.slots.length != 1 || manifest.page == null || !manifest.page!.allows(PluginPageDecl.surfaceSwing))) {
         runtime.dispose();
         throw StateError('Swing で配れるのは、Swing の面(surfaces: swing、solo)のページ型だけです');
+      }
+      if (rasqPage && (manifest.page == null || !manifest.page!.allows(PluginPageDecl.surfaceProfile) || manifest.page!.isShared)) {
+        runtime.dispose();
+        throw StateError('RASQ のページに置けるのは、プロフィールの面(surfaces: profile、solo)のページ型だけです');
       }
       // 配布物の目次が言う id と、wasm 自身が名乗る id が同じこと(別のプラグインを入れ物に紛れ込ませない)。
       if (expectedId != null && manifest.id != expectedId) {

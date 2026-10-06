@@ -279,9 +279,16 @@ String? accountKeyOfConfigKey(String configKey) {
 }
 
 /// 土台が SNS のアクションではなく、アプリ内蔵のもののバー(加工画面 / RASQ の投稿 / AsTell のルームの下段 D-324)。
-bool isBuiltinConfigKey(String configKey) => isEditorConfigKey(configKey) || configKey == rasqPostConfigKey || configKey == astellBarConfigKey;
+/// RASQ の全画面アクションバー (D-446): Swing のビューワーの上のボタン。SNS の全画面アクションバーと同じ扱いで、土台は RASQ の投稿と同じ
+/// 内蔵のアクション(並び / バンドル / プラグインのボタンは投稿のバーと別に持つ)。
+const rasqViewerConfigKey = 'rasq:viewer';
+
+/// RASQ のバーか(投稿 / 全画面)。
+bool isRasqConfigKey(String configKey) => configKey == rasqPostConfigKey || configKey == rasqViewerConfigKey;
+
+bool isBuiltinConfigKey(String configKey) => isEditorConfigKey(configKey) || isRasqConfigKey(configKey) || configKey == astellBarConfigKey;
 List<ActionDescriptor> builtinActionsFor(String configKey) => switch (configKey) {
-      rasqPostConfigKey => rasqPostBuiltinActions,
+      rasqPostConfigKey || rasqViewerConfigKey => rasqPostBuiltinActions,
       astellBarConfigKey => astellBarBuiltinActions,
       _ => editorBuiltinActionsFor(configKey),
     };
@@ -289,7 +296,7 @@ List<ActionDescriptor> builtinActionsFor(String configKey) => switch (configKey)
 String editorConfigKeyFor(String mimeType) => mimeType.startsWith('image/') ? editorImageConfigKey : editorVideoConfigKey;
 
 /// プラグインボタンの有効 / 無効と閾値の置き場: 加工画面は `slots.editor`、AsTell の下段は `slots.astell`、ほかはアカウントごと。
-String slotSettingsKeyFor(String configKey, String accountKey) => isEditorConfigKey(configKey) ? 'editor' : (configKey == rasqPostConfigKey ? 'rasq' : (configKey == astellBarConfigKey ? 'astell' : accountKey));
+String slotSettingsKeyFor(String configKey, String accountKey) => isEditorConfigKey(configKey) ? 'editor' : (isRasqConfigKey(configKey) ? 'rasq' : (configKey == astellBarConfigKey ? 'astell' : accountKey));
 
 /// 宣言が無い `composer.media` プラグインのボタン(プラグイン名 + パズルのアイコン、画像だけ)。
 const mediaEditDefaultActionId = 'composer.media';

@@ -143,6 +143,15 @@ class _RasqMfmTransformState extends State<RasqMfmTransform> with SingleTickerPr
         return Transform.flip(flipX: h, flipY: v, child: child);
       case 'center':
         return Align(alignment: Alignment.center, child: child);
+      // ルビ (D-446: RASQ の Markdown ページの `<ruby>本<rt>ほん</rt></ruby>`)。読みを小さく上に。
+      case 'ruby':
+        final rt = '${args['rt'] ?? ''}';
+        if (rt.isEmpty) return child;
+        final base = DefaultTextStyle.of(context).style;
+        return Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(rt, style: base.copyWith(fontSize: (base.fontSize ?? 15) * 0.5, height: 1)),
+          child,
+        ]);
       // Markdown ブロック(MFM の > 引用 / ```コード```)。parser が transform
       // スパンとして持ち込む(rsl-span の fn は自由文字列)。
       case 'quote':

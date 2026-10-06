@@ -517,6 +517,44 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     _queueBarSync();
   }
 
+  /// 自分の Swing を消す (D-446、… の「削除」): 確かめてから Central で消し、手元のフィード / 自分の Swing / この並びから外す。
+  /// 残りが無ければ閉じる。
+  Future<void> _delete(Swing s) async {
+    _hold('delete', true);
+    final manager = ref.read(overlayManagerProvider);
+    final ok = await manager.showAlert(id: 'swing.delete', title: 'Swing を削除', message: 'この Swing と、付いている返信を削除します。元に戻せません。', confirmText: '削除する', cancelText: 'キャンセル', destructive: true);
+    if (!mounted) return;
+    _hold('delete', false);
+    if (!ok) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    try {
+      await deleteSwing(ref, s.id);
+    } catch (e) {
+      messenger?.showSnackBar(SnackBar(content: Text('削除できませんでした: $e')));
+      return;
+    }
+    if (!mounted) return;
+    messenger?.showSnackBar(const SnackBar(content: Text('Swing を削除しました')));
+    final i = _items.indexWhere((x) => x.swing?.id == s.id);
+    if (i < 0) return;
+    _items.removeAt(i);
+    // 広告だけが残る / 何も残らない → 閉じる。
+    if (!_items.any((x) => x.swing != null)) {
+      _closed = true;
+      return _close();
+    }
+    setState(() {
+      if (i < _index || _index >= _items.length) _index = (_index - 1).clamp(0, _items.length - 1);
+    });
+    if (_pages.hasClients) {
+      _suppressPage = true;
+      _pages.jumpToPage(_index);
+      _suppressPage = false;
+    }
+    _startClock();
+    _queueBarSync();
+  }
+
   /// 離れた広告を並びから外す(スクロールが止まってから。前の Swing に戻るときに出さない、D-445)。
   void _dropLeftAd() {
     final r = _leftAd;
@@ -622,7 +660,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                     onReport: widget.mine || ref.watch(swingApiProvider) == null ? null : () => _report(s),
                     viewCount: widget.mine ? s.viewCount : null,
                     // 上のアクション (D-445): 全画面表示のアクションバーと同じボタン。返信は下の FOW のコンポーザーへ。
-                    actions: s.postId == null || ref.watch(rasqAccountPageApiProvider) == null ? null : _SwingHeaderActions(key: ValueKey('swing.actions.${s.id}'), postId: s.postId!, onReply: () => _bar.compose()),
+                    actions: s.postId == null || ref.watch(rasqAccountPageApiProvider) == null ? null : _SwingHeaderActions(key: ValueKey('swing.actions.${s.id}'), postId: s.postId!, onReply: () => _bar.compose(), onDelete: () => _delete(s)),
                     clock: _clock,
                     position: '${i + 1} / ${_items.length}',
                     onClose: _close,
@@ -773,15 +811,16 @@ class _SwingPage extends StatelessWidget {
 
 /// Swing の上のアクション (D-445): Swing のスレッドの根の投稿に、全画面表示のアクションバーと同じボタン(…に共有 / 保存は無し)。
 class _SwingHeaderActions extends ConsumerWidget {
-  const _SwingHeaderActions({super.key, required this.postId, required this.onReply});
+  const _SwingHeaderActions({super.key, required this.postId, required this.onReply, required this.onDelete});
   final String postId;
   final VoidCallback onReply;
+  final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final post = ref.watch(rasqThreadProvider(postId)).value?.post;
     if (post == null) return const SizedBox.shrink();
-    return RasqPostOverlayActions(post: post, onReply: onReply, onChanged: () => ref.invalidate(rasqThreadProvider(postId)));
+    return RasqPostOverlayActions(post: post, onReply: onReply, onDelete: onDelete, onChanged: () => ref.invalidate(rasqThreadProvider(postId)));
   }
 }
 
