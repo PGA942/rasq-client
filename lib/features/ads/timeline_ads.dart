@@ -46,6 +46,14 @@ List<Widget> withTimelineAds(WidgetRef ref, List<Post> posts, List<Widget> rows,
   ];
 }
 
+/// Swing の広告の枠に出すサーバーの広告 (D-448: AdMob の無いデスクトップ)。今日出してよいもの、形は問わない(縦長の枠に収める)。
+final swingServerAdsProvider = FutureProvider<List<ServerAd>>((ref) async {
+  final session = ref.watch(currentSnsSessionProvider);
+  if (session == null) return const [];
+  final today = DateTime.now().weekday;
+  return [for (final a in await session.serverAds()) if (a.ratio > 0 && a.showsOn(today)) a];
+});
+
 /// いまの SNS のサーバーの広告(今日出してよいもの、横長だけ)。
 final serverAdsProvider = FutureProvider<List<ServerAd>>((ref) async {
   final session = ref.watch(currentSnsSessionProvider);
@@ -106,9 +114,12 @@ class TimelineAdSlot extends ConsumerWidget {
 /// サーバーの広告(画像 + 「広告」の印 + 「…」)。押すと外のブラウザで開く。読めなければ何も出さない。
 /// 「…」(D-445) = 「表示頻度を下げる」。
 class ServerAdBanner extends ConsumerWidget {
-  const ServerAdBanner({super.key, required this.ad, this.host});
+  const ServerAdBanner({super.key, required this.ad, this.host, this.maxHeight});
   final ServerAd ad;
   final String? host;
+
+  /// 画像の高さの上限(null = 形で決める。Swing の縦長の枠では画面の 70%、D-448)。
+  final double? maxHeight;
 
   Future<void> _menu(BuildContext context, WidgetRef ref, Rect anchor) async {
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'serverAd.menu', anchor: anchor, dense: true, items: [
@@ -152,7 +163,7 @@ class ServerAdBanner extends ConsumerWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: ad.place == 'horizontal-big' ? 240 : 120, maxWidth: 600),
+                constraints: BoxConstraints(maxHeight: maxHeight ?? (ad.place == 'horizontal-big' ? 240 : 120), maxWidth: 600),
                 child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, ad.imageUrl.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => const SizedBox.shrink()),
               ),
             ),
