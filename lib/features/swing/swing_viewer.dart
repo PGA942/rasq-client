@@ -12,13 +12,14 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
-import '../../app/providers.dart' show overlayManagerProvider;
+import '../../app/providers.dart' show currentSnsSessionProvider, overlayManagerProvider;
 import '../../app/router.dart';
 import '../../shell/column_layout.dart' show swingInColumnProvider;
 import '../../shell/column_takeover.dart' show takeoverColumnOf;
 import '../../shell/third_column.dart' show openPageInPanes, paneBack;
 import '../ads/export_ad.dart';
-import '../ads/timeline_ads.dart' show timelineAdsOn;
+import '../ads/timeline_ads.dart' show ServerAdBanner, mutedServerAdKey, mutedServerAdsProvider, pickServerAd, swingServerAdsProvider, timelineAdsOn;
+import '../../backend/rasq_account.dart' show orgateAccountProvider;
 import '../vc/astell_models.dart' show astellReportReasons;
 import '../custom/custom_page.dart';
 import '../media/fow_avoid.dart';
@@ -146,6 +147,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   // ── 広告 (D-445) ──
   bool _adsOn = false;
+
+  /// AdMob が無い(デスクトップ): サーバーの広告だけで埋める (D-448)。
+  bool _serverAdsOnly = false;
 
   /// 次の広告までのスワイプの数(1 以下なら、着いた Swing の次に置く)。
   int _adCountdown = 0;
@@ -384,7 +388,16 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
         ? ([...?ref.read(mySwingsProvider).value]..sort((a, b) => a.createdAt.compareTo(b.createdAt)))
         : swingViewerQueue(ref.read(swingFeedProvider).value ?? const [], startAuthor: widget.startAuthor);
     _items = [for (final s in feed) SwingViewerItem.swing(s)];
-    _adsOn = !widget.mine && ref.read(exportAdNetworkProvider) != null && ref.read(exportAdAllowedProvider);
+    // AdMob の無い端末(デスクトップ)では、いまの SNS のサーバーの広告で埋める (D-448。無ければ挟まない)。
+    _serverAdsOnly = ref.read(exportAdNetworkProvider) == null;
+    _adsOn = !widget.mine && ref.read(exportAdAllowedProvider);
+    if (_adsOn && _serverAdsOnly) {
+      // 読み終わったら、いま着いている Swing の次に置けるか決め直す(開いた直後はまだ読めていない)。
+      ref.listenManual(swingServerAdsProvider, (_, next) {
+        if (!mounted || !next.hasValue) return;
+        setState(() => _planAd(_index));
+      }, fireImmediately: false);
+    }
     // しばらく見ていなかったら、最初の Swing から移るところで必ず (D-445)。
     final last = SwingViewerScreen.lastViewedAt;
     final forced = last == null || SwingViewerScreen.now().difference(last) >= SwingViewerScreen.adForceAfter;
@@ -481,6 +494,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   /// 着いた Swing [i] の次に広告を置くか決める (D-445)。置いたら全画面の広告を読んでおく。
   void _planAd(int i) {
     if (!_adsOn || _adCountdown > 1 || i < 0 || i + 1 >= _items.length) return;
+    // サーバーの広告で埋めるとき、出せるものが無ければ挟まない。
+    if (_serverAdsOnly && (ref.read(swingServerAdsProvider).value ?? const []).isEmpty) return;
+    if (_items[i + 1].ad) return;
     final cur = _items[i].swing;
     final next = _items[i + 1].swing;
     // 両隣が危なくないところだけ。危なければ次の Swing で試す(数は 1 のまま)。
@@ -599,6 +615,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   Widget build(BuildContext context) {
     // RASQ アカウントの読み口が変わったら、返信の欄を出し直す。
     ref.listen(rasqAccountPageApiProvider, (_, _) => _queueBarSync());
+    // いまの Swing のスレッドが読めた / 読めなかった(根の投稿が消えた Swing)で、下の FOW を出し直す (D-448)。
+    if (_current?.postId case final id?) ref.listen(rasqThreadProvider(id), (_, _) => _queueBarSync());
     return Theme(
       data: RasqTheme.dark(),
       child: Scaffold(
@@ -642,6 +660,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                     return _AdPage(
                       key: item.key,
                       active: i == _index,
+                      serverAdsOnly: _serverAdsOnly,
+                      serial: item.serial,
                       fullscreen: _fullscreenReady,
                       onClose: _close,
                       onDone: () {
@@ -660,7 +680,13 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                     onReport: widget.mine || ref.watch(swingApiProvider) == null ? null : () => _report(s),
                     viewCount: widget.mine ? s.viewCount : null,
                     // 上のアクション (D-445): 全画面表示のアクションバーと同じボタン。返信は下の FOW のコンポーザーへ。
-                    actions: s.postId == null || ref.watch(rasqAccountPageApiProvider) == null ? null : _SwingHeaderActions(key: ValueKey('swing.actions.${s.id}'), postId: s.postId!, onReply: () => _bar.compose(), onDelete: () => _delete(s)),
+                    actions: s.postId == null || ref.watch(rasqAccountPageApiProvider) == null ? null : _SwingHeaderActions(
+                            key: ValueKey('swing.actions.${s.id}'),
+                            postId: s.postId!,
+                            mine: widget.mine || s.authorAccountId == ref.watch(orgateAccountProvider).value?.id,
+                            onReply: () => _bar.compose(),
+                            onDelete: () => _delete(s),
+                          ),
                     clock: _clock,
                     position: '${i + 1} / ${_items.length}',
                     onClose: _close,
@@ -683,7 +709,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   Swing? get _current => _index < _items.length ? _items[_index].swing : null;
 
   /// 返信(下の FOW の返信の欄・返信 N・キュー)を出すか。全画面で動いているプラグイン・覆っている Swing・根の無い Swing には出さない。
-  bool _replyShown(Swing s) => s.postId != null && !_locked && !_coveredNow(s) && ref.read(rasqAccountPageApiProvider) != null;
+  /// D-448: スレッドの根の投稿が読めない(消えた)Swing にも出さない。
+  bool _replyShown(Swing s) => s.postId != null && !_locked && !_coveredNow(s) && ref.read(rasqAccountPageApiProvider) != null && !ref.read(rasqThreadProvider(s.postId!)).hasError;
 }
 
 String swingRemainingLabel(Duration d) {
@@ -766,9 +793,9 @@ class _SwingPage extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, 0, RasqSpacing.lg),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-              Row(children: [
+              LayoutBuilder(builder: (context, box) => Row(children: [
                 RasqAvatar(imageUrl: swing.author.avatarUrl, size: 32, fallbackLabel: swing.author.displayName),
                 const SizedBox(width: RasqSpacing.sm),
                 Expanded(
@@ -783,11 +810,16 @@ class _SwingPage extends StatelessWidget {
                       ]),
                   ]),
                 ),
-                // アクション (D-445 → D-447): × の左に(閉じる / 通報の手前)。狭ければ横に送る。既定は空(編集で足す)。
-                if (actions case final a?) Flexible(flex: 2, child: SingleChildScrollView(scrollDirection: Axis.horizontal, reverse: true, child: a)),
+                // アクション (D-445 → D-448): × と一緒にカラムの右端へ寄せ、× のすぐ左に詰める(名前が残りを使う)。幅は行の 60% まで、
+                // 狭ければ横に送る。既定は空(編集で足す)。
+                if (actions case final a?)
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: box.maxWidth * 0.6),
+                    child: SingleChildScrollView(scrollDirection: Axis.horizontal, reverse: true, child: a),
+                  ),
                 if (onReport != null) RasqIconButton(key: const ValueKey('swing.report'), icon: Icons.flag_outlined, tooltip: '通報', color: Colors.white, onPressed: onReport),
                 RasqIconButton(key: const ValueKey('swing.close'), icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: onClose),
-              ]),
+              ])),
               ]),
             ),
           ),
@@ -807,15 +839,40 @@ class _SwingPage extends StatelessWidget {
 
 /// Swing の上のアクション (D-445): Swing のスレッドの根の投稿に、全画面表示のアクションバーと同じボタン(…に共有 / 保存は無し)。
 class _SwingHeaderActions extends ConsumerWidget {
-  const _SwingHeaderActions({super.key, required this.postId, required this.onReply, required this.onDelete});
+  const _SwingHeaderActions({super.key, required this.postId, required this.onReply, required this.onDelete, this.mine = false});
   final String postId;
   final VoidCallback onReply;
   final Future<void> Function() onDelete;
 
+  /// 自分の Swing(根の投稿が消えていても … で消せる、D-448)。
+  final bool mine;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final post = ref.watch(rasqThreadProvider(postId)).value?.post;
-    if (post == null) return const SizedBox.shrink();
+    final thread = ref.watch(rasqThreadProvider(postId));
+    final post = thread.value?.post;
+    if (post == null) {
+      // 根の投稿が読めない(前の版の … の「削除」で投稿だけ消えた Swing など、D-448): 自分のものなら … から Swing を消せるように。
+      if (!thread.hasError || !mine) return const SizedBox.shrink();
+      return Builder(
+        builder: (bctx) => DecoratedBox(
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
+          child: RasqIconButton(
+            key: const ValueKey('overlay.action.more'),
+            icon: Icons.more_horiz,
+            color: Colors.white,
+            tooltip: 'メニュー',
+            onPressed: () async {
+              final box = bctx.findRenderObject() as RenderBox;
+              final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'swing.orphan.menu', anchor: box.localToGlobal(Offset.zero) & box.size, dense: true, items: const [
+                RasqDropdownItem('削除', 'delete', destructive: true),
+              ]);
+              if (pick == 'delete') await onDelete();
+            },
+          ),
+        ),
+      );
+    }
     return RasqPostOverlayActions(post: post, onReply: onReply, onDelete: onDelete, onChanged: () => ref.invalidate(rasqThreadProvider(postId)));
   }
 }
@@ -1190,8 +1247,14 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
 /// 動画の広告を出し、閉じたら [onDone](次の Swing へ)。全画面の広告が無ければ、縦長のバナー(高さの 70% まで)。
 /// バナーも読めなければ [onDone]。
 class _AdPage extends ConsumerStatefulWidget {
-  const _AdPage({super.key, required this.active, required this.onClose, required this.onDone, this.fullscreen});
+  const _AdPage({super.key, required this.active, required this.onClose, required this.onDone, this.fullscreen, this.serverAdsOnly = false, this.serial = 0});
   final bool active;
+
+  /// AdMob の無い端末: サーバーの広告(Misskey の `meta.ads`)を縦長の枠に (D-448)。
+  final bool serverAdsOnly;
+
+  /// 何番目の広告か(サーバーの広告を選ぶ)。
+  final int serial;
   final Future<bool>? fullscreen;
   final VoidCallback onClose;
   final VoidCallback onDone;
@@ -1220,6 +1283,10 @@ class _AdPageState extends ConsumerState<_AdPage> {
   Future<void> _start() async {
     if (_started || !mounted) return;
     _started = true;
+    if (widget.serverAdsOnly) {
+      setState(() => _banner = true);
+      return;
+    }
     final ready = await (widget.fullscreen ?? Future.value(false)).timeout(const Duration(milliseconds: 1500), onTimeout: () => false);
     if (!mounted) return;
     if (ready && await ref.read(exportAdSdkProvider).showFullscreen()) {
@@ -1227,6 +1294,20 @@ class _AdPageState extends ConsumerState<_AdPage> {
       return;
     }
     if (mounted) setState(() => _banner = true);
+  }
+
+  /// サーバーの広告 (D-448)。選べなければ次の Swing へ。
+  Widget _serverAd(BuildContext context, double maxHeight) {
+    final host = ref.watch(currentSnsSessionProvider)?.account.instance;
+    final muted = ref.watch(mutedServerAdsProvider);
+    final ad = pickServerAd(ref.watch(swingServerAdsProvider).value ?? const [], widget.serial, muted: (a) => muted.contains(mutedServerAdKey(host, a)));
+    if (ad == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onDone();
+      });
+      return const SizedBox.shrink();
+    }
+    return ServerAdBanner(key: const ValueKey('swing.ad.server'), ad: ad, host: host, maxHeight: maxHeight);
   }
 
   @override
@@ -1246,7 +1327,10 @@ class _AdPageState extends ConsumerState<_AdPage> {
         LayoutBuilder(
           builder: (context, c) => Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              ExportAdSlot(key: const ValueKey('swing.ad.banner'), onDark: true, maxHeight: c.maxHeight * SwingViewerScreen.adBannerHeightFactor, onFailed: widget.onDone),
+              if (widget.serverAdsOnly)
+                _serverAd(context, c.maxHeight * SwingViewerScreen.adBannerHeightFactor)
+              else
+                ExportAdSlot(key: const ValueKey('swing.ad.banner'), onDark: true, maxHeight: c.maxHeight * SwingViewerScreen.adBannerHeightFactor, onFailed: widget.onDone),
               const SizedBox(height: RasqSpacing.md),
               Text('スワイプで次の Swing へ', style: RasqTypography.caption.copyWith(color: Colors.white54)),
             ]),

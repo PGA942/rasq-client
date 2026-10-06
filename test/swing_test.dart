@@ -20,6 +20,7 @@ import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/ads/export_ad.dart';
+import 'package:rasq_client/features/ads/timeline_ads.dart' show swingServerAdsProvider;
 import 'package:rasq_client/features/home/home_header.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart' show astellCreateFowId;
 import 'package:rasq_client/features/settings/settings_dsl.dart';
@@ -238,6 +239,8 @@ void main() {
       final t = RegExp(r'^(GET|PUT|DELETE) /posts/([^/]+)(/queue)?$').firstMatch(route);
       if (t != null) {
         final id = t.group(2)!;
+        // `pgone` = 根の投稿が消えた Swing (D-448)。
+        if (id == 'pgone') return json({'error': {'code': 'not_found', 'message': 'no such post'}}, 404);
         swingThreadLog.add('${t.group(1)} ${t.group(3) ?? ''} $id'.replaceAll('  ', ' '));
         if (t.group(1) == 'PUT') swingQueued.add(id);
         if (t.group(1) == 'DELETE') {
@@ -1045,6 +1048,55 @@ void main() {
     expect(swingThreadLog.where((l) => l.startsWith('DELETE') && l.contains('pmine')), isEmpty, reason: '根の投稿だけを消すのではない');
     expect(find.text('残るもの'), findsOneWidget, reason: '次の Swing へ');
     expect([for (final s in c.read(mySwingsProvider).value!) s.id], ['m2']);
+  });
+
+  testWidgets('根の投稿が消えた自分の Swing (D-448): 上は … だけ(削除できる)、下の FOW に返信の欄を出さない', (tester) async {
+    swingDeleted.clear();
+    final (mock, _, _, _) = central(const [], mine: [
+      {...swing('g1', 'acc-1', text: '投稿が消えた', cw: 'ネタバレ', postId: 'pgone', age: const Duration(minutes: 30)), 'viewCount': 0, 'audience': {'followers': true, 'lists': []}},
+      {...swing('g2', 'acc-1', text: 'ふつう', age: const Duration(minutes: 10)), 'viewCount': 0, 'audience': {'followers': true, 'lists': []}},
+    ]);
+    final c = await pumpApp(tester, mock);
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    await c.read(mySwingsProvider.future);
+    c.read(routerProvider).push(Routes.mySwings);
+    await settle();
+    await tester.tap(find.text('表示する'));
+    await settle();
+    final bar = find.byKey(const ValueKey('swing.actions.g1'));
+    expect(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.more'))), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.reply.stick')), findsNothing, reason: 'スレッドが無いので返信の欄は出さない');
+    await tester.tap(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.more'))));
+    await settle();
+    await tester.tap(find.text('削除'));
+    await settle();
+    await tester.tap(find.text('削除する'));
+    await settle();
+    expect(swingDeleted, ['g1']);
+    expect(find.text('ふつう'), findsOneWidget);
+  });
+
+  testWidgets('デスクトップの Swing の広告 (D-448): AdMob が無ければ、いまの SNS のサーバーの広告を縦長の枠に', (tester) async {
+    SwingViewerScreen.lastViewedAt = null;
+    final ad = ServerAd(id: 'm1', url: Uri.parse('https://shop.example/'), imageUrl: Uri.parse('https://misskey.test/ad.png'));
+    final (mock, _, _, _) = central([for (var i = 0; i < 3; i++) swing('s$i', 'u$i', text: 'Swing $i', age: Duration(minutes: 60 - i))]);
+    final c = await pumpApp(tester, mock, extra: [
+      exportAdAllowedProvider.overrideWithValue(true),
+      swingServerAdsProvider.overrideWith((ref) async => [ad]),
+    ]);
+    await c.read(swingServerAdsProvider.future);
+    c.read(routerProvider).push(Routes.swing());
+    await tester.pumpAndSettle();
+    expect(find.text('Swing 2'), findsOneWidget);
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('swing.ad.server')), findsOneWidget);
+    expect(find.byKey(const ValueKey('serverAd.m1.more')), findsOneWidget, reason: '「…」(表示頻度を下げる)も');
   });
 
   testWidgets('上のアクション (D-445 / D-447): × の左に、全画面表示のアクションバーと同じ丸いボタン(既定は空、足すと返信 / リブロード / キュー)+ …。返信は下のコンポーザー、… に共有 / 保存は無し', (tester) async {
