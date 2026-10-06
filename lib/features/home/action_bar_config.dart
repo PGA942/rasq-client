@@ -152,10 +152,18 @@ class ActionBarConfigStore extends Notifier<ActionBarConfig> {
 
   static String viewerKey(String accountKey) => 'viewer:$accountKey';
 
+  /// 保存が無いときの構成 (D-447): RASQ の全画面アクションバー(Swing の上、`rasq:viewer`)は**何も入っていない**(編集の (+) で足す)。
+  /// SNS のバー(投稿 / 全画面)では Misskey の「お気に入り」(☆)を初めは外しておく。
+  static ActionBarConfig defaultFor(String arg) => switch (arg) {
+        'rasq:viewer' => const ActionBarConfig(hidden: {'rasq.reply', 'rasq.rebroad', 'rasq.queue'}),
+        _ when arg.startsWith('editor:') || arg.startsWith('astell:') || arg.startsWith('rasq:') => const ActionBarConfig(),
+        _ => const ActionBarConfig(hidden: {'favorite'}),
+      };
+
   @override
   ActionBarConfig build() {
     _restore();
-    return const ActionBarConfig();
+    return defaultFor(arg);
   }
 
   Future<void> _restore() async {
@@ -175,7 +183,7 @@ class ActionBarConfigStore extends Notifier<ActionBarConfig> {
     ref.read(sessionStorageProvider).write(_key, jsonEncode(next.toJson()));
   }
 
-  void reset() => set(const ActionBarConfig());
+  void reset() => set(defaultFor(arg));
 }
 
 /// アカウント(`AccountId.key`)ごとの構成。'' は旧来の共通構成。

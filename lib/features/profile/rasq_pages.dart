@@ -14,6 +14,7 @@ import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
+import '../../backend/rasq_account.dart' show orgateAccountProvider;
 import '../../text/inline_spans.dart';
 import '../settings/settings_dsl.dart';
 
@@ -112,6 +113,15 @@ class RasqPagesApi {
   /// 入れ物を取る(訪れた人も)。
   Future<Uint8List> sideloadPackage(String handle, String id) => _c.getBytes('/accounts/${_h(handle)}/sideload-pages/${Uri.encodeComponent(id)}/package');
 
+  /// 上げたページの画像(新しい順、`GET /me/md-pages/images`)。
+  Future<List<({String id, Uri url, DateTime? createdAt})>> images() async => [
+        for (final x in await _c.getList('/me/md-pages/images'))
+          if (x is Map && x['url'] is String && Uri.tryParse(x['url'] as String) != null)
+            (id: '${x['id']}', url: Uri.parse(x['url'] as String), createdAt: DateTime.tryParse('${x['createdAt'] ?? ''}')),
+      ];
+
+  Future<void> deleteImage(String id) => _c.delete('/me/md-pages/images/${Uri.encodeComponent(id)}');
+
   /// ページに貼る画像を上げる(`POST /me/md-pages/images`、S-086。100 枚まで)。返り = 画像の URL(匿名で読める)。
   Future<Uri> uploadImage(List<int> bytes, String contentType) async {
     final j = await _c.postBytes('/me/md-pages/images', bytes, contentType: contentType);
@@ -194,6 +204,45 @@ String newRasqPageId() {
   // uuid v4 の形(Central は uuid を受ける)。
   final h = '$t$r'.padRight(32, '0').substring(0, 32);
   return '${h.substring(0, 8)}-${h.substring(8, 12)}-4${h.substring(13, 16)}-a${h.substring(17, 20)}-${h.substring(20, 32)}';
+}
+
+// ── 使わなくなった画像の片付け (D-447) ───────────────────────────────
+
+/// 上げてから片付けまでの猶予(ほかの端末の下書きが使っているかもしれないので、すぐには消さない)。
+const rasqPageImageGrace = Duration(days: 3);
+
+/// 使わなくなったページの画像を消す (D-447): 公開したページ(全部)とこの端末の下書きのどれにも貼っていない画像のうち、上げてから
+/// [rasqPageImageGrace] 過ぎたもの。公開 / 削除のあとに裏で呼ぶ(失敗しても黙って次の機会に)。返り = 消した数。
+Future<int> cleanupRasqPageImages(RasqPagesApi api, {required String handle, required Iterable<String> draftBodies, DateTime? now}) async {
+  final images = await api.images();
+  if (images.isEmpty) return 0;
+  final bodies = [...draftBodies];
+  for (final p in await api.mdPages(handle)) {
+    bodies.add((await api.mdPage(handle, p.id)).body);
+  }
+  final text = bodies.join('\n');
+  final at = now ?? DateTime.now();
+  var n = 0;
+  for (final img in images) {
+    final used = text.contains(img.url.toString()) || text.contains('/profile-images/${img.id}');
+    final old = img.createdAt == null || at.difference(img.createdAt!) >= rasqPageImageGrace;
+    if (used || !old) continue;
+    await api.deleteImage(img.id);
+    n++;
+  }
+  return n;
+}
+
+/// 公開 / 削除のあとに裏で片付ける。
+void scheduleRasqPageImageCleanup(WidgetRef ref) {
+  final api = ref.read(rasqPagesApiProvider);
+  final handle = ref.read(orgateAccountProvider).value?.handle;
+  if (api == null || handle == null) return;
+  final drafts = [for (final d in ref.read(rasqPageDraftsProvider).values) d.body];
+  unawaited(cleanupRasqPageImages(api, handle: handle, draftBodies: drafts).catchError((Object e) {
+    debugPrint('rasq pages: image cleanup: $e');
+    return 0;
+  }));
 }
 
 // ── Markdown の表示 ──────────────────────────────────────────────────
@@ -442,6 +491,7 @@ class _RasqMdPageEditorScreenState extends ConsumerState<RasqMdPageEditorScreen>
       await dropRasqPageDraft(ref, widget.id);
       ref.invalidate(rasqMdPagesProvider);
       ref.invalidate(rasqMdPageProvider);
+      scheduleRasqPageImageCleanup(ref);
       messenger?.showSnackBar(const SnackBar(content: Text('公開しました')));
       if (mounted) Navigator.of(context).maybePop();
     } catch (e) {
@@ -467,6 +517,7 @@ class _RasqMdPageEditorScreenState extends ConsumerState<RasqMdPageEditorScreen>
       _save?.cancel();
       await dropRasqPageDraft(ref, widget.id);
       ref.invalidate(rasqMdPagesProvider);
+      scheduleRasqPageImageCleanup(ref);
       if (mounted) Navigator.of(context).maybePop();
     } catch (e) {
       messenger?.showSnackBar(SnackBar(content: Text('削除できませんでした: $e')));

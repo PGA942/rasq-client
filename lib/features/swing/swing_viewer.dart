@@ -779,19 +779,15 @@ class _SwingPage extends StatelessWidget {
                       Row(key: const ValueKey('swing.viewCount'), mainAxisSize: MainAxisSize.min, children: [
                         const Icon(Icons.visibility_outlined, size: 14, color: Colors.white70),
                         const SizedBox(width: 4),
-                        Text('見た人 $viewCount 人', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+                        Flexible(child: Text('見た人 $viewCount 人', maxLines: 1, overflow: TextOverflow.ellipsis, style: RasqTypography.caption.copyWith(color: Colors.white70))),
                       ]),
                   ]),
                 ),
+                // アクション (D-445 → D-447): × の左に(閉じる / 通報の手前)。狭ければ横に送る。既定は空(編集で足す)。
+                if (actions case final a?) Flexible(flex: 2, child: SingleChildScrollView(scrollDirection: Axis.horizontal, reverse: true, child: a)),
                 if (onReport != null) RasqIconButton(key: const ValueKey('swing.report'), icon: Icons.flag_outlined, tooltip: '通報', color: Colors.white, onPressed: onReport),
                 RasqIconButton(key: const ValueKey('swing.close'), icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: onClose),
               ]),
-              // アクション (D-445): 作った人の行の下に、右へ寄せて(狭ければ横に送る)。
-              if (actions case final a?)
-                Padding(
-                  padding: const EdgeInsets.only(top: RasqSpacing.xs, right: RasqSpacing.sm),
-                  child: Align(alignment: Alignment.centerRight, child: SingleChildScrollView(scrollDirection: Axis.horizontal, reverse: true, child: a)),
-                ),
               ]),
             ),
           ),
