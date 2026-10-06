@@ -135,13 +135,11 @@ void main() {
       expect(Swing.tryParse({'id': 'x', 'kind': 'story', 'author': {}}), isNull);
       // alice のいちばん新しいもの(5 分前)が bob(20 分前)より新しい → alice が先、alice の中は古い順。
       expect([for (final s in orderForViewer([b1, a2, a1])) s.id], ['a1', 'a2', 'b1']);
-      final six = [for (var i = 0; i < 6; i++) Swing.tryParse(swing('s$i', 'u$i'))!];
-      expect([for (final x in interleaveAds(six, ads: true)) x.ad ? 'ad' : x.swing!.id], ['s0', 's1', 's2', 's3', 's4', 'ad', 's5']);
-      expect(interleaveAds(six.take(5).toList(), ads: true).any((x) => x.ad), isFalse, reason: '最後には付けない');
-      expect(interleaveAds(six, ads: false).any((x) => x.ad), isFalse);
-      // D-395: adSafe でない Swing の前後には置かない(次の安全な所へずらす)。
-      final mixed = [for (var i = 0; i < 8; i++) Swing.tryParse(swing('s$i', 'u$i', adSafe: i != 5))!];
-      expect([for (final x in interleaveAds(mixed, ads: true)) x.ad ? 'ad' : x.swing!.id], ['s0', 's1', 's2', 's3', 's4', 's5', 's6', 'ad', 's7']);
+      // D-395 / D-445: 広告の隣に置けるのは、adSafe で CW もセンシティブも無い Swing だけ。
+      expect(swingAdNeighborSafe(Swing.tryParse(swing('s0', 'u0'))!), isTrue);
+      expect(swingAdNeighborSafe(Swing.tryParse(swing('s1', 'u1', adSafe: false))!), isFalse);
+      expect(swingAdNeighborSafe(Swing.tryParse(swing('s2', 'u2', cw: 'ネタバレ'))!), isFalse);
+      expect(swingAdNeighborSafe(Swing.tryParse(swing('s3', 'u3', sensitive: true))!), isFalse);
       expect(swingMediaMimeFor('a.PNG'), 'image/png');
       expect(swingMediaMimeFor('a.mov'), 'video/quicktime');
       expect(swingMediaMimeFor('a.mp3'), isNull);
@@ -411,7 +409,8 @@ void main() {
     expect(arrival, findsNothing);
   });
 
-  testWidgets('広告: 広告を出せる端末では Swing 5 個ごとに 1 枚(見終えの記録は無し)', (tester) async {
+  testWidgets('広告 (D-445): しばらく見ていなければ最初の Swing から移るところで。移る間は「広告」の表記、止まると縦長のバナー。通り過ぎたら前に戻っても出ない(見終えの記録は無し)', (tester) async {
+    SwingViewerScreen.lastViewedAt = null;
     final (mock, seen, _, _) = central([for (var i = 0; i < 6; i++) swing('s$i', 'u$i', text: 'Swing $i', age: Duration(minutes: 60 - i))]);
     final c = await pumpApp(tester, mock, extra: [
       exportAdNetworkProvider.overrideWithValue(ExportAdNetwork.admob),
@@ -421,21 +420,60 @@ void main() {
     c.read(routerProvider).push(Routes.swing());
     await tester.pumpAndSettle();
     expect(find.text('Swing 5'), findsOneWidget, reason: 'いちばん新しい人から');
-    for (var i = 0; i < 5; i++) {
-      await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
-      await tester.pumpAndSettle();
+    // 移っている間: 「広告」の表記だけ。
+    final g = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('swing.viewer.pages'))));
+    for (var k = 0; k < 10; k++) {
+      await g.moveBy(const Offset(-20, 0));
+      await tester.pump();
     }
+    expect(find.byKey(const ValueKey('swing.ad.preview')), findsOneWidget);
+    expect(find.byKey(const ValueKey('fake.ad')), findsNothing);
+    await g.moveBy(const Offset(-100, 0));
+    await tester.pump();
+    await g.up();
+    await tester.pumpAndSettle();
+    // 止まった: 全画面の広告が無いので、縦長のバナー(高さの 70% まで)。
     expect(find.byKey(const ValueKey('fake.ad')), findsOneWidget);
+    expect(_FakeAdSdk.lastMaxHeight, greaterThan(250));
     expect(find.text('広告'), findsOneWidget);
     await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
     await tester.pumpAndSettle();
-    expect(find.text('Swing 0'), findsOneWidget);
+    expect(find.text('Swing 4'), findsOneWidget);
+    // 前に戻る: 広告は並びから外れていて、そのまま前の Swing。
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(250, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('Swing 5'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.ad.preview')), findsNothing);
+    expect(find.byKey(const ValueKey('fake.ad')), findsNothing);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
-    expect(seen, ['s5', 's4', 's3', 's2', 's1'], reason: '広告のページは記録しない');
+    expect(seen, ['s5', 's4'], reason: '広告のページは記録しない');
   });
 
-  testWidgets('広告の隣の安全 (D-395): adSafe でない Swing の前後には広告を置かず、次の安全な所へずらす', (tester) async {
+  testWidgets('広告 (D-445): 全画面の動画の広告が読めていれば、止まったところで出し、閉じたら次の Swing へ', (tester) async {
+    SwingViewerScreen.lastViewedAt = null;
+    final sdk = _FakeAdSdk(fullscreen: true);
+    final (mock, _, _, _) = central([for (var i = 0; i < 3; i++) swing('s$i', 'u$i', text: 'Swing $i', age: Duration(minutes: 60 - i))]);
+    final c = await pumpApp(tester, mock, extra: [
+      exportAdNetworkProvider.overrideWithValue(ExportAdNetwork.admob),
+      exportAdAllowedProvider.overrideWithValue(true),
+      exportAdSdkProvider.overrideWithValue(sdk),
+    ]);
+    c.read(routerProvider).push(Routes.swing());
+    await tester.pumpAndSettle();
+    expect(find.text('Swing 2'), findsOneWidget);
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(sdk.shown, 1);
+    expect(find.text('Swing 1'), findsOneWidget, reason: '閉じたら次の Swing へ');
+    expect(find.byKey(const ValueKey('fake.ad')), findsNothing, reason: 'バナーは出さない');
+  });
+
+  testWidgets('広告の隣の安全 (D-395 / D-445): スワイプ 5 回目が予定でも、adSafe でない Swing の前後には置かず、次の安全な所へずらす', (tester) async {
     // 並びは新しい人から: s8, s7, …, s0。5 番目(s4)が危ない → 5 番目の後ろに置けず、6 番目(s3)の後ろへずらす。
+    // D-445: しばらく前に見ていた(最初は強制しない)。スワイプ 5 回に 1 回(乱数を固定)。
+    SwingViewerScreen.lastViewedAt = DateTime.now().subtract(const Duration(minutes: 1));
+    SwingViewerScreen.adRandom = _FixedRandom(0);
+    addTearDown(() => SwingViewerScreen.adRandom = math.Random());
     final (mock, _, _, _) = central([for (var i = 0; i < 9; i++) swing('s$i', 'u$i', text: 'Swing $i', age: Duration(minutes: 60 - i), adSafe: i != 4)]);
     final c = await pumpApp(tester, mock, extra: [
       exportAdNetworkProvider.overrideWithValue(ExportAdNetwork.admob),
@@ -965,6 +1003,43 @@ void main() {
 
   /// 下の stick FOW (D-420) の矩形。
   Rect barRect(ProviderContainer c) => c.read(overlayManagerProvider).entries.firstWhere((e) => e.id == SwingBar.fowId).fow!.laidOut!;
+
+  testWidgets('上のアクション (D-445): 全画面表示のアクションバーと同じ丸いボタン(返信 / リブロード / キュー + …)。返信は下のコンポーザー、… に共有 / 保存は無し', (tester) async {
+    swingThreadLog.clear();
+    swingQueued.clear();
+    swingReplies.clear();
+    final (mock, _, _, _) = central([swing('s1', 'alice', text: '花火', postId: 'p1'), swing('s2', 'bob', text: '古い Central')]);
+    final c = await pumpApp(tester, mock);
+    Future<void> settle() async {
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    SwingViewerScreen.displayDuration = const Duration(seconds: 30);
+    c.read(routerProvider).push(Routes.swing('alice'));
+    await settle();
+    final bar = find.byKey(const ValueKey('swing.actions.s1'));
+    expect(bar, findsOneWidget);
+    for (final id in ['rasq.reply', 'rasq.rebroad', 'rasq.queue', 'more']) {
+      expect(find.descendant(of: bar, matching: find.byKey(ValueKey('overlay.action.$id'))), findsOneWidget, reason: id);
+    }
+    await tester.tap(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.rasq.queue'))));
+    await settle();
+    expect(swingThreadLog, contains('PUT /queue p1'));
+    // スレッドの無い Swing(古い Central)には出さない。
+    expect(find.byKey(const ValueKey('swing.actions.s2')), findsNothing);
+    await tester.tap(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.more'))));
+    await settle();
+    expect(find.text('リアクションを表示'), findsOneWidget);
+    expect(find.text('共有'), findsNothing);
+    expect(find.textContaining('保存'), findsNothing);
+    await tester.tap(find.text('リンクをコピー'));
+    await settle();
+    await tester.tap(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.rasq.reply'))));
+    await settle();
+    expect(find.byKey(const ValueKey('swing.bar.composer')), findsOneWidget, reason: '返信は下の FOW のコンポーザー');
+  });
 
   testWidgets('下の stick FOW (D-420, 狭い画面): シークバー(時間の進み)+ 返信の欄 + 返信 N + キュー。返信の欄 → 返信先のタイル付きのコンポーザーに変わり Swing の面が縮む → 送ると戻る。返信 N でスレッド。広げている間は止める', (tester) async {
     swingThreadLog.clear();
@@ -1825,8 +1900,22 @@ void main() {
 }
 
 class _FakeAdSdk implements ExportAdSdk {
+  _FakeAdSdk({this.fullscreen = false});
+  final bool fullscreen;
+  int shown = 0;
+  static double? lastMaxHeight;
   @override
-  Widget buildAd({required ExportAdNetwork network, required ExportAdConfig config, required double width, required VoidCallback onLoaded, required VoidCallback onFailed}) {
+  Future<bool> loadFullscreen({required ExportAdNetwork network, required ExportAdConfig config}) async => fullscreen;
+  @override
+  Future<bool> showFullscreen() async {
+    if (!fullscreen) return false;
+    shown++;
+    return true;
+  }
+
+  @override
+  Widget buildAd({required ExportAdNetwork network, required ExportAdConfig config, required double width, double maxHeight = 250, required VoidCallback onLoaded, required VoidCallback onFailed}) {
+    lastMaxHeight = maxHeight;
     Future.microtask(onLoaded);
     return SizedBox(key: const ValueKey('fake.ad'), width: width, height: 250, child: const ColoredBox(color: Colors.grey));
   }
@@ -1876,4 +1965,16 @@ class _FakeSeek extends ChangeNotifier implements SwingSeekable {
     seeks.add(d);
     at(d);
   }
+}
+
+/// 乱数を固定する(広告の間のスワイプの数、D-445)。
+class _FixedRandom implements math.Random {
+  _FixedRandom(this.value);
+  final int value;
+  @override
+  int nextInt(int max) => value.clamp(0, max - 1);
+  @override
+  double nextDouble() => 0;
+  @override
+  bool nextBool() => false;
 }

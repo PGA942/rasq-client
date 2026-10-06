@@ -99,13 +99,20 @@ class _AdSenseSdk implements ExportAdSdk {
   }
 
   @override
-  Widget buildAd({required ExportAdNetwork network, required ExportAdConfig config, required double width, required VoidCallback onLoaded, required VoidCallback onFailed}) {
+  Widget buildAd({required ExportAdNetwork network, required ExportAdConfig config, required double width, double maxHeight = _height, required VoidCallback onLoaded, required VoidCallback onFailed}) {
     if (network != ExportAdNetwork.adsense || !config.hasAdsense) {
       scheduleMicrotask(onFailed);
       return const SizedBox.shrink();
     }
-    return _AdSenseView(sdk: this, config: config, width: width, onLoaded: onLoaded, onFailed: onFailed);
+    return _AdSenseView(sdk: this, config: config, width: width, height: maxHeight, onLoaded: onLoaded, onFailed: onFailed);
   }
+
+  /// AdSense に全画面(動画)の広告は無い (D-445): Swing では縦長の表示広告に。
+  @override
+  Future<bool> loadFullscreen({required ExportAdNetwork network, required ExportAdConfig config}) async => false;
+
+  @override
+  Future<bool> showFullscreen() async => false;
 }
 
 class _ViewParams {
@@ -115,10 +122,11 @@ class _ViewParams {
 }
 
 class _AdSenseView extends StatefulWidget {
-  const _AdSenseView({required this.sdk, required this.config, required this.width, required this.onLoaded, required this.onFailed});
+  const _AdSenseView({required this.sdk, required this.config, required this.width, required this.height, required this.onLoaded, required this.onFailed});
   final _AdSenseSdk sdk;
   final ExportAdConfig config;
   final double width;
+  final double height;
   final VoidCallback onLoaded;
   final VoidCallback onFailed;
 
@@ -151,6 +159,6 @@ class _AdSenseViewState extends State<_AdSenseView> {
   @override
   Widget build(BuildContext context) {
     if (!_ready) return const SizedBox.shrink();
-    return SizedBox(width: widget.width, height: _AdSenseSdk._height, child: HtmlElementView(viewType: _AdSenseSdk._viewType, creationParams: _params));
+    return SizedBox(width: widget.width, height: widget.height, child: HtmlElementView(viewType: _AdSenseSdk._viewType, creationParams: _params));
   }
 }

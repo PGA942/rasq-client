@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
@@ -16,7 +17,6 @@ import '../../app/router.dart';
 import '../../shell/column_layout.dart' show swingInColumnProvider;
 import '../../shell/column_takeover.dart' show takeoverColumnOf;
 import '../../shell/third_column.dart' show openPageInPanes, paneBack;
-import '../ads/ad_placement.dart';
 import '../ads/export_ad.dart';
 import '../ads/timeline_ads.dart' show timelineAdsOn;
 import '../vc/astell_models.dart' show astellReportReasons;
@@ -27,7 +27,8 @@ import '../plugins/slot_plugins.dart';
 import 'swing_models.dart';
 import 'swing_providers.dart';
 import 'swing_bar.dart';
-import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvider;
+import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvider, rasqThreadProvider;
+import '../profile/rasq_post_tile.dart' show RasqPostOverlayActions;
 
 /// Swing のビューワー (D-377 / D-379)。全画面、**左右のスワイプ**で次 / 前の Swing(と広告)へ。マウス / トラックパッドの
 /// ドラッグでも動く(Mac 版で縦のスワイプが効かなかった)。
@@ -36,9 +37,13 @@ import '../../backend/rasq_account_page_api.dart' show rasqAccountPageApiProvide
 /// - **時間で次へ**: テキスト / 画像は [displayDuration]、動画は終わったら。プラグインと広告は自分では進まない。
 ///   **中央をタップで一時停止 / 再開**、左端 / 右端のタップで前 / 次。
 /// - **見終えた** = その Swing を離れた / 閉じた / プラグインが `page.end` を呼んだ。Central へ送る(ヘッダーのリングが白になる)。
-/// - **広告**: Swing [adEvery] 個ごとに 1 枚(広告を出せる端末とアカウントだけ。出せなければ挟まない)。広告は見終えの記録なし。
-///   D-395: **`adSafe` でない Swing(通報された / CW / センシティブ / 未審査のプラグイン / 運営が止めた)の前後には置かない**
-///   ([adGaps]。予定の所が危なければ次の安全な所へずらす)。
+/// - **広告** (D-445、前は Swing 5 個ごとに固定): 次の Swing へ移るあいだに 1 枚(広告を出せる端末とアカウントだけ)。見終えの記録なし。
+///   - いつ: Swing を [adForceAfter] 以上見ていなかった(この起動で初めて含む)なら、**最初の Swing から移るところで必ず**。
+///     ほかは [adSwipesMin]〜[adSwipesMax] 回のスワイプに 1 回(数はランダム)。
+///   - **両隣が CW / センシティブでない**ところだけ(D-395 の `adSafe` も。危なければ次の安全なところへずらす)。
+///   - 置くのは、着いた Swing の**次**(先に並びへ足す)。通り過ぎた広告は並びから外すので、**前の Swing に戻るときは出ない**。
+///   - 中身: 移っている間は「広告」の表記だけ(プレビュー)。止まったら、読んでおいた**全画面の動画の広告**を出し、閉じたら
+///     次の Swing へ。全画面の広告が無ければ、**縦長のバナー**(高さの 70% まで)。
 /// - **CW / センシティブ** (D-395): ぼかして覆い、「表示する」を押すまで中身を出さない。覆っている間は時計を回さず、
 ///   動画 / プラグインも動かさない。
 /// - **通報** (D-395): ヘッダーの旗から理由を選んで `POST /reports {swingId}`。通報した Swing はこの回の間、広告の隣に置かない
@@ -65,7 +70,24 @@ class SwingViewerScreen extends ConsumerStatefulWidget {
   /// 自分の Swing を見る (D-410)。
   final bool mine;
 
-  static const adEvery = 5;
+  /// 広告の間のスワイプの数 (D-445)。
+  static const adSwipesMin = 5;
+  static const adSwipesMax = 7;
+
+  /// これ以上 Swing を見ていなければ、最初の Swing から移るところで広告 (D-445)。
+  static const adForceAfter = Duration(minutes: 10);
+
+  /// 広告の間のスワイプの数を決める乱数(テストで差し替える)。
+  static math.Random adRandom = math.Random();
+
+  /// 最後に Swing を見ていた時刻(この起動の間)。null = この起動ではまだ見ていない。
+  static DateTime? lastViewedAt;
+
+  /// 今の時刻(テストで差し替える)。
+  static DateTime Function() now = DateTime.now;
+
+  /// 縦長のバナーの高さの上限(画面の高さに対して)。
+  static const adBannerHeightFactor = 0.7;
 
   /// テキスト / 画像を出しておく時間(テストで null = 時間では進まない)。
   static Duration? displayDuration = const Duration(seconds: 6);
@@ -101,27 +123,42 @@ void openSwingViewer(BuildContext context, {String? author, bool mine = false}) 
 /// 1 ページ = Swing か広告。
 @immutable
 class SwingViewerItem {
-  const SwingViewerItem.swing(Swing this.swing) : ad = false;
-  const SwingViewerItem.ad()
+  const SwingViewerItem.swing(Swing this.swing)
+      : ad = false,
+        serial = 0;
+  const SwingViewerItem.ad(this.serial)
       : swing = null,
         ad = true;
   final Swing? swing;
   final bool ad;
+
+  /// 広告の通し番号(ページの鍵)。
+  final int serial;
+
+  Key get key => ad ? ValueKey('swing.ad.$serial') : ValueKey('swing.page.${swing!.id}');
 }
 
-/// Swing の並びに広告を挟む([every] 個ごと、最後には付けない)。`adSafe` でない Swing の前後には置かない ([adGaps]、D-395)。
-List<SwingViewerItem> interleaveAds(List<Swing> swings, {required bool ads, int every = SwingViewerScreen.adEvery}) {
-  final gaps = ads ? adGaps(swings.length, (i) => swings[i].adSafe, every: every).toSet() : const <int>{};
-  return [
-    for (var i = 0; i < swings.length; i++) ...[
-      if (gaps.contains(i)) const SwingViewerItem.ad(),
-      SwingViewerItem.swing(swings[i]),
-    ],
-  ];
-}
+/// 広告の隣に置いてよい Swing か (D-395 / D-445): `adSafe`(通報 / 未審査のプラグイン / 運営の止め)に加え、CW もセンシティブも無い。
+bool swingAdNeighborSafe(Swing s) => s.adSafe && (s.cw?.trim().isEmpty ?? true) && !s.sensitive;
 
 class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with SingleTickerProviderStateMixin {
   late final List<SwingViewerItem> _items;
+
+  // ── 広告 (D-445) ──
+  bool _adsOn = false;
+
+  /// 次の広告までのスワイプの数(1 以下なら、着いた Swing の次に置く)。
+  int _adCountdown = 0;
+  int _adSerial = 0;
+
+  /// 離れた広告(スクロールが止まったら並びから外す)。
+  int? _leftAd;
+
+  /// 並びを詰めて飛んだときの onPageChanged を無視する。
+  bool _suppressPage = false;
+
+  /// 読んでおいた全画面の広告。
+  Future<bool>? _fullscreenReady;
   late final PageController _pages;
   late final AnimationController _clock = AnimationController(vsync: this)..addStatusListener(_onClock);
   int _index = 0;
@@ -346,8 +383,14 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     final feed = widget.mine
         ? ([...?ref.read(mySwingsProvider).value]..sort((a, b) => a.createdAt.compareTo(b.createdAt)))
         : swingViewerQueue(ref.read(swingFeedProvider).value ?? const [], startAuthor: widget.startAuthor);
-    final ads = !widget.mine && ref.read(exportAdNetworkProvider) != null && ref.read(exportAdAllowedProvider);
-    _items = interleaveAds(feed, ads: ads);
+    _items = [for (final s in feed) SwingViewerItem.swing(s)];
+    _adsOn = !widget.mine && ref.read(exportAdNetworkProvider) != null && ref.read(exportAdAllowedProvider);
+    // しばらく見ていなかったら、最初の Swing から移るところで必ず (D-445)。
+    final last = SwingViewerScreen.lastViewedAt;
+    final forced = last == null || SwingViewerScreen.now().difference(last) >= SwingViewerScreen.adForceAfter;
+    _adCountdown = forced ? 1 : _nextAdCountdown();
+    SwingViewerScreen.lastViewedAt = SwingViewerScreen.now();
+    _planAd(0);
     _pages = PageController(initialPage: _index);
     _startClock();
     _queueBarSync();
@@ -368,6 +411,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     // カラムから外された(第3カラムに別のページを開いた など)ときも、見ていたものは見終えにする (D-413)。
     final s = _closed || _index >= _items.length ? null : _items[_index].swing;
     if (s != null && !widget.mine) unawaited(_feed.markSeen(s.id));
+    SwingViewerScreen.lastViewedAt = SwingViewerScreen.now();
     // 下の FOW は木を組み直している最中には閉じられないので、このフレームのあと(中身の状態もそのあとで捨てる)。
     final manager = _manager;
     final bar = _bar;
@@ -432,15 +476,60 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     if (s != null && !widget.mine) unawaited(_feed.markSeen(s.id));
   }
 
+  int _nextAdCountdown() => SwingViewerScreen.adSwipesMin + SwingViewerScreen.adRandom.nextInt(SwingViewerScreen.adSwipesMax - SwingViewerScreen.adSwipesMin + 1);
+
+  /// 着いた Swing [i] の次に広告を置くか決める (D-445)。置いたら全画面の広告を読んでおく。
+  void _planAd(int i) {
+    if (!_adsOn || _adCountdown > 1 || i < 0 || i + 1 >= _items.length) return;
+    final cur = _items[i].swing;
+    final next = _items[i + 1].swing;
+    // 両隣が危なくないところだけ。危なければ次の Swing で試す(数は 1 のまま)。
+    if (cur == null || next == null || !swingAdNeighborSafe(cur) || !swingAdNeighborSafe(next) || _reported.contains(cur.id) || _reported.contains(next.id)) return;
+    _items.insert(i + 1, SwingViewerItem.ad(++_adSerial));
+    _adCountdown = _nextAdCountdown();
+    _fullscreenReady = _loadFullscreen();
+  }
+
+  Future<bool> _loadFullscreen() {
+    final network = ref.read(exportAdNetworkProvider);
+    if (network == null) return Future.value(false);
+    return ref.read(exportAdSdkProvider).loadFullscreen(network: network, config: ref.read(exportAdConfigProvider));
+  }
+
   void _onPage(int i) {
-    _seen(_index);
+    if (_suppressPage) return;
+    final prev = _index;
+    _seen(prev);
+    SwingViewerScreen.lastViewedAt = SwingViewerScreen.now();
+    final fromAd = prev < _items.length && _items[prev].ad;
+    if (fromAd) _leftAd = prev;
     setState(() {
       _index = i;
       _locked = false;
       _paused = false;
+      // 先へ 1 回スワイプして Swing に着いた: 数を減らし、次に広告を置くか決める(広告から着いたときは数えない)。
+      if (i > prev && !fromAd && i < _items.length && _items[i].swing != null) {
+        _adCountdown--;
+        _planAd(i);
+      }
     });
     _startClock();
     _queueBarSync();
+  }
+
+  /// 離れた広告を並びから外す(スクロールが止まってから。前の Swing に戻るときに出さない、D-445)。
+  void _dropLeftAd() {
+    final r = _leftAd;
+    _leftAd = null;
+    if (r == null || r >= _items.length || !_items[r].ad || r == _index) return;
+    setState(() {
+      _items.removeAt(r);
+      if (r < _index) _index--;
+    });
+    if (!_pages.hasClients) return;
+    _suppressPage = true;
+    _pages.jumpToPage(_index);
+    _suppressPage = false;
   }
 
   /// 次へ(最後なら閉じる)。
@@ -492,16 +581,36 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                 child: KeyedSubtree(key: swingViewerMediaKey, child: ScrollConfiguration(
                 // マウス / トラックパッドのドラッグでもめくれる(既定はタッチだけ)。
                 behavior: ScrollConfiguration.of(context).copyWith(dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad, PointerDeviceKind.stylus}),
+                child: NotificationListener<ScrollEndNotification>(
+                onNotification: (_) {
+                  if (_leftAd != null) WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? _dropLeftAd() : null);
+                  return false;
+                },
                 child: PageView.builder(
                 key: const ValueKey('swing.viewer.pages'),
                 controller: _pages,
                 physics: _locked ? const NeverScrollableScrollPhysics() : const PageScrollPhysics(),
                 onPageChanged: _onPage,
                 itemCount: _items.length,
+                // 広告を外して並びが詰まっても、ページの状態(動画 / プラグイン)はそのまま。
+                findChildIndexCallback: (key) {
+                  final i = _items.indexWhere((x) => x.key == key);
+                  return i < 0 ? null : i;
+                },
                 itemBuilder: (_, i) {
                   final item = _items[i];
                   final s = item.swing;
-                  if (s == null) return _AdPage(key: ValueKey('swing.ad.$i'), onClose: _close);
+                  if (s == null) {
+                    return _AdPage(
+                      key: item.key,
+                      active: i == _index,
+                      fullscreen: _fullscreenReady,
+                      onClose: _close,
+                      onDone: () {
+                        if (i == _index) _next();
+                      },
+                    );
+                  }
                   return _SwingPage(
                     key: ValueKey('swing.page.${s.id}'),
                     swing: s,
@@ -512,6 +621,8 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                     onReveal: () => _reveal(s),
                     onReport: widget.mine || ref.watch(swingApiProvider) == null ? null : () => _report(s),
                     viewCount: widget.mine ? s.viewCount : null,
+                    // 上のアクション (D-445): 全画面表示のアクションバーと同じボタン。返信は下の FOW のコンポーザーへ。
+                    actions: s.postId == null || ref.watch(rasqAccountPageApiProvider) == null ? null : _SwingHeaderActions(key: ValueKey('swing.actions.${s.id}'), postId: s.postId!, onReply: () => _bar.compose()),
                     clock: _clock,
                     position: '${i + 1} / ${_items.length}',
                     onClose: _close,
@@ -525,7 +636,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                   );
                 },
               ),
-              )))),
+              ))))),
               ]),
       ),
     );
@@ -547,7 +658,10 @@ String swingRemainingLabel(Duration d) {
 typedef SwingSeekableCallback = void Function(SwingSeekable seek, bool alive);
 
 class _SwingPage extends StatelessWidget {
-  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.onSeekable, this.covered = false, this.onReveal, this.onReport, this.viewCount});
+  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.onSeekable, this.covered = false, this.onReveal, this.onReport, this.viewCount, this.actions});
+
+  /// 上のアクション (D-445)。null = 出さない(スレッドの無い Swing / RASQ アカウントが無い)。
+  final Widget? actions;
 
   /// 自分の Swing の見た人の数 (D-410)。null = 出さない(ほかの人の Swing / 古い Central)。
   final int? viewCount;
@@ -615,7 +729,8 @@ class _SwingPage extends StatelessWidget {
             bottom: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.lg),
-              child: Row(children: [
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+              Row(children: [
                 RasqAvatar(imageUrl: swing.author.avatarUrl, size: 32, fallbackLabel: swing.author.displayName),
                 const SizedBox(width: RasqSpacing.sm),
                 Expanded(
@@ -633,6 +748,13 @@ class _SwingPage extends StatelessWidget {
                 if (onReport != null) RasqIconButton(key: const ValueKey('swing.report'), icon: Icons.flag_outlined, tooltip: '通報', color: Colors.white, onPressed: onReport),
                 RasqIconButton(key: const ValueKey('swing.close'), icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: onClose),
               ]),
+              // アクション (D-445): 作った人の行の下に、右へ寄せて(狭ければ横に送る)。
+              if (actions case final a?)
+                Padding(
+                  padding: const EdgeInsets.only(top: RasqSpacing.xs, right: RasqSpacing.sm),
+                  child: Align(alignment: Alignment.centerRight, child: SingleChildScrollView(scrollDirection: Axis.horizontal, reverse: true, child: a)),
+                ),
+              ]),
             ),
           ),
         ),
@@ -646,6 +768,20 @@ class _SwingPage extends StatelessWidget {
           child: Text(swing.text, key: const ValueKey('swing.caption'), style: RasqTypography.body.copyWith(color: Colors.white, shadows: const [Shadow(blurRadius: 6)])),
         ),
     ]);
+  }
+}
+
+/// Swing の上のアクション (D-445): Swing のスレッドの根の投稿に、全画面表示のアクションバーと同じボタン(…に共有 / 保存は無し)。
+class _SwingHeaderActions extends ConsumerWidget {
+  const _SwingHeaderActions({super.key, required this.postId, required this.onReply});
+  final String postId;
+  final VoidCallback onReply;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final post = ref.watch(rasqThreadProvider(postId)).value?.post;
+    if (post == null) return const SizedBox.shrink();
+    return RasqPostOverlayActions(post: post, onReply: onReply, onChanged: () => ref.invalidate(rasqThreadProvider(postId)));
   }
 }
 
@@ -1015,20 +1151,73 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
   }
 }
 
-/// 広告の 1 枚。出せなかった(読み込めない)ときは案内だけ。
-class _AdPage extends StatelessWidget {
-  const _AdPage({super.key, required this.onClose});
+/// 広告の 1 枚 (D-445)。移っている間([active] でない)は「広告」の表記だけ(プレビュー)。止まったら、読んでおいた全画面の
+/// 動画の広告を出し、閉じたら [onDone](次の Swing へ)。全画面の広告が無ければ、縦長のバナー(高さの 70% まで)。
+/// バナーも読めなければ [onDone]。
+class _AdPage extends ConsumerStatefulWidget {
+  const _AdPage({super.key, required this.active, required this.onClose, required this.onDone, this.fullscreen});
+  final bool active;
+  final Future<bool>? fullscreen;
   final VoidCallback onClose;
+  final VoidCallback onDone;
 
   @override
-  Widget build(BuildContext context) => Stack(children: [
-        Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const ExportAdSlot(onDark: true),
-            const SizedBox(height: RasqSpacing.md),
-            Text('上にスワイプで次の Swing へ', style: RasqTypography.caption.copyWith(color: Colors.white54)),
-          ]),
+  ConsumerState<_AdPage> createState() => _AdPageState();
+}
+
+class _AdPageState extends ConsumerState<_AdPage> {
+  /// 全画面の広告を出すか決めた(true = バナーにした)。
+  bool _banner = false;
+  bool _started = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.active) WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+  }
+
+  @override
+  void didUpdateWidget(_AdPage old) {
+    super.didUpdateWidget(old);
+    if (widget.active && !old.active) _start();
+  }
+
+  Future<void> _start() async {
+    if (_started || !mounted) return;
+    _started = true;
+    final ready = await (widget.fullscreen ?? Future.value(false)).timeout(const Duration(milliseconds: 1500), onTimeout: () => false);
+    if (!mounted) return;
+    if (ready && await ref.read(exportAdSdkProvider).showFullscreen()) {
+      if (mounted) widget.onDone();
+      return;
+    }
+    if (mounted) setState(() => _banner = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = Center(
+      child: Container(
+        key: const ValueKey('swing.ad.preview'),
+        padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.lg, vertical: RasqSpacing.sm),
+        decoration: BoxDecoration(border: Border.all(color: Colors.white54), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
+        child: Text('広告', style: RasqTypography.title.copyWith(color: Colors.white)),
+      ),
+    );
+    return Stack(children: [
+      if (!_banner)
+        label
+      else
+        LayoutBuilder(
+          builder: (context, c) => Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              ExportAdSlot(key: const ValueKey('swing.ad.banner'), onDark: true, maxHeight: c.maxHeight * SwingViewerScreen.adBannerHeightFactor, onFailed: widget.onDone),
+              const SizedBox(height: RasqSpacing.md),
+              Text('スワイプで次の Swing へ', style: RasqTypography.caption.copyWith(color: Colors.white54)),
+            ]),
+          ),
         ),
-        Positioned(top: 8, right: 8, child: SafeArea(child: RasqIconButton(icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: onClose))),
-      ]);
+      Positioned(top: 8, right: 8, child: SafeArea(child: RasqIconButton(icon: Icons.close, tooltip: '閉じる', color: Colors.white, onPressed: widget.onClose))),
+    ]);
+  }
 }

@@ -543,3 +543,106 @@ Future<void> pickRasqQueue(BuildContext context, WidgetRef ref, RasqAccountPost 
     },
   );
 }
+
+/// 全画面の上に置く RASQ の投稿のアクション (D-445: Swing のビューワーの上)。全画面表示のアクションバー(D-212 / D-214)と同じ、
+/// 暗い丸の 40px のボタンで、並び / バンドル / プラグインのボタンは投稿のバー(`rasq:post`)の構成のまま。
+/// キューは押すと いいね(付けていれば外す)、長押しで絵を選ぶ。最後の「…」は投稿のメニュー(リアクションを表示 / リンクをコピー /
+/// ブラウザで開く / アクションバーを編集 / 自分のものは削除。共有と保存は無し)。
+class RasqPostOverlayActions extends ConsumerWidget {
+  const RasqPostOverlayActions({super.key, required this.post, required this.onChanged, this.onReply});
+  final RasqAccountPost post;
+  final VoidCallback onChanged;
+
+  /// 返信のボタン。null なら返信のコンポーザーを開く。
+  final VoidCallback? onReply;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final view = RasqPostTileView(post: post, onChanged: onChanged, onReply: onReply);
+    final me = ref.watch(orgateAccountProvider).value;
+    final isMine = me != null && post.author != null && me.id == post.author!.id;
+    final mine = post.queues.where((q) => q.mine).firstOrNull;
+    final pluginActions = ref.watch(pluginActionsForProvider(rasqPostConfigKey));
+    final merged = mergePluginActions(
+      config: ref.watch(actionBarConfigProvider(rasqPostConfigKey)),
+      snsActions: rasqPostBuiltinActions,
+      plugins: pluginActions,
+      settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(rasqPostConfigKey, ''))),
+      prefs: ref.watch(actionButtonPrefsProvider),
+    );
+    final entries = merged.config.apply(merged.actions);
+
+    Future<void> perform(ActionDescriptor a, Rect anchor) async {
+      switch (a.id) {
+        case rasqReplyActionId:
+          // 呼び出し側の返信(Swing は下の FOW のコンポーザー。ログインはそちらで見る)。
+          if (onReply case final f?) return f();
+          return view._reply(context, ref);
+        case rasqRebroadActionId:
+          return view._rebroadBundle(context, ref, anchor, myRebroad: false);
+        case rasqQueueActionId:
+          if (mine != null) return view._run(context, ref, (api) => api.setQueue(post.id, null));
+          return view._run(context, ref, (api) => api.like(post.id));
+        default:
+          return view._runPlugin(context, ref, a);
+      }
+    }
+
+    Rect anchorOf(BuildContext c) {
+      final box = c.findRenderObject() as RenderBox;
+      return box.localToGlobal(Offset.zero) & box.size;
+    }
+
+    Widget circle(Widget child) => DecoratedBox(decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle), child: child);
+
+    Widget single(ActionDescriptor a) => Builder(builder: (bctx) {
+          final queue = a.id == rasqQueueActionId;
+          final icon = switch (a.id) {
+            rasqReplyActionId => Icons.chat_bubble_outline,
+            rasqRebroadActionId => Icons.repeat,
+            rasqQueueActionId => mine != null ? Icons.favorite : (post.likeOnly ? Icons.favorite_border : Icons.add_reaction_outlined),
+            _ => PostRow.iconFor(a.icon, Icons.extension_outlined),
+          };
+          return GestureDetector(
+            onLongPress: queue ? () => view._queue(context, ref, anchorOf(bctx)) : null,
+            child: circle(RasqIconButton(
+              key: ValueKey('overlay.action.${a.id}'),
+              icon: icon,
+              color: queue && mine != null ? RasqTokens.of(context).link : Colors.white,
+              tooltip: queue ? '${a.label}(長押しで絵を選ぶ)' : a.label,
+              onPressed: () => perform(a, anchorOf(bctx)),
+            )),
+          );
+        });
+
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      for (final e in entries) ...[
+        const SizedBox(width: 2),
+        switch (e) {
+          SingleActionEntry() => single(e.action),
+          ActionListEntry() => Builder(
+              builder: (bctx) => circle(Tooltip(
+                message: e.list.name,
+                child: InkResponse(
+                  key: ValueKey('overlay.action.list:${e.list.id}'),
+                  radius: 22,
+                  onTap: () => showActionBundleMenuFow(ref, anchor: anchorOf(bctx), entry: e, column: fowColumnOf(context), onPick: (a) => perform(a, anchorOf(bctx))),
+                  child: SizedBox(width: 40, height: 40, child: Center(child: bundleIconWidget(e.list, e.members, size: 22, color: Colors.white))),
+                ),
+              )),
+            ),
+        },
+      ],
+      const SizedBox(width: 2),
+      Builder(
+        builder: (bctx) => circle(RasqIconButton(
+          key: const ValueKey('overlay.action.more'),
+          icon: Icons.more_horiz,
+          color: Colors.white,
+          tooltip: 'メニュー',
+          onPressed: () => view._more(context, ref, anchorOf(bctx), isMine),
+        )),
+      ),
+    ]);
+  }
+}
