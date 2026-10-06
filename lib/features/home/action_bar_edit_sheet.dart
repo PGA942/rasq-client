@@ -576,13 +576,13 @@ class _ActionBarEditBodyState extends ConsumerState<_ActionBarEditBody> {
             ? current
             : UserSummary(id: current.id, account: picked.account, displayName: picked.displayName ?? picked.account.handle, avatarUrl: picked.avatarUrl);
     final accountKey = picked?.account.key ?? ref.watch(currentAccountProvider)?.key ?? '';
-    // バー (D-446): RASQ アカウント = 全画面(Swing)/ 投稿。SNS のアカウント = 全画面 → 投稿 → 加工画面(RASQ のバーは出さない)。
+    // バー (D-446 → D-447): RASQ アカウント = 全画面(Swing)/ 投稿 / 加工画面。SNS のアカウント = 全画面 → 投稿 → 加工画面(RASQ のバーは出さない)。
     final shown = surfaces != null && !_rasq && surfaces!.every((x) => !x.isRasq)
         ? surfaces!
         : surfaces != null && _rasq && surfaces!.every((x) => x.isRasq)
             ? surfaces!
             : _rasq
-                ? const [ActionBarSurface.rasqViewer, ActionBarSurface.rasqPost]
+                ? const [ActionBarSurface.rasqViewer, ActionBarSurface.rasqPost, ActionBarSurface.editorImage, ActionBarSurface.editorVideo]
                 : const [ActionBarSurface.viewer, ActionBarSurface.post, ActionBarSurface.editorImage, ActionBarSurface.editorVideo];
     final astellOnly = _astellOnly(surfaces);
     return SingleChildScrollView(

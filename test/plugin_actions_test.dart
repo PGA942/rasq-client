@@ -335,7 +335,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('削除'));
     await tester.pumpAndSettle();
-    expect(c.read(actionBarConfigProvider(accountKey)).hidden, {'renote'});
+    expect(c.read(actionBarConfigProvider(accountKey)).hidden, {'favorite', 'renote'}); // お気に入りは既定で外している (D-447)
     expect(find.byKey(const ValueKey('actionbar.tile.renote')), findsNothing);
     expect(find.byKey(const ValueKey('actionbar.tile.renote.viewer')), findsOneWidget); // 全画面バーは別構成
     await tester.ensureVisible(find.byKey(const ValueKey('actionbar.plugins.open')));
@@ -346,7 +346,7 @@ void main() {
     expect(find.byKey(const ValueKey('actionbar.plugin.reply')), findsNothing); // 出ているボタンは候補に無い
     await tester.tap(find.byKey(const ValueKey('actionbar.plugin.renote')));
     await tester.pumpAndSettle();
-    expect(c.read(actionBarConfigProvider(accountKey)).hidden, isEmpty);
+    expect(c.read(actionBarConfigProvider(accountKey)).hidden, {'favorite'});
     expect(find.byKey(const ValueKey('actionbar.tile.renote')), findsOneWidget);
     // 隙間に落として並び替え: 末尾の隙間へリノート(投稿バー)。
     // 落とす先の隙間(1 段上の行)が FOW のヘッダーに隠れない位置まで戻す(編集 FOW は面が増えて長い、D-251)。
@@ -498,5 +498,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(ValueKey('actionbar.bundle.pick.$laterId')), findsNothing);
     expect(find.text('後で読むに入れました'), findsOneWidget);
+  });
+
+  test('既定の構成 (D-447): RASQ の全画面アクションバー(Swing)は空、SNS のバーは Misskey の「お気に入り」を初めは外す', () {
+    expect(ActionBarConfigStore.defaultFor(rasqViewerConfigKey).hidden, containsAll(['rasq.reply', 'rasq.rebroad', 'rasq.queue']));
+    expect(ActionBarConfigStore.defaultFor(ActionBarConfigStore.viewerKey('@a@m.example')).hidden, {'favorite'});
+    expect(ActionBarConfigStore.defaultFor('@a@m.example').hidden, {'favorite'});
+    expect(ActionBarConfigStore.defaultFor(rasqPostConfigKey).hidden, isEmpty);
+    expect(ActionBarConfigStore.defaultFor('editor:image').hidden, isEmpty);
   });
 }

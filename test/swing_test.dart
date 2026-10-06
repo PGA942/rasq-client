@@ -12,6 +12,8 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:rasq_client/features/home/action_bar_config.dart' show ActionBarConfig, actionBarConfigProvider;
+import 'package:rasq_client/features/home/plugin_actions.dart' show rasqViewerConfigKey;
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
@@ -1045,7 +1047,7 @@ void main() {
     expect([for (final s in c.read(mySwingsProvider).value!) s.id], ['m2']);
   });
 
-  testWidgets('上のアクション (D-445): 全画面表示のアクションバーと同じ丸いボタン(返信 / リブロード / キュー + …)。返信は下のコンポーザー、… に共有 / 保存は無し', (tester) async {
+  testWidgets('上のアクション (D-445 / D-447): × の左に、全画面表示のアクションバーと同じ丸いボタン(既定は空、足すと返信 / リブロード / キュー)+ …。返信は下のコンポーザー、… に共有 / 保存は無し', (tester) async {
     swingThreadLog.clear();
     swingQueued.clear();
     swingReplies.clear();
@@ -1062,6 +1064,13 @@ void main() {
     await settle();
     final bar = find.byKey(const ValueKey('swing.actions.s1'));
     expect(bar, findsOneWidget);
+    // D-447: 既定は空(… だけ)。× の左に並ぶ。
+    expect(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.rasq.reply'))), findsNothing);
+    expect(tester.getCenter(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.more')))).dx, lessThan(tester.getCenter(find.byKey(const ValueKey('swing.close')).first).dx));
+    expect((tester.getCenter(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.more')))).dy - tester.getCenter(find.byKey(const ValueKey('swing.close')).first).dy).abs(), lessThan(8), reason: '同じ行');
+    // 編集で足した(ここでは構成を直に書く)。
+    c.read(actionBarConfigProvider(rasqViewerConfigKey).notifier).set(const ActionBarConfig());
+    await settle();
     for (final id in ['rasq.reply', 'rasq.rebroad', 'rasq.queue', 'more']) {
       expect(find.descendant(of: bar, matching: find.byKey(ValueKey('overlay.action.$id'))), findsOneWidget, reason: id);
     }
@@ -1077,10 +1086,15 @@ void main() {
     expect(find.textContaining('保存'), findsNothing);
     await tester.tap(find.text('リンクをコピー'));
     await settle();
+    // 狭い画面ではボタンの並びを横に送る。
+    await tester.ensureVisible(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.rasq.reply'))));
+    await settle();
     await tester.tap(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.rasq.reply'))));
     await settle();
     expect(find.byKey(const ValueKey('swing.bar.composer')), findsOneWidget, reason: '返信は下の FOW のコンポーザー');
-    // D-446: … →「アクションバーを編集」は RASQ アカウントのバー(全画面 = Swing / 投稿)。SNS のバーや加工画面のバーは出さない。
+    // D-446 → D-447: … →「アクションバーを編集」は RASQ アカウントのバー(全画面 = Swing / 投稿 / 加工画面)。SNS のバーは出さない。
+    await tester.ensureVisible(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.more'))));
+    await settle();
     await tester.tap(find.descendant(of: bar, matching: find.byKey(const ValueKey('overlay.action.more'))));
     await settle();
     await tester.tap(find.text('アクションバーを編集'));
@@ -1088,7 +1102,7 @@ void main() {
     expect(find.byKey(const ValueKey('actionbar.account.rasq')), findsOneWidget);
     expect(find.text('全画面アクションバー(Swing)'), findsOneWidget);
     expect(find.text('投稿アクションバー'), findsOneWidget);
-    expect(find.text('加工画面のバー(画像)'), findsNothing);
+    expect(find.text('加工画面のバー(画像)'), findsOneWidget);
   });
 
   testWidgets('下の stick FOW (D-420, 狭い画面): シークバー(時間の進み)+ 返信の欄 + 返信 N + キュー。返信の欄 → 返信先のタイル付きのコンポーザーに変わり Swing の面が縮む → 送ると戻る。返信 N でスレッド。広げている間は止める', (tester) async {

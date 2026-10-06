@@ -16,7 +16,7 @@ import 'package:rasq_design/rasq_design.dart';
 /// D-446: RASQ のページ(Markdown ページの表示 / 編集、HTML 風の MFM)。
 class _FakeApi implements RasqPagesApi {
   final published = <String, ({String title, String body})>{};
-  final images = <String>[];
+  final uploaded = <String>[];
   @override
   Uri? get base => null;
   @override
@@ -27,8 +27,8 @@ class _FakeApi implements RasqPagesApi {
 
   @override
   Future<Uri> uploadImage(List<int> bytes, String contentType) async {
-    images.add(contentType);
-    return Uri.parse('https://central.test/api/v1/profile-images/i${images.length}');
+    uploaded.add(contentType);
+    return Uri.parse('https://central.test/api/v1/profile-images/i${uploaded.length}');
   }
 
   @override
@@ -36,6 +36,18 @@ class _FakeApi implements RasqPagesApi {
 
   @override
   Future<List<RasqSideloadPage>> sideloadPages(String handle) async => const [RasqSideloadPage(id: 'sl1', pluginId: 'me.game', version: '0.1.0', name: 'ミニゲーム')];
+
+  final deletedImages = <String>[];
+  List<({String id, Uri url, DateTime? createdAt})> imageList = const [];
+
+  @override
+  Future<RasqMdPage> mdPage(String handle, String id) async => const RasqMdPage(id: 'pg1', title: '自己紹介', body: '![a](https://central.test/api/v1/profile-images/used)');
+
+  @override
+  Future<List<({String id, Uri url, DateTime? createdAt})>> images() async => imageList;
+
+  @override
+  Future<void> deleteImage(String id) async => deletedImages.add(id);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -95,7 +107,7 @@ void main() {
     final body = tester.widget<TextField>(find.byKey(const ValueKey('rasqPage.md.body'))).controller!.text;
     // 道具はタグで包み、カーソルをタグの中に置く(続けて貼った画像はタグの中)。
     expect(body, 'こんにちは<center>\n![画像](https://central.test/api/v1/profile-images/i1)\n</center>');
-    expect(api.images, ['image/png']);
+    expect(api.uploaded, ['image/png']);
     await tester.pump(const Duration(seconds: 1));
     expect(c.read(rasqPageDraftsProvider)['pg1']?.title, 'わたしのページ', reason: '端末の下書き');
     await tester.tap(find.byKey(const ValueKey('rasqPage.md.preview')));
@@ -143,5 +155,21 @@ void main() {
     expect(find.byKey(const ValueKey('rasqPage.draft.d1')), findsNothing, reason: '下書きは持ち主の端末だけ');
     expect(find.byKey(const ValueKey('rasqPage.add')), findsNothing);
     expect(find.byKey(const ValueKey('rasqPage.sideload.sl1.more')), findsNothing);
+  });
+
+  test('使わなくなった画像の片付け (D-447): 公開したページにも端末の下書きにも無く、猶予が過ぎたものだけ消す', () async {
+    final api = _FakeApi();
+    final now = DateTime(2026, 10, 10);
+    final old = now.subtract(const Duration(days: 4));
+    Uri u(String id) => Uri.parse('https://central.test/api/v1/profile-images/$id');
+    api.imageList = [
+      (id: 'used', url: u('used'), createdAt: old),
+      (id: 'draft', url: u('draft'), createdAt: old),
+      (id: 'fresh', url: u('fresh'), createdAt: now.subtract(const Duration(hours: 2))),
+      (id: 'orphan', url: u('orphan'), createdAt: old),
+    ];
+    final n = await cleanupRasqPageImages(api, handle: 'tester', draftBodies: ['書きかけ ![b](${u('draft')})'], now: now);
+    expect(n, 1);
+    expect(api.deletedImages, ['orphan']);
   });
 }
