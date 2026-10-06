@@ -575,6 +575,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final kinds = ref.read(tlTimelinesProvider(s.account));
     final tlLabel = kinds.where((k) => k.id == s.tl).firstOrNull?.label ?? switch (s.tl) { 'social' => 'おすすめ', 'local' => 'ローカル', 'global' => 'グローバル', 'home' => 'フォロー中 (home)', _ => s.tl };
     if (s.isRasq) return (Icons.hub_outlined, 'RASQ の投稿を取得', 'RASQ', 'TL: 自分とフォロー中の RASQ アカウントの投稿');
+    if (s.isRasqSearch) return (Icons.travel_explore, 'RASQ 検索', 'RASQ', s.rasqSearchWord.isEmpty ? '検索: このページの検索ワード / タグ(フォローしていない人の投稿も)' : '検索: ${s.rasqSearchWord}(フォローしていない人の投稿も)');
     if (s.isRasqList) return (Icons.people_alt_outlined, 'RASQ リストを取得', 'RASQ', 'RASQ リスト: ${s.label.isNotEmpty ? s.label : (s.rasqListId.isEmpty ? '未選択' : s.rasqListId)}');
     // セクション / ブロック (D-442)。
     if (s.isSection) return (Icons.crop_square, s.label.isEmpty ? 'セクション' : s.label, 'セクション', 'ノードを $maxSectionChildren つまで包む枠(画面では入れた順に角丸の枠で出す)');
@@ -1581,6 +1582,8 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
             detail: 'RASQ リスト(Misskey / Mastodon / Bluesky の人を 1 つにまとめたリスト)の投稿を取り込みます。自分のリスト・フォロー中のリストから選ぶか、公開リストを検索します。選べるのは、リスト内の人の情報を取れる(同じサーバーのアカウントがある / 入っている人をフォローしている)リストだけです。',
             supported: allSns,
             add: () => widget.onAddSource(const TlSourceComponent(tl: rasqListKindPrefix)), drag: const TlSourceComponent(tl: rasqListKindPrefix)),
+      // RASQ 検索 (D-449): フォローしていない人も含めた RASQ の公開の投稿。ワードは追加後のタイルで(空 = このページのワード)。
+      source(const TlSourceComponent(tl: rasqSearchKindPrefix), icon: Icons.travel_explore, title: 'RASQ 検索', subtitle: 'RASQ', description: 'フォローしていない人も含めて、RASQ の投稿を検索して取り込みます。表示モード「ユーザー」で人のタイルに。'),
       // トレンドを取得 (D-442): 種別はトレンドタイル(既定)/ トレンド TL(上位タグの検索結果)。… で切り替える。
       _PaletteItem(
           icon: Icons.trending_up,
@@ -1841,6 +1844,17 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
         ]),
       );
     }
+    if (s.isRasqSearch) {
+      return (
+        const {},
+        const RrlNode(t: 'Column', c: [
+          RrlNode(t: 'Text', p: {
+            'text': 'RASQ の公開の投稿を検索して取り込みます。フォローしていない人の投稿も入ります。',
+            'detail': 'RASQ の公開の投稿(フォロー中かどうかに関係なく)を、下のワードで検索して取り込みます。空にすると、このページの検索ワード / タグで探します。表示モードを「ユーザー」にすると、投稿した人のタイルで並びます。',
+          }),
+        ]),
+      );
+    }
     if (s.isRasqList) {
       return (
         const {},
@@ -1903,7 +1917,7 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
       var updated = cur.copyWith(tl: key == 'tl' ? '$value' : null, account: key == 'account' ? '$value' : null, label: key == 'label' ? '$value' : null);
       if (key == 'account') {
         // アカウントを変えたら、その SNS に無い TL 種別 / 他アカウントのリストは選び直し (D-194)。
-        if (!cur.isTrend && !cur.isList && !cur.isDm && !cur.isFeed && !cur.isSelf && !cur.isRasqList) {
+        if (!cur.isTrend && !cur.isList && !cur.isDm && !cur.isFeed && !cur.isSelf && !cur.isRasqList && !cur.isRasqSearch) {
           final kinds = ref.read(tlTimelinesProvider('$value'));
           if (kinds.isNotEmpty && !kinds.any((k) => k.id == cur.tl)) updated = updated.copyWith(tl: kinds.first.id);
         } else if (cur.isList) {
@@ -1977,6 +1991,18 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
             RasqListTile(title: '好きなジャンル/方向性', onTap: () => widget.onTendencyAction!('genres')),
             RasqListTile(title: 'アクションからジャンルを選択', subtitle: '類似した話題でまとめて、話題性の強いものから', onTap: () => widget.onTendencyAction!('pick')),
           ],
+          // RASQ 検索のワード (D-449)。空 = このページの検索ワード / タグ。
+          if (!widget.algorithm && widget.index < cfg.sources.length && cfg.sources[widget.index].isRasqSearch)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
+              child: TextFormField(
+                key: const ValueKey('tlcfg.rasqsearch.word'),
+                initialValue: cfg.sources[widget.index].rasqSearchWord,
+                style: RasqTypography.bodySmall,
+                decoration: const InputDecoration(labelText: '検索ワード(空 = このページのワード / タグ)', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),
+                onChanged: (v) => _apply('tl', '$rasqSearchKindPrefix${v.trim()}'),
+              ),
+            ),
           // RASQ リストの検索 (D-346)。空 = 自分のリスト + フォロー中。取れないリストは選べない。
           if (!widget.algorithm && widget.index < cfg.sources.length && cfg.sources[widget.index].isRasqList) ...[
             Padding(

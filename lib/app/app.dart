@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../notify/push_fcm.dart' show pushBridgeProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:cupertino_ui/cupertino_ui.dart' as cui;
@@ -37,6 +38,8 @@ class RasqApp extends ConsumerWidget {
     ref.watch(testEndpointsSyncProvider);
     // 端末の通知のタップ (D-415): 画面の読み取りの通知 → 探す画面で 3 秒読み取る。
     ref.watch(notificationTapRouterProvider);
+    // Android のプッシュ (D-449): FCM のトークンが変われば登録し直す / 開いている間に届いたら端末の通知 / 押したら通知のページ。
+    ref.watch(pushBridgeProvider);
     // アルゴリズムとコミュニティへの貢献 (D-363): 同意しているあいだ束 / RAi のやりとりを集めて送る(状態の変化でアプリは建て直さない)。
     ref.listen(contributionProvider, (_, _) {});
     // 同意待ちの RASQ アカウント (D-371 / S-053): いまの版の利用規約を承諾していなければ、1 度だけ承諾のシート。

@@ -347,14 +347,17 @@ void main() {
     expect(find.text('プラグインノードを検索'), findsNothing); // 追加で閉じる
     expect(inScreen(find.text('キーワードを投稿内容からサジェスト')), findsOneWidget);
 
-    // タイムラインを追加 → FOW の選択肢は [タイムライン, リスト系, トレンドを取得, セクション / ブロック] (D-122 → D-442)。
+    // タイムラインを追加 → FOW の選択肢は [タイムライン, リスト系, RASQ 検索, トレンドを取得, セクション / ブロック] (D-122 → D-442 → D-449)。
     await tester.tap(inScreen(find.text('タイムラインを追加')));
     await tester.pumpAndSettle();
     expect(find.text('タイムライン'), findsOneWidget);
     expect(find.text('リストTL'), findsOneWidget); // D-194: リストは追加後にアカウント → リストで選ぶ
     expect(find.text('カスタムフィード(Bluesky)'), findsNothing); // Bluesky アカウントが無い
-    expect(find.text('セクション'), findsOneWidget);
+    expect(find.text('RASQ 検索'), findsOneWidget); // D-449
     expect(find.text('トレンドを取得'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('セクション'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('セクション'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('トレンドを取得'), -200, scrollable: find.byType(Scrollable).last);
     await tester.tap(find.text('トレンドを取得'));
     await tester.pumpAndSettle();
     expect(inScreen(find.text('トレンドを取得')), findsOneWidget);

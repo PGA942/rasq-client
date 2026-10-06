@@ -8,7 +8,7 @@ import '../home/post_duplicates.dart' show postDupKey;
 import '../relational/relational_engine.dart' show charNgramProfile, cosineOfProfiles, entityOverlap, extractFeatures, extractFeaturesText;
 import '../trend/tendency_profile.dart';
 import 'node_graph.dart';
-import 'tl_components.dart' show rasqListKindPrefix;
+import 'tl_components.dart' show rasqListKindPrefix, rasqSearchKindPrefix;
 
 /// ノードグラフの実行 (D-094/D-097)。
 ///
@@ -138,7 +138,8 @@ String withPageQuery(String kind, String? pageQuery) {
   final q = pageQuery?.trim() ?? '';
   if (q.isEmpty || !kind.endsWith('search:')) return kind;
   final bare = kind.startsWith('acct:') ? kind.substring(kind.indexOf('|') + 1) : kind;
-  return bare == 'search:' ? '$kind$q' : kind;
+  // RASQ 検索 (D-449) もワードが空ならこのページのワードで。
+  return bare == 'search:' || bare == rasqSearchKindPrefix ? '$kind$q' : kind;
 }
 
 /// 「アカウント」入力 (D-109) を kind id に包む。空/「現在のアカウント」は

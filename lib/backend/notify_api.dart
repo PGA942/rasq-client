@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../notify/push_fcm.dart' show pushMessagingProvider, pushTokenFor;
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -176,7 +177,8 @@ class NotifyStore extends AsyncNotifier<NotifyState> {
     final (info, raw) = await _api.issue(label: label);
     await ref.read(sessionStorageProvider).write(notifyTokenStorageKey, jsonEncode({'id': info.id, 'token': raw}));
     final deviceId = ref.read(orgateAccountProvider.notifier).deviceId;
-    if (deviceId != null) await _api.registerDevice(deviceId: deviceId, platform: notifyPlatform(), pushToken: dummyPushToken(), tokenId: info.id);
+    // Android で FCM が使えれば、その登録トークン(D-449)。無ければダミー(受信箱だけ)。
+    if (deviceId != null) await _api.registerDevice(deviceId: deviceId, platform: notifyPlatform(), pushToken: await pushTokenFor(ref.read(pushMessagingProvider)), tokenId: info.id);
     ref.invalidateSelf();
     await future;
   }

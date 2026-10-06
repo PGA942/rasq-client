@@ -250,6 +250,17 @@ class _SystemTile extends StatelessWidget {
   }
 }
 
+/// 通知のアイコンを押した (D-449): その人のページへ。何人もいれば、名前から選ぶ。
+Future<void> openNotificationActor(BuildContext context, WidgetRef ref, List<UserSummary> actors) async {
+  if (actors.isEmpty) return;
+  if (actors.length == 1) return context.pushUser(actors.first);
+  final box = context.findRenderObject() as RenderBox;
+  final pick = await ref.read(overlayManagerProvider).showDropdown<int>(id: 'notif.actors', anchor: box.localToGlobal(Offset.zero) & box.size, dense: true, items: [
+    for (var i = 0; i < actors.length; i++) RasqDropdownItem(actors[i].displayName.isEmpty ? '@${actors[i].account.handle}' : actors[i].displayName, i),
+  ]);
+  if (pick != null && context.mounted) context.pushUser(actors[pick]);
+}
+
 String _names(List<UserSummary> actors) {
   if (actors.isEmpty) return '';
   final shown = actors.take(2).map((a) => '${a.displayName}さん').join('、');
@@ -276,7 +287,16 @@ class _ActionTile extends ConsumerWidget {
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(icon, color: color, size: 24),
         const SizedBox(width: RasqSpacing.md),
-        if (item.actors.isNotEmpty) RasqGroupAvatar(users: item.actors, size: RasqSizes.avatarMd, maxVisible: 3),
+        // アイコンからその人のページへ (D-449)。何人もいれば選ぶ。
+        if (item.actors.isNotEmpty)
+          Builder(
+            builder: (bctx) => GestureDetector(
+              key: ValueKey('notif.avatar.${item.id}'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => openNotificationActor(bctx, ref, item.actors),
+              child: RasqGroupAvatar(users: item.actors, size: RasqSizes.avatarMd, maxVisible: 3),
+            ),
+          ),
         const Spacer(),
         RasqTimestamp(item.createdAt),
         RasqIconButton(icon: Icons.more_horiz, size: 18, onPressed: () {}, tooltip: 'メニュー'),
@@ -330,7 +350,7 @@ class _FollowTile extends ConsumerWidget {
     return Row(children: [
       Icon(icon, color: scheme.primary, size: 24),
       const SizedBox(width: RasqSpacing.md),
-      if (u != null) RasqAvatar(imageUrl: u.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: u.displayName),
+      if (u != null) RasqAvatar(key: ValueKey('notif.avatar.${item.id}'), imageUrl: u.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: u.displayName, onTap: () => context.pushUser(u)),
       const SizedBox(width: RasqSpacing.sm),
       Expanded(child: RasqRichText([RasqTextSpan(u?.displayName ?? '', bold: true), RasqTextSpan(text)], style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
       if (u != null && item.kind != NotificationKind.followRequest) RasqTogglePillButton(label: 'フォロー', activeLabel: 'フォロー中', active: st.following, onPressed: () => ref.read(userListHelperProvider).toggleFollow(u)),
@@ -398,7 +418,14 @@ class _RasqNotices extends ConsumerWidget {
                   return RasqListTile(
                     key: ValueKey('rasqNotice.${n.id}'),
                     leading: Stack(clipBehavior: Clip.none, children: [
-                      RasqAvatar(imageUrl: n.actor?.avatarUrl, size: RasqSizes.avatarSm, fallbackLabel: n.actor?.label ?? 'R'),
+                      // アイコンからその人の RASQ のページへ (D-449)。
+                      RasqAvatar(
+                        key: ValueKey('rasqNotice.${n.id}.avatar'),
+                        imageUrl: n.actor?.avatarUrl,
+                        size: RasqSizes.avatarSm,
+                        fallbackLabel: n.actor?.label ?? 'R',
+                        onTap: n.actor == null ? null : () => context.pushRasqAccount(n.actor!.handle),
+                      ),
                       Positioned(
                         right: -4,
                         bottom: -4,

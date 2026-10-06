@@ -835,6 +835,15 @@ class RasqAccountPageApi {
     );
   }
 
+  /// RASQ 検索 (D-449、Central `GET /search/posts`): フォローしていない人も含めた公開の投稿。並びと続きはフィードと同じ。
+  Future<({List<RasqAccountPost> posts, String? nextUntil})> searchPosts(String q, {String? until, int limit = 20}) async {
+    final j = await _client.getJson('/search/posts', {'q': q, 'limit': '$limit', 'until': until});
+    return (
+      posts: [for (final p in j['posts'] as List? ?? const []) if (p is Map) RasqAccountPost.fromJson(p.cast<String, Object?>())],
+      nextUntil: j['nextUntil'] as String?,
+    );
+  }
+
   /// いいね(パックを使わないキュー)。
   Future<RasqAccountPost> like(String postId) async => RasqAccountPost.fromJson(await _client.putJson('/posts/$postId/queue', const {'like': true}));
 

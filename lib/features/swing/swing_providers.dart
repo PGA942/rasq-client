@@ -63,6 +63,13 @@ class SwingFeed extends AsyncNotifier<List<Swing>> {
     if (cur != null && cur.any((s) => s.id == id)) state = AsyncData([for (final s in cur) if (s.id != id) s]);
   }
 
+  /// 届いた Swing を足す(ライブの知らせ、D-449)。もうあれば何もしない。
+  void upsertLocal(Swing s) {
+    final cur = state.value ?? const <Swing>[];
+    if (cur.any((x) => x.id == s.id)) return;
+    state = AsyncData([s, ...cur]);
+  }
+
   /// 見終えた: 手元で見終えた印を付けて Central へ。
   Future<void> markSeen(String id) async {
     if (!_seen.add(id)) return;
