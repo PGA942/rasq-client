@@ -21,6 +21,7 @@ import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/features/ads/export_ad.dart';
 import 'package:rasq_client/features/ads/timeline_ads.dart' show swingServerAdsProvider;
+import 'package:rasq_client/features/home/live_events.dart' show liveEventsConnectProvider;
 import 'package:rasq_client/features/home/home_header.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart' show astellCreateFowId;
 import 'package:rasq_client/features/settings/settings_dsl.dart';
@@ -1675,6 +1676,23 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.byType(SwingComposerScreen), findsOneWidget);
+  });
+
+  testWidgets('ライブの新着 (D-449): フォロー中の人の Swing が出たら、Central の知らせですぐヘッダーへ。上へスワイプでいったん消える', (tester) async {
+    final live = StreamController<Map<String, Object?>>.broadcast();
+    addTearDown(live.close);
+    final (mock, _, _, _) = central([swing('old', 'bob', text: '前から', age: const Duration(minutes: 30))]);
+    await pumpApp(tester, mock, extra: [liveEventsConnectProvider.overrideWithValue(() async => live.stream)]);
+    await tester.tap(find.byKey(const ValueKey('home.header.collapse')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('home.header.arrivals')), findsNothing);
+    live.add({'type': 'swing', 'swing': swing('live1', 'dave', text: 'いま', age: const Duration(seconds: 2))});
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('home.header.arrival.swing:dave')), findsOneWidget, reason: '読み直しを待たずに');
+    await tester.fling(find.byKey(const ValueKey('home.header.arrivals.swipe')), const Offset(0, -120), 800);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('home.header.arrival.swing:dave')), findsNothing, reason: '上へスワイプでいったん消える');
   });
 
   testWidgets('ヘッダーをしまう(↑)→ バーとタブ行が消え、アイコンだけ浮かぶ(↓ は無い、D-410)。新着の Swing は 1 分だけ → アイコンを押すと戻る', (tester) async {

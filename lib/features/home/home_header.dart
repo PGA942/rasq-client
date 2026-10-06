@@ -11,6 +11,7 @@ import '../swing/swing_viewer.dart' show openSwingViewer;
 import '../vc/astell_actions.dart';
 import '../vc/astell_models.dart';
 import '../vc/astell_providers.dart';
+import 'live_events.dart';
 
 /// ホームのヘッダー (D-377)。
 ///
@@ -122,6 +123,18 @@ class HeaderArrivals extends Notifier<List<HeaderArrival>> {
     }
     _mineBase = true;
     _add([?add]);
+  }
+
+  /// ライブで届いた AsTell (D-449)。前から知っていれば何もしない。
+  void liveRoom(AstellRoom r) {
+    if (!r.isOpen || !_known.add('astell:${r.id}')) return;
+    _add([HeaderArrival.astell(r, now())]);
+  }
+
+  /// 上へスワイプで、いまの新着をいったん消す (D-449)。次に届いたものはまた出る。
+  void dismissAll() {
+    _set(const []);
+    _schedule();
   }
 
   void _add(List<HeaderArrival> add) {
@@ -280,10 +293,18 @@ class HomeHeaderArrivals extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // フォロー中の人の Swing / AsTell をライブで受ける (D-449)。新着を出している間だけ繋いでおく。
+    ref.watch(liveEventsProvider);
     final arrivals = [for (final a in ref.watch(headerArrivalsProvider)) if (astell || a.room == null) a];
     if (arrivals.isEmpty) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
-    return SingleChildScrollView(
+    // 上へスワイプでいったん消す (D-449、ヘッダーをしまっているときに浮かべた新着も)。
+    return GestureDetector(
+      key: const ValueKey('home.header.arrivals.swipe'),
+      onVerticalDragEnd: (d) {
+        if ((d.primaryVelocity ?? 0) < -150) ref.read(headerArrivalsProvider.notifier).dismissAll();
+      },
+      child: SingleChildScrollView(
       key: const ValueKey('home.header.arrivals'),
       scrollDirection: Axis.horizontal,
       child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -305,6 +326,7 @@ class HomeHeaderArrivals extends ConsumerWidget {
           const SizedBox(width: 8),
         ],
       ]),
+    ),
     );
   }
 }

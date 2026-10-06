@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../notify/push_fcm.dart' show pushNotificationPayload;
 import 'dart:convert';
 import 'dart:io' show Directory, File, FileSystemEntity, Platform;
 
@@ -401,6 +402,8 @@ final notificationTapRouterProvider = Provider<void>((ref) {
 
   final sub = notifier.taps.listen((payload) {
     if (payload == discoverGlimpsePayload) open();
+    // 開いている間に届いたプッシュ(D-449)を押した → 通知のページ。
+    if (payload == pushNotificationPayload) unawaited(ref.read(routerProvider).push(Routes.notifications));
   });
   ref.onDispose(sub.cancel);
   unawaited(notifier.listenForTaps());

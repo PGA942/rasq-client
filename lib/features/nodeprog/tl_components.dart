@@ -15,6 +15,10 @@ const pageSearchKind = 'search:';
 /// 取得の kind id の接頭辞: RASQ リスト (D-346)。`rasqlist:<id>`。Central のリストのタイムライン(S-044)に解決する。
 const rasqListKindPrefix = 'rasqlist:';
 
+/// 取得の kind id の接頭辞: RASQ 検索 (D-449)。`rasqsearch:<ワード>`。フォローしていない人も含めた RASQ の公開の投稿を検索する
+/// (Central の `GET /search/posts`)。ワードが空なら、このページの検索ワード / タグ。
+const rasqSearchKindPrefix = 'rasqsearch:';
+
 /// TL カスタマイズの簡略化 (D-121, 原典: ワイヤーフレーム「タイムラインの
 /// カスタマイズ」+ ユーザー検討案)。自由形のノードキャンバスは TL スコープ
 /// では**一旦無効化**し、TL は 2 種類のコンポーネントの積みで組む:
@@ -85,6 +89,10 @@ class TlSourceComponent {
 
   /// RASQ リスト (D-346): `rasqlist:<id>`。SNS のアカウントは関係しない(Central が取る)。
   bool get isRasqList => tl.startsWith(rasqListKindPrefix);
+
+  /// RASQ 検索 (D-449)。
+  bool get isRasqSearch => tl.startsWith(rasqSearchKindPrefix);
+  String get rasqSearchWord => isRasqSearch ? tl.substring(rasqSearchKindPrefix.length) : '';
   String get rasqListId => isRasqList ? tl.substring(rasqListKindPrefix.length) : '';
   String get listName => isList ? tl.substring(5) : '';
   String get dmPeer => isDm ? tl.substring(3) : '';
@@ -387,6 +395,9 @@ NodeGraph compileTlConfig(TlConfig cfg, {required String scope}) {
     } else if (s.isRasqList) {
       // RASQ リスト (D-346): アカウントは付けない(RASQ の投稿と同じく、SNS のセッションを探しに行かない)。
       nodes.add(inst('tl.rasqlist', 's$i', at, values: {'リスト': s.rasqListId}));
+    } else if (s.isRasqSearch) {
+      // RASQ 検索 (D-449): アカウントは付けない。
+      nodes.add(inst('tl.source', 's$i', at, values: {'TL': s.tl}));
     } else {
       nodes.add(inst('tl.source', 's$i', at, values: {'TL': s.tl, 'アカウント': s.account}));
     }
