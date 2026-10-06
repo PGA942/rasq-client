@@ -8,6 +8,8 @@ import 'package:rasq_design/rasq_design.dart';
 ///   `[テキスト](URL)` 行頭の `> 引用`
 /// - タグ: `<b> <i> <s> <small> <center> <plain>`(plain は中身を解析しない)
 /// - MFM 関数: `$[fn.args …]`(入れ子可)→ [RasqTransformSpan]
+/// - HTML 風の MFM(`htmlFns: true` のときだけ、D-446 の RASQ の Markdown ページ): `<spin speed="1s">…</spin>` / `<x2>` / `<fg color="f00">` /
+///   `<flip h v>` / `<rotate deg="30">` …(MFM の関数名をタグに、引数を属性に)、`<ruby>本<rt>ほん</rt></ruby>`。入れ子可。
 ///
 /// 引用・コードブロックも transform スパン(`quote` / `code_block`)として
 /// 持ち、`RasqMfmTransform` が描画する。
@@ -21,6 +23,12 @@ abstract final class InlineSpans {
   static final _mdLink = RegExp(r'^\[([^\[\]]+)\]\((https?://[^\s)]+)\)');
   static final _htmlTag = RegExp(r'^<(b|i|s|small|center|plain)>');
 
+  /// HTML 風の MFM の開きタグ(`<spin speed="1s" left>`)。
+  static final _htmlFnOpen = RegExp(r'^<([a-z][a-z0-9]*)((?:\s+[a-z][a-z0-9]*(?:="[^"<>]*")?)*)\s*>');
+
+  /// HTML 風に書ける MFM の関数(`<b>` などの既存のタグは除く)。
+  static const htmlFnTags = {'x2', 'x3', 'x4', 'blur', 'rotate', 'flip', 'fg', 'bg', 'shake', 'spin', 'jump', 'bounce', 'rainbow', 'twitch', 'jelly', 'tada', 'ruby'};
+
   /// Shortcodes found in [text], host suffix stripped (絵文字URLのプリフェッチ用。
   /// リモート絵文字の URL は本来ノートの emojis フィールド由来)。
   static Set<String> emojiShortcodes(String text) => {
@@ -33,8 +41,9 @@ abstract final class InlineSpans {
     void Function(Uri url)? onLink,
     void Function(String handle, String? host)? onMention,
     void Function(String tag)? onHashtag,
+    bool htmlFns = false,
   }) =>
-      _Parser(emojis: emojis, onLink: onLink, onMention: onMention, onHashtag: onHashtag).parse(text, atLineStart: true);
+      _Parser(emojis: emojis, onLink: onLink, onMention: onMention, onHashtag: onHashtag, htmlFns: htmlFns).parse(text, atLineStart: true);
 
   static String shortUrl(String raw) {
     var s = raw.replaceFirst(RegExp(r'^https?://'), '');
@@ -44,7 +53,10 @@ abstract final class InlineSpans {
 }
 
 class _Parser {
-  _Parser({required this.emojis, this.onLink, this.onMention, this.onHashtag});
+  _Parser({required this.emojis, this.onLink, this.onMention, this.onHashtag, this.htmlFns = false});
+
+  /// HTML 風の MFM を読むか (D-446)。
+  final bool htmlFns;
 
   final Map<String, Uri?> emojis;
   final void Function(Uri url)? onLink;
@@ -95,6 +107,15 @@ class _Parser {
     consider(_index(s, '*', (i) => s.startsWith('**', i) ? null : _StyleMarker(i, '*', italic: true)));
     consider(_index(s, '[', (i) => InlineSpans._mdLink.firstMatch(s.substring(i)) == null ? null : _LinkMarker(i)));
     consider(_index(s, '<', (i) => InlineSpans._htmlTag.firstMatch(s.substring(i)) == null ? null : _TagMarker(i, InlineSpans._htmlTag.firstMatch(s.substring(i))!.group(1)!)));
+    if (htmlFns) {
+      for (final m in RegExp('<').allMatches(s)) {
+        final open = InlineSpans._htmlFnOpen.firstMatch(s.substring(m.start));
+        if (open != null && InlineSpans.htmlFnTags.contains(open.group(1))) {
+          consider(_HtmlFnMarker(m.start, open));
+          break;
+        }
+      }
+    }
     // 行頭の "> " 引用(先頭 or 改行直後)。
     final quote = RegExp(r'(^|\n)> ').firstMatch(s);
     if (quote != null) {
@@ -287,6 +308,60 @@ class _MfmMarker extends _Marker {
     }
     return out;
   }
+}
+
+/// HTML 風の MFM (D-446): `<fn attr="v" flag>…</fn>` → [RasqTransformSpan]。同じタグの入れ子を数えて閉じタグを探す。
+/// `<ruby>本<rt>ほん</rt></ruby>` は `ruby`(引数 `rt` = 読み)。
+class _HtmlFnMarker extends _Marker {
+  _HtmlFnMarker(super.index, this.open);
+  final RegExpMatch open;
+
+  static final _attr = RegExp(r'([a-z][a-z0-9]*)(?:="([^"<>]*)")?');
+
+  @override
+  int handle(_Parser p, String s, List<RasqSpan> out) {
+    final tag = open.group(1)!;
+    final start = index + open.end;
+    final close = _closing(s, tag, start);
+    if (close < 0) return 0;
+    var inner = s.substring(start, close);
+    final args = <String, Object?>{};
+    for (final a in _attr.allMatches(open.group(2) ?? '')) {
+      final v = a.group(2);
+      args[a.group(1)!] = v == null ? true : (num.tryParse(v) ?? v);
+    }
+    if (tag == 'ruby') {
+      final rt = RegExp(r'<rt>([\s\S]*?)</rt>').firstMatch(inner);
+      if (rt != null) {
+        args['rt'] = rt.group(1)!;
+        inner = inner.replaceRange(rt.start, rt.end, '');
+      }
+    }
+    out.add(RasqTransformSpan(tag, args: args, children: p.parse(inner)));
+    return close + '</$tag>'.length;
+  }
+
+  static int _closing(String s, String tag, int from) {
+    final opener = RegExp('<$tag(?=[\\s>])');
+    final closer = '</$tag>';
+    var depth = 0;
+    var i = from;
+    while (i < s.length) {
+      final c = s.indexOf(closer, i);
+      if (c < 0) return -1;
+      final o = opener.firstMatch(s.substring(i))?.start;
+      if (o != null && i + o < c) {
+        depth++;
+        i = i + o + 1;
+        continue;
+      }
+      if (depth == 0) return c;
+      depth--;
+      i = c + closer.length;
+    }
+    return -1;
+  }
+
 }
 
 class _QuoteMarker extends _Marker {

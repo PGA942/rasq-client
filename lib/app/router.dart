@@ -40,6 +40,7 @@ import '../features/settings/settings_dsl.dart';
 import '../features/settings/settings_section_screen.dart';
 import '../features/custom/custom_page.dart';
 import '../features/custom/custom_plugins_screen.dart';
+import '../features/profile/rasq_pages.dart' show RasqMdPage, RasqMdPageEditorScreen, RasqMdPageScreen;
 import '../features/swing/swing_composer.dart';
 import '../features/swing/swing_viewer.dart';
 import '../features/profile/profile_edit_screen.dart';
@@ -216,6 +217,10 @@ abstract final class Routes {
   static String customPage(String pluginId, [Map<String, String> query = const {}]) =>
       Uri(path: '/custom/page/${Uri.encodeComponent(pluginId)}', queryParameters: query.isEmpty ? null : query).toString();
   static String customInvite(String code) => '/custom/invite/${Uri.encodeComponent(code)}';
+
+  /// RASQ の Markdown ページ (D-446): 読む / 編集(`extra` = 公開済みの中身)。
+  static String rasqMdPage(String handle, String id, {bool mine = false}) => '/rasq-page/${Uri.encodeComponent(handle)}/${Uri.encodeComponent(id)}${mine ? '?mine=1' : ''}';
+  static String rasqMdPageEdit(String id) => '/rasq-page-edit/${Uri.encodeComponent(id)}';
 
   /// Swing (D-377): 見る(全画面、作った人から)/ 作る。
   static String swing([String? author]) => author == null ? '/swing' : '/swing?author=${Uri.encodeQueryComponent(author)}';
@@ -507,10 +512,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
               path: '/custom/page/:id',
               parentNavigatorKey: _appNavigatorKey,
-              builder: (_, s) => CustomPageScreen(key: ValueKey(s.uri.toString()), args: CustomPageArgs.fromState(Uri.decodeComponent(s.pathParameters['id']!), s.uri.queryParameters))),
+              // 入れ物を取る関数などを持つ引数は extra で(RASQ のページの自作プラグイン、D-446)。
+              builder: (_, s) => CustomPageScreen(key: ValueKey(s.uri.toString()), args: s.extra is CustomPageArgs ? s.extra as CustomPageArgs : CustomPageArgs.fromState(Uri.decodeComponent(s.pathParameters['id']!), s.uri.queryParameters))),
           GoRoute(path: '/swing', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SwingViewerScreen(startAuthor: s.uri.queryParameters['author'], mine: s.uri.queryParameters['mine'] == '1')),
           GoRoute(path: Routes.swingNew, parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SwingComposerScreen(draft: s.extra is SwingDraft ? s.extra as SwingDraft : null)),
           GoRoute(path: '/custom/invite/:code', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => CustomInviteScreen(code: Uri.decodeComponent(s.pathParameters['code']!))),
+          GoRoute(
+              path: '/rasq-page/:handle/:id',
+              parentNavigatorKey: _appNavigatorKey,
+              builder: (_, s) => RasqMdPageScreen(handle: Uri.decodeComponent(s.pathParameters['handle']!), id: Uri.decodeComponent(s.pathParameters['id']!), isMine: s.uri.queryParameters['mine'] == '1')),
+          GoRoute(
+              path: '/rasq-page-edit/:id',
+              parentNavigatorKey: _appNavigatorKey,
+              builder: (_, s) => RasqMdPageEditorScreen(id: Uri.decodeComponent(s.pathParameters['id']!), published: s.extra is RasqMdPage ? s.extra as RasqMdPage : null)),
           GoRoute(path: '/store/search', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => StoreSearchScreen(initialQuery: s.uri.queryParameters['q'] ?? '')),
           GoRoute(
               path: '/store/installed/:id',

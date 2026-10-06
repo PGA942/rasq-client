@@ -13,6 +13,7 @@ import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/providers.dart';
+import '../../backend/rasq_account.dart' show orgateAccountProvider;
 import '../settings/settings_dsl.dart';
 import '../store/store_providers.dart';
 import '../vc/astell_bar.dart';
@@ -43,7 +44,9 @@ enum ActionBarSurface {
   viewer('.viewer', '全画面アクションバー'),
   editorImage('.editor.image', '加工画面のバー(画像)'),
   editorVideo('.editor.video', '加工画面のバー(動画 / 音声)'),
-  rasqPost('.rasq', 'RASQ の投稿のバー'),
+  // RASQ のバー (D-446): RASQ アカウントを選んで編集する(SNS のアカウントのバーとは別)。Swing の上のボタンは全画面アクションバー。
+  rasqViewer('.rasq.viewer', '全画面アクションバー(Swing)'),
+  rasqPost('.rasq', '投稿アクションバー'),
   astell('.astell', 'AsTell のルームの下段');
 
   const ActionBarSurface(this.keySuffix, this.title);
@@ -54,7 +57,10 @@ enum ActionBarSurface {
   bool get isEditor => this == editorImage || this == editorVideo;
 
   /// 土台が SNS のアクションではないバー(加工画面 / RASQ の投稿 D-279 / AsTell の下段 D-324)。
-  bool get isBuiltin => isEditor || this == rasqPost || this == astell;
+  bool get isBuiltin => isEditor || isRasq || this == astell;
+
+  /// RASQ アカウントのバー (D-446)。
+  bool get isRasq => this == rasqPost || this == rasqViewer;
 }
 
 String actionBarConfigKey(ActionBarSurface surface, String accountKey) => switch (surface) {
@@ -63,6 +69,7 @@ String actionBarConfigKey(ActionBarSurface surface, String accountKey) => switch
       ActionBarSurface.editorImage => editorImageConfigKey,
       ActionBarSurface.editorVideo => editorVideoConfigKey,
       ActionBarSurface.rasqPost => rasqPostConfigKey,
+      ActionBarSurface.rasqViewer => rasqViewerConfigKey,
       ActionBarSurface.astell => astellBarConfigKey,
     };
 
@@ -73,7 +80,9 @@ const actionBarTileSize = 56.0;
 /// [accountKey] = どのアカウントのバーを編集するか (D-284)。投稿の … から開くときは、**その投稿が流れてきたアカウント**(総合 TL では、
 /// 表示中のアカウントとは限らない)。null = 表示中のアカウント。
 /// AsTell の下段だけ(D-324、設定の「ASTell」/ ルームの歯車から)のときは見出しを「ルームのボタンの編集」にする。
-Future<void> showActionBarEditSheet(WidgetRef ref, {int column = 0, List<ActionBarSurface>? surfaces, String? accountKey}) async {
+/// [rasq] (D-446) = RASQ アカウントのバー(全画面 = Swing / 投稿)を編集する。アカウントのタイルを押すと、RASQ アカウントと SNS の
+/// アカウントを切り替えられる(RASQ のバーは RASQ アカウントを選んでいるときだけ出る)。
+Future<void> showActionBarEditSheet(WidgetRef ref, {int column = 0, List<ActionBarSurface>? surfaces, String? accountKey, bool rasq = false}) async {
   final manager = ref.read(overlayManagerProvider);
   if (manager.contains(actionBarEditFowId)) return;
   final title = _astellOnly(surfaces) ? 'ルームのボタンの編集' : 'アクションバーの編集';
@@ -81,7 +90,7 @@ Future<void> showActionBarEditSheet(WidgetRef ref, {int column = 0, List<ActionB
     id: actionBarEditFowId,
     spec: FowSpec(title: title, cancelText: '閉じる', initialHeightFactor: 0.85, maxHeightFactor: 0.92, maxWidth: 640, columnIndex: column),
     semanticsLabel: title,
-    builder: (_, _) => _ActionBarEditBody(surfaces: surfaces, accountKey: accountKey),
+    builder: (_, _) => _ActionBarEditBody(surfaces: surfaces, accountKey: accountKey, rasq: rasq || (surfaces?.any((s) => s.isRasq) ?? false)),
   );
 }
 
@@ -112,7 +121,7 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
           final q = query.text.trim().toLowerCase();
           final rows = <({String id, String label, String subtitle, String genre, IconData icon})>[
             for (final a in sns)
-              if (!exclude.contains(a.id)) (id: a.id, label: a.label, subtitle: '${isEditorConfigKey(configKey) ? '内蔵の編集' : configKey == rasqPostConfigKey ? 'RASQ のアクション' : configKey == astellBarConfigKey ? 'AsTell のボタン' : 'SNS のアクション'} · ${a.genreTag}', genre: a.genreTag, icon: PostRow.iconFor(a.icon, Icons.circle_outlined)),
+              if (!exclude.contains(a.id)) (id: a.id, label: a.label, subtitle: '${isEditorConfigKey(configKey) ? '内蔵の編集' : isRasqConfigKey(configKey) ? 'RASQ のアクション' : configKey == astellBarConfigKey ? 'AsTell のボタン' : 'SNS のアクション'} · ${a.genreTag}', genre: a.genreTag, icon: PostRow.iconFor(a.icon, Icons.circle_outlined)),
             for (final p in plugins)
               if (!exclude.contains(p.id))
                 (
@@ -523,23 +532,69 @@ class _MemberTileState extends State<_MemberTile> {
 
 // ── 編集 FOW の本体 ──────────────────────────────────────────────────
 
-class _ActionBarEditBody extends ConsumerWidget {
-  const _ActionBarEditBody({this.surfaces, this.accountKey});
+class _ActionBarEditBody extends ConsumerStatefulWidget {
+  const _ActionBarEditBody({this.surfaces, this.accountKey, this.rasq = false});
   final List<ActionBarSurface>? surfaces;
   final String? accountKey;
+  final bool rasq;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ActionBarEditBody> createState() => _ActionBarEditBodyState();
+}
+
+class _ActionBarEditBodyState extends ConsumerState<_ActionBarEditBody> {
+  /// 編集するアカウント (D-446): RASQ アカウントか([_rasq])、SNS のアカウント([_accountKey]、null = 表示中のアカウント)。
+  late bool _rasq = widget.rasq;
+  late String? _accountKey = widget.accountKey;
+
+  List<ActionBarSurface>? get surfaces => widget.surfaces;
+
+  /// アカウントのタイルを押した: RASQ アカウント + SNS のアカウントから選ぶ。
+  Future<void> _pickAccount(Rect anchor) async {
+    final sessions = ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[];
+    final hasRasq = ref.read(orgateAccountProvider).value != null;
+    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'actionbar.account.pick', anchor: anchor, dense: true, items: [
+      if (hasRasq) RasqDropdownItem('RASQ アカウント', '', checked: _rasq),
+      for (final s in sessions) RasqDropdownItem('@${s.account.handle}@${s.account.instance}', s.account.key, checked: !_rasq && s.account.key == (_accountKey ?? ref.read(currentAccountProvider)?.key)),
+    ]);
+    if (pick == null || !mounted) return;
+    setState(() {
+      _rasq = pick.isEmpty;
+      if (pick.isNotEmpty) _accountKey = pick;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     // 編集するアカウント (D-284): 指定があればそれ(投稿が流れてきたアカウント)、無ければ表示中のアカウント。
-    final picked = this.accountKey == null ? null : ref.watch(sessionsProvider).value?.allSessions.where((s) => s.account.key == this.accountKey).firstOrNull;
+    final picked = _accountKey == null ? null : ref.watch(sessionsProvider).value?.allSessions.where((s) => s.account.key == _accountKey).firstOrNull;
     final current = ref.watch(currentUserProvider);
-    final me = picked == null ? current : UserSummary(id: current.id, account: picked.account, displayName: picked.displayName ?? picked.account.handle, avatarUrl: picked.avatarUrl);
+    final me = _rasq
+        ? ref.watch(rasqAccountProvider)
+        : picked == null
+            ? current
+            : UserSummary(id: current.id, account: picked.account, displayName: picked.displayName ?? picked.account.handle, avatarUrl: picked.avatarUrl);
     final accountKey = picked?.account.key ?? ref.watch(currentAccountProvider)?.key ?? '';
+    // バー (D-446): RASQ アカウント = 全画面(Swing)/ 投稿。SNS のアカウント = 全画面 → 投稿 → 加工画面(RASQ のバーは出さない)。
+    final shown = surfaces != null && !_rasq && surfaces!.every((x) => !x.isRasq)
+        ? surfaces!
+        : surfaces != null && _rasq && surfaces!.every((x) => x.isRasq)
+            ? surfaces!
+            : _rasq
+                ? const [ActionBarSurface.rasqViewer, ActionBarSurface.rasqPost]
+                : const [ActionBarSurface.viewer, ActionBarSurface.post, ActionBarSurface.editorImage, ActionBarSurface.editorVideo];
+    final astellOnly = _astellOnly(surfaces);
     return SingleChildScrollView(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        // ── アカウントタイル(AsTell の下段だけのときは出さない。端末ごとの構成、D-324)──
-        if (!_astellOnly(surfaces)) Padding(
+        // ── アカウントタイル(AsTell の下段だけのときは出さない。端末ごとの構成、D-324)。押すとアカウントを切り替える (D-446)──
+        if (!astellOnly) Builder(
+          builder: (tctx) => InkWell(
+            onTap: () {
+              final box = tctx.findRenderObject() as RenderBox;
+              _pickAccount(box.localToGlobal(Offset.zero) & box.size);
+            },
+            child: Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
           child: Row(key: const ValueKey('actionbar.account'), children: [
             RasqAvatar(imageUrl: me.avatarUrl, fallbackLabel: me.displayName, size: 40),
@@ -547,6 +602,9 @@ class _ActionBarEditBody extends ConsumerWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(me.displayName, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (_rasq)
+                  Text('RASQ アカウント', key: const ValueKey('actionbar.account.rasq'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))
+                else
                 Row(children: [
                   Flexible(child: Text('@${me.account.handle}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
                   const SizedBox(width: 4),
@@ -554,16 +612,19 @@ class _ActionBarEditBody extends ConsumerWidget {
                 ]),
               ]),
             ),
+            Icon(Icons.unfold_more, size: 20, color: scheme.onSurfaceVariant),
           ]),
         ),
+          ),
+        ),
         // ── バーごとの編集(全画面 → 投稿 → 加工画面)──
-        for (final surface in surfaces ?? const [ActionBarSurface.viewer, ActionBarSurface.post, ActionBarSurface.editorImage, ActionBarSurface.editorVideo, ActionBarSurface.rasqPost]) ...[
+        for (final surface in shown) ...[
           RasqSectionHeader(title: surface.title),
           _ActionBarTiles(key: ValueKey('actionbar.surface.${surface.name}'), surface: surface, accountKey: accountKey),
         ],
         RasqCaption(
-          _astellOnly(surfaces) ? '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。(+) でボタンを追加。' : '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。',
-          detail: _astellOnly(surfaces)
+          astellOnly ? '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。(+) でボタンを追加。' : '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。',
+          detail: astellOnly
               ? '(…) / shift + クリック / 右クリックでメニュー(非表示 / バンドル)。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。(+) で非表示にしたボタンや AsTell のプラグインを足す。幅に収まらないときは、先頭から入るだけと最後の 1 つ(入力欄の隣)を出し、残りはルームの歯車のメニューへ。'
               : '(…) / shift + クリック / 右クリックでメニュー。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。宣言されたプラグインボタンと束ねる閾値は 設定 → SNSプラグイン →「プラグインボタン」。',
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.lg),
@@ -615,7 +676,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
     final actions = merged.actions;
     final entries = merged.config.apply(actions);
     final isAstell = widget.surface == ActionBarSurface.astell;
-    final pluginName = isEditor ? 'RASQ(内蔵の編集)' : widget.surface == ActionBarSurface.rasqPost ? 'RASQ' : isAstell ? 'AsTell' : (registry.plugins.where((p) => p.manifest.id == session?.pluginId).firstOrNull?.manifest.name ?? session?.pluginId ?? '');
+    final pluginName = isEditor ? 'RASQ(内蔵の編集)' : widget.surface.isRasq ? 'RASQ' : isAstell ? 'AsTell' : (registry.plugins.where((p) => p.manifest.id == session?.pluginId).firstOrNull?.manifest.name ?? session?.pluginId ?? '');
     String providerOf(ActionDescriptor a) => isPluginActionId(a.id) ? (plugins.where((p) => p.id == a.id).firstOrNull?.plugin.manifest.name ?? 'プラグイン') : pluginName;
     Future<void> setEnabled(String id, bool on) => settingsStore.set('enabled', {...settings.enabled, id: on});
 

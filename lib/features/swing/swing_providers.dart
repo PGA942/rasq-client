@@ -57,6 +57,12 @@ class SwingFeed extends AsyncNotifier<List<Swing>> {
     }
   }
 
+  /// 手元の並びから外す(消した、D-446)。
+  void removeLocal(String id) {
+    final cur = state.value;
+    if (cur != null && cur.any((s) => s.id == id)) state = AsyncData([for (final s in cur) if (s.id != id) s]);
+  }
+
   /// 見終えた: 手元で見終えた印を付けて Central へ。
   Future<void> markSeen(String id) async {
     if (!_seen.add(id)) return;
@@ -79,6 +85,16 @@ final swingPackageFetcherProvider = Provider<Future<Uint8List> Function(Uri url)
 
 final swingFeedProvider = AsyncNotifierProvider<SwingFeed, List<Swing>>(SwingFeed.new);
 
+/// Swing を消す (D-446): Central で消し(`DELETE /swings/{id}`)、手元のフィードと自分の Swing からもすぐ外す
+/// (前はビューワーの … の「削除」が根の投稿だけを消し、Swing は残り続けていた)。消せなければ例外のまま。
+Future<void> deleteSwing(WidgetRef ref, String id) async {
+  final api = ref.read(swingApiProvider);
+  if (api == null) throw StateError('RASQ アカウントにログインしていません');
+  await api.delete(id);
+  ref.read(swingFeedProvider.notifier).removeLocal(id);
+  ref.read(mySwingsProvider.notifier).removeLocal(id);
+}
+
 /// 自分が出している Swing (D-410): ヘッダーの Swing の並びの先頭に自分の顔で出す(`GET /me/swings`、届け先と見た人の数つき)。
 /// フィードと同じ間隔で読み直し、期限の過ぎたものは手元でも外す。作ったら読み直す(`ref.invalidate`)。
 class MySwings extends AsyncNotifier<List<Swing>> {
@@ -99,6 +115,12 @@ class MySwings extends AsyncNotifier<List<Swing>> {
   }
 
   List<Swing> _live(List<Swing> all) => [for (final s in all) if (s.expiresAt.isAfter(now())) s];
+
+  /// 手元の並びから外す(消した、D-446)。
+  void removeLocal(String id) {
+    final cur = state.value;
+    if (cur != null && cur.any((s) => s.id == id)) state = AsyncData([for (final s in cur) if (s.id != id) s]);
+  }
 
   Future<void> refresh() async {
     final api = ref.read(swingApiProvider);

@@ -43,7 +43,10 @@ import '../store/sticker_packs.dart';
 /// キュー = ストアでインストール(購入)した署名済みアセットパックの絵でのリアクション。付いているキューは、絵 + 件数のチップで出る
 /// (絵はサーバーが配るので、そのパックを入れていなくても見える。チップを押すと、同じ絵を自分も付ける / 外す)。
 class RasqPostTileView extends ConsumerWidget {
-  const RasqPostTileView({super.key, required this.post, required this.onChanged, this.onOpen, this.focused = false, this.onReply, this.pinned = false, this.onTogglePin});
+  const RasqPostTileView({super.key, required this.post, required this.onChanged, this.onOpen, this.focused = false, this.onReply, this.pinned = false, this.onTogglePin, this.onDelete});
+
+  /// … の「削除」を呼び出し側で受ける(確かめも呼び出し側。Swing は Swing ごと消す、D-446)。null なら投稿を消す。
+  final Future<void> Function()? onDelete;
   final RasqAccountPost post;
 
   /// 投稿が変わった / 消えた(呼び出し側が取り直す)。
@@ -117,12 +120,14 @@ class RasqPostTileView extends ConsumerWidget {
         await Clipboard.setData(ClipboardData(text: link.toString()));
         if (context.mounted) _toast(context, 'リンクをコピーしました');
       case 'editActions':
-        await showActionBarEditSheet(ref, column: fowColumnOf(context), surfaces: const [ActionBarSurface.rasqPost]);
+        // RASQ アカウントのバー(全画面 = Swing / 投稿)を編集する (D-446)。
+        await showActionBarEditSheet(ref, column: fowColumnOf(context), rasq: true);
       case 'open':
         if (link != null) await launchUrl(link, mode: LaunchMode.externalApplication);
       case 'pin':
         await onTogglePin?.call();
       case 'delete':
+        if (onDelete case final f?) return f();
         final ok = await ref.read(overlayManagerProvider).showAlert(id: 'rasq.post.delete', title: '投稿を削除', message: 'この投稿と、付いている画像を削除します。元に戻せません。', confirmText: '削除する', cancelText: 'キャンセル', destructive: true);
         if (!ok || !context.mounted) return;
         await _run(context, ref, (api) => api.deletePost(post.id));
@@ -549,25 +554,29 @@ Future<void> pickRasqQueue(BuildContext context, WidgetRef ref, RasqAccountPost 
 /// キューは押すと いいね(付けていれば外す)、長押しで絵を選ぶ。最後の「…」は投稿のメニュー(リアクションを表示 / リンクをコピー /
 /// ブラウザで開く / アクションバーを編集 / 自分のものは削除。共有と保存は無し)。
 class RasqPostOverlayActions extends ConsumerWidget {
-  const RasqPostOverlayActions({super.key, required this.post, required this.onChanged, this.onReply});
+  const RasqPostOverlayActions({super.key, required this.post, required this.onChanged, this.onReply, this.onDelete});
   final RasqAccountPost post;
   final VoidCallback onChanged;
+
+  /// … の「削除」(D-446: Swing は Swing ごと消す)。null なら投稿を消す。
+  final Future<void> Function()? onDelete;
 
   /// 返信のボタン。null なら返信のコンポーザーを開く。
   final VoidCallback? onReply;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final view = RasqPostTileView(post: post, onChanged: onChanged, onReply: onReply);
+    final view = RasqPostTileView(post: post, onChanged: onChanged, onReply: onReply, onDelete: onDelete);
     final me = ref.watch(orgateAccountProvider).value;
     final isMine = me != null && post.author != null && me.id == post.author!.id;
     final mine = post.queues.where((q) => q.mine).firstOrNull;
-    final pluginActions = ref.watch(pluginActionsForProvider(rasqPostConfigKey));
+    // 構成は RASQ の全画面アクションバー (D-446: SNS の全画面アクションバーと同じ扱い。投稿のバーとは別に並べ替えられる)。
+    final pluginActions = ref.watch(pluginActionsForProvider(rasqViewerConfigKey));
     final merged = mergePluginActions(
-      config: ref.watch(actionBarConfigProvider(rasqPostConfigKey)),
+      config: ref.watch(actionBarConfigProvider(rasqViewerConfigKey)),
       snsActions: rasqPostBuiltinActions,
       plugins: pluginActions,
-      settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(rasqPostConfigKey, ''))),
+      settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(rasqViewerConfigKey, ''))),
       prefs: ref.watch(actionButtonPrefsProvider),
     );
     final entries = merged.config.apply(merged.actions);
