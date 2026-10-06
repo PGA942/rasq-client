@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../session/session_providers.dart';
+import '../../app/providers.dart';
 import '../settings/settings_dsl.dart';
 import 'ad_placement.dart';
 import 'export_ad.dart';
@@ -19,6 +20,8 @@ import 'export_ad.dart';
 ///   (偶数番目 = AdMob、奇数番目 = サーバーの広告)。無ければ AdMob だけ。
 /// - 出さない: 設定「リソースと広告」の `showAds` がオフ / 子のアカウント / 見守りの状態が分かる前([exportAdAllowedProvider])。
 ///   サーバーの広告も同じ決まりに従う。
+/// - サーバーの広告の「…」(D-445): 「表示頻度を下げる」を選ぶと、その広告の重みを [mutedServerAdWeight] 分の 1 に(Misskey の
+///   Web の「この広告の表示頻度を下げる」と同じ考え)。端末に残す(設定の置き場 `ads` の `mutedServerAds`、`<サーバー>|<広告の id>`)。
 
 /// TL の投稿の間の広告の間隔(件、D-433)。
 const timelineAdEvery = 10;
@@ -52,15 +55,34 @@ final serverAdsProvider = FutureProvider<List<ServerAd>>((ref) async {
   return [for (final a in ads) if (a.ratio > 0 && a.place != 'square' && a.showsOn(today)) a];
 });
 
+/// 「表示頻度を下げる」を選んだ広告の重みの割り(D-445: 割合 × 1、ほかは割合 × この数)。
+const mutedServerAdWeight = 4;
+
+/// 「表示頻度を下げる」を選んだサーバーの広告(`<サーバー>|<広告の id>`)。
+final mutedServerAdsProvider = Provider<Set<String>>((ref) {
+  final raw = ref.watch(settingsAreaProvider('ads')).value?['mutedServerAds'];
+  return raw is List ? {for (final x in raw) if (x is String) x} : const <String>{};
+});
+
+String mutedServerAdKey(String? host, ServerAd ad) => '${host ?? ''}|${ad.id}';
+
+/// 「表示頻度を下げる」(D-445): 端末に残す。
+Future<void> muteServerAd(WidgetRef ref, String? host, ServerAd ad) async {
+  final next = {...ref.read(mutedServerAdsProvider), mutedServerAdKey(host, ad)};
+  await ref.read(settingsAreaProvider('ads').notifier).set('mutedServerAds', next.toList());
+}
+
 /// [ordinal] 番目の広告枠に出すサーバーの広告(割合 [ServerAd.ratio] で重みを付け、同じ番目は同じ広告)。
-ServerAd? pickServerAd(List<ServerAd> ads, int ordinal) {
+/// [muted](「表示頻度を下げる」を選んだ広告、D-445)は重みを [mutedServerAdWeight] 分の 1 に。
+ServerAd? pickServerAd(List<ServerAd> ads, int ordinal, {bool Function(ServerAd ad)? muted}) {
   if (ads.isEmpty) return null;
-  final total = ads.fold<int>(0, (s, a) => s + a.ratio);
+  int weight(ServerAd a) => a.ratio * (muted?.call(a) ?? false ? 1 : mutedServerAdWeight);
+  final total = ads.fold<int>(0, (s, a) => s + weight(a));
   if (total <= 0) return null;
   var r = (ordinal * 7919) % total;
   for (final a in ads) {
-    if (r < a.ratio) return a;
-    r -= a.ratio;
+    if (r < weight(a)) return a;
+    r -= weight(a);
   }
   return ads.last;
 }
@@ -73,26 +95,53 @@ class TimelineAdSlot extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!timelineAdsOn(ref)) return const SizedBox.shrink();
-    final ad = ordinal.isOdd ? pickServerAd(ref.watch(serverAdsProvider).value ?? const [], ordinal ~/ 2) : null;
-    if (ad != null) return ServerAdBanner(ad: ad, host: ref.watch(currentSnsSessionProvider)?.account.instance);
+    final host = ref.watch(currentSnsSessionProvider)?.account.instance;
+    final muted = ref.watch(mutedServerAdsProvider);
+    final ad = ordinal.isOdd ? pickServerAd(ref.watch(serverAdsProvider).value ?? const [], ordinal ~/ 2, muted: (a) => muted.contains(mutedServerAdKey(host, a))) : null;
+    if (ad != null) return ServerAdBanner(ad: ad, host: host);
     return const Center(child: ExportAdSlot());
   }
 }
 
-/// サーバーの広告(画像 + 「広告」の印)。押すと外のブラウザで開く。読めなければ何も出さない。
-class ServerAdBanner extends StatelessWidget {
+/// サーバーの広告(画像 + 「広告」の印 + 「…」)。押すと外のブラウザで開く。読めなければ何も出さない。
+/// 「…」(D-445) = 「表示頻度を下げる」。
+class ServerAdBanner extends ConsumerWidget {
   const ServerAdBanner({super.key, required this.ad, this.host});
   final ServerAd ad;
   final String? host;
 
+  Future<void> _menu(BuildContext context, WidgetRef ref, Rect anchor) async {
+    final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'serverAd.menu', anchor: anchor, dense: true, items: [
+      RasqDropdownItem('表示頻度を下げる', 'less', checked: ref.read(mutedServerAdsProvider).contains(mutedServerAdKey(host, ad))),
+    ]);
+    if (pick != 'less' || !context.mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    await muteServerAd(ref, host, ad);
+    messenger?.showSnackBar(const SnackBar(content: Text('この広告の表示頻度を下げました')));
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
       key: ValueKey('serverAd.${ad.id}'),
       padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Text(host == null ? '広告' : '広告 · $host', style: RasqTypography.caption.copyWith(color: muted)),
+        Row(children: [
+          Expanded(child: Text(host == null ? '広告' : '広告 · $host', style: RasqTypography.caption.copyWith(color: muted))),
+          Builder(
+            builder: (bctx) => RasqIconButton(
+              key: ValueKey('serverAd.${ad.id}.more'),
+              icon: Icons.more_horiz,
+              size: 16,
+              tooltip: '広告のメニュー',
+              onPressed: () {
+                final box = bctx.findRenderObject() as RenderBox;
+                _menu(context, ref, box.localToGlobal(Offset.zero) & box.size);
+              },
+            ),
+          ),
+        ]),
         const SizedBox(height: 2),
         Semantics(
           link: true,

@@ -22,6 +22,7 @@ import 'export_ad_sdk.dart';
 ///
 /// ID は `--dart-define` で渡す(本物の ID はまだ無い)。既定は Google の公式のテスト ID。Web は AdSense の ID が無ければ出さない:
 /// - `RASQ_ADMOB_BANNER_ANDROID` / `RASQ_ADMOB_BANNER_IOS`: 広告ユニット ID(既定 = テスト用のアダプティブバナー)
+/// - `RASQ_ADMOB_INTERSTITIAL_ANDROID` / `RASQ_ADMOB_INTERSTITIAL_IOS`: 全画面(動画)の広告ユニット ID(D-445 の Swing。既定 = テスト用)
 /// - `RASQ_ADSENSE_CLIENT`(`ca-pub-…`)/ `RASQ_ADSENSE_SLOT`(広告ユニットの `data-ad-slot`)
 /// - App ID は端末の設定(Android = `RASQ_ADMOB_APP_ID_ANDROID` を gradle が dart-define から読む、iOS = `ios/Flutter/Ads.xcconfig`)。
 enum ExportAdNetwork { admob, adsense }
@@ -29,28 +30,45 @@ enum ExportAdNetwork { admob, adsense }
 /// 広告の ID。
 @immutable
 class ExportAdConfig {
-  const ExportAdConfig({this.admobAndroidUnit = admobTestAndroidUnit, this.admobIosUnit = admobTestIosUnit, this.adsenseClient = '', this.adsenseSlot = ''});
+  const ExportAdConfig({
+    this.admobAndroidUnit = admobTestAndroidUnit,
+    this.admobIosUnit = admobTestIosUnit,
+    this.admobInterstitialAndroidUnit = admobTestInterstitialAndroidUnit,
+    this.admobInterstitialIosUnit = admobTestInterstitialIosUnit,
+    this.adsenseClient = '',
+    this.adsenseSlot = '',
+  });
 
   /// Google の公式のテスト用の広告ユニット(アダプティブバナー)。
   static const admobTestAndroidUnit = 'ca-app-pub-3940256099942544/9214589741';
   static const admobTestIosUnit = 'ca-app-pub-3940256099942544/2435281174';
 
+  /// Google の公式のテスト用の広告ユニット(動画のインタースティシャル = 全画面の広告、D-445 の Swing)。
+  static const admobTestInterstitialAndroidUnit = 'ca-app-pub-3940256099942544/8691691433';
+  static const admobTestInterstitialIosUnit = 'ca-app-pub-3940256099942544/5135589807';
+
   /// ビルド時の `--dart-define`。
   static const fromEnvironment = ExportAdConfig(
     admobAndroidUnit: String.fromEnvironment('RASQ_ADMOB_BANNER_ANDROID', defaultValue: admobTestAndroidUnit),
     admobIosUnit: String.fromEnvironment('RASQ_ADMOB_BANNER_IOS', defaultValue: admobTestIosUnit),
+    admobInterstitialAndroidUnit: String.fromEnvironment('RASQ_ADMOB_INTERSTITIAL_ANDROID', defaultValue: admobTestInterstitialAndroidUnit),
+    admobInterstitialIosUnit: String.fromEnvironment('RASQ_ADMOB_INTERSTITIAL_IOS', defaultValue: admobTestInterstitialIosUnit),
     adsenseClient: String.fromEnvironment('RASQ_ADSENSE_CLIENT'),
     adsenseSlot: String.fromEnvironment('RASQ_ADSENSE_SLOT'),
   );
 
   final String admobAndroidUnit;
   final String admobIosUnit;
+  final String admobInterstitialAndroidUnit;
+  final String admobInterstitialIosUnit;
   final String adsenseClient;
   final String adsenseSlot;
 
   bool get hasAdsense => adsenseClient.isNotEmpty && adsenseSlot.isNotEmpty;
 
   String admobUnitFor(TargetPlatform platform) => platform == TargetPlatform.iOS ? admobIosUnit : admobAndroidUnit;
+
+  String admobInterstitialUnitFor(TargetPlatform platform) => platform == TargetPlatform.iOS ? admobInterstitialIosUnit : admobInterstitialAndroidUnit;
 }
 
 /// どの広告を出すか。null = 出さない。
@@ -64,9 +82,15 @@ ExportAdNetwork? exportAdNetworkFor({required bool web, required TargetPlatform 
 
 /// 広告の SDK の差し替え口(テストは偽物)。
 abstract interface class ExportAdSdk {
-  /// 広告 1 枠。[width] = 使える幅。出せたら [onLoaded]、読み込めなかった / 頼めなかったら [onFailed](どちらも 1 回だけ、
-  /// 非同期に)。捨てられたら(書き出しが終わったら)広告も捨てる。
-  Widget buildAd({required ExportAdNetwork network, required ExportAdConfig config, required double width, required VoidCallback onLoaded, required VoidCallback onFailed});
+  /// 広告 1 枠。[width] = 使える幅、[maxHeight] = 高さの上限(D-445: Swing の縦長のバナーは画面の高さの 70% まで)。
+  /// 出せたら [onLoaded]、読み込めなかった / 頼めなかったら [onFailed](どちらも 1 回だけ、非同期に)。捨てられたら広告も捨てる。
+  Widget buildAd({required ExportAdNetwork network, required ExportAdConfig config, required double width, double maxHeight = 250, required VoidCallback onLoaded, required VoidCallback onFailed});
+
+  /// 全画面(動画)の広告を 1 つ読んでおく (D-445)。読めたら true。出せない広告(AdSense)/ 読めなければ false。
+  Future<bool> loadFullscreen({required ExportAdNetwork network, required ExportAdConfig config});
+
+  /// 読んでおいた全画面の広告を出し、閉じられるまで待つ。出せたら true(読んでいなければ / 出せなければ false)。
+  Future<bool> showFullscreen();
 }
 
 final exportAdConfigProvider = Provider<ExportAdConfig>((ref) => ExportAdConfig.fromEnvironment);
@@ -91,10 +115,16 @@ const exportAdSlotKey = Key('export.ad');
 
 /// 書き出し中の広告枠。出せないとき / 読み込めなかったときは何も出さない。
 class ExportAdSlot extends ConsumerStatefulWidget {
-  const ExportAdSlot({super.key, this.onDark = false});
+  const ExportAdSlot({super.key, this.onDark = false, this.maxHeight = 250, this.onFailed});
 
   /// 暗い背景(加工画面)の上に置く。
   final bool onDark;
+
+  /// 高さの上限 (D-445: Swing の縦長のバナー)。
+  final double maxHeight;
+
+  /// 読み込めなかった(枠を消した)。
+  final VoidCallback? onFailed;
 
   /// 広告の幅の上限 / 下限(これより狭ければ出さない)。
   static const maxWidth = 400.0;
@@ -133,8 +163,15 @@ class _ExportAdSlotState extends ConsumerState<ExportAdSlot> {
             network: network,
             config: config,
             width: width,
-            onLoaded: () => _later(() => _loaded = true),
-            onFailed: () => _later(() => _failed = true),
+            maxHeight: widget.maxHeight,
+            // 変わったときだけ描き直す(作り直すたびに読めたと知らせる SDK でも回り続けない)。
+            onLoaded: () {
+              if (!_loaded) _later(() => _loaded = true);
+            },
+            onFailed: () => _later(() {
+              _failed = true;
+              widget.onFailed?.call();
+            }),
           ),
         ]),
       );

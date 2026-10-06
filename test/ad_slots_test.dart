@@ -111,6 +111,24 @@ void main() {
     expect(seen, {'tl.ad.10': false, 'tl.ad.20': true, 'tl.ad.30': false}, reason: '1 つ目 AdMob、2 つ目サーバーの広告、3 つ目 AdMob');
   });
 
+  testWidgets('D-445: サーバーの広告の「…」→「表示頻度を下げる」で、端末に残して重みを下げる', (tester) async {
+    final ad = ServerAd(id: 'm1', url: Uri.parse('https://shop.example/'), imageUrl: Uri.parse('https://misskey.test/ad.png'));
+    final c = await pump(tester, posts: [for (var i = 0; i < 35; i++) post(i)], serverAds: [ad]);
+    final list = find.byType(Scrollable).first;
+    final more = find.byKey(const ValueKey('serverAd.m1.more'));
+    for (var i = 0; i < 16 && more.evaluate().isEmpty; i++) {
+      await tester.drag(list, const Offset(0, -500));
+      await tester.pump();
+    }
+    expect(more, findsOneWidget);
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('表示頻度を下げる'));
+    await tester.pumpAndSettle();
+    expect(find.text('この広告の表示頻度を下げました'), findsOneWidget);
+    expect(c.read(mutedServerAdsProvider), {mutedServerAdKey(fakeSession().account.instance, ad)});
+  });
+
   test('D-438: サーバーの広告は割合で選ぶ(同じ番目は同じ広告)', () {
     ServerAd a(String id, int ratio) => ServerAd(id: id, url: Uri.parse('https://a/'), imageUrl: Uri.parse('https://a/$id.png'), ratio: ratio);
     final ads = [a('x', 3), a('y', 1)];
@@ -118,6 +136,9 @@ void main() {
     expect(picks.where((p) => p == 'x').length, closeTo(300, 40));
     expect(pickServerAd(ads, 5)!.id, pickServerAd(ads, 5)!.id);
     expect(pickServerAd(const [], 0), isNull);
+    // 「表示頻度を下げる」(D-445): 重みが 1/4 に。
+    final less = [for (var n = 0; n < 400; n++) pickServerAd(ads, n, muted: (ad) => ad.id == 'x')!.id];
+    expect(less.where((p) => p == 'x').length, closeTo(171, 40), reason: '3 : 4 の重み');
   });
 
   testWidgets('D-438: ホーム以外の TL 系(トレンド / ユーザー / リスト / クリップ / 返信)が使う共通の並び: 10 件ごと、危ない投稿の隣は避け、設定で消える', (tester) async {
@@ -170,7 +191,11 @@ void main() {
 
 class _FakeAdSdk implements ExportAdSdk {
   @override
-  Widget buildAd({required ExportAdNetwork network, required ExportAdConfig config, required double width, required VoidCallback onLoaded, required VoidCallback onFailed}) {
+  Future<bool> loadFullscreen({required ExportAdNetwork network, required ExportAdConfig config}) async => false;
+  @override
+  Future<bool> showFullscreen() async => false;
+  @override
+  Widget buildAd({required ExportAdNetwork network, required ExportAdConfig config, required double width, double maxHeight = 250, required VoidCallback onLoaded, required VoidCallback onFailed}) {
     Future.microtask(onLoaded);
     return SizedBox(key: const ValueKey('fake.ad'), width: width, height: 60, child: const ColoredBox(color: Colors.grey));
   }
