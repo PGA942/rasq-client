@@ -33,6 +33,8 @@ export 'wasm_worker_config.dart';
 /// 前は同期 XHR に戻していたが、同期 XHR はリダイレクトを勝手に追い、宣言外のホストへ**送ってから**しか気づけない
 /// (応答を渡さなくても、送った中身は届いてしまう)。同期のまま非同期の通信を待つ安全な口(メインスレッドへの中継など)は
 /// Worker に無いので、断る方を選んだ(D-408)。通信しないプラグイン(storage / fow / アプリ向けだけ)はそのまま動く。
+///
+/// `net.fetch` の応答本文は端末版と同じ 32 MiB まで (D-453)。少しずつ読み、超えたら読むのをやめて通信を切り、端末版と同じ `B03` を返す。
 class WasmPluginWorker {
   WasmPluginWorker._(this._worker, this._url) {
     _tracker = WasmRequestTracker(onFatal: (_) => _close());
@@ -257,6 +259,41 @@ function fetchResult(status, headers, bytes) {
   catch (_) { return {status, headers, bodyB64: bytesToB64(bytes)}; }
 }
 
+// 応答本文の上限 (D-453、Codex の指摘 resource-exhaustion.web-fetch-response-buffer): 端末版 (rasq_wasm_runtime_core の
+// MAX_FETCH_BODY_BYTES) と同じ 32 MiB。超えたときの答えも同じ (B03 "response body exceeds 33554432 bytes")。片方を変えたらもう片方も。
+// 前は res.arrayBuffer() で相手が送るだけ Worker の JS ヒープに載せ、そのあと文字列 / base64 / JSON で写しを増やしていた
+// (checkMemory はゲストのメモリしか見ないので止まらない。期限も速い巨大な応答は止めない)。いまは本文を少しずつ読み、
+// 上限を 1 バイトでも超えたら、文字列にする前に読むのをやめて通信も切る (reader.cancel + AbortController)。
+// Content-Length が上限を超えていれば読む前に断る(圧縮されている応答は展開後の大きさが分からないので、読みながら数える方に任せる)。
+// 同時に出る通信は 1 本だけ: 呼び出しは 1 つずつ順に処理し (下の queue)、net.fetch を待つ間ゲストは JSPI で止まっている。
+const MAX_FETCH_BODY_BYTES = 32 * 1024 * 1024;
+function bodyTooLarge() { return new HostFnError("B03", "response body exceeds " + MAX_FETCH_BODY_BYTES + " bytes"); }
+async function readBodyLimited(res, abort) {
+  const len = res.headers.get("content-length"), coding = (res.headers.get("content-encoding") || "identity").trim().toLowerCase();
+  if (len !== null && coding === "identity" && /^\s*\d+\s*$/.test(len) && Number(len) > MAX_FETCH_BODY_BYTES) { abort.abort(); throw bodyTooLarge(); }
+  if (!res.body) return new Uint8Array(0);
+  const reader = res.body.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    let r;
+    try { r = await reader.read(); } catch (e) { abort.abort(); throw new HostFnError("B03", "read body failed: " + e); }
+    if (r.done) break;
+    total += r.value.byteLength;
+    if (total > MAX_FETCH_BODY_BYTES) {
+      chunks.length = 0; // 読んだぶんもすぐ手放す
+      reader.cancel().catch(() => {});
+      abort.abort();
+      throw bodyTooLarge();
+    }
+    chunks.push(r.value);
+  }
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { out.set(c, off); off += c.byteLength; }
+  return out;
+}
+
 // JSPI のとき: fetch をリダイレクトを追わずに出す (D-407、指摘 #7)。3xx は宣言外へ一切送らずに断る(端末版も追わない)。
 async function netFetchAsync(args) {
   const url = checkFetch(args);
@@ -267,15 +304,16 @@ async function netFetchAsync(args) {
   }
   const method = String(args.method || "GET").toUpperCase();
   const body = method === "GET" || method === "HEAD" ? null : fetchBody(args);
+  const abort = new AbortController();
   let res;
-  try { res = await fetch(url, {method, headers, body, redirect: "manual"}); }
+  try { res = await fetch(url, {method, headers, body, redirect: "manual", signal: abort.signal}); }
   catch (e) { throw new HostFnError("B01", "fetch failed (network / CORS): " + e); }
   if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
     throw new HostFnError("E01", "redirect is not followed (" + hostOf(url) + ")");
   }
   const out = {};
   res.headers.forEach((v, k) => { out[k.toLowerCase()] = v; });
-  return fetchResult(res.status, out, new Uint8Array(await res.arrayBuffer()));
+  return fetchResult(res.status, out, await readBodyLimited(res, abort));
 }
 
 // JSPI の無いブラウザ: 通信は出さない(D-408、指摘 #7 の残り)。同期 XHR はリダイレクトを勝手に追い、宣言外のホストへ
