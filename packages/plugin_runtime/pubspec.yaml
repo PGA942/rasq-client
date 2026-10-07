@@ -34,4 +34,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # ブラウザのテスト (test/web) の spawnHybridUri で立てるローカル HTTP サーバー (D-453)。
+  stream_channel: ^2.1.0
   flutter_lints: ^6.0.0
