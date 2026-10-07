@@ -15,10 +15,14 @@ import '../../backend/rasq_account.dart';
 import '../../backend/redact.dart';
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart' show fowColumnOf;
+import '../child_safe/child_gate.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
+import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart';
 import '../store/store_models.dart';
 import '../store/store_providers.dart';
+import '../trend/example_match.dart' show pluginExamplePieces;
 import 'custom_client.dart';
 import 'custom_invite.dart';
 import 'custom_models.dart';
@@ -66,7 +70,8 @@ class CustomPageArgs {
   CustomPageArgs withSession(String id) => CustomPageArgs(pluginId: pluginId, version: version, surface: surface, sessionId: id, roomId: roomId, profileHandle: profileHandle, profileAccountId: profileAccountId);
 }
 
-enum CustomPagePhase { resolving, needsConsent, needsInstall, loading, ready, failed }
+/// [blocked] = チャイルドセーフで保護者が止めている(D-451。理由は [CustomPageController.error])。
+enum CustomPagePhase { resolving, needsConsent, needsInstall, loading, ready, failed, blocked }
 
 /// 端末に登録済みのページ型プラグイン(ストアから入れた / サイドロード)。[version] があればその版を優先。
 SlotPlugin? registeredPagePlugin(List<SlotPlugin> all, String pluginId, {String? version}) {
@@ -109,8 +114,43 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   StreamSubscription<Map<String, Object?>>? _sub;
   late final String token = 'page-${args.pluginId}-${DateTime.now().microsecondsSinceEpoch}';
   bool _disposed = false;
+  ProviderSubscription<ChildGate>? _gateSub;
 
   SlotPluginsNotifier get _slots => container.read(slotPluginsProvider.notifier);
+  ChildGate get _gate => container.read(childGateProvider);
+
+  /// 一時的に動かす前の関所 (D-451): ゲストのコードを動かす前は、ストアの説明(名前 / 説明)で確かめる。中身が分からなければ null。
+  List<String>? get _detailPieces => detail == null ? null : pluginExamplePieces(name: detail!.name, description: detail!.description, slots: const [SlotIds.page]);
+
+  /// 保護者が止めた (D-451): ページを閉じ(`page.close`)、一時的なものは捨て、共有セッションから抜けて、理由を出す。
+  void _block(String reason) {
+    final p = plugin;
+    if (p != null) {
+      _slots.pageClose(p, token, reason: 'childSafe');
+      if (temporary) _slots.disposeTemporary(p);
+    }
+    plugin = null;
+    temporary = false;
+    _sub?.cancel();
+    _sub = null;
+    _conn?.close();
+    _conn = null;
+    _set(() {
+      phase = CustomPagePhase.blocked;
+      error = reason;
+      root = null;
+    });
+  }
+
+  /// 開いている間に保護者の制限が変わったら、確かめ直す (D-451)。
+  void _watchGate() {
+    _gateSub ??= container.listen<ChildGate>(childGateProvider, (_, gate) {
+      if (_disposed || phase == CustomPagePhase.blocked) return;
+      final p = plugin;
+      final reason = p != null ? _slots.pageBlockReason(p) : gate.pluginPageBlockReason(args.pluginId, text: _detailPieces);
+      if (reason != null) _block(reason);
+    });
+  }
   PluginPageDecl? get decl => plugin?.manifest.page;
 
   @override
@@ -123,6 +163,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   }
 
   Future<void> start() async {
+    _watchGate();
     var p = registeredPagePlugin(container.read(slotPluginsProvider), args.pluginId, version: args.version);
     // インストール済みなのに起動直後でまだ登録が済んでいない。少し待つ。
     if (p == null && container.read(installedPluginsProvider).any((x) => x.id == args.pluginId)) {
@@ -133,17 +174,26 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     }
     if (_disposed) return;
     // 未審査の入れ物 (D-379): 入っているものは使わず、同意のうえ入れ物のものを一時的に動かす。
+    // チャイルドセーフ (D-451): 同意を聞く前に止める(中身はまだ分からないので id で)。
     if (args.package != null) {
+      if (_gate.pluginPageBlockReason(args.pluginId) case final blocked?) return _block(blocked);
       _set(() => phase = CustomPagePhase.needsConsent);
       return;
     }
     if (p != null) {
+      // 入れているもの: 保護者が許したものだけ(スロットの一覧 [slotPluginsForProvider] と同じ規則)。
+      if (_slots.pageBlockReason(p) case final blocked?) return _block(blocked);
       plugin = p;
       return _open();
     }
     try {
       detail = await container.read(storeClientProvider).plugin(args.pluginId);
     } catch (_) {}
+    if (_disposed) return;
+    // 一時的に動かす前 (D-451): ストアの説明で確かめる(止めているものは同意も聞かない)。
+    if (args.sessionId != null) {
+      if (_gate.pluginPageBlockReason(args.pluginId, text: _detailPieces) case final blocked?) return _block(blocked);
+    }
     // 共有セッションの参加者はインストールせずに使える(同意のうえ一時的に)。それ以外はインストールしてから。
     _set(() => phase = args.sessionId != null ? CustomPagePhase.needsConsent : CustomPagePhase.needsInstall);
   }
@@ -153,11 +203,20 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     final sessionId = args.sessionId;
     final package = args.package;
     if (sessionId == null && package == null) return;
+    // 同意のあいだに保護者が止めたかもしれない (D-451): 取りに行く前にもう 1 度。
+    if (_gate.pluginPageBlockReason(args.pluginId, text: package == null ? _detailPieces : null) case final blocked?) return _block(blocked);
     _set(() => phase = CustomPagePhase.loading);
+    String? childBlocked;
     try {
       final bytes = package != null ? await package() : await container.read(storeClientProvider).sessionPackage(args.pluginId, sessionId!, version: args.version);
       final source = package != null ? (args.packageSource ?? 'swing:${args.pluginId}') : storeSlotSource(args.pluginId, args.version ?? detail?.version ?? '0.0.0');
-      final p = await _slots.register(source, bytes: bytes, persist: false, temporary: true);
+      // ゲストのコードを動かす前(配布物の目次の id)と、宣言どおりに起動し直す前(名乗った id と中身)に関所を通す (D-451)。
+      final p = await _slots.register(source, bytes: bytes, persist: false, temporary: true, admit: (id, text) => childBlocked ??= container.read(childGateProvider).pluginPageBlockReason(id, text: text));
+      if (_disposed) {
+        if (p != null) _slots.disposeTemporary(p);
+        return;
+      }
+      if (childBlocked case final blocked?) return _block(blocked);
       if (p == null) throw StateError(container.read(slotPluginsNoticeProvider) ?? '読み込めませんでした');
       if (!p.has(SlotIds.page)) {
         _slots.disposeTemporary(p);
@@ -176,6 +235,8 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
 
   Future<void> _open() async {
     final p = plugin!;
+    // 入れているもの / 一時的なもの、どちらもここを通る (D-451)。
+    if (_slots.pageBlockReason(p) case final blocked?) return _block(blocked);
     _set(() => phase = CustomPagePhase.loading);
     final account = container.read(orgateAccountProvider).value;
     me = account == null ? const CustomParticipant(accountId: 'me', handle: 'me', displayName: 'あなた') : CustomParticipant(accountId: account.id, handle: account.handle, displayName: account.displayName);
@@ -198,6 +259,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         return;
       }
     }
+    if (_disposed || plugin == null) return; // 入るあいだに止められた / 閉じた
     final r = await _slots.pageOpen(p, token: token, sink: this, args: {
       'surface': args.surface,
       'context': {'roomId': ?args.roomId, 'profileHandle': ?args.profileHandle, 'profileAccountId': ?args.profileAccountId, ...args.context},
@@ -205,6 +267,8 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       if (session != null) 'session': _sessionJson(),
       'size': {'width': size.width.round(), 'height': size.height.round()},
     });
+    if (plugin == null || phase == CustomPagePhase.blocked) return; // 開くあいだに保護者が止めた
+    if (_slots.pageBlockReason(p) case final blocked?) return _block(blocked);
     _set(() {
       if (r.error != null || r.root == null) {
         phase = CustomPagePhase.failed;
@@ -341,6 +405,8 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   void onRrlEvent(String nodeId, String kind, {String? fn, Map<String, Object?> payload = const {}}) {
     final p = plugin;
     if (p == null || fn == null) return;
+    // 保護者が止めたプラグインには渡さない (D-451)。
+    if (_slots.pageBlockReason(p) case final blocked?) return _block(blocked);
     p.value(fn, {'token': token, 'nodeId': nodeId, 'kind': kind, ...payload});
   }
 
@@ -355,6 +421,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   @override
   void dispose() {
     _disposed = true;
+    _gateSub?.close();
     final p = plugin;
     if (p != null) {
       _slots.pageClose(p, token);
@@ -514,6 +581,8 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
         );
       case CustomPagePhase.failed:
         return RasqEmptyView(key: const ValueKey('custom.page.failed'), title: '開けませんでした', hint: c.error);
+      case CustomPagePhase.blocked:
+        return ChildSafeBlockedView(message: c.error ?? childSafeBlockedText);
       case CustomPagePhase.ready:
         final p = c.plugin!;
         final controller = p.runtime.view;

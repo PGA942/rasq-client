@@ -21,6 +21,8 @@ import '../ads/export_ad.dart';
 import '../ads/timeline_ads.dart' show ServerAdBanner, mutedServerAdKey, mutedServerAdsProvider, pickServerAd, swingServerAdsProvider, timelineAdsOn;
 import '../../backend/rasq_account.dart' show orgateAccountProvider;
 import '../vc/astell_models.dart' show astellReportReasons;
+import '../child_safe/child_gate.dart' show childSafeBlockedText;
+import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../custom/custom_page.dart';
 import '../media/fow_avoid.dart';
 import '../media/video_player.dart';
@@ -1184,6 +1186,9 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
         );
       case CustomPagePhase.failed:
         return RasqEmptyView(key: const ValueKey('swing.plugin.failed'), title: '開けませんでした', hint: c.error);
+      case CustomPagePhase.blocked:
+        // チャイルドセーフ (D-451): 保護者が止めているプラグイン。
+        return ChildSafeBlockedView(message: c.error ?? childSafeBlockedText);
       default:
         break;
     }

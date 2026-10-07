@@ -590,7 +590,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   ///
   /// [temporary] = 一時的に動かすだけ(カスタムプラグインの共有セッションの参加者、D-357): 登録簿(state)に入れず、保存もしない。
   /// 使い終わったら [disposeTemporary]。
-  Future<SlotPlugin?> register(String source, {Uint8List? bytes, bool persist = true, bool temporary = false}) async {
+  ///
+  /// [admit] = 動かしてよいかの関所(止める理由 / null = 通す、D-451)。**ゲストのコードを動かす前に**、配布物の目次の id
+  /// (中身はまだ分からない = text null)で 1 度、マニフェストを読んだあと宣言どおりに起動し直す前に、名乗った id と中身で 1 度。
+  /// 止めたら登録しない(通知に理由を出して null)。
+  Future<SlotPlugin?> register(String source, {Uint8List? bytes, bool persist = true, bool temporary = false, String? Function(String pluginId, List<String>? text)? admit}) async {
     try {
       final (:container, :pluginId) = splitPackageSource(source);
       // `asset:` はアプリ同梱のアセット(次回起動の読み直しは bytes 無しで来る)。
@@ -615,6 +619,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         if (entry.isSns) throw StateError('${entry.id} は SNS プラグインです(スロットには登録できません)');
         data = entry.wasm;
         expectedId = entry.id;
+        if (admit?.call(entry.id, null) case final blocked?) throw StateError(blocked);
       }
       final loader = ref.read(slotRuntimeLoaderProvider);
       // 制限モード (D-308): 宣言をさらに絞る表の行。ストアは宣言どおり。
@@ -646,6 +651,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         throw StateError('配布物の目次は $expectedId なのに、wasm は ${manifest.id} を名乗っています');
       }
       runtime.dispose();
+      if (admit?.call(manifest.id, pluginExamplePieces(name: manifest.name, description: manifest.description, slots: manifest.slots)) case final blocked?) throw StateError(blocked);
       // 2 段目は宣言どおり、ただし制限モード (D-308) の表で絞る: `network` / `storage.unsafe` / `gpu_ml` /
       // `fow.interstitial` / `fow.system` を権限から外し、接続先を空に、閉じるアプリ向けホスト関数を外し、fuel は倍率を掛ける。
       // 外したものはワーカーの環境(端末: RasqHostEnvironment、Web: Worker の JS)が `E01` で断る(どちらも同じ config を受ける)。
@@ -888,6 +894,9 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         final cb = _overlaySet['${args['token']}'];
         final root = args['root'];
         if (cb != null && root is Map) cb(RrlNode.fromJson(root.cast<String, Object?>()));
+      // ページの口 (D-451): 保護者が止めたプラグインの描画 / 共有は受けない。
+      case RasqHostFns.pageRender || RasqHostFns.pageEnd || RasqHostFns.sharedSet || RasqHostFns.sharedOp || RasqHostFns.sharedCall when pageBlockReason(plugin) != null:
+        return;
       case RasqHostFns.pageRender:
         final root = args['root'];
         if (root is Map) _pages['${args['token']}']?.render(RrlNode.fromJson(root.cast<String, Object?>()), args['title'] as String?);
@@ -1195,8 +1204,14 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   final _pages = <String, PluginPageSink>{};
 
+  /// ページを使えない理由(チャイルドセーフ、D-451)。開く / 出来事を渡す / 描画・共有を受ける口で毎回確かめる
+  /// (開いたあとに保護者が止めたら、そこから先は通さない)。使えるなら null。
+  String? pageBlockReason(SlotPlugin plugin) => ref.read(childGateProvider).pluginPageBlockReason(plugin.id, text: plugin.examplePieces);
+
   /// ページを開く: `page.open` を呼び、最初の RRL を返す。以後の `page.render` / `shared.*` は [sink] へ。
   Future<({RrlNode? root, String? title, String? error})> pageOpen(SlotPlugin plugin, {required String token, required Map<String, Object?> args, required PluginPageSink sink}) async {
+    // チャイルドセーフ (D-451): 保護者が止めたプラグインは `page.open` を呼ばない。
+    if (pageBlockReason(plugin) case final blocked?) return (root: null, title: null, error: blocked);
     _pages[token] = sink;
     try {
       final r = await plugin.call('page.open', {'token': token, ...args});
@@ -1214,7 +1229,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   /// `page.event`(値の変化 / 誰かの呼び出し / 参加 / 退出 / 閉じた)。
   void pageEvent(SlotPlugin plugin, String token, Map<String, Object?> event) {
-    if (!_pages.containsKey(token)) return;
+    if (!_pages.containsKey(token) || pageBlockReason(plugin) != null) return;
     plugin.value('page.event', {'token': token, ...event});
   }
 

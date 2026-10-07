@@ -133,7 +133,19 @@ class ChildGate {
     if (under('/store') && !under('/store/installed') && !searchAllowed('store')) return '保護者がプラグインストアを止めています';
     if ((under('/search') || under('/trend')) && !const ['posts', 'users', 'trend'].any(searchAllowed)) return '保護者が検索を止めています';
     if (loc.startsWith('/login/') && !canAddAccounts) return '保護者が SNS アカウントの追加を止めています';
+    // カスタムプラグインのページ (D-357 / D-451): ページ型をどれも使えないときは画面ごと。1 つずつの可否は中身(マニフェスト)が
+    // 分かってから開く側([pluginPageBlockReason])が決める(ルートの id はストアの id で、例 (D-314) の近さも中身が要る)。
+    if (under('/custom/page') && !_anyPagePluginAllowed) return '保護者がカスタムプラグインを止めています';
     return null;
+  }
+
+  /// ページ型のプラグインを 1 つでも使えるか(ページのスロットを切っている / `none`・`listed` で名指しが無い、なら使えない)。
+  bool get _anyPagePluginAllowed {
+    final pl = allow?.plugins;
+    if (locked) return false;
+    if (pl == null) return true;
+    if (pl.slots[pagePluginSlot] == false) return false;
+    return pl.ids.isNotEmpty || pl.install == ChildSafeInstall.any || pl.install == ChildSafeInstall.examples;
   }
 
   // ── タイムライン / 投稿 ──
@@ -256,6 +268,18 @@ class ChildGate {
     // `allow.plugins` が無くても、止める例に近いものは使わない(`any` と同じ扱い)。
     if (pl == null) return !(scores?.nearDeny ?? false);
     return pl.permits(pluginId, slot, scores: scores);
+  }
+
+  /// ページ型のスロット(`SlotIds.page`。プラグインの層を読まないよう、ここに同じ値を置く)。
+  static const pagePluginSlot = 'page';
+
+  /// カスタムプラグインのページ(ページ型、D-357)を開けない理由 (D-451)。開けるなら null。
+  /// 入れているもの / 共有セッション・Swing で一時的に動かすもの、どちらも同じ規則([pluginAllowed] の `page` のスロット)。
+  /// [text] はマニフェストの中身(分からないうちは null: 例 (D-314) で決める `examples` では、名指しが無ければ開けない)。
+  String? pluginPageBlockReason(String pluginId, {List<String>? text}) {
+    if (!supervised) return null;
+    if (locked) return '保護者が設定を決めるまで使えません';
+    return pluginAllowed(pluginId, pagePluginSlot, text: text) ? null : '保護者がこのプラグインを止めています';
   }
 
   /// インストールできない理由。[text] はマニフェストの中身(ストアから構成を取ったあとに、もう 1 度確かめる)。
