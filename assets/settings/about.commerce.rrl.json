@@ -4,8 +4,8 @@
   "title": "特定商取引法に基づく表記",
   "doc": {
     "id": "rasq.commerce",
-    "version": "1.0.0-draft.20260929",
-    "bodySha256": "4ac124d7ca1cb2bc4d7a0a11775dd3c80b2b7a36f3f70bed8283b2922f360b6a"
+    "version": "1.0.0-draft.20261007",
+    "bodySha256": "2378016eb2eeb06a84d1c0740710509438c65c624823e3d9643252ba292e5c7f"
   },
   "defaults": {},
   "root": {
@@ -16,29 +16,7 @@
         "p": {
           "kind": "warning",
           "text": "公開前の草案です。【要確定】や［　］の箇所は、正式版の公開までに決まります。",
-          "detail": "rasq.commerce / 版 1.0.0-draft.20260929。草案の利用者向け本文だけを切り出したもの(tool/legal/build_legal.py)。"
-        }
-      },
-      {
-        "t": "RichText",
-        "p": {
-          "source": [
-            {
-              "s": "text",
-              "text": "各"
-            },
-            {
-              "s": "text",
-              "text": "【要確定】",
-              "bold": true,
-              "code": true
-            },
-            {
-              "s": "text",
-              "text": "を埋め、商品ページ・ポイント購入・注文の最終確認画面から常に参照できるようにする。"
-            }
-          ],
-          "pad": 16
+          "detail": "rasq.commerce / 版 1.0.0-draft.20261007。草案の利用者向け本文だけを切り出したもの(tool/legal/build_legal.py)。"
         }
       },
       {
@@ -57,13 +35,11 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
-              "text": "【正式氏名／法人名。ブランド名だけにしない】",
-              "bold": true,
-              "code": true
+              "text": "五寳　幹久"
             }
           ],
           "pad": 16
@@ -85,13 +61,11 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
-              "text": "【氏名。該当する事業形態に合わせ確定】",
-              "bold": true,
-              "code": true
+              "text": "五寳　幹久"
             }
           ],
           "pad": 16
@@ -113,13 +87,11 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
-              "text": "【郵便番号・住所: バーチャルオフィス（GMOオフィスサポート 梅田を予定）の住所を契約後に記入】",
-              "bold": true,
-              "code": true
+              "text": "〒530-0001 大阪府大阪市北区梅田1丁目2番2号 大阪駅前第2ビル12-12"
             }
           ],
           "pad": 16
@@ -141,7 +113,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -169,7 +141,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -197,7 +169,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -223,7 +195,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -249,7 +221,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -285,7 +257,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -311,7 +283,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -367,7 +339,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -393,7 +365,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -419,7 +391,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -445,7 +417,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -471,7 +443,7 @@
             },
             {
               "s": "text",
-              "text": "\n掲載内容案: "
+              "text": "\n内容: "
             },
             {
               "s": "text",
@@ -496,7 +468,7 @@
       {
         "t": "Text",
         "p": {
-          "text": "文書 ID: rasq.commerce ・ 版: 1.0.0-draft.20260929",
+          "text": "文書 ID: rasq.commerce ・ 版: 1.0.0-draft.20261007",
           "pad": 16,
           "size": 11
         }
@@ -504,7 +476,7 @@
       {
         "t": "Text",
         "p": {
-          "text": "本文の SHA-256: 4ac124d7ca1cb2bc4d7a0a11775dd3c80b2b7a36f3f70bed8283b2922f360b6a",
+          "text": "本文の SHA-256: 2378016eb2eeb06a84d1c0740710509438c65c624823e3d9643252ba292e5c7f",
           "pad": 16,
           "size": 11,
           "dev": true

@@ -27,10 +27,39 @@ Future<bool> showTermsSheet(OverlayManager manager, PluginManifest manifest) asy
             if (manifest.author != null) Text(manifest.author!, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
           ]),
           const SizedBox(height: RasqSpacing.md),
-          Text(text.trim(), style: RasqTypography.body),
+          ...termsBlocks(text),
         ]),
       );
     },
   );
   return res == true;
+}
+
+/// 規約の Markdown を段落に分けて描く(見出し `##` / `###`、箇条書き `-` / `1.`、字下げの続きの行、`**太字**` の印を外す)。
+/// 表やリンクは使わない前提(公式プラグインの規約、assets/legal/plugins)。
+List<Widget> termsBlocks(String text) {
+  final out = <Widget>[];
+  String plain(String s) => s.replaceAll('**', '');
+  for (final raw in text.trim().split('\n')) {
+    final line = raw.trimRight();
+    final s = line.trim();
+    if (s.isEmpty) continue;
+    if (s.startsWith('## ')) {
+      // 題はシートの上に名前があるので、少しだけ大きく。
+      out.add(Padding(padding: const EdgeInsets.only(bottom: RasqSpacing.sm), child: Text(plain(s.substring(3)), style: RasqTypography.title)));
+    } else if (s.startsWith('### ')) {
+      out.add(Padding(
+        padding: const EdgeInsets.only(top: RasqSpacing.md, bottom: RasqSpacing.xs),
+        child: Text(plain(s.substring(4)), style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700)),
+      ));
+    } else {
+      final bullet = s.startsWith('- ');
+      final indent = line.startsWith('   ') ? RasqSpacing.lg : 0.0;
+      out.add(Padding(
+        padding: EdgeInsets.only(left: indent, bottom: RasqSpacing.xs),
+        child: Text(plain(bullet ? '・${s.substring(2)}' : s), style: RasqTypography.body),
+      ));
+    }
+  }
+  return out;
 }

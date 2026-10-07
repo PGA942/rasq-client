@@ -82,9 +82,14 @@ final settingsPageSpecProvider = FutureProvider.family<SettingsPageSpec, String>
     if (spec == null) throw StateError('SNS プラグインが設定ページ "$short" を提供していません');
     return spec;
   }
-  final raw = await rootBundle.loadString('assets/settings/$area.rrl.json');
+  final raw = await loadSettingsPageJson(area);
   return SettingsPageSpec.fromJson((jsonDecode(raw) as Map).cast<String, Object?>());
 });
+
+/// 設定ページの JSON を読む。`rootBundle.loadString` は 50KB を超えると別の isolate で解くので、
+/// 長い文書ページ(プライバシーポリシーなど)でも同じ道を通るよう、バイト列をこの場で UTF-8 として読む。
+Future<String> loadSettingsPageJson(String area) async =>
+    utf8.decode((await rootBundle.load('assets/settings/$area.rrl.json')).buffer.asUint8List());
 
 /// 1 ページ(area)分の設定値 KV。ホスト設定は `<area>.v1`(D-035)、
 /// プラグイン設定 (`sns.<短area>`) は `sns.<pluginId>.<短area>.v1`。
