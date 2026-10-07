@@ -33,14 +33,8 @@ class MisskeyPlugin extends SnsPlugin {
         actions: MisskeySession.defaultActions,
         official: true,
         verified: true,
-        termsOfService: '''
-## Misskey Plugin の規約
-
-このプラグインの利用にあたって、ユーザーは接続先 Misskey インスタンスの利用規約を遵守して利用するものとします。
-アクセストークンは端末内の安全な領域にのみ保存され、RASQ のサーバーへ送信されることはありません。
-
-### 第一項　プラグインの再配布の禁止
-''',
+        // 正本は rasq-client の assets/legal/plugins/rasq.official.misskey.md(tool/legal/build_legal.py で生成)。
+        termsOfService: officialMisskeyTerms,
       );
 
   @override

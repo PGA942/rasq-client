@@ -109,7 +109,8 @@ Future<List<SettingsSearchEntry>> buildSettingsSearchIndex(Future<String?> Funct
 final settingsSearchIndexProvider = FutureProvider<List<SettingsSearchEntry>>(
   (ref) => buildSettingsSearchIndex((area) async {
     try {
-      return await rootBundle.loadString('assets/settings/$area.rrl.json');
+      // loadString は 50KB を超えると別の isolate で解く。長い文書ページも同じ道で読む(settings_dsl の loadSettingsPageJson と同じ)。
+      return utf8.decode((await rootBundle.load('assets/settings/$area.rrl.json')).buffer.asUint8List());
     } catch (_) {
       return null;
     }

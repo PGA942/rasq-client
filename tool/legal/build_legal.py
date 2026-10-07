@@ -3,7 +3,7 @@
 
   python3 tool/legal/build_legal.py [--src <規約案のフォルダ>]
 
-- 草案(Obsidian「利用規約案/01〜05」)から**利用者向けの本文だけ**を切り出し、`assets/legal/<doc>.md` に置く(アプリの正本)。
+- 草案(Obsidian「RASQ/規約設計/<日付>/01〜05」、最新は 2026-10-07)から**利用者向けの本文だけ**を切り出し、`assets/legal/<doc>.md` に置く(アプリの正本)。
   内部設計メモ・実装根拠・決裁表・コードの参照は入れない(切り出す節を下の DOCS で決める)。
 - その Markdown から設定の文書ページ `assets/settings/about.<name>.rrl.json` を作る。見出し → SectionHeader、段落・箇条書き
   → RichText(太字・リンク・［要確定］の強調)、表 → 行ごとの段落、引用 → Notice。
@@ -25,13 +25,18 @@ SETTINGS = os.path.join(ROOT, 'assets', 'settings')
 DART = os.path.join(ROOT, 'lib', 'backend', 'legal_docs.g.dart')
 
 # 版はそろえる(草案の 01 / 05 の版)。公開の版は運営の決裁で決める。
-VERSION = '1.0.0-draft.20260929'
+VERSION = '1.0.0-draft.20261007'
+
+# 公式の SNS プラグインの規約: assets/legal/plugins/<pluginId>.md → rasq_plugin_api の定数(マニフェストの termsOfService)。
+PLUGIN_LEGAL = os.path.join(LEGAL, 'plugins')
+PLUGIN_DART = os.path.join(ROOT, 'packages', 'rasq_plugin_api', 'lib', 'src', 'official_plugin_terms.g.dart')
 
 # (文書 ID, 設定ページ, 題, 草案のファイル, 切り出す節の始まり, 終わり(その見出しの手前まで), 見出しの深さの繰り上げ)
 DOCS = [
     ('rasq.terms', 'about.terms', '利用規約', '01 利用規約案.md', '## 利用者向け本文', '## 内部設計メモ'),
     ('rasq.privacy', 'about.privacy', 'プライバシーポリシー', '02 プライバシーポリシー案.md', '## A. 利用者向け本文案', '## B.'),
-    ('rasq.learning', 'about.learning', 'アルゴリズムとコミュニティへの貢献について', '02 プライバシーポリシー案.md', '### 10. 学習へのデータ提供', '### 11.'),
+    # 学習の説明は独立した全文(2026-10-07〜。プライバシーポリシー第10項は案内だけ)。02 の末尾の節 D。
+    ('rasq.learning', 'about.learning', 'アルゴリズムとコミュニティへの貢献について', '02 プライバシーポリシー案.md', '## D. 利用者向け本文案: アルゴリズムとコミュニティへの貢献について', '## E.'),
     ('rasq.astell', 'about.astell', 'AsTell の利用条件', '03 AsTell・RAi利用条件案.md', '## 2. 利用者向け本文案: ASTell', '## 3.'),
     ('rasq.rai', 'about.rai', 'RAi の利用条件', '03 AsTell・RAi利用条件案.md', '## 3. 利用者向け本文案: RAi', '## 4.'),
     ('rasq.store', 'about.store', 'プラグインストアの利用条件', '04 プラグインストア・開発者条件案.md', '## A. 利用者向け「プラグインストア利用条件」本文案', '## C.'),
@@ -237,6 +242,28 @@ def main():
             f.write(f"  '{doc_id}': (area: '{area}', title: '{title}', version: rasqLegalVersion, sha256: '{sha}'),\n")
         f.write('};\n')
     print('\n'.join(f'{d} → {a} ({s[:12]})' for d, a, _, s in entries))
+    build_plugin_terms()
+
+
+def plugin_const(plugin_id: str) -> str:
+    # rasq.official.misskey → officialMisskeyTerms
+    parts = plugin_id.split('.')[1:]
+    return parts[0] + ''.join(p[:1].upper() + p[1:] for p in parts[1:]) + 'Terms'
+
+
+def build_plugin_terms():
+    files = sorted(f for f in os.listdir(PLUGIN_LEGAL) if f.endswith('.md'))
+    with open(PLUGIN_DART, 'w', encoding='utf-8') as f:
+        f.write('// 生成: tool/legal/build_legal.py(手で直さない)。正本は assets/legal/plugins/<pluginId>.md。\n')
+        f.write('// 公式の SNS プラグインの規約(マニフェストの termsOfService、初回ログインの前に出す)。\n')
+        for name in files:
+            plugin_id = name[:-3]
+            md = open(os.path.join(PLUGIN_LEGAL, name), encoding='utf-8').read()
+            for bad in FORBIDDEN + ["'''"]:
+                if bad in md:
+                    raise SystemExit(f'{name}: 使えない文字列が混ざっています: {bad!r}')
+            f.write(f"\n/// `{plugin_id}` の規約。\nconst {plugin_const(plugin_id)} = r'''\n{md}''';\n")
+    print('\n'.join(f'plugins/{n} → {plugin_const(n[:-3])}' for n in files))
 
 
 if __name__ == '__main__':
