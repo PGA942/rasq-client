@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart' show Routes;
+import 'package:rasq_client/features/child_safe/child_gate.dart';
+import 'package:rasq_client/features/child_safe/child_safe_policy.dart';
+import 'package:rasq_client/features/child_safe/child_safe_providers.dart' show childGateProvider;
 import 'package:rasq_client/features/custom/custom_astell.dart';
 import 'package:rasq_client/features/custom/custom_client.dart';
 import 'package:rasq_client/features/custom/custom_models.dart';
@@ -91,6 +95,21 @@ class _Store extends FakeStoreClient {
 
 String _text(RrlNode n) => [if (n.p['text'] != null) '${n.p['text']}', for (final c in n.c) _text(c)].join('|');
 
+/// 見守りの関所 (D-451): `allow.plugins` だけ決めた制限。
+ChildGate _kidGate({List<String> ids = const [], ChildSafeInstall install = ChildSafeInstall.listed, Map<String, bool> slots = const {}}) => ChildGate(
+      state: ChildSafeState(managed: true, state: 'active', policy: ChildSafePolicy(allow: ChildSafeAllow(plugins: ChildSafePluginsAllow(ids: ids, install: install, slots: slots)))),
+      now: DateTime(2026, 10, 7, 12),
+    );
+
+/// テストの中で保護者の制限を変えられるように。
+class _Gate extends Notifier<ChildGate> {
+  _Gate(this.initial);
+  final ChildGate initial;
+  @override
+  ChildGate build() => initial;
+  void set(ChildGate g) => state = g;
+}
+
 Future<void> _settle() async {
   for (var i = 0; i < 10; i++) {
     await Future<void>.delayed(Duration.zero);
@@ -143,7 +162,7 @@ void main() {
     expect((got[4]['from'] as Map)['accountId'], 'u2');
   });
 
-  ProviderContainer container({StoreClient? store, MockCustomSessionClient? custom, required Map<String, FakeSlotRuntime Function()> plugins}) {
+  ProviderContainer container({StoreClient? store, MockCustomSessionClient? custom, required Map<String, FakeSlotRuntime Function()> plugins, NotifierProvider<_Gate, ChildGate>? gate}) {
     TestWidgetsFlutterBinding.ensureInitialized();
     final c = ProviderContainer(overrides: [
       sessionStorageProvider.overrideWithValue(MemorySessionStorage({SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key})})),
@@ -151,6 +170,7 @@ void main() {
       storeClientProvider.overrideWithValue(store ?? _Store()),
       customSessionClientProvider.overrideWithValue(custom ?? MockCustomSessionClient()),
       slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(plugins)),
+      if (gate != null) childGateProvider.overrideWith((ref) => ref.watch(gate)),
     ]);
     addTearDown(c.dispose);
     return c;
@@ -360,5 +380,152 @@ void main() {
     expect(find.text('みんなで使う'), findsOneWidget);
     expect(find.text('1 人で使う'), findsOneWidget);
     expect(find.byKey(const ValueKey('rasqPage.custom.edit')), findsNothing);
+  });
+
+  group('チャイルドセーフ (D-451): 保護者が止めたカスタムプラグインのページは開かない', () {
+    test('関所: ページのスロット / 名指し / ルート', () {
+      expect(ChildGate.off.pluginPageBlockReason(_boardId), isNull);
+      expect(_kidGate().pluginPageBlockReason(_boardId), '保護者がこのプラグインを止めています');
+      expect(_kidGate(ids: [_boardId]).pluginPageBlockReason(_boardId), isNull);
+      expect(_kidGate(ids: [_boardId], slots: {'page': false}).pluginPageBlockReason(_boardId), isNotNull);
+      // `any` は止める例に近くなければ通す。`examples` は中身が分からないうちは通さない。
+      expect(_kidGate(install: ChildSafeInstall.any).pluginPageBlockReason(_boardId), isNull);
+      expect(_kidGate(install: ChildSafeInstall.examples).pluginPageBlockReason(_boardId), isNotNull);
+      // ルート: ページ型をどれも使えないときだけ画面ごと止める(1 つずつは開く側)。
+      final route = Routes.customPage(_boardId);
+      expect(ChildGate.off.routeBlockReason(route), isNull);
+      expect(_kidGate().routeBlockReason(route), '保護者がカスタムプラグインを止めています');
+      expect(_kidGate(ids: [_boardId], slots: {'page': false}).routeBlockReason(route), isNotNull);
+      expect(_kidGate(ids: ['other.plugin']).routeBlockReason(route), isNull);
+      expect(_kidGate(install: ChildSafeInstall.any).routeBlockReason(route), isNull);
+      expect(_kidGate().routeBlockReason('/custom'), isNull);
+    });
+
+    test('入れているもの: 止めていれば page.open を呼ばず理由を出す / 開いたあとに止めたら閉じて、出来事も描画も通さない', () async {
+      final custom = MockCustomSessionClient();
+      final gate = NotifierProvider<_Gate, ChildGate>(() => _Gate(_kidGate()));
+      final events = <(String, Map<String, Object?>)>[];
+      final runtimes = <FakeSlotRuntime>[];
+      final c = container(custom: custom, gate: gate, plugins: {'store:$_boardId@1.0.0': () => (runtimes..add(_board(events: events))).last});
+      await c.read(slotPluginsProvider.notifier).register('store:$_boardId@1.0.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false);
+      final rt = runtimes.last;
+
+      final denied = CustomPageController(c, const CustomPageArgs(pluginId: _boardId, surface: 'profile', profileHandle: 'kid'));
+      addTearDown(denied.dispose);
+      await denied.start();
+      expect(denied.phase, CustomPagePhase.blocked);
+      expect(denied.error, '保護者がこのプラグインを止めています');
+      expect(denied.plugin, isNull);
+      expect(rt.calls.map((x) => x.$1), isNot(contains('page.open')));
+      // 口そのものも断る(ほかの入口から呼ばれても)。
+      final direct = await c.read(slotPluginsProvider.notifier).pageOpen(c.read(slotPluginsProvider).single, token: 't', args: const {}, sink: denied);
+      expect(direct.error, contains('保護者'));
+      expect(rt.calls.map((x) => x.$1), isNot(contains('page.open')));
+
+      // 許す → 開ける(共有セッションにも入る)。
+      c.read(gate.notifier).set(_kidGate(ids: [_boardId]));
+      final s = await custom.create(pluginId: _boardId, version: '1.0.0', scope: 'link');
+      final page = CustomPageController(c, CustomPageArgs(pluginId: _boardId, sessionId: s.id));
+      addTearDown(page.dispose);
+      await page.start();
+      await _settle();
+      expect(page.phase, CustomPagePhase.ready);
+      expect(page.hasSession, isTrue);
+
+      // 開いたまま保護者が止める → page.close、セッションから抜ける。ほかの人の書き込みもボタンも、もう渡さない。
+      c.read(gate.notifier).set(_kidGate());
+      await _settle();
+      expect(page.phase, CustomPagePhase.blocked);
+      expect(page.root, isNull);
+      expect(page.hasSession, isFalse);
+      expect(rt.calls.where((x) => x.$1 == 'page.close').single.$2['reason'], 'childSafe');
+      final before = rt.calls.length;
+      custom.actAs(s.id, const CustomParticipant(accountId: 'u2', handle: 'u2'), {'type': 'op', 'key': 'count', 'op': 'incr', 'value': 1});
+      page.onRrlEvent('inc', 'tap', fn: 'inc');
+      rt.hostFn('page.render', {'token': page.token, 'root': {'t': 'Column'}});
+      await _settle();
+      expect(rt.calls.length, before);
+      expect(page.root, isNull);
+      expect(events, isEmpty);
+    });
+
+    test('共有セッションの参加者(入れていない): 止めていれば同意も聞かず、取りにも行かない / 同意のあいだに止めても取らない', () async {
+      final custom = MockCustomSessionClient();
+      final store = _Store();
+      final gate = NotifierProvider<_Gate, ChildGate>(() => _Gate(_kidGate()));
+      var loads = 0;
+      final c = container(store: store, custom: custom, gate: gate, plugins: {'store:$_boardId@1.0.0': () {
+        loads++;
+        return _board();
+      }});
+      final s = await custom.create(pluginId: _boardId, version: '1.0.0', scope: 'room:r1');
+      final page = CustomPageController(c, CustomPageArgs(pluginId: _boardId, version: '1.0.0', surface: 'astell', sessionId: s.id, roomId: 'r1'));
+      addTearDown(page.dispose);
+      await page.start();
+      expect(page.phase, CustomPagePhase.blocked);
+      await page.acceptTemporary();
+      expect(page.phase, CustomPagePhase.blocked);
+      expect(store.sessionDownloads, isEmpty);
+      expect(loads, 0);
+
+      // 同意の画面のあいだに止めた。
+      c.read(gate.notifier).set(_kidGate(ids: [_boardId]));
+      final later = CustomPageController(c, CustomPageArgs(pluginId: _boardId, version: '1.0.0', surface: 'astell', sessionId: s.id, roomId: 'r1'));
+      addTearDown(later.dispose);
+      await later.start();
+      expect(later.phase, CustomPagePhase.needsConsent);
+      c.read(gate.notifier).set(_kidGate());
+      await _settle();
+      expect(later.phase, CustomPagePhase.blocked);
+      await later.acceptTemporary();
+      expect(store.sessionDownloads, isEmpty);
+      expect(loads, 0);
+    });
+
+    test('一時的に動かすもの: 名乗った id / 中身で止めたら、宣言どおりに起動し直さず捨てる(登録の関所)', () async {
+      var loads = 0;
+      final runtimes = <FakeSlotRuntime>[];
+      final c = container(plugins: {'store:$_boardId@1.0.0': () {
+        loads++;
+        return (runtimes..add(_board())).last;
+      }});
+      final seen = <(String, List<String>?)>[];
+      final p = await c.read(slotPluginsProvider.notifier).register('store:$_boardId@1.0.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false, temporary: true, admit: (id, text) {
+        seen.add((id, text));
+        return '保護者がこのプラグインを止めています';
+      });
+      expect(p, isNull);
+      expect(loads, 1); // マニフェストを読む 1 段目だけ
+      expect(runtimes.single.disposed, isTrue);
+      expect(runtimes.single.calls.map((x) => x.$1), ['plugin.manifest']);
+      expect(seen.single.$1, _boardId);
+      expect(seen.single.$2, contains('みんなのボード'));
+      expect(c.read(slotPluginsNoticeProvider), contains('保護者'));
+    });
+
+    testWidgets('ページの画面: 止めているときは見守りの案内を出す', (tester) async {
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sessionStorageProvider.overrideWithValue(MemorySessionStorage({SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key})})),
+          pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+          storeClientProvider.overrideWithValue(_Store()),
+          customSessionClientProvider.overrideWithValue(MockCustomSessionClient()),
+          slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader({'store:$_boardId@1.0.0': _board})),
+          childGateProvider.overrideWithValue(_kidGate()),
+        ],
+        child: Consumer(builder: (context, ref, _) {
+          return MaterialApp(home: FutureBuilder(
+            future: ref.read(slotPluginsProvider.notifier).register('store:$_boardId@1.0.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false),
+            builder: (_, snap) => snap.connectionState != ConnectionState.done ? const SizedBox() : const CustomPageScreen(args: CustomPageArgs(pluginId: _boardId)),
+          ));
+        }),
+      ));
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(find.byKey(const ValueKey('childSafe.blocked')), findsOneWidget);
+      expect(find.text('保護者がこのプラグインを止めています'), findsOneWidget);
+      expect(find.byKey(const ValueKey('custom.page.body')), findsNothing);
+    });
   });
 }
