@@ -24,7 +24,8 @@ export 'wasm_worker_config.dart';
 /// `storage.*` = `storage.<ns>`、`fow.open` = `fowPermissions`、アプリ向け = `appFns`。**fuel の予算は Web には無い**
 /// (ブラウザの WebAssembly は fuel を数えない。`fuelPerCall` はここでは効かない)。代わりに要求ごとの期限
 /// ([webWasmInitTimeout] / [webWasmCallTimeout]) を過ぎたらワーカーを止めて失敗にし、宣言したメモリと実行後のメモリを
-/// 端末版と同じ上限 ([webWasmMaxMemoryBytes]) で見る (D-407、指摘 #10)。
+/// 端末版と同じ上限 ([webWasmMaxMemoryBytes]) で見る (D-407、指摘 #10)。起動の前に、各メモリの最大をその上限内に
+/// 書き込んでから instantiate する([capWasmMemory]、D-452)ので、実行中の `memory.grow` も上限で止まる。
 ///
 /// `net.fetch` のリダイレクト (D-407 / D-408、指摘 #7): ブラウザが JSPI (`WebAssembly.Suspending` / `promising`) を持つなら、
 /// `host_fn` を非同期にして `fetch(..., {redirect: "manual"})` で出し、リダイレクトは追わない(端末版と同じ)。
@@ -59,8 +60,9 @@ class WasmPluginWorker {
   Stream<Map<String, Object?>> get fowRequests => _fows.stream;
 
   static Future<WasmPluginWorker> spawn(WasmWorkerConfig config) async {
-    // 起動する前に、宣言したメモリの大きさを断る(指摘 #10)。
-    checkWasmMemoryDeclaration(config.wasmBytes);
+    // 起動する前に、宣言したメモリの大きさを断り(指摘 #10)、最大を上限内に書き込む(D-452: 実行後の
+    // checkMemory より先に memory.grow でブラウザのメモリを使い切らせない)。Worker に渡すのは書き換えた方。
+    final wasmBytes = capWasmMemory(config.wasmBytes);
     final blob = web.Blob([_workerSource.toJS].toJS, web.BlobPropertyBag(type: 'text/javascript'));
     final url = web.URL.createObjectURL(blob);
     final worker = WasmPluginWorker._(web.Worker(url.toJS), url);
@@ -73,7 +75,7 @@ class WasmPluginWorker {
       // 終わらない start でも期限 (webWasmInitTimeout) でワーカーごと止まる。
       await worker._request('init', timeout: webWasmInitTimeout, args: {
         'maxMemoryBytes': webWasmMaxMemoryBytes,
-        'wasm': base64Encode(config.wasmBytes),
+        'wasm': base64Encode(wasmBytes),
         'storage': config.seedStorage,
         'fowPermissions': config.fowPermissions.toList(),
         'appFns': config.appFns.toList(),
@@ -362,6 +364,7 @@ async function hostFnAsync(ptr, len) {
 }
 
 // メモリの上限 (D-407、指摘 #10): 端末版と同じ。超えたらインスタンスごと捨てる(fatal でワーカーを止めてもらう)。
+// 主な守りは起動前に書き込んだ最大 (D-452、capWasmMemory) で、ここは二段目(書き込みを抜けた場合の後始末)。
 class FatalError extends Error {}
 function checkMemory() {
   const n = inst.exports.memory.buffer.byteLength;
