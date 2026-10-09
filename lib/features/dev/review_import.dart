@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
+import '../../backend/limited_http.dart';
+
 /// 審査中の版の仮インポート (D-436、rasq-judge J-017 の 4 段目 = 人の確認と対)。
 ///
 /// 審査中の版はストアから落とせないので、judge の審査の画面が**期限つき(30 分)・ログインの要らないリンク**
@@ -49,12 +51,19 @@ final reviewImportHttpProvider = Provider<http.Client>((ref) {
 });
 
 /// [url] の配布物を落として、保存領域のファイルにする。戻りはそのパス。
+/// 本文は [reviewImportMaxBytes] までしか読まない(超えたら読むのをやめて通信を切る。全部貯めてから大きさを見ない、
+/// セキュリティ確認 2026-10-09 の [18])。
 Future<String> downloadReviewImport(String url, {required http.Client client, required Future<Directory> Function() dir}) async {
-  final res = await client.get(Uri.parse(url.trim())).timeout(const Duration(seconds: 60));
+  final LimitedResponse res;
+  try {
+    res = await getLimited(Uri.parse(url.trim()), maxBytes: reviewImportMaxBytes, timeout: const Duration(seconds: 60), client: client);
+  } on ResponseTooLargeException catch (e) {
+    throw ReviewImportException('大きさが不正です(${e.maxBytes} bytes を超えています)');
+  }
   if (res.statusCode == 404) throw const ReviewImportException('リンクの期限が切れたか、違うリンクです。審査の画面で作り直してください');
   if (res.statusCode != 200) throw ReviewImportException('取得に失敗しました(HTTP ${res.statusCode})');
   final bytes = res.bodyBytes;
-  if (bytes.isEmpty || bytes.length > reviewImportMaxBytes) throw ReviewImportException('大きさが不正です(${bytes.length} bytes)');
+  if (bytes.isEmpty) throw ReviewImportException('大きさが不正です(${bytes.length} bytes)');
   final d = await dir();
   await d.create(recursive: true);
   final file = File('${d.path}/${reviewImportFileName(res.headers['content-disposition'], url)}');
