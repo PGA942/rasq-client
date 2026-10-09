@@ -31,6 +31,7 @@ import 'post_duplicates.dart';
 import '../relational/post_embeddings.dart';
 import '../relational/relational_providers.dart' show mlGatewayProvider;
 import '../settings/settings_dsl.dart';
+import '../child_safe/child_gate.dart' show ChildGate;
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 
 /// カスタム TL の宣言 (M5e / D-080): 現在のセッションが wasm 境界
@@ -107,7 +108,7 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
       c = _nodeCursors[kid];
       if (c == null) return const []; // 読了
     }
-    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next, rasqFeed: (until) => fetchRasqFeed(ref, until), rasqList: (id, until) => fetchRasqList(ref, id, until), rasqMine: () => fetchRasqMine(ref), listHidden: ref.read(childGateProvider).collectionHidden, rasqSearch: (q, until) => fetchRasqSearch(ref, q, until));
+    return resolveNodeFetch(session, kid, cursor: c, sessionFor: sessionFor, onCursor: (next) => _nodeCursors[kid] = next, rasqFeed: (until) => fetchRasqFeed(ref, until), rasqList: (id, until) => fetchRasqList(ref, id, until), rasqMine: () => fetchRasqMine(ref), listHidden: ref.read(childGateProvider).collectionHidden, rasqSearch: (q, until) => fetchRasqSearch(ref, q, until), kindBlocked: childKindBlocked(ref.read(childGateProvider)));
   }
 
   /// カスタム関数の中身グラフ (D-118)。
@@ -173,6 +174,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
     }
     // チャイルドセーフ (D-307): 判定の強さ / 止める話題 / 見守りの時間が変われば取り直す。
     ref.watch(childGateProvider.select((g) => g.timelineSignature));
+    // DM / チャットの TL ([21]): DM を止めていれば取りに行かない(止めたら作り直して空に)。
+    if (ref.watch(childGateProvider.select((g) => g.timelineKindBlockReason(kind.id))) != null) return const TimelineState();
     if (kind == childSafeWindowKind) return TimelineState(posts: await _fetchChildWindow());
     // 一時変更 (D-338): タブの ↓ の FOW で変えた構成が入れ替わったら取り直す。
     ref.watch(tlTemporaryConfigsProvider.select((m) => m[_graphScope]));
@@ -403,6 +406,8 @@ class TimelineNotifier extends AsyncNotifier<TimelineState> {
   }
 
   Future<(Page<Post>, Map<String, Map<String, ActionResult>>, TimelineDecorations)> _fetch(SnsSession session, String? cursor) async {
+    // DM / チャットの TL ([21]): 続き読み / 取り直しでも、DM を止めていれば取らない。
+    if (ref.read(childGateProvider).timelineKindBlockReason(kind.id) != null) return (Page<Post>(items: const []), <String, Map<String, ActionResult>>{}, const TimelineDecorations());
     // カスタム TL (M5e / D-080): データ取得はホスト(基礎 TL)、TL プラグインは
     // ソートアルゴリズム(`tl.sort` — 表示順の id 列、未掲載は除外)。
     if (kind.id.startsWith('custom:') && session is WasmSnsSession) {
@@ -710,6 +715,9 @@ AsyncNotifierProvider<TimelineNotifier, TimelineState> timelineFor(TimelineKind 
 /// 見守りの時間の 1 本の TL (D-307)。ホームのタブはこれだけになる(フォロー中 / AsTell もここへ畳む)。
 const childSafeWindowKind = TimelineKind('childsafe.window', '見守りの時間', extensible: false);
 
+/// 取得ノードの kind の見守りの関所 ([21]、[resolveNodeFetch] の `kindBlocked`): DM / チャットの TL は DM を止めていれば取らない。
+bool Function(String kind) childKindBlocked(ChildGate gate) => (kind) => gate.timelineKindBlockReason(kind) != null;
+
 /// 取得ノード (D-097) の kind 解決(TL/関連/トレンドで共用): リストは
 /// 名前 → id、DM は相手ハンドル → ルームの peer id をアプリ側で引く。
 /// 自分の基礎 TL の取得か: `self`、[selfKindId] そのもの、トレンド TL(`tag:<ワード>`)なら同じワードの検索結果 (D-440)。
@@ -719,8 +727,13 @@ bool isSelfFetch(String kid, String? selfKindId) =>
 /// [selfKindId] と一致する取得は [selfItems] を返す(自分の TL の再取得回避)。
 /// [onCursor] (D-117) には取得ページの続きトークンを報告する(枝ごとの
 /// ページング用。null = 末尾まで読了)。
+/// [kindBlocked] (見守り、[21]): 取らない kind(DM / チャット。`acct:` で包まれていても)。当たれば空([childKindBlocked])。
 Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
-    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor, Future<(List<Post>, String?)> Function(String? until)? rasqFeed, Future<(List<Post>, String?)> Function(String id, String? until)? rasqList, Future<List<Post>> Function()? rasqMine, bool Function(String meta, List<String> bodies)? listHidden, Future<(List<Post>, String?)> Function(String q, String? until)? rasqSearch}) async {
+    {String? selfKindId, List<Post> selfItems = const [], String? cursor, SnsSession? Function(String account)? sessionFor, void Function(String? next)? onCursor, Future<(List<Post>, String?)> Function(String? until)? rasqFeed, Future<(List<Post>, String?)> Function(String id, String? until)? rasqList, Future<List<Post>> Function()? rasqMine, bool Function(String meta, List<String> bodies)? listHidden, Future<(List<Post>, String?)> Function(String q, String? until)? rasqSearch, bool Function(String kind)? kindBlocked}) async {
+  if (kindBlocked?.call(kid) ?? false) {
+    onCursor?.call(null);
+    return const [];
+  }
   // RASQ の投稿 (D-283): SNS のセッションではなく、Central のフィード(自分とフォロー中の RASQ アカウント)。
   // `acct:` で包まれていても拾う(包んだまま流すと、現在の SNS のセッションで取りに行ってしまう)。
   if ((kid.startsWith('acct:') ? kid.substring(kid.indexOf('|') + 1) : kid) == rasqPostsKind) {
@@ -760,7 +773,7 @@ Future<List<Post>> resolveNodeFetch(SnsSession session, String kid,
         return rasqMine();
       }
       final other = sessionFor?.call(kid.substring(5, sep));
-      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor, onCursor: onCursor, rasqFeed: rasqFeed, rasqList: rasqList, rasqMine: rasqMine, listHidden: listHidden, rasqSearch: rasqSearch);
+      return resolveNodeFetch(other ?? session, kid.substring(sep + 1), cursor: cursor, sessionFor: sessionFor, onCursor: onCursor, rasqFeed: rasqFeed, rasqList: rasqList, rasqMine: rasqMine, listHidden: listHidden, rasqSearch: rasqSearch, kindBlocked: kindBlocked);
     }
   }
   // `self` (D-124): この画面の基礎タイムライン(検索結果/リスト/欄の投稿)を

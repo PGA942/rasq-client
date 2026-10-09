@@ -15,13 +15,13 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../session/sanctions.dart';
-import '../child_safe/child_safe_providers.dart' show childComposeVerdict, childComposeSent;
+import '../child_safe/child_safe_providers.dart' show childComposeVerdict, childComposeSent, childGateProvider;
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
 import '../../text/inline_spans.dart';
 import '../home/plugin_actions.dart';
 import '../home/post_row.dart' show PostRow;
-import '../home/timeline_providers.dart' show resolveNodeFetch;
+import '../home/timeline_providers.dart' show childKindBlocked, resolveNodeFetch;
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
@@ -804,7 +804,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       return await composerLinkGates(
         graph,
         draft,
-        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine),
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine, kindBlocked: childKindBlocked(ref.read(childGateProvider))),
       );
     } catch (_) {
       return const {};
@@ -934,7 +934,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       return await composerTargetChoices(
         graph,
         draft,
-        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine),
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine, kindBlocked: childKindBlocked(ref.read(childGateProvider))),
         storageRead: (slot) async => (await ref.read(settingsAreaProvider(storageArea).future))[slot],
       );
     } catch (_) {

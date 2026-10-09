@@ -6,6 +6,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/timeline_providers.dart';
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
@@ -87,7 +88,7 @@ Future<List<Post>?> _applyTrendScopeGraph(Ref ref, SnsSession session, String sc
     final storageArea = storageSafeAreaFor(accKey);
     return await runNodeGraph(
       graph,
-      fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: selfKindId, selfItems: posts, sessionFor: sessionForAccount),
+      fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: selfKindId, selfItems: posts, sessionFor: sessionForAccount, kindBlocked: childKindBlocked(ref.read(childGateProvider))),
       fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
       storageRead: (slot) async {
         final own = (await ref.read(settingsAreaProvider(storageArea).future))[slot];
@@ -192,7 +193,7 @@ Future<List<TrendTag>?> _legacyTrendFrame(Ref ref, String? accKey, List<TrendTag
     final custom = await runNodeGraphTexts(
       graph,
       terminal: 'trend.frame',
-      fetch: (kid) => resolveNodeFetch(s, kid),
+      fetch: (kid) => resolveNodeFetch(s, kid, kindBlocked: childKindBlocked(ref.read(childGateProvider))),
       fetchTrends: () async => [for (final t in tags) t.tag],
       storageRead: (slot) async {
         final own = (await ref.read(settingsAreaProvider(storageSafeAreaFor(accKey)).future))[slot];

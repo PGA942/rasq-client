@@ -533,6 +533,8 @@ class RaiFunctionRunner {
   /// timeline.list(kind, limit): TL を取る (D-223)。
   Future<RaiFunctionResult> _timelineList(RaiFunctionCall c) => raiGuard(c.name, () async {
         final kindArg = c.arg('kind', 'home').trim();
+        // 見守り (セキュリティ確認 2026-10-09 の [21]): DM / チャットの TL(dm: / chat:)は、dm.* の関数と同じく DM を止めていれば取らない。
+        if (ref.read(childGateProvider).timelineKindBlockReason(kindArg) case final blocked?) return RaiFunctionResult(name: c.name, text: blocked, ok: false);
         final limit = _limitOf(c);
         final page = await _session().timeline(_timelineKindOf(kindArg), limit: limit);
         final lines = [for (final p in _shown(page.items).take(limit)) _line(p)];

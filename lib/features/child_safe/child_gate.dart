@@ -116,6 +116,20 @@ class ChildGate {
     return null;
   }
 
+  /// DM / チャットの TL(`dm:` / `chat:`。`acct:<アカウント>|` で包まれていても)。
+  static bool isDirectTimelineKind(String kindId) {
+    var k = kindId.trim();
+    while (k.startsWith('acct:') && k.contains('|')) {
+      k = k.substring(k.indexOf('|') + 1).trim();
+    }
+    return k.startsWith('dm:') || k.startsWith('chat:');
+  }
+
+  /// この TL(kind id)を取りに行けない理由(セキュリティ確認 2026-10-09 の [21])。取れるなら null。
+  /// DM / チャットの TL は、画面 (/dm) と同じく DM を止めていれば(見守りの時間の「DM を隠す」も)取らない。
+  /// 取得ノード (tl.dm) / RAi の timeline.list / TL の画面の、どの口からでも同じ。
+  String? timelineKindBlockReason(String kindId) => isDirectTimelineKind(kindId) ? blockedMessage('dm') : null;
+
   /// 画面(ルート)を開けない理由。開けるなら null。
   String? routeBlockReason(String loc) {
     if (!supervised) return null;

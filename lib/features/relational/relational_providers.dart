@@ -328,7 +328,7 @@ final relationalNodePostsProvider = FutureProvider<List<Post>?>((ref) async {
     return await runNodeGraph(
       graph,
       terminal: 'timeline.relational',
-      fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: 'home', selfItems: home?.posts ?? const [], sessionFor: sessionForAccount),
+      fetch: (kid) => resolveNodeFetch(session, kid, selfKindId: 'home', selfItems: home?.posts ?? const [], sessionFor: sessionForAccount, kindBlocked: childKindBlocked(ref.read(childGateProvider))),
       fetchTrends: () async => [for (final t in await session.trendingTags()) t.tag],
       pluginSort: (id, posts, params) => id.startsWith('slot:') ? ref.read(slotPluginsProvider.notifier).sortById(id, posts, params: params) : (session is WasmSnsSession ? session.timelinePlugin.compose(id, posts) : Future.value(posts)),
       storageRead: (slot) async {
