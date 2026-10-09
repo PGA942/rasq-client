@@ -311,12 +311,12 @@ class FakeStoreClient implements StoreClient {
     // 有料で買っていなければ、構成も配布物も出さない(Central と同じ 403 purchase_required、D-355)。
     if (detail.needsPurchase) throw OrgateException(ErrorCode.http(403), '購入が必要です');
     final bytes = await _bytesOf(id);
-    // 版指定 (D-137): リリースノートに載っている版だけ受ける。権限の増分は
-    // その版のリリースノートから(現在版は掲載メタと同じ)。
+    // 版指定 (D-137): リリースノートに載っている版(と現在版)だけ受ける。権限の増分は
+    // その版のリリースノートから(現在版は掲載メタと同じ)。確認シートは見た版を指定して取り直す([14])。
     final notes = await releases(id);
     final target = version ?? detail.version;
     final note = notes.where((n) => n.version == target).firstOrNull;
-    if (version != null && note == null) return null;
+    if (version != null && note == null && version != detail.version) return null;
     return InstallManifest(
       pluginId: id,
       version: target,

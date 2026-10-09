@@ -115,8 +115,9 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   );
   if (ok != true) return null; // 余白/スワイプで閉じた = キャンセル
   onBusy?.call(true);
-  // 確認シートで見た内容を許した(この版の内容を最後の承認として控える)。
-  final outcome = await installed.install(d.id, version: version, activate: activate, consent: const PluginConsent());
+  // 確認シートで見た内容を許した(この版の内容を最後の承認として控える)。版と配布物のダイジェストも渡し、
+  // シートを開いている間にストアの最新版 / 配布物が変わっていたら入れない(セキュリティ確認 2026-10-09 の [14])。
+  final outcome = await installed.install(d.id, version: manifest.version, activate: activate, consent: PluginConsent(version: manifest.version, sha512: bundle?.sha512));
   onBusy?.call(false);
   if (outcome.error != null) return outcome.error;
   // 着せ替え (D-375): 入れたらそのまま使う。暗い / 明るいモード専用なら、いまのモードで効くかも添える。

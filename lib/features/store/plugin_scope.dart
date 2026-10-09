@@ -110,7 +110,13 @@ List<String> _strings(Object? v) => [for (final s in v is List ? v : const []) i
 /// 利用者がこの場で内容を確かめて許した(インストールの確認シート / 版を切り替える前の確認)。
 /// これを渡したインストール / 版の切り替えは、その版の内容を最後の承認(`InstalledPlugin.approvedScope`)として記録する。
 /// 渡さない(自動のアップデート)ときは、最後の承認に収まる版だけを有効にする。
+///
+/// [version] / [sha512] = 確認シートで見た版(`manifest.version`)と配布物のダイジェスト(セキュリティ確認 2026-10-09 の [14])。
+/// あれば、インストールはその版を取り直し、構成の版と配布物の SHA-512 が同じときだけ入れる
+/// (シートを開いている間にストアの最新版が変わっても、確かめていない版は入れない)。
 @immutable
 class PluginConsent {
-  const PluginConsent();
+  const PluginConsent({this.version, this.sha512});
+  final String? version;
+  final String? sha512;
 }

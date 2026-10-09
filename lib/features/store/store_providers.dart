@@ -190,14 +190,16 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     final childBlocked = ref.read(childGateProvider).installBlockReason(pluginId);
     if (childBlocked != null) return fail(childBlocked);
     final client = ref.read(storeClientProvider);
+    // 確認シートで見た版があれば、その版を取り直す(版の指定が無くても「最新」を取り直さない、[14])。
+    final pinned = version ?? consent?.version;
     final InstallManifest? m;
     try {
-      m = await client.manifest(pluginId, version: version);
+      m = await client.manifest(pluginId, version: pinned);
     } on OrgateException catch (e) {
       // 停止・取り下げ中のプラグインはサーバーが 403 で断る (D-120 ③)。有料で未購入も 403 (D-355)。
       return fail(e.message);
     }
-    if (m == null) return fail(version == null ? '構成(マニフェスト)を取得できませんでした' : 'Ver.$version の構成が見つかりませんでした');
+    if (m == null) return fail(pinned == null ? '構成(マニフェスト)を取得できませんでした' : 'Ver.$pinned の構成が見つかりませんでした');
     // チャイルドセーフの例 (D-314): 構成の中身(名前 / 説明 / スロット)が分かったので、例との近さでもう 1 度。
     final manifestText = pluginExamplePieces(
       name: '${m.manifest['name'] ?? pluginId}',
@@ -208,6 +210,11 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     if (exampleBlocked != null) return fail(exampleBlocked);
     final bundle = m.bundle;
     if (bundle == null) return fail('配布物がありません');
+    // 確認シートで見た版 / 配布物と違えば、何も登録する前にやめる(セキュリティ確認 2026-10-09 の [14])。
+    // 下の verifyArtifact が落としたバイト列と bundle.sha512 を突き合わせるので、入るのは確かめた配布物そのものになる。
+    if ((consent?.version != null && m.version != consent!.version) || (consent?.sha512 != null && bundle.sha512 != consent!.sha512)) {
+      return fail('確認した内容(Ver.${consent.version ?? m.version})と、ストアの構成が変わりました。もう一度確かめてください');
+    }
 
     final Uint8List bytes;
     try {

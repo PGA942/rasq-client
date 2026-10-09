@@ -2,16 +2,21 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' show sha512;
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
 import 'package:rasq_client/features/store/plugin_scope.dart';
 import 'package:rasq_client/features/store/plugin_updates.dart';
 import 'package:rasq_client/features/store/store_models.dart';
 import 'package:rasq_client/features/store/store_providers.dart';
+import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
+import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fake_store_client.dart';
 import 'support/fake_slot_runtime.dart';
@@ -26,7 +31,11 @@ class _ScopeStore extends FakeStoreClient {
   static const id = 'sample.scope';
   final Map<String, Map<String, Object?>> manifests;
   String current;
-  static Uint8List bytesOf(String v) => Uint8List.fromList([0x00, 0x61, 0x73, 0x6d, 1, 0, 0, 0, ...utf8.encode('scope $v')]);
+
+  /// 同じ版の配布物を差し替えた(ダイジェストが変わる、[14])。
+  final rebuilt = <String>{};
+  static Uint8List bytesOf(String v, {bool rebuilt = false}) => Uint8List.fromList([0x00, 0x61, 0x73, 0x6d, 1, 0, 0, 0, ...utf8.encode('scope $v${rebuilt ? ' again' : ''}')]);
+  Uint8List _bytes(String v) => bytesOf(v, rebuilt: rebuilt.contains(v));
 
   @override
   Future<StorePluginDetail?> plugin(String pluginId) async =>
@@ -40,12 +49,12 @@ class _ScopeStore extends FakeStoreClient {
     final v = version ?? current;
     final m = manifests[v];
     if (m == null) return null;
-    final b = bytesOf(v);
+    final b = _bytes(v);
     return InstallManifest(pluginId: id, version: v, manifest: {'id': id, 'name': 'スコープ', 'kind': 'view', ...m}, artifacts: [StoreArtifact(id: 'bundle', sizeBytes: b.length, sha512: sha512.convert(b).toString())]);
   }
 
   @override
-  Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version}) async => pluginId == id ? bytesOf(version ?? current) : super.downloadArtifact(pluginId, artifactId, version: version);
+  Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version}) async => pluginId == id ? _bytes(version ?? current) : super.downloadArtifact(pluginId, artifactId, version: version);
 }
 
 void main() {
@@ -208,4 +217,79 @@ void main() {
     expect(log.single.note, contains('記録がない'));
     expect(rec(c).version, '0.1.0');
   });
+
+  group('確認シートで見た版と配布物だけを入れる(セキュリティ確認 2026-10-09 の [14])', () {
+    String digest(String v, {bool rebuilt = false}) => sha512.convert(_ScopeStore.bytesOf(v, rebuilt: rebuilt)).toString();
+
+    test('見たあとに最新版が変わっても、見た版を入れる', () async {
+      final store = _ScopeStore({'0.1.0': v1, '0.2.0': withNet}, current: '0.1.0');
+      final c = container(store);
+      await auto(c);
+      store.current = '0.2.0'; // シートを開いている間に、権限の広い版が現在版になった
+      final r = await c.read(installedPluginsProvider.notifier).install(_ScopeStore.id, consent: PluginConsent(version: '0.1.0', sha512: digest('0.1.0')));
+      expect(r.error, isNull);
+      expect(rec(c).version, '0.1.0');
+      expect(rec(c).approvedScope!.permissions, isEmpty, reason: '最後の承認は見た版の内容');
+      expect(c.read(slotPluginsProvider).map((p) => p.source), ['store:sample.scope@0.1.0']);
+    });
+
+    test('同じ版でも配布物が変わっていたら、何も登録・保存せずにやめる', () async {
+      final store = _ScopeStore({'0.1.0': v1}, current: '0.1.0');
+      final c = container(store);
+      await auto(c);
+      store.rebuilt.add('0.1.0');
+      final r = await c.read(installedPluginsProvider.notifier).install(_ScopeStore.id, consent: PluginConsent(version: '0.1.0', sha512: digest('0.1.0')));
+      expect(r.error, contains('もう一度確かめてください'));
+      expect(c.read(installedPluginsProvider), isEmpty);
+      expect(c.read(slotPluginsProvider), isEmpty);
+      // 見たダイジェストが今の配布物なら入る(版の指定と整合性の照合はこれまでどおり)。
+      expect((await c.read(installedPluginsProvider.notifier).install(_ScopeStore.id, consent: PluginConsent(version: '0.1.0', sha512: digest('0.1.0', rebuilt: true)))).error, isNull);
+    });
+
+    test('版を指定したのに構成が別の版を返したら入れない', () async {
+      final store = _LyingStore({'0.1.0': v1, '0.2.0': withNet}, current: '0.2.0');
+      final c = container(store);
+      await auto(c);
+      final r = await c.read(installedPluginsProvider.notifier).install(_ScopeStore.id, consent: PluginConsent(version: '0.1.0', sha512: digest('0.1.0')));
+      expect(r.error, contains('もう一度確かめてください'));
+      expect(c.read(installedPluginsProvider), isEmpty);
+    });
+
+    testWidgets('画面: 確認シートを開いている間に現在版が変わっても、シートの版が入る', (tester) async {
+      tester.view.physicalSize = const Size(1600, 2400);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      final store = _ScopeStore({'0.1.0': v1, '0.2.0': withNet}, current: '0.1.0');
+      final storage = MemorySessionStorage({SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key})});
+      await tester.pumpWidget(ProviderScope(overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+        storeClientProvider.overrideWithValue(store),
+        slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader({
+          for (final v in store.manifests.keys) 'store:${_ScopeStore.id}@$v': () => FakeSlotRuntime(manifest: {'id': _ScopeStore.id, 'name': 'スコープ', 'version': v, 'kind': 'view', 'slots': ['tl']}, handler: (_, fn, args) => null),
+        })),
+      ], child: const RasqApp()));
+      await tester.pumpAndSettle();
+      final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+      c.read(routerProvider).push(Routes.storePlugin(_ScopeStore.id));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('インストール'));
+      await tester.pumpAndSettle();
+      expect(find.text('スコープ 0.1.0 をインストール'), findsOneWidget);
+      store.current = '0.2.0';
+      await tester.tap(find.text('インストールする'));
+      await tester.pumpAndSettle();
+      final r = c.read(installedPluginsProvider).single;
+      expect(r.version, '0.1.0');
+      expect(r.versionInfo('0.2.0'), isNull);
+      expect(r.approvedScope!.permissions, isEmpty);
+    });
+  });
+}
+
+/// 版を指定しても現在版の構成を返すストア(取り直しで別の版にすり替わる)。
+class _LyingStore extends _ScopeStore {
+  _LyingStore(super.manifests, {required super.current});
+  @override
+  Future<InstallManifest?> manifest(String pluginId, {String? version}) => super.manifest(pluginId);
 }
