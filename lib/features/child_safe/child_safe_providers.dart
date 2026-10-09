@@ -397,10 +397,12 @@ List<String> topicLabelsOf(String text) {
 final childSafeDailyProvider = Provider<ChildSafeDaily>((ref) => ChildSafeDaily(ref.watch(sessionStorageProvider)));
 
 /// 送る前の判定 (D-307): 見守りの制限(機能 / 1 日の上限 / 本文の強さ / 投稿の話題 (D-315。DM には当てない))。通れば null。止めたら「止めた数」を数える。
-Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDaily daily, DateTime now, {required String text, bool dm = false, bool media = false}) async {
+/// [direct] = 投稿だが公開範囲がダイレクト(ダイレクト投稿への返信など、D-047)。DM の機能も要る(本文は投稿として判定。
+/// セキュリティ確認 2026-10-09 の [19])。
+Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDaily daily, DateTime now, {required String text, bool dm = false, bool direct = false, bool media = false}) async {
   if (!gate.supervised) return null;
   ChildComposeVerdict? v;
-  final feature = dm ? gate.blockedMessage('dm') : (media ? gate.blockedMessage('post.media') : null);
+  final feature = (dm || direct ? gate.blockedMessage('dm') : null) ?? (!dm && media ? gate.blockedMessage('post.media') : null);
   if (gate.locked) {
     v = const ChildComposeVerdict('保護者が設定を決めるまで送れません');
   } else if (feature != null) {
@@ -415,8 +417,8 @@ Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDai
 }
 
 /// [childComposeVerdictFor] の画面用。
-Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String text, bool dm = false, bool media = false}) =>
-    childComposeVerdictFor(ref.read(childGateProvider), ref.read(childSafeDailyProvider), ref.read(childSafeNowProvider)(), text: text, dm: dm, media: media);
+Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String text, bool dm = false, bool direct = false, bool media = false}) =>
+    childComposeVerdictFor(ref.read(childGateProvider), ref.read(childSafeDailyProvider), ref.read(childSafeNowProvider)(), text: text, dm: dm, direct: direct, media: media);
 
 /// 送れた (D-307): 1 日の数と話題の見出しを数える(見守られていなければ何もしない)。
 Future<void> childComposeSent(WidgetRef ref, String text) async {

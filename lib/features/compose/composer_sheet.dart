@@ -366,6 +366,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   /// ダイレクト投稿への返信 = 公開範囲をダイレクト(specified)に固定 (D-047)。
   bool get _directReply => _replyTo?.isDirect ?? false;
 
+  /// DM ルームではないが、送る公開範囲がダイレクトになる(ダイレクト投稿への返信 = specified + 宛先継承)。
+  /// 見守り / アカウントの処置では DM としても確かめる(セキュリティ確認 2026-10-09 の [19])。
+  bool get _sendsDirect => !_isDm && (_directReply || const {'specified', 'direct'}.contains(ref.read(composeOptionsProvider).visibility));
+
   /// 縮小状態を持つのはページ常駐 stick だけ (D-051: 通常/引用は常に展開)。
   bool get _collapsible => widget.resident;
 
@@ -1522,8 +1526,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   /// チャイルドセーフ (D-307): 見守りの制限(DM / メディア / 1 日の数 / 本文の強さ)。止めたら理由を出し、当たった語を選んで印を付ける。
-  Future<bool> _childSafeAllows({required bool dm}) async {
-    final verdict = await childComposeVerdict(ref, text: _text.text, dm: dm, media: _files.isNotEmpty);
+  Future<bool> _childSafeAllows({required bool dm, bool direct = false}) async {
+    final verdict = await childComposeVerdict(ref, text: _text.text, dm: dm, direct: direct, media: _files.isNotEmpty);
     if (verdict == null) return true;
     if (!mounted) return false;
     setState(() => _error = verdict.message);
@@ -1551,13 +1555,15 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
     if (!mounted) return;
     // アカウントの処置 (D-151): 投稿 / メディア付き投稿 / DM が止まっていれば送らない。
+    // 公開範囲がダイレクトになる返信も DM として([_sendsDirect]、[19])。
+    final sendsDirect = _sendsDirect;
     final sanctions = ref.read(rasqSanctionsProvider).value ?? RasqSanctions.none;
-    final blocked = sanctions.blockedMessage(_isDm ? 'dm' : 'post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
+    final blocked = (sendsDirect ? sanctions.blockedMessage('dm') : null) ?? sanctions.blockedMessage(_isDm ? 'dm' : 'post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
     if (blocked != null) {
       setState(() => _error = blocked);
       return;
     }
-    if (!await _childSafeAllows(dm: _isDm)) return;
+    if (!await _childSafeAllows(dm: _isDm, direct: sendsDirect)) return;
     setState(() {
       _busy = true;
       _error = null;
