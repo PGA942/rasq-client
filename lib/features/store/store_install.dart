@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../backend/orgate_client.dart' show OrgateException, centralBaseUrlProvider;
 import '../../backend/payments_api.dart';
 import '../theme/theme_packs.dart';
+import 'plugin_scope.dart';
 import 'store_client.dart';
 import 'store_models.dart';
 import 'store_providers.dart';
@@ -47,12 +48,17 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
     for (final id in (manifest.manifest['permissions'] as List? ?? const []))
       if (id is String) d.safety.permissions.where((p) => p.permission == id).firstOrNull ?? PermissionEntry(id, ''),
   ];
+  // 最後に許可した内容から広がるもの(セキュリティ確認 2026-10-09 の [8]): 端末の記録と比べる。初めて入れるなら出さない(全部が新しい)。
+  final scope = PluginScope.of([manifest.manifest]);
+  final prev = container.read(installedPluginsProvider).where((p) => p.id == d.id).firstOrNull;
+  final widened = prev == null ? const <String>[] : scope.wideningOver(prev.approvedScope);
   // インストール確認シート (D-033): 権限(種別ごと・用途理由つき)と配布物が根拠。
   final ok = await manager.showBottomSheet<bool>(
     id: 'store.install',
     title: '${d.name} ${manifest.version} をインストール',
     builder: (ctx) {
       final scheme = Theme.of(ctx).colorScheme;
+      final storeAdded = manifest!.permissionsAdded;
       return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page),
@@ -71,10 +77,21 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
                   ]),
                 ),
             ],
-            if (manifest!.permissionsAdded.isNotEmpty) ...[
+            if (scope.hosts.isNotEmpty || scope.instance) ...[
+              const SizedBox(height: 4),
+              Text('接続先', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700)),
+              Text([...scope.hosts, if (scope.instance) 'ログイン先のインスタンス'].join('、'), style: RasqTypography.bodySmall),
+            ],
+            if (widened.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(prev?.approvedScope == null ? '許可する内容(前に入れたときの記録がありません)' : '最後に許可した内容から広がるもの',
+                  key: const ValueKey('store.install.widened'), style: RasqTypography.caption.copyWith(color: RasqTokens.of(ctx).danger)),
+              for (final w in widened) Text(w, style: RasqTypography.bodySmall),
+            ] else if (storeAdded.isNotEmpty) ...[
+              // ストアの差分(直前の公開版から)は参考。判断は端末の記録で行う。
               const SizedBox(height: 4),
               Text('前のバージョンから増えた権限', style: RasqTypography.caption.copyWith(color: RasqTokens.of(ctx).danger)),
-              for (final p in manifest.permissionsAdded) Text('${p.permission} — ${p.reason}', style: RasqTypography.bodySmall),
+              for (final p in storeAdded) Text('${p.permission} — ${p.reason}', style: RasqTypography.bodySmall),
             ],
             const SizedBox(height: RasqSpacing.sm),
             if (bundle != null)
@@ -98,7 +115,8 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
   );
   if (ok != true) return null; // 余白/スワイプで閉じた = キャンセル
   onBusy?.call(true);
-  final outcome = await installed.install(d.id, version: version, activate: activate);
+  // 確認シートで見た内容を許した(この版の内容を最後の承認として控える)。
+  final outcome = await installed.install(d.id, version: version, activate: activate, consent: const PluginConsent());
   onBusy?.call(false);
   if (outcome.error != null) return outcome.error;
   // 着せ替え (D-375): 入れたらそのまま使う。暗い / 明るいモード専用なら、いまのモードで効くかも添える。
@@ -111,6 +129,21 @@ Future<String?> confirmAndInstallPlugin(WidgetRef ref, StorePluginDetail d, {Str
     };
   }
   return '${d.name} ${manifest.version} をインストールしました';
+}
+
+/// 入っている版を使い始める前の確認(セキュリティ確認 2026-10-09 の [8]): 最後に許可した内容より広がるなら、広がるものを見せて確かめる。
+/// 戻り値 = null: やめた。広がらなければ確かめずに `consent: null`、確かめたら `consent` つき(その版の内容を最後の承認として控える)。
+Future<({PluginConsent? consent})?> confirmVersionScope(OverlayManager manager, InstalledPlugins notifier, String pluginId, String version) async {
+  final widened = notifier.versionWidening(pluginId, version);
+  if (widened.isEmpty) return (consent: null);
+  final ok = await manager.showAlert(
+    id: 'store.versions.scope',
+    title: 'Ver.$version は許可する内容が広がります',
+    message: widened.join('\n'),
+    confirmText: '許可して使う',
+    cancelText: 'やめる',
+  );
+  return ok ? (consent: const PluginConsent()) : null;
 }
 
 /// 購入シート (D-355): 値段(ポイント)、いまの残高、次に失効するポイント →「購入する」。足りなければ「Web コンソールでポイントを買う」

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/features/store/plugin_scope.dart';
 import 'package:rasq_client/features/store/rasqpkg.dart';
 import 'package:rasq_client/features/store/store_models.dart';
 import 'package:rasq_client/features/store/store_providers.dart';
@@ -78,7 +79,7 @@ void main() {
   test('SNS プラグイン + 子の配布物: 子だけが `store:<id>#<childId>` でスロットに入り、アンインストールで外れる', () async {
     final store = _PkgStore({'dev.test.mysns': ('0.1.0', sns)});
     final c = container(store, loader: loaderFor({'store:dev.test.mysns@0.1.0#dev.test.mysns.hello': 'dev.test.mysns.hello'}));
-    final outcome = await c.read(installedPluginsProvider.notifier).install('dev.test.mysns');
+    final outcome = await c.read(installedPluginsProvider.notifier).install('dev.test.mysns', consent: const PluginConsent());
     expect(outcome.error, isNull, reason: c.read(slotPluginsNoticeProvider));
     expect(c.read(slotPluginsProvider).map((p) => (p.id, p.source)), [('dev.test.mysns.hello', 'store:dev.test.mysns@0.1.0#dev.test.mysns.hello')]);
     expect(c.read(installedPluginsProvider).single.sha512, sha512.convert(sns).toString());
@@ -90,35 +91,35 @@ void main() {
   test('他人の土台に足す子: 土台(requires)が無ければ入れない、あれば入る', () async {
     final store = _PkgStore({'dev.test.mysns': ('0.1.0', sns), 'net.example.later': ('0.1.0', later)});
     final c = container(store, loader: loaderFor({'store:dev.test.mysns@0.1.0#dev.test.mysns.hello': 'dev.test.mysns.hello', 'store:net.example.later@0.1.0': 'net.example.later'}));
-    final refused = await c.read(installedPluginsProvider.notifier).install('net.example.later');
+    final refused = await c.read(installedPluginsProvider.notifier).install('net.example.later', consent: const PluginConsent());
     expect(refused.error, contains('dev.test.mysns ^0.1.0 が必要'));
     expect(c.read(installedPluginsProvider), isEmpty);
     expect(c.read(slotPluginsProvider), isEmpty);
 
-    expect((await c.read(installedPluginsProvider.notifier).install('dev.test.mysns')).error, isNull);
-    final ok = await c.read(installedPluginsProvider.notifier).install('net.example.later');
+    expect((await c.read(installedPluginsProvider.notifier).install('dev.test.mysns', consent: const PluginConsent())).error, isNull);
+    final ok = await c.read(installedPluginsProvider.notifier).install('net.example.later', consent: const PluginConsent());
     expect(ok.error, isNull, reason: c.read(slotPluginsNoticeProvider));
     expect(c.read(slotPluginsProvider).map((p) => p.source), containsAll(['store:dev.test.mysns@0.1.0#dev.test.mysns.hello', 'store:net.example.later@0.1.0']));
   });
 
   test('掲載と中身が食い違う配布物(別のプラグイン / 別の版)は入れない', () async {
     final c = container(_PkgStore({'net.example.other': ('0.1.0', later), 'net.example.later': ('9.9.9', later)}), loader: loaderFor(const {}));
-    expect((await c.read(installedPluginsProvider.notifier).install('net.example.other')).error, contains('掲載'));
-    expect((await c.read(installedPluginsProvider.notifier).install('net.example.later')).error, contains('掲載'));
+    expect((await c.read(installedPluginsProvider.notifier).install('net.example.other', consent: const PluginConsent())).error, contains('掲載'));
+    expect((await c.read(installedPluginsProvider.notifier).install('net.example.later', consent: const PluginConsent())).error, contains('掲載'));
     expect(c.read(installedPluginsProvider), isEmpty);
   });
 
   test('壊れた配布物はインストール済みにもしない', () async {
     final broken = Uint8List.fromList(later)..[later.length ~/ 2] ^= 0x55;
     final c = container(_PkgStore({'net.example.later': ('0.1.0', broken)}), loader: loaderFor(const {}));
-    final outcome = await c.read(installedPluginsProvider.notifier).install('net.example.later');
+    final outcome = await c.read(installedPluginsProvider.notifier).install('net.example.later', consent: const PluginConsent());
     expect(outcome.error, contains('中身を検証できませんでした'));
     expect(c.read(installedPluginsProvider), isEmpty);
   });
 
   test('wasm が目次と違う id を名乗ったら登録しない(入れ物に別のプラグインを紛れ込ませない)', () async {
     final c = container(_PkgStore({'dev.test.mysns': ('0.1.0', sns)}), loader: loaderFor({'store:dev.test.mysns@0.1.0#dev.test.mysns.hello': 'evil.plugin'}));
-    final outcome = await c.read(installedPluginsProvider.notifier).install('dev.test.mysns');
+    final outcome = await c.read(installedPluginsProvider.notifier).install('dev.test.mysns', consent: const PluginConsent());
     expect(outcome.error, contains('evil.plugin'));
     expect(c.read(slotPluginsProvider), isEmpty);
     expect(c.read(installedPluginsProvider), isEmpty);
@@ -151,7 +152,7 @@ void main() {
   // 本物: zstd(ネイティブ)→ tar → 検証 → 本物の wasm をワーカー isolate で起動 → plugin.manifest が目次と同じ id を名乗る
   test('本物の wasm: .rasqpkg からインストールして post.action が動く', () async {
     final c = container(_PkgStore({'dev.test.mysns': ('0.1.0', sns)}));
-    final outcome = await c.read(installedPluginsProvider.notifier).install('dev.test.mysns').timeout(const Duration(seconds: 90));
+    final outcome = await c.read(installedPluginsProvider.notifier).install('dev.test.mysns', consent: const PluginConsent()).timeout(const Duration(seconds: 90));
     expect(outcome.error, isNull, reason: c.read(slotPluginsNoticeProvider));
     final p = c.read(slotPluginsProvider).single;
     expect((p.manifest.id, p.source), ('dev.test.mysns.hello', 'store:dev.test.mysns@0.1.0#dev.test.mysns.hello'));

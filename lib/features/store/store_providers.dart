@@ -11,6 +11,7 @@ import '../../backend/rasq_account.dart' show currentCentralAccountIdProvider;
 import '../settings/settings_dsl.dart';
 import '../trend/example_match.dart' show pluginExamplePieces;
 import 'http_store_client.dart';
+import 'plugin_scope.dart';
 import '../plugins/slot_plugins.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../../session/bluesky_auth.dart' show blueskyPluginId;
@@ -131,6 +132,21 @@ Future<ArtifactVerification> verifyArtifact({
   }
 }
 
+/// インストールの結果。`error` が null なら成功。[widened] = 最後に許可した内容より広がるので入れなかった(自動のアップデート、
+/// セキュリティ確認 2026-10-09 の [8]。`error` にも理由が入る)。
+typedef PluginInstallOutcome = ({String? error, ArtifactVerification? verification, List<String> widened});
+
+/// 検証した `.rasqpkg` の中身から読む、許す内容(root と子のマニフェスト + 目次の `root.safety`)。
+PluginScope packageScope(RasqPackage package) {
+  final root = package.bundle['root'];
+  return PluginScope.of([package.root.manifest, for (final c in package.children) c.manifest], safety: root is Map ? root['safety'] : null);
+}
+
+/// 自動では有効にしない理由(更新ログ / 画面に出す)。[widened] = [PluginScope.wideningOver] の答え。
+String scopeWidenedMessage(PluginScope? approved, List<String> widened) => approved == null
+    ? '最後に許可した内容の記録がないため(プラグインを管理から確かめて入れてください)'
+    : '最後に許可した内容より広がるため(${widened.join('、')})';
+
 /// インストール済みプラグイン (M4 v1): KV `store.installed.v1` に永続化。
 /// インストール = manifest 取得 → 配布物ダウンロード → **SHA-512 照合 +
 /// ed25519 署名検証**(D-034)→ 登録。wasm 実体の常設ロードはノード定義
@@ -158,24 +174,30 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
   /// インストール実行。`error` が null なら成功で、`verification` に
   /// どこまで検証できたか(ハッシュのみ / 署名まで)が入る。
   ///
+  /// [consent] = 利用者が確認シートで許した(この版の配布物から読んだ内容を最後の承認として記録する)。
+  /// null(自動のアップデート)で既定の版にするなら、配布物から読んだ内容が最後の承認([InstalledPlugin.approvedScope])に
+  /// 収まるときだけ。広がる / 記録が無ければ、何も登録・保存せずに [PluginInstallOutcome.widened] を返す
+  /// (セキュリティ確認 2026-10-09 の [8]。サーバーの `permissionsAdded` は直前の公開版との差分なので判断に使わない)。
+  ///
   /// [version] を指定するとその版を入れる(リリースノート FOW の「Ver.〇〇をインストール」, D-137)。省略時は stable 最新。
   /// **版は並べて入れておける** (D-355): 別の版が入っていても消さない。[activate] = true(既定)ならこの版を**既定の版**にする
   /// (アカウントごとの指定が無いアカウントがこの版を使う)。false(アップデートの設定「インストールだけおまかせ」)は入れて控えるだけで、
   /// 既定は変えず、スロットにも登録しない(「アカウントごとにバージョンを設定」で選ぶと動く)。
   /// 着せ替え / アセットパックは端末全体で 1 つなので、いつも既定を置き換える。
-  Future<({String? error, ArtifactVerification? verification})> install(String pluginId, {String? version, bool activate = true}) async {
+  Future<PluginInstallOutcome> install(String pluginId, {String? version, bool activate = true, PluginConsent? consent}) async {
+    PluginInstallOutcome fail(String error, [ArtifactVerification? verification]) => (error: error, verification: verification, widened: const <String>[]);
     // チャイルドセーフ (D-307): 保護者のインストールの決め(none / listed / any)。
     final childBlocked = ref.read(childGateProvider).installBlockReason(pluginId);
-    if (childBlocked != null) return (error: childBlocked, verification: null);
+    if (childBlocked != null) return fail(childBlocked);
     final client = ref.read(storeClientProvider);
     final InstallManifest? m;
     try {
       m = await client.manifest(pluginId, version: version);
     } on OrgateException catch (e) {
       // 停止・取り下げ中のプラグインはサーバーが 403 で断る (D-120 ③)。有料で未購入も 403 (D-355)。
-      return (error: e.message, verification: null);
+      return fail(e.message);
     }
-    if (m == null) return (error: version == null ? '構成(マニフェスト)を取得できませんでした' : 'Ver.$version の構成が見つかりませんでした', verification: null);
+    if (m == null) return fail(version == null ? '構成(マニフェスト)を取得できませんでした' : 'Ver.$version の構成が見つかりませんでした');
     // チャイルドセーフの例 (D-314): 構成の中身(名前 / 説明 / スロット)が分かったので、例との近さでもう 1 度。
     final manifestText = pluginExamplePieces(
       name: '${m.manifest['name'] ?? pluginId}',
@@ -183,19 +205,19 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       slots: [for (final s in (m.manifest['slots'] as List? ?? const [])) if (s is String) s],
     );
     final exampleBlocked = ref.read(childGateProvider).installBlockReason(pluginId, text: manifestText);
-    if (exampleBlocked != null) return (error: exampleBlocked, verification: null);
+    if (exampleBlocked != null) return fail(exampleBlocked);
     final bundle = m.bundle;
-    if (bundle == null) return (error: '配布物がありません', verification: null);
+    if (bundle == null) return fail('配布物がありません');
 
     final Uint8List bytes;
     try {
       bytes = await client.downloadArtifact(pluginId, bundle.id, version: m.version);
     } on OrgateException catch (e) {
-      return (error: e.message, verification: null);
+      return fail(e.message);
     }
 
     final verified = await verifyArtifact(bytes: bytes, artifact: bundle, storePublicKey: m.storePublicKey);
-    if (!verified.ok) return (error: verified.message, verification: verified);
+    if (!verified.ok) return fail(verified.message, verified);
     debugPrint('store: $pluginId ${m.version} — ${verified.message}');
 
     // 配布物が .rasqpkg(zstd 圧縮 tar、D-034)なら、署名を確かめた入れ物の**中身**を目次と突き合わせる。
@@ -205,15 +227,28 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       try {
         package = RasqPackage.open(bytes, decompress: ref.read(rasqpkgZstdProvider));
       } on RasqPackageException catch (e) {
-        return (error: '配布物の中身を検証できませんでした: ${e.message}', verification: verified);
+        return fail('配布物の中身を検証できませんでした: ${e.message}', verified);
       }
       if (package.root.id != pluginId || package.root.version != m.version) {
-        return (error: '配布物の中身(${package.root.id} ${package.root.version})がストアの掲載($pluginId ${m.version})と違います', verification: verified);
+        return fail('配布物の中身(${package.root.id} ${package.root.version})がストアの掲載($pluginId ${m.version})と違います', verified);
       }
       // 土台の SNS プラグイン(他人の土台に足す子、D-244c)。第一期は id の有無だけを見る(版の範囲は見ない)。
       final available = {...bundledSnsPluginIds, for (final p in state) p.id};
       final missing = [for (final r in package.requires) if (!available.contains(r.id)) '${r.id} ${r.version}'];
-      if (missing.isNotEmpty) return (error: 'このプラグインには ${missing.join(' / ')} が必要です(未対応のため入れられません)', verification: verified);
+      if (missing.isNotEmpty) return fail('このプラグインには ${missing.join(' / ')} が必要です(未対応のため入れられません)', verified);
+    }
+
+    // 許す内容 (セキュリティ確認 2026-10-09 の [8]): 選んだ版の配布物そのもの(署名を確かめた中身。生の wasm / 中身の無いモックは
+    // 構成のマニフェスト)から読む。自動のアップデート(consent なし)で既定の版にするなら、最後の承認に収まること。
+    // 広がる / 記録が無いなら、何も登録・保存しない(版を飛ばしても、飛ばした版で増えたものを見落とさない)。
+    final scope = package != null ? packageScope(package) : PluginScope.of([m.manifest]);
+    final prev = state.where((p) => p.id == pluginId).firstOrNull;
+    final isPack = package != null && (package.root.isTheme || package.root.isAssets);
+    // 着せ替え / アセットパックと、初めてのインストールはいつも既定にする。
+    final makeDefault = activate || prev == null || isPack;
+    if (makeDefault && consent == null) {
+      final widened = scope.wideningOver(prev?.approvedScope);
+      if (widened.isNotEmpty) return (error: scopeWidenedMessage(prev?.approvedScope, widened), verification: verified, widened: widened);
     }
 
     final name = m.manifest['name'] as String? ?? pluginId;
@@ -227,11 +262,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
         type = d.pluginType;
       }
     } catch (_) {}
-    final prev = state.where((p) => p.id == pluginId).firstOrNull;
-    final entry = InstalledVersion(version: m.version, sha512: bundle.sha512, installedAt: DateTime.now(), channel: m.channel);
-    final isPack = package != null && (package.root.isTheme || package.root.isAssets);
-    // 着せ替え / アセットパックと、初めてのインストールはいつも既定にする。
-    final makeDefault = activate || prev == null || isPack;
+    final entry = InstalledVersion(version: m.version, sha512: bundle.sha512, installedAt: DateTime.now(), channel: m.channel, scope: scope);
     final versions = [entry, for (final v in prev?.allVersions ?? const <InstalledVersion>[]) if (v.version != m.version) v];
     final record = (prev ??
             InstalledPlugin(id: pluginId, name: name, version: m.version, sha512: bundle.sha512, installedAt: entry.installedAt))
@@ -247,6 +278,8 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       accountVersions: isPack ? const {} : null,
       // 土台にするプラグイン(親子関係、D-424: Swing で配れるかに使う)。
       requires: package == null ? null : [for (final r in package.requires) r.id],
+      // 確認シートで許した版の内容を、最後の承認として控える(自動のアップデートでは書き換えない)。
+      approvedScope: consent != null ? scope : null,
     );
 
     if (package == null) {
@@ -256,10 +289,10 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       await _persist([...state.where((p) => p.id != pluginId), record]);
       if (makeDefault && isWasmBytes(bytes) && m.manifest['kind'] != 'sns') {
         final slot = await ref.read(slotPluginsProvider.notifier).register(storeSlotSource(pluginId, m.version), bytes: bytes);
-        if (slot == null) return (error: ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした', verification: verified);
+        if (slot == null) return fail(ref.read(slotPluginsNoticeProvider) ?? 'スロットに登録できませんでした', verified);
         await _syncSlots(pluginId);
       }
-      return (error: null, verification: verified);
+      return (error: null, verification: verified, widened: const <String>[]);
     }
 
     // 着せ替え (D-335、契約 v0.16): コードは無い。画像と宣言を端末に保存して、設定 → アプリの外観 → フォントやカラースキームで選ぶ。
@@ -267,12 +300,12 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       try {
         await ref.read(themePacksProvider.notifier).install(package);
       } catch (e) {
-        return (error: '着せ替えを保存できませんでした: $e', verification: verified);
+        return fail('着せ替えを保存できませんでした: $e', verified);
       }
       await _persist([...state.where((p) => p.id != pluginId), record]);
       // 入れたらすぐ使う (D-375): 入れただけで選ばれず「入れたのに変わらない」になっていた(ファイルからの読み込みと同じにする)。
       if (makeDefault) await ref.read(settingsAreaProvider(themeSettingsArea).notifier).set('id', package.root.id);
-      return (error: null, verification: verified);
+      return (error: null, verification: verified, widened: const <String>[]);
     }
 
     // アセットパック (D-252、契約 v0.11): コードは無い。画像を端末に保存して、加工画面のステッカーに出す。
@@ -280,10 +313,10 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
       try {
         await ref.read(stickerPacksProvider.notifier).install(package);
       } catch (e) {
-        return (error: 'アセットパックを保存できませんでした: $e', verification: verified);
+        return fail('アセットパックを保存できませんでした: $e', verified);
       }
       await _persist([...state.where((p) => p.id != pluginId), record]);
-      return (error: null, verification: verified);
+      return (error: null, verification: verified, widened: const <String>[]);
     }
 
     // .rasqpkg: 中のスロットプラグイン(root が sns 以外なら root、それと子)を全部登録できて初めてインストール済みにする。
@@ -291,11 +324,11 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     // 既定にしない(インストールだけ)なら登録しない。
     if (makeDefault) {
       final error = await _registerPackage(pluginId, m.version, bytes, package);
-      if (error != null) return (error: error, verification: verified);
+      if (error != null) return fail(error, verified);
     }
     await _persist([...state.where((p) => p.id != pluginId), record]);
     await _syncSlots(pluginId);
-    return (error: null, verification: verified);
+    return (error: null, verification: verified, widened: const <String>[]);
   }
 
   /// .rasqpkg の中のスロットプラグインを、その版の登録元で全部登録する。途中で失敗したら、この版で入れたものを外す。
@@ -360,21 +393,43 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
   /// このプラグインをスロットに登録したことがあるか(= スロットプラグイン)。登録元の控えから見る。
   bool _everRegistered(String pluginId) => ref.read(slotPluginsProvider).any((p) => parseStoreSlotSource(p.source)?.pluginId == pluginId);
 
-  /// 既定の版を変える (D-355)。入っている版だけ。
-  Future<String?> setDefaultVersion(String pluginId, String version) async {
+  /// 入っている [version] を使い始めると、最後に許可した内容より広がるところ(セキュリティ確認 2026-10-09 の [8])。空 = 広がらない
+  /// (もう動いている版も空)。その版の内容の記録が無い(記録より前に入れた版)ときは、分からないので理由を 1 行返す。
+  List<String> versionWidening(String pluginId, String version) {
+    final record = state.where((p) => p.id == pluginId).firstOrNull;
+    final v = record?.versionInfo(version);
+    if (record == null || v == null || record.usedVersions.contains(version)) return const [];
+    final scope = v.scope;
+    if (scope == null) return const ['この版で許す内容の記録がありません(入れ直すと確かめられます)'];
+    return scope.wideningOver(record.approvedScope);
+  }
+
+  /// [versionWidening] が空でなければ、確かめずには使い始めない(理由)。[consent] があれば、その版の内容を最後の承認として控える。
+  (String?, PluginScope?) _versionConsent(InstalledPlugin record, String version, PluginConsent? consent) {
+    final widened = versionWidening(record.id, version);
+    if (consent == null) return (widened.isEmpty ? null : scopeWidenedMessage(record.approvedScope, widened), null);
+    return (null, widened.isEmpty ? null : record.versionInfo(version)?.scope);
+  }
+
+  /// 既定の版を変える (D-355)。入っている版だけ。最後に許可した内容より広がる版は、[consent](確かめた)が無ければ断る。
+  Future<String?> setDefaultVersion(String pluginId, String version, {PluginConsent? consent}) async {
     final record = state.where((p) => p.id == pluginId).firstOrNull;
     final v = record?.versionInfo(version);
     if (record == null || v == null) return 'Ver.$version は入っていません';
+    final (refused, approved) = _versionConsent(record, version, consent);
+    if (refused != null) return refused;
     final prevUsed = record.usedVersions;
-    await _persist([for (final p in state) if (p.id == pluginId) p.copyWith(version: v.version, sha512: v.sha512, installedAt: v.installedAt) else p]);
+    await _persist([for (final p in state) if (p.id == pluginId) p.copyWith(version: v.version, sha512: v.sha512, installedAt: v.installedAt, approvedScope: approved) else p]);
     return _syncIfSlot(pluginId, prevUsed);
   }
 
-  /// アカウントごとの版 (D-355)。[version] null = 既定に従う。
-  Future<String?> setAccountVersion(String pluginId, String accountKey, String? version) async {
+  /// アカウントごとの版 (D-355)。[version] null = 既定に従う。最後に許可した内容より広がる版は、[consent] が無ければ断る。
+  Future<String?> setAccountVersion(String pluginId, String accountKey, String? version, {PluginConsent? consent}) async {
     final record = state.where((p) => p.id == pluginId).firstOrNull;
     if (record == null) return 'インストールされていません';
     if (version != null && record.versionInfo(version) == null) return 'Ver.$version は入っていません';
+    final (refused, approved) = version == null ? (null, null) : _versionConsent(record, version, consent);
+    if (refused != null) return refused;
     final prevUsed = record.usedVersions;
     final map = {...record.accountVersions};
     if (version == null || version == record.version) {
@@ -382,7 +437,7 @@ class InstalledPlugins extends Notifier<List<InstalledPlugin>> {
     } else {
       map[accountKey] = version;
     }
-    await _persist([for (final p in state) if (p.id == pluginId) p.copyWith(accountVersions: map) else p]);
+    await _persist([for (final p in state) if (p.id == pluginId) p.copyWith(accountVersions: map, approvedScope: approved) else p]);
     return _syncIfSlot(pluginId, prevUsed);
   }
 
