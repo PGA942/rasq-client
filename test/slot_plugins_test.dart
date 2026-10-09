@@ -20,7 +20,7 @@ import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/vc/astell_fows.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
-import 'package:rasq_design/rasq_design.dart' show RasqMediaPolicy;
+import 'package:rasq_design/rasq_design.dart' show RasqMediaPolicy, RasqPolicyNetworkImage;
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
@@ -634,11 +634,13 @@ void main() {
             {'t': 'Text', 'k': 't', 'p': {'text': '画像の面'}},
           ],
         };
+    // プラグインが選んだ URL は、リダイレクトの各ホップを確かめる RasqPolicyNetworkImage で読む (セキュリティ確認 2026-10-09 の [11])。
     List<String> loaded() => [
           for (final img in tester.widgetList<Image>(find.byType(Image)))
-            if (img.image case final NetworkImage n)
-              if (n.url.contains('attacker.example') || n.url.contains('cdn.allowed.example')) n.url, // ホストの画面(SNS のアイコン等)は除く
+            if (switch (img.image) { NetworkImage(:final url) => url, RasqPolicyNetworkImage(:final url) => '$url', _ => null } case final String url)
+              if (url.contains('attacker.example') || url.contains('cdn.allowed.example')) url, // ホストの画面(SNS のアイコン等)は除く
         ];
+    bool policed(String url) => tester.widgetList<Image>(find.byType(Image)).any((i) => i.image is RasqPolicyNetworkImage && '${(i.image as RasqPolicyNetworkImage).url}' == url);
     final netManifest = {
       ...manifest('t.leak', ['composer.text'], permissions: ['fow.widget', RasqPermissions.network]),
       'network': {'hosts': ['cdn.allowed.example']},
@@ -665,6 +667,7 @@ void main() {
     store.openFow('w2', images(), title: '審査済みの面');
     await tester.pumpAndSettle();
     expect(loaded(), ['https://cdn.allowed.example/ok.png']);
+    expect(policed('https://cdn.allowed.example/ok.png'), isTrue);
     // 審査済みでも network を宣言していなければ端末内だけ。
     final noNet = SlotPlugin(manifest: SlotManifest.fromJson(manifest('t.n', ['composer.text'])), source: 'store:t.n', runtime: FakeSlotRuntime(manifest: const {}, handler: (_, _, _) => null));
     expect(identical(noNet.mediaPolicy, RasqMediaPolicy.localOnly), isTrue);

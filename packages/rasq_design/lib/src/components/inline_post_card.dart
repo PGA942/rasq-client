@@ -7,7 +7,7 @@ import '../tokens/typography.dart';
 import 'avatar.dart';
 import 'rich_text.dart';
 import '../platform/media_policy.dart';
-import '../platform/web_image.dart';
+import '../platform/media_image.dart';
 
 /// インラインフレームの小表示 (D-156、ワイヤーフレーム p.1 右端 / p.5 右端):
 /// 別の面の中に投稿を埋め込むときのコンパクトなカード。小アバター + 名前 +
@@ -91,7 +91,7 @@ class _Thumbnails extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     Widget broken() => ColoredBox(color: scheme.surfaceContainerHighest, child: Icon(Icons.image_outlined, size: 14, color: scheme.onSurfaceVariant));
     // プラグインの面では、その権限で読めない URL は読まない (D-407)。
-    Widget img(Uri u) => !rasqMediaAllowed(context, u) ? broken() : Image.network(webHtmlElementStrategy: rasqWebImageStrategy, u.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => broken());
+    Widget img(Uri u) => !rasqMediaAllowed(context, u) ? broken() : Image(image: rasqMediaImage(context, u), fit: BoxFit.cover, errorBuilder: (_, _, _) => broken());
     Widget cell(int i) => Expanded(
           child: Stack(fit: StackFit.expand, children: [
             img(urls[i]),

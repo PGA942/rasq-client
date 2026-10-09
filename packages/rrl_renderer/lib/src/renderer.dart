@@ -166,7 +166,8 @@ class _NodeWidget extends StatelessWidget {
         if (src == null) return const _ErrorBox('Image without src');
         // プラグインの権限で読めない URL は、通信せずに箱だけ (D-407: 制限モードの下書き持ち出しを塞ぐ)。
         if (!rasqMediaAllowed(context, src)) return const _ErrorBox('image blocked');
-        return Image.network(webHtmlElementStrategy: rasqWebImageStrategy, src.toString(), width: width, height: height, fit: width == null && height == null ? BoxFit.cover : BoxFit.contain, errorBuilder: (_, _, _) => const _ErrorBox('image'));
+        // リダイレクトの各ホップも方針に通す(Web 版は追わない。セキュリティ確認 2026-10-09 の [11])。
+        return Image(image: rasqMediaImage(context, src), width: width, height: height, fit: width == null && height == null ? BoxFit.cover : BoxFit.contain, errorBuilder: (_, _, _) => const _ErrorBox('image'));
       case 'Row':
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: _children(scope));
       case 'Column':
