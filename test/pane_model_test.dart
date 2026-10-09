@@ -6,9 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/navigation.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/child_safe/child_gate.dart';
+import 'package:rasq_client/features/child_safe/child_safe_policy.dart';
+import 'package:rasq_client/features/child_safe/child_safe_providers.dart' show childGateProvider;
 import 'package:rasq_client/features/compose/emoji_panel.dart';
 import 'package:rasq_client/features/post/post_detail_screen.dart';
 import 'package:rasq_client/features/post/reactions_screen.dart';
+import 'package:rasq_client/features/trend/trend_screen.dart';
 import 'package:rasq_client/features/users/user_page_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/third_column.dart';
@@ -134,4 +138,67 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.descendant(of: col3, matching: find.byType(PostDetailScreen)), findsOneWidget);
   });
+
+  testWidgets('見守り (セキュリティ確認 2026-10-09 の [15]): 検索を止めていれば、第3カラムにもタグの検索を開かない / 開いたあとに止めても出さない', (tester) async {
+    tester.view.physicalSize = const Size(2400, 1600); // 1200x800 論理
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final author = UserSummary(id: 'alice', account: const AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'alice'), displayName: 'アリス');
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({
+        'sessions': [fakeSession().toJson()],
+        'current': fakeSession().account.key,
+      }),
+    });
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: (v) => [Post(id: 'p1', account: v, author: author, createdAt: DateTime(2026, 10, 9, 10), body: '#cat の投稿')]));
+    ChildGate kid({required bool search}) => ChildGate(
+          state: ChildSafeState(
+              managed: true, state: 'active', policy: ChildSafePolicy(allow: ChildSafeAllow(search: {for (final k in const ['posts', 'users', 'trend']) k: search}))),
+          now: DateTime(2026, 10, 9, 12),
+        );
+    final gate = NotifierProvider<_Gate, ChildGate>(() => _Gate(kid(search: false)));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        pluginRegistryProvider.overrideWithValue(registry),
+        childGateProvider.overrideWith((ref) => ref.watch(gate)),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    final col3 = find.byType(ThirdColumnView);
+
+    // 止めている: 狭い画面のルーターと同じく開かず、案内だけ。
+    tester.element(find.text('#cat の投稿').first).pushTrend('cat');
+    await tester.pumpAndSettle();
+    expect(find.byType(TrendScreen), findsNothing);
+    expect(c.read(thirdColumnProvider), isNull);
+    expect(find.text('保護者が検索を止めています'), findsWidgets);
+
+    // 許していれば第3カラムに開く。
+    c.read(gate.notifier).set(kid(search: true));
+    await tester.pumpAndSettle();
+    tester.element(find.text('#cat の投稿').first).pushTrend('cat');
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: col3, matching: find.byType(TrendScreen)), findsOneWidget);
+
+    // 開いたまま止める: 中身を作らず案内と ✕。
+    c.read(gate.notifier).set(kid(search: false));
+    await tester.pumpAndSettle();
+    expect(find.byType(TrendScreen), findsNothing);
+    expect(find.descendant(of: col3, matching: find.text('保護者が検索を止めています')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('thirdColumn.blocked.close')));
+    await tester.pumpAndSettle();
+    expect(c.read(thirdColumnProvider), isNull);
+  });
+}
+
+/// テストの中で保護者の制限を変えられるように。
+class _Gate extends Notifier<ChildGate> {
+  _Gate(this.initial);
+  final ChildGate initial;
+  @override
+  ChildGate build() => initial;
+  void set(ChildGate g) => state = g;
 }

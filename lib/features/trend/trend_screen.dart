@@ -83,6 +83,11 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 見守り (セキュリティ確認 2026-10-09 の [15]): どの入口(ルーター / 第3カラム / ほか)から開いても、検索を止めていれば
+    // タグの検索を取りに行かない(ルーターと同じ関所)。
+    if (ref.watch(childGateProvider).routeBlockReason('/trend') case final blocked?) {
+      return Scaffold(body: SafeArea(child: ChildSafeBlockedView(key: const ValueKey('trend.childBlocked'), message: blocked)));
+    }
     final session = ref.watch(sessionForAccountProvider(_account));
     final actions = session?.actions ?? const [];
     final tl = ref.watch(_tl);

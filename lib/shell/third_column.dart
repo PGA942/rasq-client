@@ -10,6 +10,7 @@ import '../features/compose/composer_sheet.dart' show composerFowId;
 import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
 import '../features/child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../features/notifications/notifications_screen.dart';
+import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_dsl.dart';
 import 'pane_swipe_back.dart';
@@ -74,8 +75,20 @@ class PaneScope extends InheritedWidget {
   bool updateShouldNotify(PaneScope oldWidget) => oldWidget.entry?.id != entry?.id;
 }
 
+/// 第3カラムに開くページ [location] を、ルーターと同じ関所 ([ChildGate.routeBlockReason]) に通す
+/// (セキュリティ確認 2026-10-09 の [15]: 第3カラムはルーターを通らない)。止めていれば案内を出して true。
+bool _paneBlocked(ProviderContainer container, String location) {
+  final blocked = container.read(childGateProvider).routeBlockReason(Uri.parse(location).path);
+  if (blocked == null) return false;
+  container.read(rootMessengerKeyProvider).currentState
+    ?..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(blocked)));
+  return true;
+}
+
 /// タブレットのページオープン規則 (D-057)。処理したら true(呼び出し側は
 /// router push しない)。モバイル幅・タブ外ページでは false。
+/// 見守りで止めている画面は開かずに案内だけ出す(true。ルーターの関所と同じ、[_paneBlocked])。
 bool openPageInPanes(
   BuildContext context, {
   required String id,
@@ -86,6 +99,7 @@ bool openPageInPanes(
 }) {
   if (MediaQuery.sizeOf(context).width < 840) return false;
   final container = ProviderScope.containerOf(context, listen: false);
+  if (_paneBlocked(container, location)) return true;
   final store = container.read(thirdColumnProvider.notifier);
   final current = container.read(thirdColumnProvider);
   final scope = PaneScope.maybeOf(context);
@@ -167,6 +181,7 @@ bool replacePageInPane(
   final scope = PaneScope.maybeOf(context);
   if (scope?.entry == null) return false;
   final container = ProviderScope.containerOf(context, listen: false);
+  if (_paneBlocked(container, location)) return true;
   container.read(thirdColumnProvider.notifier).open(
         ThirdColumnEntry(id: id, title: title, location: location, extra: extra, builder: builder, previous: scope!.entry!.previous),
       );
@@ -211,7 +226,10 @@ class ThirdColumnView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final entry = ref.watch(thirdColumnProvider);
-    if (entry != null) {
+    // チャイルドセーフ (D-307): 検索 / 通知を止めていれば出さない。開いたあとに止めたページも([15]、ルーターと同じ関所)。
+    final gate = ref.watch(childGateProvider);
+    final pageBlocked = entry?.location == null ? null : gate.routeBlockReason(Uri.parse(entry!.location!).path);
+    if (entry != null && pageBlocked == null) {
       // ページ entry (D-059): カラム専用ヘッダーは出さず全面表示 — 戻りは
       // ページ自身のヘッダーの < に統合される(RasqPageHeader が PaneScope を
       // 見て paneBackTo を呼ぶ。長押しで「どこまで戻るか」)。
@@ -240,10 +258,25 @@ class ThirdColumnView extends ConsumerWidget {
         ]),
       );
     }
+    if (entry != null) {
+      // 止めているページ ([15]): 中身は作らず、案内と ✕ だけ。
+      return PaneScope(
+        entry: null,
+        child: Column(children: [
+          SizedBox(
+            height: 40,
+            child: Row(children: [
+              const Spacer(),
+              RasqIconButton(key: const ValueKey('thirdColumn.blocked.close'), icon: Icons.close, size: 20, tooltip: '閉じる', onPressed: () => ref.read(thirdColumnProvider.notifier).close()),
+              const SizedBox(width: 4),
+            ]),
+          ),
+          Expanded(child: ChildSafeBlockedView(message: pageBlocked!)),
+        ]),
+      );
+    }
 
     final empty = settingValue(ref, 'thirdColumn', 'empty', 'search') as String? ?? 'search';
-    // チャイルドセーフ (D-307): 検索 / 通知を止めていれば出さない。
-    final gate = ref.watch(childGateProvider);
     // RASQ アカウント / SNS アカウントを切り替えたら、検索 / 通知を作り直す (D-397): 入力中の語やタブの位置も含めて、
     // 前のアカウントのものを残さない(左カラムと同じアカウントで開く)。
     final accountKey = '${ref.watch(currentRasqAccountProvider)?.id}|${ref.watch(currentAccountProvider)?.key}|${ref.watch(bundleViewProvider)}';
