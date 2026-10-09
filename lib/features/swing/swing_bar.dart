@@ -6,6 +6,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../backend/orgate_client.dart' show OrgateException, centralBaseUrlProvider;
 import '../../backend/rasq_account_page_api.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart' show EmbeddedComposer;
 import '../media/video_player.dart' show VideoSession, fmtDuration;
@@ -521,6 +522,9 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
     final count = thread.value?.replies.length ?? open?.replyCount ?? s.replyCount;
     // 入っている返信(取り直したものがあればそれ)。
     final focus = open == null ? null : (thread.value?.post ?? open);
+    // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): 投稿の詳細と同じく、見守りの時間に詳細を開かせない設定 /
+    // 見せない投稿(入っている返信、根なら Swing の投稿)なら、スレッドの中身を出さない。返信は rasqThreadProvider で外してある。
+    final childBlocked = rasqPostDetailBlockReason(ref.watch(childGateProvider), focus ?? thread.value?.post);
     return Column(key: const ValueKey('swing.thread'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
         padding: EdgeInsets.fromLTRB(open == null ? RasqSpacing.page : RasqSpacing.xs, 0, RasqSpacing.sm, 0),
@@ -548,7 +552,9 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
         child: ListView(
           key: const ValueKey('swing.thread.list'),
           padding: EdgeInsets.zero,
-          children: thread.when(
+          children: childBlocked != null
+              ? [Padding(key: const ValueKey('childSafe.postHidden'), padding: const EdgeInsets.all(RasqSpacing.page), child: Text(childBlocked, style: muted))]
+              : thread.when(
             loading: () => const [Padding(padding: EdgeInsets.all(RasqSpacing.page), child: RasqLoading())],
             error: (e, _) => [Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('読み込めませんでした: ${e is OrgateException ? e.message : e}', style: muted))],
             data: (_) => [
@@ -581,11 +587,13 @@ class _SwingViewerBarState extends ConsumerState<SwingViewerBar> {
           ),
         ),
       ),
-      Divider(height: 1, color: scheme.outlineVariant),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.xs),
-        child: SizedBox(height: 48, child: _replyRow(s, showCount: false)),
-      ),
+      if (childBlocked == null) ...[
+        Divider(height: 1, color: scheme.outlineVariant),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.sm, RasqSpacing.xs),
+          child: SizedBox(height: 48, child: _replyRow(s, showCount: false)),
+        ),
+      ],
     ]);
   }
 }

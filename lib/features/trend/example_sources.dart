@@ -3,6 +3,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../plugins/slot_plugins.dart';
 import '../store/store_models.dart';
 import '../store/store_providers.dart' show installedPluginsProvider, storeClientProvider;
@@ -47,7 +48,9 @@ ExampleCandidate collectionCandidate({required ExampleKind kind, required String
 Future<List<ExampleCandidate>> recentActionCandidates(WidgetRef ref) async {
   final session = ref.read(currentSnsSessionProvider);
   if (session == null) return const [];
-  final reacted = (await session.reactedPosts(limit: 40)).items;
+  // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): 候補の投稿にも、ホームと同じ保護者の表示制限を掛ける
+  // (見せない投稿は、話題のまとめにもカードにも使わない)。見守られていなければ素通し。
+  final reacted = ref.read(childGateProvider).filterPosts((await session.reactedPosts(limit: 40)).items);
   return [for (final t in topicsOf(reacted, top: reacted.length)) topicCandidate(t)];
 }
 
@@ -72,9 +75,10 @@ Future<List<T>> _orEmpty<T>(Future<List<T>> Function() f) async {
   }
 }
 
-Future<List<Post>> _firstPosts(Future<Page<Post>> Function() f) async {
+/// クリップ / リストの先頭。見せない投稿 (D-454、[9]) は外す(カードに出さない。名前と説明、残りの投稿で比べる)。
+Future<List<Post>> _firstPosts(WidgetRef ref, Future<Page<Post>> Function() f) async {
   try {
-    return (await f()).items.take(_collectionPosts).toList();
+    return ref.read(childGateProvider).filterPosts((await f()).items.take(_collectionPosts).toList());
   } catch (_) {
     return const []; // 読めなければ名前と説明だけで比べる
   }
@@ -87,7 +91,7 @@ Future<List<ExampleCandidate>> clipCandidates(WidgetRef ref) async {
   final clips = await _orEmpty(session.clips);
   return Future.wait([
     for (final c in clips.take(_collectionLimit))
-      _firstPosts(() => session.clipNotes(c.id, limit: _collectionPosts)).then((posts) => collectionCandidate(kind: ExampleKind.clip, id: c.id, name: c.name, description: c.description, posts: posts)),
+      _firstPosts(ref, () => session.clipNotes(c.id, limit: _collectionPosts)).then((posts) => collectionCandidate(kind: ExampleKind.clip, id: c.id, name: c.name, description: c.description, posts: posts)),
   ]);
 }
 
@@ -98,7 +102,7 @@ Future<List<ExampleCandidate>> listCandidates(WidgetRef ref) async {
   final lists = await _orEmpty(session.lists);
   return Future.wait([
     for (final l in lists.take(_collectionLimit))
-      _firstPosts(() => session.timeline(TimelineKind.list(l.id, l.name), limit: _collectionPosts)).then((posts) => collectionCandidate(kind: ExampleKind.list, id: l.id, name: l.name, description: l.description, posts: posts)),
+      _firstPosts(ref, () => session.timeline(TimelineKind.list(l.id, l.name), limit: _collectionPosts)).then((posts) => collectionCandidate(kind: ExampleKind.list, id: l.id, name: l.name, description: l.description, posts: posts)),
   ]);
 }
 

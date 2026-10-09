@@ -11,6 +11,7 @@ import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
 import '../post/thread_section.dart';
@@ -100,6 +101,15 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
     final order = ThreadSortOrder.values.asNameMap()[saved['order']] ?? ThreadSortOrder.none;
     final mode = RasqSectionMode.values.asNameMap()[saved['rasqMode']] ?? RasqSectionMode.replies;
     final target = thread.value?.post;
+    // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): SNS の投稿の詳細と同じく、見せない投稿 / 見守りの時間に
+    // 詳細を開かせない設定なら、中身も返信欄も(常駐の返信コンポーザーも)出さない。
+    final childBlocked = rasqPostDetailBlockReason(ref.watch(childGateProvider), target);
+    if (childBlocked != null) {
+      return Scaffold(
+        appBar: RasqPageHeader(title: '投稿', onBack: widget.onClose),
+        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: 'この投稿は表示できません', hint: childBlocked == 'この投稿は表示できません' ? '見守りの設定は保護者が決めています' : childBlocked),
+      );
+    }
     if (target != null) _ensureReplyComposer(target);
     // 返信ボタン: 消した常駐コンポーザーを呼び戻す (D-096 と同じ)。
     void reply() => setState(() => _composerDismissed = false);
@@ -123,7 +133,7 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
           // 常駐コンポーザーのぶん、下を空ける。
           return ListView(padding: const EdgeInsets.only(bottom: 160), children: [
             if (t.parent != null) RasqPostTileView(post: t.parent!, onChanged: _refresh, onOpen: () => context.push(Routes.rasqPost(t.parent!.id))),
-            if (t.parent == null && t.post.isReply)
+            if (t.parent == null && t.post.isReply && !t.parentHidden)
               Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: Text('元の投稿は削除されています。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
             RasqPostTileView(post: t.post, focused: true, onChanged: _refresh, onReply: reply),
             // 帯: 短押し = 並び順(返信のとき)、長押し = 欄の切り替え、右 = 「リアクションを表示」のページへ (D-294)。

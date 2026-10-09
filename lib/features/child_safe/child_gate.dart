@@ -185,6 +185,20 @@ class ChildGate {
 
   List<Post> filterPosts(List<Post> posts) => policy == null ? posts : [for (final p in posts) if (!postHidden(p)) p];
 
+  /// 本文だけ分かるもの(RASQ の通知の抜粋など)を見せないか。判定は [postHidden] と同じ (D-454)。
+  bool textHidden(String text) => policy != null && text.trim().isNotEmpty && postHidden(_textPost(text));
+
+  /// 通知の投稿を、[postHidden] なら外す(通知そのもの = 誰が何をしたかは残す。投稿を含みうるプラグインの `raw` も外す)
+  /// (D-454、セキュリティ確認 2026-10-09 の [9])。
+  List<NotificationItem> filterNotifications(List<NotificationItem> items) => policy == null
+      ? items
+      : [
+          for (final n in items)
+            n.post == null || !postHidden(n.post!)
+                ? n
+                : NotificationItem(id: n.id, account: n.account, kind: n.kind, createdAt: n.createdAt, actors: n.actors, reaction: n.reaction, read: n.read, reactionsByActor: n.reactionsByActor, title: n.title, body: n.body),
+        ];
+
   /// 投稿の詳細を開けない理由。開けるなら null。
   String? postDetailBlockReason(Post? p) {
     if (!supervised) return null;

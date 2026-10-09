@@ -51,6 +51,15 @@ class _ReactionsScreenState extends ConsumerState<ReactionsScreen> {
     final acct = widget.initial?.account.key; // 属するアカウントで展開 (D-155)
     final thread = ref.watch(threadProvider((id: widget.postId, account: acct)));
     final post = thread.value?.post ?? widget.initial;
+    // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): 投稿の詳細と同じく、見せない投稿 / 見守りの時間に詳細を
+    // 開かせない設定なら、対象の投稿も返信 / 引用も出さない。
+    final childBlocked = ref.watch(childGateProvider).postDetailBlockReason(post);
+    if (childBlocked != null) {
+      return Scaffold(
+        appBar: RasqPageHeader(title: 'リアクション', leadingAvatar: me),
+        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: 'この投稿は表示できません', hint: childBlocked == 'この投稿は表示できません' ? '見守りの設定は保護者が決めています' : childBlocked),
+      );
+    }
     final actions = ref.watch(sessionForAccountProvider(acct))?.actions ?? const <ActionDescriptor>[];
     final manager = ref.watch(overlayManagerProvider);
     final tabs = [const RasqTabItem('返信'), const RasqTabItem('引用'), const RasqTabItem('リアクション'), const RasqTabItem('共有')];
