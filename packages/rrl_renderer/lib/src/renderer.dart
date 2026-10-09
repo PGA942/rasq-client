@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
 
+import 'budget.dart';
 import 'geometry.dart';
 import 'host.dart';
 import 'registry.dart';
@@ -21,7 +22,12 @@ class RrlRenderer extends StatelessWidget {
 
   @override
   // 木の下の画像 / メディアの読み込みは、すべて host.mediaPolicy に従う (D-407)。
-  Widget build(BuildContext context) => RasqMediaPolicyScope(policy: host.mediaPolicy, child: _NodeWidget(node: node, host: host, scope: host.scope));
+  Widget build(BuildContext context) {
+    // 展開の予算 (セキュリティ確認 2026-10-09 の [4]): ウィジェットを作る前に木全体で数え、超えれば描かない。
+    // 根の Bind の中身は描くたびに変わりうるので、毎回数える(手間は予算の分まで)。
+    if (rrlExpansionOverBudget(node, host.scope, host.budget) case final over?) return _ErrorBox('${node.t}(${node.k ?? '-'}) not rendered: $over');
+    return RasqMediaPolicyScope(policy: host.mediaPolicy, child: _NodeWidget(node: node, host: host, scope: host.scope));
+  }
 }
 
 /// `#RRGGBB` / `#RRGGBBAA` / `#AARRGGBB`(8 桁は RRGGBBAA と解釈)を Color に。
