@@ -415,6 +415,8 @@ class AstellSession extends Notifier<AstellSessionState?> {
           );
           // 画面共有が**始まった**ら自動再生 (D-147)。
           if (peer.screenShare != null && before?.screenShare == null) _autoPlay(peer);
+          // 強制ミュート / 解除 (D-149) を配信の声にもすぐ効かせる。
+          if (peer.mutedByMod != before?.mutedByMod) _applyPlayback();
           _syncWatching();
           _syncHoldMusic(); // 誰かが話し始めた / 静かになった (D-327)
         }
@@ -602,6 +604,8 @@ class AstellSession extends Notifier<AstellSessionState?> {
 
   /// 鳴らす声: 通話はスピーカーミュート / 保留 / 手元のミュートで止める。配信(LiveKit)の声は、通話で繋がっている人
   /// なら鳴らさない(二重にしない)— 満員で通話に入れなかった人は、ホストの声を配信で聞く。
+  /// モデレーターに強制ミュートされた人 (`mutedByMod`) の声も鳴らさない(改変した端末が LiveKit に上げ続けても。
+  /// LiveKit の識別子はアカウントなので、そのアカウントの接続のどれかがミュートなら止める。セキュリティ確認 2026-10-09 の [7])。
   void _applyPlayback() {
     final s = state;
     if (s == null) return;
@@ -614,7 +618,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
     final s = state;
     if (s == null || s.speakerMuted || identity == s.myAccountId) return false;
     final peers = [for (final p in s.peers) if (p.accountId == identity) p];
-    if (peers.any((p) => s.mutedPeerIds.contains(p.peerId))) return false;
+    if (peers.any((p) => p.mutedByMod || s.mutedPeerIds.contains(p.peerId))) return false;
     final linked = _mesh?.peerIds ?? const <String>{};
     return !peers.any((p) => linked.contains(p.peerId));
   }

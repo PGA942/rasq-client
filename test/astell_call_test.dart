@@ -408,6 +408,32 @@ void main() {
       expect(streamer.connected, isFalse);
     });
 
+    test('強制ミュートされた人の声は、LiveKit に上がっていても鳴らさない。解除で戻る(セキュリティ確認 2026-10-09 の [7])', () async {
+      final session = await join(MockAstellClient.seededRooms().firstWhere((r) => r.id == 'r-sublrony'));
+      Map<String, Object?> peer(String peerId, {required bool muted}) => {
+            'type': 'peer-state',
+            'peer': {'peerId': peerId, 'accountId': 'kurt', 'handle': 'kurt', 'displayName': 'クルト', 'state': {'micOn': false, 'mutedByMod': muted}},
+          };
+      // 通話に繋がっていない(満員などで LiveKit で聞く)話す人。
+      client.emit('r-sublrony', peer('p9', muted: false));
+      await Future<void>.delayed(Duration.zero);
+      expect(streamer.policy!('kurt'), isTrue);
+      final applied = streamer.policySet;
+      client.emit('r-sublrony', peer('p9', muted: true));
+      await Future<void>.delayed(Duration.zero);
+      expect(streamer.policy!('kurt'), isFalse, reason: '強制ミュート中は配信の声も止める');
+      expect(streamer.policySet, greaterThan(applied), reason: 'いま鳴っているトラックにもすぐ効かせる');
+      // 同じアカウントの別の接続はミュートされていなくても、どれかがミュートなら止める(LiveKit の識別子はアカウント)。
+      client.emit('r-sublrony', peer('p10', muted: false));
+      await Future<void>.delayed(Duration.zero);
+      expect(streamer.policy!('kurt'), isFalse);
+      client.emit('r-sublrony', peer('p9', muted: false));
+      await Future<void>.delayed(Duration.zero);
+      expect(streamer.policy!('kurt'), isTrue, reason: '解除で戻る');
+      expect(streamer.policy!('sublrony'), isTrue, reason: 'ほかの人の声はそのまま');
+      await session.leave();
+    });
+
     test('ほかの人の画面共有があるルームでも繋ぐ(r-launch の TiVard)', () async {
       final session = await join(MockAstellClient.seededRooms().first);
       expect(client.streamTokens.single.publish, isFalse);
@@ -606,6 +632,7 @@ class FakeStreamer extends AstellStreamer {
   String? sourceId;
   bool? mic;
   bool Function(String identity)? policy;
+  int policySet = 0;
   AstellMediaException? publishError;
 
   @override
@@ -645,7 +672,10 @@ class FakeStreamer extends AstellStreamer {
   Widget? video(String identity, {bool screen = false, BoxFit fit = BoxFit.contain}) => null;
 
   @override
-  void setAudioPolicy(bool Function(String identity) play) => policy = play;
+  void setAudioPolicy(bool Function(String identity) play) {
+    policy = play;
+    policySet++;
+  }
 
   @override
   Future<void> disconnect() async {
