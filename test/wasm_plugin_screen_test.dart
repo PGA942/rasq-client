@@ -1,12 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_runtime/plugin_runtime.dart';
 import 'package:rasq_client/app/providers.dart';
+import 'package:rasq_client/features/child_safe/child_gate.dart';
+import 'package:rasq_client/features/child_safe/child_safe_policy.dart';
+import 'package:rasq_client/features/child_safe/child_safe_providers.dart';
 import 'package:rasq_client/features/dev/wasm_plugin_screen.dart';
+import 'package:rasq_client/features/plugins/sideload_trust.dart';
 import 'package:rasq_client/session/session_storage.dart';
 
 import 'support/fakes.dart';
@@ -20,6 +25,21 @@ const _samplePermissions = {'network', 'storage.safe'};
 
 /// テストの偽サーバー(接続先の宣言 schema v0.12。misskey.io はサンプルの既定 host)。
 const _sampleHosts = {'misskey.io'};
+
+/// 見守り中の子の関所(プラグインの制限だけ)。
+ChildGate _kidGate({List<String> ids = const [], ChildSafeInstall install = ChildSafeInstall.listed}) => ChildGate(
+      state: ChildSafeState(managed: true, state: 'active', policy: ChildSafePolicy(allow: ChildSafeAllow(plugins: ChildSafePluginsAllow(ids: ids, install: install)))),
+      now: DateTime(2026, 10, 9, 12),
+    );
+
+/// テストの中で保護者の制限を変えられるように。
+class _Gate extends Notifier<ChildGate> {
+  _Gate(this.initial);
+  final ChildGate initial;
+  @override
+  ChildGate build() => initial;
+  void set(ChildGate g) => state = g;
+}
 
 void main() {
   final wasmFile = File('../rasq-sdk-sample/rust/target/wasm32-unknown-unknown/release/misskey_wasm_sample.wasm');
@@ -218,5 +238,67 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('閉じますか?'), findsNothing);
     expect(find.text('リアクション (wasm)'), findsNothing);
+  });
+
+  group('見守り (セキュリティ確認 2026-10-09 の [12])', () {
+    test('関所: id の分からないものは名指し / 例で決める設定では動かさない、スロットは見ない', () {
+      expect(ChildGate.off.devPreviewBlockReason(null), isNull);
+      expect(ChildGate(state: const ChildSafeState(managed: true, state: 'active', policy: ChildSafePolicy())).devPreviewBlockReason(null), isNull);
+      expect(_kidGate().devPreviewBlockReason(null), isNotNull);
+      expect(_kidGate(ids: ['net.example.ok']).devPreviewBlockReason(null), isNotNull);
+      expect(_kidGate(install: ChildSafeInstall.examples).devPreviewBlockReason(null), isNotNull);
+      expect(_kidGate(install: ChildSafeInstall.any).devPreviewBlockReason(null), isNull);
+      // 目次の id が分かるもの: 名指しなら通す、`listed` / `none` で名指しが無ければ止める。
+      expect(_kidGate(ids: ['net.example.ok']).devPreviewBlockReason('net.example.ok'), isNull);
+      expect(_kidGate(ids: ['net.example.ok']).devPreviewBlockReason('net.example.other'), '保護者がこのプラグインを止めています');
+      expect(_kidGate(install: ChildSafeInstall.none).devPreviewBlockReason('net.example.other'), isNotNull);
+      // 設定待ち(署名を確かめた制限が無い)は動かさない。
+      expect(ChildGate(state: const ChildSafeState(managed: true, state: 'pending_setup')).devPreviewBlockReason(null), isNotNull);
+      // ルート: どれも動かせないときだけ画面ごと止める。
+      expect(_kidGate().routeBlockReason('/dev/wasm'), isNotNull);
+      expect(_kidGate(ids: ['net.example.ok']).routeBlockReason('/dev/wasm'), isNull);
+      expect(_kidGate(install: ChildSafeInstall.any).routeBlockReason('/dev/wasm'), isNull);
+      expect(ChildGate.off.routeBlockReason('/dev/wasm'), isNull);
+    });
+
+    Future<ProviderContainer> pumpScreen(WidgetTester tester, NotifierProvider<_Gate, ChildGate> gate) async {
+      await tester.pumpWidget(ProviderScope(
+        overrides: [sessionStorageProvider.overrideWithValue(MemorySessionStorage()), childGateProvider.overrideWith((ref) => ref.watch(gate))],
+        child: MaterialApp(
+          theme: RasqTheme.light(),
+          home: MediaQuery(
+            data: const MediaQueryData(disableAnimations: true),
+            child: WasmPluginScreen(wasmBytesOverride: wasmFile.existsSync() ? wasmFile.readAsBytesSync() : Uint8List.fromList(const [0, 0x61, 0x73, 0x6d]), envOverride: RasqHostEnvironment()),
+          ),
+        ),
+      ));
+      await tester.pump();
+      return ProviderScope.containerOf(tester.element(find.byType(WasmPluginScreen)));
+    }
+
+    testWidgets('止めていれば、スロット登録を押さなくても読み込んだものを動かさない', (tester) async {
+      final gate = NotifierProvider<_Gate, ChildGate>(() => _Gate(_kidGate()));
+      await pumpScreen(tester, gate);
+      expect(find.byType(WasmPluginView), findsNothing);
+      expect(find.textContaining('保護者が選んだプラグインだけ動かせます'), findsOneWidget);
+      expect(find.byKey(const ValueKey('wasm.dev.mode')), findsNothing);
+    });
+
+    testWidgets('許していれば動かす(制限モードのまま) / 動かしている間に止めたら閉じる', (tester) async {
+      if (!wasmFile.existsSync()) {
+        markTestSkipped('misskey-wasm-sample not built');
+        return;
+      }
+      final gate = NotifierProvider<_Gate, ChildGate>(() => _Gate(_kidGate(install: ChildSafeInstall.any)));
+      final c = await pumpScreen(tester, gate);
+      expect(find.byType(WasmPluginView), findsOneWidget);
+      // 差し替えのバイト列は制限モード(release の段)のまま。
+      expect(devScreenGrantFor(debug: false, trust: SideloadTrust.restricted).permissions, isNot(contains('network')));
+
+      c.read(gate.notifier).set(_kidGate());
+      await tester.pump();
+      expect(find.byType(WasmPluginView), findsNothing);
+      expect(find.textContaining('保護者が選んだプラグインだけ動かせます'), findsOneWidget);
+    });
   });
 }

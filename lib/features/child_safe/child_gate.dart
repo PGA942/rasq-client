@@ -136,7 +136,18 @@ class ChildGate {
     // カスタムプラグインのページ (D-357 / D-451): ページ型をどれも使えないときは画面ごと。1 つずつの可否は中身(マニフェスト)が
     // 分かってから開く側([pluginPageBlockReason])が決める(ルートの id はストアの id で、例 (D-314) の近さも中身が要る)。
     if (under('/custom/page') && !_anyPagePluginAllowed) return '保護者がカスタムプラグインを止めています';
+    // WASM 試験画面 (dev、セキュリティ確認 2026-10-09 の [12]): どのプラグインも動かせないときは画面ごと。
+    // 1 つずつの可否は読み込む側([devPreviewBlockReason])が決める。
+    if (under('/dev/wasm') && !_anyPluginAllowed) return '保護者がプラグインを止めています';
     return null;
+  }
+
+  /// プラグインを 1 つでも動かせるか(`none`・`listed` で名指しが無い、なら動かせない)。
+  bool get _anyPluginAllowed {
+    final pl = allow?.plugins;
+    if (locked) return false;
+    if (pl == null) return true;
+    return pl.ids.isNotEmpty || pl.install == ChildSafeInstall.any || pl.install == ChildSafeInstall.examples;
   }
 
   /// ページ型のプラグインを 1 つでも使えるか(ページのスロットを切っている / `none`・`listed` で名指しが無い、なら使えない)。
@@ -294,6 +305,23 @@ class ChildGate {
     if (!supervised) return null;
     if (locked) return '保護者が設定を決めるまで使えません';
     return pluginAllowed(pluginId, pagePluginSlot, text: text) ? null : '保護者がこのプラグインを止めています';
+  }
+
+  /// WASM 試験画面 (dev) で動かせない理由(セキュリティ確認 2026-10-09 の [12])。動かせるなら null。**ゲストのコードを動かす前に**聞く。
+  /// [pluginId] = 配布物の目次の id(素の .wasm / 同梱のアセットは分からない = null)、[text] = 目次のマニフェストの中身。
+  /// どのスロットにも入れずに動かすので、スロットは見ない([ChildSafePluginsAllow.permitsPlugin])。
+  /// id の分からないものは、名指し / 例で決める設定(`none`・`listed`・`examples`、止める例がある)では動かさない。
+  String? devPreviewBlockReason(String? pluginId, {List<String>? text}) {
+    if (!supervised) return null;
+    if (locked) return '保護者が設定を決めるまで使えません';
+    final pl = allow?.plugins;
+    if (pluginId == null) {
+      final open = (pl == null || pl.install == ChildSafeInstall.any) && !hasDenyExamples;
+      return open ? null : '保護者が選んだプラグインだけ動かせます(この読み込み方では、どのプラグインか確かめられません)';
+    }
+    final scores = _scores(text);
+    final ok = pl == null ? !(scores?.nearDeny ?? false) : pl.permitsPlugin(pluginId, scores: scores);
+    return ok ? null : '保護者がこのプラグインを止めています';
   }
 
   /// インストールできない理由。[text] はマニフェストの中身(ストアから構成を取ったあとに、もう 1 度確かめる)。
