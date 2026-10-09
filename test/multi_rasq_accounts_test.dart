@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +30,7 @@ void main() {
   http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
 
   /// 2 つのアカウントを持つ偽の Central。トークンでアカウントを見分け、リクエストごとに Authorization を記録する。
-  ({MockClient client, List<({String method, String path, String? auth})> seen, Map<String, Set<String>> bundles, Map<String, Map<String, String>> vaults}) fakeCentral({Map<String, Set<String>>? bundles, http.Response? Function(http.Request req)? intercept}) {
+  ({MockClient client, List<({String method, String path, String? auth})> seen, Map<String, Set<String>> bundles, Map<String, Map<String, String>> vaults}) fakeCentral({Map<String, Set<String>>? bundles, FutureOr<http.Response?> Function(http.Request req)? intercept}) {
     const accounts = {
       'tok-a': {'id': 'acc-a', 'handle': 'alice', 'displayName': 'アリス'},
       'tok-b': {'id': 'acc-b', 'handle': 'bob', 'displayName': 'ボブ'},
@@ -41,7 +42,7 @@ void main() {
       final path = req.url.path.replaceFirst('/api/v1', '');
       final auth = req.headers['authorization'];
       seen.add((method: req.method, path: path, auth: auth));
-      final intercepted = intercept?.call(req);
+      final intercepted = await intercept?.call(req);
       if (intercepted != null) return intercepted;
       final me = accounts[auth?.replaceFirst('Bearer ', '')];
       if (me == null) return json({'error': {'code': '401', 'message': 'no token'}}, 401);
@@ -349,6 +350,119 @@ void main() {
     await settle();
     expect(loggedIn(central.vaults['acc-a']![SessionsNotifier.storageKey]), containsAll([snsA.key, snsC.key]));
     expect(loggedIn(central.vaults['acc-b']![SessionsNotifier.storageKey]), isNot(contains(snsC.key)));
+  });
+
+  test('セキュリティ確認 2026-10-09 の [22]: A の保管庫の答えが B へ切り替えた後に届いても、B の知った状態に入らない。B が読めなくても B の保存に A の SNS は入らない', () async {
+    Completer<void>? holdA;
+    var failB = false;
+    final puts = <({String? auth, String body})>[];
+    final central = fakeCentral(intercept: (req) async {
+      if (!req.url.path.contains('/me/vault/')) return null;
+      final auth = req.headers['authorization'];
+      if (req.method == 'PUT') puts.add((auth: auth, body: req.body));
+      if (req.method == 'GET' && auth == 'Bearer tok-a' && holdA != null) await holdA.future;
+      if (req.method == 'GET' && auth == 'Bearer tok-b' && failB) return json({'error': {'code': '500', 'message': 'down'}}, 500);
+      return null;
+    });
+    final local = MemorySessionStorage();
+    final c = containerWith(central.client, local, storageFor: (ref) => CentralVaultSessionStorage(ref, local, pollInterval: Duration.zero));
+    c.listen(orgateAccountProvider, (_, _) {});
+    await c.read(sessionsProvider.future);
+    final accounts = c.read(orgateAccountProvider.notifier);
+    AuthResult login(AccountId a) => AuthResult(session: session(a), me: UserSummary(id: 'u', account: a, displayName: a.handle));
+    List<String> loggedIn(String? raw) => raw == null ? const [] : SessionOps.parse(raw).loggedInKeys;
+    const key = SessionsNotifier.storageKey;
+
+    await accounts.adoptLogin({'accountId': 'acc-a', 'accessToken': 'tok-a'});
+    await settle();
+    await c.read(sessionsProvider.future);
+    await c.read(sessionsProvider.notifier).add(login(snsA));
+    await settle();
+    await accounts.adoptLogin({'accountId': 'acc-b', 'accessToken': 'tok-b'});
+    await settle();
+    await c.read(rasqAccountsProvider.notifier).select('central-acc-a');
+    await settle();
+    await c.read(sessionsProvider.future);
+    expect(loggedIn(central.vaults['acc-a']![key]), [snsA.key]);
+
+    // A の保管庫の読みが遅れているあいだに B へ。B の保管庫は読めない。
+    final storage = c.read(sessionStorageProvider);
+    holdA = Completer<void>();
+    final lateA = storage.read(key);
+    await settle();
+    failB = true;
+    await c.read(rasqAccountsProvider.notifier).select('central-acc-b');
+    await settle();
+    expect((await c.read(orgateAccountProvider.future))!.id, 'acc-b');
+    // 切り替えのあとの B の読み(画面の作り直し)が先に済む(読めない)。
+    expect(await storage.read(key) ?? '', isNot(contains('t-alice_sns')));
+    holdA.complete();
+    holdA = null;
+    expect(await lateA, isNot(contains('t-alice_sns')), reason: '切り替わった後に戻った A の読みは、答えを出さない');
+    await settle();
+
+    // B を読み直す(読めない)→ 戻りに A の SNS は無い。そのまま SNS を追加して保存しても、B の保管庫へ A の SNS は行かない。
+    expect(await storage.read(key) ?? '', isNot(contains('t-alice_sns')));
+    c.invalidate(sessionsProvider);
+    expect((await c.read(sessionsProvider.future)).allSessions.map((s) => s.account), isNot(contains(snsA)));
+    await c.read(sessionsProvider.notifier).add(login(snsB));
+    await settle();
+    expect(loggedIn(central.vaults['acc-b']![key]), [snsB.key]);
+    expect(puts.where((p) => p.auth == 'Bearer tok-b' && p.body.contains('t-alice_sns')), isEmpty, reason: 'A の SNS の資格情報を B のトークンで送らない');
+
+    // A に戻れば、A の保管庫の中身は A のもの(遅れた答えで失われていない)。
+    failB = false;
+    await c.read(rasqAccountsProvider.notifier).select('central-acc-a');
+    await settle();
+    expect((await c.read(sessionsProvider.future)).sessions.map((s) => s.account), [snsA]);
+  });
+
+  test('[22] 保存の途中で切り替わったら、その保存の答えを切り替えた先の知った状態に入れない', () async {
+    Completer<void>? holdA;
+    final puts = <({String? auth, String body})>[];
+    final central = fakeCentral(intercept: (req) async {
+      if (!req.url.path.contains('/me/vault/')) return null;
+      final auth = req.headers['authorization'];
+      if (req.method == 'PUT') puts.add((auth: auth, body: req.body));
+      if (auth == 'Bearer tok-a' && holdA != null) await holdA.future;
+      return null;
+    });
+    final local = MemorySessionStorage();
+    final c = containerWith(central.client, local, storageFor: (ref) => CentralVaultSessionStorage(ref, local, pollInterval: Duration.zero));
+    c.listen(orgateAccountProvider, (_, _) {});
+    await c.read(sessionsProvider.future);
+    final accounts = c.read(orgateAccountProvider.notifier);
+    List<String> loggedIn(String? raw) => raw == null ? const [] : SessionOps.parse(raw).loggedInKeys;
+    const key = SessionsNotifier.storageKey;
+    const snsC = AccountId(kind: SnsKind.misskey, instance: 'example.test', handle: 'carol_sns');
+    String list(List<AccountId> l) => jsonEncode({'sessions': [for (final a in l) session(a).toJson()], 'current': l.firstOrNull?.key});
+
+    await accounts.adoptLogin({'accountId': 'acc-b', 'accessToken': 'tok-b'});
+    await accounts.adoptLogin({'accountId': 'acc-a', 'accessToken': 'tok-a'});
+    await settle();
+    await c.read(sessionsProvider.future);
+    final storage = c.read(sessionStorageProvider);
+
+    // A への保存が遅れているあいだに B へ切り替え、B から戻らないうちに、もう一度 A へ(切り替えて戻る)。
+    holdA = Completer<void>();
+    final lateWrite = storage.write(key, list([snsA]));
+    await settle();
+    await c.read(rasqAccountsProvider.notifier).select('central-acc-b');
+    await settle();
+    // B の保管庫は空。B での保存は、遅れた A の保存の答えを元にしない。
+    expect(await storage.read(key), isNot(contains('t-alice_sns')));
+    await storage.write(key, list([snsB]));
+    holdA.complete();
+    holdA = null;
+    await lateWrite;
+    await settle();
+    expect(loggedIn(central.vaults['acc-a']![key]), [snsA.key], reason: 'A の保存は A の保管庫へ(A のトークンで)');
+    // 読み直さずに B で保存: B の知った状態は B のもの(A のログインとの差 = A の SNS のログアウトを B に起こさない)。
+    await storage.write(key, list([snsB, snsC]));
+    expect(loggedIn(central.vaults['acc-b']![key]), [snsB.key, snsC.key]);
+    expect(SessionOps.parse(central.vaults['acc-b']![key]!).ops.keys, isNot(contains(snsA.key)));
+    expect(await storage.read(key), isNot(contains('t-alice_sns')), reason: 'B のいまの読みに A の SNS は出ない');
+    expect(puts.where((p) => p.auth == 'Bearer tok-b' && p.body.contains('t-alice_sns')), isEmpty);
   });
 
   testWidgets('アカウントの FOW / サイドバーは、アカウントごとの名前を出す。行を押すと、そのアカウントに切り替わる (D-316)', (tester) async {
