@@ -129,7 +129,8 @@ class ChildGate {
       if (inTimeWindow && policy!.time.hideDirectMessages) return '見守りの時間($windowLabel)は DM を使えません';
     }
     if (under('/notifications') && inTimeWindow && policy!.time.hideNotifications) return '見守りの時間($windowLabel)は通知を見られません';
-    if (under('/rai') && !raiEnabled) return '保護者が RAi を止めています';
+    // SNS 探しの「RAi に聞く」(セキュリティ確認 2026-10-09 の [13]) も RAi。
+    if ((under('/rai') || under('/sns-discover/ask')) && !raiEnabled) return '保護者が RAi を止めています';
     if (under('/store') && !under('/store/installed') && !searchAllowed('store')) return '保護者がプラグインストアを止めています';
     if ((under('/search') || under('/trend')) && !const ['posts', 'users', 'trend'].any(searchAllowed)) return '保護者が検索を止めています';
     if (loc.startsWith('/login/') && !canAddAccounts) return '保護者が SNS アカウントの追加を止めています';
