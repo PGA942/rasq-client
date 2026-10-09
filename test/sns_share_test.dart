@@ -263,7 +263,7 @@ void main() {
         if (sessions.isNotEmpty) SessionsNotifier.storageKey: jsonEncode({'sessions': [for (final s in sessions) s.toJson()], 'current': sessions.first.account.key}),
       });
 
-    List<Override> overridesFor(MockClient mock, MemorySessionStorage storage, List<SnsShareQuestion> asked, List<bool?> answers, {bool live = false, Duration whileWaiting = Duration.zero}) => [
+    List<Override> overridesFor(MockClient mock, MemorySessionStorage storage, List<SnsShareQuestion> asked, List<bool?> answers, {bool live = false, Duration whileWaiting = Duration.zero, void Function(SnsShareQuestion q)? onAsk}) => [
         sessionStorageProvider.overrideWithValue(storage),
         pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: (_) => const []))),
         orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
@@ -274,6 +274,7 @@ void main() {
         centralInboxLiveProvider.overrideWithValue((enabled: live, retry: const Duration(milliseconds: 50))),
         snsShareAskProvider.overrideWithValue((q) async {
           asked.add(q);
+          onAsk?.call(q);
           return answers.isEmpty ? null : answers.removeAt(0);
         }),
       ];
@@ -542,6 +543,64 @@ void main() {
       await settle(neu.c);
       expect((await neu.c.read(sessionsProvider.future)).sessions.map((s) => s.account), [snsA]);
       expect(neu.c.read(snsShareWaitingProvider), isFalse);
+    });
+
+    test('[16] K を持つ端末がいないときの設定の「この端末にも共有してもらう」は、承認されていない端末に K を包まない', () async {
+      final central = fakeCentral();
+      final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+      await old.c.read(sessionsProvider.future);
+      await settle(old.c);
+      // tablet は求めているだけ(承認されていない)。phone はメールのリンクで承認された。共有は on のまま K を持つ端末が 0 台。
+      final neu = device(central.client, token: 'tok-new');
+      await SnsShareStore(neu.storage).markRequest('acc-a');
+      await settle(neu.c);
+      final third = device(central.client, token: 'tok-third');
+      await SnsShareStore(third.storage).markRequest('acc-a');
+      await settle(third.c);
+      central.share.mode = 'on';
+      central.share.devices['dev-third']!['emailApproved'] = true;
+      central.share.devices['dev-third']!['emailDecision'] = 'share';
+
+      // 自動の見回りより先に、設定から(SNS にログインしている端末で)求める。
+      await old.c.read(snsShareProvider.notifier).setEnabled(true);
+      expect(central.share.devices['dev-old']!['wrapped'], isNotNull, reason: 'この端末が K を作り直す');
+      expect(central.share.devices['dev-new']!['wrapped'], isNull, reason: '求めているだけの端末には包まない(修正前は包んでいた)');
+      expect(central.share.devices['dev-third']!['wrapped'], isNotNull, reason: 'メールで承認された端末には包む');
+      expect(old.asked, isEmpty);
+      await settle(neu.c);
+      expect((await neu.c.read(sessionsProvider.future)).sessions, isEmpty, reason: '承認されていない端末は、本体を開けない');
+      await settle(third.c);
+      expect((await third.c.read(sessionsProvider.future)).sessions.map((s) => s.account), [snsA]);
+
+      // tablet には、次の見回りで 1 台ずつ問いを出す → はい で包む。
+      old.answers.add(true);
+      await settle(old.c);
+      expect([for (final q in old.asked) if (!q.first) q.devices.single.name], ['tablet']);
+      expect(central.share.devices['dev-new']!['wrapped'], isNotNull);
+      await settle(neu.c);
+      expect((await neu.c.read(sessionsProvider.future)).sessions.map((s) => s.account), [snsA]);
+    });
+
+    test('[16] 最初の問いで答えたあとに鍵を替えた端末には、包まない', () async {
+      final central = fakeCentral();
+      final old = device(central.client, token: 'tok-old', sessions: [session(snsA)]);
+      await old.c.read(sessionsProvider.future);
+      await settle(old.c);
+      final neu = device(central.client, token: 'tok-new');
+      await SnsShareStore(neu.storage).markRequest('acc-a');
+      await settle(neu.c);
+      // 問いが出ている間に、同じ端末の鍵が別のものへ替わる(問いで見せた鍵ではない)。
+      final asked = <SnsShareQuestion>[];
+      final c = ProviderContainer(
+        overrides: overridesFor(central.client, old.storage, asked, [true], onAsk: (_) => central.share.devices['dev-new']!['publicKey'] = base64.encode(List<int>.filled(32, 7))),
+      );
+      addTearDown(c.dispose);
+      c.listen(snsShareProvider, (_, _) {});
+      await c.read(snsShareProvider.notifier).check();
+      expect(asked.single.first, isTrue);
+      expect(central.share.mode, 'on');
+      expect(central.share.devices['dev-old']!['wrapped'], isNotNull);
+      expect(central.share.devices['dev-new']!['wrapped'], isNull, reason: '答えた相手(問いのときの鍵)と違う');
     });
 
     test('D-422: K を持つ端末は、メールで承認された端末に問いを出さずに包む。「SNS はこの端末でログインし直す」は待つのをやめる', () async {

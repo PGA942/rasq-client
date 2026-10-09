@@ -485,7 +485,7 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
             // `on` になったばかり)。前は誰も K を作り直さず、求めている端末はずっと待っていた。SNS にログインしているこの端末が
             // K を作り直す(自分と、メールで承認された端末に包む。ほかの求めには、次の見回りで問いを出す)。
             if (s.keyId == null && (await _localSessions(c)).isNotEmpty && ref.mounted) {
-              await _enable(c, from: SnsShareMode.on, approve: [for (final d in s.asking) if (d.emailApproved) d]);
+              await _enable(c, from: SnsShareMode.on, emailApproved: true);
               _again = true;
             }
             return;
@@ -565,15 +565,25 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
   }
 
   /// 共有をオンにする: 状態を `on` に、この端末も共有を求めた形にして、新しい K を作って自分と [approve] に包み、本体を上げる。
-  Future<void> _enable(_Ctx c, {required SnsShareMode from, List<SnsShareDevice> approve = const []}) async {
+  /// [approve] は、本人が問いに「はい」と答えた端末だけ。[emailApproved] = メールのリンクで承認された端末にも包む。
+  /// それ以外の求めている端末には包まない(K を作り直したあとの見回りで、1 台ずつ問いを出す)。前は設定の「この端末にも
+  /// 共有してもらう」から K を作り直すと、求めているだけの(承認されていない)端末にも全部包んでいた(セキュリティ確認
+  /// 2026-10-09 の [16])。包む相手は、K を作る直前に読み直した状態で確かめる(まだ求めていて、問いのときと鍵が同じ端末だけ)。
+  Future<void> _enable(_Ctx c, {required SnsShareMode from, List<SnsShareDevice> approve = const [], bool emailApproved = false}) async {
     var s = from == SnsShareMode.on ? await c.api.status() : await c.api.setMode(SnsShareMode.on, from: from);
     final seed = await _store.seed(c.accountId);
     s = await c.api.register(await SnsShareCrypto.publicKeyOf(seed), request: true);
+    final asking = {for (final d in s.asking) d.deviceId: d};
+    final yes = {for (final d in approve) d.deviceId: d};
+    final to = [
+      for (final d in asking.values)
+        if ((emailApproved && d.emailApproved) || (yes[d.deviceId] != null && listEquals(yes[d.deviceId]!.publicKey, d.publicKey))) d,
+    ];
     final key = SnsShareCrypto.newShareKey();
     final keyId = SnsShareCrypto.newKeyId();
     final me = s.me!;
     s = await _wrapFor(c, me, key, keyId);
-    for (final d in approve) {
+    for (final d in to) {
       s = await _wrapFor(c, d, key, keyId);
     }
     _publish(c, s);
@@ -655,6 +665,10 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
     final cur = state.status;
     if (cur != null) _publish(c, cur, busy: true);
     try {
+      // 走っている見回り(K の作り直しなど)が済んでから、読み直して決める(同じ K を 2 台で作り直さない)。
+      final running = _inflight;
+      if (running != null) await running;
+      if (!ref.mounted) return;
       if (!on) {
         _publish(c, await c.api.setMode(SnsShareMode.declined));
         await _store.update(c.accountId, (e) => {...e}..remove('known')..remove('keyId'));
@@ -666,7 +680,9 @@ class SnsShareNotifier extends Notifier<SnsShareView> {
         _publish(c, s.me?.requested == true ? s : await c.api.register(await SnsShareCrypto.publicKeyOf(await _store.seed(c.accountId)), request: true));
         return;
       }
-      await _enable(c, from: s.mode, approve: s.mode == SnsShareMode.on ? s.asking : const []);
+      // K を持つ端末がいない(on のまま): この端末が K を作り直す。包むのは自分と、メールで承認された端末だけ
+      // (この操作は「この端末にも」で、ほかの端末を承認するものではない。[16])。
+      await _enable(c, from: s.mode, emailApproved: s.mode == SnsShareMode.on);
     } finally {
       final s = state.status;
       if (s != null && ref.mounted) _publish(c, s);
