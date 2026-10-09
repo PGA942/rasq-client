@@ -399,7 +399,10 @@ final childSafeDailyProvider = Provider<ChildSafeDaily>((ref) => ChildSafeDaily(
 /// 送る前の判定 (D-307): 見守りの制限(機能 / 1 日の上限 / 本文の強さ / 投稿の話題 (D-315。DM には当てない))。通れば null。止めたら「止めた数」を数える。
 /// [direct] = 投稿だが公開範囲がダイレクト(ダイレクト投稿への返信など、D-047)。DM の機能も要る(本文は投稿として判定。
 /// セキュリティ確認 2026-10-09 の [19])。
-Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDaily daily, DateTime now, {required String text, bool dm = false, bool direct = false, bool media = false}) async {
+/// [sentTexts] = 実際に送る本文(正規表現の加工 (D-130) のあと、送り先ごと)。入力欄の [text] と同じ判定に通す
+/// (加工で止める内容に変えられないように。[20])。印の範囲は入力欄の本文にしか付けない。
+Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDaily daily, DateTime now,
+    {required String text, bool dm = false, bool direct = false, bool media = false, List<String> sentTexts = const []}) async {
   if (!gate.supervised) return null;
   ChildComposeVerdict? v;
   final feature = (dm || direct ? gate.blockedMessage('dm') : null) ?? (!dm && media ? gate.blockedMessage('post.media') : null);
@@ -411,14 +414,20 @@ Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDai
     v = ChildComposeVerdict('今日はもう ${gate.postsPerDay} 件送りました(保護者が決めた 1 日の数)。また明日');
   } else {
     v = gate.judgeText(text, dm: dm);
+    for (final t in sentTexts) {
+      if (v != null) break;
+      if (t.trim() == text.trim()) continue;
+      if (gate.judgeText(t, dm: dm) case final w?) v = ChildComposeVerdict('${w.message}(送る前の加工のあとの本文)');
+    }
   }
   if (v != null) await daily.recordBlocked(now: now);
   return v;
 }
 
 /// [childComposeVerdictFor] の画面用。
-Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String text, bool dm = false, bool direct = false, bool media = false}) =>
-    childComposeVerdictFor(ref.read(childGateProvider), ref.read(childSafeDailyProvider), ref.read(childSafeNowProvider)(), text: text, dm: dm, direct: direct, media: media);
+Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String text, bool dm = false, bool direct = false, bool media = false, List<String> sentTexts = const []}) =>
+    childComposeVerdictFor(ref.read(childGateProvider), ref.read(childSafeDailyProvider), ref.read(childSafeNowProvider)(),
+        text: text, dm: dm, direct: direct, media: media, sentTexts: sentTexts);
 
 /// 送れた (D-307): 1 日の数と話題の見出しを数える(見守られていなければ何もしない)。
 Future<void> childComposeSent(WidgetRef ref, String text) async {

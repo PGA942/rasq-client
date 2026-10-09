@@ -12,6 +12,7 @@ import 'package:rasq_client/features/child_safe/child_safe_policy.dart';
 import 'package:rasq_client/features/child_safe/child_safe_providers.dart';
 import 'package:rasq_client/features/compose/compose_target.dart';
 import 'package:rasq_client/features/compose/composer_sheet.dart';
+import 'package:rasq_client/features/nodeprog/node_graph.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
@@ -81,6 +82,37 @@ void main() {
       expect(await childComposeVerdictFor(g, daily, now, text: 'へんじ'), isNull);
       expect((await childComposeVerdictFor(g, daily, now, text: 'へんじ', direct: true))?.message, contains(childSafeBlockedText));
       expect(await childComposeVerdictFor(kid(), daily, now, text: 'へんじ', direct: true), isNull);
+    });
+  });
+
+  group('[20] 正規表現の加工のあとの本文', () {
+    const denyHorror = ChildSafeComposer(enabled: true, topics: ChildSafeTopics(topics: ['ホラー']));
+
+    test('判定: 送る本文(加工のあと)も入力欄と同じ判定に通す。印は付けない', () async {
+      final daily = ChildSafeDaily(MemorySessionStorage({}));
+      final now = DateTime(2026, 10, 9, 12);
+      final g = kid(composer: denyHorror);
+      expect(await childComposeVerdictFor(g, daily, now, text: 'ねこの話'), isNull);
+      final v = await childComposeVerdictFor(g, daily, now, text: 'ねこの話', sentTexts: ['ねこの話', 'ホラーの話']);
+      expect(v?.message, contains('ホラー'));
+      expect(v?.hasRange, isFalse);
+      expect(await childComposeVerdictFor(g, daily, now, text: 'ねこの話', sentTexts: ['🐱の話']), isNull);
+    });
+
+    testWidgets('入力は通っても、加工で止める話題に変わる本文は本体へ送らない。ふつうの加工は今までどおり', (tester) async {
+      final regex = builtinNodeCatalog.firstWhere((e) => e.type == 'composer.regex').instantiate('rx0', Offset.zero);
+      final graph = NodeGraph(nodes: [regex.copyWith(inputs: [regex.inputs[0], regex.inputs[1].copyWith(value: 'ねこ'), regex.inputs[2].copyWith(value: 'ホラー')])]);
+      final (c, session) = await pumpApp(tester, kid(composer: denyHorror), storage: {
+        'nodeprog.${me.account.key}.composer.v1': jsonEncode({'graph': jsonEncode(graph.toJson())}),
+      });
+      unawaited(showComposerWith(const ComposeNormal(), manager: c.read(overlayManagerProvider), router: c.read(routerProvider)));
+      await tester.pumpAndSettle();
+      await send(tester, 'ねこの話');
+      expect(session.lastDraft, isNull);
+      expect(find.textContaining('送る前の加工のあとの本文'), findsOneWidget);
+
+      await send(tester, 'いぬの話');
+      expect(session.lastDraft?.text, 'いぬの話');
     });
   });
 }

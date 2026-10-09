@@ -1526,8 +1526,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   /// チャイルドセーフ (D-307): 見守りの制限(DM / メディア / 1 日の数 / 本文の強さ)。止めたら理由を出し、当たった語を選んで印を付ける。
-  Future<bool> _childSafeAllows({required bool dm, bool direct = false}) async {
-    final verdict = await childComposeVerdict(ref, text: _text.text, dm: dm, direct: direct, media: _files.isNotEmpty);
+  /// [sentTexts] = 実際に送る本文(正規表現の加工のあと、送り先ごと。[20])。
+  Future<bool> _childSafeAllows({required bool dm, bool direct = false, List<String> sentTexts = const []}) async {
+    final verdict = await childComposeVerdict(ref, text: _text.text, dm: dm, direct: direct, media: _files.isNotEmpty, sentTexts: sentTexts);
     if (verdict == null) return true;
     if (!mounted) return false;
     setState(() => _error = verdict.message);
@@ -1563,7 +1564,17 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       setState(() => _error = blocked);
       return;
     }
-    if (!await _childSafeAllows(dm: _isDm, direct: sendsDirect)) return;
+    // 見守り ([20]): 判定するのは実際に送る本文。正規表現の加工 (D-130) のあとの本体と、連動先ごと(下書きにするだけのものは除く。
+    // 開いて送るときにまた判定する)。
+    final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
+    final sentTexts = regexRules.isEmpty
+        ? const <String>[]
+        : [
+            applyComposerRegex(_text.text.trim(), primaryLabel, regexRules),
+            for (final (s, _, delivery) in multiPlan)
+              if (delivery != 'draft') applyComposerRegex(_text.text.trim(), '${s.account}', regexRules),
+          ];
+    if (!await _childSafeAllows(dm: _isDm, direct: sendsDirect, sentTexts: sentTexts)) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -1610,8 +1621,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         case 'localOnly':
           if (!_isDm) localOnly = true;
       }
-      // 投稿加工(正規表現, D-130): 本体の投稿先アカウントにも適用。
-      final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
+      // 投稿加工(正規表現, D-130): 本体の投稿先アカウントにも適用(送る前の判定 [20] と同じ本文)。
       final draft = NewPost(
         text: applyComposerRegex(_text.text.trim(), primaryLabel, regexRules),
         contentWarning: cw,
