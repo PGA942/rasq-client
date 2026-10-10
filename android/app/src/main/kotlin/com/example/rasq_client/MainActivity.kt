@@ -7,15 +7,20 @@ import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : FlutterActivity() {
     private var glimpse: ScreenGlimpseBridge? = null
+    private var astellAudio: AstellAudioBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         glimpse = ScreenGlimpseBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+        // AsTell の通話 (D-455): マイク / Bluetooth の許可と、ルームにいる間の前面サービス。
+        astellAudio = AstellAudioBridge(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         glimpse?.detach()
         glimpse = null
+        astellAudio?.detach()
+        astellAudio = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 
@@ -38,6 +43,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         if (glimpse?.onRequestPermissionsResult(requestCode, grantResults) == true) return
+        if (astellAudio?.onRequestPermissionsResult(requestCode) == true) return
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 }

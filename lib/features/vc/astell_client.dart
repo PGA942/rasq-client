@@ -607,8 +607,11 @@ class _MockConnection implements AstellConnection {
       case 'ping':
         _controller.add({'type': 'pong'});
       case 'state':
-        // 自分の状態をそのまま peer-state で返す(他のピアにも配った体)。
-        final st = (message['state'] as Map?)?.cast<String, Object?>() ?? const {};
+        // 自分の状態を peer-state で返す(他のピアにも配った体)。サーバーと同じく、強制ミュート中は micOn を立てさせない (D-455)。
+        final st = {...?(message['state'] as Map?)?.cast<String, Object?>()};
+        final muted = client._mutedByMod[roomId]?.contains(MockAstellClient._me.peerId) ?? false;
+        st['mutedByMod'] = muted;
+        if (muted) st['micOn'] = false;
         _controller.add({'type': 'peer-state', 'peer': {'peerId': MockAstellClient._me.peerId, 'accountId': 'me', 'handle': 'me', 'displayName': 'あなた', 'state': st}});
       case 'share':
         final share = AstellShare(

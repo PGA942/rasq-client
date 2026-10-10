@@ -19,6 +19,8 @@
     <!-- 画面の取り込み (D-317): MediaProjection は前面サービスの中で(Android 14 から必須、flutter_background)。 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"/>
+    <!-- AsTell のルームにいる間、裏に回ってもマイクを止めない前面サービス (D-455、AstellCallService、種類 microphone)。 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
@@ -98,6 +100,12 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
+        <!-- AsTell の通話の前面サービス (D-455)。マイクを開いたら始め、ルームを出たら止める。 -->
+        <service
+            android:name=".AstellCallService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
         <!-- いつものブラウザで見ている画面を 3 秒だけ読み取る (D-416)。同意を得てから前面サービス(種類 mediaProjection)で
              取り込みを持ち、通知のボタンで読み取ったらすぐ止める。権限 FOREGROUND_SERVICE_MEDIA_PROJECTION は上で宣言済み (D-317)。 -->
         <service

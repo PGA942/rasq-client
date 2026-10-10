@@ -20,6 +20,9 @@ const alarmAsset = 'audio/alarm.wav';
 abstract class HoldMusic {
   /// いま鳴らしている(始めた直後から true。読み込み中も含む)。
   bool get playing;
+
+  /// 鳴らす口の音の設定を先に済ませる (D-455)。ルームに入るとき、通話の音のセッションより**前に**呼ぶ。何度呼んでもよい。
+  Future<void> prepare();
   Future<void> start();
   Future<void> stop();
 
@@ -33,9 +36,12 @@ class MemoryHoldMusic implements HoldMusic {
   int starts = 0;
   int stops = 0;
   int alarms = 0;
+  int prepares = 0;
   bool _playing = false;
   @override
   bool get playing => _playing;
+  @override
+  Future<void> prepare() async => prepares++;
   @override
   Future<void> start() async {
     if (_playing) return;
@@ -62,6 +68,15 @@ class MemoryHoldMusic implements HoldMusic {
 
 /// audioplayers で鳴らす。通話(WebRTC)と同じ音の道(iOS は playAndRecord + mixWithOthers、Android は voiceCommunication)に
 /// 乗せて、通話の音を止めたり奪ったりしない。失敗しても通話は続ける(ログだけ)。
+///
+/// **Android の注意 (D-455)**: audioplayers_android は、プレイヤーの音の設定が前と違うと、その設定の
+/// `audioMode` と `isSpeakerphoneOn` を**端末全体の** AudioManager に書く(`WrappedPlayer.updateAudioContext` の
+/// `audioManager.mode = context.audioMode` / `audioManager.isSpeakerphoneOn = …`、同じ設定なら何もしない)。
+/// 前は通話の最中に初めて鳴らしたとき `MODE_NORMAL` + スピーカー強制を書き、通話のモード(エコーキャンセル /
+/// 通話用のマイクの道 / Bluetooth のヘッドセット)を壊していた。いまは [prepare] で、**ルームに入るとき(通話の音の
+/// セッションを始める前)に** 2 つのプレイヤーの設定を一度だけ入れておく。書くのは通話の前の値と同じ(通常のモード、
+/// スピーカーの強制なし)なので、通話のセッションはそれを「入る前の状態」として覚えて、出るときに戻す。通話の最中の
+/// [start] / [alarm] は同じ設定を入れ直すだけなので、端末全体には何も書かない。
 class AudioHoldMusic implements HoldMusic {
   AudioHoldMusic({this.volume = 0.5});
   final double volume;
@@ -70,18 +85,42 @@ class AudioHoldMusic implements HoldMusic {
   @override
   bool get playing => _playing;
 
-  static final _context = AudioContext(
+  /// 保留音とチャイムの音の設定 (D-455)。Android: 通話の音の道(`voiceCommunication`)で、音の焦点は取らない(通話の
+  /// 焦点を奪わない)。`audioMode` / `isSpeakerphoneOn` は通話の前の値と同じ(通常のモード / 強制なし)— 上の注意。
+  @visibleForTesting
+  static final context = AudioContext(
     iOS: AudioContextIOS(category: AVAudioSessionCategory.playAndRecord, options: const {AVAudioSessionOptions.mixWithOthers, AVAudioSessionOptions.defaultToSpeaker, AVAudioSessionOptions.allowBluetooth}),
-    android: const AudioContextAndroid(isSpeakerphoneOn: true, stayAwake: false, contentType: AndroidContentType.music, usageType: AndroidUsageType.voiceCommunication, audioFocus: AndroidAudioFocus.none),
+    android: const AudioContextAndroid(isSpeakerphoneOn: false, audioMode: AndroidAudioMode.normal, stayAwake: false, contentType: AndroidContentType.music, usageType: AndroidUsageType.voiceCommunication, audioFocus: AndroidAudioFocus.none),
   );
+
+  AudioPlayer? _chime;
+  Future<void>? _prepared;
+
+  AudioPlayer get _hold => _player ??= AudioPlayer(playerId: 'rasq.holdMusic');
+  AudioPlayer get _alarm => _chime ??= AudioPlayer(playerId: 'rasq.alarm');
+
+  /// Android だけ先に入れる(iOS はこれまでどおり鳴らすときに。音のセッションの種類を先に変えない)。
+  @override
+  Future<void> prepare() {
+    if (kIsWeb || !Platform.isAndroid) return Future.value();
+    return _prepared ??= () async {
+      try {
+        await _hold.setAudioContext(context);
+        await _alarm.setAudioContext(context);
+      } catch (e) {
+        debugPrint('hold music: prepare: $e');
+      }
+    }();
+  }
 
   @override
   Future<void> start() async {
     if (_playing) return;
     _playing = true;
     try {
-      final p = _player ??= AudioPlayer(playerId: 'rasq.holdMusic');
-      await p.setAudioContext(_context);
+      await prepare();
+      final p = _hold;
+      await p.setAudioContext(context);
       await p.setReleaseMode(ReleaseMode.loop);
       await p.play(AssetSource(holdMusicAsset), volume: volume);
     } catch (e) {
@@ -100,14 +139,13 @@ class AudioHoldMusic implements HoldMusic {
     }
   }
 
-  AudioPlayer? _chime;
-
   @override
   Future<void> alarm() async {
     await stop();
     try {
-      final p = _chime ??= AudioPlayer(playerId: 'rasq.alarm');
-      await p.setAudioContext(_context);
+      await prepare();
+      final p = _alarm;
+      await p.setAudioContext(context);
       await p.setReleaseMode(ReleaseMode.stop);
       await p.play(AssetSource(alarmAsset), volume: 1);
     } catch (e) {
@@ -122,6 +160,7 @@ class AudioHoldMusic implements HoldMusic {
     final c = _chime;
     _player = null;
     _chime = null;
+    _prepared = null;
     try {
       await p?.dispose();
       await c?.dispose();
