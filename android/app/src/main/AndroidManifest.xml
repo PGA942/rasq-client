@@ -80,6 +80,17 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="rasq" android:host="dev-import"/>
             </intent-filter>
+            <!-- Central の Web のページの「アプリで開く」(D-456 / rasq-central S-092): AsTell ルーム(rasq://astell/<id>)/
+                 RASQ アカウント(rasq://account/<handle>)/ カスタムプラグインの招待(rasq://custom-invite/<code>)。
+                 ルーターが形を確かめてから画面へ渡す(lib/app/rasq_links.dart)。ここも host を絞る。 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="rasq" android:host="astell"/>
+                <data android:scheme="rasq" android:host="account"/>
+                <data android:scheme="rasq" android:host="custom-invite"/>
+            </intent-filter>
         </activity>
         <!-- 画面共有の前面サービス (D-317, flutter_background)。種類は mediaProjection。 -->
         <service
