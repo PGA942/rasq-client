@@ -2,19 +2,19 @@
   "features": [
     {
       "id": "astell.join",
-      "label": "AsTell への参加"
+      "label": "ASTell への参加"
     },
     {
       "id": "astell.create",
-      "label": "AsTell ルームの作成"
+      "label": "ASTell ルームの作成"
     },
     {
       "id": "astell.share",
-      "label": "AsTell での共有・チャット"
+      "label": "ASTell での共有・チャット"
     },
     {
       "id": "astell.stream",
-      "label": "AsTell の画面共有・配信"
+      "label": "ASTell の画面共有・配信"
     },
     {
       "id": "store.review",
@@ -296,7 +296,7 @@
     },
     {
       "id": "rai.astell",
-      "label": "AsTell の手伝い",
+      "label": "ASTell の手伝い",
       "phase": 1
     },
     {

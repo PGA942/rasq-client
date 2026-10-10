@@ -290,7 +290,7 @@ Future<void> showAstellDevicePreferences(BuildContext context) async {
   final column = fowColumnOf(context);
   await container.read(overlayManagerProvider).showBottomSheet<void>(
         id: 'astell.device.settings',
-        title: 'AsTell の設定(この端末)',
+        title: 'ASTell の設定(この端末)',
         builder: (ctx) => Consumer(builder: (ctx, ref, _) {
           final auto = ref.watch(astellAutoShareProvider);
           final store = ref.read(settingsAreaProvider(astellSettingsArea).notifier);

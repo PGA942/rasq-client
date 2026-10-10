@@ -150,7 +150,7 @@ void main() {
 
   Future<void> openRoom(WidgetTester tester, ProviderContainer c) async {
     await c.read(astellSessionProvider.notifier).join((await c.read(astellClientProvider).room('r-launch'))!);
-    await tester.tap(find.byTooltip('AsTell'));
+    await tester.tap(find.byTooltip('ASTell'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('参加中: '));
     await tester.pumpAndSettle();
@@ -198,7 +198,7 @@ void main() {
     // (+) → AsTell のプラグイン → 最後の 1 つ(字幕)の手前に入る。
     await tester.tap(find.byKey(const ValueKey('actionbar.plugins.open.astell')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('AsTell プラグイン(押すとそのプラグインを開く)'), findsOneWidget);
+    expect(find.textContaining('ASTell プラグイン(押すとそのプラグインを開く)'), findsOneWidget);
     await tester.tap(find.byKey(ValueKey('actionbar.plugin.$pluginId')));
     await tester.pumpAndSettle();
     final order = c.read(actionBarConfigProvider(astellBarConfigKey)).order;

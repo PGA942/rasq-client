@@ -109,7 +109,7 @@ AccountSession? _sessionOf(WidgetRef ref, String key) => ref.read(sessionsProvid
   return switch (id) {
     'post' => (icon: Icons.edit_outlined, label: '投稿', account: null, available: true),
     'rasq' => (icon: Icons.person_pin_outlined, label: 'RASQ', account: null, available: ref.read(orgateAccountProvider).value != null),
-    'astell' => (icon: Icons.graphic_eq, label: 'AsTell', account: null, available: ref.read(childGateProvider).featureAllowed('astell.join')),
+    'astell' => (icon: Icons.graphic_eq, label: 'ASTell', account: null, available: ref.read(childGateProvider).featureAllowed('astell.join')),
     'swing' => (icon: Icons.bolt_outlined, label: 'Swing', account: null, available: ref.read(swingApiProvider) != null),
     _ => (icon: Icons.block, label: 'なし', account: null, available: false),
   };
@@ -149,7 +149,7 @@ Future<void> runCreateAction(BuildContext context, WidgetRef ref, String id, {St
   if (!info.available) {
     final why = switch (id) {
       'rasq' || 'swing' => '${info.label}には RASQ アカウントが要ります',
-      'astell' => '見守りの設定で AsTell が止められています',
+      'astell' => '見守りの設定で ASTell が止められています',
       _ => 'このアカウントはもうありません',
     };
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(why)));

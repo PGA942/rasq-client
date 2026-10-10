@@ -153,7 +153,7 @@ void main() {
 
   testWidgets('post share fow + inline plugin fow (D-170)', (tester) async {
     fakes['share'] = () => FakeSlotRuntime(
-          manifest: {'id': 'sample.post-share', 'name': '共有テンプレート(サンプル)', 'version': '0.1.0', 'kind': 'action', 'description': '投稿をテンプレート(リンクのみ / 引用 / 作者に言及)で整えてコンポーザー・コピー・AsTell へ', 'slots': ['post.share'], 'permissions': ['fow.widget', 'storage.safe']},
+          manifest: {'id': 'sample.post-share', 'name': '共有テンプレート(サンプル)', 'version': '0.1.0', 'kind': 'action', 'description': '投稿をテンプレート(リンクのみ / 引用 / 作者に言及)で整えてコンポーザー・コピー・ASTell へ', 'slots': ['post.share'], 'permissions': ['fow.widget', 'storage.safe']},
           handler: (self, fn, args) {
             if (fn == 'post.share') {
               final link = '${args['link']}';

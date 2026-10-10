@@ -12,7 +12,7 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "AsTell ホームの欄"
+          "title": "ASTell ホームの欄"
         }
       },
       {
@@ -32,7 +32,7 @@
         "p": {
           "title": "「トレンド」を表示",
           "value": "$.settings.showTrending",
-          "subtitle": "トレンドのルームを AsTell ホームに並べます"
+          "subtitle": "トレンドのルームを ASTell ホームに並べます"
         },
         "on": {
           "change": "settings.set"

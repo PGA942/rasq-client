@@ -4,9 +4,9 @@
 <dict>
 	<!-- AsTell の通話と配信 (D-317)。画面の取り込みは OS の「画面収録」の許可(初回に聞かれる)。 -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>AsTell の通話と配信で、あなたの声を相手に届けるためにマイクを使います。</string>
+	<string>ASTell の通話と配信で、あなたの声を相手に届けるためにマイクを使います。</string>
 	<key>NSCameraUsageDescription</key>
-	<string>AsTell のホストの配信で、カメラの映像を届けるために使います。</string>
+	<string>ASTell のホストの配信で、カメラの映像を届けるために使います。</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>

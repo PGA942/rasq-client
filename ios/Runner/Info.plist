@@ -16,9 +16,9 @@
 	<string>RAi の端末内モデル推論のためにローカルネットワークを使います。</string>
 	<!-- AsTell の通話と配信 (D-317, flutter_webrtc / livekit_client) -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>AsTell の通話と配信で、あなたの声を相手に届けるためにマイクを使います。</string>
+	<string>ASTell の通話と配信で、あなたの声を相手に届けるためにマイクを使います。</string>
 	<key>NSCameraUsageDescription</key>
-	<string>AsTell のホストの配信で、カメラの映像を届けるために使います。</string>
+	<string>ASTell のホストの配信で、カメラの映像を届けるために使います。</string>
 	<!-- 通話中にほかのアプリへ切り替えても声が途切れないように (D-317)。 -->
 	<key>UIBackgroundModes</key>
 	<array>

@@ -64,7 +64,7 @@
         "t": "RadioListTile",
         "k": "homeTap",
         "p": {
-          "title": "AsTell を作る",
+          "title": "ASTell を作る",
           "value": "astell",
           "group": "$.settings.homeTap"
         },
@@ -118,7 +118,7 @@
         "t": "RadioListTile",
         "k": "trendTap",
         "p": {
-          "title": "AsTell を作る",
+          "title": "ASTell を作る",
           "value": "astell",
           "group": "$.settings.trendTap"
         },
@@ -129,7 +129,7 @@
       {
         "t": "SectionHeader",
         "p": {
-          "title": "AsTell の ＋ を押したとき"
+          "title": "ASTell の ＋ を押したとき"
         }
       },
       {
@@ -172,7 +172,7 @@
         "t": "RadioListTile",
         "k": "astellTap",
         "p": {
-          "title": "AsTell を作る",
+          "title": "ASTell を作る",
           "value": "astell",
           "group": "$.settings.astellTap"
         },

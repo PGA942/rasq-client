@@ -247,7 +247,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     expect(find.byType(RaiHomeScreen), findsNothing); // ディープリンクでホームへ
-    expect(find.text('右下の「＋」を押すと、コンポーザーが開きます(長押しで Swing / AsTell など)'), findsOneWidget);
+    expect(find.text('右下の「＋」を押すと、コンポーザーが開きます(長押しで Swing / ASTell など)'), findsOneWidget);
     final target = c.read(raiProvider).target!;
     final fab = tester.getRect(find.byTooltip('作成'));
     expect(target.overlaps(fab), isTrue);
@@ -380,7 +380,7 @@ void main() {
     // チャット (D-218): 提案は行に全文、行の下に操作タイル(見出し · 手順数 + 「この手順で案内」)。
     final msg0 = raiRowText(tester, 0);
     expect(msg0, startsWith('「画像を付けて投稿」なら、この順で進めます(3 手順)'));
-    expect(msg0, contains('1. 右下の「＋」を押すと、コンポーザーが開きます(長押しで Swing / AsTell など)〔composer.open〕'));
+    expect(msg0, contains('1. 右下の「＋」を押すと、コンポーザーが開きます(長押しで Swing / ASTell など)〔composer.open〕'));
     expect(msg0, contains('〔post.attach〕 入力: ファイル 固定: 閲覧注意=false'));
     expect(msg0, contains('〔post.create〕 入力: 本文 固定: 公開範囲=public CW=false 返信制限=0 作成時刻='));
     expect(find.byKey(const ValueKey('rai.chat.proposal.attach')), findsOneWidget);
@@ -453,7 +453,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('rai.ask')));
     await tester.pumpAndSettle();
     expect(c.read(raiProvider).stepIndex, 0);
-    expect(find.text('右下の「＋」を押すと、コンポーザーが開きます(長押しで Swing / AsTell など)'), findsOneWidget);
+    expect(find.text('右下の「＋」を押すと、コンポーザーが開きます(長押しで Swing / ASTell など)'), findsOneWidget);
     // ＋ をタップ → コンポーザーが開いて次へ (D-381)。
     await tester.tap(find.byTooltip('作成'));
     await tester.pumpAndSettle();

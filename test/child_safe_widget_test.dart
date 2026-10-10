@@ -290,7 +290,7 @@ void main() {
     expect(find.byKey(const ValueKey('guardian.step.next')), findsNothing);
     expect(find.text('次へ'), findsNothing);
     final tabs = tester.widget<RasqTabs>(find.byKey(const ValueKey('guardian.tabs')));
-    expect([for (final t in tabs.items) t.label], ['TL', '投稿', 'AsTell', 'プラグイン', 'SNS', 'スクリーンタイム', 'その他']);
+    expect([for (final t in tabs.items) t.label], ['TL', '投稿', 'ASTell', 'プラグイン', 'SNS', 'スクリーンタイム', 'その他']);
     expect(tester.getTopLeft(find.byKey(const ValueKey('guardian.preset'))).dy, lessThan(tester.getTopLeft(find.byKey(const ValueKey('guardian.tabs'))).dy));
     final importButton = find.byKey(const ValueKey('guardian.import'));
     expect(find.descendant(of: importButton, matching: find.byType(Tooltip)), findsOneWidget);
@@ -393,7 +393,7 @@ void main() {
     expect(tester.widget<DropdownButton<ChildSafeTopicMode>>(find.byKey(const ValueKey('guardian.timeline.topicMode'))).value, ChildSafeTopicMode.deny);
     expect(tester.widget<EditableText>(find.descendant(of: find.byKey(const ValueKey('guardian.timeline.topics')), matching: find.byType(EditableText))).controller.text, 'ホラー');
     expect(featuresShown(), isEmpty);
-    await openPage(tester, 'AsTell');
+    await openPage(tester, 'ASTell');
     expect(featuresShown(), {'astell.join', 'astell.create', 'astell.share', 'astell.stream'});
     await openPage(tester, 'プラグイン');
     expect(featuresShown(), {'store.install', 'store.review'});

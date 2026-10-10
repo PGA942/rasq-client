@@ -19,7 +19,7 @@
         "t": "SwitchListTile",
         "k": "headerStrip",
         "p": {
-          "title": "フォロー中のホストの AsTell をヘッダーに出す",
+          "title": "フォロー中のホストの ASTell をヘッダーに出す",
           "value": "$.settings.headerStrip",
           "subtitle": "開催中のルームを、ホームの上に並べます",
           "detail": "開催中のルームを、ホームのヘッダーの角丸の枠に並べます"

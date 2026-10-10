@@ -71,7 +71,7 @@ class _CustomPluginsScreenState extends ConsumerState<CustomPluginsScreen> {
             title: p.manifest.page?.title ?? p.manifest.name,
             subtitle: [
               p.manifest.page?.isShared == true ? 'みんなで使える' : '1 人で使う',
-              if (p.manifest.page?.allows('astell') == true) 'AsTell',
+              if (p.manifest.page?.allows('astell') == true) 'ASTell',
               if (p.manifest.page?.allows('profile') == true) 'プロフィール',
             ].join(' ・ '),
             onTap: () => context.push(Routes.customPage(p.storePluginId ?? p.id)),

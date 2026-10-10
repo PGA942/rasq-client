@@ -64,7 +64,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
     if (!vc) return;
-    await tester.tap(find.byTooltip('AsTell'));
+    await tester.tap(find.byTooltip('ASTell'));
     await tester.pumpAndSettle();
   }
 
@@ -90,7 +90,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('notifications_astell_reminder.png'));
     // 作成 FOW: ジャンル選定 + 開催予約。
-    await tester.tap(find.byTooltip('AsTell'));
+    await tester.tap(find.byTooltip('ASTell'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('vc_home_upcoming.png'));
     ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first)).clearSnackBars(); // スナックバーが FAB に被る
@@ -125,9 +125,9 @@ void main() {
     await tester.tap(find.byTooltip('メニュー').first);
     await tester.pumpAndSettle();
     await expectLater(find.byType(RasqApp), matchesGoldenFile('post_menu_astell.png'));
-    await tester.tap(find.text('AsTell で共有'));
+    await tester.tap(find.text('ASTell で共有'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('AsTell'));
+    await tester.tap(find.byTooltip('ASTell'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('参加中: '));
     await tester.pumpAndSettle();
@@ -150,7 +150,7 @@ void main() {
     final container = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
     await container.read(astellClientProvider).createRoom(const NewAstellRoom(title: '自分の部屋', description: '自分がホストのルーム。… から終了できる。', genres: ['雑談']));
     container.invalidate(astellHomeProvider);
-    await tester.tap(find.byTooltip('AsTell'));
+    await tester.tap(find.byTooltip('ASTell'));
     await tester.pumpAndSettle();
     final tile = find.ancestor(of: find.text('自分の部屋').first, matching: find.byType(AstellTile)).first;
     await tester.tap(find.descendant(of: tile, matching: find.byTooltip('メニュー')));

@@ -75,10 +75,10 @@ class RasqSanctions {
   }
 
   static const featureLabels = {
-    'astell.join': 'AsTell への参加',
-    'astell.create': 'AsTell ルームの作成',
-    'astell.share': 'AsTell での共有・チャット',
-    'astell.stream': 'AsTell の画面共有・配信',
+    'astell.join': 'ASTell への参加',
+    'astell.create': 'ASTell ルームの作成',
+    'astell.share': 'ASTell での共有・チャット',
+    'astell.stream': 'ASTell の画面共有・配信',
     'store.review': 'ストアのレビュー投稿',
     'account.follow': 'RASQ アカウントのフォロー',
     'post': '投稿',

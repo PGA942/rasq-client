@@ -67,7 +67,7 @@ class PostImageTab {
   static const mine = PostImageTab('mine', '自分の投稿');
   static const reacted = PostImageTab('reacted', 'リアクション');
   static const favorites = PostImageTab('favorites', 'ブックマーク');
-  static const astell = PostImageTab('astell', 'AsTell');
+  static const astell = PostImageTab('astell', 'ASTell');
   static const searches = PostImageTab('searches', '最近の検索');
 
   static List<PostImageTab> of(SnsSession session) => [for (final t in session.timelines) PostImageTab('tl:${t.id}', t.label), mine, reacted, favorites, astell, searches];

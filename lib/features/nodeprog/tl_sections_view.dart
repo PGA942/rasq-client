@@ -67,7 +67,7 @@ final tlSectionsRefreshProvider = NotifierProvider<TlSectionsRefresh, int>(TlSec
 /// ノードの名前(セクションの見出しが無いとき / 編集画面)。
 String tlNodeLabel(WidgetRef ref, TlSourceComponent s) {
   if (s.isSection) return s.label.isEmpty ? 'セクション' : s.label;
-  if (s.isAstell) return 'AsTell のタイル';
+  if (s.isAstell) return 'ASTell のタイル';
   if (s.isSwing) return 'Swing';
   if (s.isTrendTags) return 'トレンド';
   if (s.isTrendFollowing) return 'フォロー中の反応';
@@ -188,7 +188,7 @@ class TlNodeContent extends ConsumerWidget {
       final home = ref.watch(astellHomeProvider);
       if (home.value == null) return home.hasError ? const RasqCaption('読み込めませんでした') : _loading();
       final rooms = searchAstellRooms(home.value!, q).take(s.limit).toList();
-      if (rooms.isEmpty) return RasqCaption(q.isEmpty ? 'いま開いている AsTell はありません' : '「$q」の AsTell はありません');
+      if (rooms.isEmpty) return RasqCaption(q.isEmpty ? 'いま開いている ASTell はありません' : '「$q」の ASTell はありません');
       return AstellTileStrip(key: const ValueKey('tl.node.astell'), rooms: rooms, tileBuilder: (r) => AstellRoomTile(room: r));
     }
     if (s.isSwing) {

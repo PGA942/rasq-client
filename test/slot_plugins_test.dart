@@ -128,7 +128,7 @@ void main() {
           manifest: {...manifest('t.astell', ['astell.action']), 'actions': [{'id': 'fx', 'slot': 'astell.action', 'label': '効果音パネル', 'icon': 'celebration'}]},
           handler: (self, fn, args) {
             if (fn == 'astell.open') {
-              self.openFow('panel', {'t': 'Column', 'k': 'root', 'c': [{'t': 'Text', 'k': 'hello', 'p': {'text': 'プラグインのパネル ${(args['peers'] as List).length} 人'}}, {'t': 'Button', 'k': 'b', 'p': {'label': '効果音'}, 'on': {'tap': 'fx'}}]}, title: 'AsTell プラグイン');
+              self.openFow('panel', {'t': 'Column', 'k': 'root', 'c': [{'t': 'Text', 'k': 'hello', 'p': {'text': 'プラグインのパネル ${(args['peers'] as List).length} 人'}}, {'t': 'Button', 'k': 'b', 'p': {'label': '効果音'}, 'on': {'tap': 'fx'}}]}, title: 'ASTell プラグイン');
               return {};
             }
             if (fn == 'fx') {
@@ -144,7 +144,7 @@ void main() {
     await register(c, 'astell', reviewed: true);
     // 参加してルーム FOW を開く。
     await c.read(astellSessionProvider.notifier).join((await c.read(astellClientProvider).room('r-launch'))!);
-    await tester.tap(find.byTooltip('AsTell'));
+    await tester.tap(find.byTooltip('ASTell'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('参加中: '));
     await tester.pumpAndSettle();
@@ -160,7 +160,7 @@ void main() {
     expect(open.$2['room'], isA<Map>());
     expect((open.$2['peers'] as List).length, 5);
     expect((open.$2['shares'] as List), isA<List>());
-    expect(find.text('AsTell プラグイン'), findsOneWidget); // FOW が開いた
+    expect(find.text('ASTell プラグイン'), findsOneWidget); // FOW が開いた
     expect(find.textContaining('プラグインのパネル 5 人'), findsOneWidget);
     // FOW のボタン → プラグイン fn → astell.share がルームの共有になる。
     await tester.tap(find.text('効果音'));

@@ -71,7 +71,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('Tellタイル', route: '/settings/dsl/astell.tiles'),
     SettingsRow('トレンドタイムラインへの配信', route: '/settings/dsl/astell.trend'),
     SettingsRow('ルームのボタン', subtitle: '入力欄の左に並ぶボタン', detail: 'ルームの下段、入力欄の左の丸いボタンの並び(並べ替え / 表示 / 非表示 / プラグインのボタンを追加)', route: settingsActionAstellBar),
-    SettingsRow('プラグインの詳細設定', subtitle: 'AsTell で使うプラグイン', detail: 'AsTell のアクションプラグイン(ストア)', route: Routes.store),
+    SettingsRow('プラグインの詳細設定', subtitle: 'ASTell で使うプラグイン', detail: 'ASTell のアクションプラグイン(ストア)', route: Routes.store),
     SettingsRow('画面オフ時の動作', route: '/settings/dsl/astell.background'),
   ]),
   'relational': SettingsSection('リレーショナルタイムライン', [
@@ -104,7 +104,7 @@ const settingsSections = <String, SettingsSection>{
     SettingsRow('プライバシーポリシー', route: '/settings/dsl/about.privacy'),
     SettingsRow('利用規約', route: '/settings/dsl/about.terms'),
     SettingsRow('アルゴリズムとコミュニティへの貢献', subtitle: '任意。既定は「提供しない」', route: Routes.settingsLearning),
-    SettingsRow('AsTell の利用条件', route: '/settings/dsl/about.astell'),
+    SettingsRow('ASTell の利用条件', route: '/settings/dsl/about.astell'),
     SettingsRow('RAi の利用条件', route: '/settings/dsl/about.rai'),
     SettingsRow('プラグインストアの利用条件', route: '/settings/dsl/about.store'),
     SettingsRow('プラグイン開発者の掲載・審査条件', subtitle: '審査料を含む', route: '/settings/dsl/about.devterms'),

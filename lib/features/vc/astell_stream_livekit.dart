@@ -137,7 +137,7 @@ class LiveKitAstellStreamer extends AstellStreamer {
     final granted = await rtc.Helper.requestCapturePermission();
     if (!granted) throw const AstellMediaException(AstellMediaIssue.permissionDenied);
     const config = FlutterBackgroundAndroidConfig(
-      notificationTitle: 'RASQ AsTell',
+      notificationTitle: 'RASQ ASTell',
       notificationText: '画面を共有しています',
       notificationImportance: AndroidNotificationImportance.normal,
       notificationIcon: AndroidResource(name: 'ic_launcher', defType: 'mipmap'),

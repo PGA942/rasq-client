@@ -46,7 +46,7 @@ Future<bool> showRasqTermsSheet(WidgetRef ref) async {
         padding: const EdgeInsets.only(bottom: RasqSpacing.lg),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const RasqNotice(
-            text: 'RASQ アカウントを使い続けるには、いまの利用規約とプライバシーポリシーへの同意が必要です。同意するまで、AsTell・購入・データの預け入れは使えません。',
+            text: 'RASQ アカウントを使い続けるには、いまの利用規約とプライバシーポリシーへの同意が必要です。同意するまで、ASTell・購入・データの預け入れは使えません。',
             detail: 'D-371 / S-053。サーバーの CENTRAL_TERMS_VERSION / CENTRAL_PRIVACY_VERSION と同じ版の承諾がそろうまで「同意待ち」。PUT /me/consents/{terms,privacy,age,guardian}。',
           ),
           RasqListTile(key: const ValueKey('terms.read.terms'), title: '利用規約を読む', onTap: () => ref.read(routerProvider).push('/settings/dsl/about.terms')),
@@ -101,7 +101,7 @@ class RasqTermsBanner extends ConsumerWidget {
     return RasqNotice.warning(
       key: const ValueKey('terms.banner'),
       margin: margin,
-      text: '利用規約への同意が必要です。同意するまで AsTell・購入などは使えません。',
+      text: '利用規約への同意が必要です。同意するまで ASTell・購入などは使えません。',
       action: TextButton(key: const ValueKey('terms.banner.open'), onPressed: () => showRasqTermsSheet(ref), child: const Text('確認する')),
     );
   }

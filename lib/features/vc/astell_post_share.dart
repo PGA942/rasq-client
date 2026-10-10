@@ -49,11 +49,11 @@ const astellShareableVisibility = {'public', 'home', 'unlisted'};
 /// 限定公開 / DM / ローカル限定 / 公開範囲が不明な投稿は、共有する人にしか読めないかもしれない。
 /// その本文をルーム全員へ配らない。リンクだけの共有は別(見る側の権限で開く)。サーバーも同じ検査をする。
 String? astellShareBlockReason(Post p) {
-  if (p.source != PostSource.note || p.isDirect) return 'ダイレクトの投稿は AsTell に共有できません';
-  if (p.localOnly) return 'ローカル限定の投稿は AsTell に共有できません';
+  if (p.source != PostSource.note || p.isDirect) return 'ダイレクトの投稿は ASTell に共有できません';
+  if (p.localOnly) return 'ローカル限定の投稿は ASTell に共有できません';
   final v = p.visibility;
-  if (v == null || v.isEmpty) return '公開範囲が分からない投稿は AsTell に共有できません';
-  if (!astellShareableVisibility.contains(v)) return '公開範囲が限定された投稿は AsTell に共有できません';
+  if (v == null || v.isEmpty) return '公開範囲が分からない投稿は ASTell に共有できません';
+  if (!astellShareableVisibility.contains(v)) return '公開範囲が限定された投稿は ASTell に共有できません';
   return null;
 }
 
