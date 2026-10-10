@@ -499,8 +499,8 @@ void main() {
       }
       return null;
     }));
-    // ほかの rasq:// は開かない(ホームのまま)。
-    await openLink(tester, 'rasq://astell/room-1');
+    // 知らない rasq:// は開かない(ホームのまま)。AsTell / アカウント / 招待は D-456 から開く(test/rasq_links_test.dart)。
+    await openLink(tester, 'rasq://other/room-1');
     expect(c.read(routerProvider).routerDelegate.currentConfiguration.uri.path, Routes.home);
 
     await openLink(tester, 'rasq://child-safe/pair?code=abcd-efgh');

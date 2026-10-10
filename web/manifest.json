@@ -1,12 +1,12 @@
 {
-    "name": "rasq_client",
-    "short_name": "rasq_client",
+    "name": "RASQ",
+    "short_name": "RASQ",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#ffffff",
+    "theme_color": "#3274b5",
+    "description": "RASQ — プラグインで広がる SNS クライアント(Web 版)",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

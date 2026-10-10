@@ -134,7 +134,8 @@ class ChildGate {
   String? routeBlockReason(String loc) {
     if (!supervised) return null;
     bool under(String p) => loc == p || loc.startsWith('$p/');
-    if (under('/vc')) {
+    // リンクから開く AsTell ルーム (`/astell/<ref>`、D-456) も AsTell。
+    if (under('/vc') || under('/astell')) {
       if (!featureAllowed('astell.join')) return '保護者が AsTell を止めています';
       if (inTimeWindow) return '見守りの時間($windowLabel)は AsTell を使えません';
     }

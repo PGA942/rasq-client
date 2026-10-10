@@ -15,21 +15,24 @@
     the `--base-href` argument provided to `flutter build`.
   -->
   <base href="$FLUTTER_BASE_HREF">
+  <!-- Central の /app/ で配る (D-456 / rasq-central S-092): tool/web/build_web.sh が --base-href /app/ で作る。
+       アプリの中の場所(/app/astell/<code> など)は Central が index.html に落とすので、相対の参照は base に寄せる。 -->
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="RASQ — プラグインで広がる SNS クライアント(Web 版)">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="rasq_client">
+  <meta name="apple-mobile-web-app-title" content="RASQ">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>rasq_client</title>
+  <title>RASQ</title>
+  <meta name="theme-color" content="#3274b5">
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
