@@ -115,7 +115,7 @@ enum StorePluginType {
   post('post', '投稿', 32),
   viewer('viewer', '全画面表示', 275),
   timeline('timeline', 'タイムライン', 188),
-  astell('astell', 'AsTell', 330),
+  astell('astell', 'ASTell', 330),
   trend('trend', 'トレンド', 0),
   theme('theme', '着せ替え', 52),
   assets('assets', 'ステッカー / 素材', 95),

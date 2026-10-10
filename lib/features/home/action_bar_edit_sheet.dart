@@ -47,7 +47,7 @@ enum ActionBarSurface {
   // RASQ のバー (D-446): RASQ アカウントを選んで編集する(SNS のアカウントのバーとは別)。Swing の上のボタンは全画面アクションバー。
   rasqViewer('.rasq.viewer', '全画面アクションバー(Swing)'),
   rasqPost('.rasq', '投稿アクションバー'),
-  astell('.astell', 'AsTell のルームの下段');
+  astell('.astell', 'ASTell のルームの下段');
 
   const ActionBarSurface(this.keySuffix, this.title);
 
@@ -121,14 +121,14 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
           final q = query.text.trim().toLowerCase();
           final rows = <({String id, String label, String subtitle, String genre, IconData icon})>[
             for (final a in sns)
-              if (!exclude.contains(a.id)) (id: a.id, label: a.label, subtitle: '${isEditorConfigKey(configKey) ? '内蔵の編集' : isRasqConfigKey(configKey) ? 'RASQ のアクション' : configKey == astellBarConfigKey ? 'AsTell のボタン' : 'SNS のアクション'} · ${a.genreTag}', genre: a.genreTag, icon: PostRow.iconFor(a.icon, Icons.circle_outlined)),
+              if (!exclude.contains(a.id)) (id: a.id, label: a.label, subtitle: '${isEditorConfigKey(configKey) ? '内蔵の編集' : isRasqConfigKey(configKey) ? 'RASQ のアクション' : configKey == astellBarConfigKey ? 'ASTell のボタン' : 'SNS のアクション'} · ${a.genreTag}', genre: a.genreTag, icon: PostRow.iconFor(a.icon, Icons.circle_outlined)),
             for (final p in plugins)
               if (!exclude.contains(p.id))
                 (
                   id: p.id,
                   label: p.decl.label,
                   // 手動配置 (契約 v0.14 placement): 宣言だけでは置かれないので、ここで足す。
-                  subtitle: '${isViewerToggleActionId(p.id) ? '${p.plugin.manifest.name} · 全画面表示プラグイン(ON / OFF のボタン)' : isAstellPluginAction(p) ? '${p.plugin.manifest.name} · AsTell プラグイン(押すとそのプラグインを開く)' : '${p.plugin.manifest.name} · タグ: ${p.decl.tags.join(' / ')}'}${p.isManual ? ' · 手動配置' : ''}',
+                  subtitle: '${isViewerToggleActionId(p.id) ? '${p.plugin.manifest.name} · 全画面表示プラグイン(ON / OFF のボタン)' : isAstellPluginAction(p) ? '${p.plugin.manifest.name} · ASTell プラグイン(押すとそのプラグインを開く)' : '${p.plugin.manifest.name} · タグ: ${p.decl.tags.join(' / ')}'}${p.isManual ? ' · 手動配置' : ''}',
                   genre: p.decl.tags.isEmpty ? 'Plugin' : p.decl.tags.first,
                   icon: PostRow.iconFor(p.decl.icon, Icons.extension_outlined),
                 ),
@@ -162,7 +162,7 @@ Future<String?> showActionSearchFow(WidgetRef ref, {String title = 'プラグイ
                               ? rasqDetail(
                                   ctx,
                                   configKey == astellBarConfigKey ? '追加できるボタンがありません。プラグインはストアから追加できます' : 'ここに置けるプラグインがありません。ストアから追加できます',
-                                  isEditorConfigKey(configKey) ? 'composer.media を宣言したプラグインがありません(ストアから追加)' : configKey == astellBarConfigKey ? '非表示にしたボタン / AsTell のプラグイン(astell.action)がありません(プラグインはストアから追加)' : configKey.startsWith('viewer:') ? '全画面表示プラグイン / post.action を宣言したプラグインがありません(ストアから追加)' : 'post.action を宣言したプラグインがありません(ストアから追加)',
+                                  isEditorConfigKey(configKey) ? 'composer.media を宣言したプラグインがありません(ストアから追加)' : configKey == astellBarConfigKey ? '非表示にしたボタン / ASTell のプラグイン(astell.action)がありません(プラグインはストアから追加)' : configKey.startsWith('viewer:') ? '全画面表示プラグイン / post.action を宣言したプラグインがありません(ストアから追加)' : 'post.action を宣言したプラグインがありません(ストアから追加)',
                                 )
                               : '見つかりません', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
                     )
@@ -340,7 +340,7 @@ Future<void> showActionBundleSettingsFow(WidgetRef ref, {required String configK
           final members = [for (final id in memberIds) if (byId.containsKey(id)) byId[id]!];
           void update(ActionListDef next) => store.set(config.copyWith(lists: [for (final l in config.lists) l.id == listId ? next : l]));
           final astell = configKey == astellBarConfigKey;
-          String providerOf(String id) => isPluginActionId(id) ? (plugins.where((p) => p.id == id).firstOrNull?.plugin.manifest.name ?? 'プラグイン') : (astell ? 'AsTell' : 'SNS のアクション');
+          String providerOf(String id) => isPluginActionId(id) ? (plugins.where((p) => p.id == id).firstOrNull?.plugin.manifest.name ?? 'プラグイン') : (astell ? 'ASTell' : 'SNS のアクション');
           String describe(String id) => isPluginActionId(id) ? (plugins.where((p) => p.id == id).firstOrNull?.plugin.manifest.description ?? '') : (astell ? 'ルームの下段のボタン(${byId[id]?.label ?? ''})' : 'SNS プラグインが提供するアクション(${byId[id]?.genreTag ?? ''})');
           return ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.lg), children: [
             Padding(
@@ -625,7 +625,7 @@ class _ActionBarEditBodyState extends ConsumerState<_ActionBarEditBody> {
         RasqCaption(
           astellOnly ? '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。(+) でボタンを追加。' : '(…) か右クリックでメニュー。長押しで並び替え、ほかのアイコンに重ねるとまとめます。',
           detail: astellOnly
-              ? '(…) / shift + クリック / 右クリックでメニュー(非表示 / バンドル)。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。(+) で非表示にしたボタンや AsTell のプラグインを足す。幅に収まらないときは、先頭から入るだけと最後の 1 つ(入力欄の隣)を出し、残りはルームの歯車のメニューへ。'
+              ? '(…) / shift + クリック / 右クリックでメニュー(非表示 / バンドル)。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。(+) で非表示にしたボタンや ASTell のプラグインを足す。幅に収まらないときは、先頭から入るだけと最後の 1 つ(入力欄の隣)を出し、残りはルームの歯車のメニューへ。'
               : '(…) / shift + クリック / 右クリックでメニュー。長押しして動かすと並び替え、別のアイコンの上で離すとバンドル。宣言されたプラグインボタンと束ねる閾値は 設定 → SNSプラグイン →「プラグインボタン」。',
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.lg),
         ),
@@ -676,7 +676,7 @@ class _ActionBarTilesState extends ConsumerState<_ActionBarTiles> {
     final actions = merged.actions;
     final entries = merged.config.apply(actions);
     final isAstell = widget.surface == ActionBarSurface.astell;
-    final pluginName = isEditor ? 'RASQ(内蔵の編集)' : widget.surface.isRasq ? 'RASQ' : isAstell ? 'AsTell' : (registry.plugins.where((p) => p.manifest.id == session?.pluginId).firstOrNull?.manifest.name ?? session?.pluginId ?? '');
+    final pluginName = isEditor ? 'RASQ(内蔵の編集)' : widget.surface.isRasq ? 'RASQ' : isAstell ? 'ASTell' : (registry.plugins.where((p) => p.manifest.id == session?.pluginId).firstOrNull?.manifest.name ?? session?.pluginId ?? '');
     String providerOf(ActionDescriptor a) => isPluginActionId(a.id) ? (plugins.where((p) => p.id == a.id).firstOrNull?.plugin.manifest.name ?? 'プラグイン') : pluginName;
     Future<void> setEnabled(String id, bool on) => settingsStore.set('enabled', {...settings.enabled, id: on});
 

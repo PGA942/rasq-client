@@ -55,7 +55,7 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
         const RasqCaption(
           '通知を受け取るためだけの鍵です。投稿やアカウントの操作はできません。',
           detail: '通知トークンは、RASQ サーバーからの通知を受け取るためだけのトークンです(読めるのは自分宛ての通知の受信箱だけ。投稿やアカウントの操作はできません)。'
-              'マクロ / AsTell 用の配下トークンもここから発行します。',
+              'マクロ / ASTell 用の配下トークンもここから発行します。',
           padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.md, RasqSpacing.page, 0),
         ),
         const RasqSectionHeader(title: '状態'),
@@ -128,7 +128,7 @@ class _NotifyTokenScreenState extends ConsumerState<NotifyTokenScreen> {
                         key: ValueKey('notify.child.${t.id}'),
                         icon: Icons.call_split,
                         size: 20,
-                        tooltip: '配下トークンを発行(マクロ / AsTell 共用)',
+                        tooltip: '配下トークンを発行(マクロ / ASTell 共用)',
                         onPressed: _busy
                             ? null
                             : () => _run(() async {

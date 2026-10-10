@@ -74,7 +74,7 @@ void main() {
   }
 
   Future<void> openVc(WidgetTester tester) async {
-    await tester.tap(find.byTooltip('AsTell'));
+    await tester.tap(find.byTooltip('ASTell'));
     await tester.pumpAndSettle();
   }
 
@@ -1180,7 +1180,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('ブックマーク'));
     await tester.pumpAndSettle();
-    expect(find.text('AsTell'), findsOneWidget);
+    expect(find.text('ASTell'), findsOneWidget);
     expect(find.text('打ち上げの打ち上げ'), findsWidgets); // 帯のタイル + お気に入りの投稿内タイル
     // 前のスナックバー(通知登録 / 解除)を流してから。
     ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first)).clearSnackBars();
@@ -1405,7 +1405,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('post.share.astell')));
     await tester.pumpAndSettle();
-    expect(find.text('公開範囲が限定された投稿は AsTell に共有できません'), findsOneWidget);
+    expect(find.text('公開範囲が限定された投稿は ASTell に共有できません'), findsOneWidget);
     expect(container.read(astellSessionProvider)!.shares.length, before);
   });
 
@@ -1417,7 +1417,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('メニュー').first);
     await tester.pumpAndSettle();
-    expect(find.text('AsTell で共有'), findsNothing);
+    expect(find.text('ASTell で共有'), findsNothing);
     await tester.tap(find.text('共有'));
     await tester.pumpAndSettle();
     expect(find.text('プラグインに共有'), findsOneWidget);

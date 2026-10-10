@@ -229,8 +229,8 @@ const raiFunctionUsage = <String>[
   'reference.get(id=操作か関数の id): リファレンスの詳細を取る',
   'post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる(送信は自動化不可 = ユーザーが押す)',
   'post.action(action=アクション id, post=投稿 id): 投稿にアクション(自動化が許可されたものだけ)',
-  'astell.rooms(): AsTell のルーム一覧を取る',
-  'astell.create(title=題名): AsTell のルームを作る',
+  'astell.rooms(): ASTell のルーム一覧を取る',
+  'astell.create(title=題名): ASTell のルームを作る',
   'timeline.list(kind=home|social|local|global|featured|tag:語|list:id, limit)・post.get(id)・post.thread(post, limit): TL/投稿の本文を取る',
   'post.reactions(post, limit)・post.reposters(post, limit)・post.quotes(post, limit): 投稿への反応を取る',
   'favorites.list(limit)・reacted.list(limit): お気に入り/リアクション済みの投稿を取る',
@@ -472,17 +472,17 @@ class RaiFunctionRunner {
   Future<RaiFunctionResult> _astellRooms() async {
     final home = await ref.read(astellClientProvider).home();
     final rooms = [...home.following, ...home.recommended, ...home.trending];
-    if (rooms.isEmpty) return const RaiFunctionResult(name: 'astell.rooms', text: 'AsTell のルームはありません', fetched: true);
+    if (rooms.isEmpty) return const RaiFunctionResult(name: 'astell.rooms', text: 'ASTell のルームはありません', fetched: true);
     final seen = <String>{};
     final lines = [for (final r in rooms) if (seen.add(r.id)) '${r.title} [${r.id}]'];
-    return RaiFunctionResult(name: 'astell.rooms', text: raiTruncate('AsTell のルーム: ${lines.join(' / ')}', budget), fetched: true);
+    return RaiFunctionResult(name: 'astell.rooms', text: raiTruncate('ASTell のルーム: ${lines.join(' / ')}', budget), fetched: true);
   }
 
   Future<RaiFunctionResult> _astellCreate(RaiFunctionCall c) async {
     final title = c.arg('title').trim();
     if (title.isEmpty) return RaiFunctionResult(name: c.name, text: '題名がありません', ok: false);
     final room = await ref.read(astellClientProvider).createRoom(NewAstellRoom(title: title));
-    return RaiFunctionResult(name: c.name, text: 'AsTell「${room.title}」を作りました [${room.id}]');
+    return RaiFunctionResult(name: c.name, text: 'ASTell「${room.title}」を作りました [${room.id}]');
   }
 
   // --- ここから D-223: 既存 SNS プラグイン関数のラップ(第一弾) ---
@@ -523,7 +523,7 @@ class RaiFunctionRunner {
       NotificationKind.listAdded => '$who がリストに追加',
       NotificationKind.pollEnded => 'アンケート終了',
       NotificationKind.timer => 'タイマー通知',
-      NotificationKind.vc => 'AsTell 通知',
+      NotificationKind.vc => 'ASTell 通知',
       NotificationKind.system => n.title ?? 'システム通知',
       NotificationKind.other => 'その他の通知',
     };

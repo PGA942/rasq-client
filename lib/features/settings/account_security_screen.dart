@@ -429,7 +429,7 @@ class _AccountSecurityScreenState extends ConsumerState<AccountSecurityScreen> {
       ref.read,
       id: 'security.delete.confirm',
       title: 'RASQ アカウントを削除',
-      message: 'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、AsTell のルームと共有、通知トークン、同意の記録を削除します。元に戻せません。',
+      message: 'サーバー上のプロフィール、アカウントバンドル、同期した設定、レビューとブックマーク、ASTell のルームと共有、通知トークン、同意の記録を削除します。元に戻せません。',
       confirmText: account.emailVerified ? '確認コードを送る' : '削除する',
     );
     if (sns == null || !mounted) return;

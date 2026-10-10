@@ -158,7 +158,7 @@ void main() {
 
     test('ルート: /vc /dm /rai /store /search と SNS の追加', () {
       final g = gateOf(v2());
-      expect(g.routeBlockReason('/vc'), contains('AsTell'));
+      expect(g.routeBlockReason('/vc'), contains('ASTell'));
       expect(g.routeBlockReason('/dm/room/x'), contains('DM'));
       expect(g.routeBlockReason('/store'), contains('ストア'));
       expect(g.routeBlockReason('/store/installed'), isNull);

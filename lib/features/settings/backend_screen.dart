@@ -143,7 +143,7 @@ class _BackendSettingsScreenState extends ConsumerState<BackendSettingsScreen> {
       body: ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [
         const RasqCaption(
           'RASQ アカウントやストアのサーバーの接続先です。SNS の投稿やタイムラインは、ここを通りません。',
-          detail: 'RASQ Central は公開・共有のもの(プロフィール・ストア・AsTell・投稿・リストなど)のサーバー、'
+          detail: 'RASQ Central は公開・共有のもの(プロフィール・ストア・ASTell・投稿・リストなど)のサーバー、'
               'ORGATE は本人だけの情報(ログイン・パスワード・メールアドレス)と Mastodon などのログイン(OAuth ブローカー)の'
               'サーバーです。RASQ アカウントへのログインは ORGATE で行い、そのトークンを Central にも使います。'
               'SNS の投稿やタイムラインはどちらも通らず、プラグインが各インスタンスへ直接接続します。',

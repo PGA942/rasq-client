@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 enum RasqNavTab {
   home('ホーム', Icons.home_outlined, Icons.home),
   search('検索', Icons.travel_explore_outlined, Icons.travel_explore),
-  vc('AsTell', Icons.settings_input_antenna_outlined, Icons.settings_input_antenna),
+  vc('ASTell', Icons.settings_input_antenna_outlined, Icons.settings_input_antenna),
   notifications('通知', Icons.notifications_none, Icons.notifications),
   dm('DM', Icons.mail_outline, Icons.mail);
 

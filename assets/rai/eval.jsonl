@@ -370,7 +370,7 @@
 {"q": "Where can I find my drafts?", "op": "draft"}
 {"q": "how do I save a draft", "op": "draft"}
 {"q": "＋を長押しして何ができる", "op": "fab-expand"}
-{"q": "プラスボタンからAsTellを作りたい", "op": "fab-expand"}
+{"q": "プラスボタンからASTellを作りたい", "op": "fab-expand"}
 {"q": "＋のボタンを増やしたい", "op": "fab-customize"}
 {"q": "＋ボタンにアカウントを並べたい", "op": "fab-customize"}
 {"q": "＋を押したらSwingにしたい", "op": "fab-tap"}
@@ -384,7 +384,7 @@
 {"q": "ヘッダーを隠して画面を広くしたい", "op": "header-collapse"}
 {"q": "設定を検索したい", "op": "settings-search"}
 {"q": "設定の場所を探したい", "op": "settings-search"}
-{"q": "AsTellのルームを探したい", "op": "astell-search"}
+{"q": "ASTellのルームを探したい", "op": "astell-search"}
 {"q": "タイムラインを他のアカウントでも使いたい", "op": "tl-share"}
 {"q": "新しい投稿を読み込みたい", "op": "tl-load-new"}
 {"q": "RAiの広告を消したい", "op": "rai-cloud-ad"}

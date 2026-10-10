@@ -279,7 +279,7 @@ class _OneTimeCode extends StatelessWidget {
 enum GuardianPage {
   timeline('TL'),
   composer('投稿'),
-  astell('AsTell'),
+  astell('ASTell'),
   plugins('プラグイン'),
   sns('SNS'),
   screenTime('スクリーンタイム'),
@@ -819,7 +819,7 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> with 
   }
 
   List<Widget> _astellPage(BuildContext context, ChildSafeCatalog catalog) => [
-        _pad(Text('AsTell(ルームの通話・チャット・共有)で、子ができること。', style: _caption(context))),
+        _pad(Text('ASTell(ルームの通話・チャット・共有)で、子ができること。', style: _caption(context))),
         ..._featuresOn(catalog, GuardianPage.astell),
       ];
 

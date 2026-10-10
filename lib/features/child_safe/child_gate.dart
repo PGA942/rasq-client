@@ -136,8 +136,8 @@ class ChildGate {
     bool under(String p) => loc == p || loc.startsWith('$p/');
     // リンクから開く AsTell ルーム (`/astell/<ref>`、D-456) も AsTell。
     if (under('/vc') || under('/astell')) {
-      if (!featureAllowed('astell.join')) return '保護者が AsTell を止めています';
-      if (inTimeWindow) return '見守りの時間($windowLabel)は AsTell を使えません';
+      if (!featureAllowed('astell.join')) return '保護者が ASTell を止めています';
+      if (inTimeWindow) return '見守りの時間($windowLabel)は ASTell を使えません';
     }
     if (under('/dm')) {
       if (!featureAllowed('dm')) return '保護者が DM を止めています';

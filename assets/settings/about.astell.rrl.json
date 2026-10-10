@@ -1,7 +1,7 @@
 {
   "schema": "rasq.settings-page/1",
   "area": "about.astell",
-  "title": "AsTell の利用条件",
+  "title": "ASTell の利用条件",
   "doc": {
     "id": "rasq.astell",
     "version": "1.0.0-draft.20261007",

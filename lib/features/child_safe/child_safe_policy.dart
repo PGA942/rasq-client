@@ -417,10 +417,10 @@ class ChildSafeCatalog {
   static final fallback = ChildSafeCatalog(
     version: 1,
     features: const [
-      ChildSafeCatalogItem('astell.join', 'AsTell への参加'),
-      ChildSafeCatalogItem('astell.create', 'AsTell ルームの作成'),
-      ChildSafeCatalogItem('astell.share', 'AsTell での共有・チャット'),
-      ChildSafeCatalogItem('astell.stream', 'AsTell の画面共有・配信'),
+      ChildSafeCatalogItem('astell.join', 'ASTell への参加'),
+      ChildSafeCatalogItem('astell.create', 'ASTell ルームの作成'),
+      ChildSafeCatalogItem('astell.share', 'ASTell での共有・チャット'),
+      ChildSafeCatalogItem('astell.stream', 'ASTell の画面共有・配信'),
       ChildSafeCatalogItem('store.review', 'ストアのレビュー投稿'),
       ChildSafeCatalogItem('account.follow', 'RASQ アカウントのフォロー'),
       ChildSafeCatalogItem('post', '投稿'),
@@ -447,7 +447,7 @@ class ChildSafeCatalog {
       ChildSafeCatalogItem('rai.compose', '書く手伝い'),
       ChildSafeCatalogItem('rai.act', '操作の代行'),
       ChildSafeCatalogItem('rai.settings', '設定の変更'),
-      ChildSafeCatalogItem('rai.astell', 'AsTell の手伝い'),
+      ChildSafeCatalogItem('rai.astell', 'ASTell の手伝い'),
       ChildSafeCatalogItem('rai.web', 'Web の調べもの'),
       ChildSafeCatalogItem('rai.assistant', 'アシスタント', phase: 2),
       ChildSafeCatalogItem('rai.macro', 'マクロ', phase: 2),

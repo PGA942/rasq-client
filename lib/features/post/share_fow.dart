@@ -235,14 +235,14 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
         RasqListTile(
           key: const ValueKey('post.share.astell'),
           leading: Icon(Icons.record_voice_over_outlined, size: 20, color: scheme.onSurfaceVariant),
-          title: 'AsTell に共有',
+          title: 'ASTell に共有',
           subtitle: '参加中のルーム「${astell.room.title}」へ投稿を流す',
           onTap: _astell,
         ),
       if (plugins.isEmpty && astell == null)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: RasqSpacing.sm),
-          child: Text(rasqDetail(context, '共有に対応したプラグインがここに並びます', 'post.share を宣言したプラグイン(と参加中の AsTell)がここに並びます'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text(rasqDetail(context, '共有に対応したプラグインがここに並びます', 'post.share を宣言したプラグイン(と参加中の ASTell)がここに並びます'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ),
       for (final p in plugins)
         RasqListTile(

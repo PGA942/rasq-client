@@ -126,7 +126,7 @@ class _VcScreenState extends ConsumerState<VcScreen> {
                   expanded: _toggled || _focus.hasFocus || _sections.isNotEmpty || _terms.isNotEmpty,
                   controller: _query,
                   focusNode: _focus,
-                  hintText: _terms.isEmpty ? 'AsTell / Swing を検索' : 'さらに絞る',
+                  hintText: _terms.isEmpty ? 'ASTell / Swing を検索' : 'さらに絞る',
                   onSubmitted: _stack,
                   onDropdownTap: () => setState(() => _toggled = !_toggled),
                   onReset: _sections.isEmpty && _terms.isEmpty
@@ -213,7 +213,7 @@ class _VcScreenState extends ConsumerState<VcScreen> {
     final wantRooms = _sections.isEmpty || roomSections.isNotEmpty;
     final swings = !wantSwing ? const <SwingAuthorEntry>[] : searchSwingAuthors(ref.watch(swingFeedProvider).value ?? const [], q);
     final rooms = !wantRooms ? const <AstellRoom>[] : searchAstellRooms(h, q, sections: roomSections);
-    if (rooms.isEmpty && swings.isEmpty) return RasqEmptyView(title: '見つかりませんでした', hint: q.isEmpty ? 'この節にはありません' : '「$q」に当たる AsTell / Swing はありません');
+    if (rooms.isEmpty && swings.isEmpty) return RasqEmptyView(title: '見つかりませんでした', hint: q.isEmpty ? 'この節にはありません' : '「$q」に当たる ASTell / Swing はありません');
     return ListView(key: const ValueKey('astell.search.results'), children: [
       if (swings.isNotEmpty) ...[
         RasqSectionHeader(title: 'Swing(${swings.length})', topMargin: 0),
@@ -221,7 +221,7 @@ class _VcScreenState extends ConsumerState<VcScreen> {
           Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, RasqSpacing.xs), child: SwingBanner(entry: e)),
       ],
       if (rooms.isNotEmpty) ...[
-        RasqSectionHeader(title: 'AsTell(${rooms.length})', topMargin: 0),
+        RasqSectionHeader(title: 'ASTell(${rooms.length})', topMargin: 0),
         AstellTileStrip(
           key: const ValueKey('astell.search.rooms'),
           rooms: rooms,

@@ -92,7 +92,7 @@ class BookmarksScreen extends ConsumerWidget {
           final scheme = Theme.of(context).colorScheme;
           if (posts.isEmpty && clips.isEmpty && rooms.isEmpty) {
             return canRemove
-                ? const RasqEmptyView(title: 'ブックマークはありません', hint: '投稿の 🔖、クリップに追加、AsTell のしおりで集められます')
+                ? const RasqEmptyView(title: 'ブックマークはありません', hint: '投稿の 🔖、クリップに追加、ASTell のしおりで集められます')
                 : const RasqEmptyView(key: ValueKey('bookmarks.noSns'), title: 'ブックマークはありません', hint: 'このサービスにはブックマークがありません。投稿の 🔖 を長押しすると RASQ クリップに集められます');
           }
           return RefreshIndicator(
@@ -103,7 +103,7 @@ class BookmarksScreen extends ConsumerWidget {
             },
             child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
               if (rooms.isNotEmpty) ...[
-                const RasqSectionHeader(title: 'AsTell', topMargin: 0),
+                const RasqSectionHeader(title: 'ASTell', topMargin: 0),
                 AstellTileStrip(rooms: rooms, tileBuilder: (r) => AstellRoomTile(room: r)),
               ],
               if (clips.isNotEmpty) ...[

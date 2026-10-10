@@ -579,7 +579,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     if (s.isRasqList) return (Icons.people_alt_outlined, 'RASQ リストを取得', 'RASQ', 'RASQ リスト: ${s.label.isNotEmpty ? s.label : (s.rasqListId.isEmpty ? '未選択' : s.rasqListId)}');
     // セクション / ブロック (D-442)。
     if (s.isSection) return (Icons.crop_square, s.label.isEmpty ? 'セクション' : s.label, 'セクション', 'ノードを $maxSectionChildren つまで包む枠(画面では入れた順に角丸の枠で出す)');
-    if (s.isAstell) return (Icons.settings_input_antenna, 'AsTell のタイル', 'RASQ', 'いま開いている AsTell のルーム(${s.limit} 件まで)');
+    if (s.isAstell) return (Icons.settings_input_antenna, 'ASTell のタイル', 'RASQ', 'いま開いている ASTell のルーム(${s.limit} 件まで)');
     if (s.isSwing) return (Icons.motion_photos_on_outlined, 'Swing', 'RASQ', 'Swing を出している人(${s.limit} 件まで)');
     if (s.isTrendFollowing) return (Icons.people_outline, 'フォロー中の反応', 'RASQ', 'フォロー中の人の、このページのワード / タグの投稿');
     // SNS アカウントごとの取得元 (D-440)。トレンドは「トレンドを取得」ノードで、種別を切り替える (D-442)。
@@ -1505,7 +1505,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
     final blocks = [
       if (widget.allowSection)
         source(const TlSourceComponent(tl: sectionKind, label: 'セクション'), icon: Icons.crop_square, title: 'セクション', subtitle: 'RASQ', description: 'ノードを 3 つまで包む枠です。画面では見出しの下に、入れた順で出します。'),
-      source(const TlSourceComponent(tl: astellSectionKind), icon: Icons.settings_input_antenna, title: 'AsTell のタイル', subtitle: 'RASQ', description: 'いま開いている AsTell のルームをタイルで出します。'),
+      source(const TlSourceComponent(tl: astellSectionKind), icon: Icons.settings_input_antenna, title: 'ASTell のタイル', subtitle: 'RASQ', description: 'いま開いている ASTell のルームをタイルで出します。'),
       source(const TlSourceComponent(tl: swingSectionKind), icon: Icons.motion_photos_on_outlined, title: 'Swing', subtitle: 'RASQ', description: 'Swing を出している人を並べます。'),
     ];
     // Today (D-440): アカウントごとの featured(Today / 注目)。出せる SNS だけ。

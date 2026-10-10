@@ -138,7 +138,7 @@ class RasqVerifiedBadge extends StatelessWidget {
 /// deep-colour variant on light surfaces and the pastel one on dark surfaces;
 /// an unselected tab is shown slightly faded like the Material nav icons.
 class RasqAsTellIcon extends StatelessWidget {
-  const RasqAsTellIcon({super.key, this.size = 24, this.selected = true, this.semanticsLabel = 'AsTell'});
+  const RasqAsTellIcon({super.key, this.size = 24, this.selected = true, this.semanticsLabel = 'ASTell'});
   final double size;
   final bool selected;
   final String semanticsLabel;

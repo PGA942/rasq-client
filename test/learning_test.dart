@@ -142,7 +142,7 @@ void main() {
     // 同意: 確認のシート。チェックを入れるまで「同意して提供する」は押せない。
     await tester.tap(find.byKey(const ValueKey('learning.grant')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('DM、限定公開の投稿、AsTell の会話'), findsOneWidget);
+    expect(find.textContaining('DM、限定公開の投稿、ASTell の会話'), findsOneWidget);
     await tester.tap(find.text('同意して参加する'));
     await tester.pumpAndSettle();
     expect(central.calls, isNot(contains('POST /me/learning/grant')));
