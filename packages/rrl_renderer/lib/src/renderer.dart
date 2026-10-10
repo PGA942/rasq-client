@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
 
+import 'budget.dart';
 import 'geometry.dart';
 import 'host.dart';
 import 'registry.dart';
@@ -21,7 +22,12 @@ class RrlRenderer extends StatelessWidget {
 
   @override
   // 木の下の画像 / メディアの読み込みは、すべて host.mediaPolicy に従う (D-407)。
-  Widget build(BuildContext context) => RasqMediaPolicyScope(policy: host.mediaPolicy, child: _NodeWidget(node: node, host: host, scope: host.scope));
+  Widget build(BuildContext context) {
+    // 展開の予算 (セキュリティ確認 2026-10-09 の [4]): ウィジェットを作る前に木全体で数え、超えれば描かない。
+    // 根の Bind の中身は描くたびに変わりうるので、毎回数える(手間は予算の分まで)。
+    if (rrlExpansionOverBudget(node, host.scope, host.budget) case final over?) return _ErrorBox('${node.t}(${node.k ?? '-'}) not rendered: $over');
+    return RasqMediaPolicyScope(policy: host.mediaPolicy, child: _NodeWidget(node: node, host: host, scope: host.scope));
+  }
 }
 
 /// `#RRGGBB` / `#RRGGBBAA` / `#AARRGGBB`(8 桁は RRGGBBAA と解釈)を Color に。
@@ -160,7 +166,8 @@ class _NodeWidget extends StatelessWidget {
         if (src == null) return const _ErrorBox('Image without src');
         // プラグインの権限で読めない URL は、通信せずに箱だけ (D-407: 制限モードの下書き持ち出しを塞ぐ)。
         if (!rasqMediaAllowed(context, src)) return const _ErrorBox('image blocked');
-        return Image.network(webHtmlElementStrategy: rasqWebImageStrategy, src.toString(), width: width, height: height, fit: width == null && height == null ? BoxFit.cover : BoxFit.contain, errorBuilder: (_, _, _) => const _ErrorBox('image'));
+        // リダイレクトの各ホップも方針に通す(Web 版は追わない。セキュリティ確認 2026-10-09 の [11])。
+        return Image(image: rasqMediaImage(context, src), width: width, height: height, fit: width == null && height == null ? BoxFit.cover : BoxFit.contain, errorBuilder: (_, _, _) => const _ErrorBox('image'));
       case 'Row':
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: _children(scope));
       case 'Column':

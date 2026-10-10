@@ -143,4 +143,31 @@ void main() {
     expect(ErrorCode.tryParse('G00'), isNull);
     expect(ErrorCode.noTrendRequirement.display, 'Error:A25 No Trend Requirement');
   });
+  // セキュリティ確認 2026-10-09 の [11]: 制限のある面では、プラグインが選んだ URL をリダイレクトの各ホップで確かめる読み方で読む。
+  group('media redirects', () {
+    final allowed = Uri.parse('https://cdn.allowed.example/a.png');
+    List<ImageProvider> images(WidgetTester tester) => [for (final i in tester.widgetList<Image>(find.byType(Image))) i.image];
+    Widget all() => Column(children: [
+          RasqAvatar(imageUrl: allowed),
+          RasqCustomEmoji(url: allowed, fallbackText: ':a:', height: 20),
+          RasqMediaGrid(items: [MediaItem(id: 'm', type: MediaType.image, url: allowed)]),
+        ]);
+
+    testWidgets('plugin surfaces: avatar / emoji / media use the per-hop loader', (tester) async {
+      await tester.pumpWidget(wrap(RasqMediaPolicyScope(policy: RasqMediaPolicy.plugin(hostAllowed: (h) => h == 'cdn.allowed.example'), child: all())));
+      await tester.pump();
+      final got = images(tester);
+      expect(got, hasLength(3));
+      expect(got, everyElement(isA<RasqPolicyNetworkImage>()));
+    });
+
+    testWidgets('host screens and host-given URLs keep the normal loader', (tester) async {
+      await tester.pumpWidget(wrap(all()));
+      await tester.pump();
+      expect(images(tester), everyElement(isA<NetworkImage>()));
+      await tester.pumpWidget(wrap(RasqMediaPolicyScope(policy: RasqMediaPolicy.plugin(allowedUrls: {allowed.toString()}), child: all())));
+      await tester.pump();
+      expect(images(tester), everyElement(isA<NetworkImage>()));
+    });
+  });
 }

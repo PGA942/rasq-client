@@ -15,6 +15,7 @@ import '../../app/router.dart';
 import '../../app/providers.dart';
 import '../../shell/headers.dart';
 import '../../text/inline_spans.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../clips/clip_providers.dart';
 import '../collections/rasq_collections.dart';
 import '../servers/server_info_tile.dart';
@@ -155,6 +156,9 @@ class _UserPosts extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final page = ref.watch(userPostsProvider((id: userId, filter: filter, account: account)));
+    // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): ピン留め(プロフィールに付いてくる投稿)にも、投稿一覧
+    // (userPostsProvider)と同じ保護者の表示制限を掛けてから混ぜる。
+    final pinned = ref.watch(childGateProvider).filterPosts(this.pinned);
     final actions = ref.watch(sessionForAccountProvider(account))?.actions ?? const <ActionDescriptor>[];
     final notifier = ref.read(timelineProvider(TimelineKind.home).notifier);
     final scheme = Theme.of(context).colorScheme;

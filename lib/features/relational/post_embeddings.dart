@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:rasq_models/rasq_models.dart';
 
+import '../../backend/limited_http.dart';
 import '../emoji/emoji_image_embedder.dart';
 import '../emoji/emoji_index_providers.dart' show EmojiImageEmbedderLoader;
 import '../rai/rai_embedding_model.dart';
@@ -86,11 +86,15 @@ class PostEmbedder {
 /// 投稿の画像の埋め込み器を読む(実機では main が差し替える。既定 = 使えない)。
 final postImageEmbedderLoaderProvider = Provider<EmojiImageEmbedderLoader>((_) => (_) async => null);
 
+/// 投稿の画像の上限。
+const postImageMaxBytes = 4 * 1024 * 1024;
+
 /// 投稿の画像を取ってくる(テストでは差し替える)。4 MiB 超と失敗は null。
+/// 本文は上限までしか読まない(超えたら読むのをやめて通信を切る、セキュリティ確認 2026-10-09 の [18])。
 final postImageFetcherProvider = Provider<Future<Uint8List?> Function(Uri url)>((ref) => (url) async {
       try {
-        final res = await http.get(url).timeout(const Duration(seconds: 10));
-        return res.statusCode == 200 && res.bodyBytes.isNotEmpty && res.bodyBytes.length <= 4 * 1024 * 1024 ? res.bodyBytes : null;
+        final res = await getLimited(url, maxBytes: postImageMaxBytes, timeout: const Duration(seconds: 10));
+        return res.statusCode == 200 && res.bodyBytes.isNotEmpty ? res.bodyBytes : null;
       } catch (_) {
         return null;
       }

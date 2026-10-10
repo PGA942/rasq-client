@@ -215,4 +215,49 @@ void main() {
       expect(find.text('古い'), findsNothing);
     });
   });
+
+  // 展開の予算 (セキュリティ確認 2026-10-09 の [4])。
+  group('expansion budget', () {
+    final items = [for (var i = 0; i < 100; i++) i];
+    // 100 項目の ForEach を 5 段(JSON は小さいが 100^5 の葉)。
+    RrlNode nested(int levels) => levels == 0
+        ? const RrlNode(t: 'Text', k: 'leaf', p: {'text': '葉'})
+        : RrlNode(t: 'ForEach', p: {'in': items}, c: [nested(levels - 1)]);
+
+    test('counts the whole tree under one shared budget', () {
+      final scope = RrlScope({});
+      expect(rrlExpansionOverBudget(nested(5), scope), contains('too many'));
+      expect(rrlExpansionOverBudget(nested(1), scope), isNull);
+      // 1 段なら収まる大きさでも、入れ子にすると積で超える。
+      expect(rrlExpansionOverBudget(nested(2), scope, const RrlBudget(maxNodes: 5000)), contains('too many nodes'));
+      // 子の無い ForEach も繰り返しを数える。
+      expect(rrlExpansionOverBudget(RrlNode(t: 'ForEach', p: {'in': List.filled(20000, 0)}), scope), contains('too many iterations'));
+      // Bind 越しのリストも同じ規則で数える。偽の If の中は数えない。
+      final bound = RrlNode(t: 'Bind', p: {'name': 'xs', 'value': items}, c: [RrlNode(t: 'ForEach', p: {'in': r'$.xs'}, c: [nested(1)])]);
+      expect(rrlExpansionOverBudget(bound, scope, const RrlBudget(maxNodes: 5000)), contains('too many nodes'));
+      expect(rrlExpansionOverBudget(RrlNode(t: 'If', p: {'cond': false}, c: [nested(5)]), scope), isNull);
+      // 深すぎる木。
+      var deep = const RrlNode(t: 'Text', p: {'text': 'x'});
+      for (var i = 0; i < 100; i++) {
+        deep = RrlNode(t: 'Column', c: [deep]);
+      }
+      expect(rrlExpansionOverBudget(deep, scope), contains('too deep'));
+    });
+
+    testWidgets('over-budget trees are not built; normal iteration still renders', (tester) async {
+      final host = RrlHost(instanceScope: instanceScope, scope: RrlScope({'rows': items}));
+      await tester.pumpWidget(wrap(RrlRenderer(node: nested(5), host: host)));
+      expect(find.text('葉'), findsNothing);
+      expect(find.textContaining('not rendered'), findsOneWidget);
+
+      await tester.pumpWidget(wrap(SingleChildScrollView(
+        child: RrlRenderer(
+          node: const RrlNode(t: 'ForEach', p: {'in': r'$.rows'}, c: [RrlNode(t: 'Text', k: 'row', p: {'text': r'$.item'})]),
+          host: host,
+        ),
+      )));
+      expect(find.textContaining('not rendered'), findsNothing);
+      expect(find.text('0'), findsOneWidget);
+    });
+  });
 }

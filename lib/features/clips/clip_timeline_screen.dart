@@ -82,10 +82,7 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
     if (_isHost) ref.watch(hostClipsProvider); // 追加/削除に追従
     final session = ref.watch(currentSnsSessionProvider);
     final actions = session?.actions ?? const <ActionDescriptor>[];
-    final posts = _posts ?? const <Post>[];
-    final index = buildClipIndex(posts);
-    final selected = findIndexEntry(index, _selectedEntry);
-    final visible = selected == null ? posts : [for (final p in posts) if (selected.postKeys.contains(p.key)) p];
+    final read = _posts ?? const <Post>[];
 
     // ヘッダーはリレーショナルページと同じブロック(D-037):
     // 参加メンバー + 実在語見出し + 説明 + キーワードチップ。
@@ -96,10 +93,16 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
       final hidden = ref.watch(childSafeHiddenCollectionsProvider).value;
       if (hidden == null || (_posts == null && _error == null)) return Scaffold(appBar: RasqPageHeader(title: widget.clip.name), body: const RasqLoading());
       if (childSafeCollectionHidden(gate, hidden, kind: 'clip', id: widget.clip.id, name: widget.clip.name, description: widget.clip.description) ||
-          gate.collectionHidden(childSafeCollectionMeta(widget.clip.name, widget.clip.description), [for (final p in posts) '${p.body} ${p.quote?.body ?? ''}'])) {
+          gate.collectionHidden(childSafeCollectionMeta(widget.clip.name, widget.clip.description), [for (final p in read) '${p.body} ${p.quote?.body ?? ''}'])) {
         return Scaffold(appBar: RasqPageHeader(title: widget.clip.name), body: const ChildSafeBlockedView(message: '保護者がこのクリップを止めています'));
       }
     }
+    // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): 開けるクリップでも、見せない投稿は外す(一覧にも、
+    // 見出し / チップ / メンバー / 目次にも使わない)。クリップごと止めるかは、上で読んだ中身全体で決める。
+    final posts = gate.filterPosts(read);
+    final index = buildClipIndex(posts);
+    final selected = findIndexEntry(index, _selectedEntry);
+    final visible = selected == null ? posts : [for (final p in posts) if (selected.postKeys.contains(p.key)) p];
     final selfKey = ref.watch(currentUserProvider).key;
     final memberSeen = <String>{};
     final members = [for (final p in posts) if (memberSeen.add(p.author.key)) p.author];
@@ -120,7 +123,7 @@ class _ClipTimelineScreenState extends ConsumerState<ClipTimelineScreen> {
                           members: avatars.isEmpty ? members : avatars,
                           title: widget.clip.name,
                           caption: [
-                            '${widget.clip.notesCount ?? posts.length}件',
+                            '${posts.length != read.length ? posts.length : widget.clip.notesCount ?? posts.length}件',
                             if (_isHost) 'RASQ クリップ(SNS 横断)' else if (!widget.clip.isPublic) '非公開クリップ' else if (widget.clip.owner != null) widget.clip.owner!.displayName,
                           ].join(' ・ '),
                           headline: sharedHeadline(posts),

@@ -116,6 +116,20 @@ class ChildGate {
     return null;
   }
 
+  /// DM / チャットの TL(`dm:` / `chat:`。`acct:<アカウント>|` で包まれていても)。
+  static bool isDirectTimelineKind(String kindId) {
+    var k = kindId.trim();
+    while (k.startsWith('acct:') && k.contains('|')) {
+      k = k.substring(k.indexOf('|') + 1).trim();
+    }
+    return k.startsWith('dm:') || k.startsWith('chat:');
+  }
+
+  /// この TL(kind id)を取りに行けない理由(セキュリティ確認 2026-10-09 の [21])。取れるなら null。
+  /// DM / チャットの TL は、画面 (/dm) と同じく DM を止めていれば(見守りの時間の「DM を隠す」も)取らない。
+  /// 取得ノード (tl.dm) / RAi の timeline.list / TL の画面の、どの口からでも同じ。
+  String? timelineKindBlockReason(String kindId) => isDirectTimelineKind(kindId) ? blockedMessage('dm') : null;
+
   /// 画面(ルート)を開けない理由。開けるなら null。
   String? routeBlockReason(String loc) {
     if (!supervised) return null;
@@ -129,14 +143,26 @@ class ChildGate {
       if (inTimeWindow && policy!.time.hideDirectMessages) return '見守りの時間($windowLabel)は DM を使えません';
     }
     if (under('/notifications') && inTimeWindow && policy!.time.hideNotifications) return '見守りの時間($windowLabel)は通知を見られません';
-    if (under('/rai') && !raiEnabled) return '保護者が RAi を止めています';
+    // SNS 探しの「RAi に聞く」(セキュリティ確認 2026-10-09 の [13]) も RAi。
+    if ((under('/rai') || under('/sns-discover/ask')) && !raiEnabled) return '保護者が RAi を止めています';
     if (under('/store') && !under('/store/installed') && !searchAllowed('store')) return '保護者がプラグインストアを止めています';
     if ((under('/search') || under('/trend')) && !const ['posts', 'users', 'trend'].any(searchAllowed)) return '保護者が検索を止めています';
     if (loc.startsWith('/login/') && !canAddAccounts) return '保護者が SNS アカウントの追加を止めています';
     // カスタムプラグインのページ (D-357 / D-451): ページ型をどれも使えないときは画面ごと。1 つずつの可否は中身(マニフェスト)が
     // 分かってから開く側([pluginPageBlockReason])が決める(ルートの id はストアの id で、例 (D-314) の近さも中身が要る)。
     if (under('/custom/page') && !_anyPagePluginAllowed) return '保護者がカスタムプラグインを止めています';
+    // WASM 試験画面 (dev、セキュリティ確認 2026-10-09 の [12]): どのプラグインも動かせないときは画面ごと。
+    // 1 つずつの可否は読み込む側([devPreviewBlockReason])が決める。
+    if (under('/dev/wasm') && !_anyPluginAllowed) return '保護者がプラグインを止めています';
     return null;
+  }
+
+  /// プラグインを 1 つでも動かせるか(`none`・`listed` で名指しが無い、なら動かせない)。
+  bool get _anyPluginAllowed {
+    final pl = allow?.plugins;
+    if (locked) return false;
+    if (pl == null) return true;
+    return pl.ids.isNotEmpty || pl.install == ChildSafeInstall.any || pl.install == ChildSafeInstall.examples;
   }
 
   /// ページ型のプラグインを 1 つでも使えるか(ページのスロットを切っている / `none`・`listed` で名指しが無い、なら使えない)。
@@ -184,6 +210,20 @@ class ChildGate {
   }
 
   List<Post> filterPosts(List<Post> posts) => policy == null ? posts : [for (final p in posts) if (!postHidden(p)) p];
+
+  /// 本文だけ分かるもの(RASQ の通知の抜粋など)を見せないか。判定は [postHidden] と同じ (D-454)。
+  bool textHidden(String text) => policy != null && text.trim().isNotEmpty && postHidden(_textPost(text));
+
+  /// 通知の投稿を、[postHidden] なら外す(通知そのもの = 誰が何をしたかは残す。投稿を含みうるプラグインの `raw` も外す)
+  /// (D-454、セキュリティ確認 2026-10-09 の [9])。
+  List<NotificationItem> filterNotifications(List<NotificationItem> items) => policy == null
+      ? items
+      : [
+          for (final n in items)
+            n.post == null || !postHidden(n.post!)
+                ? n
+                : NotificationItem(id: n.id, account: n.account, kind: n.kind, createdAt: n.createdAt, actors: n.actors, reaction: n.reaction, read: n.read, reactionsByActor: n.reactionsByActor, title: n.title, body: n.body),
+        ];
 
   /// 投稿の詳細を開けない理由。開けるなら null。
   String? postDetailBlockReason(Post? p) {
@@ -280,6 +320,23 @@ class ChildGate {
     if (!supervised) return null;
     if (locked) return '保護者が設定を決めるまで使えません';
     return pluginAllowed(pluginId, pagePluginSlot, text: text) ? null : '保護者がこのプラグインを止めています';
+  }
+
+  /// WASM 試験画面 (dev) で動かせない理由(セキュリティ確認 2026-10-09 の [12])。動かせるなら null。**ゲストのコードを動かす前に**聞く。
+  /// [pluginId] = 配布物の目次の id(素の .wasm / 同梱のアセットは分からない = null)、[text] = 目次のマニフェストの中身。
+  /// どのスロットにも入れずに動かすので、スロットは見ない([ChildSafePluginsAllow.permitsPlugin])。
+  /// id の分からないものは、名指し / 例で決める設定(`none`・`listed`・`examples`、止める例がある)では動かさない。
+  String? devPreviewBlockReason(String? pluginId, {List<String>? text}) {
+    if (!supervised) return null;
+    if (locked) return '保護者が設定を決めるまで使えません';
+    final pl = allow?.plugins;
+    if (pluginId == null) {
+      final open = (pl == null || pl.install == ChildSafeInstall.any) && !hasDenyExamples;
+      return open ? null : '保護者が選んだプラグインだけ動かせます(この読み込み方では、どのプラグインか確かめられません)';
+    }
+    final scores = _scores(text);
+    final ok = pl == null ? !(scores?.nearDeny ?? false) : pl.permitsPlugin(pluginId, scores: scores);
+    return ok ? null : '保護者がこのプラグインを止めています';
   }
 
   /// インストールできない理由。[text] はマニフェストの中身(ストアから構成を取ったあとに、もう 1 度確かめる)。

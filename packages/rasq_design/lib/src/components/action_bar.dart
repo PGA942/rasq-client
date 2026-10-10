@@ -6,7 +6,7 @@ import '../tokens/sizes.dart';
 import '../tokens/typography.dart';
 import 'action_button.dart';
 import '../platform/media_policy.dart';
-import '../platform/web_image.dart';
+import '../platform/media_image.dart';
 
 /// One registered button of an [RasqActionBar] (L2 composite `ActionBar`).
 ///
@@ -246,5 +246,5 @@ Widget rasqIconImage(Uri url, {required double size, required IconData fallback}
         return ClipRRect(borderRadius: BorderRadius.circular(size / 4), child: Image.file(File(url.toFilePath()), width: size, height: size, fit: BoxFit.cover, errorBuilder: (_, _, _) => Icon(fallback, size: size)));
       }
       if (!policy.allows(url)) return Icon(fallback, size: size);
-      return Image.network(webHtmlElementStrategy: rasqWebImageStrategy, url.toString(), width: size, height: size, errorBuilder: (_, _, _) => Icon(fallback, size: size));
+      return Image(image: policy.imageFor(url), width: size, height: size, errorBuilder: (_, _, _) => Icon(fallback, size: size));
     });

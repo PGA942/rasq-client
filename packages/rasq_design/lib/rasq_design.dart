@@ -8,6 +8,8 @@ library;
 
 export 'src/platform/web_image.dart';
 export 'src/platform/media_policy.dart';
+export 'src/platform/media_fetch.dart' show rasqFetchMedia, RasqMediaBlocked, rasqMediaMaxRedirects, rasqMediaMaxBytes;
+export 'src/platform/media_image.dart';
 export 'src/tokens/colors.dart';
 export 'src/tokens/spacing.dart';
 export 'src/tokens/sizes.dart';

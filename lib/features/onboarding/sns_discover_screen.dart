@@ -1465,6 +1465,9 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
     final text = _input.text.trim();
     final api = ref.read(onboardingDiscoverApiProvider);
     if (text.isEmpty || _busy) return;
+    // 見守り (セキュリティ確認 2026-10-09 の [13]): 送るたびに確かめる(開いたあとに保護者が RAi を止めたら送らない)。
+    // Central の `POST /onboarding/discover/ask` は匿名の口なので、ここで塞ぐ。
+    if (!ref.read(childGateProvider).raiEnabled) return;
     setState(() {
       _turns.add(_AskTurn.user(text));
       _input.clear();
@@ -1474,6 +1477,8 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
       if (api == null) throw StateError('no central');
       final messages = [for (final t in _turns) if (!t.failed && t.body.isNotEmpty) DiscoverChatMessage(fromUser: t.fromUser, text: t.body)];
       final r = await api.ask(messages);
+      // 答えを待つあいだに止められたら、答えも出さない。
+      if (!ref.read(childGateProvider).raiEnabled) return;
       if (mounted) setState(() => _turns.add(_AskTurn.rai(r)));
     } catch (e) {
       debugPrint('discover ask: $e');
@@ -1487,6 +1492,8 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    // 見守り ([13]): 開いたあとに保護者が RAi を止めたら、入力の代わりに案内を出す(送る口は [_send] でも止める)。
+    final raiOk = ref.watch(childGateProvider).raiEnabled;
     // 見た目は RAi ホームのチャットと同じ (D-427): 質問は右の吹き出し、返事は RAi のアイコン + 枠なしの文 + 時刻、
     // 候補のタイルは返事の下。新しいものが下。入力は RAi バーと同じ形(案内やモードの切り替えは無い)。
     final rows = <Widget>[
@@ -1533,18 +1540,20 @@ class _DiscoverAskScreenState extends ConsumerState<DiscoverAskScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
-                child: RaiPromptBar(
-                  controller: _input,
-                  inputKey: const ValueKey('discover.ask.input'),
-                  sendKey: const ValueKey('discover.ask.send'),
-                  modelLabel: 'クラウド版 RAi',
-                  hint: 'どんなことが好きですか?',
-                  busy: _busy,
-                  error: _turns.isNotEmpty && _turns.last.failed,
-                  maxLength: discoverAskMaxChars,
-                  onChanged: (_) => setState(() {}),
-                  onSubmit: _send,
-                ),
+                child: !raiOk
+                    ? Text('保護者が RAi を止めています', key: const ValueKey('discover.ask.blocked'), textAlign: TextAlign.center, style: caption)
+                    : RaiPromptBar(
+                      controller: _input,
+                      inputKey: const ValueKey('discover.ask.input'),
+                      sendKey: const ValueKey('discover.ask.send'),
+                      modelLabel: 'クラウド版 RAi',
+                      hint: 'どんなことが好きですか?',
+                      busy: _busy,
+                      error: _turns.isNotEmpty && _turns.last.failed,
+                      maxLength: discoverAskMaxChars,
+                      onChanged: (_) => setState(() {}),
+                      onSubmit: _send,
+                    ),
               ),
             ]),
           ),

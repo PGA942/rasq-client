@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../tokens/spacing.dart';
 import '../tokens/typography.dart';
 import '../platform/media_policy.dart';
-import '../platform/web_image.dart';
+import '../platform/media_image.dart';
 
 /// カスタム絵文字の共通表示 (D-040)。
 ///
@@ -74,7 +74,7 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
   void _resolve() {
     final url = widget.url;
     if (url == null) return;
-    final stream = NetworkImage(url.toString(), webHtmlElementStrategy: rasqWebImageStrategy).resolve(ImageConfiguration.empty);
+    final stream = rasqMediaImage(context, url).resolve(ImageConfiguration.empty);
     final listener = ImageStreamListener((info, _) {
       // Web 版で `<img>` として読めた絵 (D-298) は、`image` を持たない(触ると例外)。そのときは実寸なしのまま(高さ固定で出る)。
       try {
@@ -111,8 +111,8 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
       // 数 px にレタボ化されて見えなくなっていた (D-041)。
       emoji = ConstrainedBox(
         constraints: BoxConstraints(maxWidth: widget.height * 3, maxHeight: widget.height),
-        child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, 
-          url.toString(),
+        child: Image(
+          image: rasqMediaImage(context, url),
           height: widget.height,
           fit: BoxFit.fitHeight,
           semanticLabel: widget.semanticLabel ?? widget.name,
@@ -123,8 +123,8 @@ class _RasqCustomEmojiState extends State<RasqCustomEmoji> {
       emoji = SizedBox(
         width: RasqCustomEmoji.displayWidth(_aspect!, widget.height),
         height: widget.height,
-        child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, 
-          url.toString(),
+        child: Image(
+          image: rasqMediaImage(context, url),
           fit: BoxFit.contain,
           semanticLabel: widget.semanticLabel ?? widget.name,
           errorBuilder: (_, _, _) => FittedBox(child: Text(widget.fallbackText)),
@@ -165,7 +165,7 @@ class _EmojiChip extends StatelessWidget {
         : SizedBox(
             width: RasqCustomEmoji.displayWidth(target._aspect ?? 1.0, chipEmojiHeight),
             height: chipEmojiHeight,
-            child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, w.url.toString(), fit: BoxFit.contain, errorBuilder: (_, _, _) => Text(w.fallbackText)),
+            child: Image(image: rasqMediaImage(target.context, w.url!), fit: BoxFit.contain, errorBuilder: (_, _, _) => Text(w.fallbackText)),
           );
     final name = Text(w.name!, style: RasqTypography.caption.copyWith(color: scheme.onInverseSurface));
     final detail = w.chipDetail?.call(context);

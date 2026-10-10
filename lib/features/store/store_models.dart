@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'plugin_scope.dart';
+
 /// プラグインストアのクライアント側モデル (M4 / D-120)。
 /// 正本は rasq-sdk-sample/openapi/store.yaml (D-033)。ワイヤ(JSON)からの
 /// 復元は各型の `fromJson` にあり、orgate-server の `/api/v1` 応答と
@@ -661,20 +663,24 @@ class InstalledInfo {
 /// 入っている版 1 つ (D-355): 検証済みの SHA-512 とチャンネル。
 @immutable
 class InstalledVersion {
-  const InstalledVersion({required this.version, required this.sha512, required this.installedAt, this.channel = 'stable'});
+  const InstalledVersion({required this.version, required this.sha512, required this.installedAt, this.channel = 'stable', this.scope});
   final String version;
   final String sha512;
   final DateTime installedAt;
   final String channel;
 
+  /// この版の配布物から読んだ、許す内容(セキュリティ確認 2026-10-09 の [8])。null = 記録より前に入れた版(分からない)。
+  final PluginScope? scope;
+
   bool get isPreview => channel != 'stable';
 
-  Map<String, Object?> toJson() => {'version': version, 'sha512': sha512, 'installedAt': installedAt.toIso8601String(), 'channel': channel};
+  Map<String, Object?> toJson() => {'version': version, 'sha512': sha512, 'installedAt': installedAt.toIso8601String(), 'channel': channel, if (scope != null) 'scope': scope!.toJson()};
   factory InstalledVersion.fromJson(Map<String, Object?> j) => InstalledVersion(
         version: j['version'] as String? ?? '',
         sha512: j['sha512'] as String? ?? '',
         installedAt: DateTime.tryParse(j['installedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
         channel: j['channel'] as String? ?? 'stable',
+        scope: j['scope'] is Map ? PluginScope.fromJson((j['scope'] as Map).cast<String, Object?>()) : null,
       );
 }
 
@@ -696,9 +702,14 @@ class InstalledPlugin {
     this.accountVersions = const {},
     this.pluginType = StorePluginType.other,
     this.requires = const [],
+    this.approvedScope,
   });
   final String id;
   final String name;
+
+  /// 利用者が最後に許可した内容(確認シートで入れた / 確かめて切り替えた版のもの。セキュリティ確認 2026-10-09 の [8])。
+  /// 自動のアップデートは、これに収まる版だけを有効にする。null = 記録より前に入れた(何も許していない扱い = 自動では有効にしない)。
+  final PluginScope? approvedScope;
 
   /// 土台にするほかのプラグインの id(配布物の `root.requires`、D-244c)。親子関係のあるものは Swing で配れない (D-424)。
   final List<String> requires;
@@ -733,7 +744,7 @@ class InstalledPlugin {
 
   InstalledVersion? versionInfo(String v) => allVersions.where((x) => x.version == v).firstOrNull;
 
-  InstalledPlugin copyWith({String? name, String? version, String? sha512, DateTime? installedAt, InstalledInfo? info, List<InstalledVersion>? versions, Map<String, String>? accountVersions, StorePluginType? pluginType, List<String>? requires}) => InstalledPlugin(
+  InstalledPlugin copyWith({String? name, String? version, String? sha512, DateTime? installedAt, InstalledInfo? info, List<InstalledVersion>? versions, Map<String, String>? accountVersions, StorePluginType? pluginType, List<String>? requires, PluginScope? approvedScope}) => InstalledPlugin(
         id: id,
         name: name ?? this.name,
         version: version ?? this.version,
@@ -744,6 +755,7 @@ class InstalledPlugin {
         accountVersions: accountVersions ?? this.accountVersions,
         pluginType: pluginType ?? this.pluginType,
         requires: requires ?? this.requires,
+        approvedScope: approvedScope ?? this.approvedScope,
       );
 
   Map<String, Object?> toJson() => {
@@ -757,6 +769,7 @@ class InstalledPlugin {
         if (accountVersions.isNotEmpty) 'accountVersions': accountVersions,
         if (pluginType != StorePluginType.other) 'pluginType': pluginType.wire,
         if (requires.isNotEmpty) 'requires': requires,
+        if (approvedScope != null) 'approvedScope': approvedScope!.toJson(),
       };
   factory InstalledPlugin.fromJson(Map<String, Object?> j) => InstalledPlugin(
         id: j['id'] as String,
@@ -769,6 +782,7 @@ class InstalledPlugin {
         accountVersions: {for (final e in ((j['accountVersions'] as Map?) ?? const {}).entries) '${e.key}': '${e.value}'},
         pluginType: StorePluginType.fromWire(j['pluginType']),
         requires: [for (final r in j['requires'] as List? ?? const []) if (r is String) r],
+        approvedScope: j['approvedScope'] is Map ? PluginScope.fromJson((j['approvedScope'] as Map).cast<String, Object?>()) : null,
       );
 }
 

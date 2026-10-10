@@ -12,10 +12,19 @@ Widget wrap(Widget child) => MaterialApp(
       home: Scaffold(body: SingleChildScrollView(child: SizedBox(width: 400, child: child))),
     );
 
-/// 木の下で作られた NetworkImage の URL(= ホストが送ろうとする通信)。
+/// 木の下で作られた NetworkImage / RasqPolicyNetworkImage の URL(= ホストが送ろうとする通信)。
 List<String> networkUrls(WidgetTester tester) => [
       for (final img in tester.widgetList<Image>(find.byType(Image)))
-        if (img.image case final NetworkImage n) n.url,
+        if (img.image case final NetworkImage n)
+          n.url
+        else if (img.image case final RasqPolicyNetworkImage n)
+          n.url.toString(),
+    ];
+
+/// リダイレクトを各ホップで確かめる読み方 (セキュリティ確認 2026-10-09 の [11]) の URL。
+List<String> policedUrls(WidgetTester tester) => [
+      for (final img in tester.widgetList<Image>(find.byType(Image)))
+        if (img.image case final RasqPolicyNetworkImage n) n.url.toString(),
     ];
 
 const _draft = 'まだ投稿していない下書き';
@@ -122,6 +131,8 @@ void main() {
     await tester.pumpWidget(wrap(RrlRenderer(node: node, host: hostWith(policy))));
     await tester.pump();
     expect(networkUrls(tester), unorderedEquals(['https://cdn.allowed.example/ok.png', 'https://cdn.allowed.example/a.png']));
+    // プラグインが選んだ URL は、リダイレクトの各ホップを方針で確かめる読み方で読む(ふつうの NetworkImage にしない)。
+    expect(policedUrls(tester), unorderedEquals(['https://cdn.allowed.example/ok.png', 'https://cdn.allowed.example/a.png']));
   });
 
   testWidgets('ホストが渡した URL(allowedUrls、完全一致)だけは読む', (tester) async {
@@ -144,12 +155,14 @@ void main() {
     await tester.pumpWidget(wrap(RrlRenderer(node: node, host: hostWith(const RasqMediaPolicy.plugin(allowedUrls: {given})))));
     await tester.pump();
     expect(networkUrls(tester), [given]);
+    expect(policedUrls(tester), isEmpty); // ホストが渡した URL はこれまでどおり
   });
 
   testWidgets('ホストの見本(unrestricted)は従来どおり読む', (tester) async {
     await tester.pumpWidget(wrap(RrlRenderer(node: exfilTree(), host: hostWith(RasqMediaPolicy.unrestricted))));
     await tester.pump();
     expect(networkUrls(tester), contains(_exfil));
+    expect(policedUrls(tester), isEmpty);
   });
 
   test('RasqMediaPolicy.allows: スキームと接続先', () {

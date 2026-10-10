@@ -17,11 +17,13 @@ import '../../app/router.dart' show Routes;
 import '../../shell/headers.dart';
 import '../../shell/third_column.dart';
 import '../../text/inline_spans.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/post_row.dart';
 import '../plugins/sideload_trust.dart';
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart';
 import '../store/store_providers.dart' show bundledSnsPluginIds, installedPluginsProvider;
+import '../trend/example_match.dart' show pluginExamplePieces;
 import 'review_import.dart';
 
 /// WASM プラグイン試験画面 (dev)。misskey-wasm-sample(rasq-sdk-sample で
@@ -38,6 +40,9 @@ import 'review_import.dart';
 ///
 /// 読み込んだものに与える権限は [devScreenGrantFor] (D-308): debug ビルドだけ全権限、release では
 /// スロット登録と同じ [SideloadTrust](自分の鍵で署名した `.rasqpkg` = フル、ほか = 制限モード)。
+///
+/// 見守り中は、動かす前に保護者のプラグインの制限([ChildGate.devPreviewBlockReason])を確かめ、
+/// 動かしている間に止められたら閉じる(セキュリティ確認 2026-10-09 の [12])。
 class WasmPluginScreen extends ConsumerStatefulWidget {
   const WasmPluginScreen({super.key, this.wasmBytesOverride, this.envOverride, this.initialUrl});
 
@@ -194,7 +199,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       _lastSource = 'asset:$asset';
       // アプリ同梱のアセットはアプリと同じ信頼 = フル (D-308)。rootBundle から読んだものだけ(試験の差し替えのバイト列は制限モード)。
       final trust = widget.wasmBytesOverride == null ? SideloadTrust.bundled : SideloadTrust.restricted;
-      await _start(bytes, trust: trust);
+      await _start(bytes, trust: trust, pluginId: null);
     } catch (e) {
       setState(() => _loadError = 'アセットの読み込みに失敗: $e');
     }
@@ -221,6 +226,9 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
       _lastBytes = bytes;
       _lastSource = file.path;
       String? note;
+      // 見守りの関所 ([12]) に渡す中身: .rasqpkg は目次の id とマニフェスト、素の .wasm は分からない(null)。
+      String? pluginId;
+      List<String>? text;
       // 段 (D-306 / D-308) は展開する前の配布物と隣の .sig.json で決める(スロット登録と同じ sideloadTrustOfContainer)。
       final trust = await sideloadTrustOfContainer(file.path, bytes, ownFingerprints: ref.read(ownDevKeyFingerprintsProvider));
       // サイドロード (WF P-23): .rasqpkg は展開・検証して、root(SNS プラグインなら最初の子)を読み込む。
@@ -235,20 +243,33 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
             '${signed != null ? '開発者鍵の署名 OK(指紋 $signed)。ストアの審査は通っていません' : '署名なし(.sig.json がありません)。出どころを確かめられません'}。'
             'スロットに登録すると${trust.isFull ? 'フル機能(自分の鍵の署名)' : '制限モード(自分の鍵の署名ではないため、通信 / GPU / storage.unsafe / interstitial・system の FOW / 共有・コンポーザー・ミュート・URL を開く関数は閉)'}';
         bytes = target.wasm;
+        pluginId = target.id;
+        final m = target.manifest;
+        text = pluginExamplePieces(name: '${m['name'] ?? target.id}', description: '${m['description'] ?? ''}', slots: [for (final x in (m['slots'] as List? ?? const [])) '$x']);
         final have = {...bundledSnsPluginIds, for (final p in ref.read(installedPluginsProvider)) p.id};
         _parents = [for (final r in pkg.requires) (id: r.id, version: r.version, installed: have.contains(r.id))];
       } else {
         _parents = const [];
       }
-      await _start(bytes, trust: trust);
+      await _start(bytes, trust: trust, pluginId: pluginId, text: text);
       if (mounted) setState(() => _pkgNote = note);
     } catch (e) {
       setState(() => _loadError = '$raw の読み込みに失敗(絶対パスか ~/ 始まりで指定してください): $e');
     }
   }
 
-  Future<void> _start(Uint8List bytes, {required SideloadTrust trust}) async {
+  /// いま動かしているものの中身(見守りの関所 [12] の判定に使う。止められたら閉じる)。
+  ({String? id, List<String>? text})? _previewIdentity;
+
+  Future<void> _start(Uint8List bytes, {required SideloadTrust trust, required String? pluginId, List<String>? text}) async {
     _disposeController();
+    // 見守り ([12]): 保護者のプラグインの制限を、ゲストのコードを動かす前に(スロット登録を押さなくても)。
+    if (ref.read(childGateProvider).devPreviewBlockReason(pluginId, text: text) case final blocked?) {
+      _grant = null;
+      if (mounted) setState(() => _loadError = blocked);
+      return;
+    }
+    _previewIdentity = (id: pluginId, text: text);
     final grant = devScreenGrantFor(debug: kDebugMode, trust: trust);
     _grant = grant;
     if (widget.envOverride != null) {
@@ -373,6 +394,23 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
     if (c is WasmPluginController) c.dispose();
     if (c is AsyncWasmPluginController) c.dispose();
     _controller = null;
+    _previewIdentity = null;
+    _boundaryPosts = null;
+    _boundarySession = null;
+    _boundaryNote = null;
+  }
+
+  /// 動かしている間に保護者が止めたら閉じる ([12])。
+  void _onChildGateChanged() {
+    final id = _previewIdentity;
+    if (_controller == null || id == null) return;
+    final blocked = ref.read(childGateProvider).devPreviewBlockReason(id.id, text: id.text);
+    if (blocked == null) return;
+    setState(() {
+      _disposeController();
+      _grant = null;
+      _loadError = blocked;
+    });
   }
 
   Future<void> _invoke(String fn, Map<String, Object?> args) async {
@@ -401,6 +439,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    ref.listen(childGateProvider, (_, _) => _onChildGateChanged());
     final controller = _controller;
     return Scaffold(
       appBar: const RasqPageHeader(title: 'WASMプラグイン試験 (dev)'),
@@ -548,7 +587,7 @@ class _WasmPluginScreenState extends ConsumerState<WasmPluginScreen> {
                   ],
                 ])
               : controller == null
-                  ? const RasqLoading()
+                  ? (_loadError != null && _grant == null ? const SizedBox.shrink() : const RasqLoading())
                   : SingleChildScrollView(
                       child: WasmPluginView(controller: controller, rslParser: InlineSpans.parse),
                     ),

@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 
 import 'image_scale.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
+import '../../backend/limited_http.dart';
 import '../home/plugin_actions.dart';
 import '../home/material_icons.dart';
 import '../home/post_row.dart';
@@ -21,11 +21,19 @@ import '../plugins/slot_plugins.dart';
 /// (`ProfileImageViewerScreen`)で同じ流れ: 画像本体を(長辺 1024 に縮めて)プラグインへ渡し、
 /// 重ねる RRL(座標は渡した画素数)をもらって [wrap] で画像の上に描く。
 /// 所有する State の `ref` を借り、State の dispose で [dispose] を呼ぶ。
-/// 画像本体の取得(テストで差し替える)。200 以外 / 失敗は null。
+/// 画像本体の取得(テストで差し替える)。200 以外 / 失敗 / [viewerImageMaxBytes] 超は null。
+/// 本文は上限までしか読まない(超えたら読むのをやめて通信を切る、セキュリティ確認 2026-10-09 の [18])。
 final viewerImageFetcherProvider = Provider<Future<Uint8List?> Function(Uri url)>((ref) => (url) async {
-      final res = await http.get(url).timeout(const Duration(seconds: 15));
-      return res.statusCode == 200 ? res.bodyBytes : null;
+      try {
+        final res = await getLimited(url, maxBytes: viewerImageMaxBytes, timeout: const Duration(seconds: 15));
+        return res.statusCode == 200 ? res.bodyBytes : null;
+      } on ResponseTooLargeException {
+        return null;
+      }
     });
+
+/// 全画面表示プラグインへ渡す画像本体の上限(Web 版プラグインの net.fetch の本文と同じ 32 MiB、D-453)。
+const viewerImageMaxBytes = 32 * 1024 * 1024;
 
 /// 全画面表示プラグインの ON / OFF (D-205 → D-207 → D-305): 全画面のアクションバーのトグルで切り替える。
 /// 契約 v0.14 §2.4 / §2.11(temp): 切り替えた値は**その全画面限り**で永続しない([ViewerPluginOverlays] が面ローカルに持つ)。

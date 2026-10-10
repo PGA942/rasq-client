@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:rasq_models/rasq_models.dart';
 
+import '../features/child_safe/child_gate.dart';
+import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
 import 'orgate_client.dart';
 import 'rasq_account.dart';
 
@@ -526,10 +528,13 @@ class RasqAccountPost {
 /// 投稿 1 つと、その前後(`GET /posts/{id}`)。
 @immutable
 class RasqThread {
-  const RasqThread({required this.post, this.parent, this.replies = const []});
+  const RasqThread({required this.post, this.parent, this.replies = const [], this.parentHidden = false});
   final RasqAccountPost post;
   final RasqAccountPost? parent;
   final List<RasqAccountPost> replies;
+
+  /// 元の投稿を、保護者の表示制限で外したか([parent] は null。「削除されています」とは出さない)。
+  final bool parentHidden;
 }
 
 /// 誰が、いつ(キュー / リブロードの 1 件。S-030)。
@@ -919,8 +924,10 @@ final currentBundleLinksProvider = FutureProvider.autoDispose<List<RasqSnsLink>>
 final rasqAccountPageProvider = FutureProvider.autoDispose.family<({RasqPublicProfile profile, RasqPostList posts}), String>((ref, handle) async {
   final api = ref.watch(rasqAccountPageApiProvider);
   if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
+  // チャイルドセーフ (D-454、[9]): ページの投稿 / 固定 / メディアにも、ホームと同じ保護者の表示制限を掛ける。
+  final gate = ref.watch(childGateProvider);
   final (profile, posts) = await (api.profile(handle), api.posts(handle)).wait;
-  return (profile: profile, posts: posts);
+  return (profile: profile, posts: childSafeRasqPostList(gate, posts));
 });
 
 /// [rasqSnsOwnerProvider] の控え。同じプロフィールを行き来するたびに Central へ聞き直さない(10 分)。
@@ -968,11 +975,48 @@ final rasqFeedPostsProvider = NotifierProvider<RasqFeedPosts, Map<String, RasqAc
 final rasqThreadProvider = FutureProvider.autoDispose.family<RasqThread, String>((ref, id) async {
   final api = ref.watch(rasqAccountPageApiProvider);
   if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
-  return api.thread(id);
+  // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): 元の投稿 / 返信にも、ホームと同じ保護者の表示制限を掛ける
+  // (RASQ の詳細 / リアクション画面 / Swing の返信の共有の口)。この投稿そのものは、開く側が postDetailBlockReason で決める。
+  final gate = ref.watch(childGateProvider);
+  return childSafeRasqThread(gate, await api.thread(id));
 });
 
 final rasqPostReactionsProvider = FutureProvider.autoDispose.family<RasqPostReactions, String>((ref, id) async {
   final api = ref.watch(rasqAccountPageApiProvider);
   if (api == null) throw StateError('RASQ サーバーの接続先が未設定です');
-  return api.reactions(id);
+  // チャイルドセーフ (D-454、[9]): 引用した投稿にも同じ制限。
+  final gate = ref.watch(childGateProvider);
+  return childSafeRasqReactions(gate, await api.reactions(id));
 });
+
+// ── チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]) ──
+// RASQ の投稿も、SNS の投稿の形 ([RasqAccountPost.toPost]) にして [ChildGate.postHidden] で決める(ホームと同じ判定)。
+
+/// この RASQ の投稿を見せないか。引用した元の投稿はタイルの中にそのまま出るので、元が見せないものなら、この投稿ごと外す。
+bool rasqPostHidden(ChildGate gate, RasqAccountPost p) => gate.postHidden(p.toPost()) || (p.quote != null && gate.postHidden(p.quote!.toPost()));
+
+/// 開いてよい RASQ の投稿の詳細か(見守りの時間に詳細を開かせない設定 / 見せない投稿)。開けるなら null。[p] が null = まだ読んでいない。
+String? rasqPostDetailBlockReason(ChildGate gate, RasqAccountPost? p) =>
+    gate.postDetailBlockReason(null) ?? (p != null && rasqPostHidden(gate, p) ? 'この投稿は表示できません' : null);
+
+List<RasqAccountPost> childSafeRasqPosts(ChildGate gate, List<RasqAccountPost> posts) => gate.policy == null ? posts : [for (final p in posts) if (!rasqPostHidden(gate, p)) p];
+
+RasqThread childSafeRasqThread(ChildGate gate, RasqThread t) {
+  if (gate.policy == null) return t;
+  final parentHidden = t.parent != null && rasqPostHidden(gate, t.parent!);
+  return RasqThread(post: t.post, parent: parentHidden ? null : t.parent, replies: childSafeRasqPosts(gate, t.replies), parentHidden: parentHidden);
+}
+
+RasqPostReactions childSafeRasqReactions(ChildGate gate, RasqPostReactions r) =>
+    gate.policy == null ? r : RasqPostReactions(queues: r.queues, rebroads: r.rebroads, quotes: childSafeRasqPosts(gate, r.quotes));
+
+/// アカウントページの投稿(RASQ / SNS の投稿の両方。固定もこの中から引くので、固定した投稿も外れる)。メディアのタブもこれを使う。
+RasqPostList childSafeRasqPostList(ChildGate gate, RasqPostList l) => gate.policy == null
+    ? l
+    : RasqPostList(
+        posts: childSafeRasqPosts(gate, l.posts),
+        snsPosts: [for (final p in l.snsPosts) if (!gate.postHidden(p.toPost())) p],
+        pins: l.pins,
+        limit: l.limit,
+        source: l.source,
+      );

@@ -3,7 +3,7 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../tokens/colors.dart';
 import '../platform/media_policy.dart';
-import '../platform/web_image.dart';
+import '../platform/media_image.dart';
 
 /// Server icon + label shown after `@username` in every user row
 /// (ワイヤーフレーム: `@username ● BlueSky`)。
@@ -50,8 +50,8 @@ class RasqSnsPill extends StatelessWidget {
                 ? dot
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(dotSize * 0.25),
-                    child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, 
-                      url.toString(),
+                    child: Image(
+                      image: rasqMediaImage(context, url),
                       width: dotSize,
                       height: dotSize,
                       fit: BoxFit.cover,

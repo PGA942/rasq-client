@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rrl_core/rrl_core.dart';
 
+import 'budget.dart';
 import 'geometry.dart';
 import 'registry.dart';
 
@@ -22,6 +23,7 @@ class RrlHost {
     this.components = const {},
     this.geometry,
     this.mediaPolicy = RasqMediaPolicy.localOnly,
+    this.budget = RrlBudget.standard,
   });
 
   /// `pluginId:accountKey:pluginVersion:instanceId` — prefixed to explicit
@@ -56,6 +58,9 @@ class RrlHost {
   /// [RasqMediaPolicy.unrestricted] を渡してよい。`Image` / `Avatar` / `MediaGrid` / `ActionBar` のアイコンなど、
   /// 木の下で URL を読む部品はすべて [RasqMediaPolicyScope] 経由でこれに従う。
   final RasqMediaPolicy mediaPolicy;
+
+  /// 1 つの木で組んでよい量 (セキュリティ確認 2026-10-09 の [4])。超える木は描かずに箱だけ出す([RrlRenderer])。
+  final RrlBudget budget;
 
   String nodeId(RrlNode node, RrlScope scope) => '$instanceScope:${scope.resolveTemplate(node.k ?? '#${node.t}')}';
 

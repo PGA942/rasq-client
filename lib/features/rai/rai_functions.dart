@@ -402,6 +402,13 @@ class RaiFunctionRunner {
     return s;
   }
 
+  /// チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): 関数で取った投稿にも、ホームと同じ保護者の表示制限を掛ける
+  /// (見せない投稿は、モデルにも答えにも渡さない)。見守られていなければ素通し。
+  List<Post> _shown(List<Post> posts) => ref.read(childGateProvider).filterPosts(posts);
+
+  /// 投稿 1 件 / スレッドを読ませない理由(見せない投稿 / 見守りの時間に詳細を開かせない設定。画面の詳細と同じ)。読めるなら null。
+  String? _detailBlocked(Post p) => ref.read(childGateProvider).postDetailBlockReason(p);
+
   static String _line(Post p) {
     final body = p.body.replaceAll(RegExp(r'\s+'), ' ').trim();
     final n = p.reactions.values.fold(0, (a, b) => a + b);
@@ -416,7 +423,7 @@ class RaiFunctionRunner {
     final limit = int.tryParse(c.arg('limit', '5')) ?? 5;
     final kind = c.arg('kind', 'home');
     final page = kind == 'search' && keyword.isNotEmpty ? await s.searchPosts(keyword, limit: 30) : await s.timeline(TimelineKind.home, limit: 30);
-    var posts = [for (final p in page.items) if (keyword.isEmpty || p.body.contains(keyword) || p.author.displayName.contains(keyword)) p];
+    var posts = [for (final p in _shown(page.items)) if (keyword.isEmpty || p.body.contains(keyword) || p.author.displayName.contains(keyword)) p];
     if (c.arg('sort') == 'reactions') {
       posts.sort((a, b) => b.reactions.values.fold(0, (x, y) => x + y).compareTo(a.reactions.values.fold(0, (x, y) => x + y)));
     }
@@ -526,9 +533,11 @@ class RaiFunctionRunner {
   /// timeline.list(kind, limit): TL を取る (D-223)。
   Future<RaiFunctionResult> _timelineList(RaiFunctionCall c) => raiGuard(c.name, () async {
         final kindArg = c.arg('kind', 'home').trim();
+        // 見守り (セキュリティ確認 2026-10-09 の [21]): DM / チャットの TL(dm: / chat:)は、dm.* の関数と同じく DM を止めていれば取らない。
+        if (ref.read(childGateProvider).timelineKindBlockReason(kindArg) case final blocked?) return RaiFunctionResult(name: c.name, text: blocked, ok: false);
         final limit = _limitOf(c);
         final page = await _session().timeline(_timelineKindOf(kindArg), limit: limit);
-        final lines = [for (final p in page.items.take(limit)) _line(p)];
+        final lines = [for (final p in _shown(page.items).take(limit)) _line(p)];
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'TL($kindArg)'), budget), fetched: true);
       });
 
@@ -537,6 +546,8 @@ class RaiFunctionRunner {
         final id = c.arg('id').trim();
         if (id.isEmpty) return RaiFunctionResult(name: c.name, text: '投稿 id (id=) がありません', ok: false);
         final p = await _session().post(id);
+        final blocked = _detailBlocked(p);
+        if (blocked != null) return RaiFunctionResult(name: c.name, text: blocked, ok: false);
         return RaiFunctionResult(name: c.name, text: raiTruncate(_line(p), budget), fetched: true);
       });
 
@@ -546,7 +557,9 @@ class RaiFunctionRunner {
         if (id.isEmpty) return RaiFunctionResult(name: c.name, text: '投稿 id (post=) がありません', ok: false);
         final limit = _limitOf(c);
         final t = await _session().thread(id);
-        final lines = [_line(t.post), for (final p in t.descendants.take(limit)) '返信: ${_line(p)}'];
+        final blocked = _detailBlocked(t.post);
+        if (blocked != null) return RaiFunctionResult(name: c.name, text: blocked, ok: false);
+        final lines = [_line(t.post), for (final p in _shown(t.descendants).take(limit)) '返信: ${_line(p)}'];
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'スレッド'), budget), fetched: true);
       });
 
@@ -577,21 +590,21 @@ class RaiFunctionRunner {
         final id = c.arg('post').trim();
         if (id.isEmpty) return RaiFunctionResult(name: c.name, text: '投稿 id (post=) がありません', ok: false);
         final page = await _session().quotes(id, limit: _limitOf(c));
-        final lines = [for (final p in page.items) _line(p)];
+        final lines = [for (final p in _shown(page.items)) _line(p)];
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: '引用'), budget), fetched: true);
       });
 
   /// favorites.list(limit): ブックマーク/お気に入りを取る (D-223)。
   Future<RaiFunctionResult> _favoritesList(RaiFunctionCall c) => raiGuard(c.name, () async {
         final page = await _session().favorites(limit: _limitOf(c));
-        final lines = [for (final p in page.items) _line(p)];
+        final lines = [for (final p in _shown(page.items)) _line(p)];
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'お気に入り'), budget), fetched: true);
       });
 
   /// reacted.list(limit): 自分がリアクションした投稿を取る (D-223)。
   Future<RaiFunctionResult> _reactedList(RaiFunctionCall c) => raiGuard(c.name, () async {
         final page = await _session().reactedPosts(limit: _limitOf(c));
-        final lines = [for (final p in page.items) _line(p)];
+        final lines = [for (final p in _shown(page.items)) _line(p)];
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'リアクション済み'), budget), fetched: true);
       });
 
@@ -634,7 +647,7 @@ class RaiFunctionRunner {
           filter = UserPostsFilter.posts;
         }
         final page = await _session().userPosts(id, limit: _limitOf(c), filter: filter);
-        final lines = [for (final p in page.items) _line(p)];
+        final lines = [for (final p in _shown(page.items)) _line(p)];
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: '投稿($filterArg)'), budget), fetched: true);
       });
 
@@ -752,7 +765,7 @@ class RaiFunctionRunner {
         final id = c.arg('clip').trim();
         if (id.isEmpty) return RaiFunctionResult(name: c.name, text: 'clip id (clip=) がありません', ok: false);
         final page = await _session().clipNotes(id, limit: _limitOf(c));
-        final lines = [for (final p in page.items) _line(p)];
+        final lines = [for (final p in _shown(page.items)) _line(p)];
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: 'クリップの中身'), budget), fetched: true);
       });
 
@@ -1053,7 +1066,7 @@ class RaiFunctionRunner {
         if (loc.startsWith('/feeds/')) {
           final uri = Uri.decodeComponent(loc.substring('/feeds/'.length).split('?').first);
           final page = await _session().timeline(TimelineKind('feed:$uri', 'フィード'), limit: 20);
-          lines = [for (final p in page.items) if (keep(p.body)) _line(p)];
+          lines = [for (final p in _shown(page.items)) if (keep(p.body)) _line(p)];
           head = 'フィード TL';
         } else if (loc.startsWith(Routes.lists)) {
           final lists = await ref.read(listsProvider.future);
@@ -1066,7 +1079,7 @@ class RaiFunctionRunner {
           head = 'リストページ';
         } else if (loc.startsWith(Routes.notifications)) {
           final page = await _session().notifications();
-          lines = [for (final n in page.items) if (keep('${n.kind.name} ${n.post?.body ?? ''}')) '${n.kind.name}: ${n.actors.map((a) => '@${a.handle}').join(', ')}${n.post == null ? '' : ' — ${raiTruncate(n.post!.body, 60)}'}'];
+          lines = [for (final n in ref.read(childGateProvider).filterNotifications(page.items)) if (keep('${n.kind.name} ${n.post?.body ?? ''}')) '${n.kind.name}: ${n.actors.map((a) => '@${a.handle}').join(', ')}${n.post == null ? '' : ' — ${raiTruncate(n.post!.body, 60)}'}'];
           head = '通知';
         } else if (loc.startsWith(Routes.dm)) {
           final rooms = await _session().dmRooms();
@@ -1075,7 +1088,7 @@ class RaiFunctionRunner {
         } else {
           final st = ref.read(timelineProvider(TimelineKind.home)).value;
           final posts = st?.posts ?? (await _session().timeline(TimelineKind.home, limit: 20)).items;
-          lines = [for (final p in posts) if (keep(p.body)) _line(p)];
+          lines = [for (final p in _shown(posts)) if (keep(p.body)) _line(p)];
           head = 'ホーム TL';
         }
         return RaiFunctionResult(name: c.name, text: raiTruncate(raiFoldLines(lines, budget, head: '$head($loc)'), budget), fetched: true, items: items);
@@ -1097,9 +1110,9 @@ class RaiFunctionRunner {
           label = source.substring(5).split('/').last;
         }
         final kind = source.startsWith('feed:') ? TimelineKind(source, label) : _timelineKindOf(source);
-        final page = await s.timeline(kind, limit: 40);
-        if (page.items.isEmpty) return RaiFunctionResult(name: c.name, text: '「$label」に投稿が無いので特徴語を取れません', ok: false);
-        final topics = topicsOf(page.items, top: 4);
+        final items = _shown((await s.timeline(kind, limit: 40)).items);
+        if (items.isEmpty) return RaiFunctionResult(name: c.name, text: '「$label」に投稿が無いので特徴語を取れません', ok: false);
+        final topics = topicsOf(items, top: 4);
         final words = <String>{for (final t in topics) ...t.genres.take(3)}.take(8).toList();
         if (words.isEmpty) return RaiFunctionResult(name: c.name, text: '「$label」から特徴語を取れませんでした', ok: false);
         final profile = await ref.read(tendencyProfileProvider.future);

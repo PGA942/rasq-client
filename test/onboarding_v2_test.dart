@@ -16,6 +16,9 @@ import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/onboarding_discover_api.dart' show discoverFramesMax, discoverFramesMaxTotalBytes;
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart' show orgateTokenHolderProvider;
+import 'package:rasq_client/features/child_safe/child_gate.dart';
+import 'package:rasq_client/features/child_safe/child_safe_policy.dart';
+import 'package:rasq_client/features/child_safe/child_safe_providers.dart' show childGateProvider;
 import 'package:rasq_client/features/child_safe/child_safe_screens.dart' show ChildLoginScreen;
 import 'package:rasq_client/features/collections/rasq_collection_screen.dart';
 import 'package:rasq_client/features/login/sns_login_screen.dart';
@@ -460,6 +463,38 @@ void main() {
       await tester.pumpAndSettle();
       expect([for (final m in central.askMessages.last) m['role']], ['user', 'assistant', 'user']);
       expect(central.askMessages.last.first['text'], '猫の写真が好き');
+    });
+
+    testWidgets('RAi に聞く (セキュリティ確認 2026-10-09 の [13]): 開いたあとに保護者が RAi を止めたら、続けて送れない / 止めていれば開けない', (tester) async {
+      ChildGate kid({required bool rai}) => ChildGate(
+            state: ChildSafeState(managed: true, state: 'active', policy: ChildSafePolicy(allow: ChildSafeAllow(rai: ChildSafeRaiAllow(enabled: rai, groups: const ['rai.web'])))),
+            now: DateTime(2026, 10, 9, 12),
+          );
+      final gate = NotifierProvider<_Gate, ChildGate>(() => _Gate(kid(rai: true)));
+      final central = _FakeCentral();
+      final c = await openDiscover(tester, central, sub: Routes.snsDiscoverAsk, overrides: [childGateProvider.overrideWith((ref) => ref.watch(gate))]);
+      expect(find.byType(DiscoverAskScreen), findsOneWidget);
+      await tester.enterText(find.byKey(const ValueKey('discover.ask.input')), '猫の写真が好き');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('discover.ask.send')));
+      await tester.pumpAndSettle();
+      expect(central.askMessages, hasLength(1));
+
+      // 開いたまま止める: 入力の代わりに案内(画面ごと閉じても可)、送る口も通らない。
+      final state = tester.state(find.byType(DiscoverAskScreen));
+      c.read(gate.notifier).set(kid(rai: false));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('discover.ask.input')), findsNothing);
+      if (state.mounted) expect(find.byKey(const ValueKey('discover.ask.blocked')), findsOneWidget);
+      expect(central.askMessages, hasLength(1), reason: '止めたあとは送らない');
+
+      // 止めていれば、ルートからも開けない。
+      expect(kid(rai: false).routeBlockReason(Routes.snsDiscoverAsk), isNotNull);
+      expect(kid(rai: true).routeBlockReason(Routes.snsDiscoverAsk), isNull);
+      expect(kid(rai: false).routeBlockReason(Routes.snsDiscoverContent), isNull);
+      c.read(routerProvider).push(Routes.snsDiscoverAsk);
+      await tester.pumpAndSettle();
+      expect(find.byType(DiscoverAskScreen), findsNothing);
     });
   });
 
@@ -1279,4 +1314,13 @@ Future<ProviderContainer> _pump(WidgetTester tester, _FakeCentral central, {Size
   ));
   await tester.pumpAndSettle();
   return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+}
+
+/// テストの中で保護者の制限を変えられるように。
+class _Gate extends Notifier<ChildGate> {
+  _Gate(this.initial);
+  final ChildGate initial;
+  @override
+  ChildGate build() => initial;
+  void set(ChildGate g) => state = g;
 }

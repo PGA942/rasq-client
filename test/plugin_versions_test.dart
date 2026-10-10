@@ -12,6 +12,7 @@ import 'package:rasq_client/backend/orgate_client.dart' show OrgateException;
 import 'package:rasq_client/backend/payments_api.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart';
+import 'package:rasq_client/features/store/plugin_scope.dart';
 import 'package:rasq_client/features/store/plugin_updates.dart';
 import 'package:rasq_client/features/store/rasqpkg.dart';
 import 'package:rasq_client/features/store/store_client.dart';
@@ -60,7 +61,9 @@ class _TwoVersionStore extends FakeStoreClient {
     if (pluginId != id) return super.manifest(pluginId, version: version);
     final v = version ?? '0.2.0';
     final b = bytesOf(v);
-    return InstallManifest(pluginId: id, version: v, manifest: const {'id': id, 'name': 'Unicode 昇順 TL', 'kind': 'view'}, artifacts: [StoreArtifact(id: 'bundle', sizeBytes: b.length, sha512: sha512.convert(b).toString())]);
+    // 権限が増える版は、構成(マニフェスト)そのものに network と接続先が載る。
+    final adds = latestAddsPermission && v == '0.2.0';
+    return InstallManifest(pluginId: id, version: v, manifest: {'id': id, 'name': 'Unicode 昇順 TL', 'kind': 'view', if (adds) 'permissions': const ['network'], if (adds) 'network': const {'hosts': ['api.example.com']}}, artifacts: [StoreArtifact(id: 'bundle', sizeBytes: b.length, sha512: sha512.convert(b).toString())]);
   }
   @override
   Future<Uint8List> downloadArtifact(String pluginId, String artifactId, {String? version}) async => pluginId == id ? bytesOf(version ?? '0.2.0') : super.downloadArtifact(pluginId, artifactId, version: version);
@@ -181,26 +184,34 @@ void main() {
     // 権限が増える版: どのモードでも入れない(理由つき)。
     final c2 = container(_TwoVersionStore(latestAddsPermission: true), loader());
     await c2.read(settingsAreaProvider('store.installed').future);
-    await c2.read(installedPluginsProvider.notifier).install('sample.timeline', version: '0.1.0');
+    await c2.read(installedPluginsProvider.notifier).install('sample.timeline', version: '0.1.0', consent: const PluginConsent());
     await c2.read(settingsAreaProvider(pluginUpdateArea).notifier).set('mode.action', 'auto');
     final skipped = await runPluginUpdates(c2);
     expect(skipped.single.result, 'skipped');
-    expect(skipped.single.note, contains('network'));
+    expect(skipped.single.note, allOf(contains('権限 network'), contains('接続先 api.example.com')));
     expect(c2.read(installedPluginsProvider).single.version, '0.1.0');
+    expect(c2.read(installedPluginsProvider).single.versionInfo('0.2.0'), isNull, reason: '広がる版は保存もしない');
     // 全て手動: 何もしない。
     await c2.read(settingsAreaProvider(pluginUpdateArea).notifier).set('mode.action', 'manual');
     expect(await runPluginUpdates(c2), isEmpty);
   });
 
-  test('TERMS-09 / REC-10: リリース情報が取れなければ入れない / ストアの版が古ければ更新しない(下げない)', () async {
-    final c = container(_TwoVersionStore(releasesFail: true), loader());
+  test('TERMS-09 / REC-10: 判断は配布物の中身(リリース情報が取れなくても広がる版は入れない)/ ストアの版が古ければ更新しない(下げない)', () async {
+    // リリース情報(サーバーの差分)が取れなくても、選んだ版の構成と最後の承認を比べる(セキュリティ確認 2026-10-09 の [8])。
+    final c = container(_TwoVersionStore(releasesFail: true, latestAddsPermission: true), loader());
     await c.read(settingsAreaProvider('store.installed').future);
-    await c.read(installedPluginsProvider.notifier).install('sample.timeline', version: '0.1.0');
+    await c.read(installedPluginsProvider.notifier).install('sample.timeline', version: '0.1.0', consent: const PluginConsent());
     await c.read(settingsAreaProvider(pluginUpdateArea).notifier).set('mode.action', 'auto');
     final log = await runPluginUpdates(c);
     expect(log.single.result, 'skipped');
-    expect(log.single.note, contains('リリース情報'));
+    expect(log.single.note, contains('権限 network'));
     expect(c.read(installedPluginsProvider).single.version, '0.1.0');
+    // 広がらない版なら、リリース情報が取れなくても入れる。
+    final c1 = container(_TwoVersionStore(releasesFail: true), loader());
+    await c1.read(settingsAreaProvider('store.installed').future);
+    await c1.read(installedPluginsProvider.notifier).install('sample.timeline', version: '0.1.0', consent: const PluginConsent());
+    await c1.read(settingsAreaProvider(pluginUpdateArea).notifier).set('mode.action', 'auto');
+    expect((await runPluginUpdates(c1)).single.result, 'activated');
 
     // 入っている 0.2.0 より、ストアの現在版 0.1.0 のほうが古い: 何もしない。
     final c2 = container(_TwoVersionStore(current: '0.1.0'), loader());
@@ -384,6 +395,60 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.read(installedPluginsProvider).single.versionFor(second.account.key), '0.2.0');
     expect(c.read(installedPluginsProvider).single.versionFor(fakeSession().account.key), '0.1.0');
+  });
+
+  testWidgets('画面: 最後に許可した内容より広がる版を既定にする前に、広がるものを見せて確かめる(セキュリティ確認 2026-10-09 の [8])', (tester) async {
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    const net = PluginScope(permissions: {'network'}, hosts: {'api.example.com'});
+    final record = InstalledPlugin(
+      id: _TwoVersionStore.id,
+      name: 'Unicode 昇順 TL',
+      version: '0.1.0',
+      sha512: 'x',
+      installedAt: DateTime(2026, 9, 1),
+      approvedScope: const PluginScope(),
+      versions: [
+        InstalledVersion(version: '0.2.0', sha512: sha512.convert(_TwoVersionStore.bytesOf('0.2.0')).toString(), installedAt: DateTime(2026, 9, 2), scope: net),
+        InstalledVersion(version: '0.1.0', sha512: 'x', installedAt: DateTime(2026, 9, 1), scope: const PluginScope()),
+      ],
+      pluginType: StorePluginType.timeline,
+    );
+    final storage = MemorySessionStorage({
+      SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
+      'store.installed.v1': jsonEncode({'list': jsonEncode([record.toJson()])}),
+    });
+    await tester.pumpWidget(ProviderScope(overrides: [
+      sessionStorageProvider.overrideWithValue(storage),
+      pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+      storeClientProvider.overrideWithValue(_TwoVersionStore()),
+      slotRuntimeLoaderProvider.overrideWithValue(loader()),
+    ], child: const RasqApp()));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(routerProvider).push(Routes.storePluginVersions(_TwoVersionStore.id));
+    await tester.pumpAndSettle();
+    Future<void> pickDefault() async {
+      await tester.tap(find.byKey(const ValueKey('store.versions.menu.0.2.0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('既定の版にする'));
+      await tester.pumpAndSettle();
+    }
+
+    await pickDefault();
+    expect(find.text('Ver.0.2.0 は許可する内容が広がります'), findsOneWidget);
+    expect(find.textContaining('権限 network'), findsOneWidget);
+    expect(find.textContaining('接続先 api.example.com'), findsOneWidget);
+    await tester.tap(find.text('やめる'));
+    await tester.pumpAndSettle();
+    expect(c.read(installedPluginsProvider).single.version, '0.1.0');
+    await pickDefault();
+    await tester.tap(find.text('許可して使う'));
+    await tester.pumpAndSettle();
+    final rec = c.read(installedPluginsProvider).single;
+    expect(rec.version, '0.2.0');
+    expect(rec.approvedScope!.hosts, {'api.example.com'});
   });
 }
 

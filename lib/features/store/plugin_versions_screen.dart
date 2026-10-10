@@ -67,7 +67,10 @@ class PluginVersionsScreen extends ConsumerWidget {
                     RasqDropdownItem('既定の版にする', 'default', enabled: !isDefault),
                     RasqDropdownItem('この版を消す', 'remove', destructive: true, enabled: !record.usedVersions.contains(v.version)),
                   ]);
-                  if (pick == 'default') report(await notifier.setDefaultVersion(pluginId, v.version), '${v.version} を既定の版にしました');
+                  if (pick == 'default') {
+                    final ok = await confirmVersionScope(ref.read(overlayManagerProvider), notifier, pluginId, v.version);
+                    if (ok != null) report(await notifier.setDefaultVersion(pluginId, v.version, consent: ok.consent), '${v.version} を既定の版にしました');
+                  }
                   if (pick == 'remove') report(await notifier.removeVersion(pluginId, v.version), '${v.version} を消しました');
                 },
               ),
@@ -124,7 +127,9 @@ class PluginVersionsScreen extends ConsumerWidget {
                       for (final v in record.allVersions) RasqDropdownItem(label(v), v.version, checked: chosen == v.version),
                     ]);
                     if (pick == null) return;
-                    report(await notifier.setAccountVersion(pluginId, s.account.key, pick.isEmpty ? null : pick), pick.isEmpty ? '${s.account} は既定の版に従います' : '${s.account} は $pick を使います');
+                    final ok = pick.isEmpty ? (consent: null) : await confirmVersionScope(ref.read(overlayManagerProvider), notifier, pluginId, pick);
+                    if (ok == null) return;
+                    report(await notifier.setAccountVersion(pluginId, s.account.key, pick.isEmpty ? null : pick, consent: ok.consent), pick.isEmpty ? '${s.account} は既定の版に従います' : '${s.account} は $pick を使います');
                   },
                   child: Text(chosen ?? '既定(${record.version})'),
                 ),

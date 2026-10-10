@@ -11,7 +11,7 @@ import 'brand.dart';
 import 'buttons.dart';
 import 'sns_pill.dart';
 import '../platform/media_policy.dart';
-import '../platform/web_image.dart';
+import '../platform/media_image.dart';
 
 /// ユーザータイル（大）— ユーザーページ上部専用の独立コンポーネント
 /// (原典: UI_Elements「アイコン位置ズレ時のダメージが大きいため独立」).
@@ -80,7 +80,7 @@ class RasqUserTileLarge extends StatelessWidget {
                   child: Semantics(
                     button: onBannerTap != null,
                     label: 'バナー画像',
-                    child: Image.network(webHtmlElementStrategy: rasqWebImageStrategy, profile.bannerUrl.toString(), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
+                    child: Image(image: rasqMediaImage(context, profile.bannerUrl!), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest)),
                   ),
                 ),
         ),

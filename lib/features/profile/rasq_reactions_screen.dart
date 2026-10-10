@@ -8,6 +8,7 @@ import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account_page_api.dart';
 import '../../shell/headers.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/post_row.dart';
 import 'rasq_post_tile.dart';
 
@@ -36,6 +37,14 @@ class _RasqReactionsScreenState extends ConsumerState<RasqReactionsScreen> {
     final rx = ref.watch(rasqPostReactionsProvider(widget.postId));
     final central = ref.watch(centralBaseUrlProvider);
     final post = thread.value?.post;
+    // チャイルドセーフ (D-454、[9]): 投稿の詳細と同じく、見せない投稿 / 見守りの時間に詳細を開かせない設定なら出さない。
+    final childBlocked = rasqPostDetailBlockReason(ref.watch(childGateProvider), post);
+    if (childBlocked != null) {
+      return Scaffold(
+        appBar: const RasqPageHeader(title: 'リアクション'),
+        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: 'この投稿は表示できません', hint: childBlocked == 'この投稿は表示できません' ? '見守りの設定は保護者が決めています' : childBlocked),
+      );
+    }
     Widget tab(Widget Function(RasqPostReactions) of) => rx.when(
           loading: () => const RasqLoading(),
           error: (e, _) => _RasqLoadError(error: e),

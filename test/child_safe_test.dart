@@ -505,6 +505,72 @@ void main() {
       expect(await t.storage.read(childSafePolicyStorageKey), isNull);
     });
 
+    test('[23] 見守られた A を外したあと、設定待ちの別のアカウント B に入って出ても、A の制限は残る。A でオンラインで終わりを確かめたら外す', () async {
+      Future<String> cacheOf(MemorySessionStorage s) async => (await s.read(childSafePolicyStorageKey))!;
+      // ログアウトした端末(RASQ アカウントのトークンが無い)。
+      final loggedOut = {OrgateAccountNotifier.storageKey: jsonEncode({'deviceId': 'device-kid', 'tokens': <String, String>{}})};
+      final pendingB = {'managed': true, 'state': 'pending_setup', 'parent': {'handle': 'papa'}, 'revision': 0, 'settings': null, 'guardian': {'verified': false}};
+
+      final stA = await active();
+      final tA = setup(() => stA);
+      expect((await sync(tA.c)).policy, isNotNull);
+
+      // A からログアウト(SNS は端末に残す): 制限は残る。
+      final out1 = setup(() => null, seed: {childSafePolicyStorageKey: await cacheOf(tA.storage), ...loggedOut});
+      final s1 = await sync(out1.c);
+      expect((s1.managed, s1.accountId, s1.policy?.postsPerDay), (true, 'kid-1', 10));
+
+      // 設定待ちの B にログイン: B の設定待ち(鍵)。
+      final tB = setup(() => pendingB, seed: {childSafePolicyStorageKey: await cacheOf(out1.storage)}, accountId: 'kid-2');
+      final sB = await sync(tB.c);
+      expect((sB.managed, sB.state, sB.locked), (true, 'pending_setup', true));
+
+      // B からログアウト(設定待ちの画面の「ログアウト」): B の控えは消えるが、A の制限に戻る(修正前は全部消えて ChildGate.off)。
+      final out2 = setup(() => null, seed: {childSafePolicyStorageKey: await cacheOf(tB.storage), ...loggedOut});
+      final s2 = await sync(out2.c);
+      expect((s2.managed, s2.accountId, s2.policy?.postsPerDay), (true, 'kid-1', 10));
+      expect(out2.c.read(childGateProvider).routeBlockReason('/vc'), isNotNull);
+      expect(await out2.storage.read(childSafePolicyStorageKey), isNotNull);
+
+      // 見守られていない B / オフラインでも残る。
+      final unmanagedB = setup(() => {'managed': false, 'guardian': {'verified': false}}, seed: {childSafePolicyStorageKey: await cacheOf(out2.storage)}, accountId: 'kid-2');
+      expect((await sync(unmanagedB.c)).policy?.postsPerDay, 10);
+      final offline = setup(() => null, seed: {childSafePolicyStorageKey: await cacheOf(out2.storage)}, accountId: 'kid-2', offline: true);
+      expect((await sync(offline.c)).policy?.postsPerDay, 10);
+
+      // A でオンラインで「見守られていない」と確かめたら外す。
+      final endA = setup(() => {'managed': false, 'guardian': {'verified': false}}, seed: {childSafePolicyStorageKey: await cacheOf(out2.storage)});
+      expect((await sync(endA.c)).managed, isFalse);
+      expect(await endA.storage.read(childSafePolicyStorageKey), isNull);
+    });
+
+    test('[23] 別のアカウント B の制限で上書きしても A の制限はアカウントごとに残り、B の終わりでは消えない。A に戻れば A の控えを使う', () async {
+      Future<String> cacheOf(MemorySessionStorage s) async => (await s.read(childSafePolicyStorageKey))!;
+      final stA = await active();
+      final tA = setup(() => stA);
+      await sync(tA.c);
+
+      // B は別の保護者の(ゆるい)制限。B のあいだは B の制限。
+      final stB = await active(accountId: 'kid-2', settings: {...v2(), 'postsPerDay': 99});
+      final tB = setup(() => stB, seed: {childSafePolicyStorageKey: await cacheOf(tA.storage)}, accountId: 'kid-2');
+      final sB = await sync(tB.c);
+      expect((sB.accountId, sB.policy?.postsPerDay), ('kid-2', 99));
+      final heldB = (jsonDecode(await cacheOf(tB.storage)) as Map)['held'] as Map;
+      expect(heldB.keys, ['kid-1']);
+
+      // A に戻る(同じ端末に両方ログインしている): A の控えを戻して使う。B の制限も B のぶんとして残る。
+      final backA = setup(() => stA, seed: {childSafePolicyStorageKey: await cacheOf(tB.storage)});
+      final sA = await sync(backA.c);
+      expect((sA.accountId, sA.policy?.postsPerDay), ('kid-1', 10));
+      expect(((jsonDecode(await cacheOf(backA.storage)) as Map)['held'] as Map).keys, ['kid-2']);
+
+      // B の保護者が見守りを終えた(B でオンラインで確かめた): B のぶんだけ消え、A の制限に戻る。
+      final endB = setup(() => {'managed': false, 'guardian': {'verified': false}}, seed: {childSafePolicyStorageKey: await cacheOf(tB.storage)}, accountId: 'kid-2');
+      final sEnd = await sync(endB.c);
+      expect((sEnd.managed, sEnd.accountId, sEnd.policy?.postsPerDay), (true, 'kid-1', 10));
+      expect((jsonDecode(await cacheOf(endB.storage)) as Map).containsKey('held'), isFalse);
+    });
+
     test('1 日の報告: 終わった日の数と話題の見出しだけ(本文は送らない)', () async {
       final st = await active();
       final t = setup(() => st);

@@ -22,6 +22,10 @@ import 'child_safe_policy.dart';
 /// - **一度でも見守られた端末は、オンラインで「終わった」と確かめるまで制限を外さない**(オフライン / ログアウト / 別の
 ///   アカウントでも)。ただし保護者がまだ何も決めていない(`pending_setup` で控えも無い)ままログアウトしたら、控えを消す
 ///   (守る制限がまだ無いので)。
+/// - 控えは**見守られたアカウントごと**。別のアカウントの控えで上書きするときも、前のアカウントの守る制限(署名つきの設定)は
+///   `held` にそのアカウントのぶんとして残し、そのアカウントでオンラインで終わりを確かめるまで消さない。いまのアカウントの
+///   控えが消えたら(設定待ちのままログアウト / 終わりを確かめた)、残してあるぶんを戻して当てはめる。前は控えが 1 つだけで、
+///   設定待ちの別のアカウントへログインして出ると、前のアカウントの制限ごと消えた(セキュリティ確認 2026-10-09 の [23])。
 
 /// 端末の控え(セキュアストレージ)。
 const childSafePolicyStorageKey = 'childSafe.policy.v1';
@@ -107,13 +111,30 @@ class ChildSafeController extends AsyncNotifier<ChildSafeState> {
     );
   }
 
+  /// 控えに残してある、ほかのアカウントの守る制限(アカウント → そのアカウントの控え)。
+  static Map<String, Map<String, Object?>> _heldOf(Map<String, Object?>? c) => {
+        for (final e in ((c?['held'] as Map?) ?? const {}).entries)
+          if (e.value is Map) '${e.key}': (e.value as Map).cast<String, Object?>(),
+      };
+
+  /// [c] をいまのアカウントの控えにする(null = いまのアカウントの控えを消す)。前の控えが別のアカウントの守る制限なら
+  /// `held` に残す。いまのぶんが無くなって残してあるぶんがあれば、それをいまの控えに戻す ([23])。
   Future<void> _writeCache(Map<String, Object?>? c) async {
-    _cache = c;
+    final old = _cache;
+    final held = _heldOf(old);
+    final next = c == null ? null : ({...c}..remove('held'));
+    if (next != null && old != null && old['settings'] is Map && old['accountId'] != next['accountId']) {
+      held['${old['accountId']}'] = {...old}..remove('held');
+    }
+    if (next != null) held.remove('${next['accountId']}');
+    var cur = next ?? (held.isEmpty ? null : held.remove(held.keys.first));
+    if (cur != null && held.isNotEmpty) cur = {...cur, 'held': held};
+    _cache = cur;
     final storage = ref.read(sessionStorageProvider);
-    if (c == null) {
+    if (cur == null) {
       await storage.delete(childSafePolicyStorageKey);
     } else {
-      await storage.write(childSafePolicyStorageKey, jsonEncode(c));
+      await storage.write(childSafePolicyStorageKey, jsonEncode(cur));
     }
   }
 
@@ -142,9 +163,10 @@ class ChildSafeController extends AsyncNotifier<ChildSafeState> {
     if (!ref.mounted) return;
     if (me == null) {
       // ログアウト: 守る制限がまだ無い(設定待ち)なら控えを消す。制限があれば残す。
+      // 残してあるほかのアカウントの制限があれば、それに戻す ([23])。
       if (_cache != null && _cache!['settings'] is! Map) {
         await _writeCache(null);
-        if (ref.mounted) state = const AsyncData(ChildSafeState());
+        if (ref.mounted) state = AsyncData(await _fromCache(_cache, guardian: ChildSafeGuardianStatus.none));
       }
       return;
     }
@@ -158,13 +180,19 @@ class ChildSafeController extends AsyncNotifier<ChildSafeState> {
     }
     if (!ref.mounted) return;
     final guardian = j['guardian'] is Map ? ChildSafeGuardianStatus.fromJson((j['guardian'] as Map).cast<String, Object?>()) : ChildSafeGuardianStatus.none;
+    // このアカウントの控えを残してあれば、いまの控えに戻してから比べる(いまのぶんは、守る制限なら残る。[23])。
+    final mine = _heldOf(_cache)[me.id];
+    if (mine != null && _cache!['accountId'] != me.id) await _writeCache(mine);
+    if (!ref.mounted) return;
     final sameAccount = _cache == null || _cache!['accountId'] == me.id;
 
     if (j['managed'] != true) {
       if (sameAccount) {
-        // オンラインで「見守られていない」と確かめた = 終わった(か、はじめから)。
+        // オンラインで「見守られていない」と確かめた = 終わった(か、はじめから)。このアカウントの控えだけ消す
+        // (残してあるほかのアカウントの制限は、そのアカウントで終わりを確かめるまで当てはめる。[23])。
         if (_cache != null) await _writeCache(null);
-        state = AsyncData(ChildSafeState(guardian: guardian));
+        if (!ref.mounted) return;
+        state = AsyncData(_cache == null ? ChildSafeState(guardian: guardian) : await _fromCache(_cache, guardian: guardian));
       } else {
         // 別のアカウント: 前のアカウントの制限は、そのアカウントで終わりを確かめるまで残す。
         state = AsyncData(await _fromCache(_cache, guardian: guardian));
@@ -397,10 +425,15 @@ List<String> topicLabelsOf(String text) {
 final childSafeDailyProvider = Provider<ChildSafeDaily>((ref) => ChildSafeDaily(ref.watch(sessionStorageProvider)));
 
 /// 送る前の判定 (D-307): 見守りの制限(機能 / 1 日の上限 / 本文の強さ / 投稿の話題 (D-315。DM には当てない))。通れば null。止めたら「止めた数」を数える。
-Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDaily daily, DateTime now, {required String text, bool dm = false, bool media = false}) async {
+/// [direct] = 投稿だが公開範囲がダイレクト(ダイレクト投稿への返信など、D-047)。DM の機能も要る(本文は投稿として判定。
+/// セキュリティ確認 2026-10-09 の [19])。
+/// [sentTexts] = 実際に送る本文(正規表現の加工 (D-130) のあと、送り先ごと)。入力欄の [text] と同じ判定に通す
+/// (加工で止める内容に変えられないように。[20])。印の範囲は入力欄の本文にしか付けない。
+Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDaily daily, DateTime now,
+    {required String text, bool dm = false, bool direct = false, bool media = false, List<String> sentTexts = const []}) async {
   if (!gate.supervised) return null;
   ChildComposeVerdict? v;
-  final feature = dm ? gate.blockedMessage('dm') : (media ? gate.blockedMessage('post.media') : null);
+  final feature = (dm || direct ? gate.blockedMessage('dm') : null) ?? (!dm && media ? gate.blockedMessage('post.media') : null);
   if (gate.locked) {
     v = const ChildComposeVerdict('保護者が設定を決めるまで送れません');
   } else if (feature != null) {
@@ -409,14 +442,20 @@ Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDai
     v = ChildComposeVerdict('今日はもう ${gate.postsPerDay} 件送りました(保護者が決めた 1 日の数)。また明日');
   } else {
     v = gate.judgeText(text, dm: dm);
+    for (final t in sentTexts) {
+      if (v != null) break;
+      if (t.trim() == text.trim()) continue;
+      if (gate.judgeText(t, dm: dm) case final w?) v = ChildComposeVerdict('${w.message}(送る前の加工のあとの本文)');
+    }
   }
   if (v != null) await daily.recordBlocked(now: now);
   return v;
 }
 
 /// [childComposeVerdictFor] の画面用。
-Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String text, bool dm = false, bool media = false}) =>
-    childComposeVerdictFor(ref.read(childGateProvider), ref.read(childSafeDailyProvider), ref.read(childSafeNowProvider)(), text: text, dm: dm, media: media);
+Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String text, bool dm = false, bool direct = false, bool media = false, List<String> sentTexts = const []}) =>
+    childComposeVerdictFor(ref.read(childGateProvider), ref.read(childSafeDailyProvider), ref.read(childSafeNowProvider)(),
+        text: text, dm: dm, direct: direct, media: media, sentTexts: sentTexts);
 
 /// 送れた (D-307): 1 日の数と話題の見出しを数える(見守られていなければ何もしない)。
 Future<void> childComposeSent(WidgetRef ref, String text) async {

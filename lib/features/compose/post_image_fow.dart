@@ -12,6 +12,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
 import '../ads/export_ad.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/post_row.dart';
 import '../search/search_history.dart';
 import '../vc/astell_post_share.dart';
@@ -266,9 +267,12 @@ class _BodyState extends ConsumerState<_Body> {
       final page = tab.id == PostImageTab.astell.id ? await _astellPosts() : await fetchPostImagePage(session, tab, search: _search, cursor: reset ? null : _cursor);
       if (!mounted || gen != _generation) return;
       final ok = [for (final p in page.items) if (isPickablePost(p)) p];
+      // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): ホームと同じ保護者の表示制限を掛ける(見せない投稿は
+      // 選べない・描かない。公開範囲で外した数には数えない)。
+      final shown = ref.read(childGateProvider).filterPosts(ok);
       setState(() {
         final seen = {for (final p in _posts) p.key};
-        _posts = [..._posts, for (final p in ok) if (seen.add(p.key)) p];
+        _posts = [..._posts, for (final p in shown) if (seen.add(p.key)) p];
         _excluded += page.items.length - ok.length;
         _cursor = page.hasMore ? page.nextCursor : null;
         _loading = false;

@@ -87,8 +87,8 @@ class _PluginUpdateSettingsScreenState extends ConsumerState<PluginUpdateSetting
               ),
               const SizedBox(height: RasqSpacing.xs),
               const RasqCaption(
-                '権限が増える版と有料の版は、自動では入りません',
-                detail: '権限が増える版(増えないことを確かめられない版も)と、買っていない有料の版は、どのモードでも自動では入れません(更新ログに理由が残ります)。起動するたびに 1 回確かめます。',
+                '許可した内容が広がる版と有料の版は、自動では入りません',
+                detail: '最後に許可した内容より権限・接続先・使う場所・用途が広がる版(確かめられない版も)と、買っていない有料の版は、どのモードでも自動では使い始めません(更新ログに理由が残ります)。起動するたびに 1 回確かめます。',
                 padding: EdgeInsets.zero,
               ),
             ]),

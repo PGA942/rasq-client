@@ -16,6 +16,7 @@ import '../../app/router.dart';
 import '../../shell/headers.dart';
 import '../../shell/rasq_shell.dart';
 import '../../text/inline_spans.dart';
+import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/post_row.dart';
 import '../home/timeline_providers.dart';
 import '../users/user_list.dart';
@@ -28,9 +29,12 @@ final notificationsProvider = FutureProvider<Page<NotificationItem>>((ref) async
   ref.watch(currentAccountProvider);
   final s = ref.watch(currentSnsSessionProvider);
   if (s == null) return Page.empty();
+  // チャイルドセーフ (D-454、セキュリティ確認 2026-10-09 の [9]): 通知に付いてくる投稿(返信 / メンション / 引用の本文、
+  // リアクションされた投稿)にも、ホームと同じ保護者の表示制限を掛ける。見せない投稿は外し、通知そのものは残す。
+  final gate = ref.watch(childGateProvider);
   final page = await s.notifications(limit: 40);
   await ref.read(userListHelperProvider).primeRelationships(page.items.expand((n) => n.actors.map((a) => a.id)));
-  return page;
+  return gate.supervised ? Page(items: gate.filterNotifications(page.items), nextCursor: page.nextCursor) : page;
 });
 
 /// 未読の通知数(現在の SNS アカウント分)。RASQ アカウント FOW の左端バッジ
@@ -401,6 +405,7 @@ class _RasqNotices extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notices = ref.watch(rasqNoticesProvider);
+    final gate = ref.watch(childGateProvider);
     final scheme = Theme.of(context).colorScheme;
     return RefreshIndicator(
       onRefresh: () => ref.refresh(rasqNoticesProvider.future),
@@ -437,7 +442,8 @@ class _RasqNotices extends ConsumerWidget {
                       ),
                     ]),
                     title: n.title,
-                    subtitle: n.body,
+                    // チャイルドセーフ (D-454、[9]): 抜粋が見せない内容なら出さない(開いた先の投稿は、詳細の側で止める)。
+                    subtitle: gate.textHidden(n.body) ? null : n.body,
                     // Swing の通知 (D-424): その人の Swing のビューワーへ(招待ならプラグインのページから一緒に入る)。
                     onTap: n.isSwing && n.actor != null
                         ? () => context.push(Routes.swing(n.actor!.handle))

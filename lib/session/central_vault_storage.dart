@@ -36,7 +36,11 @@ class CentralVaultSessionStorage implements SessionStorage {
     void onChange() {
       final next = holder.accountId;
       if (prev == next) return;
+      // アカウントから離れたら、世代をすぐ進める(読み書きの途中の await から戻ったものが、前のアカウントの答えだと分かるように)。
+      // ログイン前 (null) からのログインは進めない(ログイン前のぶんは、ログインしたアカウントへ預ける約束)。
+      if (prev != null) _gen++;
       prev = next;
+      _known.clear();
       Future.microtask(() => _onAccountChanged(next));
     }
 
@@ -46,8 +50,7 @@ class CentralVaultSessionStorage implements SessionStorage {
 
   Future<void> _onAccountChanged(String? next) async {
     if (!_ref.mounted) return;
-    _known = SessionOps();
-    _knownFor = null;
+    _known.clear();
     if (next != null) {
       // ログインした: ログイン前(持ち主なし)にメモリにだけ持っていたぶんを預ける(ログインしたら預ける、という約束どおり)。
       // 別のアカウントが預け損ねたぶん(SNS のトークン入り)は、このアカウントの保管庫へ持ち込まない (D-407、指摘 #20)。
@@ -136,72 +139,87 @@ class CentralVaultSessionStorage implements SessionStorage {
     }
   }
 
-  /// この端末(タブ)が最後に知った状態。ログイン / ログアウトの操作は、これとの差から起こす。
-  SessionOps _known = SessionOps();
+  /// この端末(タブ)が最後に知った状態。Central のアカウントごと。ログイン / ログアウトの操作は、これとの差から起こす。
+  /// 入れるのは、読み書きを始めたときと同じアカウント・同じ世代 ([_gen]) のまま戻ってきた答えだけ。前は 1 つの箱に
+  /// 「どのアカウントのものか」を await の前に書いてから答えを待ったので、遅れて届いた前のアカウント (A) の答えが、
+  /// 切り替えた先 (B) のものとして入り、B が読めなかったときの戻りや次の保存で A の SNS のトークンが B の保管庫へ
+  /// 預けられることがあった(セキュリティ確認 2026-10-09 の [22])。
+  final Map<String, SessionOps> _known = {};
 
-  /// [_known] がどの Central のアカウントの保管庫のものか。
-  String? _knownFor;
+  /// アカウントが切り替わるたびに進む世代。
+  int _gen = 0;
 
-  /// [accountId] の保管庫を触る前に: 別のアカウントの「最後に知った状態」なら捨てる。
-  void _forAccount(String accountId) {
-    if (_knownFor == accountId) return;
-    _known = SessionOps();
-    _knownFor = accountId;
-  }
+  /// [gen] の世代を始めたときのまま(await のあいだにアカウントが切り替わっていない)で、いまも [accountId] か。
+  bool _still(String accountId, int gen) => gen == _gen && (_holderAccountId ?? accountId) == accountId;
   Timer? _poll;
 
   @override
   Future<String?> read(String key) async {
     if (!vaulted.contains(key)) return local.read(key);
+    final gen = _gen;
     final c = await _client();
     if (c == null) return _memoryFor(key, _holderAccountId);
     final client = c.client;
-    _forAccount(c.accountId);
+    final account = c.accountId;
+    // 切り替わった後に戻った読み: 答えは出さない(切り替えで読み直すので、それを待つ)。
+    if (!_still(account, gen)) return null;
     final remote = await _fetch(client, key);
-    if (remote == null) return _memoryFor(key, c.accountId) ?? _known.toSessionsJson();
+    if (!_still(account, gen)) return null;
+    if (remote == null) return _memoryFor(key, account) ?? _known[account]?.toSessionsJson();
     // 前の版がブラウザ / メモリに置いていたぶんがあれば、操作として足してから、ブラウザのぶんを消す。
     // メモリのぶんは、このアカウントのもの / ログイン前のものだけ(別のアカウントのぶんは混ぜない、指摘 #20)。
-    final slot = _memorySlotFor(key, c.accountId);
+    final slot = _memorySlotFor(key, account);
     final memOld = _memory[slot];
     final old = memOld ?? await local.read(key);
+    var known = remote;
     if (old != null) {
-      final merged = remote.merged(SessionOps().applying(old, at: DateTime.fromMillisecondsSinceEpoch(0)));
-      if (await _putWith(client, key, merged.encode())) {
+      // 預けるのは、このアカウントの口で、このアカウントの保管庫へ(途中で切り替わっても、ほかのアカウントへは行かない)。
+      known = remote.merged(SessionOps().applying(old, at: DateTime.fromMillisecondsSinceEpoch(0)));
+      if (await _putWith(client, key, known.encode())) {
         if (slot != null && identical(_memory[slot], memOld)) _memory.remove(slot);
         await local.delete(key);
       }
-      _known = merged;
-    } else {
-      _known = remote;
     }
+    if (!_still(account, gen)) return null;
+    _known[account] = known;
     _startPolling(key);
-    _adoptKeys(c.accountId);
-    return _known.toSessionsJson();
+    _adoptKeys(known, account);
+    return known.toSessionsJson();
   }
 
   @override
   Future<void> write(String key, String value) async {
     if (!vaulted.contains(key)) return local.write(key, value);
+    // [value] は、書き始めたときのアカウントの一覧。
+    final gen = _gen;
+    final owner = _holderAccountId;
     final c = await _client();
     if (c == null) {
-      _memory[(key: key, owner: _holderAccountId)] = value;
+      _memory[(key: key, owner: owner)] = value;
+      return;
+    }
+    if (!_still(c.accountId, gen) || (owner != null && owner != c.accountId)) {
+      // 口を作るあいだに切り替わった: 前のアカウントの一覧を、いまのアカウントの保管庫へ書かない (#20 と同じく持ち主へ残す)。
+      _memory[(key: key, owner: owner)] = value;
       return;
     }
     final client = c.client;
-    _forAccount(c.accountId);
+    final account = c.accountId;
     // いま保管庫にある台帳に、この端末の操作(知っていた状態との差)を重ねる。ほかの端末の操作は消さない。
-    final mine = _known.applying(value, at: DateTime.now());
+    final mine = (_known[account] ?? SessionOps()).applying(value, at: DateTime.now());
     final remote = await _fetch(client, key);
     final merged = (remote ?? SessionOps()).merged(mine).pruned(DateTime.now());
     if (await _putWith(client, key, merged.encode())) {
-      _forgetMemory(key, c.accountId);
+      _forgetMemory(key, account);
     } else {
       // 預け直しは、このアカウントの保管庫へだけ(別のアカウントへ切り替わったら持ち込まない、指摘 #20)。
-      _memory[(key: key, owner: c.accountId)] = value;
+      _memory[(key: key, owner: account)] = value;
     }
+    // 書いているあいだに切り替わった: 知った状態は入れない(このアカウントに戻ったときに読み直す)。
+    if (!_still(account, gen)) return;
     final changedElsewhere = !merged.sameLoginsAs(mine);
-    _known = merged;
-    _adoptKeys(c.accountId);
+    _known[account] = merged;
+    _adoptKeys(merged, account);
     // ほかの端末でのログイン / ログアウトが混ざっていたら、画面にも反映する。
     if (changedElsewhere) Future.microtask(() => _ref.mounted ? _ref.invalidate(sessionsProvider) : null);
   }
@@ -219,10 +237,12 @@ class CentralVaultSessionStorage implements SessionStorage {
     if (_poll != null || pollInterval == Duration.zero) return;
     _poll = Timer.periodic(pollInterval, (_) async {
       if (!_ref.mounted) return;
+      final gen = _gen;
       final c = await _client();
-      if (c == null || c.accountId != _knownFor) return;
+      if (c == null || !_still(c.accountId, gen) || !_known.containsKey(c.accountId)) return;
       final remote = await _fetch(c.client, key);
-      if (remote != null && _ref.mounted && c.accountId == _knownFor && !remote.sameLoginsAs(_known)) _ref.invalidate(sessionsProvider);
+      final known = _known[c.accountId];
+      if (remote != null && _ref.mounted && _still(c.accountId, gen) && known != null && !remote.sameLoginsAs(known)) _ref.invalidate(sessionsProvider);
     });
     _ref.onDispose(() => _poll?.cancel());
   }
@@ -230,8 +250,8 @@ class CentralVaultSessionStorage implements SessionStorage {
   /// 保管庫でログイン中の SNS アカウントを、この端末の台帳の RASQ アカウントに所属させる
   /// (別のブラウザでログインしたぶんは、こちらの台帳にはまだ載っていない — 載せないと、あるのに見えない)。
   /// [accountId] = 読んだ保管庫の持ち主(D-316: 読んでいるあいだに切り替わっても、別のアカウントの行へ入れない)。
-  void _adoptKeys(String accountId) {
-    final keys = _known.loggedInKeys;
+  void _adoptKeys(SessionOps known, String accountId) {
+    final keys = known.loggedInKeys;
     Future.microtask(() async {
       if (!_ref.mounted) return;
       await _ref.read(rasqAccountsProvider.notifier).adoptCentralSessionKeys(keys, centralAccountId: accountId);

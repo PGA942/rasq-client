@@ -15,13 +15,13 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../session/sanctions.dart';
-import '../child_safe/child_safe_providers.dart' show childComposeVerdict, childComposeSent;
+import '../child_safe/child_safe_providers.dart' show childComposeVerdict, childComposeSent, childGateProvider;
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
 import '../../text/inline_spans.dart';
 import '../home/plugin_actions.dart';
 import '../home/post_row.dart' show PostRow;
-import '../home/timeline_providers.dart' show resolveNodeFetch;
+import '../home/timeline_providers.dart' show childKindBlocked, resolveNodeFetch;
 import '../nodeprog/node_executor.dart';
 import '../nodeprog/node_graph.dart';
 import '../nodeprog/node_tabs.dart';
@@ -365,6 +365,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   /// ダイレクト投稿への返信 = 公開範囲をダイレクト(specified)に固定 (D-047)。
   bool get _directReply => _replyTo?.isDirect ?? false;
+
+  /// DM ルームではないが、送る公開範囲がダイレクトになる(ダイレクト投稿への返信 = specified + 宛先継承)。
+  /// 見守り / アカウントの処置では DM としても確かめる(セキュリティ確認 2026-10-09 の [19])。
+  bool get _sendsDirect => !_isDm && (_directReply || const {'specified', 'direct'}.contains(ref.read(composeOptionsProvider).visibility));
 
   /// 縮小状態を持つのはページ常駐 stick だけ (D-051: 通常/引用は常に展開)。
   bool get _collapsible => widget.resident;
@@ -800,7 +804,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       return await composerLinkGates(
         graph,
         draft,
-        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine),
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine, kindBlocked: childKindBlocked(ref.read(childGateProvider))),
       );
     } catch (_) {
       return const {};
@@ -930,7 +934,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       return await composerTargetChoices(
         graph,
         draft,
-        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine),
+        fetch: session == null ? null : (kid) => resolveNodeFetch(session, kid, sessionFor: sessionForAccount, rasqMine: _rasqMine, kindBlocked: childKindBlocked(ref.read(childGateProvider))),
         storageRead: (slot) async => (await ref.read(settingsAreaProvider(storageArea).future))[slot],
       );
     } catch (_) {
@@ -1522,8 +1526,9 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   }
 
   /// チャイルドセーフ (D-307): 見守りの制限(DM / メディア / 1 日の数 / 本文の強さ)。止めたら理由を出し、当たった語を選んで印を付ける。
-  Future<bool> _childSafeAllows({required bool dm}) async {
-    final verdict = await childComposeVerdict(ref, text: _text.text, dm: dm, media: _files.isNotEmpty);
+  /// [sentTexts] = 実際に送る本文(正規表現の加工のあと、送り先ごと。[20])。
+  Future<bool> _childSafeAllows({required bool dm, bool direct = false, List<String> sentTexts = const []}) async {
+    final verdict = await childComposeVerdict(ref, text: _text.text, dm: dm, direct: direct, media: _files.isNotEmpty, sentTexts: sentTexts);
     if (verdict == null) return true;
     if (!mounted) return false;
     setState(() => _error = verdict.message);
@@ -1551,13 +1556,25 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     }
     if (!mounted) return;
     // アカウントの処置 (D-151): 投稿 / メディア付き投稿 / DM が止まっていれば送らない。
+    // 公開範囲がダイレクトになる返信も DM として([_sendsDirect]、[19])。
+    final sendsDirect = _sendsDirect;
     final sanctions = ref.read(rasqSanctionsProvider).value ?? RasqSanctions.none;
-    final blocked = sanctions.blockedMessage(_isDm ? 'dm' : 'post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
+    final blocked = (sendsDirect ? sanctions.blockedMessage('dm') : null) ?? sanctions.blockedMessage(_isDm ? 'dm' : 'post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
     if (blocked != null) {
       setState(() => _error = blocked);
       return;
     }
-    if (!await _childSafeAllows(dm: _isDm)) return;
+    // 見守り ([20]): 判定するのは実際に送る本文。正規表現の加工 (D-130) のあとの本体と、連動先ごと(下書きにするだけのものは除く。
+    // 開いて送るときにまた判定する)。
+    final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
+    final sentTexts = regexRules.isEmpty
+        ? const <String>[]
+        : [
+            applyComposerRegex(_text.text.trim(), primaryLabel, regexRules),
+            for (final (s, _, delivery) in multiPlan)
+              if (delivery != 'draft') applyComposerRegex(_text.text.trim(), '${s.account}', regexRules),
+          ];
+    if (!await _childSafeAllows(dm: _isDm, direct: sendsDirect, sentTexts: sentTexts)) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -1604,8 +1621,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         case 'localOnly':
           if (!_isDm) localOnly = true;
       }
-      // 投稿加工(正規表現, D-130): 本体の投稿先アカウントにも適用。
-      final primaryLabel = '${(_effectivePostAs ?? ref.read(currentAccountSessionProvider))?.account ?? ''}';
+      // 投稿加工(正規表現, D-130): 本体の投稿先アカウントにも適用(送る前の判定 [20] と同じ本文)。
       final draft = NewPost(
         text: applyComposerRegex(_text.text.trim(), primaryLabel, regexRules),
         contentWarning: cw,

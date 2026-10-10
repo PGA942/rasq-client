@@ -250,8 +250,9 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         return;
       }
       try {
-        await _join(sessionId);
+        await _join(sessionId, p);
       } catch (e) {
+        _leave();
         _set(() {
           phase = CustomPagePhase.failed;
           error = 'セッションに入れませんでした: ${redactSecrets('$e')}';
@@ -289,7 +290,25 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         'vars': {for (final e in vars.entries) e.key: e.value.toJson()},
       };
 
-  Future<void> _join(String sessionId) async {
+  /// セッションが [p] のものか (セキュリティ確認 2026-10-09 の [2])。Central はこのユーザーが入れるかだけを見ていて、
+  /// ホストがどのプラグインを動かしているかは知らない。ストアの id(サイドロードは名乗った id)で比べる。
+  static bool sessionBelongsTo(CustomSession s, SlotPlugin p) => s.pluginId.isNotEmpty && s.pluginId == (p.storePluginId ?? p.id);
+
+  /// 共有セッションから抜け、受け取ったものを捨てる(プラグインへは渡さない)。
+  void _leave() {
+    _sub?.cancel();
+    _sub = null;
+    _conn?.close();
+    _conn = null;
+    session = null;
+    role = null;
+    vars.clear();
+    participants.clear();
+  }
+
+  /// [p] のセッションに入る。welcome のセッションが別のプラグインのものなら、`page.open` と共有の口
+  /// ([shared]) の前に閉じて失敗にする(参加者 / 値はプラグインへ渡さない)。
+  Future<void> _join(String sessionId, SlotPlugin p) async {
     final client = container.read(customSessionClientProvider);
     final conn = await client.connect(sessionId);
     _conn = conn;
@@ -297,7 +316,18 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     _sub = conn.messages.listen((m) {
       if (m['type'] == 'welcome') {
         final s = m['session'];
-        if (s is Map) session = CustomSession.fromJson(s.cast<String, Object?>());
+        final next = s is Map ? CustomSession.fromJson(s.cast<String, Object?>()) : null;
+        if (next == null || !sessionBelongsTo(next, p)) {
+          // 別のプラグインのセッション(または名乗りが無い): 値を受け取らずに抜ける。開いた後に来ても同じ。
+          if (!welcome.isCompleted) {
+            welcome.completeError(StateError('${p.manifest.name} のセッションではありません'));
+          } else if (_conn == conn) {
+            _leave();
+            _set(() => notice = '${p.manifest.name} のセッションではないため抜けました');
+          }
+          return;
+        }
+        session = next;
         if (m['me'] is Map) {
           me = CustomParticipant.fromJson((m['me'] as Map).cast<String, Object?>());
           role = (m['me'] as Map)['role'] as String?;
@@ -390,7 +420,8 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   @override
   void shared(String fn, Map<String, Object?> a) {
     final conn = _conn;
-    if (conn == null) return;
+    // 確かめたセッション(このプラグインのもの)に入っているときだけ (セキュリティ確認 2026-10-09 の [2])。
+    if (conn == null || session == null) return;
     switch (fn) {
       case 'shared.set':
         conn.send({'type': 'set', 'key': a['key'], 'value': a['value'], if (a['ifRev'] is num) 'ifRev': a['ifRev']});

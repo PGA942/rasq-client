@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/providers.dart' show overlayManagerProvider;
 import '../../app/router.dart';
 import '../../backend/orgate_client.dart' show centralBaseUrlProvider;
 import '../../backend/payments_api.dart' show paidFeaturesProvider;
@@ -130,8 +131,12 @@ class _InstalledBlock extends ConsumerWidget {
         label: '$newer に切り替え',
         selected: false,
         onTap: () async {
-          final error = await ref.read(installedPluginsProvider.notifier).setDefaultVersion(record.id, newer);
-          ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(error ?? '$newer を既定の版にしました')));
+          final notifier = ref.read(installedPluginsProvider.notifier);
+          final messenger = ref.read(rootMessengerKeyProvider).currentState;
+          final ok = await confirmVersionScope(ref.read(overlayManagerProvider), notifier, record.id, newer);
+          if (ok == null) return;
+          final error = await notifier.setDefaultVersion(record.id, newer, consent: ok.consent);
+          messenger?.showSnackBar(SnackBar(content: Text(error ?? '$newer を既定の版にしました')));
         },
       );
     } else if (newer != null) {

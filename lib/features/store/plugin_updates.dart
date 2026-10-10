@@ -16,7 +16,8 @@ import 'store_providers.dart';
 /// - **おまかせ**: 新しい版を入れて、**既定の版にする**(アカウントごとに指定した版はそのまま)。
 /// - **インストールだけおまかせ**: 新しい版を入れて控えるだけ。既定は変えない(「アカウントごとにバージョンを設定」で選ぶ)。
 /// - **全て手動で構成**: 何もしない(プラグインを管理に「更新」のチップが出る)。
-/// どのモードでも、**権限が増える版 / 有料で買っていない版は自動では入れない**(更新ログに理由を残す)。
+/// どのモードでも、**最後に許可した内容より権限・接続先・データ・目的が広がる版 / 有料で買っていない版は自動では有効にしない**
+/// (更新ログに理由を残す。比べるのは端末に記録した最後の承認で、サーバーの直前の版との差分ではない。セキュリティ確認 2026-10-09 の [8])。
 enum PluginUpdateMode {
   auto('auto', 'おまかせ', '新しい版を入れて、既定の版にします(アカウントごとに指定した版はそのまま)'),
   installOnly('installOnly', 'インストールだけおまかせ', '新しい版を入れておくだけで、使う版は変えません'),
@@ -136,8 +137,14 @@ Future<List<PluginUpdateLogEntry>> runPluginUpdates(ProviderContainer ref) async
     if (mode == PluginUpdateMode.manual) continue;
     PluginUpdateLogEntry log(String result, [String? note]) => PluginUpdateLogEntry(pluginId: p.id, name: p.name.isEmpty ? p.id : p.name, from: p.version, to: latest, at: DateTime.now(), result: result, note: note);
     // 入っていた版なら、おまかせは既定に切り替えるだけ。インストールだけなら何もしない。
+    // 「インストールだけ」で控えた版も、最後の承認より広がるなら切り替えない。
     if (p.versionInfo(latest) != null) {
       if (mode == PluginUpdateMode.auto) {
+        final widened = notifier.versionWidening(p.id, latest);
+        if (widened.isNotEmpty) {
+          out.add(log('skipped', scopeWidenedMessage(p.approvedScope, widened)));
+          continue;
+        }
         final error = await notifier.setDefaultVersion(p.id, latest);
         out.add(error == null ? log('switched') : log('failed', error));
       }
@@ -147,25 +154,15 @@ Future<List<PluginUpdateLogEntry>> runPluginUpdates(ProviderContainer ref) async
       out.add(log('skipped', '購入が必要です'));
       continue;
     }
-    // 権限が増える版は自動では入れない(ユーザーが確認シートで見てから)。
-    // TERMS-09: 権限が増えないことを確かめられないとき(リリース情報が取れない / その版が載っていない)も入れない
-    // (画面の「権限が増える版は、どのモードでも自動では入れません」を守る側に倒す)。
-    ReleaseNote? rel;
-    try {
-      rel = (await client.releases(p.id)).where((r) => r.version == latest).firstOrNull;
-    } catch (_) {
-      out.add(log('skipped', 'リリース情報を確認できないため(権限の増減が分かりません)'));
-      continue;
-    }
-    if (rel == null) {
-      out.add(log('skipped', 'この版のリリース情報が見つからないため(権限の増減が分かりません)'));
-      continue;
-    }
-    if (rel.permissionsAdded.isNotEmpty) {
-      out.add(log('skipped', '権限が増えるため(${rel.permissionsAdded.map((x) => x.permission).join('、')})'));
-      continue;
-    }
+    // 広がる版は自動では有効にしない(ユーザーが確認シートで見てから)。
+    // 判断は [InstalledPlugins.install] が、選んだ版の配布物から読んだ内容と、端末に記録した最後の承認を比べてする
+    // (サーバーのリリース情報の `permissionsAdded` は直前の公開版との差分なので、版を飛ばすと空になる。判断に使わない)。
+    // 配布物を確かめられなければ install が失敗し、何も変えない(TERMS-09)。
     final outcome = await notifier.install(p.id, version: latest, activate: mode == PluginUpdateMode.auto);
+    if (outcome.widened.isNotEmpty) {
+      out.add(log('skipped', outcome.error));
+      continue;
+    }
     out.add(outcome.error == null ? log(mode == PluginUpdateMode.auto ? 'activated' : 'installed') : log('failed', outcome.error));
   }
   await _appendLog(ref, out);

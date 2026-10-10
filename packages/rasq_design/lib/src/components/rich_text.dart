@@ -5,7 +5,7 @@ import '../theme/rasq_tokens_extension.dart';
 import 'custom_emoji.dart';
 import 'mfm.dart';
 import '../platform/media_policy.dart';
-import '../platform/web_image.dart';
+import '../platform/media_image.dart';
 
 /// Inline span model for RSL (RASQ Subassembly Language) output.
 ///
@@ -159,7 +159,7 @@ class _RasqRichTextState extends State<RasqRichText> {
               // プラグインの面では、その権限で読めない URL は読まない (D-407)。
               child: Builder(
                 builder: (context) => rasqMediaAllowed(context, s.url)
-                    ? Image.network(webHtmlElementStrategy: rasqWebImageStrategy, s.url.toString(), height: s.height, semanticLabel: s.alt, errorBuilder: (_, _, _) => const SizedBox.shrink())
+                    ? Image(image: rasqMediaImage(context, s.url), height: s.height, semanticLabel: s.alt, errorBuilder: (_, _, _) => const SizedBox.shrink())
                     : const SizedBox.shrink(),
               ),
             ),

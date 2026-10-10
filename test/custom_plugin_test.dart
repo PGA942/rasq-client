@@ -268,6 +268,50 @@ void main() {
     expect(rt.calls.where((x) => x.$1 == 'page.event'), isEmpty);
   });
 
+  test('別のプラグインのセッション: 入れたプラグインに page.open もみんなの値も渡さない / 同じプラグインはこれまでどおり (セキュリティ確認 2026-10-09 の [2])', () async {
+    final custom = MockCustomSessionClient();
+    late FakeSlotRuntime rt;
+    final c = container(custom: custom, plugins: {'store:$_boardId@1.0.0': () => rt = _board()});
+    await c.read(slotPluginsProvider.notifier).register('store:$_boardId@1.0.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false);
+    // 利用者が入れる、別のプラグイン A のセッション(秘密の値と参加者)。
+    final other = await custom.create(pluginId: 'other.secret', version: '1.0.0', scope: 'link');
+    custom.vars[other.id]!['secret'] = const CustomVar(value: 'A の秘密', rev: 1, by: 'u2');
+    custom.join(other.id, const CustomParticipant(accountId: 'u2', handle: 'hanako'));
+
+    final page = CustomPageController(c, CustomPageArgs(pluginId: _boardId, sessionId: other.id));
+    addTearDown(page.dispose);
+    await page.start();
+    await _settle();
+    expect(page.phase, CustomPagePhase.failed);
+    expect(page.error, contains('セッションではありません'));
+    expect(rt.calls.where((x) => x.$1 == 'page.open' || x.$1 == 'page.event'), isEmpty);
+    expect(page.session, isNull);
+    expect(page.vars, isEmpty);
+    expect(page.participants, isEmpty);
+    expect(page.hasSession, isFalse);
+    // 共有の口も A へは送らない。
+    page.shared('shared.set', {'key': 'secret', 'value': 'x'});
+    custom.actAs(other.id, const CustomParticipant(accountId: 'u2', handle: 'hanako'), {'type': 'set', 'key': 'title', 'value': 'y'});
+    await _settle();
+    expect(custom.vars[other.id]!['secret']!.value, 'A の秘密');
+    expect(rt.calls.where((x) => x.$1 == 'page.event'), isEmpty);
+    final board = c.read(slotPluginsProvider).single;
+    expect(CustomPageController.sessionBelongsTo(other, board), isFalse);
+    expect(CustomPageController.sessionBelongsTo(CustomSession.fromJson({'id': 'x', 'scope': 'link'}), board), isFalse); // 名乗りが無い
+
+    // 同じプラグインのセッションは入れて、自分のキーだけ書ける。
+    final mine = await custom.create(pluginId: _boardId, version: '1.0.0', scope: 'link');
+    final ok = CustomPageController(c, CustomPageArgs(pluginId: _boardId, sessionId: mine.id));
+    addTearDown(ok.dispose);
+    await ok.start();
+    await _settle();
+    expect(ok.phase, CustomPagePhase.ready);
+    ok.shared('shared.set', {'key': 'me.vote', 'value': 'a'});
+    ok.shared('shared.set', {'key': '@u2.vote', 'value': 'b'});
+    await _settle();
+    expect(custom.vars[mine.id]!.keys, ['@me.vote']);
+  });
+
   testWidgets('ページの画面: RRL を描き、ボタン / 入力欄のイベントでみんなの値が変わる', (tester) async {
     final custom = MockCustomSessionClient();
     final s = await custom.create(pluginId: _boardId, version: '1.0.0', scope: 'link');

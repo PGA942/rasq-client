@@ -5,7 +5,7 @@ import '../theme/rasq_tokens_extension.dart';
 import '../tokens/colors.dart';
 import '../tokens/sizes.dart';
 import '../platform/media_policy.dart';
-import '../platform/web_image.dart';
+import '../platform/media_image.dart';
 
 /// Single avatar with optional presence ring/badge (LIVE / VC中).
 ///
@@ -64,8 +64,8 @@ class RasqAvatar extends StatelessWidget {
                   ),
                 ),
               )
-            : Image.network(webHtmlElementStrategy: rasqWebImageStrategy, 
-                imageUrl.toString(),
+            : Image(
+                image: rasqMediaImage(context, imageUrl!),
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => ColoredBox(color: scheme.surfaceContainerHighest),
               ),
