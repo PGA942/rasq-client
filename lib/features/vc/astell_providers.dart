@@ -167,6 +167,7 @@ class AstellSessionState {
     this.drafts = const {},
     this.connected = false,
     this.micOn = false,
+    this.micOpening = false,
     this.captionsOn = true,
     this.screenShareOn = false,
     this.viewingPeerId,
@@ -193,7 +194,12 @@ class AstellSessionState {
   final bool connected;
 
   /// マイク (D-317): 立っている間だけ通話(P2P)と、配信中なら LiveKit へ声を送る。
+  /// **実際に送っているか**と同じ(D-455: 端末に「立てて」と渡したときだけ true、下ろしたらすぐ false)。
   final bool micOn;
+
+  /// マイクを開いている最中(OS の許可のダイアログ / getUserMedia を待っている、D-455)。この間は [micOn] は false の
+  /// まま(まだ送っていない)。ボタンは「準備中」を出し、押すとやめる。
+  final bool micOpening;
 
   /// 字幕(文字起こしの表示)。
   final bool captionsOn;
@@ -244,6 +250,7 @@ class AstellSessionState {
     Map<String, AstellDraft>? drafts,
     bool? connected,
     bool? micOn,
+    bool? micOpening,
     bool? captionsOn,
     bool? screenShareOn,
     String? viewingPeerId,
@@ -270,6 +277,7 @@ class AstellSessionState {
         drafts: drafts ?? this.drafts,
         connected: connected ?? this.connected,
         micOn: micOn ?? this.micOn,
+        micOpening: micOpening ?? this.micOpening,
         captionsOn: captionsOn ?? this.captionsOn,
         screenShareOn: screenShareOn ?? this.screenShareOn,
         viewingPeerId: clearViewing ? null : (viewingPeerId ?? this.viewingPeerId),
@@ -322,6 +330,13 @@ class AstellSession extends Notifier<AstellSessionState?> {
     _lastChatAt = DateTime.now();
     _waitingForStart = false;
     if (ref.read(astellHoldMusicTickProvider) case final tick?) _holdTick = Timer.periodic(tick, (_) => _syncHoldMusic());
+    // 保留音の口の音の設定は、通話の音のセッションより前に (D-455: Android は端末全体のモードを書くので、通話の最中に書かせない)。
+    try {
+      await ref.read(holdMusicProvider).prepare();
+    } catch (e) {
+      debugPrint('astell: hold music prepare: $e');
+    }
+    if (!identical(state?.room, room)) return; // 待っている間に別のルームへ / 退出
     _media = ref.read(astellMediaFactoryProvider)();
     _streamGaveUp = false;
     astellAudioAwaitingGesture.addListener(_onAudioAwaitingGesture);
@@ -368,6 +383,7 @@ class AstellSession extends Notifier<AstellSessionState?> {
           transcripts: [for (final x in (m['transcripts'] as List? ?? const [])) if (x is Map) AstellTranscript.fromJson(x.cast<String, Object?>())],
         );
         _autoPlay(state!.peers.where((p) => p.peerId != state!.myPeerId && p.screenShare != null).firstOrNull);
+        _reconcileWelcome(m);
         _startCall();
         _syncWatching();
         _syncHoldMusic(); // 開催予約の待ち (D-327) は接続した時点から
@@ -396,15 +412,13 @@ class AstellSession extends Notifier<AstellSessionState?> {
         if (p is Map) {
           final peer = AstellPeer.fromJson(p.cast<String, Object?>());
           if (peer.peerId == s.myPeerId) {
-            // 自分の状態の折り返しは参加者に入れない。強制ミュート (D-149) だけ拾う。
+            // 自分の状態の折り返しは参加者に入れない。強制ミュート (D-149) と、サーバーの見ているマイク (D-455) を拾う。
             if (peer.mutedByMod != s.forceMuted) {
-              state = s.copyWith(forceMuted: peer.mutedByMod, micOn: peer.mutedByMod ? false : null);
-              // 強制ミュート: 声を止める(通話も配信も)。
-              if (peer.mutedByMod) {
-                _media?.setMicEnabled(false);
-                unawaited(_streamer?.setMic(false));
-              }
+              state = s.copyWith(forceMuted: peer.mutedByMod);
+              // 強制ミュート: 声を止める(通話も配信も)。開いている最中なら、開けても立てない。
+              if (peer.mutedByMod) _forceMicOff();
             }
+            _reconcileOwnMic(peer.micOn);
             break;
           }
           final before = s.peers.where((e) => e.peerId == peer.peerId).firstOrNull;
@@ -523,11 +537,15 @@ class AstellSession extends Notifier<AstellSessionState?> {
     if (state != null) state = state!.copyWith(room: room);
   }
 
-  /// 自分の状態(マイク / 画面共有)を全員へ (D-146: `state` メッセージ)。
+  /// 自分の状態(マイク / 画面共有)を全員へ (D-146: `state` メッセージ)。送ったマイクの向きは、サーバーの折り返しと
+  /// 突き合わせるために順に控える(D-455、[_reconcileOwnMic])。
   void _sendState() {
     final s = state;
-    if (s == null) return;
-    _conn?.send({
+    final conn = _conn;
+    if (s == null || conn == null) return;
+    _micSent.add(s.micOn);
+    if (_micSent.length > 32) _micSent.removeAt(0); // 折り返しが来ない(切れた)ときに溜めない
+    conn.send({
       'type': 'state',
       'state': {
         'micOn': s.micOn,
@@ -536,33 +554,148 @@ class AstellSession extends Notifier<AstellSessionState?> {
     });
   }
 
+  // ── マイク (D-317 → D-455) ──
+  // ボタンの見た目([AstellSessionState.micOn])は、いつも**実際に送っているか**と同じにする。
+  // - 押された向き([_micWant])だけを覚え、[_driveMic] が 1 本で順に揃える。開いている最中(OS の許可のダイアログ /
+  //   getUserMedia)にもう一度押されたら「やめる」— 開け終わっても立てない。getUserMedia は 1 回だけ。
+  // - 立てるのは開けてから([micOpening] の間は false のまま)。下ろすのはすぐ(待たない)。
+  // - サーバーの welcome / 自分の peer-state の `micOn` と突き合わせる: サーバーが立てさせなかった(リスナー / 強制ミュート)
+  //   なら下ろす。サーバーが古い向きのままなら、いまの向きを送り直す。サーバーの値で**立てることはしない**。
+
+  /// 押された向き(最後に押したときに、マイクを立てたいか)。
+  bool _micWant = false;
+
+  /// 揃えている最中の 1 本(無ければ null)。
+  Future<void>? _micRun;
+
+  /// ルームが変わったら進める(前のルームの揃えは、以後なにもしない)。
+  int _micGen = 0;
+
+  /// 送った `state.micOn` の控え(古い順)。自分の peer-state の折り返しごとに先頭を 1 つ取る。
+  final List<bool> _micSent = [];
+
   /// マイク (D-317): 立てるときに初めてマイクを開く(OS の許可)。開けなければ理由を出して立てない。
-  Future<void> toggleMic() async {
+  /// 開いている最中に押すと、やめる(開け終わっても立てない、D-455)。
+  Future<void> toggleMic() {
     final s = state;
-    if (s == null || s.forceMuted) return; // 強制ミュート中は立てられない
-    final on = !s.micOn;
-    final media = _media;
-    if (on && media != null && media.available) {
-      final blocked = media.micBlocked;
-      if (blocked != null) {
-        state = s.copyWith(error: AstellMediaException(blocked).message);
-        return;
-      }
-      try {
-        if (!media.micOpen) await media.openMic();
-      } catch (e) {
-        if (state != null) state = state!.copyWith(error: AstellMediaException.from(e).message);
-        return;
-      }
+    if (s == null || s.forceMuted) return Future.value(); // 強制ミュート中は立てられない
+    final run = _micRun;
+    if (run != null) {
+      _micWant = !_micWant;
+      return run;
     }
+    _micWant = !s.micOn;
+    final gen = _micGen;
+    late final Future<void> f;
+    f = _driveMic(gen).whenComplete(() {
+      if (identical(_micRun, f)) _micRun = null;
+    });
+    _micRun = f;
+    return f;
+  }
+
+  /// 押された向きに揃える(揃うまで繰り返す。開ける間に向きが変わっても、最後の向きに揃う)。
+  Future<void> _driveMic(int gen) async {
+    while (gen == _micGen) {
+      final s = state;
+      final media = _media;
+      if (s == null) return;
+      final want = _micWant && !s.forceMuted;
+      if (media == null && want) {
+        // 通話の口がまだ無い(入る途中)/ もう無い(閉鎖・キック): 立てない(送れないのに「オン」と出さない)。下ろすのはできる。
+        _micWant = false;
+        if (s.micOpening) state = s.copyWith(micOpening: false);
+        return;
+      }
+      if (want == s.micOn) {
+        if (s.micOpening) state = s.copyWith(micOpening: false);
+        return;
+      }
+      if (want && media != null && media.available) {
+        final blocked = media.micBlocked;
+        if (blocked != null) {
+          _micWant = false;
+          state = s.copyWith(micOpening: false, error: AstellMediaException(blocked).message);
+          return;
+        }
+        if (!media.micOpen) {
+          if (!s.micOpening) state = s.copyWith(micOpening: true);
+          try {
+            await media.openMic();
+          } catch (e) {
+            if (gen != _micGen) return;
+            _micWant = false;
+            if (state != null) state = state!.copyWith(micOpening: false, error: AstellMediaException.from(e).message);
+            return;
+          }
+          continue; // 開けている間に押された向き / 強制ミュート / 退出を見直す
+        }
+      }
+      _applyMic(want);
+    }
+  }
+
+  /// マイクを立てる / 下ろす(端末とボタンと全員へ、同時に)。[announce] = 全員へ `state` を送る(サーバーが下ろした
+  /// ときは、サーバーがもう知っているので送らない)。
+  void _applyMic(bool on, {bool announce = true}) {
     final now = state;
-    if (now == null || now.forceMuted) return;
+    if (now == null) return;
     _media?.setMicEnabled(on);
-    state = now.copyWith(micOn: on, clearError: on && now.error != null);
-    _sendState();
+    state = now.copyWith(micOn: on, micOpening: false, clearError: on && now.error != null);
+    if (announce) _sendState();
     unawaited(_streamer?.setMic(on));
     if (on && now.callFull && now.streaming == null) state = state!.copyWith(notice: astellCallFullNotice);
     _syncHoldMusic(); // 話し始めたら保留音は止まる (D-327)
+  }
+
+  /// サーバーに止められた(強制ミュート / 話せない): 開いている最中なら立てず、立っていれば下ろす。
+  /// サーバーはもう「下ろしている」と配っているので、`state` は送らない。
+  void _forceMicOff() {
+    _micWant = false;
+    final s = state;
+    if (s == null) return;
+    if (s.micOn) {
+      _applyMic(false, announce: false);
+    } else {
+      // 立てていなくても、念のため端末にも下ろすと渡す(声は出ていない形に揃える)。
+      _media?.setMicEnabled(false);
+      unawaited(_streamer?.setMic(false));
+    }
+  }
+
+  /// welcome (D-455): サーバーが見ている自分の `micOn`(`me`)/ 自分の状態と突き合わせる。入る前に押したマイク
+  /// (まだ繋がっていなくて送れなかった)も、ここで全員へ送る。
+  void _reconcileWelcome(Map<String, Object?> m) {
+    final s = state;
+    if (s == null) return;
+    _micSent.clear();
+    final me = m['me'];
+    final server = me is Map ? AstellPeer.fromJson(me.cast<String, Object?>()) : s.peers.where((p) => p.peerId == s.myPeerId).firstOrNull;
+    if (server != null && server.mutedByMod && !s.forceMuted) {
+      state = s.copyWith(forceMuted: true);
+      _forceMicOff();
+    }
+    final now = state!;
+    if (now.micOn != (server?.micOn ?? false) || now.screenShareOn != (server?.screenShare != null)) _sendState();
+  }
+
+  /// 自分の peer-state の `micOn` と突き合わせる (D-455)。
+  /// - 送った向きの折り返し: 立てたのにサーバーが立てなかった(リスナー / 強制ミュート)なら下ろす。
+  /// - サーバーからの知らせ(役割の変更など): サーバーが「下ろしている」のに立てていれば下ろす。
+  ///   サーバーが「立てている」のに下ろしていれば、いまの向きを送り直す(ほかの人の見た目を直す)。
+  void _reconcileOwnMic(bool serverMicOn) {
+    final s = state;
+    if (s == null) return;
+    if (_micSent.isNotEmpty) {
+      final sent = _micSent.removeAt(0);
+      if (sent && !serverMicOn && s.micOn && _micSent.every((v) => v)) _forceMicOff();
+      return;
+    }
+    if (!serverMicOn && s.micOn) {
+      _forceMicOff();
+    } else if (serverMicOn && !s.micOn) {
+      _sendState();
+    }
   }
 
   // ── 通話 (D-317) ──
@@ -965,6 +1098,11 @@ class AstellSession extends Notifier<AstellSessionState?> {
   /// 引きずられないため。購読は先に外すので、以後のメッセージは無視される。
   Future<void> _teardown() async {
     astellAudioAwaitingGesture.removeListener(_onAudioAwaitingGesture);
+    // マイクの揃え (D-455) は、このルームの分を打ち切る。
+    _micGen++;
+    _micRun = null;
+    _micWant = false;
+    _micSent.clear();
     _holdTick?.cancel();
     _holdTick = null;
     _draftTimer?.cancel();

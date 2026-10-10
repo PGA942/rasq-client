@@ -794,7 +794,10 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
       AstellBarIds.speaker: AstellBarButton(icon: s.speakerMuted ? Icons.volume_off : Icons.volume_up, tooltip: s.speakerMuted ? 'スピーカーミュート解除' : 'スピーカーミュート', filled: s.speakerMuted ? RasqColors.danger : null, onPressed: session.toggleSpeaker),
       AstellBarIds.mic: s.forceMuted
           ? const AstellBarButton(icon: Icons.mic_off, tooltip: 'モデレーターにミュートされています', filled: RasqColors.danger)
-          : AstellBarButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン', filled: s.micOn ? RasqColors.accent : null, onPressed: session.toggleMic),
+          // 開いている最中 (D-455): まだ送っていない。押すとやめる(開け終わっても立てない)。
+          : s.micOpening
+              ? AstellBarButton(icon: Icons.mic_none, tooltip: 'マイクを準備中(押すとやめる)', onPressed: session.toggleMic)
+              : AstellBarButton(icon: s.micOn ? Icons.mic : Icons.mic_off, tooltip: s.micOn ? 'マイクオフ' : 'マイクオン', filled: s.micOn ? RasqColors.accent : null, onPressed: session.toggleMic),
       AstellBarIds.screen: AstellBarButton(icon: s.screenShareOn ? Icons.desktop_windows : Icons.desktop_access_disabled_outlined, tooltip: s.screenShareOn ? '画面共有オフ' : '画面共有', filled: s.screenShareOn ? RasqColors.sub : null, onPressed: () => _toggleScreen(context)),
       if (s.viewingPeer case final peer?) AstellBarIds.fullscreen: AstellBarButton(icon: Icons.fullscreen, tooltip: '全画面', onPressed: () => _openPeerScreen(context, peer)),
       AstellBarIds.captions: AstellBarButton(icon: Icons.subtitles_outlined, tooltip: s.captionsOn ? '字幕オフ' : '字幕オン', filled: s.captionsOn ? const Color(0xFF2EBF8F) : null, onPressed: session.toggleCaptions),

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +13,7 @@ import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/features/vc/astell_stream.dart';
 import 'package:rasq_client/features/vc/astell_stream_livekit.dart' show astellScreenCaptureInApp;
 import 'package:rasq_client/features/vc/astell_web_audio.dart' show astellAudioAwaitingGesture;
+import 'package:rasq_client/features/vc/hold_music.dart';
 import 'package:rasq_client/session/session_providers.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_models/rasq_models.dart';
@@ -307,6 +311,131 @@ void main() {
       await session.leave();
     });
 
+    group('マイクのボタンと実際の送り (D-455)', () {
+      AstellSessionState now() => container.read(astellSessionProvider)!;
+
+      test('開いている最中(OS の許可のダイアログ)にもう一度押すと、やめる — 開け終わっても立てない。getUserMedia は 1 回', () async {
+        final session = await join(MockAstellClient.seededRooms().first);
+        final gate = media.openGate = Completer<void>();
+        final first = session.toggleMic();
+        expect([now().micOn, now().micOpening], [false, true], reason: 'まだ送っていない — 「オン」とは出さない');
+        final second = session.toggleMic(); // ダイアログの裏でもう一度
+        gate.complete();
+        await Future.wait([first, second]);
+        expect([now().micOn, now().micOpening, media.micEnabled], [false, false, false]);
+        expect(media.openCalls, 1);
+        expect(sentOf('state').where((m) => (m['state'] as Map)['micOn'] == true), isEmpty, reason: '一度も立てていない');
+        // 次に押せばすぐ立つ(開いたまま)。
+        await session.toggleMic();
+        expect([now().micOn, media.micEnabled, media.openCalls], [true, true, 1]);
+        await session.leave();
+      });
+
+      test('開いている最中に 3 回押す(立てる → やめる → 立てる): 開け終わったら立てる', () async {
+        final session = await join(MockAstellClient.seededRooms().first);
+        final gate = media.openGate = Completer<void>();
+        final runs = [session.toggleMic(), session.toggleMic(), session.toggleMic()];
+        gate.complete();
+        await Future.wait(runs);
+        expect([now().micOn, now().micOpening, media.micEnabled, media.openCalls], [true, false, true, 1]);
+        expect((sentOf('state').last['state'] as Map)['micOn'], isTrue);
+        await session.leave();
+      });
+
+      test('開いている最中に強制ミュートされたら、開け終わっても立てない', () async {
+        final session = await join(MockAstellClient.seededRooms().first);
+        final gate = media.openGate = Completer<void>();
+        final run = session.toggleMic();
+        client.emit('r-launch', {'type': 'peer-state', 'peer': {'peerId': 'me', 'accountId': 'me', 'handle': 'me', 'displayName': 'あなた', 'state': {'micOn': false, 'mutedByMod': true}}});
+        await Future<void>.delayed(Duration.zero);
+        gate.complete();
+        await run;
+        expect([now().forceMuted, now().micOn, now().micOpening, media.micEnabled], [true, false, false, false]);
+        await session.leave();
+      });
+
+      test('開いている最中に退出 → 別のルームでは、前のルームの揃えは何もしない', () async {
+        final rooms = MockAstellClient.seededRooms();
+        final session = await join(rooms.first);
+        final gate = media.openGate = Completer<void>();
+        final run = session.toggleMic();
+        await session.leave();
+        media = FakeMedia();
+        await join(rooms[1]);
+        gate.complete();
+        await run;
+        expect([now().micOn, now().micOpening, media.micEnabled], [false, false, false]);
+        await session.toggleMic();
+        expect(now().micOn, isTrue, reason: '新しいルームでは押せばふつうに立つ');
+        await session.leave();
+      });
+
+      test('サーバーの自分の状態と突き合わせる: サーバーが下ろした(話せない)なら下ろす / 古い「立てている」は送り直す / サーバーの値で立てはしない', () async {
+        final session = await join(MockAstellClient.seededRooms().first);
+        await session.toggleMic();
+        await Future<void>.delayed(Duration.zero); // 折り返しを受ける
+        expect(now().micOn, isTrue);
+        // サーバーから(役割が変わった等)「下ろしている」。
+        client.emit('r-launch', {'type': 'peer-state', 'peer': {'peerId': 'me', 'accountId': 'me', 'handle': 'me', 'displayName': 'あなた', 'state': {'micOn': false}}});
+        await Future<void>.delayed(Duration.zero);
+        expect([now().micOn, media.micEnabled], [false, false]);
+        await Future<void>.delayed(Duration.zero);
+        // サーバーが古い「立てている」のまま: 立てずに、いまの向き(下ろしている)を送り直す。
+        final before = sentOf('state').length;
+        client.emit('r-launch', {'type': 'peer-state', 'peer': {'peerId': 'me', 'accountId': 'me', 'handle': 'me', 'displayName': 'あなた', 'state': {'micOn': true}}});
+        await Future<void>.delayed(Duration.zero);
+        expect([now().micOn, media.micEnabled], [false, false]);
+        expect(sentOf('state').length, before + 1);
+        expect((sentOf('state').last['state'] as Map)['micOn'], isFalse);
+        await session.leave();
+      });
+
+      test('welcome: 入る前に立てたマイクは繋がったら全員へ送る / 強制ミュートのまま入り直したら立てられない', () async {
+        final session = container.read(astellSessionProvider.notifier);
+        final joining = session.join(MockAstellClient.seededRooms().first);
+        await joining;
+        await Future<void>.delayed(Duration.zero);
+        client.emit('r-launch', {
+          'type': 'welcome',
+          'peerId': 'me',
+          'accountId': 'me',
+          'me': {'peerId': 'me', 'accountId': 'me', 'state': {'micOn': false, 'mutedByMod': true}},
+          'peers': const [],
+        });
+        await Future<void>.delayed(Duration.zero);
+        expect(now().forceMuted, isTrue);
+        await session.toggleMic();
+        expect(now().micOn, isFalse);
+        await session.leave();
+      });
+
+      test('保留音の口の音の設定は、通話の口を作る前に済ませる(Android は端末全体のモードを書くので)', () async {
+        var preparedBeforeMedia = -1;
+        final c = ProviderContainer(overrides: [
+          sessionStorageProvider.overrideWithValue(MemorySessionStorage({})),
+          astellClientProvider.overrideWithValue(client),
+          astellMediaFactoryProvider.overrideWith((ref) => () {
+                preparedBeforeMedia = (ref.read(holdMusicProvider) as MemoryHoldMusic).prepares;
+                return media;
+              }),
+          astellStreamerFactoryProvider.overrideWithValue(() => streamer),
+          astellLevelIntervalProvider.overrideWithValue(null),
+        ]);
+        addTearDown(c.dispose);
+        await c.read(astellSessionProvider.notifier).join(MockAstellClient.seededRooms().first);
+        expect(preparedBeforeMedia, 1);
+        await c.read(astellSessionProvider.notifier).leave();
+      });
+
+      test('保留音の音の設定 (Android): 通話の音の道で、焦点を取らず、端末全体のモード / スピーカーは通話の前の値(書いても壊さない)', () {
+        final a = AudioHoldMusic.context.android;
+        expect(a.usageType, AndroidUsageType.voiceCommunication);
+        expect(a.audioFocus, AndroidAudioFocus.none);
+        expect(a.audioMode, AndroidAudioMode.normal);
+        expect(a.isSpeakerphoneOn, isFalse);
+      });
+    });
+
     test('スピーカーミュート / 手元のミュートで、通話の声を止める', () async {
       final session = await join(MockAstellClient.seededRooms().first);
       session.toggleMute('p2');
@@ -526,6 +655,10 @@ void main() {
 class FakeMedia implements AstellMedia {
   final links = <String, FakeLink>{};
   int opened = 0;
+  int openCalls = 0;
+
+  /// 開くのを待たせる(OS の許可のダイアログの間)。
+  Completer<void>? openGate;
   bool micEnabled = false;
   bool disposed = false;
   AstellMediaIssue? blocked;
@@ -540,6 +673,9 @@ class FakeMedia implements AstellMedia {
 
   @override
   Future<void> openMic() async {
+    openCalls++;
+    final g = openGate;
+    if (g != null) await g.future;
     if (openError != null) throw openError!;
     opened++;
   }

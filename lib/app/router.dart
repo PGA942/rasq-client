@@ -81,10 +81,12 @@ import '../features/store/store_search_screen.dart';
 import '../features/rai/rai_achievements_screen.dart';
 import '../features/rai/rai_home_screen.dart';
 import '../features/trend/trend_screen.dart';
+import '../features/vc/astell_open_screen.dart';
 import '../features/vc/vc_screen.dart';
 import '../shell/app_overlay_root.dart';
 import '../shell/rasq_shell.dart';
 import 'providers.dart';
+import 'rasq_links.dart';
 
 /// Route names (keep in sync with deep links: Push通知→投稿詳細, ブックマーク等).
 abstract final class Routes {
@@ -218,6 +220,10 @@ abstract final class Routes {
       Uri(path: '/custom/page/${Uri.encodeComponent(pluginId)}', queryParameters: query.isEmpty ? null : query).toString();
   static String customInvite(String code) => '/custom/invite/${Uri.encodeComponent(code)}';
 
+  /// リンクから開く AsTell ルーム (D-456): `/astell/<UUID か Base58 コード>`。Web クライアント(`/app/astell/<code>`)と
+  /// `rasq://astell/<id>` の着地点。
+  static String astellRoom(String ref) => '/astell/${Uri.encodeComponent(ref)}';
+
   /// RASQ の Markdown ページ (D-446): 読む / 編集(`extra` = 公開済みの中身)。
   static String rasqMdPage(String handle, String id, {bool mine = false}) => '/rasq-page/${Uri.encodeComponent(handle)}/${Uri.encodeComponent(id)}${mine ? '?mine=1' : ''}';
   static String rasqMdPageEdit(String id) => '/rasq-page-edit/${Uri.encodeComponent(id)}';
@@ -348,6 +354,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       // チャイルドセーフのリンクはアプリの中の画面へ(コードは入れるだけで送らない)。ほかの `rasq://` は開かずホームへ。
       // 審査中の版の仮インポート (D-436): `rasq://dev-import?url=…` → インポートの画面に URL を入れるだけ(読み込みは押してから)。
       if (state.uri.scheme == reviewImportLinkScheme && state.uri.host == reviewImportLinkHost) return reviewImportDeepLinkLocation(state.uri);
+      // Central の Web のページの「アプリで開く」(D-456): `rasq://astell/…` / `rasq://account/…` / `rasq://custom-invite/…`
+      // → アプリの中の画面(rasq_links.dart)。チャイルドセーフより先に見る(あちらは `rasq://` を全部受けてホームへ寄せる)。
+      final linked = rasqDeepLinkLocation(state.uri);
+      if (linked != null) return linked;
       if (state.uri.scheme == childSafeLinkScheme) return childSafeDeepLinkLocation(state.uri) ?? Routes.home;
       final sessions = ref.read(sessionsProvider);
       final ledger = ref.read(rasqAccountsProvider);
@@ -517,6 +527,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/swing', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SwingViewerScreen(startAuthor: s.uri.queryParameters['author'], mine: s.uri.queryParameters['mine'] == '1')),
           GoRoute(path: Routes.swingNew, parentNavigatorKey: _appNavigatorKey, builder: (_, s) => SwingComposerScreen(draft: s.extra is SwingDraft ? s.extra as SwingDraft : null)),
           GoRoute(path: '/custom/invite/:code', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => CustomInviteScreen(code: Uri.decodeComponent(s.pathParameters['code']!))),
+          GoRoute(path: '/astell/:ref', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => AstellOpenScreen(roomRef: s.pathParameters['ref']!)),
           GoRoute(
               path: '/rasq-page/:handle/:id',
               parentNavigatorKey: _appNavigatorKey,

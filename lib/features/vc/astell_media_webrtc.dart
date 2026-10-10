@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:livekit_client/livekit_client.dart' show AudioManager;
 
+import 'astell_audio_platform.dart';
 import 'astell_media.dart';
 import 'astell_web_audio.dart';
 
@@ -27,21 +27,37 @@ typedef AstellRemoteAudioPlayer = AstellRemoteAudio? Function(MediaStreamTrack t
 /// - Web のマイク: https(安全なコンテキスト)なら、ネイティブと同じく開ける。http のときだけ [micBlocked]。
 /// - 様子 (D-323): 接続 / ICE の状態の変化と、受けた声・`<audio>` の様子をログ(`astell call:`)に出し、
 ///   [AstellPeerLink.diagnostics] で ICE の候補の種類・選ばれた組・送受信のバイト数を返す(設定の「接続の状態」)。
+/// - **下ろしている間は送る側を止める (D-455)**: ネイティブの WebRTC(libwebrtc)は、マイクを取り込む口(ADM)から
+///   「送っている」音声の送り口すべてへ直に音を渡す。送受信(sendrecv)の 1 本は、トラックを一度も差していなくても
+///   ネゴシエーションが終わると送り始め(トラックが無くても始まり、ミュートもされていない)、端末のマイクが入って
+///   **相手に声が届いていた** — 接続した直後、ボタンは「オフ」なのに声が出ていて、1 回目のタップ(立てる)では変わらず、
+///   2 回目(下ろす = `replaceTrack(null)` でミュートされる)でやっと止まった。いまは送る側の符号化を
+///   `active: false`(`RTCRtpSender.setParameters`)にして、立てている間だけ `true` にする(送り口が止まり、ほかに
+///   送っているものが無ければ取り込みも止まる)。Web(ブラウザ)はトラックの無い送り口は何も送らないので、これまでどおり。
+/// - マイクの開け閉め (D-455): 開いている最中にもう一度呼ばれても getUserMedia は 1 回だけ(同じ待ちを返す)。
+///   開いている間に閉じた(退出)ら、開けたマイクはすぐ止める(OS のマイクを掴んだままにしない)。
+/// - 端末の音 (D-455): 最初に接続を作るか、マイクを開くときに [AstellAudioPlatform] で通話の音のセッションを始め
+///   (Android は通話のモード)、マイクの前に許可を求め(Android は Bluetooth のヘッドセットの許可も)、開けたら
+///   裏に回っても止めない前面サービスを始める。閉じたら全部止める。
 class WebRtcAstellMedia implements AstellMedia {
-  WebRtcAstellMedia({AstellPeerConnectionFactory? peerConnection, AstellUserMedia? userMedia, AstellRemoteAudioPlayer? remoteAudio, bool? web})
+  WebRtcAstellMedia({AstellPeerConnectionFactory? peerConnection, AstellUserMedia? userMedia, AstellRemoteAudioPlayer? remoteAudio, bool? web, AstellAudioPlatform? audio})
       : _peerConnection = peerConnection ?? createPeerConnection,
         _userMedia = userMedia ?? ((constraints) => navigator.mediaDevices.getUserMedia(constraints)),
         _remoteAudio = remoteAudio ?? playAstellRemoteAudio,
-        _web = web ?? kIsWeb;
+        _web = web ?? kIsWeb,
+        _audio = audio ?? ((web ?? kIsWeb) ? const NullAstellAudioPlatform() : astellAudioPlatform());
 
   final AstellPeerConnectionFactory _peerConnection;
   final AstellUserMedia _userMedia;
   final AstellRemoteAudioPlayer _remoteAudio;
   final bool _web;
+  final AstellAudioPlatform _audio;
   MediaStream? _mic;
   bool _micEnabled = false;
   final Set<_WebRtcLink> _links = {};
-  bool _speakerRouted = false;
+  Future<void>? _sessionStarted;
+  Future<void>? _opening;
+  bool _disposed = false;
 
   @override
   bool get available => true;
@@ -54,28 +70,45 @@ class WebRtcAstellMedia implements AstellMedia {
 
   MediaStreamTrack? get _micTrack => _mic?.getAudioTracks().firstOrNull;
 
+  /// 開いている最中に何度呼ばれても、同じ待ちを返す(getUserMedia は 1 回だけ、D-455)。
   @override
-  Future<void> openMic() async {
-    if (_mic != null) return;
+  Future<void> openMic() {
+    if (_mic != null) return Future.value();
+    if (_disposed) return Future.error(StateError('閉じた通話のマイクは開けません'));
+    return _opening ??= _openMic().whenComplete(() => _opening = null);
+  }
+
+  Future<void> _openMic() async {
     final blocked = micBlocked;
     if (blocked != null) throw AstellMediaException(blocked);
+    // 先に通話の音のセッション(Android の通話のモード)と許可。許可が無いまま getUserMedia に進まない。
+    await _startSession();
+    if (!await _audio.requestMic()) throw const AstellMediaException(AstellMediaIssue.permissionDenied);
+    if (_disposed) throw StateError('閉じた通話のマイクは開けません');
+    final MediaStream stream;
     try {
-      _mic = await _userMedia({
+      stream = await _userMedia({
         'audio': {'echoCancellation': true, 'noiseSuppression': true, 'autoGainControl': true},
         'video': false,
       });
     } catch (e) {
       throw AstellMediaException.from(e);
     }
-    final track = _micTrack;
+    // 開いている間に退出した: 掴んだマイクはすぐ離す。
+    if (_disposed || _mic != null) {
+      await _stopStream(stream);
+      if (_disposed) throw StateError('閉じた通話のマイクは開けません');
+      return;
+    }
+    final track = stream.getAudioTracks().firstOrNull;
     if (track == null) {
-      await _closeMic();
+      await _stopStream(stream);
       throw const AstellMediaException(AstellMediaIssue.noDevice);
     }
+    _mic = stream;
     track.enabled = _micEnabled;
-    for (final l in _links) {
-      await l.attachMic(track, send: _micEnabled);
-    }
+    unawaited(_audio.keepAlive(this, true));
+    await Future.wait([for (final l in [..._links]) l.attachMic(track, send: _micEnabled)]);
   }
 
   /// マイクの上げ下ろし (D-330): `enabled` を切り替えるだけでなく、下ろしたら送る側から**外す**(`replaceTrack(null)`)、
@@ -85,61 +118,69 @@ class WebRtcAstellMedia implements AstellMedia {
     _micEnabled = enabled;
     _micTrack?.enabled = enabled;
     for (final l in _links) {
-      unawaited(l.setSending(enabled).catchError((Object e) => debugPrint('astell media: mic ${enabled ? 'on' : 'off'}: $e')));
+      unawaited(l.setSending(enabled));
     }
   }
 
   @override
   Future<AstellPeerLink> createLink(String peerId, {required bool offerer, required List<Map<String, Object?>> iceServers, required AstellLinkHandlers handlers}) async {
-    await _routeToSpeaker();
+    await _startSession();
     final pc = await _peerConnection({
       'iceServers': iceServers,
       'sdpSemantics': 'unified-plan',
     });
-    final link = _WebRtcLink(peerId, pc, handlers, remoteAudio: _remoteAudio, onClosed: _links.remove);
-    await link.init(offerer: offerer, mic: _micTrack, send: _micEnabled);
+    final link = _WebRtcLink(peerId, pc, handlers, remoteAudio: _remoteAudio, onClosed: _links.remove, gateSender: !_web)
+      .._pendingMic = _micTrack
+      .._send = _micEnabled;
+    // 作っている間にマイクを開けた / 立てた・下ろした分も、この接続に届くよう先に並べる。
     _links.add(link);
+    await link.init(offerer: offerer);
+    if (_disposed) await link.close(); // 作っている間に閉じた(退出)
     return link;
   }
 
-  /// 電話(Android / iOS)は受話口ではなくスピーカーから(複数人の通話なので。ヘッドセットがあればそちら)。
-  /// 端末の音のセッションは livekit_client の AudioManager が持つ(読み込んだ時点で flutter_webrtc の
-  /// 管理を止めて、同じ WebRTC のエンジンの状態から決める)ので、出し先もそこへ頼む。
-  Future<void> _routeToSpeaker() async {
-    if (_speakerRouted || _web) return;
-    _speakerRouted = true;
-    if (defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS) return;
-    try {
-      await AudioManager.instance.setSpeakerOutputPreferred(true);
-    } catch (e) {
-      debugPrint('astell media: speakerphone: $e');
+  /// 通話の音のセッション(Android: 通話のモード + 音の焦点 + スピーカー優先、iOS: スピーカー優先)を 1 回だけ。
+  Future<void> _startSession() => _sessionStarted ??= _audio.start(this).catchError((Object e) => debugPrint('astell media: audio session: $e'));
+
+  static Future<void> _stopStream(MediaStream stream) async {
+    for (final t in stream.getTracks()) {
+      try {
+        await t.stop();
+      } catch (_) {}
     }
+    try {
+      await stream.dispose();
+    } catch (_) {}
   }
 
   Future<void> _closeMic() async {
     final mic = _mic;
     _mic = null;
     if (mic == null) return;
-    for (final t in mic.getTracks()) {
-      try {
-        await t.stop();
-      } catch (_) {}
-    }
-    await mic.dispose();
+    await _stopStream(mic);
   }
 
   @override
   Future<void> dispose() async {
+    _disposed = true;
     for (final l in [..._links]) {
       await l.close();
     }
     _links.clear();
     await _closeMic();
+    try {
+      await _audio.stop(this);
+    } catch (e) {
+      debugPrint('astell media: audio session stop: $e');
+    }
   }
 }
 
 class _WebRtcLink implements AstellPeerLink {
-  _WebRtcLink(this.peerId, this._pc, this._handlers, {required AstellRemoteAudioPlayer remoteAudio, required this.onClosed}) : _playRemote = remoteAudio;
+  _WebRtcLink(this.peerId, this._pc, this._handlers, {required AstellRemoteAudioPlayer remoteAudio, required this.onClosed, required this.gateSender}) : _playRemote = remoteAudio;
+
+  /// 下ろしている間、送る側の符号化を止める(`active: false`)か (D-455)。ネイティブだけ。
+  final bool gateSender;
 
   @override
   final String peerId;
@@ -164,7 +205,17 @@ class _WebRtcLink implements AstellPeerLink {
   MediaStreamTrack? _pendingMic;
   bool _send = false;
 
-  Future<void> init({required bool offerer, MediaStreamTrack? mic, bool send = false}) async {
+  /// 送る側にいま差しているトラック(差し替えが済んだもの)。
+  MediaStreamTrack? _attached;
+
+  /// 送る側の符号化を最後に何にしたか(`active`)。null = まだ決めていない(ネゴシエーションのたびに決め直す)。
+  bool? _active;
+
+  /// 送る側の差し替えを 1 本ずつ (D-455): 立てる途中に下ろしても、順に済ませて最後の向きに揃える。
+  Future<void> _micOps = Future.value();
+
+  /// マイク([_pendingMic])と向き([_send])は、作った側が先に入れておく。
+  Future<void> init({required bool offerer}) async {
     _pc.onSignalingState = (s) => _signaling = s;
     _pc.onIceCandidate = (c) {
       if (c.candidate == null || _closed) return;
@@ -201,9 +252,8 @@ class _WebRtcLink implements AstellPeerLink {
         init: RTCRtpTransceiverInit(direction: TransceiverDirection.SendRecv),
       );
     }
-    _pendingMic = mic;
-    _send = send;
-    if (offerer && mic != null && send) await _applyMic();
+    // 送受信の 1 本を作ったらすぐ、下ろしていれば送る側を止めておく(トラックが無くても送り始めるので、D-455)。
+    if (offerer) await _applyMic();
   }
 
   /// Web: 受けたトラックを `<audio>` に繋ぐ(`e.streams` は見ない — 送る側が `addTransceiver` + `replaceTrack` なので、
@@ -229,26 +279,60 @@ class _WebRtcLink implements AstellPeerLink {
   }
 
   /// マイクを持つ(繋ぎ直しは要らない)。[send] = 立っている(送る側に差す)。
-  Future<void> attachMic(MediaStreamTrack track, {required bool send}) async {
+  Future<void> attachMic(MediaStreamTrack track, {required bool send}) {
     _pendingMic = track;
     _send = send;
-    await _applyMic();
+    return _applyMic();
   }
 
   /// マイクを立てる / 下ろす (D-330): 立てたら差す、下ろしたら `replaceTrack(null)` で外す。
-  Future<void> setSending(bool send) async {
+  Future<void> setSending(bool send) {
     _send = send;
-    await _applyMic();
+    return _applyMic();
   }
 
-  Future<void> _applyMic() async {
+  /// 送る側を、いまの向き([_send] / [_pendingMic])に揃える。1 本ずつ順に(前の差し替えが済んでから)。
+  /// 揃える中身は実行するときに読むので、立てる → 下ろす が重なっても最後は下ろした形になる (D-455)。
+  Future<void> _applyMic() {
+    final op = _micOps.then((_) => _syncSender()).catchError((Object e) => debugPrint('astell media: ${peerId.length > 8 ? peerId.substring(0, 8) : peerId} mic: $e'));
+    return _micOps = op;
+  }
+
+  Future<void> _syncSender() async {
     if (_closed) return;
     final t = await _audioTransceiver();
     if (t == null) return; // 受ける側で、まだ相手の offer が来ていない — setRemoteDescription のあとで差し込む
     final track = _send ? _pendingMic : null;
-    if (track == null && !_micAttached) return; // 外すものが無い
-    await t.sender.replaceTrack(track);
-    _micAttached = track != null;
+    final sending = track != null;
+    // 下ろす: 先に符号化を止めてから外す。立てる: 差してから符号化を始める(止めている間は何も送らない)。
+    if (!sending) await _setActive(t.sender, false);
+    if (!identical(track, _attached)) {
+      await t.sender.replaceTrack(track);
+      _attached = track;
+    }
+    _micAttached = sending;
+    if (sending) await _setActive(t.sender, true);
+  }
+
+  /// 送る側の符号化を入れる / 止める (D-455、ネイティブだけ)。いまの値は送り手から読み直して、`active` だけ変える。
+  /// 失敗しても差し替え(`replaceTrack`)は続ける(下ろすときのミュートは D-330 の外し方でも効く)。
+  Future<void> _setActive(RTCRtpSender sender, bool active) async {
+    if (!gateSender || _active == active || _closed) return;
+    try {
+      final p = sender.parameters;
+      final encodings = p.encodings;
+      if (encodings == null || encodings.isEmpty) {
+        p.encodings = [RTCRtpEncoding(active: active, numTemporalLayers: null, scaleResolutionDownBy: null)];
+      } else {
+        for (final e in encodings) {
+          e.active = active;
+        }
+      }
+      await sender.setParameters(p);
+      _active = active;
+    } catch (e) {
+      _log('sender active=$active: $e');
+    }
   }
 
   static void _tally(Map<String, int> into, String? candidate) {
@@ -286,6 +370,7 @@ class _WebRtcLink implements AstellPeerLink {
     final offer = await _pc.createOffer({if (iceRestart) 'iceRestart': true});
     await _pc.setLocalDescription(offer);
     _signaling = RTCSignalingState.RTCSignalingStateHaveLocalOffer;
+    await _resyncSender();
     return _desc(offer);
   }
 
@@ -294,6 +379,7 @@ class _WebRtcLink implements AstellPeerLink {
     final answer = await _pc.createAnswer();
     await _pc.setLocalDescription(answer);
     _signaling = RTCSignalingState.RTCSignalingStateStable;
+    await _resyncSender();
     return _desc(answer);
   }
 
@@ -306,11 +392,16 @@ class _WebRtcLink implements AstellPeerLink {
     if (type == 'offer') {
       // 相手の offer でできた音声の 1 本を送受信にして、マイクが立っていれば差し込む(answer に sendrecv が載る)。
       final t = await _audioTransceiver();
-      if (t != null) {
-        await t.setDirection(TransceiverDirection.SendRecv);
-        await _applyMic();
-      }
+      if (t != null) await t.setDirection(TransceiverDirection.SendRecv);
     }
+    await _resyncSender();
+  }
+
+  /// ネゴシエーションのたびに(送り手に SSRC が付いた / 付け直した)、送る側の止める / 入れるを決め直す (D-455)。
+  /// 送り始めるのは ICE が繋がってからなので、下ろしていればそれより前に止まる。
+  Future<void> _resyncSender() {
+    _active = null;
+    return _applyMic();
   }
 
   @override

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:rasq_client/features/vc/astell_audio_platform.dart';
 import 'package:rasq_client/features/vc/astell_media.dart';
 import 'package:rasq_client/features/vc/astell_media_webrtc.dart';
 
@@ -12,12 +15,13 @@ void main() {
   const handlers = AstellLinkHandlers(onIceCandidate: _ignore, onState: _ignoreState);
   const ice = <Map<String, Object?>>[];
 
-  ({WebRtcAstellMedia media, List<_FakePc> pcs, List<_FakeOut> outs, List<Map<String, dynamic>> asked}) make({bool web = true, _FakeTrack? mic}) {
+  ({WebRtcAstellMedia media, List<_FakePc> pcs, List<_FakeOut> outs, List<Map<String, dynamic>> asked}) make({bool web = true, _FakeTrack? mic, AstellAudioPlatform? audio, Future<MediaStream> Function()? userMedia}) {
     final pcs = <_FakePc>[];
     final outs = <_FakeOut>[];
     final asked = <Map<String, dynamic>>[];
     final media = WebRtcAstellMedia(
       web: web,
+      audio: audio ?? (web ? null : _FakeAudio()),
       peerConnection: (config) async {
         final pc = _FakePc();
         pcs.add(pc);
@@ -25,6 +29,7 @@ void main() {
       },
       userMedia: (constraints) async {
         asked.add(constraints);
+        if (userMedia != null) return userMedia();
         return _FakeStream([mic ?? _FakeTrack('audio', 'mic')]);
       },
       remoteAudio: (track, {required muted}) {
@@ -118,6 +123,141 @@ void main() {
       expect(astellInsecureWebContext(web: true, secureContext: false), isTrue);
       final native = make(web: false);
       expect(native.media.micBlocked, isNull);
+    });
+  });
+
+  group('ネイティブ: 下ろしている間は送る側を止める (D-455)', () {
+    Future<void> settle() async {
+      for (var i = 0; i < 5; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    test('offer を出す側: 送受信の 1 本を作った時点で止める(トラックが無くても libwebrtc は送り始めるので)。立てたら差してから入れ、下ろしたら止めてから外す', () async {
+      final mic = _FakeTrack('audio', 'mic');
+      final m = make(web: false, mic: mic);
+      final link = await m.media.createLink('p2', offerer: true, iceServers: ice, handlers: handlers);
+      await settle();
+      final sender = m.pcs.single.made.single.sender;
+      expect(sender.active, isFalse, reason: '接続した直後、ボタンはオフ — 送る側も止まっている');
+      expect(sender.replaced, isEmpty);
+      // ネゴシエーション(SSRC が付く)のあとも止めたまま。
+      await link.createOffer();
+      await link.setRemoteDescription({'sdp': 'answer-sdp', 'type': 'answer'});
+      await settle();
+      expect(sender.active, isFalse);
+      expect(sender.ops.where((o) => o == 'active:true'), isEmpty, reason: '一度も入れていない');
+
+      await m.media.openMic();
+      m.media.setMicEnabled(true);
+      await settle();
+      expect([sender.active, sender.replaced], [true, [mic]]);
+      expect(sender.ops.sublist(sender.ops.length - 2), ['replace:mic', 'active:true'], reason: '差してから入れる');
+      m.media.setMicEnabled(false);
+      await settle();
+      expect([sender.active, sender.replaced], [false, [mic, null]]);
+      expect(sender.ops.sublist(sender.ops.length - 2), ['active:false', 'replace:null'], reason: '止めてから外す');
+      expect((await link.diagnostics()).micAttached, isFalse);
+    });
+
+    test('受ける側: 相手の offer でできた 1 本は、answer を作る前に止める。立てたまま繋いだ相手には入れる', () async {
+      final mic = _FakeTrack('audio', 'mic');
+      final m = make(web: false, mic: mic);
+      final link = await m.media.createLink('p2', offerer: false, iceServers: ice, handlers: handlers);
+      await link.setRemoteDescription({'sdp': 'offer-sdp', 'type': 'offer'});
+      final sender = m.pcs.single.made.single.sender;
+      expect(sender.active, isFalse);
+      await link.createAnswer();
+      await settle();
+      expect(sender.active, isFalse);
+
+      await m.media.openMic();
+      m.media.setMicEnabled(true);
+      final l2 = await m.media.createLink('p3', offerer: false, iceServers: ice, handlers: handlers);
+      await l2.setRemoteDescription({'sdp': 'offer-sdp', 'type': 'offer'});
+      await settle();
+      final s2 = m.pcs.last.made.single.sender;
+      expect([s2.active, s2.replaced], [true, [mic]]);
+    });
+
+    test('立てる途中で下ろす(差し替えを待っている間): 順に済ませて、最後は止めて外した形', () async {
+      final mic = _FakeTrack('audio', 'mic');
+      final m = make(web: false, mic: mic);
+      await m.media.createLink('p2', offerer: true, iceServers: ice, handlers: handlers);
+      await settle();
+      final sender = m.pcs.single.made.single.sender;
+      await m.media.openMic();
+      final gate = sender.gate = Completer<void>();
+      m.media.setMicEnabled(true);
+      await settle();
+      m.media.setMicEnabled(false); // 差し替えの最中に下ろす
+      await settle();
+      gate.complete();
+      sender.gate = null;
+      await settle();
+      expect(sender.replaced, [mic, null]);
+      expect(sender.active, isFalse);
+      expect(mic.enabled, isFalse);
+    });
+
+    test('Web は送る側の符号化を触らない(ブラウザはトラックの無い送り口から何も送らない)', () async {
+      final m = make(mic: _FakeTrack('audio', 'mic'));
+      await m.media.createLink('p2', offerer: true, iceServers: ice, handlers: handlers);
+      await m.media.openMic();
+      m.media.setMicEnabled(true);
+      await settle();
+      expect(m.pcs.single.made.single.sender.ops.where((o) => o.startsWith('active')), isEmpty);
+    });
+  });
+
+  group('マイクの開け閉めと端末の音 (D-455)', () {
+    test('開いている最中にもう一度呼んでも getUserMedia は 1 回。先に音のセッションと許可、開けたら前面サービス', () async {
+      final audio = _FakeAudio();
+      final gate = Completer<MediaStream>();
+      final m = make(web: false, audio: audio, userMedia: () => gate.future);
+      final a = m.media.openMic();
+      final b = m.media.openMic();
+      await Future<void>.delayed(Duration.zero);
+      expect(m.asked, hasLength(1));
+      gate.complete(_FakeStream([_FakeTrack('audio', 'mic')]));
+      await Future.wait([a, b]);
+      expect(m.asked, hasLength(1));
+      expect(m.media.micOpen, isTrue);
+      expect(audio.log, ['start', 'requestMic', 'keepAlive:true']);
+      await m.media.openMic();
+      expect(m.asked, hasLength(1), reason: '開いていれば開かない');
+      await m.media.dispose();
+      expect(audio.log.last, 'stop');
+    });
+
+    test('マイクの許可が無ければ getUserMedia に進まず、許可が無いと言う', () async {
+      final audio = _FakeAudio()..micGranted = false;
+      final m = make(web: false, audio: audio);
+      await expectLater(m.media.openMic(), throwsA(isA<AstellMediaException>().having((e) => e.issue, 'issue', AstellMediaIssue.permissionDenied)));
+      expect(m.asked, isEmpty);
+      expect(m.media.micOpen, isFalse);
+    });
+
+    test('開いている最中に退出したら、開けたマイクはすぐ止める(OS のマイクを掴んだままにしない)', () async {
+      final gate = Completer<MediaStream>();
+      final track = _FakeTrack('audio', 'mic');
+      final m = make(web: false, userMedia: () => gate.future);
+      final opening = m.media.openMic();
+      await Future<void>.delayed(Duration.zero);
+      await m.media.dispose();
+      gate.complete(_FakeStream([track]));
+      await expectLater(opening, throwsA(isA<StateError>()));
+      expect(track.stopped, isTrue);
+      expect(m.media.micOpen, isFalse);
+    });
+
+    test('接続を作るときにも音のセッションを始める(1 回だけ)。始めた口でないと止めない', () async {
+      final audio = _FakeAudio();
+      final m = make(web: false, audio: audio);
+      await m.media.createLink('p2', offerer: true, iceServers: ice, handlers: handlers);
+      await m.media.createLink('p3', offerer: true, iceServers: ice, handlers: handlers);
+      expect(audio.log, ['start']);
+      expect(audio.owners.single, same(m.media));
     });
   });
 
@@ -244,8 +384,31 @@ class _FakeTrack extends Fake implements MediaStreamTrack {
   final String? id;
   @override
   bool enabled = true;
+  bool stopped = false;
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async => stopped = true;
+}
+
+class _FakeAudio implements AstellAudioPlatform {
+  final log = <String>[];
+  final owners = <Object>[];
+  bool micGranted = true;
+  @override
+  Future<void> start(Object owner) async {
+    owners.add(owner);
+    log.add('start');
+  }
+
+  @override
+  Future<void> stop(Object owner) async => log.add('stop');
+  @override
+  Future<bool> requestMic() async {
+    log.add('requestMic');
+    return micGranted;
+  }
+
+  @override
+  Future<void> keepAlive(Object owner, bool on) async => log.add('keepAlive:$on');
 }
 
 class _FakeStream extends Fake implements MediaStream {
@@ -261,10 +424,34 @@ class _FakeStream extends Fake implements MediaStream {
 
 class _FakeSender extends Fake implements RTCRtpSender {
   final List<MediaStreamTrack?> replaced = [];
+
+  /// 差し替え / 符号化の入れ切りの順(`replace:mic` / `active:false` …)。
+  final List<String> ops = [];
+
+  /// 送る側の符号化(libwebrtc の既定は入っている)。
+  bool active = true;
+
+  /// 差し替えを待たせる。
+  Completer<void>? gate;
   @override
   MediaStreamTrack? get track => replaced.lastOrNull;
   @override
-  Future<void> replaceTrack(MediaStreamTrack? track) async => replaced.add(track);
+  Future<void> replaceTrack(MediaStreamTrack? track) async {
+    final g = gate;
+    if (g != null) await g.future;
+    replaced.add(track);
+    ops.add('replace:${track?.id}');
+  }
+
+  @override
+  RTCRtpParameters get parameters => RTCRtpParameters(encodings: [RTCRtpEncoding(active: active, numTemporalLayers: null, scaleResolutionDownBy: null)]);
+
+  @override
+  Future<bool> setParameters(RTCRtpParameters parameters) async {
+    active = parameters.encodings!.single.active;
+    ops.add('active:$active');
+    return true;
+  }
 }
 
 class _FakeReceiver extends Fake implements RTCRtpReceiver {
