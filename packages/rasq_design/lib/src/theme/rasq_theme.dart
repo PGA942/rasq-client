@@ -45,6 +45,9 @@ abstract final class RasqTheme {
     );
 
     final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: brightness);
+    // ボタン(FilledButton / OutlinedButton)の文言の書体は、ほかの文字(labelLarge)と同じ名前で。fontFamily を空のままにすると
+    // エンジンの既定の書体で描かれ、flutter_tester ではテストのフォントに落ちて日本語が □ になる(D-458 のスクリーンショット)。
+    final button = RasqTypography.button.copyWith(fontFamily: base.textTheme.labelLarge?.fontFamily, fontFamilyFallback: base.textTheme.labelLarge?.fontFamilyFallback);
     return base.copyWith(
       scaffoldBackgroundColor: scheme.surface,
       splashFactory: InkSparkle.splashFactory,
@@ -89,7 +92,7 @@ abstract final class RasqTheme {
         style: FilledButton.styleFrom(
           backgroundColor: scheme.primary,
           foregroundColor: scheme.onPrimary,
-          textStyle: RasqTypography.button,
+          textStyle: button,
           shape: const StadiumBorder(),
           minimumSize: const Size(64, RasqSizes.minTap - 8),
         ),
@@ -97,7 +100,7 @@ abstract final class RasqTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: scheme.primary,
-          textStyle: RasqTypography.button,
+          textStyle: button,
           shape: const StadiumBorder(),
           side: BorderSide(color: scheme.primary),
           minimumSize: const Size(64, RasqSizes.minTap - 8),
