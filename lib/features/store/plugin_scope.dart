@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:plugin_runtime/plugin_runtime.dart' show fetchHostPermitted;
 
 /// プラグインに許す内容 (セキュリティ確認 2026-10-09 の [8] / [14]): 選んだ版の**マニフェストそのもの**から読む
 /// 権限・接続先・アクセスできるデータ(差し込む面 = 受け取る入力)・目的(権限ごとの用途理由とデータの扱い)。
@@ -92,18 +93,9 @@ class PluginScope {
 }
 
 /// [host] が許していた接続先 [approved] に収まるか(`*` = どこでも、`*.example.com` = そのサブドメイン)。
-bool _hostCovered(String host, Set<String> approved) {
-  if (approved.contains('*') || approved.contains(host)) return true;
-  if (host == '*') return false;
-  final wild = host.startsWith('*.');
-  final base = wild ? host.substring(2) : host;
-  for (final a in approved) {
-    if (!a.startsWith('*.')) continue;
-    final suffix = a.substring(2);
-    if (base.endsWith('.$suffix') || (wild && base == suffix)) return true;
-  }
-  return false;
-}
+/// 判定は net.fetch と同じ fetchHostPermitted に寄せる。`*.a.example.com` は先頭のラベルが `*` のサブドメインとして
+/// 渡せば、`*.example.com` / `*` にだけ収まり、`a.example.com` のような 1 つのホストには収まらない。
+bool _hostCovered(String host, Set<String> approved) => fetchHostPermitted(host, approved);
 
 List<String> _strings(Object? v) => [for (final s in v is List ? v : const []) if (s is String) s];
 
