@@ -1,5 +1,7 @@
-// rasq-central のホームページ (S-095) の「実機っぽいプレビュー」に貼る、アプリの画面のスクリーンショット。
-// 390×844 論理 px(2 倍 = 780×1688)で、ホームのタイムライン / ASTell のホーム / RASQ アカウントページ / オンボーディングを PNG に出す。
+// rasq-central のホームページ (S-095 / S-096) の「実機っぽいプレビュー」に貼る、アプリの画面のスクリーンショット。
+// 390×844 論理 px(2 倍 = 780×1688、スマホ)で ASTell のホーム / RASQ アカウントページ / オンボーディングを、
+// 1280×800 論理 px(1.5 倍 = 1920×1200、タブレットの横向き)で Web クライアント(レール + 2 カラムのホーム)を PNG に出す。
+// ホームページは画像の比率で端末(長辺 / 短辺 が 2 以上ならスマホ、それ未満ならタブレット)と向きを決める (S-096)。
 // 実行(WebP への変換と置き場までまとめて)は tool/preview/homeshots.sh。手で回すなら:
 //   RASQ_PREVIEW_FONT=/path/to/NotoSansJP.ttf flutter test tool/preview/homeshots_test.dart --update-goldens
 // → tool/preview/home_*.png(git には入れない。成果物は rasq-central の src/web/home/*.webp)。
@@ -33,6 +35,8 @@ void main() {
   setUpAll(() async {
     final bytes = File(fontPath).readAsBytesSync();
     // FlutterTest = flutter_test の既定のフォント(テーマを通らない文字はここへ落ちる)。
+    // fontFamily の無い文字は、ここで登録した名前では探されずエンジンのテストのフォントに落ちて □ になる(D-458 で
+    // FilledButton / OutlinedButton の文言がそうだった → rasq_design のテーマ側で labelLarge と同じ名前を付けた)。
     for (final family in ['Roboto', 'NotoSansJP', '.SF UI Text', '.SF UI Display', 'FlutterTest']) {
       final loader = FontLoader(family)..addFont(Future.value(ByteData.view(bytes.buffer)));
       await loader.load();
@@ -67,9 +71,21 @@ void main() {
     SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
   });
 
+  /// 画面の大きさ: 1280×800 論理 px(タブレット / Web の横向き、16:10)の 1.5 倍。ホームページのタブレットの画面に貼る。
+  void tablet(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1920, 1200);
+    tester.view.devicePixelRatio = 1.5;
+    addTearDown(tester.view.reset);
+  }
+
   /// SNS のタイムラインの見本 (MockData) でログイン中。Central には繋がない(ASTell はモックのルーム)。
-  Future<ProviderContainer> pumpApp(WidgetTester tester) async {
-    phone(tester);
+  /// [wide] なら タブレットの横向き(レール + 2 カラム)で。
+  Future<ProviderContainer> pumpApp(WidgetTester tester, {bool wide = false}) async {
+    if (wide) {
+      tablet(tester);
+    } else {
+      phone(tester);
+    }
     await tester.pumpWidget(ProviderScope(
       overrides: [
         sessionStorageProvider.overrideWithValue(loggedIn),
@@ -82,9 +98,9 @@ void main() {
     return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
   }
 
-  testWidgets('home timeline', (tester) async {
-    await pumpApp(tester);
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_timeline.png'));
+  testWidgets('web client (tablet, landscape)', (tester) async {
+    await pumpApp(tester, wide: true);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_client.png'));
   });
 
   testWidgets('astell home', (tester) async {
