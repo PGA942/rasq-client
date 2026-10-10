@@ -33,6 +33,13 @@ for p in packages/*; do (cd "$p" && flutter test); done
 flutter run              # 起動。サイドバー →「コンポーネントカタログ (dev)」で部品一覧
 ```
 
+Web クライアント(D-295 / D-456)は Central の `/app/` で配る形に作る(`--base-href /app/`、path の URL):
+
+```bash
+RASQ_CENTRAL_URL=https://central.example ORGATE_BASE_URL=https://orgate.example tool/web/build_web.sh
+# → build/web を Central の CENTRAL_WEB_APP_DIR に置く(rasq-central docs/API.md 4c')
+```
+
 プラグインのサイドロード(「WASMプラグイン試験 (dev)」から読み込む / スロットに登録する)は、**自分の開発者鍵で署名した
 `.rasqpkg`(`rasq build` が隣に `.sig.json` を出す)とアプリ同梱のものだけフル機能**、ほかは**制限モード**
 (通信 / GPU / `storage.unsafe` / interstitial・system の FOW / `composer.open`・`astell.share`・`mute.add`・`url.open` が閉、fuel は半分)。

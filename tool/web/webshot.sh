@@ -2,7 +2,7 @@
 # Web 版を、ヘッドレス Chrome で開いて確かめる (D-303)。コンソールの中身を出し、画面の写真を撮る。
 #
 #   flutter build web --profile --source-maps   # 名前の残るビルド(release でもよい)
-#   docker run --rm -v ~/work:/w -v /tmp/out:/s -e PAGE='#/rai' -w /w/rasq-client rasq-flutter:3.47.2 sh tool/web/webshot.sh
+#   docker run --rm -v ~/work:/w -v /tmp/out:/s -e PAGE='rai' -w /w/rasq-client rasq-flutter:3.47.2 sh tool/web/webshot.sh
 #
 # 写真は /s/shot.png。イメージ (.docker-flutter) には Chrome が入っている。
 cd "$(dirname "$0")/../../build/web" || exit 1

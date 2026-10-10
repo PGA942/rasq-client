@@ -21,6 +21,9 @@ workspace:
 dependencies:
   flutter:
     sdk: flutter
+  # Web 版の URL を path にする (D-456): Central の `/app/astell/<code>` などから直接その画面へ。
+  flutter_web_plugins:
+    sdk: flutter
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^3.0.0
   go_router: ^17.0.0

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:sns_misskey/sns_misskey.dart';
 
 import 'app/app.dart';
@@ -13,6 +14,10 @@ const _probeHost = String.fromEnvironment('RASQ_PROBE');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Web 版 (D-456): `#/…` でなく path の URL(Central が `/app/` の下を index.html に落とす、rasq-central S-092)。
+  // Central のページのチップ(`/app/astell/<code>` / `/app/rasq/<handle>` / `/app/custom/invite/<code>`)がそのまま場所になる。
+  // 端末では何もしない。
+  usePathUrlStrategy();
   if (kDebugMode && _probeHost.isNotEmpty) await _probe(_probeHost);
   await prepareDeviceRuntime();
   runApp(ProviderScope(

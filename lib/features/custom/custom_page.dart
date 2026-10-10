@@ -10,7 +10,9 @@ import 'package:rrl_core/rrl_core.dart';
 import 'package:rrl_renderer/rrl_renderer.dart';
 
 import '../../app/providers.dart';
+import '../../app/rasq_links.dart';
 import '../../app/router.dart';
+import '../../backend/orgate_client.dart' show centralBaseUrlProvider;
 import '../../backend/rasq_account.dart';
 import '../../backend/redact.dart';
 import '../../shell/headers.dart';
@@ -509,6 +511,8 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
     final pick = await ref.read(overlayManagerProvider).showDropdown<String>(id: 'custom.page.menu', anchor: anchor, items: [
       if (invitable) const RasqDropdownItem('招待(Swing で送る)', 'invite'),
       if (s?.inviteCode != null) const RasqDropdownItem('招待コードをコピー', 'copy'),
+      // 招待リンク (D-456): Central のページから Web クライアント / アプリで開ける。
+      if (s?.inviteCode != null && ref.read(centralBaseUrlProvider) != null) const RasqDropdownItem('招待リンクをコピー', 'copyLink'),
       if (s != null) RasqDropdownItem('参加者(${c.participants.length})', 'people'),
       if (isOwner) const RasqDropdownItem('セッションを閉じる', 'close', destructive: true),
       const RasqDropdownItem('ストアで見る', 'store'),
@@ -528,6 +532,11 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
       case 'copy':
         await Clipboard.setData(ClipboardData(text: s!.inviteCode!));
         messenger?.showSnackBar(SnackBar(content: Text('招待コード ${s.inviteCode} をコピーしました')));
+      case 'copyLink':
+        final central = ref.read(centralBaseUrlProvider);
+        if (central == null) return;
+        await Clipboard.setData(ClipboardData(text: centralCustomInviteUrl(central, s!.inviteCode!)));
+        messenger?.showSnackBar(const SnackBar(content: Text('招待リンクをコピーしました')));
       case 'people':
         await ref.read(overlayManagerProvider).showAlert(
               id: 'custom.page.people',
