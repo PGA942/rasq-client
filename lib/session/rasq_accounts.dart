@@ -46,6 +46,7 @@ class RasqAccountRecord {
     this.centralAccountId,
     this.sessionKeys = const [],
     this.pruneBundle = true,
+    this.bundleRemovals = const [],
     required this.createdAt,
   });
 
@@ -68,11 +69,18 @@ class RasqAccountRecord {
   /// サーバーのアカウントバンドルを、この端末の SNS アカウントで**置き換える**か (D-241)。
   /// false = 登録のときに「置き換えない」を選んだ: 足すだけで、サーバーにだけある分は消さない。
   final bool pruneBundle;
+
+  /// この端末で**ログアウトした** SNS アカウントのうち、まだサーバーのバンドル(`sns_links`)から外せていないもの (D-461)。
+  /// [pruneBundle] が false の行(ログインで入ったアカウント = ほかの端末のぶんを消さない)は、この端末に無いものを消さないので、
+  /// 前はこの端末でログアウトしてもサーバーに残り続け、Web コンソール (S-097) の一覧がアプリと食い違っていた。ログアウトした
+  /// ことだけをここに残し、次の同期で `DELETE /me/sns-accounts/{key}` する(消せたら外す。もう一度ログインしたら外す)。
+  /// RASQ アカウントからのログアウト(D-409)で SNS も消したときは入れない(アカウントのバンドルは変えない)。
+  final List<String> bundleRemovals;
   final DateTime createdAt;
 
   bool get isCentral => kind == RasqAccountKind.central;
 
-  RasqAccountRecord copyWith({String? handle, String? displayName, Uri? avatarUrl, List<String>? sessionKeys, bool clearAvatar = false}) => RasqAccountRecord(
+  RasqAccountRecord copyWith({String? handle, String? displayName, Uri? avatarUrl, List<String>? sessionKeys, List<String>? bundleRemovals, bool clearAvatar = false}) => RasqAccountRecord(
         id: id,
         kind: kind,
         handle: handle ?? this.handle,
@@ -81,6 +89,7 @@ class RasqAccountRecord {
         centralAccountId: centralAccountId,
         sessionKeys: sessionKeys ?? this.sessionKeys,
         pruneBundle: pruneBundle,
+        bundleRemovals: bundleRemovals ?? this.bundleRemovals,
         createdAt: createdAt,
       );
 
@@ -93,6 +102,7 @@ class RasqAccountRecord {
         'centralAccountId': centralAccountId,
         'sessionKeys': sessionKeys,
         if (!pruneBundle) 'pruneBundle': false,
+        if (bundleRemovals.isNotEmpty) 'bundleRemovals': bundleRemovals,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -105,6 +115,7 @@ class RasqAccountRecord {
         centralAccountId: j['centralAccountId'] as String?,
         sessionKeys: [for (final k in (j['sessionKeys'] as List? ?? const [])) if (k is String) k],
         pruneBundle: j['pruneBundle'] != false,
+        bundleRemovals: [for (final k in (j['bundleRemovals'] as List? ?? const [])) if (k is String) k],
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
       );
 }
@@ -196,6 +207,9 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
 
   RasqAccountsState get _cur => state.value ?? const RasqAccountsState();
 
+  /// [keys] にもう一度ログインした / 入れた: ログアウトの控え (D-461 [RasqAccountRecord.bundleRemovals]) から外す。
+  static List<String> _unremoved(RasqAccountRecord a, Iterable<String> keys) => [for (final k in a.bundleRemovals) if (!keys.contains(k)) k];
+
   /// 「この端末のみ」のアカウントを用意する(無ければ作る)。
   Future<RasqAccountRecord> ensureLocal() async {
     final cur = _cur;
@@ -218,8 +232,8 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
   ///
   /// [inheritSessions] = false は登録の FOW で「置き換えない」を選んだとき (D-241) と、**既存のアカウントへのログイン**
   /// (D-316: 前のアカウントの SNS を持ち込まない)。[pruneBundle] = サーバーのバンドルを、この端末の SNS アカウントで
-  /// 置き換えるか(省けば [inheritSessions] と同じ)。[adoptKeys] = そのアカウントに入れる SNS セッション(ログインのとき、
-  /// そのアカウントのバンドルにあって、この端末にもログインがあるもの)。
+  /// 置き換えるか(省けば [inheritSessions] と同じ)。[adoptKeys] = そのアカウントに入れる SNS セッション。ログインでは使わない
+  /// (D-461: この端末の SNS は本人が選んだものだけを、あとから [addCentralSessionKeys] で移す)。
   Future<RasqAccountRecord> attachCentral({
     required String centralAccountId,
     required String handle,
@@ -233,7 +247,8 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
     final id = 'central-$centralAccountId';
     final existing = cur.accounts.where((a) => a.id == id).firstOrNull;
     if (existing != null) {
-      final updated = existing.copyWith(handle: handle, displayName: displayName, avatarUrl: avatarUrl, sessionKeys: {...existing.sessionKeys, ...adoptKeys}.toList());
+      final updated = existing.copyWith(
+          handle: handle, displayName: displayName, avatarUrl: avatarUrl, sessionKeys: {...existing.sessionKeys, ...adoptKeys}.toList(), bundleRemovals: _unremoved(existing, adoptKeys));
       await _persist(cur.copyWith(accounts: [for (final a in cur.accounts) a.id == id ? updated : a], currentId: id));
       return updated;
     }
@@ -326,7 +341,7 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
     final target = cur.current!;
     if (target.sessionKeys.contains(key)) return;
     await _persist(cur.copyWith(accounts: [
-      for (final a in cur.accounts) a.id == target.id ? a.copyWith(sessionKeys: [...a.sessionKeys, key]) : a,
+      for (final a in cur.accounts) a.id == target.id ? a.copyWith(sessionKeys: [...a.sessionKeys, key], bundleRemovals: _unremoved(a, [key])) : a,
     ]));
   }
 
@@ -344,7 +359,7 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
     await _persist(cur.copyWith(accounts: [
       for (final a in cur.accounts)
         if (a.id == central.id)
-          a.copyWith(sessionKeys: keys)
+          a.copyWith(sessionKeys: keys, bundleRemovals: _unremoved(a, keys))
         else if (!a.isCentral)
           a.copyWith(sessionKeys: [for (final k in a.sessionKeys) if (!keys.contains(k)) k])
         else
@@ -362,7 +377,7 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
     await _persist(cur.copyWith(accounts: [
       for (final a in cur.accounts)
         if (a.id == central.id)
-          a.copyWith(sessionKeys: {...a.sessionKeys, ...keys}.toList())
+          a.copyWith(sessionKeys: {...a.sessionKeys, ...keys}.toList(), bundleRemovals: _unremoved(a, keys))
         else if (!a.isCentral)
           a.copyWith(sessionKeys: [for (final k in a.sessionKeys) if (!keys.contains(k)) k])
         else
@@ -371,12 +386,29 @@ class RasqAccountsNotifier extends AsyncNotifier<RasqAccountsState> {
   }
 
   /// SNS ログアウト: どのアカウントからも外す。
-  Future<void> removeSessionKey(String key) async {
+  ///
+  /// [unlink] = この端末で、その SNS アカウントからログアウトした(SNS のアカウントの一覧の「ログアウト」)。それを持っていた
+  /// Central のアカウントの行に控えを残し、次のバンドルの同期でサーバーからも外す (D-461)。RASQ アカウントからのログアウト
+  /// (D-409) / ほかの端末でのログアウトの取り込み (D-319) では残さない(前者はアカウントのバンドルを変えない、後者は
+  /// ログアウトした端末が外す)。
+  Future<void> removeSessionKey(String key, {bool unlink = false}) async {
     final cur = _cur;
     if (!cur.accounts.any((a) => a.sessionKeys.contains(key))) return;
     await _persist(cur.copyWith(accounts: [
-      for (final a in cur.accounts) a.copyWith(sessionKeys: [for (final k in a.sessionKeys) if (k != key) k]),
+      for (final a in cur.accounts)
+        a.copyWith(
+          sessionKeys: [for (final k in a.sessionKeys) if (k != key) k],
+          bundleRemovals: unlink && a.isCentral && a.sessionKeys.contains(key) && !a.bundleRemovals.contains(key) ? [...a.bundleRemovals, key] : null,
+        ),
     ]));
+  }
+
+  /// バンドルの同期 (D-461) が、サーバーから外せた(か、もともと無かった)ログアウトの控えを消す。変わらなければ書かない。
+  Future<void> clearBundleRemovals(String centralAccountId, Iterable<String> keys) async {
+    final cur = state.value;
+    final rec = cur?.centralRecord(centralAccountId);
+    if (cur == null || rec == null || !rec.bundleRemovals.any(keys.contains)) return;
+    await _persist(cur.copyWith(accounts: [for (final a in cur.accounts) a.id == rec.id ? a.copyWith(bundleRemovals: _unremoved(a, keys)) : a]));
   }
 }
 

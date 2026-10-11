@@ -51,8 +51,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// すでに RASQ アカウントを持っている人 (D-296): ログイン(パスワード、必要なら 2 段階目のメールのコード)→ できていたら、オンボーディングを済みにする。
   Future<void> _login() async {
     await context.push('${Routes.settings}/account-login');
-    // ログインできていれば、台帳に Central のアカウントが付いている(閉じたあとに付くので、少し待つ)。
-    for (var i = 0; i < 50 && mounted && !_hasCentral; i++) {
+    // ログインできていれば、台帳に Central のアカウントが付いている(閉じたあとに付くので、少し待つ)。この端末の SNS を
+    // 持ち込むかを聞いている間 (D-461) は、答えが出るまで待つ。
+    final accounts = ref.read(orgateAccountProvider.notifier);
+    for (var i = 0; mounted && !_hasCentral && (i < 50 || accounts.adopting); i++) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
     if (!mounted || !_hasCentral) return;

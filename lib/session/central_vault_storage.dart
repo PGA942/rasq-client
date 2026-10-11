@@ -21,7 +21,7 @@ import 'session_storage.dart';
 /// - 保管庫は **Central のアカウントごと** (D-316)。読み書きは、そのときのアカウントのトークンに縛った口で行い、
 ///   アカウントを切り替えたら「最後に知った状態」も捨てる(前のアカウントのログインを、次のアカウントの保管庫へ持ち込まない)。
 /// - 前の版(ブラウザに置いていた)のぶんが残っていれば、保管庫へ移してブラウザからは消す。
-class CentralVaultSessionStorage implements SessionStorage {
+class CentralVaultSessionStorage implements SessionStorage, PreLoginSessionsHolder {
   CentralVaultSessionStorage(this._ref, this.local, {this.pollInterval = const Duration(seconds: 45)}) {
     // RASQ アカウントの読み込みは、この保存先を読む。作っている最中に読ませないよう、見張りはひと呼吸おいてから始める。
     Future.microtask(_watchAccount);
@@ -53,6 +53,9 @@ class CentralVaultSessionStorage implements SessionStorage {
     _known.clear();
     if (next != null) {
       // ログインした: ログイン前(持ち主なし)にメモリにだけ持っていたぶんを預ける(ログインしたら預ける、という約束どおり)。
+      // 既存のアカウントへのログインでは、その前に [keepPreLogin] で本人が「加える」を選んだものだけに絞ってある (D-461)。
+      // 預けるのは保管庫の台帳に**重ねて**(前は一覧そのままで上書きしていたので、ほかの端末のログインが消え、
+      // 保管庫の中身がログイン前のぶんだけになっていた)。
       // 別のアカウントが預け損ねたぶん(SNS のトークン入り)は、このアカウントの保管庫へ持ち込まない (D-407、指摘 #20)。
       // そのアカウントに戻るまでメモリに残し(ログアウトで消える)、戻ったら read が保管庫の台帳に重ねて預け直す。
       for (final e in [for (final e in _memory.entries) if (e.key.owner == null) e]) {
@@ -109,12 +112,41 @@ class CentralVaultSessionStorage implements SessionStorage {
     return (client: base.withToken(() => token), accountId: accountId);
   }
 
-  /// [owner] の保管庫へ預ける。いまのアカウントが [owner] でなければ預けない(切り替わった後に前のアカウントのぶんを
-  /// 次のアカウントへ書かない)。
+  /// [owner] の保管庫へ、[value](アプリのセッション一覧)のログインを重ねて預ける。いまのアカウントが [owner] でなければ
+  /// 預けない(切り替わった後に前のアカウントのぶんを次のアカウントへ書かない)。保管庫を読めなければ預けない(上書きしない)。
   Future<bool> _put(String key, String value, {required String owner}) async {
     final c = await _client();
     if (c == null || c.accountId != owner) return false;
-    return _putWith(c.client, key, value);
+    final remote = await _fetch(c.client, key);
+    if (remote == null) return false;
+    return _putWith(c.client, key, remote.merged(SessionOps().applying(value, at: DateTime.now())).encode());
+  }
+
+  @override
+  void keepPreLogin(Set<String> keep) {
+    for (final slot in [for (final k in _memory.keys) if (k.owner == null) k]) {
+      final kept = _onlySessions(_memory[slot]!, keep);
+      if (kept == null) {
+        _memory.remove(slot);
+      } else {
+        _memory[slot] = kept;
+      }
+    }
+  }
+
+  /// アプリのセッション一覧 [raw] を、[keep] のアカウントだけにする(残らなければ null)。
+  static String? _onlySessions(String raw, Set<String> keep) {
+    try {
+      final j = (jsonDecode(raw) as Map).cast<String, Object?>();
+      final sessions = [
+        for (final s in (j['sessions'] as List? ?? const []))
+          if (s is Map && keep.contains(AccountSession.fromJson(s.cast<String, Object?>()).account.key)) s,
+      ];
+      if (sessions.isEmpty) return null;
+      return jsonEncode({...j, 'sessions': sessions, 'current': keep.contains(j['current']) ? j['current'] : null});
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<bool> _putWith(OrgateClient client, String key, String value) async {
