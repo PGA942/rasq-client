@@ -1,4 +1,4 @@
-// rasq-central のホームページ (S-095 / S-096 / S-098) の「実機っぽいプレビュー」に貼る、アプリの画面のスクリーンショット。
+// rasq-central のホームページ (S-095 / S-096 / S-098 / S-101) の「実機っぽいプレビュー」に貼る、アプリの画面のスクリーンショット。
 // ホームページには スマホ / タブレット の 2 つのプレビューがあり (S-098)、節ごとに両方の画面を持つ:
 //
 //   | 節 | スマホ(縦、390×844 論理 px の 2 倍 = 780×1688) | タブレット |
@@ -7,6 +7,7 @@
 //   | RASQ Web クライアント | home_timeline.png(ホームのタイムライン) | 横向き: home_client.png(レール + 2 カラムのホーム) |
 //   | RASQ アカウント・QuickView | home_account.png | 縦向き(800×1280 の 1.5 倍 = 1200×1920、1 カラム): home_account_tall.png |
 //   | ASTell | home_astell_listen.png(ルームで聞いているところ) | 縦向き: home_astell_listen_tall.png |
+//   | RAi (D-463) | home_rai.png(RAi のホーム) | 縦向き: home_rai_tall.png |
 //
 // タブレットの縦向きは幅 800 論理 px(< RasqSizes.tabletBreakpoint = 840)なので、アプリはスマホと同じ 1 カラムで描く。
 // ホームページは画像の比率で端末(長辺 / 短辺 が 2 以上ならスマホ、それ未満ならタブレット)と向きを決める (S-096)。
@@ -27,12 +28,16 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
+import 'package:rasq_client/features/rai/rai_embedding_model.dart';
+import 'package:rasq_client/features/rai/rai_llm.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/notify/local_notifier.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
+import '../../test/support/fake_rai_embedding_model.dart';
+import '../../test/support/fake_rai_llm.dart';
 import '../../test/support/fakes.dart';
 
 /// 端末の画面の大きさ(物理 px と倍率)。ホームページの端末の画面に貼るテクスチャの大きさになる。
@@ -122,6 +127,29 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('参加中: '));
     await tester.pumpAndSettle();
+  }
+
+  /// RAi のホーム (D-463)。ホームページの RAi の節(Central S-101)。モデルは入れていない(テストの偽物)ので LLM は動かない。
+  /// RAi の 3D / 浮遊の動きは止まらないので pumpAndSettle せず、決まった時間だけ進める。
+  Future<void> pumpRai(WidgetTester tester, HomeView view) async {
+    view.apply(tester);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionStorageProvider.overrideWithValue(loggedIn),
+        pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
+        localNotifierProvider.overrideWithValue(MemoryLocalNotifier()),
+        raiLlmProvider.overrideWithValue(FakeRaiLlm()),
+        raiEmbeddingModelProvider.overrideWithValue(FakeRaiEmbeddingModel()),
+        deviceRamReaderProvider.overrideWithValue(() async => (totalMb: 8192, availableMb: 4096)),
+      ],
+      child: const RasqApp(),
+    ));
+    await tester.pumpAndSettle();
+    final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    c.read(routerProvider).push(Routes.rai);
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
   }
 
   /// RASQ アカウントページ(はな @hana、Central の口をまねる)。ホームページの RASQ アカウント・QuickView の節。
@@ -238,5 +266,16 @@ void main() {
   testWidgets('astell listening in a room (tablet, portrait)', (tester) async {
     await pumpListening(tester, HomeView.tabletTall);
     await expectLater(find.byType(RasqApp), matchesGoldenFile('home_astell_listen_tall.png'));
+  });
+
+  // ── RAi (D-463) ──
+  testWidgets('rai home (phone)', (tester) async {
+    await pumpRai(tester, HomeView.phone);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_rai.png'));
+  });
+
+  testWidgets('rai home (tablet, portrait)', (tester) async {
+    await pumpRai(tester, HomeView.tabletTall);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_rai_tall.png'));
   });
 }

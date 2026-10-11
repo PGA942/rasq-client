@@ -1,13 +1,13 @@
 #!/bin/sh
-# rasq-central のホームページ (S-095 / S-096 / S-098) の端末のプレビューに貼る、アプリの画面のスクリーンショットを作り直す。
+# rasq-central のホームページ (S-095 / S-096 / S-098 / S-101) の端末のプレビューに貼る、アプリの画面のスクリーンショットを作り直す。
 #
 # 使い方: RASQ_PREVIEW_FONT=<NotoSansJP の .ttf> tool/preview/homeshots.sh [出力先]
 #   出力先の既定は ../rasq-central/src/web/home(Central が include_bytes! で配る置き場)。
 #
-# 1. flutter test tool/preview/homeshots_test.dart --update-goldens → tool/preview/home_*.png(8 枚)
-#    スマホ(縦、780×1688 = 390×844 の 2 倍): onboarding / timeline / account / astell_listen
+# 1. flutter test tool/preview/homeshots_test.dart --update-goldens → tool/preview/home_*.png(10 枚)
+#    スマホ(縦、780×1688 = 390×844 の 2 倍): onboarding / timeline / account / astell_listen / rai
 #    タブレットの横向き(1920×1200 = 1280×800 の 1.5 倍): onboarding_wide / client
-#    タブレットの縦向き(1200×1920 = 800×1280 の 1.5 倍、1 カラム): account_tall / astell_listen_tall
+#    タブレットの縦向き(1200×1920 = 800×1280 の 1.5 倍、1 カラム): account_tall / astell_listen_tall / rai_tall
 # 2. WebP(品質 80)に変換して出力先へ(home_client.png → client.webp)。cwebp があればそれを、無ければ Python の Pillow。
 #    Central は WebP のヘッダーから大きさを読んで端末の種類(比率)と向きを決めるので、名前と大きさを変えたら
 #    src/web/home.rs の SHOTS と節の割り当て(section)とテストも揃える。1 枚 150 KB 以内(Central のテストが見る)。
