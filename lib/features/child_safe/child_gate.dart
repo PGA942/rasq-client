@@ -70,12 +70,15 @@ class ChildSafeState {
 const childSafeBlockedText = '保護者が止めています';
 
 /// コンポーザーの判定の結果: 止めた理由と、印を付ける範囲。
+/// [type] = 本文の判定で止めた種類(`stimulus` = 強い言葉 / `topic` = 決められた話題。Central S-102 の種類)。機能 / 1 日の数 /
+/// 設定待ちで止めたときは null。種類があるときだけ、種類を Central へ知らせる(本文は送らない、D-462)。
 @immutable
 class ChildComposeVerdict {
-  const ChildComposeVerdict(this.message, {this.start, this.end});
+  const ChildComposeVerdict(this.message, {this.start, this.end, this.type});
   final String message;
   final int? start;
   final int? end;
+  final String? type;
   bool get hasRange => start != null && end != null && end! > start!;
 }
 
@@ -257,7 +260,7 @@ class ChildGate {
     if (t.allow) {
       if (matchesTopic(post, t.topics)) return null;
       final shown = t.topics.take(5).join('・');
-      return ChildComposeVerdict(t.topics.isEmpty ? '保護者の設定により、いまは投稿を送れません' : '保護者の設定により、決められた話題($shown${t.topics.length > 5 ? ' など' : ''})の投稿だけ送れます。話題に合うように書いてください');
+      return ChildComposeVerdict(t.topics.isEmpty ? '保護者の設定により、いまは投稿を送れません' : '保護者の設定により、決められた話題($shown${t.topics.length > 5 ? ' など' : ''})の投稿だけ送れます。話題に合うように書いてください', type: 'topic');
     }
     if (!matchesTopic(post, t.topics)) return null;
     // 当たった話題のうち、本文にそのまま出てくる最初のものに印を付ける(特徴語だけで当たったときは印なし)。
@@ -269,7 +272,7 @@ class ChildGate {
       if (i >= 0 && (hit == null || i < hit.start)) hit = (topic: topic, start: i, end: i + key.length);
     }
     final label = hit?.topic ?? t.topics.firstWhere((x) => matchesTopic(post, [x]), orElse: () => t.topics.first);
-    return ChildComposeVerdict('保護者の設定により、「$label」の話題の投稿は送れません。書き換えてください', start: hit?.start, end: hit?.end);
+    return ChildComposeVerdict('保護者の設定により、「$label」の話題の投稿は送れません。書き換えてください', start: hit?.start, end: hit?.end, type: 'topic');
   }
 
   ChildComposeVerdict? _judgeStimulus(ChildSafePolicy pol, String text) {
@@ -278,7 +281,7 @@ class ChildGate {
     final emo = emotionLexiconOf(text);
     final hit = emotionLexiconMatches(text).where((m) => (emo[m.emotion] ?? 0) > stimulusProfile.stimulusCap(m.emotion)).firstOrNull;
     final word = hit == null ? '' : '「${text.substring(hit.start, hit.end)}」';
-    return ChildComposeVerdict('保護者の設定(${pol.composer.level.label})により、この表現$wordは送れません。言い換えてください', start: hit?.start, end: hit?.end);
+    return ChildComposeVerdict('保護者の設定(${pol.composer.level.label})により、この表現$wordは送れません。言い換えてください', start: hit?.start, end: hit?.end, type: 'stimulus');
   }
 
   int? get postsPerDay => policy?.postsPerDay;

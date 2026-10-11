@@ -156,6 +156,78 @@ void main() {
     expect(find.textContaining('ママ'), findsWidgets);
   });
 
+  testWidgets('送る前の判定 (D-462): Central の閾値で端末が止め、種類だけを知らせる(本文は送らない)/ warn は確かめて送る', (tester) async {
+    final st = await active(kidSettings());
+    final trips = <Map<String, Object?>>[];
+    final bodies = <String>[];
+    final registry = PluginRegistry()..register(FakeSnsPlugin(posts: posts));
+    final c = await pump(
+        tester,
+        central((route, body) async {
+          bodies.add(jsonEncode(body));
+          switch (route) {
+            case 'GET /me/child-safe':
+              return json(st);
+            case 'GET /me/compose-policy':
+              return json({
+                'schema': 'rasq.compose-policy/1',
+                'version': 'v1',
+                'refreshSeconds': 3600,
+                'modes': [
+                  {'mode': 'child-safe', 'level': 'strict'},
+                ],
+                'rules': [
+                  {'type': 'personal-info', 'mode': 'child-safe', 'action': 'block', 'threshold': 1, 'signal': 'pattern'},
+                  {'type': 'link', 'mode': 'child-safe', 'action': 'warn', 'threshold': 1, 'signal': 'pattern'},
+                ],
+                'types': [
+                  {'id': 'personal-info', 'label': '個人情報', 'signal': 'pattern'},
+                  {'id': 'link', 'label': '外部へのリンク', 'signal': 'pattern'},
+                ],
+              });
+            case 'POST /me/compose-policy/trips':
+              trips.add(body);
+              return http.Response('', 204);
+          }
+          return null;
+        }),
+        registry: registry);
+    expect(c.read(childGateProvider).supervised, isTrue);
+    final session = registry.session(fakeSession()) as FakeSnsSession;
+
+    await openHomeComposer(tester);
+    await tester.pumpAndSettle();
+    const secret = 'でんわして 090-1234-5678';
+    await tester.enterText(find.byType(TextField).last, secret);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '送信'));
+    await tester.pumpAndSettle();
+    expect(session.lastDraft, isNull);
+    expect(find.textContaining('保護者の設定により、「個人情報」に当たる内容は送れません'), findsOneWidget);
+    expect(tester.widget<TextField>(find.byType(TextField).last).controller!.selection, const TextSelection(baseOffset: 6, extentOffset: 19));
+    // 届くのは種類 / モード / 面だけ。本文はどの口にも出ない。
+    expect(trips, [
+      {'type': 'personal-info', 'mode': 'child-safe', 'surface': 'post'},
+    ]);
+    expect(bodies.any((b) => b.contains('090')), isFalse);
+
+    // warn: 確かめのシートで「書き直す」なら送らない、「このまま送る」なら送る(知らせない)。
+    await tester.enterText(find.byType(TextField).last, 'これみて https://example.test/a');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '送信'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('composer.policy.warn.child-safe.link')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('composer.policy.edit')));
+    await tester.pumpAndSettle();
+    expect(session.lastDraft, isNull);
+    await tester.tap(find.widgetWithText(FilledButton, '送信'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('composer.policy.send')));
+    await tester.pumpAndSettle();
+    expect(session.lastDraft?.text, 'これみて https://example.test/a');
+    expect(trips, hasLength(1));
+  });
+
   testWidgets('保護者からのコードでログイン: この端末の SNS アカウントは引き継がない', (tester) async {
     Map<String, Object?>? loginBody;
     String? loginAuth;
@@ -248,7 +320,7 @@ void main() {
             'settings': null,
             'summary': {
               'days': [
-                {'date': '2026-09-23', 'posts': 2, 'blocked': 1, 'topics': ['宿題']},
+                {'date': '2026-09-23', 'posts': 2, 'blocked': 1, 'topics': [], 'trips': {'sexual': 1}},
               ],
             },
           });
@@ -361,6 +433,8 @@ void main() {
     expect((saved['allow'] as Map)['features'], containsPair('store.review', false));
 
     await reveal(tester, 'guardian.summary.2026-09-23');
+    // 止めた種類ごとの数 (D-462)。本文や話題の名前は出ない。
+    expect(find.textContaining('止めた 1(性的な表現 1)'), findsOneWidget);
     // 親が作った子: ログインのコードを出し直す。
     await reveal(tester, 'guardian.loginCode');
     await tester.tap(find.byKey(const ValueKey('guardian.loginCode')));

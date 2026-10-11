@@ -204,7 +204,7 @@ void main() {
       final daily = ChildSafeDaily(storage);
       final now = DateTime(2026, 9, 24, 12);
       for (var i = 0; i < 10; i++) {
-        await daily.recordSent('宿題 $i', now: now);
+        await daily.recordSent(now: now);
       }
       final limited = await childComposeVerdictFor(g, daily, now, text: '宿題おわり');
       expect(limited?.message, contains('10 件'));
@@ -571,21 +571,19 @@ void main() {
       expect((jsonDecode(await cacheOf(endB.storage)) as Map).containsKey('held'), isFalse);
     });
 
-    test('1 日の報告: 終わった日の数と話題の見出しだけ(本文は送らない)', () async {
+    test('1 日の報告: 終わった日の数だけ(本文も話題の見出しも送らない。D-462)', () async {
       final st = await active();
       final t = setup(() => st);
       final daily = t.c.read(childSafeDailyProvider);
-      await daily.recordSent('宿題の数学がむずかしい #宿題', now: DateTime(2026, 9, 23, 20));
-      await daily.recordSent('宿題おわった #宿題', now: DateTime(2026, 9, 23, 21));
+      await daily.recordSent(now: DateTime(2026, 9, 23, 20));
+      await daily.recordSent(now: DateTime(2026, 9, 23, 21));
       await daily.recordBlocked(now: DateTime(2026, 9, 23, 22));
-      await daily.recordSent('今日の分(まだ送らない)', now: DateTime(2026, 9, 24, 9));
+      await daily.recordSent(now: DateTime(2026, 9, 24, 9));
       await sync(t.c);
       final reports = [for (final b in t.bodies) if (b.containsKey('date')) b];
       expect(reports, hasLength(1));
-      expect(reports.single.keys.toSet(), {'date', 'posts', 'blocked', 'topics'});
+      expect(reports.single.keys.toSet(), {'date', 'posts', 'blocked'});
       expect((reports.single['date'], reports.single['posts'], reports.single['blocked']), ('2026-09-23', 2, 1));
-      expect(reports.single['topics'], contains('宿題'));
-      expect(jsonEncode(reports.single), isNot(contains('むずかしい')));
       // 2 回目は送らない(1 日 1 回)。
       await t.c.read(childSafeProvider.notifier).refresh();
       expect([for (final b in t.bodies) if (b.containsKey('date')) b], hasLength(1));
@@ -596,7 +594,7 @@ void main() {
       final t = setup(() => st);
       final daily = t.c.read(childSafeDailyProvider);
       for (final d in [10, 11, 20]) {
-        await daily.recordSent('宿題 #宿題', now: DateTime(2026, 9, d, 20));
+        await daily.recordSent(now: DateTime(2026, 9, d, 20));
       }
       await sync(t.c);
       expect([for (final b in t.bodies) if (b.containsKey('date')) b['date']], ['2026-09-11', '2026-09-20']);
@@ -693,10 +691,10 @@ void main() {
         'handle': 'kid', 'displayName': 'こども', 'state': 'active', 'revision': 2, 'appliedRevision': 1, 'ageBand': '13-15', 'createdByGuardian': false,
         'linkedAt': '2026-09-24T12:00:00Z', 'updatedAt': '2026-09-24T12:00:00Z', 'settings': fixture()['presets'] is Map ? (fixture()['presets'] as Map)['13-15'] : null,
         'signature': 'c2ln', 'issuedAt': '2026-09-24T12:00:00Z', 'presetDefaults': (fixture()['presets'] as Map)['13-15'],
-        'summary': {'since': '2026-09-11', 'days': [{'date': '2026-09-24', 'posts': 3, 'rasqPosts': 1, 'blocked': 1, 'topics': ['ゲーム'], 'reported': true}]},
+        'summary': {'since': '2026-09-11', 'days': [{'date': '2026-09-24', 'posts': 3, 'rasqPosts': 1, 'blocked': 1, 'topics': [], 'trips': {'sexual': 1, 'x': 'bad'}, 'reported': true}]},
       });
       expect((d.row.applied, d.settings?.preset, d.signature, d.summary.days.single.posts), (false, 'strict', 'c2ln', 3));
-      expect(d.summary.days.single.topics, ['ゲーム']);
+      expect(d.summary.days.single.trips, {'sexual': 1});
       expect(ChildSafeChildDetail.fromJson({'handle': 'kid', 'state': 'pending_setup', 'settings': null, 'signature': null, 'issuedAt': null}).settings, isNull);
     });
   });

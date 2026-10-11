@@ -15,7 +15,9 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../../app/navigation.dart';
 import '../../app/providers.dart';
 import '../../session/sanctions.dart';
-import '../child_safe/child_safe_providers.dart' show childComposeVerdict, childComposeSent, childGateProvider;
+import '../child_safe/child_safe_providers.dart' show childComposeVerdict, childComposeSent, childComposeBlocked, childGateProvider;
+import '../compose_policy/compose_policy.dart';
+import '../compose_policy/compose_policy_providers.dart' show currentComposePolicy, reportComposeTrips;
 import '../../app/router.dart';
 import '../../shell/app_overlay_root.dart';
 import '../../text/inline_spans.dart';
@@ -1464,6 +1466,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
     final blocked = sanctions.blockedMessage('post') ?? (_files.isNotEmpty ? sanctions.blockedMessage('post.media') : null);
     if (blocked != null) return setState(() => _error = blocked);
     if (!await _childSafeAllows(dm: false)) return;
+    if (!await _composePolicyAllows()) return;
     // 公開設定は SNS と同じ FOW から。RASQ に無いもの(指名 / リモート向けの受け入れ)は、近いものへ寄せる。
     final opts = ref.read(composeOptionsProvider);
     final visibility = const {'public', 'home', 'followers'}.contains(opts.visibility) ? opts.visibility : 'followers';
@@ -1493,7 +1496,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         quoteOf: _rasqQuote ? _quoteOf!.id : null,
       );
       ref.invalidate(rasqAccountPageProvider(me.handle));
-      await childComposeSent(ref, _text.text.trim());
+      await childComposeSent(ref);
       if (_draftId != null) _drafts.clear(_draftId!);
       _skipDraftOnDispose = true;
       ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(const SnackBar(content: Text('RASQ に投稿しました')));
@@ -1527,9 +1530,11 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   /// チャイルドセーフ (D-307): 見守りの制限(DM / メディア / 1 日の数 / 本文の強さ)。止めたら理由を出し、当たった語を選んで印を付ける。
   /// [sentTexts] = 実際に送る本文(正規表現の加工のあと、送り先ごと。[20])。
+  /// 本文の判定(強い言葉 / 話題)で止めたときは、**種類だけ**を Central へ知らせる (D-462)。
   Future<bool> _childSafeAllows({required bool dm, bool direct = false, List<String> sentTexts = const []}) async {
     final verdict = await childComposeVerdict(ref, text: _text.text, dm: dm, direct: direct, media: _files.isNotEmpty, sentTexts: sentTexts);
     if (verdict == null) return true;
+    if (verdict.type case final type?) reportComposeTrips(ref, [(type: type, mode: composeModeChildSafe)], surface: _surface);
     if (!mounted) return false;
     setState(() => _error = verdict.message);
     if (verdict.hasRange && verdict.end! <= _text.text.length) {
@@ -1537,6 +1542,72 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       _focus.requestFocus();
     }
     return false;
+  }
+
+  /// 送る面(Central へ知らせる種類に添える。本文は添えない)。
+  String get _surface => _isDm || _sendsDirect
+      ? 'dm'
+      : _replyTo != null
+          ? 'reply'
+          : _quoteOf != null
+              ? 'quote'
+              : 'post';
+
+  /// 送る前の判定 (D-462 / Central S-102): 見守り / 制限の閾値(Central が配る。見守りは取れなければ組み込みの既定)で、
+  /// **端末が**本文 / 注釈 / 投票の選択肢 / 送る前の加工のあとの本文と添付を判定する。
+  /// - `block` に当たれば送らない: 種類の名前を出し、当たった語に印を付け、**種類 / モード / 面だけ**を Central へ知らせる
+  ///   (見守りなら「止めた数」も数える)。本文・画像はどこにも送らない。
+  /// - `warn` だけなら、送ってよいか聞く(知らせない)。
+  /// - 端末で判定できない種類(画像)は、見守りの `block` なら止める側、ほかは通す側([evaluateCompose])。
+  Future<bool> _composePolicyAllows({List<String> sentTexts = const []}) async {
+    final policy = await currentComposePolicy(ref);
+    if (!mounted) return false;
+    if (policy.rules.isEmpty) return true;
+    final verdict = evaluateCompose(
+      policy,
+      ComposeInput(texts: [_text.text, if (_cwOn) _cw.text, ...?_poll?.texts, ...sentTexts], mediaCount: _files.length),
+    );
+    final first = verdict.first;
+    if (first == null) return true;
+    if (verdict.blocked) {
+      reportComposeTrips(ref, verdict.blockedTypes, surface: _surface);
+      if (verdict.blocks.any((t) => t.mode == composeModeChildSafe)) await childComposeBlocked(ref);
+      if (!mounted) return false;
+      setState(() => _error = first.message);
+      if (first.hasRange && first.end! <= _text.text.length) {
+        _text.selection = TextSelection(baseOffset: first.start!, extentOffset: first.end!);
+        _focus.requestFocus();
+      }
+      return false;
+    }
+    final ok = await _confirmComposeWarn(verdict.warns);
+    return ok && mounted;
+  }
+
+  /// `warn` に当たった: 種類の名前を見せて、このまま送るか聞く。閉じたら送らない。
+  Future<bool> _confirmComposeWarn(List<ComposeTrip> warns) async {
+    final manager = ref.read(overlayManagerProvider);
+    const id = 'composer.policy.warn';
+    final ok = await manager.showBottomSheet<bool>(
+      id: id,
+      title: '送る前の確認',
+      builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        for (final w in warns)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+            child: Text(w.message, key: ValueKey('composer.policy.warn.${w.mode}.${w.type}')),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
+          child: FilledButton(key: const ValueKey('composer.policy.send'), onPressed: () => manager.close(id, result: true), child: const Text('このまま送る')),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.sm),
+          child: TextButton(key: const ValueKey('composer.policy.edit'), onPressed: () => manager.close(id, result: false), child: const Text('書き直す')),
+        ),
+      ]),
+    );
+    return ok == true;
   }
 
   Future<void> _send() async {
@@ -1575,6 +1646,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
               if (delivery != 'draft') applyComposerRegex(_text.text.trim(), '${s.account}', regexRules),
           ];
     if (!await _childSafeAllows(dm: _isDm, direct: sendsDirect, sentTexts: sentTexts)) return;
+    // 見守り / 制限の閾値 (D-462): 端末で判定して止める(本文は Central に送らない)。
+    if (!await _composePolicyAllows(sentTexts: sentTexts)) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -1638,7 +1711,7 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ComposeDm(room: final r) => await session.sendDm(r, draft),
         _ => await session.createPost(draft),
       };
-      await childComposeSent(ref, _text.text.trim());
+      await childComposeSent(ref);
       // 返信 / 引用した相手を、投稿したアカウントの「やりとり」として覚える (D-280: 共有 / リノートに使うアカウントの予測の材料)。
       final talkedTo = replyTo ?? quoteOf;
       if (talkedTo != null) ref.read(accountAffinityProvider.notifier).record(Post(id: talkedTo.id, account: session.account, author: talkedTo.author, createdAt: talkedTo.createdAt, body: '')).ignore();

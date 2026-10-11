@@ -3,13 +3,11 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rasq_models/rasq_models.dart';
 
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../session/session_storage.dart';
-import '../trend/genre_topics.dart';
 import 'child_gate.dart';
 import 'child_safe_api.dart';
 import 'child_safe_policy.dart';
@@ -317,9 +315,11 @@ final childGateProvider = Provider<ChildGate>((ref) {
 
 // ── 1 日の数(投稿の上限と、保護者への報告)──────────────────────────────
 
-/// 端末の中の 1 日の数。**本文は残さない**(送った数 / 止めた数 / 話題の見出しの数だけ)。
+/// 端末の中の 1 日の数。**本文は残さない**(送った数 / 止めた数だけ)。
 /// - `childSafe.posts.<YYYY-MM-DD>` = その日に送った数(1 日の上限の判定)。
-/// - `childSafe.report.v1` = 日ごとの止めた数と話題の見出し、送った日。14 日で捨てる。
+/// - `childSafe.report.v1` = 日ごとの止めた数、送った日。14 日で捨てる。
+/// 話題の見出し(本文から取り出した語)は、もう数えない・送らない(D-462 / Central S-102: 投稿の中身に当たるので)。
+/// 止めた種類は、止めたときに `POST /me/compose-policy/trips` で別に届く。
 class ChildSafeDaily {
   ChildSafeDaily(this._storage);
   final SessionStorage _storage;
@@ -341,7 +341,7 @@ class ChildSafeDaily {
   Map<String, Object?> _day(Map<String, Object?> r, String date) {
     final days = (r['days'] as Map? ?? {}).cast<String, Object?>();
     r['days'] = days;
-    return (days[date] as Map? ?? {'blocked': 0, 'topics': <String, Object?>{}}).cast<String, Object?>();
+    return (days[date] as Map? ?? {'blocked': 0}).cast<String, Object?>();
   }
 
   Future<void> _putDay(Map<String, Object?> r, String date, Map<String, Object?> day) async {
@@ -349,18 +349,12 @@ class ChildSafeDaily {
     await _storage.write(reportKey, jsonEncode(r));
   }
 
-  /// 送った: 数を 1 つ足し、話題の見出し([topicsOf] の上位の語)を数える。本文は残さない。
-  Future<void> recordSent(String text, {required DateTime now}) async {
+  /// 送った: 数を 1 つ足す(本文は見ない・残さない)。その日を報告の一覧に載せる。
+  Future<void> recordSent({required DateTime now}) async {
     final date = dateOf(now);
     await _storage.write(postsKey(date), '${await postsOn(date) + 1}');
     final r = await _report();
-    final day = _day(r, date);
-    final topics = (day['topics'] as Map? ?? {}).cast<String, Object?>();
-    for (final t in topicLabelsOf(text)) {
-      topics[t] = ((topics[t] as num?) ?? 0) + 1;
-    }
-    day['topics'] = topics;
-    await _putDay(r, date, day);
+    await _putDay(r, date, _day(r, date));
   }
 
   /// 止めた(判定 / 上限で送らなかった)。
@@ -390,9 +384,8 @@ class ChildSafeDaily {
       }
       if (date.compareTo(today) >= 0 || sent.contains(date)) continue;
       final day = (days[date] as Map).cast<String, Object?>();
-      final topics = (day['topics'] as Map? ?? {}).cast<String, Object?>().entries.toList()..sort((a, b) => ((b.value as num?) ?? 0).compareTo((a.value as num?) ?? 0));
       try {
-        await api.report(date: date, posts: await postsOn(date), blocked: (day['blocked'] as num?)?.toInt() ?? 0, topics: [for (final e in topics.take(5)) e.key.length > 40 ? e.key.substring(0, 40) : e.key]);
+        await api.report(date: date, posts: await postsOn(date), blocked: (day['blocked'] as num?)?.toInt() ?? 0);
         sent.add(date);
       } on OrgateException catch (e) {
         debugPrint('child-safe: report failed (${e.code.code})');
@@ -407,19 +400,6 @@ class ChildSafeDaily {
     r['sent'] = sent;
     await _storage.write(reportKey, jsonEncode(r));
   }
-}
-
-/// 本文 1 件の話題の見出し([topicsOf] の上位の語、3 つまで)。
-List<String> topicLabelsOf(String text) {
-  if (text.trim().isEmpty) return const [];
-  final p = Post(
-    id: 'draft',
-    account: const AccountId(kind: SnsKind.other, instance: 'rasq', handle: 'me'),
-    author: const UserSummary(id: 'me', account: AccountId(kind: SnsKind.other, instance: 'rasq', handle: 'me'), displayName: 'me'),
-    createdAt: DateTime.fromMillisecondsSinceEpoch(0),
-    body: text,
-  );
-  return [for (final t in topicsOf([p], top: 1)) ...t.genres.take(3)];
 }
 
 final childSafeDailyProvider = Provider<ChildSafeDaily>((ref) => ChildSafeDaily(ref.watch(sessionStorageProvider)));
@@ -445,7 +425,7 @@ Future<ChildComposeVerdict?> childComposeVerdictFor(ChildGate gate, ChildSafeDai
     for (final t in sentTexts) {
       if (v != null) break;
       if (t.trim() == text.trim()) continue;
-      if (gate.judgeText(t, dm: dm) case final w?) v = ChildComposeVerdict('${w.message}(送る前の加工のあとの本文)');
+      if (gate.judgeText(t, dm: dm) case final w?) v = ChildComposeVerdict('${w.message}(送る前の加工のあとの本文)', type: w.type);
     }
   }
   if (v != null) await daily.recordBlocked(now: now);
@@ -457,8 +437,14 @@ Future<ChildComposeVerdict?> childComposeVerdict(WidgetRef ref, {required String
     childComposeVerdictFor(ref.read(childGateProvider), ref.read(childSafeDailyProvider), ref.read(childSafeNowProvider)(),
         text: text, dm: dm, direct: direct, media: media, sentTexts: sentTexts);
 
-/// 送れた (D-307): 1 日の数と話題の見出しを数える(見守られていなければ何もしない)。
-Future<void> childComposeSent(WidgetRef ref, String text) async {
+/// 送れた (D-307): 1 日の数を数える(見守られていなければ何もしない。本文は見ない)。
+Future<void> childComposeSent(WidgetRef ref) async {
   if (!ref.read(childGateProvider).supervised) return;
-  await ref.read(childSafeDailyProvider).recordSent(text, now: ref.read(childSafeNowProvider)());
+  await ref.read(childSafeDailyProvider).recordSent(now: ref.read(childSafeNowProvider)());
+}
+
+/// 送る前の判定で止めた (D-462): 見守りの「止めた数」を 1 つ足す(見守られていなければ何もしない)。
+Future<void> childComposeBlocked(WidgetRef ref) async {
+  if (!ref.read(childGateProvider).supervised) return;
+  await ref.read(childSafeDailyProvider).recordBlocked(now: ref.read(childSafeNowProvider)());
 }
