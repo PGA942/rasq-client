@@ -7,6 +7,14 @@ abstract class SessionStorage {
   Future<void> delete(String key);
 }
 
+/// RASQ アカウントにログインする前の SNS のセッションを、ログインした先とは別に持っている保存先 (D-461。Web 版の保管庫
+/// `CentralVaultSessionStorage`: ログイン前のぶんはメモリにだけある)。
+abstract interface class PreLoginSessionsHolder {
+  /// 既存の RASQ アカウントへのログインの直前に呼ぶ: ログイン前のぶんのうち [keep](`AccountId.key`)だけを残し、ほかは
+  /// 捨てる。残したぶんだけが、ログインした先の保管庫へ預けられる(本人が「加える」を選んだもの)。
+  void keepPreLogin(Set<String> keep);
+}
+
 class SecureSessionStorage implements SessionStorage {
   SecureSessionStorage([FlutterSecureStorage? storage])
       : _s = storage ??

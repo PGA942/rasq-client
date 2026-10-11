@@ -215,7 +215,8 @@ class SessionsNotifier extends AsyncNotifier<SessionsState> {
   Future<void> remove(AccountId account) async {
     final cur = state.value ?? const SessionsState();
     await ref.read(pluginRegistryProvider).closeSession(account);
-    await ref.read(rasqAccountsProvider.notifier).removeSessionKey(account.key);
+    // この端末でのログアウト: Central のバンドルからも、次の同期で外す (D-461)。
+    await ref.read(rasqAccountsProvider.notifier).removeSessionKey(account.key, unlink: true);
     final rest = cur.allSessions.where((s) => s.account != account).toList();
     await _persist(_view(rest, currentKey: cur.currentKey == account.key ? null : cur.currentKey, bundleView: cur.bundleView, ledger: ref.read(rasqAccountsProvider).value));
   }

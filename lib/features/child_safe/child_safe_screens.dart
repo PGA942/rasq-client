@@ -328,8 +328,9 @@ class _ChildLoginScreenState extends ConsumerState<ChildLoginScreen> {
       // 先に画面を閉じてから、アカウントをこの端末のものにする(ログイン画面と同じ理由)。
       if (mounted) context.pop();
       await WidgetsBinding.instance.endOfFrame;
-      // 台帳にも載せて、いまのアカウントにする(いまのアカウントの SNS は持ち込まない。D-316)。
-      final account = await accounts.adoptLogin(res);
+      // 台帳にも載せて、いまのアカウントにする(いまのアカウントの SNS は持ち込まない。D-316)。この端末の SNS も、
+      // 持ち込むかを聞かずに持ち込まない(画面で「引き継ぎません」と案内している。D-461)。
+      final account = await accounts.adoptLogin(res, offerCarry: false);
       if (account == null) return _toast(ref, 'ログインできませんでした');
       await childSafe.refresh();
       _toast(ref, '@${account.handle} にログインしました(${accountDeviceLabel()})');

@@ -10,6 +10,7 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
 import 'package:rasq_client/session/central_vault_storage.dart';
+import 'package:rasq_client/session/rasq_login_carry.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_client/shell/sidebar.dart';
 import 'package:rasq_design/rasq_design.dart' show RasqUserRow;
@@ -82,6 +83,8 @@ void main() {
       orgateClientProvider.overrideWith((ref) => OrgateClient(baseUrl: Uri.parse('https://central.test'), httpClient: mock, tokenProvider: () => ref.read(orgateTokenHolderProvider).token)),
       centralBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
       orgateBaseUrlProvider.overrideWithValue(Uri.parse('https://central.test')),
+      // ログインで、この端末の SNS を持ち込むかの問い (D-461): そのアカウントのバンドルにもあるものを選ぶ。
+      rasqLoginCarryAskProvider.overrideWithValue((q) async => {for (final x in q.candidates) if (x.inBundle) x.key}),
     ]);
     addTearDown(c.dispose);
     return c;
@@ -106,7 +109,7 @@ void main() {
       await c.read(sessionsProvider.future);
       final accounts = c.read(orgateAccountProvider.notifier);
 
-      // A にログイン: A のバンドルにあって、この端末にもログインがある SNS は、そのまま A に入る。
+      // A にログイン: A のバンドルにあって、この端末にもログインがある SNS は、選べば A に入る (D-461: 黙っては入れない)。
       final a = await accounts.adoptLogin({'accountId': 'acc-a', 'accessToken': 'tok-a'});
       expect(a!.handle, 'alice');
       await settle();

@@ -9,6 +9,7 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart' show AccountSession;
 import '../session/session_providers.dart';
 import '../session/session_storage.dart';
 import '../session/rasq_accounts.dart';
+import '../session/rasq_login_carry.dart';
 import '../session/sns_share.dart' show SnsShareStore;
 import 'orgate_client.dart';
 import 'rasq_account_page_api.dart';
@@ -608,13 +609,29 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
   /// いまのアカウントにする。
   ///
   /// **いまの RASQ アカウントの SNS セッションは引き継がない**(引き継ぐと、名前は新しいアカウントなのに中身は前のアカウント
-  /// のまま、になる)。代わりに、そのアカウントのバンドル(Central にある SNS アカウントの一覧)のうち、この端末にもログインが
-  /// あるものをそのアカウントに入れる。残りは SNS のログイン画面に「このアカウントの SNS アカウント」として出る。
-  /// バンドルは置き換えない(ほかの端末でつないだぶんを、この端末に無いからといって消さない)。
-  Future<RasqAccount?> adoptLogin(Map<String, Object?> res) async {
+  /// のまま、になる)。この端末で開いていた SNS アカウント(「この端末のみ」のもの、とそのアカウントのバンドルにもあるもの)は、
+  /// **黙っては入れない** (D-461): [offerCarry] なら 1 件ずつ選んでもらい([rasqLoginCarryAskProvider]、既定は入れない)、
+  /// 選んだものだけをそのアカウントに入れる(「この端末のみ」からは外れる)。選ばなかったものは「この端末のみ」に残り、
+  /// そのアカウントのバンドルへは送らない。バンドルにだけあるものは SNS のログイン画面に「このアカウントの SNS アカウント」
+  /// として出る(押せば入る)。バンドルは置き換えない(ほかの端末でつないだぶんを、この端末に無いからといって消さない)。
+  /// [offerCarry] = false(保護者からのコードでのログイン)は聞かずに入れない(この端末の SNS は引き継がない、と画面で案内している)。
+  Future<RasqAccount?> adoptLogin(Map<String, Object?> res, {bool offerCarry = true}) async {
     final client = ref.read(centralClientProvider);
     final t = _tokensOf(res);
     if (client == null || t == null) return null;
+    _adopting = true;
+    try {
+      return await _adoptLogin(client, t, offerCarry: offerCarry);
+    } finally {
+      _adopting = false;
+    }
+  }
+
+  /// [adoptLogin] の途中(この端末の SNS を持ち込むかを聞いている間も)。オンボーディングは、終わるまで待つ。
+  bool get adopting => _adopting;
+  bool _adopting = false;
+
+  Future<RasqAccount?> _adoptLogin(OrgateClient client, ({String access, String? refresh, String? restore}) t, {required bool offerCarry}) async {
     final token = t.access;
     final storage = ref.read(sessionStorageProvider);
     _creds ??= await _loadOrCreateCredentials(storage);
@@ -627,24 +644,43 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
     await _save(storage);
     // SNS のアクセストークンの端末間共有 (D-319): 新しくログインした端末は、次の見回りで共有を求める(元の端末に問いが出る)。
     await SnsShareStore(storage).markRequest(account.id);
-    var bundle = const <String>[];
+    var bundle = const <String>{};
     try {
-      bundle = [for (final e in await bound.getList('/me/sns-accounts')) if (e is Map && e['accountKey'] is String) e['accountKey'] as String];
+      bundle = {for (final e in await bound.getList('/me/sns-accounts')) if (e is Map && e['accountKey'] is String) e['accountKey'] as String};
     } on OrgateException catch (e) {
       debugPrint('rasq account: bundle unavailable after login: $e');
     }
-    final onDevice = {for (final s in ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[]) s.account.key};
+    final ledger = await ref.read(rasqAccountsProvider.future);
+    // この端末で開いていた SNS アカウント (D-461): どの Central のアカウントにも属さないもの(「この端末のみ」/ Web 版の
+    // ログイン前のぶん)と、そのアカウントのバンドルにもあるもの。ログインする先の行にもうあるものは聞かない。
+    final already = {...?ledger.centralRecord(account.id)?.sessionKeys};
+    final inCentral = {for (final a in ledger.accounts) if (a.isCentral) ...a.sessionKeys};
+    // (読み込みを待たない: Web 版の保管庫の読み込みは、このアカウントの読み込みを待つので、ここで待つと互いに待ち合う。)
+    final onDevice = ref.read(sessionsProvider).value?.allSessions ?? const <AccountSession>[];
+    final candidates = [
+      for (final s in onDevice)
+        if (!already.contains(s.account.key) && (!inCentral.contains(s.account.key) || bundle.contains(s.account.key)))
+          RasqLoginCarryCandidate(session: s, inBundle: bundle.contains(s.account.key)),
+    ];
+    var carry = const <String>{};
+    if (offerCarry && candidates.isNotEmpty) {
+      final picked = await ref.read(rasqLoginCarryAskProvider)(RasqLoginCarryQuestion(accountHandle: account.handle, candidates: candidates));
+      carry = {for (final c in candidates) if (picked?.contains(c.key) ?? false) c.key};
+    }
+    // Web 版: ログイン前にメモリにだけ持っていたぶんは、選んだものだけを、ログインした先の保管庫へ預ける。
+    if (storage case final PreLoginSessionsHolder holder) holder.keepPreLogin(carry);
     _fetched = (client: client, token: token, account: account);
-    await ref.read(rasqAccountsProvider.future);
-    await ref.read(rasqAccountsProvider.notifier).attachCentral(
-          centralAccountId: account.id,
-          handle: account.handle,
-          displayName: account.displayName,
-          avatarUrl: account.avatarUrl,
-          inheritSessions: false,
-          pruneBundle: false,
-          adoptKeys: [for (final k in bundle) if (onDevice.contains(k)) k],
-        );
+    final accounts = ref.read(rasqAccountsProvider.notifier);
+    await accounts.attachCentral(
+      centralAccountId: account.id,
+      handle: account.handle,
+      displayName: account.displayName,
+      avatarUrl: account.avatarUrl,
+      inheritSessions: false,
+      pruneBundle: false,
+    );
+    // 選んだものは、このアカウントへ移す(「この端末のみ」からは外す。同じ SNS を 2 か所に数えない)。
+    if (carry.isNotEmpty) await accounts.addCentralSessionKeys(carry.toList(), centralAccountId: account.id);
     // 台帳の切り替えでも作り直されるが、同じアカウントへのログインし直し(台帳の「いま」が変わらない)でも使い始める。
     _activeId = account.id;
     _publishToken();
@@ -743,22 +779,36 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
 
   /// [accountId] = 同期する Central のアカウント。そのアカウントのトークンに縛った口で送る(途中で切り替わっても、
   /// よそのアカウントのバンドルを書き換えない。D-316)。
-  Future<void> syncBundle(List<AccountSession> sessions, {bool prune = true, String? accountId}) async {
+  ///
+  /// サーバーのバンドルを、この端末のこのアカウントの SNS アカウント([sessions])に寄せる (D-461):
+  /// - [sessions] は全部 `PUT`(1 件が断られても、残りは送る。前は最初の失敗で止まり、後ろのアカウントが載らなかった)。
+  /// - [prune] = この端末に無いものは消す(登録のときに「置き換える」を選んだアカウント)。[sessions] が空のときは消さない
+  ///   (読み込みの途中などで空に見えただけで、全部を消さない)。
+  /// - [removals] = この端末でログアウトしたもの([RasqAccountRecord.bundleRemovals])。[prune] でなくても消す。消せた / もともと
+  ///   無かったものは、台帳の控えから外す。
+  Future<void> syncBundle(List<AccountSession> sessions, {bool prune = true, String? accountId, List<String> removals = const []}) async {
     final base = ref.read(centralClientProvider);
+    final owner = accountId ?? state.value?.id;
     final token = accountId == null ? this.token : tokenFor(accountId);
     if (base == null || state.value == null || token == null) return;
     final client = base.withToken(() => token);
     final wanted = {for (final s in sessions) s.account.key: s};
+    final Set<String> existingKeys;
     try {
-      final existing = await client.getList('/me/sns-accounts');
-      final existingKeys = {
-        for (final e in existing)
-          if (e is Map) e['accountKey'] as String? ?? '',
+      existingKeys = {
+        for (final e in await client.getList('/me/sns-accounts'))
+          if (e is Map && e['accountKey'] is String) e['accountKey'] as String,
       };
-      for (final s in wanted.values) {
-        // アカウントページのタイル (S-021): 自動で出してよいか / サーバーの名前とアイコン / その SNS 上のプロフィール。
-        // 取れなければ送らない(サーバーは前の値のまま。新規は「出す」)。
-        final tile = await _tileInfo(s);
+    } on OrgateException catch (e) {
+      // バンドル同期は付随機能。失敗してもアプリは動き続ける(次の変化 / 起動で送り直す)。
+      debugPrint('rasq account: bundle sync failed: $e');
+      return;
+    }
+    for (final s in wanted.values) {
+      // アカウントページのタイル (S-021): 自動で出してよいか / サーバーの名前とアイコン / その SNS 上のプロフィール。
+      // 取れなければ送らない(サーバーは前の値のまま。新規は「出す」)。
+      final tile = await _tileInfo(s);
+      try {
         await client.putJson('/me/sns-accounts', {
           'kind': s.account.kind.name,
           'instance': s.account.instance,
@@ -768,15 +818,28 @@ class OrgateAccountNotifier extends AsyncNotifier<RasqAccount?> {
           if (s.avatarUrl != null) 'avatarUrl': s.avatarUrl.toString(),
           ...tile,
         });
+      } on OrgateException catch (e) {
+        // 1 件だけ断られた(見守りで止めている SNS など)。残りは送る。
+        debugPrint('rasq account: bundle sync of ${s.account.key} failed: $e');
       }
-      if (!prune) return;
-      for (final gone in existingKeys.where((k) => k.isNotEmpty && !wanted.containsKey(k))) {
-        await client.delete('/me/sns-accounts/${Uri.encodeComponent(gone)}');
-      }
-    } on OrgateException catch (e) {
-      // バンドル同期は付随機能。失敗してもアプリは動き続ける。
-      debugPrint('rasq account: bundle sync failed: $e');
     }
+    final gone = {
+      if (prune && wanted.isNotEmpty) ...existingKeys.where((k) => k.isNotEmpty && !wanted.containsKey(k)),
+      ...removals.where((k) => existingKeys.contains(k) && !wanted.containsKey(k)),
+    };
+    // 控えから外せるもの: もう載っていない / また載せた(ログインし直した)。
+    final settled = {for (final k in removals) if (!existingKeys.contains(k) || wanted.containsKey(k)) k};
+    for (final k in gone) {
+      try {
+        await client.delete('/me/sns-accounts/${Uri.encodeComponent(k)}');
+        settled.add(k);
+      } on OrgateException catch (e) {
+        if (e.code.code == '404') settled.add(k);
+        debugPrint('rasq account: bundle removal of $k failed: $e');
+      }
+    }
+    final done = {for (final k in removals) if (settled.contains(k)) k};
+    if (owner != null && done.isNotEmpty && ref.mounted) await ref.read(rasqAccountsProvider.notifier).clearBundleRemovals(owner, done);
   }
 }
 
@@ -784,20 +847,29 @@ final orgateAccountProvider = AsyncNotifierProvider<OrgateAccountNotifier, RasqA
 
 /// ログイン済みアカウントが変わるたびにバンドルを同期する。アプリ起動時に
 /// 1 度 watch しておけば以後は自動で追随する。
+///
+/// D-461: 送るのは**台帳の「いま」がこの Central のアカウントの行**のときだけ(「この端末のみ」/ 台帳に Central の行が
+/// まだ無い — 登録の途中など — ときは送らない。前は台帳に Central の行が無いと「いま」の行の SNS をそのまま送り、
+/// 端末だけのアカウントがバンドルに入ることがあった)。SNS アカウントが 0 件になっても、ログアウトの控えがあれば送る
+/// (前は 0 件だと何もせず、最後の 1 件をログアウトしてもサーバーに残っていた)。
 final orgateBundleSyncProvider = Provider<void>((ref) {
-  final shown = ref.watch(sessionsProvider).value?.sessions ?? const <AccountSession>[];
+  final loaded = ref.watch(sessionsProvider);
   final account = ref.watch(orgateAccountProvider).value;
-  final (target, prune, keys) = ref.watch(rasqAccountsProvider.select((s) => (centralTargetOf(s.value), s.value?.current?.pruneBundle ?? true, s.value?.current?.sessionKeys)));
-  if (account == null) return;
+  final (target, prune, keys, removals) = ref.watch(rasqAccountsProvider.select((s) {
+    final cur = s.value?.current;
+    return (centralTargetOf(s.value), cur?.pruneBundle ?? true, cur?.sessionKeys, cur?.bundleRemovals ?? const <String>[]);
+  }));
+  // まだ読み込んでいない SNS のセッションを「0 件」と取り違えない。
+  if (account == null || !loaded.hasValue || keys == null) return;
   // 台帳の「いま」と Central のアカウントが食い違っている(切り替えの途中)あいだは送らない (D-316):
   // 見えているのは台帳の「いま」のアカウントの SNS なので、別のアカウントのバンドルへ写してしまう。
-  if (target != null && target != account.id) return;
+  if (target != account.id) return;
   // セッションの一覧は、台帳が切り替わってから少し遅れて作り直される。前のアカウントの一覧が残っているあいだに
   // 送らないよう、台帳の「いま」の行に属するものだけにする。
-  final sessions = keys == null ? shown : [for (final s in shown) if (keys.contains(s.account.key)) s];
-  if (sessions.isEmpty) return;
+  final sessions = [for (final s in loaded.value!.sessions) if (keys.contains(s.account.key)) s];
+  if (sessions.isEmpty && removals.isEmpty) return;
   // build 中の書き込みを避けるため次のマイクロタスクへ逃がす。
-  Future.microtask(() => ref.read(orgateAccountProvider.notifier).syncBundle(sessions, prune: prune, accountId: account.id));
+  Future.microtask(() => ref.read(orgateAccountProvider.notifier).syncBundle(sessions, prune: prune, accountId: account.id, removals: removals));
 });
 
 /// いまの Central のアカウントの id (D-316)。アカウントごとの中身を持つ口(アカウントページ / AsTell / ストア)は

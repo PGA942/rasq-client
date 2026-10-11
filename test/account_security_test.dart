@@ -380,6 +380,14 @@ void main() {
     expect(find.textContaining('パスワードを設定していない RASQ アカウントには、ほかの端末からはログインできません'), findsOneWidget);
     // 2 段階目の無いアカウント: パスワードだけで入る。トークンは添えない(401 の取り直しで送り直さない)。
     await typeLogin(tester, 'hanako', 'correct horse battery');
+    // この端末で開いていた SNS アカウントを持ち込むかを聞く (D-461)。既定は何も選ばれていない。「加えない」。
+    final key = fakeSession().account.key;
+    expect(find.text('この端末で開いていた 1 件のアカウントを、@hanako に加えますか?'), findsOneWidget);
+    expect(tester.widget<CheckboxListTile>(find.byKey(ValueKey('rasqLogin.carry.$key'))).value, isFalse);
+    expect(tester.widget<TextButton>(find.byKey(const ValueKey('rasqLogin.carry.add'))).onPressed, isNull);
+    await tester.tap(find.byKey(const ValueKey('rasqLogin.carry.none')));
+    await tester.pumpAndSettle();
+    expect(c.read(currentRasqAccountProvider)!.sessionKeys, isEmpty, reason: '加えなければ、この端末の SNS は入らない');
     expect(f.bodies['POST /auth/login'], containsPair('deviceId', 'device-abc'));
     expect(f.bodies['POST /auth/login']!['label'], startsWith('RASQ ('));
     expect(f.auth['POST /auth/login'], isNull);
@@ -413,6 +421,14 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('login.code')), '9zYx8-WvUt7');
     await tester.tap(find.byKey(const ValueKey('login.confirm')));
     await tester.pumpAndSettle();
+    // この端末の SNS を選んで加える (D-461): 「この端末のみ」から、ログインしたアカウントへ移る。
+    final key = fakeSession().account.key;
+    await tester.tap(find.byKey(ValueKey('rasqLogin.carry.$key')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rasqLogin.carry.add')));
+    await tester.pumpAndSettle();
+    expect(c.read(currentRasqAccountProvider)!.sessionKeys, [key]);
+    expect(c.read(rasqAccountsProvider).value!.accounts.where((a) => !a.isCentral).expand((a) => a.sessionKeys), isNot(contains(key)));
     expect(f.bodies['POST /auth/login/confirm'], {'challengeId': 'ch-2', 'code': '9zYx8-WvUt7'});
     expect(f.auth['POST /auth/login/confirm'], isNull);
     expect(c.read(orgateAccountProvider).value?.handle, 'hanako');
