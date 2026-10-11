@@ -1,6 +1,14 @@
-// rasq-central のホームページ (S-095 / S-096) の「実機っぽいプレビュー」に貼る、アプリの画面のスクリーンショット。
-// 390×844 論理 px(2 倍 = 780×1688、スマホ)で ASTell のホーム / RASQ アカウントページ / オンボーディングを、
-// 1280×800 論理 px(1.5 倍 = 1920×1200、タブレットの横向き)で Web クライアント(レール + 2 カラムのホーム)を PNG に出す。
+// rasq-central のホームページ (S-095 / S-096 / S-098) の「実機っぽいプレビュー」に貼る、アプリの画面のスクリーンショット。
+// ホームページには スマホ / タブレット の 2 つのプレビューがあり (S-098)、節ごとに両方の画面を持つ:
+//
+//   | 節 | スマホ(縦、390×844 論理 px の 2 倍 = 780×1688) | タブレット |
+//   |---|---|---|
+//   | はじめ | home_onboarding.png | 横向き(1280×800 の 1.5 倍 = 1920×1200): home_onboarding_wide.png(2 カラム、D-405) |
+//   | RASQ Web クライアント | home_timeline.png(ホームのタイムライン) | 横向き: home_client.png(レール + 2 カラムのホーム) |
+//   | RASQ アカウント・QuickView | home_account.png | 縦向き(800×1280 の 1.5 倍 = 1200×1920、1 カラム): home_account_tall.png |
+//   | ASTell | home_astell_listen.png(ルームで聞いているところ) | 縦向き: home_astell_listen_tall.png |
+//
+// タブレットの縦向きは幅 800 論理 px(< RasqSizes.tabletBreakpoint = 840)なので、アプリはスマホと同じ 1 カラムで描く。
 // ホームページは画像の比率で端末(長辺 / 短辺 が 2 以上ならスマホ、それ未満ならタブレット)と向きを決める (S-096)。
 // 実行(WebP への変換と置き場までまとめて)は tool/preview/homeshots.sh。手で回すなら:
 //   RASQ_PREVIEW_FONT=/path/to/NotoSansJP.ttf flutter test tool/preview/homeshots_test.dart --update-goldens
@@ -19,12 +27,36 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
+import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/notify/local_notifier.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../test/support/fakes.dart';
+
+/// 端末の画面の大きさ(物理 px と倍率)。ホームページの端末の画面に貼るテクスチャの大きさになる。
+enum HomeView {
+  /// スマホの縦: 390×844 論理 px(iPhone 14 相当)の 2 倍。
+  phone(780, 1688, 2),
+
+  /// タブレットの横向き: 1280×800 論理 px(16:10)の 1.5 倍。レール + 2 カラム。
+  tabletWide(1920, 1200, 1.5),
+
+  /// タブレットの縦向き: 800×1280 論理 px(10:16)の 1.5 倍。幅が 840 未満なので 1 カラム。
+  tabletTall(1200, 1920, 1.5);
+
+  const HomeView(this.width, this.height, this.dpr);
+  final double width;
+  final double height;
+  final double dpr;
+
+  void apply(WidgetTester tester) {
+    tester.view.physicalSize = Size(width, height);
+    tester.view.devicePixelRatio = dpr;
+    addTearDown(tester.view.reset);
+  }
+}
 
 void main() {
   final fontPath = Platform.environment['RASQ_PREVIEW_FONT'];
@@ -60,32 +92,13 @@ void main() {
 
   http.Response json(Object body, [int code = 200]) => http.Response.bytes(utf8.encode(jsonEncode(body)), code, headers: {'content-type': 'application/json'});
 
-  /// 画面の大きさ: 390×844 論理 px(iPhone 14 相当)の 2 倍。ホームページの端末の画面に貼るテクスチャの大きさ。
-  void phone(WidgetTester tester) {
-    tester.view.physicalSize = const Size(780, 1688);
-    tester.view.devicePixelRatio = 2;
-    addTearDown(tester.view.reset);
-  }
-
   final loggedIn = MemorySessionStorage({
     SessionsNotifier.storageKey: jsonEncode({'sessions': [fakeSession().toJson()], 'current': fakeSession().account.key}),
   });
 
-  /// 画面の大きさ: 1280×800 論理 px(タブレット / Web の横向き、16:10)の 1.5 倍。ホームページのタブレットの画面に貼る。
-  void tablet(WidgetTester tester) {
-    tester.view.physicalSize = const Size(1920, 1200);
-    tester.view.devicePixelRatio = 1.5;
-    addTearDown(tester.view.reset);
-  }
-
   /// SNS のタイムラインの見本 (MockData) でログイン中。Central には繋がない(ASTell はモックのルーム)。
-  /// [wide] なら タブレットの横向き(レール + 2 カラム)で。
-  Future<ProviderContainer> pumpApp(WidgetTester tester, {bool wide = false}) async {
-    if (wide) {
-      tablet(tester);
-    } else {
-      phone(tester);
-    }
+  Future<ProviderContainer> pumpApp(WidgetTester tester, HomeView view) async {
+    view.apply(tester);
     await tester.pumpWidget(ProviderScope(
       overrides: [
         sessionStorageProvider.overrideWithValue(loggedIn),
@@ -98,20 +111,22 @@ void main() {
     return ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
   }
 
-  testWidgets('web client (tablet, landscape)', (tester) async {
-    await pumpApp(tester, wide: true);
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_client.png'));
-  });
-
-  testWidgets('astell home', (tester) async {
-    await pumpApp(tester);
+  /// ASTell のルーム「打ち上げの打ち上げ」(モック、ダグラスが話していて TiVard が画面を共有中)に入って**聞いている**ところ:
+  /// ルーム FOW(共有欄 / 参加メンバー / 字幕の文字起こし / 下段のマイク(オフ)・画面・字幕・共有)。ホームページの ASTell の節。
+  Future<void> pumpListening(WidgetTester tester, HomeView view) async {
+    final c = await pumpApp(tester, view);
+    final room = (await c.read(astellClientProvider).room('r-launch'))!;
+    await c.read(astellSessionProvider.notifier).join(room);
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('ASTell'));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_astell.png'));
-  });
+    await tester.tap(find.textContaining('参加中: '));
+    await tester.pumpAndSettle();
+  }
 
-  testWidgets('rasq account page', (tester) async {
-    phone(tester);
+  /// RASQ アカウントページ(はな @hana、Central の口をまねる)。ホームページの RASQ アカウント・QuickView の節。
+  Future<void> pumpAccount(WidgetTester tester, HomeView view) async {
+    view.apply(tester);
     const author = {'id': 'acc-1', 'handle': 'hana', 'displayName': 'はな'};
     final mock = MockClient((req) async {
       final path = req.url.path.replaceFirst('/api/v1', '');
@@ -156,12 +171,12 @@ void main() {
     final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
     c.read(routerProvider).push(Routes.rasqAccount('hana'));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_account.png'));
-  });
+  }
 
-  testWidgets('onboarding (register)', (tester) async {
-    phone(tester);
-    // サーバーのタイル (D-412) の情報だけ Central の口をまねる(plugin_preview_test の onboarding_wide と同じ)。
+  /// 最初のオンボーディング(登録)。サーバーのタイル (D-412) の情報だけ Central の口をまねる
+  /// (plugin_preview_test の onboarding_wide と同じ)。ホームページの はじめ の節。
+  Future<void> pumpOnboarding(WidgetTester tester, HomeView view) async {
+    view.apply(tester);
     final central = MockClient((req) async => switch (req.url.path) {
           '/api/v1/servers/misskey.io/info' => json({'host': 'misskey.io', 'software': 'misskey', 'version': '2025.4.1', 'name': 'Misskey.io', 'description': 'Misskey.io は、地球で生まれた分散マイクロブログ SNS です。', 'themeColor': '#86b300', 'users': 520000, 'posts': 210000000, 'registrationOpen': true}),
           '/api/v1/servers/mastodon.social/info' => json({'host': 'mastodon.social', 'software': 'mastodon', 'version': '4.8.0', 'name': 'Mastodon', 'description': 'The original server of Mastodon.', 'themeColor': '#6364ff', 'users': 3100000, 'registrationOpen': true}),
@@ -179,6 +194,49 @@ void main() {
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
+  }
+
+  // ── はじめ ──
+  testWidgets('onboarding (phone)', (tester) async {
+    await pumpOnboarding(tester, HomeView.phone);
     await expectLater(find.byType(RasqApp), matchesGoldenFile('home_onboarding.png'));
+  });
+
+  testWidgets('onboarding (tablet, landscape)', (tester) async {
+    await pumpOnboarding(tester, HomeView.tabletWide);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_onboarding_wide.png'));
+  });
+
+  // ── RASQ Web クライアント ──
+  testWidgets('home timeline (phone)', (tester) async {
+    await pumpApp(tester, HomeView.phone);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_timeline.png'));
+  });
+
+  testWidgets('web client (tablet, landscape)', (tester) async {
+    await pumpApp(tester, HomeView.tabletWide);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_client.png'));
+  });
+
+  // ── RASQ アカウント・QuickView ──
+  testWidgets('rasq account page (phone)', (tester) async {
+    await pumpAccount(tester, HomeView.phone);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_account.png'));
+  });
+
+  testWidgets('rasq account page (tablet, portrait)', (tester) async {
+    await pumpAccount(tester, HomeView.tabletTall);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_account_tall.png'));
+  });
+
+  // ── ASTell ──
+  testWidgets('astell listening in a room (phone)', (tester) async {
+    await pumpListening(tester, HomeView.phone);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_astell_listen.png'));
+  });
+
+  testWidgets('astell listening in a room (tablet, portrait)', (tester) async {
+    await pumpListening(tester, HomeView.tabletTall);
+    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_astell_listen_tall.png'));
   });
 }
