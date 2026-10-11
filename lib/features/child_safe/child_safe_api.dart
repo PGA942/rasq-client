@@ -90,19 +90,24 @@ class ChildSafeGuardianInfo {
   }
 }
 
-/// 1 日ぶんの要約(**値は無い**: 数と話題の見出しだけ)。
+/// 1 日ぶんの要約(**値は無い**: 数と、送る前に止めた種類ごとの数だけ。D-462 / Central S-102)。
 @immutable
 class ChildSafeSummaryDay {
-  const ChildSafeSummaryDay({required this.date, this.posts = 0, this.blocked = 0, this.topics = const []});
+  const ChildSafeSummaryDay({required this.date, this.posts = 0, this.blocked = 0, this.trips = const {}});
   final String date;
   final int posts;
   final int blocked;
-  final List<String> topics;
+
+  /// 止めた種類 → 数(`sexual` / `topic` など)。
+  final Map<String, int> trips;
   factory ChildSafeSummaryDay.fromJson(Map<String, Object?> j) => ChildSafeSummaryDay(
         date: '${j['date'] ?? ''}',
         posts: (j['posts'] as num?)?.toInt() ?? 0,
         blocked: (j['blocked'] as num?)?.toInt() ?? 0,
-        topics: [for (final t in j['topics'] as List? ?? const []) '$t'],
+        trips: {
+          for (final e in (j['trips'] is Map ? j['trips'] as Map : const {}).entries)
+            if (e.value is num) '${e.key}': (e.value as num).toInt(),
+        },
       );
 }
 
@@ -150,9 +155,9 @@ class ChildSafeApi {
   Future<Map<String, Object?>> status() => _client.getJson('/me/child-safe');
   Future<void> ack(int revision) => _client.postJson('/me/child-safe/ack', {'revision': revision});
 
-  /// 1 日ぶんの報告。**数と話題の見出しだけ**(投稿の本文は送らない)。
-  Future<void> report({required String date, required int posts, required int blocked, required List<String> topics}) =>
-      _client.postJson('/me/child-safe/report', {'date': date, 'posts': posts, 'blocked': blocked, 'topics': topics});
+  /// 1 日ぶんの報告。**数だけ**(投稿の本文も、話題の見出しも送らない。D-462)。
+  Future<void> report({required String date, required int posts, required int blocked}) =>
+      _client.postJson('/me/child-safe/report', {'date': date, 'posts': posts, 'blocked': blocked});
 
   /// 既にある子のアカウントを、保護者のコードでつなぐ。
   Future<void> pair(String code) => _client.postJson('/me/child-safe/pair', {'code': code});
@@ -203,7 +208,7 @@ const childSafePledgeVersion = '2026-09-24';
 const childSafePledge = [
   '私は、見守るお子さんの親権者、またはそれに準じる保護者です。',
   '見守りは、お子さんの安全のために使い、お子さんの年齢と成長に合わせて見直します。',
-  'お子さんの投稿の中身は RASQ Central に送られず、見られるのは日ごとの数と話題の名前だけであることを理解しています。',
+  'お子さんの投稿の中身は RASQ Central に送られず(送る前の判定はお子さんの端末で行います)、見られるのは日ごとの数と、送る前に止めた種類だけであることを理解しています。',
   '申告が事実と違うとわかったときは、確認を取り消されることがあります。',
 ];
 

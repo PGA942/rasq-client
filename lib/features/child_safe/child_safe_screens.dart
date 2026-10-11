@@ -115,7 +115,7 @@ class ChildSafeHubScreen extends ConsumerWidget {
     return Scaffold(
       appBar: const RasqPageHeader(title: 'チャイルドセーフ'),
       body: ListView(padding: const EdgeInsets.only(bottom: RasqSpacing.xl), children: [
-        _pad(Text(rasqDetail(context, '保護者が、子のアカウントの使い方を決めます。保護者に届くのは数と話題の見出しだけで、投稿の本文は送りません。', '保護者の RASQ アカウントが、子の RASQ アカウントの使い方を決めます。投稿の判定はこの端末の中で行い、保護者に届くのは、送った数と止めた数と話題の見出しだけです(投稿の本文は送りません)。'), style: caption)),
+        _pad(Text(rasqDetail(context, '保護者が、子のアカウントの使い方を決めます。保護者に届くのは数と止めた種類だけで、投稿の本文は送りません。', '保護者の RASQ アカウントが、子の RASQ アカウントの使い方を決めます。投稿の判定はこの端末の中で行い、保護者に届くのは、送った数と止めた数と、送る前に止めた種類だけです(投稿の本文や話題は送りません)。'), style: caption)),
         if (cs.managed) ...[
           const RasqSectionHeader(title: '見守られています'),
           RasqValueListTile(key: const ValueKey('childSafe.hub.parent'), title: '保護者', value: cs.parentDisplayName?.isNotEmpty == true ? '${cs.parentDisplayName} (@${cs.parentHandle})' : '@${cs.parentHandle ?? '—'}'),

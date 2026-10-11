@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/providers.dart';
 import '../../backend/orgate_client.dart';
 import '../../shell/headers.dart';
+import '../compose_policy/compose_policy.dart' show composeTypeLabels;
 import '../store/store_providers.dart' show installedPluginsProvider;
 import '../trend/example_match.dart';
 import '../trend/example_picker.dart';
@@ -700,9 +701,12 @@ class _GuardianChildScreenState extends ConsumerState<GuardianChildScreen> with 
     final caption = RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
     if (s.days.isEmpty) return [_pad(Text('まだ報告はありません(子の端末は、終わった日の数を 1 日 1 回送ります)。', style: caption))];
     return [
-      _pad(Text('送った数 / 止めた数 / 話題の見出しだけです(投稿の本文は届きません)。', style: caption)),
+      _pad(Text('送った数 / 止めた数 / 止めた種類だけです(投稿の本文や話題は届きません。送る前の判定はお子さんの端末で行います)。', style: caption)),
       for (final day in s.days.take(14))
-        RasqValueListTile(key: ValueKey('guardian.summary.${day.date}'), title: day.date, value: '送った ${day.posts}・止めた ${day.blocked}${day.topics.isEmpty ? '' : '・${day.topics.join('、')}'}'),
+        RasqValueListTile(
+            key: ValueKey('guardian.summary.${day.date}'),
+            title: day.date,
+            value: '送った ${day.posts}・止めた ${day.blocked}${day.trips.isEmpty ? '' : '(${[for (final e in day.trips.entries) '${composeTypeLabels[e.key] ?? e.key} ${e.value}'].join('、')})'}'),
     ];
   }
 
