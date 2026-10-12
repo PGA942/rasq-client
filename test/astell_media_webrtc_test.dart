@@ -358,6 +358,49 @@ void main() {
       expect([d.connectionState, d.playout], ['closed', null], reason: '<audio> は外した');
     });
   });
+
+  group('声の大きさ (D-467)', () {
+    test('相手の声は inbound-rtp、自分のマイクは media-source の audioLevel(音声だけ、文字列でも読む)', () {
+      AstellStatsReport r(String type, Map<Object?, Object?> v) => (id: type, type: type, values: v);
+      expect(
+        astellAudioLevelsOf([
+          r('inbound-rtp', {'kind': 'audio', 'audioLevel': 0.12}),
+          r('media-source', {'kind': 'audio', 'audioLevel': 0.3}),
+          // 映像 / 音声でない報告は見ない。
+          r('inbound-rtp', {'kind': 'video', 'audioLevel': 0.9}),
+          r('media-source', {'kind': 'video', 'audioLevel': 0.9}),
+          r('outbound-rtp', {'kind': 'audio', 'audioLevel': 0.9}),
+        ]),
+        (remote: 0.12, local: 0.3),
+      );
+      // 古い実装の track(remoteSource で向きが分かる)/ mediaType / 文字列の値 / 範囲外は 0〜1 に。
+      expect(
+        astellAudioLevelsOf([
+          r('track', {'mediaType': 'audio', 'remoteSource': true, 'audioLevel': '0.05'}),
+          r('track', {'kind': 'audio', 'remoteSource': false, 'audioLevel': 1.7}),
+        ]),
+        (remote: 0.05, local: 1.0),
+      );
+      // 報告が無い / 値が無い(マイクを下ろして送り口が空)なら 0。
+      expect(astellAudioLevelsOf([r('inbound-rtp', {'kind': 'audio'}), r('media-source', {'kind': 'audio', 'audioLevel': 'n/a'})]), (remote: 0.0, local: 0.0));
+      expect(astellAudioLevelsOf(const []), (remote: 0.0, local: 0.0));
+    });
+
+    test('接続の getStats を 1 回読んで、相手の声と自分のマイクを返す。閉じたら 0', () async {
+      final m = make(web: false);
+      final link = await m.media.createLink('p2', offerer: true, iceServers: ice, handlers: handlers);
+      final pc = m.pcs.single;
+      // Android(libwebrtc)の形: 数は Double / Long、kind は文字列。
+      pc.stats = [
+        StatsReport('IT01', 'inbound-rtp', 0, {'kind': 'audio', 'audioLevel': 0.0712, 'totalAudioEnergy': 0.4}),
+        StatsReport('SA1', 'media-source', 0, {'kind': 'audio', 'trackIdentifier': 'mic', 'audioLevel': 0.204}),
+        StatsReport('CP', 'candidate-pair', 0, {'state': 'succeeded'}),
+      ];
+      expect(await link.audioLevels(), (remote: 0.0712, local: 0.204));
+      await link.close();
+      expect(await link.audioLevels(), (remote: 0.0, local: 0.0));
+    });
+  });
 }
 
 void _ignore(Map<String, Object?> _) {}

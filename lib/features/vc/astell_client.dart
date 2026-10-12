@@ -582,6 +582,8 @@ class _MockConnection implements AstellConnection {
         'type': 'welcome',
         'peerId': MockAstellClient._me.peerId,
         'accountId': MockAstellClient._me.accountId,
+        // サーバーと同じく、自分(`me`)はほかの参加者(`peers`)とは別に載せる (D-467)。
+        'me': _peerJson(muted.contains(MockAstellClient._me.peerId) ? MockAstellClient._me.copyWith(mutedByMod: true) : MockAstellClient._me),
         'peers': [for (final p in peers) _peerJson(p)],
         'shares': [for (final s in client._shares[roomId] ?? const <AstellShare>[]) _shareJson(s)],
         'transcripts': [for (final t in client._transcripts[roomId] ?? const <AstellTranscript>[]) _transcriptJson(t)],

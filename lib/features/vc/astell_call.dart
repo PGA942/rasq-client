@@ -8,8 +8,43 @@ import 'astell_media.dart';
 /// それより後に入った人は通話に入らず、配信があれば LiveKit で聞く (D-317)。
 const astellMeshCap = 8;
 
-/// 話している印の閾値(受けている音声の audioLevel、0〜1)。
+/// 話している印の閾値(受けている / 送っている音声の audioLevel、0〜1)。
 const astellSpeakingLevel = 0.02;
+
+/// 話している印のために声の大きさを見る間隔 (D-467: 400 ms → 300 ms)。ルームにいて、通話の接続があるときだけ。
+const astellLevelInterval = Duration(milliseconds: 300);
+
+/// 静かになってから話している印を消すまでの回数 (D-467)。言葉の切れ目(1 回だけ閾値を下回る)で印が点滅しない
+/// ように、続けてこの回数だけ静かだったら消す。間隔 300 ms なら、消えるのは 300〜600 ms 後。
+const astellSpeakingRelease = 2;
+
+/// 声の大きさ → 話している印 (D-467)。閾値を超えたらすぐ立て、続けて [release] 回静かだったら下ろす。
+class AstellSpeakingGate {
+  AstellSpeakingGate({this.threshold = astellSpeakingLevel, this.release = astellSpeakingRelease});
+  final double threshold;
+  final int release;
+  int _quiet = 0;
+
+  /// いま話している印を立てているか。
+  bool speaking = false;
+
+  /// 1 回ぶんの大きさを入れて、印を返す。
+  bool update(double level) {
+    if (level >= threshold) {
+      _quiet = 0;
+      speaking = true;
+    } else if (speaking && ++_quiet >= release) {
+      _quiet = 0;
+      speaking = false;
+    }
+    return speaking;
+  }
+
+  void reset() {
+    _quiet = 0;
+    speaking = false;
+  }
+}
 
 /// 通話の手順 (D-317): 音声だけのメッシュを、Central の WS の中継で組む。
 ///
@@ -29,7 +64,7 @@ class AstellCallMesh {
     required this.iceServers,
     this.onChanged,
     this.onError,
-    this.levelInterval = const Duration(milliseconds: 400),
+    this.levelInterval = astellLevelInterval,
     this.cap = astellMeshCap,
   });
 
@@ -65,6 +100,13 @@ class AstellCallMesh {
 
   /// いま話している相手の peerId。
   Set<String> speaking = const {};
+
+  /// 自分が話している (D-467): 送っているマイクの大きさ(どれかの接続の `media-source`)から。マイクを下ろして
+  /// いれば送り口にトラックが無いので立たない。接続が 1 本も無い(ひとりだけ)ときは測れない。
+  bool selfSpeaking = false;
+
+  final Map<String, AstellSpeakingGate> _gates = {};
+  final AstellSpeakingGate _selfGate = AstellSpeakingGate();
 
   /// 接続(作りかけも含む)がある相手。
   Set<String> get peerIds => _links.keys.toSet();
@@ -141,8 +183,13 @@ class AstellCallMesh {
         final l = _links.remove(peerId);
         if (l == null) return;
         await l.link.close();
+        _gates.remove(peerId);
         if (speaking.contains(peerId)) speaking = {...speaking}..remove(peerId);
-        if (_links.isEmpty) _stopLevels();
+        if (_links.isEmpty) {
+          _stopLevels();
+          _selfGate.reset();
+          selfSpeaking = false;
+        }
         onChanged?.call();
       });
 
@@ -165,6 +212,9 @@ class AstellCallMesh {
     final links = [..._links.values];
     _links.clear();
     speaking = const {};
+    selfSpeaking = false;
+    _gates.clear();
+    _selfGate.reset();
     for (final l in links) {
       try {
         await l.link.close();
@@ -292,22 +342,34 @@ class AstellCallMesh {
 
   bool _polling = false;
 
-  /// 声の大きさを見て、話している人を更新する。変われば [onChanged]。
+  /// 1 本の接続の `getStats` を待つ上限。閉じかけの接続で返ってこなくても、印の更新を止めない。
+  static const _statsTimeout = Duration(seconds: 2);
+
+  /// 声の大きさを見て、話している人(相手 / 自分)を更新する。変われば [onChanged]。
+  /// 接続ごとの `getStats` は並べて待つ(人数が増えても 1 回の見直しが間隔を超えないように)。
   Future<void> pollLevels() async {
     if (_polling || _closed) return;
     _polling = true;
     try {
-      final next = <String>{};
-      for (final l in [..._links.values]) {
-        try {
-          if (await l.link.remoteAudioLevel() >= astellSpeakingLevel) next.add(l.link.peerId);
-        } catch (_) {
-          // 統計が取れない(閉じかけ)なら黙っている扱い。
-        }
-      }
+      final links = [..._links.values];
+      final levels = await Future.wait([
+        for (final l in links)
+          l.link.audioLevels().timeout(_statsTimeout).catchError((Object _) => (remote: 0.0, local: 0.0)), // 統計が取れない(閉じかけ)なら黙っている扱い
+      ]);
       if (_closed) return;
-      if (!setEquals(next, speaking)) {
+      final next = <String>{};
+      var local = 0.0;
+      for (final (i, l) in links.indexed) {
+        final id = l.link.peerId;
+        if (!identical(_links[id], l)) continue; // 待っている間に閉じた / 張り直した
+        if (_gates.putIfAbsent(id, AstellSpeakingGate.new).update(levels[i].remote)) next.add(id);
+        if (levels[i].local > local) local = levels[i].local;
+      }
+      _gates.removeWhere((id, _) => !_links.containsKey(id));
+      final self = _links.isNotEmpty && _selfGate.update(local);
+      if (!setEquals(next, speaking) || self != selfSpeaking) {
         speaking = next;
+        selfSpeaking = self;
         onChanged?.call();
       }
     } finally {

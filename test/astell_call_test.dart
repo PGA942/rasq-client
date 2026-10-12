@@ -200,6 +200,50 @@ void main() {
       expect(m.speaking, isEmpty);
       await m.close();
     });
+
+    test('話している印の立て下ろし (D-467): 閾値を超えたらすぐ立て、続けて 2 回静かだったら下ろす', () {
+      final g = AstellSpeakingGate();
+      expect([for (final l in [0.0, 0.019, 0.02, 0.001, 0.3, 0.0, 0.0, 0.0]) g.update(l)], [false, false, true, true, true, true, false, false]);
+      g.update(0.5);
+      g.reset();
+      expect(g.speaking, isFalse);
+      expect(AstellSpeakingGate(release: 1).update(0.5), isTrue);
+      expect(astellLevelInterval, const Duration(milliseconds: 300));
+    });
+
+    test('自分の話している印 (D-467): 送っているマイクの大きさ。静かになって 2 回で消える / 統計が取れない接続は黙っている扱い / 接続が無くなれば消える', () async {
+      final m = mesh();
+      await m.start('m', ['a', 'b']);
+      media.links['a']!.localLevel = 0.25;
+      await m.pollLevels();
+      expect([m.selfSpeaking, m.speaking], [true, isEmpty]);
+      final before = changed;
+      // 相手の声の印は、言葉の切れ目(1 回だけ静か)では消えない。
+      media.links['a']!
+        ..localLevel = 0
+        ..level = 0.4;
+      await m.pollLevels();
+      expect([m.selfSpeaking, m.speaking], [true, {'a'}]);
+      media.links['a']!.level = 0;
+      await m.pollLevels();
+      expect([m.selfSpeaking, m.speaking], [false, {'a'}]);
+      await m.pollLevels();
+      expect([m.selfSpeaking, m.speaking], [false, isEmpty]);
+      expect(changed, before + 3);
+      // 1 本の getStats が失敗しても、ほかの接続の印は出る。
+      media.links['a']!.levelError = Exception('closed');
+      media.links['b']!.level = 0.5;
+      await m.pollLevels();
+      expect(m.speaking, {'b'});
+      media.links['b']!.localLevel = 0.5;
+      await m.pollLevels();
+      expect(m.selfSpeaking, isTrue);
+      await m.peerLeft('a');
+      expect(m.selfSpeaking, isTrue);
+      await m.peerLeft('b');
+      expect([m.selfSpeaking, m.speaking], [false, isEmpty], reason: 'ひとりになったら測れない(印は残さない)');
+      await m.close();
+    });
   });
 
   group('マイク / Web の安全な場所', () {
@@ -271,6 +315,49 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 1));
       expect(media.disposed, isTrue);
       expect(media.links['p1']!.closed, isTrue);
+    });
+
+    test('話している印 (D-467): 自分も参加メンバーに入り、マイクを立てて話している間だけ印が立つ / peer-state で相手の印が消えない', () async {
+      final session = await join(MockAstellClient.seededRooms().first);
+      AstellSessionState now() => container.read(astellSessionProvider)!;
+      // 自分(welcome の me)は peers に入らず、表示の members の先頭に。
+      expect(now().peers.any((p) => p.peerId == 'me'), isFalse);
+      expect([for (final p in now().members) p.peerId], ['me', 'p1', 'p2', 'p3', 'p4', 'p5']);
+      expect(now().members.first.displayName, 'あなた');
+      // マイクを下ろしている間は、測った値が残っていても印は立てない。
+      media.links['p1']!.localLevel = 0.3;
+      await session.mesh!.pollLevels();
+      expect(now().selfSpeaking, isTrue);
+      expect(now().members.first.speaking, isFalse);
+      await session.toggleMic();
+      await Future<void>.delayed(Duration.zero);
+      expect([now().members.first.micOn, now().members.first.speaking], [true, true]);
+      // 相手が話している間に peer-state(マイク / 画面共有の変化)が来ても、印は消えない。
+      media.links['p1']!.level = 0.3;
+      await session.mesh!.pollLevels();
+      expect(now().peers.firstWhere((p) => p.peerId == 'p1').speaking, isTrue);
+      client.emit('r-launch', {'type': 'peer-state', 'peer': {'peerId': 'p1', 'accountId': 'douglas', 'handle': 'douglas', 'displayName': 'ダグラス', 'state': {'micOn': true}}});
+      await Future<void>.delayed(Duration.zero);
+      expect(now().peers.firstWhere((p) => p.peerId == 'p1').speaking, isTrue);
+      // 下ろしたら自分の印はすぐ消える(次の見直しを待たない)。
+      await session.toggleMic();
+      await Future<void>.delayed(Duration.zero);
+      expect([now().members.first.micOn, now().members.first.speaking], [false, false]);
+      await session.leave();
+    });
+
+    test('話している印 (D-467): 通話に入っていない人は配信(LiveKit)の話している人から。閉鎖で消える', () async {
+      await join(MockAstellClient.seededRooms().first); // TiVard が画面共有中 → 配信に繋ぐ
+      await Future<void>.delayed(Duration.zero);
+      AstellSessionState now() => container.read(astellSessionProvider)!;
+      expect(streamer.connected, isTrue);
+      streamer.speak({'yamahaya'});
+      expect([for (final p in now().peers) if (p.speaking) p.peerId], ['p3']);
+      streamer.speak({'yamahaya'}, local: true);
+      expect(now().selfSpeaking, isTrue);
+      client.emit('r-launch', {'type': 'closed'});
+      await Future<void>.delayed(Duration.zero);
+      expect([now().selfSpeaking, now().peers.any((p) => p.speaking)], [false, false]);
     });
 
     test('マイク: 立てたときに開いて送る / 許可が無ければ理由を出して立てない / 強制ミュートで止める', () async {
@@ -750,8 +837,17 @@ class FakeLink implements AstellPeerLink {
   @override
   void setPlayback(bool on) => playback = on;
 
+  /// 自分のマイクの大きさ(`media-source`)。
+  double localLevel = 0;
+
+  /// `getStats` が返ってこない / 失敗する(閉じかけ)。
+  Exception? levelError;
+
   @override
-  Future<double> remoteAudioLevel() async => level;
+  Future<AstellAudioLevels> audioLevels() async {
+    if (levelError != null) throw levelError!;
+    return (remote: level, local: localLevel);
+  }
 
   @override
   Future<AstellLinkDiagnostics> diagnostics() async => AstellLinkDiagnostics(peerId: peerId, connectionState: closed ? 'closed' : 'connected', signalingState: state);
@@ -817,5 +913,20 @@ class FakeStreamer extends AstellStreamer {
   Future<void> disconnect() async {
     _connected = false;
     _publishing = null;
+  }
+
+  Set<String> _speakers = const {};
+  bool _localSpeaks = false;
+
+  @override
+  Set<String> get speakingIdentities => _speakers;
+  @override
+  bool get localSpeaking => _localSpeaks;
+
+  /// LiveKit のサーバーの話している人が変わった(`ActiveSpeakersChanged`)。
+  void speak(Set<String> identities, {bool local = false}) {
+    _speakers = identities;
+    _localSpeaks = local;
+    notifyListeners();
   }
 }

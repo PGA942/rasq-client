@@ -362,7 +362,7 @@ class _SceneLink implements AstellPeerLink {
   @override
   void setPlayback(bool on) {}
   @override
-  Future<double> remoteAudioLevel() async => level;
+  Future<AstellAudioLevels> audioLevels() async => (remote: level, local: 0.0);
   @override
   Future<AstellLinkDiagnostics> diagnostics() async => AstellLinkDiagnostics(peerId: peerId, connectionState: 'connected', signalingState: _state);
   @override
@@ -1077,7 +1077,11 @@ void main() {
       for (final l in media.links.values) {
         l.level = l.peerId == peerId ? 0.4 : 0;
       }
-      await tester.runAsync(() async => session.mesh?.pollLevels()); // ignore: invalid_use_of_visible_for_testing_member, 話している印は通話の声の大きさから
+      // 話している印は通話の声の大きさから。前の人の印は続けて 2 回静かだと消える (D-467)。
+      await tester.runAsync(() async {
+        await session.mesh?.pollLevels(); // ignore: invalid_use_of_visible_for_testing_member
+        await session.mesh?.pollLevels(); // ignore: invalid_use_of_visible_for_testing_member
+      });
       client.emit('r-launch', {
         'type': 'transcript',
         'transcript': {'id': 't${seq++}', 'accountId': accountId, 'handle': accountId, 'displayName': name, 'text': text, 'lang': 'ja', 'pinned': false, 'createdAt': DateTime(2026, 9, 6, 20, seq).toIso8601String()},
@@ -1094,7 +1098,10 @@ void main() {
     for (final l in media.links.values) {
       l.level = 0;
     }
-    await tester.runAsync(() async => session.mesh?.pollLevels()); // ignore: invalid_use_of_visible_for_testing_member, 話している印は通話の声の大きさから
+    await tester.runAsync(() async {
+      await session.mesh?.pollLevels(); // ignore: invalid_use_of_visible_for_testing_member
+      await session.mesh?.pollLevels(); // ignore: invalid_use_of_visible_for_testing_member
+    });
     await shot(1600, enter: rec.replace(fow), caption: 'ルームで聞いている');
   }
 

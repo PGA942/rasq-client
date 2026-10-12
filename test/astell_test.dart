@@ -796,7 +796,7 @@ void main() {
     // ルーム: 参加メンバー全員。
     await tester.tap(inRoom('ルーム'));
     await tester.pumpAndSettle();
-    expect(find.text('参加メンバー(5)'), findsOneWidget);
+    expect(find.text('参加メンバー(6)'), findsOneWidget); // 自分も入る (D-467)
     // ルームタブはホストが先頭(役割のピル付き)。
     final firstName = tester.widgetList<Text>(find.descendant(of: find.byType(AstellRoomBody), matching: find.textContaining('@'))).first.data;
     expect(firstName, '@douglas');

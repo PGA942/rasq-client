@@ -70,6 +70,8 @@ Widget _label(BuildContext context, String text) => Padding(
 
 /// ホストの行: ルームを作った人の顔 / 名前 / @handle と、いま参加しているか。
 /// 参加 FOW とルーム FOW のホームで、「参加メンバー」の上に置く(参加メンバーの行からはホストを除く)。
+/// 参加中なら、顔のバッジは参加メンバーと同じ(話している間は緑の波形、D-467)。ルーム FOW では自分も
+/// [peers] に入る([AstellSessionState.members])ので、自分がホストなら自分の行になる。
 class AstellHostRow extends StatelessWidget {
   const AstellHostRow({super.key, required this.room, required this.peers});
   final AstellRoom room;
@@ -92,7 +94,7 @@ class AstellHostRow extends StatelessWidget {
           imageUrl: here?.avatarUrl ?? room.ownerAvatarUrl,
           size: RasqSizes.avatarLg,
           fallbackLabel: room.ownerDisplayName,
-          badge: here == null ? null : _StateBadge(icon: here.micOn ? Icons.mic : Icons.volume_up, color: here.micOn ? RasqColors.accent : RasqColors.sub),
+          badge: here == null ? null : _StateBadge.of(here),
         ),
         const SizedBox(width: RasqSpacing.md),
         Expanded(
@@ -150,7 +152,8 @@ class AstellMembersRow extends StatelessWidget {
                 size: RasqSizes.avatarXl,
                 fallbackLabel: p.displayName,
                 // マイク/スピーカーは背景色の縁取りつき円の内側に (D-142: 素のアイコンは見づらい)。
-                badge: _StateBadge(icon: p.speaking ? Icons.graphic_eq : (p.micOn ? Icons.mic : Icons.volume_up), color: p.speaking ? astellSpeakingColor : (p.micOn ? RasqColors.accent : RasqColors.sub)),
+                // 話している間 (D-317 / D-467) は緑の波形。
+                badge: _StateBadge.of(p),
               ),
               // 画面共有枠: マイク表示の左(左下)。タップで共有枠に表示(選択中は強調)。
               if (p.screenShare != null)
@@ -216,6 +219,14 @@ const astellSpeakingColor = Color(0xFF2EBF8F);
 /// アバター右下の状態バッジ: 色つきの円 + 背景色の縁取り、アイコンは白で内側に。
 class _StateBadge extends StatelessWidget {
   const _StateBadge({required this.icon, required this.color});
+
+  /// 参加メンバー / ホストの行のバッジ: 話している間は緑の波形(強制ミュート中は出さない)、マイクを立てていれば
+  /// マイク、聞いているだけならスピーカー (D-317 / D-467)。
+  factory _StateBadge.of(AstellPeer p) {
+    if (p.speaking && !p.mutedByMod) return const _StateBadge(icon: Icons.graphic_eq, color: astellSpeakingColor);
+    return p.micOn ? const _StateBadge(icon: Icons.mic, color: RasqColors.accent) : const _StateBadge(icon: Icons.volume_up, color: RasqColors.sub);
+  }
+
   final IconData icon;
   final Color color;
   static const size = 22.0;
@@ -1355,9 +1366,10 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
     final room = s.room;
     return ListView(padding: EdgeInsets.zero, children: [
       _label(context, 'ホスト'),
-      AstellHostRow(room: room, peers: s.peers),
+      // 自分も入れる (D-467): 自分がホストならホストの行、そうでなければ参加メンバーの先頭。
+      AstellHostRow(room: room, peers: s.members),
       _label(context, '参加メンバー'),
-      AstellMembersRow(peers: _guests(room, s.peers).$1, viewingPeerId: s.viewingPeerId, onViewScreen: (id) => ref.read(astellSessionProvider.notifier).viewScreen(s.viewingPeerId == id ? null : id)),
+      AstellMembersRow(peers: _guests(room, s.members).$1, viewingPeerId: s.viewingPeerId, onViewScreen: (id) => ref.read(astellSessionProvider.notifier).viewScreen(s.viewingPeerId == id ? null : id)),
       const Divider(height: RasqSpacing.md),
       RasqSwitchListTile(title: 'プレビューにざっくり要約を表示する', value: room.showSummary, enabled: isOwner, onChanged: isOwner ? (v) => _patch({'showSummary': v}) : null),
       RasqSwitchListTile(title: 'ジャンルを自動選択する', value: room.autoGenre, enabled: isOwner, onChanged: isOwner ? (v) => _patch({'autoGenre': v}) : null),
@@ -1468,10 +1480,11 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
   Widget _roomTab(BuildContext context, AstellSessionState s) {
     final scheme = Theme.of(context).colorScheme;
     return ListView(padding: EdgeInsets.zero, children: [
-      _label(context, '参加メンバー(${s.peers.length})'),
+      _label(context, '参加メンバー(${s.members.length})'),
       // ワイヤーフレーム右下 (D-147): アバター(マイク)+ 名前/@handle + 画面共有枠 +
       // スピーカー(ミュート切替)+ 「…」。
-      for (final (_, p) in [...s.peers.indexed]..sort((a, b) => _rank(s.room, a.$2) != _rank(s.room, b.$2) ? _rank(s.room, a.$2).compareTo(_rank(s.room, b.$2)) : a.$1.compareTo(b.$1)))
+      // 自分も入れる(先頭 = 同じ役割の中では自分が先、D-467)。
+      for (final (_, p) in [...s.members.indexed]..sort((a, b) => _rank(s.room, a.$2) != _rank(s.room, b.$2) ? _rank(s.room, a.$2).compareTo(_rank(s.room, b.$2)) : a.$1.compareTo(b.$1)))
         _MemberRow(
           peer: p,
           self: p.peerId == s.myPeerId,
@@ -1482,7 +1495,7 @@ class _AstellRoomBodyState extends ConsumerState<AstellRoomBody> {
           onMute: () => ref.read(astellSessionProvider.notifier).toggleMute(p.peerId),
           onMore: (rect) => _peerMenu(context, s, p, rect, pinned: s.viewingPeerId == p.peerId),
         ),
-      if (s.peers.isEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('まだ誰もいません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+      if (s.members.isEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page), child: Text('まだ誰もいません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
       const Divider(height: RasqSpacing.md),
       _label(context, 'カスタムプラグイン'),
       // カスタムプラグイン (D-357): デプロイされているもの + 足す(ホスト)/ 提案(ほか)。
