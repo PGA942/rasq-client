@@ -66,10 +66,10 @@ while IFS=' ' read -r repo asset; do
     *)
       (cd "$dir" && "$RASQ" build --raw --no-sign >/dev/null)
       cp "$dir/dist/$asset" "$OUT/$asset"
-      pkg="$(ls "$dir"/dist/*.rasqpkg | head -1)" ;;
+      pkg="$(ls "$dir"/dist/*.rspkg "$dir"/dist/*.rasqpkg 2>/dev/null | head -1)" ;;
   esac
-  # 版 = 配布物の名前 <id>-<版>.rasqpkg から。
-  version="$(basename "$pkg" .rasqpkg | sed -E 's/^.*-([0-9][^-]*(-[^-]+)?)$/\1/')"
+  # 版 = 配布物の名前 <id>-<版>.rspkg(旧 .rasqpkg)から。
+  version="$(basename "$(basename "$pkg" .rasqpkg)" .rspkg | sed -E 's/^.*-([0-9][^-]*(-[^-]+)?)$/\1/')"
   record "$asset" "$dir" "$version" "$dirty"
   echo "   $asset $version"
 done <<'EOF'
@@ -77,6 +77,7 @@ astell-plugin astell_plugin.wasm
 composer-media-plugin composer_media_plugin.wasm
 composer-text-plugin composer_text_plugin.wasm
 custom-page-plugin custom_page_plugin.wasm
+custom-plugin-paint custom_plugin_paint.wasm
 media-draw-plugin media_draw_plugin.wasm
 media-fullscreen-plugin media_fullscreen_plugin.wasm
 media-process-plugin media_process_plugin.wasm

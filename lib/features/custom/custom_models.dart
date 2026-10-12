@@ -83,16 +83,19 @@ class CustomParticipant {
   Map<String, Object?> toJson() => {'accountId': accountId, 'handle': handle, 'displayName': ?displayName};
 }
 
-/// サーバー変数 1 つ(値と版、最後に書いた人)。
+/// サーバー変数 1 つ(値と版、最後に書いた人、期限)。
 @immutable
 class CustomVar {
-  const CustomVar({required this.value, required this.rev, this.by});
+  const CustomVar({required this.value, required this.rev, this.by, this.expiresAt});
   final Object? value;
   final int rev;
   final String? by;
 
-  factory CustomVar.fromJson(Map<String, Object?> j) => CustomVar(value: j['value'], rev: (j['rev'] as num?)?.toInt() ?? 0, by: j['by'] as String?);
-  Map<String, Object?> toJson() => {'value': value, 'rev': rev, 'by': ?by};
+  /// 期限(エポックミリ秒、契約 v0.22 / D-465)。期限の無いキーは null。
+  final int? expiresAt;
+
+  factory CustomVar.fromJson(Map<String, Object?> j) => CustomVar(value: j['value'], rev: (j['rev'] as num?)?.toInt() ?? 0, by: j['by'] as String?, expiresAt: (j['expiresAt'] as num?)?.toInt());
+  Map<String, Object?> toJson() => {'value': value, 'rev': rev, 'by': ?by, 'expiresAt': ?expiresAt};
 }
 
 /// RASQ アカウントのページに置いたカスタムプラグイン(`GET /accounts/{handle}/pages`)。

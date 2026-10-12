@@ -260,4 +260,61 @@ void main() {
       expect(find.text('0'), findsOneWidget);
     });
   });
+
+  group('SVG / Grid の縦横比 (契約 v0.22、D-465)', () {
+    String svgUri(String svg) => 'data:image/svg+xml;base64,${base64.encode(utf8.encode(svg))}';
+    RrlHost host() => RrlHost(instanceScope: instanceScope, scope: RrlScope(const {}));
+
+    testWidgets('Grid.p.aspectRatio: 3:4 の縦長のマス、外れた値は正方形', (tester) async {
+      final cell = svgUri('<svg viewBox="0 0 300 400"><path d="M0 0L300 400" stroke="#000"/></svg>');
+      RrlNode grid(Object? ratio) => RrlNode(t: 'Grid', p: {'columns': 2, 'aspectRatio': ratio}, c: [
+            for (var i = 0; i < 4; i++) RrlNode(t: 'Image', k: 'c$i', p: {'src': cell}),
+          ]);
+      await tester.pumpWidget(wrap(RrlRenderer(node: grid(0.75), host: host())));
+      final w = (400 - RasqSpacing.mediaGap) / 2;
+      expect(find.byType(SvgLiteView), findsNWidgets(4));
+      expect(tester.getSize(find.byType(SvgLiteView).first), Size(w, w / 0.75));
+      for (final bad in [0.05, 11, 'x', null]) {
+        await tester.pumpWidget(wrap(RrlRenderer(node: grid(bad), host: host())));
+        expect(tester.getSize(find.byType(SvgLiteView).first), Size(w, w), reason: '$bad');
+      }
+    });
+
+    testWidgets('Image の data:image/svg+xml は SvgLiteView で描く(fit / 大きさ)、読めなければ ⚠', (tester) async {
+      final svg = '<svg viewBox="0 0 300 400"><circle cx="150" cy="200" r="100" fill="red"/></svg>';
+      await tester.pumpWidget(wrap(RrlRenderer(node: RrlNode(t: 'Column', c: [
+        RrlNode(t: 'Image', k: 'a', p: {'src': svgUri(svg)}),
+        RrlNode(t: 'Image', k: 'b', p: {'src': 'data:image/svg+xml,${Uri.encodeComponent(svg)}', 'width': 60, 'height': 60, 'fit': 'cover'}),
+        const RrlNode(t: 'Image', k: 'c', p: {'src': 'data:image/svg+xml;base64,PGh0bWw+'}),
+      ]), host: host())));
+      final views = tester.widgetList<SvgLiteView>(find.byType(SvgLiteView)).toList();
+      expect(views, hasLength(2));
+      // 大きさの指定が無ければ親の幅に合わせ、viewBox の縦横比で高さ。
+      expect(tester.getSize(find.byWidget(views[0])), const Size(400, 400 * 4 / 3));
+      expect(views[0].fit, BoxFit.contain);
+      expect(views[1].fit, BoxFit.cover);
+      expect(tester.getSize(find.byWidget(views[1])), const Size(60, 60));
+      expect(find.text('⚠ bad svg'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('悪意のある SVG: 捨てた部分は描かず、残りだけ描く', (tester) async {
+      const svg = '<svg viewBox="0 0 10 10" onload="alert(1)">'
+          '<script>alert(1)</script>'
+          '<foreignObject><path d="M0 0L5 5"/></foreignObject>'
+          '<image href="https://evil.invalid/a.png"/>'
+          '<use href="#p"/>'
+          '<path id="p" d="M0 0L10 10" stroke="#ff0000" onclick="x()" style="fill:url(https://evil.invalid/)"/>'
+          '</svg>';
+      await tester.pumpWidget(wrap(RrlRenderer(node: RrlNode(t: 'Image', p: {'src': svgUri(svg), 'width': 50, 'height': 50}), host: host())));
+      final view = tester.widget<SvgLiteView>(find.byType(SvgLiteView));
+      expect(view.doc.shapes, hasLength(1));
+      expect(view.doc.shapes.single.stroke, const Color(0xFFFF0000));
+      final out = view.doc.toSvg();
+      for (final bad in ['script', 'onload', 'onclick', 'href', 'style', 'evil', 'foreignObject']) {
+        expect(out, isNot(contains(bad)), reason: bad);
+      }
+      expect(find.byType(Image), findsNothing); // 外の画像は読まない
+    });
+  });
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +21,7 @@ import '../../shell/third_column.dart' show fowColumnOf;
 import '../child_safe/child_gate.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
+import '../plugins/pro_media_editor_screen.dart' show SvgPaintOpener, openSvgPaintEditor;
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart';
 import '../store/store_models.dart';
@@ -72,6 +74,17 @@ class CustomPageArgs {
   CustomPageArgs withSession(String id) => CustomPageArgs(pluginId: pluginId, version: version, surface: surface, sessionId: id, roomId: roomId, profileHandle: profileHandle, profileAccountId: profileAccountId);
 }
 
+/// `media.editor.open` の `svg` の上限(契約 v0.22: 64 KiB。超えたら白紙から)。
+const customEditorMaxSvgBytes = 64 * 1024;
+
+/// `aspect` = `"<w>:<h>"`(1〜16 の整数)。外れたら `3:4`。
+String normalizeEditorAspect(Object? aspect) {
+  final m = aspect is String ? RegExp(r'^(\d{1,2}):(\d{1,2})$').firstMatch(aspect) : null;
+  final w = int.tryParse(m?.group(1) ?? ''), h = int.tryParse(m?.group(2) ?? '');
+  if (w == null || h == null || w < 1 || w > 16 || h < 1 || h > 16) return '3:4';
+  return '$w:$h';
+}
+
 /// [blocked] = チャイルドセーフで保護者が止めている(D-451。理由は [CustomPageController.error])。
 enum CustomPagePhase { resolving, needsConsent, needsInstall, loading, ready, failed, blocked }
 
@@ -114,6 +127,18 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
 
   CustomConnection? _conn;
   StreamSubscription<Map<String, Object?>>? _sub;
+
+  /// Central の時計との差(welcome の `now` − 端末の時刻、ミリ秒。契約 v0.22 / D-465)。
+  int _clockOffset = 0;
+
+  /// いまの時刻(エポックミリ秒)。wasm は `SystemTime::now` でトラップするので、`page.open` / `page.event` / RRL のイベントに載せる。
+  /// 共有セッションに入っていれば Central の時計に合わせる(期限 `expiresAt` と比べられるように)。
+  int get nowMs => DateTime.now().millisecondsSinceEpoch + _clockOffset;
+
+  /// `media.editor.open` の開き方(画面が渡す。無ければ開けない = `editCancelled`)。
+  SvgPaintOpener? editorOpener;
+  VoidCallback? _closeEditor;
+  int _editorSeq = 0;
   late final String token = 'page-${args.pluginId}-${DateTime.now().microsecondsSinceEpoch}';
   bool _disposed = false;
   ProviderSubscription<ChildGate>? _gateSub;
@@ -269,6 +294,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       'me': me!.toJson(),
       if (session != null) 'session': _sessionJson(),
       'size': {'width': size.width.round(), 'height': size.height.round()},
+      'now': nowMs,
     });
     if (plugin == null || phase == CustomPagePhase.blocked) return; // 開くあいだに保護者が止めた
     if (_slots.pageBlockReason(p) case final blocked?) return _block(blocked);
@@ -288,6 +314,8 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         'id': session!.id,
         'scope': session!.scope,
         'role': role ?? (session!.ownerAccountId != null && session!.ownerAccountId == me?.accountId ? 'owner' : 'member'),
+        // v0.22: 持ち主だけが書ける設定(`@<ownerAccountId>.…`)を参加者が引けるように。
+        'ownerAccountId': ?session!.ownerAccountId,
         'participants': [for (final x in participants) x.toJson()],
         'vars': {for (final e in vars.entries) e.key: e.value.toJson()},
       };
@@ -330,6 +358,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
           return;
         }
         session = next;
+        if (m['now'] case final num n) _clockOffset = n.toInt() - DateTime.now().millisecondsSinceEpoch;
         if (m['me'] is Map) {
           me = CustomParticipant.fromJson((m['me'] as Map).cast<String, Object?>());
           role = (m['me'] as Map)['role'] as String?;
@@ -357,7 +386,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
 
   void _event(Map<String, Object?> e) {
     final p = plugin;
-    if (p != null && phase == CustomPagePhase.ready) _slots.pageEvent(p, token, e);
+    if (p != null && phase == CustomPagePhase.ready) _slots.pageEvent(p, token, {...e, 'now': nowMs});
   }
 
   void _onMessage(Map<String, Object?> m) {
@@ -365,12 +394,14 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       case 'var':
         final key = '${m['key']}';
         final rev = (m['rev'] as num?)?.toInt() ?? 0;
+        final expiresAt = (m['expiresAt'] as num?)?.toInt();
         if (m['value'] == null) {
           vars.remove(key);
         } else {
-          vars[key] = CustomVar(value: m['value'], rev: rev, by: m['by'] as String?);
+          vars[key] = CustomVar(value: m['value'], rev: rev, by: m['by'] as String?, expiresAt: expiresAt);
         }
-        _event({'type': 'var', 'key': key, 'value': m['value'], 'rev': rev, 'by': m['by']});
+        // v0.22: 期限と、書いた人が消したのでないときの理由(expired / evicted / removedByOwner)。
+        _event({'type': 'var', 'key': key, 'value': m['value'], 'rev': rev, 'by': m['by'], 'expiresAt': ?expiresAt, 'reason': ?(m['reason'] as String?)});
       case 'call':
         _event({'type': 'call', 'fn': m['fn'], 'args': m['args'], 'from': m['from']});
       case 'joined':
@@ -426,21 +457,44 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     if (conn == null || session == null) return;
     switch (fn) {
       case 'shared.set':
-        conn.send({'type': 'set', 'key': a['key'], 'value': a['value'], if (a['ifRev'] is num) 'ifRev': a['ifRev']});
+        conn.send({'type': 'set', 'key': a['key'], 'value': a['value'], if (a['ifRev'] is num) 'ifRev': a['ifRev'], if (a['ttl'] is num) 'ttl': (a['ttl'] as num).toInt()});
       case 'shared.op':
-        conn.send({'type': 'op', 'key': a['key'], 'op': a['op'], 'value': a['value']});
+        conn.send({'type': 'op', 'key': a['key'], 'op': a['op'], 'value': a['value'], if (a['ttl'] is num) 'ttl': (a['ttl'] as num).toInt()});
       case 'shared.call':
         conn.send({'type': 'call', 'fn': a['fn'], 'args': a['args']});
     }
   }
 
-  /// RRL のイベント → プラグインの関数(`{token, nodeId, kind, ...payload}`)。
+  /// `media.editor.open`(v0.22、D-465): メディア編集画面を SVG モードで開き、保存で `edited {svg, width, height}`、
+  /// 閉じたら `editCancelled`。開いている間の 2 度目は前のものを閉じて(それには `editCancelled`)開き直す。
+  @override
+  void mediaEditor(Map<String, Object?> a) {
+    final open = editorOpener;
+    if (_disposed || plugin == null || phase != CustomPagePhase.ready) return;
+    final svgArg = a['svg'];
+    final svg = svgArg is String && utf8.encode(svgArg).length <= customEditorMaxSvgBytes ? svgArg : null;
+    if (open == null || (a['format'] != null && a['format'] != 'svg')) {
+      _event({'type': 'editCancelled'});
+      return;
+    }
+    _closeEditor?.call();
+    final seq = ++_editorSeq;
+    final h = open(aspect: normalizeEditorAspect(a['aspect']), svg: svg, title: a['title'] is String ? a['title'] as String : null);
+    _closeEditor = h.close;
+    unawaited(h.result.then((r) {
+      if (seq == _editorSeq) _closeEditor = null;
+      if (_disposed) return;
+      _event(r == null ? {'type': 'editCancelled'} : {'type': 'edited', 'svg': r.svg, 'width': r.width, 'height': r.height});
+    }));
+  }
+
+  /// RRL のイベント → プラグインの関数(`{token, nodeId, kind, now, ...payload}`)。
   void onRrlEvent(String nodeId, String kind, {String? fn, Map<String, Object?> payload = const {}}) {
     final p = plugin;
     if (p == null || fn == null) return;
     // 保護者が止めたプラグインには渡さない (D-451)。
     if (_slots.pageBlockReason(p) case final blocked?) return _block(blocked);
-    p.value(fn, {'token': token, 'nodeId': nodeId, 'kind': kind, ...payload});
+    p.value(fn, {'token': token, 'nodeId': nodeId, 'kind': kind, 'now': nowMs, ...payload});
   }
 
   void resized(Size next) {
@@ -455,6 +509,9 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
   void dispose() {
     _disposed = true;
     _gateSub?.close();
+    // ページを閉じたら編集画面も閉じる(結果はもう渡さない)。
+    _closeEditor?.call();
+    _closeEditor = null;
     final p = plugin;
     if (p != null) {
       _slots.pageClose(p, token);
@@ -483,7 +540,10 @@ class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
     super.didChangeDependencies();
     if (_c != null) return;
     final size = MediaQuery.sizeOf(context);
-    _c = CustomPageController(ProviderScope.containerOf(context), widget.args, size: size)..addListener(_changed);
+    _c = CustomPageController(ProviderScope.containerOf(context), widget.args, size: size)
+      ..addListener(_changed)
+      // 落書き (D-465): 広い画面は隣のカラム、狭い画面は全画面で開く。
+      ..editorOpener = ({required aspect, svg, title}) => openSvgPaintEditor(context, aspect: aspect, svg: svg, title: title);
     unawaited(_c!.start());
   }
 

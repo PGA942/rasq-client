@@ -145,7 +145,7 @@ let inst = null, ex = null, storage = {}, maxMemoryBytes = 256 * 1024 * 1024, cf
 // 無ければ net.fetch は断る(同期 XHR はリダイレクトを追って宣言外へ送ってしまう。D-408)。
 const JSPI = typeof WebAssembly.Suspending === "function" && typeof WebAssembly.promising === "function";
 const enc = new TextEncoder(), dec = new TextDecoder();
-const TOKEN_FNS = ["composer.media.replace","composer.media.preview","composer.text.replace","viewer.overlay.set","composer.open","composer.media.overlay","page.render","page.end","shared.set","shared.op","shared.call"];
+const TOKEN_FNS = ["composer.media.replace","composer.media.preview","composer.text.replace","viewer.overlay.set","composer.open","composer.media.overlay","page.render","page.end","shared.set","shared.op","shared.call","media.editor.open"];
 const send = (m) => self.postMessage(JSON.stringify(m));
 
 function bytesAt(ptr, len) { return new Uint8Array(inst.exports.memory.buffer, ptr >>> 0, len >>> 0); }

@@ -51,6 +51,9 @@ final customSessionClientProvider = Provider<CustomSessionClient>((ref) {
 /// キーの形(`me.` は送った人の `@<accountId>.` に書き換わる)。
 final customVarKeyPattern = RegExp(r'^[A-Za-z0-9_.:@-]{1,64}$');
 const customVarMaxBytes = 16 * 1024;
+
+/// `ttl` の上限(30 日、契約 v0.22 / S-106)。
+const customVarMaxTtl = 30 * 24 * 3600;
 const customVarMaxKeys = 256;
 const customAppendMax = 500;
 
@@ -97,7 +100,10 @@ Object? applyCustomOp(Object? current, String op, Object? value) {
 // ── モック(Central に繋がっていないとき / テスト)──────────────────────
 
 class MockCustomSessionClient implements CustomSessionClient {
-  MockCustomSessionClient({this.me = const CustomParticipant(accountId: 'me', handle: 'me', displayName: 'あなた')});
+  MockCustomSessionClient({this.me = const CustomParticipant(accountId: 'me', handle: 'me', displayName: 'あなた'), DateTime Function()? clock}) : clock = clock ?? DateTime.now;
+
+  /// サーバーの時計(期限と welcome の `now`。テストで差し替える)。
+  final DateTime Function() clock;
   final CustomParticipant me;
 
   final sessions = <String, CustomSession>{};
@@ -197,6 +203,19 @@ class MockCustomSessionClient implements CustomSessionClient {
     return c;
   }
 
+  /// 期限の来たサーバー変数を消して `var {value: null, by: null, reason: expired}` を配る(Central の掃除の代わり、テスト用)。
+  void expire(String sessionId) {
+    final store = vars[sessionId];
+    if (store == null) return;
+    final now = clock().millisecondsSinceEpoch;
+    for (final e in [...store.entries]) {
+      final at = e.value.expiresAt;
+      if (at == null || at > now) continue;
+      store.remove(e.key);
+      _broadcast(sessionId, {'type': 'var', 'key': e.key, 'value': null, 'rev': e.value.rev + 1, 'by': null, 'reason': 'expired'});
+    }
+  }
+
   /// ほかの参加者として送る(テスト用)。WS と同じ規則で当て、全員へ配る。
   void actAs(String sessionId, CustomParticipant who, Map<String, Object?> message) => _handle(sessionId, who, message, null);
 
@@ -225,8 +244,14 @@ class MockCustomSessionClient implements CustomSessionClient {
       case 'ping':
         from?._push({'type': 'pong'});
       case 'set' || 'op':
-        final key = resolveCustomKey('${m['key']}', who.accountId);
+        var key = resolveCustomKey('${m['key']}', who.accountId);
+        // owner は他人の @<accountId>. を value: null でだけ消せる(契約 v0.22 / S-106)。
+        final owner = sessions[sessionId]?.ownerAccountId == who.accountId;
+        final removing = key == null && owner && m['type'] == 'set' && m['value'] == null && '${m['key']}'.startsWith('@') && customVarKeyPattern.hasMatch('${m['key']}');
+        if (removing) key = '${m['key']}';
         if (key == null) return error('forbidden key: ${m['key']}');
+        final ttl = m['ttl'];
+        if (ttl != null && (ttl is! int || ttl < 1 || ttl > customVarMaxTtl)) return error('bad ttl $ttl');
         final cur = store[key];
         Object? next;
         if (m['type'] == 'set') {
@@ -246,12 +271,14 @@ class MockCustomSessionClient implements CustomSessionClient {
         if (utf8.encode(jsonEncode(next)).length > customVarMaxBytes) return error('value too large');
         if (cur == null && next != null && store.length >= customVarMaxKeys) return error('too many keys');
         final rev = (cur?.rev ?? 0) + 1;
+        // set で ttl を省くと期限なし、op で省くと今の期限のまま。
+        final expiresAt = ttl is int ? clock().millisecondsSinceEpoch + ttl * 1000 : (m['type'] == 'op' ? cur?.expiresAt : null);
         if (next == null) {
           store.remove(key);
         } else {
-          store[key] = CustomVar(value: next, rev: rev, by: who.accountId);
+          store[key] = CustomVar(value: next, rev: rev, by: who.accountId, expiresAt: expiresAt);
         }
-        _broadcast(sessionId, {'type': 'var', 'key': key, 'value': next, 'rev': rev, 'by': who.accountId});
+        _broadcast(sessionId, {'type': 'var', 'key': key, 'value': next, 'rev': rev, 'by': who.accountId, if (next != null) 'expiresAt': ?expiresAt, if (removing) 'reason': 'removedByOwner'});
       case 'call':
         _broadcast(sessionId, {'type': 'call', 'fn': m['fn'], 'args': m['args'], 'from': who.toJson()});
       default:
@@ -266,7 +293,8 @@ class _MockCustomConnection implements CustomConnection {
       final s = client.sessions[sessionId]!;
       _controller.add({
         'type': 'welcome',
-        'me': client.me.toJson(),
+        'me': {...client.me.toJson(), 'role': s.ownerAccountId == client.me.accountId ? 'owner' : 'member'},
+        'now': client.clock().millisecondsSinceEpoch,
         'session': s.toJson(),
         'participants': [for (final p in client._participants(sessionId)) p.toJson()],
         'vars': {for (final e in (client.vars[sessionId] ?? const <String, CustomVar>{}).entries) e.key: e.value.toJson()},

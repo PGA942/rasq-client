@@ -39,8 +39,11 @@ abstract final class RasqHostFns {
   static const sharedOp = 'shared.op';
   static const sharedCall = 'shared.call';
 
+  /// v0.22 (D-465): メディア編集画面を SVG モードで開く(`page.event {type: edited | editCancelled}` で返る)。
+  static const mediaEditorOpen = 'media.editor.open';
+
   /// アプリ側へ中継するホスト関数(権限はスロット登録時に決まる)。
-  static const appFns = {toast, soundPlay, clipboardSet, urlOpen, muteAdd, astellShare, composerMediaReplace, composerMediaPreview, composerTextReplace, viewerOverlaySet, composerOpen, composerMediaOverlay, pageRender, pageEnd, sharedSet, sharedOp, sharedCall};
+  static const appFns = {toast, soundPlay, clipboardSet, urlOpen, muteAdd, astellShare, composerMediaReplace, composerMediaPreview, composerTextReplace, viewerOverlaySet, composerOpen, composerMediaOverlay, pageRender, pageEnd, sharedSet, sharedOp, sharedCall, mediaEditorOpen};
 }
 
 /// Where an `ml.infer` call actually ran (returned to the plugin).

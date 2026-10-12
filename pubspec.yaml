@@ -161,6 +161,8 @@ flutter:
     - assets/plugins/post_action_plugin.wasm
     # カスタムプラグイン(ページ型)のサンプル「みんなのボード」(D-357、plugin-sample/custom-page-plugin)。
     - assets/plugins/custom_page_plugin.wasm
+    # カスタムプラグインのサンプル「みんなで落書き」(D-465、plugin-sample/custom-plugin-paint、契約 v0.22)。
+    - assets/plugins/custom_plugin_paint.wasm
     # 着せ替えのサンプル (D-335、plugin-sample/theme-plugin の rasq build)。
     - assets/plugins/theme_starry.rasqpkg
     - assets/plugins/theme_rasq.rasqpkg

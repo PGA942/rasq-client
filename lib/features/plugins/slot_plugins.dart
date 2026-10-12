@@ -115,6 +115,8 @@ class SlotManifest {
         // ページ型 (§2.13): ページの描き替え。共有セッションは `shared.session` 権限の shared だけ。
         if (slots.contains(SlotIds.page)) RasqHostFns.pageRender,
         if (slots.contains(SlotIds.page)) RasqHostFns.pageEnd,
+        // v0.22 (D-465): 落書き = メディア編集画面の SVG モード。
+        if (slots.contains(SlotIds.page) && permissions.contains('render')) RasqHostFns.mediaEditorOpen,
         if (page?.isShared == true && permissions.contains(RasqPermissions.sharedSession)) ...{RasqHostFns.sharedSet, RasqHostFns.sharedOp, RasqHostFns.sharedCall},
       };
 
@@ -244,6 +246,9 @@ abstract class PluginPageSink {
   void end() {}
   bool get hasSession;
   void shared(String fn, Map<String, Object?> args);
+
+  /// `media.editor.open`(v0.22、D-465): メディア編集画面を SVG モードで開く。結果は `page.event {type: edited | editCancelled}`。
+  void mediaEditor(Map<String, Object?> args) {}
 }
 
 /// ページ型の宣言(マニフェストの `page`、契約 v0.18 §2.13、D-357)。
@@ -895,13 +900,15 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
         final root = args['root'];
         if (cb != null && root is Map) cb(RrlNode.fromJson(root.cast<String, Object?>()));
       // ページの口 (D-451): 保護者が止めたプラグインの描画 / 共有は受けない。
-      case RasqHostFns.pageRender || RasqHostFns.pageEnd || RasqHostFns.sharedSet || RasqHostFns.sharedOp || RasqHostFns.sharedCall when pageBlockReason(plugin) != null:
+      case RasqHostFns.pageRender || RasqHostFns.pageEnd || RasqHostFns.sharedSet || RasqHostFns.sharedOp || RasqHostFns.sharedCall || RasqHostFns.mediaEditorOpen when pageBlockReason(plugin) != null:
         return;
       case RasqHostFns.pageRender:
         final root = args['root'];
         if (root is Map) _pages['${args['token']}']?.render(RrlNode.fromJson(root.cast<String, Object?>()), args['title'] as String?);
       case RasqHostFns.pageEnd:
         _pages['${args['token']}']?.end();
+      case RasqHostFns.mediaEditorOpen:
+        _pages['${args['token']}']?.mediaEditor(args);
       case RasqHostFns.sharedSet || RasqHostFns.sharedOp || RasqHostFns.sharedCall:
         final page = _pages['${args['token']}'];
         if (page == null) return;

@@ -10,6 +10,7 @@ import 'budget.dart';
 import 'geometry.dart';
 import 'host.dart';
 import 'registry.dart';
+import 'svg_lite.dart';
 
 /// Renders one RRL tree. Give it the document root (or any subtree) and a
 /// [RrlHost]; rebuild with a new node after a `patch` (the tree is immutable,
@@ -153,6 +154,14 @@ class _NodeWidget extends StatelessWidget {
         final raw = rrlString(_prop('src'));
         final width = (_prop('width') as num?)?.toDouble();
         final height = (_prop('height') as num?)?.toDouble();
+        // p.fit (契約 v0.22): contain(既定)/ cover / fill。data: の画像(SVG とラスター)に効く。
+        final fit = switch (rrlString(_prop('fit'))) { 'cover' => BoxFit.cover, 'fill' => BoxFit.fill, _ => BoxFit.contain };
+        // SVG (契約 v0.22、D-465): 許可リストで消毒してから描く(外のものは読まない)。読めなければ箱だけ。
+        if (raw.startsWith('data:image/svg+xml')) {
+          final doc = SvgLite.fromDataUri(raw);
+          if (doc == null) return const _ErrorBox('bad svg');
+          return SvgLiteView(doc: doc, width: width, height: height, fit: fit);
+        }
         if (raw.startsWith('data:')) {
           final Uint8List bytes;
           try {
@@ -160,7 +169,7 @@ class _NodeWidget extends StatelessWidget {
           } catch (_) {
             return const _ErrorBox('bad data uri');
           }
-          return Image.memory(bytes, width: width, height: height, fit: BoxFit.contain, gaplessPlayback: true, errorBuilder: (_, _, _) => const _ErrorBox('image'));
+          return Image.memory(bytes, width: width, height: height, fit: fit, gaplessPlayback: true, errorBuilder: (_, _, _) => const _ErrorBox('image'));
         }
         final src = rrlUri(raw);
         if (src == null) return const _ErrorBox('Image without src');
@@ -205,7 +214,9 @@ class _NodeWidget extends StatelessWidget {
         return angle == 0 ? box : Transform.rotate(angle: angle * math.pi / 180, child: box);
       case 'Grid':
         final columns = (_prop('columns') as num?)?.toInt() ?? 2;
-        return GridView.count(crossAxisCount: columns, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: RasqSpacing.mediaGap, crossAxisSpacing: RasqSpacing.mediaGap, children: _children(scope));
+        // p.aspectRatio (契約 v0.22): 1 マスの幅 ÷ 高さ。0.1〜10 の外 / 数でない → 1(正方形)。
+        final ratio = switch (_prop('aspectRatio')) { final num r when r >= 0.1 && r <= 10 => r.toDouble(), _ => 1.0 };
+        return GridView.count(crossAxisCount: columns, childAspectRatio: ratio, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), mainAxisSpacing: RasqSpacing.mediaGap, crossAxisSpacing: RasqSpacing.mediaGap, children: _children(scope));
       case 'Scroll':
         final horizontal = rrlString(_prop('direction')) == 'horizontal';
         return SingleChildScrollView(scrollDirection: horizontal ? Axis.horizontal : Axis.vertical, child: horizontal ? Row(children: _children(scope)) : Column(crossAxisAlignment: CrossAxisAlignment.start, children: _children(scope)));

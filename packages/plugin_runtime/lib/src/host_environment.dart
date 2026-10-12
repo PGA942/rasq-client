@@ -339,7 +339,8 @@ class RasqHostEnvironment {
             RasqHostFns.pageEnd ||
             RasqHostFns.sharedSet ||
             RasqHostFns.sharedOp ||
-            RasqHostFns.sharedCall:
+            RasqHostFns.sharedCall ||
+            RasqHostFns.mediaEditorOpen:
         // スロット契約 (D-167): 権限内ならアプリへ fire-and-forget で中継。
         final relay = onAppFn;
         if (relay == null) throw _HostFnError('E01', '$fn not wired');
@@ -349,7 +350,7 @@ class RasqHostEnvironment {
           if (u == null || !(u.isScheme('https') || u.isScheme('http'))) throw _HostFnError('B03', 'url.open: http(s) only');
         }
         if ((fn == RasqHostFns.composerMediaReplace || fn == RasqHostFns.composerMediaPreview || fn == RasqHostFns.composerTextReplace || fn == RasqHostFns.viewerOverlaySet || fn == RasqHostFns.composerOpen || fn == RasqHostFns.composerMediaOverlay ||
-                fn == RasqHostFns.pageRender || fn == RasqHostFns.pageEnd || fn == RasqHostFns.sharedSet || fn == RasqHostFns.sharedOp || fn == RasqHostFns.sharedCall) &&
+                fn == RasqHostFns.pageRender || fn == RasqHostFns.pageEnd || fn == RasqHostFns.sharedSet || fn == RasqHostFns.sharedOp || fn == RasqHostFns.sharedCall || fn == RasqHostFns.mediaEditorOpen) &&
             args['token'] is! String) {
           throw _HostFnError('D01', '$fn: token required');
         }
