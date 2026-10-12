@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart' show GoRouter;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 // LayerInteraction は公開ライブラリから export されていない(レイヤーを「動かせない / 選べない」にする唯一の口)。
@@ -22,6 +23,8 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../media/fow_avoid.dart';
 import '../../app/providers.dart';
+import '../../shell/column_takeover.dart';
+import '../../shell/third_column.dart' show fowColumnOf;
 import '../ads/export_ad.dart';
 import '../compose/post_image_fow.dart';
 import '../compose/post_video.dart';
@@ -39,6 +42,7 @@ import 'media_plugin_panel.dart';
 import 'pro_video_export.dart';
 import 'slot_plugins.dart';
 import 'sticker_picker.dart';
+import 'svg_paint_editor.dart';
 
 /// 添付の加工 (D-173 → D-249): 基本動作は **pro_image_editor**(ネイティブ実装: クロップ / 回転 / ペイント /
 /// テキスト / 絵文字 / フィルター / ぼかし / 調整)、アセットに無いフィルターや wasm / ONNX を使う編集は
@@ -55,9 +59,33 @@ import 'sticker_picker.dart';
 /// 動画 (D-174): `mimeType` が `video/*` なら pro_image_editor の動画モード。再生は `video_player`、書き出しは
 /// `pro_video_editor`(端末ネイティブ、mp4)。動画を受ける(`accepts`)プラグインのボタンは、元のファイルをそのまま
 /// プラグインへ渡し、結果で添付を差し替えて閉じる(焼き込みはしない)。
+///
+/// **SVG モード**(契約 v0.22 の `media.editor.open`、D-465): [ProMediaEditorArgs.svg] で開くと、pro_image_editor の代わりに
+/// 縦横比を固定した落書きの面([SvgPaintEditor]: ペン / 消しゴム / 色 / 太さ / 取り消し)になり、閉じると [SvgPaintResult]
+/// (保存)か null(やめた)を返す。ページ型プラグインの「みんなで落書き」(plugin-sample custom-plugin-paint)が使う。
 class ProMediaEditorArgs {
-  const ProMediaEditorArgs({required this.bytes, required this.name, required this.mimeType, this.extraActions = const [], this.avoidFows = false});
+  const ProMediaEditorArgs({required this.bytes, required this.name, required this.mimeType, this.extraActions = const [], this.avoidFows = false})
+      : svgAspect = null,
+        svg = null,
+        svgTitle = null;
+
+  /// SVG モード (D-465): `aspect` = `"<w>:<h>"`、`svg` = 続きから描く SVG(消毒してから読む)。
+  ProMediaEditorArgs.svg({String aspect = '3:4', this.svg, String? title})
+      : bytes = Uint8List(0),
+        name = 'paint.svg',
+        mimeType = 'image/svg+xml',
+        extraActions = const [],
+        avoidFows = false,
+        svgAspect = aspect,
+        svgTitle = title;
+
   final Uint8List bytes;
+
+  /// SVG モードの縦横比(null = ふだんの画像 / 動画の編集)。
+  final String? svgAspect;
+  final String? svg;
+  final String? svgTitle;
+  bool get isSvg => svgAspect != null;
 
   /// 全画面のメディア表示と同じく、出ている FOW(編集の FOW など)の逆サイドへ面を寄せる (D-413: Swing の編集の段)。
   final bool avoidFows;
@@ -183,14 +211,78 @@ const rasqEditorI18n = I18n(
   emojiEditor: I18nEmojiEditor(bottomNavigationBarText: '絵文字', search: '検索', categoryRecent: '最近', categorySmileys: '顔と人', categoryAnimals: '動物と自然', categoryFood: '食べ物', categoryActivities: 'アクティビティ', categoryTravel: '旅行と場所', categoryObjects: 'もの', categorySymbols: '記号', categoryFlags: '旗'),
 );
 
-class ProMediaEditorScreen extends ConsumerStatefulWidget {
+class ProMediaEditorScreen extends StatelessWidget {
   const ProMediaEditorScreen({super.key, required this.args});
   final ProMediaEditorArgs args;
   @override
-  ConsumerState<ProMediaEditorScreen> createState() => _ProMediaEditorScreenState();
+  Widget build(BuildContext context) => args.isSvg ? _SvgMode(args: args) : _ProMediaEditor(args: args);
 }
 
-class _ProMediaEditorScreenState extends ConsumerState<ProMediaEditorScreen> {
+class _ProMediaEditor extends ConsumerStatefulWidget {
+  const _ProMediaEditor({required this.args});
+  final ProMediaEditorArgs args;
+  @override
+  ConsumerState<_ProMediaEditor> createState() => _ProMediaEditorScreenState();
+}
+
+/// SVG モード (D-465): 落書きの面だけ。閉じ方は開き方に合わせる(カラムに重ねたならカラムを閉じる、全画面ならルートを戻す)。
+class _SvgMode extends StatefulWidget {
+  const _SvgMode({required this.args});
+  final ProMediaEditorArgs args;
+  @override
+  State<_SvgMode> createState() => _SvgModeState();
+}
+
+class _SvgModeState extends State<_SvgMode> {
+  bool _closed = false;
+
+  void _done(SvgPaintResult? r) {
+    if (_closed) return;
+    _closed = true;
+    if (!ColumnTakeoverScope.closeOf(context, r)) Navigator.of(context).pop(r);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final a = widget.args;
+    return SvgPaintEditor(key: const ValueKey('media.svg.editor'), aspect: a.svgAspect!, initialSvg: a.svg, title: a.svgTitle, onDone: _done);
+  }
+}
+
+/// `media.editor.open` の開き方(ページの画面が [CustomPageController.editorOpener] に渡す)。
+/// 戻り = 結果(保存 = [SvgPaintResult]、やめた / 閉じられた = null)と、外から閉じる口(ページを閉じた / 開き直す)。
+typedef SvgPaintOpener = ({Future<SvgPaintResult?> result, VoidCallback close}) Function({required String aspect, String? svg, String? title});
+
+/// カラムに重ねたときの id。
+const svgPaintTakeoverId = 'media.svg.editor';
+
+/// 落書きの編集画面を開く (D-465、契約 v0.22 `media.editor.open`)。**広い画面**(≥ [RasqSizes.tabletBreakpoint])は、ページの
+/// **隣のカラム**に重ねる(ページが第2カラムなら第3カラム、第3カラムなら第2カラム。D-057 のペインモデルのまま、ページは見えたまま)。
+/// **狭い画面**は全画面のルート。
+({Future<SvgPaintResult?> result, VoidCallback close}) openSvgPaintEditor(BuildContext context, {required String aspect, String? svg, String? title}) {
+  final args = ProMediaEditorArgs.svg(aspect: aspect, svg: svg, title: title);
+  if (MediaQuery.sizeOf(context).width >= RasqSizes.tabletBreakpoint && GoRouter.maybeOf(context) != null) {
+    final store = ProviderScope.containerOf(context, listen: false).read(columnTakeoverProvider.notifier);
+    final column = fowColumnOf(context) == 1 ? 0 : 1;
+    final result = store.open<SvgPaintResult>(column, id: svgPaintTakeoverId, builder: (_) => ProMediaEditorScreen(args: args));
+    return (result: result, close: () => store.close(column, id: svgPaintTakeoverId));
+  }
+  final route = PageRouteBuilder<SvgPaintResult>(
+    settings: const RouteSettings(name: svgPaintTakeoverId),
+    pageBuilder: (_, _, _) => ProMediaEditorScreen(args: args),
+    transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
+  );
+  final nav = Navigator.of(context, rootNavigator: true);
+  final result = nav.push(route);
+  return (
+    result: result,
+    close: () {
+      if (route.isActive) nav.removeRoute(route);
+    },
+  );
+}
+
+class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
   final _editorKey = GlobalKey<ProImageEditorState>();
   final _barScroll = ScrollController();
   bool _closing = false;

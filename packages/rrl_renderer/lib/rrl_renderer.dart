@@ -20,3 +20,4 @@ export 'src/geometry.dart';
 export 'src/host.dart';
 export 'src/registry.dart';
 export 'src/renderer.dart';
+export 'src/svg_lite.dart';

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -15,6 +16,7 @@ import 'package:rasq_client/features/custom/custom_models.dart';
 import 'package:rasq_client/features/custom/custom_page.dart';
 import 'package:rasq_client/features/custom/custom_profile.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
+import 'package:rasq_client/features/plugins/svg_paint_editor.dart' show SvgPaintResult;
 import 'package:rasq_client/features/store/store_client.dart';
 import 'package:rasq_client/features/store/store_models.dart';
 import 'package:rasq_client/features/store/store_providers.dart';
@@ -121,7 +123,7 @@ void main() {
     final m = SlotManifest.fromJson(_manifest());
     expect(m.page!.isShared, isTrue);
     expect(m.page!.allows('astell'), isTrue);
-    expect(m.appFns, containsAll([RasqHostFns.pageRender, RasqHostFns.sharedSet, RasqHostFns.sharedOp, RasqHostFns.sharedCall]));
+    expect(m.appFns, containsAll([RasqHostFns.pageRender, RasqHostFns.sharedSet, RasqHostFns.sharedOp, RasqHostFns.sharedCall, RasqHostFns.mediaEditorOpen]));
     // 権限が無ければ shared.* は開けない。solo は astell に出せない。
     expect(SlotManifest.fromJson(_manifest(permissions: ['render'])).appFns.contains(RasqHostFns.sharedSet), isFalse);
     final solo = SlotManifest.fromJson(_manifest(mode: 'solo'));
@@ -570,6 +572,163 @@ void main() {
       expect(find.byKey(const ValueKey('childSafe.blocked')), findsOneWidget);
       expect(find.text('保護者がこのプラグインを止めています'), findsOneWidget);
       expect(find.byKey(const ValueKey('custom.page.body')), findsNothing);
+    });
+  });
+
+  group('契約 v0.22 (D-465 / Central S-106): 時刻・期限・owner の削除・落書きの編集画面', () {
+    /// 偽のページ型: `paint` = `shared.set me.paint`(ttl 60)、`zap` = 他人の `@u2.paint` を消す、`draw` = `media.editor.open`。
+    FakeSlotRuntime painter({required List<(String, Map<String, Object?>)> events, Map<String, Object?> editorArgs = const {'format': 'svg', 'aspect': '3:4', 'svg': '<svg/>', 'title': '落書き'}}) => FakeSlotRuntime(
+          manifest: _manifest(),
+          handler: (rt, fn, args) {
+            final token = args['token'];
+            switch (fn) {
+              case 'page.open':
+                return {'root': {'t': 'Text', 'k': 'root', 'p': {'text': '落書き'}}};
+              case 'paint':
+                rt.hostFn('shared.set', {'token': token, 'key': 'me.paint', 'value': {'svg': '<svg/>'}, 'ttl': 60});
+                return {};
+              case 'bump':
+                rt.hostFn('shared.op', {'token': token, 'key': 'count', 'op': 'incr', 'value': 1, 'ttl': 30});
+                return {};
+              case 'zap':
+                rt.hostFn('shared.set', {'token': token, 'key': '@u2.paint', 'value': null});
+                return {};
+              case 'draw':
+                rt.hostFn('media.editor.open', {'token': token, ...editorArgs});
+                return {};
+              case 'page.event':
+                events.add(('${args['type']}', args));
+                return {};
+              case 'page.close':
+                return {};
+            }
+            return null;
+          },
+        );
+
+    test('page.open / page.event / RRL のイベントに now(Central の時計に合わせる)、session に ownerAccountId、var の expiresAt / reason、shared.* の ttl', () async {
+      var serverNow = DateTime(2030, 1, 2, 3, 4, 5);
+      final custom = MockCustomSessionClient(clock: () => serverNow);
+      final events = <(String, Map<String, Object?>)>[];
+      late FakeSlotRuntime rt;
+      final c = container(custom: custom, plugins: {'store:$_boardId@1.0.0': () => rt = painter(events: events)});
+      await c.read(slotPluginsProvider.notifier).register('store:$_boardId@1.0.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false);
+      final s = await custom.create(pluginId: _boardId, version: '1.0.0', scope: 'link');
+      final page = CustomPageController(c, CustomPageArgs(pluginId: _boardId, sessionId: s.id));
+      addTearDown(page.dispose);
+      await page.start();
+      await _settle();
+      expect(page.phase, CustomPagePhase.ready);
+      bool nearServer(Object? v) => v is int && (v - serverNow.millisecondsSinceEpoch).abs() < 5000;
+      final open = rt.calls.firstWhere((x) => x.$1 == 'page.open').$2;
+      expect(nearServer(open['now']), isTrue, reason: '${open['now']}');
+      expect(((open['session'] as Map)['ownerAccountId'], (open['session'] as Map)['role']), ('me', 'owner'));
+
+      // 期限つきで書く → var に expiresAt。RRL のイベントにも now。
+      page.onRrlEvent('paint', 'tap', fn: 'paint');
+      await _settle();
+      expect(nearServer(rt.calls.lastWhere((x) => x.$1 == 'paint').$2['now']), isTrue);
+      final at = serverNow.millisecondsSinceEpoch + 60000;
+      expect(custom.vars[s.id]!['@me.paint']!.expiresAt, at);
+      expect(page.vars['@me.paint']!.expiresAt, at);
+      var e = events.lastWhere((x) => x.$1 == 'var').$2;
+      expect((e['key'], e['expiresAt'], e.containsKey('reason'), nearServer(e['now'])), ('@me.paint', at, false, true));
+      // op の ttl も Central へ渡る。
+      page.onRrlEvent('bump', 'tap', fn: 'bump');
+      await _settle();
+      expect(custom.vars[s.id]!['count']!.expiresAt, serverNow.millisecondsSinceEpoch + 30000);
+
+      // owner は他人の @<accountId>. を消せる(reason: removedByOwner)。
+      const u2 = CustomParticipant(accountId: 'u2', handle: 'hanako', displayName: 'ハナコ');
+      custom.join(s.id, u2);
+      custom.actAs(s.id, u2, {'type': 'set', 'key': 'me.paint', 'value': {'svg': '<svg/>'}});
+      page.onRrlEvent('zap', 'tap', fn: 'zap');
+      await _settle();
+      e = events.lastWhere((x) => x.$1 == 'var').$2;
+      expect((e['key'], e['value'], e['by'], e['reason']), ('@u2.paint', null, 'me', 'removedByOwner'));
+      expect(custom.vars[s.id]!.containsKey('@u2.paint'), isFalse);
+
+      // 期限が来たら Central が消す(by: null、reason: expired)。
+      serverNow = serverNow.add(const Duration(minutes: 2));
+      custom.expire(s.id);
+      await _settle();
+      e = events.lastWhere((x) => x.$1 == 'var' && x.$2['key'] == '@me.paint').$2;
+      expect((e['value'], e['by'], e['reason']), (null, null, 'expired'));
+      expect(page.vars.containsKey('@me.paint'), isFalse);
+      expect(events.every((x) => x.$2['now'] is int), isTrue);
+    });
+
+    test('media.editor.open: 開き方へ渡し、保存で edited / やめたら editCancelled / 開き直すと前は editCancelled / ページを閉じたら編集画面も閉じる', () async {
+      final events = <(String, Map<String, Object?>)>[];
+      late FakeSlotRuntime rt;
+      final c = container(plugins: {'store:$_boardId@1.0.0': () => rt = painter(events: events)});
+      await c.read(slotPluginsProvider.notifier).register('store:$_boardId@1.0.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false);
+      final page = CustomPageController(c, const CustomPageArgs(pluginId: _boardId));
+      final opened = <({String aspect, String? svg, String? title, Completer<SvgPaintResult?> done})>[];
+      var closes = 0;
+      page.editorOpener = ({required aspect, svg, title}) {
+        final done = Completer<SvgPaintResult?>();
+        opened.add((aspect: aspect, svg: svg, title: title, done: done));
+        return (
+          result: done.future,
+          close: () {
+            closes++;
+            if (!done.isCompleted) done.complete(null);
+          },
+        );
+      };
+      await page.start();
+      await _settle();
+      expect(page.phase, CustomPagePhase.ready);
+
+      page.onRrlEvent('draw', 'tap', fn: 'draw');
+      await _settle();
+      expect((opened.single.aspect, opened.single.svg, opened.single.title), ('3:4', '<svg/>', '落書き'));
+      opened.single.done.complete(const SvgPaintResult(svg: '<svg viewBox="0 0 300 400"/>', width: 300, height: 400));
+      await _settle();
+      final edited = events.lastWhere((x) => x.$1 == 'edited').$2;
+      expect((edited['svg'], edited['width'], edited['height'], edited['now'] is int), ('<svg viewBox="0 0 300 400"/>', 300, 400, true));
+
+      // 開いている間にもう一度 → 前のものは閉じて editCancelled、新しいのは開いたまま。
+      page.onRrlEvent('draw', 'tap', fn: 'draw');
+      page.onRrlEvent('draw', 'tap', fn: 'draw');
+      await _settle();
+      expect((opened.length, closes, events.where((x) => x.$1 == 'editCancelled').length), (3, 1, 1));
+      // ページを閉じたら編集画面も閉じる(結果はもう渡さない)。
+      final before = rt.calls.length;
+      page.dispose();
+      await _settle();
+      expect(closes, 2);
+      expect(rt.calls.skip(before).where((x) => x.$1 == 'page.event'), isEmpty);
+    });
+
+    test('media.editor.open の引数: 縦横比は 1〜16 の整数(外れたら 3:4)、svg は 64 KiB まで、svg 以外の形式は editCancelled', () async {
+      expect([for (final a in ['1:1', '16:9', '3:4', '99:1', '0:3', 'x', null, 3]) normalizeEditorAspect(a)], ['1:1', '16:9', '3:4', '3:4', '3:4', '3:4', '3:4', '3:4']);
+      final events = <(String, Map<String, Object?>)>[];
+      final big = '<svg>${'x' * (64 * 1024)}</svg>';
+      final c = container(plugins: {
+        'store:$_boardId@1.0.0': () => painter(events: events, editorArgs: {'format': 'svg', 'aspect': '9:16', 'svg': big}),
+      });
+      await c.read(slotPluginsProvider.notifier).register('store:$_boardId@1.0.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false);
+      final page = CustomPageController(c, const CustomPageArgs(pluginId: _boardId));
+      addTearDown(page.dispose);
+      String? gotSvg = 'unset';
+      String? gotAspect;
+      page.editorOpener = ({required aspect, svg, title}) {
+        gotSvg = svg;
+        gotAspect = aspect;
+        return (result: Completer<SvgPaintResult?>().future, close: () {});
+      };
+      await page.start();
+      await _settle();
+      page.onRrlEvent('draw', 'tap', fn: 'draw');
+      await _settle();
+      expect((gotAspect, gotSvg), ('9:16', null));
+      // 開き方が無い(画面の外)/ svg 以外の形式 → すぐ editCancelled。
+      page.editorOpener = null;
+      page.onRrlEvent('draw', 'tap', fn: 'draw');
+      await _settle();
+      expect(events.where((x) => x.$1 == 'editCancelled'), hasLength(1));
     });
   });
 }

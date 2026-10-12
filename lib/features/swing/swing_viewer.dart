@@ -26,6 +26,7 @@ import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../custom/custom_page.dart';
 import '../media/fow_avoid.dart';
 import '../media/video_player.dart';
+import '../plugins/pro_media_editor_screen.dart' show openSvgPaintEditor;
 import '../plugins/slot_plugins.dart';
 import 'swing_models.dart';
 import 'swing_providers.dart';
@@ -1091,6 +1092,8 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
       size: switch (context.findRenderObject()) { final RenderBox b when b.hasSize => b.size, _ => MediaQuery.sizeOf(context) },
     );
     c.onEnd = widget.onEnd;
+    // 落書き (D-465): Swing のページからも同じ編集画面(全画面 / 隣のカラム)を開ける。
+    c.editorOpener = ({required aspect, svg, title}) => openSvgPaintEditor(context, aspect: aspect, svg: svg, title: title);
     c.addListener(_changed);
     _c = c;
     _shrunk = false;
