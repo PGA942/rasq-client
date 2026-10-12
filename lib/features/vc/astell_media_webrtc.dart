@@ -423,18 +423,12 @@ class _WebRtcLink implements AstellPeerLink {
     _out?.setMuted(!on);
   }
 
+  /// 声の大きさ (D-467): 接続全体の `getStats()` を 1 回読み、相手の声(`inbound-rtp`)と自分のマイク
+  /// (`media-source`、送り口に差している間だけ)を取り出す([astellAudioLevelsOf])。
   @override
-  Future<double> remoteAudioLevel() async {
-    if (_closed) return 0;
-    var level = 0.0;
-    for (final r in await _pc.getStats()) {
-      final v = r.values;
-      final audio = v['kind'] == 'audio' || v['mediaType'] == 'audio';
-      final remote = r.type == 'inbound-rtp' || (r.type == 'track' && v['remoteSource'] == true);
-      final l = v['audioLevel'];
-      if (audio && remote && l is num && l > level) level = l.toDouble();
-    }
-    return level;
+  Future<AstellAudioLevels> audioLevels() async {
+    if (_closed) return (remote: 0.0, local: 0.0);
+    return astellAudioLevelsOf([for (final r in await _pc.getStats()) (id: r.id, type: r.type, values: r.values)]);
   }
 
   @override

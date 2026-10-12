@@ -63,8 +63,10 @@ abstract class AstellPeerLink {
   /// 相手の声を鳴らすか(スピーカーミュート / 手元のミュート)。
   void setPlayback(bool on);
 
-  /// 相手の声の大きさ(0〜1、受けている音声の audioLevel)。話している印に使う。
-  Future<double> remoteAudioLevel();
+  /// 声の大きさ(0〜1)。話している印に使う (D-317 / D-467)。`getStats` 1 回で、相手の声(受けている音声の
+  /// `inbound-rtp` の audioLevel)と自分の声(送っているマイクの `media-source` の audioLevel)を返す。
+  /// 自分の声はマイクを送り口に差している間(立てている間)だけ測れる — 下ろしていれば 0。
+  Future<AstellAudioLevels> audioLevels();
 
   /// 接続の様子(開発者向けの表示、D-323)。
   Future<AstellLinkDiagnostics> diagnostics();
@@ -197,6 +199,34 @@ String? astellCandidateKind(String? candidate) {
 /// `getStats()` の報告 1 つ(W3C の名前: `transport` / `candidate-pair` / `local-candidate` / `remote-candidate` /
 /// `inbound-rtp` / `outbound-rtp` …)。
 typedef AstellStatsReport = ({String id, String type, Map<Object?, Object?> values});
+
+/// 1 本の接続で測った声の大きさ(0〜1)。[remote] = 相手の声、[local] = 自分のマイク (D-467)。
+typedef AstellAudioLevels = ({double remote, double local});
+
+/// `getStats()` の報告から声の大きさを取り出す (D-467)。
+///
+/// - 相手の声: `inbound-rtp`(音声)の `audioLevel`。古い実装の `track`(`remoteSource: true`)も見る。
+/// - 自分の声: `media-source`(音声)の `audioLevel`。古い実装の `track`(`remoteSource: false`)も見る。
+///   送り口にトラックを差していない(マイクを下ろしている)と、この報告は出ないか 0。
+/// - 値は数でも文字列でも読む(端末の橋によっては文字列で来る)。音声かどうかは `kind`(古い実装は `mediaType`)、
+///   `media-source` は `kind` が無ければ音声とみなさない。
+AstellAudioLevels astellAudioLevelsOf(Iterable<AstellStatsReport> reports) {
+  var remote = 0.0;
+  var local = 0.0;
+  for (final r in reports) {
+    final v = r.values;
+    if (v['kind'] != 'audio' && v['mediaType'] != 'audio') continue;
+    final raw = v['audioLevel'];
+    final level = raw is num ? raw.toDouble() : (raw is String ? double.tryParse(raw) : null);
+    if (level == null || level.isNaN) continue;
+    final l = level.clamp(0.0, 1.0);
+    final incoming = r.type == 'inbound-rtp' || (r.type == 'track' && v['remoteSource'] == true);
+    final outgoing = r.type == 'media-source' || (r.type == 'track' && v['remoteSource'] == false);
+    if (incoming && l > remote) remote = l;
+    if (outgoing && l > local) local = l;
+  }
+  return (remote: remote, local: local);
+}
 
 /// 接続の統計のまとめ (D-323)。取れなかったものは null。
 @immutable

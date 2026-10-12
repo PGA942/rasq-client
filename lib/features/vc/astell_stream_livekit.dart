@@ -215,6 +215,17 @@ class LiveKitAstellStreamer extends AstellStreamer {
     return lk.VideoTrackRenderer(t, key: ValueKey(t.sid ?? identity), fit: fit == BoxFit.cover ? lk.VideoViewFit.cover : lk.VideoViewFit.contain);
   }
 
+  /// LiveKit のサーバーの話している人 (D-467)。`ActiveSpeakersChanged` も含め、部屋の出来事ごとに
+  /// [notifyListeners] している(`connect` の `events.listen`)ので、聞く側はそこで読み直す。
+  @override
+  Set<String> get speakingIdentities => {
+        for (final p in _room?.activeSpeakers ?? const <lk.Participant>[])
+          if (p is lk.RemoteParticipant) p.identity,
+      };
+
+  @override
+  bool get localSpeaking => _room?.localParticipant?.isSpeaking ?? false;
+
   @override
   void setAudioPolicy(bool Function(String identity) play) {
     _play = play;

@@ -45,6 +45,14 @@ abstract class AstellStreamer extends ChangeNotifier {
   /// LiveKit の声を鳴らす相手を決める(identity → 鳴らすか)。
   void setAudioPolicy(bool Function(String identity) play);
 
+  /// いま話しているほかの参加者(identity = アカウント、D-467)。LiveKit のサーバーが決める話している人
+  /// (`ActiveSpeakersChanged`)。通話に入っていない人(満員 / 配信だけで聞いている)の話している印に使う。
+  /// 変わったら [notifyListeners]。
+  Set<String> get speakingIdentities => const {};
+
+  /// 自分が配信で話している(LiveKit のサーバーの印、D-467)。
+  bool get localSpeaking => false;
+
   /// 切る。
   Future<void> disconnect();
 
