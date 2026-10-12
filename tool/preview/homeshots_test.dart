@@ -1,4 +1,4 @@
-// rasq-central のホームページ (S-095 / S-096 / S-098 / S-101) の「実機っぽいプレビュー」に貼る、アプリの画面のスクリーンショット。
+// rasq-central のホームページ (S-095 / S-096 / S-098 / S-101 / S-103) の「実機っぽいプレビュー」に貼る、アプリの画面のスクリーンショット。
 // ホームページには スマホ / タブレット の 2 つのプレビューがあり (S-098)、節ごとに両方の画面を持つ:
 //
 //   | 節 | スマホ(縦、390×844 論理 px の 2 倍 = 780×1688) | タブレット |
@@ -7,7 +7,14 @@
 //   | RASQ Web クライアント | home_timeline.png(ホームのタイムライン) | 横向き: home_client.png(レール + 2 カラムのホーム) |
 //   | RASQ アカウント・QuickView | home_account.png | 縦向き(800×1280 の 1.5 倍 = 1200×1920、1 カラム): home_account_tall.png |
 //   | ASTell | home_astell_listen.png(ルームで聞いているところ) | 縦向き: home_astell_listen_tall.png |
-//   | RAi (D-463) | home_rai.png(RAi のホーム) | 縦向き: home_rai_tall.png |
+//   | RAi (D-463 → D-464) | 下の見本のキーフレーム(静止版の rai.webp は homeshots.sh が案内の 2 コマ目から) | 縦向き: 同(_tall) |
+//
+// RAi の節 (Central S-103 / D-464) は、端末の画面で 2 つの見本を交互に流す。見本ごとにキーフレームを描く
+// (homeshots.sh が 1 本の animated WebP にまとめる):
+//   - 案内「TL にリストを設定」(インストラクション、RAi が部品を指差して順に進む): home_rai_guide_00.png …(8 コマ)
+//   - アシスタントの RAi との会話(「ハロー、RAi さん」→ 返事が流れる): home_rai_chat_00.png …(6 コマ)
+//   タブレットは末尾に _tall(縦、1 カラム)。静止版の rai(_tall).webp は案内の 2 コマ目(「タイムラインを追加」を指す)。
+//   (前の RAi のホームだけの 1 枚 home_rai.png は撮らない。会話の見本の 1 コマ目がそれにあたる)
 //
 // タブレットの縦向きは幅 800 論理 px(< RasqSizes.tabletBreakpoint = 840)なので、アプリはスマホと同じ 1 カラムで描く。
 // ホームページは画像の比率で端末(長辺 / 短辺 が 2 以上ならスマホ、それ未満ならタブレット)と向きを決める (S-096)。
@@ -15,9 +22,11 @@
 //   RASQ_PREVIEW_FONT=/path/to/NotoSansJP.ttf flutter test tool/preview/homeshots_test.dart --update-goldens
 // → tool/preview/home_*.png(git には入れない。成果物は rasq-central の src/web/home/*.webp)。
 // ほかのプレビュー (vc_preview_test.dart など) と同じく、フォント未指定ならスキップ。
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,8 +37,12 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/backend/orgate_client.dart';
 import 'package:rasq_client/backend/rasq_account.dart';
+import 'package:rasq_client/features/nodeprog/timeline_config_screen.dart' show TimelineConfigScreen;
 import 'package:rasq_client/features/rai/rai_embedding_model.dart';
 import 'package:rasq_client/features/rai/rai_llm.dart';
+import 'package:rasq_client/features/rai/rai_providers.dart';
+import 'package:rasq_client/features/rai/rai_reference.dart' show RaiReferenceIndex, raiSituationSystem;
+import 'package:rasq_client/features/rai/rai_reference_providers.dart';
 import 'package:rasq_client/features/vc/astell_providers.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/notify/local_notifier.dart';
@@ -60,6 +73,31 @@ enum HomeView {
     tester.view.physicalSize = Size(width, height);
     tester.view.devicePixelRatio = dpr;
     addTearDown(tester.view.reset);
+  }
+}
+
+/// 返事を 1 字ずつ時間をかけて流す偽の端末内 LLM(会話の見本で「流れている途中」のコマを撮るため)。
+/// シチュエーションの一文と計画は短く即答、本文の返事は [firstDelay] 待ってから 1 字 [perChar] ずつ。
+class _SlowRaiLlm extends FakeRaiLlm {
+  _SlowRaiLlm({required String answer}) : super(phase: RaiLlmPhase.ready, reply: answer);
+  static const firstDelay = Duration(milliseconds: 900);
+  static const perChar = Duration(milliseconds: 40);
+
+  @override
+  Stream<String> chat(String prompt, {String? system, int? maxTokens}) async* {
+    if (system == raiSituationSystem) {
+      yield 'RAi にあいさつしている';
+      return;
+    }
+    if (system == RaiController.raiPlanSystem) {
+      yield '- あいさつを返す';
+      return;
+    }
+    await Future<void>.delayed(firstDelay);
+    await for (final ch in super.chat(prompt, system: system, maxTokens: maxTokens)) {
+      await Future<void>.delayed(perChar);
+      yield ch;
+    }
   }
 }
 
@@ -129,27 +167,154 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// RAi のホーム (D-463)。ホームページの RAi の節(Central S-101)。モデルは入れていない(テストの偽物)ので LLM は動かない。
-  /// RAi の 3D / 浮遊の動きは止まらないので pumpAndSettle せず、決まった時間だけ進める。
-  Future<void> pumpRai(WidgetTester tester, HomeView view) async {
+  /// 時計を [ms] だけ進める(RAi の 3D / 浮遊の動きは止まらないので pumpAndSettle は使わない)。
+  Future<void> run(WidgetTester tester, [int ms = 1500]) async {
+    for (var i = 0; i < ms ~/ 100; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
+  /// RAi の見本 (D-464) の土台: SNS の見本 (MockData) でログイン中、テストの偽物の LLM([llm])/ 埋め込み。
+  /// 操作の索引(アセットの読み込み = 実 I/O)を FakeAsync の外で組んでから、RAi のホーム(アシスタント)を開く。
+  /// [withIndex] = false なら操作の索引を読めないことにする(会話の見本: 「RAi」を含むあいさつが操作「RAi に操作を聞く」の
+  /// 提案にならず、LLM の返事だけになる)。
+  Future<ProviderContainer> pumpRaiHome(WidgetTester tester, HomeView view, RaiLlm llm, {bool withIndex = true}) async {
     view.apply(tester);
+    // rootBundle は loadString の Future をプロセスで持つので、前のテストのゾーンのものを捨てる(rai_chat_test と同じ)。
+    rootBundle.clear();
     await tester.pumpWidget(ProviderScope(
       overrides: [
         sessionStorageProvider.overrideWithValue(loggedIn),
         pluginRegistryProvider.overrideWithValue(PluginRegistry()..register(FakeSnsPlugin(posts: MockData.timeline))),
         localNotifierProvider.overrideWithValue(MemoryLocalNotifier()),
-        raiLlmProvider.overrideWithValue(FakeRaiLlm()),
+        raiLlmProvider.overrideWithValue(llm),
         raiEmbeddingModelProvider.overrideWithValue(FakeRaiEmbeddingModel()),
         deviceRamReaderProvider.overrideWithValue(() async => (totalMb: 8192, availableMb: 4096)),
+        if (!withIndex) raiReferenceProvider.overrideWith((ref) => Future<RaiReferenceIndex>.error(StateError('会話の見本では操作の索引を使わない'))),
       ],
       child: const RasqApp(),
     ));
     await tester.pumpAndSettle();
     final c = ProviderScope.containerOf(tester.element(find.byType(RasqApp)));
+    if (withIndex) await tester.runAsync(() => c.read(raiReferenceProvider.future));
+    await tester.pumpAndSettle();
     c.read(routerProvider).push(Routes.rai);
-    for (var i = 0; i < 20; i++) {
-      await tester.pump(const Duration(milliseconds: 100));
+    await run(tester, 2000);
+    return c;
+  }
+
+  /// キーフレームを home_<name>_00.png から順に撮る口。
+  Future<void> Function() frames(String name) {
+    var i = 0;
+    return () => expectLater(find.byType(RasqApp), matchesGoldenFile('home_${name}_${(i++).toString().padLeft(2, '0')}.png'));
+  }
+
+  /// 見本 (a): インストラクションの案内「TL にリストを設定」(rasq-client assets/rai/operations.jsonl の `tl-list`、
+  /// base = `tl-temp` の 1 手順目から分岐)。アプリと同じく RAi が部品へ移動して指差し、指した部品を押すと次の手順へ進む。
+  /// 8 コマ: 質問を入れる → ∨ を指す → 「タイムラインを追加」を指す → 追加の一覧(「リスト…」を選ぶ手順)→ リストを選ぶ →
+  /// 戻るとリストが流れる → 「決定」を指す → 決定後のタイムライン。
+  Future<void> raiGuide(WidgetTester tester, HomeView view, String name) async {
+    // 手順ごとに待つ時間(RAi が次の部品へ走って止まるまで)。
+    const step = 5000;
+    final c = await pumpRaiHome(tester, view, FakeRaiLlm());
+    final n = c.read(raiProvider.notifier);
+    final shot = frames(name);
+    // バーのトグルでインストラクションへ(RAi のページは閉じて、ホームのタイムラインに戻る)。
+    await tester.tap(find.byKey(const ValueKey('rai.toggle')));
+    await run(tester);
+    expect(c.read(raiProvider).mode, RaiMode.instruction);
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'TL にリストを設定');
+    await run(tester, 600);
+    await shot(); // 00: 質問を入れたところ
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await run(tester, step);
+    if (c.read(raiProvider).lastOperation != 'tl-list') {
+      // 索引の引き方が変わって別の操作に当たっても、見本は同じ案内にする(テストの偽物の埋め込みは n-gram)。
+      n.dismissBubble();
+      unawaited(n.runInstruction('tl-list'));
+      await run(tester, step);
     }
+    expect(c.read(raiProvider).lastOperation, 'tl-list');
+    expect(c.read(raiProvider).stepIndex, 0);
+    expect(c.read(raiProvider).target, isNotNull);
+    await shot(); // 01: 選んでいるタブの ∨ を指す
+    await tester.tapAt(c.read(raiProvider).target!.center);
+    await run(tester, step);
+    expect(c.read(raiProvider).stepIndex, 1);
+    // 「タイムラインを追加」は一時変更の FOW の下のほう。見えるところまで送ってから RAi に取り直させる(人が送るのと同じ)。
+    final config = find.descendant(of: find.byType(TimelineConfigScreen), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.descendant(of: find.byType(TimelineConfigScreen), matching: find.text('タイムラインを追加')), 120, scrollable: config);
+    await tester.drag(config, const Offset(0, -80)); // FOW の下端に寄りすぎないよう少し余分に送る
+    await run(tester, 300);
+    await run(tester, 500);
+    unawaited(n.relocate());
+    await run(tester, step);
+    expect(c.read(raiProvider).target, isNotNull);
+    await shot(); // 02: 「タイムラインを一時変更」の「タイムラインを追加」を指す(静止版の 1 枚)
+    await tester.tapAt(c.read(raiProvider).target!.center);
+    await run(tester, step);
+    expect(c.read(raiProvider).stepIndex, 2);
+    await shot(); // 03: 追加の一覧(「リストTL」)と、リストのタイルを選ぶ手順
+    await tester.tap(find.text('リストTL').last);
+    await run(tester);
+    await tester.tap(find.text('リストTLを取得').last);
+    await run(tester);
+    await tester.tap(find.text('Fediverse Banner').last);
+    await run(tester, 1000);
+    await shot(); // 04: リストを選ぶ
+    await tester.tap(find.text('決定').last);
+    await run(tester);
+    unawaited(n.next());
+    await run(tester, step);
+    expect(c.read(raiProvider).stepIndex, 3);
+    await shot(); // 05: 戻るとそのタブにリストの投稿が流れる
+    unawaited(n.next());
+    await run(tester, step);
+    expect(c.read(raiProvider).stepIndex, 4);
+    expect(c.read(raiProvider).target, isNotNull);
+    await shot(); // 06: 「決定」を指す
+    await tester.tapAt(c.read(raiProvider).target!.center);
+    await run(tester, step);
+    expect(c.read(raiProvider).bubble, isNull, reason: '最後の手順の部品を押すと案内は閉じる');
+    // stick に畳んだ一時変更を ✕ で閉じる(一時変更はそのタブに残る)。決定したタイムラインだけを見せる。
+    await tester.tap(find.byKey(const ValueKey('tl.temp.close')));
+    await run(tester, 3000);
+    await shot(); // 07: 決定したタイムライン
+  }
+
+  /// 見本 (b) の返事。
+  const raiChatAnswer = 'ハロー！RAi です。タイムラインの整え方や ASTell のルーム探し、投稿の下書きまで、RASQ のことなら何でも聞いてくださいね。';
+
+  /// 見本 (b): アシスタントの RAi との会話。RAi のホームで「ハロー、RAi さん」と送り、返事が 1 字ずつ流れる。
+  /// 6 コマ: 空のホーム → 入れたところ → 送った(考え中)→ 流れている途中 × 2 → 返事。
+  Future<void> raiChat(WidgetTester tester, HomeView view, String name) async {
+    final c = await pumpRaiHome(tester, view, _SlowRaiLlm(answer: raiChatAnswer), withIndex: false);
+    final shot = frames(name);
+    expect(c.read(raiProvider).mode, RaiMode.assistant);
+    await shot(); // 00: RAi のホーム
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'ハロー、RAi さん');
+    await run(tester, 600);
+    await shot(); // 01: 入れたところ
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await run(tester, 500);
+    expect(c.read(raiProvider).busy, isTrue);
+    await shot(); // 02: 送った(考え中)
+    Future<void> until(bool Function() ok) async {
+      for (var k = 0; k < 200 && !ok(); k++) {
+        await tester.pump(const Duration(milliseconds: 40));
+      }
+    }
+
+    String bubble() => c.read(raiProvider).bubble ?? '';
+    await until(() => bubble().length >= raiChatAnswer.length ~/ 3);
+    await shot(); // 03: 流れている途中
+    await until(() => bubble().length >= raiChatAnswer.length * 2 ~/ 3);
+    await shot(); // 04
+    await until(() => !c.read(raiProvider).busy);
+    await run(tester, 1000);
+    expect(c.read(raiProvider).bubble, raiChatAnswer);
+    expect(c.read(raiProvider).proposal, isNull, reason: 'あいさつは操作の提案にしない');
+    await shot(); // 05: 返事
   }
 
   /// RASQ アカウントページ(はな @hana、Central の口をまねる)。ホームページの RASQ アカウント・QuickView の節。
@@ -268,14 +433,20 @@ void main() {
     await expectLater(find.byType(RasqApp), matchesGoldenFile('home_astell_listen_tall.png'));
   });
 
-  // ── RAi (D-463) ──
-  testWidgets('rai home (phone)', (tester) async {
-    await pumpRai(tester, HomeView.phone);
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_rai.png'));
+  // ── RAi (D-463 → D-464): 2 つの見本のキーフレーム ──
+  testWidgets('rai guide "TL にリストを設定" (phone)', (tester) async {
+    await raiGuide(tester, HomeView.phone, 'rai_guide');
   });
 
-  testWidgets('rai home (tablet, portrait)', (tester) async {
-    await pumpRai(tester, HomeView.tabletTall);
-    await expectLater(find.byType(RasqApp), matchesGoldenFile('home_rai_tall.png'));
+  testWidgets('rai guide "TL にリストを設定" (tablet, portrait)', (tester) async {
+    await raiGuide(tester, HomeView.tabletTall, 'rai_guide_tall');
+  });
+
+  testWidgets('rai chat "ハロー、RAi さん" (phone)', (tester) async {
+    await raiChat(tester, HomeView.phone, 'rai_chat');
+  });
+
+  testWidgets('rai chat "ハロー、RAi さん" (tablet, portrait)', (tester) async {
+    await raiChat(tester, HomeView.tabletTall, 'rai_chat_tall');
   });
 }
