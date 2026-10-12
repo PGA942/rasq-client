@@ -102,11 +102,13 @@ class _StandbySlotState extends ConsumerState<_StandbySlot> {
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) => _report());
     final three = ref.watch(raiMascot3dProvider);
+    // 描かない (D-466、ホームページのシーンの撮影): 枠(スタンバイの位置)は報告し続ける。
+    final hidden = ref.watch(raiMascotHiddenProvider);
     return SizedBox(
       key: const ValueKey('rai.home.mascot'),
       width: widget.size,
       height: widget.size * 1.25,
-      child: three ? null : RaiMascot(size: widget.size, opacity: 0.35),
+      child: three || hidden ? null : RaiMascot(size: widget.size, opacity: 0.35),
     );
   }
 }
