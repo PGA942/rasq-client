@@ -24,6 +24,11 @@ import 'rai_space.dart';
 // あるときだけ 3D、無ければ 2D([RaiMascot] の painter)。`Platform` は Web では触れないので、先に kIsWeb を見る。
 final raiMascot3dProvider = Provider<bool>((_) => kIsWeb ? webGlBindingsLoaded() : !Platform.environment.containsKey('FLUTTER_TEST'));
 
+/// RAi のマスコット(3D / 2D の代わりの絵)を画面に描かない (D-466)。位置・大きさ・腕・向きの計算
+/// ([RaiMascot3dController])と、指す部品の枠はそのまま。rasq-central のホームページのシーン(tool/preview/homescenes_test.dart)は
+/// 画面のコマの上にページ側の 3D の RAi を重ねるので、撮るときだけ true に上書きする。アプリでは常に false。
+final raiMascotHiddenProvider = Provider<bool>((_) => false);
+
 /// 3D 側へ渡す状態: 静止時の腕、移動中の計画と進み具合、一時停止。
 class RaiMascot3dController extends ChangeNotifier {
   RaiArm _arm = RaiArm.none;

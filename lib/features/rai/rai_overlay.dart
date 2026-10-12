@@ -450,6 +450,8 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     final s = ref.watch(raiProvider);
     final screen = MediaQuery.sizeOf(context);
     final three = ref.watch(raiMascot3dProvider);
+    // 描かない (D-466、ホームページのシーンの撮影): 動き(コントローラーの位置 / 腕 / 計画)は同じに進め、絵だけ出さない。
+    final hidden = ref.watch(raiMascotHiddenProvider);
     _threeMode = three;
     final slot = ref.watch(raiStandbySlotProvider);
     _projector ??= RaiProjector(screen: screen);
@@ -464,7 +466,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
     // 空間モードのウィジェットは常に同じ Stack の先頭に固定キーで置く (D-202): 出す / 隠す / スタンバイで
     // 木の形を変えると three_js が作り直され(テクスチャの再生成、破棄時の EGL 例外)、Stack の外に
     // Positioned を返すと ParentDataWidget の誤用になる(実機のログ)。
-    final scene = three ? Positioned.fill(key: const ValueKey('rai.scene'), child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj, outline: outline))) : null;
+    final scene = three && !hidden ? Positioned.fill(key: const ValueKey('rai.scene'), child: IgnorePointer(child: RaiMascot3d.scene(controller: _ctrl3d, projector: proj, outline: outline))) : null;
     Widget layer(List<Widget> children) => SizedBox(width: screen.width, height: screen.height, child: Stack(children: [?scene, ...children]));
     // 行程が進んだら表情を目に戻す (D-211)。アシスタントの返事が出たらランダムな表情 (D-215)。
     if (s.stepIndex != _lastStep || s.bubble != _lastBubble || s.busy != _lastBusy) {
@@ -526,7 +528,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
       _lastMode = s.mode;
       _onFrame();
       return layer([
-        if (!three)
+        if (!three && !hidden)
           Positioned(
             key: const ValueKey('rai.mascot2d'),
             left: local.center.dx - local.width / 2,
@@ -589,7 +591,7 @@ class _RaiMascotLayerState extends ConsumerState<RaiMascotLayer> with SingleTick
               ),
             ),
           ),
-      ] else
+      ] else if (!hidden)
         Positioned(
           key: const ValueKey('rai.mascot2d'),
           left: pos.dx - size / 2,
