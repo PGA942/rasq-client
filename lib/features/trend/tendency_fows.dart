@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,7 +38,7 @@ Future<void> showTrendProfileSheet(BuildContext context, WidgetRef ref) async {
         const SizedBox(height: RasqSpacing.xs),
         RasqWarningListTile(title: 'トレンドの指向性/刺激性', subtitle: '指向性 ${_dirLabel(profile.directionality)} ・ 刺激性 ${_stimLabel(profile)}', onTap: () => openTendencyFow(ctx, ref)),
         // 設定ページへ (D-238): トレンドプラグインの有効 / 無効、キャッシュネットワークの状態。
-        RasqListTile(title: 'トレンドプラグインの設定', subtitle: '検索の候補チップ', detail: '検索ホームの候補チップ(trend.suggest)', onTap: () {
+        RasqListTile(title: 'トレンドプラグインの設定', subtitle: 'TL のノード / 検索の候補', detail: 'trend.suggest のプラグイン。TL のカスタマイズのノード(トレンドを取得 / Today / カスタム)と検索の候補で出します (D-470)', onTap: () {
           manager.close('trend.profile');
           ref.read(routerProvider).push('/settings/dsl/plugins.trend');
         }),
@@ -77,6 +79,10 @@ Widget _label(BuildContext context, String text) => Padding(
 /// トレンドの指向性/刺激性 FOW (D-153、p.2 中段上): エコーチェンバーの注意 +
 /// 指向性スライダー(狭い ⇄ 広い)+ 刺激性レーダー(8 感情の上限、触って決める)。
 /// 決定で保存、キャンセルで捨てる。
+///
+/// **2 カラム (D-470)**: 指向性と刺激性を横に並べる(左右のスワイプで行き来しない。どちらも 1 つの縦スクロールの中)。
+/// 刺激性のほうを細く: 狭い画面は [tendencyNarrowSplit](62 / 38)、幅 [tendencyWideBreakpoint] 以上は 60 / 40 で
+/// レーダーを大きく。「設定を共有」(前の「端末側で適用する」= TL の既定適用のオン / オフ)は指向性のカラムに置く。
 Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
   final manager = ref.read(overlayManagerProvider);
   var draft = ref.read(tendencyProfileProvider).value ?? const TendencyProfile();
@@ -86,9 +92,7 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
     confirmText: '決定',
     onConfirm: () => saveTendencyProfileFrom(ref, draft),
     builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) {
-      final scheme = Theme.of(ctx).colorScheme;
-      return ListView(shrinkWrap: true, children: [
-        const RasqNotice.warning(text: 'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。', margin: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0)),
+      final directivity = Column(key: const Key('trend.tendency.directivity'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         RasqSliderListTile(
           title: 'トレンドの指向性',
           subtitle: '狭いほど、好きなジャンルから外れた投稿を出しません。',
@@ -100,34 +104,95 @@ Future<void> openTendencyFow(BuildContext context, WidgetRef ref) async {
           valueLabel: _dirLabel(draft.directionality),
           onChanged: (v) => setSheet(() => draft = draft.copyWith(directionality: v)),
         ),
-        _label(ctx, 'トレンドの刺激性(各感情の上限。中心に寄せるほど抑える)'),
-        Center(
-          child: RasqRadarChart(
-            key: const Key('trend.stimulus.radar'),
-            axes: TendencyProfile.emotions,
-            values: {for (final e in TendencyProfile.emotions) e: draft.stimulusCap(e)},
-            labels: TendencyProfile.emotionLabels,
-            onChanged: (axis, v) => setSheet(() => draft = draft.copyWith(stimulus: {...draft.stimulus, axis: v})),
-          ),
+        // 設定を共有 (D-470、前の「端末側で適用する」): オフにすると、おすすめ / トレンド / 関連 TL の既定適用を止める。
+        RasqSwitchListTile(
+          key: const Key('trend.tendency.share'),
+          title: '設定を共有',
+          subtitle: 'おすすめ / トレンド / 関連 TL にこの設定を使います',
+          detail: 'オフにすると TL の既定適用を止めます(ノードで明示した分は効きます)',
+          value: draft.enabled,
+          onChanged: (v) => setSheet(() => draft = draft.copyWith(enabled: v)),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
-          child: Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-            for (final e in TendencyProfile.emotions)
-              RasqPill(label: '${TendencyProfile.emotionLabels[e]} ${(draft.stimulusCap(e) * 100).round()}%', color: draft.stimulusCap(e) < 1 ? RasqColors.danger : scheme.surfaceContainerHighest, textColor: draft.stimulusCap(e) < 1 ? Colors.white : scheme.onSurface),
+      ]);
+      Widget stimulus(double width) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return Container(
+          key: const Key('trend.tendency.stimulus'),
+          decoration: BoxDecoration(border: Border(left: BorderSide(color: scheme.outlineVariant))),
+          padding: const EdgeInsets.only(left: RasqSpacing.xs, right: RasqSpacing.xs),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Padding(
+              padding: const EdgeInsets.only(top: RasqSpacing.sm),
+              child: Text('トレンドの刺激性', style: RasqTypography.listTile),
+            ),
+            Text('各感情の上限。中心に寄せるほど抑えます', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: RasqSpacing.xs),
+            Center(
+              child: RasqRadarChart(
+                key: const Key('trend.stimulus.radar'),
+                size: math.max(96, math.min(width - RasqSpacing.xs * 2, 240)),
+                axes: TendencyProfile.emotions,
+                values: {for (final e in TendencyProfile.emotions) e: draft.stimulusCap(e)},
+                labels: TendencyProfile.emotionLabels,
+                onChanged: (axis, v) => setSheet(() => draft = draft.copyWith(stimulus: {...draft.stimulus, axis: v})),
+              ),
+            ),
+            const SizedBox(height: RasqSpacing.xs),
+            Wrap(spacing: 4, runSpacing: 4, children: [
+              for (final e in TendencyProfile.emotions) _StimulusChip(label: TendencyProfile.emotionLabels[e]!, cap: draft.stimulusCap(e)),
+            ]),
+            Align(
+              alignment: Alignment.centerRight,
+              // 既定(恐れ / 嫌悪 / 怒り 45%、D-470)へ戻す。細いカラムでは折り返さずに縮める。
+              child: TextButton(onPressed: () => setSheet(() => draft = draft.copyWith(stimulus: TendencyProfile.defaultStimulus)), child: const FittedBox(fit: BoxFit.scaleDown, child: Text('刺激性をリセット', maxLines: 1))),
+            ),
           ]),
-        ),
-        Align(alignment: Alignment.centerRight, child: Padding(padding: const EdgeInsets.only(right: RasqSpacing.sm), child: TextButton(onPressed: () => setSheet(() => draft = draft.copyWith(stimulus: const {})), child: const Text('刺激性をリセット')))),
-        RasqSwitchListTile(title: '端末側で適用する', subtitle: 'オフにすると、タイムラインへの自動の適用を止めます', detail: 'オフにすると TL の既定適用を止めます(ノードで明示した分は効きます)', value: draft.enabled, onChanged: (v) => setSheet(() => draft = draft.copyWith(enabled: v))),
+        );
+      }
+
+      return ListView(shrinkWrap: true, children: [
+        const RasqNotice.warning(text: 'トレンドの指向性/刺激性を強くすると、エコーチェンバーの影響を受けやすくなる危険性があります。', margin: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0)),
+        LayoutBuilder(builder: (ctx, c) {
+          final split = c.maxWidth >= tendencyWideBreakpoint ? tendencyWideSplit : tendencyNarrowSplit;
+          return Row(key: const Key('trend.tendency.columns'), crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(flex: split.$1, child: directivity),
+            Expanded(flex: split.$2, child: stimulus(c.maxWidth * split.$2 / (split.$1 + split.$2))),
+          ]);
+        }),
         const RasqCaption(
           '刺激性は、いまは言葉の傾向から推定しています。',
           detail: '刺激性は語彙ルールで推定しています(emotion8 / GRU の端末推論は ml.infer 配線後に差し替え)。',
-          padding: EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.page),
+          padding: EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.page),
         ),
       ]);
     }),
   );
   if (saved == true && context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('トレンドの指向性/刺激性を保存しました')));
+}
+
+/// 指向性 / 刺激性のカラムの幅の比 (D-470)。狭い画面(スマホ)でも両方が入るように刺激性を細く。
+const tendencyNarrowSplit = (62, 38);
+const tendencyWideSplit = (60, 40);
+
+/// これ以上の幅なら、刺激性のカラムを広げてレーダーを大きく。
+const tendencyWideBreakpoint = 600.0;
+
+/// 刺激性の 1 感情の上限(細いカラムに入るよう小さく。抑えているものは赤)。
+class _StimulusChip extends StatelessWidget {
+  const _StimulusChip({required this.label, required this.cap});
+  final String label;
+  final double cap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final limited = cap < 1;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: limited ? RasqColors.danger : scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(10)),
+      child: Text('$label ${(cap * 100).round()}%', style: RasqTypography.caption.copyWith(fontSize: 11, color: limited ? Colors.white : scheme.onSurface)),
+    );
+  }
 }
 
 /// 好きなジャンル/方向性 FOW (D-153、p.2 中段): SNS 側の設定に任せる /

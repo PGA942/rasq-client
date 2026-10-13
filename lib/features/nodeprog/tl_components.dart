@@ -12,6 +12,40 @@ const trendTagsKind = 'trend.tags';
 /// 取得元: このページの検索ワード / タグの検索結果 (D-440、トレンド TL)。
 const pageSearchKind = 'search:';
 
+/// トレンドプラグインのノード (D-470) の kind id の接頭辞: `trendplugin:<プラグイン id>`(id が空 = 入れているトレンドプラグイン全部)。
+/// スロット `trend.suggest` の答え(候補のワード)を、[TrendNodeForm] の形でタイムラインの並び / セクションに出す。
+const trendPluginKindPrefix = 'trendplugin:';
+
+/// トレンドプラグインのノードの形式 (D-470)。どれもブロック(本体の TL にはまとめない)。
+enum TrendNodeForm {
+  /// トレンドを取得: 候補のワードをトレンドのタイルの形で(タップでそのワードのトレンド TL)。
+  tiles('トレンドを取得', 'トレンド', Icons.trending_up),
+
+  /// Today: 候補の上位のワードの投稿をまとめたダイジェスト(いまのアカウントの検索結果を合流)。
+  today('Today', 'Today', Icons.wb_sunny_outlined),
+
+  /// カスタム(候補のチップ): 検索ホームの「検索の候補」と同じチップ(D-470 より前の固定の置き場の形)。
+  chips('カスタム(候補のチップ)', '検索の候補', Icons.label_outline);
+
+  const TrendNodeForm(this.label, this.heading, this.icon);
+
+  /// パレット / 編集画面での名前。
+  final String label;
+
+  /// 画面の見出し(後ろにプラグインの名前を付ける)。
+  final String heading;
+  final IconData icon;
+
+  static TrendNodeForm byName(Object? name) => values.where((f) => f.name == name).firstOrNull ?? tiles;
+}
+
+/// 形式の説明(パレット / 詳細)。
+String trendNodeFormDescription(TrendNodeForm f) => switch (f) {
+      TrendNodeForm.tiles => '候補のワードを、トレンドのタイルの形で出します(タップでそのワードのトレンド)。',
+      TrendNodeForm.today => '候補の上位のワードの投稿を、Today のようにまとめて出します。',
+      TrendNodeForm.chips => '候補のワードを、検索の候補のチップで出します。',
+    };
+
 /// 取得の kind id の接頭辞: RASQ リスト (D-346)。`rasqlist:<id>`。Central のリストのタイムライン(S-044)に解決する。
 const rasqListKindPrefix = 'rasqlist:';
 
@@ -36,7 +70,10 @@ const rasqSearchKindPrefix = 'rasqsearch:';
 /// そのまま使われ、オート構成を壊す自由形はこの UI からは作れない。
 @immutable
 class TlSourceComponent {
-  const TlSourceComponent({this.tl = 'home', this.account = '', this.enabled = true, this.label = '', this.children = const [], this.limit = 5, this.display = TlDisplayMode.timeline});
+  const TlSourceComponent({this.tl = 'home', this.account = '', this.enabled = true, this.label = '', this.children = const [], this.limit = 5, this.display = TlDisplayMode.timeline, this.form = TrendNodeForm.tiles});
+
+  /// トレンドプラグインのノード (D-470) の形式。ほかのノードでは使わない。
+  final TrendNodeForm form;
 
   /// セクション (D-442、`tl: section`) に入れたノード(最大 [maxSectionChildren] 個)。画面では入れた順に、角丸の枠で出す。
   final List<TlSourceComponent> children;
@@ -55,8 +92,14 @@ class TlSourceComponent {
   /// フォロー中の反応 (D-442、トレンド TL): フォロー中の人の、このページのワード / タグの投稿。
   bool get isTrendFollowing => tl == trendFollowingKind;
 
+  /// トレンドプラグインのノード (D-470): `trendplugin:<プラグイン id>`。
+  bool get isTrendPlugin => tl.startsWith(trendPluginKindPrefix);
+
+  /// トレンドプラグインのノードのプラグイン id(空 = 入れているトレンドプラグイン全部)。
+  String get trendPluginId => isTrendPlugin ? tl.substring(trendPluginKindPrefix.length) : '';
+
   /// 投稿の並びではなく、枠 / タイルで出すノード(本体の TL にはまとめない)。
-  bool get isBlock => isSection || isAstell || isSwing || isTrendTags;
+  bool get isBlock => isSection || isAstell || isSwing || isTrendTags || isTrendPlugin;
 
   /// 件数の選択肢。
   static const limits = [3, 5, 10, 20];
@@ -104,14 +147,15 @@ class TlSourceComponent {
   /// アカウント表記(空 = 現在のアカウント)。
   final String account;
 
-  TlSourceComponent copyWith({String? tl, String? account, bool? enabled, String? label, List<TlSourceComponent>? children, int? limit, TlDisplayMode? display}) => TlSourceComponent(
+  TlSourceComponent copyWith({String? tl, String? account, bool? enabled, String? label, List<TlSourceComponent>? children, int? limit, TlDisplayMode? display, TrendNodeForm? form}) => TlSourceComponent(
       tl: tl ?? this.tl,
       account: account ?? this.account,
       enabled: enabled ?? this.enabled,
       label: label ?? this.label,
       children: children ?? this.children,
       limit: limit ?? this.limit,
-      display: display ?? this.display);
+      display: display ?? this.display,
+      form: form ?? this.form);
   Map<String, Object?> toJson() => {
         'tl': tl,
         'account': account,
@@ -120,6 +164,7 @@ class TlSourceComponent {
         if (children.isNotEmpty) 'children': [for (final c in children) c.toJson()],
         if (limit != 5) 'limit': limit,
         if (display != TlDisplayMode.timeline) 'display': display.name,
+        if (isTrendPlugin) 'form': form.name,
       };
   factory TlSourceComponent.fromJson(Map<String, Object?> j) => TlSourceComponent(
         tl: j['tl'] as String? ?? 'home',
@@ -129,6 +174,7 @@ class TlSourceComponent {
         children: [for (final c in (j['children'] as List? ?? const [])) if (c is Map) TlSourceComponent.fromJson(c.cast<String, Object?>())].take(maxSectionChildren).toList(),
         limit: (j['limit'] as num?)?.toInt().clamp(1, 50) ?? 5,
         display: TlDisplayMode.byName(j['display']),
+        form: TrendNodeForm.byName(j['form']),
       );
 }
 
@@ -258,8 +304,13 @@ class TlConfig {
 
   /// 並びの版。1 = D-442 より前に保存した構成(トレンド TL は「フォロー中の反応」を前に足して出す)。
   /// 2 = セクションを並びの中に置く形 (D-442)。3 = トレンドページ (D-443、それより前のトレンドタイルの構成は [trendPageConfig] で組み直す)。
+  /// 4 = トレンドプラグインのノード (D-470、トレンドページの固定の「検索の候補」をノードにした。それより前のトレンドページには
+  /// [trendPageConfig] が候補のチップのノードを末尾に足す)。
   final int layout;
-  static const currentLayout = 3;
+  static const currentLayout = 4;
+
+  /// トレンドページの「検索の候補」をノードにした版 (D-470)。
+  static const trendPluginLayout = 4;
 
   /// セクションを並びの中に置く形になった版 (D-442)。
   static const sectionsLayout = 2;
@@ -325,10 +376,12 @@ TlConfig defaultTlConfig(String scope, {List<String> bundleAccounts = const []})
   }
   // トレンドページ (D-431 → D-440 → D-443): 検索ホームの並び。「トレンド」のセクション(全部のアカウントのトレンドのタイル)と
   // 「Today」のセクション(Today)。アルゴリズムはトレンドのタイルに掛かる(軽いものだけ)。自動更新は無い。
+  // 末尾は「検索の候補」(トレンドプラグインのノード、候補のチップ。D-470 より前はノードではなく固定の置き場だった)。
   if (scope == trendTilesScope) {
     return const TlConfig(sources: [
       TlSourceComponent(tl: sectionKind, label: 'トレンド', children: [TlSourceComponent(tl: trendTagsKind, limit: 10)]),
       TlSourceComponent(tl: sectionKind, label: 'Today', children: [TlSourceComponent(tl: 'featured', limit: 10)]),
+      trendSuggestChipsNode,
     ], algorithms: [TlAlgorithmComponent(type: 'chrono')], clock: '');
   }
   if (scope == 'trend.users') {
@@ -855,10 +908,17 @@ const trendTilesScope = 'trend.tiles';
 /// トレンドページ (D-443) の並び。保存が無ければ既定(「トレンド」「Today」のセクション)。前の版のトレンドタイルの構成
 /// (取得元 = アカウントごとのトレンドだけ)は、既定のセクションに組み直す: 有効なアカウントが 1 つならそのアカウントのトレンド、
 /// ほかは全部のアカウントのトレンド。アルゴリズムはそのまま。
+///
+/// D-470: 版 3(D-443)のトレンドページには、前は固定で出していた「検索の候補」(トレンドプラグインの候補のチップ)のノードを
+/// 末尾に足す(トレンドプラグインのノードが既にあれば足さない)。保存し直すと版 4 になる。
 TlConfig trendPageConfig(TlConfig? saved) {
   final def = defaultTlConfig(trendTilesScope);
   if (saved == null) return def;
   if (saved.layout >= TlConfig.currentLayout) return saved;
+  if (saved.layout >= 3) {
+    if (saved.sources.any((s) => s.isTrendPlugin || s.children.any((c) => c.isTrendPlugin))) return saved;
+    return TlConfig(sources: [...saved.sources, trendSuggestChipsNode], algorithms: saved.algorithms, clock: saved.clock, display: saved.display, layout: saved.layout);
+  }
   final picked = [for (final s in saved.sources) if (s.isTrendTags && s.enabled) s];
   final tags = picked.length == 1 ? picked.first.copyWith(limit: 10) : const TlSourceComponent(tl: trendTagsKind, limit: 10);
   return TlConfig(
@@ -867,6 +927,9 @@ TlConfig trendPageConfig(TlConfig? saved) {
     clock: '',
   );
 }
+
+/// 「検索の候補」のノード (D-470): 入れているトレンドプラグイン全部の候補をチップで。トレンドページの既定の末尾。
+const trendSuggestChipsNode = TlSourceComponent(tl: trendPluginKindPrefix, form: TrendNodeForm.chips, limit: 10);
 
 /// 構成のトレンドのタイル(`trend.tags`)。セクションの中も見る。
 Iterable<TlSourceComponent> trendTagsNodesOf(TlConfig cfg) sync* {

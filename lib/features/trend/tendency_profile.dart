@@ -31,7 +31,7 @@ class TendencyProfile {
   const TendencyProfile({
     this.enabled = true,
     this.directionality = 0.5,
-    this.stimulus = const {},
+    this.stimulus = defaultStimulus,
     this.genres = const [],
     this.disliked = const [],
     this.autoGenre = false,
@@ -59,8 +59,13 @@ class TendencyProfile {
   /// 指向性 0(狭い)〜1(広い)。好きなジャンルへの近さのしきい値になる。
   final double directionality;
 
-  /// 刺激性: 感情 → 許容の上限 0〜1(未設定 = 1 = 制限なし)。
+  /// 刺激性: 感情 → 許容の上限 0〜1(未設定 = 1 = 制限なし)。新しいプロファイルは [defaultStimulus]。
   final Map<String, double> stimulus;
+
+  /// 刺激性の既定 (D-470): 恐れ / 嫌悪 / 怒りを 45% まで(後の機能の下準備)。**まだ保存していない人**(プロファイルが無い /
+  /// 保存に刺激性の欄が無い)にだけ効く。保存したプロファイルの値(触っていない軸 = 制限なしを含む)は書き換えない。
+  /// 傾向 FOW の「刺激性をリセット」もこの既定に戻す。
+  static const defaultStimulus = <String, double>{'fear': 0.45, 'disgust': 0.45, 'anger': 0.45};
 
   /// 好きなジャンル/方向性(タグやキーワード)。
   final List<String> genres;
@@ -129,7 +134,8 @@ class TendencyProfile {
   factory TendencyProfile.fromJson(Map<String, Object?> j) => TendencyProfile(
         enabled: j['enabled'] != false,
         directionality: ((j['directionality'] as num?) ?? 0.5).toDouble().clamp(0.0, 1.0),
-        stimulus: {for (final e in ((j['stimulus'] as Map?) ?? const {}).entries) '${e.key}': ((e.value as num?) ?? 1).toDouble().clamp(0.0, 1.0)},
+        // 刺激性の欄が無い保存(壊れた / とても古い形)は既定 (D-470)。欄があれば、その値だけ(空 = 制限なし)。
+        stimulus: j['stimulus'] is Map ? {for (final e in (j['stimulus'] as Map).entries) '${e.key}': ((e.value as num?) ?? 1).toDouble().clamp(0.0, 1.0)} : defaultStimulus,
         genres: [for (final g in (j['genres'] as List? ?? const [])) if (g is String && g.trim().isNotEmpty) g.trim()],
         disliked: [for (final g in (j['disliked'] as List? ?? const [])) if (g is String && g.trim().isNotEmpty) g.trim()],
         autoGenre: j['autoGenre'] == true,

@@ -17,6 +17,7 @@ import '../search/search_screen.dart' show TrendTile;
 import '../swing/swing_banner.dart';
 import '../swing/swing_models.dart';
 import '../swing/swing_providers.dart';
+import '../trend/trend_plugin_nodes.dart' show TrendPluginNodeContent, trendPluginNodeHidden, trendPluginNodeLabel;
 import '../trend/trend_providers.dart' show sourcedTrendsProvider, trendFollowingPostsProvider, trendKey;
 import '../users/user_list.dart';
 import '../vc/astell_actions.dart' show AstellRoomTile;
@@ -71,6 +72,7 @@ String tlNodeLabel(WidgetRef ref, TlSourceComponent s) {
   if (s.isSwing) return 'Swing';
   if (s.isTrendTags) return 'トレンド';
   if (s.isTrendFollowing) return 'フォロー中の反応';
+  if (s.isTrendPlugin) return trendPluginNodeLabel(ref, s);
   if (s.tl.startsWith('node:')) return ref.watch(nodeTabsProvider).where((t) => t.id == s.tl).firstOrNull?.label ?? 'ノード TL';
   final kinds = ref.watch(currentSnsSessionProvider)?.timelines ?? const <TimelineKind>[];
   return kinds.where((k) => k.id == s.tl).firstOrNull?.label ?? switch (s.tl) {
@@ -138,6 +140,8 @@ class TlNodeBlock extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!node.isSection) {
+      // トレンドプラグインのノード (D-470): プラグインが無い / 候補のチップが空なら、見出しごと出さない(前の固定の置き場と同じ)。
+      if (node.isTrendPlugin && trendPluginNodeHidden(ref, node, trends)) return const SizedBox.shrink();
       final content = TlNodeContent(node: node, query: query, trends: trends);
       return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         RasqSectionHeader(title: tlNodeLabel(ref, node), topMargin: 0, trailing: trailing),
@@ -214,6 +218,7 @@ class TlNodeContent extends ConsumerWidget {
       if (tags.isEmpty) return const RasqCaption('トレンドはまだありません');
       return Column(key: const ValueKey('tl.node.trend'), mainAxisSize: MainAxisSize.min, children: [for (final t in tags) TrendTile(trend: t)]);
     }
+    if (s.isTrendPlugin) return TrendPluginNodeContent(key: ValueKey('tl.node.trendplugin.${s.trendPluginId}.${s.form.name}'), node: s, trends: trends);
     if (s.isTrendFollowing) {
       if (q.isEmpty) return const RasqCaption('トレンド TL で出ます');
       final posts = ref.watch(trendFollowingPostsProvider((tag: query!, account: null)));

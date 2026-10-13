@@ -16,7 +16,10 @@ void main() {
     expect(p.stimulusCap('joy'), 1.0);
     expect(p.directionThreshold, closeTo(0.4, 1e-9));
     expect(TendencyProfile.fromJson(p.toJson()).disliked, ['占い']);
-    expect(const TendencyProfile().active, isFalse); // 何も設定していなければ効かない
+    expect(const TendencyProfile(stimulus: {}).active, isFalse); // 何も設定していなければ効かない
+    // 刺激性の既定 (D-470): 新しいプロファイルは恐れ / 嫌悪 / 怒りを 45% までにするので効く。
+    expect(const TendencyProfile().active, isTrue);
+    expect(const TendencyProfile().stimulusCap('fear'), 0.45);
     expect(p.copyWith(snsDefault: true).active, isFalse);
     expect(TendencyProfile.tryParse('nope'), isNull);
   });
@@ -62,7 +65,7 @@ void main() {
     expect(calm.first, rocket);
     expect(!calm.contains(angry) || calm.last == angry, isTrue);
     // 効かない設定は素通し(順序も維持)。
-    expect(tendencyScorer.apply(posts, const TendencyProfile()), posts);
+    expect(tendencyScorer.apply(posts, const TendencyProfile(stimulus: {})), posts);
     expect(applyTendencyProfile(posts, null), posts);
   });
 }

@@ -235,7 +235,9 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   final ranked = [...users]..sort((x, y) => filter.sort == SearchSort.oldest ? x.$2.compareTo(y.$2) : y.$2.compareTo(x.$2));
                   return ranked.isEmpty
                       ? const RasqEmptyView(title: 'ユーザーはいません')
-                      : UserList(users: [for (final e in ranked) e.$1.summary], subtitles: {for (final e in ranked) e.$1.summary.id: 'リアクション ${e.$2}'});
+                      // このページを開いたアカウント (D-397) の一覧として(フォロー状態はそのアカウントから)。
+                      // TODO(D-469): 行のタップ(pushUser)もこのアカウントで開くのは D-469 の `pushUser(user, account:)` が入ってから。
+                      : UserList(users: [for (final e in ranked) e.$1.summary], subtitles: {for (final e in ranked) e.$1.summary.id: 'リアクション ${e.$2}'}, account: _account);
                 },
               ),
             ]),

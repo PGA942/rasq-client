@@ -1371,9 +1371,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     }
   }
 
-  Future<List<({String text, String? reason, SlotPlugin plugin})>> trendSuggest(List<String> recent, {String? query, int limit = 6}) async {
+  /// トレンドのサジェスト (§2.7)。[pluginId] (D-470: トレンドプラグインのノード) を渡せば、そのプラグインだけに聞く。
+  Future<List<({String text, String? reason, SlotPlugin plugin})>> trendSuggest(List<String> recent, {String? query, int limit = 6, String? pluginId}) async {
     final out = <({String text, String? reason, SlotPlugin plugin})>[];
     for (final p in forSlot(SlotIds.trendSuggest)) {
+      if (pluginId != null && pluginId.isNotEmpty && p.id != pluginId) continue;
       final v = await p.value('trend.suggest', {'recent': recent, 'query': ?query, 'limit': limit});
       for (final s in (v?['suggestions'] as List? ?? const [])) {
         if (s is Map && s['text'] is String) out.add((text: s['text'] as String, reason: s['reason'] as String?, plugin: p));
