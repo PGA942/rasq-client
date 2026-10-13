@@ -44,6 +44,18 @@ import 'post_duplicates.dart';
 /// Action handler: `args` carries e.g. `{'reaction': '🎉'}` from the picker.
 typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<String, Object?> args});
 
+/// その人の SNS のプロフィールの URL (D-469)。この端末にその SNS のアカウントが無く、アプリ内のユーザーページで引けない人を
+/// ブラウザで開くのに使う。分からなければ null。
+Uri? snsProfileUrlOf(UserSummary u) {
+  final handle = u.handle.replaceFirst(RegExp('^@'), '');
+  if (u.account.kind == SnsKind.bluesky) return handle.isEmpty && u.id.isEmpty ? null : Uri.https('bsky.app', '/profile/${handle.isEmpty ? u.id : handle}');
+  if (u.account.instance.isEmpty || handle.isEmpty) return null;
+  return switch (u.account.kind) {
+    SnsKind.misskey || SnsKind.mastodon => Uri.https(u.account.instance, '/@$handle'),
+    _ => null,
+  };
+}
+
 /// Host adapter around the L2 composite [RasqPostTile]: reads the Store
 /// (既読 / アクション状態 / 絵文字キャッシュ), parses RSL into spans, maps the
 /// plugin's `ActionDescriptor`s to [RasqActionBarItem]s and fills the tile's
@@ -52,7 +64,7 @@ typedef PostActionHandler = Future<void> Function(ActionDescriptor action, {Map<
 /// This is exactly the work the RRL renderer will do for a WASM plugin's
 /// `PostTile` node later (M3): descriptor + Store → props.
 class PostRow extends ConsumerStatefulWidget {
-  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText, this.onActAs, this.compactQuote = false, this.showAllMedia = false, this.hideMedia = false, this.menuPin});
+  const PostRow({super.key, required this.post, required this.actions, required this.onAction, this.actionsFor, this.onTap, this.dense = false, this.showReplyParent = true, this.bannerIcon, this.bannerText, this.onActAs, this.compactQuote = false, this.showAllMedia = false, this.hideMedia = false, this.menuPin, this.onAuthorTap});
 
   final Post post;
   final List<ActionDescriptor> actions;
@@ -90,6 +102,10 @@ class PostRow extends ConsumerStatefulWidget {
 
   /// … のメニューの「固定する / 固定を外す」(D-423。アカウントページの自分の投稿だけ)。
   final PostMenuPin? menuPin;
+
+  /// アイコン / 名前のタップ。null = 作者のユーザーページを、**投稿を引いたアカウント**(`post.account`)で開く (D-469)。
+  /// この端末にその SNS のアカウントが無い投稿(アカウントページ / RASQ リストの読むだけの投稿)は、ブラウザで開くなどに差し替える。
+  final VoidCallback? onAuthorTap;
 
   /// リプライ元の添付サマリー(「N件の添付ファイル」「1件の添付リンク」)。
   static String? attachmentSummaryOf(Post p) {
@@ -335,7 +351,9 @@ class _PostRowState extends ConsumerState<PostRow> {
             ]),
       // ↓ で別アカウントを選んでいる間は、そのコピーで以降の画面を開く (D-155)。
       onTap: _actAs != null && widget.onActAs == null ? () => context.pushPost(_actAs!) : widget.onTap,
-      onAuthorTap: () => context.pushUser(post.author),
+      // 作者の id は投稿を引いたサーバーのもの (D-469): 作者自身のアカウント(`post.author.account`)ではなく、
+      // 投稿が流れてきたアカウント(↓ で選んだコピーならそのアカウント)のセッションでページを引く。
+      onAuthorTap: widget.onAuthorTap ?? () => context.pushUser(post.author, account: post.account.key),
       onMore: (anchor) => showPostMenu(context, ref, post, anchor, pin: widget.menuPin),
       // アカウント選択 (D-110/D-111): 複数アカウントに流れてきた同一投稿は
       // 1 枚に畳まれる — ヘッダー右上(… の左)の ↓ でどのアカウントとして

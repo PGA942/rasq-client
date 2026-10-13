@@ -50,20 +50,21 @@ final userListHelperProvider = Provider<UserListHelper>((ref) => UserListHelper(
 
 /// ユーザー欄 / リアクション欄の中身: RasqUserRow のリスト + フォロー状態.
 class UserList extends ConsumerWidget {
-  const UserList({super.key, required this.users, this.subtitles = const {}, this.shrinkWrap = false, this.leadingFor, this.account});
+  const UserList({super.key, required this.users, this.subtitles = const {}, this.shrinkWrap = false, this.leadingFor, this.account, this.accountFor});
   final List<UserSummary> users;
 
-  /// 一覧が属するアカウント(`AccountId.key`、D-155 / D-421)。null = 現在。
+  /// 一覧が属するアカウント(`AccountId.key`、D-155 / D-421)。null = 現在。行のタップで開くユーザーページも、このアカウントで引く (D-469)。
   final String? account;
+
+  /// 行ごとに引いたアカウントが違う一覧(総合表示の TL から集めた人など)の、その行のアカウント (D-469)。null を返せば [account]。
+  final String? Function(UserSummary u)? accountFor;
   final Map<String, String> subtitles;
   final bool shrinkWrap;
   final Widget? Function(UserSummary u)? leadingFor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewer = ref.watch(viewerForAccountProvider(account));
     final me = ref.watch(currentUserProvider);
-    final viewerId = ref.watch(viewerUserIdProvider(account));
     return ListView.separated(
       shrinkWrap: shrinkWrap,
       physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
@@ -71,6 +72,9 @@ class UserList extends ConsumerWidget {
       separatorBuilder: (_, _) => const Divider(),
       itemBuilder: (context, i) {
         final u = users[i];
+        final account = accountFor?.call(u) ?? this.account;
+        final viewer = ref.watch(viewerForAccountProvider(account));
+        final viewerId = ref.watch(viewerUserIdProvider(account));
         final keyUser = viewer == null ? u.key : followUserKey(viewer, u.id);
         final st = viewer == null ? const FollowState() : ref.watch(followStateOfProvider((viewer: viewer.key, user: keyUser)));
         final isMe = isViewerSelf(u, viewer, me: me, viewerId: viewerId);
@@ -81,7 +85,7 @@ class UserList extends ConsumerWidget {
           subtitle: subtitles[u.id],
           leading: leadingFor?.call(u),
           onFollowTap: isMe ? null : () => ref.read(userListHelperProvider).toggleFollow(u, account: account),
-          onTap: () => context.pushUser(u), // 行タップでプロフィールへ (D-177)
+          onTap: () => context.pushUser(u, account: account), // 行タップでプロフィールへ (D-177)。一覧を引いたアカウントで (D-469)
           onMore: () {},
         );
       },
