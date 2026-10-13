@@ -106,8 +106,8 @@ class _ColumnLayoutScreenState extends ConsumerState<ColumnLayoutScreen> {
         const RasqSectionHeader(title: 'Swing'),
         RasqSwitchListTile(
           key: const ValueKey('columns.swingInColumn'),
-          title: 'Swing を第3カラムで開く',
-          subtitle: 'オフのときは全画面で開きます(はじめはオフ)',
+          title: 'Swing を右のカラムで開く',
+          subtitle: 'オフのときは全画面で開きます(はじめはオン。全画面を指定したプラグインの Swing はいつも全画面)',
           value: ref.watch(swingInColumnProvider),
           onChanged: (v) => _store.set('swingInColumn', v),
         ),

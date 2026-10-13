@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 
@@ -20,6 +21,8 @@ import 'package:flutter/widgets.dart';
 ///   (書き戻すときは `M 終点`)。おかしな字が来たら、そこまでで止める(SVG の規則どおり)。
 /// - 上限(契約): 入力 **64 KiB**([maxBytes]、超えたら null)、残す要素 **4,000 個**([maxElements])、`d` / `points` の数
 ///   **合計 40,000 個**([maxNumbers])。要素と数は、超えたところで読むのをやめ、それまでに読んだ分を残す。
+/// - zstd で縮めた SVG(`data:image/svg+xml;zstd;base64,…`、契約 v0.23 の落書きの `svgz`、rasq-client D-472)は [zstdDecompress] で
+///   展開してから(展開後も 64 KiB まで)同じく読む。
 @immutable
 class SvgLite {
   const SvgLite({required this.viewBox, required this.shapes});
@@ -54,7 +57,13 @@ class SvgLite {
     }
   }
 
-  /// `data:image/svg+xml;base64,…` / `data:image/svg+xml,<URL エンコード>`(`;utf8,` / `;charset=utf-8,` も)を読む。
+  /// zstd の復号(`data:image/svg+xml;zstd;base64,…`、契約 v0.23)。rrl_renderer は zstd を持たないので、アプリが起動時に入れる
+  /// (rasq-client の `installSvgzDecoder` = plugin_runtime の `rasqZstdDecompress`)。`maxOutput` を超える出力は例外にすること。
+  /// null の間は zstd の SVG を読まない(描く側は箱になる)。
+  static SvgZstdDecoder? zstdDecompress;
+
+  /// `data:image/svg+xml;base64,…` / `data:image/svg+xml,<URL エンコード>`(`;utf8,` / `;charset=utf-8,` も)と、
+  /// (v0.23)`data:image/svg+xml;zstd;base64,…`(zstd で縮めた SVG、[zstdDecompress] で展開)を読む。
   /// 同じ URI は小さな LRU から同じ文書を返す(描き直しのたびに読み直さない。描き手は同じ物なら塗り直さない)。
   static SvgLite? fromDataUri(String uri) {
     final cached = _cache.remove(uri);
@@ -64,6 +73,8 @@ class SvgLite {
     }
     final doc = _fromDataUri(uri);
     if (doc == null) {
+      // zstd の復号がまだ入っていないための失敗は覚えない(入れたあとに読めるように)。
+      if (zstdDecompress == null && uri.contains(';zstd')) return null;
       _cacheMisses.add(uri);
       if (_cacheMisses.length > _cacheSize) _cacheMisses.remove(_cacheMisses.first);
     } else {
@@ -85,6 +96,13 @@ class SvgLite {
     if (meta.first != 'image/svg+xml') return null;
     final body = uri.substring(comma + 1);
     try {
+      if (meta.contains('zstd')) {
+        // zstd は base64 だけ。縮めた入力も、展開した出力も 64 KiB まで(展開爆弾の対策)。
+        final unzstd = zstdDecompress;
+        if (unzstd == null || !meta.contains('base64') || body.length > maxBytes * 4 ~/ 3 + 1024) return null;
+        final packed = base64.decode(base64.normalize(body.replaceAll(RegExp(r'\s'), '')));
+        return parse(utf8.decode(unzstd(packed, maxBytes), allowMalformed: true));
+      }
       if (meta.contains('base64')) {
         // base64 は 4/3 倍。外れて大きいものは復号しない。
         if (body.length > maxBytes * 4 ~/ 3 + 1024) return null;
@@ -111,6 +129,9 @@ class SvgLite {
     return b.toString();
   }
 }
+
+/// zstd の復号(入力, 出力の上限バイト)→ 出力。壊れた入力 / 上限を超える出力は例外。
+typedef SvgZstdDecoder = Uint8List Function(Uint8List input, int maxOutput);
 
 /// 形の種類(要素名)。
 enum SvgLiteShapeKind { path, polyline, polygon, line, rect, circle, ellipse }

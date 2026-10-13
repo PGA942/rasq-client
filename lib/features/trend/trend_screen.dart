@@ -236,7 +236,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen> {
                   return ranked.isEmpty
                       ? const RasqEmptyView(title: 'ユーザーはいません')
                       // このページを開いたアカウント (D-397) の一覧として(フォロー状態はそのアカウントから)。
-                      // TODO(D-469): 行のタップ(pushUser)もこのアカウントで開くのは D-469 の `pushUser(user, account:)` が入ってから。
+                      // 行のタップも、このアカウントでプロフィールを開く(UserList が `pushUser(user, account:)` へ渡す、D-469 / D-472)。
                       : UserList(users: [for (final e in ranked) e.$1.summary], subtitles: {for (final e in ranked) e.$1.summary.id: 'リアクション ${e.$2}'}, account: _account);
                 },
               ),

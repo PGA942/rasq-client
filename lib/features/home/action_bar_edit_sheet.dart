@@ -44,6 +44,8 @@ enum ActionBarSurface {
   viewer('.viewer', '全画面アクションバー'),
   editorImage('.editor.image', '加工画面のバー(画像)'),
   editorVideo('.editor.video', '加工画面のバー(動画 / 音声)'),
+  // SVG (D-472): 加工画面の SVG モード(落書き)のバー。SVG を受けるプラグインのボタンだけ(加工画面の「バーの編集」から開く)。
+  editorSvg('.editor.svg', '加工画面のバー(SVG)'),
   // RASQ のバー (D-446): RASQ アカウントを選んで編集する(SNS のアカウントのバーとは別)。Swing の上のボタンは全画面アクションバー。
   rasqViewer('.rasq.viewer', '全画面アクションバー(Swing)'),
   rasqPost('.rasq', '投稿アクションバー'),
@@ -54,7 +56,7 @@ enum ActionBarSurface {
   /// タイル / 隙間のキーの接尾辞。
   final String keySuffix;
   final String title;
-  bool get isEditor => this == editorImage || this == editorVideo;
+  bool get isEditor => this == editorImage || this == editorVideo || this == editorSvg;
 
   /// 土台が SNS のアクションではないバー(加工画面 / RASQ の投稿 D-279 / AsTell の下段 D-324)。
   bool get isBuiltin => isEditor || isRasq || this == astell;
@@ -68,6 +70,7 @@ String actionBarConfigKey(ActionBarSurface surface, String accountKey) => switch
       ActionBarSurface.viewer => ActionBarConfigStore.viewerKey(accountKey),
       ActionBarSurface.editorImage => editorImageConfigKey,
       ActionBarSurface.editorVideo => editorVideoConfigKey,
+      ActionBarSurface.editorSvg => editorSvgConfigKey,
       ActionBarSurface.rasqPost => rasqPostConfigKey,
       ActionBarSurface.rasqViewer => rasqViewerConfigKey,
       ActionBarSurface.astell => astellBarConfigKey,

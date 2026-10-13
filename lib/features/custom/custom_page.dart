@@ -22,6 +22,7 @@ import '../child_safe/child_gate.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView;
 import '../plugins/pro_media_editor_screen.dart' show SvgPaintOpener, openSvgPaintEditor;
+import '../plugins/svgz.dart';
 import '../plugins/slot_plugins.dart';
 import '../store/rasqpkg.dart';
 import '../store/store_models.dart';
@@ -311,6 +312,8 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         if (session != null) 'session': _sessionJson(),
         'size': {'width': size.width.round(), 'height': size.height.round()},
         'now': nowMs,
+        // v0.23 (D-472): このホストが話す契約の版(プラグインが svgz の画像を描けるかを見分ける)。
+        'contract': rasqHostContract,
       };
 
   /// 開き直しているところ(重ねて呼ばない)。
@@ -490,6 +493,8 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
 
   /// `media.editor.open`(v0.22、D-465): メディア編集画面を SVG モードで開き、保存で `edited {svg, width, height}`、
   /// 閉じたら `editCancelled`。開いている間の 2 度目は前のものを閉じて(それには `editCancelled`)開き直す。
+  /// v0.23 (D-472): `edited` に zstd で縮めた `svgz`(標準の base64)と `svgzEncoding: "zstd"` も付ける。`svg` は
+  /// `data:image/svg+xml;zstd;base64,…` も受ける(続きから描く。展開は編集画面の [SvgLite])。
   @override
   void mediaEditor(Map<String, Object?> a) {
     final open = editorOpener;
@@ -507,7 +512,9 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     unawaited(h.result.then((r) {
       if (seq == _editorSeq) _closeEditor = null;
       if (_disposed) return;
-      _event(r == null ? {'type': 'editCancelled'} : {'type': 'edited', 'svg': r.svg, 'width': r.width, 'height': r.height});
+      if (r == null) return _event({'type': 'editCancelled'});
+      final svgz = encodeSvgz(r.svg, container.read(svgzCompressProvider));
+      _event({'type': 'edited', 'svg': r.svg, 'width': r.width, 'height': r.height, 'svgz': ?svgz, if (svgz != null) 'svgzEncoding': svgzEncoding});
     }));
   }
 

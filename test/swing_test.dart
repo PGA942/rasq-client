@@ -1439,15 +1439,95 @@ void main() {
     expect(fowAvoidInset(area, [(rect: const Rect.fromLTWH(400, 0, 100, 800), wall: true)]), const EdgeInsets.only(right: 100));
   });
 
-  testWidgets('幅の広い画面でも既定は全画面 (D-437)。「カラムの幅」で選ぶと第3カラム', (tester) async {
-    final (mock, _, _, _) = central([swing('t1', 'alice', text: 'こんにちは')]);
-    final c = await pumpApp(tester, mock, size: const Size(1400, 900), dpr: 1);
-    await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
-    await tester.pumpAndSettle();
-    expect(c.read(thirdColumnProvider), isNull, reason: '第3カラムには開かない');
-    final viewer = tester.getRect(find.byType(SwingViewerScreen));
-    expect(viewer.left, 0, reason: '全画面(レールも覆う)');
-    expect(viewer.width, 1400);
+  group('開く場所 (D-472: 幅の広い画面の既定は右のカラム)', () {
+    Future<void> openAlice(WidgetTester tester) async {
+      await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('既定(設定なし)= 右のカラム(第3カラム)。ビューワーは左のカラムを覆わない', (tester) async {
+      final (mock, _, _, _) = central([swing('t1', 'alice', text: 'こんにちは')]);
+      final c = await pumpApp(tester, mock, size: const Size(1400, 900), dpr: 1);
+      expect(c.read(settingsAreaProvider(columnLayoutArea)).value?['swingInColumn'], isNull, reason: '何も選んでいない');
+      await openAlice(tester);
+      expect(c.read(thirdColumnProvider)?.id, startsWith('swing:alice'));
+      final viewer = tester.getRect(find.byType(SwingViewerScreen));
+      expect(viewer.left, greaterThan(72 + 200), reason: '右のカラム');
+      expect(find.text('こんにちは'), findsOneWidget);
+    });
+
+    testWidgets('「カラムの幅」で全画面を選んだ人(swingInColumn: false)は、そのまま全画面', (tester) async {
+      final (mock, _, _, _) = central([swing('t1', 'alice', text: 'こんにちは')]);
+      final c = await pumpApp(tester, mock, size: const Size(1400, 900), dpr: 1);
+      await c.read(settingsAreaProvider(columnLayoutArea).notifier).set('swingInColumn', false);
+      await openAlice(tester);
+      expect(c.read(thirdColumnProvider), isNull, reason: '第3カラムには開かない');
+      final viewer = tester.getRect(find.byType(SwingViewerScreen));
+      expect(viewer.left, 0, reason: '全画面(レールも覆う)');
+      expect(viewer.width, 1400);
+    });
+
+    testWidgets('スマホの幅は全画面(既定のまま)', (tester) async {
+      final (mock, _, _, _) = central([swing('t1', 'alice', text: 'こんにちは')]);
+      final c = await pumpApp(tester, mock);
+      await openAlice(tester);
+      expect(c.read(thirdColumnProvider), isNull);
+      expect(tester.getRect(find.byType(SwingViewerScreen)).width, 360);
+    });
+
+    testWidgets('全画面を指定したページ型プラグイン(surfaces に swing)の Swing は、既定でも全画面。指定の無いものは右のカラム', (tester) async {
+      Map<String, Object?> manifest(String id, List<String> surfaces) => {
+            'id': id, 'name': id, 'version': '0.1.0', 'kind': 'view', 'slots': ['page'], 'permissions': ['render'],
+            'page': {'title': id, 'mode': 'solo', 'surfaces': surfaces},
+          };
+      final fakes = <String, FakeSlotRuntime Function()>{
+        'fake:full': () => FakeSlotRuntime(manifest: manifest('t.full', ['page', 'swing']), handler: (_, fn, _) => fn == 'page.open' ? {'root': {'t': 'Column', 'k': 'root'}} : {}),
+        'fake:plain': () => FakeSlotRuntime(manifest: manifest('t.plain', ['page']), handler: (_, fn, _) => fn == 'page.open' ? {'root': {'t': 'Column', 'k': 'root'}} : {}),
+      };
+      final (mock, _, _, _) = central([
+        swing('f1', 'alice', kind: 'plugin', text: '', plugin: {'id': 't.full', 'version': '0.1.0'}),
+        swing('p1', 'bob', kind: 'plugin', text: '', plugin: {'id': 't.plain', 'version': '0.1.0'}),
+        swing('u1', 'carol', kind: 'plugin', text: '', plugin: {'id': 'my.game', 'version': '0.1.0', 'packageUrl': 'https://central.test/api/v1/swings/media/pk1?exp=1&sig=x', 'unreviewed': true}),
+      ]);
+      final c = await pumpApp(tester, mock, size: const Size(1400, 900), dpr: 1, extra: [slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader(fakes))]);
+      await tester.runAsync(() async {
+        await c.read(slotPluginsProvider.notifier).register('fake:full', bytes: Uint8List.fromList('full'.codeUnits), persist: false);
+        await c.read(slotPluginsProvider.notifier).register('fake:plain', bytes: Uint8List.fromList('plain'.codeUnits), persist: false);
+      });
+      final feed = c.read(swingFeedProvider).value!;
+      final plugins = c.read(slotPluginsProvider);
+      expect([for (final s in feed) swingDeclaresFullScreen(s, plugins)], [true, false, true], reason: '未審査の Swing は swing の宣言が要るので全画面');
+      expect(swingDeclaresFullScreen(Swing.tryParse(swing('t', 'x'))!, plugins), isFalse, reason: 'プラグインでない Swing');
+
+      Future<void> pumpFor() async {
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+      }
+
+      // 全画面を指定した alice の Swing → 全画面のルート(ヘッダーの丸と同じ口)。
+      openSwingViewer(tester.element(find.byType(HomeScreen)), author: 'alice');
+      await pumpFor();
+      expect(c.read(thirdColumnProvider), isNull);
+      expect(tester.getRect(find.byType(SwingViewerScreen)).width, 1400);
+      await tester.tap(find.byKey(const ValueKey('swing.close')));
+      await pumpFor();
+      await pumpFor();
+      expect(find.byType(SwingViewerScreen), findsNothing);
+      // 指定の無い bob の Swing → 右のカラム。
+      openSwingViewer(tester.element(find.byType(HomeScreen)), author: 'bob');
+      await pumpFor();
+      expect(c.read(thirdColumnProvider)?.id, startsWith('swing:bob'));
+      expect(tester.getRect(find.byType(SwingViewerScreen)).left, greaterThan(72 + 200));
+      // 未審査(carol)は全画面。
+      await tester.tap(find.byKey(const ValueKey('swing.close')));
+      await pumpFor();
+      expect(c.read(thirdColumnProvider), isNull);
+      openSwingViewer(tester.element(find.byType(HomeScreen)), author: 'carol');
+      await pumpFor();
+      expect(c.read(thirdColumnProvider), isNull);
+      expect(tester.getRect(find.byType(SwingViewerScreen)).width, 1400);
+    });
   });
 
   for (final wide in [true, false]) {
@@ -1456,8 +1536,7 @@ void main() {
       final fake = _FakeSeek(const Duration(seconds: 10));
       final (mock, seen, _, _) = central([swing('v1', 'alice', kind: 'video', text: '', media: {'url': 'https://central.test/api/v1/swings/media/v.mp4', 'contentType': 'video/mp4'}, postId: 'p1')]);
       final c = await pumpApp(tester, mock, size: wide ? const Size(1400, 900) : const Size(1080, 2340), dpr: wide ? 1 : 3, extra: [swingVideoSeekOverrideProvider.overrideWithValue((_) => fake)]);
-      // 第3カラムに開くのは設定で選んだときだけ (D-437)。
-      if (wide) await c.read(settingsAreaProvider(columnLayoutArea).notifier).set('swingInColumn', true);
+      // 幅の広い画面の既定は第3カラム (D-472。D-437 の間は設定で選んだときだけだった)。
       await tester.tap(find.byKey(const ValueKey('swing.bundle.alice')));
       await tester.pumpAndSettle();
       final viewer = tester.getRect(find.byType(SwingViewerScreen));

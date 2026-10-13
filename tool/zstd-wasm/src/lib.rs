@@ -1,4 +1,4 @@
-//! zstd の復号だけを持つ、小さな wasm (D-299)。ABI はプラグインと同じ流儀: `alloc` / `dealloc` と、`(ptr << 32) | len` を返す関数。
+//! zstd の復号(D-299)と圧縮(D-472: 落書きの svgz、契約 v0.23)を持つ、小さな wasm。ABI はプラグインと同じ流儀: `alloc` / `dealloc` と、`(ptr << 32) | len` を返す関数。
 use std::io::Read;
 
 #[no_mangle]
@@ -44,6 +44,21 @@ pub unsafe extern "C" fn decompress(ptr: u32, len: u32, max_out: u32) -> u64 {
         return 0;
     }
     // dealloc と対になるように、容量 = 長さにそろえる。
+    let mut out = out.into_boxed_slice();
+    let (p, l) = (out.as_mut_ptr() as u64, out.len() as u64);
+    std::mem::forget(out);
+    (p << 32) | l
+}
+
+/// zstd で圧縮する(ruzstd の `Fastest` = zstd のレベル 1 相当。端末のランタイムの `rasq_zstd_compress` と同じ、D-472)。
+/// 成功: `(ptr << 32) | len`(呼び出し側が `dealloc(ptr, len)` で返す)。
+///
+/// # Safety
+/// `ptr` / `len` は [alloc] で確保して、入力を書き込んだ領域。
+#[no_mangle]
+pub unsafe extern "C" fn compress(ptr: u32, len: u32) -> u64 {
+    let input = std::slice::from_raw_parts(ptr as *const u8, len as usize);
+    let out = ruzstd::encoding::compress_to_vec(input, ruzstd::encoding::CompressionLevel::Fastest);
     let mut out = out.into_boxed_slice();
     let (p, l) = (out.as_mut_ptr() as u64, out.len() as u64);
     std::mem::forget(out);

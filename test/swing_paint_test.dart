@@ -26,8 +26,10 @@ import 'package:rasq_client/features/swing/swing_providers.dart';
 import 'package:rasq_client/features/swing/swing_viewer.dart';
 import 'package:rasq_client/mock/mock_data.dart';
 import 'package:rasq_client/session/session_storage.dart';
-import 'package:rasq_client/shell/column_layout.dart' show swingInColumnProvider;
+import 'package:rasq_client/features/plugins/svgz.dart' show installSvgzDecoder;
 import 'package:rasq_client/shell/column_takeover.dart' show columnTakeoverProvider;
+import 'package:rasq_client/shell/extra_column.dart' show extraColumnProvider;
+import 'package:rrl_renderer/rrl_renderer.dart' show SvgLite, SvgLiteView;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fake_store_client.dart';
@@ -82,6 +84,7 @@ class _Store extends FakeStoreClient {
 
 void main() {
   final now = DateTime.now().toUtc();
+  setUpAll(installSvgzDecoder);
 
   ({MockClient mock, List<String> seen}) central() {
     final seen = <String>[];
@@ -131,7 +134,7 @@ void main() {
     return custom;
   }
 
-  Future<ProviderContainer> pumpApp(WidgetTester tester, {required MockClient mock, required MockCustomSessionClient custom, required StoreClient store, required Size size, double dpr = 3, bool swingInColumn = false}) async {
+  Future<ProviderContainer> pumpApp(WidgetTester tester, {required MockClient mock, required MockCustomSessionClient custom, required StoreClient store, required Size size, double dpr = 3}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = dpr;
     addTearDown(tester.view.reset);
@@ -153,7 +156,6 @@ void main() {
         customSessionClientProvider.overrideWithValue(custom),
         storeClientProvider.overrideWithValue(store),
         slotRuntimeLoaderProvider.overrideWithValue(_inProcessLoader),
-        if (swingInColumn) swingInColumnProvider.overrideWithValue(true),
       ],
       child: const RasqApp(),
     ));
@@ -203,10 +205,17 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
     }
     expect(custom.vars['cs-swing']!['@acc-1.paint'], isNotNull, reason: '完了で shared.set me.paint(Swing のセッション)');
+    // v0.23 (D-472): 同梱の落書き(0.2.0)は、ホストが付けた svgz(zstd)を置く。展開すると描いた SVG。
+    final value = custom.vars['cs-swing']!['@acc-1.paint']!.value as Map;
+    expect(value.containsKey('svg'), isFalse, reason: '素の SVG は送らない');
+    final svg = utf8.decode(rasqZstdDecompress(base64Decode(value['svgz'] as String)));
+    expect(SvgLite.parse(svg)!.shapes, isNotEmpty);
     await pumpFor(tester, 400);
     expect(find.byKey(const ValueKey('svgpaint.canvas')), findsNothing, reason: '編集画面は閉じた');
     expect(find.byKey(back), findsOneWidget, reason: 'ページに戻った');
     expect(find.text('✏️ タップして描く'), findsNothing, reason: '自分のマスに絵');
+    expect(find.byType(SvgLiteView), findsWidgets, reason: 'zstd の data URI を展開して描く(箱にならない)');
+    expect(find.text('アプリを更新すると見られます'), findsNothing);
   }
 
   for (final (label, size, dpr) in [('狭い画面', const Size(1080, 2340), 3.0), ('広い画面', const Size(2560, 1600), 2.0)]) {
@@ -235,10 +244,10 @@ void main() {
     });
   }
 
-  testWidgets('Swing の落書き (広い画面・第3カラムの Swing): 編集画面はホームのカラムに重ねて開く', (tester) async {
+  testWidgets('Swing の落書き (広い画面・右のカラムの Swing = 既定、D-472): 編集画面は Swing の右にもう 1 カラム足して開く(Swing は見えたまま)', (tester) async {
     final (:mock, seen: _) = central();
     final custom = swingSession();
-    final c = await pumpApp(tester, mock: mock, custom: custom, store: _Store(), size: const Size(2560, 1600), dpr: 2, swingInColumn: true);
+    final c = await pumpApp(tester, mock: mock, custom: custom, store: _Store(), size: const Size(2560, 1600), dpr: 2);
     final plugin = await tester.runAsync(() => c.read(slotPluginsProvider.notifier).register('/plugins/sample.paint.wasm', bytes: _paintWasm(), persist: false));
     expect(plugin?.manifest.id, 'sample.paint', reason: c.read(slotPluginsNoticeProvider));
     openSwingViewer(tester.element(find.byType(HomeScreen)), author: 'alice');
@@ -246,10 +255,25 @@ void main() {
     await until(tester, find.text('✏️ タップして描く'));
     await tester.tap(find.text('✏️ タップして描く'));
     await until(tester, find.byKey(const ValueKey('svgpaint.canvas')));
-    expect(c.read(columnTakeoverProvider)[0]?.id, 'media.svg.editor', reason: '第3カラムの Swing の隣(ホームのカラム)');
+    expect(c.read(extraColumnProvider)?.id, 'media.svg.editor');
+    expect(c.read(extraColumnProvider)?.afterColumn, 1, reason: '右のカラムの Swing の右');
+    expect(c.read(columnTakeoverProvider), isEmpty, reason: 'ホームのカラムは置き換えない');
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('swing.plugin.page')), findsOneWidget, reason: 'Swing は見えたまま');
+    expect(find.byKey(const ValueKey('swing.plugin.page')).hitTestable(), findsOneWidget, reason: 'Swing は見えたまま');
+    final swingRect = tester.getRect(find.byKey(const ValueKey('swing.plugin.page')));
+    final extra = tester.getRect(find.byKey(const ValueKey('shell.extraColumn')));
+    expect(extra.left, greaterThanOrEqualTo(swingRect.right - 1), reason: 'Swing に被らない');
+    expect(find.byKey(const ValueKey('svgpaint.canvas')).hitTestable(), findsOneWidget, reason: '編集画面は見えて押せる(D-468 の「Swing の下に隠れる」の回帰)');
     await drawOnce(tester, custom, swingShown: true);
+
+    // 開いたまま Swing を閉じたら、足したカラムも閉じる(ページの dispose から。組み立ての最中でも落ちない)。
+    await tester.tap(find.textContaining('(あなた)'));
+    await until(tester, find.byKey(const ValueKey('svgpaint.canvas')));
+    expect(c.read(extraColumnProvider), isNotNull);
+    await tester.tap(find.byKey(const ValueKey('swing.close')));
+    await pumpFor(tester, 600);
+    expect(c.read(extraColumnProvider), isNull);
+    expect(find.byKey(const ValueKey('shell.extraColumn')), findsNothing);
   });
 
   testWidgets('作った人: 招待のページ(Swing のセッション)の上で自分の Swing を見て戻っても、ページから描ける', (tester) async {

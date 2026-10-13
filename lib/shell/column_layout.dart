@@ -115,6 +115,13 @@ final columnLayoutProvider = Provider<ColumnLayout>((ref) {
 /// カラムの比の設定の保存先 (D-320)。
 const columnLayoutArea = 'appearance.columns';
 
-/// Swing のビューワーを幅の広い画面で第3カラムに開くか (D-437、キー `swingInColumn`)。既定 = 開かない = 全画面
-/// (D-413 で第3カラムにしていたが、iPad で全画面にならないのが分かりにくかった)。
-final swingInColumnProvider = Provider<bool>((ref) => ref.watch(settingsAreaProvider(columnLayoutArea)).value?['swingInColumn'] == true);
+/// Swing のビューワーを幅の広い画面で右のカラム(第3カラム)に開くか (キー `swingInColumn`)。
+/// **既定(保存が無い)= 開く** (D-472)。全画面を指定したページ型プラグインの Swing は、これに依らず全画面
+/// (`swingDeclaresFullScreen`)、狭い画面はいつも全画面。
+/// 移り変わり: D-413 は第3カラム(設定なし)→ D-437 で既定を全画面にして、このキーを足した(オンにした人だけ `true`)→ D-472 で
+/// 既定を右のカラムへ戻した。保存してある値は**選んだもの**なのでそのまま使う(`true` = 右のカラム、`false` = 一度オンにしてから
+/// オフに戻した = 全画面を選んだ)。何もしていない人(保存が無い)だけが新しい既定になる。
+final swingInColumnProvider = Provider<bool>((ref) {
+  final v = ref.watch(settingsAreaProvider(columnLayoutArea)).value?['swingInColumn'];
+  return v is bool ? v : true;
+});

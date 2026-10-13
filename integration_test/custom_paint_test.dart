@@ -5,10 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:plugin_runtime/plugin_runtime.dart' show rasqZstdDecompress;
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/features/custom/custom_client.dart';
 import 'package:rasq_client/features/custom/custom_page.dart';
 import 'package:rasq_client/features/plugins/slot_plugins.dart';
+import 'package:rasq_client/features/plugins/svgz.dart' show installSvgzDecoder;
 import 'package:rasq_client/features/store/rasqpkg.dart' show storeSlotSource;
 import 'package:rasq_client/features/store/store_providers.dart';
 import 'package:rasq_client/mock/mock_data.dart';
@@ -33,6 +35,8 @@ Future<bool> waitFor(WidgetTester tester, Finder f, {int seconds = 15}) async {
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  // マスの zstd の SVG を描く(アプリの main と同じ)。
+  installSvgzDecoder();
 
   testWidgets('みんなで落書き: 自分のマス → SVG モードで描く → 完了 → 期限つきで共有され、マスに絵が出る / 消す', (tester) async {
     final custom = MockCustomSessionClient();
@@ -71,7 +75,8 @@ void main() {
     // 期限つきで Central(モック)に書かれ、マスに SVG が出る。
     expect(await waitFor(tester, find.byType(SvgLiteView)), isTrue, reason: 'マスに落書き');
     final v = custom.vars[s.id]!['@me.paint']!;
-    final svg = '${(v.value as Map)['svg']}';
+    // 0.2.0 (D-472、契約 v0.23): 値はホストが zstd で縮めた svgz。展開すると描いた SVG。
+    final svg = utf8.decode(rasqZstdDecompress(base64Decode('${(v.value as Map)['svgz']}')));
     expect(svg, contains('<path'));
     expect(svg.toLowerCase(), contains('#e53935'));
     expect(v.expiresAt, isNotNull);
