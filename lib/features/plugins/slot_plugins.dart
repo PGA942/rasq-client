@@ -1211,6 +1211,15 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   final _pages = <String, PluginPageSink>{};
 
+  /// プラグイン(の動いている実体)ごとの「今のページ」= 最後に `page.open` した token (D-468)。ページ型の雛形
+  /// (`rasq new page`)と sample は**ページを 1 つしか覚えない**(token の違う呼び出しは古いページとして捨てる)ので、
+  /// 同じプラグインのページを重ねて開くと(招待のページの上で同じ落書きの Swing を見る など)、下のページは効かなくなる。
+  /// 下のページは、また触られた / 見えたときに [CustomPageController] が開き直す。
+  final _currentPage = <Object, String>{};
+
+  /// [token] がそのプラグインの今のページか(ほかのページを後から開いていないか)。
+  bool isCurrentPage(SlotPlugin plugin, String token) => _currentPage[plugin.runtime] == token;
+
   /// ページを使えない理由(チャイルドセーフ、D-451)。開く / 出来事を渡す / 描画・共有を受ける口で毎回確かめる
   /// (開いたあとに保護者が止めたら、そこから先は通さない)。使えるなら null。
   String? pageBlockReason(SlotPlugin plugin) => ref.read(childGateProvider).pluginPageBlockReason(plugin.id, text: plugin.examplePieces);
@@ -1220,6 +1229,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
     // チャイルドセーフ (D-451): 保護者が止めたプラグインは `page.open` を呼ばない。
     if (pageBlockReason(plugin) case final blocked?) return (root: null, title: null, error: blocked);
     _pages[token] = sink;
+    _currentPage[plugin.runtime] = token;
     try {
       final r = await plugin.call('page.open', {'token': token, ...args});
       if (r['ok'] != true) {
@@ -1242,6 +1252,7 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
 
   void pageClose(SlotPlugin plugin, String token, {String reason = 'closed'}) {
     if (_pages.remove(token) == null) return;
+    if (_currentPage[plugin.runtime] == token) _currentPage.remove(plugin.runtime);
     plugin.value('page.close', {'token': token, 'reason': reason});
   }
 
