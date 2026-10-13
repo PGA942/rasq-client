@@ -5,6 +5,7 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:sns_misskey/sns_misskey.dart';
 
 import 'app/app.dart';
+import 'features/plugins/svgz.dart' show installSvgzDecoder;
 import 'platform/device_overrides.dart';
 import 'session/session_storage.dart';
 
@@ -20,6 +21,8 @@ Future<void> main() async {
   usePathUrlStrategy();
   if (kDebugMode && _probeHost.isNotEmpty) await _probe(_probeHost);
   await prepareDeviceRuntime();
+  // 落書きの zstd の SVG(契約 v0.23、D-472)を RRL の Image / 編集画面で読めるように。
+  installSvgzDecoder();
   runApp(ProviderScope(
     // 端末だけの実装(端末内モデルなど)。Web 版では空 (D-295)。
     overrides: deviceOverrides(),

@@ -55,6 +55,7 @@ extension type _ZstdExports._(JSObject _) implements JSObject {
   external int alloc(int len);
   external void dealloc(int ptr, int len);
   external JSBigInt decompress(int ptr, int len, int maxOut);
+  external JSBigInt compress(int ptr, int len);
 }
 
 extension type _Memory._(JSObject _) implements JSObject {
@@ -76,6 +77,28 @@ Future<void> rasqZstdWarmUp(Uint8List wasmBytes) async {
   _zstd = result.instance.exports;
 }
 
+/// zstd の圧縮 (D-472: 落書きの `svgz`、契約 v0.23)。端末のランタイムの `rasqZstdCompress` と同じ ruzstd の `Fastest`。
+Uint8List rasqZstdCompress(Uint8List input) {
+  final z = _zstd;
+  if (z == null) throw const RasqZstdException('the zstd codec is not loaded yet');
+  final inLen = input.isEmpty ? 1 : input.length;
+  final inPtr = z.alloc(inLen);
+  z.memory.buffer.toDart.asUint8List(inPtr, input.length).setAll(0, input);
+  final packed = _asUintN(64, z.compress(inPtr, input.length));
+  z.dealloc(inPtr, inLen);
+  final (ptr, len) = _unpack(packed);
+  if (ptr == 0 && len == 0) throw const RasqZstdException('compression failed');
+  final out = Uint8List.fromList(z.memory.buffer.toDart.asUint8List(ptr, len));
+  z.dealloc(ptr, len);
+  return out;
+}
+
+/// `(ptr << 32) | len` を分ける。64 ビットの値は JS の Number では正確に持てないので、10 進の文字列を経由して Dart の BigInt で分ける。
+(int, int) _unpack(JSBigInt packed) {
+  final value = BigInt.parse(_jsString(packed).toDart);
+  return ((value >> 32).toInt(), (value & BigInt.from(0xFFFFFFFF)).toInt());
+}
+
 Uint8List rasqZstdDecompress(Uint8List input, {int maxOutput = 256 * 1024 * 1024}) {
   if (input.isEmpty) throw const RasqZstdException('empty input');
   final z = _zstd;
@@ -85,10 +108,7 @@ Uint8List rasqZstdDecompress(Uint8List input, {int maxOutput = 256 * 1024 * 1024
   final packed = _asUintN(64, z.decompress(inPtr, input.length, maxOutput));
   z.dealloc(inPtr, input.length);
   // (ptr << 32) | len。0 = 失敗。
-  // 64 ビットの値は JS の Number では正確に持てないので、10 進の文字列を経由して Dart の BigInt で分ける。
-  final value = BigInt.parse(_jsString(packed).toDart);
-  final len = (value & BigInt.from(0xFFFFFFFF)).toInt();
-  final ptr = (value >> 32).toInt();
+  final (ptr, len) = _unpack(packed);
   if (ptr == 0 && len == 0) throw RasqZstdException('not a valid zstd frame, or the output exceeds $maxOutput bytes');
   // メモリは伸びるたびに作り直されるので、読む直前に取り直す。
   final out = Uint8List.fromList(z.memory.buffer.toDart.asUint8List(ptr, len));

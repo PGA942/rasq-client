@@ -17,6 +17,7 @@ import '../features/onboarding/rasq_account_nudge.dart' show RasqAccountNudgeLis
 import '../features/plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import 'column_layout.dart';
 import 'column_takeover.dart';
+import 'extra_column.dart';
 import 'headers.dart';
 import 'nav.dart';
 import 'pane_swipe_back.dart';
@@ -87,10 +88,15 @@ class _MobileLayout extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    // 幅の広い画面で足したカラム (D-472) が開いたまま狭くなったら、全画面に重ねて出す(中身はそのまま移す)。
+    final extra = ref.watch(extraColumnProvider);
     return Scaffold(
       // 見守りの時間の帯 (D-307)。
       // 畳まれた stick FOW があれば、そのぶん中身を縮める (D-397)。
-      body: Column(children: [const ChildSafeWindowBanner(), Expanded(child: FowStickPadding(manager: ref.watch(overlayManagerProvider), child: shell))]),
+      body: Stack(fit: StackFit.expand, children: [
+        Column(children: [const ChildSafeWindowBanner(), Expanded(child: FowStickPadding(manager: ref.watch(overlayManagerProvider), child: shell))]),
+        if (extra != null) Positioned.fill(child: ColoredBox(color: scheme.surface, child: ExtraColumnView(column: extra))),
+      ]),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(border: Border(top: BorderSide(color: scheme.onSurface, width: 1.2))),
         child: NavigationBar(
@@ -145,10 +151,26 @@ class _TabletLayout extends ConsumerWidget {
     // 小型 / 大型の幅は設定「カラムの幅」 (D-320) の比で決める。
     final occupied = ref.watch(thirdColumnProvider) != null;
     final layout = ref.watch(columnLayoutProvider);
+    // さらに 1 カラム (D-472): 開いた画面(落書きの編集画面など)を、開いたカラムの右に足す。ほかのカラムは比のまま縮む。
+    final extra = ref.watch(extraColumnProvider);
     return Scaffold(
       body: LayoutBuilder(builder: (context, constraints) {
-        final split = splitColumns(constraints.maxWidth - 72, layout);
+        final extraWidth = extra == null ? 0.0 : extraColumnWidth(constraints.maxWidth - 72);
+        final split = splitColumns(constraints.maxWidth - 72 - extraWidth, layout);
         final col2Width = occupied ? split.small : split.large;
+        // 0 から広げる(第2カラムが縮むのと同じ速さ。合わせて広がるので、途中で並びがはみ出さない)。
+        Widget extraPane(ExtraColumn e) => TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: extraWidth),
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              builder: (_, w, child) => SizedBox(width: w, child: child),
+              child: Container(
+                key: const ValueKey('shell.extraColumn'),
+                decoration: BoxDecoration(color: scheme.surface, border: Border(left: BorderSide(color: scheme.outlineVariant))),
+                // 広がる途中は中身を最後の幅で組み、はみ出しは切る。
+                child: ClipRect(child: OverflowBox(alignment: Alignment.centerLeft, minWidth: extraWidth, maxWidth: extraWidth, child: SafeArea(child: ExtraColumnView(column: e)))),
+              ),
+            );
         return RasqRailScope(child: Row(children: [
           // Sidebar rail (何も開いてない時はサイドバー).
           Container(
@@ -219,6 +241,7 @@ class _TabletLayout extends ConsumerWidget {
               ]),
             ),
           ),
+          if (extra != null && extra.afterColumn == 0) extraPane(extra),
           // 第3カラム (D-056/D-057): 空のときは検索(設定で変更可)。ページが
           // 開くと広がり、M5c 以降は FOW の移動先になる。
           Expanded(
@@ -228,6 +251,7 @@ class _TabletLayout extends ConsumerWidget {
               child: SafeArea(child: FowStickPadding(manager: ref.watch(overlayManagerProvider), column: 1, child: const ColumnTakeoverHost(column: 1, child: ThirdColumnView()))),
             ),
           ),
+          if (extra != null && extra.afterColumn != 0) extraPane(extra),
         ]));
       }),
     );

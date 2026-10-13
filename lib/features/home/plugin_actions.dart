@@ -255,9 +255,33 @@ final composerTextPluginsProvider = Provider<List<PluginAction>>((ref) {
 
 // ── 加工画面の下段バー (D-249、契約 v0.10) ─────────────────────────────
 
-/// 加工画面の下段バーの構成キー: `editor:image` / `editor:video`(アカウントに依らない)。
+/// 加工画面の下段バーの構成キー: `editor:image` / `editor:video` / `editor:svg`(D-472、アカウントに依らない)。
 const editorImageConfigKey = 'editor:image';
 const editorVideoConfigKey = 'editor:video';
+const editorSvgConfigKey = 'editor:svg';
+
+/// SVG の MIME。
+const svgMimeType = 'image/svg+xml';
+
+/// 加工画面のモード (D-472): 添付の種類(MIME / 拡張子)で道具と下段バーを変える。
+/// - [image]: pro_image_editor(クロップ / ペイント / テキスト / フィルター …)。構成 `editor:image`
+/// - [video] / [audio]: pro_image_editor の動画モード(音声は Visualizer の動画にしてから)。構成 `editor:video`
+/// - [svg]: SVG の道具(ペン / 消しゴム / 色 / 太さ / 取り消し = `SvgPaintEditor`)。ラスターの編集と動画 / 音声の編集は出ない。構成 `editor:svg`
+enum MediaEditorMode { image, video, audio, svg }
+
+MediaEditorMode mediaEditorModeOf({required String mimeType, String name = ''}) {
+  final mime = mimeType.toLowerCase();
+  if (mime == svgMimeType || name.toLowerCase().endsWith('.svg')) return MediaEditorMode.svg;
+  if (mime.startsWith('audio/')) return MediaEditorMode.audio;
+  if (mime.startsWith('video/')) return MediaEditorMode.video;
+  return MediaEditorMode.image;
+}
+
+/// SVG モードのバーに出す宣言か (D-472、契約 v0.23 §2.2): `accepts` に `image/svg+xml` か `.svg` を**書いた**もの
+/// (`image/*` / `*` / `*/*` では出さない。ラスターの画像を前提にしたプラグインへ SVG の文字列を渡さない)。
+/// ステッカー / カスタムフィルターは SVG モードには出さない(焼き込む先の絵が無い)。
+bool svgEditorAccepts(SlotActionDecl decl) =>
+    !decl.isStickerOutput && !decl.isFilterOutput && decl.accepts.any((a) => const {svgMimeType, '.svg'}.contains(a.trim().toLowerCase()));
 
 bool isEditorConfigKey(String configKey) => configKey.startsWith('editor:');
 
@@ -288,12 +312,18 @@ bool isRasqConfigKey(String configKey) => configKey == rasqPostConfigKey || conf
 
 bool isBuiltinConfigKey(String configKey) => isEditorConfigKey(configKey) || isRasqConfigKey(configKey) || configKey == astellBarConfigKey;
 List<ActionDescriptor> builtinActionsFor(String configKey) => switch (configKey) {
+      // SVG の道具は落書きの面(SvgPaintEditor)が持つので、バーは SVG を受けるプラグインのボタンだけ (D-472)。
+      editorSvgConfigKey => const <ActionDescriptor>[],
       rasqPostConfigKey || rasqViewerConfigKey => rasqPostBuiltinActions,
       astellBarConfigKey => astellBarBuiltinActions,
       _ => editorBuiltinActionsFor(configKey),
     };
 
-String editorConfigKeyFor(String mimeType) => mimeType.startsWith('image/') ? editorImageConfigKey : editorVideoConfigKey;
+String editorConfigKeyFor(String mimeType, {String name = ''}) => switch (mediaEditorModeOf(mimeType: mimeType, name: name)) {
+      MediaEditorMode.svg => editorSvgConfigKey,
+      MediaEditorMode.image => editorImageConfigKey,
+      MediaEditorMode.video || MediaEditorMode.audio => editorVideoConfigKey,
+    };
 
 /// プラグインボタンの有効 / 無効と閾値の置き場: 加工画面は `slots.editor`、AsTell の下段は `slots.astell`、ほかはアカウントごと。
 String slotSettingsKeyFor(String configKey, String accountKey) => isEditorConfigKey(configKey) ? 'editor' : (isRasqConfigKey(configKey) ? 'rasq' : (configKey == astellBarConfigKey ? 'astell' : accountKey));
@@ -320,7 +350,11 @@ const editorVisualizerActionId = 'editor:visualizer';
 const editorVisualizerAction = ActionDescriptor(id: editorVisualizerActionId, genreTag: 'Audio', label: 'Visualizer', icon: 'graphic_eq', doneIcon: 'graphic_eq', countSource: CountSource.none);
 
 /// バー(構成キー)ごとの内蔵の編集。
-List<ActionDescriptor> editorBuiltinActionsFor(String configKey) => configKey == editorVideoConfigKey ? const [editorVisualizerAction, ...editorBuiltinActions] : editorBuiltinActions;
+List<ActionDescriptor> editorBuiltinActionsFor(String configKey) => switch (configKey) {
+      editorVideoConfigKey => const [editorVisualizerAction, ...editorBuiltinActions],
+      editorSvgConfigKey => const <ActionDescriptor>[],
+      _ => editorBuiltinActions,
+    };
 
 /// `composer.media` プラグインの下段バーのボタン(契約 v0.10): マニフェストの `actions` の
 /// `slot: "composer.media"` の項目。1 つも宣言していないプラグインは、従来どおり画像にだけ出る既定のボタン 1 つ。
@@ -341,7 +375,9 @@ final mediaPluginActionsProvider = Provider<List<PluginAction>>((ref) => [
 final pluginActionsForProvider = Provider.family<List<PluginAction>, String>((ref, configKey) {
   final prefs = ref.watch(actionButtonPrefsProvider);
   final List<PluginAction> all;
-  if (isEditorConfigKey(configKey)) {
+  if (configKey == editorSvgConfigKey) {
+    all = [for (final a in ref.watch(mediaPluginActionsProvider)) if (svgEditorAccepts(a.decl)) a];
+  } else if (isEditorConfigKey(configKey)) {
     final mime = configKey == editorImageConfigKey ? 'image/*' : 'video/*';
     all = [for (final a in ref.watch(mediaPluginActionsProvider)) if (mediaAcceptsKind(a.decl.accepts, mime)) a];
   } else if (configKey == astellBarConfigKey) {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -178,6 +179,12 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
     if (_previewSize != null || identical(_measuring, _preview) || _overlayRoot == null) return;
     final bytes = _preview;
     _measuring = bytes;
+    // SVG は viewBox の大きさ (D-472)。
+    if (_previewMime.toLowerCase() == 'image/svg+xml') {
+      final vb = SvgLite.parse(utf8.decode(bytes, allowMalformed: true))?.viewBox;
+      if (vb != null && vb.width >= 1 && vb.height >= 1) setState(() => _previewSize = (vb.width.round(), vb.height.round()));
+      return;
+    }
     ui.decodeImageFromList(bytes, (img) {
       if (!mounted || !identical(bytes, _preview)) return;
       setState(() => _previewSize = (img.width, img.height));
@@ -185,11 +192,20 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
     });
   }
 
+  /// プレビューの絵。SVG(加工画面の SVG モード、D-472)は許可リストで消毒して描く(白い紙の上に)。読めなければ null。
+  Widget? _image(BoxFit fit) {
+    if (_previewMime.toLowerCase() == 'image/svg+xml') {
+      final doc = SvgLite.parse(utf8.decode(_preview, allowMalformed: true));
+      return doc == null ? null : ColoredBox(color: Colors.white, child: SvgLiteView(doc: doc, fit: fit));
+    }
+    return Image.memory(_preview, fit: fit, gaplessPlayback: true, errorBuilder: (_, _, _) => fit == BoxFit.fill ? const SizedBox.shrink() : const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48));
+  }
+
   /// プレビュー(+ 重ね)。重ねはプレビューの画素数の Stack を表示倍率に合わせて拡縮する(ビューワーの重ねと同じ作法)。
   Widget _previewWidget() {
     // 画像でない添付(動画 / 音声)は、プラグインがプレビューを出すまで印だけ。
     if (!_previewMime.startsWith('image/')) return Icon(_previewMime.startsWith('audio/') ? Icons.graphic_eq : Icons.movie_outlined, color: Colors.white54, size: 64);
-    final image = Image.memory(_preview, fit: BoxFit.contain, gaplessPlayback: true, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48));
+    final image = _image(BoxFit.contain) ?? const Icon(Icons.broken_image_outlined, color: Colors.white, size: 48);
     final root = _overlayRoot;
     final size = _previewSize;
     if (root == null) return image;
@@ -207,7 +223,7 @@ class _MediaPluginPanelState extends ConsumerState<MediaPluginPanel> {
         width: size.$1.toDouble(),
         height: size.$2.toDouble(),
         child: Stack(fit: StackFit.expand, children: [
-          Image.memory(_preview, fit: BoxFit.fill, gaplessPlayback: true, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+          _image(BoxFit.fill) ?? const SizedBox.shrink(),
           // ダブルタップ (v0.6): 合わせる先の指定。子の tap / drag はそのまま(ダブルタップ判定ぶんだけ tap が遅れる)。
           GestureDetector(
             behavior: HitTestBehavior.translucent,

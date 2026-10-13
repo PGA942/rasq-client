@@ -34,9 +34,9 @@
     },
     "custom_plugin_paint.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/plugin-sample/custom-plugin-paint.git",
-      "commit": "d1ae1489a68a7a22edfcff27eaffd0f99e7b35b6",
-      "version": "0.1.0",
-      "sha256": "b14e7099d956da5623e7773fc04fbd09f41c3c34f1220d6e7fd4b290851b9e6b"
+      "commit": "c18738b0a0bf12add01c51a28791771d53bb37e1",
+      "version": "0.2.0",
+      "sha256": "5880376a2bbc1500cce78e67418df09219b4f62e8a7181ae15ec5c96827903c5"
     },
     "hello_rasq_plugin.wasm": {
       "repo": "http://tui.tail346b42.ts.net:8929/orgate-question/rasq-sdk-sample.git",

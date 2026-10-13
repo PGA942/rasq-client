@@ -108,12 +108,14 @@ const swingViewerMediaKey = ValueKey('swing.viewer.media');
 /// 第3カラムに開いた回数(同じ人を開き直したら、並びを作り直す)。
 int _paneSerial = 0;
 
-/// Swing のビューワーを開く: 既定は**全画面**のルート (D-437)。「カラムの幅」で「Swing を第3カラムで開く」を選んでいれば、
-/// 幅の広い画面では**第3カラム**(D-413。第3カラムのページは第2カラムへ移る、D-057)。[mine] = 自分の Swing (D-410)。
+/// Swing のビューワーを開く (D-472): 幅の広い画面の既定は**右のカラム**(第3カラム、D-413。第3カラムのページは第2カラムへ移る、D-057)、
+/// 狭い画面は**全画面**のルート。全画面にするのは、利用者が「カラムの幅」で全画面を選んだとき(`swingInColumn: false`、D-437)と、
+/// 最初に出す Swing が**全画面を指定したページ型プラグイン**のとき([swingDeclaresFullScreen])。[mine] = 自分の Swing (D-410)。
 void openSwingViewer(BuildContext context, {String? author, bool mine = false}) {
   final id = 'swing:${mine ? 'me' : author ?? ''}#${++_paneSerial}';
-  // 既定は全画面 (D-437)。第3カラムに開くのは「カラムの幅」で選んだときだけ。
-  final inColumn = ProviderScope.containerOf(context, listen: false).read(swingInColumnProvider);
+  final c = ProviderScope.containerOf(context, listen: false);
+  final first = (mine ? ([...?c.read(mySwingsProvider).value]..sort((a, b) => a.createdAt.compareTo(b.createdAt))) : swingViewerQueue(c.read(swingFeedProvider).value ?? const [], startAuthor: author)).firstOrNull;
+  final inColumn = c.read(swingInColumnProvider) && !(first != null && swingDeclaresFullScreen(first, c.read(slotPluginsProvider)));
   if (inColumn && openPageInPanes(
     context,
     id: id,
@@ -124,6 +126,18 @@ void openSwingViewer(BuildContext context, {String? author, bool mine = false}) 
     return;
   }
   context.push(mine ? Routes.mySwings : Routes.swing(author));
+}
+
+/// 全画面を指定したページ型プラグインの Swing か (D-472): マニフェストの `page.surfaces` に `swing` を書いたもの
+/// (契約 v0.19 の「Swing 向けに作った = 全画面・`page.end`・`paused` を扱う」宣言。v0.20 から書かなくても配れるので、書いたものだけ)。
+/// - 宣言は端末に入っているプラグイン([plugins]、ストアから入れた / サイドロード / 一時的に動かしたもの)のマニフェストで見る。
+/// - 未審査の Swing (D-379) は `swing` の宣言が無いと配れない([SlotPluginsNotifier.register] が断る)ので、いつも全画面。
+/// - 入っていないストアのプラグインは、開く前には宣言が分からないので右のカラム(見る人が入れたあとは宣言どおり)。
+bool swingDeclaresFullScreen(Swing s, List<SlotPlugin> plugins) {
+  final p = s.plugin;
+  if (s.kind != SwingKind.plugin || p == null) return false;
+  if (p.unreviewed) return true;
+  return registeredPagePlugin(plugins, p.id, version: p.version)?.manifest.page?.allows(PluginPageDecl.surfaceSwing) ?? false;
 }
 
 /// 1 ページ = Swing か広告。

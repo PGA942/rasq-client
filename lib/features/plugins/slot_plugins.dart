@@ -12,6 +12,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import 'package:rrl_core/rrl_core.dart';
+import 'package:rrl_renderer/rrl_renderer.dart' show SvgLite;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/providers.dart';
@@ -1057,6 +1058,11 @@ class SlotPluginsNotifier extends Notifier<List<SlotPlugin>> {
   Future<ScaledImage> _fitForEdit(SlotPlugin plugin, Uint8List bytes, String mimeType) async {
     final passthrough = ScaledImage(bytes: bytes, mimeType: mimeType, width: 0, height: 0, scaled: false);
     if (!mimeType.startsWith('image/')) return passthrough;
+    // SVG(加工画面の SVG モード、契約 v0.23)は縮めずに渡し、width / height は viewBox の大きさ。
+    if (mimeType.toLowerCase() == 'image/svg+xml') {
+      final vb = SvgLite.parse(utf8.decode(bytes, allowMalformed: true))?.viewBox;
+      return vb == null ? passthrough : ScaledImage(bytes: bytes, mimeType: mimeType, width: vb.width.round(), height: vb.height.round(), scaled: false);
+    }
     final size = imageSizeFromHeader(bytes);
     if (size == null) return passthrough;
     final (width, height) = size;

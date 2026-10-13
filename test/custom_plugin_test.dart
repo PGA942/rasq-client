@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plugin_runtime/plugin_runtime.dart' show rasqZstdDecompress;
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart' show Routes;
 import 'package:rasq_client/features/child_safe/child_gate.dart';
@@ -688,6 +689,10 @@ void main() {
       await _settle();
       final edited = events.lastWhere((x) => x.$1 == 'edited').$2;
       expect((edited['svg'], edited['width'], edited['height'], edited['now'] is int), ('<svg viewBox="0 0 300 400"/>', 300, 400, true));
+      // v0.23 (D-472): 同じ SVG を zstd で縮めた svgz(標準の base64)と形式。page.open に契約の版。
+      expect(edited['svgzEncoding'], 'zstd');
+      expect(utf8.decode(rasqZstdDecompress(base64Decode(edited['svgz']! as String))), '<svg viewBox="0 0 300 400"/>');
+      expect(rt.calls.firstWhere((x) => x.$1 == 'page.open').$2['contract'], '0.23');
 
       // 開いている間にもう一度 → 前のものは閉じて editCancelled、新しいのは開いたまま。
       page.onRrlEvent('draw', 'tap', fn: 'draw');

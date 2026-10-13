@@ -7,6 +7,8 @@ import 'package:rasq_client/app/app.dart';
 import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/home/post_row.dart';
+import 'package:rasq_client/features/trend/trend_screen.dart';
+import 'package:rasq_client/features/users/user_list.dart';
 import 'package:rasq_client/features/users/follows_screen.dart';
 import 'package:rasq_client/features/users/user_page_screen.dart';
 import 'package:rasq_client/session/session_storage.dart';
@@ -73,7 +75,7 @@ void main() {
 
   Post post(String id, AccountId via, UserSummary author, String body) => Post(id: id, account: via, author: author, createdAt: DateTime(2026, 10, 13, 9), body: body);
 
-  Future<(ProviderContainer, _RecPlugin)> pump(WidgetTester tester) async {
+  Future<(ProviderContainer, _RecPlugin)> pump(WidgetTester tester, {List<Post> extraB = const []}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -94,6 +96,7 @@ void main() {
               post('b1', v, bob, 'ボブの投稿'),
               post('b2', v, dave, 'デイブの投稿'),
               post('b3', v, meOnB, 'b.test の自分の投稿'),
+              ...extraB,
             ]
           : [post('a1', v, carol, 'キャロルの投稿')],
     );
@@ -210,5 +213,28 @@ void main() {
     expect(a.userRequests, isNotEmpty);
     expect(a.userRequests, everyElement('b-bob'), reason: '取り直しはあっても、引くのは a.test');
     expect(find.text(noHit), findsOneWidget);
+  });
+
+  testWidgets('トレンドのページのユーザーの一覧 (D-472、D-469 の続き): 行のタップは、そのページのアカウント(b.test)で開く', (tester) async {
+    // 偽物のタグの TL は id が p1 の投稿だけを返す(b.test のボブの投稿)。
+    final (c, plugin) = await pump(tester, extraB: [post('p1', serverB, bob, '#花火 ボブ')]);
+    expect(c.read(currentAccountProvider), serverA);
+    c.read(routerProvider).push('/trend/${Uri.encodeComponent('花火')}?account=${Uri.encodeQueryComponent(serverB.key)}');
+    await tester.pumpAndSettle();
+    expect(find.byType(TrendScreen), findsOneWidget);
+    final a = plugin.sessions[serverA.key]!;
+    final b = plugin.sessions[serverB.key]!;
+    await tester.tap(find.text('ユーザー'));
+    await tester.pumpAndSettle();
+    final list = find.byType(UserList);
+    expect(list, findsOneWidget);
+    expect(tester.widget<UserList>(list).account, serverB.key);
+    final before = a.userRequests.length;
+    await tester.tap(find.descendant(of: list, matching: find.text('ボブ')).first);
+    await tester.pumpAndSettle();
+    expect(find.byType(UserPageScreen), findsOneWidget);
+    expect(find.text(noHit), findsNothing);
+    expect(b.userRequests.last, 'b-bob', reason: 'トレンドのページのアカウント(b.test)で引く');
+    expect(a.userRequests.length, before, reason: 'b.test の id を現在のアカウント(a.test)で引かない');
   });
 }

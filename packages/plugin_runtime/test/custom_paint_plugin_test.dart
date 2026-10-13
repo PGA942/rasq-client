@@ -83,5 +83,11 @@ void main() {
     controller.invoke('paint.remove.a2', {'token': token, 'nodeId': 'x', 'kind': 'tap', 'now': now + 7});
     final remove = sent.singleWhere((x) => x.$1 == RasqHostFns.sharedSet).$2;
     expect((remove['key'], remove['value'], remove.containsKey('ttl')), ('@a2.paint', null, false));
+
+    // v0.23 (D-472、0.2.0): ホストが svgz(zstd で縮めた SVG)を付けると、値にはそちらを置く(svg は置かない)。
+    sent.clear();
+    controller.invoke('page.event', {'token': token, 'type': 'edited', 'svg': svg, 'svgz': 'KLUv/QBYIQAAPHN2Zy8+', 'svgzEncoding': 'zstd', 'width': 300, 'height': 400, 'now': now + 8});
+    final z = sent.singleWhere((x) => x.$1 == RasqHostFns.sharedSet).$2['value'] as Map;
+    expect((z['svgz'], z.containsKey('svg')), ('KLUv/QBYIQAAPHN2Zy8+', false));
   });
 }

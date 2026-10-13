@@ -19,10 +19,12 @@ import 'package:video_player/video_player.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
+import 'package:rrl_renderer/rrl_renderer.dart' show SvgLite;
 
 import '../media/fow_avoid.dart';
 import '../../app/providers.dart';
 import '../../shell/column_takeover.dart';
+import '../../shell/extra_column.dart';
 import '../ads/export_ad.dart';
 import '../compose/post_image_fow.dart';
 import '../compose/post_video.dart';
@@ -58,16 +60,21 @@ import 'svg_paint_editor.dart';
 /// `pro_video_editor`(端末ネイティブ、mp4)。動画を受ける(`accepts`)プラグインのボタンは、元のファイルをそのまま
 /// プラグインへ渡し、結果で添付を差し替えて閉じる(焼き込みはしない)。
 ///
-/// **SVG モード**(契約 v0.22 の `media.editor.open`、D-465): [ProMediaEditorArgs.svg] で開くと、pro_image_editor の代わりに
-/// 縦横比を固定した落書きの面([SvgPaintEditor]: ペン / 消しゴム / 色 / 太さ / 取り消し)になり、閉じると [SvgPaintResult]
-/// (保存)か null(やめた)を返す。ページ型プラグインの「みんなで落書き」(plugin-sample custom-plugin-paint)が使う。
+/// **モード (D-472)**: 添付の種類(MIME / 拡張子、[mediaEditorModeOf])で道具と下段バーを変える、1 つの加工画面。
+/// - 画像 = pro_image_editor の道具(構成 `editor:image`)、動画 / 音声 = 動画モード(`editor:video`、音声だけ Visualizer)。
+/// - **SVG**(`image/svg+xml` / `.svg`。契約 v0.22 の `media.editor.open` = [ProMediaEditorArgs.svg] も)= pro_image_editor が扱えないので、
+///   **SVG の道具に載せ替える**: 紙の面は [SvgPaintEditor](ペン / 消しゴム / 色 / 太さ / 取り消し。D-473 が持つ部品をそのまま置く)、
+///   その下に同じ仕組みの下段バー(構成 `editor:svg`)= `accepts` に `image/svg+xml` / `.svg` を書いたプラグインのボタンと「バーの編集」
+///   ([svgEditorAccepts]。動画 / 音声だけの編集、ラスターの編集、ステッカー / フィルターは出ない)。プラグインのボタンは、そのときの絵を
+///   SVG で `media.edit` に渡し、返った SVG(消毒する)で紙を描き直す。閉じると `media.editor.open` なら [SvgPaintResult](保存)か
+///   null(やめた)、添付の SVG なら [MediaEditResult]。ページ型プラグインの「みんなで落書き」(plugin-sample custom-plugin-paint)が使う。
 class ProMediaEditorArgs {
   const ProMediaEditorArgs({required this.bytes, required this.name, required this.mimeType, this.extraActions = const [], this.avoidFows = false})
       : svgAspect = null,
         svg = null,
         svgTitle = null;
 
-  /// SVG モード (D-465): `aspect` = `"<w>:<h>"`、`svg` = 続きから描く SVG(消毒してから読む)。
+  /// SVG モード (D-465、`media.editor.open`): `aspect` = `"<w>:<h>"`、`svg` = 続きから描く SVG(消毒してから読む)。結果は [SvgPaintResult]。
   ProMediaEditorArgs.svg({String aspect = '3:4', this.svg, String? title})
       : bytes = Uint8List(0),
         name = 'paint.svg',
@@ -79,11 +86,17 @@ class ProMediaEditorArgs {
 
   final Uint8List bytes;
 
-  /// SVG モードの縦横比(null = ふだんの画像 / 動画の編集)。
+  /// `media.editor.open` の SVG モードの縦横比(null = 添付の編集)。
   final String? svgAspect;
   final String? svg;
   final String? svgTitle;
-  bool get isSvg => svgAspect != null;
+
+  /// 道具と下段バーのモード (D-472)。`media.editor.open` はいつも SVG、添付は MIME / 拡張子で。
+  MediaEditorMode get mode => svgAspect != null ? MediaEditorMode.svg : mediaEditorModeOf(mimeType: mimeType, name: name);
+  bool get isSvg => mode == MediaEditorMode.svg;
+
+  /// `media.editor.open` から開いた(結果は [SvgPaintResult])。添付の SVG は [MediaEditResult]。
+  bool get isPaint => svgAspect != null;
 
   /// 全画面のメディア表示と同じく、出ている FOW(編集の FOW など)の逆サイドへ面を寄せる (D-413: Swing の編集の段)。
   final bool avoidFows;
@@ -223,7 +236,37 @@ class _ProMediaEditor extends ConsumerStatefulWidget {
   ConsumerState<_ProMediaEditor> createState() => _ProMediaEditorScreenState();
 }
 
-/// SVG モード (D-465): 落書きの面だけ。閉じ方は開き方に合わせる(カラムに重ねたならカラムを閉じる、全画面ならルートを戻す)。
+/// 加工画面を閉じる: 足したカラム (D-472) / カラムの置き換え (D-413) の中ならそれを閉じ、全画面のルートなら戻る。
+void closeMediaEditor(BuildContext context, [Object? result]) {
+  if (ExtraColumnScope.closeOf(context, result) || ColumnTakeoverScope.closeOf(context, result)) return;
+  Navigator.of(context).pop(result);
+}
+
+/// `"<w>:<h>"`(1〜16 の整数)で [w] : [h] にいちばん近いもの(添付の SVG の viewBox の縦横比を、落書きの紙に合わせる、D-472)。
+String nearestPaintAspect(double w, double h) {
+  if (!(w > 0 && h > 0) || !w.isFinite || !h.isFinite) return '3:4';
+  final want = w / h;
+  var best = (1, 1);
+  var err = double.infinity;
+  for (var a = 1; a <= 16; a++) {
+    for (var b = 1; b <= 16; b++) {
+      final e = (a / b - want).abs() / want;
+      if (e < err - 1e-12) {
+        err = e;
+        best = (a, b);
+      }
+    }
+  }
+  final g = best.$1.gcd(best.$2);
+  return '${best.$1 ~/ g}:${best.$2 ~/ g}';
+}
+
+/// SVG モードのキー (D-472)。
+const proMediaEditorSvgKey = ValueKey('media.svg.editor');
+const proMediaEditorSvgBarKey = Key('media.pro.svg.bar');
+
+/// SVG モード (D-465 → D-472): 紙の面([SvgPaintEditor]、そのまま置く)+ 加工画面と同じ仕組みの下段バー(構成 `editor:svg`)。
+/// アプリの外(ProviderScope の無いところ)でも紙だけで動く(バーとプラグインは無し)。
 class _SvgMode extends StatefulWidget {
   const _SvgMode({required this.args});
   final ProMediaEditorArgs args;
@@ -232,18 +275,269 @@ class _SvgMode extends StatefulWidget {
 }
 
 class _SvgModeState extends State<_SvgMode> {
+  final _barScroll = ScrollController();
   bool _closed = false;
 
+  /// 紙に読ませる SVG(プラグインの結果で差し替える)と、描き直しの回数(紙を作り直す鍵)。
+  late String? _svg = widget.args.isPaint ? widget.args.svg : _attachmentSvg;
+  late final String _aspect = widget.args.svgAspect ?? _attachmentAspect;
+  int _generation = 0;
+
+  /// 押されたプラグインのボタン(紙の「完了」で今の絵を受けてから、編集パネルへ渡す)。
+  PluginAction? _pending;
+
+  /// 重ねているプラグインの編集パネル。
+  ({PluginAction action, Uint8List bytes, Completer<MediaEditResult?> done})? _panel;
+  final _paperKey = GlobalKey();
+
+  String? get _attachmentSvg {
+    try {
+      return utf8.decode(widget.args.bytes, allowMalformed: true);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String get _attachmentAspect {
+    final doc = _svg == null ? null : SvgLite.parse(_svg!);
+    return doc == null ? '3:4' : nearestPaintAspect(doc.viewBox.width, doc.viewBox.height);
+  }
+
+  String get _name {
+    final n = widget.args.name;
+    return n.toLowerCase().endsWith('.svg') ? n : '${n.replaceFirst(RegExp(r'\.[A-Za-z0-9]{1,5}$'), '')}.svg';
+  }
+
+  @override
+  void dispose() {
+    _barScroll.dispose();
+    super.dispose();
+  }
+
   void _done(SvgPaintResult? r) {
+    // プラグインのボタンのために「完了」を押した: 閉じずに、今の絵をパネルへ。
+    final pending = _pending;
+    if (pending != null) {
+      _pending = null;
+      if (r != null) unawaited(_runPlugin(pending, r));
+      return;
+    }
     if (_closed) return;
     _closed = true;
-    if (!ColumnTakeoverScope.closeOf(context, r)) Navigator.of(context).pop(r);
+    final Object? result = r == null || widget.args.isPaint ? r : MediaEditResult(bytes: Uint8List.fromList(utf8.encode(r.svg)), mimeType: svgMimeType, name: _name);
+    closeMediaEditor(context, result);
   }
+
+  /// SVG を受けるプラグインのボタン (D-472、契約 v0.23 §2.2)。紙は外から読めない部品なので、紙の「完了」を押して今の絵を受け取り
+  /// ([_done] が閉じずにここへ回す)、`media.edit` へ SVG で渡す。返った SVG は消毒して紙を描き直す(取り消しの段はそこから)。
+  void _onPlugin(PluginAction a) {
+    if (_panel != null || _pending != null) return;
+    final done = _findPaperDone();
+    if (done == null) return _toast('いまは使えません(紙の「完了」が見つかりません)');
+    _pending = a;
+    done();
+    // 紙が完了を返さなかった(空の絵を返さない作りなど)。
+    if (identical(_pending, a)) _pending = null;
+  }
+
+  /// 紙の「完了」ボタン(`svgpaint.done`)の押し口。
+  VoidCallback? _findPaperDone() {
+    VoidCallback? found;
+    void visit(Element e) {
+      if (found != null) return;
+      final w = e.widget;
+      if (w.key == const ValueKey('svgpaint.done') && w is ButtonStyleButton) {
+        found = w.onPressed;
+        return;
+      }
+      e.visitChildElements(visit);
+    }
+    final root = _paperKey.currentContext;
+    if (root is Element) root.visitChildElements(visit);
+    return found;
+  }
+
+  Future<void> _runPlugin(PluginAction a, SvgPaintResult current) async {
+    final done = Completer<MediaEditResult?>();
+    setState(() => _panel = (action: a, bytes: Uint8List.fromList(utf8.encode(current.svg)), done: done));
+    final r = await done.future;
+    if (!mounted) return;
+    String? next;
+    if (r != null) {
+      final svg = mediaEditorModeOf(mimeType: r.mimeType, name: r.name ?? '') == MediaEditorMode.svg ? SvgLite.parse(utf8.decode(r.bytes, allowMalformed: true)) : null;
+      if (svg == null) _toast('${a.plugin.manifest.name} が SVG を返さなかったので、使いませんでした');
+      next = svg?.toSvg();
+    }
+    setState(() {
+      _panel = null;
+      // 適用しなかったときも、完了で受け取った今の絵から続ける(紙は作り直す)。
+      _svg = next ?? current.svg;
+      _generation++;
+    });
+  }
+
+  /// アプリの ProviderScope(無ければ null = 紙だけ)。
+  ProviderContainer? get _container {
+    try {
+      return ProviderScope.containerOf(context, listen: false);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _toast(String text) {
+    _container?.read(rootMessengerKeyProvider).currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  /// SVG を受けるプラグインのボタンのバー(無ければ出さない。SVG の道具は紙の面にある)。
+  Widget _bar() => Consumer(builder: (context, ref, _) {
+        final plugins = [
+          for (final p in ref.watch(pluginActionsForProvider(editorSvgConfigKey)))
+            if (mediaAccepts(p.decl.accepts, mimeType: svgMimeType, name: _name)) p,
+        ];
+        if (plugins.isEmpty) return const SizedBox.shrink();
+        return EditorActionBar(
+          key: proMediaEditorSvgBarKey,
+          configKey: editorSvgConfigKey,
+          surface: ActionBarSurface.editorSvg,
+          plugins: plugins,
+          controller: _barScroll,
+          onPerform: (d) {
+            final hit = plugins.where((x) => x.id == d.id).firstOrNull;
+            if (hit != null) _onPlugin(hit);
+          },
+        );
+      });
 
   @override
   Widget build(BuildContext context) {
     final a = widget.args;
-    return SvgPaintEditor(key: const ValueKey('media.svg.editor'), aspect: a.svgAspect!, initialSvg: a.svg, title: a.svgTitle, onDone: _done);
+    final paper = SvgPaintEditor(key: ValueKey('media.svg.paper.$_generation'), aspect: _aspect, initialSvg: _svg, title: a.svgTitle ?? (a.isPaint ? null : a.name), onDone: _done);
+    final p = _panel;
+    return Material(
+      key: proMediaEditorSvgKey,
+      child: Stack(fit: StackFit.expand, children: [
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Expanded(child: KeyedSubtree(key: _paperKey, child: paper)),
+          if (_container != null) _bar(),
+        ]),
+        if (p != null)
+          Positioned.fill(
+            child: MediaPluginPanel(
+              key: ValueKey('media.panel.${p.action.id}'),
+              plugin: p.action.plugin,
+              bytes: p.bytes,
+              name: _name,
+              mimeType: svgMimeType,
+              actionId: p.action.decl.id == mediaEditDefaultActionId ? null : p.action.decl.id,
+              onDone: (r) {
+                if (!p.done.isCompleted) p.done.complete(r);
+              },
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+/// 加工画面の下段バー (D-249 → D-472): 内蔵の編集 + プラグインのボタンを構成([configKey])どおりに並べ、最後に「バーの編集」。
+/// 画像 / 動画 / SVG のモードで同じ枠と並べ方(並べ替え / バンドル / プラグインのボタンの追加・削除)を使う。
+class EditorActionBar extends ConsumerWidget {
+  const EditorActionBar({
+    super.key,
+    required this.configKey,
+    required this.surface,
+    required this.plugins,
+    required this.controller,
+    required this.onPerform,
+    this.builtins = const [],
+    this.leading = const [],
+    this.activeIds = const {},
+    this.onLongPressFor,
+  });
+  final String configKey;
+  final ActionBarSurface surface;
+  final List<PluginAction> plugins;
+  final ScrollController controller;
+  final void Function(ActionDescriptor action) onPerform;
+
+  /// 内蔵の編集(モードごと)。
+  final List<ActionDescriptor> builtins;
+
+  /// 先頭に足すボタン(呼んだ画面のもの)。
+  final List<Widget> leading;
+
+  /// 掛かっている(チェックの印を付ける)ボタン。
+  final Set<String> activeIds;
+
+  /// ボタンの長押し(無ければ null)。
+  final void Function(BuildContext ctx)? Function(String id)? onLongPressFor;
+
+  static const _style = TextStyle(fontSize: 10, color: Colors.white);
+
+  /// バーのボタン 1 つ。キーは `media.pro.bar.<id>`。
+  static Widget item(String id, String label, Widget icon, void Function(BuildContext ctx) onTap, {Color color = Colors.white, Key? key, void Function(BuildContext ctx)? onLongPress}) => Builder(
+        builder: (ctx) {
+          final button = FlatIconTextButton(key: key ?? proMediaEditorBarKey(id), label: Text(label, style: _style.copyWith(color: color)), icon: icon, onPressed: () => onTap(ctx));
+          return onLongPress == null ? button : GestureDetector(onLongPress: () => onLongPress(ctx), child: button);
+        },
+      );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final merged = mergePluginActions(
+      config: ref.watch(actionBarConfigProvider(configKey)),
+      snsActions: builtins,
+      plugins: plugins,
+      settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(configKey, ''))),
+      prefs: ref.watch(actionButtonPrefsProvider),
+    );
+    final entries = merged.config.apply(merged.actions);
+    return Scrollbar(
+      controller: controller,
+      thickness: 0,
+      // material_ui の Scaffold の下なので flutter/material の BottomAppBar は使わない(素の箱で十分)。
+      child: Container(
+        height: kBottomNavigationBarHeight,
+        color: Colors.black,
+        child: Center(
+          child: SingleChildScrollView(
+            controller: controller,
+            scrollDirection: Axis.horizontal,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                ...leading,
+                for (final e in entries)
+                  switch (e) {
+                    SingleActionEntry() => item(
+                        e.action.id,
+                        e.action.label,
+                        Icon(activeIds.contains(e.action.id) ? Icons.check_circle : PostRow.iconFor(e.action.icon, Icons.extension_outlined), size: 22, color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white),
+                        (_) => onPerform(e.action),
+                        color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white,
+                        onLongPress: onLongPressFor?.call(e.action.id),
+                      ),
+                    ActionListEntry() => item(
+                        ActionBarConfig.listKey(e.list.id),
+                        e.list.name,
+                        SizedBox(width: 22, height: 22, child: Center(child: bundleIconWidget(e.list, e.members, size: 22, color: Colors.white))),
+                        (ctx) {
+                          final box = ctx.findRenderObject() as RenderBox;
+                          showActionBundleMenuFow(ref, anchor: box.localToGlobal(Offset.zero) & box.size, entry: e, onPick: (a) async => onPerform(a));
+                        },
+                      ),
+                  },
+                // バーの編集(並べ替え / バンドル / プラグインボタンの追加・削除)。
+                item('edit', 'バーの編集', const Icon(Icons.dashboard_customize_outlined, size: 22, color: Colors.white54), (_) => showActionBarEditSheet(ref, surfaces: [surface]), color: Colors.white54, key: proMediaEditorBarEditKey),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -251,23 +545,22 @@ class _SvgModeState extends State<_SvgMode> {
 /// 戻り = 結果(保存 = [SvgPaintResult]、やめた / 閉じられた = null)と、外から閉じる口(ページを閉じた / 開き直す)。
 typedef SvgPaintOpener = ({Future<SvgPaintResult?> result, VoidCallback close}) Function({required String aspect, String? svg, String? title});
 
-/// カラムに重ねたときの id。
+/// 足したカラム (D-472) / 全画面のルートの id。
 const svgPaintTakeoverId = 'media.svg.editor';
 
-/// 落書きの編集画面を開く (D-465、契約 v0.22 `media.editor.open`)。**広い画面**(≥ [RasqSizes.tabletBreakpoint])で、ページが
-/// **カラムの中**([ColumnTakeoverHost] の下 = ホームのカラム / 第3カラム)にあれば、ページの**隣のカラム**に重ねる
-/// (ページが第2カラムなら第3カラム、第3カラムなら第2カラム。D-057 のペインモデルのまま、ページは見えたまま)。
-/// **狭い画面**と、**カラムの外の全画面のルート**(既定の Swing のビューワー `/swing`、`/custom/page/…`)は全画面のルート。
-/// D-468: 全画面のルートはカラムの上に被さっているので、カラムに重ねると編集画面がその下に隠れて見えなかった
-/// (広い画面で Swing に配った落書きの自分のマスを押しても、編集画面が出ない)。
+/// 落書きの編集画面を開く (D-465 → D-472、契約 v0.22 / v0.23 `media.editor.open`)。
+/// - **広い画面**(≥ [RasqSizes.tabletBreakpoint])で、ページが**カラムの中**([ColumnTakeoverHost] の下 = ホームのカラムのページ /
+///   右のカラムの Swing やページ)にあり、そのカラムが見えている(上に全画面のルートが被っていない、[_shownInShell])なら、
+///   **そのカラムの右にもう 1 カラム**足して開く([ExtraColumnStore]。ページも隣のカラムも隠さない。フォーカスは編集画面へ)。
+/// - **狭い画面**と、**カラムの外の全画面のルート**(全画面を選んだ / 全画面を指定したプラグインの Swing のビューワー `/swing`、
+///   `/custom/page/…`)は全画面のルート。D-468: 全画面のルートはカラムの上に被さっているので、カラムに出すと編集画面がその下に隠れる。
 ({Future<SvgPaintResult?> result, VoidCallback close}) openSvgPaintEditor(BuildContext context, {required String aspect, String? svg, String? title}) {
   final args = ProMediaEditorArgs.svg(aspect: aspect, svg: svg, title: title);
   final host = context.findAncestorWidgetOfExactType<ColumnTakeoverHost>();
-  if (MediaQuery.sizeOf(context).width >= RasqSizes.tabletBreakpoint && host != null) {
-    final store = ProviderScope.containerOf(context, listen: false).read(columnTakeoverProvider.notifier);
-    final column = host.column == 1 ? 0 : 1;
-    final result = store.open<SvgPaintResult>(column, id: svgPaintTakeoverId, builder: (_) => ProMediaEditorScreen(args: args));
-    return (result: result, close: () => store.close(column, id: svgPaintTakeoverId));
+  if (MediaQuery.sizeOf(context).width >= RasqSizes.tabletBreakpoint && host != null && _shownInShell(context)) {
+    final store = ProviderScope.containerOf(context, listen: false).read(extraColumnProvider.notifier);
+    final result = store.open<SvgPaintResult>(id: svgPaintTakeoverId, afterColumn: host.column, builder: (_) => ProMediaEditorScreen(args: args));
+    return (result: result, close: () => store.close(id: svgPaintTakeoverId));
   }
   final route = PageRouteBuilder<SvgPaintResult>(
     settings: const RouteSettings(name: svgPaintTakeoverId),
@@ -282,6 +575,18 @@ const svgPaintTakeoverId = 'media.svg.editor';
       if (route.isActive) nav.removeRoute(route);
     },
   );
+}
+
+/// [context] の画面が、入れ子の Navigator のどの段でもいちばん上のルートにある(全画面のルートが上に被っていない)。
+bool _shownInShell(BuildContext context) {
+  BuildContext? c = context;
+  while (c != null && c.mounted) {
+    if (ModalRoute.of(c) case final route? when !route.isCurrent) return false;
+    final nav = c.findAncestorStateOfType<NavigatorState>();
+    if (nav == null) return true;
+    c = nav.context;
+  }
+  return true;
 }
 
 class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
@@ -1171,7 +1476,7 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
     }
   }
 
-  String get _configKey => editorConfigKeyFor(widget.args.mimeType);
+  String get _configKey => editorConfigKeyFor(widget.args.mimeType, name: widget.args.name);
 
   /// この添付に出るプラグインボタン(宣言の `accepts` を実際の MIME / ファイル名で絞る)。
   List<PluginAction> get _pluginActions => [
@@ -1222,71 +1527,26 @@ class _ProMediaEditorScreenState extends ConsumerState<_ProMediaEditor> {
 
   Widget _bar(ProImageEditorState editor, Key key) {
     _imageEditor = editor;
-    const style = TextStyle(fontSize: 10, color: Colors.white);
-    Widget item(String id, String label, Widget icon, void Function(BuildContext ctx) onTap, {Color color = Colors.white, Key? key, void Function(BuildContext ctx)? onLongPress}) => Builder(
-          builder: (ctx) {
-            final button = FlatIconTextButton(key: key ?? proMediaEditorBarKey(id), label: Text(label, style: style.copyWith(color: color)), icon: icon, onPressed: () => onTap(ctx));
-            return onLongPress == null ? button : GestureDetector(onLongPress: () => onLongPress(ctx), child: button);
-          },
-        );
-    Widget extra(ProEditorExtraAction x, String label) => item('extra:${x.id}', label, Icon(x.icon, size: 22, color: RasqColors.accent), (_) => x.onTap(_ProEditorHandle(editor, context, _isVideo)),
+    Widget extra(ProEditorExtraAction x, String label) => EditorActionBar.item('extra:${x.id}', label, Icon(x.icon, size: 22, color: RasqColors.accent), (_) => x.onTap(_ProEditorHandle(editor, context, _isVideo)),
         color: RasqColors.accent, onLongPress: x.onLongPress == null ? null : (_) => x.onLongPress!(_ProEditorHandle(editor, context, _isVideo)));
     final plugins = _pluginActions;
     _applyAutoFilters(editor, plugins);
-    final merged = mergePluginActions(
-      config: ref.watch(actionBarConfigProvider(_configKey)),
-      // 「Visualizer」は音声を開いているときだけ(動画のバーの構成には常に居る)。
-      snsActions: [for (final a in editorBuiltinActionsFor(_configKey)) if (a.id != editorVisualizerActionId || _isAudio) a],
-      plugins: plugins,
-      settings: ref.watch(slotActionSettingsProvider(slotSettingsKeyFor(_configKey, ''))),
-      prefs: ref.watch(actionButtonPrefsProvider),
-    );
-    final entries = merged.config.apply(merged.actions);
-    return Scrollbar(
+    return EditorActionBar(
       key: key,
+      configKey: _configKey,
+      surface: _isVideo ? ActionBarSurface.editorVideo : ActionBarSurface.editorImage,
+      // 「Visualizer」は音声を開いているときだけ(動画のバーの構成には常に居る)。
+      builtins: [for (final a in editorBuiltinActionsFor(_configKey)) if (a.id != editorVisualizerActionId || _isAudio) a],
+      plugins: plugins,
       controller: _barScroll,
-      thickness: 0,
-      // material_ui の Scaffold の下なので flutter/material の BottomAppBar は使わない(素の箱で十分)。
-      child: Container(
-        height: kBottomNavigationBarHeight,
-        color: Colors.black,
-        child: Center(
-          child: SingleChildScrollView(
-            controller: _barScroll,
-            scrollDirection: Axis.horizontal,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                for (final x in widget.args.extraActions)
-                  if (x.liveLabel case final live?) ValueListenableBuilder<String>(valueListenable: live, builder: (_, label, _) => extra(x, label)) else extra(x, x.label),
-                for (final e in entries)
-                  switch (e) {
-                    SingleActionEntry() => item(
-                        e.action.id,
-                        e.action.label,
-                        Icon(_filters.containsKey(e.action.id) ? Icons.check_circle : PostRow.iconFor(e.action.icon, Icons.extension_outlined), size: 22, color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white),
-                        (_) => _perform(editor, e.action, plugins),
-                        color: isPluginActionId(e.action.id) ? RasqColors.accent : Colors.white,
-                        // フィルターの長押し (契約 v0.14 temp): 「次からも自動でオン / オフ」。
-                        onLongPress: _filterTempMenu(plugins, e.action.id),
-                      ),
-                    ActionListEntry() => item(
-                        ActionBarConfig.listKey(e.list.id),
-                        e.list.name,
-                        SizedBox(width: 22, height: 22, child: Center(child: bundleIconWidget(e.list, e.members, size: 22, color: Colors.white))),
-                        (ctx) {
-                          final box = ctx.findRenderObject() as RenderBox;
-                          showActionBundleMenuFow(ref, anchor: box.localToGlobal(Offset.zero) & box.size, entry: e, onPick: (a) async => _perform(editor, a, plugins));
-                        },
-                      ),
-                  },
-                // バーの編集(並べ替え / バンドル / プラグインボタンの追加・削除)。
-                item('edit', 'バーの編集', const Icon(Icons.dashboard_customize_outlined, size: 22, color: Colors.white54), (_) => showActionBarEditSheet(ref, surfaces: [_isVideo ? ActionBarSurface.editorVideo : ActionBarSurface.editorImage]), color: Colors.white54, key: proMediaEditorBarEditKey),
-              ]),
-            ),
-          ),
-        ),
-      ),
+      activeIds: _filters.keys.toSet(),
+      leading: [
+        for (final x in widget.args.extraActions)
+          if (x.liveLabel case final live?) ValueListenableBuilder<String>(valueListenable: live, builder: (_, label, _) => extra(x, label)) else extra(x, x.label),
+      ],
+      onPerform: (a) => _perform(editor, a, plugins),
+      // フィルターの長押し (契約 v0.14 temp): 「次からも自動でオン / オフ」。
+      onLongPressFor: (id) => _filterTempMenu(plugins, id),
     );
   }
 
