@@ -32,6 +32,17 @@
         }
       },
       {
+        "t": "ListTile",
+        "k": "/tour?again=1",
+        "p": {
+          "title": "RASQ の使い方をもう一度見る",
+          "subtitle": "機能の紹介(TL・トレンド・ASTell・RAi など)"
+        },
+        "on": {
+          "tap": "route.push"
+        }
+      },
+      {
         "t": "SectionHeader",
         "p": {
           "title": "困ったとき"

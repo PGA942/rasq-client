@@ -7,6 +7,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
+import 'feature_tour.dart' show featureTourHoldNudge, featureTourHoldsProvider;
 import 'rasq_register_screen.dart' show openRasqAccountCreation;
 
 /// タイルから登録した人に、あとで RASQ アカウントを聞く (D-413)。
@@ -74,6 +75,8 @@ class _RasqAccountNudgeListenerState extends ConsumerState<RasqAccountNudgeListe
   Future<void> _show() async {
     if (_showing) return;
     _showing = true;
+    // 出している間は RASQ の機能の紹介 (D-471) を待たせる(先に印を付けてから、頼まれた印を下ろす)。
+    final holds = ref.read(featureTourHoldsProvider.notifier)..hold(featureTourHoldNudge);
     ref.read(rasqAccountNudgeProvider.notifier).set(false);
     try {
       final c = ProviderScope.containerOf(context, listen: false);
@@ -106,6 +109,7 @@ class _RasqAccountNudgeListenerState extends ConsumerState<RasqAccountNudgeListe
       }
     } finally {
       _showing = false;
+      holds.release(featureTourHoldNudge);
     }
   }
 

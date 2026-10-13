@@ -393,3 +393,5 @@
 {"q": "Swingを検索したい", "op": "astell-search"}
 {"q": "Swingの背景を写真にしたい", "op": "swing-background"}
 {"q": "Swingに返信したい", "op": "swing-reply"}
+{"q": "最初に出た使い方の説明をもう一度見たい", "op": "help-tour"}
+{"q": "RASQの機能の紹介をもう一回", "op": "help-tour"}

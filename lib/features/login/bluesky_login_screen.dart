@@ -9,6 +9,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../session/bluesky_auth.dart';
 import 'login_screen.dart' show popOr;
+import 'sns_signup.dart';
 import 'terms_sheet.dart';
 
 /// Bluesky のログイン (D-175): PDS / ハンドル(かメール)/ アプリパスワード。
@@ -31,6 +32,9 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
   bool _busy = false;
   bool _showPassword = false;
   String? _error;
+
+  /// 新規登録 (D-471) で外部のブラウザに開いた登録ページ(戻ってきたらログインの手順を出す)。
+  Uri? _signupUrl;
 
   @override
   void dispose() {
@@ -71,6 +75,18 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
     }
   }
 
+  /// 新規登録 (D-471): Bluesky のアプリ(bsky.app)の登録ページを外部のブラウザで開く。登録はブラウザで行い、戻ってきたら
+  /// アプリパスワードを作ってこの画面でログインする。
+  Future<void> _signup() async {
+    final url = snsSignupPageUrl(SnsKind.bluesky, _host.text);
+    final ok = await ref.read(snsSignupLauncherProvider)(url);
+    if (!mounted) return;
+    setState(() {
+      _signupUrl = url;
+      _error = ok ? null : 'ブラウザを開けませんでした。URL: $url';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -103,6 +119,13 @@ class _BlueskyLoginScreenState extends ConsumerState<BlueskyLoginScreen> {
           const SizedBox(height: RasqSpacing.xl),
           FilledButton(key: blueskyLoginButtonKey, onPressed: canSubmit ? _login : null, child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('ログイン')),
           if (_error != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.md), child: Text(_error!, style: RasqTypography.bodySmall.copyWith(color: tokens.danger))),
+          SnsSignupButton(kind: SnsKind.bluesky, onPressed: _busy ? null : _signup),
+          if (_signupUrl != null)
+            SnsSignupReturnHint(
+              text: 'ブラウザの Bluesky で「アカウントを作成」から登録してください。登録できたら、Bluesky の「設定 → プライバシーとセキュリティ → アプリパスワード」でパスワードを作り、上のハンドルとアプリパスワードでログインします。',
+              url: _signupUrl!,
+              onReopen: _signup,
+            ),
         ]),
       ),
     );

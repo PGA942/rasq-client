@@ -14,6 +14,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../onboarding/server_signup.dart';
 import 'login_screen.dart' show popOr;
+import 'sns_signup.dart';
 import 'terms_sheet.dart';
 
 /// SNS ログインの共通画面: インスタンスURL入力 → サーバー確認 → 利用規約 →
@@ -87,6 +88,44 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
     } finally {
       setState(() => _busy = false);
     }
+  }
+
+  /// 新規登録 (D-471): サーバーを確かめて(済んでいればそのまま)、D-412 の登録ページ(RAi の案内つき)へ。
+  /// 登録できたら「登録できた」→ このサーバーのログイン → ログインしたら RASQ の機能の紹介。
+  Future<void> _signup() async {
+    var info = _server;
+    final typed = _host.text.trim().replaceFirst(RegExp(r'^https?://'), '').split('/').first.toLowerCase();
+    if (info == null || (typed.isNotEmpty && info.host != typed)) {
+      setState(() {
+        _busy = true;
+        _error = null;
+      });
+      try {
+        info = await _plugin.inspectServer(_host.text);
+        if (mounted) setState(() => _server = info);
+      } on SnsApiException catch (e) {
+        if (mounted) setState(() => _error = '${e.code.display}\n${e.code.message ?? 'サーバーに接続できませんでした'}');
+        return;
+      } catch (e) {
+        if (mounted) setState(() => _error = 'サーバーに接続できませんでした: $e');
+        return;
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+    final server = info;
+    if (!mounted) return;
+    startServerSignup(
+      context,
+      ref,
+      ServerSignupTarget(
+        host: server.host,
+        kind: widget.kind,
+        software: server.software ?? (widget.kind == SnsKind.mastodon ? 'mastodon' : 'misskey'),
+        name: server.name,
+        registrationOpen: server.registrationOpen,
+      ),
+    );
   }
 
   Future<void> _startAuth() async {
@@ -213,6 +252,8 @@ class _SnsLoginScreenState extends ConsumerState<SnsLoginScreen> {
               TextButton(onPressed: _busy ? null : () => launchUrl(_flow!.url, mode: LaunchMode.externalApplication), child: const Text('ブラウザをもう一度開く')),
             ],
           ],
+          // 新規登録 (D-471): アカウントを持っていない人は、このサーバー(入力欄)の登録ページへ。
+          SnsSignupButton(kind: widget.kind, onPressed: _busy ? null : _signup),
         ]),
       ),
     );

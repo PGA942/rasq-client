@@ -9,6 +9,7 @@ import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../session/mixi2_auth.dart';
 import 'login_screen.dart' show popOr;
+import 'sns_signup.dart';
 import 'terms_sheet.dart';
 
 /// mixi2 のログイン (D-206、サンプル): 公式 API は申請制 + OAuth(RASQ サーバーのブローカー)なので、
@@ -28,10 +29,24 @@ class _Mixi2LoginScreenState extends ConsumerState<Mixi2LoginScreen> {
   bool _busy = false;
   String? _error;
 
+  /// 新規登録 (D-471) で外部のブラウザに開いた登録ページ(戻ってきたらログインの手順を出す)。
+  Uri? _signupUrl;
+
   @override
   void dispose() {
     _host.dispose();
     super.dispose();
+  }
+
+  /// 新規登録 (D-471): mixi2 の登録ページを外部のブラウザで開く(アカウントは mixi2 の側で作る)。戻ってきたら「ブラウザで認証」。
+  Future<void> _signup() async {
+    final url = snsSignupPageUrl(SnsKind.mixi2, _host.text);
+    final ok = await ref.read(snsSignupLauncherProvider)(url);
+    if (!mounted) return;
+    setState(() {
+      _signupUrl = url;
+      _error = ok ? null : 'ブラウザを開けませんでした。URL: $url';
+    });
   }
 
   Future<void> _login({required bool dummy}) async {
@@ -97,6 +112,13 @@ class _Mixi2LoginScreenState extends ConsumerState<Mixi2LoginScreen> {
           Text('ダミーはネットワークを使わず、プラグインの中の投稿で TL / いいね / リポスト / 投稿 / 通知の流れを確かめられます。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
           ],
           if (_error != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.md), child: Text(_error!, key: const ValueKey('login.mixi2.error'), style: RasqTypography.bodySmall.copyWith(color: tokens.danger))),
+          SnsSignupButton(kind: SnsKind.mixi2, onPressed: _busy ? null : _signup),
+          if (_signupUrl != null)
+            SnsSignupReturnHint(
+              text: 'mixi2 のアカウントは、ブラウザ(または mixi2 のアプリ)で作ります。作れたら、この画面に戻って「ブラウザで認証」でログインしてください。',
+              url: _signupUrl!,
+              onReopen: _signup,
+            ),
         ]),
       ),
     );
