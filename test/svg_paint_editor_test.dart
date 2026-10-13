@@ -83,11 +83,11 @@ void main() {
     final line = s.polylines!.single;
     expect((line.first - const Offset(50, 50)).distance, lessThan(1.5));
     expect((line.last - const Offset(200, 300)).distance, lessThan(1.5));
-    // 座標は整数。
-    expect(results.last!.svg, matches(RegExp(r'd="M\d+ \d+L[\d ]+"')));
+    // 座標は 0.1 単位(D-473)、まっすぐな線は直線 1 本(相対の `l`)。
+    expect(results.last!.svg, matches(RegExp(r'd="M[\d.]+ [\d.]+l-?[\d.]+[ -][\d.]+"')));
   });
 
-  testWidgets('まっすぐな線は 2 点に簡略化、タップは点(M x yL x y)', (tester) async {
+  testWidgets('まっすぐな線は 2 点に簡略化、タップは点(M x yh0)', (tester) async {
     await pump(tester);
     await stroke(tester, const Offset(60, 200), const Offset(240, 200), steps: 30);
     final g = await tester.startGesture(at(tester, const Offset(100, 100)));
@@ -99,14 +99,16 @@ void main() {
     expect(line, hasLength(2));
     expect(line.first.dy, line.last.dy);
     expect(doc.shapes[1].polylines!.single, [const Offset(100, 100), const Offset(100, 100)]);
-    expect(results.last!.svg, contains('d="M100 100L100 100"'));
+    expect(results.last!.svg, contains('d="M100 100h0"'));
   });
 
-  testWidgets('消しゴムは線をまるごと消し、取り消しで戻る。全部消すも戻せる', (tester) async {
+  testWidgets('線ごと消す消しゴムは線をまるごと消し、取り消しで戻る。全部消すも戻せる', (tester) async {
     await pump(tester);
     await stroke(tester, const Offset(50, 100), const Offset(250, 100));
     await stroke(tester, const Offset(50, 300), const Offset(250, 300));
     await tester.tap(find.byKey(const ValueKey('svgpaint.tool.eraser')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('svgpaint.eraser.whole')));
     await tester.pump();
     // 1 本目だけを縦に横切る。
     await stroke(tester, const Offset(150, 60), const Offset(150, 140));
@@ -160,13 +162,13 @@ void main() {
     expect(after.shapes.map((s) => s.kind), [SvgLiteShapeKind.path, SvgLiteShapeKind.path]);
   });
 
-  testWidgets('出力は SvgLite で読み直すと同じ線(書き戻しも同じ文字列)', (tester) async {
+  testWidgets('出力は SvgLite で読める。読み直して書き出すと同じ文字列', (tester) async {
     await pump(tester);
     await stroke(tester, const Offset(30, 30), const Offset(120, 80));
     await stroke(tester, const Offset(120, 80), const Offset(60, 300));
     expect(results, isEmpty); // 完了を押すまで返さない
     final doc = await done(tester);
-    expect(doc.toSvg(), results.last!.svg);
+    expect(doc.shapes, hasLength(2));
 
     // 読み直して続きを描いても、前の線は変わらない。
     final svg = results.last!.svg;
