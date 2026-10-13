@@ -272,11 +272,11 @@ GoRoute get _postRoute => GoRoute(
 /// `user/:id` (+ `follows`) — nested under each tab.
 GoRoute get _userRoute => GoRoute(
       path: 'user/:id',
-      builder: (_, s) => UserPageScreen(userId: s.pathParameters['id']!, initial: s.extra is UserSummary ? s.extra as UserSummary : null),
+      builder: (_, s) => UserPageScreen(userId: s.pathParameters['id']!, initial: s.extra is UserSummary ? s.extra as UserSummary : null, account: s.uri.queryParameters['account']),
       routes: [
         GoRoute(
           path: 'follows',
-          builder: (_, s) => FollowsScreen(userId: s.pathParameters['id']!, initialFollowers: s.uri.queryParameters['tab'] == 'followers', user: s.extra is UserSummary ? s.extra as UserSummary : null),
+          builder: (_, s) => FollowsScreen(userId: s.pathParameters['id']!, initialFollowers: s.uri.queryParameters['tab'] == 'followers', user: s.extra is UserSummary ? s.extra as UserSummary : null, account: s.uri.queryParameters['account']),
         ),
       ],
     );
@@ -466,11 +466,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/post/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => PostDetailScreen(postId: s.pathParameters['id']!, initial: s.extra is Post ? s.extra as Post : null), routes: [
             GoRoute(path: 'reactions', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => ReactionsScreen(postId: s.pathParameters['id']!, initial: s.extra is Post ? s.extra as Post : null)),
           ]),
-          GoRoute(path: '/user/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => UserPageScreen(userId: s.pathParameters['id']!, initial: s.extra is UserSummary ? s.extra as UserSummary : null), routes: [
+          GoRoute(path: '/user/:id', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => UserPageScreen(userId: s.pathParameters['id']!, initial: s.extra is UserSummary ? s.extra as UserSummary : null, account: s.uri.queryParameters['account']), routes: [
             GoRoute(
               path: 'follows',
               parentNavigatorKey: _appNavigatorKey,
-              builder: (_, s) => FollowsScreen(userId: s.pathParameters['id']!, initialFollowers: s.uri.queryParameters['tab'] == 'followers', user: s.extra is UserSummary ? s.extra as UserSummary : null),
+              builder: (_, s) => FollowsScreen(userId: s.pathParameters['id']!, initialFollowers: s.uri.queryParameters['tab'] == 'followers', user: s.extra is UserSummary ? s.extra as UserSummary : null, account: s.uri.queryParameters['account']),
             ),
           ]),
           GoRoute(path: '/trend/:tag', parentNavigatorKey: _appNavigatorKey, builder: (_, s) => TrendScreen(tag: s.pathParameters['tag']!, account: s.uri.queryParameters['account'])),

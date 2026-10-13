@@ -730,5 +730,40 @@ void main() {
       await _settle();
       expect(events.where((x) => x.$1 == 'editCancelled'), hasLength(1));
     });
+
+    test('D-468: 同じプラグインのページを後から開かれたら(1 ページしか覚えない雛形)、下のページは触られたときに開き直してから渡す', () async {
+      late FakeSlotRuntime rt;
+      final c = container(plugins: {'store:$_boardId@1.0.0': () => rt = painter(events: [])});
+      await c.read(slotPluginsProvider.notifier).register('store:$_boardId@1.0.0', bytes: Uint8List.fromList(utf8.encode('board')), persist: false);
+      final slots = c.read(slotPluginsProvider.notifier);
+      final lower = CustomPageController(c, const CustomPageArgs(pluginId: _boardId));
+      addTearDown(lower.dispose);
+      lower.editorOpener = ({required aspect, svg, title}) => (result: Completer<SvgPaintResult?>().future, close: () {});
+      await lower.start();
+      await _settle();
+      final p = lower.plugin!;
+      expect(slots.isCurrentPage(p, lower.token), isTrue);
+      // 上に同じプラグインのページ(Swing など)を開く → 下のページはもう今のページではない。
+      final upper = CustomPageController(c, const CustomPageArgs(pluginId: _boardId, surface: 'swing'));
+      await upper.start();
+      await _settle();
+      expect((slots.isCurrentPage(p, lower.token), slots.isCurrentPage(p, upper.token)), (false, true));
+      // 上を閉じても、下は今のページに戻らない(プラグインは閉じたページしか覚えていなかった)。
+      upper.dispose();
+      await _settle();
+      expect(slots.isCurrentPage(p, lower.token), isFalse);
+      // 下のページを触る → 同じ token で page.open し直してから、その出来事を渡す。
+      final before = rt.calls.length;
+      lower.onRrlEvent('draw', 'tap', fn: 'draw');
+      await _settle();
+      final after = [for (final x in rt.calls.skip(before)) (x.$1, x.$2['token'])];
+      expect(after.take(2).toList(), [('page.open', lower.token), ('draw', lower.token)]);
+      expect(slots.isCurrentPage(p, lower.token), isTrue);
+      // 今のページなら開き直さない。
+      final again = rt.calls.length;
+      lower.onRrlEvent('draw', 'tap', fn: 'draw');
+      await _settle();
+      expect([for (final x in rt.calls.skip(again)) x.$1].where((f) => f == 'page.open'), isEmpty);
+    });
   });
 }

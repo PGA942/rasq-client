@@ -7,7 +7,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart' show GoRouter;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 // LayerInteraction は公開ライブラリから export されていない(レイヤーを「動かせない / 選べない」にする唯一の口)。
@@ -24,7 +23,6 @@ import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 import '../media/fow_avoid.dart';
 import '../../app/providers.dart';
 import '../../shell/column_takeover.dart';
-import '../../shell/third_column.dart' show fowColumnOf;
 import '../ads/export_ad.dart';
 import '../compose/post_image_fow.dart';
 import '../compose/post_video.dart';
@@ -256,14 +254,18 @@ typedef SvgPaintOpener = ({Future<SvgPaintResult?> result, VoidCallback close}) 
 /// カラムに重ねたときの id。
 const svgPaintTakeoverId = 'media.svg.editor';
 
-/// 落書きの編集画面を開く (D-465、契約 v0.22 `media.editor.open`)。**広い画面**(≥ [RasqSizes.tabletBreakpoint])は、ページの
-/// **隣のカラム**に重ねる(ページが第2カラムなら第3カラム、第3カラムなら第2カラム。D-057 のペインモデルのまま、ページは見えたまま)。
-/// **狭い画面**は全画面のルート。
+/// 落書きの編集画面を開く (D-465、契約 v0.22 `media.editor.open`)。**広い画面**(≥ [RasqSizes.tabletBreakpoint])で、ページが
+/// **カラムの中**([ColumnTakeoverHost] の下 = ホームのカラム / 第3カラム)にあれば、ページの**隣のカラム**に重ねる
+/// (ページが第2カラムなら第3カラム、第3カラムなら第2カラム。D-057 のペインモデルのまま、ページは見えたまま)。
+/// **狭い画面**と、**カラムの外の全画面のルート**(既定の Swing のビューワー `/swing`、`/custom/page/…`)は全画面のルート。
+/// D-468: 全画面のルートはカラムの上に被さっているので、カラムに重ねると編集画面がその下に隠れて見えなかった
+/// (広い画面で Swing に配った落書きの自分のマスを押しても、編集画面が出ない)。
 ({Future<SvgPaintResult?> result, VoidCallback close}) openSvgPaintEditor(BuildContext context, {required String aspect, String? svg, String? title}) {
   final args = ProMediaEditorArgs.svg(aspect: aspect, svg: svg, title: title);
-  if (MediaQuery.sizeOf(context).width >= RasqSizes.tabletBreakpoint && GoRouter.maybeOf(context) != null) {
+  final host = context.findAncestorWidgetOfExactType<ColumnTakeoverHost>();
+  if (MediaQuery.sizeOf(context).width >= RasqSizes.tabletBreakpoint && host != null) {
     final store = ProviderScope.containerOf(context, listen: false).read(columnTakeoverProvider.notifier);
-    final column = fowColumnOf(context) == 1 ? 0 : 1;
+    final column = host.column == 1 ? 0 : 1;
     final result = store.open<SvgPaintResult>(column, id: svgPaintTakeoverId, builder: (_) => ProMediaEditorScreen(args: args));
     return (result: result, close: () => store.close(column, id: svgPaintTakeoverId));
   }

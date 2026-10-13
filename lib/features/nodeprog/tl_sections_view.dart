@@ -318,14 +318,17 @@ class TlPostsDisplay extends ConsumerWidget {
   List<Widget> _users(List<Post> shown) {
     final count = <String, int>{};
     final users = <String, UserSummary>{};
+    // その人の投稿を引いたアカウント (D-469): 総合表示の TL ではアカウントごとに違う。人のページはそのアカウントで引く。
+    final via = <String, String>{};
     for (final p in shown) {
       count[p.author.key] = (count[p.author.key] ?? 0) + 1;
       users.putIfAbsent(p.author.key, () => p.author);
+      via.putIfAbsent(p.author.key, () => p.account.key);
     }
     final order = users.keys.toList()..sort((a, b) => count[b]!.compareTo(count[a]!));
     final picked = [for (final k in limit == null ? order : order.take(limit!)) users[k]!];
     if (picked.isEmpty) return const [RasqCaption('まだいません')];
-    return [UserList(key: const ValueKey('tl.display.users.list'), users: picked, shrinkWrap: true, subtitles: {for (final u in picked) u.id: '${count[u.key]} 件の投稿'})];
+    return [UserList(key: const ValueKey('tl.display.users.list'), users: picked, accountFor: (u) => via[u.key], shrinkWrap: true, subtitles: {for (final u in picked) u.id: '${count[u.key]} 件の投稿'})];
   }
 }
 

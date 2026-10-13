@@ -223,7 +223,7 @@ class NotificationTile extends ConsumerWidget {
         } else if (item.kind == NotificationKind.followRequest) {
           context.pushFollowRequests();
         } else if (item.actors.isNotEmpty) {
-          context.pushUser(item.actors.first);
+          context.pushUser(item.actors.first, account: item.account.key);
         }
       },
       child: Container(color: bg, padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.md), child: child),
@@ -255,14 +255,15 @@ class _SystemTile extends StatelessWidget {
 }
 
 /// 通知のアイコンを押した (D-449): その人のページへ。何人もいれば、名前から選ぶ。
-Future<void> openNotificationActor(BuildContext context, WidgetRef ref, List<UserSummary> actors) async {
+/// [account] = 通知を受けたアカウント(人の id はそのサーバーのもの、D-469)。
+Future<void> openNotificationActor(BuildContext context, WidgetRef ref, List<UserSummary> actors, {String? account}) async {
   if (actors.isEmpty) return;
-  if (actors.length == 1) return context.pushUser(actors.first);
+  if (actors.length == 1) return context.pushUser(actors.first, account: account);
   final box = context.findRenderObject() as RenderBox;
   final pick = await ref.read(overlayManagerProvider).showDropdown<int>(id: 'notif.actors', anchor: box.localToGlobal(Offset.zero) & box.size, dense: true, items: [
     for (var i = 0; i < actors.length; i++) RasqDropdownItem(actors[i].displayName.isEmpty ? '@${actors[i].account.handle}' : actors[i].displayName, i),
   ]);
-  if (pick != null && context.mounted) context.pushUser(actors[pick]);
+  if (pick != null && context.mounted) context.pushUser(actors[pick], account: account);
 }
 
 String _names(List<UserSummary> actors) {
@@ -297,7 +298,7 @@ class _ActionTile extends ConsumerWidget {
             builder: (bctx) => GestureDetector(
               key: ValueKey('notif.avatar.${item.id}'),
               behavior: HitTestBehavior.opaque,
-              onTap: () => openNotificationActor(bctx, ref, item.actors),
+              onTap: () => openNotificationActor(bctx, ref, item.actors, account: item.account.key),
               child: RasqGroupAvatar(users: item.actors, size: RasqSizes.avatarMd, maxVisible: 3),
             ),
           ),
@@ -354,7 +355,7 @@ class _FollowTile extends ConsumerWidget {
     return Row(children: [
       Icon(icon, color: scheme.primary, size: 24),
       const SizedBox(width: RasqSpacing.md),
-      if (u != null) RasqAvatar(key: ValueKey('notif.avatar.${item.id}'), imageUrl: u.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: u.displayName, onTap: () => context.pushUser(u)),
+      if (u != null) RasqAvatar(key: ValueKey('notif.avatar.${item.id}'), imageUrl: u.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: u.displayName, onTap: () => context.pushUser(u, account: item.account.key)),
       const SizedBox(width: RasqSpacing.sm),
       Expanded(child: RasqRichText([RasqTextSpan(u?.displayName ?? '', bold: true), RasqTextSpan(text)], style: RasqTypography.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)),
       if (u != null && item.kind != NotificationKind.followRequest) RasqTogglePillButton(label: 'フォロー', activeLabel: 'フォロー中', active: st.following, onPressed: () => ref.read(userListHelperProvider).toggleFollow(u)),

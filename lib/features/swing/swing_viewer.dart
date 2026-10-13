@@ -54,7 +54,9 @@ import '../profile/rasq_post_tile.dart' show RasqPostOverlayActions;
 ///   扱いにする(並びは開いた時点で決めているので、記録するだけ)。
 /// - **プラグイン**(ページ型、契約 v0.19。v0.20 / D-424 から親子関係の無いものは swing の宣言なし・shared も。shared は作った人のセッションに入る): 全画面で動かし、その間は**スワイプで移れない**。
 ///   「全画面から縮小」を押すと、ぼかして止め(`page.event paused`)、スワイプで移れるようにする。縮小したものを押すと
-///   全画面に戻る(`resumed`)。
+///   全画面に戻る(`resumed`)。D-468: 止めている(縮小した)間は、左右のスワイプに加えて**上下のスワイプ**でも次 / 前へ
+///   (案内の「上下にスワイプ」どおりに。上 = 次、下 = 前)。スワイプを止めるのは、止まりきったときにまだそのページが
+///   全画面で動いていたら(止まるまでに縮小した / 別のページへ移ったら掛けない)。
 ///
 /// D-413: **幅の広い画面では第3カラム**に開く([openSwingViewer]。狭い画面は前のとおり全画面)。**Swing の下に返信が続く**
 /// (D-389 のスレッド = 返信の一覧と返信の欄。下へスクロールすると出る。左下の欄のハンドル / 入力欄もそこへ送る)。
@@ -172,6 +174,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
 
   /// いまのプラグインが全画面で動いている(スワイプで移れない)。
   bool _locked = false;
+
+  /// いまのページが望んでいるロック(スクロールが止まりきってから掛けるので、それまでに変わったら掛けない、D-468)。
+  bool _wantLocked = false;
 
   /// 中央のタップで止めている。
   bool _paused = false;
@@ -470,14 +475,19 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
   }
 
   /// スワイプを止める / 戻す。ページが止まりきる前に物理を変えると、ページの途中で止まるので、止まってから。
+  /// D-468: 止まりきったときに、別のページへ移っていた / そのページがもうロックを望んでいない(縮小した = 止めた)なら掛けない
+  /// (前は掛けてしまい、テキストの Swing や縮小したプラグインでスワイプが効かなくなることがあった)。
   void _setLocked(bool v) {
+    _wantLocked = v;
     if (v == _locked) return;
     final pos = _pages.hasClients ? _pages.position : null;
     if (v && pos != null && pos.isScrollingNotifier.value) {
+      // ページの番号は通り過ぎた広告を外すとずれるので、並びの 1 つ(の鍵)で比べる。
+      final at = _index < _items.length ? _items[_index].key : null;
       void once() {
         if (pos.isScrollingNotifier.value) return;
         pos.isScrollingNotifier.removeListener(once);
-        if (mounted) _setLocked(true);
+        if (mounted && _wantLocked && _index < _items.length && _items[_index].key == at) _setLocked(true);
       }
 
       pos.isScrollingNotifier.addListener(once);
@@ -525,6 +535,7 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
     setState(() {
       _index = i;
       _locked = false;
+      _wantLocked = false;
       _paused = false;
       // 先へ 1 回スワイプして Swing に着いた: 数を減らし、次に広告を置くか決める(広告から着いたときは数えない)。
       if (i > prev && !fromAd && i < _items.length && _items[i].swing != null) {
@@ -700,6 +711,9 @@ class _SwingViewerScreenState extends ConsumerState<SwingViewerScreen> with Sing
                     onEnd: () {
                       if (i == _index) _next();
                     },
+                    onSwipe: (dir) {
+                      if (i == _index) dir > 0 ? _next() : _prev();
+                    },
                   );
                 },
               ),
@@ -726,7 +740,7 @@ String swingRemainingLabel(Duration d) {
 typedef SwingSeekableCallback = void Function(SwingSeekable seek, bool alive);
 
 class _SwingPage extends StatelessWidget {
-  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.onSeekable, this.covered = false, this.onReveal, this.onReport, this.viewCount, this.actions});
+  const _SwingPage({super.key, required this.swing, required this.active, required this.paused, required this.clock, required this.position, required this.onClose, required this.onTapZone, required this.onLockChanged, required this.onEnd, this.onSwipe, this.onSeekable, this.covered = false, this.onReveal, this.onReport, this.viewCount, this.actions});
 
   /// 上のアクション (D-445)。null = 出さない(スレッドの無い Swing / RASQ アカウントが無い)。
   final Widget? actions;
@@ -755,6 +769,9 @@ class _SwingPage extends StatelessWidget {
   final ValueChanged<bool> onLockChanged;
   final VoidCallback onEnd;
 
+  /// 止めたプラグインの上下のスワイプ (D-468): 1 = 次、-1 = 前。
+  final ValueChanged<int>? onSwipe;
+
   /// 1 つの Swing のページ。返信・シークバーは下の FOW (D-420)。
   @override
   Widget build(BuildContext context) {
@@ -764,7 +781,7 @@ class _SwingPage extends StatelessWidget {
       SwingKind.text => _TextBody(text: swing.text),
       SwingKind.image => _ImageBody(swing: swing),
       SwingKind.video => _VideoBody(swing: swing, active: live, paused: paused, onDone: onEnd, onSeekable: onSeekable),
-      SwingKind.plugin => _PluginBody(swing: swing, active: live, onLockChanged: onLockChanged, onEnd: onEnd),
+      SwingKind.plugin => _PluginBody(swing: swing, active: live, onLockChanged: onLockChanged, onEnd: onEnd, onSwipe: onSwipe),
     };
     final timed = swing.kind != SwingKind.plugin;
     return Stack(fit: StackFit.expand, children: [
@@ -1034,13 +1051,20 @@ class _VideoBodyState extends ConsumerState<_VideoBody> {
   }
 }
 
-/// プラグインの Swing: 全画面で動かす。「全画面から縮小」でぼかして止め、スワイプで移れるように。
+/// プラグインの Swing: 全画面で動かす。「全画面から縮小」でぼかして止め、スワイプで移れるように
+/// (左右はページのスワイプ、上下は [onSwipe]、D-468)。
 class _PluginBody extends ConsumerStatefulWidget {
-  const _PluginBody({required this.swing, required this.active, required this.onLockChanged, required this.onEnd});
+  const _PluginBody({required this.swing, required this.active, required this.onLockChanged, required this.onEnd, this.onSwipe});
   final Swing swing;
   final bool active;
   final ValueChanged<bool> onLockChanged;
   final VoidCallback onEnd;
+
+  /// 止めている間の上下のスワイプ: 1 = 次(上へ)、-1 = 前(下へ)。
+  final ValueChanged<int>? onSwipe;
+
+  /// 上下のスワイプで移る速さの下限(論理ピクセル / 秒)。
+  static const swipeVelocity = 300.0;
 
   @override
   ConsumerState<_PluginBody> createState() => _PluginBodyState();
@@ -1207,8 +1231,8 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
       child: SafeArea(child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 56, RasqSpacing.page, RasqSpacing.page), child: page)),
     );
     if (_shrunk) {
-      // 縮小: ぼかして止め、押すと全画面に戻る。
-      return GestureDetector(
+      // 縮小: ぼかして止め、押すと全画面に戻る。左右のスワイプはページ(ロックを外している)、上下はここで次 / 前へ (D-468)。
+      final shrunk = GestureDetector(
         key: const ValueKey('swing.plugin.shrunk'),
         onTap: () => _setShrunk(false),
         child: Center(
@@ -1225,12 +1249,24 @@ class _PluginBodyState extends ConsumerState<_PluginBody> {
                   const Icon(Icons.play_circle_outline, color: Colors.white, size: 48),
                   const SizedBox(height: RasqSpacing.xs),
                   Text('押すと全画面に戻ります', style: RasqTypography.caption.copyWith(color: Colors.white)),
-                  Text('上下にスワイプで次の Swing へ', style: RasqTypography.caption.copyWith(color: Colors.white70)),
+                  Text('左右・上下にスワイプで次の Swing へ', key: const ValueKey('swing.plugin.shrunk.hint'), style: RasqTypography.caption.copyWith(color: Colors.white70)),
                 ]),
               ),
             ]),
           ),
         ),
+      );
+      final onSwipe = widget.onSwipe;
+      if (onSwipe == null) return shrunk;
+      // 上下のスワイプは画面のどこでも(縮小したページの外でも)。
+      return GestureDetector(
+        key: const ValueKey('swing.plugin.paused'),
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragEnd: (d) {
+          final v = d.primaryVelocity ?? 0;
+          if (v.abs() >= _PluginBody.swipeVelocity) onSwipe(v < 0 ? 1 : -1);
+        },
+        child: shrunk,
       );
     }
     return Stack(fit: StackFit.expand, children: [
