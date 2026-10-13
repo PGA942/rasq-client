@@ -28,9 +28,18 @@ import '../ads/timeline_ads.dart';
 
 /// ユーザーページ(通常 / 自分 / 制限 / ノーヒット). タブ: ノート / 引用 / メディア / クリップ.
 class UserPageScreen extends ConsumerStatefulWidget {
-  const UserPageScreen({super.key, required this.userId, this.initial});
+  const UserPageScreen({super.key, required this.userId, this.initial, this.account});
   final String userId;
   final UserSummary? initial;
+
+  /// この人を引いたアカウント(`AccountId.key`、D-469)。ページはこのアカウントのセッションで引く。
+  /// null = [initial] の人自身のアカウント(D-155。自分のページならそのアカウント、ほかの人なら現在のアカウントへ縮退)。
+  final String? account;
+
+  /// ページを引くアカウント (D-469)。投稿の作者(`initial`)の `AccountId` は**その人の**サーバーとハンドルで、
+  /// ログイン中のアカウントではない(自分のときだけ一致する)ので、それで選ぶと、総合表示で現在のアカウントが別のサーバー /
+  /// 別の SNS のとき、ほかの人の id を別のサーバーで引いて「このユーザーは存在しないようです」になっていた。
+  String? get accountKey => account ?? initial?.account.key;
   @override
   ConsumerState<UserPageScreen> createState() => _UserPageScreenState();
 }
@@ -40,7 +49,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final acct = widget.initial?.account.key; // 属するアカウントで展開 (D-155)
+    final acct = widget.accountKey; // 引いたアカウントで展開 (D-155 / D-469)
     final profile = ref.watch(userProfileProvider((id: widget.userId, account: acct)));
     final me = ref.watch(currentUserProvider);
     // 見ているアカウント = このページを引いたセッションのアカウント (D-421。総合表示でも、そのアカウントの自分のページは「自分」)。
@@ -85,8 +94,8 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
                 onFollowTap: () => ref.read(userListHelperProvider).toggleFollow(p.summary, account: acct),
                 onEditTap: () => context.push(Routes.profileEdit),
                 onNotifyTap: () {},
-                onFollowingTap: () => context.pushFollows(p.summary, followers: false),
-                onFollowersTap: () => context.pushFollows(p.summary, followers: true),
+                onFollowingTap: () => context.pushFollows(p.summary, followers: false, account: acct),
+                onFollowersTap: () => context.pushFollows(p.summary, followers: true, account: acct),
                 onLinkTap: (u) => launchUrl(u, mode: LaunchMode.externalApplication),
               ),
               // この人の RASQ アカウントと、ほかにつないでいるアカウント (D-312)。制限中 / 凍結中は出さない。
@@ -112,7 +121,7 @@ class _UserPageScreenState extends ConsumerState<UserPageScreen> {
     if (u == null) return;
     final box = context.findRenderObject() as RenderBox?;
     final anchor = box == null ? const Rect.fromLTWH(0, 80, 1, 1) : Rect.fromLTWH(box.size.width - 48, 56, 40, 40);
-    final acct = widget.initial?.account.key;
+    final acct = widget.accountKey;
     // このページを開いているアカウント (D-155 / D-421)。RASQ リストの項目の id も、ミュート / ブロック / 報告も、このサーバーのもの。
     final viewer = ref.read(viewerForAccountProvider(acct));
     final st = viewer == null ? const FollowState() : ref.read(followStateProvider.notifier).of(viewer.key, followUserKey(viewer, u.id));
