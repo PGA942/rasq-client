@@ -70,6 +70,7 @@ import '../features/onboarding/onboarding_steps.dart';
 import '../features/onboarding/sns_discover_screen.dart';
 import '../features/onboarding/screen_glimpse.dart' show isValidGlimpseId;
 import '../features/onboarding/rasq_register_screen.dart';
+import '../features/onboarding/feature_tour_screen.dart';
 import '../features/store/installed_plugins_screen.dart';
 import '../features/store/plugin_page_screen.dart';
 import '../features/store/review_timeline_screen.dart';
@@ -120,6 +121,10 @@ abstract final class Routes {
   static const onboardingAccount = '/onboarding/account';
   static const onboardingTerms = '/onboarding/terms';
   static const onboardingSns = '/onboarding/sns';
+
+  /// RASQ の機能の紹介 (D-471): 入れてから最初のログインのあと / 設定・RAi から。`?skip=1` = 見たことがある(「スキップ」を出す)、
+  /// `?again=1` = 設定 / RAi から開いた。
+  static const featureTour = '/tour';
 
   /// SNS サービスを探す画面 (D-414): 画像・コンテンツ / 人 / エクスポート(準備中)/ RAi に聞く。オンボーディング中も開ける。
   static const snsDiscover = '/sns-discover';
@@ -570,6 +575,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: 'people', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverPeopleScreen()),
             GoRoute(path: 'ask', parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const DiscoverAskScreen()),
           ]),
+          // RASQ の機能の紹介 (D-471)。
+          GoRoute(
+              path: Routes.featureTour,
+              parentNavigatorKey: _appNavigatorKey,
+              builder: (_, s) => FeatureTourScreen(canSkip: s.uri.queryParameters['skip'] == '1', again: s.uri.queryParameters['again'] == '1')),
           // オンボーディングからも、サイドバーの RASQ アカウント FOW からも開く (D-405)。
           GoRoute(path: Routes.onboardingShowcase, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const OnboardingShowcaseScreen()),
           GoRoute(path: Routes.serverSignup, parentNavigatorKey: _appNavigatorKey, builder: (_, _) => const ServerSignupScreen()),

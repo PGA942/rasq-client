@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../backend/legal_docs.g.dart';
 import '../../shell/headers.dart';
 import '../login/terms_sheet.dart';
+import '../onboarding/feature_tour.dart' show featureTourLocation;
 
 /// アプリのバージョン(pubspec の version と揃える。package_info は入れていない)。
 const rasqAppVersion = '0.1.0+1';
@@ -26,6 +27,8 @@ class LegalScreen extends ConsumerWidget {
         const RasqSectionHeader(title: 'RASQ'),
         const RasqValueListTile(title: 'バージョン', value: rasqAppVersion),
         RasqListTile(title: 'ヘルプ', onTap: () => context.push('/settings/dsl/about.help')),
+        // RASQ の機能の紹介 (D-471) をもう一度。
+        RasqListTile(key: const ValueKey('legal.tour'), title: 'RASQ の使い方をもう一度見る', onTap: () => context.push(featureTourLocation(again: true))),
         // 規約・ポリシー (D-372): 草案の利用者向け本文から作った文書ページ(tool/legal/build_legal.py)。
         for (final d in rasqLegalDocs.values)
           RasqListTile(key: ValueKey('legal.doc.${d.area}'), title: d.title, onTap: () => context.push('/settings/dsl/${d.area}')),

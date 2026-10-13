@@ -99,6 +99,8 @@ const settingsSections = <String, SettingsSection>{
   'about': SettingsSection('RASQについて', [
     SettingsRow('RASQ サーバー', subtitle: 'つなぐ先のサーバー', detail: 'プラグインストア / RASQ アカウント / ログインの接続先', route: '/settings/server'),
     SettingsRow('ヘルプ', route: '/settings/dsl/about.help'),
+    // RASQ の機能の紹介 (D-471) をもう一度。RAi の `help.tour` もここ(とヘルプのページ)を指す。
+    SettingsRow('RASQ の使い方をもう一度見る', subtitle: '機能の紹介(TL・トレンド・ASTell・RAi など)', route: '${Routes.featureTour}?again=1'),
     SettingsRow('購読状況', route: '/settings/dsl/about.subscription'),
     SettingsRow('クッキーについて', route: '/settings/dsl/about.cookies'),
     SettingsRow('プライバシーポリシー', route: '/settings/dsl/about.privacy'),

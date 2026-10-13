@@ -9,6 +9,7 @@ import '../backend/rasq_account.dart';
 import '../backend/test_endpoints.dart';
 import '../features/home/reaction_history.dart';
 import '../features/learning/contribution.dart';
+import '../features/onboarding/feature_tour.dart' show featureTourProvider;
 import '../features/onboarding/screen_glimpse.dart' show notificationTapRouterProvider;
 import '../features/plugins/slot_plugins.dart';
 import '../features/media/video_player.dart' show VideoPrefs;
@@ -42,6 +43,8 @@ class RasqApp extends ConsumerWidget {
     ref.watch(pushBridgeProvider);
     // アルゴリズムとコミュニティへの貢献 (D-363): 同意しているあいだ束 / RAi のやりとりを集めて送る(状態の変化でアプリは建て直さない)。
     ref.listen(contributionProvider, (_, _) {});
+    // RASQ の機能の紹介 (D-471): 起動したときに「入れて最初の起動か」を見て、端末の印を立てておく(ログインより前に)。
+    ref.listen(featureTourProvider, (_, _) {});
     // 同意待ちの RASQ アカウント (D-371 / S-053): いまの版の利用規約を承諾していなければ、1 度だけ承諾のシート。
     ref.listen(orgateAccountProvider, (_, next) => _termsPrompt.onAccount(ref, next.value));
     final developerMode = ref.watch(developerModeProvider);

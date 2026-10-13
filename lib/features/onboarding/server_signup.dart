@@ -18,6 +18,7 @@ import '../collections/rasq_list_picker.dart' show importRasqListToHomeWith;
 import '../collections/rasq_collections.dart' show hasRasqAccountProvider;
 import '../plugins/slot_plugins.dart' show rootMessengerKeyProvider;
 import '../post/post_resolve.dart';
+import 'feature_tour.dart' show featureTourHoldSignup, featureTourHoldsProvider;
 import 'rasq_account_nudge.dart' show requestRasqAccountNudge;
 import 'signup_pointer.dart';
 import '../rai/rai_widgets.dart' show RaiIcon;
@@ -383,14 +384,22 @@ class _ExternalSignupPanel extends StatelessWidget {
 ///
 /// D-413: タイルから登録した人は RASQ アカウントの問いを通っていないので、ここまで済んだら(最初のオンボーディングの終わり)
 /// RASQ アカウントのポップアップを 1 回だけ頼む([requestRasqAccountNudge]。持っている人には出さない)。
+///
+/// D-471: ここまでが SNS の新規登録のオンボーディング。終わるまで RASQ の機能の紹介([featureTourHoldsProvider])を待たせる
+/// (ポップアップを頼んだら、ポップアップが閉じるまではそちらが待たせる)。
 Future<void> followSignupTarget(ProviderContainer c, AccountId account) async {
   final t = c.read(serverSignupTargetProvider);
   if (t == null || t.host != account.instance) return;
   c.read(serverSignupTargetProvider.notifier).set(null);
+  final holds = c.read(featureTourHoldsProvider.notifier)..hold(featureTourHoldSignup);
   try {
     await _openSignupTarget(c, t, account);
   } finally {
-    if (t.nudgeRasqAccount) await requestRasqAccountNudge(c);
+    try {
+      if (t.nudgeRasqAccount) await requestRasqAccountNudge(c);
+    } finally {
+      holds.release(featureTourHoldSignup);
+    }
   }
 }
 
