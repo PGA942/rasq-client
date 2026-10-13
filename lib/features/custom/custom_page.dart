@@ -288,14 +288,7 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
       }
     }
     if (_disposed || plugin == null) return; // 入るあいだに止められた / 閉じた
-    final r = await _slots.pageOpen(p, token: token, sink: this, args: {
-      'surface': args.surface,
-      'context': {'roomId': ?args.roomId, 'profileHandle': ?args.profileHandle, 'profileAccountId': ?args.profileAccountId, ...args.context},
-      'me': me!.toJson(),
-      if (session != null) 'session': _sessionJson(),
-      'size': {'width': size.width.round(), 'height': size.height.round()},
-      'now': nowMs,
-    });
+    final r = await _slots.pageOpen(p, token: token, sink: this, args: _openArgs());
     if (plugin == null || phase == CustomPagePhase.blocked) return; // 開くあいだに保護者が止めた
     if (_slots.pageBlockReason(p) case final blocked?) return _block(blocked);
     _set(() {
@@ -308,6 +301,36 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
         title = r.title;
       }
     });
+  }
+
+  /// `page.open` の args(token は口が足す)。
+  Map<String, Object?> _openArgs() => {
+        'surface': args.surface,
+        'context': {'roomId': ?args.roomId, 'profileHandle': ?args.profileHandle, 'profileAccountId': ?args.profileAccountId, ...args.context},
+        'me': me!.toJson(),
+        if (session != null) 'session': _sessionJson(),
+        'size': {'width': size.width.round(), 'height': size.height.round()},
+        'now': nowMs,
+      };
+
+  /// 開き直しているところ(重ねて呼ばない)。
+  Future<void>? _reopening;
+
+  /// 同じプラグインのページを後から開かれていたら(このページはもうプラグインに覚えられていない)、同じ token で
+  /// `page.open` し直す (D-468)。セッションの値は手元に持っているので、そのときの値で描き直す。
+  /// 呼ぶのは、このページがまた触られたとき([onRrlEvent])と、また見えたとき(画面が呼ぶ)。
+  Future<void> reopenIfSuperseded() {
+    final p = plugin;
+    if (_disposed || p == null || phase != CustomPagePhase.ready || me == null || _slots.isCurrentPage(p, token)) return Future.value();
+    return _reopening ??= () async {
+      try {
+        final r = await _slots.pageOpen(p, token: token, sink: this, args: _openArgs());
+        if (_disposed || plugin != p || phase != CustomPagePhase.ready) return;
+        if (r.root != null) render(r.root!, r.title);
+      } finally {
+        _reopening = null;
+      }
+    }();
   }
 
   Map<String, Object?> _sessionJson() => {
@@ -494,6 +517,13 @@ class CustomPageController extends ChangeNotifier implements PluginPageSink {
     if (p == null || fn == null) return;
     // 保護者が止めたプラグインには渡さない (D-451)。
     if (_slots.pageBlockReason(p) case final blocked?) return _block(blocked);
+    // 後から同じプラグインのページを開かれていたら、開き直してから渡す (D-468。古い token の出来事はプラグインが捨てる)。
+    if (!_slots.isCurrentPage(p, token)) {
+      unawaited(reopenIfSuperseded().then((_) {
+        if (!_disposed && plugin == p) p.value(fn, {'token': token, 'nodeId': nodeId, 'kind': kind, 'now': nowMs, ...payload});
+      }));
+      return;
+    }
     p.value(fn, {'token': token, 'nodeId': nodeId, 'kind': kind, 'now': nowMs, ...payload});
   }
 
@@ -535,10 +565,20 @@ class CustomPageScreen extends ConsumerStatefulWidget {
 class _CustomPageScreenState extends ConsumerState<CustomPageScreen> {
   CustomPageController? _c;
 
+  /// このページの画面がいちばん上にある(戻ってきたかを見る、D-468)。
+  bool _routeCurrent = true;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_c != null) return;
+    // 上に重ねた画面(同じプラグインの Swing など)から戻ってきたら、後から開かれたページに取られていれば開き直す (D-468)。
+    final current = ModalRoute.of(context)?.isCurrent ?? true;
+    final back = current && !_routeCurrent;
+    _routeCurrent = current;
+    if (_c != null) {
+      if (back) unawaited(_c!.reopenIfSuperseded());
+      return;
+    }
     final size = MediaQuery.sizeOf(context);
     _c = CustomPageController(ProviderScope.containerOf(context), widget.args, size: size)
       ..addListener(_changed)

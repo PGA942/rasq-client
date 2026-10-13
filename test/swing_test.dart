@@ -646,6 +646,94 @@ void main() {
     expect(seen, ['p1', 'p2']);
   });
 
+  testWidgets('D-468: プラグインの Swing を止めた(縮小した)間は上下のスワイプでも次 / 前へ。全画面の間は上下でも移れない', (tester) async {
+    final (mock, seen, _, _) = central([
+      swing('p1', 'alice', kind: 'plugin', text: '', plugin: {'id': 'sample.swing-game', 'version': '1.0.0', 'data': {'level': 3}}, age: const Duration(minutes: 30)),
+      swing('p2', 'alice', kind: 'plugin', text: '', plugin: {'id': 'sample.swing-game', 'version': '1.0.0', 'data': {'level': 4}}, age: const Duration(minutes: 20)),
+      swing('t1', 'alice', text: 'さいご', age: const Duration(minutes: 10)),
+    ]);
+    final events = <String>[];
+    FakeSlotRuntime game() => FakeSlotRuntime(
+          manifest: const {
+            'id': 'sample.swing-game',
+            'name': 'ゲーム',
+            'version': '1.0.0',
+            'kind': 'view',
+            'slots': ['page'],
+            'permissions': ['render'],
+            'page': {'title': 'ゲーム', 'mode': 'solo', 'surfaces': ['swing']},
+          },
+          handler: (rt, fn, args) {
+            switch (fn) {
+              case 'page.open':
+                final level = ((args['context'] as Map)['data'] as Map)['level'];
+                return {
+                  'root': {'t': 'Column', 'k': 'root', 'c': [{'t': 'Text', 'k': 'lv', 'p': {'text': 'レベル $level'}}]},
+                };
+              case 'page.event':
+                events.add('${args['type']}');
+                return {};
+            }
+            return {};
+          },
+        );
+    final c = await pumpApp(tester, mock, extra: [slotRuntimeLoaderProvider.overrideWithValue(fakeSlotLoader({'store:sample.swing-game@1.0.0': game}))]);
+    await tester.runAsync(() => c.read(slotPluginsProvider.notifier).register('store:sample.swing-game@1.0.0', bytes: Uint8List.fromList(utf8.encode('game')), persist: false));
+    await tester.pumpAndSettle();
+    c.read(routerProvider).push(Routes.swing('alice'));
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.text('レベル 3'), findsOneWidget);
+    Future<void> settle() async {
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pumpAndSettle();
+    }
+
+    // 全画面(動いている)の間は、上下でも移れない(ページが入力を使う)。
+    await tester.fling(find.byKey(const ValueKey('swing.plugin.page')), const Offset(0, -300), 1500);
+    await settle();
+    expect(find.text('レベル 3'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.plugin.paused')), findsNothing);
+
+    // 止める(縮小)→ 案内は「左右・上下」、上へスワイプで次へ。
+    await tester.tap(find.byKey(const ValueKey('swing.plugin.shrink')));
+    await tester.pumpAndSettle();
+    expect(events, contains('paused'));
+    expect(find.text('左右・上下にスワイプで次の Swing へ'), findsOneWidget);
+    await tester.fling(find.byKey(const ValueKey('swing.plugin.paused')), const Offset(0, -300), 1500);
+    await settle();
+    expect(find.text('レベル 4'), findsOneWidget);
+    // 着いた先は全画面で動く(止めていない)= 上下でも左右でも移れない。
+    expect(find.byKey(const ValueKey('swing.plugin.shrink')), findsOneWidget);
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
+    await settle();
+    expect(find.text('レベル 4'), findsOneWidget);
+
+    // 止めて、下へスワイプで前へ(戻ったページは全画面で開き直す)。
+    await tester.tap(find.byKey(const ValueKey('swing.plugin.shrink')));
+    await tester.pumpAndSettle();
+    await tester.fling(find.byKey(const ValueKey('swing.plugin.paused')), const Offset(0, 300), 1500);
+    await settle();
+    expect(find.text('レベル 3'), findsOneWidget);
+    expect(find.byKey(const ValueKey('swing.plugin.shrink')), findsOneWidget);
+
+    // ゆっくり動かしただけ(速さが足りない)では移らない。
+    await tester.tap(find.byKey(const ValueKey('swing.plugin.shrink')));
+    await tester.pumpAndSettle();
+    await tester.timedDrag(find.byKey(const ValueKey('swing.plugin.paused')), const Offset(0, -40), const Duration(seconds: 1));
+    await settle();
+    expect(find.byKey(const ValueKey('swing.plugin.shrunk')), findsOneWidget);
+    // 止めたまま左右のスワイプでも次へ(前のとおり)。
+    await tester.fling(find.byKey(const ValueKey('swing.viewer.pages')), const Offset(-250, 0), 1000);
+    await settle();
+    expect(find.text('レベル 4'), findsOneWidget);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    expect(seen, containsAll(['p1', 'p2']));
+  });
+
   testWidgets('プラグインが入っていなければストアへ案内し、スワイプで移れる', (tester) async {
     final (mock, _, _, _) = central([
       swing('p1', 'alice', kind: 'plugin', text: '', plugin: {'id': 'sample.not-installed'}, age: const Duration(minutes: 30)),
