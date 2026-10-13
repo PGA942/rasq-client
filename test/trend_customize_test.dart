@@ -30,7 +30,8 @@ void main() {
       expect(defaultTlConfig(trendTodayScope).sources.single.tl, 'featured');
       expect(defaultTlConfig('trend').postSources.single.tl, pageSearchKind);
       final page = defaultTlConfig(trendTilesScope);
-      expect([for (final s in page.sources) '${s.label}: ${[for (final c in s.children) c.tl].join(', ')}'], ['トレンド: $trendTagsKind', 'Today: featured']);
+      expect([for (final s in page.sources) '${s.label}: ${[for (final c in s.children) c.tl].join(', ')}'], ['トレンド: $trendTagsKind', 'Today: featured', ': ']);
+      expect(page.sources.last.tl, trendPluginKindPrefix, reason: '末尾は「検索の候補」(トレンドプラグインのノード、D-470)');
       expect(page.sources.first.children.single.account, '', reason: '全部のアカウントのトレンド');
       expect(page.clock, '');
       final g = compileTlConfig(defaultTlConfig('trend'), scope: 'trend');
@@ -43,13 +44,13 @@ void main() {
             'layout': TlConfig.sectionsLayout,
           });
       final one = trendPageConfig(legacy(['@a@m.example']));
-      expect([for (final s in one.sources) s.label], ['トレンド', 'Today']);
+      expect([for (final s in one.sources) s.label], ['トレンド', 'Today', '']); // 末尾は「検索の候補」(D-470)
       expect(one.sources.first.children.single.account, '@a@m.example');
       expect(one.algorithms.single.query, '月見');
       expect(trendPageConfig(legacy(['@a@m.example', '@b@bsky.social'])).sources.first.children.single.account, '');
       const mine = TlConfig(sources: [TlSourceComponent(tl: trendTagsKind, account: '@a@m.example')], clock: '');
       expect(trendPageConfig(mine).sources.single.tl, trendTagsKind, reason: 'いまの版で保存したものはそのまま');
-      expect(trendPageConfig(null).sources.length, 2);
+      expect(trendPageConfig(null).sources.length, 3);
     });
 
     test('「画面の投稿」(self)の名前はスコープごとに厳密に (D-443、前は「この画面の基礎タイムライン」)', () {
@@ -187,10 +188,14 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('trend.customize')));
     await tester.pumpAndSettle();
     expect(find.byType(TimelineConfigScreen), findsOneWidget);
+    // 刺激性の既定 (D-470) は効く設定なので、ここでは制限なしで保存した人で見る。
+    await c.read(settingsAreaProvider('storage.safe').notifier).set(TendencyProfile.slot, const TendencyProfile(stimulus: {}).toJson());
+    c.invalidate(tendencyProfileProvider);
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('tlconfig.tendency.pinned')), findsNothing, reason: '傾向が何も効かない設定なら出さない');
 
     // 傾向 FOW で好きなジャンルを決めた → 一番最後に固定の項目。
-    await c.read(settingsAreaProvider('storage.safe').notifier).set(TendencyProfile.slot, const TendencyProfile(genres: ['花火']).toJson());
+    await c.read(settingsAreaProvider('storage.safe').notifier).set(TendencyProfile.slot, const TendencyProfile(genres: ['花火'], stimulus: {}).toJson());
     c.invalidate(tendencyProfileProvider);
     await tester.pumpAndSettle();
     final pinned = find.byKey(const ValueKey('tlconfig.tendency.pinned'));

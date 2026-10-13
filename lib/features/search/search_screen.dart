@@ -14,7 +14,6 @@ import '../../app/router.dart';
 import '../nodeprog/tl_components.dart' show trendPageConfig, trendTilesScope;
 import '../nodeprog/tl_config_store.dart' show tlViewConfigProvider;
 import '../nodeprog/tl_sections_view.dart' show TlBlocks, tlSectionsRefreshProvider;
-import '../plugins/slot_plugins.dart';
 import '../../shell/rasq_shell.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../child_safe/child_safe_screens.dart' show ChildSafeBlockedView, ChildSafeGreyed;
@@ -29,7 +28,8 @@ import 'search_history.dart';
 import 'search_filter_bar_view.dart';
 
 /// 検索ホーム / トレンドホーム = トレンドページ (D-443): 広告枠(AdSlot) → トレンドページの構成の並び(既定は「トレンド」
-/// (ワード一覧)と「Today」のセクション)→ トレンドプラグインのサジェスト。
+/// (ワード一覧)と「Today」のセクション → 「検索の候補」= トレンドプラグインのノード)。
+/// トレンドプラグインのサジェストは D-470 から並びのノード(`trendplugin:`、[trendPageConfig] が前の構成にも足す)。前は並びの後ろの固定の置き場だった。
 /// Phase-1 sample sources trends from the SNS (`hashtags/trend`) and Today
 /// from `notes/featured` until the trend provider / server exists.
 ///
@@ -168,8 +168,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           if (settingValue(ref, 'resources', 'showAds', true) != false) const Center(key: ValueKey('search.ad'), child: ExportAdSlot()),
           if (nodes.isEmpty) RasqSectionHeader(title: 'トレンドページ', trailing: settings),
           TlBlocks(key: const ValueKey('search.blocks'), nodes: nodes, trends: trends, headerTrailing: (i) => i == 0 ? settings : null),
-          // トレンドプラグインのサジェスト (D-167、スロット `trend.suggest`)。
-          _TrendSuggestions(recent: [for (final t in trends.value ?? const <TrendTag>[]) t.tag]),
           const SizedBox(height: 80),
         ]),
       );
@@ -227,34 +225,6 @@ class TrendTile extends ConsumerWidget {
           }),
         ]),
       ),
-    );
-  }
-}
-
-class _TrendSuggestions extends ConsumerWidget {
-  const _TrendSuggestions({required this.recent});
-  final List<String> recent;
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final plugins = ref.watch(slotPluginsForProvider(SlotIds.trendSuggest));
-    if (plugins.isEmpty) return const SizedBox.shrink();
-    final scheme = Theme.of(context).colorScheme;
-    return FutureBuilder(
-      future: ref.read(slotPluginsProvider.notifier).trendSuggest(recent),
-      builder: (context, snap) {
-        final items = snap.data ?? const [];
-        if (items.isEmpty) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('検索の候補(${items.first.plugin.manifest.name})', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
-            const SizedBox(height: RasqSpacing.xs),
-            Wrap(spacing: RasqSpacing.xs, runSpacing: RasqSpacing.xs, children: [
-              for (final it in items) ActionChip(label: Text('#${it.text}'), tooltip: it.reason, onPressed: () => context.pushTrend(it.text)),
-            ]),
-          ]),
-        );
-      },
     );
   }
 }

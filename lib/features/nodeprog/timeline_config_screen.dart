@@ -582,6 +582,12 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     if (s.isAstell) return (Icons.settings_input_antenna, 'ASTell のタイル', 'RASQ', 'いま開いている ASTell のルーム(${s.limit} 件まで)');
     if (s.isSwing) return (Icons.motion_photos_on_outlined, 'Swing', 'RASQ', 'Swing を出している人(${s.limit} 件まで)');
     if (s.isTrendFollowing) return (Icons.people_outline, 'フォロー中の反応', 'RASQ', 'フォロー中の人の、このページのワード / タグの投稿');
+    // トレンドプラグインのノード (D-470): 形式(トレンドを取得 / Today / カスタム)は … / 詳細で切り替える。
+    if (s.isTrendPlugin) {
+      final plugins = ref.read(slotPluginsForProvider(SlotIds.trendSuggest));
+      final name = s.trendPluginId.isEmpty ? '入れているトレンドプラグイン全部' : plugins.where((p) => p.id == s.trendPluginId).firstOrNull?.manifest.name ?? '${s.trendPluginId}(入っていません)';
+      return (s.form.icon, s.form.label, 'トレンドプラグイン', '$name ・ ${trendNodeFormDescription(s.form)}');
+    }
     // SNS アカウントごとの取得元 (D-440)。トレンドは「トレンドを取得」ノードで、種別を切り替える (D-442)。
     final who = s.account.isEmpty ? '(現在のアカウント)' : s.account;
     if (s.isTrendTags) {
@@ -622,12 +628,21 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       // トレンドを取得 (D-442): 種別(トレンドタイル / トレンド TL)を切り替える。ブロック(AsTell / Swing / タイル)は件数。
       if (!algorithm && _scope != trendTilesScope && (_cfg.sources[i].isTrend || _cfg.sources[i].isTrendTags)) RasqDropdownItem(_cfg.sources[i].isTrend ? '種別をトレンドタイルに' : '種別をトレンド TL に', 'kind'),
       if (!algorithm && _cfg.sources[i].isBlock && !_cfg.sources[i].isSection) RasqDropdownItem('件数: ${_cfg.sources[i].limit}', 'limit'),
+      // トレンドプラグインのノード (D-470): 形式。Today の形式は投稿を出すので表示モードも。
+      if (!algorithm && _cfg.sources[i].isTrendPlugin) RasqDropdownItem('形式: ${_cfg.sources[i].form.label}', 'form'),
+      if (!algorithm && _cfg.sources[i].isTrendPlugin && _cfg.sources[i].form == TrendNodeForm.today) RasqDropdownItem('表示モード: ${_cfg.sources[i].display.label}', 'display'),
       const RasqDropdownItem('削除', 'delete', destructive: true),
     ]);
     if (pick == null || !mounted || !anchorContext.mounted) return;
     switch (pick) {
       case 'kind':
         _replaceNode((section: null, index: i), _switchTrendKind(_cfg.sources[i]));
+      case 'form':
+        final f = await _dropdown(anchorContext, 'tlconfig.form', [for (final f in TrendNodeForm.values) (f.name, f.label)], current: _cfg.sources[i].form.name);
+        if (f != null && mounted) _replaceNode((section: null, index: i), _cfg.sources[i].copyWith(form: TrendNodeForm.byName(f)));
+      case 'display':
+        final m = await _dropdown(anchorContext, 'tlconfig.display.node', [for (final m in TlDisplayMode.values) (m.name, m.label)], current: _cfg.sources[i].display.name);
+        if (m != null && mounted) _replaceNode((section: null, index: i), _cfg.sources[i].copyWith(display: TlDisplayMode.byName(m)));
       case 'limit':
         final n = await _dropdown(anchorContext, 'tlconfig.limit', [for (final n in TlSourceComponent.limits) ('$n', '$n 件')], current: '${_cfg.sources[i].limit}');
         if (n != null && mounted) _replaceNode((section: null, index: i), _cfg.sources[i].copyWith(limit: int.parse(n)));
@@ -1076,8 +1091,8 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
     final c = _cfg.sources[i].children[k];
     final scheme = Theme.of(context).colorScheme;
     final (icon, title, subtitle, description) = _sourceInfo(c);
-    final showsPosts = !c.isBlock;
-    final meta = [subtitle, if (showsPosts || c.isTrendFollowing) c.display.label, '${c.limit} 件', if (!c.enabled) '無効化中'].join(' ・ ');
+    final showsPosts = !c.isBlock || c.isTrendFollowing || (c.isTrendPlugin && c.form == TrendNodeForm.today);
+    final meta = [subtitle, if (showsPosts) c.display.label, '${c.limit} 件', if (!c.enabled) '無効化中'].join(' ・ ');
     return Row(key: ValueKey('tlconfig.section.$i.child.$k'), children: [
       Expanded(
         child: Opacity(
@@ -1131,7 +1146,8 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       const RasqDropdownItem('プラグインのストアページへ移動', 'store', enabled: false),
       if (_scope != trendTilesScope && (c.isTrend || c.isTrendTags)) RasqDropdownItem(c.isTrend ? '種別をトレンドタイルに' : '種別をトレンド TL に', 'kind'),
       RasqDropdownItem('件数: ${c.limit}', 'limit'),
-      if (!c.isBlock || c.isTrendFollowing) RasqDropdownItem('表示モード: ${c.display.label}', 'display'),
+      if (c.isTrendPlugin) RasqDropdownItem('形式: ${c.form.label}', 'form'),
+      if (!c.isBlock || c.isTrendFollowing || (c.isTrendPlugin && c.form == TrendNodeForm.today)) RasqDropdownItem('表示モード: ${c.display.label}', 'display'),
       const RasqDropdownItem('セクションから出す', 'out'),
       const RasqDropdownItem('削除', 'delete', destructive: true),
     ]);
@@ -1150,6 +1166,9 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
         if (n != null && mounted) _replaceNode(at, c.copyWith(limit: int.parse(n)));
       case 'kind':
         _replaceNode(at, _switchTrendKind(c));
+      case 'form':
+        final f = await _dropdown(anchorContext, 'tlconfig.child.form', [for (final f in TrendNodeForm.values) (f.name, f.label)], current: c.form.name);
+        if (f != null && mounted) _replaceNode(at, c.copyWith(form: TrendNodeForm.byName(f)));
       case 'toggle':
         _replaceNode(at, c.copyWith(enabled: !c.enabled));
       case 'out':
@@ -1254,6 +1273,7 @@ class _TimelineConfigScreenState extends ConsumerState<TimelineConfigScreen> {
       ),
       Builder(
           builder: (ctx) => RasqIconButton(
+              key: ValueKey('tlconfig.${algorithm ? 'algo' : 'source'}.$i.more'),
               icon: Icons.more_horiz,
               size: 18,
               tooltip: algorithm ? 'アルゴリズムの操作' : 'タイムラインの操作',
@@ -1508,6 +1528,13 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
       source(const TlSourceComponent(tl: astellSectionKind), icon: Icons.settings_input_antenna, title: 'ASTell のタイル', subtitle: 'RASQ', description: 'いま開いている ASTell のルームをタイルで出します。'),
       source(const TlSourceComponent(tl: swingSectionKind), icon: Icons.motion_photos_on_outlined, title: 'Swing', subtitle: 'RASQ', description: 'Swing を出している人を並べます。'),
     ];
+    // トレンドプラグインのノード (D-470): 入れているトレンドプラグイン(`trend.suggest`)ごとに、形式(トレンドを取得 / Today / カスタム)。
+    final trendPlugins = [
+      for (final p in ref.watch(slotPluginsForProvider(SlotIds.trendSuggest)))
+        for (final f in TrendNodeForm.values)
+          source(TlSourceComponent(tl: '$trendPluginKindPrefix${p.id}', form: f, limit: f == TrendNodeForm.chips ? 10 : 5),
+              icon: f.icon, title: '${f.label}: ${p.manifest.name}', subtitle: 'トレンドプラグイン', description: trendNodeFormDescription(f), detail: '${trendNodeFormDescription(f)}(スロット trend.suggest の答えを、この形式のノードで出します)'),
+    ];
     // Today (D-440): アカウントごとの featured(Today / 注目)。出せる SNS だけ。
     final todays = [
       for (final a in accounts)
@@ -1521,6 +1548,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
         for (final a in accounts)
           source(TlSourceComponent(tl: trendTagsKind, account: a, limit: 10), icon: Icons.trending_up, title: 'トレンド: $a', subtitle: 'SNSプラグイン', description: 'このアカウントのサーバーのトレンドのワードを、タイルで出します。'),
         ...todays,
+        ...trendPlugins,
         ...blocks,
       ];
     }
@@ -1535,7 +1563,8 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
               description: 'このアカウントで、このページの検索ワード / タグを検索した結果を取り込みます。',
               supported: allSns,
               add: () => widget.onAddSource(TlSourceComponent(tl: pageSearchKind, account: a)), drag: TlSourceComponent(tl: pageSearchKind, account: a)),
-      if (widget.scope == trendTodayScope) ...todays,
+      // Today (D-440 → D-470): どの TL にも置ける(前は Today の構成だけ)。
+      ...todays,
       // 画面の投稿 (D-124 → D-443): 名前は何を取り込むか(このリストの投稿 / このワードの検索結果 …)。
       source(const TlSourceComponent(tl: 'self'), icon: Icons.sync_alt, title: tlSelfLabel(widget.scope), subtitle: 'RASQ', description: '${tlSelfLabel(widget.scope)}をそのまま取り込みます。'),
       // RASQ の投稿 (D-283): SNS のアカウントではなく、RASQ アカウント(Central)のフィード。
@@ -1593,6 +1622,7 @@ class _ComponentPalettePanelState extends ConsumerState<_ComponentPalettePanel> 
           detail: 'トレンドタイル = サーバーのトレンドのワードのタイル、トレンド TL = いまのトレンド上位タグの検索結果を 1 本に合流した投稿。',
           supported: allSns,
           add: () => widget.onAddSource(TlSourceComponent(tl: trendTagsKind, account: current)), drag: TlSourceComponent(tl: trendTagsKind, account: current)),
+      ...trendPlugins,
       ...blocks,
       if (widget.scope == 'trend')
         _PaletteItem(
@@ -1833,6 +1863,20 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
       );
     }
     final s = cfg.sources[widget.index];
+    // トレンドプラグインのノード (D-470): 形式を選ぶ。
+    if (s.isTrendPlugin) {
+      return (
+        {'form': s.form.name},
+        RrlNode(t: 'Column', c: [
+          const RrlNode(t: 'Text', p: {
+            'text': 'トレンドプラグインが出した候補のワードを、選んだ形式で出します。',
+            'detail': 'スロット trend.suggest の答え(候補のワード)を、トレンドを取得 = トレンドのタイル / Today = 上位の語の投稿のダイジェスト / カスタム = 候補のチップ で出します。件数は … から。',
+          }),
+          _section('形式'),
+          for (final f in TrendNodeForm.values) _radio('form', f.label, f.name),
+        ]),
+      );
+    }
     if (s.isRasq) {
       return (
         const {},
@@ -1914,7 +1958,7 @@ class _ComponentParamsPanelState extends ConsumerState<_ComponentParamsPanel> {
       widget.onUpdate(cfg.copyWith(algorithms: next));
     } else {
       final cur = cfg.sources[widget.index];
-      var updated = cur.copyWith(tl: key == 'tl' ? '$value' : null, account: key == 'account' ? '$value' : null, label: key == 'label' ? '$value' : null);
+      var updated = cur.copyWith(tl: key == 'tl' ? '$value' : null, account: key == 'account' ? '$value' : null, label: key == 'label' ? '$value' : null, form: key == 'form' ? TrendNodeForm.byName(value) : null);
       if (key == 'account') {
         // アカウントを変えたら、その SNS に無い TL 種別 / 他アカウントのリストは選び直し (D-194)。
         if (!cur.isTrend && !cur.isList && !cur.isDm && !cur.isFeed && !cur.isSelf && !cur.isRasqList && !cur.isRasqSearch) {
