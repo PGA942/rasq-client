@@ -78,9 +78,12 @@ extension RasqNavigation on BuildContext {
   }
 
   void pushClip(ClipInfo clip) => push('/clips/detail', extra: clip);
-  void pushUser(UserSummary user) {
-    final loc = '${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}';
-    if (_inTab && openPageInPanes(this, id: 'user:${user.key}', title: user.displayName, location: loc, extra: user, builder: (_) => UserPageScreen(userId: user.id, initial: user))) return;
+  /// ユーザーページ。[account] (D-469) = その人を**引いたアカウント**(`AccountId.key`。投稿なら `post.account`、一覧なら
+  /// 一覧を引いたアカウント)。Misskey / Mastodon の人の id はそのサーバーの中でだけ通じるので、ページもそのアカウントの
+  /// セッションで引く。null = 従来どおり(その人自身のアカウントがログイン中ならそれ、無ければ現在のアカウント)。
+  void pushUser(UserSummary user, {String? account}) {
+    final loc = '${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}${_accountQuery(account)}';
+    if (_inTab && openPageInPanes(this, id: 'user:${user.key}${account == null ? '' : '@$account'}', title: user.displayName, location: loc, extra: user, builder: (_) => UserPageScreen(userId: user.id, initial: user, account: account))) return;
     push(loc, extra: user);
   }
   /// RASQ アカウントページ (D-425): ユーザーページと同じく、幅の広い画面(≥840dp)では**第3カラム**に開く
@@ -103,9 +106,11 @@ extension RasqNavigation on BuildContext {
     push(loc, extra: event);
   }
 
-  void pushFollows(UserSummary user, {required bool followers}) {
-    final loc = '${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}/follows${followers ? '?tab=followers' : ''}';
-    if (_inTab && openPageInPanes(this, id: 'follows:${user.key}:$followers', title: followers ? 'フォロワー' : 'フォロー中', location: loc, extra: user, builder: (_) => FollowsScreen(userId: user.id, initialFollowers: followers, user: user))) return;
+  /// フォロー中 / フォロワーの一覧。[account] (D-469) は [pushUser] と同じ(ユーザーページを引いたアカウント)。
+  void pushFollows(UserSummary user, {required bool followers, String? account}) {
+    final query = [if (followers) 'tab=followers', if (account != null) 'account=${Uri.encodeQueryComponent(account)}'];
+    final loc = '${_inTab ? _tabBase : ''}/user/${Uri.encodeComponent(user.id)}/follows${query.isEmpty ? '' : '?${query.join('&')}'}';
+    if (_inTab && openPageInPanes(this, id: 'follows:${user.key}:$followers${account == null ? '' : '@$account'}', title: followers ? 'フォロワー' : 'フォロー中', location: loc, extra: user, builder: (_) => FollowsScreen(userId: user.id, initialFollowers: followers, user: user, account: account))) return;
     push(loc, extra: user);
   }
   void pushFollowRequests() => push('${Routes.notifications}/requests');
@@ -169,3 +174,6 @@ bool routeInHistory(RouteMatchList config, String route) {
 
 /// トレンドTL のアカウント指定 (D-397): `?account=<AccountId.key>`。
 String _trendQuery(String? account) => account == null ? '' : '?account=${Uri.encodeQueryComponent(account)}';
+
+/// ユーザーページ / フォロー一覧を引くアカウントのクエリ (D-469)。
+String _accountQuery(String? account) => account == null ? '' : '?account=${Uri.encodeQueryComponent(account)}';

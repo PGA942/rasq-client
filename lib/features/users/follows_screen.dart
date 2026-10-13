@@ -10,22 +10,26 @@ import 'user_providers.dart';
 
 /// フォロー中 / フォロワー を表示 (tabs ∨フォロー中 / フォロワー).
 class FollowsScreen extends ConsumerWidget {
-  const FollowsScreen({super.key, required this.userId, this.initialFollowers = false, this.user});
+  const FollowsScreen({super.key, required this.userId, this.initialFollowers = false, this.user, this.account});
   final String userId;
   final bool initialFollowers;
   final UserSummary? user;
 
+  /// 一覧を引くアカウント(`AccountId.key`、D-469: ユーザーページを引いたアカウント)。null = [user] のアカウント(→ 無ければ現在)。
+  final String? account;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tabs = [const RasqTabItem('フォロー中'), const RasqTabItem('フォロワー')];
+    final acct = account ?? user?.account.key;
     return DefaultTabController(
       length: 2,
       initialIndex: initialFollowers ? 1 : 0,
       child: Scaffold(
         appBar: RasqPageHeader(title: user?.displayName ?? 'フォロー/フォロワー', onMore: () {}, bottom: RasqTabs(items: tabs)),
         body: TabBarView(children: [
-          _List(k: (id: userId, followers: false, account: user?.account.key)),
-          _List(k: (id: userId, followers: true, account: user?.account.key)),
+          _List(k: (id: userId, followers: false, account: acct)),
+          _List(k: (id: userId, followers: true, account: acct)),
         ]),
       ),
     );

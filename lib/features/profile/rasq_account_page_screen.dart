@@ -135,7 +135,8 @@ Future<void> openRasqSnsTile(BuildContext context, WidgetRef ref, RasqSnsTile t)
     try {
       final session = ref.read(pluginRegistryProvider).session(mine);
       final user = await session.userByHandle(t.handle, host: t.instance);
-      if (user != null && context.mounted) return context.pushUser(user.summary);
+      // 引いたアカウントで開く (D-469)。人の AccountId のままだと、現在のアカウントが別のサーバーのとき別のサーバーで引いていた。
+      if (user != null && context.mounted) return context.pushUser(user.summary, account: mine.account.key);
     } catch (_) {
       // 取れなければブラウザへ。
     }
@@ -446,6 +447,13 @@ class _SnsPostRow extends ConsumerWidget {
       menuPin: menuPin,
       actions: session?.actions ?? const [],
       onAction: (a, {args = const {}}) => ref.read(timelineProvider(TimelineKind.home).notifier).perform(p, a, args: args),
+      // その SNS のアカウントが無ければ、アイコン / 名前もブラウザで (D-469。アプリ内のページは現在のアカウントで引いて「存在しない」になる)。
+      onAuthorTap: mine != null
+          ? null
+          : () {
+              final url = snsProfileUrlOf(p.author);
+              if (url != null) launchUrl(url, mode: LaunchMode.externalApplication);
+            },
       onTap: mine != null
           ? () => context.pushPost(p)
           : () {
