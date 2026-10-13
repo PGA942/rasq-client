@@ -10,7 +10,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-ruzstd = "0.8"
+ruzstd = "0.9.1"
 
 [profile.release]
 opt-level = "z"
