@@ -11,6 +11,7 @@ import 'package:rasq_overlay/rasq_overlay.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../ads/export_ad.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../home/post_row.dart';
@@ -64,11 +65,12 @@ class PostImageTab {
   final String id;
   final String label;
 
-  static const mine = PostImageTab('mine', '自分の投稿');
-  static const reacted = PostImageTab('reacted', 'リアクション');
-  static const favorites = PostImageTab('favorites', 'ブックマーク');
+  // 名前はいまの表示の言語。
+  static PostImageTab get mine => PostImageTab('mine', appL10n.composeMediaTabMine);
+  static PostImageTab get reacted => PostImageTab('reacted', appL10n.composeMediaTabReacted);
+  static PostImageTab get favorites => PostImageTab('favorites', appL10n.composeMediaTabFavorites);
   static const astell = PostImageTab('astell', 'ASTell');
-  static const searches = PostImageTab('searches', '最近の検索');
+  static PostImageTab get searches => PostImageTab('searches', appL10n.composeMediaTabSearches);
 
   static List<PostImageTab> of(SnsSession session) => [for (final t in session.timelines) PostImageTab('tl:${t.id}', t.label), mine, reacted, favorites, astell, searches];
 }
@@ -76,17 +78,23 @@ class PostImageTab {
 /// 貼る投稿の見た目 (D-262)。一覧もこの見た目で並ぶ(見えているものが、そのまま画像になる)。
 enum PostTileStyle {
   /// スレッド展開時の本文(全文 + メディアを全部)。
-  thread('thread', 'スレッド'),
+  thread('thread'),
 
   /// タイムラインでの表示(長い本文は畳む)。
-  timeline('timeline', 'TL'),
+  timeline('timeline'),
 
   /// インライン表示(小アバター + 本文 3 行 + サムネイル)。一番小さい。
-  inline('inline', 'インライン');
+  inline('inline');
 
-  const PostTileStyle(this.id, this.label);
+  const PostTileStyle(this.id);
   final String id;
-  final String label;
+
+  /// 表示名(いまの表示の言語)。
+  String get label => switch (this) {
+        thread => appL10n.composeMediaStyleThread,
+        timeline => 'TL',
+        inline => appL10n.composeMediaStyleInline,
+      };
   static PostTileStyle of(String? id) => values.firstWhere((v) => v.id == id, orElse: () => timeline);
 }
 
@@ -137,8 +145,8 @@ Future<PostImageResult?> showPostImageFow(WidgetRef ref, {String? ownerId, int c
         ownerId: ownerId,
         spec: FowSpec(
           type: FowPanelType.widget,
-          title: 'ノート画像の追加',
-          cancelText: 'キャンセル',
+          title: appL10n.composeMediaPostImageTitle,
+          cancelText: appL10n.composeMediaCancel,
           // 下書きの FOW と同じ高さ(コンポーザーは子の FOW の高さぶん避けるので、高すぎると閉じる瞬間にコンポーザーがはみ出す)。
           initialHeightFactor: 0.6,
           minHeightFactor: 0.3,
@@ -149,10 +157,10 @@ Future<PostImageResult?> showPostImageFow(WidgetRef ref, {String? ownerId, int c
           // 決定は投稿を選ぶまで押せない。
           headerTrailing: ValueListenableBuilder<bool>(
             valueListenable: canConfirm,
-            builder: (ctx, ok, _) => TextButton(key: postImageConfirmKey, onPressed: ok ? () => confirm.value?.call() : null, child: const Text('決定')),
+            builder: (ctx, ok, _) => TextButton(key: postImageConfirmKey, onPressed: ok ? () => confirm.value?.call() : null, child: Text(ctx.l10n.composeMediaConfirm)),
           ),
         ),
-        semanticsLabel: 'ノート画像の追加',
+        semanticsLabel: appL10n.composeMediaPostImageTitle,
         builder: (_, _) => _Body(fowId: id, allowVideo: allowVideo && audioVideoSupported, confirmVideo: confirmVideo, canConfirm: canConfirm, confirm: confirm, onDone: (r) => manager.close(id, result: r)),
       )
       .whenComplete(() {
@@ -244,7 +252,7 @@ class _BodyState extends ConsumerState<_Body> {
 
   Future<void> _load({required bool reset}) async {
     final session = _session;
-    if (session == null) return setState(() => _error = 'アカウントがありません');
+    if (session == null) return setState(() => _error = context.l10n.composeMediaNoAccount);
     final tab = _tab ??= PostImageTab.of(session).first;
     final gen = ++_generation;
     setState(() {
@@ -281,13 +289,13 @@ class _BodyState extends ConsumerState<_Body> {
       if (!mounted || gen != _generation) return;
       setState(() {
         _loading = false;
-        _error = _search != null ? 'この SNS では投稿の検索が使えません' : 'この SNS では「${tab.label}」が使えません';
+        _error = _search != null ? context.l10n.composeMediaSearchUnsupported : context.l10n.composeMediaTabUnsupported(tab.label);
       });
     } catch (e) {
       if (!mounted || gen != _generation) return;
       setState(() {
         _loading = false;
-        _error = '取得できませんでした: $e';
+        _error = context.l10n.composeMediaFetchFailed('$e');
       });
     }
   }
@@ -389,10 +397,10 @@ class _BodyState extends ConsumerState<_Body> {
       final bytes = await capturePostTile(key);
       if (!mounted) return;
       // 選んだあとで遠くまでスクロールすると、タイルが画面に無くて写せない(一覧は見えるところだけ作る)。
-      if (bytes == null) return setState(() => _notice = '選んだ投稿が画面に出ている状態で、もう一度「決定」を押してください');
+      if (bytes == null) return setState(() => _notice = context.l10n.composeMediaCaptureRetry);
       widget.onDone((bytes: bytes, name: '$name.png', mimeType: 'image/png', post: post, still: null));
     } catch (e) {
-      if (mounted) setState(() => _notice = '動画にできませんでした: $e');
+      if (mounted) setState(() => _notice = context.l10n.composeMediaVideoFailed('$e'));
     } finally {
       if (mounted) {
         setState(() {
@@ -429,8 +437,8 @@ class _BodyState extends ConsumerState<_Body> {
             child: RasqInput(
               key: postImageFilterKey,
               controller: _filter,
-              hintText: _showingHistory ? '検索の履歴を絞り込む' : '一覧を絞り込む',
-              prefix: Builder(builder: (ctx) => RasqIconButton(key: const ValueKey('postImage.filter.menu'), icon: Icons.keyboard_arrow_down, size: 20, tooltip: '最近の検索から入れる', onPressed: () => _filterMenu(ctx))),
+              hintText: _showingHistory ? context.l10n.composeMediaFilterHistoryHint : context.l10n.composeMediaFilterListHint,
+              prefix: Builder(builder: (ctx) => RasqIconButton(key: const ValueKey('postImage.filter.menu'), icon: Icons.keyboard_arrow_down, size: 20, tooltip: context.l10n.composeMediaFilterFromHistoryTooltip, onPressed: () => _filterMenu(ctx))),
               onChanged: (_) => setState(() {}),
             ),
           ),
@@ -465,7 +473,7 @@ class _BodyState extends ConsumerState<_Body> {
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, 0),
           child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
-            Text('見た目', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+            Text(context.l10n.composeMediaStyleHeading, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(width: RasqSpacing.sm),
             for (final v in PostTileStyle.values)
               Padding(
@@ -485,20 +493,20 @@ class _BodyState extends ConsumerState<_Body> {
           ])),
         ),
       if (_search != null)
-        RasqListTile(key: const ValueKey('postImage.search.back'), leading: const Icon(Icons.arrow_back), title: '「$_search」の検索結果', subtitle: '最近の検索に戻る', chevron: false, onTap: () => _switchTab(PostImageTab.searches)),
+        RasqListTile(key: const ValueKey('postImage.search.back'), leading: const Icon(Icons.arrow_back), title: context.l10n.composeMediaSearchResultsTitle(_search!), subtitle: context.l10n.composeMediaSearchBack, chevron: false, onTap: () => _switchTab(PostImageTab.searches)),
       if (_excluded > 0)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs),
-          child: Text('公開範囲を限った投稿 $_excluded 件は出していません。', key: const ValueKey('postImage.excluded'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text(context.l10n.composeMediaExcludedNote(_excluded), key: const ValueKey('postImage.excluded'), style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         ),
       // 動く / 鳴る投稿を選んだとき (D-260): 動画にするか、その瞬間の静止画にするか。
       if (widget.allowVideo && widget.confirmVideo == null && _selected != null && postMotionOf(_selected!) != PostMotion.none)
-        RasqSwitchListTile(key: const ValueKey('postImage.asVideo'), title: postMotionLabel(postMotionOf(_selected!)), subtitle: 'オフ = その瞬間の静止画', value: _asVideo, enabled: !_capturing, onChanged: (v) => setState(() => _asVideo = v)),
+        RasqSwitchListTile(key: const ValueKey('postImage.asVideo'), title: postMotionLabel(postMotionOf(_selected!)), subtitle: context.l10n.composeMediaAsVideoOffNote, value: _asVideo, enabled: !_capturing, onChanged: (v) => setState(() => _asVideo = v)),
       // 書き出しの進み具合と、その間だけの広告の枠 (D-327)。
       if (_videoProgress != null)
         Padding(
           padding: const EdgeInsets.fromLTRB(RasqSpacing.page, 0, RasqSpacing.page, RasqSpacing.xs),
-          child: MediaExportProgress(progress: _videoProgress, label: '動画にしています…'),
+          child: MediaExportProgress(progress: _videoProgress, label: context.l10n.composeMediaExporting),
         ),
       if (_notice != null) Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.xs), child: Text(_notice!, style: RasqTypography.caption.copyWith(color: scheme.error))),
       ]))),
@@ -513,7 +521,7 @@ class _BodyState extends ConsumerState<_Body> {
   Widget _history(ColorScheme scheme) {
     final words = _filter.text.trim().toLowerCase();
     final entries = [for (final e in ref.watch(searchHistoryProvider)) if (words.isEmpty || e.query.toLowerCase().contains(words) || e.chips.any((c) => c.toLowerCase().contains(words))) e];
-    if (entries.isEmpty) return _message(scheme, words.isEmpty ? '最近の検索はありません(検索ホームで検索すると、ここに並びます)' : '当てはまる検索はありません');
+    if (entries.isEmpty) return _message(scheme, words.isEmpty ? context.l10n.composeMediaHistoryEmpty : context.l10n.composeMediaHistoryNoMatch);
     return ListView.separated(
       itemCount: entries.length,
       separatorBuilder: (_, _) => const Divider(height: 1),
@@ -548,7 +556,7 @@ class _BodyState extends ConsumerState<_Body> {
 
   Widget _list(ColorScheme scheme, List<Post> shown) {
     if (_error != null) return _message(scheme, _error!);
-    if (shown.isEmpty) return _loading ? const RasqLoading() : _message(scheme, _posts.isEmpty ? '投稿はありません' : '当てはまる投稿はありません(「もっと読む」で続きも探せます)');
+    if (shown.isEmpty) return _loading ? const RasqLoading() : _message(scheme, _posts.isEmpty ? context.l10n.composeMediaPostsEmpty : context.l10n.composeMediaPostsNoMatch);
     return ListView.separated(
       padding: const EdgeInsets.only(bottom: RasqSpacing.lg),
       itemCount: shown.length + 1,
@@ -556,7 +564,7 @@ class _BodyState extends ConsumerState<_Body> {
       itemBuilder: (_, i) {
         if (i == shown.length) {
           if (_cursor == null) return const SizedBox(height: RasqSpacing.md);
-          return Padding(padding: const EdgeInsets.all(RasqSpacing.sm), child: Center(child: _loading ? const RasqLoading() : TextButton(key: const ValueKey('postImage.more'), onPressed: () => _load(reset: false), child: const Text('もっと読む'))));
+          return Padding(padding: const EdgeInsets.all(RasqSpacing.sm), child: Center(child: _loading ? const RasqLoading() : TextButton(key: const ValueKey('postImage.more'), onPressed: () => _load(reset: false), child: Text(context.l10n.composeMediaLoadMore))));
         }
         final p = shown[i];
         final on = _selected?.key == p.key;

@@ -1,5 +1,944 @@
 {
   "@@locale": "ja",
+  "composeTargetNormalTitle": "ノートの作成",
+  "@composeTargetNormalTitle": {
+    "description": "コンポーザーの題(新しい投稿)"
+  },
+  "composeTargetReplyTitle": "返信",
+  "@composeTargetReplyTitle": {
+    "description": "コンポーザーの題(返信)"
+  },
+  "composeTargetQuoteTitle": "引用",
+  "@composeTargetQuoteTitle": {
+    "description": "コンポーザーの題(引用)"
+  },
+  "composeEmojiPickerTitle": "絵文字",
+  "@composeEmojiPickerTitle": {
+    "description": "絵文字ピッカーの題(既定)"
+  },
+  "composeEmojiPickerClose": "閉じる",
+  "composePollRemoveTooltip": "投票を削除",
+  "composePollChoiceHint": "回答{index}",
+  "@composePollChoiceHint": {
+    "description": "投票の選択肢の入力欄のヒント。index は 1 から",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "composePollChoiceDeleteTooltip": "削除",
+  "@composePollChoiceDeleteTooltip": {
+    "description": "投票の選択肢を消すボタン"
+  },
+  "composePollAddChoice": "その他",
+  "@composePollAddChoice": {
+    "description": "投票の選択肢を足すボタン"
+  },
+  "composePollTimed": "時間指定",
+  "@composePollTimed": {
+    "description": "投票の締め切りを決める欄の開閉"
+  },
+  "composePollMultiple": "複数回答",
+  "composePollUnitDays": "日",
+  "@composePollUnitDays": {
+    "description": "投票の期間の単位"
+  },
+  "composePollUnitHours": "時間",
+  "@composePollUnitHours": {
+    "description": "投票の期間の単位"
+  },
+  "composePollUnitMinutes": "分",
+  "@composePollUnitMinutes": {
+    "description": "投票の期間の単位"
+  },
+  "composePollUnitSeconds": "秒",
+  "@composePollUnitSeconds": {
+    "description": "投票の期間の単位"
+  },
+  "composeDraftsTitle": "下書き",
+  "@composeDraftsTitle": {
+    "description": "下書きの一覧(FOW)の題"
+  },
+  "composeDraftsCancel": "キャンセル",
+  "composeDraftsDelete": "削除",
+  "@composeDraftsDelete": {
+    "description": "選んだ下書きを消すボタン"
+  },
+  "composeDraftsSaveAndClose": "今の内容を保存して閉じる",
+  "composeDraftsOverwriteAndClose": "今の内容を上書き保存して閉じる",
+  "composeDraftsSaveNewAndClose": "今の内容を新しい下書きにして閉じる",
+  "composeDraftsEmpty": "下書きはありません",
+  "composeDraftsAttachmentCount": "{count, plural, other{添付 {count}}}",
+  "@composeDraftsAttachmentCount": {
+    "description": "下書きの行の注記: 添付の数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeDraftsOpenNow": "開いている",
+  "@composeDraftsOpenNow": {
+    "description": "下書きの行の注記: いまコンポーザーで開いている"
+  },
+  "composeDraftsSelectOff": "選択解除",
+  "composeDraftsSelect": "選択",
+  "composeDraftsSelectedCount": "{count, plural, other{{count} 件}}",
+  "@composeDraftsSelectedCount": {
+    "description": "選んだ下書きの数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeDraftTitleAttachments": "{count, plural, other{(添付 {count} 件)}}",
+  "@composeDraftTitleAttachments": {
+    "description": "本文の無い下書きの見出し",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeDraftTitleEmpty": "(本文なし)",
+  "@composeDraftTitleEmpty": {
+    "description": "本文も添付も無い下書きの見出し"
+  },
+  "composeDraftTargetReply": "返信",
+  "@composeDraftTargetReply": {
+    "description": "下書きの対象の種類"
+  },
+  "composeDraftTargetQuote": "引用",
+  "@composeDraftTargetQuote": {
+    "description": "下書きの対象の種類"
+  },
+  "composeDraftTargetPost": "投稿",
+  "@composeDraftTargetPost": {
+    "description": "下書きの対象の種類"
+  },
+  "composeReactionAcceptanceAll": "全て",
+  "@composeReactionAcceptanceAll": {
+    "description": "リアクションの受け入れ(Misskey)"
+  },
+  "composeReactionAcceptanceLikeOnly": "いいねのみ",
+  "@composeReactionAcceptanceLikeOnly": {
+    "description": "リアクションの受け入れ(Misskey)"
+  },
+  "composeReactionAcceptanceLikeOnlyForRemote": "外部からはいいね",
+  "@composeReactionAcceptanceLikeOnlyForRemote": {
+    "description": "リアクションの受け入れ(Misskey)"
+  },
+  "composeReactionAcceptanceNonSensitiveOnly": "非センシティブのみ",
+  "@composeReactionAcceptanceNonSensitiveOnly": {
+    "description": "リアクションの受け入れ(Misskey)"
+  },
+  "composeReactionAcceptanceNonSensitiveOnlyForLocalLikeOnlyForRemote": "非センシティブ&外部からはいいねのみ",
+  "@composeReactionAcceptanceNonSensitiveOnlyForLocalLikeOnlyForRemote": {
+    "description": "リアクションの受け入れ(Misskey)"
+  },
+  "composeEmojiResizeHandleSemantics": "サイズ変更ハンドル",
+  "composeEmojiSectionHistory": "履歴",
+  "@composeEmojiSectionHistory": {
+    "description": "絵文字ピッカーの節: 最近使った絵文字"
+  },
+  "composeEmojiSectionPrediction": "予測",
+  "@composeEmojiSectionPrediction": {
+    "description": "絵文字ピッカーの節: 予測した絵文字"
+  },
+  "composeEmojiBundleEditTitle": "バンドル編集",
+  "composeEmojiBundleEditMessage": "バンドルの編集は準備中です。",
+  "composeEmojiSectionDefault": "デフォルト",
+  "@composeEmojiSectionDefault": {
+    "description": "絵文字ピッカーの節: Unicode の絵文字"
+  },
+  "composeEmojiCustomEmpty": "独自の絵文字はありません",
+  "composeEmojiSectionServer": "サーバー",
+  "@composeEmojiSectionServer": {
+    "description": "絵文字ピッカーの節: サーバーの独自の絵文字"
+  },
+  "composeEmojiGenreOther": "その他",
+  "@composeEmojiGenreOther": {
+    "description": "ジャンルの無い独自の絵文字のまとまり"
+  },
+  "composeEmojiGroupHeading": "・{name}",
+  "@composeEmojiGroupHeading": {
+    "description": "絵文字のジャンル / ステッカーのパックの見出し",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "composeEmojiSearchHint": "検索",
+  "composeEmojiStickersEmpty": "使えるアセットパックがありません(ストアからインストールできます)",
+  "composeEmojiSectionSearchResults": "検索結果",
+  "composeEmojiSearchNoHit": "見つかりません",
+  "composeEmojiIndexProgress": "意味検索を準備中 {done} / {total}",
+  "@composeEmojiIndexProgress": {
+    "description": "絵文字の意味検索の索引づくりの進み",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "composeVisibilityHome": "ホーム",
+  "@composeVisibilityHome": {
+    "description": "投稿の公開範囲"
+  },
+  "composeVisibilityFollowers": "フォロワー",
+  "@composeVisibilityFollowers": {
+    "description": "投稿の公開範囲"
+  },
+  "composeVisibilityPublic": "パブリック",
+  "@composeVisibilityPublic": {
+    "description": "投稿の公開範囲"
+  },
+  "composeVisibilityTooltip": "公開範囲: {label}",
+  "@composeVisibilityTooltip": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "composeLocalOnlyOnTooltip": "連合なし(このサーバーのみ)",
+  "composeLocalOnlyOffTooltip": "連合あり(タップで連合なしに)",
+  "composeReactionAcceptanceTooltip": "リアクションの受け入れ: {label}",
+  "@composeReactionAcceptanceTooltip": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "composeOn": "オン",
+  "composeOff": "オフ",
+  "composeTextPluginTooltip": "{label}({state}・長押しで設定)",
+  "@composeTextPluginTooltip": {
+    "description": "テキスト加工プラグインのボタン。state は「オン」/「オフ」",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "composeTextPluginHereTitle": "このコンポーザーでオン",
+  "composeTextPluginHereSubtitle": "本文の変化をこのプラグインに渡します",
+  "composeTextPluginAutoTitle": "次からも自動でオン",
+  "composeTextPluginAutoDefault": "プラグインの既定({state})",
+  "@composeTextPluginAutoDefault": {
+    "description": "state は「オン」/「オフ」",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "composeTextPluginAutoOverridden": "設定で上書き中(既定は {state})",
+  "@composeTextPluginAutoOverridden": {
+    "description": "state は「オン」/「オフ」",
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "composeTextPluginResetDefault": "プラグインの既定に戻す",
+  "composeTextPluginCaption": "{name} · テキスト加工",
+  "@composeTextPluginCaption": {
+    "description": "name はプラグインの名前",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "composeHeaderPost": "投稿",
+  "@composeHeaderPost": {
+    "description": "コンポーザーのヘッダーの題"
+  },
+  "composeHeaderReply": "返信",
+  "@composeHeaderReply": {
+    "description": "コンポーザーのヘッダーの題"
+  },
+  "composeHeaderQuote": "引用",
+  "@composeHeaderQuote": {
+    "description": "コンポーザーのヘッダーの題"
+  },
+  "composeCloseOverwriteTitle": "下書きを上書きしますか",
+  "composeCloseSaveTitle": "下書きに保存しますか",
+  "composeCloseOverwriteMessage": "開いている下書きを今の内容で上書きして閉じます。",
+  "composeCloseSaveMessage": "今の内容を下書きに残して閉じます。",
+  "composeCloseOverwrite": "上書き",
+  "composeCloseSaveNew": "新規保存",
+  "composeCloseSave": "保存",
+  "composeCloseDiscard": "変更を破棄",
+  "composeCancel": "キャンセル",
+  "composeMultiNormal": "通常投稿",
+  "@composeMultiNormal": {
+    "description": "複数選択モード: 同じ内容で投稿するアカウントの印"
+  },
+  "composeMultiLinked": "ノード連動",
+  "@composeMultiLinked": {
+    "description": "複数選択モード: ポスト先グラフを通して投稿するアカウントの印"
+  },
+  "composeRasqTarget": "RASQ に投稿",
+  "composeTargetMatchedTooltip": "ポスト先ノードの条件に一致",
+  "composeTargetCustomize": "投稿先のカスタマイズ",
+  "composeMultiSelectOff": "複数選択を解除",
+  "composeMultiSelectOn": "複数選択モード",
+  "composeLinkedConfirmTitle": "連動投稿の確認",
+  "composeLinkedConfirmSame": "同内容で連動投稿",
+  "composeLinkedConfirmAlt": "代わりのフォーマットで連動投稿",
+  "composeLinkedConfirmPost": "この内容で投稿する",
+  "composeRasqNoServer": "RASQ のサーバーが設定されていません",
+  "composeRasqOverLimit": "RASQ の上限を超えています",
+  "composeRasqTextOnlyTip": "RASQ の返信は文字だけです",
+  "@composeRasqTextOnlyTip": {
+    "description": "RASQ の返信で添付のボタンを押せないときのツールチップ"
+  },
+  "composePickImageFailed": "画像を選択できませんでした: {error}",
+  "@composePickImageFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "composePickVideoLibrary": "ライブラリの動画",
+  "composePickVideoFile": "ファイルから(動画 / 音声)",
+  "composePickNotMedia": "動画 / 音声のファイルではありません: {name}",
+  "@composePickNotMedia": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "composePickMediaFailed": "動画 / 音声を選択できませんでした: {error}",
+  "@composePickMediaFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "composeRasqNotLoggedIn": "RASQ アカウントにログインしていません",
+  "composeRasqMediaTooLarge": "RASQ への投稿では、動画 / 音声は 1 つ {mb} MB までです",
+  "@composeRasqMediaTooLarge": {
+    "placeholders": {
+      "mb": {
+        "type": "int"
+      }
+    }
+  },
+  "composeRasqReplyTextOnly": "RASQ の返信は、文字だけです(添付 / 投票は付けられません)",
+  "composeRasqReplyMaxChars": "{count, plural, other{RASQ の返信は {count} 文字までです}}",
+  "@composeRasqReplyMaxChars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeRasqMaxImages": "{count, plural, other{RASQ への投稿は、添付 {count} つまでです}}",
+  "@composeRasqMaxImages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeRasqMaxChars": "{count, plural, other{RASQ への投稿は {count} 文字までです}}",
+  "@composeRasqMaxChars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeRasqMaxPollChoices": "{count, plural, other{RASQ への投稿は、投票の選択肢 {count} 個までです}}",
+  "@composeRasqMaxPollChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeRasqPosted": "RASQ に投稿しました",
+  "composeRasqReplyQuota": "RASQ の返信は 100 件までです。古い返信を消してください",
+  "composeRasqPostQuota": "RASQ への投稿は 3 件までです。古い投稿を消してください",
+  "composeRasqPostFailed": "RASQ に投稿できませんでした: {error}",
+  "@composeRasqPostFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "composePolicyConfirmTitle": "送る前の確認",
+  "composePolicyConfirmSend": "このまま送る",
+  "composePolicyConfirmEdit": "書き直す",
+  "composeSending": "送信中…",
+  "composeModerationDelay": "{seconds, plural, other{検閲による遅延: あと {seconds} 秒}}",
+  "@composeModerationDelay": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "composeUploading": "アップロード中 {index}/{total}",
+  "@composeUploading": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "composeLinkedFailed": "連動投稿に失敗しました: {errors}(本体は投稿済みです)",
+  "@composeLinkedFailed": {
+    "description": "errors は失敗したアカウントの理由(「 / 」区切り)",
+    "placeholders": {
+      "errors": {
+        "type": "String"
+      }
+    }
+  },
+  "composeSendFailed": "送信に失敗しました: {error}",
+  "@composeSendFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "composeDraftsButton": "下書き",
+  "@composeDraftsButton": {
+    "description": "コンポーザーのヘッダーの、下書きの一覧を開くボタン"
+  },
+  "composeDirectReplyNote": "ダイレクト投稿への返信(相手にだけ届きます)",
+  "composeChooseTargetTooltip": "投稿先を選ぶ",
+  "composeCwHint": "注釈..",
+  "composeCwRemoveTooltip": "注釈を外す",
+  "composeDmHint": "メッセージを入力..",
+  "composeTextHint": "いいことがありますように！",
+  "@composeTextHint": {
+    "description": "コンポーザーの本文の欄のヒント"
+  },
+  "composeHashtagUsers": "{count, plural, other{{tag}  {count}人}}",
+  "@composeHashtagUsers": {
+    "description": "ハッシュタグの候補。tag はタグ、count は使っている人の数",
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeToolCamera": "カメラ",
+  "composeToolImage": "画像",
+  "composeToolVideo": "動画 / 音声",
+  "composeToolCw": "隠す(注釈)",
+  "composeToolPoll": "投票",
+  "composeToolEmoji": "絵文字",
+  "composeSendReply": "返信",
+  "@composeSendReply": {
+    "description": "送信ボタン(返信のとき)"
+  },
+  "composeSend": "送信",
+  "@composeSend": {
+    "description": "送信ボタン"
+  },
+  "composeAttachmentRemove": "削除",
+  "@composeAttachmentRemove": {
+    "description": "添付を外すボタン"
+  },
+  "composeAttachmentEdit": "加工",
+  "@composeAttachmentEdit": {
+    "description": "添付を加工するボタン"
+  },
+  "composeAttachmentUnsensitive": "センシティブ解除",
+  "composeAttachmentSensitive": "センシティブにする",
+  "composeMediaPickTypeLabel": "動画 / 音声",
+  "@composeMediaPickTypeLabel": {
+    "description": "ファイル選択ダイアログの種類の名前"
+  },
+  "composeMediaMotionVideoLabel": "動画にする(付いている動画を、タイルの中で再生。音つき)",
+  "@composeMediaMotionVideoLabel": {
+    "description": "投稿の画像の加工: 動画にするスイッチ(動画の付いた投稿)"
+  },
+  "composeMediaMotionAudioLabel": "動画にする(タイルの静止画 + 付いている音声)",
+  "@composeMediaMotionAudioLabel": {
+    "description": "投稿の画像の加工: 動画にするスイッチ(音声の付いた投稿)"
+  },
+  "composeMediaMotionAnimatedLabel": "動画にする(動いている様子を {fps} コマ/秒で {seconds} 秒)",
+  "@composeMediaMotionAnimatedLabel": {
+    "description": "投稿の画像の加工: 動画にするスイッチ(GIF / 動く MFM の投稿)",
+    "placeholders": {
+      "fps": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "composeMediaMotionVideoNote": "この投稿には動画が付いています。",
+  "@composeMediaMotionVideoNote": {
+    "description": "「動画に変換しますか?」に添える説明"
+  },
+  "composeMediaMotionAudioNote": "この投稿には音声が付いています。",
+  "@composeMediaMotionAudioNote": {
+    "description": "「動画に変換しますか?」に添える説明"
+  },
+  "composeMediaMotionAnimatedNote": "この投稿には動く絵(GIF / 動く MFM)があります。",
+  "@composeMediaMotionAnimatedNote": {
+    "description": "「動画に変換しますか?」に添える説明"
+  },
+  "composeMediaPostNotOnScreen": "投稿が画面に出ていません",
+  "@composeMediaPostNotOnScreen": {
+    "description": "投稿を動画にするときのエラー"
+  },
+  "composeMediaSourceFetchFailed": "元のファイルを取得できませんでした",
+  "@composeMediaSourceFetchFailed": {
+    "description": "投稿を動画にするときのエラー(後ろに「: 詳しい理由」が付く)"
+  },
+  "composeMediaFormatUnreadable": "この端末は {ext} 形式を読めません(静止画なら貼れます)",
+  "@composeMediaFormatUnreadable": {
+    "description": "ext はファイルの拡張子(webm など)",
+    "placeholders": {
+      "ext": {
+        "type": "String"
+      }
+    }
+  },
+  "composeMediaSourceOpenFailed": "元のファイル(.{ext}、{bytes} バイト)を開けませんでした",
+  "@composeMediaSourceOpenFailed": {
+    "description": "投稿を動画にするときのエラー(後ろに「: 詳しい理由」が付く)",
+    "placeholders": {
+      "ext": {
+        "type": "String"
+      },
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "composeMediaTabMine": "自分の投稿",
+  "@composeMediaTabMine": {
+    "description": "ノート画像の追加: タブ"
+  },
+  "composeMediaTabReacted": "リアクション",
+  "@composeMediaTabReacted": {
+    "description": "ノート画像の追加: タブ(リアクションした投稿)"
+  },
+  "composeMediaTabFavorites": "ブックマーク",
+  "@composeMediaTabFavorites": {
+    "description": "ノート画像の追加: タブ"
+  },
+  "composeMediaTabSearches": "最近の検索",
+  "@composeMediaTabSearches": {
+    "description": "ノート画像の追加: タブ"
+  },
+  "composeMediaStyleThread": "スレッド",
+  "@composeMediaStyleThread": {
+    "description": "貼る投稿の見た目: スレッド展開時の本文"
+  },
+  "composeMediaStyleInline": "インライン",
+  "@composeMediaStyleInline": {
+    "description": "貼る投稿の見た目: 一番小さい表示"
+  },
+  "composeMediaPostImageTitle": "ノート画像の追加",
+  "@composeMediaPostImageTitle": {
+    "description": "投稿を画像にして貼る FOW の題"
+  },
+  "composeMediaCancel": "キャンセル",
+  "composeMediaConfirm": "決定",
+  "composeMediaNoAccount": "アカウントがありません",
+  "composeMediaSearchUnsupported": "この SNS では投稿の検索が使えません",
+  "composeMediaTabUnsupported": "この SNS では「{tab}」が使えません",
+  "@composeMediaTabUnsupported": {
+    "placeholders": {
+      "tab": {
+        "type": "String"
+      }
+    }
+  },
+  "composeMediaFetchFailed": "取得できませんでした: {error}",
+  "@composeMediaFetchFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "composeMediaCaptureRetry": "選んだ投稿が画面に出ている状態で、もう一度「決定」を押してください",
+  "composeMediaVideoFailed": "動画にできませんでした: {error}",
+  "@composeMediaVideoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "composeMediaFilterHistoryHint": "検索の履歴を絞り込む",
+  "composeMediaFilterListHint": "一覧を絞り込む",
+  "composeMediaFilterFromHistoryTooltip": "最近の検索から入れる",
+  "composeMediaStyleHeading": "見た目",
+  "@composeMediaStyleHeading": {
+    "description": "貼る投稿の見た目の選択の見出し"
+  },
+  "composeMediaSearchResultsTitle": "「{query}」の検索結果",
+  "@composeMediaSearchResultsTitle": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "composeMediaSearchBack": "最近の検索に戻る",
+  "composeMediaExcludedNote": "{count, plural, other{公開範囲を限った投稿 {count} 件は出していません。}}",
+  "@composeMediaExcludedNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeMediaAsVideoOffNote": "オフ = その瞬間の静止画",
+  "@composeMediaAsVideoOffNote": {
+    "description": "動画にするスイッチの説明"
+  },
+  "composeMediaExporting": "動画にしています…",
+  "composeMediaHistoryEmpty": "最近の検索はありません(検索ホームで検索すると、ここに並びます)",
+  "composeMediaHistoryNoMatch": "当てはまる検索はありません",
+  "composeMediaPostsEmpty": "投稿はありません",
+  "composeMediaPostsNoMatch": "当てはまる投稿はありません(「もっと読む」で続きも探せます)",
+  "composeMediaLoadMore": "もっと読む",
+  "composeMfmFnX2": "2倍に拡大",
+  "@composeMfmFnX2": {
+    "description": "MFM の関数 x2 の説明"
+  },
+  "composeMfmFnX3": "3倍に拡大",
+  "@composeMfmFnX3": {
+    "description": "MFM の関数 x3 の説明"
+  },
+  "composeMfmFnX4": "4倍に拡大",
+  "@composeMfmFnX4": {
+    "description": "MFM の関数 x4 の説明"
+  },
+  "composeMfmFnSmall": "小さく表示",
+  "@composeMfmFnSmall": {
+    "description": "MFM の関数 small の説明"
+  },
+  "composeMfmFnCenter": "中央寄せ",
+  "@composeMfmFnCenter": {
+    "description": "MFM の関数 center の説明"
+  },
+  "composeMfmFnBlur": "ぼかし(ホバー/タップで解除)",
+  "@composeMfmFnBlur": {
+    "description": "MFM の関数 blur の説明"
+  },
+  "composeMfmFnRotate": "回転",
+  "@composeMfmFnRotate": {
+    "description": "MFM の関数 rotate の説明"
+  },
+  "composeMfmPropRotateDeg": "角度(既定 90)",
+  "@composeMfmPropRotateDeg": {
+    "description": "MFM の関数 rotate のプロパティー deg の説明"
+  },
+  "composeMfmFnFlip": "反転",
+  "@composeMfmFnFlip": {
+    "description": "MFM の関数 flip の説明"
+  },
+  "composeMfmPropFlipH": "左右",
+  "@composeMfmPropFlipH": {
+    "description": "MFM の関数 flip のプロパティー h の説明"
+  },
+  "composeMfmPropFlipV": "上下",
+  "@composeMfmPropFlipV": {
+    "description": "MFM の関数 flip のプロパティー v の説明"
+  },
+  "composeMfmFnFg": "文字色",
+  "@composeMfmFnFg": {
+    "description": "MFM の関数 fg の説明"
+  },
+  "composeMfmPropFgColor": "16進(例: ff0000)",
+  "@composeMfmPropFgColor": {
+    "description": "MFM の関数 fg のプロパティー color の説明"
+  },
+  "composeMfmFnBg": "背景色",
+  "@composeMfmFnBg": {
+    "description": "MFM の関数 bg の説明"
+  },
+  "composeMfmPropBgColor": "16進(例: ffff00)",
+  "@composeMfmPropBgColor": {
+    "description": "MFM の関数 bg のプロパティー color の説明"
+  },
+  "composeMfmFnShake": "振動",
+  "@composeMfmFnShake": {
+    "description": "MFM の関数 shake の説明"
+  },
+  "composeMfmPropShakeSpeed": "例: 0.5s",
+  "@composeMfmPropShakeSpeed": {
+    "description": "MFM の関数 shake のプロパティー speed の説明"
+  },
+  "composeMfmFnSpin": "回転アニメ",
+  "@composeMfmFnSpin": {
+    "description": "MFM の関数 spin の説明"
+  },
+  "composeMfmPropSpinSpeed": "例: 1.5s",
+  "@composeMfmPropSpinSpeed": {
+    "description": "MFM の関数 spin のプロパティー speed の説明"
+  },
+  "composeMfmPropSpinLeft": "逆回転",
+  "@composeMfmPropSpinLeft": {
+    "description": "MFM の関数 spin のプロパティー left の説明"
+  },
+  "composeMfmPropSpinAlternate": "往復",
+  "@composeMfmPropSpinAlternate": {
+    "description": "MFM の関数 spin のプロパティー alternate の説明"
+  },
+  "composeMfmPropSpinX": "横軸",
+  "@composeMfmPropSpinX": {
+    "description": "MFM の関数 spin のプロパティー x の説明"
+  },
+  "composeMfmPropSpinY": "縦軸",
+  "@composeMfmPropSpinY": {
+    "description": "MFM の関数 spin のプロパティー y の説明"
+  },
+  "composeMfmFnJump": "ジャンプ",
+  "@composeMfmFnJump": {
+    "description": "MFM の関数 jump の説明"
+  },
+  "composeMfmPropJumpSpeed": "例: 0.75s",
+  "@composeMfmPropJumpSpeed": {
+    "description": "MFM の関数 jump のプロパティー speed の説明"
+  },
+  "composeMfmFnBounce": "バウンド",
+  "@composeMfmFnBounce": {
+    "description": "MFM の関数 bounce の説明"
+  },
+  "composeMfmPropBounceSpeed": "例: 0.75s",
+  "@composeMfmPropBounceSpeed": {
+    "description": "MFM の関数 bounce のプロパティー speed の説明"
+  },
+  "composeMfmFnRainbow": "虹色",
+  "@composeMfmFnRainbow": {
+    "description": "MFM の関数 rainbow の説明"
+  },
+  "composeMfmPropRainbowSpeed": "例: 1s",
+  "@composeMfmPropRainbowSpeed": {
+    "description": "MFM の関数 rainbow のプロパティー speed の説明"
+  },
+  "composeMfmFnTwitch": "ぴくぴく",
+  "@composeMfmFnTwitch": {
+    "description": "MFM の関数 twitch の説明"
+  },
+  "composeMfmPropTwitchSpeed": "例: 0.5s",
+  "@composeMfmPropTwitchSpeed": {
+    "description": "MFM の関数 twitch のプロパティー speed の説明"
+  },
+  "composeMfmFnJelly": "ぷるぷる",
+  "@composeMfmFnJelly": {
+    "description": "MFM の関数 jelly の説明"
+  },
+  "composeMfmPropJellySpeed": "例: 1s",
+  "@composeMfmPropJellySpeed": {
+    "description": "MFM の関数 jelly のプロパティー speed の説明"
+  },
+  "composeMfmFnTada": "じゃーん",
+  "@composeMfmFnTada": {
+    "description": "MFM の関数 tada の説明"
+  },
+  "composeMfmPropTadaSpeed": "例: 1s",
+  "@composeMfmPropTadaSpeed": {
+    "description": "MFM の関数 tada のプロパティー speed の説明"
+  },
+  "composeMfmFnPlain": "装飾を無効化",
+  "@composeMfmFnPlain": {
+    "description": "MFM の関数 plain の説明"
+  },
+  "composeMfmMarkdownBoldName": "太字",
+  "@composeMfmMarkdownBoldName": {
+    "description": "Markdown のスニペットの名前"
+  },
+  "composeMfmMarkdownBoldDescription": "**強調** で表示",
+  "@composeMfmMarkdownBoldDescription": {
+    "description": "Markdown のスニペットの説明"
+  },
+  "composeMfmMarkdownItalicName": "斜体",
+  "@composeMfmMarkdownItalicName": {
+    "description": "Markdown のスニペットの名前"
+  },
+  "composeMfmMarkdownItalicDescription": "*斜体* で表示",
+  "@composeMfmMarkdownItalicDescription": {
+    "description": "Markdown のスニペットの説明"
+  },
+  "composeMfmMarkdownStrikeName": "取り消し線",
+  "@composeMfmMarkdownStrikeName": {
+    "description": "Markdown のスニペットの名前"
+  },
+  "composeMfmMarkdownStrikeDescription": "~~取り消し~~ で表示",
+  "@composeMfmMarkdownStrikeDescription": {
+    "description": "Markdown のスニペットの説明"
+  },
+  "composeMfmMarkdownInlineCodeName": "インラインコード",
+  "@composeMfmMarkdownInlineCodeName": {
+    "description": "Markdown のスニペットの名前"
+  },
+  "composeMfmMarkdownInlineCodeDescription": "`コード` で表示",
+  "@composeMfmMarkdownInlineCodeDescription": {
+    "description": "Markdown のスニペットの説明"
+  },
+  "composeMfmMarkdownCodeBlockName": "コードブロック",
+  "@composeMfmMarkdownCodeBlockName": {
+    "description": "Markdown のスニペットの名前"
+  },
+  "composeMfmMarkdownCodeBlockDescription": "複数行のコードを枠で表示",
+  "@composeMfmMarkdownCodeBlockDescription": {
+    "description": "Markdown のスニペットの説明"
+  },
+  "composeMfmMarkdownHeadingName": "見出し",
+  "@composeMfmMarkdownHeadingName": {
+    "description": "Markdown のスニペットの名前"
+  },
+  "composeMfmMarkdownHeadingDescription": "行頭に # を付ける",
+  "@composeMfmMarkdownHeadingDescription": {
+    "description": "Markdown のスニペットの説明"
+  },
+  "composeMfmMarkdownLinkName": "リンク",
+  "@composeMfmMarkdownLinkName": {
+    "description": "Markdown のスニペットの名前"
+  },
+  "composeMfmMarkdownLinkDescription": "[表示名](URL) の形",
+  "@composeMfmMarkdownLinkDescription": {
+    "description": "Markdown のスニペットの説明"
+  },
+  "composeMfmClose": "閉じる",
+  "composeMfmSample": "サンプル",
+  "@composeMfmSample": {
+    "description": "MFM のプレビューに入れる見本の文"
+  },
+  "composeMfmSampleWithEmoji": "サンプル {emoji}",
+  "@composeMfmSampleWithEmoji": {
+    "description": "MFM のプレビューに入れる見本の文。emoji はサーバーの絵文字(:name:)",
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "composeMfmBackTooltip": "一覧へ戻る",
+  "composeMfmApply": "決定",
+  "@composeMfmApply": {
+    "description": "MFM / Markdown をコンポーザーに入れるボタン"
+  },
+  "composeMfmNoProps": "この関数にプロパティーはありません。",
+  "composePolicyTypeSexual": "性的な表現",
+  "@composePolicyTypeSexual": {
+    "description": "送る前の判定の種類の名前"
+  },
+  "composePolicyTypeViolence": "暴力・脅し",
+  "@composePolicyTypeViolence": {
+    "description": "送る前の判定の種類の名前"
+  },
+  "composePolicyTypeSelfHarm": "自傷・自殺",
+  "@composePolicyTypeSelfHarm": {
+    "description": "送る前の判定の種類の名前"
+  },
+  "composePolicyTypeHarassment": "暴言・嫌がらせ",
+  "@composePolicyTypeHarassment": {
+    "description": "送る前の判定の種類の名前"
+  },
+  "composePolicyTypePersonalInfo": "個人情報(電話番号・メールアドレス・住所など)",
+  "@composePolicyTypePersonalInfo": {
+    "description": "送る前の判定の種類の名前"
+  },
+  "composePolicyTypeLink": "外部へのリンク",
+  "@composePolicyTypeLink": {
+    "description": "送る前の判定の種類の名前"
+  },
+  "composePolicyTypeMedia": "画像・動画",
+  "@composePolicyTypeMedia": {
+    "description": "送る前の判定の種類の名前"
+  },
+  "composePolicyTypeStimulus": "強い言葉",
+  "@composePolicyTypeStimulus": {
+    "description": "送る前の判定の種類の名前"
+  },
+  "composePolicyTypeTopic": "決められた話題",
+  "@composePolicyTypeTopic": {
+    "description": "送る前の判定の種類の名前"
+  },
+  "composePolicyWhoGuardian": "保護者の設定",
+  "@composePolicyWhoGuardian": {
+    "description": "送れない理由の主語(見守り)"
+  },
+  "composePolicyWhoSanction": "アカウントの制限",
+  "@composePolicyWhoSanction": {
+    "description": "送れない理由の主語(アカウントの処置)"
+  },
+  "composePolicyBlockedMediaUnmeasured": "{who}により、画像・動画は送れません(この端末では添付の確認ができません)。添付を外してください",
+  "@composePolicyBlockedMediaUnmeasured": {
+    "description": "who は「保護者の設定」/「アカウントの制限」",
+    "placeholders": {
+      "who": {
+        "type": "String"
+      }
+    }
+  },
+  "composePolicyBlockedUnmeasured": "{who}により、いまは送れません(この端末では「{label}」の確認ができません)",
+  "@composePolicyBlockedUnmeasured": {
+    "description": "who は「保護者の設定」/「アカウントの制限」、label は種類の名前",
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "composePolicyBlocked": "{who}により、「{label}」に当たる内容は送れません。書き換えてください",
+  "@composePolicyBlocked": {
+    "description": "who は「保護者の設定」/「アカウントの制限」、label は種類の名前",
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "composePolicyWarn": "「{label}」に当たるかもしれません({who})。このまま送りますか?",
+  "@composePolicyWarn": {
+    "description": "who は「保護者の設定」/「アカウントの制限」、label は種類の名前",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "who": {
+        "type": "String"
+      }
+    }
+  },
   "languageSelfName": "日本語",
   "@languageSelfName": {
     "description": "この言語の、その言語での名前(設定の「言語」の一覧に出す)。訳すときは、その言語での自分の名前にする(English / 한국어 など)。"

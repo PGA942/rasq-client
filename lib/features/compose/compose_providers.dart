@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_models/rasq_models.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import 'compose_target.dart';
 
 /// Custom emoji of the current instance (絵文字ピッカー「独自の絵文字」).
@@ -87,17 +88,17 @@ class ComposeDraft {
     final t = text.trim();
     if (t.isNotEmpty) return t.split('\n').first;
     if (cw.trim().isNotEmpty) return '[${cw.trim()}]';
-    return files.isNotEmpty ? '(添付 ${files.length} 件)' : '(本文なし)';
+    return files.isNotEmpty ? appL10n.composeDraftTitleAttachments(files.length) : appL10n.composeDraftTitleEmpty;
   }
 
   /// 対象の種類(投稿 / 返信 / 引用 / DM)。
   String get targetLabel => targetKey.startsWith('reply:')
-      ? '返信'
+      ? appL10n.composeDraftTargetReply
       : targetKey.startsWith('quote:')
-          ? '引用'
+          ? appL10n.composeDraftTargetQuote
           : targetKey.startsWith('dm:')
               ? 'DM'
-              : '投稿';
+              : appL10n.composeDraftTargetPost;
 
   ComposeDraft copyWith({String? id, DateTime? createdAt}) => ComposeDraft(text: text, cw: cw, cwOn: cwOn, files: files, id: id ?? this.id, targetKey: targetKey, createdAt: createdAt ?? this.createdAt);
 }
@@ -141,12 +142,12 @@ class ComposeDraftsStore extends Notifier<Map<String, ComposeDraft>> {
 
 final composeDraftsProvider = NotifierProvider<ComposeDraftsStore, Map<String, ComposeDraft>>(ComposeDraftsStore.new);
 
-/// リアクション受け入れの選択肢 (Misskey の語彙 → 表示名)。null = 全て。
-const reactionAcceptanceLabels = <String?, String>{
-  null: '全て',
-  'likeOnly': 'いいねのみ',
-  'likeOnlyForRemote': '外部からはいいね',
-  'nonSensitiveOnly': '非センシティブのみ',
-  'nonSensitiveOnlyForLocalLikeOnlyForRemote': '非センシティブ&外部からはいいねのみ',
+/// リアクション受け入れの選択肢 (Misskey の語彙 → 表示名、いまの表示の言語)。null = 全て。
+Map<String?, String> get reactionAcceptanceLabels => <String?, String>{
+  null: appL10n.composeReactionAcceptanceAll,
+  'likeOnly': appL10n.composeReactionAcceptanceLikeOnly,
+  'likeOnlyForRemote': appL10n.composeReactionAcceptanceLikeOnlyForRemote,
+  'nonSensitiveOnly': appL10n.composeReactionAcceptanceNonSensitiveOnly,
+  'nonSensitiveOnlyForLocalLikeOnlyForRemote': appL10n.composeReactionAcceptanceNonSensitiveOnlyForLocalLikeOnlyForRemote,
 };
 

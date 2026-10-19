@@ -7,6 +7,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../home/reaction_history.dart';
 import '../emoji/emoji_index.dart';
 import '../emoji/emoji_index_providers.dart';
@@ -154,7 +155,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
               },
         onVerticalDragCancel: spec == null ? null : () => spec.dragging.value = false,
         child: Semantics(
-          label: 'サイズ変更ハンドル',
+          label: context.l10n.composeEmojiResizeHandleSemantics,
           child: SizedBox(
             height: 18,
             width: double.infinity,
@@ -224,7 +225,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
       // 以前は別のアカウントの絵文字が並び、「ピッカーの中身が切り替わらない」ように見えていた)。
       final usable = [for (final e in recent) if (_usable(e, custom.value)) e];
       if (usable.isNotEmpty) {
-        label('履歴');
+        label(context.l10n.composeEmojiSectionHistory);
         grid([for (final e in usable) _CellSpec(e, _urlFor(e, custom.value))]);
       }
     }
@@ -232,13 +233,13 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
       // 予測も同じ: 履歴 / 付いているリアクション(他サーバーのものは名前だけ借りている)由来の、このサーバーに無い絵文字は出さない。
       final predicted = [for (final e in _prediction(custom.value)) if (_usable(e, custom.value)) e];
       if (predicted.isNotEmpty) {
-        label('予測');
+        label(context.l10n.composeEmojiSectionPrediction);
         grid([for (final e in predicted) _CellSpec(e, _urlFor(e, custom.value))]);
       }
     }
     rows.add(() => InkWell(
-          onLongPress: () => ref.read(overlayManagerProvider).showAlert(id: 'emoji.bundle', title: 'バンドル編集', message: 'バンドルの編集は準備中です。', confirmText: 'OK'),
-          child: _label('デフォルト'),
+          onLongPress: () => ref.read(overlayManagerProvider).showAlert(id: 'emoji.bundle', title: context.l10n.composeEmojiBundleEditTitle, message: context.l10n.composeEmojiBundleEditMessage, confirmText: 'OK'),
+          child: _label(context.l10n.composeEmojiSectionDefault),
         ));
     chunked([for (final e in EmojiPanel.unicode) _CellSpec(e, null)]);
 
@@ -250,17 +251,17 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
         final semantic = q.isEmpty ? null : ref.watch(emojiSearchProvider((accountKey: widget.accountKey, query: q))).value;
         final filtered = filterAndRankEmojis(list, q, semantic);
         if (filtered.isEmpty) {
-          rows.add(() => Padding(padding: const EdgeInsets.all(8), child: Text('独自の絵文字はありません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))));
+          rows.add(() => Padding(padding: const EdgeInsets.all(8), child: Text(context.l10n.composeEmojiCustomEmpty, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))));
         } else if (q.isNotEmpty) {
           // 検索中はジャンルを跨いだフラット表示。
-          label('サーバー');
+          label(context.l10n.composeEmojiSectionServer);
           chunked([for (final e in filtered) spec(e)]);
         } else {
-          label('サーバー');
+          label(context.l10n.composeEmojiSectionServer);
           // サーバーが設定したジャンル(category)毎。挿入順を維持。
           final byGenre = <String, List<EmojiInfo>>{};
           for (final e in filtered) {
-            byGenre.putIfAbsent(e.category ?? 'その他', () => []).add(e);
+            byGenre.putIfAbsent(e.category ?? context.l10n.composeEmojiGenreOther, () => []).add(e);
           }
           for (final entry in byGenre.entries) {
             final genre = entry.key;
@@ -270,7 +271,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
                   child: Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Row(children: [
-                      Expanded(child: Text('・$genre', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
+                      Expanded(child: Text(context.l10n.composeEmojiGroupHeading(genre), style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
                       Text('${entry.value.length}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                       Icon(open ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 16, color: scheme.onSurfaceVariant),
                     ]),
@@ -311,7 +312,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
           Padding(
             key: const ValueKey('emoji.search'),
             padding: const EdgeInsets.fromLTRB(RasqSpacing.md, RasqSpacing.sm, RasqSpacing.md, 4),
-            child: RasqSearchBar(controller: _q, hintText: '検索', onChanged: (_) => setState(() {})),
+            child: RasqSearchBar(controller: _q, hintText: context.l10n.composeEmojiSearchHint, onChanged: (_) => setState(() {})),
           ),
           // 意味検索の索引づくり (D-290): ピッカーを開いたら裏で始める(モデルを入れてあるときだけ)。進み具合を 1 行で出す。
           if (stickers == null) _EmojiIndexProgressLine(key: const ValueKey('emoji.index'), accountKey: widget.accountKey),
@@ -345,14 +346,14 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
     _CellSpec cell(EmojiPanelSticker s) => _CellSpec(s.key, s.url, file: s.file, tooltip: s.label ?? s.key);
     final byKey = {for (final s in stickers) s.key: s};
     if (stickers.isEmpty) {
-      rows.add(() => Padding(padding: const EdgeInsets.all(8), child: Text('使えるアセットパックがありません(ストアからインストールできます)', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))));
+      rows.add(() => Padding(padding: const EdgeInsets.all(8), child: Text(context.l10n.composeEmojiStickersEmpty, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))));
       return;
     }
     if (q.isNotEmpty) {
       final hit = [for (final s in stickers) if (s.matches(q)) s];
-      label('検索結果');
+      label(context.l10n.composeEmojiSectionSearchResults);
       if (hit.isEmpty) {
-        rows.add(() => Padding(padding: const EdgeInsets.all(8), child: Text('見つかりません', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))));
+        rows.add(() => Padding(padding: const EdgeInsets.all(8), child: Text(context.l10n.composeEmojiSearchNoHit, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))));
       } else {
         chunked([for (final s in hit) cell(s)]);
       }
@@ -361,7 +362,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
     // 履歴: 絵文字と同じ置き場(最近使ったもの)から、ステッカーのものだけ。
     final recent = [for (final k in ref.watch(recentEmojiProvider)) if (byKey[k] != null) byKey[k]!];
     if (recent.isNotEmpty) {
-      label('履歴');
+      label(context.l10n.composeEmojiSectionHistory);
       grid([for (final s in recent) cell(s)]);
     }
     // 予測: 絵文字の予測と同じ式(本文との語句一致 / 既に付いているもの / 最近使った)を、ラベルとタグに当てる。
@@ -373,7 +374,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
     );
     final predicted = [for (final p in _stickerPredicted!) if (byKey[p.substring(1, p.length - 1)] != null) byKey[p.substring(1, p.length - 1)]!];
     if (predicted.isNotEmpty) {
-      label('予測');
+      label(context.l10n.composeEmojiSectionPrediction);
       grid([for (final s in predicted) cell(s)]);
     }
     // パックごと(絵文字のジャンルと同じ省略表示)。
@@ -388,7 +389,7 @@ class _EmojiPanelState extends ConsumerState<EmojiPanel> {
             child: Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Row(children: [
-                Expanded(child: Text('・${entry.key}', style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
+                Expanded(child: Text(context.l10n.composeEmojiGroupHeading(entry.key), style: RasqTypography.caption.copyWith(fontWeight: FontWeight.w700))),
                 Text('${entry.value.length}', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                 if (byPack.length > 1) Icon(open ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 16, color: scheme.onSurfaceVariant),
               ]),
@@ -494,7 +495,7 @@ class _EmojiIndexProgressLine extends ConsumerWidget {
     return Padding(
       key: const ValueKey('emoji.index.progress'),
       padding: const EdgeInsets.fromLTRB(RasqSpacing.md, 0, RasqSpacing.md, 4),
-      child: Text('意味検索を準備中 ${p.$1} / ${p.$2}', style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      child: Text(context.l10n.composeEmojiIndexProgress(p.$1, p.$2), style: RasqTypography.caption.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../text/inline_spans.dart';
 import 'compose_providers.dart';
 
@@ -39,37 +40,37 @@ class MfmFn {
 
 /// MFM カタログ = ホストが描画できるコアセット(PROTOCOL §2.3。プレビューが
 /// 必ず動く範囲に限定)。
-const mfmFunctions = <MfmFn>[
-  MfmFn('x2', '2倍に拡大'),
-  MfmFn('x3', '3倍に拡大'),
-  MfmFn('x4', '4倍に拡大'),
-  MfmFn('small', '小さく表示'),
-  MfmFn('center', '中央寄せ'),
-  MfmFn('blur', 'ぼかし(ホバー/タップで解除)'),
-  MfmFn('rotate', '回転', props: [MfmProp('deg', hint: '角度(既定 90)')]),
-  MfmFn('flip', '反転', props: [MfmProp('h', hint: '左右', flag: true), MfmProp('v', hint: '上下', flag: true)]),
-  MfmFn('fg', '文字色', props: [MfmProp('color', hint: '16進(例: ff0000)')]),
-  MfmFn('bg', '背景色', props: [MfmProp('color', hint: '16進(例: ffff00)')]),
-  MfmFn('shake', '振動', props: [MfmProp('speed', hint: '例: 0.5s')]),
-  MfmFn('spin', '回転アニメ', props: [MfmProp('speed', hint: '例: 1.5s'), MfmProp('left', hint: '逆回転', flag: true), MfmProp('alternate', hint: '往復', flag: true), MfmProp('x', hint: '横軸', flag: true), MfmProp('y', hint: '縦軸', flag: true)]),
-  MfmFn('jump', 'ジャンプ', props: [MfmProp('speed', hint: '例: 0.75s')]),
-  MfmFn('bounce', 'バウンド', props: [MfmProp('speed', hint: '例: 0.75s')]),
-  MfmFn('rainbow', '虹色', props: [MfmProp('speed', hint: '例: 1s')]),
-  MfmFn('twitch', 'ぴくぴく', props: [MfmProp('speed', hint: '例: 0.5s')]),
-  MfmFn('jelly', 'ぷるぷる', props: [MfmProp('speed', hint: '例: 1s')]),
-  MfmFn('tada', 'じゃーん', props: [MfmProp('speed', hint: '例: 1s')]),
-  MfmFn('plain', '装飾を無効化'),
+List<MfmFn> get mfmFunctions => <MfmFn>[
+  MfmFn('x2', appL10n.composeMfmFnX2),
+  MfmFn('x3', appL10n.composeMfmFnX3),
+  MfmFn('x4', appL10n.composeMfmFnX4),
+  MfmFn('small', appL10n.composeMfmFnSmall),
+  MfmFn('center', appL10n.composeMfmFnCenter),
+  MfmFn('blur', appL10n.composeMfmFnBlur),
+  MfmFn('rotate', appL10n.composeMfmFnRotate, props: [MfmProp('deg', hint: appL10n.composeMfmPropRotateDeg)]),
+  MfmFn('flip', appL10n.composeMfmFnFlip, props: [MfmProp('h', hint: appL10n.composeMfmPropFlipH, flag: true), MfmProp('v', hint: appL10n.composeMfmPropFlipV, flag: true)]),
+  MfmFn('fg', appL10n.composeMfmFnFg, props: [MfmProp('color', hint: appL10n.composeMfmPropFgColor)]),
+  MfmFn('bg', appL10n.composeMfmFnBg, props: [MfmProp('color', hint: appL10n.composeMfmPropBgColor)]),
+  MfmFn('shake', appL10n.composeMfmFnShake, props: [MfmProp('speed', hint: appL10n.composeMfmPropShakeSpeed)]),
+  MfmFn('spin', appL10n.composeMfmFnSpin, props: [MfmProp('speed', hint: appL10n.composeMfmPropSpinSpeed), MfmProp('left', hint: appL10n.composeMfmPropSpinLeft, flag: true), MfmProp('alternate', hint: appL10n.composeMfmPropSpinAlternate, flag: true), MfmProp('x', hint: appL10n.composeMfmPropSpinX, flag: true), MfmProp('y', hint: appL10n.composeMfmPropSpinY, flag: true)]),
+  MfmFn('jump', appL10n.composeMfmFnJump, props: [MfmProp('speed', hint: appL10n.composeMfmPropJumpSpeed)]),
+  MfmFn('bounce', appL10n.composeMfmFnBounce, props: [MfmProp('speed', hint: appL10n.composeMfmPropBounceSpeed)]),
+  MfmFn('rainbow', appL10n.composeMfmFnRainbow, props: [MfmProp('speed', hint: appL10n.composeMfmPropRainbowSpeed)]),
+  MfmFn('twitch', appL10n.composeMfmFnTwitch, props: [MfmProp('speed', hint: appL10n.composeMfmPropTwitchSpeed)]),
+  MfmFn('jelly', appL10n.composeMfmFnJelly, props: [MfmProp('speed', hint: appL10n.composeMfmPropJellySpeed)]),
+  MfmFn('tada', appL10n.composeMfmFnTada, props: [MfmProp('speed', hint: appL10n.composeMfmPropTadaSpeed)]),
+  MfmFn('plain', appL10n.composeMfmFnPlain),
 ];
 
 /// Markdown カタログ(MFM 非対応 SNS 向け。固定スニペット)。
-const markdownFunctions = <MfmFn>[
-  MfmFn('太字', '**強調** で表示', prefix: '**', suffix: '**'),
-  MfmFn('斜体', '*斜体* で表示', prefix: '*', suffix: '*'),
-  MfmFn('取り消し線', '~~取り消し~~ で表示', prefix: '~~', suffix: '~~'),
-  MfmFn('インラインコード', '`コード` で表示', prefix: '`', suffix: '`'),
-  MfmFn('コードブロック', '複数行のコードを枠で表示', prefix: '```\n', suffix: '\n```'),
-  MfmFn('見出し', '行頭に # を付ける', prefix: '# ', suffix: ''),
-  MfmFn('リンク', '[表示名](URL) の形', prefix: '[', suffix: '](url)'),
+List<MfmFn> get markdownFunctions => <MfmFn>[
+  MfmFn(appL10n.composeMfmMarkdownBoldName, appL10n.composeMfmMarkdownBoldDescription, prefix: '**', suffix: '**'),
+  MfmFn(appL10n.composeMfmMarkdownItalicName, appL10n.composeMfmMarkdownItalicDescription, prefix: '*', suffix: '*'),
+  MfmFn(appL10n.composeMfmMarkdownStrikeName, appL10n.composeMfmMarkdownStrikeDescription, prefix: '~~', suffix: '~~'),
+  MfmFn(appL10n.composeMfmMarkdownInlineCodeName, appL10n.composeMfmMarkdownInlineCodeDescription, prefix: '`', suffix: '`'),
+  MfmFn(appL10n.composeMfmMarkdownCodeBlockName, appL10n.composeMfmMarkdownCodeBlockDescription, prefix: '```\n', suffix: '\n```'),
+  MfmFn(appL10n.composeMfmMarkdownHeadingName, appL10n.composeMfmMarkdownHeadingDescription, prefix: '# ', suffix: ''),
+  MfmFn(appL10n.composeMfmMarkdownLinkName, appL10n.composeMfmMarkdownLinkDescription, prefix: '[', suffix: '](url)'),
 ];
 
 /// [values] = プロパティーキー → 入力値(flag は 'true' でオン)から
@@ -93,7 +94,7 @@ Future<void> openMfmPicker(WidgetRef ref, {String? ownerId, required void Functi
   final manager = ref.read(overlayManagerProvider);
   final title = mfm ? 'MFM' : 'Markdown';
   // 横ドッキング (D-062): ヘッダー(FowMoveGrip)を掴んで左右カラムへ移動。
-  final spec = FowSpec(type: FowPanelType.widget, initialHeightFactor: 0.5, minHeightFactor: 0.3, maxHeightFactor: 0.85, title: title, cancelText: '閉じる', dockAboveFooter: true, columnIndex: column);
+  final spec = FowSpec(type: FowPanelType.widget, initialHeightFactor: 0.5, minHeightFactor: 0.3, maxHeightFactor: 0.85, title: title, cancelText: appL10n.composeMfmClose, dockAboveFooter: true, columnIndex: column);
   await manager.showFow<void>(
     id: mfmPickerFowId,
     ownerId: ownerId,
@@ -174,9 +175,9 @@ class _MfmPickerPanelState extends ConsumerState<MfmPickerPanel> {
   Widget _detail(MfmFn fn) {
     final scheme = Theme.of(context).colorScheme;
     final emojiUrls = <String, Uri?>{};
-    var sample = 'サンプル';
+    var sample = context.l10n.composeMfmSample;
     if (_sampleEmoji != null) {
-      sample = 'サンプル :$_sampleEmoji:';
+      sample = context.l10n.composeMfmSampleWithEmoji(':$_sampleEmoji:');
       final info = (ref.watch(customEmojisProvider).value ?? const []).where((e) => e.name == _sampleEmoji).firstOrNull;
       emojiUrls[_sampleEmoji!] = info?.url;
     }
@@ -185,13 +186,13 @@ class _MfmPickerPanelState extends ConsumerState<MfmPickerPanel> {
       Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, 0, RasqSpacing.sm, 0),
         child: Row(children: [
-          RasqIconButton(icon: Icons.arrow_back, size: 20, tooltip: '一覧へ戻る', onPressed: () => setState(() => _fn = null)),
+          RasqIconButton(icon: Icons.arrow_back, size: 20, tooltip: context.l10n.composeMfmBackTooltip, onPressed: () => setState(() => _fn = null)),
           const SizedBox(width: 4),
           Expanded(child: Text(fn.name, style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700))),
           FilledButton(
             onPressed: () => widget.onApply(prefix, suffix),
             style: FilledButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 16)),
-            child: const Text('決定'),
+            child: Text(context.l10n.composeMfmApply),
           ),
         ]),
       ),
@@ -209,7 +210,7 @@ class _MfmPickerPanelState extends ConsumerState<MfmPickerPanel> {
       ),
       Expanded(
         child: fn.props.isEmpty
-            ? Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('この関数にプロパティーはありません。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)))
+            ? Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(context.l10n.composeMfmNoProps, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)))
             : ListView(
                 padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, RasqSpacing.md),
                 children: [

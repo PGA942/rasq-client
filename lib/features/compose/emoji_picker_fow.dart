@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import 'emoji_panel.dart';
 
 /// 絵文字ピッカー FOW (widget type): docked, resizable, content behind stays
@@ -16,7 +17,7 @@ Future<void> openEmojiPicker(
   required ValueChanged<String> onPick,
   String? ownerId,
   bool closeOnPick = false,
-  String title = '絵文字',
+  String? title,
   String? predictionContext,
   Map<String, int> existingReactions = const {},
   Widget? actionBar,
@@ -37,13 +38,14 @@ Future<void> openEmojiPicker(
   //    バーへのアンカー付け**(ワイヤーフレーム 1p 左下)は FOW 再設計
   //    (RRL 拡張)時にこの系統で実装する。
   final reaction = actionBar != null;
+  final resolvedTitle = title ?? appL10n.composeEmojiPickerTitle;
   final spec = FowSpec(
     type: FowPanelType.widget,
     initialHeightFactor: 0.4,
     minHeightFactor: 0.25,
     maxHeightFactor: 0.8,
-    title: reaction ? null : title,
-    cancelText: reaction ? null : '閉じる',
+    title: reaction ? null : resolvedTitle,
+    cancelText: reaction ? null : appL10n.composeEmojiPickerClose,
     dockAboveFooter: true,
     showHandle: !reaction,
     // 横ドッキング (D-062): 開いた側のカラムに揃う。ヘッダー(FowMoveGrip)を
@@ -57,7 +59,7 @@ Future<void> openEmojiPicker(
   await manager.showFow<void>(
     id: emojiPickerFowId,
     ownerId: ownerId,
-    semanticsLabel: title,
+    semanticsLabel: resolvedTitle,
     // 同手法化 (D-051): 角丸枠 + フッター上にドック + **余白クリックで消失**
     // (ポップアップは出ない)。
     barrierBehavior: OverlayBarrierBehavior.dismissDiscard,

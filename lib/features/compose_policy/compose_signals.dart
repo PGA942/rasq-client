@@ -15,21 +15,21 @@ typedef ComposeHit = ({int start, int end});
 /// 種類ごとの語。誤判定の多い短い語(「ばか」→「ばかり」、「カス」→「カスタム」、「ゴミ」→「ゴミ出し」など)は入れない。
 const composeLexicon = <String, List<String>>{
   'sexual': [
-    'セックス', 'せっくす', 'エッチしよ', 'えっちしよ', 'エッチな写真', 'えっちな写真', '裸の写真', '裸の画像', 'ヌード', 'おっぱい', 'ちんこ', 'ちんぽ',
-    'まんこ', 'オナニー', 'おなにー', 'パパ活', 'ママ活', '援交', '援助交際', 'エロ画像', 'エロ動画', 'ムラムラ', 'sex', 'nude', 'nudes', 'porn',
+    'セックス', 'せっくす', 'エッチしよ', 'えっちしよ', 'エッチな写真', 'えっちな写真', '裸の写真', '裸の画像', 'ヌード', 'おっぱい', 'ちんこ', 'ちんぽ', // l10n-ignore
+    'まんこ', 'オナニー', 'おなにー', 'パパ活', 'ママ活', '援交', '援助交際', 'エロ画像', 'エロ動画', 'ムラムラ', 'sex', 'nude', 'nudes', 'porn', // l10n-ignore
     'horny', 'send pics', 'boobs', 'dick pic',
   ],
   'violence': [
-    '殺す', 'ころす', '殺してやる', 'ぶっ殺', 'ぶっころ', '殴る', 'なぐる', 'ぶん殴', '刺してやる', '燃やしてやる', '爆破', '襲ってやる', '痛めつけ',
-    'ボコボコにし', 'kill you', 'i will kill', 'beat you up', 'stab you', 'shoot you', 'bomb threat',
+    '殺す', 'ころす', '殺してやる', 'ぶっ殺', 'ぶっころ', '殴る', 'なぐる', 'ぶん殴', '刺してやる', '燃やしてやる', '爆破', '襲ってやる', '痛めつけ', // l10n-ignore
+    'ボコボコにし', 'kill you', 'i will kill', 'beat you up', 'stab you', 'shoot you', 'bomb threat', // l10n-ignore
   ],
   'self-harm': [
-    '死にたい', 'しにたい', '消えたい', 'きえたい', '自殺', 'リスカ', 'リストカット', '首吊', '首つり', '飛び降り', 'オーバードーズ', '自傷',
+    '死にたい', 'しにたい', '消えたい', 'きえたい', '自殺', 'リスカ', 'リストカット', '首吊', '首つり', '飛び降り', 'オーバードーズ', '自傷', // l10n-ignore
     'kill myself', 'suicide', 'self harm', 'self-harm', 'want to die', 'cut myself',
   ],
   'harassment': [
-    '死ね', '氏ね', 'タヒね', 'きもい', 'キモい', 'うざい', 'ウザい', 'ブス', 'クズ', '馬鹿', 'バカじゃ', 'バカやろ', 'ばかやろ', 'バーカ', 'アホ',
-    '消えろ', '黙れ', 'ガイジ', 'idiot', 'stupid', 'loser', 'shut up', 'kys', 'fuck you', 'retard',
+    '死ね', '氏ね', 'タヒね', 'きもい', 'キモい', 'うざい', 'ウザい', 'ブス', 'クズ', '馬鹿', 'バカじゃ', 'バカやろ', 'ばかやろ', 'バーカ', 'アホ', // l10n-ignore
+    '消えろ', '黙れ', 'ガイジ', 'idiot', 'stupid', 'loser', 'shut up', 'kys', 'fuck you', 'retard', // l10n-ignore
   ],
 };
 
@@ -62,11 +62,11 @@ double lexiconScore(int hits) => hits <= 0 ? 0 : 1 - math.pow(0.5, math.min(hits
 
 // ── 形のルール ──
 
-final _phone = RegExp(r'(?<![\d０-９])(?:\+81[-\s]?|0)\d{1,4}[-‐－ー−\s]?\d{1,4}[-‐－ー−\s]?\d{3,4}(?![\d０-９])');
+final _phone = RegExp(r'(?<![\d０-９])(?:\+81[-\s]?|0)\d{1,4}[-‐－ー−\s]?\d{1,4}[-‐－ー−\s]?\d{3,4}(?![\d０-９])'); // l10n-ignore
 final _email = RegExp(r'(?<![@\w.+-])[\w.+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+');
-final _postal = RegExp(r'(?:〒|郵便番号\s*[:：]?)\s*\d{3}[-－ー]?\d{4}');
-final _address = RegExp(r'[一-龥]{1,4}[市区町村][一-龥ぁ-んァ-ヶ]{0,12}\d{1,4}\s*(?:丁目|番地|[-－ー]\s*\d{1,4})');
-final _lineId = RegExp(r'(?:LINE|ＬＩＮＥ|ライン)\s*(?:ID|ＩＤ|id)\s*[:：は]?\s*[A-Za-z0-9._-]{3,}', caseSensitive: false);
+final _postal = RegExp(r'(?:〒|郵便番号\s*[:：]?)\s*\d{3}[-－ー]?\d{4}'); // l10n-ignore
+final _address = RegExp(r'[一-龥]{1,4}[市区町村][一-龥ぁ-んァ-ヶ]{0,12}\d{1,4}\s*(?:丁目|番地|[-－ー]\s*\d{1,4})'); // l10n-ignore
+final _lineId = RegExp(r'(?:LINE|ＬＩＮＥ|ライン)\s*(?:ID|ＩＤ|id)\s*[:：は]?\s*[A-Za-z0-9._-]{3,}', caseSensitive: false); // l10n-ignore
 final _url = RegExp(r'(?:https?://|www\.)[^\s]+', caseSensitive: false);
 
 /// 電話番号らしい数字の並び(数字が 10〜11 桁、`+81` は 9〜10 桁)。

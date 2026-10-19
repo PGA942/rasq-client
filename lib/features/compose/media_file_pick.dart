@@ -1,6 +1,8 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
+
 /// 動画 / 音声のファイルを選ぶ (D-250)。image_picker のギャラリーは音声を出せないので、ファイル選択から。
 const mediaVideoExtensions = ['mp4', 'mov', 'm4v', 'webm', 'mkv'];
 const mediaAudioExtensions = ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'oga', 'opus', 'flac'];
@@ -19,6 +21,6 @@ String? mediaMimeFor(String name, {String? reported}) {
 }
 
 /// 選択ダイアログ(テストで差し替える)。
-final mediaFilePickerProvider = Provider<Future<XFile?> Function()>((ref) => () => openFile(acceptedTypeGroups: const [
-      XTypeGroup(label: '動画 / 音声', extensions: [...mediaVideoExtensions, ...mediaAudioExtensions], mimeTypes: ['video/*', 'audio/*'], uniformTypeIdentifiers: ['public.movie', 'public.audio']),
+final mediaFilePickerProvider = Provider<Future<XFile?> Function()>((ref) => () => openFile(acceptedTypeGroups: [
+      XTypeGroup(label: appL10n.composeMediaPickTypeLabel, extensions: const [...mediaVideoExtensions, ...mediaAudioExtensions], mimeTypes: const ['video/*', 'audio/*'], uniformTypeIdentifiers: const ['public.movie', 'public.audio']),
     ]));
