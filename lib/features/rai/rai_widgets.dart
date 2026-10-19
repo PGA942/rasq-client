@@ -285,7 +285,8 @@ class RaiAskButton extends StatelessWidget {
 }
 
 /// RAi バーの枠(角丸 + 線 + 影)。
-ShapeBorder raiBarShape(ColorScheme scheme) => RoundedRectangleBorder(side: BorderSide(color: scheme.onSurface, width: 1.2), borderRadius: BorderRadius.circular(RasqSizes.radiusLg));
+/// ふちは他の FOW と同じ細い線 (D-480: [fowRimSide] = 1px の outlineVariant。以前は onSurface の 1.2px で濃く見えた)。
+ShapeBorder raiBarShape(ColorScheme scheme) => RoundedRectangleBorder(side: fowRimSide(scheme), borderRadius: BorderRadius.circular(RasqSizes.radiusLg));
 
 /// 会話だけの RAi の入力 (D-427): RAi バーと同じ見た目(上段 = 入力欄、下段 = モデルのチップ / 状態リング / 「質問する」)で、
 /// 案内 / モードの切り替え / 履歴は持たない。オンボーディングの「RAi に聞く」(クラウドの RAi)で使う。
@@ -623,8 +624,9 @@ class RaiSpeech extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surface,
-      elevation: 4,
-      shape: RoundedRectangleBorder(side: BorderSide(color: error ? RasqColors.danger : scheme.onSurface, width: 1.2), borderRadius: BorderRadius.circular(RasqSizes.radiusLg)),
+      // ふちと影はバーと同じ (D-480: [fowRimSide] / [kFowElevation])。エラーのときだけ線を赤に。
+      elevation: kFowElevation,
+      shape: RoundedRectangleBorder(side: error ? fowRimSide(scheme).copyWith(color: RasqColors.danger) : fowRimSide(scheme), borderRadius: BorderRadius.circular(RasqSizes.radiusLg)),
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(RasqSpacing.sm, RasqSpacing.xs, RasqSpacing.xs, RasqSpacing.xs),

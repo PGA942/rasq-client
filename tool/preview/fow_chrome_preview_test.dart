@@ -1,4 +1,5 @@
-// 描画確認ハーネス (D-479): FOW の外側のふち(見出し / ハンドルのある FOW・RAi のウィジェット)を明 / 暗のテーマで PNG に。
+// 描画確認ハーネス (D-479 / D-480): FOW の外側のふち(見出し / ハンドルのある FOW・RAi のウィジェット = 発言 + バー / 会話だけの入力)を
+// 明 / 暗のテーマで PNG に。
 //   RASQ_PREVIEW_FONT=/path/to/NotoSansJP.ttf flutter test tool/preview/fow_chrome_preview_test.dart --update-goldens
 import 'dart:io';
 
@@ -32,6 +33,8 @@ void main() {
       tester.view.physicalSize = const Size(1080, 1500);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
+      // テストの既定は影を黒い線で描く(debugDisableShadows)。実機と同じ浅い影で見る(撮り終えたら戻す)。
+      debugDisableShadows = false;
       final m = OverlayManager();
       m.showFow<void>(
         id: 'fow',
@@ -55,12 +58,15 @@ void main() {
       ));
       await tester.pumpAndSettle();
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('fow_chrome_header_$name.png'));
+      debugDisableShadows = true;
     });
 
     testWidgets('RAi のウィジェット: $name', (tester) async {
-      tester.view.physicalSize = const Size(1080, 900);
+      tester.view.physicalSize = const Size(1080, 1200);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
+      // テストの既定は影を黒い線で描く(debugDisableShadows)。実機と同じ浅い影で見る(撮り終えたら戻す)。
+      debugDisableShadows = false;
       await tester.pumpWidget(ProviderScope(
         child: MaterialApp(
           theme: theme,
@@ -72,7 +78,13 @@ void main() {
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: const EdgeInsets.all(RasqSpacing.sm),
-                  child: RaiBar(state: const RaiState(open: true), onToggleExpanded: () {}, onMode: (_) {}, onSubmit: (_) {}, onClose: () {}, modelLabel: 'Gemma'),
+                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    RaiSpeech(line: 'こんにちは。何をお手伝いしましょう？', index: 0, count: 2, hasMore: true, streaming: false, onNext: () {}, onClose: () {}),
+                    const SizedBox(height: RasqSpacing.sm),
+                    RaiBar(state: const RaiState(open: true), onToggleExpanded: () {}, onMode: (_) {}, onSubmit: (_) {}, onClose: () {}, modelLabel: 'Gemma'),
+                    const SizedBox(height: RasqSpacing.sm),
+                    RaiPromptBar(controller: TextEditingController(), onSubmit: () {}, modelLabel: 'クラウド'),
+                  ]),
                 ),
               ),
             ]),
@@ -81,6 +93,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('fow_chrome_rai_$name.png'));
+      debugDisableShadows = true;
     });
   }
 }
