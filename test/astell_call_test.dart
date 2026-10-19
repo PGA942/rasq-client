@@ -731,6 +731,8 @@ void main() {
 
     test('Central が配信を用意していない (501) / 断った (403) ときの言い換え', () {
       expect(astellStreamErrorText(OrgateException(ErrorCode.tryParse('501')!, 'streaming is not configured')), '配信はまだ使えません(配信サーバーが未設定)');
+      // D-503: 見るのは番号だけ(サーバーの文は表示の言語に訳される)。
+      expect(astellStreamErrorText(OrgateException(ErrorCode.tryParse('501')!, '配信の設定がありません')), '配信はまだ使えません(配信サーバーが未設定)');
       expect(astellStreamErrorText(OrgateException(ErrorCode.tryParse('403')!, 'streaming is limited to moderators in this room')), contains('許可されていません'));
       expect(astellStreamErrorText(const AstellMediaException(AstellMediaIssue.insecureContext)), 'Web 版の通話は https で開いたときだけ使えます');
     });

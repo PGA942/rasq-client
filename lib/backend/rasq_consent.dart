@@ -27,10 +27,11 @@ enum RasqAgeBand {
 }
 
 /// サーバーが規約の版を断った (`409 terms_version`、D-371 / S-053): アプリに入っている規約が古い。
-bool isTermsVersionError(Object e) => e is OrgateException && '$e'.contains('409') && '$e'.contains('current version');
+/// 名前つきの理由で見る (D-503)。古いサーバーは 409 と英語の文。
+bool isTermsVersionError(Object e) => e is OrgateException && (e.serverCode == 'terms_version' || (e.code.code == '409' && e.isReason('terms_version', legacyText: 'current version')));
 
 /// 利用規約の承諾が先 (`403 terms_required`)。
-bool isTermsRequiredError(Object e) => e is OrgateException && '$e'.contains('accept the current terms');
+bool isTermsRequiredError(Object e) => e is OrgateException && e.isReason('terms_required', legacyText: 'accept the current terms');
 
 /// 登録の FOW で選んだ内容。
 class RasqRegisterChoice {

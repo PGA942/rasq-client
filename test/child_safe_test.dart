@@ -612,7 +612,7 @@ void main() {
     expect(childSafeErrorMessage(e('404', 'not found')), contains('コード'));
     expect(childSafeErrorMessage(e('404', '見守っているアカウントに、そのハンドルはありません')), contains('ハンドル'));
     // 403 は Central の文のまま(端末の 403 だけ言い換える)。
-    expect(childSafeErrorMessage(e('403', '保護者の確認が済んでいません(POST /me/child-safe/guardian/verify)')), contains('保護者の確認'));
+    expect(childSafeErrorMessage(e('403', '保護者の確認が済んでいません。「チャイルドセーフ」の「保護者の確認」から確認してください')), contains('保護者の確認'));
     expect(childSafeErrorMessage(e('403', 'this device cannot sign in')), contains('端末'));
   });
 

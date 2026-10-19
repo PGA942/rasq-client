@@ -532,7 +532,8 @@ class _SwingComposerScreenState extends ConsumerState<SwingComposerScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.swingSent(ttl))));
       _close();
     } on OrgateException catch (e) {
-      setState(() => _error = e.message.contains('swing_limit') || e.toString().contains('429') ? appL10n.swingErrorLimit : appL10n.swingSendFailed(e.message));
+      // `429 swing_limit` (D-503: 文ではなく名前と HTTP の番号で見る)。
+      setState(() => _error = e.isReason('swing_limit', legacyText: 'swing_limit') || e.code.code == '429' ? appL10n.swingErrorLimit : appL10n.swingSendFailed(e.message));
     } catch (e) {
       setState(() => _error = appL10n.swingSendFailed(e is StateError ? e.message : '$e'));
     } finally {

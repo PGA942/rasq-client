@@ -29,6 +29,8 @@ String rasqVerifyWhere(String kind, List<String> where) {
 }
 
 /// 持ち主の確認のエラーを、画面に出す 1 行へ。
+/// D-503: Central の持ち主の確認 / Keybase の誤りには名前つきの理由(`error.code`)がまだ無く、文は英語の固定の文なので、
+/// HTTP の番号と文の一部で見ている。Central が名前を返すようになったら [OrgateException.isReason] に替える。
 String rasqVerifyMessage(OrgateException e) => switch (e.code.code) {
       '404' => appL10n.profileOwnershipErrorNotLinked,
       '400' when e.message.contains('not supported') => appL10n.profileOwnershipErrorUnsupported,

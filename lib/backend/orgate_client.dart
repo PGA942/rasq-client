@@ -97,6 +97,19 @@ class OrgateException implements Exception {
   /// ユーザーに見せる 1 行。
   @override
   String toString() => '${code.code}: $message';
+
+  /// サーバーが名前つきの理由(`error.code` が `swing_limit` などの語)を返したか。数字 / CONTRACT §9 のコード
+  /// (`409` / `B03` など)だけのときは false。
+  bool get hasNamedReason => serverCode != null && ErrorCode.tryParse(serverCode!) == null;
+
+  /// 理由が [name] か (D-503)。サーバーの文(`message`)は表示の言語に合わせて訳される(Central S-111 / ORGATE の
+  /// `Accept-Language`)ので、理由は名前で見る。名前つきの理由を返さない古いサーバーのときだけ、前の版の英語の文の
+  /// 一部 [legacyText] で見る(名前つきの理由が来ていれば文は見ない)。
+  bool isReason(String name, {String? legacyText}) {
+    if (serverCode == name) return true;
+    if (hasNamedReason || legacyText == null) return false;
+    return message.contains(legacyText);
+  }
 }
 
 /// `/api/v1` 配下への薄い HTTP 口。認証は Bearer だけで Cookie は使わない。

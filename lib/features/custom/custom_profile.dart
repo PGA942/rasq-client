@@ -212,10 +212,11 @@ Future<void> uploadRasqSideloadPage(BuildContext context, WidgetRef ref, {requir
     onDone();
     messenger?.showSnackBar(SnackBar(content: Text(l10n.customProfileSideloadPlaced(p.name))));
   } on OrgateException catch (e) {
-    messenger?.showSnackBar(SnackBar(content: Text(switch (e.message) {
-      final m when m.contains('not_profile_page') => l10n.customProfileSideloadErrorNotProfilePage,
-      final m when m.contains('sideload_page_limit') => l10n.customProfileSideloadErrorLimit,
-      final m when m.contains('invalid_package') => l10n.customProfileSideloadErrorInvalidPackage,
+    // 理由は Central の名前つきの理由(`400 not_profile_page` / `409 sideload_page_limit` / `400 invalid_package`)で見る (D-503)。
+    messenger?.showSnackBar(SnackBar(content: Text(switch (e) {
+      _ when e.isReason('not_profile_page', legacyText: 'not_profile_page') => l10n.customProfileSideloadErrorNotProfilePage,
+      _ when e.isReason('sideload_page_limit', legacyText: 'sideload_page_limit') => l10n.customProfileSideloadErrorLimit,
+      _ when e.isReason('invalid_package', legacyText: 'invalid_package') => l10n.customProfileSideloadErrorInvalidPackage,
       _ => l10n.customPlaceFailed(e.message),
     })));
   } catch (e) {
