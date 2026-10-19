@@ -52,7 +52,7 @@ bool isFrontmostFowPanel(Widget w) => w is Material && w.key == kFowPanelKey && 
 /// 閉じる動きの写し (D-476) は無い(動かすとボタンから離れてしまうので)。
 @immutable
 class FowTether {
-  const FowTether({this.anchorChild, this.preferredSide = TetherSide.below, this.width = 320, this.fitContent = false, this.iconExtent = kTetherIconExtent});
+  const FowTether({this.anchorChild, this.preferredSide = TetherSide.below, this.width = 320, this.fitContent = false, this.iconExtent = kTetherIconExtent, this.liftOwner = false});
 
   /// 首の中に描く元のボタンの見た目(アイコン)。パネルがボタンを覆うので、同じアイコンを渡す。
   final Widget? anchorChild;
@@ -67,6 +67,11 @@ class FowTether {
 
   /// [kTetherIconExtent](ボタンのアイコンの大きさ)。
   final double iconExtent;
+
+  /// 親の FOW(下にドックしている。ownerId)を、このパネルの高さぶん持ち上げる (D-517)。親の中のボタン(コンポーザーの
+  /// ツールバーの絵文字)から下に開く子のパネル用: 親は子の高さぶん枠を伸ばし([FowChildGap] が中身を上へ押し出す、D-068)、
+  /// パネルは持ち上がったボタンにつながって**下へ**出る(入力欄を覆わない)。開く側は [preferredSide] に固定する。
+  final bool liftOwner;
 }
 
 /// FOW type (原典: UI_Elements「FOWタイプ（3種）」).
@@ -96,6 +101,7 @@ class FowSpec {
     this.confirmText,
     this.headerTrailing,
     this.headerLeading,
+    this.footer,
     this.showHandle = true,
     this.avoidKeyboard = true,
     this.dockAboveFooter = false,
@@ -139,6 +145,10 @@ class FowSpec {
 
   /// ヘッダー左側(キャンセルの代わり。共有 FOW のアカウント選択、D-170)。
   final Widget? headerLeading;
+
+  /// フッター (D-517): 中身の下に置く行。ふつうは [FowFooter](上に細い線 + 左に状態の文 + 右に操作)。ドックする FOW では
+  /// ハンドルより内側(下付きなら中身とハンドルの間)、ボタンにつながった形([tether])ではパネルの下の辺。
+  final Widget? footer;
   final bool showHandle;
 
   /// Lift the panel above the soft keyboard.
@@ -331,6 +341,38 @@ class FowSpec {
       if ((v - s).abs() < (v - best).abs()) best = s;
     }
     heightFactor.value = best.clamp(minHeightFactor, maxHeightFactor);
+  }
+}
+
+/// FOW の標準のフッター (D-517)。見出し(キャンセル / タイトル / 決定)と対になる下の行: 上に細い線([fowRimSide])、
+/// 左に状態の文([leading]。件数など。小さい灰色の字)、右に操作([actions]。リセット / 閉じる などの文字のボタン)。
+/// [FowSpec.footer] / `showTetheredPanel(footer:)` に渡す。ドックする FOW とボタンにつながったパネルで同じ見た目。
+class FowFooter extends StatelessWidget {
+  const FowFooter({super.key, this.leading, this.actions = const []});
+
+  /// 左の状態の文(null なら空き)。
+  final Widget? leading;
+
+  /// 右の操作(左から順)。
+  final List<Widget> actions;
+
+  /// フッターの行の高さ(線を除く)。
+  static const double height = 44;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final caption = (Theme.of(context).textTheme.bodySmall ?? const TextStyle()).copyWith(color: scheme.onSurfaceVariant);
+    return Container(
+      key: const ValueKey('rasqOverlay.fow.footer'),
+      constraints: const BoxConstraints(minHeight: height),
+      padding: const EdgeInsets.only(left: 16, right: 4),
+      decoration: BoxDecoration(border: Border(top: fowRimSide(scheme))),
+      child: Row(children: [
+        Expanded(child: DefaultTextStyle.merge(style: caption, maxLines: 1, overflow: TextOverflow.ellipsis, child: leading ?? const SizedBox.shrink())),
+        ...actions,
+      ]),
+    );
   }
 }
 

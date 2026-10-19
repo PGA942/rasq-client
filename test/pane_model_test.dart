@@ -93,36 +93,24 @@ void main() {
     expect(col3Width(), lessThanOrEqualTo(kSearchHomeColumnWidth + 1));
     expect(find.byType(PostDetailScreen), findsNothing); // 第2カラムはホームTLのまま
 
-    // ---- FOW の横ドッキング + アンカー (D-062/D-065) -------------------
-    // リアクションピッカーは**実物のリアクションボタンにアンカー**して開き
-    // (D-065)、開いた側(第2カラム)の幅に収まる。
+    // ---- リアクションのボタンから出るピッカー (D-065 → D-517) -------------------
+    // ピッカー全体は**リアクションのボタンにつながった形**(TetheredPanel)で、開いた側(第2カラム)の中に収まる。
     final reactionBtn = find.byIcon(Icons.favorite_border).first;
     final btnRect = tester.getRect(reactionBtn);
-    // 長押しはすぐ選べる絵文字 (D-512)。その「その他」でピッカー全体を開く。
+    // 長押しはすぐ選べる絵文字 (D-512)。その「その他」でピッカー全体を開く(同じボタンにつなげ直す、D-517)。
     await tester.longPress(reactionBtn);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('quickEmoji.more')));
     await tester.pumpAndSettle();
     expect(find.byType(EmojiPanel), findsOneWidget);
-    Finder fowPanel() => find.byWidgetPredicate(isFrontmostFowPanel);
-    expect(tester.getTopLeft(fowPanel()).dx, closeTo(72, 1)); // 第2カラムの左端
-    expect(tester.getSize(fowPanel()).width, closeTo(1200 - 72 - kSearchHomeColumnWidth, 1));
-    // 基本は下付き: FOW の上辺がボタンの下辺の近く(ボタンより下)。
-    expect(tester.getTopLeft(fowPanel()).dy, greaterThanOrEqualTo(btnRect.bottom - 1));
-
-    // アンカー FOW を別カラムへ動かすと**その時点で壁付き表示** (D-065):
-    // 壁側に検索ホーム幅・最大高さで張り付く(アンカーは解除)。
-    await tester.drag(find.text('リアクション'), const Offset(150, 0));
-    await tester.pumpAndSettle();
-    expect(tester.getTopLeft(fowPanel()).dx, closeTo(1200 - kSearchHomeColumnWidth, 1));
-    expect(tester.getSize(fowPanel()).width, closeTo(kSearchHomeColumnWidth, 1));
-    expect(tester.getSize(fowPanel()).height, closeTo(800 - 32, 1)); // 上辺の余白 32px (D-178)
-
-    // 内側へしきい値以上動かすとピンが外れてカラム揃えへ戻る(高さも戻る)。
-    await tester.drag(find.text('リアクション'), const Offset(-200, 0));
-    await tester.pumpAndSettle();
-    expect(tester.getSize(fowPanel()).width, closeTo(kSearchHomeColumnWidth, 1));
-    expect(tester.getSize(fowPanel()).height, lessThan(700));
+    expect(find.descendant(of: find.byType(TetheredPanel), matching: find.byType(EmojiPanel)), findsOneWidget);
+    final panel = tester.getRect(find.byKey(kTetherPanelKey));
+    // 第2カラム(左端 72、幅 1200 - 72 - 検索ホームの幅)の中。
+    expect(panel.left, greaterThanOrEqualTo(72));
+    expect(panel.right, lessThanOrEqualTo(1200 - kSearchHomeColumnWidth));
+    // 基本は下に: パネルの上辺がボタンの中心のすぐ下。
+    expect(panel.top, greaterThan(btnRect.center.dy));
+    expect(panel.top - btnRect.center.dy, lessThan(16));
 
     // ピックでリアクション実行 → 閉じる(従来どおり)。
     await tester.tap(find.descendant(of: find.byType(EmojiPanel), matching: find.text('👍')).first);

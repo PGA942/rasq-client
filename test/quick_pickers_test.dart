@@ -95,6 +95,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(EmojiPanel), findsOneWidget);
       expect(sent(), isEmpty);
+      // D-517: 「その他」のピッカー全体も、同じリアクションのボタンにつながった形(離れた所に出さない)。
+      expect(find.byType(TetheredPanel), findsOneWidget);
+      expect(find.descendant(of: find.byType(TetheredPanel), matching: find.byType(EmojiPanel)), findsOneWidget);
+      final button = tester.getCenter(find.byTooltip('リアクション').first);
+      final panel = tester.getRect(find.byKey(kTetherPanelKey));
+      expect(panel.left <= button.dx && button.dx <= panel.right, isTrue);
+      expect(panel.top - button.dy, inInclusiveRange(0, 16), reason: 'ボタンのすぐ下から');
     });
 
     testWidgets('設定のプリセットが先頭に並び、最近使った絵文字が続く。設定は保存される', (tester) async {
@@ -169,6 +176,76 @@ void main() {
       await g.up();
       await tester.pumpAndSettle();
       expect(find.text('引用'), findsOneWidget);
+    });
+  });
+
+  group('FOW のフッター / ボタンから出る絵文字ピッカー (D-517)', () {
+    testWidgets('共有 FOW: 下に標準のフッター(リンク + ブラウザで開く / 閉じる)、閉じるで閉じる', (tester) async {
+      await pump(tester);
+      await tester.tap(find.byTooltip('共有').first);
+      await tester.pumpAndSettle();
+      final footer = find.descendant(of: find.byType(TetheredPanel), matching: find.byType(FowFooter));
+      expect(footer, findsOneWidget);
+      expect(find.descendant(of: footer, matching: find.byKey(const ValueKey('post.share.browser'))), findsOneWidget);
+      expect(find.descendant(of: footer, matching: find.byKey(const ValueKey('post.share.link'))), findsOneWidget);
+      // フッターはパネルのいちばん下。
+      expect(tester.getRect(footer).bottom, closeTo(tester.getRect(find.byKey(kTetherPanelKey)).bottom, 1));
+      await tester.tap(find.descendant(of: footer, matching: find.byKey(const ValueKey('post.share.close'))));
+      await tester.pumpAndSettle();
+      expect(find.byType(TetheredPanel), findsNothing);
+    });
+
+    testWidgets('リアクションのボタンのタップ(予測が無い)でも、ピッカー全体はボタンにつながった形。検索欄でキーボードが出ても見える', (tester) async {
+      await pump(tester);
+      await tester.tap(find.byTooltip('リアクション').first);
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(TetheredPanel), matching: find.byType(EmojiPanel)), findsOneWidget);
+      final field = find.descendant(of: find.byKey(const ValueKey('emoji.search')), matching: find.byType(TextField));
+      await tester.tap(field);
+      await tester.pump();
+      // キーボード(画面の下半分)。ボタンが隠れなければつながったまま上に回り、隠れれば首を外してキーボードの上。
+      tester.view.viewInsets = FakeViewPadding(bottom: 1300 * tester.view.devicePixelRatio / 3);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      final keyboardTop = 780 - 1300 / 3;
+      expect(tester.getRect(field).bottom, lessThanOrEqualTo(keyboardTop), reason: '検索欄はキーボードの上');
+      expect(tester.getRect(find.byKey(kTetherPanelKey)).bottom, lessThanOrEqualTo(keyboardTop + 1));
+      expect(tester.testTextInput.hasAnyClients, isTrue, reason: 'フォーカスは外れない(キーボードが閉じない)');
+      await tester.enterText(field, 'smile');
+      await tester.pumpAndSettle();
+      expect(find.byType(EmojiPanel), findsOneWidget);
+    });
+
+    testWidgets('コンポーザーの絵文字のボタン: タップ / 長押しの「その他」で、ボタンにつながったピッカー全体が下に開き、コンポーザーを持ち上げる', (tester) async {
+      await pump(tester);
+      await openHomeComposer(tester);
+      await tester.pumpAndSettle();
+      final button = find.byKey(const ValueKey('composer.tool.emoji'));
+      final input = find.byKey(const ValueKey('composer.input'));
+      final inputBefore = tester.getRect(input);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(TetheredPanel), matching: find.byType(EmojiPanel)), findsOneWidget);
+      final panel = tester.getRect(find.byKey(kTetherPanelKey));
+      final b = tester.getCenter(button);
+      expect(panel.top, greaterThan(b.dy), reason: 'ボタンの下に開く(持ち上がったボタンにつながる)');
+      expect(panel.top - b.dy, lessThan(16));
+      expect(tester.getRect(input).top, lessThan(inputBefore.top), reason: 'コンポーザーが持ち上がる');
+      expect(tester.getRect(input).bottom, lessThanOrEqualTo(panel.top), reason: '入力欄を覆わない');
+      final manager = ProviderScope.containerOf(tester.element(find.byType(RasqApp))).read(overlayManagerProvider);
+      expect(manager.entries.firstWhere((e) => e.id == 'fow.emoji').fow!.tether!.liftOwner, isTrue);
+      await tester.tap(find.byKey(const ValueKey('rasqOverlay.tether.hit')));
+      await tester.pumpAndSettle();
+      expect(find.byType(EmojiPanel), findsNothing);
+
+      // 長押し →「その他」でも同じ形。
+      final g = await hold(tester, button);
+      await g.moveTo(tester.getCenter(find.byKey(const ValueKey('quickEmoji.more'))));
+      await tester.pump();
+      await g.up();
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(TetheredPanel), matching: find.byType(EmojiPanel)), findsOneWidget);
+      expect(tester.getRect(find.byKey(kTetherPanelKey)).top, greaterThan(tester.getCenter(button).dy));
     });
   });
 

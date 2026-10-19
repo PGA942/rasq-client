@@ -26,6 +26,8 @@ import '../vc/astell_providers.dart';
 ///   プラグインが自動で並ぶ。タップで `post.share` → プラグインの FOW がこの FOW の子に
 ///   インラインで開き、`composer.open` で編集した文面をコンポーザーへ)、DM へ共有、
 ///   ブラウザで開く。
+/// - フッター (D-517): FOW の標準のフッター([FowFooter])に、リンク(薄い字)+「ブラウザで開く」/「閉じる」(前は見出しの ✕ と
+///   「その他」節の行)。
 const postShareFowId = 'fow.post.share';
 const postShareDmFowId = 'fow.post.share.dm';
 const postShareAccountKey = Key('post.share.account');
@@ -106,7 +108,7 @@ Future<void> showPostShareFow(WidgetRef ref, Post post, {int column = 0, MediaIt
         },
       ),
     ),
-    headerTrailing: RasqIconButton(icon: Icons.close, tooltip: '閉じる', onPressed: () => manager.close(postShareFowId)),
+    footer: _ShareFooter(link: link, onClose: () => manager.close(postShareFowId)),
   );
   try {
     await manager.showFow<void>(
@@ -269,16 +271,30 @@ class _ShareBodyState extends ConsumerState<_ShareBody> {
         ),
       const RasqSectionHeader(title: 'その他', topMargin: RasqSpacing.md),
       RasqListTile(key: const ValueKey('post.share.dm'), leading: Icon(Icons.mail_outline, size: 20, color: scheme.onSurfaceVariant), title: 'DM へ共有', subtitle: '選んだアカウントの DM にリンクを送る', onTap: _dm),
-      RasqListTile(
-        key: const ValueKey('post.share.browser'),
-        leading: Icon(Icons.open_in_browser, size: 20, color: scheme.onSurfaceVariant),
-        title: 'ブラウザで開く',
-        subtitle: widget.link,
-        onTap: () => launchUrl(Uri.parse(widget.link), mode: LaunchMode.externalApplication),
-      ),
       if (_note != null) Padding(padding: const EdgeInsets.only(top: RasqSpacing.sm), child: Text(_note!, style: RasqTypography.caption.copyWith(color: scheme.error))),
     ]);
   }
+}
+
+/// 共有 FOW のフッター (D-517): リンク + ブラウザで開く / 閉じる。
+class _ShareFooter extends StatelessWidget {
+  const _ShareFooter({required this.link, required this.onClose});
+  final String link;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) => FowFooter(
+        leading: Text(link, key: const ValueKey('post.share.link')),
+        actions: [
+          TextButton.icon(
+            key: const ValueKey('post.share.browser'),
+            onPressed: () => launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication),
+            icon: const Icon(Icons.open_in_browser, size: 18),
+            label: const Text('ブラウザで開く'),
+          ),
+          TextButton(key: const ValueKey('post.share.close'), onPressed: onClose, child: const Text('閉じる', style: TextStyle(fontWeight: FontWeight.w700))),
+        ],
+      );
 }
 
 /// 上段の 3 つ(内容 / リンク / 他のアカウント): アイコン + 短いラベルの角丸チップ。
