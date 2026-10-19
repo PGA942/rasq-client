@@ -5,6 +5,7 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../../app/navigation.dart';
 import '../../backend/rasq_account_page_api.dart';
+import '../../l10n/l10n.dart';
 import 'rasq_account_page_screen.dart' show RasqSnsTileChip, openRasqSnsTile;
 
 /// SNS のプロフィールに出す「RASQ アカウント」欄 (D-312)。
@@ -37,7 +38,7 @@ class RasqLinksOnSnsProfile extends ConsumerWidget {
       key: const ValueKey('snsProfile.rasq'),
       padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.xs, RasqSpacing.page, RasqSpacing.sm),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Text('RASQ アカウント', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
+        Text(context.l10n.profilePageRasqAccount, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: RasqSpacing.xs),
         Material(
           color: scheme.surface,
@@ -59,8 +60,8 @@ class RasqLinksOnSnsProfile extends ConsumerWidget {
                 if (viewing != null && viewing.verified) ...[
                   const SizedBox(width: 6),
                   Tooltip(
-                    message: 'このアカウントの持ち主を確認済み(${viewing.verifiedLabel})',
-                    child: Icon(Icons.verified, key: const ValueKey('snsProfile.rasq.verified'), size: 16, color: scheme.primary, semanticLabel: '持ち主を確認済み'),
+                    message: context.l10n.profilePageViewingVerified(viewing.verifiedLabel),
+                    child: Icon(Icons.verified, key: const ValueKey('snsProfile.rasq.verified'), size: 16, color: scheme.primary, semanticLabel: context.l10n.profilePageVerifiedSemantics),
                   ),
                 ],
                 const Spacer(),

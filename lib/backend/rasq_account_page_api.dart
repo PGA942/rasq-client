@@ -5,6 +5,7 @@ import 'package:rasq_models/rasq_models.dart';
 
 import '../features/child_safe/child_gate.dart';
 import '../features/child_safe/child_safe_providers.dart' show childGateProvider;
+import '../l10n/l10n.dart';
 import 'orgate_client.dart';
 import 'rasq_account.dart';
 
@@ -997,7 +998,7 @@ bool rasqPostHidden(ChildGate gate, RasqAccountPost p) => gate.postHidden(p.toPo
 
 /// 開いてよい RASQ の投稿の詳細か(見守りの時間に詳細を開かせない設定 / 見せない投稿)。開けるなら null。[p] が null = まだ読んでいない。
 String? rasqPostDetailBlockReason(ChildGate gate, RasqAccountPost? p) =>
-    gate.postDetailBlockReason(null) ?? (p != null && rasqPostHidden(gate, p) ? 'この投稿は表示できません' : null);
+    gate.postDetailBlockReason(null) ?? (p != null && rasqPostHidden(gate, p) ? appL10n.childSafePostHidden : null);
 
 List<RasqAccountPost> childSafeRasqPosts(ChildGate gate, List<RasqAccountPost> posts) => gate.policy == null ? posts : [for (final p in posts) if (!rasqPostHidden(gate, p)) p];
 

@@ -9,6 +9,7 @@ import 'package:rasq_models/rasq_models.dart';
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import '../../app/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import '../users/user_providers.dart';
 
@@ -90,7 +91,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     } on SnsApiException catch (e) {
       setState(() => _error = '${e.code.display}${e.code.message == null ? '' : '\n${e.code.message}'}');
     } catch (e) {
-      setState(() => _error = '更新に失敗しました: $e');
+      setState(() => _error = appL10n.profileEditErrorFailed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -102,16 +103,17 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     final profile = ref.watch(userProfileProvider((id: me.id, account: null)));
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
+    final l10n = context.l10n;
     profile.whenData(_fill);
     return Scaffold(
       appBar: RasqPageHeader(
-        title: 'プロフィールの更新',
-        actions: [TextButton(onPressed: _busy || _loaded == null ? null : _save, child: const Text('決定'))],
+        title: l10n.profileEditTitle,
+        actions: [TextButton(onPressed: _busy || _loaded == null ? null : _save, child: Text(l10n.profileEditSave))],
         onMore: () {},
       ),
       body: profile.when(
         loading: () => const RasqLoading(),
-        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userProfileProvider((id: me.id, account: null))), retryLabel: '再読み込み'),
+        error: (e, _) => RasqErrorView(code: e is SnsApiException ? e.code : ErrorCode.internalServerError.copyWith(message: '$e'), onRetry: () => ref.invalidate(userProfileProvider((id: me.id, account: null))), retryLabel: l10n.profileEditReload),
         data: (p) => ListView(padding: const EdgeInsets.only(bottom: 48), children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.sm),
@@ -137,24 +139,24 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               const SizedBox(width: RasqSpacing.md),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  RasqInput(controller: _name, hintText: '名前を入力..', suffix: IconButton(icon: const Icon(Icons.cancel, size: 18), onPressed: () => _name.clear())),
+                  RasqInput(controller: _name, hintText: l10n.profileEditNameHint, suffix: IconButton(icon: const Icon(Icons.cancel, size: 18), onPressed: () => _name.clear())),
                   Row(children: [
                     const Icon(Icons.cake_outlined, size: 16),
                     const SizedBox(width: 4),
-                    Expanded(child: RasqInput(controller: _birthday, hintText: '誕生日 (YYYY-MM-DD)', keyboardType: TextInputType.datetime)),
+                    Expanded(child: RasqInput(controller: _birthday, hintText: l10n.profileEditBirthdayHintSns, keyboardType: TextInputType.datetime)),
                     const SizedBox(width: 12),
                     const Icon(Icons.calendar_today_outlined, size: 16),
                     const SizedBox(width: 4),
-                    Text(p.createdAt == null ? '' : '${p.createdAt!.year}年${p.createdAt!.month}月', style: RasqTypography.bodySmall),
+                    Text(p.createdAt == null ? '' : RasqDateFormat.yearMonth(p.createdAt!), style: RasqTypography.bodySmall),
                   ]),
                 ]),
               ),
             ]),
           ),
-          _Labeled('自己紹介', RasqInput(controller: _bio, maxLines: 5, hintText: '自己紹介')),
-          _Labeled('場所', RasqInput(controller: _location, hintText: '場所')),
+          _Labeled(l10n.profileEditBioLabel, RasqInput(controller: _bio, maxLines: 5, hintText: l10n.profileEditBioLabel)),
+          _Labeled(l10n.profileEditLocationLabel, RasqInput(controller: _location, hintText: l10n.profileEditLocationLabel)),
           _Labeled(
-            'リンク',
+            l10n.profileEditLinksLabel,
             Column(children: [
               for (var i = 0; i < _links.length; i++)
                 Container(
@@ -162,13 +164,13 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(border: Border.all(color: scheme.onSurface), borderRadius: BorderRadius.circular(RasqSizes.radiusMd)),
                   child: Row(children: [
-                    IconButton(icon: const Icon(Icons.cancel), onPressed: () => setState(() => _links.removeAt(i)), tooltip: '削除'),
+                    IconButton(icon: const Icon(Icons.cancel), onPressed: () => setState(() => _links.removeAt(i)), tooltip: l10n.profileEditLinkRemove),
                     Expanded(child: Column(children: [
-                      TextField(controller: _links[i].$1, decoration: InputDecoration(hintText: 'キャプション', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), isDense: true)),
+                      TextField(controller: _links[i].$1, decoration: InputDecoration(hintText: l10n.profileEditLinkCaptionHint, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), isDense: true)),
                       const SizedBox(height: 6),
                       TextField(controller: _links[i].$2, decoration: InputDecoration(hintText: 'URL', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), isDense: true), keyboardType: TextInputType.url),
                     ])),
-                    IconButton(icon: const Icon(Icons.add), onPressed: _links.length >= 4 ? null : () => setState(() => _links.add((TextEditingController(), TextEditingController()))), tooltip: '追加'),
+                    IconButton(icon: const Icon(Icons.add), onPressed: _links.length >= 4 ? null : () => setState(() => _links.add((TextEditingController(), TextEditingController()))), tooltip: l10n.profileEditLinkAdd),
                   ]),
                 ),
             ]),
@@ -203,6 +205,6 @@ class _PickButton extends StatelessWidget {
   Widget build(BuildContext context) => Material(
         color: Theme.of(context).colorScheme.surface,
         shape: const CircleBorder(),
-        child: IconButton(icon: const Icon(Icons.add_photo_alternate_outlined, size: 18), onPressed: onTap, tooltip: '画像を選択', constraints: const BoxConstraints(minWidth: 36, minHeight: 36)),
+        child: IconButton(icon: const Icon(Icons.add_photo_alternate_outlined, size: 18), onPressed: onTap, tooltip: context.l10n.profileEditPickImage, constraints: const BoxConstraints(minWidth: 36, minHeight: 36)),
       );
 }

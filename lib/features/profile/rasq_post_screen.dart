@@ -14,6 +14,7 @@ import '../../shell/third_column.dart';
 import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../compose/compose_target.dart';
 import '../compose/composer_sheet.dart';
+import '../../l10n/l10n.dart';
 import '../post/thread_section.dart';
 import '../post/thread_section_bar.dart';
 import '../settings/settings_dsl.dart';
@@ -22,13 +23,17 @@ import 'rasq_reactions_screen.dart';
 
 /// 返信欄に出すもの (D-294): 帯の長押しで切り替える(SNS の欄の切り替え D-070 と同じ)。保存先も同じ(キーは `rasqMode`)。
 enum RasqSectionMode {
-  replies('返信'),
-  queues('キュー'),
-  rebroads('リブロード'),
-  quotes('引用');
+  replies,
+  queues,
+  rebroads,
+  quotes;
 
-  const RasqSectionMode(this.label);
-  final String label;
+  String get label => switch (this) {
+        replies => appL10n.profilePostReply,
+        queues => appL10n.profilePostQueue,
+        rebroads => appL10n.profilePostRebroad,
+        quotes => appL10n.profilePostQuote,
+      };
 }
 
 /// RASQ の投稿の詳細 (D-271 / S-022 → D-292): **SNS の投稿の詳細 (Misskey) と同じ作り**。
@@ -96,6 +101,7 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final thread = ref.watch(rasqThreadProvider(widget.postId));
     final saved = ref.watch(settingsAreaProvider(threadRepliesKvArea)).value ?? const <String, Object?>{};
     final order = ThreadSortOrder.values.asNameMap()[saved['order']] ?? ThreadSortOrder.none;
@@ -106,8 +112,8 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
     final childBlocked = rasqPostDetailBlockReason(ref.watch(childGateProvider), target);
     if (childBlocked != null) {
       return Scaffold(
-        appBar: RasqPageHeader(title: '投稿', onBack: widget.onClose),
-        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: 'この投稿は表示できません', hint: childBlocked == 'この投稿は表示できません' ? '見守りの設定は保護者が決めています' : childBlocked),
+        appBar: RasqPageHeader(title: l10n.profilePostTitle, onBack: widget.onClose),
+        body: RasqEmptyView(key: const ValueKey('childSafe.postHidden'), title: l10n.childSafePostHidden, hint: childBlocked == l10n.childSafePostHidden ? l10n.childSafeScreensBlockedHint : childBlocked),
       );
     }
     if (target != null) _ensureReplyComposer(target);
@@ -115,12 +121,12 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
     void reply() => setState(() => _composerDismissed = false);
 
     return Scaffold(
-      appBar: RasqPageHeader(title: '投稿', onBack: widget.onClose),
+      appBar: RasqPageHeader(title: l10n.profilePostTitle, onBack: widget.onClose),
       body: thread.when(
         loading: () => const RasqLoading(),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(RasqSpacing.page),
-          child: Text(e is OrgateException && e.code.code == '404' ? 'この投稿は、もうありません' : '読み込めませんでした: ${e is OrgateException ? e.message : e}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
+          child: Text(e is OrgateException && e.code.code == '404' ? l10n.profilePostGone : l10n.profilePostLoadFailed('${e is OrgateException ? e.message : e}'), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)),
         ),
         data: (t) {
           // 並び順は、SNS の返信欄と同じ関数で(SNS の投稿の形に写して並べ、元の投稿へ戻す)。
@@ -134,22 +140,22 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
           return ListView(padding: const EdgeInsets.only(bottom: 160), children: [
             if (t.parent != null) RasqPostTileView(post: t.parent!, onChanged: _refresh, onOpen: () => context.push(Routes.rasqPost(t.parent!.id))),
             if (t.parent == null && t.post.isReply && !t.parentHidden)
-              Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: Text('元の投稿は削除されています。', style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
+              Padding(padding: const EdgeInsets.fromLTRB(RasqSpacing.page, RasqSpacing.sm, RasqSpacing.page, 0), child: Text(l10n.profilePostParentDeleted, style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant))),
             RasqPostTileView(post: t.post, focused: true, onChanged: _refresh, onReply: reply),
             // 帯: 短押し = 並び順(返信のとき)、長押し = 欄の切り替え、右 = 「リアクションを表示」のページへ (D-294)。
             ThreadSectionBar(
-              label: mode == RasqSectionMode.replies ? '返信 ${t.replies.length}' : mode.label,
+              label: mode == RasqSectionMode.replies ? l10n.profilePostRepliesCount(t.replies.length) : mode.label,
               order: mode == RasqSectionMode.replies ? order : ThreadSortOrder.none,
               onSortTap: mode == RasqSectionMode.replies ? (r) => _sort(r, order) : null,
               onModeTap: (r) => _switchMode(r, mode),
               trailing: TextButton(
                 key: const ValueKey('rasqThread.showReactions'),
                 onPressed: () => context.push(Routes.rasqPostReactions(t.post.id)),
-                child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('リアクションを表示'), Icon(Icons.chevron_right, size: 18)]),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [Text(l10n.profilePostMenuReactions), const Icon(Icons.chevron_right, size: 18)]),
               ),
             ),
             if (mode == RasqSectionMode.replies) ...[
-              if (t.replies.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('返信はまだありません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
+              if (t.replies.isEmpty) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(l10n.profilePostNoRepliesYet, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
               for (final r in sorted) ...[
                 RasqPostTileView(key: ValueKey('rasqThread.reply.${r.id}'), post: r, onChanged: _refresh, onOpen: () => context.push(Routes.rasqPost(r.id))),
                 const Divider(),
@@ -157,11 +163,11 @@ class _RasqPostScreenState extends ConsumerState<RasqPostScreen> {
             ] else
               ref.watch(rasqPostReactionsProvider(widget.postId)).when(
                     loading: () => const RasqLoading(),
-                    error: (e, _) => Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('読み込めませんでした: ${e is OrgateException ? e.message : e}', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
+                    error: (e, _) => Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(l10n.profilePostLoadFailed('${e is OrgateException ? e.message : e}'), style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))),
                     data: (rx) => switch (mode) {
                       RasqSectionMode.queues => RasqQueueSections(groups: rx.queues, open: _openQueues, shrinkWrap: true, onToggle: (k) => setState(() => _openQueues.contains(k) ? _openQueues.remove(k) : _openQueues.add(k))),
-                      RasqSectionMode.rebroads => RasqActorList(actors: rx.rebroads, empty: 'リブロードはありません', shrinkWrap: true),
-                      _ => RasqPostTileList(posts: rx.quotes, empty: '引用はありません', onChanged: _refresh, shrinkWrap: true),
+                      RasqSectionMode.rebroads => RasqActorList(actors: rx.rebroads, empty: l10n.profilePostNoRebroads, shrinkWrap: true),
+                      _ => RasqPostTileList(posts: rx.quotes, empty: l10n.profilePostNoQuotes, onChanged: _refresh, shrinkWrap: true),
                     },
                   ),
           ]);

@@ -100,7 +100,7 @@ void main() {
     final (c, api) = await pumpEditor(tester);
     await tester.enterText(find.byKey(const ValueKey('rasqPage.md.title')), 'わたしのページ');
     await tester.enterText(find.byKey(const ValueKey('rasqPage.md.body')), 'こんにちは');
-    await tester.tap(find.byKey(const ValueKey('rasqPage.md.tool.中央')));
+    await tester.tap(find.byKey(const ValueKey('rasqPage.md.tool.center')));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('rasqPage.md.tool.image')));
     await tester.pumpAndSettle();

@@ -14,6 +14,7 @@ import '../../app/router.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart' hide RasqNotice;
+import '../../l10n/l10n.dart';
 import 'rasq_account_page_screen.dart' show RasqSnsTileChip;
 import 'rasq_ownership_screens.dart' show rasqVerifiableKinds;
 import '../../shell/headers.dart';
@@ -178,16 +179,17 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
+    final l10n = context.l10n;
     final account = ref.watch(orgateAccountProvider).value;
     if (account != null) _fill(account);
     final a = _loaded;
     return Scaffold(
       appBar: RasqPageHeader(
-        title: 'プロフィールの更新',
-        actions: [TextButton(key: const ValueKey('rasqProfile.save'), onPressed: _busy || a == null ? null : _save, child: const Text('決定'))],
+        title: l10n.profileEditTitle,
+        actions: [TextButton(key: const ValueKey('rasqProfile.save'), onPressed: _busy || a == null ? null : _save, child: Text(l10n.profileEditSave))],
       ),
       body: a == null
-          ? Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('RASQ アカウントにログインしていません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)))
+          ? Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(l10n.profileEditNotLoggedIn, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)))
           : ListView(padding: const EdgeInsets.only(bottom: 48), children: [
               // 失敗は一番上に出す(下に置くと、長い画面では気づけない)。
               if (_error != null) Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(_error!, key: const ValueKey('rasqProfile.error'), style: RasqTypography.bodySmall.copyWith(color: tokens.danger))),
@@ -208,12 +210,12 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                   bottom: 8,
                   child: Row(children: [
                     if (_banner != null || (a.bannerUrl != null && !_removeBanner))
-                      _RoundButton(key: const ValueKey('rasqProfile.banner.remove'), icon: Icons.delete_outline, tooltip: 'バナーを外す', onTap: () => setState(() {
+                      _RoundButton(key: const ValueKey('rasqProfile.banner.remove'), icon: Icons.delete_outline, tooltip: l10n.profileEditBannerRemove, onTap: () => setState(() {
                             _banner = null;
                             _removeBanner = true;
                           })),
                     const SizedBox(width: 6),
-                    _RoundButton(key: const ValueKey('rasqProfile.banner.pick'), icon: Icons.add, tooltip: 'バナーを選ぶ', onTap: () => _pick(true)),
+                    _RoundButton(key: const ValueKey('rasqProfile.banner.pick'), icon: Icons.add, tooltip: l10n.profileEditBannerPick, onTap: () => _pick(true)),
                   ]),
                 ),
               ]),
@@ -224,9 +226,9 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                     _avatar != null
                         ? ClipOval(child: Image.memory(_avatar!.bytes, width: 64, height: 64, fit: BoxFit.cover))
                         : RasqAvatar(imageUrl: _removeAvatar ? null : a.avatarUrl, size: 64, fallbackLabel: a.displayName.isEmpty ? a.handle : a.displayName),
-                    Positioned(right: -4, bottom: -4, child: _RoundButton(key: const ValueKey('rasqProfile.avatar.pick'), icon: Icons.add, tooltip: 'アイコンを選ぶ', onTap: () => _pick(false))),
+                    Positioned(right: -4, bottom: -4, child: _RoundButton(key: const ValueKey('rasqProfile.avatar.pick'), icon: Icons.add, tooltip: l10n.profileEditAvatarPick, onTap: () => _pick(false))),
                     if (_avatar != null || (a.avatarUrl != null && !_removeAvatar))
-                      Positioned(left: -4, bottom: -4, child: _RoundButton(key: const ValueKey('rasqProfile.avatar.remove'), icon: Icons.delete_outline, tooltip: 'アイコンを外す', onTap: () => setState(() {
+                      Positioned(left: -4, bottom: -4, child: _RoundButton(key: const ValueKey('rasqProfile.avatar.remove'), icon: Icons.delete_outline, tooltip: l10n.profileEditAvatarRemove, onTap: () => setState(() {
                             _avatar = null;
                             _removeAvatar = true;
                           }))),
@@ -234,25 +236,25 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                   const SizedBox(width: RasqSpacing.md),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      RasqInput(key: const ValueKey('rasqProfile.name'), controller: _name, hintText: '名前を入力..', suffix: IconButton(icon: const Icon(Icons.cancel, size: 18), onPressed: () => _name.clear())),
+                      RasqInput(key: const ValueKey('rasqProfile.name'), controller: _name, hintText: l10n.profileEditNameHint, suffix: IconButton(icon: const Icon(Icons.cancel, size: 18), onPressed: () => _name.clear())),
                       Row(children: [
                         const Icon(Icons.cake_outlined, size: 16),
                         const SizedBox(width: 4),
-                        Expanded(child: RasqInput(key: const ValueKey('rasqProfile.birthday'), controller: _birthday, hintText: '誕生日 (YYYY-MM-DD / MM-DD)', keyboardType: TextInputType.datetime)),
+                        Expanded(child: RasqInput(key: const ValueKey('rasqProfile.birthday'), controller: _birthday, hintText: l10n.profileEditBirthdayHint, keyboardType: TextInputType.datetime)),
                         const SizedBox(width: 12),
                         const Icon(Icons.calendar_today_outlined, size: 16),
                         const SizedBox(width: 4),
-                        Text(a.createdAt == null ? '' : '${a.createdAt!.year}年${a.createdAt!.month}月', style: RasqTypography.bodySmall),
+                        Text(a.createdAt == null ? '' : RasqDateFormat.yearMonth(a.createdAt!), style: RasqTypography.bodySmall),
                       ]),
                     ]),
                   ),
                 ]),
               ),
-              _Labeled('ハンドル(@ なし、a-z 0-9 _、3〜32 文字)', RasqInput(key: const ValueKey('rasqProfile.handle'), controller: _handle, hintText: 'handle')),
-              _Labeled('自己紹介', RasqInput(key: const ValueKey('rasqProfile.bio'), controller: _bio, maxLines: 5, hintText: '自己紹介(500 文字まで)')),
-              _Labeled('場所', RasqInput(key: const ValueKey('rasqProfile.location'), controller: _location, hintText: '場所')),
+              _Labeled(l10n.profileEditHandleLabel, RasqInput(key: const ValueKey('rasqProfile.handle'), controller: _handle, hintText: 'handle')),
+              _Labeled(l10n.profileEditBioLabel, RasqInput(key: const ValueKey('rasqProfile.bio'), controller: _bio, maxLines: 5, hintText: l10n.profileEditBioHint)),
+              _Labeled(l10n.profileEditLocationLabel, RasqInput(key: const ValueKey('rasqProfile.location'), controller: _location, hintText: l10n.profileEditLocationLabel)),
               _Labeled(
-                'リンク',
+                l10n.profileEditLinksLabel,
                 Column(children: [
                   for (var i = 0; i < _links.length; i++)
                     Container(
@@ -262,7 +264,7 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                       child: Row(children: [
                         IconButton(
                           icon: const Icon(Icons.cancel),
-                          tooltip: '削除',
+                          tooltip: l10n.profileEditLinkRemove,
                           onPressed: () => setState(() {
                             final l = _links.removeAt(i);
                             l.$1.dispose();
@@ -272,12 +274,12 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                         ),
                         Expanded(
                           child: Column(children: [
-                            TextField(key: ValueKey('rasqProfile.link.$i.label'), controller: _links[i].$1, decoration: InputDecoration(hintText: 'キャプション', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), isDense: true)),
+                            TextField(key: ValueKey('rasqProfile.link.$i.label'), controller: _links[i].$1, decoration: InputDecoration(hintText: l10n.profileEditLinkCaptionHint, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), isDense: true)),
                             const SizedBox(height: 6),
                             TextField(key: ValueKey('rasqProfile.link.$i.url'), controller: _links[i].$2, decoration: InputDecoration(hintText: 'URL (https://…)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), isDense: true), keyboardType: TextInputType.url),
                           ]),
                         ),
-                        IconButton(icon: const Icon(Icons.add), tooltip: '追加', onPressed: _links.length >= maxLinks ? null : () => setState(() => _links.add((TextEditingController(), TextEditingController())))),
+                        IconButton(icon: const Icon(Icons.add), tooltip: l10n.profileEditLinkAdd, onPressed: _links.length >= maxLinks ? null : () => setState(() => _links.add((TextEditingController(), TextEditingController())))),
                       ]),
                     ),
                 ]),
@@ -285,10 +287,10 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
               // ── アカウントページに出す SNS アカウント (D-270) ──
               if ((_snsLinks ?? const []).isNotEmpty)
                 _Labeled(
-                  'アカウントページに出す SNS アカウント',
+                  l10n.profileEditSnsTilesLabel,
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(
-                        rasqDetail(context, '「自動」では、鍵アカウントなどは出しません。薄いタイルは、いま出ていないものです。', '「自動」は、鍵アカウントと、直近の投稿の公開範囲がフォロワーのみに寄っているアカウントを出しません。薄いタイルは、いまは出ていないものです。変更はすぐ反映されます。'),
+                        rasqDetail(context, l10n.profileEditSnsTilesCaption, l10n.profileEditSnsTilesCaptionDetail),
                         style: RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant)),
                     const SizedBox(height: RasqSpacing.sm),
                     for (final l in _snsLinks!)
@@ -302,7 +304,7 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                             key: ValueKey('rasqProfile.sns.${l.accountKey}'),
                             showSelectedIcon: false,
                             style: const ButtonStyle(visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                            segments: [for (final v in SnsTileVisibility.values) ButtonSegment(value: v, label: Text(v == SnsTileVisibility.auto ? '自動(${l.autoVisible ? '表示' : '非表示'})' : v.label, style: const TextStyle(fontSize: 12)))],
+                            segments: [for (final v in SnsTileVisibility.values) ButtonSegment(value: v, label: Text(v == SnsTileVisibility.auto ? l10n.profileEditSnsTileAuto(l.autoVisible ? l10n.profileEditSnsTileShown : l10n.profileEditSnsTileHidden) : v.label, style: const TextStyle(fontSize: 12)))],
                             selected: {l.visibility},
                             onSelectionChanged: (s) => _setSnsVisibility(l, s.first),
                           ),
@@ -311,7 +313,7 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                             Padding(
                               key: ValueKey('rasqProfile.verified.${l.accountKey}'),
                               padding: const EdgeInsets.only(top: RasqSpacing.xs),
-                              child: Row(children: [Icon(Icons.verified, size: 16, color: scheme.primary), const SizedBox(width: 4), Text('持ち主を確認済み(${l.tile.verifiedLabel})', style: RasqTypography.caption)]),
+                              child: Row(children: [Icon(Icons.verified, size: 16, color: scheme.primary), const SizedBox(width: 4), Text(l10n.profileEditVerified(l.tile.verifiedLabel), style: RasqTypography.caption)]),
                             )
                           else if (rasqVerifiableKinds.contains(l.tile.kind))
                             TextButton.icon(
@@ -319,7 +321,7 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                               style: const ButtonStyle(visualDensity: VisualDensity.compact),
                               onPressed: () => _openVerify(l),
                               icon: const Icon(Icons.verified_outlined, size: 16),
-                              label: const Text('持ち主を確認'),
+                              label: Text(l10n.profileEditVerify),
                             ),
                           // 投稿もアカウントページに出す (S-027): SNS のアクセストークンを ORGATE に預ける (D-399)。同意してから。
                           _SnsPostsSwitch(key: ValueKey('rasqProfile.snsPosts.${l.accountKey}'), accountKey: l.accountKey, onMessage: (m) => ScaffoldMessenger.of(context)..hideCurrentSnackBar()..showSnackBar(SnackBar(content: Text(m)))),
@@ -329,12 +331,12 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                 ),
               // ── SNS のプロフィールにも出す (D-312) ──
               _Labeled(
-                'SNS のプロフィール',
+                l10n.profileEditShowOnSnsLabel,
                 RasqSwitchListTile(
                   key: const ValueKey('rasqProfile.showOnSns'),
-                  title: 'SNS のプロフィールにも、つないだアカウントを出す',
-                  subtitle: 'RASQ で誰かがあなたの SNS のプロフィールを見たとき、つないだアカウントを出します。',
-                  detail: 'アプリで誰かがあなたの SNS のプロフィールを見たとき、この RASQ アカウントと、アカウントページに出しているほかのアカウントを出します。自己紹介に書いてあるものは重ねて出しません。変更はすぐ反映されます。',
+                  title: l10n.profileEditShowOnSnsTitle,
+                  subtitle: l10n.profileEditShowOnSnsSubtitle,
+                  detail: l10n.profileEditShowOnSnsDetail,
                   value: (account ?? a).showLinksOnSnsProfiles,
                   onChanged: _setShowOnSns,
                 ),
@@ -344,8 +346,8 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                 'Keybase',
                 RasqListTile(
                   key: const ValueKey('rasqProfile.keybase'),
-                  title: (account ?? a).keybase == null ? 'Keybase をつなぐ' : 'Keybase: @${(account ?? a).keybase!.username}',
-                  subtitle: (account ?? a).keybase == null ? 'Keybase で本人確認して、アカウントページに出します' : '確認済み。アカウントページに出ます',
+                  title: (account ?? a).keybase == null ? l10n.profileEditKeybaseConnect : 'Keybase: @${(account ?? a).keybase!.username}',
+                  subtitle: (account ?? a).keybase == null ? l10n.profileEditKeybaseConnectSubtitle : l10n.profileEditKeybaseLinkedSubtitle,
                   leading: Icon((account ?? a).keybase == null ? Icons.key_outlined : Icons.verified, color: (account ?? a).keybase == null ? null : scheme.primary),
                   divider: false,
                   onTap: () async {
@@ -354,9 +356,9 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
                   },
                 ),
               ),
-              const RasqNotice(
-                text: 'プロフィールは、公開ページとストアのレビューに出ます。メールとパスワードは「セキュリティ」から。',
-                detail: 'プロフィールは、RASQ の公開ページとストアのレビューに出ます。画像はサーバーで縮めて保存し直します(位置情報などは残りません)。メールアドレスとパスワードは「セキュリティ」から。',
+              RasqNotice(
+                text: l10n.profileEditNotice,
+                detail: l10n.profileEditNoticeDetail,
               ),
               if (_busy) const RasqLoading(),
             ]),
@@ -366,14 +368,14 @@ class _RasqProfileEditScreenState extends ConsumerState<RasqProfileEditScreen> {
 
 /// サーバーのエラーを、画面に出す 1 行へ。
 String rasqProfileMessage(OrgateException e) => switch (e.code.code) {
-      '409' => 'そのハンドルは使われています',
-      '400' when e.message.contains('handle') => 'ハンドルは 3〜32 文字の a-z 0-9 _ にしてください',
-      '400' when e.message.contains('birthday') => '誕生日は YYYY-MM-DD か MM-DD の形で入れてください',
-      '400' when e.message.contains('link') => 'リンクは、キャプション(40 文字まで)と http(s) の URL の組にしてください(8 組まで)',
-      '400' when e.message.contains('image') => 'その画像は使えません(PNG / JPEG / WebP / GIF、8 MiB まで)',
-      '400' when e.message.contains('bio') => '自己紹介は 500 文字までです',
-      '400' when e.message.contains('location') => '場所は 60 文字までです',
-      _ => '更新に失敗しました: ${e.message}',
+      '409' => appL10n.profileEditErrorHandleTaken,
+      '400' when e.message.contains('handle') => appL10n.profileEditErrorHandle,
+      '400' when e.message.contains('birthday') => appL10n.profileEditErrorBirthday,
+      '400' when e.message.contains('link') => appL10n.profileEditErrorLink,
+      '400' when e.message.contains('image') => appL10n.profileEditErrorImage,
+      '400' when e.message.contains('bio') => appL10n.profileEditErrorBio,
+      '400' when e.message.contains('location') => appL10n.profileEditErrorLocation,
+      _ => appL10n.profileEditErrorFailed(e.message),
     };
 
 class _Labeled extends StatelessWidget {
@@ -451,14 +453,15 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
   Future<void> _set(bool on) async {
     final api = ref.read(rasqAccountPageApiProvider);
     if (api == null || _busy) return;
+    final l10n = context.l10n;
     if (!on) {
       setState(() => _busy = true);
       try {
         await api.withdrawToken(widget.accountKey);
         if (mounted) setState(() => _status = const RasqVaultStatus(hasToken: false));
-        widget.onMessage('預けた鍵と、取ってきた投稿を消しました');
+        widget.onMessage(l10n.profileEditSnsPostsWithdrawn);
       } on OrgateException catch (e) {
-        widget.onMessage('消せませんでした: ${e.message}');
+        widget.onMessage(l10n.profileEditSnsPostsWithdrawFailed(e.message));
       } finally {
         if (mounted) setState(() => _busy = false);
       }
@@ -466,50 +469,40 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
     }
     // このアプリが持っている、その SNS アカウントのセッション(トークン)。
     final session = ref.read(sessionsProvider).value?.allSessions.where((s) => s.account.key == widget.accountKey).firstOrNull;
-    if (session == null || session.token.isEmpty) return widget.onMessage('この端末に、そのアカウントのログインがありません');
+    if (session == null || session.token.isEmpty) return widget.onMessage(l10n.profileEditSnsPostsNoLogin);
     // Bluesky (D-423): 投稿はすべて公開で、ORGATE は Bluesky の公開の API(AppView)から読める。ログインの鍵(アプリパスワードで
     // 作ったセッション)は預けず、どのアカウントかを示す DID とハンドルだけを渡す。
     final bluesky = session.account.kind == SnsKind.bluesky;
     final did = blueskyDidOf(session);
-    if (bluesky && did == null) return widget.onMessage('このアカウントの DID が分かりません。ログインし直してください');
+    if (bluesky && did == null) return widget.onMessage(l10n.profileEditSnsPostsNoDid);
     final ok = bluesky
         ? await ref.read(overlayManagerProvider).showAlert(
             id: 'rasqProfile.snsPosts.consent',
-            title: 'Bluesky の投稿をアカウントページに出します',
-            message: '${session.account} の投稿を、RASQ のサーバーが Bluesky の公開の API から読み、**RASQ のアカウントページで誰でも見られる状態**にします。\n\n'
-                '・Bluesky の投稿は、もともと誰でも読めます。返信とリポストは取り込みません。\n'
-                '・**ログインの鍵(アプリパスワード / セッション)は預けません**。サーバーに渡すのは、このアカウントの DID とハンドルだけです。\n'
-                '・使えるのは、持ち主の確認が済んだアカウントだけです(他人のアカウントの投稿を出せないように)。\n'
-                '・このスイッチを切ると、取ってきた投稿は、すぐに消えます。',
-            confirmText: '同意して出す',
-            cancelText: 'やめる',
+            title: l10n.profileEditSnsPostsBlueskyConsentTitle,
+            message: l10n.profileEditSnsPostsBlueskyConsentMessage('${session.account}'),
+            confirmText: l10n.profileEditSnsPostsAgreeShow,
+            cancelText: l10n.profileEditCancel,
           )
         : await ref.read(overlayManagerProvider).showAlert(
           id: 'rasqProfile.snsPosts.consent',
-          title: 'ログインの鍵を RASQ に預けます',
+          title: l10n.profileEditSnsPostsTokenConsentTitle,
           // 規約案 02 第 4 項 (D-372): 誰でも見られる状態になること、サーバーが復号できる方式であることを先に。
-          message: '${session.account} の投稿をアカウントページに出すために、この SNS の**ログインの鍵(アクセストークン)を RASQ のサーバーに預けます**。\n\n'
-              '・あなたの「公開」と「ホーム(未収載)」の投稿が、**RASQ のアカウントページで誰でも見られる状態**になります。「ホーム」はフォロワー限定ではありません。\n'
-              '・フォロワー限定 / 指名・DM / ローカルのみ / 公開範囲が分からない投稿は、取り込みません。\n'
-              '・鍵は、あなたの投稿を読むためだけに使います。投稿・フォローなどの操作や、ほかの目的には使いません。\n'
-              '・鍵はサーバーの鍵で暗号化して保存します(RASQ のサーバーは復号できます)。アプリにも他の人にも返しません。\n'
-              '・このスイッチを切ると、預けた鍵と取ってきた投稿は、すぐに消えます。\n\n'
-              'この鍵があれば、そのアカウントを操作できます。心配なときは、預けたあとでも SNS 側の設定からこの鍵(トークン)を無効にできます。',
-          confirmText: '同意して預ける',
-          cancelText: 'やめる',
+          message: l10n.profileEditSnsPostsTokenConsentMessage('${session.account}'),
+          confirmText: l10n.profileEditSnsPostsAgreeDeposit,
+          cancelText: l10n.profileEditCancel,
         );
     if (!ok || !mounted) return;
     setState(() => _busy = true);
     try {
       final st = await api.depositToken(widget.accountKey, bluesky ? jsonEncode({'did': did, 'handle': session.account.handle}) : session.token);
       if (mounted) setState(() => _status = st);
-      widget.onMessage(st.lastError == null ? '${st.postCount} 件の投稿を取ってきました' : '預けましたが、投稿を取れませんでした(${st.lastError})');
+      widget.onMessage(st.lastError == null ? l10n.profileEditSnsPostsFetched(st.postCount) : l10n.profileEditSnsPostsFetchFailed('${st.lastError}'));
     } on OrgateException catch (e) {
       widget.onMessage(switch (e.code.code) {
-        '501' => 'このサーバーでは、まだ使えません',
+        '501' => l10n.profileEditSnsPostsUnsupported,
         // Bluesky は持ち主の確認が済んだアカウントだけ (D-423 / ORGATE O-011)。
-        '403' when bluesky => '先に、このアカウントの「持ち主の確認」を済ませてください',
-        _ => '預けられませんでした: ${e.message}',
+        '403' when bluesky => l10n.profileEditSnsPostsVerifyFirst,
+        _ => l10n.profileEditSnsPostsDepositFailed(e.message),
       });
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -521,12 +514,13 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
     // サーバーがこの機能を閉じている / まだ分からない間は、出さない。
     if (!_loaded || _status == null) return const SizedBox.shrink();
     final st = _status!;
+    final l10n = context.l10n;
     return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       RasqSwitchListTile(
-        title: '投稿もアカウントページに出す',
+        title: l10n.profileEditSnsPostsSwitchTitle,
         subtitle: st.hasToken
-            ? (st.lastError != null ? '取得に失敗しています: ${st.lastError}' : '${st.postCount} 件(公開 / ホームの投稿。30 分ごとに更新)')
-            : (widget.accountKey.startsWith('bluesky:') ? 'RASQ のサーバーが Bluesky の公開の投稿を読みます(鍵は預けません)' : 'SNS のログインの鍵を RASQ に預けます(入れるときに確認が出ます)'),
+            ? (st.lastError != null ? l10n.profileEditSnsPostsFetchError('${st.lastError}') : l10n.profileEditSnsPostsCount(st.postCount))
+            : (widget.accountKey.startsWith('bluesky:') ? l10n.profileEditSnsPostsBlueskySubtitle : l10n.profileEditSnsPostsTokenSubtitle),
         value: st.hasToken,
         onChanged: _busy ? null : _set,
       ),
@@ -535,10 +529,9 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
       if (st.hasToken && !widget.accountKey.startsWith('bluesky:'))
         RasqSwitchListTile(
           key: ValueKey('rasqProfile.snsPosts.collections.${widget.accountKey}'),
-          title: 'この鍵を RASQ リストにも使う',
-          subtitle: '開いた RASQ リストの取得と、見られるかの確認に使います',
-          detail: 'S-054。RASQ リスト・クリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせ、中の人の公開の投稿を取りに行く。'
-              '投稿の表示のために預けた鍵とは別の目的なので、別に選ぶ(既定はオフ、選ぶ / やめるは同意の記録に残る)。',
+          title: l10n.profileEditSnsPostsCollectionsTitle,
+          subtitle: l10n.profileEditSnsPostsCollectionsSubtitle,
+          detail: l10n.profileEditSnsPostsCollectionsDetail,
           value: st.collectionsAllowed,
           onChanged: _busy ? null : _setCollections,
         ),
@@ -548,17 +541,14 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
   Future<void> _setCollections(bool on) async {
     final api = ref.read(rasqAccountPageApiProvider);
     if (api == null) return;
+    final l10n = context.l10n;
     if (on) {
       final ok = await ref.read(overlayManagerProvider).showAlert(
             id: 'rasqProfile.snsPosts.collections.consent',
-            title: '預けた鍵を RASQ リストにも使います',
-            message: '投稿の表示のために預けた鍵を、別の目的にも使います。\n\n'
-                '・RASQ リストやクリップを開いたとき、この鍵で SNS に「リストの人をフォローしているか」を問い合わせます(見られるかの確認)。\n'
-                '・リストの人の公開 / ホームの投稿を、この鍵で取りに行きます。\n'
-                '・投稿・フォローなどの操作には使いません。\n'
-                '・このスイッチを切ると、すぐに使わなくなります。',
-            confirmText: '同意して使う',
-            cancelText: 'やめる',
+            title: l10n.profileEditSnsPostsCollectionsConsentTitle,
+            message: l10n.profileEditSnsPostsCollectionsConsentMessage,
+            confirmText: l10n.profileEditSnsPostsCollectionsAgree,
+            cancelText: l10n.profileEditCancel,
           );
       if (!ok || !mounted) return;
     }
@@ -567,7 +557,7 @@ class _SnsPostsSwitchState extends ConsumerState<_SnsPostsSwitch> {
       final st = await api.setCollectionsAllowed(widget.accountKey, on);
       if (mounted) setState(() => _status = st);
     } on OrgateException catch (e) {
-      widget.onMessage('変えられませんでした: ${e.message}');
+      widget.onMessage(l10n.profileEditSnsPostsCollectionsFailed(e.message));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

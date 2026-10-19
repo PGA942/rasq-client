@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../backend/orgate_client.dart';
 import '../../backend/rasq_account.dart';
 import '../../backend/rasq_account_page_api.dart';
+import '../../l10n/l10n.dart';
 import '../../shell/headers.dart';
 import 'rasq_account_page_screen.dart' show RasqSnsTileChip;
 
@@ -19,38 +20,38 @@ const rasqVerifiableKinds = {'misskey', 'mastodon', 'bluesky'};
 String rasqVerifyWhere(String kind, List<String> where) {
   final fields = where.contains('fields');
   return switch (kind) {
-    'misskey' when fields => '自己紹介か、プロフィールの「追加情報」のどれかに貼って、保存してください。',
-    'mastodon' when fields => '自己紹介か、プロフィールの「補足情報」のどれかに貼って、保存してください。',
-    'bluesky' => '自己紹介(プロフィールの説明)に貼って、保存してください。',
-    _ when fields => '自己紹介か、プロフィールの項目のどれかに貼って、保存してください。',
-    _ => '自己紹介に貼って、保存してください。',
+    'misskey' when fields => appL10n.profileOwnershipWhereMisskey,
+    'mastodon' when fields => appL10n.profileOwnershipWhereMastodon,
+    'bluesky' => appL10n.profileOwnershipWhereBluesky,
+    _ when fields => appL10n.profileOwnershipWhereFields,
+    _ => appL10n.profileOwnershipWhereBio,
   };
 }
 
 /// 持ち主の確認のエラーを、画面に出す 1 行へ。
 String rasqVerifyMessage(OrgateException e) => switch (e.code.code) {
-      '404' => 'この SNS アカウントは、RASQ アカウントにつながっていません',
-      '400' when e.message.contains('not supported') => 'この SNS は、まだ持ち主の確認に対応していません',
-      '429' => '試す回数が多すぎます。しばらく待ってから、もう一度お試しください',
-      '409' when e.message.contains('verify/start') => 'まだ確認の文を作っていないか、期限が切れています。「確認の文を作る」からやり直してください',
-      '409' when e.message.contains('code was not found') => 'プロフィールに確認の文が見つかりませんでした。保存したか、公開のプロフィールに出ているかを確かめてください(反映まで少しかかることがあります)',
-      '409' when e.message.contains('was not found') => 'その SNS アカウントの公開のプロフィールが見つかりませんでした',
-      '409' => 'その SNS のプロフィールを読めませんでした。少し待ってから、もう一度お試しください',
-      _ => '確認できませんでした: ${e.message}',
+      '404' => appL10n.profileOwnershipErrorNotLinked,
+      '400' when e.message.contains('not supported') => appL10n.profileOwnershipErrorUnsupported,
+      '429' => appL10n.profileOwnershipErrorTooMany,
+      '409' when e.message.contains('verify/start') => appL10n.profileOwnershipErrorNotStarted,
+      '409' when e.message.contains('code was not found') => appL10n.profileOwnershipErrorCodeNotFound,
+      '409' when e.message.contains('was not found') => appL10n.profileOwnershipErrorProfileNotFound,
+      '409' => appL10n.profileOwnershipErrorReadFailed,
+      _ => appL10n.profileOwnershipErrorFailed(e.message),
     };
 
 /// Keybase のエラーを、画面に出す 1 行へ。
 String rasqKeybaseMessage(OrgateException e) => switch (e.code.code) {
-      '400' when e.message.contains('username') => 'Keybase のユーザー名(英小文字・数字・_、2〜16 文字)を入れてください',
-      '400' when e.message.contains('signature:') => '署名を読めませんでした。BEGIN KEYBASE SALTPACK SIGNED MESSAGE から END KEYBASE SALTPACK SIGNED MESSAGE. までを、そのまま貼ってください',
-      '400' when e.message.contains('not the statement') => '署名した文が違います。上のコマンドを、そのまま使ってください',
-      '400' when e.message.contains('current key') => 'その Keybase のユーザーの鍵で署名されていません',
-      '400' when e.message.contains('no such keybase user') => 'その Keybase のユーザーは見つかりませんでした',
-      '409' when e.message.contains('another rasq account') => 'その Keybase は、別の RASQ アカウントにつながっています',
-      '409' => '文の期限が切れたか、まだ作っていません。「署名する文を作る」からやり直してください',
-      '429' => '試す回数が多すぎます。しばらく待ってから、もう一度お試しください',
-      'B03' => 'Keybase に繋がりませんでした。少し待ってから、もう一度お試しください',
-      _ => '確かめられませんでした: ${e.message}',
+      '400' when e.message.contains('username') => appL10n.profileOwnershipKeybaseErrorUsername,
+      '400' when e.message.contains('signature:') => appL10n.profileOwnershipKeybaseErrorSignature,
+      '400' when e.message.contains('not the statement') => appL10n.profileOwnershipKeybaseErrorStatement,
+      '400' when e.message.contains('current key') => appL10n.profileOwnershipKeybaseErrorKey,
+      '400' when e.message.contains('no such keybase user') => appL10n.profileOwnershipKeybaseErrorNoUser,
+      '409' when e.message.contains('another rasq account') => appL10n.profileOwnershipKeybaseErrorOtherAccount,
+      '409' => appL10n.profileOwnershipKeybaseErrorExpired,
+      '429' => appL10n.profileOwnershipErrorTooMany,
+      'B03' => appL10n.profileOwnershipKeybaseErrorUnreachable,
+      _ => appL10n.profileOwnershipKeybaseErrorFailed(e.message),
     };
 
 String _date(DateTime? t) {
@@ -163,15 +164,16 @@ class _RasqSnsVerifyScreenState extends ConsumerState<RasqSnsVerifyScreen> {
     final scheme = Theme.of(context).colorScheme;
     final tokens = RasqTokens.of(context);
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
+    final l10n = context.l10n;
     final link = _link;
     final kind = link?.tile.kind ?? widget.accountKey.split(':').first;
     return Scaffold(
-      appBar: const RasqPageHeader(title: '持ち主を確認'),
+      appBar: RasqPageHeader(title: l10n.profileOwnershipVerifyTitle),
       body: !_loaded
           ? const RasqLoading()
           : ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [
               if (link == null)
-                Text('この SNS アカウントは、RASQ アカウントにつながっていません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
+                Text(l10n.profileOwnershipNotLinked, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
               else ...[
                 Align(alignment: Alignment.centerLeft, child: SizedBox(height: 40, child: RasqSnsTileChip(tile: link.tile))),
                 const SizedBox(height: RasqSpacing.md),
@@ -179,42 +181,42 @@ class _RasqSnsVerifyScreenState extends ConsumerState<RasqSnsVerifyScreen> {
                   Row(key: const ValueKey('snsVerify.done'), children: [
                     Icon(Icons.verified, size: 20, color: scheme.primary),
                     const SizedBox(width: 6),
-                    Expanded(child: Text('確認済み(${link.tile.verifiedLabel})', style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700))),
+                    Expanded(child: Text(l10n.profileOwnershipVerified(link.tile.verifiedLabel), style: RasqTypography.body.copyWith(fontWeight: FontWeight.w700))),
                   ]),
                   const SizedBox(height: RasqSpacing.sm),
-                  if (_justVerified) Text('確認できました。プロフィールに貼った文は、もう消してかまいません。', key: const ValueKey('snsVerify.removeHint'), style: RasqTypography.bodySmall),
+                  if (_justVerified) Text(l10n.profileOwnershipJustVerified, key: const ValueKey('snsVerify.removeHint'), style: RasqTypography.bodySmall),
                   const SizedBox(height: RasqSpacing.xs),
-                  Text(rasqDetail(context, 'アカウントページと SNS のプロフィールに、確認済みの印が付きます。', 'アカウントページと、SNS のプロフィールに出る RASQ アカウントの欄に、確認済みの印が付きます。この SNS アカウントを外すまで続きます。'), style: caption),
+                  Text(rasqDetail(context, l10n.profileOwnershipVerifiedCaption, l10n.profileOwnershipVerifiedCaptionDetail), style: caption),
                 ] else if (!rasqVerifiableKinds.contains(kind))
-                  Text('この SNS は、まだ本人確認に対応していません(Misskey / Mastodon / Bluesky のみ)。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
+                  Text(l10n.profileOwnershipUnsupportedKind, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant))
                 else ...[
-                  Text(rasqDetail(context, 'この SNS アカウントがあなたのものか確かめます。プロフィールに確認の文を一時的に貼ってください。', 'この SNS アカウントが、あなたのものかを確かめます。確認の文をその SNS のプロフィールに一時的に貼ってもらい、RASQ がその公開のプロフィールを読んで確かめます。'), style: RasqTypography.bodySmall),
+                  Text(rasqDetail(context, l10n.profileOwnershipIntro, l10n.profileOwnershipIntroDetail), style: RasqTypography.bodySmall),
                   const SizedBox(height: RasqSpacing.xs),
-                  Text(rasqDetail(context, '確かめると、確認済みの印が付きます。', '確かめると、アカウントページと SNS のプロフィールの RASQ アカウントの欄に、確認済みの印が付きます。同じ SNS アカウントをほかの人がつないでいても、確認した人が優先されます。'), style: caption),
+                  Text(rasqDetail(context, l10n.profileOwnershipEffect, l10n.profileOwnershipEffectDetail), style: caption),
                   const SizedBox(height: RasqSpacing.md),
                   if (_start == null)
-                    FilledButton(key: const ValueKey('snsVerify.start'), onPressed: _busy ? null : _begin, child: const Text('確認の文を作る'))
+                    FilledButton(key: const ValueKey('snsVerify.start'), onPressed: _busy ? null : _begin, child: Text(l10n.profileOwnershipStart))
                   else ...[
-                    Text('1. この文をコピーする', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+                    Text(l10n.profileOwnershipStep1, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: RasqSpacing.xs),
                     _CodeBox(valueKey: const ValueKey('snsVerify.text'), text: _start!.text),
                     Wrap(spacing: RasqSpacing.xs, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                      TextButton.icon(key: const ValueKey('snsVerify.copy'), onPressed: () => _copy(context, _start!.text, '確認の文をコピーしました'), icon: const Icon(Icons.copy, size: 16), label: const Text('コピー')),
-                      if (_start!.expiresAt != null) Text('${_date(_start!.expiresAt)} まで有効', style: caption),
+                      TextButton.icon(key: const ValueKey('snsVerify.copy'), onPressed: () => _copy(context, _start!.text, l10n.profileOwnershipCopied), icon: const Icon(Icons.copy, size: 16), label: Text(l10n.profileOwnershipCopy)),
+                      if (_start!.expiresAt != null) Text(l10n.profileOwnershipValidUntil(_date(_start!.expiresAt)), style: caption),
                     ]),
                     const SizedBox(height: RasqSpacing.sm),
-                    Text('2. その SNS のプロフィールに貼る', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+                    Text(l10n.profileOwnershipStep2, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: RasqSpacing.xs),
                     Text(rasqVerifyWhere(kind, _start!.where), key: const ValueKey('snsVerify.where'), style: RasqTypography.bodySmall),
-                    Text('RASQ からプロフィールを書き換えることはしません。その SNS で、ご自分で貼ってください。', style: caption),
+                    Text(l10n.profileOwnershipNoRewrite, style: caption),
                     const SizedBox(height: RasqSpacing.sm),
-                    Text('3. 貼ったら「確認する」', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+                    Text(l10n.profileOwnershipStep3, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
                   ],
                   const SizedBox(height: RasqSpacing.sm),
                   Wrap(spacing: RasqSpacing.sm, runSpacing: RasqSpacing.xs, children: [
                     // 前に作った文を貼ってあれば、作り直さずに確かめられる。
-                    FilledButton.tonal(key: const ValueKey('snsVerify.check'), onPressed: _busy ? null : _check, child: const Text('確認する')),
-                    if (_start != null) TextButton(key: const ValueKey('snsVerify.restart'), onPressed: _busy ? null : _begin, child: const Text('文を作り直す')),
+                    FilledButton.tonal(key: const ValueKey('snsVerify.check'), onPressed: _busy ? null : _check, child: Text(l10n.profileOwnershipCheck)),
+                    if (_start != null) TextButton(key: const ValueKey('snsVerify.restart'), onPressed: _busy ? null : _begin, child: Text(l10n.profileOwnershipRestart)),
                   ]),
                 ],
               ],
@@ -270,8 +272,8 @@ class _RasqKeybaseScreenState extends ConsumerState<RasqKeybaseScreen> {
   }
 
   String _linksMessage(RasqKeybaseStatus st) => st.verifiedLinks.isEmpty
-      ? 'Keybase の証明に、つないでいる SNS アカウントはありませんでした。'
-      : 'Keybase の証明で、つないでいる SNS アカウント ${st.verifiedLinks.length} 件も確認済みになりました。';
+      ? appL10n.profileOwnershipKeybaseNoLinks
+      : appL10n.profileOwnershipKeybaseLinksVerified(st.verifiedLinks.length);
 
   Future<void> _begin() => _run((api) async {
         final s = await api.startKeybase(_username.text.trim().replaceFirst(RegExp('^@'), '').toLowerCase());
@@ -290,7 +292,7 @@ class _RasqKeybaseScreenState extends ConsumerState<RasqKeybaseScreen> {
           setState(() {
             _start = null;
             _signature.clear();
-            _message = '@${st.keybase?.username ?? ''} をつなぎました。${_linksMessage(st)}';
+            _message = appL10n.profileOwnershipKeybaseLinked(st.keybase?.username ?? '', _linksMessage(st));
           });
         }
       });
@@ -303,7 +305,7 @@ class _RasqKeybaseScreenState extends ConsumerState<RasqKeybaseScreen> {
   Future<void> _unlink() => _run((api) async {
         await api.unlinkKeybase();
         await ref.read(orgateAccountProvider.notifier).refresh();
-        if (mounted) setState(() => _message = 'Keybase を外しました。Keybase の証明で確認していた SNS アカウントは、未確認に戻ります。');
+        if (mounted) setState(() => _message = appL10n.profileOwnershipKeybaseUnlinked);
       });
 
   @override
@@ -313,10 +315,11 @@ class _RasqKeybaseScreenState extends ConsumerState<RasqKeybaseScreen> {
     final caption = RasqTypography.caption.copyWith(color: scheme.onSurfaceVariant);
     final account = ref.watch(orgateAccountProvider).value;
     final kb = account?.keybase;
+    final l10n = context.l10n;
     return Scaffold(
       appBar: const RasqPageHeader(title: 'Keybase'),
       body: account == null
-          ? Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text('RASQ アカウントにログインしていません。', style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)))
+          ? Padding(padding: const EdgeInsets.all(RasqSpacing.page), child: Text(l10n.profileEditNotLoggedIn, style: RasqTypography.bodySmall.copyWith(color: scheme.onSurfaceVariant)))
           : ListView(padding: const EdgeInsets.all(RasqSpacing.page), children: [
               if (kb != null) ...[
                 Row(children: [
@@ -330,38 +333,38 @@ class _RasqKeybaseScreenState extends ConsumerState<RasqKeybaseScreen> {
                     ),
                   ),
                 ]),
-                if (kb.verifiedAt != null) Text('${_date(kb.verifiedAt)} に確認', style: caption),
+                if (kb.verifiedAt != null) Text(l10n.profileOwnershipKeybaseVerifiedAt(_date(kb.verifiedAt)), style: caption),
                 const SizedBox(height: RasqSpacing.sm),
-                Text(rasqDetail(context, 'アカウントページに「Keybase: @${kb.username}」が出ます。', 'アカウントページに「Keybase: @${kb.username}」が出ます。Keybase で Mastodon などの証明を足したら、「証明を読み直す」で、つないでいる SNS アカウントも確認済みになります。'), style: caption),
+                Text(rasqDetail(context, l10n.profileOwnershipKeybaseCaption(kb.username), l10n.profileOwnershipKeybaseCaptionDetail(kb.username)), style: caption),
                 const SizedBox(height: RasqSpacing.md),
                 Wrap(spacing: RasqSpacing.sm, runSpacing: RasqSpacing.xs, children: [
-                  FilledButton.tonal(key: const ValueKey('keybase.refresh'), onPressed: _busy ? null : _refresh, child: const Text('証明を読み直す')),
-                  TextButton(key: const ValueKey('keybase.unlink'), onPressed: _busy ? null : _unlink, child: Text('Keybase を外す', style: TextStyle(color: tokens.danger))),
+                  FilledButton.tonal(key: const ValueKey('keybase.refresh'), onPressed: _busy ? null : _refresh, child: Text(l10n.profileOwnershipKeybaseRefresh)),
+                  TextButton(key: const ValueKey('keybase.unlink'), onPressed: _busy ? null : _unlink, child: Text(l10n.profileOwnershipKeybaseUnlink, style: TextStyle(color: tokens.danger))),
                 ]),
               ] else ...[
-                Text(rasqDetail(context, 'Keybase で署名して、この RASQ アカウントとつなぎます。つないだ Keybase は公開されます。', 'Keybase のアカウントで署名して、この RASQ アカウントとつなぎます。つないだ Keybase は、アカウントページに出ます(Keybase のプロフィールと同じく公開です)。'), style: RasqTypography.bodySmall),
+                Text(rasqDetail(context, l10n.profileOwnershipKeybaseIntro, l10n.profileOwnershipKeybaseIntroDetail), style: RasqTypography.bodySmall),
                 const SizedBox(height: RasqSpacing.md),
-                Text('Keybase のユーザー名', style: caption),
+                Text(l10n.profileOwnershipKeybaseUsername, style: caption),
                 const SizedBox(height: 4),
                 RasqInput(key: const ValueKey('keybase.username'), controller: _username, hintText: 'username'),
                 const SizedBox(height: RasqSpacing.sm),
-                FilledButton(key: const ValueKey('keybase.start'), onPressed: _busy ? null : _begin, child: Text(_start == null ? '署名する文を作る' : '文を作り直す')),
+                FilledButton(key: const ValueKey('keybase.start'), onPressed: _busy ? null : _begin, child: Text(_start == null ? l10n.profileOwnershipKeybaseStart : l10n.profileOwnershipRestart)),
                 if (_start != null) ...[
                   const SizedBox(height: RasqSpacing.md),
-                  Text('1. Keybase が入っている端末で、このコマンドを実行する', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+                  Text(l10n.profileOwnershipKeybaseStep1, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: RasqSpacing.xs),
                   _CodeBox(valueKey: const ValueKey('keybase.command'), text: _start!.command, mono: true),
                   Wrap(spacing: RasqSpacing.xs, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                    TextButton.icon(key: const ValueKey('keybase.copy'), onPressed: () => _copy(context, _start!.command, 'コマンドをコピーしました'), icon: const Icon(Icons.copy, size: 16), label: const Text('コピー')),
-                    if (_start!.expiresAt != null) Text('${_date(_start!.expiresAt)} まで有効', style: caption),
+                    TextButton.icon(key: const ValueKey('keybase.copy'), onPressed: () => _copy(context, _start!.command, l10n.profileOwnershipKeybaseCopied), icon: const Icon(Icons.copy, size: 16), label: Text(l10n.profileOwnershipCopy)),
+                    if (_start!.expiresAt != null) Text(l10n.profileOwnershipValidUntil(_date(_start!.expiresAt)), style: caption),
                   ]),
-                  Text('署名する文: ${_start!.statement}', key: const ValueKey('keybase.statement'), style: caption),
+                  Text(l10n.profileOwnershipKeybaseStatement(_start!.statement), key: const ValueKey('keybase.statement'), style: caption),
                   const SizedBox(height: RasqSpacing.sm),
-                  Text('2. 出てきた署名を、BEGIN から END … MESSAGE. まで貼る', style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
+                  Text(l10n.profileOwnershipKeybaseStep2, style: RasqTypography.bodySmall.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: RasqSpacing.xs),
                   RasqInput(key: const ValueKey('keybase.signature'), controller: _signature, maxLines: 6, hintText: 'BEGIN KEYBASE SALTPACK SIGNED MESSAGE. …'),
                   const SizedBox(height: RasqSpacing.sm),
-                  FilledButton.tonal(key: const ValueKey('keybase.verify'), onPressed: _busy ? null : _verify, child: const Text('確かめる')),
+                  FilledButton.tonal(key: const ValueKey('keybase.verify'), onPressed: _busy ? null : _verify, child: Text(l10n.profileOwnershipKeybaseVerify)),
                 ],
               ],
               // 結果は、押したボタンのすぐ下に出す。
