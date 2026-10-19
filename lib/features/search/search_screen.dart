@@ -27,6 +27,30 @@ import 'search_filter.dart';
 import 'search_history.dart';
 import 'search_filter_bar_view.dart';
 
+/// 検索欄へのフォーカスの頼み (D-483: ホーム画面のショートカット「検索」)。検索タブ(第2カラム / 狭い画面)の [SearchScreen] が受ける
+/// (第3カラムの検索は受けない)。まだ作られていなければ(起動直後)、作られたときに 1 度だけ受ける。
+class SearchFocusRequests extends ChangeNotifier {
+  bool _pending = false;
+
+  /// 受けていない頼みがあれば true を返して消す。
+  bool take() {
+    final p = _pending;
+    _pending = false;
+    return p;
+  }
+
+  void request() {
+    _pending = true;
+    notifyListeners();
+  }
+}
+
+final searchFocusRequestsProvider = Provider<SearchFocusRequests>((ref) {
+  final r = SearchFocusRequests();
+  ref.onDispose(r.dispose);
+  return r;
+});
+
 /// 検索ホーム / トレンドホーム = トレンドページ (D-443): 広告枠(AdSlot) → トレンドページの構成の並び(既定は「トレンド」
 /// (ワード一覧)と「Today」のセクション → 「検索の候補」= トレンドプラグインのノード)。
 /// トレンドプラグインのサジェストは D-470 から並びのノード(`trendplugin:`、[trendPageConfig] が前の構成にも足す)。前は並びの後ろの固定の置き場だった。
@@ -59,15 +83,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   /// 運営の制限 (D-404) を 10 分おきに読み直す。
   Timer? _restrictionsTimer;
 
+  /// ショートカットの「検索」(D-483)。第3カラムの検索では null(受けない)。
+  SearchFocusRequests? _focusRequests;
+
   @override
   void initState() {
     super.initState();
     _focus.addListener(() => setState(() {}));
     _restrictionsTimer = Timer.periodic(const Duration(minutes: 10), (_) => ref.invalidate(trendRestrictionsProvider));
+    if (!widget.inThirdColumn) {
+      final requests = ref.read(searchFocusRequestsProvider);
+      _focusRequests = requests;
+      requests.addListener(_onFocusRequest);
+      if (requests.take()) WidgetsBinding.instance.addPostFrameCallback((_) => _focusField());
+    }
+  }
+
+  void _onFocusRequest() {
+    if (_focusRequests?.take() ?? false) WidgetsBinding.instance.addPostFrameCallback((_) => _focusField());
+  }
+
+  void _focusField() {
+    if (mounted) _focus.requestFocus();
   }
 
   @override
   void dispose() {
+    _focusRequests?.removeListener(_onFocusRequest);
     _restrictionsTimer?.cancel();
     _controller.dispose();
     _focus.dispose();

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -57,16 +59,23 @@ class DmScreen extends ConsumerWidget {
   }
 }
 
-Future<void> _startNewDm(BuildContext context, WidgetRef ref) async {
-  final manager = ref.read(overlayManagerProvider);
-  final rooms = ref.read(dmRoomsProvider).value ?? const <DmRoom>[];
-  final nav = context.pushDmRoom; // await 前に確保(deactivated-ancestor 対策)
-  final picked = await manager.showBottomSheet<UserSummary>(id: 'dm.new', title: '新規メッセージ', builder: (_) => const _UserPickSheet());
+Future<void> _startNewDm(BuildContext context, WidgetRef ref) =>
+    startNewDm(manager: ref.read(overlayManagerProvider), router: GoRouter.of(context), rooms: () => ref.read(dmRoomsProvider).value ?? const <DmRoom>[]);
+
+/// 新規メッセージ: 相手を選ぶシート → ルーム(コンポーザー付き)。DM の + と、ホーム画面のショートカット「メッセージを作成」(D-483)
+/// から。Widget の外からも開けるよう [OverlayManager] と [GoRouter] を直接受ける。[rooms] は相手を選んでから読む
+/// (起動直後のショートカットでは、シートを出した時点でまだ読み終えていないことがある)。
+Future<void> startNewDm({required OverlayManager manager, required GoRouter router, required List<DmRoom> Function() rooms}) async {
+  final picked = await manager.showBottomSheet<UserSummary>(id: dmNewSheetId, title: '新規メッセージ', builder: (_) => const _UserPickSheet());
   if (picked == null) return;
   // 既存ルームがあればそれを開く(重複ルームを作らない)。
-  final existing = rooms.where((r) => r.peer.id == picked.id).firstOrNull;
-  nav(existing ?? DmRoom(id: 'dm:${picked.id}', peer: picked));
+  final existing = rooms().where((r) => r.peer.id == picked.id).firstOrNull;
+  final room = existing ?? DmRoom(id: 'dm:${picked.id}', peer: picked);
+  unawaited(router.push(Routes.dmRoom(room.peer.id), extra: room));
 }
+
+/// 新規メッセージのシートの id。
+const dmNewSheetId = 'dm.new';
 
 /// 相手を選ぶシート: 検索欄 + 結果リスト。選択で ルーム画面(コンポーザー付き)へ。
 class _UserPickSheet extends ConsumerStatefulWidget {
@@ -110,7 +119,7 @@ class _UserPickSheetState extends ConsumerState<_UserPickSheet> {
                         leading: RasqAvatar(imageUrl: u.avatarUrl, size: RasqSizes.avatarMd, fallbackLabel: u.displayName),
                         title: u.displayName,
                         subtitle: '@${u.handle}',
-                        onTap: () => ref.read(overlayManagerProvider).close('dm.new', result: u),
+                        onTap: () => ref.read(overlayManagerProvider).close(dmNewSheetId, result: u),
                       ),
                   ]);
                 },

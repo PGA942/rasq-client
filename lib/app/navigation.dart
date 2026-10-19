@@ -141,7 +141,7 @@ extension RasqNavigation on BuildContext {
     pushReplacement('$base/${Uri.encodeComponent(tag)}${_trendQuery(account)}');
   }
 
-  void pushDmRoom(DmRoom room) => push('${Routes.dm}/room/${Uri.encodeComponent(room.peer.id)}', extra: room);
+  void pushDmRoom(DmRoom room) => push(Routes.dmRoom(room.peer.id), extra: room);
 }
 
 bool _isTabLocation(String loc) => loc.startsWith(Routes.home) || loc.startsWith(Routes.search) || loc.startsWith(Routes.vc) || loc.startsWith(Routes.notifications) || loc.startsWith(Routes.dm);

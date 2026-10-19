@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ホーム画面のショートカット「メッセージを作成 (envelope)」(D-483): API 25 用(丸の背景 + 字形)。API 26 からは drawable-anydpi-v26 の
+     アダプティブアイコン。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="@color/ic_shortcut_background"
+        android:pathData="M24,2A22,22 0,1 1,24 46A22,22 0,1 1,24 2z" />
+    <group
+        android:translateX="12"
+        android:translateY="12">
+        <path
+            android:fillColor="@color/ic_shortcut_glyph"
+            android:pathData="M20,4H4c-1.1,0 -1.99,0.9 -1.99,2L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6c0,-1.1 -0.9,-2 -2,-2zM20,18H4V8l8,5 8,-5v10zM12,11L4,6h16l-8,5z" />
+    </group>
+</vector>
