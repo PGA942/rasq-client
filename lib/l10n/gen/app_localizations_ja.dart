@@ -1480,6 +1480,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String composePostNoticeForAccount(String account, String message) {
+    return '$account: $message';
+  }
+
+  @override
   String get composeDraftsButton => '下書き';
 
   @override

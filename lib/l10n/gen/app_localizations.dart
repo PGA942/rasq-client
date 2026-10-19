@@ -2446,6 +2446,12 @@ abstract class AppLocalizations {
   /// **'送信に失敗しました: {error}'**
   String composeSendFailed(String error);
 
+  /// 複数のアカウントへ同時に送ったあとのスナックバーで、SNS プラグインからの知らせ(D-500。例: 引用の代わりに引用元の URL を付けて投稿した)の前にアカウント名を添える。account はアカウント表記(@name@host)、message はプラグインが表示の言語で返した文
+  ///
+  /// In ja, this message translates to:
+  /// **'{account}: {message}'**
+  String composePostNoticeForAccount(String account, String message);
+
   /// コンポーザーのヘッダーの、下書きの一覧を開くボタン
   ///
   /// In ja, this message translates to:

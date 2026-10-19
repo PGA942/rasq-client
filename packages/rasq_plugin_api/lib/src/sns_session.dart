@@ -27,6 +27,11 @@ abstract class SnsSession {
   Future<Post> post(String id);
   Future<Thread> thread(String id);
   Future<Post> createPost(NewPost draft);
+
+  /// [createPost] と同じ投稿をし、プラグインが添えた**利用者への知らせ**([SnsNotice])も返す
+  /// (契約 v0.25、D-500)。送った後に知らせを出すコンポーザーはこちらを呼ぶ。
+  /// 既定([SnsSessionBase])は [createPost] を呼んで知らせ無しで返す。
+  Future<SentPost> createPostWithNotice(NewPost draft);
   Future<void> deletePost(String id);
 
   /// Performs [actionId] on [postId]. `args` carries e.g. the reaction emoji.
@@ -148,7 +153,42 @@ abstract class SnsSession {
   Future<List<DmRoom>> dmRooms();
   Future<Post> sendDm(DmRoom room, NewPost draft);
 
+  /// [sendDm] の知らせ付き(契約 v0.25、[createPostWithNotice] と同じ)。
+  Future<SentPost> sendDmWithNotice(DmRoom room, NewPost draft);
+
   Future<void> close();
+}
+
+/// 投稿は**できた**が、利用者に知らせたいこと(rasq-sdk-sample PROTOCOL.md §4.3、契約 v0.25、D-500)。
+/// 例: Mastodon が引用を持たないサーバーで、引用の代わりに引用元の URL を本文に付けて送った。
+class SnsNotice {
+  const SnsNotice({required this.code, required this.message});
+
+  /// 言語に依らない機械向けの id(`quote.fallbackUrl` など)。ホストは知らない値でも [message] を出す。
+  final String code;
+
+  /// 利用者に見せる 1 文(プラグインが `args.locale` の言語で引いたもの)。
+  final String message;
+
+  /// ワイヤの `notice`(`{code, message}`)から。無い・形が違う・文が空なら null(何も出さない)。
+  static SnsNotice? fromWire(Object? wire) {
+    if (wire is! Map) return null;
+    final message = wire['message'];
+    if (message is! String || message.trim().isEmpty) return null;
+    final code = wire['code'];
+    return SnsNotice(code: code is String ? code : '', message: message.trim());
+  }
+
+  @override
+  String toString() => 'SnsNotice($code: $message)';
+}
+
+/// [SnsSession.createPostWithNotice] / [SnsSession.sendDmWithNotice] の答え: 作られた投稿と、あれば知らせ。
+class SentPost {
+  const SentPost(this.post, {this.notice});
+
+  final Post post;
+  final SnsNotice? notice;
 }
 
 /// Filter for [SnsSession.userPosts] (ユーザーページのタブ).
@@ -186,6 +226,8 @@ abstract class SnsSessionBase implements SnsSession {
   Future<Thread> thread(String id) => _unsupported('thread');
   @override
   Future<Post> createPost(NewPost draft) => _unsupported('createPost');
+  @override
+  Future<SentPost> createPostWithNotice(NewPost draft) async => SentPost(await createPost(draft));
   @override
   Future<void> deletePost(String id) => _unsupported('deletePost');
   @override
@@ -304,6 +346,8 @@ abstract class SnsSessionBase implements SnsSession {
   Future<List<DmRoom>> dmRooms() => _unsupported('dmRooms');
   @override
   Future<Post> sendDm(DmRoom room, NewPost draft) => _unsupported('sendDm');
+  @override
+  Future<SentPost> sendDmWithNotice(DmRoom room, NewPost draft) async => SentPost(await sendDm(room, draft));
   @override
   Future<void> close() async {}
 }

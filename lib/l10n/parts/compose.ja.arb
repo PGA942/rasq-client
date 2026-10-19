@@ -180,6 +180,8 @@
   "@composeLinkedFailed": {"description": "errors は失敗したアカウントの理由(「 / 」区切り)", "placeholders": {"errors": {"type": "String"}}},
   "composeSendFailed": "送信に失敗しました: {error}",
   "@composeSendFailed": {"placeholders": {"error": {"type": "String"}}},
+  "composePostNoticeForAccount": "{account}: {message}",
+  "@composePostNoticeForAccount": {"description": "複数のアカウントへ同時に送ったあとのスナックバーで、SNS プラグインからの知らせ(D-500。例: 引用の代わりに引用元の URL を付けて投稿した)の前にアカウント名を添える。account はアカウント表記(@name@host)、message はプラグインが表示の言語で返した文", "placeholders": {"account": {"type": "String"}, "message": {"type": "String"}}},
   "composeDraftsButton": "下書き",
   "@composeDraftsButton": {"description": "コンポーザーのヘッダーの、下書きの一覧を開くボタン"},
   "composeDirectReplyNote": "ダイレクト投稿への返信(相手にだけ届きます)",

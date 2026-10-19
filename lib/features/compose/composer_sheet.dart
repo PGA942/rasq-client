@@ -47,6 +47,17 @@ import '../../backend/rasq_account_page_api.dart';
 import '../plugins/slot_plugins.dart';
 import 'poll_editor.dart';
 
+/// 送った後に出す、プラグインの知らせ(契約 v0.25 の `notice`、D-500)の文。[notices] = (アカウント表記, 知らせ)。
+/// [multi] = 複数のアカウントへ送った(本体 + 連動)ので、どのアカウントの話かをアカウント名で添える。
+/// 知らせが 1 つも無ければ null(何も出さない — `notice` を返さない古いプラグイン)。2 つ以上は行に分ける。
+String? composePostNoticeText(List<(String, SnsNotice)> notices, {required bool multi, AppLocalizations? l10n}) {
+  if (notices.isEmpty) return null;
+  final l = l10n ?? appL10n;
+  return [
+    for (final (account, n) in notices) multi && account.isNotEmpty ? l.composePostNoticeForAccount(account, n.message) : n.message,
+  ].join('\n');
+}
+
 /// Opens the composer as an interstitial FOW (docked, resizable). Child FOWs
 /// (絵文字ピッカー) are owned by it and closed with it.
 /// Resolves with the created post, or null on cancel.
@@ -1285,12 +1296,13 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
 
   /// 計画の実行 (D-128/D-129/D-130): auto/confirm 済み = 投稿、draft =
   /// そのアカウント宛の下書き(次にそのアカウントを投稿先に選ぶと復元)。
-  /// 失敗したアカウント表記を返す(本体は落とさない)。
-  Future<(List<String>, List<String>)> _executeMultiPlan(
+  /// 失敗したアカウント表記を返す(本体は落とさない)。プラグインが添えた知らせ(D-500)もアカウント表記と一緒に返す。
+  Future<(List<String>, List<String>, List<(String, SnsNotice)>)> _executeMultiPlan(
       List<(AccountSession, Map<String, String>?, String)> plan, NewPost base, List<(String, String, String)> regexRules) async {
     final registry = ref.read(pluginRegistryProvider);
     final errors = <String>[];
     final posted = <String>[]; // 連動の正例 (D-132)
+    final notices = <(String, SnsNotice)>[];
     for (final (s, fb, delivery) in plan) {
       final label = '${s.account}';
       var cw = base.contentWarning;
@@ -1342,15 +1354,16 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         for (final f in _files) {
           ids.add((await session.uploadMedia(f.bytes, f.name, mimeType: f.mimeType, sensitive: f.sensitive)).id);
         }
-        await session.createPost(NewPost(
+        final sent = await session.createPostWithNotice(NewPost(
             text: text, contentWarning: cw, visibility: visibility, localOnly: localOnly, reactionAcceptance: base.reactionAcceptance, mediaIds: ids, poll: base.poll));
         posted.add(label);
+        if (sent.notice != null) notices.add((label, sent.notice!));
       } catch (e) {
         errors.add(label);
         debugPrint('連動投稿 $label: $e');
       }
     }
-    return (errors, posted);
+    return (errors, posted, notices);
   }
 
   /// 学習ループ (D-132): 確定ラベルをプロファイルへ EMA 追加(手動切替は
@@ -1827,17 +1840,19 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         mediaIds: ids,
         poll: _poll == null ? null : NewPoll(choices: _poll!.texts, multiple: _poll!.multiple, expiresAfter: _poll!.expiresAfter),
       );
-      final post = switch (widget.target) {
-        ComposeDm(room: final r) => await session.sendDm(r, draft),
-        _ => await session.createPost(draft),
+      // 知らせ付き (契約 v0.25、D-500): 投稿はできたが利用者に知らせたいこと(引用の代わりに URL を付けた等)。
+      final sent = switch (widget.target) {
+        ComposeDm(room: final r) => await session.sendDmWithNotice(r, draft),
+        _ => await session.createPostWithNotice(draft),
       };
+      final post = sent.post;
       await childComposeSent(ref);
       // 返信 / 引用した相手を、投稿したアカウントの「やりとり」として覚える (D-280: 共有 / リノートに使うアカウントの予測の材料)。
       final talkedTo = replyTo ?? quoteOf;
       if (talkedTo != null) ref.read(accountAffinityProvider.notifier).record(Post(id: talkedTo.id, account: session.account, author: talkedTo.author, createdAt: talkedTo.createdAt, body: '')).ignore();
       // 複数選択モード (D-128/D-129): 計画の実行 — auto/confirm 済みは投稿、
       // draft はそのアカウント宛の下書き。正規表現加工 (D-130) も各送信先に。
-      final (linkErrors, linkedPosted) = await _executeMultiPlan(multiPlan, NewPost(
+      final (linkErrors, linkedPosted, linkedNotices) = await _executeMultiPlan(multiPlan, NewPost(
         text: _text.text.trim(),
         contentWarning: cw,
         visibility: visibility,
@@ -1853,6 +1868,10 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
       if (_draftId != null) _drafts.clear(_draftId!); // 送信済み → 下書き破棄
       _skipDraftOnDispose = true;
       _multiSel.clear();
+      // プラグインの知らせ (D-500): 送った後にスナックバーで(シートが閉じても見えるようにルートの messenger へ)。
+      // 複数のアカウントへ送ったときは、どのアカウントの話かをアカウント名で添える。
+      final noticeText = composePostNoticeText([if (sent.notice != null) (primaryLabel, sent.notice!), ...linkedNotices], multi: linkedPosted.isNotEmpty);
+      if (noticeText != null) ref.read(rootMessengerKeyProvider).currentState?.showSnackBar(SnackBar(content: Text(noticeText)));
       if (linkErrors.isNotEmpty && mounted) {
         // 本体は投稿済み — 閉じずに連動側の失敗だけ知らせる。
         setState(() => _error = appL10n.composeLinkedFailed(linkErrors.join(' / ')));

@@ -213,10 +213,19 @@ class WasmSnsSession extends SnsSessionBase {
   // ---- 書き込み系 (D-076) ----------------------------------------------
 
   @override
-  Future<Post> createPost(NewPost draft) async {
+  Future<Post> createPost(NewPost draft) async => (await createPostWithNotice(draft)).post;
+
+  /// 答えの `notice`(契約 v0.25、D-500)も受け取る。古いプラグインは付けないので null。
+  @override
+  Future<SentPost> createPostWithNotice(NewPost draft) async {
     final value = await _call('sns.createPost', {'draft': SnsWire.newPost(draft)});
-    return SnsWire.postFrom((value['post'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+    return _sent(value);
   }
+
+  SentPost _sent(Map<String, Object?> value) => SentPost(
+        SnsWire.postFrom((value['post'] as Map? ?? const {}).cast<String, Object?>(), account: account),
+        notice: SnsNotice.fromWire(value['notice']),
+      );
 
   @override
   Future<void> deletePost(String id) async {
@@ -477,13 +486,16 @@ class WasmSnsSession extends SnsSessionBase {
   }
 
   @override
-  Future<Post> sendDm(DmRoom room, NewPost draft) async {
+  Future<Post> sendDm(DmRoom room, NewPost draft) async => (await sendDmWithNotice(room, draft)).post;
+
+  @override
+  Future<SentPost> sendDmWithNotice(DmRoom room, NewPost draft) async {
     final value = await _call('sns.sendDm', {
       'roomKind': room.kind.name,
       'peerId': room.peer.id,
       'draft': SnsWire.newPost(draft),
     });
-    return SnsWire.postFrom((value['post'] as Map? ?? const {}).cast<String, Object?>(), account: account);
+    return _sent(value);
   }
 
   // ── メディア / プロフィール (D-136) ─────────────────────────────
