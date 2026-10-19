@@ -89,7 +89,7 @@ class ActionBarPluginsScreen extends ConsumerWidget {
         ...section('投稿タイル', 'post.action を宣言したプラグインがここに並びます(ストアから追加)', postActions, (p) => bundleOf(p, snsActions, settings.threshold)),
         ...section('全画面', 'viewer.overlay を宣言したプラグイン(QR コード検出など)がここに並びます', ref.watch(viewerPluginActionsProvider), (_) => '全画面アクションバーの ON / OFF ボタン'),
         ...section('加工画面', 'composer.media を宣言したプラグインがここに並びます', ref.watch(mediaPluginActionsProvider), (p) => '${p.decl.isFilterOutput ? 'フィルター · ' : ''}${bundleOf(p, editorBuiltinActions, editorSettings.threshold)}'),
-        ...section('コンポーザー本文', 'composer.text を宣言したプラグインがここに並びます', ref.watch(composerTextPluginActionsProvider), (_) => '入力欄の上の ON / OFF チップ'),
+        ...section('コンポーザー本文', 'composer.text を宣言したプラグインがここに並びます', ref.watch(composerTextPluginActionsProvider), (_) => 'コンポーザーのアクションバーの ON / OFF ボタン(長押しで設定)'),
         ...section('投稿加工(自動)', 'post.transform を宣言したプラグインがここに並びます', transforms, (_) => '表示前に本文を加工(ボタン無し)'),
         RasqSectionHeader(title: 'このアカウント(${account == null ? '未選択' : '$account'})'),
         if (postActions.isEmpty) hint('このアカウントで出すかどうか', '投稿タイルのボタンを、このアカウントで出すかどうか'),

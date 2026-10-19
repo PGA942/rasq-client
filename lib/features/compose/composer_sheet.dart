@@ -310,35 +310,91 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
   String? _progress;
   bool _textPluginIsOn(PluginAction a) => _textPluginOn.putIfAbsent(a.id, () => a.effectiveAuto(ref.read(actionButtonPrefsProvider)));
 
-  /// 入力欄の上のチップ行: switch がオンの `composer.text` プラグインごとに ON / OFF。長押しで「次からも自動でオン / オフ」。
-  Widget _textPluginChips(List<PluginAction> actions) => Padding(
-        padding: const EdgeInsets.only(bottom: RasqSpacing.xs),
-        child: Wrap(spacing: RasqSpacing.xs, runSpacing: 2, children: [
-          for (final a in actions)
-            Builder(
-              builder: (ctx) => GestureDetector(
-                onLongPress: () {
-                  final box = ctx.findRenderObject() as RenderBox;
-                  showActionTempMenu(ref, anchor: box.localToGlobal(Offset.zero) & box.size, action: a, ownerId: _ownerId);
-                },
-                child: FilterChip(
-                  key: ValueKey('composer.textPlugin.${a.plugin.id}'),
-                  avatar: Icon(PostRow.iconFor(a.decl.icon, Icons.extension_outlined), size: 16),
-                  label: Text(a.decl.label, style: RasqTypography.caption),
-                  tooltip: '${a.plugin.manifest.name}(テキスト加工)',
-                  selected: _textPluginIsOn(a),
-                  showCheckmark: false,
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  onSelected: (on) => setState(() {
-                    _textPluginOn[a.id] = on;
-                    if (on) _scheduleTextPlugins();
-                  }),
-                ),
+  /// アクションバーのテキスト加工プラグインのボタン (D-474: 入力欄の上のチップ行から、絵文字 / 画像 / 投票と同じ行へ)。
+  /// switch がオンの `composer.text` プラグインごとに 1 つ。押すとこのコンポーザーでの ON / OFF(全画面の viewer.overlay の
+  /// ボタンと同じ)、長押しでボタンにつながったパネル(このコンポーザーでの ON / OFF と「次からも自動でオン」)。
+  List<Widget> _textPluginButtons(List<PluginAction> actions) => [
+        for (final a in actions)
+          Builder(builder: (ctx) {
+            final icon = PostRow.iconFor(a.decl.icon, Icons.extension_outlined);
+            final on = _textPluginIsOn(a);
+            return RasqActionButton.icon(
+              key: ValueKey('composer.textPlugin.${a.plugin.id}'),
+              icon: icon,
+              doneIcon: icon,
+              done: on,
+              tooltip: '${a.decl.label}(${on ? 'オン' : 'オフ'}・長押しで設定)',
+              onTap: () => setState(() {
+                _textPluginOn[a.id] = !on;
+                if (!on) _scheduleTextPlugins();
+              }),
+              onLongPress: () {
+                final box = ctx.findRenderObject() as RenderBox;
+                _openTextPluginPanel(a, box.localToGlobal(Offset.zero) & box.size, icon);
+              },
+            );
+          }),
+      ];
+
+  /// 長押しのパネル (D-474): ボタンにつながった形([TetheredPanel])。OK で、このコンポーザーでの状態と
+  /// 次からの初期状態(temp、契約 v0.14 §2.11)を書く。キャンセル / 外のタップは何も変えない。
+  Future<void> _openTextPluginPanel(PluginAction a, Rect anchor, IconData icon) async {
+    final prefs = ref.read(actionButtonPrefsProvider);
+    var here = _textPluginIsOn(a);
+    final override = prefs.autoOverride(a.id);
+    var auto = a.effectiveAuto(prefs);
+    var reset = false;
+    final scheme = Theme.of(context).colorScheme;
+    final ok = await ref.read(overlayManagerProvider).showTetheredPanel<bool>(
+      id: 'composer.textPlugin.panel',
+      ownerId: _ownerId,
+      anchor: anchor,
+      title: a.decl.label,
+      // コンポーザーのアクションバーは画面の下なので、上に開く(入らなければ下)。
+      preferredSide: TetherSide.above,
+      anchorChild: Icon(icon, size: 20, color: here ? scheme.primary : scheme.onSurface),
+      onConfirm: () => true,
+      builder: (_) => StatefulBuilder(
+        builder: (context, set) => Column(mainAxisSize: MainAxisSize.min, children: [
+          RasqSwitchListTile(
+            key: const ValueKey('composer.textPlugin.panel.here'),
+            title: 'このコンポーザーでオン',
+            subtitle: '本文の変化をこのプラグインに渡します',
+            value: here,
+            onChanged: (v) => set(() => here = v),
+          ),
+          RasqSwitchListTile(
+            key: const ValueKey('composer.textPlugin.panel.auto'),
+            title: '次からも自動でオン',
+            subtitle: reset || override == null ? 'プラグインの既定(${a.declaredAuto ? 'オン' : 'オフ'})' : '設定で上書き中(既定は ${a.declaredAuto ? 'オン' : 'オフ'})',
+            value: auto,
+            onChanged: (v) => set(() {
+              auto = v;
+              reset = false;
+            }),
+          ),
+          if (override != null && !reset)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => set(() {
+                  reset = true;
+                  auto = a.declaredAuto;
+                }),
+                child: const Text('プラグインの既定に戻す'),
               ),
             ),
+          RasqCaption('${a.plugin.manifest.name} · テキスト加工', padding: const EdgeInsets.symmetric(horizontal: RasqSpacing.page, vertical: RasqSpacing.xs)),
         ]),
-      );
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final wasOn = _textPluginIsOn(a);
+    setState(() => _textPluginOn[a.id] = here);
+    if (here && !wasOn) _scheduleTextPlugins();
+    final next = reset ? null : (auto == a.declaredAuto && override == null ? null : auto);
+    if (next != override) await setActionAuto(ref.read(settingsAreaProvider(actionButtonPrefsArea).notifier), prefs, a.id, next);
+  }
 
   // stick FOW (D-047/D-049) の高さ: 折りたたみ = 入力行 + ツールバーだけ、
   // 展開 = ヘッダー + 返信先タイルが割り込む。定数は実測が入るまでの初期値で、
@@ -1843,8 +1899,6 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  // テキスト加工プラグインの ON / OFF チップ (契約 v0.14 §2.3)。
-                  if (ref.watch(composerTextPluginsProvider).isNotEmpty) _textPluginChips(ref.watch(composerTextPluginsProvider)),
                   if (_cwOn)
                     Row(children: [
                       Icon(Icons.visibility_outlined, size: 18, color: scheme.onSurfaceVariant),
@@ -1951,6 +2005,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     _focus.requestFocus();
                   }),
                 ),
+                // テキスト加工プラグイン (契約 v0.14 §2.3 → D-474): 入力欄の上のチップから、この行の絵文字の隣へ(本文を触るボタンの並び)。
+                ..._textPluginButtons(ref.watch(composerTextPluginsProvider)),
                 // MFM/Markdown ピッカー (D-045/D-046: 起動ボタンはツールバー側)。
                 Builder(builder: (context) {
                   // 投稿するアカウントの SNS に合わせる (D-278。切り替えに追従する)。RASQ 指定のときは装飾を送れないので Markdown 側。
