@@ -365,6 +365,41 @@ void main() {
     expect(c.read(raiStatsProvider).automations, 0);
   });
 
+  testWidgets('選択肢タイルの答え (D-493): 空白を含むラベル「RASQ リスト」にそのまま入る(注記の先頭の語を読み戻さない)', (tester) async {
+    final c = await pump(tester);
+    llm.reply = '順にやりましょう。';
+    await tester.enterText(find.byKey(const ValueKey('rai.input')), 'RASQ リストをタイムラインに取り込みたい');
+    await tester.tap(find.byKey(const ValueKey('rai.ask')));
+    await tester.pumpAndSettle();
+    await c.read(raiProvider.notifier).skip('tl-rasqlist');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('rai.chat.approve.tl-rasqlist')));
+    await tester.pumpAndSettle();
+    // 質問に引用が無いので、RASQ リストを聞く。
+    expect(find.byKey(const ValueKey('rai.ask.fow')), findsOneWidget);
+    expect(c.read(raiProvider).bubble, 'RASQ リスト はどれにしますか？');
+    await tester.enterText(find.byKey(const ValueKey('rai.ask.text')), 'list-1');
+    await tester.tap(find.byKey(const ValueKey('rai.ask.ok')));
+    await tester.pumpAndSettle();
+    // 以前は答えが「RASQ」に入り、同じ問いがまた出ていた。今は timeline.addRasqList(list=list-1) まで進む
+    // (このテストでは RASQ アカウントに入っていないので、その手順で止まる)。
+    expect(find.byKey(const ValueKey('rai.ask.fow')), findsNothing);
+    final st = c.read(raiProvider);
+    expect(st.bubble, isNot(contains('どれにしますか')));
+    final trace = st.log.first.trace;
+    final add = trace.firstWhere((s) => s.binding?.call == 'timeline.addRasqList');
+    expect(add.status, RaiAutoStatus.failed);
+    expect(trace.where((s) => s.status == RaiAutoStatus.asking), isEmpty);
+  });
+
+  test('RaiAutoPlan.askingFor (D-493): 聞いている入力のラベルを持ち、copyWith で消えない', () {
+    const plan = RaiAutoPlan(opId: 'op', title: 't', steps: [], question: 'q');
+    final asking = plan.askingFor('RASQ リスト');
+    expect(asking.asking, 'RASQ リスト');
+    expect(asking.copyWith(cursor: 2).asking, 'RASQ リスト');
+    expect(asking.askingFor(null).asking, isNull);
+  });
+
   testWidgets('自動化の分岐 (D-229、Bluesky): 検索で見つからなければ別の語を聞き、取り込み先は質問から読んでホームの TL に取り込む(しおりも)', (tester) async {
     const feeds = [FeedInfo(uri: 'at://did:plc:x/app.bsky.feed.generator/cats', name: 'Cats', description: 'ねこ')];
     final c = await pump(tester, kind: SnsKind.bluesky, feeds: feeds);

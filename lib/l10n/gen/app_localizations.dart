@@ -6476,7 +6476,7 @@ abstract class AppLocalizations {
   /// **'自動で進めています({step} / {total}): {text}'**
   String raiAutoProgress(int step, int total, String text);
 
-  /// 工程の手順の注記(入力の選択待ち)。先頭が label、空白で区切る(答えを受けるときに先頭の語をラベルとして読む)
+  /// 工程の手順の注記(入力の選択待ち)。label は入力のラベル(「RASQ リスト」など)
   ///
   /// In ja, this message translates to:
   /// **'{label} を選ぶ'**

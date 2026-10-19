@@ -28,6 +28,7 @@ import '../vc/astell_providers.dart';
 import 'rai_reference.dart';
 import 'rai_reference_providers.dart';
 import 'rai_web_search.dart';
+import 'prompts/rai_prompts.dart';
 import '../../l10n/l10n.dart';
 
 /// RAi が呼べる関数 (D-221): LLM の返事の `[[call:<関数>|引数=値|…]]` を実行する。
@@ -224,33 +225,8 @@ Future<RaiFunctionResult> raiGuard(String name, Future<RaiFunctionResult> Functi
 }
 
 /// 関数の一覧(system に出す 1 行ずつ)。呼べる範囲は関連する関数をまとめて 1 行にし、system の
-/// 肥大化(D-220 の 2500 文字上限)を抑える。
-const raiFunctionUsage = <String>[
-  'posts.fetch(kind=home|search, keyword, sort=new|reactions, limit)・page.read(filter, tag): 投稿本文/いま開いている画面の表示データを取る', // l10n-ignore
-  'reference.get(id=操作か関数の id): リファレンスの詳細を取る', // l10n-ignore
-  'post.compose(text)・post.reply(post, text)・post.quote(post, text)・dm.compose(room, text): 送らずにコンポーザーへ下書きを入れる(送信は自動化不可 = ユーザーが押す)', // l10n-ignore
-  'post.action(action=アクション id, post=投稿 id): 投稿にアクション(自動化が許可されたものだけ)', // l10n-ignore
-  'astell.rooms(): ASTell のルーム一覧を取る', // l10n-ignore
-  'astell.create(title=題名): ASTell のルームを作る', // l10n-ignore
-  'timeline.list(kind=home|social|local|global|featured|tag:語|list:id, limit)・post.get(id)・post.thread(post, limit): TL/投稿の本文を取る', // l10n-ignore
-  'post.reactions(post, limit)・post.reposters(post, limit)・post.quotes(post, limit): 投稿への反応を取る', // l10n-ignore
-  'favorites.list(limit)・reacted.list(limit): お気に入り/リアクション済みの投稿を取る', // l10n-ignore
-  'me.get()・user.get(id=|handle=@名前)・user.posts(user, filter=posts|replies|media|quotes, limit)・user.search(keyword, limit)・user.follows(user, direction=followers|following, limit)・user.relation(user): ユーザーの情報を取る', // l10n-ignore
-  'moderation.list(kind=muted|blocked|requests): ミュート/ブロック/フォロー申請の一覧を取る', // l10n-ignore
-  'notifications.list(kind=all|reaction|reply|follow|mention, limit)・notifications.read(): 通知を取る/既読にする', // l10n-ignore
-  'trends.tags(limit): トレンドのタグを取る', // l10n-ignore
-  'lists.list()・lists.members(list): リストとメンバーを取る', // l10n-ignore
-  'clips.list(user=)・clips.notes(clip, limit): クリップを取る(Misskey)', // l10n-ignore
-  'feeds.list(keyword=)・feed.save(feed=uri|語, on)・rasqLists.search(keyword=): フィード(Bluesky、keyword 無し=保存済み)/RASQ リストを探す・フィードを保存', // l10n-ignore
-  'timeline.addFeed(feed=uri|語)・timeline.addRasqList(list=id|語)・timeline.filterWord(word, mode=include|exclude)・tendency.seed(source=feed:uri|語): ホーム TL へフィード/RASQ リストを取り込む・語で通す/除外・特徴語を指向性へ', // l10n-ignore
-  'dm.rooms(): DM ルーム一覧を取る', // l10n-ignore
-  'emoji.find(keyword, limit): カスタム絵文字を探す', // l10n-ignore
-  'follow.set(user, on=true|false): フォローする/外す', // l10n-ignore
-  'list.edit(list, user, add=true|false)・list.create(name): リストにユーザーを足す/外す・作る', // l10n-ignore
-  'clip.edit(clip, post, add=true|false)・clip.create(name): クリップに投稿を足す/外す・作る(Misskey)', // l10n-ignore
-  'settings.get(area, key)・settings.set(area, key, value): 設定を読む/書く(設定ページのキーのみ。書けるのはパスワード不要・操作禁止タグ無し)', // l10n-ignore
-  'app.actions(): この SNS で自動化できる投稿アクション一覧を取る', // l10n-ignore
-];
+/// 肥大化(D-220 の 2500 文字上限)を抑える。文は表示の言語の表から (D-492: `prompts/rai_prompts_<言語>.dart`)。
+List<String> get raiFunctionUsage => raiPrompts.functionUsage;
 
 /// 見守り中 (D-307) に system へ出す関数の一覧: 行の関数が**全部**呼べる行だけ。
 List<String> raiFunctionUsageFor(ChildGate gate) {
@@ -263,7 +239,7 @@ List<String> raiFunctionUsageFor(ChildGate gate) {
 }
 
 /// web 検索の行 (D-228): 使えるとき([RaiWebSearch.available])だけ system の一覧に足す。
-const raiWebSearchUsage = 'web.search(q=語や質問, count=数): web を検索して答えや上位の題名 / URL / 説明を取る(アプリの外の知識が要るとき)'; // l10n-ignore
+String get raiWebSearchUsage => raiPrompts.webSearchUsage;
 
 /// 自動化不可の関数 (D-237): 送信 / 返信 / DM の送信はユーザーが押す。呼ばれたらエラーにして、代替
 /// (コンポーザーのオートフィル)を代わりに実行して知らせる。

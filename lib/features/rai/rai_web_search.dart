@@ -8,6 +8,7 @@ import '../child_safe/child_safe_providers.dart' show childGateProvider;
 import '../settings/settings_dsl.dart';
 import 'rai_llm.dart' show raiSettingsArea;
 import '../../l10n/l10n.dart';
+import 'prompts/rai_prompts.dart';
 
 /// web 検索 (D-228): Brave Search API。RAi の関数 `web.search` から使う。
 ///
@@ -60,7 +61,7 @@ class RaiWebSearch {
     return [RaiWebHit(title: appL10n.raiModelsWebAnswerTitle, url: url == null ? null : Uri.tryParse(url), description: a)];
   }
 
-  /// Answers API (D-228): `POST /chat/completions`(OpenAI 互換)。検索に基づく短い答え(日本語)を返す。
+  /// Answers API (D-228): `POST /chat/completions`(OpenAI 互換)。検索に基づく短い答え(表示の言語、D-492)を返す。
   Future<String> answer(String question, {String model = 'brave-pro'}) async {
     _check();
     final q = question.trim();
@@ -76,7 +77,7 @@ class RaiWebSearch {
               'stream': false,
               // Answers API は messages を 1 件しか受けない(system 不可)ので、指示は質問に添える。
               'messages': [
-                {'role': 'user', 'content': '$q\n\n(検索結果に基づいて日本語で簡潔に、200 文字以内で答えてください。根拠の URL があれば末尾に添えてください)'}, // l10n-ignore
+                {'role': 'user', 'content': raiPrompts.webAnswerQuestion(q)},
               ],
             }),
           )
