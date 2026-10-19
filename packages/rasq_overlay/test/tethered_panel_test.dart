@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rasq_overlay/rasq_overlay.dart';
@@ -16,14 +18,40 @@ Rect tight(Path path) {
   return r;
 }
 
-/// ボタンにつながったパネル (D-474)。
+/// 輪郭を 0.5px ずつたどって、隣どうしの接線の向きの差の最大(ラジアン)。角があると大きく跳ねる。
+double maxTurn(Path path) {
+  var worst = 0.0;
+  for (final m in path.computeMetrics()) {
+    double? prev;
+    double? first;
+    for (var d = 0.0; d <= m.length; d += 0.5) {
+      final a = m.getTangentForOffset(d)!.angle;
+      first ??= a;
+      if (prev != null) worst = math.max(worst, _diff(a, prev));
+      prev = a;
+    }
+    if (m.isClosed && prev != null && first != null) worst = math.max(worst, _diff(first, prev));
+  }
+  return worst;
+}
+
+double _diff(double a, double b) {
+  var d = (a - b).abs() % (2 * math.pi);
+  if (d > math.pi) d = 2 * math.pi - d;
+  return d;
+}
+
+/// 首の形 (D-477): ボタンの中心からパネルの外形の辺まで = ボタンの半径 − [kTetherPanelInset]。
+const r = 22.0;
+const reach = r - kTetherPanelInset;
+
+/// ボタンにつながったパネル (D-474 / D-477)。
 void main() {
   group('TetherOutline(形)', () {
     const button = Offset(180, 100);
-    const r = 22.0;
 
     test('下に開く: 首は上辺から立ち上がってボタンを [clearance] 空けて包み、パネルとひと続きの輪郭になる', () {
-      final rect = Rect.fromLTWH(30, button.dy + r + 3 + 10, 300, 200);
+      final rect = Rect.fromLTWH(30, button.dy + reach, 300, 200);
       final o = TetherOutline(rect: rect, button: button, buttonRadius: r, side: TetherSide.below);
       final path = o.path();
       final b = tight(path);
@@ -34,48 +62,82 @@ void main() {
       expect(path.contains(button), isTrue); // ボタンは首の中
       expect(path.contains(rect.center), isTrue);
       expect(path.contains(Offset(button.dx, rect.top - 1)), isTrue); // 首はパネルとつながっている
+      // パネルの辺はボタンの丸の端まで寄る(ボタンの下端はパネルの中)。
+      expect(rect.top, lessThan(button.dy + r));
+      expect(path.contains(Offset(button.dx, button.dy + r - 1)), isTrue);
+      // 首は丸の真横より上(パネルと反対の側)で丸を離れる: 真横の丸の外側 1px はまだ首の中(裾が広がっている)。
+      expect(path.contains(Offset(button.dx - r - 3 - 1, button.dy + 2)), isTrue);
+      // 裾は横に長い: 丸の端から [kTetherNeckFlare] の手前まで、パネルの上辺より少し上も首の中。
+      expect(path.contains(Offset(button.dx - r - 3 - 10, rect.top - 2)), isTrue);
+      expect(path.contains(Offset(button.dx + r + 3 + 10, rect.top - 2)), isTrue);
       // 首の外(ボタンの横で、パネルより上)は外側。
-      expect(path.contains(Offset(button.dx + r + 6, button.dy)), isFalse);
+      expect(path.contains(Offset(button.dx + r + 6, button.dy - 6)), isFalse);
       expect(path.contains(Offset(rect.left + 4, rect.top - 2)), isFalse);
       // 1 本の輪郭(穴やもう 1 つの島が無い)。
       expect(path.computeMetrics().length, 1);
+      // つなぎ目に角が無い(接線がつながる)。
+      expect(maxTurn(path), lessThan(0.15));
+    });
+
+    test('調整値: 首の角度を上げると丸を離れる点が高くなり、裾を伸ばすと首が横に広がる', () {
+      final rect = Rect.fromLTWH(30, button.dy + reach, 300, 200);
+      bool neckAt(TetherOutline o, Offset p) => o.path().contains(p);
+      const probe = Offset(180 - 25 - 2, 100 - 4); // 丸の左、真横より少し上
+      expect(neckAt(TetherOutline(rect: rect, button: button, buttonRadius: r, side: TetherSide.below, neckAngle: 0), probe), isFalse);
+      expect(neckAt(TetherOutline(rect: rect, button: button, buttonRadius: r, side: TetherSide.below, neckAngle: 40), probe), isTrue);
+      final far = Offset(180 - 25 - 30, rect.top - 2);
+      expect(neckAt(TetherOutline(rect: rect, button: button, buttonRadius: r, side: TetherSide.below, neckFlare: 16), far), isFalse);
+      expect(neckAt(TetherOutline(rect: rect, button: button, buttonRadius: r, side: TetherSide.below, neckFlare: 60), far), isTrue);
     });
 
     test('上に開く: 上下が裏返る(首は下辺)', () {
-      final rect = Rect.fromLTWH(30, button.dy - r - 3 - 10 - 200, 300, 200);
+      final rect = Rect.fromLTWH(30, button.dy - reach - 200, 300, 200);
       final path = TetherOutline(rect: rect, button: button, buttonRadius: r, side: TetherSide.above).path();
       final b = tight(path);
       expect(b.bottom, closeTo(button.dy + r + 3, 0.5));
       expect(b.top, closeTo(rect.top, 0.5));
       expect(path.contains(button), isTrue);
       expect(path.contains(Offset(button.dx, rect.bottom + 1)), isTrue);
-      expect(path.contains(Offset(button.dx + r + 6, button.dy)), isFalse);
+      expect(path.contains(Offset(button.dx + r + 6, button.dy + 6)), isFalse);
+      expect(maxTurn(path), lessThan(0.15));
     });
 
-    test('画面の端のボタン: 角の丸みを詰めて首を角から始める(輪郭は崩れない)', () {
-      const edge = Offset(26, 100);
-      final rect = Rect.fromLTWH(8, edge.dy + r + 3 + 10, 300, 200);
-      final path = TetherOutline(rect: rect, button: edge, buttonRadius: r, side: TetherSide.below).path();
-      expect(path.contains(edge), isTrue);
-      expect(tight(path).left, closeTo(edge.dx - r - 3, 0.5)); // 首の丸はパネルより外まで出てよい(ボタンを包む)
-      expect(path.computeMetrics().length, 1);
+    test('画面の端のボタン: 上辺に裾の場所が無ければ首を横の辺へ流す(輪郭は崩れず、角も出ない)', () {
+      for (final (name, edge, rect) in [
+        // 丸がパネルの横の辺より外へはみ出す(右端のカメラのボタン)。
+        ('はみ出す', const Offset(334, 100), Rect.fromLTWH(52, 100 + reach, 300, 200)),
+        // 丸はパネルの中だが、角までが近い(左端の絵文字のボタン)。
+        ('角が近い', const Offset(52, 100), Rect.fromLTWH(8, 100 + reach, 300, 200)),
+        // 角の丸みを詰めれば上辺に着く。
+        ('角を詰める', const Offset(90, 100), Rect.fromLTWH(8, 100 + reach, 300, 200)),
+      ]) {
+        final path = TetherOutline(rect: rect, button: edge, buttonRadius: r, side: TetherSide.below).path();
+        expect(path.contains(edge), isTrue, reason: name);
+        expect(path.contains(rect.center), isTrue, reason: name);
+        expect(path.computeMetrics().length, 1, reason: name);
+        expect(maxTurn(path), lessThan(0.2), reason: name);
+        final b = tight(path);
+        expect(b.top, closeTo(edge.dy - r - 3, 0.5), reason: name);
+        expect(b.left, greaterThanOrEqualTo(math.min(rect.left, edge.dx - r - 3) - 0.5), reason: name);
+        expect(b.right, lessThanOrEqualTo(math.max(rect.right, edge.dx + r + 3) + 1), reason: name); // 横の辺へ流す S 字は丸より 1px 未満ふくらむことがある
+      }
     });
   });
 
   group('tetherPlacement(置き場所)', () {
     const area = Rect.fromLTWH(8, 8, 344, 764);
     test('下に余裕があれば下(スケッチのとおり)、無ければ上', () {
-      final top = tetherPlacement(anchor: const Rect.fromLTWH(160, 40, 44, 44), area: area, width: 320, neckGap: 10, headRadius: 25, preferred: TetherSide.below);
+      final top = tetherPlacement(anchor: const Rect.fromLTWH(160, 40, 44, 44), area: area, width: 320, reach: 19, preferred: TetherSide.below);
       expect(top.side, TetherSide.below);
-      final bottom = tetherPlacement(anchor: const Rect.fromLTWH(160, 700, 44, 44), area: area, width: 320, neckGap: 10, headRadius: 25, preferred: TetherSide.below);
+      final bottom = tetherPlacement(anchor: const Rect.fromLTWH(160, 700, 44, 44), area: area, width: 320, reach: 19, preferred: TetherSide.below);
       expect(bottom.side, TetherSide.above);
-      expect(bottom.maxHeight, closeTo(722 - 25 - 10 - 8, 0.01));
+      expect(bottom.maxHeight, closeTo(722 - 19 - 8, 0.01));
     });
 
     test('横はボタンの真ん中に合わせ、画面からはみ出さない', () {
-      final mid = tetherPlacement(anchor: const Rect.fromLTWH(158, 40, 44, 44), area: area, width: 200, neckGap: 10, headRadius: 25, preferred: TetherSide.below);
+      final mid = tetherPlacement(anchor: const Rect.fromLTWH(158, 40, 44, 44), area: area, width: 200, reach: 19, preferred: TetherSide.below);
       expect(mid.left, 80);
-      final edge = tetherPlacement(anchor: const Rect.fromLTWH(310, 40, 44, 44), area: area, width: 200, neckGap: 10, headRadius: 25, preferred: TetherSide.below);
+      final edge = tetherPlacement(anchor: const Rect.fromLTWH(310, 40, 44, 44), area: area, width: 200, reach: 19, preferred: TetherSide.below);
       expect(edge.left, area.right - 200);
     });
   });
@@ -95,7 +157,8 @@ void main() {
       ),
     ));
     final body = tester.getRect(find.byKey(const ValueKey('body')));
-    expect(body.top, greaterThan(anchor.bottom));
+    // 外形の辺はボタンの丸の端から [kTetherPanelInset] 内側、中身はそこから 6px 内側。
+    expect(body.top, closeTo(anchor.bottom - kTetherPanelInset + 6, 0.01));
     expect(body.width, 240 - 12); // 外形は中身から 6px 外
     expect(tester.getCenter(find.byKey(const ValueKey('glyph'))), anchor.center);
     await tester.tap(find.byKey(const ValueKey('glyph')));
