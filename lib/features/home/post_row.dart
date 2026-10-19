@@ -440,6 +440,8 @@ class _PostRowState extends ConsumerState<PostRow> {
         predictedIcon = iconText != null || iconUrl != null;
       }
     }
+    // 首の中に描くボタンの見た目(ボタンにつながったパネル、D-512 / D-517)。
+    final glyph = iconText != null ? Text(iconText, style: const TextStyle(fontSize: 17)) : iconUrl != null ? rasqIconImage(iconUrl, size: 20, fallback: icon) : Icon(icon, size: 20);
     return RasqActionBarItem(
       id: a.id,
       label: likeOnly ? appL10n.homePostLike : a.label,
@@ -461,7 +463,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       // Repost はデフォルトの**アクションバンドル**(D-039): タップで
       // リノート / 引用ノートのドロップダウン(ユーザー編集のリスト化とは
       // 別で、(+) の編集導線には出ない組み込みバンドル)。
-      onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : (anchor) => _performReactionAware(a, st, anchor, reactionMode),
+      onAnchorTap: isRepost ? (anchor) => _repostBundle(a, st, anchor) : (anchor) => _performReactionAware(a, st, anchor, reactionMode, glyph: glyph),
       // リアクション: 長押しで絵文字ピッカー FOW → 選んだ絵文字で実行。
       // ピッカーは**実物のリアクションボタンにアンカー**する (D-065:
       // 基本下付き・余白不足で上付き。D-055 の複製バーは置かない)。
@@ -471,7 +473,7 @@ class _PostRowState extends ConsumerState<PostRow> {
       onAnchorLongPress: isRepost
           ? (anchor) => _repostBundle(a, st, anchor, holding: true)
           : isReaction && reactionMode == PostReactionMode.emoji
-              ? (anchor) => _openQuickReaction(a, anchor, glyph: iconText != null ? Text(iconText, style: const TextStyle(fontSize: 17)) : iconUrl != null ? rasqIconImage(iconUrl, size: 20, fallback: icon) : Icon(icon, size: 20))
+              ? (anchor) => _openQuickReaction(a, anchor, glyph: glyph)
               : null,
     );
   }
@@ -486,7 +488,7 @@ class _PostRowState extends ConsumerState<PostRow> {
   ///
   /// 絵文字でリアクションできない投稿 (D-321) では予測もピッカーも使わない: いいねだけの SNS はボタンの入り切り、
   /// Misskey の「いいねのみ」のノートは ❤ を付ける。
-  Future<void> _performReactionAware(ActionDescriptor a, ActionState st, Rect anchor, PostReactionMode mode) async {
+  Future<void> _performReactionAware(ActionDescriptor a, ActionState st, Rect anchor, PostReactionMode mode, {Widget? glyph}) async {
     // リアクション済みなら、確認なしで取り消す (D-281)。
     if (a.genreTag == 'Reaction' && st.done) return _onAction(a, args: const {'forceUndo': true}).catchError((_) {});
     if (a.genreTag == 'Reaction' && mode == PostReactionMode.likeOnly && !isPluginActionId(a.id)) return _onAction(a, args: const {'reaction': likeOnlyReaction}).catchError((_) {});
@@ -497,7 +499,7 @@ class _PostRowState extends ConsumerState<PostRow> {
     final predicted = ref.read(reactionHistoryProvider.notifier).predictFor(shown);
     final reaction = predicted == null ? null : await _sendable(predicted);
     if (!mounted) return;
-    if (reaction == null) return post.key == shown.key ? _openReactionPicker(a, anchor) : null;
+    if (reaction == null) return post.key == shown.key ? _openReactionPicker(a, anchor, glyph: glyph) : null;
     await handler(a, args: {'reaction': reaction}).then((_) => ref.read(reactionHistoryProvider.notifier).record(reaction)).catchError((_) {});
   }
 
@@ -514,15 +516,16 @@ class _PostRowState extends ConsumerState<PostRow> {
   }
 
   /// リアクションの絵文字ピッカー。**実物のリアクションボタンにアンカー**する (D-065: 基本下付き・余白不足で上付き)。
+  /// [glyph] があれば**ボタンにつながった形**(首の中にボタンの見た目、D-517)。
   ///
   /// **開いた時点の投稿と実行先を掴んでおく** (D-282): ピッカーを開いている間に TL へ投稿が足されると、この行の State が別の投稿に
   /// 使い回されることがあり、選んだ瞬間の `post` / `_onAction` を読むと、隣の投稿にリアクションしてしまっていた。
-  void _openReactionPicker(ActionDescriptor a, Rect anchor) {
+  void _openReactionPicker(ActionDescriptor a, Rect anchor, {Widget? glyph}) {
     final target = post;
     final handler = _onAction;
     // 行が作り直されて(TL の取り直しなど)この State が捨てられたあとに選ばれても動くよう、ref もここで読んでおく。
     final history = ref.read(reactionHistoryProvider.notifier);
-    openEmojiPicker(ref, closeOnPick: true, title: context.l10n.homePostReaction, column: fowColumnOf(context), anchor: anchor, accountKey: target.account.key,
+    openEmojiPicker(ref, closeOnPick: true, title: context.l10n.homePostReaction, column: fowColumnOf(context), anchor: anchor, anchorChild: glyph, accountKey: target.account.key,
         predictionContext: '${target.contentWarning ?? ''} ${target.body} ${target.quote?.body ?? ''}',
         existingReactions: target.reactions, onPick: (e) {
       handler(a, args: {'reaction': e}).then((_) => history.record(e)).catchError((_) {});
@@ -544,7 +547,8 @@ class _PostRowState extends ConsumerState<PostRow> {
       anchorChild: glyph,
       onPick: (e) => handler(a, args: {'reaction': e}).then((_) => history.record(e)).catchError((_) {}),
       onMore: () {
-        if (mounted && post.key == target.key) _openReactionPicker(a, anchor);
+        // 「その他」(D-517): ピッカー全体も同じリアクションのボタンにつなげ直す(離れた所に出さない)。
+        if (mounted && post.key == target.key) _openReactionPicker(a, anchor, glyph: glyph);
       },
     );
   }

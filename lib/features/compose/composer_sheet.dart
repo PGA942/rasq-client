@@ -1526,6 +1526,26 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
         ]),
       );
 
+  /// 絵文字のピッカー全体を、ツールバーの絵文字のボタン([buttonContext])につながった形で開く (D-517)。
+  void _openEmojiPickerFrom(BuildContext buttonContext) {
+    final box = buttonContext.mounted ? buttonContext.findRenderObject() as RenderBox? : null;
+    openEmojiPicker(
+      ref,
+      ownerId: _ownerId,
+      column: _column,
+      predictionContext: _text.text,
+      accountKey: _effectivePostAs?.account.key,
+      anchor: box == null || !box.attached ? null : box.localToGlobal(Offset.zero) & box.size,
+      anchorChild: const Icon(Icons.emoji_emotions_outlined, size: 20),
+      // 下に開き、コンポーザーをピッカーの高さぶん持ち上げる(入力欄 → ツールバー → ピッカーの並び。入力欄を覆わない)。
+      preferredSide: TetherSide.below,
+      onPick: (e) {
+        _insert(e);
+        _focus.requestFocus();
+      },
+    );
+  }
+
   void _insert(String s) {
     final v = _text.value;
     final sel = v.selection.isValid ? v.selection : TextSelection.collapsed(offset: v.text.length);
@@ -2096,10 +2116,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                     icon: Icons.emoji_emotions_outlined,
                     tooltip: context.l10n.composeToolEmoji,
                     // 絵文字は、**投稿するアカウント**のサーバーのもの (D-278。切り替えに追従する)。
-                    onTap: () => openEmojiPicker(ref, ownerId: _ownerId, column: _column, predictionContext: _text.text, accountKey: _effectivePostAs?.account.key, onPick: (e) {
-                      _insert(e);
-                      _focus.requestFocus();
-                    }),
+                    // ピッカー全体はボタンにつながった形 (D-517)。
+                    onTap: () => _openEmojiPickerFrom(ctx),
                     // 長押し (D-512): ボタンにつながったすぐ選べる絵文字。指を滑らせて離した絵文字を入れる。バーは画面の下なので上に開く。
                     onLongPress: () {
                       final box = ctx.findRenderObject() as RenderBox;
@@ -2116,10 +2134,8 @@ class _ComposerBodyState extends ConsumerState<_ComposerBody> {
                           _insert(e);
                           _focus.requestFocus();
                         },
-                        onMore: () => openEmojiPicker(ref, ownerId: _ownerId, column: _column, predictionContext: _text.text, accountKey: _effectivePostAs?.account.key, onPick: (e) {
-                          _insert(e);
-                          _focus.requestFocus();
-                        }),
+                        // 「その他」(D-517): ピッカー全体も同じ絵文字のボタンにつなげ直す。
+                        onMore: () => _openEmojiPickerFrom(ctx),
                       );
                     },
                   ),

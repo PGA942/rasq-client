@@ -256,7 +256,21 @@ void main() {
       return c;
     }
 
-    for (final (name, size, split) in [('スマホ', const Size(1080, 2340), tendencyNarrowSplit), ('広い画面', const Size(2400, 1600), tendencyWideSplit)]) {
+    testWidgets('スマホ (D-518): 幅が狭いので指向性の下に刺激性を積む(ユーザーページの「ノートの表示」と同じ部品)', (tester) async {
+      await openFow(tester);
+      expect(find.byType(TendencyControls), findsOneWidget);
+      expect(find.byKey(const Key('trend.tendency.stacked')), findsOneWidget);
+      expect(find.byKey(const Key('trend.tendency.columns')), findsNothing);
+      final dir = tester.getRect(find.byKey(const Key('trend.tendency.directivity')));
+      final stim = tester.getRect(find.byKey(const Key('trend.tendency.stimulus')));
+      expect(stim.top, greaterThanOrEqualTo(dir.bottom - 1), reason: 'レーダーは下');
+      expect(stim.width, closeTo(dir.width, 1));
+      final radar = find.byKey(const Key('trend.stimulus.radar'));
+      expect(find.descendant(of: find.byKey(const Key('trend.tendency.stimulus')), matching: radar), findsOneWidget);
+      expect(find.text('怒り 45%'), findsOneWidget);
+    });
+
+    for (final (name, size, split) in [('広い画面(狭いほうの比)', const Size(1600, 1600), tendencyNarrowSplit), ('広い画面', const Size(2400, 1600), tendencyWideSplit)]) {
       testWidgets('$name: 指向性と刺激性を横に並べ(刺激性が細い)、左右のスワイプは無い', (tester) async {
         await openFow(tester, size: size);
         final dir = find.byKey(const Key('trend.tendency.directivity'));

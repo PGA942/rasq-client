@@ -85,6 +85,7 @@ class TetherOutline {
     this.cornerRadius = 18,
     this.neckAngle = kTetherNeckAngle,
     this.neckFlare = kTetherNeckFlare,
+    this.detached = false,
   });
 
   final Rect rect;
@@ -102,6 +103,9 @@ class TetherOutline {
   /// [kTetherNeckFlare](px)。
   final double neckFlare;
 
+  /// 首なし (D-517): 元のボタンがキーボードに隠れていて、つなげる場所が無い。ふつうの角丸の四角(キーボードの上)。
+  final bool detached;
+
   /// 首の丸(ボタン + すき間)の半径。
   double get headRadius => buttonRadius + clearance;
 
@@ -110,6 +114,7 @@ class TetherOutline {
 
   /// 輪郭(閉じたパス)。下に開くときの形を作り、上に開くときは上下を裏返す。
   Path path() {
+    if (detached) return Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(cornerRadius)));
     if (side == TetherSide.below) return _topNeck(rect, button);
     final flipped = _topNeck(Rect.fromLTRB(rect.left, -rect.bottom, rect.right, -rect.top), Offset(button.dx, -button.dy));
     return flipped.transform((Matrix4.identity()..scaleByDouble(1.0, -1.0, 1.0, 1.0)).storage);
@@ -193,23 +198,24 @@ class TetherOutline {
       other.clearance == clearance &&
       other.cornerRadius == cornerRadius &&
       other.neckAngle == neckAngle &&
-      other.neckFlare == neckFlare;
+      other.neckFlare == neckFlare &&
+      other.detached == detached;
 
   @override
-  int get hashCode => Object.hash(rect, button, buttonRadius, side, clearance, cornerRadius, neckAngle, neckFlare);
+  int get hashCode => Object.hash(rect, button, buttonRadius, side, clearance, cornerRadius, neckAngle, neckFlare, detached);
 }
 
 /// [TetheredPanel] の置き場所を決める(純粋な計算。テストもここ)。
 /// [area] = 置いてよい範囲(画面からキーボード / ノッチ / 余白を除いたもの)。
 /// [reach] = ボタンの中心からパネルの外形の辺まで(= [tetherReach]。アイコンの範囲の半分 + すき間)。
 @visibleForTesting
-({TetherSide side, double left, double maxHeight}) tetherPlacement({required Rect anchor, required Rect area, required double width, required double reach, required TetherSide preferred, double minHeight = 200}) {
+({TetherSide side, double left, double maxHeight}) tetherPlacement({required Rect anchor, required Rect area, required double width, required double reach, required TetherSide preferred, double minHeight = 200, bool lockSide = false}) {
   final c = anchor.center;
   final spaceBelow = area.bottom - (c.dy + reach);
   final spaceAbove = (c.dy - reach) - area.top;
   final pref = preferred == TetherSide.below ? spaceBelow : spaceAbove;
   final other = preferred == TetherSide.below ? spaceAbove : spaceBelow;
-  final side = pref >= minHeight || pref >= other ? preferred : (preferred == TetherSide.below ? TetherSide.above : TetherSide.below);
+  final side = lockSide || pref >= minHeight || pref >= other ? preferred : (preferred == TetherSide.below ? TetherSide.above : TetherSide.below);
   final w = math.min(width, area.width);
   final left = (c.dx - w / 2).clamp(area.left, area.right - w).toDouble();
   return (side: side, left: left, maxHeight: math.max(0.0, side == TetherSide.below ? spaceBelow : spaceAbove));
@@ -235,10 +241,14 @@ class TetheredPanel extends StatelessWidget {
     this.margin = 8,
     this.progress = 1,
     this.bounds,
+    this.lockSide = false,
   });
 
   final Rect anchor;
   final Widget child;
+
+  /// 開く側を [preferredSide] に固定する(空きで反対側へ回さない。[FowTether.liftOwner])。
+  final bool lockSide;
 
   /// 首の中(元のボタンの位置)に描くもの。null なら空の丸。
   final Widget? anchorChild;
@@ -291,6 +301,7 @@ class TetheredPanel extends StatelessWidget {
         neckFlare: neckFlare,
         insets: EdgeInsets.fromLTRB(mq.padding.left + margin, mq.padding.top + margin, mq.padding.right + margin, math.max(mq.padding.bottom, mq.viewInsets.bottom) + margin),
         bounds: bounds,
+        lockSide: lockSide,
       ),
       children: [
         LayoutId(
@@ -341,7 +352,7 @@ class _TetherHolder {
 }
 
 class _TetherDelegate extends MultiChildLayoutDelegate {
-  _TetherDelegate({required this.holder, required this.anchor, required this.width, required this.preferred, required this.offset, required this.clearance, required this.reach, required this.neckAngle, required this.neckFlare, required this.insets, this.bounds});
+  _TetherDelegate({required this.holder, required this.anchor, required this.width, required this.preferred, required this.offset, required this.clearance, required this.reach, required this.neckAngle, required this.neckFlare, required this.insets, this.bounds, this.lockSide = false});
   final _TetherHolder holder;
   final Rect anchor;
   final double width;
@@ -353,6 +364,7 @@ class _TetherDelegate extends MultiChildLayoutDelegate {
   final double neckFlare;
   final EdgeInsets insets;
   final Rect? bounds;
+  final bool lockSide;
 
   @override
   void performLayout(Size size) {
@@ -362,11 +374,32 @@ class _TetherDelegate extends MultiChildLayoutDelegate {
     // カラムに収める (D-513): 画面の余白と重ねる。重ならない(カラムが画面の外)なら画面全体。
     final within = b == null ? screen : screen.intersect(Rect.fromLTRB(b.left + 4, b.top, b.right - 4, b.bottom));
     final area = within.width > 0 && within.height > 0 ? within : screen;
-    final place = tetherPlacement(anchor: anchor, area: area, width: width, reach: reach, preferred: preferred);
+    final c = anchor.center;
+    // 元のボタンがキーボード(または画面の上の余白)に隠れた (D-517): つなげると入力欄がキーボードの下になるので、首を外して
+    // キーボードの上(隠れた側の反対の端)に置く。キーボードが閉じれば、またつながった形に戻る(中身の Element はそのまま)。
+    final coveredBelow = c.dy - reach > area.bottom;
+    final coveredAbove = c.dy + reach < area.top;
+    if (coveredBelow || coveredAbove) {
+      final w = math.min(width, area.width);
+      final left = (c.dx - w / 2).clamp(area.left, area.right - w).toDouble();
+      final panel = layoutChild(_TetherSlot.panel, BoxConstraints(minWidth: w - 2 * offset, maxWidth: w - 2 * offset, maxHeight: math.max(0.0, area.height - 2 * offset)));
+      final h = panel.height + 2 * offset;
+      final rect = Rect.fromLTWH(left, coveredBelow ? area.bottom - h : area.top, w, h);
+      positionChild(_TetherSlot.panel, rect.topLeft + Offset(offset, offset));
+      holder.outline = TetherOutline(rect: rect, button: c, buttonRadius: 0, side: coveredBelow ? TetherSide.above : TetherSide.below, detached: true);
+      layoutChild(_TetherSlot.paint, BoxConstraints.tight(size));
+      positionChild(_TetherSlot.paint, Offset.zero);
+      // 首の中と首のタップは出さない(大きさ 0)。
+      layoutChild(_TetherSlot.head, BoxConstraints.tight(Size.zero));
+      positionChild(_TetherSlot.head, c);
+      layoutChild(_TetherSlot.hit, BoxConstraints.tight(Size.zero));
+      positionChild(_TetherSlot.hit, c);
+      return;
+    }
+    final place = tetherPlacement(anchor: anchor, area: area, width: width, reach: reach, preferred: preferred, lockSide: lockSide);
     final w = math.min(width, area.width);
     final panel = layoutChild(_TetherSlot.panel, BoxConstraints(minWidth: w - 2 * offset, maxWidth: w - 2 * offset, maxHeight: math.max(0.0, place.maxHeight - 2 * offset)));
     final h = panel.height + 2 * offset;
-    final c = anchor.center;
     final top = place.side == TetherSide.below ? c.dy + reach : c.dy - reach - h;
     final rect = Rect.fromLTWH(place.left, top, w, h);
     positionChild(_TetherSlot.panel, rect.topLeft + Offset(offset, offset));
@@ -385,7 +418,7 @@ class _TetherDelegate extends MultiChildLayoutDelegate {
       old.anchor != anchor || old.width != width || old.preferred != preferred || old.offset != offset || old.clearance != clearance ||
       old.reach != reach ||
       old.neckAngle != neckAngle ||
-      old.neckFlare != neckFlare || old.insets != insets || old.bounds != bounds || old.holder != holder;
+      old.neckFlare != neckFlare || old.insets != insets || old.bounds != bounds || old.lockSide != lockSide || old.holder != holder;
 }
 
 class _TetherPainter extends CustomPainter {
@@ -418,7 +451,7 @@ class _TetherPainter extends CustomPainter {
   bool shouldRepaint(_TetherPainter old) => true;
 }
 
-/// オーバーレイに出す形。中身は キャンセル / タイトル / OK の見出し + [builder] + 下のハンドル(スケッチのとおり)。
+/// オーバーレイに出す形。中身は キャンセル / タイトル / OK の見出し + [builder] + 下のハンドル(スケッチのとおり。[footer] を渡すとハンドルの代わりにフッター、D-517)。
 extension TetheredPanelPresets on OverlayManager {
   /// [anchor] のボタンにつながったパネルを出す。OK で [onConfirm] の値を返す(キャンセル / 外のタップは null)。
   /// [anchorChild] = 首の中に描く元のボタンの見た目(アイコンなど)。首を押しても閉じる。
@@ -435,6 +468,8 @@ extension TetheredPanelPresets on OverlayManager {
     double width = 320,
     TetherSide preferredSide = TetherSide.below,
     double iconExtent = kTetherIconExtent,
+    Widget Function(BuildContext context, OverlayHandle handle)? footer,
+    TextStyle? titleStyle,
   }) async {
     final result = await show(RasqOverlayEntry(
       id: id,
@@ -450,7 +485,7 @@ extension TetheredPanelPresets on OverlayManager {
               TextButton(key: ValueKey('$id.cancel'), onPressed: handle.cancel, child: Text(cancelText, style: TextStyle(color: scheme.onSurfaceVariant)))
             else
               const SizedBox(width: 64),
-            Expanded(child: Center(child: Text(title ?? '', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),
+            Expanded(child: Center(child: Text(title ?? '', style: titleStyle ?? Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis))),
             if (confirmText != null)
               TextButton(key: ValueKey('$id.ok'), onPressed: () => handle.close(result: onConfirm?.call()), child: Text(confirmText, style: TextStyle(color: scheme.primary, fontWeight: FontWeight.w700)))
             else
@@ -474,6 +509,10 @@ extension TetheredPanelPresets on OverlayManager {
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 header,
                 Flexible(child: SingleChildScrollView(child: builder(context))),
+                // フッター (D-517): 渡されたら飾りのハンドルの代わりに標準のフッター([FowFooter] など)。
+                if (footer != null)
+                  footer(context, handle)
+                else
                 Center(
                   child: Container(
                     margin: const EdgeInsets.only(top: 6, bottom: 8),

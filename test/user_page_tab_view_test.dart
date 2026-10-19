@@ -8,12 +8,14 @@ import 'package:rasq_client/app/providers.dart';
 import 'package:rasq_client/app/router.dart';
 import 'package:rasq_client/features/home/post_row.dart';
 import 'package:rasq_client/features/settings/settings_dsl.dart' show settingsAreaProvider;
+import 'package:rasq_client/features/trend/tendency_controls.dart';
 import 'package:rasq_client/features/trend/tendency_profile.dart';
 import 'package:rasq_client/features/users/user_page_screen.dart';
 import 'package:rasq_client/features/users/user_tab_view.dart';
 import 'package:rasq_client/session/session_storage.dart';
 import 'package:rasq_design/rasq_design.dart';
 import 'package:rasq_models/rasq_models.dart';
+import 'package:rasq_overlay/rasq_overlay.dart' show FowFooter;
 import 'package:rasq_plugin_api/rasq_plugin_api.dart';
 
 import 'support/fakes.dart';
@@ -62,8 +64,11 @@ void main() {
       expect(applyUserTabView(posts, UserTabView.defaults, query: 'ロケット カレー'), isEmpty);
     });
 
-    test('刺激性: どれかの感情が上限を超えたら隠す / 指向性: 好きなジャンルから外れたものを隠す', () {
-      expect(ids(applyUserTabView(posts, const UserTabView(stimulus: {'anger': 0.3}))), ['a1', 'a3', 'a4', 'a5']);
+    test('刺激性: 上限を超えたぶんの合計が TL と同じ境目以上なら隠す (D-518) / 指向性: 好きなジャンルから外れたものを隠す', () {
+      // トレンドと同じ基準: 少し超えただけでは隠さない(D-514 では 1 つでも超えたら隠していた)。
+      expect(tendencyScorer.stimulusPenaltyOf(angry, const TendencyProfile(stimulus: {'anger': 0.3})), allOf(greaterThan(0), lessThan(tendencyStimulusHideAt)));
+      expect(ids(applyUserTabView(posts, const UserTabView(stimulus: {'anger': 0.3}))), ['a1', 'a2', 'a3', 'a4', 'a5']);
+      expect(ids(applyUserTabView(posts, const UserTabView(stimulus: {'anger': 0.0}))), ['a1', 'a3', 'a4', 'a5']);
       const base = TendencyProfile(genres: ['ロケット'], stimulus: {});
       expect(ids(applyUserTabView(posts, const UserTabView(directionality: 0), base: base)), ['a4']);
       // 好きなジャンルが無ければ指向性では落とさない。
@@ -126,6 +131,18 @@ void main() {
       expect(find.byKey(const ValueKey('user.tabView.digest')), findsOneWidget);
       expect(find.byKey(const ValueKey('user.tabView.pinned')), findsNothing, reason: 'ピン留めの無い人');
       expect(find.text('4 件中 4 件'), findsOneWidget);
+      // D-517: 下は FOW の標準のフッター(件数 + リセット / 閉じる)。
+      final footer = find.descendant(of: panel, matching: find.byType(FowFooter));
+      expect(footer, findsOneWidget);
+      for (final k in ['user.tabView.count', 'user.tabView.reset', 'user.tabView.close']) {
+        expect(find.descendant(of: footer, matching: find.byKey(ValueKey(k))), findsOneWidget, reason: k);
+      }
+      // D-518: 見た目は「このタイムラインから探す」と同じ並び(太い下線の節)、指向性 / 刺激性はトレンドと同じ部品。
+      expect(find.descendant(of: panel, matching: find.byType(RasqSectionHeader)), findsNWidgets(3));
+      expect(find.descendant(of: panel, matching: find.byType(TendencyControls)), findsOneWidget);
+      // スマホの幅では縦に積む(レーダーは指向性の下)。
+      expect(find.byKey(const ValueKey('user.tabView.tendency.stacked')), findsOneWidget);
+      expect(tester.getTopLeft(find.byKey(const ValueKey('user.tabView.tendency.stimulus'))).dy, greaterThan(tester.getBottomLeft(find.byKey(const ValueKey('user.tabView.tendency.directivity'))).dy - 1));
 
       await tester.tap(find.byKey(const ValueKey('rasqOverlay.tether.hit')));
       await tester.pumpAndSettle();
@@ -133,9 +150,24 @@ void main() {
 
       await tester.tap(tab('ノート'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('閉じる'));
+      await tester.tap(find.byKey(const ValueKey('user.tabView.close')));
       await tester.pumpAndSettle();
       expect(panel, findsNothing);
+    });
+
+    testWidgets('広い画面ではパネルを広げ、指向性 / 刺激性を横に並べる (D-518)', (tester) async {
+      await pump(tester);
+      tester.view.physicalSize = const Size(1800, 2400);
+      tester.view.devicePixelRatio = 2;
+      await tester.pumpAndSettle();
+      await tester.tap(tab('ノート'));
+      await tester.pumpAndSettle();
+      expect(panel, findsOneWidget);
+      expect(find.byKey(const ValueKey('user.tabView.tendency.columns')), findsOneWidget);
+      final dir = tester.getRect(find.byKey(const ValueKey('user.tabView.tendency.directivity')));
+      final stim = tester.getRect(find.byKey(const ValueKey('user.tabView.tendency.stimulus')));
+      expect(stim.top, dir.top);
+      expect(stim.left, greaterThanOrEqualTo(dir.right - 1));
     });
 
     testWidgets('並べ替え・表示・検索がすぐ一覧に効き、タブの種類ごとに保存される。リセットで元へ', (tester) async {
@@ -167,7 +199,7 @@ void main() {
       expect(saved['posts'], {'sort': 'reactions', 'renotes': false, 'digest': true});
       expect(jsonEncode(saved), isNot(contains('カレー')));
 
-      await tester.tap(find.text('閉じる'));
+      await tester.tap(find.byKey(const ValueKey('user.tabView.close')));
       await tester.pumpAndSettle();
       // 変えているタブの印(名前の右肩の点)。
       expect(find.descendant(of: find.byType(TabBar), matching: find.byKey(const ValueKey('tab.dot'))), findsOneWidget);
@@ -202,15 +234,17 @@ void main() {
       expect(pop().canPop, isTrue);
 
       final radar = find.byKey(const ValueKey('user.tabView.radar'));
+      await tester.ensureVisible(radar);
+      await tester.pumpAndSettle();
       final center = tester.getCenter(radar);
-      // 怒り(真上から時計回りに 7 番目 = 真左)の軸を、中心の近くへ。
+      // 怒り(真上から時計回りに 7 番目 = 真左)の軸を、中心まで(トレンドと同じ基準なので、ほぼ 0 まで絞ると隠れる)。
       final g = await tester.startGesture(center + const Offset(-40, 0));
       await tester.pump();
       expect(view().physics, isA<NeverScrollableScrollPhysics>(), reason: '触れている間はタブの横のスワイプを止める');
       expect(pop().canPop, isFalse, reason: '戻るジェスチャーも止める');
       await g.moveBy(const Offset(20, 0));
       await tester.pump();
-      await g.moveBy(const Offset(10, 0));
+      await g.moveBy(const Offset(20, 0));
       await tester.pump();
       await g.up();
       await tester.pumpAndSettle();
@@ -218,11 +252,13 @@ void main() {
       expect(pop().canPop, isTrue);
       final saved = jsonDecode((await storage.read('userPageTabs.v1'))!) as Map;
       final cap = ((saved['posts'] as Map)['stimulus'] as Map)['anger'] as num;
-      expect(cap, lessThan(0.5));
+      expect(cap, lessThan(0.15));
       expect(shownBodies(tester), isNot(contains(angry.body)), reason: '怒りの強い投稿を隠す');
 
       // スライダー(指向性)も同じ欄。
-      final slider = find.byKey(const ValueKey('user.tabView.directivity'));
+      final slider = find.descendant(of: find.byKey(const ValueKey('user.tabView.tendency.slider')), matching: find.byType(Slider));
+      await tester.ensureVisible(slider);
+      await tester.pumpAndSettle();
       final g2 = await tester.startGesture(tester.getCenter(slider));
       await tester.pump();
       expect(view().physics, isA<NeverScrollableScrollPhysics>());

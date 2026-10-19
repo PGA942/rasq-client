@@ -198,4 +198,81 @@ void main() {
     await tester.tapAt(Offset(anchor.center.dx, body.top + 4));
     expect(tapped, 2);
   });
+
+  test('tetherPlacement: lockSide なら空きが少なくても好みの側(親を持ち上げる子、D-517)', () {
+    const area = Rect.fromLTWH(8, 8, 344, 764);
+    final p = tetherPlacement(anchor: const Rect.fromLTWH(160, 700, 44, 44), area: area, width: 320, reach: 19, preferred: TetherSide.below, lockSide: true);
+    expect(p.side, TetherSide.below);
+  });
+
+  testWidgets('TetheredPanel: ボタンがキーボードに隠れたら首を外してキーボードの上に置く。閉じればまたつながる (D-517)', (tester) async {
+    const anchor = Rect.fromLTWH(100, 500, 44, 44);
+    Widget app(double keyboard) => MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(size: const Size(400, 800), viewInsets: EdgeInsets.only(bottom: keyboard)),
+            child: const Scaffold(
+              resizeToAvoidBottomInset: false,
+              body: TetheredPanel(
+                anchor: anchor,
+                width: 240,
+                preferredSide: TetherSide.above,
+                anchorChild: Icon(Icons.tag, key: ValueKey('glyph')),
+                child: SizedBox(key: ValueKey('body'), height: 120, child: TextField(key: ValueKey('field'))),
+              ),
+            ),
+          ),
+        );
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app(0));
+    var body = tester.getRect(find.byKey(const ValueKey('body')));
+    expect(body.bottom, lessThan(anchor.center.dy), reason: 'ボタンの上につながる');
+    await tester.tap(find.byKey(const ValueKey('field')));
+    final field = tester.state(find.byType(EditableText));
+    // キーボード 400px: ボタン(中心 522)は隠れる。
+    await tester.pumpWidget(app(400));
+    body = tester.getRect(find.byKey(const ValueKey('body')));
+    expect(body.bottom, lessThanOrEqualTo(800 - 400 - 8), reason: 'キーボードの上');
+    expect(tester.getSize(find.byKey(const ValueKey('rasqOverlay.tether.hit'))), Size.zero, reason: '首は外す');
+    expect(identical(tester.state(find.byType(EditableText)), field), isTrue, reason: '中身は作り直さない(入力のフォーカスが外れない)');
+    await tester.pumpWidget(app(0));
+    expect(tester.getSize(find.byKey(const ValueKey('rasqOverlay.tether.hit'))).width, greaterThan(0), reason: 'またつながる');
+  });
+
+  testWidgets('showTetheredPanel(footer:): 飾りのハンドルの代わりに標準のフッター (D-517)', (tester) async {
+    final manager = OverlayManager();
+    await tester.pumpWidget(MaterialApp(home: OverlayHost(manager: manager, child: const SizedBox.expand())));
+    manager.showTetheredPanel<void>(
+      id: 'p',
+      anchor: const Rect.fromLTWH(100, 60, 44, 44),
+      title: 't',
+      builder: (_) => const SizedBox(height: 40),
+      footer: (_, handle) => FowFooter(leading: const Text('3 件'), actions: [TextButton(key: const ValueKey('close'), onPressed: handle.close, child: const Text('閉じる'))]),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(FowFooter), findsOneWidget);
+    expect(find.text('3 件'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('close')));
+    await tester.pumpAndSettle();
+    expect(find.byType(FowFooter), findsNothing);
+  });
+
+  testWidgets('FowSpec.footer: ドックする FOW でも、ボタンにつながった FOW でも中身の下にフッター (D-517)', (tester) async {
+    final manager = OverlayManager();
+    await tester.pumpWidget(MaterialApp(home: OverlayHost(manager: manager, child: const SizedBox.expand())));
+    for (final anchor in [null, const Rect.fromLTWH(100, 60, 44, 44)]) {
+      manager.showFow<void>(
+        id: 'f',
+        spec: FowSpec(title: 't', anchor: anchor, tether: anchor == null ? null : const FowTether(), footer: const FowFooter(leading: Text('footer'))),
+        builder: (_, _) => const SizedBox.expand(key: ValueKey('body')),
+      );
+      await tester.pumpAndSettle();
+      final footer = find.byType(FowFooter);
+      expect(footer, findsOneWidget);
+      expect(tester.getRect(footer).top, greaterThanOrEqualTo(tester.getRect(find.byKey(const ValueKey('body'))).bottom - 0.01));
+      manager.close('f');
+      await tester.pumpAndSettle();
+    }
+  });
 }

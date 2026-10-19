@@ -462,7 +462,8 @@ class _FowColumn extends StatelessWidget {
             for (final c in entries) {
               if (c.ownerId != p.id) continue;
               final cs = c.fow;
-              if (cs == null || cs.anchor != null || cs.pinnedWall != 0) continue;
+              // ボタンにつながった子は、親を持ち上げるもの([FowTether.liftOwner]、D-517)だけ。
+              if (cs == null || cs.pinnedWall != 0 || (cs.anchor != null && cs.tether?.liftOwner != true)) continue;
               final ch = cs.heightFactor.value * avail;
               if (ch > lift) lift = ch;
             }
@@ -470,6 +471,8 @@ class _FowColumn extends StatelessWidget {
           }
 
           final children = <Widget>[];
+          // 下にドックした親が子の高さぶん持ち上げた量(id → px、D-068)。持ち上げる子([FowTether.liftOwner])のつなぎ先をずらす。
+          final lifted = <String, double>{};
           // stick のぶんカラムを縮める (D-397): 畳まれた stick FOW が下端に置かれていれば、重なるカラムにその高さを知らせる。
           final reserve = <int, double>{};
           final seen = <String>{};
@@ -487,6 +490,8 @@ class _FowColumn extends StatelessWidget {
             if (tether != null && anchor != null) {
               if (isLeaving) continue;
               final slot = slotOf(s);
+              // 親を持ち上げる子 (D-517): 開いたときに取ったボタンの矩形は持ち上げる前のもの。親の中のボタンは持ち上げたぶん上にある。
+              final shift = tether.liftOwner && e.ownerId != null ? (lifted[e.ownerId] ?? 0.0) : 0.0;
               s.laidOut = null;
               children.add(Positioned.fill(
                 key: ValueKey('rasqOverlay.fow.${e.id}'),
@@ -495,7 +500,7 @@ class _FowColumn extends StatelessWidget {
                   child: _FowTethered(
                     entry: e,
                     tether: tether,
-                    anchor: anchor,
+                    anchor: anchor.translate(0, -shift),
                     bounds: Rect.fromLTWH(slot.x, 0, slot.width, hostH),
                     height: s.heightFactor.value * avail,
                     onCancel: () => onCancel(e),
@@ -541,6 +546,7 @@ class _FowColumn extends StatelessWidget {
             } else if (!pinned) {
               // 下側ドック: 子の高さぶん枠を伸ばす (D-068)。
               h += lift;
+              if (!isLeaving) lifted[e.id] = lift;
               final space = hostH - padBottom;
               if (space > 0 && h > space) h = space;
             }
@@ -654,7 +660,7 @@ class _FowColumn extends StatelessWidget {
 }
 
 /// ボタンにつながった FOW (D-513)。見出し(FOW と同じ: 左 = headerLeading / キャンセル、真ん中 = タイトル、右 = headerTrailing / 決定)
-/// + 中身を [TetheredPanel] に入れる。首(元のボタン)を押すと閉じる。
+/// + 中身 + フッター([FowSpec.footer]、D-517)を [TetheredPanel] に入れる。首(元のボタン)を押すと閉じる。
 class _FowTethered extends StatelessWidget {
   const _FowTethered({required this.entry, required this.tether, required this.anchor, required this.bounds, required this.height, required this.onCancel, required this.onConfirm, required this.child});
   final RasqOverlayEntry entry;
@@ -693,12 +699,12 @@ class _FowTethered extends StatelessWidget {
                 )
               : null;
           final body = tether.fitContent
-              ? Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [?header, Flexible(child: child)])
+              ? Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [?header, Flexible(child: child), ?spec.footer])
               // 高さの決まった FOW: 空いているぶんまで(入りきらなければ中がスクロールする)。
               : LayoutBuilder(
                   builder: (context, c) => SizedBox(
                     height: math.min(height, c.maxHeight),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [?header, Expanded(child: child)]),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [?header, Expanded(child: child), ?spec.footer]),
                   ),
                 );
           return TetheredPanel(
@@ -711,6 +717,7 @@ class _FowTethered extends StatelessWidget {
             anchorChild: tether.anchorChild,
             onAnchorTap: onCancel,
             progress: progress,
+            lockSide: tether.liftOwner,
             child: body,
           );
         });
@@ -868,6 +875,8 @@ class _FowPanelState extends State<_FowPanel> {
         key: const ValueKey('rasqOverlay.fow.body'),
         child: _StickExpandTap(spec: spec, child: spec.bodyMove ? FowMoveGrip(spec: spec, child: child) : child),
       ),
+      // フッター (D-517): 見出しと同じく掴んで動かせる。
+      if (spec.footer != null) KeyedSubtree(key: const ValueKey('rasqOverlay.fow.footerSlot'), child: FowMoveGrip(spec: spec, child: spec.footer!)),
       if (spec.showHandle && topSide) KeyedSubtree(key: const ValueKey('rasqOverlay.fow.handle.bottom'), child: handle),
     ]);
     final panel = FowSnapshotBoundary(
