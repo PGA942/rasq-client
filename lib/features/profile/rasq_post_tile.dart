@@ -31,7 +31,9 @@ import '../plugins/slot_plugins.dart';
 import '../post/share_fow.dart';
 import '../vc/astell_post_share.dart';
 import 'rasq_queue_prediction.dart';
+import '../media/media_reveal.dart';
 import '../media/video_player.dart';
+import '../settings/safety.dart';
 import '../../shell/third_column.dart';
 import '../store/sticker_packs.dart';
 
@@ -149,11 +151,16 @@ class RasqPostTileView extends ConsumerWidget {
   Widget? _media(BuildContext context, WidgetRef ref) {
     if (post.images.isEmpty) return null;
     final asPost = post.toPost(central: ref.read(centralBaseUrlProvider));
+    // 閲覧注意の設定と、1 枚ずつ開いた記録(全画面表示と共有、D-510)。
+    final (items, index) = ref.watch(safetySettingsProvider).applyToPost(asPost);
+    if (items.isEmpty) return null;
     return RasqMediaGrid(
-      items: asPost.media,
+      items: items,
       maxVisible: 6,
-      onTapTile: (i) => context.openViewer(asPost, i),
-      onPlayTile: (i) => showVideoFow(ref, asPost.media[i], post: asPost, column: fowColumnOf(context)),
+      revealed: watchRevealedMedia(ref, asPost),
+      onReveal: (id) => ref.read(mediaRevealProvider.notifier).reveal(asPost, id),
+      onTapTile: (i) => context.openViewer(asPost, index[i]),
+      onPlayTile: (i) => showVideoFow(ref, items[i], post: asPost, column: fowColumnOf(context)),
     );
   }
 

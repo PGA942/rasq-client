@@ -64,6 +64,9 @@ class RasqDesignLocalizationsJa extends RasqDesignLocalizations {
   String get designMediaReveal => '表示する';
 
   @override
+  String get designMediaHidden => '表示しない設定のメディアです';
+
+  @override
   String designReactionMorePeople(int count) {
     return '+$count人';
   }
